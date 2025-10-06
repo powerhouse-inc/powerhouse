@@ -1,10 +1,4 @@
-import {
-  addFile,
-  addFolder,
-  deleteNode,
-  driveDocumentModelModule,
-  setDriveName,
-} from "document-drive";
+import { addFile, addFolder, deleteNode, setDriveName } from "document-drive";
 import type { Operation } from "document-model";
 import { generateId } from "document-model/core";
 import { Kysely } from "kysely";
@@ -172,55 +166,6 @@ describe("KyselyOperationStore", () => {
           txn.addOperations({ ...op, index: 0 });
         }),
       ).rejects.toThrow(DuplicateOperationError);
-    });
-  });
-
-  describe("getHeader", () => {
-    it("should reconstruct header from operations", async () => {
-      const documentId = generateId();
-      const branch = "main";
-
-      // Create initial header using real document-drive document
-      const driveDoc = driveDocumentModelModule.utils.createDocument();
-      const createdAtUtcIso = new Date().toISOString();
-
-      // Use CREATE_DOCUMENT action with signing parameters
-      await store.apply(documentId, "header", branch, 0, (txn) => {
-        txn.addOperations({
-          index: 0,
-          timestampUtcMs: createdAtUtcIso,
-          hash: "",
-          skip: 0,
-          action: {
-            id: generateId(),
-            type: "CREATE_DOCUMENT",
-            timestampUtcMs: createdAtUtcIso,
-            model: "powerhouse/document-drive",
-            version: "0.0.0",
-            signing: {
-              signature: documentId,
-              publicKey: driveDoc.header.sig.publicKey,
-              nonce: driveDoc.header.sig.nonce || "",
-              createdAtUtcIso: createdAtUtcIso,
-              documentType: "powerhouse/document-drive",
-            },
-            scope: "header",
-          },
-        });
-      });
-
-      // Get header at revision 0
-      const header = await store.getHeader(documentId, branch, 0);
-      expect(header.id).toBe(documentId);
-      expect(header.documentType).toBe("powerhouse/document-drive");
-      expect(header.createdAtUtcIso).toBe(createdAtUtcIso);
-    });
-
-    it("should throw error for non-existent document", async () => {
-      const nonExistentId = generateId();
-      await expect(store.getHeader(nonExistentId, "main", 0)).rejects.toThrow(
-        "Document header not found",
-      );
     });
   });
 
@@ -459,16 +404,6 @@ describe("KyselyOperationStore", () => {
 
       await expect(
         store.get(documentId, "global", "main", 0, controller.signal),
-      ).rejects.toThrow("Operation aborted");
-    });
-
-    it("should abort getHeader operation", async () => {
-      const controller = new AbortController();
-      controller.abort();
-      const documentId = generateId();
-
-      await expect(
-        store.getHeader(documentId, "main", 0, controller.signal),
       ).rejects.toThrow("Operation aborted");
     });
 

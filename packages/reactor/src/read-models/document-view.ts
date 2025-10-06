@@ -1,4 +1,5 @@
-import type { Operation } from "document-model";
+import type { Operation, PHDocumentHeader } from "document-model";
+import { createPresignedHeader } from "document-model/core";
 import type { Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import type {
@@ -191,6 +192,81 @@ export class KyselyDocumentView implements IDocumentView {
           .execute();
       }
     });
+  }
+
+  async getHeader(
+    documentId: string,
+    branch: string,
+    signal?: AbortSignal,
+  ): Promise<PHDocumentHeader> {
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    // Query operations from header and document scopes only
+    // - "header" scope: CREATE_DOCUMENT actions contain initial header metadata
+    // - "document" scope: UPGRADE_DOCUMENT actions contain version transitions
+    const headerAndDocOps = await this.db
+      .selectFrom("Operation")
+      .selectAll()
+      .where("documentId", "=", documentId)
+      .where("branch", "=", branch)
+      .where("scope", "in", ["header", "document"])
+      .orderBy("timestampUtcMs", "asc") // Process in chronological order
+      .execute();
+
+    if (headerAndDocOps.length === 0) {
+      throw new Error(`Document header not found: ${documentId}`);
+    }
+
+    // Reconstruct header from header and document scope operations
+    let header = createPresignedHeader();
+
+    for (const op of headerAndDocOps) {
+      const action = JSON.parse(op.action) as {
+        type: string;
+        model?: string;
+        version?: string;
+        signing?: {
+          signature: string;
+          publicKey: JsonWebKey;
+          nonce: string;
+          createdAtUtcIso: string;
+          documentType: string;
+        };
+      };
+
+      if (action.type === "CREATE_DOCUMENT") {
+        // Extract header from CREATE_DOCUMENT action's signing parameters
+        if (action.signing) {
+          header = {
+            ...header,
+            id: action.signing.signature, // documentId === signing.signature
+            documentType: action.signing.documentType,
+            createdAtUtcIso: action.signing.createdAtUtcIso,
+            lastModifiedAtUtcIso: action.signing.createdAtUtcIso,
+            sig: {
+              nonce: action.signing.nonce,
+              publicKey: action.signing.publicKey,
+            },
+          };
+        }
+      } else if (action.type === "UPGRADE_DOCUMENT") {
+        // UPGRADE_DOCUMENT tracks version changes in the document scope
+        // Version information would be in the operation's resulting state
+        // For now, this is handled elsewhere in the document state
+      }
+    }
+
+    // Get revision map and latest timestamp from all scopes efficiently
+    const { revision, latestTimestamp } =
+      await this.operationStore.getRevisions(documentId, branch, signal);
+
+    // Update header with cross-scope revision and timestamp information
+    header.revision = revision;
+    header.lastModifiedAtUtcIso = latestTimestamp;
+
+    return header;
   }
 
   async exists(

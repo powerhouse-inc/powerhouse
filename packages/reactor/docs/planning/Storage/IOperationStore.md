@@ -71,6 +71,20 @@ interface IOperationStore {
     id: number,
     signal?: AbortSignal,
   ): Promise<Operation[]>;
+
+  getRevisions(
+    documentId: string,
+    branch: string,
+    signal?: AbortSignal,
+  ): Promise<DocumentRevisions>;
+}
+
+type DocumentRevisions {
+  /** Map of scope to operation index for that scope */
+  revision: Record<string, number>;
+
+  /** Latest timestamp across revisions */
+  latestTimestamp: string;
 }
 
 interface AtomicTxn {
@@ -90,9 +104,19 @@ await operations.apply(documentId, scope, branch, revision, async (txn) => {
   // add new operations
   txn.addOperations(...operations);
 });
+
+// Get revision map and latest timestamp efficiently
+const { revision, latestTimestamp } = await operations.getRevisions(
+  documentId,
+  branch
+);
+// revision = { header: 5, document: 3, global: 10, local: 7 }
+// latestTimestamp = "2025-01-15T10:30:00.000Z"
 ```
 
 **Note**: Header changes (slug, name, meta) are now handled through regular operations in the "header" scope, not through special transaction methods.
+
+**Note**: The `getRevisions()` method efficiently retrieves the latest operation index for each scope and the overall latest timestamp, which is used by `IDocumentView.getHeader()` to reconstruct document headers without loading all operations.
 
 ### Schema
 

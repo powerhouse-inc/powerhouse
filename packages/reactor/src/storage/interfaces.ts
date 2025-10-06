@@ -25,6 +25,14 @@ export interface AtomicTxn {
   addOperations(...operations: Operation[]): void;
 }
 
+export type DocumentRevisions = {
+  /** Map of scope to operation index for that scope */
+  revision: Record<string, number>;
+
+  /** Latest timestamp across revisions */
+  latestTimestamp: string;
+};
+
 export interface IOperationStore {
   apply(
     documentId: string,
@@ -34,13 +42,6 @@ export interface IOperationStore {
     fn: (txn: AtomicTxn) => void | Promise<void>,
     signal?: AbortSignal,
   ): Promise<void>;
-
-  getHeader(
-    documentId: string,
-    branch: string,
-    revision: number,
-    signal?: AbortSignal,
-  ): Promise<PHDocumentHeader>;
 
   get(
     documentId: string,
@@ -67,6 +68,22 @@ export interface IOperationStore {
   ): Promise<Operation[]>;
 
   getSinceId(id: number, signal?: AbortSignal): Promise<Operation[]>;
+
+  /**
+   * Gets the latest operation index for each scope of a document, along with
+   * the latest timestamp across all scopes. This is used to efficiently reconstruct
+   * the revision map and lastModified timestamp for document headers.
+   *
+   * @param documentId - The document id
+   * @param branch - The branch name
+   * @param signal - Optional abort signal to cancel the request
+   * @returns Object containing revision map and latest timestamp
+   */
+  getRevisions(
+    documentId: string,
+    branch: string,
+    signal?: AbortSignal,
+  ): Promise<DocumentRevisions>;
 }
 
 export interface ViewFilter {
@@ -120,6 +137,24 @@ export interface IDocumentView {
    * Indexes a list of operations.
    */
   indexOperations(operations: Operation[]): Promise<void>;
+
+  /**
+   * Retrieves a document header by reconstructing it from operations across all scopes.
+   *
+   * Headers contain cross-scope metadata (revision tracking, lastModified timestamps)
+   * that require aggregating information from multiple scopes, making this a
+   * view-layer concern rather than an operation store concern.
+   *
+   * @param documentId - The document id
+   * @param branch - The branch name
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The reconstructed document header
+   */
+  getHeader(
+    documentId: string,
+    branch: string,
+    signal?: AbortSignal,
+  ): Promise<PHDocumentHeader>;
 
   /**
    * Returns true if and only if the documents exist.

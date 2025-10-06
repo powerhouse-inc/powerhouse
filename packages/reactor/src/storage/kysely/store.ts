@@ -1,10 +1,10 @@
-import { type Operation, type PHDocumentHeader } from "document-model";
-import { createPresignedHeader } from "document-model/core";
+import { type Operation } from "document-model";
 import type { Kysely } from "kysely";
 import {
   DuplicateOperationError,
   RevisionMismatchError,
   type AtomicTxn,
+  type DocumentRevisions,
   type IOperationStore,
 } from "../interfaces.js";
 import { AtomicTransaction } from "../txn.js";
@@ -84,34 +84,6 @@ export class KyselyOperationStore implements IOperationStore {
     });
   }
 
-  async getHeader(
-    documentId: string,
-    branch: string,
-    revision: number,
-    signal?: AbortSignal,
-  ): Promise<PHDocumentHeader> {
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
-
-    // Get header operations from the 'header' scope
-    const headerOps = await this.db
-      .selectFrom("Operation")
-      .selectAll()
-      .where("documentId", "=", documentId)
-      .where("scope", "=", "header")
-      .where("branch", "=", branch)
-      .where("index", "<=", revision)
-      .orderBy("index", "asc")
-      .execute();
-
-    if (headerOps.length === 0) {
-      throw new Error(`Document header not found: ${documentId}`);
-    }
-
-    return this.reconstructHeader(headerOps);
-  }
-
   async get(
     documentId: string,
     scope: string,
@@ -139,55 +111,6 @@ export class KyselyOperationStore implements IOperationStore {
     }
 
     return this.rowToOperation(row);
-  }
-
-  private reconstructHeader(
-    orderedHeaderOps: OperationRow[],
-  ): PHDocumentHeader {
-    // Start with a base header
-    let header = createPresignedHeader();
-
-    // Apply each header operation in order
-    for (const op of orderedHeaderOps) {
-      const action = JSON.parse(op.action) as {
-        type: string;
-        model?: string;
-        version?: string;
-        signing?: {
-          signature: string;
-          publicKey: JsonWebKey;
-          nonce: string;
-          createdAtUtcIso: string;
-          documentType: string;
-        };
-      };
-
-      if (action.type === "CREATE_DOCUMENT") {
-        // Extract header from CREATE_DOCUMENT action's signing parameters
-        if (action.signing) {
-          header = {
-            ...header,
-            id: action.signing.signature, // documentId === signing.signature
-            documentType: action.signing.documentType,
-            createdAtUtcIso: action.signing.createdAtUtcIso,
-            lastModifiedAtUtcIso: action.signing.createdAtUtcIso,
-            sig: {
-              nonce: action.signing.nonce,
-              publicKey: action.signing.publicKey,
-            },
-          };
-        }
-      } else if (action.type === "UPGRADE_DOCUMENT") {
-        // UPGRADE_DOCUMENT doesn't modify header
-        // Version is tracked elsewhere in the document (state or revision)
-      }
-
-      // Update revision tracking
-      header.revision[op.scope] = op.index;
-      header.lastModifiedAtUtcIso = op.timestampUtcMs.toISOString();
-    }
-
-    return header;
   }
 
   async getSince(
@@ -251,6 +174,54 @@ export class KyselyOperationStore implements IOperationStore {
       .execute();
 
     return rows.map((row) => this.rowToOperation(row));
+  }
+
+  async getRevisions(
+    documentId: string,
+    branch: string,
+    signal?: AbortSignal,
+  ): Promise<DocumentRevisions> {
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    // Get the latest operation for each scope in a single query
+    // Uses a subquery to find operations where the index equals the max index for that scope
+    const scopeRevisions = await this.db
+      .selectFrom("Operation as o1")
+      .select(["o1.scope", "o1.index", "o1.timestampUtcMs"])
+      .where("o1.documentId", "=", documentId)
+      .where("o1.branch", "=", branch)
+      .where((eb) =>
+        eb(
+          "o1.index",
+          "=",
+          eb
+            .selectFrom("Operation as o2")
+            .select((eb2) => eb2.fn.max("o2.index").as("maxIndex"))
+            .where("o2.documentId", "=", eb.ref("o1.documentId"))
+            .where("o2.branch", "=", eb.ref("o1.branch"))
+            .where("o2.scope", "=", eb.ref("o1.scope")),
+        ),
+      )
+      .execute();
+
+    // Build the revision map and find the latest timestamp
+    const revision: Record<string, number> = {};
+    let latestTimestamp = new Date(0).toISOString(); // Start with epoch
+
+    for (const row of scopeRevisions) {
+      revision[row.scope] = row.index;
+      const timestamp = row.timestampUtcMs.toISOString();
+      if (timestamp > latestTimestamp) {
+        latestTimestamp = timestamp;
+      }
+    }
+
+    return {
+      revision,
+      latestTimestamp,
+    };
   }
 
   private rowToOperation(row: OperationRow): Operation {
