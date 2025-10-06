@@ -71,7 +71,7 @@ importers:
         version: 8.6.14(@storybook/test@8.6.14(storybook@8.6.14(bufferutil@4.0.9)(prettier@3.6.2)(utf-8-validate@5.0.10)))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.6.14(bufferutil@4.0.9)(prettier@3.6.2)(utf-8-validate@5.0.10))(typescript@5.9.3)
       '@storybook/react-vite':
         specifier: ^8.6.3
-        version: 8.6.14(@storybook/test@8.6.14(storybook@8.6.14(bufferutil@4.0.9)(prettier@3.6.2)(utf-8-validate@5.0.10)))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rollup@4.52.3)(storybook@8.6.14(bufferutil@4.0.9)(prettier@3.6.2)(utf-8-validate@5.0.10))(typescript@5.9.3)(vite@7.1.8(@types/node@24.6.2)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.0)(tsx@4.20.6)(yaml@2.8.1))
+        version: 8.6.14(@storybook/test@8.6.14(storybook@8.6.14(bufferutil@4.0.9)(prettier@3.6.2)(utf-8-validate@5.0.10)))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rollup@4.52.3)(storybook@8.6.14(bufferutil@4.0.9)(prettier@3.6.2)(utf-8-validate@5.0.10))(typescript@5.9.3)(vite@6.3.6(@types/node@24.6.2)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.0)(tsx@4.20.6)(yaml@2.8.1))
       '@storybook/test':
         specifier: ^8.6.3
         version: 8.6.14(storybook@8.6.14(bufferutil@4.0.9)(prettier@3.6.2)(utf-8-validate@5.0.10))
@@ -740,7 +740,7 @@ importers:
     dependencies:
       '@acaldas/graphql-codegen-typescript-validation-schema':
         specifier: ^0.12.3
-        version: 0.12.3(encoding@0.1.13)(graphql@16.11.0)
+        version: 0.12.3(graphql@16.11.0)
       '@anatine/zod-mock':
         specifier: ^3.13.3
         version: 3.14.0(@faker-js/faker@8.4.1)(zod@3.25.76)
@@ -1899,7 +1899,7 @@ importers:
         specifier: ^1.0.0
         version: 1.0.0(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)
       did-jwt:
-        specifier: ^8.0.14
+        specifier: ^8.0.18
         version: 8.0.18
       did-jwt-vc:
         specifier: ^4.0.12
@@ -14498,7 +14498,6 @@ packages:
 
   libsql@0.4.7:
     resolution: {integrity: sha512-T9eIRCs6b0J1SHKYIvD8+KCJMcWZ900iZyxdnSCdqxN12Z1ijzT+jY5nrk72Jw4B0HGzms2NgpryArlJqvc3Lw==}
-    cpu: [x64, arm64, wasm32]
     os: [darwin, linux, win32]
 
   lie@3.1.1:
@@ -20093,7 +20092,7 @@ packages:
 
 snapshots:
 
-  '@acaldas/graphql-codegen-typescript-validation-schema@0.12.3(encoding@0.1.13)(graphql@16.11.0)':
+  '@acaldas/graphql-codegen-typescript-validation-schema@0.12.3(graphql@16.11.0)':
     dependencies:
       '@graphql-codegen/plugin-helpers': 5.1.1(graphql@16.11.0)
       '@graphql-codegen/schema-ast': 4.0.0(graphql@16.11.0)
@@ -24791,6 +24790,15 @@ snapshots:
 
   '@josephg/resolvable@1.0.1': {}
 
+  '@joshwooding/vite-plugin-react-docgen-typescript@0.5.0(typescript@5.9.3)(vite@6.3.6(@types/node@24.6.2)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.0)(tsx@4.20.6)(yaml@2.8.1))':
+    dependencies:
+      glob: 10.4.5
+      magic-string: 0.27.0
+      react-docgen-typescript: 2.4.0(typescript@5.9.3)
+      vite: 6.3.6(@types/node@24.6.2)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.0)(tsx@4.20.6)(yaml@2.8.1)
+    optionalDependencies:
+      typescript: 5.9.3
+
   '@joshwooding/vite-plugin-react-docgen-typescript@0.5.0(typescript@5.9.3)(vite@7.1.8(@types/node@24.6.2)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.0)(tsx@4.20.6)(yaml@2.8.1))':
     dependencies:
       glob: 10.4.5
@@ -25628,7 +25636,7 @@ snapshots:
       '@noble/hashes': 1.8.0
       '@scure/base': 1.2.6
       '@types/debug': 4.1.12
-      debug: 4.4.3(supports-color@5.5.0)
+      debug: 4.3.4
       pony-cause: 2.1.11
       semver: 7.7.2
       uuid: 9.0.1
@@ -25642,7 +25650,7 @@ snapshots:
       '@noble/hashes': 1.8.0
       '@scure/base': 1.2.6
       '@types/debug': 4.1.12
-      debug: 4.4.3(supports-color@5.5.0)
+      debug: 4.3.4
       pony-cause: 2.1.11
       semver: 7.7.2
       uuid: 9.0.1
@@ -27011,7 +27019,7 @@ snapshots:
 
   '@powerhousedao/document-engineering@1.38.0(@types/express@5.0.3)(@types/react-dom@19.2.0(@types/react@19.2.0))(@types/react@19.2.0)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)':
     dependencies:
-      '@internationalized/date': 3.10.0
+      '@internationalized/date': 3.9.0
       '@radix-ui/react-alert-dialog': 1.1.15(@types/react-dom@19.2.0(@types/react@19.2.0))(@types/react@19.2.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@radix-ui/react-checkbox': 1.3.3(@types/react-dom@19.2.0(@types/react@19.2.0))(@types/react@19.2.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@radix-ui/react-dropdown-menu': 2.1.16(@types/react-dom@19.2.0(@types/react@19.2.0))(@types/react@19.2.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -28656,6 +28664,14 @@ snapshots:
       react: 19.2.0
       react-dom: 19.2.0(react@19.2.0)
 
+  '@storybook/builder-vite@8.6.14(storybook@8.6.14(bufferutil@4.0.9)(prettier@3.6.2)(utf-8-validate@5.0.10))(vite@6.3.6(@types/node@24.6.2)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.0)(tsx@4.20.6)(yaml@2.8.1))':
+    dependencies:
+      '@storybook/csf-plugin': 8.6.14(storybook@8.6.14(bufferutil@4.0.9)(prettier@3.6.2)(utf-8-validate@5.0.10))
+      browser-assert: 1.2.1
+      storybook: 8.6.14(bufferutil@4.0.9)(prettier@3.6.2)(utf-8-validate@5.0.10)
+      ts-dedent: 2.2.0
+      vite: 6.3.6(@types/node@24.6.2)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.0)(tsx@4.20.6)(yaml@2.8.1)
+
   '@storybook/builder-vite@8.6.14(storybook@8.6.14(bufferutil@4.0.9)(prettier@3.6.2)(utf-8-validate@5.0.10))(vite@7.1.8(@types/node@24.6.2)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.0)(tsx@4.20.6)(yaml@2.8.1))':
     dependencies:
       '@storybook/csf-plugin': 8.6.14(storybook@8.6.14(bufferutil@4.0.9)(prettier@3.6.2)(utf-8-validate@5.0.10))
@@ -28790,11 +28806,11 @@ snapshots:
       react-dom: 19.2.0(react@19.2.0)
       storybook: 8.6.14(bufferutil@4.0.9)(prettier@3.6.2)(utf-8-validate@5.0.10)
 
-  '@storybook/react-vite@8.6.14(@storybook/test@8.6.14(storybook@8.6.14(bufferutil@4.0.9)(prettier@3.6.2)(utf-8-validate@5.0.10)))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rollup@4.52.3)(storybook@8.6.14(bufferutil@4.0.9)(prettier@3.6.2)(utf-8-validate@5.0.10))(typescript@5.9.3)(vite@7.1.8(@types/node@24.6.2)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.0)(tsx@4.20.6)(yaml@2.8.1))':
+  '@storybook/react-vite@8.6.14(@storybook/test@8.6.14(storybook@8.6.14(bufferutil@4.0.9)(prettier@3.6.2)(utf-8-validate@5.0.10)))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rollup@4.52.3)(storybook@8.6.14(bufferutil@4.0.9)(prettier@3.6.2)(utf-8-validate@5.0.10))(typescript@5.9.3)(vite@6.3.6(@types/node@24.6.2)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.0)(tsx@4.20.6)(yaml@2.8.1))':
     dependencies:
-      '@joshwooding/vite-plugin-react-docgen-typescript': 0.5.0(typescript@5.9.3)(vite@7.1.8(@types/node@24.6.2)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.0)(tsx@4.20.6)(yaml@2.8.1))
+      '@joshwooding/vite-plugin-react-docgen-typescript': 0.5.0(typescript@5.9.3)(vite@6.3.6(@types/node@24.6.2)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.0)(tsx@4.20.6)(yaml@2.8.1))
       '@rollup/pluginutils': 5.3.0(rollup@4.52.3)
-      '@storybook/builder-vite': 8.6.14(storybook@8.6.14(bufferutil@4.0.9)(prettier@3.6.2)(utf-8-validate@5.0.10))(vite@7.1.8(@types/node@24.6.2)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.0)(tsx@4.20.6)(yaml@2.8.1))
+      '@storybook/builder-vite': 8.6.14(storybook@8.6.14(bufferutil@4.0.9)(prettier@3.6.2)(utf-8-validate@5.0.10))(vite@6.3.6(@types/node@24.6.2)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.0)(tsx@4.20.6)(yaml@2.8.1))
       '@storybook/react': 8.6.14(@storybook/test@8.6.14(storybook@8.6.14(bufferutil@4.0.9)(prettier@3.6.2)(utf-8-validate@5.0.10)))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(storybook@8.6.14(bufferutil@4.0.9)(prettier@3.6.2)(utf-8-validate@5.0.10))(typescript@5.9.3)
       find-up: 5.0.0
       magic-string: 0.30.19
@@ -28804,7 +28820,7 @@ snapshots:
       resolve: 1.22.10
       storybook: 8.6.14(bufferutil@4.0.9)(prettier@3.6.2)(utf-8-validate@5.0.10)
       tsconfig-paths: 4.2.0
-      vite: 7.1.8(@types/node@24.6.2)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.0)(tsx@4.20.6)(yaml@2.8.1)
+      vite: 6.3.6(@types/node@24.6.2)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.0)(tsx@4.20.6)(yaml@2.8.1)
     optionalDependencies:
       '@storybook/test': 8.6.14(storybook@8.6.14(bufferutil@4.0.9)(prettier@3.6.2)(utf-8-validate@5.0.10))
     transitivePeerDependencies:
@@ -30434,7 +30450,7 @@ snapshots:
       '@noble/hashes': 1.7.0
       '@walletconnect/safe-json': 1.0.2
       '@walletconnect/time': 1.0.2
-      uint8arrays: 3.1.1
+      uint8arrays: 3.1.0
 
   '@walletconnect/safe-json@1.0.2':
     dependencies:
@@ -31493,14 +31509,6 @@ snapshots:
   aws-sign2@0.7.0: {}
 
   aws4@1.13.2: {}
-
-  axios@1.12.2:
-    dependencies:
-      follow-redirects: 1.15.11(debug@4.3.7)
-      form-data: 4.0.4
-      proxy-from-env: 1.1.0
-    transitivePeerDependencies:
-      - debug
 
   axios@1.12.2(debug@4.4.3):
     dependencies:
@@ -33718,7 +33726,7 @@ snapshots:
   engine.io-client@6.6.3(bufferutil@4.0.9)(utf-8-validate@5.0.10):
     dependencies:
       '@socket.io/component-emitter': 3.1.2
-      debug: 4.3.7
+      debug: 4.3.4
       engine.io-parser: 5.2.3
       ws: 8.17.1(bufferutil@4.0.9)(utf-8-validate@5.0.10)
       xmlhttprequest-ssl: 2.1.2
@@ -35854,7 +35862,7 @@ snapshots:
   http-proxy@1.18.1:
     dependencies:
       eventemitter3: 4.0.7
-      follow-redirects: 1.15.11(debug@4.3.7)
+      follow-redirects: 1.15.11(debug@4.4.3)
       requires-port: 1.0.0
     transitivePeerDependencies:
       - debug
@@ -39183,7 +39191,7 @@ snapshots:
       '@yarnpkg/lockfile': 1.1.0
       '@yarnpkg/parsers': 3.0.2
       '@zkochan/js-yaml': 0.0.7
-      axios: 1.12.2
+      axios: 1.12.2(debug@4.4.3)
       chalk: 4.1.2
       cli-cursor: 3.1.0
       cli-spinners: 2.6.1
@@ -39235,7 +39243,7 @@ snapshots:
       '@yarnpkg/lockfile': 1.1.0
       '@yarnpkg/parsers': 3.0.2
       '@zkochan/js-yaml': 0.0.7
-      axios: 1.12.2
+      axios: 1.12.2(debug@4.4.3)
       chalk: 4.1.2
       cli-cursor: 3.1.0
       cli-spinners: 2.6.1
@@ -42004,7 +42012,7 @@ snapshots:
   socket.io-client@4.8.1(bufferutil@4.0.9)(utf-8-validate@5.0.10):
     dependencies:
       '@socket.io/component-emitter': 3.1.2
-      debug: 4.3.7
+      debug: 4.3.4
       engine.io-client: 6.6.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)
       socket.io-parser: 4.2.4
     transitivePeerDependencies:
@@ -42015,7 +42023,7 @@ snapshots:
   socket.io-parser@4.2.4:
     dependencies:
       '@socket.io/component-emitter': 3.1.2
-      debug: 4.3.7
+      debug: 4.3.4
     transitivePeerDependencies:
       - supports-color
 
