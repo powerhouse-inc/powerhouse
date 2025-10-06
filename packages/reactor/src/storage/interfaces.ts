@@ -1,5 +1,17 @@
 import type { Operation, PHDocumentHeader } from "document-model";
 
+export type OperationContext = {
+  documentId: string;
+  documentType: string;
+  scope: string;
+  branch: string;
+};
+
+export type OperationWithContext = {
+  operation: Operation;
+  context: OperationContext;
+};
+
 export class DuplicateOperationError extends Error {
   constructor(opId: string) {
     super(`Operation with opId ${opId} already exists`);
@@ -36,6 +48,7 @@ export type DocumentRevisions = {
 export interface IOperationStore {
   apply(
     documentId: string,
+    documentType: string,
     scope: string,
     branch: string,
     revision: number,
@@ -49,7 +62,7 @@ export interface IOperationStore {
     branch: string,
     revision: number,
     signal?: AbortSignal,
-  ): Promise<Operation>;
+  ): Promise<OperationWithContext>;
 
   getSince(
     documentId: string,
@@ -57,7 +70,7 @@ export interface IOperationStore {
     branch: string,
     revision: number,
     signal?: AbortSignal,
-  ): Promise<Operation[]>;
+  ): Promise<OperationWithContext[]>;
 
   getSinceTimestamp(
     documentId: string,
@@ -65,9 +78,9 @@ export interface IOperationStore {
     branch: string,
     timestampUtcMs: number,
     signal?: AbortSignal,
-  ): Promise<Operation[]>;
+  ): Promise<OperationWithContext[]>;
 
-  getSinceId(id: number, signal?: AbortSignal): Promise<Operation[]>;
+  getSinceId(id: number, signal?: AbortSignal): Promise<OperationWithContext[]>;
 
   /**
    * Gets the latest operation index for each scope of a document, along with
@@ -136,7 +149,7 @@ export interface IDocumentView {
   /**
    * Indexes a list of operations.
    */
-  indexOperations(operations: Operation[]): Promise<void>;
+  indexOperations(items: OperationWithContext[]): Promise<void>;
 
   /**
    * Retrieves a document header by reconstructing it from operations across all scopes.

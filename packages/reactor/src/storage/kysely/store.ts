@@ -6,6 +6,7 @@ import {
   type AtomicTxn,
   type DocumentRevisions,
   type IOperationStore,
+  type OperationWithContext,
 } from "../interfaces.js";
 import { AtomicTransaction } from "../txn.js";
 import type { Database, OperationRow } from "./types.js";
@@ -15,6 +16,7 @@ export class KyselyOperationStore implements IOperationStore {
 
   async apply(
     documentId: string,
+    documentType: string,
     scope: string,
     branch: string,
     revision: number,
@@ -47,6 +49,7 @@ export class KyselyOperationStore implements IOperationStore {
       // Create atomic transaction
       const atomicTxn = new AtomicTransaction(
         documentId,
+        documentType,
         scope,
         branch,
         revision,
@@ -90,7 +93,7 @@ export class KyselyOperationStore implements IOperationStore {
     branch: string,
     index: number,
     signal?: AbortSignal,
-  ): Promise<Operation> {
+  ): Promise<OperationWithContext> {
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
@@ -110,7 +113,7 @@ export class KyselyOperationStore implements IOperationStore {
       );
     }
 
-    return this.rowToOperation(row);
+    return this.rowToOperationWithContext(row);
   }
 
   async getSince(
@@ -119,7 +122,7 @@ export class KyselyOperationStore implements IOperationStore {
     branch: string,
     index: number,
     signal?: AbortSignal,
-  ): Promise<Operation[]> {
+  ): Promise<OperationWithContext[]> {
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
@@ -134,7 +137,7 @@ export class KyselyOperationStore implements IOperationStore {
       .orderBy("index", "asc")
       .execute();
 
-    return rows.map((row) => this.rowToOperation(row));
+    return rows.map((row) => this.rowToOperationWithContext(row));
   }
 
   async getSinceTimestamp(
@@ -143,7 +146,7 @@ export class KyselyOperationStore implements IOperationStore {
     branch: string,
     timestampUtcMs: number,
     signal?: AbortSignal,
-  ): Promise<Operation[]> {
+  ): Promise<OperationWithContext[]> {
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
@@ -158,10 +161,13 @@ export class KyselyOperationStore implements IOperationStore {
       .orderBy("index", "asc")
       .execute();
 
-    return rows.map((row) => this.rowToOperation(row));
+    return rows.map((row) => this.rowToOperationWithContext(row));
   }
 
-  async getSinceId(id: number, signal?: AbortSignal): Promise<Operation[]> {
+  async getSinceId(
+    id: number,
+    signal?: AbortSignal,
+  ): Promise<OperationWithContext[]> {
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
@@ -173,7 +179,7 @@ export class KyselyOperationStore implements IOperationStore {
       .orderBy("id", "asc")
       .execute();
 
-    return rows.map((row) => this.rowToOperation(row));
+    return rows.map((row) => this.rowToOperationWithContext(row));
   }
 
   async getRevisions(
@@ -224,16 +230,24 @@ export class KyselyOperationStore implements IOperationStore {
     };
   }
 
-  private rowToOperation(row: OperationRow): Operation {
+  private rowToOperationWithContext(row: OperationRow): OperationWithContext {
     return {
-      index: row.index,
-      timestampUtcMs: row.timestampUtcMs.toISOString(),
-      hash: row.hash,
-      skip: row.skip,
-      error: row.error || undefined,
-      resultingState: row.resultingState || undefined,
-      id: row.opId,
-      action: JSON.parse(row.action) as Operation["action"],
+      operation: {
+        index: row.index,
+        timestampUtcMs: row.timestampUtcMs.toISOString(),
+        hash: row.hash,
+        skip: row.skip,
+        error: row.error || undefined,
+        resultingState: row.resultingState || undefined,
+        id: row.opId,
+        action: JSON.parse(row.action) as Operation["action"],
+      },
+      context: {
+        documentId: row.documentId,
+        documentType: row.documentType,
+        scope: row.scope,
+        branch: row.branch,
+      },
     };
   }
 }

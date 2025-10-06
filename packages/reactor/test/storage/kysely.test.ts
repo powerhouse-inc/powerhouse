@@ -35,6 +35,7 @@ describe("KyselyOperationStore", () => {
         col.notNull().defaultTo(new Date()),
       )
       .addColumn("documentId", "text", (col) => col.notNull())
+      .addColumn("documentType", "text", (col) => col.notNull())
       .addColumn("scope", "text", (col) => col.notNull())
       .addColumn("branch", "text", (col) => col.notNull())
       .addColumn("timestampUtcMs", "timestamptz", (col) => col.notNull())
@@ -88,7 +89,8 @@ describe("KyselyOperationStore", () => {
       });
 
       // First operation (revision 0)
-      await store.apply(documentId, scope, branch, 0, (txn) => {
+      const documentType = "powerhouse/document-drive";
+      await store.apply(documentId, documentType, scope, branch, 0, (txn) => {
         const op: Operation = {
           index: 0,
           timestampUtcMs: new Date().toISOString(),
@@ -101,10 +103,18 @@ describe("KyselyOperationStore", () => {
       });
 
       // Verify operation was stored
-      const retrievedOp = await store.get(documentId, scope, branch, 0);
-      expect(retrievedOp.id).toBe(opId);
-      expect(retrievedOp.action.type).toBe("ADD_FOLDER");
-      expect(retrievedOp.action.input).toHaveProperty("name", "Test Folder");
+      const { operation, context } = await store.get(
+        documentId,
+        scope,
+        branch,
+        0,
+      );
+      expect(operation.id).toBe(opId);
+      expect(operation.action.type).toBe("ADD_FOLDER");
+      expect(operation.action.input).toHaveProperty("name", "Test Folder");
+      expect(context.documentId).toBe(documentId);
+      expect(context.scope).toBe(scope);
+      expect(context.branch).toBe(branch);
     });
 
     it("should enforce revision ordering", async () => {
@@ -118,8 +128,9 @@ describe("KyselyOperationStore", () => {
       });
 
       // Try to apply operation with wrong revision
+      const documentType = "powerhouse/document-drive";
       await expect(
-        store.apply(documentId, scope, branch, 5, (txn) => {
+        store.apply(documentId, documentType, scope, branch, 5, (txn) => {
           txn.addOperations({
             index: 5,
             timestampUtcMs: new Date().toISOString(),
@@ -154,15 +165,17 @@ describe("KyselyOperationStore", () => {
         action,
       };
 
+      const documentType = "powerhouse/document-drive";
+
       // First insert should succeed
-      await store.apply(documentId, scope, branch, 0, (txn) => {
+      await store.apply(documentId, documentType, scope, branch, 0, (txn) => {
         txn.addOperations(op);
       });
 
       // Second insert with same ID should fail
       const secondDocId = generateId();
       await expect(
-        store.apply(secondDocId, scope, branch, 0, (txn) => {
+        store.apply(secondDocId, documentType, scope, branch, 0, (txn) => {
           txn.addOperations({ ...op, index: 0 });
         }),
       ).rejects.toThrow(DuplicateOperationError);
@@ -193,18 +206,28 @@ describe("KyselyOperationStore", () => {
         error: undefined,
       };
 
-      await store.apply(documentId, scope, branch, 0, (txn) => {
+      const documentType = "powerhouse/document-drive";
+
+      await store.apply(documentId, documentType, scope, branch, 0, (txn) => {
         txn.addOperations(originalOp);
       });
 
-      const retrievedOp = await store.get(documentId, scope, branch, 0);
+      const { operation, context } = await store.get(
+        documentId,
+        scope,
+        branch,
+        0,
+      );
 
-      expect(retrievedOp.index).toBe(0);
-      expect(retrievedOp.id).toBe(opId);
-      expect(retrievedOp.hash).toBe("test-hash");
-      expect(retrievedOp.action.type).toBe("DELETE_NODE");
-      expect(retrievedOp.action.input).toEqual({ id: nodeId });
-      expect(retrievedOp.resultingState).toBe(JSON.stringify({ nodes: [] }));
+      expect(operation.index).toBe(0);
+      expect(operation.id).toBe(opId);
+      expect(operation.hash).toBe("test-hash");
+      expect(operation.action.type).toBe("DELETE_NODE");
+      expect(operation.action.input).toEqual({ id: nodeId });
+      expect(operation.resultingState).toBe(JSON.stringify({ nodes: [] }));
+      expect(context.documentId).toBe(documentId);
+      expect(context.scope).toBe(scope);
+      expect(context.branch).toBe(branch);
     });
 
     it("should throw error for non-existent operation", async () => {
@@ -220,6 +243,7 @@ describe("KyselyOperationStore", () => {
       const documentId = generateId();
       const scope = "global";
       const branch = "main";
+      const documentType = "powerhouse/document-drive";
 
       // Add multiple operations
       const operations = [];
@@ -240,7 +264,7 @@ describe("KyselyOperationStore", () => {
         };
         operations.push(op);
 
-        await store.apply(documentId, scope, branch, i, (txn) => {
+        await store.apply(documentId, documentType, scope, branch, i, (txn) => {
           txn.addOperations(op);
         });
       }
@@ -248,15 +272,19 @@ describe("KyselyOperationStore", () => {
       // Get operations since revision 0 (should return operations at revision 1 and 2)
       const result = await store.getSince(documentId, scope, branch, 0);
       expect(result).toHaveLength(2);
-      expect(result[0].index).toBe(1);
-      expect(result[1].index).toBe(2);
-      expect(result[0].action.type).toBe("ADD_FOLDER");
+      expect(result[0].operation.index).toBe(1);
+      expect(result[1].operation.index).toBe(2);
+      expect(result[0].operation.action.type).toBe("ADD_FOLDER");
+      expect(result[0].context.documentId).toBe(documentId);
+      expect(result[0].context.scope).toBe(scope);
+      expect(result[0].context.branch).toBe(branch);
     });
 
     it("should return empty array when no operations since revision", async () => {
       const documentId = generateId();
       const scope = "global";
       const branch = "main";
+      const documentType = "powerhouse/document-drive";
 
       // Add one operation at revision 0
       const action = addFile({
@@ -266,7 +294,7 @@ describe("KyselyOperationStore", () => {
         parentFolder: null,
       });
 
-      await store.apply(documentId, scope, branch, 0, (txn) => {
+      await store.apply(documentId, documentType, scope, branch, 0, (txn) => {
         txn.addOperations({
           index: 0,
           timestampUtcMs: new Date().toISOString(),
@@ -288,6 +316,7 @@ describe("KyselyOperationStore", () => {
       const documentId = generateId();
       const scope = "global";
       const branch = "main";
+      const documentType = "powerhouse/document-drive";
 
       // Add some operations
       for (let i = 0; i < 2; i++) {
@@ -295,7 +324,7 @@ describe("KyselyOperationStore", () => {
           name: `Drive ${i}`,
         });
 
-        await store.apply(documentId, scope, branch, i, (txn) => {
+        await store.apply(documentId, documentType, scope, branch, i, (txn) => {
           txn.addOperations({
             index: i,
             timestampUtcMs: new Date().toISOString(),
@@ -318,8 +347,11 @@ describe("KyselyOperationStore", () => {
 
       // Should get both operations since they were created after 2020
       expect(result.length).toBe(2);
-      expect(result[0].action.type).toBe("SET_DRIVE_NAME");
-      expect(result[1].action.type).toBe("SET_DRIVE_NAME");
+      expect(result[0].operation.action.type).toBe("SET_DRIVE_NAME");
+      expect(result[1].operation.action.type).toBe("SET_DRIVE_NAME");
+      expect(result[0].context.documentId).toBe(documentId);
+      expect(result[0].context.scope).toBe(scope);
+      expect(result[0].context.branch).toBe(branch);
     });
 
     it("should return empty array when no operations since timestamp", async () => {
@@ -345,6 +377,7 @@ describe("KyselyOperationStore", () => {
       const documentId = generateId();
       const scope = "global";
       const branch = "main";
+      const documentType = "powerhouse/document-drive";
 
       // Add multiple operations to get database IDs
       for (let i = 0; i < 3; i++) {
@@ -352,7 +385,7 @@ describe("KyselyOperationStore", () => {
           id: generateId(),
         });
 
-        await store.apply(documentId, scope, branch, i, (txn) => {
+        await store.apply(documentId, documentType, scope, branch, i, (txn) => {
           txn.addOperations({
             index: i,
             timestampUtcMs: new Date().toISOString(),
@@ -373,8 +406,9 @@ describe("KyselyOperationStore", () => {
       const result = await store.getSinceId(1); // Assuming first DB ID is 1
 
       expect(result.length).toBeGreaterThanOrEqual(1);
-      result.forEach((op) => {
-        expect(op.action.type).toBe("DELETE_NODE");
+      result.forEach((item) => {
+        expect(item.operation.action.type).toBe("DELETE_NODE");
+        expect(item.context.documentId).toBe(documentId);
       });
     });
   });
@@ -384,10 +418,12 @@ describe("KyselyOperationStore", () => {
       const controller = new AbortController();
       controller.abort();
       const documentId = generateId();
+      const documentType = "powerhouse/document-drive";
 
       await expect(
         store.apply(
           documentId,
+          documentType,
           "global",
           "main",
           0,

@@ -1,4 +1,4 @@
-import type { Operation, PHDocumentHeader } from "document-model";
+import type { PHDocumentHeader } from "document-model";
 import { createPresignedHeader } from "document-model/core";
 import type { Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
@@ -6,6 +6,7 @@ import type {
   DocumentSnapshot,
   IDocumentView,
   IOperationStore,
+  OperationWithContext,
 } from "../storage/interfaces.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
 import type {
@@ -16,26 +17,6 @@ import type {
 
 // Combine both database schemas
 type Database = StorageDatabase & DocumentViewDatabase;
-
-// Extended operation type with database fields
-interface OperationWithDbId extends Operation {
-  dbId?: number;
-  documentId?: string;
-  scope?: string;
-  branch?: string;
-}
-
-// Action types for type-safe access
-interface BaseAction {
-  type: string;
-  scope?: string;
-  documentType?: string;
-  input?: {
-    slug?: string;
-    [key: string]: unknown;
-  };
-  [key: string]: unknown;
-}
 
 export class KyselyDocumentView implements IDocumentView {
   private lastOperationId: number = 0;
@@ -83,17 +64,14 @@ export class KyselyDocumentView implements IDocumentView {
     }
   }
 
-  async indexOperations(operations: Operation[]): Promise<void> {
-    if (operations.length === 0) return;
+  async indexOperations(items: OperationWithContext[]): Promise<void> {
+    if (items.length === 0) return;
 
     await this.db.transaction().execute(async (trx) => {
-      // Track the highest database ID we've seen
-      let maxDbId = this.lastOperationId;
-
-      for (const operation of operations) {
-        // Extract document metadata from the operation
-        const parsed = this.parseOperation(operation);
-        const { documentId, scope, branch, index, action } = parsed;
+      for (const item of items) {
+        const { operation, context } = item;
+        const { documentId, scope, branch, documentType } = context;
+        const { index, hash, action } = operation;
 
         // Check if we need to create or update a snapshot
         const existingSnapshot = await trx
@@ -110,7 +88,7 @@ export class KyselyDocumentView implements IDocumentView {
             .updateTable("DocumentSnapshot")
             .set({
               lastOperationIndex: index,
-              lastOperationHash: operation.hash,
+              lastOperationHash: hash,
               lastUpdatedAt: new Date(),
               snapshotVersion: existingSnapshot.snapshotVersion + 1,
             })
@@ -128,9 +106,9 @@ export class KyselyDocumentView implements IDocumentView {
             scope,
             branch,
             content: JSON.stringify({}), // Empty for now, will be filled when we build full documents
-            documentType: this.extractDocumentType(action),
+            documentType,
             lastOperationIndex: index,
-            lastOperationHash: operation.hash,
+            lastOperationHash: hash,
             identifiers: null,
             metadata: null,
             deletedAt: null,
@@ -141,7 +119,8 @@ export class KyselyDocumentView implements IDocumentView {
 
         // Update slug mapping if the action contains slug information
         if (action.type === "SET_SLUG" || action.type === "CREATE") {
-          const slug = this.extractSlug(action);
+          const input = action.input as any;
+          const slug = input?.slug;
           if (slug) {
             const existingMapping = await trx
               .selectFrom("SlugMapping")
@@ -172,24 +151,6 @@ export class KyselyDocumentView implements IDocumentView {
             }
           }
         }
-        // Update max database ID if this operation has one
-        const opWithDbId = operation as OperationWithDbId;
-        if (typeof opWithDbId.dbId === "number" && opWithDbId.dbId > maxDbId) {
-          maxDbId = opWithDbId.dbId;
-        }
-      }
-
-      // Update the last operation ID if we processed operations from the database
-      if (maxDbId > this.lastOperationId) {
-        this.lastOperationId = maxDbId;
-
-        await trx
-          .updateTable("ViewState")
-          .set({
-            lastOperationId: this.lastOperationId,
-            lastOperationTimestamp: new Date(),
-          })
-          .execute();
       }
     });
   }
@@ -443,62 +404,5 @@ export class KyselyDocumentView implements IDocumentView {
     } catch {
       return false;
     }
-  }
-
-  private parseOperation(operation: Operation): {
-    documentId: string;
-    scope: string;
-    branch: string;
-    index: number;
-    action: BaseAction;
-  } {
-    const opWithDbFields = operation as OperationWithDbId;
-
-    // Handle operations from database (which have documentId, scope, branch at root level)
-    // vs operations from memory
-    if (
-      "documentId" in opWithDbFields &&
-      typeof opWithDbFields.documentId === "string"
-    ) {
-      return {
-        documentId: opWithDbFields.documentId,
-        scope: opWithDbFields.scope || "global",
-        branch: opWithDbFields.branch || "main",
-        index: opWithDbFields.index,
-        action: opWithDbFields.action as BaseAction,
-      };
-    }
-
-    // Extract from action for in-memory operations
-    const action = operation.action as BaseAction;
-    const actionWithDocId = action as BaseAction & {
-      documentId?: string;
-      branch?: string;
-    };
-
-    return {
-      documentId: actionWithDocId.documentId || "",
-      scope: action.scope || "global",
-      branch: actionWithDocId.branch || "main",
-      index: operation.index,
-      action,
-    };
-  }
-
-  private extractDocumentType(action: BaseAction): string {
-    // Extract document type from action
-    // This would need to be customized based on your action structure
-    return action.documentType || "unknown";
-  }
-
-  private extractSlug(action: BaseAction): string | null {
-    // Extract slug from action if present
-    if (action.type === "SET_SLUG") {
-      return action.input?.slug || null;
-    }
-    if (action.type === "CREATE" && action.input?.slug) {
-      return action.input.slug;
-    }
-    return null;
   }
 }

@@ -7,6 +7,7 @@ export interface OperationTable {
   prevOpId: string;
   writeTimestampUtcMs: Generated<Date>;
   documentId: string;
+  documentType: string;
   scope: string;
   branch: string;
   timestampUtcMs: Date;
