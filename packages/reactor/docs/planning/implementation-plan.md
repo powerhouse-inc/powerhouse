@@ -4,7 +4,7 @@ This document outlines the plan to refactor the existing `document-drive` packag
 
 All new development will take place in the `packages/reactor` directory, providing a clean separation from the existing `document-drive` codebase.
 
-## Phase 1: Foundational `PHDocument` Refactoring
+## Phase 1 (✅ Completed): Foundational `PHDocument` Refactoring
 
 Before building any new `Reactor` components, we must first refactor the core data structure, `PHDocument`, within the existing `document-drive` package. This is a significant breaking change that must be handled in isolation.
 
@@ -17,7 +17,7 @@ Before building any new `Reactor` components, we must first refactor the core da
 3.  **Update All Consumers**:
     - Systematically update all application code that currently consumes `BaseDocumentDriveServer` or interacts with the old `PHDocument` structure. This includes UI components, utilities, and tests. This is a breaking change across the codebase, and all affected code must be updated to be compatible with `PHDocument` v2.
 
-## Phase 2: The `IReactor` Facade ([Strangler Fig](https://learn.microsoft.com/en-us/azure/architecture/patterns/strangler-fig) Pattern)
+## Phase 2 (✅ Completed): The `IReactor` Facade ([Strangler Fig](https://learn.microsoft.com/en-us/azure/architecture/patterns/strangler-fig) Pattern)
 
 With the `PHDocument` structure stabilized, we can now create the `IReactor` interface as a facade.
 
@@ -28,7 +28,7 @@ With the `PHDocument` structure stabilized, we can now create the `IReactor` int
     - Internally, this class will wrap the newly-refactored `BaseDocumentDriveServer`.
     - **Crucially**: No complex data translation is needed. The facade is now a simple pass-through for `PHDocument` objects, as the underlying server already speaks v2.
 
-## Phase 2.5: Shift Facade Reads to Legacy Storage Directly
+## Phase 2.5 (✅ Completed): Shift Facade Reads to Legacy Storage Directly
 
 Before building the async write pipeline, decouple the facade's read-path from `BaseDocumentDriveServer` by calling existing legacy storage interfaces directly (no new abstractions).
 
@@ -47,21 +47,44 @@ Before building the async write pipeline, decouple the facade's read-path from `
 
 Outcome: The facade no longer depends on `BaseDocumentDriveServer` for reads, making Phase 3 simpler and reducing churn later when repointing to `IDocumentView`.
 
-## Phase 3: Implement Core Write Path Components
+## Phase 3 (✅ Completed): Implement Core Write Path Components
 
 This phase proceeds as before: building the new asynchronous pipeline for handling mutations.
 
 1.  **Implement `IEventBus`**, **`IQueue`**, and **`IJobExecutorManager`**:
     - Within `packages/reactor`, define and implement these core components as planned.
 
-## Phase 4: Connect Facade to Legacy Write Path
+## Phase 3.5 (⚠️ In Progress): Introduce CREATE/UPDATE Action Flow
+
+To enable proper command-sourced document creation, introduce a standardized action-based flow for document lifecycle operations.
+
+1.  **Define CREATE Action** (✅ Completed):
+    - Introduce a `CREATE` action type that initializes a new document with its header and initial state.
+    - The action should contain all necessary information to bootstrap a document (id, documentType, initial metadata, etc.).
+2.  **Define UPDATE Action** (✅ Completed):
+    - Introduce an `UPDATE` action type for modifying existing documents.
+    - Together with `CREATE`, this forms the complete action-based document lifecycle.
+3.  **Update Document Model Reducers** (✅ Completed):
+    - Ensure document model reducers properly handle both `CREATE` and `UPDATE` actions.
+    - `CREATE` actions should generate proper operations that can be stored and replayed.
+4.  **Remove Legacy Creation Hacks** (⚠️ In Progress):
+    - This enables removing hacks in `KyselyOperationStore.reconstructHeader()` which currently handles fake "CREATE_HEADER" and "UPDATE_HEADER" action types (store.ts:145-172).
+    - With proper `CREATE` actions, document headers can be reconstructed from real operations.
+
+**Outcome**: Document creation now flows through the same action-based pipeline as mutations, enabling full event sourcing and eliminating the need for special-case document creation logic.
+
+## Phase 4 (⚠️ In Progress): Connect Facade to Legacy Write Path
 
 Instead of a "big bang" switch, we first validate the new job pipeline while still relying on the legacy storage system as the source of truth.
 
-1.  **Update `Reactor` Facade Mutations**:
-    - Modify the facade's mutation methods to package requests as `Job`s and `enqueue` them into the new `IQueue`.
-2.  **Executor Writes to Legacy Storage**:
-    - Configure the `IJobExecutor` to take the legacy `IDriveOperationStorage` as a dependency. After processing a job, it will write the resulting `Operation`s back to the existing legacy database.
+1.  **Update `Reactor` Facade Mutations** (⚠️ Partially Complete):
+    - ✅ The `mutate()` method packages actions as `Job`s and enqueues them into `IQueue` (reactor.ts:370-404)
+    - ❌ The `create()` method still calls `BaseDocumentDriveServer.addDocument()` directly and returns synchronous job completion (reactor.ts:295-325)
+    - ❌ The `deleteDocument()` method still calls `BaseDocumentDriveServer.deleteDocument()` directly and returns synchronous job completion (reactor.ts:330-365)
+    - **TODO**: Refactor `create()` and `deleteDocument()` to use the queue pipeline
+2.  **Executor Writes to Legacy Storage** (✅ Complete):
+    - ✅ `SimpleJobExecutor` takes `IDocumentOperationStorage` as a constructor dependency (simple-job-executor.ts:15-18)
+    - ✅ After processing a job, it writes the resulting `Operation`s to legacy storage via `operationStorage.addDocumentOperations()` (simple-job-executor.ts:66-70)
     - **Goal**: This validates the entire `Facade -> Queue -> Executor` pipeline is working correctly before introducing any new storage.
 
 ## Phase 5: Introduce `IOperationStore` with Dual-Writing
