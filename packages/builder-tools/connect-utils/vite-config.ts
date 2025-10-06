@@ -1,7 +1,9 @@
 import { phExternalPackagesPlugin } from "@powerhousedao/builder-tools";
+import { getConfig } from "@powerhousedao/config/node";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwind from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import { join } from "node:path";
 import {
   loadEnv,
   type HtmlTagDescriptor,
@@ -89,7 +91,13 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const mode = options.mode;
   const envDir = options.envDir ?? options.dirname;
   const fileEnv = loadEnv(mode, envDir, "PH_");
-  const env = { ...process.env, ...fileEnv } as Partial<ConnectEnv>;
+  const env = { ...fileEnv, ...process.env } as Partial<ConnectEnv>;
+
+  // load powerhouse config
+  const phConfigPath =
+    env.PH_CONFIG_PATH ?? join(options.dirname, "powerhouse.config.json");
+
+  const phConfig = options.powerhouseConfig ?? getConfig(phConfigPath);
 
   // load packages from env variable
   const phPackagesStr = env.PH_PACKAGES || "";
@@ -97,7 +105,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
 
   // loadPackages from config
   const configPhPackages =
-    options.powerhouseConfig?.packages?.map((p) =>
+    phConfig.packages?.map((p) =>
       typeof p === "string" ? p : p.packageName,
     ) || [];
 
