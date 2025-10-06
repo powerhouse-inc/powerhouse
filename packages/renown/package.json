@@ -30,9 +30,11 @@
   },
   "dependencies": {
     "@didtools/key-did": "^1.0.0",
-    "did-jwt": "^8.0.14",
+    "did-jwt": "^8.0.18",
     "did-jwt-vc": "^4.0.12",
+    "did-key-creator": "^1.2.0",
     "did-resolver": "^4.1.0",
-    "key-did-resolver": "^4.0.0"
+    "key-did-resolver": "^4.0.0",
+    "uint8arrays": "^5.1.0"
   }
 }
