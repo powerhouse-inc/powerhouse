@@ -75,7 +75,7 @@ export async function handlePackageEvents(
 }
 
 export function useSubscribeToVetraPackages() {
-  const hmrRef = useRef<ViteHotContext>();
+  const hmrRef = useRef<ViteHotContext>(undefined);
 
   useEffect(() => {
     const handler = async (data: PackagesUpdate) => {

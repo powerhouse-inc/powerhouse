@@ -25,7 +25,7 @@ exports[`ConnectSearchBar Component > should match snapshot 1`] = `
       aria-haspopup="menu"
       class="ml-3 flex h-full flex-row items-center outline-none"
       data-state="closed"
-      id="radix-:r0:"
+      id="radix-_r_0_"
       type="button"
     >
       <div

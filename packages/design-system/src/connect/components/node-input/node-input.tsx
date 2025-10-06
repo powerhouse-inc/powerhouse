@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { twMerge } from "tailwind-merge";
 import { useEventListener, useOnClickOutside } from "usehooks-ts";
 
@@ -25,7 +25,7 @@ export function NodeInput(props: Props) {
 
   const ref = useRef<HTMLInputElement>(null);
 
-  useOnClickOutside(ref, handleSubmit);
+  useOnClickOutside(ref as RefObject<HTMLElement>, handleSubmit);
 
   useEventListener("keyup", (e) => {
     if (e.key === "Enter") {

@@ -1,11 +1,11 @@
-import type { MutableRefObject, RefObject } from "react";
+import type { RefObject } from "react";
 import { useCallback, useEffect, useState } from "react";
 
 type Props = {
   selectedItemNumber: number | undefined;
-  tableContainerRef: RefObject<HTMLDivElement>;
-  rowRefs: MutableRefObject<(HTMLTableRowElement | null)[]>;
-  headerRef: RefObject<HTMLTableSectionElement>;
+  tableContainerRef: RefObject<HTMLDivElement | null>;
+  rowRefs: RefObject<(HTMLTableRowElement | null)[]>;
+  headerRef: RefObject<HTMLTableSectionElement | null>;
   hasSpecialLastRow?: boolean;
 };
 

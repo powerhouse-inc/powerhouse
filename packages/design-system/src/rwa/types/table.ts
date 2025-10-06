@@ -8,7 +8,7 @@ import type {
   tableNames,
 } from "@powerhousedao/design-system";
 import type { Identifier, Order } from "natural-orderby";
-import type { ReactNode, RefObject } from "react";
+import type { JSX, ReactNode, RefObject } from "react";
 
 export type ColumnCountByTableWidth = Record<number, number>;
 
@@ -36,6 +36,7 @@ export type TableColumn = {
 
 export type TableBaseProps = {
   columns: TableColumn[];
+  ref: RefObject<HTMLDivElement | null>;
   tableData: TableItemType<TableName>[] | undefined;
   renderRow: (
     item: TableItemType<TableName>,
@@ -45,7 +46,7 @@ export type TableBaseProps = {
   onClickSort: (key: string, direction: SortDirection) => void;
   children?: ReactNode;
   footer?: ReactNode;
-  headerRef: RefObject<HTMLTableSectionElement>;
+  headerRef: RefObject<HTMLTableSectionElement | null>;
   maxHeight?: string;
   hasSelectedItem?: boolean;
   specialFirstRow?: (columns: TableColumn[]) => JSX.Element;

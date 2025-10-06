@@ -28,28 +28,29 @@
   "devDependencies": {
     "@types/lodash.isequal": "^4.5.8",
     "@types/luxon": "^3.6.2",
-    "@types/react": "^18.3.1",
-    "@types/react-dom": "^18.3.1",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
     "@types/slug": "^5.0.9",
     "@types/wicg-file-system-access": "^2020.9.8",
     "@vitejs/plugin-react": "^5.0.1",
     "@vitest/browser": "^3.2.4",
     "playwright": "^1.51.1",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "vite-plugin-node-polyfills": "^0.24.0",
     "vitest": "^3.2.4",
     "vitest-browser-react": "^1.0.1"
   },
   "peerDependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.2.17",
     "@electric-sql/pglite-react": "^0.2.17",
     "@powerhousedao/analytics-engine-browser": "^0.6.0",
     "@powerhousedao/analytics-engine-core": "^0.5.0",
+    "@powerhousedao/config": "workspace:*",
     "@renown/sdk": "workspace:*",
     "@tanstack/react-query": "^5.49.2",
     "change-case": "^5.4.4",
@@ -58,7 +59,6 @@
     "did-key-creator": "^1.2.0",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
-    "@powerhousedao/config": "workspace:*",
     "fast-deep-equal": "^3.1.3",
     "kysely": "^0.28.2",
     "kysely-pglite-dialect": "^1.1.1",

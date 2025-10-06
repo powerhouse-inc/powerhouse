@@ -14,7 +14,7 @@ import { useCallback, useMemo, useRef } from "react";
 
 // Custom hook for parameter memoization
 function useStableParams<T>(params: T): T {
-  const prevParamsRef = useRef<T>();
+  const prevParamsRef = useRef<T>(null);
 
   return useMemo(() => {
     if (!deepEqual(prevParamsRef.current, params)) {
