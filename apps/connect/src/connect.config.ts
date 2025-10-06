@@ -2,6 +2,7 @@ import { isLogLevel } from "@powerhousedao/config";
 import { getBasePath } from "@powerhousedao/connect";
 import { logger, setLogLevel } from "document-drive";
 
+const APP_VERSION = import.meta.env.PH_CONNECT_VERSION;
 const WARN_OUTDATED_APP =
   import.meta.env.PH_CONNECT_WARN_OUTDATED_APP || "false";
 const PH_CONNECT_STUDIO_MODE =
@@ -37,6 +38,11 @@ const HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS =
 
 const PH_CONNECT_ROUTER_BASENAME = getBasePath() || "/";
 
+const PH_CONNECT_EXTERNAL_PACKAGES_DISABLED =
+  import.meta.env.PH_CONNECT_EXTERNAL_PACKAGES_DISABLED === "true";
+
+const PH_CONNECT_SENTRY_RELEASE =
+  import.meta.env.PH_CONNECT_SENTRY_RELEASE || "";
 const PH_CONNECT_SENTRY_DSN = import.meta.env.PH_CONNECT_SENTRY_DSN || "";
 const PH_CONNECT_SENTRY_ENV = import.meta.env.PH_CONNECT_SENTRY_ENV || "dev";
 const PH_CONNECT_SENTRY_TRACING_ENABLED =
@@ -61,17 +67,18 @@ const PH_CONNECT_DRIVE_ANALYTICS_ENABLED =
 const PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED =
   import.meta.env.PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED || "true";
 
-const LOG_LEVEL = isLogLevel(import.meta.env.LOG_LEVEL)
-  ? import.meta.env.LOG_LEVEL
+const LOG_LEVEL = isLogLevel(import.meta.env.PH_CONNECT_LOG_LEVEL)
+  ? import.meta.env.PH_CONNECT_LOG_LEVEL
   : "info";
 setLogLevel(LOG_LEVEL);
-logger.debug(`Setting log level to ${import.meta.env.LOG_LEVEL}.`);
+logger.debug(`Setting log level to ${LOG_LEVEL}.`);
 
 export const connectConfig = {
-  appVersion: __APP_VERSION__,
+  appVersion: APP_VERSION,
   studioMode: PH_CONNECT_STUDIO_MODE.toString() === "true",
   warnOutdatedApp: WARN_OUTDATED_APP === "true",
   routerBasename: PH_CONNECT_ROUTER_BASENAME,
+  externalPackagesEnabled: !PH_CONNECT_EXTERNAL_PACKAGES_DISABLED,
   analytics: {
     databaseName: PH_CONNECT_ANALYTICS_DATABASE_NAME,
     useWorker: PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED !== "true",
@@ -81,6 +88,7 @@ export const connectConfig = {
       PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED === "true",
   },
   sentry: {
+    release: PH_CONNECT_SENTRY_RELEASE,
     dsn: PH_CONNECT_SENTRY_DSN,
     env: PH_CONNECT_SENTRY_ENV,
     tracing: PH_CONNECT_SENTRY_TRACING_ENABLED === "true",

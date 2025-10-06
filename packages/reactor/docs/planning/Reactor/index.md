@@ -9,8 +9,7 @@ Manages DocumentModels and Documents with an asynchronous interface.
 - [IQueue](../Queue/index.md)
 - [IEventBus](../Events/index.md)
 - [IOperationStore](../Storage/IOperationStore.md)
-- [IEventStore](../Storage/IEventStore.md)
-- [IDocumentView](../Storage/IDocumentView.md)
+- [IWriteCache](../Storage/IWriteCache.md)
 - [IJobExecutor](../Jobs/index.md)
 
 ### Links

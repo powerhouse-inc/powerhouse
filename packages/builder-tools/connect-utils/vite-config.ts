@@ -1,27 +1,17 @@
 import { phExternalPackagesPlugin } from "@powerhousedao/builder-tools";
-import type { PowerhouseConfig } from "@powerhousedao/config";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwind from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { readFileSync } from "node:fs";
-import path from "node:path";
-import type {
-  HtmlTagDescriptor,
+import {
   loadEnv,
-  PluginOption,
-  UserConfig,
+  type HtmlTagDescriptor,
+  type PluginOption,
+  type UserConfig,
 } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 import svgr from "vite-plugin-svgr";
-
-export type IConnectOptions = {
-  dirname: string;
-  env: ReturnType<typeof loadEnv>;
-  powerhouseConfig?: PowerhouseConfig;
-  localPackage?: string | false; // path to local package to be loaded.
-  packageJsonPath?: string;
-};
+import type { ConnectEnv, IConnectOptions } from "./types.js";
 
 export const connectClientConfig = {
   meta: [
@@ -96,11 +86,13 @@ export const connectClientConfig = {
 } as const;
 
 export function getConnectBaseViteConfig(options: IConnectOptions) {
-  const env = options.env;
-  const packageJsonPath =
-    options.packageJsonPath ?? path.resolve(options.dirname, "./package.json");
+  const mode = options.mode;
+  const envDir = options.envDir ?? options.dirname;
+  const fileEnv = loadEnv(mode, envDir, "PH_");
+  const env = { ...process.env, ...fileEnv } as Partial<ConnectEnv>;
+
   // load packages from env variable
-  const phPackagesStr = (process.env.PH_PACKAGES ?? env.PH_PACKAGES) || "";
+  const phPackagesStr = env.PH_PACKAGES || "";
   const envPhPackages = phPackagesStr.split(",");
 
   // loadPackages from config
@@ -114,7 +106,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
 
   // if local package is provided, add it to the packages to be loaded
   const localPackage =
-    options.localPackage ?? process.env.PH_LOCAL_PACKAGE ?? options.dirname;
+    env.PH_LOCAL_PACKAGE ?? options.localPackage ?? options.dirname;
   if (localPackage) {
     allPackages.push(localPackage);
   }
@@ -122,27 +114,13 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   // remove duplicates and empty strings
   const phPackages = [...new Set(allPackages.filter((p) => p.trim().length))];
 
-  let pkg;
-  try {
-    pkg = JSON.parse(readFileSync(packageJsonPath, "utf-8")) as {
-      version: string;
-    };
-  } catch (error) {
-    console.error("Failed to read package.json:", error);
-  }
+  const APP_VERSION = (env.PH_CONNECT_VERSION || "unknown").toString();
+  process.env.PH_CONNECT_VERSION = APP_VERSION;
 
-  const APP_VERSION = (
-    process.env.APP_VERSION ||
-    env.APP_VERSION ||
-    pkg?.version ||
-    "unknown"
-  ).toString();
-
-  const authToken = process.env.SENTRY_AUTH_TOKEN ?? env.SENTRY_AUTH_TOKEN;
-  const org = process.env.SENTRY_ORG ?? env.SENTRY_ORG;
-  const project = process.env.SENTRY_PROJECT ?? env.SENTRY_PROJECT;
-  const release =
-    (process.env.SENTRY_RELEASE ?? env.SENTRY_RELEASE) || APP_VERSION;
+  const authToken = env.PH_SENTRY_AUTH_TOKEN;
+  const org = env.PH_SENTRY_ORG;
+  const project = env.PH_SENTRY_PROJECT;
+  const release = env.PH_CONNECT_SENTRY_RELEASE || APP_VERSION;
   const uploadSentrySourcemaps = authToken && org && project;
 
   const plugins: PluginOption[] = [
@@ -194,6 +172,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const config: UserConfig = {
     base: "./",
     envPrefix: ["PH_CONNECT_"],
+    envDir: envDir,
     optimizeDeps: {
       exclude: ["@electric-sql/pglite"],
     },
@@ -209,12 +188,6 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     },
     worker: {
       format: "es",
-    },
-    define: {
-      // TODO: replace with env variables?
-      __APP_VERSION__: JSON.stringify(APP_VERSION),
-      __SENTRY_RELEASE__: JSON.stringify(release),
-      __REQUIRES_HARD_REFRESH__: false,
     },
   };
   return config;

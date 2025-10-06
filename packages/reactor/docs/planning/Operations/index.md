@@ -7,7 +7,7 @@ An `Operation` is the fundamental unit of change in the Reactor system. These re
 - In a Command Sourcing architecture, Operations correspond to "Commands" - they capture the intent to change the system state.
 - An `Operation` is immutable, ordered (though sometimes reshuffled), and provides complete auditability of all document changes.
 - An `Operation` always applies to a specific document, scope, and branch. See [PHDocument](../PHDocument/index.md) for more information on scopes.
-- Operations are stored in the Command Store and synchronized between clients, while Events (containing the resulting state) are output for downstream aggregates to build their read models.
+- Operations are stored in the Command Store and synchronized between clients.
 
 ### Actions
 
@@ -203,7 +203,7 @@ type Operation = {
 
 ### Schema
 
-See the `[IOperationStore](../Storage/IOperationStore.md)` doc for operations (commands) schema and the `[IEventStore](../Storage/IEventStore.md)` doc for events schema.
+See the `[IOperationStore](../Storage/IOperationStore.md)` doc for operations (commands) schema.
 
 ### Operation Lifecycle
 
@@ -211,7 +211,6 @@ See the `[IOperationStore](../Storage/IOperationStore.md)` doc for operations (c
 graph TD
     Action --> IQueue --> IJobExecutor
     IJobExecutor --> Operation --> IOperationStore
-    IJobExecutor --> Event --> IEventStore
     Event --> ReadModels
 ```
 
@@ -223,11 +222,11 @@ graph TD
 
 4. Command storage - Operations are persisted in the `IOperationStore`, which is synchronized between clients.
 
-5. Event generation - The `IJobExecutor` processes Operations and generates Events containing the resulting state.
+5. Event generation - The `IJobExecutor` processes Operations and generates Operations containing the resulting state.
 
-6. Event storage - Events are persisted in the `IEventStore`.
+6. Operation storage - Operations are persisted in the `IOperationStore`.
 
-7. Read model updates - Events are consumed by downstream aggregates to build their read models.
+7. Read model updates - Operations are consumed by downstream aggregates to build their read models.
 
 ### Idempotency
 
