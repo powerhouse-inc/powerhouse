@@ -109,7 +109,6 @@ export class KyselyOperationStore implements IOperationStore {
       throw new Error(`Document header not found: ${documentId}`);
     }
 
-    // Reconstruct header from operations
     return this.reconstructHeader(headerOps);
   }
 
@@ -142,25 +141,45 @@ export class KyselyOperationStore implements IOperationStore {
     return this.rowToOperation(row);
   }
 
-  // TODO: This is a hack for testing purposes -- these actions do not exist
-  private reconstructHeader(headerOps: OperationRow[]): PHDocumentHeader {
+  private reconstructHeader(
+    orderedHeaderOps: OperationRow[],
+  ): PHDocumentHeader {
     // Start with a base header
     let header = createPresignedHeader();
 
     // Apply each header operation in order
-    for (const op of headerOps) {
+    for (const op of orderedHeaderOps) {
       const action = JSON.parse(op.action) as {
         type: string;
-        input: Partial<PHDocumentHeader>;
+        model?: string;
+        version?: string;
+        signing?: {
+          signature: string;
+          publicKey: JsonWebKey;
+          nonce: string;
+          createdAtUtcIso: string;
+          documentType: string;
+        };
       };
 
-      if (action.type === "CREATE_HEADER") {
-        // Initial header creation
-        header = action.input as PHDocumentHeader;
-      } else if (action.type === "UPDATE_HEADER") {
-        // Header updates
-        const updates = action.input as Partial<PHDocumentHeader>;
-        header = { ...header, ...updates };
+      if (action.type === "CREATE_DOCUMENT") {
+        // Extract header from CREATE_DOCUMENT action's signing parameters
+        if (action.signing) {
+          header = {
+            ...header,
+            id: action.signing.signature, // documentId === signing.signature
+            documentType: action.signing.documentType,
+            createdAtUtcIso: action.signing.createdAtUtcIso,
+            lastModifiedAtUtcIso: action.signing.createdAtUtcIso,
+            sig: {
+              nonce: action.signing.nonce,
+              publicKey: action.signing.publicKey,
+            },
+          };
+        }
+      } else if (action.type === "UPGRADE_DOCUMENT") {
+        // UPGRADE_DOCUMENT doesn't modify header
+        // Version is tracked elsewhere in the document (state or revision)
       }
 
       // Update revision tracking

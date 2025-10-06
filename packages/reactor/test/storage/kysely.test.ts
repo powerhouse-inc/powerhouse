@@ -5,7 +5,7 @@ import {
   driveDocumentModelModule,
   setDriveName,
 } from "document-drive";
-import type { Operation, PHDocumentHeader } from "document-model";
+import type { Operation } from "document-model";
 import { generateId } from "document-model/core";
 import { Kysely } from "kysely";
 import { KyselyPGlite } from "kysely-pglite";
@@ -182,28 +182,28 @@ describe("KyselyOperationStore", () => {
 
       // Create initial header using real document-drive document
       const driveDoc = driveDocumentModelModule.utils.createDocument();
-      const initialHeader: PHDocumentHeader = {
-        ...driveDoc.header,
-        id: documentId,
-        slug: "initial-slug",
-        name: "Initial Name",
-        branch: branch,
-        revision: {},
-        meta: { preferredEditor: "test-editor" },
-      };
+      const createdAtUtcIso = new Date().toISOString();
 
-      // This is not how headers will work, but for now, test that we can store them per scope
+      // Use CREATE_DOCUMENT action with signing parameters
       await store.apply(documentId, "header", branch, 0, (txn) => {
         txn.addOperations({
           index: 0,
-          timestampUtcMs: new Date().toISOString(),
+          timestampUtcMs: createdAtUtcIso,
           hash: "",
           skip: 0,
           action: {
             id: generateId(),
-            type: "CREATE_HEADER",
-            timestampUtcMs: new Date().toISOString(),
-            input: initialHeader,
+            type: "CREATE_DOCUMENT",
+            timestampUtcMs: createdAtUtcIso,
+            model: "powerhouse/document-drive",
+            version: "0.0.0",
+            signing: {
+              signature: documentId,
+              publicKey: driveDoc.header.sig.publicKey,
+              nonce: driveDoc.header.sig.nonce || "",
+              createdAtUtcIso: createdAtUtcIso,
+              documentType: "powerhouse/document-drive",
+            },
             scope: "header",
           },
         });
@@ -212,9 +212,8 @@ describe("KyselyOperationStore", () => {
       // Get header at revision 0
       const header = await store.getHeader(documentId, branch, 0);
       expect(header.id).toBe(documentId);
-      expect(header.name).toBe("Initial Name");
-      expect(header.slug).toBe("initial-slug");
-      expect(header.meta?.preferredEditor).toBe("test-editor");
+      expect(header.documentType).toBe("powerhouse/document-drive");
+      expect(header.createdAtUtcIso).toBe(createdAtUtcIso);
     });
 
     it("should throw error for non-existent document", async () => {
