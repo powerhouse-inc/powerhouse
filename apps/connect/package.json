@@ -30,7 +30,7 @@
       "types": "./lib/src/connect.config.d.ts"
     },
     "./custom.d.ts": "./lib/custom.d.ts",
-    "./styles.css": "./dist/styles.css",
+    "./styles.css": "./lib/styles.css",
     "./assets/*.mp4": "./assets/*.mp4",
     "./assets/*.png": "./assets/*.png",
     "./assets/*.svg": "./assets/*.svg",
@@ -55,8 +55,8 @@
     "lint": "eslint",
     "postinstall": "cp ./package.json ./package.copy.json",
     "dev": "vite dev",
+    "build:css": "npx @tailwindcss/cli -i ./src/index.css -o ./lib/styles.css",
     "build:vite": "vite build",
-    "build:css": "tailwindcss -i ./src/index.css -o ./dist/styles.css",
     "preview": "vite preview",
     "cy:open": "cypress open",
     "docker:build": "docker build -f ./Dockerfile --tag connect-test-dev --build-arg TAG=dev .",
