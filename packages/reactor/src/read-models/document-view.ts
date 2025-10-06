@@ -119,9 +119,12 @@ export class KyselyDocumentView implements IDocumentView {
 
         // Update slug mapping if the action contains slug information
         if (action.type === "SET_SLUG" || action.type === "CREATE") {
-          const input = action.input as any;
-          const slug = input?.slug;
-          if (slug) {
+          const input = action.input as Record<string, unknown> | undefined;
+          const slug =
+            input && typeof input === "object" && "slug" in input
+              ? (input.slug as string)
+              : undefined;
+          if (slug && typeof slug === "string") {
             const existingMapping = await trx
               .selectFrom("SlugMapping")
               .selectAll()
