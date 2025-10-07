@@ -1,6 +1,6 @@
-# IWriteCache
+# IOperationIndex
 
-The goal of the `IWriteCache` is to reduce operations across many related documents into a single stream of operations to optimize the flow of operations to listeners. This allows a `Listener`, for example, to have a simple, optimized cursor to iterate over operations that affect it. Additionally, the object will allow us to reduce the complexity of the storage adapters.
+The goal of the `IOperationIndex` is to reduce operations across many related documents into a single stream of operations to optimize the flow of operations to listeners. This allows a `Listener`, for example, to have a simple, optimized cursor to iterate over operations that affect it. Additionally, the object will allow us to reduce the complexity of the storage adapters.
 
 ### Ideal Command-Sourcing v Reactor Command-Sourcing
 
@@ -12,23 +12,23 @@ This means that Reactor diverges from typical approaches in that there is no str
 
 The "Write Model" is essentially the `IJobExecutor`, which calls the reducer, generates events, then stores things.
 
-### Is the `IWriteCache` a "Read Model"?
+### Is the `IOperationIndex` a "Read Model"?
 
-There are two main approaches to implementing the `IWriteCache`:
+There are two main approaches to implementing the `IOperationIndex`:
 
-1. Write to both `IOperationStore` and `IWriteCache` in `IJobExecutor` (inside the "Write Model"). The reason we do not want to combine these two interfaces into a single entity is because they have different requirements: `IOperationStore` will have implementations for IPFS and Swarm, while `IWriteCache` will always only have an implementation on top of a relational database (Kysely with PG or PGLite).
+1. Write to both `IOperationStore` and `IOperationIndex` in `IJobExecutor` (inside the "Write Model"). The reason we do not want to combine these two interfaces into a single entity is because they have different requirements: `IOperationStore` will have implementations for IPFS and Swarm, while `IOperationIndex` will always only have an implementation on top of a relational database (Kysely with PG or PGLite).
 
-2. Write to `IOperationStore` in `IJobExecutor`, and `IWriteCache` "eventually", in response to Event Bus job completion events. This effectively makes the `IWriteCache` a read model. This, however, would mean the `IWriteCache` can be stale. In addition, we would need an additional catchup mechanism to ensure that the `IWriteCache` is up to date. But the catchup mechanism is essentially what the write cache is designed to make simpler.
+2. Write to `IOperationStore` in `IJobExecutor`, and `IOperationIndex` "eventually", in response to Event Bus job completion events. This effectively makes the `IOperationIndex` a read model. This, however, would mean the `IOperationIndex` can be stale. In addition, we would need an additional catchup mechanism to ensure that the `IOperationIndex` is up to date. But the catchup mechanism is essentially what the operation index is designed to make simpler.
 
-Thus, `IWriteCache` is a write model and approach (1) is the more viable option.
+Thus, `IOperationIndex` is a write model and approach (1) is the more viable option.
 
 ### Requirements
 
-- `IWriteCache` must have a rollback mechanism, in order to support optimistic writes, in the case that writes to the `IOperationStore` fail.
+- `IOperationIndex` must have a rollback mechanism, in order to support optimistic writes, in the case that writes to the `IOperationStore` fail.
 
 - Ideally, collections are not created lazily, they are created when new operations are made available.
 
-- The `IWriteCache` must be able to be sharded. In reality, this likely means that Switchboard (for example) would have multiple `IWriteCache` instances, and we shard deterministically based on document properties.
+- The `IOperationIndex` must be able to be sharded. In reality, this likely means that Switchboard (for example) would have multiple `IOperationIndex` instances, and we shard deterministically based on document properties.
 
 ### Data Structure
 
@@ -40,7 +40,7 @@ Operations are kept in the `IOperationStore` as a table of `Operation`s. The ful
 | 2   | 1     | 2    | 1        | 2021-01-01 00:00:00 | doc1       | scope1 | branch1 | 2021-01-01 00:00:00 | 2     | { "type": "update", "data": { "id": "1", "name": "New Name" } } | 0    |
 | 3   | 1     | 3    | 2        | 2021-01-01 00:00:00 | doc1       | scope1 | branch1 | 2021-01-01 00:00:00 | 3     | { "type": "delete", "data": { "id": "1" } }                     | 0    |
 
-The `IWriteCache` defines a new table that relates documents to each other, in a flat structure we call a **Collection**. A collection is the set of all documents that have ever been in that drive. A drive is always a member of it's own collection. While documents are free to exist in a graph structure (with some restrictions), the `IWriteCache` only stores flat collections of documents.
+The `IOperationIndex` defines a new table that relates documents to each other, in a flat structure we call a **Collection**. A collection is the set of all documents that have ever been in that drive. A drive is always a member of it's own collection. While documents are free to exist in a graph structure (with some restrictions), the `IOperationIndex` only stores flat collections of documents.
 
 | documentId | collectionId |
 | ---------- | ------------ |
@@ -48,7 +48,7 @@ The `IWriteCache` defines a new table that relates documents to each other, in a
 | doc2       | collection1  |
 | doc3       | collection2  |
 
-Additionally, the `IWriteCache` stores a table very similar to the `IOperationStore` table, so that a join can be performed on `documentId`.
+Additionally, the `IOperationIndex` stores a table very similar to the `IOperationStore` table, so that a join can be performed on `documentId`.
 
 | ordinal | opId | documentId | documentType  | scope  | branch  | timestampUtcMs      | index | action                                                          |
 | ------- | ---- | ---------- | ------------- | ------ | ------- | ------------------- | ----- | --------------------------------------------------------------- |
@@ -56,34 +56,34 @@ Additionally, the `IWriteCache` stores a table very similar to the `IOperationSt
 | 2       | 1    | doc1       | documentType1 | scope1 | branch1 | 2021-01-01 00:00:00 | 2     | { "type": "update", "data": { "id": "1", "name": "New Name" } } |
 | 3       | 1    | doc1       | documentType1 | scope1 | branch1 | 2021-01-01 00:00:00 | 3     | { "type": "delete", "data": { "id": "1" } }                     |
 
-The main difference is that the `IWriteCache` table is not append-only. It is garbage collected and thus has no skip, only ordered streams.
+The main difference is that the `IOperationIndex` table is not append-only. It is garbage collected and thus has no skip, only ordered streams.
 
 A query to get all operations for a collection and branch would look like something like this:
 
 ```sql
 SELECT
-    wc.ordinal,
-    wc.opId,
-    wc.documentId,
-    wc.documentType,
-    wc.scope,
-    wc.branch,
-    wc.timestampUtcMs,
-    wc.index,
-    wc.action
-FROM write_cache_operations wc
-JOIN document_collections dc ON wc.documentId = dc.documentId
+    oi.ordinal,
+    oi.opId,
+    oi.documentId,
+    oi.documentType,
+    oi.scope,
+    oi.branch,
+    oi.timestampUtcMs,
+    oi.index,
+    oi.action
+FROM operation_index_operations oi
+JOIN document_collections dc ON oi.documentId = dc.documentId
 WHERE 1=1
     AND dc.collectionId in ('collection1', 'collection2')
-    AND wc.documentType in ('documentType1', 'documentType2')
-    AND wc.branch in ('branch1', 'branch2')
-    AND wc.scope in ('scope1', 'scope2')
-ORDER BY wc.ordinal;
+    AND oi.documentType in ('documentType1', 'documentType2')
+    AND oi.branch in ('branch1', 'branch2')
+    AND oi.scope in ('scope1', 'scope2')
+ORDER BY oi.ordinal;
 ```
 
 ### `OperationFilter` --> Collection Id
 
-Collection ids are able to be explicitly created from an `OperationFilter`. This ensures that the `IWriteCache` can forward-create collections for Listeners that may not exist yet.
+Collection ids are able to be explicitly created from an `OperationFilter`. This ensures that the `IOperationIndex` can forward-create collections for Listeners that may not exist yet.
 
 Here is the definition of the `OperationFilter` type:
 
@@ -122,7 +122,7 @@ INSERT INTO document_collections (documentId, collectionId) VALUES ('doc1', 'dri
 
 For building the query, branch and scope may be left out if a wildcard is used (`branch: ['*']`).
 
-If `driveId` is not provided, we need no join at all and can directly query the `write_cache_operations` table.
+If `driveId` is not provided, we need no join at all and can directly query the `operation_index_operations` table.
 
 #### Hashing Document Ids
 
@@ -138,15 +138,15 @@ Obviously, this creates a CPU-side performance impact from running SHA256. This 
 
 ### Cursors
 
-There are two types of cursors: one cursor into the `IOperationStore` that allows the `IWriteCache` to understand which operations have been processed, and a set of cursors that listeners have into the `IWriteCache` that allow them to iterate over operations that affect them.
+There are two types of cursors: one cursor into the `IOperationStore` that allows the `IOperationIndex` to understand which operations have been processed, and a set of cursors that listeners have into the `IOperationIndex` that allow them to iterate over operations that affect them.
 
 #### Cursor into `IOperationStore`
 
 The cursor into the `IOperationStore` is a simple integer that represents the ordinal of the last operation that was processed. This is used to determine which operations have been processed and which have not. It can easily be generated on startup and updated on commit.
 
-#### Cursors into `IWriteCache`
+#### Cursors into `IOperationIndex`
 
-The `IListenerManager` and `ISyncManager` both have cursors into the `IWriteCache`. The `IListenerManager` has a cursor for each listener, and the `ISyncManager` has a cursor for each registered synchronization channel (currently, pull responders).
+The `IListenerManager` and `ISyncManager` both have cursors into the `IOperationIndex`. The `IListenerManager` has a cursor for each listener, and the `ISyncManager` has a cursor for each registered synchronization channel (currently, pull responders).
 
 These cursors are kept in storage mechanisms specific to the `IListenerManager` and `ISyncManager`.
 
@@ -173,21 +173,21 @@ flowchart LR
     JAJ["execute()"]
     JAJ -->|"Action[]"| JAR["Reducer"]
     JAR -->|"Operation[]"| JAO["IOperationStore"]
-    JAR -->|"Operation[]"| JAW["IWriteCache"]
+    JAR -->|"Operation[]"| JAW["IOperationIndex"]
   end
 
   subgraph JB["IJobExecutor (Worker / Process)"]
     JBJ["execute()"]
     JBJ -->|"Action[]"| JBR["Reducer"]
     JBR -->|"Operation[]"| JBO["IOperationStore"]
-    JBR -->|"Operation[]"| JBW["IWriteCache"]
+    JBR -->|"Operation[]"| JBW["IOperationIndex"]
   end
 
   subgraph JC["IJobExecutor (Worker / Process)"]
     JCJ["execute()"]
     JCJ -->|"Action[]"| JCR["Reducer"]
     JCR -->|"Operation[]"| JCO["IOperationStore"]
-    JCR -->|"Operation[]"| JCW["IWriteCache"]
+    JCR -->|"Operation[]"| JCW["IOperationIndex"]
   end
 
   JAO -->|"Lock + Commit"| DB[(PG / PGLite)]
@@ -232,6 +232,6 @@ flowchart LR
     FC["Filter"] --> L["Arbitrary Listener"]
   end
 
-  ISyncManager -->|Query| IWriteCache
-  IListenerManager -->|Query| IWriteCache
+  ISyncManager -->|Query| IOperationIndex
+  IListenerManager -->|Query| IOperationIndex
 ```

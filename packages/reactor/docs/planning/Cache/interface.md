@@ -2,7 +2,7 @@
 
 ```tsx
 /**
- * Filter for querying operations from the write cache
+ * Filter for querying operations from the operation index
  */
 export type OperationFilter = {
   /** Array of drive IDs to include, use ["*"] for all */
@@ -22,9 +22,9 @@ export type OperationFilter = {
 };
 
 /**
- * Represents a single operation in the write cache
+ * Represents a single operation in the operation index
  */
-export type WriteCacheOperation = {
+export type OperationIndexEntry = {
   /** Sequential ordinal number for ordering operations */
   ordinal: number;
 
@@ -54,7 +54,7 @@ export type WriteCacheOperation = {
 };
 
 /**
- * Options for querying operations from the write cache
+ * Options for querying operations from the operation index
  */
 export type QueryOptions = {
   /** Optional cursor position to start from (exclusive) */
@@ -65,16 +65,16 @@ export type QueryOptions = {
 };
 
 /**
- * Transaction handle for managing write cache operations
+ * Transaction handle for managing operation index writes
  */
-export interface IWriteCacheTxn {
+export interface IOperationIndexTxn {
   /**
-   * Writes operations to the write cache within the transaction.
+   * Writes operations to the operation index within the transaction.
    * Operations are staged but not visible until the transaction commits.
    *
    * @param operations - Array of operations to write
    */
-  writeOperations(operations: WriteCacheOperation[]): void;
+  writeOperations(operations: OperationIndexEntry[]): void;
 
   /**
    * Adds documents to collections within the transaction.
@@ -86,10 +86,10 @@ export interface IWriteCacheTxn {
 }
 
 /**
- * The write cache provides an optimized, flattened view of operations
+ * The operation index provides an optimized, flattened view of operations
  * organized by collections for efficient querying by listeners and sync channels.
  */
-export interface IWriteCache {
+export interface IOperationIndex {
   /**
    * Applies write operations atomically within a transaction.
    * The transaction automatically commits if the callback completes successfully,
@@ -101,12 +101,12 @@ export interface IWriteCache {
    */
   apply(
     cursor: number,
-    callback: (txn: IWriteCacheTxn) => Promise<void>,
+    callback: (txn: IOperationIndexTxn) => Promise<void>,
     signal?: AbortSignal
   ): Promise<void>;
 
   /**
-   * Queries operations from the write cache based on a filter.
+   * Queries operations from the operation index based on a filter.
    * Returns operations in ordinal order.
    *
    * @param filter - Filter criteria for operations
@@ -118,7 +118,7 @@ export interface IWriteCache {
     filter: OperationFilter,
     options?: QueryOptions,
     signal?: AbortSignal
-  ): Promise<WriteCacheOperation[]>;
+  ): Promise<OperationIndexEntry[]>;
 
   /**
    * Gets the current cursor position (highest ordinal processed).
@@ -162,9 +162,9 @@ export interface IWriteCache {
 ### Usage
 
 ```tsx
-// Writing to the write cache
-await writeCache.apply(newCursor, async (txn) => {
-  // Add operations to the cache
+// Writing to the operation index
+await operationIndex.apply(newCursor, async (txn) => {
+  // Add operations to the index
   txn.writeOperations([
     {
       ordinal: 1,
@@ -180,7 +180,7 @@ await writeCache.apply(newCursor, async (txn) => {
   ]);
 
   // Add document to collections
-  const collectionIds = writeCache.deriveCollectionIds({
+  const collectionIds = operationIndex.deriveCollectionIds({
     driveId: ['drive-1'],
     documentId: ['*'],
     branch: ['*'],
@@ -192,7 +192,7 @@ await writeCache.apply(newCursor, async (txn) => {
 });
 
 // Querying operations for a listener
-const operations = await writeCache.queryOperations(
+const operations = await operationIndex.queryOperations(
   {
     driveId: ['drive-1'],
     documentId: ['*'],
@@ -207,10 +207,10 @@ const operations = await writeCache.queryOperations(
 );
 
 // Getting the current cursor position
-const cursor = await writeCache.getCursor();
+const cursor = await operationIndex.getCursor();
 ```
 
 ### Links
 
 * [Schema](mdc:schema.md) - Database schema and table definitions
-* [Overview](mdc:write-cache.md) - Detailed architectural overview
+* [Overview](mdc:operation-index.md) - Detailed architectural overview

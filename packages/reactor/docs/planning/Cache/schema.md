@@ -1,8 +1,8 @@
-# IWriteCache Schema
+# IOperationIndex Schema
 
 ### Summary
 
-The write cache maintains three primary tables: one for mapping documents to collections, one for storing operations in ordinal order, and one for tracking cursor position. The schema is optimized for efficient querying by collection, document type, branch, and scope.
+The operation index maintains three primary tables: one for mapping documents to collections, one for storing operations in ordinal order, and one for tracking cursor position. The schema is optimized for efficient querying by collection, document type, branch, and scope.
 
 ### Tables
 
@@ -25,12 +25,12 @@ CREATE INDEX idx_doc_collections_collection ON document_collections(collectionId
 - `documentId` - The document identifier
 - `collectionId` - The collection identifier (format: `drive.{driveId}`)
 
-#### write_cache_operations
+#### operation_index_operations
 
 Stores operations in ordinal order. Unlike IOperationStore, this table is not append-only and can be garbage collected. Operations are stored with denormalized document metadata for efficient querying.
 
 ```sql
-CREATE TABLE write_cache_operations (
+CREATE TABLE operation_index_operations (
   ordinal BIGSERIAL PRIMARY KEY,
   opId TEXT NOT NULL UNIQUE,
   documentId TEXT NOT NULL,
@@ -42,10 +42,10 @@ CREATE TABLE write_cache_operations (
   action JSONB NOT NULL
 );
 
-CREATE INDEX idx_wc_ops_doc ON write_cache_operations(documentId);
-CREATE INDEX idx_wc_ops_type ON write_cache_operations(documentType);
-CREATE INDEX idx_wc_ops_branch ON write_cache_operations(branch);
-CREATE INDEX idx_wc_ops_scope ON write_cache_operations(scope);
+CREATE INDEX idx_oi_ops_doc ON operation_index_operations(documentId);
+CREATE INDEX idx_oi_ops_type ON operation_index_operations(documentType);
+CREATE INDEX idx_oi_ops_branch ON operation_index_operations(branch);
+CREATE INDEX idx_oi_ops_scope ON operation_index_operations(scope);
 ```
 
 **Columns:**
@@ -60,12 +60,12 @@ CREATE INDEX idx_wc_ops_scope ON write_cache_operations(scope);
 - `index` - Operation index within the document's operation stream
 - `action` - The operation action data as JSON
 
-#### write_cache_metadata
+#### operation_index_metadata
 
-Tracks the cursor position, representing the highest ordinal from IOperationStore that has been processed and written to the cache.
+Tracks the cursor position, representing the highest ordinal from IOperationStore that has been processed and written to the index.
 
 ```sql
-CREATE TABLE write_cache_metadata (
+CREATE TABLE operation_index_metadata (
   key TEXT PRIMARY KEY,
   value BIGINT NOT NULL
 );
@@ -82,24 +82,24 @@ Query all operations for a collection with filters:
 
 ```sql
 SELECT
-    wc.ordinal,
-    wc.opId,
-    wc.documentId,
-    wc.documentType,
-    wc.scope,
-    wc.branch,
-    wc.timestampUtcMs,
-    wc.index,
-    wc.action
-FROM write_cache_operations wc
-JOIN document_collections dc ON wc.documentId = dc.documentId
+    oi.ordinal,
+    oi.opId,
+    oi.documentId,
+    oi.documentType,
+    oi.scope,
+    oi.branch,
+    oi.timestampUtcMs,
+    oi.index,
+    oi.action
+FROM operation_index_operations oi
+JOIN document_collections dc ON oi.documentId = dc.documentId
 WHERE 1=1
     AND dc.collectionId IN ('drive.drive1', 'drive.drive2')
-    AND wc.documentType IN ('documentType1', 'documentType2')
-    AND wc.branch IN ('branch1', 'branch2')
-    AND wc.scope IN ('scope1', 'scope2')
-    AND wc.ordinal > $1  -- cursor position
-ORDER BY wc.ordinal
+    AND oi.documentType IN ('documentType1', 'documentType2')
+    AND oi.branch IN ('branch1', 'branch2')
+    AND oi.scope IN ('scope1', 'scope2')
+    AND oi.ordinal > $1  -- cursor position
+ORDER BY oi.ordinal
 LIMIT $2;
 ```
 
