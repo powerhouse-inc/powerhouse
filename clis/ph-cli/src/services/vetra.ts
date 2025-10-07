@@ -111,23 +111,6 @@ async function startLocalVetraSwitchboard(
   }
 }
 
-type VetraConnectOptions = {
-  port?: number;
-  disableLocalPackages?: boolean;
-  vetraDriveUrl: string;
-};
-
-const startLocalConnect = (options: VetraConnectOptions) => {
-  process.env.PH_CONNECT_DEFAULT_DRIVES_URL = options.vetraDriveUrl;
-  process.env.PH_CONNECT_DRIVES_PRESERVE_STRATEGY = "preserve-all";
-
-  if (options.disableLocalPackages) {
-    process.env.DISABLE_LOCAL_PACKAGES = "true";
-  }
-
-  return startConnect({ port: options.port });
-};
-
 export async function startVetra({
   generate,
   watch,
@@ -192,8 +175,9 @@ export async function startVetra({
         console.log("Starting Connect...");
         console.log(`   ➜ Connect will use drive: ${driveUrl}`);
       }
-      await startLocalConnect({
-        vetraDriveUrl: driveUrl,
+      await startConnect({
+        defaultDrivesUrl: [driveUrl],
+        drivesPreserveStrategy: "preserve-all",
         disableLocalPackages: !watchPackages,
         port: connectPort,
       });

@@ -93,7 +93,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const fileEnv = loadEnv(mode, envDir, "PH_");
   const env = { ...fileEnv, ...process.env } as Partial<ConnectEnv>;
 
-  const disableLocalPackages = process.env.DISABLE_LOCAL_PACKAGES === "true";
+  const disableLocalPackages = env.PH_CONNECT_DISABLE_LOCAL_PACKAGES === "true";
 
   // load powerhouse config
   const phConfigPath =

@@ -232,7 +232,11 @@ export async function startServer(
         exclude: ["node_modules", join(studioPath, "assets/*.js")],
       }),
       viteConnectDevStudioPlugin(true, studioPath),
-      viteLoadExternalPackages(!disableDynamicLoading, phPackages, studioPath),
+      viteLoadExternalPackages(
+        !disableDynamicLoading,
+        options.packages,
+        studioPath,
+      ),
       // Only enable documents HMR when explicitly requested (e.g., from ph-cli vetra)
       options.enableDocumentsHMR && viteDocumentModelsHMR(studioPath),
       options.enableDocumentsHMR && viteEditorsHMR(studioPath),
