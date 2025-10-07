@@ -1,4 +1,8 @@
-import type { PHDocumentHeader } from "document-model";
+import type {
+  CreateDocumentAction,
+  PHDocumentHeader,
+  UpgradeDocumentAction,
+} from "document-model";
 import { createPresignedHeader } from "document-model/core";
 import type { Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
@@ -12,7 +16,6 @@ import type { Database as StorageDatabase } from "../storage/kysely/types.js";
 import type {
   DocumentViewDatabase,
   InsertableDocumentSnapshot,
-  InsertableSlugMapping,
 } from "./types.js";
 
 // Combine both database schemas
@@ -116,44 +119,6 @@ export class KyselyDocumentView implements IDocumentView {
 
           await trx.insertInto("DocumentSnapshot").values(snapshot).execute();
         }
-
-        // Update slug mapping if the action contains slug information
-        if (action.type === "SET_SLUG" || action.type === "CREATE") {
-          const input = action.input as Record<string, unknown> | undefined;
-          const slug =
-            input && typeof input === "object" && "slug" in input
-              ? (input.slug as string)
-              : undefined;
-          if (slug && typeof slug === "string") {
-            const existingMapping = await trx
-              .selectFrom("SlugMapping")
-              .selectAll()
-              .where("slug", "=", slug)
-              .executeTakeFirst();
-
-            if (!existingMapping) {
-              const mapping: InsertableSlugMapping = {
-                slug,
-                documentId,
-                scope,
-                branch,
-              };
-              await trx.insertInto("SlugMapping").values(mapping).execute();
-            } else if (existingMapping.documentId !== documentId) {
-              // Update if the slug now points to a different document
-              await trx
-                .updateTable("SlugMapping")
-                .set({
-                  documentId,
-                  scope,
-                  branch,
-                  updatedAt: new Date(),
-                })
-                .where("slug", "=", slug)
-                .execute();
-            }
-          }
-        }
       }
     });
   }
@@ -187,31 +152,24 @@ export class KyselyDocumentView implements IDocumentView {
     let header = createPresignedHeader();
 
     for (const op of headerAndDocOps) {
-      const action = JSON.parse(op.action) as {
-        type: string;
-        model?: string;
-        version?: string;
-        signing?: {
-          signature: string;
-          publicKey: JsonWebKey;
-          nonce: string;
-          createdAtUtcIso: string;
-          documentType: string;
-        };
-      };
+      const action = JSON.parse(op.action) as
+        | { type: "CREATE_DOCUMENT"; input: CreateDocumentAction }
+        | { type: "UPGRADE_DOCUMENT"; input: UpgradeDocumentAction }
+        | { type: string; input: unknown };
 
       if (action.type === "CREATE_DOCUMENT") {
+        const input = action.input as CreateDocumentAction;
         // Extract header from CREATE_DOCUMENT action's signing parameters
-        if (action.signing) {
+        if (input.signing) {
           header = {
             ...header,
-            id: action.signing.signature, // documentId === signing.signature
-            documentType: action.signing.documentType,
-            createdAtUtcIso: action.signing.createdAtUtcIso,
-            lastModifiedAtUtcIso: action.signing.createdAtUtcIso,
+            id: input.signing.signature, // documentId === signing.signature
+            documentType: input.signing.documentType,
+            createdAtUtcIso: input.signing.createdAtUtcIso,
+            lastModifiedAtUtcIso: input.signing.createdAtUtcIso,
             sig: {
-              nonce: action.signing.nonce,
-              publicKey: action.signing.publicKey,
+              nonce: input.signing.nonce,
+              publicKey: input.signing.publicKey,
             },
           };
         }

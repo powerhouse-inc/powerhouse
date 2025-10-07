@@ -65,6 +65,7 @@ import { runAsap, runAsapAsync } from "document-drive/run-asap";
 import {
   documentModelCreateDocument,
   type Action,
+  type CreateDocumentAction,
   type DocumentModelModule,
   type DocumentOperations,
   type Operation,
@@ -73,6 +74,7 @@ import {
   type PHDocumentMeta,
   type Signal,
   type SignalResult,
+  type UpgradeDocumentAction,
 } from "document-model";
 import {
   attachBranch,
@@ -1172,30 +1174,36 @@ export class BaseDocumentDriveServer
         : undefined;
 
       // Create actions for CREATE_DOCUMENT and UPGRADE_DOCUMENT
+      const createDocumentInput: CreateDocumentAction = {
+        type: "CREATE_DOCUMENT",
+        model: documentType,
+        version: "0.0.0",
+        documentId: header.id,
+        signing,
+      };
+
       const createDocumentAction: Action = {
         id: `${header.id}-create`,
         type: "CREATE_DOCUMENT",
         timestampUtcMs,
-        input: {
-          model: documentType,
-          version: "0.0.0" as const,
-          documentId: header.id,
-          signing,
-        },
+        input: createDocumentInput,
         scope: "global",
+      };
+
+      const upgradeDocumentInput: UpgradeDocumentAction = {
+        type: "UPGRADE_DOCUMENT",
+        model: documentType,
+        fromVersion: "0.0.0",
+        toVersion: currentVersion,
+        documentId: header.id,
+        initialState,
       };
 
       const upgradeDocumentAction: Action = {
         id: `${header.id}-upgrade`,
         type: "UPGRADE_DOCUMENT",
         timestampUtcMs,
-        input: {
-          model: documentType,
-          fromVersion: "0.0.0",
-          toVersion: currentVersion,
-          documentId: header.id,
-          initialState,
-        },
+        input: upgradeDocumentInput,
         scope: "global",
       };
 
