@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "@powerhousedao/design-system/style.css";
+@import "@powerhousedao/design-system/theme.css";
 
 @theme {
   /* You can customize the theme by overriding the theme variables here */

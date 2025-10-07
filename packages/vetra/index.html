@@ -19,6 +19,10 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="./connect.tsx"></script>
+    <script type="module">
+      import { AppLoader } from "@powerhousedao/connect";
+      import { createRoot } from "react-dom/client";
+      createRoot(document.getElementById("root")).render(AppLoader());
+    </script>
   </body>
 </html>
