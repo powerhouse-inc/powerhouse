@@ -1,0 +1,30 @@
+name: Build & Deploy
+
+on:
+    push:
+        branches: [main]
+
+env:
+    HUSKY: 0
+
+jobs:
+    build:
+        environment: Production
+        runs-on: ubuntu-latest
+        steps:
+            # Check-out your repository.
+            - name: Checkout
+              uses: actions/checkout@v2
+
+            - name: Build, Push and Release APP to Heroku. # Your custom step name
+              uses: gonuit/heroku-docker-deploy@v1.3.3
+              with:
+                  email: ${{ secrets.HEROKU_EMAIL }}
+                  heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+                  heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
+                  process_type: web
+                  docker_options: >-
+                      --build-arg CERAMIC_SEED=${{ secrets.CERAMIC_SEED }}
+                      --build-arg NEXT_PUBLIC_CERAMIC_URL=${{ secrets.NEXT_PUBLIC_CERAMIC_URL }}
+                      --build-arg NEXT_PUBLIC_VITE_INFURA_PROJECT_ID=${{ secrets.NEXT_PUBLIC_VITE_INFURA_PROJECT_ID }}
+                      --build-arg NEXT_PUBLIC_VITE_WALLET_CONNECT_PROJECT_ID=${{ secrets.NEXT_PUBLIC_VITE_WALLET_CONNECT_PROJECT_ID }}
