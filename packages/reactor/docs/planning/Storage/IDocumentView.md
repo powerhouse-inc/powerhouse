@@ -7,6 +7,7 @@ TLDR: Think of this as a smart, materialized view of the command store.
 - The intention is that the Reactor listens to `IEventBus` for command store updates, which are passed here to trigger the view to rebuild / update pre-joined, denormalized views for application reads.
 - Reads from `IOperationStore` as needed.
 - Provides an API for `IReactor` or external systems to read document data from.
+- **Handles cross-scope concerns**: Reconstructs document headers by aggregating information from operations across multiple scopes (header, document, global, local, etc.). Headers contain metadata like revision tracking and lastModified timestamps that span all scopes.
 
 ### Implementations
 
@@ -61,7 +62,25 @@ interface IDocumentView {
    * Indexes a list of operations.
    */
   indexOperations(operations: Operation[]): Promise<void>;
-  
+
+  /**
+   * Retrieves a document header by reconstructing it from operations across all scopes.
+   *
+   * Headers contain cross-scope metadata (revision tracking, lastModified timestamps)
+   * that require aggregating information from multiple scopes, making this a
+   * view-layer concern rather than an operation store concern.
+   *
+   * @param documentId - The document id
+   * @param branch - The branch name
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The reconstructed document header
+   */
+  getHeader(
+    documentId: string,
+    branch: string,
+    signal?: AbortSignal,
+  ): Promise<PHDocumentHeader>;
+
   /**
    * Resolves a list of ids from a list of slugs.
    *

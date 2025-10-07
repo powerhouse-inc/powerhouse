@@ -9,6 +9,8 @@
 - All writes are atomic.
 - Deterministic hashing.
 - Submitting a duplicate operation will be rejected with a `DuplicateOperationError`, and reject the entire transaction.
+- **Scope-specific**: All operations are stored and queried per `(documentId, scope, branch)` tuple.
+- **Cross-scope concerns** like document headers (which aggregate information from multiple scopes) should be handled by `IDocumentView`, not `IOperationStore`.
 
 ### Implementations
 
@@ -44,13 +46,6 @@ interface IOperationStore {
     signal?: AbortSignal,
   ): Promise<void>;
 
-  getHeader(
-    documentId: string,
-    branch: string,
-    revision: number,
-    signal?: AbortSignal,
-  ): Promise<DocumentHeader>;
-
   get(
     documentId: string,
     scope: string,
@@ -76,16 +71,25 @@ interface IOperationStore {
     id: number,
     signal?: AbortSignal,
   ): Promise<Operation[]>;
+
+  getRevisions(
+    documentId: string,
+    branch: string,
+    signal?: AbortSignal,
+  ): Promise<DocumentRevisions>;
+}
+
+type DocumentRevisions {
+  /** Map of scope to operation index for that scope */
+  revision: Record<string, number>;
+
+  /** Latest timestamp across revisions */
+  latestTimestamp: string;
 }
 
 interface AtomicTxn {
 	// append-only operations
 	addOperations(...operations: Operation[]);
-
-	// header operations
-	setSlug(slug: string);
-	setName(name: string);
-	setMeta(meta: PHDocumentMeta);
 }
 ```
 
@@ -95,17 +99,24 @@ interface AtomicTxn {
 await operations.apply(documentId, scope, branch, revision, async (txn) => {
   // get current state to pass to reducers
   const currentState = await readModel.get(documentId, scope, branch, revision);
-  const { operations, header } = await applyReducers(currentState);
+  const { operations } = await applyReducers(currentState);
 
   // add new operations
   txn.addOperations(...operations);
-
-  // header operations
-  txn.setSlug("updated-slug");
-  txn.setName("updated-name");
-  txn.setMeta({ preferredEditor: "updated-editor" });
 });
+
+// Get revision map and latest timestamp efficiently
+const { revision, latestTimestamp } = await operations.getRevisions(
+  documentId,
+  branch
+);
+// revision = { header: 5, document: 3, global: 10, local: 7 }
+// latestTimestamp = "2025-01-15T10:30:00.000Z"
 ```
+
+**Note**: Header changes (slug, name, meta) are now handled through regular operations in the "header" scope, not through special transaction methods.
+
+**Note**: The `getRevisions()` method efficiently retrieves the latest operation index for each scope and the overall latest timestamp, which is used by `IDocumentView.getHeader()` to reconstruct document headers without loading all operations.
 
 ### Schema
 

@@ -8,6 +8,7 @@ export class AtomicTransaction implements IAtomicTxn {
 
   constructor(
     private documentId: string,
+    private documentType: string,
     private scope: string,
     private branch: string,
     private baseRevision: number,
@@ -22,6 +23,7 @@ export class AtomicTransaction implements IAtomicTxn {
         opId: op.id || uuidv4(),
         prevOpId: "", // Will be set during apply
         documentId: this.documentId,
+        documentType: this.documentType,
         scope: this.scope,
         branch: this.branch,
         timestampUtcMs: new Date(op.timestampUtcMs),

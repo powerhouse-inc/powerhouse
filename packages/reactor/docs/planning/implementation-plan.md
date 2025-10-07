@@ -54,7 +54,7 @@ This phase proceeds as before: building the new asynchronous pipeline for handli
 1.  **Implement `IEventBus`**, **`IQueue`**, and **`IJobExecutorManager`**:
     - Within `packages/reactor`, define and implement these core components as planned.
 
-## Phase 3.5 (⚠️ In Progress): Introduce CREATE/UPDATE Action Flow
+## Phase 3.5 (✅ Completed): Introduce CREATE/UPDATE Action Flow
 
 To enable proper command-sourced document creation, introduce a standardized action-based flow for document lifecycle operations.
 
@@ -67,9 +67,30 @@ To enable proper command-sourced document creation, introduce a standardized act
 3.  **Update Document Model Reducers** (✅ Completed):
     - Ensure document model reducers properly handle both `CREATE` and `UPDATE` actions.
     - `CREATE` actions should generate proper operations that can be stored and replayed.
-4.  **Remove Legacy Creation Hacks** (⚠️ In Progress):
-    - This enables removing hacks in `KyselyOperationStore.reconstructHeader()` which currently handles fake "CREATE_HEADER" and "UPDATE_HEADER" action types (store.ts:145-172).
-    - With proper `CREATE` actions, document headers can be reconstructed from real operations.
+4.  **Remove Legacy Creation Hacks** (✅ Complete):
+    - ✅ Updated `KyselyOperationStore.reconstructHeader()` to handle ONLY `CREATE_DOCUMENT` and `UPGRADE_DOCUMENT` actions (store.ts:145-191)
+    - ✅ Header information is now extracted from `CREATE_DOCUMENT` action's signing parameters (signature, publicKey, nonce, documentType, createdAtUtcIso)
+    - ✅ Removed all legacy "CREATE_HEADER" and "UPDATE_HEADER" action type handling
+    - Document headers are now fully reconstructed from real CREATE_DOCUMENT and UPGRADE_DOCUMENT operations
+
+5.  **Architectural Fix: Move `getHeader()` from `IOperationStore` to `IDocumentView`** (✅ Complete):
+    - **Problem Identified**: Headers contain cross-scope metadata (`revision` tracking for all scopes, `lastModifiedAtUtcIso` for latest change across all scopes)
+    - **Current Issue**: `IOperationStore.getHeader()` is scope-specific and cannot properly reconstruct headers that aggregate information from multiple scopes
+    - **Solution**:
+        - ✅ Remove `getHeader()` from `IOperationStore` interface and implementations (interfaces.ts:28-63, store.ts:1-115)
+        - ✅ Add `getHeader()` to `IDocumentView` interface and implementations (interfaces.ts:129-133, document-view.ts:197-273)
+        - ✅ Add `getRevisions()` to `IOperationStore` to efficiently retrieve revision map and latest timestamp (interfaces.ts:71-86, store.ts:179-217)
+        - ✅ Update `IDocumentView.getHeader()` to reconstruct header and document scopes by processing only header and document operations in chronological order, then using `getRevisions()` to update revisions with latest distinct operations across all scopes
+        - ✅ Update all callsites - removed obsolete tests from kysely.test.ts since `IOperationStore` no longer has this method
+    - **Rationale**: Headers are read model concerns that require cross-scope aggregation, which is precisely what `IDocumentView` is designed for
+    - **Spec Changes**: Updated [IOperationStore.md](./Storage/IOperationStore.md) and [IDocumentView.md](./Storage/IDocumentView.md) to reflect this architectural change
+    - **Implementation Details**:
+        - `IOperationStore.getRevisions()` efficiently finds the latest operation for each scope in a **single query** using a subquery to match operations where index equals the max index for that scope, returning both the revision map and the latest timestamp
+        - `KyselyDocumentView.getHeader()` queries ONLY "header" and "document" scope operations (for CREATE_DOCUMENT and UPGRADE_DOCUMENT actions)
+        - Processes those operations in chronological order (by `timestampUtcMs`)
+        - Calls `operationStore.getRevisions()` to get the revision map and latest timestamp from ALL scopes efficiently
+        - Uses that information to populate the header's `revision` map and `lastModifiedAtUtcIso` field
+        - This ensures header is always current with the latest operations across all scopes while only loading necessary operations
 
 **Outcome**: Document creation now flows through the same action-based pipeline as mutations, enabling full event sourcing and eliminating the need for special-case document creation logic.
 

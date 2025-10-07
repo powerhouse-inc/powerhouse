@@ -1,5 +1,4 @@
 import { addFile, addFolder, setDriveName } from "document-drive";
-import type { Operation } from "document-model";
 import { generateId } from "document-model/core";
 import { Kysely } from "kysely";
 import { KyselyPGlite } from "kysely-pglite";
@@ -38,6 +37,7 @@ describe("KyselyDocumentView", () => {
         col.notNull().defaultTo(new Date()),
       )
       .addColumn("documentId", "text", (col) => col.notNull())
+      .addColumn("documentType", "text", (col) => col.notNull())
       .addColumn("scope", "text", (col) => col.notNull())
       .addColumn("branch", "text", (col) => col.notNull())
       .addColumn("timestampUtcMs", "timestamptz", (col) => col.notNull())
@@ -86,6 +86,7 @@ describe("KyselyDocumentView", () => {
       const documentId = generateId();
       const scope = "global";
       const branch = "main";
+      const documentType = "powerhouse/document-drive";
 
       for (let i = 0; i < 3; i++) {
         const action = addFolder({
@@ -94,21 +95,23 @@ describe("KyselyDocumentView", () => {
           parentFolder: null,
         });
 
-        await operationStore.apply(documentId, scope, branch, i, (txn) => {
-          txn.addOperations({
-            index: i,
-            timestampUtcMs: new Date().toISOString(),
-            hash: `hash-${i}`,
-            skip: 0,
-            id: generateId(),
-            action: {
-              ...action,
-              documentId, // Add documentId for parsing
-              scope,
-              branch,
-            } as any,
-          });
-        });
+        await operationStore.apply(
+          documentId,
+          documentType,
+          scope,
+          branch,
+          i,
+          (txn) => {
+            txn.addOperations({
+              index: i,
+              timestampUtcMs: new Date().toISOString(),
+              hash: `hash-${i}`,
+              skip: 0,
+              id: generateId(),
+              action,
+            });
+          },
+        );
       }
 
       // Initialize the view - it should process all operations
@@ -133,22 +136,31 @@ describe("KyselyDocumentView", () => {
 
     it("should index operations and create document snapshots", async () => {
       const documentId = generateId();
-      const operations: Operation[] = [
+      const scope = "global";
+      const branch = "main";
+      const documentType = "text/plain";
+
+      const operations = [
         {
-          index: 0,
-          timestampUtcMs: new Date().toISOString(),
-          hash: "hash-0",
-          skip: 0,
-          id: generateId(),
-          action: {
-            ...addFile({
+          operation: {
+            index: 0,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "hash-0",
+            skip: 0,
+            id: generateId(),
+            action: addFile({
               id: generateId(),
               name: "test.txt",
               documentType: "text/plain",
               parentFolder: null,
             }),
-            documentId, // Adding documentId for parsing
-          } as any,
+          },
+          context: {
+            documentId,
+            documentType,
+            scope,
+            branch,
+          },
         },
       ];
 
@@ -168,22 +180,30 @@ describe("KyselyDocumentView", () => {
 
     it("should update existing snapshots", async () => {
       const documentId = generateId();
+      const scope = "global";
+      const branch = "main";
+      const documentType = "powerhouse/document-drive";
 
       // Index first operation
-      const operation1: Operation = {
-        index: 0,
-        timestampUtcMs: new Date().toISOString(),
-        hash: "hash-0",
-        skip: 0,
-        id: generateId(),
-        action: {
-          ...addFolder({
+      const operation1 = {
+        operation: {
+          index: 0,
+          timestampUtcMs: new Date().toISOString(),
+          hash: "hash-0",
+          skip: 0,
+          id: generateId(),
+          action: addFolder({
             id: generateId(),
             name: "Folder 1",
             parentFolder: null,
           }),
+        },
+        context: {
           documentId,
-        } as any,
+          documentType,
+          scope,
+          branch,
+        },
       };
 
       await view.indexOperations([operation1]);
@@ -198,16 +218,21 @@ describe("KyselyDocumentView", () => {
       expect(initialSnapshot?.snapshotVersion).toBe(1);
 
       // Index second operation
-      const operation2: Operation = {
-        index: 1,
-        timestampUtcMs: new Date().toISOString(),
-        hash: "hash-1",
-        skip: 0,
-        id: generateId(),
-        action: {
-          ...setDriveName({ name: "Updated Drive" }),
+      const operation2 = {
+        operation: {
+          index: 1,
+          timestampUtcMs: new Date().toISOString(),
+          hash: "hash-1",
+          skip: 0,
+          id: generateId(),
+          action: setDriveName({ name: "Updated Drive" }),
+        },
+        context: {
           documentId,
-        } as any,
+          documentType,
+          scope,
+          branch,
+        },
       };
 
       await view.indexOperations([operation2]);
@@ -233,23 +258,31 @@ describe("KyselyDocumentView", () => {
     it("should check if documents exist", async () => {
       const existingDocId = generateId();
       const nonExistingDocId = generateId();
+      const scope = "global";
+      const branch = "main";
+      const documentType = "text/plain";
 
       // Create a snapshot for the existing document
-      const operation: Operation = {
-        index: 0,
-        timestampUtcMs: new Date().toISOString(),
-        hash: "hash-0",
-        skip: 0,
-        id: generateId(),
-        action: {
-          ...addFile({
+      const operation = {
+        operation: {
+          index: 0,
+          timestampUtcMs: new Date().toISOString(),
+          hash: "hash-0",
+          skip: 0,
+          id: generateId(),
+          action: addFile({
             id: generateId(),
             name: "exists.txt",
             documentType: "text/plain",
             parentFolder: null,
           }),
+        },
+        context: {
           documentId: existingDocId,
-        } as any,
+          documentType,
+          scope,
+          branch,
+        },
       };
 
       await view.indexOperations([operation]);
@@ -271,23 +304,31 @@ describe("KyselyDocumentView", () => {
 
     it("should not count deleted documents as existing", async () => {
       const documentId = generateId();
+      const scope = "global";
+      const branch = "main";
+      const documentType = "text/plain";
 
       // Create a snapshot
-      const operation: Operation = {
-        index: 0,
-        timestampUtcMs: new Date().toISOString(),
-        hash: "hash-0",
-        skip: 0,
-        id: generateId(),
-        action: {
-          ...addFile({
+      const operation = {
+        operation: {
+          index: 0,
+          timestampUtcMs: new Date().toISOString(),
+          hash: "hash-0",
+          skip: 0,
+          id: generateId(),
+          action: addFile({
             id: generateId(),
             name: "deleted.txt",
             documentType: "text/plain",
             parentFolder: null,
           }),
+        },
+        context: {
           documentId,
-        } as any,
+          documentType,
+          scope,
+          branch,
+        },
       };
 
       await view.indexOperations([operation]);
@@ -326,40 +367,53 @@ describe("KyselyDocumentView", () => {
       const doc1Id = generateId();
       const doc2Id = generateId();
       const doc3Id = generateId();
+      const scope = "global";
+      const branch = "main";
+      const documentType = "text/plain";
 
       // Create snapshots for doc1 and doc2
       const operations = [
         {
-          index: 0,
-          timestampUtcMs: new Date().toISOString(),
-          hash: "hash-0",
-          skip: 0,
-          id: generateId(),
-          action: {
-            ...addFile({
+          operation: {
+            index: 0,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "hash-0",
+            skip: 0,
+            id: generateId(),
+            action: addFile({
               id: generateId(),
               name: "doc1.txt",
               documentType: "text/plain",
               parentFolder: null,
             }),
+          },
+          context: {
             documentId: doc1Id,
-          } as any,
+            documentType,
+            scope,
+            branch,
+          },
         },
         {
-          index: 0,
-          timestampUtcMs: new Date().toISOString(),
-          hash: "hash-1",
-          skip: 0,
-          id: generateId(),
-          action: {
-            ...addFile({
+          operation: {
+            index: 0,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "hash-1",
+            skip: 0,
+            id: generateId(),
+            action: addFile({
               id: generateId(),
               name: "doc2.txt",
               documentType: "text/plain",
               parentFolder: null,
             }),
+          },
+          context: {
             documentId: doc2Id,
-          } as any,
+            documentType,
+            scope,
+            branch,
+          },
         },
       ];
 
@@ -383,24 +437,31 @@ describe("KyselyDocumentView", () => {
 
     it("should filter by scope and branch", async () => {
       const docId = generateId();
+      const customScope = "custom-scope";
+      const branch = "main";
+      const documentType = "text/plain";
 
       // Create a snapshot in a different scope
-      const operation: Operation = {
-        index: 0,
-        timestampUtcMs: new Date().toISOString(),
-        hash: "hash-0",
-        skip: 0,
-        id: generateId(),
-        action: {
-          ...addFile({
+      const operation = {
+        operation: {
+          index: 0,
+          timestampUtcMs: new Date().toISOString(),
+          hash: "hash-0",
+          skip: 0,
+          id: generateId(),
+          action: addFile({
             id: generateId(),
             name: "scoped.txt",
             documentType: "text/plain",
             parentFolder: null,
           }),
+        },
+        context: {
           documentId: docId,
-          scope: "custom-scope",
-        } as any,
+          documentType,
+          scope: customScope,
+          branch,
+        },
       };
 
       await view.indexOperations([operation]);
@@ -417,23 +478,31 @@ describe("KyselyDocumentView", () => {
 
     it("should not return deleted documents", async () => {
       const docId = generateId();
+      const scope = "global";
+      const branch = "main";
+      const documentType = "text/plain";
 
       // Create a snapshot
-      const operation: Operation = {
-        index: 0,
-        timestampUtcMs: new Date().toISOString(),
-        hash: "hash-0",
-        skip: 0,
-        id: generateId(),
-        action: {
-          ...addFile({
+      const operation = {
+        operation: {
+          index: 0,
+          timestampUtcMs: new Date().toISOString(),
+          hash: "hash-0",
+          skip: 0,
+          id: generateId(),
+          action: addFile({
             id: generateId(),
             name: "deleted.txt",
             documentType: "text/plain",
             parentFolder: null,
           }),
+        },
+        context: {
           documentId: docId,
-        } as any,
+          documentType,
+          scope,
+          branch,
+        },
       };
 
       await view.indexOperations([operation]);
@@ -470,40 +539,53 @@ describe("KyselyDocumentView", () => {
       const doc1Id = generateId();
       const doc2Id = generateId();
       const doc3Id = generateId();
+      const scope = "global";
+      const branch = "main";
+      const documentType = "text/plain";
 
       // Create snapshots in different order
       const operations = [
         {
-          index: 0,
-          timestampUtcMs: new Date().toISOString(),
-          hash: "hash-2",
-          skip: 0,
-          id: generateId(),
-          action: {
-            ...addFile({
+          operation: {
+            index: 0,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "hash-2",
+            skip: 0,
+            id: generateId(),
+            action: addFile({
               id: generateId(),
               name: "doc3.txt",
               documentType: "text/plain",
               parentFolder: null,
             }),
+          },
+          context: {
             documentId: doc3Id,
-          } as any,
+            documentType,
+            scope,
+            branch,
+          },
         },
         {
-          index: 0,
-          timestampUtcMs: new Date().toISOString(),
-          hash: "hash-0",
-          skip: 0,
-          id: generateId(),
-          action: {
-            ...addFile({
+          operation: {
+            index: 0,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "hash-0",
+            skip: 0,
+            id: generateId(),
+            action: addFile({
               id: generateId(),
               name: "doc1.txt",
               documentType: "text/plain",
               parentFolder: null,
             }),
+          },
+          context: {
             documentId: doc1Id,
-          } as any,
+            documentType,
+            scope,
+            branch,
+          },
         },
       ];
 

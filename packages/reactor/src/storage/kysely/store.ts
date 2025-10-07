@@ -1,11 +1,12 @@
-import { type Operation, type PHDocumentHeader } from "document-model";
-import { createPresignedHeader } from "document-model/core";
+import { type Operation } from "document-model";
 import type { Kysely } from "kysely";
 import {
   DuplicateOperationError,
   RevisionMismatchError,
   type AtomicTxn,
+  type DocumentRevisions,
   type IOperationStore,
+  type OperationWithContext,
 } from "../interfaces.js";
 import { AtomicTransaction } from "../txn.js";
 import type { Database, OperationRow } from "./types.js";
@@ -15,6 +16,7 @@ export class KyselyOperationStore implements IOperationStore {
 
   async apply(
     documentId: string,
+    documentType: string,
     scope: string,
     branch: string,
     revision: number,
@@ -47,6 +49,7 @@ export class KyselyOperationStore implements IOperationStore {
       // Create atomic transaction
       const atomicTxn = new AtomicTransaction(
         documentId,
+        documentType,
         scope,
         branch,
         revision,
@@ -84,42 +87,13 @@ export class KyselyOperationStore implements IOperationStore {
     });
   }
 
-  async getHeader(
-    documentId: string,
-    branch: string,
-    revision: number,
-    signal?: AbortSignal,
-  ): Promise<PHDocumentHeader> {
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
-
-    // Get header operations from the 'header' scope
-    const headerOps = await this.db
-      .selectFrom("Operation")
-      .selectAll()
-      .where("documentId", "=", documentId)
-      .where("scope", "=", "header")
-      .where("branch", "=", branch)
-      .where("index", "<=", revision)
-      .orderBy("index", "asc")
-      .execute();
-
-    if (headerOps.length === 0) {
-      throw new Error(`Document header not found: ${documentId}`);
-    }
-
-    // Reconstruct header from operations
-    return this.reconstructHeader(headerOps);
-  }
-
   async get(
     documentId: string,
     scope: string,
     branch: string,
     index: number,
     signal?: AbortSignal,
-  ): Promise<Operation> {
+  ): Promise<OperationWithContext> {
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
@@ -139,36 +113,7 @@ export class KyselyOperationStore implements IOperationStore {
       );
     }
 
-    return this.rowToOperation(row);
-  }
-
-  // TODO: This is a hack for testing purposes -- these actions do not exist
-  private reconstructHeader(headerOps: OperationRow[]): PHDocumentHeader {
-    // Start with a base header
-    let header = createPresignedHeader();
-
-    // Apply each header operation in order
-    for (const op of headerOps) {
-      const action = JSON.parse(op.action) as {
-        type: string;
-        input: Partial<PHDocumentHeader>;
-      };
-
-      if (action.type === "CREATE_HEADER") {
-        // Initial header creation
-        header = action.input as PHDocumentHeader;
-      } else if (action.type === "UPDATE_HEADER") {
-        // Header updates
-        const updates = action.input as Partial<PHDocumentHeader>;
-        header = { ...header, ...updates };
-      }
-
-      // Update revision tracking
-      header.revision[op.scope] = op.index;
-      header.lastModifiedAtUtcIso = op.timestampUtcMs.toISOString();
-    }
-
-    return header;
+    return this.rowToOperationWithContext(row);
   }
 
   async getSince(
@@ -177,7 +122,7 @@ export class KyselyOperationStore implements IOperationStore {
     branch: string,
     index: number,
     signal?: AbortSignal,
-  ): Promise<Operation[]> {
+  ): Promise<OperationWithContext[]> {
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
@@ -192,7 +137,7 @@ export class KyselyOperationStore implements IOperationStore {
       .orderBy("index", "asc")
       .execute();
 
-    return rows.map((row) => this.rowToOperation(row));
+    return rows.map((row) => this.rowToOperationWithContext(row));
   }
 
   async getSinceTimestamp(
@@ -201,7 +146,7 @@ export class KyselyOperationStore implements IOperationStore {
     branch: string,
     timestampUtcMs: number,
     signal?: AbortSignal,
-  ): Promise<Operation[]> {
+  ): Promise<OperationWithContext[]> {
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
@@ -216,10 +161,13 @@ export class KyselyOperationStore implements IOperationStore {
       .orderBy("index", "asc")
       .execute();
 
-    return rows.map((row) => this.rowToOperation(row));
+    return rows.map((row) => this.rowToOperationWithContext(row));
   }
 
-  async getSinceId(id: number, signal?: AbortSignal): Promise<Operation[]> {
+  async getSinceId(
+    id: number,
+    signal?: AbortSignal,
+  ): Promise<OperationWithContext[]> {
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
@@ -231,19 +179,75 @@ export class KyselyOperationStore implements IOperationStore {
       .orderBy("id", "asc")
       .execute();
 
-    return rows.map((row) => this.rowToOperation(row));
+    return rows.map((row) => this.rowToOperationWithContext(row));
   }
 
-  private rowToOperation(row: OperationRow): Operation {
+  async getRevisions(
+    documentId: string,
+    branch: string,
+    signal?: AbortSignal,
+  ): Promise<DocumentRevisions> {
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    // Get the latest operation for each scope in a single query
+    // Uses a subquery to find operations where the index equals the max index for that scope
+    const scopeRevisions = await this.db
+      .selectFrom("Operation as o1")
+      .select(["o1.scope", "o1.index", "o1.timestampUtcMs"])
+      .where("o1.documentId", "=", documentId)
+      .where("o1.branch", "=", branch)
+      .where((eb) =>
+        eb(
+          "o1.index",
+          "=",
+          eb
+            .selectFrom("Operation as o2")
+            .select((eb2) => eb2.fn.max("o2.index").as("maxIndex"))
+            .where("o2.documentId", "=", eb.ref("o1.documentId"))
+            .where("o2.branch", "=", eb.ref("o1.branch"))
+            .where("o2.scope", "=", eb.ref("o1.scope")),
+        ),
+      )
+      .execute();
+
+    // Build the revision map and find the latest timestamp
+    const revision: Record<string, number> = {};
+    let latestTimestamp = new Date(0).toISOString(); // Start with epoch
+
+    for (const row of scopeRevisions) {
+      revision[row.scope] = row.index;
+      const timestamp = row.timestampUtcMs.toISOString();
+      if (timestamp > latestTimestamp) {
+        latestTimestamp = timestamp;
+      }
+    }
+
     return {
-      index: row.index,
-      timestampUtcMs: row.timestampUtcMs.toISOString(),
-      hash: row.hash,
-      skip: row.skip,
-      error: row.error || undefined,
-      resultingState: row.resultingState || undefined,
-      id: row.opId,
-      action: JSON.parse(row.action) as Operation["action"],
+      revision,
+      latestTimestamp,
+    };
+  }
+
+  private rowToOperationWithContext(row: OperationRow): OperationWithContext {
+    return {
+      operation: {
+        index: row.index,
+        timestampUtcMs: row.timestampUtcMs.toISOString(),
+        hash: row.hash,
+        skip: row.skip,
+        error: row.error || undefined,
+        resultingState: row.resultingState || undefined,
+        id: row.opId,
+        action: JSON.parse(row.action) as Operation["action"],
+      },
+      context: {
+        documentId: row.documentId,
+        documentType: row.documentType,
+        scope: row.scope,
+        branch: row.branch,
+      },
     };
   }
 }
