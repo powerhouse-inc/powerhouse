@@ -70,7 +70,7 @@ export async function startConnectStudio(options?: ConnectStudioOptions) {
     process.env.PH_CONNECT_DRIVES_PRESERVE_STRATEGY = drivesPreserveStrategy;
   }
   if (disableLocalPackage) {
-    process.env.PH_DISABLE_LOCAL_PACKAGES = "true";
+    process.env.PH_DISABLE_LOCAL_PACKAGE = "true";
   }
 
   const vite = await loadVite();
