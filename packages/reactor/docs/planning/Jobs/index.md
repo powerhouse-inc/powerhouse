@@ -34,6 +34,7 @@ graph LR
       IQueueManager
       IJobExecutorManager
       IOperationStore
+      IWriteCache
       IDocumentView
       IDocumentIndexer
 
@@ -69,6 +70,8 @@ graph LR
 
   W1 -->|"Operation[]"| IOperationStore
   W2 -->|"Operation[]"| IOperationStore
+  W1 <-->|"Snapshots"| IWriteCache
+  W2 <-->|"Snapshots"| IWriteCache
 ```
 
 ### Flow
@@ -78,7 +81,7 @@ An `IJobExecutor` follows the following flow:
 1. Verify signatures on `Action` objects before executing them.
 2. Verify authorization on `Action` objects before executing them.
 3. Reshuffle to get list of actions to process.
-4. Execute reducers to get list of operations.
+4. Check `IWriteCache` for recent snapshot, execute reducers from snapshot or from store, and update cache with result.
 5. Verify resulting `Operation` hashes match expected hashes.
 6. Write `Operation`s to the `IOperationStore`.
 7. Propagate events to the `IEventBus`.
@@ -90,8 +93,10 @@ flowchart TD
     A("`QueueEventTypes.JOB_AVAILABLE`") --> C{"(1) Are Signatures Valid?"}
     C -->|Yes| F{"(2) Is Authorized?"}
     F -->|Yes| H{"(3) Reshuffle"}
-    H -->|Success| I{"(4) Execute Reducers"}
-    I -->|Success| J{"(5a) Is expected hash provided?"}
+    H -->|Success| IG["(4a) Get State from IWriteCache"]
+    IG --> I["(4b) Execute Reducers"]
+    I -->|Success| IP["(4c) Store Result in IWriteCache"]
+    IP --> J{"(5a) Is expected hash provided?"}
     J -->|Yes| K{"(5b) Do hashes match?"}
     J -->|No| L
     K -->|No| O["TODO"]
@@ -132,6 +137,18 @@ See the [Reshuffle](./reshuffle.md) documentation for more information.
 #### (4) Reducer Execution
 
 For each `Action`, the `IJobExecutor` will execute the relevant reducer to construct the resulting state of the document. The job executor will generate corresponding `Operation` objects.
+
+The job executor uses the `IWriteCache` to obtain document state at the required revision and cache the resulting state:
+
+1. **Request state from cache**: Call `IWriteCache.getState(documentId, scope, branch, targetRevision)`
+2. **Cache handles retrieval internally**:
+   - Checks ring buffer for cached snapshot at or before targetRevision
+   - On cache hit: Returns cached state, updates LRU tracking
+   - On cache miss: Loads operations from `IOperationStore`, replays them to build state at target revision, stores result in ring buffer automatically, updates LRU, and returns state
+3. **Execute reducers**: Apply the new actions to the retrieved state to generate operations
+4. **Store resulting state**: Call `IWriteCache.putState(documentId, scope, branch, finalRevision, newState)` to cache the state after executing operations
+
+This architecture keeps the executor simple - it always receives the exact state it needs from the cache, and can efficiently cache the resulting state after execution.
 
 ##### System Stream
 
@@ -264,6 +281,7 @@ flowchart TD
 - [IQueue](../Queue/index.md)
 - [IEventBus](../Events/index.md)
 - [IOperationStore](../Storage/IOperationStore.md)
+- [IWriteCache](../Cache/write-cache-interface.md)
 - [IDocumentModelRegistry](./document-model-registry.md)
 
 ### Links
