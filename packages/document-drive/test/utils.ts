@@ -238,6 +238,11 @@ export function createBaseState<TGlobal, TLocal>(
     auth: {},
     document: {
       version: "0",
+      hash: {
+        algorithm: "sha1",
+        encoding: "base64",
+        params: {},
+      },
     },
     global,
     local,

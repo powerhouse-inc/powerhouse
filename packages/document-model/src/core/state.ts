@@ -1,4 +1,5 @@
 import type { PHAuthState, PHBaseState, PHDocumentState } from "./ph-types.js";
+import { HASH_ALGORITHM_SHA1, HASH_ENCODING_BASE64 } from "./ph-types.js";
 
 /**
  * Creates a default PHAuthState
@@ -13,6 +14,10 @@ export function defaultAuthState(): PHAuthState {
 export function defaultDocumentState(): PHDocumentState {
   return {
     version: "1.0.0",
+    hash: {
+      algorithm: HASH_ALGORITHM_SHA1,
+      encoding: HASH_ENCODING_BASE64,
+    },
   };
 }
 /**

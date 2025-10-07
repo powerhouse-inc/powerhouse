@@ -196,10 +196,29 @@ type Operation = {
   /** Timestamp of when the operation was added */
   timestampUtcMs: number;
 
+  /** Hash of the resulting document state after the operation */
+  hash: string;
+
   /** The action that was executed to produce this operation */
   action: Action;
 };
 ```
+
+#### Operation Hash
+
+The `hash` field stores a cryptographic hash of the resulting document state after applying the operation. This hash is computed using the configuration specified in `PHDocumentState.hash`, which includes:
+
+- **algorithm**: The hashing algorithm (e.g., "sha1", "sha256", "sha512")
+- **encoding**: The output encoding (e.g., "base64", "hex")
+- **params**: Optional algorithm-specific parameters
+
+The hash configuration is set when a document is created and remains immutable throughout the document's lifetime. This ensures:
+
+1. **Backward Compatibility**: Old documents can be verified using their original hash algorithm
+2. **Future-Proofing**: New hash algorithms can be added without breaking existing documents
+3. **Deterministic Verification**: Operation replay produces identical hashes when using the same configuration
+
+When verifying operations during replay, the system reads the hash configuration from `document.state.document.hash` and uses it to compute state hashes for comparison.
 
 ### Schema
 
@@ -238,7 +257,7 @@ Each operation has an `opId` derived from stable properties such as: document id
 
 Submitting the same action twice results in the same `opId`, which will be rejected by the `IOperationStore`.
 
-The `hash` field stores the expected document state after applying the operation; reducers compute the state hash during execution and compare it to this value to detect divergence.
+The `hash` field stores the expected document state after applying the operation; reducers compute the state hash during execution using the document's hash configuration (`document.state.document.hash`) and compare it to this value to detect divergence.
 
 Along with the unique `(documentId, scope, branch, index)` constraint in the storage schema, these identifiers ensure that replaying operations cannot introduce inconsistent state.
 
