@@ -1,9 +1,11 @@
 import type {
-  AppConfigUpdatedEvent,
+  AllowListUpdatedEvent,
+  AnalyticsDatabaseNameUpdatedEvent,
   ConnectCryptoUpdatedEvent,
   DidUpdatedEvent,
   DocumentsUpdatedEvent,
   DrivesUpdatedEvent,
+  IsSearchBarEnabledUpdatedEvent,
   LoginStatusUpdatedEvent,
   ModalUpdatedEvent,
   ProcessorManagerUpdatedEvent,
@@ -11,11 +13,13 @@ import type {
   RenownUpdatedEvent,
   SelectedDriveIdUpdatedEvent,
   SelectedNodeIdUpdatedEvent,
-  SetAppConfigEvent,
+  SetAllowListEvent,
+  SetAnalyticsDatabaseNameEvent,
   SetConnectCryptoEvent,
   SetDidEvent,
   SetDocumentsEvent,
   SetDrivesEvent,
+  SetIsSearchBarEnabledEvent,
   SetLoginStatusEvent,
   SetModalEvent,
   SetProcessorManagerEvent,
@@ -26,6 +30,7 @@ import type {
   SetUserEvent,
   SetVetraPackagesEvent,
   UserUpdatedEvent,
+  VetraPackage,
   VetraPackagesUpdatedEvent,
 } from "@powerhousedao/reactor-browser";
 import type { DID, IConnectCrypto, IRenown, User } from "@renown/sdk";
@@ -37,7 +42,6 @@ import type {
 } from "document-drive";
 import type { PHDocument } from "document-model";
 import type { PHModal } from "./modals.js";
-import type { VetraPackage } from "./vetra.js";
 
 export type UserPermissions = {
   isAllowedToCreateDocuments: boolean;
@@ -49,12 +53,6 @@ export type LoginStatus =
   | "checking"
   | "not-authorized"
   | "authorized";
-
-export type AppConfig = {
-  showSearchBar?: boolean;
-  analyticsDatabaseName?: string;
-  allowList?: string[];
-};
 
 declare global {
   interface Window {
@@ -71,8 +69,10 @@ declare global {
     phDocuments?: PHDocument[] | undefined;
     phSelectedDriveId?: string | undefined;
     phSelectedNodeId?: string | undefined;
-    phAppConfig?: AppConfig | undefined;
     phModal?: PHModal | undefined;
+    analyticsDatabaseName?: string;
+    allowList?: string[];
+    isSearchBarEnabled?: boolean | undefined;
   }
 
   interface WindowEventMap {
@@ -100,9 +100,13 @@ declare global {
     "ph:selectedDriveIdUpdated": SelectedDriveIdUpdatedEvent;
     "ph:setSelectedNodeId": SetSelectedNodeIdEvent;
     "ph:selectedNodeIdUpdated": SelectedNodeIdUpdatedEvent;
-    "ph:setAppConfig": SetAppConfigEvent;
-    "ph:appConfigUpdated": AppConfigUpdatedEvent;
     "ph:setModal": SetModalEvent;
     "ph:modalUpdated": ModalUpdatedEvent;
+    "ph:setAnalyticsDatabaseName": SetAnalyticsDatabaseNameEvent;
+    "ph:analyticsDatabaseNameUpdated": AnalyticsDatabaseNameUpdatedEvent;
+    "ph:setAllowList": SetAllowListEvent;
+    "ph:allowListUpdated": AllowListUpdatedEvent;
+    "ph:setIsSearchBarEnabled": SetIsSearchBarEnabledEvent;
+    "ph:isSearchBarEnabledUpdated": IsSearchBarEnabledUpdatedEvent;
   }
 }

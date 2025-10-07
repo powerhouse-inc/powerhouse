@@ -1,4 +1,8 @@
-import { addAppConfigEventHandler } from "./config.js";
+import {
+  addAllowListEventHandler,
+  addAnalyticsDatabaseNameEventHandler,
+  addIsSearchBarEnabledEventHandler,
+} from "../hooks/config.js";
 import { addConnectCryptoEventHandler, addDidEventHandler } from "./crypto.js";
 import { addDocumentsEventHandler } from "./documents.js";
 import {
@@ -12,7 +16,6 @@ import { addReactorEventHandler } from "./reactor.js";
 import { addRenownEventHandler } from "./renown.js";
 import { addLoginStatusEventHandler, addUserEventHandler } from "./user.js";
 import { addVetraPackagesEventHandler } from "./vetra-packages.js";
-
 export function addPHEventHandlers() {
   addReactorEventHandler();
   addModalEventHandler();
@@ -21,11 +24,13 @@ export function addPHEventHandlers() {
   addRenownEventHandler();
   addLoginStatusEventHandler();
   addUserEventHandler();
-  addAppConfigEventHandler();
   addProcessorManagerEventHandler();
   addDrivesEventHandler();
   addDocumentsEventHandler();
   addSelectedDriveIdEventHandler();
   addSelectedNodeIdEventHandler();
   addVetraPackagesEventHandler();
+  addAnalyticsDatabaseNameEventHandler();
+  addAllowListEventHandler();
+  addIsSearchBarEnabledEventHandler();
 }

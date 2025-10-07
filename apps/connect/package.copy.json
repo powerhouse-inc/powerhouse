@@ -20,10 +20,18 @@
     "./src/index.css"
   ],
   "exports": {
-    ".": "./lib/src/index.js",
-    "./config": "./lib/src/connect.config.js",
+    ".": {
+      "development": "./src/index.ts",
+      "import": "./lib/src/index.js",
+  "types": "./lib/src/index.d.ts"
+    },
+    "./config": {
+      "development": "./src/connect.config.ts",
+      "import": "./lib/src/connect.config.js",
+      "types": "./lib/src/connect.config.d.ts"
+    },
     "./custom.d.ts": "./lib/custom.d.ts",
-    "./styles.css": "./src/index.css",
+    "./style.css": "./src/index.css",
     "./assets/*.mp4": "./assets/*.mp4",
     "./assets/*.png": "./assets/*.png",
     "./assets/*.svg": "./assets/*.svg",
@@ -33,7 +41,6 @@
     "./assets/*.webp": "./assets/*.webp",
     "./assets/*.avif": "./assets/*.avif"
   },
-  "types": "./lib/src/index.d.ts",
   "license": "AGPL-3.0-only",
   "author": "acaldas@powerhouse.inc",
   "repository": {

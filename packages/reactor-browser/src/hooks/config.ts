@@ -1,21 +1,19 @@
-import { subscribeToAppConfig } from "@powerhousedao/reactor-browser";
-import { useSyncExternalStore } from "react";
+import { makePHEventFunctions } from "../events/make-ph-event-functions.js";
 
-export function useAppConfig() {
-  return useSyncExternalStore(subscribeToAppConfig, () => window.phAppConfig);
-}
+export const {
+  useValue: useAnalyticsDatabaseName,
+  setValue: setAnalyticsDatabaseName,
+  addEventHandler: addAnalyticsDatabaseNameEventHandler,
+} = makePHEventFunctions<string>("analyticsDatabaseName");
 
-export function useShowSearchBar() {
-  const appConfig = useAppConfig();
-  return appConfig?.showSearchBar ?? false;
-}
+export const {
+  useValue: useAllowList,
+  setValue: setAllowList,
+  addEventHandler: addAllowListEventHandler,
+} = makePHEventFunctions<string[]>("allowList");
 
-export function useAnalyticsDatabaseName() {
-  const appConfig = useAppConfig();
-  return appConfig?.analyticsDatabaseName;
-}
-
-export function useAllowList() {
-  const appConfig = useAppConfig();
-  return appConfig?.allowList;
-}
+export const {
+  useValue: useIsSearchBarEnabled,
+  setValue: setIsSearchBarEnabled,
+  addEventHandler: addIsSearchBarEnabledEventHandler,
+} = makePHEventFunctions<boolean>("isSearchBarEnabled");

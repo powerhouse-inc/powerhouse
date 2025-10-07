@@ -7,7 +7,9 @@ import {
 import { connectConfig } from "@powerhousedao/connect/config";
 import {
   addPHEventHandlers,
-  dispatchSetAppConfigEvent,
+  setAnalyticsDatabaseName,
+  setAllowList,
+  setIsSearchBarEnabled,
   dispatchSetConnectCryptoEvent,
   dispatchSetDidEvent,
   dispatchSetDocumentsEvent,
@@ -67,7 +69,8 @@ export async function createReactor() {
   await initFeatureFlags();
 
   // initialize app config
-  const appConfig = getAppConfig();
+  const { analyticsDatabaseName, allowList, isSearchBarEnabled } =
+    getAppConfig();
 
   // initialize connect crypto
   const connectCrypto = await initConnectCrypto();
@@ -175,7 +178,9 @@ export async function createReactor() {
   dispatchSetConnectCryptoEvent(connectCrypto);
   dispatchSetDidEvent(did);
   dispatchSetRenownEvent(renown);
-  dispatchSetAppConfigEvent(appConfig);
+  setAnalyticsDatabaseName(analyticsDatabaseName);
+  setAllowList(allowList);
+  setIsSearchBarEnabled(isSearchBarEnabled);
   dispatchSetProcessorManagerEvent(processorManager);
   dispatchSetDrivesEvent(drives);
   dispatchSetDocumentsEvent(documents);
@@ -232,11 +237,11 @@ export async function createReactor() {
 
 function getAppConfig() {
   const analyticsDatabaseName = connectConfig.analytics.databaseName;
-  const showSearchBar = connectConfig.content.showSearchBar;
+  const isSearchBarEnabled = connectConfig.content.isSearchBarEnabled;
   return {
     allowList: undefined,
     analyticsDatabaseName,
-    showSearchBar,
+    isSearchBarEnabled,
   };
 }
 

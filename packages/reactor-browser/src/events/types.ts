@@ -1,5 +1,4 @@
 import type {
-  AppConfig,
   LoginStatus,
   Reactor,
   VetraPackage,
@@ -68,10 +67,20 @@ export type SetVetraPackagesEvent = CustomEvent<{
 }>;
 export type VetraPackagesUpdatedEvent = CustomEvent;
 
-export type SetAppConfigEvent = CustomEvent<{
-  appConfig: AppConfig | undefined;
+export type SetAnalyticsDatabaseNameEvent = CustomEvent<{
+  analyticsDatabaseName: string | undefined;
 }>;
-export type AppConfigUpdatedEvent = CustomEvent;
+export type AnalyticsDatabaseNameUpdatedEvent = CustomEvent;
+
+export type SetAllowListEvent = CustomEvent<{
+  allowList: string[] | undefined;
+}>;
+export type AllowListUpdatedEvent = CustomEvent;
+
+export type SetIsSearchBarEnabledEvent = CustomEvent<{
+  isSearchBarEnabled: boolean | undefined;
+}>;
+export type IsSearchBarEnabledUpdatedEvent = CustomEvent;
 
 export type SetModalEvent = CustomEvent<{
   modal: PHModal | undefined;

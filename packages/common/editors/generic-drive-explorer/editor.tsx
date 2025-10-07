@@ -17,11 +17,11 @@ import {
   showCreateDocumentModal,
   showDeleteNodeModal,
   useDocumentModelModules,
+  useIsSearchBarEnabled,
   useNodeActions,
   useSelectedDrive,
   useSelectedFolder,
   useSelectedNodePath,
-  useShowSearchBar,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
 import { getDriveSharingType } from "document-drive";
@@ -47,7 +47,7 @@ export function Editor(props: GenericDriveExplorerEditorProps) {
   const documentModels = useDocumentModelModules();
   const selectedNodePath = useSelectedNodePath();
   const { isAllowedToCreateDocuments } = useUserPermissions();
-  const showSearchBar = useShowSearchBar();
+  const isSearchBarEnabled = useIsSearchBarEnabled();
   const onCreateDocument = (documentModel: DocumentModelModule) => {
     showCreateDocumentModal(documentModel.documentModel.global.id);
   };
@@ -81,7 +81,7 @@ export function Editor(props: GenericDriveExplorerEditorProps) {
             onCreate={onAddAndSelectNewFolder}
             onBreadcrumbSelected={onBreadcrumbSelected}
           />
-          {showSearchBar && <SearchBar />}
+          {isSearchBarEnabled && <SearchBar />}
         </DriveLayout.Header>
       )}
       {showDocumentEditor ? (
