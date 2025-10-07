@@ -1,9 +1,9 @@
+import { startConnectStudio } from "@powerhousedao/builder-tools";
 import type { VetraProcessorConfigType } from "@powerhousedao/config";
 import { VETRA_PROCESSOR_CONFIG_KEY } from "@powerhousedao/config";
 import { getConfig } from "@powerhousedao/config/node";
 import { blue, red } from "colorette";
 import { setLogLevel } from "document-drive";
-import { startConnect } from "./connect.js";
 import type { ReactorOptions } from "./reactor.js";
 import { DefaultReactorOptions } from "./reactor.js";
 
@@ -175,11 +175,13 @@ export async function startVetra({
         console.log("Starting Connect...");
         console.log(`   ➜ Connect will use drive: ${driveUrl}`);
       }
-      await startConnect({
+      await startConnectStudio({
         defaultDrivesUrl: [driveUrl],
         drivesPreserveStrategy: "preserve-all",
-        disableLocalPackages: !watchPackages,
-        port: connectPort,
+        disableLocalPackage: !watchPackages,
+        devServerOptions: {
+          port: connectPort,
+        },
       });
     }
   } catch (error) {
