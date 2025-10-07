@@ -22,6 +22,10 @@
       "import": "./dist/document-model-editor/index.js",
       "types": "./dist/document-model-editor/index.d.ts"
     },
+    "./browser": {
+      "import": "./dist/browser.js",
+      "types": "./dist/browser.d.ts"
+    },
     "./style.css": "./dist/style.css"
   },
   "sideEffects": false,

@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { cwd } from "node:process";
 import type { CommonServerOptions, InlineConfig, ResolvedConfig } from "vite";
+import { setConnectEnv } from "./env-config.js";
 
 type ViteDevOptions = Pick<
   CommonServerOptions,
@@ -64,12 +65,19 @@ export async function startConnectStudio(options?: ConnectStudioOptions) {
   };
 
   if (defaultDrivesUrl) {
-    process.env.PH_CONNECT_DEFAULT_DRIVES_URL = defaultDrivesUrl.join(",");
+    setConnectEnv({
+      PH_CONNECT_DEFAULT_DRIVES_URL: defaultDrivesUrl.join(","),
+    });
   }
   if (drivesPreserveStrategy) {
-    process.env.PH_CONNECT_DRIVES_PRESERVE_STRATEGY = drivesPreserveStrategy;
+    setConnectEnv({
+      PH_CONNECT_DRIVES_PRESERVE_STRATEGY: drivesPreserveStrategy,
+    });
   }
   if (disableLocalPackage) {
+    setConnectEnv({
+      PH_DISABLE_LOCAL_PACKAGE: true,
+    });
     process.env.PH_DISABLE_LOCAL_PACKAGE = "true";
   }
 

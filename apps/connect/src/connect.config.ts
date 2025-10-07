@@ -1,123 +1,76 @@
-import { isLogLevel } from "@powerhousedao/config";
+import { loadRuntimeEnv } from "@powerhousedao/builder-tools/browser";
 import { getBasePath } from "@powerhousedao/connect";
 import { logger, setLogLevel } from "document-drive";
 
-const APP_VERSION = import.meta.env.PH_CONNECT_VERSION;
-const WARN_OUTDATED_APP =
-  import.meta.env.PH_CONNECT_WARN_OUTDATED_APP || "false";
-const PH_CONNECT_STUDIO_MODE =
-  import.meta.env.PH_CONNECT_STUDIO_MODE || "false";
+// Load environment variables with validation and defaults
+const env = loadRuntimeEnv({
+  processEnv: import.meta.env,
+});
 
-const DISABLE_ADD_DRIVE =
-  import.meta.env.PH_CONNECT_DISABLE_ADD_DRIVE || "false";
-const DISABLE_ADD_PUBLIC_DRIVES =
-  import.meta.env.PH_CONNECT_DISABLE_ADD_PUBLIC_DRIVES || undefined;
-const DISABLE_ADD_CLOUD_DRIVES =
-  import.meta.env.PH_CONNECT_DISABLE_ADD_CLOUD_DRIVES || undefined;
-const DISABLE_ADD_LOCAL_DRIVES =
-  import.meta.env.PH_CONNECT_DISABLE_ADD_LOCAL_DRIVES || undefined;
-const DISABLE_DELETE_PUBLIC_DRIVES =
-  import.meta.env.PH_CONNECT_DISABLE_DELETE_PUBLIC_DRIVES || undefined;
-const DISABLE_DELETE_CLOUD_DRIVES =
-  import.meta.env.PH_CONNECT_DISABLE_DELETE_CLOUD_DRIVES || undefined;
-const DISABLE_DELETE_LOCAL_DRIVES =
-  import.meta.env.PH_CONNECT_DISABLE_DELETE_LOCAL_DRIVES || undefined;
+// Set log level from validated config
+setLogLevel(env.PH_CONNECT_LOG_LEVEL);
+logger.debug(`Setting log level to ${env.PH_CONNECT_LOG_LEVEL}.`);
 
-const LOCAL_DRIVES_ENABLED =
-  import.meta.env.PH_CONNECT_LOCAL_DRIVES_ENABLED || undefined;
-const CLOUD_DRIVES_ENABLED =
-  import.meta.env.PH_CONNECT_CLOUD_DRIVES_ENABLED || undefined;
-const PUBLIC_DRIVES_ENABLED =
-  import.meta.env.PH_CONNECT_PUBLIC_DRIVES_ENABLED || undefined;
+// Router basename from getBasePath() or default
+const PH_CONNECT_ROUTER_BASENAME =
+  getBasePath() || env.PH_CONNECT_ROUTER_BASENAME;
 
-const SEARCH_BAR_ENABLED =
-  import.meta.env.PH_CONNECT_SEARCH_BAR_ENABLED || undefined;
-
-const HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS =
-  import.meta.env.PH_CONNECT_HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS || "false";
-
-const PH_CONNECT_ROUTER_BASENAME = getBasePath() || "/";
-
-const PH_CONNECT_EXTERNAL_PACKAGES_DISABLED =
-  import.meta.env.PH_CONNECT_EXTERNAL_PACKAGES_DISABLED === "true";
-
-const PH_CONNECT_SENTRY_RELEASE =
-  import.meta.env.PH_CONNECT_SENTRY_RELEASE || "";
-const PH_CONNECT_SENTRY_DSN = import.meta.env.PH_CONNECT_SENTRY_DSN || "";
-const PH_CONNECT_SENTRY_ENV = import.meta.env.PH_CONNECT_SENTRY_ENV || "dev";
-const PH_CONNECT_SENTRY_TRACING_ENABLED =
-  import.meta.env.PH_CONNECT_SENTRY_TRACING_ENABLED || "false";
-
-const GA_TRACKING_ID = import.meta.env.PH_CONNECT_GA_TRACKING_ID;
-const PH_CONNECT_CLI_VERSION =
-  import.meta.env.PH_CONNECT_CLI_VERSION || undefined;
-
+// Analytics database name with custom logic
 const PH_CONNECT_ANALYTICS_DATABASE_NAME =
-  import.meta.env.PH_CONNECT_ANALYTICS_DATABASE_NAME ||
-  `${PH_CONNECT_ROUTER_BASENAME.replace(/\//g, "")}:analytics`; // remove ending slash
-const PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED =
-  import.meta.env.PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED || "false";
-
-const PH_CONNECT_DIFF_ANALYTICS_ENABLED =
-  import.meta.env.PH_CONNECT_DIFF_ANALYTICS_ENABLED || "false";
-
-const PH_CONNECT_DRIVE_ANALYTICS_ENABLED =
-  import.meta.env.PH_CONNECT_DRIVE_ANALYTICS_ENABLED || "false";
-
-const PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED =
-  import.meta.env.PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED || "true";
-
-const LOG_LEVEL = isLogLevel(import.meta.env.PH_CONNECT_LOG_LEVEL)
-  ? import.meta.env.PH_CONNECT_LOG_LEVEL
-  : "info";
-setLogLevel(LOG_LEVEL);
-logger.debug(`Setting log level to ${LOG_LEVEL}.`);
+  env.PH_CONNECT_ANALYTICS_DATABASE_NAME ||
+  `${PH_CONNECT_ROUTER_BASENAME.replace(/\//g, "")}:analytics`;
 
 export const connectConfig = {
-  appVersion: APP_VERSION,
-  studioMode: PH_CONNECT_STUDIO_MODE.toString() === "true",
-  warnOutdatedApp: WARN_OUTDATED_APP === "true",
+  appVersion: env.PH_CONNECT_VERSION,
+  studioMode: env.PH_CONNECT_STUDIO_MODE,
+  warnOutdatedApp: env.PH_CONNECT_WARN_OUTDATED_APP,
+  appVersionCheckInterval: env.PH_CONNECT_VERSION_CHECK_INTERVAL,
   routerBasename: PH_CONNECT_ROUTER_BASENAME,
-  externalPackagesEnabled: !PH_CONNECT_EXTERNAL_PACKAGES_DISABLED,
+  externalPackagesEnabled: !env.PH_CONNECT_EXTERNAL_PACKAGES_DISABLED,
   analytics: {
     databaseName: PH_CONNECT_ANALYTICS_DATABASE_NAME,
-    useWorker: PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED !== "true",
-    driveAnalyticsEnabled: PH_CONNECT_DRIVE_ANALYTICS_ENABLED === "true",
-    diffProcessorEnabled: PH_CONNECT_DIFF_ANALYTICS_ENABLED === "true",
-    externalProcessorsEnabled:
-      PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED === "true",
+    useWorker: !env.PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED,
+    driveAnalyticsEnabled: env.PH_CONNECT_DRIVE_ANALYTICS_ENABLED,
+    diffProcessorEnabled: env.PH_CONNECT_DIFF_ANALYTICS_ENABLED,
+    externalProcessorsEnabled: env.PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED,
+  },
+  renown: {
+    url: env.PH_CONNECT_RENOWN_URL,
+    networkId: env.PH_CONNECT_RENOWN_NETWORK_ID,
+    chainId: env.PH_CONNECT_RENOWN_CHAIN_ID,
   },
   sentry: {
-    release: PH_CONNECT_SENTRY_RELEASE,
-    dsn: PH_CONNECT_SENTRY_DSN,
-    env: PH_CONNECT_SENTRY_ENV,
-    tracing: PH_CONNECT_SENTRY_TRACING_ENABLED === "true",
+    release: env.PH_CONNECT_SENTRY_RELEASE,
+    dsn: env.PH_CONNECT_SENTRY_DSN,
+    env: env.PH_CONNECT_SENTRY_ENV,
+    tracing: env.PH_CONNECT_SENTRY_TRACING_ENABLED,
   },
   content: {
-    showSearchBar: SEARCH_BAR_ENABLED === "true",
+    showSearchBar: env.PH_CONNECT_SEARCH_BAR_ENABLED,
     showDocumentModelSelectionSetting:
-      HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS !== "true",
+      !env.PH_CONNECT_HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS,
   },
   drives: {
-    addDriveEnabled: DISABLE_ADD_DRIVE === "true" ? false : true,
+    addDriveEnabled: !env.PH_CONNECT_DISABLE_ADD_DRIVE,
+    preserveStrategy: env.PH_CONNECT_DRIVES_PRESERVE_STRATEGY,
     sections: {
       LOCAL: {
-        enabled: LOCAL_DRIVES_ENABLED !== "false",
-        allowAdd: DISABLE_ADD_LOCAL_DRIVES !== "true",
-        allowDelete: DISABLE_DELETE_LOCAL_DRIVES !== "true",
+        enabled: env.PH_CONNECT_LOCAL_DRIVES_ENABLED,
+        allowAdd: !env.PH_CONNECT_DISABLE_ADD_LOCAL_DRIVES,
+        allowDelete: !env.PH_CONNECT_DISABLE_DELETE_LOCAL_DRIVES,
       },
       CLOUD: {
-        enabled: CLOUD_DRIVES_ENABLED !== "false",
-        allowAdd: DISABLE_ADD_CLOUD_DRIVES !== "true",
-        allowDelete: DISABLE_DELETE_CLOUD_DRIVES !== "true",
+        enabled: env.PH_CONNECT_CLOUD_DRIVES_ENABLED,
+        allowAdd: !env.PH_CONNECT_DISABLE_ADD_CLOUD_DRIVES,
+        allowDelete: !env.PH_CONNECT_DISABLE_DELETE_CLOUD_DRIVES,
       },
       PUBLIC: {
-        enabled: PUBLIC_DRIVES_ENABLED !== "false",
-        allowAdd: DISABLE_ADD_PUBLIC_DRIVES !== "true",
-        allowDelete: DISABLE_DELETE_PUBLIC_DRIVES !== "true",
+        enabled: env.PH_CONNECT_PUBLIC_DRIVES_ENABLED,
+        allowAdd: !env.PH_CONNECT_DISABLE_ADD_PUBLIC_DRIVES,
+        allowDelete: !env.PH_CONNECT_DISABLE_DELETE_PUBLIC_DRIVES,
       },
     },
   },
-  gaTrackingId: GA_TRACKING_ID,
-  phCliVersion: PH_CONNECT_CLI_VERSION,
+  gaTrackingId: env.PH_CONNECT_GA_TRACKING_ID,
+  phCliVersion: env.PH_CONNECT_CLI_VERSION,
 } as const;

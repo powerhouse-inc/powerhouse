@@ -1,9 +1,8 @@
-export const RENOWN_URL =
-  import.meta.env.PH_CONNECT_RENOWN_URL || "https://www.renown.id";
-export const RENOWN_NETWORK_ID =
-  import.meta.env.PH_CONNECT_RENOWN_NETWORK_ID || "eip155";
-export const RENOWN_CHAIN_ID =
-  import.meta.env.PH_CONNECT_RENOWN_CHAIN_ID || "1";
+import { connectConfig } from "@powerhousedao/connect/config";
+
+export const RENOWN_URL = connectConfig.renown.url;
+export const RENOWN_NETWORK_ID = connectConfig.renown.networkId;
+export const RENOWN_CHAIN_ID = connectConfig.renown.chainId;
 
 export const DOMAIN_TYPE = [
   { name: "name", type: "string" },

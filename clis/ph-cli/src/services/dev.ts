@@ -1,10 +1,10 @@
 import type { ConnectStudioOptions } from "@powerhousedao/builder-tools";
+import { getConfig } from "@powerhousedao/config/node";
 import { blue, green, red } from "colorette";
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { fork } from "node:child_process";
 import path, { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { getConfig } from "@powerhousedao/config/node";
 import type { ReactorOptions } from "./reactor.js";
 import { DefaultReactorOptions } from "./reactor.js";
 
@@ -59,18 +59,21 @@ function spawnLocalSwitchboard(options?: ReactorOptions) {
 }
 
 async function spawnConnect(
-  options?: ConnectStudioOptions,
+  options: ConnectStudioOptions = {},
   localReactorUrl?: string,
 ) {
+  if (localReactorUrl) {
+    options.defaultDrivesUrl = options.defaultDrivesUrl
+      ? options.defaultDrivesUrl.concat([localReactorUrl])
+      : [localReactorUrl];
+  }
   const child = fork(
     path.join(dirname(__dirname), "commands", "connect.js"),
-    ["spawn", JSON.stringify(options ?? {})],
+    ["spawn", JSON.stringify(options)],
     {
       silent: true,
       env: {
         ...process.env,
-        // TODO add studio variables?
-        PH_CONNECT_DEFAULT_DRIVES_URL: localReactorUrl,
       },
     },
   ) as ChildProcessWithoutNullStreams;

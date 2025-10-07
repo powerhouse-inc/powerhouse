@@ -1,8 +1,5 @@
 import { connectConfig } from "@powerhousedao/connect/config";
 
-const VERSION_CHECK_INTERVAL =
-  parseInt(import.meta.env.PH_CONNECT_VERSION_CHECK_INTERVAL) || 60 * 60 * 1000; // 1 hour;
-
 const basePath = connectConfig.routerBasename;
 
 const serviceWorkerScriptPath = [basePath, "service-worker.js"]
@@ -71,6 +68,46 @@ class ServiceWorkerManager {
     }
   }
 
+  async #register() {
+    try {
+      // checks if there is a service worker installed already and calls
+      // its the update method to check if there is a new version available
+      const existingRegistration =
+        await navigator.serviceWorker.getRegistration();
+      if (existingRegistration) {
+        await existingRegistration.update();
+        this.#handleServiceWorker(existingRegistration);
+      }
+
+      // if no service worker is installed then registers the service worker
+      else {
+        const registration = await navigator.serviceWorker.register(
+          serviceWorkerScriptPath,
+        );
+        this.#handleServiceWorker(registration);
+
+        registration.addEventListener("updatefound", () => {
+          this.#handleServiceWorker(registration);
+        });
+      }
+
+      // calls the update on an interval to force
+      // the browser to check for a new version
+      const intervalId = setInterval(async () => {
+        const existingRegistration =
+          await navigator.serviceWorker.getRegistration();
+        if (existingRegistration) {
+          await existingRegistration.update();
+        } else {
+          clearInterval(intervalId);
+          this.registerServiceWorker();
+        }
+      }, connectConfig.appVersionCheckInterval);
+    } catch (error) {
+      console.error("ServiceWorker registration failed: ", error);
+    }
+  }
+
   registerServiceWorker(debug = false) {
     this.debug = debug;
 
@@ -78,44 +115,8 @@ class ServiceWorkerManager {
       console.warn("Service Worker not available");
       return;
     }
-    window.addEventListener("load", async () => {
-      try {
-        // checks if there is a service worker installed already and calls
-        // its the update method to check if there is a new version available
-        const existingRegistration =
-          await navigator.serviceWorker.getRegistration();
-        if (existingRegistration) {
-          await existingRegistration.update();
-          this.#handleServiceWorker(existingRegistration);
-        }
-
-        // if no service worker is installed then registers the service worker
-        else {
-          const registration = await navigator.serviceWorker.register(
-            serviceWorkerScriptPath,
-          );
-          this.#handleServiceWorker(registration);
-
-          registration.addEventListener("updatefound", () => {
-            this.#handleServiceWorker(registration);
-          });
-        }
-
-        // calls the update on an interval to force
-        // the browser to check for a new version
-        const intervalId = setInterval(async () => {
-          const existingRegistration =
-            await navigator.serviceWorker.getRegistration();
-          if (existingRegistration) {
-            await existingRegistration.update();
-          } else {
-            clearInterval(intervalId);
-            this.registerServiceWorker();
-          }
-        }, VERSION_CHECK_INTERVAL);
-      } catch (error) {
-        console.error("ServiceWorker registration failed: ", error);
-      }
+    window.addEventListener("load", () => {
+      this.#register().catch(console.error);
     });
   }
 }
