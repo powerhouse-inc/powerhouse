@@ -2,7 +2,6 @@ export * from "./useAcceptedCookies.js";
 export * from "./useCheckLatestVersion.js";
 export * from "./useClientErrorHandler.js";
 export * from "./useCookiebanner.js";
-export * from "./useFeatureFlags/index.js";
 export * from "./useInitSentry.js";
 export * from "./useNodeActions.js";
 export * from "./useUndoRedoShortcuts.js";

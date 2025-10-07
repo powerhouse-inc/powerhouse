@@ -1,3 +1,4 @@
+import { connectConfig } from "@powerhousedao/connect/config";
 import type { DocumentDriveServerOptions } from "document-drive";
 
 /**
@@ -15,9 +16,7 @@ type SupportedStrategy = (typeof SUPPORTED_STRATEGIES)[number];
  * @returns Valid strategy or default 'preserve-by-url-and-detach'
  */
 export const getDrivePreservationStrategy = (): SupportedStrategy => {
-  const envStrategy = import.meta.env.PH_CONNECT_DRIVES_PRESERVE_STRATEGY as
-    | string
-    | undefined;
+  const envStrategy = connectConfig.drives.preserveStrategy;
 
   if (!envStrategy) {
     return "preserve-by-url-and-detach";
