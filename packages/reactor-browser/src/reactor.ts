@@ -5,8 +5,8 @@ import type {
   DocumentDriveServerOptions,
 } from "document-drive";
 import { generateId } from "document-model/core";
-import { dispatchSetDocumentsEvent } from "./events/documents.js";
-import { dispatchSetDrivesEvent } from "./events/drives.js";
+import { setDrives } from "./hooks/drives.js";
+import { setDocuments } from "./hooks/documents.js";
 import type { Reactor } from "./types/reactor.js";
 import { getDocuments, getDrives } from "./utils/drives.js";
 
@@ -67,8 +67,8 @@ export async function refreshReactorData(reactor: Reactor | undefined) {
   if (!reactor) return;
   const drives = await getDrives(reactor);
   const documents = await getDocuments(reactor);
-  dispatchSetDrivesEvent(drives);
-  dispatchSetDocumentsEvent(documents);
+  setDrives(drives);
+  setDocuments(documents);
 }
 
 export async function initReactor(

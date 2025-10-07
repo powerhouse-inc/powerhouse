@@ -1,35 +1,5 @@
-import type { DocumentDriveDocument } from "document-drive";
 import { dispatchSetSelectedNodeIdEvent } from "./nodes.js";
-import type { SetDrivesEvent, SetSelectedDriveIdEvent } from "./types.js";
-
-export function dispatchSetDrivesEvent(
-  drives: DocumentDriveDocument[] | undefined,
-) {
-  const event = new CustomEvent("ph:setDrives", {
-    detail: { drives },
-  });
-  window.dispatchEvent(event);
-}
-export function dispatchDrivesUpdatedEvent() {
-  const event = new CustomEvent("ph:drivesUpdated");
-  window.dispatchEvent(event);
-}
-export function handleSetDrivesEvent(event: SetDrivesEvent) {
-  const drives = event.detail.drives;
-  window.phDrives = drives;
-  dispatchDrivesUpdatedEvent();
-}
-
-export function subscribeToDrives(onStoreChange: () => void) {
-  window.addEventListener("ph:drivesUpdated", onStoreChange);
-  return () => {
-    window.removeEventListener("ph:drivesUpdated", onStoreChange);
-  };
-}
-
-export function addDrivesEventHandler() {
-  window.addEventListener("ph:setDrives", handleSetDrivesEvent);
-}
+import type { SetSelectedDriveIdEvent } from "./types.js";
 
 export function dispatchSetSelectedDriveIdEvent(driveSlug: string | undefined) {
   const event = new CustomEvent("ph:setSelectedDriveId", {

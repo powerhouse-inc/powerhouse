@@ -1,21 +1,17 @@
-import {
-  subscribeToConnectCrypto,
-  subscribeToDid,
-} from "@powerhousedao/reactor-browser";
-import { useSyncExternalStore } from "react";
+import { makePHEventFunctions } from "@powerhousedao/reactor-browser";
+import type { DID, IConnectCrypto } from "@renown/sdk";
 
-export function useConnectCrypto() {
-  const connectCrypto = useSyncExternalStore(
-    subscribeToConnectCrypto,
-    () => window.connectCrypto,
-  );
-  return connectCrypto;
-}
+export const {
+  useValue: useConnectCrypto,
+  setValue: setConnectCrypto,
+  addEventHandler: addConnectCryptoEventHandler,
+} = makePHEventFunctions<IConnectCrypto>("connectCrypto");
 
-export function useDid() {
-  const did = useSyncExternalStore(subscribeToDid, () => window.did);
-  return did;
-}
+export const {
+  useValue: useDid,
+  setValue: setDid,
+  addEventHandler: addDidEventHandler,
+} = makePHEventFunctions<DID>("did");
 
 export function useSign() {
   const connectCrypto = useConnectCrypto();

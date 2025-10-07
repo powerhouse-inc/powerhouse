@@ -2,7 +2,7 @@ import {
   dispatchSetSelectedDriveIdEvent,
   getDriveAvailableOffline,
   getDriveSharingType,
-  subscribeToDrives,
+  makePHEventFunctions,
   subscribeToSelectedDriveId,
   useDispatch,
 } from "@powerhousedao/reactor-browser";
@@ -15,11 +15,11 @@ import type {
 import { useSyncExternalStore } from "react";
 import type { DocumentDispatch } from "./documents.js";
 
-/** Returns the drives for a reactor. */
-export function useDrives(): DocumentDriveDocument[] | undefined {
-  const drives = useSyncExternalStore(subscribeToDrives, () => window.phDrives);
-  return drives;
-}
+export const {
+  useValue: useDrives,
+  setValue: setDrives,
+  addEventHandler: addDrivesEventHandler,
+} = makePHEventFunctions<DocumentDriveDocument[]>("phDrives");
 
 export function useDriveById(
   driveId: string | undefined | null,

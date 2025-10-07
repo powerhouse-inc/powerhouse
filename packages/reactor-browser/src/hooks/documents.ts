@@ -1,4 +1,5 @@
 import {
+  makePHEventFunctions,
   useDispatch,
   useDocumentModelModuleById,
   useFileNodes,
@@ -6,25 +7,12 @@ import {
   useSelectedNodeId,
 } from "@powerhousedao/reactor-browser";
 import type { Action, DocumentAction, PHDocument } from "document-model";
-import { useSyncExternalStore } from "react";
 
-function getDocumentsSnapshot() {
-  const documents = window.phDocuments;
-  return documents;
-}
-
-function subscribeToDocuments(onStoreChange: () => void) {
-  window.addEventListener("ph:setDocuments", onStoreChange);
-  return () => window.removeEventListener("ph:setDocuments", onStoreChange);
-}
-
-export function useAllDocuments(): PHDocument[] | undefined {
-  const documents = useSyncExternalStore(
-    subscribeToDocuments,
-    () => window.phDocuments,
-  );
-  return documents;
-}
+export const {
+  useValue: useAllDocuments,
+  setValue: setDocuments,
+  addEventHandler: addDocumentsEventHandler,
+} = makePHEventFunctions<PHDocument[]>("phDocuments");
 
 /** Returns the documents for the selected drive. */
 export function useSelectedDriveDocuments(): PHDocument[] | undefined {

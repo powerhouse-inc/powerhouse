@@ -8,81 +8,39 @@ import type { DocumentDriveDocument, ProcessorManager } from "document-drive";
 import type { PHDocument } from "document-model";
 import type { PHModal } from "../types/modals.js";
 
-export type SetReactorEvent = CustomEvent<{
-  reactor: Reactor | undefined;
+type SetEvent<TKey extends string, TValue> = CustomEvent<{
+  [key in TKey]: TValue | undefined;
 }>;
-export type ReactorUpdatedEvent = CustomEvent;
+export type SetReactorEvent = SetEvent<"reactor", Reactor>;
+export type SetConnectCryptoEvent = SetEvent<"connectCrypto", IConnectCrypto>;
+export type SetDidEvent = SetEvent<"did", DID>;
+export type SetRenownEvent = SetEvent<"renown", IRenown>;
+export type SetLoginStatusEvent = SetEvent<"loginStatus", LoginStatus>;
+export type SetUserEvent = SetEvent<"user", User>;
+export type SetProcessorManagerEvent = SetEvent<
+  "processorManager",
+  ProcessorManager
+>;
+export type SetDrivesEvent = SetEvent<"drives", DocumentDriveDocument[]>;
 
-export type SetConnectCryptoEvent = CustomEvent<{
-  connectCrypto: IConnectCrypto | undefined;
-}>;
-export type ConnectCryptoUpdatedEvent = CustomEvent;
+export type SetDocumentsEvent = SetEvent<"documents", PHDocument[]>;
 
-export type SetDidEvent = CustomEvent<{
-  did: DID | undefined;
-}>;
-export type DidUpdatedEvent = CustomEvent;
+export type SetSelectedDriveIdEvent = SetEvent<"driveSlug", string>;
 
-export type SetRenownEvent = CustomEvent<{
-  renown: IRenown | undefined;
-}>;
-export type RenownUpdatedEvent = CustomEvent;
+export type SetSelectedNodeIdEvent = SetEvent<"nodeSlug", string>;
 
-export type SetLoginStatusEvent = CustomEvent<{
-  loginStatus: LoginStatus | undefined;
-}>;
-export type LoginStatusUpdatedEvent = CustomEvent;
+export type SetVetraPackagesEvent = SetEvent<"vetraPackages", VetraPackage[]>;
 
-export type SetUserEvent = CustomEvent<{
-  user: User | undefined;
-}>;
-export type UserUpdatedEvent = CustomEvent;
+export type SetAnalyticsDatabaseNameEvent = SetEvent<
+  "analyticsDatabaseName",
+  string
+>;
 
-export type SetProcessorManagerEvent = CustomEvent<{
-  processorManager: ProcessorManager | undefined;
-}>;
-export type ProcessorManagerUpdatedEvent = CustomEvent;
+export type SetAllowListEvent = SetEvent<"allowList", string[]>;
 
-export type SetDrivesEvent = CustomEvent<{
-  drives: DocumentDriveDocument[] | undefined;
-}>;
-export type DrivesUpdatedEvent = CustomEvent;
+export type SetIsSearchBarEnabledEvent = SetEvent<
+  "isSearchBarEnabled",
+  boolean
+>;
 
-export type SetDocumentsEvent = CustomEvent<{
-  documents: PHDocument[] | undefined;
-}>;
-export type DocumentsUpdatedEvent = CustomEvent;
-
-export type SetSelectedDriveIdEvent = CustomEvent<{
-  driveSlug: string | undefined;
-}>;
-export type SelectedDriveIdUpdatedEvent = CustomEvent;
-
-export type SetSelectedNodeIdEvent = CustomEvent<{
-  nodeSlug: string | undefined;
-}>;
-export type SelectedNodeIdUpdatedEvent = CustomEvent;
-export type SetVetraPackagesEvent = CustomEvent<{
-  vetraPackages: VetraPackage[] | undefined;
-}>;
-export type VetraPackagesUpdatedEvent = CustomEvent;
-
-export type SetAnalyticsDatabaseNameEvent = CustomEvent<{
-  analyticsDatabaseName: string | undefined;
-}>;
-export type AnalyticsDatabaseNameUpdatedEvent = CustomEvent;
-
-export type SetAllowListEvent = CustomEvent<{
-  allowList: string[] | undefined;
-}>;
-export type AllowListUpdatedEvent = CustomEvent;
-
-export type SetIsSearchBarEnabledEvent = CustomEvent<{
-  isSearchBarEnabled: boolean | undefined;
-}>;
-export type IsSearchBarEnabledUpdatedEvent = CustomEvent;
-
-export type SetModalEvent = CustomEvent<{
-  modal: PHModal | undefined;
-}>;
-export type ModalUpdatedEvent = CustomEvent;
+export type SetModalEvent = SetEvent<"modal", PHModal>;

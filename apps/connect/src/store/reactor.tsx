@@ -10,13 +10,13 @@ import {
   setAnalyticsDatabaseName,
   setAllowList,
   setIsSearchBarEnabled,
-  dispatchSetConnectCryptoEvent,
-  dispatchSetDidEvent,
-  dispatchSetDocumentsEvent,
-  dispatchSetDrivesEvent,
-  dispatchSetProcessorManagerEvent,
-  dispatchSetReactorEvent,
-  dispatchSetRenownEvent,
+  setConnectCrypto,
+  setDid,
+  setDocuments,
+  setDrives,
+  setProcessorManager,
+  setReactor,
+  setRenown,
   dispatchSetSelectedDriveIdEvent,
   dispatchSetSelectedNodeIdEvent,
   dispatchSetVetraPackagesEvent,
@@ -174,16 +174,16 @@ export async function createReactor() {
   const didFromUrl = getDidFromUrl();
   await login(didFromUrl, reactor, renown, connectCrypto);
   // dispatch the events to set the values in the window object
-  dispatchSetReactorEvent(reactor);
-  dispatchSetConnectCryptoEvent(connectCrypto);
-  dispatchSetDidEvent(did);
-  dispatchSetRenownEvent(renown);
+  setReactor(reactor);
+  setConnectCrypto(connectCrypto);
+  setDid(did);
+  setRenown(renown);
   setAnalyticsDatabaseName(analyticsDatabaseName);
   setAllowList(allowList);
   setIsSearchBarEnabled(isSearchBarEnabled);
-  dispatchSetProcessorManagerEvent(processorManager);
-  dispatchSetDrivesEvent(drives);
-  dispatchSetDocumentsEvent(documents);
+  setProcessorManager(processorManager);
+  setDrives(drives);
+  setDocuments(documents);
   dispatchSetVetraPackagesEvent(vetraPackages);
   dispatchSetSelectedDriveIdEvent(driveSlug);
   dispatchSetSelectedNodeIdEvent(nodeSlug);

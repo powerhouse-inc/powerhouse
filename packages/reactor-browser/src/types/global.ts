@@ -1,18 +1,4 @@
 import type {
-  AllowListUpdatedEvent,
-  AnalyticsDatabaseNameUpdatedEvent,
-  ConnectCryptoUpdatedEvent,
-  DidUpdatedEvent,
-  DocumentsUpdatedEvent,
-  DrivesUpdatedEvent,
-  IsSearchBarEnabledUpdatedEvent,
-  LoginStatusUpdatedEvent,
-  ModalUpdatedEvent,
-  ProcessorManagerUpdatedEvent,
-  ReactorUpdatedEvent,
-  RenownUpdatedEvent,
-  SelectedDriveIdUpdatedEvent,
-  SelectedNodeIdUpdatedEvent,
   SetAllowListEvent,
   SetAnalyticsDatabaseNameEvent,
   SetConnectCryptoEvent,
@@ -29,9 +15,7 @@ import type {
   SetSelectedNodeIdEvent,
   SetUserEvent,
   SetVetraPackagesEvent,
-  UserUpdatedEvent,
   VetraPackage,
-  VetraPackagesUpdatedEvent,
 } from "@powerhousedao/reactor-browser";
 import type { DID, IConnectCrypto, IRenown, User } from "@renown/sdk";
 
@@ -77,36 +61,36 @@ declare global {
 
   interface WindowEventMap {
     "ph:setReactor": SetReactorEvent;
-    "ph:reactorUpdated": ReactorUpdatedEvent;
+    "ph:reactorUpdated": CustomEvent;
     "ph:setConnectCrypto": SetConnectCryptoEvent;
-    "ph:connectCryptoUpdated": ConnectCryptoUpdatedEvent;
+    "ph:connectCryptoUpdated": CustomEvent;
     "ph:setDid": SetDidEvent;
-    "ph:didUpdated": DidUpdatedEvent;
+    "ph:didUpdated": CustomEvent;
     "ph:setRenown": SetRenownEvent;
-    "ph:renownUpdated": RenownUpdatedEvent;
+    "ph:renownUpdated": CustomEvent;
     "ph:setLoginStatus": SetLoginStatusEvent;
-    "ph:loginStatusUpdated": LoginStatusUpdatedEvent;
+    "ph:loginStatusUpdated": CustomEvent;
     "ph:setUser": SetUserEvent;
-    "ph:userUpdated": UserUpdatedEvent;
+    "ph:userUpdated": CustomEvent;
     "ph:setProcessorManager": SetProcessorManagerEvent;
-    "ph:processorManagerUpdated": ProcessorManagerUpdatedEvent;
+    "ph:processorManagerUpdated": CustomEvent;
     "ph:setDrives": SetDrivesEvent;
-    "ph:drivesUpdated": DrivesUpdatedEvent;
+    "ph:drivesUpdated": CustomEvent;
     "ph:setDocuments": SetDocumentsEvent;
-    "ph:documentsUpdated": DocumentsUpdatedEvent;
+    "ph:documentsUpdated": CustomEvent;
     "ph:setVetraPackages": SetVetraPackagesEvent;
-    "ph:vetraPackagesUpdated": VetraPackagesUpdatedEvent;
+    "ph:vetraPackagesUpdated": CustomEvent;
     "ph:setSelectedDriveId": SetSelectedDriveIdEvent;
-    "ph:selectedDriveIdUpdated": SelectedDriveIdUpdatedEvent;
+    "ph:selectedDriveIdUpdated": CustomEvent;
     "ph:setSelectedNodeId": SetSelectedNodeIdEvent;
-    "ph:selectedNodeIdUpdated": SelectedNodeIdUpdatedEvent;
+    "ph:selectedNodeIdUpdated": CustomEvent;
     "ph:setModal": SetModalEvent;
-    "ph:modalUpdated": ModalUpdatedEvent;
+    "ph:modalUpdated": CustomEvent;
     "ph:setAnalyticsDatabaseName": SetAnalyticsDatabaseNameEvent;
-    "ph:analyticsDatabaseNameUpdated": AnalyticsDatabaseNameUpdatedEvent;
+    "ph:analyticsDatabaseNameUpdated": CustomEvent;
     "ph:setAllowList": SetAllowListEvent;
-    "ph:allowListUpdated": AllowListUpdatedEvent;
+    "ph:allowListUpdated": CustomEvent;
     "ph:setIsSearchBarEnabled": SetIsSearchBarEnabledEvent;
-    "ph:isSearchBarEnabledUpdated": IsSearchBarEnabledUpdatedEvent;
+    "ph:isSearchBarEnabledUpdated": CustomEvent;
   }
 }
