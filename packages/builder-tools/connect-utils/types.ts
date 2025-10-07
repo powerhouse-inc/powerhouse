@@ -15,6 +15,7 @@ export type ConnectBuildEnv = {
   PH_SENTRY_AUTH_TOKEN?: string;
   PH_SENTRY_ORG?: string;
   PH_SENTRY_PROJECT?: string;
+  PH_DISABLE_LOCAL_PACKAGES: string;
 };
 
 export type ConnectRuntimeEnv = {
