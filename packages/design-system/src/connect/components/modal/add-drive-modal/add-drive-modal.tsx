@@ -72,13 +72,6 @@ export function AddDriveModal(props: AddDriveModalProps) {
               requestPublicDrive={requestPublicDrive}
             />
           </TabContent>
-          <TabContent
-            label="New Shortcut"
-            description="Create a new shortcut"
-            disabled
-          >
-            test
-          </TabContent>
         </Tabs>
       </div>
     </Modal>
