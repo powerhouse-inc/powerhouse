@@ -10,9 +10,13 @@ export const getResolvers = (subgraph: ISubgraph): Record<string, unknown> => {
     Query: {
       vetraPackages: async (
         parent: unknown,
-        args: { search?: string; sortOrder?: "asc" | "desc" },
+        args: {
+          search?: string;
+          sortOrder?: "asc" | "desc";
+          documentId_in?: string[];
+        },
       ) => {
-        const { search } = args;
+        const { search, documentId_in } = args;
         const sortOrder = args.sortOrder || "asc";
 
         let query = VetraReadModelProcessor.query<DB>("vetra-packages", db)
@@ -21,6 +25,10 @@ export const getResolvers = (subgraph: ISubgraph): Record<string, unknown> => {
 
         if (search) {
           query = query.where("name", "ilike", `%${search}%`);
+        }
+
+        if (documentId_in && documentId_in.length > 0) {
+          query = query.where("document_id", "in", documentId_in);
         }
 
         query = query.orderBy("name", sortOrder);
