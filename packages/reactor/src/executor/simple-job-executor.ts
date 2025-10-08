@@ -17,6 +17,14 @@ type CreateDocumentInput = {
 };
 
 /**
+ * Input type for DELETE_DOCUMENT system actions in the reactor.
+ */
+type DeleteDocumentInput = {
+  documentId: string;
+  propagate?: string; // PropagationMode ("none" | "cascade")
+};
+
+/**
  * Simple job executor that processes a job by applying actions through document model reducers.
  */
 export class SimpleJobExecutor implements IJobExecutor {
@@ -32,9 +40,13 @@ export class SimpleJobExecutor implements IJobExecutor {
   async executeJob(job: Job): Promise<JobResult> {
     const startTime = Date.now();
 
-    // Handle system actions specially (CREATE_DOCUMENT, etc.)
+    // Handle system actions specially (CREATE_DOCUMENT, DELETE_DOCUMENT, etc.)
     if (job.operation.action.type === "CREATE_DOCUMENT") {
       return this.executeCreateDocument(job, startTime);
+    }
+
+    if (job.operation.action.type === "DELETE_DOCUMENT") {
+      return this.executeDeleteDocument(job, startTime);
     }
 
     let document: PHDocument;
@@ -144,6 +156,56 @@ export class SimpleJobExecutor implements IJobExecutor {
         duration: Date.now() - startTime,
       };
     }
+
+    return {
+      job,
+      success: true,
+      operation,
+      duration: Date.now() - startTime,
+    };
+  }
+
+  /**
+   * Execute a DELETE_DOCUMENT system action.
+   * This deletes a document from storage.
+   */
+  private async executeDeleteDocument(
+    job: Job,
+    startTime: number,
+  ): Promise<JobResult> {
+    const action = job.operation.action;
+    const input = action.input as DeleteDocumentInput;
+
+    if (!input?.documentId) {
+      return {
+        job,
+        success: false,
+        error: new Error("DELETE_DOCUMENT action requires a documentId in input"),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    const documentId = input.documentId;
+
+    // Delete the document from storage
+    try {
+      await this.documentStorage.delete(documentId);
+    } catch (error) {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          `Failed to delete document from storage: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    // Create the operation from the job
+    const operation = job.operation;
+
+    // For DELETE_DOCUMENT, we don't write operations to storage since the document is gone
+    // The operation is just returned to indicate successful deletion
 
     return {
       job,

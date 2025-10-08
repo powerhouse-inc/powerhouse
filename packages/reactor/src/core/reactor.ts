@@ -348,34 +348,49 @@ export class Reactor implements IReactor {
     signal?: AbortSignal,
   ): Promise<JobInfo> {
     const createdAtUtcIso = new Date().toISOString();
-    const jobId = uuidv4();
-
-    try {
-      // Delete document using drive server
-      await this.driveServer.deleteDocument(id);
-
-      // TODO: Implement cascade deletion when propagate mode is CASCADE
-    } catch (error) {
-      // TODO: Phase 4 - This will return a job that can be retried
-      return {
-        id: jobId,
-        status: JobStatus.FAILED,
-        createdAtUtcIso,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
 
     if (signal?.aborted) {
       throw new AbortError();
     }
 
-    // Return success job info
-    // TODO: Phase 4 - This will return a job that goes through the queue
+    // Create a DELETE_DOCUMENT action
+    const action: Action = {
+      id: `${id}-delete`,
+      type: "DELETE_DOCUMENT",
+      scope: "system",
+      timestampUtcMs: String(Date.now()),
+      input: {
+        documentId: id,
+        propagate,
+      },
+    };
+
+    // Create a job for the DELETE_DOCUMENT action
+    const job: Job = {
+      id: uuidv4(),
+      documentId: SYSTEM_DOCUMENT_ID,
+      scope: "system",
+      branch: "main",
+      operation: {
+        index: 0,
+        timestampUtcMs: String(Date.now()),
+        hash: "",
+        skip: 0,
+        action: action,
+      },
+      createdAt: new Date().toISOString(),
+      queueHint: [],
+      maxRetries: 3,
+    };
+
+    // Enqueue the job
+    await this.queue.enqueue(job);
+
+    // Return pending job status
     return {
-      id: jobId,
-      status: JobStatus.COMPLETED,
+      id: job.id,
+      status: JobStatus.PENDING,
       createdAtUtcIso,
-      completedAtUtcIso: new Date().toISOString(),
     };
   }
 
