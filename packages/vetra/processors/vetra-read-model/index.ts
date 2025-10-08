@@ -1,7 +1,5 @@
-import {
-  RelationalDbProcessor,
-  type InternalTransmitterUpdate,
-} from "document-drive";
+import { type InternalTransmitterUpdate } from "document-drive";
+import { RelationalDbProcessor } from "document-drive/processors/relational";
 import type { VetraPackageState } from "../../document-models/vetra-package/gen/schema/types.js";
 import { up } from "./migrations.js";
 import { type DB } from "./schema.js";

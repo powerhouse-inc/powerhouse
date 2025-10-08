@@ -1,8 +1,6 @@
-import {
-  type IProcessorHostModule,
-  type ProcessorRecord,
-  type RelationalDbProcessorFilter,
-} from "document-drive";
+import { type ProcessorRecord } from "document-drive";
+import type { RelationalDbProcessorFilter } from "document-drive/processors/relational";
+import type { IProcessorHostModule } from "document-drive/processors/types";
 import { type PHDocumentHeader } from "document-model";
 import { VetraReadModelProcessor } from "./index.js";
 
