@@ -1,5 +1,4 @@
 import type { StorybookConfig } from "@storybook/react-vite";
-import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const srcPath = fileURLToPath(new URL("../dist/src", import.meta.url));
@@ -31,11 +30,16 @@ const config: StorybookConfig = {
     const { mergeConfig } = await import("vite");
     const { default: tailwindcss } = await import("@tailwindcss/vite");
     return mergeConfig(config, {
-      plugins: [tailwindcss()],
+      plugins: [
+        tailwindcss(),
+      ],
       build: {
         rollupOptions: {
           external: ["node:crypto"],
         },
+      },
+      define: {
+        "process.env": {},
       },
     });
   },
