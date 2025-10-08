@@ -1,3 +1,24 @@
+## 5.0.0-staging.22 (2025-10-08)
+
+### 🚀 Features
+
+- update file extension to .phd for document export ([#1894](https://github.com/powerhouse-inc/powerhouse/pull/1894))
+- **vetra:** added read model to fetch vetra packages ([abb6d3742](https://github.com/powerhouse-inc/powerhouse/commit/abb6d3742))
+- **vetra:** added documentId in filter option ([01bb92f28](https://github.com/powerhouse-inc/powerhouse/commit/01bb92f28))
+
+### 🩹 Fixes
+
+- enabled supported file ext in drop zone ([#1892](https://github.com/powerhouse-inc/powerhouse/pull/1892))
+- **reactor-api:** added auth export ([a38df7fde](https://github.com/powerhouse-inc/powerhouse/commit/a38df7fde))
+- **switchboard, ph-cli, ph-cmd, builder-tools:** ensure minimum node version ([e0fb396e7](https://github.com/powerhouse-inc/powerhouse/commit/e0fb396e7))
+- **vetra:** added vetra package to processor filter ([5f3eaadf4](https://github.com/powerhouse-inc/powerhouse/commit/5f3eaadf4))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+- Guillermo Puente Sandoval @gpuente
+
 ## 5.0.0-staging.21 (2025-09-30)
 
 ### 🩹 Fixes

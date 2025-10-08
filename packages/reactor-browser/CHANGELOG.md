@@ -1,3 +1,15 @@
+## 5.0.0-staging.22 (2025-10-08)
+
+### 🚀 Features
+
+- **vetra:** added read model to fetch vetra packages ([abb6d3742](https://github.com/powerhouse-inc/powerhouse/commit/abb6d3742))
+- update file extension to .phd for document export ([#1894](https://github.com/powerhouse-inc/powerhouse/pull/1894))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente Sandoval @gpuente
+
 ## 5.0.0-staging.21 (2025-09-30)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

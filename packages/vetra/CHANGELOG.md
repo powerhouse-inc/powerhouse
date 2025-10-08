@@ -1,3 +1,18 @@
+## 5.0.0-staging.22 (2025-10-08)
+
+### 🚀 Features
+
+- **vetra:** added documentId in filter option ([01bb92f28](https://github.com/powerhouse-inc/powerhouse/commit/01bb92f28))
+- **vetra:** added read model to fetch vetra packages ([abb6d3742](https://github.com/powerhouse-inc/powerhouse/commit/abb6d3742))
+
+### 🩹 Fixes
+
+- **vetra:** added vetra package to processor filter ([5f3eaadf4](https://github.com/powerhouse-inc/powerhouse/commit/5f3eaadf4))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.0.0-staging.21 (2025-09-30)
 
 ### 🩹 Fixes
