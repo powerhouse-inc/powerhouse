@@ -100,12 +100,13 @@ Instead of a "big bang" switch, we first validate the new job pipeline while sti
 
 1.  **Update `Reactor` Facade Mutations** (⚠️ Partially Complete):
     - ✅ The `mutate()` method packages actions as `Job`s and enqueues them into `IQueue` (reactor.ts:370-404)
-    - ❌ The `create()` method still calls `BaseDocumentDriveServer.addDocument()` directly and returns synchronous job completion (reactor.ts:295-325)
-    - ❌ The `deleteDocument()` method still calls `BaseDocumentDriveServer.deleteDocument()` directly and returns synchronous job completion (reactor.ts:330-365)
-    - **TODO**: Refactor `create()` and `deleteDocument()` to use the queue pipeline
+    - ✅ The `create()` method packages CREATE_DOCUMENT actions as `Job`s and enqueues them into `IQueue` (reactor.ts:295-340)
+    - ❌ The `deleteDocument()` method still calls `BaseDocumentDriveServer.deleteDocument()` directly and returns synchronous job completion (reactor.ts:342-377)
+    - **TODO**: Refactor `deleteDocument()` to use the queue pipeline
 2.  **Executor Writes to Legacy Storage** (✅ Complete):
     - ✅ `SimpleJobExecutor` takes `IDocumentOperationStorage` as a constructor dependency (simple-job-executor.ts:15-18)
     - ✅ After processing a job, it writes the resulting `Operation`s to legacy storage via `operationStorage.addDocumentOperations()` (simple-job-executor.ts:66-70)
+    - ✅ `SimpleJobExecutor` handles CREATE_DOCUMENT system actions specially, creating documents in storage and writing operations (simple-job-executor.ts:97-138)
     - **Goal**: This validates the entire `Facade -> Queue -> Executor` pipeline is working correctly before introducing any new storage.
 
 ## Phase 5: Introduce `IOperationStore` with Dual-Writing

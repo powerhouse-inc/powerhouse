@@ -9,6 +9,14 @@ import type { IJobExecutor } from "./interfaces.js";
 import type { JobResult } from "./types.js";
 
 /**
+ * Input type for CREATE_DOCUMENT system actions in the reactor.
+ * This is a simplified version that just wraps the complete document.
+ */
+type CreateDocumentInput = {
+  document: PHDocument;
+};
+
+/**
  * Simple job executor that processes a job by applying actions through document model reducers.
  */
 export class SimpleJobExecutor implements IJobExecutor {
@@ -23,6 +31,11 @@ export class SimpleJobExecutor implements IJobExecutor {
    */
   async executeJob(job: Job): Promise<JobResult> {
     const startTime = Date.now();
+
+    // Handle system actions specially (CREATE_DOCUMENT, etc.)
+    if (job.operation.action.type === "CREATE_DOCUMENT") {
+      return this.executeCreateDocument(job, startTime);
+    }
 
     let document: PHDocument;
     try {
@@ -81,6 +94,61 @@ export class SimpleJobExecutor implements IJobExecutor {
       job,
       success: true,
       operation: newOperation,
+      duration: Date.now() - startTime,
+    };
+  }
+
+  /**
+   * Execute a CREATE_DOCUMENT system action.
+   * This creates a new document in storage along with its initial operations.
+   */
+  private async executeCreateDocument(
+    job: Job,
+    startTime: number,
+  ): Promise<JobResult> {
+    const action = job.operation.action;
+    const input = action.input as CreateDocumentInput;
+    const document = input.document;
+
+    // Store the document in storage
+    try {
+      await this.documentStorage.create(document);
+    } catch (error) {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          `Failed to create document in storage: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    // Create the operation from the job
+    const operation = job.operation;
+
+    // Write the CREATE_DOCUMENT operation to storage
+    try {
+      await this.operationStorage.addDocumentOperations(
+        document.header.id,
+        [operation],
+        document,
+      );
+    } catch (error) {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          `Failed to write CREATE_DOCUMENT operation to storage: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    return {
+      job,
+      success: true,
+      operation,
       duration: Date.now() - startTime,
     };
   }

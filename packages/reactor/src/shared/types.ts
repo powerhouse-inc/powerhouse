@@ -1,4 +1,10 @@
 /**
+ * The document ID used for system operations (CREATE_DOCUMENT, DELETE_DOCUMENT, etc.)
+ * System operations use this special ID along with the "system" scope.
+ */
+export const SYSTEM_DOCUMENT_ID = "00000000-0000-0000-0000-000000000000";
+
+/**
  * Describes the status of a shutdown operation.
  */
 export type ShutdownStatus = {
