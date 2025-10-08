@@ -2,7 +2,11 @@ import type {
   IDocumentOperationStorage,
   IDocumentStorage,
 } from "document-drive";
-import type { DocumentModelModule, PHDocument } from "document-model";
+import type {
+  DeleteDocumentActionInput,
+  DocumentModelModule,
+  PHDocument,
+} from "document-model";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import type { IJobExecutor } from "./interfaces.js";
@@ -14,14 +18,6 @@ import type { JobResult } from "./types.js";
  */
 type CreateDocumentInput = {
   document: PHDocument;
-};
-
-/**
- * Input type for DELETE_DOCUMENT system actions in the reactor.
- */
-type DeleteDocumentInput = {
-  documentId: string;
-  propagate?: string; // PropagationMode ("none" | "cascade")
 };
 
 /**
@@ -174,13 +170,15 @@ export class SimpleJobExecutor implements IJobExecutor {
     startTime: number,
   ): Promise<JobResult> {
     const action = job.operation.action;
-    const input = action.input as DeleteDocumentInput;
+    const input = action.input as DeleteDocumentActionInput;
 
     if (!input?.documentId) {
       return {
         job,
         success: false,
-        error: new Error("DELETE_DOCUMENT action requires a documentId in input"),
+        error: new Error(
+          "DELETE_DOCUMENT action requires a documentId in input",
+        ),
         duration: Date.now() - startTime,
       };
     }

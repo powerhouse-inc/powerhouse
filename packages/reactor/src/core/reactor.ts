@@ -2,6 +2,7 @@ import type { BaseDocumentDriveServer, IDocumentStorage } from "document-drive";
 import { AbortError } from "document-drive";
 import type {
   Action,
+  DeleteDocumentActionInput,
   DocumentModelModule,
   Operation,
   PHBaseState,
@@ -354,15 +355,17 @@ export class Reactor implements IReactor {
     }
 
     // Create a DELETE_DOCUMENT action
+    const deleteInput: DeleteDocumentActionInput = {
+      documentId: id,
+      propagate,
+    };
+
     const action: Action = {
       id: `${id}-delete`,
       type: "DELETE_DOCUMENT",
       scope: "system",
       timestampUtcMs: String(Date.now()),
-      input: {
-        documentId: id,
-        propagate,
-      },
+      input: deleteInput,
     };
 
     // Create a job for the DELETE_DOCUMENT action

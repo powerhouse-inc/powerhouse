@@ -228,6 +228,11 @@ export type UpgradeDocumentActionInput = {
   initialState?: object; // optional; defaults to model.defaultState()
 };
 
+export type DeleteDocumentActionInput = {
+  documentId: string;
+  propagate?: "none" | "cascade"; // Deletion propagation mode
+};
+
 export type CreateDocumentAction = Action & {
   type: "CREATE_DOCUMENT";
   input: CreateDocumentActionInput;
@@ -236,6 +241,11 @@ export type CreateDocumentAction = Action & {
 export type UpgradeDocumentAction = Action & {
   type: "UPGRADE_DOCUMENT";
   input: UpgradeDocumentActionInput;
+};
+
+export type DeleteDocumentAction = Action & {
+  type: "DELETE_DOCUMENT";
+  input: DeleteDocumentActionInput;
 };
 
 export type DocumentAction =
