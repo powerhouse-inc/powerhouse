@@ -18,14 +18,17 @@ import { childLogger } from "document-drive";
 import { generateUUIDBrowser } from "document-model/core";
 import type { PropsWithChildren } from "react";
 import { useEffect, useRef } from "react";
-import PGWorker from "../workers/pglite-worker?worker";
+
 const logger = childLogger(["reactor-analytics"]);
 
 function createPgLiteFactoryWorker(databaseName: string) {
   return async () => {
-    const worker = new PGWorker({
-      name: "pglite-worker",
-    });
+    const worker = new Worker(
+      new URL("../workers/pglite-worke.js", import.meta.url),
+      {
+        type: "module",
+      },
+    );
 
     worker.onmessage = (event) => {
       logger.verbose(event.data);

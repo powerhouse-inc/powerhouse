@@ -1,6 +1,6 @@
 import { loadRuntimeEnv } from "@powerhousedao/builder-tools/browser";
-import { getBasePath } from "@powerhousedao/connect";
 import { logger, setLogLevel } from "document-drive";
+import { getBasePath } from "./utils/browser.js";
 
 // Load environment variables with validation and defaults
 const env = loadRuntimeEnv({
