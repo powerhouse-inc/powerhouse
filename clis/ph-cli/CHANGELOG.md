@@ -1,3 +1,43 @@
+## 4.1.0-dev.60 (2025-10-08)
+
+### 🚀 Features
+
+- **connect, builder-tools:** centralized logic to handle env vars ([bf4b569d1](https://github.com/powerhouse-inc/powerhouse/commit/bf4b569d1))
+- **vetra:** added read model to fetch vetra packages ([23c55364d](https://github.com/powerhouse-inc/powerhouse/commit/23c55364d))
+- **monorepo:** use latest versions of react related deps ([#1905](https://github.com/powerhouse-inc/powerhouse/pull/1905))
+- **monorepo:** remove global storybook installs ([#1903](https://github.com/powerhouse-inc/powerhouse/pull/1903))
+- **monorepo:** update to react 19 ([#1902](https://github.com/powerhouse-inc/powerhouse/pull/1902))
+- **connect, ph-cli, builder-tools, vetra:** ph connect rework ([746390687](https://github.com/powerhouse-inc/powerhouse/commit/746390687))
+- **vetra:** enabled HMR in dev mode ([8cf19757e](https://github.com/powerhouse-inc/powerhouse/commit/8cf19757e))
+- **vetra:** new connect build setup on vetra ([8dd11a849](https://github.com/powerhouse-inc/powerhouse/commit/8dd11a849))
+- **monorepo:** revert package versions ([8a1a02628](https://github.com/powerhouse-inc/powerhouse/commit/8a1a02628))
+- **monorepo:** update eslint config ([ac97af97d](https://github.com/powerhouse-inc/powerhouse/commit/ac97af97d))
+- adding feature flags to reactor-mcp ([fe4f2f683](https://github.com/powerhouse-inc/powerhouse/commit/fe4f2f683))
+- stubbing out feature flag + reactor setup in connect and deleting unused code in reactor-browser ([793bbd7af](https://github.com/powerhouse-inc/powerhouse/commit/793bbd7af))
+- syncing feature flag behavior between switchboard and reactor-local ([e45dc2bf7](https://github.com/powerhouse-inc/powerhouse/commit/e45dc2bf7))
+- added initial pieces of the kysely operation store implementation ([3fbece162](https://github.com/powerhouse-inc/powerhouse/commit/3fbece162))
+- **connect,builder-tools:** build rework ([#1871](https://github.com/powerhouse-inc/powerhouse/pull/1871))
+- **codegen:** updated editor boilerplate with document state and example setName dispatch ([3e7c51cc3](https://github.com/powerhouse-inc/powerhouse/commit/3e7c51cc3))
+- restructure document model to avoid circular imports ([#1874](https://github.com/powerhouse-inc/powerhouse/pull/1874))
+- remove hardcoded Vetra drive ID from document editors ([#1878](https://github.com/powerhouse-inc/powerhouse/pull/1878))
+- added watch-packages option to vetra command and disabled dynamic package loading by default ([#1875](https://github.com/powerhouse-inc/powerhouse/pull/1875))
+
+### 🩹 Fixes
+
+- enable ph vetra command ([#1907](https://github.com/powerhouse-inc/powerhouse/pull/1907))
+- **ph-cli,builder-tools:** remove ph connect implementation ([f92aa4df5](https://github.com/powerhouse-inc/powerhouse/commit/f92aa4df5))
+- **switchboard, ph-cli, ph-cmd, builder-tools:** ensure minimum node version ([e0fb396e7](https://github.com/powerhouse-inc/powerhouse/commit/e0fb396e7))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
 ## 4.1.0-dev.59 (2025-09-24)
 
 ### 🚀 Features

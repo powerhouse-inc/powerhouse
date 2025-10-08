@@ -1,3 +1,43 @@
+## 4.1.0-dev.60 (2025-10-08)
+
+### 🚀 Features
+
+- **vetra:** added read model to fetch vetra packages ([23c55364d](https://github.com/powerhouse-inc/powerhouse/commit/23c55364d))
+- **monorepo:** use latest versions of react related deps ([#1905](https://github.com/powerhouse-inc/powerhouse/pull/1905))
+- **monorepo:** remove global storybook installs ([#1903](https://github.com/powerhouse-inc/powerhouse/pull/1903))
+- **monorepo:** update to react 19 ([#1902](https://github.com/powerhouse-inc/powerhouse/pull/1902))
+- **vetra:** enabled HMR in dev mode ([8cf19757e](https://github.com/powerhouse-inc/powerhouse/commit/8cf19757e))
+- **vetra:** new connect build setup on vetra ([8dd11a849](https://github.com/powerhouse-inc/powerhouse/commit/8dd11a849))
+- **reactor-browser,codegen:** unify new and existing drive hooks ([7ed734b23](https://github.com/powerhouse-inc/powerhouse/commit/7ed734b23))
+- **monorepo:** revert package versions ([8a1a02628](https://github.com/powerhouse-inc/powerhouse/commit/8a1a02628))
+- **monorepo:** update eslint config ([ac97af97d](https://github.com/powerhouse-inc/powerhouse/commit/ac97af97d))
+- adding feature flags to reactor-mcp ([fe4f2f683](https://github.com/powerhouse-inc/powerhouse/commit/fe4f2f683))
+- stubbing out feature flag + reactor setup in connect and deleting unused code in reactor-browser ([793bbd7af](https://github.com/powerhouse-inc/powerhouse/commit/793bbd7af))
+- syncing feature flag behavior between switchboard and reactor-local ([e45dc2bf7](https://github.com/powerhouse-inc/powerhouse/commit/e45dc2bf7))
+- **connect,reactor-browser:** remove drive context and use window for modals ([a9539202e](https://github.com/powerhouse-inc/powerhouse/commit/a9539202e))
+- added initial pieces of the kysely operation store implementation ([3fbece162](https://github.com/powerhouse-inc/powerhouse/commit/3fbece162))
+- removed props from document editor and updated boilerplate to use hook ([7f49e9070](https://github.com/powerhouse-inc/powerhouse/commit/7f49e9070))
+- **common,vetra,connect:** render document editor as child of drive ([#1882](https://github.com/powerhouse-inc/powerhouse/pull/1882))
+- **connect,builder-tools,common,document-model,reactor-browser,vetra:** typed editor components with dispatch as prop ([c47d1d5dd](https://github.com/powerhouse-inc/powerhouse/commit/c47d1d5dd))
+- pass documentId to editor component and useDocumentOfModule for type safe retrieval ([7f0781ea0](https://github.com/powerhouse-inc/powerhouse/commit/7f0781ea0))
+- **connect,builder-tools:** build rework ([#1871](https://github.com/powerhouse-inc/powerhouse/pull/1871))
+- **codegen:** updated editor boilerplate with document state and example setName dispatch ([3e7c51cc3](https://github.com/powerhouse-inc/powerhouse/commit/3e7c51cc3))
+- restructure document model to avoid circular imports ([#1874](https://github.com/powerhouse-inc/powerhouse/pull/1874))
+- **connect,builder-tools,common,document-model,reactor-browser,vetra:** typed editor components with dispatch as prop ([553d38fef](https://github.com/powerhouse-inc/powerhouse/commit/553d38fef))
+
+### 🩹 Fixes
+
+- **connect, design-system, vetra:** import design system tailwind theme separately ([97857800d](https://github.com/powerhouse-inc/powerhouse/commit/97857800d))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+- Guillermo Puente @gpuente
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
 ## 4.1.0-dev.59 (2025-09-24)
 
 ### 🚀 Features

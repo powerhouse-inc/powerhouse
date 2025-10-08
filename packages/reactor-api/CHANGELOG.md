@@ -1,3 +1,43 @@
+## 4.1.0-dev.60 (2025-10-08)
+
+### 🚀 Features
+
+- **vetra:** added read model to fetch vetra packages ([23c55364d](https://github.com/powerhouse-inc/powerhouse/commit/23c55364d))
+- **monorepo:** use latest versions of react related deps ([#1905](https://github.com/powerhouse-inc/powerhouse/pull/1905))
+- **monorepo:** remove global storybook installs ([#1903](https://github.com/powerhouse-inc/powerhouse/pull/1903))
+- **monorepo:** update to react 19 ([#1902](https://github.com/powerhouse-inc/powerhouse/pull/1902))
+- **vetra:** enabled HMR in dev mode ([8cf19757e](https://github.com/powerhouse-inc/powerhouse/commit/8cf19757e))
+- **vetra:** new connect build setup on vetra ([8dd11a849](https://github.com/powerhouse-inc/powerhouse/commit/8dd11a849))
+- **monorepo:** revert package versions ([8a1a02628](https://github.com/powerhouse-inc/powerhouse/commit/8a1a02628))
+- **monorepo:** update eslint config ([ac97af97d](https://github.com/powerhouse-inc/powerhouse/commit/ac97af97d))
+- adding feature flags to reactor-mcp ([fe4f2f683](https://github.com/powerhouse-inc/powerhouse/commit/fe4f2f683))
+- stubbing out feature flag + reactor setup in connect and deleting unused code in reactor-browser ([793bbd7af](https://github.com/powerhouse-inc/powerhouse/commit/793bbd7af))
+- syncing feature flag behavior between switchboard and reactor-local ([e45dc2bf7](https://github.com/powerhouse-inc/powerhouse/commit/e45dc2bf7))
+- added initial pieces of the kysely operation store implementation ([3fbece162](https://github.com/powerhouse-inc/powerhouse/commit/3fbece162))
+- **connect,builder-tools:** build rework ([#1871](https://github.com/powerhouse-inc/powerhouse/pull/1871))
+- **codegen:** updated editor boilerplate with document state and example setName dispatch ([3e7c51cc3](https://github.com/powerhouse-inc/powerhouse/commit/3e7c51cc3))
+- restructure document model to avoid circular imports ([#1874](https://github.com/powerhouse-inc/powerhouse/pull/1874))
+
+### 🩹 Fixes
+
+- multiple fixes for ph vetra ([#1906](https://github.com/powerhouse-inc/powerhouse/pull/1906))
+- **reactor-api:** rolling back some changes that break subgraph injection ([29fd974e1](https://github.com/powerhouse-inc/powerhouse/commit/29fd974e1))
+- **reactor-api:** added auth export ([d3a13f128](https://github.com/powerhouse-inc/powerhouse/commit/d3a13f128))
+- **reactor-api:** catch subgraph setup errors to avoid breaking the server ([2237ff6b4](https://github.com/powerhouse-inc/powerhouse/commit/2237ff6b4))
+- **reactor-api:** rename timestamp fields to follow ISO format ([86813d154](https://github.com/powerhouse-inc/powerhouse/commit/86813d154))
+- **reactor-api:** skip document model with duplicated name instead of breaking ([d0bc1ff58](https://github.com/powerhouse-inc/powerhouse/commit/d0bc1ff58))
+- **reactor-api:** catch errors when loading packages to avoid breaking the process ([87adac5f2](https://github.com/powerhouse-inc/powerhouse/commit/87adac5f2))
+- **reactor-api:** do not use multiple loaders ([93ca742ae](https://github.com/powerhouse-inc/powerhouse/commit/93ca742ae))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+- Guillermo Puente @gpuente
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
 ## 4.1.0-dev.59 (2025-09-24)
 
 ### 🚀 Features

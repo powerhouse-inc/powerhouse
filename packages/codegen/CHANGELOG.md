@@ -1,3 +1,51 @@
+## 4.1.0-dev.60 (2025-10-08)
+
+### 🚀 Features
+
+- **vetra:** added read model to fetch vetra packages ([23c55364d](https://github.com/powerhouse-inc/powerhouse/commit/23c55364d))
+- **monorepo:** use latest versions of react related deps ([#1905](https://github.com/powerhouse-inc/powerhouse/pull/1905))
+- **monorepo:** remove global storybook installs ([#1903](https://github.com/powerhouse-inc/powerhouse/pull/1903))
+- **monorepo:** update to react 19 ([#1902](https://github.com/powerhouse-inc/powerhouse/pull/1902))
+- **vetra:** enabled HMR in dev mode ([8cf19757e](https://github.com/powerhouse-inc/powerhouse/commit/8cf19757e))
+- **vetra:** new connect build setup on vetra ([8dd11a849](https://github.com/powerhouse-inc/powerhouse/commit/8dd11a849))
+- **reactor-browser,codegen:** unify new and existing drive hooks ([7ed734b23](https://github.com/powerhouse-inc/powerhouse/commit/7ed734b23))
+- **monorepo:** revert package versions ([8a1a02628](https://github.com/powerhouse-inc/powerhouse/commit/8a1a02628))
+- **codegen:** fix index file code lost in merge ([ded0c91e5](https://github.com/powerhouse-inc/powerhouse/commit/ded0c91e5))
+- **monorepo:** update eslint config ([ac97af97d](https://github.com/powerhouse-inc/powerhouse/commit/ac97af97d))
+- adding feature flags to reactor-mcp ([fe4f2f683](https://github.com/powerhouse-inc/powerhouse/commit/fe4f2f683))
+- stubbing out feature flag + reactor setup in connect and deleting unused code in reactor-browser ([793bbd7af](https://github.com/powerhouse-inc/powerhouse/commit/793bbd7af))
+- syncing feature flag behavior between switchboard and reactor-local ([e45dc2bf7](https://github.com/powerhouse-inc/powerhouse/commit/e45dc2bf7))
+- **codegen:** fix some type errors ([0f5eec72a](https://github.com/powerhouse-inc/powerhouse/commit/0f5eec72a))
+- **codegen,reactor-browser:** drive boilerplate tweaks ([870180495](https://github.com/powerhouse-inc/powerhouse/commit/870180495))
+- refactor DriveExplorer and FolderTree components to use unified node structure and Sidebar component ([64c69ce59](https://github.com/powerhouse-inc/powerhouse/commit/64c69ce59))
+- drive boilerplate update ([aca241a83](https://github.com/powerhouse-inc/powerhouse/commit/aca241a83))
+- **connect,reactor-browser:** remove drive context and use window for modals ([a9539202e](https://github.com/powerhouse-inc/powerhouse/commit/a9539202e))
+- added initial pieces of the kysely operation store implementation ([3fbece162](https://github.com/powerhouse-inc/powerhouse/commit/3fbece162))
+- removed props from document editor and updated boilerplate to use hook ([7f49e9070](https://github.com/powerhouse-inc/powerhouse/commit/7f49e9070))
+- pass documentId to editor component and useDocumentOfModule for type safe retrieval ([7f0781ea0](https://github.com/powerhouse-inc/powerhouse/commit/7f0781ea0))
+- **connect,builder-tools:** build rework ([#1871](https://github.com/powerhouse-inc/powerhouse/pull/1871))
+- **codegen:** updated document editor boilerplate ([75cc0b9ff](https://github.com/powerhouse-inc/powerhouse/commit/75cc0b9ff))
+- **codegen:** updated editor boilerplate with document state and example setName dispatch ([3e7c51cc3](https://github.com/powerhouse-inc/powerhouse/commit/3e7c51cc3))
+- make EditorProps generic and added codegen tests ([ff5664adc](https://github.com/powerhouse-inc/powerhouse/commit/ff5664adc))
+- restructure document model to avoid circular imports ([#1874](https://github.com/powerhouse-inc/powerhouse/pull/1874))
+
+### 🩹 Fixes
+
+- **builder-tools,codegen,reactor-browser,vetra:** better error handling on useSelectedDocumentOfType ([2c2d15e06](https://github.com/powerhouse-inc/powerhouse/commit/2c2d15e06))
+- **codegen:** do not rely on global installation of prettier ([67076c5a5](https://github.com/powerhouse-inc/powerhouse/commit/67076c5a5))
+- **codegen, document-model:** export actions object from document-model ([66c2b2b4b](https://github.com/powerhouse-inc/powerhouse/commit/66c2b2b4b))
+- **codegen:** do not overwrite existing subgraphs ([b4b553441](https://github.com/powerhouse-inc/powerhouse/commit/b4b553441))
+- **codegen:** support document-model on typemap ([43be2d482](https://github.com/powerhouse-inc/powerhouse/commit/43be2d482))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+- Guillermo Puente @gpuente
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
 ## 4.1.0-dev.59 (2025-09-24)
 
 ### 🚀 Features
