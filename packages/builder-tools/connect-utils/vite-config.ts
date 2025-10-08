@@ -200,6 +200,9 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     worker: {
       format: "es",
     },
+    resolve: {
+      dedupe: ["react", "react-dom"], // needed when linked to the monorepo
+    },
   };
   return config;
 }
