@@ -1,3 +1,14 @@
+## 4.1.0-dev.62 (2025-10-08)
+
+### 🩹 Fixes
+
+- **connect:** bad worker path ([66b8cd9a1](https://github.com/powerhouse-inc/powerhouse/commit/66b8cd9a1))
+- **connect:** fix build issues on external package ([2e46ebdcb](https://github.com/powerhouse-inc/powerhouse/commit/2e46ebdcb))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.61 (2025-10-08)
 
 ### 🩹 Fixes

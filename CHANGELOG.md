@@ -1,3 +1,19 @@
+## 4.1.0-dev.62 (2025-10-08)
+
+### 🚀 Features
+
+- wip delete document action ([5f753cea0](https://github.com/powerhouse-inc/powerhouse/commit/5f753cea0))
+
+### 🩹 Fixes
+
+- **connect:** fix build issues on external package ([2e46ebdcb](https://github.com/powerhouse-inc/powerhouse/commit/2e46ebdcb))
+- **connect:** bad worker path ([66b8cd9a1](https://github.com/powerhouse-inc/powerhouse/commit/66b8cd9a1))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.61 (2025-10-08)
 
 ### 🩹 Fixes

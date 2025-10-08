@@ -1,3 +1,13 @@
+## 4.1.0-dev.62 (2025-10-08)
+
+### 🚀 Features
+
+- wip delete document action ([5f753cea0](https://github.com/powerhouse-inc/powerhouse/commit/5f753cea0))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.61 (2025-10-08)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
