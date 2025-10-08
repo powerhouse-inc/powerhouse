@@ -17,6 +17,10 @@ export const schema: DocumentNode = gql`
   }
 
   type Query {
-    vetraPackages(search: String, sortOrder: String): [VetraPackageItem!]!
+    vetraPackages(
+      search: String
+      sortOrder: String
+      documentId_in: [PHID!]
+    ): [VetraPackageItem!]!
   }
 `;
