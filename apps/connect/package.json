@@ -21,19 +21,16 @@
   ],
   "exports": {
     ".": {
-      "development": "./src/index.ts",
-      "types": "./lib/src/index.d.ts",
-      "default": "./lib/src/index.js"
+      "import": "./lib/src/index.js",
+      "types": "./lib/src/index.d.ts"
     },
     "./main.js": {
-      "development": "./src/main.tsx",
-      "types": "./lib/src/main.d.ts",
-      "default": "./lib/src/main.js"
+      "import": "./lib/src/main.js",
+      "types": "./lib/src/main.d.ts"
     },
     "./config": {
-      "development": "./src/connect.config.ts",
-      "types": "./lib/src/connect.config.d.ts",
-      "default": "./lib/src/connect.config.js"
+      "import": "./lib/src/connect.config.js",
+      "types": "./lib/src/connect.config.d.ts"
     },
     "./custom.d.ts": "./lib/custom.d.ts",
     "./style.css": "./src/index.css",
