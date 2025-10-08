@@ -1,6 +1,7 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
+    "composite": true,
     // File Layout
     "outDir": "./dist",
 
@@ -17,8 +18,8 @@
     "declarationMap": true,
 
     // Stricter Typechecking Options
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
+    // "noUncheckedIndexedAccess": true,
+    // "exactOptionalPropertyTypes": true,
 
     // Style Options
     // "noImplicitReturns": true,
@@ -37,7 +38,7 @@
     "moduleDetection": "force",
     "skipLibCheck": true
   },
-  "files": ["powerhouse.manifest.json"],
+  "include": ["**/*", "./powerhouse.manifest.json"],
   "exclude": ["dist", "node_modules", ".ph"],
   "references": [
     {
