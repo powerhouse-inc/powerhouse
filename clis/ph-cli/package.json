@@ -20,7 +20,6 @@
   "exports": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
   "scripts": {
-    "pretsc": "tsx scripts/generate-version.ts",
     "tsc": "tsc",
     "lint": "eslint",
     "generate-commands-md": "tsx scripts/generate-commands-md.ts",
