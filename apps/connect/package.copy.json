@@ -23,7 +23,12 @@
     ".": {
       "development": "./src/index.ts",
       "import": "./lib/src/index.js",
-  "types": "./lib/src/index.d.ts"
+      "types": "./lib/src/index.d.ts"
+    },
+    "./main.js": {
+      "development": "./src/main.tsx",
+      "import": "./lib/src/main.js",
+      "types": "./lib/src/main.d.ts"
     },
     "./config": {
       "development": "./src/connect.config.ts",
@@ -42,7 +47,7 @@
     "./assets/*.avif": "./assets/*.avif"
   },
   "license": "AGPL-3.0-only",
-  "author": "acaldas@powerhouse.inc",
+  "author": "powerhouse.inc",
   "repository": {
     "type": "git",
     "url": "https://github.com/powerhouse-inc/powerhouse"
