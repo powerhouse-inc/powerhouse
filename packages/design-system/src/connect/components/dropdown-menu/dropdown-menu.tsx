@@ -20,19 +20,26 @@ export interface ConnectDropdownMenuProps<TItemId extends string> {
   readonly open?: boolean;
   readonly onItemClick: (id: TItemId) => void;
   readonly onOpenChange?: (open: boolean) => void;
+  readonly menuClassName?: string;
 }
 
 export function ConnectDropdownMenu<TItemId extends string>(
   props: ConnectDropdownMenuProps<TItemId>,
 ) {
-  const { children, items, open, onItemClick, onOpenChange } = props;
+  const { children, items, open, onItemClick, onOpenChange, menuClassName } =
+    props;
 
   return (
     <DropdownMenu onOpenChange={onOpenChange} open={open}>
       <DropdownMenuTrigger asChild className="outline-none">
         {children}
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="modal-shadow cursor-pointer rounded-2xl bg-white text-sm font-medium text-slate-500">
+      <DropdownMenuContent
+        className={twMerge(
+          "modal-shadow cursor-pointer rounded-2xl bg-white text-sm font-medium text-slate-500",
+          menuClassName,
+        )}
+      >
         {items.map(({ id, label, icon, className }) => (
           <DropdownMenuItem
             className={twMerge(

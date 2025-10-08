@@ -19,6 +19,7 @@ interface ModuleSpecificationsSectionProps {
   onAddProcessor?: () => void;
   onAddCodegenProcessor?: () => void;
   onOpenDocument?: (node: FileNode) => void;
+  onDelete?: (node: FileNode) => void;
 }
 
 export const ModuleSpecificationsSection: React.FC<
@@ -31,6 +32,7 @@ export const ModuleSpecificationsSection: React.FC<
           documentModels={props.documentModels}
           onAddDocumentModel={props.onAddDocumentModel}
           onOpenDocument={props.onOpenDocument}
+          onDelete={props.onDelete}
         />
         <UserExperiencesColumn
           editors={props.editors}
@@ -38,6 +40,7 @@ export const ModuleSpecificationsSection: React.FC<
           onAddEditor={props.onAddEditor}
           onAddApp={props.onAddApp}
           onOpenDocument={props.onOpenDocument}
+          onDelete={props.onDelete}
         />
         <DataIntegrationsColumn
           subgraphs={props.subgraphs}
@@ -47,6 +50,7 @@ export const ModuleSpecificationsSection: React.FC<
           onAddProcessor={props.onAddProcessor}
           onAddCodegenProcessor={props.onAddCodegenProcessor}
           onOpenDocument={props.onOpenDocument}
+          onDelete={props.onDelete}
         />
       </div>
     </SectionAccordion>

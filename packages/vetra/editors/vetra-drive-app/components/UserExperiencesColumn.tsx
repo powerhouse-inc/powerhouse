@@ -10,6 +10,7 @@ interface UserExperiencesColumnProps {
   onAddEditor?: () => void;
   onAddApp?: () => void;
   onOpenDocument?: (node: FileNode) => void;
+  onDelete?: (node: FileNode) => void;
 }
 
 export const UserExperiencesColumn: React.FC<UserExperiencesColumnProps> = ({
@@ -18,6 +19,7 @@ export const UserExperiencesColumn: React.FC<UserExperiencesColumnProps> = ({
   onAddEditor,
   onAddApp,
   onOpenDocument,
+  onDelete,
 }) => {
   return (
     <div>
@@ -37,6 +39,7 @@ export const UserExperiencesColumn: React.FC<UserExperiencesColumnProps> = ({
             documentType={DOCUMENT_TYPES.documentEditor}
             onAddNewSpec={onAddEditor}
             onClickItem={onOpenDocument}
+            onDelete={onDelete}
           />
         </ModuleAccordion>
         <ModuleAccordion
@@ -51,6 +54,7 @@ export const UserExperiencesColumn: React.FC<UserExperiencesColumnProps> = ({
             documentType={DOCUMENT_TYPES.documentApp}
             onAddNewSpec={onAddApp}
             onClickItem={onOpenDocument}
+            onDelete={onDelete}
           />
         </ModuleAccordion>
       </div>

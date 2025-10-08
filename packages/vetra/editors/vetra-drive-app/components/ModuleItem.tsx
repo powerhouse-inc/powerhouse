@@ -1,5 +1,12 @@
+import type { NodeOption } from "@powerhousedao/design-system";
+import {
+  cn,
+  ConnectDropdownMenu,
+  Icon,
+  nodeOptionsMap,
+} from "@powerhousedao/design-system";
 import type { FileNode } from "document-drive";
-import React from "react";
+import React, { useState } from "react";
 import { DOCUMENT_TYPES } from "../document-types.js";
 import { AddNewIcon } from "../icons/AddNewIcon.js";
 import { AppIcon } from "../icons/AppIcon.js";
@@ -10,6 +17,7 @@ import { SubgraphIcon } from "../icons/SubgraphIcon.js";
 interface ModuleItemProps {
   fileNode: FileNode;
   onClick: (file: FileNode) => void;
+  onDelete?: (file: FileNode) => void;
   className?: string;
 }
 
@@ -35,14 +43,39 @@ const getIconForDocumentType = (documentType: string) => {
 export const ModuleItem: React.FC<ModuleItemProps> = ({
   fileNode,
   onClick,
+  onDelete,
   className = "",
 }) => {
   const IconComponent = getIconForDocumentType(fileNode.documentType);
+  const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
+
+  // Only show DELETE option
+  const dropdownMenuOptions = [
+    {
+      ...nodeOptionsMap.DELETE,
+      id: "DELETE" as NodeOption,
+    },
+  ];
+
+  const dropdownMenuHandlers = {
+    DELETE: () => onDelete?.(fileNode),
+  } as const;
+
+  function onDropdownMenuOptionClick(itemId: NodeOption) {
+    const handler =
+      dropdownMenuHandlers[itemId as keyof typeof dropdownMenuHandlers];
+
+    handler();
+    setIsDropdownMenuOpen(false);
+  }
 
   return (
-    <button
+    <div
       onClick={() => onClick(fileNode)}
-      className={`flex w-full items-center gap-3 rounded-md bg-zinc-100 p-1 text-left transition-colors hover:bg-zinc-200 ${className}`}
+      className={cn(
+        "group flex w-full cursor-pointer items-center gap-3 rounded-md bg-zinc-100 p-1 text-left transition-colors hover:bg-zinc-200",
+        className,
+      )}
     >
       <div className="flex-shrink-0">
         <IconComponent />
@@ -55,6 +88,28 @@ export const ModuleItem: React.FC<ModuleItemProps> = ({
           {fileNode.documentType}
         </p>
       </div>
-    </button>
+      {onDelete ? (
+        <ConnectDropdownMenu
+          items={dropdownMenuOptions}
+          onItemClick={onDropdownMenuOptionClick}
+          onOpenChange={setIsDropdownMenuOpen}
+          open={isDropdownMenuOpen}
+          menuClassName="border-zinc-200"
+        >
+          <button
+            className={cn(
+              "hidden group-hover:block",
+              isDropdownMenuOpen && "block",
+            )}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsDropdownMenuOpen(true);
+            }}
+          >
+            <Icon className="text-gray-600" name="VerticalDots" />
+          </button>
+        </ConnectDropdownMenu>
+      ) : null}
+    </div>
   );
 };

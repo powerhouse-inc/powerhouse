@@ -5,6 +5,7 @@ import {
   AnalyticsProvider,
   setSelectedNode,
   showCreateDocumentModal,
+  showDeleteNodeModal,
   useAnalyticsDatabaseName,
   useDocumentModelModules,
   useSelectedDrive,
@@ -66,6 +67,10 @@ export function BaseEditor(props: IProps) {
     );
   }, [driveId]);
 
+  const onDeleteDocument = useCallback((node: FileNode) => {
+    showDeleteNodeModal(node.id);
+  }, []);
+
   const showDocumentEditor = !!children;
 
   return showDocumentEditor ? (
@@ -95,6 +100,7 @@ export function BaseEditor(props: IProps) {
         packageDocumentId={packageDocumentId}
         onAddPackageDocument={onCreatePackageFile}
         onOpenDocument={(node) => setSelectedNode(node)}
+        onDelete={onDeleteDocument}
       />
     </div>
   );
