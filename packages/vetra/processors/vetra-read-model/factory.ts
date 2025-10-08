@@ -1,8 +1,8 @@
 import {
-  type ProcessorRecord,
   type IProcessorHostModule,
+  type ProcessorRecord,
+  type RelationalDbProcessorFilter,
 } from "document-drive";
-import { type RelationalDbProcessorFilter } from "document-drive";
 import { type PHDocumentHeader } from "document-model";
 import { VetraReadModelProcessor } from "./index.js";
 
@@ -22,7 +22,7 @@ export const vetraReadModelProcessorFactory =
     const filter: RelationalDbProcessorFilter = {
       branch: ["main"],
       documentId: ["*"],
-      documentType: ["*"],
+      documentType: ["powerhouse/package"],
       scope: ["global"],
     };
 
