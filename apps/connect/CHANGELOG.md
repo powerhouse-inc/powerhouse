@@ -1,3 +1,13 @@
+## 4.1.0-dev.61 (2025-10-08)
+
+### 🩹 Fixes
+
+- **connect:** fix use default export as fallback ([1569f1342](https://github.com/powerhouse-inc/powerhouse/commit/1569f1342))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.60 (2025-10-08)
 
 ### 🚀 Features
