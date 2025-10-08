@@ -1,17 +1,19 @@
+import type { ConnectStudioOptions } from "@powerhousedao/builder-tools";
 import { Command } from "commander";
 import {
   connectBuildHelp,
   connectPreviewHelp,
   connectStudioHelp,
 } from "../help.js";
-import type { ConnectOptions } from "../services/connect.js";
 import type { CommandActionType } from "../types.js";
 import { setCustomHelp } from "../utils.js";
+
+type ConnectOptions = ConnectStudioOptions["devServerOptions"];
 
 async function startConnect(options?: ConnectOptions) {
   const Connect = await import("../services/connect.js");
   const { startConnect } = Connect;
-  return startConnect(options);
+  return startConnect({ devServerOptions: options });
 }
 
 export const connect: CommandActionType<[ConnectOptions], void> = (options) => {

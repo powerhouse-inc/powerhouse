@@ -1,15 +1,16 @@
 {
   "extends": "../../tsconfig.options.json",
-  // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
     "composite": true,
+    // File Layout
     "outDir": "./dist",
+
     // Environment Settings
     // See also https://aka.ms/tsconfig/module
     "module": "nodenext",
     "target": "esnext",
-    "lib": ["esnext"],
-    "types": ["node", "vite/client"],
+    "types": ["node", "vitest/globals"],
+    "lib": ["ESNext", "dom", "dom.iterable"],
 
     // Other Outputs
     "sourceMap": true,
@@ -37,6 +38,8 @@
     "moduleDetection": "force",
     "skipLibCheck": true
   },
+  "include": ["**/*", "./powerhouse.manifest.json"],
+  "exclude": ["dist", "node_modules", ".ph"],
   "references": [
     {
       "path": "../document-model"
@@ -72,8 +75,10 @@
       "path": "../document-drive"
     },
     {
+      "path": "../../apps/connect"
+    },
+    {
       "path": "../../apps/switchboard"
     }
-  ],
-  "include": ["**/*", "./powerhouse.manifest.json"],
+  ]
 }

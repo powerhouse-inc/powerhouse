@@ -1,7 +1,3 @@
-import {
-  useDocumentModelModuleById,
-  useFallbackEditorModule,
-} from "@powerhousedao/reactor-browser";
 import type { FileNode } from "document-drive";
 import type React from "react";
 import { DriveHeader } from "./components/DriveHeader.js";
@@ -24,7 +20,6 @@ interface DriveExplorerProps {
   onAddCodegenProcessor?: () => void;
   packageDocumentId?: string;
   onAddPackageDocument?: () => void;
-  driveId: string;
   onOpenDocument?: (node: FileNode) => void;
 }
 
@@ -44,13 +39,8 @@ export const DriveExplorer: React.FC<DriveExplorerProps> = ({
   onAddCodegenProcessor,
   packageDocumentId,
   onAddPackageDocument,
-  driveId,
   onOpenDocument,
 }) => {
-  const vetraPackageModule = useDocumentModelModuleById("powerhouse/package");
-  const vetraPackageEditorModule =
-    useFallbackEditorModule("powerhouse/package");
-
   return (
     <div className="min-h-screen bg-white">
       <DriveHeader onShareClick={onShareDrive} />
@@ -60,9 +50,6 @@ export const DriveExplorer: React.FC<DriveExplorerProps> = ({
           className="mb-6"
           packageDocumentId={packageDocumentId}
           onAddPackageDocument={onAddPackageDocument}
-          documentModelModule={vetraPackageModule}
-          editorModule={vetraPackageEditorModule}
-          driveId={driveId}
         />
         <ModuleSpecificationsSection
           documentModels={documentModels}

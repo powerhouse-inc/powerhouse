@@ -83,7 +83,6 @@ export function BaseEditor({ children }: EditorProps) {
         onAddCodegenProcessor={() => console.log("add codegen processor")}
         packageDocumentId={packageDocumentId}
         onAddPackageDocument={onCreatePackageFile}
-        driveId={document.header.id}
         onOpenDocument={(node) => setSelectedNode(node)}
       />
     </div>

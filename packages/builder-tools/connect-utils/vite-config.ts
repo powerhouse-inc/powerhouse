@@ -93,6 +93,8 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const fileEnv = loadEnv(mode, envDir, "PH_");
   const env = { ...fileEnv, ...process.env } as Partial<ConnectEnv>;
 
+  const disableLocalPackages = env.PH_DISABLE_LOCAL_PACKAGE === "true";
+
   // load powerhouse config
   const phConfigPath =
     env.PH_CONFIG_PATH ?? join(options.dirname, "powerhouse.config.json");
@@ -115,7 +117,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   // if local package is provided, add it to the packages to be loaded
   const localPackage =
     env.PH_LOCAL_PACKAGE ?? options.localPackage ?? options.dirname;
-  if (localPackage) {
+  if (localPackage && !disableLocalPackages) {
     allPackages.push(localPackage);
   }
 
@@ -193,9 +195,13 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       fs: {
         strict: false,
       },
+      port: phConfig.studio?.port,
     },
     worker: {
       format: "es",
+    },
+    resolve: {
+      dedupe: ["react", "react-dom"], // needed when linked to the monorepo
     },
   };
   return config;

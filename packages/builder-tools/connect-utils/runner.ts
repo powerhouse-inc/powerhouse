@@ -16,6 +16,10 @@ export type ConnectStudioOptions = {
   viteConfig?: InlineConfig | ResolvedConfig;
   printUrls?: boolean;
   bindCLIShortcuts?: boolean;
+
+  /* The default drives url to use in connect */
+  defaultDrivesUrl?: string[];
+  drivesPreserveStrategy?: "preserve-all" | "preserve-by-url-and-detach";
 };
 
 export const ConnectStudioDefaultOptions = {
@@ -46,10 +50,29 @@ function devServerOptionsToConfig(
 }
 
 export async function startConnectStudio(options?: ConnectStudioOptions) {
-  const { viteConfig, printUrls, bindCLIShortcuts, devServerOptions } = {
+  const {
+    viteConfig,
+    printUrls,
+    bindCLIShortcuts,
+    devServerOptions,
+    disableLocalPackage,
+    defaultDrivesUrl,
+    drivesPreserveStrategy,
+  } = {
     ...ConnectStudioDefaultOptions,
     ...options,
   };
+
+  if (defaultDrivesUrl) {
+    process.env.PH_CONNECT_DEFAULT_DRIVES_URL = defaultDrivesUrl.join(",");
+  }
+  if (drivesPreserveStrategy) {
+    process.env.PH_CONNECT_DRIVES_PRESERVE_STRATEGY = drivesPreserveStrategy;
+  }
+  if (disableLocalPackage) {
+    process.env.PH_DISABLE_LOCAL_PACKAGE = "true";
+  }
+
   const vite = await loadVite();
 
   // TODO: support options field instead of using 'cwd()'

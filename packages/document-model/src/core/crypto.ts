@@ -20,12 +20,27 @@ export function generateUUIDBrowser() {
 export const hashBrowser = (
   data: string | Uint8Array | ArrayBufferView | DataView,
   algorithm = "sha1",
+  encoding = "base64",
+  _params?: Record<string, unknown>,
 ) => {
   if (!["sha1"].includes(algorithm)) {
-    throw new Error("Hashing algorithm not supported: Available: sha1");
+    throw new Error(
+      `Hashing algorithm not supported: "${algorithm}". Available: sha1`,
+    );
   }
 
-  const hash = hashUIntArray(data);
+  if (!["base64", "hex"].includes(encoding)) {
+    throw new Error(
+      `Hash encoding not supported: "${encoding}". Available: base64, hex`,
+    );
+  }
+
+  const hash = hashUIntArray(data, algorithm);
+
+  if (encoding === "hex") {
+    return uint8ArrayToHex(hash);
+  }
+
   return uint8ArrayToBase64(hash);
 };
 
@@ -39,6 +54,12 @@ function uint8ArrayToBase64(uint8Array: Uint8Array) {
   // Encode the binary string to base64
   const base64String = btoa(binaryString);
   return base64String;
+}
+
+function uint8ArrayToHex(uint8Array: Uint8Array) {
+  return Array.from(uint8Array)
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 function hashUIntArray(

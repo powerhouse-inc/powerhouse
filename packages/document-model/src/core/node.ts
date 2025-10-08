@@ -179,6 +179,23 @@ export const getFileNode = async (file: string) => {
   return readFileNode(file);
 };
 
-export const hashNode = (data: BinaryLike, algorithm = "sha1") => {
-  return createHash(algorithm).update(data).digest("base64");
+export const hashNode = (
+  data: BinaryLike,
+  algorithm = "sha1",
+  encoding: "base64" | "hex" = "base64",
+  _params?: Record<string, unknown>,
+) => {
+  if (!["sha1", "sha256", "sha512"].includes(algorithm)) {
+    throw new Error(
+      `Hashing algorithm not supported: "${algorithm}". Available: sha1, sha256, sha512`,
+    );
+  }
+
+  if (!["base64", "hex"].includes(encoding)) {
+    throw new Error(
+      `Hash encoding not supported: "${encoding}". Available: base64, hex`,
+    );
+  }
+
+  return createHash(algorithm).update(data).digest(encoding);
 };

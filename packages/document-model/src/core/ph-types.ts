@@ -94,12 +94,38 @@ export type PHDocumentHeader = {
  */
 export type PHAuthState = {};
 
+// Known hash algorithms (can be extended without breaking changes)
+export const HASH_ALGORITHM_SHA1 = "sha1";
+export const HASH_ALGORITHM_SHA256 = "sha256";
+export const HASH_ALGORITHM_SHA512 = "sha512";
+
+// Known encodings (can be extended without breaking changes)
+export const HASH_ENCODING_BASE64 = "base64";
+export const HASH_ENCODING_HEX = "hex";
+
+/**
+ * Configuration for hashing document state in operations.
+ */
+export type HashConfig = {
+  /** The hashing algorithm to use (e.g., "sha1", "sha256") */
+  algorithm: string;
+
+  /** The encoding format for the hash output (e.g., "base64", "hex") */
+  encoding: string;
+
+  /** Optional algorithm-specific parameters */
+  params?: Record<string, unknown>;
+};
+
 /**
  * The document state of the document.
  */
 export type PHDocumentState = {
   /** The current version of the document. */
   version: string;
+
+  /** Hash configuration for operation state verification */
+  hash: HashConfig;
 };
 
 /**

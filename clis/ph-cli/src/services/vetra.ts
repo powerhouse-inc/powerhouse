@@ -1,22 +1,15 @@
-import type { ConnectStudioOptions } from "@powerhousedao/builder-tools";
 import type { VetraProcessorConfigType } from "@powerhousedao/config";
 import { VETRA_PROCESSOR_CONFIG_KEY } from "@powerhousedao/config";
 import { getConfig } from "@powerhousedao/config/node";
-import { blue, green, red } from "colorette";
+import { blue, red } from "colorette";
 import { setLogLevel } from "document-drive";
-import type { ChildProcessWithoutNullStreams } from "node:child_process";
-import { fork } from "node:child_process";
-import path, { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { startConnect } from "./connect.js";
 import type { ReactorOptions } from "./reactor.js";
 import { DefaultReactorOptions } from "./reactor.js";
 
 const VETRA_DRIVE_ID = "vetra";
 const getDefaultVetraUrl = (port: number) =>
   `http://localhost:${port}/d/${VETRA_DRIVE_ID}`;
-
-const __dirname =
-  import.meta.dirname || dirname(fileURLToPath(import.meta.url));
 
 export type DevOptions = {
   generate?: boolean;
@@ -118,70 +111,6 @@ async function startLocalVetraSwitchboard(
   }
 }
 
-async function spawnConnect(
-  options?: ConnectStudioOptions & { verbose?: boolean; connectPort?: number },
-  localReactorUrl?: string,
-) {
-  const { verbose = false, connectPort, ...connectOptions } = options || {};
-
-  const finalOptions = connectPort
-    ? { ...connectOptions, port: connectPort.toString() }
-    : connectOptions;
-
-  const child = fork(
-    path.join(dirname(__dirname), "commands", "connect.js"),
-    ["spawn", JSON.stringify(finalOptions)],
-    {
-      silent: true,
-      env: {
-        ...process.env,
-        PH_CONNECT_DEFAULT_DRIVES_URL: localReactorUrl,
-        PH_CONNECT_DRIVES_PRESERVE_STRATEGY: "preserve-all",
-      },
-    },
-  ) as ChildProcessWithoutNullStreams;
-
-  return new Promise<void>((resolve) => {
-    let connectInitialized = false;
-
-    child.stdout.on("data", (data: Buffer) => {
-      const message = data.toString();
-      const lines = message.split("\n").filter((line) => line.trim().length);
-
-      if (!connectInitialized) {
-        resolve();
-        connectInitialized = true;
-        if (!verbose) {
-          console.log(green(`[Connect]: Connect initialized`));
-        }
-      }
-
-      for (const line of lines) {
-        if (verbose) {
-          process.stdout.write(green(`[Connect]: ${line}\n`));
-        } else {
-          // Only show Local and Network URLs when not verbose
-          if (line.includes("➜  Local:") || line.includes("➜  Network:")) {
-            process.stdout.write(green(`[Connect]: ${line}\n`));
-          }
-        }
-      }
-    });
-
-    child.stderr.on("data", (data: Buffer) => {
-      if (verbose) {
-        process.stderr.write(red(`[Connect]: ${data.toString()}`));
-      }
-    });
-
-    child.on("close", (code) => {
-      if (verbose) {
-        console.log(`Connect process exited with code ${code}`);
-      }
-    });
-  });
-}
-
 export async function startVetra({
   generate,
   watch,
@@ -210,7 +139,6 @@ export async function startVetra({
     // Use vetraUrl from config if no explicit remoteDrive is provided
     const configVetraUrl = baseConfig.vetra?.driveUrl;
     const resolvedVetraUrl = remoteDrive ?? configVetraUrl;
-    const resolvedVetraId = baseConfig.vetra?.driveId ?? VETRA_DRIVE_ID;
 
     if (verbose) {
       console.log("Starting Vetra Switchboard...");
@@ -247,15 +175,14 @@ export async function startVetra({
         console.log("Starting Connect...");
         console.log(`   ➜ Connect will use drive: ${driveUrl}`);
       }
-      await spawnConnect(
-        {
-          configFile,
-          verbose,
-          connectPort,
-          disableLocalPackage: !watchPackages,
+      await startConnect({
+        defaultDrivesUrl: [driveUrl],
+        drivesPreserveStrategy: "preserve-all",
+        disableLocalPackage: !watchPackages,
+        devServerOptions: {
+          port: connectPort,
         },
-        driveUrl,
-      );
+      });
     }
   } catch (error) {
     console.error(error);
