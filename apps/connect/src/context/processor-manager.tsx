@@ -24,7 +24,7 @@ const logger = childLogger(["reactor-analytics"]);
 function createPgLiteFactoryWorker(databaseName: string) {
   return async () => {
     const worker = new Worker(
-      new URL("../workers/pglite-worke.js", import.meta.url),
+      new URL("../workers/pglite-worker.js", import.meta.url),
       {
         type: "module",
       },
