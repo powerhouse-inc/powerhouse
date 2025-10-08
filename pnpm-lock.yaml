@@ -179,7 +179,7 @@ importers:
   apps/connect:
     dependencies:
       '@electric-sql/pglite':
-        specifier: ^0.2.17
+        specifier: 0.2.17
         version: 0.2.17
       '@openfeature/web-sdk':
         specifier: ^1.6.2
@@ -1372,8 +1372,8 @@ importers:
   packages/reactor:
     dependencies:
       '@electric-sql/pglite':
-        specifier: ^0.3.10
-        version: 0.3.10
+        specifier: 0.2.17
+        version: 0.2.17
       document-drive:
         specifier: workspace:*
         version: link:../document-drive
@@ -1385,7 +1385,7 @@ importers:
         version: 0.28.7
       kysely-pglite:
         specifier: ^0.6.1
-        version: 0.6.1(@electric-sql/pglite@0.3.10)(kysely@0.28.7)(pg@8.16.3)(tarn@3.0.2)
+        version: 0.6.1(@electric-sql/pglite@0.2.17)(kysely@0.28.7)(pg@8.16.3)(tarn@3.0.2)
       uuid:
         specifier: ^11.0.5
         version: 11.1.0
@@ -1409,7 +1409,7 @@ importers:
         specifier: ^2.9.2
         version: 2.11.2(graphql@16.11.0)
       '@electric-sql/pglite':
-        specifier: ^0.2.17
+        specifier: 0.2.17
         version: 0.2.17
       '@graphql-typed-document-node/core':
         specifier: ^3.2.0
@@ -1593,7 +1593,7 @@ importers:
   packages/reactor-browser:
     dependencies:
       '@electric-sql/pglite':
-        specifier: ^0.2.17
+        specifier: 0.2.17
         version: 0.2.17
       '@electric-sql/pglite-react':
         specifier: ^0.2.17
@@ -1705,7 +1705,7 @@ importers:
         specifier: ^2.9.2
         version: 2.11.2(graphql@16.11.0)
       '@electric-sql/pglite':
-        specifier: ^0.2.17
+        specifier: 0.2.17
         version: 0.2.17
       '@libsql/client':
         specifier: ^0.14.0
@@ -1950,7 +1950,7 @@ importers:
         version: 3.25.76
     devDependencies:
       '@electric-sql/pglite':
-        specifier: ^0.2.12
+        specifier: 0.2.17
         version: 0.2.17
       '@powerhousedao/analytics-engine-core':
         specifier: ^0.5.0
@@ -2037,7 +2037,7 @@ importers:
   test/connect-e2e:
     devDependencies:
       '@electric-sql/pglite':
-        specifier: ^0.2.17
+        specifier: 0.2.17
         version: 0.2.17
       '@playwright/test':
         specifier: ^1.41.2
@@ -37181,6 +37181,30 @@ snapshots:
     dependencies:
       '@electric-sql/pglite': 0.2.17
       kysely: 0.28.7
+
+  kysely-pglite@0.6.1(@electric-sql/pglite@0.2.17)(kysely@0.28.7)(pg@8.16.3)(tarn@3.0.2):
+    dependencies:
+      '@electric-sql/pglite': 0.2.17
+      '@oclif/core': 4.5.4
+      '@repeaterjs/repeater': 3.0.6
+      '@sindresorhus/is': 7.1.0
+      chokidar: 3.6.0
+      consola: 3.4.2
+      fs-extra: 11.3.2
+      globby: 14.1.0
+      jiti: 2.0.0-beta.3
+      kysely: 0.28.7
+      kysely-codegen: 0.15.0(kysely@0.28.7)(pg@8.16.3)(tarn@3.0.2)
+      radash: 12.1.1
+    transitivePeerDependencies:
+      - '@libsql/kysely-libsql'
+      - '@tediousjs/connection-string'
+      - better-sqlite3
+      - kysely-bun-worker
+      - mysql2
+      - pg
+      - tarn
+      - tedious
 
   kysely-pglite@0.6.1(@electric-sql/pglite@0.3.10)(kysely@0.28.7)(pg@8.16.3)(tarn@3.0.2):
     dependencies:

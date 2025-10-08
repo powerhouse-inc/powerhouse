@@ -34,7 +34,7 @@
   "author": "",
   "license": "AGPL-3.0-only",
   "dependencies": {
-    "@electric-sql/pglite": "^0.3.10",
+    "@electric-sql/pglite": "0.2.17",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "kysely": "^0.28.2",

@@ -57,7 +57,7 @@
     "@apollo/gateway": "^2.10.0",
     "@apollo/server": "^4.11.0",
     "@apollo/subgraph": "^2.9.2",
-    "@electric-sql/pglite": "^0.2.17",
+    "@electric-sql/pglite": "0.2.17",
     "@graphql-typed-document-node/core": "^3.2.0",
     "@originjs/vite-plugin-commonjs": "^1.0.3",
     "@powerhousedao/analytics-engine-core": "^0.5.0",
