@@ -28,9 +28,10 @@ export function BaseEditor(props: IProps) {
   const fileNodes = document.state.global.nodes.filter(
     (node) => node.kind === "file",
   ) as Array<FileNode>;
-  const packageDocumentId = fileNodes.find(
+  const packageNode = fileNodes.find(
     (node) => node.documentType === DOCUMENT_TYPES.documentPackage,
-  )?.id;
+  );
+  const packageDocumentId = packageNode?.id;
 
   const docModelsNodes = fileNodes.filter(
     (node) => node.documentType === DOCUMENT_TYPES.documentModel,
@@ -71,6 +72,12 @@ export function BaseEditor(props: IProps) {
     showDeleteNodeModal(node.id);
   }, []);
 
+  const onOpenPackageDocument = useCallback(() => {
+    if (packageNode) {
+      setSelectedNode(packageNode);
+    }
+  }, [packageNode]);
+
   const showDocumentEditor = !!children;
 
   return showDocumentEditor ? (
@@ -99,6 +106,7 @@ export function BaseEditor(props: IProps) {
         onAddCodegenProcessor={() => console.log("add codegen processor")}
         packageDocumentId={packageDocumentId}
         onAddPackageDocument={onCreatePackageFile}
+        onOpenPackageDocument={onOpenPackageDocument}
         onOpenDocument={(node) => setSelectedNode(node)}
         onDelete={onDeleteDocument}
       />

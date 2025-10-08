@@ -8,6 +8,7 @@ interface SectionAccordionProps {
   children: React.ReactNode;
   defaultOpen?: boolean;
   className?: string;
+  actionButton?: React.ReactNode;
 }
 
 export const SectionAccordion: React.FC<SectionAccordionProps> = ({
@@ -15,6 +16,7 @@ export const SectionAccordion: React.FC<SectionAccordionProps> = ({
   children,
   defaultOpen = false,
   className = "",
+  actionButton,
 }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
@@ -28,6 +30,7 @@ export const SectionAccordion: React.FC<SectionAccordionProps> = ({
         }`}
       />
       <h2 className="text-base font-semibold text-gray-800">{title}</h2>
+      {actionButton && <div className="ml-auto">{actionButton}</div>}
     </div>
   );
 
