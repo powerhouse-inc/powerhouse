@@ -38,6 +38,7 @@ export function Header(props: Props) {
     >
       <div className="flex items-center gap-3">
         <button
+          name="close-revision-history"
           className="shadow-button rounded-lg bg-gray-50 p-1 text-stone-300"
           onClick={onClose}
         >

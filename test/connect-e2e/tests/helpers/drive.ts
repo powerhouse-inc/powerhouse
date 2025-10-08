@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
 import { handleCookieConsent } from "./cookie-consent.js";
 /**
  * Helper function to navigate into a folder and verify it's visible
@@ -12,22 +12,16 @@ export async function createLocalDrive(page: Page, driveName: string) {
   // Handle cookie consent
   await handleCookieConsent(page);
 
-  await page.click(`text=Create New Drive`);
-  const input = page.getByPlaceholder("Drive name");
+  const createDriveButton = page.getByText("Create New Drive");
 
-  // the model only opens when packages are loaded
-  for (let retry = 0; retry < 5; retry++) {
-    try {
-      await input.waitFor({ state: "visible", timeout: 500 * retry });
-      break;
-    } catch {
-      await page.click(`text=Create New Drive`);
-    }
-  }
+  await createDriveButton.click();
+
+  const form = page.locator('form[name="add-local-drive"]').last();
+  const input = form.getByPlaceholder("Drive name");
 
   await input.fill(driveName);
 
-  const submit = page
+  const submit = form
     .getByText("Create new drive")
     .and(page.locator("button[type=submit]"));
   await submit.click();
