@@ -1,0 +1,43 @@
+import type { ISubgraph } from "@powerhousedao/reactor-api";
+import { VetraReadModelProcessor } from "../../processors/vetra-read-model/index.js";
+import type { DB } from "../../processors/vetra-read-model/schema.js";
+
+export const getResolvers = (subgraph: ISubgraph): Record<string, unknown> => {
+  const reactor = subgraph.reactor;
+  const db = subgraph.relationalDb;
+
+  return {
+    Query: {
+      vetraPackages: async (
+        parent: unknown,
+        args: { search?: string; sortOrder?: "asc" | "desc" },
+      ) => {
+        const { search } = args;
+        const sortOrder = args.sortOrder || "asc";
+
+        let query = VetraReadModelProcessor.query<DB>("vetra-packages", db)
+          .selectFrom("vetra_package")
+          .selectAll();
+
+        if (search) {
+          query = query.where("name", "ilike", `%${search}%`);
+        }
+
+        query = query.orderBy("name", sortOrder);
+
+        return (await query.execute()).map((pkg) => ({
+          ...pkg,
+          documentId: pkg.document_id,
+          name: pkg.name,
+          description: pkg.description,
+          category: pkg.category,
+          authorName: pkg.author_name,
+          authorWebsite: pkg.author_website,
+          githubUrl: pkg.github_url,
+          npmUrl: pkg.npm_url,
+          keywords: pkg.keywords,
+        }));
+      },
+    },
+  };
+};
