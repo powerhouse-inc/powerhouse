@@ -353,7 +353,7 @@ export async function addFileWithProgress(
   name?: string,
   parentFolder?: string,
   onProgress?: FileUploadProgressCallback,
-  documentTypes: string[] = [],
+  documentTypes?: string[],
   resolveConflict?: ConflictResolution,
 ) {
   logger.verbose(

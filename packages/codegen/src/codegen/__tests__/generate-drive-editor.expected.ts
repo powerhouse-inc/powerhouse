@@ -6,9 +6,7 @@ export const module: DriveEditorModule = {
   documentTypes: ["powerhouse/document-drive"],
   config: {
     id: "AtlasDriveExplorer",
-    disableExternalControls: true,
-    documentToolbarEnabled: true,
-    showSwitchboardLink: true,  },
+  },
 };`;
 
 export const EXPECTED_EDITOR_CONTENT = `import { withDropZone } from "@powerhousedao/design-system";

@@ -7,17 +7,17 @@ import type {
 } from "../types/upload.js";
 import { useSelectedDriveSafe } from "./drives.js";
 import { useSelectedFolder } from "./nodes.js";
+import { useSupportedDocumentTypes } from "./reactor.js";
 
-type UseOnDropFile = (
-  documentTypes?: string[],
-) => (
+type UseOnDropFile = () => (
   file: File,
   onProgress?: FileUploadProgressCallback,
   resolveConflict?: ConflictResolution,
 ) => Promise<FileNode | undefined>;
 
-export const useOnDropFile: UseOnDropFile = (documentTypes = []) => {
+export const useOnDropFile: UseOnDropFile = () => {
   const [selectedDrive] = useSelectedDriveSafe();
+  const supportedDocumentTypes = useSupportedDocumentTypes();
   const selectedDriveId = selectedDrive?.header.id;
   const selectedFolder = useSelectedFolder();
 
@@ -42,7 +42,7 @@ export const useOnDropFile: UseOnDropFile = (documentTypes = []) => {
         fileName,
         targetNodeId,
         onProgress,
-        documentTypes,
+        supportedDocumentTypes,
         resolveConflict,
       );
     },

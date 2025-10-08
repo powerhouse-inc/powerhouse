@@ -1,12 +1,10 @@
 import { GenericDriveExplorer } from "@powerhousedao/common";
-import type { DriveEditorProps } from "@powerhousedao/reactor-browser";
 import {
   useDefaultDriveEditorModule,
   useDriveEditorModuleById,
   useSelectedDocument,
   useSelectedDrive,
 } from "@powerhousedao/reactor-browser";
-import type { ComponentType } from "react";
 import type { FallbackProps } from "react-error-boundary";
 import { ErrorBoundary } from "react-error-boundary";
 import { DocumentEditorContainer } from "./document-editor-container.js";
@@ -30,24 +28,17 @@ export function DriveEditorContainer() {
   );
   const defaultDriveEditor = useDefaultDriveEditorModule();
 
-  const DriveEditorComponent = (driveEditor?.Component ??
+  const DriveEditorComponent =
+    driveEditor?.Component ??
     defaultDriveEditor?.Component ??
-    GenericDriveExplorer.Component) as ComponentType<DriveEditorProps>;
-
-  const editorConfig = driveEditor?.Component
-    ? driveEditor.config
-    : defaultDriveEditor?.Component
-      ? defaultDriveEditor.config
-      : GenericDriveExplorer.config;
-
-  if (!selectedDrive) return null;
+    GenericDriveExplorer.Component;
 
   return (
     <ErrorBoundary
       fallbackRender={DriveEditorError}
       key={selectedDrive.header.id}
     >
-      <DriveEditorComponent editorConfig={editorConfig}>
+      <DriveEditorComponent>
         {selectedDocument ? <DocumentEditorContainer /> : null}
       </DriveEditorComponent>
     </ErrorBoundary>

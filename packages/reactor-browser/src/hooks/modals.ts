@@ -1,5 +1,5 @@
-import { makePHEventFunctions } from "../events/make-ph-event-functions.js";
 import type { PHModal } from "../types/modals.js";
+import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
 export const {
   useValue: usePHModal,

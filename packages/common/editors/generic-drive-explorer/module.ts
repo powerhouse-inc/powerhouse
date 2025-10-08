@@ -1,14 +1,11 @@
+import { editorId, editorName } from "@powerhousedao/builder-tools";
 import { Editor } from "@powerhousedao/common";
-import type { DriveEditorModule } from "@powerhousedao/reactor-browser";
+import type { EditorModule } from "document-model";
+import { editorDocumentTypes } from "./constants.js";
 
-export const GenericDriveExplorer: DriveEditorModule = {
+export const GenericDriveExplorer: EditorModule = {
   Component: Editor,
-  documentTypes: ["powerhouse/document-drive"],
-  config: {
-    id: "GenericDriveExplorer",
-    name: "Drive Explorer App",
-    disableExternalControls: true,
-    documentToolbarEnabled: true,
-    showSwitchboardLink: true,
-  },
+  id: editorId,
+  name: editorName,
+  documentTypes: editorDocumentTypes,
 };

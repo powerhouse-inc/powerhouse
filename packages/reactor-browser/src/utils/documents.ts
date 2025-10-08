@@ -1,6 +1,6 @@
 export function isDocumentTypeSupported(
   documentType: string,
-  supportedDocuments: string[] = [],
+  supportedDocuments: readonly string[] = [],
 ): boolean {
   if (supportedDocuments.length === 0) {
     return true;

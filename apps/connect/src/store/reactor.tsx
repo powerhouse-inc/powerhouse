@@ -7,19 +7,6 @@ import {
 import { connectConfig } from "@powerhousedao/connect/config";
 import {
   addPHEventHandlers,
-  setAnalyticsDatabaseName,
-  setAllowList,
-  setIsSearchBarEnabled,
-  setConnectCrypto,
-  setDid,
-  setDocuments,
-  setDrives,
-  setProcessorManager,
-  setReactor,
-  setRenown,
-  dispatchSetSelectedDriveIdEvent,
-  dispatchSetSelectedNodeIdEvent,
-  dispatchSetVetraPackagesEvent,
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
   getDocuments,
@@ -29,6 +16,19 @@ import {
   initReactor,
   login,
   refreshReactorData,
+  setAllowList,
+  setAnalyticsDatabaseName,
+  setConnectCrypto,
+  setDid,
+  setDocuments,
+  setDrives,
+  setIsSearchBarEnabled,
+  setProcessorManager,
+  setReactor,
+  setRenown,
+  setSelectedDrive,
+  setSelectedNode,
+  setVetraPackages,
 } from "@powerhousedao/reactor-browser";
 import { initRenown } from "@renown/sdk";
 import type { IDocumentAdminStorage } from "document-drive";
@@ -184,9 +184,9 @@ export async function createReactor() {
   setProcessorManager(processorManager);
   setDrives(drives);
   setDocuments(documents);
-  dispatchSetVetraPackagesEvent(vetraPackages);
-  dispatchSetSelectedDriveIdEvent(driveSlug);
-  dispatchSetSelectedNodeIdEvent(nodeSlug);
+  setVetraPackages(vetraPackages);
+  setSelectedDrive(driveSlug);
+  setSelectedNode(nodeSlug);
 
   // subscribe to reactor events
   reactor.on("syncStatus", (...args) => {

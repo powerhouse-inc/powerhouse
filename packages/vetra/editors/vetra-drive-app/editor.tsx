@@ -1,5 +1,4 @@
 import { WagmiContext } from "@powerhousedao/design-system";
-import type { DriveEditorProps } from "@powerhousedao/reactor-browser";
 import {
   addDocument,
   AnalyticsProvider,
@@ -7,44 +6,38 @@ import {
   showCreateDocumentModal,
   useAnalyticsDatabaseName,
   useDocumentModelModules,
+  useFileNodes,
   useSelectedDrive,
 } from "@powerhousedao/reactor-browser";
-import type { DocumentDriveDocument, FileNode } from "document-drive";
+import type { EditorProps } from "document-model";
 import { useCallback } from "react";
-import { DOCUMENT_TYPES } from "./document-types.js";
 import { DriveExplorer } from "./DriveExplorer.js";
 import { withDropZone } from "./utils/withDropZone.js";
 
-export type IProps = DriveEditorProps;
-
-export function BaseEditor(props: IProps) {
-  const { children } = props;
-
+export function BaseEditor({ children }: EditorProps) {
   const [document] = useSelectedDrive();
-
   const driveId = document.header.id;
   const documentModels = useDocumentModelModules();
-  const fileNodes = document.state.global.nodes.filter(
-    (node) => node.kind === "file",
-  ) as Array<FileNode>;
+  const fileNodes = useFileNodes() ?? [];
+
   const packageDocumentId = fileNodes.find(
-    (node) => node.documentType === DOCUMENT_TYPES.documentPackage,
+    (node) => node.documentType === "powerhouse/package",
   )?.id;
 
   const docModelsNodes = fileNodes.filter(
-    (node) => node.documentType === DOCUMENT_TYPES.documentModel,
+    (node) => node.documentType === "powerhouse/document-model",
   );
   const docEditorsNodes = fileNodes.filter(
-    (node) => node.documentType === DOCUMENT_TYPES.documentEditor,
+    (node) => node.documentType === "powerhouse/document-editor",
   );
   const docSubgraphsNodes = fileNodes.filter(
-    (node) => node.documentType === DOCUMENT_TYPES.documentSubgraph,
+    (node) => node.documentType === "powerhouse/subgraph",
   );
   const docProcessorsNodes = fileNodes.filter(
-    (node) => node.documentType === DOCUMENT_TYPES.documentProcessor,
+    (node) => node.documentType === "powerhouse/processor",
   );
   const docAppsNodes = fileNodes.filter(
-    (node) => node.documentType === DOCUMENT_TYPES.documentApp,
+    (node) => node.documentType === "powerhouse/app",
   );
 
   const onCreateDocument = useCallback(
@@ -61,7 +54,7 @@ export function BaseEditor(props: IProps) {
   );
 
   const onCreatePackageFile = useCallback(() => {
-    addDocument(driveId, "vetra-package", DOCUMENT_TYPES.documentPackage).catch(
+    addDocument(driveId, "vetra-package", "powerhouse/package").catch(
       console.error,
     );
   }, [driveId]);
@@ -82,15 +75,11 @@ export function BaseEditor(props: IProps) {
         subgraphs={docSubgraphsNodes}
         processors={docProcessorsNodes}
         codegenProcessors={[]}
-        onAddDocumentModel={() =>
-          onCreateDocument(DOCUMENT_TYPES.documentModel)
-        }
-        onAddEditor={() => onCreateDocument(DOCUMENT_TYPES.documentEditor)}
-        onAddApp={() => onCreateDocument(DOCUMENT_TYPES.documentApp)}
-        onAddSubgraph={() => onCreateDocument(DOCUMENT_TYPES.documentSubgraph)}
-        onAddProcessor={() =>
-          onCreateDocument(DOCUMENT_TYPES.documentProcessor)
-        }
+        onAddDocumentModel={() => onCreateDocument("powerhouse/document-model")}
+        onAddEditor={() => onCreateDocument("powerhouse/document-editor")}
+        onAddApp={() => onCreateDocument("powerhouse/app")}
+        onAddSubgraph={() => onCreateDocument("powerhouse/subgraph")}
+        onAddProcessor={() => onCreateDocument("powerhouse/processor")}
         onAddCodegenProcessor={() => console.log("add codegen processor")}
         packageDocumentId={packageDocumentId}
         onAddPackageDocument={onCreatePackageFile}
@@ -103,7 +92,7 @@ export function BaseEditor(props: IProps) {
 
 const BaseEditorWithDropZone = withDropZone(BaseEditor);
 
-export function Editor(props: IProps) {
+export function Editor(props: EditorProps) {
   const analyticsDatabaseName = useAnalyticsDatabaseName();
   return (
     <WagmiContext>

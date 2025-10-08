@@ -1,8 +1,8 @@
 import { capitalCase } from "change-case";
 import { useSyncExternalStore } from "react";
 
-type CustomWindowKey = keyof Window;
-export function makePHEventFunctions<TValue>(key: CustomWindowKey) {
+type WindowKey = keyof Window;
+export function makePHEventFunctions<TValue>(key: WindowKey) {
   if (typeof key !== "string") {
     throw new Error("Key must be a string");
   }
@@ -25,7 +25,7 @@ export function makePHEventFunctions<TValue>(key: CustomWindowKey) {
     event: CustomEvent<{ [K in typeof key]: TValue }>,
   ) {
     const value = event.detail[key];
-    (window as Record<CustomWindowKey, any>)[key] = value;
+    (window as Record<WindowKey, any>)[key] = value;
     dispatchUpdatedEvent();
   }
 
@@ -41,9 +41,7 @@ export function makePHEventFunctions<TValue>(key: CustomWindowKey) {
   }
 
   function getSnapshot(): TValue | undefined {
-    const value = (window as Record<CustomWindowKey, any>)[key] as
-      | TValue
-      | undefined;
+    const value = (window as Record<WindowKey, any>)[key] as TValue | undefined;
     return value;
   }
 
@@ -52,8 +50,8 @@ export function makePHEventFunctions<TValue>(key: CustomWindowKey) {
   }
 
   return {
-    useValue,
     setValue: dispatchSetValueEvent,
+    useValue,
     addEventHandler,
   };
 }

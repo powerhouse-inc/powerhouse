@@ -1,6 +1,5 @@
 import type { FileNode } from "document-drive";
 import React from "react";
-import { DOCUMENT_TYPES } from "../document-types.js";
 import { ModuleAccordion } from "./ModuleAccordion.js";
 import { ModuleList } from "./ModuleList.js";
 
@@ -38,7 +37,7 @@ export const DataIntegrationsColumn: React.FC<DataIntegrationsColumnProps> = ({
         >
           <ModuleList
             items={subgraphs}
-            documentType={DOCUMENT_TYPES.documentSubgraph}
+            documentType="powerhouse/subgraph"
             onAddNewSpec={onAddSubgraph}
             onClickItem={onOpenDocument}
           />
@@ -52,7 +51,7 @@ export const DataIntegrationsColumn: React.FC<DataIntegrationsColumnProps> = ({
         >
           <ModuleList
             items={processors}
-            documentType={DOCUMENT_TYPES.documentProcessor}
+            documentType="powerhouse/processor"
             onAddNewSpec={onAddProcessor}
             onClickItem={onOpenDocument}
           />
@@ -69,7 +68,7 @@ export const DataIntegrationsColumn: React.FC<DataIntegrationsColumnProps> = ({
         >
           <ModuleList
             items={codegenProcessors}
-            documentType={DOCUMENT_TYPES.documentCodegenProcessor}
+            documentType="powerhouse/codegen-processor"
             onAddNewSpec={onAddCodegenProcessor}
             onClickItem={onOpenDocument}
           />

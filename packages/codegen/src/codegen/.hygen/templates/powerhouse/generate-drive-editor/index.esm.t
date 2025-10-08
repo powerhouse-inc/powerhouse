@@ -10,12 +10,7 @@ export const module: DriveEditorModule = {
   documentTypes: ["powerhouse/document-drive"],
   config: {
     id: "<%= appId || 'drive-editor-id' %>",
-    disableExternalControls: true,
-    documentToolbarEnabled: true,
-    showSwitchboardLink: true,<%_ if (dragAndDropEnabled) { _%>
-    documentTypes: [<%- (dragAndDropDocumentTypes ? JSON.parse(dragAndDropDocumentTypes) : []).map(type => JSON.stringify(type)).join(', ') %>],
-    dragAndDrop: {
-      enabled: true,
-    },<%_ } _%>
+    <%_ if (dragAndDropEnabled) { _%>
+    documentTypes: [<%- (dragAndDropDocumentTypes ? JSON.parse(dragAndDropDocumentTypes) : []).map(type => JSON.stringify(type)).join(', ') %>],<%_ } _%>
   },
 };

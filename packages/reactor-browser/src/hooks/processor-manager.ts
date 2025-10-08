@@ -1,5 +1,5 @@
 import type { ProcessorManager } from "document-drive";
-import { makePHEventFunctions } from "../events/make-ph-event-functions.js";
+import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
 export const {
   useValue: useProcessorManager,

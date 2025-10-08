@@ -1,8 +1,4 @@
-import type {
-  LoginStatus,
-  Reactor,
-  VetraPackage,
-} from "@powerhousedao/reactor-browser";
+import type { Reactor, VetraPackage } from "@powerhousedao/reactor-browser";
 import type { DID, IConnectCrypto, IRenown, User } from "@renown/sdk";
 import type { DocumentDriveDocument, ProcessorManager } from "document-drive";
 import type { PHDocument } from "document-model";
@@ -31,6 +27,8 @@ export type SetSelectedNodeIdEvent = SetEvent<"nodeSlug", string>;
 
 export type SetVetraPackagesEvent = SetEvent<"vetraPackages", VetraPackage[]>;
 
+export type SetModalEvent = SetEvent<"modal", PHModal>;
+
 export type SetAnalyticsDatabaseNameEvent = SetEvent<
   "analyticsDatabaseName",
   string
@@ -43,4 +41,45 @@ export type SetIsSearchBarEnabledEvent = SetEvent<
   boolean
 >;
 
-export type SetModalEvent = SetEvent<"modal", PHModal>;
+export type SetIsExternalControlsEnabledEvent = SetEvent<
+  "isExternalControlsEnabled",
+  boolean
+>;
+
+export type SetIsDocumentToolbarEnabledEvent = SetEvent<
+  "isDocumentToolbarEnabled",
+  boolean
+>;
+
+export type SetIsSwitchboardLinkEnabledEvent = SetEvent<
+  "isSwitchboardLinkEnabled",
+  boolean
+>;
+
+export type SetIsDragAndDropEnabledEvent = SetEvent<
+  "isDragAndDropEnabled",
+  boolean
+>;
+
+export type SetIsTimelineEnabledEvent = SetEvent<"isTimelineEnabled", boolean>;
+
+export type SetIsEditorDebugModeEnabledEvent = SetEvent<
+  "isEditorDebugModeEnabled",
+  boolean
+>;
+
+export type SetIsEditorReadModeEnabledEvent = SetEvent<
+  "isEditorReadModeEnabled",
+  boolean
+>;
+
+export type SetSelectedTimelineRevisionEvent = SetEvent<
+  "selectedTimelineRevision",
+  string | number | null
+>;
+
+export type LoginStatus =
+  | "initial"
+  | "checking"
+  | "not-authorized"
+  | "authorized";

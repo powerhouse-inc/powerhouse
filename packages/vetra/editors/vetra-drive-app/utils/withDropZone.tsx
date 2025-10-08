@@ -1,22 +1,23 @@
 import { DropZone } from "@powerhousedao/design-system";
 import type {
   ConflictResolution,
-  DriveEditorProps,
   FileUploadProgressCallback,
 } from "@powerhousedao/reactor-browser";
 import {
   setSelectedNode,
+  useIsDragAndDropEnabled,
   useOnDropFile,
   useSelectedDriveId,
 } from "@powerhousedao/reactor-browser";
 import type { ComponentType } from "react";
 
-export function withDropZone<T extends DriveEditorProps>(
-  WrappedComponent: ComponentType<T>,
-): ComponentType<T> {
-  const WithDropZoneComponent = (props: T) => {
+export function withDropZone<T extends ComponentType<any>>(
+  WrappedComponent: T,
+): T {
+  const WithDropZoneComponent = (props: any) => {
     const driveId = useSelectedDriveId();
-    const onDropFile = useOnDropFile(props.editorConfig?.documentTypes);
+    const onDropFile = useOnDropFile();
+    const isDragAndDropEnabled = useIsDragAndDropEnabled();
 
     const onAddFile = async (
       file: File,
@@ -27,7 +28,7 @@ export function withDropZone<T extends DriveEditorProps>(
       return await onDropFile(file, onProgress, resolveConflict);
     };
 
-    if (props.editorConfig?.dragAndDrop?.enabled && driveId) {
+    if (isDragAndDropEnabled && driveId) {
       return (
         <DropZone
           onAddFile={onAddFile}
@@ -48,5 +49,5 @@ export function withDropZone<T extends DriveEditorProps>(
     WrappedComponent.displayName || WrappedComponent.name || "Component"
   })`;
 
-  return WithDropZoneComponent;
+  return WithDropZoneComponent as T;
 }

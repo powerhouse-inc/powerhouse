@@ -1,14 +1,19 @@
-import {
-  subscribeToLoginStatus,
-  subscribeToUser,
-} from "@powerhousedao/reactor-browser";
-import { useSyncExternalStore } from "react";
+import type { LoginStatus } from "@powerhousedao/reactor-browser";
+import { makePHEventFunctions } from "@powerhousedao/reactor-browser";
+import type { User } from "@renown/sdk";
 import { useAllowList } from "./config.js";
 
-export function useUser() {
-  const user = useSyncExternalStore(subscribeToUser, () => window.user);
-  return user;
-}
+export const {
+  useValue: useLoginStatus,
+  setValue: setLoginStatus,
+  addEventHandler: addLoginStatusEventHandler,
+} = makePHEventFunctions<LoginStatus>("loginStatus");
+
+export const {
+  useValue: useUser,
+  setValue: setUser,
+  addEventHandler: addUserEventHandler,
+} = makePHEventFunctions<User>("user");
 
 export function useUserPermissions() {
   const user = useUser();
@@ -24,12 +29,4 @@ export function useUserPermissions() {
     isAllowedToCreateDocuments: allowList.includes(user?.address ?? ""),
     isAllowedToEditDocuments: allowList.includes(user?.address ?? ""),
   };
-}
-
-export function useLoginStatus() {
-  const loginStatus = useSyncExternalStore(
-    subscribeToLoginStatus,
-    () => window.loginStatus,
-  );
-  return loginStatus;
 }

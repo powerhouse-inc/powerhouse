@@ -3,21 +3,21 @@ import {
   addFile,
   addFolder,
   copyNode,
-  dispatchSetSelectedNodeIdEvent,
+  extractDriveSlugFromPath,
+  extractNodeIdFromSlug,
   isFileNodeKind,
   isFolderNodeKind,
   makeFolderNodeFromDrive,
   makeNodeSlug,
+  makePHEventFunctions,
   moveNode,
   renameNode,
   sortNodesByName,
-  subscribeToSelectedNodeId,
   useDrives,
   useSelectedDocument,
   useSelectedDriveSafe,
 } from "@powerhousedao/reactor-browser";
 import { type FileNode, type FolderNode, type Node } from "document-drive";
-import { useSyncExternalStore } from "react";
 
 /** Returns the nodes for a drive. */
 export function useNodes() {
@@ -25,13 +25,11 @@ export function useNodes() {
   return selectedDrive?.state.global.nodes;
 }
 
-export function useSelectedNodeId() {
-  const selectedNodeId = useSyncExternalStore(
-    subscribeToSelectedNodeId,
-    () => window.phSelectedNodeId,
-  );
-  return selectedNodeId;
-}
+export const {
+  useValue: useSelectedNodeId,
+  setValue: _setSelectedNodeId,
+  addEventHandler: addSelectedNodeIdEventHandler,
+} = makePHEventFunctions<string | undefined>("phSelectedNodeId");
 
 export function useFileNodes() {
   const nodes = useNodes();
@@ -48,7 +46,17 @@ export function setSelectedNode(nodeOrNodeSlug: Node | string | undefined) {
     typeof nodeOrNodeSlug === "string"
       ? nodeOrNodeSlug
       : makeNodeSlug(nodeOrNodeSlug);
-  dispatchSetSelectedNodeIdEvent(nodeSlug);
+  const nodeId = extractNodeIdFromSlug(nodeSlug);
+  _setSelectedNodeId(nodeId);
+  const driveSlugFromPath = extractDriveSlugFromPath(window.location.pathname);
+  if (!driveSlugFromPath) {
+    return;
+  }
+  if (!nodeSlug) {
+    window.history.pushState(null, "", `/d/${driveSlugFromPath}`);
+    return;
+  }
+  window.history.pushState(null, "", `/d/${driveSlugFromPath}/${nodeSlug}`);
 }
 
 /** Returns a node in the selected drive by id. */

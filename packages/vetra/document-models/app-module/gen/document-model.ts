@@ -16,9 +16,9 @@ export const documentModel: DocumentModelGlobalState = {
       state: {
         global: {
           schema:
-            "type AppModuleState {\n  name: String!\n  status: StatusType!\n  documentTypes: [DocumentTypeItem!]\n  dragAndDrop: DragAndDropSettings\n}\n\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}\n\ntype DocumentTypeItem {\n  id: OID!\n  documentType: String!\n}\n\ntype DragAndDropSettings {\n  enabled: Boolean!\n}",
+            "type AppModuleState {\n  name: String!\n  status: StatusType!\n  documentTypes: [DocumentTypeItem!]\n}\n\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}\n\ntype DocumentTypeItem {\n  id: OID!\n  documentType: String!\n}",
           initialValue:
-            '"{\\n  \\"name\\": \\"\\",\\n  \\"status\\": \\"DRAFT\\",\\n  \\"documentTypes\\": [{ \\"id\\": \\"all-documents\\", \\"documentType\\": \\"*\\" }],\\n  \\"dragAndDrop\\": {\\n    \\"enabled\\": true\\n  }\\n}"',
+            '"{\\n  \\"name\\": \\"\\",\\n  \\"status\\": \\"DRAFT\\",\\n  \\"documentTypes\\": [{ \\"id\\": \\"all-documents\\", \\"documentType\\": \\"*\\" }]\\n}"',
           examples: [],
         },
         local: {

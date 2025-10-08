@@ -5,7 +5,14 @@ import type {
   SetDidEvent,
   SetDocumentsEvent,
   SetDrivesEvent,
+  SetIsDocumentToolbarEnabledEvent,
+  SetIsDragAndDropEnabledEvent,
+  SetIsEditorDebugModeEnabledEvent,
+  SetIsEditorReadModeEnabledEvent,
+  SetIsExternalControlsEnabledEvent,
   SetIsSearchBarEnabledEvent,
+  SetIsSwitchboardLinkEnabledEvent,
+  SetIsTimelineEnabledEvent,
   SetLoginStatusEvent,
   SetModalEvent,
   SetProcessorManagerEvent,
@@ -13,9 +20,11 @@ import type {
   SetRenownEvent,
   SetSelectedDriveIdEvent,
   SetSelectedNodeIdEvent,
+  SetSelectedTimelineRevisionEvent,
   SetUserEvent,
   SetVetraPackagesEvent,
   VetraPackage,
+  LoginStatus,
 } from "@powerhousedao/reactor-browser";
 import type { DID, IConnectCrypto, IRenown, User } from "@renown/sdk";
 
@@ -27,36 +36,33 @@ import type {
 import type { PHDocument } from "document-model";
 import type { PHModal } from "./modals.js";
 
-export type UserPermissions = {
-  isAllowedToCreateDocuments: boolean;
-  isAllowedToEditDocuments: boolean;
-};
-
-export type LoginStatus =
-  | "initial"
-  | "checking"
-  | "not-authorized"
-  | "authorized";
-
 declare global {
   interface Window {
-    loading?: boolean | undefined;
-    reactor?: IDocumentDriveServer | undefined;
-    connectCrypto?: IConnectCrypto | undefined;
-    did?: DID | undefined;
-    renown?: IRenown | undefined;
-    user?: User | undefined;
-    loginStatus?: LoginStatus | undefined;
-    vetraPackages?: VetraPackage[] | undefined;
-    phProcessorManager?: ProcessorManager | undefined;
-    phDrives?: DocumentDriveDocument[] | undefined;
-    phDocuments?: PHDocument[] | undefined;
-    phSelectedDriveId?: string | undefined;
-    phSelectedNodeId?: string | undefined;
-    phModal?: PHModal | undefined;
+    loading?: boolean;
+    reactor?: IDocumentDriveServer;
+    connectCrypto?: IConnectCrypto;
+    did?: DID;
+    renown?: IRenown;
+    user?: User;
+    loginStatus?: LoginStatus;
+    vetraPackages?: VetraPackage[];
+    phProcessorManager?: ProcessorManager;
+    phDrives?: DocumentDriveDocument[];
+    phDocuments?: PHDocument[];
+    phSelectedDriveId?: string;
+    phSelectedNodeId?: string;
+    phModal?: PHModal;
     analyticsDatabaseName?: string;
     allowList?: string[];
-    isSearchBarEnabled?: boolean | undefined;
+    isSearchBarEnabled?: boolean;
+    isExternalControlsEnabled?: boolean;
+    isDocumentToolbarEnabled?: boolean;
+    isSwitchboardLinkEnabled?: boolean;
+    isDragAndDropEnabled?: boolean;
+    isTimelineEnabled?: boolean;
+    isEditorDebugModeEnabled?: boolean;
+    isEditorReadModeEnabled?: boolean;
+    selectedTimelineRevision?: string | number | null;
   }
 
   interface WindowEventMap {
@@ -92,5 +98,21 @@ declare global {
     "ph:allowListUpdated": CustomEvent;
     "ph:setIsSearchBarEnabled": SetIsSearchBarEnabledEvent;
     "ph:isSearchBarEnabledUpdated": CustomEvent;
+    "ph:setIsExternalControlsEnabled": SetIsExternalControlsEnabledEvent;
+    "ph:isExternalControlsEnabledUpdated": CustomEvent;
+    "ph:setIsDocumentToolbarEnabled": SetIsDocumentToolbarEnabledEvent;
+    "ph:isDocumentToolbarEnabledUpdated": CustomEvent;
+    "ph:setIsSwitchboardLinkEnabled": SetIsSwitchboardLinkEnabledEvent;
+    "ph:isSwitchboardLinkEnabledUpdated": CustomEvent;
+    "ph:setIsDragAndDropEnabled": SetIsDragAndDropEnabledEvent;
+    "ph:isDragAndDropEnabledUpdated": CustomEvent;
+    "ph:setIsTimelineEnabled": SetIsTimelineEnabledEvent;
+    "ph:isTimelineEnabledUpdated": CustomEvent;
+    "ph:setIsEditorDebugModeEnabled": SetIsEditorDebugModeEnabledEvent;
+    "ph:isEditorDebugModeEnabledUpdated": CustomEvent;
+    "ph:setIsEditorReadModeEnabled": SetIsEditorReadModeEnabledEvent;
+    "ph:isEditorReadModeEnabledUpdated": CustomEvent;
+    "ph:setSelectedTimelineRevision": SetSelectedTimelineRevisionEvent;
+    "ph:selectedTimelineRevisionUpdated": CustomEvent;
   }
 }

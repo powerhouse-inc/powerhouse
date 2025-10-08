@@ -39,7 +39,6 @@ import {
 
 export function DocumentModelEditor() {
   const [document, dispatch] = useSelectedDocumentModelDocument();
-
   const documentNodeName = document.header.name;
   const {
     name: modelName,

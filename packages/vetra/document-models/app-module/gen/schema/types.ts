@@ -63,7 +63,6 @@ export type AddDocumentTypeInput = {
 
 export type AppModuleState = {
   documentTypes: Maybe<Array<DocumentTypeItem>>;
-  dragAndDrop: Maybe<DragAndDropSettings>;
   name: Scalars["String"]["output"];
   status: StatusType | `${StatusType}`;
 };

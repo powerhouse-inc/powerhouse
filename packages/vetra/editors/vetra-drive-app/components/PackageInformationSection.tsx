@@ -3,7 +3,6 @@ import type {
   VetraEditorModule,
 } from "@powerhousedao/reactor-browser";
 import React from "react";
-import { DOCUMENT_TYPES } from "../document-types.js";
 import { EditorContainer } from "./EditorContainer.js";
 import { SectionAccordion } from "./SectionAccordion.js";
 
@@ -48,7 +47,7 @@ export const PackageInformationSection: React.FC<
             driveId={driveId}
             documentModelModule={documentModelModule}
             editorModule={editorModule}
-            documentType={DOCUMENT_TYPES.documentPackage}
+            documentType="powerhouse/package"
           />
         ) : (
           createpackageContent

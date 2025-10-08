@@ -7,29 +7,25 @@ export async function loadGenericDriveExplorerEditorModule(): Promise<VetraEdito
   const name = "Generic Drive Explorer";
   const documentTypes = genericDriveExplorerEditorModule.documentTypes;
   const Component = genericDriveExplorerEditorModule.Component;
-  const config = genericDriveExplorerEditorModule.config;
   const vetraEditorModule: VetraEditorModule = {
     id: DEFAULT_DRIVE_EDITOR_ID,
     name,
     documentTypes,
     Component,
-    config,
   };
   return vetraEditorModule;
 }
 
 export async function loadDocumentModelEditor(): Promise<VetraEditorModule> {
-  const config = documentModelEditorModule.config;
-  const unsafeIdFromConfig = config.id;
   const name = "Document Model Editor";
+  const id = "document-model-editor-v2";
   const documentTypes = documentModelEditorModule.documentTypes;
   const Component = documentModelEditorModule.Component;
   const vetraEditorModule: VetraEditorModule = {
-    id: unsafeIdFromConfig,
+    id,
     name,
     documentTypes,
     Component,
-    config,
   };
   return vetraEditorModule;
 }

@@ -116,9 +116,6 @@ export const module: DriveEditorModule = {
   documentTypes: ["powerhouse/document-drive"],
   config: {
     id: "ExistingEditor",
-    disableExternalControls: true,
-    documentToolbarEnabled: true,
-    showSwitchboardLink: true,
   },
 };`,
     );

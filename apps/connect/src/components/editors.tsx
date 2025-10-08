@@ -1,8 +1,8 @@
 import { getRevisionFromDate, useTimelineItems } from "@powerhousedao/common";
 import {
   EditorLoader,
-  useUndoRedoShortcuts,
   toast,
+  useUndoRedoShortcuts,
 } from "@powerhousedao/connect";
 import type { TimelineItem } from "@powerhousedao/design-system";
 import {
@@ -16,6 +16,10 @@ import {
   useDocumentModelModuleById,
   useEditorModuleById,
   useFallbackEditorModule,
+  useIsDocumentToolbarEnabled,
+  useIsExternalControlsEnabled,
+  useIsSwitchboardLinkEnabled,
+  useIsTimelineEnabled,
 } from "@powerhousedao/reactor-browser";
 import type { PHDocument } from "document-model";
 import { redo, undo } from "document-model/core";
@@ -71,7 +75,9 @@ export const DocumentEditor: React.FC<Props> = (props) => {
   const fallbackEditorModule = useFallbackEditorModule(documentType);
   const editorModule = preferredEditorModule ?? fallbackEditorModule;
   const timelineItems = useTimelineItems(documentId, createdAt);
-
+  const isExternalControlsEnabled = useIsExternalControlsEnabled();
+  const isDocumentToolbarEnabled = useIsDocumentToolbarEnabled();
+  const isSwitchboardLinkEnabled = useIsSwitchboardLinkEnabled();
   const isLoadingDocument = !document;
   const isLoadingEditor =
     editorModule === undefined ||
@@ -183,19 +189,14 @@ export const DocumentEditor: React.FC<Props> = (props) => {
   }
 
   const EditorComponent = editorModule.Component;
-  const {
-    disableExternalControls,
-    documentToolbarEnabled,
-    showSwitchboardLink,
-    timelineEnabled,
-  } = editorModule.config;
+  const isTimelineEnabled = useIsTimelineEnabled();
 
   const handleSwitchboardLinkClick =
-    showSwitchboardLink !== false ? onOpenSwitchboardLink : undefined;
+    isSwitchboardLinkEnabled !== false ? onOpenSwitchboardLink : undefined;
   return (
     <div className="relative h-full" id="document-editor-context">
-      {documentToolbarEnabled &&
-        disableExternalControls &&
+      {isDocumentToolbarEnabled &&
+        !isExternalControlsEnabled &&
         !revisionHistoryVisible && (
           <DocumentToolbar
             onClose={onClose}
@@ -203,12 +204,12 @@ export const DocumentEditor: React.FC<Props> = (props) => {
             onShowRevisionHistory={() => setRevisionHistoryVisible(true)}
             title={documentName}
             onSwitchboardLinkClick={handleSwitchboardLinkClick}
-            timelineButtonVisible={timelineEnabled}
+            timelineButtonVisible={isTimelineEnabled}
             timelineItems={timelineItems.data}
             onTimelineItemClick={setSelectedTimelineItem}
           />
         )}
-      {!disableExternalControls && (
+      {!!isExternalControlsEnabled && (
         <div className="mb-4 flex justify-end gap-10">
           <PowerhouseButton onClick={onExport}>Export</PowerhouseButton>
           <div className="flex gap-4">
