@@ -22,18 +22,18 @@
   "exports": {
     ".": {
       "development": "./src/index.ts",
-      "import": "./lib/src/index.js",
-      "types": "./lib/src/index.d.ts"
+      "types": "./lib/src/index.d.ts",
+      "default": "./lib/src/index.js"
     },
     "./main.js": {
       "development": "./src/main.tsx",
-      "import": "./lib/src/main.js",
-      "types": "./lib/src/main.d.ts"
+      "types": "./lib/src/main.d.ts",
+      "default": "./lib/src/main.js"
     },
     "./config": {
       "development": "./src/connect.config.ts",
-      "import": "./lib/src/connect.config.js",
-      "types": "./lib/src/connect.config.d.ts"
+      "types": "./lib/src/connect.config.d.ts",
+      "default": "./lib/src/connect.config.js"
     },
     "./custom.d.ts": "./lib/custom.d.ts",
     "./style.css": "./src/index.css",
