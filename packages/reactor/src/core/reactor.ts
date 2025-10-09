@@ -2,6 +2,7 @@ import type { BaseDocumentDriveServer, IDocumentStorage } from "document-drive";
 import { AbortError } from "document-drive";
 import type {
   Action,
+  DeleteDocumentActionInput,
   DocumentModelModule,
   Operation,
   PHBaseState,
@@ -20,7 +21,7 @@ import type {
   ShutdownStatus,
   ViewFilter,
 } from "../shared/types.js";
-import { JobStatus } from "../shared/types.js";
+import { JobStatus, SYSTEM_DOCUMENT_ID } from "../shared/types.js";
 import { matchesScope } from "../shared/utils.js";
 import type { IReactor } from "./types.js";
 import { filterByParentId, filterByType } from "./utils.js";
@@ -295,32 +296,47 @@ export class Reactor implements IReactor {
   async create(document: PHDocument, signal?: AbortSignal): Promise<JobInfo> {
     const createdAtUtcIso = new Date().toISOString();
 
-    let doc: PHDocument;
-    try {
-      // BaseDocumentDriveServer uses addDocument, not createDocument
-      // addDocument adds an existing document to a drive
-      doc = await this.driveServer.addDocument(document);
-    } catch {
-      // TODO: Phase 4 - This will return a job that can be retried
-      return {
-        id: uuidv4(),
-        status: JobStatus.FAILED,
-        createdAtUtcIso,
-      };
-    }
-
     if (signal?.aborted) {
       throw new AbortError();
     }
 
-    // Return success status
-    // TODO: Phase 4 - This will return a job that goes through the queue
-    return {
+    // Create a CREATE_DOCUMENT action
+    const action: Action = {
+      id: `${document.header.id}-create`,
+      type: "CREATE_DOCUMENT",
+      scope: "system",
+      timestampUtcMs: String(Date.now()),
+      input: {
+        document,
+      },
+    };
+
+    // Create a job for the CREATE_DOCUMENT action
+    const job: Job = {
       id: uuidv4(),
-      status: JobStatus.COMPLETED,
+      documentId: SYSTEM_DOCUMENT_ID,
+      scope: "system",
+      branch: "main",
+      operation: {
+        index: 0,
+        timestampUtcMs: String(Date.now()),
+        hash: "",
+        skip: 0,
+        action: action,
+      },
+      createdAt: new Date().toISOString(),
+      queueHint: [],
+      maxRetries: 3,
+    };
+
+    // Enqueue the job
+    await this.queue.enqueue(job);
+
+    // Return pending job status
+    return {
+      id: job.id,
+      status: JobStatus.PENDING,
       createdAtUtcIso,
-      completedAtUtcIso: new Date().toISOString(),
-      result: doc,
     };
   }
 
@@ -333,34 +349,51 @@ export class Reactor implements IReactor {
     signal?: AbortSignal,
   ): Promise<JobInfo> {
     const createdAtUtcIso = new Date().toISOString();
-    const jobId = uuidv4();
-
-    try {
-      // Delete document using drive server
-      await this.driveServer.deleteDocument(id);
-
-      // TODO: Implement cascade deletion when propagate mode is CASCADE
-    } catch (error) {
-      // TODO: Phase 4 - This will return a job that can be retried
-      return {
-        id: jobId,
-        status: JobStatus.FAILED,
-        createdAtUtcIso,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
 
     if (signal?.aborted) {
       throw new AbortError();
     }
 
-    // Return success job info
-    // TODO: Phase 4 - This will return a job that goes through the queue
+    // Create a DELETE_DOCUMENT action
+    const deleteInput: DeleteDocumentActionInput = {
+      documentId: id,
+      propagate,
+    };
+
+    const action: Action = {
+      id: `${id}-delete`,
+      type: "DELETE_DOCUMENT",
+      scope: "system",
+      timestampUtcMs: String(Date.now()),
+      input: deleteInput,
+    };
+
+    // Create a job for the DELETE_DOCUMENT action
+    const job: Job = {
+      id: uuidv4(),
+      documentId: SYSTEM_DOCUMENT_ID,
+      scope: "system",
+      branch: "main",
+      operation: {
+        index: 0,
+        timestampUtcMs: String(Date.now()),
+        hash: "",
+        skip: 0,
+        action: action,
+      },
+      createdAt: new Date().toISOString(),
+      queueHint: [],
+      maxRetries: 3,
+    };
+
+    // Enqueue the job
+    await this.queue.enqueue(job);
+
+    // Return pending job status
     return {
-      id: jobId,
-      status: JobStatus.COMPLETED,
+      id: job.id,
+      status: JobStatus.PENDING,
       createdAtUtcIso,
-      completedAtUtcIso: new Date().toISOString(),
     };
   }
 

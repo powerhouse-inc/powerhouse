@@ -2,6 +2,36 @@
 
 This repository contains base and scoped (project) components, utilities, and hooks for the powerhouse org.
 
+## Installation & Setup
+
+After installing the package, you'll need to load the Inter font family for proper styling.
+
+### Font Loading (Required)
+
+The design system uses the **Inter** font family. Choose one of the following approaches:
+
+#### Option 1: HTML Link Tags (Recommended)
+
+Add these tags to your HTML `<head>` for optimal performance:
+
+```html
+<head>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet" />
+</head>
+```
+
+#### Option 2: CSS Import (Fallback)
+
+Alternatively, import the font in your CSS file:
+
+```css
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
+```
+
+**Note:** HTML link tags are preferred for better performance (preconnect support, earlier parsing, non-blocking).
+
 ### How to run this project:
 
 - Clone this repo: `git clone https://github.com/powerhouse-inc/design-system.git`

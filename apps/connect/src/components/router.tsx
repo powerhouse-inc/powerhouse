@@ -4,11 +4,11 @@ import { Suspense } from "react";
 import type { RouteObject } from "react-router-dom";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 
-const routerBasename = connectConfig.routerBasename.endsWith("/")
-  ? connectConfig.routerBasename.slice(0, -1)
-  : connectConfig.routerBasename;
-
 function createRouter(routes: RouteObject[]) {
+  const routerBasename = connectConfig.routerBasename.endsWith("/")
+    ? connectConfig.routerBasename.slice(0, -1)
+    : connectConfig.routerBasename;
+
   return createBrowserRouter(routes, {
     basename: routerBasename,
     future: {

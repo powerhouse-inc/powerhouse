@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -9,15 +9,17 @@
     />
     <title>Powerhouse Connect</title>
     <link rel="icon" href="/icon.ico" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet" />
-    <link rel="preconnect" href="https://esm.sh" crossorigin />
-    <link href="/src/index.css" rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+    <style>
+      @import "@powerhousedao/design-system/style.css";
+      @import "tailwindcss";
+      @source "./node_modules/@powerhousedao/connect"
+    </style>
   </head>
-
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module">
+      import "@powerhousedao/connect/main.js";
+    </script>
   </body>
 </html>

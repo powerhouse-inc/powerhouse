@@ -129,7 +129,7 @@ test("Create ToDoDocument Model", async ({ page }) => {
 test("Create a TodoList", async ({ page }) => {
   await goToConnectDrive(page, "My Local Drive");
   await createDocument(page, "ToDoDocument", "MyTodoList");
-  await page.getByText("This h1 will be styled").waitFor({ state: "visible" });
+  await page.getByText("Change document name").waitFor({ state: "visible" });
 });
 
 // Helper Functions

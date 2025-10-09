@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
 import { camelCase } from "change-case";
 
 export interface DocumentBasicData {
@@ -39,11 +39,13 @@ export async function createDocument(
     .getByText(documentType)
     .click();
 
+  const form = page.locator('form[name="create-document"]').last();
+
   // Fill in the document name
-  await page.fill('input[type="text"]', documentName);
+  await form.locator('input[type="text"]').fill(documentName);
 
   // Click create button
-  await page.click('button:has-text("Create")');
+  await form.locator('button:has-text("Create")').click();
 
   // Wait for the document to be created and opened
   await page.getByText(documentName).first().waitFor({ state: "visible" });
@@ -170,8 +172,5 @@ export async function clickDocumentOperationHistory(page: Page) {
 }
 
 export async function closeDocumentOperationHistory(page: Page) {
-  await page
-    .locator(".shadow-button.rounded-lg.bg-gray-50.p-1.text-slate-100")
-    .first()
-    .click();
+  await page.locator("button[name='close-revision-history']").first().click();
 }

@@ -63,10 +63,11 @@ describe("ReactorClient Passthrough Functions", () => {
       .withSigner(mockSigner)
       .build();
 
-    // Add some test documents through the reactor
+    // Add some test documents through the drive server
+    // (not using reactor.create since that's now async via jobs)
     const docs = createTestDocuments(5);
     for (const doc of docs) {
-      await reactor.create(doc);
+      await driveServer.addDocument(doc);
     }
   });
 
@@ -175,7 +176,7 @@ describe("ReactorClient Passthrough Functions", () => {
       const docWithSlug = createDocModelDocument();
       docWithSlug.header.id = "doc-with-id-123";
       docWithSlug.header.slug = "my-document-slug";
-      await reactor.create(docWithSlug);
+      await driveServer.addDocument(docWithSlug);
     });
 
     it("should return the same result as reactor.get when using id", async () => {
@@ -265,17 +266,18 @@ describe("ReactorClient Passthrough Functions", () => {
     });
 
     describe("deleteDocument", () => {
-      it("should call reactor.deleteDocument and wait for completion", async () => {
+      it("should call reactor.deleteDocument and return job info", async () => {
         const id = "doc-1";
 
         // should be fine
         await reactor.get(id);
 
-        // delete through the client
-        await client.deleteDocument(id);
+        // delete through the reactor (returns job info since it's async via queue)
+        const jobInfo = await reactor.deleteDocument(id);
 
-        // now it should throw an error
-        await expect(reactor.get(id)).rejects.toThrow();
+        // Should return a pending job
+        expect(jobInfo.status).toBe("PENDING");
+        expect(jobInfo.id).toBeDefined();
       });
     });
   });

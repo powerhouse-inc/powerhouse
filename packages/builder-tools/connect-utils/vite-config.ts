@@ -13,7 +13,12 @@ import {
 import { createHtmlPlugin } from "vite-plugin-html";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 import svgr from "vite-plugin-svgr";
-import type { ConnectEnv, IConnectOptions } from "./types.js";
+import {
+  loadConnectEnv,
+  setConnectEnv,
+  type ConnectEnv,
+} from "./env-config.js";
+import type { IConnectOptions } from "./types.js";
 
 export const connectClientConfig = {
   meta: [
@@ -87,13 +92,37 @@ export const connectClientConfig = {
   ],
 } as const;
 
+function viteOptionsToEnv(options: IConnectOptions) {
+  const optionsEnv: Partial<ConnectEnv> = {};
+
+  if (options.localPackage !== undefined) {
+    if (options.localPackage === false) {
+      optionsEnv.PH_DISABLE_LOCAL_PACKAGE = true;
+    } else {
+      optionsEnv.PH_LOCAL_PACKAGE = options.localPackage;
+    }
+  }
+
+  return optionsEnv;
+}
+
 export function getConnectBaseViteConfig(options: IConnectOptions) {
   const mode = options.mode;
   const envDir = options.envDir ?? options.dirname;
   const fileEnv = loadEnv(mode, envDir, "PH_");
-  const env = { ...fileEnv, ...process.env } as Partial<ConnectEnv>;
 
-  const disableLocalPackages = env.PH_DISABLE_LOCAL_PACKAGE === "true";
+  // Map options to env vars
+  const optionsEnv = viteOptionsToEnv(options);
+
+  // Load and validate environment with priority: process.env > options > fileEnv > defaults
+  const env = loadConnectEnv({
+    processEnv: process.env,
+    optionsEnv,
+    fileEnv,
+  });
+
+  // set the resolved env to process.env so it's loaded by vite
+  setConnectEnv(env);
 
   // load powerhouse config
   const phConfigPath =
@@ -114,23 +143,21 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   // merges env and config packages
   const allPackages = [...envPhPackages, ...configPhPackages];
 
-  // if local package is provided, add it to the packages to be loaded
-  const localPackage =
-    env.PH_LOCAL_PACKAGE ?? options.localPackage ?? options.dirname;
-  if (localPackage && !disableLocalPackages) {
-    allPackages.push(localPackage);
+  // if local package is provided and not disabled, add it to the packages to be loaded
+  if (!env.PH_DISABLE_LOCAL_PACKAGE) {
+    const localPackage = env.PH_LOCAL_PACKAGE ?? options.dirname;
+    if (localPackage) {
+      allPackages.push(localPackage);
+    }
   }
 
   // remove duplicates and empty strings
   const phPackages = [...new Set(allPackages.filter((p) => p.trim().length))];
 
-  const APP_VERSION = (env.PH_CONNECT_VERSION || "unknown").toString();
-  process.env.PH_CONNECT_VERSION = APP_VERSION;
-
   const authToken = env.PH_SENTRY_AUTH_TOKEN;
   const org = env.PH_SENTRY_ORG;
   const project = env.PH_SENTRY_PROJECT;
-  const release = env.PH_CONNECT_SENTRY_RELEASE || APP_VERSION;
+  const release = env.PH_CONNECT_SENTRY_RELEASE || env.PH_CONNECT_VERSION;
   const uploadSentrySourcemaps = authToken && org && project;
 
   const plugins: PluginOption[] = [
@@ -182,7 +209,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const config: UserConfig = {
     base: "./",
     envPrefix: ["PH_CONNECT_"],
-    envDir: envDir,
+    envDir: false,
     optimizeDeps: {
       exclude: ["@electric-sql/pglite"],
     },

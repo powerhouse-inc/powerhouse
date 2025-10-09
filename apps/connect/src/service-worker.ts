@@ -22,8 +22,11 @@ type ServiceWorkerMessage = ServiceWorkerEvent<ServiceWorkerMessageData>;
 const _self = self as unknown as ServiceWorkerGlobalScope;
 
 const APP_VERSION = import.meta.env.PH_CONNECT_VERSION;
-const REQUIRES_HARD_REFRESH =
-  import.meta.env.PH_CONNECT_REQUIRES_HARD_REFRESH === "true";
+const REQUIRES_HARD_REFRESH = import.meta.env.PH_CONNECT_REQUIRES_HARD_REFRESH;
+const requiresHardRefresh =
+  typeof REQUIRES_HARD_REFRESH === "boolean"
+    ? REQUIRES_HARD_REFRESH
+    : REQUIRES_HARD_REFRESH === "true";
 
 const VERSION_CACHE = "version-cache";
 const VERSION_KEY = "app-version";
@@ -35,7 +38,7 @@ _self.addEventListener("install", () => {
 _self.addEventListener("activate", (event: ExtendableEvent) => {
   event.waitUntil(_self.clients.claim());
 
-  checkAppVersion(APP_VERSION, REQUIRES_HARD_REFRESH).catch(console.error);
+  checkAppVersion(APP_VERSION, requiresHardRefresh).catch(console.error);
 });
 
 function postMessage(client: Client, message: ServiceWorkerMessageData) {

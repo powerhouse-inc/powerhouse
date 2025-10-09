@@ -9,7 +9,9 @@
     />
     <title>Powerhouse Connect</title>
     <link rel="icon" href="/icon.ico" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./connect.css">
     <style>
       @import "@powerhousedao/design-system/style.css";
@@ -19,6 +21,10 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="./connect.tsx"></script>
+    <script type="module">
+      import { AppLoader } from "@powerhousedao/connect";
+      import { createRoot } from "react-dom/client";
+      createRoot(document.getElementById("root")).render(AppLoader());
+    </script>
   </body>
 </html>

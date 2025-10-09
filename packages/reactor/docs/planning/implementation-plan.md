@@ -94,18 +94,19 @@ To enable proper command-sourced document creation, introduce a standardized act
 
 **Outcome**: Document creation now flows through the same action-based pipeline as mutations, enabling full event sourcing and eliminating the need for special-case document creation logic.
 
-## Phase 4 (⚠️ In Progress): Connect Facade to Legacy Write Path
+## Phase 4 (✅ Complete): Connect Facade to Legacy Write Path
 
 Instead of a "big bang" switch, we first validate the new job pipeline while still relying on the legacy storage system as the source of truth.
 
-1.  **Update `Reactor` Facade Mutations** (⚠️ Partially Complete):
-    - ✅ The `mutate()` method packages actions as `Job`s and enqueues them into `IQueue` (reactor.ts:370-404)
-    - ❌ The `create()` method still calls `BaseDocumentDriveServer.addDocument()` directly and returns synchronous job completion (reactor.ts:295-325)
-    - ❌ The `deleteDocument()` method still calls `BaseDocumentDriveServer.deleteDocument()` directly and returns synchronous job completion (reactor.ts:330-365)
-    - **TODO**: Refactor `create()` and `deleteDocument()` to use the queue pipeline
+1.  **Update `Reactor` Facade Mutations** (✅ Complete):
+    - ✅ The `mutate()` method packages actions as `Job`s and enqueues them into `IQueue` (reactor.ts:385-419)
+    - ✅ The `create()` method packages CREATE_DOCUMENT actions as `Job`s and enqueues them into `IQueue` (reactor.ts:295-340)
+    - ✅ The `deleteDocument()` method packages DELETE_DOCUMENT actions as `Job`s and enqueues them into `IQueue` (reactor.ts:345-395)
 2.  **Executor Writes to Legacy Storage** (✅ Complete):
-    - ✅ `SimpleJobExecutor` takes `IDocumentOperationStorage` as a constructor dependency (simple-job-executor.ts:15-18)
-    - ✅ After processing a job, it writes the resulting `Operation`s to legacy storage via `operationStorage.addDocumentOperations()` (simple-job-executor.ts:66-70)
+    - ✅ `SimpleJobExecutor` takes `IDocumentOperationStorage` as a constructor dependency (simple-job-executor.ts:30-34)
+    - ✅ After processing a job, it writes the resulting `Operation`s to legacy storage via `operationStorage.addDocumentOperations()` (simple-job-executor.ts:80-84)
+    - ✅ `SimpleJobExecutor` handles CREATE_DOCUMENT system actions specially, creating documents in storage and writing operations (simple-job-executor.ts:111-165)
+    - ✅ `SimpleJobExecutor` handles DELETE_DOCUMENT system actions specially, deleting documents from storage (simple-job-executor.ts:171-215)
     - **Goal**: This validates the entire `Facade -> Queue -> Executor` pipeline is working correctly before introducing any new storage.
 
 ## Phase 5: Introduce `IOperationStore` with Dual-Writing

@@ -207,8 +207,7 @@ export type NOOPAction = Action & {
   input: SchemaNOOPAction["input"];
 };
 
-export type CreateDocumentAction = {
-  type: "CREATE_DOCUMENT";
+export type CreateDocumentActionInput = {
   model: string; // e.g., 'ph/todo'
   version: "0.0.0";
   documentId: string; // equals signature when signed; UUID when unsigned
@@ -221,13 +220,32 @@ export type CreateDocumentAction = {
   };
 };
 
-export type UpgradeDocumentAction = {
-  type: "UPGRADE_DOCUMENT";
+export type UpgradeDocumentActionInput = {
   model: string;
   fromVersion: string; // '0.0.0' for first upgrade
   toVersion: string; // current model version
   documentId: string;
   initialState?: object; // optional; defaults to model.defaultState()
+};
+
+export type DeleteDocumentActionInput = {
+  documentId: string;
+  propagate?: "none" | "cascade"; // Deletion propagation mode
+};
+
+export type CreateDocumentAction = Action & {
+  type: "CREATE_DOCUMENT";
+  input: CreateDocumentActionInput;
+};
+
+export type UpgradeDocumentAction = Action & {
+  type: "UPGRADE_DOCUMENT";
+  input: UpgradeDocumentActionInput;
+};
+
+export type DeleteDocumentAction = Action & {
+  type: "DELETE_DOCUMENT";
+  input: DeleteDocumentActionInput;
 };
 
 export type DocumentAction =

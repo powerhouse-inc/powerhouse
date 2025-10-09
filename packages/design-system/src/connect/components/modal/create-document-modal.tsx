@@ -54,7 +54,7 @@ export function CreateDocumentModal(props: CreateDocumentModalProps) {
       }}
       {...restProps}
     >
-      <div className="w-[400px] p-6 text-slate-300">
+      <form name="create-document" className="w-[400px] p-6 text-slate-300">
         <div className="border-b border-slate-50 pb-2 text-2xl font-bold text-gray-800">
           Create a new document
         </div>
@@ -94,7 +94,7 @@ export function CreateDocumentModal(props: CreateDocumentModalProps) {
             Create
           </PowerhouseButton>
         </div>
-      </div>
+      </form>
     </Modal>
   );
 }

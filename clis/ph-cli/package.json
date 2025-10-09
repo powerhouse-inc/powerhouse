@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/ph-cli",
-  "version": "4.1.0-dev.59",
+  "version": "4.1.0-dev.63",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -24,7 +24,7 @@
     "lint": "eslint",
     "generate-commands-md": "tsx scripts/generate-commands-md.ts",
     "generate-version": "tsx scripts/generate-version.ts",
-    "build": "npm run generate-commands-md && npm run generate-version && npm run copy-scripts",
+    "build:misc": "npm run generate-commands-md && npm run generate-version && tsc && npm run copy-scripts",
     "copy-scripts": "copyfiles scripts/* dist/",
     "dev": "concurrently -P 'pnpm -w run tsc --watch' 'nodemon --watch \"../..\" -e ts,tsx,js,json dist/src/cli.js -- {@}' --",
     "test": "vitest --run"

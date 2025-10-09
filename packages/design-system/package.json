@@ -1,10 +1,11 @@
 {
   "name": "@powerhousedao/design-system",
-  "version": "4.1.0-dev.59",
+  "version": "4.1.0-dev.63",
   "description": "",
   "files": [
     "dist",
-    "assets"
+    "assets",
+    "theme.css"
   ],
   "type": "module",
   "repository": {
@@ -28,7 +29,8 @@
     "./assets/*.gif": "./assets/*.gif",
     "./assets/*.webp": "./assets/*.webp",
     "./assets/*.avif": "./assets/*.avif",
-    "./style.css": "./dist/style.css"
+    "./style.css": "./dist/style.css",
+    "./theme.css": "./theme.css"
   },
   "scripts": {
     "tsc": "tsc",

@@ -106,7 +106,7 @@ export async function deleteFolder(page: Page, folderName: string) {
   await page.getByRole("menuitem", { name: "Delete" }).click();
 
   // Press Enter to confirm deletion
-  await page.getByText("Delete", { exact: true }).click();
+  await page.getByText("Delete", { exact: true }).last().click();
 
   // Verify the folder has been deleted
   await page

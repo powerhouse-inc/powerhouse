@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-export const CONNECT_URL = "http://localhost:3000";
+export const CONNECT_URL = "http://127.0.0.1:3000";
 export const REACTOR_URL = "http://127.0.0.1:4001";
 
 /**
@@ -74,7 +74,7 @@ export default defineConfig({
   /* Run your local dev server before starting the tests */
   webServer: [
     {
-      command: "pnpm connect",
+      command: "pnpm connect --host",
       url: CONNECT_URL,
       stderr: "pipe",
       stdout: "pipe",

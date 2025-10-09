@@ -1,7 +1,7 @@
 import type {
-  CreateDocumentAction,
+  CreateDocumentActionInput,
   PHDocumentHeader,
-  UpgradeDocumentAction,
+  UpgradeDocumentActionInput,
 } from "document-model";
 import { createPresignedHeader } from "document-model/core";
 import type { Kysely } from "kysely";
@@ -74,7 +74,7 @@ export class KyselyDocumentView implements IDocumentView {
       for (const item of items) {
         const { operation, context } = item;
         const { documentId, scope, branch, documentType } = context;
-        const { index, hash, action } = operation;
+        const { index, hash } = operation;
 
         // Check if we need to create or update a snapshot
         const existingSnapshot = await trx
@@ -153,12 +153,12 @@ export class KyselyDocumentView implements IDocumentView {
 
     for (const op of headerAndDocOps) {
       const action = JSON.parse(op.action) as
-        | { type: "CREATE_DOCUMENT"; input: CreateDocumentAction }
-        | { type: "UPGRADE_DOCUMENT"; input: UpgradeDocumentAction }
+        | { type: "CREATE_DOCUMENT"; input: CreateDocumentActionInput }
+        | { type: "UPGRADE_DOCUMENT"; input: UpgradeDocumentActionInput }
         | { type: string; input: unknown };
 
       if (action.type === "CREATE_DOCUMENT") {
-        const input = action.input as CreateDocumentAction;
+        const input = action.input as CreateDocumentActionInput;
         // Extract header from CREATE_DOCUMENT action's signing parameters
         if (input.signing) {
           header = {
