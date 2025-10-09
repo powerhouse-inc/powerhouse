@@ -1,3 +1,13 @@
+## 4.1.0-dev.64 (2025-10-09)
+
+### 🩹 Fixes
+
+- **ph-cli:** force transpiliation of version.ts ([6b1294745](https://github.com/powerhouse-inc/powerhouse/commit/6b1294745))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.63 (2025-10-09)
 
 ### 🚀 Features
