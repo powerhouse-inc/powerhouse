@@ -58,9 +58,12 @@ async function loadVetraPackages() {
 }
 
 export async function createReactor() {
-  if (window.reactor || window.loading) return;
+  if (!window.ph) {
+    window.ph = {};
+  }
+  if (window.ph.reactor || window.ph.loading) return;
 
-  window.loading = true;
+  window.ph.loading = true;
 
   // add window event handlers for updates
   addPHEventHandlers();
@@ -232,7 +235,7 @@ export async function createReactor() {
     refreshReactorData(reactor).catch(logger.error);
   });
 
-  window.loading = false;
+  window.ph.loading = false;
 }
 
 function getAppConfig() {

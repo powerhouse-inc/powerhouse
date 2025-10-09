@@ -1,15 +1,13 @@
 import { capitalCase } from "change-case";
 import { useSyncExternalStore } from "react";
+import type { PHGlobal, PHGlobalKey } from "../types/global.js";
+import type { SetEvent } from "./types.js";
 
-type WindowKey = keyof Window;
-export function makePHEventFunctions<TValue>(key: WindowKey) {
-  if (typeof key !== "string") {
-    throw new Error("Key must be a string");
-  }
+export function makePHEventFunctions<TKey extends PHGlobalKey>(key: TKey) {
   const setEventName = `ph:set${capitalCase(key)}` as const;
   const updateEventName = `ph:${key}Updated` as const;
 
-  function dispatchSetValueEvent(value: TValue | undefined) {
+  function setValue(value: PHGlobal[TKey] | undefined) {
     const event = new CustomEvent(setEventName, {
       detail: { [key]: value },
     });
@@ -21,11 +19,10 @@ export function makePHEventFunctions<TValue>(key: WindowKey) {
     window.dispatchEvent(event);
   }
 
-  function handleSetValueEvent(
-    event: CustomEvent<{ [K in typeof key]: TValue }>,
-  ) {
+  function handleSetValueEvent(event: SetEvent<TKey>) {
     const value = event.detail[key];
-    (window as Record<WindowKey, any>)[key] = value;
+    if (!window.ph) throw new Error("ph global store is not defined");
+    window.ph[key] = value;
     dispatchUpdatedEvent();
   }
 
@@ -40,9 +37,9 @@ export function makePHEventFunctions<TValue>(key: WindowKey) {
     };
   }
 
-  function getSnapshot(): TValue | undefined {
-    const value = (window as Record<WindowKey, any>)[key] as TValue | undefined;
-    return value;
+  function getSnapshot() {
+    if (!window.ph) throw new Error("ph is not defined");
+    return window.ph[key];
   }
 
   function useValue() {
@@ -50,8 +47,8 @@ export function makePHEventFunctions<TValue>(key: WindowKey) {
   }
 
   return {
-    setValue: dispatchSetValueEvent,
     useValue,
+    setValue,
     addEventHandler,
   };
 }

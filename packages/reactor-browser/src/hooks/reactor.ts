@@ -1,11 +1,21 @@
 import type { IDocumentDriveServer } from "document-drive";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
+import type {
+  AddPHGlobalEventHandler,
+  SetPHGlobalValue,
+  UsePHGlobalValue,
+} from "./types.js";
 
-export const {
-  useValue: useReactor,
-  setValue: setReactor,
-  addEventHandler: addReactorEventHandler,
-} = makePHEventFunctions<IDocumentDriveServer>("reactor");
+const eventFunctions = makePHEventFunctions("reactor");
+
+export const useReactor: UsePHGlobalValue<IDocumentDriveServer> =
+  eventFunctions.useValue;
+
+export const setReactor: SetPHGlobalValue<IDocumentDriveServer> =
+  eventFunctions.setValue;
+
+export const addReactorEventHandler: AddPHGlobalEventHandler =
+  eventFunctions.addEventHandler;
 
 export function useSupportedDocumentTypes() {
   const reactor = useReactor();

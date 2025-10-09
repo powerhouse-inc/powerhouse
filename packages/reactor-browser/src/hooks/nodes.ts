@@ -29,7 +29,7 @@ export const {
   useValue: useSelectedNodeId,
   setValue: _setSelectedNodeId,
   addEventHandler: addSelectedNodeIdEventHandler,
-} = makePHEventFunctions<string | undefined>("phSelectedNodeId");
+} = makePHEventFunctions("selectedNodeId");
 
 export function useFileNodes() {
   const nodes = useNodes();

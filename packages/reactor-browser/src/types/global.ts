@@ -1,4 +1,5 @@
 import type {
+  LoginStatus,
   SetAllowListEvent,
   SetAnalyticsDatabaseNameEvent,
   SetConnectCryptoEvent,
@@ -24,7 +25,6 @@ import type {
   SetUserEvent,
   SetVetraPackagesEvent,
   VetraPackage,
-  LoginStatus,
 } from "@powerhousedao/reactor-browser";
 import type { DID, IConnectCrypto, IRenown, User } from "@renown/sdk";
 
@@ -36,33 +36,40 @@ import type {
 import type { PHDocument } from "document-model";
 import type { PHModal } from "./modals.js";
 
+export type PHGlobal = {
+  loading?: boolean;
+  reactor?: IDocumentDriveServer;
+  connectCrypto?: IConnectCrypto;
+  did?: DID;
+  renown?: IRenown;
+  user?: User;
+  loginStatus?: LoginStatus;
+  vetraPackages?: VetraPackage[];
+  processorManager?: ProcessorManager;
+  drives?: DocumentDriveDocument[];
+  documents?: PHDocument[];
+  selectedDriveId?: string;
+  selectedNodeId?: string;
+  modal?: PHModal;
+  analyticsDatabaseName?: string;
+  allowList?: string[];
+  isSearchBarEnabled?: boolean;
+  isExternalControlsEnabled?: boolean;
+  isDocumentToolbarEnabled?: boolean;
+  isSwitchboardLinkEnabled?: boolean;
+  isDragAndDropEnabled?: boolean;
+  isTimelineEnabled?: boolean;
+  isEditorDebugModeEnabled?: boolean;
+  isEditorReadModeEnabled?: boolean;
+  selectedTimelineRevision?: string | number | null;
+};
+
+export type PHGlobalKey = keyof PHGlobal;
+export type PHGlobalValue = PHGlobal[PHGlobalKey];
+
 declare global {
   interface Window {
-    loading?: boolean;
-    reactor?: IDocumentDriveServer;
-    connectCrypto?: IConnectCrypto;
-    did?: DID;
-    renown?: IRenown;
-    user?: User;
-    loginStatus?: LoginStatus;
-    vetraPackages?: VetraPackage[];
-    phProcessorManager?: ProcessorManager;
-    phDrives?: DocumentDriveDocument[];
-    phDocuments?: PHDocument[];
-    phSelectedDriveId?: string;
-    phSelectedNodeId?: string;
-    phModal?: PHModal;
-    analyticsDatabaseName?: string;
-    allowList?: string[];
-    isSearchBarEnabled?: boolean;
-    isExternalControlsEnabled?: boolean;
-    isDocumentToolbarEnabled?: boolean;
-    isSwitchboardLinkEnabled?: boolean;
-    isDragAndDropEnabled?: boolean;
-    isTimelineEnabled?: boolean;
-    isEditorDebugModeEnabled?: boolean;
-    isEditorReadModeEnabled?: boolean;
-    selectedTimelineRevision?: string | number | null;
+    ph?: PHGlobal;
   }
 
   interface WindowEventMap {

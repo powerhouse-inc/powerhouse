@@ -5,7 +5,7 @@ export const {
   useValue: usePHModal,
   setValue: setPHModal,
   addEventHandler: addModalEventHandler,
-} = makePHEventFunctions<PHModal>("phModal");
+} = makePHEventFunctions("modal");
 
 export function showPHModal(modal: PHModal) {
   setPHModal(modal);

@@ -19,14 +19,14 @@ export const {
   useValue: useVetraPackages,
   setValue: _setVetraPackages,
   addEventHandler: addVetraPackagesEventHandler,
-} = makePHEventFunctions<VetraPackage[]>("vetraPackages");
+} = makePHEventFunctions("vetraPackages");
 
 export function setVetraPackages(vetraPackages: VetraPackage[] | undefined) {
   _setVetraPackages(vetraPackages);
   const documentModelModules = vetraPackages
     ?.flatMap((pkg) => pkg.modules.documentModelModules)
     .filter((module) => module !== undefined);
-  window.reactor?.setDocumentModelModules(
+  window.ph?.reactor?.setDocumentModelModules(
     documentModelModules as unknown as DocumentModelModule[],
   );
 }

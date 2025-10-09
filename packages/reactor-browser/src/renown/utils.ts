@@ -1,12 +1,11 @@
-import type { Reactor } from "@powerhousedao/reactor-browser";
 import { setLoginStatus, setUser } from "@powerhousedao/reactor-browser";
 import type { IConnectCrypto, IRenown } from "@renown/sdk";
-import { logger } from "document-drive";
+import { logger, type IDocumentDriveServer } from "document-drive";
 import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID, RENOWN_URL } from "./constants.js";
 
 export function openRenown() {
   const url = new URL(RENOWN_URL);
-  url.searchParams.set("connect", window.did ?? "");
+  url.searchParams.set("connect", window.ph?.did ?? "");
   url.searchParams.set("network", RENOWN_NETWORK_ID);
   url.searchParams.set("chain", RENOWN_CHAIN_ID);
 
@@ -17,7 +16,7 @@ export function openRenown() {
 
 export async function login(
   userDid: string | undefined,
-  reactor: Reactor | undefined,
+  reactor: IDocumentDriveServer | undefined,
   renown: IRenown | undefined,
   connectCrypto: IConnectCrypto | undefined,
 ) {
@@ -63,8 +62,8 @@ export async function login(
 }
 
 export async function logout() {
-  const renown = window.renown;
-  const reactor = window.reactor;
+  const renown = window.ph?.renown;
+  const reactor = window.ph?.reactor;
   setLoginStatus("initial");
   await renown?.logout();
   reactor?.removeJwtHandler();

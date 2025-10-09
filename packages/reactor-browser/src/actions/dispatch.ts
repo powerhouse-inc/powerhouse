@@ -7,7 +7,7 @@ async function getDocument(
   documentId: string,
 ): Promise<PHDocument | undefined> {
   try {
-    return await window.reactor?.getDocument(documentId);
+    return await window.ph?.reactor?.getDocument(documentId);
   } catch (error) {
     logger.debug(`Failed to get document with id ${documentId}:`, error);
     return undefined;

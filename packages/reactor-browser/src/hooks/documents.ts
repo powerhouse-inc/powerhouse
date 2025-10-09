@@ -12,13 +12,13 @@ export const {
   useValue: useAllDocuments,
   setValue: setDocuments,
   addEventHandler: addDocumentsEventHandler,
-} = makePHEventFunctions<PHDocument[]>("phDocuments");
+} = makePHEventFunctions("documents");
 
 export const {
   useValue: useSelectedTimelineRevision,
   setValue: setSelectedTimelineRevision,
   addEventHandler: addSelectedTimelineRevisionEventHandler,
-} = makePHEventFunctions<string | number | null>("selectedTimelineRevision");
+} = makePHEventFunctions("selectedTimelineRevision");
 
 /** Returns the documents for the selected drive. */
 export function useSelectedDriveDocuments(): PHDocument[] | undefined {

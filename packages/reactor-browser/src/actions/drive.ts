@@ -23,7 +23,7 @@ import { generateId } from "document-model/core";
 import { queueActions } from "./queue.js";
 
 export async function addDrive(input: DriveInput, preferredEditor?: string) {
-  const reactor = window.reactor;
+  const reactor = window.ph?.reactor;
   if (!reactor) {
     return;
   }
@@ -45,7 +45,7 @@ export async function addDrive(input: DriveInput, preferredEditor?: string) {
 }
 
 export async function addRemoteDrive(url: string, options: RemoteDriveOptions) {
-  const reactor = window.reactor;
+  const reactor = window.ph?.reactor;
   if (!reactor) {
     return;
   }
@@ -55,7 +55,7 @@ export async function addRemoteDrive(url: string, options: RemoteDriveOptions) {
 }
 
 export async function deleteDrive(driveId: string) {
-  const reactor = window.reactor;
+  const reactor = window.ph?.reactor;
   if (!reactor) {
     return;
   }
@@ -71,7 +71,7 @@ export async function renameDrive(
   driveId: string,
   name: string,
 ): Promise<PHDocument | undefined> {
-  const reactor = window.reactor;
+  const reactor = window.ph?.reactor;
   if (!reactor) {
     return;
   }
@@ -89,7 +89,7 @@ export async function setDriveAvailableOffline(
   driveId: string,
   availableOffline: boolean,
 ): Promise<PHDocument | undefined> {
-  const reactor = window.reactor;
+  const reactor = window.ph?.reactor;
   if (!reactor) {
     return;
   }
@@ -110,7 +110,7 @@ export async function setDriveSharingType(
   driveId: string,
   sharingType: SharingType,
 ): Promise<PHDocument | undefined> {
-  const reactor = window.reactor;
+  const reactor = window.ph?.reactor;
   if (!reactor) {
     return;
   }
@@ -132,7 +132,7 @@ export function getSyncStatus(
   sharingType: SharingType,
 ): Promise<SyncStatus | undefined> {
   if (sharingType === "LOCAL") return Promise.resolve(undefined);
-  const reactor = window.reactor;
+  const reactor = window.ph?.reactor;
   if (!reactor) {
     return Promise.resolve(undefined);
   }
@@ -152,7 +152,7 @@ export function getSyncStatusSync(
   sharingType: SharingType,
 ): SyncStatus | undefined {
   if (sharingType === "LOCAL") return;
-  const reactor = window.reactor;
+  const reactor = window.ph?.reactor;
   if (!reactor) {
     return;
   }
@@ -168,7 +168,7 @@ export function getSyncStatusSync(
 }
 
 export async function removeTrigger(driveId: string, triggerId: string) {
-  const reactor = window.reactor;
+  const reactor = window.ph?.reactor;
   if (!reactor) {
     return;
   }
@@ -192,7 +192,7 @@ export async function registerNewPullResponderTrigger(
   url: string,
   options: Pick<RemoteDriveOptions, "pullFilter" | "pullInterval">,
 ): Promise<PullResponderTrigger | undefined> {
-  const reactor = window.reactor;
+  const reactor = window.ph?.reactor;
   if (!reactor) {
     return;
   }
@@ -247,7 +247,7 @@ export async function registerNewPullResponderTrigger(
 }
 
 export async function addTrigger(driveId: string, trigger: Trigger) {
-  const reactor = window.reactor;
+  const reactor = window.ph?.reactor;
   if (!reactor) {
     return;
   }

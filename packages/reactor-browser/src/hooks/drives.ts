@@ -17,13 +17,13 @@ export const {
   useValue: useDrives,
   setValue: setDrives,
   addEventHandler: addDrivesEventHandler,
-} = makePHEventFunctions<DocumentDriveDocument[]>("phDrives");
+} = makePHEventFunctions("drives");
 
 export const {
   useValue: useSelectedDriveId,
   setValue: _setSelectedDriveId,
   addEventHandler: addSelectedDriveIdEventHandler,
-} = makePHEventFunctions<string | undefined>("phSelectedDriveId");
+} = makePHEventFunctions("selectedDriveId");
 
 export function useDriveById(
   driveId: string | undefined | null,
@@ -81,7 +81,7 @@ export function setSelectedDrive(
   _setSelectedDriveId(driveSlug);
 
   // Find the drive by slug to get its actual ID
-  const drive = window.phDrives?.find((d) => d.header.slug === driveSlug);
+  const drive = window.ph?.drives?.find((d) => d.header.slug === driveSlug);
   const driveId = drive?.header.id;
   if (!driveId) {
     window.history.pushState(null, "", "/");

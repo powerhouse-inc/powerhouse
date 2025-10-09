@@ -4,19 +4,19 @@ export const {
   useValue: useAnalyticsDatabaseName,
   setValue: setAnalyticsDatabaseName,
   addEventHandler: addAnalyticsDatabaseNameEventHandler,
-} = makePHEventFunctions<string>("analyticsDatabaseName");
+} = makePHEventFunctions("analyticsDatabaseName");
 
 export const {
   useValue: useAllowList,
   setValue: setAllowList,
   addEventHandler: addAllowListEventHandler,
-} = makePHEventFunctions<string[]>("allowList");
+} = makePHEventFunctions("allowList");
 
 export const {
   useValue: useIsSearchBarEnabled,
   setValue: setIsSearchBarEnabled,
   addEventHandler: addIsSearchBarEnabledEventHandler,
-} = makePHEventFunctions<boolean>("isSearchBarEnabled");
+} = makePHEventFunctions("isSearchBarEnabled");
 
 export function enableSearchBar() {
   setIsSearchBarEnabled(true);
@@ -30,7 +30,7 @@ export const {
   useValue: useIsExternalControlsEnabled,
   setValue: setIsExternalControlsEnabled,
   addEventHandler: addIsExternalControlsEnabledEventHandler,
-} = makePHEventFunctions<boolean>("isExternalControlsEnabled");
+} = makePHEventFunctions("isExternalControlsEnabled");
 
 export function enableExternalControls() {
   setIsExternalControlsEnabled(true);
@@ -44,7 +44,7 @@ export const {
   useValue: useIsDocumentToolbarEnabled,
   setValue: setIsDocumentToolbarEnabled,
   addEventHandler: addIsDocumentToolbarEnabledEventHandler,
-} = makePHEventFunctions<boolean>("isDocumentToolbarEnabled");
+} = makePHEventFunctions("isDocumentToolbarEnabled");
 
 export function enableDocumentToolbar() {
   setIsDocumentToolbarEnabled(true);
@@ -58,7 +58,7 @@ export const {
   useValue: useIsSwitchboardLinkEnabled,
   setValue: setIsSwitchboardLinkEnabled,
   addEventHandler: addIsSwitchboardLinkEnabledEventHandler,
-} = makePHEventFunctions<boolean>("isSwitchboardLinkEnabled");
+} = makePHEventFunctions("isSwitchboardLinkEnabled");
 
 export function enableSwitchboardLink() {
   setIsSwitchboardLinkEnabled(true);
@@ -72,7 +72,7 @@ export const {
   useValue: useIsDragAndDropEnabled,
   setValue: setIsDragAndDropEnabled,
   addEventHandler: addIsDragAndDropEnabledEventHandler,
-} = makePHEventFunctions<boolean>("isDragAndDropEnabled");
+} = makePHEventFunctions("isDragAndDropEnabled");
 
 export function enableDragAndDrop() {
   setIsDragAndDropEnabled(true);
@@ -86,7 +86,7 @@ export const {
   useValue: useIsTimelineEnabled,
   setValue: setIsTimelineEnabled,
   addEventHandler: addIsTimelineEnabledEventHandler,
-} = makePHEventFunctions<boolean>("isTimelineEnabled");
+} = makePHEventFunctions("isTimelineEnabled");
 
 export function enableTimeline() {
   setIsTimelineEnabled(true);
@@ -96,7 +96,7 @@ export const {
   useValue: useIsEditorDebugModeEnabled,
   setValue: setIsEditorDebugModeEnabled,
   addEventHandler: addIsEditorDebugModeEnabledEventHandler,
-} = makePHEventFunctions<boolean>("isEditorDebugModeEnabled");
+} = makePHEventFunctions("isEditorDebugModeEnabled");
 
 export function enableEditorDebugMode() {
   setIsEditorDebugModeEnabled(true);
@@ -110,7 +110,7 @@ export const {
   useValue: useIsEditorReadModeEnabled,
   setValue: setIsEditorReadModeEnabled,
   addEventHandler: addIsEditorReadModeEnabledEventHandler,
-} = makePHEventFunctions<boolean>("isEditorReadModeEnabled");
+} = makePHEventFunctions("isEditorReadModeEnabled");
 
 export function enableEditorReadMode() {
   setIsEditorReadModeEnabled(true);

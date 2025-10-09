@@ -1,82 +1,67 @@
-import type { Reactor, VetraPackage } from "@powerhousedao/reactor-browser";
-import type { DID, IConnectCrypto, IRenown, User } from "@renown/sdk";
-import type { DocumentDriveDocument, ProcessorManager } from "document-drive";
-import type { PHDocument } from "document-model";
-import type { PHModal } from "../types/modals.js";
+import type {
+  PHGlobal,
+  PHGlobalKey,
+  PHGlobalValue,
+} from "@powerhousedao/reactor-browser";
 
-type SetEvent<TKey extends string, TValue> = CustomEvent<{
-  [key in TKey]: TValue | undefined;
+export type UsePHGlobalValue<TValue extends PHGlobalValue> = () =>
+  | TValue
+  | undefined;
+
+export type SetPHGlobalValue<TValue extends PHGlobalValue> = (
+  value: TValue | undefined,
+) => void;
+
+export type AddPHGlobalEventHandler = () => void;
+
+export type SetEvent<TKey extends PHGlobalKey> = CustomEvent<{
+  [key in TKey]: PHGlobal[TKey] | undefined;
 }>;
-export type SetReactorEvent = SetEvent<"reactor", Reactor>;
-export type SetConnectCryptoEvent = SetEvent<"connectCrypto", IConnectCrypto>;
-export type SetDidEvent = SetEvent<"did", DID>;
-export type SetRenownEvent = SetEvent<"renown", IRenown>;
-export type SetLoginStatusEvent = SetEvent<"loginStatus", LoginStatus>;
-export type SetUserEvent = SetEvent<"user", User>;
-export type SetProcessorManagerEvent = SetEvent<
-  "processorManager",
-  ProcessorManager
->;
-export type SetDrivesEvent = SetEvent<"drives", DocumentDriveDocument[]>;
+export type SetReactorEvent = SetEvent<"reactor">;
+export type SetConnectCryptoEvent = SetEvent<"connectCrypto">;
+export type SetDidEvent = SetEvent<"did">;
+export type SetRenownEvent = SetEvent<"renown">;
+export type SetLoginStatusEvent = SetEvent<"loginStatus">;
+export type SetUserEvent = SetEvent<"user">;
+export type SetProcessorManagerEvent = SetEvent<"processorManager">;
+export type SetDrivesEvent = SetEvent<"drives">;
 
-export type SetDocumentsEvent = SetEvent<"documents", PHDocument[]>;
+export type SetDocumentsEvent = SetEvent<"documents">;
 
-export type SetSelectedDriveIdEvent = SetEvent<"driveSlug", string>;
+export type SetSelectedDriveIdEvent = SetEvent<"selectedDriveId">;
 
-export type SetSelectedNodeIdEvent = SetEvent<"nodeSlug", string>;
+export type SetSelectedNodeIdEvent = SetEvent<"selectedNodeId">;
 
-export type SetVetraPackagesEvent = SetEvent<"vetraPackages", VetraPackage[]>;
+export type SetVetraPackagesEvent = SetEvent<"vetraPackages">;
 
-export type SetModalEvent = SetEvent<"modal", PHModal>;
+export type SetModalEvent = SetEvent<"modal">;
 
-export type SetAnalyticsDatabaseNameEvent = SetEvent<
-  "analyticsDatabaseName",
-  string
->;
+export type SetAnalyticsDatabaseNameEvent = SetEvent<"analyticsDatabaseName">;
 
-export type SetAllowListEvent = SetEvent<"allowList", string[]>;
+export type SetAllowListEvent = SetEvent<"allowList">;
 
-export type SetIsSearchBarEnabledEvent = SetEvent<
-  "isSearchBarEnabled",
-  boolean
->;
+export type SetIsSearchBarEnabledEvent = SetEvent<"isSearchBarEnabled">;
 
-export type SetIsExternalControlsEnabledEvent = SetEvent<
-  "isExternalControlsEnabled",
-  boolean
->;
+export type SetIsExternalControlsEnabledEvent =
+  SetEvent<"isExternalControlsEnabled">;
 
-export type SetIsDocumentToolbarEnabledEvent = SetEvent<
-  "isDocumentToolbarEnabled",
-  boolean
->;
+export type SetIsDocumentToolbarEnabledEvent =
+  SetEvent<"isDocumentToolbarEnabled">;
+export type SetIsSwitchboardLinkEnabledEvent =
+  SetEvent<"isSwitchboardLinkEnabled">;
 
-export type SetIsSwitchboardLinkEnabledEvent = SetEvent<
-  "isSwitchboardLinkEnabled",
-  boolean
->;
+export type SetIsDragAndDropEnabledEvent = SetEvent<"isDragAndDropEnabled">;
 
-export type SetIsDragAndDropEnabledEvent = SetEvent<
-  "isDragAndDropEnabled",
-  boolean
->;
+export type SetIsTimelineEnabledEvent = SetEvent<"isTimelineEnabled">;
 
-export type SetIsTimelineEnabledEvent = SetEvent<"isTimelineEnabled", boolean>;
+export type SetIsEditorDebugModeEnabledEvent =
+  SetEvent<"isEditorDebugModeEnabled">;
 
-export type SetIsEditorDebugModeEnabledEvent = SetEvent<
-  "isEditorDebugModeEnabled",
-  boolean
->;
+export type SetIsEditorReadModeEnabledEvent =
+  SetEvent<"isEditorReadModeEnabled">;
 
-export type SetIsEditorReadModeEnabledEvent = SetEvent<
-  "isEditorReadModeEnabled",
-  boolean
->;
-
-export type SetSelectedTimelineRevisionEvent = SetEvent<
-  "selectedTimelineRevision",
-  string | number | null
->;
+export type SetSelectedTimelineRevisionEvent =
+  SetEvent<"selectedTimelineRevision">;
 
 export type LoginStatus =
   | "initial"
