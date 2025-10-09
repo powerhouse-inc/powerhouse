@@ -107,10 +107,9 @@ const appConfigSchema = z.object({
   PH_CONNECT_STUDIO_MODE: booleanString.default(false),
 
   /**
-   * Base path for router
-   * @default "/"
+   * Base path for the Connect router, defaults to import.meta.env.BASE_URL
    */
-  PH_CONNECT_ROUTER_BASENAME: z.string().default("/"),
+  PH_CONNECT_BASE_PATH: z.string().optional(),
 
   /**
    * Default drives URL to load on startup
@@ -262,7 +261,7 @@ const analyticsConfigSchema = z.object({
    * Disable analytics database worker
    * @default false
    */
-  PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED: booleanString.default(false),
+  PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED: booleanString.default(true),
 
   /**
    * Enable diff analytics tracking

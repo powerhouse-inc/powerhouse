@@ -8,6 +8,7 @@ import { connectConfig } from "@powerhousedao/connect/config";
 import {
   addPHEventHandlers,
   dispatchSetAppConfigEvent,
+  dispatchSetBasePathEvent,
   dispatchSetConnectCryptoEvent,
   dispatchSetDidEvent,
   dispatchSetDocumentsEvent,
@@ -29,7 +30,11 @@ import {
   refreshReactorData,
 } from "@powerhousedao/reactor-browser";
 import { initRenown } from "@renown/sdk";
-import type { IDocumentAdminStorage } from "document-drive";
+import type {
+  DocumentDriveDocument,
+  IDocumentAdminStorage,
+  IDocumentDriveServer,
+} from "document-drive";
 import { ProcessorManager, logger } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { generateId } from "document-model/core";
@@ -55,6 +60,51 @@ async function loadVetraPackages() {
   return [commonPackage, ...externalPackages];
 }
 
+async function loadDriveFromRemoteUrl(
+  remoteUrl: string,
+  reactor: IDocumentDriveServer,
+  drives: DocumentDriveDocument[],
+): Promise<DocumentDriveDocument | undefined> {
+  const driveFromRemoteUrl = drives.find((drive) =>
+    drive.state.local.triggers.find(
+      (trigger) =>
+        trigger.type === "PullResponder" && trigger.data?.url === remoteUrl,
+    ),
+  );
+  if (driveFromRemoteUrl) {
+    return driveFromRemoteUrl;
+  }
+  try {
+    const remoteDrive = await reactor.addRemoteDrive(remoteUrl, {
+      sharingType: "PUBLIC",
+      availableOffline: true,
+      listeners: [
+        {
+          block: true,
+          callInfo: {
+            data: remoteUrl,
+            name: "switchboard-push",
+            transmitterType: "SwitchboardPush",
+          },
+          filter: {
+            branch: ["main"],
+            documentId: ["*"],
+            documentType: ["*"],
+            scope: ["global"],
+          },
+          label: "Switchboard Sync",
+          listenerId: generateId(),
+          system: true,
+        },
+      ],
+      triggers: [],
+    });
+    return remoteDrive;
+  } catch (error) {
+    logger.error("Error adding remote drive", error);
+  }
+}
+
 export async function createReactor() {
   if (window.reactor || window.loading) return;
 
@@ -62,6 +112,8 @@ export async function createReactor() {
 
   // add window event handlers for updates
   addPHEventHandlers();
+
+  dispatchSetBasePathEvent(connectConfig.routerBasename);
 
   // initialize feature flags
   await initFeatureFlags();
@@ -112,51 +164,17 @@ export async function createReactor() {
   const processorManager = new ProcessorManager(reactor.listeners, reactor);
 
   // get the drives from the reactor
-  const drives = await getDrives(reactor);
-
-  // if remoteUrl is set and drive not already existing add remote drive and open it
+  let drives = await getDrives(reactor);
 
   // if remoteUrl is set and drive not already existing add remote drive and open it
   const remoteUrl = getDriveUrl();
-  if (
-    remoteUrl &&
-    !drives.some(
-      (drive) =>
-        remoteUrl.includes(drive.header.slug) ||
-        remoteUrl.includes(drive.header.id),
-    )
-  ) {
-    try {
-      await reactor.addRemoteDrive(remoteUrl, {
-        sharingType: "PUBLIC",
-        availableOffline: true,
-        listeners: [
-          {
-            block: true,
-            callInfo: {
-              data: remoteUrl,
-              name: "switchboard-push",
-              transmitterType: "SwitchboardPush",
-            },
-            filter: {
-              branch: ["main"],
-              documentId: ["*"],
-              documentType: ["*"],
-              scope: ["global"],
-            },
-            label: "Switchboard Sync",
-            listenerId: generateId(),
-            system: true,
-          },
-        ],
-        triggers: [],
-      });
-      window.location.href = "/d/" + remoteUrl.split("/").pop();
-    } catch (error) {
-      logger.error("Error adding remote drive", error);
-    }
-  } else if (remoteUrl) {
-    window.location.href = "/d/" + remoteUrl.split("/").pop();
+  const remoteDrive = remoteUrl
+    ? await loadDriveFromRemoteUrl(remoteUrl, reactor, drives)
+    : undefined;
+
+  // if a remote drive was added then refetches the drives
+  if (remoteDrive) {
+    drives = await getDrives(reactor);
   }
 
   // get the documents from the reactor
@@ -164,8 +182,8 @@ export async function createReactor() {
 
   // set the selected drive and node from the path
   const path = window.location.pathname;
-  const driveSlug = extractDriveSlugFromPath(path);
-  const nodeSlug = extractNodeSlugFromPath(path);
+  const driveSlug = remoteDrive?.header.slug ?? extractDriveSlugFromPath(path);
+  const nodeSlug = !remoteDrive ? extractNodeSlugFromPath(path) : "";
 
   // initialize user
   const didFromUrl = getDidFromUrl();

@@ -21,6 +21,7 @@
   ],
   "exports": {
     ".": {
+      "source": "./src/index.ts",
       "import": "./lib/src/index.js",
       "types": "./lib/src/index.d.ts"
     },
@@ -29,6 +30,7 @@
       "types": "./lib/src/main.d.ts"
     },
     "./config": {
+      "source": "./src/connect.config.ts",
       "import": "./lib/src/connect.config.js",
       "types": "./lib/src/connect.config.d.ts"
     },

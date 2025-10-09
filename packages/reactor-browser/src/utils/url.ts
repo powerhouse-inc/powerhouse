@@ -1,6 +1,20 @@
 import type { DocumentDriveDocument, Node } from "document-drive";
 import slug from "slug";
 
+// Returns url with base path plus provided path
+export function resolveUrlPathname(path: string) {
+  return new URL(
+    path.replace(/^\/+/, ""),
+    window.location.origin + (window.basePath ?? "/"),
+  ).pathname;
+}
+
+/** Returns the current path without the base path */
+export function getPathWithoutBase(path: string) {
+  const basePath = window.basePath ?? "/";
+  return path.replace(basePath, basePath.endsWith("/") ? "/" : "");
+}
+
 /** Makes a URL component for a drive. */
 export function makeDriveUrlComponent(
   drive: DocumentDriveDocument | undefined,
@@ -22,7 +36,8 @@ export function makeNodeSlug(node: Node | undefined) {
  * The path is expected to be in the format `/d/<drive-slug>/<node-slug>`.
  */
 export function extractNodeSlugFromPath(path: string) {
-  const match = /^\/d\/[^/]+\/([^/]+)$/.exec(path);
+  const currentPath = getPathWithoutBase(path);
+  const match = /^\/d\/[^/]+\/([^/]+)$/.exec(currentPath);
   return match?.[1] ?? "";
 }
 
@@ -51,7 +66,8 @@ export function extractNodeIdFromPath(path: string) {
  * Expects the path to be in the format `/d/<drive-slug>`.
  */
 export function extractDriveSlugFromPath(path: string) {
-  const match = /^\/d\/([^/]+)/.exec(path);
+  const currentPath = getPathWithoutBase(path);
+  const match = /^\/d\/([^/]+)/.exec(currentPath);
   return match?.[1] ?? "";
 }
 

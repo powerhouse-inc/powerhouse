@@ -9,6 +9,13 @@ export default defineConfig(({ mode }) => {
     dirname,
     localPackage: false,
   });
+  config.resolve!.conditions = [
+    "source",
+    "browser",
+    "module",
+    "jsnext:main",
+    "jsnext",
+  ];
 
   return config;
 });

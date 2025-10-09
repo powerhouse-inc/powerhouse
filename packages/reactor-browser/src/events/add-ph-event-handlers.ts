@@ -1,4 +1,4 @@
-import { addAppConfigEventHandler } from "./config.js";
+import { addAppConfigEventHandler, addBasePathEventHandler } from "./config.js";
 import { addConnectCryptoEventHandler, addDidEventHandler } from "./crypto.js";
 import { addDocumentsEventHandler } from "./documents.js";
 import {
@@ -14,6 +14,7 @@ import { addLoginStatusEventHandler, addUserEventHandler } from "./user.js";
 import { addVetraPackagesEventHandler } from "./vetra-packages.js";
 
 export function addPHEventHandlers() {
+  addBasePathEventHandler();
   addReactorEventHandler();
   addModalEventHandler();
   addConnectCryptoEventHandler();

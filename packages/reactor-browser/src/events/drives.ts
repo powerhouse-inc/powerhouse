@@ -1,4 +1,5 @@
 import type { DocumentDriveDocument } from "document-drive";
+import { resolveUrlPathname } from "../utils/url.js";
 import { dispatchSetSelectedNodeIdEvent } from "./nodes.js";
 import type { SetDrivesEvent, SetSelectedDriveIdEvent } from "./types.js";
 
@@ -44,7 +45,6 @@ export function dispatchSelectedDriveIdUpdatedEvent() {
 
 export function handleSetSelectedDriveIdEvent(event: SetSelectedDriveIdEvent) {
   const driveSlug = event.detail.driveSlug;
-
   // Find the drive by slug to get its actual ID
   const drive = window.phDrives?.find((d) => d.header.slug === driveSlug);
   const driveId = drive?.header.id;
@@ -53,10 +53,10 @@ export function handleSetSelectedDriveIdEvent(event: SetSelectedDriveIdEvent) {
   dispatchSelectedDriveIdUpdatedEvent();
   dispatchSetSelectedNodeIdEvent(undefined);
   if (!driveId) {
-    window.history.pushState(null, "", "/");
+    window.history.pushState(null, "", resolveUrlPathname("/"));
     return;
   }
-  window.history.pushState(null, "", `/d/${driveSlug}`);
+  window.history.pushState(null, "", resolveUrlPathname(`/d/${driveSlug}`));
 }
 
 export function subscribeToSelectedDriveId(onStoreChange: () => void) {
