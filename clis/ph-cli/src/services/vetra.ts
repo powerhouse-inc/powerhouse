@@ -3,13 +3,15 @@ import { VETRA_PROCESSOR_CONFIG_KEY } from "@powerhousedao/config";
 import { getConfig } from "@powerhousedao/config/node";
 import { blue, red } from "colorette";
 import { setLogLevel } from "document-drive";
+import { generateProjectDriveId } from "../utils.js";
 import { startConnect } from "./connect.js";
 import type { ReactorOptions } from "./reactor.js";
 import { DefaultReactorOptions } from "./reactor.js";
 
-const VETRA_DRIVE_ID = "vetra";
+const VETRA_DRIVE_NAME = "vetra";
+
 const getDefaultVetraUrl = (port: number) =>
-  `http://localhost:${port}/d/${VETRA_DRIVE_ID}`;
+  `http://localhost:${port}/d/${generateProjectDriveId(VETRA_DRIVE_NAME)}`;
 
 export type DevOptions = {
   generate?: boolean;
@@ -27,7 +29,7 @@ export type DevOptions = {
 };
 
 const getDriveId = (driveUrl: string | undefined): string =>
-  driveUrl?.split("/").pop() ?? VETRA_DRIVE_ID;
+  driveUrl?.split("/").pop() ?? generateProjectDriveId(VETRA_DRIVE_NAME);
 
 async function startLocalVetraSwitchboard(
   options?: ReactorOptions & {
@@ -81,6 +83,7 @@ async function startLocalVetraSwitchboard(
       packages,
       remoteDrives,
       useVetraDrive: true, // Use Vetra drive instead of Powerhouse drive
+      vetraDriveId: generateProjectDriveId(VETRA_DRIVE_NAME),
       https,
       mcp: true,
       processorConfig,
