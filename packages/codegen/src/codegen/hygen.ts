@@ -312,6 +312,7 @@ export async function hygenGenerateDriveEditor(
   dir: string,
   { skipFormat = false } = {},
   appId?: string,
+  appName?: string,
   editorOptions?: {
     documentTypes: string[];
   },
@@ -328,6 +329,10 @@ export async function hygenGenerateDriveEditor(
 
   if (appId) {
     args.push("--app-id", appId);
+  }
+
+  if (appName) {
+    args.push("--app-name", appName);
   }
 
   if (editorOptions?.documentTypes.length) {

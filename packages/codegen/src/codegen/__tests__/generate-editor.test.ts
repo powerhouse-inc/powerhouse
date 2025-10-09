@@ -46,7 +46,13 @@ describe("generateEditor", () => {
 
   it("should generate a generic document editor", async () => {
     const name = "GenericDocumentEditor";
-    await generateEditor(name, [], config, "test-generic-document-editor");
+    await generateEditor(
+      name,
+      [],
+      config,
+      "test-generic-document-editor",
+      "Test Generic Document Editor",
+    );
 
     const editorDir = path.join(testDir, "generic-document-editor");
     expect(fs.existsSync(editorDir)).toBe(true);
@@ -85,6 +91,7 @@ describe("generateEditor", () => {
       ["powerhouse/document-model"],
       config,
       "test-document-model-editor",
+      "Test Document Model Editor",
     );
 
     const editorDir = path.join(testDir, "document-model-editor");

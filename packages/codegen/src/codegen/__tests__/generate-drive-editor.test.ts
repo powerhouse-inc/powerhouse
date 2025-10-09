@@ -109,13 +109,14 @@ ${EXPECTED_EXISTING_EDITOR_EXPORT}`;
     const existingEditorIndexPath = path.join(existingEditorDir, "index.ts");
     fs.writeFileSync(
       existingEditorIndexPath,
-      `import { type DriveEditorModule } from "@powerhousedao/reactor-browser";
+      `import { type EditorModule } from "document-model";
 
-export const module: DriveEditorModule = {
+export const module: EditorModule = {
   Component: () => null,
   documentTypes: ["powerhouse/document-drive"],
   config: {
     id: "ExistingEditor",
+    name: "Existing Editor",
   },
 };`,
     );

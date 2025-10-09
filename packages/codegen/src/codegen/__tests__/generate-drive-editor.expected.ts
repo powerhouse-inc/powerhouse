@@ -1,11 +1,12 @@
-export const EXPECTED_INDEX_CONTENT = `import { type DriveEditorModule } from "@powerhousedao/reactor-browser";
+export const EXPECTED_INDEX_CONTENT = `import { type EditorModule } from "document-model";
 import { Editor } from "./editor.js";
 
-export const module: DriveEditorModule = {
+export const module: EditorModule = {
   Component: Editor,
   documentTypes: ["powerhouse/document-drive"],
   config: {
     id: "AtlasDriveExplorer",
+    name: "Atlas Drive Explorer",
   },
 };`;
 

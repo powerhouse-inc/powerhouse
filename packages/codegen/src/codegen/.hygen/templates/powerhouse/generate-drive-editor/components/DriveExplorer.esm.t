@@ -10,7 +10,6 @@ import {
   useBreadcrumbs,
 } from "@powerhousedao/design-system";
 import {
-  type DriveEditorProps,
   getSyncStatusSync,
   setSelectedNode,
   showDeleteNodeModal,
@@ -23,7 +22,9 @@ import {
   useSelectedFolder,
   useSelectedNodePath,
   useUserPermissions,
+  useSupportedDocumentTypes,
 } from "@powerhousedao/reactor-browser";
+import type { EditorProps } from "document-model";
 import { useCallback } from "react";
 import { CreateDocument } from "./CreateDocument.js";
 import { FolderTree } from "./FolderTree.js";
@@ -32,8 +33,8 @@ import { FolderTree } from "./FolderTree.js";
  * Main drive explorer component with sidebar navigation and content area.
  * Layout: Left sidebar (folder tree) + Right content area (files/folders + document editor)
  */
-export function DriveExplorer(props: DriveEditorProps) {
-  const { children, editorConfig } = props;
+export function DriveExplorer(props: EditorProps) {
+  const { children } = props;
 
   // === DRIVE CONTEXT HOOKS ===
   // Core drive operations and document models
@@ -45,7 +46,7 @@ export function DriveExplorer(props: DriveEditorProps) {
     onMoveNode,
     onRenameNode,
   } = useNodeActions();
-
+  const supportedDocumentTypes = useSupportedDocumentTypes();
   const { isAllowedToCreateDocuments } = useUserPermissions();
   // === STATE MANAGEMENT HOOKS ===
   // Core state hooks for drive navigation
@@ -221,7 +222,7 @@ export function DriveExplorer(props: DriveEditorProps) {
 
             {/* === DOCUMENT CREATION SECTION === */}
             {/* Component for creating new documents */}
-            <CreateDocument documentTypes={editorConfig?.documentTypes} />
+            <CreateDocument documentTypes={supportedDocumentTypes} />
           </div>
         )}
       </div>
