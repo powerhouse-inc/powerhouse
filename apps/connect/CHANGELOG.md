@@ -1,3 +1,13 @@
+## 4.1.0-dev.66 (2025-10-09)
+
+### 🚀 Features
+
+- **connect, builder-tools, reactor-browser:** support basepath on connect ([0571822ed](https://github.com/powerhouse-inc/powerhouse/commit/0571822ed))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.65 (2025-10-09)
 
 ### 🩹 Fixes

@@ -1,3 +1,17 @@
+## 4.1.0-dev.66 (2025-10-09)
+
+### 🚀 Features
+
+- **connect, builder-tools, reactor-browser:** support basepath on connect ([0571822ed](https://github.com/powerhouse-inc/powerhouse/commit/0571822ed))
+
+### 🩹 Fixes
+
+- **ph-reactor:** remove test files from root index ([2a217e8e6](https://github.com/powerhouse-inc/powerhouse/commit/2a217e8e6))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.65 (2025-10-09)
 
 ### 🩹 Fixes

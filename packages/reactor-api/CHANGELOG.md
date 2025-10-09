@@ -1,3 +1,13 @@
+## 4.1.0-dev.66 (2025-10-09)
+
+### 🩹 Fixes
+
+- **ph-reactor:** remove test files from root index ([2a217e8e6](https://github.com/powerhouse-inc/powerhouse/commit/2a217e8e6))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.65 (2025-10-09)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
