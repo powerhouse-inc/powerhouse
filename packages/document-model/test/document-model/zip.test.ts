@@ -31,7 +31,7 @@ describe("DocumentModel", () => {
       setModelId({ id: "powerhouse/test" }),
     );
     await baseSaveToFile(documentModel, tempDir, "phdm", "test");
-    expect(fs.existsSync(`${tempDir}/test.phdm.zip`)).toBe(true);
+    expect(fs.existsSync(`${tempDir}/test.phdm.phd`)).toBe(true);
 
     // keeps operation timestamp to check when loading
     timestamp = documentModel.operations.global[0].timestampUtcMs;
@@ -39,7 +39,7 @@ describe("DocumentModel", () => {
 
   it("should load from zip", async () => {
     const documentModel = await baseLoadFromFile(
-      `${tempDir}/test.phdm.zip`,
+      `${tempDir}/test.phdm.phd`,
       documentModelReducer,
     );
     expect(documentModel.state.global.id).toBe("powerhouse/test");
@@ -91,7 +91,7 @@ describe("DocumentModel", () => {
     );
 
     const loadedDocumentModel = await baseLoadFromFile(
-      `${tempDir}/test-document-resulting-state.phdm.zip`,
+      `${tempDir}/test-document-resulting-state.phdm.phd`,
       documentModelReducer,
     );
 
@@ -113,7 +113,7 @@ describe("DocumentModel", () => {
     await baseSaveToFile(documentModel, tempDir, "phdm", "test2");
 
     const loadedDocumentModel = await baseLoadFromFile(
-      `${tempDir}/test2.phdm.zip`,
+      `${tempDir}/test2.phdm.phd`,
       documentModelReducer,
     );
     expect(loadedDocumentModel.state.global.id).toBe("");
