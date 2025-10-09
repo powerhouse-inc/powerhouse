@@ -1,3 +1,13 @@
+## 4.1.0-dev.65 (2025-10-09)
+
+### 🩹 Fixes
+
+- **ph-cli:** build version on release ci action ([cb86009c4](https://github.com/powerhouse-inc/powerhouse/commit/cb86009c4))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.64 (2025-10-09)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
