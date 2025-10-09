@@ -1,5 +1,6 @@
 import type {
   AppConfigUpdatedEvent,
+  BasePathUpdatedEvent,
   ConnectCryptoUpdatedEvent,
   DidUpdatedEvent,
   DocumentsUpdatedEvent,
@@ -12,6 +13,7 @@ import type {
   SelectedDriveIdUpdatedEvent,
   SelectedNodeIdUpdatedEvent,
   SetAppConfigEvent,
+  SetBasePathEvent,
   SetConnectCryptoEvent,
   SetDidEvent,
   SetDocumentsEvent,
@@ -59,6 +61,7 @@ export type AppConfig = {
 declare global {
   interface Window {
     loading?: boolean | undefined;
+    basePath?: string | undefined;
     reactor?: IDocumentDriveServer | undefined;
     connectCrypto?: IConnectCrypto | undefined;
     did?: DID | undefined;
@@ -76,6 +79,8 @@ declare global {
   }
 
   interface WindowEventMap {
+    "ph:setBasePath": SetBasePathEvent;
+    "ph:basePathUpdated": BasePathUpdatedEvent;
     "ph:setReactor": SetReactorEvent;
     "ph:reactorUpdated": ReactorUpdatedEvent;
     "ph:setConnectCrypto": SetConnectCryptoEvent;

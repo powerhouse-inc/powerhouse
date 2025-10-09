@@ -9,6 +9,11 @@ import type { DocumentDriveDocument, ProcessorManager } from "document-drive";
 import type { PHDocument } from "document-model";
 import type { PHModal } from "../types/modals.js";
 
+export type SetBasePathEvent = CustomEvent<{
+  basePath: string | undefined;
+}>;
+export type BasePathUpdatedEvent = CustomEvent;
+
 export type SetReactorEvent = CustomEvent<{
   reactor: Reactor | undefined;
 }>;
