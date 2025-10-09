@@ -3,8 +3,10 @@ import { Editor } from "./editor.js";
 
 export const module: EditorModule = {
   Component: Editor,
-  id: "subgraph-module-editor",
-  name: "Subgraph Module Editor",
+  config: {
+    id: "subgraph-module-editor",
+    name: "Subgraph Module Editor",
+  },
   documentTypes: ["powerhouse/subgraph"],
 };
 

@@ -171,6 +171,7 @@ export async function hygenGenerateEditor(
   documentModelsDir: string,
   { skipFormat = false, verbose = true } = {},
   editorId?: string,
+  editorName?: string,
 ) {
   // Generate the singular files for the document model logic
   const args = [
@@ -190,6 +191,10 @@ export async function hygenGenerateEditor(
 
   if (editorId) {
     args.push("--editor-id", editorId);
+  }
+
+  if (editorName) {
+    args.push("--editor-name", editorName);
   }
 
   await run(args, { skipFormat, verbose });

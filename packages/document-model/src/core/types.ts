@@ -522,10 +522,12 @@ export type ImportScriptModule = {
 };
 
 export type EditorModule = {
-  id: string;
-  name: string;
-  documentTypes: readonly string[];
   Component: FC<EditorProps>;
+  documentTypes: string[];
+  config: {
+    id: string;
+    name: string;
+  };
 };
 
 export type App = {

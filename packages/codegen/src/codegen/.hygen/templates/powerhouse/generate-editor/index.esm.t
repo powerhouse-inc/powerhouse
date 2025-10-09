@@ -10,5 +10,6 @@ export const module: EditorModule = {
     documentTypes: [<% if(!documentTypes.length){ %>'*'<% } else { %><% documentTypes.forEach(type => { _%>"<%= type %>", %><% }); _%> <% } %>],
     config: {
         id: '<%= editorId || 'editor-id' %>',
+        name: '<%= editorName || 'editor-name' %>',
     },
 };

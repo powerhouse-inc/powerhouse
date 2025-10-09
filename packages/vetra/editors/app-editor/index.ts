@@ -3,8 +3,10 @@ import { Editor } from "./editor.js";
 
 export const module: EditorModule = {
   Component: Editor,
-  id: "app-module-editor",
-  name: "App Module Editor",
+  config: {
+    id: "app-module-editor",
+    name: "App Module Editor",
+  },
   documentTypes: ["powerhouse/app"],
 };
 

@@ -3,7 +3,9 @@ import type { EditorModule } from "document-model";
 
 export const GenericDriveExplorer: EditorModule = {
   Component: Editor,
-  id: "GenericDriveExplorer",
-  name: "Drive Explorer App",
+  config: {
+    id: "GenericDriveExplorer",
+    name: "Drive Explorer App",
+  },
   documentTypes: ["powerhouse/document-drive"],
 };
