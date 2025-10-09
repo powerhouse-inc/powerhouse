@@ -1,3 +1,5 @@
+import "@powerhousedao/builder-tools/style.css";
+
 import { documentModelEditorModule } from "@powerhousedao/builder-tools/editor";
 import { GenericDriveExplorer as genericDriveExplorerEditorModule } from "@powerhousedao/common";
 import type { VetraEditorModule } from "@powerhousedao/reactor-browser";
