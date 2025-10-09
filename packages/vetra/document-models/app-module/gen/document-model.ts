@@ -18,7 +18,7 @@ export const documentModel: DocumentModelGlobalState = {
           schema:
             "type AppModuleState {\n  name: String!\n  status: StatusType!\n  documentTypes: [DocumentTypeItem!]\n}\n\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}\n\ntype DocumentTypeItem {\n  id: OID!\n  documentType: String!\n}",
           initialValue:
-            '"{\\n  \\"name\\": \\"\\",\\n  \\"status\\": \\"DRAFT\\",\\n  \\"documentTypes\\": [{ \\"id\\": \\"all-documents\\", \\"documentType\\": \\"*\\" }]\\n}"',
+            '"{\\n  \\"name\\": \\"\\",\\n  \\"status\\": \\"DRAFT\\",\\n  \\"documentTypes\\": [{ \\"id\\": \\"all-documents\\", \\"documentType\\": \\"*\\" }],\\n\\n}"',
           examples: [],
         },
         local: {

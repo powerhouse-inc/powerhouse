@@ -7,6 +7,7 @@ import type { AppModulePHState } from "./types.js";
 import { z } from "./types.js";
 
 import { reducer as BaseOperationsReducer } from "../src/reducers/base-operations.js";
+import { reducer as DndOperationsReducer } from "../src/reducers/dnd-operations.js";
 
 export const stateReducer: StateReducer<AppModulePHState> = (
   state,
@@ -48,6 +49,15 @@ export const stateReducer: StateReducer<AppModulePHState> = (
     case "REMOVE_DOCUMENT_TYPE":
       z.RemoveDocumentTypeInputSchema().parse(action.input);
       BaseOperationsReducer.removeDocumentTypeOperation(
+        (state as any)[action.scope],
+        action as any,
+        dispatch,
+      );
+      break;
+
+    case "SET_DRAG_AND_DROP_ENABLED":
+      z.SetDragAndDropEnabledInputSchema().parse(action.input);
+      DndOperationsReducer.setDragAndDropEnabledOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
