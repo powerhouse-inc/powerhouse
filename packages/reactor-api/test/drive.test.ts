@@ -1,5 +1,6 @@
 import type { SubgraphArgs } from "@powerhousedao/reactor-api";
-import { DriveSubgraph, testSetupReactor } from "@powerhousedao/reactor-api";
+import { DriveSubgraph } from "@powerhousedao/reactor-api";
+import { testSetupReactor } from "@powerhousedao/reactor-api/test";
 import { driveCreateDocument } from "document-drive";
 import {
   documentModelDocumentModelModule,
