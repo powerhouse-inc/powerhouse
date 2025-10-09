@@ -3,7 +3,7 @@ import {
   expectUTCTimestamp,
   getDocumentScopeIndexes,
   testSetupReactor,
-} from "@powerhousedao/reactor-api";
+} from "@powerhousedao/reactor-api/test";
 import type {
   DocumentDriveDocument,
   IDocumentDriveServer,
