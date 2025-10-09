@@ -1,3 +1,13 @@
+## 4.1.0-dev.63 (2025-10-09)
+
+### 🚀 Features
+
+- update @electric-sql/pglite version ([fa3529328](https://github.com/powerhouse-inc/powerhouse/commit/fa3529328))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.62 (2025-10-08)
 
 This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
