@@ -22,6 +22,7 @@ interface DriveExplorerProps {
   onAddCodegenProcessor?: () => void;
   packageDocumentId?: string;
   onAddPackageDocument?: () => void;
+  onOpenPackageDocument?: () => void;
   onOpenDocument?: (node: FileNode) => void;
   onDelete?: (node: FileNode) => void;
 }
@@ -42,6 +43,7 @@ export const DriveExplorer: React.FC<DriveExplorerProps> = ({
   onAddCodegenProcessor,
   packageDocumentId,
   onAddPackageDocument,
+  onOpenPackageDocument,
   onOpenDocument,
   onDelete,
 }) => {
@@ -54,6 +56,7 @@ export const DriveExplorer: React.FC<DriveExplorerProps> = ({
           className="mb-6"
           packageDocumentId={packageDocumentId}
           onAddPackageDocument={onAddPackageDocument}
+          onOpenPackageDocument={onOpenPackageDocument}
         />
         <ModuleSpecificationsSection
           documentModels={documentModels}
