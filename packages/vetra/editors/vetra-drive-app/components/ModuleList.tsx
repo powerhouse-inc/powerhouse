@@ -8,6 +8,7 @@ interface ModuleListProps {
   documentType: string;
   onAddNewSpec?: () => void;
   onClickItem?: (node: FileNode) => void;
+  onDelete?: (node: FileNode) => void;
 }
 
 export const ModuleList: React.FC<ModuleListProps> = ({
@@ -15,12 +16,17 @@ export const ModuleList: React.FC<ModuleListProps> = ({
   documentType,
   onAddNewSpec = () => {},
   onClickItem = () => {},
+  onDelete,
 }) => {
   return (
     <div className="space-y-2">
       {items.map((item, index) => (
         <div key={index} className="px-2 py-1 text-sm text-gray-600">
-          <ModuleItem fileNode={item} onClick={onClickItem} />
+          <ModuleItem
+            fileNode={item}
+            onClick={onClickItem}
+            onDelete={onDelete}
+          />
         </div>
       ))}
       <div className="px-2 py-1 text-sm text-gray-600">
