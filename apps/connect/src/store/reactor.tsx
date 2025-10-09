@@ -237,7 +237,7 @@ export async function createReactor() {
 
 function getAppConfig() {
   const analyticsDatabaseName = connectConfig.analytics.databaseName;
-  const isSearchBarEnabled = connectConfig.content.isSearchBarEnabled;
+  const isSearchBarEnabled = connectConfig.content.showSearchBar;
   return {
     allowList: undefined,
     analyticsDatabaseName,
