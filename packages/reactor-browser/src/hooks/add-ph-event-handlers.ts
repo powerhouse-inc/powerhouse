@@ -26,6 +26,7 @@ import { addReactorEventHandler } from "./reactor.js";
 import { addRenownEventHandler } from "./renown.js";
 import { addLoginStatusEventHandler, addUserEventHandler } from "./user.js";
 import { addVetraPackagesEventHandler } from "./vetra-packages.js";
+
 export function addPHEventHandlers() {
   addReactorEventHandler();
   addModalEventHandler();

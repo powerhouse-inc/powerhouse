@@ -1,4 +1,4 @@
-import type { LoginStatus, VetraPackage } from "@powerhousedao/reactor-browser";
+import type { VetraPackage } from "@powerhousedao/reactor-browser";
 import type { DID, IConnectCrypto, IRenown, User } from "@renown/sdk";
 
 import type {
@@ -39,6 +39,26 @@ export type PHGlobal = {
 
 export type PHGlobalKey = keyof PHGlobal;
 export type PHGlobalValue = PHGlobal[PHGlobalKey];
+
+export type UsePHGlobalValue<TValue extends PHGlobalValue> = () =>
+  | TValue
+  | undefined;
+
+export type SetPHGlobalValue<TValue extends PHGlobalValue> = (
+  value: TValue | undefined,
+) => void;
+
+export type AddPHGlobalEventHandler = () => void;
+
+export type SetEvent<TKey extends PHGlobalKey> = CustomEvent<{
+  [key in TKey]: PHGlobal[TKey] | undefined;
+}>;
+
+export type LoginStatus =
+  | "initial"
+  | "checking"
+  | "not-authorized"
+  | "authorized";
 
 declare global {
   interface Window {

@@ -1,10 +1,10 @@
-import type { IDocumentDriveServer } from "document-drive";
-import { makePHEventFunctions } from "./make-ph-event-functions.js";
 import type {
   AddPHGlobalEventHandler,
   SetPHGlobalValue,
   UsePHGlobalValue,
-} from "./types.js";
+} from "@powerhousedao/reactor-browser";
+import type { IDocumentDriveServer } from "document-drive";
+import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
 const eventFunctions = makePHEventFunctions("reactor");
 

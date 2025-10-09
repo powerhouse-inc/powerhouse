@@ -1,4 +1,4 @@
-import type { PHModal } from "../types/modals.js";
+import type { PHModal } from "@powerhousedao/reactor-browser";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
 export const {

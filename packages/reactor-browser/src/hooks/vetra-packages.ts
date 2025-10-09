@@ -1,19 +1,17 @@
 import type {
+  DocumentModelModule,
+  ImportScriptModule,
+  SubgraphModule,
+} from "document-model";
+import { DEFAULT_DRIVE_EDITOR_ID } from "../constants.js";
+import type {
   Processors,
   VetraDocumentModelModule,
   VetraEditorModule,
   VetraPackage,
   VetraProcessorModule,
-} from "@powerhousedao/reactor-browser";
-import {
-  DEFAULT_DRIVE_EDITOR_ID,
-  makePHEventFunctions,
-} from "@powerhousedao/reactor-browser";
-import type {
-  DocumentModelModule,
-  ImportScriptModule,
-  SubgraphModule,
-} from "document-model";
+} from "../types/vetra.js";
+import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
 export const {
   useValue: useVetraPackages,

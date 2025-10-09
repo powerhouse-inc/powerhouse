@@ -1,7 +1,10 @@
+import type {
+  PHGlobal,
+  PHGlobalKey,
+  SetEvent,
+} from "@powerhousedao/reactor-browser";
 import { capitalCase } from "change-case";
 import { useSyncExternalStore } from "react";
-import type { PHGlobal, PHGlobalKey } from "../types/global.js";
-import type { SetEvent } from "./types.js";
 
 export function makePHEventFunctions<TKey extends PHGlobalKey>(key: TKey) {
   const setEventName = `ph:set${capitalCase(key)}` as const;

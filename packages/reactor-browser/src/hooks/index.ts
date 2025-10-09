@@ -4,7 +4,6 @@ export * from "./crypto.js";
 export * from "./dispatch.js";
 export * from "./documents.js";
 export * from "./drives.js";
-export * from "./make-ph-event-functions.js";
 export * from "./modals.js";
 export * from "./nodes.js";
 export * from "./processor-manager.js";

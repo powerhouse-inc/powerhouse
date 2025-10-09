@@ -1,5 +1,5 @@
-import { makePHEventFunctions } from "@powerhousedao/reactor-browser";
 import { useAllowList } from "./config.js";
+import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
 export const {
   useValue: useLoginStatus,

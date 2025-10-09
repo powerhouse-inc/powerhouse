@@ -1,12 +1,8 @@
-import {
-  makePHEventFunctions,
-  useDispatch,
-  useDocumentModelModuleById,
-  useFileNodes,
-  useNodeKind,
-  useSelectedNodeId,
-} from "@powerhousedao/reactor-browser";
 import type { Action, DocumentAction, PHDocument } from "document-model";
+import { useDispatch } from "./dispatch.js";
+import { makePHEventFunctions } from "./make-ph-event-functions.js";
+import { useFileNodes, useNodeKind, useSelectedNodeId } from "./nodes.js";
+import { useDocumentModelModuleById } from "./vetra-packages.js";
 
 export const {
   useValue: useAllDocuments,

@@ -1,4 +1,4 @@
-import { makePHEventFunctions } from "@powerhousedao/reactor-browser";
+import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
 export const {
   useValue: useConnectCrypto,

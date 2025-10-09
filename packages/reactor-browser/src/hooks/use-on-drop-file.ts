@@ -1,10 +1,10 @@
-import type { FileNode } from "document-drive";
-import { useCallback } from "react";
-import { addFileWithProgress } from "../actions/document.js";
 import type {
   ConflictResolution,
   FileUploadProgressCallback,
-} from "../types/upload.js";
+} from "@powerhousedao/reactor-browser";
+import type { FileNode } from "document-drive";
+import { useCallback } from "react";
+import { addFileWithProgress } from "../actions/document.js";
 import { useSelectedDriveSafe } from "./drives.js";
 import { useSelectedFolder } from "./nodes.js";
 import { useSupportedDocumentTypes } from "./reactor.js";
