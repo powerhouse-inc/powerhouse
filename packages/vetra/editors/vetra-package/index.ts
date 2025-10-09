@@ -1,16 +1,11 @@
-import {
-  editorDocumentTypes,
-  editorId,
-  editorName,
-} from "@powerhousedao/builder-tools";
 import type { EditorModule } from "document-model";
 import { Editor } from "./editor.js";
 
 export const module: EditorModule = {
   Component: Editor,
-  id: editorId,
-  name: editorName,
-  documentTypes: editorDocumentTypes,
+  id: "vetra-package-editor",
+  name: "Vetra Package Editor",
+  documentTypes: ["powerhouse/package"],
 };
 
 export default module;

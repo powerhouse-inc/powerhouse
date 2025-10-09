@@ -1,6 +1,5 @@
 import type { FileNode } from "document-drive";
 import React from "react";
-import type { DriveDocumentType } from "../constants.js";
 import { AddNewIcon } from "../icons/AddNewIcon.js";
 import { AppIcon } from "../icons/AppIcon.js";
 import { DocModelIcon } from "../icons/DocModelIcon.js";

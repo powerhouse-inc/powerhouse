@@ -1,16 +1,11 @@
-import {
-  editorDocumentTypes,
-  editorId,
-  editorName,
-} from "@powerhousedao/builder-tools";
 import type { EditorModule } from "document-model";
 import { Editor } from "./editor.js";
 
 export const module: EditorModule = {
   Component: Editor,
-  id: editorId,
-  name: editorName,
-  documentTypes: editorDocumentTypes,
+  id: "processor-module-editor",
+  name: "Processor Module Editor",
+  documentTypes: ["powerhouse/processor"],
 };
 
 export default module;

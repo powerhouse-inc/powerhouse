@@ -1,10 +1,9 @@
 import { DocumentModelEditor } from "@powerhousedao/builder-tools/editor";
 import type { EditorModule } from "document-model";
-import { editorDocumentTypes, editorId, editorName } from "./constants.js";
 
 export const documentModelEditorModule: EditorModule = {
-  id: editorId,
-  name: editorName,
-  documentTypes: editorDocumentTypes,
+  id: "document-model-editor-v2",
+  name: "Document Model Editor",
+  documentTypes: ["powerhouse/document-model"],
   Component: DocumentModelEditor,
 };
