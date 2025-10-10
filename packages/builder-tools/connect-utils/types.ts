@@ -23,7 +23,7 @@ export type ConnectCommonOptions = {
   mode?: string;
   /* Path to the powerhouse.config.js file to load */
   configFile?: string;
-  /* Path to the project root. Defauls to the current directory. */
+  /* Path to the project root. Defaults to the current directory. */
   projectRoot?: string;
   /* Path to the vite config file to load. Defaults to 'projectRoot/"vite.config.ts' */
   viteConfigFile?: string;

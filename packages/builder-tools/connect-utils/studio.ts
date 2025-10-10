@@ -35,6 +35,8 @@ export async function startConnectStudio(
   );
 
   const devServerConfig: InlineConfig = {
+    mode,
+    configFile: false,
     server: devServerOptions,
   };
 

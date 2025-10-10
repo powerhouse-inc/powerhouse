@@ -23,7 +23,8 @@ export async function buildConnect(options: ConnectBuildOptions = {}) {
 
   const buildConfig: InlineConfig = {
     base: options.base,
-    mode: options.mode,
+    mode,
+    configFile: false,
     build: {
       outDir: options.outDir ?? DEFAULT_CONNECT_OUTDIR,
     },
