@@ -23,7 +23,8 @@ export async function previewConnect(options: ConnectPreviewOptions = {}) {
 
   const previewConfig: InlineConfig = {
     base: options.base,
-    mode: options.mode,
+    mode,
+    configFile: false,
     build: {
       outDir: options.outDir ?? DEFAULT_CONNECT_OUTDIR,
     },

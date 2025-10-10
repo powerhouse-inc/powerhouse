@@ -26,6 +26,7 @@
       "types": "./lib/src/index.d.ts"
     },
     "./main.js": {
+      "source": "./src/main.tsx",
       "import": "./lib/src/main.js",
       "types": "./lib/src/main.d.ts"
     },
