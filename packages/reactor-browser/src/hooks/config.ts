@@ -293,62 +293,6 @@ export const {
   addEventHandler: addIsExternalPackagesEnabledEventHandler,
 } = makePHEventFunctions("isExternalPackagesEnabled");
 
-export const phGlobalConfigEventHandlerRegisterFunctions: Record<
-  PHGlobalConfigKey,
-  () => void
-> = {
-  routerBasename: addRouterBasenameEventHandler,
-  version: addVersionEventHandler,
-  logLevel: addLogLevelEventHandler,
-  requiresHardRefresh: addRequiresHardRefreshEventHandler,
-  warnOutdatedApp: addWarnOutdatedAppEventHandler,
-  studioMode: addStudioModeEventHandler,
-  basePath: addBasePathEventHandler,
-  versionCheckInterval: addVersionCheckIntervalEventHandler,
-  cliVersion: addCliVersionEventHandler,
-  fileUploadOperationsChunkSize: addFileUploadOperationsChunkSizeEventHandler,
-  isDocumentModelSelectionSettingsEnabled:
-    addIsDocumentModelSelectionSettingsEnabledEventHandler,
-  gaTrackingId: addGaTrackingIdEventHandler,
-  allowList: addAllowListEventHandler,
-  defaultDrivesUrl: addDefaultDrivesUrlEventHandler,
-  drivesPreserveStrategy: addDrivesPreserveStrategyEventHandler,
-  enabledEditors: addEnabledEditorsEventHandler,
-  disabledEditors: addDisabledEditorsEventHandler,
-  isAddDriveEnabled: addIsAddDriveEnabledEventHandler,
-  isPublicDrivesEnabled: addIsPublicDrivesEnabledEventHandler,
-  isAddPublicDrivesEnabled: addIsAddPublicDrivesEnabledEventHandler,
-  isDeletePublicDrivesEnabled: addIsDeletePublicDrivesEnabledEventHandler,
-  isCloudDrivesEnabled: addIsCloudDrivesEnabledEventHandler,
-  isAddCloudDrivesEnabled: addIsAddCloudDrivesEnabledEventHandler,
-  isDeleteCloudDrivesEnabled: addIsDeleteCloudDrivesEnabledEventHandler,
-  localDrivesEnabled: addLocalDrivesEnabledEventHandler,
-  isAddLocalDrivesEnabled: addIsAddLocalDrivesEnabledEventHandler,
-  isDeleteLocalDrivesEnabled: addIsDeleteLocalDrivesEnabledEventHandler,
-  isSearchBarEnabled: addIsSearchBarEnabledEventHandler,
-  isDragAndDropEnabled: addIsDragAndDropEnabledEventHandler,
-  isExternalControlsEnabled: addIsExternalControlsEnabledEventHandler,
-  isDocumentToolbarEnabled: addIsDocumentToolbarEnabledEventHandler,
-  isSwitchboardLinkEnabled: addIsSwitchboardLinkEnabledEventHandler,
-  isTimelineEnabled: addIsTimelineEnabledEventHandler,
-  isEditorDebugModeEnabled: addIsEditorDebugModeEnabledEventHandler,
-  isEditorReadModeEnabled: addIsEditorReadModeEnabledEventHandler,
-  analyticsDatabaseName: addAnalyticsDatabaseNameEventHandler,
-  isAnalyticsDatabaseWorkerEnabled:
-    addIsAnalyticsDatabaseWorkerEnabledEventHandler,
-  isDiffAnalyticsEnabled: addIsDiffAnalyticsEnabledEventHandler,
-  isDriveAnalyticsEnabled: addIsDriveAnalyticsEnabledEventHandler,
-  renownUrl: addRenownUrlEventHandler,
-  renownNetworkId: addRenownNetworkIdEventHandler,
-  renownChainId: addRenownChainIdEventHandler,
-  sentryRelease: addSentryReleaseEventHandler,
-  sentryDsn: addSentryDsnEventHandler,
-  sentryEnv: addSentryEnvEventHandler,
-  isSentryTracingEnabled: addIsSentryTracingEnabledEventHandler,
-  isExternalProcessorsEnabled: addIsExternalProcessorsEnabledEventHandler,
-  isExternalPackagesEnabled: addIsExternalPackagesEnabledEventHandler,
-};
-
 type PHGlobalConfigSetters<T extends PHGlobalConfigKey = PHGlobalConfigKey> = {
   [K in T]: (value: PHGlobalConfig[K]) => void;
 };
