@@ -1,23 +1,27 @@
-import type { NodeKind } from "@powerhousedao/reactor-browser";
+import type { FileNode, FolderNode, Node } from "document-drive";
 import {
   addFile,
   addFolder,
   copyNode,
-  dispatchSetSelectedNodeIdEvent,
-  isFileNodeKind,
-  isFolderNodeKind,
-  makeFolderNodeFromDrive,
-  makeNodeSlug,
   moveNode,
   renameNode,
+} from "../actions/document.js";
+import type { NodeKind } from "../types/reactor.js";
+import { makeFolderNodeFromDrive } from "../utils/drives.js";
+import {
+  isFileNodeKind,
+  isFolderNodeKind,
   sortNodesByName,
-  subscribeToSelectedNodeId,
-  useDrives,
-  useSelectedDocument,
-  useSelectedDriveSafe,
-} from "@powerhousedao/reactor-browser";
-import { type FileNode, type FolderNode, type Node } from "document-drive";
-import { useSyncExternalStore } from "react";
+} from "../utils/nodes.js";
+import {
+  extractDriveSlugFromPath,
+  extractNodeIdFromSlug,
+  makeNodeSlug,
+  resolveUrlPathname,
+} from "../utils/url.js";
+import { useSelectedDocument } from "./documents.js";
+import { useDrives, useSelectedDriveSafe } from "./drives.js";
+import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
 /** Returns the nodes for a drive. */
 export function useNodes() {
@@ -25,13 +29,11 @@ export function useNodes() {
   return selectedDrive?.state.global.nodes;
 }
 
-export function useSelectedNodeId() {
-  const selectedNodeId = useSyncExternalStore(
-    subscribeToSelectedNodeId,
-    () => window.phSelectedNodeId,
-  );
-  return selectedNodeId;
-}
+export const {
+  useValue: useSelectedNodeId,
+  setValue: _setSelectedNodeId,
+  addEventHandler: addSelectedNodeIdEventHandler,
+} = makePHEventFunctions("selectedNodeId");
 
 export function useFileNodes() {
   const nodes = useNodes();
@@ -48,7 +50,25 @@ export function setSelectedNode(nodeOrNodeSlug: Node | string | undefined) {
     typeof nodeOrNodeSlug === "string"
       ? nodeOrNodeSlug
       : makeNodeSlug(nodeOrNodeSlug);
-  dispatchSetSelectedNodeIdEvent(nodeSlug);
+  const nodeId = extractNodeIdFromSlug(nodeSlug);
+  _setSelectedNodeId(nodeId);
+  const driveSlugFromPath = extractDriveSlugFromPath(window.location.pathname);
+  if (!driveSlugFromPath) {
+    return;
+  }
+  if (!nodeSlug) {
+    window.history.pushState(
+      null,
+      "",
+      resolveUrlPathname(`/d/${driveSlugFromPath}`),
+    );
+    return;
+  }
+  window.history.pushState(
+    null,
+    "",
+    resolveUrlPathname(`/d/${driveSlugFromPath}/${nodeSlug}`),
+  );
 }
 
 /** Returns a node in the selected drive by id. */

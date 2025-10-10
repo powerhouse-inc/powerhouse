@@ -44,7 +44,7 @@ describe("generateDriveEditor", () => {
   });
 
   it("should generate a drive editor with the correct files and content", async () => {
-    const name = "AtlasDriveExplorer";
+    const name = "Atlas Drive Explorer";
     await generateDriveEditor(name, config, "AtlasDriveExplorer");
 
     await compile("tsconfig.document-editor.test.json");
@@ -93,7 +93,7 @@ describe("generateDriveEditor", () => {
   });
 
   it("should append new exports to existing index.ts file", async () => {
-    const name = "AtlasDriveExplorer";
+    const name = "Atlas Drive Explorer";
     const existingContent = `${EXPECTED_HEADER_COMMENT}
 
 ${EXPECTED_EXISTING_EDITOR_EXPORT}`;
@@ -109,16 +109,14 @@ ${EXPECTED_EXISTING_EDITOR_EXPORT}`;
     const existingEditorIndexPath = path.join(existingEditorDir, "index.ts");
     fs.writeFileSync(
       existingEditorIndexPath,
-      `import { type DriveEditorModule } from "@powerhousedao/reactor-browser";
+      `import { type EditorModule } from "document-model";
 
-export const module: DriveEditorModule = {
+export const module: EditorModule = {
   Component: () => null,
   documentTypes: ["powerhouse/document-drive"],
   config: {
     id: "ExistingEditor",
-    disableExternalControls: true,
-    documentToolbarEnabled: true,
-    showSwitchboardLink: true,
+    name: "Existing Editor",
   },
 };`,
     );

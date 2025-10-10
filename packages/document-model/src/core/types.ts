@@ -1,5 +1,5 @@
 import type { Draft } from "mutative";
-import type { FC } from "react";
+import type { FC, ReactNode } from "react";
 import type {
   Action,
   ActionSigner,
@@ -494,15 +494,6 @@ export type GetDocumentOptions = ReducerOptions & {
   checkHashes?: boolean;
 };
 
-export type EditorContext = {
-  debug?: boolean;
-  readMode?: boolean;
-  selectedTimelineRevision?: string | number | null;
-  getDocumentRevision?: (
-    options?: GetDocumentOptions,
-  ) => Promise<PHDocument> | undefined;
-};
-
 export type ActionErrorCallback = (error: unknown) => void;
 
 export type EditorDispatch = (
@@ -511,8 +502,9 @@ export type EditorDispatch = (
 ) => void;
 
 export type EditorProps = {
-  document: PHDocument;
-  context: EditorContext;
+  children?: ReactNode;
+  className?: string;
+  document?: PHDocument;
 };
 
 export type SubgraphModule = {
@@ -534,11 +526,7 @@ export type EditorModule = {
   documentTypes: string[];
   config: {
     id: string;
-    name?: string;
-    disableExternalControls?: boolean;
-    documentToolbarEnabled?: boolean;
-    showSwitchboardLink?: boolean;
-    timelineEnabled?: boolean;
+    name: string;
   };
 };
 

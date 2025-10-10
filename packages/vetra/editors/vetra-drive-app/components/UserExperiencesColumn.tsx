@@ -1,6 +1,5 @@
 import type { FileNode } from "document-drive";
 import React from "react";
-import { DOCUMENT_TYPES } from "../document-types.js";
 import { ModuleAccordion } from "./ModuleAccordion.js";
 import { ModuleList } from "./ModuleList.js";
 
@@ -36,7 +35,7 @@ export const UserExperiencesColumn: React.FC<UserExperiencesColumnProps> = ({
         >
           <ModuleList
             items={editors}
-            documentType={DOCUMENT_TYPES.documentEditor}
+            documentType="powerhouse/document-editor"
             onAddNewSpec={onAddEditor}
             onClickItem={onOpenDocument}
             onDelete={onDelete}
@@ -51,7 +50,7 @@ export const UserExperiencesColumn: React.FC<UserExperiencesColumnProps> = ({
         >
           <ModuleList
             items={apps}
-            documentType={DOCUMENT_TYPES.documentApp}
+            documentType="powerhouse/app"
             onAddNewSpec={onAddApp}
             onClickItem={onOpenDocument}
             onDelete={onDelete}

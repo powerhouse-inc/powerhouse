@@ -153,7 +153,6 @@ export async function generateDriveEditor(
   config: PowerhouseConfig,
   appId?: string,
   editorOptions?: {
-    enabled: boolean;
     documentTypes: string[];
   },
 ) {

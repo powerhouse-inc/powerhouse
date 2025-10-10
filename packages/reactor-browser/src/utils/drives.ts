@@ -1,7 +1,7 @@
-import type { Reactor } from "@powerhousedao/reactor-browser";
 import type {
   DocumentDriveDocument,
   FolderNode,
+  IDocumentDriveServer,
   SharingType,
 } from "document-drive";
 import type { PHDocument } from "document-model";
@@ -69,7 +69,7 @@ export function makeFolderNodeFromDrive(
 }
 
 export async function getDocumentsForDriveId(
-  reactor: Reactor | undefined,
+  reactor: IDocumentDriveServer | undefined,
   driveId: string | undefined,
 ): Promise<PHDocument[]> {
   if (!reactor || !driveId) return [];
@@ -81,7 +81,7 @@ export async function getDocumentsForDriveId(
 }
 
 export async function getDrives(
-  reactor: Reactor | undefined,
+  reactor: IDocumentDriveServer | undefined,
 ): Promise<DocumentDriveDocument[]> {
   if (!reactor) return [];
   const driveIds = await reactor.getDrives();
@@ -90,7 +90,7 @@ export async function getDrives(
 }
 
 export async function getDocuments(
-  reactor: Reactor | undefined,
+  reactor: IDocumentDriveServer | undefined,
 ): Promise<PHDocument[]> {
   if (!reactor) return [];
   const driveIds = await reactor.getDrives();
@@ -104,7 +104,7 @@ export async function getDocuments(
 }
 
 export async function getDriveById(
-  reactor: Reactor | undefined,
+  reactor: IDocumentDriveServer | undefined,
   driveId: string | undefined,
 ): Promise<DocumentDriveDocument | undefined> {
   if (!reactor || !driveId) return undefined;

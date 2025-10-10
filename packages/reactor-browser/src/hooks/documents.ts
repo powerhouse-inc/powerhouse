@@ -1,30 +1,20 @@
-import {
-  useDispatch,
-  useDocumentModelModuleById,
-  useFileNodes,
-  useNodeKind,
-  useSelectedNodeId,
-} from "@powerhousedao/reactor-browser";
 import type { Action, DocumentAction, PHDocument } from "document-model";
-import { useSyncExternalStore } from "react";
+import { useDispatch } from "./dispatch.js";
+import { makePHEventFunctions } from "./make-ph-event-functions.js";
+import { useFileNodes, useNodeKind, useSelectedNodeId } from "./nodes.js";
+import { useDocumentModelModuleById } from "./vetra-packages.js";
 
-function getDocumentsSnapshot() {
-  const documents = window.phDocuments;
-  return documents;
-}
+export const {
+  useValue: useAllDocuments,
+  setValue: setDocuments,
+  addEventHandler: addDocumentsEventHandler,
+} = makePHEventFunctions("documents");
 
-function subscribeToDocuments(onStoreChange: () => void) {
-  window.addEventListener("ph:setDocuments", onStoreChange);
-  return () => window.removeEventListener("ph:setDocuments", onStoreChange);
-}
-
-export function useAllDocuments(): PHDocument[] | undefined {
-  const documents = useSyncExternalStore(
-    subscribeToDocuments,
-    () => window.phDocuments,
-  );
-  return documents;
-}
+export const {
+  useValue: useSelectedTimelineRevision,
+  setValue: setSelectedTimelineRevision,
+  addEventHandler: addSelectedTimelineRevisionEventHandler,
+} = makePHEventFunctions("selectedTimelineRevision");
 
 /** Returns the documents for the selected drive. */
 export function useSelectedDriveDocuments(): PHDocument[] | undefined {

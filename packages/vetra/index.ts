@@ -1,4 +1,3 @@
-import type { DriveEditorModule } from "@powerhousedao/reactor-browser";
 import type {
   DocumentModelModule,
   EditorModule,
@@ -21,7 +20,6 @@ export const documentModels: (
   | DocumentModelModule<ProcessorModulePHState>
   | DocumentModelModule<AppModulePHState>
 )[] = Object.values(documentModelsExports);
-export const editors: (EditorModule | DriveEditorModule)[] =
-  Object.values(editorsExports);
+export const editors: EditorModule[] = Object.values(editorsExports);
 
 export * from "./editors/hooks/useVetraDocument.js";

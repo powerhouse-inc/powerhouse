@@ -16,9 +16,6 @@ export function defaultGlobalState(): AppModuleGlobalState {
     name: "",
     status: "DRAFT",
     documentTypes: [{ id: "all-documents", documentType: "*" }],
-    dragAndDrop: {
-      enabled: true,
-    },
   };
 }
 

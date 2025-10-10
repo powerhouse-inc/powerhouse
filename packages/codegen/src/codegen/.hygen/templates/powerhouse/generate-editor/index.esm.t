@@ -10,8 +10,6 @@ export const module: EditorModule = {
     documentTypes: [<% if(!documentTypes.length){ %>'*'<% } else { %><% documentTypes.forEach(type => { _%>"<%= type %>", %><% }); _%> <% } %>],
     config: {
         id: '<%= editorId || 'editor-id' %>',
-        disableExternalControls: true,
-        documentToolbarEnabled: true,
-        showSwitchboardLink: true,
+        name: '<%= name || 'editor-name' %>',
     },
 };

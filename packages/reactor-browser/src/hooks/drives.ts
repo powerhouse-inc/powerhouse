@@ -1,25 +1,28 @@
-import {
-  dispatchSetSelectedDriveIdEvent,
-  getDriveAvailableOffline,
-  getDriveSharingType,
-  subscribeToDrives,
-  subscribeToSelectedDriveId,
-  useDispatch,
-} from "@powerhousedao/reactor-browser";
 import type {
   DocumentDriveAction,
   DocumentDriveDocument,
   SharingType,
   Trigger,
 } from "document-drive";
-import { useSyncExternalStore } from "react";
+import { getDriveSharingType } from "document-drive";
+import { getDriveAvailableOffline } from "../utils/drives.js";
+import { resolveUrlPathname } from "../utils/url.js";
+import { useDispatch } from "./dispatch.js";
 import type { DocumentDispatch } from "./documents.js";
+import { makePHEventFunctions } from "./make-ph-event-functions.js";
+import { setSelectedNode } from "./nodes.js";
 
-/** Returns the drives for a reactor. */
-export function useDrives(): DocumentDriveDocument[] | undefined {
-  const drives = useSyncExternalStore(subscribeToDrives, () => window.phDrives);
-  return drives;
-}
+export const {
+  useValue: useDrives,
+  setValue: setDrives,
+  addEventHandler: addDrivesEventHandler,
+} = makePHEventFunctions("drives");
+
+export const {
+  useValue: useSelectedDriveId,
+  setValue: _setSelectedDriveId,
+  addEventHandler: addSelectedDriveIdEventHandler,
+} = makePHEventFunctions("selectedDriveId");
 
 export function useDriveById(
   driveId: string | undefined | null,
@@ -34,14 +37,6 @@ export function useDriveById(
     DocumentDriveDocument,
     DocumentDispatch<DocumentDriveAction>,
   ];
-}
-
-export function useSelectedDriveId() {
-  const selectedDriveId = useSyncExternalStore(
-    subscribeToSelectedDriveId,
-    () => window.phSelectedDriveId,
-  );
-  return selectedDriveId;
 }
 
 /** Returns the selected drive */
@@ -81,7 +76,17 @@ export function setSelectedDrive(
     typeof driveOrDriveSlug === "string"
       ? driveOrDriveSlug
       : driveOrDriveSlug?.header.slug;
-  dispatchSetSelectedDriveIdEvent(driveSlug);
+  setSelectedNode(undefined);
+  _setSelectedDriveId(driveSlug);
+
+  // Find the drive by slug to get its actual ID
+  const drive = window.ph?.drives?.find((d) => d.header.slug === driveSlug);
+  const driveId = drive?.header.id;
+  if (!driveId) {
+    window.history.pushState(null, "", resolveUrlPathname("/"));
+    return;
+  }
+  window.history.pushState(null, "", resolveUrlPathname(`/d/${driveSlug}`));
 }
 
 /** Returns the remote URL for a drive. */

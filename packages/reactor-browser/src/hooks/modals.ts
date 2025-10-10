@@ -1,27 +1,24 @@
-import { useSyncExternalStore } from "react";
-import {
-  dispatchSetModalEvent,
-  getModalSnapshot,
-  subscribeToModal,
-} from "../events/modals.js";
-import type { PHModal } from "../types/modals.js";
+import type { PHModal } from "@powerhousedao/reactor-browser";
+import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
-export function usePHModal() {
-  return useSyncExternalStore(subscribeToModal, getModalSnapshot);
-}
+export const {
+  useValue: usePHModal,
+  setValue: setPHModal,
+  addEventHandler: addModalEventHandler,
+} = makePHEventFunctions("modal");
 
 export function showPHModal(modal: PHModal) {
-  dispatchSetModalEvent(modal);
+  setPHModal(modal);
 }
 
 export function closePHModal() {
-  dispatchSetModalEvent(undefined);
+  setPHModal(undefined);
 }
 
 export function showCreateDocumentModal(documentType: string) {
-  dispatchSetModalEvent({ type: "createDocument", documentType });
+  setPHModal({ type: "createDocument", documentType });
 }
 
 export function showDeleteNodeModal(id: string) {
-  dispatchSetModalEvent({ type: "deleteItem", id });
+  setPHModal({ type: "deleteItem", id });
 }

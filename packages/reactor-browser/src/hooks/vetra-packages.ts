@@ -1,42 +1,47 @@
 import type {
+  DocumentModelModule,
+  ImportScriptModule,
+  SubgraphModule,
+} from "document-model";
+import { DEFAULT_DRIVE_EDITOR_ID } from "../constants.js";
+import type {
   Processors,
   VetraDocumentModelModule,
   VetraEditorModule,
   VetraPackage,
   VetraProcessorModule,
-} from "@powerhousedao/reactor-browser";
-import {
-  DEFAULT_DRIVE_EDITOR_ID,
-  dispatchSetVetraPackagesEvent,
-  subscribeToVetraPackages,
-} from "@powerhousedao/reactor-browser";
-import type { ImportScriptModule, SubgraphModule } from "document-model";
-import { useSyncExternalStore } from "react";
+} from "../types/vetra.js";
+import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
-const defaultVetraPackages: VetraPackage[] = [];
+export const {
+  useValue: useVetraPackages,
+  setValue: _setVetraPackages,
+  addEventHandler: addVetraPackagesEventHandler,
+} = makePHEventFunctions("vetraPackages");
 
-export function useVetraPackages(): VetraPackage[] {
-  return useSyncExternalStore(
-    subscribeToVetraPackages,
-    () => window.vetraPackages || defaultVetraPackages,
+export function setVetraPackages(vetraPackages: VetraPackage[] | undefined) {
+  _setVetraPackages(vetraPackages);
+  const documentModelModules = vetraPackages
+    ?.flatMap((pkg) => pkg.modules.documentModelModules)
+    .filter((module) => module !== undefined);
+  window.ph?.reactor?.setDocumentModelModules(
+    documentModelModules as unknown as DocumentModelModule[],
   );
-}
-
-export function setVetraPackages(packages: VetraPackage[]) {
-  dispatchSetVetraPackagesEvent(packages);
 }
 
 export function useDocumentModelModules():
   | VetraDocumentModelModule[]
   | undefined {
   const vetraPackages = useVetraPackages();
-  return vetraPackages.flatMap((pkg) => pkg.modules.documentModelModules || []);
+  return vetraPackages?.flatMap(
+    (pkg) => pkg.modules.documentModelModules || [],
+  );
 }
 
 export function useEditorModules(): VetraEditorModule[] | undefined {
   const vetraPackages = useVetraPackages();
   return vetraPackages
-    .flatMap((pkg) => pkg.modules.editorModules || [])
+    ?.flatMap((pkg) => pkg.modules.editorModules || [])
     .filter(
       (module) => !module.documentTypes.includes("powerhouse/document-drive"),
     );
@@ -45,7 +50,7 @@ export function useEditorModules(): VetraEditorModule[] | undefined {
 export function useDriveEditorModules(): VetraEditorModule[] | undefined {
   const vetraPackages = useVetraPackages();
   return vetraPackages
-    .flatMap((pkg) => pkg.modules.editorModules || [])
+    ?.flatMap((pkg) => pkg.modules.editorModules || [])
     .filter((module) =>
       module.documentTypes.includes("powerhouse/document-drive"),
     );
@@ -55,9 +60,7 @@ export function useDocumentModelModuleById(
   id: string | null | undefined,
 ): VetraDocumentModelModule | undefined {
   const documentModelModules = useDocumentModelModules();
-  return documentModelModules?.find(
-    (module) => module.documentModel.global.id === id,
-  );
+  return documentModelModules?.find((module) => module.id === id);
 }
 
 export function useEditorModuleById(
@@ -109,7 +112,7 @@ export function useEditorModulesForDocumentType(
 export function useProcessorModules(): VetraProcessorModule[] | undefined {
   const vetraPackages = useVetraPackages();
   return vetraPackages
-    .flatMap((pkg) => pkg.modules.processorModules)
+    ?.flatMap((pkg) => pkg.modules.processorModules)
     .filter((module) => module !== undefined) as VetraProcessorModule[];
 }
 
@@ -120,10 +123,10 @@ export function useProcessors(): Processors[] | undefined {
 
 export function useSubgraphModules(): SubgraphModule[] | undefined {
   const vetraPackages = useVetraPackages();
-  return vetraPackages.flatMap((pkg) => pkg.modules.subgraphModules || []);
+  return vetraPackages?.flatMap((pkg) => pkg.modules.subgraphModules || []);
 }
 
 export function useImportScriptModules(): ImportScriptModule[] | undefined {
   const vetraPackages = useVetraPackages();
-  return vetraPackages.flatMap((pkg) => pkg.modules.importScriptModules || []);
+  return vetraPackages?.flatMap((pkg) => pkg.modules.importScriptModules || []);
 }

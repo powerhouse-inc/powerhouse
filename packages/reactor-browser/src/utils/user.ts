@@ -1,6 +1,6 @@
 export function getUserPermissions() {
-  const user = window.user;
-  const allowList = window.phAppConfig?.allowList;
+  const user = window.ph?.user;
+  const allowList = window.ph?.allowList;
   if (!allowList) {
     return {
       isAllowedToCreateDocuments: true,

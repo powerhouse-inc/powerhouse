@@ -49,7 +49,7 @@ async function isDocumentInLocation(
   duplicateType?: "id" | "name";
   nodeId?: string;
 }> {
-  const reactor = window.reactor;
+  const reactor = window.ph?.reactor;
   if (!reactor) {
     return { isDuplicate: false };
   }
@@ -146,7 +146,7 @@ export function downloadFile(document: PHDocument, fileName: string) {
 }
 
 export async function exportFile(document: PHDocument, suggestedName?: string) {
-  const reactor = window.reactor;
+  const reactor = window.ph?.reactor;
   if (!reactor) {
     return;
   }
@@ -185,7 +185,7 @@ export async function exportFile(document: PHDocument, suggestedName?: string) {
 }
 
 export async function loadFile(path: string | File) {
-  const reactor = window.reactor;
+  const reactor = window.ph?.reactor;
   if (!reactor) {
     return;
   }
@@ -216,7 +216,7 @@ export async function addDocument(
   id?: string,
   preferredEditor?: string,
 ) {
-  const reactor = window.reactor;
+  const reactor = window.ph?.reactor;
   if (!reactor) {
     return;
   }
@@ -276,7 +276,7 @@ export async function addFile(
   logger.verbose(
     `addFile(drive: ${driveId}, name: ${name}, folder: ${parentFolder})`,
   );
-  const reactor = window.reactor;
+  const reactor = window.ph?.reactor;
   if (!reactor) {
     return;
   }
@@ -359,13 +359,13 @@ export async function addFileWithProgress(
   name?: string,
   parentFolder?: string,
   onProgress?: FileUploadProgressCallback,
-  documentTypes: string[] = [],
+  documentTypes?: string[],
   resolveConflict?: ConflictResolution,
 ) {
   logger.verbose(
     `addFileWithProgress(drive: ${driveId}, name: ${name}, folder: ${parentFolder})`,
   );
-  const reactor = window.reactor;
+  const reactor = window.ph?.reactor;
   if (!reactor) {
     return;
   }
@@ -536,7 +536,7 @@ export async function updateFile(
   name?: string,
   parentFolder?: string,
 ) {
-  const reactor = window.reactor;
+  const reactor = window.ph?.reactor;
   if (!reactor) {
     return;
   }
@@ -570,7 +570,7 @@ export async function addFolder(
   name: string,
   parentFolder?: string,
 ) {
-  const reactor = window.reactor;
+  const reactor = window.ph?.reactor;
   if (!reactor) {
     return;
   }
@@ -600,7 +600,7 @@ export async function addFolder(
 }
 
 export async function deleteNode(driveId: string, nodeId: string) {
-  const reactor = window.reactor;
+  const reactor = window.ph?.reactor;
   if (!reactor) {
     return;
   }
@@ -618,7 +618,7 @@ export async function renameNode(
   nodeId: string,
   name: string,
 ): Promise<Node | undefined> {
-  const reactor = window.reactor;
+  const reactor = window.ph?.reactor;
   if (!reactor) {
     return;
   }
@@ -647,7 +647,7 @@ export async function moveNode(
   src: Node,
   target: Node | undefined,
 ) {
-  const reactor = window.reactor;
+  const reactor = window.ph?.reactor;
   if (!reactor) {
     return;
   }
@@ -696,7 +696,7 @@ export async function copyNode(
   src: Node,
   target: Node | undefined,
 ) {
-  const reactor = window.reactor;
+  const reactor = window.ph?.reactor;
   if (!reactor) {
     return;
   }

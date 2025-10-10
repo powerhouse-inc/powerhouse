@@ -6,9 +6,7 @@ export const module: EditorModule = {
   documentTypes: ["powerhouse/package"],
   config: {
     id: "vetra-package-editor",
-    disableExternalControls: true,
-    documentToolbarEnabled: true,
-    showSwitchboardLink: true,
+    name: "Vetra Package Editor",
   },
 };
 

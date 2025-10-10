@@ -1,7 +1,7 @@
-import { subscribeToRenown } from "@powerhousedao/reactor-browser";
-import { useSyncExternalStore } from "react";
+import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
-export function useRenown() {
-  const renown = useSyncExternalStore(subscribeToRenown, () => window.renown);
-  return renown;
-}
+export const {
+  useValue: useRenown,
+  setValue: setRenown,
+  addEventHandler: addRenownEventHandler,
+} = makePHEventFunctions("renown");

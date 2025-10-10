@@ -5,13 +5,13 @@ import slug from "slug";
 export function resolveUrlPathname(path: string) {
   return new URL(
     path.replace(/^\/+/, ""),
-    window.location.origin + (window.basePath ?? "/"),
+    window.location.origin + (window.ph?.basePath ?? "/"),
   ).pathname;
 }
 
 /** Returns the current path without the base path */
 export function getPathWithoutBase(path: string) {
-  const basePath = window.basePath ?? "/";
+  const basePath = window.ph?.basePath ?? "/";
   return path.replace(basePath, basePath.endsWith("/") ? "/" : "");
 }
 

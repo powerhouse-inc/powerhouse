@@ -9,7 +9,6 @@ import {
   useBreadcrumbs,
   useDrop,
 } from "@powerhousedao/design-system";
-import type { DriveEditorProps } from "@powerhousedao/reactor-browser";
 import {
   getSyncStatusSync,
   makeFolderNodeFromDrive,
@@ -17,21 +16,17 @@ import {
   showCreateDocumentModal,
   showDeleteNodeModal,
   useDocumentModelModules,
+  useIsSearchBarEnabled,
   useNodeActions,
   useSelectedDrive,
   useSelectedFolder,
   useSelectedNodePath,
-  useShowSearchBar,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
 import { getDriveSharingType } from "document-drive";
-import type { DocumentModelModule } from "document-model";
-import React from "react";
+import type { DocumentModelModule, EditorProps } from "document-model";
 
-type GenericDriveExplorerEditorProps = DriveEditorProps &
-  React.HTMLProps<HTMLDivElement>;
-
-export function Editor(props: GenericDriveExplorerEditorProps) {
+export function Editor(props: EditorProps) {
   const { className, children } = props;
   const [selectedDrive] = useSelectedDrive();
   const {
@@ -47,7 +42,7 @@ export function Editor(props: GenericDriveExplorerEditorProps) {
   const documentModels = useDocumentModelModules();
   const selectedNodePath = useSelectedNodePath();
   const { isAllowedToCreateDocuments } = useUserPermissions();
-  const showSearchBar = useShowSearchBar();
+  const isSearchBarEnabled = useIsSearchBarEnabled();
   const onCreateDocument = (documentModel: DocumentModelModule) => {
     showCreateDocumentModal(documentModel.documentModel.global.id);
   };
@@ -81,7 +76,7 @@ export function Editor(props: GenericDriveExplorerEditorProps) {
             onCreate={onAddAndSelectNewFolder}
             onBreadcrumbSelected={onBreadcrumbSelected}
           />
-          {showSearchBar && <SearchBar />}
+          {isSearchBarEnabled && <SearchBar />}
         </DriveLayout.Header>
       )}
       {showDocumentEditor ? (
