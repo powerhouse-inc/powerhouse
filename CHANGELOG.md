@@ -1,3 +1,14 @@
+## 4.1.0-dev.67 (2025-10-10)
+
+### 🚀 Features
+
+- **vetra:** add delete functionality to vetra drive app documents ([#1927](https://github.com/powerhouse-inc/powerhouse/pull/1927))
+- **vetra:** add open button to Package Information section ([#1930](https://github.com/powerhouse-inc/powerhouse/pull/1930))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.66 (2025-10-09)
 
 ### 🚀 Features
