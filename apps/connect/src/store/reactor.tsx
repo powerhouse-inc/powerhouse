@@ -115,7 +115,6 @@ export async function createReactor() {
   window.ph.loading = true;
 
   const phGlobalConfigFromEnv = getPHGlobalConfigFromEnv();
-  setDefaultPHGlobalConfig(phGlobalConfigFromEnv);
 
   // add window event handlers for updates
   addPHEventHandlers();
@@ -191,6 +190,7 @@ export async function createReactor() {
   const didFromUrl = getDidFromUrl();
   await login(didFromUrl, reactor, renown, connectCrypto);
   // dispatch the events to set the values in the window object
+  setDefaultPHGlobalConfig(phGlobalConfigFromEnv);
   setReactor(reactor);
   setConnectCrypto(connectCrypto);
   setDid(did);
