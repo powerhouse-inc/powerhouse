@@ -23,6 +23,8 @@ type Props = {
   localStateInitialValue: string;
   setStateSchema: (doc: string, scope: Scope) => void;
   setInitialState: (doc: string, scope: Scope) => void;
+  currentScope: Scope;
+  onScopeChange: (scope: Scope) => void;
 };
 
 type StateEditorProps = {
@@ -165,6 +167,8 @@ export function StateSchemas({
   localStateInitialValue,
   setStateSchema,
   setInitialState,
+  currentScope,
+  onScopeChange,
 }: Props) {
   const handleAddLocalState = useCallback(() => {
     const initialDoc = makeInitialSchemaDoc(modelName, "local");
@@ -173,7 +177,12 @@ export function StateSchemas({
   }, [modelName, setStateSchema, setInitialState]);
 
   return (
-    <Tabs className="pb-8" activationMode="manual" defaultValue="global">
+    <Tabs
+      className="pb-8"
+      activationMode="manual"
+      value={currentScope}
+      onValueChange={(value) => onScopeChange(value as Scope)}
+    >
       <div className="my-6">
         <TabsList className="mx-auto flex max-w-sm">
           <TabsTrigger value="global">Global</TabsTrigger>

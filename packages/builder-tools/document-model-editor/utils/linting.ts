@@ -2,6 +2,7 @@ import type { Diagnostic } from "@codemirror/lint";
 import { pascalCase, sentenceCase } from "change-case";
 import { Kind } from "graphql";
 import { safeParseSdl } from "../context/schema-context.js";
+import { makeStateSchemaNameForScope } from "./helpers.js";
 
 export function ensureDocumentContainsNodeWithNameAndType(
   doc: string,
@@ -44,11 +45,7 @@ export function ensureValidStateSchemaName(
   scope: string,
 ) {
   if (!safeParseSdl(doc)) return [];
-  const scopePascalCase = pascalCase(scope);
-  const modelNamePascalCase = pascalCase(modelName);
-  const scopeStateTypeNamePrefix =
-    scopePascalCase === "Global" ? "" : scopePascalCase;
-  const requiredTypeName = `${scopeStateTypeNamePrefix}${modelNamePascalCase}State`;
+  const requiredTypeName = makeStateSchemaNameForScope(modelName, scope);
   if (
     !ensureDocumentContainsNodeWithNameAndType(
       doc,
