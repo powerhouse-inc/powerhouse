@@ -68,7 +68,6 @@ export async function generateEditor(
   documentTypes: string[],
   config: PowerhouseConfig,
   editorId?: string,
-  editorName?: string,
 ) {
   const pathOrigin = "../../";
 
@@ -91,7 +90,6 @@ export async function generateEditor(
     config.documentModelsDir,
     { skipFormat },
     editorId,
-    editorName,
   );
 }
 
@@ -154,7 +152,6 @@ export async function generateDriveEditor(
   name: string,
   config: PowerhouseConfig,
   appId?: string,
-  appName?: string,
   editorOptions?: {
     documentTypes: string[];
   },
@@ -166,7 +163,6 @@ export async function generateDriveEditor(
       skipFormat: config.skipFormat,
     },
     appId,
-    appName,
     editorOptions,
   );
 }

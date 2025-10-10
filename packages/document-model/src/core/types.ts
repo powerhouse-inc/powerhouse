@@ -502,7 +502,7 @@ export type EditorDispatch = (
 ) => void;
 
 export type EditorProps = {
-  children: ReactNode;
+  children?: ReactNode;
   className?: string;
   document?: PHDocument;
 };

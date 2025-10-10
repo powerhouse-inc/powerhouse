@@ -17,6 +17,7 @@ import {
   extractDriveSlugFromPath,
   extractNodeIdFromSlug,
   makeNodeSlug,
+  resolveUrlPathname,
 } from "../utils/url.js";
 import { useSelectedDocument } from "./documents.js";
 import { useDrives, useSelectedDriveSafe } from "./drives.js";
@@ -56,10 +57,18 @@ export function setSelectedNode(nodeOrNodeSlug: Node | string | undefined) {
     return;
   }
   if (!nodeSlug) {
-    window.history.pushState(null, "", `/d/${driveSlugFromPath}`);
+    window.history.pushState(
+      null,
+      "",
+      resolveUrlPathname(`/d/${driveSlugFromPath}`),
+    );
     return;
   }
-  window.history.pushState(null, "", `/d/${driveSlugFromPath}/${nodeSlug}`);
+  window.history.pushState(
+    null,
+    "",
+    resolveUrlPathname(`/d/${driveSlugFromPath}/${nodeSlug}`),
+  );
 }
 
 /** Returns a node in the selected drive by id. */

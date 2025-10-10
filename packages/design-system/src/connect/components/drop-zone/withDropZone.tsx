@@ -11,11 +11,13 @@ import {
 } from "@powerhousedao/reactor-browser";
 import type { ComponentType } from "react";
 
-export function withDropZone(WrappedComponent: ComponentType): ComponentType {
+export function withDropZone<T extends ComponentType<any>>(
+  WrappedComponent: T,
+): T {
   const WithDropZoneComponent = (props: any) => {
     const driveId = useSelectedDriveId();
-    const isDragAndDropEnabled = useIsDragAndDropEnabled();
     const onDropFile = useOnDropFile();
+    const isDragAndDropEnabled = useIsDragAndDropEnabled();
 
     const onAddFile = async (
       file: File,
@@ -26,12 +28,12 @@ export function withDropZone(WrappedComponent: ComponentType): ComponentType {
       return await onDropFile(file, onProgress, resolveConflict);
     };
 
-    if (isDragAndDropEnabled) {
+    if (isDragAndDropEnabled && driveId) {
       return (
         <DropZone
-          driveId={driveId}
           onAddFile={onAddFile}
           setSelectedNode={setSelectedNode}
+          driveId={driveId}
           useLocalStorage={true}
           style={{ height: "100%" }}
         >
@@ -47,5 +49,5 @@ export function withDropZone(WrappedComponent: ComponentType): ComponentType {
     WrappedComponent.displayName || WrappedComponent.name || "Component"
   })`;
 
-  return WithDropZoneComponent;
+  return WithDropZoneComponent as T;
 }

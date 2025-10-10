@@ -1,6 +1,7 @@
 import {
   addAllowListEventHandler,
   addAnalyticsDatabaseNameEventHandler,
+  addBasePathEventHandler,
   addIsDocumentToolbarEnabledEventHandler,
   addIsDragAndDropEnabledEventHandler,
   addIsEditorDebugModeEnabledEventHandler,
@@ -26,8 +27,8 @@ import { addReactorEventHandler } from "./reactor.js";
 import { addRenownEventHandler } from "./renown.js";
 import { addLoginStatusEventHandler, addUserEventHandler } from "./user.js";
 import { addVetraPackagesEventHandler } from "./vetra-packages.js";
-
 export function addPHEventHandlers() {
+  addBasePathEventHandler();
   addReactorEventHandler();
   addModalEventHandler();
   addConnectCryptoEventHandler();

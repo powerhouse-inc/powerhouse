@@ -1,4 +1,4 @@
-import { WagmiContext } from "@powerhousedao/design-system";
+import { WagmiContext, withDropZone } from "@powerhousedao/design-system";
 import {
   addDocument,
   AnalyticsProvider,
@@ -10,10 +10,10 @@ import {
   useFileNodes,
   useSelectedDrive,
 } from "@powerhousedao/reactor-browser";
+import type { FileNode } from "document-drive";
 import type { EditorProps } from "document-model";
 import { useCallback } from "react";
 import { DriveExplorer } from "./DriveExplorer.js";
-import { withDropZone } from "./utils/withDropZone.js";
 
 export function BaseEditor({ children }: EditorProps) {
   const [document] = useSelectedDrive();

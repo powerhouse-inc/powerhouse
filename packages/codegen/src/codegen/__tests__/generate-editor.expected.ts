@@ -6,7 +6,7 @@ export const module: EditorModule = {
     documentTypes: ["powerhouse/document-model", ],
     config: {
         id: 'test-document-model-editor',
-        name: 'Test Document Model Editor',
+        name: 'DocumentModelEditor',
     },
 };`;
 
@@ -124,7 +124,7 @@ export const module: EditorModule = {
     documentTypes: ['*'],
     config: {
         id: 'test-generic-document-editor',
-        name: 'Test Generic Document Editor',
+        name: 'GenericDocumentEditor',
     },
 };`;
 

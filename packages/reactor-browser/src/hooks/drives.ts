@@ -6,6 +6,7 @@ import type {
 } from "document-drive";
 import { getDriveSharingType } from "document-drive";
 import { getDriveAvailableOffline } from "../utils/drives.js";
+import { resolveUrlPathname } from "../utils/url.js";
 import { useDispatch } from "./dispatch.js";
 import type { DocumentDispatch } from "./documents.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
@@ -82,10 +83,10 @@ export function setSelectedDrive(
   const drive = window.ph?.drives?.find((d) => d.header.slug === driveSlug);
   const driveId = drive?.header.id;
   if (!driveId) {
-    window.history.pushState(null, "", "/");
+    window.history.pushState(null, "", resolveUrlPathname("/"));
     return;
   }
-  window.history.pushState(null, "", `/d/${driveSlug}`);
+  window.history.pushState(null, "", resolveUrlPathname(`/d/${driveSlug}`));
 }
 
 /** Returns the remote URL for a drive. */

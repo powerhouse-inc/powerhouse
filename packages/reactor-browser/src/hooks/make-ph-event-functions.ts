@@ -41,7 +41,7 @@ export function makePHEventFunctions<TKey extends PHGlobalKey>(key: TKey) {
   }
 
   function getSnapshot() {
-    if (!window.ph) throw new Error("ph is not defined");
+    if (!window.ph) throw new Error("ph global store is not defined");
     return window.ph[key];
   }
 

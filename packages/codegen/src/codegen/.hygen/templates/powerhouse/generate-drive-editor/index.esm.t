@@ -10,7 +10,7 @@ export const module: EditorModule = {
   documentTypes: ["powerhouse/document-drive"],
   config: {
     id: "<%= appId || 'drive-editor-id' %>",
-    name: "<%= appName || 'YOUR_APP_NAME' %>",
+    name: "<%= name || 'YOUR_APP_NAME' %>",
     <%_ if (dragAndDropEnabled) { _%>
     documentTypes: [<%- (dragAndDropDocumentTypes ? JSON.parse(dragAndDropDocumentTypes) : []).map(type => JSON.stringify(type)).join(', ') %>],<%_ } _%>
   },

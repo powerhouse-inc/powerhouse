@@ -18,6 +18,7 @@ import {
   refreshReactorData,
   setAllowList,
   setAnalyticsDatabaseName,
+  setBasePath,
   setConnectCrypto,
   setDid,
   setDocuments,
@@ -117,7 +118,7 @@ export async function createReactor() {
   // add window event handlers for updates
   addPHEventHandlers();
 
-  dispatchSetBasePathEvent(connectConfig.routerBasename);
+  setBasePath(connectConfig.routerBasename);
 
   // initialize feature flags
   await initFeatureFlags();

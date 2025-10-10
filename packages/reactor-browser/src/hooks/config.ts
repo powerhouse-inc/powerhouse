@@ -1,6 +1,12 @@
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
 export const {
+  useValue: useBasePath,
+  setValue: setBasePath,
+  addEventHandler: addBasePathEventHandler,
+} = makePHEventFunctions("basePath");
+
+export const {
   useValue: useAnalyticsDatabaseName,
   setValue: setAnalyticsDatabaseName,
   addEventHandler: addAnalyticsDatabaseNameEventHandler,

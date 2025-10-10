@@ -171,7 +171,6 @@ export async function hygenGenerateEditor(
   documentModelsDir: string,
   { skipFormat = false, verbose = true } = {},
   editorId?: string,
-  editorName?: string,
 ) {
   // Generate the singular files for the document model logic
   const args = [
@@ -191,10 +190,6 @@ export async function hygenGenerateEditor(
 
   if (editorId) {
     args.push("--editor-id", editorId);
-  }
-
-  if (editorName) {
-    args.push("--editor-name", editorName);
   }
 
   await run(args, { skipFormat, verbose });
@@ -312,7 +307,6 @@ export async function hygenGenerateDriveEditor(
   dir: string,
   { skipFormat = false } = {},
   appId?: string,
-  appName?: string,
   editorOptions?: {
     documentTypes: string[];
   },
@@ -329,10 +323,6 @@ export async function hygenGenerateDriveEditor(
 
   if (appId) {
     args.push("--app-id", appId);
-  }
-
-  if (appName) {
-    args.push("--app-name", appName);
   }
 
   if (editorOptions?.documentTypes.length) {

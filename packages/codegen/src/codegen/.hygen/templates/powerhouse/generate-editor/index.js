@@ -23,7 +23,6 @@ module.exports = {
         .filter((type) => type !== ""),
       documentTypesMap,
       editorId: args.editorId,
-      editorName: args.editorName,
       documentType,
     };
   },
