@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import type { PHGlobal } from "../types/global.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
 export const {
@@ -124,4 +126,48 @@ export function enableEditorReadMode() {
 
 export function disableEditorReadMode() {
   setIsEditorReadModeEnabled(false);
+}
+
+export const phGlobalConfigSetters = {
+  basePath: setBasePath,
+  analyticsDatabaseName: setAnalyticsDatabaseName,
+  allowList: setAllowList,
+  isSearchBarEnabled: setIsSearchBarEnabled,
+  isExternalControlsEnabled: setIsExternalControlsEnabled,
+  isDocumentToolbarEnabled: setIsDocumentToolbarEnabled,
+  isSwitchboardLinkEnabled: setIsSwitchboardLinkEnabled,
+  isDragAndDropEnabled: setIsDragAndDropEnabled,
+  isTimelineEnabled: setIsTimelineEnabled,
+  isEditorDebugModeEnabled: setIsEditorDebugModeEnabled,
+  isEditorReadModeEnabled: setIsEditorReadModeEnabled,
+};
+
+type PHGlobalConfig = typeof phGlobalConfigSetters;
+type PHGlobalConfigKey = keyof PHGlobalConfig;
+type PHGlobalConfigSetter<TKey extends PHGlobalConfigKey> = (
+  value: PHGlobal[TKey],
+) => void;
+type PHGlobalConfigObject = Partial<
+  Record<PHGlobalConfigKey, PHGlobal[PHGlobalConfigKey]>
+>;
+
+export function setPHGlobalConfig(config: PHGlobalConfigObject) {
+  for (const k of Object.keys(config)) {
+    const key = k as PHGlobalConfigKey;
+    const setter = phGlobalConfigSetters[key] as PHGlobalConfigSetter<
+      typeof key
+    >;
+    const value = config[key];
+    setter(value);
+  }
+}
+
+export function useSetPHGlobalConfig(config: PHGlobalConfigObject) {
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  useEffect(() => {
+    if (isInitialized) return;
+    setPHGlobalConfig(config);
+    setIsInitialized(true);
+  }, [config, isInitialized]);
 }
