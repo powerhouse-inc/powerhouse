@@ -13,6 +13,11 @@ type Props = {
    * Defaults to false to preserve legacy behavior.
    */
   trackNestedDrag?: boolean;
+  /**
+   * Array of accepted file extensions (e.g., ['.zip', '.phd', '.phdm'])
+   * If not provided, all files are accepted
+   */
+  acceptedFileExtensions?: string[];
 };
 export function useDrop(props: Props) {
   const {
@@ -21,22 +26,86 @@ export function useDrop(props: Props) {
     onCopyNode,
     onMoveNode,
     trackNestedDrag = false,
+    acceptedFileExtensions,
   } = props;
   const [isDropTarget, setIsDropTarget] = useState(false);
   const dragDepthRef = useRef(0);
 
-  const onDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setIsDropTarget(true);
-  }, []);
+  /**
+   * Check if the dragged content is valid based on accepted file extensions
+   */
+  const isValidDropContent = useCallback(
+    (dataTransfer: DataTransfer): boolean => {
+      if (!acceptedFileExtensions || acceptedFileExtensions.length === 0) {
+        return true;
+      }
 
-  const onDragEnter = useCallback((event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    dragDepthRef.current += 1;
-    setIsDropTarget(true);
-  }, []);
+      // Always allow internal node dragging
+      if (dataTransfer.types.includes("UI_NODE")) {
+        return true;
+      }
+
+      // Check if dragging files
+      if (dataTransfer.types.includes("Files")) {
+        const items = Array.from(dataTransfer.items);
+
+        return items.some((item) => {
+          if (item.kind === "file") {
+            // Check MIME types for zip files
+            if (
+              item.type === "application/zip" ||
+              item.type === "application/x-zip-compressed"
+            ) {
+              return acceptedFileExtensions.includes(".zip");
+            }
+
+            // For custom extensions (.phd, .phdm), browsers might not report
+            // a specific MIME type (they show as '' or 'application/octet-stream')
+            // We allow these through and do stricter validation on drop
+            if (item.type === "" || item.type === "application/octet-stream") {
+              return true;
+            }
+          }
+          return false;
+        });
+      }
+
+      return false;
+    },
+    [acceptedFileExtensions],
+  );
+
+  const onDragOver = useCallback(
+    (event: DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const isValid = isValidDropContent(event.dataTransfer);
+
+      if (isValid) {
+        setIsDropTarget(true);
+      } else {
+        // Visual feedback that dropping is not allowed
+        event.dataTransfer.dropEffect = "none";
+      }
+    },
+    [isValidDropContent],
+  );
+
+  const onDragEnter = useCallback(
+    (event: DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const isValid = isValidDropContent(event.dataTransfer);
+
+      if (isValid) {
+        dragDepthRef.current += 1;
+        setIsDropTarget(true);
+      }
+    },
+    [isValidDropContent],
+  );
 
   const onDragLeaveDepth = useCallback((event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -68,9 +137,21 @@ export function useDrop(props: Props) {
       }
 
       try {
-        const droppedFiles = getDroppedFiles(event.dataTransfer.items).filter(
+        let droppedFiles = getDroppedFiles(event.dataTransfer.items).filter(
           Boolean,
         );
+
+        // Filter files by accepted extensions if specified
+        if (acceptedFileExtensions && acceptedFileExtensions.length > 0) {
+          droppedFiles = droppedFiles.filter((file) => {
+            if (!file) return false;
+            const fileName = file.name.toLowerCase();
+            return acceptedFileExtensions.some((ext) =>
+              fileName.endsWith(ext.toLowerCase()),
+            );
+          });
+        }
+
         if (droppedFiles.length) {
           for (const file of droppedFiles) {
             if (file) {

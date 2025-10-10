@@ -1,5 +1,6 @@
 import type { PowerhouseConfig } from "@powerhousedao/config";
 import type { Command } from "commander";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import { homedir } from "node:os";
 import path, { dirname } from "node:path";
@@ -107,6 +108,22 @@ export function getProjectInfo(debug?: boolean): ProjectInfo {
     path: projectPath,
     packageManager: getPackageManagerFromLockfile(projectPath),
   };
+}
+
+/**
+ * Generates a unique drive ID based on the project path.
+ * The same project path will always generate the same ID.
+ * @param name - The name prefix for the drive ID (e.g., "vetra", "powerhouse")
+ * @returns A unique drive ID in the format "{name}-{hash}"
+ */
+export function generateProjectDriveId(name: string): string {
+  const projectInfo = getProjectInfo();
+  const hash = crypto
+    .createHash("sha256")
+    .update(projectInfo.path)
+    .digest("hex");
+  const shortHash = hash.substring(0, 8);
+  return `${name}-${shortHash}`;
 }
 
 export function getPackageManagerFromLockfile(dir: string): PackageManager {

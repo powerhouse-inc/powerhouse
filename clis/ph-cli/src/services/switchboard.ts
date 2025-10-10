@@ -22,29 +22,34 @@ const defaultSwitchboardOptions: Partial<StartServerOptions> = {
   },
 };
 
-const defaultVetraSwitchboardOptions: Partial<StartServerOptions> = {
-  port: 4001,
-  dbPath: path.join(process.cwd(), ".ph/read-model.db"),
-  drive: {
-    id: "vetra",
-    slug: "vetra",
-    global: {
-      name: "Vetra",
-      icon: "https://azure-elderly-tortoise-212.mypinata.cloud/ipfs/bafkreibf2xokjqqtomqjd2w2xxmmhvogq4262csevclxh6sbrjgmjfre5u",
+function getDefaultVetraSwitchboardOptions(
+  vetraDriveId: string,
+): Partial<StartServerOptions> {
+  return {
+    port: 4001,
+    dbPath: path.join(process.cwd(), ".ph/read-model.db"),
+    drive: {
+      id: vetraDriveId,
+      slug: vetraDriveId,
+      global: {
+        name: "Vetra",
+        icon: "https://azure-elderly-tortoise-212.mypinata.cloud/ipfs/bafkreibf2xokjqqtomqjd2w2xxmmhvogq4262csevclxh6sbrjgmjfre5u",
+      },
+      preferredEditor: "vetra-drive-app",
+      local: {
+        availableOffline: true,
+        listeners: [],
+        sharingType: "public",
+        triggers: [],
+      },
     },
-    preferredEditor: "vetra-drive-app",
-    local: {
-      availableOffline: true,
-      listeners: [],
-      sharingType: "public",
-      triggers: [],
-    },
-  },
-};
+  };
+}
 
 type SwitchboardOptions = StartServerOptions & {
   remoteDrives?: string[];
   useVetraDrive?: boolean;
+  vetraDriveId?: string;
 };
 
 export async function startSwitchboard(options: SwitchboardOptions) {
@@ -53,12 +58,13 @@ export async function startSwitchboard(options: SwitchboardOptions) {
   const {
     remoteDrives = [],
     useVetraDrive = false,
+    vetraDriveId = "vetra",
     ...serverOptions
   } = options;
 
   // Choose the appropriate default configuration
   const defaultOptions = useVetraDrive
-    ? defaultVetraSwitchboardOptions
+    ? getDefaultVetraSwitchboardOptions(vetraDriveId)
     : defaultSwitchboardOptions;
 
   // Only include the default drive if no remote drives are provided
