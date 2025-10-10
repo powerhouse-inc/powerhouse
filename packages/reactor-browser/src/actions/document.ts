@@ -154,10 +154,16 @@ export async function exportFile(document: PHDocument, suggestedName?: string) {
   const documentModelModule = documentModelModules.find(
     (module) => module.documentModel.global.id === document.header.documentType,
   );
-  const extension = documentModelModule?.documentModel.global.extension;
-  const name = `${suggestedName || document.header.name || "Untitled"}.${
-    extension ? `${extension}.` : ""
-  }zip`;
+
+  let extension = "";
+  const documentExtension = documentModelModule?.documentModel.global.extension;
+
+  if (documentExtension) {
+    const cleanExtension = documentExtension.replace(/^\.+|\.+$/g, "") || "";
+    extension = `.${cleanExtension}`;
+  }
+
+  const name = `${suggestedName || document.header.name || "Untitled"}${extension}.phd`;
 
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (!window.showSaveFilePicker) {
