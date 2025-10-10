@@ -4,7 +4,7 @@ import { getConfig } from "@powerhousedao/config/node";
 import { blue, red } from "colorette";
 import { setLogLevel } from "document-drive";
 import { generateProjectDriveId } from "../utils.js";
-import { startConnect } from "./connect.js";
+import { startConnectStudio } from "./connect.js";
 import type { ReactorOptions } from "./reactor.js";
 import { DefaultReactorOptions } from "./reactor.js";
 
@@ -178,7 +178,7 @@ export async function startVetra({
         console.log("Starting Connect...");
         console.log(`   ➜ Connect will use drive: ${driveUrl}`);
       }
-      await startConnect({
+      await startConnectStudio({
         defaultDrivesUrl: [driveUrl],
         drivesPreserveStrategy: "preserve-all",
         disableLocalPackage: !watchPackages,

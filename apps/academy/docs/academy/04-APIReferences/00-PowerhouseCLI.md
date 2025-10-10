@@ -228,15 +228,30 @@ Examples:
 
 ```
 Command Overview:
-  The Connect build command creates a connect build with the project's local and external packages included.
+  The Connect build command creates a production build with the project's local and
+  external packages included.
 
 Options:
-  --base <path> The base path for the app. Default is "/".
-  --project-root <path>  The root directory of the project. Default is "process.cwd()".
-  --assets-dir-name <name> The name of the assets directory. Default is "${DEFAULT_ASSETS_DIR_NAME}".
-  --external-packages-file-name <name> The name of the external packages file. Default is "${DEFAULT_EXTERNAL_PACKAGES_FILE_NAME}".
-  --styles-file-name <name> The name of the styles file. Default is "${DEFAULT_STYLES_FILE_NAME}".
-  --connect-path <path>  The path to the Connect dist directory. Calls "resolveConnect()" if not provided.
+  --outDir <outDir>           Output directory. Defaults to 'dist'.
+
+  --base <base>               Base path for the app. Default is "/".
+
+  --mode <mode>               Vite mode to use (e.g., development, production).
+
+  --config-file <configFile>  Path to the powerhouse.config.js file.
+
+  --vite-config-file <file>   Path to the vite config file.
+
+  --project-root <path>       The root directory of the project. Default is current directory.
+
+Examples:
+  $ ph connect build                              # Build with defaults
+  $ ph connect build --outDir build               # Output to 'build' directory
+  $ ph connect build --base /app                  # Set base path to '/app'
+  $ ph connect build --mode production            # Use production mode
+  $ ph connect build --config-file custom.config.js # Use custom configuration
+  $ ph connect build --vite-config-file vite.config.js # Use custom vite config
+  $ ph connect build --project-root /path/to/project # Set project root
 ```
 
 ## Connect Preview
@@ -247,10 +262,38 @@ Command Overview:
   NOTE: You must run \`ph connect build\` first.
 
 Options:
-  --base <path>          The base path for the app. Default is "/".
-  --project-root <path>  The root directory of the project. Default is "process.cwd()".
-  --port <port>          The port to run the server on. Default is 4173.
-  --open                 Open the browser. Default is true.
+  --outDir <outDir>           Output directory. Defaults to 'dist'.
+
+  --port <port>               Port to run the server on. Default is 3000.
+
+  --host                      Expose the server to the network.
+
+  --open                      Open browser on startup.
+
+  --strictPort                Exit if specified port is already in use.
+
+  --base <base>               Base path for the app. Default is "/".
+
+  --mode <mode>               Vite mode to use (e.g., development, production).
+
+  --config-file <configFile>  Path to the powerhouse.config.js file.
+
+  --vite-config-file <file>   Path to the vite config file.
+
+  --project-root <path>       The root directory of the project. Default is current directory.
+
+Examples:
+  $ ph connect preview                            # Preview with defaults
+  $ ph connect preview --outDir build             # Preview from 'build' directory
+  $ ph connect preview --port 8080                # Preview on port 8080
+  $ ph connect preview --host                     # Expose to network
+  $ ph connect preview --open                     # Open browser automatically
+  $ ph connect preview --strictPort               # Exit if port is in use
+  $ ph connect preview --base /app                # Set base path to '/app'
+  $ ph connect preview --mode production          # Use production mode
+  $ ph connect preview --config-file custom.config.js # Use custom configuration
+  $ ph connect preview --vite-config-file vite.config.js # Use custom vite config
+  $ ph connect preview --project-root /path/to/project # Set project root
 ```
 
 ## Connect Studio
@@ -258,7 +301,7 @@ Options:
 ```
 Command Overview:
   The connect command starts the Connect Studio, a development environment for building
-  and testing Powerhouse applications. It provides a visual interface for working with 
+  and testing Powerhouse applications. It provides a visual interface for working with
   your project.
 
   This command:
@@ -268,27 +311,41 @@ Command Overview:
   4. Supports various configuration options for customization
 
 Options:
-  -p, --port <port>      Port to run the server on. Default is 3000.
-                       
-  -h, --host             Expose the server to the network. By default, the server
-                        only accepts connections from localhost.
-                       
-  --https                Enable HTTPS for secure connections. You may need to provide
-                        certificate files for this option to work properly.
-                       
-  --open                 Automatically open the browser window after starting the server.
-                       
-  --config-file <path>   Path to the powerhouse.config.js file. This allows you to
-                        customize the behavior of Connect Studio.
+  --port <port>               Port to run the server on. Default is 3000.
+
+  --host                      Expose the server to the network. By default, the server
+                              only accepts connections from localhost.
+
+  --open                      Automatically open the browser window after starting the server.
+
+  --cors                      Enable CORS (Cross-Origin Resource Sharing).
+
+  --strictPort                Exit if specified port is already in use.
+
+  --force                     Force the optimizer to ignore the cache and re-bundle.
+
+  --mode <mode>               Vite mode to use (e.g., development, production).
+
+  --config-file <configFile>  Path to the powerhouse.config.js file. This allows you to
+                              customize the behavior of Connect Studio.
+
+  --vite-config-file <file>   Path to the vite config file.
+
+  --project-root <path>       The root directory of the project. Default is current directory.
 
 Examples:
-  $ ph connect                                # Start Connect Studio on default port 3000
-  $ ph connect -p 8080                        # Start on port 8080
-  $ ph connect -h                             # Expose to network (not just localhost)
-  $ ph connect --https                        # Enable HTTPS
-  $ ph connect --open                         # Open browser automatically
-  $ ph connect --config-file custom.config.js # Use custom configuration
-  $ ph connect -p 8080 --open                 # Start on port 8080 and open browser
+  $ ph connect                                 # Start Connect Studio on default port 3000
+  $ ph connect --port 8080                     # Start on port 8080
+  $ ph connect --host                          # Expose to network (not just localhost)
+  $ ph connect --open                          # Open browser automatically
+  $ ph connect --cors                          # Enable CORS
+  $ ph connect --strictPort                    # Exit if port is in use
+  $ ph connect --force                         # Force re-bundle
+  $ ph connect --mode production               # Use production mode
+  $ ph connect --config-file custom.config.js  # Use custom configuration
+  $ ph connect --vite-config-file vite.config.js # Use custom vite config
+  $ ph connect --project-root /path/to/project # Set project root
+  $ ph connect --port 8080 --open              # Start on port 8080 and open browser
 ```
 
 ## Dev
