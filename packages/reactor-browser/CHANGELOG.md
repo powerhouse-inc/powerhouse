@@ -1,3 +1,27 @@
+## 4.1.0-dev.67 (2025-10-10)
+
+### 🚀 Features
+
+- **vetra:** add open button to Package Information section ([#1930](https://github.com/powerhouse-inc/powerhouse/pull/1930))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.66 (2025-10-09)
+
+### 🚀 Features
+
+- **connect, builder-tools, reactor-browser:** support basepath on connect ([0571822ed](https://github.com/powerhouse-inc/powerhouse/commit/0571822ed))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.65 (2025-10-09)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.64 (2025-10-09)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

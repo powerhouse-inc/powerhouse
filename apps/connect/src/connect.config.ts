@@ -1,6 +1,5 @@
 import { loadRuntimeEnv } from "@powerhousedao/builder-tools/browser";
 import { logger, setLogLevel } from "document-drive";
-import { getBasePath } from "./utils/browser.js";
 
 // Load environment variables with validation and defaults
 const env = loadRuntimeEnv({
@@ -11,21 +10,23 @@ const env = loadRuntimeEnv({
 setLogLevel(env.PH_CONNECT_LOG_LEVEL);
 logger.debug(`Setting log level to ${env.PH_CONNECT_LOG_LEVEL}.`);
 
-// Router basename from getBasePath() or default
-const PH_CONNECT_ROUTER_BASENAME =
-  getBasePath() || env.PH_CONNECT_ROUTER_BASENAME;
+// Router basename
+const PH_CONNECT_BASE_PATH =
+  env.PH_CONNECT_BASE_PATH || import.meta.env.BASE_URL;
 
 // Analytics database name with custom logic
 const PH_CONNECT_ANALYTICS_DATABASE_NAME =
   env.PH_CONNECT_ANALYTICS_DATABASE_NAME ||
-  `${PH_CONNECT_ROUTER_BASENAME.replace(/\//g, "")}:analytics`;
+  `${PH_CONNECT_BASE_PATH.replace(/\//g, "")}:analytics`;
 
 export const connectConfig = {
   appVersion: env.PH_CONNECT_VERSION,
   studioMode: env.PH_CONNECT_STUDIO_MODE,
   warnOutdatedApp: env.PH_CONNECT_WARN_OUTDATED_APP,
   appVersionCheckInterval: env.PH_CONNECT_VERSION_CHECK_INTERVAL,
-  routerBasename: PH_CONNECT_ROUTER_BASENAME,
+  routerBasename: PH_CONNECT_BASE_PATH.endsWith("/")
+    ? PH_CONNECT_BASE_PATH
+    : PH_CONNECT_BASE_PATH + "/",
   externalPackagesEnabled: !env.PH_CONNECT_EXTERNAL_PACKAGES_DISABLED,
   analytics: {
     databaseName: PH_CONNECT_ANALYTICS_DATABASE_NAME,

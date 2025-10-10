@@ -11,6 +11,7 @@ interface DataIntegrationsColumnProps {
   onAddProcessor?: () => void;
   onAddCodegenProcessor?: () => void;
   onOpenDocument?: (node: FileNode) => void;
+  onDelete?: (node: FileNode) => void;
 }
 
 export const DataIntegrationsColumn: React.FC<DataIntegrationsColumnProps> = ({
@@ -21,6 +22,7 @@ export const DataIntegrationsColumn: React.FC<DataIntegrationsColumnProps> = ({
   onAddProcessor,
   onAddCodegenProcessor,
   onOpenDocument,
+  onDelete,
 }) => {
   return (
     <div>
@@ -40,6 +42,7 @@ export const DataIntegrationsColumn: React.FC<DataIntegrationsColumnProps> = ({
             documentType="powerhouse/subgraph"
             onAddNewSpec={onAddSubgraph}
             onClickItem={onOpenDocument}
+            onDelete={onDelete}
           />
         </ModuleAccordion>
         <ModuleAccordion
@@ -54,6 +57,7 @@ export const DataIntegrationsColumn: React.FC<DataIntegrationsColumnProps> = ({
             documentType="powerhouse/processor"
             onAddNewSpec={onAddProcessor}
             onClickItem={onOpenDocument}
+            onDelete={onDelete}
           />
         </ModuleAccordion>
         <ModuleAccordion
@@ -71,6 +75,7 @@ export const DataIntegrationsColumn: React.FC<DataIntegrationsColumnProps> = ({
             documentType="powerhouse/codegen-processor"
             onAddNewSpec={onAddCodegenProcessor}
             onClickItem={onOpenDocument}
+            onDelete={onDelete}
           />
         </ModuleAccordion>
       </div>

@@ -4,6 +4,7 @@ import {
   AnalyticsProvider,
   setSelectedNode,
   showCreateDocumentModal,
+  showDeleteNodeModal,
   useAnalyticsDatabaseName,
   useDocumentModelModules,
   useFileNodes,
@@ -20,9 +21,10 @@ export function BaseEditor({ children }: EditorProps) {
   const documentModels = useDocumentModelModules();
   const fileNodes = useFileNodes() ?? [];
 
-  const packageDocumentId = fileNodes.find(
+  const packageNode = fileNodes.find(
     (node) => node.documentType === "powerhouse/package",
-  )?.id;
+  );
+  const packageDocumentId = packageNode?.id;
 
   const docModelsNodes = fileNodes.filter(
     (node) => node.documentType === "powerhouse/document-model",
@@ -59,6 +61,16 @@ export function BaseEditor({ children }: EditorProps) {
     );
   }, [driveId]);
 
+  const onDeleteDocument = useCallback((node: FileNode) => {
+    showDeleteNodeModal(node.id);
+  }, []);
+
+  const onOpenPackageDocument = useCallback(() => {
+    if (packageNode) {
+      setSelectedNode(packageNode);
+    }
+  }, [packageNode]);
+
   const showDocumentEditor = !!children;
 
   return showDocumentEditor ? (
@@ -83,7 +95,9 @@ export function BaseEditor({ children }: EditorProps) {
         onAddCodegenProcessor={() => console.log("add codegen processor")}
         packageDocumentId={packageDocumentId}
         onAddPackageDocument={onCreatePackageFile}
+        onOpenPackageDocument={onOpenPackageDocument}
         onOpenDocument={(node) => setSelectedNode(node)}
+        onDelete={onDeleteDocument}
       />
     </div>
   );

@@ -20,7 +20,9 @@ interface DriveExplorerProps {
   onAddCodegenProcessor?: () => void;
   packageDocumentId?: string;
   onAddPackageDocument?: () => void;
+  onOpenPackageDocument?: () => void;
   onOpenDocument?: (node: FileNode) => void;
+  onDelete?: (node: FileNode) => void;
 }
 
 export const DriveExplorer: React.FC<DriveExplorerProps> = ({
@@ -39,7 +41,9 @@ export const DriveExplorer: React.FC<DriveExplorerProps> = ({
   onAddCodegenProcessor,
   packageDocumentId,
   onAddPackageDocument,
+  onOpenPackageDocument,
   onOpenDocument,
+  onDelete,
 }) => {
   return (
     <div className="min-h-screen bg-white">
@@ -50,6 +54,7 @@ export const DriveExplorer: React.FC<DriveExplorerProps> = ({
           className="mb-6"
           packageDocumentId={packageDocumentId}
           onAddPackageDocument={onAddPackageDocument}
+          onOpenPackageDocument={onOpenPackageDocument}
         />
         <ModuleSpecificationsSection
           documentModels={documentModels}
@@ -65,6 +70,7 @@ export const DriveExplorer: React.FC<DriveExplorerProps> = ({
           onAddProcessor={onAddProcessor}
           onAddCodegenProcessor={onAddCodegenProcessor}
           onOpenDocument={onOpenDocument}
+          onDelete={onDelete}
         />
       </div>
     </div>

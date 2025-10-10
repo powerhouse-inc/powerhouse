@@ -7,12 +7,14 @@ interface DocumentModelsColumnProps {
   documentModels: FileNode[];
   onAddDocumentModel?: () => void;
   onOpenDocument?: (node: FileNode) => void;
+  onDelete?: (node: FileNode) => void;
 }
 
 export const DocumentModelsColumn: React.FC<DocumentModelsColumnProps> = ({
   documentModels,
   onAddDocumentModel,
   onOpenDocument,
+  onDelete,
 }) => {
   return (
     <div>
@@ -35,6 +37,7 @@ export const DocumentModelsColumn: React.FC<DocumentModelsColumnProps> = ({
             documentType="powerhouse/document-model"
             onAddNewSpec={onAddDocumentModel}
             onClickItem={onOpenDocument}
+            onDelete={onDelete}
           />
         </ModuleAccordion>
       </div>

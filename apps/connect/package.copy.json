@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/connect",
   "productName": "Powerhouse-Connect",
-  "version": "4.1.0-dev.64",
+  "version": "4.1.0-dev.66",
   "description": "Powerhouse Connect",
   "main": "./dist/index.html",
   "type": "module",
@@ -21,6 +21,7 @@
   ],
   "exports": {
     ".": {
+      "source": "./src/index.ts",
       "import": "./lib/src/index.js",
       "types": "./lib/src/index.d.ts"
     },
@@ -29,6 +30,7 @@
       "types": "./lib/src/main.d.ts"
     },
     "./config": {
+      "source": "./src/connect.config.ts",
       "import": "./lib/src/connect.config.js",
       "types": "./lib/src/connect.config.d.ts"
     },

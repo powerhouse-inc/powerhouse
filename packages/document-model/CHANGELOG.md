@@ -1,3 +1,21 @@
+## 4.1.0-dev.67 (2025-10-10)
+
+### 🚀 Features
+
+- **vetra:** add open button to Package Information section ([#1930](https://github.com/powerhouse-inc/powerhouse/pull/1930))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.66 (2025-10-09)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.65 (2025-10-09)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.64 (2025-10-09)
 
 This was a version bump only for document-model to align it with other projects, there were no code changes.

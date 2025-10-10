@@ -1,4 +1,33 @@
-import type { VetraPackage } from "@powerhousedao/reactor-browser";
+import type {
+  AppConfigUpdatedEvent,
+  ConnectCryptoUpdatedEvent,
+  DidUpdatedEvent,
+  DocumentsUpdatedEvent,
+  DrivesUpdatedEvent,
+  LoginStatusUpdatedEvent,
+  ModalUpdatedEvent,
+  ProcessorManagerUpdatedEvent,
+  ReactorUpdatedEvent,
+  RenownUpdatedEvent,
+  SelectedDriveIdUpdatedEvent,
+  SelectedNodeIdUpdatedEvent,
+  SetAppConfigEvent,
+  SetConnectCryptoEvent,
+  SetDidEvent,
+  SetDocumentsEvent,
+  SetDrivesEvent,
+  SetLoginStatusEvent,
+  SetModalEvent,
+  SetProcessorManagerEvent,
+  SetReactorEvent,
+  SetRenownEvent,
+  SetSelectedDriveIdEvent,
+  SetSelectedNodeIdEvent,
+  SetUserEvent,
+  SetVetraPackagesEvent,
+  UserUpdatedEvent,
+  VetraPackagesUpdatedEvent,
+} from "@powerhousedao/reactor-browser";
 import type { DID, IConnectCrypto, IRenown, User } from "@renown/sdk";
 
 import type {
@@ -62,6 +91,51 @@ export type LoginStatus =
 
 declare global {
   interface Window {
-    ph?: PHGlobal;
+    loading?: boolean | undefined;
+    reactor?: IDocumentDriveServer | undefined;
+    connectCrypto?: IConnectCrypto | undefined;
+    did?: DID | undefined;
+    renown?: IRenown | undefined;
+    user?: User | undefined;
+    loginStatus?: LoginStatus | undefined;
+    vetraPackages?: VetraPackage[] | undefined;
+    phProcessorManager?: ProcessorManager | undefined;
+    phDrives?: DocumentDriveDocument[] | undefined;
+    phDocuments?: PHDocument[] | undefined;
+    phSelectedDriveId?: string | undefined;
+    phSelectedNodeId?: string | undefined;
+    phAppConfig?: AppConfig | undefined;
+    phModal?: PHModal | undefined;
+  }
+
+  interface WindowEventMap {
+    "ph:setReactor": SetReactorEvent;
+    "ph:reactorUpdated": ReactorUpdatedEvent;
+    "ph:setConnectCrypto": SetConnectCryptoEvent;
+    "ph:connectCryptoUpdated": ConnectCryptoUpdatedEvent;
+    "ph:setDid": SetDidEvent;
+    "ph:didUpdated": DidUpdatedEvent;
+    "ph:setRenown": SetRenownEvent;
+    "ph:renownUpdated": RenownUpdatedEvent;
+    "ph:setLoginStatus": SetLoginStatusEvent;
+    "ph:loginStatusUpdated": LoginStatusUpdatedEvent;
+    "ph:setUser": SetUserEvent;
+    "ph:userUpdated": UserUpdatedEvent;
+    "ph:setProcessorManager": SetProcessorManagerEvent;
+    "ph:processorManagerUpdated": ProcessorManagerUpdatedEvent;
+    "ph:setDrives": SetDrivesEvent;
+    "ph:drivesUpdated": DrivesUpdatedEvent;
+    "ph:setDocuments": SetDocumentsEvent;
+    "ph:documentsUpdated": DocumentsUpdatedEvent;
+    "ph:setVetraPackages": SetVetraPackagesEvent;
+    "ph:vetraPackagesUpdated": VetraPackagesUpdatedEvent;
+    "ph:setSelectedDriveId": SetSelectedDriveIdEvent;
+    "ph:selectedDriveIdUpdated": SelectedDriveIdUpdatedEvent;
+    "ph:setSelectedNodeId": SetSelectedNodeIdEvent;
+    "ph:selectedNodeIdUpdated": SelectedNodeIdUpdatedEvent;
+    "ph:setAppConfig": SetAppConfigEvent;
+    "ph:appConfigUpdated": AppConfigUpdatedEvent;
+    "ph:setModal": SetModalEvent;
+    "ph:modalUpdated": ModalUpdatedEvent;
   }
 }
