@@ -4,7 +4,7 @@ import {
   loadCommonPackage,
   loadExternalPackages,
 } from "@powerhousedao/connect";
-import { connectConfig } from "@powerhousedao/connect/config";
+import { connectConfig, env } from "@powerhousedao/connect/config";
 import {
   addPHEventHandlers,
   extractDriveSlugFromPath,
@@ -16,20 +16,19 @@ import {
   initReactor,
   login,
   refreshReactorData,
-  setAllowList,
-  setAnalyticsDatabaseName,
-  setBasePath,
   setConnectCrypto,
+  setDefaultPHGlobalConfig,
   setDid,
   setDocuments,
   setDrives,
-  setIsSearchBarEnabled,
   setProcessorManager,
   setReactor,
   setRenown,
   setSelectedDrive,
   setSelectedNode,
   setVetraPackages,
+  type FullPHGlobalConfig,
+  type PHGlobalConfig,
 } from "@powerhousedao/reactor-browser";
 import { initRenown } from "@renown/sdk";
 import type {
@@ -115,17 +114,14 @@ export async function createReactor() {
 
   window.ph.loading = true;
 
+  const phGlobalConfigFromEnv = getPHGlobalConfigFromEnv();
+  setDefaultPHGlobalConfig(phGlobalConfigFromEnv);
+
   // add window event handlers for updates
   addPHEventHandlers();
 
-  setBasePath(connectConfig.routerBasename);
-
   // initialize feature flags
   await initFeatureFlags();
-
-  // initialize app config
-  const { analyticsDatabaseName, allowList, isSearchBarEnabled } =
-    getAppConfig();
 
   // initialize connect crypto
   const connectCrypto = await initConnectCrypto();
@@ -134,10 +130,10 @@ export async function createReactor() {
   const did = await connectCrypto.did();
 
   // initialize renown
-  const renown = initRenown(did, connectConfig.routerBasename);
+  const renown = initRenown(did, phGlobalConfigFromEnv.routerBasename);
 
   // initialize storage
-  const storage = createBrowserStorage(connectConfig.routerBasename);
+  const storage = createBrowserStorage(phGlobalConfigFromEnv.routerBasename!);
 
   // store storage for admin access
   setReactorStorage(storage);
@@ -199,9 +195,6 @@ export async function createReactor() {
   setConnectCrypto(connectCrypto);
   setDid(did);
   setRenown(renown);
-  setAnalyticsDatabaseName(analyticsDatabaseName);
-  setAllowList(allowList);
-  setIsSearchBarEnabled(isSearchBarEnabled);
   setProcessorManager(processorManager);
   setDrives(drives);
   setDocuments(documents);
@@ -256,14 +249,68 @@ export async function createReactor() {
   window.ph.loading = false;
 }
 
-function getAppConfig() {
-  const analyticsDatabaseName = connectConfig.analytics.databaseName;
-  const isSearchBarEnabled = connectConfig.content.showSearchBar;
-  return {
+function getRouterBasenameFromBasePath(basePath: string) {
+  return basePath.endsWith("/") ? basePath : basePath + "/";
+}
+
+function getPHGlobalConfigFromEnv(): PHGlobalConfig {
+  const basePath = env.PH_CONNECT_BASE_PATH || import.meta.env.BASE_URL;
+  const routerBasename = getRouterBasenameFromBasePath(basePath);
+  const config = {
+    basePath,
+    routerBasename,
     allowList: undefined,
-    analyticsDatabaseName,
-    isSearchBarEnabled,
-  };
+    isDragAndDropEnabled: true,
+    isDocumentToolbarEnabled: true,
+    isSwitchboardLinkEnabled: true,
+    isTimelineEnabled: false,
+    isEditorDebugModeEnabled: false,
+    isEditorReadModeEnabled: false,
+    version: env.PH_CONNECT_VERSION,
+    logLevel: env.PH_CONNECT_LOG_LEVEL,
+    requiresHardRefresh: env.PH_CONNECT_REQUIRES_HARD_REFRESH,
+    warnOutdatedApp: env.PH_CONNECT_WARN_OUTDATED_APP,
+    studioMode: env.PH_CONNECT_STUDIO_MODE,
+    versionCheckInterval: env.PH_CONNECT_VERSION_CHECK_INTERVAL,
+    cliVersion: env.PH_CONNECT_CLI_VERSION,
+    fileUploadOperationsChunkSize:
+      env.PH_CONNECT_FILE_UPLOAD_OPERATIONS_CHUNK_SIZE,
+    gaTrackingId: env.PH_CONNECT_GA_TRACKING_ID,
+    defaultDrivesUrl: env.PH_CONNECT_DEFAULT_DRIVES_URL,
+    drivesPreserveStrategy: env.PH_CONNECT_DRIVES_PRESERVE_STRATEGY,
+    enabledEditors: env.PH_CONNECT_ENABLED_EDITORS?.split(","),
+    disabledEditors: env.PH_CONNECT_DISABLED_EDITORS.split(","),
+    analyticsDatabaseName: env.PH_CONNECT_ANALYTICS_DATABASE_NAME,
+    renownUrl: env.PH_CONNECT_RENOWN_URL,
+    renownNetworkId: env.PH_CONNECT_RENOWN_NETWORK_ID,
+    renownChainId: env.PH_CONNECT_RENOWN_CHAIN_ID,
+    sentryRelease: env.PH_CONNECT_SENTRY_RELEASE,
+    sentryDsn: env.PH_CONNECT_SENTRY_DSN,
+    sentryEnv: env.PH_CONNECT_SENTRY_ENV,
+    isDiffAnalyticsEnabled: env.PH_CONNECT_DIFF_ANALYTICS_ENABLED,
+    isDriveAnalyticsEnabled: env.PH_CONNECT_DRIVE_ANALYTICS_ENABLED,
+    isPublicDrivesEnabled: env.PH_CONNECT_PUBLIC_DRIVES_ENABLED,
+    isCloudDrivesEnabled: env.PH_CONNECT_CLOUD_DRIVES_ENABLED,
+    localDrivesEnabled: env.PH_CONNECT_LOCAL_DRIVES_ENABLED,
+    isSearchBarEnabled: env.PH_CONNECT_SEARCH_BAR_ENABLED,
+    isSentryTracingEnabled: env.PH_CONNECT_SENTRY_TRACING_ENABLED,
+    isExternalProcessorsEnabled: env.PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED,
+    isDocumentModelSelectionSettingsEnabled:
+      !env.PH_CONNECT_HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS,
+    isAddDriveEnabled: !env.PH_CONNECT_DISABLE_ADD_DRIVE,
+    isAddPublicDrivesEnabled: !env.PH_CONNECT_DISABLE_ADD_PUBLIC_DRIVES,
+    isDeletePublicDrivesEnabled: !env.PH_CONNECT_DISABLE_DELETE_PUBLIC_DRIVES,
+    isAddCloudDrivesEnabled: !env.PH_CONNECT_DISABLE_ADD_CLOUD_DRIVES,
+    isDeleteCloudDrivesEnabled: !env.PH_CONNECT_DISABLE_DELETE_CLOUD_DRIVES,
+    isAddLocalDrivesEnabled: !env.PH_CONNECT_DISABLE_ADD_LOCAL_DRIVES,
+    isDeleteLocalDrivesEnabled: !env.PH_CONNECT_DISABLE_DELETE_LOCAL_DRIVES,
+    isExternalControlsEnabled: !env.PH_CONNECT_EXTERNAL_PACKAGES_DISABLED,
+    isAnalyticsDatabaseWorkerEnabled:
+      !env.PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED,
+    isExternalPackagesEnabled: !env.PH_CONNECT_EXTERNAL_PACKAGES_DISABLED,
+  } satisfies FullPHGlobalConfig;
+
+  return config;
 }
 
 function getDidFromUrl() {

@@ -6,11 +6,11 @@ import type {
   ProcessorManager,
 } from "document-drive";
 import type { PHDocument } from "document-model";
+import type { PHGlobalConfig } from "./config.js";
 import type { PHModal } from "./modals.js";
 import type { VetraPackage } from "./vetra.js";
 
-export type PHGlobal = {
-  basePath?: string;
+export type PHGlobal = PHGlobalConfig & {
   loading?: boolean;
   reactor?: IDocumentDriveServer;
   connectCrypto?: IConnectCrypto;
@@ -25,16 +25,6 @@ export type PHGlobal = {
   selectedDriveId?: string;
   selectedNodeId?: string;
   modal?: PHModal;
-  analyticsDatabaseName?: string;
-  allowList?: string[];
-  isSearchBarEnabled?: boolean;
-  isExternalControlsEnabled?: boolean;
-  isDocumentToolbarEnabled?: boolean;
-  isSwitchboardLinkEnabled?: boolean;
-  isDragAndDropEnabled?: boolean;
-  isTimelineEnabled?: boolean;
-  isEditorDebugModeEnabled?: boolean;
-  isEditorReadModeEnabled?: boolean;
   selectedTimelineRevision?: string | number | null;
 };
 

@@ -1,16 +1,4 @@
-import {
-  addAllowListEventHandler,
-  addAnalyticsDatabaseNameEventHandler,
-  addBasePathEventHandler,
-  addIsDocumentToolbarEnabledEventHandler,
-  addIsDragAndDropEnabledEventHandler,
-  addIsEditorDebugModeEnabledEventHandler,
-  addIsEditorReadModeEnabledEventHandler,
-  addIsExternalControlsEnabledEventHandler,
-  addIsSearchBarEnabledEventHandler,
-  addIsSwitchboardLinkEnabledEventHandler,
-  addIsTimelineEnabledEventHandler,
-} from "./config.js";
+import { phGlobalConfigEventHandlerRegisterFunctions } from "./config.js";
 import { addConnectCryptoEventHandler, addDidEventHandler } from "./crypto.js";
 import {
   addDocumentsEventHandler,
@@ -28,7 +16,10 @@ import { addRenownEventHandler } from "./renown.js";
 import { addLoginStatusEventHandler, addUserEventHandler } from "./user.js";
 import { addVetraPackagesEventHandler } from "./vetra-packages.js";
 export function addPHEventHandlers() {
-  addBasePathEventHandler();
+  for (const fn of Object.values(phGlobalConfigEventHandlerRegisterFunctions)) {
+    fn();
+  }
+
   addReactorEventHandler();
   addModalEventHandler();
   addConnectCryptoEventHandler();
@@ -42,15 +33,5 @@ export function addPHEventHandlers() {
   addSelectedDriveIdEventHandler();
   addSelectedNodeIdEventHandler();
   addVetraPackagesEventHandler();
-  addAnalyticsDatabaseNameEventHandler();
-  addAllowListEventHandler();
-  addIsSearchBarEnabledEventHandler();
-  addIsDragAndDropEnabledEventHandler();
-  addIsExternalControlsEnabledEventHandler();
-  addIsDocumentToolbarEnabledEventHandler();
-  addIsSwitchboardLinkEnabledEventHandler();
-  addIsTimelineEnabledEventHandler();
-  addIsEditorDebugModeEnabledEventHandler();
-  addIsEditorReadModeEnabledEventHandler();
   addSelectedTimelineRevisionEventHandler();
 }
