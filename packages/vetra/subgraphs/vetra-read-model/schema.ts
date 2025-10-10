@@ -8,12 +8,12 @@ export const schema: DocumentNode = gql`
   type VetraPackageItem {
     documentId: String!
     name: String!
-    description: String!
-    category: String!
-    authorName: String!
-    authorWebsite: String!
-    githubUrl: String!
-    npmUrl: String!
+    description: String
+    category: String
+    authorName: String
+    authorWebsite: String
+    githubUrl: String
+    npmUrl: String
   }
 
   type Query {
