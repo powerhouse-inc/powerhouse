@@ -1,3 +1,13 @@
+## 5.0.0-staging.23 (2025-10-10)
+
+### 🩹 Fixes
+
+- **vetra:** package query ([1f8d14d85](https://github.com/powerhouse-inc/powerhouse/commit/1f8d14d85))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.0.0-staging.22 (2025-10-08)
 
 ### 🚀 Features
