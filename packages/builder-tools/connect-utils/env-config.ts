@@ -536,7 +536,6 @@ export function setConnectEnv(values: Partial<ConnectEnv>): void {
       fieldSchema.parse(value);
 
       // Set the value (convert to string for process.env compatibility)
-
       process.env[key] = String(value);
     } catch (error) {
       console.warn(
