@@ -1,3 +1,7 @@
+## 4.1.0-dev.69 (2025-10-11)
+
+This was a version bump only for @powerhousedao/switchboard-gui to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.68 (2025-10-11)
 
 ### 🚀 Features

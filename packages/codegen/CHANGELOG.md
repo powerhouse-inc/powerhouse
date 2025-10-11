@@ -1,3 +1,13 @@
+## 4.1.0-dev.69 (2025-10-11)
+
+### 🩹 Fixes
+
+- **codegen:** add /index.js to import path on templates ([37bc2e9ef](https://github.com/powerhouse-inc/powerhouse/commit/37bc2e9ef))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.68 (2025-10-11)
 
 ### 🚀 Features

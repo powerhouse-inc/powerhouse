@@ -1,3 +1,13 @@
+## 4.1.0-dev.69 (2025-10-11)
+
+### 🩹 Fixes
+
+- **ph-cmd:** fixed detection of help command ([157249468](https://github.com/powerhouse-inc/powerhouse/commit/157249468))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.68 (2025-10-11)
 
 ### 🚀 Features

@@ -1,3 +1,13 @@
+## 4.1.0-dev.69 (2025-10-11)
+
+### 🩹 Fixes
+
+- **vetra:** added drive id to read model ([cfe16037e](https://github.com/powerhouse-inc/powerhouse/commit/cfe16037e))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.68 (2025-10-11)
 
 ### 🚀 Features

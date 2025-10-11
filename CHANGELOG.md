@@ -1,3 +1,21 @@
+## 4.1.0-dev.69 (2025-10-11)
+
+### 🚀 Features
+
+- **builder-tools, ph-cli, connect:** reimplemented ph connect build and preview ([4f568517b](https://github.com/powerhouse-inc/powerhouse/commit/4f568517b))
+
+### 🩹 Fixes
+
+- **builder-tools:** do not watch if local package is disabled ([335f41a0c](https://github.com/powerhouse-inc/powerhouse/commit/335f41a0c))
+- **codegen:** add /index.js to import path on templates ([37bc2e9ef](https://github.com/powerhouse-inc/powerhouse/commit/37bc2e9ef))
+- **ph-cmd:** fixed detection of help command ([157249468](https://github.com/powerhouse-inc/powerhouse/commit/157249468))
+- **vetra:** added drive id to read model ([cfe16037e](https://github.com/powerhouse-inc/powerhouse/commit/cfe16037e))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
 ## 4.1.0-dev.68 (2025-10-11)
 
 ### 🚀 Features
