@@ -13,6 +13,7 @@ export async function up(db: IRelationalDb<any>): Promise<void> {
     .addColumn("keywords", "text") // JSON array of {id, label}
     .addColumn("github_url", "varchar(512)")
     .addColumn("npm_url", "varchar(512)")
+    .addColumn("drive_id", "varchar(255)")
     // Document metadata
     .addColumn("last_operation_index", "integer", (col) => col.notNull())
     .addColumn("last_operation_hash", "varchar(255)", (col) => col.notNull())
