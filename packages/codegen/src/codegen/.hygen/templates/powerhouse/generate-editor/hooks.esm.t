@@ -4,7 +4,7 @@ unless_exists: true
 ---
 <% if (documentType) { %>
 import { useDocumentOfType, useSelectedDocumentOfType } from "@powerhousedao/reactor-browser";
-import type { <%= documentType.name %>Action, <%= documentType.name %>Document } from "<%= documentType.importPath %>/index.js";
+import type { <%= documentType.name %>Action, <%= documentType.name %>Document } from "<%= documentType.importPath %>";
 
 export function use<%= documentType.name %>Document(documentId: string | null | undefined) {
   return useDocumentOfType<<%= documentType.name %>Document, <%= documentType.name %>Action>(documentId, "<%= documentType.type %>");

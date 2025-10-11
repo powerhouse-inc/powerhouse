@@ -78,7 +78,7 @@ export function getDocumentTypesMap(
           if (spec.id) {
             documentTypesMap[spec.id] = {
               name: pascalCase(name),
-              importPath: join(pathOrigin, dir, name),
+              importPath: join(pathOrigin, dir, name, "index.js"),
             };
           }
         } catch {

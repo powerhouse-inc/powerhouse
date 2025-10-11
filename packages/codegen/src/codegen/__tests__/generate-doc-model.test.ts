@@ -4,14 +4,13 @@ import {
   hygenGenerateProcessor,
   loadDocumentModel,
 } from "@powerhousedao/codegen";
-import { exec } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import path from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
+import { compile } from "./fixtures/typecheck.js";
 
 const testDir = import.meta.dirname;
-import { compile } from "./fixtures/typecheck.js";
 
 describe("document model", () => {
   const srcPath = path.join(testDir, "data", "document-models");
@@ -75,7 +74,7 @@ describe("document model", () => {
         {
           "billing-statement": {
             name: "BillingStatement",
-            importPath: "../../document-model/billing-statement",
+            importPath: "../../document-model/billing-statement/index.js",
           },
         },
         path.join(outPath, "processors"),
@@ -104,7 +103,7 @@ describe("document model", () => {
         {
           "billing-statement": {
             name: "BillingStatement",
-            importPath: "../../document-model/billing-statement",
+            importPath: "../../document-model/billing-statement/index.js",
           },
         },
         path.join(outPath, "processors"),
@@ -121,7 +120,7 @@ describe("document model", () => {
         {
           "billing-statement": {
             name: "BillingStatement",
-            importPath: "../../document-model/billing-statement",
+            importPath: "../../document-model/billing-statement/index.js",
           },
         },
         path.join(outPath, "processors"),
@@ -138,7 +137,7 @@ describe("document model", () => {
         {
           "billing-statement": {
             name: "BillingStatement",
-            importPath: "../../document-model/billing-statement",
+            importPath: "../../document-model/billing-statement/index.js",
           },
         },
         path.join(outPath, "processors"),

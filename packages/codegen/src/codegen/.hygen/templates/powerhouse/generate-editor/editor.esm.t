@@ -10,7 +10,7 @@ import {
 } from "@powerhousedao/document-engineering";
 <% if(!documentType){ %>import { useSelectedDocument } from "@powerhousedao/reactor-browser";<% } else { %>import { useSelected<%= documentType.name %>Document %>} from "../hooks/use<%= documentType.name %>Document%>.js";<% } %>
 import { setName } from "document-model";<% if(documentType) { %>
-import { actions } from "<%= documentType.importPath %>/index.js";<% } %>
+import { actions } from "<%= documentType.importPath %>";<% } %>
 
 export function Editor() {
   const [document, dispatch] = <% if(documentType) { %>useSelected<%= documentType.name %>Document()<% } else { %>useSelectedDocument()<% } %>;
