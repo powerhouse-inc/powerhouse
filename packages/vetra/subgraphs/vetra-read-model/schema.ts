@@ -14,6 +14,7 @@ export const schema: DocumentNode = gql`
     authorWebsite: String
     githubUrl: String
     npmUrl: String
+    driveId: String
   }
 
   type Query {

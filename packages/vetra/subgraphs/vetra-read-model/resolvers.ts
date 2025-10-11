@@ -44,6 +44,7 @@ export const getResolvers = (subgraph: ISubgraph): Record<string, unknown> => {
           githubUrl: pkg.github_url,
           npmUrl: pkg.npm_url,
           keywords: pkg.keywords,
+          driveId: pkg.drive_id,
         }));
       },
     },
