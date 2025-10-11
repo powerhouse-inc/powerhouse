@@ -1,3 +1,13 @@
+## 4.1.0-dev.68 (2025-10-11)
+
+### 🚀 Features
+
+- **vetra:** added read model to fetch vetra packages ([abb6d3742](https://github.com/powerhouse-inc/powerhouse/commit/abb6d3742))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.67 (2025-10-10)
 
 ### 🚀 Features
