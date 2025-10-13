@@ -9,6 +9,7 @@ import type {
 } from "document-model";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
+import type { IOperationStore } from "../storage/interfaces.js";
 import type { IJobExecutor } from "./interfaces.js";
 import type { JobResult } from "./types.js";
 
@@ -28,6 +29,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     private registry: IDocumentModelRegistry,
     private documentStorage: IDocumentStorage,
     private operationStorage: IDocumentOperationStorage,
+    private operationStore: IOperationStore,
   ) {}
 
   /**
@@ -98,6 +100,29 @@ export class SimpleJobExecutor implements IJobExecutor {
       };
     }
 
+    // Write the operation to new IOperationStore (dual-writing)
+    try {
+      await this.operationStore.apply(
+        job.documentId,
+        document.header.documentType,
+        scope,
+        job.branch,
+        newOperation.index,
+        (txn) => {
+          txn.addOperations(newOperation);
+        },
+      );
+    } catch (error) {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          `Failed to write operation to IOperationStore: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
     return {
       job,
       success: true,
@@ -135,7 +160,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     // Create the operation from the job
     const operation = job.operation;
 
-    // Write the CREATE_DOCUMENT operation to storage
+    // Write the CREATE_DOCUMENT operation to legacy storage
     try {
       await this.operationStorage.addDocumentOperations(
         document.header.id,
@@ -147,7 +172,30 @@ export class SimpleJobExecutor implements IJobExecutor {
         job,
         success: false,
         error: new Error(
-          `Failed to write CREATE_DOCUMENT operation to storage: ${error instanceof Error ? error.message : String(error)}`,
+          `Failed to write CREATE_DOCUMENT operation to legacy storage: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    // Write the operation to new IOperationStore (dual-writing)
+    try {
+      await this.operationStore.apply(
+        document.header.id,
+        document.header.documentType,
+        job.scope || "global",
+        job.branch,
+        operation.index,
+        (txn) => {
+          txn.addOperations(operation);
+        },
+      );
+    } catch (error) {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          `Failed to write CREATE_DOCUMENT operation to IOperationStore: ${error instanceof Error ? error.message : String(error)}`,
         ),
         duration: Date.now() - startTime,
       };
@@ -163,7 +211,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
   /**
    * Execute a DELETE_DOCUMENT system action.
-   * This deletes a document from storage.
+   * This deletes a document from legacy storage and writes the operation to IOperationStore.
    */
   private async executeDeleteDocument(
     job: Job,
@@ -185,6 +233,20 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     const documentId = input.documentId;
 
+    let document: PHDocument;
+    try {
+      document = await this.documentStorage.get(documentId);
+    } catch (error) {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          `Failed to fetch document before deletion: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
     try {
       await this.documentStorage.delete(documentId);
     } catch (error) {
@@ -192,7 +254,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         job,
         success: false,
         error: new Error(
-          `Failed to delete document from storage: ${error instanceof Error ? error.message : String(error)}`,
+          `Failed to delete document from legacy storage: ${error instanceof Error ? error.message : String(error)}`,
         ),
         duration: Date.now() - startTime,
       };
@@ -200,8 +262,28 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     const operation = job.operation;
 
-    // NOTE: Legacy storage does not support adding operations for deleted documents.
-    // DELETE_DOCUMENT operations will be written to storage once IOperationStore is used.
+    // Write the DELETE_DOCUMENT operation to IOperationStore
+    try {
+      await this.operationStore.apply(
+        documentId,
+        document.header.documentType,
+        job.scope || "document",
+        job.branch,
+        operation.index,
+        (txn) => {
+          txn.addOperations(operation);
+        },
+      );
+    } catch (error) {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          `Failed to write DELETE_DOCUMENT operation to IOperationStore: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
 
     return {
       job,

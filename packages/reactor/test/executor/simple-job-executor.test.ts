@@ -7,9 +7,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
 import type { Job } from "../../src/queue/types.js";
 import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
+import type { IOperationStore } from "../../src/storage/interfaces.js";
 import {
   createMockDocumentStorage,
   createMockOperationStorage,
+  createMockOperationStore,
   createTestRegistry,
 } from "../factories.js";
 
@@ -18,6 +20,7 @@ describe("SimpleJobExecutor", () => {
   let registry: IDocumentModelRegistry;
   let mockDocStorage: IDocumentStorage;
   let mockOperationStorage: IDocumentOperationStorage;
+  let mockOperationStore: IOperationStore;
 
   beforeEach(() => {
     // Setup registry with real document model
@@ -46,10 +49,14 @@ describe("SimpleJobExecutor", () => {
     // Setup mock operation storage
     mockOperationStorage = createMockOperationStorage();
 
+    // Setup mock operation store
+    mockOperationStore = createMockOperationStore();
+
     executor = new SimpleJobExecutor(
       registry,
       mockDocStorage,
       mockOperationStorage,
+      mockOperationStore,
     );
   });
 

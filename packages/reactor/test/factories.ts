@@ -28,6 +28,74 @@ import { InMemoryQueue } from "../src/queue/queue.js";
 import type { Job } from "../src/queue/types.js";
 import { DocumentModelRegistry } from "../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../src/registry/interfaces.js";
+import type { IOperationStore } from "../src/storage/interfaces.js";
+import { Kysely } from "kysely";
+import { KyselyPGlite } from "kysely-pglite";
+import { KyselyOperationStore } from "../src/storage/kysely/store.js";
+import type { Database as DatabaseSchema } from "../src/storage/kysely/types.js";
+
+/**
+ * Creates a real PGLite-backed KyselyOperationStore for testing.
+ * Returns both the database instance and the operation store.
+ *
+ * @returns Object containing db and store instances
+ */
+export async function createTestOperationStore(): Promise<{
+  db: Kysely<DatabaseSchema>;
+  store: KyselyOperationStore;
+}> {
+  // Create in-memory PGLite database
+  const kyselyPGlite = await KyselyPGlite.create();
+  const db = new Kysely<DatabaseSchema>({
+    dialect: kyselyPGlite.dialect,
+  });
+
+  // Create the Operation table
+  await db.schema
+    .createTable("Operation")
+    .addColumn("id", "serial", (col) => col.primaryKey())
+    .addColumn("jobId", "text", (col) => col.notNull())
+    .addColumn("opId", "text", (col) => col.notNull().unique())
+    .addColumn("prevOpId", "text", (col) => col.notNull())
+    .addColumn("writeTimestampUtcMs", "timestamptz", (col) =>
+      col.notNull().defaultTo(new Date()),
+    )
+    .addColumn("documentId", "text", (col) => col.notNull())
+    .addColumn("documentType", "text", (col) => col.notNull())
+    .addColumn("scope", "text", (col) => col.notNull())
+    .addColumn("branch", "text", (col) => col.notNull())
+    .addColumn("timestampUtcMs", "timestamptz", (col) => col.notNull())
+    .addColumn("index", "integer", (col) => col.notNull())
+    .addColumn("action", "text", (col) => col.notNull())
+    .addColumn("skip", "integer", (col) => col.notNull())
+    .addColumn("resultingState", "text")
+    .addColumn("error", "text")
+    .addColumn("hash", "text", (col) => col.notNull())
+    .addUniqueConstraint("unique_revision", [
+      "documentId",
+      "scope",
+      "branch",
+      "index",
+    ])
+    .execute();
+
+  // Create indexes
+  await db.schema
+    .createIndex("streamOperations")
+    .on("Operation")
+    .columns(["documentId", "scope", "branch", "id"])
+    .execute();
+
+  await db.schema
+    .createIndex("branchlessStreamOperations")
+    .on("Operation")
+    .columns(["documentId", "scope", "id"])
+    .execute();
+
+  const store = new KyselyOperationStore(db);
+
+  return { db, store };
+}
 
 /**
  * Factory for creating test Job objects
@@ -277,6 +345,40 @@ export function createMockOperationStorage(
 }
 
 /**
+ * Factory for creating mock IOperationStore
+ */
+export function createMockOperationStore(
+  overrides: Partial<IOperationStore> = {},
+): IOperationStore {
+  return {
+    apply: vi.fn().mockResolvedValue(undefined),
+    get: vi.fn().mockResolvedValue({
+      operation: {
+        index: 0,
+        timestampUtcMs: "2023-01-01T00:00:00.000Z",
+        hash: "hash-123",
+        skip: 0,
+        action: { type: "CREATE", input: {}, scope: "global" },
+      },
+      context: {
+        documentId: "doc-1",
+        documentType: "powerhouse/document-model",
+        scope: "global",
+        branch: "main",
+      },
+    }),
+    getSince: vi.fn().mockResolvedValue([]),
+    getSinceTimestamp: vi.fn().mockResolvedValue([]),
+    getSinceId: vi.fn().mockResolvedValue([]),
+    getRevisions: vi.fn().mockResolvedValue({
+      revision: {},
+      latestTimestamp: new Date(0).toISOString(),
+    }),
+    ...overrides,
+  } as unknown as IOperationStore;
+}
+
+/**
  * Factory for creating a complete test reactor setup
  */
 export async function createTestReactorSetup(
@@ -298,8 +400,16 @@ export async function createTestReactorSetup(
   const registry = new DocumentModelRegistry();
   registry.registerModules(documentModelDocumentModelModule);
 
+  // Create mock operation store for testing
+  const operationStore = createMockOperationStore();
+
   // Create job executor
-  const jobExecutor = new SimpleJobExecutor(registry, storage, storage);
+  const jobExecutor = new SimpleJobExecutor(
+    registry,
+    storage,
+    storage,
+    operationStore,
+  );
 
   // Create reactor
   const reactor = new Reactor(driveServer, storage, queue);
@@ -312,6 +422,7 @@ export async function createTestReactorSetup(
     queue,
     jobExecutor,
     registry,
+    operationStore,
   };
 }
 

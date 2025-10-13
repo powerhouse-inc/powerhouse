@@ -5,18 +5,24 @@ import type {
   IDocumentStorage,
 } from "document-drive";
 import { MemoryStorage, driveDocumentModelModule } from "document-drive";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { Kysely } from "kysely";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
 import type { Job } from "../../src/queue/types.js";
 import { DocumentModelRegistry } from "../../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
+import type { KyselyOperationStore } from "../../src/storage/kysely/store.js";
+import type { Database as DatabaseSchema } from "../../src/storage/kysely/types.js";
+import { createTestOperationStore } from "../factories.js";
 
 describe("SimpleJobExecutor Integration", () => {
   let executor: SimpleJobExecutor;
   let registry: IDocumentModelRegistry;
   let storage: MemoryStorage;
+  let db: Kysely<DatabaseSchema>;
+  let operationStore: KyselyOperationStore;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Use real storage that implements both IDocumentStorage and IDocumentOperationStorage
     storage = new MemoryStorage();
 
@@ -24,12 +30,22 @@ describe("SimpleJobExecutor Integration", () => {
     registry = new DocumentModelRegistry();
     registry.registerModules(driveDocumentModelModule);
 
-    // Create executor with real storage
+    // Create in-memory PGLite database for IOperationStore
+    const setup = await createTestOperationStore();
+    db = setup.db;
+    operationStore = setup.store;
+
+    // Create executor with real storage and real operation store
     executor = new SimpleJobExecutor(
       registry,
       storage as IDocumentStorage,
       storage as IDocumentOperationStorage,
+      operationStore,
     );
+  });
+
+  afterEach(async () => {
+    await db.destroy();
   });
 
   describe("Document Drive Operations", () => {
@@ -302,6 +318,7 @@ describe("SimpleJobExecutor Integration", () => {
         registry,
         storage as IDocumentStorage,
         storage as IDocumentOperationStorage,
+        operationStore,
       );
 
       // Create a valid job
