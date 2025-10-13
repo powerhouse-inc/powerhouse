@@ -126,6 +126,18 @@ export type PHDocumentState = {
 
   /** Hash configuration for operation state verification */
   hash: HashConfig;
+
+  /** True if and only if the document has been deleted */
+  isDeleted?: boolean;
+
+  /** The timestamp when the document was deleted, in UTC ISO format */
+  deletedAtUtcIso?: string;
+
+  /** Optional: who deleted the document */
+  deletedBy?: string;
+
+  /** Optional: reason for deletion */
+  deletionReason?: string;
 };
 
 /**

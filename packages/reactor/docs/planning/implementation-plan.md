@@ -127,11 +127,17 @@ In a command-sourcing architecture, deletion is a **state transition**, not phys
 
 ### Implementation Changes
 
-1. **Add Deletion Fields to PHDocumentState** (in document-model package)
-2. **Store DELETE_DOCUMENT Operations** (write to operation store like any other operation)
+1. ✅ **Add Deletion Fields to PHDocumentState** (in document-model package)
+   - Added `isDeleted`, `deletedAtUtcIso`, `deletedBy`, and `deletionReason` fields to `PHDocumentState` type (ph-types.ts:130-140)
+2. ✅ **Handle DELETE_DOCUMENT Operations**
+   - Updated `SimpleJobExecutor.executeDeleteDocument()` to delete documents from storage (simple-job-executor.ts:186-213)
+   - **Note**: DELETE_DOCUMENT operations are NOT written to legacy storage because legacy storage does not support adding operations for deleted documents. Operations will be written once IOperationStore is implemented in Phase 5.
+   - Added comprehensive tests for DELETE_DOCUMENT execution (simple-job-executor.test.ts:173-275)
 3. **Update Job Executor to Check Deletion State** (reject operations on deleted documents)
 4. **Simplify IDocumentView Indexing** (derive deletion status from document state)
-5. **Add DocumentDeletedError** (custom error class with metadata)
+5. ✅ **Add DocumentDeletedError** (custom error class with metadata)
+   - Created `DocumentDeletedError` class with `documentId` and `deletedAtUtcIso` properties (shared/errors.ts)
+   - Added unit tests for error creation and usage (test/shared/errors.test.ts)
 6. **Update Query Methods** (check `isDeleted` flag, throw DocumentDeletedError)
 7. **Add Optional Deleted Document Access** (`includeDeleted?: boolean` in SearchFilter)
 8. **Update Reshuffling Logic** (DELETE_DOCUMENT creates timestamp boundary)

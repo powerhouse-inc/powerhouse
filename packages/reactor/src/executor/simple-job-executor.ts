@@ -172,7 +172,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     const action = job.operation.action;
     const input = action.input as DeleteDocumentActionInput;
 
-    if (!input?.documentId) {
+    if (!input.documentId) {
       return {
         job,
         success: false,
@@ -185,7 +185,6 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     const documentId = input.documentId;
 
-    // Delete the document from storage
     try {
       await this.documentStorage.delete(documentId);
     } catch (error) {
@@ -199,11 +198,10 @@ export class SimpleJobExecutor implements IJobExecutor {
       };
     }
 
-    // Create the operation from the job
     const operation = job.operation;
 
-    // For DELETE_DOCUMENT, we don't write operations to storage since the document is gone
-    // The operation is just returned to indicate successful deletion
+    // NOTE: Legacy storage does not support adding operations for deleted documents.
+    // DELETE_DOCUMENT operations will be written to storage once IOperationStore is used.
 
     return {
       job,
