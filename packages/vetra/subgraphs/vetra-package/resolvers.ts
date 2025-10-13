@@ -1,9 +1,11 @@
 import type { BaseSubgraph } from "@powerhousedao/reactor-api";
-import { addFile } from "document-drive";
-import { generateId } from "document-model/core";
+import { addFile, childLogger } from "document-drive";
+import { createVetraPackageDocument } from "../../document-models/vetra-package/gen/ph-factories.js";
 import { actions } from "../../document-models/vetra-package/index.js";
 
 const DEFAULT_DRIVE_ID = "powerhouse";
+
+const logger = childLogger(["VetraPackageResolvers"]);
 
 export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
   const reactor = subgraph.reactor;
@@ -57,30 +59,42 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
     Mutation: {
       VetraPackage_createDocument: async (_: any, args: any) => {
         const driveId: string = args.driveId || DEFAULT_DRIVE_ID;
-        const docId = generateId();
+        const document = createVetraPackageDocument();
+        const documentId = document.header.id;
 
-        await reactor.addDriveAction(
-          driveId,
-          addFile({
-            id: docId,
-            name: args.name,
-            documentType: "powerhouse/package",
-            synchronizationUnits: [
-              {
-                branch: "main",
-                scope: "global",
-                syncId: generateId(),
-              },
-              {
-                branch: "main",
-                scope: "local",
-                syncId: generateId(),
-              },
-            ],
-          }),
-        );
+        await reactor.addDocument(document);
 
-        return docId;
+        let revert = false;
+        try {
+          await reactor.addDriveAction(
+            driveId,
+            addFile({
+              id: documentId,
+              name: args.name,
+              documentType: document.header.documentType,
+            }),
+          );
+        } catch (error) {
+          logger.error(
+            `Created document but failed to add file to drive. Reverting: ${(error as Error).message}`,
+          );
+
+          revert = true;
+        }
+
+        if (revert) {
+          try {
+            await reactor.deleteDocument(documentId);
+          } catch (error) {
+            logger.error(
+              `Failed to revert document creation! This means there was a document created but not added to a drive. DocumentId: ${documentId}, Error: ${(error as Error).message}`,
+            );
+
+            throw error;
+          }
+        }
+
+        return document.header.id;
       },
 
       VetraPackage_setPackageName: async (_: any, args: any) => {
