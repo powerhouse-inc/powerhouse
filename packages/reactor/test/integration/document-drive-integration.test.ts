@@ -23,6 +23,7 @@ import {
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { generateId } from "document-model/core";
+import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Reactor } from "../../src/core/reactor.js";
 import { EventBus } from "../../src/events/event-bus.js";
@@ -32,6 +33,9 @@ import { InMemoryQueue } from "../../src/queue/queue.js";
 import { DocumentModelRegistry } from "../../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
 import { JobStatus } from "../../src/shared/types.js";
+import type { KyselyOperationStore } from "../../src/storage/kysely/store.js";
+import type { Database as DatabaseSchema } from "../../src/storage/kysely/types.js";
+import { createTestOperationStore } from "../factories.js";
 
 describe("Integration Test: Reactor <> Document Drive Document Model", () => {
   let reactor: Reactor;
@@ -42,6 +46,8 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
   let executor: SimpleJobExecutor;
   let executorManager: SimpleJobExecutorManager;
   let driveServer: BaseDocumentDriveServer;
+  let db: Kysely<DatabaseSchema>;
+  let operationStore: KyselyOperationStore;
 
   beforeEach(async () => {
     // Setup real components
@@ -56,12 +62,18 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
     driveServer = builder.build() as unknown as BaseDocumentDriveServer;
     await driveServer.initialize();
 
+    // Create in-memory PGLite database for IOperationStore
+    const setup = await createTestOperationStore();
+    db = setup.db;
+    operationStore = setup.store;
+
     eventBus = new EventBus();
     queue = new InMemoryQueue(eventBus);
     executor = new SimpleJobExecutor(
       registry,
       storage as IDocumentStorage,
       storage as IDocumentOperationStorage,
+      operationStore,
     );
 
     executorManager = new SimpleJobExecutorManager(
@@ -79,6 +91,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
 
   afterEach(async () => {
     await executorManager.stop();
+    await db.destroy();
   });
 
   describe("ADD Operations", () => {

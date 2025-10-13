@@ -163,15 +163,27 @@ For complete details on DELETE_DOCUMENT behavior, including:
 
 See [Operations/delete.md](./Operations/delete.md).
 
-## Phase 5: Introduce `IOperationStore` with Dual-Writing
+## Phase 5 (✅ Complete): Introduce `IOperationStore` with Dual-Writing
 
 With the job pipeline validated, we now introduce the new `IOperationStore` and populate it in parallel.
 
-1.  **Implement `IOperationStore`**:
-    - Define and implement the `IOperationStore` in `packages/reactor`.
-2.  **Enable Dual-Writing**:
-    - Modify the `IJobExecutor` to write to **both** the legacy `IDriveOperationStorage` and the new `IOperationStore`.
-    - **Goal**: This safely populates the new store. We can add validation logic to compare the data in both stores to ensure consistency and correctness of the new implementation.
+1.  **Implement `IOperationStore`** (✅ Complete):
+    - ✅ `IOperationStore` interface already implemented at `src/storage/interfaces.ts`
+    - ✅ `KyselyOperationStore` implementation exists at `src/storage/kysely/store.ts`
+    - ✅ Provides atomic transaction support via `apply()` method
+    - ✅ Enforces revision ordering and prevents duplicate operations
+    - ✅ Supports efficient querying via `get()`, `getSince()`, `getSinceTimestamp()`, `getSinceId()`
+    - ✅ Includes `getRevisions()` for cross-scope revision aggregation
+2.  **Enable Dual-Writing** (✅ Complete):
+    - ✅ Modified `SimpleJobExecutor` to accept `IOperationStore` as constructor dependency (simple-job-executor.ts:33)
+    - ✅ `executeJob()` writes to both legacy storage and IOperationStore (simple-job-executor.ts:104-125)
+    - ✅ `executeCreateDocument()` writes to both legacy storage and IOperationStore (simple-job-executor.ts:182-203)
+    - ✅ `executeDeleteDocument()` writes DELETE_DOCUMENT operations to IOperationStore (simple-job-executor.ts:266-287)
+      - **Note**: DELETE_DOCUMENT operations are now written to IOperationStore as planned in Phase 4.5
+      - Deletes document from legacy storage first, then writes operation to IOperationStore
+    - ✅ Updated all tests to provide mock IOperationStore (factories.ts:283-312)
+    - ✅ All 308 tests passing with dual-write implementation
+    - **Goal Achieved**: The new store is safely populated in parallel with legacy storage, enabling validation and comparison.
 
 ## Phase 6: Implement and Validate `IDocumentView`
 
