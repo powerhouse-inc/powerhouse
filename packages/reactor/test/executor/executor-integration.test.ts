@@ -367,4 +367,102 @@ describe("SimpleJobExecutor Integration", () => {
       expect(globalState.nodes).toHaveLength(0);
     });
   });
+
+  describe("Deletion State Checking", () => {
+    it("should reject operations on deleted documents", async () => {
+      // Create a document with deletion state already set
+      const document = driveDocumentModelModule.utils.createDocument();
+      // Mark it as deleted in the state
+      document.state.document = {
+        ...document.state.document,
+        isDeleted: true,
+        deletedAtUtcIso: new Date().toISOString(),
+      };
+      await storage.create(document);
+
+      // Try to add a folder to the deleted document
+      const job: Job = {
+        id: "job-1",
+        documentId: document.header.id,
+        scope: "global",
+        branch: "main",
+        operation: {
+          action: {
+            id: "action-1",
+            type: "ADD_FOLDER",
+            scope: "global",
+            timestampUtcMs: Date.now().toString(),
+            input: {
+              id: "folder-1",
+              name: "Test Folder",
+              parentFolder: null,
+            },
+          },
+          index: 0,
+          timestampUtcMs: Date.now().toString(),
+          hash: "test-hash",
+          skip: 0,
+        },
+        createdAt: Date.now().toString(),
+        queueHint: [],
+      };
+
+      // Execute the job
+      const result = await executor.executeJob(job);
+
+      // Verify job failed with DocumentDeletedError
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
+      expect(result.error?.name).toBe("DocumentDeletedError");
+      expect(result.error?.message).toContain(document.header.id);
+      expect(result.error?.message).toContain("deleted");
+    });
+
+    it("should reject double-deletion attempts", async () => {
+      // Create a document with deletion state already set
+      const document = driveDocumentModelModule.utils.createDocument();
+      // Mark it as deleted in the state
+      document.state.document = {
+        ...document.state.document,
+        isDeleted: true,
+        deletedAtUtcIso: new Date().toISOString(),
+      };
+      await storage.create(document);
+
+      // Try to delete the already-deleted document
+      const job: Job = {
+        id: "job-1",
+        documentId: document.header.id,
+        scope: "document",
+        branch: "main",
+        operation: {
+          action: {
+            id: "action-1",
+            type: "DELETE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: Date.now().toString(),
+            input: {
+              documentId: document.header.id,
+            },
+          },
+          index: 0,
+          timestampUtcMs: Date.now().toString(),
+          hash: "test-hash",
+          skip: 0,
+        },
+        createdAt: Date.now().toString(),
+        queueHint: [],
+      };
+
+      // Execute the job
+      const result = await executor.executeJob(job);
+
+      // Verify job failed with DocumentDeletedError
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
+      expect(result.error?.name).toBe("DocumentDeletedError");
+      expect(result.error?.message).toContain(document.header.id);
+      expect(result.error?.message).toContain("deleted");
+    });
+  });
 });
