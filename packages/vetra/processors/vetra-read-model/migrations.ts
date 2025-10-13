@@ -2,6 +2,7 @@ import { type IRelationalDb } from "document-drive";
 
 export async function up(db: IRelationalDb<any>): Promise<void> {
   // Create vetra_package table to store VetraPackage document state
+  await down(db);
   await db.schema
     .createTable("vetra_package")
     .addColumn("document_id", "varchar(255)", (col) => col.primaryKey()) // VetraPackage state fields
