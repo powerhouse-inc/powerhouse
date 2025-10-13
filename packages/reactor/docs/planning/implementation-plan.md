@@ -133,8 +133,11 @@ In a command-sourcing architecture, deletion is a **state transition**, not phys
    - Updated `SimpleJobExecutor.executeDeleteDocument()` to delete documents from storage (simple-job-executor.ts:186-213)
    - **Note**: DELETE_DOCUMENT operations are NOT written to legacy storage because legacy storage does not support adding operations for deleted documents. Operations will be written once IOperationStore is implemented in Phase 5.
    - Added comprehensive tests for DELETE_DOCUMENT execution (simple-job-executor.test.ts:173-275)
-3. ⏸️ **Update Job Executor to Check Deletion State** (reject operations on deleted documents)
-   - Deferred to Phase 6 when IOperationStore is implemented and can track deletion state
+3. ✅ **Update Job Executor to Check Deletion State** (reject operations on deleted documents)
+   - Added deletion state check in `SimpleJobExecutor.executeJob()` after loading document (simple-job-executor.ts:63-81)
+   - Added deletion state check in `SimpleJobExecutor.executeDeleteDocument()` to prevent double-deletion (simple-job-executor.ts:271-289)
+   - Checks `document.state.document.isDeleted` flag and rejects operations with `DocumentDeletedError`
+   - Added comprehensive integration tests for deletion state checking (executor-integration.test.ts:371-467)
 4. ⏸️ **Simplify IDocumentView Indexing** (derive deletion status from document state)
    - Deferred to Phase 6 when IDocumentView is implemented
    - IDocumentView will derive `isDeleted` and `deletedAtUtcIso` from document state when indexing operations
@@ -150,7 +153,7 @@ In a command-sourcing architecture, deletion is a **state transition**, not phys
 8. ⏸️ **Update Reshuffling Logic** (DELETE_DOCUMENT creates timestamp boundary)
    - Deferred to Phase 6 when reshuffling logic is implemented
 
-**Phase 4.5 Status**: Core type definitions and infrastructure are in place. Full soft-delete behavior will be implemented in Phase 6 when IOperationStore and IDocumentView are available. Currently, DELETE_DOCUMENT performs physical deletion via legacy storage.
+**Phase 4.5 Status**: Write-side validation is complete! The job executor now properly enforces deletion boundaries by checking document state and rejecting operations on deleted documents. Read-side behavior (IDocumentView query methods and reshuffling logic) will be implemented in Phase 6.
 
 ### Detailed Specification
 

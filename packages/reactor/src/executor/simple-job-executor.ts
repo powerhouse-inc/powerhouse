@@ -9,6 +9,7 @@ import type {
 } from "document-model";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
+import { DocumentDeletedError } from "../shared/errors.js";
 import type { IOperationStore } from "../storage/interfaces.js";
 import type { IJobExecutor } from "./interfaces.js";
 import type { JobResult } from "./types.js";
@@ -55,6 +56,20 @@ export class SimpleJobExecutor implements IJobExecutor {
         job,
         success: false,
         error: error instanceof Error ? error : new Error(String(error)),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    // Check if document is deleted
+    const documentState = document.state.document;
+    if (documentState.isDeleted) {
+      return {
+        job,
+        success: false,
+        error: new DocumentDeletedError(
+          job.documentId,
+          documentState.deletedAtUtcIso || null,
+        ),
         duration: Date.now() - startTime,
       };
     }
@@ -242,6 +257,20 @@ export class SimpleJobExecutor implements IJobExecutor {
         success: false,
         error: new Error(
           `Failed to fetch document before deletion: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    // Check if document is already deleted
+    const documentState = document.state.document;
+    if (documentState.isDeleted) {
+      return {
+        job,
+        success: false,
+        error: new DocumentDeletedError(
+          documentId,
+          documentState.deletedAtUtcIso || null,
         ),
         duration: Date.now() - startTime,
       };
