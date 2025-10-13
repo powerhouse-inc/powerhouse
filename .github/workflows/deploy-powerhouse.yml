@@ -41,28 +41,80 @@ jobs:
         run: |
           echo "github.ref: ${{ github.ref }}"
           echo "DEPLOY_ENV: ${{ needs.setup.outputs.deploy-env }}"
-      - name: Set up heroku
-        run: sudo curl https://cli-assets.heroku.com/install.sh | sh
-      - name: Checkout
+
+      - name: Checkout Connect Heroku config
         uses: actions/checkout@v4
-      - name: Build, Push and Release APP to Heroku. # Your custom step name
-        uses: gonuit/heroku-docker-deploy@v1.3.3
         with:
-          email: ${{ secrets.HEROKU_EMAIL }}
+          fetch-depth: 1 # shallow clone
+          filter: blob:none # partial clone: no file blobs unless needed
+          sparse-checkout: |
+            apps/connect/heroku
+          sparse-checkout-cone: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm with cache
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+          run_install: false
+
+      - name: Install Powerhouse cli
+        run: pnpm install -g ph-cmd@${{ vars.PH_TAG }}
+
+      - name: Initialize new project
+        run: |
+          mkdir projects
+          cd projects
+          ph init connect-deploy --pnpm --${{ vars.PH_TAG }}
+
+      - name: Install dependencies
+        working-directory: ./projects/connect-deploy
+        run: pnpm install --no-workspace --frozen-lockfile
+
+      - name: Install Powerhouse packages
+        if: ${{ vars.PH_PACKAGES && vars.PH_PACKAGES != '' }}
+        working-directory: ./projects/connect-deploy
+        env:
+          PH_PACKAGES: ${{ vars.PH_PACKAGES }}
+        run: |
+          set -euxo pipefail
+          PKGS="${PH_PACKAGES//,/ }"
+          echo "Installing Powerhouse packages: $PKGS"
+          ph install $PKGS
+
+      - name: Build Connect
+        working-directory: ./projects/connect-deploy
+        run: ph connect build
+        env:
+          PH_CONNECT_BASE_PATH: ${{ vars.CONNECT_BASE_PATH }}
+          PH_PACKAGES: ${{ vars.PH_PACKAGES }}
+          PH_CONNECT_SENTRY_DSN: ${{ secrets.CONNECT_SENTRY_DSN }}
+          PH_CONNECT_SENTRY_ENV: ${{ needs.setup.outputs.deploy-env }}
+          PH_CONNECT_SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          PH_CONNECT_SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          PH_CONNECT_SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+
+      - name: Prepare Heroku deployment
+        run: |
+          cp -r apps/connect/heroku/* projects/connect-deploy/.ph/connect-build/dist/
+
+      - name: Install Heroku CLI
+        run: |
+          curl https://cli-assets.heroku.com/install.sh | sh
+
+      - name: Deploy to Heroku
+        uses: akhileshns/heroku-deploy@v3.14.15
+        with:
           heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
           heroku_app_name: ${{ vars.HEROKU_APP_NAME_CONNECT }}
-          dockerfile_directory: ./apps/connect
-          docker_options: >-
-            --build-arg NX_SOCKET_DIR=${{ vars.NX_SOCKET_DIR }}
-            --build-arg BASE_PATH=${{ vars.CONNECT_BASE_PATH }}
-            --build-arg PH_PACKAGES=${{ vars.PH_PACKAGES }}
-            --build-arg PH_CONNECT_SENTRY_DSN=${{ secrets.CONNECT_SENTRY_DSN }}
-            --build-arg PH_CONNECT_SENTRY_ENV=${{ needs.setup.outputs.deploy-env }}
-            --build-arg SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
-            --build-arg SENTRY_ORG=${{ secrets.SENTRY_ORG }}
-            --build-arg SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}
-            --build-arg TAG=${{ vars.PH_TAG }}
-          process_type: web
+          heroku_email: ${{ secrets.HEROKU_EMAIL }}
+          dontautocreate: true
+          appdir: "projects/connect-deploy/.ph/connect-build/dist/"
+
   switchboard:
     needs: setup
     environment: ${{ needs.setup.outputs.deploy-env }}

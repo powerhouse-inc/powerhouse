@@ -16,6 +16,7 @@
     "scripts",
     "assets",
     "public",
+    "heroku",
     ".env",
     "./src/index.css"
   ],
