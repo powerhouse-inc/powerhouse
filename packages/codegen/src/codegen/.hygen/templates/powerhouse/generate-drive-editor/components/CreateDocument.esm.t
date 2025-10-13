@@ -54,7 +54,7 @@ export const CreateDocument = (props: CreateDocumentProps) => {
             <Button
               key={documentModelModule.documentModel.global.id}
               color="light" // Customize button appearance
-              className="cursor-pointer"
+              className="cursor-pointer bg-gray-200 p-2 hover:bg-gray-300"
               title={documentModelModule.documentModel.global.name}
               aria-description={documentModelModule.documentModel.global.description}
               onClick={() => handleAddDocument(documentModelModule)}

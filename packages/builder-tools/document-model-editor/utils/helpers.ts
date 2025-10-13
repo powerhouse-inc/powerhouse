@@ -31,9 +31,10 @@ import type { Scope } from "../types/documents.js";
 export function makeStateSchemaNameForScope(modelName: string, scope: string) {
   const modelNamePascalCase = pascalCase(modelName);
   const scopePascalCase = pascalCase(scope);
-  const scopeStateTypeNamePrefix =
-    scopePascalCase === "Global" ? "" : scopePascalCase;
-  const name = `${scopeStateTypeNamePrefix}${modelNamePascalCase}State`;
+  const name =
+    scopePascalCase === "Global"
+      ? `${modelNamePascalCase}State`
+      : `${modelNamePascalCase}${scopePascalCase}State`;
   return name;
 }
 
