@@ -109,6 +109,44 @@ Instead of a "big bang" switch, we first validate the new job pipeline while sti
     - ✅ `SimpleJobExecutor` handles DELETE_DOCUMENT system actions specially, deleting documents from storage (simple-job-executor.ts:171-215)
     - **Goal**: This validates the entire `Facade -> Queue -> Executor` pipeline is working correctly before introducing any new storage.
 
+## Phase 4.5: Define DELETE_DOCUMENT Query Behavior
+
+With DELETE_DOCUMENT operations now flowing through the job pipeline, we must define how deleted documents affect queries across `IOperationStore` and `IDocumentView`.
+
+### Core Design Principle
+
+In a command-sourcing architecture, deletion is a **state transition**, not physical removal. DELETE_DOCUMENT is treated as a state change in the document scope, with operations stored in `IOperationStore` and document state marked as deleted in `IDocumentView`.
+
+### Key Architectural Decisions
+
+1. **Soft Delete with Operation Tracking**: DELETE_DOCUMENT operations are stored like any other operation to maintain a complete audit trail
+2. **Document Scope State Change**: Deletion updates `PHDocumentState.document` with deletion metadata (isDeleted, deletedAtUtcIso, etc.)
+3. **Write-Side Validation**: The job executor enforces deletion boundaries before operations are stored - operations on deleted documents are rejected
+4. **Read-Side Simplicity**: IDocumentView simply indexes operations as they arrive, deriving deletion status from document state
+5. **Timestamp-Based Reshuffling**: DELETE_DOCUMENT establishes a timestamp boundary beyond which no operations can be inserted
+
+### Implementation Changes
+
+1. **Add Deletion Fields to PHDocumentState** (in document-model package)
+2. **Store DELETE_DOCUMENT Operations** (write to operation store like any other operation)
+3. **Update Job Executor to Check Deletion State** (reject operations on deleted documents)
+4. **Simplify IDocumentView Indexing** (derive deletion status from document state)
+5. **Add DocumentDeletedError** (custom error class with metadata)
+6. **Update Query Methods** (check `isDeleted` flag, throw DocumentDeletedError)
+7. **Add Optional Deleted Document Access** (`includeDeleted?: boolean` in SearchFilter)
+8. **Update Reshuffling Logic** (DELETE_DOCUMENT creates timestamp boundary)
+
+### Detailed Specification
+
+For complete details on DELETE_DOCUMENT behavior, including:
+- Query return value specifications
+- Operation ordering and reshuffling
+- Write model, read model, and operation store behavior
+- Edge cases (multiple deletes, concurrent operations, rebuilding from operations)
+- Schema changes
+
+See [Operations/delete.md](./Operations/delete.md).
+
 ## Phase 5: Introduce `IOperationStore` with Dual-Writing
 
 With the job pipeline validated, we now introduce the new `IOperationStore` and populate it in parallel.
