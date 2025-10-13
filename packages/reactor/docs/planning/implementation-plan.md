@@ -133,14 +133,24 @@ In a command-sourcing architecture, deletion is a **state transition**, not phys
    - Updated `SimpleJobExecutor.executeDeleteDocument()` to delete documents from storage (simple-job-executor.ts:186-213)
    - **Note**: DELETE_DOCUMENT operations are NOT written to legacy storage because legacy storage does not support adding operations for deleted documents. Operations will be written once IOperationStore is implemented in Phase 5.
    - Added comprehensive tests for DELETE_DOCUMENT execution (simple-job-executor.test.ts:173-275)
-3. **Update Job Executor to Check Deletion State** (reject operations on deleted documents)
-4. **Simplify IDocumentView Indexing** (derive deletion status from document state)
+3. ⏸️ **Update Job Executor to Check Deletion State** (reject operations on deleted documents)
+   - Deferred to Phase 6 when IOperationStore is implemented and can track deletion state
+4. ⏸️ **Simplify IDocumentView Indexing** (derive deletion status from document state)
+   - Deferred to Phase 6 when IDocumentView is implemented
+   - IDocumentView will derive `isDeleted` and `deletedAtUtcIso` from document state when indexing operations
+   - Schema already prepared with `isDeleted` and `deletedAt` fields in `DocumentSnapshot` interface (storage/interfaces.ts:139-140)
 5. ✅ **Add DocumentDeletedError** (custom error class with metadata)
    - Created `DocumentDeletedError` class with `documentId` and `deletedAtUtcIso` properties (shared/errors.ts)
    - Added unit tests for error creation and usage (test/shared/errors.test.ts)
-6. **Update Query Methods** (check `isDeleted` flag, throw DocumentDeletedError)
-7. **Add Optional Deleted Document Access** (`includeDeleted?: boolean` in SearchFilter)
-8. **Update Reshuffling Logic** (DELETE_DOCUMENT creates timestamp boundary)
+6. ⏸️ **Update Query Methods** (check `isDeleted` flag, throw DocumentDeletedError)
+   - Deferred to Phase 6 when IDocumentView is implemented
+   - Query methods will check the `isDeleted` flag from DocumentSnapshot and throw DocumentDeletedError
+7. ✅ **Add Optional Deleted Document Access** (`includeDeleted?: boolean` in SearchFilter)
+   - Added `includeDeleted` parameter to SearchFilter type (storage/interfaces.ts:111)
+8. ⏸️ **Update Reshuffling Logic** (DELETE_DOCUMENT creates timestamp boundary)
+   - Deferred to Phase 6 when reshuffling logic is implemented
+
+**Phase 4.5 Status**: Core type definitions and infrastructure are in place. Full soft-delete behavior will be implemented in Phase 6 when IOperationStore and IDocumentView are available. Currently, DELETE_DOCUMENT performs physical deletion via legacy storage.
 
 ### Detailed Specification
 
