@@ -1,3 +1,13 @@
+## 5.0.0-staging.25 (2025-10-13)
+
+### 🩹 Fixes
+
+- **vetra:** added drive id to read model ([dffe520c3](https://github.com/powerhouse-inc/powerhouse/commit/dffe520c3))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.0.0-staging.24 (2025-10-11)
 
 ### 🩹 Fixes
