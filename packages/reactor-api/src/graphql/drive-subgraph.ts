@@ -271,6 +271,10 @@ export class DriveSubgraph extends BaseSubgraph {
         return obj.operations.global.slice(start, start + limit);
       },
     },
+    Operation: {
+      type: (operation: Operation) => operation.action.type,
+      id: (operation: Operation) => operation.id ?? operation.action.id,
+    },
     Query: {
       drive: async (
         _: unknown,
