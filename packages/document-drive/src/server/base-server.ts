@@ -63,7 +63,6 @@ import {
 } from "document-drive";
 import { runAsap, runAsapAsync } from "document-drive/run-asap";
 import {
-  documentModelCreateDocument,
   type Action,
   type CreateDocumentActionInput,
   type DeleteDocumentActionInput,
@@ -1348,10 +1347,7 @@ export class BaseDocumentDriveServer
         );
       } catch (error) {
         // If writing operation fails, log but continue with deletion
-        this.logger.warn(
-          "Failed to write DELETE_DOCUMENT operation",
-          error,
-        );
+        this.logger.warn("Failed to write DELETE_DOCUMENT operation", error);
       }
     }
 

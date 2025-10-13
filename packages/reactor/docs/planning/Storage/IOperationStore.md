@@ -118,6 +118,39 @@ const { revision, latestTimestamp } = await operations.getRevisions(
 
 **Note**: The `getRevisions()` method efficiently retrieves the latest operation index for each scope and the overall latest timestamp, which is used by `IDocumentView.getHeader()` to reconstruct document headers without loading all operations.
 
+### DELETE_DOCUMENT Operations
+
+DELETE_DOCUMENT operations are stored in `IOperationStore` like any other operation, maintaining a complete audit trail:
+
+- **Storage**: DELETE_DOCUMENT operations are written to the operation store with a normal operation structure
+- **Scope**: DELETE_DOCUMENT operations apply to the `document` scope
+- **State Change**: The operation updates `PHDocumentState.document.isDeleted` to `true`, just like other operations update state fields
+- **Audit Trail**: Preserves when and why documents were deleted, supporting compliance and recovery
+- **Recovery**: Enables "undelete" functionality since the operation is preserved
+
+```tsx
+// Example DELETE_DOCUMENT operation in the store
+{
+  id: 123,
+  jobId: "job-uuid",
+  opId: "doc-id-delete",
+  documentId: "doc-id",
+  scope: "document",
+  branch: "main",
+  index: 5,
+  skip: 0,
+  timestampUtcMs: "2025-01-15T10:30:00.000Z",
+  hash: "abc123...",
+  action: {
+    type: "DELETE_DOCUMENT",
+    input: {
+      documentId: "doc-id",
+      propagate: "none"
+    }
+  }
+}
+```
+
 ### Schema
 
 The database schema, in prisma format, will look something like:

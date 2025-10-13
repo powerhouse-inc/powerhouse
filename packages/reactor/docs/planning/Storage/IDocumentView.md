@@ -49,6 +49,30 @@ this.indexOperations(operations);
 
 - [IDocumentIndexer](../Storage/IDocumentIndexer.md)
 
+### Soft Delete Behavior
+
+The `IDocumentView` implements soft delete semantics for deleted documents:
+
+- **DELETE_DOCUMENT Operations**: When indexing a DELETE_DOCUMENT operation, the operation updates the document scope state (setting `document.state.document.isDeleted = true`), and the snapshot is updated to reflect this
+- **No Special Validation**: IDocumentView simply applies operations as they arrive - operations have already been validated and reshuffled by the write side (IJobExecutor)
+- **State-Derived Fields**: The `isDeleted` and `deletedAt` fields in DocumentSnapshot are derived from the document scope's state (`document.state.document.isDeleted` and `document.state.document.deletedAt`)
+- **Query Filtering**: By default, all queries filter out deleted documents (`isDeleted = false`)
+- **Explicit Access**: Deleted documents can be included in search results by setting `includeDeleted: true` in the search filter
+- **Error Handling**: Single-document retrieval methods (`getHeader`, etc.) throw `DocumentDeletedError` when attempting to access deleted documents
+- **Audit Support**: Deleted documents and all their operations remain in the database for audit trails, compliance, and potential recovery
+
+```typescript
+class DocumentDeletedError extends Error {
+  constructor(
+    public documentId: string,
+    public deletedAt: Date | null
+  ) {
+    super(`Document ${documentId} was deleted at ${deletedAt?.toISOString()}`);
+    this.name = "DocumentDeletedError";
+  }
+}
+```
+
 ### Interface
 
 ```tsx
@@ -146,7 +170,7 @@ interface IDocumentView {
   /**
    * Filters documents by criteria and returns a list of them
    *
-   * @param search - Search filter options (type, parentId, identifiers)
+   * @param search - Search filter options (type, parentId, identifiers, includeDeleted)
    * @param view - Optional filter containing branch and scopes information
    * @param paging - Optional pagination options
    * @param signal - Optional abort signal to cancel the request
@@ -158,6 +182,19 @@ interface IDocumentView {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<TDocument>>;
+}
+
+type SearchFilter = {
+  documentType?: string;
+  parentId?: string;
+  identifiers?: Record<string, any>;
+
+  /**
+   * Whether to include deleted documents in search results.
+   * Defaults to false (excludes deleted documents).
+   * Set to true for audit/admin tools that need to see deleted documents.
+   */
+  includeDeleted?: boolean;
 }
 ```
 
@@ -197,9 +234,9 @@ model DocumentSnapshot {
   identifiers       Json?    // Custom identifiers for find() queries
   metadata          Json?    // Additional searchable metadata
 
-  // Soft delete support
-  isDeleted         Boolean  @default(false)
-  deletedAt         DateTime?
+  // Soft delete support (derived from document state)
+  isDeleted         Boolean  @default(false)  // From document.state.document.isDeleted
+  deletedAt         DateTime?                 // From document.state.document.deletedAt
 
   // Indexes for efficient queries
   @@unique([documentId, scope, branch]) // One snapshot per document+scope+branch
