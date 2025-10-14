@@ -63,6 +63,71 @@ export const getResolvers = (subgraph: Subgraph): Record<string, unknown> => {
               (doc) => doc.header.documentType === "<%- documentTypeId %>",
             );
           },
+          findDocuments: async (args: {
+            search: { type?: string; parentId?: string; identifiers?: string[] };
+            view?: { branch?: string; scopes?: string[] };
+            paging?: { limit?: number; offset?: number; cursor?: string }
+          }) => {
+            const { search, view, paging } = args;
+
+            // Build search criteria
+            const searchCriteria: any = {
+              documentType: search.type || "<%- documentTypeId %>",
+            };
+
+            if (search.parentId) {
+              searchCriteria.parentId = search.parentId;
+            }
+
+            // Get documents based on identifiers or search all
+            let docIds: string[] = [];
+            if (search.identifiers && search.identifiers.length > 0) {
+              docIds = search.identifiers;
+            } else if (search.parentId) {
+              // If parentId is provided, get documents from that drive
+              docIds = await reactor.getDocuments(search.parentId);
+            } else {
+              // Otherwise, we need to search across all documents
+              // This would require a reactor.find() method or similar
+              throw new Error("Either identifiers or parentId must be provided for findDocuments");
+            }
+
+            // Apply paging
+            const offset = paging?.offset || 0;
+            const limit = paging?.limit || docIds.length;
+            const pagedDocIds = docIds.slice(offset, offset + limit);
+
+            // Fetch and transform documents
+            const docs = await Promise.all(
+              pagedDocIds.map(async (docId) => {
+                try {
+                  const doc = await reactor.getDocument<<%- h.changeCase.pascal(documentType) %>Document>(docId);
+
+                  // Filter by document type
+                  if (doc.header.documentType !== searchCriteria.documentType) {
+                    return null;
+                  }
+
+                  return {
+                    driveId: search.parentId,
+                    ...doc,
+                    ...doc.header,
+                    created: doc.header.createdAtUtcIso,
+                    lastModified: doc.header.lastModifiedAtUtcIso,
+                    state: doc.state.global,
+                    stateJSON: doc.state.global,
+                    revision: doc.header?.revision?.global ?? 0,
+                  };
+                } catch (error) {
+                  // Skip documents that can't be loaded
+                  return null;
+                }
+              }),
+            );
+
+            // Filter out null values (documents that couldn't be loaded or didn't match)
+            return docs.filter((doc) => doc !== null);
+          },
         };
       },
     },

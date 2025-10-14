@@ -10,7 +10,27 @@ export const schema: DocumentNode = gql`
 Subgraph definition for <%= h.changeCase.pascal(documentType) %> (<%- documentTypeId %>)
 
 """
-<%- schema %> 
+<%- schema %>
+
+"""
+Input types for queries
+"""
+input SearchFilterInput {
+    type: String
+    parentId: String
+    identifiers: [String!]
+}
+
+input ViewFilterInput {
+    branch: String
+    scopes: [String!]
+}
+
+input PagingInput {
+    limit: Int
+    offset: Int
+    cursor: String
+}
 
 """
 Queries: <%= h.changeCase.pascal(documentType) %>
@@ -19,6 +39,7 @@ Queries: <%= h.changeCase.pascal(documentType) %>
 type <%- h.changeCase.pascal(documentType) %>Queries {
     getDocument(docId: PHID!, driveId: PHID): <%- h.changeCase.pascal(documentType) %>
     getDocuments(driveId: String!): [<%- h.changeCase.pascal(documentType) %>!]
+    findDocuments(search: SearchFilterInput!, view: ViewFilterInput, paging: PagingInput): [<%- h.changeCase.pascal(documentType) %>!]
 }
 
 type Query {
