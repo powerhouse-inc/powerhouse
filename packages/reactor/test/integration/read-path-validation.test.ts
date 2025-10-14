@@ -136,14 +136,14 @@ describe("Legacy Storage vs IDocumentView", () => {
       });
 
       // Wait for the document to be indexed in the document view
-      // Note: CREATE_DOCUMENT operations use "system" scope
+      // Note: CREATE_DOCUMENT operations use "document" scope
       await vi.waitUntil(async () => {
-        const documents = await documentView.getMany([documentId], "system");
+        const documents = await documentView.getMany([documentId], "document");
         return documents.length > 0 && documents[0] !== null;
       });
 
-      // Verify document is in the document view with system scope
-      const documents = await documentView.getMany([documentId], "system");
+      // Verify document is in the document view with document scope
+      const documents = await documentView.getMany([documentId], "document");
       expect(documents).toHaveLength(1);
       expect(documents[0]).not.toBeNull();
 

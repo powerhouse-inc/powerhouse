@@ -1186,7 +1186,7 @@ export class BaseDocumentDriveServer
         type: "CREATE_DOCUMENT",
         timestampUtcMs,
         input: createDocumentInput,
-        scope: "global",
+        scope: "document",
       };
 
       const upgradeDocumentInput: UpgradeDocumentActionInput = {
@@ -1202,7 +1202,7 @@ export class BaseDocumentDriveServer
         type: "UPGRADE_DOCUMENT",
         timestampUtcMs,
         input: upgradeDocumentInput,
-        scope: "global",
+        scope: "document",
       };
 
       // we need to create hashes for later verification
@@ -1220,8 +1220,7 @@ export class BaseDocumentDriveServer
       };
       const upgradeHash = hashDocumentStateForScope(
         upgradeStateForHash,
-        // this is bad! there may not be a global scope
-        "global",
+        "document",
       );
 
       // Create operations from actions with computed hashes
