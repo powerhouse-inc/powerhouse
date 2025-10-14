@@ -1,3 +1,7 @@
+## 4.1.0-dev.70 (2025-10-14)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.69 (2025-10-11)
 
 ### 🚀 Features
