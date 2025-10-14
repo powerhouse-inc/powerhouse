@@ -41,6 +41,10 @@ export {
   type JobAvailableEvent,
 } from "./queue/types.js";
 
+// Job Tracker
+export { type IJobTracker } from "./job-tracker/interfaces.js";
+export { InMemoryJobTracker } from "./job-tracker/in-memory-job-tracker.js";
+
 // Job Executor
 export {
   type IJobExecutor,

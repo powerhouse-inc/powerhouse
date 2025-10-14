@@ -1,4 +1,5 @@
 import type { IEventBus } from "../events/interfaces.js";
+import type { IJobTracker } from "../job-tracker/interfaces.js";
 import type { IQueue } from "../queue/interfaces.js";
 import { QueueEventTypes } from "../queue/types.js";
 import type { IJobExecutor, IJobExecutorManager } from "./interfaces.js";
@@ -21,6 +22,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     private executorFactory: JobExecutorFactory,
     private eventBus: IEventBus,
     private queue: IQueue,
+    private jobTracker: IJobTracker,
   ) {}
 
   async start(numExecutors: number): Promise<void> {
@@ -100,6 +102,9 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
 
       this.activeJobs++;
 
+      // Mark job as running in tracker
+      this.jobTracker.markRunning(handle.job.id);
+
       // Find an available executor (simple round-robin)
       const executorIndex = this.totalJobsProcessed % this.executors.length;
       const executor = this.executors[executorIndex];
@@ -107,8 +112,9 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
       // Execute the job
       const result = await executor.executeJob(handle.job);
 
-      // Update job status in queue
+      // Update job status in queue and tracker
       if (result.success) {
+        this.jobTracker.markCompleted(handle.job.id, result.operation);
         await this.queue.completeJob(handle.job.id);
       } else {
         // Handle retry logic
@@ -117,6 +123,10 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
         if (retryCount < maxRetries) {
           await this.queue.retryJob(handle.job.id, result.error?.message);
         } else {
+          this.jobTracker.markFailed(
+            handle.job.id,
+            result.error?.message || "Unknown error",
+          );
           await this.queue.failJob(handle.job.id, result.error?.message);
         }
       }

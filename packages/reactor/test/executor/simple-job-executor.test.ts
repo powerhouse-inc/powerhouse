@@ -40,6 +40,9 @@ describe("SimpleJobExecutor", () => {
         state: {
           global: {},
           local: {},
+          document: {
+            isDeleted: false,
+          },
         },
       }),
       exists: vi.fn().mockResolvedValue(true),
@@ -108,7 +111,11 @@ describe("SimpleJobExecutor", () => {
           documentType: "unknown/type",
         },
         operations: { global: [] },
-        state: {},
+        state: {
+          document: {
+            isDeleted: false,
+          },
+        },
       });
 
       const job: Job = {

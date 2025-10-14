@@ -23,6 +23,8 @@ import type { IEventBus } from "../src/events/interfaces.js";
 import type { IJobExecutor } from "../src/executor/interfaces.js";
 import { SimpleJobExecutorManager } from "../src/executor/simple-job-executor-manager.js";
 import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
+import type { IJobTracker } from "../src/job-tracker/interfaces.js";
+import { InMemoryJobTracker } from "../src/job-tracker/in-memory-job-tracker.js";
 import type { IQueue } from "../src/queue/interfaces.js";
 import { InMemoryQueue } from "../src/queue/queue.js";
 import type { Job } from "../src/queue/types.js";
@@ -278,6 +280,13 @@ export function createTestQueue(eventBus?: IEventBus): IQueue {
 }
 
 /**
+ * Factory for creating test JobTracker instances
+ */
+export function createTestJobTracker(): IJobTracker {
+  return new InMemoryJobTracker();
+}
+
+/**
  * Factory for creating test Registry instances
  */
 export function createTestRegistry(
@@ -390,6 +399,7 @@ export async function createTestReactorSetup(
   const storage = new MemoryStorage();
   const eventBus = new EventBus();
   const queue = new InMemoryQueue(eventBus);
+  const jobTracker = new InMemoryJobTracker();
 
   // Create real drive server
   const builder = new ReactorBuilder(documentModels).withStorage(storage);
@@ -412,7 +422,7 @@ export async function createTestReactorSetup(
   );
 
   // Create reactor
-  const reactor = new Reactor(driveServer, storage, queue);
+  const reactor = new Reactor(driveServer, storage, queue, jobTracker);
 
   return {
     reactor,
@@ -420,6 +430,7 @@ export async function createTestReactorSetup(
     storage,
     eventBus,
     queue,
+    jobTracker,
     jobExecutor,
     registry,
     operationStore,
@@ -433,15 +444,18 @@ export function createTestJobExecutorManager(
   queue?: IQueue,
   eventBus?: IEventBus,
   executor?: IJobExecutor,
+  jobTracker?: IJobTracker,
 ) {
   const actualQueue = queue || createTestQueue();
   const actualEventBus = eventBus || createTestEventBus();
   const actualExecutor = executor || createMockJobExecutor();
+  const actualJobTracker = jobTracker || createTestJobTracker();
 
   const manager = new SimpleJobExecutorManager(
     () => actualExecutor,
     actualEventBus,
     actualQueue,
+    actualJobTracker,
   );
 
   return {
@@ -449,6 +463,7 @@ export function createTestJobExecutorManager(
     queue: actualQueue,
     eventBus: actualEventBus,
     executor: actualExecutor,
+    jobTracker: actualJobTracker,
   };
 }
 
