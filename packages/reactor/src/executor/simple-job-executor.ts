@@ -182,7 +182,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     const input = action.input as CreateDocumentInput;
     const document = input.document;
 
-    // Store the document in storage
+    // Legacy: Store the document in storage
     try {
       await this.documentStorage.create(document);
     } catch (error) {
@@ -199,7 +199,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     // Create the operation from the job
     const operation = job.operation;
 
-    // Write the CREATE_DOCUMENT operation to legacy storage
+    // Legacy: Write the CREATE_DOCUMENT operation to legacy storage
     try {
       await this.operationStorage.addDocumentOperations(
         document.header.id,

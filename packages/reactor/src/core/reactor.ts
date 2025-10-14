@@ -309,7 +309,7 @@ export class Reactor implements IReactor {
       id: `${document.header.id}-create`,
       type: "CREATE_DOCUMENT",
       scope: "system",
-      timestampUtcMs: String(Date.now()),
+      timestampUtcMs: new Date().toISOString(),
       input: {
         document,
       },
@@ -323,7 +323,7 @@ export class Reactor implements IReactor {
       branch: "main",
       operation: {
         index: 0,
-        timestampUtcMs: String(Date.now()),
+        timestampUtcMs: new Date().toISOString(),
         hash: "",
         skip: 0,
         action: action,
@@ -371,7 +371,7 @@ export class Reactor implements IReactor {
       id: `${id}-delete`,
       type: "DELETE_DOCUMENT",
       scope: "system",
-      timestampUtcMs: String(Date.now()),
+      timestampUtcMs: new Date().toISOString(),
       input: deleteInput,
     };
 
@@ -383,7 +383,7 @@ export class Reactor implements IReactor {
       branch: "main",
       operation: {
         index: 0,
-        timestampUtcMs: String(Date.now()),
+        timestampUtcMs: new Date().toISOString(),
         hash: "",
         skip: 0,
         action: action,
@@ -421,7 +421,7 @@ export class Reactor implements IReactor {
       branch: "main", // Default to main branch
       operation: {
         index: index,
-        timestampUtcMs: String(action.timestampUtcMs || Date.now()),
+        timestampUtcMs: action.timestampUtcMs || new Date().toISOString(),
         hash: "", // Will be computed by the executor
         skip: 0,
         action: action,
