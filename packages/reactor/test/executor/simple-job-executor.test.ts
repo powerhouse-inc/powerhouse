@@ -82,19 +82,21 @@ describe("SimpleJobExecutor", () => {
         documentId: "missing-doc",
         scope: "global",
         branch: "main",
-        operation: {
-          action: {
-            id: "action-2",
-            type: "SET_NAME",
-            scope: "global",
+        operations: [
+          {
+            action: {
+              id: "action-2",
+              type: "SET_NAME",
+              scope: "global",
+              timestampUtcMs: "123",
+              input: { name: "Test" },
+            },
+            index: 0,
             timestampUtcMs: "123",
-            input: { name: "Test" },
+            hash: "hash",
+            skip: 0,
           },
-          index: 0,
-          timestampUtcMs: "123",
-          hash: "hash",
-          skip: 0,
-        },
+        ],
         createdAt: "123",
         queueHint: [],
       };
@@ -126,19 +128,21 @@ describe("SimpleJobExecutor", () => {
         documentId: "doc-1",
         scope: "global",
         branch: "main",
-        operation: {
-          action: {
-            id: "action-3",
-            type: "SOME_ACTION",
-            scope: "global",
+        operations: [
+          {
+            action: {
+              id: "action-3",
+              type: "SOME_ACTION",
+              scope: "global",
+              timestampUtcMs: "123",
+              input: {},
+            },
+            index: 0,
             timestampUtcMs: "123",
-            input: {},
+            hash: "hash",
+            skip: 0,
           },
-          index: 0,
-          timestampUtcMs: "123",
-          hash: "hash",
-          skip: 0,
-        },
+        ],
         createdAt: "123",
         queueHint: [],
       };
@@ -162,19 +166,21 @@ describe("SimpleJobExecutor", () => {
         documentId: "doc-1",
         scope: "global",
         branch: "main",
-        operation: {
-          action: {
-            id: "action-4",
-            type: "SET_NAME",
-            scope: "global",
+        operations: [
+          {
+            action: {
+              id: "action-4",
+              type: "SET_NAME",
+              scope: "global",
+              timestampUtcMs: "123",
+              input: { name: "Test" },
+            },
+            index: 0,
             timestampUtcMs: "123",
-            input: { name: "Test" },
+            hash: "hash",
+            skip: 0,
           },
-          index: 0,
-          timestampUtcMs: "123",
-          hash: "hash",
-          skip: 0,
-        },
+        ],
         createdAt: "123",
         queueHint: [],
       };
@@ -195,19 +201,21 @@ describe("SimpleJobExecutor", () => {
         documentId,
         scope: "document",
         branch: "main",
-        operation: {
-          action: {
-            id: "delete-action-1",
-            type: "DELETE_DOCUMENT",
-            scope: "document",
+        operations: [
+          {
+            action: {
+              id: "delete-action-1",
+              type: "DELETE_DOCUMENT",
+              scope: "document",
+              timestampUtcMs: "1234567890",
+              input: { documentId },
+            },
+            index: 5,
             timestampUtcMs: "1234567890",
-            input: { documentId },
+            hash: "delete-hash",
+            skip: 0,
           },
-          index: 5,
-          timestampUtcMs: "1234567890",
-          hash: "delete-hash",
-          skip: 0,
-        },
+        ],
         createdAt: "1234567890",
         queueHint: [],
       };
@@ -217,7 +225,8 @@ describe("SimpleJobExecutor", () => {
       const result = await executor.executeJob(job);
 
       expect(result.success).toBe(true);
-      expect(result.operation).toEqual(job.operation);
+      expect(result.operations).toBeDefined();
+      expect(result.operations?.[0]).toEqual(job.operations[0]);
       expect(mockDocStorage.delete).toHaveBeenCalledWith(documentId);
     });
 
@@ -228,19 +237,21 @@ describe("SimpleJobExecutor", () => {
         documentId,
         scope: "document",
         branch: "main",
-        operation: {
-          action: {
-            id: "delete-action-2",
-            type: "DELETE_DOCUMENT",
-            scope: "document",
+        operations: [
+          {
+            action: {
+              id: "delete-action-2",
+              type: "DELETE_DOCUMENT",
+              scope: "document",
+              timestampUtcMs: "1234567890",
+              input: { documentId },
+            },
+            index: 5,
             timestampUtcMs: "1234567890",
-            input: { documentId },
+            hash: "delete-hash",
+            skip: 0,
           },
-          index: 5,
-          timestampUtcMs: "1234567890",
-          hash: "delete-hash",
-          skip: 0,
-        },
+        ],
         createdAt: "1234567890",
         queueHint: [],
       };
@@ -263,19 +274,21 @@ describe("SimpleJobExecutor", () => {
         documentId: "doc-missing-id",
         scope: "document",
         branch: "main",
-        operation: {
-          action: {
-            id: "delete-action-3",
-            type: "DELETE_DOCUMENT",
-            scope: "document",
+        operations: [
+          {
+            action: {
+              id: "delete-action-3",
+              type: "DELETE_DOCUMENT",
+              scope: "document",
+              timestampUtcMs: "1234567890",
+              input: {},
+            },
+            index: 5,
             timestampUtcMs: "1234567890",
-            input: {},
+            hash: "delete-hash",
+            skip: 0,
           },
-          index: 5,
-          timestampUtcMs: "1234567890",
-          hash: "delete-hash",
-          skip: 0,
-        },
+        ],
         createdAt: "1234567890",
         queueHint: [],
       };

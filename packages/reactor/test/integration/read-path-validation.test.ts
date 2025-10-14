@@ -146,7 +146,7 @@ describe("Legacy Storage vs IDocumentView", () => {
       });
 
       // Give a bit more time for UPGRADE_DOCUMENT operation to be indexed
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Verify header fields match (allowing for small timestamp differences)
       const header = await documentView.getHeader(documentId, "main");

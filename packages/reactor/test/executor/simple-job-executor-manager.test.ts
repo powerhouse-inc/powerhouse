@@ -145,19 +145,21 @@ describe("SimpleJobExecutorManager", () => {
         documentId: "doc-1",
         scope: "global",
         branch: "main",
-        operation: {
-          action: {
-            id: "action-1",
-            type: "CREATE",
-            scope: "global",
+        operations: [
+          {
+            action: {
+              id: "action-1",
+              type: "CREATE",
+              scope: "global",
+              timestampUtcMs: "123",
+              input: {},
+            },
+            index: 0,
             timestampUtcMs: "123",
-            input: {},
+            hash: "hash",
+            skip: 0,
           },
-          index: 0,
-          timestampUtcMs: "123",
-          hash: "hash",
-          skip: 0,
-        },
+        ],
         createdAt: "123",
         queueHint: [],
       };
@@ -178,19 +180,21 @@ describe("SimpleJobExecutorManager", () => {
         documentId: "doc-1",
         scope: "global",
         branch: "main",
-        operation: {
-          action: {
-            id: "action-1",
-            type: "CREATE",
-            scope: "global",
+        operations: [
+          {
+            action: {
+              id: "action-1",
+              type: "CREATE",
+              scope: "global",
+              timestampUtcMs: "123",
+              input: {},
+            },
+            index: 0,
             timestampUtcMs: "123",
-            input: {},
+            hash: "hash",
+            skip: 0,
           },
-          index: 0,
-          timestampUtcMs: "123",
-          hash: "hash",
-          skip: 0,
-        },
+        ],
         createdAt: "123",
         queueHint: [],
       };
