@@ -35,3 +35,17 @@ export const useSelectedAppModuleDocument = vi.fn(() => {
   const mockDispatch = vi.fn();
   return [mockDocument, mockDispatch];
 });
+
+export const useSelectedDocumentEditorDocument = vi.fn(() => {
+  const mockDocument = {
+    state: {
+      global: {
+        name: "",
+        status: "DRAFT" as const,
+        documentTypes: [],
+      },
+    },
+  };
+  const mockDispatch = vi.fn();
+  return [mockDocument, mockDispatch];
+});
