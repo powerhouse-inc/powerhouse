@@ -4,6 +4,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useSelectedDriveVetraPackage } from "../hooks/useVetraDocument.js";
 import { Editor } from "./editor.js";
 
+vi.mock("../hooks/useVetraDocument.js", () => ({
+  useSelectedDriveVetraPackage: vi.fn(),
+}));
+
 describe("VetraPackage Editor", () => {
   let mockDispatch: ReturnType<typeof vi.fn>;
 

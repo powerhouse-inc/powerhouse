@@ -4,6 +4,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useSelectedAppModuleDocument } from "../hooks/useVetraDocument.js";
 import { Editor } from "./editor.js";
 
+vi.mock("../hooks/useVetraDocument.js", () => ({
+  useSelectedAppModuleDocument: vi.fn(),
+}));
+
+vi.mock("../hooks/useAvailableDocumentTypes.js", () => ({
+  useAvailableDocumentTypes: vi.fn(() => [
+    "powerhouse/document-model",
+    "powerhouse/budget-statement",
+    "powerhouse/project-tracker",
+  ]),
+}));
+
 describe("AppModule Editor", () => {
   let mockDispatch: ReturnType<typeof vi.fn>;
 
