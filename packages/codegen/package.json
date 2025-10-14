@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/codegen",
-  "version": "4.1.0-dev.69",
+  "version": "4.1.0-dev.70",
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
@@ -51,6 +51,7 @@
     "@graphql-codegen/core": "^4.0.2",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "@powerhousedao/analytics-engine-core": "^0.5.0",
     "copyfiles": "^2.4.1",
     "document-drive": "workspace:*",
     "esbuild-fix-imports-plugin": "^1.0.7",

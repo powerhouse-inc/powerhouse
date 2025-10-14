@@ -595,8 +595,9 @@ Options:
   --config-file <path>       Path to the powerhouse.config.js file. This allows you to
                             customize the behavior of the Vetra development environment.
                         
-  -w, --watch                Watch for local changes to document models and processors,
-                            and automatically update the Switchboard accordingly.
+  -w, --watch                Enable dynamic loading for document-models and editors in
+                            connect-studio and switchboard. When enabled, the system will
+                            watch for changes in these directories and reload them dynamically.
                         
   --remote-drive <url>       URL of remote drive to connect to. When specified, the switchboard
                             connects to this remote drive instead of creating a local Vetra drive.
@@ -608,20 +609,16 @@ Options:
                             will prompt for user confirmation before generating code. This is useful
                             for development when you want control over when code regeneration happens.
 
-  --watch-packages           Enable dynamic loading for document-models and editors in connect-studio
-                            and switchboard. When enabled, the system will watch for changes in these
-                            directories and reload them dynamically. Default is disabled for better performance.
-
 Examples:
   $ ph vetra                                              # Start Vetra environment with defaults
   $ ph vetra --switchboard-port 5000 --connect-port 3001 # Use custom ports
   $ ph vetra --config-file custom.powerhouse.config.js   # Use custom configuration
-  $ ph vetra --watch                                      # Watch for changes and auto-update
+  $ ph vetra --watch                                      # Enable dynamic loading for development
+  $ ph vetra -w                                           # Enable dynamic loading (short form)
   $ ph vetra --logs                                       # Enable detailed logging
   $ ph vetra --remote-drive http://localhost:4001/d/docs  # Connect to remote drive
   $ ph vetra --disable-connect                            # Start only backend services
   $ ph vetra --interactive                                # Enable interactive code generation mode
-  $ ph vetra --watch-packages                             # Enable dynamic loading for development
   $ ph vetra --https-key-file key.pem --https-cert-file cert.pem  # Use HTTPS
 ```
 

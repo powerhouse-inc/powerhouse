@@ -11,14 +11,14 @@ async function startVetraEnv(options: DevOptions) {
 }
 
 export const vetra: CommandActionType<
-  [DevOptions & { logs?: boolean }]
+  [DevOptions & { logs?: boolean; watch?: boolean }]
 > = async (options) => {
   return startVetraEnv({
     ...options,
     verbose: options.logs,
     disableConnect: options.disableConnect,
     interactive: options.interactive,
-    watchPackages: options.watchPackages,
+    watch: options.watch,
   });
 };
 
@@ -42,7 +42,7 @@ export function vetraCommand(program: Command) {
     )
     .option(
       "-w, --watch",
-      "if the switchboard and reactor should watch for local changes to document models and processors",
+      "Enable dynamic loading for document-models and editors in connect-studio and switchboard",
     )
     .option(
       "--remote-drive <url>",
@@ -55,10 +55,6 @@ export function vetraCommand(program: Command) {
     .option(
       "--interactive",
       "Enable interactive mode for code generation (requires user confirmation before generating code)",
-    )
-    .option(
-      "--watch-packages",
-      "Enable dynamic loading for document-models and editors in connect-studio and switchboard",
     );
 
   // Use the setCustomHelp utility to apply custom help formatting

@@ -65,7 +65,6 @@ import { runAsap, runAsapAsync } from "document-drive/run-asap";
 import {
   type Action,
   type CreateDocumentActionInput,
-  type DeleteDocumentActionInput,
   type DocumentModelModule,
   type DocumentOperations,
   type Operation,
@@ -1279,79 +1278,6 @@ export class BaseDocumentDriveServer
   }
 
   async deleteDocument(documentId: string) {
-    if (this.enableDualActionCreate) {
-      return this.deleteDocumentDualAction(documentId);
-    } else {
-      return this.deleteDocumentLegacy(documentId);
-    }
-  }
-
-  private async deleteDocumentLegacy(documentId: string) {
-    try {
-      const syncUnits =
-        await this.synchronizationManager.getSynchronizationUnitsIds(
-          undefined,
-          [documentId],
-        );
-
-      // remove document sync units status when a document is deleted
-      for (const syncUnit of syncUnits) {
-        this.synchronizationManager.updateSyncStatus(syncUnit, null);
-      }
-      const parents = await this.documentStorage.getParents(documentId);
-      for (const parent of parents) {
-        this.listenerManager
-          .removeSyncUnits(parent, syncUnits)
-          .catch(this.logger.warn);
-      }
-    } catch (error) {
-      this.logger.warn("Error deleting document", error);
-    }
-    await this.cache.deleteDocument(documentId);
-    await this.documentStorage.delete(documentId);
-  }
-
-  private async deleteDocumentDualAction(documentId: string) {
-    const timestampUtcMs = new Date().toISOString();
-
-    // Create DELETE_DOCUMENT action
-    const deleteDocumentInput: DeleteDocumentActionInput = {
-      documentId,
-    };
-
-    const deleteDocumentAction: Action = {
-      id: `${documentId}-delete`,
-      type: "DELETE_DOCUMENT",
-      timestampUtcMs,
-      input: deleteDocumentInput,
-      scope: "global",
-    };
-
-    // Create operation from action
-    const operation: Operation = {
-      index: 0,
-      skip: 0,
-      hash: "", // Will be computed if needed
-      timestampUtcMs,
-      action: deleteDocumentAction,
-    };
-
-    // Write the DELETE_DOCUMENT operation to storage
-    // This allows tracking deletion in the operation log
-    if (this.legacyStorage.addDocumentOperations) {
-      try {
-        await this.legacyStorage.addDocumentOperations(
-          documentId,
-          [operation],
-          undefined as any, // Document is being deleted, so we don't have it
-        );
-      } catch (error) {
-        // If writing operation fails, log but continue with deletion
-        this.logger.warn("Failed to write DELETE_DOCUMENT operation", error);
-      }
-    }
-
-    // Perform the actual deletion (same as legacy)
     try {
       const syncUnits =
         await this.synchronizationManager.getSynchronizationUnitsIds(

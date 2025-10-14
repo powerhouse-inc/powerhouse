@@ -1,3 +1,13 @@
+## 4.1.0-dev.70 (2025-10-14)
+
+### 🩹 Fixes
+
+- **vetra:** added drive id to read model ([2e40cc500](https://github.com/powerhouse-inc/powerhouse/commit/2e40cc500))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.69 (2025-10-11)
 
 ### 🩹 Fixes
