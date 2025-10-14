@@ -108,6 +108,7 @@ export interface SearchFilter {
   documentType?: string;
   parentId?: string;
   identifiers?: Record<string, any>;
+  includeDeleted?: boolean;
 }
 
 export interface PagingOptions {
