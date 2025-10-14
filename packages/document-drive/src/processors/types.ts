@@ -1,3 +1,4 @@
+import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import type {
   InternalTransmitterUpdate,
   ListenerFilter,
@@ -5,9 +6,6 @@ import type {
 } from "document-drive";
 import type { PHDocumentHeader } from "document-model";
 import type { Kysely, QueryCreator } from "kysely";
-
-// TODO: Add @powerhousedao/analytics-engine-core dependency when needed
-type IAnalyticsStore = any;
 
 export type IRelationalQueryMethods =
   | "selectFrom"
