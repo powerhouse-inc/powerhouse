@@ -20,3 +20,18 @@ export const useSelectedDriveVetraPackage = vi.fn(() => {
   const mockDispatch = vi.fn();
   return [mockDocument, mockDispatch];
 });
+
+export const useSelectedAppModuleDocument = vi.fn(() => {
+  const mockDocument = {
+    state: {
+      global: {
+        name: "",
+        status: "DRAFT" as const,
+        documentTypes: null,
+        dragAndDrop: null,
+      },
+    },
+  };
+  const mockDispatch = vi.fn();
+  return [mockDocument, mockDispatch];
+});
