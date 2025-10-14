@@ -12,7 +12,12 @@ import { EventBus } from "../../src/events/event-bus.js";
 import type { IEventBus } from "../../src/events/interfaces.js";
 import type { IQueue } from "../../src/queue/interfaces.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
-import { createDocModelDocument, createTestDocuments } from "../factories.js";
+import {
+  createDocModelDocument,
+  createMockReadModelCoordinator,
+  createTestDocuments,
+  createTestJobTracker,
+} from "../factories.js";
 
 describe("Reactor Read Interface", () => {
   let reactor: Reactor;
@@ -41,7 +46,15 @@ describe("Reactor Read Interface", () => {
     queue = new InMemoryQueue(eventBus);
 
     // Create reactor facade with all required dependencies
-    reactor = new Reactor(driveServer, storage, queue);
+    const jobTracker = createTestJobTracker();
+    const readModelCoordinator = createMockReadModelCoordinator();
+    reactor = new Reactor(
+      driveServer,
+      storage,
+      queue,
+      jobTracker,
+      readModelCoordinator,
+    );
   });
 
   describe("getDocumentModels", () => {

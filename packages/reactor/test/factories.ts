@@ -15,6 +15,8 @@ import type {
   PHDocument,
 } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
+import { Kysely } from "kysely";
+import { KyselyPGlite } from "kysely-pglite";
 import { v4 as uuidv4 } from "uuid";
 import { vi } from "vitest";
 import { Reactor } from "../src/core/reactor.js";
@@ -23,16 +25,15 @@ import type { IEventBus } from "../src/events/interfaces.js";
 import type { IJobExecutor } from "../src/executor/interfaces.js";
 import { SimpleJobExecutorManager } from "../src/executor/simple-job-executor-manager.js";
 import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
-import type { IJobTracker } from "../src/job-tracker/interfaces.js";
 import { InMemoryJobTracker } from "../src/job-tracker/in-memory-job-tracker.js";
+import type { IJobTracker } from "../src/job-tracker/interfaces.js";
 import type { IQueue } from "../src/queue/interfaces.js";
 import { InMemoryQueue } from "../src/queue/queue.js";
 import type { Job } from "../src/queue/types.js";
+import type { IReadModelCoordinator } from "../src/read-models/interfaces.js";
 import { DocumentModelRegistry } from "../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../src/registry/interfaces.js";
 import type { IOperationStore } from "../src/storage/interfaces.js";
-import { Kysely } from "kysely";
-import { KyselyPGlite } from "kysely-pglite";
 import { KyselyOperationStore } from "../src/storage/kysely/store.js";
 import type { Database as DatabaseSchema } from "../src/storage/kysely/types.js";
 
@@ -388,6 +389,19 @@ export function createMockOperationStore(
 }
 
 /**
+ * Factory for creating mock IReadModelCoordinator
+ */
+export function createMockReadModelCoordinator(
+  overrides: Partial<IReadModelCoordinator> = {},
+): IReadModelCoordinator {
+  return {
+    start: vi.fn(),
+    stop: vi.fn(),
+    ...overrides,
+  };
+}
+
+/**
  * Factory for creating a complete test reactor setup
  */
 export async function createTestReactorSetup(
@@ -413,16 +427,26 @@ export async function createTestReactorSetup(
   // Create mock operation store for testing
   const operationStore = createMockOperationStore();
 
-  // Create job executor
+  // Create job executor with event bus
   const jobExecutor = new SimpleJobExecutor(
     registry,
     storage,
     storage,
     operationStore,
+    eventBus,
   );
 
+  // Create mock read model coordinator
+  const readModelCoordinator = createMockReadModelCoordinator();
+
   // Create reactor
-  const reactor = new Reactor(driveServer, storage, queue, jobTracker);
+  const reactor = new Reactor(
+    driveServer,
+    storage,
+    queue,
+    jobTracker,
+    readModelCoordinator,
+  );
 
   return {
     reactor,

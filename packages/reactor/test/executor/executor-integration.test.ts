@@ -13,7 +13,7 @@ import { DocumentModelRegistry } from "../../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
 import type { KyselyOperationStore } from "../../src/storage/kysely/store.js";
 import type { Database as DatabaseSchema } from "../../src/storage/kysely/types.js";
-import { createTestOperationStore } from "../factories.js";
+import { createTestEventBus, createTestOperationStore } from "../factories.js";
 
 describe("SimpleJobExecutor Integration", () => {
   let executor: SimpleJobExecutor;
@@ -36,11 +36,13 @@ describe("SimpleJobExecutor Integration", () => {
     operationStore = setup.store;
 
     // Create executor with real storage and real operation store
+    const eventBus = createTestEventBus();
     executor = new SimpleJobExecutor(
       registry,
       storage as IDocumentStorage,
       storage as IDocumentOperationStorage,
       operationStore,
+      eventBus,
     );
   });
 
@@ -314,11 +316,13 @@ describe("SimpleJobExecutor Integration", () => {
       const fn = vi.fn().mockRejectedValue(new Error("Storage write failed"));
       storage.addDocumentOperations = fn;
 
+      const eventBus = createTestEventBus();
       const executorWithFailingStorage = new SimpleJobExecutor(
         registry,
         storage as IDocumentStorage,
         storage as IDocumentOperationStorage,
         operationStore,
+        eventBus,
       );
 
       // Create a valid job

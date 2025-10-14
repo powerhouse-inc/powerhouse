@@ -7,6 +7,8 @@ import type {
   DocumentModelModule,
   PHDocument,
 } from "document-model";
+import type { IEventBus } from "../events/interfaces.js";
+import { OperationEventTypes } from "../events/types.js";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import { DocumentDeletedError } from "../shared/errors.js";
@@ -31,6 +33,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     private documentStorage: IDocumentStorage,
     private operationStorage: IDocumentOperationStorage,
     private operationStore: IOperationStore,
+    private eventBus: IEventBus,
   ) {}
 
   /**
@@ -138,6 +141,27 @@ export class SimpleJobExecutor implements IJobExecutor {
       };
     }
 
+    // Emit event for read models - fire and forget, don't block
+    // Read model indexing happens asynchronously
+    this.eventBus
+      .emit(OperationEventTypes.OPERATION_WRITTEN, {
+        operations: [
+          {
+            operation: newOperation,
+            context: {
+              documentId: job.documentId,
+              scope,
+              branch: job.branch,
+              documentType: document.header.documentType,
+            },
+          },
+        ],
+      })
+      .catch((error) => {
+        // Log error but don't fail the job - read models are eventually consistent
+        console.error("Failed to emit operation event for read models:", error);
+      });
+
     return {
       job,
       success: true,
@@ -215,6 +239,26 @@ export class SimpleJobExecutor implements IJobExecutor {
         duration: Date.now() - startTime,
       };
     }
+
+    // Emit event for read models - fire and forget
+    this.eventBus
+      .emit(OperationEventTypes.OPERATION_WRITTEN, {
+        operations: [
+          {
+            operation,
+            context: {
+              documentId: document.header.id,
+              scope: job.scope || "global",
+              branch: job.branch,
+              documentType: document.header.documentType,
+            },
+          },
+        ],
+      })
+      .catch((error) => {
+        // Log error but don't fail the job - read models are eventually consistent
+        console.error("Failed to emit operation event for read models:", error);
+      });
 
     return {
       job,
@@ -313,6 +357,26 @@ export class SimpleJobExecutor implements IJobExecutor {
         duration: Date.now() - startTime,
       };
     }
+
+    // Emit event for read models - fire and forget
+    this.eventBus
+      .emit(OperationEventTypes.OPERATION_WRITTEN, {
+        operations: [
+          {
+            operation,
+            context: {
+              documentId,
+              scope: job.scope || "document",
+              branch: job.branch,
+              documentType: document.header.documentType,
+            },
+          },
+        ],
+      })
+      .catch((error) => {
+        // Log error but don't fail the job - read models are eventually consistent
+        console.error("Failed to emit operation event for read models:", error);
+      });
 
     return {
       job,

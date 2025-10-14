@@ -12,6 +12,7 @@ import { v4 as uuidv4 } from "uuid";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
 import type { IQueue } from "../queue/interfaces.js";
 import type { Job } from "../queue/types.js";
+import type { IReadModelCoordinator } from "../read-models/interfaces.js";
 import { createMutableShutdownStatus } from "../shared/factories.js";
 import type {
   JobInfo,
@@ -28,18 +29,8 @@ import type { IReactor } from "./types.js";
 import { filterByParentId, filterByType } from "./utils.js";
 
 /**
- * The Reactor facade implementation.
- *
  * This class implements the IReactor interface and serves as the main entry point
- * for the new Reactor architecture. In Phase 2 of the refactoring plan, it acts
- * as a facade over the existing BaseDocumentDriveServer while we incrementally
- * migrate to the new architecture.
- *
- * The facade pattern allows us to:
- * 1. Present the new IReactor API to clients immediately
- * 2. Internally delegate to the refactored BaseDocumentDriveServer (post Phase 1)
- * 3. Incrementally replace internal implementations without breaking clients
- * 4. Validate the new architecture alongside the existing system
+ * for the new Reactor architecture.
  */
 export class Reactor implements IReactor {
   private driveServer: BaseDocumentDriveServer;
@@ -48,18 +39,24 @@ export class Reactor implements IReactor {
   private setShutdown: (value: boolean) => void;
   private queue: IQueue;
   private jobTracker: IJobTracker;
+  private readModelCoordinator: IReadModelCoordinator;
 
   constructor(
     driveServer: BaseDocumentDriveServer,
     documentStorage: IDocumentStorage,
     queue: IQueue,
     jobTracker: IJobTracker,
+    readModelCoordinator: IReadModelCoordinator,
   ) {
     // Store required dependencies
     this.driveServer = driveServer;
     this.documentStorage = documentStorage;
     this.queue = queue;
     this.jobTracker = jobTracker;
+    this.readModelCoordinator = readModelCoordinator;
+
+    // Start the read model coordinator
+    this.readModelCoordinator.start();
 
     // Create mutable shutdown status using factory method
     const [status, setter] = createMutableShutdownStatus(false);
@@ -73,6 +70,9 @@ export class Reactor implements IReactor {
   kill(): ShutdownStatus {
     // Mark the reactor as shutdown
     this.setShutdown(true);
+
+    // Stop the read model coordinator
+    this.readModelCoordinator.stop();
 
     // TODO: Phase 3+ - Implement graceful shutdown for queue, executors, etc.
     // For now, we just mark as shutdown and return status
@@ -333,9 +333,6 @@ export class Reactor implements IReactor {
       maxRetries: 3,
     };
 
-    // Enqueue the job
-    await this.queue.enqueue(job);
-
     // Create job info and register with tracker
     const jobInfo: JobInfo = {
       id: job.id,
@@ -343,6 +340,9 @@ export class Reactor implements IReactor {
       createdAtUtcIso,
     };
     this.jobTracker.registerJob(jobInfo);
+
+    // Enqueue the job
+    await this.queue.enqueue(job);
 
     return jobInfo;
   }
@@ -393,9 +393,6 @@ export class Reactor implements IReactor {
       maxRetries: 3,
     };
 
-    // Enqueue the job
-    await this.queue.enqueue(job);
-
     // Create job info and register with tracker
     const jobInfo: JobInfo = {
       id: job.id,
@@ -403,6 +400,9 @@ export class Reactor implements IReactor {
       createdAtUtcIso,
     };
     this.jobTracker.registerJob(jobInfo);
+
+    // Enqueue the job
+    await this.queue.enqueue(job);
 
     return jobInfo;
   }
@@ -431,13 +431,7 @@ export class Reactor implements IReactor {
       maxRetries: 3,
     }));
 
-    // Enqueue all jobs
-    for (const job of jobs) {
-      await this.queue.enqueue(job);
-    }
-
     // Create job info for the batch (using the first job's ID as the batch ID)
-    // TODO: we need proper support for batch jobs
     const batchJobId = jobs.length > 0 ? jobs[0].id : uuidv4();
     const jobInfo: JobInfo = {
       id: batchJobId,
@@ -445,6 +439,11 @@ export class Reactor implements IReactor {
       createdAtUtcIso,
     };
     this.jobTracker.registerJob(jobInfo);
+
+    // Enqueue all jobs
+    for (const job of jobs) {
+      await this.queue.enqueue(job);
+    }
 
     return jobInfo;
   }
