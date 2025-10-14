@@ -93,7 +93,7 @@ describe("DocumentEditor Editor", () => {
       );
     });
 
-    it("should NOT dispatch when new value equals current value", async () => {
+    it("should dispatch when clearing a non-empty field", async () => {
       vi.mocked(useSelectedDocumentEditorDocument).mockReturnValue([
         {
           state: {
@@ -112,7 +112,41 @@ describe("DocumentEditor Editor", () => {
 
       const nameInput = screen.getByLabelText("Editor Name");
       await user.clear(nameInput);
-      await user.type(nameInput, "existing-editor");
+
+      await waitFor(
+        () => {
+          expect(mockDispatch).toHaveBeenCalledWith(
+            expect.objectContaining({
+              type: "SET_EDITOR_NAME",
+              input: { name: "" },
+            }),
+          );
+        },
+        { timeout: 500 },
+      );
+    });
+
+    it("should NOT dispatch when typing identical value without clearing", async () => {
+      vi.mocked(useSelectedDocumentEditorDocument).mockReturnValue([
+        {
+          state: {
+            global: {
+              name: "test",
+              status: "DRAFT",
+              documentTypes: [],
+            },
+          },
+        },
+        mockDispatch,
+      ] as any);
+
+      const user = userEvent.setup();
+      render(<Editor />);
+
+      const nameInput = screen.getByLabelText("Editor Name");
+      // Simulate user selecting all text and typing the same value
+      await user.tripleClick(nameInput); // Select all
+      await user.type(nameInput, "test");
 
       await waitFor(() => {
         expect(mockDispatch).not.toHaveBeenCalled();

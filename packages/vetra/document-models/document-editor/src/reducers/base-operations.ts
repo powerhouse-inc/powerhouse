@@ -2,10 +2,11 @@ import type { DocumentEditorBaseOperationsOperations } from "../../gen/base-oper
 
 export const reducer: DocumentEditorBaseOperationsOperations = {
   setEditorNameOperation(state, action, dispatch) {
-    if (action.input.name.trim() === "") {
+    const trimmedName = action.input.name.trim();
+    if (trimmedName === "") {
       throw new Error("Editor name cannot be empty");
     }
-    state.name = action.input.name;
+    state.name = trimmedName;
   },
   addDocumentTypeOperation(state, action, dispatch) {
     // Check for duplicate ID

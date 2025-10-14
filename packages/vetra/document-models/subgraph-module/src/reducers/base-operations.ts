@@ -2,10 +2,11 @@ import type { SubgraphModuleBaseOperationsOperations } from "../../gen/base-oper
 
 export const reducer: SubgraphModuleBaseOperationsOperations = {
   setSubgraphNameOperation(state, action, dispatch) {
-    if (action.input.name.trim() === "") {
+    const trimmedName = action.input.name.trim();
+    if (trimmedName === "") {
       throw new Error("Subgraph name cannot be empty");
     }
-    state.name = action.input.name;
+    state.name = trimmedName;
   },
   setSubgraphStatusOperation(state, action, dispatch) {
     state.status = action.input.status;

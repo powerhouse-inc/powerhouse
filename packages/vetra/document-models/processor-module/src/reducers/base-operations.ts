@@ -2,16 +2,18 @@ import type { ProcessorModuleBaseOperationsOperations } from "../../gen/base-ope
 
 export const reducer: ProcessorModuleBaseOperationsOperations = {
   setProcessorNameOperation(state, action, dispatch) {
-    if (action.input.name.trim() === "") {
+    const trimmedName = action.input.name.trim();
+    if (trimmedName === "") {
       throw new Error("Processor name cannot be empty");
     }
-    state.name = action.input.name;
+    state.name = trimmedName;
   },
   setProcessorTypeOperation(state, action, dispatch) {
-    if (action.input.type.trim() === "") {
+    const trimmedType = action.input.type.trim();
+    if (trimmedType === "") {
       throw new Error("Processor type cannot be empty");
     }
-    state.type = action.input.type;
+    state.type = trimmedType;
   },
   addDocumentTypeOperation(state, action, dispatch) {
     // Check for duplicate ID

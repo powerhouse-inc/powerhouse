@@ -217,7 +217,7 @@ describe("VetraPackage Editor", () => {
   });
 
   describe("Conditional Dispatch Logic", () => {
-    it("should NOT dispatch when new value equals current value", async () => {
+    it("should dispatch when clearing a non-empty field", async () => {
       vi.mocked(useSelectedDriveVetraPackage).mockReturnValue([
         {
           state: {
@@ -239,9 +239,46 @@ describe("VetraPackage Editor", () => {
       render(<Editor />);
 
       const nameInput = screen.getByLabelText("Name");
-      // Clear and type the same value
       await user.clear(nameInput);
-      await user.type(nameInput, "existing-package");
+
+      await waitFor(
+        () => {
+          expect(mockDispatch).toHaveBeenCalledWith(
+            expect.objectContaining({
+              type: "SET_PACKAGE_NAME",
+              input: { name: "" },
+            }),
+          );
+        },
+        { timeout: 500 },
+      );
+    });
+
+    it("should NOT dispatch when typing identical value without clearing", async () => {
+      vi.mocked(useSelectedDriveVetraPackage).mockReturnValue([
+        {
+          state: {
+            global: {
+              name: "test",
+              description: null,
+              category: null,
+              author: { name: null, website: null },
+              keywords: [],
+              githubUrl: null,
+              npmUrl: null,
+            },
+          },
+        },
+        mockDispatch,
+      ] as any);
+
+      const user = userEvent.setup();
+      render(<Editor />);
+
+      const nameInput = screen.getByLabelText("Name");
+      // Simulate user selecting all text and typing the same value
+      await user.tripleClick(nameInput); // Select all
+      await user.type(nameInput, "test");
 
       await waitFor(() => {
         expect(mockDispatch).not.toHaveBeenCalled();
