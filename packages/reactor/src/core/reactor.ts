@@ -2,11 +2,13 @@ import type { BaseDocumentDriveServer, IDocumentStorage } from "document-drive";
 import { AbortError } from "document-drive";
 import type {
   Action,
+  CreateDocumentActionInput,
   DeleteDocumentActionInput,
   DocumentModelModule,
   Operation,
   PHBaseState,
   PHDocument,
+  UpgradeDocumentActionInput,
 } from "document-model";
 import { v4 as uuidv4 } from "uuid";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
@@ -304,19 +306,38 @@ export class Reactor implements IReactor {
       throw new AbortError();
     }
 
-    // Create a CREATE_DOCUMENT action
+    // Create a CREATE_DOCUMENT action with proper CreateDocumentActionInput
+    const input: CreateDocumentActionInput = {
+      model: document.header.documentType,
+      version: "0.0.0",
+      documentId: document.header.id,
+    };
+
+    // Add signing info
+    input.signing = {
+      signature: document.header.id,
+      publicKey: document.header.sig.publicKey,
+      nonce: document.header.sig.nonce,
+      createdAtUtcIso: document.header.createdAtUtcIso,
+      documentType: document.header.documentType,
+    };
+
+    // Add optional mutable header fields (always include even if empty/undefined)
+    input.slug = document.header.slug;
+    input.name = document.header.name;
+    input.branch = document.header.branch;
+    input.meta = document.header.meta;
+
     const action: Action = {
       id: `${document.header.id}-create`,
       type: "CREATE_DOCUMENT",
       scope: "document",
       timestampUtcMs: new Date().toISOString(),
-      input: {
-        document,
-      },
+      input,
     };
 
     // Create a job for the CREATE_DOCUMENT action
-    const job: Job = {
+    const createJob: Job = {
       id: uuidv4(),
       documentId: SYSTEM_DOCUMENT_ID,
       scope: "document",
@@ -333,16 +354,51 @@ export class Reactor implements IReactor {
       maxRetries: 3,
     };
 
-    // Create job info and register with tracker
+    // Create an UPGRADE_DOCUMENT action to set the initial state
+    const upgradeInput: UpgradeDocumentActionInput = {
+      model: document.header.documentType,
+      fromVersion: "0.0.0",
+      toVersion: "0.0.0", // Same version since we're just setting initial state
+      documentId: document.header.id,
+      initialState: document.state,
+    };
+
+    const upgradeAction: Action = {
+      id: `${document.header.id}-upgrade`,
+      type: "UPGRADE_DOCUMENT",
+      scope: "document",
+      timestampUtcMs: new Date().toISOString(),
+      input: upgradeInput,
+    };
+
+    const upgradeJob: Job = {
+      id: uuidv4(),
+      documentId: document.header.id,
+      scope: "document",
+      branch: "main",
+      operation: {
+        index: 0,
+        timestampUtcMs: new Date().toISOString(),
+        hash: "",
+        skip: 0,
+        action: upgradeAction,
+      },
+      createdAt: new Date().toISOString(),
+      queueHint: [],
+      maxRetries: 3,
+    };
+
+    // Create job info and register with tracker (use the first job's ID)
     const jobInfo: JobInfo = {
-      id: job.id,
+      id: createJob.id,
       status: JobStatus.PENDING,
       createdAtUtcIso,
     };
     this.jobTracker.registerJob(jobInfo);
 
-    // Enqueue the job
-    await this.queue.enqueue(job);
+    // Enqueue both jobs
+    await this.queue.enqueue(createJob);
+    await this.queue.enqueue(upgradeJob);
 
     return jobInfo;
   }

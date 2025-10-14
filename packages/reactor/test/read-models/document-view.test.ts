@@ -358,172 +358,344 @@ describe("KyselyDocumentView", () => {
     });
   });
 
-  describe("getMany", () => {
+  describe("getHeader", () => {
     beforeEach(async () => {
       await view.init();
     });
 
-    it("should retrieve multiple documents by ID", async () => {
-      const doc1Id = generateId();
-      const doc2Id = generateId();
-      const doc3Id = generateId();
-      const scope = "global";
+    it("should reconstruct header from CREATE_DOCUMENT operation", async () => {
+      const documentId = generateId();
       const branch = "main";
-      const documentType = "text/plain";
+      const documentType = "powerhouse/document-drive";
+      const createdAt = new Date().toISOString();
+      const nonce = "test-nonce-123";
+      const publicKey: JsonWebKey = {
+        kty: "EC",
+        crv: "P-256",
+        x: "test-x",
+        y: "test-y",
+      };
 
-      // Create snapshots for doc1 and doc2
-      const operations = [
+      // Create a CREATE_DOCUMENT operation with signing parameters
+      const createAction = {
+        id: generateId(),
+        type: "CREATE_DOCUMENT",
+        scope: "header",
+        timestampUtcMs: createdAt,
+        input: {
+          model: "powerhouse/document-drive",
+          version: "0.0.0" as const,
+          documentId,
+          signing: {
+            signature: documentId,
+            publicKey,
+            nonce,
+            createdAtUtcIso: createdAt,
+            documentType,
+          },
+        },
+      };
+
+      // Index the CREATE_DOCUMENT operation in "header" scope
+      await view.indexOperations([
         {
           operation: {
             index: 0,
-            timestampUtcMs: new Date().toISOString(),
+            timestampUtcMs: createdAt,
             hash: "hash-0",
             skip: 0,
             id: generateId(),
-            action: addFile({
-              id: generateId(),
-              name: "doc1.txt",
-              documentType: "text/plain",
-              parentFolder: null,
-            }),
+            action: createAction,
           },
           context: {
-            documentId: doc1Id,
+            documentId,
             documentType,
-            scope,
+            scope: "header",
             branch,
           },
         },
+      ]);
+
+      // Store the operation in the operation store for getRevisions to work
+      await operationStore.apply(
+        documentId,
+        documentType,
+        "header",
+        branch,
+        0,
+        (txn) => {
+          txn.addOperations({
+            index: 0,
+            timestampUtcMs: createdAt,
+            hash: "hash-0",
+            skip: 0,
+            id: generateId(),
+            action: createAction,
+          });
+        },
+      );
+
+      // Get header and verify
+      const header = await view.getHeader(documentId, branch);
+
+      expect(header.id).toBe(documentId);
+      expect(header.documentType).toBe(documentType);
+      expect(header.createdAtUtcIso).toBe(createdAt);
+      expect(header.sig.nonce).toBe(nonce);
+      expect(header.sig.publicKey).toEqual(publicKey);
+    });
+
+    it("should include revision map and latest timestamp from all scopes", async () => {
+      const documentId = generateId();
+      const branch = "main";
+      const documentType = "powerhouse/document-drive";
+      const createdAt = new Date().toISOString();
+      const laterTimestamp = new Date(Date.now() + 1000).toISOString();
+
+      // Create a CREATE_DOCUMENT operation
+      const createAction = {
+        id: generateId(),
+        type: "CREATE_DOCUMENT",
+        scope: "header",
+        timestampUtcMs: createdAt,
+        input: {
+          model: "powerhouse/document-drive",
+          version: "0.0.0" as const,
+          documentId,
+          signing: {
+            signature: documentId,
+            publicKey: { kty: "EC", crv: "P-256", x: "x", y: "y" },
+            nonce: "nonce",
+            createdAtUtcIso: createdAt,
+            documentType,
+          },
+        },
+      };
+
+      // Index CREATE_DOCUMENT in "header" scope
+      await view.indexOperations([
         {
           operation: {
             index: 0,
-            timestampUtcMs: new Date().toISOString(),
-            hash: "hash-1",
+            timestampUtcMs: createdAt,
+            hash: "hash-0",
             skip: 0,
             id: generateId(),
-            action: addFile({
-              id: generateId(),
-              name: "doc2.txt",
-              documentType: "text/plain",
-              parentFolder: null,
-            }),
+            action: createAction,
           },
           context: {
-            documentId: doc2Id,
+            documentId,
             documentType,
-            scope,
+            scope: "header",
             branch,
           },
         },
-      ];
+      ]);
 
-      await view.indexOperations(operations);
-
-      // Get all three documents (doc3 doesn't exist)
-      const results = await view.getMany([doc1Id, doc2Id, doc3Id]);
-
-      expect(results).toHaveLength(3);
-      expect(results[0]).not.toBeNull();
-      expect(results[0]?.documentId).toBe(doc1Id);
-      expect(results[1]).not.toBeNull();
-      expect(results[1]?.documentId).toBe(doc2Id);
-      expect(results[2]).toBeNull();
-    });
-
-    it("should return empty array for empty input", async () => {
-      const results = await view.getMany([]);
-      expect(results).toEqual([]);
-    });
-
-    it("should filter by scope and branch", async () => {
-      const docId = generateId();
-      const customScope = "custom-scope";
-      const branch = "main";
-      const documentType = "text/plain";
-
-      // Create a snapshot in a different scope
-      const operation = {
-        operation: {
-          index: 0,
-          timestampUtcMs: new Date().toISOString(),
-          hash: "hash-0",
-          skip: 0,
-          id: generateId(),
-          action: addFile({
+      // Store operations in operation store
+      await operationStore.apply(
+        documentId,
+        documentType,
+        "header",
+        branch,
+        0,
+        (txn) => {
+          txn.addOperations({
+            index: 0,
+            timestampUtcMs: createdAt,
+            hash: "hash-0",
+            skip: 0,
             id: generateId(),
-            name: "scoped.txt",
-            documentType: "text/plain",
-            parentFolder: null,
-          }),
+            action: createAction,
+          });
         },
-        context: {
-          documentId: docId,
-          documentType,
-          scope: customScope,
-          branch,
+      );
+
+      // Add operations in different scopes to test revision tracking
+      await operationStore.apply(
+        documentId,
+        documentType,
+        "global",
+        branch,
+        0,
+        (txn) => {
+          txn.addOperations({
+            index: 0,
+            timestampUtcMs: laterTimestamp,
+            hash: "hash-global-0",
+            skip: 0,
+            id: generateId(),
+            action: addFolder({
+              id: generateId(),
+              name: "Test Folder",
+              parentFolder: null,
+            }),
+          });
+        },
+      );
+
+      await operationStore.apply(
+        documentId,
+        documentType,
+        "global",
+        branch,
+        1,
+        (txn) => {
+          txn.addOperations({
+            index: 1,
+            timestampUtcMs: laterTimestamp,
+            hash: "hash-global-1",
+            skip: 0,
+            id: generateId(),
+            action: setDriveName({ name: "Test Drive" }),
+          });
+        },
+      );
+
+      // Get header and verify revision tracking
+      const header = await view.getHeader(documentId, branch);
+
+      // Revision should include all scopes with their latest indices
+      expect(header.revision).toEqual({
+        header: 0,
+        global: 1,
+      });
+
+      // lastModifiedAtUtcIso should be the latest timestamp across all scopes
+      expect(header.lastModifiedAtUtcIso).toBe(laterTimestamp);
+    });
+
+    it("should handle multiple operations in header and document scopes", async () => {
+      const documentId = generateId();
+      const branch = "main";
+      const documentType = "powerhouse/document-drive";
+      const createdAt = new Date().toISOString();
+
+      // Create a CREATE_DOCUMENT operation
+      const createAction = {
+        id: generateId(),
+        type: "CREATE_DOCUMENT",
+        scope: "header",
+        timestampUtcMs: createdAt,
+        input: {
+          model: "powerhouse/document-drive",
+          version: "0.0.0" as const,
+          documentId,
+          signing: {
+            signature: documentId,
+            publicKey: { kty: "EC", crv: "P-256", x: "x", y: "y" },
+            nonce: "nonce",
+            createdAtUtcIso: createdAt,
+            documentType,
+          },
         },
       };
 
-      await view.indexOperations([operation]);
-
-      // Should not find in default scope
-      const defaultResults = await view.getMany([docId]);
-      expect(defaultResults[0]).toBeNull();
-
-      // Should find in custom scope
-      const customResults = await view.getMany([docId], "custom-scope", "main");
-      expect(customResults[0]).not.toBeNull();
-      expect(customResults[0]?.documentId).toBe(docId);
-    });
-
-    it("should not return deleted documents", async () => {
-      const docId = generateId();
-      const scope = "global";
-      const branch = "main";
-      const documentType = "text/plain";
-
-      // Create a snapshot
-      const operation = {
-        operation: {
-          index: 0,
-          timestampUtcMs: new Date().toISOString(),
-          hash: "hash-0",
-          skip: 0,
-          id: generateId(),
-          action: addFile({
+      // Store CREATE_DOCUMENT in both view and operation store
+      await view.indexOperations([
+        {
+          operation: {
+            index: 0,
+            timestampUtcMs: createdAt,
+            hash: "hash-0",
+            skip: 0,
             id: generateId(),
-            name: "deleted.txt",
-            documentType: "text/plain",
-            parentFolder: null,
-          }),
+            action: createAction,
+          },
+          context: {
+            documentId,
+            documentType,
+            scope: "header",
+            branch,
+          },
         },
-        context: {
-          documentId: docId,
-          documentType,
-          scope,
-          branch,
+      ]);
+
+      await operationStore.apply(
+        documentId,
+        documentType,
+        "header",
+        branch,
+        0,
+        (txn) => {
+          txn.addOperations({
+            index: 0,
+            timestampUtcMs: createdAt,
+            hash: "hash-0",
+            skip: 0,
+            id: generateId(),
+            action: createAction,
+          });
+        },
+      );
+
+      // Add an operation in document scope
+      const upgradeAction = {
+        id: generateId(),
+        type: "UPGRADE_DOCUMENT",
+        scope: "document",
+        timestampUtcMs: createdAt,
+        input: {
+          model: "powerhouse/document-drive",
+          fromVersion: "0.0.0",
+          toVersion: "1.0.0",
         },
       };
 
-      await view.indexOperations([operation]);
+      await view.indexOperations([
+        {
+          operation: {
+            index: 0,
+            timestampUtcMs: createdAt,
+            hash: "hash-doc-0",
+            skip: 0,
+            id: generateId(),
+            action: upgradeAction,
+          },
+          context: {
+            documentId,
+            documentType,
+            scope: "document",
+            branch,
+          },
+        },
+      ]);
 
-      // Verify it exists
-      let results = await view.getMany([docId]);
-      expect(results[0]).not.toBeNull();
+      await operationStore.apply(
+        documentId,
+        documentType,
+        "document",
+        branch,
+        0,
+        (txn) => {
+          txn.addOperations({
+            index: 0,
+            timestampUtcMs: createdAt,
+            hash: "hash-doc-0",
+            skip: 0,
+            id: generateId(),
+            action: upgradeAction,
+          });
+        },
+      );
 
-      // Mark as deleted
-      await db
-        .updateTable("DocumentSnapshot")
-        .set({
-          isDeleted: true,
-          deletedAt: new Date(),
-        })
-        .where("documentId", "=", docId)
-        .execute();
+      // Get header and verify it includes operations from both header and document scopes
+      const header = await view.getHeader(documentId, branch);
 
-      // Should not be returned
-      results = await view.getMany([docId]);
-      expect(results[0]).toBeNull();
+      expect(header.id).toBe(documentId);
+      expect(header.revision).toEqual({
+        header: 0,
+        document: 0,
+      });
+    });
+
+    it("should throw error when document header not found", async () => {
+      const nonExistentDocId = generateId();
+      const branch = "main";
+
+      await expect(view.getHeader(nonExistentDocId, branch)).rejects.toThrow(
+        `Document header not found: ${nonExistentDocId}`,
+      );
     });
 
     it("should abort when signal is aborted", async () => {
@@ -531,73 +703,8 @@ describe("KyselyDocumentView", () => {
       controller.abort();
 
       await expect(
-        view.getMany([generateId()], "global", "main", controller.signal),
+        view.getHeader(generateId(), "main", controller.signal),
       ).rejects.toThrow("Operation aborted");
-    });
-
-    it("should maintain order of requested IDs", async () => {
-      const doc1Id = generateId();
-      const doc2Id = generateId();
-      const doc3Id = generateId();
-      const scope = "global";
-      const branch = "main";
-      const documentType = "text/plain";
-
-      // Create snapshots in different order
-      const operations = [
-        {
-          operation: {
-            index: 0,
-            timestampUtcMs: new Date().toISOString(),
-            hash: "hash-2",
-            skip: 0,
-            id: generateId(),
-            action: addFile({
-              id: generateId(),
-              name: "doc3.txt",
-              documentType: "text/plain",
-              parentFolder: null,
-            }),
-          },
-          context: {
-            documentId: doc3Id,
-            documentType,
-            scope,
-            branch,
-          },
-        },
-        {
-          operation: {
-            index: 0,
-            timestampUtcMs: new Date().toISOString(),
-            hash: "hash-0",
-            skip: 0,
-            id: generateId(),
-            action: addFile({
-              id: generateId(),
-              name: "doc1.txt",
-              documentType: "text/plain",
-              parentFolder: null,
-            }),
-          },
-          context: {
-            documentId: doc1Id,
-            documentType,
-            scope,
-            branch,
-          },
-        },
-      ];
-
-      await view.indexOperations(operations);
-
-      // Request in specific order
-      const results = await view.getMany([doc2Id, doc3Id, doc1Id]);
-
-      expect(results).toHaveLength(3);
-      expect(results[0]).toBeNull(); // doc2 doesn't exist
-      expect(results[1]?.documentId).toBe(doc3Id);
-      expect(results[2]?.documentId).toBe(doc1Id);
     });
   });
 });
