@@ -3,7 +3,6 @@ export * from "./config.js";
 export * from "./crypto.js";
 export * from "./documents.js";
 export * from "./drives.js";
-export * from "./errors.js";
 export * from "./modals.js";
 export * from "./nodes.js";
 export * from "./processor-manager.js";

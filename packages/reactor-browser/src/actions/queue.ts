@@ -1,3 +1,4 @@
+import type { FileUploadProgressCallback } from "@powerhousedao/reactor-browser";
 import { logger } from "document-drive";
 import type {
   Action,
@@ -5,7 +6,6 @@ import type {
   Operation,
   PHDocument,
 } from "document-model";
-import type { FileUploadProgressCallback } from "../types/upload.js";
 
 export async function queueActions(
   document: PHDocument | undefined,

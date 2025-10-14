@@ -3,7 +3,9 @@ import type {
   FolderNode,
   IDocumentDriveServer,
   SharingType,
+  SyncStatus,
 } from "document-drive";
+import { SynchronizationUnitNotFoundError } from "document-drive";
 import type { PHDocument } from "document-model";
 
 /** Returns the sharing type for a drive. */
@@ -109,4 +111,44 @@ export async function getDriveById(
 ): Promise<DocumentDriveDocument | undefined> {
   if (!reactor || !driveId) return undefined;
   return await reactor.getDrive(driveId);
+}
+
+export function getSyncStatus(
+  documentId: string,
+  sharingType: SharingType,
+): Promise<SyncStatus | undefined> {
+  if (sharingType === "LOCAL") return Promise.resolve(undefined);
+  const reactor = window.ph?.reactor;
+  if (!reactor) {
+    return Promise.resolve(undefined);
+  }
+  try {
+    const syncStatus = reactor.getSyncStatus(documentId);
+    if (syncStatus instanceof SynchronizationUnitNotFoundError)
+      return Promise.resolve("INITIAL_SYNC");
+    return Promise.resolve(syncStatus);
+  } catch (error) {
+    console.error(error);
+    return Promise.resolve("ERROR");
+  }
+}
+
+export function getSyncStatusSync(
+  documentId: string,
+  sharingType: SharingType,
+): SyncStatus | undefined {
+  if (sharingType === "LOCAL") return;
+  const reactor = window.ph?.reactor;
+  if (!reactor) {
+    return;
+  }
+  try {
+    const syncStatus = reactor.getSyncStatus(documentId);
+    if (syncStatus instanceof SynchronizationUnitNotFoundError)
+      return "INITIAL_SYNC";
+    return syncStatus;
+  } catch (error) {
+    console.error(error);
+    return "ERROR";
+  }
 }

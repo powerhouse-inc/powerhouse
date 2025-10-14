@@ -1,8 +1,7 @@
-import {
-  getUserPermissions,
-  queueActions,
-  queueOperations,
-  uploadOperations,
+import type {
+  ConflictResolution,
+  DocumentTypeIcon,
+  FileUploadProgressCallback,
 } from "@powerhousedao/reactor-browser";
 import type {
   DocumentDriveDocument,
@@ -31,14 +30,10 @@ import {
   generateId,
   replayDocument,
 } from "document-model/core";
-
-import type {
-  ConflictResolution,
-  DocumentTypeIcon,
-  FileUploadProgressCallback,
-} from "../types/upload.js";
+import { UnsupportedDocumentTypeError } from "../errors.js";
 import { isDocumentTypeSupported } from "../utils/documents.js";
-import { UnsupportedDocumentTypeError } from "../utils/unsupported-document-type-error.js";
+import { getUserPermissions } from "../utils/user.js";
+import { queueActions, queueOperations, uploadOperations } from "./queue.js";
 
 async function isDocumentInLocation(
   document: PHDocument,

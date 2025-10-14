@@ -1,5 +1,12 @@
-export * from "./dispatch.js";
-export * from "./document.js";
-export * from "./drive.js";
-export * from "./queue.js";
-export * from "./sign.js";
+export { addDocument, deleteNode, exportFile } from "./document.js";
+export {
+  addDrive,
+  addRemoteDrive,
+  addTrigger,
+  deleteDrive,
+  registerNewPullResponderTrigger,
+  removeTrigger,
+  renameDrive,
+  setDriveAvailableOffline,
+  setDriveSharingType,
+} from "./drive.js";

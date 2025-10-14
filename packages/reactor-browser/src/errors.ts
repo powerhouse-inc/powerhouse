@@ -1,3 +1,10 @@
+export class UnsupportedDocumentTypeError extends Error {
+  constructor(documentType: string) {
+    super(`Document type ${documentType} is not supported`);
+    this.name = "UnsupportedDocumentTypeError";
+  }
+}
+
 export class DocumentNotFoundError extends Error {
   constructor(documentId: string) {
     super(`Document with id ${documentId} not found`);

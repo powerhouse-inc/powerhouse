@@ -1,4 +1,3 @@
-import { getUserPermissions } from "@powerhousedao/reactor-browser";
 import type {
   DocumentDriveDocument,
   DriveInput,
@@ -6,12 +5,10 @@ import type {
   RemoteDriveOptions,
   ServerListener,
   SharingType,
-  SyncStatus,
   Trigger,
 } from "document-drive";
 import {
   PullResponderTransmitter,
-  SynchronizationUnitNotFoundError,
   addTrigger as baseAddTrigger,
   removeTrigger as baseRemoveTrigger,
   setAvailableOffline,
@@ -20,6 +17,7 @@ import {
 } from "document-drive";
 import type { PHDocument } from "document-model";
 import { generateId } from "document-model/core";
+import { getUserPermissions } from "../utils/user.js";
 import { queueActions } from "./queue.js";
 
 export async function addDrive(input: DriveInput, preferredEditor?: string) {
@@ -125,46 +123,6 @@ export async function setDriveSharingType(
     setSharingType({ type: sharingType }),
   );
   return updatedDrive;
-}
-
-export function getSyncStatus(
-  documentId: string,
-  sharingType: SharingType,
-): Promise<SyncStatus | undefined> {
-  if (sharingType === "LOCAL") return Promise.resolve(undefined);
-  const reactor = window.ph?.reactor;
-  if (!reactor) {
-    return Promise.resolve(undefined);
-  }
-  try {
-    const syncStatus = reactor.getSyncStatus(documentId);
-    if (syncStatus instanceof SynchronizationUnitNotFoundError)
-      return Promise.resolve("INITIAL_SYNC");
-    return Promise.resolve(syncStatus);
-  } catch (error) {
-    console.error(error);
-    return Promise.resolve("ERROR");
-  }
-}
-
-export function getSyncStatusSync(
-  documentId: string,
-  sharingType: SharingType,
-): SyncStatus | undefined {
-  if (sharingType === "LOCAL") return;
-  const reactor = window.ph?.reactor;
-  if (!reactor) {
-    return;
-  }
-  try {
-    const syncStatus = reactor.getSyncStatus(documentId);
-    if (syncStatus instanceof SynchronizationUnitNotFoundError)
-      return "INITIAL_SYNC";
-    return syncStatus;
-  } catch (error) {
-    console.error(error);
-    return "ERROR";
-  }
 }
 
 export async function removeTrigger(driveId: string, triggerId: string) {

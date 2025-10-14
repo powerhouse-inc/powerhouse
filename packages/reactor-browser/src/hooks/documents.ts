@@ -1,11 +1,13 @@
+import { type DocumentDispatch } from "@powerhousedao/reactor-browser";
 import {
   DocumentModelNotFoundError,
   DocumentNotFoundError,
+} from "document-drive";
+import type { Action, PHDocument } from "document-model";
+import {
   DocumentTypeMismatchError,
   NoSelectedDocumentError,
-  type DocumentDispatch,
-} from "@powerhousedao/reactor-browser";
-import type { Action, PHDocument } from "document-model";
+} from "../errors.js";
 import { useDispatch } from "./dispatch.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 import { useFileNodes, useNodeKind, useSelectedNodeId } from "./nodes.js";
