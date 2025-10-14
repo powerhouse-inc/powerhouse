@@ -69,6 +69,7 @@ export class VetraReadModelProcessor extends RelationalDbProcessor<DB> {
           last_operation_index: lastOperation.index,
           last_operation_hash: lastOperation.hash,
           last_operation_timestamp: operationTimestamp,
+          drive_id: strand.driveId,
           created_at: now,
           updated_at: now,
         })
@@ -85,6 +86,7 @@ export class VetraReadModelProcessor extends RelationalDbProcessor<DB> {
             last_operation_index: lastOperation.index,
             last_operation_hash: lastOperation.hash,
             last_operation_timestamp: operationTimestamp,
+            drive_id: strand.driveId,
             updated_at: now,
           }),
         )

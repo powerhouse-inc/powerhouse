@@ -138,10 +138,16 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const configPhPackages =
     phConfig.packages?.map((p) =>
       typeof p === "string" ? p : p.packageName,
-    ) || [];
+    ) ?? [];
 
-  // merges env and config packages
-  const allPackages = [...envPhPackages, ...configPhPackages];
+  // merges env and config packages, remove empty strings and duplicates
+  const allPackages = [
+    ...new Set(
+      [...envPhPackages, ...configPhPackages]
+        .map((p) => p.trim())
+        .filter((p) => p.length),
+    ),
+  ];
 
   // if local package is provided and not disabled, add it to the packages to be loaded
   if (!env.PH_DISABLE_LOCAL_PACKAGE) {
@@ -219,6 +225,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       sourcemap: true,
     },
     server: {
+      watch: env.PH_DISABLE_LOCAL_PACKAGE ? null : undefined,
       fs: {
         strict: false,
       },

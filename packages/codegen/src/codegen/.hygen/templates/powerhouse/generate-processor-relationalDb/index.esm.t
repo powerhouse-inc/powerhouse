@@ -6,7 +6,7 @@ import { type IRelationalDb } from "document-drive";
 import { RelationalDbProcessor } from "document-drive";
 import { type InternalTransmitterUpdate } from "document-drive";
 <% documentTypes.forEach(type => { _%>
-import type { <%= documentTypesMap[type].name %>Document } from "<%= documentTypesMap[type].importPath %>/index.js";
+import type { <%= documentTypesMap[type].name %>Document } from "<%= documentTypesMap[type].importPath %>";
 %><% }); _%>
 <% if(documentTypes.length === 0) { %>import { type PHDocument } from "document-model";<% } %>
 import { up } from "./migrations.js";

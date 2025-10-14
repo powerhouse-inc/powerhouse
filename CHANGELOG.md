@@ -1,3 +1,59 @@
+## 4.1.0-dev.70 (2025-10-14)
+
+### 🩹 Fixes
+
+- broken templates, drive app styles, local state schema and validation ([#1941](https://github.com/powerhouse-inc/powerhouse/pull/1941))
+- revert delete operation change to base-server as the underlying storage doesn't support it ([723345310](https://github.com/powerhouse-inc/powerhouse/commit/723345310))
+- **codegen:** generate dm subgraphs ([a7be027f1](https://github.com/powerhouse-inc/powerhouse/commit/a7be027f1))
+- **reactor-api:** bandaid a deeper issue where some document model types have their own name separate from header information, and headers aren't generally synced ([bbf5c94d8](https://github.com/powerhouse-inc/powerhouse/commit/bbf5c94d8))
+- **vetra:** added drive id to read model ([2e40cc500](https://github.com/powerhouse-inc/powerhouse/commit/2e40cc500))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.69 (2025-10-11)
+
+### 🚀 Features
+
+- **builder-tools, ph-cli, connect:** reimplemented ph connect build and preview ([4f568517b](https://github.com/powerhouse-inc/powerhouse/commit/4f568517b))
+
+### 🩹 Fixes
+
+- **builder-tools:** do not watch if local package is disabled ([335f41a0c](https://github.com/powerhouse-inc/powerhouse/commit/335f41a0c))
+- **codegen:** add /index.js to import path on templates ([37bc2e9ef](https://github.com/powerhouse-inc/powerhouse/commit/37bc2e9ef))
+- **ph-cmd:** fixed detection of help command ([157249468](https://github.com/powerhouse-inc/powerhouse/commit/157249468))
+- **vetra:** added drive id to read model ([cfe16037e](https://github.com/powerhouse-inc/powerhouse/commit/cfe16037e))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
+## 4.1.0-dev.68 (2025-10-11)
+
+### 🚀 Features
+
+- update file extension to .phd for document export ([#1894](https://github.com/powerhouse-inc/powerhouse/pull/1894))
+- generate unique vetra drive IDs per project ([#1936](https://github.com/powerhouse-inc/powerhouse/pull/1936))
+- **connect:** import document-model editor missing styles ([#1937](https://github.com/powerhouse-inc/powerhouse/pull/1937))
+- **vetra:** added read model to fetch vetra packages ([abb6d3742](https://github.com/powerhouse-inc/powerhouse/commit/abb6d3742))
+- **vetra:** added documentId in filter option ([01bb92f28](https://github.com/powerhouse-inc/powerhouse/commit/01bb92f28))
+
+### 🩹 Fixes
+
+- enabled supported file ext in drop zone ([#1892](https://github.com/powerhouse-inc/powerhouse/pull/1892))
+- **reactor-api:** added auth export ([a38df7fde](https://github.com/powerhouse-inc/powerhouse/commit/a38df7fde))
+- **vetra:** added vetra package to processor filter ([5f3eaadf4](https://github.com/powerhouse-inc/powerhouse/commit/5f3eaadf4))
+- **vetra:** package query ([36bea7102](https://github.com/powerhouse-inc/powerhouse/commit/36bea7102))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.67 (2025-10-10)
 
 ### 🚀 Features

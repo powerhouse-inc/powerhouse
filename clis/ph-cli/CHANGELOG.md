@@ -1,3 +1,33 @@
+## 4.1.0-dev.70 (2025-10-14)
+
+This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.69 (2025-10-11)
+
+### 🚀 Features
+
+- **builder-tools, ph-cli, connect:** reimplemented ph connect build and preview ([4f568517b](https://github.com/powerhouse-inc/powerhouse/commit/4f568517b))
+
+### 🩹 Fixes
+
+- **ph-cmd:** fixed detection of help command ([157249468](https://github.com/powerhouse-inc/powerhouse/commit/157249468))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.68 (2025-10-11)
+
+### 🚀 Features
+
+- generate unique vetra drive IDs per project ([#1936](https://github.com/powerhouse-inc/powerhouse/pull/1936))
+- **vetra:** added read model to fetch vetra packages ([abb6d3742](https://github.com/powerhouse-inc/powerhouse/commit/abb6d3742))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.67 (2025-10-10)
 
 ### 🚀 Features

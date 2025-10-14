@@ -1,3 +1,31 @@
+## 4.1.0-dev.70 (2025-10-14)
+
+### 🩹 Fixes
+
+- **reactor-api:** bandaid a deeper issue where some document model types have their own name separate from header information, and headers aren't generally synced ([bbf5c94d8](https://github.com/powerhouse-inc/powerhouse/commit/bbf5c94d8))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 4.1.0-dev.69 (2025-10-11)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.68 (2025-10-11)
+
+### 🚀 Features
+
+- **vetra:** added read model to fetch vetra packages ([abb6d3742](https://github.com/powerhouse-inc/powerhouse/commit/abb6d3742))
+
+### 🩹 Fixes
+
+- **reactor-api:** added auth export ([a38df7fde](https://github.com/powerhouse-inc/powerhouse/commit/a38df7fde))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.67 (2025-10-10)
 
 ### 🚀 Features

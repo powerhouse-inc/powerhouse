@@ -22,7 +22,7 @@ import {
   setStateSchema,
 } from "document-model";
 import { generateId } from "document-model/core";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Divider } from "./components/divider.js";
 import { ModelMetadata } from "./components/model-metadata-form.js";
 import { Modules } from "./components/modules.js";
@@ -43,6 +43,7 @@ export function DocumentModelEditor() {
     isTimelineEnabled: true,
   });
   const [document, dispatch] = useSelectedDocumentModelDocument();
+  const [scope, setScope] = useState<Scope>("global");
   const documentNodeName = document.header.name;
   const {
     name: modelName,
@@ -182,7 +183,7 @@ export function DocumentModelEditor() {
           return;
         }
         const id = generateId();
-        dispatch(addOperation({ id, moduleId, name }));
+        dispatch(addOperation({ id, moduleId, name, scope }));
         resolve(id);
       } catch (error) {
         console.error("Failed to add operation:", error);
@@ -341,11 +342,18 @@ export function DocumentModelEditor() {
               localStateInitialValue={localStateInitialValue}
               setStateSchema={handleSetStateSchema}
               setInitialState={handleSetInitialState}
+              currentScope={scope}
+              onScopeChange={setScope}
             />
             <Divider />
-            <h3 className="mb-6 text-lg">Global Operations</h3>
+            <h3 className="mb-6 text-lg capitalize">{scope} Operations</h3>
             <Modules
-              modules={modules}
+              modules={modules.map((module) => ({
+                ...module,
+                operations: module.operations.filter(
+                  (op) => op.scope === scope,
+                ),
+              }))}
               allOperations={operations}
               addModule={handleAddModule}
               updateModuleName={handleSetModuleName}

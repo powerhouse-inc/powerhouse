@@ -4,8 +4,69 @@ import fs, { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
+import { cwd } from "node:process";
 import type { Plugin } from "vite";
 import { LOCAL_PACKAGE_ID } from "./constants.js";
+import { setConnectEnv } from "./env-config.js";
+import type { ConnectCommonOptions } from "./types.js";
+
+export const DEFAULT_CONNECT_OUTDIR = ".ph/connect-build/dist/";
+
+export async function loadVite() {
+  try {
+    return await import("vite");
+  } catch (error) {
+    const viteError = new Error(
+      "Could not load 'vite'. Is it installed in your project?",
+    );
+
+    throw viteError;
+  }
+}
+
+export function commonConnectOptionsToEnv(options: ConnectCommonOptions) {
+  const {
+    base,
+    configFile,
+    defaultDrivesUrl,
+    drivesPreserveStrategy,
+    disableLocalPackage,
+  } = options;
+
+  if (base) {
+    setConnectEnv({
+      PH_CONNECT_BASE_PATH: base,
+    });
+  }
+
+  if (configFile) {
+    setConnectEnv({
+      PH_CONFIG_PATH: configFile,
+    });
+  }
+  if (defaultDrivesUrl) {
+    setConnectEnv({
+      PH_CONNECT_DEFAULT_DRIVES_URL: defaultDrivesUrl.join(","),
+    });
+  }
+  if (drivesPreserveStrategy) {
+    setConnectEnv({
+      PH_CONNECT_DRIVES_PRESERVE_STRATEGY: drivesPreserveStrategy,
+    });
+  }
+  if (disableLocalPackage) {
+    setConnectEnv({
+      PH_DISABLE_LOCAL_PACKAGE: true,
+    });
+  }
+}
+
+export function resolveViteConfigPath(
+  options: Pick<ConnectCommonOptions, "projectRoot" | "viteConfigFile">,
+) {
+  const { projectRoot = cwd(), viteConfigFile } = options;
+  return viteConfigFile || join(projectRoot, "vite.config.ts");
+}
 
 export function resolvePackage(packageName: string, root = process.cwd()) {
   // find connect installation

@@ -169,4 +169,108 @@ describe("SimpleJobExecutor", () => {
       expect(result.error?.message).toContain("Storage error");
     });
   });
+
+  describe("executeDeleteDocument", () => {
+    it("should delete document successfully", async () => {
+      const documentId = "doc-to-delete";
+      const job: Job = {
+        id: "delete-job-1",
+        documentId,
+        scope: "document",
+        branch: "main",
+        operation: {
+          action: {
+            id: "delete-action-1",
+            type: "DELETE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: "1234567890",
+            input: { documentId },
+          },
+          index: 5,
+          timestampUtcMs: "1234567890",
+          hash: "delete-hash",
+          skip: 0,
+        },
+        createdAt: "1234567890",
+        queueHint: [],
+      };
+
+      mockDocStorage.delete = vi.fn().mockResolvedValue(undefined);
+
+      const result = await executor.executeJob(job);
+
+      expect(result.success).toBe(true);
+      expect(result.operation).toEqual(job.operation);
+      expect(mockDocStorage.delete).toHaveBeenCalledWith(documentId);
+    });
+
+    it("should return error if document deletion fails", async () => {
+      const documentId = "doc-delete-fail";
+      const job: Job = {
+        id: "delete-job-2",
+        documentId,
+        scope: "document",
+        branch: "main",
+        operation: {
+          action: {
+            id: "delete-action-2",
+            type: "DELETE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: "1234567890",
+            input: { documentId },
+          },
+          index: 5,
+          timestampUtcMs: "1234567890",
+          hash: "delete-hash",
+          skip: 0,
+        },
+        createdAt: "1234567890",
+        queueHint: [],
+      };
+
+      mockDocStorage.delete = vi
+        .fn()
+        .mockRejectedValue(new Error("Delete failed"));
+
+      const result = await executor.executeJob(job);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
+      expect(result.error?.message).toContain("Failed to delete document");
+      expect(result.error?.message).toContain("Delete failed");
+    });
+
+    it("should return error if documentId is missing from input", async () => {
+      const job: Job = {
+        id: "delete-job-3",
+        documentId: "doc-missing-id",
+        scope: "document",
+        branch: "main",
+        operation: {
+          action: {
+            id: "delete-action-3",
+            type: "DELETE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: "1234567890",
+            input: {},
+          },
+          index: 5,
+          timestampUtcMs: "1234567890",
+          hash: "delete-hash",
+          skip: 0,
+        },
+        createdAt: "1234567890",
+        queueHint: [],
+      };
+
+      const result = await executor.executeJob(job);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
+      expect(result.error?.message).toContain(
+        "DELETE_DOCUMENT action requires a documentId",
+      );
+      expect(mockDocStorage.delete).not.toHaveBeenCalled();
+    });
+  });
 });

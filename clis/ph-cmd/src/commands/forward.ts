@@ -17,8 +17,11 @@ export const forwardCommand = async (
   args: string,
   options: ForwardPHCommandOptions,
 ) => {
+  const argsList = args.split(" ");
   const isHelpCommand =
-    args.includes("help") || args.includes("--help") || args.includes("-h");
+    argsList.includes("help") ||
+    argsList.includes("--help") ||
+    argsList.includes("-h");
 
   if (options.debug) {
     console.log(">>> command arguments:", { options });
@@ -59,11 +62,12 @@ export const forwardCommand = async (
       return;
     }
 
-    console.error("❌ Failed to forward command");
     if ((error as FSError).code === "ENOENT") {
       console.error("Have you run `ph setup-globals` or `ph init`?");
     }
+
     if (options.debug) {
+      console.error("❌ Failed to forward command");
       throw error;
     }
   }

@@ -1,3 +1,27 @@
+## 4.1.0-dev.70 (2025-10-14)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.69 (2025-10-11)
+
+### 🚀 Features
+
+- **builder-tools, ph-cli, connect:** reimplemented ph connect build and preview ([4f568517b](https://github.com/powerhouse-inc/powerhouse/commit/4f568517b))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.68 (2025-10-11)
+
+### 🚀 Features
+
+- **vetra:** added read model to fetch vetra packages ([abb6d3742](https://github.com/powerhouse-inc/powerhouse/commit/abb6d3742))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.67 (2025-10-10)
 
 ### 🚀 Features

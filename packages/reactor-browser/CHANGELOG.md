@@ -1,3 +1,23 @@
+## 4.1.0-dev.70 (2025-10-14)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.69 (2025-10-11)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.68 (2025-10-11)
+
+### 🚀 Features
+
+- **vetra:** added read model to fetch vetra packages ([abb6d3742](https://github.com/powerhouse-inc/powerhouse/commit/abb6d3742))
+- update file extension to .phd for document export ([#1894](https://github.com/powerhouse-inc/powerhouse/pull/1894))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.67 (2025-10-10)
 
 ### 🚀 Features

@@ -2,6 +2,7 @@ import { type IRelationalDb } from "document-drive";
 
 export async function up(db: IRelationalDb<any>): Promise<void> {
   // Create vetra_package table to store VetraPackage document state
+  await down(db);
   await db.schema
     .createTable("vetra_package")
     .addColumn("document_id", "varchar(255)", (col) => col.primaryKey()) // VetraPackage state fields
@@ -13,6 +14,7 @@ export async function up(db: IRelationalDb<any>): Promise<void> {
     .addColumn("keywords", "text") // JSON array of {id, label}
     .addColumn("github_url", "varchar(512)")
     .addColumn("npm_url", "varchar(512)")
+    .addColumn("drive_id", "varchar(255)")
     // Document metadata
     .addColumn("last_operation_index", "integer", (col) => col.notNull())
     .addColumn("last_operation_hash", "varchar(255)", (col) => col.notNull())

@@ -1,3 +1,35 @@
+## 4.1.0-dev.70 (2025-10-14)
+
+### 🩹 Fixes
+
+- broken templates, drive app styles, local state schema and validation ([#1941](https://github.com/powerhouse-inc/powerhouse/pull/1941))
+- **codegen:** generate dm subgraphs ([a7be027f1](https://github.com/powerhouse-inc/powerhouse/commit/a7be027f1))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.69 (2025-10-11)
+
+### 🩹 Fixes
+
+- **codegen:** add /index.js to import path on templates ([37bc2e9ef](https://github.com/powerhouse-inc/powerhouse/commit/37bc2e9ef))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.68 (2025-10-11)
+
+### 🚀 Features
+
+- **vetra:** added read model to fetch vetra packages ([abb6d3742](https://github.com/powerhouse-inc/powerhouse/commit/abb6d3742))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.67 (2025-10-10)
 
 ### 🚀 Features

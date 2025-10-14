@@ -9,14 +9,18 @@ import type {
 
 export function useDocumentModelDocument(
   documentId: string | undefined | null,
-) {
+): ReturnType<
+  typeof useDocumentOfType<DocumentModelDocument, DocumentModelAction>
+> {
   return useDocumentOfType<DocumentModelDocument, DocumentModelAction>(
     documentId,
     "powerhouse/document-model",
   );
 }
 
-export function useSelectedDocumentModelDocument() {
+export function useSelectedDocumentModelDocument(): ReturnType<
+  typeof useSelectedDocumentOfType<DocumentModelDocument, DocumentModelAction>
+> {
   return useSelectedDocumentOfType<DocumentModelDocument, DocumentModelAction>(
     "powerhouse/document-model",
   );

@@ -11,8 +11,18 @@ setLogLevel(env.PH_CONNECT_LOG_LEVEL);
 logger.debug(`Setting log level to ${env.PH_CONNECT_LOG_LEVEL}.`);
 
 // Router basename
-const PH_CONNECT_BASE_PATH =
-  env.PH_CONNECT_BASE_PATH || import.meta.env.BASE_URL;
+let phConnectBasePath = env.PH_CONNECT_BASE_PATH || import.meta.env.BASE_URL;
+// add ending slash if missing
+if (!phConnectBasePath.endsWith("/")) {
+  phConnectBasePath += "/";
+}
+
+// remove relative path
+if (phConnectBasePath.startsWith(".")) {
+  phConnectBasePath = phConnectBasePath.slice(1);
+}
+
+const PH_CONNECT_BASE_PATH = phConnectBasePath;
 
 // Analytics database name with custom logic
 const PH_CONNECT_ANALYTICS_DATABASE_NAME =
@@ -24,9 +34,7 @@ export const connectConfig = {
   studioMode: env.PH_CONNECT_STUDIO_MODE,
   warnOutdatedApp: env.PH_CONNECT_WARN_OUTDATED_APP,
   appVersionCheckInterval: env.PH_CONNECT_VERSION_CHECK_INTERVAL,
-  routerBasename: PH_CONNECT_BASE_PATH.endsWith("/")
-    ? PH_CONNECT_BASE_PATH
-    : PH_CONNECT_BASE_PATH + "/",
+  routerBasename: PH_CONNECT_BASE_PATH,
   externalPackagesEnabled: !env.PH_CONNECT_EXTERNAL_PACKAGES_DISABLED,
   analytics: {
     databaseName: PH_CONNECT_ANALYTICS_DATABASE_NAME,

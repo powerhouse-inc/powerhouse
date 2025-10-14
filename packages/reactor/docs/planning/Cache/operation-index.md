@@ -58,6 +58,8 @@ Additionally, the `IOperationIndex` stores a table very similar to the `IOperati
 
 The main difference is that the `IOperationIndex` table is not append-only. It is garbage collected and thus has no skip, only ordered streams.
 
+**Note on DELETE_DOCUMENT Operations**: DELETE_DOCUMENT operations are indexed like any other operation. They represent a state transition (marking the document as deleted) rather than physical removal. The read models (like `IDocumentView`) are responsible for interpreting these operations and filtering out deleted documents in queries. The `IOperationIndex` simply ensures these operations are available to read models and listeners.
+
 A query to get all operations for a collection and branch would look like something like this:
 
 ```sql

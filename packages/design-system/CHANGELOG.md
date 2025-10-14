@@ -1,3 +1,26 @@
+## 4.1.0-dev.70 (2025-10-14)
+
+This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.69 (2025-10-11)
+
+This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.68 (2025-10-11)
+
+### 🚀 Features
+
+- **vetra:** added read model to fetch vetra packages ([abb6d3742](https://github.com/powerhouse-inc/powerhouse/commit/abb6d3742))
+
+### 🩹 Fixes
+
+- enabled supported file ext in drop zone ([#1892](https://github.com/powerhouse-inc/powerhouse/pull/1892))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.67 (2025-10-10)
 
 ### 🚀 Features

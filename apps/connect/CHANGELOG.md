@@ -1,3 +1,43 @@
+## 4.1.0-dev.70 (2025-10-14)
+
+### 🩹 Fixes
+
+- broken templates, drive app styles, local state schema and validation ([#1941](https://github.com/powerhouse-inc/powerhouse/pull/1941))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.69 (2025-10-11)
+
+### 🚀 Features
+
+- **builder-tools, ph-cli, connect:** reimplemented ph connect build and preview ([4f568517b](https://github.com/powerhouse-inc/powerhouse/commit/4f568517b))
+
+### 🩹 Fixes
+
+- **ph-cmd:** fixed detection of help command ([157249468](https://github.com/powerhouse-inc/powerhouse/commit/157249468))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.68 (2025-10-11)
+
+### 🚀 Features
+
+- **connect:** import document-model editor missing styles ([#1937](https://github.com/powerhouse-inc/powerhouse/pull/1937))
+- **vetra:** added read model to fetch vetra packages ([abb6d3742](https://github.com/powerhouse-inc/powerhouse/commit/abb6d3742))
+
+### 🩹 Fixes
+
+- enabled supported file ext in drop zone ([#1892](https://github.com/powerhouse-inc/powerhouse/pull/1892))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.67 (2025-10-10)
 
 ### 🚀 Features

@@ -130,7 +130,10 @@ export function DriveExplorer(props: EditorProps) {
                 </h2>
                 {/* Customize: Add more action buttons here */}
                 {isAllowedToCreateDocuments && (
-                  <Button onClick={() => handleCreateFolder()}>
+                  <Button
+                    onClick={() => handleCreateFolder()}
+                    className="bg-gray-200 p-2 hover:bg-gray-300"
+                  >
                     New Folder
                   </Button>
                 )}

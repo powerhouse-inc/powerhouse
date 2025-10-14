@@ -1,4 +1,9 @@
-import type { ConnectStudioOptions } from "@powerhousedao/builder-tools";
+import type {
+  ConnectBuildOptions,
+  ConnectCommonOptions,
+  ConnectPreviewOptions,
+  ConnectStudioOptions,
+} from "@powerhousedao/builder-tools";
 import { Command } from "commander";
 import {
   connectBuildHelp,
@@ -8,61 +13,126 @@ import {
 import type { CommandActionType } from "../types.js";
 import { setCustomHelp } from "../utils.js";
 
-type ConnectOptions = ConnectStudioOptions["devServerOptions"];
+type CliConnectCommonOptions = Pick<
+  ConnectCommonOptions,
+  "base" | "mode" | "configFile" | "projectRoot" | "viteConfigFile"
+>;
 
-async function startConnect(options?: ConnectOptions) {
-  const Connect = await import("../services/connect.js");
-  const { startConnect } = Connect;
-  return startConnect({ devServerOptions: options });
+type CliConnectStudioOptions = ConnectStudioOptions["devServerOptions"] &
+  CliConnectCommonOptions;
+
+type CliConnectBuildOptions = Omit<
+  ConnectBuildOptions,
+  keyof ConnectCommonOptions
+> &
+  CliConnectCommonOptions;
+
+type CliConnectPreviewOptions = Omit<
+  ConnectPreviewOptions,
+  keyof ConnectCommonOptions
+> &
+  CliConnectCommonOptions;
+
+async function startConnectStudio(options: CliConnectStudioOptions = {}) {
+  const { startConnectStudio } = await import("../services/connect.js");
+  const { port, host, open, cors, strictPort, force, ...otherOptions } =
+    options;
+  return startConnectStudio({
+    ...otherOptions,
+    devServerOptions: { port, host, open, cors, strictPort, force },
+  });
 }
 
-export const connect: CommandActionType<[ConnectOptions], void> = (options) => {
-  return startConnect(options);
+export const connectStudioCommand: CommandActionType<
+  [CliConnectStudioOptions],
+  void
+> = (options) => {
+  return startConnectStudio(options);
 };
 
 const studioCommand = new Command("studio")
   .description("Starts Connect Studio (default)")
-  // Vite dev config: https://github.com/vitejs/vite/blob/1ef57bc7700375bf4bca0edbf0a9e4517c5dd35b/packages/vite/src/node/cli.ts#L184
   .option("--port <port>", "Port to run the server on", "3000")
   .option("--host", "Expose the server to the network")
   .option("--open", "Open browser on startup")
-  .option("--config-file <configFile>", "Path to the powerhouse.config.js file")
   .option("--cors", `Enable CORS`)
   .option("--strictPort", `Exit if specified port is already in use`)
   .option("--force", `Force the optimizer to ignore the cache and re-bundle`)
-  .action(connect);
-
-setCustomHelp(studioCommand, connectStudioHelp);
-
-const buildCommand = new Command("build")
-  .description("Build Connect project")
-  .option("--base <base>", "Base path for the app")
+  .option("--mode <mode>", `Vite mode to use`)
+  .option("--config-file <configFile>", "Path to the powerhouse.config.js file")
+  .option("--vite-config-file <viteConfigFile>", "Path to the vite config file")
   .option(
-    "--project-root <path>",
+    "--project-root <projectRoot>",
     "The root directory of the project",
     process.cwd(),
   )
-  .option("--assets-dir-name <name>", "The name of the assets directory")
+  .action(connectStudioCommand);
+
+setCustomHelp(studioCommand, connectStudioHelp);
+
+async function buildConnect(options?: CliConnectBuildOptions) {
+  const { buildConnect } = await import("../services/connect.js");
+  return buildConnect(options);
+}
+
+export const buildConnectCommand: CommandActionType<
+  [CliConnectBuildOptions],
+  void
+> = (options) => {
+  return buildConnect(options);
+};
+
+const buildCommand = new Command("build")
+  .description("Build Connect project")
   .option(
-    "--external-packages-file-name <name>",
-    "The name of the external packages file",
+    "--outDir <outDir>",
+    "Output directory. Defaults to '.ph/connect-build/dist/'",
   )
-  .option("--styles-file-name <name>", "The name of the styles file")
-  .option("--connect-path <path>", "The path to the Connect dist directory")
-  .action(async (...args: []) => {
-    throw new Error("Not Implemented");
-  });
+  .option("--base <base>", "Base path for the app")
+  .option("--mode <mode>", `Vite mode to use`)
+  .option("--config-file <configFile>", "Path to the powerhouse.config.js file")
+  .option("--vite-config-file <viteConfigFile>", "Path to the vite config file")
+  .option(
+    "--project-root <projectRoot>",
+    "The root directory of the project",
+    process.cwd(),
+  )
+  .action(buildConnectCommand);
 setCustomHelp(buildCommand, connectBuildHelp);
+
+async function previewConnect(options?: CliConnectPreviewOptions) {
+  const { previewConnect } = await import("../services/connect.js");
+  return previewConnect(options);
+}
+
+export const previewConnectCommand: CommandActionType<
+  [CliConnectPreviewOptions],
+  void
+> = (options) => {
+  return previewConnect(options).then();
+};
 
 const previewCommand = new Command("preview")
   .description("Preview built Connect project")
+  .option(
+    "--outDir <outDir>",
+    "Output directory. Defaults to '.ph/connect-build/dist/'",
+  )
+  .option("--port <port>", "Port to run the server on", "4173")
+  .option("--host", "Expose the server to the network")
+  .option("--open", "Open browser on startup")
+  .option("--strictPort", `Exit if specified port is already in use`)
   .option("--base <base>", "Base path for the app")
-  .option("--project-root <path>", "The root directory of the project")
-  .option("-p, --port <port>", "The port to run the server on", "4173")
-  .option("--open", "Open the browser")
-  .action(async (...args: []) => {
-    throw Error("Not Implemented");
-  });
+  .option("--mode <mode>", `Vite mode to use`)
+  .option("--config-file <configFile>", "Path to the powerhouse.config.js file")
+  .option("--vite-config-file <viteConfigFile>", "Path to the vite config file")
+  .option(
+    "--project-root <projectRoot>",
+    "The root directory of the project",
+    process.cwd(),
+  )
+  .action(previewConnectCommand);
+
 setCustomHelp(previewCommand, connectPreviewHelp);
 
 export function connectCommand(program: Command) {
@@ -77,8 +147,10 @@ export function connectCommand(program: Command) {
 
 if (process.argv.at(2) === "spawn") {
   const optionsArg = process.argv.at(3);
-  const options = optionsArg ? (JSON.parse(optionsArg) as ConnectOptions) : {};
-  startConnect(options).catch((e: unknown) => {
+  const options = optionsArg
+    ? (JSON.parse(optionsArg) as CliConnectStudioOptions)
+    : {};
+  startConnectStudio(options).catch((e: unknown) => {
     throw e;
   });
 }

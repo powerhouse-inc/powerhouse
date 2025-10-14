@@ -9,9 +9,10 @@ export default defineConfig(({ mode }) => {
 
   const additionalViteConfig: UserConfig = {
     // add your own vite config here
+    resolve: {
+      conditions: ["source", "browser", "module", "jsnext:main", "jsnext"],
+    },
   };
 
-  const config = mergeConfig(baseConnectViteConfig, additionalViteConfig);
-
-  return config;
+  return mergeConfig(baseConnectViteConfig, additionalViteConfig);
 });

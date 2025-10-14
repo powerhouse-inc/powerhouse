@@ -48,7 +48,7 @@ export const validateDocument = (document: PHDocument) => {
         ...acc,
         ...validateStateSchemaName(
           specs.state[scope].schema,
-          doc.header.name || doc.state.global?.name || "",
+          doc.state.global?.name || doc.header.name || "",
           !isGlobalScope ? scope : "",
           !isGlobalScope,
         ).map((err) => ({

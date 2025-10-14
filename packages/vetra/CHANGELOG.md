@@ -1,3 +1,41 @@
+## 4.1.0-dev.70 (2025-10-14)
+
+### 🩹 Fixes
+
+- **vetra:** added drive id to read model ([2e40cc500](https://github.com/powerhouse-inc/powerhouse/commit/2e40cc500))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.69 (2025-10-11)
+
+### 🩹 Fixes
+
+- **vetra:** added drive id to read model ([cfe16037e](https://github.com/powerhouse-inc/powerhouse/commit/cfe16037e))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.68 (2025-10-11)
+
+### 🚀 Features
+
+- generate unique vetra drive IDs per project ([#1936](https://github.com/powerhouse-inc/powerhouse/pull/1936))
+- **vetra:** added documentId in filter option ([01bb92f28](https://github.com/powerhouse-inc/powerhouse/commit/01bb92f28))
+- **vetra:** added read model to fetch vetra packages ([abb6d3742](https://github.com/powerhouse-inc/powerhouse/commit/abb6d3742))
+
+### 🩹 Fixes
+
+- **vetra:** package query ([36bea7102](https://github.com/powerhouse-inc/powerhouse/commit/36bea7102))
+- **vetra:** added vetra package to processor filter ([5f3eaadf4](https://github.com/powerhouse-inc/powerhouse/commit/5f3eaadf4))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.67 (2025-10-10)
 
 ### 🚀 Features

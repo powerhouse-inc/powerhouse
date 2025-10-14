@@ -271,7 +271,8 @@
       "input": {
         "id": "c17b3ca9-ee6b-4d62-b0d6-1126685e9c10",
         "moduleId": "0bac6d22-7268-4140-98e2-5216bf6a4d2d",
-        "name": "ADD_TODO_ITEM_INPUT"
+        "name": "ADD_TODO_ITEM_INPUT",
+        "scope": "global"
       },
       "scope": "global",
       "action": {
@@ -281,7 +282,8 @@
         "input": {
           "id": "c17b3ca9-ee6b-4d62-b0d6-1126685e9c10",
           "moduleId": "0bac6d22-7268-4140-98e2-5216bf6a4d2d",
-          "name": "ADD_TODO_ITEM_INPUT"
+          "name": "ADD_TODO_ITEM_INPUT",
+          "scope": "global"
         },
         "scope": "global"
       },
@@ -365,7 +367,8 @@
       "input": {
         "id": "38cecafa-fe77-44de-80c7-0d86cd4b8437",
         "moduleId": "0bac6d22-7268-4140-98e2-5216bf6a4d2d",
-        "name": "UPDATE_TODO_ITEM_INPUT"
+        "name": "UPDATE_TODO_ITEM_INPUT",
+        "scope": "global"
       },
       "scope": "global",
       "action": {
@@ -375,7 +378,8 @@
         "input": {
           "id": "38cecafa-fe77-44de-80c7-0d86cd4b8437",
           "moduleId": "0bac6d22-7268-4140-98e2-5216bf6a4d2d",
-          "name": "UPDATE_TODO_ITEM_INPUT"
+          "name": "UPDATE_TODO_ITEM_INPUT",
+          "scope": "global"
         },
         "scope": "global"
       },
@@ -459,7 +463,8 @@
       "input": {
         "id": "a79ec928-c17e-4c1e-a5b7-cee5b8c01c1c",
         "moduleId": "0bac6d22-7268-4140-98e2-5216bf6a4d2d",
-        "name": "DELETE_TODO_ITEM_INPUT"
+        "name": "DELETE_TODO_ITEM_INPUT",
+        "scope": "global"
       },
       "scope": "global",
       "action": {
@@ -469,7 +474,8 @@
         "input": {
           "id": "a79ec928-c17e-4c1e-a5b7-cee5b8c01c1c",
           "moduleId": "0bac6d22-7268-4140-98e2-5216bf6a4d2d",
-          "name": "DELETE_TODO_ITEM_INPUT"
+          "name": "DELETE_TODO_ITEM_INPUT",
+          "scope": "global"
         },
         "scope": "global"
       },

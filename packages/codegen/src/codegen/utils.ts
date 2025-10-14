@@ -17,7 +17,7 @@ export async function loadDocumentModel(
   try {
     if (!path) {
       throw new Error("Document model file not specified");
-    } else if (path.endsWith(".zip")) {
+    } else if (path.endsWith(".zip") || path.endsWith(".phd")) {
       const file = await baseLoadFromFile(path, documentModelReducer);
       documentModel = file.state.global;
     } else if (path.endsWith(".json")) {
@@ -29,7 +29,7 @@ export async function loadDocumentModel(
         documentModel = parsedData;
       }
     } else {
-      throw new Error("File type not supported. Must be zip or json.");
+      throw new Error("File type not supported. Must be zip, phd, or json.");
     }
     return documentModel;
   } catch (error) {
@@ -78,7 +78,7 @@ export function getDocumentTypesMap(
           if (spec.id) {
             documentTypesMap[spec.id] = {
               name: pascalCase(name),
-              importPath: join(pathOrigin, dir, name),
+              importPath: join(pathOrigin, dir, name, "index.js"),
             };
           }
         } catch {

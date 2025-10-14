@@ -22,6 +22,7 @@ export interface VetraPackage {
   name: string | null;
   npm_url: string | null;
   updated_at: Generated<Timestamp>;
+  drive_id: string | null;
 }
 
 export interface DB {
