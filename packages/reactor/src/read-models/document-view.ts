@@ -7,7 +7,6 @@ import { createPresignedHeader } from "document-model/core";
 import type { Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import type {
-  DocumentSnapshot,
   IDocumentView,
   IOperationStore,
   OperationWithContext,
@@ -133,8 +132,6 @@ export class KyselyDocumentView implements IDocumentView {
     }
 
     // Query operations from header and document scopes only
-    // - "header" scope: CREATE_DOCUMENT actions contain initial header metadata
-    // - "document" scope: UPGRADE_DOCUMENT actions contain version transitions
     const headerAndDocOps = await this.db
       .selectFrom("Operation")
       .selectAll()
@@ -159,19 +156,37 @@ export class KyselyDocumentView implements IDocumentView {
 
       if (action.type === "CREATE_DOCUMENT") {
         const input = action.input as CreateDocumentActionInput;
-        // Extract header from CREATE_DOCUMENT action's signing parameters
+
+        // Handle proper CreateDocumentActionInput format
+        header.id = input.documentId;
+        header.documentType = input.model;
+
+        // Handle signing info if present
         if (input.signing) {
-          header = {
-            ...header,
-            id: input.signing.signature, // documentId === signing.signature
-            documentType: input.signing.documentType,
-            createdAtUtcIso: input.signing.createdAtUtcIso,
-            lastModifiedAtUtcIso: input.signing.createdAtUtcIso,
-            sig: {
-              nonce: input.signing.nonce,
-              publicKey: input.signing.publicKey,
-            },
+          header.createdAtUtcIso = input.signing.createdAtUtcIso;
+          header.lastModifiedAtUtcIso = input.signing.createdAtUtcIso;
+          header.sig = {
+            nonce: input.signing.nonce,
+            publicKey: input.signing.publicKey,
           };
+        }
+
+        // Handle optional mutable header fields
+        if (input.slug !== undefined) {
+          header.slug = input.slug;
+        }
+        // Default slug to document ID if empty (matching legacy behavior)
+        if (!header.slug) {
+          header.slug = input.documentId;
+        }
+        if (input.name !== undefined) {
+          header.name = input.name;
+        }
+        if (input.branch !== undefined) {
+          header.branch = input.branch;
+        }
+        if (input.meta !== undefined) {
+          header.meta = input.meta;
         }
       } else if (action.type === "UPGRADE_DOCUMENT") {
         // UPGRADE_DOCUMENT tracks version changes in the document scope
@@ -217,37 +232,6 @@ export class KyselyDocumentView implements IDocumentView {
 
     // Return a boolean array in the same order as the input
     return documentIds.map((id) => existingIds.has(id));
-  }
-
-  async getMany(
-    documentIds: string[],
-    scope: string = "global",
-    branch: string = "main",
-    signal?: AbortSignal,
-  ): Promise<(DocumentSnapshot | null)[]> {
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
-
-    if (documentIds.length === 0) {
-      return [];
-    }
-
-    // Query for all documents at once
-    const snapshots = await this.db
-      .selectFrom("DocumentSnapshot")
-      .selectAll()
-      .where("documentId", "in", documentIds)
-      .where("scope", "=", scope)
-      .where("branch", "=", branch)
-      .where("isDeleted", "=", false)
-      .execute();
-
-    // Create a Map of document ID to snapshot for fast lookup
-    const snapshotMap = new Map(snapshots.map((s) => [s.documentId, s]));
-
-    // Return an array in the same order as the input, with null for missing documents
-    return documentIds.map((id) => snapshotMap.get(id) || null);
   }
 
   private async createTablesIfNotExist(): Promise<void> {

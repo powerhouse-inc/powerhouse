@@ -218,6 +218,11 @@ export type CreateDocumentActionInput = {
     createdAtUtcIso: string;
     documentType: string;
   };
+  // Optional mutable header fields
+  slug?: string;
+  name?: string;
+  branch?: string;
+  meta?: Record<string, unknown>;
 };
 
 export type UpgradeDocumentActionInput = {
