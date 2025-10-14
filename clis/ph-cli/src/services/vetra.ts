@@ -15,7 +15,6 @@ const getDefaultVetraUrl = (port: number) =>
 
 export type DevOptions = {
   generate?: boolean;
-  watch?: boolean;
   switchboardPort?: number;
   connectPort?: number;
   configFile?: string;
@@ -25,7 +24,7 @@ export type DevOptions = {
   remoteDrive?: string;
   disableConnect?: boolean;
   interactive?: boolean;
-  watchPackages?: boolean;
+  watch?: boolean;
 };
 
 const getDriveId = (driveUrl: string | undefined): string =>
@@ -35,7 +34,7 @@ async function startLocalVetraSwitchboard(
   options?: ReactorOptions & {
     verbose?: boolean;
     interactiveCodegen?: boolean;
-    watchPackages?: boolean;
+    watch?: boolean;
   },
   remoteDrive?: string,
 ) {
@@ -87,7 +86,7 @@ async function startLocalVetraSwitchboard(
       https,
       mcp: true,
       processorConfig,
-      disableLocalPackages: !options?.watchPackages,
+      disableLocalPackages: !options?.watch,
     });
 
     if (verbose) {
@@ -116,7 +115,6 @@ async function startLocalVetraSwitchboard(
 
 export async function startVetra({
   generate,
-  watch,
   switchboardPort,
   connectPort,
   configFile,
@@ -124,7 +122,7 @@ export async function startVetra({
   remoteDrive,
   disableConnect = false,
   interactive = false,
-  watchPackages = false,
+  watch = false,
 }: DevOptions) {
   try {
     // Set default log level to info if not already specified
@@ -156,13 +154,12 @@ export async function startVetra({
       {
         generate,
         port: resolvedSwitchboardPort,
-        watch,
         dev: true, // Vetra always runs in dev mode to load local packages
         https,
         configFile,
         verbose,
         interactiveCodegen: interactive,
-        watchPackages,
+        watch,
       },
       resolvedVetraUrl,
     );
@@ -181,7 +178,7 @@ export async function startVetra({
       await startConnectStudio({
         defaultDrivesUrl: [driveUrl],
         drivesPreserveStrategy: "preserve-all",
-        disableLocalPackage: !watchPackages,
+        disableLocalPackage: !watch,
         devServerOptions: {
           port: connectPort,
         },
