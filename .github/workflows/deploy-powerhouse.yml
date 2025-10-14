@@ -44,12 +44,6 @@ jobs:
 
       - name: Checkout Connect Heroku config
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1 # shallow clone
-          filter: blob:none # partial clone: no file blobs unless needed
-          sparse-checkout: |
-            apps/connect/heroku
-          sparse-checkout-cone: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -73,7 +67,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: ./projects/connect-deploy
-        run: pnpm install --no-workspace --frozen-lockfile
+        run: pnpm install --ignore-workspace
 
       - name: Install Powerhouse packages
         if: ${{ vars.PH_PACKAGES && vars.PH_PACKAGES != '' }}
