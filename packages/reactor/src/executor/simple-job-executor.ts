@@ -6,7 +6,7 @@ import type {
   CreateDocumentActionInput,
   DeleteDocumentActionInput,
   DocumentModelModule,
-  PHBaseState,
+  Operation,
   PHDocument,
 } from "document-model";
 import { createPresignedHeader, defaultBaseState } from "document-model/core";
@@ -32,148 +32,210 @@ export class SimpleJobExecutor implements IJobExecutor {
   ) {}
 
   /**
-   * Execute a single job by applying its action through the appropriate reducer.
+   * Execute a single job by applying all its operations through the appropriate reducers.
+   * Operations are processed sequentially in order.
    */
   async executeJob(job: Job): Promise<JobResult> {
     const startTime = Date.now();
-
-    // Handle system actions specially (CREATE_DOCUMENT, DELETE_DOCUMENT, etc.)
-    if (job.operation.action.type === "CREATE_DOCUMENT") {
-      return this.executeCreateDocument(job, startTime);
-    }
-
-    if (job.operation.action.type === "DELETE_DOCUMENT") {
-      return this.executeDeleteDocument(job, startTime);
-    }
-
-    let document: PHDocument;
-    try {
-      document = await this.documentStorage.get(job.documentId);
-    } catch (error) {
-      return {
-        job,
-        success: false,
-        error: error instanceof Error ? error : new Error(String(error)),
-        duration: Date.now() - startTime,
+    const generatedOperations: Operation[] = [];
+    const operationsWithContext: Array<{
+      operation: Operation;
+      context: {
+        documentId: string;
+        scope: string;
+        branch: string;
+        documentType: string;
       };
-    }
+    }> = [];
 
-    // Check if document is deleted
-    const documentState = document.state.document;
-    if (documentState.isDeleted) {
-      return {
-        job,
-        success: false,
-        error: new DocumentDeletedError(
+    // Process each operation in the job sequentially
+    for (const operation of job.operations) {
+      // Handle system actions specially (CREATE_DOCUMENT, DELETE_DOCUMENT, etc.)
+      if (operation.action.type === "CREATE_DOCUMENT") {
+        const result = await this.executeCreateDocumentOperation(
+          job,
+          operation,
+          startTime,
+        );
+        if (!result.success) {
+          return result;
+        }
+        if (result.operations && result.operations.length > 0) {
+          generatedOperations.push(...result.operations);
+        }
+        if (result.operationsWithContext) {
+          operationsWithContext.push(...result.operationsWithContext);
+        }
+        continue;
+      }
+
+      if (operation.action.type === "DELETE_DOCUMENT") {
+        const result = await this.executeDeleteDocumentOperation(
+          job,
+          operation,
+          startTime,
+        );
+        if (!result.success) {
+          return result;
+        }
+        if (result.operations && result.operations.length > 0) {
+          generatedOperations.push(...result.operations);
+        }
+        if (result.operationsWithContext) {
+          operationsWithContext.push(...result.operationsWithContext);
+        }
+        continue;
+      }
+
+      // For regular actions, load the document and apply through reducer
+      let document: PHDocument;
+      try {
+        document = await this.documentStorage.get(job.documentId);
+      } catch (error) {
+        return {
+          job,
+          success: false,
+          error: error instanceof Error ? error : new Error(String(error)),
+          duration: Date.now() - startTime,
+        };
+      }
+
+      // Check if document is deleted
+      const documentState = document.state.document;
+      if (documentState.isDeleted) {
+        return {
+          job,
+          success: false,
+          error: new DocumentDeletedError(
+            job.documentId,
+            documentState.deletedAtUtcIso,
+          ),
+          duration: Date.now() - startTime,
+        };
+      }
+
+      let module: DocumentModelModule;
+      try {
+        module = this.registry.getModule(document.header.documentType);
+      } catch (error) {
+        return {
+          job,
+          success: false,
+          error: error instanceof Error ? error : new Error(String(error)),
+          duration: Date.now() - startTime,
+        };
+      }
+
+      const updatedDocument = module.reducer(
+        document as PHDocument,
+        operation.action,
+      );
+
+      const scope = job.scope;
+      const operations = updatedDocument.operations[scope];
+      if (operations.length === 0) {
+        throw new Error("No operation generated from action");
+      }
+
+      const newOperation = operations[operations.length - 1];
+      generatedOperations.push(newOperation);
+
+      // Write the operation to legacy storage
+      try {
+        await this.operationStorage.addDocumentOperations(
           job.documentId,
-          documentState.deletedAtUtcIso,
-        ),
-        duration: Date.now() - startTime,
-      };
-    }
+          [newOperation],
+          updatedDocument,
+        );
+      } catch (error) {
+        return {
+          job,
+          success: false,
+          error: error instanceof Error ? error : new Error(String(error)),
+          duration: Date.now() - startTime,
+        };
+      }
 
-    let module: DocumentModelModule;
-    try {
-      module = this.registry.getModule(document.header.documentType);
-    } catch (error) {
-      return {
-        job,
-        success: false,
-        error: error instanceof Error ? error : new Error(String(error)),
-        duration: Date.now() - startTime,
-      };
-    }
-
-    const updatedDocument = module.reducer(
-      document as PHDocument,
-      job.operation.action,
-    );
-
-    const scope = job.scope;
-    const operations = updatedDocument.operations[scope];
-    if (operations.length === 0) {
-      throw new Error("No operation generated from action");
-    }
-
-    const newOperation = operations[operations.length - 1];
-
-    // Write the operation to legacy storage
-    try {
-      await this.operationStorage.addDocumentOperations(
-        job.documentId,
-        [newOperation],
-        updatedDocument,
-      );
-    } catch (error) {
-      return {
-        job,
-        success: false,
-        error: error instanceof Error ? error : new Error(String(error)),
-        duration: Date.now() - startTime,
-      };
-    }
-
-    // Write the operation to new IOperationStore (dual-writing)
-    try {
-      await this.operationStore.apply(
-        job.documentId,
-        document.header.documentType,
-        scope,
-        job.branch,
-        newOperation.index,
-        (txn) => {
-          txn.addOperations(newOperation);
-        },
-      );
-    } catch (error) {
-      return {
-        job,
-        success: false,
-        error: new Error(
-          `Failed to write operation to IOperationStore: ${error instanceof Error ? error.message : String(error)}`,
-        ),
-        duration: Date.now() - startTime,
-      };
-    }
-
-    // Emit event for read models - fire and forget, don't block
-    // Read model indexing happens asynchronously
-    this.eventBus
-      .emit(OperationEventTypes.OPERATION_WRITTEN, {
-        operations: [
-          {
-            operation: newOperation,
-            context: {
-              documentId: job.documentId,
-              scope,
-              branch: job.branch,
-              documentType: document.header.documentType,
-            },
+      // Write the operation to new IOperationStore (dual-writing)
+      try {
+        await this.operationStore.apply(
+          job.documentId,
+          document.header.documentType,
+          scope,
+          job.branch,
+          newOperation.index,
+          (txn) => {
+            txn.addOperations(newOperation);
           },
-        ],
-      })
-      .catch((error) => {
-        // Log error but don't fail the job - read models are eventually consistent
-        console.error("Failed to emit operation event for read models:", error);
+        );
+      } catch (error) {
+        return {
+          job,
+          success: false,
+          error: new Error(
+            `Failed to write operation to IOperationStore: ${error instanceof Error ? error.message : String(error)}`,
+          ),
+          duration: Date.now() - startTime,
+        };
+      }
+
+      operationsWithContext.push({
+        operation: newOperation,
+        context: {
+          documentId: job.documentId,
+          scope,
+          branch: job.branch,
+          documentType: document.header.documentType,
+        },
       });
+    }
+
+    // Emit event for read models with all operations - fire and forget, don't block
+    // Read model indexing happens asynchronously
+    if (operationsWithContext.length > 0) {
+      this.eventBus
+        .emit(OperationEventTypes.OPERATION_WRITTEN, {
+          operations: operationsWithContext,
+        })
+        .catch((error) => {
+          // Log error but don't fail the job - read models are eventually consistent
+          console.error(
+            "Failed to emit operation event for read models:",
+            error,
+          );
+        });
+    }
 
     return {
       job,
       success: true,
-      operation: newOperation,
+      operations: generatedOperations,
       duration: Date.now() - startTime,
     };
   }
 
   /**
-   * Execute a CREATE_DOCUMENT system action.
+   * Execute a CREATE_DOCUMENT system action for a single operation.
    * This creates a new document in storage along with its initial operations.
    */
-  private async executeCreateDocument(
+  private async executeCreateDocumentOperation(
     job: Job,
+    operation: Operation,
     startTime: number,
-  ): Promise<JobResult> {
-    const action = job.operation.action;
+  ): Promise<
+    JobResult & {
+      operationsWithContext?: Array<{
+        operation: Operation;
+        context: {
+          documentId: string;
+          scope: string;
+          branch: string;
+          documentType: string;
+        };
+      }>;
+    }
+  > {
+    const action = operation.action;
     const input = action.input as CreateDocumentActionInput;
 
     // Reconstruct the document from CreateDocumentActionInput
@@ -233,9 +295,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       };
     }
 
-    // Create the operation from the job
-    const operation = job.operation;
-
     // Legacy: Write the CREATE_DOCUMENT operation to legacy storage
     try {
       await this.operationStorage.addDocumentOperations(
@@ -277,43 +336,47 @@ export class SimpleJobExecutor implements IJobExecutor {
       };
     }
 
-    // Emit event for read models - fire and forget
-    this.eventBus
-      .emit(OperationEventTypes.OPERATION_WRITTEN, {
-        operations: [
-          {
-            operation,
-            context: {
-              documentId: document.header.id,
-              scope: job.scope,
-              branch: job.branch,
-              documentType: document.header.documentType,
-            },
-          },
-        ],
-      })
-      .catch((error) => {
-        // Log error but don't fail the job - read models are eventually consistent
-        console.error("Failed to emit operation event for read models:", error);
-      });
-
     return {
       job,
       success: true,
-      operation,
+      operations: [operation],
+      operationsWithContext: [
+        {
+          operation,
+          context: {
+            documentId: document.header.id,
+            scope: job.scope,
+            branch: job.branch,
+            documentType: document.header.documentType,
+          },
+        },
+      ],
       duration: Date.now() - startTime,
     };
   }
 
   /**
-   * Execute a DELETE_DOCUMENT system action.
+   * Execute a DELETE_DOCUMENT system action for a single operation.
    * This deletes a document from legacy storage and writes the operation to IOperationStore.
    */
-  private async executeDeleteDocument(
+  private async executeDeleteDocumentOperation(
     job: Job,
+    operation: Operation,
     startTime: number,
-  ): Promise<JobResult> {
-    const action = job.operation.action;
+  ): Promise<
+    JobResult & {
+      operationsWithContext?: Array<{
+        operation: Operation;
+        context: {
+          documentId: string;
+          scope: string;
+          branch: string;
+          documentType: string;
+        };
+      }>;
+    }
+  > {
+    const action = operation.action;
     const input = action.input as DeleteDocumentActionInput;
 
     if (!input.documentId) {
@@ -370,8 +433,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       };
     }
 
-    const operation = job.operation;
-
     // Write the DELETE_DOCUMENT operation to IOperationStore
     try {
       await this.operationStore.apply(
@@ -395,30 +456,21 @@ export class SimpleJobExecutor implements IJobExecutor {
       };
     }
 
-    // Emit event for read models - fire and forget
-    this.eventBus
-      .emit(OperationEventTypes.OPERATION_WRITTEN, {
-        operations: [
-          {
-            operation,
-            context: {
-              documentId,
-              scope: job.scope,
-              branch: job.branch,
-              documentType: document.header.documentType,
-            },
-          },
-        ],
-      })
-      .catch((error) => {
-        // Log error but don't fail the job - read models are eventually consistent
-        console.error("Failed to emit operation event for read models:", error);
-      });
-
     return {
       job,
       success: true,
-      operation,
+      operations: [operation],
+      operationsWithContext: [
+        {
+          operation,
+          context: {
+            documentId,
+            scope: job.scope,
+            branch: job.branch,
+            documentType: document.header.documentType,
+          },
+        },
+      ],
       duration: Date.now() - startTime,
     };
   }

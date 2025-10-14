@@ -146,7 +146,7 @@ export class KyselyDocumentView implements IDocumentView {
     }
 
     // Reconstruct header from header and document scope operations
-    let header = createPresignedHeader();
+    const header = createPresignedHeader();
 
     for (const op of headerAndDocOps) {
       const action = JSON.parse(op.action) as

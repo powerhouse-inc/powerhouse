@@ -62,23 +62,25 @@ describe("SimpleJobExecutor Integration", () => {
         documentId: document.header.id,
         scope: "global",
         branch: "main",
-        operation: {
-          action: {
-            id: "action-1",
-            type: "ADD_FOLDER",
-            scope: "global",
-            timestampUtcMs: Date.now().toString(),
-            input: {
-              id: "folder-1",
-              name: "Test Folder",
-              parentFolder: null,
+        operations: [
+          {
+            action: {
+              id: "action-1",
+              type: "ADD_FOLDER",
+              scope: "global",
+              timestampUtcMs: Date.now().toString(),
+              input: {
+                id: "folder-1",
+                name: "Test Folder",
+                parentFolder: null,
+              },
             },
+            index: 0,
+            timestampUtcMs: Date.now().toString(),
+            hash: "test-hash",
+            skip: 0,
           },
-          index: 0,
-          timestampUtcMs: Date.now().toString(),
-          hash: "test-hash",
-          skip: 0,
-        },
+        ],
         createdAt: Date.now().toString(),
         queueHint: [],
       };
@@ -88,7 +90,7 @@ describe("SimpleJobExecutor Integration", () => {
 
       // Verify job executed successfully
       expect(result.success).toBe(true);
-      expect(result.operation).toBeDefined();
+      expect(result.operations).toBeDefined();
       expect(result.error).toBeUndefined();
 
       // Verify operation was persisted to storage
@@ -130,23 +132,25 @@ describe("SimpleJobExecutor Integration", () => {
         documentId: document.header.id,
         scope: "global",
         branch: "main",
-        operation: {
-          action: {
-            id: "action-1",
-            type: "ADD_FOLDER",
-            scope: "global",
-            timestampUtcMs: Date.now().toString(),
-            input: {
-              id: "folder-1",
-              name: "Parent Folder",
-              parentFolder: null,
+        operations: [
+          {
+            action: {
+              id: "action-1",
+              type: "ADD_FOLDER",
+              scope: "global",
+              timestampUtcMs: Date.now().toString(),
+              input: {
+                id: "folder-1",
+                name: "Parent Folder",
+                parentFolder: null,
+              },
             },
+            index: 0,
+            timestampUtcMs: Date.now().toString(),
+            hash: "hash-1",
+            skip: 0,
           },
-          index: 0,
-          timestampUtcMs: Date.now().toString(),
-          hash: "hash-1",
-          skip: 0,
-        },
+        ],
         createdAt: Date.now().toString(),
         queueHint: [],
       };
@@ -160,23 +164,25 @@ describe("SimpleJobExecutor Integration", () => {
         documentId: document.header.id,
         scope: "global",
         branch: "main",
-        operation: {
-          action: {
-            id: "action-2",
-            type: "ADD_FOLDER",
-            scope: "global",
-            timestampUtcMs: (Date.now() + 1).toString(),
-            input: {
-              id: "folder-2",
-              name: "Child Folder",
-              parentFolder: "folder-1",
+        operations: [
+          {
+            action: {
+              id: "action-2",
+              type: "ADD_FOLDER",
+              scope: "global",
+              timestampUtcMs: (Date.now() + 1).toString(),
+              input: {
+                id: "folder-2",
+                name: "Child Folder",
+                parentFolder: "folder-1",
+              },
             },
+            index: 1,
+            timestampUtcMs: (Date.now() + 1).toString(),
+            hash: "hash-2",
+            skip: 0,
           },
-          index: 1,
-          timestampUtcMs: (Date.now() + 1).toString(),
-          hash: "hash-2",
-          skip: 0,
-        },
+        ],
         createdAt: (Date.now() + 1).toString(),
         queueHint: [],
       };
@@ -224,23 +230,25 @@ describe("SimpleJobExecutor Integration", () => {
         documentId: document.header.id,
         scope: "global",
         branch: "main",
-        operation: {
-          action: {
-            id: "action-folder",
-            type: "ADD_FOLDER",
-            scope: "global",
-            timestampUtcMs: Date.now().toString(),
-            input: {
-              id: "folder-1",
-              name: "Documents",
-              parentFolder: null,
+        operations: [
+          {
+            action: {
+              id: "action-folder",
+              type: "ADD_FOLDER",
+              scope: "global",
+              timestampUtcMs: Date.now().toString(),
+              input: {
+                id: "folder-1",
+                name: "Documents",
+                parentFolder: null,
+              },
             },
+            index: 0,
+            timestampUtcMs: Date.now().toString(),
+            hash: "hash-folder",
+            skip: 0,
           },
-          index: 0,
-          timestampUtcMs: Date.now().toString(),
-          hash: "hash-folder",
-          skip: 0,
-        },
+        ],
         createdAt: Date.now().toString(),
         queueHint: [],
       };
@@ -253,24 +261,26 @@ describe("SimpleJobExecutor Integration", () => {
         documentId: document.header.id,
         scope: "global",
         branch: "main",
-        operation: {
-          action: {
-            id: "action-file",
-            type: "ADD_FILE",
-            scope: "global",
-            timestampUtcMs: (Date.now() + 1).toString(),
-            input: {
-              id: "file-1",
-              name: "test.txt",
-              documentType: "text/plain",
-              parentFolder: "folder-1",
+        operations: [
+          {
+            action: {
+              id: "action-file",
+              type: "ADD_FILE",
+              scope: "global",
+              timestampUtcMs: (Date.now() + 1).toString(),
+              input: {
+                id: "file-1",
+                name: "test.txt",
+                documentType: "text/plain",
+                parentFolder: "folder-1",
+              },
             },
+            index: 1,
+            timestampUtcMs: (Date.now() + 1).toString(),
+            hash: "hash-file",
+            skip: 0,
           },
-          index: 1,
-          timestampUtcMs: (Date.now() + 1).toString(),
-          hash: "hash-file",
-          skip: 0,
-        },
+        ],
         createdAt: (Date.now() + 1).toString(),
         queueHint: [],
       };
@@ -331,23 +341,25 @@ describe("SimpleJobExecutor Integration", () => {
         documentId: document.header.id,
         scope: "global",
         branch: "main",
-        operation: {
-          action: {
-            id: "action-1",
-            type: "ADD_FOLDER",
-            scope: "global",
-            timestampUtcMs: Date.now().toString(),
-            input: {
-              id: "folder-1",
-              name: "Test Folder",
-              parentFolder: null,
+        operations: [
+          {
+            action: {
+              id: "action-1",
+              type: "ADD_FOLDER",
+              scope: "global",
+              timestampUtcMs: Date.now().toString(),
+              input: {
+                id: "folder-1",
+                name: "Test Folder",
+                parentFolder: null,
+              },
             },
+            index: 0,
+            timestampUtcMs: Date.now().toString(),
+            hash: "test-hash",
+            skip: 0,
           },
-          index: 0,
-          timestampUtcMs: Date.now().toString(),
-          hash: "test-hash",
-          skip: 0,
-        },
+        ],
         createdAt: Date.now().toString(),
         queueHint: [],
       };
@@ -390,23 +402,25 @@ describe("SimpleJobExecutor Integration", () => {
         documentId: document.header.id,
         scope: "global",
         branch: "main",
-        operation: {
-          action: {
-            id: "action-1",
-            type: "ADD_FOLDER",
-            scope: "global",
-            timestampUtcMs: Date.now().toString(),
-            input: {
-              id: "folder-1",
-              name: "Test Folder",
-              parentFolder: null,
+        operations: [
+          {
+            action: {
+              id: "action-1",
+              type: "ADD_FOLDER",
+              scope: "global",
+              timestampUtcMs: Date.now().toString(),
+              input: {
+                id: "folder-1",
+                name: "Test Folder",
+                parentFolder: null,
+              },
             },
+            index: 0,
+            timestampUtcMs: Date.now().toString(),
+            hash: "test-hash",
+            skip: 0,
           },
-          index: 0,
-          timestampUtcMs: Date.now().toString(),
-          hash: "test-hash",
-          skip: 0,
-        },
+        ],
         createdAt: Date.now().toString(),
         queueHint: [],
       };
@@ -439,21 +453,23 @@ describe("SimpleJobExecutor Integration", () => {
         documentId: document.header.id,
         scope: "document",
         branch: "main",
-        operation: {
-          action: {
-            id: "action-1",
-            type: "DELETE_DOCUMENT",
-            scope: "document",
-            timestampUtcMs: Date.now().toString(),
-            input: {
-              documentId: document.header.id,
+        operations: [
+          {
+            action: {
+              id: "action-1",
+              type: "DELETE_DOCUMENT",
+              scope: "document",
+              timestampUtcMs: Date.now().toString(),
+              input: {
+                documentId: document.header.id,
+              },
             },
+            index: 0,
+            timestampUtcMs: Date.now().toString(),
+            hash: "test-hash",
+            skip: 0,
           },
-          index: 0,
-          timestampUtcMs: Date.now().toString(),
-          hash: "test-hash",
-          skip: 0,
-        },
+        ],
         createdAt: Date.now().toString(),
         queueHint: [],
       };

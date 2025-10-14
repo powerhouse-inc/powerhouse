@@ -25,7 +25,7 @@ import type {
   ShutdownStatus,
   ViewFilter,
 } from "../shared/types.js";
-import { JobStatus, SYSTEM_DOCUMENT_ID } from "../shared/types.js";
+import { JobStatus } from "../shared/types.js";
 import { matchesScope } from "../shared/utils.js";
 import type { IReactor } from "./types.js";
 import { filterByParentId, filterByType } from "./utils.js";
@@ -328,30 +328,12 @@ export class Reactor implements IReactor {
     input.branch = document.header.branch;
     input.meta = document.header.meta;
 
-    const action: Action = {
+    const createAction: Action = {
       id: `${document.header.id}-create`,
       type: "CREATE_DOCUMENT",
       scope: "document",
       timestampUtcMs: new Date().toISOString(),
       input,
-    };
-
-    // Create a job for the CREATE_DOCUMENT action
-    const createJob: Job = {
-      id: uuidv4(),
-      documentId: SYSTEM_DOCUMENT_ID,
-      scope: "document",
-      branch: "main",
-      operation: {
-        index: 0,
-        timestampUtcMs: new Date().toISOString(),
-        hash: "",
-        skip: 0,
-        action: action,
-      },
-      createdAt: new Date().toISOString(),
-      queueHint: [],
-      maxRetries: 3,
     };
 
     // Create an UPGRADE_DOCUMENT action to set the initial state
@@ -371,34 +353,43 @@ export class Reactor implements IReactor {
       input: upgradeInput,
     };
 
-    const upgradeJob: Job = {
+    // Create a single job with both CREATE_DOCUMENT and UPGRADE_DOCUMENT operations
+    const job: Job = {
       id: uuidv4(),
       documentId: document.header.id,
       scope: "document",
       branch: "main",
-      operation: {
-        index: 0,
-        timestampUtcMs: new Date().toISOString(),
-        hash: "",
-        skip: 0,
-        action: upgradeAction,
-      },
+      operations: [
+        {
+          index: 0,
+          timestampUtcMs: new Date().toISOString(),
+          hash: "",
+          skip: 0,
+          action: createAction,
+        },
+        {
+          index: 1,
+          timestampUtcMs: new Date().toISOString(),
+          hash: "",
+          skip: 0,
+          action: upgradeAction,
+        },
+      ],
       createdAt: new Date().toISOString(),
       queueHint: [],
       maxRetries: 3,
     };
 
-    // Create job info and register with tracker (use the first job's ID)
+    // Create job info and register with tracker
     const jobInfo: JobInfo = {
-      id: createJob.id,
+      id: job.id,
       status: JobStatus.PENDING,
       createdAtUtcIso,
     };
     this.jobTracker.registerJob(jobInfo);
 
-    // Enqueue both jobs
-    await this.queue.enqueue(createJob);
-    await this.queue.enqueue(upgradeJob);
+    // Enqueue the job
+    await this.queue.enqueue(job);
 
     return jobInfo;
   }
@@ -434,16 +425,18 @@ export class Reactor implements IReactor {
     // Create a job for the DELETE_DOCUMENT action
     const job: Job = {
       id: uuidv4(),
-      documentId: SYSTEM_DOCUMENT_ID,
+      documentId: id,
       scope: "document",
       branch: "main",
-      operation: {
-        index: 0,
-        timestampUtcMs: new Date().toISOString(),
-        hash: "",
-        skip: 0,
-        action: action,
-      },
+      operations: [
+        {
+          index: 0,
+          timestampUtcMs: new Date().toISOString(),
+          hash: "",
+          skip: 0,
+          action: action,
+        },
+      ],
       createdAt: new Date().toISOString(),
       queueHint: [],
       maxRetries: 3,
@@ -469,37 +462,40 @@ export class Reactor implements IReactor {
   async mutate(id: string, actions: Action[]): Promise<JobInfo> {
     const createdAtUtcIso = new Date().toISOString();
 
-    // Create jobs for each action/operation
-    const jobs: Job[] = actions.map((action, index) => ({
+    // Convert actions to operations
+    const operations = actions.map((action, index) => ({
+      index: index,
+      timestampUtcMs: action.timestampUtcMs || new Date().toISOString(),
+      hash: "", // Will be computed by the executor
+      skip: 0,
+      action: action,
+    }));
+
+    // Determine scope from first action (all actions should have the same scope)
+    const scope = actions.length > 0 ? actions[0].scope || "global" : "global";
+
+    // Create a single job with all operations
+    const job: Job = {
       id: uuidv4(),
       documentId: id,
-      scope: action.scope || "global",
+      scope: scope,
       branch: "main", // Default to main branch
-      operation: {
-        index: index,
-        timestampUtcMs: action.timestampUtcMs || new Date().toISOString(),
-        hash: "", // Will be computed by the executor
-        skip: 0,
-        action: action,
-      },
+      operations: operations,
       createdAt: new Date().toISOString(),
       queueHint: [],
       maxRetries: 3,
-    }));
+    };
 
-    // Create job info for the batch (using the first job's ID as the batch ID)
-    const batchJobId = jobs.length > 0 ? jobs[0].id : uuidv4();
+    // Create job info and register with tracker
     const jobInfo: JobInfo = {
-      id: batchJobId,
+      id: job.id,
       status: JobStatus.PENDING,
       createdAtUtcIso,
     };
     this.jobTracker.registerJob(jobInfo);
 
-    // Enqueue all jobs
-    for (const job of jobs) {
-      await this.queue.enqueue(job);
-    }
+    // Enqueue the job
+    await this.queue.enqueue(job);
 
     return jobInfo;
   }

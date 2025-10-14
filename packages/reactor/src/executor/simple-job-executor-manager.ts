@@ -137,7 +137,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     if (result.success) {
       handle.complete();
       this.totalJobsProcessed++;
-      this.jobTracker.markCompleted(handle.job.id, result.operation);
+      this.jobTracker.markCompleted(handle.job.id, result.operations);
     } else {
       // Handle retry logic
       const retryCount = handle.job.retryCount || 0;
