@@ -12,6 +12,7 @@ import {
   createMockDocumentStorage,
   createMockOperationStorage,
   createMockOperationStore,
+  createTestEventBus,
   createTestRegistry,
 } from "../factories.js";
 
@@ -55,11 +56,13 @@ describe("SimpleJobExecutor", () => {
     // Setup mock operation store
     mockOperationStore = createMockOperationStore();
 
+    const eventBus = createTestEventBus();
     executor = new SimpleJobExecutor(
       registry,
       mockDocStorage,
       mockOperationStorage,
       mockOperationStore,
+      eventBus,
     );
   });
 

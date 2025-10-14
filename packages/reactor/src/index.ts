@@ -30,7 +30,12 @@ export {
 // Event Bus
 export { EventBus } from "./events/event-bus.js";
 export { type IEventBus } from "./events/interfaces.js";
-export { EventBusAggregateError, type Unsubscribe } from "./events/types.js";
+export {
+  EventBusAggregateError,
+  OperationEventTypes,
+  type OperationWrittenEvent,
+  type Unsubscribe,
+} from "./events/types.js";
 
 // Queue
 export { type IQueue } from "./queue/interfaces.js";
@@ -84,7 +89,24 @@ export {
   OptimisticLockError,
   RevisionMismatchError,
   type AtomicTxn,
+  type DocumentRevisions,
+  type DocumentSnapshot,
+  type IDocumentView,
   type IOperationStore,
+  type OperationContext,
+  type OperationWithContext,
 } from "./storage/interfaces.js";
 export { KyselyOperationStore } from "./storage/kysely/store.js";
 export type { Database, OperationTable } from "./storage/kysely/types.js";
+
+// Read Models
+export {
+  type IReadModel,
+  type IReadModelCoordinator,
+} from "./read-models/interfaces.js";
+export { ReadModelCoordinator } from "./read-models/coordinator.js";
+export { KyselyDocumentView } from "./read-models/document-view.js";
+export type {
+  DocumentViewDatabase,
+  InsertableDocumentSnapshot,
+} from "./read-models/types.js";

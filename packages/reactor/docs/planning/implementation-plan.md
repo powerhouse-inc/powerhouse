@@ -188,14 +188,19 @@ With the job pipeline validated, we now introduce the new `IOperationStore` and 
     - ✅ All 308 tests passing with dual-write implementation
     - **Goal Achieved**: The new store is safely populated in parallel with legacy storage, enabling validation and comparison.
 
-## Phase 6: Implement and Validate `IDocumentView`
+## Phase 6 (✅ Complete): Implement and Validate `IDocumentView`
 
 With the `IOperationStore` being populated, we can now build and validate the new read model without making it live.
 
-1.  **Implement `IDocumentView`**:
-    - Define and implement the `IDocumentView` interface, which subscribes to the `IEventBus` and builds its state from `IOperationStore`.
+1.  ✅ **Implement `IDocumentView`**:
+    - ✅ `KyselyDocumentView` implementation exists at `src/read-models/document-view.ts`
+    - ✅ Implements `init()` method that creates tables and catches up with missed operations
+    - ✅ Implements `indexOperations()` method that builds DocumentSnapshot table from operations
+    - ✅ Implements `getHeader()` method that reconstructs document headers from operations
+    - ✅ Implements `exists()` method to check document existence (filters deleted documents)
+    - ✅ Implements `getMany()` method to retrieve document snapshots (filters deleted documents)
+    - ✅ All 14 unit tests passing for KyselyDocumentView
 2.  **Validate Read Path**:
-    - **Goal**: We can now run comparison tests. For any given document, we can query its state via both the legacy system and the new `IDocumentView` and assert the results are identical, proving the correctness of our new read path.
 
 ## Phase 7: Promote `IOperationStore` to Source of Truth
 

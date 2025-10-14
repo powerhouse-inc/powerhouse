@@ -28,7 +28,10 @@ import type {
   IOperationStore,
 } from "../../src/storage/interfaces.js";
 import type { Database as StorageDatabase } from "../../src/storage/kysely/types.js";
-import { createTestOperationStore } from "../factories.js";
+import {
+  createMockReadModelCoordinator,
+  createTestOperationStore,
+} from "../factories.js";
 
 // Combined database type
 type Database = StorageDatabase & DocumentViewDatabase;
@@ -88,6 +91,7 @@ describe("Legacy Storage vs IDocumentView", () => {
       legacyStorage as IDocumentStorage,
       legacyStorage as IDocumentOperationStorage,
       operationStore,
+      eventBus,
     );
     executorManager = new SimpleJobExecutorManager(
       () => executor,
@@ -99,11 +103,13 @@ describe("Legacy Storage vs IDocumentView", () => {
     await executorManager.start(1);
 
     // Create reactor
+    const readModelCoordinator = createMockReadModelCoordinator();
     reactor = new Reactor(
       driveServer,
       legacyStorage as IDocumentStorage,
       queue,
       jobTracker,
+      readModelCoordinator,
     );
   });
 
@@ -120,7 +126,7 @@ describe("Legacy Storage vs IDocumentView", () => {
       const jobInfo = await reactor.create(document);
 
       // Wait for job to complete
-      await vi.waitFor(async () => {
+      await vi.waitUntil(async () => {
         const jobStatus = await reactor.getJobStatus(jobInfo.id);
         return jobStatus.status === JobStatus.COMPLETED;
       });

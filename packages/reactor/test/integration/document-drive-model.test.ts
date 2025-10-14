@@ -30,12 +30,21 @@ import { EventBus } from "../../src/events/event-bus.js";
 import { SimpleJobExecutorManager } from "../../src/executor/simple-job-executor-manager.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
+import { ReadModelCoordinator } from "../../src/read-models/coordinator.js";
+import { KyselyDocumentView } from "../../src/read-models/document-view.js";
+import type { DocumentViewDatabase } from "../../src/read-models/types.js";
 import { DocumentModelRegistry } from "../../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
 import { JobStatus } from "../../src/shared/types.js";
 import type { KyselyOperationStore } from "../../src/storage/kysely/store.js";
-import type { Database as DatabaseSchema } from "../../src/storage/kysely/types.js";
-import { createTestOperationStore } from "../factories.js";
+import type { Database as StorageDatabase } from "../../src/storage/kysely/types.js";
+import {
+  createTestJobTracker,
+  createTestOperationStore,
+} from "../factories.js";
+
+// Combined database type
+type Database = StorageDatabase & DocumentViewDatabase;
 
 describe("Integration Test: Reactor <> Document Drive Document Model", () => {
   let reactor: Reactor;
@@ -46,7 +55,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
   let executor: SimpleJobExecutor;
   let executorManager: SimpleJobExecutorManager;
   let driveServer: BaseDocumentDriveServer;
-  let db: Kysely<DatabaseSchema>;
+  let db: Kysely<Database>;
   let operationStore: KyselyOperationStore;
 
   beforeEach(async () => {
@@ -64,29 +73,45 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
 
     // Create in-memory PGLite database for IOperationStore
     const setup = await createTestOperationStore();
-    db = setup.db;
+    db = setup.db as unknown as Kysely<Database>;
     operationStore = setup.store;
 
     eventBus = new EventBus();
     queue = new InMemoryQueue(eventBus);
+    const jobTracker = createTestJobTracker();
     executor = new SimpleJobExecutor(
       registry,
       storage as IDocumentStorage,
       storage as IDocumentOperationStorage,
       operationStore,
+      eventBus,
     );
 
     executorManager = new SimpleJobExecutorManager(
       () => executor,
       eventBus,
       queue,
+      jobTracker,
     );
 
     // Start the executor manager to process jobs
     await executorManager.start(1);
 
+    // Create real document view and read model coordinator
+    const documentView = new KyselyDocumentView(db, operationStore);
+    await documentView.init();
+    const readModelCoordinator = new ReadModelCoordinator(eventBus, [
+      documentView,
+    ]);
+
     // Create reactor with all components
-    reactor = new Reactor(driveServer, storage as IDocumentStorage, queue);
+    reactor = new Reactor(
+      driveServer,
+      storage as IDocumentStorage,
+      queue,
+      jobTracker,
+      readModelCoordinator,
+    );
   });
 
   afterEach(async () => {
