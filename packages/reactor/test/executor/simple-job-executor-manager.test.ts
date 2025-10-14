@@ -5,6 +5,8 @@ import type { IJobExecutor } from "../../src/executor/interfaces.js";
 import type { JobExecutorFactory } from "../../src/executor/simple-job-executor-manager.js";
 import { SimpleJobExecutorManager } from "../../src/executor/simple-job-executor-manager.js";
 import type { JobResult } from "../../src/executor/types.js";
+import type { IJobTracker } from "../../src/job-tracker/interfaces.js";
+import { InMemoryJobTracker } from "../../src/job-tracker/in-memory-job-tracker.js";
 import type { IQueue } from "../../src/queue/interfaces.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
 import type { Job } from "../../src/queue/types.js";
@@ -15,6 +17,7 @@ describe("SimpleJobExecutorManager", () => {
   let executorFactory: JobExecutorFactory;
   let eventBus: IEventBus;
   let queue: IQueue;
+  let jobTracker: IJobTracker;
 
   // Create a mock executor
   const createMockExecutor = (): IJobExecutor => {
@@ -34,11 +37,17 @@ describe("SimpleJobExecutorManager", () => {
     mockExecutors = [];
     eventBus = new EventBus();
     queue = new InMemoryQueue(eventBus);
+    jobTracker = new InMemoryJobTracker();
 
     // Create factory that returns mock executors
     executorFactory = vi.fn(() => createMockExecutor());
 
-    manager = new SimpleJobExecutorManager(executorFactory, eventBus, queue);
+    manager = new SimpleJobExecutorManager(
+      executorFactory,
+      eventBus,
+      queue,
+      jobTracker,
+    );
   });
 
   describe("start", () => {

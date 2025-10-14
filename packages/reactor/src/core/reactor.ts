@@ -9,6 +9,7 @@ import type {
   PHDocument,
 } from "document-model";
 import { v4 as uuidv4 } from "uuid";
+import type { IJobTracker } from "../job-tracker/interfaces.js";
 import type { IQueue } from "../queue/interfaces.js";
 import type { Job } from "../queue/types.js";
 import { createMutableShutdownStatus } from "../shared/factories.js";
@@ -46,16 +47,19 @@ export class Reactor implements IReactor {
   private shutdownStatus: ShutdownStatus;
   private setShutdown: (value: boolean) => void;
   private queue: IQueue;
+  private jobTracker: IJobTracker;
 
   constructor(
     driveServer: BaseDocumentDriveServer,
     documentStorage: IDocumentStorage,
     queue: IQueue,
+    jobTracker: IJobTracker,
   ) {
     // Store required dependencies
     this.driveServer = driveServer;
     this.documentStorage = documentStorage;
     this.queue = queue;
+    this.jobTracker = jobTracker;
 
     // Create mutable shutdown status using factory method
     const [status, setter] = createMutableShutdownStatus(false);
@@ -332,12 +336,15 @@ export class Reactor implements IReactor {
     // Enqueue the job
     await this.queue.enqueue(job);
 
-    // Return pending job status
-    return {
+    // Create job info and register with tracker
+    const jobInfo: JobInfo = {
       id: job.id,
       status: JobStatus.PENDING,
       createdAtUtcIso,
     };
+    this.jobTracker.registerJob(jobInfo);
+
+    return jobInfo;
   }
 
   /**
@@ -389,12 +396,15 @@ export class Reactor implements IReactor {
     // Enqueue the job
     await this.queue.enqueue(job);
 
-    // Return pending job status
-    return {
+    // Create job info and register with tracker
+    const jobInfo: JobInfo = {
       id: job.id,
       status: JobStatus.PENDING,
       createdAtUtcIso,
     };
+    this.jobTracker.registerJob(jobInfo);
+
+    return jobInfo;
   }
 
   /**
@@ -426,14 +436,17 @@ export class Reactor implements IReactor {
       await this.queue.enqueue(job);
     }
 
-    // Return job info for the batch (using the first job's ID as the batch ID)
+    // Create job info for the batch (using the first job's ID as the batch ID)
     // TODO: we need proper support for batch jobs
     const batchJobId = jobs.length > 0 ? jobs[0].id : uuidv4();
-    return {
+    const jobInfo: JobInfo = {
       id: batchJobId,
       status: JobStatus.PENDING,
       createdAtUtcIso,
     };
+    this.jobTracker.registerJob(jobInfo);
+
+    return jobInfo;
   }
 
   /**
@@ -555,21 +568,24 @@ export class Reactor implements IReactor {
    * Retrieves the status of a job
    */
   getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobInfo> {
-    const createdAtUtcIso = new Date().toISOString();
-
     if (signal?.aborted) {
       throw new AbortError();
     }
 
-    // TODO: Phase 3 - Implement once IQueue and job tracking is in place
-    // For now, return a not found status
-    return Promise.resolve({
-      id: jobId,
-      status: JobStatus.FAILED,
-      createdAtUtcIso,
-      completedAtUtcIso: new Date().toISOString(),
-      error: "Job tracking not yet implemented",
-    });
+    const jobInfo = this.jobTracker.getJobStatus(jobId);
+
+    if (!jobInfo) {
+      // Job not found - return FAILED status with appropriate error
+      return Promise.resolve({
+        id: jobId,
+        status: JobStatus.FAILED,
+        createdAtUtcIso: new Date().toISOString(),
+        completedAtUtcIso: new Date().toISOString(),
+        error: "Job not found",
+      });
+    }
+
+    return Promise.resolve(jobInfo);
   }
 
   /**
