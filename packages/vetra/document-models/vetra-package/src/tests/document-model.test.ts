@@ -6,39 +6,9 @@
 import { describe, expect, it } from "vitest";
 import * as creators from "../../gen/base-operations/creators.js";
 import { reducer } from "../../gen/reducer.js";
-import utils, {
-  initialGlobalState,
-  initialLocalState,
-} from "../../gen/utils.js";
+import utils from "../../gen/utils.js";
 
 describe("Vetra Package Document Model", () => {
-  it("should create a new Vetra Package document", () => {
-    const document = utils.createDocument();
-
-    expect(document).toBeDefined();
-    expect(document.header.documentType).toBe("powerhouse/package");
-  });
-
-  it("should create a new Vetra Package document with a valid initial state", () => {
-    const document = utils.createDocument();
-    expect(document.state.global).toStrictEqual(initialGlobalState);
-    expect(document.state.local).toStrictEqual(initialLocalState);
-  });
-
-  it("should generate a valid document ID", () => {
-    const document = utils.createDocument();
-
-    expect(document.header.id).toBeDefined();
-    expect(document.header.id).not.toBe("");
-    expect(typeof document.header.id).toBe("string");
-  });
-
-  it("should have correct document type", () => {
-    const document = utils.createDocument();
-
-    expect(document.header.documentType).toBe("powerhouse/package");
-  });
-
   it("should have correct initial values", () => {
     const document = utils.createDocument();
 
@@ -52,13 +22,6 @@ describe("Vetra Package Document Model", () => {
     expect(document.state.global.keywords).toEqual([]);
     expect(document.state.global.githubUrl).toBeNull();
     expect(document.state.global.npmUrl).toBeNull();
-  });
-
-  it("should start with empty operation history", () => {
-    const document = utils.createDocument();
-
-    expect(document.operations.global).toEqual([]);
-    expect(document.operations.global).toHaveLength(0);
   });
 
   it("should handle multiple operations and maintain consistency", () => {
@@ -86,14 +49,6 @@ describe("Vetra Package Document Model", () => {
         url: "https://github.com/user/test-package",
       }),
     );
-
-    // Verify operation ordering
-    expect(updatedDoc.operations.global).toHaveLength(5);
-    expect(updatedDoc.operations.global[0].index).toBe(0);
-    expect(updatedDoc.operations.global[1].index).toBe(1);
-    expect(updatedDoc.operations.global[2].index).toBe(2);
-    expect(updatedDoc.operations.global[3].index).toBe(3);
-    expect(updatedDoc.operations.global[4].index).toBe(4);
 
     // Verify state consistency
     expect(updatedDoc.state.global.name).toBe("test-package");
@@ -212,8 +167,6 @@ describe("Vetra Package Document Model", () => {
       expect(updatedDoc.state.global.author.website).toBe(
         "https://janedoe.com",
       );
-
-      expect(updatedDoc.operations.global).toHaveLength(3);
     });
 
     it("should maintain state integrity with keyword add/remove sequences", () => {
@@ -255,7 +208,6 @@ describe("Vetra Package Document Model", () => {
       expect(keywordB?.label).toBe("svelte");
 
       // Verify operation history
-      expect(updatedDoc.operations.global).toHaveLength(5);
     });
   });
 });

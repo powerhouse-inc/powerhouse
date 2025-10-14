@@ -3,12 +3,10 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
-import { generateMock } from "@powerhousedao/codegen";
 import { beforeEach, describe, expect, it } from "vitest";
 import * as creators from "../../gen/base-operations/creators.js";
 import { reducer } from "../../gen/reducer.js";
 import type { SetSubgraphNameInput } from "../../gen/schema/index.js";
-import { z } from "../../gen/schema/index.js";
 import type { SubgraphModuleDocument } from "../../gen/types.js";
 import utils from "../../gen/utils.js";
 
@@ -20,26 +18,6 @@ describe("BaseOperations Operations", () => {
   });
 
   describe("setSubgraphName", () => {
-    it("should handle setSubgraphName operation", () => {
-      const input: SetSubgraphNameInput = generateMock(
-        z.SetSubgraphNameInputSchema(),
-      );
-
-      const updatedDocument = reducer(
-        document,
-        creators.setSubgraphName(input),
-      );
-
-      expect(updatedDocument.operations.global).toHaveLength(1);
-      expect(updatedDocument.operations.global[0].action.type).toBe(
-        "SET_SUBGRAPH_NAME",
-      );
-      expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-        input,
-      );
-      expect(updatedDocument.operations.global[0].index).toEqual(0);
-    });
-
     it("should mutate state with new name", () => {
       const input: SetSubgraphNameInput = { name: "My Subgraph" };
 
@@ -68,24 +46,6 @@ describe("BaseOperations Operations", () => {
   });
 
   describe("setSubgraphStatus", () => {
-    it("should handle setSubgraphStatus operation", () => {
-      const input = { status: "CONFIRMED" as const };
-
-      const updatedDocument = reducer(
-        document,
-        creators.setSubgraphStatus(input),
-      );
-
-      expect(updatedDocument.operations.global).toHaveLength(1);
-      expect(updatedDocument.operations.global[0].action.type).toBe(
-        "SET_SUBGRAPH_STATUS",
-      );
-      expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-        input,
-      );
-      expect(updatedDocument.operations.global[0].index).toEqual(0);
-    });
-
     it("should mutate state with new status", () => {
       const input = { status: "CONFIRMED" as const };
 

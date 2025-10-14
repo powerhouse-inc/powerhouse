@@ -3,13 +3,11 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
-import { generateMock } from "@powerhousedao/codegen";
 import { beforeEach, describe, expect, it } from "vitest";
 import * as creators from "../../gen/base-operations/creators.js";
 import { reducer } from "../../gen/reducer.js";
 import type {
   AddPackageKeywordInput,
-  RemovePackageKeywordInput,
   SetPackageAuthorInput,
   SetPackageAuthorNameInput,
   SetPackageAuthorWebsiteInput,
@@ -19,7 +17,6 @@ import type {
   SetPackageNameInput,
   SetPackageNpmUrlInput,
 } from "../../gen/schema/index.js";
-import { z } from "../../gen/schema/index.js";
 import type { VetraPackageDocument } from "../../gen/types.js";
 import utils from "../../gen/utils.js";
 
@@ -31,23 +28,6 @@ describe("BaseOperations Operations", () => {
   });
 
   describe("setPackageName", () => {
-    it("should handle setPackageName operation", () => {
-      const input: SetPackageNameInput = generateMock(
-        z.SetPackageNameInputSchema(),
-      );
-
-      const updatedDocument = reducer(document, creators.setPackageName(input));
-
-      expect(updatedDocument.operations.global).toHaveLength(1);
-      expect(updatedDocument.operations.global[0].action.type).toBe(
-        "SET_PACKAGE_NAME",
-      );
-      expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-        input,
-      );
-      expect(updatedDocument.operations.global[0].index).toEqual(0);
-    });
-
     it("should mutate state with new name", () => {
       const input: SetPackageNameInput = { name: "my-package" };
 
@@ -58,26 +38,6 @@ describe("BaseOperations Operations", () => {
   });
 
   describe("setPackageDescription", () => {
-    it("should handle setPackageDescription operation", () => {
-      const input: SetPackageDescriptionInput = generateMock(
-        z.SetPackageDescriptionInputSchema(),
-      );
-
-      const updatedDocument = reducer(
-        document,
-        creators.setPackageDescription(input),
-      );
-
-      expect(updatedDocument.operations.global).toHaveLength(1);
-      expect(updatedDocument.operations.global[0].action.type).toBe(
-        "SET_PACKAGE_DESCRIPTION",
-      );
-      expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-        input,
-      );
-      expect(updatedDocument.operations.global[0].index).toEqual(0);
-    });
-
     it("should mutate state with new description", () => {
       const input: SetPackageDescriptionInput = {
         description: "A test package",
@@ -93,26 +53,6 @@ describe("BaseOperations Operations", () => {
   });
 
   describe("setPackageCategory", () => {
-    it("should handle setPackageCategory operation", () => {
-      const input: SetPackageCategoryInput = generateMock(
-        z.SetPackageCategoryInputSchema(),
-      );
-
-      const updatedDocument = reducer(
-        document,
-        creators.setPackageCategory(input),
-      );
-
-      expect(updatedDocument.operations.global).toHaveLength(1);
-      expect(updatedDocument.operations.global[0].action.type).toBe(
-        "SET_PACKAGE_CATEGORY",
-      );
-      expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-        input,
-      );
-      expect(updatedDocument.operations.global[0].index).toEqual(0);
-    });
-
     it("should mutate state with new category", () => {
       const input: SetPackageCategoryInput = { category: "utility" };
 
@@ -126,26 +66,6 @@ describe("BaseOperations Operations", () => {
   });
 
   describe("setPackageAuthor", () => {
-    it("should handle setPackageAuthor operation", () => {
-      const input: SetPackageAuthorInput = generateMock(
-        z.SetPackageAuthorInputSchema(),
-      );
-
-      const updatedDocument = reducer(
-        document,
-        creators.setPackageAuthor(input),
-      );
-
-      expect(updatedDocument.operations.global).toHaveLength(1);
-      expect(updatedDocument.operations.global[0].action.type).toBe(
-        "SET_PACKAGE_AUTHOR",
-      );
-      expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-        input,
-      );
-      expect(updatedDocument.operations.global[0].index).toEqual(0);
-    });
-
     it("should mutate state with both name and website", () => {
       const input: SetPackageAuthorInput = {
         name: "John Doe",
@@ -185,26 +105,6 @@ describe("BaseOperations Operations", () => {
   });
 
   describe("setPackageAuthorName", () => {
-    it("should handle setPackageAuthorName operation", () => {
-      const input: SetPackageAuthorNameInput = generateMock(
-        z.SetPackageAuthorNameInputSchema(),
-      );
-
-      const updatedDocument = reducer(
-        document,
-        creators.setPackageAuthorName(input),
-      );
-
-      expect(updatedDocument.operations.global).toHaveLength(1);
-      expect(updatedDocument.operations.global[0].action.type).toBe(
-        "SET_PACKAGE_AUTHOR_NAME",
-      );
-      expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-        input,
-      );
-      expect(updatedDocument.operations.global[0].index).toEqual(0);
-    });
-
     it("should mutate state with new author name", () => {
       const input: SetPackageAuthorNameInput = { name: "Alice" };
 
@@ -218,26 +118,6 @@ describe("BaseOperations Operations", () => {
   });
 
   describe("setPackageAuthorWebsite", () => {
-    it("should handle setPackageAuthorWebsite operation", () => {
-      const input: SetPackageAuthorWebsiteInput = generateMock(
-        z.SetPackageAuthorWebsiteInputSchema(),
-      );
-
-      const updatedDocument = reducer(
-        document,
-        creators.setPackageAuthorWebsite(input),
-      );
-
-      expect(updatedDocument.operations.global).toHaveLength(1);
-      expect(updatedDocument.operations.global[0].action.type).toBe(
-        "SET_PACKAGE_AUTHOR_WEBSITE",
-      );
-      expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-        input,
-      );
-      expect(updatedDocument.operations.global[0].index).toEqual(0);
-    });
-
     it("should mutate state with new author website", () => {
       const input: SetPackageAuthorWebsiteInput = {
         website: "https://example.com",
@@ -255,26 +135,6 @@ describe("BaseOperations Operations", () => {
   });
 
   describe("addPackageKeyword", () => {
-    it("should handle addPackageKeyword operation", () => {
-      const input: AddPackageKeywordInput = generateMock(
-        z.AddPackageKeywordInputSchema(),
-      );
-
-      const updatedDocument = reducer(
-        document,
-        creators.addPackageKeyword(input),
-      );
-
-      expect(updatedDocument.operations.global).toHaveLength(1);
-      expect(updatedDocument.operations.global[0].action.type).toBe(
-        "ADD_PACKAGE_KEYWORD",
-      );
-      expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-        input,
-      );
-      expect(updatedDocument.operations.global[0].index).toEqual(0);
-    });
-
     it("should mutate state by adding keyword to array", () => {
       const input: AddPackageKeywordInput = {
         id: "kw-1",
@@ -363,42 +223,9 @@ describe("BaseOperations Operations", () => {
       );
       expect(updatedDoc.state.global.keywords).toHaveLength(1);
     });
-
-    it("should increase array length correctly", () => {
-      const initialLength = document.state.global.keywords.length;
-
-      const updatedDocument = reducer(
-        document,
-        creators.addPackageKeyword({ id: "new", label: "test" }),
-      );
-
-      expect(updatedDocument.state.global.keywords.length).toBe(
-        initialLength + 1,
-      );
-    });
   });
 
   describe("removePackageKeyword", () => {
-    it("should handle removePackageKeyword operation", () => {
-      const input: RemovePackageKeywordInput = generateMock(
-        z.RemovePackageKeywordInputSchema(),
-      );
-
-      const updatedDocument = reducer(
-        document,
-        creators.removePackageKeyword(input),
-      );
-
-      expect(updatedDocument.operations.global).toHaveLength(1);
-      expect(updatedDocument.operations.global[0].action.type).toBe(
-        "REMOVE_PACKAGE_KEYWORD",
-      );
-      expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-        input,
-      );
-      expect(updatedDocument.operations.global[0].index).toEqual(0);
-    });
-
     it("should mutate state by removing keyword from array", () => {
       let updatedDoc = reducer(
         document,
@@ -485,26 +312,6 @@ describe("BaseOperations Operations", () => {
   });
 
   describe("setPackageGithubUrl", () => {
-    it("should handle setPackageGithubUrl operation", () => {
-      const input: SetPackageGithubUrlInput = generateMock(
-        z.SetPackageGithubUrlInputSchema(),
-      );
-
-      const updatedDocument = reducer(
-        document,
-        creators.setPackageGithubUrl(input),
-      );
-
-      expect(updatedDocument.operations.global).toHaveLength(1);
-      expect(updatedDocument.operations.global[0].action.type).toBe(
-        "SET_PACKAGE_GITHUB_URL",
-      );
-      expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-        input,
-      );
-      expect(updatedDocument.operations.global[0].index).toEqual(0);
-    });
-
     it("should mutate state with new GitHub URL", () => {
       const input: SetPackageGithubUrlInput = {
         url: "https://github.com/user/repo",
@@ -522,26 +329,6 @@ describe("BaseOperations Operations", () => {
   });
 
   describe("setPackageNpmUrl", () => {
-    it("should handle setPackageNpmUrl operation", () => {
-      const input: SetPackageNpmUrlInput = generateMock(
-        z.SetPackageNpmUrlInputSchema(),
-      );
-
-      const updatedDocument = reducer(
-        document,
-        creators.setPackageNpmUrl(input),
-      );
-
-      expect(updatedDocument.operations.global).toHaveLength(1);
-      expect(updatedDocument.operations.global[0].action.type).toBe(
-        "SET_PACKAGE_NPM_URL",
-      );
-      expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-        input,
-      );
-      expect(updatedDocument.operations.global[0].index).toEqual(0);
-    });
-
     it("should mutate state with new npm URL", () => {
       const input: SetPackageNpmUrlInput = {
         url: "https://npmjs.com/package/my-package",

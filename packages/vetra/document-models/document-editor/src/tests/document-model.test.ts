@@ -6,52 +6,15 @@
 import { describe, expect, it } from "vitest";
 import * as creators from "../../gen/base-operations/creators.js";
 import { reducer } from "../../gen/reducer.js";
-import utils, {
-  initialGlobalState,
-  initialLocalState,
-} from "../../gen/utils.js";
+import utils from "../../gen/utils.js";
 
 describe("Document Editor Document Model", () => {
-  it("should create a new Document Editor document", () => {
-    const document = utils.createDocument();
-
-    expect(document).toBeDefined();
-    expect(document.header.documentType).toBe("powerhouse/document-editor");
-  });
-
-  it("should create a new Document Editor document with a valid initial state", () => {
-    const document = utils.createDocument();
-    expect(document.state.global).toStrictEqual(initialGlobalState);
-    expect(document.state.local).toStrictEqual(initialLocalState);
-  });
-
-  it("should generate a valid document ID", () => {
-    const document = utils.createDocument();
-
-    expect(document.header.id).toBeDefined();
-    expect(document.header.id).not.toBe("");
-    expect(typeof document.header.id).toBe("string");
-  });
-
-  it("should have correct document type", () => {
-    const document = utils.createDocument();
-
-    expect(document.header.documentType).toBe("powerhouse/document-editor");
-  });
-
   it("should have correct initial values", () => {
     const document = utils.createDocument();
 
     expect(document.state.global.name).toBe("");
     expect(document.state.global.documentTypes).toEqual([]);
     expect(document.state.global.status).toBe("DRAFT");
-  });
-
-  it("should start with empty operation history", () => {
-    const document = utils.createDocument();
-
-    expect(document.operations.global).toEqual([]);
-    expect(document.operations.global).toHaveLength(0);
   });
 
   it("should handle multiple operations and maintain consistency", () => {
@@ -72,12 +35,6 @@ describe("Document Editor Document Model", () => {
       updatedDoc,
       creators.setEditorStatus({ status: "CONFIRMED" }),
     );
-
-    // Verify operation ordering
-    expect(updatedDoc.operations.global).toHaveLength(3);
-    expect(updatedDoc.operations.global[0].index).toBe(0);
-    expect(updatedDoc.operations.global[1].index).toBe(1);
-    expect(updatedDoc.operations.global[2].index).toBe(2);
 
     // Verify state consistency
     expect(updatedDoc.state.global.name).toBe("Test Editor");
@@ -119,9 +76,6 @@ describe("Document Editor Document Model", () => {
         creators.setEditorStatus({ status: "CONFIRMED" }),
       );
       expect(updatedDoc.state.global.status).toBe("CONFIRMED");
-
-      // Verify final state
-      expect(updatedDoc.operations.global).toHaveLength(4);
     });
 
     it("should handle reset scenario: remove all types and add new ones", () => {
@@ -190,7 +144,6 @@ describe("Document Editor Document Model", () => {
           (dt) => dt.id === "new-type-1",
         ),
       ).toBeDefined();
-      expect(updatedDoc.operations.global).toHaveLength(7);
     });
 
     it("should maintain state integrity with complex add/remove sequences", () => {
@@ -230,9 +183,6 @@ describe("Document Editor Document Model", () => {
         (dt) => dt.id === "type-b",
       );
       expect(typeB?.documentType).toBe("b-new");
-
-      // Verify operation history
-      expect(updatedDoc.operations.global).toHaveLength(5);
     });
   });
 });

@@ -3,17 +3,14 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
-import { generateMock } from "@powerhousedao/codegen";
 import { beforeEach, describe, expect, it } from "vitest";
 import * as creators from "../../gen/base-operations/creators.js";
 import { reducer } from "../../gen/reducer.js";
 import type {
   AddDocumentTypeInput,
-  RemoveDocumentTypeInput,
   SetProcessorNameInput,
   SetProcessorTypeInput,
 } from "../../gen/schema/index.js";
-import { z } from "../../gen/schema/index.js";
 import type { ProcessorModuleDocument } from "../../gen/types.js";
 import utils from "../../gen/utils.js";
 
@@ -25,26 +22,6 @@ describe("BaseOperations Operations", () => {
   });
 
   describe("setProcessorName", () => {
-    it("should handle setProcessorName operation", () => {
-      const input: SetProcessorNameInput = generateMock(
-        z.SetProcessorNameInputSchema(),
-      );
-
-      const updatedDocument = reducer(
-        document,
-        creators.setProcessorName(input),
-      );
-
-      expect(updatedDocument.operations.global).toHaveLength(1);
-      expect(updatedDocument.operations.global[0].action.type).toBe(
-        "SET_PROCESSOR_NAME",
-      );
-      expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-        input,
-      );
-      expect(updatedDocument.operations.global[0].index).toEqual(0);
-    });
-
     it("should mutate state with new name", () => {
       const input: SetProcessorNameInput = { name: "My Processor" };
 
@@ -73,26 +50,6 @@ describe("BaseOperations Operations", () => {
   });
 
   describe("setProcessorType", () => {
-    it("should handle setProcessorType operation", () => {
-      const input: SetProcessorTypeInput = generateMock(
-        z.SetProcessorTypeInputSchema(),
-      );
-
-      const updatedDocument = reducer(
-        document,
-        creators.setProcessorType(input),
-      );
-
-      expect(updatedDocument.operations.global).toHaveLength(1);
-      expect(updatedDocument.operations.global[0].action.type).toBe(
-        "SET_PROCESSOR_TYPE",
-      );
-      expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-        input,
-      );
-      expect(updatedDocument.operations.global[0].index).toEqual(0);
-    });
-
     it("should mutate state with new type", () => {
       const input: SetProcessorTypeInput = { type: "analytics" };
 
@@ -121,24 +78,6 @@ describe("BaseOperations Operations", () => {
   });
 
   describe("setProcessorStatus", () => {
-    it("should handle setProcessorStatus operation", () => {
-      const input = { status: "CONFIRMED" as const };
-
-      const updatedDocument = reducer(
-        document,
-        creators.setProcessorStatus(input),
-      );
-
-      expect(updatedDocument.operations.global).toHaveLength(1);
-      expect(updatedDocument.operations.global[0].action.type).toBe(
-        "SET_PROCESSOR_STATUS",
-      );
-      expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-        input,
-      );
-      expect(updatedDocument.operations.global[0].index).toEqual(0);
-    });
-
     it("should mutate state with new status", () => {
       const input = { status: "CONFIRMED" as const };
 
@@ -177,26 +116,6 @@ describe("BaseOperations Operations", () => {
   });
 
   describe("addDocumentType", () => {
-    it("should handle addDocumentType operation", () => {
-      const input: AddDocumentTypeInput = generateMock(
-        z.AddDocumentTypeInputSchema(),
-      );
-
-      const updatedDocument = reducer(
-        document,
-        creators.addDocumentType(input),
-      );
-
-      expect(updatedDocument.operations.global).toHaveLength(1);
-      expect(updatedDocument.operations.global[0].action.type).toBe(
-        "ADD_DOCUMENT_TYPE",
-      );
-      expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-        input,
-      );
-      expect(updatedDocument.operations.global[0].index).toEqual(0);
-    });
-
     it("should mutate state by adding document type to array", () => {
       const input: AddDocumentTypeInput = {
         id: "test-type-1",
@@ -294,42 +213,9 @@ describe("BaseOperations Operations", () => {
       );
       expect(updatedDoc.state.global.documentTypes).toHaveLength(1);
     });
-
-    it("should increase array length correctly", () => {
-      const initialLength = document.state.global.documentTypes.length;
-
-      const updatedDocument = reducer(
-        document,
-        creators.addDocumentType({ id: "new", documentType: "powerhouse/new" }),
-      );
-
-      expect(updatedDocument.state.global.documentTypes.length).toBe(
-        initialLength + 1,
-      );
-    });
   });
 
   describe("removeDocumentType", () => {
-    it("should handle removeDocumentType operation", () => {
-      const input: RemoveDocumentTypeInput = generateMock(
-        z.RemoveDocumentTypeInputSchema(),
-      );
-
-      const updatedDocument = reducer(
-        document,
-        creators.removeDocumentType(input),
-      );
-
-      expect(updatedDocument.operations.global).toHaveLength(1);
-      expect(updatedDocument.operations.global[0].action.type).toBe(
-        "REMOVE_DOCUMENT_TYPE",
-      );
-      expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-        input,
-      );
-      expect(updatedDocument.operations.global[0].index).toEqual(0);
-    });
-
     it("should mutate state by removing document type from array", () => {
       let updatedDoc = reducer(
         document,

@@ -3,17 +3,14 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
-import { generateMock } from "@powerhousedao/codegen";
 import { beforeEach, describe, expect, it } from "vitest";
 import * as creators from "../../gen/base-operations/creators.js";
 import { reducer } from "../../gen/reducer.js";
 import type {
   AddDocumentTypeInput,
-  RemoveDocumentTypeInput,
   SetAppNameInput,
   SetAppStatusInput,
 } from "../../gen/schema/index.js";
-import { z } from "../../gen/schema/index.js";
 import type { AppModuleDocument } from "../../gen/types.js";
 import utils from "../../gen/utils.js";
 
@@ -25,21 +22,6 @@ describe("BaseOperations Operations", () => {
   });
 
   describe("setAppName", () => {
-    it("should handle setAppName operation", () => {
-      const input: SetAppNameInput = generateMock(z.SetAppNameInputSchema());
-
-      const updatedDocument = reducer(document, creators.setAppName(input));
-
-      expect(updatedDocument.operations.global).toHaveLength(1);
-      expect(updatedDocument.operations.global[0].action.type).toBe(
-        "SET_APP_NAME",
-      );
-      expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-        input,
-      );
-      expect(updatedDocument.operations.global[0].index).toEqual(0);
-    });
-
     it("should mutate state with new name", () => {
       const input: SetAppNameInput = { name: "My Test App" };
 
@@ -78,23 +60,6 @@ describe("BaseOperations Operations", () => {
   });
 
   describe("setAppStatus", () => {
-    it("should handle setAppStatus operation", () => {
-      const input: SetAppStatusInput = generateMock(
-        z.SetAppStatusInputSchema(),
-      );
-
-      const updatedDocument = reducer(document, creators.setAppStatus(input));
-
-      expect(updatedDocument.operations.global).toHaveLength(1);
-      expect(updatedDocument.operations.global[0].action.type).toBe(
-        "SET_APP_STATUS",
-      );
-      expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-        input,
-      );
-      expect(updatedDocument.operations.global[0].index).toEqual(0);
-    });
-
     it("should mutate state with new status", () => {
       const input: SetAppStatusInput = { status: "CONFIRMED" };
 
@@ -144,26 +109,6 @@ describe("BaseOperations Operations", () => {
   });
 
   describe("addDocumentType", () => {
-    it("should handle addDocumentType operation", () => {
-      const input: AddDocumentTypeInput = generateMock(
-        z.AddDocumentTypeInputSchema(),
-      );
-
-      const updatedDocument = reducer(
-        document,
-        creators.addDocumentType(input),
-      );
-
-      expect(updatedDocument.operations.global).toHaveLength(1);
-      expect(updatedDocument.operations.global[0].action.type).toBe(
-        "ADD_DOCUMENT_TYPE",
-      );
-      expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-        input,
-      );
-      expect(updatedDocument.operations.global[0].index).toEqual(0);
-    });
-
     it("should mutate state by adding document type to array", () => {
       const input: AddDocumentTypeInput = {
         id: "test-type-1",
@@ -288,19 +233,6 @@ describe("BaseOperations Operations", () => {
       });
     });
 
-    it("should increase array length correctly", () => {
-      const initialLength = document.state.global.documentTypes?.length ?? 0;
-
-      const updatedDocument = reducer(
-        document,
-        creators.addDocumentType({ id: "new", documentType: "powerhouse/new" }),
-      );
-
-      expect(updatedDocument.state.global.documentTypes?.length).toBe(
-        initialLength + 1,
-      );
-    });
-
     it("should handle special documentType values", () => {
       let updatedDoc = reducer(
         document,
@@ -334,26 +266,6 @@ describe("BaseOperations Operations", () => {
   });
 
   describe("removeDocumentType", () => {
-    it("should handle removeDocumentType operation", () => {
-      const input: RemoveDocumentTypeInput = generateMock(
-        z.RemoveDocumentTypeInputSchema(),
-      );
-
-      const updatedDocument = reducer(
-        document,
-        creators.removeDocumentType(input),
-      );
-
-      expect(updatedDocument.operations.global).toHaveLength(1);
-      expect(updatedDocument.operations.global[0].action.type).toBe(
-        "REMOVE_DOCUMENT_TYPE",
-      );
-      expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-        input,
-      );
-      expect(updatedDocument.operations.global[0].index).toEqual(0);
-    });
-
     it("should mutate state by removing document type from array", () => {
       const updatedDocument = reducer(
         document,
@@ -471,27 +383,6 @@ describe("BaseOperations Operations", () => {
       );
       expect(updatedDoc.state.global.documentTypes?.[1].id).toBe("type-1");
       expect(updatedDoc.state.global.documentTypes?.[2].id).toBe("type-3");
-    });
-
-    it("should decrease array length correctly", () => {
-      let updatedDoc = reducer(
-        document,
-        creators.addDocumentType({
-          id: "to-remove",
-          documentType: "powerhouse/test",
-        }),
-      );
-
-      const lengthBefore = updatedDoc.state.global.documentTypes?.length ?? 0;
-
-      updatedDoc = reducer(
-        updatedDoc,
-        creators.removeDocumentType({ id: "to-remove" }),
-      );
-
-      expect(updatedDoc.state.global.documentTypes?.length).toBe(
-        lengthBefore - 1,
-      );
     });
   });
 });

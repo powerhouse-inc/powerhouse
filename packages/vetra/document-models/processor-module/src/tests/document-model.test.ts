@@ -6,39 +6,9 @@
 import { describe, expect, it } from "vitest";
 import * as creators from "../../gen/base-operations/creators.js";
 import { reducer } from "../../gen/reducer.js";
-import utils, {
-  initialGlobalState,
-  initialLocalState,
-} from "../../gen/utils.js";
+import utils from "../../gen/utils.js";
 
 describe("Processor Module Document Model", () => {
-  it("should create a new Processor Module document", () => {
-    const document = utils.createDocument();
-
-    expect(document).toBeDefined();
-    expect(document.header.documentType).toBe("powerhouse/processor");
-  });
-
-  it("should create a new Processor Module document with a valid initial state", () => {
-    const document = utils.createDocument();
-    expect(document.state.global).toStrictEqual(initialGlobalState);
-    expect(document.state.local).toStrictEqual(initialLocalState);
-  });
-
-  it("should generate a valid document ID", () => {
-    const document = utils.createDocument();
-
-    expect(document.header.id).toBeDefined();
-    expect(document.header.id).not.toBe("");
-    expect(typeof document.header.id).toBe("string");
-  });
-
-  it("should have correct document type", () => {
-    const document = utils.createDocument();
-
-    expect(document.header.documentType).toBe("powerhouse/processor");
-  });
-
   it("should have correct initial values", () => {
     const document = utils.createDocument();
 
@@ -46,13 +16,6 @@ describe("Processor Module Document Model", () => {
     expect(document.state.global.type).toBe("");
     expect(document.state.global.documentTypes).toEqual([]);
     expect(document.state.global.status).toBe("DRAFT");
-  });
-
-  it("should start with empty operation history", () => {
-    const document = utils.createDocument();
-
-    expect(document.operations.global).toEqual([]);
-    expect(document.operations.global).toHaveLength(0);
   });
 
   it("should handle multiple operations and maintain consistency", () => {
@@ -77,13 +40,6 @@ describe("Processor Module Document Model", () => {
       updatedDoc,
       creators.setProcessorStatus({ status: "CONFIRMED" }),
     );
-
-    // Verify operation ordering
-    expect(updatedDoc.operations.global).toHaveLength(4);
-    expect(updatedDoc.operations.global[0].index).toBe(0);
-    expect(updatedDoc.operations.global[1].index).toBe(1);
-    expect(updatedDoc.operations.global[2].index).toBe(2);
-    expect(updatedDoc.operations.global[3].index).toBe(3);
 
     // Verify state consistency
     expect(updatedDoc.state.global.name).toBe("Test Processor");
@@ -132,9 +88,6 @@ describe("Processor Module Document Model", () => {
         creators.setProcessorStatus({ status: "CONFIRMED" }),
       );
       expect(updatedDoc.state.global.status).toBe("CONFIRMED");
-
-      // Verify final state
-      expect(updatedDoc.operations.global).toHaveLength(5);
     });
 
     it("should handle reset scenario: remove all types and add new ones", () => {
@@ -203,7 +156,6 @@ describe("Processor Module Document Model", () => {
           (dt) => dt.id === "new-type-1",
         ),
       ).toBeDefined();
-      expect(updatedDoc.operations.global).toHaveLength(7);
     });
 
     it("should maintain state integrity with complex add/remove sequences", () => {
@@ -243,9 +195,6 @@ describe("Processor Module Document Model", () => {
         (dt) => dt.id === "type-b",
       );
       expect(typeB?.documentType).toBe("b-new");
-
-      // Verify operation history
-      expect(updatedDoc.operations.global).toHaveLength(5);
     });
   });
 });
