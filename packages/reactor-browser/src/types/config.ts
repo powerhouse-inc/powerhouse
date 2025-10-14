@@ -77,3 +77,9 @@ export type PHProcessorsGlobalConfig = {
   isExternalProcessorsEnabled?: boolean;
   isExternalPackagesEnabled?: boolean;
 };
+
+export type PHGlobalConfigSetters<
+  T extends PHGlobalConfigKey = PHGlobalConfigKey,
+> = {
+  [K in T]: (value: PHGlobalConfig[K]) => void;
+};

@@ -1,4 +1,4 @@
-import type { PHGlobalKey } from "../types/global.js";
+import type { PHGlobalEventHandlerAdders } from "@powerhousedao/reactor-browser";
 import {
   addAllowListEventHandler,
   addAnalyticsDatabaseNameEventHandler,
@@ -67,7 +67,7 @@ import { addRenownEventHandler } from "./renown.js";
 import { addLoginStatusEventHandler, addUserEventHandler } from "./user.js";
 import { addVetraPackagesEventHandler } from "./vetra-packages.js";
 
-const phGlobalEventHandlerRegisterFunctions: Record<PHGlobalKey, () => void> = {
+const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   loading: addLoadingEventHandler,
   reactor: addReactorEventHandler,
   modal: addModalEventHandler,

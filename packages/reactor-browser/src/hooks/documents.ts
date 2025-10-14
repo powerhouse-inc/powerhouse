@@ -1,20 +1,42 @@
-import type { Action, DocumentAction, PHDocument } from "document-model";
+import {
+  DocumentModelNotFoundError,
+  DocumentNotFoundError,
+  DocumentTypeMismatchError,
+  NoSelectedDocumentError,
+  type DocumentDispatch,
+} from "@powerhousedao/reactor-browser";
+import type { Action, PHDocument } from "document-model";
 import { useDispatch } from "./dispatch.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 import { useFileNodes, useNodeKind, useSelectedNodeId } from "./nodes.js";
 import { useDocumentModelModuleById } from "./vetra-packages.js";
 
-export const {
-  useValue: useAllDocuments,
-  setValue: setDocuments,
-  addEventHandler: addDocumentsEventHandler,
-} = makePHEventFunctions("documents");
+const documentEventFunctions = makePHEventFunctions("documents");
 
-export const {
-  useValue: useSelectedTimelineRevision,
-  setValue: setSelectedTimelineRevision,
-  addEventHandler: addSelectedTimelineRevisionEventHandler,
-} = makePHEventFunctions("selectedTimelineRevision");
+/** Returns all documents in the reactor. */
+export const useAllDocuments = documentEventFunctions.useValue;
+
+/** Sets all of the documents in the reactor. */
+export const setDocuments = documentEventFunctions.setValue;
+
+/** Adds an event handler for all of the documents in the reactor. */
+export const addDocumentsEventHandler = documentEventFunctions.addEventHandler;
+
+export const selectedTimelineRevisionEventFunctions = makePHEventFunctions(
+  "selectedTimelineRevision",
+);
+
+/** Returns the selected timeline revision. */
+export const useSelectedTimelineRevision =
+  selectedTimelineRevisionEventFunctions.useValue;
+
+/** Sets the selected timeline revision. */
+export const setSelectedTimelineRevision =
+  selectedTimelineRevisionEventFunctions.setValue;
+
+/** Adds an event handler for the selected timeline revision. */
+export const addSelectedTimelineRevisionEventHandler =
+  selectedTimelineRevisionEventFunctions.addEventHandler;
 
 /** Returns the documents for the selected drive. */
 export function useSelectedDriveDocuments(): PHDocument[] | undefined {
@@ -59,35 +81,6 @@ export function useDocumentById(id: string | null | undefined) {
   return useDispatch(document);
 }
 
-export class DocumentNotFoundError extends Error {
-  constructor(documentId: string) {
-    super(`Document with id ${documentId} not found`);
-  }
-}
-
-export class DocumentModelNotFoundError extends Error {
-  constructor(documentType: string) {
-    super(`Document model module for type ${documentType} not found`);
-  }
-}
-
-export class DocumentTypeMismatchError extends Error {
-  constructor(documentId: string, expectedType: string, actualType: string) {
-    super(
-      `Document ${documentId} is not of type ${expectedType}. Actual type: ${actualType}`,
-    );
-  }
-}
-
-export type DocumentDispatch<TAction extends Action> = (
-  actionOrActions:
-    | TAction
-    | TAction[]
-    | DocumentAction
-    | DocumentAction[]
-    | undefined,
-) => void;
-
 /** Returns a document of a specific type, throws an error if the found document has a different type */
 export function useDocumentOfType<
   TDocument extends PHDocument,
@@ -119,6 +112,7 @@ export function useDocumentOfType<
   return [document, dispatch] as [TDocument, DocumentDispatch<TAction>];
 }
 
+/** Returns the selected document of a specific type, throws an error if the found document has a different type */
 export function useSelectedDocumentOfType(
   documentType: null | undefined,
 ): never[];
@@ -138,9 +132,7 @@ export function useSelectedDocumentOfType<
     return [];
   }
   if (!documentId) {
-    throw new Error(
-      "There is no selected document. Call 'setSelectedNode' to select a document.",
-    );
+    throw new NoSelectedDocumentError();
   }
   return useDocumentOfType<TDocument, TAction>(documentId, documentType);
 }

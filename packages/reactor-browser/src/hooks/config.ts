@@ -1,6 +1,7 @@
 import type {
   PHGlobalConfig,
   PHGlobalConfigKey,
+  PHGlobalConfigSetters,
 } from "@powerhousedao/reactor-browser";
 import { useEffect, useState } from "react";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
@@ -293,10 +294,7 @@ export const {
   addEventHandler: addIsExternalPackagesEnabledEventHandler,
 } = makePHEventFunctions("isExternalPackagesEnabled");
 
-type PHGlobalConfigSetters<T extends PHGlobalConfigKey = PHGlobalConfigKey> = {
-  [K in T]: (value: PHGlobalConfig[K]) => void;
-};
-export const phGlobalConfigSetters = {
+export const phGlobalConfigSetters: PHGlobalConfigSetters = {
   routerBasename: setRouterBasename,
   version: setVersion,
   logLevel: setLogLevel,

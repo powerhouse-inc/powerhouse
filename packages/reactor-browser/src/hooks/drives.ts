@@ -1,3 +1,4 @@
+import type { DocumentDispatch } from "@powerhousedao/reactor-browser";
 import type {
   DocumentDriveAction,
   DocumentDriveDocument,
@@ -8,7 +9,6 @@ import { getDriveSharingType } from "document-drive";
 import { getDriveAvailableOffline } from "../utils/drives.js";
 import { resolveUrlPathname } from "../utils/url.js";
 import { useDispatch } from "./dispatch.js";
-import type { DocumentDispatch } from "./documents.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 import { setSelectedNode } from "./nodes.js";
 

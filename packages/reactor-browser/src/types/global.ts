@@ -41,6 +41,11 @@ export type SetPHGlobalValue<TValue extends PHGlobalValue> = (
 
 export type AddPHGlobalEventHandler = () => void;
 
+export type PHGlobalEventHandlerAdders = Record<
+  PHGlobalKey,
+  AddPHGlobalEventHandler
+>;
+
 export type SetEvent<TKey extends PHGlobalKey> = CustomEvent<{
   [key in TKey]: PHGlobal[TKey] | undefined;
 }>;
