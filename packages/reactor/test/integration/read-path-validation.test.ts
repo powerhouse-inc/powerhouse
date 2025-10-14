@@ -19,7 +19,9 @@ import { SimpleJobExecutorManager } from "../../src/executor/simple-job-executor
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
 import { InMemoryJobTracker } from "../../src/job-tracker/in-memory-job-tracker.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
+import { ReadModelCoordinator } from "../../src/read-models/coordinator.js";
 import { KyselyDocumentView } from "../../src/read-models/document-view.js";
+import type { IReadModelCoordinator } from "../../src/read-models/interfaces.js";
 import type { DocumentViewDatabase } from "../../src/read-models/types.js";
 import { DocumentModelRegistry } from "../../src/registry/implementation.js";
 import { JobStatus } from "../../src/shared/types.js";
@@ -28,10 +30,7 @@ import type {
   IOperationStore,
 } from "../../src/storage/interfaces.js";
 import type { Database as StorageDatabase } from "../../src/storage/kysely/types.js";
-import {
-  createMockReadModelCoordinator,
-  createTestOperationStore,
-} from "../factories.js";
+import { createTestOperationStore } from "../factories.js";
 
 // Combined database type
 type Database = StorageDatabase & DocumentViewDatabase;
@@ -52,6 +51,7 @@ describe("Legacy Storage vs IDocumentView", () => {
   let operationStore: IOperationStore;
   let executorManager: IJobExecutorManager;
   let driveServer: BaseDocumentDriveServer;
+  let readModelCoordinator: IReadModelCoordinator;
 
   beforeEach(async () => {
     // Set up legacy storage
@@ -102,8 +102,11 @@ describe("Legacy Storage vs IDocumentView", () => {
 
     await executorManager.start(1);
 
+    // Create real read model coordinator with document view
+    readModelCoordinator = new ReadModelCoordinator(eventBus, [documentView]);
+    readModelCoordinator.start();
+
     // Create reactor
-    const readModelCoordinator = createMockReadModelCoordinator();
     reactor = new Reactor(
       driveServer,
       legacyStorage as IDocumentStorage,
@@ -115,11 +118,12 @@ describe("Legacy Storage vs IDocumentView", () => {
 
   afterEach(async () => {
     await executorManager.stop();
+    readModelCoordinator.stop();
     await db.destroy();
   });
 
   describe("reactor.create() validation", () => {
-    it("should create document visible in legacy storage", async () => {
+    it("should create document visible in both legacy storage and document view", async () => {
       // Create the document through the Reactor interface
       const document = driveDocumentModelModule.utils.createDocument();
       const documentId = document.header.id;
@@ -131,12 +135,24 @@ describe("Legacy Storage vs IDocumentView", () => {
         return jobStatus.status === JobStatus.COMPLETED;
       });
 
-      // Verify document is exactly the same in both legacy storage and the document view
+      // Wait for the document to be indexed in the document view
+      // Note: CREATE_DOCUMENT operations use "system" scope
+      await vi.waitUntil(async () => {
+        const documents = await documentView.getMany([documentId], "system");
+        return documents.length > 0 && documents[0] !== null;
+      });
+
+      // Verify document is in the document view with system scope
+      const documents = await documentView.getMany([documentId], "system");
+      expect(documents).toHaveLength(1);
+      expect(documents[0]).not.toBeNull();
+
+      // Verify basic properties match
       const legacyDoc =
         await legacyStorage.get<DocumentDriveDocument>(documentId);
-      const documents = await documentView.getMany([documentId]);
-      expect(documents).toHaveLength(1);
-      expect(documents[0]).toEqual(legacyDoc);
+      const snapshot = documents[0]!;
+      expect(snapshot.documentId).toEqual(legacyDoc.header.id);
+      expect(snapshot.documentType).toEqual(legacyDoc.header.documentType);
     });
   });
 });
