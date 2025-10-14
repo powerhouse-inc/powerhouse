@@ -308,7 +308,7 @@ export class Reactor implements IReactor {
     const action: Action = {
       id: `${document.header.id}-create`,
       type: "CREATE_DOCUMENT",
-      scope: "system",
+      scope: "document",
       timestampUtcMs: new Date().toISOString(),
       input: {
         document,
@@ -319,7 +319,7 @@ export class Reactor implements IReactor {
     const job: Job = {
       id: uuidv4(),
       documentId: SYSTEM_DOCUMENT_ID,
-      scope: "system",
+      scope: "document",
       branch: "main",
       operation: {
         index: 0,
@@ -370,7 +370,7 @@ export class Reactor implements IReactor {
     const action: Action = {
       id: `${id}-delete`,
       type: "DELETE_DOCUMENT",
-      scope: "system",
+      scope: "document",
       timestampUtcMs: new Date().toISOString(),
       input: deleteInput,
     };
@@ -379,7 +379,7 @@ export class Reactor implements IReactor {
     const job: Job = {
       id: uuidv4(),
       documentId: SYSTEM_DOCUMENT_ID,
-      scope: "system",
+      scope: "document",
       branch: "main",
       operation: {
         index: 0,

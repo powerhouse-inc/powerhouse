@@ -71,7 +71,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         success: false,
         error: new DocumentDeletedError(
           job.documentId,
-          documentState.deletedAtUtcIso || null,
+          documentState.deletedAtUtcIso,
         ),
         duration: Date.now() - startTime,
       };
@@ -94,7 +94,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       job.operation.action,
     );
 
-    const scope = job.scope || "global";
+    const scope = job.scope;
     const operations = updatedDocument.operations[scope];
     if (operations.length === 0) {
       throw new Error("No operation generated from action");
@@ -222,7 +222,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       await this.operationStore.apply(
         document.header.id,
         document.header.documentType,
-        job.scope || "global",
+        job.scope,
         job.branch,
         operation.index,
         (txn) => {
@@ -248,7 +248,7 @@ export class SimpleJobExecutor implements IJobExecutor {
             operation,
             context: {
               documentId: document.header.id,
-              scope: job.scope || "global",
+              scope: job.scope,
               branch: job.branch,
               documentType: document.header.documentType,
             },
@@ -314,7 +314,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         success: false,
         error: new DocumentDeletedError(
           documentId,
-          documentState.deletedAtUtcIso || null,
+          documentState.deletedAtUtcIso,
         ),
         duration: Date.now() - startTime,
       };
@@ -340,7 +340,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       await this.operationStore.apply(
         documentId,
         document.header.documentType,
-        job.scope || "document",
+        job.scope,
         job.branch,
         operation.index,
         (txn) => {
@@ -366,7 +366,7 @@ export class SimpleJobExecutor implements IJobExecutor {
             operation,
             context: {
               documentId,
-              scope: job.scope || "document",
+              scope: job.scope,
               branch: job.branch,
               documentType: document.header.documentType,
             },
