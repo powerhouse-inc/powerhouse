@@ -748,6 +748,9 @@ importers:
       '@graphql-codegen/core':
         specifier: ^4.0.2
         version: 4.0.2(graphql@16.11.0)
+      '@powerhousedao/analytics-engine-core':
+        specifier: ^0.5.0
+        version: 0.5.0
       '@types/react':
         specifier: ^19.2.0
         version: 19.2.2
@@ -34243,7 +34246,7 @@ snapshots:
 
   extension-port-stream@3.0.0:
     dependencies:
-      readable-stream: 3.6.2
+      readable-stream: 4.7.0
       webextension-polyfill: 0.10.0
 
   external-editor@3.1.0:
