@@ -35,10 +35,6 @@
     "@powerhousedao/codegen": "workspace:*",
     "commander": "^12.1.0"
   },
-  "overrides": {
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
-  },
   "devDependencies": {
     "vitest": "^3.2.4"
   }

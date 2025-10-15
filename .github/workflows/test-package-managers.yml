@@ -57,7 +57,11 @@ jobs:
         id: install-ph-cmd
         run: |
           echo "Installing ph-cmd@$PH_TAG with ${{ matrix.package-manager }}"
-          ${{ matrix.package-manager }} install -g ph-cmd@${{ env.PH_TAG }} 2>&1 | tee ph-cmd-install.log
+          if [ "${{ matrix.package-manager }}" = "npm" ]; then
+            ${{ matrix.package-manager }} install -g ph-cmd@${{ env.PH_TAG }} --legacy-peer-deps 2>&1 | tee ph-cmd-install.log
+          else
+            ${{ matrix.package-manager }} install -g ph-cmd@${{ env.PH_TAG }} 2>&1 | tee ph-cmd-install.log
+          fi
 
       - name: Parse ph-cmd install warnings
         if: always()
