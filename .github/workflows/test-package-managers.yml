@@ -42,7 +42,9 @@ jobs:
 
       - name: Setup pnpm
         if: matrix.package-manager == 'pnpm'
-        run: npm install -g npm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
 
       - name: Setup bun
         if: matrix.package-manager == 'bun'
@@ -74,6 +76,7 @@ jobs:
         run: |
           cd /tmp/ph-test-${{ matrix.package-manager }}
           if [ "${{ matrix.package-manager }}" = "yarn" ]; then
+            yarn init
             echo "Running: yarn dlx ph-cmd@${{ env.PH_TAG }} init project --${{ env.PH_TAG }} --yarn"
             yarn dlx ph-cmd@${{ env.PH_TAG }} init project --${{ env.PH_TAG }} --yarn  2>&1 | tee ph-init.log
           else
