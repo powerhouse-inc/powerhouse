@@ -153,24 +153,6 @@ export interface IDocumentView {
   indexOperations(items: OperationWithContext[]): Promise<void>;
 
   /**
-   * Retrieves a document header by reconstructing it from operations across all scopes.
-   *
-   * Headers contain cross-scope metadata (revision tracking, lastModified timestamps)
-   * that require aggregating information from multiple scopes, making this a
-   * view-layer concern rather than an operation store concern.
-   *
-   * @param documentId - The document id
-   * @param branch - The branch name
-   * @param signal - Optional abort signal to cancel the request
-   * @returns The reconstructed document header
-   */
-  getHeader(
-    documentId: string,
-    branch: string,
-    signal?: AbortSignal,
-  ): Promise<PHDocumentHeader>;
-
-  /**
    * Returns true if and only if the documents exist.
    *
    * @param documentIds - The list of document ids to check.
