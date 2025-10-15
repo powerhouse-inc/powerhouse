@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 import {
   EventBus,
+  InMemoryJobTracker,
   InMemoryQueue,
   Reactor,
   ReactorClientBuilder,
+  ReadModelCoordinator,
 } from "@powerhousedao/reactor";
 import {
   VitePackageLoader,
@@ -99,11 +101,14 @@ async function initServer(serverPort: number, options: StartServerOptions) {
   // init drive server
   await driveServer.initialize();
 
-  const queue = new InMemoryQueue(new EventBus());
+  const eventBus = new EventBus();
+  const queue = new InMemoryQueue(eventBus);
   const reactor = new Reactor(
     driveServer as unknown as BaseDocumentDriveServer,
     storage as unknown as IDocumentStorage,
     queue,
+    new InMemoryJobTracker(),
+    new ReadModelCoordinator(eventBus, []),
   );
   const client = new ReactorClientBuilder().withReactor(reactor).build();
 

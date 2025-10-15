@@ -157,10 +157,16 @@ export class SimpleJobExecutor implements IJobExecutor {
       }
 
       // Populate resultingState with the updated document's state for read model indexing
+      // Always include header and document scopes, plus the scope that was modified
       const resultingState: Record<string, unknown> = {
         header: updatedDocument.header,
-        ...updatedDocument.state,
+        document: updatedDocument.state.document,
       };
+
+      // Add the modified scope (cast to Record to satisfy TypeScript)
+      const state = updatedDocument.state as Record<string, unknown>;
+      resultingState[scope] = state[scope];
+
       newOperation.resultingState = JSON.stringify(resultingState);
 
       // Write the operation to new IOperationStore (dual-writing)
@@ -204,12 +210,8 @@ export class SimpleJobExecutor implements IJobExecutor {
         .emit(OperationEventTypes.OPERATION_WRITTEN, {
           operations: operationsWithContext,
         })
-        .catch((error) => {
-          // Log error but don't fail the job - read models are eventually consistent
-          console.error(
-            "Failed to emit operation event for read models:",
-            error,
-          );
+        .catch(() => {
+          // Swallow error - read models are eventually consistent
         });
     }
 
@@ -321,7 +323,8 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     // Populate resultingState with the document's state for read model indexing
-    // The header scope gets the full header, other scopes get their respective state
+    // Include header and all scopes present in the document state (auth, document, etc.)
+    // but not global/local which aren't initialized by CREATE_DOCUMENT
     const resultingState: Record<string, unknown> = {
       header: document.header,
       ...document.state,
@@ -460,9 +463,10 @@ export class SimpleJobExecutor implements IJobExecutor {
     };
 
     // Populate resultingState with the deleted document state
+    // DELETE_DOCUMENT only affects header and document scopes
     const resultingState: Record<string, unknown> = {
       header: document.header,
-      ...updatedState,
+      document: updatedState.document,
     };
     operation.resultingState = JSON.stringify(resultingState);
 

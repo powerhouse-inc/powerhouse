@@ -80,11 +80,8 @@ export class KyselyDocumentView implements IDocumentView {
               string,
               unknown
             >;
-          } catch (error) {
-            console.warn(
-              `Failed to parse resultingState for operation ${index} on document ${documentId}:`,
-              error,
-            );
+          } catch {
+            // Failed to parse resultingState, use empty state
           }
         }
 
@@ -252,11 +249,8 @@ export class KyselyDocumentView implements IDocumentView {
       try {
         const scopeState = JSON.parse(snapshot.content) as unknown;
         state[snapshot.scope] = scopeState;
-      } catch (error) {
-        console.warn(
-          `Failed to parse snapshot content for document ${documentId} scope ${snapshot.scope}:`,
-          error,
-        );
+      } catch {
+        // Failed to parse snapshot content, use empty state
         state[snapshot.scope] = {};
       }
     }

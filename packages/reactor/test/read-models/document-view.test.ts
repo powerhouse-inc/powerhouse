@@ -452,7 +452,10 @@ describe("KyselyDocumentView", () => {
       );
 
       // Get document with just header scope specified (should return header + document minimum)
-      const document = await view.get(documentId, { scopes: ["header"], branch });
+      const document = await view.get(documentId, {
+        scopes: ["header"],
+        branch,
+      });
 
       // Verify header fields
       expect(document.header.id).toBe(documentId);
@@ -626,7 +629,10 @@ describe("KyselyDocumentView", () => {
       ]);
 
       // Get document with document scope specified (should return header + document minimum)
-      const document = await view.get(documentId, { scopes: ["document"], branch });
+      const document = await view.get(documentId, {
+        scopes: ["document"],
+        branch,
+      });
 
       // Verify revision map includes data from snapshot
       expect(document.header.revision).toEqual({
@@ -790,7 +796,10 @@ describe("KyselyDocumentView", () => {
       ]);
 
       // Get document with header scope specified (should return header + document minimum)
-      const document = await view.get(documentId, { scopes: ["header"], branch });
+      const document = await view.get(documentId, {
+        scopes: ["header"],
+        branch,
+      });
 
       // Verify header and revision tracking
       expect(document.header.id).toBe(documentId);
@@ -814,7 +823,11 @@ describe("KyselyDocumentView", () => {
       controller.abort();
 
       await expect(
-        view.get(generateId(), { scopes: ["header"], branch: "main" }, controller.signal),
+        view.get(
+          generateId(),
+          { scopes: ["header"], branch: "main" },
+          controller.signal,
+        ),
       ).rejects.toThrow("Operation aborted");
     });
   });

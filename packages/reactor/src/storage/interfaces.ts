@@ -1,4 +1,4 @@
-import type { Operation, PHDocument, PHDocumentHeader } from "document-model";
+import type { Operation, PHDocument } from "document-model";
 
 export type OperationContext = {
   documentId: string;
