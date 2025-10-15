@@ -1,3 +1,13 @@
+## 4.1.0-dev.73 (2025-10-15)
+
+### 🚀 Features
+
+- **renown:** added login button ([f109c7305](https://github.com/powerhouse-inc/powerhouse/commit/f109c7305))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.72 (2025-10-15)
 
 This was a version bump only for @powerhousedao/reactor-local to align it with other projects, there were no code changes.
