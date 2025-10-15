@@ -1,8 +1,9 @@
+import type { SubgraphClass } from "@powerhousedao/reactor-api";
 import type { IProcessorHostModule, ProcessorFactory } from "document-drive";
 import { childLogger } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { execSync } from "node:child_process";
-import type { SubgraphClass } from "@powerhousedao/reactor-api";
+import path from "node:path";
 import { resolveLinkedPackage } from "./import-resolver.js";
 
 // Define the expected module export structures
@@ -110,4 +111,9 @@ export function debounce<T extends (...args: any[]) => void>(
     clearTimeout(timeoutId);
     timeoutId = setTimeout(() => func(...args), delay);
   };
+}
+
+export function isSubpath(parent: string, dir: string) {
+  const relative = path.relative(parent, dir);
+  return relative && !relative.startsWith("..") && !path.isAbsolute(relative);
 }
