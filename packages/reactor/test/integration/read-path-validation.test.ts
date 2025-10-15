@@ -138,15 +138,12 @@ describe("Legacy Storage vs IDocumentView", () => {
       // Wait for the document to be indexed in the document view
       await vi.waitUntil(async () => {
         try {
-          await documentView.getHeader(documentId, "main");
+          await documentView.get(documentId);
           return true;
         } catch {
           return false;
         }
       });
-
-      // Give a bit more time for UPGRADE_DOCUMENT operation to be indexed
-      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Verify header fields match (allowing for small timestamp differences)
       const header = await documentView.getHeader(documentId, "main");

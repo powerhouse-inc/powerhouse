@@ -156,6 +156,13 @@ export class SimpleJobExecutor implements IJobExecutor {
         };
       }
 
+      // Populate resultingState with the updated document's state for read model indexing
+      const resultingState: Record<string, unknown> = {
+        header: updatedDocument.header,
+        ...updatedDocument.state,
+      };
+      newOperation.resultingState = JSON.stringify(resultingState);
+
       // Write the operation to new IOperationStore (dual-writing)
       try {
         await this.operationStore.apply(
@@ -313,6 +320,14 @@ export class SimpleJobExecutor implements IJobExecutor {
       };
     }
 
+    // Populate resultingState with the document's state for read model indexing
+    // The header scope gets the full header, other scopes get their respective state
+    const resultingState: Record<string, unknown> = {
+      header: document.header,
+      ...document.state,
+    };
+    operation.resultingState = JSON.stringify(resultingState);
+
     // Write the operation to new IOperationStore (dual-writing)
     try {
       await this.operationStore.apply(
@@ -432,6 +447,24 @@ export class SimpleJobExecutor implements IJobExecutor {
         duration: Date.now() - startTime,
       };
     }
+
+    // Mark the document as deleted in the state for read model indexing
+    const deletedAt = new Date().toISOString();
+    const updatedState = {
+      ...document.state,
+      document: {
+        ...document.state.document,
+        isDeleted: true,
+        deletedAtUtcIso: deletedAt,
+      },
+    };
+
+    // Populate resultingState with the deleted document state
+    const resultingState: Record<string, unknown> = {
+      header: document.header,
+      ...updatedState,
+    };
+    operation.resultingState = JSON.stringify(resultingState);
 
     // Write the DELETE_DOCUMENT operation to IOperationStore
     try {

@@ -406,6 +406,22 @@ describe("KyselyDocumentView", () => {
             skip: 0,
             id: generateId(),
             action: createAction,
+            resultingState: JSON.stringify({
+              header: {
+                id: documentId,
+                documentType,
+                slug: documentId,
+                name: "",
+                branch,
+                revision: { header: 0 },
+                lastModifiedAtUtcIso: createdAt,
+                createdAtUtcIso: createdAt,
+                sig: {
+                  nonce,
+                  publicKey,
+                },
+              },
+            }),
           },
           context: {
             documentId,
@@ -482,6 +498,20 @@ describe("KyselyDocumentView", () => {
             skip: 0,
             id: generateId(),
             action: createAction,
+            resultingState: JSON.stringify({
+              header: {
+                id: documentId,
+                documentType,
+                slug: documentId,
+                name: "",
+                branch,
+                createdAtUtcIso: createdAt,
+                sig: {
+                  nonce: "nonce",
+                  publicKey: { kty: "EC", crv: "P-256", x: "x", y: "y" },
+                },
+              },
+            }),
           },
           context: {
             documentId,
@@ -601,6 +631,20 @@ describe("KyselyDocumentView", () => {
             skip: 0,
             id: generateId(),
             action: createAction,
+            resultingState: JSON.stringify({
+              header: {
+                id: documentId,
+                documentType,
+                slug: documentId,
+                name: "",
+                branch,
+                createdAtUtcIso: createdAt,
+                sig: {
+                  nonce: "nonce",
+                  publicKey: { kty: "EC", crv: "P-256", x: "x", y: "y" },
+                },
+              },
+            }),
           },
           context: {
             documentId,
@@ -651,6 +695,12 @@ describe("KyselyDocumentView", () => {
             skip: 0,
             id: generateId(),
             action: upgradeAction,
+            resultingState: JSON.stringify({
+              document: {
+                version: "1.0.0",
+                isDeleted: false,
+              },
+            }),
           },
           context: {
             documentId,
