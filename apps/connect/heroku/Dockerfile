@@ -30,7 +30,6 @@ ARG PH_CONNECT_SENTRY_PROJECT=""
 
 ENV TAG=$TAG
 ENV PH_PACKAGES=$PH_PACKAGES
-ENV PH_CONNECT_BASE_PATH=$PH_CONNECT_BASE_PATH
 ENV PH_CONNECT_SENTRY_DSN=$PH_CONNECT_SENTRY_DSN
 ENV PH_CONNECT_SENTRY_ENV=$PH_CONNECT_SENTRY_ENV
 ENV PH_CONNECT_SENTRY_AUTH_TOKEN=$PH_CONNECT_SENTRY_AUTH_TOKEN
@@ -53,8 +52,19 @@ RUN if [ -n "$PH_PACKAGES" ]; then \
         ph install $PKGS; \
     fi
 
-# Build Connect
-RUN ph connect build
+# Normalize base path and build Connect in a single RUN command
+# This ensures the normalized path is used by Vite during the build
+RUN NORMALIZED_BASE_PATH="${PH_CONNECT_BASE_PATH:-/}" && \
+    NORMALIZED_BASE_PATH="${NORMALIZED_BASE_PATH#.}" && \
+    if [ "${NORMALIZED_BASE_PATH#/}" = "$NORMALIZED_BASE_PATH" ]; then \
+        NORMALIZED_BASE_PATH="/$NORMALIZED_BASE_PATH"; \
+    fi && \
+    if [ "${NORMALIZED_BASE_PATH%/}" = "$NORMALIZED_BASE_PATH" ]; then \
+        NORMALIZED_BASE_PATH="$NORMALIZED_BASE_PATH/"; \
+    fi && \
+    export PH_CONNECT_BASE_PATH="$NORMALIZED_BASE_PATH" && \
+    echo "Building Connect with base path: $PH_CONNECT_BASE_PATH" && \
+    ph connect build
 
 # Production stage with nginx (using fholzer/nginx-brotli for Brotli support)
 FROM fholzer/nginx-brotli:latest
@@ -68,7 +78,7 @@ COPY --from=build /app/project/.ph/connect-build/dist /app/dist
 # Copy nginx configuration template
 COPY config/nginx.conf.template /etc/nginx/nginx.conf.template
 
-# Set PH_CONNECT_BASE_PATH as environment variable
+# Set PH_CONNECT_BASE_PATH (will be normalized at runtime by entrypoint)
 ARG PH_CONNECT_BASE_PATH=""
 ENV PH_CONNECT_BASE_PATH=$PH_CONNECT_BASE_PATH
 

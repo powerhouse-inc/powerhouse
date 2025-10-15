@@ -305,3 +305,16 @@ export async function prependToHtmlHead(pathToHtml: string, contents: string) {
 export function runTsc(outDir: string) {
   execSync(`npx tsc --outDir ${outDir}`, { stdio: "inherit" });
 }
+
+// Helper function to remove version suffix from package name
+// Handles formats like: @scope/package@version -> @scope/package
+export function stripVersionFromPackage(packageName: string): string {
+  const trimmed = packageName.trim();
+  if (!trimmed) return "";
+  const lastAtIndex = trimmed.lastIndexOf("@");
+  if (lastAtIndex > 0) {
+    return trimmed.substring(0, lastAtIndex);
+  }
+
+  return trimmed;
+}

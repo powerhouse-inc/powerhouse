@@ -1,4 +1,7 @@
-import { phExternalPackagesPlugin } from "@powerhousedao/builder-tools";
+import {
+  phExternalPackagesPlugin,
+  stripVersionFromPackage,
+} from "@powerhousedao/builder-tools";
 import { getConfig } from "@powerhousedao/config/node";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwind from "@tailwindcss/vite";
@@ -15,6 +18,7 @@ import { nodePolyfills } from "vite-plugin-node-polyfills";
 import svgr from "vite-plugin-svgr";
 import {
   loadConnectEnv,
+  normalizeBasePath,
   setConnectEnv,
   type ConnectEnv,
 } from "./env-config.js";
@@ -140,11 +144,11 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       typeof p === "string" ? p : p.packageName,
     ) ?? [];
 
-  // merges env and config packages, remove empty strings and duplicates
+  // merges env and config packages, remove empty strings, version suffixes and duplicates
   const allPackages = [
     ...new Set(
       [...envPhPackages, ...configPhPackages]
-        .map((p) => p.trim())
+        .map(stripVersionFromPackage)
         .filter((p) => p.length),
     ),
   ];
@@ -212,8 +216,10 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     );
   }
 
+  const basePath = normalizeBasePath(env.PH_CONNECT_BASE_PATH || "/");
+
   const config: UserConfig = {
-    base: "./",
+    base: basePath,
     envPrefix: ["PH_CONNECT_"],
     envDir: false,
     optimizeDeps: {
