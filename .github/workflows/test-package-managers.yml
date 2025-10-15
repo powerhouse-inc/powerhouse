@@ -6,11 +6,18 @@ on:
       tag:
         description: "ph-cmd version tag (e.g., dev, latest, 1.2.3)"
         required: false
-        default: ""
+        default: "dev"
       packages:
         description: "Comma-separated list of packages to install (e.g., @powerhousedao/vetra@dev)"
         required: false
         default: ""
+  pull_request:
+    branches:
+      - main
+      - 'release/staging/**'
+      - 'release/stg/**'
+      - 'release/production/**'
+      - 'release/prod/**'
 
 jobs:
   test-package-managers:
@@ -24,7 +31,7 @@ jobs:
     name: Test with ${{ matrix.package-manager }}
 
     env:
-      PH_TAG: ${{ inputs.tag || vars.PH_TAG || 'latest' }}
+      PH_TAG: ${{ inputs.tag || (github.base_ref == 'main' && 'dev') || (contains(github.base_ref, 'staging') && 'staging') || (contains(github.base_ref, 'stg') && 'staging') || (contains(github.base_ref, 'production') && 'latest') || (contains(github.base_ref, 'prod') && 'latest') || vars.PH_TAG || 'dev' }}
       PH_PACKAGES: ${{ inputs.packages || vars.PH_PACKAGES || '' }}
 
     steps:
