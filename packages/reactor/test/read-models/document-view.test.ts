@@ -358,12 +358,12 @@ describe("KyselyDocumentView", () => {
     });
   });
 
-  describe("getHeader", () => {
+  describe("get() with minimal scopes (header and document only)", () => {
     beforeEach(async () => {
       await view.init();
     });
 
-    it("should reconstruct header from CREATE_DOCUMENT operation", async () => {
+    it("should retrieve document with only header and document scopes when specifying ['header']", async () => {
       const documentId = generateId();
       const branch = "main";
       const documentType = "powerhouse/document-drive";
@@ -451,14 +451,15 @@ describe("KyselyDocumentView", () => {
         },
       );
 
-      // Get header and verify
-      const header = await view.getHeader(documentId, branch);
+      // Get document with just header scope specified (should return header + document minimum)
+      const document = await view.get(documentId, { scopes: ["header"], branch });
 
-      expect(header.id).toBe(documentId);
-      expect(header.documentType).toBe(documentType);
-      expect(header.createdAtUtcIso).toBe(createdAt);
-      expect(header.sig.nonce).toBe(nonce);
-      expect(header.sig.publicKey).toEqual(publicKey);
+      // Verify header fields
+      expect(document.header.id).toBe(documentId);
+      expect(document.header.documentType).toBe(documentType);
+      expect(document.header.createdAtUtcIso).toBe(createdAt);
+      expect(document.header.sig.nonce).toBe(nonce);
+      expect(document.header.sig.publicKey).toEqual(publicKey);
     });
 
     it("should include revision map and latest timestamp from all scopes", async () => {
@@ -505,6 +506,8 @@ describe("KyselyDocumentView", () => {
                 slug: documentId,
                 name: "",
                 branch,
+                revision: { header: 0 },
+                lastModifiedAtUtcIso: laterTimestamp,
                 createdAtUtcIso: createdAt,
                 sig: {
                   nonce: "nonce",
@@ -582,17 +585,57 @@ describe("KyselyDocumentView", () => {
         },
       );
 
-      // Get header and verify revision tracking
-      const header = await view.getHeader(documentId, branch);
+      // Index the latest global operation which updates the header with cross-scope revision
+      await view.indexOperations([
+        {
+          operation: {
+            index: 1,
+            timestampUtcMs: laterTimestamp,
+            hash: "hash-global-1",
+            skip: 0,
+            id: generateId(),
+            action: setDriveName({ name: "Test Drive" }),
+            resultingState: JSON.stringify({
+              header: {
+                id: documentId,
+                documentType,
+                slug: documentId,
+                name: "",
+                branch,
+                revision: { header: 0, global: 1 },
+                lastModifiedAtUtcIso: laterTimestamp,
+                createdAtUtcIso: createdAt,
+                sig: {
+                  nonce: "nonce",
+                  publicKey: { kty: "EC", crv: "P-256", x: "x", y: "y" },
+                },
+              },
+              global: {
+                name: "Test Drive",
+                // ... rest of global state
+              },
+            }),
+          },
+          context: {
+            documentId,
+            documentType,
+            scope: "global",
+            branch,
+          },
+        },
+      ]);
 
-      // Revision should include all scopes with their latest indices
-      expect(header.revision).toEqual({
+      // Get document with document scope specified (should return header + document minimum)
+      const document = await view.get(documentId, { scopes: ["document"], branch });
+
+      // Verify revision map includes data from snapshot
+      expect(document.header.revision).toEqual({
         header: 0,
         global: 1,
       });
 
-      // lastModifiedAtUtcIso should be the latest timestamp across all scopes
-      expect(header.lastModifiedAtUtcIso).toBe(laterTimestamp);
+      // lastModifiedAtUtcIso should be the latest timestamp from snapshot
+      expect(document.header.lastModifiedAtUtcIso).toBe(laterTimestamp);
     });
 
     it("should handle multiple operations in header and document scopes", async () => {
@@ -638,6 +681,8 @@ describe("KyselyDocumentView", () => {
                 slug: documentId,
                 name: "",
                 branch,
+                revision: { header: 0 },
+                lastModifiedAtUtcIso: createdAt,
                 createdAtUtcIso: createdAt,
                 sig: {
                   nonce: "nonce",
@@ -686,31 +731,6 @@ describe("KyselyDocumentView", () => {
         },
       };
 
-      await view.indexOperations([
-        {
-          operation: {
-            index: 0,
-            timestampUtcMs: createdAt,
-            hash: "hash-doc-0",
-            skip: 0,
-            id: generateId(),
-            action: upgradeAction,
-            resultingState: JSON.stringify({
-              document: {
-                version: "1.0.0",
-                isDeleted: false,
-              },
-            }),
-          },
-          context: {
-            documentId,
-            documentType,
-            scope: "document",
-            branch,
-          },
-        },
-      ]);
-
       await operationStore.apply(
         documentId,
         documentType,
@@ -729,23 +749,64 @@ describe("KyselyDocumentView", () => {
         },
       );
 
-      // Get header and verify it includes operations from both header and document scopes
-      const header = await view.getHeader(documentId, branch);
+      // Index the document operation which updates the header with document scope revision
+      await view.indexOperations([
+        {
+          operation: {
+            index: 0,
+            timestampUtcMs: createdAt,
+            hash: "hash-doc-0",
+            skip: 0,
+            id: generateId(),
+            action: upgradeAction,
+            resultingState: JSON.stringify({
+              header: {
+                id: documentId,
+                documentType,
+                slug: documentId,
+                name: "",
+                branch,
+                revision: { header: 0, document: 0 },
+                lastModifiedAtUtcIso: createdAt,
+                createdAtUtcIso: createdAt,
+                sig: {
+                  nonce: "nonce",
+                  publicKey: { kty: "EC", crv: "P-256", x: "x", y: "y" },
+                },
+              },
+              document: {
+                version: "1.0.0",
+                isDeleted: false,
+              },
+            }),
+          },
+          context: {
+            documentId,
+            documentType,
+            scope: "document",
+            branch,
+          },
+        },
+      ]);
 
-      expect(header.id).toBe(documentId);
-      expect(header.revision).toEqual({
+      // Get document with header scope specified (should return header + document minimum)
+      const document = await view.get(documentId, { scopes: ["header"], branch });
+
+      // Verify header and revision tracking
+      expect(document.header.id).toBe(documentId);
+      expect(document.header.revision).toEqual({
         header: 0,
         document: 0,
       });
     });
 
-    it("should throw error when document header not found", async () => {
+    it("should throw error when document not found", async () => {
       const nonExistentDocId = generateId();
       const branch = "main";
 
-      await expect(view.getHeader(nonExistentDocId, branch)).rejects.toThrow(
-        `Document header not found: ${nonExistentDocId}`,
-      );
+      await expect(
+        view.get(nonExistentDocId, { scopes: ["header"], branch }),
+      ).rejects.toThrow(`Document not found: ${nonExistentDocId}`);
     });
 
     it("should abort when signal is aborted", async () => {
@@ -753,7 +814,7 @@ describe("KyselyDocumentView", () => {
       controller.abort();
 
       await expect(
-        view.getHeader(generateId(), "main", controller.signal),
+        view.get(generateId(), { scopes: ["header"], branch: "main" }, controller.signal),
       ).rejects.toThrow("Operation aborted");
     });
   });

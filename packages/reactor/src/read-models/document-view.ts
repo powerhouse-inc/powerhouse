@@ -1,4 +1,4 @@
-import type { PHDocument, PHDocumentHeader } from "document-model";
+import type { Operation, PHDocument, PHDocumentHeader } from "document-model";
 import { defaultBaseState } from "document-model/core";
 import type { Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
@@ -150,50 +150,6 @@ export class KyselyDocumentView implements IDocumentView {
     });
   }
 
-  async getHeader(
-    documentId: string,
-    branch: string,
-    signal?: AbortSignal,
-  ): Promise<PHDocumentHeader> {
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
-
-    // Query the header scope snapshot for basic header info
-    const headerSnapshot = await this.db
-      .selectFrom("DocumentSnapshot")
-      .selectAll()
-      .where("documentId", "=", documentId)
-      .where("branch", "=", branch)
-      .where("scope", "=", "header")
-      .where("isDeleted", "=", false)
-      .executeTakeFirst();
-
-    if (!headerSnapshot) {
-      throw new Error(`Document header not found: ${documentId}`);
-    }
-
-    // Parse the basic header from snapshot
-    let header: PHDocumentHeader;
-    try {
-      header = JSON.parse(headerSnapshot.content) as PHDocumentHeader;
-    } catch (error) {
-      throw new Error(
-        `Failed to parse header for document ${documentId}: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-
-    // Augment with cross-scope revision and timestamp information from operation store
-    // These fields span all scopes and need to be computed dynamically
-    const { revision, latestTimestamp } =
-      await this.operationStore.getRevisions(documentId, branch, signal);
-
-    header.revision = revision;
-    header.lastModifiedAtUtcIso = latestTimestamp;
-
-    return header;
-  }
-
   async exists(
     documentIds: string[],
     signal?: AbortSignal,
@@ -234,14 +190,13 @@ export class KyselyDocumentView implements IDocumentView {
     const branch = view?.branch || "main";
 
     // Determine which scopes to retrieve
-    // Always include header and document scopes
     let scopesToQuery: string[];
     if (view?.scopes && view.scopes.length > 0) {
-      // If specific scopes are requested, include them along with header and document
+      // If scopes has values, always include header + document + specified scopes
+      // (header and document are the minimum scopes that must be returned)
       scopesToQuery = [...new Set(["header", "document", ...view.scopes])];
     } else {
-      // If no specific scopes are requested, get all scopes for this document
-      // Don't apply scope filter
+      // If scopes is undefined, null, or empty array [], get all scopes (no filter)
       scopesToQuery = [];
     }
 
@@ -286,8 +241,14 @@ export class KyselyDocumentView implements IDocumentView {
     }
 
     // Reconstruct the document state from all snapshots
+    // Note: exclude "header" scope from state since it's already in the header field
     const state: Record<string, unknown> = {};
     for (const snapshot of snapshots) {
+      // Skip header scope - it's stored separately in the header field
+      if (snapshot.scope === "header") {
+        continue;
+      }
+
       try {
         const scopeState = JSON.parse(snapshot.content) as unknown;
         state[snapshot.scope] = scopeState;
@@ -300,12 +261,46 @@ export class KyselyDocumentView implements IDocumentView {
       }
     }
 
+    // Retrieve operations from the operation store to match legacy storage format
+    const operations: Record<string, Operation[]> = {};
+
+    // Get all operations for this document across all scopes
+    const allOps = await this.operationStore.getSinceId(0, signal);
+    const docOps = allOps.filter(
+      (op) =>
+        op.context.documentId === documentId && op.context.branch === branch,
+    );
+
+    // Group operations by scope and normalize to match legacy storage structure
+    for (const { operation, context } of docOps) {
+      if (!operations[context.scope]) {
+        operations[context.scope] = [];
+      }
+
+      // Normalize operation to match legacy storage format
+      // Legacy storage includes redundant top-level fields that duplicate action fields
+      const normalizedOp: Operation = {
+        action: operation.action,
+        index: operation.index,
+        timestampUtcMs: operation.timestampUtcMs,
+        hash: operation.hash,
+        skip: operation.skip,
+        // Add top-level fields that mirror action fields (legacy format)
+        ...(operation.action as Record<string, unknown>),
+        // Legacy storage includes these optional fields
+        error: operation.error,
+        resultingState: operation.resultingState,
+      };
+
+      operations[context.scope].push(normalizedOp);
+    }
+
     // Construct the PHDocument
     const document: PHDocument = {
       header,
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       state: state as any,
-      operations: {},
+      operations,
       // to be removed...
       initialState: defaultBaseState(),
       clipboard: [],

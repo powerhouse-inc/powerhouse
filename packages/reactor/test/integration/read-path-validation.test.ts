@@ -145,34 +145,15 @@ describe("Legacy Storage vs IDocumentView", () => {
         }
       });
 
-      // Verify header fields match (allowing for small timestamp differences)
-      const header = await documentView.getHeader(documentId, "main");
+      // Get documents from both storage systems
+      const viewDoc = await documentView.get<DocumentDriveDocument>(documentId);
       const legacyDoc =
         await legacyStorage.get<DocumentDriveDocument>(documentId);
 
-      // Compare all fields except timestamps and revision (which may differ due to timing)
-      expect(header.id).toBe(legacyDoc.header.id);
-      expect(header.documentType).toBe(legacyDoc.header.documentType);
-      expect(header.slug).toBe(legacyDoc.header.slug);
-      expect(header.name).toBe(legacyDoc.header.name);
-      expect(header.branch).toBe(legacyDoc.header.branch);
-      // Revision should be at least 1 (CREATE_DOCUMENT operation was indexed)
-      expect(header.revision.document).toBeGreaterThanOrEqual(1);
-      expect(legacyDoc.header.revision.document).toBeGreaterThanOrEqual(1);
-      expect(header.meta).toEqual(legacyDoc.header.meta);
-      expect(header.sig).toEqual(legacyDoc.header.sig);
-
-      // Timestamps should be close (within 100ms)
-      const createdDiff = Math.abs(
-        new Date(header.createdAtUtcIso).getTime() -
-          new Date(legacyDoc.header.createdAtUtcIso).getTime(),
-      );
-      const modifiedDiff = Math.abs(
-        new Date(header.lastModifiedAtUtcIso).getTime() -
-          new Date(legacyDoc.header.lastModifiedAtUtcIso).getTime(),
-      );
-      expect(createdDiff).toBeLessThan(100);
-      expect(modifiedDiff).toBeLessThan(100);
+      // Compare the meaningful document data
+      expect(viewDoc.header).toEqual(legacyDoc.header);
+      expect(viewDoc.state).toEqual(legacyDoc.state);
+      expect(viewDoc.initialState).toEqual(legacyDoc.initialState);
     });
   });
 });
