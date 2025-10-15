@@ -20,6 +20,7 @@ on:
 jobs:
   test-package-managers:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
@@ -54,13 +55,19 @@ jobs:
 
       - name: Setup yarn
         if: matrix.package-manager == 'yarn'
-        run: npm install -g yarn
+        run: |
+          npm install -g yarn
+          echo "$(yarn global bin)" >> $GITHUB_PATH
 
       - name: Install ph-cmd globally with ${{ matrix.package-manager }}
         id: install-ph-cmd
         run: |
           echo "Installing ph-cmd@$PH_TAG with ${{ matrix.package-manager }}"
-          ${{ matrix.package-manager }} install -g ph-cmd@${{ env.PH_TAG }} 2>&1 | tee ph-cmd-install.log
+          if [ "${{ matrix.package-manager }}" = "yarn" ]; then
+            yarn global add ph-cmd@${{ env.PH_TAG }} 2>&1 | tee ph-cmd-install.log
+          else
+            ${{ matrix.package-manager }} install -g ph-cmd@${{ env.PH_TAG }} 2>&1 | tee ph-cmd-install.log
+          fi
 
       - name: Parse ph-cmd install warnings
         if: always()
