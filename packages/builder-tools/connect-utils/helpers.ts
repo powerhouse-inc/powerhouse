@@ -3,7 +3,7 @@ import { exec, execSync } from "node:child_process";
 import fs, { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
-import { join, resolve } from "node:path";
+import path, { join, resolve } from "node:path";
 import { cwd } from "node:process";
 import type { Plugin } from "vite";
 import { LOCAL_PACKAGE_ID } from "./constants.js";
@@ -84,6 +84,14 @@ export function resolveConnectBundle(root = process.cwd()) {
     connectIndexPath.indexOf("connect") + "connect".length,
   );
   return join(connectRootPath, "dist/");
+}
+
+export function resolveConnectPublicDir(root = process.cwd()) {
+  const connectIconPath = resolvePackage(
+    "@powerhousedao/connect/public/icon.ico",
+    root,
+  );
+  return path.join(connectIconPath, "../");
 }
 
 /**

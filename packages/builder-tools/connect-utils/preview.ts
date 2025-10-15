@@ -3,6 +3,7 @@ import {
   commonConnectOptionsToEnv,
   DEFAULT_CONNECT_OUTDIR,
   loadVite,
+  resolveConnectPublicDir,
   resolveViteConfigPath,
 } from "./helpers.js";
 import type { ConnectPreviewOptions } from "./types.js";
@@ -21,8 +22,11 @@ export async function previewConnect(options: ConnectPreviewOptions = {}) {
     viteConfigPath,
   );
 
+  const connectPublicDir = resolveConnectPublicDir(options.projectRoot);
+
   const previewConfig: InlineConfig = {
     base: options.base,
+    publicDir: connectPublicDir,
     mode,
     configFile: false,
     build: {

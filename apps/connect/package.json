@@ -45,7 +45,8 @@
     "./assets/*.jpeg": "./assets/*.jpeg",
     "./assets/*.gif": "./assets/*.gif",
     "./assets/*.webp": "./assets/*.webp",
-    "./assets/*.avif": "./assets/*.avif"
+    "./assets/*.avif": "./assets/*.avif",
+    "./public/icon.ico": "./public/icon.ico"
   },
   "license": "AGPL-3.0-only",
   "author": "powerhouse.inc",
