@@ -1,3 +1,13 @@
+## 4.1.0-dev.72 (2025-10-15)
+
+### 🩹 Fixes
+
+- **connect, builder-tools:** normalize base path to start and end with a slash ([bea7b4673](https://github.com/powerhouse-inc/powerhouse/commit/bea7b4673))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.71 (2025-10-15)
 
 ### 🚀 Features
