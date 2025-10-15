@@ -92,10 +92,14 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
 
       {/* Processor Name Field */}
       <div>
-        <label className="mb-2 block text-sm font-medium text-gray-700">
+        <label
+          htmlFor="processor-name"
+          className="mb-2 block text-sm font-medium text-gray-700"
+        >
           Processor Name
         </label>
         <input
+          id="processor-name"
           type="text"
           value={processorName}
           onChange={(e) => setProcessorName(e.target.value)}
@@ -109,10 +113,14 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
 
       {/* Processor Type Dropdown */}
       <div>
-        <label className="mb-2 block text-sm font-medium text-gray-700">
+        <label
+          htmlFor="processor-type"
+          className="mb-2 block text-sm font-medium text-gray-700"
+        >
           Type
         </label>
         <select
+          id="processor-type"
           value={processorType}
           onChange={(e) => setProcessorType(e.target.value)}
           disabled={isReadOnly}
@@ -128,12 +136,16 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
 
       {/* Document Types Field */}
       <div>
-        <label className="mb-2 block text-sm font-medium text-gray-700">
+        <label
+          htmlFor="document-types"
+          className="mb-2 block text-sm font-medium text-gray-700"
+        >
           Document Types
         </label>
         <div className="space-y-2">
           {!isReadOnly && availableDocumentTypes.length > 0 && (
             <select
+              id="document-types"
               value={selectedDocumentType}
               onChange={(e) => {
                 const selectedValue = e.target.value;

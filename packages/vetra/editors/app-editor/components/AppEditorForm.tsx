@@ -112,10 +112,14 @@ export const AppEditorForm: React.FC<AppEditorFormProps> = ({
 
       {/* App Name Field */}
       <div>
-        <label className="mb-2 block text-sm font-medium text-gray-700">
+        <label
+          htmlFor="app-name"
+          className="mb-2 block text-sm font-medium text-gray-700"
+        >
           App Name
         </label>
         <input
+          id="app-name"
           type="text"
           value={appName}
           onChange={(e) => setAppName(e.target.value)}
@@ -129,13 +133,17 @@ export const AppEditorForm: React.FC<AppEditorFormProps> = ({
 
       {/* Document Types Field */}
       <div>
-        <label className="mb-2 block text-sm font-medium text-gray-700">
+        <label
+          htmlFor="document-types"
+          className="mb-2 block text-sm font-medium text-gray-700"
+        >
           Document Types
         </label>
         <div className="space-y-2">
           {!isReadOnly &&
             !documentTypes.some((dt) => dt.documentType === "*") && (
               <select
+                id="document-types"
                 value={selectedDocumentType}
                 onChange={(e) => handleAddDocumentType(e.target.value)}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -189,8 +197,9 @@ export const AppEditorForm: React.FC<AppEditorFormProps> = ({
 
         {/* Enable/Disable Switch */}
         <div className="mb-4">
-          <label className="flex items-center">
+          <label htmlFor="drag-and-drop-enabled" className="flex items-center">
             <input
+              id="drag-and-drop-enabled"
               type="checkbox"
               checked={dragAndDropEnabled}
               onChange={(e) => onDragAndDropToggle?.(e.target.checked)}

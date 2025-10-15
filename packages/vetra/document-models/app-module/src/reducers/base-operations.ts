@@ -2,13 +2,26 @@ import type { AppModuleBaseOperationsOperations } from "../../gen/base-operation
 
 export const reducer: AppModuleBaseOperationsOperations = {
   setAppNameOperation(state, action, dispatch) {
-    state.name = action.input.name;
+    const trimmedName = action.input.name.trim();
+    if (trimmedName === "") {
+      throw new Error("App name cannot be empty");
+    }
+    state.name = trimmedName;
   },
   setAppStatusOperation(state, action, dispatch) {
     state.status = action.input.status;
   },
   addDocumentTypeOperation(state, action, dispatch) {
     const documentTypes = state.documentTypes ?? [];
+
+    // Check for duplicate ID
+    const existingId = documentTypes.find((dt) => dt.id === action.input.id);
+    if (existingId) {
+      throw new Error(
+        `Document type with id "${action.input.id}" already exists`,
+      );
+    }
+
     documentTypes.push({
       id: action.input.id,
       documentType: action.input.documentType,

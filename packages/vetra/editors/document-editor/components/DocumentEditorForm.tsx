@@ -78,10 +78,14 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
 
       {/* Editor Name Field */}
       <div>
-        <label className="mb-2 block text-sm font-medium text-gray-700">
+        <label
+          htmlFor="editor-name"
+          className="mb-2 block text-sm font-medium text-gray-700"
+        >
           Editor Name
         </label>
         <input
+          id="editor-name"
           type="text"
           value={editorName}
           onChange={(e) => setEditorName(e.target.value)}
@@ -94,12 +98,16 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
 
       {/* Supported Document Types Field */}
       <div>
-        <label className="mb-2 block text-sm font-medium text-gray-700">
+        <label
+          htmlFor="supported-document-types"
+          className="mb-2 block text-sm font-medium text-gray-700"
+        >
           Supported Document Types
         </label>
         <div className="space-y-2">
           {!isReadOnly && availableDocumentTypes.length > 0 && (
             <select
+              id="supported-document-types"
               value={selectedDocumentType}
               onChange={(e) => {
                 const selectedValue = e.target.value;
