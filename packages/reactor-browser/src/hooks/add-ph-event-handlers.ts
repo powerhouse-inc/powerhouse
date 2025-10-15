@@ -1,5 +1,7 @@
 import type { PHGlobalEventHandlerAdders } from "@powerhousedao/reactor-browser";
+import { addAllDocumentsEventHandler } from "./all-documents.js";
 import {
+  addAllowedDocumentTypesEventHandler,
   addAllowListEventHandler,
   addAnalyticsDatabaseNameEventHandler,
   addBasePathEventHandler,
@@ -49,22 +51,19 @@ import {
   addVersionEventHandler,
   addWarnOutdatedAppEventHandler,
 } from "./config.js";
-import { addConnectCryptoEventHandler, addDidEventHandler } from "./crypto.js";
-import {
-  addDocumentsEventHandler,
-  addSelectedTimelineRevisionEventHandler,
-} from "./documents.js";
-import {
-  addDrivesEventHandler,
-  addSelectedDriveIdEventHandler,
-} from "./drives.js";
+import { addConnectCryptoEventHandler } from "./crypto.js";
+import { addDidEventHandler } from "./did.js";
+import { addDrivesEventHandler } from "./drives.js";
 import { addLoadingEventHandler } from "./loading.js";
+import { addLoginStatusEventHandler } from "./login-status.js";
 import { addModalEventHandler } from "./modals.js";
-import { addSelectedNodeIdEventHandler } from "./nodes.js";
 import { addProcessorManagerEventHandler } from "./processor-manager.js";
 import { addReactorEventHandler } from "./reactor.js";
 import { addRenownEventHandler } from "./renown.js";
-import { addLoginStatusEventHandler, addUserEventHandler } from "./user.js";
+import { addSelectedDriveIdEventHandler } from "./selected-drive.js";
+import { addSelectedNodeIdEventHandler } from "./selected-node.js";
+import { addSelectedTimelineRevisionEventHandler } from "./timeline-revision.js";
+import { addUserEventHandler } from "./user.js";
 import { addVetraPackagesEventHandler } from "./vetra-packages.js";
 
 const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
@@ -78,7 +77,7 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   user: addUserEventHandler,
   processorManager: addProcessorManagerEventHandler,
   drives: addDrivesEventHandler,
-  documents: addDocumentsEventHandler,
+  documents: addAllDocumentsEventHandler,
   selectedDriveId: addSelectedDriveIdEventHandler,
   selectedNodeId: addSelectedNodeIdEventHandler,
   vetraPackages: addVetraPackagesEventHandler,
@@ -99,6 +98,7 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   allowList: addAllowListEventHandler,
   defaultDrivesUrl: addDefaultDrivesUrlEventHandler,
   drivesPreserveStrategy: addDrivesPreserveStrategyEventHandler,
+  allowedDocumentTypes: addAllowedDocumentTypesEventHandler,
   enabledEditors: addEnabledEditorsEventHandler,
   disabledEditors: addDisabledEditorsEventHandler,
   isAddDriveEnabled: addIsAddDriveEnabledEventHandler,

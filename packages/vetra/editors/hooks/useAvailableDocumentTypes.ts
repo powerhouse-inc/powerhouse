@@ -1,4 +1,8 @@
-import { useReactor, useSelectedDriveId } from "@powerhousedao/reactor-browser";
+import {
+  useDocumentModelModules,
+  useDocumentsInSelectedDrive,
+  useSelectedDriveId,
+} from "@powerhousedao/reactor-browser";
 import type { DocumentModelDocument } from "document-model";
 import { useEffect, useState } from "react";
 
@@ -10,7 +14,8 @@ export function useAvailableDocumentTypes(
   const [availableDocumentTypes, setAvailableDocumentTypes] = useState<
     string[]
   >([]);
-  const reactor = useReactor();
+  const documentModelModules = useDocumentModelModules();
+  const documents = useDocumentsInSelectedDrive();
   const selectedDriveId = useSelectedDriveId();
 
   useEffect(() => {
@@ -19,7 +24,7 @@ export function useAvailableDocumentTypes(
 
       // Get from reactor document model modules (if not onlyVetraDocuments)
       if (!onlyVetraDocuments) {
-        const docModels = reactor?.getDocumentModelModules() ?? [];
+        const docModels = documentModelModules ?? [];
         moduleDocIds.push(
           ...docModels.map((model) => model.documentModel.global.id),
         );
@@ -27,14 +32,10 @@ export function useAvailableDocumentTypes(
 
       // Get from vetra drive
       const driveDocIds: string[] = [];
-      const driveDocs = await reactor?.getDocuments(
-        selectedDriveId ?? DEFAULT_DRIVE_ID,
-      );
 
-      if (driveDocs) {
-        for (const docId of driveDocs) {
-          const document = await reactor?.getDocument(docId);
-          if (document?.header.documentType === "powerhouse/document-model") {
+      if (documents) {
+        for (const document of documents) {
+          if (document.header.documentType === "powerhouse/document-model") {
             const documentModel = document as DocumentModelDocument;
             driveDocIds.push(documentModel.state.global.id);
           }
@@ -49,7 +50,7 @@ export function useAvailableDocumentTypes(
     }
 
     void loadDocumentTypes();
-  }, [reactor, selectedDriveId, onlyVetraDocuments]);
+  }, [documents, documentModelModules, onlyVetraDocuments]);
 
   return availableDocumentTypes;
 }

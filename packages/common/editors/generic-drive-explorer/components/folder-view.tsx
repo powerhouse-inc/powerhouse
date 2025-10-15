@@ -3,8 +3,9 @@ import { DriveLayout, FileContentView } from "@powerhousedao/common";
 import type { TNodeActions } from "@powerhousedao/design-system";
 import { FolderItem, useDrop } from "@powerhousedao/design-system";
 import {
-  useFileChildNodesForId,
-  useFolderChildNodesForId,
+  isFileNodeKind,
+  isFolderNodeKind,
+  useNodesInSelectedDriveOrFolder,
 } from "@powerhousedao/reactor-browser";
 import type { FolderNode, Node, SharingType, SyncStatus } from "document-drive";
 import { useTranslation } from "react-i18next";
@@ -42,8 +43,9 @@ export function FolderView(props: IFolderViewProps) {
     showDeleteNodeModal,
   } = props;
   const { t } = useTranslation();
-  const folderNodes = useFolderChildNodesForId(node?.id);
-  const fileNodes = useFileChildNodesForId(node?.id);
+  const nodes = useNodesInSelectedDriveOrFolder();
+  const fileNodes = nodes.filter((n) => isFileNodeKind(n));
+  const folderNodes = nodes.filter((n) => isFolderNodeKind(n));
   const { isDropTarget, dropProps } = useDrop({
     node,
     onAddFile,

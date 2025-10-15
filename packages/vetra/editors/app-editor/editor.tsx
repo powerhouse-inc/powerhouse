@@ -1,5 +1,5 @@
 import {
-  setIsDragAndDropEnabled,
+  setPHGlobalConfig,
   useIsDragAndDropEnabled,
 } from "@powerhousedao/reactor-browser";
 import { useCallback } from "react";
@@ -23,7 +23,7 @@ export function Editor() {
   }, [dispatch]);
 
   function onDragAndDropToggle(enabled: boolean) {
-    setIsDragAndDropEnabled(enabled);
+    setPHGlobalConfig({ isDragAndDropEnabled: enabled });
   }
 
   const onAddDocumentType = useCallback(

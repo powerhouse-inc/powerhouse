@@ -6,9 +6,21 @@ export type PHGlobalConfig = PHCommonGlobalConfig &
   PHSentryGlobalConfig &
   PHProcessorsGlobalConfig;
 
+/** Helper type for ensuring keys are all present while still allowing them to be set */
+export type FullPHGlobalConfig = Record<PHGlobalConfigKey, PHGlobalConfigValue>;
+
 export type PHGlobalConfigKey = keyof PHGlobalConfig;
 export type PHGlobalConfigValue = PHGlobalConfig[PHGlobalConfigKey];
-export type FullPHGlobalConfig = Record<PHGlobalConfigKey, PHGlobalConfigValue>;
+export type PHGlobalConfigSetters<
+  T extends PHGlobalConfigKey = PHGlobalConfigKey,
+> = {
+  [K in T]: (value: PHGlobalConfig[K]) => void;
+};
+export type PHGlobalConfigHooks<
+  TKey extends PHGlobalConfigKey = PHGlobalConfigKey,
+> = {
+  [K in TKey]: () => PHGlobalConfig[K];
+};
 export type PHCommonGlobalConfig = {
   basePath?: string;
   routerBasename?: string;
@@ -28,6 +40,7 @@ export type PHCommonGlobalConfig = {
 export type PHDrivesGlobalConfig = {
   defaultDrivesUrl?: string;
   drivesPreserveStrategy?: string;
+  allowedDocumentTypes?: string[];
   enabledEditors?: string[];
   disabledEditors?: string[];
   isAddDriveEnabled?: boolean;
@@ -76,10 +89,4 @@ export type PHSentryGlobalConfig = {
 export type PHProcessorsGlobalConfig = {
   isExternalProcessorsEnabled?: boolean;
   isExternalPackagesEnabled?: boolean;
-};
-
-export type PHGlobalConfigSetters<
-  T extends PHGlobalConfigKey = PHGlobalConfigKey,
-> = {
-  [K in T]: (value: PHGlobalConfig[K]) => void;
 };

@@ -6,25 +6,27 @@ import {
 import {
   buildDocumentSubgraphUrl,
   exportFile,
+  getDriveIsRemote,
+  getDriveRemoteUrl,
   setSelectedNode,
   showPHModal,
-  useConnectCrypto,
-  useDriveIsRemote,
-  useDriveRemoteUrl,
-  useParentFolder,
+  useNodeParentFolderById,
   useSelectedDocument,
   useSelectedDrive,
-  useUser,
 } from "@powerhousedao/reactor-browser";
+import {
+  useConnectCrypto,
+  useUser,
+} from "@powerhousedao/reactor-browser/connect";
 import type { PHDocument } from "document-model";
 import { useMemo } from "react";
 
 export function DocumentEditorContainer() {
   const [selectedDrive] = useSelectedDrive();
   const [selectedDocument] = useSelectedDocument();
-  const parentFolder = useParentFolder(selectedDocument?.header.id);
-  const isRemoteDrive = useDriveIsRemote(selectedDrive?.header.id);
-  const remoteUrl = useDriveRemoteUrl(selectedDrive?.header.id);
+  const parentFolder = useNodeParentFolderById(selectedDocument?.header.id);
+  const isRemoteDrive = getDriveIsRemote(selectedDrive);
+  const remoteUrl = getDriveRemoteUrl(selectedDrive);
   const connectCrypto = useConnectCrypto();
   const user = useUser();
 

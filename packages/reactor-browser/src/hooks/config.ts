@@ -1,7 +1,9 @@
-import type {
-  PHGlobalConfig,
-  PHGlobalConfigKey,
-  PHGlobalConfigSetters,
+import {
+  useSupportedDocumentTypes,
+  type PHGlobalConfig,
+  type PHGlobalConfigHooks,
+  type PHGlobalConfigKey,
+  type PHGlobalConfigSetters,
 } from "@powerhousedao/reactor-browser";
 import { useEffect, useState } from "react";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
@@ -95,6 +97,26 @@ export const {
   setValue: setDrivesPreserveStrategy,
   addEventHandler: addDrivesPreserveStrategyEventHandler,
 } = makePHEventFunctions("drivesPreserveStrategy");
+
+const allowedDocumentTypesEventFunctions = makePHEventFunctions(
+  "allowedDocumentTypes",
+);
+export const setAllowedDocumentTypes =
+  allowedDocumentTypesEventFunctions.setValue;
+
+/** Defines the document types a drive supports.
+ *
+ * Defaults to all of the document types registered in the reactor.
+ */
+export function useAllowedDocumentTypes() {
+  const definedAllowedDocumentTypes =
+    allowedDocumentTypesEventFunctions.useValue();
+  const supportedDocumentTypes = useSupportedDocumentTypes();
+  return definedAllowedDocumentTypes ?? supportedDocumentTypes;
+}
+
+export const addAllowedDocumentTypesEventHandler =
+  allowedDocumentTypesEventFunctions.addEventHandler;
 
 export const {
   useValue: useEnabledEditors,
@@ -311,6 +333,7 @@ export const phGlobalConfigSetters: PHGlobalConfigSetters = {
   allowList: setAllowList,
   defaultDrivesUrl: setDefaultDrivesUrl,
   drivesPreserveStrategy: setDrivesPreserveStrategy,
+  allowedDocumentTypes: setAllowedDocumentTypes,
   enabledEditors: setEnabledEditors,
   disabledEditors: setDisabledEditors,
   isAddDriveEnabled: setIsAddDriveEnabled,
@@ -344,7 +367,60 @@ export const phGlobalConfigSetters: PHGlobalConfigSetters = {
   isSentryTracingEnabled: setIsSentryTracingEnabled,
   isExternalProcessorsEnabled: setIsExternalProcessorsEnabled,
   isExternalPackagesEnabled: setIsExternalPackagesEnabled,
-} satisfies PHGlobalConfigSetters;
+};
+
+export const phGlobalConfigHooks: PHGlobalConfigHooks = {
+  routerBasename: useRouterBasename,
+  version: useVersion,
+  logLevel: useLogLevel,
+  requiresHardRefresh: useRequiresHardRefresh,
+  warnOutdatedApp: useWarnOutdatedApp,
+  studioMode: useStudioMode,
+  basePath: useBasePath,
+  versionCheckInterval: useVersionCheckInterval,
+  cliVersion: useCliVersion,
+  fileUploadOperationsChunkSize: useFileUploadOperationsChunkSize,
+  isDocumentModelSelectionSettingsEnabled:
+    useIsDocumentModelSelectionSettingsEnabled,
+  gaTrackingId: useGaTrackingId,
+  allowList: useAllowList,
+  defaultDrivesUrl: useDefaultDrivesUrl,
+  drivesPreserveStrategy: useDrivesPreserveStrategy,
+  allowedDocumentTypes: useAllowedDocumentTypes,
+  enabledEditors: useEnabledEditors,
+  disabledEditors: useDisabledEditors,
+  isAddDriveEnabled: useIsAddDriveEnabled,
+  isPublicDrivesEnabled: useIsPublicDrivesEnabled,
+  isAddPublicDrivesEnabled: useIsAddPublicDrivesEnabled,
+  isDeletePublicDrivesEnabled: useIsDeletePublicDrivesEnabled,
+  isCloudDrivesEnabled: useIsCloudDrivesEnabled,
+  isAddCloudDrivesEnabled: useIsAddCloudDrivesEnabled,
+  isDeleteCloudDrivesEnabled: useIsDeleteCloudDrivesEnabled,
+  localDrivesEnabled: useLocalDrivesEnabled,
+  isAddLocalDrivesEnabled: useIsAddLocalDrivesEnabled,
+  isDeleteLocalDrivesEnabled: useIsDeleteLocalDrivesEnabled,
+  isSearchBarEnabled: useIsSearchBarEnabled,
+  isDragAndDropEnabled: useIsDragAndDropEnabled,
+  isExternalControlsEnabled: useIsExternalControlsEnabled,
+  isDocumentToolbarEnabled: useIsDocumentToolbarEnabled,
+  isSwitchboardLinkEnabled: useIsSwitchboardLinkEnabled,
+  isTimelineEnabled: useIsTimelineEnabled,
+  isEditorDebugModeEnabled: useIsEditorDebugModeEnabled,
+  isEditorReadModeEnabled: useIsEditorReadModeEnabled,
+  analyticsDatabaseName: useAnalyticsDatabaseName,
+  isAnalyticsDatabaseWorkerEnabled: useIsAnalyticsDatabaseWorkerEnabled,
+  isDiffAnalyticsEnabled: useIsDiffAnalyticsEnabled,
+  isDriveAnalyticsEnabled: useIsDriveAnalyticsEnabled,
+  renownUrl: useRenownUrl,
+  renownNetworkId: useRenownNetworkId,
+  renownChainId: useRenownChainId,
+  sentryRelease: useSentryRelease,
+  sentryDsn: useSentryDsn,
+  sentryEnv: useSentryEnv,
+  isSentryTracingEnabled: useIsSentryTracingEnabled,
+  isExternalProcessorsEnabled: useIsExternalProcessorsEnabled,
+  isExternalPackagesEnabled: useIsExternalPackagesEnabled,
+};
 
 function callGlobalSetterForKey<TKey extends PHGlobalConfigKey>(
   key: TKey,

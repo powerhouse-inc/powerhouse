@@ -1,5 +1,4 @@
 import type { DID, IConnectCrypto, IRenown, User } from "@renown/sdk";
-
 import type {
   DocumentDriveDocument,
   IDocumentDriveServer,

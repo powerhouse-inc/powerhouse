@@ -1,12 +1,4 @@
 import {
-  createBrowserDocumentDriveServer,
-  createBrowserStorage,
-  loadCommonPackage,
-  loadExternalPackages,
-} from "@powerhousedao/connect";
-import { connectConfig, env } from "@powerhousedao/connect/config";
-import {
-  addPHEventHandlers,
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
   getDocuments,
@@ -16,20 +8,23 @@ import {
   initReactor,
   login,
   refreshReactorData,
-  setConnectCrypto,
-  setDefaultPHGlobalConfig,
-  setDid,
-  setDocuments,
-  setDrives,
-  setProcessorManager,
-  setReactor,
-  setRenown,
+  setAllDocuments,
   setSelectedDrive,
   setSelectedNode,
   setVetraPackages,
   type FullPHGlobalConfig,
   type PHGlobalConfig,
 } from "@powerhousedao/reactor-browser";
+import {
+  addPHEventHandlers,
+  setConnectCrypto,
+  setDefaultPHGlobalConfig,
+  setDid,
+  setDrives,
+  setProcessorManager,
+  setReactor,
+  setRenown,
+} from "@powerhousedao/reactor-browser/connect";
 import { initRenown } from "@renown/sdk";
 import type {
   DocumentDriveDocument,
@@ -43,6 +38,13 @@ import {
   initFeatureFlags,
   isDualActionCreateEnabled,
 } from "../../feature-flags.js";
+import {
+  createBrowserDocumentDriveServer,
+  createBrowserStorage,
+} from "../utils/reactor.js";
+import { loadCommonPackage } from "./document-model.js";
+import { loadExternalPackages } from "./external-packages.js";
+import { env } from "../connect.config.js";
 
 let reactorStorage: IDocumentAdminStorage | undefined;
 
@@ -197,7 +199,7 @@ export async function createReactor() {
   setRenown(renown);
   setProcessorManager(processorManager);
   setDrives(drives);
-  setDocuments(documents);
+  setAllDocuments(documents);
   setVetraPackages(vetraPackages);
   setSelectedDrive(driveSlug);
   setSelectedNode(nodeSlug);
@@ -260,6 +262,7 @@ function getPHGlobalConfigFromEnv(): PHGlobalConfig {
     basePath,
     routerBasename,
     allowList: undefined,
+    allowedDocumentTypes: undefined,
     isDragAndDropEnabled: true,
     isDocumentToolbarEnabled: true,
     isSwitchboardLinkEnabled: true,

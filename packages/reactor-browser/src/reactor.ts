@@ -6,7 +6,7 @@ import type {
   IDocumentDriveServer,
 } from "document-drive";
 import { generateId } from "document-model/core";
-import { setDocuments } from "./hooks/documents.js";
+import { setAllDocuments } from "./hooks/all-documents.js";
 import { setDrives } from "./hooks/drives.js";
 import { getDocuments, getDrives } from "./utils/drives.js";
 
@@ -70,7 +70,7 @@ export async function refreshReactorData(
   const drives = await getDrives(reactor);
   const documents = await getDocuments(reactor);
   setDrives(drives);
-  setDocuments(documents);
+  setAllDocuments(documents);
 }
 
 export async function initReactor(

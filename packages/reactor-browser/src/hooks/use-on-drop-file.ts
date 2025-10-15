@@ -1,19 +1,13 @@
+import { useCallback } from "react";
+import { addFileWithProgress } from "../actions/document.js";
 import type {
   ConflictResolution,
   FileUploadProgressCallback,
-} from "@powerhousedao/reactor-browser";
-import type { FileNode } from "document-drive";
-import { useCallback } from "react";
-import { addFileWithProgress } from "../actions/document.js";
-import { useSelectedDriveSafe } from "./drives.js";
-import { useSelectedFolder } from "./nodes.js";
-import { useSupportedDocumentTypes } from "./reactor.js";
-
-type UseOnDropFile = () => (
-  file: File,
-  onProgress?: FileUploadProgressCallback,
-  resolveConflict?: ConflictResolution,
-) => Promise<FileNode | undefined>;
+  UseOnDropFile,
+} from "../types/upload.js";
+import { useSelectedDriveSafe } from "./selected-drive.js";
+import { useSelectedFolder } from "./selected-folder.js";
+import { useSupportedDocumentTypes } from "./supported-document-types.js";
 
 export const useOnDropFile: UseOnDropFile = () => {
   const [selectedDrive] = useSelectedDriveSafe();

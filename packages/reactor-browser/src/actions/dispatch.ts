@@ -14,13 +14,13 @@ async function getDocument(
   }
 }
 
-export async function dispatchActions(
-  actionOrActions: Action[] | Action | undefined,
-  document: PHDocument | undefined,
+export async function dispatchActions<TDocument = PHDocument, TAction = Action>(
+  actionOrActions: TAction[] | TAction | undefined,
+  document: TDocument | undefined,
 ): Promise<PHDocument | undefined>;
 export async function dispatchActions(
   actionOrActions: Action[] | Action | undefined,
-  // eslint-disable-next-line @typescript-eslint/unified-signatures
+
   documentId: string,
 ): Promise<PHDocument | undefined>;
 export async function dispatchActions(

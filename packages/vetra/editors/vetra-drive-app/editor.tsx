@@ -7,7 +7,7 @@ import {
   showDeleteNodeModal,
   useAnalyticsDatabaseName,
   useDocumentModelModules,
-  useFileNodes,
+  useFileNodesInSelectedDrive,
   useSelectedDrive,
 } from "@powerhousedao/reactor-browser";
 import type { FileNode } from "document-drive";
@@ -19,7 +19,7 @@ export function BaseEditor({ children }: EditorProps) {
   const [document] = useSelectedDrive();
   const driveId = document.header.id;
   const documentModels = useDocumentModelModules();
-  const fileNodes = useFileNodes() ?? [];
+  const fileNodes = useFileNodesInSelectedDrive() ?? [];
 
   const packageNode = fileNodes.find(
     (node) => node.documentType === "powerhouse/package",

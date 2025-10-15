@@ -4,6 +4,7 @@ import type {
   IDocumentDriveServer,
   SharingType,
   SyncStatus,
+  Trigger,
 } from "document-drive";
 import { SynchronizationUnitNotFoundError } from "document-drive";
 import type { PHDocument } from "document-model";
@@ -151,4 +152,43 @@ export function getSyncStatusSync(
     console.error(error);
     return "ERROR";
   }
+}
+
+export function getDrivePullResponderTrigger(
+  drive: DocumentDriveDocument | undefined,
+): Trigger | undefined {
+  return drive?.state.local.triggers.find(
+    (trigger) => trigger.type === "PullResponder",
+  );
+}
+
+export function getDrivePullResponderUrl(
+  drive: DocumentDriveDocument | undefined,
+): string | undefined {
+  const pullResponder = getDrivePullResponderTrigger(drive);
+  return pullResponder?.data?.url;
+}
+
+export function getDriveRemoteUrl(
+  drive: DocumentDriveDocument | undefined,
+): string | undefined {
+  if (!drive) return undefined;
+  const pullResponderUrl = getDrivePullResponderUrl(drive);
+
+  if ("remoteUrl" in drive.state.global) {
+    const remoteUrl = drive.state.global.remoteUrl;
+    if (typeof remoteUrl === "string") {
+      return remoteUrl;
+    }
+  }
+
+  return pullResponderUrl;
+}
+
+export function getDriveIsRemote(
+  drive: DocumentDriveDocument | undefined,
+): boolean {
+  const remoteUrl = getDriveRemoteUrl(drive);
+  const pullResponderUrl = getDrivePullResponderUrl(drive);
+  return remoteUrl !== undefined || pullResponderUrl !== undefined;
 }

@@ -8,18 +8,14 @@ import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
 const eventFunctions = makePHEventFunctions("reactor");
 
+/** Returns the reactor */
 export const useReactor: UsePHGlobalValue<IDocumentDriveServer> =
   eventFunctions.useValue;
 
+/** Sets the reactor */
 export const setReactor: SetPHGlobalValue<IDocumentDriveServer> =
   eventFunctions.setValue;
 
+/** Adds an event handler for the reactor */
 export const addReactorEventHandler: AddPHGlobalEventHandler =
   eventFunctions.addEventHandler;
-
-export function useSupportedDocumentTypes() {
-  const reactor = useReactor();
-  return reactor
-    ?.getDocumentModelModules()
-    .map((module) => module.documentModel.global.id);
-}
