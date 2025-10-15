@@ -117,7 +117,11 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
   afterEach(async () => {
     await executorManager.stop();
     readModelCoordinator.stop();
-    await db.destroy();
+    try {
+      await db.destroy();
+    } catch {
+      //
+    }
   });
 
   describe("ADD Operations", () => {
