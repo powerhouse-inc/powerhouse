@@ -58,7 +58,7 @@ jobs:
         run: |
           echo "Installing ph-cmd@$PH_TAG with ${{ matrix.package-manager }}"
           if [ "${{ matrix.package-manager }}" = "npm" ]; then
-            ${{ matrix.package-manager }} install -g ph-cmd@${{ env.PH_TAG }} --legacy-peer-deps 2>&1 | tee ph-cmd-install.log
+            ${{ matrix.package-manager }} install -g ph-cmd@${{ env.PH_TAG }} --legacy-peer-deps --ignore-scripts 2>&1 | tee ph-cmd-install.log
           else
             ${{ matrix.package-manager }} install -g ph-cmd@${{ env.PH_TAG }} 2>&1 | tee ph-cmd-install.log
           fi
