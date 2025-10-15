@@ -1,3 +1,15 @@
+## 4.1.0-dev.74 (2025-10-15)
+
+### 🩹 Fixes
+
+- **codegen:** update graphql dependency in package.json ([257f368ac](https://github.com/powerhouse-inc/powerhouse/commit/257f368ac))
+- adding all header parameters to create action input ([67ac63f05](https://github.com/powerhouse-inc/powerhouse/commit/67ac63f05))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.73 (2025-10-15)
 
 ### 🚀 Features

@@ -1,3 +1,15 @@
+## 4.1.0-dev.74 (2025-10-15)
+
+### 🩹 Fixes
+
+- **codegen:** update graphql dependency in package.json ([257f368ac](https://github.com/powerhouse-inc/powerhouse/commit/257f368ac))
+- fixing issue where create, update, delete were applied with incorrect scope ([59c7a981e](https://github.com/powerhouse-inc/powerhouse/commit/59c7a981e))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.73 (2025-10-15)
 
 ### 🚀 Features
