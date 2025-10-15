@@ -4,18 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'ph-cmd version tag (e.g., latest, 1.2.3, dev)'
+        description: "ph-cmd version tag (e.g., dev, latest, 1.2.3)"
         required: false
-        default: ''
+        default: ""
       packages:
-        description: 'Comma-separated list of packages to install (leave empty to skip)'
+        description: "Comma-separated list of packages to install (e.g., @powerhousedao/vetra@dev)"
         required: false
-        default: ''
-  pull_request:
-    branches: ["main"]
-    paths:
-      - 'clis/ph-cmd/**'
-      - 'clis/ph-cli/**'
+        default: ""
 
 jobs:
   test-package-managers:
@@ -41,23 +36,20 @@ jobs:
         with:
           node-version: 22
 
-      - name: Setup pnpm
-        if: matrix.package-manager == 'pnpm'
-        uses: pnpm/action-setup@v4
-        with:
-          version: latest
+      - name: Setup package managers with corepack
+        if: matrix.package-manager != 'bun'
+        run: |
+          corepack enable
+          corepack prepare ${{ matrix.package-manager }}@latest --activate
+          if [ "${{ matrix.package-manager }}" = "yarn" ]; then
+            echo "$(yarn global bin)" >> $GITHUB_PATH
+          fi
 
       - name: Setup bun
         if: matrix.package-manager == 'bun'
         uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
-
-      - name: Setup yarn
-        if: matrix.package-manager == 'yarn'
-        run: |
-          npm install -g yarn
-          echo "$(yarn global bin)" >> $GITHUB_PATH
 
       - name: Install ph-cmd globally with ${{ matrix.package-manager }}
         id: install-ph-cmd
