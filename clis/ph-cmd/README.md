@@ -25,7 +25,7 @@ A powerful command-line interface tool for Powerhouse DAO that streamlines proje
 
 ```bash
 # Using npm
-npm install -g ph-cmd
+npm install -g ph-cmd --legacy-peer-deps
 
 # Using yarn
 yarn global add ph-cmd
