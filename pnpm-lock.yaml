@@ -729,6 +729,9 @@ importers:
       execa:
         specifier: ^8.0.1
         version: 8.0.1
+      graphql:
+        specifier: ^16.11.0
+        version: 16.11.0
       hygen:
         specifier: ^6.2.11
         version: 6.2.11
@@ -766,9 +769,6 @@ importers:
       esbuild-fix-imports-plugin:
         specifier: ^1.0.7
         version: 1.0.22
-      graphql:
-        specifier: ^16.11.0
-        version: 16.11.0
       husky:
         specifier: ^8.0.3
         version: 8.0.3
