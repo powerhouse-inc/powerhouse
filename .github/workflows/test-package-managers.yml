@@ -36,14 +36,13 @@ jobs:
         with:
           node-version: 22
 
-      - name: Setup package managers with corepack
-        if: matrix.package-manager != 'bun'
-        run: |
-          corepack enable
-          corepack prepare ${{ matrix.package-manager }}@latest --activate
-          if [ "${{ matrix.package-manager }}" = "yarn" ]; then
-            echo "$(yarn global bin)" >> $GITHUB_PATH
-          fi
+      - name: Setup yarn
+        if: matrix.package-manager == 'yarn'
+        run: npm install -g yarn
+
+      - name: Setup pnpm
+        if: matrix.package-manager == 'pnpm'
+        run: npm install -g npm
 
       - name: Setup bun
         if: matrix.package-manager == 'bun'
@@ -52,14 +51,11 @@ jobs:
           bun-version: latest
 
       - name: Install ph-cmd globally with ${{ matrix.package-manager }}
+        if: matrix.package-manager != 'yarn'
         id: install-ph-cmd
         run: |
           echo "Installing ph-cmd@$PH_TAG with ${{ matrix.package-manager }}"
-          if [ "${{ matrix.package-manager }}" = "yarn" ]; then
-            yarn global add ph-cmd@${{ env.PH_TAG }} 2>&1 | tee ph-cmd-install.log
-          else
-            ${{ matrix.package-manager }} install -g ph-cmd@${{ env.PH_TAG }} 2>&1 | tee ph-cmd-install.log
-          fi
+          ${{ matrix.package-manager }} install -g ph-cmd@${{ env.PH_TAG }} 2>&1 | tee ph-cmd-install.log
 
       - name: Parse ph-cmd install warnings
         if: always()
@@ -77,9 +73,13 @@ jobs:
         id: ph-init
         run: |
           cd /tmp/ph-test-${{ matrix.package-manager }}
-          echo "Running: ph init project --${{ env.PH_TAG }} --${{ matrix.package-manager }}"
-          ph init project --${{ env.PH_TAG }} --${{ matrix.package-manager }} 2>&1 | tee ph-init.log
-        continue-on-error: true
+          if [ "${{ matrix.package-manager }}" = "yarn" ]; then
+            echo "Running: yarn dlx ph-cmd@${{ env.PH_TAG }} init project --${{ env.PH_TAG }} --yarn"
+            yarn dlx ph-cmd@${{ env.PH_TAG }} init project --${{ env.PH_TAG }} --yarn  2>&1 | tee ph-init.log
+          else
+            echo "Running: ph init project --${{ env.PH_TAG }} --${{ matrix.package-manager }}"
+            ph init project --${{ env.PH_TAG }} --${{ matrix.package-manager }} 2>&1 | tee ph-init.log
+          fi
 
       - name: Parse ph init warnings
         if: always()
@@ -96,7 +96,6 @@ jobs:
           cd /tmp/ph-test-${{ matrix.package-manager }}/project
           echo "Installing project dependencies with ${{ matrix.package-manager }}"
           ${{ matrix.package-manager }} install 2>&1 | tee deps-install.log
-        continue-on-error: true
 
       - name: Parse dependency install warnings
         if: always() && steps.ph-init.outcome == 'success'
@@ -123,7 +122,6 @@ jobs:
               echo "::endgroup::"
             fi
           done
-        continue-on-error: true
 
       - name: Parse package install warnings
         if: always() && steps.ph-init.outcome == 'success' && env.PH_PACKAGES != ''
@@ -145,7 +143,6 @@ jobs:
           cd /tmp/ph-test-${{ matrix.package-manager }}/project
           echo "Building Connect with ph connect build"
           ph connect build 2>&1 | tee connect-build.log
-        continue-on-error: true
 
       - name: Parse build warnings
         if: always() && steps.ph-init.outcome == 'success'
