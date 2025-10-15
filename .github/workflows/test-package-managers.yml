@@ -38,7 +38,9 @@ jobs:
 
       - name: Setup yarn
         if: matrix.package-manager == 'yarn'
-        run: npm install -g yarn
+        run: |
+          npm install -g yarn
+          yarn set version stable
 
       - name: Setup pnpm
         if: matrix.package-manager == 'pnpm'
