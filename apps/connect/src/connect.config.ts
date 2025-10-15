@@ -1,4 +1,7 @@
-import { loadRuntimeEnv } from "@powerhousedao/builder-tools/browser";
+import {
+  loadRuntimeEnv,
+  normalizeBasePath,
+} from "@powerhousedao/builder-tools/browser";
 import { logger, setLogLevel } from "document-drive";
 
 // Load environment variables with validation and defaults
@@ -10,19 +13,10 @@ export const env = loadRuntimeEnv({
 setLogLevel(env.PH_CONNECT_LOG_LEVEL);
 logger.debug(`Setting log level to ${env.PH_CONNECT_LOG_LEVEL}.`);
 
-// Router basename
-let phConnectBasePath = env.PH_CONNECT_BASE_PATH || import.meta.env.BASE_URL;
-// add ending slash if missing
-if (!phConnectBasePath.endsWith("/")) {
-  phConnectBasePath += "/";
-}
-
-// remove relative path
-if (phConnectBasePath.startsWith(".")) {
-  phConnectBasePath = phConnectBasePath.slice(1);
-}
-
-const PH_CONNECT_BASE_PATH = phConnectBasePath;
+// Normalize the base path to ensure it starts and ends with a forward slash
+const PH_CONNECT_BASE_PATH = normalizeBasePath(
+  env.PH_CONNECT_BASE_PATH || import.meta.env.BASE_URL,
+);
 
 // Analytics database name with custom logic
 const PH_CONNECT_ANALYTICS_DATABASE_NAME =

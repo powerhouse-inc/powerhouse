@@ -1,3 +1,27 @@
+## 4.1.0-dev.72 (2025-10-15)
+
+### 🩹 Fixes
+
+- **connect, builder-tools:** normalize base path to start and end with a slash ([bea7b4673](https://github.com/powerhouse-inc/powerhouse/commit/bea7b4673))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.71 (2025-10-15)
+
+### 🚀 Features
+
+- **reactor-api:** add operation type and id resolvers to DriveSubgraph ([#1955](https://github.com/powerhouse-inc/powerhouse/pull/1955))
+
+### 🩹 Fixes
+
+- **codegen:** update analytics processor imports to use in processor templates ([#1954](https://github.com/powerhouse-inc/powerhouse/pull/1954))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.70 (2025-10-14)
 
 ### 🩹 Fixes

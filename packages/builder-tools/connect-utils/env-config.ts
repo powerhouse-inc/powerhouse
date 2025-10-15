@@ -545,3 +545,44 @@ export function setConnectEnv(values: Partial<ConnectEnv>): void {
     }
   }
 }
+
+/**
+ * Normalizes a base path to ensure it:
+ * - Starts with a forward slash (/)
+ * - Ends with a forward slash (/)
+ * - Has no relative path prefix (.)
+ *
+ * @param basePath - The base path to normalize
+ * @returns The normalized base path
+ *
+ * @example
+ * normalizeBasePath('/app') // '/app/'
+ * normalizeBasePath('./app/') // '/app/'
+ * normalizeBasePath('app') // '/app/'
+ * normalizeBasePath('/') // '/'
+ * normalizeBasePath('') // '/'
+ */
+export function normalizeBasePath(basePath: string): string {
+  if (!basePath) {
+    return "/";
+  }
+
+  let normalized = basePath;
+
+  // Remove relative path prefix
+  if (normalized.startsWith(".")) {
+    normalized = normalized.slice(1);
+  }
+
+  // Ensure it starts with a forward slash
+  if (!normalized.startsWith("/")) {
+    normalized = `/${normalized}`;
+  }
+
+  // Ensure it ends with a forward slash
+  if (!normalized.endsWith("/")) {
+    normalized = `${normalized}/`;
+  }
+
+  return normalized;
+}

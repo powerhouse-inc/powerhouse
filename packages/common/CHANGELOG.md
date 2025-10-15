@@ -1,3 +1,17 @@
+## 4.1.0-dev.72 (2025-10-15)
+
+This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.71 (2025-10-15)
+
+### 🩹 Fixes
+
+- **codegen:** update analytics processor imports to use in processor templates ([#1954](https://github.com/powerhouse-inc/powerhouse/pull/1954))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.70 (2025-10-14)
 
 This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.

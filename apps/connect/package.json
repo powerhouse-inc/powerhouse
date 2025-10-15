@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/connect",
   "productName": "Powerhouse-Connect",
-  "version": "4.1.0-dev.70",
+  "version": "4.1.0-dev.72",
   "description": "Powerhouse Connect",
   "main": "./dist/index.html",
   "type": "module",
@@ -16,6 +16,7 @@
     "scripts",
     "assets",
     "public",
+    "heroku",
     ".env",
     "./src/index.css"
   ],

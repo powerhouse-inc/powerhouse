@@ -37,32 +37,29 @@ jobs:
     environment: ${{ needs.setup.outputs.deploy-env }}
     runs-on: ubuntu-latest
     steps:
-      - name: Show environment to deploy
-        run: |
-          echo "github.ref: ${{ github.ref }}"
-          echo "DEPLOY_ENV: ${{ needs.setup.outputs.deploy-env }}"
-      - name: Set up heroku
-        run: sudo curl https://cli-assets.heroku.com/install.sh | sh
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Build, Push and Release APP to Heroku. # Your custom step name
+      - name: Set up heroku
+        run: sudo curl https://cli-assets.heroku.com/install.sh | sh
+      - name: Build, Push and Release Connect to Heroku
         uses: gonuit/heroku-docker-deploy@v1.3.3
         with:
           email: ${{ secrets.HEROKU_EMAIL }}
           heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
           heroku_app_name: ${{ vars.HEROKU_APP_NAME_CONNECT }}
-          dockerfile_directory: ./apps/connect
+          dockerfile_directory: ./apps/connect/heroku
+          dockerfile_name: Dockerfile
+          process_type: web
           docker_options: >-
-            --build-arg NX_SOCKET_DIR=${{ vars.NX_SOCKET_DIR }}
-            --build-arg BASE_PATH=${{ vars.CONNECT_BASE_PATH }}
+            --build-arg TAG=${{ vars.PH_TAG }}
             --build-arg PH_PACKAGES=${{ vars.PH_PACKAGES }}
+            --build-arg PH_CONNECT_BASE_PATH=${{ vars.CONNECT_BASE_PATH }}
             --build-arg PH_CONNECT_SENTRY_DSN=${{ secrets.CONNECT_SENTRY_DSN }}
             --build-arg PH_CONNECT_SENTRY_ENV=${{ needs.setup.outputs.deploy-env }}
-            --build-arg SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
-            --build-arg SENTRY_ORG=${{ secrets.SENTRY_ORG }}
-            --build-arg SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}
-            --build-arg TAG=${{ vars.PH_TAG }}
-          process_type: web
+            --build-arg PH_CONNECT_SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
+            --build-arg PH_CONNECT_SENTRY_ORG=${{ secrets.SENTRY_ORG }}
+            --build-arg PH_CONNECT_SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}
+
   switchboard:
     needs: setup
     environment: ${{ needs.setup.outputs.deploy-env }}
