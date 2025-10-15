@@ -13,11 +13,15 @@ import { Reactor } from "../../src/core/reactor.js";
 import type { IReactor } from "../../src/core/types.js";
 import { EventBus } from "../../src/events/event-bus.js";
 import type { IEventBus } from "../../src/events/interfaces.js";
+import { SimpleJobExecutorManager } from "../../src/executor/simple-job-executor-manager.js";
+import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
 import type { IQueue } from "../../src/queue/interfaces.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
+import { DocumentModelRegistry } from "../../src/registry/implementation.js";
 import type { ISigner } from "../../src/signer/types.js";
 import {
   createDocModelDocument,
+  createMockOperationStore,
   createMockReadModelCoordinator,
   createTestDocuments,
   createTestJobTracker,
@@ -30,6 +34,7 @@ describe("ReactorClient Passthrough Functions", () => {
   let storage: MemoryStorage;
   let eventBus: IEventBus;
   let queue: IQueue;
+  let executorManager: SimpleJobExecutorManager;
 
   const documentModels = [
     documentModelDocumentModelModule,
@@ -53,8 +58,36 @@ describe("ReactorClient Passthrough Functions", () => {
     eventBus = new EventBus();
     queue = new InMemoryQueue(eventBus);
 
-    // Create reactor facade with all required dependencies
+    // Create registry and register modules
+    const registry = new DocumentModelRegistry();
+    registry.registerModules(documentModelDocumentModelModule);
+    registry.registerModules(driveDocumentModelModule);
+
+    // Create operation store
+    const operationStore = createMockOperationStore();
+
+    // Create job executor
+    const executor = new SimpleJobExecutor(
+      registry,
+      storage,
+      storage,
+      operationStore,
+      eventBus,
+    );
+
+    // Create job tracker
     const jobTracker = createTestJobTracker();
+
+    // Create and start executor manager
+    executorManager = new SimpleJobExecutorManager(
+      () => executor,
+      eventBus,
+      queue,
+      jobTracker,
+    );
+    await executorManager.start(1);
+
+    // Create reactor facade with all required dependencies
     const readModelCoordinator = createMockReadModelCoordinator();
     reactor = new Reactor(
       driveServer,
@@ -84,7 +117,9 @@ describe("ReactorClient Passthrough Functions", () => {
     }
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    // Stop executor manager
+    await executorManager.stop();
     // Restore real timers after each test
     vi.useRealTimers();
   });
