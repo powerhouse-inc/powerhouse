@@ -11,12 +11,17 @@ import type { PackageManager, PathValidation, ProjectInfo } from "./types.js";
 
 export function resolvePackageManagerOptions(options: {
   packageManager?: string;
+  npm?: boolean;
   pnpm?: boolean;
   yarn?: boolean;
   bun?: boolean;
 }) {
   if (options.packageManager) {
     return options.packageManager;
+  }
+
+  if (options.npm) {
+    return "npm";
   }
 
   if (options.pnpm) {

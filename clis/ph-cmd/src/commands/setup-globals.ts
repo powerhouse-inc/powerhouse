@@ -11,6 +11,7 @@ export type SetupGlobalsOptions = {
   dev?: boolean;
   staging?: boolean;
   packageManager?: string;
+  npm?: boolean;
   pnpm?: boolean;
   yarn?: boolean;
   bun?: boolean;
@@ -36,6 +37,7 @@ export function setupGlobalsCommand(program: Command): Command {
     .option("--dev", 'Use "development" version of the boilerplate')
     .option("--staging", 'Use "development" version of the boilerplate')
     .option("--package-manager <packageManager>", "package manager to be used")
+    .option("--npm", "Use 'npm' as package manager")
     .option("--pnpm", "Use 'pnpm' as package manager")
     .option("--yarn", "Use 'yarn' as package manager")
     .option("--bun", "Use 'bun' as package manager");
