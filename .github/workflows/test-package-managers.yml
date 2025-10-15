@@ -38,9 +38,7 @@ jobs:
 
       - name: Setup yarn
         if: matrix.package-manager == 'yarn'
-        run: |
-          npm install -g yarn
-          yarn set version stable
+        run: npm install -g corepack
 
       - name: Setup pnpm
         if: matrix.package-manager == 'pnpm'
@@ -78,6 +76,7 @@ jobs:
         run: |
           cd /tmp/ph-test-${{ matrix.package-manager }}
           if [ "${{ matrix.package-manager }}" = "yarn" ]; then
+            yarn set version stable
             yarn init --yes
             echo "Running: yarn dlx ph-cmd@${{ env.PH_TAG }} init project --${{ env.PH_TAG }} --yarn"
             yarn dlx ph-cmd@${{ env.PH_TAG }} init project --${{ env.PH_TAG }} --yarn  2>&1 | tee ph-init.log
