@@ -30,7 +30,7 @@ http {
         server_name _;
         root /app/dist;
 
-        location ${PH_CONNECT_BASE_PATH}/assets/ {
+        location ${PH_CONNECT_BASE_PATH}assets/ {
             alias /app/dist/assets/;
             access_log off;
             log_not_found off;
@@ -39,7 +39,7 @@ http {
             add_header Cache-Control "public, max-age=31536000, immutable";
         }
 
-        location = ${PH_CONNECT_BASE_PATH}/service-worker.js {
+        location = ${PH_CONNECT_BASE_PATH}service-worker.js {
             alias /app/dist/service-worker.js;
 
             access_log off;
@@ -52,7 +52,7 @@ http {
         }
 
         # match any file in the root folder, except index.html
-        location ~ ${PH_CONNECT_BASE_PATH}/(?!index\.html$)([^/]+\.[a-z0-9]+)$ {
+        location ~ ${PH_CONNECT_BASE_PATH}(?!index\.html$)([^/]+\.[a-z0-9]+)$ {
             alias /app/dist/$1;
             access_log off;
             log_not_found off;
@@ -61,7 +61,28 @@ http {
         }
 
         location ${PH_CONNECT_BASE_PATH} {
-            try_files $uri $uri/ /index.html;
+            try_files $uri $uri/ ${PH_CONNECT_BASE_PATH}index.html;
+        }
+
+        location = ${PH_CONNECT_BASE_PATH}index.html {
+            alias /app/dist/index.html;
+            add_header Cache-Control "no-cache, no-store, must-revalidate";
+            add_header Pragma "no-cache";
+            add_header Expires "0";
+        }
+
+        # Catch-all: redirect to base path only if base path is not /
+        location / {
+            # Use X-Forwarded-Proto from Heroku to preserve https
+            set $redirect_scheme $scheme;
+            if ($http_x_forwarded_proto = 'https') {
+                set $redirect_scheme https;
+            }
+
+            if ($request_uri !~ ^${PH_CONNECT_BASE_PATH}) {
+                return 301 $redirect_scheme://$host${PH_CONNECT_BASE_PATH};
+            }
+            return 404;
         }
     }
 }

@@ -1,1 +1,4 @@
-export { loadRuntimeEnv } from "./connect-utils/env-config.js";
+export {
+  loadRuntimeEnv,
+  normalizeBasePath,
+} from "./connect-utils/env-config.js";
