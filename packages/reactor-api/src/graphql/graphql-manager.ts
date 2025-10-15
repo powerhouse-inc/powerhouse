@@ -259,7 +259,7 @@ export class GraphQLManager {
   ) {
     for (const [supergraph, subgraphs] of subgraphsMap.entries()) {
       for (const subgraph of subgraphs) {
-        this.logger.info(`Setting up subgraph ${subgraph.name}`);
+        this.logger.debug(`Setting up subgraph ${subgraph.name}`);
 
         // create subgraph schema
         const schema = createSchema(
