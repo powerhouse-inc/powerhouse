@@ -57,6 +57,7 @@
     "test:watch": "vitest",
     "test:document-models": "vitest run document-models",
     "test:editors": "vitest run editors",
+    "test:processors": "vitest run processors",
     "generate": "ph-cli generate",
     "connect": "vite",
     "reactor": "ph-cli reactor",

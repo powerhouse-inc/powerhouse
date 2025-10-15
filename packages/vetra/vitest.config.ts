@@ -8,6 +8,7 @@ export default defineConfig({
       "test/**/*.test.tsx",
       "document-models/**/*.test.ts",
       "editors/**/*.test.tsx",
+      "processors/**/*.test.ts",
     ],
     globals: true,
     environment: "happy-dom",
