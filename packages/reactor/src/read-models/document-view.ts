@@ -1,15 +1,17 @@
 import type {
   CreateDocumentActionInput,
+  PHDocument,
   PHDocumentHeader,
   UpgradeDocumentActionInput,
 } from "document-model";
-import { createPresignedHeader } from "document-model/core";
+import { createPresignedHeader, defaultBaseState } from "document-model/core";
 import type { Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import type {
   IDocumentView,
   IOperationStore,
   OperationWithContext,
+  ViewFilter,
 } from "../storage/interfaces.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
 import type {
@@ -84,8 +86,34 @@ export class KyselyDocumentView implements IDocumentView {
           .where("branch", "=", branch)
           .executeTakeFirst();
 
+        // Get the state from the operation's resultingState field
+        // This was already computed by the job executor when the operation was applied
+        let newState: Record<string, unknown> = {};
+
+        if (operation.resultingState) {
+          try {
+            // Parse the resulting state from the operation
+            const fullState = JSON.parse(operation.resultingState) as Record<
+              string,
+              unknown
+            >;
+            // Extract just the state for this scope
+            const scopeState = fullState[scope];
+            newState =
+              typeof scopeState === "object" && scopeState !== null
+                ? (scopeState as Record<string, unknown>)
+                : {};
+          } catch (error) {
+            // If parsing fails, use empty state
+            console.warn(
+              `Failed to parse resultingState for operation ${index} on document ${documentId}:`,
+              error,
+            );
+          }
+        }
+
         if (existingSnapshot) {
-          // Update existing snapshot
+          // Update existing snapshot with new state
           await trx
             .updateTable("DocumentSnapshot")
             .set({
@@ -93,13 +121,14 @@ export class KyselyDocumentView implements IDocumentView {
               lastOperationHash: hash,
               lastUpdatedAt: new Date(),
               snapshotVersion: existingSnapshot.snapshotVersion + 1,
+              content: JSON.stringify(newState),
             })
             .where("documentId", "=", documentId)
             .where("scope", "=", scope)
             .where("branch", "=", branch)
             .execute();
         } else {
-          // Create new snapshot
+          // Create new snapshot with computed state
           const snapshot: InsertableDocumentSnapshot = {
             id: uuidv4(),
             documentId,
@@ -107,7 +136,7 @@ export class KyselyDocumentView implements IDocumentView {
             name: null,
             scope,
             branch,
-            content: JSON.stringify({}), // Empty for now, will be filled when we build full documents
+            content: JSON.stringify(newState),
             documentType,
             lastOperationIndex: index,
             lastOperationHash: hash,
@@ -349,5 +378,75 @@ export class KyselyDocumentView implements IDocumentView {
     } catch {
       return false;
     }
+  }
+
+  async get<TDocument extends PHDocument>(
+    documentId: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    const branch = view?.branch || "main";
+
+    // Get the document header
+    const header = await this.getHeader(documentId, branch, signal);
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    // Build query to get snapshots
+    let query = this.db
+      .selectFrom("DocumentSnapshot")
+      .selectAll()
+      .where("documentId", "=", documentId)
+      .where("branch", "=", branch)
+      .where("isDeleted", "=", false);
+
+    // Filter by scopes if provided in view
+    if (view?.scopes && view.scopes.length > 0) {
+      query = query.where("scope", "in", view.scopes);
+    }
+
+    // Execute the query
+    const snapshots = await query.execute();
+
+    if (snapshots.length === 0) {
+      throw new Error(`Document not found: ${documentId}`);
+    }
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    // Reconstruct the document state from snapshots
+    const state: Record<string, unknown> = {};
+    for (const snapshot of snapshots) {
+      try {
+        const scopeState = JSON.parse(snapshot.content) as unknown;
+        state[snapshot.scope] = scopeState;
+      } catch (error) {
+        console.warn(
+          `Failed to parse snapshot content for document ${documentId} scope ${snapshot.scope}:`,
+          error,
+        );
+        state[snapshot.scope] = {};
+      }
+    }
+
+    // Construct the PHDocument
+    const document: PHDocument = {
+      header,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      state: state as any,
+      operations: {},
+      initialState: defaultBaseState(),
+      clipboard: [],
+    };
+
+    return document as TDocument;
   }
 }

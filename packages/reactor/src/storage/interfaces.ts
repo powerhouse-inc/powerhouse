@@ -1,4 +1,4 @@
-import type { Operation, PHDocumentHeader } from "document-model";
+import type { Operation, PHDocument, PHDocumentHeader } from "document-model";
 
 export type OperationContext = {
   documentId: string;
@@ -177,4 +177,17 @@ export interface IDocumentView {
    * @param signal - Optional abort signal to cancel the request
    */
   exists(documentIds: string[], signal?: AbortSignal): Promise<boolean[]>;
+
+  /**
+   * Returns the document with the given id.
+   *
+   * @param documentId - The id of the document to get.
+   * @param view - Optional filter containing branch and scopes information
+   * @param signal - Optional abort signal to cancel the request
+   */
+  get<TDocument extends PHDocument>(
+    documentId: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<TDocument>;
 }

@@ -142,6 +142,19 @@ interface IDocumentView {
   exists(documentIds: string[], signal?: AbortSignal): Promise<boolean[]>;
 
   /**
+   * Returns the document with the given id.
+   *
+   * @param documentId - The id of the document to get.
+   * @param view - Optional filter containing branch and scopes information
+   * @param signal - Optional abort signal to cancel the request
+   */
+  get<TDocument extends PHDocument>(
+    documentId: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<TDocument>;
+
+  /**
    * Returns the documents with the given ids.
    *
    * @param documentIds - The list of document ids to get.
