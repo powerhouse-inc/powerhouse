@@ -10,11 +10,20 @@ export const module: EditorModule = {
   },
 };`;
 
-export const EXPECTED_EDITOR_CONTENT = `import { withDropZone } from "@powerhousedao/design-system";
+export const EXPECTED_EDITOR_CONTENT = `import { DropZoneWrapper } from "@powerhousedao/design-system";
+import { useSetPHGlobalEditorConfig } from "@powerhousedao/reactor-browser";
+import type { EditorProps } from "document-model";
 import { DriveExplorer } from "./components/DriveExplorer.js";
+import { editorConfig } from "./config.js";
 
-export const Editor = withDropZone(DriveExplorer);
-`;
+export function Editor(props: EditorProps) {
+  useSetPHGlobalEditorConfig(editorConfig);
+  return (
+    <DropZoneWrapper>
+      <DriveExplorer {...props} />
+    </DropZoneWrapper>
+  );
+}`;
 
 export const EXPECTED_MAIN_INDEX_CONTENT = `/**
 * This is a scaffold file meant for customization.
