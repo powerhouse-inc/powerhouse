@@ -6,7 +6,7 @@ export const module: EditorModule = {
   documentTypes: ["powerhouse/document-editor"],
   config: {
     id: "document-editor-editor",
-    name: "Document Editor",
+    name: "Document Editor Editor",
   },
 };
 

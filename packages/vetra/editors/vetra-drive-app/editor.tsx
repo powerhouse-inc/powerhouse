@@ -1,4 +1,5 @@
-import { WagmiContext, withDropZone } from "@powerhousedao/design-system";
+import { DropZoneWrapper, WagmiContext } from "@powerhousedao/design-system";
+
 import {
   addDocument,
   AnalyticsProvider,
@@ -6,40 +7,46 @@ import {
   showCreateDocumentModal,
   showDeleteNodeModal,
   useDocumentModelModules,
-  useFileNodesInSelectedDrive,
   useSelectedDrive,
+  useSetPHGlobalEditorConfig,
 } from "@powerhousedao/reactor-browser";
 import { useAnalyticsDatabaseName } from "@powerhousedao/reactor-browser/connect";
 import type { FileNode } from "document-drive";
 import type { EditorProps } from "document-model";
 import { useCallback } from "react";
+import { editorConfig } from "./config.js";
+import { DOCUMENT_TYPES } from "./document-types.js";
 import { DriveExplorer } from "./DriveExplorer.js";
 
-export function BaseEditor({ children }: EditorProps) {
+export function BaseEditor(props: EditorProps) {
+  const { children } = props;
+
   const [document] = useSelectedDrive();
+
   const driveId = document.header.id;
   const documentModels = useDocumentModelModules();
-  const fileNodes = useFileNodesInSelectedDrive() ?? [];
-
+  const fileNodes = document.state.global.nodes.filter(
+    (node) => node.kind === "file",
+  ) as Array<FileNode>;
   const packageNode = fileNodes.find(
-    (node) => node.documentType === "powerhouse/package",
+    (node) => node.documentType === DOCUMENT_TYPES.documentPackage,
   );
   const packageDocumentId = packageNode?.id;
 
   const docModelsNodes = fileNodes.filter(
-    (node) => node.documentType === "powerhouse/document-model",
+    (node) => node.documentType === DOCUMENT_TYPES.documentModel,
   );
   const docEditorsNodes = fileNodes.filter(
-    (node) => node.documentType === "powerhouse/document-editor",
+    (node) => node.documentType === DOCUMENT_TYPES.documentEditor,
   );
   const docSubgraphsNodes = fileNodes.filter(
-    (node) => node.documentType === "powerhouse/subgraph",
+    (node) => node.documentType === DOCUMENT_TYPES.documentSubgraph,
   );
   const docProcessorsNodes = fileNodes.filter(
-    (node) => node.documentType === "powerhouse/processor",
+    (node) => node.documentType === DOCUMENT_TYPES.documentProcessor,
   );
   const docAppsNodes = fileNodes.filter(
-    (node) => node.documentType === "powerhouse/app",
+    (node) => node.documentType === DOCUMENT_TYPES.documentApp,
   );
 
   const onCreateDocument = useCallback(
@@ -56,7 +63,7 @@ export function BaseEditor({ children }: EditorProps) {
   );
 
   const onCreatePackageFile = useCallback(() => {
-    addDocument(driveId, "vetra-package", "powerhouse/package").catch(
+    addDocument(driveId, "vetra-package", DOCUMENT_TYPES.documentPackage).catch(
       console.error,
     );
   }, [driveId]);
@@ -87,11 +94,15 @@ export function BaseEditor({ children }: EditorProps) {
         subgraphs={docSubgraphsNodes}
         processors={docProcessorsNodes}
         codegenProcessors={[]}
-        onAddDocumentModel={() => onCreateDocument("powerhouse/document-model")}
-        onAddEditor={() => onCreateDocument("powerhouse/document-editor")}
-        onAddApp={() => onCreateDocument("powerhouse/app")}
-        onAddSubgraph={() => onCreateDocument("powerhouse/subgraph")}
-        onAddProcessor={() => onCreateDocument("powerhouse/processor")}
+        onAddDocumentModel={() =>
+          onCreateDocument(DOCUMENT_TYPES.documentModel)
+        }
+        onAddEditor={() => onCreateDocument(DOCUMENT_TYPES.documentEditor)}
+        onAddApp={() => onCreateDocument(DOCUMENT_TYPES.documentApp)}
+        onAddSubgraph={() => onCreateDocument(DOCUMENT_TYPES.documentSubgraph)}
+        onAddProcessor={() =>
+          onCreateDocument(DOCUMENT_TYPES.documentProcessor)
+        }
         onAddCodegenProcessor={() => console.log("add codegen processor")}
         packageDocumentId={packageDocumentId}
         onAddPackageDocument={onCreatePackageFile}
@@ -103,9 +114,14 @@ export function BaseEditor({ children }: EditorProps) {
   );
 }
 
-const BaseEditorWithDropZone = withDropZone(BaseEditor);
+const BaseEditorWithDropZone = (props: EditorProps) => (
+  <DropZoneWrapper>
+    <BaseEditor {...props} />
+  </DropZoneWrapper>
+);
 
 export function Editor(props: EditorProps) {
+  useSetPHGlobalEditorConfig(editorConfig);
   const analyticsDatabaseName = useAnalyticsDatabaseName();
   return (
     <WagmiContext>

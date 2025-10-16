@@ -1,15 +1,14 @@
-import {
-  setPHGlobalEditorConfig,
-  useIsDragAndDropEnabled,
-} from "@powerhousedao/reactor-browser";
+import { useSetPHGlobalEditorConfig } from "@powerhousedao/reactor-browser";
 import { useCallback } from "react";
 import { actions } from "../../document-models/app-module/index.js";
 import { useSelectedAppModuleDocument } from "../hooks/useVetraDocument.js";
 import { AppEditorForm } from "./components/AppEditorForm.js";
+import { editorConfig } from "./config.js";
 
 export function Editor() {
+  useSetPHGlobalEditorConfig(editorConfig);
   const [document, dispatch] = useSelectedAppModuleDocument();
-  const isDragAndDropEnabled = useIsDragAndDropEnabled();
+
   const onNameChange = useCallback(
     (name: string) => {
       if (name === document.state.global.name) return;
@@ -22,9 +21,13 @@ export function Editor() {
     dispatch(actions.setAppStatus({ status: "CONFIRMED" }));
   }, [dispatch]);
 
-  function onDragAndDropToggle(enabled: boolean) {
-    setPHGlobalEditorConfig({ isDragAndDropEnabled: enabled });
-  }
+  const onDragAndDropToggle = useCallback(
+    (enabled: boolean) => {
+      if (enabled === document.state.global.dragAndDrop?.enabled) return;
+      dispatch(actions.setDragAndDropEnabled({ enabled }));
+    },
+    [document.state.global.dragAndDrop?.enabled, dispatch],
+  );
 
   const onAddDocumentType = useCallback(
     (id: string, documentType: string) => {
@@ -45,7 +48,7 @@ export function Editor() {
       <AppEditorForm
         appName={document.state.global.name ?? ""}
         status={document.state.global.status}
-        dragAndDropEnabled={isDragAndDropEnabled}
+        dragAndDropEnabled={document.state.global.dragAndDrop?.enabled ?? false}
         documentTypes={document.state.global.documentTypes ?? []}
         onNameChange={onNameChange}
         onDragAndDropToggle={onDragAndDropToggle}

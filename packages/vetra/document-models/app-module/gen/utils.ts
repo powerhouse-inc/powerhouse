@@ -14,6 +14,9 @@ export const initialGlobalState: AppModuleGlobalState = {
   name: "",
   status: "DRAFT",
   documentTypes: [{ id: "all-documents", documentType: "*" }],
+  dragAndDrop: {
+    enabled: true,
+  },
 };
 export const initialLocalState: AppModuleLocalState = {};
 

@@ -3,11 +3,11 @@ import { Editor } from "./editor.js";
 
 export const module: EditorModule = {
   Component: Editor,
+  documentTypes: ["powerhouse/document-drive"],
   config: {
     id: "vetra-drive-app",
     name: "Vetra Drive App",
   },
-  documentTypes: ["powerhouse/document-drive"],
 };
 
 export default module;

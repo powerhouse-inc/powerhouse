@@ -19,6 +19,7 @@ type AppModuleState {
   name: String!
   status: StatusType!
   documentTypes: [DocumentTypeItem!]
+  dragAndDrop: DragAndDropSettings
 }
 
 enum StatusType {

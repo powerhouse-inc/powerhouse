@@ -41,6 +41,7 @@ export function AppModuleStateSchema(): z.ZodObject<
   return z.object({
     __typename: z.literal("AppModuleState").optional(),
     documentTypes: z.array(DocumentTypeItemSchema()).nullable(),
+    dragAndDrop: DragAndDropSettingsSchema().nullable(),
     name: z.string(),
     status: StatusTypeSchema,
   });

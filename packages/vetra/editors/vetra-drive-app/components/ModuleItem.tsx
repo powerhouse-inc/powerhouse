@@ -7,6 +7,7 @@ import {
 } from "@powerhousedao/design-system";
 import type { FileNode } from "document-drive";
 import React, { useState } from "react";
+import { DOCUMENT_TYPES } from "../document-types.js";
 import { AddNewIcon } from "../icons/AddNewIcon.js";
 import { AppIcon } from "../icons/AppIcon.js";
 import { DocModelIcon } from "../icons/DocModelIcon.js";
@@ -22,15 +23,15 @@ interface ModuleItemProps {
 
 const getIconForDocumentType = (documentType: string) => {
   switch (documentType) {
-    case "powerhouse/document-model":
+    case DOCUMENT_TYPES.documentModel:
       return DocModelIcon;
-    case "powerhouse/document-editor":
+    case DOCUMENT_TYPES.documentEditor:
       return EditorIcon;
-    case "powerhouse/subgraph":
+    case DOCUMENT_TYPES.documentSubgraph:
       return SubgraphIcon;
-    case "powerhouse/processor":
+    case DOCUMENT_TYPES.documentProcessor:
       return ProcessorIcon;
-    case "powerhouse/app":
+    case DOCUMENT_TYPES.documentApp:
       return AppIcon;
     case "new":
       return AddNewIcon;

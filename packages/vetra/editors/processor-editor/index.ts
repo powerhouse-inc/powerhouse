@@ -3,11 +3,11 @@ import { Editor } from "./editor.js";
 
 export const module: EditorModule = {
   Component: Editor,
+  documentTypes: ["powerhouse/processor"],
   config: {
     id: "processor-module-editor",
     name: "Processor Module Editor",
   },
-  documentTypes: ["powerhouse/processor"],
 };
 
 export default module;

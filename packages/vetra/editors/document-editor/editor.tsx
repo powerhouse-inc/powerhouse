@@ -1,3 +1,4 @@
+import { useSetPHGlobalEditorConfig } from "@powerhousedao/reactor-browser";
 import { useCallback } from "react";
 import type {
   AddDocumentTypeInput,
@@ -6,8 +7,10 @@ import type {
 import { actions } from "../../document-models/document-editor/index.js";
 import { useSelectedDocumentEditorDocument } from "../hooks/useVetraDocument.js";
 import { DocumentEditorForm } from "./components/DocumentEditorForm.js";
+import { editorConfig } from "./config.js";
 
 export function Editor() {
+  useSetPHGlobalEditorConfig(editorConfig);
   const [document, dispatch] = useSelectedDocumentEditorDocument();
 
   const onEditorNameChange = useCallback(

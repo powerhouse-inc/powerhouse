@@ -1,5 +1,7 @@
 import type { FileNode } from "document-drive";
 import React from "react";
+
+import { DOCUMENT_TYPES } from "../document-types.js";
 import { ModuleAccordion } from "./ModuleAccordion.js";
 import { ModuleList } from "./ModuleList.js";
 
@@ -34,7 +36,7 @@ export const DocumentModelsColumn: React.FC<DocumentModelsColumnProps> = ({
         >
           <ModuleList
             items={documentModels}
-            documentType="powerhouse/document-model"
+            documentType={DOCUMENT_TYPES.documentModel}
             onAddNewSpec={onAddDocumentModel}
             onClickItem={onOpenDocument}
             onDelete={onDelete}

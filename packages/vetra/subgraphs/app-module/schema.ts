@@ -9,6 +9,7 @@ export const schema: DocumentNode = gql`
     name: String!
     status: StatusType!
     documentTypes: [DocumentTypeItem!]
+    dragAndDrop: DragAndDropSettings
   }
 
   enum StatusType {
