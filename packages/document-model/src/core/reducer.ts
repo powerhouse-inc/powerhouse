@@ -93,7 +93,11 @@ function updateOperationsForAction<TDocument extends PHDocument>(
   }
 
   const scope = action.scope;
-  const operations: Operation[] = document.operations[scope].slice();
+
+  let operations: Operation[] = [];
+  if (document.operations[scope]) {
+    operations = document.operations[scope].slice();
+  }
 
   const latestOperation = operations.sort((a, b) => a.index - b.index).at(-1);
   const lastOperationIndex = latestOperation?.index ?? -1;
