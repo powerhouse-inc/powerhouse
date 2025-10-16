@@ -53,14 +53,14 @@ describe("Reactor <> Queue Integration", () => {
 
       const result = await reactor.mutate(testDoc.header.id, [action]);
 
-      // Verify that the queue's enqueue method was called once (single job with one operation)
+      // Verify that the queue's enqueue method was called once (single job with one action)
       expect(enqueueSpy).toHaveBeenCalledTimes(1);
 
       // Verify the job structure
       const enqueuedJob = enqueueSpy.mock.calls[0][0] as Job;
       expect(enqueuedJob.documentId).toBe(testDoc.header.id);
-      expect(enqueuedJob.operations).toHaveLength(1);
-      expect(enqueuedJob.operations[0].action).toEqual(action);
+      expect(enqueuedJob.actions).toHaveLength(1);
+      expect(enqueuedJob.actions[0]).toEqual(action);
       expect(enqueuedJob.scope).toBe(action.scope || "global");
       expect(enqueuedJob.branch).toBe("main");
 
@@ -100,14 +100,13 @@ describe("Reactor <> Queue Integration", () => {
 
       const result = await reactor.mutate(testDoc.header.id, actions);
 
-      // Verify a single job was enqueued with multiple operations
+      // Verify a single job was enqueued with multiple actions
       expect(enqueuedJobs).toHaveLength(1);
       const job = enqueuedJobs[0];
       expect(job.documentId).toBe(testDoc.header.id);
-      expect(job.operations).toHaveLength(actions.length);
-      job.operations.forEach((operation, index) => {
-        expect(operation.action).toEqual(actions[index]);
-        expect(operation.index).toBe(index);
+      expect(job.actions).toHaveLength(actions.length);
+      job.actions.forEach((action, index) => {
+        expect(action).toEqual(actions[index]);
       });
       expect(job.scope).toBe(actions[0].scope || "global");
       expect(job.branch).toBe("main");
@@ -184,14 +183,13 @@ describe("Reactor <> Queue Integration", () => {
       expect(result.id).toBeDefined();
       expect(result.status).toBe(JobStatus.PENDING);
 
-      // Verify a single job was enqueued with 3 operations
+      // Verify a single job was enqueued with 3 actions
       expect(enqueuedJobs).toHaveLength(1);
       const job = enqueuedJobs[0];
-      expect(job.operations).toHaveLength(3);
-      // Verify operations maintain order
-      job.operations.forEach((operation, index) => {
-        expect(operation.index).toBe(index);
-        const actionInput = (operation.action as Action).input as {
+      expect(job.actions).toHaveLength(3);
+      // Verify actions maintain order
+      job.actions.forEach((action, index) => {
+        const actionInput = (action as Action).input as {
           name: string;
         };
         expect(actionInput.name).toBe(`Action ${index + 1}`);
@@ -240,21 +238,21 @@ describe("Reactor <> Queue Integration", () => {
         } as Action;
 
         // Enqueue jobs for both documents
-        // Doc1 gets one job with 2 operations, Doc2 gets one job with 1 operation
+        // Doc1 gets one job with 2 actions, Doc2 gets one job with 1 action
         await reactor.mutate(testDoc1.header.id, [action1, action2]);
         await reactor.mutate(testDoc2.header.id, [action3]);
 
-        // First dequeue should get doc1's job (with 2 operations)
+        // First dequeue should get doc1's job (with 2 actions)
         const job1 = await queue.dequeueNext();
         expect(job1).toBeDefined();
         expect(job1?.job.documentId).toBe(testDoc1.header.id);
-        expect(job1?.job.operations).toHaveLength(2);
+        expect(job1?.job.actions).toHaveLength(2);
 
         // Second dequeue should get doc2's job (since doc1 is executing)
         const job2 = await queue.dequeueNext();
         expect(job2).toBeDefined();
         expect(job2?.job.documentId).toBe(testDoc2.header.id);
-        expect(job2?.job.operations).toHaveLength(1);
+        expect(job2?.job.actions).toHaveLength(1);
 
         // Third dequeue should return null since both documents are executing
         const job3 = await queue.dequeueNext();
@@ -344,19 +342,16 @@ describe("Reactor <> Queue Integration", () => {
         // Enqueue all actions
         await reactor.mutate(testDoc.header.id, actions);
 
-        // Dequeue the single job (which contains all 3 operations)
+        // Dequeue the single job (which contains all 3 actions)
         const job1 = await queue.dequeueNext();
         expect(job1).toBeDefined();
-        expect(job1?.job.operations).toHaveLength(3);
-        expect(job1?.job.operations[0].index).toBe(0);
-        expect(job1?.job.operations[1].index).toBe(1);
-        expect(job1?.job.operations[2].index).toBe(2);
+        expect(job1?.job.actions).toHaveLength(3);
 
         // Should not be able to dequeue another job for this document
         const blockedJob = await queue.dequeueNext();
         expect(blockedJob).toBeNull();
 
-        // Complete the job (all operations are processed together)
+        // Complete the job (all actions are processed together)
         if (job1) {
           await queue.completeJob(job1.job.id);
         }
@@ -387,21 +382,19 @@ describe("Reactor <> Queue Integration", () => {
             }) as Action,
         );
 
-        // Enqueue actions (creates a single job with 2 operations)
+        // Enqueue actions (creates a single job with 2 actions)
         await reactor.mutate(testDoc.header.id, actions);
 
         // Dequeue the job
         const job1 = await queue.dequeueNext();
         expect(job1).toBeDefined();
-        expect(job1?.job.operations).toHaveLength(2);
-        expect(job1?.job.operations[0].index).toBe(0);
-        expect(job1?.job.operations[1].index).toBe(1);
+        expect(job1?.job.actions).toHaveLength(2);
 
         // Should not be able to dequeue another job
         const blockedJob = await queue.dequeueNext();
         expect(blockedJob).toBeNull();
 
-        // Fail the job (failing the entire job with all its operations)
+        // Fail the job (failing the entire job with all its actions)
         if (job1) {
           await queue.failJob(job1.job.id, "Test failure");
         }

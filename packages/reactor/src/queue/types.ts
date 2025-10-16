@@ -1,4 +1,4 @@
-import type { Operation } from "document-model";
+import type { Action } from "document-model";
 
 /**
  * State of a job in the queue
@@ -40,8 +40,8 @@ export type Job = {
   /** The branch of the operations */
   branch: string;
 
-  /** The operations to be executed (processed sequentially) */
-  operations: Operation[];
+  /** The actions to be executed (processed sequentially) */
+  actions: Action[];
 
   /** Timestamp when the job was created */
   createdAt: string;

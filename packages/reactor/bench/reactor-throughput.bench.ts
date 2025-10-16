@@ -9,7 +9,6 @@ import { DocumentModelRegistry } from "../src/registry/implementation.js";
 import {
   createDocumentModelAction,
   createMockOperationStore,
-  createTestOperation,
 } from "../test/factories.js";
 
 // Pre-create shared components to avoid setup overhead
@@ -45,14 +44,13 @@ function createSimpleJob(): Job {
   const action = createDocumentModelAction("SET_NAME", {
     input: { name: `Test Name ${++jobCounter}` },
   });
-  const operation = createTestOperation({ action });
 
   return {
     id: `job-${jobCounter}`,
     documentId: "doc1",
     scope: "global",
     branch: "main",
-    operations: [operation],
+    actions: [action],
     maxRetries: 0,
     createdAt: new Date().toISOString(),
     queueHint: [],
@@ -68,17 +66,13 @@ function createComplexJob(): Job {
       ).join("\n"),
     },
   });
-  const operation = createTestOperation({
-    action,
-    index: Math.floor(Math.random() * 1000),
-  });
 
   return {
     id: `job-${++jobCounter}`,
     documentId: "doc1",
     scope: "global",
     branch: "main",
-    operations: [operation],
+    actions: [action],
     maxRetries: 0,
     createdAt: new Date().toISOString(),
     queueHint: [],

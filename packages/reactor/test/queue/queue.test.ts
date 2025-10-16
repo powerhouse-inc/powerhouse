@@ -1113,7 +1113,7 @@ describe("InMemoryQueue", () => {
         documentId: "custom-doc-id",
         scope: "custom-scope",
         branch: "custom-branch",
-        operations: [operation],
+        actions: [operation.action],
         createdAt: "2023-01-01T00:00:00.000Z",
         retryCount: 2,
         maxRetries: 5,
@@ -1135,7 +1135,7 @@ describe("InMemoryQueue", () => {
         documentId: "doc-1",
         scope: "global",
         branch: "main",
-        operations: [createTestOperation()],
+        actions: [createTestOperation().action],
         createdAt: new Date().toISOString(),
         queueHint: [],
         // retryCount and maxRetries are optional
