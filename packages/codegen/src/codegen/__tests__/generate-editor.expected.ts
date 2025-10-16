@@ -6,9 +6,7 @@ export const module: EditorModule = {
     documentTypes: ["powerhouse/document-model", ],
     config: {
         id: 'test-document-model-editor',
-        disableExternalControls: true,
-        documentToolbarEnabled: true,
-        showSwitchboardLink: true,
+        name: 'DocumentModelEditor',
     },
 };`;
 
@@ -126,9 +124,7 @@ export const module: EditorModule = {
     documentTypes: ['*'],
     config: {
         id: 'test-generic-document-editor',
-        disableExternalControls: true,
-        documentToolbarEnabled: true,
-        showSwitchboardLink: true,
+        name: 'GenericDocumentEditor',
     },
 };`;
 

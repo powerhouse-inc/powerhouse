@@ -3,11 +3,11 @@ import { BrowserKeyStorage, ConnectCrypto } from "@renown/sdk";
 import type {
   DefaultRemoteDriveInput,
   DocumentDriveServerOptions,
+  IDocumentDriveServer,
 } from "document-drive";
 import { generateId } from "document-model/core";
-import { dispatchSetDocumentsEvent } from "./events/documents.js";
-import { dispatchSetDrivesEvent } from "./events/drives.js";
-import type { Reactor } from "./types/reactor.js";
+import { setAllDocuments } from "./hooks/all-documents.js";
+import { setDrives } from "./hooks/drives.js";
 import { getDocuments, getDrives } from "./utils/drives.js";
 
 export type ReactorDefaultDrivesConfig = {
@@ -63,16 +63,18 @@ export const getReactorDefaultDrivesConfig = (
   };
 };
 
-export async function refreshReactorData(reactor: Reactor | undefined) {
+export async function refreshReactorData(
+  reactor: IDocumentDriveServer | undefined,
+) {
   if (!reactor) return;
   const drives = await getDrives(reactor);
   const documents = await getDocuments(reactor);
-  dispatchSetDrivesEvent(drives);
-  dispatchSetDocumentsEvent(documents);
+  setDrives(drives);
+  setAllDocuments(documents);
 }
 
 export async function initReactor(
-  reactor: Reactor,
+  reactor: IDocumentDriveServer,
   renown: IRenown | undefined,
   connectCrypto: IConnectCrypto | undefined,
 ) {
@@ -85,7 +87,7 @@ export async function initReactor(
 }
 
 export async function handleCreateFirstLocalDrive(
-  reactor: Reactor | undefined,
+  reactor: IDocumentDriveServer | undefined,
   localDrivesEnabled = true,
 ) {
   if (!localDrivesEnabled || reactor === undefined) return;
@@ -114,7 +116,7 @@ export async function handleCreateFirstLocalDrive(
 }
 
 async function initJwtHandler(
-  reactor: Reactor,
+  reactor: IDocumentDriveServer,
   renown: IRenown | undefined,
   connectCrypto: IConnectCrypto | undefined,
 ) {

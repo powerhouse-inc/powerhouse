@@ -1,53 +1,44 @@
-import type { FileNode } from "document-drive";
-import { useCallback } from "react";
 import { addFileWithProgress } from "../actions/document.js";
 import type {
   ConflictResolution,
   FileUploadProgressCallback,
+  UseOnDropFile,
 } from "../types/upload.js";
-import { useSelectedDriveSafe } from "./drives.js";
-import { useSelectedFolder } from "./nodes.js";
+import { useDocumentTypes } from "./document-types.js";
+import { useSelectedDriveId } from "./selected-drive.js";
+import { useSelectedFolder } from "./selected-folder.js";
 
-type UseOnDropFile = (
-  documentTypes?: string[],
-) => (
-  file: File,
-  onProgress?: FileUploadProgressCallback,
-  resolveConflict?: ConflictResolution,
-) => Promise<FileNode | undefined>;
-
-export const useOnDropFile: UseOnDropFile = (documentTypes = []) => {
-  const [selectedDrive] = useSelectedDriveSafe();
-  const selectedDriveId = selectedDrive?.header.id;
+export const useOnDropFile: UseOnDropFile = (
+  documentTypesOverride?: string[],
+) => {
+  const selectedDriveId = useSelectedDriveId();
   const selectedFolder = useSelectedFolder();
+  const documentTypes = useDocumentTypes();
 
-  const onDropFile = useCallback(
-    async (
-      file: File,
-      onProgress?: FileUploadProgressCallback,
-      resolveConflict?: ConflictResolution,
-    ) => {
-      if (!selectedDriveId) {
-        console.warn("No selected drive - upload skipped");
-        return;
-      }
+  const onDropFile = async (
+    file: File,
+    onProgress?: FileUploadProgressCallback,
+    resolveConflict?: ConflictResolution,
+  ) => {
+    if (!selectedDriveId) {
+      console.warn("No selected drive - upload skipped");
+      return;
+    }
 
-      const fileName = file.name.replace(/\..+/gim, "");
-      const targetNodeId = selectedFolder?.id;
+    const fileName = file.name.replace(/\..+/gim, "");
+    const targetNodeId = selectedFolder?.id;
 
-      // Return the FileNode directly from addFileWithProgress
-      return await addFileWithProgress(
-        file,
-        selectedDriveId,
-        fileName,
-        targetNodeId,
-        onProgress,
-        documentTypes,
-        resolveConflict,
-      );
-    },
-    [selectedDriveId, selectedFolder],
-  );
+    // Return the FileNode directly from addFileWithProgress
+    return await addFileWithProgress(
+      file,
+      selectedDriveId,
+      fileName,
+      targetNodeId,
+      onProgress,
+      documentTypesOverride ?? documentTypes,
+      resolveConflict,
+    );
+  };
 
   return onDropFile;
 };

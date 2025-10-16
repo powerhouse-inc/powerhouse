@@ -3,11 +3,10 @@ import {
   closePHModal,
   deleteNode,
   setSelectedNode,
-  useNodeKind,
-  useNodeName,
+  useNodeById,
+  useNodeParentFolderById,
   usePHModal,
   useSelectedDriveId,
-  useSelectedParentFolder,
 } from "@powerhousedao/reactor-browser";
 import React from "react";
 import { useTranslation } from "react-i18next";
@@ -17,10 +16,11 @@ export const DeleteItemModal: React.FC = () => {
   const open = phModal?.type === "deleteItem";
   const id = open ? phModal.id : undefined;
   const { t } = useTranslation();
-  const name = useNodeName(id);
-  const kind = useNodeKind(id);
+  const node = useNodeById(id);
+  const name = node?.name;
+  const kind = node?.kind;
   const selectedDriveId = useSelectedDriveId();
-  const selectedParentFolder = useSelectedParentFolder();
+  const nodeParentFolder = useNodeParentFolderById(node?.parentFolder);
   async function onDelete() {
     if (!selectedDriveId || !id) {
       return;
@@ -34,7 +34,7 @@ export const DeleteItemModal: React.FC = () => {
 
     await deleteNode(selectedDriveId, id);
 
-    setSelectedNode(selectedParentFolder);
+    setSelectedNode(nodeParentFolder);
 
     toast(t(i18nKey), { type: "connect-deleted" });
   }

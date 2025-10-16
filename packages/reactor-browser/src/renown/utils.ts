@@ -1,15 +1,14 @@
-import type { Reactor } from "@powerhousedao/reactor-browser";
 import {
-  dispatchSetLoginStatusEvent,
-  dispatchSetUserEvent,
-} from "@powerhousedao/reactor-browser";
+  setLoginStatus,
+  setUser,
+} from "@powerhousedao/reactor-browser/connect";
 import type { IConnectCrypto, IRenown } from "@renown/sdk";
-import { logger } from "document-drive";
+import { logger, type IDocumentDriveServer } from "document-drive";
 import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID, RENOWN_URL } from "./constants.js";
 
 export function openRenown() {
   const url = new URL(RENOWN_URL);
-  url.searchParams.set("connect", window.did ?? "");
+  url.searchParams.set("connect", window.ph?.did ?? "");
   url.searchParams.set("network", RENOWN_NETWORK_ID);
   url.searchParams.set("chain", RENOWN_CHAIN_ID);
 
@@ -20,7 +19,7 @@ export function openRenown() {
 
 export async function login(
   userDid: string | undefined,
-  reactor: Reactor | undefined,
+  reactor: IDocumentDriveServer | undefined,
   renown: IRenown | undefined,
   connectCrypto: IConnectCrypto | undefined,
 ) {
@@ -28,13 +27,13 @@ export async function login(
     return;
   }
   try {
-    dispatchSetLoginStatusEvent("checking");
+    setLoginStatus("checking");
     let user = renown.user instanceof Function ? renown.user() : renown.user;
     user = user instanceof Promise ? await user : user;
 
     if (user?.did && (user.did === userDid || !userDid)) {
-      dispatchSetLoginStatusEvent("authorized");
-      dispatchSetUserEvent(user);
+      setLoginStatus("authorized");
+      setUser(user);
       reactor.setGenerateJwtHandler(async (driveUrl) =>
         connectCrypto.getBearerToken(driveUrl, user.address, true, {
           expiresIn: 10,
@@ -49,26 +48,26 @@ export async function login(
 
     const newUser = await renown.login(userDid ?? "");
     if (newUser) {
-      dispatchSetLoginStatusEvent("authorized");
-      dispatchSetUserEvent(newUser);
+      setLoginStatus("authorized");
+      setUser(newUser);
       reactor.setGenerateJwtHandler(async (driveUrl) =>
         connectCrypto.getBearerToken(driveUrl, newUser.address, true, {
           expiresIn: 10,
         }),
       );
     } else {
-      dispatchSetLoginStatusEvent("not-authorized");
+      setLoginStatus("not-authorized");
     }
   } catch (error) {
-    dispatchSetLoginStatusEvent("not-authorized");
+    setLoginStatus("not-authorized");
     logger.error(error);
   }
 }
 
 export async function logout() {
-  const renown = window.renown;
-  const reactor = window.reactor;
-  dispatchSetLoginStatusEvent("initial");
+  const renown = window.ph?.renown;
+  const reactor = window.ph?.reactor;
+  setLoginStatus("initial");
   await renown?.logout();
   reactor?.removeJwtHandler();
 }

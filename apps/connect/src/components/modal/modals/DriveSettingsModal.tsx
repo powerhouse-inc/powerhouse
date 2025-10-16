@@ -5,9 +5,9 @@ import {
   setDriveAvailableOffline,
   setDriveSharingType,
   showPHModal,
-  useDriveAvailableOffline,
+  getDriveAvailableOffline,
   useDriveById,
-  useDriveSharingType,
+  getDriveSharingType,
   usePHModal,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument, SharingType } from "document-drive";
@@ -17,8 +17,8 @@ export function DriveSettingsModal() {
   const open = phModal?.type === "driveSettings";
   const driveId = open ? phModal.driveId : undefined;
   const [drive] = useDriveById(driveId);
-  const sharingType = useDriveSharingType(driveId);
-  const availableOffline = useDriveAvailableOffline(driveId);
+  const sharingType = getDriveSharingType(drive);
+  const availableOffline = getDriveAvailableOffline(drive);
 
   if (!driveId || !drive) {
     return null;

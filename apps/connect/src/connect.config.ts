@@ -5,7 +5,7 @@ import {
 import { logger, setLogLevel } from "document-drive";
 
 // Load environment variables with validation and defaults
-const env = loadRuntimeEnv({
+export const env = loadRuntimeEnv({
   processEnv: import.meta.env,
 });
 

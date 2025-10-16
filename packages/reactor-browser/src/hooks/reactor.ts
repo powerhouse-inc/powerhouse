@@ -1,11 +1,21 @@
-import type { Reactor } from "@powerhousedao/reactor-browser";
-import { subscribeToReactor } from "@powerhousedao/reactor-browser";
-import { useSyncExternalStore } from "react";
+import type {
+  AddPHGlobalEventHandler,
+  SetPHGlobalValue,
+  UsePHGlobalValue,
+} from "@powerhousedao/reactor-browser";
+import type { IDocumentDriveServer } from "document-drive";
+import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
-export function useReactor(): Reactor | undefined {
-  const reactor = useSyncExternalStore(
-    subscribeToReactor,
-    () => window.reactor,
-  );
-  return reactor;
-}
+const eventFunctions = makePHEventFunctions("reactor");
+
+/** Returns the reactor */
+export const useReactor: UsePHGlobalValue<IDocumentDriveServer> =
+  eventFunctions.useValue;
+
+/** Sets the reactor */
+export const setReactor: SetPHGlobalValue<IDocumentDriveServer> =
+  eventFunctions.setValue;
+
+/** Adds an event handler for the reactor */
+export const addReactorEventHandler: AddPHGlobalEventHandler =
+  eventFunctions.addEventHandler;

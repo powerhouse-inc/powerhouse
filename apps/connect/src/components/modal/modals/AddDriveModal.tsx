@@ -11,11 +11,13 @@ import {
   addRemoteDrive,
   closePHModal,
   setSelectedDrive,
-  useConnectCrypto,
   useDriveEditorModules,
   usePHModal,
-  useUser,
 } from "@powerhousedao/reactor-browser";
+import {
+  useConnectCrypto,
+  useUser,
+} from "@powerhousedao/reactor-browser/connect";
 import { requestPublicDrive } from "document-drive";
 import { t } from "i18next";
 

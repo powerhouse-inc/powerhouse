@@ -1,21 +1,10 @@
-import {
-  subscribeToConnectCrypto,
-  subscribeToDid,
-} from "@powerhousedao/reactor-browser";
-import { useSyncExternalStore } from "react";
+import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
-export function useConnectCrypto() {
-  const connectCrypto = useSyncExternalStore(
-    subscribeToConnectCrypto,
-    () => window.connectCrypto,
-  );
-  return connectCrypto;
-}
-
-export function useDid() {
-  const did = useSyncExternalStore(subscribeToDid, () => window.did);
-  return did;
-}
+export const {
+  useValue: useConnectCrypto,
+  setValue: setConnectCrypto,
+  addEventHandler: addConnectCryptoEventHandler,
+} = makePHEventFunctions("connectCrypto");
 
 export function useSign() {
   const connectCrypto = useConnectCrypto();

@@ -13,8 +13,8 @@ import {
   showPHModal,
   useDrives,
   useSelectedDriveSafe,
-  useUser,
 } from "@powerhousedao/reactor-browser";
+import { useUser } from "@powerhousedao/reactor-browser/connect";
 import { logger } from "document-drive";
 import { ErrorBoundary } from "react-error-boundary";
 

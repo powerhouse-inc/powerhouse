@@ -1,12 +1,10 @@
 import type { FileNode } from "document-drive";
-import type { EditorContext } from "document-model";
 import type React from "react";
 import { DriveHeader } from "./components/DriveHeader.js";
 import { ModuleSpecificationsSection } from "./components/ModuleSpecificationsSection.js";
 import { PackageInformationSection } from "./components/PackageInformationSection.js";
 
 interface DriveExplorerProps {
-  context?: EditorContext;
   documentModels?: FileNode[];
   editors?: FileNode[];
   apps?: FileNode[];

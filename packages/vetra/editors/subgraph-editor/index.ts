@@ -6,9 +6,7 @@ export const module: EditorModule = {
   documentTypes: ["powerhouse/subgraph"],
   config: {
     id: "subgraph-module-editor",
-    disableExternalControls: true,
-    documentToolbarEnabled: true,
-    showSwitchboardLink: true,
+    name: "Subgraph Module Editor",
   },
 };
 

@@ -1,11 +1,11 @@
 import { DotsLoader } from "@powerhousedao/connect";
 import IconRenown from "@powerhousedao/connect/assets/icons/renown.svg?react";
 import { PowerhouseButton } from "@powerhousedao/design-system";
+import { openRenown } from "@powerhousedao/reactor-browser";
 import {
-  openRenown,
   useLoginStatus,
   useUser,
-} from "@powerhousedao/reactor-browser";
+} from "@powerhousedao/reactor-browser/connect";
 
 export const Login: React.FC = () => {
   const user = useUser();

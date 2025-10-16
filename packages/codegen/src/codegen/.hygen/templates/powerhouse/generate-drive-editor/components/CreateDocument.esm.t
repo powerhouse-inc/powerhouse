@@ -4,30 +4,26 @@ unless_exists: true
 ---
 import { Button } from "@powerhousedao/design-system";
 import {
-  isDocumentTypeSupported,
-  showPHModal,
+  showCreateDocumentModal,
+  useAllowedDocumentTypes,
   useDocumentModelModules,
   useSelectedDriveId,
   type VetraDocumentModelModule,
 } from "@powerhousedao/reactor-browser";
 
-interface CreateDocumentProps {
-  documentTypes?: string[];
-}
-
 /**
  * Document creation UI component.
  * Displays available document types as clickable buttons.
  */
-export const CreateDocument = (props: CreateDocumentProps) => {
-  const { documentTypes = [] } = props;
-
+export function CreateDocument() {
+  const allowedDocumentTypes = useAllowedDocumentTypes();
   const selectedDriveId = useSelectedDriveId();
   const documentModelModules = useDocumentModelModules();
-
-  const filteredDocumentModelModules = documentModelModules?.filter((module) =>
-    isDocumentTypeSupported(module.documentModel.global.id, documentTypes),
-  );
+  const filteredDocumentModelModules = allowedDocumentTypes
+    ? documentModelModules?.filter((module) =>
+        allowedDocumentTypes.includes(module.documentModel.global.id),
+      )
+    : documentModelModules;
 
   function handleAddDocument(module: VetraDocumentModelModule) {
     if (!selectedDriveId) {
@@ -35,10 +31,7 @@ export const CreateDocument = (props: CreateDocumentProps) => {
     }
 
     // Display the Create Document modal on the host app
-    showPHModal({
-      type: "createDocument",
-      documentType: module.documentModel.global.id,
-    });
+    showCreateDocumentModal(module.documentModel.global.id);
   }
 
   return (
@@ -56,7 +49,9 @@ export const CreateDocument = (props: CreateDocumentProps) => {
               color="light" // Customize button appearance
               className="cursor-pointer bg-gray-200 p-2 hover:bg-gray-300"
               title={documentModelModule.documentModel.global.name}
-              aria-description={documentModelModule.documentModel.global.description}
+              aria-description={
+                documentModelModule.documentModel.global.description
+              }
               onClick={() => handleAddDocument(documentModelModule)}
             >
               {/* Customize document type display format */}
@@ -69,4 +64,4 @@ export const CreateDocument = (props: CreateDocumentProps) => {
       </div>
     </div>
   );
-};
+}

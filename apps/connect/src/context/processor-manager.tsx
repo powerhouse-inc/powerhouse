@@ -8,11 +8,11 @@ import type { Processors } from "@powerhousedao/reactor-browser";
 import {
   AnalyticsProvider,
   useAnalyticsStoreAsync,
-  useProcessorManager,
   useProcessors,
   useRelationalDb,
   useSetPGliteDB,
 } from "@powerhousedao/reactor-browser";
+import { useProcessorManager } from "@powerhousedao/reactor-browser/connect";
 import type { IRelationalDb, ProcessorManager } from "document-drive";
 import { childLogger } from "document-drive";
 import { generateUUIDBrowser } from "document-model/core";

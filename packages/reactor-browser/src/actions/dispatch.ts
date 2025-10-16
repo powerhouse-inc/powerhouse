@@ -7,20 +7,20 @@ async function getDocument(
   documentId: string,
 ): Promise<PHDocument | undefined> {
   try {
-    return await window.reactor?.getDocument(documentId);
+    return await window.ph?.reactor?.getDocument(documentId);
   } catch (error) {
     logger.debug(`Failed to get document with id ${documentId}:`, error);
     return undefined;
   }
 }
 
-export async function dispatchActions(
-  actionOrActions: Action[] | Action | undefined,
-  document: PHDocument | undefined,
+export async function dispatchActions<TDocument = PHDocument, TAction = Action>(
+  actionOrActions: TAction[] | TAction | undefined,
+  document: TDocument | undefined,
 ): Promise<PHDocument | undefined>;
 export async function dispatchActions(
   actionOrActions: Action[] | Action | undefined,
-  // eslint-disable-next-line @typescript-eslint/unified-signatures
+
   documentId: string,
 ): Promise<PHDocument | undefined>;
 export async function dispatchActions(

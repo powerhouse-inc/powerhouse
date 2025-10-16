@@ -1,3 +1,5 @@
+import type { FileNode } from "document-drive";
+
 export type DocumentTypeIcon =
   | "analytics-processor"
   | "relational-processor"
@@ -29,3 +31,9 @@ export interface FileUploadProgress {
 }
 
 export type FileUploadProgressCallback = (progress: FileUploadProgress) => void;
+
+export type UseOnDropFile = () => (
+  file: File,
+  onProgress?: FileUploadProgressCallback,
+  resolveConflict?: ConflictResolution,
+) => Promise<FileNode | undefined>;

@@ -1,9 +1,12 @@
+import { useSetPHGlobalEditorConfig } from "@powerhousedao/reactor-browser";
 import { useCallback } from "react";
 import { actions } from "../../document-models/app-module/index.js";
 import { useSelectedAppModuleDocument } from "../hooks/useVetraDocument.js";
 import { AppEditorForm } from "./components/AppEditorForm.js";
+import { editorConfig } from "./config.js";
 
 export function Editor() {
+  useSetPHGlobalEditorConfig(editorConfig);
   const [document, dispatch] = useSelectedAppModuleDocument();
 
   const onNameChange = useCallback(

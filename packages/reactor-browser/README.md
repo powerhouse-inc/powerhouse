@@ -174,7 +174,7 @@ function MyEditorComponent() {
 
 ### Documents
 
-#### useAllDocuments/useSelectedDriveDocuments
+#### useAllDocuments/useDocumentsInSelectedDrive
 
 ```ts
 function useAllDocuments(): PHDocument[] | undefined;
@@ -183,7 +183,7 @@ function useAllDocuments(): PHDocument[] | undefined;
 Returns all of the documents in the reactor.
 
 ```ts
-function useSelectedDriveDocuments(): PHDocument[] | undefined;
+function useDocumentsInSelectedDrive(): PHDocument[] | undefined;
 ```
 
 Returns the documents in the reactor for the selected drive.
@@ -193,12 +193,12 @@ Returns the documents in the reactor for the selected drive.
 ```jsx
 import {
   useAllDocuments,
-  useSelectedDriveDocuments,
+  useDocumentsInSelectedDrive,
 } from "@powerhousedao/state";
 
 function MyEditorComponent() {
   const allDocuments = useAllDocuments();
-  const selectedDriveDocuments = useSelectedDriveDocuments();
+  const selectedDriveDocuments = useDocumentsInSelectedDrive();
 }
 ```
 

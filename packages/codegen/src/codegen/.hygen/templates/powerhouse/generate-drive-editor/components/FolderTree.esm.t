@@ -7,20 +7,14 @@ import {
   SidebarProvider,
   type SidebarNode,
 } from "@powerhousedao/document-engineering";
+import {
+  setSelectedNode,
+  useNodesInSelectedDrive,
+  useSelectedDrive,
+  useSelectedNode,
+} from "@powerhousedao/reactor-browser";
 import type { Node } from "document-drive";
 import { useMemo } from "react";
-
-interface FolderTreeProps {
-  driveId: string;
-  driveName: string;
-  nodes: Node[];
-  selectedNodeId?: string;
-  onSelectNode: (nodeId: string | undefined) => void;
-}
-
-function isFolder(node: Node): boolean {
-  return node.kind === "folder";
-}
 
 function buildSidebarNodes(
   nodes: Node[],
@@ -34,7 +28,7 @@ function buildSidebarNodes(
       return n.parentFolder === parentId;
     })
     .map((node): SidebarNode => {
-      if (isFolder(node)) {
+      if (node.kind === "folder") {
         return {
           id: node.id,
           title: node.name,
@@ -69,30 +63,30 @@ function transformNodesToSidebarNodes(
  * Hierarchical folder tree navigation component using Sidebar from document-engineering.
  * Displays folders and files in a tree structure with expand/collapse functionality, search, and resize support.
  */
-export function FolderTree({
-  driveId,
-  driveName,
-  nodes,
-  selectedNodeId,
-  onSelectNode,
-}: FolderTreeProps) {
+export function FolderTree() {
+  const [selectedDrive] = useSelectedDrive();
+  const nodes = useNodesInSelectedDrive();
+  const selectedNode = useSelectedNode();
+  const driveName = selectedDrive.header.name;
   // Transform Node[] to hierarchical SidebarNode structure
   const sidebarNodes = useMemo(
-    () => transformNodesToSidebarNodes(nodes, driveName),
+    () => transformNodesToSidebarNodes(nodes || [], driveName),
     [nodes, driveName],
   );
 
   const handleActiveNodeChange = (node: SidebarNode) => {
     // If root node is selected, pass undefined to match existing behavior
     if (node.id === "root") {
-      onSelectNode(undefined);
+      setSelectedNode(undefined);
     } else {
-      onSelectNode(node.id);
+      setSelectedNode(node.id);
     }
   };
   // Map selectedNodeId to activeNodeId (use "root" when undefined)
   const activeNodeId =
-    !selectedNodeId || selectedNodeId === driveId ? "root" : selectedNodeId;
+    !selectedNode || selectedNode.id === selectedDrive.header.id
+      ? "root"
+      : selectedNode.id;
 
   return (
     <SidebarProvider nodes={sidebarNodes}>
