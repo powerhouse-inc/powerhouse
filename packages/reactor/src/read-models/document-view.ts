@@ -1,5 +1,4 @@
 import type { Operation, PHDocument, PHDocumentHeader } from "document-model";
-import { defaultBaseState } from "document-model/core";
 import type { Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import type {
@@ -106,6 +105,10 @@ export class KyselyDocumentView implements IDocumentView {
             typeof scopeState === "object" && scopeState !== null
               ? (scopeState as Record<string, unknown>)
               : {};
+
+          console.log(
+            `Indexing scope ('${scopeName}', ${item.operation.index}).`,
+          );
 
           if (existingSnapshot) {
             // Update existing snapshot with new state

@@ -109,7 +109,7 @@ export function createTestJob(overrides: Partial<Job> = {}): Job {
     documentId: "doc-1",
     scope: "global",
     branch: "main",
-    operations: overrides.operations || [createTestOperation()],
+    actions: overrides.actions || [createTestAction()],
     createdAt: new Date().toISOString(),
     queueHint: [],
     retryCount: 0,
@@ -131,7 +131,7 @@ export function createMinimalJob(overrides: Partial<Job> = {}): Job {
     documentId: overrides.documentId || "doc-1",
     scope: overrides.scope || "global",
     branch: overrides.branch || "main",
-    operations: overrides.operations || [createMinimalOperation()],
+    actions: overrides.actions || [createMinimalAction()],
     createdAt: overrides.createdAt || "2023-01-01T00:00:00.000Z",
     queueHint: overrides.queueHint || [],
     ...overrides,
@@ -500,12 +500,9 @@ export function createTestJobSet(
     createTestJob({
       id: `job-${i + 1}`,
       ...baseOverrides,
-      operations: [
-        createTestOperation({
-          index: i,
-          action: createTestAction({
-            input: { name: `Action ${i + 1}` },
-          }),
+      actions: [
+        createTestAction({
+          input: { name: `Action ${i + 1}` },
         }),
       ],
     }),
@@ -537,12 +534,9 @@ export function createJobDependencyChain(length: number): Job[] {
     const dependencies = i === 0 ? [] : [`job-${i}`];
     jobs.push(
       createJobWithDependencies(`job-${i + 1}`, dependencies, {
-        operations: [
-          createTestOperation({
-            index: i,
-            action: createTestAction({
-              input: { name: `Chain Action ${i + 1}` },
-            }),
+        actions: [
+          createTestAction({
+            input: { name: `Chain Action ${i + 1}` },
           }),
         ],
       }),

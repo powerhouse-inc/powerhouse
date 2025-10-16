@@ -15,19 +15,13 @@ function createMinimalJob(): Job {
     documentId: "doc1",
     scope: "default",
     branch: "main",
-    operations: [
+    actions: [
       {
-        action: {
-          id: `action-${jobCounter}`,
-          type: "CREATE",
-          timestampUtcMs: "2023-01-01T00:00:00.000Z",
-          input: { data: "test" },
-          scope: "default",
-        },
-        index: 0,
+        id: `action-${jobCounter}`,
+        type: "CREATE",
         timestampUtcMs: "2023-01-01T00:00:00.000Z",
-        hash: "hash-123",
-        skip: 0,
+        input: { data: "test" },
+        scope: "default",
       },
     ],
     maxRetries: 0,
