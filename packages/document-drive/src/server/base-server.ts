@@ -1245,35 +1245,41 @@ export class BaseDocumentDriveServer
       operations = existingOperations;
     }
 
-    // stores document information with empty operations initially
+    // Group operations by scope before storing
+    const groupedOps = groupOperationsByScope(operations);
+
+    // Ensure backward compatibility by initializing missing scopes
+    if (!groupedOps.header) {
+      groupedOps.header = [];
+    }
+    if (!groupedOps.document) {
+      groupedOps.document = [];
+    }
+    if (!groupedOps.global) {
+      groupedOps.global = [];
+    }
+    if (!groupedOps.local) {
+      groupedOps.local = [];
+    }
+
+    // After initialization, it's safe to treat as DocumentOperations
+    const operationsByScope = groupedOps as DocumentOperations;
+
+    // stores document information with operations
     const documentToStore: PHDocument = {
       header,
-      operations: { global: [], local: [] },
-      initialState: document.initialState,
+      operations: operationsByScope,
+      initialState,
       clipboard: [],
       state: initialState,
     };
 
     await this.documentStorage.create(documentToStore);
 
-    // Store operations separately (if any)
-    if (operations.length > 0) {
-      if (isDocumentDrive(documentToStore)) {
-        await this.legacyStorage.addDriveOperations(
-          header.id,
-          operations,
-          documentToStore,
-        );
-      } else {
-        await this.legacyStorage.addDocumentOperations(
-          header.id,
-          operations,
-          documentToStore,
-        );
-      }
-    }
-
-    return await this.getDocument<TDocument>(documentToStore.header.id);
+    // Force rebuild to ensure operations are properly merged
+    return await this.getDocument<TDocument>(documentToStore.header.id, {
+      checkHashes: true,
+    });
   }
 
   async deleteDocument(documentId: string) {
@@ -1468,9 +1474,18 @@ export class BaseDocumentDriveServer
         : documentStorage.operations;
     const operations = garbageCollectDocumentOperations(revisionOperations);
 
-    // for backward compatibility, we need to add global and local
-    const headerOperations: DocumentOperations = { global: [], local: [] };
-    const operationsToReplay: DocumentOperations = { global: [], local: [] };
+    // Get all scopes from operations
+    const allScopes = Object.keys(operations);
+
+    // Initialize with all scopes found in operations, plus global and local for backward compatibility
+    const scopesToInitialize = new Set([...allScopes, "global", "local"]);
+    const headerOperations: DocumentOperations = {};
+    const operationsToReplay: DocumentOperations = {};
+
+    for (const scope of scopesToInitialize) {
+      headerOperations[scope] = [];
+      operationsToReplay[scope] = [];
+    }
 
     // Filter out CREATE_DOCUMENT and UPGRADE_DOCUMENT operations
     // (these don't currently have reducers and should not be replayed)
@@ -1480,9 +1495,9 @@ export class BaseDocumentDriveServer
           op.action.type === "CREATE_DOCUMENT" ||
           op.action.type === "UPGRADE_DOCUMENT"
         ) {
-          headerOperations[scope as keyof DocumentOperations].push(op);
+          headerOperations[scope].push(op);
         } else {
-          operationsToReplay[scope as keyof DocumentOperations].push(op);
+          operationsToReplay[scope].push(op);
         }
       }
     }
@@ -1502,16 +1517,18 @@ export class BaseDocumentDriveServer
     ) as TDocument;
 
     // merge header operations back into the result
-    const allScopes = new Set([
+    // Include ALL scopes from input operations, header operations, and replayed operations
+    const allScopesForMerge = new Set([
+      ...Object.keys(operations), // From input storage
       ...Object.keys(headerOperations),
       ...Object.keys(replayed.operations),
     ]);
 
     const finalOperations: DocumentOperations = {};
-    for (const scope of allScopes) {
+    for (const scope of allScopesForMerge) {
       finalOperations[scope] = [
-        ...headerOperations[scope],
-        ...replayed.operations[scope],
+        ...(headerOperations[scope] || []),
+        ...(replayed.operations[scope] || []),
       ];
     }
 
