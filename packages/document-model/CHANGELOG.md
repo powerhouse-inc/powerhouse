@@ -1,3 +1,13 @@
+## 5.0.0-staging.26 (2025-10-16)
+
+### 🩹 Fixes
+
+- **document-model:** improved hash mismatch error message ([20567ea8c](https://github.com/powerhouse-inc/powerhouse/commit/20567ea8c))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.0.0-staging.25 (2025-10-13)
 
 This was a version bump only for document-model to align it with other projects, there were no code changes.
