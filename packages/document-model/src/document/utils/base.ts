@@ -29,6 +29,7 @@ import type {
 import { generateId } from "./crypto.js";
 import { sortOperations } from "./document-helpers.js";
 import {
+  HashMismatchError,
   InvalidActionInputError,
   InvalidActionInputZodError,
 } from "./errors.js";
@@ -430,7 +431,7 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
           continue;
         }
         if (operation.hash !== hashDocumentStateForScope(result, scope)) {
-          throw new Error(`Hash mismatch for scope ${scope}`);
+          throw new HashMismatchError(scope, result, operation);
         } else {
           break;
         }
