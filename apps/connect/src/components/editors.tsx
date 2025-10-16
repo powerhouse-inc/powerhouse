@@ -16,10 +16,7 @@ import {
   useDocumentModelModuleById,
   useEditorModuleById,
   useFallbackEditorModule,
-  useIsDocumentToolbarEnabled,
   useIsExternalControlsEnabled,
-  useIsSwitchboardLinkEnabled,
-  useIsTimelineEnabled,
 } from "@powerhousedao/reactor-browser";
 import type { PHDocument } from "document-model";
 import { redo, undo } from "document-model/core";
@@ -76,8 +73,6 @@ export const DocumentEditor: React.FC<Props> = (props) => {
   const editorModule = preferredEditorModule ?? fallbackEditorModule;
   const timelineItems = useTimelineItems(documentId, createdAt);
   const isExternalControlsEnabled = useIsExternalControlsEnabled();
-  const isDocumentToolbarEnabled = useIsDocumentToolbarEnabled();
-  const isSwitchboardLinkEnabled = useIsSwitchboardLinkEnabled();
   const isLoadingDocument = !document;
   const isLoadingEditor =
     editorModule === undefined ||
@@ -189,26 +184,19 @@ export const DocumentEditor: React.FC<Props> = (props) => {
   }
 
   const EditorComponent = editorModule.Component;
-  const isTimelineEnabled = useIsTimelineEnabled();
 
-  const handleSwitchboardLinkClick =
-    isSwitchboardLinkEnabled !== false ? onOpenSwitchboardLink : undefined;
   return (
     <div className="relative h-full" id="document-editor-context">
-      {isDocumentToolbarEnabled &&
-        !isExternalControlsEnabled &&
-        !revisionHistoryVisible && (
-          <DocumentToolbar
-            onClose={onClose}
-            onExport={onExport}
-            onShowRevisionHistory={() => setRevisionHistoryVisible(true)}
-            title={documentName}
-            onSwitchboardLinkClick={handleSwitchboardLinkClick}
-            timelineButtonVisible={isTimelineEnabled}
-            timelineItems={timelineItems.data}
-            onTimelineItemClick={setSelectedTimelineItem}
-          />
-        )}
+      {!isExternalControlsEnabled && !revisionHistoryVisible && (
+        <DocumentToolbar
+          onClose={onClose}
+          onExport={onExport}
+          onShowRevisionHistory={() => setRevisionHistoryVisible(true)}
+          title={documentName}
+          timelineItems={timelineItems.data}
+          onTimelineItemClick={setSelectedTimelineItem}
+        />
+      )}
       {!!isExternalControlsEnabled && (
         <div className="mb-4 flex justify-end gap-10">
           <PowerhouseButton onClick={onExport}>Export</PowerhouseButton>

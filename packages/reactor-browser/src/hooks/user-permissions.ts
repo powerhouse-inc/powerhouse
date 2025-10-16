@@ -1,6 +1,5 @@
-import { useAllowList } from "./config.js";
+import { useAllowList } from "./connect.js";
 import { useUser } from "./user.js";
-
 export function useUserPermissions() {
   const user = useUser();
   const allowList = useAllowList();

@@ -1,64 +1,26 @@
 export { setAllDocuments, useAllDocuments } from "./all-documents.js";
 export { useNodesInSelectedDriveOrFolder } from "./child-nodes.js";
 export {
-  setPHGlobalConfig,
-  useAllowList,
-  useAnalyticsDatabaseName,
-  useBasePath,
-  useCliVersion,
-  useDefaultDrivesUrl,
-  useDisabledEditors,
-  useDrivesPreserveStrategy,
-  useEnabledEditors,
-  useFileUploadOperationsChunkSize,
-  useGaTrackingId,
-  useIsAddCloudDrivesEnabled,
-  useIsAddDriveEnabled,
-  useIsAddLocalDrivesEnabled,
-  useIsAddPublicDrivesEnabled,
-  useIsAnalyticsDatabaseWorkerEnabled,
-  useIsCloudDrivesEnabled,
-  useIsDeleteCloudDrivesEnabled,
-  useIsDeleteLocalDrivesEnabled,
-  useIsDeletePublicDrivesEnabled,
-  useIsDiffAnalyticsEnabled,
-  useIsDocumentModelSelectionSettingsEnabled,
-  useIsDocumentToolbarEnabled,
-  useIsDragAndDropEnabled,
-  useIsDriveAnalyticsEnabled,
-  useIsEditorDebugModeEnabled,
-  useIsEditorReadModeEnabled,
-  useIsExternalControlsEnabled,
-  useIsExternalPackagesEnabled,
-  useIsExternalProcessorsEnabled,
-  useIsPublicDrivesEnabled,
-  useIsSearchBarEnabled,
-  useIsSentryTracingEnabled,
-  useIsSwitchboardLinkEnabled,
-  useIsTimelineEnabled,
-  useLocalDrivesEnabled,
-  useLogLevel,
-  useRenownChainId,
-  useRenownNetworkId,
-  useRenownUrl,
-  useRequiresHardRefresh,
-  useRouterBasename,
-  useSentryDsn,
-  useSentryEnv,
-  useSentryRelease,
-  useSetPHGlobalConfig,
-  useStudioMode,
-  useVersion,
-  useVersionCheckInterval,
-  useWarnOutdatedApp,
+  setAllowedDocumentTypes,
+  setIsDragAndDropEnabled,
+  setIsExternalControlsEnabled,
   useAllowedDocumentTypes,
-} from "./config.js";
+  useIsDragAndDropEnabled,
+  useIsExternalControlsEnabled,
+} from "./config/editor.js";
+export { setPHGlobalEditorConfigByKey } from "./config/set-config-by-key.js";
+export {
+  setPHGlobalEditorConfig,
+  useSetPHGlobalEditorConfig,
+} from "./config/set-config-by-object.js";
+export { usePHGlobalEditorConfigByKey } from "./config/use-value-by-key.js";
 export { useDocumentById } from "./document-by-id.js";
 export {
   useDocumentModelModuleById,
   useDocumentModelModules,
 } from "./document-model-modules.js";
 export { useDocumentOfType } from "./document-of-type.js";
+export { useDocumentTypes } from "./document-types.js";
 export { useDriveById } from "./drive-by-id.js";
 export { useDrives } from "./drives.js";
 export {

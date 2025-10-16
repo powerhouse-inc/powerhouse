@@ -1,12 +1,16 @@
-import {
-  useSupportedDocumentTypes,
-  type PHGlobalConfig,
-  type PHGlobalConfigHooks,
-  type PHGlobalConfigKey,
-  type PHGlobalConfigSetters,
+import type {
+  PHGlobalConfigHooks,
+  PHGlobalConfigHooksForKey,
+  PHGlobalConfigKey,
+  PHGlobalConfigSetters,
+  PHGlobalConfigSettersForKey,
+  PHGlobalEditorConfigKey,
 } from "@powerhousedao/reactor-browser";
-import { useEffect, useState } from "react";
-import { makePHEventFunctions } from "./make-ph-event-functions.js";
+import { makePHEventFunctions } from "../make-ph-event-functions.js";
+import {
+  phGlobalEditorConfigHooks,
+  phGlobalEditorConfigSetters,
+} from "./editor.js";
 
 export const {
   useValue: useRouterBasename,
@@ -19,12 +23,6 @@ export const {
   setValue: setVersion,
   addEventHandler: addVersionEventHandler,
 } = makePHEventFunctions("version");
-
-export const {
-  useValue: useLogLevel,
-  setValue: setLogLevel,
-  addEventHandler: addLogLevelEventHandler,
-} = makePHEventFunctions("logLevel");
 
 export const {
   useValue: useRequiresHardRefresh,
@@ -81,12 +79,6 @@ export const {
 } = makePHEventFunctions("gaTrackingId");
 
 export const {
-  useValue: useAllowList,
-  setValue: setAllowList,
-  addEventHandler: addAllowListEventHandler,
-} = makePHEventFunctions("allowList");
-
-export const {
   useValue: useDefaultDrivesUrl,
   setValue: setDefaultDrivesUrl,
   addEventHandler: addDefaultDrivesUrlEventHandler,
@@ -98,37 +90,11 @@ export const {
   addEventHandler: addDrivesPreserveStrategyEventHandler,
 } = makePHEventFunctions("drivesPreserveStrategy");
 
-const allowedDocumentTypesEventFunctions = makePHEventFunctions(
-  "allowedDocumentTypes",
-);
-export const setAllowedDocumentTypes =
-  allowedDocumentTypesEventFunctions.setValue;
-
-/** Defines the document types a drive supports.
- *
- * Defaults to all of the document types registered in the reactor.
- */
-export function useAllowedDocumentTypes() {
-  const definedAllowedDocumentTypes =
-    allowedDocumentTypesEventFunctions.useValue();
-  const supportedDocumentTypes = useSupportedDocumentTypes();
-  return definedAllowedDocumentTypes ?? supportedDocumentTypes;
-}
-
-export const addAllowedDocumentTypesEventHandler =
-  allowedDocumentTypesEventFunctions.addEventHandler;
-
 export const {
-  useValue: useEnabledEditors,
-  setValue: setEnabledEditors,
-  addEventHandler: addEnabledEditorsEventHandler,
-} = makePHEventFunctions("enabledEditors");
-
-export const {
-  useValue: useDisabledEditors,
-  setValue: setDisabledEditors,
-  addEventHandler: addDisabledEditorsEventHandler,
-} = makePHEventFunctions("disabledEditors");
+  useValue: useIsLocalDrivesEnabled,
+  setValue: setIsLocalDrivesEnabled,
+  addEventHandler: addIsLocalDrivesEnabledEventHandler,
+} = makePHEventFunctions("isLocalDrivesEnabled");
 
 export const {
   useValue: useIsAddDriveEnabled,
@@ -176,7 +142,7 @@ export const {
   useValue: useLocalDrivesEnabled,
   setValue: setLocalDrivesEnabled,
   addEventHandler: addLocalDrivesEnabledEventHandler,
-} = makePHEventFunctions("localDrivesEnabled");
+} = makePHEventFunctions("isLocalDrivesEnabled");
 
 export const {
   useValue: useIsAddLocalDrivesEnabled,
@@ -191,42 +157,6 @@ export const {
 } = makePHEventFunctions("isDeleteLocalDrivesEnabled");
 
 export const {
-  useValue: useIsSearchBarEnabled,
-  setValue: setIsSearchBarEnabled,
-  addEventHandler: addIsSearchBarEnabledEventHandler,
-} = makePHEventFunctions("isSearchBarEnabled");
-
-export const {
-  useValue: useIsDragAndDropEnabled,
-  setValue: setIsDragAndDropEnabled,
-  addEventHandler: addIsDragAndDropEnabledEventHandler,
-} = makePHEventFunctions("isDragAndDropEnabled");
-
-export const {
-  useValue: useIsExternalControlsEnabled,
-  setValue: setIsExternalControlsEnabled,
-  addEventHandler: addIsExternalControlsEnabledEventHandler,
-} = makePHEventFunctions("isExternalControlsEnabled");
-
-export const {
-  useValue: useIsDocumentToolbarEnabled,
-  setValue: setIsDocumentToolbarEnabled,
-  addEventHandler: addIsDocumentToolbarEnabledEventHandler,
-} = makePHEventFunctions("isDocumentToolbarEnabled");
-
-export const {
-  useValue: useIsSwitchboardLinkEnabled,
-  setValue: setIsSwitchboardLinkEnabled,
-  addEventHandler: addIsSwitchboardLinkEnabledEventHandler,
-} = makePHEventFunctions("isSwitchboardLinkEnabled");
-
-export const {
-  useValue: useIsTimelineEnabled,
-  setValue: setIsTimelineEnabled,
-  addEventHandler: addIsTimelineEnabledEventHandler,
-} = makePHEventFunctions("isTimelineEnabled");
-
-export const {
   useValue: useIsEditorDebugModeEnabled,
   setValue: setIsEditorDebugModeEnabled,
   addEventHandler: addIsEditorDebugModeEnabledEventHandler,
@@ -237,12 +167,6 @@ export const {
   setValue: setIsEditorReadModeEnabled,
   addEventHandler: addIsEditorReadModeEnabledEventHandler,
 } = makePHEventFunctions("isEditorReadModeEnabled");
-
-export const {
-  useValue: useAnalyticsDatabaseName,
-  setValue: setAnalyticsDatabaseName,
-  addEventHandler: addAnalyticsDatabaseNameEventHandler,
-} = makePHEventFunctions("analyticsDatabaseName");
 
 export const {
   useValue: useIsAnalyticsDatabaseWorkerEnabled,
@@ -316,10 +240,75 @@ export const {
   addEventHandler: addIsExternalPackagesEnabledEventHandler,
 } = makePHEventFunctions("isExternalPackagesEnabled");
 
-export const phGlobalConfigSetters: PHGlobalConfigSetters = {
+const enabledEditorsEventFunctions = makePHEventFunctions("enabledEditors");
+
+/** Sets the enabled editors for Connect. */
+export const setEnabledEditors = enabledEditorsEventFunctions.setValue;
+
+/** Gets the enabled editors for Connect. */
+export const useEnabledEditors = enabledEditorsEventFunctions.useValue;
+
+/** Adds an event handler for when the enabled editors for Connect changes. */
+export const addEnabledEditorsEventHandler =
+  enabledEditorsEventFunctions.addEventHandler;
+
+const disabledEditorsEventFunctions = makePHEventFunctions("disabledEditors");
+
+/** Sets the disabled editors for Connect. */
+export const setDisabledEditors = disabledEditorsEventFunctions.setValue;
+
+/** Gets the disabled editors for Connect. */
+export const useDisabledEditors = disabledEditorsEventFunctions.useValue;
+
+/** Adds an event handler for when the disabled editors for Connect changes. */
+export const addDisabledEditorsEventHandler =
+  disabledEditorsEventFunctions.addEventHandler;
+
+const analyticsDatabaseNameEventFunctions = makePHEventFunctions(
+  "analyticsDatabaseName",
+);
+
+/** Sets the analytics database name for Connect. */
+export const setAnalyticsDatabaseName =
+  analyticsDatabaseNameEventFunctions.setValue;
+
+/** Gets the analytics database name for Connect. */
+export const useAnalyticsDatabaseName =
+  analyticsDatabaseNameEventFunctions.useValue;
+
+/** Adds an event handler for when the analytics database name for Connect changes. */
+export const addAnalyticsDatabaseNameEventHandler =
+  analyticsDatabaseNameEventFunctions.addEventHandler;
+
+const logLevelEventFunctions = makePHEventFunctions("logLevel");
+
+/** Sets the log level for Connect. */
+export const setLogLevel = logLevelEventFunctions.setValue;
+
+/** Gets the log level for Connect. */
+export const useLogLevel = logLevelEventFunctions.useValue;
+
+/** Adds an event handler for when the log level for Connect changes. */
+export const addLogLevelEventHandler = logLevelEventFunctions.addEventHandler;
+
+const allowListEventFunctions = makePHEventFunctions("allowList");
+
+/** Sets the allow list for Connect. */
+export const setAllowList = allowListEventFunctions.setValue;
+
+/** Gets the allow list for Connect. */
+export const useAllowList = allowListEventFunctions.useValue;
+
+/** Adds an event handler for when the allow list for Connect changes. */
+export const addAllowListEventHandler = allowListEventFunctions.addEventHandler;
+
+type NonUserConfigKey = Exclude<PHGlobalConfigKey, PHGlobalEditorConfigKey>;
+type NonUserConfigSetters = PHGlobalConfigSettersForKey<NonUserConfigKey>;
+type NonUserConfigHooks = PHGlobalConfigHooksForKey<NonUserConfigKey>;
+
+const nonUserConfigSetters: NonUserConfigSetters = {
   routerBasename: setRouterBasename,
   version: setVersion,
-  logLevel: setLogLevel,
   requiresHardRefresh: setRequiresHardRefresh,
   warnOutdatedApp: setWarnOutdatedApp,
   studioMode: setStudioMode,
@@ -330,12 +319,9 @@ export const phGlobalConfigSetters: PHGlobalConfigSetters = {
   isDocumentModelSelectionSettingsEnabled:
     setIsDocumentModelSelectionSettingsEnabled,
   gaTrackingId: setGaTrackingId,
-  allowList: setAllowList,
   defaultDrivesUrl: setDefaultDrivesUrl,
   drivesPreserveStrategy: setDrivesPreserveStrategy,
-  allowedDocumentTypes: setAllowedDocumentTypes,
-  enabledEditors: setEnabledEditors,
-  disabledEditors: setDisabledEditors,
+  isLocalDrivesEnabled: setIsLocalDrivesEnabled,
   isAddDriveEnabled: setIsAddDriveEnabled,
   isPublicDrivesEnabled: setIsPublicDrivesEnabled,
   isAddPublicDrivesEnabled: setIsAddPublicDrivesEnabled,
@@ -343,18 +329,10 @@ export const phGlobalConfigSetters: PHGlobalConfigSetters = {
   isCloudDrivesEnabled: setIsCloudDrivesEnabled,
   isAddCloudDrivesEnabled: setIsAddCloudDrivesEnabled,
   isDeleteCloudDrivesEnabled: setIsDeleteCloudDrivesEnabled,
-  localDrivesEnabled: setLocalDrivesEnabled,
   isAddLocalDrivesEnabled: setIsAddLocalDrivesEnabled,
   isDeleteLocalDrivesEnabled: setIsDeleteLocalDrivesEnabled,
-  isSearchBarEnabled: setIsSearchBarEnabled,
-  isDragAndDropEnabled: setIsDragAndDropEnabled,
-  isExternalControlsEnabled: setIsExternalControlsEnabled,
-  isDocumentToolbarEnabled: setIsDocumentToolbarEnabled,
-  isSwitchboardLinkEnabled: setIsSwitchboardLinkEnabled,
-  isTimelineEnabled: setIsTimelineEnabled,
   isEditorDebugModeEnabled: setIsEditorDebugModeEnabled,
   isEditorReadModeEnabled: setIsEditorReadModeEnabled,
-  analyticsDatabaseName: setAnalyticsDatabaseName,
   isAnalyticsDatabaseWorkerEnabled: setIsAnalyticsDatabaseWorkerEnabled,
   isDiffAnalyticsEnabled: setIsDiffAnalyticsEnabled,
   isDriveAnalyticsEnabled: setIsDriveAnalyticsEnabled,
@@ -367,12 +345,21 @@ export const phGlobalConfigSetters: PHGlobalConfigSetters = {
   isSentryTracingEnabled: setIsSentryTracingEnabled,
   isExternalProcessorsEnabled: setIsExternalProcessorsEnabled,
   isExternalPackagesEnabled: setIsExternalPackagesEnabled,
+  allowList: setAllowList,
+  analyticsDatabaseName: setAnalyticsDatabaseName,
+  logLevel: setLogLevel,
+  disabledEditors: setDisabledEditors,
+  enabledEditors: setEnabledEditors,
 };
 
-export const phGlobalConfigHooks: PHGlobalConfigHooks = {
+export const phGlobalConfigSetters: PHGlobalConfigSetters = {
+  ...phGlobalEditorConfigSetters,
+  ...nonUserConfigSetters,
+};
+
+const nonUserConfigHooks: NonUserConfigHooks = {
   routerBasename: useRouterBasename,
   version: useVersion,
-  logLevel: useLogLevel,
   requiresHardRefresh: useRequiresHardRefresh,
   warnOutdatedApp: useWarnOutdatedApp,
   studioMode: useStudioMode,
@@ -383,12 +370,8 @@ export const phGlobalConfigHooks: PHGlobalConfigHooks = {
   isDocumentModelSelectionSettingsEnabled:
     useIsDocumentModelSelectionSettingsEnabled,
   gaTrackingId: useGaTrackingId,
-  allowList: useAllowList,
   defaultDrivesUrl: useDefaultDrivesUrl,
   drivesPreserveStrategy: useDrivesPreserveStrategy,
-  allowedDocumentTypes: useAllowedDocumentTypes,
-  enabledEditors: useEnabledEditors,
-  disabledEditors: useDisabledEditors,
   isAddDriveEnabled: useIsAddDriveEnabled,
   isPublicDrivesEnabled: useIsPublicDrivesEnabled,
   isAddPublicDrivesEnabled: useIsAddPublicDrivesEnabled,
@@ -396,18 +379,11 @@ export const phGlobalConfigHooks: PHGlobalConfigHooks = {
   isCloudDrivesEnabled: useIsCloudDrivesEnabled,
   isAddCloudDrivesEnabled: useIsAddCloudDrivesEnabled,
   isDeleteCloudDrivesEnabled: useIsDeleteCloudDrivesEnabled,
-  localDrivesEnabled: useLocalDrivesEnabled,
+  isLocalDrivesEnabled: useIsLocalDrivesEnabled,
   isAddLocalDrivesEnabled: useIsAddLocalDrivesEnabled,
   isDeleteLocalDrivesEnabled: useIsDeleteLocalDrivesEnabled,
-  isSearchBarEnabled: useIsSearchBarEnabled,
-  isDragAndDropEnabled: useIsDragAndDropEnabled,
-  isExternalControlsEnabled: useIsExternalControlsEnabled,
-  isDocumentToolbarEnabled: useIsDocumentToolbarEnabled,
-  isSwitchboardLinkEnabled: useIsSwitchboardLinkEnabled,
-  isTimelineEnabled: useIsTimelineEnabled,
   isEditorDebugModeEnabled: useIsEditorDebugModeEnabled,
   isEditorReadModeEnabled: useIsEditorReadModeEnabled,
-  analyticsDatabaseName: useAnalyticsDatabaseName,
   isAnalyticsDatabaseWorkerEnabled: useIsAnalyticsDatabaseWorkerEnabled,
   isDiffAnalyticsEnabled: useIsDiffAnalyticsEnabled,
   isDriveAnalyticsEnabled: useIsDriveAnalyticsEnabled,
@@ -420,43 +396,14 @@ export const phGlobalConfigHooks: PHGlobalConfigHooks = {
   isSentryTracingEnabled: useIsSentryTracingEnabled,
   isExternalProcessorsEnabled: useIsExternalProcessorsEnabled,
   isExternalPackagesEnabled: useIsExternalPackagesEnabled,
+  allowList: useAllowList,
+  analyticsDatabaseName: useAnalyticsDatabaseName,
+  logLevel: useLogLevel,
+  disabledEditors: useDisabledEditors,
+  enabledEditors: useEnabledEditors,
 };
 
-function callGlobalSetterForKey<TKey extends PHGlobalConfigKey>(
-  key: TKey,
-  value: PHGlobalConfig[TKey] | undefined,
-) {
-  const setter = phGlobalConfigSetters[key] as PHGlobalConfigSetters[TKey];
-  setter(value);
-}
-export function setDefaultPHGlobalConfig(config: PHGlobalConfig) {
-  for (const key of Object.keys(config) as PHGlobalConfigKey[]) {
-    callGlobalSetterForKey(key, config[key]);
-  }
-}
-
-export function useSetDefaultPHGlobalConfig(config: PHGlobalConfig) {
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  useEffect(() => {
-    if (isInitialized) return;
-    setDefaultPHGlobalConfig(config);
-    setIsInitialized(true);
-  }, [config, isInitialized]);
-}
-
-export function setPHGlobalConfig(config: Partial<PHGlobalConfig>) {
-  for (const key of Object.keys(config) as PHGlobalConfigKey[]) {
-    callGlobalSetterForKey(key, config[key]);
-  }
-}
-
-export function useSetPHGlobalConfig(config: Partial<PHGlobalConfig>) {
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  useEffect(() => {
-    if (isInitialized) return;
-    setPHGlobalConfig(config);
-    setIsInitialized(true);
-  }, [config, isInitialized]);
-}
+export const phGlobalConfigHooks: PHGlobalConfigHooks = {
+  ...phGlobalEditorConfigHooks,
+  ...nonUserConfigHooks,
+};

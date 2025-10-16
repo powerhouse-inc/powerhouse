@@ -5,11 +5,11 @@ import {
   setSelectedNode,
   showCreateDocumentModal,
   showDeleteNodeModal,
-  useAnalyticsDatabaseName,
   useDocumentModelModules,
   useFileNodesInSelectedDrive,
   useSelectedDrive,
 } from "@powerhousedao/reactor-browser";
+import { useAnalyticsDatabaseName } from "@powerhousedao/reactor-browser/connect";
 import type { FileNode } from "document-drive";
 import type { EditorProps } from "document-model";
 import { useCallback } from "react";

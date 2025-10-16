@@ -1,56 +1,26 @@
 import {
-  useDocumentModelModules,
   useDocumentsInSelectedDrive,
-  useSelectedDriveId,
+  useSupportedDocumentTypes,
 } from "@powerhousedao/reactor-browser";
-import type { DocumentModelDocument } from "document-model";
-import { useEffect, useState } from "react";
 
 const DEFAULT_DRIVE_ID = "vetra";
 
 export function useAvailableDocumentTypes(
   onlyVetraDocuments = false,
 ): string[] {
-  const [availableDocumentTypes, setAvailableDocumentTypes] = useState<
-    string[]
-  >([]);
-  const documentModelModules = useDocumentModelModules();
+  const supportedDocumentTypes = useSupportedDocumentTypes() ?? [];
   const documents = useDocumentsInSelectedDrive();
-  const selectedDriveId = useSelectedDriveId();
-
-  useEffect(() => {
-    async function loadDocumentTypes() {
-      const moduleDocIds: string[] = [];
-
-      // Get from reactor document model modules (if not onlyVetraDocuments)
-      if (!onlyVetraDocuments) {
-        const docModels = documentModelModules ?? [];
-        moduleDocIds.push(
-          ...docModels.map((model) => model.documentModel.global.id),
-        );
-      }
-
-      // Get from vetra drive
-      const driveDocIds: string[] = [];
-
-      if (documents) {
-        for (const document of documents) {
-          if (document.header.documentType === "powerhouse/document-model") {
-            const documentModel = document as DocumentModelDocument;
-            driveDocIds.push(documentModel.state.global.id);
-          }
-        }
-      }
-
-      // Combine and deduplicate (or just use driveDocIds if onlyVetraDocuments)
-      const uniqueIds = onlyVetraDocuments
-        ? driveDocIds
-        : [...new Set([...moduleDocIds, ...driveDocIds])];
-      setAvailableDocumentTypes(uniqueIds);
-    }
-
-    void loadDocumentTypes();
-  }, [documents, documentModelModules, onlyVetraDocuments]);
-
-  return availableDocumentTypes;
+  const documentModelTypeDocuments = documents?.filter(
+    (document) => document.header.documentType === "powerhouse/document-model",
+  );
+  const documentTypesFromDocuments =
+    documentModelTypeDocuments?.map(
+      (document) => document.header.documentType,
+    ) ?? [];
+  if (onlyVetraDocuments) {
+    return documentTypesFromDocuments;
+  }
+  return [
+    ...new Set([...supportedDocumentTypes, ...documentTypesFromDocuments]),
+  ];
 }

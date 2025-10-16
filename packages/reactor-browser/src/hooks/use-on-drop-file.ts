@@ -5,13 +5,13 @@ import type {
   FileUploadProgressCallback,
   UseOnDropFile,
 } from "../types/upload.js";
+import { useAllowedDocumentTypes } from "./config/editor.js";
 import { useSelectedDriveSafe } from "./selected-drive.js";
 import { useSelectedFolder } from "./selected-folder.js";
-import { useSupportedDocumentTypes } from "./supported-document-types.js";
 
 export const useOnDropFile: UseOnDropFile = () => {
   const [selectedDrive] = useSelectedDriveSafe();
-  const supportedDocumentTypes = useSupportedDocumentTypes();
+  const allowedDocumentTypes = useAllowedDocumentTypes();
   const selectedDriveId = selectedDrive?.header.id;
   const selectedFolder = useSelectedFolder();
 
@@ -36,7 +36,7 @@ export const useOnDropFile: UseOnDropFile = () => {
         fileName,
         targetNodeId,
         onProgress,
-        supportedDocumentTypes,
+        allowedDocumentTypes,
         resolveConflict,
       );
     },

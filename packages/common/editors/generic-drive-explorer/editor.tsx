@@ -1,9 +1,4 @@
-import {
-  CreateDocument,
-  DriveLayout,
-  FolderView,
-  SearchBar,
-} from "@powerhousedao/common";
+import { CreateDocument, DriveLayout, FolderView } from "@powerhousedao/common";
 import {
   Breadcrumbs,
   useBreadcrumbs,
@@ -16,7 +11,6 @@ import {
   showCreateDocumentModal,
   showDeleteNodeModal,
   useDocumentModelModules,
-  useIsSearchBarEnabled,
   useNodeActions,
   useSelectedDrive,
   useSelectedFolder,
@@ -42,7 +36,6 @@ export function Editor(props: EditorProps) {
   const documentModels = useDocumentModelModules();
   const selectedNodePath = useSelectedNodePath();
   const { isAllowedToCreateDocuments } = useUserPermissions();
-  const isSearchBarEnabled = useIsSearchBarEnabled();
   const onCreateDocument = (documentModel: DocumentModelModule) => {
     showCreateDocumentModal(documentModel.documentModel.global.id);
   };
@@ -76,7 +69,6 @@ export function Editor(props: EditorProps) {
             onCreate={onAddAndSelectNewFolder}
             onBreadcrumbSelected={onBreadcrumbSelected}
           />
-          {isSearchBarEnabled && <SearchBar />}
         </DriveLayout.Header>
       )}
       {showDocumentEditor ? (

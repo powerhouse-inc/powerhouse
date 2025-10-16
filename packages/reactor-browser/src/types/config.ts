@@ -1,48 +1,39 @@
 export type PHGlobalConfig = PHCommonGlobalConfig &
+  PHGlobalEditorConfig &
   PHDrivesGlobalConfig &
-  PHEditorsGlobalConfig &
   PHAnalyticsGlobalConfig &
   PHRenownGlobalConfig &
   PHSentryGlobalConfig &
   PHProcessorsGlobalConfig;
 
-/** Helper type for ensuring keys are all present while still allowing them to be set */
-export type FullPHGlobalConfig = Record<PHGlobalConfigKey, PHGlobalConfigValue>;
-
 export type PHGlobalConfigKey = keyof PHGlobalConfig;
-export type PHGlobalConfigValue = PHGlobalConfig[PHGlobalConfigKey];
-export type PHGlobalConfigSetters<
-  T extends PHGlobalConfigKey = PHGlobalConfigKey,
-> = {
-  [K in T]: (value: PHGlobalConfig[K]) => void;
+export type PHGlobalConfigSetters =
+  PHGlobalConfigSettersForKey<PHGlobalConfigKey>;
+export type PHGlobalConfigHooks = PHGlobalConfigHooksForKey<PHGlobalConfigKey>;
+
+export type PHGlobalEditorConfig = {
+  allowedDocumentTypes?: string[];
+  isExternalControlsEnabled?: boolean;
+  isDragAndDropEnabled?: boolean;
 };
-export type PHGlobalConfigHooks<
-  TKey extends PHGlobalConfigKey = PHGlobalConfigKey,
-> = {
-  [K in TKey]: () => PHGlobalConfig[K];
-};
+export type PHGlobalEditorConfigKey = keyof PHGlobalEditorConfig;
+export type PHGlobalEditorConfigSetters =
+  PHGlobalConfigSettersForKey<PHGlobalEditorConfigKey>;
+export type PHGlobalEditorConfigHooks =
+  PHGlobalConfigHooksForKey<PHGlobalEditorConfigKey>;
+
 export type PHCommonGlobalConfig = {
   basePath?: string;
   routerBasename?: string;
   version?: string;
-  logLevel?: "debug" | "info" | "warn" | "error";
   requiresHardRefresh?: boolean;
   warnOutdatedApp?: boolean;
   studioMode?: boolean;
   versionCheckInterval?: number;
   cliVersion?: string;
   fileUploadOperationsChunkSize?: number;
-  isDocumentModelSelectionSettingsEnabled?: boolean;
   gaTrackingId?: string;
-  allowList?: string[];
-};
-
-export type PHDrivesGlobalConfig = {
-  defaultDrivesUrl?: string;
-  drivesPreserveStrategy?: string;
-  allowedDocumentTypes?: string[];
-  enabledEditors?: string[];
-  disabledEditors?: string[];
+  isDocumentModelSelectionSettingsEnabled?: boolean;
   isAddDriveEnabled?: boolean;
   isPublicDrivesEnabled?: boolean;
   isAddPublicDrivesEnabled?: boolean;
@@ -50,24 +41,24 @@ export type PHDrivesGlobalConfig = {
   isCloudDrivesEnabled?: boolean;
   isAddCloudDrivesEnabled?: boolean;
   isDeleteCloudDrivesEnabled?: boolean;
-  localDrivesEnabled?: boolean;
+  isLocalDrivesEnabled?: boolean;
   isAddLocalDrivesEnabled?: boolean;
   isDeleteLocalDrivesEnabled?: boolean;
-  isSearchBarEnabled?: boolean;
-  isDragAndDropEnabled?: boolean;
-};
-
-export type PHEditorsGlobalConfig = {
-  isExternalControlsEnabled?: boolean;
-  isDocumentToolbarEnabled?: boolean;
-  isSwitchboardLinkEnabled?: boolean;
-  isTimelineEnabled?: boolean;
+  allowList?: string[];
+  analyticsDatabaseName?: string;
+  logLevel?: "debug" | "info" | "warn" | "error";
   isEditorDebugModeEnabled?: boolean;
   isEditorReadModeEnabled?: boolean;
+  disabledEditors?: string[];
+  enabledEditors?: string[];
+};
+
+export type PHDrivesGlobalConfig = {
+  defaultDrivesUrl?: string;
+  drivesPreserveStrategy?: string;
 };
 
 export type PHAnalyticsGlobalConfig = {
-  analyticsDatabaseName?: string;
   isAnalyticsDatabaseWorkerEnabled?: boolean;
   isDiffAnalyticsEnabled?: boolean;
   isDriveAnalyticsEnabled?: boolean;
@@ -90,3 +81,15 @@ export type PHProcessorsGlobalConfig = {
   isExternalProcessorsEnabled?: boolean;
   isExternalPackagesEnabled?: boolean;
 };
+
+export type PHGlobalConfigSettersForKey<T extends PHGlobalConfigKey> = {
+  [K in T]: (value: PHGlobalConfig[K]) => void;
+};
+export type PHGlobalConfigHooksForKey<TKey extends PHGlobalConfigKey> = {
+  [K in TKey]: () => PHGlobalConfig[K];
+};
+/** Helper type for ensuring keys are all present while still allowing them to be set */
+export type FullPHGlobalConfig = Record<
+  PHGlobalConfigKey,
+  PHGlobalConfig[PHGlobalConfigKey]
+>;

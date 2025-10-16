@@ -1,7 +1,6 @@
 import type { PHGlobalEventHandlerAdders } from "@powerhousedao/reactor-browser";
 import { addAllDocumentsEventHandler } from "./all-documents.js";
 import {
-  addAllowedDocumentTypesEventHandler,
   addAllowListEventHandler,
   addAnalyticsDatabaseNameEventHandler,
   addBasePathEventHandler,
@@ -23,20 +22,14 @@ import {
   addIsDeletePublicDrivesEnabledEventHandler,
   addIsDiffAnalyticsEnabledEventHandler,
   addIsDocumentModelSelectionSettingsEnabledEventHandler,
-  addIsDocumentToolbarEnabledEventHandler,
-  addIsDragAndDropEnabledEventHandler,
   addIsDriveAnalyticsEnabledEventHandler,
   addIsEditorDebugModeEnabledEventHandler,
   addIsEditorReadModeEnabledEventHandler,
-  addIsExternalControlsEnabledEventHandler,
   addIsExternalPackagesEnabledEventHandler,
   addIsExternalProcessorsEnabledEventHandler,
+  addIsLocalDrivesEnabledEventHandler,
   addIsPublicDrivesEnabledEventHandler,
-  addIsSearchBarEnabledEventHandler,
   addIsSentryTracingEnabledEventHandler,
-  addIsSwitchboardLinkEnabledEventHandler,
-  addIsTimelineEnabledEventHandler,
-  addLocalDrivesEnabledEventHandler,
   addLogLevelEventHandler,
   addRenownChainIdEventHandler,
   addRenownNetworkIdEventHandler,
@@ -50,7 +43,13 @@ import {
   addVersionCheckIntervalEventHandler,
   addVersionEventHandler,
   addWarnOutdatedAppEventHandler,
-} from "./config.js";
+} from "./config/connect.js";
+
+import {
+  addAllowedDocumentTypesEventHandler,
+  addIsDragAndDropEnabledEventHandler,
+  addIsExternalControlsEnabledEventHandler,
+} from "./config/editor.js";
 import { addConnectCryptoEventHandler } from "./crypto.js";
 import { addDidEventHandler } from "./did.js";
 import { addDrivesEventHandler } from "./drives.js";
@@ -102,21 +101,17 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   enabledEditors: addEnabledEditorsEventHandler,
   disabledEditors: addDisabledEditorsEventHandler,
   isAddDriveEnabled: addIsAddDriveEnabledEventHandler,
+  isLocalDrivesEnabled: addIsLocalDrivesEnabledEventHandler,
   isPublicDrivesEnabled: addIsPublicDrivesEnabledEventHandler,
   isAddPublicDrivesEnabled: addIsAddPublicDrivesEnabledEventHandler,
   isDeletePublicDrivesEnabled: addIsDeletePublicDrivesEnabledEventHandler,
   isCloudDrivesEnabled: addIsCloudDrivesEnabledEventHandler,
   isAddCloudDrivesEnabled: addIsAddCloudDrivesEnabledEventHandler,
   isDeleteCloudDrivesEnabled: addIsDeleteCloudDrivesEnabledEventHandler,
-  localDrivesEnabled: addLocalDrivesEnabledEventHandler,
   isAddLocalDrivesEnabled: addIsAddLocalDrivesEnabledEventHandler,
   isDeleteLocalDrivesEnabled: addIsDeleteLocalDrivesEnabledEventHandler,
-  isSearchBarEnabled: addIsSearchBarEnabledEventHandler,
   isDragAndDropEnabled: addIsDragAndDropEnabledEventHandler,
   isExternalControlsEnabled: addIsExternalControlsEnabledEventHandler,
-  isDocumentToolbarEnabled: addIsDocumentToolbarEnabledEventHandler,
-  isSwitchboardLinkEnabled: addIsSwitchboardLinkEnabledEventHandler,
-  isTimelineEnabled: addIsTimelineEnabledEventHandler,
   isEditorDebugModeEnabled: addIsEditorDebugModeEnabledEventHandler,
   isEditorReadModeEnabled: addIsEditorReadModeEnabledEventHandler,
   analyticsDatabaseName: addAnalyticsDatabaseNameEventHandler,
