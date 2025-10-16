@@ -8,8 +8,13 @@ import type {
 import {
   MemoryStorage,
   ReactorBuilder,
+  addFile,
+  addFolder,
   driveDocumentModelModule,
+  setDriveName,
+  updateNode,
 } from "document-drive";
+import { generateId } from "document-model/core";
 import type { DocumentModelModule } from "document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -135,11 +140,16 @@ describe("Legacy Storage vs IDocumentView", () => {
         return jobStatus.status === JobStatus.COMPLETED;
       });
 
-      // Wait for the document to be indexed in the document view
+      // Wait for the document to be fully indexed in the document view (with all scopes)
       await vi.waitUntil(async () => {
         try {
-          await documentView.get(documentId);
-          return true;
+          const viewDoc =
+            await documentView.get<DocumentDriveDocument>(documentId);
+          // Check that all expected scopes are present
+          return (
+            viewDoc.state.global !== undefined &&
+            viewDoc.state.local !== undefined
+          );
         } catch {
           return false;
         }
@@ -154,6 +164,160 @@ describe("Legacy Storage vs IDocumentView", () => {
       expect(viewDoc.header).toEqual(legacyDoc.header);
       expect(viewDoc.state).toEqual(legacyDoc.state);
       expect(viewDoc.initialState).toEqual(legacyDoc.initialState);
+    });
+  });
+
+  describe("reactor.mutate() validation", () => {
+    it("should maintain equivalent documents in both stores after multiple mutations", async () => {
+      // Create the document through the Reactor interface
+      const document = driveDocumentModelModule.utils.createDocument();
+      const documentId = document.header.id;
+      const createJobInfo = await reactor.create(document);
+
+      // Wait for create job to complete
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(createJobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
+      });
+
+      // Wait for the document to be fully indexed in the document view (with all scopes)
+      await vi.waitUntil(async () => {
+        try {
+          const viewDoc =
+            await documentView.get<DocumentDriveDocument>(documentId);
+          // Check that all expected scopes are present
+          return (
+            viewDoc.state.global !== undefined &&
+            viewDoc.state.local !== undefined
+          );
+        } catch {
+          return false;
+        }
+      });
+
+      // Perform multiple mutations
+      const folder1Id = generateId();
+      const folder2Id = generateId();
+      const fileId = generateId();
+
+      // First mutation: set drive name and add folders
+      const mutation1Actions = [
+        setDriveName({ name: "Test Drive" }),
+        addFolder({
+          id: folder1Id,
+          name: "Documents",
+          parentFolder: null,
+        }),
+        addFolder({
+          id: folder2Id,
+          name: "Images",
+          parentFolder: null,
+        }),
+      ];
+
+      const mutation1JobInfo = await reactor.mutate(
+        documentId,
+        mutation1Actions,
+      );
+
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(mutation1JobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
+      });
+
+      // Second mutation: add a file
+      const mutation2Actions = [
+        addFile({
+          id: fileId,
+          name: "test.txt",
+          documentType: "text/plain",
+          parentFolder: folder1Id,
+        }),
+      ];
+
+      const mutation2JobInfo = await reactor.mutate(
+        documentId,
+        mutation2Actions,
+      );
+
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(mutation2JobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
+      });
+
+      // Third mutation: update folder name
+      const mutation3Actions = [
+        updateNode({
+          id: folder2Id,
+          name: "Photos",
+        }),
+      ];
+
+      const mutation3JobInfo = await reactor.mutate(
+        documentId,
+        mutation3Actions,
+      );
+
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(mutation3JobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
+      });
+
+      // Wait a bit for document view to be fully updated
+      await vi.waitUntil(async () => {
+        try {
+          const viewDoc =
+            await documentView.get<DocumentDriveDocument>(documentId);
+          // Check that the document has the expected number of nodes
+          return viewDoc.state.global.nodes.length === 3;
+        } catch {
+          return false;
+        }
+      });
+
+      // Get documents from both storage systems
+      const viewDoc = await documentView.get<DocumentDriveDocument>(documentId);
+      const legacyDoc =
+        await legacyStorage.get<DocumentDriveDocument>(documentId);
+
+      // Compare the meaningful document data
+      expect(viewDoc.header).toEqual(legacyDoc.header);
+      expect(viewDoc.state).toEqual(legacyDoc.state);
+      expect(viewDoc.initialState).toEqual(legacyDoc.initialState);
+
+      // Verify specific mutations were applied correctly in both stores
+      expect(viewDoc.state.global.name).toBe("Test Drive");
+      expect(legacyDoc.state.global.name).toBe("Test Drive");
+
+      expect(viewDoc.state.global.nodes).toHaveLength(3);
+      expect(legacyDoc.state.global.nodes).toHaveLength(3);
+
+      // Find specific nodes in both stores
+      const viewFolder1 = viewDoc.state.global.nodes.find(
+        (n) => n.id === folder1Id,
+      );
+      const legacyFolder1 = legacyDoc.state.global.nodes.find(
+        (n) => n.id === folder1Id,
+      );
+      expect(viewFolder1).toEqual(legacyFolder1);
+      expect(viewFolder1?.name).toBe("Documents");
+
+      const viewFolder2 = viewDoc.state.global.nodes.find(
+        (n) => n.id === folder2Id,
+      );
+      const legacyFolder2 = legacyDoc.state.global.nodes.find(
+        (n) => n.id === folder2Id,
+      );
+      expect(viewFolder2).toEqual(legacyFolder2);
+      expect(viewFolder2?.name).toBe("Photos"); // Should be updated name
+
+      const viewFile = viewDoc.state.global.nodes.find((n) => n.id === fileId);
+      const legacyFile = legacyDoc.state.global.nodes.find(
+        (n) => n.id === fileId,
+      );
+      expect(viewFile).toEqual(legacyFile);
+      expect(viewFile?.name).toBe("test.txt");
+      expect(viewFile?.parentFolder).toBe(folder1Id);
     });
   });
 });

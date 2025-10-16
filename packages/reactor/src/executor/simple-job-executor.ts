@@ -8,6 +8,7 @@ import type {
   DocumentModelModule,
   Operation,
   PHDocument,
+  UpgradeDocumentActionInput,
 } from "document-model";
 import { createPresignedHeader, defaultBaseState } from "document-model/core";
 import type { IEventBus } from "../events/interfaces.js";
@@ -71,6 +72,24 @@ export class SimpleJobExecutor implements IJobExecutor {
 
       if (operation.action.type === "DELETE_DOCUMENT") {
         const result = await this.executeDeleteDocumentOperation(
+          job,
+          operation,
+          startTime,
+        );
+        if (!result.success) {
+          return result;
+        }
+        if (result.operations && result.operations.length > 0) {
+          generatedOperations.push(...result.operations);
+        }
+        if (result.operationsWithContext) {
+          operationsWithContext.push(...result.operationsWithContext);
+        }
+        continue;
+      }
+
+      if (operation.action.type === "UPGRADE_DOCUMENT") {
+        const result = await this.executeUpgradeDocumentOperation(
           job,
           operation,
           startTime,
@@ -156,18 +175,8 @@ export class SimpleJobExecutor implements IJobExecutor {
         };
       }
 
-      // Populate resultingState with the updated document's state for read model indexing
-      // Always include header and document scopes, plus the scope that was modified
-      const resultingState: Record<string, unknown> = {
-        header: updatedDocument.header,
-        document: updatedDocument.state.document,
-      };
-
-      // Add the modified scope (cast to Record to satisfy TypeScript)
-      const state = updatedDocument.state as Record<string, unknown>;
-      resultingState[scope] = state[scope];
-
-      newOperation.resultingState = JSON.stringify(resultingState);
+      // save the whole state
+      newOperation.resultingState = JSON.stringify(updatedDocument.state);
 
       // Write the operation to new IOperationStore (dual-writing)
       try {
@@ -488,6 +497,150 @@ export class SimpleJobExecutor implements IJobExecutor {
         success: false,
         error: new Error(
           `Failed to write DELETE_DOCUMENT operation to IOperationStore: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    return {
+      job,
+      success: true,
+      operations: [operation],
+      operationsWithContext: [
+        {
+          operation,
+          context: {
+            documentId,
+            scope: job.scope,
+            branch: job.branch,
+            documentType: document.header.documentType,
+          },
+        },
+      ],
+      duration: Date.now() - startTime,
+    };
+  }
+
+  /**
+   * Execute an UPGRADE_DOCUMENT system action for a single operation.
+   * This sets the document's initial state from the upgrade action.
+   */
+  private async executeUpgradeDocumentOperation(
+    job: Job,
+    operation: Operation,
+    startTime: number,
+  ): Promise<
+    JobResult & {
+      operationsWithContext?: Array<{
+        operation: Operation;
+        context: {
+          documentId: string;
+          scope: string;
+          branch: string;
+          documentType: string;
+        };
+      }>;
+    }
+  > {
+    const action = operation.action;
+    const input = action.input as UpgradeDocumentActionInput;
+
+    if (!input.documentId) {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          "UPGRADE_DOCUMENT action requires a documentId in input",
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    const documentId = input.documentId;
+
+    // Load the document from storage
+    let document: PHDocument;
+    try {
+      document = await this.documentStorage.get(documentId);
+    } catch (error) {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          `Failed to fetch document for upgrade: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    // Check if document is deleted
+    const documentState = document.state.document;
+    if (documentState.isDeleted) {
+      return {
+        job,
+        success: false,
+        error: new DocumentDeletedError(
+          documentId,
+          documentState.deletedAtUtcIso,
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    // Apply the initialState from the upgrade action
+    // The initialState from UPGRADE_DOCUMENT should be merged with the existing base state
+    // to preserve auth and document scopes while adding model-specific scopes (global, local, etc.)
+    if (input.initialState) {
+      document.state = {
+        ...document.state,
+        ...input.initialState,
+      };
+      document.initialState = document.state;
+    }
+
+    // Write the updated document to legacy storage
+    try {
+      await this.operationStorage.addDocumentOperations(
+        documentId,
+        [operation],
+        document,
+      );
+    } catch (error) {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          `Failed to write UPGRADE_DOCUMENT operation to legacy storage: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    // Populate resultingState with the full document state for read model indexing
+    const resultingState: Record<string, unknown> = {
+      header: document.header,
+      ...document.state,
+    };
+    operation.resultingState = JSON.stringify(resultingState);
+
+    // Write the operation to new IOperationStore (dual-writing)
+    try {
+      await this.operationStore.apply(
+        documentId,
+        document.header.documentType,
+        job.scope,
+        job.branch,
+        operation.index,
+        (txn) => {
+          txn.addOperations(operation);
+        },
+      );
+    } catch (error) {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          `Failed to write UPGRADE_DOCUMENT operation to IOperationStore: ${error instanceof Error ? error.message : String(error)}`,
         ),
         duration: Date.now() - startTime,
       };

@@ -295,8 +295,9 @@ export class KyselyDocumentView implements IDocumentView {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       state: state as any,
       operations,
-      // to be removed...
-      initialState: defaultBaseState(),
+      // initialState should match the current state reconstructed from snapshots
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      initialState: state as any,
       clipboard: [],
     };
 
