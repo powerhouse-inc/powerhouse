@@ -1,9 +1,11 @@
 import { isLogLevel } from "@powerhousedao/config";
 import {
   EventBus,
+  InMemoryJobTracker,
   InMemoryQueue,
   Reactor,
   ReactorClientBuilder,
+  ReadModelCoordinator,
 } from "@powerhousedao/reactor";
 import {
   VitePackageLoader,
@@ -128,11 +130,14 @@ const startServer = async (
 
   const driveServer = reactorBuilder.build();
 
-  const queue = new InMemoryQueue(new EventBus());
+  const eventBus = new EventBus();
+  const queue = new InMemoryQueue(eventBus);
   const reactor = new Reactor(
     driveServer as unknown as BaseDocumentDriveServer,
     storageImpl as unknown as IDocumentStorage,
     queue,
+    new InMemoryJobTracker(),
+    new ReadModelCoordinator(eventBus, []),
   );
   const client = new ReactorClientBuilder().withReactor(reactor).build();
 

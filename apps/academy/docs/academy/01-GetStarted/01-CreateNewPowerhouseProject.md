@@ -10,8 +10,8 @@ For todays purpose, you'll be using Connect, our user-centric collaboration tool
 
 ## Prerequisites
 
-- Powerhouse CLI installed: `pnpm install -g ph-cmd`
-- node.js 22 and pnpm installed
+- Powerhouse CLI installed: `pnpm install -g ph-cmd` or `npm install -g ph-cmd --legacy-peer-deps`
+- node.js 22 and a package manager (pnpm or npm) installed
 - Visual Studio Code (or your preferred IDE)
 - Terminal/Command Prompt access
 

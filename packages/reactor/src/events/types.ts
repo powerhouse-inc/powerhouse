@@ -1,3 +1,5 @@
+import type { OperationWithContext } from "#storage/interfaces.js";
+
 /**
  * Describes a function to unsubscribe from an event.
  */
@@ -37,3 +39,18 @@ export class EventBusAggregateError extends Error {
     this.errors = errors;
   }
 }
+
+/**
+ * Event types for operation-related events.
+ */
+export const OperationEventTypes = {
+  OPERATION_WRITTEN: 10001,
+} as const;
+
+/**
+ * Event emitted when operations are written to IOperationStore.
+ * Contains the operations directly to avoid round-trip queries.
+ */
+export type OperationWrittenEvent = {
+  operations: OperationWithContext[];
+};

@@ -1,16 +1,12 @@
-import type {
-  CreateDocumentActionInput,
-  PHDocumentHeader,
-  UpgradeDocumentActionInput,
-} from "document-model";
-import { createPresignedHeader } from "document-model/core";
+import type { Operation, PHDocument, PHDocumentHeader } from "document-model";
+import { defaultBaseState } from "document-model/core";
 import type { Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import type {
-  DocumentSnapshot,
   IDocumentView,
   IOperationStore,
   OperationWithContext,
+  ViewFilter,
 } from "../storage/interfaces.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
 import type {
@@ -76,119 +72,79 @@ export class KyselyDocumentView implements IDocumentView {
         const { documentId, scope, branch, documentType } = context;
         const { index, hash } = operation;
 
-        // Check if we need to create or update a snapshot
-        const existingSnapshot = await trx
-          .selectFrom("DocumentSnapshot")
-          .selectAll()
-          .where("documentId", "=", documentId)
-          .where("scope", "=", scope)
-          .where("branch", "=", branch)
-          .executeTakeFirst();
+        // Parse the full resulting state if present
+        let fullState: Record<string, unknown> = {};
+        if (operation.resultingState) {
+          try {
+            fullState = JSON.parse(operation.resultingState) as Record<
+              string,
+              unknown
+            >;
+          } catch {
+            // Failed to parse resultingState, use empty state
+          }
+        }
 
-        if (existingSnapshot) {
-          // Update existing snapshot
-          await trx
-            .updateTable("DocumentSnapshot")
-            .set({
+        // If resultingState is present, create/update snapshots for ALL scopes in the state
+        // Otherwise, fall back to creating/updating a snapshot for just the operation's scope
+        const scopesToIndex: Array<[string, unknown]> =
+          Object.keys(fullState).length > 0
+            ? Object.entries(fullState)
+            : [[scope, {}]];
+
+        for (const [scopeName, scopeState] of scopesToIndex) {
+          // Check if we need to create or update a snapshot for this scope
+          const existingSnapshot = await trx
+            .selectFrom("DocumentSnapshot")
+            .selectAll()
+            .where("documentId", "=", documentId)
+            .where("scope", "=", scopeName)
+            .where("branch", "=", branch)
+            .executeTakeFirst();
+
+          const newState =
+            typeof scopeState === "object" && scopeState !== null
+              ? (scopeState as Record<string, unknown>)
+              : {};
+
+          if (existingSnapshot) {
+            // Update existing snapshot with new state
+            await trx
+              .updateTable("DocumentSnapshot")
+              .set({
+                lastOperationIndex: index,
+                lastOperationHash: hash,
+                lastUpdatedAt: new Date(),
+                snapshotVersion: existingSnapshot.snapshotVersion + 1,
+                content: JSON.stringify(newState),
+              })
+              .where("documentId", "=", documentId)
+              .where("scope", "=", scopeName)
+              .where("branch", "=", branch)
+              .execute();
+          } else {
+            // Create new snapshot with computed state
+            const snapshot: InsertableDocumentSnapshot = {
+              id: uuidv4(),
+              documentId,
+              slug: null,
+              name: null,
+              scope: scopeName,
+              branch,
+              content: JSON.stringify(newState),
+              documentType,
               lastOperationIndex: index,
               lastOperationHash: hash,
-              lastUpdatedAt: new Date(),
-              snapshotVersion: existingSnapshot.snapshotVersion + 1,
-            })
-            .where("documentId", "=", documentId)
-            .where("scope", "=", scope)
-            .where("branch", "=", branch)
-            .execute();
-        } else {
-          // Create new snapshot
-          const snapshot: InsertableDocumentSnapshot = {
-            id: uuidv4(),
-            documentId,
-            slug: null,
-            name: null,
-            scope,
-            branch,
-            content: JSON.stringify({}), // Empty for now, will be filled when we build full documents
-            documentType,
-            lastOperationIndex: index,
-            lastOperationHash: hash,
-            identifiers: null,
-            metadata: null,
-            deletedAt: null,
-          };
+              identifiers: null,
+              metadata: null,
+              deletedAt: null,
+            };
 
-          await trx.insertInto("DocumentSnapshot").values(snapshot).execute();
+            await trx.insertInto("DocumentSnapshot").values(snapshot).execute();
+          }
         }
       }
     });
-  }
-
-  async getHeader(
-    documentId: string,
-    branch: string,
-    signal?: AbortSignal,
-  ): Promise<PHDocumentHeader> {
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
-
-    // Query operations from header and document scopes only
-    // - "header" scope: CREATE_DOCUMENT actions contain initial header metadata
-    // - "document" scope: UPGRADE_DOCUMENT actions contain version transitions
-    const headerAndDocOps = await this.db
-      .selectFrom("Operation")
-      .selectAll()
-      .where("documentId", "=", documentId)
-      .where("branch", "=", branch)
-      .where("scope", "in", ["header", "document"])
-      .orderBy("timestampUtcMs", "asc") // Process in chronological order
-      .execute();
-
-    if (headerAndDocOps.length === 0) {
-      throw new Error(`Document header not found: ${documentId}`);
-    }
-
-    // Reconstruct header from header and document scope operations
-    let header = createPresignedHeader();
-
-    for (const op of headerAndDocOps) {
-      const action = JSON.parse(op.action) as
-        | { type: "CREATE_DOCUMENT"; input: CreateDocumentActionInput }
-        | { type: "UPGRADE_DOCUMENT"; input: UpgradeDocumentActionInput }
-        | { type: string; input: unknown };
-
-      if (action.type === "CREATE_DOCUMENT") {
-        const input = action.input as CreateDocumentActionInput;
-        // Extract header from CREATE_DOCUMENT action's signing parameters
-        if (input.signing) {
-          header = {
-            ...header,
-            id: input.signing.signature, // documentId === signing.signature
-            documentType: input.signing.documentType,
-            createdAtUtcIso: input.signing.createdAtUtcIso,
-            lastModifiedAtUtcIso: input.signing.createdAtUtcIso,
-            sig: {
-              nonce: input.signing.nonce,
-              publicKey: input.signing.publicKey,
-            },
-          };
-        }
-      } else if (action.type === "UPGRADE_DOCUMENT") {
-        // UPGRADE_DOCUMENT tracks version changes in the document scope
-        // Version information would be in the operation's resulting state
-        // For now, this is handled elsewhere in the document state
-      }
-    }
-
-    // Get revision map and latest timestamp from all scopes efficiently
-    const { revision, latestTimestamp } =
-      await this.operationStore.getRevisions(documentId, branch, signal);
-
-    // Update header with cross-scope revision and timestamp information
-    header.revision = revision;
-    header.lastModifiedAtUtcIso = latestTimestamp;
-
-    return header;
   }
 
   async exists(
@@ -219,35 +175,146 @@ export class KyselyDocumentView implements IDocumentView {
     return documentIds.map((id) => existingIds.has(id));
   }
 
-  async getMany(
-    documentIds: string[],
-    scope: string = "global",
-    branch: string = "main",
+  async get<TDocument extends PHDocument>(
+    documentId: string,
+    view?: ViewFilter,
     signal?: AbortSignal,
-  ): Promise<(DocumentSnapshot | null)[]> {
+  ): Promise<TDocument> {
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
 
-    if (documentIds.length === 0) {
-      return [];
+    const branch = view?.branch || "main";
+
+    // Determine which scopes to retrieve
+    let scopesToQuery: string[];
+    if (view?.scopes && view.scopes.length > 0) {
+      // If scopes has values, always include header + document + specified scopes
+      // (header and document are the minimum scopes that must be returned)
+      scopesToQuery = [...new Set(["header", "document", ...view.scopes])];
+    } else {
+      // If scopes is undefined, null, or empty array [], get all scopes (no filter)
+      scopesToQuery = [];
     }
 
-    // Query for all documents at once
-    const snapshots = await this.db
+    // Build query to get snapshots
+    let query = this.db
       .selectFrom("DocumentSnapshot")
       .selectAll()
-      .where("documentId", "in", documentIds)
-      .where("scope", "=", scope)
+      .where("documentId", "=", documentId)
       .where("branch", "=", branch)
-      .where("isDeleted", "=", false)
-      .execute();
+      .where("isDeleted", "=", false);
 
-    // Create a Map of document ID to snapshot for fast lookup
-    const snapshotMap = new Map(snapshots.map((s) => [s.documentId, s]));
+    // Apply scope filter if we have specific scopes to query
+    if (scopesToQuery.length > 0) {
+      query = query.where("scope", "in", scopesToQuery);
+    }
 
-    // Return an array in the same order as the input, with null for missing documents
-    return documentIds.map((id) => snapshotMap.get(id) || null);
+    // Execute the query
+    const snapshots = await query.execute();
+
+    if (snapshots.length === 0) {
+      throw new Error(`Document not found: ${documentId}`);
+    }
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    // Find the header snapshot
+    const headerSnapshot = snapshots.find((s) => s.scope === "header");
+    if (!headerSnapshot) {
+      throw new Error(`Document header not found: ${documentId}`);
+    }
+
+    // Parse the header
+    let header: PHDocumentHeader;
+    try {
+      header = JSON.parse(headerSnapshot.content) as PHDocumentHeader;
+    } catch (error) {
+      throw new Error(
+        `Failed to parse header for document ${documentId}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+
+    // Reconstruct the document state from all snapshots
+    // Note: exclude "header" scope from state since it's already in the header field
+    const state: Record<string, unknown> = {};
+    for (const snapshot of snapshots) {
+      // Skip header scope - it's stored separately in the header field
+      if (snapshot.scope === "header") {
+        continue;
+      }
+
+      try {
+        const scopeState = JSON.parse(snapshot.content) as unknown;
+        state[snapshot.scope] = scopeState;
+      } catch {
+        // Failed to parse snapshot content, use empty state
+        state[snapshot.scope] = {};
+      }
+    }
+
+    // Retrieve operations from the operation store to match legacy storage format
+    const operations: Record<string, Operation[]> = {};
+
+    // Get all operations for this document across all scopes
+    const allOps = await this.operationStore.getSinceId(0, signal);
+    const docOps = allOps.filter(
+      (op) =>
+        op.context.documentId === documentId && op.context.branch === branch,
+    );
+
+    // Group operations by scope and normalize to match legacy storage structure
+    for (const { operation, context } of docOps) {
+      if (!operations[context.scope]) {
+        operations[context.scope] = [];
+      }
+
+      // Normalize operation to match legacy storage format
+      // Legacy storage includes redundant top-level fields that duplicate action fields
+      const normalizedOp: Operation = {
+        action: operation.action,
+        index: operation.index,
+        timestampUtcMs: operation.timestampUtcMs,
+        hash: operation.hash,
+        skip: operation.skip,
+        // Add top-level fields that mirror action fields (legacy format)
+        ...(operation.action as Record<string, unknown>),
+        // Legacy storage includes these optional fields
+        error: operation.error,
+        resultingState: operation.resultingState,
+      };
+
+      operations[context.scope].push(normalizedOp);
+    }
+
+    // Construct the PHDocument
+    const document: PHDocument = {
+      header,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      state: state as any,
+      operations,
+      // to be removed...
+      initialState: defaultBaseState(),
+      clipboard: [],
+    };
+
+    return document as TDocument;
+  }
+
+  private async checkTablesExist(): Promise<boolean> {
+    try {
+      // Try to query ViewState table
+      await this.db
+        .selectFrom("ViewState")
+        .select("lastOperationId")
+        .limit(1)
+        .execute();
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private async createTablesIfNotExist(): Promise<void> {
@@ -350,20 +417,6 @@ export class KyselyDocumentView implements IDocumentView {
         .on("SlugMapping")
         .column("documentId")
         .execute();
-    }
-  }
-
-  private async checkTablesExist(): Promise<boolean> {
-    try {
-      // Try to query ViewState table
-      await this.db
-        .selectFrom("ViewState")
-        .select("lastOperationId")
-        .limit(1)
-        .execute();
-      return true;
-    } catch {
-      return false;
     }
   }
 }

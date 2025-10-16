@@ -23,15 +23,28 @@ import {
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { generateId } from "document-model/core";
+import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Reactor } from "../../src/core/reactor.js";
 import { EventBus } from "../../src/events/event-bus.js";
 import { SimpleJobExecutorManager } from "../../src/executor/simple-job-executor-manager.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
+import { ReadModelCoordinator } from "../../src/read-models/coordinator.js";
+import { KyselyDocumentView } from "../../src/read-models/document-view.js";
+import type { DocumentViewDatabase } from "../../src/read-models/types.js";
 import { DocumentModelRegistry } from "../../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
 import { JobStatus } from "../../src/shared/types.js";
+import type { KyselyOperationStore } from "../../src/storage/kysely/store.js";
+import type { Database as StorageDatabase } from "../../src/storage/kysely/types.js";
+import {
+  createTestJobTracker,
+  createTestOperationStore,
+} from "../factories.js";
+
+// Combined database type
+type Database = StorageDatabase & DocumentViewDatabase;
 
 describe("Integration Test: Reactor <> Document Drive Document Model", () => {
   let reactor: Reactor;
@@ -42,6 +55,9 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
   let executor: SimpleJobExecutor;
   let executorManager: SimpleJobExecutorManager;
   let driveServer: BaseDocumentDriveServer;
+  let db: Kysely<Database>;
+  let operationStore: KyselyOperationStore;
+  let readModelCoordinator: ReadModelCoordinator;
 
   beforeEach(async () => {
     // Setup real components
@@ -56,29 +72,56 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
     driveServer = builder.build() as unknown as BaseDocumentDriveServer;
     await driveServer.initialize();
 
+    // Create in-memory PGLite database for IOperationStore
+    const setup = await createTestOperationStore();
+    db = setup.db as unknown as Kysely<Database>;
+    operationStore = setup.store;
+
     eventBus = new EventBus();
     queue = new InMemoryQueue(eventBus);
+    const jobTracker = createTestJobTracker();
     executor = new SimpleJobExecutor(
       registry,
       storage as IDocumentStorage,
       storage as IDocumentOperationStorage,
+      operationStore,
+      eventBus,
     );
 
     executorManager = new SimpleJobExecutorManager(
       () => executor,
       eventBus,
       queue,
+      jobTracker,
     );
 
     // Start the executor manager to process jobs
     await executorManager.start(1);
 
+    // Create real document view and read model coordinator
+    const documentView = new KyselyDocumentView(db, operationStore);
+    await documentView.init();
+    readModelCoordinator = new ReadModelCoordinator(eventBus, [documentView]);
+    readModelCoordinator.start();
+
     // Create reactor with all components
-    reactor = new Reactor(driveServer, storage as IDocumentStorage, queue);
+    reactor = new Reactor(
+      driveServer,
+      storage as IDocumentStorage,
+      queue,
+      jobTracker,
+      readModelCoordinator,
+    );
   });
 
   afterEach(async () => {
     await executorManager.stop();
+    readModelCoordinator.stop();
+    try {
+      await db.destroy();
+    } catch {
+      //
+    }
   });
 
   describe("ADD Operations", () => {
@@ -99,10 +142,10 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       const jobInfo = await reactor.mutate(document.header.id, [action]);
       expect(jobInfo.status).toBe(JobStatus.PENDING);
 
-      // Wait for processing
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(1);
+      // Wait for job completion
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(jobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Verify the operation was processed
@@ -134,12 +177,14 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         parentFolder: null,
       });
 
-      await reactor.mutate(document.header.id, [folderAction]);
+      const folderJobInfo = await reactor.mutate(document.header.id, [
+        folderAction,
+      ]);
 
-      // Wait for folder to be created
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(1);
+      // Wait for job completion
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(folderJobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Then add a file to the folder
@@ -151,12 +196,14 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         parentFolder: folderId,
       });
 
-      await reactor.mutate(document.header.id, [fileAction]);
+      const fileJobInfo = await reactor.mutate(document.header.id, [
+        fileAction,
+      ]);
 
-      // Wait for processing
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(2);
+      // Wait for job completion
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(fileJobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Verify both operations were processed
@@ -207,12 +254,12 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       ];
 
       // Submit all actions at once
-      await reactor.mutate(document.header.id, actions);
+      const jobInfo = await reactor.mutate(document.header.id, actions);
 
-      // Wait for processing
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(3);
+      // Wait for job completion
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(jobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Verify the hierarchy
@@ -249,11 +296,11 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         parentFolder: null,
       });
 
-      await reactor.mutate(document.header.id, [addAction]);
+      const addJobInfo = await reactor.mutate(document.header.id, [addAction]);
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(1);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(addJobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Update the file
@@ -263,11 +310,13 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         documentType: "text/markdown",
       });
 
-      await reactor.mutate(document.header.id, [updateAction]);
+      const updateJobInfo = await reactor.mutate(document.header.id, [
+        updateAction,
+      ]);
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(2);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(updateJobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Verify the update
@@ -296,11 +345,11 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         parentFolder: null,
       });
 
-      await reactor.mutate(document.header.id, [addAction]);
+      const addJobInfo = await reactor.mutate(document.header.id, [addAction]);
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(1);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(addJobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Update the folder
@@ -309,11 +358,13 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         name: "Renamed Folder",
       });
 
-      await reactor.mutate(document.header.id, [updateAction]);
+      const updateJobInfo = await reactor.mutate(document.header.id, [
+        updateAction,
+      ]);
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(2);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(updateJobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Verify the update
@@ -343,11 +394,11 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         parentFolder: null,
       });
 
-      await reactor.mutate(document.header.id, [addAction]);
+      const addJobInfo = await reactor.mutate(document.header.id, [addAction]);
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(1);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(addJobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Delete the folder
@@ -355,11 +406,13 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         id: folderId,
       });
 
-      await reactor.mutate(document.header.id, [deleteAction]);
+      const deleteJobInfo = await reactor.mutate(document.header.id, [
+        deleteAction,
+      ]);
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(2);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(deleteJobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Verify the deletion
@@ -406,11 +459,11 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         }),
       ];
 
-      await reactor.mutate(document.header.id, actions);
+      const setupJobInfo = await reactor.mutate(document.header.id, actions);
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(4);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(setupJobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Delete parent
@@ -418,11 +471,13 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         id: parentId,
       });
 
-      await reactor.mutate(document.header.id, [deleteAction]);
+      const deleteJobInfo = await reactor.mutate(document.header.id, [
+        deleteAction,
+      ]);
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(5);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(deleteJobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Verify all nodes were deleted
@@ -462,11 +517,11 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         }),
       ];
 
-      await reactor.mutate(document.header.id, actions);
+      const setupJobInfo = await reactor.mutate(document.header.id, actions);
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(3);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(setupJobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Move child from folder1 to folder2
@@ -475,11 +530,13 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         targetParentFolder: folder2Id,
       });
 
-      await reactor.mutate(document.header.id, [moveAction]);
+      const moveJobInfo = await reactor.mutate(document.header.id, [
+        moveAction,
+      ]);
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(4);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(moveJobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Verify the move
@@ -513,11 +570,11 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         }),
       ];
 
-      await reactor.mutate(document.header.id, actions);
+      const setupJobInfo = await reactor.mutate(document.header.id, actions);
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(2);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(setupJobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Move child to root
@@ -526,11 +583,13 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         targetParentFolder: null,
       });
 
-      await reactor.mutate(document.header.id, [moveAction]);
+      const moveJobInfo = await reactor.mutate(document.header.id, [
+        moveAction,
+      ]);
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(3);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(moveJobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Verify the move
@@ -570,11 +629,11 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         }),
       ];
 
-      await reactor.mutate(document.header.id, actions);
+      const setupJobInfo = await reactor.mutate(document.header.id, actions);
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(3);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(setupJobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Try to move folder1 to folder3 (its descendant)
@@ -583,10 +642,15 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         targetParentFolder: folder3Id,
       });
 
-      await reactor.mutate(document.header.id, [moveAction]);
+      const moveJobInfo = await reactor.mutate(document.header.id, [
+        moveAction,
+      ]);
 
-      // Wait a bit for potential processing
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Wait for job completion (should complete but operation may be rejected by reducer)
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(moveJobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
+      });
 
       // The operation should have been rejected - verify folder1 is still at root
       const { document: updatedDocument } =
@@ -627,11 +691,11 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         }),
       ];
 
-      await reactor.mutate(document.header.id, actions);
+      const setupJobInfo = await reactor.mutate(document.header.id, actions);
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(3);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(setupJobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Copy source to folder2
@@ -642,11 +706,13 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         targetParentFolder: folder2Id,
       });
 
-      await reactor.mutate(document.header.id, [copyAction]);
+      const copyJobInfo = await reactor.mutate(document.header.id, [
+        copyAction,
+      ]);
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(4);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(copyJobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Verify the copy
@@ -678,11 +744,11 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         parentFolder: null,
       });
 
-      await reactor.mutate(document.header.id, [addAction]);
+      const addJobInfo = await reactor.mutate(document.header.id, [addAction]);
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(1);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(addJobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Copy with new name
@@ -694,11 +760,13 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         targetParentFolder: null,
       });
 
-      await reactor.mutate(document.header.id, [copyAction]);
+      const copyJobInfo = await reactor.mutate(document.header.id, [
+        copyAction,
+      ]);
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(2);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(copyJobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Verify the copy
@@ -745,11 +813,11 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         }),
       ];
 
-      await reactor.mutate(document.header.id, actions);
+      const setupJobInfo = await reactor.mutate(document.header.id, actions);
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(4);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(setupJobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Copy the entire structure
@@ -760,15 +828,13 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         targetParentFolder: null,
       });
 
-      await reactor.mutate(document.header.id, [copyAction]);
+      const copyJobInfo = await reactor.mutate(document.header.id, [
+        copyAction,
+      ]);
 
-      await vi.waitFor(async () => {
-        const { document: doc } = await reactor.get<DocumentDriveDocument>(
-          document.header.id,
-        );
-        const globalState = doc.state.global;
-        // Should have original 4 nodes + 1 copied node
-        expect(globalState.nodes.length).toBe(5);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(copyJobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Verify the node was copied
@@ -814,11 +880,11 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         name: "My Drive",
       });
 
-      await reactor.mutate(document.header.id, [action]);
+      const jobInfo = await reactor.mutate(document.header.id, [action]);
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(1);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(jobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Verify the drive name was set
@@ -837,11 +903,11 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         icon: "folder-open",
       });
 
-      await reactor.mutate(document.header.id, [action]);
+      const jobInfo = await reactor.mutate(document.header.id, [action]);
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(1);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(jobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Verify the drive icon was set
@@ -860,11 +926,11 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         type: "PUBLIC",
       });
 
-      await reactor.mutate(document.header.id, [action]);
+      const jobInfo = await reactor.mutate(document.header.id, [action]);
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.local.results).toHaveLength(1);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(jobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Verify the sharing type was set
@@ -883,11 +949,11 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         availableOffline: true,
       });
 
-      await reactor.mutate(document.header.id, [action]);
+      const jobInfo = await reactor.mutate(document.header.id, [action]);
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.local.results).toHaveLength(1);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(jobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Verify available offline was set
@@ -938,11 +1004,11 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       ];
 
       // Submit all at once
-      await reactor.mutate(document.header.id, actions);
+      const jobInfo = await reactor.mutate(document.header.id, actions);
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(5);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(jobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Verify all operations were applied
@@ -1001,11 +1067,11 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         }),
       ];
 
-      await reactor.mutate(document.header.id, actions);
+      const jobInfo = await reactor.mutate(document.header.id, actions);
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(4);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(jobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Verify final state
@@ -1035,10 +1101,13 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         parentFolder: "non-existent-folder",
       });
 
-      await reactor.mutate(document.header.id, [action]);
+      const jobInfo = await reactor.mutate(document.header.id, [action]);
 
-      // Wait a bit for potential processing
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Wait for job completion
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(jobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
+      });
 
       // The operation should have been attempted but may have failed
       // Check that the document state is still valid
@@ -1076,12 +1145,11 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         }),
       ];
 
-      await reactor.mutate(document.header.id, actions);
+      const jobInfo = await reactor.mutate(document.header.id, actions);
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        // At least one operation should have been processed
-        expect(operations.global.results.length).toBeGreaterThanOrEqual(1);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(jobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Only one node with the ID should exist
@@ -1114,12 +1182,11 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         }),
       ];
 
-      await reactor.mutate(document.header.id, actions);
+      const jobInfo = await reactor.mutate(document.header.id, actions);
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        // At least one operation should have been processed
-        expect(operations.global.results.length).toBeGreaterThanOrEqual(1);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(jobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Check how the system handled the collision
@@ -1162,12 +1229,11 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         }),
       ];
 
-      await reactor.mutate(document.header.id, actions);
+      const jobInfo = await reactor.mutate(document.header.id, actions);
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        // At least some operations should have been processed
-        expect(operations.global.results.length).toBeGreaterThanOrEqual(1);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(jobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Check that valid operations were processed
@@ -1234,11 +1300,14 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         }),
       ];
 
-      await reactor.mutate(document.header.id, setupActions);
+      const setupJobInfo = await reactor.mutate(
+        document.header.id,
+        setupActions,
+      );
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(6);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(setupJobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Reorganize files
@@ -1263,11 +1332,14 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         }),
       ];
 
-      await reactor.mutate(document.header.id, reorganizeActions);
+      const reorganizeJobInfo = await reactor.mutate(
+        document.header.id,
+        reorganizeActions,
+      );
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(10);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(reorganizeJobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Verify final structure
@@ -1359,11 +1431,11 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         }),
       ];
 
-      await reactor.mutate(document.header.id, templateActions);
+      const jobInfo = await reactor.mutate(document.header.id, templateActions);
 
-      await vi.waitFor(async () => {
-        const operations = await reactor.getOperations(document.header.id);
-        expect(operations.global.results).toHaveLength(10);
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(jobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
       });
 
       // Verify the complete structure

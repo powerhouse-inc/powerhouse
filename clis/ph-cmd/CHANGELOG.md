@@ -1,3 +1,28 @@
+## 4.1.0-dev.74 (2025-10-15)
+
+### 🩹 Fixes
+
+- **codegen:** update graphql dependency in package.json ([257f368ac](https://github.com/powerhouse-inc/powerhouse/commit/257f368ac))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 4.1.0-dev.73 (2025-10-15)
+
+### 🚀 Features
+
+- **renown:** added login button ([f109c7305](https://github.com/powerhouse-inc/powerhouse/commit/f109c7305))
+
+### 🩹 Fixes
+
+- **ph-cmd:** add overrides for react and react-dom versions ([fe1412c20](https://github.com/powerhouse-inc/powerhouse/commit/fe1412c20))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.72 (2025-10-15)
 
 This was a version bump only for ph-cmd to align it with other projects, there were no code changes.

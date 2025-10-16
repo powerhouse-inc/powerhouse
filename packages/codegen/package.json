@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/codegen",
-  "version": "4.1.0-dev.72",
+  "version": "4.1.0-dev.74",
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
@@ -25,7 +25,7 @@
     "test": "npm run copy-hygen && vitest run"
   },
   "dependencies": {
-    "@acaldas/graphql-codegen-typescript-validation-schema": "^0.12.3",
+    "@acaldas/graphql-codegen-typescript-validation-schema": "^0.12.4",
     "@anatine/zod-mock": "^3.13.3",
     "@faker-js/faker": "^8.3.1",
     "@graphql-codegen/cli": "^5.0.0",
@@ -41,6 +41,7 @@
     "document-model": "workspace:*",
     "enquirer": "^2.4.1",
     "execa": "^8.0.1",
+    "graphql": "^16.11.0",
     "hygen": "^6.2.11",
     "kysely": "^0.28.2",
     "kysely-pglite": "^0.6.1",
@@ -55,7 +56,6 @@
     "copyfiles": "^2.4.1",
     "document-drive": "workspace:*",
     "esbuild-fix-imports-plugin": "^1.0.7",
-    "graphql": "^16.11.0",
     "husky": "^8.0.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

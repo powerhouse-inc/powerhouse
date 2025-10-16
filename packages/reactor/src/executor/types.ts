@@ -1,3 +1,4 @@
+import type { Operation } from "document-model";
 import type { Job } from "../queue/types.js";
 
 /**
@@ -13,8 +14,8 @@ export type JobResult = {
   /** Error if the job failed */
   error?: Error;
 
-  /** The operation generated from the action (if successful) */
-  operation?: any;
+  /** The operations generated from the actions (if successful) */
+  operations?: Operation[];
 
   /** Timestamp when the job execution completed */
   completedAt?: string;

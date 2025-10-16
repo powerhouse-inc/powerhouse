@@ -8,6 +8,7 @@ import type { Job } from "../src/queue/types.js";
 import { DocumentModelRegistry } from "../src/registry/implementation.js";
 import {
   createDocumentModelAction,
+  createMockOperationStore,
   createTestOperation,
 } from "../test/factories.js";
 
@@ -22,8 +23,17 @@ registry.registerModules(documentModelDocumentModelModule);
 // Use real storage
 const storage = new MemoryStorage();
 
+// Create mock operation store for benchmarks
+const operationStore = createMockOperationStore();
+
 // Create real executor with real storage
-const executor = new SimpleJobExecutor(registry, storage, storage);
+const executor = new SimpleJobExecutor(
+  registry,
+  storage,
+  storage,
+  operationStore,
+  eventBus,
+);
 
 // Pre-create a document for benchmarks
 const testDocument = documentModelDocumentModelModule.utils.createDocument();
@@ -42,7 +52,7 @@ function createSimpleJob(): Job {
     documentId: "doc1",
     scope: "global",
     branch: "main",
-    operation,
+    operations: [operation],
     maxRetries: 0,
     createdAt: new Date().toISOString(),
     queueHint: [],
@@ -68,7 +78,7 @@ function createComplexJob(): Job {
     documentId: "doc1",
     scope: "global",
     branch: "main",
-    operation,
+    operations: [operation],
     maxRetries: 0,
     createdAt: new Date().toISOString(),
     queueHint: [],

@@ -1,4 +1,4 @@
-import type { Operation, PHDocumentHeader } from "document-model";
+import type { Operation, PHDocument } from "document-model";
 
 export type OperationContext = {
   documentId: string;
@@ -153,24 +153,6 @@ export interface IDocumentView {
   indexOperations(items: OperationWithContext[]): Promise<void>;
 
   /**
-   * Retrieves a document header by reconstructing it from operations across all scopes.
-   *
-   * Headers contain cross-scope metadata (revision tracking, lastModified timestamps)
-   * that require aggregating information from multiple scopes, making this a
-   * view-layer concern rather than an operation store concern.
-   *
-   * @param documentId - The document id
-   * @param branch - The branch name
-   * @param signal - Optional abort signal to cancel the request
-   * @returns The reconstructed document header
-   */
-  getHeader(
-    documentId: string,
-    branch: string,
-    signal?: AbortSignal,
-  ): Promise<PHDocumentHeader>;
-
-  /**
    * Returns true if and only if the documents exist.
    *
    * @param documentIds - The list of document ids to check.
@@ -179,18 +161,15 @@ export interface IDocumentView {
   exists(documentIds: string[], signal?: AbortSignal): Promise<boolean[]>;
 
   /**
-   * Retrieves multiple document snapshots by their IDs.
+   * Returns the document with the given id.
    *
-   * @param documentIds - The list of document ids to retrieve.
-   * @param scope - The scope to filter by (default: "global")
-   * @param branch - The branch to filter by (default: "main")
+   * @param documentId - The id of the document to get.
+   * @param view - Optional filter containing branch and scopes information
    * @param signal - Optional abort signal to cancel the request
-   * @returns Array of document snapshots in the same order as input IDs (null for non-existent docs)
    */
-  getMany(
-    documentIds: string[],
-    scope?: string,
-    branch?: string,
+  get<TDocument extends PHDocument>(
+    documentId: string,
+    view?: ViewFilter,
     signal?: AbortSignal,
-  ): Promise<(DocumentSnapshot | null)[]>;
+  ): Promise<TDocument>;
 }

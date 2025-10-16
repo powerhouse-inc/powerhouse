@@ -1,3 +1,25 @@
+## 4.1.0-dev.74 (2025-10-15)
+
+### 🩹 Fixes
+
+- **codegen:** update graphql dependency in package.json ([257f368ac](https://github.com/powerhouse-inc/powerhouse/commit/257f368ac))
+- merge fixes ([e5eda5985](https://github.com/powerhouse-inc/powerhouse/commit/e5eda5985))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente @gpuente
+
+## 4.1.0-dev.73 (2025-10-15)
+
+### 🚀 Features
+
+- **renown:** added login button ([f109c7305](https://github.com/powerhouse-inc/powerhouse/commit/f109c7305))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.72 (2025-10-15)
 
 ### 🩹 Fixes
