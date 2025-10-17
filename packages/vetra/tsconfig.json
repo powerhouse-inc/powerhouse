@@ -13,7 +13,7 @@
     "lib": ["ESNext", "dom", "dom.iterable"],
 
     // Other Outputs
-    "sourceMap": true,
+    "sourceMap": false,
     "declaration": true,
     "declarationMap": true,
 

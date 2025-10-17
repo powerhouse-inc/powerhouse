@@ -11,14 +11,7 @@
     "access": "public"
   },
   "files": [
-    "dist",
-    "document-models",
-    "editors",
-    "subgraphs",
-    "processors",
-    "utils",
-    "index.ts",
-    "style.css"
+    "dist"
   ],
   "exports": {
     ".": {
