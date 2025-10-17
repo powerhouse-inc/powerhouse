@@ -5,16 +5,18 @@ import type { CommandActionType } from "../types.js";
 import { setCustomHelp } from "../utils.js";
 
 async function startGenerate(
-  filePath: string | undefined,
+  filePath: string | string[] | undefined,
   options: GenerateOptions,
 ) {
   const Generate = await import("../services/generate.js");
   const { startGenerate } = Generate;
-  return startGenerate(filePath, options);
+
+  const resolvedPath = Array.isArray(filePath) ? filePath.join(" ") : filePath;
+  return startGenerate(resolvedPath, options);
 }
 
 export const generate: CommandActionType<
-  [string | undefined, GenerateOptions]
+  [string | string[] | undefined, GenerateOptions]
 > = async (filePath, options) => {
   return startGenerate(filePath, options);
 };
@@ -23,7 +25,7 @@ export function generateCommand(program: Command) {
   const cmd = program
     .command("generate")
     .description("Generate code from the document models")
-    .argument("[document-model-file]", "Path to the document model file")
+    .argument("[document-model-file...]", "Path to the document model file")
     .option("-i, --interactive", "Run the command in interactive mode")
     .option("--editors <type>", "Path to the editors directory")
     .option("-e, --editor <type>", "Editor Name")
