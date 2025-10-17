@@ -1,19 +1,19 @@
-import type { PHDocument } from "document-model";
+import type { DocumentOperations, PHDocument } from "document-model";
 
 // Deletes the resulting state on all operations in a document.
 // NOTE: THE RESULT IS THE CACHES MUTATE DOCUMENTS
 export const trimResultingState = <TDocument extends PHDocument>(
   document: TDocument,
 ): TDocument => {
-  const global = document.operations.global.map((e) => {
-    delete e.resultingState;
-    return e;
-  });
+  // Handle all scopes dynamically, not just global and local
+  const trimmedOperations: DocumentOperations = {};
 
-  const local = document.operations.local.map((e) => {
-    delete e.resultingState;
-    return e;
-  });
+  for (const [scope, operations] of Object.entries(document.operations)) {
+    trimmedOperations[scope] = operations.map((e) => {
+      delete e.resultingState;
+      return e;
+    });
+  }
 
-  return { ...document, operations: { global, local } };
+  return { ...document, operations: trimmedOperations };
 };

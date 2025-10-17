@@ -181,10 +181,12 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
 
   let documentState = initialState;
   const operationsToReplay: Operation[] = [];
-  const initialOperations: DocumentOperations = {
-    global: [],
-    local: [],
-  };
+  // Initialize with all scopes found in operations, plus global and local for backward compatibility
+  const allScopes = new Set([...Object.keys(operations), "global", "local"]);
+  const initialOperations: DocumentOperations = {};
+  for (const scope of allScopes) {
+    initialOperations[scope] = [];
+  }
 
   // if operation resulting state is to be used then
   // looks for the last operation with state of each
@@ -283,28 +285,38 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
   }
 
   // reuses operation timestamp if provided
-  const resultOperations: DocumentOperations = Object.keys(
-    result.operations,
-  ).reduce(
-    (acc, key) => {
-      const scope = key as keyof DocumentOperations;
+  // Initialize with all scopes from both result.operations and input operations
+  const allResultScopes = new Set([
+    ...Object.keys(result.operations),
+    ...Object.keys(operations),
+    "global",
+    "local",
+  ]);
+  const initialResultOperations: DocumentOperations = {};
+  for (const scope of allResultScopes) {
+    initialResultOperations[scope] = [];
+  }
 
-      return {
-        ...acc,
-        [scope]: [
-          ...result.operations[scope].map((operation, index) => {
-            return {
-              ...operation,
-              timestamp:
-                operations[scope][index]?.timestampUtcMs ??
-                operation.timestampUtcMs,
-            };
-          }),
-        ],
-      };
-    },
-    { global: [], local: [] },
-  );
+  // Iterate over all scopes (not just result.operations) to preserve empty scopes
+  const resultOperations: DocumentOperations = Array.from(
+    allResultScopes,
+  ).reduce((acc, scope) => {
+    const scopeOps = result.operations[scope] || [];
+
+    return {
+      ...acc,
+      [scope]: [
+        ...scopeOps.map((operation, index) => {
+          return {
+            ...operation,
+            timestamp:
+              operations[scope]?.[index]?.timestampUtcMs ??
+              operation.timestampUtcMs,
+          };
+        }),
+      ],
+    };
+  }, initialResultOperations);
 
   // gets the last modified timestamp from the latest operation
   const lastModified = header

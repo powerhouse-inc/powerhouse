@@ -1,3 +1,13 @@
+## 4.1.0-dev.75 (2025-10-17)
+
+### 🩹 Fixes
+
+- **reactor-api:** avoids use of path.matchGlob which logs a error message ([9a88cf095](https://github.com/powerhouse-inc/powerhouse/commit/9a88cf095))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.74 (2025-10-15)
 
 ### 🩹 Fixes

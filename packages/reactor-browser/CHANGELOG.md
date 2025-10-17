@@ -1,3 +1,13 @@
+## 4.1.0-dev.75 (2025-10-17)
+
+### 🩹 Fixes
+
+- **reactor-browser:** deal with invalid getDocument ([a38c9cda2](https://github.com/powerhouse-inc/powerhouse/commit/a38c9cda2))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.74 (2025-10-15)
 
 ### 🩹 Fixes

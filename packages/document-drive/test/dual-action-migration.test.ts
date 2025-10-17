@@ -147,9 +147,13 @@ describe("Dual Action Migration Tests", () => {
       );
 
       // Verify operations exist
-      expect(created.operations.global.length).toBe(2);
-      expect(created.operations.global[0].action.type).toBe("CREATE_DOCUMENT");
-      expect(created.operations.global[1].action.type).toBe("UPGRADE_DOCUMENT");
+      expect(created.operations.document.length).toBe(2);
+      expect(created.operations.document[0].action.type).toBe(
+        "CREATE_DOCUMENT",
+      );
+      expect(created.operations.document[1].action.type).toBe(
+        "UPGRADE_DOCUMENT",
+      );
 
       // Retrieve with legacy server
       const legacyServer = new ReactorBuilder(documentModels)
@@ -168,8 +172,8 @@ describe("Dual Action Migration Tests", () => {
       const retrieved = await legacyServer.getDocument(documentId);
 
       expect(retrieved).toBeDefined();
-      // Operations should be preserved in storage
-      expect(retrieved.operations.global.length).toBe(2);
+      // Operations should be preserved in storage (in document scope)
+      expect(retrieved.operations.document.length).toBe(2);
       // State should match
       expect(retrieved.state).toEqual(created.state);
     });
@@ -311,10 +315,10 @@ describe("Dual Action Migration Tests", () => {
       // doc1 should have no operations (legacy)
       expect(doc1.operations.global.length).toBe(0);
 
-      // doc2 should have CREATE + UPGRADE (dual-action)
-      expect(doc2.operations.global.length).toBe(2);
-      expect(doc2.operations.global[0].action.type).toBe("CREATE_DOCUMENT");
-      expect(doc2.operations.global[1].action.type).toBe("UPGRADE_DOCUMENT");
+      // doc2 should have CREATE + UPGRADE (dual-action) in document scope
+      expect(doc2.operations.document.length).toBe(2);
+      expect(doc2.operations.document[0].action.type).toBe("CREATE_DOCUMENT");
+      expect(doc2.operations.document[1].action.type).toBe("UPGRADE_DOCUMENT");
     });
 
     it("should handle document with only partial dual-action operations", async () => {
@@ -393,7 +397,7 @@ describe("Dual Action Migration Tests", () => {
 
       // Verify no duplicate operations
       const final = await server.getDocument(documentId);
-      expect(final.operations.global.length).toBe(2); // Still just CREATE + UPGRADE
+      expect(final.operations.document.length).toBe(2); // Still just CREATE + UPGRADE
     });
   });
 

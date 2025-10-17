@@ -11,7 +11,7 @@ import type {
   ISubscribablePackageLoader,
   ISubscriptionOptions,
 } from "./types.js";
-import { debounce } from "./util.js";
+import { debounce, isSubpath } from "./util.js";
 
 export class VitePackageLoader implements ISubscribablePackageLoader {
   private readonly logger = childLogger(["reactor-api", "vite-loader"]);
@@ -142,7 +142,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     const documentModelsPath = this.getDocumentModelsPath(identifier);
 
     const listener = debounce(async (changedPath: string) => {
-      if (path.matchesGlob(changedPath, path.join(documentModelsPath, "**"))) {
+      if (isSubpath(documentModelsPath, changedPath)) {
         const documentModels = await this.loadDocumentModels(identifier);
         handler(documentModels);
       }
@@ -162,7 +162,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
   ): () => void {
     const subgraphsPath = this.getSubgraphsPath(identifier);
     const listener = debounce(async (changedPath: string) => {
-      if (path.matchesGlob(changedPath, path.join(subgraphsPath, "**"))) {
+      if (isSubpath(subgraphsPath, changedPath)) {
         const subgraphs = await this.loadSubgraphs(identifier);
         handler(subgraphs);
       }
@@ -183,7 +183,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
   ): () => void {
     const processorsPath = this.getProcessorsPath(identifier);
     const listener = debounce(async (changedPath: string) => {
-      if (path.matchesGlob(changedPath, path.join(processorsPath, "**"))) {
+      if (isSubpath(processorsPath, changedPath)) {
         const processors = await this.loadProcessors(identifier);
         handler(processors);
       }

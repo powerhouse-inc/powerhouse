@@ -9,6 +9,17 @@ import type {
 import { SynchronizationUnitNotFoundError } from "document-drive";
 import type { PHDocument } from "document-model";
 
+function handleSettledResults<T>(results: PromiseSettledResult<T>[]): T[] {
+  return results.reduce((acc, result) => {
+    if (result.status === "fulfilled") {
+      acc.push(result.value);
+    } else {
+      console.warn(result.reason);
+    }
+    return acc;
+  }, [] as T[]);
+}
+
 /** Returns the sharing type for a drive. */
 export function getDriveSharingType(
   drive:
@@ -77,10 +88,10 @@ export async function getDocumentsForDriveId(
 ): Promise<PHDocument[]> {
   if (!reactor || !driveId) return [];
   const documentIds = await reactor.getDocuments(driveId);
-  const documents = await Promise.all(
+  const documents = await Promise.allSettled(
     documentIds.map((id) => reactor.getDocument(id)),
   );
-  return documents;
+  return handleSettledResults(documents);
 }
 
 export async function getDrives(
@@ -88,8 +99,10 @@ export async function getDrives(
 ): Promise<DocumentDriveDocument[]> {
   if (!reactor) return [];
   const driveIds = await reactor.getDrives();
-  const drives = await Promise.all(driveIds.map((id) => reactor.getDrive(id)));
-  return drives;
+  const drives = await Promise.allSettled(
+    driveIds.map((id) => reactor.getDrive(id)),
+  );
+  return handleSettledResults(drives);
 }
 
 export async function getDocuments(
@@ -97,13 +110,12 @@ export async function getDocuments(
 ): Promise<PHDocument[]> {
   if (!reactor) return [];
   const driveIds = await reactor.getDrives();
-  const documentIds = await Promise.all(
-    driveIds.map((id) => reactor.getDocuments(id)),
+  const documentIds = handleSettledResults(
+    await Promise.allSettled(driveIds.map((id) => reactor.getDocuments(id))),
+  ).flat();
+  return handleSettledResults(
+    await Promise.allSettled(documentIds.map((id) => reactor.getDocument(id))),
   );
-  const documents = await Promise.all(
-    documentIds.flat().map((id) => reactor.getDocument(id)),
-  );
-  return documents;
 }
 
 export async function getDriveById(
