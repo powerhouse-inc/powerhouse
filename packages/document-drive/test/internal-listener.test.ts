@@ -1,32 +1,31 @@
+import { IProcessor } from "#processors/types";
 import {
   createPresignedHeader,
+  documentModelDocumentModelModule,
   DocumentModelModule,
   generateId,
   setModelName,
 } from "document-model";
 import { beforeEach, describe, expect, test, vi, vitest } from "vitest";
 import * as DriveActions from "../src/drive-document-model/gen/creators.js";
+import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
 import { ReactorBuilder } from "../src/server/builder.js";
 import { InternalTransmitter } from "../src/server/listener/transmitter/internal.js";
-import { expectUTCTimestamp, expectUUID } from "./utils.js";
-
-import { IProcessor } from "#processors/types";
-import { documentModelDocumentModelModule } from "document-model";
-import { driveDocumentModelModule } from "../src/drive-document-model/module.js";
 import { Listener } from "../src/server/types.js";
+import { expectUTCTimestamp, expectUUID } from "./utils.js";
 
 describe("Internal Listener", () => {
   const documentModels = [
     documentModelDocumentModelModule,
     driveDocumentModelModule,
   ] as DocumentModelModule<any>[];
-  const driveId = generateId();
 
   async function buildServer(processor: IProcessor) {
     const builder = new ReactorBuilder(documentModels);
     const server = builder.build();
     await server.initialize();
 
+    const driveId = generateId();
     await server.addDrive({
       id: driveId,
       global: {
@@ -69,7 +68,7 @@ describe("Internal Listener", () => {
 
     await listenerManager?.setListener(driveId, listener);
 
-    return server;
+    return { driveId, server };
   }
 
   beforeEach(() => {
@@ -81,7 +80,7 @@ describe("Internal Listener", () => {
       return Promise.resolve();
     });
 
-    const server = await buildServer({
+    const { driveId, server } = await buildServer({
       onStrands: transmitFn,
       onDisconnect: () => Promise.resolve(),
     });
@@ -96,7 +95,7 @@ describe("Internal Listener", () => {
         driveId: drive.header.id,
         operations: [],
         scope: "global",
-        state: {},
+        state: drive.state.global,
       },
     ]);
 
@@ -147,8 +146,8 @@ describe("Internal Listener", () => {
             skip: 0,
             timestampUtcMs: expectUTCTimestamp(expect),
             type: "ADD_FILE",
-            previousState: expect.any(Object),
-            state: expect.any(Object),
+            previousState: drive.initialState.global,
+            state: (result.document!.state as any).global,
           }),
         ],
         scope: "global",
@@ -161,7 +160,7 @@ describe("Internal Listener", () => {
         driveId: drive.header.id,
         operations: [],
         scope: "global",
-        state: {},
+        state: document.state.global,
       }),
     ]);
 
@@ -222,7 +221,7 @@ describe("Internal Listener", () => {
             skip: 0,
             timestampUtcMs: expectUTCTimestamp(expect),
             type: "SET_MODEL_NAME",
-            previousState: expect.any(Object),
+            previousState: document.state.global,
             state,
           }),
         ],
@@ -257,7 +256,7 @@ describe("Internal Listener", () => {
             skip: 0,
             timestampUtcMs: expectUTCTimestamp(expect),
             type: "SET_MODEL_NAME",
-            previousState: expect.any(Object),
+            previousState: state,
             state: expect.objectContaining({ name: "test 2" }),
           }),
         ],
@@ -270,7 +269,7 @@ describe("Internal Listener", () => {
   test("should call disconnect function of processor", async () => {
     const disconnectFn = vitest.fn(() => Promise.resolve());
 
-    const server = await buildServer({
+    const { driveId, server } = await buildServer({
       onStrands: () => Promise.resolve(),
       onDisconnect: disconnectFn,
     });
