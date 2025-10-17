@@ -10,6 +10,7 @@ import type { SynchronizationUnitQuery } from "#server/types";
 import { AbortError } from "#utils/errors";
 import { mergeOperations, operationsToRevision } from "#utils/misc";
 import type { Operation, PHDocument } from "document-model";
+import { childLogger } from "../utils/logger.js";
 import type {
   IDocumentAdminStorage,
   IDocumentStorage,
@@ -30,6 +31,7 @@ type DriveManifest = {
 export class MemoryStorage
   implements IDriveOperationStorage, IDocumentStorage, IDocumentAdminStorage
 {
+  private logger = childLogger(["MemoryStorage"]);
   private documents: Record<string, PHDocument>;
   private driveManifests: Record<string, DriveManifest>;
   private slugToDocumentId: Record<string, string>;
@@ -363,7 +365,6 @@ export class MemoryStorage
           if (!document || !Object.keys(document.state).includes(unit.scope)) {
             return undefined;
           }
-
           const operations = document.operations[unit.scope];
 
           return {
@@ -374,9 +375,14 @@ export class MemoryStorage
             lastUpdated:
               operations.at(-1)?.timestampUtcMs ??
               document.header.createdAtUtcIso,
-            revision: operationsToRevision(operations),
+            revision:
+              operations.length > 0 ? operationsToRevision(operations) : 0,
           };
-        } catch {
+        } catch (error) {
+          this.logger.error(
+            "Error getting synchronization units revision",
+            error,
+          );
           return undefined;
         }
       }),
