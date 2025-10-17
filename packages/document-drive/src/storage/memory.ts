@@ -321,9 +321,20 @@ export class MemoryStorage
       operations,
     );
 
+    const revision: Record<string, number> = {};
+    for (const [scope, scopeOps] of Object.entries(mergedOperations)) {
+      revision[scope] = operationsToRevision(scopeOps);
+    }
+
     this.documents[id] = {
       ...existingDocument,
-      ...document,
+      state: document.state,
+      initialState: document.initialState,
+      header: {
+        ...existingDocument.header,
+        ...document.header,
+        revision,
+      },
       operations: mergedOperations,
     };
   }
@@ -336,9 +347,20 @@ export class MemoryStorage
     const drive = await this.get<DocumentDriveDocument>(id);
     const mergedOperations = mergeOperations(drive.operations, operations);
 
+    const revision: Record<string, number> = {};
+    for (const [scope, scopeOps] of Object.entries(mergedOperations)) {
+      revision[scope] = operationsToRevision(scopeOps);
+    }
+
     this.documents[id] = {
       ...drive,
-      ...document,
+      state: document.state,
+      initialState: document.initialState,
+      header: {
+        ...drive.header,
+        ...document.header,
+        revision,
+      },
       operations: mergedOperations,
     };
   }

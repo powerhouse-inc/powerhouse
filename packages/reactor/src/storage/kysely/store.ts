@@ -212,12 +212,11 @@ export class KyselyOperationStore implements IOperationStore {
       )
       .execute();
 
-    // Build the revision map and find the latest timestamp
     const revision: Record<string, number> = {};
-    let latestTimestamp = new Date(0).toISOString(); // Start with epoch
+    let latestTimestamp = new Date(0).toISOString();
 
     for (const row of scopeRevisions) {
-      revision[row.scope] = row.index;
+      revision[row.scope] = row.index + 1;
       const timestamp = row.timestampUtcMs.toISOString();
       if (timestamp > latestTimestamp) {
         latestTimestamp = timestamp;
