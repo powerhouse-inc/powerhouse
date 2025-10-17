@@ -287,6 +287,9 @@ export type Operation = {
  * The operations history of the document by scope.
  *
  * This will be removed in a future release.
+ *
+ * TODO: Type should be Partial<Record<string, Operation[]>>,
+ * but that is a breaking change for codegen + external doc models.
  */
 export type DocumentOperations = Record<string, Operation[]>;
 
