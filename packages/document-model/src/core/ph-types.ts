@@ -288,7 +288,7 @@ export type Operation = {
  *
  * This will be removed in a future release.
  */
-export type DocumentOperations = Partial<Record<string, Operation[]>>;
+export type DocumentOperations = Record<string, Operation[]>;
 
 /**
  * The base type of a document model.
