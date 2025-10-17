@@ -1,3 +1,7 @@
+## 5.0.0-staging.27 (2025-10-17)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
 ## 5.0.0-staging.26 (2025-10-16)
 
 This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.

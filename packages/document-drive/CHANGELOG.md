@@ -1,3 +1,14 @@
+## 5.0.0-staging.27 (2025-10-17)
+
+### 🩹 Fixes
+
+- **document-drive:** add initial state to first internal strand update ([120396f57](https://github.com/powerhouse-inc/powerhouse/commit/120396f57))
+- **document-drive:** consistent getSynchronizationUnitsRevision results for all storage adapters ([eb1d9a2bd](https://github.com/powerhouse-inc/powerhouse/commit/eb1d9a2bd))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.0.0-staging.26 (2025-10-16)
 
 This was a version bump only for document-drive to align it with other projects, there were no code changes.
