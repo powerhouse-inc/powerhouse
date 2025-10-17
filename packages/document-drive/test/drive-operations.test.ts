@@ -21,7 +21,7 @@ function buildOperation(
   index?: number,
 ): Operation {
   const newDocument = driveDocumentReducer(document, action);
-  const operation = newDocument.operations[action.scope].slice().pop()!;
+  const operation = newDocument.operations[action.scope]!.slice().pop()!;
   return { ...operation, index: index ?? operation.index };
 }
 
@@ -32,7 +32,7 @@ function buildOperations(
   const operations: Operation[] = [];
   for (const action of actions) {
     document = driveDocumentReducer(document, action);
-    const operation = document.operations[action.scope].slice().pop()!;
+    const operation = document.operations[action.scope]!.slice().pop()!;
     operations.push(operation);
   }
   return operations;

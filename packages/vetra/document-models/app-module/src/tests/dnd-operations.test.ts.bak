@@ -28,13 +28,13 @@ describe("DndOperations Operations", () => {
       creators.setDragAndDropEnabled(input),
     );
 
-    expect(updatedDocument.operations.global!).toHaveLength(1);
-    expect(updatedDocument.operations.global![0].action.type).toBe(
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
       "SET_DRAG_AND_DROP_ENABLED",
     );
-    expect(updatedDocument.operations.global![0].action.input).toStrictEqual(
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
       input,
     );
-    expect(updatedDocument.operations.global![0].index).toEqual(0);
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
 });

@@ -165,13 +165,16 @@ export async function uploadOperations(
   );
 
   // Calculate total operations for progress tracking
-  const totalOperations = Object.values(allOperations).reduce(
+  const allOperationsArray = Object.values(allOperations).filter(
+    (ops): ops is Operation[] => ops !== undefined,
+  );
+  const totalOperations = allOperationsArray.reduce(
     (total, operations) => total + operations.length,
     0,
   );
   let uploadedOperations = 0;
 
-  for (const operations of Object.values(allOperations)) {
+  for (const operations of allOperationsArray) {
     for (let i = 0; i < operations.length; i += operationsLimit) {
       logger.verbose(
         `uploadDocumentOperations:for(i:${i}, ops:${operations.length}, limit:${operationsLimit}): START`,

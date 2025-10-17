@@ -547,7 +547,7 @@ export class FilesystemStorage
             return undefined;
           }
 
-          const operations = document.operations[unit.scope];
+          const operations = document.operations[unit.scope]!;
 
           return {
             documentId: unit.documentId,

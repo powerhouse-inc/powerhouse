@@ -223,9 +223,9 @@ describe("Document operations", () => {
 
       expect(document.state.global).toMatchObject(expectedState);
       expect(document.revision.global).toBe(6);
-      expect(document.operations.global.length).toBe(6);
-      expect(document.operations.global[5]?.index).toBe(5);
-      expect(document.operations.global[5]?.skip).toBe(1);
+      expect(document.operations.global!.length).toBe(6);
+      expect(document.operations.global![5]?.index).toBe(5);
+      expect(document.operations.global![5]?.skip).toBe(1);
     });
 
     it("should update latest undo operation", async () => {
@@ -241,9 +241,9 @@ describe("Document operations", () => {
 
       expect(document.state.global).toMatchObject(expectedState);
       expect(document.revision.global).toBe(6);
-      expect(document.operations.global.length).toBe(6);
-      expect(document.operations.global[5]?.index).toBe(5);
-      expect(document.operations.global[5]?.skip).toBe(2);
+      expect(document.operations.global!.length).toBe(6);
+      expect(document.operations.global![5]?.index).toBe(5);
+      expect(document.operations.global![5]?.skip).toBe(2);
     });
 
     it("should update latest undo operation with skip = 3", async () => {
@@ -259,9 +259,9 @@ describe("Document operations", () => {
 
       expect(document.state.global).toMatchObject(expectedState);
       expect(document.revision.global).toBe(6);
-      expect(document.operations.global.length).toBe(6);
-      expect(document.operations.global[5]?.index).toBe(5);
-      expect(document.operations.global[5]?.skip).toBe(3);
+      expect(document.operations.global!.length).toBe(6);
+      expect(document.operations.global![5]?.index).toBe(5);
+      expect(document.operations.global![5]?.skip).toBe(3);
     });
 
     it("should not update latest operation when latest op !== NOOP with skip", async () => {
@@ -283,9 +283,9 @@ describe("Document operations", () => {
 
       expect(document.state.global).toMatchObject(expectedState);
       expect(document.revision.global).toBe(8);
-      expect(document.operations.global.length).toBe(8);
-      expect(document.operations.global[7]?.index).toBe(7);
-      expect(document.operations.global[7]?.skip).toBe(1);
+      expect(document.operations.global!.length).toBe(8);
+      expect(document.operations.global![7]?.index).toBe(7);
+      expect(document.operations.global![7]?.skip).toBe(1);
     });
   });
 });

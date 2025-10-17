@@ -191,9 +191,9 @@ describe("Base utils", () => {
       replayedDocument.header.lastModifiedAtUtcIso,
     );
     expect(
-      newDocument.operations.global.map((o) => o.timestampUtcMs),
+      newDocument.operations.global!.map((o) => o.timestampUtcMs),
     ).toStrictEqual(
-      replayedDocument.operations.global.map((o) => o.timestampUtcMs),
+      replayedDocument.operations.global!.map((o) => o.timestampUtcMs),
     );
   });
 

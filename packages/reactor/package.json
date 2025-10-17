@@ -25,7 +25,8 @@
     "lint": "eslint",
     "bench": "vitest bench --run",
     "clean": "rimraf dist",
-    "clean:node_modules": "rimraf node_modules"
+    "clean:node_modules": "rimraf node_modules",
+    "claude": "pnpm build && pnpm test && pnpm lint"
   },
   "publishConfig": {
     "access": "public"

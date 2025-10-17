@@ -74,7 +74,7 @@ describe("DocumentModel Class", () => {
     newDocument = reducer(newDocument, increment());
 
     // path resulting state so it is reused
-    const lastOperation = newDocument.operations.global.at(-1);
+    const lastOperation = newDocument.operations.global!.at(-1);
     if (lastOperation) {
       lastOperation.resultingState = JSON.stringify(newDocument.state.global);
     }

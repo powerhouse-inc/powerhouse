@@ -155,12 +155,12 @@ describe.each(storageLayers)(
       await storage.migrateOperationSignatures();
       const migratedDrive = await storage.get<DocumentDriveDocument>(driveId);
 
-      expect(storedDrive.operations.global.length).toEqual(
-        migratedDrive.operations.global.length,
+      expect(storedDrive.operations.global!.length).toEqual(
+        migratedDrive.operations.global!.length,
       );
 
       expect(
-        storedDrive.operations.global.map((o: any) => o.context),
+        storedDrive.operations.global!.map((o: any) => o.context),
       ).toStrictEqual([undefined]);
     });
 
@@ -219,12 +219,12 @@ describe.each(storageLayers)(
       await storage.migrateOperationSignatures();
       const migratedDrive = await storage.get<DocumentDriveDocument>(driveId);
 
-      expect(storedDrive.operations.global.length).toEqual(
-        migratedDrive.operations.global.length,
+      expect(storedDrive.operations.global!.length).toEqual(
+        migratedDrive.operations.global!.length,
       );
 
       expect(
-        migratedDrive.operations.global.map((o: any) => o.context),
+        migratedDrive.operations.global!.map((o: any) => o.context),
       ).toStrictEqual([
         {
           signer: {
@@ -296,12 +296,12 @@ describe.each(storageLayers)(
       await storage.migrateOperationSignatures();
       const migratedDrive = await storage.get<DocumentDriveDocument>(driveId);
 
-      expect(storedDrive.operations.global.length).toEqual(
-        migratedDrive.operations.global.length,
+      expect(storedDrive.operations.global!.length).toEqual(
+        migratedDrive.operations.global!.length,
       );
 
       expect(
-        migratedDrive.operations.global.map((o: any) => o.context),
+        migratedDrive.operations.global!.map((o: any) => o.context),
       ).toStrictEqual([
         {
           signer: {

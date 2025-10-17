@@ -80,7 +80,7 @@ describe("Local reducer", () => {
         error: undefined,
       },
     ]);
-    expect(newDocument.operations.global).toStrictEqual([]);
+    expect(newDocument.operations.global!).toStrictEqual([]);
   });
 
   it("should update local operations list", async () => {
@@ -110,7 +110,7 @@ describe("Local reducer", () => {
       },
     ]);
 
-    expect(newDocument.operations.global).toStrictEqual([]);
+    expect(newDocument.operations.global!).toStrictEqual([]);
   });
   it("should update local name", async () => {
     const document = baseCreateDocument<CountPHState>(

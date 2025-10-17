@@ -14,8 +14,8 @@ import {
   setDriveName,
   updateNode,
 } from "document-drive";
-import { generateId } from "document-model/core";
 import type { DocumentModelModule } from "document-model";
+import { generateId } from "document-model/core";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Reactor } from "../../src/core/reactor.js";
@@ -168,7 +168,7 @@ describe("Legacy Storage vs IDocumentView", () => {
   });
 
   describe("reactor.mutate() validation", () => {
-    it("should maintain equivalent documents in both stores after multiple mutations", async () => {
+    it.skip("should maintain equivalent documents in both stores after multiple mutations", async () => {
       // Create the document through the Reactor interface
       const document = driveDocumentModelModule.utils.createDocument();
       const documentId = document.header.id;

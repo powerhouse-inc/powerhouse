@@ -91,9 +91,9 @@ describe("SimpleJobExecutor Integration", () => {
       const updatedDocument = await storage.get<DocumentDriveDocument>(
         document.header.id,
       );
-      expect(updatedDocument.operations.global).toHaveLength(1);
+      expect(updatedDocument.operations.global!).toHaveLength(1);
 
-      const persistedOperation = updatedDocument.operations.global[0];
+      const persistedOperation = updatedDocument.operations.global![0];
       expect(persistedOperation.action.type).toBe("ADD_FOLDER");
       expect(persistedOperation.action.input).toMatchObject({
         id: "folder-1",
@@ -176,7 +176,7 @@ describe("SimpleJobExecutor Integration", () => {
       const updatedDocument = await storage.get<DocumentDriveDocument>(
         document.header.id,
       );
-      expect(updatedDocument.operations.global).toHaveLength(2);
+      expect(updatedDocument.operations.global!).toHaveLength(2);
 
       // Verify state reflects both changes
       const globalState = updatedDocument.state.global;
@@ -262,7 +262,7 @@ describe("SimpleJobExecutor Integration", () => {
       const updatedDocument = await storage.get<DocumentDriveDocument>(
         document.header.id,
       );
-      expect(updatedDocument.operations.global).toHaveLength(2);
+      expect(updatedDocument.operations.global!).toHaveLength(2);
 
       // Verify state reflects the changes
       const globalState = updatedDocument.state.global;
@@ -340,7 +340,7 @@ describe("SimpleJobExecutor Integration", () => {
       const unchangedDocument = await storage.get<DocumentDriveDocument>(
         document.header.id,
       );
-      expect(unchangedDocument.operations.global).toHaveLength(0);
+      expect(unchangedDocument.operations.global!).toHaveLength(0);
       const globalState = unchangedDocument.state.global;
       expect(globalState).toBeDefined();
       expect(globalState.nodes).toBeDefined();

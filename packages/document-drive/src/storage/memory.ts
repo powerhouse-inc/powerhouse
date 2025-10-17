@@ -364,6 +364,9 @@ export class MemoryStorage
           }
 
           const operations = document.operations[unit.scope];
+          if (!operations) {
+            return undefined;
+          }
 
           return {
             documentId: unit.documentId,

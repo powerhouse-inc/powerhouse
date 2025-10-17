@@ -235,13 +235,13 @@ describe("remove old drives", () => {
   const expectPublicDrive = (drive: DocumentDriveDocument) => {
     expect(drive.state.local.listeners).toHaveLength(1);
     expect(drive.state.local.triggers).toHaveLength(1);
-    expect(drive.operations.local).toHaveLength(0);
+    expect(drive.operations.local!).toHaveLength(0);
   };
 
   const expectDetachedDrive = (drive: DocumentDriveDocument) => {
     expect(drive.state.local.listeners).toHaveLength(0);
     expect(drive.state.local.triggers).toHaveLength(0);
-    expect(drive.operations.local).toMatchObject([
+    expect(drive.operations.local!).toMatchObject([
       {
         type: "REMOVE_LISTENER",
         index: 0,
