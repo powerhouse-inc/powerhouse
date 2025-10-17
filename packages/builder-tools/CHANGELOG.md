@@ -1,3 +1,13 @@
+## 4.1.0-dev.75 (2025-10-17)
+
+### 🩹 Fixes
+
+- **connect:** fixes #1965 build public dir ([#1965](https://github.com/powerhouse-inc/powerhouse/issues/1965))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.74 (2025-10-15)
 
 ### 🩹 Fixes

@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/reactor-local",
   "type": "module",
-  "version": "4.1.0-dev.74",
+  "version": "4.1.0-dev.75",
   "main": "dist/server.js",
   "repository": {
     "type": "git",

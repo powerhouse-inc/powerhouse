@@ -1,3 +1,13 @@
+## 4.1.0-dev.75 (2025-10-17)
+
+### 🩹 Fixes
+
+- oof, fixed a few deep issues with assumptions about global and local scope ([85d3c9616](https://github.com/powerhouse-inc/powerhouse/commit/85d3c9616))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.74 (2025-10-15)
 
 ### 🩹 Fixes

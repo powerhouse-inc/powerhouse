@@ -1,3 +1,18 @@
+## 4.1.0-dev.75 (2025-10-17)
+
+### 🩹 Fixes
+
+- oof, fixed a few deep issues with assumptions about global and local scope ([85d3c9616](https://github.com/powerhouse-inc/powerhouse/commit/85d3c9616))
+- **connect:** reload window after clearing storage ([f214391f6](https://github.com/powerhouse-inc/powerhouse/commit/f214391f6))
+- **connect:** fixes #1965 build public dir ([#1965](https://github.com/powerhouse-inc/powerhouse/issues/1965))
+- **reactor-api:** avoids use of path.matchGlob which logs a error message ([9a88cf095](https://github.com/powerhouse-inc/powerhouse/commit/9a88cf095))
+- **reactor-browser:** deal with invalid getDocument ([a38c9cda2](https://github.com/powerhouse-inc/powerhouse/commit/a38c9cda2))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.74 (2025-10-15)
 
 ### 🚀 Features
