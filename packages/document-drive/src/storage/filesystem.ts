@@ -488,12 +488,23 @@ export class FilesystemStorage
       operations,
     );
 
+    const revision: Record<string, number> = {};
+    for (const [scope, scopeOps] of Object.entries(mergedOperations)) {
+      revision[scope] = operationsToRevision(scopeOps);
+    }
+
     const documentPath = this._buildDocumentPath(id);
     await fs.writeFile(
       documentPath,
       stringify({
         ...existingDocument,
-        ...document,
+        state: document.state,
+        initialState: document.initialState,
+        header: {
+          ...existingDocument.header,
+          ...document.header,
+          revision,
+        },
         operations: mergedOperations,
       }),
       {
@@ -513,12 +524,23 @@ export class FilesystemStorage
       operations,
     );
 
+    const revision: Record<string, number> = {};
+    for (const [scope, scopeOps] of Object.entries(mergedOperations)) {
+      revision[scope] = operationsToRevision(scopeOps);
+    }
+
     const drivePath = this._buildDocumentPath(id);
     await fs.writeFile(
       drivePath,
       stringify({
         ...existingDocument,
-        ...document,
+        state: document.state,
+        initialState: document.initialState,
+        header: {
+          ...existingDocument.header,
+          ...document.header,
+          revision,
+        },
         operations: mergedOperations,
       }),
       {

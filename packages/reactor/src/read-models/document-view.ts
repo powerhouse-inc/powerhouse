@@ -141,10 +141,6 @@ export class KyselyDocumentView implements IDocumentView {
               ? (scopeState as Record<string, unknown>)
               : {};
 
-          console.log(
-            `Indexing ('${documentId}', '${scopeName}', ${item.operation.index}).`,
-          );
-
           if (existingSnapshot) {
             await trx
               .updateTable("DocumentSnapshot")
