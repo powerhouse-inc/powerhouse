@@ -2,10 +2,11 @@ import type { IJobExecutorManager, IReactor } from "#index.js";
 import type {
   BaseDocumentDriveServer,
   DocumentDriveDocument,
-  IDocumentOperationStorage,
   IDocumentStorage,
+  IDriveOperationStorage,
 } from "document-drive";
 import {
+  InMemoryCache,
   MemoryStorage,
   ReactorBuilder,
   addFile,
@@ -14,9 +15,13 @@ import {
   setDriveName,
   updateNode,
 } from "document-drive";
+import { FilesystemStorage } from "document-drive/storage/filesystem";
+import { PrismaClient } from "document-drive/storage/prisma/client";
 import type { DocumentModelModule } from "document-model";
 import { generateId } from "document-model/core";
 import type { Kysely } from "kysely";
+import fs from "node:fs/promises";
+import path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Reactor } from "../../src/core/reactor.js";
 import { EventBus } from "../../src/events/event-bus.js";
@@ -40,6 +45,20 @@ import { createTestOperationStore } from "../factories.js";
 // Combined database type
 type Database = StorageDatabase & DocumentViewDatabase;
 
+const FileStorageDir = path.join(__dirname, "./file-storage");
+const prismaClient = new PrismaClient();
+const cache = new InMemoryCache();
+const storageLayers = [
+  ["MemoryStorage", async () => new MemoryStorage()],
+  ["FilesystemStorage", async () => new FilesystemStorage(FileStorageDir)],
+  // PrismaStorage always returns an undefined state and requires rebuild, so it will always fail until
+  // this new Reactor implementation uses the IWriteCache.
+  //["PrismaStorage", async () => new PrismaStorage(prismaClient, cache)],
+] as unknown as [
+  string,
+  () => Promise<IDriveOperationStorage & IDocumentStorage>,
+][];
+
 /**
  * These tests validate the entire pipeline:
  * 1. Operations go through Reactor interface (create, mutate, delete)
@@ -48,9 +67,9 @@ type Database = StorageDatabase & DocumentViewDatabase;
  *
  * This proves the full integration works correctly end-to-end.
  */
-describe("Legacy Storage vs IDocumentView", () => {
+describe.each(storageLayers)("%s", (storageName, buildStorage) => {
   let reactor: IReactor;
-  let legacyStorage: MemoryStorage;
+  let legacyStorage: IDriveOperationStorage & IDocumentStorage;
   let documentView: IDocumentView;
   let db: Kysely<Database>;
   let operationStore: IOperationStore;
@@ -59,8 +78,22 @@ describe("Legacy Storage vs IDocumentView", () => {
   let readModelCoordinator: IReadModelCoordinator;
 
   beforeEach(async () => {
+    vi.setSystemTime(new Date("2024-01-01"));
+
+    cache.clear();
+
+    if (storageName === "FilesystemStorage") {
+      await fs.rm(FileStorageDir, { recursive: true, force: true });
+    } else if (storageName === "PrismaStorage") {
+      await prismaClient.$executeRawUnsafe('DELETE FROM "Attachment";');
+      await prismaClient.$executeRawUnsafe('DELETE FROM "Operation";');
+      await prismaClient.$executeRawUnsafe('DELETE FROM "DriveDocument";');
+      await prismaClient.$executeRawUnsafe('DELETE FROM "Document";');
+      await prismaClient.$executeRawUnsafe('DELETE FROM "Drive";');
+    }
+
     // Set up legacy storage
-    legacyStorage = new MemoryStorage();
+    legacyStorage = await buildStorage();
 
     // Set up registry
     const registry = new DocumentModelRegistry();
@@ -70,6 +103,7 @@ describe("Legacy Storage vs IDocumentView", () => {
     const builder = new ReactorBuilder([
       driveDocumentModelModule,
     ] as DocumentModelModule<any>[])
+      .withCache(cache)
       .withStorage(legacyStorage)
       .withOptions({
         featureFlags: {
@@ -94,7 +128,7 @@ describe("Legacy Storage vs IDocumentView", () => {
     const executor = new SimpleJobExecutor(
       registry,
       legacyStorage as IDocumentStorage,
-      legacyStorage as IDocumentOperationStorage,
+      legacyStorage,
       operationStore,
       eventBus,
     );
@@ -122,9 +156,15 @@ describe("Legacy Storage vs IDocumentView", () => {
   });
 
   afterEach(async () => {
+    vi.useRealTimers();
+
     await executorManager.stop();
     readModelCoordinator.stop();
     await db.destroy();
+
+    if (storageName === "FilesystemStorage") {
+      await fs.rm(FileStorageDir, { recursive: true, force: true });
+    }
   });
 
   describe("reactor.create() validation", () => {
@@ -137,6 +177,12 @@ describe("Legacy Storage vs IDocumentView", () => {
       // Wait for job to complete
       await vi.waitUntil(async () => {
         const jobStatus = await reactor.getJobStatus(jobInfo.id);
+
+        if (jobStatus.status === JobStatus.FAILED) {
+          // fail the test
+          expect.fail(`Job failed: ${jobStatus.error}`);
+        }
+
         return jobStatus.status === JobStatus.COMPLETED;
       });
 
