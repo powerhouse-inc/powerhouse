@@ -268,7 +268,7 @@ export class DriveSubgraph extends BaseSubgraph {
       ) => {
         const limit = first ?? 0;
         const start = skip ?? 0;
-        return obj.operations.global.slice(start, start + limit);
+        return obj.operations.global?.slice(start, start + limit) ?? [];
       },
     },
     Operation: {

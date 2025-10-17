@@ -68,8 +68,8 @@ describe("UNDO/REDO", () => {
       const result = processUndoRedo(document, undoAction, skip);
 
       expect(result.skip).toBe(1);
-      expect(result.document.operations.global.length).toBe(5);
-      expect(result.document.operations.global[4].action.type).toBe(
+      expect(result.document.operations.global!.length).toBe(5);
+      expect(result.document.operations.global![4].action.type).toBe(
         "INCREMENT",
       );
     });
@@ -85,8 +85,8 @@ describe("UNDO/REDO", () => {
       const result = processUndoRedo(document, undoAction, skip);
 
       expect(result.skip).toBe(1);
-      expect(result.document.operations.global.length).toBe(6);
-      expect(result.document.operations.global[5].action.type).toBe("NOOP");
+      expect(result.document.operations.global!.length).toBe(6);
+      expect(result.document.operations.global![5].action.type).toBe("NOOP");
     });
 
     it("should throw an error if you try to undone more operations than the ones available", () => {
@@ -187,18 +187,18 @@ describe("UNDO/REDO", () => {
       expect(document.clipboard[0].action.type).toBe("INCREMENT");
       expect(document.clipboard[0].index).toBe(4);
 
-      expect(document.operations.global.length).toBe(5);
-      expect(document.operations.global[4]).toMatchObject({
+      expect(document.operations.global!.length).toBe(5);
+      expect(document.operations.global![4]).toMatchObject({
         type: "NOOP",
         index: 5,
         skip: 1,
       });
-      expect(document.operations.global[3]).toMatchObject({
+      expect(document.operations.global![3]).toMatchObject({
         type: "INCREMENT",
         index: 3,
         skip: 0,
       });
-      expect(document.operations.global[2]).toMatchObject({
+      expect(document.operations.global![2]).toMatchObject({
         type: "INCREMENT",
         index: 2,
         skip: 0,
@@ -221,18 +221,18 @@ describe("UNDO/REDO", () => {
       expect(document.clipboard[2].action.type).toBe("INCREMENT");
       expect(document.clipboard[2].index).toBe(2);
 
-      expect(document.operations.global.length).toBe(3);
-      expect(document.operations.global[2]).toMatchObject({
+      expect(document.operations.global!.length).toBe(3);
+      expect(document.operations.global![2]).toMatchObject({
         type: "NOOP",
         index: 5,
         skip: 3,
       });
-      expect(document.operations.global[1]).toMatchObject({
+      expect(document.operations.global![1]).toMatchObject({
         type: "INCREMENT",
         index: 1,
         skip: 0,
       });
-      expect(document.operations.global[0]).toMatchObject({
+      expect(document.operations.global![0]).toMatchObject({
         type: "INCREMENT",
         index: 0,
         skip: 0,
@@ -260,8 +260,8 @@ describe("UNDO/REDO", () => {
       expect(document.clipboard[2].action.type).toBe("INCREMENT");
       expect(document.clipboard[2].index).toBe(1);
 
-      expect(document.operations.global.length).toBe(2);
-      expect(document.operations.global).toMatchObject([
+      expect(document.operations.global!.length).toBe(2);
+      expect(document.operations.global!).toMatchObject([
         {
           type: "INCREMENT",
           index: 0,
@@ -293,8 +293,8 @@ describe("UNDO/REDO", () => {
       expect(document.clipboard[1].action.type).toBe("INCREMENT");
       expect(document.clipboard[1].index).toBe(2);
 
-      expect(document.operations.global.length).toBe(3);
-      expect(document.operations.global).toMatchObject([
+      expect(document.operations.global!.length).toBe(3);
+      expect(document.operations.global!).toMatchObject([
         {
           type: "INCREMENT",
           index: 0,
@@ -322,9 +322,9 @@ describe("UNDO/REDO", () => {
 
       expect(document.header.revision.global).toBe(7);
       expect(document.state.global.count).toBe(4);
-      expect(document.operations.global.length).toBe(5);
+      expect(document.operations.global!.length).toBe(5);
       expect(document.clipboard.length).toBe(1);
-      expect(document.operations.global[4]).toMatchObject({
+      expect(document.operations.global![4]).toMatchObject({
         type: "INCREMENT",
         index: 6,
       });
@@ -338,34 +338,34 @@ describe("UNDO/REDO", () => {
 
       expect(document.header.revision.global).toBe(8);
       expect(document.state.global.count).toBe(5);
-      expect(document.operations.global.length).toBe(6);
+      expect(document.operations.global!.length).toBe(6);
       expect(document.clipboard.length).toBe(0);
-      expect(document.operations.global[5]).toMatchObject({
+      expect(document.operations.global![5]).toMatchObject({
         type: "INCREMENT",
         index: 7,
         skip: 0,
       });
-      expect(document.operations.global[4]).toMatchObject({
+      expect(document.operations.global![4]).toMatchObject({
         type: "INCREMENT",
         index: 6,
         skip: 0,
       });
-      expect(document.operations.global[3]).toMatchObject({
+      expect(document.operations.global![3]).toMatchObject({
         type: "NOOP",
         index: 5,
         skip: 2,
       });
-      expect(document.operations.global[2]).toMatchObject({
+      expect(document.operations.global![2]).toMatchObject({
         type: "INCREMENT",
         index: 2,
         skip: 0,
       });
-      expect(document.operations.global[1]).toMatchObject({
+      expect(document.operations.global![1]).toMatchObject({
         type: "INCREMENT",
         index: 1,
         skip: 0,
       });
-      expect(document.operations.global[0]).toMatchObject({
+      expect(document.operations.global![0]).toMatchObject({
         type: "INCREMENT",
         index: 0,
         skip: 0,
@@ -379,7 +379,7 @@ describe("UNDO/REDO", () => {
 
       expect(document.header.revision.global).toBe(7);
       expect(document.state.global.count).toBe(4);
-      expect(document.operations.global.length).toBe(5);
+      expect(document.operations.global!.length).toBe(5);
       expect(document.clipboard.length).toBe(0);
     });
   });
@@ -404,8 +404,8 @@ describe("UNDO/REDO", () => {
 
       expect(document.header.revision.global).toBe(6);
       expect(document.state.global.count).toBe(4);
-      expect(document.operations.global.length).toBe(5);
-      expect(document.operations.global[4]).toMatchObject({
+      expect(document.operations.global!.length).toBe(5);
+      expect(document.operations.global![4]).toMatchObject({
         type: "NOOP",
         index: 5,
         skip: 1,
@@ -462,12 +462,12 @@ describe("UNDO/REDO", () => {
 
       expect(document.header.revision.global).toBe(6);
       expect(document.state.global.count).toBe(2);
-      expect(document.operations.global.length).toBe(3);
-      expect(document.operations.global[2]).toMatchObject({
+      expect(document.operations.global!.length).toBe(3);
+      expect(document.operations.global![2]).toMatchObject({
         index: 5,
         skip: 3,
       });
-      expect(document.operations.global[2].action).toMatchObject({
+      expect(document.operations.global![2].action).toMatchObject({
         type: "NOOP",
       });
     });

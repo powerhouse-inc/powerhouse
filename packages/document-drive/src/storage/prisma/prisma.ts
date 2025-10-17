@@ -389,7 +389,8 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
     >(
       (acc, value) => {
         const scope = value;
-        const lastIndex = cachedOperations[scope].at(-1)?.index ?? -1;
+        const scopeOps = cachedOperations[scope];
+        const lastIndex = scopeOps?.at(-1)?.index ?? -1;
         acc[scope] = lastIndex;
         return acc;
       },

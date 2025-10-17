@@ -9,10 +9,12 @@ export const trimResultingState = <TDocument extends PHDocument>(
   const trimmedOperations: DocumentOperations = {};
 
   for (const [scope, operations] of Object.entries(document.operations)) {
-    trimmedOperations[scope] = operations.map((e) => {
-      delete e.resultingState;
-      return e;
-    });
+    if (operations) {
+      trimmedOperations[scope] = operations.map((e) => {
+        delete e.resultingState;
+        return e;
+      });
+    }
   }
 
   return { ...document, operations: trimmedOperations };

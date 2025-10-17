@@ -17,7 +17,7 @@ export function getDocumentScopeIndexes(document: PHDocument) {
   return Object.entries(document.operations).reduce(
     (acc, [scope, ops]) => ({
       ...acc,
-      [scope]: ops.at(-1)?.index ?? -1,
+      [scope]: ops?.at(-1)?.index ?? -1,
     }),
     {} as Record<string, number>,
   );

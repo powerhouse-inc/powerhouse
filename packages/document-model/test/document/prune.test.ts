@@ -33,7 +33,7 @@ describe("PRUNE operation", () => {
     expect(newDocument.header.name).toBe("Document");
     expect(newDocument.state.global.count).toBe(4);
     expect(newDocument.header.revision.global).toBe(2);
-    expect(mapOperations(newDocument.operations.global)).toStrictEqual([
+    expect(mapOperations(newDocument.operations.global!)).toStrictEqual([
       {
         ...loadState(
           {
@@ -69,7 +69,7 @@ describe("PRUNE operation", () => {
     expect(newDocument.header.name).toBe("Document");
     expect(newDocument.state.global.count).toBe(4);
     expect(newDocument.header.revision.global).toBe(3);
-    expect(mapOperations(newDocument.operations.global)).toStrictEqual([
+    expect(mapOperations(newDocument.operations.global!)).toStrictEqual([
       { ...increment(), index: 0, skip: 0 },
       { ...setName("Document"), index: 1, skip: 0 },
       {
@@ -106,7 +106,7 @@ describe("PRUNE operation", () => {
     expect(newDocument.header.name).toBe("Document");
     expect(newDocument.state.global.count).toBe(4);
     expect(newDocument.header.revision.global).toBe(4);
-    expect(mapOperations(newDocument.operations.global)).toStrictEqual([
+    expect(mapOperations(newDocument.operations.global!)).toStrictEqual([
       { ...increment(), index: 0, skip: 0 },
       { ...setName("Document"), index: 1, skip: 0 },
       {
@@ -145,7 +145,7 @@ describe("PRUNE operation", () => {
     expect(newDocument.header.name).toBe("");
     expect(newDocument.state.global.count).toBe(1);
     expect(newDocument.header.revision.global).toBe(3);
-    expect(mapOperations(newDocument.operations.global)).toMatchObject([
+    expect(mapOperations(newDocument.operations.global!)).toMatchObject([
       { ...increment(), index: 0, skip: 0 },
       { type: "NOOP", input: {}, index: 1, skip: 0, scope: "global" },
       { type: "NOOP", input: {}, index: 2, skip: 1, scope: "global" },
@@ -187,7 +187,7 @@ describe("PRUNE operation", () => {
     expect(newDocument.header.name).toBe("Document");
     expect(newDocument.state.global.count).toBe(4);
     expect(newDocument.header.revision.global).toBe(4);
-    expect(mapOperations(newDocument.operations.global)).toMatchObject([
+    expect(mapOperations(newDocument.operations.global!)).toMatchObject([
       { ...increment(), index: 0, skip: 0 },
       { type: "NOOP", input: {}, index: 1, skip: 0, scope: "global" },
       { type: "NOOP", input: {}, index: 2, skip: 1, scope: "global" },

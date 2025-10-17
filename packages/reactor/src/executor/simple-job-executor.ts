@@ -23,6 +23,10 @@ import type { JobResult } from "./types.js";
 
 /**
  * Simple job executor that processes a job by applying actions through document model reducers.
+ *
+ * @see docs/planning/Storage/IOperationStore.md for storage schema
+ * @see docs/planning/Operations/index.md for operation structure
+ * @see docs/planning/Jobs/reshuffle.md for skip mechanism details
  */
 export class SimpleJobExecutor implements IJobExecutor {
   constructor(
@@ -32,6 +36,36 @@ export class SimpleJobExecutor implements IJobExecutor {
     private operationStore: IOperationStore,
     private eventBus: IEventBus,
   ) {}
+
+  /**
+   * Calculate the next operation index for a specific scope.
+   * Each scope maintains its own independent index sequence.
+   *
+   * Per-scope indexing means:
+   * - Each scope (document, global, local, etc.) has independent indexes
+   * - Indexes start at 0 for each scope
+   * - Different scopes can have operations with the same index value
+   *
+   * @param document - The document whose operations to inspect
+   * @param scope - The scope to calculate the next index for
+   * @returns The next available index in the specified scope
+   */
+  private getNextIndexForScope(document: PHDocument, scope: string): number {
+    const scopeOps = document.operations[scope];
+    if (!scopeOps || scopeOps.length === 0) {
+      return 0;
+    }
+
+    // Find the highest index in this scope
+    let maxIndex = -1;
+    for (const op of scopeOps) {
+      if (op.index > maxIndex) {
+        maxIndex = op.index;
+      }
+    }
+
+    return maxIndex + 1;
+  }
 
   /**
    * Execute a single job by applying all its actions through the appropriate reducers.
@@ -151,7 +185,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
       const scope = job.scope;
       const operations = updatedDocument.operations[scope];
-      if (operations.length === 0) {
+      if (!operations || operations.length === 0) {
         throw new Error("No operation generated from action");
       }
 
@@ -317,7 +351,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       index: 0,
       timestampUtcMs: action.timestampUtcMs || new Date().toISOString(),
       hash: "", // Will be computed later
-      skip: 0,
+      skip: 0, // Always 0 for new operations; skip > 0 only during reshuffle
       action: action,
     };
 
@@ -455,23 +489,15 @@ export class SimpleJobExecutor implements IJobExecutor {
       };
     }
 
-    // Determine the next operation index from the document's existing operations
-    let nextIndex = 0;
-    for (const scope in document.operations) {
-      const scopeOps = document.operations[scope];
-      for (const op of scopeOps) {
-        if (op.index >= nextIndex) {
-          nextIndex = op.index + 1;
-        }
-      }
-    }
+    // Determine the next operation index for this scope only (per-scope indexing)
+    const nextIndex = this.getNextIndexForScope(document, job.scope);
 
     // Create the DELETE_DOCUMENT operation
     const operation: Operation = {
       index: nextIndex,
       timestampUtcMs: action.timestampUtcMs || new Date().toISOString(),
       hash: "", // Will be computed later
-      skip: 0,
+      skip: 0, // Always 0 for new operations; skip > 0 only during reshuffle
       action: action,
     };
 
@@ -615,16 +641,8 @@ export class SimpleJobExecutor implements IJobExecutor {
       };
     }
 
-    // Determine the next operation index from the document's existing operations
-    let nextIndex = 0;
-    for (const scope in document.operations) {
-      const scopeOps = document.operations[scope];
-      for (const op of scopeOps) {
-        if (op.index >= nextIndex) {
-          nextIndex = op.index + 1;
-        }
-      }
-    }
+    // Determine the next operation index for this scope only (per-scope indexing)
+    const nextIndex = this.getNextIndexForScope(document, job.scope);
 
     // Apply the initialState from the upgrade action
     // The initialState from UPGRADE_DOCUMENT should be merged with the existing base state
@@ -642,7 +660,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       index: nextIndex,
       timestampUtcMs: action.timestampUtcMs || new Date().toISOString(),
       hash: "", // Will be computed later
-      skip: 0,
+      skip: 0, // Always 0 for new operations; skip > 0 only during reshuffle
       action: action,
     };
 

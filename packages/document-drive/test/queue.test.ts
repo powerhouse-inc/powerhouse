@@ -99,8 +99,8 @@ describe.each(queueLayers)(
         );
         promisses.push(
           queue
-            ? server.queueOperations(drive.header.id, drive.operations.global)
-            : server.addOperations(drive.header.id, drive.operations.global),
+            ? server.queueOperations(drive.header.id, drive.operations.global!)
+            : server.addOperations(drive.header.id, drive.operations.global!),
         );
       }
       return Promise.all(promisses);

@@ -34,7 +34,7 @@ describe("DocumentModel", () => {
     expect(fs.existsSync(`${tempDir}/test.phdm.phd`)).toBe(true);
 
     // keeps operation timestamp to check when loading
-    timestamp = documentModel.operations.global[0].timestampUtcMs;
+    timestamp = documentModel.operations.global![0].timestampUtcMs;
   });
 
   it("should load from zip", async () => {
@@ -43,7 +43,7 @@ describe("DocumentModel", () => {
       documentModelReducer,
     );
     expect(documentModel.state.global.id).toBe("powerhouse/test");
-    expect(documentModel.operations.global).toMatchObject([
+    expect(documentModel.operations.global!).toMatchObject([
       {
         hash: "xmstBdekoMQJQXwUZaOcv/Q/d9Q=",
         index: 0,
@@ -78,8 +78,8 @@ describe("DocumentModel", () => {
       { reuseOperationResultingState: true },
     );
 
-    expect(documentModel.operations.global).toHaveLength(3);
-    for (const operation of documentModel.operations.global) {
+    expect(documentModel.operations.global!).toHaveLength(3);
+    for (const operation of documentModel.operations.global!) {
       expect(operation.resultingState).toBeDefined();
     }
 
@@ -95,8 +95,8 @@ describe("DocumentModel", () => {
       documentModelReducer,
     );
 
-    expect(loadedDocumentModel.operations.global).toHaveLength(3);
-    for (const operation of loadedDocumentModel.operations.global) {
+    expect(loadedDocumentModel.operations.global!).toHaveLength(3);
+    for (const operation of loadedDocumentModel.operations.global!) {
       expect(operation.resultingState).toBeUndefined();
     }
   });
@@ -117,7 +117,7 @@ describe("DocumentModel", () => {
       documentModelReducer,
     );
     expect(loadedDocumentModel.state.global.id).toBe("");
-    expect(loadedDocumentModel.operations.global).toMatchObject([
+    expect(loadedDocumentModel.operations.global!).toMatchObject([
       {
         index: 1,
         skip: 1,

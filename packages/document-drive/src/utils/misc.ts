@@ -17,7 +17,8 @@ export function mergeOperations(
     Partial<Record<string, number>>
   >((acc, curr) => {
     const scope = curr;
-    acc[scope] = currentOperations[scope].at(-1)?.index ?? 0;
+    const scopeOps = currentOperations[scope];
+    acc[scope] = scopeOps?.at(-1)?.index ?? 0;
     return acc;
   }, {});
 

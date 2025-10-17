@@ -32,7 +32,7 @@ describe("skip operations", () => {
 
       expect(document.header.revision.global).toBe(3);
 
-      const ops = mapOperations(document.operations.global);
+      const ops = mapOperations(document.operations.global!);
 
       expect(ops.length).toBe(3);
 
@@ -60,7 +60,7 @@ describe("skip operations", () => {
 
       expect(document.header.revision.global).toBe(3);
 
-      const ops = mapOperations(document.operations.global);
+      const ops = mapOperations(document.operations.global!);
 
       expect(ops.length).toBe(3);
 
@@ -333,8 +333,8 @@ describe("skip operations", () => {
 
       expect(replayedDoc.header.revision.global).toBe(3);
 
-      expect(replayedDoc.operations.global.length).toBe(2);
-      expect(replayedDoc.operations.global).toMatchObject([
+      expect(replayedDoc.operations.global!.length).toBe(2);
+      expect(replayedDoc.operations.global!).toMatchObject([
         {
           type: "INCREMENT",
           skip: 0,
@@ -380,8 +380,8 @@ describe("skip operations", () => {
 
       expect(replayedDoc.header.revision.global).toBe(5);
 
-      expect(replayedDoc.operations.global.length).toBe(2);
-      expect(replayedDoc.operations.global).toMatchObject([
+      expect(replayedDoc.operations.global!.length).toBe(2);
+      expect(replayedDoc.operations.global!).toMatchObject([
         {
           type: "INCREMENT",
           skip: 0,
@@ -434,9 +434,9 @@ describe("skip operations", () => {
 
       expect(replayedDoc.header.revision.global).toBe(6);
 
-      expect(replayedDoc.operations.global.length).toBe(4);
+      expect(replayedDoc.operations.global!.length).toBe(4);
 
-      expect(replayedDoc.operations.global).toMatchObject([
+      expect(replayedDoc.operations.global!).toMatchObject([
         {
           type: "INCREMENT",
           skip: 0,
@@ -492,9 +492,9 @@ describe("skip operations", () => {
 
       expect(replayedDoc.header.revision.global).toBe(5);
 
-      expect(replayedDoc.operations.global.length).toBe(1);
+      expect(replayedDoc.operations.global!.length).toBe(1);
 
-      expect(replayedDoc.operations.global).toMatchObject([
+      expect(replayedDoc.operations.global!).toMatchObject([
         {
           type: "INCREMENT",
           skip: 4,
@@ -522,9 +522,9 @@ describe("skip operations", () => {
       });
 
       expect(document.state.global.count).toBe(3);
-      expect(document.operations.global.length).toBe(3);
+      expect(document.operations.global!.length).toBe(3);
 
-      expect(document.operations.global).toMatchObject([
+      expect(document.operations.global!).toMatchObject([
         {
           type: "INCREMENT",
           skip: 0,
@@ -558,9 +558,9 @@ describe("skip operations", () => {
       });
 
       expect(document.state.global.count).toBe(2);
-      expect(document.operations.global.length).toBe(3);
+      expect(document.operations.global!.length).toBe(3);
 
-      expect(document.operations.global).toMatchObject([
+      expect(document.operations.global!).toMatchObject([
         {
           type: "INCREMENT",
           skip: 0,

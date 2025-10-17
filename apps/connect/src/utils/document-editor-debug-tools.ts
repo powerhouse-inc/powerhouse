@@ -38,6 +38,7 @@ export class DocumentEditorDebugTools {
       console.warn("No document");
     }
     const ops = Object.values(this.document?.operations || {})
+      .filter((array): array is Operation[] => array !== undefined)
       .flatMap((array) => array)
       .sort((a, b) => a.index - b.index);
 

@@ -85,7 +85,7 @@ describe("Document Drive Server with remote switchboard instance", async () => {
 
       const addFileResult = await server.addDriveOperation(
         "1",
-        drive.operations.global[0]!,
+        drive.operations.global![0]!,
       );
 
       expect(addFileResult.error).toBeUndefined();
@@ -100,7 +100,7 @@ describe("Document Drive Server with remote switchboard instance", async () => {
         DocumentModelActions.setAuthorName({ authorName: "test" }),
       );
 
-      const operation = document.operations.global[0]!;
+      const operation = document.operations.global![0]!;
       const result = await server.addOperation("1", "1.1", operation);
       expect(result.error).toBeUndefined();
       expect(result.status).toBe("SUCCESS");
@@ -132,7 +132,7 @@ describe("Document Drive Server with remote switchboard instance", async () => {
     const drive = await vi.waitFor(
       async () => {
         const drive = await server.getDrive("1");
-        expect(drive.operations.global.length).toBeTruthy();
+        expect(drive.operations.global!.length).toBeTruthy();
         return drive;
       },
       {
@@ -141,7 +141,7 @@ describe("Document Drive Server with remote switchboard instance", async () => {
       },
     );
 
-    expect(drive.operations.global[0]).toMatchObject({
+    expect(drive.operations.global![0]).toMatchObject({
       index: 0,
       skip: 0,
       type: "ADD_FILE",
@@ -165,7 +165,7 @@ describe("Document Drive Server with remote switchboard instance", async () => {
           "1",
           "1.1",
         )) as DocumentModelGlobalState;
-        expect(document.operations.global.length).toBeTruthy();
+        expect(document.operations.global!.length).toBeTruthy();
         return document;
       },
       {

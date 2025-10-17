@@ -266,12 +266,16 @@ export async function buildSignedAction<
     //reuseHash: true,
     reuseOperationResultingState: true,
   });
-  const operation = result.operations[action.scope].at(-1);
+  const scopeOperations = result.operations[action.scope];
+  if (!scopeOperations) {
+    throw new Error(`No operations found for scope: ${action.scope}`);
+  }
+  const operation = scopeOperations.at(-1);
   if (!operation) {
     throw new Error("Action was not applied");
   }
 
-  const previousStateHash = result.operations[action.scope].at(-2)?.hash ?? "";
+  const previousStateHash = scopeOperations.at(-2)?.hash ?? "";
   const signature = await buildOperationSignature(
     {
       documentId: document.header.id,

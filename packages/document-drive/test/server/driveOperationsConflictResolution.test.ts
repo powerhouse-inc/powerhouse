@@ -175,8 +175,8 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
         { id: "1", name: "test1" },
         { id: "2", name: "test2" },
       ]);
-      expect(drive.operations.global.length).toBe(2);
-      expect(drive.operations.global).toMatchObject([
+      expect(drive.operations.global!.length).toBe(2);
+      expect(drive.operations.global!).toMatchObject([
         {
           action: {
             type: "ADD_FOLDER",
@@ -298,7 +298,7 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
         { id: "5", name: "test5" },
         { id: "6", name: "test6" },
       ]);
-      expect(drive.operations.global.slice(-6)).toMatchObject([
+      expect(drive.operations.global!.slice(-6)).toMatchObject([
         {
           action: {
             type: "ADD_FOLDER",
@@ -381,8 +381,8 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
       pushOperationResult = await client1.pushOperationsToServer();
       expect(pushOperationResult.status).toBe("SUCCESS");
 
-      expect(client1.getDocument().operations.global.length).toBe(2);
-      expect(client1.getDocument().operations.global[1]).toMatchObject({
+      expect(client1.getDocument().operations.global!.length).toBe(2);
+      expect(client1.getDocument().operations.global![1]).toMatchObject({
         action: {
           type: "ADD_FOLDER",
           input: { id: "1", name: "test1" },
@@ -399,8 +399,8 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
       expect(drive.state.global.nodes).toMatchObject([
         { id: "1", name: "test1" },
       ]);
-      expect(drive.operations.global.length).toBe(2);
-      expect(drive.operations.global).toMatchObject([
+      expect(drive.operations.global!.length).toBe(2);
+      expect(drive.operations.global!).toMatchObject([
         {
           action: {
             type: "ADD_FOLDER",
@@ -454,8 +454,8 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
         );
         pushOperationResult = await client1.pushOperationsToServer();
         expect(pushOperationResult.status).toBe("SUCCESS");
-        expect(client1.getDocument().operations.global.length).toBe(1);
-        expect(client1.getDocument().operations.global[0]).toMatchObject({
+        expect(client1.getDocument().operations.global!.length).toBe(1);
+        expect(client1.getDocument().operations.global![0]).toMatchObject({
           action: {
             type: "ADD_FOLDER",
             input: { id: "1", name: "test1" },
@@ -475,8 +475,8 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
         pushOperationResult = await client2.pushOperationsToServer();
         expect(pushOperationResult.status).toBe("SUCCESS");
 
-        expect(client2.getDocument().operations.global.length).toBe(1);
-        expect(client2.getDocument().operations.global[0]).toMatchObject({
+        expect(client2.getDocument().operations.global!.length).toBe(1);
+        expect(client2.getDocument().operations.global![0]).toMatchObject({
           action: {
             type: "ADD_FOLDER",
             input: { id: "1", name: "test2" },
@@ -494,8 +494,8 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
           { id: "1", name: "test1" },
         ]);
 
-        expect(drive.operations.global.length).toBe(2);
-        expect(drive.operations.global).toMatchObject([
+        expect(drive.operations.global!.length).toBe(2);
+        expect(drive.operations.global!).toMatchObject([
           {
             action: {
               type: "ADD_FOLDER",

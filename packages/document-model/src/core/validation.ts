@@ -6,7 +6,11 @@ export function validateOperations(operations: DocumentOperations) {
   const scopes = Object.keys(operations);
 
   for (const scope of scopes) {
-    const ops = operations[scope].sort((a, b) => a.index - b.index);
+    const scopeOperations = operations[scope];
+    if (!scopeOperations) {
+      continue;
+    }
+    const ops = scopeOperations.sort((a, b) => a.index - b.index);
 
     let opIndex = -1;
 

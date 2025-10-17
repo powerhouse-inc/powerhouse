@@ -92,7 +92,7 @@ describe("Synchronization Manager with memory adapters", () => {
     );
     await storage.addDocumentOperations(
       newDrive.header.id,
-      newDrive.operations.global,
+      newDrive.operations.global!,
       newDrive,
     );
     const syncUnit = await syncManager.getSynchronizationUnit({
@@ -130,7 +130,7 @@ describe("Synchronization Manager with memory adapters", () => {
     );
     await storage.addDriveOperations(
       drive.header.id,
-      drive.operations.global,
+      drive.operations.global!,
       drive,
     );
     await storage.addChild(drive.header.id, document.header.id);

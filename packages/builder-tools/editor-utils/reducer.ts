@@ -19,9 +19,9 @@ export function useDocumentReducer<TState extends PHBaseState = PHBaseState>(
       try {
         const newState = reducer(_state, action);
 
-        const operation = newState.operations[action.scope].slice(-1)[0];
+        const operation = newState.operations[action.scope]?.slice(-1)[0];
 
-        if (operation.error) {
+        if (operation?.error) {
           const error = new Error(operation.error);
           onError?.(error);
           onErrorCallback?.(error);
