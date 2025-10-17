@@ -373,7 +373,10 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
         documentType: "powerhouse/document-model",
       }),
     );
-    let result = await server.addOperation(driveId, drive.operations.global![0]);
+    let result = await server.addOperation(
+      driveId,
+      drive.operations.global![0],
+    );
     expect(result.status).toBe("SUCCESS");
 
     await expect(
@@ -437,7 +440,10 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       }),
     );
 
-    const result = await server.addOperations(driveId, drive.operations.global!);
+    const result = await server.addOperations(
+      driveId,
+      drive.operations.global!,
+    );
     expect(result.status).toBe("SUCCESS");
 
     const documents = await server.getDocuments(driveId);
@@ -502,7 +508,10 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       }),
     );
 
-    const result = await server.addOperations(driveId, drive.operations.global!);
+    const result = await server.addOperations(
+      driveId,
+      drive.operations.global!,
+    );
     expect(result.status).toBe("SUCCESS");
 
     await expect(
@@ -698,7 +707,10 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       }),
     );
     vi.useRealTimers();
-    const result = await server.addOperations(driveId, drive.operations.global!);
+    const result = await server.addOperations(
+      driveId,
+      drive.operations.global!,
+    );
 
     expect(result.status).toBe("SUCCESS");
 

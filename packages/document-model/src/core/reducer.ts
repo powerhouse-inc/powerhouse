@@ -125,7 +125,9 @@ function updateOperationsForOperation<TDocument extends PHDocument>(
 ): TDocument {
   const scope = operation.action.scope;
   const scopeOperations = document.operations[scope];
-  const operations: Operation[] = scopeOperations ? scopeOperations.slice() : [];
+  const operations: Operation[] = scopeOperations
+    ? scopeOperations.slice()
+    : [];
 
   const latestOperation = operations.sort((a, b) => a.index - b.index).at(-1);
   const lastOperationIndex = latestOperation?.index ?? -1;
@@ -500,11 +502,11 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
       const lastOperationIndex = actionScopeOps.length - 1;
       const draftScopeOps = draft.operations[_action.scope];
       if (!draftScopeOps) {
-        throw new Error(`No operations found in draft for scope: ${_action.scope}`);
+        throw new Error(
+          `No operations found in draft for scope: ${_action.scope}`,
+        );
       }
-      draftScopeOps[lastOperationIndex].error = (
-        error as Error
-      ).message;
+      draftScopeOps[lastOperationIndex].error = (error as Error).message;
 
       draftScopeOps[lastOperationIndex].skip = 0;
 

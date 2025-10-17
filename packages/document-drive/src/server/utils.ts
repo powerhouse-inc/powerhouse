@@ -47,9 +47,7 @@ export function filterOperationsByRevision(
       if (revision !== undefined) {
         const scopeOps = operations[scope];
         if (scopeOps) {
-          acc[scope] = scopeOps.filter(
-            (op: Operation) => op.index <= revision,
-          );
+          acc[scope] = scopeOps.filter((op: Operation) => op.index <= revision);
         }
       }
       return acc;

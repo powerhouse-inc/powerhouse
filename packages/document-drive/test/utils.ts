@@ -117,9 +117,7 @@ export class BasicClient<TDocument extends PHDocument = PHDocument> {
 
     const remoteDocument = await this.server.getDocument(this.documentId);
 
-    const remoteDocumentOperations = Object.values(
-      remoteDocument.operations,
-    )
+    const remoteDocumentOperations = Object.values(remoteDocument.operations)
       .filter((ops): ops is Operation[] => ops !== undefined)
       .flat();
 
@@ -191,9 +189,7 @@ export class DriveBasicClient<TDocument extends PHDocument = PHDocument> {
 
     const remoteDocument = await this.server.getDrive(this.driveId);
 
-    const remoteDocumentOperations = Object.values(
-      remoteDocument.operations,
-    )
+    const remoteDocumentOperations = Object.values(remoteDocument.operations)
       .filter((ops): ops is Operation[] => ops !== undefined)
       .flat();
 

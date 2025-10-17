@@ -110,7 +110,9 @@ describe("Node Operations", () => {
     const updatedDocument = driveDocumentReducer(document, addFolder(input));
 
     expect(updatedDocument.operations.global!).toHaveLength(1);
-    expect(updatedDocument.operations.global![0].action.type).toBe("ADD_FOLDER");
+    expect(updatedDocument.operations.global![0].action.type).toBe(
+      "ADD_FOLDER",
+    );
     expect(updatedDocument.operations.global![0].action.input).toStrictEqual(
       input,
     );

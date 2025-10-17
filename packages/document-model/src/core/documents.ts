@@ -213,11 +213,10 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
           // TODO how to deal with attachments?
           [scope]: scopeState,
         };
-        const scopeInitialOps = initialOperations[scope as keyof typeof initialOperations];
+        const scopeInitialOps =
+          initialOperations[scope as keyof typeof initialOperations];
         if (scopeInitialOps) {
-          scopeInitialOps.push(
-            ...scopeOperations.slice(0, index + 1),
-          );
+          scopeInitialOps.push(...scopeOperations.slice(0, index + 1));
         }
         operationsToReplay.push(...scopeOperations.slice(index + 1));
       } catch {
@@ -226,7 +225,9 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
       }
     }
   } else {
-    operationsToReplay.push(...Object.values(operations).flatMap(ops => ops || []));
+    operationsToReplay.push(
+      ...Object.values(operations).flatMap((ops) => ops || []),
+    );
   }
 
   // builds a new document from the initial data
@@ -986,22 +987,19 @@ export function filterDocumentOperationsResultingState(
 
   const entries = Object.entries(documentOperations);
 
-  return entries.reduce(
-    (acc, [scope, operations]) => {
-      if (!operations) {
-        return acc;
-      }
-      return {
-        ...acc,
-        [scope]: operations.map((op) => {
-          const { resultingState, ...restProps } = op;
+  return entries.reduce((acc, [scope, operations]) => {
+    if (!operations) {
+      return acc;
+    }
+    return {
+      ...acc,
+      [scope]: operations.map((op) => {
+        const { resultingState, ...restProps } = op;
 
-          return restProps;
-        }),
-      };
-    },
-    {} as DocumentOperations,
-  );
+        return restProps;
+      }),
+    };
+  }, {} as DocumentOperations);
 }
 
 /**
@@ -1028,7 +1026,7 @@ export function diffOperations<TOp extends OperationIndex>(
 // it's operations, falling back to the initial state
 export function getDocumentLastModified(document: PHDocument) {
   const sortedOperations = sortOperations(
-    Object.values(document.operations).flatMap(ops => ops || []),
+    Object.values(document.operations).flatMap((ops) => ops || []),
   );
 
   return (

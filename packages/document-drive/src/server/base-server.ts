@@ -1622,7 +1622,8 @@ export class BaseDocumentDriveServer
       },
     );
 
-    const newDocScopeOperations = newDocument.operations[operation.action.scope];
+    const newDocScopeOperations =
+      newDocument.operations[operation.action.scope];
     if (!newDocScopeOperations) {
       throw new OperationError(
         "ERROR",
