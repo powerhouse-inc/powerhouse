@@ -1,3 +1,7 @@
+## 4.1.0-dev.76 (2025-10-18)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.75 (2025-10-17)
 
 ### 🩹 Fixes

@@ -1,3 +1,13 @@
+## 4.1.0-dev.76 (2025-10-18)
+
+### 🩹 Fixes
+
+- **vetra:** update package.json to include src files ([#1980](https://github.com/powerhouse-inc/powerhouse/pull/1980))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.75 (2025-10-17)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.

@@ -1,3 +1,14 @@
+## 4.1.0-dev.76 (2025-10-18)
+
+### 🩹 Fixes
+
+- filesystem needs to calculate revisions better ([96654825a](https://github.com/powerhouse-inc/powerhouse/commit/96654825a))
+- fixes to how revisions are calculated ([c2b0c2227](https://github.com/powerhouse-inc/powerhouse/commit/c2b0c2227))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.75 (2025-10-17)
 
 ### 🩹 Fixes

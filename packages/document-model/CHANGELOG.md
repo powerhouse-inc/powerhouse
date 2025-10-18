@@ -1,3 +1,13 @@
+## 4.1.0-dev.76 (2025-10-18)
+
+### 🚀 Features
+
+- document-view parity fixes ([0d6dd53fa](https://github.com/powerhouse-inc/powerhouse/commit/0d6dd53fa))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.75 (2025-10-17)
 
 ### 🩹 Fixes

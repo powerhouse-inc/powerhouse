@@ -1,3 +1,22 @@
+## 4.1.0-dev.76 (2025-10-18)
+
+### 🚀 Features
+
+- document-view parity fixes ([0d6dd53fa](https://github.com/powerhouse-inc/powerhouse/commit/0d6dd53fa))
+
+### 🩹 Fixes
+
+- fixes to how revisions are calculated ([c2b0c2227](https://github.com/powerhouse-inc/powerhouse/commit/c2b0c2227))
+- filesystem needs to calculate revisions better ([96654825a](https://github.com/powerhouse-inc/powerhouse/commit/96654825a))
+- **reactor-browser:** add debounce to refreshReactorData to avoid spam on indexeddb ([4c5f3aed7](https://github.com/powerhouse-inc/powerhouse/commit/4c5f3aed7))
+- **vetra:** update package.json to include src files ([#1980](https://github.com/powerhouse-inc/powerhouse/pull/1980))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.75 (2025-10-17)
 
 ### 🩹 Fixes

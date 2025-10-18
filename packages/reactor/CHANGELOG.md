@@ -1,3 +1,18 @@
+## 4.1.0-dev.76 (2025-10-18)
+
+### 🚀 Features
+
+- document-view parity fixes ([0d6dd53fa](https://github.com/powerhouse-inc/powerhouse/commit/0d6dd53fa))
+
+### 🩹 Fixes
+
+- filesystem needs to calculate revisions better ([96654825a](https://github.com/powerhouse-inc/powerhouse/commit/96654825a))
+- fixes to how revisions are calculated ([c2b0c2227](https://github.com/powerhouse-inc/powerhouse/commit/c2b0c2227))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.75 (2025-10-17)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
