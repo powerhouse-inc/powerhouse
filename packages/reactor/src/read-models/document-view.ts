@@ -78,7 +78,7 @@ export class KyselyDocumentView implements IDocumentView {
           }
         }
 
-        const operationType = operation.action?.type;
+        const operationType = operation.action.type;
         let scopesToIndex: Array<[string, unknown]>;
 
         if (operationType === "CREATE_DOCUMENT") {
@@ -306,9 +306,7 @@ export class KyselyDocumentView implements IDocumentView {
 
     // Group operations by scope and normalize to match legacy storage structure
     for (const { operation, context } of docOps) {
-      if (!operations[context.scope]) {
-        operations[context.scope] = [];
-      }
+      operations[context.scope] ??= [];
 
       // Normalize operation to match legacy storage format
       // Legacy storage includes redundant top-level fields that duplicate action fields

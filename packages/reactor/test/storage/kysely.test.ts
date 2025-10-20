@@ -58,7 +58,10 @@ describe("KyselyOperationStore", () => {
       expect(result.items).toHaveLength(1);
       expect(result.items[0].id).toBe(opId);
       expect(result.items[0].action.type).toBe("ADD_FOLDER");
-      expect(result.items[0].action.input).toHaveProperty("name", "Test Folder");
+      expect(result.items[0].action.input).toHaveProperty(
+        "name",
+        "Test Folder",
+      );
     });
 
     it("should enforce revision ordering", async () => {
@@ -313,7 +316,14 @@ describe("KyselyOperationStore", () => {
       const documentId = generateId();
 
       await expect(
-        store.getSince(documentId, "global", "main", 0, undefined, controller.signal),
+        store.getSince(
+          documentId,
+          "global",
+          "main",
+          0,
+          undefined,
+          controller.signal,
+        ),
       ).rejects.toThrow("Operation aborted");
     });
 
@@ -321,9 +331,9 @@ describe("KyselyOperationStore", () => {
       const controller = new AbortController();
       controller.abort();
 
-      await expect(store.getSinceId(1, undefined, controller.signal)).rejects.toThrow(
-        "Operation aborted",
-      );
+      await expect(
+        store.getSinceId(1, undefined, controller.signal),
+      ).rejects.toThrow("Operation aborted");
     });
   });
 });
