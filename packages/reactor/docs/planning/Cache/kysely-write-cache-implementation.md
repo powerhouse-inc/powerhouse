@@ -126,17 +126,17 @@ This is separate from IDocumentView (read-side projection) which optimizes queri
 ## Phase 2: Ring Buffer Implementation
 
 ### Task 2.1: Create RingBuffer class
-- [ ] Create `packages/reactor/src/cache/buffer/ring-buffer.ts`
-- [ ] Implement generic `RingBuffer<T>` class with:
+- [x] Create `packages/reactor/src/cache/buffer/ring-buffer.ts`
+- [x] Implement generic `RingBuffer<T>` class with:
   - Private `buffer: T[]`
   - Private `head: number = 0`
   - Private `size: number = 0`
   - Private `capacity: number`
-- [ ] Implement `constructor(capacity: number)`
-- [ ] Implement `push(item: T): void` method (circular overwrite)
-- [ ] Implement `getAll(): T[]` method (returns items in chronological order)
-- [ ] Implement `clear(): void` method
-- [ ] Implement `get length(): number` getter
+- [x] Implement `constructor(capacity: number)`
+- [x] Implement `push(item: T): void` method (circular overwrite)
+- [x] Implement `getAll(): T[]` method (returns items in chronological order)
+- [x] Implement `clear(): void` method
+- [x] Implement `get length(): number` getter
 
 **Acceptance Criteria:**
 - Class properly handles circular buffer logic
@@ -144,33 +144,19 @@ This is separate from IDocumentView (read-side projection) which optimizes queri
 - All methods use classical OOP patterns (no Pick/Omit)
 
 ### Task 2.2: Create RingBuffer unit tests
-- [ ] Create `packages/reactor/test/cache/ring-buffer.test.ts`
-- [ ] Test: should initialize with correct capacity
-- [ ] Test: should add items sequentially
-- [ ] Test: should overwrite oldest item when full
-- [ ] Test: should return items in chronological order
-- [ ] Test: should handle edge case of capacity=1
-- [ ] Test: should clear all items
-- [ ] Test: should track size correctly
+- [x] Create `packages/reactor/test/cache/buffer/ring-buffer.test.ts`
+- [x] Test: should initialize with correct capacity
+- [x] Test: should add items sequentially
+- [x] Test: should overwrite oldest item when full
+- [x] Test: should return items in chronological order
+- [x] Test: should handle edge case of capacity=1
+- [x] Test: should clear all items
+- [x] Test: should track size correctly
 
 **Acceptance Criteria:**
 - All tests pass with `pnpm test`
 - 100% code coverage on RingBuffer class
 - Tests use vitest framework
-
-### Task 2.3: Create DocumentRingBuffer wrapper
-- [ ] Create wrapper type in `packages/reactor/src/cache/buffer/ring-buffer.ts`
-- [ ] Define `DocumentRingBuffer` that wraps `RingBuffer<CachedSnapshot>`
-- [ ] Add helper method `findNearest(targetRevision?: number): CachedSnapshot | undefined`
-  - Returns exact match if targetRevision provided and exists
-  - Returns newest snapshot <= targetRevision if targetRevision provided
-  - Returns newest snapshot if targetRevision not provided
-- [ ] Add helper method `has(revision: number): boolean`
-
-**Acceptance Criteria:**
-- findNearest correctly implements search logic
-- Handles undefined targetRevision (returns newest)
-- Tests added to ring-buffer.test.ts
 
 ## Phase 3: LRU Cache Implementation
 
