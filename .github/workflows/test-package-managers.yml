@@ -11,13 +11,6 @@ on:
         description: "Comma-separated list of packages to install (e.g., @powerhousedao/vetra@dev)"
         required: false
         default: ""
-  pull_request:
-    branches:
-      - main
-      - 'release/staging/**'
-      - 'release/stg/**'
-      - 'release/production/**'
-      - 'release/prod/**'
 
 jobs:
   test-package-managers:
