@@ -17,6 +17,10 @@ export const getNextIndexForScope = (
   document: PHDocument,
   scope: string,
 ): number => {
+  if (!document.operations[scope]) {
+    return 0;
+  }
+
   const scopeOps = document.operations[scope];
   if (scopeOps.length === 0) {
     return 0;

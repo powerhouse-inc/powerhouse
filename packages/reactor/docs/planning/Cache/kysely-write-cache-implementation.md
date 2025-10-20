@@ -40,15 +40,15 @@ This is separate from IDocumentView (read-side projection) which optimizes queri
 ## Phase 0: Key-Value Store Abstraction
 
 ### Task 0.1: Create IKeyValueStore interface
-- [ ] Create `packages/reactor/src/cache/kv-store.ts`
-- [ ] Define `IKeyValueStore` interface with methods:
+- [x] Create `packages/reactor/src/cache/kv-store.ts`
+- [x] Define `IKeyValueStore` interface with methods:
   - `get(key: string, signal?: AbortSignal): Promise<string | undefined>`
   - `put(key: string, value: string, signal?: AbortSignal): Promise<void>`
   - `delete(key: string, signal?: AbortSignal): Promise<void>`
   - `clear(): Promise<void>`
   - `startup(): Promise<void>`
   - `shutdown(): Promise<void>`
-- [ ] Add comprehensive JSDoc
+- [x] Add comprehensive JSDoc
 
 **Acceptance Criteria:**
 - Interface provides simple K/V abstraction
@@ -56,10 +56,10 @@ This is separate from IDocumentView (read-side projection) which optimizes queri
 - JSDoc explains pluggable implementations
 
 ### Task 0.2: Create InMemoryKeyValueStore
-- [ ] Create `InMemoryKeyValueStore` class in same file
-- [ ] Implement using `Map<string, string>`
-- [ ] Implement all IKeyValueStore methods
-- [ ] Use for testing and development
+- [x] Create `InMemoryKeyValueStore` class in same file
+- [x] Implement using `Map<string, string>`
+- [x] Implement all IKeyValueStore methods
+- [x] Use for testing and development
 
 **Acceptance Criteria:**
 - Simple Map-based implementation
@@ -67,12 +67,12 @@ This is separate from IDocumentView (read-side projection) which optimizes queri
 - No external dependencies
 
 ### Task 0.3: Create tests for InMemoryKeyValueStore
-- [ ] Create `packages/reactor/test/cache/kv-store.test.ts`
-- [ ] Test: should store and retrieve values
-- [ ] Test: should return undefined for missing keys
-- [ ] Test: should delete keys
-- [ ] Test: should clear all keys
-- [ ] Test: should handle startup/shutdown
+- [x] Create `packages/reactor/test/cache/kv-store.test.ts`
+- [x] Test: should store and retrieve values
+- [x] Test: should return undefined for missing keys
+- [x] Test: should delete keys
+- [x] Test: should clear all keys
+- [x] Test: should handle startup/shutdown
 
 **Acceptance Criteria:**
 - All tests pass with `pnpm test`
