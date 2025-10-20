@@ -30,7 +30,8 @@
     "./assets/*.webp": "./assets/*.webp",
     "./assets/*.avif": "./assets/*.avif",
     "./style.css": "./dist/style.css",
-    "./theme.css": "./theme.css"
+    "./theme.css": "./theme.css",
+    "./testing": "./dist/src/ui/lib/testing.js"
   },
   "scripts": {
     "tsc": "tsc",

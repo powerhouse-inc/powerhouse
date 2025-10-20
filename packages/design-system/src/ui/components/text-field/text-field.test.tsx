@@ -1,4 +1,4 @@
-import { renderWithForm } from "@powerhousedao/design-system";
+import { renderWithForm } from "@powerhousedao/design-system/testing";
 import { screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { TextField } from "./text-field.js";

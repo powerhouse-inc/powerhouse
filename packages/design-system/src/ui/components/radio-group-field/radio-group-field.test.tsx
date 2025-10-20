@@ -1,4 +1,5 @@
-import { RadioGroupField, renderWithForm } from "@powerhousedao/design-system";
+import { RadioGroupField } from "@powerhousedao/design-system";
+import { renderWithForm } from "@powerhousedao/design-system/testing";
 import { screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
