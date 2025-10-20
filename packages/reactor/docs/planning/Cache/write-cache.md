@@ -98,7 +98,7 @@ flowchart TD
         CheckCache -->|Exact Match| UpdateLRU1["Update LRU"]
         UpdateLRU1 --> Return1["Return Cached Document"]
         CheckCache -->|No Match| ColdOrWarm{"Has Older<br/>Revision?"}
-        ColdOrWarm -->|No: Cold Miss| StreamOps["Stream Operations<br/>from IOperationStore<br/>(paged)"]
+        ColdOrWarm -->|No: Cold Miss| StreamOps["Stream Operations<br/>using getSince(0)<br/>(cursor-based paging)"]
         StreamOps --> ReplayCold["Replay All Operations<br/>Incrementally"]
         ColdOrWarm -->|Yes: Warm Miss| LoadIncremental["Load Operations<br/>After Cached Revision"]
         LoadIncremental --> ReplayWarm["Apply Incremental<br/>Operations"]
@@ -131,10 +131,11 @@ flowchart TD
 
      **Cold miss** (no document in ring buffer for this stream):
      - Gets reducer from `IDocumentModelRegistry` using documentType
-     - Streams operations from `IOperationStore` in pages (e.g., 100 operations at a time)
+     - Streams operations from `IOperationStore.getSince(documentId, scope, branch, 0, paging)` using cursor-based paging (e.g., 100 operations per page)
      - For each page of operations:
        - Applies operations through reducer incrementally
        - Builds up document state progressively
+       - Uses cursor from previous page to fetch next page
      - Continues until targetRevision is reached (or latest if not specified)
      - Stores resulting PHDocument in ring buffer automatically
      - Updates LRU tracking
@@ -143,7 +144,7 @@ flowchart TD
      **Warm miss** (have older revision in ring buffer, need newer revision):
      - Finds the newest cached document at revision < targetRevision
      - Gets reducer from `IDocumentModelRegistry` using documentType
-     - Loads operations from `IOperationStore` starting after cached revision
+     - Uses `IOperationStore.getSince(documentId, scope, branch, cachedRevision, paging)` to load operations after cached revision
      - Applies only the incremental operations through reducer
      - Stores resulting PHDocument in ring buffer automatically
      - Updates LRU tracking
@@ -264,40 +265,54 @@ private async coldMissRebuild(
   const reducer = this.registry.getModule(documentType).reducer;
   let document: PHDocument | null = null;
   const pageSize = 100;
-  let currentIndex = 0;
 
-  // Stream operations in pages
-  while (true) {
-    const operations = await this.operationStore.getOperations(
-      documentId,
-      scope,
-      branch,
-      currentIndex,
-      pageSize,
-      signal
-    );
+  // Stream operations using cursor-based paging with IOperationStore.getSince(0)
+  // Start from revision 0 to get all operations from the beginning
+  let currentPage = await this.operationStore.getSince(
+    documentId,
+    scope,
+    branch,
+    0,  // Start from beginning
+    { cursor: "", limit: pageSize },
+    signal
+  );
 
-    if (operations.length === 0) break;
-
-    // Apply operations incrementally
-    for (const operation of operations) {
-      if (targetRevision && operation.index > targetRevision) {
+  while (currentPage.results.length > 0) {
+    // Apply operations from current page incrementally
+    for (const operation of currentPage.results) {
+      // Stop if we've reached the target revision
+      if (targetRevision !== undefined && operation.index > targetRevision) {
         return document!;
       }
 
       if (!document) {
-        // Initialize document from first operation
+        // Initialize document from first operation (CREATE_DOCUMENT)
         document = this.createInitialDocument(documentId, documentType, operation);
       } else {
         document = reducer(document, operation.action);
       }
+
+      // Stop if we've reached the target revision
+      if (targetRevision !== undefined && operation.index === targetRevision) {
+        return document!;
+      }
     }
 
-    if (targetRevision && operations[operations.length - 1].index >= targetRevision) {
+    // Check if there are more pages
+    if (!currentPage.nextCursor) {
+      // No more pages, we've reached the end
       break;
     }
 
-    currentIndex += operations.length;
+    // Fetch next page using cursor
+    currentPage = await this.operationStore.getSince(
+      documentId,
+      scope,
+      branch,
+      0,  // Keep using 0, cursor handles pagination
+      { cursor: currentPage.nextCursor, limit: pageSize },
+      signal
+    );
   }
 
   return document!;
@@ -316,22 +331,30 @@ private async warmMissRebuild(
   const reducer = this.registry.getModule(documentType).reducer;
   let document = structuredClone(baseDocument);
 
-  // Load operations after base revision
-  const operations = await this.operationStore.getOperations(
+  // Load operations after base revision using getSince
+  // Omit paging parameter to get all operations (warm-miss range is typically small)
+  const pagedResults = await this.operationStore.getSince(
     documentId,
     scope,
     branch,
-    baseRevision + 1,
-    targetRevision ? targetRevision - baseRevision : undefined,
+    baseRevision,  // Get operations since this revision
+    undefined,     // No paging - load all incremental operations
     signal
   );
 
-  // Apply incremental operations
-  for (const operation of operations) {
-    if (targetRevision && operation.index > targetRevision) {
+  // Apply incremental operations up to target revision
+  for (const operation of pagedResults.results) {
+    // Stop if we've reached the target revision
+    if (targetRevision !== undefined && operation.index > targetRevision) {
       break;
     }
+
     document = reducer(document, operation.action);
+
+    // Stop if we've reached the target revision
+    if (targetRevision !== undefined && operation.index === targetRevision) {
+      break;
+    }
   }
 
   return document;

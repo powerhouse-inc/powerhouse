@@ -67,10 +67,10 @@ export interface IWriteCache {
    * If targetRevision is not provided, retrieves the latest state.
    *
    * Cache miss handling:
-   * - Cold miss (no cached document): Streams operations from IOperationStore
-   *   in pages and replays them through reducer from scratch
+   * - Cold miss (no cached document): Streams operations using getSince(0, paging)
+   *   with cursor-based paging and replays them through reducer from scratch
    * - Warm miss (has older revision): Loads only operations since cached revision
-   *   and applies them incrementally to the cached document
+   *   using getSince(cachedRevision) and applies them incrementally to the cached document
    *
    * @param documentId - The document identifier
    * @param documentType - The document type (needed for reducer lookup on cache miss)

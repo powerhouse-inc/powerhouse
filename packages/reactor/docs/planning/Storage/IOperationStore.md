@@ -58,19 +58,24 @@ interface IOperationStore {
     scope: string,
     branch: string,
     revision: number,
-    signal?: AbortSignal): Promise<Operation[]>;
+    paging?: PagingOptions,
+    signal?: AbortSignal
+  ): Promise<PagedResults<Operation>>;
 
   getSinceTimestamp(
     documentId: string,
     scope: string,
     branch: string,
     timestampUtcMs: number,
-    signal?: AbortSignal): Promise<Operation[]>;
+    paging?: PagingOptions,
+    signal?: AbortSignal
+  ): Promise<PagedResults<Operation>>;
 
   getSinceId(
     id: number,
+    paging?: PagingOptions,
     signal?: AbortSignal,
-  ): Promise<Operation[]>;
+  ): Promise<PagedResults<Operation>>;
 
   getRevisions(
     documentId: string,
@@ -112,11 +117,55 @@ const { revision, latestTimestamp } = await operations.getRevisions(
 );
 // revision = { header: 5, document: 3, global: 10, local: 7 }
 // latestTimestamp = "2025-01-15T10:30:00.000Z"
+
+// Get all operations for a document stream with cursor-based paging
+// Use getSince with revision 0 to get all operations from the beginning
+// First page (cursor starts empty, limit controls page size)
+const firstPage = await operations.getSince(
+  documentId,
+  scope,
+  branch,
+  0,  // Start from beginning
+  { cursor: "", limit: 100 }
+);
+// firstPage.results = [operation 0, operation 1, ..., operation 99]
+// firstPage.nextCursor = "opaque-cursor-string"
+
+// Get next page using cursor
+const secondPage = await operations.getSince(
+  documentId,
+  scope,
+  branch,
+  0,
+  { cursor: firstPage.nextCursor!, limit: 100 }
+);
+
+// Or use the convenience function
+const secondPageAlt = await firstPage.next!();
+
+// Get operations since a specific revision with paging
+const sinceRev50 = await operations.getSince(
+  documentId,
+  scope,
+  branch,
+  50,  // Start from revision 50
+  { cursor: "", limit: 100 }
+);
+
+// Get all operations without paging (omit paging parameter)
+const allOperations = await operations.getSince(
+  documentId,
+  scope,
+  branch,
+  0  // Start from beginning
+);
 ```
 
 **Note**: Header changes (slug, name, meta) are now handled through regular operations in the "header" scope, not through special transaction methods.
 
 **Note**: The `getRevisions()` method efficiently retrieves the latest operation index for each scope and the overall latest timestamp, which is used by `IDocumentView.getHeader()` to reconstruct document headers without loading all operations.
+
+**Note**: The `getSince()` method supports cursor-based paging using the standard `PagingOptions` and `PagedResults` pattern. The `limit` parameter caps the number of operations returned per page, which is essential for preventing memory exhaustion when dealing with documents that have very large operation histories. This method is primarily used by `IWriteCache` for rebuilding documents on cache misses where operations need to be streamed and applied in pages. The cursor is opaque and implementation-specific, allowing efficient continuation of pagination. Use `getSince(documentId, scope, branch, 0, paging)` to get all operations from the beginning (cold-miss scenario), or `getSince(documentId, scope, branch, cachedRevision, paging)` to get incremental operations (warm-miss scenario).
 
 ### DELETE_DOCUMENT Operations
 
