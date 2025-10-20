@@ -1,4 +1,4 @@
-import type { IKeyValueStore } from "./types.js";
+import type { IKeyValueStore } from "./interfaces.js";
 
 /**
  * InMemoryKeyValueStore is a simple Map-based implementation of IKeyValueStore.

@@ -1,51 +1,51 @@
+import type { PHDocument } from "document-model";
+
 /**
- * IKeyValueStore provides a simple key-value storage abstraction for persisting
- * keyframe snapshots.
- *
- * All values are stored as strings. Implementations are responsible for serialization
- * and deserialization of complex data structures.
+ * Configuration options for the write cache
  */
-export interface IKeyValueStore {
-  /**
-   * Retrieves a value from the store.
-   *
-   * @param key - The key to retrieve
-   * @param signal - Optional abort signal to cancel the operation
-   * @returns The value associated with the key, or undefined if not found
-   */
-  get(key: string, signal?: AbortSignal): Promise<string | undefined>;
+export type WriteCacheConfig = {
+  /** Maximum number of document streams to cache (LRU eviction). Default: 1000 */
+  maxDocuments: number;
 
-  /**
-   * Stores a value in the store.
-   *
-   * @param key - The key to store under
-   * @param value - The value to store (must be a string)
-   * @param signal - Optional abort signal to cancel the operation
-   */
-  put(key: string, value: string, signal?: AbortSignal): Promise<void>;
+  /** Number of snapshots to keep in each document's ring buffer. Default: 10 */
+  ringBufferSize: number;
 
-  /**
-   * Deletes a value from the store.
-   *
-   * @param key - The key to delete
-   * @param signal - Optional abort signal to cancel the operation
-   */
-  delete(key: string, signal?: AbortSignal): Promise<void>;
+  /** Persist a keyframe snapshot every N revisions. Default: 10 */
+  keyframeInterval: number;
+};
 
-  /**
-   * Clears all values from the store.
-   */
-  clear(): Promise<void>;
+/**
+ * Unique identifier for a document stream
+ */
+export type DocumentStreamKey = {
+  /** Document identifier */
+  documentId: string;
 
-  /**
-   * Performs startup initialization.
-   * Called once when the store is initialized.
-   */
-  startup(): Promise<void>;
+  /** Operation scope */
+  scope: string;
 
-  /**
-   * Performs graceful shutdown.
-   * Called once when the store is being shut down.
-   */
-  shutdown(): Promise<void>;
-}
+  /** Branch name */
+  branch: string;
+};
+
+/**
+ * A cached document snapshot at a specific revision
+ */
+export type CachedSnapshot = {
+  /** The revision number of this snapshot */
+  revision: number;
+
+  /** The document state at this revision */
+  document: PHDocument;
+};
+
+/**
+ * Serialized keyframe snapshot for K/V store persistence
+ */
+export type KeyframeSnapshot = {
+  /** The revision number of this keyframe */
+  revision: number;
+
+  /** Serialized document state */
+  document: string;
+};

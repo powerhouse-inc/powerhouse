@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { InMemoryKeyValueStore } from "../../src/cache/kv-store.js";
+import { InMemoryKeyValueStore } from "../../src/cache/kv/kv-store.js";
 
 describe("InMemoryKeyValueStore", () => {
   let store: InMemoryKeyValueStore;
