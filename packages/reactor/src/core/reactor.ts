@@ -219,6 +219,9 @@ export class Reactor implements IReactor {
     for (const scope in operations) {
       if (matchesScope(view, scope)) {
         const scopeOperations = operations[scope];
+        if (!scopeOperations) {
+          continue;
+        }
 
         // apply paging too
         const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
@@ -353,28 +356,13 @@ export class Reactor implements IReactor {
       input: upgradeInput,
     };
 
-    // Create a single job with both CREATE_DOCUMENT and UPGRADE_DOCUMENT operations
+    // Create a single job with both CREATE_DOCUMENT and UPGRADE_DOCUMENT actions
     const job: Job = {
       id: uuidv4(),
       documentId: document.header.id,
       scope: "document",
       branch: "main",
-      operations: [
-        {
-          index: 0,
-          timestampUtcMs: new Date().toISOString(),
-          hash: "",
-          skip: 0,
-          action: createAction,
-        },
-        {
-          index: 1,
-          timestampUtcMs: new Date().toISOString(),
-          hash: "",
-          skip: 0,
-          action: upgradeAction,
-        },
-      ],
+      actions: [createAction, upgradeAction],
       createdAt: new Date().toISOString(),
       queueHint: [],
       maxRetries: 3,
@@ -428,15 +416,7 @@ export class Reactor implements IReactor {
       documentId: id,
       scope: "document",
       branch: "main",
-      operations: [
-        {
-          index: 0,
-          timestampUtcMs: new Date().toISOString(),
-          hash: "",
-          skip: 0,
-          action: action,
-        },
-      ],
+      actions: [action],
       createdAt: new Date().toISOString(),
       queueHint: [],
       maxRetries: 3,
@@ -462,25 +442,16 @@ export class Reactor implements IReactor {
   async mutate(id: string, actions: Action[]): Promise<JobInfo> {
     const createdAtUtcIso = new Date().toISOString();
 
-    // Convert actions to operations
-    const operations = actions.map((action, index) => ({
-      index: index,
-      timestampUtcMs: action.timestampUtcMs || new Date().toISOString(),
-      hash: "", // Will be computed by the executor
-      skip: 0,
-      action: action,
-    }));
-
     // Determine scope from first action (all actions should have the same scope)
     const scope = actions.length > 0 ? actions[0].scope || "global" : "global";
 
-    // Create a single job with all operations
+    // Create a single job with all actions
     const job: Job = {
       id: uuidv4(),
       documentId: id,
       scope: scope,
       branch: "main", // Default to main branch
-      operations: operations,
+      actions: actions,
       createdAt: new Date().toISOString(),
       queueHint: [],
       maxRetries: 3,

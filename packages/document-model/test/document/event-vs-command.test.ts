@@ -57,7 +57,7 @@ describe("Event", () => {
     });
 
     expect(document.header.revision.global).toBe(4);
-    expect(document.operations.global).toMatchObject([
+    expect(document.operations.global!).toMatchObject([
       {
         action: { type: "TEST" },
         index: 0,
@@ -120,7 +120,7 @@ describe("Event", () => {
     );
 
     expect(document.header.revision.global).toBe(4);
-    expect(document.operations.global).toMatchObject([
+    expect(document.operations.global!).toMatchObject([
       {
         type: "TEST",
         index: 0,
@@ -189,7 +189,7 @@ describe("Event", () => {
     );
 
     expect(document.header.revision.global).toBe(5);
-    expect(document.operations.global).toMatchObject([
+    expect(document.operations.global!).toMatchObject([
       {
         action: { type: "TEST" },
         index: 0,
@@ -253,7 +253,7 @@ describe("Event", () => {
     });
 
     expect(document.header.revision.global).toBe(4);
-    expect(document.operations.global).toMatchObject([
+    expect(document.operations.global!).toMatchObject([
       {
         action: { type: "TEST" },
         index: 0,

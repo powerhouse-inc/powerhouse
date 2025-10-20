@@ -223,12 +223,17 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
 
     // Map the database results to IStorageUnit objects
     const units: IStorageUnit[] = results.flatMap((doc) =>
-      doc.scopes.map((scope) => ({
-        documentId: doc.id,
-        documentModelType: doc.documentType,
-        scope,
-        branch: "main",
-      })),
+      doc.scopes
+        .filter((scope) => {
+          const test = !scopes || scopes.size === 0 || scopes.has(scope);
+          return test;
+        })
+        .map((scope) => ({
+          documentId: doc.id,
+          documentModelType: doc.documentType,
+          scope,
+          branch: "main",
+        })),
     );
 
     return {
@@ -389,7 +394,8 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
     >(
       (acc, value) => {
         const scope = value;
-        const lastIndex = cachedOperations[scope].at(-1)?.index ?? -1;
+        const scopeOps = cachedOperations[scope];
+        const lastIndex = scopeOps?.at(-1)?.index ?? -1;
         acc[scope] = lastIndex;
         return acc;
       },
@@ -902,11 +908,11 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
       return [];
     }
 
-    const documentTypes = await this.db.document.findMany({
+    const documentHeaders = await this.db.document.findMany({
       where: {
         id: { in: [...new Set(units.map((unit) => unit.documentId)).keys()] },
       },
-      select: { id: true, documentType: true },
+      select: { id: true, documentType: true, created: true },
     });
 
     // TODO add branch condition
@@ -933,13 +939,27 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
       }[]
     >(query, ...params);
 
-    return results.map((row) => ({
-      ...row,
-      documentId: row.documentId,
-      documentType: documentTypes.find((doc) => doc.id === row.documentId)!
-        .documentType,
-      lastUpdated: new Date(row.lastUpdated).toISOString(),
-    }));
+    return units.map((unit) => {
+      const header = documentHeaders.find(
+        (header) => header.id === unit.documentId,
+      );
+      const result = results.find(
+        (row) =>
+          row.documentId === unit.documentId &&
+          row.scope === unit.scope &&
+          row.branch === unit.branch,
+      );
+      return {
+        documentId: unit.documentId,
+        documentType: header?.documentType ?? unit.documentType,
+        scope: unit.scope,
+        branch: unit.branch,
+        lastUpdated: new Date(
+          result?.lastUpdated ?? header!.created,
+        ).toISOString(),
+        revision: result?.revision ?? 0,
+      };
+    });
   }
 
   // migrates all stored operations from legacy signature to signatures array

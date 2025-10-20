@@ -292,7 +292,7 @@ describe("Document Drive Server with %s", () => {
         ],
       }),
     );
-    await server.addDriveOperation("1", drive.operations.global[0]);
+    await server.addDriveOperation("1", drive.operations.global![0]);
     expect(server.getSyncStatus("1")).toBe("SYNCING");
 
     vi.advanceTimersToNextTimer();
@@ -369,7 +369,7 @@ describe("Document Drive Server with %s", () => {
       mswServer.events.on("request:start", listener);
     });
 
-    const operation = document.operations.global[0]!;
+    const operation = document.operations.global![0]!;
     const result = await server.addOperation("1", "1.1", operation);
     expect(result.status).toBe("SUCCESS");
     expect(server.getSyncStatus("1")).toBe("SYNCING");
@@ -450,7 +450,7 @@ describe("Document Drive Server with %s", () => {
     await new Promise((resolve) => server.on("strandUpdate", resolve));
 
     const drive = await server.getDrive("1");
-    expect(drive.operations.global[0]).toMatchObject({
+    expect(drive.operations.global![0]).toMatchObject({
       index: 0,
       skip: 0,
       type: "ADD_FILE",
@@ -774,7 +774,7 @@ describe("Document Drive Server with %s", () => {
     await vi.waitFor(() => expect(server.getSyncStatus("1")).toBe("CONFLICT"));
 
     const drive = await server.getDrive("1");
-    expect(drive.operations.global.length).toBe(1);
+    expect(drive.operations.global!.length).toBe(1);
     // expect(server.getSyncStatus('1')).toBe('');
   });
 
@@ -828,18 +828,18 @@ describe("Document Drive Server with %s", () => {
       "1",
       "1.1",
     )) as DocumentModelGlobalState;
-    expect(document.operations.global.length).toBe(0);
+    expect(document.operations.global!.length).toBe(0);
 
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const operationA = DocumentModelLib.reducer(
       document,
       DocumentModelActions.addModule({ id: "a", name: "a" }),
-    ).operations.global[0]!;
+    ).operations.global![0]!;
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const operationB = DocumentModelLib.reducer(
       document,
       DocumentModelActions.addModule({ id: "b", name: "b" }),
-    ).operations.global[0]!;
+    ).operations.global![0]!;
 
     const resultDelayP = server.addOperations("1", "1.1", [operationA]);
     const result = await server.addOperations("1", "1.1", [operationB]);
@@ -852,8 +852,8 @@ describe("Document Drive Server with %s", () => {
       "1",
       "1.1",
     )) as DocumentModelGlobalState;
-    expect(document.operations.global.length).toBe(1);
-    expect(document.operations.global[0]?.index).toBe(0);
+    expect(document.operations.global!.length).toBe(1);
+    expect(document.operations.global![0]?.index).toBe(0);
     expect(document.state.global.specifications[0]?.modules[0]?.id).toBe("a");
   });
 });

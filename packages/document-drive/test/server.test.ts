@@ -192,7 +192,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     );
 
     // dispatches operation to server
-    const operation = drive.operations.global[0];
+    const operation = drive.operations.global![0];
     const operationResult = await server.addOperation(driveId, operation);
     expect(operationResult.status).toBe("SUCCESS");
 
@@ -258,7 +258,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
         documentType: "powerhouse/document-model",
       }),
     );
-    const operation = drive.operations.global[0];
+    const operation = drive.operations.global![0];
 
     const result = await server.addOperation(driveId, operation);
     if (result.error) {
@@ -316,7 +316,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
         documentType: "powerhouse/document-model",
       }),
     );
-    const operation = drive.operations.global[0];
+    const operation = drive.operations.global![0];
 
     const result = await server.addOperation(driveId, operation);
     if (result.error) {
@@ -373,7 +373,10 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
         documentType: "powerhouse/document-model",
       }),
     );
-    let result = await server.addOperation(driveId, drive.operations.global[0]);
+    let result = await server.addOperation(
+      driveId,
+      drive.operations.global![0],
+    );
     expect(result.status).toBe("SUCCESS");
 
     await expect(
@@ -387,7 +390,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
         id: documentId,
       }),
     );
-    result = await server.addOperation(driveId, drive.operations.global[1]);
+    result = await server.addOperation(driveId, drive.operations.global![1]);
     expect(result.status).toBe("SUCCESS");
 
     await expect(
@@ -437,7 +440,10 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       }),
     );
 
-    const result = await server.addOperations(driveId, drive.operations.global);
+    const result = await server.addOperations(
+      driveId,
+      drive.operations.global!,
+    );
     expect(result.status).toBe("SUCCESS");
 
     const documents = await server.getDocuments(driveId);
@@ -502,7 +508,10 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       }),
     );
 
-    const result = await server.addOperations(driveId, drive.operations.global);
+    const result = await server.addOperations(
+      driveId,
+      drive.operations.global!,
+    );
     expect(result.status).toBe("SUCCESS");
 
     await expect(
@@ -584,7 +593,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
     const result = await server.addOperation(
       driveId,
-      drive.operations.global[0],
+      drive.operations.global![0],
     );
     expect(result.status).toBe("SUCCESS");
 
@@ -628,7 +637,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
     const result = await server.addOperation(
       driveId,
-      drive.operations.global[0],
+      drive.operations.global![0],
     );
     expect(result.status).toBe("SUCCESS");
 
@@ -698,7 +707,10 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       }),
     );
     vi.useRealTimers();
-    const result = await server.addOperations(driveId, drive.operations.global);
+    const result = await server.addOperations(
+      driveId,
+      drive.operations.global!,
+    );
 
     expect(result.status).toBe("SUCCESS");
 
@@ -760,7 +772,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
         documentType: "powerhouse/document-model",
       }),
     );
-    await server.addOperation(driveId, drive.operations.global[0]);
+    await server.addOperation(driveId, drive.operations.global![0]);
 
     let document = await server.getDocument<DocumentModelDocument>(documentId);
 
@@ -768,7 +780,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       document,
       setModelName({ name: "Test" }),
     );
-    const operation = document.operations.global[0];
+    const operation = document.operations.global![0];
     const result = await server.addOperation(documentId, operation);
     expect(result.error).toBeUndefined();
     expect(result.status).toBe("SUCCESS");
@@ -808,7 +820,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
         scope: "global",
       }),
     );
-    const operations = document.operations.global;
+    const operations = document.operations.global!;
     const result = await server.addOperations(documentId, operations);
     expect(result.error).toBeUndefined();
     expect(result.status).toBe("SUCCESS");
@@ -852,7 +864,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       addFolder({ id: generateId(), name: "folder 2" }),
     );
 
-    const operations = drive.operations.global;
+    const operations = drive.operations.global!;
     const result = await server.addDriveOperations(driveId, operations);
 
     expect(result.status).toBe("SUCCESS");
@@ -913,12 +925,12 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     });
 
     // dispatches operation to server
-    const operation = drive.operations.global[0];
+    const operation = drive.operations.global![0];
     const operationResult = await server.addOperation(driveId, operation);
     expect(operationResult.status).toBe("SUCCESS");
 
     drive = await server.getDrive(driveId);
-    expect(drive.operations.global[0]?.action?.context).toStrictEqual(context);
+    expect(drive.operations.global![0]?.action?.context).toStrictEqual(context);
   });
 
   it("get drives by slug", async ({ expect }) => {
@@ -1041,6 +1053,25 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     });
     let drive = await server.getDrive(driveId);
 
+    const syncUnitsInitial = await syncManager.getSynchronizationUnits(
+      driveId,
+      undefined,
+      ["global"],
+    );
+    expect(syncUnitsInitial).toStrictEqual([
+      {
+        documentId: drive.header.id,
+        documentType: "powerhouse/document-drive",
+        scope: "global",
+        branch: "main",
+        lastUpdated: "2024-01-01T00:00:00.000Z",
+        revision: 0,
+      },
+    ]);
+
+    const storageUnitsInitial = await storage.findStorageUnitsBy({}, 10);
+    expect(storageUnitsInitial.units).toHaveLength(4);
+
     await server.addDocument(createDocumentModelWithId(documentId));
 
     // adds file
@@ -1052,18 +1083,22 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
         documentType: "powerhouse/document-model",
       }),
     );
-    await server.addOperation(driveId, drive.operations.global[0]);
+    await server.addOperation(driveId, drive.operations.global![0]);
 
     let document = await server.getDocument<DocumentModelDocument>(documentId);
     document = documentModelDocumentModelModule.reducer(
       document,
       setModelName({ name: "Test" }),
     );
-    const operation = document.operations.global[0];
+    const operation = document.operations.global![0];
     await server.addOperation(documentId, operation);
     await server.getDocument(documentId);
 
-    const syncUnits = await syncManager.getSynchronizationUnits(driveId);
+    const syncUnits = await syncManager.getSynchronizationUnits(
+      driveId,
+      undefined,
+      ["global"],
+    );
     expect(syncUnits).toStrictEqual([
       {
         documentId: drive.header.id,
@@ -1136,10 +1171,10 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       context,
     });
 
-    await server.addOperation(driveId, drive.operations.global[0]);
+    await server.addOperation(driveId, drive.operations.global![0]);
     const storedDrive = await server.getDrive(driveId);
-    expect(storedDrive.operations.global[0]).toMatchObject(
-      drive.operations.global[0],
+    expect(storedDrive.operations.global![0]).toMatchObject(
+      drive.operations.global![0],
     );
   });
 
@@ -1176,12 +1211,12 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       }),
     );
 
-    await server.addOperation(driveId, newDrive.operations.global[0]);
+    await server.addOperation(driveId, newDrive.operations.global![0]);
 
     const drive0 = await server.getDrive(driveId, {
       revisions: { global: -1 },
     });
-    expect(drive0.operations.global.length).toBe(0);
+    expect(drive0.operations.global!.length).toBe(0);
     expect(drive0).toStrictEqual(drive);
   });
 

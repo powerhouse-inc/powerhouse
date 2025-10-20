@@ -77,7 +77,7 @@ describe("Base reducer", () => {
       }),
     );
 
-    expect(newDocument.operations.global).toMatchObject([
+    expect(newDocument.operations.global!).toMatchObject([
       {
         type: "TEST",
         timestampUtcMs: new Date().toISOString(),
@@ -308,15 +308,15 @@ describe("Base reducer", () => {
       },
     });
 
-    expect(document.operations.global[0].action.type).toBe("TEST_0");
-    expect(document.operations.global[0].index).toBe(0);
-    expect(document.operations.global[0].skip).toBe(0);
-    expect(document.operations.global[1].action.type).toBe("TEST_1");
-    expect(document.operations.global[1].index).toBe(1);
-    expect(document.operations.global[1].skip).toBe(0);
-    expect(document.operations.global[2].action.type).toBe("TEST_2");
-    expect(document.operations.global[2].index).toBe(3);
-    expect(document.operations.global[2].skip).toBe(1);
+    expect(document.operations.global![0].action.type).toBe("TEST_0");
+    expect(document.operations.global![0].index).toBe(0);
+    expect(document.operations.global![0].skip).toBe(0);
+    expect(document.operations.global![1].action.type).toBe("TEST_1");
+    expect(document.operations.global![1].index).toBe(1);
+    expect(document.operations.global![1].skip).toBe(0);
+    expect(document.operations.global![2].action.type).toBe("TEST_2");
+    expect(document.operations.global![2].index).toBe(3);
+    expect(document.operations.global![2].skip).toBe(1);
   });
 
   it("should not throw errors from reducer", () => {
@@ -364,9 +364,9 @@ describe("Base reducer", () => {
     document = countReducer(document, error());
     document = countReducer(document, increment());
 
-    expect(document.operations.global.length).toBe(3);
+    expect(document.operations.global!.length).toBe(3);
     expect(document.state.global.count).toBe(2);
-    expect(document.operations.global).toMatchObject([
+    expect(document.operations.global!).toMatchObject([
       {
         type: "INCREMENT",
         index: 1,
@@ -400,8 +400,8 @@ describe("Base reducer", () => {
     document = countReducer(document, increment());
     document = countReducer(document, increment());
 
-    expect(document.operations.global.length).toBe(3);
-    for (const operation of document.operations.global) {
+    expect(document.operations.global!.length).toBe(3);
+    for (const operation of document.operations.global!) {
       expect(operation.error).toBeUndefined();
     }
   });

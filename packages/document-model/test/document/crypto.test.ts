@@ -87,7 +87,7 @@ describe("Crypto utils", () => {
 
     const action = increment();
     const documentWithOp = countReducer(document, action);
-    const operation = documentWithOp.operations.global[0];
+    const operation = documentWithOp.operations.global![0];
 
     // overwrite id
     operation.id = "4871aa5f-a53d-4d1c-b5dd-baef4fb17bc2";
@@ -129,7 +129,7 @@ describe("Crypto utils", () => {
 
     const action = increment();
     const documentWithOp = countReducer(document, action);
-    const operation = documentWithOp.operations.global[1];
+    const operation = documentWithOp.operations.global![1];
 
     // overwrite id
     operation.id = "4871aa5f-a53d-4d1c-b5dd-baef4fb17bc2";
@@ -193,7 +193,7 @@ describe("Crypto utils", () => {
       const documentWithOp = countReducer(document, action);
 
       // overwrite last operation id
-      documentWithOp.operations.global.at(-1)!.id = "123";
+      documentWithOp.operations.global!.at(-1)!.id = "123";
 
       return documentWithOp;
     }) as Reducer<CountPHState>;

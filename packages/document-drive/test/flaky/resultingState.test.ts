@@ -43,7 +43,7 @@ describe("Document operations", () => {
     const driveStorage = await storage.getDrive("test");
     expect(
       JSON.parse(
-        driveStorage.operations.global.at(-1)?.resultingState as string,
+        driveStorage.operations.global!.at(-1)?.resultingState as string,
       ),
     ).toStrictEqual({
       icon: null,
@@ -73,7 +73,7 @@ describe("Document operations", () => {
     const driveStorage = await storage.getDrive("test");
     expect(
       JSON.parse(
-        driveStorage.operations.global.at(-1)?.resultingState as string,
+        driveStorage.operations.global!.at(-1)?.resultingState as string,
       ),
     ).toStrictEqual({
       icon: null,
@@ -97,7 +97,7 @@ describe("Document operations", () => {
     });
 
     expect(
-      driveStorage.operations.global.at(0)?.resultingState,
+      driveStorage.operations.global!.at(0)?.resultingState,
     ).toBeUndefined();
   });
 
@@ -135,7 +135,7 @@ describe("Document operations", () => {
     });
     expect(result.error?.message).toBeUndefined();
     const driveStorage = await storage.getDrive("test");
-    expect(driveStorage.operations.global.at(-1)?.attachments).toMatchObject([
+    expect(driveStorage.operations.global!.at(-1)?.attachments).toMatchObject([
       {
         data: "test",
         mimeType: "text",
@@ -150,10 +150,10 @@ describe("Document operations", () => {
     expect,
   }) => {
     const driveStorage = await storage.getDrive("test");
-    expect(driveStorage.operations.global.length).toBe(3);
+    expect(driveStorage.operations.global!.length).toBe(3);
     expect(
       JSON.parse(
-        driveStorage.operations.global.at(2)?.resultingState as string,
+        driveStorage.operations.global!.at(2)?.resultingState as string,
       ),
     ).toStrictEqual({
       icon: null,
@@ -182,7 +182,7 @@ describe("Document operations", () => {
       slug: null,
     });
     expect(
-      driveStorage.operations.global.at(1)?.resultingState,
+      driveStorage.operations.global!.at(1)?.resultingState,
     ).toBeUndefined();
     const result = await server.addDriveOperation(
       "test",
@@ -191,7 +191,7 @@ describe("Document operations", () => {
         ...actions.noop(),
         skip: 1,
         index: 3,
-        hash: driveStorage.operations.global.at(1)?.hash,
+        hash: driveStorage.operations.global!.at(1)?.hash,
       },
     );
 
@@ -217,13 +217,13 @@ describe("Document operations", () => {
       slug: null,
     };
     expect(result.document?.state.global).toStrictEqual(resultingState);
-    expect(driveStorage.operations.global.length).toBe(3);
+    expect(driveStorage.operations.global!.length).toBe(3);
     expect(
-      result.document?.operations.global.at(2)?.resultingState,
+      result.document?.operations.global!.at(2)?.resultingState,
     ).toStrictEqual(resultingState);
     expect(
       JSON.parse(
-        result.document?.operations.global.at(1)?.resultingState as string,
+        result.document?.operations.global!.at(1)?.resultingState as string,
       ),
     ).toStrictEqual(resultingState);
   });

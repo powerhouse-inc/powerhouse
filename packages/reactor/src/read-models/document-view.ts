@@ -1,5 +1,4 @@
 import type { Operation, PHDocument, PHDocumentHeader } from "document-model";
-import { defaultBaseState } from "document-model/core";
 import type { Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import type {
@@ -26,10 +25,8 @@ export class KyselyDocumentView implements IDocumentView {
   ) {}
 
   async init(): Promise<void> {
-    // Create tables if they don't exist
     await this.createTablesIfNotExist();
 
-    // Load the last processed operation ID from ViewState
     const viewState = await this.db
       .selectFrom("ViewState")
       .selectAll()
@@ -38,7 +35,6 @@ export class KyselyDocumentView implements IDocumentView {
     if (viewState) {
       this.lastOperationId = viewState.lastOperationId;
 
-      // Catch up with any operations we missed
       const missedOperations = await this.operationStore.getSinceId(
         this.lastOperationId,
       );
@@ -47,7 +43,6 @@ export class KyselyDocumentView implements IDocumentView {
         await this.indexOperations(missedOperations);
       }
     } else {
-      // Initialize ViewState with ID 0
       await this.db
         .insertInto("ViewState")
         .values({
@@ -55,7 +50,6 @@ export class KyselyDocumentView implements IDocumentView {
         })
         .execute();
 
-      // Process all existing operations
       const allOperations = await this.operationStore.getSinceId(0);
       if (allOperations.length > 0) {
         await this.indexOperations(allOperations);
@@ -72,7 +66,6 @@ export class KyselyDocumentView implements IDocumentView {
         const { documentId, scope, branch, documentType } = context;
         const { index, hash } = operation;
 
-        // Parse the full resulting state if present
         let fullState: Record<string, unknown> = {};
         if (operation.resultingState) {
           try {
@@ -81,19 +74,60 @@ export class KyselyDocumentView implements IDocumentView {
               unknown
             >;
           } catch {
-            // Failed to parse resultingState, use empty state
+            //
           }
         }
 
-        // If resultingState is present, create/update snapshots for ALL scopes in the state
-        // Otherwise, fall back to creating/updating a snapshot for just the operation's scope
-        const scopesToIndex: Array<[string, unknown]> =
-          Object.keys(fullState).length > 0
-            ? Object.entries(fullState)
-            : [[scope, {}]];
+        const operationType = operation.action?.type;
+        let scopesToIndex: Array<[string, unknown]>;
+
+        if (operationType === "CREATE_DOCUMENT") {
+          scopesToIndex = Object.entries(fullState).filter(
+            ([key]) => key === "header" || key === "document" || key === "auth",
+          );
+        } else if (operationType === "UPGRADE_DOCUMENT") {
+          const scopeStatesToIndex: Array<[string, unknown]> = [];
+
+          for (const [scopeName, scopeState] of Object.entries(fullState)) {
+            if (scopeName === "header") {
+              scopeStatesToIndex.push([scopeName, scopeState]);
+              continue;
+            }
+
+            if (scopeName === scope) {
+              scopeStatesToIndex.push([scopeName, scopeState]);
+              continue;
+            }
+
+            const existingSnapshot = await trx
+              .selectFrom("DocumentSnapshot")
+              .select("scope")
+              .where("documentId", "=", documentId)
+              .where("scope", "=", scopeName)
+              .where("branch", "=", branch)
+              .executeTakeFirst();
+
+            if (!existingSnapshot) {
+              scopeStatesToIndex.push([scopeName, scopeState]);
+            }
+          }
+
+          scopesToIndex = scopeStatesToIndex;
+        } else {
+          scopesToIndex = [];
+
+          if (fullState.header !== undefined) {
+            scopesToIndex.push(["header", fullState.header]);
+          }
+
+          if (fullState[scope] !== undefined) {
+            scopesToIndex.push([scope, fullState[scope]]);
+          } else {
+            scopesToIndex.push([scope, {}]);
+          }
+        }
 
         for (const [scopeName, scopeState] of scopesToIndex) {
-          // Check if we need to create or update a snapshot for this scope
           const existingSnapshot = await trx
             .selectFrom("DocumentSnapshot")
             .selectAll()
@@ -108,7 +142,6 @@ export class KyselyDocumentView implements IDocumentView {
               : {};
 
           if (existingSnapshot) {
-            // Update existing snapshot with new state
             await trx
               .updateTable("DocumentSnapshot")
               .set({
@@ -123,7 +156,6 @@ export class KyselyDocumentView implements IDocumentView {
               .where("branch", "=", branch)
               .execute();
           } else {
-            // Create new snapshot with computed state
             const snapshot: InsertableDocumentSnapshot = {
               id: uuidv4(),
               documentId,
@@ -159,7 +191,6 @@ export class KyselyDocumentView implements IDocumentView {
       return [];
     }
 
-    // Query for all documents at once
     const snapshots = await this.db
       .selectFrom("DocumentSnapshot")
       .select(["documentId"])
@@ -168,10 +199,8 @@ export class KyselyDocumentView implements IDocumentView {
       .distinct()
       .execute();
 
-    // Create a Set of existing document IDs for fast lookup
     const existingIds = new Set(snapshots.map((s) => s.documentId));
 
-    // Return a boolean array in the same order as the input
     return documentIds.map((id) => existingIds.has(id));
   }
 
@@ -237,6 +266,16 @@ export class KyselyDocumentView implements IDocumentView {
       );
     }
 
+    // Reconstruct cross-scope header metadata (revision, lastModifiedAtUtcIso)
+    // by aggregating information from all scopes
+    const revisions = await this.operationStore.getRevisions(
+      documentId,
+      branch,
+      signal,
+    );
+    header.revision = revisions.revision;
+    header.lastModifiedAtUtcIso = revisions.latestTimestamp;
+
     // Reconstruct the document state from all snapshots
     // Note: exclude "header" scope from state since it's already in the header field
     const state: Record<string, unknown> = {};
@@ -295,8 +334,9 @@ export class KyselyDocumentView implements IDocumentView {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       state: state as any,
       operations,
-      // to be removed...
-      initialState: defaultBaseState(),
+      // initialState should match the current state reconstructed from snapshots
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      initialState: state as any,
       clipboard: [],
     };
 

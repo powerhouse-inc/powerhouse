@@ -636,8 +636,8 @@ describe("KyselyDocumentView", () => {
 
       // Verify revision map includes data from snapshot
       expect(document.header.revision).toEqual({
-        header: 0,
-        global: 1,
+        header: 1,
+        global: 2,
       });
 
       // lastModifiedAtUtcIso should be the latest timestamp from snapshot
@@ -804,8 +804,8 @@ describe("KyselyDocumentView", () => {
       // Verify header and revision tracking
       expect(document.header.id).toBe(documentId);
       expect(document.header.revision).toEqual({
-        header: 0,
-        document: 0,
+        header: 1,
+        document: 1,
       });
     });
 

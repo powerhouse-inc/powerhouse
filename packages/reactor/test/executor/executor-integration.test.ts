@@ -62,23 +62,17 @@ describe("SimpleJobExecutor Integration", () => {
         documentId: document.header.id,
         scope: "global",
         branch: "main",
-        operations: [
+        actions: [
           {
-            action: {
-              id: "action-1",
-              type: "ADD_FOLDER",
-              scope: "global",
-              timestampUtcMs: Date.now().toString(),
-              input: {
-                id: "folder-1",
-                name: "Test Folder",
-                parentFolder: null,
-              },
-            },
-            index: 0,
+            id: "action-1",
+            type: "ADD_FOLDER",
+            scope: "global",
             timestampUtcMs: Date.now().toString(),
-            hash: "test-hash",
-            skip: 0,
+            input: {
+              id: "folder-1",
+              name: "Test Folder",
+              parentFolder: null,
+            },
           },
         ],
         createdAt: Date.now().toString(),
@@ -97,9 +91,9 @@ describe("SimpleJobExecutor Integration", () => {
       const updatedDocument = await storage.get<DocumentDriveDocument>(
         document.header.id,
       );
-      expect(updatedDocument.operations.global).toHaveLength(1);
+      expect(updatedDocument.operations.global!).toHaveLength(1);
 
-      const persistedOperation = updatedDocument.operations.global[0];
+      const persistedOperation = updatedDocument.operations.global![0];
       expect(persistedOperation.action.type).toBe("ADD_FOLDER");
       expect(persistedOperation.action.input).toMatchObject({
         id: "folder-1",
@@ -132,23 +126,17 @@ describe("SimpleJobExecutor Integration", () => {
         documentId: document.header.id,
         scope: "global",
         branch: "main",
-        operations: [
+        actions: [
           {
-            action: {
-              id: "action-1",
-              type: "ADD_FOLDER",
-              scope: "global",
-              timestampUtcMs: Date.now().toString(),
-              input: {
-                id: "folder-1",
-                name: "Parent Folder",
-                parentFolder: null,
-              },
-            },
-            index: 0,
+            id: "action-1",
+            type: "ADD_FOLDER",
+            scope: "global",
             timestampUtcMs: Date.now().toString(),
-            hash: "hash-1",
-            skip: 0,
+            input: {
+              id: "folder-1",
+              name: "Parent Folder",
+              parentFolder: null,
+            },
           },
         ],
         createdAt: Date.now().toString(),
@@ -164,23 +152,17 @@ describe("SimpleJobExecutor Integration", () => {
         documentId: document.header.id,
         scope: "global",
         branch: "main",
-        operations: [
+        actions: [
           {
-            action: {
-              id: "action-2",
-              type: "ADD_FOLDER",
-              scope: "global",
-              timestampUtcMs: (Date.now() + 1).toString(),
-              input: {
-                id: "folder-2",
-                name: "Child Folder",
-                parentFolder: "folder-1",
-              },
-            },
-            index: 1,
+            id: "action-2",
+            type: "ADD_FOLDER",
+            scope: "global",
             timestampUtcMs: (Date.now() + 1).toString(),
-            hash: "hash-2",
-            skip: 0,
+            input: {
+              id: "folder-2",
+              name: "Child Folder",
+              parentFolder: "folder-1",
+            },
           },
         ],
         createdAt: (Date.now() + 1).toString(),
@@ -194,7 +176,7 @@ describe("SimpleJobExecutor Integration", () => {
       const updatedDocument = await storage.get<DocumentDriveDocument>(
         document.header.id,
       );
-      expect(updatedDocument.operations.global).toHaveLength(2);
+      expect(updatedDocument.operations.global!).toHaveLength(2);
 
       // Verify state reflects both changes
       const globalState = updatedDocument.state.global;
@@ -230,23 +212,17 @@ describe("SimpleJobExecutor Integration", () => {
         documentId: document.header.id,
         scope: "global",
         branch: "main",
-        operations: [
+        actions: [
           {
-            action: {
-              id: "action-folder",
-              type: "ADD_FOLDER",
-              scope: "global",
-              timestampUtcMs: Date.now().toString(),
-              input: {
-                id: "folder-1",
-                name: "Documents",
-                parentFolder: null,
-              },
-            },
-            index: 0,
+            id: "action-folder",
+            type: "ADD_FOLDER",
+            scope: "global",
             timestampUtcMs: Date.now().toString(),
-            hash: "hash-folder",
-            skip: 0,
+            input: {
+              id: "folder-1",
+              name: "Documents",
+              parentFolder: null,
+            },
           },
         ],
         createdAt: Date.now().toString(),
@@ -261,24 +237,18 @@ describe("SimpleJobExecutor Integration", () => {
         documentId: document.header.id,
         scope: "global",
         branch: "main",
-        operations: [
+        actions: [
           {
-            action: {
-              id: "action-file",
-              type: "ADD_FILE",
-              scope: "global",
-              timestampUtcMs: (Date.now() + 1).toString(),
-              input: {
-                id: "file-1",
-                name: "test.txt",
-                documentType: "text/plain",
-                parentFolder: "folder-1",
-              },
-            },
-            index: 1,
+            id: "action-file",
+            type: "ADD_FILE",
+            scope: "global",
             timestampUtcMs: (Date.now() + 1).toString(),
-            hash: "hash-file",
-            skip: 0,
+            input: {
+              id: "file-1",
+              name: "test.txt",
+              documentType: "text/plain",
+              parentFolder: "folder-1",
+            },
           },
         ],
         createdAt: (Date.now() + 1).toString(),
@@ -292,7 +262,7 @@ describe("SimpleJobExecutor Integration", () => {
       const updatedDocument = await storage.get<DocumentDriveDocument>(
         document.header.id,
       );
-      expect(updatedDocument.operations.global).toHaveLength(2);
+      expect(updatedDocument.operations.global!).toHaveLength(2);
 
       // Verify state reflects the changes
       const globalState = updatedDocument.state.global;
@@ -341,23 +311,17 @@ describe("SimpleJobExecutor Integration", () => {
         documentId: document.header.id,
         scope: "global",
         branch: "main",
-        operations: [
+        actions: [
           {
-            action: {
-              id: "action-1",
-              type: "ADD_FOLDER",
-              scope: "global",
-              timestampUtcMs: Date.now().toString(),
-              input: {
-                id: "folder-1",
-                name: "Test Folder",
-                parentFolder: null,
-              },
-            },
-            index: 0,
+            id: "action-1",
+            type: "ADD_FOLDER",
+            scope: "global",
             timestampUtcMs: Date.now().toString(),
-            hash: "test-hash",
-            skip: 0,
+            input: {
+              id: "folder-1",
+              name: "Test Folder",
+              parentFolder: null,
+            },
           },
         ],
         createdAt: Date.now().toString(),
@@ -376,7 +340,7 @@ describe("SimpleJobExecutor Integration", () => {
       const unchangedDocument = await storage.get<DocumentDriveDocument>(
         document.header.id,
       );
-      expect(unchangedDocument.operations.global).toHaveLength(0);
+      expect(unchangedDocument.operations.global!).toHaveLength(0);
       const globalState = unchangedDocument.state.global;
       expect(globalState).toBeDefined();
       expect(globalState.nodes).toBeDefined();
@@ -402,23 +366,17 @@ describe("SimpleJobExecutor Integration", () => {
         documentId: document.header.id,
         scope: "global",
         branch: "main",
-        operations: [
+        actions: [
           {
-            action: {
-              id: "action-1",
-              type: "ADD_FOLDER",
-              scope: "global",
-              timestampUtcMs: Date.now().toString(),
-              input: {
-                id: "folder-1",
-                name: "Test Folder",
-                parentFolder: null,
-              },
-            },
-            index: 0,
+            id: "action-1",
+            type: "ADD_FOLDER",
+            scope: "global",
             timestampUtcMs: Date.now().toString(),
-            hash: "test-hash",
-            skip: 0,
+            input: {
+              id: "folder-1",
+              name: "Test Folder",
+              parentFolder: null,
+            },
           },
         ],
         createdAt: Date.now().toString(),
@@ -453,21 +411,15 @@ describe("SimpleJobExecutor Integration", () => {
         documentId: document.header.id,
         scope: "document",
         branch: "main",
-        operations: [
+        actions: [
           {
-            action: {
-              id: "action-1",
-              type: "DELETE_DOCUMENT",
-              scope: "document",
-              timestampUtcMs: Date.now().toString(),
-              input: {
-                documentId: document.header.id,
-              },
-            },
-            index: 0,
+            id: "action-1",
+            type: "DELETE_DOCUMENT",
+            scope: "document",
             timestampUtcMs: Date.now().toString(),
-            hash: "test-hash",
-            skip: 0,
+            input: {
+              documentId: document.header.id,
+            },
           },
         ],
         createdAt: Date.now().toString(),

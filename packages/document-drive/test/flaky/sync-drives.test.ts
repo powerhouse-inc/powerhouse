@@ -121,7 +121,7 @@ describe("Document Drive Server interaction", () => {
             drive,
             actions.addListener({ listener }),
           );
-          const operation = drive.operations.local.slice(-1);
+          const operation = drive.operations.local!.slice(-1);
 
           await server.addDriveOperations(driveId, operation);
           return HttpResponse.json({
@@ -289,7 +289,7 @@ describe("Document Drive Server interaction", () => {
     });
 
     let connectDrive = await connectServer.getDrive("1");
-    expect(connectDrive.operations.global.length).toBe(0);
+    expect(connectDrive.operations.global!.length).toBe(0);
 
     const remoteDrive = await remoteServer.getDrive("1");
 
@@ -319,7 +319,7 @@ describe("Document Drive Server interaction", () => {
     );
 
     connectDrive = await connectServer.getDrive("1");
-    expect(connectDrive.operations.global.length).toBe(1);
+    expect(connectDrive.operations.global!.length).toBe(1);
     expect(connectDrive.state.global.nodes).toStrictEqual([
       {
         id: "1",
@@ -347,7 +347,7 @@ describe("Document Drive Server interaction", () => {
     });
 
     let connectDrive = await connectServer.getDrive("1");
-    expect(connectDrive.operations.global.length).toBe(0);
+    expect(connectDrive.operations.global!.length).toBe(0);
 
     const remoteDrive = await remoteServer.getDrive("1");
     await remoteServer.addDriveOperation(
@@ -390,11 +390,11 @@ describe("Document Drive Server interaction", () => {
         "1",
         "1",
       )) as DocumentModelGlobalState;
-      expect(connectDocument.operations.global.length).toBe(1);
+      expect(connectDocument.operations.global!.length).toBe(1);
     });
 
     connectDrive = await connectServer.getDrive("1");
-    expect(connectDrive.operations.global.length).toBe(1);
+    expect(connectDrive.operations.global!.length).toBe(1);
     expect(connectDrive.state.global.nodes).toStrictEqual([
       {
         id: "1",
@@ -489,7 +489,7 @@ describe("Document Drive Server interaction", () => {
 
     await vi.waitFor(async () => {
       const connectDocument = await connectServer.getDrive("1");
-      expect(connectDocument.operations.global.length).toBe(3);
+      expect(connectDocument.operations.global!.length).toBe(3);
     });
 
     connectDrive = await connectServer.getDrive("1");
@@ -558,7 +558,7 @@ describe("Document Drive Server interaction", () => {
 
     await vi.waitFor(async () => {
       const connectDocument = await connectServer.getDrive("1");
-      expect(connectDocument.operations.global.length).toBe(2);
+      expect(connectDocument.operations.global!.length).toBe(2);
     });
 
     connectDrive = await connectServer.getDrive("1");
@@ -621,7 +621,7 @@ describe("Document Drive Server interaction", () => {
 
     await vi.waitFor(async () => {
       const connectDocument = await connectServer.getDrive("1");
-      expect(connectDocument.operations.global.length).toBe(3);
+      expect(connectDocument.operations.global!.length).toBe(3);
     });
 
     connectDrive = await connectServer.getDrive("1");

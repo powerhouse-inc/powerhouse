@@ -93,7 +93,11 @@ function updateOperationsForAction<TDocument extends PHDocument>(
   }
 
   const scope = action.scope;
-  const operations: Operation[] = document.operations[scope].slice();
+
+  let operations: Operation[] = [];
+  if (document.operations[scope]) {
+    operations = document.operations[scope].slice();
+  }
 
   const latestOperation = operations.sort((a, b) => a.index - b.index).at(-1);
   const lastOperationIndex = latestOperation?.index ?? -1;
@@ -120,7 +124,10 @@ function updateOperationsForOperation<TDocument extends PHDocument>(
   skip = 0,
 ): TDocument {
   const scope = operation.action.scope;
-  const operations: Operation[] = document.operations[scope].slice();
+  const scopeOperations = document.operations[scope];
+  const operations: Operation[] = scopeOperations
+    ? scopeOperations.slice()
+    : [];
 
   const latestOperation = operations.sort((a, b) => a.index - b.index).at(-1);
   const lastOperationIndex = latestOperation?.index ?? -1;
@@ -251,17 +258,23 @@ function processSkipOperation<TState extends PHBaseState = PHBaseState>(
 ): PHDocument<TState> {
   const scope = action.scope;
 
-  const latestOperation = document.operations[scope].at(-1);
+  const scopeOperations = document.operations[scope];
+  if (!scopeOperations) {
+    return document;
+  }
+
+  const latestOperation = scopeOperations.at(-1);
 
   if (!latestOperation) return document;
 
   const documentOperations = garbageCollectDocumentOperations({
     ...document.operations,
-    [scope]: skipHeaderOperations(document.operations[scope], latestOperation),
+    [scope]: skipHeaderOperations(scopeOperations, latestOperation),
   });
 
   let scopeState: unknown = undefined;
-  const lastRemainingOperation = documentOperations[scope].at(-1);
+  const documentScopeOps = documentOperations[scope];
+  const lastRemainingOperation = documentScopeOps?.at(-1);
 
   // if the last operation has the resulting state and
   // reuseOperationResultingState is true then reuses it
@@ -305,7 +318,11 @@ function processUndoOperation<TState extends PHBaseState = PHBaseState>(
   reuseOperationResultingState = false,
   resultingStateParser = parseResultingState,
 ): PHDocument<TState> {
-  const operations = [...document.operations[scope]];
+  const scopeOperations = document.operations[scope];
+  if (!scopeOperations) {
+    return document;
+  }
+  const operations = [...scopeOperations];
   const sortedOperations = sortOperations(operations);
 
   sortedOperations.pop();
@@ -314,7 +331,11 @@ function processUndoOperation<TState extends PHBaseState = PHBaseState>(
     ...document.operations,
   });
 
-  const clearedOperations = [...documentOperations[scope]];
+  const documentScopeOps = documentOperations[scope];
+  if (!documentScopeOps) {
+    return document;
+  }
+  const clearedOperations = [...documentScopeOps];
   const diff = diffOperations(
     garbageCollect(sortedOperations),
     clearedOperations,
@@ -474,24 +495,35 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
     } catch (error) {
       // if the reducer throws an error then we should keep the previous state (before replayOperations)
       // and remove skip number from action/operation
-      const lastOperationIndex =
-        newDocument.operations[_action.scope].length - 1;
-      draft.operations[_action.scope][lastOperationIndex].error = (
-        error as Error
-      ).message;
+      const actionScopeOps = newDocument.operations[_action.scope];
+      if (!actionScopeOps) {
+        throw new Error(`No operations found for scope: ${_action.scope}`);
+      }
+      const lastOperationIndex = actionScopeOps.length - 1;
+      const draftScopeOps = draft.operations[_action.scope];
+      if (!draftScopeOps) {
+        throw new Error(
+          `No operations found in draft for scope: ${_action.scope}`,
+        );
+      }
+      draftScopeOps[lastOperationIndex].error = (error as Error).message;
 
-      draft.operations[_action.scope][lastOperationIndex].skip = 0;
+      draftScopeOps[lastOperationIndex].skip = 0;
 
       if (shouldProcessSkipOperation) {
         draft.state = castDraft({
           ...document.state,
         });
+        const documentScopeOps = document.operations[_action.scope];
+        if (!documentScopeOps) {
+          throw new Error(`No operations found for scope: ${_action.scope}`);
+        }
         draft.operations = castDraft({
           ...document.operations,
           [_action.scope]: [
-            ...document.operations[_action.scope],
+            ...documentScopeOps,
             {
-              ...draft.operations[_action.scope][lastOperationIndex],
+              ...draftScopeOps[lastOperationIndex],
             },
           ],
         });
@@ -516,7 +548,8 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
   }
 
   // updates the last operation with the hash of the resulting state
-  const lastOperation = newDocument.operations[scope].at(-1);
+  const scopeOperations = newDocument.operations[scope];
+  const lastOperation = scopeOperations?.at(-1);
   if (lastOperation) {
     lastOperation.hash = hash;
 
@@ -569,6 +602,9 @@ export function pruneOperation<TState extends PHBaseState = PHBaseState>(
   wrappedReducer: StateReducer<TState>,
 ): PHDocument<TState> {
   const operations = document.operations.global;
+  if (!operations) {
+    throw new Error("No global operations found");
+  }
 
   let { start, end } = input;
   start = start || 0;

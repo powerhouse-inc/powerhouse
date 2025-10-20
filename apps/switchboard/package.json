@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard",
   "type": "module",
-  "version": "4.1.0-dev.75",
+  "version": "4.1.0-dev.77",
   "main": "dist/src/index.js",
   "exports": {
     ".": {
@@ -32,6 +32,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@openfeature/core": "^1.9.1",
     "@openfeature/env-var-provider": "^0.3.1",
     "@openfeature/server-sdk": "^1.19.0",
     "@powerhousedao/analytics-engine-core": "^0.5.0",

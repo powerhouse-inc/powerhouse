@@ -1325,7 +1325,7 @@ export class BaseDocumentDriveServer
     const operationsByScope = groupOperationsByScope(operations);
 
     for (const scope of Object.keys(operationsByScope)) {
-      const storageDocumentOperations = documentStorage.operations[scope];
+      const storageDocumentOperations = documentStorage.operations[scope] || [];
 
       // TODO two equal operations done by two clients will be considered the same, ie: { type: "INCREMENT" }
       const branch = removeExistingOperations(
@@ -1423,7 +1423,11 @@ export class BaseDocumentDriveServer
     const documentOperations = garbageCollectDocumentOperations(operations);
 
     for (const scope of Object.keys(documentOperations)) {
-      const lastRemainingOperation = documentOperations[scope].at(-1);
+      const scopeOps = documentOperations[scope];
+      if (!scopeOps) {
+        continue;
+      }
+      const lastRemainingOperation = scopeOps.at(-1);
       // if the latest operation doesn't have a resulting state then tries
       // to retrieve it from the db to avoid rerunning all the operations
       if (lastRemainingOperation && !lastRemainingOperation.resultingState) {
@@ -1490,14 +1494,23 @@ export class BaseDocumentDriveServer
     // Filter out CREATE_DOCUMENT and UPGRADE_DOCUMENT operations
     // (these don't currently have reducers and should not be replayed)
     for (const [scope, scopeOps] of Object.entries(operations)) {
+      if (!scopeOps) {
+        continue;
+      }
       for (const op of scopeOps) {
         if (
           op.action.type === "CREATE_DOCUMENT" ||
           op.action.type === "UPGRADE_DOCUMENT"
         ) {
-          headerOperations[scope].push(op);
+          const headerOps = headerOperations[scope];
+          if (headerOps) {
+            headerOps.push(op);
+          }
         } else {
-          operationsToReplay[scope].push(op);
+          const replayOps = operationsToReplay[scope];
+          if (replayOps) {
+            replayOps.push(op);
+          }
         }
       }
     }
@@ -1552,12 +1565,14 @@ export class BaseDocumentDriveServer
     let newDocument = document;
 
     const scope = operation.action.scope;
+    const currentScopeOperations = document.operations[scope] || [];
     const documentOperations = garbageCollectDocumentOperations({
       ...document.operations,
-      [scope]: skipHeaderOperations(document.operations[scope], operation),
+      [scope]: skipHeaderOperations(currentScopeOperations, operation),
     });
 
-    const lastRemainingOperation = documentOperations[scope].at(-1);
+    const remainingScopeOps = documentOperations[scope];
+    const lastRemainingOperation = remainingScopeOps?.at(-1);
     // if the latest operation doesn't have a resulting state then tries
     // to retrieve it from the db to avoid rerunning all the operations
     if (lastRemainingOperation && !lastRemainingOperation.resultingState) {
@@ -1607,9 +1622,18 @@ export class BaseDocumentDriveServer
       },
     );
 
-    const appliedOperations = newDocument.operations[
-      operation.action.scope
-    ].filter((op) => op.index == operation.index && op.skip == operation.skip);
+    const newDocScopeOperations =
+      newDocument.operations[operation.action.scope];
+    if (!newDocScopeOperations) {
+      throw new OperationError(
+        "ERROR",
+        operation,
+        `No operations found for scope: ${operation.action.scope}`,
+      );
+    }
+    const appliedOperations = newDocScopeOperations.filter(
+      (op) => op.index == operation.index && op.skip == operation.skip,
+    );
     const appliedOperation = appliedOperations.at(0);
 
     if (!appliedOperation) {
@@ -1808,17 +1832,22 @@ export class BaseDocumentDriveServer
   ): Promise<IOperationResult | undefined> {
     try {
       const document = await this.getDocument(id);
-      const newOperation = operations.find(
-        (op) =>
-          !op.id ||
-          !document.operations[op.action.scope].find(
-            (existingOp: Operation) =>
-              existingOp.id === op.id &&
-              existingOp.index === op.index &&
-              existingOp.action.type === op.action.type &&
-              existingOp.hash === op.hash,
-          ),
-      );
+      const newOperation = operations.find((op) => {
+        if (!op.id) {
+          return true;
+        }
+        const scopeOps = document.operations[op.action.scope];
+        if (!scopeOps) {
+          return true;
+        }
+        return !scopeOps.find(
+          (existingOp: Operation) =>
+            existingOp.id === op.id &&
+            existingOp.index === op.index &&
+            existingOp.action.type === op.action.type &&
+            existingOp.hash === op.hash,
+        );
+      });
       if (!newOperation) {
         return {
           status: "SUCCESS",
@@ -2385,17 +2414,22 @@ export class BaseDocumentDriveServer
   ): Promise<DriveOperationResult | undefined> {
     try {
       const drive = await this.getDrive(driveId);
-      const newOperation = operations.find(
-        (op) =>
-          !op.id ||
-          !drive.operations[op.action.scope].find(
-            (existingOp: Operation) =>
-              existingOp.id === op.id &&
-              existingOp.index === op.index &&
-              existingOp.action.type === op.action.type &&
-              existingOp.hash === op.hash,
-          ),
-      );
+      const newOperation = operations.find((op) => {
+        if (!op.id) {
+          return true;
+        }
+        const scopeOps = drive.operations[op.action.scope];
+        if (!scopeOps) {
+          return true;
+        }
+        return !scopeOps.find(
+          (existingOp: Operation) =>
+            existingOp.id === op.id &&
+            existingOp.index === op.index &&
+            existingOp.action.type === op.action.type &&
+            existingOp.hash === op.hash,
+        );
+      });
       if (!newOperation) {
         return {
           status: "SUCCESS",
@@ -2640,7 +2674,11 @@ export class BaseDocumentDriveServer
     );
     for (const action of actions) {
       documentId = reducer(documentId, action);
-      const operation = documentId.operations[action.scope].slice().pop();
+      const scopeOps = documentId.operations[action.scope];
+      if (!scopeOps) {
+        throw new Error(`No operations found for scope: ${action.scope}`);
+      }
+      const operation = scopeOps.slice().pop();
       if (!operation) {
         throw new Error("Error creating operations");
       }

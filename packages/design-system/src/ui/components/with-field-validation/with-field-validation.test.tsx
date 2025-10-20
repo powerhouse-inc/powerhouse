@@ -8,8 +8,8 @@ import {
   FormLabel,
   FormMessageList,
   Input,
-  renderWithForm,
 } from "@powerhousedao/design-system";
+import { renderWithForm } from "@powerhousedao/design-system/testing";
 import { act, render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { createRef, forwardRef } from "react";

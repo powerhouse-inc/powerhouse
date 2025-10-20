@@ -82,19 +82,13 @@ describe("SimpleJobExecutor", () => {
         documentId: "missing-doc",
         scope: "global",
         branch: "main",
-        operations: [
+        actions: [
           {
-            action: {
-              id: "action-2",
-              type: "SET_NAME",
-              scope: "global",
-              timestampUtcMs: "123",
-              input: { name: "Test" },
-            },
-            index: 0,
+            id: "action-2",
+            type: "SET_NAME",
+            scope: "global",
             timestampUtcMs: "123",
-            hash: "hash",
-            skip: 0,
+            input: { name: "Test" },
           },
         ],
         createdAt: "123",
@@ -128,19 +122,13 @@ describe("SimpleJobExecutor", () => {
         documentId: "doc-1",
         scope: "global",
         branch: "main",
-        operations: [
+        actions: [
           {
-            action: {
-              id: "action-3",
-              type: "SOME_ACTION",
-              scope: "global",
-              timestampUtcMs: "123",
-              input: {},
-            },
-            index: 0,
+            id: "action-3",
+            type: "SOME_ACTION",
+            scope: "global",
             timestampUtcMs: "123",
-            hash: "hash",
-            skip: 0,
+            input: {},
           },
         ],
         createdAt: "123",
@@ -166,19 +154,13 @@ describe("SimpleJobExecutor", () => {
         documentId: "doc-1",
         scope: "global",
         branch: "main",
-        operations: [
+        actions: [
           {
-            action: {
-              id: "action-4",
-              type: "SET_NAME",
-              scope: "global",
-              timestampUtcMs: "123",
-              input: { name: "Test" },
-            },
-            index: 0,
+            id: "action-4",
+            type: "SET_NAME",
+            scope: "global",
             timestampUtcMs: "123",
-            hash: "hash",
-            skip: 0,
+            input: { name: "Test" },
           },
         ],
         createdAt: "123",
@@ -201,19 +183,13 @@ describe("SimpleJobExecutor", () => {
         documentId,
         scope: "document",
         branch: "main",
-        operations: [
+        actions: [
           {
-            action: {
-              id: "delete-action-1",
-              type: "DELETE_DOCUMENT",
-              scope: "document",
-              timestampUtcMs: "1234567890",
-              input: { documentId },
-            },
-            index: 5,
+            id: "delete-action-1",
+            type: "DELETE_DOCUMENT",
+            scope: "document",
             timestampUtcMs: "1234567890",
-            hash: "delete-hash",
-            skip: 0,
+            input: { documentId },
           },
         ],
         createdAt: "1234567890",
@@ -226,7 +202,7 @@ describe("SimpleJobExecutor", () => {
 
       expect(result.success).toBe(true);
       expect(result.operations).toBeDefined();
-      expect(result.operations?.[0]).toEqual(job.operations[0]);
+      expect(result.operations?.[0].action).toEqual(job.actions[0]);
       expect(mockDocStorage.delete).toHaveBeenCalledWith(documentId);
     });
 
@@ -237,19 +213,13 @@ describe("SimpleJobExecutor", () => {
         documentId,
         scope: "document",
         branch: "main",
-        operations: [
+        actions: [
           {
-            action: {
-              id: "delete-action-2",
-              type: "DELETE_DOCUMENT",
-              scope: "document",
-              timestampUtcMs: "1234567890",
-              input: { documentId },
-            },
-            index: 5,
+            id: "delete-action-2",
+            type: "DELETE_DOCUMENT",
+            scope: "document",
             timestampUtcMs: "1234567890",
-            hash: "delete-hash",
-            skip: 0,
+            input: { documentId },
           },
         ],
         createdAt: "1234567890",
@@ -274,19 +244,13 @@ describe("SimpleJobExecutor", () => {
         documentId: "doc-missing-id",
         scope: "document",
         branch: "main",
-        operations: [
+        actions: [
           {
-            action: {
-              id: "delete-action-3",
-              type: "DELETE_DOCUMENT",
-              scope: "document",
-              timestampUtcMs: "1234567890",
-              input: {},
-            },
-            index: 5,
+            id: "delete-action-3",
+            type: "DELETE_DOCUMENT",
+            scope: "document",
             timestampUtcMs: "1234567890",
-            hash: "delete-hash",
-            skip: 0,
+            input: {},
           },
         ],
         createdAt: "1234567890",
@@ -301,6 +265,466 @@ describe("SimpleJobExecutor", () => {
         "DELETE_DOCUMENT action requires a documentId",
       );
       expect(mockDocStorage.delete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Operation Index Assignment", () => {
+    describe("CREATE_DOCUMENT", () => {
+      it("should assign index 0 for new document", async () => {
+        const documentId = "new-doc-1";
+        const job: Job = {
+          id: "create-job-1",
+          documentId,
+          scope: "document",
+          branch: "main",
+          actions: [
+            {
+              id: "create-action-1",
+              type: "CREATE_DOCUMENT",
+              scope: "document",
+              timestampUtcMs: "1234567890",
+              input: {
+                documentId,
+                model: "powerhouse/document-model",
+                slug: "test-doc",
+                name: "Test Document",
+              },
+            },
+          ],
+          createdAt: "1234567890",
+          queueHint: [],
+        };
+
+        mockDocStorage.create = vi.fn().mockResolvedValue(undefined);
+
+        const result = await executor.executeJob(job);
+
+        expect(result.success).toBe(true);
+        expect(result.operations).toBeDefined();
+        expect(result.operations?.length).toBe(1);
+        expect(result.operations?.[0].index).toBe(0);
+        expect(result.operations?.[0].action.type).toBe("CREATE_DOCUMENT");
+      });
+    });
+
+    describe("DELETE_DOCUMENT", () => {
+      it("should calculate next index based on operations in the same scope only", async () => {
+        const documentId = "doc-with-ops";
+        mockDocStorage.get = vi.fn().mockResolvedValue({
+          header: {
+            id: documentId,
+            documentType: "powerhouse/document-model",
+          },
+          operations: {
+            document: [
+              { index: 0, action: { type: "CREATE_DOCUMENT" } },
+              { index: 1, action: { type: "UPGRADE_DOCUMENT" } },
+            ],
+            global: [
+              { index: 0, action: { type: "SET_NAME" } },
+              { index: 1, action: { type: "SET_DESCRIPTION" } },
+            ],
+          },
+          state: {
+            document: {
+              isDeleted: false,
+            },
+          },
+        });
+
+        const job: Job = {
+          id: "delete-job-index",
+          documentId,
+          scope: "document",
+          branch: "main",
+          actions: [
+            {
+              id: "delete-action-index",
+              type: "DELETE_DOCUMENT",
+              scope: "document",
+              timestampUtcMs: "1234567890",
+              input: { documentId },
+            },
+          ],
+          createdAt: "1234567890",
+          queueHint: [],
+        };
+
+        mockDocStorage.delete = vi.fn().mockResolvedValue(undefined);
+
+        const result = await executor.executeJob(job);
+
+        expect(result.success).toBe(true);
+        expect(result.operations).toBeDefined();
+        expect(result.operations?.length).toBe(1);
+        // Should be 2 (next index in document scope), not 4 (global indexing)
+        expect(result.operations?.[0].index).toBe(2);
+      });
+
+      it("should assign index 0 when document has no operations", async () => {
+        const documentId = "doc-no-ops";
+        mockDocStorage.get = vi.fn().mockResolvedValue({
+          header: {
+            id: documentId,
+            documentType: "powerhouse/document-model",
+          },
+          operations: {},
+          state: {
+            document: {
+              isDeleted: false,
+            },
+          },
+        });
+
+        const job: Job = {
+          id: "delete-job-no-ops",
+          documentId,
+          scope: "document",
+          branch: "main",
+          actions: [
+            {
+              id: "delete-action-no-ops",
+              type: "DELETE_DOCUMENT",
+              scope: "document",
+              timestampUtcMs: "1234567890",
+              input: { documentId },
+            },
+          ],
+          createdAt: "1234567890",
+          queueHint: [],
+        };
+
+        mockDocStorage.delete = vi.fn().mockResolvedValue(undefined);
+
+        const result = await executor.executeJob(job);
+
+        expect(result.success).toBe(true);
+        expect(result.operations?.[0].index).toBe(0);
+      });
+    });
+
+    describe("UPGRADE_DOCUMENT", () => {
+      it("should calculate next index based on existing operations", async () => {
+        const documentId = "doc-to-upgrade";
+        mockDocStorage.get = vi.fn().mockResolvedValue({
+          header: {
+            id: documentId,
+            documentType: "powerhouse/document-model",
+          },
+          operations: {
+            document: [{ index: 0, action: { type: "CREATE_DOCUMENT" } }],
+          },
+          state: {
+            document: {
+              isDeleted: false,
+            },
+          },
+        });
+
+        const job: Job = {
+          id: "upgrade-job-index",
+          documentId,
+          scope: "document",
+          branch: "main",
+          actions: [
+            {
+              id: "upgrade-action-index",
+              type: "UPGRADE_DOCUMENT",
+              scope: "document",
+              timestampUtcMs: "1234567890",
+              input: {
+                documentId,
+                initialState: {
+                  global: { some: "state" },
+                  local: { other: "state" },
+                },
+              },
+            },
+          ],
+          createdAt: "1234567890",
+          queueHint: [],
+        };
+
+        const result = await executor.executeJob(job);
+
+        expect(result.success).toBe(true);
+        expect(result.operations).toBeDefined();
+        expect(result.operations?.length).toBe(1);
+        // Should be 1 (max existing index 0 + 1)
+        expect(result.operations?.[0].index).toBe(1);
+      });
+    });
+
+    describe("Multiple actions in single job", () => {
+      it("should assign sequential indexes for CREATE and UPGRADE", async () => {
+        const documentId = "new-doc-with-upgrade";
+        const job: Job = {
+          id: "create-and-upgrade-job",
+          documentId,
+          scope: "document",
+          branch: "main",
+          actions: [
+            {
+              id: "create-action",
+              type: "CREATE_DOCUMENT",
+              scope: "document",
+              timestampUtcMs: "1234567890",
+              input: {
+                documentId,
+                model: "powerhouse/document-model",
+                slug: "test-doc",
+                name: "Test Document",
+              },
+            },
+            {
+              id: "upgrade-action",
+              type: "UPGRADE_DOCUMENT",
+              scope: "document",
+              timestampUtcMs: "1234567891",
+              input: {
+                documentId,
+                initialState: {
+                  global: { some: "state" },
+                  local: { other: "state" },
+                },
+              },
+            },
+          ],
+          createdAt: "1234567890",
+          queueHint: [],
+        };
+
+        mockDocStorage.create = vi.fn().mockResolvedValue(undefined);
+        // After CREATE, document will have one operation
+        mockDocStorage.get = vi.fn().mockResolvedValue({
+          header: {
+            id: documentId,
+            documentType: "powerhouse/document-model",
+          },
+          operations: {
+            document: [
+              {
+                index: 0,
+                action: {
+                  type: "CREATE_DOCUMENT",
+                  id: "create-action",
+                  scope: "document",
+                  timestampUtcMs: "1234567890",
+                  input: {
+                    documentId,
+                    model: "powerhouse/document-model",
+                  },
+                },
+              },
+            ],
+          },
+          state: {
+            document: {
+              isDeleted: false,
+            },
+            auth: {},
+          },
+        });
+
+        const result = await executor.executeJob(job);
+
+        expect(result.success).toBe(true);
+        expect(result.operations).toBeDefined();
+        expect(result.operations?.length).toBe(2);
+
+        // First operation (CREATE_DOCUMENT) should have index 0
+        expect(result.operations?.[0].index).toBe(0);
+        expect(result.operations?.[0].action.type).toBe("CREATE_DOCUMENT");
+
+        // Second operation (UPGRADE_DOCUMENT) should have index 1
+        expect(result.operations?.[1].index).toBe(1);
+        expect(result.operations?.[1].action.type).toBe("UPGRADE_DOCUMENT");
+      });
+    });
+  });
+
+  describe("Operation Index Assignment - Per-Scope Indexing", () => {
+    describe("Index independence across scopes", () => {
+      it("should allow same index values in different scopes", async () => {
+        const documentId = "doc-multi-scope";
+
+        // Set up document with index 0 in multiple scopes
+        mockDocStorage.get = vi.fn().mockResolvedValue({
+          header: { id: documentId, documentType: "powerhouse/document-model" },
+          operations: {
+            document: [{ index: 0, action: { type: "CREATE_DOCUMENT" } }],
+            global: [{ index: 0, action: { type: "SET_NAME" } }],
+            local: [{ index: 0, action: { type: "SOME_ACTION" } }],
+          },
+          state: { document: { isDeleted: false } },
+        });
+
+        // Test DELETE in document scope gets index 1
+        const job: Job = {
+          id: "delete-job",
+          documentId,
+          scope: "document",
+          branch: "main",
+          actions: [
+            {
+              id: "delete-action",
+              type: "DELETE_DOCUMENT",
+              scope: "document",
+              timestampUtcMs: "1234567890",
+              input: { documentId },
+            },
+          ],
+          createdAt: "1234567890",
+          queueHint: [],
+        };
+
+        mockDocStorage.delete = vi.fn().mockResolvedValue(undefined);
+        const result = await executor.executeJob(job);
+
+        expect(result.success).toBe(true);
+        expect(result.operations?.[0].index).toBe(1);
+
+        // Verify the index is for document scope, independent of global/local
+        expect(result.operations?.[0].index).not.toBe(3); // Not global indexing
+      });
+
+      it("should maintain separate index sequences per scope", async () => {
+        const documentId = "doc-separate-sequences";
+
+        // Create a document where different scopes have different index counts
+        const document = {
+          header: { id: documentId, documentType: "powerhouse/document-model" },
+          operations: {
+            document: [
+              { index: 0, action: { type: "CREATE_DOCUMENT" } },
+              { index: 1, action: { type: "UPGRADE_DOCUMENT" } },
+            ],
+            global: [
+              { index: 0, action: { type: "SET_NAME" } },
+              { index: 1, action: { type: "SET_ATTR_1" } },
+              { index: 2, action: { type: "SET_ATTR_2" } },
+            ],
+            local: [{ index: 0, action: { type: "LOCAL_ACTION" } }],
+          },
+          state: { document: { isDeleted: false } },
+        };
+
+        mockDocStorage.get = vi.fn().mockResolvedValue(document);
+
+        // Test UPGRADE in document scope (should be 2, not 4)
+        const job: Job = {
+          id: "upgrade-job",
+          documentId,
+          scope: "document",
+          branch: "main",
+          actions: [
+            {
+              id: "upgrade-action",
+              type: "UPGRADE_DOCUMENT",
+              scope: "document",
+              timestampUtcMs: "1234567890",
+              input: {
+                documentId,
+                initialState: { global: {}, local: {} },
+              },
+            },
+          ],
+          createdAt: "1234567890",
+          queueHint: [],
+        };
+
+        const result = await executor.executeJob(job);
+
+        expect(result.success).toBe(true);
+        // Next index in document scope is 2 (following 0, 1)
+        // NOT 4 (which would be global indexing across all scopes)
+        expect(result.operations?.[0].index).toBe(2);
+      });
+    });
+
+    describe("Mixed scope operations", () => {
+      it("should handle CREATE→UPGRADE with correct indexes", async () => {
+        const documentId = "new-doc-multi-action";
+        const job: Job = {
+          id: "create-and-upgrade-job",
+          documentId,
+          scope: "document",
+          branch: "main",
+          actions: [
+            {
+              id: "create-action",
+              type: "CREATE_DOCUMENT",
+              scope: "document",
+              timestampUtcMs: "1234567890",
+              input: {
+                documentId,
+                model: "powerhouse/document-model",
+                slug: "test-doc",
+                name: "Test Document",
+              },
+            },
+            {
+              id: "upgrade-action",
+              type: "UPGRADE_DOCUMENT",
+              scope: "document",
+              timestampUtcMs: "1234567891",
+              input: {
+                documentId,
+                initialState: {
+                  global: { some: "state" },
+                  local: { other: "state" },
+                },
+              },
+            },
+          ],
+          createdAt: "1234567890",
+          queueHint: [],
+        };
+
+        mockDocStorage.create = vi.fn().mockResolvedValue(undefined);
+
+        // After CREATE, document will have one operation
+        mockDocStorage.get = vi.fn().mockResolvedValue({
+          header: {
+            id: documentId,
+            documentType: "powerhouse/document-model",
+          },
+          operations: {
+            document: [
+              {
+                index: 0,
+                action: {
+                  type: "CREATE_DOCUMENT",
+                  id: "create-action",
+                  scope: "document",
+                  timestampUtcMs: "1234567890",
+                  input: {
+                    documentId,
+                    model: "powerhouse/document-model",
+                  },
+                },
+              },
+            ],
+          },
+          state: {
+            document: { isDeleted: false },
+            auth: {},
+          },
+        });
+
+        const result = await executor.executeJob(job);
+
+        expect(result.success).toBe(true);
+        expect(result.operations?.length).toBe(2);
+
+        // First operation (CREATE_DOCUMENT) should have index 0
+        expect(result.operations?.[0].index).toBe(0);
+        expect(result.operations?.[0].action.type).toBe("CREATE_DOCUMENT");
+
+        // Second operation (UPGRADE_DOCUMENT) should have index 1
+        expect(result.operations?.[1].index).toBe(1);
+        expect(result.operations?.[1].action.type).toBe("UPGRADE_DOCUMENT");
+      });
     });
   });
 });

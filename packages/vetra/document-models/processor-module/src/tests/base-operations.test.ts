@@ -31,14 +31,14 @@ describe("BaseOperations Operations", () => {
 
     const updatedDocument = reducer(document, creators.setProcessorName(input));
 
-    expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe(
+    expect(updatedDocument.operations.global!).toHaveLength(1);
+    expect(updatedDocument.operations.global![0].action.type).toBe(
       "SET_PROCESSOR_NAME",
     );
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+    expect(updatedDocument.operations.global![0].action.input).toStrictEqual(
       input,
     );
-    expect(updatedDocument.operations.global[0].index).toEqual(0);
+    expect(updatedDocument.operations.global![0].index).toEqual(0);
   });
   it("should handle setProcessorType operation", () => {
     const input: SetProcessorTypeInput = generateMock(
@@ -47,14 +47,14 @@ describe("BaseOperations Operations", () => {
 
     const updatedDocument = reducer(document, creators.setProcessorType(input));
 
-    expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe(
+    expect(updatedDocument.operations.global!).toHaveLength(1);
+    expect(updatedDocument.operations.global![0].action.type).toBe(
       "SET_PROCESSOR_TYPE",
     );
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+    expect(updatedDocument.operations.global![0].action.input).toStrictEqual(
       input,
     );
-    expect(updatedDocument.operations.global[0].index).toEqual(0);
+    expect(updatedDocument.operations.global![0].index).toEqual(0);
   });
   it("should handle addDocumentType operation", () => {
     const input: AddDocumentTypeInput = generateMock(
@@ -63,14 +63,14 @@ describe("BaseOperations Operations", () => {
 
     const updatedDocument = reducer(document, creators.addDocumentType(input));
 
-    expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe(
+    expect(updatedDocument.operations.global!).toHaveLength(1);
+    expect(updatedDocument.operations.global![0].action.type).toBe(
       "ADD_DOCUMENT_TYPE",
     );
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+    expect(updatedDocument.operations.global![0].action.input).toStrictEqual(
       input,
     );
-    expect(updatedDocument.operations.global[0].index).toEqual(0);
+    expect(updatedDocument.operations.global![0].index).toEqual(0);
   });
   it("should handle removeDocumentType operation", () => {
     const input: RemoveDocumentTypeInput = generateMock(
@@ -82,13 +82,13 @@ describe("BaseOperations Operations", () => {
       creators.removeDocumentType(input),
     );
 
-    expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe(
+    expect(updatedDocument.operations.global!).toHaveLength(1);
+    expect(updatedDocument.operations.global![0].action.type).toBe(
       "REMOVE_DOCUMENT_TYPE",
     );
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+    expect(updatedDocument.operations.global![0].action.input).toStrictEqual(
       input,
     );
-    expect(updatedDocument.operations.global[0].index).toEqual(0);
+    expect(updatedDocument.operations.global![0].index).toEqual(0);
   });
 });

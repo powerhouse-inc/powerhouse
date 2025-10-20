@@ -8,6 +8,7 @@ import type {
 } from "document-drive";
 import {
   AbortError,
+  childLogger,
   DocumentAlreadyExistsError,
   DocumentAlreadyExistsReason,
   DocumentIdValidationError,
@@ -44,6 +45,7 @@ function ensureDir(dir: string) {
 export class FilesystemStorage
   implements IDriveOperationStorage, IDocumentStorage
 {
+  private logger = childLogger(["FilesystemStorage"]);
   private basePath: string;
 
   constructor(basePath: string) {
@@ -488,12 +490,23 @@ export class FilesystemStorage
       operations,
     );
 
+    const revision: Record<string, number> = {};
+    for (const [scope, scopeOps] of Object.entries(mergedOperations)) {
+      revision[scope] = operationsToRevision(scopeOps);
+    }
+
     const documentPath = this._buildDocumentPath(id);
     await fs.writeFile(
       documentPath,
       stringify({
         ...existingDocument,
-        ...document,
+        state: document.state,
+        initialState: document.initialState,
+        header: {
+          ...existingDocument.header,
+          ...document.header,
+          revision,
+        },
         operations: mergedOperations,
       }),
       {
@@ -513,12 +526,23 @@ export class FilesystemStorage
       operations,
     );
 
+    const revision: Record<string, number> = {};
+    for (const [scope, scopeOps] of Object.entries(mergedOperations)) {
+      revision[scope] = operationsToRevision(scopeOps);
+    }
+
     const drivePath = this._buildDocumentPath(id);
     await fs.writeFile(
       drivePath,
       stringify({
         ...existingDocument,
-        ...document,
+        state: document.state,
+        initialState: document.initialState,
+        header: {
+          ...existingDocument.header,
+          ...document.header,
+          revision,
+        },
         operations: mergedOperations,
       }),
       {
@@ -547,7 +571,7 @@ export class FilesystemStorage
             return undefined;
           }
 
-          const operations = document.operations[unit.scope];
+          const operations = document.operations[unit.scope]!;
 
           return {
             documentId: unit.documentId,
@@ -557,9 +581,14 @@ export class FilesystemStorage
             lastUpdated:
               operations.at(-1)?.timestampUtcMs ??
               document.header.createdAtUtcIso,
-            revision: operationsToRevision(operations),
+            revision:
+              operations.length > 0 ? operationsToRevision(operations) : 0,
           };
-        } catch {
+        } catch (error) {
+          this.logger.error(
+            "Error getting synchronization units revision",
+            error,
+          );
           return undefined;
         }
       }),

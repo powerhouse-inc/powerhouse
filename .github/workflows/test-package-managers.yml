@@ -11,13 +11,6 @@ on:
         description: "Comma-separated list of packages to install (e.g., @powerhousedao/vetra@dev)"
         required: false
         default: ""
-  pull_request:
-    branches:
-      - main
-      - 'release/staging/**'
-      - 'release/stg/**'
-      - 'release/production/**'
-      - 'release/prod/**'
 
 jobs:
   test-package-managers:
@@ -62,6 +55,7 @@ jobs:
       - name: Install ph-cmd globally with ${{ matrix.package-manager }}
         id: install-ph-cmd
         run: |
+          set -o pipefail
           echo "Installing ph-cmd@$PH_TAG with ${{ matrix.package-manager }}"
           if [ "${{ matrix.package-manager }}" = "npm" ]; then
             ${{ matrix.package-manager }} install -g ph-cmd@${{ env.PH_TAG }} --legacy-peer-deps --ignore-scripts 2>&1 | tee ph-cmd-install.log
@@ -88,6 +82,7 @@ jobs:
         run: |
           cd /tmp/ph-test-${{ matrix.package-manager }}
           echo "Running: ph init project --${{ env.PH_TAG }} --${{ matrix.package-manager }}"
+          set -o pipefail
           ph init project --${{ env.PH_TAG }} --${{ matrix.package-manager }} 2>&1 | tee ph-init.log
 
       - name: Parse ph init warnings
@@ -104,6 +99,7 @@ jobs:
         run: |
           cd /tmp/ph-test-${{ matrix.package-manager }}/project
           echo "Installing project dependencies with ${{ matrix.package-manager }}"
+          set -o pipefail
           ${{ matrix.package-manager }} install 2>&1 | tee deps-install.log
 
       - name: Parse dependency install warnings
@@ -118,6 +114,7 @@ jobs:
         id: install-packages
         if: steps.ph-init.outcome == 'success' && env.PH_PACKAGES != ''
         run: |
+          set -o pipefail
           cd /tmp/ph-test-${{ matrix.package-manager }}/project
 
           IFS=',' read -ra PACKAGES <<< "$PH_PACKAGES"
@@ -151,7 +148,17 @@ jobs:
         run: |
           cd /tmp/ph-test-${{ matrix.package-manager }}/project
           echo "Building Connect with ph connect build"
+          set -o pipefail
           ph connect build 2>&1 | tee connect-build.log
+          BUILD_EXIT_CODE=${PIPESTATUS[0]}
+
+          # Check if build output contains failure indicators
+          if grep -q "Build failed\|✗ Build failed\|error Command failed" connect-build.log; then
+            echo "Build failed - errors detected in output"
+            exit 1
+          fi
+
+          exit $BUILD_EXIT_CODE
 
       - name: Parse build warnings
         if: always() && steps.ph-init.outcome == 'success'

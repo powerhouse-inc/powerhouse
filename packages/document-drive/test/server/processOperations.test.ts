@@ -110,7 +110,7 @@ describe("processOperations", () => {
 
     const document = await buildFile(operations);
 
-    expect(document.operations.global.length).toBe(operations.length);
+    expect(document.operations.global!.length).toBe(operations.length);
     expect((document.state as any).global).toMatchObject({
       name: "test",
       id: "test",
@@ -198,12 +198,12 @@ describe("processOperations", () => {
       mapExpectedOperations(operations),
     );
 
-    expect(result.document.operations.global.length).toBe(3);
-    expect(result.document.operations.global[1]).toMatchObject({
+    expect(result.document.operations.global!.length).toBe(3);
+    expect(result.document.operations.global![1]).toMatchObject({
       type: "NOOP",
       skip: 0,
     });
-    expect(result.document.operations.global[2]).toMatchObject({
+    expect(result.document.operations.global![2]).toMatchObject({
       type: "NOOP",
       skip: 1,
     });
@@ -236,7 +236,7 @@ describe("processOperations", () => {
     });
     expect(result.error).toBeUndefined();
     expect(result.operationsApplied.length).toBe(0);
-    expect(garbageCollect(result.document.operations.global)).toMatchObject(
+    expect(garbageCollect(result.document.operations.global!)).toMatchObject(
       garbageCollect([
         { action: { type: "SET_MODEL_NAME" }, index: 0, skip: 0 },
         { action: { type: "NOOP" }, index: 1, skip: 0 },
@@ -272,7 +272,7 @@ describe("processOperations", () => {
       "Missing operations: expected 3 with skip 0 or equivalent, got index 4 with skip 0",
     );
     expect(result.operationsApplied.length).toBe(0);
-    expect(result.document.operations.global.length).toBe(3);
+    expect(result.document.operations.global!.length).toBe(3);
     expect((result.document.state as any).global).toMatchObject({
       name: "test",
       id: "test",
@@ -324,7 +324,7 @@ describe("processOperations", () => {
       "Missing operations: expected 5 with skip 0 or equivalent, got index 6 with skip 0",
     );
     expect(result.operationsApplied.length).toBe(2);
-    expect(result.document.operations.global.length).toBe(5);
+    expect(result.document.operations.global!.length).toBe(5);
     expect((result.document.state as any).global).toMatchObject({
       name: "test4",
       id: "test",
@@ -356,7 +356,7 @@ describe("processOperations", () => {
 
     expect(result.error).toBeUndefined();
     expect(result.operationsApplied.length).toBe(2);
-    expect(result.document.operations.global.length).toBe(4);
+    expect(result.document.operations.global!.length).toBe(4);
     expect((result.document.state as any).global).toMatchObject({
       name: "test2",
       id: "test",
@@ -400,7 +400,7 @@ describe("processOperations", () => {
 
     expect(result.error).toBeUndefined();
     expect(result.operationsApplied.length).toBe(2);
-    expect(result.document.operations.global.length).toBe(5);
+    expect(result.document.operations.global!.length).toBe(5);
     expect((result.document.state as any).global).toMatchObject({
       name: "test5",
       id: "test",
@@ -424,8 +424,8 @@ describe("processOperations", () => {
     document = await server.getDocument<DocumentModelDocument>(documentId);
 
     expect((document.state as any).global.name).toBe("test");
-    expect(document.operations.global.length).toBe(1);
-    expect(document.operations.global).toMatchObject([
+    expect(document.operations.global!.length).toBe(1);
+    expect(document.operations.global!).toMatchObject([
       {
         hash: operation.hash,
         index: operation.index,
@@ -444,8 +444,8 @@ describe("processOperations", () => {
     expect(resultOp2.status).toBe("SUCCESS");
     expect(resultOp2.operations.length).toBe(1);
 
-    expect(document.operations.global.length).toBe(1);
-    expect(document.operations.global).toMatchObject([
+    expect(document.operations.global!.length).toBe(1);
+    expect(document.operations.global!).toMatchObject([
       {
         hash: operation.hash,
         index: operation.index,
@@ -513,7 +513,7 @@ describe("processOperations", () => {
 
     document = await server.getDocument<DocumentModelDocument>(documentId);
 
-    const operations = document.operations.global.slice(-4);
+    const operations = document.operations.global!.slice(-4);
 
     expect((document.state as any).global).toMatchObject({
       name: "2",
@@ -587,7 +587,7 @@ describe("processOperations", () => {
     const finalDocument =
       await server.getDocument<DocumentModelDocument>(documentId);
 
-    const operations = finalDocument.operations.global.slice(-4);
+    const operations = finalDocument.operations.global!.slice(-4);
 
     expect((finalDocument.state as any).global).toMatchObject({
       name: "2",
@@ -653,14 +653,14 @@ describe("processOperations", () => {
       await server.getDocument<DocumentModelDocument>(documentId);
 
     const clientDocument = client1.getDocument();
-    expect(clientDocument.operations.global.length).toBe(1);
+    expect(clientDocument.operations.global!.length).toBe(1);
 
     const updatedClientDocument = await client1.syncDocument();
 
-    expect(finalDocument.operations.global.length).toBe(2);
-    expect(updatedClientDocument.operations.global.length).toBe(2);
-    expect(updatedClientDocument.operations.global).toMatchObject(
-      mapExpectedOperations(finalDocument.operations.global),
+    expect(finalDocument.operations.global!.length).toBe(2);
+    expect(updatedClientDocument.operations.global!.length).toBe(2);
+    expect(updatedClientDocument.operations.global!).toMatchObject(
+      mapExpectedOperations(finalDocument.operations.global!),
     );
   });
 });

@@ -3,11 +3,13 @@ import type {
   IDocumentStorage,
 } from "document-drive";
 import type {
+  Action,
   CreateDocumentActionInput,
   DeleteDocumentActionInput,
   DocumentModelModule,
   Operation,
   PHDocument,
+  UpgradeDocumentActionInput,
 } from "document-model";
 import { createPresignedHeader, defaultBaseState } from "document-model/core";
 import type { IEventBus } from "../events/interfaces.js";
@@ -21,6 +23,10 @@ import type { JobResult } from "./types.js";
 
 /**
  * Simple job executor that processes a job by applying actions through document model reducers.
+ *
+ * @see docs/planning/Storage/IOperationStore.md for storage schema
+ * @see docs/planning/Operations/index.md for operation structure
+ * @see docs/planning/Jobs/reshuffle.md for skip mechanism details
  */
 export class SimpleJobExecutor implements IJobExecutor {
   constructor(
@@ -32,8 +38,38 @@ export class SimpleJobExecutor implements IJobExecutor {
   ) {}
 
   /**
-   * Execute a single job by applying all its operations through the appropriate reducers.
-   * Operations are processed sequentially in order.
+   * Calculate the next operation index for a specific scope.
+   * Each scope maintains its own independent index sequence.
+   *
+   * Per-scope indexing means:
+   * - Each scope (document, global, local, etc.) has independent indexes
+   * - Indexes start at 0 for each scope
+   * - Different scopes can have operations with the same index value
+   *
+   * @param document - The document whose operations to inspect
+   * @param scope - The scope to calculate the next index for
+   * @returns The next available index in the specified scope
+   */
+  private getNextIndexForScope(document: PHDocument, scope: string): number {
+    const scopeOps = document.operations[scope];
+    if (!scopeOps || scopeOps.length === 0) {
+      return 0;
+    }
+
+    // Find the highest index in this scope
+    let maxIndex = -1;
+    for (const op of scopeOps) {
+      if (op.index > maxIndex) {
+        maxIndex = op.index;
+      }
+    }
+
+    return maxIndex + 1;
+  }
+
+  /**
+   * Execute a single job by applying all its actions through the appropriate reducers.
+   * Actions are processed sequentially in order.
    */
   async executeJob(job: Job): Promise<JobResult> {
     const startTime = Date.now();
@@ -48,13 +84,13 @@ export class SimpleJobExecutor implements IJobExecutor {
       };
     }> = [];
 
-    // Process each operation in the job sequentially
-    for (const operation of job.operations) {
+    // Process each action in the job sequentially
+    for (const action of job.actions) {
       // Handle system actions specially (CREATE_DOCUMENT, DELETE_DOCUMENT, etc.)
-      if (operation.action.type === "CREATE_DOCUMENT") {
-        const result = await this.executeCreateDocumentOperation(
+      if (action.type === "CREATE_DOCUMENT") {
+        const result = await this.executeCreateDocumentAction(
           job,
-          operation,
+          action,
           startTime,
         );
         if (!result.success) {
@@ -69,10 +105,28 @@ export class SimpleJobExecutor implements IJobExecutor {
         continue;
       }
 
-      if (operation.action.type === "DELETE_DOCUMENT") {
-        const result = await this.executeDeleteDocumentOperation(
+      if (action.type === "DELETE_DOCUMENT") {
+        const result = await this.executeDeleteDocumentAction(
           job,
-          operation,
+          action,
+          startTime,
+        );
+        if (!result.success) {
+          return result;
+        }
+        if (result.operations && result.operations.length > 0) {
+          generatedOperations.push(...result.operations);
+        }
+        if (result.operationsWithContext) {
+          operationsWithContext.push(...result.operationsWithContext);
+        }
+        continue;
+      }
+
+      if (action.type === "UPGRADE_DOCUMENT") {
+        const result = await this.executeUpgradeDocumentAction(
+          job,
+          action,
           startTime,
         );
         if (!result.success) {
@@ -126,14 +180,12 @@ export class SimpleJobExecutor implements IJobExecutor {
         };
       }
 
-      const updatedDocument = module.reducer(
-        document as PHDocument,
-        operation.action,
-      );
+      // Reducer assigns index based on document's current operation count
+      const updatedDocument = module.reducer(document as PHDocument, action);
 
       const scope = job.scope;
       const operations = updatedDocument.operations[scope];
-      if (operations.length === 0) {
+      if (!operations || operations.length === 0) {
         throw new Error("No operation generated from action");
       }
 
@@ -156,18 +208,8 @@ export class SimpleJobExecutor implements IJobExecutor {
         };
       }
 
-      // Populate resultingState with the updated document's state for read model indexing
-      // Always include header and document scopes, plus the scope that was modified
-      const resultingState: Record<string, unknown> = {
-        header: updatedDocument.header,
-        document: updatedDocument.state.document,
-      };
-
-      // Add the modified scope (cast to Record to satisfy TypeScript)
-      const state = updatedDocument.state as Record<string, unknown>;
-      resultingState[scope] = state[scope];
-
-      newOperation.resultingState = JSON.stringify(resultingState);
+      // save the whole state
+      newOperation.resultingState = JSON.stringify(updatedDocument.state);
 
       // Write the operation to new IOperationStore (dual-writing)
       try {
@@ -224,12 +266,13 @@ export class SimpleJobExecutor implements IJobExecutor {
   }
 
   /**
-   * Execute a CREATE_DOCUMENT system action for a single operation.
-   * This creates a new document in storage along with its initial operations.
+   * Execute a CREATE_DOCUMENT system action.
+   * This creates a new document in storage along with its initial operation.
+   * For a new document, the operation index is always 0.
    */
-  private async executeCreateDocumentOperation(
+  private async executeCreateDocumentAction(
     job: Job,
-    operation: Operation,
+    action: Action,
     startTime: number,
   ): Promise<
     JobResult & {
@@ -244,7 +287,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       }>;
     }
   > {
-    const action = operation.action;
     const input = action.input as CreateDocumentActionInput;
 
     // Reconstruct the document from CreateDocumentActionInput
@@ -303,6 +345,15 @@ export class SimpleJobExecutor implements IJobExecutor {
         duration: Date.now() - startTime,
       };
     }
+
+    // Create the operation with index 0 (first operation for a new document)
+    const operation: Operation = {
+      index: 0,
+      timestampUtcMs: action.timestampUtcMs || new Date().toISOString(),
+      hash: "", // Will be computed later
+      skip: 0, // Always 0 for new operations; skip > 0 only during reshuffle
+      action: action,
+    };
 
     // Legacy: Write the CREATE_DOCUMENT operation to legacy storage
     try {
@@ -374,12 +425,13 @@ export class SimpleJobExecutor implements IJobExecutor {
   }
 
   /**
-   * Execute a DELETE_DOCUMENT system action for a single operation.
+   * Execute a DELETE_DOCUMENT system action.
    * This deletes a document from legacy storage and writes the operation to IOperationStore.
+   * The operation index is determined from the document's current operation count.
    */
-  private async executeDeleteDocumentOperation(
+  private async executeDeleteDocumentAction(
     job: Job,
-    operation: Operation,
+    action: Action,
     startTime: number,
   ): Promise<
     JobResult & {
@@ -394,7 +446,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       }>;
     }
   > {
-    const action = operation.action;
     const input = action.input as DeleteDocumentActionInput;
 
     if (!input.documentId) {
@@ -437,6 +488,18 @@ export class SimpleJobExecutor implements IJobExecutor {
         duration: Date.now() - startTime,
       };
     }
+
+    // Determine the next operation index for this scope only (per-scope indexing)
+    const nextIndex = this.getNextIndexForScope(document, job.scope);
+
+    // Create the DELETE_DOCUMENT operation
+    const operation: Operation = {
+      index: nextIndex,
+      timestampUtcMs: action.timestampUtcMs || new Date().toISOString(),
+      hash: "", // Will be computed later
+      skip: 0, // Always 0 for new operations; skip > 0 only during reshuffle
+      action: action,
+    };
 
     try {
       await this.documentStorage.delete(documentId);
@@ -488,6 +551,162 @@ export class SimpleJobExecutor implements IJobExecutor {
         success: false,
         error: new Error(
           `Failed to write DELETE_DOCUMENT operation to IOperationStore: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    return {
+      job,
+      success: true,
+      operations: [operation],
+      operationsWithContext: [
+        {
+          operation,
+          context: {
+            documentId,
+            scope: job.scope,
+            branch: job.branch,
+            documentType: document.header.documentType,
+          },
+        },
+      ],
+      duration: Date.now() - startTime,
+    };
+  }
+
+  /**
+   * Execute an UPGRADE_DOCUMENT system action.
+   * This sets the document's initial state from the upgrade action.
+   * The operation index is determined from the document's current operation count.
+   */
+  private async executeUpgradeDocumentAction(
+    job: Job,
+    action: Action,
+    startTime: number,
+  ): Promise<
+    JobResult & {
+      operationsWithContext?: Array<{
+        operation: Operation;
+        context: {
+          documentId: string;
+          scope: string;
+          branch: string;
+          documentType: string;
+        };
+      }>;
+    }
+  > {
+    const input = action.input as UpgradeDocumentActionInput;
+
+    if (!input.documentId) {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          "UPGRADE_DOCUMENT action requires a documentId in input",
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    const documentId = input.documentId;
+
+    // Load the document from storage
+    let document: PHDocument;
+    try {
+      document = await this.documentStorage.get(documentId);
+    } catch (error) {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          `Failed to fetch document for upgrade: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    // Check if document is deleted
+    const documentState = document.state.document;
+    if (documentState.isDeleted) {
+      return {
+        job,
+        success: false,
+        error: new DocumentDeletedError(
+          documentId,
+          documentState.deletedAtUtcIso,
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    // Determine the next operation index for this scope only (per-scope indexing)
+    const nextIndex = this.getNextIndexForScope(document, job.scope);
+
+    // Apply the initialState from the upgrade action
+    // The initialState from UPGRADE_DOCUMENT should be merged with the existing base state
+    // to preserve auth and document scopes while adding model-specific scopes (global, local, etc.)
+    if (input.initialState) {
+      document.state = {
+        ...document.state,
+        ...input.initialState,
+      };
+      document.initialState = document.state;
+    }
+
+    // Create the UPGRADE_DOCUMENT operation with calculated index
+    const operation: Operation = {
+      index: nextIndex,
+      timestampUtcMs: action.timestampUtcMs || new Date().toISOString(),
+      hash: "", // Will be computed later
+      skip: 0, // Always 0 for new operations; skip > 0 only during reshuffle
+      action: action,
+    };
+
+    // Write the updated document to legacy storage
+    try {
+      await this.operationStorage.addDocumentOperations(
+        documentId,
+        [operation],
+        document,
+      );
+    } catch (error) {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          `Failed to write UPGRADE_DOCUMENT operation to legacy storage: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    // Populate resultingState with the full document state for read model indexing
+    const resultingState: Record<string, unknown> = {
+      header: document.header,
+      ...document.state,
+    };
+    operation.resultingState = JSON.stringify(resultingState);
+
+    // Write the operation to new IOperationStore (dual-writing)
+    try {
+      await this.operationStore.apply(
+        documentId,
+        document.header.documentType,
+        job.scope,
+        job.branch,
+        operation.index,
+        (txn) => {
+          txn.addOperations(operation);
+        },
+      );
+    } catch (error) {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          `Failed to write UPGRADE_DOCUMENT operation to IOperationStore: ${error instanceof Error ? error.message : String(error)}`,
         ),
         duration: Date.now() - startTime,
       };
