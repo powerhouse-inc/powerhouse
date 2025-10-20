@@ -157,6 +157,15 @@ jobs:
           echo "Building Connect with ph connect build"
           set -o pipefail
           ph connect build 2>&1 | tee connect-build.log
+          BUILD_EXIT_CODE=${PIPESTATUS[0]}
+
+          # Check if build output contains failure indicators
+          if grep -q "Build failed\|✗ Build failed\|error Command failed" connect-build.log; then
+            echo "Build failed - errors detected in output"
+            exit 1
+          fi
+
+          exit $BUILD_EXIT_CODE
 
       - name: Parse build warnings
         if: always() && steps.ph-init.outcome == 'success'
