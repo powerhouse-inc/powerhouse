@@ -1,3 +1,13 @@
+## 4.1.0-dev.78 (2025-10-20)
+
+### 🩹 Fixes
+
+- **document-drive:** add schema.prisma to bundle ([40eac982f](https://github.com/powerhouse-inc/powerhouse/commit/40eac982f))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.77 (2025-10-20)
 
 ### 🩹 Fixes
