@@ -1,3 +1,28 @@
+## 4.1.0-dev.77 (2025-10-20)
+
+### 🚀 Features
+
+- merge branch 'release/staging/5.0.0' ([123e720e6](https://github.com/powerhouse-inc/powerhouse/commit/123e720e6))
+
+### 🩹 Fixes
+
+- add missing @openfeature/core peer dependency ([2c4a904b0](https://github.com/powerhouse-inc/powerhouse/commit/2c4a904b0))
+- **design-system:** avoid testing library export ([9a290c7a4](https://github.com/powerhouse-inc/powerhouse/commit/9a290c7a4))
+- **document-drive:** consistent getSynchronizationUnitsRevision results for all storage adapters ([eb1d9a2bd](https://github.com/powerhouse-inc/powerhouse/commit/eb1d9a2bd))
+- **document-drive:** add initial state to first internal strand update ([120396f57](https://github.com/powerhouse-inc/powerhouse/commit/120396f57))
+- **document-model:** improved hash mismatch error message ([20567ea8c](https://github.com/powerhouse-inc/powerhouse/commit/20567ea8c))
+- **ph-cli:** allow file names with spaces ([651346930](https://github.com/powerhouse-inc/powerhouse/commit/651346930))
+- **reactor-browser:** add debounce to refreshReactorData to avoid spam on indexeddb ([53ceef967](https://github.com/powerhouse-inc/powerhouse/commit/53ceef967))
+- **vetra:** package query ([1f8d14d85](https://github.com/powerhouse-inc/powerhouse/commit/1f8d14d85))
+- **vetra:** added drive id to read model ([dc9491766](https://github.com/powerhouse-inc/powerhouse/commit/dc9491766))
+- **vetra:** added drive id to read model ([dffe520c3](https://github.com/powerhouse-inc/powerhouse/commit/dffe520c3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.76 (2025-10-18)
 
 ### 🚀 Features

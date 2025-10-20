@@ -1,3 +1,14 @@
+## 4.1.0-dev.77 (2025-10-20)
+
+### 🩹 Fixes
+
+- add missing @openfeature/core peer dependency ([2c4a904b0](https://github.com/powerhouse-inc/powerhouse/commit/2c4a904b0))
+- **reactor-browser:** add debounce to refreshReactorData to avoid spam on indexeddb ([53ceef967](https://github.com/powerhouse-inc/powerhouse/commit/53ceef967))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.76 (2025-10-18)
 
 ### 🩹 Fixes

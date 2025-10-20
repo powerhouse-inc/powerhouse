@@ -1,3 +1,14 @@
+## 4.1.0-dev.77 (2025-10-20)
+
+### 🩹 Fixes
+
+- **design-system:** avoid testing library export ([9a290c7a4](https://github.com/powerhouse-inc/powerhouse/commit/9a290c7a4))
+- add missing @openfeature/core peer dependency ([2c4a904b0](https://github.com/powerhouse-inc/powerhouse/commit/2c4a904b0))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.76 (2025-10-18)
 
 ### 🚀 Features

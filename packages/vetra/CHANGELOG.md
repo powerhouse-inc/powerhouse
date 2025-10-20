@@ -1,3 +1,17 @@
+## 4.1.0-dev.77 (2025-10-20)
+
+### 🩹 Fixes
+
+- add missing @openfeature/core peer dependency ([2c4a904b0](https://github.com/powerhouse-inc/powerhouse/commit/2c4a904b0))
+- **vetra:** added drive id to read model ([dffe520c3](https://github.com/powerhouse-inc/powerhouse/commit/dffe520c3))
+- **vetra:** added drive id to read model ([dc9491766](https://github.com/powerhouse-inc/powerhouse/commit/dc9491766))
+- **vetra:** package query ([1f8d14d85](https://github.com/powerhouse-inc/powerhouse/commit/1f8d14d85))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
 ## 4.1.0-dev.76 (2025-10-18)
 
 ### 🩹 Fixes
