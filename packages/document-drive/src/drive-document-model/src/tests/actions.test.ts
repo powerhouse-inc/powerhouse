@@ -130,8 +130,8 @@ describe("DocumentDrive Actions", () => {
         }),
       );
 
-      expect(document.operations.global).toHaveLength(6);
-      expect(document.operations.global[5]).toMatchObject({
+      expect(document.operations.global!).toHaveLength(6);
+      expect(document.operations.global![5]).toMatchObject({
         type: "MOVE_NODE",
         input: { srcFolder: "invalid", targetParentFolder: folder2Id },
         scope: "global",
@@ -140,8 +140,8 @@ describe("DocumentDrive Actions", () => {
         error: "Node with id invalid not found",
       });
 
-      expect(document.operations.global[5].hash).toBe(
-        document.operations.global[4].hash,
+      expect(document.operations.global![5].hash).toBe(
+        document.operations.global![4].hash,
       );
     });
   });
@@ -233,8 +233,8 @@ describe("DocumentDrive Actions", () => {
         }),
       );
 
-      expect(document.operations.global).toHaveLength(6);
-      expect(document.operations.global[5]).toMatchObject({
+      expect(document.operations.global!).toHaveLength(6);
+      expect(document.operations.global![5]).toMatchObject({
         type: "COPY_NODE",
         input: {
           srcId: "invalid",
@@ -247,8 +247,8 @@ describe("DocumentDrive Actions", () => {
         error: "Node with id invalid not found",
       });
 
-      expect(document.operations.global[5].hash).toBe(
-        document.operations.global[4].hash,
+      expect(document.operations.global![5].hash).toBe(
+        document.operations.global![4].hash,
       );
     });
 

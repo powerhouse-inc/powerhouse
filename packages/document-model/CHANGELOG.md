@@ -1,3 +1,78 @@
+## 4.1.0-dev.79 (2025-10-20)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.78 (2025-10-20)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.77 (2025-10-20)
+
+### 🩹 Fixes
+
+- **design-system:** avoid testing library export ([9a290c7a4](https://github.com/powerhouse-inc/powerhouse/commit/9a290c7a4))
+- add missing @openfeature/core peer dependency ([2c4a904b0](https://github.com/powerhouse-inc/powerhouse/commit/2c4a904b0))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.76 (2025-10-18)
+
+### 🚀 Features
+
+- document-view parity fixes ([0d6dd53fa](https://github.com/powerhouse-inc/powerhouse/commit/0d6dd53fa))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 4.1.0-dev.75 (2025-10-17)
+
+### 🩹 Fixes
+
+- oof, fixed a few deep issues with assumptions about global and local scope ([85d3c9616](https://github.com/powerhouse-inc/powerhouse/commit/85d3c9616))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 4.1.0-dev.74 (2025-10-15)
+
+### 🩹 Fixes
+
+- **codegen:** update graphql dependency in package.json ([257f368ac](https://github.com/powerhouse-inc/powerhouse/commit/257f368ac))
+- adding all header parameters to create action input ([67ac63f05](https://github.com/powerhouse-inc/powerhouse/commit/67ac63f05))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente @gpuente
+
+## 4.1.0-dev.73 (2025-10-15)
+
+### 🚀 Features
+
+- **renown:** added login button ([f109c7305](https://github.com/powerhouse-inc/powerhouse/commit/f109c7305))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.72 (2025-10-15)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.71 (2025-10-15)
+
+### 🩹 Fixes
+
+- **codegen:** update analytics processor imports to use in processor templates ([#1954](https://github.com/powerhouse-inc/powerhouse/pull/1954))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.70 (2025-10-14)
 
 This was a version bump only for document-model to align it with other projects, there were no code changes.

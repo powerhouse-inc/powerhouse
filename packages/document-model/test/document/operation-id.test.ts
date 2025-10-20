@@ -28,8 +28,8 @@ describe("Document Operation ID", () => {
     document = countReducer(document, increment());
     document = countReducer(document, increment());
 
-    expect(document.operations.global.length).toBe(3);
-    for (const operation of document.operations.global) {
+    expect(document.operations.global!.length).toBe(3);
+    for (const operation of document.operations.global!) {
       expect(operation.id).toBeDefined();
     }
   });
@@ -46,7 +46,7 @@ describe("Document Operation ID", () => {
     document = countReducer(document, increment());
     document = countReducer(document, increment());
 
-    const ids = document.operations.global.map((operation) => operation.id);
+    const ids = document.operations.global!.map((operation) => operation.id);
     expect(new Set(ids).size).toBe(10);
   });
 
@@ -59,7 +59,7 @@ describe("Document Operation ID", () => {
       ...document,
       operations: {
         ...document.operations,
-        global: document.operations.global.map((op) => ({
+        global: document.operations.global!.map((op) => ({
           ...op,
           id: undefined,
         })),
@@ -68,8 +68,8 @@ describe("Document Operation ID", () => {
 
     document = countReducer(document, increment());
 
-    expect(document.operations.global).toHaveLength(4);
-    for (const operation of document.operations.global) {
+    expect(document.operations.global!).toHaveLength(4);
+    for (const operation of document.operations.global!) {
       if (operation.index === 3) {
         expect(operation.id).toBeDefined();
       } else {
@@ -87,7 +87,7 @@ describe("Document Operation ID", () => {
       ...document,
       operations: {
         ...document.operations,
-        global: document.operations.global.map((op) => {
+        global: document.operations.global!.map((op) => {
           const { id, ...operation } = op;
           return operation;
         }),
@@ -96,8 +96,8 @@ describe("Document Operation ID", () => {
 
     document = countReducer(document, increment());
 
-    expect(document.operations.global).toHaveLength(4);
-    for (const operation of document.operations.global) {
+    expect(document.operations.global!).toHaveLength(4);
+    for (const operation of document.operations.global!) {
       if (operation.index === 3) {
         expect(operation.id).toBeDefined();
       } else {
@@ -121,12 +121,12 @@ describe("Document Operation ID", () => {
       baseCountReducer,
     );
 
-    expect(replayedDoc.operations.global).toHaveLength(3);
-    expect(document.operations.global).toHaveLength(3);
+    expect(replayedDoc.operations.global!).toHaveLength(3);
+    expect(document.operations.global!).toHaveLength(3);
 
-    for (let i = 0; i < document.operations.global.length; i++) {
-      expect(replayedDoc.operations.global[i].id).toBe(
-        document.operations.global[i].id,
+    for (let i = 0; i < document.operations.global!.length; i++) {
+      expect(replayedDoc.operations.global![i].id).toBe(
+        document.operations.global![i].id,
       );
     }
   });
@@ -140,7 +140,7 @@ describe("Document Operation ID", () => {
       ...document,
       operations: {
         ...document.operations,
-        global: document.operations.global.map((op) => ({
+        global: document.operations.global!.map((op) => ({
           ...op,
           id: undefined,
         })),
@@ -159,18 +159,18 @@ describe("Document Operation ID", () => {
       baseCountReducer,
     );
 
-    expect(replayedDoc.operations.global).toHaveLength(4);
-    expect(document.operations.global).toHaveLength(4);
+    expect(replayedDoc.operations.global!).toHaveLength(4);
+    expect(document.operations.global!).toHaveLength(4);
 
-    for (let i = 0; i < document.operations.global.length; i++) {
+    for (let i = 0; i < document.operations.global!.length; i++) {
       if (i === 3) {
-        expect(replayedDoc.operations.global[i].id).toBeDefined();
+        expect(replayedDoc.operations.global![i].id).toBeDefined();
       } else {
-        expect(replayedDoc.operations.global[i].id).toBeUndefined();
+        expect(replayedDoc.operations.global![i].id).toBeUndefined();
       }
 
-      expect(replayedDoc.operations.global[i].id).toBe(
-        document.operations.global[i].id,
+      expect(replayedDoc.operations.global![i].id).toBe(
+        document.operations.global![i].id,
       );
     }
   });
@@ -184,7 +184,7 @@ describe("Document Operation ID", () => {
       ...document,
       operations: {
         ...document.operations,
-        global: document.operations.global.map((op) => {
+        global: document.operations.global!.map((op) => {
           const { id, ...operation } = op;
           return operation;
         }),
@@ -203,18 +203,18 @@ describe("Document Operation ID", () => {
       baseCountReducer,
     );
 
-    expect(replayedDoc.operations.global).toHaveLength(4);
-    expect(document.operations.global).toHaveLength(4);
+    expect(replayedDoc.operations.global!).toHaveLength(4);
+    expect(document.operations.global!).toHaveLength(4);
 
-    for (let i = 0; i < document.operations.global.length; i++) {
+    for (let i = 0; i < document.operations.global!.length; i++) {
       if (i === 3) {
-        expect(replayedDoc.operations.global[i].id).toBeDefined();
+        expect(replayedDoc.operations.global![i].id).toBeDefined();
       } else {
-        expect(replayedDoc.operations.global[i].id).toBeUndefined();
+        expect(replayedDoc.operations.global![i].id).toBeUndefined();
       }
 
-      expect(replayedDoc.operations.global[i].id).toBe(
-        document.operations.global[i].id,
+      expect(replayedDoc.operations.global![i].id).toBe(
+        document.operations.global![i].id,
       );
     }
   });

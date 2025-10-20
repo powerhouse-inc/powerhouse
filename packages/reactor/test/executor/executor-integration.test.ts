@@ -5,18 +5,24 @@ import type {
   IDocumentStorage,
 } from "document-drive";
 import { MemoryStorage, driveDocumentModelModule } from "document-drive";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { Kysely } from "kysely";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
 import type { Job } from "../../src/queue/types.js";
 import { DocumentModelRegistry } from "../../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
+import type { KyselyOperationStore } from "../../src/storage/kysely/store.js";
+import type { Database as DatabaseSchema } from "../../src/storage/kysely/types.js";
+import { createTestEventBus, createTestOperationStore } from "../factories.js";
 
 describe("SimpleJobExecutor Integration", () => {
   let executor: SimpleJobExecutor;
   let registry: IDocumentModelRegistry;
   let storage: MemoryStorage;
+  let db: Kysely<DatabaseSchema>;
+  let operationStore: KyselyOperationStore;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Use real storage that implements both IDocumentStorage and IDocumentOperationStorage
     storage = new MemoryStorage();
 
@@ -24,12 +30,24 @@ describe("SimpleJobExecutor Integration", () => {
     registry = new DocumentModelRegistry();
     registry.registerModules(driveDocumentModelModule);
 
-    // Create executor with real storage
+    // Create in-memory PGLite database for IOperationStore
+    const setup = await createTestOperationStore();
+    db = setup.db;
+    operationStore = setup.store;
+
+    // Create executor with real storage and real operation store
+    const eventBus = createTestEventBus();
     executor = new SimpleJobExecutor(
       registry,
       storage as IDocumentStorage,
       storage as IDocumentOperationStorage,
+      operationStore,
+      eventBus,
     );
+  });
+
+  afterEach(async () => {
+    await db.destroy();
   });
 
   describe("Document Drive Operations", () => {
@@ -44,8 +62,8 @@ describe("SimpleJobExecutor Integration", () => {
         documentId: document.header.id,
         scope: "global",
         branch: "main",
-        operation: {
-          action: {
+        actions: [
+          {
             id: "action-1",
             type: "ADD_FOLDER",
             scope: "global",
@@ -56,11 +74,7 @@ describe("SimpleJobExecutor Integration", () => {
               parentFolder: null,
             },
           },
-          index: 0,
-          timestampUtcMs: Date.now().toString(),
-          hash: "test-hash",
-          skip: 0,
-        },
+        ],
         createdAt: Date.now().toString(),
         queueHint: [],
       };
@@ -70,16 +84,16 @@ describe("SimpleJobExecutor Integration", () => {
 
       // Verify job executed successfully
       expect(result.success).toBe(true);
-      expect(result.operation).toBeDefined();
+      expect(result.operations).toBeDefined();
       expect(result.error).toBeUndefined();
 
       // Verify operation was persisted to storage
       const updatedDocument = await storage.get<DocumentDriveDocument>(
         document.header.id,
       );
-      expect(updatedDocument.operations.global).toHaveLength(1);
+      expect(updatedDocument.operations.global!).toHaveLength(1);
 
-      const persistedOperation = updatedDocument.operations.global[0];
+      const persistedOperation = updatedDocument.operations.global![0];
       expect(persistedOperation.action.type).toBe("ADD_FOLDER");
       expect(persistedOperation.action.input).toMatchObject({
         id: "folder-1",
@@ -112,8 +126,8 @@ describe("SimpleJobExecutor Integration", () => {
         documentId: document.header.id,
         scope: "global",
         branch: "main",
-        operation: {
-          action: {
+        actions: [
+          {
             id: "action-1",
             type: "ADD_FOLDER",
             scope: "global",
@@ -124,11 +138,7 @@ describe("SimpleJobExecutor Integration", () => {
               parentFolder: null,
             },
           },
-          index: 0,
-          timestampUtcMs: Date.now().toString(),
-          hash: "hash-1",
-          skip: 0,
-        },
+        ],
         createdAt: Date.now().toString(),
         queueHint: [],
       };
@@ -142,8 +152,8 @@ describe("SimpleJobExecutor Integration", () => {
         documentId: document.header.id,
         scope: "global",
         branch: "main",
-        operation: {
-          action: {
+        actions: [
+          {
             id: "action-2",
             type: "ADD_FOLDER",
             scope: "global",
@@ -154,11 +164,7 @@ describe("SimpleJobExecutor Integration", () => {
               parentFolder: "folder-1",
             },
           },
-          index: 1,
-          timestampUtcMs: (Date.now() + 1).toString(),
-          hash: "hash-2",
-          skip: 0,
-        },
+        ],
         createdAt: (Date.now() + 1).toString(),
         queueHint: [],
       };
@@ -170,7 +176,7 @@ describe("SimpleJobExecutor Integration", () => {
       const updatedDocument = await storage.get<DocumentDriveDocument>(
         document.header.id,
       );
-      expect(updatedDocument.operations.global).toHaveLength(2);
+      expect(updatedDocument.operations.global!).toHaveLength(2);
 
       // Verify state reflects both changes
       const globalState = updatedDocument.state.global;
@@ -206,8 +212,8 @@ describe("SimpleJobExecutor Integration", () => {
         documentId: document.header.id,
         scope: "global",
         branch: "main",
-        operation: {
-          action: {
+        actions: [
+          {
             id: "action-folder",
             type: "ADD_FOLDER",
             scope: "global",
@@ -218,11 +224,7 @@ describe("SimpleJobExecutor Integration", () => {
               parentFolder: null,
             },
           },
-          index: 0,
-          timestampUtcMs: Date.now().toString(),
-          hash: "hash-folder",
-          skip: 0,
-        },
+        ],
         createdAt: Date.now().toString(),
         queueHint: [],
       };
@@ -235,8 +237,8 @@ describe("SimpleJobExecutor Integration", () => {
         documentId: document.header.id,
         scope: "global",
         branch: "main",
-        operation: {
-          action: {
+        actions: [
+          {
             id: "action-file",
             type: "ADD_FILE",
             scope: "global",
@@ -248,11 +250,7 @@ describe("SimpleJobExecutor Integration", () => {
               parentFolder: "folder-1",
             },
           },
-          index: 1,
-          timestampUtcMs: (Date.now() + 1).toString(),
-          hash: "hash-file",
-          skip: 0,
-        },
+        ],
         createdAt: (Date.now() + 1).toString(),
         queueHint: [],
       };
@@ -264,7 +262,7 @@ describe("SimpleJobExecutor Integration", () => {
       const updatedDocument = await storage.get<DocumentDriveDocument>(
         document.header.id,
       );
-      expect(updatedDocument.operations.global).toHaveLength(2);
+      expect(updatedDocument.operations.global!).toHaveLength(2);
 
       // Verify state reflects the changes
       const globalState = updatedDocument.state.global;
@@ -298,10 +296,13 @@ describe("SimpleJobExecutor Integration", () => {
       const fn = vi.fn().mockRejectedValue(new Error("Storage write failed"));
       storage.addDocumentOperations = fn;
 
+      const eventBus = createTestEventBus();
       const executorWithFailingStorage = new SimpleJobExecutor(
         registry,
         storage as IDocumentStorage,
         storage as IDocumentOperationStorage,
+        operationStore,
+        eventBus,
       );
 
       // Create a valid job
@@ -310,8 +311,8 @@ describe("SimpleJobExecutor Integration", () => {
         documentId: document.header.id,
         scope: "global",
         branch: "main",
-        operation: {
-          action: {
+        actions: [
+          {
             id: "action-1",
             type: "ADD_FOLDER",
             scope: "global",
@@ -322,11 +323,7 @@ describe("SimpleJobExecutor Integration", () => {
               parentFolder: null,
             },
           },
-          index: 0,
-          timestampUtcMs: Date.now().toString(),
-          hash: "test-hash",
-          skip: 0,
-        },
+        ],
         createdAt: Date.now().toString(),
         queueHint: [],
       };
@@ -343,11 +340,101 @@ describe("SimpleJobExecutor Integration", () => {
       const unchangedDocument = await storage.get<DocumentDriveDocument>(
         document.header.id,
       );
-      expect(unchangedDocument.operations.global).toHaveLength(0);
+      expect(unchangedDocument.operations.global!).toHaveLength(0);
       const globalState = unchangedDocument.state.global;
       expect(globalState).toBeDefined();
       expect(globalState.nodes).toBeDefined();
       expect(globalState.nodes).toHaveLength(0);
+    });
+  });
+
+  describe("Deletion State Checking", () => {
+    it("should reject operations on deleted documents", async () => {
+      // Create a document with deletion state already set
+      const document = driveDocumentModelModule.utils.createDocument();
+      // Mark it as deleted in the state
+      document.state.document = {
+        ...document.state.document,
+        isDeleted: true,
+        deletedAtUtcIso: new Date().toISOString(),
+      };
+      await storage.create(document);
+
+      // Try to add a folder to the deleted document
+      const job: Job = {
+        id: "job-1",
+        documentId: document.header.id,
+        scope: "global",
+        branch: "main",
+        actions: [
+          {
+            id: "action-1",
+            type: "ADD_FOLDER",
+            scope: "global",
+            timestampUtcMs: Date.now().toString(),
+            input: {
+              id: "folder-1",
+              name: "Test Folder",
+              parentFolder: null,
+            },
+          },
+        ],
+        createdAt: Date.now().toString(),
+        queueHint: [],
+      };
+
+      // Execute the job
+      const result = await executor.executeJob(job);
+
+      // Verify job failed with DocumentDeletedError
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
+      expect(result.error?.name).toBe("DocumentDeletedError");
+      expect(result.error?.message).toContain(document.header.id);
+      expect(result.error?.message).toContain("deleted");
+    });
+
+    it("should reject double-deletion attempts", async () => {
+      // Create a document with deletion state already set
+      const document = driveDocumentModelModule.utils.createDocument();
+      // Mark it as deleted in the state
+      document.state.document = {
+        ...document.state.document,
+        isDeleted: true,
+        deletedAtUtcIso: new Date().toISOString(),
+      };
+      await storage.create(document);
+
+      // Try to delete the already-deleted document
+      const job: Job = {
+        id: "job-1",
+        documentId: document.header.id,
+        scope: "document",
+        branch: "main",
+        actions: [
+          {
+            id: "action-1",
+            type: "DELETE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: Date.now().toString(),
+            input: {
+              documentId: document.header.id,
+            },
+          },
+        ],
+        createdAt: Date.now().toString(),
+        queueHint: [],
+      };
+
+      // Execute the job
+      const result = await executor.executeJob(job);
+
+      // Verify job failed with DocumentDeletedError
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
+      expect(result.error?.name).toBe("DocumentDeletedError");
+      expect(result.error?.message).toContain(document.header.id);
+      expect(result.error?.message).toContain("deleted");
     });
   });
 });

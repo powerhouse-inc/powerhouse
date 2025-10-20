@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/design-system",
-  "version": "4.1.0-dev.70",
+  "version": "4.1.0-dev.79",
   "description": "",
   "files": [
     "dist",
@@ -30,7 +30,8 @@
     "./assets/*.webp": "./assets/*.webp",
     "./assets/*.avif": "./assets/*.avif",
     "./style.css": "./dist/style.css",
-    "./theme.css": "./theme.css"
+    "./theme.css": "./theme.css",
+    "./testing": "./dist/src/ui/lib/testing.js"
   },
   "scripts": {
     "tsc": "tsc",

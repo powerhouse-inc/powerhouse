@@ -5,9 +5,7 @@ import type { RouteObject } from "react-router-dom";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 
 function createRouter(routes: RouteObject[]) {
-  const routerBasename = connectConfig.routerBasename.endsWith("/")
-    ? connectConfig.routerBasename.slice(0, -1)
-    : connectConfig.routerBasename;
+  const routerBasename = connectConfig.routerBasename;
 
   return createBrowserRouter(routes, {
     basename: routerBasename,

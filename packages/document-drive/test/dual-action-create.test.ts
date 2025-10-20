@@ -63,8 +63,8 @@ describe("Dual Action Create", () => {
 
       // Legacy behavior: no operations on new document
       const operations = [
-        ...document.operations.global,
-        ...document.operations.local,
+        ...document.operations.global!,
+        ...document.operations.local!,
       ];
       expect(operations.length).toBe(0);
     });
@@ -92,11 +92,8 @@ describe("Dual Action Create", () => {
       expect(document).toBeDefined();
       expect(document.header.id).toBe(documentId);
 
-      // New behavior: should have CREATE_DOCUMENT and UPGRADE_DOCUMENT operations
-      const operations = [
-        ...document.operations.global,
-        ...document.operations.local,
-      ];
+      // New behavior: should have CREATE_DOCUMENT and UPGRADE_DOCUMENT operations in document scope
+      const operations = document.operations.document! || [];
       expect(operations.length).toBe(2);
 
       // Check CREATE_DOCUMENT operation
@@ -153,11 +150,8 @@ describe("Dual Action Create", () => {
       expect(document).toBeDefined();
       expect(document.state.global.name).toBe("Custom Document Name");
 
-      // Check UPGRADE_DOCUMENT contains the custom state
-      const operations = [
-        ...document.operations.global,
-        ...document.operations.local,
-      ];
+      // Check UPGRADE_DOCUMENT contains the custom state in document scope
+      const operations = document.operations.document! || [];
       const upgradeOp = operations[1];
       expect(upgradeOp.action.type).toBe("UPGRADE_DOCUMENT");
 
@@ -186,14 +180,18 @@ describe("Dual Action Create", () => {
 
       const created = await server.addDocument(doc);
 
-      expect(created.operations.global.length).toBe(2);
-      expect(created.operations.global[0].action.type).toBe("CREATE_DOCUMENT");
-      expect(created.operations.global[0].hash).toBeDefined();
-      expect(created.operations.global[0].hash.length).toBeGreaterThan(0);
+      expect(created.operations.document!.length).toBe(2);
+      expect(created.operations.document![0].action.type).toBe(
+        "CREATE_DOCUMENT",
+      );
+      expect(created.operations.document![0].hash).toBeDefined();
+      expect(created.operations.document![0].hash.length).toBeGreaterThan(0);
 
-      expect(created.operations.global[1].action.type).toBe("UPGRADE_DOCUMENT");
-      expect(created.operations.global[1].hash).toBeDefined();
-      expect(created.operations.global[1].hash.length).toBeGreaterThan(0);
+      expect(created.operations.document![1].action.type).toBe(
+        "UPGRADE_DOCUMENT",
+      );
+      expect(created.operations.document![1].hash).toBeDefined();
+      expect(created.operations.document![1].hash.length).toBeGreaterThan(0);
     });
 
     it("operations are persisted in storage", async () => {
@@ -214,10 +212,7 @@ describe("Dual Action Create", () => {
 
       // Verify operations were stored by retrieving the document
       const retrieved = await server.getDocument(documentId);
-      const storedOperations = [
-        ...retrieved.operations.global,
-        ...retrieved.operations.local,
-      ];
+      const storedOperations = retrieved.operations.document! || [];
       expect(storedOperations.length).toBe(2);
 
       // Verify operations are in correct order
@@ -247,10 +242,7 @@ describe("Dual Action Create", () => {
       expect(retrieved).toBeDefined();
       expect(retrieved.header.id).toBe(documentId);
 
-      const operations = [
-        ...retrieved.operations.global,
-        ...retrieved.operations.local,
-      ];
+      const operations = retrieved.operations.document! || [];
       expect(operations.length).toBe(2);
       expect(operations[0].action.type).toBe("CREATE_DOCUMENT");
       expect(operations[1].action.type).toBe("UPGRADE_DOCUMENT");

@@ -28,14 +28,14 @@ describe("Drive Operations", () => {
     const input = generateMock(SetDriveNameInputSchema());
     const updatedDocument = driveDocumentReducer(document, setDriveName(input));
 
-    expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe(
+    expect(updatedDocument.operations.global!).toHaveLength(1);
+    expect(updatedDocument.operations.global![0].action.type).toBe(
       "SET_DRIVE_NAME",
     );
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+    expect(updatedDocument.operations.global![0].action.input).toStrictEqual(
       input,
     );
-    expect(updatedDocument.operations.global[0].index).toEqual(0);
+    expect(updatedDocument.operations.global![0].index).toEqual(0);
   });
 
   it("should handle setSharingType operation", () => {
@@ -45,14 +45,14 @@ describe("Drive Operations", () => {
       setSharingType(input),
     );
 
-    expect(updatedDocument.operations.local).toHaveLength(1);
-    expect(updatedDocument.operations.local[0].action.type).toBe(
+    expect(updatedDocument.operations.local!).toHaveLength(1);
+    expect(updatedDocument.operations.local![0].action.type).toBe(
       "SET_SHARING_TYPE",
     );
-    expect(updatedDocument.operations.local[0].action.input).toStrictEqual(
+    expect(updatedDocument.operations.local![0].action.input).toStrictEqual(
       input,
     );
-    expect(updatedDocument.operations.local[0].index).toEqual(0);
+    expect(updatedDocument.operations.local![0].index).toEqual(0);
   });
 
   it("should handle setAvailableOffline operation", () => {
@@ -62,13 +62,13 @@ describe("Drive Operations", () => {
       setAvailableOffline(input),
     );
 
-    expect(updatedDocument.operations.local).toHaveLength(1);
-    expect(updatedDocument.operations.local[0].action.type).toBe(
+    expect(updatedDocument.operations.local!).toHaveLength(1);
+    expect(updatedDocument.operations.local![0].action.type).toBe(
       "SET_AVAILABLE_OFFLINE",
     );
-    expect(updatedDocument.operations.local[0].action.input).toStrictEqual(
+    expect(updatedDocument.operations.local![0].action.input).toStrictEqual(
       input,
     );
-    expect(updatedDocument.operations.local[0].index).toEqual(0);
+    expect(updatedDocument.operations.local![0].index).toEqual(0);
   });
 });

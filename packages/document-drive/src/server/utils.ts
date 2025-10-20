@@ -27,7 +27,7 @@ export function buildDocumentRevisionsFilter(
 ): RevisionsFilter {
   return Object.entries(document.operations).reduce<RevisionsFilter>(
     (acc, [scope, operations]) => {
-      acc[scope] = operations.at(-1)?.index ?? -1;
+      acc[scope] = operations?.at(-1)?.index ?? -1;
       return acc;
     },
     {} as RevisionsFilter,
@@ -45,9 +45,10 @@ export function filterOperationsByRevision(
     (acc, scope) => {
       const revision = revisions[scope];
       if (revision !== undefined) {
-        acc[scope] = operations[scope].filter(
-          (op: Operation) => op.index <= revision,
-        );
+        const scopeOps = operations[scope];
+        if (scopeOps) {
+          acc[scope] = scopeOps.filter((op: Operation) => op.index <= revision);
+        }
       }
       return acc;
     },
@@ -62,7 +63,7 @@ export function isAtRevision(
   return (
     !revisions ||
     Object.entries(revisions).find(([scope, revision]) => {
-      const operation = document.operations[scope].at(-1);
+      const operation = document.operations[scope]?.at(-1);
       if (revision === -1) {
         return operation !== undefined;
       }
@@ -78,7 +79,7 @@ export function isAfterRevision(
   return (
     !revisions ||
     Object.entries(revisions).every(([scope, revision]) => {
-      const operation = document.operations[scope].at(-1);
+      const operation = document.operations[scope]?.at(-1);
 
       if (revision === -1) {
         return operation !== undefined;

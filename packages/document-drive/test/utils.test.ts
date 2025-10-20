@@ -111,7 +111,7 @@ describe("utils", () => {
         global: 2,
       }),
     ).toStrictEqual({
-      global: document.operations.global.slice(0, 3),
+      global: document.operations.global!.slice(0, 3),
       local: [],
     });
   });

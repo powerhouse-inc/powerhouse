@@ -1,3 +1,92 @@
+## 4.1.0-dev.79 (2025-10-20)
+
+### 🩹 Fixes
+
+- **document-drive:** copy schema.prisma to dist on build ([f510653fd](https://github.com/powerhouse-inc/powerhouse/commit/f510653fd))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.78 (2025-10-20)
+
+### 🩹 Fixes
+
+- **document-drive:** add schema.prisma to bundle ([40eac982f](https://github.com/powerhouse-inc/powerhouse/commit/40eac982f))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.77 (2025-10-20)
+
+### 🩹 Fixes
+
+- add missing @openfeature/core peer dependency ([2c4a904b0](https://github.com/powerhouse-inc/powerhouse/commit/2c4a904b0))
+- **document-drive:** add initial state to first internal strand update ([120396f57](https://github.com/powerhouse-inc/powerhouse/commit/120396f57))
+- **document-drive:** consistent getSynchronizationUnitsRevision results for all storage adapters ([eb1d9a2bd](https://github.com/powerhouse-inc/powerhouse/commit/eb1d9a2bd))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.76 (2025-10-18)
+
+### 🩹 Fixes
+
+- filesystem needs to calculate revisions better ([96654825a](https://github.com/powerhouse-inc/powerhouse/commit/96654825a))
+- fixes to how revisions are calculated ([c2b0c2227](https://github.com/powerhouse-inc/powerhouse/commit/c2b0c2227))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 4.1.0-dev.75 (2025-10-17)
+
+### 🩹 Fixes
+
+- oof, fixed a few deep issues with assumptions about global and local scope ([85d3c9616](https://github.com/powerhouse-inc/powerhouse/commit/85d3c9616))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 4.1.0-dev.74 (2025-10-15)
+
+### 🩹 Fixes
+
+- **codegen:** update graphql dependency in package.json ([257f368ac](https://github.com/powerhouse-inc/powerhouse/commit/257f368ac))
+- fixing issue where create, update, delete were applied with incorrect scope ([59c7a981e](https://github.com/powerhouse-inc/powerhouse/commit/59c7a981e))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente @gpuente
+
+## 4.1.0-dev.73 (2025-10-15)
+
+### 🚀 Features
+
+- **renown:** added login button ([f109c7305](https://github.com/powerhouse-inc/powerhouse/commit/f109c7305))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.72 (2025-10-15)
+
+This was a version bump only for document-drive to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.71 (2025-10-15)
+
+### 🩹 Fixes
+
+- **codegen:** update analytics processor imports to use in processor templates ([#1954](https://github.com/powerhouse-inc/powerhouse/pull/1954))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.70 (2025-10-14)
 
 ### 🩹 Fixes

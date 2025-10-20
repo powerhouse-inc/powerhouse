@@ -15,6 +15,8 @@ import type {
   PHDocument,
 } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
+import { Kysely } from "kysely";
+import { KyselyPGlite } from "kysely-pglite";
 import { v4 as uuidv4 } from "uuid";
 import { vi } from "vitest";
 import { Reactor } from "../src/core/reactor.js";
@@ -23,11 +25,80 @@ import type { IEventBus } from "../src/events/interfaces.js";
 import type { IJobExecutor } from "../src/executor/interfaces.js";
 import { SimpleJobExecutorManager } from "../src/executor/simple-job-executor-manager.js";
 import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
+import { InMemoryJobTracker } from "../src/job-tracker/in-memory-job-tracker.js";
+import type { IJobTracker } from "../src/job-tracker/interfaces.js";
 import type { IQueue } from "../src/queue/interfaces.js";
 import { InMemoryQueue } from "../src/queue/queue.js";
 import type { Job } from "../src/queue/types.js";
+import type { IReadModelCoordinator } from "../src/read-models/interfaces.js";
 import { DocumentModelRegistry } from "../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../src/registry/interfaces.js";
+import type { IOperationStore } from "../src/storage/interfaces.js";
+import { KyselyOperationStore } from "../src/storage/kysely/store.js";
+import type { Database as DatabaseSchema } from "../src/storage/kysely/types.js";
+
+/**
+ * Creates a real PGLite-backed KyselyOperationStore for testing.
+ * Returns both the database instance and the operation store.
+ *
+ * @returns Object containing db and store instances
+ */
+export async function createTestOperationStore(): Promise<{
+  db: Kysely<DatabaseSchema>;
+  store: KyselyOperationStore;
+}> {
+  // Create in-memory PGLite database
+  const kyselyPGlite = await KyselyPGlite.create();
+  const db = new Kysely<DatabaseSchema>({
+    dialect: kyselyPGlite.dialect,
+  });
+
+  // Create the Operation table
+  await db.schema
+    .createTable("Operation")
+    .addColumn("id", "serial", (col) => col.primaryKey())
+    .addColumn("jobId", "text", (col) => col.notNull())
+    .addColumn("opId", "text", (col) => col.notNull().unique())
+    .addColumn("prevOpId", "text", (col) => col.notNull())
+    .addColumn("writeTimestampUtcMs", "timestamptz", (col) =>
+      col.notNull().defaultTo(new Date()),
+    )
+    .addColumn("documentId", "text", (col) => col.notNull())
+    .addColumn("documentType", "text", (col) => col.notNull())
+    .addColumn("scope", "text", (col) => col.notNull())
+    .addColumn("branch", "text", (col) => col.notNull())
+    .addColumn("timestampUtcMs", "timestamptz", (col) => col.notNull())
+    .addColumn("index", "integer", (col) => col.notNull())
+    .addColumn("action", "text", (col) => col.notNull())
+    .addColumn("skip", "integer", (col) => col.notNull())
+    .addColumn("resultingState", "text")
+    .addColumn("error", "text")
+    .addColumn("hash", "text", (col) => col.notNull())
+    .addUniqueConstraint("unique_revision", [
+      "documentId",
+      "scope",
+      "branch",
+      "index",
+    ])
+    .execute();
+
+  // Create indexes
+  await db.schema
+    .createIndex("streamOperations")
+    .on("Operation")
+    .columns(["documentId", "scope", "branch", "id"])
+    .execute();
+
+  await db.schema
+    .createIndex("branchlessStreamOperations")
+    .on("Operation")
+    .columns(["documentId", "scope", "id"])
+    .execute();
+
+  const store = new KyselyOperationStore(db);
+
+  return { db, store };
+}
 
 /**
  * Factory for creating test Job objects
@@ -38,9 +109,7 @@ export function createTestJob(overrides: Partial<Job> = {}): Job {
     documentId: "doc-1",
     scope: "global",
     branch: "main",
-    operation: createTestOperation(
-      overrides.operation ? { ...overrides.operation } : undefined,
-    ),
+    actions: overrides.actions || [createTestAction()],
     createdAt: new Date().toISOString(),
     queueHint: [],
     retryCount: 0,
@@ -62,7 +131,7 @@ export function createMinimalJob(overrides: Partial<Job> = {}): Job {
     documentId: overrides.documentId || "doc-1",
     scope: overrides.scope || "global",
     branch: overrides.branch || "main",
-    operation: createMinimalOperation(),
+    actions: overrides.actions || [createMinimalAction()],
     createdAt: overrides.createdAt || "2023-01-01T00:00:00.000Z",
     queueHint: overrides.queueHint || [],
     ...overrides,
@@ -210,6 +279,13 @@ export function createTestQueue(eventBus?: IEventBus): IQueue {
 }
 
 /**
+ * Factory for creating test JobTracker instances
+ */
+export function createTestJobTracker(): IJobTracker {
+  return new InMemoryJobTracker();
+}
+
+/**
  * Factory for creating test Registry instances
  */
 export function createTestRegistry(
@@ -277,6 +353,53 @@ export function createMockOperationStorage(
 }
 
 /**
+ * Factory for creating mock IOperationStore
+ */
+export function createMockOperationStore(
+  overrides: Partial<IOperationStore> = {},
+): IOperationStore {
+  return {
+    apply: vi.fn().mockResolvedValue(undefined),
+    get: vi.fn().mockResolvedValue({
+      operation: {
+        index: 0,
+        timestampUtcMs: "2023-01-01T00:00:00.000Z",
+        hash: "hash-123",
+        skip: 0,
+        action: { type: "CREATE", input: {}, scope: "global" },
+      },
+      context: {
+        documentId: "doc-1",
+        documentType: "powerhouse/document-model",
+        scope: "global",
+        branch: "main",
+      },
+    }),
+    getSince: vi.fn().mockResolvedValue([]),
+    getSinceTimestamp: vi.fn().mockResolvedValue([]),
+    getSinceId: vi.fn().mockResolvedValue([]),
+    getRevisions: vi.fn().mockResolvedValue({
+      revision: {},
+      latestTimestamp: new Date(0).toISOString(),
+    }),
+    ...overrides,
+  } as unknown as IOperationStore;
+}
+
+/**
+ * Factory for creating mock IReadModelCoordinator
+ */
+export function createMockReadModelCoordinator(
+  overrides: Partial<IReadModelCoordinator> = {},
+): IReadModelCoordinator {
+  return {
+    start: vi.fn(),
+    stop: vi.fn(),
+    ...overrides,
+  };
+}
+
+/**
  * Factory for creating a complete test reactor setup
  */
 export async function createTestReactorSetup(
@@ -288,6 +411,7 @@ export async function createTestReactorSetup(
   const storage = new MemoryStorage();
   const eventBus = new EventBus();
   const queue = new InMemoryQueue(eventBus);
+  const jobTracker = new InMemoryJobTracker();
 
   // Create real drive server
   const builder = new ReactorBuilder(documentModels).withStorage(storage);
@@ -298,11 +422,29 @@ export async function createTestReactorSetup(
   const registry = new DocumentModelRegistry();
   registry.registerModules(documentModelDocumentModelModule);
 
-  // Create job executor
-  const jobExecutor = new SimpleJobExecutor(registry, storage, storage);
+  // Create mock operation store for testing
+  const operationStore = createMockOperationStore();
+
+  // Create job executor with event bus
+  const jobExecutor = new SimpleJobExecutor(
+    registry,
+    storage,
+    storage,
+    operationStore,
+    eventBus,
+  );
+
+  // Create mock read model coordinator
+  const readModelCoordinator = createMockReadModelCoordinator();
 
   // Create reactor
-  const reactor = new Reactor(driveServer, storage, queue);
+  const reactor = new Reactor(
+    driveServer,
+    storage,
+    queue,
+    jobTracker,
+    readModelCoordinator,
+  );
 
   return {
     reactor,
@@ -310,8 +452,10 @@ export async function createTestReactorSetup(
     storage,
     eventBus,
     queue,
+    jobTracker,
     jobExecutor,
     registry,
+    operationStore,
   };
 }
 
@@ -322,15 +466,18 @@ export function createTestJobExecutorManager(
   queue?: IQueue,
   eventBus?: IEventBus,
   executor?: IJobExecutor,
+  jobTracker?: IJobTracker,
 ) {
   const actualQueue = queue || createTestQueue();
   const actualEventBus = eventBus || createTestEventBus();
   const actualExecutor = executor || createMockJobExecutor();
+  const actualJobTracker = jobTracker || createTestJobTracker();
 
   const manager = new SimpleJobExecutorManager(
     () => actualExecutor,
     actualEventBus,
     actualQueue,
+    actualJobTracker,
   );
 
   return {
@@ -338,6 +485,7 @@ export function createTestJobExecutorManager(
     queue: actualQueue,
     eventBus: actualEventBus,
     executor: actualExecutor,
+    jobTracker: actualJobTracker,
   };
 }
 
@@ -352,12 +500,11 @@ export function createTestJobSet(
     createTestJob({
       id: `job-${i + 1}`,
       ...baseOverrides,
-      operation: createTestOperation({
-        index: i,
-        action: createTestAction({
+      actions: [
+        createTestAction({
           input: { name: `Action ${i + 1}` },
         }),
-      }),
+      ],
     }),
   );
 }
@@ -387,12 +534,11 @@ export function createJobDependencyChain(length: number): Job[] {
     const dependencies = i === 0 ? [] : [`job-${i}`];
     jobs.push(
       createJobWithDependencies(`job-${i + 1}`, dependencies, {
-        operation: createTestOperation({
-          index: i,
-          action: createTestAction({
+        actions: [
+          createTestAction({
             input: { name: `Chain Action ${i + 1}` },
           }),
-        }),
+        ],
       }),
     );
   }

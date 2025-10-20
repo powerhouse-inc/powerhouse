@@ -7,11 +7,32 @@ import {
   showPHModal,
   usePHModal,
 } from "@powerhousedao/reactor-browser";
+import { childLogger } from "document-drive";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
+
+const logger = childLogger(["ClearStorage"]);
+
 export function ClearStorageModal() {
   const phModal = usePHModal();
   const open = phModal?.type === "clearStorage";
   const { t } = useTranslation();
+  const [loading, setLoading] = useState(false);
+
+  function clearStorage() {
+    setLoading(true);
+    clearReactorStorage()
+      .then(() => {
+        logger.info("Storage cleared");
+        setSelectedDrive(undefined);
+        setSelectedNode(undefined);
+        window.location.reload();
+      })
+      .catch((error) => {
+        logger.error("Error clearing storage", error);
+        setLoading(false);
+      });
+  }
 
   return (
     <ConnectConfirmationModal
@@ -24,19 +45,12 @@ export function ClearStorageModal() {
         "modals.connectSettings.clearStorage.confirmation.clearButton",
       )}
       onCancel={() => showPHModal({ type: "settings" })}
-      onContinue={async () => {
-        try {
-          await clearReactorStorage();
-        } catch (error) {
-          console.error(error);
-        } finally {
-          setSelectedDrive(undefined);
-          setSelectedNode(undefined);
-          closePHModal();
-        }
-      }}
+      onContinue={clearStorage}
       onOpenChange={(status: boolean) => {
         if (!status) return closePHModal();
+      }}
+      continueButtonProps={{
+        disabled: loading,
       }}
     />
   );

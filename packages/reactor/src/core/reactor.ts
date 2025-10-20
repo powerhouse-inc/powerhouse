@@ -2,15 +2,19 @@ import type { BaseDocumentDriveServer, IDocumentStorage } from "document-drive";
 import { AbortError } from "document-drive";
 import type {
   Action,
+  CreateDocumentActionInput,
   DeleteDocumentActionInput,
   DocumentModelModule,
   Operation,
   PHBaseState,
   PHDocument,
+  UpgradeDocumentActionInput,
 } from "document-model";
 import { v4 as uuidv4 } from "uuid";
+import type { IJobTracker } from "../job-tracker/interfaces.js";
 import type { IQueue } from "../queue/interfaces.js";
 import type { Job } from "../queue/types.js";
+import type { IReadModelCoordinator } from "../read-models/interfaces.js";
 import { createMutableShutdownStatus } from "../shared/factories.js";
 import type {
   JobInfo,
@@ -21,24 +25,14 @@ import type {
   ShutdownStatus,
   ViewFilter,
 } from "../shared/types.js";
-import { JobStatus, SYSTEM_DOCUMENT_ID } from "../shared/types.js";
+import { JobStatus } from "../shared/types.js";
 import { matchesScope } from "../shared/utils.js";
 import type { IReactor } from "./types.js";
 import { filterByParentId, filterByType } from "./utils.js";
 
 /**
- * The Reactor facade implementation.
- *
  * This class implements the IReactor interface and serves as the main entry point
- * for the new Reactor architecture. In Phase 2 of the refactoring plan, it acts
- * as a facade over the existing BaseDocumentDriveServer while we incrementally
- * migrate to the new architecture.
- *
- * The facade pattern allows us to:
- * 1. Present the new IReactor API to clients immediately
- * 2. Internally delegate to the refactored BaseDocumentDriveServer (post Phase 1)
- * 3. Incrementally replace internal implementations without breaking clients
- * 4. Validate the new architecture alongside the existing system
+ * for the new Reactor architecture.
  */
 export class Reactor implements IReactor {
   private driveServer: BaseDocumentDriveServer;
@@ -46,16 +40,25 @@ export class Reactor implements IReactor {
   private shutdownStatus: ShutdownStatus;
   private setShutdown: (value: boolean) => void;
   private queue: IQueue;
+  private jobTracker: IJobTracker;
+  private readModelCoordinator: IReadModelCoordinator;
 
   constructor(
     driveServer: BaseDocumentDriveServer,
     documentStorage: IDocumentStorage,
     queue: IQueue,
+    jobTracker: IJobTracker,
+    readModelCoordinator: IReadModelCoordinator,
   ) {
     // Store required dependencies
     this.driveServer = driveServer;
     this.documentStorage = documentStorage;
     this.queue = queue;
+    this.jobTracker = jobTracker;
+    this.readModelCoordinator = readModelCoordinator;
+
+    // Start the read model coordinator
+    this.readModelCoordinator.start();
 
     // Create mutable shutdown status using factory method
     const [status, setter] = createMutableShutdownStatus(false);
@@ -69,6 +72,9 @@ export class Reactor implements IReactor {
   kill(): ShutdownStatus {
     // Mark the reactor as shutdown
     this.setShutdown(true);
+
+    // Stop the read model coordinator
+    this.readModelCoordinator.stop();
 
     // TODO: Phase 3+ - Implement graceful shutdown for queue, executors, etc.
     // For now, we just mark as shutdown and return status
@@ -213,6 +219,9 @@ export class Reactor implements IReactor {
     for (const scope in operations) {
       if (matchesScope(view, scope)) {
         const scopeOperations = operations[scope];
+        if (!scopeOperations) {
+          continue;
+        }
 
         // apply paging too
         const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
@@ -300,44 +309,77 @@ export class Reactor implements IReactor {
       throw new AbortError();
     }
 
-    // Create a CREATE_DOCUMENT action
-    const action: Action = {
-      id: `${document.header.id}-create`,
-      type: "CREATE_DOCUMENT",
-      scope: "system",
-      timestampUtcMs: String(Date.now()),
-      input: {
-        document,
-      },
+    // Create a CREATE_DOCUMENT action with proper CreateDocumentActionInput
+    const input: CreateDocumentActionInput = {
+      model: document.header.documentType,
+      version: "0.0.0",
+      documentId: document.header.id,
     };
 
-    // Create a job for the CREATE_DOCUMENT action
+    // Add signing info
+    input.signing = {
+      signature: document.header.id,
+      publicKey: document.header.sig.publicKey,
+      nonce: document.header.sig.nonce,
+      createdAtUtcIso: document.header.createdAtUtcIso,
+      documentType: document.header.documentType,
+    };
+
+    // Add optional mutable header fields (always include even if empty/undefined)
+    input.slug = document.header.slug;
+    input.name = document.header.name;
+    input.branch = document.header.branch;
+    input.meta = document.header.meta;
+
+    const createAction: Action = {
+      id: `${document.header.id}-create`,
+      type: "CREATE_DOCUMENT",
+      scope: "document",
+      timestampUtcMs: new Date().toISOString(),
+      input,
+    };
+
+    // Create an UPGRADE_DOCUMENT action to set the initial state
+    const upgradeInput: UpgradeDocumentActionInput = {
+      model: document.header.documentType,
+      fromVersion: "0.0.0",
+      toVersion: "0.0.0", // Same version since we're just setting initial state
+      documentId: document.header.id,
+      initialState: document.state,
+    };
+
+    const upgradeAction: Action = {
+      id: `${document.header.id}-upgrade`,
+      type: "UPGRADE_DOCUMENT",
+      scope: "document",
+      timestampUtcMs: new Date().toISOString(),
+      input: upgradeInput,
+    };
+
+    // Create a single job with both CREATE_DOCUMENT and UPGRADE_DOCUMENT actions
     const job: Job = {
       id: uuidv4(),
-      documentId: SYSTEM_DOCUMENT_ID,
-      scope: "system",
+      documentId: document.header.id,
+      scope: "document",
       branch: "main",
-      operation: {
-        index: 0,
-        timestampUtcMs: String(Date.now()),
-        hash: "",
-        skip: 0,
-        action: action,
-      },
+      actions: [createAction, upgradeAction],
       createdAt: new Date().toISOString(),
       queueHint: [],
       maxRetries: 3,
     };
 
-    // Enqueue the job
-    await this.queue.enqueue(job);
-
-    // Return pending job status
-    return {
+    // Create job info and register with tracker
+    const jobInfo: JobInfo = {
       id: job.id,
       status: JobStatus.PENDING,
       createdAtUtcIso,
     };
+    this.jobTracker.registerJob(jobInfo);
+
+    // Enqueue the job
+    await this.queue.enqueue(job);
+
+    return jobInfo;
   }
 
   /**
@@ -363,38 +405,35 @@ export class Reactor implements IReactor {
     const action: Action = {
       id: `${id}-delete`,
       type: "DELETE_DOCUMENT",
-      scope: "system",
-      timestampUtcMs: String(Date.now()),
+      scope: "document",
+      timestampUtcMs: new Date().toISOString(),
       input: deleteInput,
     };
 
     // Create a job for the DELETE_DOCUMENT action
     const job: Job = {
       id: uuidv4(),
-      documentId: SYSTEM_DOCUMENT_ID,
-      scope: "system",
+      documentId: id,
+      scope: "document",
       branch: "main",
-      operation: {
-        index: 0,
-        timestampUtcMs: String(Date.now()),
-        hash: "",
-        skip: 0,
-        action: action,
-      },
+      actions: [action],
       createdAt: new Date().toISOString(),
       queueHint: [],
       maxRetries: 3,
     };
 
-    // Enqueue the job
-    await this.queue.enqueue(job);
-
-    // Return pending job status
-    return {
+    // Create job info and register with tracker
+    const jobInfo: JobInfo = {
       id: job.id,
       status: JobStatus.PENDING,
       createdAtUtcIso,
     };
+    this.jobTracker.registerJob(jobInfo);
+
+    // Enqueue the job
+    await this.queue.enqueue(job);
+
+    return jobInfo;
   }
 
   /**
@@ -403,37 +442,33 @@ export class Reactor implements IReactor {
   async mutate(id: string, actions: Action[]): Promise<JobInfo> {
     const createdAtUtcIso = new Date().toISOString();
 
-    // Create jobs for each action/operation
-    const jobs: Job[] = actions.map((action, index) => ({
+    // Determine scope from first action (all actions should have the same scope)
+    const scope = actions.length > 0 ? actions[0].scope || "global" : "global";
+
+    // Create a single job with all actions
+    const job: Job = {
       id: uuidv4(),
       documentId: id,
-      scope: action.scope || "global",
+      scope: scope,
       branch: "main", // Default to main branch
-      operation: {
-        index: index,
-        timestampUtcMs: String(action.timestampUtcMs || Date.now()),
-        hash: "", // Will be computed by the executor
-        skip: 0,
-        action: action,
-      },
+      actions: actions,
       createdAt: new Date().toISOString(),
       queueHint: [],
       maxRetries: 3,
-    }));
+    };
 
-    // Enqueue all jobs
-    for (const job of jobs) {
-      await this.queue.enqueue(job);
-    }
-
-    // Return job info for the batch (using the first job's ID as the batch ID)
-    // TODO: we need proper support for batch jobs
-    const batchJobId = jobs.length > 0 ? jobs[0].id : uuidv4();
-    return {
-      id: batchJobId,
+    // Create job info and register with tracker
+    const jobInfo: JobInfo = {
+      id: job.id,
       status: JobStatus.PENDING,
       createdAtUtcIso,
     };
+    this.jobTracker.registerJob(jobInfo);
+
+    // Enqueue the job
+    await this.queue.enqueue(job);
+
+    return jobInfo;
   }
 
   /**
@@ -555,21 +590,24 @@ export class Reactor implements IReactor {
    * Retrieves the status of a job
    */
   getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobInfo> {
-    const createdAtUtcIso = new Date().toISOString();
-
     if (signal?.aborted) {
       throw new AbortError();
     }
 
-    // TODO: Phase 3 - Implement once IQueue and job tracking is in place
-    // For now, return a not found status
-    return Promise.resolve({
-      id: jobId,
-      status: JobStatus.FAILED,
-      createdAtUtcIso,
-      completedAtUtcIso: new Date().toISOString(),
-      error: "Job tracking not yet implemented",
-    });
+    const jobInfo = this.jobTracker.getJobStatus(jobId);
+
+    if (!jobInfo) {
+      // Job not found - return FAILED status with appropriate error
+      return Promise.resolve({
+        id: jobId,
+        status: JobStatus.FAILED,
+        createdAtUtcIso: new Date().toISOString(),
+        completedAtUtcIso: new Date().toISOString(),
+        error: "Job not found",
+      });
+    }
+
+    return Promise.resolve(jobInfo);
   }
 
   /**

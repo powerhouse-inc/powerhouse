@@ -1,6 +1,6 @@
 {
   "name": "document-drive",
-  "version": "4.1.0-dev.70",
+  "version": "4.1.0-dev.79",
   "license": "AGPL-3.0-only",
   "type": "module",
   "types": "./dist/index.d.ts",
@@ -36,12 +36,14 @@
   },
   "files": [
     "./dist",
-    "./src/storage/prisma/client"
+    "./src/storage/prisma/client",
+    "./prisma/schema.prisma"
   ],
   "sideEffects": false,
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
+    "build": "pnpm run copy-prisma",
     "release": "semantic-release",
     "test": "vitest run --coverage --exclude \"test/flaky/**\"",
     "test:flaky": "vitest run --coverage test/flaky",

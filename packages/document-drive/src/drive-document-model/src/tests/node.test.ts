@@ -39,12 +39,12 @@ describe("Node Operations", () => {
     const input = generateMock(AddFileInputSchema());
     const updatedDocument = driveDocumentReducer(document, addFile(input));
 
-    expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe("ADD_FILE");
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+    expect(updatedDocument.operations.global!).toHaveLength(1);
+    expect(updatedDocument.operations.global![0].action.type).toBe("ADD_FILE");
+    expect(updatedDocument.operations.global![0].action.input).toStrictEqual(
       input,
     );
-    expect(updatedDocument.operations.global[0].index).toEqual(0);
+    expect(updatedDocument.operations.global![0].index).toEqual(0);
   });
   it("should prevent name collisions in addFile operation when parent is a folder", () => {
     const firstInput = generateMock(AddFileInputSchema());
@@ -109,12 +109,14 @@ describe("Node Operations", () => {
     const input = generateMock(AddFolderInputSchema());
     const updatedDocument = driveDocumentReducer(document, addFolder(input));
 
-    expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe("ADD_FOLDER");
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+    expect(updatedDocument.operations.global!).toHaveLength(1);
+    expect(updatedDocument.operations.global![0].action.type).toBe(
+      "ADD_FOLDER",
+    );
+    expect(updatedDocument.operations.global![0].action.input).toStrictEqual(
       input,
     );
-    expect(updatedDocument.operations.global[0].index).toEqual(0);
+    expect(updatedDocument.operations.global![0].index).toEqual(0);
   });
   it("should prevent name collisions in addFolder operation when parent is a folder", () => {
     const firstInput = generateMock(AddFolderInputSchema());
@@ -182,28 +184,28 @@ describe("Node Operations", () => {
     const document = createDocumentWithNodes([input]);
     const updatedDocument = driveDocumentReducer(document, deleteNode(input));
 
-    expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe(
+    expect(updatedDocument.operations.global!).toHaveLength(1);
+    expect(updatedDocument.operations.global![0].action.type).toBe(
       "DELETE_NODE",
     );
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+    expect(updatedDocument.operations.global![0].action.input).toStrictEqual(
       input,
     );
-    expect(updatedDocument.operations.global[0].index).toEqual(0);
+    expect(updatedDocument.operations.global![0].index).toEqual(0);
   });
 
   it("should handle updateFile operation", () => {
     const input = generateMock(UpdateFileInputSchema());
     const updatedDocument = driveDocumentReducer(document, updateFile(input));
 
-    expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe(
+    expect(updatedDocument.operations.global!).toHaveLength(1);
+    expect(updatedDocument.operations.global![0].action.type).toBe(
       "UPDATE_FILE",
     );
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+    expect(updatedDocument.operations.global![0].action.input).toStrictEqual(
       input,
     );
-    expect(updatedDocument.operations.global[0].index).toEqual(0);
+    expect(updatedDocument.operations.global![0].index).toEqual(0);
   });
   it("should handle name collisions in updateFile operation", () => {
     const existingFile1 = generateMock(FileNodeSchema());
@@ -227,14 +229,14 @@ describe("Node Operations", () => {
     const input = generateMock(UpdateNodeInputSchema());
     const updatedDocument = driveDocumentReducer(document, updateNode(input));
 
-    expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe(
+    expect(updatedDocument.operations.global!).toHaveLength(1);
+    expect(updatedDocument.operations.global![0].action.type).toBe(
       "UPDATE_NODE",
     );
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+    expect(updatedDocument.operations.global![0].action.input).toStrictEqual(
       input,
     );
-    expect(updatedDocument.operations.global[0].index).toEqual(0);
+    expect(updatedDocument.operations.global![0].index).toEqual(0);
   });
   it("should handle name collisions in updateNode operation", () => {
     const existingNode1 = generateMock(NodeSchema());
@@ -268,12 +270,12 @@ describe("Node Operations", () => {
     ]);
     const updatedDocument = driveDocumentReducer(document, copyNode(input));
 
-    expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe("COPY_NODE");
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+    expect(updatedDocument.operations.global!).toHaveLength(1);
+    expect(updatedDocument.operations.global![0].action.type).toBe("COPY_NODE");
+    expect(updatedDocument.operations.global![0].action.input).toStrictEqual(
       input,
     );
-    expect(updatedDocument.operations.global[0].index).toEqual(0);
+    expect(updatedDocument.operations.global![0].index).toEqual(0);
   });
   it("should handle duplicated id when copy a node", () => {
     const input = generateMock(CopyNodeInputSchema());
@@ -302,8 +304,8 @@ describe("Node Operations", () => {
       { id: "2", name: "Node 2" },
     ]);
 
-    expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0]).toMatchObject({
+    expect(updatedDocument.operations.global!).toHaveLength(1);
+    expect(updatedDocument.operations.global![0]).toMatchObject({
       index: 0,
       skip: 0,
       type: "COPY_NODE",
@@ -373,12 +375,12 @@ describe("Node Operations", () => {
     ]);
     const updatedDocument = driveDocumentReducer(document, moveNode(input));
 
-    expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe("MOVE_NODE");
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+    expect(updatedDocument.operations.global!).toHaveLength(1);
+    expect(updatedDocument.operations.global![0].action.type).toBe("MOVE_NODE");
+    expect(updatedDocument.operations.global![0].action.input).toStrictEqual(
       input,
     );
-    expect(updatedDocument.operations.global[0].index).toEqual(0);
+    expect(updatedDocument.operations.global![0].index).toEqual(0);
   });
   it("should handle name collisions in moveNode operation", () => {
     const existingNode = generateMock(NodeSchema());
@@ -437,8 +439,8 @@ describe("Node Operations", () => {
     );
 
     expect(updatedDocument.state.global.nodes).toMatchObject(nodes);
-    expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0]).toMatchObject({
+    expect(updatedDocument.operations.global!).toHaveLength(1);
+    expect(updatedDocument.operations.global![0]).toMatchObject({
       type: "MOVE_NODE",
       input: { srcFolder: "1", targetParentFolder: "3" },
       scope: "global",
@@ -467,8 +469,8 @@ describe("Node Operations", () => {
     );
 
     expect(updatedDocument.state.global.nodes).toMatchObject(nodes);
-    expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0]).toMatchObject({
+    expect(updatedDocument.operations.global!).toHaveLength(1);
+    expect(updatedDocument.operations.global![0]).toMatchObject({
       type: "MOVE_NODE",
       input: { srcFolder: "1", targetParentFolder: "1" },
       scope: "global",

@@ -1186,7 +1186,7 @@ export class BaseDocumentDriveServer
         type: "CREATE_DOCUMENT",
         timestampUtcMs,
         input: createDocumentInput,
-        scope: "global",
+        scope: "document",
       };
 
       const upgradeDocumentInput: UpgradeDocumentActionInput = {
@@ -1202,7 +1202,7 @@ export class BaseDocumentDriveServer
         type: "UPGRADE_DOCUMENT",
         timestampUtcMs,
         input: upgradeDocumentInput,
-        scope: "global",
+        scope: "document",
       };
 
       // we need to create hashes for later verification
@@ -1220,8 +1220,7 @@ export class BaseDocumentDriveServer
       };
       const upgradeHash = hashDocumentStateForScope(
         upgradeStateForHash,
-        // this is bad! there may not be a global scope
-        "global",
+        "document",
       );
 
       // Create operations from actions with computed hashes
@@ -1246,35 +1245,41 @@ export class BaseDocumentDriveServer
       operations = existingOperations;
     }
 
-    // stores document information with empty operations initially
+    // Group operations by scope before storing
+    const groupedOps = groupOperationsByScope(operations);
+
+    // Ensure backward compatibility by initializing missing scopes
+    if (!groupedOps.header) {
+      groupedOps.header = [];
+    }
+    if (!groupedOps.document) {
+      groupedOps.document = [];
+    }
+    if (!groupedOps.global) {
+      groupedOps.global = [];
+    }
+    if (!groupedOps.local) {
+      groupedOps.local = [];
+    }
+
+    // After initialization, it's safe to treat as DocumentOperations
+    const operationsByScope = groupedOps as DocumentOperations;
+
+    // stores document information with operations
     const documentToStore: PHDocument = {
       header,
-      operations: { global: [], local: [] },
-      initialState: document.initialState,
+      operations: operationsByScope,
+      initialState,
       clipboard: [],
       state: initialState,
     };
 
     await this.documentStorage.create(documentToStore);
 
-    // Store operations separately (if any)
-    if (operations.length > 0) {
-      if (isDocumentDrive(documentToStore)) {
-        await this.legacyStorage.addDriveOperations(
-          header.id,
-          operations,
-          documentToStore,
-        );
-      } else {
-        await this.legacyStorage.addDocumentOperations(
-          header.id,
-          operations,
-          documentToStore,
-        );
-      }
-    }
-
-    return await this.getDocument<TDocument>(documentToStore.header.id);
+    // Force rebuild to ensure operations are properly merged
+    return await this.getDocument<TDocument>(documentToStore.header.id, {
+      checkHashes: true,
+    });
   }
 
   async deleteDocument(documentId: string) {
@@ -1320,7 +1325,7 @@ export class BaseDocumentDriveServer
     const operationsByScope = groupOperationsByScope(operations);
 
     for (const scope of Object.keys(operationsByScope)) {
-      const storageDocumentOperations = documentStorage.operations[scope];
+      const storageDocumentOperations = documentStorage.operations[scope] || [];
 
       // TODO two equal operations done by two clients will be considered the same, ie: { type: "INCREMENT" }
       const branch = removeExistingOperations(
@@ -1418,7 +1423,11 @@ export class BaseDocumentDriveServer
     const documentOperations = garbageCollectDocumentOperations(operations);
 
     for (const scope of Object.keys(documentOperations)) {
-      const lastRemainingOperation = documentOperations[scope].at(-1);
+      const scopeOps = documentOperations[scope];
+      if (!scopeOps) {
+        continue;
+      }
+      const lastRemainingOperation = scopeOps.at(-1);
       // if the latest operation doesn't have a resulting state then tries
       // to retrieve it from the db to avoid rerunning all the operations
       if (lastRemainingOperation && !lastRemainingOperation.resultingState) {
@@ -1469,21 +1478,39 @@ export class BaseDocumentDriveServer
         : documentStorage.operations;
     const operations = garbageCollectDocumentOperations(revisionOperations);
 
-    // for backward compatibility, we need to add global and local
-    const headerOperations: DocumentOperations = { global: [], local: [] };
-    const operationsToReplay: DocumentOperations = { global: [], local: [] };
+    // Get all scopes from operations
+    const allScopes = Object.keys(operations);
+
+    // Initialize with all scopes found in operations, plus global and local for backward compatibility
+    const scopesToInitialize = new Set([...allScopes, "global", "local"]);
+    const headerOperations: DocumentOperations = {};
+    const operationsToReplay: DocumentOperations = {};
+
+    for (const scope of scopesToInitialize) {
+      headerOperations[scope] = [];
+      operationsToReplay[scope] = [];
+    }
 
     // Filter out CREATE_DOCUMENT and UPGRADE_DOCUMENT operations
     // (these don't currently have reducers and should not be replayed)
     for (const [scope, scopeOps] of Object.entries(operations)) {
+      if (!scopeOps) {
+        continue;
+      }
       for (const op of scopeOps) {
         if (
           op.action.type === "CREATE_DOCUMENT" ||
           op.action.type === "UPGRADE_DOCUMENT"
         ) {
-          headerOperations[scope as keyof DocumentOperations].push(op);
+          const headerOps = headerOperations[scope];
+          if (headerOps) {
+            headerOps.push(op);
+          }
         } else {
-          operationsToReplay[scope as keyof DocumentOperations].push(op);
+          const replayOps = operationsToReplay[scope];
+          if (replayOps) {
+            replayOps.push(op);
+          }
         }
       }
     }
@@ -1503,16 +1530,18 @@ export class BaseDocumentDriveServer
     ) as TDocument;
 
     // merge header operations back into the result
-    const allScopes = new Set([
+    // Include ALL scopes from input operations, header operations, and replayed operations
+    const allScopesForMerge = new Set([
+      ...Object.keys(operations), // From input storage
       ...Object.keys(headerOperations),
       ...Object.keys(replayed.operations),
     ]);
 
     const finalOperations: DocumentOperations = {};
-    for (const scope of allScopes) {
+    for (const scope of allScopesForMerge) {
       finalOperations[scope] = [
-        ...headerOperations[scope],
-        ...replayed.operations[scope],
+        ...(headerOperations[scope] || []),
+        ...(replayed.operations[scope] || []),
       ];
     }
 
@@ -1536,12 +1565,14 @@ export class BaseDocumentDriveServer
     let newDocument = document;
 
     const scope = operation.action.scope;
+    const currentScopeOperations = document.operations[scope] || [];
     const documentOperations = garbageCollectDocumentOperations({
       ...document.operations,
-      [scope]: skipHeaderOperations(document.operations[scope], operation),
+      [scope]: skipHeaderOperations(currentScopeOperations, operation),
     });
 
-    const lastRemainingOperation = documentOperations[scope].at(-1);
+    const remainingScopeOps = documentOperations[scope];
+    const lastRemainingOperation = remainingScopeOps?.at(-1);
     // if the latest operation doesn't have a resulting state then tries
     // to retrieve it from the db to avoid rerunning all the operations
     if (lastRemainingOperation && !lastRemainingOperation.resultingState) {
@@ -1591,9 +1622,18 @@ export class BaseDocumentDriveServer
       },
     );
 
-    const appliedOperations = newDocument.operations[
-      operation.action.scope
-    ].filter((op) => op.index == operation.index && op.skip == operation.skip);
+    const newDocScopeOperations =
+      newDocument.operations[operation.action.scope];
+    if (!newDocScopeOperations) {
+      throw new OperationError(
+        "ERROR",
+        operation,
+        `No operations found for scope: ${operation.action.scope}`,
+      );
+    }
+    const appliedOperations = newDocScopeOperations.filter(
+      (op) => op.index == operation.index && op.skip == operation.skip,
+    );
     const appliedOperation = appliedOperations.at(0);
 
     if (!appliedOperation) {
@@ -1792,17 +1832,22 @@ export class BaseDocumentDriveServer
   ): Promise<IOperationResult | undefined> {
     try {
       const document = await this.getDocument(id);
-      const newOperation = operations.find(
-        (op) =>
-          !op.id ||
-          !document.operations[op.action.scope].find(
-            (existingOp: Operation) =>
-              existingOp.id === op.id &&
-              existingOp.index === op.index &&
-              existingOp.action.type === op.action.type &&
-              existingOp.hash === op.hash,
-          ),
-      );
+      const newOperation = operations.find((op) => {
+        if (!op.id) {
+          return true;
+        }
+        const scopeOps = document.operations[op.action.scope];
+        if (!scopeOps) {
+          return true;
+        }
+        return !scopeOps.find(
+          (existingOp: Operation) =>
+            existingOp.id === op.id &&
+            existingOp.index === op.index &&
+            existingOp.action.type === op.action.type &&
+            existingOp.hash === op.hash,
+        );
+      });
       if (!newOperation) {
         return {
           status: "SUCCESS",
@@ -2369,17 +2414,22 @@ export class BaseDocumentDriveServer
   ): Promise<DriveOperationResult | undefined> {
     try {
       const drive = await this.getDrive(driveId);
-      const newOperation = operations.find(
-        (op) =>
-          !op.id ||
-          !drive.operations[op.action.scope].find(
-            (existingOp: Operation) =>
-              existingOp.id === op.id &&
-              existingOp.index === op.index &&
-              existingOp.action.type === op.action.type &&
-              existingOp.hash === op.hash,
-          ),
-      );
+      const newOperation = operations.find((op) => {
+        if (!op.id) {
+          return true;
+        }
+        const scopeOps = drive.operations[op.action.scope];
+        if (!scopeOps) {
+          return true;
+        }
+        return !scopeOps.find(
+          (existingOp: Operation) =>
+            existingOp.id === op.id &&
+            existingOp.index === op.index &&
+            existingOp.action.type === op.action.type &&
+            existingOp.hash === op.hash,
+        );
+      });
       if (!newOperation) {
         return {
           status: "SUCCESS",
@@ -2624,7 +2674,11 @@ export class BaseDocumentDriveServer
     );
     for (const action of actions) {
       documentId = reducer(documentId, action);
-      const operation = documentId.operations[action.scope].slice().pop();
+      const scopeOps = documentId.operations[action.scope];
+      if (!scopeOps) {
+        throw new Error(`No operations found for scope: ${action.scope}`);
+      }
+      const operation = scopeOps.slice().pop();
       if (!operation) {
         throw new Error("Error creating operations");
       }

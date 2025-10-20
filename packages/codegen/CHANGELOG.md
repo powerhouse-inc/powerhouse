@@ -1,3 +1,63 @@
+## 4.1.0-dev.79 (2025-10-20)
+
+This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.78 (2025-10-20)
+
+This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.77 (2025-10-20)
+
+### 🩹 Fixes
+
+- add missing @openfeature/core peer dependency ([2c4a904b0](https://github.com/powerhouse-inc/powerhouse/commit/2c4a904b0))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.76 (2025-10-18)
+
+This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.75 (2025-10-17)
+
+This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.74 (2025-10-15)
+
+### 🩹 Fixes
+
+- **codegen:** update graphql dependency in package.json ([257f368ac](https://github.com/powerhouse-inc/powerhouse/commit/257f368ac))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 4.1.0-dev.73 (2025-10-15)
+
+### 🚀 Features
+
+- **renown:** added login button ([f109c7305](https://github.com/powerhouse-inc/powerhouse/commit/f109c7305))
+
+### ❤️ Thank You
+
+- Frank
+
+## 4.1.0-dev.72 (2025-10-15)
+
+This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.71 (2025-10-15)
+
+### 🩹 Fixes
+
+- **codegen:** update analytics processor imports to use in processor templates ([#1954](https://github.com/powerhouse-inc/powerhouse/pull/1954))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.70 (2025-10-14)
 
 ### 🩹 Fixes

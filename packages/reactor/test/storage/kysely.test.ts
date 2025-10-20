@@ -1,76 +1,27 @@
 import { addFile, addFolder, deleteNode, setDriveName } from "document-drive";
 import type { Operation } from "document-model";
 import { generateId } from "document-model/core";
-import { Kysely } from "kysely";
-import { KyselyPGlite } from "kysely-pglite";
+import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   DuplicateOperationError,
   RevisionMismatchError,
 } from "../../src/storage/interfaces.js";
-import { KyselyOperationStore } from "../../src/storage/kysely/store.js";
+import type { KyselyOperationStore } from "../../src/storage/kysely/store.js";
 import type { Database as DatabaseSchema } from "../../src/storage/kysely/types.js";
+import { createTestOperationStore } from "../factories.js";
 
 describe("KyselyOperationStore", () => {
   let db: Kysely<DatabaseSchema>;
   let store: KyselyOperationStore;
-  let dialect: any;
 
   beforeEach(async () => {
-    // Create in-memory PGLite database for testing
-    const kyselyPGlite = await KyselyPGlite.create();
-    dialect = kyselyPGlite.dialect;
-    db = new Kysely<DatabaseSchema>({
-      dialect,
-    });
-
-    // Create the Operation table
-    await db.schema
-      .createTable("Operation")
-      .addColumn("id", "serial", (col) => col.primaryKey())
-      .addColumn("jobId", "text", (col) => col.notNull())
-      .addColumn("opId", "text", (col) => col.notNull().unique())
-      .addColumn("prevOpId", "text", (col) => col.notNull())
-      .addColumn("writeTimestampUtcMs", "timestamptz", (col) =>
-        col.notNull().defaultTo(new Date()),
-      )
-      .addColumn("documentId", "text", (col) => col.notNull())
-      .addColumn("documentType", "text", (col) => col.notNull())
-      .addColumn("scope", "text", (col) => col.notNull())
-      .addColumn("branch", "text", (col) => col.notNull())
-      .addColumn("timestampUtcMs", "timestamptz", (col) => col.notNull())
-      .addColumn("index", "integer", (col) => col.notNull())
-      .addColumn("action", "text", (col) => col.notNull())
-      .addColumn("skip", "integer", (col) => col.notNull())
-      .addColumn("resultingState", "text")
-      .addColumn("error", "text")
-      .addColumn("hash", "text", (col) => col.notNull())
-      .addUniqueConstraint("unique_revision", [
-        "documentId",
-        "scope",
-        "branch",
-        "index",
-      ])
-      .execute();
-
-    // Create indexes
-    await db.schema
-      .createIndex("streamOperations")
-      .on("Operation")
-      .columns(["documentId", "scope", "branch", "id"])
-      .execute();
-
-    await db.schema
-      .createIndex("branchlessStreamOperations")
-      .on("Operation")
-      .columns(["documentId", "scope", "id"])
-      .execute();
-
-    store = new KyselyOperationStore(db);
+    const setup = await createTestOperationStore();
+    db = setup.db;
+    store = setup.store;
   });
 
   afterEach(async () => {
-    // Clean up database connection
     await db.destroy();
   });
 

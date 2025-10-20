@@ -44,7 +44,7 @@ describe("Document Operations", () => {
       );
 
       expect(document.header.revision.global).toBe(6);
-      document.operations.global.forEach((op) => {
+      document.operations.global!.forEach((op) => {
         expect(op).toHaveProperty("skip", 0);
       });
     });
@@ -93,7 +93,7 @@ describe("Document Operations", () => {
       );
 
       expect(document.header.revision.global).toBe(6);
-      document.operations.global.forEach((op, index) => {
+      document.operations.global!.forEach((op, index) => {
         expect(op).toHaveProperty("skip", index + 1);
       });
     });
@@ -122,7 +122,7 @@ describe("Document Operations", () => {
       );
 
       expect(document.header.revision.global).toBe(5);
-      document.operations.global.forEach((op) => {
+      document.operations.global!.forEach((op) => {
         expect(op).toHaveProperty("skip", 0);
       });
     });
@@ -165,7 +165,7 @@ describe("Document Operations", () => {
       );
 
       expect(document.header.revision.global).toBe(5);
-      document.operations.global.forEach((op, index) => {
+      document.operations.global!.forEach((op, index) => {
         expect(op).toHaveProperty("skip", index + 1);
       });
     });
@@ -199,7 +199,7 @@ describe("Document Operations", () => {
       document = documentModelReducer(document, setModelId({ id: "<id2>" }));
 
       expect(document.header.revision.global).toBe(7);
-      document.operations.global.forEach((op) => {
+      document.operations.global!.forEach((op) => {
         expect(op).toHaveProperty("skip", 0);
       });
     });
@@ -257,7 +257,7 @@ describe("Document Operations", () => {
       );
 
       expect(document.header.revision.global).toBe(7);
-      document.operations.global.forEach((op, index) => {
+      document.operations.global!.forEach((op, index) => {
         expect(op).toHaveProperty("skip", index + 1);
       });
     });
@@ -286,7 +286,7 @@ describe("Document Operations", () => {
       );
 
       expect(document.header.revision.global).toBe(5);
-      document.operations.global.forEach((op) => {
+      document.operations.global!.forEach((op) => {
         expect(op).toHaveProperty("skip", 0);
       });
     });
@@ -329,7 +329,7 @@ describe("Document Operations", () => {
       );
 
       expect(document.header.revision.global).toBe(5);
-      document.operations.global.forEach((op, index) => {
+      document.operations.global!.forEach((op, index) => {
         expect(op).toHaveProperty("skip", index + 1);
       });
     });
@@ -362,7 +362,7 @@ describe("Document Operations", () => {
       );
 
       expect(document.header.revision.global).toBe(6);
-      document.operations.global.forEach((op) => {
+      document.operations.global!.forEach((op) => {
         expect(op).toHaveProperty("skip", 0);
       });
     });
@@ -411,7 +411,7 @@ describe("Document Operations", () => {
       );
 
       expect(document.header.revision.global).toBe(6);
-      document.operations.global.forEach((op, index) => {
+      document.operations.global!.forEach((op, index) => {
         expect(op).toHaveProperty("skip", index + 1);
       });
     });
@@ -444,7 +444,7 @@ describe("Document Operations", () => {
       );
 
       expect(document.header.revision.global).toBe(6);
-      document.operations.global.forEach((op) => {
+      document.operations.global!.forEach((op) => {
         expect(op).toHaveProperty("skip", 0);
       });
     });
@@ -493,7 +493,7 @@ describe("Document Operations", () => {
       );
 
       expect(document.header.revision.global).toBe(6);
-      document.operations.global.forEach((op, index) => {
+      document.operations.global!.forEach((op, index) => {
         expect(op).toHaveProperty("skip", index + 1);
       });
     });
@@ -536,7 +536,7 @@ describe("Document Operations", () => {
       );
 
       expect(replayedDoc.header.revision.global).toBe(6);
-      expect(replayedDoc.operations.global.length).toBe(3);
+      expect(replayedDoc.operations.global!.length).toBe(3);
       expect(replayedDoc.state.global).toMatchObject({
         id: "<id>",
         name: "",

@@ -23,6 +23,11 @@ function debounce<T extends (...args: any[]) => void>(
   };
 }
 
+function isSubpath(parent: string, dir: string) {
+  const relative = path.relative(parent, dir);
+  return relative && !relative.startsWith("..") && !path.isAbsolute(relative);
+}
+
 export class VitePackageLoader implements IPackageLoader {
   private readonly logger = childLogger(["reactor-local", "vite-loader"]);
 
@@ -109,7 +114,7 @@ export class VitePackageLoader implements IPackageLoader {
   ) {
     const vite = await this.initVite();
     const listener = debounce(async (changedPath: string) => {
-      if (path.matchesGlob(changedPath, path.join(this.fullPath, "**"))) {
+      if (isSubpath(this.fullPath, changedPath)) {
         const documentModels = await this.load();
         callback(documentModels);
       }

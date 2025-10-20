@@ -1,8 +1,10 @@
 import type { IEventBus } from "../events/interfaces.js";
+import type { IJobTracker } from "../job-tracker/interfaces.js";
 import type { IQueue } from "../queue/interfaces.js";
+import type { IJobExecutionHandle } from "../queue/types.js";
 import { QueueEventTypes } from "../queue/types.js";
 import type { IJobExecutor, IJobExecutorManager } from "./interfaces.js";
-import type { ExecutorManagerStatus } from "./types.js";
+import type { ExecutorManagerStatus, JobResult } from "./types.js";
 
 export type JobExecutorFactory = () => IJobExecutor;
 
@@ -21,6 +23,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     private executorFactory: JobExecutorFactory,
     private eventBus: IEventBus,
     private queue: IQueue,
+    private jobTracker: IJobTracker,
   ) {}
 
   async start(numExecutors: number): Promise<void> {
@@ -91,61 +94,117 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
   }
 
   private async processNextJob(): Promise<void> {
+    // dequeue next available job
+    let handle: IJobExecutionHandle | null;
     try {
-      // Dequeue next available job
-      const handle = await this.queue.dequeueNext();
-      if (!handle) {
-        return;
-      }
-
-      this.activeJobs++;
-
-      // Find an available executor (simple round-robin)
-      const executorIndex = this.totalJobsProcessed % this.executors.length;
-      const executor = this.executors[executorIndex];
-
-      // Execute the job
-      const result = await executor.executeJob(handle.job);
-
-      // Update job status in queue
-      if (result.success) {
-        await this.queue.completeJob(handle.job.id);
-      } else {
-        // Handle retry logic
-        const retryCount = handle.job.retryCount || 0;
-        const maxRetries = handle.job.maxRetries || 0;
-        if (retryCount < maxRetries) {
-          await this.queue.retryJob(handle.job.id, result.error?.message);
-        } else {
-          await this.queue.failJob(handle.job.id, result.error?.message);
-        }
-      }
-
-      this.totalJobsProcessed++;
+      handle = await this.queue.dequeueNext();
     } catch (error) {
-      console.error("Error processing job:", error);
-    } finally {
-      this.activeJobs--;
+      console.error("Error dequeueing job:", error);
+      return;
+    }
 
-      // Check if there are more jobs to process
-      if (this.isRunning) {
-        const hasMore = await this.queue.hasJobs();
-        if (hasMore) {
-          await this.processNextJob();
+    if (!handle) {
+      return;
+    }
+
+    // start the job execution
+    handle.start();
+    this.activeJobs++;
+    this.jobTracker.markRunning(handle.job.id);
+
+    // Find an available executor (simple round-robin)
+    const executorIndex = this.totalJobsProcessed % this.executors.length;
+    const executor = this.executors[executorIndex];
+
+    // execute the job
+    let result: JobResult;
+    try {
+      result = await executor.executeJob(handle.job);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      console.error(`Error executing job ${handle.job.id}:`, errorMessage);
+
+      handle.fail(errorMessage);
+      this.activeJobs--;
+      this.jobTracker.markFailed(handle.job.id, errorMessage);
+
+      await this.checkForMoreJobs();
+      return;
+    }
+
+    // handle the result
+    if (result.success) {
+      handle.complete();
+      this.totalJobsProcessed++;
+      this.jobTracker.markCompleted(handle.job.id, result.operations);
+    } else {
+      // Handle retry logic
+      const retryCount = handle.job.retryCount || 0;
+      const maxRetries = handle.job.maxRetries || 0;
+
+      if (retryCount < maxRetries) {
+        try {
+          await this.queue.retryJob(handle.job.id, result.error?.message);
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : "Failed to retry job";
+          console.error(`Failed to retry job ${handle.job.id}:`, errorMessage);
+
+          this.jobTracker.markFailed(handle.job.id, errorMessage);
+          handle.fail(errorMessage);
         }
+      } else {
+        const errorMessage = result.error?.message || "Unknown error";
+        this.jobTracker.markFailed(handle.job.id, errorMessage);
+
+        handle.fail(errorMessage);
       }
+    }
+
+    this.activeJobs--;
+    await this.checkForMoreJobs();
+  }
+
+  private async checkForMoreJobs(): Promise<void> {
+    if (!this.isRunning) {
+      return;
+    }
+
+    let hasMore: boolean;
+    try {
+      hasMore = await this.queue.hasJobs();
+    } catch (error) {
+      console.error("Error checking for more jobs:", error);
+      return;
+    }
+
+    if (hasMore) {
+      await this.processNextJob();
     }
   }
 
   private async processExistingJobs(): Promise<void> {
-    const hasJobs = await this.queue.hasJobs();
+    let hasJobs: boolean;
+    try {
+      hasJobs = await this.queue.hasJobs();
+    } catch (error) {
+      console.error("Error checking for existing jobs:", error);
+      return;
+    }
+
     if (hasJobs) {
       // Start processing up to the number of executors
       const promises: Promise<void>[] = [];
       for (let i = 0; i < Math.min(this.executors.length, 5); i++) {
         promises.push(this.processNextJob());
       }
-      await Promise.all(promises);
+
+      try {
+        await Promise.all(promises);
+      } catch (error) {
+        console.error("Error processing existing jobs:", error);
+      }
     }
   }
 }

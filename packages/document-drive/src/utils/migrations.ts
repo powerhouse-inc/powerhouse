@@ -14,9 +14,15 @@ export function migrateDocumentOperationSignatures(
   ).reduce<DocumentOperations>(
     (acc, [key, operations]) => {
       const scope = key;
+      if (!operations) {
+        return acc;
+      }
       for (const op of operations) {
         const newOp = migrateLegacyOperationSignature(op);
-        acc[scope].push(newOp);
+        const scopeOps = acc[scope];
+        if (scopeOps) {
+          scopeOps.push(newOp);
+        }
         if (newOp !== op) {
           legacy = true;
         }

@@ -88,7 +88,7 @@ function buildDocumentResponse(drive: PHDocument) {
     ...drive,
     revision: drive.header.revision,
     state: drive.state,
-    operations: drive.operations.global.map((op) => ({
+    operations: drive.operations.global!.map((op) => ({
       ...op,
       inputText: JSON.stringify(op.action.input),
     })),

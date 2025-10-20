@@ -1,6 +1,6 @@
 {
   "name": "@renown/sdk",
-  "version": "4.1.0-dev.70",
+  "version": "4.1.0-dev.79",
   "description": "",
   "license": "AGPL-3.0-only",
   "private": false,
@@ -32,10 +32,18 @@
     "lint": "eslint"
   },
   "peerDependencies": {
-    "document-model": "workspace:*"
+    "document-model": "workspace:*",
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
   },
   "devDependencies": {
+    "@types/react": "^18.0.0",
     "document-model": "workspace:*",
+    "react": "^18.0.0",
     "vitest": "^3.2.4"
   },
   "dependencies": {

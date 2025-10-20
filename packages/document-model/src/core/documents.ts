@@ -1,5 +1,6 @@
 import stringifyJson, { stringify } from "safe-stable-stringify";
 import { generateId, hashBrowser } from "./crypto.js";
+import { HashMismatchError } from "./errors.js";
 import { createPresignedHeader } from "./header.js";
 import type {
   Action,
@@ -181,10 +182,12 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
 
   let documentState = initialState;
   const operationsToReplay: Operation[] = [];
-  const initialOperations: DocumentOperations = {
-    global: [],
-    local: [],
-  };
+  // Initialize with all scopes found in operations, plus global and local for backward compatibility
+  const allScopes = new Set([...Object.keys(operations), "global", "local"]);
+  const initialOperations: DocumentOperations = {};
+  for (const scope of allScopes) {
+    initialOperations[scope] = [];
+  }
 
   // if operation resulting state is to be used then
   // looks for the last operation with state of each
@@ -192,13 +195,16 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
   // replay operations that follow it
   if (reuseOperationResultingState) {
     for (const [scope, scopeOperations] of Object.entries(operations)) {
+      if (!scopeOperations) {
+        continue;
+      }
       const index = scopeOperations.findLastIndex((s) => !!s.resultingState);
       if (index < 0) {
         operationsToReplay.push(...scopeOperations);
         continue;
       }
       const opWithState = scopeOperations[index];
-      if (!opWithState.resultingState) continue;
+      if (!opWithState || !opWithState.resultingState) continue;
       try {
         const scopeState = operationResultingStateParser(
           opWithState.resultingState,
@@ -208,9 +214,11 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
           // TODO how to deal with attachments?
           [scope]: scopeState,
         };
-        initialOperations[scope as keyof typeof initialOperations].push(
-          ...scopeOperations.slice(0, index + 1),
-        );
+        const scopeInitialOps =
+          initialOperations[scope as keyof typeof initialOperations];
+        if (scopeInitialOps) {
+          scopeInitialOps.push(...scopeOperations.slice(0, index + 1));
+        }
         operationsToReplay.push(...scopeOperations.slice(index + 1));
       } catch {
         /* if parsing fails then keeps replays all scope operations */
@@ -218,7 +226,9 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
       }
     }
   } else {
-    operationsToReplay.push(...Object.values(operations).flat());
+    operationsToReplay.push(
+      ...Object.values(operations).flatMap((ops) => ops || []),
+    );
   }
 
   // builds a new document from the initial data
@@ -253,6 +263,9 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
   // to the latest operation of each scope
   else {
     for (const scopeOperations of Object.values(initialOperations)) {
+      if (!scopeOperations) {
+        continue;
+      }
       const lastOperation = scopeOperations.at(-1);
       if (lastOperation) {
         result = updateHeaderRevision(
@@ -274,7 +287,7 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
           continue;
         }
         if (operation.hash !== hashDocumentStateForScope(result, scope)) {
-          throw new Error(`Hash mismatch for scope ${scope}`);
+          throw new HashMismatchError(scope, result, operation);
         } else {
           break;
         }
@@ -283,33 +296,46 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
   }
 
   // reuses operation timestamp if provided
-  const resultOperations: DocumentOperations = Object.keys(
-    result.operations,
-  ).reduce(
-    (acc, key) => {
-      const scope = key as keyof DocumentOperations;
+  // Initialize with all scopes from both result.operations and input operations
+  const allResultScopes = new Set([
+    ...Object.keys(result.operations),
+    ...Object.keys(operations),
+    "global",
+    "local",
+  ]);
+  const initialResultOperations: DocumentOperations = {};
+  for (const scope of allResultScopes) {
+    initialResultOperations[scope] = [];
+  }
 
-      return {
-        ...acc,
-        [scope]: [
-          ...result.operations[scope].map((operation, index) => {
-            return {
-              ...operation,
-              timestamp:
-                operations[scope][index]?.timestampUtcMs ??
-                operation.timestampUtcMs,
-            };
-          }),
-        ],
-      };
-    },
-    { global: [], local: [] },
-  );
+  // Iterate over all scopes (not just result.operations) to preserve empty scopes
+  const resultOperations: DocumentOperations = Array.from(
+    allResultScopes,
+  ).reduce((acc, scope) => {
+    const scopeOps = result.operations[scope] || [];
+
+    return {
+      ...acc,
+      [scope]: [
+        ...scopeOps.map((operation, index) => {
+          return {
+            ...operation,
+            timestamp:
+              operations[scope]?.[index]?.timestampUtcMs ??
+              operation.timestampUtcMs,
+          };
+        }),
+      ],
+    };
+  }, initialResultOperations);
 
   // gets the last modified timestamp from the latest operation
   const lastModified = header
     ? header.lastModifiedAtUtcIso
     : Object.values(resultOperations).reduce((acc, curr) => {
+        if (!curr) {
+          return acc;
+        }
         const operation = curr.at(-1);
         if (operation) {
           if (operation.timestampUtcMs > acc) {
@@ -917,6 +943,9 @@ export function garbageCollectDocumentOperations(
   const clearedOperations = Object.entries(documentOperations).reduce(
     (acc, entry) => {
       const [scope, ops] = entry;
+      if (!ops) {
+        return acc;
+      }
 
       return {
         ...acc,
@@ -959,17 +988,19 @@ export function filterDocumentOperationsResultingState(
 
   const entries = Object.entries(documentOperations);
 
-  return entries.reduce(
-    (acc, [scope, operations]) => ({
+  return entries.reduce((acc, [scope, operations]) => {
+    if (!operations) {
+      return acc;
+    }
+    return {
       ...acc,
       [scope]: operations.map((op) => {
         const { resultingState, ...restProps } = op;
 
         return restProps;
       }),
-    }),
-    {} as DocumentOperations,
-  );
+    };
+  }, {} as DocumentOperations);
 }
 
 /**
@@ -996,11 +1027,11 @@ export function diffOperations<TOp extends OperationIndex>(
 // it's operations, falling back to the initial state
 export function getDocumentLastModified(document: PHDocument) {
   const sortedOperations = sortOperations(
-    Object.values(document.operations).flat(),
+    Object.values(document.operations).flatMap((ops) => ops || []),
   );
 
   return (
-    sortedOperations.at(-1)!.timestampUtcMs ||
+    sortedOperations.at(-1)?.timestampUtcMs ||
     document.header.lastModifiedAtUtcIso
   );
 }
@@ -1013,7 +1044,8 @@ export function getDocumentLastModified(document: PHDocument) {
  * @returns The next revision number.
  */
 function getNextRevision(document: PHDocument, scope: string) {
-  const latestOperationIndex = document.operations[scope].at(-1)?.index ?? -1;
+  const scopeOperations = document.operations[scope];
+  const latestOperationIndex = scopeOperations?.at(-1)?.index ?? -1;
 
   return (latestOperationIndex ?? -1) + 1;
 }

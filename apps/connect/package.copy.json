@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/connect",
   "productName": "Powerhouse-Connect",
-  "version": "4.1.0-dev.67",
+  "version": "4.1.0-dev.76",
   "description": "Powerhouse Connect",
   "main": "./dist/index.html",
   "type": "module",
@@ -16,6 +16,7 @@
     "scripts",
     "assets",
     "public",
+    "heroku",
     ".env",
     "./src/index.css"
   ],
@@ -26,6 +27,7 @@
       "types": "./lib/src/index.d.ts"
     },
     "./main.js": {
+      "source": "./src/main.tsx",
       "import": "./lib/src/main.js",
       "types": "./lib/src/main.d.ts"
     },
@@ -43,7 +45,8 @@
     "./assets/*.jpeg": "./assets/*.jpeg",
     "./assets/*.gif": "./assets/*.gif",
     "./assets/*.webp": "./assets/*.webp",
-    "./assets/*.avif": "./assets/*.avif"
+    "./assets/*.avif": "./assets/*.avif",
+    "./public/icon.ico": "./public/icon.ico"
   },
   "license": "AGPL-3.0-only",
   "author": "powerhouse.inc",
@@ -68,6 +71,7 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "0.2.17",
+    "@openfeature/core": "^1.9.1",
     "@openfeature/web-sdk": "^1.6.2",
     "@powerhousedao/analytics-engine-core": "^0.5.0",
     "@powerhousedao/builder-tools": "workspace:*",

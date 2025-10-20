@@ -100,7 +100,9 @@ export class InternalTransmitter implements ITransmitter {
       for (const strand of strands) {
         const operations = await this.#buildInternalOperationUpdate(strand);
         const document = await this.drive.getDocument(strand.documentId);
-        const state = operations.at(-1)?.state ?? ({} as PHBaseState);
+        const state =
+          operations.at(-1)?.state ??
+          document.initialState[strand.scope as keyof PHBaseState];
         updates.push({
           ...strand,
           documentType: document.header.documentType,

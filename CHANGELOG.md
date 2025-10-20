@@ -1,3 +1,151 @@
+## 4.1.0-dev.79 (2025-10-20)
+
+### 🩹 Fixes
+
+- **document-drive:** copy schema.prisma to dist on build ([f510653fd](https://github.com/powerhouse-inc/powerhouse/commit/f510653fd))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.78 (2025-10-20)
+
+### 🩹 Fixes
+
+- **document-drive:** add schema.prisma to bundle ([40eac982f](https://github.com/powerhouse-inc/powerhouse/commit/40eac982f))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.77 (2025-10-20)
+
+### 🚀 Features
+
+- merge branch 'release/staging/5.0.0' ([123e720e6](https://github.com/powerhouse-inc/powerhouse/commit/123e720e6))
+
+### 🩹 Fixes
+
+- add missing @openfeature/core peer dependency ([2c4a904b0](https://github.com/powerhouse-inc/powerhouse/commit/2c4a904b0))
+- **design-system:** avoid testing library export ([9a290c7a4](https://github.com/powerhouse-inc/powerhouse/commit/9a290c7a4))
+- **document-drive:** consistent getSynchronizationUnitsRevision results for all storage adapters ([eb1d9a2bd](https://github.com/powerhouse-inc/powerhouse/commit/eb1d9a2bd))
+- **document-drive:** add initial state to first internal strand update ([120396f57](https://github.com/powerhouse-inc/powerhouse/commit/120396f57))
+- **document-model:** improved hash mismatch error message ([20567ea8c](https://github.com/powerhouse-inc/powerhouse/commit/20567ea8c))
+- **ph-cli:** allow file names with spaces ([651346930](https://github.com/powerhouse-inc/powerhouse/commit/651346930))
+- **reactor-browser:** add debounce to refreshReactorData to avoid spam on indexeddb ([53ceef967](https://github.com/powerhouse-inc/powerhouse/commit/53ceef967))
+- **vetra:** package query ([1f8d14d85](https://github.com/powerhouse-inc/powerhouse/commit/1f8d14d85))
+- **vetra:** added drive id to read model ([dc9491766](https://github.com/powerhouse-inc/powerhouse/commit/dc9491766))
+- **vetra:** added drive id to read model ([dffe520c3](https://github.com/powerhouse-inc/powerhouse/commit/dffe520c3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+- Guillermo Puente @gpuente
+
+## 4.1.0-dev.76 (2025-10-18)
+
+### 🚀 Features
+
+- document-view parity fixes ([0d6dd53fa](https://github.com/powerhouse-inc/powerhouse/commit/0d6dd53fa))
+
+### 🩹 Fixes
+
+- fixes to how revisions are calculated ([c2b0c2227](https://github.com/powerhouse-inc/powerhouse/commit/c2b0c2227))
+- filesystem needs to calculate revisions better ([96654825a](https://github.com/powerhouse-inc/powerhouse/commit/96654825a))
+- **reactor-browser:** add debounce to refreshReactorData to avoid spam on indexeddb ([4c5f3aed7](https://github.com/powerhouse-inc/powerhouse/commit/4c5f3aed7))
+- **vetra:** update package.json to include src files ([#1980](https://github.com/powerhouse-inc/powerhouse/pull/1980))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.75 (2025-10-17)
+
+### 🩹 Fixes
+
+- oof, fixed a few deep issues with assumptions about global and local scope ([85d3c9616](https://github.com/powerhouse-inc/powerhouse/commit/85d3c9616))
+- **connect:** reload window after clearing storage ([f214391f6](https://github.com/powerhouse-inc/powerhouse/commit/f214391f6))
+- **connect:** fixes #1965 build public dir ([#1965](https://github.com/powerhouse-inc/powerhouse/issues/1965))
+- **reactor-api:** avoids use of path.matchGlob which logs a error message ([9a88cf095](https://github.com/powerhouse-inc/powerhouse/commit/9a88cf095))
+- **reactor-browser:** deal with invalid getDocument ([a38c9cda2](https://github.com/powerhouse-inc/powerhouse/commit/a38c9cda2))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
+## 4.1.0-dev.74 (2025-10-15)
+
+### 🚀 Features
+
+- dual write ([cd1fad2fb](https://github.com/powerhouse-inc/powerhouse/commit/cd1fad2fb))
+- deletion state checks ([9fc3798cd](https://github.com/powerhouse-inc/powerhouse/commit/9fc3798cd))
+- implemented job tracking ([370447337](https://github.com/powerhouse-inc/powerhouse/commit/370447337))
+- introduced a read model coordinator ([ae5e765a9](https://github.com/powerhouse-inc/powerhouse/commit/ae5e765a9))
+- document-view reconstruction fixes ([97a66e3fd](https://github.com/powerhouse-inc/powerhouse/commit/97a66e3fd))
+- document-view optimizations ([d4251ce98](https://github.com/powerhouse-inc/powerhouse/commit/d4251ce98))
+- document-view stiching changes ([fd875ca0a](https://github.com/powerhouse-inc/powerhouse/commit/fd875ca0a))
+
+### 🩹 Fixes
+
+- date issue in op store ([4c2fb3ae6](https://github.com/powerhouse-inc/powerhouse/commit/4c2fb3ae6))
+- incremental fix wit hack ([5f4a7e2cd](https://github.com/powerhouse-inc/powerhouse/commit/5f4a7e2cd))
+- fixing issue where create, update, delete were applied with incorrect scope ([59c7a981e](https://github.com/powerhouse-inc/powerhouse/commit/59c7a981e))
+- adding all header parameters to create action input ([67ac63f05](https://github.com/powerhouse-inc/powerhouse/commit/67ac63f05))
+- jobs can have many operations, fixing create/update in new flow ([ffcf6b468](https://github.com/powerhouse-inc/powerhouse/commit/ffcf6b468))
+- now we need an actual job executor to make tests pass ([c869f1f34](https://github.com/powerhouse-inc/powerhouse/commit/c869f1f34))
+- document-drive-model tests should use updated job status system and proper lifecycle methods of coordinator ([4217e3292](https://github.com/powerhouse-inc/powerhouse/commit/4217e3292))
+- error thrown on shutdown ([b52cdb6fe](https://github.com/powerhouse-inc/powerhouse/commit/b52cdb6fe))
+- merge fixes ([e5eda5985](https://github.com/powerhouse-inc/powerhouse/commit/e5eda5985))
+- **codegen:** update graphql dependency in package.json ([257f368ac](https://github.com/powerhouse-inc/powerhouse/commit/257f368ac))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente @gpuente
+
+## 4.1.0-dev.73 (2025-10-15)
+
+### 🚀 Features
+
+- **renown:** added login button ([f109c7305](https://github.com/powerhouse-inc/powerhouse/commit/f109c7305))
+
+### 🩹 Fixes
+
+- **ph-cmd:** add overrides for react and react-dom versions ([fe1412c20](https://github.com/powerhouse-inc/powerhouse/commit/fe1412c20))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente @gpuente
+
+## 4.1.0-dev.72 (2025-10-15)
+
+### 🩹 Fixes
+
+- **connect, builder-tools:** normalize base path to start and end with a slash ([bea7b4673](https://github.com/powerhouse-inc/powerhouse/commit/bea7b4673))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.71 (2025-10-15)
+
+### 🚀 Features
+
+- **reactor-api:** add operation type and id resolvers to DriveSubgraph ([#1955](https://github.com/powerhouse-inc/powerhouse/pull/1955))
+
+### 🩹 Fixes
+
+- **codegen:** update analytics processor imports to use in processor templates ([#1954](https://github.com/powerhouse-inc/powerhouse/pull/1954))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.70 (2025-10-14)
 
 ### 🩹 Fixes

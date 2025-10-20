@@ -2,6 +2,7 @@ import type { InlineConfig } from "vite";
 import {
   commonConnectOptionsToEnv,
   loadVite,
+  resolveConnectPublicDir,
   resolveViteConfigPath,
 } from "./helpers.js";
 import type { ConnectStudioOptions } from "./types.js";
@@ -34,9 +35,12 @@ export async function startConnectStudio(
     viteConfigPath,
   );
 
+  const connectPublicDir = resolveConnectPublicDir(options.projectRoot);
+
   const devServerConfig: InlineConfig = {
     mode,
     configFile: false,
+    publicDir: connectPublicDir,
     server: devServerOptions,
   };
 

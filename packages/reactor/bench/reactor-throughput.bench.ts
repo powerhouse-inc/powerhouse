@@ -8,7 +8,7 @@ import type { Job } from "../src/queue/types.js";
 import { DocumentModelRegistry } from "../src/registry/implementation.js";
 import {
   createDocumentModelAction,
-  createTestOperation,
+  createMockOperationStore,
 } from "../test/factories.js";
 
 // Pre-create shared components to avoid setup overhead
@@ -22,8 +22,17 @@ registry.registerModules(documentModelDocumentModelModule);
 // Use real storage
 const storage = new MemoryStorage();
 
+// Create mock operation store for benchmarks
+const operationStore = createMockOperationStore();
+
 // Create real executor with real storage
-const executor = new SimpleJobExecutor(registry, storage, storage);
+const executor = new SimpleJobExecutor(
+  registry,
+  storage,
+  storage,
+  operationStore,
+  eventBus,
+);
 
 // Pre-create a document for benchmarks
 const testDocument = documentModelDocumentModelModule.utils.createDocument();
@@ -35,14 +44,13 @@ function createSimpleJob(): Job {
   const action = createDocumentModelAction("SET_NAME", {
     input: { name: `Test Name ${++jobCounter}` },
   });
-  const operation = createTestOperation({ action });
 
   return {
     id: `job-${jobCounter}`,
     documentId: "doc1",
     scope: "global",
     branch: "main",
-    operation,
+    actions: [action],
     maxRetries: 0,
     createdAt: new Date().toISOString(),
     queueHint: [],
@@ -58,17 +66,13 @@ function createComplexJob(): Job {
       ).join("\n"),
     },
   });
-  const operation = createTestOperation({
-    action,
-    index: Math.floor(Math.random() * 1000),
-  });
 
   return {
     id: `job-${++jobCounter}`,
     documentId: "doc1",
     scope: "global",
     branch: "main",
-    operation,
+    actions: [action],
     maxRetries: 0,
     createdAt: new Date().toISOString(),
     queueHint: [],

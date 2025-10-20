@@ -5,9 +5,12 @@ import type { IJobExecutor } from "../../src/executor/interfaces.js";
 import type { JobExecutorFactory } from "../../src/executor/simple-job-executor-manager.js";
 import { SimpleJobExecutorManager } from "../../src/executor/simple-job-executor-manager.js";
 import type { JobResult } from "../../src/executor/types.js";
+import type { IJobTracker } from "../../src/job-tracker/interfaces.js";
+import { InMemoryJobTracker } from "../../src/job-tracker/in-memory-job-tracker.js";
 import type { IQueue } from "../../src/queue/interfaces.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
-import type { Job } from "../../src/queue/types.js";
+import type { IJobExecutionHandle, Job } from "../../src/queue/types.js";
+import { JobQueueState } from "../../src/queue/types.js";
 
 describe("SimpleJobExecutorManager", () => {
   let manager: SimpleJobExecutorManager;
@@ -15,6 +18,7 @@ describe("SimpleJobExecutorManager", () => {
   let executorFactory: JobExecutorFactory;
   let eventBus: IEventBus;
   let queue: IQueue;
+  let jobTracker: IJobTracker;
 
   // Create a mock executor
   const createMockExecutor = (): IJobExecutor => {
@@ -34,11 +38,17 @@ describe("SimpleJobExecutorManager", () => {
     mockExecutors = [];
     eventBus = new EventBus();
     queue = new InMemoryQueue(eventBus);
+    jobTracker = new InMemoryJobTracker();
 
     // Create factory that returns mock executors
     executorFactory = vi.fn(() => createMockExecutor());
 
-    manager = new SimpleJobExecutorManager(executorFactory, eventBus, queue);
+    manager = new SimpleJobExecutorManager(
+      executorFactory,
+      eventBus,
+      queue,
+      jobTracker,
+    );
   });
 
   describe("start", () => {
@@ -135,19 +145,15 @@ describe("SimpleJobExecutorManager", () => {
         documentId: "doc-1",
         scope: "global",
         branch: "main",
-        operation: {
-          action: {
+        actions: [
+          {
             id: "action-1",
             type: "CREATE",
             scope: "global",
             timestampUtcMs: "123",
             input: {},
           },
-          index: 0,
-          timestampUtcMs: "123",
-          hash: "hash",
-          skip: 0,
-        },
+        ],
         createdAt: "123",
         queueHint: [],
       };
@@ -160,6 +166,57 @@ describe("SimpleJobExecutorManager", () => {
 
       // Check that the executor was called
       expect(mockExecutors[0].executeJob).toHaveBeenCalledWith(job);
+    });
+
+    it("should call start() on the job execution handle", async () => {
+      const job: Job = {
+        id: "job-1",
+        documentId: "doc-1",
+        scope: "global",
+        branch: "main",
+        actions: [
+          {
+            id: "action-1",
+            type: "CREATE",
+            scope: "global",
+            timestampUtcMs: "123",
+            input: {},
+          },
+        ],
+        createdAt: "123",
+        queueHint: [],
+      };
+
+      // Create a mock handle with a spy on start()
+      const startMock = vi.fn();
+      const completeMock = vi.fn();
+      const failMock = vi.fn();
+
+      const mockHandle: IJobExecutionHandle = {
+        job,
+        state: JobQueueState.READY,
+        start: startMock,
+        complete: completeMock,
+        fail: failMock,
+      };
+
+      // Mock the queue's dequeueNext to return our mock handle
+      const originalDequeueNext = queue.dequeueNext.bind(queue);
+      vi.spyOn(queue, "dequeueNext").mockImplementation(async (signal) => {
+        // First call the original to remove the job from the queue
+        await originalDequeueNext(signal);
+        // Then return our mock handle instead
+        return mockHandle;
+      });
+
+      await manager.start(1);
+      await queue.enqueue(job);
+
+      // Give the manager time to process
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // This should FAIL because start() is never called in the current implementation
+      expect(startMock).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -304,7 +304,7 @@ Choose the appropriate installation command based on your package manager:
 
 ```bash
 # Using npm
-npm install -g ph-cmd
+npm install -g ph-cmd --legacy-peer-deps
 
 # Using yarn
 yarn global add ph-cmd

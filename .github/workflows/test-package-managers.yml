@@ -1,0 +1,250 @@
+name: Test Package Managers
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "ph-cmd version tag (e.g., dev, latest, 1.2.3)"
+        required: false
+        default: "dev"
+      packages:
+        description: "Comma-separated list of packages to install (e.g., @powerhousedao/vetra@dev)"
+        required: false
+        default: ""
+
+jobs:
+  test-package-managers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        package-manager: [npm, pnpm, yarn, bun]
+
+    name: Test with ${{ matrix.package-manager }}
+
+    env:
+      PH_TAG: ${{ inputs.tag || (github.base_ref == 'main' && 'dev') || (contains(github.base_ref, 'staging') && 'staging') || (contains(github.base_ref, 'stg') && 'staging') || (contains(github.base_ref, 'production') && 'latest') || (contains(github.base_ref, 'prod') && 'latest') || vars.PH_TAG || 'dev' }}
+      PH_PACKAGES: ${{ inputs.packages || vars.PH_PACKAGES || '' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup yarn
+        if: matrix.package-manager == 'yarn'
+        run: npm install -g corepack
+
+      - name: Setup pnpm
+        if: matrix.package-manager == 'pnpm'
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Setup bun
+        if: matrix.package-manager == 'bun'
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install ph-cmd globally with ${{ matrix.package-manager }}
+        id: install-ph-cmd
+        run: |
+          set -o pipefail
+          echo "Installing ph-cmd@$PH_TAG with ${{ matrix.package-manager }}"
+          if [ "${{ matrix.package-manager }}" = "npm" ]; then
+            ${{ matrix.package-manager }} install -g ph-cmd@${{ env.PH_TAG }} --legacy-peer-deps --ignore-scripts 2>&1 | tee ph-cmd-install.log
+          elif [ "${{ matrix.package-manager }}" = "yarn" ]; then
+            yarn global add ph-cmd@${{ env.PH_TAG }} 2>&1 | tee ph-cmd-install.log
+          else
+            ${{ matrix.package-manager }} install -g ph-cmd@${{ env.PH_TAG }} 2>&1 | tee ph-cmd-install.log
+          fi
+
+      - name: Parse ph-cmd install warnings
+        if: always()
+        run: |
+          grep -iE "(warn|warning|deprecated|peer|conflict|unmet)" ph-cmd-install.log | while IFS= read -r line; do
+            echo "::warning title=[${{ matrix.package-manager }}] Install ph-cmd::$line"
+          done || true
+
+      - name: Create test directory
+        run: |
+          mkdir -p /tmp/ph-test-${{ matrix.package-manager }}
+          cd /tmp/ph-test-${{ matrix.package-manager }}
+
+      - name: Run ph init
+        id: ph-init
+        run: |
+          cd /tmp/ph-test-${{ matrix.package-manager }}
+          echo "Running: ph init project --${{ env.PH_TAG }} --${{ matrix.package-manager }}"
+          set -o pipefail
+          ph init project --${{ env.PH_TAG }} --${{ matrix.package-manager }} 2>&1 | tee ph-init.log
+
+      - name: Parse ph init warnings
+        if: always()
+        run: |
+          cd /tmp/ph-test-${{ matrix.package-manager }}
+          grep -iE "(warn|warning|deprecated|peer|conflict|unmet)" ph-init.log | while IFS= read -r line; do
+            echo "::warning title=[${{ matrix.package-manager }}] ph init::$line"
+          done || true
+
+      - name: Install dependencies
+        id: install-deps
+        if: steps.ph-init.outcome == 'success'
+        run: |
+          cd /tmp/ph-test-${{ matrix.package-manager }}/project
+          echo "Installing project dependencies with ${{ matrix.package-manager }}"
+          set -o pipefail
+          ${{ matrix.package-manager }} install 2>&1 | tee deps-install.log
+
+      - name: Parse dependency install warnings
+        if: always() && steps.ph-init.outcome == 'success'
+        run: |
+          cd /tmp/ph-test-${{ matrix.package-manager }}/project
+          grep -iE "(warn|warning|deprecated|peer|conflict|unmet)" deps-install.log | while IFS= read -r line; do
+            echo "::warning title=[${{ matrix.package-manager }}] Install dependencies::$line"
+          done || true
+
+      - name: Install Powerhouse packages
+        id: install-packages
+        if: steps.ph-init.outcome == 'success' && env.PH_PACKAGES != ''
+        run: |
+          set -o pipefail
+          cd /tmp/ph-test-${{ matrix.package-manager }}/project
+
+          IFS=',' read -ra PACKAGES <<< "$PH_PACKAGES"
+
+          for package in "${PACKAGES[@]}"; do
+            package=$(echo "$package" | xargs)
+
+            if [ ! -z "$package" ]; then
+              echo "::group::Installing $package"
+              ph install "$package" 2>&1 | tee "install-${package//[@\/]/-}.log"
+              echo "::endgroup::"
+            fi
+          done
+
+      - name: Parse package install warnings
+        if: always() && steps.ph-init.outcome == 'success' && env.PH_PACKAGES != ''
+        run: |
+          cd /tmp/ph-test-${{ matrix.package-manager }}/project
+
+          for logfile in install-*.log; do
+            if [ -f "$logfile" ]; then
+              grep -iE "(warn|warning|deprecated|peer|conflict|unmet)" "$logfile" | while IFS= read -r line; do
+                echo "::warning title=[${{ matrix.package-manager }}] ph install::$line"
+              done || true
+            fi
+          done
+
+      - name: Run ph connect build
+        id: connect-build
+        if: steps.ph-init.outcome == 'success'
+        run: |
+          cd /tmp/ph-test-${{ matrix.package-manager }}/project
+          echo "Building Connect with ph connect build"
+          set -o pipefail
+          ph connect build 2>&1 | tee connect-build.log
+          BUILD_EXIT_CODE=${PIPESTATUS[0]}
+
+          # Check if build output contains failure indicators
+          if grep -q "Build failed\|✗ Build failed\|error Command failed" connect-build.log; then
+            echo "Build failed - errors detected in output"
+            exit 1
+          fi
+
+          exit $BUILD_EXIT_CODE
+
+      - name: Parse build warnings
+        if: always() && steps.ph-init.outcome == 'success'
+        run: |
+          cd /tmp/ph-test-${{ matrix.package-manager }}/project
+          grep -iE "(warn|warning|deprecated)" connect-build.log | while IFS= read -r line; do
+            echo "::warning title=[${{ matrix.package-manager }}] ph connect build::$line"
+          done || true
+
+      - name: Generate Job Summary
+        if: always()
+        run: |
+          cd /tmp/ph-test-${{ matrix.package-manager }}
+
+          echo "# Package Manager Test Results: ${{ matrix.package-manager }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- **ph-cmd version:** ${{ env.PH_TAG }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Packages to install:** ${PH_PACKAGES:-"(none)"}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # ph-cmd install
+          STATUS="${{ steps.install-ph-cmd.outcome }}"
+          ICON="✅"; [ "$STATUS" != "success" ] && ICON="❌"
+          WARNINGS=$(grep -icE "(warn|warning|deprecated|peer|conflict|unmet)" ph-cmd-install.log 2>/dev/null || echo "0")
+          echo "### $ICON Install ph-cmd@${{ env.PH_TAG }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** $STATUS" >> $GITHUB_STEP_SUMMARY
+          echo "- **Warnings:** $WARNINGS" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # ph init
+          if [ -f "project/ph-init.log" ] || [ -f "ph-init.log" ]; then
+            STATUS="${{ steps.ph-init.outcome }}"
+            ICON="✅"; [ "$STATUS" != "success" ] && ICON="❌"
+            WARNINGS=$(grep -icE "(warn|warning|deprecated|peer|conflict|unmet)" ph-init.log 2>/dev/null || echo "0")
+            echo "### $ICON ph init project --${{ matrix.package-manager }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Status:** $STATUS" >> $GITHUB_STEP_SUMMARY
+            echo "- **Warnings:** $WARNINGS" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Dependency install
+          if [ -f "project/deps-install.log" ]; then
+            STATUS="${{ steps.install-deps.outcome }}"
+            ICON="✅"; [ "$STATUS" != "success" ] && ICON="❌"
+            WARNINGS=$(grep -icE "(warn|warning|deprecated|peer|conflict|unmet)" project/deps-install.log 2>/dev/null || echo "0")
+            echo "### $ICON Install project dependencies" >> $GITHUB_STEP_SUMMARY
+            echo "- **Status:** $STATUS" >> $GITHUB_STEP_SUMMARY
+            echo "- **Warnings:** $WARNINGS" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Package installs
+          if [ ! -z "$PH_PACKAGES" ]; then
+            IFS=',' read -ra PACKAGES <<< "$PH_PACKAGES"
+            for package in "${PACKAGES[@]}"; do
+              package=$(echo "$package" | xargs)
+              if [ ! -z "$package" ]; then
+                LOGFILE="project/install-${package//[@\/]/-}.log"
+                if [ -f "$LOGFILE" ]; then
+                  WARNINGS=$(grep -icE "(warn|warning|deprecated|peer|conflict|unmet)" "$LOGFILE" 2>/dev/null || echo "0")
+                  echo "### ✅ ph install $package" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Warnings:** $WARNINGS" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                fi
+              fi
+            done
+          fi
+
+          # Connect build
+          if [ -f "project/connect-build.log" ]; then
+            STATUS="${{ steps.connect-build.outcome }}"
+            ICON="✅"; [ "$STATUS" != "success" ] && ICON="❌"
+            WARNINGS=$(grep -icE "(warn|warning|deprecated)" project/connect-build.log 2>/dev/null || echo "0")
+            echo "### $ICON ph connect build" >> $GITHUB_STEP_SUMMARY
+            echo "- **Status:** $STATUS" >> $GITHUB_STEP_SUMMARY
+            echo "- **Warnings:** $WARNINGS" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload logs as artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-${{ matrix.package-manager }}
+          path: /tmp/ph-test-${{ matrix.package-manager }}/**/*.log
+          retention-days: 7
