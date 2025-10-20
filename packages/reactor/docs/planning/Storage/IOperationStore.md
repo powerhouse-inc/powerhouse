@@ -46,13 +46,8 @@ interface IOperationStore {
     signal?: AbortSignal,
   ): Promise<void>;
 
-  get(
-    documentId: string,
-    scope: string,
-    branch: string,
-    revision: number,
-    signal?: AbortSignal): Promise<Operation>;
-
+  // Returns operations for a specific document stream (documentId, scope, branch)
+  // Returns Operation[] since context is implicit from the query parameters
   getSince(
     documentId: string,
     scope: string,
@@ -62,21 +57,25 @@ interface IOperationStore {
     signal?: AbortSignal
   ): Promise<PagedResults<Operation>>;
 
-  getSinceTimestamp(
-    documentId: string,
-    scope: string,
-    branch: string,
-    timestampUtcMs: number,
-    paging?: PagingOptions,
-    signal?: AbortSignal
-  ): Promise<PagedResults<Operation>>;
-
+  // Returns operations across all documents starting from a database ID
+  // Returns OperationWithContext[] since context varies per operation
+  // Used by IDocumentView to catch up on missed operations during initialization
   getSinceId(
     id: number,
     paging?: PagingOptions,
     signal?: AbortSignal,
-  ): Promise<PagedResults<Operation>>;
+  ): Promise<PagedResults<OperationWithContext>>;
 
+  /**
+   * Gets the latest operation index for each scope of a document, along with
+   * the latest timestamp across all scopes. This is used to efficiently reconstruct
+   * the revision map and lastModified timestamp for document headers.
+   *
+   * @param documentId - The document id
+   * @param branch - The branch name
+   * @param signal - Optional abort signal to cancel the request
+   * @returns Object containing revision map and latest timestamp
+   */
   getRevisions(
     documentId: string,
     branch: string,

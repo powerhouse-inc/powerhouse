@@ -54,18 +54,11 @@ describe("KyselyOperationStore", () => {
       });
 
       // Verify operation was stored
-      const { operation, context } = await store.get(
-        documentId,
-        scope,
-        branch,
-        0,
-      );
-      expect(operation.id).toBe(opId);
-      expect(operation.action.type).toBe("ADD_FOLDER");
-      expect(operation.action.input).toHaveProperty("name", "Test Folder");
-      expect(context.documentId).toBe(documentId);
-      expect(context.scope).toBe(scope);
-      expect(context.branch).toBe(branch);
+      const result = await store.getSince(documentId, scope, branch, -1);
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].id).toBe(opId);
+      expect(result.items[0].action.type).toBe("ADD_FOLDER");
+      expect(result.items[0].action.input).toHaveProperty("name", "Test Folder");
     });
 
     it("should enforce revision ordering", async () => {
@@ -133,62 +126,6 @@ describe("KyselyOperationStore", () => {
     });
   });
 
-  describe("get", () => {
-    it("should retrieve a specific operation with document-drive action", async () => {
-      const documentId = generateId();
-      const scope = "global";
-      const branch = "main";
-      const opId = generateId();
-      const nodeId = generateId();
-
-      // Use a real delete node action
-      const action = deleteNode({
-        id: nodeId,
-      });
-
-      const originalOp: Operation = {
-        index: 0,
-        timestampUtcMs: new Date().toISOString(),
-        hash: "test-hash",
-        skip: 0,
-        id: opId,
-        action,
-        resultingState: JSON.stringify({ nodes: [] }),
-        error: undefined,
-      };
-
-      const documentType = "powerhouse/document-drive";
-
-      await store.apply(documentId, documentType, scope, branch, 0, (txn) => {
-        txn.addOperations(originalOp);
-      });
-
-      const { operation, context } = await store.get(
-        documentId,
-        scope,
-        branch,
-        0,
-      );
-
-      expect(operation.index).toBe(0);
-      expect(operation.id).toBe(opId);
-      expect(operation.hash).toBe("test-hash");
-      expect(operation.action.type).toBe("DELETE_NODE");
-      expect(operation.action.input).toEqual({ id: nodeId });
-      expect(operation.resultingState).toBe(JSON.stringify({ nodes: [] }));
-      expect(context.documentId).toBe(documentId);
-      expect(context.scope).toBe(scope);
-      expect(context.branch).toBe(branch);
-    });
-
-    it("should throw error for non-existent operation", async () => {
-      const documentId = generateId();
-      await expect(
-        store.get(documentId, "global", "main", 999),
-      ).rejects.toThrow("Operation not found");
-    });
-  });
-
   describe("getSince", () => {
     it("should get operations since a given revision", async () => {
       const documentId = generateId();
@@ -222,13 +159,11 @@ describe("KyselyOperationStore", () => {
 
       // Get operations since revision 0 (should return operations at revision 1 and 2)
       const result = await store.getSince(documentId, scope, branch, 0);
-      expect(result).toHaveLength(2);
-      expect(result[0].operation.index).toBe(1);
-      expect(result[1].operation.index).toBe(2);
-      expect(result[0].operation.action.type).toBe("ADD_FOLDER");
-      expect(result[0].context.documentId).toBe(documentId);
-      expect(result[0].context.scope).toBe(scope);
-      expect(result[0].context.branch).toBe(branch);
+      expect(result.items).toHaveLength(2);
+      expect(result.items[0].index).toBe(1);
+      expect(result.items[1].index).toBe(2);
+      expect(result.items[0].action.type).toBe("ADD_FOLDER");
+      expect(result.hasMore).toBe(false);
     });
 
     it("should return empty array when no operations since revision", async () => {
@@ -258,27 +193,28 @@ describe("KyselyOperationStore", () => {
 
       // Get operations since revision 0 (should return empty array)
       const result = await store.getSince(documentId, scope, branch, 0);
-      expect(result).toHaveLength(0);
+      expect(result.items).toHaveLength(0);
+      expect(result.hasMore).toBe(false);
     });
-  });
 
-  describe("getSinceTimestamp", () => {
-    it("should get operations since a given timestamp", async () => {
+    it("should support cursor-based paging", async () => {
       const documentId = generateId();
       const scope = "global";
       const branch = "main";
       const documentType = "powerhouse/document-drive";
 
-      // Add some operations
-      for (let i = 0; i < 2; i++) {
-        const action = setDriveName({
-          name: `Drive ${i}`,
+      // Add 5 operations
+      for (let i = 0; i < 5; i++) {
+        const action = addFolder({
+          id: generateId(),
+          name: `Folder ${i}`,
+          parentFolder: null,
         });
 
         await store.apply(documentId, documentType, scope, branch, i, (txn) => {
           txn.addOperations({
             index: i,
-            timestampUtcMs: new Date().toISOString(),
+            timestampUtcMs: new Date(Date.now() + i * 1000).toISOString(),
             hash: `hash-${i}`,
             skip: 0,
             id: generateId(),
@@ -287,39 +223,26 @@ describe("KyselyOperationStore", () => {
         });
       }
 
-      // Test with a timestamp from long ago - should get all operations
-      const longAgo = new Date("2020-01-01").getTime();
-      const result = await store.getSinceTimestamp(
-        documentId,
-        scope,
-        branch,
-        longAgo,
-      );
+      // Get first page of 2 items starting from revision 0
+      const page1 = await store.getSince(documentId, scope, branch, 0, {
+        cursor: "",
+        limit: 2,
+      });
+      expect(page1.items).toHaveLength(2);
+      expect(page1.items[0].index).toBe(1);
+      expect(page1.items[1].index).toBe(2);
+      expect(page1.hasMore).toBe(true);
+      expect(page1.nextCursor).toBeDefined();
 
-      // Should get both operations since they were created after 2020
-      expect(result.length).toBe(2);
-      expect(result[0].operation.action.type).toBe("SET_DRIVE_NAME");
-      expect(result[1].operation.action.type).toBe("SET_DRIVE_NAME");
-      expect(result[0].context.documentId).toBe(documentId);
-      expect(result[0].context.scope).toBe(scope);
-      expect(result[0].context.branch).toBe(branch);
-    });
-
-    it("should return empty array when no operations since timestamp", async () => {
-      const documentId = generateId();
-      const scope = "global";
-      const branch = "main";
-
-      // Test with a future timestamp - should get no operations
-      const futureTime = Date.now() + 1000000; // 1000 seconds in future
-      const result = await store.getSinceTimestamp(
-        documentId,
-        scope,
-        branch,
-        futureTime,
-      );
-
-      expect(result).toHaveLength(0);
+      // Get second page using cursor
+      const page2 = await store.getSince(documentId, scope, branch, 0, {
+        cursor: page1.nextCursor,
+        limit: 2,
+      });
+      expect(page2.items).toHaveLength(2);
+      expect(page2.items[0].index).toBe(3);
+      expect(page2.items[1].index).toBe(4);
+      expect(page2.hasMore).toBe(false);
     });
   });
 
@@ -350,14 +273,14 @@ describe("KyselyOperationStore", () => {
 
       // Get all operations first to find the first ID
       const allOps = await store.getSince(documentId, scope, branch, -1);
-      expect(allOps.length).toBeGreaterThanOrEqual(3);
+      expect(allOps.items.length).toBeGreaterThanOrEqual(3);
 
       // Get operations since the first database ID
       // Note: This uses the internal database ID, not the operation ID
       const result = await store.getSinceId(1); // Assuming first DB ID is 1
 
-      expect(result.length).toBeGreaterThanOrEqual(1);
-      result.forEach((item) => {
+      expect(result.items.length).toBeGreaterThanOrEqual(1);
+      result.items.forEach((item) => {
         expect(item.operation.action.type).toBe("DELETE_NODE");
         expect(item.context.documentId).toBe(documentId);
       });
@@ -384,39 +307,13 @@ describe("KyselyOperationStore", () => {
       ).rejects.toThrow("Operation aborted");
     });
 
-    it("should abort get operation", async () => {
-      const controller = new AbortController();
-      controller.abort();
-      const documentId = generateId();
-
-      await expect(
-        store.get(documentId, "global", "main", 0, controller.signal),
-      ).rejects.toThrow("Operation aborted");
-    });
-
     it("should abort getSince operation", async () => {
       const controller = new AbortController();
       controller.abort();
       const documentId = generateId();
 
       await expect(
-        store.getSince(documentId, "global", "main", 0, controller.signal),
-      ).rejects.toThrow("Operation aborted");
-    });
-
-    it("should abort getSinceTimestamp operation", async () => {
-      const controller = new AbortController();
-      controller.abort();
-      const documentId = generateId();
-
-      await expect(
-        store.getSinceTimestamp(
-          documentId,
-          "global",
-          "main",
-          Date.now(),
-          controller.signal,
-        ),
+        store.getSince(documentId, "global", "main", 0, undefined, controller.signal),
       ).rejects.toThrow("Operation aborted");
     });
 
@@ -424,7 +321,7 @@ describe("KyselyOperationStore", () => {
       const controller = new AbortController();
       controller.abort();
 
-      await expect(store.getSinceId(1, controller.signal)).rejects.toThrow(
+      await expect(store.getSinceId(1, undefined, controller.signal)).rejects.toThrow(
         "Operation aborted",
       );
     });

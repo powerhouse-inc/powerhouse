@@ -7,6 +7,8 @@ import {
   type DocumentRevisions,
   type IOperationStore,
   type OperationWithContext,
+  type PagedResults,
+  type PagingOptions,
 } from "../interfaces.js";
 import { AtomicTransaction } from "../txn.js";
 import type { Database, OperationRow } from "./types.js";
@@ -87,99 +89,116 @@ export class KyselyOperationStore implements IOperationStore {
     });
   }
 
-  async get(
-    documentId: string,
-    scope: string,
-    branch: string,
-    index: number,
-    signal?: AbortSignal,
-  ): Promise<OperationWithContext> {
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
-
-    const row = await this.db
-      .selectFrom("Operation")
-      .selectAll()
-      .where("documentId", "=", documentId)
-      .where("scope", "=", scope)
-      .where("branch", "=", branch)
-      .where("index", "=", index)
-      .executeTakeFirst();
-
-    if (!row) {
-      throw new Error(
-        `Operation not found: ${documentId}/${scope}/${branch}/${index}`,
-      );
-    }
-
-    return this.rowToOperationWithContext(row);
-  }
-
   async getSince(
     documentId: string,
     scope: string,
     branch: string,
-    index: number,
+    revision: number,
+    paging?: PagingOptions,
     signal?: AbortSignal,
-  ): Promise<OperationWithContext[]> {
+  ): Promise<PagedResults<Operation>> {
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
 
-    const rows = await this.db
+    let query = this.db
       .selectFrom("Operation")
       .selectAll()
       .where("documentId", "=", documentId)
       .where("scope", "=", scope)
       .where("branch", "=", branch)
-      .where("index", ">", index)
-      .orderBy("index", "asc")
-      .execute();
+      .where("index", ">", revision)
+      .orderBy("index", "asc");
 
-    return rows.map((row) => this.rowToOperationWithContext(row));
-  }
+    // Handle cursor-based pagination
+    if (paging) {
+      // Cursor encodes the last seen index
+      if (paging.cursor) {
+        const lastIndex = Number.parseInt(paging.cursor, 10);
+        query = query.where("index", ">", lastIndex);
+      }
 
-  async getSinceTimestamp(
-    documentId: string,
-    scope: string,
-    branch: string,
-    timestampUtcMs: number,
-    signal?: AbortSignal,
-  ): Promise<OperationWithContext[]> {
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
+      // Apply limit if specified (fetch one extra to determine hasMore)
+      if (paging.limit) {
+        query = query.limit(paging.limit + 1);
+      }
     }
 
-    const rows = await this.db
-      .selectFrom("Operation")
-      .selectAll()
-      .where("documentId", "=", documentId)
-      .where("scope", "=", scope)
-      .where("branch", "=", branch)
-      .where("writeTimestampUtcMs", ">", new Date(timestampUtcMs))
-      .orderBy("index", "asc")
-      .execute();
+    const rows = await query.execute();
 
-    return rows.map((row) => this.rowToOperationWithContext(row));
+    // Determine if there are more results
+    let hasMore = false;
+    let items = rows;
+
+    if (paging?.limit && rows.length > paging.limit) {
+      hasMore = true;
+      items = rows.slice(0, paging.limit);
+    }
+
+    // Generate next cursor from last item's index
+    const nextCursor =
+      hasMore && items.length > 0
+        ? items[items.length - 1].index.toString()
+        : undefined;
+
+    return {
+      items: items.map((row) => this.rowToOperation(row)),
+      nextCursor,
+      hasMore,
+    };
   }
 
   async getSinceId(
     id: number,
+    paging?: PagingOptions,
     signal?: AbortSignal,
-  ): Promise<OperationWithContext[]> {
+  ): Promise<PagedResults<OperationWithContext>> {
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
 
-    const rows = await this.db
+    let query = this.db
       .selectFrom("Operation")
       .selectAll()
       .where("id", ">", id)
-      .orderBy("id", "asc")
-      .execute();
+      .orderBy("id", "asc");
 
-    return rows.map((row) => this.rowToOperationWithContext(row));
+    // Handle cursor-based pagination
+    if (paging) {
+      // Cursor encodes the last seen id
+      if (paging.cursor) {
+        const lastId = Number.parseInt(paging.cursor, 10);
+        query = query.where("id", ">", lastId);
+      }
+
+      // Apply limit if specified (fetch one extra to determine hasMore)
+      if (paging.limit) {
+        query = query.limit(paging.limit + 1);
+      }
+    }
+
+    const rows = await query.execute();
+
+    // Determine if there are more results
+    let hasMore = false;
+    let items = rows;
+
+    if (paging?.limit && rows.length > paging.limit) {
+      hasMore = true;
+      items = rows.slice(0, paging.limit);
+    }
+
+    // Generate next cursor from last item's id
+    const nextCursor =
+      hasMore && items.length > 0
+        ? items[items.length - 1].id.toString()
+        : undefined;
+
+    return {
+      items: items.map((row) => this.rowToOperationWithContext(row)),
+      nextCursor,
+      hasMore,
+    };
   }
 
   async getRevisions(
@@ -229,18 +248,22 @@ export class KyselyOperationStore implements IOperationStore {
     };
   }
 
+  private rowToOperation(row: OperationRow): Operation {
+    return {
+      index: row.index,
+      timestampUtcMs: row.timestampUtcMs.toISOString(),
+      hash: row.hash,
+      skip: row.skip,
+      error: row.error || undefined,
+      resultingState: row.resultingState || undefined,
+      id: row.opId,
+      action: JSON.parse(row.action) as Operation["action"],
+    };
+  }
+
   private rowToOperationWithContext(row: OperationRow): OperationWithContext {
     return {
-      operation: {
-        index: row.index,
-        timestampUtcMs: row.timestampUtcMs.toISOString(),
-        hash: row.hash,
-        skip: row.skip,
-        error: row.error || undefined,
-        resultingState: row.resultingState || undefined,
-        id: row.opId,
-        action: JSON.parse(row.action) as Operation["action"],
-      },
+      operation: this.rowToOperation(row),
       context: {
         documentId: row.documentId,
         documentType: row.documentType,
