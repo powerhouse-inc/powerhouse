@@ -14,7 +14,6 @@ export interface OperationTable {
   index: number;
   action: string; // JSON string
   skip: number;
-  resultingState?: string | null;
   error?: string | null;
   hash: string;
 }

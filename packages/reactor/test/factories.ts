@@ -71,7 +71,6 @@ export async function createTestOperationStore(): Promise<{
     .addColumn("index", "integer", (col) => col.notNull())
     .addColumn("action", "text", (col) => col.notNull())
     .addColumn("skip", "integer", (col) => col.notNull())
-    .addColumn("resultingState", "text")
     .addColumn("error", "text")
     .addColumn("hash", "text", (col) => col.notNull())
     .addUniqueConstraint("unique_revision", [

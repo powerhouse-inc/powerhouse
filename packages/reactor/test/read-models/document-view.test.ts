@@ -2,7 +2,7 @@ import { addFile, addFolder, setDriveName } from "document-drive";
 import { generateId } from "document-model/core";
 import { Kysely } from "kysely";
 import { KyselyPGlite } from "kysely-pglite";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyDocumentView } from "../../src/read-models/document-view.js";
 import type { DocumentViewDatabase } from "../../src/read-models/types.js";
 import type { IOperationStore } from "../../src/storage/interfaces.js";
@@ -88,6 +88,7 @@ describe("KyselyDocumentView", () => {
       const branch = "main";
       const documentType = "powerhouse/document-drive";
 
+      const operations = [];
       for (let i = 0; i < 3; i++) {
         const action = addFolder({
           id: generateId(),
@@ -112,7 +113,32 @@ describe("KyselyDocumentView", () => {
             });
           },
         );
+
+        operations.push({
+          operation: {
+            index: i,
+            timestampUtcMs: new Date().toISOString(),
+            hash: `hash-${i}`,
+            skip: 0,
+            id: generateId(),
+            action,
+          },
+          context: {
+            documentId,
+            documentType,
+            scope,
+            branch,
+            resultingState: JSON.stringify({ global: {} }),
+          },
+        });
       }
+
+      // Mock getSinceId to return operations with resultingState
+      vi.spyOn(operationStore, "getSinceId").mockResolvedValue({
+        items: operations,
+        nextCursor: undefined,
+        hasMore: false,
+      });
 
       // Initialize the view - it should process all operations
       await view.init();
@@ -160,6 +186,7 @@ describe("KyselyDocumentView", () => {
             documentType,
             scope,
             branch,
+            resultingState: JSON.stringify({ global: {} }), // Ephemeral state
           },
         },
       ];
@@ -203,6 +230,7 @@ describe("KyselyDocumentView", () => {
           documentType,
           scope,
           branch,
+          resultingState: JSON.stringify({ global: {} }),
         },
       };
 
@@ -232,6 +260,7 @@ describe("KyselyDocumentView", () => {
           documentType,
           scope,
           branch,
+          resultingState: JSON.stringify({ global: {} }),
         },
       };
 
@@ -282,6 +311,7 @@ describe("KyselyDocumentView", () => {
           documentType,
           scope,
           branch,
+          resultingState: JSON.stringify({ global: {} }),
         },
       };
 
@@ -328,6 +358,7 @@ describe("KyselyDocumentView", () => {
           documentType,
           scope,
           branch,
+          resultingState: JSON.stringify({ global: {} }),
         },
       };
 
@@ -428,6 +459,22 @@ describe("KyselyDocumentView", () => {
             documentType,
             scope: "header",
             branch,
+            resultingState: JSON.stringify({
+              header: {
+                id: documentId,
+                documentType,
+                slug: documentId,
+                name: "",
+                branch,
+                revision: { header: 0 },
+                lastModifiedAtUtcIso: createdAt,
+                createdAtUtcIso: createdAt,
+                sig: {
+                  nonce,
+                  publicKey,
+                },
+              },
+            }),
           },
         },
       ]);
@@ -524,6 +571,22 @@ describe("KyselyDocumentView", () => {
             documentType,
             scope: "header",
             branch,
+            resultingState: JSON.stringify({
+              header: {
+                id: documentId,
+                documentType,
+                slug: documentId,
+                name: "",
+                branch,
+                revision: { header: 0 },
+                lastModifiedAtUtcIso: laterTimestamp,
+                createdAtUtcIso: createdAt,
+                sig: {
+                  nonce: "nonce",
+                  publicKey: { kty: "EC", crv: "P-256", x: "x", y: "y" },
+                },
+              },
+            }),
           },
         },
       ]);
@@ -624,6 +687,26 @@ describe("KyselyDocumentView", () => {
             documentType,
             scope: "global",
             branch,
+            resultingState: JSON.stringify({
+              header: {
+                id: documentId,
+                documentType,
+                slug: documentId,
+                name: "",
+                branch,
+                revision: { header: 0, global: 1 },
+                lastModifiedAtUtcIso: laterTimestamp,
+                createdAtUtcIso: createdAt,
+                sig: {
+                  nonce: "nonce",
+                  publicKey: { kty: "EC", crv: "P-256", x: "x", y: "y" },
+                },
+              },
+              global: {
+                name: "Test Drive",
+                // ... rest of global state
+              },
+            }),
           },
         },
       ]);
@@ -702,6 +785,22 @@ describe("KyselyDocumentView", () => {
             documentType,
             scope: "header",
             branch,
+            resultingState: JSON.stringify({
+              header: {
+                id: documentId,
+                documentType,
+                slug: documentId,
+                name: "",
+                branch,
+                revision: { header: 0 },
+                lastModifiedAtUtcIso: createdAt,
+                createdAtUtcIso: createdAt,
+                sig: {
+                  nonce: "nonce",
+                  publicKey: { kty: "EC", crv: "P-256", x: "x", y: "y" },
+                },
+              },
+            }),
           },
         },
       ]);
@@ -791,6 +890,26 @@ describe("KyselyDocumentView", () => {
             documentType,
             scope: "document",
             branch,
+            resultingState: JSON.stringify({
+              header: {
+                id: documentId,
+                documentType,
+                slug: documentId,
+                name: "",
+                branch,
+                revision: { header: 0, document: 0 },
+                lastModifiedAtUtcIso: createdAt,
+                createdAtUtcIso: createdAt,
+                sig: {
+                  nonce: "nonce",
+                  publicKey: { kty: "EC", crv: "P-256", x: "x", y: "y" },
+                },
+              },
+              document: {
+                version: "1.0.0",
+                isDeleted: false,
+              },
+            }),
           },
         },
       ]);

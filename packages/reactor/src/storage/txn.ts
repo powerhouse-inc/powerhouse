@@ -30,7 +30,6 @@ export class AtomicTransaction implements IAtomicTxn {
         index: op.index,
         action: JSON.stringify(op.action),
         skip: op.skip,
-        resultingState: op.resultingState || null,
         error: op.error || null,
         hash: op.hash,
       });
