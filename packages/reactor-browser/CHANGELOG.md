@@ -1,3 +1,13 @@
+## 5.0.0-staging.28 (2025-10-20)
+
+### 🩹 Fixes
+
+- **reactor-browser:** add debounce to refreshReactorData to avoid spam on indexeddb ([53ceef967](https://github.com/powerhouse-inc/powerhouse/commit/53ceef967))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.0.0-staging.27 (2025-10-17)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
