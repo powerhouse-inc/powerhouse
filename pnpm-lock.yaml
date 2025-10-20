@@ -181,6 +181,9 @@ importers:
       '@electric-sql/pglite':
         specifier: 0.2.17
         version: 0.2.17
+      '@openfeature/core':
+        specifier: ^1.9.1
+        version: 1.9.1
       '@openfeature/web-sdk':
         specifier: ^1.6.2
         version: 1.6.2(@openfeature/core@1.9.1)
@@ -296,6 +299,9 @@ importers:
 
   apps/switchboard:
     dependencies:
+      '@openfeature/core':
+        specifier: ^1.9.1
+        version: 1.9.1
       '@openfeature/env-var-provider':
         specifier: ^0.3.1
         version: 0.3.1(@openfeature/server-sdk@1.19.0(@openfeature/core@1.9.1))
@@ -1713,6 +1719,9 @@ importers:
       '@libsql/client':
         specifier: ^0.14.0
         version: 0.14.0(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+      '@openfeature/core':
+        specifier: ^1.9.1
+        version: 1.9.1
       '@openfeature/env-var-provider':
         specifier: ^0.3.1
         version: 0.3.1(@openfeature/server-sdk@1.19.0(@openfeature/core@1.9.1))
@@ -1795,6 +1804,9 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.17.0
         version: 1.19.1
+      '@openfeature/core':
+        specifier: ^1.9.1
+        version: 1.9.1
       '@openfeature/env-var-provider':
         specifier: ^0.3.1
         version: 0.3.1(@openfeature/server-sdk@1.19.0(@openfeature/core@1.9.1))

@@ -32,6 +32,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@openfeature/core": "^1.9.1",
     "@openfeature/env-var-provider": "^0.3.1",
     "@openfeature/server-sdk": "^1.19.0",
     "@powerhousedao/analytics-engine-core": "^0.5.0",
