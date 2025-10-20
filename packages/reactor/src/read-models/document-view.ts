@@ -13,7 +13,6 @@ import type {
   InsertableDocumentSnapshot,
 } from "./types.js";
 
-// Combine both database schemas
 type Database = StorageDatabase & DocumentViewDatabase;
 
 export class KyselyDocumentView implements IDocumentView {
@@ -63,19 +62,25 @@ export class KyselyDocumentView implements IDocumentView {
     await this.db.transaction().execute(async (trx) => {
       for (const item of items) {
         const { operation, context } = item;
-        const { documentId, scope, branch, documentType } = context;
+        const { documentId, scope, branch, documentType, resultingState } =
+          context;
         const { index, hash } = operation;
 
+        // We never rebuild here
+        if (!resultingState) {
+          throw new Error(
+            `Missing resultingState in context for operation ${operation.id || "unknown"}. ` +
+              `IDocumentView requires resultingState from upstream - it does not rebuild documents.`,
+          );
+        }
+
         let fullState: Record<string, unknown> = {};
-        if (operation.resultingState) {
-          try {
-            fullState = JSON.parse(operation.resultingState) as Record<
-              string,
-              unknown
-            >;
-          } catch {
-            //
-          }
+        try {
+          fullState = JSON.parse(resultingState) as Record<string, unknown>;
+        } catch (error) {
+          throw new Error(
+            `Failed to parse resultingState for operation ${operation.id || "unknown"}: ${error instanceof Error ? error.message : String(error)}`,
+          );
         }
 
         const operationType = operation.action.type;
@@ -332,7 +337,6 @@ export class KyselyDocumentView implements IDocumentView {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       state: state as any,
       operations,
-      // initialState should match the current state reconstructed from snapshots
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       initialState: state as any,
       clipboard: [],

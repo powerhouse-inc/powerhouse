@@ -5,6 +5,7 @@ export type OperationContext = {
   documentType: string;
   scope: string;
   branch: string;
+  resultingState?: string;
 };
 
 export type OperationWithContext = {
@@ -138,6 +139,10 @@ export interface IDocumentView {
 
   /**
    * Indexes a list of operations.
+   *
+   * @param items - Operations with context. Context MUST include ephemeral
+   *                `resultingState` for optimization. IDocumentView never rebuilds
+   *                documents from operations - it always requires resultingState.
    */
   indexOperations(items: OperationWithContext[]): Promise<void>;
 

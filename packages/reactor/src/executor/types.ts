@@ -1,5 +1,6 @@
 import type { Operation } from "document-model";
 import type { Job } from "../queue/types.js";
+import type { OperationWithContext } from "../storage/interfaces.js";
 
 /**
  * Represents the result of a job execution
@@ -16,6 +17,12 @@ export type JobResult = {
 
   /** The operations generated from the actions (if successful) */
   operations?: Operation[];
+
+  /**
+   * Operations with context (includes ephemeral resultingState).
+   * Used for emitting to IDocumentView via event bus.
+   */
+  operationsWithContext?: OperationWithContext[];
 
   /** Timestamp when the job execution completed */
   completedAt?: string;
