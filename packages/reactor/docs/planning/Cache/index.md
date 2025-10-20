@@ -19,18 +19,21 @@ The operation index provides an optimized, flattened view of operations organize
 
 #### IWriteCache
 
-The write cache is an in-memory LRU cache that stores ring buffers of document snapshots for fast state retrieval by the job executor. It allows executors to start from recent snapshots instead of replaying all operations from the beginning.
+The write cache is an in-memory LRU cache that stores ring buffers of `PHDocument` snapshots for fast retrieval by the job executor. It allows executors to start from recent document snapshots instead of replaying all operations from the beginning. The cache requires `IDocumentModelRegistry` to access reducers for rebuilding documents on cache misses.
 
 **Key characteristics:**
 
 - In-memory storage only
 - Ring buffer per document stream
+- Stores complete PHDocument objects
+- Requires IDocumentModelRegistry for cache miss handling
 - Used by job executors
 - Optimizes the write path for job execution
 
 ### Dependencies
 
 - [IOperationStore](../Storage/IOperationStore.md) - Source of operations for both caches
+- [IDocumentModelRegistry](../Jobs/document-model-registry.md) - Provides reducers for IWriteCache to rebuild documents on cache miss
 
 ### Links
 
@@ -64,13 +67,13 @@ flowchart LR
 
 **Write path optimization:**
 
-1. Job executor calls `IWriteCache.getState()` to get document state at required revision
+1. Job executor calls `IWriteCache.getState()` with documentId, documentType, scope, branch, and revision
 2. Write cache handles retrieval internally:
-   - On cache hit: returns cached state, updates LRU (fast)
-   - On cache miss: loads from `IOperationStore`, replays operations, stores in ring buffer, updates LRU, returns state
-3. Executor receives exact state it requested
-4. Executor executes reducers with new actions
-5. Executor calls `IWriteCache.putState()` to store resulting state in cache
+   - On cache hit: returns cached PHDocument, updates LRU (fast)
+   - On cache miss: loads from `IOperationStore`, gets reducer from `IDocumentModelRegistry`, replays operations, stores PHDocument in ring buffer, updates LRU, returns document
+3. Executor receives complete PHDocument at requested revision
+4. Executor executes reducers with new actions to produce updated PHDocument
+5. Executor calls `IWriteCache.putState()` to store resulting PHDocument in cache
 6. Executor writes operations to `IOperationStore` and `IOperationIndex`
 
 **Read path optimization:**
