@@ -35,9 +35,11 @@ export class DocumentModelGenerator extends BaseDocumentGen {
 
     const validationResult = validateDocumentModelState(state);
     if (!validationResult.isValid) {
-      logger.debug(
-        `>>> Validation failed for document model: ${state.name}`,
-        validationResult.errors,
+      const errorList = validationResult.errors
+        .map((error) => `  - ${error}`)
+        .join("\n");
+      logger.info(
+        `⚠️ Skipped code generation for '${state.name || strand.documentId}' due to validation errors:\n${errorList}`,
       );
       return false;
     }
