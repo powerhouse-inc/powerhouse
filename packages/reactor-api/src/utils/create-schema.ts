@@ -51,7 +51,7 @@ export const getDocumentModelTypeDefs = (
       documentModel.global.name.replaceAll("/", " "),
     );
     if (addedDocumentModels.has(dmSchemaName)) {
-      logger.error(
+      logger.debug(
         `Skipping document model with duplicate name: ${dmSchemaName}`,
       );
       return;
