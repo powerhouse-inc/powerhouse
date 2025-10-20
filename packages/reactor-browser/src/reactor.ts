@@ -89,13 +89,50 @@ export function createBrowserDocumentDriveServer(
   return builder.build();
 }
 
-export async function refreshReactorData(reactor: Reactor | undefined) {
+const DEFAULT_DEBOUNCE_DELAY_MS = 200;
+const DEFAULT_IMMEDIATE_THRESHOLD_MS = 1000;
+
+async function _refreshReactorData(reactor: Reactor | undefined) {
   if (!reactor) return;
   const drives = await getDrives(reactor);
   const documents = await getDocuments(reactor);
   dispatchSetDrivesEvent(drives);
   dispatchSetDocumentsEvent(documents);
 }
+
+function createDebouncedRefreshReactorData(
+  debounceDelayMs = DEFAULT_DEBOUNCE_DELAY_MS,
+  immediateThresholdMs = DEFAULT_IMMEDIATE_THRESHOLD_MS,
+) {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  let lastRefreshTime = 0;
+
+  return (reactor: Reactor | undefined, immediate = false) => {
+    const now = Date.now();
+    const timeSinceLastRefresh = now - lastRefreshTime;
+
+    // Clear any pending timeout
+    if (timeout !== null) {
+      clearTimeout(timeout);
+    }
+
+    // If caller requests immediate execution or enough time has passed, execute immediately
+    if (immediate || timeSinceLastRefresh >= immediateThresholdMs) {
+      lastRefreshTime = now;
+      return _refreshReactorData(reactor);
+    }
+
+    // Otherwise, debounce the call
+    return new Promise<void>((resolve) => {
+      timeout = setTimeout(() => {
+        lastRefreshTime = Date.now();
+        void _refreshReactorData(reactor).then(resolve);
+      }, debounceDelayMs);
+    });
+  };
+}
+
+export const refreshReactorData = createDebouncedRefreshReactorData();
 
 export async function initReactor(
   reactor: Reactor,
