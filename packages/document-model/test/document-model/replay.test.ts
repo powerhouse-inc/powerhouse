@@ -1,5 +1,10 @@
 import type { PHDocument } from "document-model";
-import { createReducer, noop, replayDocument } from "document-model/core";
+import {
+  createReducer,
+  HashMismatchError,
+  noop,
+  replayDocument,
+} from "document-model/core";
 import type { CountPHState } from "document-model/test";
 import {
   baseCountReducer,
@@ -7,7 +12,8 @@ import {
   createCountState,
   increment,
 } from "document-model/test";
-describe("DocumentModel Class", () => {
+
+describe("DocumentModel Replay", () => {
   const initialState = createCountState();
   const initialDocument: PHDocument<CountPHState> = {
     header: {
@@ -165,5 +171,30 @@ describe("DocumentModel Class", () => {
     expect(mockReducer).toHaveBeenCalledTimes(3);
     expect(document.state.global.count).toBe(1);
     expect(newDocument.state).toStrictEqual(document.state);
+  });
+
+  it("should throw HashMismatchError when replaying document with invalid operations", () => {
+    const mockReducer = vi.fn(baseCountReducer);
+    const reducer = createReducer<CountPHState>(mockReducer);
+    let newDocument = reducer(initialDocument, increment());
+    newDocument = reducer(newDocument, increment());
+    newDocument.operations.global.at(-1)!.hash = "invalid";
+
+    expect.assertions(1);
+    try {
+      replayDocument(
+        initialState,
+        newDocument.operations,
+        reducer,
+        undefined,
+        undefined,
+        undefined,
+        {
+          checkHashes: false,
+        },
+      );
+    } catch (e) {
+      expect(e).toBeInstanceOf(HashMismatchError);
+    }
   });
 });
