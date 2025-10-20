@@ -1,4 +1,5 @@
 export { setAllDocuments, useAllDocuments } from "./all-documents.js";
+export { useAllowedDocumentModelModules } from "./allowed-document-model-modules.js";
 export { useNodesInSelectedDriveOrFolder } from "./child-nodes.js";
 export {
   useAllowedDocumentTypes,
@@ -10,8 +11,8 @@ export {
   setPHDriveEditorConfigByKey,
 } from "./config/set-config-by-key.js";
 export {
-  setPHDriveEditorConfig,
   setPHDocumentEditorConfig,
+  setPHDriveEditorConfig,
   setPHGlobalConfig,
   useSetPHDocumentEditorConfig,
   useSetPHDriveEditorConfig,

@@ -5,7 +5,7 @@ unless_exists: true
 import { Button } from "@powerhousedao/design-system";
 import {
   showCreateDocumentModal,
-  useAllowedDocumentTypes,
+  useAllowedDocumentModelModules,
   useDocumentModelModules,
   useSelectedDriveId,
   type VetraDocumentModelModule,
@@ -16,14 +16,8 @@ import {
  * Displays available document types as clickable buttons.
  */
 export function CreateDocument() {
-  const allowedDocumentTypes = useAllowedDocumentTypes();
   const selectedDriveId = useSelectedDriveId();
-  const documentModelModules = useDocumentModelModules();
-  const filteredDocumentModelModules = allowedDocumentTypes
-    ? documentModelModules?.filter((module) =>
-        allowedDocumentTypes.includes(module.documentModel.global.id),
-      )
-    : documentModelModules;
+  const allowedDocumentModelModules = useAllowedDocumentModelModules();
 
   function handleAddDocument(module: VetraDocumentModelModule) {
     if (!selectedDriveId) {
@@ -42,7 +36,7 @@ export function CreateDocument() {
       </h3>
       {/* Customize layout by changing flex-wrap, gap, or grid layout */}
       <div className="flex w-full flex-wrap gap-4">
-        {filteredDocumentModelModules?.map((documentModelModule) => {
+        {allowedDocumentModelModules?.map((documentModelModule) => {
           return (
             <Button
               key={documentModelModule.documentModel.global.id}
