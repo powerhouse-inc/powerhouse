@@ -9,6 +9,7 @@ import type {
 } from "document-drive";
 import {
   AbortError,
+  childLogger,
   DocumentAlreadyExistsError,
   DocumentAlreadyExistsReason,
   DocumentIdValidationError,
@@ -29,6 +30,7 @@ type DriveManifest = {
 export class MemoryStorage
   implements IDriveOperationStorage, IDocumentStorage, IDocumentAdminStorage
 {
+  private logger = childLogger(["MemoryStorage"]);
   private documents: Record<string, PHDocument>;
   private driveManifests: Record<string, DriveManifest>;
   private slugToDocumentId: Record<string, string>;
@@ -384,7 +386,6 @@ export class MemoryStorage
           if (!document || !Object.keys(document.state).includes(unit.scope)) {
             return undefined;
           }
-
           const operations = document.operations[unit.scope];
           if (!operations) {
             return undefined;
@@ -398,9 +399,14 @@ export class MemoryStorage
             lastUpdated:
               operations.at(-1)?.timestampUtcMs ??
               document.header.createdAtUtcIso,
-            revision: operationsToRevision(operations),
+            revision:
+              operations.length > 0 ? operationsToRevision(operations) : 0,
           };
-        } catch {
+        } catch (error) {
+          this.logger.error(
+            "Error getting synchronization units revision",
+            error,
+          );
           return undefined;
         }
       }),

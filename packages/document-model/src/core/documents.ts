@@ -1,5 +1,6 @@
 import stringifyJson, { stringify } from "safe-stable-stringify";
 import { generateId, hashBrowser } from "./crypto.js";
+import { HashMismatchError } from "./errors.js";
 import { createPresignedHeader } from "./header.js";
 import type {
   Action,
@@ -286,7 +287,7 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
           continue;
         }
         if (operation.hash !== hashDocumentStateForScope(result, scope)) {
-          throw new Error(`Hash mismatch for scope ${scope}`);
+          throw new HashMismatchError(scope, result, operation);
         } else {
           break;
         }

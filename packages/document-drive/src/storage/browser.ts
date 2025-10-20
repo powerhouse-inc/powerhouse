@@ -9,6 +9,7 @@ import type {
 } from "document-drive";
 import {
   AbortError,
+  childLogger,
   DocumentAlreadyExistsError,
   DocumentAlreadyExistsReason,
   DocumentIdValidationError,
@@ -37,6 +38,7 @@ interface SlugManifest {
 export class BrowserStorage
   implements IDriveOperationStorage, IDocumentStorage, IDocumentAdminStorage
 {
+  private logger = childLogger(["BrowserStorage"]);
   private db: Promise<LocalForage>;
 
   static DBName = "DOCUMENT_DRIVES";
@@ -578,9 +580,14 @@ export class BrowserStorage
             lastUpdated:
               operations.at(-1)?.timestampUtcMs ??
               document.header.createdAtUtcIso,
-            revision: operationsToRevision(operations),
+            revision:
+              operations.length > 0 ? operationsToRevision(operations) : 0,
           };
-        } catch {
+        } catch (error) {
+          this.logger.error(
+            "Error getting synchronization units revision",
+            error,
+          );
           return undefined;
         }
       }),

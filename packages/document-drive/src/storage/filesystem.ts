@@ -8,6 +8,7 @@ import type {
 } from "document-drive";
 import {
   AbortError,
+  childLogger,
   DocumentAlreadyExistsError,
   DocumentAlreadyExistsReason,
   DocumentIdValidationError,
@@ -44,6 +45,7 @@ function ensureDir(dir: string) {
 export class FilesystemStorage
   implements IDriveOperationStorage, IDocumentStorage
 {
+  private logger = childLogger(["FilesystemStorage"]);
   private basePath: string;
 
   constructor(basePath: string) {
@@ -579,9 +581,14 @@ export class FilesystemStorage
             lastUpdated:
               operations.at(-1)?.timestampUtcMs ??
               document.header.createdAtUtcIso,
-            revision: operationsToRevision(operations),
+            revision:
+              operations.length > 0 ? operationsToRevision(operations) : 0,
           };
-        } catch {
+        } catch (error) {
+          this.logger.error(
+            "Error getting synchronization units revision",
+            error,
+          );
           return undefined;
         }
       }),

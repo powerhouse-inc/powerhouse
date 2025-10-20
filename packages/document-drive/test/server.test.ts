@@ -1053,6 +1053,25 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     });
     let drive = await server.getDrive(driveId);
 
+    const syncUnitsInitial = await syncManager.getSynchronizationUnits(
+      driveId,
+      undefined,
+      ["global"],
+    );
+    expect(syncUnitsInitial).toStrictEqual([
+      {
+        documentId: drive.header.id,
+        documentType: "powerhouse/document-drive",
+        scope: "global",
+        branch: "main",
+        lastUpdated: "2024-01-01T00:00:00.000Z",
+        revision: 0,
+      },
+    ]);
+
+    const storageUnitsInitial = await storage.findStorageUnitsBy({}, 10);
+    expect(storageUnitsInitial.units).toHaveLength(4);
+
     await server.addDocument(createDocumentModelWithId(documentId));
 
     // adds file
@@ -1075,7 +1094,11 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     await server.addOperation(documentId, operation);
     await server.getDocument(documentId);
 
-    const syncUnits = await syncManager.getSynchronizationUnits(driveId);
+    const syncUnits = await syncManager.getSynchronizationUnits(
+      driveId,
+      undefined,
+      ["global"],
+    );
     expect(syncUnits).toStrictEqual([
       {
         documentId: drive.header.id,

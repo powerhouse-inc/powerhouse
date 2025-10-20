@@ -21,13 +21,13 @@ describe("Internal Listener", () => {
     documentModelDocumentModelModule,
     driveDocumentModelModule,
   ] as DocumentModelModule<any>[];
-  const driveId = generateId();
 
   async function buildServer(processor: IProcessor) {
     const builder = new ReactorBuilder(documentModels);
     const server = builder.build();
     await server.initialize();
 
+    const driveId = generateId();
     await server.addDrive({
       id: driveId,
       global: {
@@ -70,7 +70,7 @@ describe("Internal Listener", () => {
 
     await listenerManager?.setListener(driveId, listener);
 
-    return server;
+    return { driveId, server };
   }
 
   beforeEach(() => {
@@ -82,7 +82,7 @@ describe("Internal Listener", () => {
       return Promise.resolve();
     });
 
-    const server = await buildServer({
+    const { driveId, server } = await buildServer({
       onStrands: transmitFn,
       onDisconnect: () => Promise.resolve(),
     });
@@ -97,7 +97,7 @@ describe("Internal Listener", () => {
         driveId: drive.header.id,
         operations: [],
         scope: "global",
-        state: {},
+        state: drive.state.global,
       },
     ]);
 
@@ -148,8 +148,8 @@ describe("Internal Listener", () => {
             skip: 0,
             timestampUtcMs: expectUTCTimestamp(expect),
             type: "ADD_FILE",
-            previousState: expect.any(Object),
-            state: expect.any(Object),
+            previousState: drive.initialState.global,
+            state: (result.document!.state as any).global,
           }),
         ],
         scope: "global",
@@ -162,7 +162,7 @@ describe("Internal Listener", () => {
         driveId: drive.header.id,
         operations: [],
         scope: "global",
-        state: {},
+        state: document.state.global,
       }),
     ]);
 
@@ -223,7 +223,7 @@ describe("Internal Listener", () => {
             skip: 0,
             timestampUtcMs: expectUTCTimestamp(expect),
             type: "SET_MODEL_NAME",
-            previousState: expect.any(Object),
+            previousState: document.state.global,
             state,
           }),
         ],
@@ -258,7 +258,7 @@ describe("Internal Listener", () => {
             skip: 0,
             timestampUtcMs: expectUTCTimestamp(expect),
             type: "SET_MODEL_NAME",
-            previousState: expect.any(Object),
+            previousState: state,
             state: expect.objectContaining({ name: "test 2" }),
           }),
         ],
@@ -271,7 +271,7 @@ describe("Internal Listener", () => {
   test("should call disconnect function of processor", async () => {
     const disconnectFn = vitest.fn(() => Promise.resolve());
 
-    const server = await buildServer({
+    const { driveId, server } = await buildServer({
       onStrands: () => Promise.resolve(),
       onDisconnect: disconnectFn,
     });
