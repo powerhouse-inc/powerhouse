@@ -1,5 +1,7 @@
-import { loadRuntimeEnv } from "@powerhousedao/builder-tools";
-import { normalizeBasePath } from "@powerhousedao/builder-tools/browser";
+import {
+  loadRuntimeEnv,
+  normalizeBasePath,
+} from "@powerhousedao/builder-tools/browser";
 import type {
   FullPHGlobalConfig,
   PHDocumentEditorConfig,

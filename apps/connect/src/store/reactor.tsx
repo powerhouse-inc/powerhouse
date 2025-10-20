@@ -36,7 +36,7 @@ import {
   initFeatureFlags,
   isDualActionCreateEnabled,
 } from "../../feature-flags.js";
-import { phGlobalConfigFromEnv } from "../connect.config.js";
+import { phGlobalConfigFromEnv } from "@powerhousedao/connect/config";
 import {
   createBrowserDocumentDriveServer,
   createBrowserStorage,
