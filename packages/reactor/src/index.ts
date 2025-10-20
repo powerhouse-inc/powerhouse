@@ -47,8 +47,8 @@ export {
 } from "./queue/types.js";
 
 // Job Tracker
-export { type IJobTracker } from "./job-tracker/interfaces.js";
 export { InMemoryJobTracker } from "./job-tracker/in-memory-job-tracker.js";
+export { type IJobTracker } from "./job-tracker/interfaces.js";
 
 // Job Executor
 export {
@@ -100,13 +100,24 @@ export { KyselyOperationStore } from "./storage/kysely/store.js";
 export type { Database, OperationTable } from "./storage/kysely/types.js";
 
 // Read Models
+export { ReadModelCoordinator } from "./read-models/coordinator.js";
+export { KyselyDocumentView } from "./read-models/document-view.js";
 export {
   type IReadModel,
   type IReadModelCoordinator,
 } from "./read-models/interfaces.js";
-export { ReadModelCoordinator } from "./read-models/coordinator.js";
-export { KyselyDocumentView } from "./read-models/document-view.js";
 export type {
   DocumentViewDatabase,
   InsertableDocumentSnapshot,
 } from "./read-models/types.js";
+
+// Cache
+export { type IKeyValueStore } from "./cache/kv/interfaces.js";
+export { InMemoryKeyValueStore } from "./cache/kv/kv-store.js";
+export type {
+  CachedSnapshot,
+  DocumentStreamKey,
+  KeyframeSnapshot,
+  WriteCacheConfig,
+} from "./cache/types.js";
+export { type IWriteCache } from "./cache/write/interfaces.js";

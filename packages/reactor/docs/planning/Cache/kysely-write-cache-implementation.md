@@ -82,15 +82,15 @@ This is separate from IDocumentView (read-side projection) which optimizes queri
 ## Phase 1: Core Types and Interfaces
 
 ### Task 1.1: Create cache types file
-- [ ] Create `packages/reactor/src/cache/types.ts`
-- [ ] Define `WriteCacheConfig` type with options:
+- [x] Create `packages/reactor/src/cache/types.ts`
+- [x] Define `WriteCacheConfig` type with options:
   - `maxDocuments` (default: 1000)
   - `ringBufferSize` (default: 10)
   - `keyframeInterval` (default: 10) - persist every Nth revision
-- [ ] Define `DocumentStreamKey` type (documentId, scope, branch)
-- [ ] Define `CachedSnapshot` type (revision, document)
-- [ ] Define `KeyframeSnapshot` type for K/V store serialization
-- [ ] Export all types
+- [x] Define `DocumentStreamKey` type (documentId, scope, branch)
+- [x] Define `CachedSnapshot` type (revision, document)
+- [x] Define `KeyframeSnapshot` type for K/V store serialization
+- [x] Export all types
 
 **Acceptance Criteria:**
 - File compiles without errors
@@ -98,15 +98,15 @@ This is separate from IDocumentView (read-side projection) which optimizes queri
 - Default values: maxDocuments=1000, ringBufferSize=10, keyframeInterval=10
 
 ### Task 1.2: Create IWriteCache interface
-- [ ] Create `packages/reactor/src/cache/interfaces.ts`
-- [ ] Define `IWriteCache` interface with all methods from spec:
+- [x] Create `packages/reactor/src/cache/interfaces.ts`
+- [x] Define `IWriteCache` interface with all methods from spec:
   - `getState(documentId, documentType, scope, branch, targetRevision, signal): Promise<PHDocument>`
   - `putState(documentId, documentType, scope, branch, revision, document): void`
   - `invalidate(documentId, scope?, branch?): number`
   - `clear(): void`
   - `startup(): Promise<void>`
   - `shutdown(): Promise<void>`
-- [ ] Add comprehensive JSDoc comments for each method
+- [x] Add comprehensive JSDoc comments for each method
 
 **Acceptance Criteria:**
 - Interface matches specification exactly
@@ -114,10 +114,10 @@ This is separate from IDocumentView (read-side projection) which optimizes queri
 - JSDoc includes examples from spec
 
 ### Task 1.3: Update package exports
-- [ ] Add cache exports to `packages/reactor/src/index.ts`
-- [ ] Export IWriteCache interface
-- [ ] Export WriteCacheConfig type
-- [ ] Ensure proper module resolution
+- [x] Add cache exports to `packages/reactor/src/index.ts`
+- [x] Export IWriteCache interface
+- [x] Export WriteCacheConfig type
+- [x] Ensure proper module resolution
 
 **Acceptance Criteria:**
 - `pnpm tsc --build` passes in reactor package
@@ -126,7 +126,7 @@ This is separate from IDocumentView (read-side projection) which optimizes queri
 ## Phase 2: Ring Buffer Implementation
 
 ### Task 2.1: Create RingBuffer class
-- [ ] Create `packages/reactor/src/cache/ring-buffer.ts`
+- [ ] Create `packages/reactor/src/cache/buffer/ring-buffer.ts`
 - [ ] Implement generic `RingBuffer<T>` class with:
   - Private `buffer: T[]`
   - Private `head: number = 0`
@@ -159,7 +159,7 @@ This is separate from IDocumentView (read-side projection) which optimizes queri
 - Tests use vitest framework
 
 ### Task 2.3: Create DocumentRingBuffer wrapper
-- [ ] Create wrapper type in `packages/reactor/src/cache/ring-buffer.ts`
+- [ ] Create wrapper type in `packages/reactor/src/cache/buffer/ring-buffer.ts`
 - [ ] Define `DocumentRingBuffer` that wraps `RingBuffer<CachedSnapshot>`
 - [ ] Add helper method `findNearest(targetRevision?: number): CachedSnapshot | undefined`
   - Returns exact match if targetRevision provided and exists
@@ -175,7 +175,7 @@ This is separate from IDocumentView (read-side projection) which optimizes queri
 ## Phase 3: LRU Cache Implementation
 
 ### Task 3.1: Create LRU tracker
-- [ ] Create `packages/reactor/src/cache/lru-tracker.ts`
+- [ ] Create `packages/reactor/src/cache/lru/lru-tracker.ts`
 - [ ] Implement `LRUTracker<K>` class using Map for O(1) operations
 - [ ] Track access order with doubly-linked list structure
 - [ ] Implement `touch(key: K): void` - mark as most recently used
@@ -190,7 +190,7 @@ This is separate from IDocumentView (read-side projection) which optimizes queri
 - Classical OOP implementation
 
 ### Task 3.2: Create LRU tracker unit tests
-- [ ] Create `packages/reactor/test/cache/lru-tracker.test.ts`
+- [ ] Create `packages/reactor/test/cache/lru/lru-tracker.test.ts`
 - [ ] Test: should track most recently used items
 - [ ] Test: should evict least recently used item
 - [ ] Test: should handle touch updating order
