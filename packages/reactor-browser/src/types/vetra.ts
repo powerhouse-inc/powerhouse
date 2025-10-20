@@ -48,7 +48,7 @@ export type VetraDocumentModelModule = VetraMeta & {
   documentModel: DocumentModelPHState;
 };
 export type VetraEditorModule = VetraMeta & {
-  documentTypes: readonly string[];
+  documentTypes: string[];
   Component: React.ComponentType<any>;
 };
 

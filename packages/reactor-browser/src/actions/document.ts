@@ -1,7 +1,8 @@
-import type {
-  ConflictResolution,
-  DocumentTypeIcon,
-  FileUploadProgressCallback,
+import {
+  isDocumentTypeSupported,
+  type ConflictResolution,
+  type DocumentTypeIcon,
+  type FileUploadProgressCallback,
 } from "@powerhousedao/reactor-browser";
 import type {
   DocumentDriveDocument,
@@ -31,7 +32,6 @@ import {
   replayDocument,
 } from "document-model/core";
 import { UnsupportedDocumentTypeError } from "../errors.js";
-import { isDocumentTypeSupported } from "../utils/documents.js";
 import { getUserPermissions } from "../utils/user.js";
 import { queueActions, queueOperations, uploadOperations } from "./queue.js";
 
@@ -354,7 +354,7 @@ export async function addFileWithProgress(
   name?: string,
   parentFolder?: string,
   onProgress?: FileUploadProgressCallback,
-  documentTypes?: string[] | "all",
+  documentTypes?: string[],
   resolveConflict?: ConflictResolution,
 ) {
   logger.verbose(

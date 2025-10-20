@@ -1,17 +1,12 @@
 export function isDocumentTypeSupported(
   documentType: string,
-  supportedDocuments: string[] | "all" = [],
+  supportedDocuments: string[] | null | undefined,
 ): boolean {
-  if (supportedDocuments === "all") {
+  if (!supportedDocuments?.length) {
     return true;
   }
 
   return supportedDocuments.some((pattern) => {
-    // Universal match
-    if (pattern === "*") {
-      return true;
-    }
-
     // Path wildcard: "powerhouse/*"
     if (pattern.endsWith("/*")) {
       const prefix = pattern.slice(0, -2);
