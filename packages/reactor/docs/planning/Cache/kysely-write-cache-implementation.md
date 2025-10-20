@@ -161,14 +161,14 @@ This is separate from IDocumentView (read-side projection) which optimizes queri
 ## Phase 3: LRU Cache Implementation
 
 ### Task 3.1: Create LRU tracker
-- [ ] Create `packages/reactor/src/cache/lru/lru-tracker.ts`
-- [ ] Implement `LRUTracker<K>` class using Map for O(1) operations
-- [ ] Track access order with doubly-linked list structure
-- [ ] Implement `touch(key: K): void` - mark as most recently used
-- [ ] Implement `evict(): K | undefined` - return least recently used key
-- [ ] Implement `remove(key: K): void` - remove specific key from tracking
-- [ ] Implement `clear(): void` - reset tracker
-- [ ] Implement `get size(): number` getter
+- [x] Create `packages/reactor/src/cache/lru/lru-tracker.ts`
+- [x] Implement `LRUTracker<K>` class using Map for O(1) operations
+- [x] Track access order with doubly-linked list structure
+- [x] Implement `touch(key: K): void` - mark as most recently used
+- [x] Implement `evict(): K | undefined` - return least recently used key
+- [x] Implement `remove(key: K): void` - remove specific key from tracking
+- [x] Implement `clear(): void` - reset tracker
+- [x] Implement `get size(): number` getter
 
 **Acceptance Criteria:**
 - O(1) time complexity for touch operation
@@ -176,14 +176,14 @@ This is separate from IDocumentView (read-side projection) which optimizes queri
 - Classical OOP implementation
 
 ### Task 3.2: Create LRU tracker unit tests
-- [ ] Create `packages/reactor/test/cache/lru/lru-tracker.test.ts`
-- [ ] Test: should track most recently used items
-- [ ] Test: should evict least recently used item
-- [ ] Test: should handle touch updating order
-- [ ] Test: should handle removal of tracked items
-- [ ] Test: should clear all tracked items
-- [ ] Test: should maintain correct size
-- [ ] Test: should handle edge cases (empty, single item)
+- [x] Create `packages/reactor/test/cache/lru/lru-tracker.test.ts`
+- [x] Test: should track most recently used items
+- [x] Test: should evict least recently used item
+- [x] Test: should handle touch updating order
+- [x] Test: should handle removal of tracked items
+- [x] Test: should clear all tracked items
+- [x] Test: should maintain correct size
+- [x] Test: should handle edge cases (empty, single item)
 
 **Acceptance Criteria:**
 - All tests pass
