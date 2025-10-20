@@ -55,6 +55,11 @@ export const schema: DocumentNode = gql`
       docId: PHID
       input: AppModule_RemoveDocumentTypeInput
     ): Int
+    AppModule_setDocumentTypes(
+      driveId: String
+      docId: PHID
+      input: AppModule_SetDocumentTypesInput
+    ): Int
     AppModule_setDragAndDropEnabled(
       driveId: String
       docId: PHID
@@ -76,6 +81,9 @@ export const schema: DocumentNode = gql`
   }
   input AppModule_RemoveDocumentTypeInput {
     documentType: String!
+  }
+  input AppModule_SetDocumentTypesInput {
+    documentTypes: [String!]!
   }
 
   """

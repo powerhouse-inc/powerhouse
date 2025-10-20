@@ -5,12 +5,14 @@ import {
   type SetAppStatusInput,
   type AddDocumentTypeInput,
   type RemoveDocumentTypeInput,
+  type SetDocumentTypesInput,
 } from "../types.js";
 import {
   type SetAppNameAction,
   type SetAppStatusAction,
   type AddDocumentTypeAction,
   type RemoveDocumentTypeAction,
+  type SetDocumentTypesAction,
 } from "./actions.js";
 
 export const setAppName = (input: SetAppNameInput) =>
@@ -46,5 +48,14 @@ export const removeDocumentType = (input: RemoveDocumentTypeInput) =>
     { ...input },
     undefined,
     z.RemoveDocumentTypeInputSchema,
+    "global",
+  );
+
+export const setDocumentTypes = (input: SetDocumentTypesInput) =>
+  createAction<SetDocumentTypesAction>(
+    "SET_DOCUMENT_TYPES",
+    { ...input },
+    undefined,
+    z.SetDocumentTypesInputSchema,
     "global",
   );

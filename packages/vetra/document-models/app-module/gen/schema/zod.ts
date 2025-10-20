@@ -5,6 +5,7 @@ import type {
   RemoveDocumentTypeInput,
   SetAppNameInput,
   SetAppStatusInput,
+  SetDocumentTypesInput,
   SetDragAndDropEnabledInput,
   StatusType,
 } from "./types.js";
@@ -65,6 +66,14 @@ export function SetAppStatusInputSchema(): z.ZodObject<
 > {
   return z.object({
     status: StatusTypeSchema,
+  });
+}
+
+export function SetDocumentTypesInputSchema(): z.ZodObject<
+  Properties<SetDocumentTypesInput>
+> {
+  return z.object({
+    documentTypes: z.array(z.string()),
   });
 }
 

@@ -163,7 +163,7 @@ export async function generateDriveEditor(options: {
     name,
     dir,
     appId: appId ?? "drive-editor-id",
-    allowedDocumentTypes: allowedDocumentTypes ?? "",
+    allowedDocumentTypes: allowedDocumentTypes,
     isDragAndDropEnabled: isDragAndDropEnabled ?? true,
     skipFormat,
   });

@@ -4,6 +4,7 @@ import type {
   SetAppStatusInput,
   AddDocumentTypeInput,
   RemoveDocumentTypeInput,
+  SetDocumentTypesInput,
 } from "../types.js";
 
 export type SetAppNameAction = Action & {
@@ -22,9 +23,14 @@ export type RemoveDocumentTypeAction = Action & {
   type: "REMOVE_DOCUMENT_TYPE";
   input: RemoveDocumentTypeInput;
 };
+export type SetDocumentTypesAction = Action & {
+  type: "SET_DOCUMENT_TYPES";
+  input: SetDocumentTypesInput;
+};
 
 export type AppModuleBaseOperationsAction =
   | SetAppNameAction
   | SetAppStatusAction
   | AddDocumentTypeAction
-  | RemoveDocumentTypeAction;
+  | RemoveDocumentTypeAction
+  | SetDocumentTypesAction;

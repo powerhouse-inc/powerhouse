@@ -19,15 +19,13 @@ export const AppEditorForm = () => {
   const isDragAndDropEnabled = document.state.global.isDragAndDropEnabled;
   const allowedDocumentTypes = document.state.global.allowedDocumentTypes;
   const [appName, setAppName] = useState(documentName);
-  const [isConfirmed, setIsConfirmed] = useState(false);
+  const [isConfirmed, setIsConfirmed] = useState(status === "CONFIRMED");
   const documentTypesInSelectedDrive = useDocumentTypesInSelectedDrive();
   const supportedDocumentTypesInReactor = useSupportedDocumentTypesInReactor();
   const [selectedDocumentTypes, setSelectedDocumentTypes] = useState(
-    allowedDocumentTypes ??
-      documentTypesInSelectedDrive ??
-      supportedDocumentTypesInReactor ??
-      [],
+    allowedDocumentTypes ?? [],
   );
+
   // Use the debounce hook for name changes
 
   const onNameChange = (name: string) => {
@@ -44,15 +42,6 @@ export const AppEditorForm = () => {
   const onDragAndDropToggle = (enabled: boolean) => {
     if (enabled === isDragAndDropEnabled) return;
     dispatch(actions.setDragAndDropEnabled({ enabled }));
-  };
-
-  const onAddDocumentType = (documentType: string) => {
-    if (allowedDocumentTypes?.includes(documentType)) return;
-    dispatch(actions.addDocumentType({ documentType }));
-  };
-
-  const onRemoveDocumentType = (documentType: string) => {
-    dispatch(actions.removeDocumentType({ documentType }));
   };
 
   // Reset confirmation state if status changes back to DRAFT
@@ -82,7 +71,7 @@ export const AppEditorForm = () => {
     setSelectedDocumentTypes(
       selectedDocumentTypes.filter((dt) => dt !== documentType),
     );
-    onRemoveDocumentType(documentType);
+    dispatch(actions.removeDocumentType({ documentType }));
   };
 
   const handleAddAllDocumentTypesInDrive = () => {
@@ -93,10 +82,7 @@ export const AppEditorForm = () => {
       ]),
     ];
     setSelectedDocumentTypes(newDocumentTypes);
-    const actionsToDispatch = newDocumentTypes.map((documentType) =>
-      actions.addDocumentType({ documentType }),
-    );
-    dispatch(actionsToDispatch);
+    dispatch(actions.setDocumentTypes({ documentTypes: newDocumentTypes }));
   };
 
   const handleAddAllDocumentTypesInReactor = () => {
@@ -107,22 +93,15 @@ export const AppEditorForm = () => {
       ]),
     ];
     setSelectedDocumentTypes(newDocumentTypes);
-    const actionsToDispatch = newDocumentTypes.map((documentType) =>
-      actions.addDocumentType({ documentType }),
-    );
-    dispatch(actionsToDispatch);
+    dispatch(actions.setDocumentTypes({ documentTypes: newDocumentTypes }));
   };
 
   const handleAllowAnyDocumentType = () => {
     setSelectedDocumentTypes([]);
-    const actionsToDispatch = selectedDocumentTypes.map((documentType) =>
-      actions.removeDocumentType({ documentType }),
-    );
-    dispatch(actionsToDispatch);
+    dispatch(actions.setDocumentTypes({ documentTypes: [] }));
   };
 
   const handleDocumentTypeSelection = (selectedValue: string) => {
-    console.log({ selectedValue });
     if (selectedValue === ALL_IN_DRIVE) {
       handleAddAllDocumentTypesInDrive();
     } else if (selectedValue === ALL_IN_REACTOR) {

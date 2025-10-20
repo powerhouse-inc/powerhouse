@@ -79,6 +79,10 @@ export type SetAppStatusInput = {
   status: StatusType | `${StatusType}`;
 };
 
+export type SetDocumentTypesInput = {
+  documentTypes: Array<Scalars["String"]["input"]>;
+};
+
 export type SetDragAndDropEnabledInput = {
   enabled: Scalars["Boolean"]["input"];
 };

@@ -22,10 +22,9 @@ export const reducer: AppModuleBaseOperationsOperations = {
     const newAllowedDocumentTypes = existingAllowedDocumentTypes?.filter(
       (dt) => dt !== documentTypeToRemove,
     );
-    if (!newAllowedDocumentTypes?.length) {
-      state.allowedDocumentTypes = null;
-    } else {
-      state.allowedDocumentTypes = newAllowedDocumentTypes;
-    }
+    state.allowedDocumentTypes = newAllowedDocumentTypes ?? [];
+  },
+  setDocumentTypesOperation(state, action, dispatch) {
+    state.allowedDocumentTypes = action.input.documentTypes;
   },
 };

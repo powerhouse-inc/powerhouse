@@ -55,6 +55,15 @@ export const stateReducer: StateReducer<AppModulePHState> = (
       );
       break;
 
+    case "SET_DOCUMENT_TYPES":
+      z.SetDocumentTypesInputSchema().parse(action.input);
+      BaseOperationsReducer.setDocumentTypesOperation(
+        (state as any)[action.scope],
+        action as any,
+        dispatch,
+      );
+      break;
+
     case "SET_DRAG_AND_DROP_ENABLED":
       z.SetDragAndDropEnabledInputSchema().parse(action.input);
       DndOperationsReducer.setDragAndDropEnabledOperation(

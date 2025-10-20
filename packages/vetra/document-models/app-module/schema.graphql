@@ -47,6 +47,10 @@ input RemoveDocumentTypeInput {
   documentType: String!
 }
 
+input SetDocumentTypesInput {
+  documentTypes: [String!]!
+}
+
 # dnd_operations
 
 input SetDragAndDropEnabledInput {

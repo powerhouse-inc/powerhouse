@@ -56,7 +56,7 @@ export class AppGenerator extends BaseDocumentGen {
           name: state.name,
           config: this.config.PH_CONFIG,
           appId: appId,
-          allowedDocumentTypes: state.allowedDocumentTypes?.join(",") ?? "all",
+          allowedDocumentTypes: state.allowedDocumentTypes?.join(","),
           isDragAndDropEnabled: state.isDragAndDropEnabled,
         });
 

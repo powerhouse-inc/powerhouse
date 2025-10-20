@@ -79,6 +79,18 @@ export const documentModel: DocumentModelGlobalState = {
               examples: [],
               scope: "global",
             },
+            {
+              id: "b365727a-7df3-48f0-a4f8-02362f02ad1d",
+              name: "SET_DOCUMENT_TYPES",
+              description: "",
+              schema:
+                "input SetDocumentTypesInput {\n  documentTypes: [String!]!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
           ],
         },
         {
