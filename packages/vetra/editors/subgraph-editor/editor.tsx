@@ -1,4 +1,4 @@
-import { useSetPHGlobalEditorConfig } from "@powerhousedao/reactor-browser";
+import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
 import { useCallback } from "react";
 import { actions } from "../../document-models/subgraph-module/index.js";
 import { useSelectedSubgraphModuleDocument } from "../hooks/useVetraDocument.js";
@@ -6,7 +6,7 @@ import { SubgraphEditorForm } from "./components/SubgraphEditorForm.js";
 import { editorConfig } from "./config.js";
 
 export function Editor() {
-  useSetPHGlobalEditorConfig(editorConfig);
+  useSetPHDocumentEditorConfig(editorConfig);
   const [document, dispatch] = useSelectedSubgraphModuleDocument();
 
   const onNameChange = useCallback(

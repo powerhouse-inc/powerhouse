@@ -85,20 +85,15 @@ export {
   useVersionCheckInterval,
   useWarnOutdatedApp,
 } from "./config/connect.js";
-export {
-  setPHGlobalConfigByKey,
-  setPHGlobalEditorConfigByKey,
-} from "./config/set-config-by-key.js";
+export { setPHGlobalConfigByKey } from "./config/set-config-by-key.js";
 export {
   setDefaultPHGlobalConfig,
   setPHGlobalConfig,
+  useResetPHGlobalConfig,
   useSetDefaultPHGlobalConfig,
   useSetPHGlobalConfig,
 } from "./config/set-config-by-object.js";
-export {
-  usePHGlobalConfigByKey,
-  usePHGlobalEditorConfigByKey,
-} from "./config/use-value-by-key.js";
+export { usePHGlobalConfigByKey } from "./config/use-value-by-key.js";
 export { setConnectCrypto, useConnectCrypto, useSign } from "./crypto.js";
 export { setDid, useDid } from "./did.js";
 export { setDrives } from "./drives.js";

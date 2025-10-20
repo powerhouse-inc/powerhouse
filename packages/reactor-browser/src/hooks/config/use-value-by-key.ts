@@ -1,9 +1,13 @@
 import type {
+  PHDocumentEditorConfigKey,
+  PHDriveEditorConfigKey,
   PHGlobalConfigKey,
-  PHGlobalEditorConfigKey,
 } from "@powerhousedao/reactor-browser";
 import { phGlobalConfigHooks } from "./connect.js";
-import { phGlobalEditorConfigHooks } from "./editor.js";
+import {
+  phDocumentEditorConfigHooks,
+  phDriveEditorConfigHooks,
+} from "./editor.js";
 
 export function usePHGlobalConfigByKey<TKey extends PHGlobalConfigKey>(
   key: TKey,
@@ -12,13 +16,24 @@ export function usePHGlobalConfigByKey<TKey extends PHGlobalConfigKey>(
   return useValueHook();
 }
 
-/** Gets the value of an item in the global user config for a given key.
+/** Gets the value of an item in the global drive config for a given key.
  *
  * Strongly typed, inferred from type definition for the key.
  */
-export function usePHGlobalEditorConfigByKey<
-  TKey extends PHGlobalEditorConfigKey,
+export function usePHDriveEditorConfigByKey<
+  TKey extends PHDriveEditorConfigKey,
 >(key: TKey) {
-  const useValueHook = phGlobalEditorConfigHooks[key];
+  const useValueHook = phDriveEditorConfigHooks[key];
+  return useValueHook();
+}
+
+/** Gets the value of an item in the global document config for a given key.
+ *
+ * Strongly typed, inferred from type definition for the key.
+ */
+export function usePHDocumentEditorConfigByKey<
+  TKey extends PHDocumentEditorConfigKey,
+>(key: TKey) {
+  const useValueHook = phDocumentEditorConfigHooks[key];
   return useValueHook();
 }

@@ -45,7 +45,12 @@ describe("generateDriveEditor", () => {
 
   it("should generate a drive editor with the correct files and content", async () => {
     const name = "Atlas Drive Explorer";
-    await generateDriveEditor(name, config, "AtlasDriveExplorer");
+    await generateDriveEditor({
+      name,
+      config,
+      appId: "AtlasDriveExplorer",
+      allowedDocumentTypes: "thing-1,thing-2",
+    });
 
     await compile("tsconfig.document-editor.test.json");
 
@@ -81,7 +86,7 @@ describe("generateDriveEditor", () => {
 
   it("should generate a drive editor with default id when no appId is provided", async () => {
     const name = "TestApp";
-    await generateDriveEditor(name, config); // No appId provided
+    await generateDriveEditor({ name, config }); // No appId provided
 
     const editorDir = path.join(testDir, "test-app");
     const indexPath = path.join(editorDir, "index.ts");
@@ -121,7 +126,7 @@ export const module: EditorModule = {
 };`,
     );
 
-    await generateDriveEditor(name, config);
+    await generateDriveEditor({ name, config });
 
     const mainIndexContent = fs
       .readFileSync(mainIndexPath, "utf-8")

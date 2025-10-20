@@ -1,5 +1,5 @@
 import { useAllowedDocumentTypes } from "./config/editor.js";
-import { useSupportedDocumentTypes } from "./supported-document-types.js";
+import { useSupportedDocumentTypesInReactor } from "./supported-document-types.js";
 
 /** Returns the document types a drive editor supports.
  *
@@ -8,6 +8,6 @@ import { useSupportedDocumentTypes } from "./supported-document-types.js";
  */
 export function useDocumentTypes() {
   const allowedDocumentTypes = useAllowedDocumentTypes();
-  const supportedDocumentTypes = useSupportedDocumentTypes();
+  const supportedDocumentTypes = useSupportedDocumentTypesInReactor();
   return allowedDocumentTypes ?? supportedDocumentTypes;
 }

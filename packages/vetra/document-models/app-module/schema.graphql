@@ -18,22 +18,13 @@ scalar Upload
 type AppModuleState {
   name: String!
   status: StatusType!
-  documentTypes: [DocumentTypeItem!]
-  dragAndDrop: DragAndDropSettings
+  allowedDocumentTypes: [String!]
+  isDragAndDropEnabled: Boolean!
 }
 
 enum StatusType {
   DRAFT
   CONFIRMED
-}
-
-type DocumentTypeItem {
-  id: OID!
-  documentType: String!
-}
-
-type DragAndDropSettings {
-  enabled: Boolean!
 }
 
 
@@ -49,12 +40,11 @@ input SetAppStatusInput {
 }
 
 input AddDocumentTypeInput {
-  id: OID!
   documentType: String!
 }
 
 input RemoveDocumentTypeInput {
-  id: OID!
+  documentType: String!
 }
 
 # dnd_operations

@@ -13,10 +13,8 @@ import { reducer } from "./reducer.js";
 export const initialGlobalState: AppModuleGlobalState = {
   name: "",
   status: "DRAFT",
-  documentTypes: [{ id: "all-documents", documentType: "*" }],
-  dragAndDrop: {
-    enabled: true,
-  },
+  allowedDocumentTypes: null,
+  isDragAndDropEnabled: true,
 };
 export const initialLocalState: AppModuleLocalState = {};
 

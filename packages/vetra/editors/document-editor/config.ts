@@ -1,3 +1,5 @@
-import type { PHGlobalEditorConfig } from "@powerhousedao/reactor-browser";
+import type { PHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
 
-export const editorConfig: PHGlobalEditorConfig = {};
+export const editorConfig: PHDocumentEditorConfig = {
+  isExternalControlsEnabled: false,
+};

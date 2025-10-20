@@ -1,13 +1,89 @@
-import {
-  loadRuntimeEnv,
-  normalizeBasePath,
-} from "@powerhousedao/builder-tools/browser";
+import { loadRuntimeEnv } from "@powerhousedao/builder-tools";
+import { normalizeBasePath } from "@powerhousedao/builder-tools/browser";
+import type {
+  FullPHGlobalConfig,
+  PHDocumentEditorConfig,
+  PHDriveEditorConfig,
+  PHGlobalConfig,
+} from "@powerhousedao/reactor-browser";
 import { logger, setLogLevel } from "document-drive";
 
 // Load environment variables with validation and defaults
 export const env = loadRuntimeEnv({
   processEnv: import.meta.env,
 });
+
+function getRouterBasenameFromBasePath(basePath: string) {
+  return basePath.endsWith("/") ? basePath : basePath + "/";
+}
+
+function getPHGlobalConfigFromEnv(): PHGlobalConfig {
+  const basePath = env.PH_CONNECT_BASE_PATH || import.meta.env.BASE_URL;
+  const routerBasename = getRouterBasenameFromBasePath(basePath);
+  const config = {
+    basePath,
+    routerBasename,
+    allowList: undefined,
+    allowedDocumentTypes: [],
+    isDragAndDropEnabled: true,
+    isEditorDebugModeEnabled: false,
+    isEditorReadModeEnabled: false,
+    version: env.PH_CONNECT_VERSION,
+    logLevel: env.PH_CONNECT_LOG_LEVEL,
+    requiresHardRefresh: env.PH_CONNECT_REQUIRES_HARD_REFRESH,
+    warnOutdatedApp: env.PH_CONNECT_WARN_OUTDATED_APP,
+    studioMode: env.PH_CONNECT_STUDIO_MODE,
+    versionCheckInterval: env.PH_CONNECT_VERSION_CHECK_INTERVAL,
+    cliVersion: env.PH_CONNECT_CLI_VERSION,
+    fileUploadOperationsChunkSize:
+      env.PH_CONNECT_FILE_UPLOAD_OPERATIONS_CHUNK_SIZE,
+    gaTrackingId: env.PH_CONNECT_GA_TRACKING_ID,
+    defaultDrivesUrl: env.PH_CONNECT_DEFAULT_DRIVES_URL,
+    drivesPreserveStrategy: env.PH_CONNECT_DRIVES_PRESERVE_STRATEGY,
+    enabledEditors: env.PH_CONNECT_ENABLED_EDITORS?.split(","),
+    disabledEditors: env.PH_CONNECT_DISABLED_EDITORS.split(","),
+    analyticsDatabaseName: env.PH_CONNECT_ANALYTICS_DATABASE_NAME,
+    renownUrl: env.PH_CONNECT_RENOWN_URL,
+    renownNetworkId: env.PH_CONNECT_RENOWN_NETWORK_ID,
+    renownChainId: env.PH_CONNECT_RENOWN_CHAIN_ID,
+    sentryRelease: env.PH_CONNECT_SENTRY_RELEASE,
+    sentryDsn: env.PH_CONNECT_SENTRY_DSN,
+    sentryEnv: env.PH_CONNECT_SENTRY_ENV,
+    isDiffAnalyticsEnabled: env.PH_CONNECT_DIFF_ANALYTICS_ENABLED,
+    isDriveAnalyticsEnabled: env.PH_CONNECT_DRIVE_ANALYTICS_ENABLED,
+    isPublicDrivesEnabled: env.PH_CONNECT_PUBLIC_DRIVES_ENABLED,
+    isCloudDrivesEnabled: env.PH_CONNECT_CLOUD_DRIVES_ENABLED,
+    isLocalDrivesEnabled: env.PH_CONNECT_LOCAL_DRIVES_ENABLED,
+    isSentryTracingEnabled: env.PH_CONNECT_SENTRY_TRACING_ENABLED,
+    isExternalProcessorsEnabled: env.PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED,
+    isDocumentModelSelectionSettingsEnabled:
+      !env.PH_CONNECT_HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS,
+    isAddDriveEnabled: !env.PH_CONNECT_DISABLE_ADD_DRIVE,
+    isAddPublicDrivesEnabled: !env.PH_CONNECT_DISABLE_ADD_PUBLIC_DRIVES,
+    isDeletePublicDrivesEnabled: !env.PH_CONNECT_DISABLE_DELETE_PUBLIC_DRIVES,
+    isAddCloudDrivesEnabled: !env.PH_CONNECT_DISABLE_ADD_CLOUD_DRIVES,
+    isDeleteCloudDrivesEnabled: !env.PH_CONNECT_DISABLE_DELETE_CLOUD_DRIVES,
+    isAddLocalDrivesEnabled: !env.PH_CONNECT_DISABLE_ADD_LOCAL_DRIVES,
+    isDeleteLocalDrivesEnabled: !env.PH_CONNECT_DISABLE_DELETE_LOCAL_DRIVES,
+    isExternalControlsEnabled: !env.PH_CONNECT_EXTERNAL_PACKAGES_DISABLED,
+    isAnalyticsDatabaseWorkerEnabled:
+      !env.PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED,
+    isExternalPackagesEnabled: !env.PH_CONNECT_EXTERNAL_PACKAGES_DISABLED,
+  } satisfies FullPHGlobalConfig;
+
+  return config;
+}
+
+export const phGlobalConfigFromEnv = getPHGlobalConfigFromEnv();
+
+export const defaultPHDocumentEditorConfig: PHDocumentEditorConfig = {
+  isExternalControlsEnabled: phGlobalConfigFromEnv.isExternalControlsEnabled,
+};
+
+export const defaultPHDriveEditorConfig: PHDriveEditorConfig = {
+  allowedDocumentTypes: phGlobalConfigFromEnv.allowedDocumentTypes,
+  isDragAndDropEnabled: phGlobalConfigFromEnv.isDragAndDropEnabled,
+};
 
 // Set log level from validated config
 setLogLevel(env.PH_CONNECT_LOG_LEVEL);

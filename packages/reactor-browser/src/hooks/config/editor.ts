@@ -1,7 +1,9 @@
 import type {
-  PHGlobalEditorConfigHooks,
-  PHGlobalEditorConfigSetters,
-} from "../../types/config.js";
+  PHDocumentEditorConfigHooks,
+  PHDocumentEditorConfigSetters,
+  PHDriveEditorConfigHooks,
+  PHDriveEditorConfigSetters,
+} from "@powerhousedao/reactor-browser";
 import { makePHEventFunctions } from "../make-ph-event-functions.js";
 
 export const isExternalControlsEnabledEventFunctions = makePHEventFunctions(
@@ -58,14 +60,20 @@ export function useAllowedDocumentTypes() {
 export const addAllowedDocumentTypesEventHandler =
   allowedDocumentTypesEventFunctions.addEventHandler;
 
-export const phGlobalEditorConfigSetters: PHGlobalEditorConfigSetters = {
-  isExternalControlsEnabled: setIsExternalControlsEnabled,
+export const phDriveEditorConfigSetters: PHDriveEditorConfigSetters = {
   allowedDocumentTypes: setAllowedDocumentTypes,
   isDragAndDropEnabled: setIsDragAndDropEnabled,
 };
 
-export const phGlobalEditorConfigHooks: PHGlobalEditorConfigHooks = {
-  isExternalControlsEnabled: useIsExternalControlsEnabled,
+export const phDocumentEditorConfigSetters: PHDocumentEditorConfigSetters = {
+  isExternalControlsEnabled: setIsExternalControlsEnabled,
+};
+
+export const phDriveEditorConfigHooks: PHDriveEditorConfigHooks = {
   allowedDocumentTypes: useAllowedDocumentTypes,
   isDragAndDropEnabled: useIsDragAndDropEnabled,
+};
+
+export const phDocumentEditorConfigHooks: PHDocumentEditorConfigHooks = {
+  isExternalControlsEnabled: useIsExternalControlsEnabled,
 };

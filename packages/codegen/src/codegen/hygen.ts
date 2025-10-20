@@ -301,16 +301,36 @@ export async function hygenGenerateImportScript(
     { skipFormat, verbose },
   );
 }
-
-export async function hygenGenerateDriveEditor(
-  name: string,
+/* 
+name: string,
   dir: string,
   { skipFormat = false } = {},
   appId?: string,
   editorOptions?: {
     documentTypes: string[];
   },
-) {
+*/
+export async function hygenGenerateDriveEditor(options: {
+  name: string;
+  dir: string;
+  appId: string;
+  allowedDocumentTypes: string;
+  isDragAndDropEnabled: boolean;
+  skipFormat?: boolean;
+}) {
+  const {
+    name,
+    dir,
+    appId,
+    skipFormat,
+    allowedDocumentTypes,
+    isDragAndDropEnabled,
+  } = options;
+
+  const allowedDocumentTypesString = JSON.stringify(
+    allowedDocumentTypes.split(","),
+  );
+
   // Generate the drive editor files
   const args = [
     "powerhouse",
@@ -319,18 +339,13 @@ export async function hygenGenerateDriveEditor(
     name,
     "--root-dir",
     dir,
+    "--app-id",
+    appId,
+    "--allowed-document-types",
+    allowedDocumentTypesString,
+    "--is-drag-and-drop-enabled",
+    isDragAndDropEnabled ? "true" : "false",
   ];
-
-  if (appId) {
-    args.push("--app-id", appId);
-  }
-
-  if (editorOptions?.documentTypes.length) {
-    args.push(
-      "--drag-and-drop-document-types",
-      JSON.stringify(editorOptions.documentTypes),
-    );
-  }
 
   await run(args, { skipFormat });
 }

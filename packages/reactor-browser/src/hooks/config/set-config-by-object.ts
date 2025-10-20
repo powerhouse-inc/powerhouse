@@ -1,8 +1,10 @@
 import type {
+  PHDocumentEditorConfig,
+  PHDocumentEditorConfigKey,
+  PHDriveEditorConfig,
+  PHDriveEditorConfigKey,
   PHGlobalConfig,
   PHGlobalConfigKey,
-  PHGlobalEditorConfig,
-  PHGlobalEditorConfigKey,
 } from "@powerhousedao/reactor-browser";
 import { useEffect, useState } from "react";
 import { callGlobalSetterForKey } from "./utils.js";
@@ -23,6 +25,12 @@ export function useSetDefaultPHGlobalConfig(config: PHGlobalConfig) {
   }, [config, isInitialized]);
 }
 
+export function useResetPHGlobalConfig(defaultConfigForReset: PHGlobalConfig) {
+  return function reset() {
+    setPHGlobalConfig(defaultConfigForReset);
+  };
+}
+
 export function setPHGlobalConfig(config: Partial<PHGlobalConfig>) {
   for (const key of Object.keys(config) as PHGlobalConfigKey[]) {
     callGlobalSetterForKey(key, config[key]);
@@ -39,30 +47,60 @@ export function useSetPHGlobalConfig(config: Partial<PHGlobalConfig>) {
   }, [config, isInitialized]);
 }
 
-/** Sets the global user config.
+/** Sets the global drive config.
  *
- * Pass in a partial object of the global user config to set.
+ * Pass in a partial object of the global drive config to set.
  */
-export function setPHGlobalEditorConfig(config: Partial<PHGlobalEditorConfig>) {
-  for (const key of Object.keys(config) as PHGlobalEditorConfigKey[]) {
+export function setPHDriveEditorConfig(config: Partial<PHDriveEditorConfig>) {
+  for (const key of Object.keys(config) as PHDriveEditorConfigKey[]) {
     callGlobalSetterForKey(key, config[key]);
   }
 }
 
-/** Wrapper hook for setting the global user config.
+/** Sets the global document config.
  *
- * Automatically sets the global user config when the component mounts.
- *
- * Pass in a partial object of the global user config to set.
+ * Pass in a partial object of the global document config to set.
  */
-export function useSetPHGlobalEditorConfig(
-  config: Partial<PHGlobalEditorConfig>,
+export function setPHDocumentEditorConfig(
+  config: Partial<PHDocumentEditorConfig>,
+) {
+  for (const key of Object.keys(config) as PHDocumentEditorConfigKey[]) {
+    callGlobalSetterForKey(key, config[key]);
+  }
+}
+
+/** Wrapper hook for setting the global drive editor config.
+ *
+ * Automatically sets the global drive editor config when the component mounts.
+ *
+ * Pass in a partial object of the global drive editor config to set.
+ */
+export function useSetPHDriveEditorConfig(
+  config: Partial<PHDriveEditorConfig>,
 ) {
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     if (isInitialized) return;
-    setPHGlobalEditorConfig(config);
+    setPHDriveEditorConfig(config);
+    setIsInitialized(true);
+  }, [config, isInitialized]);
+}
+
+/** Wrapper hook for setting the global document editor config.
+ *
+ * Automatically sets the global document editor config when the component mounts.
+ *
+ * Pass in a partial object of the global document editor config to set.
+ */
+export function useSetPHDocumentEditorConfig(
+  config: Partial<PHDocumentEditorConfig>,
+) {
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  useEffect(() => {
+    if (isInitialized) return;
+    setPHDocumentEditorConfig(config);
     setIsInitialized(true);
   }, [config, isInitialized]);
 }

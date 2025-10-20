@@ -1,6 +1,6 @@
 import {
   useDocumentsInSelectedDrive,
-  useSupportedDocumentTypes,
+  useSupportedDocumentTypesInReactor,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentModelDocument, PHDocument } from "document-model";
 
@@ -13,7 +13,7 @@ function isDocumentModelDocument(
 export function useAvailableDocumentTypes(
   onlyDocumentTypesFromDriveDocuments = false,
 ): string[] {
-  const supportedDocumentTypes = useSupportedDocumentTypes() ?? [];
+  const supportedDocumentTypes = useSupportedDocumentTypesInReactor() ?? [];
   const documents = useDocumentsInSelectedDrive() ?? [];
   const documentModelDocumentsInSelectedDrive = documents.filter(
     isDocumentModelDocument,

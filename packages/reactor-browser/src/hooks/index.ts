@@ -1,19 +1,25 @@
 export { setAllDocuments, useAllDocuments } from "./all-documents.js";
 export { useNodesInSelectedDriveOrFolder } from "./child-nodes.js";
 export {
-  setAllowedDocumentTypes,
-  setIsDragAndDropEnabled,
-  setIsExternalControlsEnabled,
   useAllowedDocumentTypes,
   useIsDragAndDropEnabled,
   useIsExternalControlsEnabled,
 } from "./config/editor.js";
-export { setPHGlobalEditorConfigByKey } from "./config/set-config-by-key.js";
 export {
-  setPHGlobalEditorConfig,
-  useSetPHGlobalEditorConfig,
+  setPHDocumentEditorConfigByKey,
+  setPHDriveEditorConfigByKey,
+} from "./config/set-config-by-key.js";
+export {
+  setPHDriveEditorConfig,
+  setPHDocumentEditorConfig,
+  setPHGlobalConfig,
+  useSetPHDocumentEditorConfig,
+  useSetPHDriveEditorConfig,
 } from "./config/set-config-by-object.js";
-export { usePHGlobalEditorConfigByKey } from "./config/use-value-by-key.js";
+export {
+  usePHDocumentEditorConfigByKey,
+  usePHDriveEditorConfigByKey,
+} from "./config/use-value-by-key.js";
 export { useDocumentById } from "./document-by-id.js";
 export {
   useDocumentModelModuleById,
@@ -36,6 +42,7 @@ export { useFolderById } from "./folder-by-id.js";
 export { useImportScriptModules } from "./import-script-modules.js";
 export {
   useDocumentsInSelectedDrive,
+  useDocumentTypesInSelectedDrive,
   useFileNodesInSelectedDrive,
   useFolderNodesInSelectedDrive,
   useNodesInSelectedDrive,
@@ -70,7 +77,7 @@ export {
 export { useSelectedFolder } from "./selected-folder.js";
 export { setSelectedNode, useSelectedNode } from "./selected-node.js";
 export { useSubgraphModules } from "./subgraph-modules.js";
-export { useSupportedDocumentTypes } from "./supported-document-types.js";
+export { useSupportedDocumentTypesInReactor } from "./supported-document-types.js";
 export {
   setSelectedTimelineRevision,
   useSelectedTimelineRevision,

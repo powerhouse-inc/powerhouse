@@ -147,24 +147,26 @@ export async function generateProcessor(
     { skipFormat },
   );
 }
+export async function generateDriveEditor(options: {
+  name: string;
+  config: PowerhouseConfig;
+  appId?: string;
+  allowedDocumentTypes?: string;
+  isDragAndDropEnabled?: boolean;
+}) {
+  const { name, config, appId, allowedDocumentTypes, isDragAndDropEnabled } =
+    options;
+  const dir = config.editorsDir;
+  const skipFormat = config.skipFormat;
 
-export async function generateDriveEditor(
-  name: string,
-  config: PowerhouseConfig,
-  appId?: string,
-  editorOptions?: {
-    documentTypes: string[];
-  },
-) {
-  return hygenGenerateDriveEditor(
+  return hygenGenerateDriveEditor({
     name,
-    config.editorsDir,
-    {
-      skipFormat: config.skipFormat,
-    },
-    appId,
-    editorOptions,
-  );
+    dir,
+    appId: appId ?? "drive-editor-id",
+    allowedDocumentTypes: allowedDocumentTypes ?? "",
+    isDragAndDropEnabled: isDragAndDropEnabled ?? true,
+    skipFormat,
+  });
 }
 
 export async function generateImportScript(

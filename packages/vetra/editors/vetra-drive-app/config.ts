@@ -1,6 +1,6 @@
-import type { PHGlobalEditorConfig } from "@powerhousedao/reactor-browser";
+import type { PHDriveEditorConfig } from "@powerhousedao/reactor-browser";
 
-export const editorConfig: PHGlobalEditorConfig = {
+export const editorConfig: PHDriveEditorConfig = {
   allowedDocumentTypes: [
     "powerhouse/document-model",
     "powerhouse/app",
@@ -9,4 +9,5 @@ export const editorConfig: PHGlobalEditorConfig = {
     "powerhouse/subgraph",
     "powerhouse/package",
   ],
+  isDragAndDropEnabled: true,
 };

@@ -8,18 +8,24 @@ export const reducer: AppModuleBaseOperationsOperations = {
     state.status = action.input.status;
   },
   addDocumentTypeOperation(state, action, dispatch) {
-    const documentTypes = state.documentTypes ?? [];
-    documentTypes.push({
-      id: action.input.id,
-      documentType: action.input.documentType,
-    });
-    state.documentTypes = documentTypes;
+    const existingAllowedDocumentTypes = state.allowedDocumentTypes ?? [];
+    const newDocumentType = action.input.documentType;
+    const newAllowedDocumentTypesSet = new Set(
+      existingAllowedDocumentTypes,
+    ).add(newDocumentType);
+    const newAllowedDocumentTypes = [...newAllowedDocumentTypesSet];
+    state.allowedDocumentTypes = newAllowedDocumentTypes;
   },
   removeDocumentTypeOperation(state, action, dispatch) {
-    let documentTypes = state.documentTypes ?? [];
-    documentTypes = documentTypes.filter(
-      (documentType) => documentType.id !== action.input.id,
+    const existingAllowedDocumentTypes = state.allowedDocumentTypes;
+    const documentTypeToRemove = action.input.documentType;
+    const newAllowedDocumentTypes = existingAllowedDocumentTypes?.filter(
+      (dt) => dt !== documentTypeToRemove,
     );
-    state.documentTypes = documentTypes;
+    if (!newAllowedDocumentTypes?.length) {
+      state.allowedDocumentTypes = null;
+    } else {
+      state.allowedDocumentTypes = newAllowedDocumentTypes;
+    }
   },
 };

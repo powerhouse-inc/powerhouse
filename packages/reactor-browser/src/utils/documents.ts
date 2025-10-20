@@ -1,8 +1,8 @@
 export function isDocumentTypeSupported(
   documentType: string,
-  supportedDocuments: readonly string[] = [],
+  supportedDocuments: string[] | "all" = [],
 ): boolean {
-  if (supportedDocuments.length === 0) {
+  if (supportedDocuments === "all") {
     return true;
   }
 

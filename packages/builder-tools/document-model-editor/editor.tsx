@@ -1,4 +1,4 @@
-import { useSetPHGlobalEditorConfig } from "@powerhousedao/reactor-browser";
+import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
 import { pascalCase } from "change-case";
 import {
   addModule,
@@ -38,7 +38,7 @@ import {
 } from "./utils/helpers.js";
 
 export function DocumentModelEditor() {
-  useSetPHGlobalEditorConfig(editorConfig);
+  useSetPHDocumentEditorConfig(editorConfig);
   const [document, dispatch] = useSelectedDocumentModelDocument();
   const [scope, setScope] = useState<Scope>("global");
   const documentNodeName = document.header.name;

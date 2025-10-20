@@ -15,7 +15,7 @@ import {
   useSelectedDrive,
   useSelectedFolder,
   useSelectedNodePath,
-  useSetPHGlobalEditorConfig,
+  useSetPHDriveEditorConfig,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
 import { getDriveSharingType } from "document-drive";
@@ -23,7 +23,7 @@ import type { DocumentModelModule, EditorProps } from "document-model";
 import { editorConfig } from "./config.js";
 
 export function Editor(props: EditorProps) {
-  useSetPHGlobalEditorConfig(editorConfig);
+  useSetPHDriveEditorConfig(editorConfig);
   const { className, children } = props;
   const [selectedDrive] = useSelectedDrive();
   const {

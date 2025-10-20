@@ -1,4 +1,4 @@
-import { useSetPHGlobalEditorConfig } from "@powerhousedao/reactor-browser";
+import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
 import { useCallback } from "react";
 import type {
   AddDocumentTypeInput,
@@ -10,7 +10,7 @@ import { DocumentEditorForm } from "./components/DocumentEditorForm.js";
 import { editorConfig } from "./config.js";
 
 export function Editor() {
-  useSetPHGlobalEditorConfig(editorConfig);
+  useSetPHDocumentEditorConfig(editorConfig);
   const [document, dispatch] = useSelectedDocumentEditorDocument();
 
   const onEditorNameChange = useCallback(

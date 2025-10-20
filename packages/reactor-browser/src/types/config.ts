@@ -1,5 +1,6 @@
 export type PHGlobalConfig = PHCommonGlobalConfig &
-  PHGlobalEditorConfig &
+  PHDriveEditorConfig &
+  PHDocumentEditorConfig &
   PHDrivesGlobalConfig &
   PHAnalyticsGlobalConfig &
   PHRenownGlobalConfig &
@@ -12,23 +13,33 @@ export type PHGlobalConfigSetters =
 export type PHGlobalConfigHooks = PHGlobalConfigHooksForKey<PHGlobalConfigKey>;
 
 /**
- * Editor configuration settings which are globally available to your custom editors.
+ * Editor configuration settings which are globally available to your custom drive editors.
  *
  * Setting these will override the defaults when your editor is mounted.
  */
-export type PHGlobalEditorConfig = {
-  /** Used for drive editors, allows you to specify the document types that are allowed to be added to the drive. */
+export type PHDriveEditorConfig = {
+  /** Allows you to specify the document types that are allowed to be added to the drive.
+   * An empty array means that any document type is allowed.
+   */
   allowedDocumentTypes?: string[];
-  /** Whether external controls are enabled for the editor. Defaults to `true`. */
-  isExternalControlsEnabled?: boolean;
-  /** Whether drag and drop is enabled for the editor. Defaults to `false`. */
+  /** Whether drag and drop is enabled for the drive editor. */
   isDragAndDropEnabled?: boolean;
 };
-export type PHGlobalEditorConfigKey = keyof PHGlobalEditorConfig;
-export type PHGlobalEditorConfigSetters =
-  PHGlobalConfigSettersForKey<PHGlobalEditorConfigKey>;
-export type PHGlobalEditorConfigHooks =
-  PHGlobalConfigHooksForKey<PHGlobalEditorConfigKey>;
+export type PHDriveEditorConfigKey = keyof PHDriveEditorConfig;
+export type PHDriveEditorConfigSetters =
+  PHGlobalConfigSettersForKey<PHDriveEditorConfigKey>;
+export type PHDriveEditorConfigHooks =
+  PHGlobalConfigHooksForKey<PHDriveEditorConfigKey>;
+
+export type PHDocumentEditorConfig = {
+  /** Whether external controls are enabled for the document editor. */
+  isExternalControlsEnabled?: boolean;
+};
+export type PHDocumentEditorConfigKey = keyof PHDocumentEditorConfig;
+export type PHDocumentEditorConfigSetters =
+  PHGlobalConfigSettersForKey<PHDocumentEditorConfigKey>;
+export type PHDocumentEditorConfigHooks =
+  PHGlobalConfigHooksForKey<PHDocumentEditorConfigKey>;
 
 export type PHCommonGlobalConfig = {
   basePath?: string;

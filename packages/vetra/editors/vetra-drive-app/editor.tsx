@@ -8,7 +8,7 @@ import {
   showDeleteNodeModal,
   useDocumentModelModules,
   useSelectedDrive,
-  useSetPHGlobalEditorConfig,
+  useSetPHDriveEditorConfig,
 } from "@powerhousedao/reactor-browser";
 import { useAnalyticsDatabaseName } from "@powerhousedao/reactor-browser/connect";
 import type { FileNode } from "document-drive";
@@ -121,7 +121,7 @@ const BaseEditorWithDropZone = (props: EditorProps) => (
 );
 
 export function Editor(props: EditorProps) {
-  useSetPHGlobalEditorConfig(editorConfig);
+  useSetPHDriveEditorConfig(editorConfig);
   const analyticsDatabaseName = useAnalyticsDatabaseName();
   return (
     <WagmiContext>

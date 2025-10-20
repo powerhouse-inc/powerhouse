@@ -1,15 +1,18 @@
 import type {
+  PHDocumentEditorConfigKey,
+  PHDriveEditorConfigKey,
   PHGlobalConfigHooks,
   PHGlobalConfigHooksForKey,
   PHGlobalConfigKey,
   PHGlobalConfigSetters,
   PHGlobalConfigSettersForKey,
-  PHGlobalEditorConfigKey,
 } from "@powerhousedao/reactor-browser";
 import { makePHEventFunctions } from "../make-ph-event-functions.js";
 import {
-  phGlobalEditorConfigHooks,
-  phGlobalEditorConfigSetters,
+  phDocumentEditorConfigHooks,
+  phDocumentEditorConfigSetters,
+  phDriveEditorConfigHooks,
+  phDriveEditorConfigSetters,
 } from "./editor.js";
 
 export const {
@@ -302,7 +305,10 @@ export const useAllowList = allowListEventFunctions.useValue;
 /** Adds an event handler for when the allow list for Connect changes. */
 export const addAllowListEventHandler = allowListEventFunctions.addEventHandler;
 
-type NonUserConfigKey = Exclude<PHGlobalConfigKey, PHGlobalEditorConfigKey>;
+type NonUserConfigKey = Exclude<
+  PHGlobalConfigKey,
+  PHDriveEditorConfigKey | PHDocumentEditorConfigKey
+>;
 type NonUserConfigSetters = PHGlobalConfigSettersForKey<NonUserConfigKey>;
 type NonUserConfigHooks = PHGlobalConfigHooksForKey<NonUserConfigKey>;
 
@@ -353,7 +359,8 @@ const nonUserConfigSetters: NonUserConfigSetters = {
 };
 
 export const phGlobalConfigSetters: PHGlobalConfigSetters = {
-  ...phGlobalEditorConfigSetters,
+  ...phDriveEditorConfigSetters,
+  ...phDocumentEditorConfigSetters,
   ...nonUserConfigSetters,
 };
 
@@ -404,6 +411,7 @@ const nonUserConfigHooks: NonUserConfigHooks = {
 };
 
 export const phGlobalConfigHooks: PHGlobalConfigHooks = {
-  ...phGlobalEditorConfigHooks,
+  ...phDriveEditorConfigHooks,
+  ...phDocumentEditorConfigHooks,
   ...nonUserConfigHooks,
 };

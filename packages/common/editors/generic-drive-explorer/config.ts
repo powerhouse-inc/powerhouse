@@ -1,7 +1,6 @@
-import type { PHGlobalEditorConfig } from "@powerhousedao/reactor-browser";
+import type { PHDriveEditorConfig } from "@powerhousedao/reactor-browser";
 
-export const editorConfig: PHGlobalEditorConfig = {
-  allowedDocumentTypes: undefined,
-  isExternalControlsEnabled: false,
+export const editorConfig: PHDriveEditorConfig = {
+  allowedDocumentTypes: [],
   isDragAndDropEnabled: true,
 };
