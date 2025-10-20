@@ -24,41 +24,6 @@ export type WriteCacheConfig = {
 };
 
 /**
- * Statistics about cache performance
- */
-export type CacheStats = {
-  /** Total number of getState() calls */
-  totalGets: number;
-
-  /** Number of cache hits */
-  hits: number;
-
-  /** Number of cache misses */
-  misses: number;
-
-  /** Number of cold misses (no cached document for stream) */
-  coldMisses: number;
-
-  /** Number of warm misses (had older revision, applied incremental operations) */
-  warmMisses: number;
-
-  /** Hit rate (hits / totalGets) */
-  hitRate: number;
-
-  /** Current number of cached document streams */
-  cachedDocuments: number;
-
-  /** Total number of cached snapshots across all ring buffers */
-  totalSnapshots: number;
-
-  /** Number of evictions performed */
-  evictions: number;
-
-  /** Total memory usage estimate in bytes */
-  estimatedMemoryBytes?: number;
-};
-
-/**
  * In-memory LRU cache for document snapshots with ring buffer per document
  */
 export interface IWriteCache {
@@ -123,16 +88,8 @@ export interface IWriteCache {
 
   /**
    * Clears all cached data.
-   * Resets statistics.
    */
   clear(): void;
-
-  /**
-   * Returns cache statistics for monitoring and optimization.
-   *
-   * @returns Current cache statistics
-   */
-  getStats(): CacheStats;
 
   /**
    * Performs startup initialization.
@@ -177,11 +134,6 @@ const updatedDocument = module.reducer(document, action);
 // Store the resulting document in cache for future executions
 cache.putState(documentId, documentType, scope, branch, finalRevision, updatedDocument);
 
-// Check cache performance
-const stats = cache.getStats();
-console.log(`Cache hit rate: ${(stats.hitRate * 100).toFixed(1)}%`);
-console.log(`Cached documents: ${stats.cachedDocuments}`);
-
 // Invalidate cache when document is deleted or significant changes occur
 cache.invalidate(documentId);
 
@@ -190,46 +142,6 @@ cache.invalidate(documentId, 'global');
 
 // Or invalidate specific stream
 cache.invalidate(documentId, 'global', 'main');
-```
-
-### Monitoring and Management
-
-```tsx
-// Monitor memory usage
-const stats = cache.getStats();
-if (stats.estimatedMemoryBytes && stats.estimatedMemoryBytes > MAX_MEMORY) {
-  console.warn('Cache memory usage exceeds threshold');
-  // Consider reducing maxDocuments or ringBufferSize, or clear cache
-  cache.clear();
-}
-
-// Periodic stats logging
-setInterval(() => {
-  const stats = cache.getStats();
-  logger.info('Write cache stats', {
-    hitRate: stats.hitRate,
-    cachedDocs: stats.cachedDocuments,
-    totalSnapshots: stats.totalSnapshots,
-    evictions: stats.evictions,
-    coldMisses: stats.coldMisses,
-    warmMisses: stats.warmMisses
-  });
-
-  // Warm miss ratio indicates ring buffer effectiveness
-  const warmMissRatio = stats.warmMisses / (stats.coldMisses + stats.warmMisses);
-  if (warmMissRatio < 0.5) {
-    logger.warn('Low warm miss ratio - consider increasing ringBufferSize');
-  }
-
-  // Reset stats for next period
-  cache.resetStats();
-}, 60000);
-
-// Clear cache during low-traffic periods or high memory pressure
-if (memoryPressure === 'critical') {
-  cache.clear();
-  console.log('Cache cleared due to memory pressure');
-}
 ```
 
 ### Links
