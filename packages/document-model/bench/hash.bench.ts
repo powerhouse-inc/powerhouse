@@ -33,7 +33,6 @@ const data64k = makeBytes(64 * 1024);
 const data1m = makeBytes(1024 * 1024);
 
 const stringPayloads = {"smallStr": smallStr, "jsonStr": jsonStr}
-const bytePayloads = {"data1k":data1k, "data64k":data64k, "data1m":data1m};
 
 const baseDocument = {
   documentId: "doc-123",
@@ -58,14 +57,32 @@ describe("hashBrowser - strings", () => {
   }
 });
 
-describe("hashBrowser - bytes", () => {
+describe("hashBrowser - bytes (1kb)", () => {
   for (const algorithm of supportedAlgorithms) {
     for (const encoding of supportedEncodings) {
-      for (const [byteName, byteValue] of Object.entries(bytePayloads)) {
-        bench(`${algorithm} ${encoding}, ${byteName}`, () => {
-          hashBrowser(byteValue, algorithm, encoding);
-        });
-      }
+      bench(`${algorithm} ${encoding}, 1kb`, () => {
+        hashBrowser(data1k, algorithm, encoding);
+      });
+    }
+  }
+});
+
+describe("hashBrowser - bytes (64kb)", () => {
+  for (const algorithm of supportedAlgorithms) {
+    for (const encoding of supportedEncodings) {
+      bench(`${algorithm} ${encoding}, 64kb`, () => {
+        hashBrowser(data64k, algorithm, encoding);
+      });
+    }
+  }
+});
+
+describe("hashBrowser - bytes (lmb)", () => {
+  for (const algorithm of supportedAlgorithms) {
+    for (const encoding of supportedEncodings) {
+      bench(`${algorithm} ${encoding}, 1mb`, () => {
+        hashBrowser(data1m, algorithm, encoding);
+      });
     }
   }
 });
