@@ -37,7 +37,7 @@ function createMockRegistry(): IDocumentModelRegistry {
   };
 }
 
-function createMockDocument(): PHDocument {
+function createTestDocument(): PHDocument {
   const doc = documentModelDocumentModelModule.utils.createDocument();
   return doc;
 }
@@ -67,35 +67,40 @@ describe("KyselyWriteCache", () => {
   });
 
   describe("putState and basic tracking", () => {
-    it("should store and track documents", () => {
-      const doc1 = createMockDocument();
-      const doc2 = createMockDocument();
+    it("should store and track documents", async () => {
+      const doc1 = createTestDocument();
 
       cache.putState("doc1", "test/type", "global", "main", 1, doc1);
-      cache.putState("doc1", "test/type", "global", "main", 2, doc2);
 
-      expect(cache).toBeDefined();
+      const retrieved = await cache.getState(
+        "doc1",
+        "test/type",
+        "global",
+        "main",
+        1,
+      );
+
+      expect(retrieved).toEqual(doc1);
     });
 
     it("should deep copy documents on put", () => {
-      const doc = createMockDocument();
+      const doc = createTestDocument();
       const originalDoc = structuredClone(doc);
 
       cache.putState("doc1", "test/type", "global", "main", 1, doc);
 
-      (doc.state as any).testField = "modified";
+      doc.state.document.version = "100";
 
-      expect((doc.state as any).testField).toBe("modified");
-      expect((originalDoc.state as any).testField).toBeUndefined();
+      expect(doc.state.document.version).toBe("100");
+      expect(originalDoc.state.document.version).not.toBe("100");
     });
 
     it("should evict LRU stream when at capacity", () => {
-      const doc = createMockDocument();
+      const doc = createTestDocument();
 
       cache.putState("doc1", "test/type", "global", "main", 1, doc);
       cache.putState("doc2", "test/type", "global", "main", 1, doc);
       cache.putState("doc3", "test/type", "global", "main", 1, doc);
-
       cache.putState("doc4", "test/type", "global", "main", 1, doc);
 
       const evicted = cache.invalidate("doc1", "global", "main");
@@ -109,7 +114,7 @@ describe("KyselyWriteCache", () => {
         "global",
         "main",
         1,
-        createMockDocument(),
+        createTestDocument(),
       );
       cache.putState(
         "doc1",
@@ -117,7 +122,7 @@ describe("KyselyWriteCache", () => {
         "global",
         "main",
         2,
-        createMockDocument(),
+        createTestDocument(),
       );
       cache.putState(
         "doc1",
@@ -125,14 +130,14 @@ describe("KyselyWriteCache", () => {
         "global",
         "main",
         3,
-        createMockDocument(),
+        createTestDocument(),
       );
 
       expect(cache).toBeDefined();
     });
 
     it("should handle multiple scopes/branches separately", () => {
-      const doc = createMockDocument();
+      const doc = createTestDocument();
 
       cache.putState("doc1", "test/type", "global", "main", 1, doc);
       cache.putState("doc1", "test/type", "global", "feature", 1, doc);
@@ -159,7 +164,7 @@ describe("KyselyWriteCache", () => {
         highCapacityConfig,
       );
 
-      const doc = createMockDocument();
+      const doc = createTestDocument();
       cacheWithHigherCapacity.putState(
         "doc1",
         "test/type",
@@ -241,7 +246,7 @@ describe("KyselyWriteCache", () => {
 
   describe("clear", () => {
     it("should clear entire cache", () => {
-      const doc = createMockDocument();
+      const doc = createTestDocument();
       cache.putState("doc1", "test/type", "global", "main", 1, doc);
       cache.putState("doc2", "test/type", "global", "main", 1, doc);
 
@@ -254,8 +259,8 @@ describe("KyselyWriteCache", () => {
 
   describe("keyframe persistence", () => {
     it("should persist keyframes at interval boundaries", async () => {
-      const doc10 = createMockDocument();
-      const doc20 = createMockDocument();
+      const doc10 = createTestDocument();
+      const doc20 = createTestDocument();
 
       cache.putState("doc1", "test/type", "global", "main", 10, doc10);
       cache.putState("doc1", "test/type", "global", "main", 20, doc20);
@@ -290,8 +295,8 @@ describe("KyselyWriteCache", () => {
     });
 
     it("should not persist non-keyframe revisions", async () => {
-      const doc5 = createMockDocument();
-      const doc15 = createMockDocument();
+      const doc5 = createTestDocument();
+      const doc15 = createTestDocument();
 
       cache.putState("doc1", "test/type", "global", "main", 5, doc5);
       cache.putState("doc1", "test/type", "global", "main", 15, doc15);
@@ -314,7 +319,7 @@ describe("KyselyWriteCache", () => {
         config,
       );
 
-      const doc10 = createMockDocument();
+      const doc10 = createTestDocument();
 
       expect(() => {
         failingCache.putState("doc1", "test/type", "global", "main", 10, doc10);
@@ -336,7 +341,7 @@ describe("KyselyWriteCache", () => {
 
   describe("LRU eviction", () => {
     it("should evict least recently used stream", () => {
-      const doc = createMockDocument();
+      const doc = createTestDocument();
 
       cache.putState("doc1", "test/type", "global", "main", 1, doc);
       cache.putState("doc2", "test/type", "global", "main", 1, doc);
@@ -351,7 +356,7 @@ describe("KyselyWriteCache", () => {
     });
 
     it("should update LRU on putState", () => {
-      const doc = createMockDocument();
+      const doc = createTestDocument();
 
       cache.putState("doc1", "test/type", "global", "main", 1, doc);
       cache.putState("doc2", "test/type", "global", "main", 1, doc);
@@ -372,9 +377,9 @@ describe("KyselyWriteCache", () => {
 
   describe("getState - cache hit", () => {
     it("should return exact revision match on cache hit", async () => {
-      const doc1 = createMockDocument();
-      const doc2 = createMockDocument();
-      const doc3 = createMockDocument();
+      const doc1 = createTestDocument();
+      const doc2 = createTestDocument();
+      const doc3 = createTestDocument();
 
       cache.putState("doc1", "test/type", "global", "main", 1, doc1);
       cache.putState("doc1", "test/type", "global", "main", 2, doc2);
@@ -393,9 +398,9 @@ describe("KyselyWriteCache", () => {
     });
 
     it("should return newest snapshot when targetRevision undefined", async () => {
-      const doc1 = createMockDocument();
-      const doc2 = createMockDocument();
-      const doc3 = createMockDocument();
+      const doc1 = createTestDocument();
+      const doc2 = createTestDocument();
+      const doc3 = createTestDocument();
 
       cache.putState("doc1", "test/type", "global", "main", 1, doc1);
       cache.putState("doc1", "test/type", "global", "main", 2, doc2);
@@ -413,7 +418,7 @@ describe("KyselyWriteCache", () => {
     });
 
     it("should return deep copy (mutations don't affect cache)", async () => {
-      const doc = createMockDocument();
+      const doc = createTestDocument();
 
       cache.putState("doc1", "test/type", "global", "main", 1, doc);
 
@@ -439,7 +444,7 @@ describe("KyselyWriteCache", () => {
     });
 
     it("should update LRU on cache hit", async () => {
-      const doc = createMockDocument();
+      const doc = createTestDocument();
 
       cache.putState("doc1", "test/type", "global", "main", 1, doc);
       cache.putState("doc2", "test/type", "global", "main", 1, doc);
@@ -457,7 +462,7 @@ describe("KyselyWriteCache", () => {
     });
 
     it("should respect abort signal", async () => {
-      const doc = createMockDocument();
+      const doc = createTestDocument();
       cache.putState("doc1", "test/type", "global", "main", 1, doc);
 
       const controller = new AbortController();
@@ -679,6 +684,307 @@ describe("KyselyWriteCache - Cold Miss Rebuild", () => {
         undefined,
         controller.signal,
       ),
+    ).rejects.toThrow("Operation aborted");
+  });
+});
+
+describe("KyselyWriteCache - Warm Miss Rebuild", () => {
+  let keyframeStore: IKeyframeStore;
+  let operationStore: IOperationStore;
+  let registry: IDocumentModelRegistry;
+  let cache: KyselyWriteCache;
+  let config: WriteCacheConfig;
+  let db: any;
+
+  beforeEach(async () => {
+    const opStoreSetup = await createTestOperationStore();
+    operationStore = opStoreSetup.store;
+    keyframeStore = opStoreSetup.keyframeStore;
+    db = opStoreSetup.db;
+
+    const mockRegistry = {
+      registerModules: vi.fn(),
+      unregisterModules: vi.fn(),
+      getModule: vi.fn().mockReturnValue({
+        reducer: (doc: PHDocument) => {
+          return doc;
+        },
+        utils: documentModelDocumentModelModule.utils,
+      }),
+      getAllModules: vi.fn(),
+      clear: vi.fn(),
+    };
+
+    registry = mockRegistry;
+
+    config = {
+      maxDocuments: 10,
+      ringBufferSize: 5,
+      keyframeInterval: 10,
+    };
+    cache = new KyselyWriteCache(
+      keyframeStore,
+      operationStore,
+      registry,
+      config,
+    );
+    await cache.startup();
+  });
+
+  afterEach(async () => {
+    await cache.shutdown();
+    if (db) {
+      await db.destroy();
+    }
+  });
+
+  it("should use cached base revision for warm miss", async () => {
+    const docId = "test-warm-1";
+    const docType = "powerhouse/document-model";
+
+    const operations: Operation[] = [];
+    for (let i = 1; i <= 20; i++) {
+      operations.push(
+        createTestOperation({
+          id: `op-test-warm-1-${i}`,
+          index: i,
+          skip: 0,
+        }),
+      );
+    }
+
+    await operationStore.apply(docId, docType, "global", "main", 0, (txn) => {
+      for (const op of operations) {
+        txn.addOperations(op);
+      }
+    });
+
+    const doc10 = await cache.getState(docId, docType, "global", "main", 10);
+    expect(doc10).toBeDefined();
+
+    const getSinceSpy = vi.spyOn(operationStore, "getSince");
+
+    const doc15 = await cache.getState(docId, docType, "global", "main", 15);
+    expect(doc15).toBeDefined();
+
+    expect(getSinceSpy).toHaveBeenCalledWith(
+      docId,
+      "global",
+      "main",
+      10,
+      undefined,
+      undefined,
+    );
+  });
+
+  it("should only load operations after base revision", async () => {
+    const docId = "test-warm-2";
+    const docType = "powerhouse/document-model";
+
+    const operations: Operation[] = [];
+    for (let i = 1; i <= 30; i++) {
+      operations.push(
+        createTestOperation({
+          id: `op-test-warm-2-${i}`,
+          index: i,
+          skip: 0,
+        }),
+      );
+    }
+
+    await operationStore.apply(docId, docType, "global", "main", 0, (txn) => {
+      for (const op of operations) {
+        txn.addOperations(op);
+      }
+    });
+
+    await cache.getState(docId, docType, "global", "main", 10);
+
+    const getSinceSpy = vi.spyOn(operationStore, "getSince");
+
+    await cache.getState(docId, docType, "global", "main", 20);
+
+    expect(getSinceSpy).toHaveBeenCalledWith(
+      docId,
+      "global",
+      "main",
+      10,
+      undefined,
+      undefined,
+    );
+
+    const call = getSinceSpy.mock.calls[0];
+    expect(call[3]).toBe(10);
+  });
+
+  it("should build to exact targetRevision", async () => {
+    const docId = "test-warm-3";
+    const docType = "powerhouse/document-model";
+
+    const operations: Operation[] = [];
+    for (let i = 1; i <= 25; i++) {
+      operations.push(
+        createTestOperation({
+          id: `op-test-warm-3-${i}`,
+          index: i,
+          skip: 0,
+        }),
+      );
+    }
+
+    await operationStore.apply(docId, docType, "global", "main", 0, (txn) => {
+      for (const op of operations) {
+        txn.addOperations(op);
+      }
+    });
+
+    await cache.getState(docId, docType, "global", "main", 10);
+
+    const doc17 = await cache.getState(docId, docType, "global", "main", 17);
+    expect(doc17).toBeDefined();
+  });
+
+  it("should cache result after warm rebuild", async () => {
+    const docId = "test-warm-4";
+    const docType = "powerhouse/document-model";
+
+    const operations: Operation[] = [];
+    for (let i = 1; i <= 20; i++) {
+      operations.push(
+        createTestOperation({
+          id: `op-test-warm-4-${i}`,
+          index: i,
+          skip: 0,
+        }),
+      );
+    }
+
+    await operationStore.apply(docId, docType, "global", "main", 0, (txn) => {
+      for (const op of operations) {
+        txn.addOperations(op);
+      }
+    });
+
+    await cache.getState(docId, docType, "global", "main", 10);
+
+    const getSinceSpy = vi.spyOn(operationStore, "getSince");
+
+    await cache.getState(docId, docType, "global", "main", 15);
+
+    expect(getSinceSpy).toHaveBeenCalledTimes(1);
+
+    await cache.getState(docId, docType, "global", "main", 15);
+
+    expect(getSinceSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("should handle multiple revisions in ring buffer", async () => {
+    const docId = "test-warm-5";
+    const docType = "powerhouse/document-model";
+
+    const operations: Operation[] = [];
+    for (let i = 1; i <= 50; i++) {
+      operations.push(
+        createTestOperation({
+          id: `op-test-warm-5-${i}`,
+          index: i,
+          skip: 0,
+        }),
+      );
+    }
+
+    await operationStore.apply(docId, docType, "global", "main", 0, (txn) => {
+      for (const op of operations) {
+        txn.addOperations(op);
+      }
+    });
+
+    await cache.getState(docId, docType, "global", "main", 10);
+    await cache.getState(docId, docType, "global", "main", 20);
+    await cache.getState(docId, docType, "global", "main", 30);
+
+    const getSinceSpy = vi.spyOn(operationStore, "getSince");
+
+    await cache.getState(docId, docType, "global", "main", 35);
+
+    expect(getSinceSpy).toHaveBeenCalledWith(
+      docId,
+      "global",
+      "main",
+      30,
+      undefined,
+      undefined,
+    );
+  });
+
+  it("should choose nearest older revision as base", async () => {
+    const docId = "test-warm-6";
+    const docType = "powerhouse/document-model";
+
+    const operations: Operation[] = [];
+    for (let i = 1; i <= 100; i++) {
+      operations.push(
+        createTestOperation({
+          id: `op-test-warm-6-${i}`,
+          index: i,
+          skip: 0,
+        }),
+      );
+    }
+
+    await operationStore.apply(docId, docType, "global", "main", 0, (txn) => {
+      for (const op of operations) {
+        txn.addOperations(op);
+      }
+    });
+
+    await cache.getState(docId, docType, "global", "main", 10);
+    await cache.getState(docId, docType, "global", "main", 30);
+    await cache.getState(docId, docType, "global", "main", 50);
+    await cache.getState(docId, docType, "global", "main", 70);
+
+    const getSinceSpy = vi.spyOn(operationStore, "getSince");
+
+    await cache.getState(docId, docType, "global", "main", 65);
+
+    expect(getSinceSpy).toHaveBeenCalledWith(
+      docId,
+      "global",
+      "main",
+      50,
+      undefined,
+      undefined,
+    );
+  });
+
+  it("should handle warm miss with abort signal", async () => {
+    const docId = "test-warm-7";
+    const docType = "powerhouse/document-model";
+
+    const operations: Operation[] = [];
+    for (let i = 1; i <= 20; i++) {
+      operations.push(
+        createTestOperation({
+          id: `op-test-warm-7-${i}`,
+          index: i,
+          skip: 0,
+        }),
+      );
+    }
+
+    await operationStore.apply(docId, docType, "global", "main", 0, (txn) => {
+      for (const op of operations) {
+        txn.addOperations(op);
+      }
+    });
+
+    await cache.getState(docId, docType, "global", "main", 10);
+
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      cache.getState(docId, docType, "global", "main", 15, controller.signal),
     ).rejects.toThrow("Operation aborted");
   });
 });
