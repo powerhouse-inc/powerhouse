@@ -37,24 +37,24 @@ test("Navigate to local drive", async ({ page }) => {
 
 test("Create new folder and verify it exists", async ({ page }) => {
   await goToConnectDrive(page, "My Local Drive");
-  await createFolder(page, "test folder");
+  await createFolder(page, "test folder", "My Local Drive");
 });
 
 test("Rename folder and verify new name", async ({ page }) => {
   await goToConnectDrive(page, "My Local Drive");
-  await createFolder(page, "test folder");
+  await createFolder(page, "test folder", "My Local Drive");
   await renameFolder(page, "test folder", "my-documents");
 });
 
 test("Duplicate folder and verify copy exists", async ({ page }) => {
   await goToConnectDrive(page, "My Local Drive");
-  await createFolder(page, "test folder");
+  await createFolder(page, "test folder", "My Local Drive");
   await duplicateFolder(page, "test folder");
 });
 
 test("Delete folder and verify it is removed", async ({ page }) => {
   await goToConnectDrive(page, "My Local Drive");
-  await createFolder(page, "test folder");
+  await createFolder(page, "test folder", "My Local Drive");
   await deleteFolder(page, "test folder");
 });
 
@@ -64,16 +64,16 @@ test("Navigate through nested folders and verify breadcrumbs", async ({
   await goToConnectDrive(page, "My Local Drive");
 
   // Create and navigate through nested folders
-  await createFolder(page, "parent");
+  await createFolder(page, "parent", "My Local Drive");
   await navigateIntoFolder(page, "parent");
 
-  await createFolder(page, "children1");
+  await createFolder(page, "children1", "parent");
   await navigateIntoFolder(page, "children1");
 
-  await createFolder(page, "children2");
+  await createFolder(page, "children2", "children1");
   await navigateIntoFolder(page, "children2");
 
-  await createFolder(page, "children3");
+  await createFolder(page, "children3", "children2");
   await page.getByText("children3").waitFor({ state: "visible" });
 
   // Navigate back using breadcrumbs and verify each level
@@ -96,6 +96,8 @@ test("Create Document Model", async ({ page }) => {
 test("Document Operation History", async ({ page }) => {
   await goToConnectDrive(page, "My Local Drive");
   await createDocument(page, "DocumentModel", "MyDocumentModel");
+  // wait for 2 seconds
+  await page.waitForTimeout(1000);
   await clickDocumentOperationHistory(page);
   const articles = await page
     .locator(

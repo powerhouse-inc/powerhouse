@@ -1,12 +1,17 @@
 import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
+import { navigateIntoFolder } from "./navigation.js";
 
 /**
  * Helper function to create a new folder in the current drive
  * @param page Playwright Page object
  * @param folderName Name of the folder to create
  */
-export async function createFolder(page: Page, folderName: string) {
+export async function createFolder(
+  page: Page,
+  folderName: string,
+  parentFolderName?: string,
+) {
   // Click on add new button
   await page.click("text=add new");
 
@@ -15,6 +20,9 @@ export async function createFolder(page: Page, folderName: string) {
   await page.keyboard.press("Enter");
 
   // Wait for the folder to be created and verify it exists under the Folders section
+  if (parentFolderName) {
+    await navigateIntoFolder(page, parentFolderName);
+  }
   const folderSection = page.getByText("Folders").locator("..");
   await folderSection.getByText(folderName).waitFor({ state: "visible" });
 }

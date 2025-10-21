@@ -11,7 +11,6 @@ export async function goToConnectDrive(page: Page, driveName: string) {
   await createLocalDrive(page, driveName);
 
   // Click on the drive
-  await page.click(`text=${driveName}`);
   await page.isVisible(`text=Documents and files`);
 }
 
