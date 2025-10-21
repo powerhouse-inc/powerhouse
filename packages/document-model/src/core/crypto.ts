@@ -18,8 +18,8 @@ export function generateUUIDBrowser() {
   return crypto.randomUUID();
 }
 
-const supportedAlgorithms = ["sha1", "blake3"];
-const supportedEncodings = ["base64", "hex"];
+export const supportedAlgorithms = ["sha1", "blake3"];
+export const supportedEncodings = ["base64", "hex"];
 const defaultAlg = "sha1"
 const defaultEnc = "base64"
 
