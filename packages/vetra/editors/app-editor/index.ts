@@ -6,9 +6,7 @@ export const module: EditorModule = {
   documentTypes: ["powerhouse/app"],
   config: {
     id: "app-module-editor",
-    disableExternalControls: true,
-    documentToolbarEnabled: true,
-    showSwitchboardLink: true,
+    name: "App Module Editor",
   },
 };
 

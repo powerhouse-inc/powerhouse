@@ -1,9 +1,12 @@
+import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
 import { useCallback } from "react";
 import { actions } from "../../document-models/vetra-package/index.js";
 import { useSelectedDriveVetraPackage } from "../hooks/useVetraDocument.js";
 import { MetaForm } from "./components/MetaForm.js";
+import { editorConfig } from "./config.js";
 
 export function Editor() {
+  useSetPHDocumentEditorConfig(editorConfig);
   const [document, dispatch] = useSelectedDriveVetraPackage();
 
   const onNameChange = useCallback(

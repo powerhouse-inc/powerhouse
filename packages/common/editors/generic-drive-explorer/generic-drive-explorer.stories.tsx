@@ -1,10 +1,8 @@
-import type { DocumentStory } from "@powerhousedao/builder-tools";
 import {
-  type EditorStoryArgs,
-  type EditorStoryProps,
+  type AdditionalEditorStoryArgs,
   createDocumentStory,
 } from "@powerhousedao/builder-tools";
-import type { Decorator, Meta } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react";
 import { driveDocumentModelModule } from "document-drive";
 import { defaultBaseState } from "document-model/core";
 import { Editor } from "./editor.js";
@@ -12,11 +10,10 @@ import { Editor } from "./editor.js";
 function createDriveStory<T extends (props: any) => React.JSX.Element>(
   Editor: T,
   initialState?: any,
-  additionalStoryArgs?: EditorStoryArgs,
-  decorators?: Decorator<EditorStoryProps>[],
+  additionalStoryArgs?: AdditionalEditorStoryArgs,
 ): {
   meta: Meta<T>;
-  CreateDocumentStory: DocumentStory;
+  CreateDocumentStory: StoryObj<T>;
 } {
   const story = createDocumentStory(
     Editor,
@@ -35,7 +32,7 @@ function createDriveStory<T extends (props: any) => React.JSX.Element>(
   );
   return story as {
     meta: Meta<T>;
-    CreateDocumentStory: DocumentStory;
+    CreateDocumentStory: StoryObj<T>;
   };
 }
 

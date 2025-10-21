@@ -1,11 +1,21 @@
-import { subscribeToProcessorManager } from "@powerhousedao/reactor-browser";
+import type {
+  AddPHGlobalEventHandler,
+  SetPHGlobalValue,
+  UsePHGlobalValue,
+} from "@powerhousedao/reactor-browser";
 import type { ProcessorManager } from "document-drive";
-import { useSyncExternalStore } from "react";
+import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
-export function useProcessorManager(): ProcessorManager | undefined {
-  const processorManager = useSyncExternalStore(
-    subscribeToProcessorManager,
-    () => window.phProcessorManager,
-  );
-  return processorManager;
-}
+const eventFunctions = makePHEventFunctions("processorManager");
+
+/** Returns the processor manager */
+export const useProcessorManager: UsePHGlobalValue<ProcessorManager> =
+  eventFunctions.useValue;
+
+/** Sets the processor manager */
+export const setProcessorManager: SetPHGlobalValue<ProcessorManager> =
+  eventFunctions.setValue;
+
+/** Adds an event handler for the processor manager */
+export const addProcessorManagerEventHandler: AddPHGlobalEventHandler =
+  eventFunctions.addEventHandler;

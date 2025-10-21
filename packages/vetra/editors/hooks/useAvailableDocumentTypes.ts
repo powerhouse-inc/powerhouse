@@ -1,55 +1,33 @@
-import { useReactor, useSelectedDriveId } from "@powerhousedao/reactor-browser";
-import type { DocumentModelDocument } from "document-model";
-import { useEffect, useState } from "react";
+import {
+  useDocumentsInSelectedDrive,
+  useSupportedDocumentTypesInReactor,
+} from "@powerhousedao/reactor-browser";
+import type { DocumentModelDocument, PHDocument } from "document-model";
 
-const DEFAULT_DRIVE_ID = "vetra";
+function isDocumentModelDocument(
+  document: PHDocument,
+): document is DocumentModelDocument {
+  return document.header.documentType === "powerhouse/document-model";
+}
 
 export function useAvailableDocumentTypes(
-  onlyVetraDocuments = false,
+  onlyDocumentTypesFromDriveDocuments = false,
 ): string[] {
-  const [availableDocumentTypes, setAvailableDocumentTypes] = useState<
-    string[]
-  >([]);
-  const reactor = useReactor();
-  const selectedDriveId = useSelectedDriveId();
+  const supportedDocumentTypes = useSupportedDocumentTypesInReactor() ?? [];
+  const documents = useDocumentsInSelectedDrive() ?? [];
+  const documentModelDocumentsInSelectedDrive = documents.filter(
+    isDocumentModelDocument,
+  );
+  const documentTypesFromDocumentModelDocuments =
+    documentModelDocumentsInSelectedDrive.map((doc) => doc.state.global.id);
 
-  useEffect(() => {
-    async function loadDocumentTypes() {
-      const moduleDocIds: string[] = [];
+  if (onlyDocumentTypesFromDriveDocuments)
+    return [...new Set(documentTypesFromDocumentModelDocuments)];
 
-      // Get from reactor document model modules (if not onlyVetraDocuments)
-      if (!onlyVetraDocuments) {
-        const docModels = reactor?.getDocumentModelModules() ?? [];
-        moduleDocIds.push(
-          ...docModels.map((model) => model.documentModel.global.id),
-        );
-      }
-
-      // Get from vetra drive
-      const driveDocIds: string[] = [];
-      const driveDocs = await reactor?.getDocuments(
-        selectedDriveId ?? DEFAULT_DRIVE_ID,
-      );
-
-      if (driveDocs) {
-        for (const docId of driveDocs) {
-          const document = await reactor?.getDocument(docId);
-          if (document?.header.documentType === "powerhouse/document-model") {
-            const documentModel = document as DocumentModelDocument;
-            driveDocIds.push(documentModel.state.global.id);
-          }
-        }
-      }
-
-      // Combine and deduplicate (or just use driveDocIds if onlyVetraDocuments)
-      const uniqueIds = onlyVetraDocuments
-        ? driveDocIds
-        : [...new Set([...moduleDocIds, ...driveDocIds])];
-      setAvailableDocumentTypes(uniqueIds);
-    }
-
-    void loadDocumentTypes();
-  }, [reactor, selectedDriveId, onlyVetraDocuments]);
-
-  return availableDocumentTypes;
+  return [
+    ...new Set([
+      ...supportedDocumentTypes,
+      ...documentTypesFromDocumentModelDocuments,
+    ]),
+  ];
 }

@@ -1,27 +1,35 @@
-import { useSyncExternalStore } from "react";
-import {
-  dispatchSetModalEvent,
-  getModalSnapshot,
-  subscribeToModal,
-} from "../events/modals.js";
-import type { PHModal } from "../types/modals.js";
+import type { PHModal } from "@powerhousedao/reactor-browser";
+import { makePHEventFunctions } from "./make-ph-event-functions.js";
+import type { Node } from "document-drive";
 
-export function usePHModal() {
-  return useSyncExternalStore(subscribeToModal, getModalSnapshot);
-}
+const modalEventFunctions = makePHEventFunctions("modal");
 
+/** Returns the current modal */
+export const usePHModal = modalEventFunctions.useValue;
+
+/** Sets the current modal */
+export const setPHModal = modalEventFunctions.setValue;
+
+/** Adds an event handler for the modal */
+export const addModalEventHandler = modalEventFunctions.addEventHandler;
+
+/** Shows a modal */
 export function showPHModal(modal: PHModal) {
-  dispatchSetModalEvent(modal);
+  setPHModal(modal);
 }
 
+/** Closes the current modal */
 export function closePHModal() {
-  dispatchSetModalEvent(undefined);
+  setPHModal(undefined);
 }
 
+/** Shows the create document modal */
 export function showCreateDocumentModal(documentType: string) {
-  dispatchSetModalEvent({ type: "createDocument", documentType });
+  setPHModal({ type: "createDocument", documentType });
 }
 
-export function showDeleteNodeModal(id: string) {
-  dispatchSetModalEvent({ type: "deleteItem", id });
+/** Shows the delete node modal */
+export function showDeleteNodeModal(nodeOrId: Node | string) {
+  const id = typeof nodeOrId === "string" ? nodeOrId : nodeOrId.id;
+  setPHModal({ type: "deleteItem", id });
 }

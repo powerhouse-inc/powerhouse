@@ -4,6 +4,7 @@ import {
   type SetAppStatusAction,
   type AddDocumentTypeAction,
   type RemoveDocumentTypeAction,
+  type SetDocumentTypesAction,
 } from "./actions.js";
 import { type AppModuleState } from "../types.js";
 
@@ -26,6 +27,11 @@ export interface AppModuleBaseOperationsOperations {
   removeDocumentTypeOperation: (
     state: AppModuleState,
     action: RemoveDocumentTypeAction,
+    dispatch?: SignalDispatch,
+  ) => void;
+  setDocumentTypesOperation: (
+    state: AppModuleState,
+    action: SetDocumentTypesAction,
     dispatch?: SignalDispatch,
   ) => void;
 }

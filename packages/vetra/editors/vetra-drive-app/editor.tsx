@@ -1,24 +1,24 @@
-import { WagmiContext } from "@powerhousedao/design-system";
-import type { DriveEditorProps } from "@powerhousedao/reactor-browser";
+import { DropZoneWrapper, WagmiContext } from "@powerhousedao/design-system";
+
 import {
   addDocument,
   AnalyticsProvider,
   setSelectedNode,
   showCreateDocumentModal,
   showDeleteNodeModal,
-  useAnalyticsDatabaseName,
   useDocumentModelModules,
   useSelectedDrive,
+  useSetPHDriveEditorConfig,
 } from "@powerhousedao/reactor-browser";
+import { useAnalyticsDatabaseName } from "@powerhousedao/reactor-browser/connect";
 import type { FileNode } from "document-drive";
+import type { EditorProps } from "document-model";
 import { useCallback } from "react";
+import { editorConfig } from "./config.js";
 import { DOCUMENT_TYPES } from "./document-types.js";
 import { DriveExplorer } from "./DriveExplorer.js";
-import { withDropZone } from "./utils/withDropZone.js";
 
-export type IProps = DriveEditorProps;
-
-export function BaseEditor(props: IProps) {
+export function BaseEditor(props: EditorProps) {
   const { children } = props;
 
   const [document] = useSelectedDrive();
@@ -114,9 +114,14 @@ export function BaseEditor(props: IProps) {
   );
 }
 
-const BaseEditorWithDropZone = withDropZone(BaseEditor);
+const BaseEditorWithDropZone = (props: EditorProps) => (
+  <DropZoneWrapper>
+    <BaseEditor {...props} />
+  </DropZoneWrapper>
+);
 
-export function Editor(props: IProps) {
+export function Editor(props: EditorProps) {
+  useSetPHDriveEditorConfig(editorConfig);
   const analyticsDatabaseName = useAnalyticsDatabaseName();
   return (
     <WagmiContext>

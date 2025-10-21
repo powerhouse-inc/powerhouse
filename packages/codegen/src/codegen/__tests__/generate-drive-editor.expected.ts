@@ -1,21 +1,29 @@
-export const EXPECTED_INDEX_CONTENT = `import { type DriveEditorModule } from "@powerhousedao/reactor-browser";
+export const EXPECTED_INDEX_CONTENT = `import { type EditorModule } from "document-model";
 import { Editor } from "./editor.js";
 
-export const module: DriveEditorModule = {
+export const module: EditorModule = {
   Component: Editor,
   documentTypes: ["powerhouse/document-drive"],
   config: {
     id: "AtlasDriveExplorer",
-    disableExternalControls: true,
-    documentToolbarEnabled: true,
-    showSwitchboardLink: true,  },
+    name: "Atlas Drive Explorer",
+  },
 };`;
 
-export const EXPECTED_EDITOR_CONTENT = `import { withDropZone } from "@powerhousedao/design-system";
+export const EXPECTED_EDITOR_CONTENT = `import { DropZoneWrapper } from "@powerhousedao/design-system";
+import { useSetPHDriveEditorConfig } from "@powerhousedao/reactor-browser";
+import type { EditorProps } from "document-model";
 import { DriveExplorer } from "./components/DriveExplorer.js";
+import { editorConfig } from "./config.js";
 
-export const Editor = withDropZone(DriveExplorer);
-`;
+export function Editor(props: EditorProps) {
+  useSetPHDriveEditorConfig(editorConfig);
+  return (
+    <DropZoneWrapper>
+      <DriveExplorer {...props} />
+    </DropZoneWrapper>
+  );
+}`;
 
 export const EXPECTED_MAIN_INDEX_CONTENT = `/**
 * This is a scaffold file meant for customization.

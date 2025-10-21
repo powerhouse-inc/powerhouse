@@ -1,51 +1,48 @@
+import {
+  useDocumentTypesInSelectedDrive,
+  useSupportedDocumentTypesInReactor,
+} from "@powerhousedao/reactor-browser";
 import { useEffect, useState } from "react";
-import type { DocumentTypeItem } from "../../../document-models/app-module/index.js";
+import { actions } from "../../../document-models/app-module/index.js";
 import { StatusPill } from "../../components/index.js";
-import { useAvailableDocumentTypes, useDebounce } from "../../hooks/index.js";
+import { useDebounce } from "../../hooks/index.js";
+import { useSelectedAppModuleDocument } from "../../hooks/useVetraDocument.js";
 
-export interface AppEditorFormProps {
-  appName?: string;
-  status?: string;
-  dragAndDropEnabled?: boolean;
-  documentTypes?: DocumentTypeItem[];
-  onNameChange?: (name: string) => void;
-  onDragAndDropToggle?: (enabled: boolean) => void;
-  onAddDocumentType?: (id: string, documentType: string) => void;
-  onRemoveDocumentType?: (id: string) => void;
-  onConfirm?: () => void;
-}
+const ALL_IN_DRIVE = "all-in-drive";
+const ALL_IN_REACTOR = "all-in-reactor";
+const ALLOW_ANY = "allow-any";
 
-export const AppEditorForm: React.FC<AppEditorFormProps> = ({
-  appName: initialAppName = "",
-  status = "DRAFT",
-  dragAndDropEnabled = false,
-  documentTypes: initialDocumentTypes = [],
-  onNameChange,
-  onDragAndDropToggle,
-  onAddDocumentType,
-  onRemoveDocumentType,
-  onConfirm,
-}) => {
-  const [appName, setAppName] = useState(initialAppName);
-  const [documentTypes, setDocumentTypes] =
-    useState<DocumentTypeItem[]>(initialDocumentTypes);
-  const [selectedDocumentType, setSelectedDocumentType] = useState("");
-  const [isConfirmed, setIsConfirmed] = useState(false);
-
-  // Get available document types from the hook (combines reactor and vetra drive)
-  const availableDocumentTypes = useAvailableDocumentTypes();
+export const AppEditorForm = () => {
+  const [document, dispatch] = useSelectedAppModuleDocument();
+  const documentName = document.state.global.name;
+  const status = document.state.global.status;
+  const isDragAndDropEnabled = document.state.global.isDragAndDropEnabled;
+  const allowedDocumentTypes = document.state.global.allowedDocumentTypes;
+  const [appName, setAppName] = useState(documentName);
+  const [isConfirmed, setIsConfirmed] = useState(status === "CONFIRMED");
+  const documentTypesInSelectedDrive = useDocumentTypesInSelectedDrive();
+  const supportedDocumentTypesInReactor = useSupportedDocumentTypesInReactor();
+  const [selectedDocumentTypes, setSelectedDocumentTypes] = useState(
+    allowedDocumentTypes ?? [],
+  );
 
   // Use the debounce hook for name changes
+
+  const onNameChange = (name: string) => {
+    if (name === documentName) return;
+    dispatch(actions.setAppName({ name }));
+  };
+
   useDebounce(appName, onNameChange, 300);
 
-  // Update local state when initial values change
-  useEffect(() => {
-    setAppName(initialAppName);
-  }, [initialAppName]);
+  const onConfirm = () => {
+    dispatch(actions.setAppStatus({ status: "CONFIRMED" }));
+  };
 
-  useEffect(() => {
-    setDocumentTypes(initialDocumentTypes);
-  }, [initialDocumentTypes]);
+  const onDragAndDropToggle = (enabled: boolean) => {
+    if (enabled === isDragAndDropEnabled) return;
+    dispatch(actions.setDragAndDropEnabled({ enabled }));
+  };
 
   // Reset confirmation state if status changes back to DRAFT
   useEffect(() => {
@@ -60,44 +57,60 @@ export const AppEditorForm: React.FC<AppEditorFormProps> = ({
   const handleConfirm = () => {
     if (appName.trim()) {
       setIsConfirmed(true); // Immediate UI update
-      onConfirm?.();
+      onConfirm();
     }
   };
 
-  const handleRemoveDocumentType = (id: string) => {
-    setDocumentTypes(documentTypes.filter((dt) => dt.id !== id));
-    onRemoveDocumentType?.(id);
+  const handleAddDocumentType = (documentType: string) => {
+    if (!documentType || selectedDocumentTypes.includes(documentType)) return;
+    setSelectedDocumentTypes([...selectedDocumentTypes, documentType]);
+    dispatch(actions.addDocumentType({ documentType }));
   };
 
-  const handleAddDocumentType = (selectedValue: string) => {
-    if (
-      selectedValue &&
-      !documentTypes.some((dt) => dt.documentType === selectedValue)
-    ) {
-      if (selectedValue === "all-documents") {
-        // Special case for "All documents" - clear all individual types and add "*"
-        const newType: DocumentTypeItem = {
-          id: "all-documents",
-          documentType: "*",
-        };
-        // Remove all existing document types first
-        documentTypes.forEach((dt) => onRemoveDocumentType?.(dt.id));
-        setDocumentTypes([newType]);
-        onAddDocumentType?.("all-documents", "*");
-      } else {
-        // Regular document type - only add if "*" is not already selected
-        if (!documentTypes.some((dt) => dt.documentType === "*")) {
-          const id = Date.now().toString();
-          const newType: DocumentTypeItem = {
-            id,
-            documentType: selectedValue,
-          };
-          setDocumentTypes([...documentTypes, newType]);
-          onAddDocumentType?.(id, selectedValue);
-        }
-      }
+  const handleRemoveDocumentType = (documentType: string) => {
+    setSelectedDocumentTypes(
+      selectedDocumentTypes.filter((dt) => dt !== documentType),
+    );
+    dispatch(actions.removeDocumentType({ documentType }));
+  };
+
+  const handleAddAllDocumentTypesInDrive = () => {
+    const newDocumentTypes = [
+      ...new Set([
+        ...selectedDocumentTypes,
+        ...(documentTypesInSelectedDrive ?? []),
+      ]),
+    ];
+    setSelectedDocumentTypes(newDocumentTypes);
+    dispatch(actions.setDocumentTypes({ documentTypes: newDocumentTypes }));
+  };
+
+  const handleAddAllDocumentTypesInReactor = () => {
+    const newDocumentTypes = [
+      ...new Set([
+        ...selectedDocumentTypes,
+        ...(supportedDocumentTypesInReactor ?? []),
+      ]),
+    ];
+    setSelectedDocumentTypes(newDocumentTypes);
+    dispatch(actions.setDocumentTypes({ documentTypes: newDocumentTypes }));
+  };
+
+  const handleAllowAnyDocumentType = () => {
+    setSelectedDocumentTypes([]);
+    dispatch(actions.setDocumentTypes({ documentTypes: [] }));
+  };
+
+  const handleDocumentTypeSelection = (selectedValue: string) => {
+    if (selectedValue === ALL_IN_DRIVE) {
+      handleAddAllDocumentTypesInDrive();
+    } else if (selectedValue === ALL_IN_REACTOR) {
+      handleAddAllDocumentTypesInReactor();
+    } else if (selectedValue === ALLOW_ANY) {
+      handleAllowAnyDocumentType();
+    } else {
+      handleAddDocumentType(selectedValue);
     }
-    setSelectedDocumentType("");
   };
 
   return (
@@ -133,51 +146,57 @@ export const AppEditorForm: React.FC<AppEditorFormProps> = ({
           Document Types
         </label>
         <div className="space-y-2">
-          {!isReadOnly &&
-            !documentTypes.some((dt) => dt.documentType === "*") && (
-              <select
-                value={selectedDocumentType}
-                onChange={(e) => handleAddDocumentType(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select a document type to add</option>
-                <option value="all-documents">All documents</option>
-                {availableDocumentTypes
-                  .filter(
-                    (docType) =>
-                      !documentTypes.some((dt) => dt.documentType === docType),
-                  )
-                  .map((docType) => (
-                    <option key={docType} value={docType}>
-                      {docType}
-                    </option>
-                  ))}
-              </select>
-            )}
-          <div className="space-y-1">
-            {documentTypes.map((type) => (
-              <div key={type.id} className="flex items-center py-1">
-                <span className="text-sm text-gray-700">
-                  {type.documentType === "*"
-                    ? "All documents (*)"
-                    : type.documentType}
-                </span>
-                {!isReadOnly && (
-                  <button
-                    onClick={() => handleRemoveDocumentType(type.id)}
-                    className="ml-2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-          {documentTypes.some((dt) => dt.documentType === "*") && (
-            <p className="text-sm italic text-gray-500">
-              Wildcard (*) matches all document types
-            </p>
+          {!isReadOnly && (
+            <select
+              onChange={(e) => handleDocumentTypeSelection(e.target.value)}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option>Select a document type to add</option>
+              <option>--- Vetra drive document types ---</option>
+              <option value={ALL_IN_DRIVE}>
+                Add all document types in Vetra drive
+              </option>
+              {documentTypesInSelectedDrive
+                ?.filter((dt) => !selectedDocumentTypes.includes(dt))
+                .map((docType) => (
+                  <option key={docType} value={docType}>
+                    {docType}
+                  </option>
+                ))}
+              <option>--- Reactor document types ---</option>
+              <option value={ALL_IN_REACTOR}>
+                Add all document types in Reactor
+              </option>
+              {supportedDocumentTypesInReactor
+                ?.filter((dt) => !selectedDocumentTypes.includes(dt))
+                .map((docType) => (
+                  <option key={docType} value={docType}>
+                    {docType}
+                  </option>
+                ))}
+              <option>--- Allow any document type ---</option>
+              <option value={ALLOW_ANY}>Allow any document type</option>
+            </select>
           )}
+          <div className="space-y-1">
+            {selectedDocumentTypes.length > 0 ? (
+              selectedDocumentTypes.map((type) => (
+                <div key={type} className="flex items-center py-1">
+                  <span className="text-sm text-gray-700">{type}</span>
+                  {!isReadOnly && (
+                    <button
+                      onClick={() => handleRemoveDocumentType(type)}
+                      className="ml-2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))
+            ) : (
+              <span className="text-sm text-gray-700">All documents (*)</span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -192,8 +211,8 @@ export const AppEditorForm: React.FC<AppEditorFormProps> = ({
           <label className="flex items-center">
             <input
               type="checkbox"
-              checked={dragAndDropEnabled}
-              onChange={(e) => onDragAndDropToggle?.(e.target.checked)}
+              checked={isDragAndDropEnabled}
+              onChange={(e) => onDragAndDropToggle(e.target.checked)}
               disabled={isReadOnly}
               className={`mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${
                 isReadOnly ? "cursor-not-allowed" : ""

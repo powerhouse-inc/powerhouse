@@ -3,7 +3,7 @@ import type { Action, ActionSigner, PHDocument } from "document-model";
 import { buildSignedAction } from "document-model/core";
 
 export async function signAction(action: Action, document: PHDocument) {
-  const reactor = window.reactor;
+  const reactor = window.ph?.reactor;
   if (!reactor) return action;
 
   const documentModelModules = reactor.getDocumentModelModules();
@@ -15,8 +15,8 @@ export async function signAction(action: Action, document: PHDocument) {
     return action;
   }
   const reducer = documentModelModule.reducer;
-  const user = window.user;
-  const connectCrypto = window.connectCrypto;
+  const user = window.ph?.user;
+  const connectCrypto = window.ph?.connectCrypto;
   if (!user || !connectCrypto) return action;
   if (!action.context?.signer) return action;
 
@@ -34,8 +34,8 @@ export async function signAction(action: Action, document: PHDocument) {
 }
 
 export function addActionContext(action: Action) {
-  const user = window.user;
-  const connectDid = window.did;
+  const user = window.ph?.user;
+  const connectDid = window.ph?.did;
   if (!user) return action;
 
   const signer: ActionSigner = {

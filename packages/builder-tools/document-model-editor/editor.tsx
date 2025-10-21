@@ -1,3 +1,4 @@
+import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
 import { pascalCase } from "change-case";
 import {
   addModule,
@@ -26,6 +27,7 @@ import { Divider } from "./components/divider.js";
 import { ModelMetadata } from "./components/model-metadata-form.js";
 import { Modules } from "./components/modules.js";
 import { StateSchemas } from "./components/state-schemas.js";
+import { editorConfig } from "./config.js";
 import { SchemaContextProvider } from "./context/schema-context.js";
 import { useSelectedDocumentModelDocument } from "./hooks/useDocumentModelDocument.js";
 import type { Scope } from "./types/documents.js";
@@ -36,9 +38,9 @@ import {
 } from "./utils/helpers.js";
 
 export function DocumentModelEditor() {
+  useSetPHDocumentEditorConfig(editorConfig);
   const [document, dispatch] = useSelectedDocumentModelDocument();
   const [scope, setScope] = useState<Scope>("global");
-
   const documentNodeName = document.header.name;
   const {
     name: modelName,

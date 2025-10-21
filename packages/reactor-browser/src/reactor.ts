@@ -3,11 +3,11 @@ import { BrowserKeyStorage, ConnectCrypto } from "@renown/sdk";
 import type {
   DefaultRemoteDriveInput,
   DocumentDriveServerOptions,
+  IDocumentDriveServer,
 } from "document-drive";
 import { generateId } from "document-model/core";
-import { dispatchSetDocumentsEvent } from "./events/documents.js";
-import { dispatchSetDrivesEvent } from "./events/drives.js";
-import type { Reactor } from "./types/reactor.js";
+import { setAllDocuments } from "./hooks/all-documents.js";
+import { setDrives } from "./hooks/drives.js";
 import { getDocuments, getDrives } from "./utils/drives.js";
 
 export type ReactorDefaultDrivesConfig = {
@@ -71,12 +71,12 @@ export type RefreshReactorDataConfig = {
 const DEFAULT_DEBOUNCE_DELAY_MS = 200;
 const DEFAULT_IMMEDIATE_THRESHOLD_MS = 1000;
 
-async function _refreshReactorData(reactor: Reactor | undefined) {
+async function _refreshReactorData(reactor: IDocumentDriveServer | undefined) {
   if (!reactor) return;
   const drives = await getDrives(reactor);
   const documents = await getDocuments(reactor);
-  dispatchSetDrivesEvent(drives);
-  dispatchSetDocumentsEvent(documents);
+  setDrives(drives);
+  setAllDocuments(documents);
 }
 
 function createDebouncedRefreshReactorData(
@@ -86,7 +86,7 @@ function createDebouncedRefreshReactorData(
   let timeout: ReturnType<typeof setTimeout> | null = null;
   let lastRefreshTime = 0;
 
-  return (reactor: Reactor | undefined, immediate = false) => {
+  return (reactor: IDocumentDriveServer | undefined, immediate = false) => {
     const now = Date.now();
     const timeSinceLastRefresh = now - lastRefreshTime;
 
@@ -114,7 +114,7 @@ function createDebouncedRefreshReactorData(
 export const refreshReactorData = createDebouncedRefreshReactorData();
 
 export async function initReactor(
-  reactor: Reactor,
+  reactor: IDocumentDriveServer,
   renown: IRenown | undefined,
   connectCrypto: IConnectCrypto | undefined,
 ) {
@@ -127,7 +127,7 @@ export async function initReactor(
 }
 
 export async function handleCreateFirstLocalDrive(
-  reactor: Reactor | undefined,
+  reactor: IDocumentDriveServer | undefined,
   localDrivesEnabled = true,
 ) {
   if (!localDrivesEnabled || reactor === undefined) return;
@@ -156,7 +156,7 @@ export async function handleCreateFirstLocalDrive(
 }
 
 async function initJwtHandler(
-  reactor: Reactor,
+  reactor: IDocumentDriveServer,
   renown: IRenown | undefined,
   connectCrypto: IConnectCrypto | undefined,
 ) {

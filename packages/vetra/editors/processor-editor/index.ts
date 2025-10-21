@@ -6,9 +6,7 @@ export const module: EditorModule = {
   documentTypes: ["powerhouse/processor"],
   config: {
     id: "processor-module-editor",
-    disableExternalControls: true,
-    documentToolbarEnabled: true,
-    showSwitchboardLink: true,
+    name: "Processor Module Editor",
   },
 };
 

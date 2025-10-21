@@ -10,20 +10,21 @@ import {
   useBreadcrumbs,
 } from "@powerhousedao/design-system";
 import {
-  type DriveEditorProps,
+  getDriveSharingType,
   getSyncStatusSync,
+  isFileNodeKind,
+  isFolderNodeKind,
   setSelectedNode,
   showDeleteNodeModal,
-  useDriveSharingType,
-  useFileChildNodesForId,
-  useFolderChildNodesForId,
   useNodeActions,
-  useNodes,
+  useNodesInSelectedDrive,
+  useNodesInSelectedDriveOrFolder,
   useSelectedDrive,
   useSelectedFolder,
   useSelectedNodePath,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
+import type { EditorProps } from "document-model";
 import { useCallback } from "react";
 import { CreateDocument } from "./CreateDocument.js";
 import { FolderTree } from "./FolderTree.js";
@@ -32,8 +33,8 @@ import { FolderTree } from "./FolderTree.js";
  * Main drive explorer component with sidebar navigation and content area.
  * Layout: Left sidebar (folder tree) + Right content area (files/folders + document editor)
  */
-export function DriveExplorer(props: DriveEditorProps) {
-  const { children, editorConfig } = props;
+export function DriveExplorer(props: EditorProps) {
+  const { children } = props;
 
   // === DRIVE CONTEXT HOOKS ===
   // Core drive operations and document models
@@ -45,14 +46,13 @@ export function DriveExplorer(props: DriveEditorProps) {
     onMoveNode,
     onRenameNode,
   } = useNodeActions();
-
   const { isAllowedToCreateDocuments } = useUserPermissions();
   // === STATE MANAGEMENT HOOKS ===
   // Core state hooks for drive navigation
   const [selectedDrive] = useSelectedDrive(); // Currently selected drive
   const selectedFolder = useSelectedFolder(); // Currently selected folder
   const selectedNodePath = useSelectedNodePath();
-  const sharingType = useDriveSharingType(selectedDrive.header.id);
+  const sharingType = getDriveSharingType(selectedDrive);
 
   // === NAVIGATION SETUP ===
   // Breadcrumbs for folder navigation
@@ -61,13 +61,10 @@ export function DriveExplorer(props: DriveEditorProps) {
     setSelectedNode,
   });
 
-  const selectedNodeId = selectedFolder?.id || selectedDrive.header.id;
-
-  const folderChildren = useFolderChildNodesForId(selectedNodeId);
-  const fileChildren = useFileChildNodesForId(selectedNodeId);
-
-  // All nodes (folders and files) for the sidebar tree view
-  const allNodes = useNodes() || [];
+  const allNodes = useNodesInSelectedDrive();
+  const childNodes = useNodesInSelectedDriveOrFolder();
+  const folderChildren = childNodes.filter((n) => isFolderNodeKind(n));
+  const fileChildren = childNodes.filter((n) => isFileNodeKind(n));
 
   // === EVENT HANDLERS ===
 
@@ -101,13 +98,7 @@ export function DriveExplorer(props: DriveEditorProps) {
     <div className="flex h-full">
       {/* === LEFT SIDEBAR: Folder and File Navigation === */}
       {/* Sidebar component manages its own width, styling, and overflow */}
-      <FolderTree
-        driveId={selectedDrive.header.id}
-        driveName={selectedDrive.state.global.name}
-        nodes={allNodes}
-        selectedNodeId={selectedNodeId}
-        onSelectNode={setSelectedNode}
-      />
+      <FolderTree />
 
       {/* === RIGHT CONTENT AREA: Files/Folders or Document Editor === */}
       <div className="flex-1 overflow-y-auto p-4">
@@ -161,7 +152,7 @@ export function DriveExplorer(props: DriveEditorProps) {
                       key={folderNode.id}
                       folderNode={folderNode}
                       isAllowedToCreateDocuments={isAllowedToCreateDocuments}
-                      sharingType={sharingType || "LOCAL"}
+                      sharingType={sharingType}
                       getSyncStatusSync={getSyncStatusSync}
                       setSelectedNode={setSelectedNode}
                       onAddFile={onAddFile}
@@ -171,9 +162,7 @@ export function DriveExplorer(props: DriveEditorProps) {
                       onDuplicateNode={onDuplicateNode}
                       onAddFolder={onAddFolder}
                       onAddAndSelectNewFolder={handleCreateFolder}
-                      showDeleteNodeModal={(node) =>
-                        showDeleteNodeModal(node.id)
-                      }
+                      showDeleteNodeModal={showDeleteNodeModal}
                     />
                   ))}
                 </div>
@@ -192,12 +181,10 @@ export function DriveExplorer(props: DriveEditorProps) {
                       key={fileNode.id}
                       fileNode={fileNode}
                       isAllowedToCreateDocuments={isAllowedToCreateDocuments}
-                      sharingType={sharingType || "LOCAL"}
+                      sharingType={sharingType}
                       getSyncStatusSync={getSyncStatusSync}
                       setSelectedNode={setSelectedNode}
-                      showDeleteNodeModal={(node) =>
-                        showDeleteNodeModal(node.id)
-                      }
+                      showDeleteNodeModal={showDeleteNodeModal}
                       onRenameNode={onRenameNode}
                       onDuplicateNode={onDuplicateNode}
                       onAddFile={onAddFile}
@@ -224,7 +211,7 @@ export function DriveExplorer(props: DriveEditorProps) {
 
             {/* === DOCUMENT CREATION SECTION === */}
             {/* Component for creating new documents */}
-            <CreateDocument documentTypes={editorConfig?.documentTypes} />
+            <CreateDocument />
           </div>
         )}
       </div>

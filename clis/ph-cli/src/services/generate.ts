@@ -22,11 +22,14 @@ export type GenerateOptions = {
   editor?: string;
   processor?: string;
   documentTypes?: string;
+  allowedDocumentTypes?: string;
+  isDragAndDropEnabled?: boolean;
   processorType?: "analytics" | "relationalDb";
   subgraph?: string;
   importScript?: string;
   file?: string;
   driveEditor?: string;
+  driveEditorAppId?: string;
   migrationFile?: string;
   schemaFile?: string;
 };
@@ -55,6 +58,7 @@ export async function startGenerate(
     editor: !!options.editor,
     editorName: options.editor,
     documentTypes: options.documentTypes,
+    allowedDocumentTypes: options.allowedDocumentTypes,
     processor: !!options.processor,
     processorName: options.processor,
     processorType: options.processorType,
@@ -64,6 +68,8 @@ export async function startGenerate(
     importScriptName: options.importScript,
     driveEditor: !!options.driveEditor,
     driveEditorName: options.driveEditor,
+    driveEditorAppId: options.driveEditorAppId,
+    isDragAndDropEnabled: options.isDragAndDropEnabled,
     migrationFile: options.migrationFile,
     schemaFile: options.schemaFile,
   };
@@ -72,7 +78,13 @@ export async function startGenerate(
     if (!command.driveEditorName) {
       throw new Error("Drive editor name is required (--drive-editor or -d)");
     }
-    await generateDriveEditor(command.driveEditorName, config);
+    await generateDriveEditor({
+      config,
+      name: command.driveEditorName,
+      appId: command.driveEditorAppId,
+      allowedDocumentTypes: command.allowedDocumentTypes,
+      isDragAndDropEnabled: command.isDragAndDropEnabled,
+    });
   } else if (command.editor) {
     if (!command.editorName) {
       throw new Error("Editor name is required (--editor or -e)");

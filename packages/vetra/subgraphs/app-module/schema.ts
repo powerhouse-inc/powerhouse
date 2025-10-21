@@ -8,22 +8,13 @@ export const schema: DocumentNode = gql`
   type AppModuleState {
     name: String!
     status: StatusType!
-    documentTypes: [DocumentTypeItem!]
-    dragAndDrop: DragAndDropSettings
+    allowedDocumentTypes: [String!]
+    isDragAndDropEnabled: Boolean!
   }
 
   enum StatusType {
     DRAFT
     CONFIRMED
-  }
-
-  type DocumentTypeItem {
-    id: OID!
-    documentType: String!
-  }
-
-  type DragAndDropSettings {
-    enabled: Boolean!
   }
 
   """
@@ -64,6 +55,11 @@ export const schema: DocumentNode = gql`
       docId: PHID
       input: AppModule_RemoveDocumentTypeInput
     ): Int
+    AppModule_setDocumentTypes(
+      driveId: String
+      docId: PHID
+      input: AppModule_SetDocumentTypesInput
+    ): Int
     AppModule_setDragAndDropEnabled(
       driveId: String
       docId: PHID
@@ -81,11 +77,13 @@ export const schema: DocumentNode = gql`
     status: StatusType!
   }
   input AppModule_AddDocumentTypeInput {
-    id: OID!
     documentType: String!
   }
   input AppModule_RemoveDocumentTypeInput {
-    id: OID!
+    documentType: String!
+  }
+  input AppModule_SetDocumentTypesInput {
+    documentTypes: [String!]!
   }
 
   """

@@ -1,4 +1,4 @@
-import { connectConfig } from "../connect.config.js";
+import { connectConfig } from "@powerhousedao/connect/config";
 
 export const isMac = window.navigator.appVersion.includes("Mac");
 
