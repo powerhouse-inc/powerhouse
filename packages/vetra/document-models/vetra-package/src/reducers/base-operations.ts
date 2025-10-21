@@ -23,6 +23,14 @@ export const reducer: VetraPackageBaseOperationsOperations = {
     state.author.website = action.input.website;
   },
   addPackageKeywordOperation(state, action, dispatch) {
+    // Check for duplicate ID
+    const existingId = state.keywords.find(
+      (keyword) => keyword.id === action.input.id,
+    );
+    if (existingId) {
+      throw new Error(`Keyword with id "${action.input.id}" already exists`);
+    }
+
     state.keywords.push(action.input);
   },
   removePackageKeywordOperation(state, action, dispatch) {

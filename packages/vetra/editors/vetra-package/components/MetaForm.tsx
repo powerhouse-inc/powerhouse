@@ -71,10 +71,14 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
       <div className="space-y-6">
         {/* Name Field */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="package-name"
+            className="mb-2 block text-sm font-medium text-gray-700"
+          >
             Name
           </label>
           <input
+            id="package-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -84,10 +88,14 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
 
         {/* Description Field */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="package-description"
+            className="mb-2 block text-sm font-medium text-gray-700"
+          >
             Description
           </label>
           <textarea
+            id="package-description"
             rows={6}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -100,10 +108,14 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
       <div className="space-y-6">
         {/* Category Field */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="package-category"
+            className="mb-2 block text-sm font-medium text-gray-700"
+          >
             Category
           </label>
           <select
+            id="package-category"
             value={category}
             onChange={(e) => {
               const newValue = e.target.value;
@@ -125,10 +137,14 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
 
         {/* Publisher Field */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="package-publisher"
+            className="mb-2 block text-sm font-medium text-gray-700"
+          >
             Publisher
           </label>
           <input
+            id="package-publisher"
             type="text"
             value={publisher}
             onChange={(e) => setPublisher(e.target.value)}
@@ -138,10 +154,14 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
 
         {/* Publisher URL Field */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="package-publisher-url"
+            className="mb-2 block text-sm font-medium text-gray-700"
+          >
             Publisher URL
           </label>
           <input
+            id="package-publisher-url"
             type="text"
             value={publisherUrl}
             onChange={(e) => setPublisherUrl(e.target.value)}
@@ -151,11 +171,15 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
 
         {/* Keywords Field */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="package-keywords"
+            className="mb-2 block text-sm font-medium text-gray-700"
+          >
             Keywords
           </label>
           <div className="space-y-2">
             <input
+              id="package-keywords"
               type="text"
               value={keywordInput}
               onChange={(e) => setKeywordInput(e.target.value)}
@@ -201,10 +225,14 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
       <div className="space-y-6">
         {/* Github Repository Field */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="package-github"
+            className="mb-2 block text-sm font-medium text-gray-700"
+          >
             Github Repository
           </label>
           <input
+            id="package-github"
             type="text"
             value={githubRepository}
             onChange={(e) => setGithubRepository(e.target.value)}
@@ -214,10 +242,14 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
 
         {/* NPM-package Field */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="package-npm"
+            className="mb-2 block text-sm font-medium text-gray-700"
+          >
             NPM-package
           </label>
           <input
+            id="package-npm"
             type="text"
             value={npmPackage}
             onChange={(e) => setNpmPackage(e.target.value)}
@@ -227,10 +259,14 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
 
         {/* Version Field */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="package-version"
+            className="mb-2 block text-sm font-medium text-gray-700"
+          >
             Version
           </label>
           <input
+            id="package-version"
             type="text"
             placeholder="1.0.0-dev"
             readOnly
@@ -240,10 +276,14 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
 
         {/* License Field */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="package-license"
+            className="mb-2 block text-sm font-medium text-gray-700"
+          >
             License
           </label>
           <input
+            id="package-license"
             type="text"
             placeholder="AGPL-3.0-only"
             readOnly
@@ -253,10 +293,14 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
 
         {/* Install with Field */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="package-install"
+            className="mb-2 block text-sm font-medium text-gray-700"
+          >
             Install with:
           </label>
           <input
+            id="package-install"
             type="text"
             placeholder="@powerhousedao/todo-demo-package"
             readOnly

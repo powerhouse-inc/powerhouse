@@ -2,7 +2,11 @@ import type { AppModuleBaseOperationsOperations } from "../../gen/base-operation
 
 export const reducer: AppModuleBaseOperationsOperations = {
   setAppNameOperation(state, action, dispatch) {
-    state.name = action.input.name;
+    const trimmedName = action.input.name.trim();
+    if (trimmedName === "") {
+      throw new Error("App name cannot be empty");
+    }
+    state.name = trimmedName;
   },
   setAppStatusOperation(state, action, dispatch) {
     state.status = action.input.status;
