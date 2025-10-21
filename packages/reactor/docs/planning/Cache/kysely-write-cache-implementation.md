@@ -293,10 +293,10 @@ putState(...): void {
 - Tests verify LRU eviction
 - All 18 tests passing
 
-## Phase 5: Cache Hit Path (getState)
+## Phase 5: Cache Hit Path (getState) (✅ Complete)
 
 ### Task 5.1: Implement cache hit path
-- [ ] Implement basic `getState` with cache hit logic:
+- [x] Implement basic `getState` with cache hit logic:
   - Check abort signal
   - Make stream key
   - Look up stream in cache
@@ -304,9 +304,9 @@ putState(...): void {
   - If exact match or newest, deep copy and return
   - Update LRU tracker on hit
   - Return cached document (deep copied)
-- [ ] Handle targetRevision undefined (return newest)
-- [ ] Handle exact revision match
-- [ ] Throw placeholder error for cache miss (Phase 6)
+- [x] Handle targetRevision undefined (return newest)
+- [x] Handle exact revision match
+- [x] Throw placeholder error for cache miss (Phase 6)
 
 **Acceptance Criteria:**
 - Cache hits return correct document
@@ -315,17 +315,18 @@ putState(...): void {
 - Handles abort signal
 
 ### Task 5.2: Create cache hit tests
-- [ ] Test: should return exact revision match on cache hit
-- [ ] Test: should return newest snapshot when targetRevision undefined
-- [ ] Test: should return deep copy (mutations don't affect cache)
-- [ ] Test: should update LRU on cache hit
-- [ ] Test: should respect abort signal
-- [ ] Test: should handle cache miss (expect placeholder error)
+- [x] Test: should return exact revision match on cache hit
+- [x] Test: should return newest snapshot when targetRevision undefined
+- [x] Test: should return deep copy (mutations don't affect cache)
+- [x] Test: should update LRU on cache hit
+- [x] Test: should respect abort signal
+- [x] Test: should handle cache miss (expect placeholder error)
 
 **Acceptance Criteria:**
 - All cache hit scenarios covered
 - Deep copy behavior verified
 - LRU behavior verified
+- All 6 new tests passing (24 total cache tests)
 
 ## Phase 6: Cold Miss Rebuild (with Keyframe Optimization)
 

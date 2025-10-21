@@ -348,4 +348,116 @@ describe("KyselyWriteCache", () => {
       expect(evicted2).toBe(0);
     });
   });
+
+  describe("getState - cache hit", () => {
+    it("should return exact revision match on cache hit", async () => {
+      const doc1 = createMockDocument(1);
+      const doc2 = createMockDocument(2);
+      const doc3 = createMockDocument(3);
+
+      cache.putState("doc1", "test/type", "global", "main", 1, doc1);
+      cache.putState("doc1", "test/type", "global", "main", 2, doc2);
+      cache.putState("doc1", "test/type", "global", "main", 3, doc3);
+
+      const retrieved = await cache.getState(
+        "doc1",
+        "test/type",
+        "global",
+        "main",
+        2,
+      );
+
+      expect(retrieved).toBeDefined();
+      expect(retrieved).not.toBe(doc2);
+    });
+
+    it("should return newest snapshot when targetRevision undefined", async () => {
+      const doc1 = createMockDocument(1);
+      const doc2 = createMockDocument(2);
+      const doc3 = createMockDocument(3);
+
+      cache.putState("doc1", "test/type", "global", "main", 1, doc1);
+      cache.putState("doc1", "test/type", "global", "main", 2, doc2);
+      cache.putState("doc1", "test/type", "global", "main", 3, doc3);
+
+      const retrieved = await cache.getState(
+        "doc1",
+        "test/type",
+        "global",
+        "main",
+      );
+
+      expect(retrieved).toBeDefined();
+      expect(retrieved).not.toBe(doc3);
+    });
+
+    it("should return deep copy (mutations don't affect cache)", async () => {
+      const doc = createMockDocument(1);
+
+      cache.putState("doc1", "test/type", "global", "main", 1, doc);
+
+      const retrieved = await cache.getState(
+        "doc1",
+        "test/type",
+        "global",
+        "main",
+        1,
+      );
+
+      (retrieved.state as any).mutated = "yes";
+
+      const retrievedAgain = await cache.getState(
+        "doc1",
+        "test/type",
+        "global",
+        "main",
+        1,
+      );
+
+      expect((retrievedAgain.state as any).mutated).toBeUndefined();
+    });
+
+    it("should update LRU on cache hit", async () => {
+      const doc = createMockDocument(1);
+
+      cache.putState("doc1", "test/type", "global", "main", 1, doc);
+      cache.putState("doc2", "test/type", "global", "main", 1, doc);
+      cache.putState("doc3", "test/type", "global", "main", 1, doc);
+
+      await cache.getState("doc1", "test/type", "global", "main", 1);
+
+      cache.putState("doc4", "test/type", "global", "main", 1, doc);
+
+      const evicted1 = cache.invalidate("doc1", "global", "main");
+      expect(evicted1).toBe(1);
+
+      const evicted2 = cache.invalidate("doc2", "global", "main");
+      expect(evicted2).toBe(0);
+    });
+
+    it("should respect abort signal", async () => {
+      const doc = createMockDocument(1);
+      cache.putState("doc1", "test/type", "global", "main", 1, doc);
+
+      const controller = new AbortController();
+      controller.abort();
+
+      await expect(
+        cache.getState(
+          "doc1",
+          "test/type",
+          "global",
+          "main",
+          1,
+          controller.signal,
+        ),
+      ).rejects.toThrow("Operation aborted");
+    });
+
+    it("should handle cache miss", async () => {
+      await expect(
+        cache.getState("non-existent", "test/type", "global", "main", 1),
+      ).rejects.toThrow("Cache miss");
+    });
+  });
 });
