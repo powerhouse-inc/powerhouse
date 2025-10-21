@@ -54,7 +54,34 @@ export class KyselyWriteCache implements IWriteCache {
     targetRevision?: number,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    throw new Error("Not implemented");
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    const streamKey = this.makeStreamKey(documentId, scope, branch);
+    const stream = this.streams.get(streamKey);
+
+    if (stream) {
+      const snapshots = stream.ringBuffer.getAll();
+
+      if (targetRevision === undefined) {
+        if (snapshots.length > 0) {
+          const newest = snapshots[snapshots.length - 1];
+          this.lruTracker.touch(streamKey);
+          return structuredClone(newest.document);
+        }
+      } else {
+        const exactMatch = snapshots.find((s) => s.revision === targetRevision);
+        if (exactMatch) {
+          this.lruTracker.touch(streamKey);
+          return structuredClone(exactMatch.document);
+        }
+      }
+    }
+
+    throw new Error(
+      `Cache miss: document ${documentId} not found in cache (scope: ${scope}, branch: ${branch}, targetRevision: ${targetRevision})`,
+    );
   }
 
   putState(
