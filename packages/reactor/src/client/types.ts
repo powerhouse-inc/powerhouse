@@ -9,6 +9,10 @@ import type {
   ViewFilter,
 } from "../shared/types.js";
 
+export type TestCI = {
+  test: boolean;
+};
+
 /**
  * Describes the types of document changes that can occur.
  */
