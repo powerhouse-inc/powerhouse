@@ -1,11 +1,5 @@
 # IWriteCache Interface
 
-### Summary
-
-The `IWriteCache` interface defines an in-memory LRU cache that stores ring buffers of `PHDocument` snapshots. The cache requires `IOperationStore` for loading operations on cache misses and `IDocumentModelRegistry` for accessing reducers to rebuild document state. The cache handles all retrieval, storage, and eviction automatically through the `getState()` method. When the job executor requests a document at a specific revision (or latest if not specified), the cache either returns a cached snapshot or rebuilds the document from operations and caches it automatically. Each document stream maintains a ring buffer of recent snapshots, and entire ring buffers are evicted as a unit when the LRU policy triggers.
-
-### Interface
-
 ```tsx
 // Import from other interfaces
 import type { IOperationStore } from '../Storage/IOperationStore';
@@ -21,19 +15,20 @@ export type WriteCacheConfig = {
 
   /** Number of snapshots to keep in each document's ring buffer */
   ringBufferSize?: number;
+
+  /** Interval for persisting keyframes (e.g., every 10 revisions) */
+  keyframeInterval?: number;
 };
 
-/**
- * In-memory LRU cache for document snapshots with ring buffer per document
- */
 export interface IWriteCache {
   /**
    * Retrieves or builds the document at the specified revision.
    * If targetRevision is not provided, retrieves the latest state.
    *
    * Cache miss handling:
-   * - Cold miss (no cached document): Streams operations using getSince(0, paging)
-   *   with cursor-based paging and replays them through reducer from scratch
+   * - Cold miss (no cached document): Checks IKeyframeStore for nearest keyframe using indexed
+   *   SQL query (O(log n)), then streams operations from keyframe revision (or 0 if no keyframe)
+   *   using getSince with cursor-based paging and replays them through reducer
    * - Warm miss (has older revision): Loads only operations since cached revision
    *   using getSince(cachedRevision) and applies them incrementally to the cached document
    *
@@ -107,12 +102,14 @@ export interface IWriteCache {
 
 ```tsx
 // Initialize cache with configuration and dependencies
-const cache = new MemoryWriteCache(
+const cache = new KyselyWriteCache(
+  keyframeStore,     // IKeyframeStore for persisting/retrieving keyframes
   operationStore,    // IOperationStore for loading operations on cache miss
   registry,          // IDocumentModelRegistry for accessing reducers on cache miss
   {
     maxDocuments: 1000,    // Cache up to 1000 document streams
-    ringBufferSize: 10     // Keep 10 snapshots per document stream
+    ringBufferSize: 10,    // Keep 10 snapshots per document stream
+    keyframeInterval: 10   // Persist keyframe every 10 revisions
   }
 );
 
