@@ -328,8 +328,9 @@ export class KyselyWriteCache implements IWriteCache {
     const module = this.registry.getModule(documentType);
     let cursor: string | undefined = undefined;
     const pageSize = 100;
+    let hasMorePages: boolean;
 
-    while (true) {
+    do {
       if (signal?.aborted) {
         throw new Error("Operation aborted");
       }
@@ -362,22 +363,21 @@ export class KyselyWriteCache implements IWriteCache {
           document = module.reducer(document, operation.action);
         }
 
-        if (
-          !result.nextCursor ||
-          (targetRevision !== undefined &&
-            result.items.some((op) => op.index >= targetRevision))
-        ) {
-          break;
-        }
+        const reachedTarget =
+          targetRevision !== undefined &&
+          result.items.some((op) => op.index >= targetRevision);
+        hasMorePages = Boolean(result.nextCursor) && !reachedTarget;
 
-        cursor = result.nextCursor;
+        if (hasMorePages) {
+          cursor = result.nextCursor;
+        }
       } catch (err) {
         // Wrap errors with context to include document ID for debugging
         throw new Error(
           `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
         );
       }
-    }
+    } while (hasMorePages);
 
     if (!document) {
       throw new Error(
