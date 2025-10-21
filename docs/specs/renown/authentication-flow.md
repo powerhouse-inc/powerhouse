@@ -162,9 +162,16 @@ Match? → Continue | Mismatch? → Reject
 | Data | Location | Encryption | Access |
 |------|----------|------------|--------|
 | **VC JWT** | IndexedDB | AES-GCM | Browser only |
-| **SDK Private Key** | Browser Memory | N/A | Runtime only |
+| **SDK Private Key** | IndexedDB (Web Crypto API) | Non-extractable CryptoKey | Browser only, XSS-protected |
 | **Challenge** | Server Session | N/A | Server only |
 | **Metadata** | IndexedDB | Yes | Browser only |
+
+**SDK Private Key Security:**
+The Renown SDK private key is generated using `crypto.subtle.generateKey()` with `extractable: false`, making it a non-extractable CryptoKey object. This key:
+- Cannot be read or extracted by JavaScript code (protects against XSS attacks)
+- Remains usable for cryptographic operations (signing VPs)
+- Persists in IndexedDB as a CryptoKey object
+- Provides hardware-backed security when available (TPM, secure enclave)
 
 ---
 
