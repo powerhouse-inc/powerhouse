@@ -101,8 +101,11 @@ describe("KyselyWriteCache", () => {
       cache.putState("doc1", "test/type", "global", "main", 1, doc);
       cache.putState("doc2", "test/type", "global", "main", 1, doc);
       cache.putState("doc3", "test/type", "global", "main", 1, doc);
+
+      // the LRU is set to capacity of 3, so doc1 should be evicted
       cache.putState("doc4", "test/type", "global", "main", 1, doc);
 
+      // evicting the doc that has already been evicted should not evict anything
       const evicted = cache.invalidate("doc1", "global", "main");
       expect(evicted).toBe(0);
     });
@@ -132,8 +135,42 @@ describe("KyselyWriteCache", () => {
         3,
         createTestDocument(),
       );
+      cache.putState(
+        "doc1",
+        "test/type",
+        "global",
+        "main",
+        4,
+        createTestDocument(),
+      );
+      cache.putState(
+        "doc1",
+        "test/type",
+        "global",
+        "main",
+        5,
+        createTestDocument(),
+      );
+      cache.putState(
+        "doc1",
+        "test/type",
+        "global",
+        "main",
+        6,
+        createTestDocument(),
+      );
 
-      expect(cache).toBeDefined();
+      const stream = cache.getStream("doc1", "global", "main");
+      expect(stream).toBeDefined();
+      expect(stream?.ringBuffer.length).toBe(5);
+
+      const snapshots = stream?.ringBuffer.getAll();
+      expect(snapshots).toHaveLength(5);
+      expect(snapshots?.[0].revision).toBe(2);
+      expect(snapshots?.[1].revision).toBe(3);
+      expect(snapshots?.[2].revision).toBe(4);
+      expect(snapshots?.[3].revision).toBe(5);
+      expect(snapshots?.[4].revision).toBe(6);
     });
 
     it("should handle multiple scopes/branches separately", () => {
