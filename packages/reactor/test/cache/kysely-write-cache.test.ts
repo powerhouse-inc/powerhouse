@@ -697,12 +697,18 @@ describe("KyselyWriteCache (Partial Integration) - Cold Miss Rebuild", () => {
       }
     });
 
+    const streamBefore = cache.getStream(docId, "global", "main");
+    expect(streamBefore).toBeUndefined();
+
     await cache.getState(docId, docType, "global", "main");
 
-    const document = await cache.getState(docId, docType, "global", "main");
+    const streamAfter = cache.getStream(docId, "global", "main");
+    expect(streamAfter).toBeDefined();
+    expect(streamAfter?.ringBuffer.length).toBe(1);
 
-    expect(document).toBeDefined();
-    expect(document.state).toBeDefined();
+    const snapshots = streamAfter?.ringBuffer.getAll();
+    expect(snapshots).toHaveLength(1);
+    expect(snapshots?.[0].document).toBeDefined();
   });
 
   it("should handle abort signal during rebuild", async () => {
