@@ -198,7 +198,6 @@ export async function hygenGenerateEditor(
 export async function hygenGenerateProcessor(
   name: string,
   documentTypes: string[],
-  documentTypesMap: DocumentTypesMap,
   outDir: string,
   documentModelsDir: string,
   type: "analytics" | "relationalDb",
@@ -218,8 +217,6 @@ export async function hygenGenerateProcessor(
       outDir,
       "--document-types",
       documentTypes.join(","),
-      "--document-types-map",
-      JSON.stringify(documentTypesMap),
       "--document-models-dir",
       documentModelsDir,
     ],
