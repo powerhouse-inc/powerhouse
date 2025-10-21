@@ -255,7 +255,7 @@ describe("KyselyWriteCache", () => {
       expect(evicted).toBe(1);
     });
 
-    it("should return correct eviction count", () => {
+    it("should not double evict", () => {
       const evicted1 = cacheWithHigherCapacity.invalidate(
         "doc1",
         "global",
@@ -295,14 +295,16 @@ describe("KyselyWriteCache", () => {
   });
 
   describe("keyframe persistence", () => {
-    it("should persist keyframes at interval boundaries", async () => {
+    it("should persist keyframes at interval boundaries", () => {
+      const doc0 = createTestDocument();
+      const doc2 = createTestDocument();
       const doc10 = createTestDocument();
       const doc20 = createTestDocument();
 
+      cache.putState("doc1", "test/type", "global", "main", 0, doc0);
+      cache.putState("doc1", "test/type", "global", "main", 2, doc2);
       cache.putState("doc1", "test/type", "global", "main", 10, doc10);
       cache.putState("doc1", "test/type", "global", "main", 20, doc20);
-
-      await new Promise((resolve) => setTimeout(resolve, 10));
 
       expect(keyframeStore.putKeyframe).toHaveBeenCalledTimes(2);
       expect(keyframeStore.putKeyframe).toHaveBeenNthCalledWith(
@@ -331,19 +333,17 @@ describe("KyselyWriteCache", () => {
       );
     });
 
-    it("should not persist non-keyframe revisions", async () => {
+    it("should not persist non-keyframe revisions", () => {
       const doc5 = createTestDocument();
       const doc15 = createTestDocument();
 
       cache.putState("doc1", "test/type", "global", "main", 5, doc5);
       cache.putState("doc1", "test/type", "global", "main", 15, doc15);
 
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
       expect(keyframeStore.putKeyframe).not.toHaveBeenCalled();
     });
 
-    it("should handle keyframe persistence errors gracefully", async () => {
+    it("should handle keyframe persistence errors gracefully", () => {
       const failingKeyframeStore = createMockKeyframeStore();
       failingKeyframeStore.putKeyframe = vi
         .fn()
@@ -361,8 +361,6 @@ describe("KyselyWriteCache", () => {
       expect(() => {
         failingCache.putState("doc1", "test/type", "global", "main", 10, doc10);
       }).not.toThrow();
-
-      await new Promise((resolve) => setTimeout(resolve, 10));
     });
   });
 
@@ -384,8 +382,10 @@ describe("KyselyWriteCache", () => {
       cache.putState("doc2", "test/type", "global", "main", 1, doc);
       cache.putState("doc3", "test/type", "global", "main", 1, doc);
 
+      // make doc1 the most recently used
       cache.putState("doc1", "test/type", "global", "main", 2, doc);
 
+      // doc2 should be evicted now
       cache.putState("doc4", "test/type", "global", "main", 1, doc);
 
       const evicted = cache.invalidate("doc2", "global", "main");
@@ -399,11 +399,14 @@ describe("KyselyWriteCache", () => {
       cache.putState("doc2", "test/type", "global", "main", 1, doc);
       cache.putState("doc3", "test/type", "global", "main", 1, doc);
 
+      // make doc1 the most recently used
       cache.putState("doc1", "test/type", "global", "main", 2, doc);
       cache.putState("doc1", "test/type", "global", "main", 3, doc);
 
+      // make doc4 the most recently used, which will evict doc2
       cache.putState("doc4", "test/type", "global", "main", 1, doc);
 
+      // now evict doc1
       const evicted1 = cache.invalidate("doc1", "global", "main");
       expect(evicted1).toBe(1);
 
@@ -430,8 +433,8 @@ describe("KyselyWriteCache", () => {
         2,
       );
 
-      expect(retrieved).toBeDefined();
       expect(retrieved).not.toBe(doc2);
+      expect(retrieved).toEqual(doc2);
     });
 
     it("should return newest snapshot when targetRevision undefined", async () => {
@@ -450,8 +453,8 @@ describe("KyselyWriteCache", () => {
         "main",
       );
 
-      expect(retrieved).toBeDefined();
       expect(retrieved).not.toBe(doc3);
+      expect(retrieved).toEqual(doc3);
     });
 
     it("should return deep copy (mutations don't affect cache)", async () => {
@@ -467,7 +470,7 @@ describe("KyselyWriteCache", () => {
         1,
       );
 
-      (retrieved.state as any).mutated = "yes";
+      retrieved.state.document.version = "100";
 
       const retrievedAgain = await cache.getState(
         "doc1",
@@ -477,7 +480,7 @@ describe("KyselyWriteCache", () => {
         1,
       );
 
-      expect((retrievedAgain.state as any).mutated).toBeUndefined();
+      expect(retrievedAgain.state.document.version).not.toBe("100");
     });
 
     it("should update LRU on cache hit", async () => {
@@ -489,11 +492,13 @@ describe("KyselyWriteCache", () => {
 
       await cache.getState("doc1", "test/type", "global", "main", 1);
 
+      // this will evict doc2
       cache.putState("doc4", "test/type", "global", "main", 1, doc);
 
       const evicted1 = cache.invalidate("doc1", "global", "main");
       expect(evicted1).toBe(1);
 
+      // already evicted
       const evicted2 = cache.invalidate("doc2", "global", "main");
       expect(evicted2).toBe(0);
     });
@@ -516,39 +521,10 @@ describe("KyselyWriteCache", () => {
         ),
       ).rejects.toThrow("Operation aborted");
     });
-
-    it("should handle cache miss (with cold rebuild)", async () => {
-      const mockGetSince = vi.fn().mockResolvedValue({
-        items: [],
-        nextCursor: undefined,
-      });
-      const mockOperationStore = {
-        ...createMockOperationStore(),
-        getSince: mockGetSince,
-      };
-
-      const mockRegistry = {
-        ...createMockRegistry(),
-        getModule: vi.fn().mockReturnValue({
-          reducer: documentModelDocumentModelModule.reducer,
-        }),
-      };
-
-      const testCache = new KyselyWriteCache(
-        keyframeStore,
-        mockOperationStore,
-        mockRegistry,
-        config,
-      );
-
-      await expect(
-        testCache.getState("non-existent", "test/type", "global", "main", 1),
-      ).rejects.toThrow("Failed to rebuild document non-existent");
-    });
   });
 });
 
-describe("KyselyWriteCache - Cold Miss Rebuild", () => {
+describe("KyselyWriteCache (Partial Integration) - Cold Miss Rebuild", () => {
   let keyframeStore: IKeyframeStore;
   let operationStore: IOperationStore;
   let registry: IDocumentModelRegistry;
@@ -598,6 +574,35 @@ describe("KyselyWriteCache - Cold Miss Rebuild", () => {
     }
   });
 
+  it("should throw on rebuild failure", async () => {
+    const mockGetSince = vi.fn().mockResolvedValue({
+      items: [],
+      nextCursor: undefined,
+    });
+    const mockOperationStore = {
+      ...createMockOperationStore(),
+      getSince: mockGetSince,
+    };
+
+    const mockRegistry = {
+      ...createMockRegistry(),
+      getModule: vi.fn().mockReturnValue({
+        reducer: documentModelDocumentModelModule.reducer,
+      }),
+    };
+
+    const testCache = new KyselyWriteCache(
+      keyframeStore,
+      mockOperationStore,
+      mockRegistry,
+      config,
+    );
+
+    await expect(
+      testCache.getState("non-existent", "test/type", "global", "main", 1),
+    ).rejects.toThrow("Failed to rebuild document non-existent");
+  });
+
   it("should rebuild document from scratch on cold miss (no keyframe)", async () => {
     const docId = "test-doc-1";
     const docType = "powerhouse/document-model";
@@ -621,7 +626,7 @@ describe("KyselyWriteCache - Cold Miss Rebuild", () => {
 
     const document = await cache.getState(docId, docType, "global", "main");
 
-    expect(document).toBeDefined();
+    expect(document).toEqual(createTestDocument());
     expect(document.state).toBeDefined();
   });
 
@@ -630,7 +635,7 @@ describe("KyselyWriteCache - Cold Miss Rebuild", () => {
     const docType = "powerhouse/document-model";
 
     const operations: Operation[] = [];
-    for (let i = 1; i <= 25; i++) {
+    for (let i = 1; i <= 22; i++) {
       operations.push(
         createTestOperation({
           id: `op-test-doc-2-${i}`,
@@ -646,14 +651,26 @@ describe("KyselyWriteCache - Cold Miss Rebuild", () => {
       }
     });
 
-    const doc10 = await cache.getState(docId, docType, "global", "main", 10);
-    cache.putState(docId, docType, "global", "main", 10, doc10);
+    const doc20 = await cache.getState(docId, docType, "global", "main", 20);
+    await keyframeStore.putKeyframe(
+      docId,
+      docType,
+      "global",
+      "main",
+      20,
+      doc20,
+    );
 
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    // now delete operations 1 - 20, this will prove that the keyframe is used
+    await db
+      .deleteFrom("Operation")
+      .where("documentId", "=", docId)
+      .where("index", "<", 21)
+      .execute();
 
     cache.clear();
 
-    const document = await cache.getState(docId, docType, "global", "main", 25);
+    const document = await cache.getState(docId, docType, "global", "main", 22);
 
     expect(document).toBeDefined();
     expect(document.state).toBeDefined();

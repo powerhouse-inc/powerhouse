@@ -215,7 +215,6 @@ export class KyselyWriteCache implements IWriteCache {
 
   private async findNearestKeyframe(
     documentId: string,
-    documentType: string,
     scope: string,
     branch: string,
     targetRevision: number,
@@ -246,7 +245,6 @@ export class KyselyWriteCache implements IWriteCache {
 
     const keyframe = await this.findNearestKeyframe(
       documentId,
-      documentType,
       scope,
       branch,
       effectiveTargetRevision,
@@ -270,7 +268,6 @@ export class KyselyWriteCache implements IWriteCache {
     let cursor: string | undefined = undefined;
     const pageSize = 100;
 
-    // todo: refactor
     while (true) {
       if (signal?.aborted) {
         throw new Error("Operation aborted");
