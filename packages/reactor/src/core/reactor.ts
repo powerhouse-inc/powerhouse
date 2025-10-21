@@ -219,9 +219,6 @@ export class Reactor implements IReactor {
     for (const scope in operations) {
       if (matchesScope(view, scope)) {
         const scopeOperations = operations[scope];
-        if (!scopeOperations) {
-          continue;
-        }
 
         // apply paging too
         const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;

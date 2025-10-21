@@ -432,8 +432,8 @@ describe("CodegenProcessor E2E Tests", () => {
       const validState: AppModuleGlobalState = {
         name: "Test App",
         status: "CONFIRMED",
-        dragAndDrop: { enabled: false },
-        documentTypes: [],
+        isDragAndDropEnabled: false,
+        allowedDocumentTypes: [],
       };
 
       const strand: InternalTransmitterUpdate = {
@@ -445,12 +445,13 @@ describe("CodegenProcessor E2E Tests", () => {
       await processor.onStrands([strand]);
       await vi.runAllTimersAsync();
 
-      expect(generateDriveEditor).toHaveBeenCalledWith(
-        "Test App",
-        mockConfig.PH_CONFIG,
-        "test-app",
-        undefined,
-      );
+      expect(generateDriveEditor).toHaveBeenCalledWith({
+        name: "Test App",
+        config: mockConfig.PH_CONFIG,
+        appId: "test-app",
+        allowedDocumentTypes: "",
+        isDragAndDropEnabled: false,
+      });
 
       expect(generateManifest).toHaveBeenCalledWith(
         {
@@ -474,10 +475,10 @@ describe("CodegenProcessor E2E Tests", () => {
       const validState: AppModuleGlobalState = {
         name: "Test App",
         status: "CONFIRMED",
-        dragAndDrop: { enabled: true },
-        documentTypes: [
-          { id: "dt-1", documentType: "powerhouse/document-model" },
-          { id: "dt-2", documentType: "powerhouse/budget-statement" },
+        isDragAndDropEnabled: true,
+        allowedDocumentTypes: [
+          "powerhouse/document-model",
+          "powerhouse/budget-statement",
         ],
       };
 
@@ -490,18 +491,13 @@ describe("CodegenProcessor E2E Tests", () => {
       await processor.onStrands([strand]);
       await vi.runAllTimersAsync();
 
-      expect(generateDriveEditor).toHaveBeenCalledWith(
-        "Test App",
-        mockConfig.PH_CONFIG,
-        "test-app",
-        {
-          enabled: true,
-          documentTypes: [
-            "powerhouse/document-model",
-            "powerhouse/budget-statement",
-          ],
-        },
-      );
+      expect(generateDriveEditor).toHaveBeenCalledWith({
+        name: "Test App",
+        config: mockConfig.PH_CONFIG,
+        appId: "test-app",
+        allowedDocumentTypes: "powerhouse/document-model,powerhouse/budget-statement",
+        isDragAndDropEnabled: true,
+      });
 
       expect(generateManifest).toHaveBeenCalled();
     });
@@ -514,8 +510,8 @@ describe("CodegenProcessor E2E Tests", () => {
       const invalidState: AppModuleGlobalState = {
         name: "Test App",
         status: "DRAFT",
-        dragAndDrop: { enabled: false },
-        documentTypes: [],
+        isDragAndDropEnabled: false,
+        allowedDocumentTypes: [],
       };
 
       const strand: InternalTransmitterUpdate = {

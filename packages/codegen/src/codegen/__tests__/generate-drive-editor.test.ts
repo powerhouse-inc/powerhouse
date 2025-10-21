@@ -44,8 +44,13 @@ describe("generateDriveEditor", () => {
   });
 
   it("should generate a drive editor with the correct files and content", async () => {
-    const name = "AtlasDriveExplorer";
-    await generateDriveEditor(name, config, "AtlasDriveExplorer");
+    const name = "Atlas Drive Explorer";
+    await generateDriveEditor({
+      name,
+      config,
+      appId: "AtlasDriveExplorer",
+      allowedDocumentTypes: "thing-1,thing-2",
+    });
 
     await compile("tsconfig.document-editor.test.json");
 
@@ -81,7 +86,7 @@ describe("generateDriveEditor", () => {
 
   it("should generate a drive editor with default id when no appId is provided", async () => {
     const name = "TestApp";
-    await generateDriveEditor(name, config); // No appId provided
+    await generateDriveEditor({ name, config }); // No appId provided
 
     const editorDir = path.join(testDir, "test-app");
     const indexPath = path.join(editorDir, "index.ts");
@@ -93,7 +98,7 @@ describe("generateDriveEditor", () => {
   });
 
   it("should append new exports to existing index.ts file", async () => {
-    const name = "AtlasDriveExplorer";
+    const name = "Atlas Drive Explorer";
     const existingContent = `${EXPECTED_HEADER_COMMENT}
 
 ${EXPECTED_EXISTING_EDITOR_EXPORT}`;
@@ -109,21 +114,19 @@ ${EXPECTED_EXISTING_EDITOR_EXPORT}`;
     const existingEditorIndexPath = path.join(existingEditorDir, "index.ts");
     fs.writeFileSync(
       existingEditorIndexPath,
-      `import { type DriveEditorModule } from "@powerhousedao/reactor-browser";
+      `import { type EditorModule } from "document-model";
 
-export const module: DriveEditorModule = {
+export const module: EditorModule = {
   Component: () => null,
   documentTypes: ["powerhouse/document-drive"],
   config: {
     id: "ExistingEditor",
-    disableExternalControls: true,
-    documentToolbarEnabled: true,
-    showSwitchboardLink: true,
+    name: "Existing Editor",
   },
 };`,
     );
 
-    await generateDriveEditor(name, config);
+    await generateDriveEditor({ name, config });
 
     const mainIndexContent = fs
       .readFileSync(mainIndexPath, "utf-8")

@@ -39,8 +39,8 @@ export class KyselyDocumentView implements IDocumentView {
         this.lastOperationId,
       );
 
-      if (missedOperations.length > 0) {
-        await this.indexOperations(missedOperations);
+      if (missedOperations.items.length > 0) {
+        await this.indexOperations(missedOperations.items);
       }
     } else {
       await this.db
@@ -51,8 +51,8 @@ export class KyselyDocumentView implements IDocumentView {
         .execute();
 
       const allOperations = await this.operationStore.getSinceId(0);
-      if (allOperations.length > 0) {
-        await this.indexOperations(allOperations);
+      if (allOperations.items.length > 0) {
+        await this.indexOperations(allOperations.items);
       }
     }
   }
@@ -78,7 +78,7 @@ export class KyselyDocumentView implements IDocumentView {
           }
         }
 
-        const operationType = operation.action?.type;
+        const operationType = operation.action.type;
         let scopesToIndex: Array<[string, unknown]>;
 
         if (operationType === "CREATE_DOCUMENT") {
@@ -298,17 +298,15 @@ export class KyselyDocumentView implements IDocumentView {
     const operations: Record<string, Operation[]> = {};
 
     // Get all operations for this document across all scopes
-    const allOps = await this.operationStore.getSinceId(0, signal);
-    const docOps = allOps.filter(
+    const allOps = await this.operationStore.getSinceId(0, undefined, signal);
+    const docOps = allOps.items.filter(
       (op) =>
         op.context.documentId === documentId && op.context.branch === branch,
     );
 
     // Group operations by scope and normalize to match legacy storage structure
     for (const { operation, context } of docOps) {
-      if (!operations[context.scope]) {
-        operations[context.scope] = [];
-      }
+      operations[context.scope] ??= [];
 
       // Normalize operation to match legacy storage format
       // Legacy storage includes redundant top-level fields that duplicate action fields

@@ -80,7 +80,7 @@ export function useSubscribeToVetraPackages() {
   useEffect(() => {
     const handler = async (data: PackagesUpdate) => {
       // Get current packages to preserve built-in ones
-      const currentPackages = window.vetraPackages || [];
+      const currentPackages = window.ph?.vetraPackages || [];
 
       const modulesImport = import(
         /* @vite-ignore */ `${data.url}?t=${data.timestamp}`

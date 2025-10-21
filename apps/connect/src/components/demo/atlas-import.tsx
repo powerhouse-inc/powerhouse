@@ -1,7 +1,8 @@
 import AtlasIcon from "@powerhousedao/connect/assets/icons/Atlas-Logomark.svg?react";
 import RefreshIcon from "@powerhousedao/connect/assets/icons/refresh.svg?react";
 import { PowerhouseButton } from "@powerhousedao/design-system";
-import { addRemoteDrive, useReactor } from "@powerhousedao/reactor-browser";
+import { addRemoteDrive } from "@powerhousedao/reactor-browser";
+import { useReactor } from "@powerhousedao/reactor-browser/connect";
 import { gql, request } from "graphql-request";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";

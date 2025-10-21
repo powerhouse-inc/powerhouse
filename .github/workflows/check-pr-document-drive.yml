@@ -1,4 +1,4 @@
-name: Check PR document-drive
+name: Check PR document-drive and reactor
 
 on:
   workflow_dispatch:
@@ -6,10 +6,12 @@ on:
     branches: ["main"]
     paths:
       - "packages/document-drive/**"
+      - "packages/reactor/**"
   pull_request:
     branches: ["main"]
     paths:
       - "packages/document-drive/**"
+      - "packages/reactor/**"
     types: [opened, synchronize]
 
 env:
@@ -36,8 +38,8 @@ jobs:
   #         - name: Check types
   #           run: pnpm run build:tsc
 
-  test:
-    name: Test
+  test-document-drive:
+    name: Test document-drive
     runs-on: ubuntu-24.04
     container: node:22
 
@@ -102,3 +104,32 @@ jobs:
       - name: Run tests
         run: pnpm test
         working-directory: packages/document-drive
+
+  test-reactor:
+    name: Test Reactor
+    runs-on: ubuntu-24.04
+    container: node:22
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm install:ci
+
+      - name: Build
+        run: pnpm tsc:build
+
+      - name: Lint
+        run: pnpm lint
+        working-directory: packages/reactor
+
+      - name: Run tests
+        run: pnpm test
+        working-directory: packages/reactor

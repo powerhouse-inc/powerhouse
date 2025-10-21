@@ -1,7 +1,4 @@
-import {
-  useSelectedDocument,
-  type DriveEditorProps,
-} from "@powerhousedao/reactor-browser";
+import { useSelectedDocument } from "@powerhousedao/reactor-browser";
 import { useArgs, useChannel } from "@storybook/preview-api";
 import type { Decorator, Meta, StoryObj } from "@storybook/react";
 import type {
@@ -12,10 +9,10 @@ import type {
   PHDocument,
 } from "document-model";
 import { baseCreateDocument } from "document-model/core";
-import React, { useEffect } from "react";
+import { useEffect, type ComponentType } from "react";
 import { useInterval } from "usehooks-ts";
 
-export type EditorStoryArgs = Partial<{
+export type AdditionalEditorStoryArgs = Partial<{
   document: PHDocument;
   user: {
     address: string;
@@ -40,30 +37,14 @@ export type EditorStoryArgs = Partial<{
   };
 }>;
 
-export type EditorStoryProps = EditorStoryArgs;
-
-export type DriveEditorStoryProps = DriveEditorProps & EditorStoryArgs;
-
-export type EditorStoryComponent = (
-  props: EditorStoryProps,
-) => React.JSX.Element;
-
-export type DriveEditorStoryComponent = (
-  props: DriveEditorStoryProps,
-) => React.JSX.Element;
-
-export type DocumentStory = StoryObj<EditorStoryComponent>;
-
-export type DriveDocumentStory = StoryObj<DriveEditorStoryComponent>;
-
 export function createDocumentStory(
-  Editor: EditorStoryComponent,
+  Editor: ComponentType,
   initialState: any,
-  additionalStoryArgs?: EditorStoryArgs,
+  additionalStoryArgs?: AdditionalEditorStoryArgs,
   decorators?: Decorator[],
 ): {
   meta: Meta<typeof Editor>;
-  CreateDocumentStory: DocumentStory;
+  CreateDocumentStory: StoryObj<typeof Editor>;
 } {
   const meta = {
     includeStories: ["All"],
@@ -102,12 +83,12 @@ export function createDocumentStory(
       const [document, _dispatch] = useSelectedDocument();
       function dispatch(action: Action) {
         const context: ActionContext = {};
-        if (args.user) {
+        if (additionalStoryArgs?.user) {
           context.signer = {
             user: {
-              address: args.user.address,
-              networkId: args.user.networkId,
-              chainId: args.user.chainId,
+              address: additionalStoryArgs.user.address,
+              networkId: additionalStoryArgs.user.networkId,
+              chainId: additionalStoryArgs.user.chainId,
             },
             app: {
               name: "storybook",
@@ -130,13 +111,14 @@ export function createDocumentStory(
       }, [document, emit]);
 
       useInterval(() => {
-        if (args.simulateBackgroundUpdates) {
-          const { backgroundUpdateActions } = args.simulateBackgroundUpdates;
+        if (additionalStoryArgs?.simulateBackgroundUpdates) {
+          const { backgroundUpdateActions } =
+            additionalStoryArgs.simulateBackgroundUpdates;
           backgroundUpdateActions.forEach((createAction) => {
             dispatch(createAction(document!));
           });
         }
-      }, args.simulateBackgroundUpdates?.backgroundUpdateRate ?? null);
+      }, additionalStoryArgs?.simulateBackgroundUpdates?.backgroundUpdateRate ?? null);
 
       return <Editor {...args} />;
     },
@@ -156,7 +138,7 @@ export function createDocumentStory(
     return state;
   };
 
-  const CreateDocumentStory: DocumentStory = {
+  const CreateDocumentStory: StoryObj<typeof Editor> = {
     name: "New document",
     args: {
       document: baseCreateDocument(

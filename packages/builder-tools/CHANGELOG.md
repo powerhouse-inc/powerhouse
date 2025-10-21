@@ -1,3 +1,27 @@
+## 4.1.0-dev.81 (2025-10-21)
+
+### 🚀 Features
+
+- **reactor-browser:** remove catch all wildcard ([f09931a88](https://github.com/powerhouse-inc/powerhouse/commit/f09931a88))
+- **reactor-browser,connect,vetra:** simplify document types workflow ([e665914e9](https://github.com/powerhouse-inc/powerhouse/commit/e665914e9))
+- **common,builder-tools:** always call editor config on mount ([7b246306b](https://github.com/powerhouse-inc/powerhouse/commit/7b246306b))
+- **reactor-browser:** finalize config values ([c180f146c](https://github.com/powerhouse-inc/powerhouse/commit/c180f146c))
+- **reactor-browser:** use one object for all event handler register fns ([bd5ebde02](https://github.com/powerhouse-inc/powerhouse/commit/bd5ebde02))
+- **codegen:** add editor name codegen arg ([22334afb4](https://github.com/powerhouse-inc/powerhouse/commit/22334afb4))
+- **reactor-browser,connect:** use new window function factory ([7886c284f](https://github.com/powerhouse-inc/powerhouse/commit/7886c284f))
+
+### 🩹 Fixes
+
+- **vetra,builder-tools,common:** revert constants for id and name ([7d5f21c8b](https://github.com/powerhouse-inc/powerhouse/commit/7d5f21c8b))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
+## 4.1.0-dev.80 (2025-10-21)
+
+This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.79 (2025-10-20)
 
 This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.

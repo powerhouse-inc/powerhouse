@@ -2,13 +2,15 @@
 
 ### Summary
 
-The `IWriteCache` interface defines an in-memory LRU cache that stores ring buffers of document snapshots. The cache handles all retrieval, storage, and eviction automatically through the `getState()` method. When the job executor requests a document state at a specific revision, the cache either returns a cached snapshot or rebuilds the state from operations and caches it automatically. Each document stream maintains a ring buffer of recent snapshots, and entire ring buffers are evicted as a unit when the LRU policy triggers.
+The `IWriteCache` interface defines an in-memory LRU cache that stores ring buffers of `PHDocument` snapshots. The cache requires `IOperationStore` for loading operations on cache misses and `IDocumentModelRegistry` for accessing reducers to rebuild document state. The cache handles all retrieval, storage, and eviction automatically through the `getState()` method. When the job executor requests a document at a specific revision (or latest if not specified), the cache either returns a cached snapshot or rebuilds the document from operations and caches it automatically. Each document stream maintains a ring buffer of recent snapshots, and entire ring buffers are evicted as a unit when the LRU policy triggers.
 
 ### Interface
 
 ```tsx
 // Import from other interfaces
 import type { IOperationStore } from '../Storage/IOperationStore';
+import type { IDocumentModelRegistry } from '../Registry/IDocumentModelRegistry';
+import type { PHDocument } from 'document-model';
 
 /**
  * Configuration options for the write cache
@@ -34,6 +36,12 @@ export type CacheStats = {
   /** Number of cache misses */
   misses: number;
 
+  /** Number of cold misses (no cached document for stream) */
+  coldMisses: number;
+
+  /** Number of warm misses (had older revision, applied incremental operations) */
+  warmMisses: number;
+
   /** Hit rate (hits / totalGets) */
   hitRate: number;
 
@@ -55,38 +63,49 @@ export type CacheStats = {
  */
 export interface IWriteCache {
   /**
-   * Retrieves or builds the document state at the specified revision.
-   * 
+   * Retrieves or builds the document at the specified revision.
+   * If targetRevision is not provided, retrieves the latest state.
+   *
+   * Cache miss handling:
+   * - Cold miss (no cached document): Streams operations using getSince(0, paging)
+   *   with cursor-based paging and replays them through reducer from scratch
+   * - Warm miss (has older revision): Loads only operations since cached revision
+   *   using getSince(cachedRevision) and applies them incrementally to the cached document
+   *
    * @param documentId - The document identifier
+   * @param documentType - The document type (needed for reducer lookup on cache miss)
    * @param scope - Operation scope
    * @param branch - Branch name
-   * @param targetRevision - The exact revision to retrieve
+   * @param targetRevision - The exact revision to retrieve (optional, defaults to latest)
    * @param signal - Optional abort signal
-   * @returns The document state at the specified revision
+   * @returns The complete document at the specified revision
    */
   getState(
     documentId: string,
+    documentType: string,
     scope: string,
     branch: string,
-    targetRevision: number,
+    targetRevision?: number,
     signal?: AbortSignal
-  ): Promise<any>;
+  ): Promise<PHDocument>;
 
   /**
-   * Stores a document state snapshot in the cache at the specified revision.
+   * Stores a document snapshot in the cache at the specified revision.
    *
    * @param documentId - The document identifier
+   * @param documentType - The document type
    * @param scope - Operation scope
    * @param branch - Branch name
-   * @param revision - The revision this state represents
-   * @param state - The document state to cache
+   * @param revision - The revision this document represents
+   * @param document - The complete document to cache
    */
   putState(
     documentId: string,
+    documentType: string,
     scope: string,
     branch: string,
     revision: number,
-    state: any
+    document: PHDocument
   ): void;
 
   /**
@@ -132,7 +151,8 @@ export interface IWriteCache {
 ```tsx
 // Initialize cache with configuration and dependencies
 const cache = new MemoryWriteCache(
-  operationStore,
+  operationStore,    // IOperationStore for loading operations on cache miss
+  registry,          // IDocumentModelRegistry for accessing reducers on cache miss
   {
     maxDocuments: 1000,    // Cache up to 1000 document streams
     ringBufferSize: 10     // Keep 10 snapshots per document stream
@@ -141,19 +161,21 @@ const cache = new MemoryWriteCache(
 
 await cache.startup();
 
-// In job executor: Get state at specific revision
-const currentState = await cache.getState(
+// In job executor: Get document at specific revision (or latest if not specified)
+const document = await cache.getState(
   documentId,
+  documentType,
   scope,
   branch,
-  targetRevision
+  targetRevision  // Optional - omit to get latest
 );
 
-// Apply operations starting from current state
-const { operations, newState, finalRevision } = await applyReducers(currentState, actions);
+// Apply operations starting from cached document
+const module = registry.getModule(documentType);
+const updatedDocument = module.reducer(document, action);
 
-// Store the resulting state in cache for future executions
-cache.putState(documentId, scope, branch, finalRevision, newState);
+// Store the resulting document in cache for future executions
+cache.putState(documentId, documentType, scope, branch, finalRevision, updatedDocument);
 
 // Check cache performance
 const stats = cache.getStats();
@@ -188,8 +210,16 @@ setInterval(() => {
     hitRate: stats.hitRate,
     cachedDocs: stats.cachedDocuments,
     totalSnapshots: stats.totalSnapshots,
-    evictions: stats.evictions
+    evictions: stats.evictions,
+    coldMisses: stats.coldMisses,
+    warmMisses: stats.warmMisses
   });
+
+  // Warm miss ratio indicates ring buffer effectiveness
+  const warmMissRatio = stats.warmMisses / (stats.coldMisses + stats.warmMisses);
+  if (warmMissRatio < 0.5) {
+    logger.warn('Low warm miss ratio - consider increasing ringBufferSize');
+  }
 
   // Reset stats for next period
   cache.resetStats();

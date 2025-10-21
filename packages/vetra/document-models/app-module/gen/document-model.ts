@@ -16,9 +16,9 @@ export const documentModel: DocumentModelGlobalState = {
       state: {
         global: {
           schema:
-            "type AppModuleState {\n  name: String!\n  status: StatusType!\n  documentTypes: [DocumentTypeItem!]\n  dragAndDrop: DragAndDropSettings\n}\n\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}\n\ntype DocumentTypeItem {\n  id: OID!\n  documentType: String!\n}\n\ntype DragAndDropSettings {\n  enabled: Boolean!\n}",
+            "type AppModuleState {\n  name: String!\n  status: StatusType!\n  allowedDocumentTypes: [String!]\n  isDragAndDropEnabled: Boolean!\n}\n\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}",
           initialValue:
-            '"{\\n  \\"name\\": \\"\\",\\n  \\"status\\": \\"DRAFT\\",\\n  \\"documentTypes\\": [{ \\"id\\": \\"all-documents\\", \\"documentType\\": \\"*\\" }],\\n  \\"dragAndDrop\\": {\\n    \\"enabled\\": true\\n  }\\n}"',
+            '"{\\n  \\"name\\": \\"\\",\\n  \\"status\\": \\"DRAFT\\",\\n  \\"allowedDocumentTypes\\": null,\\n  \\"isDragAndDropEnabled\\": true\\n}"',
           examples: [],
         },
         local: {
@@ -60,7 +60,7 @@ export const documentModel: DocumentModelGlobalState = {
               name: "ADD_DOCUMENT_TYPE",
               description: "",
               schema:
-                "input AddDocumentTypeInput {\n  id: OID!\n  documentType: String!\n}",
+                "input AddDocumentTypeInput {\n  documentType: String!\n}",
               template: "",
               reducer: "",
               errors: [],
@@ -71,7 +71,20 @@ export const documentModel: DocumentModelGlobalState = {
               id: "310e4e5b-3f14-4e9a-8e09-5583c7698a65",
               name: "REMOVE_DOCUMENT_TYPE",
               description: "",
-              schema: "input RemoveDocumentTypeInput {\n  id: OID!\n}",
+              schema:
+                "input RemoveDocumentTypeInput {\n  documentType: String!\n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
+              id: "b365727a-7df3-48f0-a4f8-02362f02ad1d",
+              name: "SET_DOCUMENT_TYPES",
+              description: "",
+              schema:
+                "input SetDocumentTypesInput {\n  documentTypes: [String!]!\n}",
               template: "",
               reducer: "",
               errors: [],

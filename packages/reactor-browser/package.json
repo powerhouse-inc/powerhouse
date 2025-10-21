@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-browser",
-  "version": "4.1.0-dev.79",
+  "version": "4.1.0-dev.81",
   "license": "AGPL-3.0-only",
   "type": "module",
   "repository": {
@@ -17,6 +17,10 @@
     ".": {
       "import": "./dist/src/index.js",
       "types": "./dist/src/index.d.ts"
+    },
+    "./connect": {
+      "types": "./dist/src/connect.d.ts",
+      "default": "./dist/src/connect.js"
     }
   },
   "scripts": {

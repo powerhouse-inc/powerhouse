@@ -58,27 +58,17 @@ export type Scalars = {
 
 export type AddDocumentTypeInput = {
   documentType: Scalars["String"]["input"];
-  id: Scalars["OID"]["input"];
 };
 
 export type AppModuleState = {
-  documentTypes: Maybe<Array<DocumentTypeItem>>;
-  dragAndDrop: Maybe<DragAndDropSettings>;
+  allowedDocumentTypes: Maybe<Array<Scalars["String"]["output"]>>;
+  isDragAndDropEnabled: Scalars["Boolean"]["output"];
   name: Scalars["String"]["output"];
   status: StatusType | `${StatusType}`;
 };
 
-export type DocumentTypeItem = {
-  documentType: Scalars["String"]["output"];
-  id: Scalars["OID"]["output"];
-};
-
-export type DragAndDropSettings = {
-  enabled: Scalars["Boolean"]["output"];
-};
-
 export type RemoveDocumentTypeInput = {
-  id: Scalars["OID"]["input"];
+  documentType: Scalars["String"]["input"];
 };
 
 export type SetAppNameInput = {
@@ -87,6 +77,10 @@ export type SetAppNameInput = {
 
 export type SetAppStatusInput = {
   status: StatusType | `${StatusType}`;
+};
+
+export type SetDocumentTypesInput = {
+  documentTypes: Array<Scalars["String"]["input"]>;
 };
 
 export type SetDragAndDropEnabledInput = {

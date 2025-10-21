@@ -2,11 +2,10 @@ import { z } from "zod";
 import type {
   AddDocumentTypeInput,
   AppModuleState,
-  DocumentTypeItem,
-  DragAndDropSettings,
   RemoveDocumentTypeInput,
   SetAppNameInput,
   SetAppStatusInput,
+  SetDocumentTypesInput,
   SetDragAndDropEnabledInput,
   StatusType,
 } from "./types.js";
@@ -31,7 +30,6 @@ export function AddDocumentTypeInputSchema(): z.ZodObject<
 > {
   return z.object({
     documentType: z.string(),
-    id: z.string(),
   });
 }
 
@@ -40,29 +38,10 @@ export function AppModuleStateSchema(): z.ZodObject<
 > {
   return z.object({
     __typename: z.literal("AppModuleState").optional(),
-    documentTypes: z.array(DocumentTypeItemSchema()).nullable(),
-    dragAndDrop: DragAndDropSettingsSchema().nullable(),
+    allowedDocumentTypes: z.array(z.string()).nullable(),
+    isDragAndDropEnabled: z.boolean(),
     name: z.string(),
     status: StatusTypeSchema,
-  });
-}
-
-export function DocumentTypeItemSchema(): z.ZodObject<
-  Properties<DocumentTypeItem>
-> {
-  return z.object({
-    __typename: z.literal("DocumentTypeItem").optional(),
-    documentType: z.string(),
-    id: z.string(),
-  });
-}
-
-export function DragAndDropSettingsSchema(): z.ZodObject<
-  Properties<DragAndDropSettings>
-> {
-  return z.object({
-    __typename: z.literal("DragAndDropSettings").optional(),
-    enabled: z.boolean(),
   });
 }
 
@@ -70,7 +49,7 @@ export function RemoveDocumentTypeInputSchema(): z.ZodObject<
   Properties<RemoveDocumentTypeInput>
 > {
   return z.object({
-    id: z.string(),
+    documentType: z.string(),
   });
 }
 
@@ -87,6 +66,14 @@ export function SetAppStatusInputSchema(): z.ZodObject<
 > {
   return z.object({
     status: StatusTypeSchema,
+  });
+}
+
+export function SetDocumentTypesInputSchema(): z.ZodObject<
+  Properties<SetDocumentTypesInput>
+> {
+  return z.object({
+    documentTypes: z.array(z.string()),
   });
 }
 

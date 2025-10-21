@@ -50,17 +50,6 @@ export type VetraDocumentModelModule = VetraMeta & {
 export type VetraEditorModule = VetraMeta & {
   documentTypes: string[];
   Component: React.ComponentType<any>;
-  config: {
-    id: string;
-    disableExternalControls?: boolean;
-    documentToolbarEnabled?: boolean;
-    showSwitchboardLink?: boolean;
-    timelineEnabled?: boolean;
-    documentTypes?: string[];
-    dragAndDrop?: {
-      enabled?: boolean;
-    };
-  };
 };
 
 export type VetraProcessorModule = VetraMeta & {

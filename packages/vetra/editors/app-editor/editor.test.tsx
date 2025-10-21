@@ -8,12 +8,14 @@ vi.mock("../hooks/useVetraDocument.js", () => ({
   useSelectedAppModuleDocument: vi.fn(),
 }));
 
-vi.mock("../hooks/useAvailableDocumentTypes.js", () => ({
-  useAvailableDocumentTypes: vi.fn(() => [
+vi.mock("@powerhousedao/reactor-browser", () => ({
+  useDocumentTypesInSelectedDrive: vi.fn(() => [
     "powerhouse/document-model",
     "powerhouse/budget-statement",
     "powerhouse/project-tracker",
   ]),
+  useSupportedDocumentTypesInReactor: vi.fn(() => []),
+  useSetPHDocumentEditorConfig: vi.fn(),
 }));
 
 describe("AppModule Editor", () => {
@@ -27,8 +29,8 @@ describe("AppModule Editor", () => {
           global: {
             name: "",
             status: "DRAFT",
-            documentTypes: null,
-            dragAndDrop: null,
+            allowedDocumentTypes: null,
+            isDragAndDropEnabled: true,
           },
         },
       },
@@ -55,13 +57,11 @@ describe("AppModule Editor", () => {
             global: {
               name: "test-app",
               status: "DRAFT",
-              documentTypes: [
-                { id: "dt-1", documentType: "powerhouse/document-model" },
-                { id: "dt-2", documentType: "powerhouse/budget-statement" },
+              allowedDocumentTypes: [
+                "powerhouse/document-model",
+                "powerhouse/budget-statement",
               ],
-              dragAndDrop: {
-                enabled: true,
-              },
+              isDragAndDropEnabled: true,
             },
           },
         },
@@ -108,8 +108,8 @@ describe("AppModule Editor", () => {
             global: {
               name: "existing-app",
               status: "DRAFT",
-              documentTypes: null,
-              dragAndDrop: null,
+              allowedDocumentTypes: null,
+              isDragAndDropEnabled: true,
             },
           },
         },
@@ -142,8 +142,8 @@ describe("AppModule Editor", () => {
             global: {
               name: "test",
               status: "DRAFT",
-              documentTypes: null,
-              dragAndDrop: null,
+              allowedDocumentTypes: null,
+              isDragAndDropEnabled: true,
             },
           },
         },
@@ -182,58 +182,35 @@ describe("AppModule Editor", () => {
       const user = userEvent.setup();
       render(<Editor />);
 
-      const select = screen.getByLabelText("Document Types");
+      const select = screen.getByRole("combobox");
       await user.selectOptions(select, "powerhouse/document-model");
 
       expect(mockDispatch).toHaveBeenCalledWith(
         expect.objectContaining({
           type: "ADD_DOCUMENT_TYPE",
-          input: expect.objectContaining({
+          input: {
             documentType: "powerhouse/document-model",
-            id: expect.any(String),
-          }),
+          },
         }),
       );
     });
 
-    it("should add wildcard '*' document type and clear existing types", async () => {
-      vi.mocked(useSelectedAppModuleDocument).mockReturnValue([
-        {
-          state: {
-            global: {
-              name: "test-app",
-              status: "DRAFT",
-              documentTypes: [
-                { id: "dt-1", documentType: "powerhouse/document-model" },
-              ],
-              dragAndDrop: null,
-            },
-          },
-        },
-        mockDispatch,
-      ] as any);
-
+    it("should add all document types when selecting 'all-in-drive'", async () => {
       const user = userEvent.setup();
       render(<Editor />);
 
-      const select = screen.getByLabelText("Document Types");
-      await user.selectOptions(select, "all-documents");
+      const select = screen.getByRole("combobox");
+      await user.selectOptions(select, "all-in-drive");
 
-      // Should first remove existing type
       expect(mockDispatch).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: "REMOVE_DOCUMENT_TYPE",
-          input: { id: "dt-1" },
-        }),
-      );
-
-      // Then add wildcard
-      expect(mockDispatch).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: "ADD_DOCUMENT_TYPE",
+          type: "SET_DOCUMENT_TYPES",
           input: {
-            documentType: "*",
-            id: "all-documents",
+            documentTypes: [
+              "powerhouse/document-model",
+              "powerhouse/budget-statement",
+              "powerhouse/project-tracker",
+            ],
           },
         }),
       );
@@ -246,11 +223,11 @@ describe("AppModule Editor", () => {
             global: {
               name: "test-app",
               status: "DRAFT",
-              documentTypes: [
-                { id: "dt-1", documentType: "powerhouse/document-model" },
-                { id: "dt-2", documentType: "powerhouse/budget-statement" },
+              allowedDocumentTypes: [
+                "powerhouse/document-model",
+                "powerhouse/budget-statement",
               ],
-              dragAndDrop: null,
+              isDragAndDropEnabled: true,
             },
           },
         },
@@ -272,7 +249,7 @@ describe("AppModule Editor", () => {
       expect(mockDispatch).toHaveBeenCalledWith(
         expect.objectContaining({
           type: "REMOVE_DOCUMENT_TYPE",
-          input: { id: "dt-1" },
+          input: { documentType: "powerhouse/document-model" },
         }),
       );
     });
@@ -284,10 +261,8 @@ describe("AppModule Editor", () => {
             global: {
               name: "test-app",
               status: "DRAFT",
-              documentTypes: [
-                { id: "dt-1", documentType: "powerhouse/document-model" },
-              ],
-              dragAndDrop: null,
+              allowedDocumentTypes: ["powerhouse/document-model"],
+              isDragAndDropEnabled: true,
             },
           },
         },
@@ -296,7 +271,7 @@ describe("AppModule Editor", () => {
 
       render(<Editor />);
 
-      const select = screen.getByLabelText("Document Types");
+      const select = screen.getByRole("combobox");
       // Document type should not be in the options since it's already selected
       const options = Array.from(select.querySelectorAll("option")).map(
         (opt) => opt.value,
@@ -308,28 +283,6 @@ describe("AppModule Editor", () => {
       expect(options).toContain("powerhouse/project-tracker");
     });
 
-    it("should NOT add regular type when wildcard '*' exists", () => {
-      vi.mocked(useSelectedAppModuleDocument).mockReturnValue([
-        {
-          state: {
-            global: {
-              name: "test-app",
-              status: "DRAFT",
-              documentTypes: [{ id: "all", documentType: "*" }],
-              dragAndDrop: null,
-            },
-          },
-        },
-        mockDispatch,
-      ] as any);
-
-      render(<Editor />);
-
-      // Dropdown should not be visible when wildcard exists
-      const select = screen.queryByLabelText("Document Types");
-      expect(select).not.toBeInTheDocument();
-    });
-
     it("should display existing document types list", () => {
       vi.mocked(useSelectedAppModuleDocument).mockReturnValue([
         {
@@ -337,11 +290,11 @@ describe("AppModule Editor", () => {
             global: {
               name: "test-app",
               status: "DRAFT",
-              documentTypes: [
-                { id: "dt-1", documentType: "powerhouse/document-model" },
-                { id: "dt-2", documentType: "powerhouse/budget-statement" },
+              allowedDocumentTypes: [
+                "powerhouse/document-model",
+                "powerhouse/budget-statement",
               ],
-              dragAndDrop: null,
+              isDragAndDropEnabled: true,
             },
           },
         },
@@ -354,6 +307,46 @@ describe("AppModule Editor", () => {
       expect(
         screen.getByText("powerhouse/budget-statement"),
       ).toBeInTheDocument();
+    });
+
+    it("should show 'All documents (*)' when allowedDocumentTypes is empty", () => {
+      vi.mocked(useSelectedAppModuleDocument).mockReturnValue([
+        {
+          state: {
+            global: {
+              name: "test-app",
+              status: "DRAFT",
+              allowedDocumentTypes: [],
+              isDragAndDropEnabled: true,
+            },
+          },
+        },
+        mockDispatch,
+      ] as any);
+
+      render(<Editor />);
+
+      expect(screen.getByText("All documents (*)")).toBeInTheDocument();
+    });
+
+    it("should show 'All documents (*)' when allowedDocumentTypes is null", () => {
+      vi.mocked(useSelectedAppModuleDocument).mockReturnValue([
+        {
+          state: {
+            global: {
+              name: "test-app",
+              status: "DRAFT",
+              allowedDocumentTypes: null,
+              isDragAndDropEnabled: true,
+            },
+          },
+        },
+        mockDispatch,
+      ] as any);
+
+      render(<Editor />);
+
+      expect(screen.getByText("All documents (*)")).toBeInTheDocument();
     });
   });
 
@@ -368,7 +361,7 @@ describe("AppModule Editor", () => {
       expect(mockDispatch).toHaveBeenCalledWith(
         expect.objectContaining({
           type: "SET_DRAG_AND_DROP_ENABLED",
-          input: { enabled: true },
+          input: { enabled: false },
         }),
       );
     });
@@ -380,8 +373,8 @@ describe("AppModule Editor", () => {
             global: {
               name: "test-app",
               status: "DRAFT",
-              documentTypes: null,
-              dragAndDrop: { enabled: true },
+              allowedDocumentTypes: null,
+              isDragAndDropEnabled: true,
             },
           },
         },
@@ -392,8 +385,8 @@ describe("AppModule Editor", () => {
       render(<Editor />);
 
       const checkbox = screen.getByLabelText("Enable drag and drop");
-      // Checkbox is already checked, so clicking it would toggle to false, then back to true
-      await user.click(checkbox); // toggles to false
+      // Checkbox is already checked, so clicking it would toggle to false
+      await user.click(checkbox);
 
       // The dispatch should be called with enabled: false
       expect(mockDispatch).toHaveBeenCalledWith(
@@ -413,8 +406,8 @@ describe("AppModule Editor", () => {
             global: {
               name: "test-app",
               status: "DRAFT",
-              documentTypes: null,
-              dragAndDrop: null,
+              allowedDocumentTypes: null,
+              isDragAndDropEnabled: true,
             },
           },
         },
@@ -449,8 +442,8 @@ describe("AppModule Editor", () => {
             global: {
               name: "test-app",
               status: "CONFIRMED",
-              documentTypes: null,
-              dragAndDrop: null,
+              allowedDocumentTypes: null,
+              isDragAndDropEnabled: true,
             },
           },
         },
@@ -472,10 +465,8 @@ describe("AppModule Editor", () => {
             global: {
               name: "test-app",
               status: "CONFIRMED",
-              documentTypes: [
-                { id: "dt-1", documentType: "powerhouse/document-model" },
-              ],
-              dragAndDrop: { enabled: true },
+              allowedDocumentTypes: ["powerhouse/document-model"],
+              isDragAndDropEnabled: true,
             },
           },
         },
@@ -491,7 +482,7 @@ describe("AppModule Editor", () => {
       expect(checkbox).toBeDisabled();
 
       // Document types dropdown should not be visible in read-only mode
-      const select = screen.queryByLabelText("Document Types");
+      const select = screen.queryByRole("combobox");
       expect(select).not.toBeInTheDocument();
 
       // Remove buttons should not be visible
@@ -506,10 +497,8 @@ describe("AppModule Editor", () => {
             global: {
               name: "test-app",
               status: "DRAFT",
-              documentTypes: [
-                { id: "dt-1", documentType: "powerhouse/document-model" },
-              ],
-              dragAndDrop: { enabled: false },
+              allowedDocumentTypes: ["powerhouse/document-model"],
+              isDragAndDropEnabled: false,
             },
           },
         },
@@ -525,7 +514,7 @@ describe("AppModule Editor", () => {
       expect(checkbox).not.toBeDisabled();
 
       // Document types dropdown should be visible
-      const select = screen.getByLabelText("Document Types");
+      const select = screen.getByRole("combobox");
       expect(select).toBeInTheDocument();
 
       // Remove button should be visible

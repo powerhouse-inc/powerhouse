@@ -4,7 +4,6 @@ export * from "./analytics/types.js";
 export * from "./constants.js";
 export * from "./context/index.js";
 export * from "./document-model.js";
-export * from "./events/index.js";
 export * from "./global/index.js";
 export * from "./hooks/index.js";
 export * from "./pglite/index.js";

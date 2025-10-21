@@ -47,19 +47,19 @@ describe("DndOperations Operations", () => {
         creators.setDragAndDropEnabled(input),
       );
 
-      expect(updatedDocument.state.global.dragAndDrop?.enabled).toBe(false);
+      expect(updatedDocument.state.global.isDragAndDropEnabled).toBe(false);
     });
 
     it("should enable drag and drop from initial state", () => {
-      // Initial state has dragAndDrop.enabled = true
-      expect(document.state.global.dragAndDrop?.enabled).toBe(true);
+      // Initial state has isDragAndDropEnabled = true
+      expect(document.state.global.isDragAndDropEnabled).toBe(true);
 
       const updatedDocument = reducer(
         document,
         creators.setDragAndDropEnabled({ enabled: true }),
       );
 
-      expect(updatedDocument.state.global.dragAndDrop?.enabled).toBe(true);
+      expect(updatedDocument.state.global.isDragAndDropEnabled).toBe(true);
     });
 
     it("should disable drag and drop", () => {
@@ -68,7 +68,7 @@ describe("DndOperations Operations", () => {
         creators.setDragAndDropEnabled({ enabled: false }),
       );
 
-      expect(updatedDocument.state.global.dragAndDrop?.enabled).toBe(false);
+      expect(updatedDocument.state.global.isDragAndDropEnabled).toBe(false);
     });
 
     it("should toggle drag and drop in sequence", () => {
@@ -76,45 +76,31 @@ describe("DndOperations Operations", () => {
         document,
         creators.setDragAndDropEnabled({ enabled: false }),
       );
-      expect(updatedDoc.state.global.dragAndDrop?.enabled).toBe(false);
+      expect(updatedDoc.state.global.isDragAndDropEnabled).toBe(false);
 
       updatedDoc = reducer(
         updatedDoc,
         creators.setDragAndDropEnabled({ enabled: true }),
       );
-      expect(updatedDoc.state.global.dragAndDrop?.enabled).toBe(true);
+      expect(updatedDoc.state.global.isDragAndDropEnabled).toBe(true);
 
       updatedDoc = reducer(
         updatedDoc,
         creators.setDragAndDropEnabled({ enabled: false }),
       );
-      expect(updatedDoc.state.global.dragAndDrop?.enabled).toBe(false);
+      expect(updatedDoc.state.global.isDragAndDropEnabled).toBe(false);
 
       expect(updatedDoc.operations.global).toHaveLength(3);
     });
 
-    it("should create default object when dragAndDrop is null", () => {
-      document.state.global.dragAndDrop = null;
-
-      const updatedDocument = reducer(
-        document,
-        creators.setDragAndDropEnabled({ enabled: true }),
-      );
-
-      expect(updatedDocument.state.global.dragAndDrop).toEqual({
-        enabled: true,
-        documentTypes: [],
-      });
-    });
-
-    it("should preserve dragAndDrop object structure", () => {
+    it("should update boolean field directly", () => {
       const updatedDocument = reducer(
         document,
         creators.setDragAndDropEnabled({ enabled: false }),
       );
 
-      expect(updatedDocument.state.global.dragAndDrop).toBeDefined();
-      expect(typeof updatedDocument.state.global.dragAndDrop?.enabled).toBe(
+      expect(updatedDocument.state.global.isDragAndDropEnabled).toBeDefined();
+      expect(typeof updatedDocument.state.global.isDragAndDropEnabled).toBe(
         "boolean",
       );
     });

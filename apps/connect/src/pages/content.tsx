@@ -1,11 +1,17 @@
 import { DriveEditorContainer, DriveIcon } from "@powerhousedao/connect";
-import { connectConfig } from "@powerhousedao/connect/config";
+import {
+  connectConfig,
+  defaultPHDocumentEditorConfig,
+  defaultPHDriveEditorConfig,
+} from "@powerhousedao/connect/config";
 import {
   HomeScreen,
   HomeScreenAddDriveItem,
   HomeScreenItem,
 } from "@powerhousedao/design-system";
 import {
+  setPHDocumentEditorConfig,
+  setPHDriveEditorConfig,
   setSelectedDrive,
   useDriveEditorModuleById,
   useDrives,
@@ -14,11 +20,25 @@ import {
   useSelectedFolder,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "document-drive";
+import { useEffect } from "react";
 
 export function Content() {
   const [selectedDrive] = useSelectedDriveSafe();
   const selectedFolder = useSelectedFolder();
   const [selectedDocument] = useSelectedDocument();
+
+  useEffect(() => {
+    if (!selectedDocument) {
+      setPHDocumentEditorConfig(defaultPHDocumentEditorConfig);
+    }
+  }, [selectedDocument]);
+
+  useEffect(() => {
+    if (!selectedDrive) {
+      setPHDriveEditorConfig(defaultPHDriveEditorConfig);
+    }
+  }, [selectedDrive]);
+
   const showHomeScreen = !selectedDocument && !selectedDrive && !selectedFolder;
   return (
     <ContentContainer>

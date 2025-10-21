@@ -49,8 +49,8 @@ const FileStorageDir = path.join(__dirname, "./file-storage");
 const prismaClient = new PrismaClient();
 const cache = new InMemoryCache();
 const storageLayers = [
-  ["MemoryStorage", async () => new MemoryStorage()],
-  ["FilesystemStorage", async () => new FilesystemStorage(FileStorageDir)],
+  ["MemoryStorage", () => new MemoryStorage()],
+  ["FilesystemStorage", () => new FilesystemStorage(FileStorageDir)],
   // PrismaStorage always returns an undefined state and requires rebuild, so it will always fail until
   // this new Reactor implementation uses the IWriteCache.
   //["PrismaStorage", async () => new PrismaStorage(prismaClient, cache)],
@@ -189,13 +189,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       // Wait for the document to be fully indexed in the document view (with all scopes)
       await vi.waitUntil(async () => {
         try {
-          const viewDoc =
-            await documentView.get<DocumentDriveDocument>(documentId);
-          // Check that all expected scopes are present
-          return (
-            viewDoc.state.global !== undefined &&
-            viewDoc.state.local !== undefined
-          );
+          await documentView.get<DocumentDriveDocument>(documentId);
+          // If we successfully get the document, it means it's been indexed
+          return true;
         } catch {
           return false;
         }
@@ -230,13 +226,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       // Wait for the document to be fully indexed in the document view (with all scopes)
       await vi.waitUntil(async () => {
         try {
-          const viewDoc =
-            await documentView.get<DocumentDriveDocument>(documentId);
-          // Check that all expected scopes are present
-          return (
-            viewDoc.state.global !== undefined &&
-            viewDoc.state.local !== undefined
-          );
+          await documentView.get<DocumentDriveDocument>(documentId);
+          // If we successfully get the document, it means it's been indexed
+          return true;
         } catch {
           return false;
         }

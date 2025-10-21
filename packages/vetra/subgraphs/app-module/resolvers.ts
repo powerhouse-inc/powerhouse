@@ -1,15 +1,16 @@
-import { type BaseSubgraph } from "@powerhousedao/reactor-api";
+import type { BaseSubgraph } from "@powerhousedao/reactor-api";
 import { addFile } from "document-drive";
-import { setName } from "document-model";
 import {
   actions,
-  type AddDocumentTypeInput,
-  type AppModuleDocument,
-  type RemoveDocumentTypeInput,
   type SetAppNameInput,
   type SetAppStatusInput,
+  type AddDocumentTypeInput,
+  type RemoveDocumentTypeInput,
+  type SetDocumentTypesInput,
   type SetDragAndDropEnabledInput,
+  type AppModuleDocument,
 } from "../../document-models/app-module/index.js";
+import { setName } from "document-model";
 
 export const getResolvers = (
   subgraph: BaseSubgraph,
@@ -184,6 +185,30 @@ export const getResolvers = (
         if (result.status !== "SUCCESS") {
           throw new Error(
             result.error?.message ?? "Failed to removeDocumentType",
+          );
+        }
+
+        return true;
+      },
+
+      AppModule_setDocumentTypes: async (
+        _: unknown,
+        args: { docId: string; input: SetDocumentTypesInput },
+      ) => {
+        const { docId, input } = args;
+        const doc = await reactor.getDocument<AppModuleDocument>(docId);
+        if (!doc) {
+          throw new Error("Document not found");
+        }
+
+        const result = await reactor.addAction(
+          docId,
+          actions.setDocumentTypes(input),
+        );
+
+        if (result.status !== "SUCCESS") {
+          throw new Error(
+            result.error?.message ?? "Failed to setDocumentTypes",
           );
         }
 

@@ -1,9 +1,12 @@
-import type { Reactor } from "@powerhousedao/reactor-browser";
 import type {
   DocumentDriveDocument,
   FolderNode,
+  IDocumentDriveServer,
   SharingType,
+  SyncStatus,
+  Trigger,
 } from "document-drive";
+import { SynchronizationUnitNotFoundError } from "document-drive";
 import type { PHDocument } from "document-model";
 
 function handleSettledResults<T>(results: PromiseSettledResult<T>[]): T[] {
@@ -80,7 +83,7 @@ export function makeFolderNodeFromDrive(
 }
 
 export async function getDocumentsForDriveId(
-  reactor: Reactor | undefined,
+  reactor: IDocumentDriveServer | undefined,
   driveId: string | undefined,
 ): Promise<PHDocument[]> {
   if (!reactor || !driveId) return [];
@@ -92,7 +95,7 @@ export async function getDocumentsForDriveId(
 }
 
 export async function getDrives(
-  reactor: Reactor | undefined,
+  reactor: IDocumentDriveServer | undefined,
 ): Promise<DocumentDriveDocument[]> {
   if (!reactor) return [];
   const driveIds = await reactor.getDrives();
@@ -103,7 +106,7 @@ export async function getDrives(
 }
 
 export async function getDocuments(
-  reactor: Reactor | undefined,
+  reactor: IDocumentDriveServer | undefined,
 ): Promise<PHDocument[]> {
   if (!reactor) return [];
   const driveIds = await reactor.getDrives();
@@ -116,9 +119,88 @@ export async function getDocuments(
 }
 
 export async function getDriveById(
-  reactor: Reactor | undefined,
+  reactor: IDocumentDriveServer | undefined,
   driveId: string | undefined,
 ): Promise<DocumentDriveDocument | undefined> {
   if (!reactor || !driveId) return undefined;
   return await reactor.getDrive(driveId);
+}
+
+export function getSyncStatus(
+  documentId: string,
+  sharingType: SharingType,
+): Promise<SyncStatus | undefined> {
+  if (sharingType === "LOCAL") return Promise.resolve(undefined);
+  const reactor = window.ph?.reactor;
+  if (!reactor) {
+    return Promise.resolve(undefined);
+  }
+  try {
+    const syncStatus = reactor.getSyncStatus(documentId);
+    if (syncStatus instanceof SynchronizationUnitNotFoundError)
+      return Promise.resolve("INITIAL_SYNC");
+    return Promise.resolve(syncStatus);
+  } catch (error) {
+    console.error(error);
+    return Promise.resolve("ERROR");
+  }
+}
+
+export function getSyncStatusSync(
+  documentId: string,
+  sharingType: SharingType,
+): SyncStatus | undefined {
+  if (sharingType === "LOCAL") return;
+  const reactor = window.ph?.reactor;
+  if (!reactor) {
+    return;
+  }
+  try {
+    const syncStatus = reactor.getSyncStatus(documentId);
+    if (syncStatus instanceof SynchronizationUnitNotFoundError)
+      return "INITIAL_SYNC";
+    return syncStatus;
+  } catch (error) {
+    console.error(error);
+    return "ERROR";
+  }
+}
+
+export function getDrivePullResponderTrigger(
+  drive: DocumentDriveDocument | undefined,
+): Trigger | undefined {
+  return drive?.state.local.triggers.find(
+    (trigger) => trigger.type === "PullResponder",
+  );
+}
+
+export function getDrivePullResponderUrl(
+  drive: DocumentDriveDocument | undefined,
+): string | undefined {
+  const pullResponder = getDrivePullResponderTrigger(drive);
+  return pullResponder?.data?.url;
+}
+
+export function getDriveRemoteUrl(
+  drive: DocumentDriveDocument | undefined,
+): string | undefined {
+  if (!drive) return undefined;
+  const pullResponderUrl = getDrivePullResponderUrl(drive);
+
+  if ("remoteUrl" in drive.state.global) {
+    const remoteUrl = drive.state.global.remoteUrl;
+    if (typeof remoteUrl === "string") {
+      return remoteUrl;
+    }
+  }
+
+  return pullResponderUrl;
+}
+
+export function getDriveIsRemote(
+  drive: DocumentDriveDocument | undefined,
+): boolean {
+  const remoteUrl = getDriveRemoteUrl(drive);
+  const pullResponderUrl = getDrivePullResponderUrl(drive);
+  return remoteUrl !== undefined || pullResponderUrl !== undefined;
 }

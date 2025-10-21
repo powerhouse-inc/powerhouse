@@ -1,24 +1,4 @@
 import {
-  createBrowserDocumentDriveServer,
-  createBrowserStorage,
-  loadCommonPackage,
-  loadExternalPackages,
-} from "@powerhousedao/connect";
-import { connectConfig } from "@powerhousedao/connect/config";
-import {
-  addPHEventHandlers,
-  dispatchSetAppConfigEvent,
-  dispatchSetBasePathEvent,
-  dispatchSetConnectCryptoEvent,
-  dispatchSetDidEvent,
-  dispatchSetDocumentsEvent,
-  dispatchSetDrivesEvent,
-  dispatchSetProcessorManagerEvent,
-  dispatchSetReactorEvent,
-  dispatchSetRenownEvent,
-  dispatchSetSelectedDriveIdEvent,
-  dispatchSetSelectedNodeIdEvent,
-  dispatchSetVetraPackagesEvent,
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
   getDocuments,
@@ -28,7 +8,21 @@ import {
   initReactor,
   login,
   refreshReactorData,
+  setAllDocuments,
+  setSelectedDrive,
+  setSelectedNode,
+  setVetraPackages,
 } from "@powerhousedao/reactor-browser";
+import {
+  addPHEventHandlers,
+  setConnectCrypto,
+  setDefaultPHGlobalConfig,
+  setDid,
+  setDrives,
+  setProcessorManager,
+  setReactor,
+  setRenown,
+} from "@powerhousedao/reactor-browser/connect";
 import { initRenown } from "@renown/sdk";
 import type {
   DocumentDriveDocument,
@@ -42,6 +36,13 @@ import {
   initFeatureFlags,
   isDualActionCreateEnabled,
 } from "../../feature-flags.js";
+import { phGlobalConfigFromEnv } from "@powerhousedao/connect/config";
+import {
+  createBrowserDocumentDriveServer,
+  createBrowserStorage,
+} from "../utils/reactor.js";
+import { loadCommonPackage } from "./document-model.js";
+import { loadExternalPackages } from "./external-packages.js";
 
 let reactorStorage: IDocumentAdminStorage | undefined;
 
@@ -106,20 +107,18 @@ async function loadDriveFromRemoteUrl(
 }
 
 export async function createReactor() {
-  if (window.reactor || window.loading) return;
+  if (!window.ph) {
+    window.ph = {};
+  }
+  if (window.ph.reactor || window.ph.loading) return;
 
-  window.loading = true;
+  window.ph.loading = true;
 
   // add window event handlers for updates
   addPHEventHandlers();
 
-  dispatchSetBasePathEvent(connectConfig.routerBasename);
-
   // initialize feature flags
   await initFeatureFlags();
-
-  // initialize app config
-  const appConfig = getAppConfig();
 
   // initialize connect crypto
   const connectCrypto = await initConnectCrypto();
@@ -128,10 +127,10 @@ export async function createReactor() {
   const did = await connectCrypto.did();
 
   // initialize renown
-  const renown = initRenown(did, connectConfig.routerBasename);
+  const renown = initRenown(did, phGlobalConfigFromEnv.routerBasename);
 
   // initialize storage
-  const storage = createBrowserStorage(connectConfig.routerBasename);
+  const storage = createBrowserStorage(phGlobalConfigFromEnv.routerBasename!);
 
   // store storage for admin access
   setReactorStorage(storage);
@@ -189,17 +188,17 @@ export async function createReactor() {
   const didFromUrl = getDidFromUrl();
   await login(didFromUrl, reactor, renown, connectCrypto);
   // dispatch the events to set the values in the window object
-  dispatchSetReactorEvent(reactor);
-  dispatchSetConnectCryptoEvent(connectCrypto);
-  dispatchSetDidEvent(did);
-  dispatchSetRenownEvent(renown);
-  dispatchSetAppConfigEvent(appConfig);
-  dispatchSetProcessorManagerEvent(processorManager);
-  dispatchSetDrivesEvent(drives);
-  dispatchSetDocumentsEvent(documents);
-  dispatchSetVetraPackagesEvent(vetraPackages);
-  dispatchSetSelectedDriveIdEvent(driveSlug);
-  dispatchSetSelectedNodeIdEvent(nodeSlug);
+  setDefaultPHGlobalConfig(phGlobalConfigFromEnv);
+  setReactor(reactor);
+  setConnectCrypto(connectCrypto);
+  setDid(did);
+  setRenown(renown);
+  setProcessorManager(processorManager);
+  setDrives(drives);
+  setAllDocuments(documents);
+  setVetraPackages(vetraPackages);
+  setSelectedDrive(driveSlug);
+  setSelectedNode(nodeSlug);
 
   // subscribe to reactor events
   reactor.on("syncStatus", (...args) => {
@@ -245,17 +244,7 @@ export async function createReactor() {
     refreshReactorData(reactor).catch(logger.error);
   });
 
-  window.loading = false;
-}
-
-function getAppConfig() {
-  const analyticsDatabaseName = connectConfig.analytics.databaseName;
-  const showSearchBar = connectConfig.content.showSearchBar;
-  return {
-    allowList: undefined,
-    analyticsDatabaseName,
-    showSearchBar,
-  };
+  window.ph.loading = false;
 }
 
 function getDidFromUrl() {

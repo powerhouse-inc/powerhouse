@@ -1,3 +1,30 @@
+## 4.1.0-dev.81 (2025-10-21)
+
+### 🚀 Features
+
+- **vetra:** add set document types operation/action ([dcb59d1d9](https://github.com/powerhouse-inc/powerhouse/commit/dcb59d1d9))
+- **reactor-browser:** remove catch all wildcard ([f09931a88](https://github.com/powerhouse-inc/powerhouse/commit/f09931a88))
+- **reactor-browser,connect,vetra:** simplify document types workflow ([e665914e9](https://github.com/powerhouse-inc/powerhouse/commit/e665914e9))
+- **reactor-browser,vetra,design-system:** use config hooks ([f6a62a099](https://github.com/powerhouse-inc/powerhouse/commit/f6a62a099))
+- **reactor-browser:** finalize config values ([c180f146c](https://github.com/powerhouse-inc/powerhouse/commit/c180f146c))
+- **reactor-browser:** organize and deduplicate state hooks ([e0ad408e7](https://github.com/powerhouse-inc/powerhouse/commit/e0ad408e7))
+- **codegen:** update templates ([2715fccca](https://github.com/powerhouse-inc/powerhouse/commit/2715fccca))
+- **codegen:** add editor name codegen arg ([22334afb4](https://github.com/powerhouse-inc/powerhouse/commit/22334afb4))
+- **vetra:** re-run generate ([71d9c33ba](https://github.com/powerhouse-inc/powerhouse/commit/71d9c33ba))
+- **reactor-browser,connect:** use new window function factory ([7886c284f](https://github.com/powerhouse-inc/powerhouse/commit/7886c284f))
+
+### 🩹 Fixes
+
+- **vetra,builder-tools,common:** revert constants for id and name ([7d5f21c8b](https://github.com/powerhouse-inc/powerhouse/commit/7d5f21c8b))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
+## 4.1.0-dev.80 (2025-10-21)
+
+This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.79 (2025-10-20)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
