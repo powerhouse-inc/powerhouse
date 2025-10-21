@@ -1,19 +1,24 @@
 import { Icon } from "@powerhousedao/design-system";
+import type {
+  TimelineBarItem,
+  TimelineDividerItem,
+} from "@powerhousedao/reactor-browser";
 import {
   setSelectedNode,
+  setSelectedTimelineItem,
   showRevisionHistory,
   useNodeParentFolderById,
   useSelectedDocument,
 } from "@powerhousedao/reactor-browser";
 import { useEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";
-import type {
-  DocumentTimelineProps,
-  TimelineBarItem,
-  TimelineDividerItem,
-} from "../document-timeline/document-timeline.js";
+import type { DocumentTimelineProps } from "../document-timeline/document-timeline.js";
 import { DocumentTimeline } from "../document-timeline/document-timeline.js";
-import { exportDocument, useDocumentUndoRedo } from "./utils/index.js";
+import {
+  exportDocument,
+  useDocumentTimeline,
+  useDocumentUndoRedo,
+} from "./utils/index.js";
 
 export type DocumentToolbarV2Props = {
   title?: string;
@@ -46,7 +51,7 @@ export const DocumentToolbarV2: React.FC<DocumentToolbarV2Props> = (props) => {
     onShowRevisionHistory,
     disableRevisionHistory = false,
     onSwitchboardLinkClick,
-    timelineItems = [],
+    timelineItems,
     onTimelineItemClick,
     initialTimelineVisible = false,
     timelineButtonVisible = false,
@@ -66,13 +71,18 @@ export const DocumentToolbarV2: React.FC<DocumentToolbarV2Props> = (props) => {
   const handleShowRevisionHistory =
     onShowRevisionHistory || showRevisionHistory;
 
+  const timelineItemsData = useDocumentTimeline();
+  const handleTimelineItemClick =
+    onTimelineItemClick || setSelectedTimelineItem;
+  const finalTimelineItems = timelineItems || timelineItemsData;
+
   const [showTimeline, setShowTimeline] = useState(initialTimelineVisible);
 
   const isUndoDisabled = !handleCanUndo;
   const isRedoDisabled = !handleCanRedo;
   const isExportDisabled = !onExport && !document;
   const isSwitchboardLinkDisabled = !onSwitchboardLinkClick;
-  const isTimelineDisabled = timelineItems.length === 0;
+  const isTimelineDisabled = finalTimelineItems.length === 0;
 
   useEffect(() => {
     if (initialTimelineVisible) {
@@ -216,8 +226,8 @@ export const DocumentToolbarV2: React.FC<DocumentToolbarV2Props> = (props) => {
       {showTimeline && (
         <div className="mt-2 w-full">
           <DocumentTimeline
-            timeline={timelineItems}
-            onItemClick={onTimelineItemClick}
+            timeline={finalTimelineItems}
+            onItemClick={handleTimelineItemClick}
           />
         </div>
       )}

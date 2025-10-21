@@ -1,8 +1,8 @@
-import { addHours } from "date-fns";
 import type {
   TimelineBarItem,
   TimelineDividerItem,
-} from "./document-timeline.js";
+} from "@powerhousedao/reactor-browser";
+import { addHours } from "date-fns";
 
 // Generate timestamps with 1 hour difference starting from a base date
 const generateTimestamps = (count: number) => {

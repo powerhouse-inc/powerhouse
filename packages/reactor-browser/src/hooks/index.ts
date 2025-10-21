@@ -81,6 +81,10 @@ export {
   useSelectedDriveId,
   useSelectedDriveSafe,
 } from "./selected-drive.js";
+export {
+  setSelectedTimelineItem,
+  useSelectedTimelineItem,
+} from "./selected-timeline-item.js";
 export { useSelectedFolder } from "./selected-folder.js";
 export { setSelectedNode, useSelectedNode } from "./selected-node.js";
 export { useSubgraphModules } from "./subgraph-modules.js";
@@ -89,6 +93,8 @@ export {
   setSelectedTimelineRevision,
   useSelectedTimelineRevision,
 } from "./timeline-revision.js";
+export { useTimelineItems } from "./use-timeline-items.js";
+export type { UseTimelineItemsResult } from "./use-timeline-items.js";
 export { useOnDropFile } from "./use-on-drop-file.js";
 export { useUserPermissions } from "./user-permissions.js";
 export { setVetraPackages, useVetraPackages } from "./vetra-packages.js";

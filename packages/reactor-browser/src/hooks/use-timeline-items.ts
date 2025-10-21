@@ -3,9 +3,9 @@ import {
   AnalyticsGranularity,
   AnalyticsPath,
 } from "@powerhousedao/analytics-engine-core";
-import type { UseAnalyticsQueryResult } from "@powerhousedao/reactor-browser";
-import { useAnalyticsQuery } from "@powerhousedao/reactor-browser";
 import { DateTime } from "luxon";
+import type { UseAnalyticsQueryResult } from "../analytics/hooks.js";
+import { useAnalyticsQuery } from "../analytics/hooks.js";
 
 const getBarSize = (value: number) => {
   if (value <= 0) return 0;

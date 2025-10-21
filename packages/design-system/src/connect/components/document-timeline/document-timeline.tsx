@@ -1,28 +1,11 @@
 import { ConnectTooltipProvider } from "@powerhousedao/design-system";
+import type {
+  TimelineBarItem,
+  TimelineDividerItem,
+  TimelineItem,
+} from "@powerhousedao/reactor-browser";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { TimelineBarProps } from "./components/index.js";
 import { HDivider, TimelineBar } from "./components/index.js";
-
-export type TimelineBarItem = Omit<TimelineBarProps, "className"> & {
-  id: string;
-  type: "bar";
-  revision?: number;
-  startDate?: Date;
-  endDate?: Date;
-};
-
-export type TimelineDividerItem = {
-  id: string;
-  type: "divider";
-  timestampUtcMs?: string;
-  title?: string;
-  subtitle?: string;
-  revision?: number;
-  startDate?: Date;
-  endDate?: Date;
-};
-
-export type TimelineItem = TimelineBarItem | TimelineDividerItem;
 
 export interface DocumentTimelineProps {
   onItemClick?: (item: TimelineItem | null) => void;

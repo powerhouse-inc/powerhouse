@@ -1,17 +1,17 @@
-import { getRevisionFromDate, useTimelineItems } from "@powerhousedao/common";
 import {
   EditorLoader,
   toast,
   useUndoRedoShortcuts,
 } from "@powerhousedao/connect";
-import type { TimelineItem } from "@powerhousedao/design-system";
 import {
   DocumentToolbar,
   PowerhouseButton,
   RevisionHistory,
 } from "@powerhousedao/design-system";
 import {
+  getRevisionFromDate,
   setRevisionHistoryVisible,
+  setSelectedTimelineItem,
   showPHModal,
   useDocumentById,
   useDocumentModelModuleById,
@@ -19,6 +19,8 @@ import {
   useFallbackEditorModule,
   useIsExternalControlsEnabled,
   useRevisionHistoryVisible,
+  useSelectedTimelineItem,
+  useTimelineItems,
 } from "@powerhousedao/reactor-browser";
 import type { PHDocument } from "document-model";
 import { redo, undo } from "document-model/core";
@@ -56,8 +58,7 @@ export const DocumentEditor: React.FC<Props> = (props) => {
     onExport,
     onOpenSwitchboardLink,
   } = props;
-  const [selectedTimelineItem, setSelectedTimelineItem] =
-    useState<TimelineItem | null>(null);
+  const selectedTimelineItem = useSelectedTimelineItem();
   const revisionHistoryVisible = useRevisionHistoryVisible();
   const [document, dispatch] = useDocumentById(initialDocument.header.id);
   const documentId = document?.header.id ?? undefined;

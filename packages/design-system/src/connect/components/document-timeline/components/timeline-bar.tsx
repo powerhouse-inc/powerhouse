@@ -1,15 +1,15 @@
 import { ConnectTooltip, Icon } from "@powerhousedao/design-system";
+import type { TimelineBarItem } from "@powerhousedao/reactor-browser";
 import { format, parseISO } from "date-fns";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 
-export interface TimelineBarProps {
+export interface TimelineBarProps
+  extends Omit<
+    TimelineBarItem,
+    "id" | "type" | "revision" | "startDate" | "endDate"
+  > {
   readonly className?: string;
-  addSize?: 0 | 1 | 2 | 3 | 4;
-  delSize?: 0 | 1 | 2 | 3 | 4;
-  timestampUtcMs?: string;
-  additions?: number;
-  deletions?: number;
   onClick?: () => void;
   isSelected?: boolean;
 }

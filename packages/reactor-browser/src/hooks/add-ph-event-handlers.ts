@@ -62,6 +62,7 @@ import { addRenownEventHandler } from "./renown.js";
 import { addRevisionHistoryVisibleEventHandler } from "./revision-history.js";
 import { addSelectedDriveIdEventHandler } from "./selected-drive.js";
 import { addSelectedNodeIdEventHandler } from "./selected-node.js";
+import { addSelectedTimelineItemEventHandler } from "./selected-timeline-item.js";
 import { addSelectedTimelineRevisionEventHandler } from "./timeline-revision.js";
 import { addUserEventHandler } from "./user.js";
 import { addVetraPackagesEventHandler } from "./vetra-packages.js";
@@ -83,6 +84,7 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   vetraPackages: addVetraPackagesEventHandler,
   selectedTimelineRevision: addSelectedTimelineRevisionEventHandler,
   revisionHistoryVisible: addRevisionHistoryVisibleEventHandler,
+  selectedTimelineItem: addSelectedTimelineItemEventHandler,
   routerBasename: addRouterBasenameEventHandler,
   version: addVersionEventHandler,
   logLevel: addLogLevelEventHandler,
