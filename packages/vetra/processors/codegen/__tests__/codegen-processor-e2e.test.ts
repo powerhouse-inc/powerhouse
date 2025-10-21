@@ -495,7 +495,8 @@ describe("CodegenProcessor E2E Tests", () => {
         name: "Test App",
         config: mockConfig.PH_CONFIG,
         appId: "test-app",
-        allowedDocumentTypes: "powerhouse/document-model,powerhouse/budget-statement",
+        allowedDocumentTypes:
+          "powerhouse/document-model,powerhouse/budget-statement",
         isDragAndDropEnabled: true,
       });
 
@@ -801,11 +802,8 @@ describe("CodegenProcessor E2E Tests", () => {
 
   describe("Edge Cases E2E", () => {
     it("should not process strand with unsupported document type", async () => {
-      const {
-        generateEditor,
-        generateProcessor,
-        generateManifest,
-      } = await import("@powerhousedao/codegen");
+      const { generateEditor, generateProcessor, generateManifest } =
+        await import("@powerhousedao/codegen");
 
       const strand: InternalTransmitterUpdate = {
         documentId: "test-doc-1",
@@ -823,10 +821,9 @@ describe("CodegenProcessor E2E Tests", () => {
     });
 
     it("should not process strand with missing documentId", async () => {
-      const {
-        generateEditor,
-        generateManifest,
-      } = await import("@powerhousedao/codegen");
+      const { generateEditor, generateManifest } = await import(
+        "@powerhousedao/codegen"
+      );
 
       const validState: DocumentEditorState = {
         name: "Test Editor",
@@ -851,10 +848,9 @@ describe("CodegenProcessor E2E Tests", () => {
     });
 
     it("should not process strand with missing state", async () => {
-      const {
-        generateEditor,
-        generateManifest,
-      } = await import("@powerhousedao/codegen");
+      const { generateEditor, generateManifest } = await import(
+        "@powerhousedao/codegen"
+      );
 
       const strand: InternalTransmitterUpdate = {
         documentId: "test-doc-1",
