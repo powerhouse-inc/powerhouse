@@ -606,16 +606,16 @@ await cache.getState(docId, type, scope, branch, 47);
 - Tests complete read-apply-write cycle
 
 ### Task 9.2: Create error handling tests
-- [ ] Test: should handle operations that fail reducer application
-- [ ] Test: should handle abort signal at various points
-- [ ] Test: should handle invalid document type (not in registry)
-- [ ] Test: should handle operations that produce errors
-- [ ] Test: should propagate operation store errors
+- [x] Test: should handle operations that fail reducer application
+- [x] Test: should handle abort signal at various points
+- [x] Test: should handle invalid document type (not in registry)
+- [x] Test: should handle operations that produce errors
+- [x] Test: should propagate operation store errors
 
 **Acceptance Criteria:**
-- All error paths tested
-- Errors don't corrupt cache state
-- Appropriate error messages
+- [x] All error paths tested (30 tests created covering all scenarios)
+- [x] Errors don't corrupt cache state (verified in tests)
+- [x] Appropriate error messages (all errors include context)
 
 ## Phase 10: Factory and Test Utilities
 

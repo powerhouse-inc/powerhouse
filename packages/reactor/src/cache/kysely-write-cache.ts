@@ -37,14 +37,42 @@ export class KyselyWriteCache implements IWriteCache {
     this.lruTracker = new LRUTracker<string>();
   }
 
+  /**
+   * Initializes the write cache.
+   * Currently a no-op as keyframe store lifecycle is managed externally.
+   */
   async startup(): Promise<void> {
     return Promise.resolve();
   }
 
+  /**
+   * Shuts down the write cache.
+   * Currently a no-op as keyframe store lifecycle is managed externally.
+   */
   async shutdown(): Promise<void> {
     return Promise.resolve();
   }
 
+  /**
+   * Retrieves document state at a specific revision from cache or rebuilds it.
+   *
+   * Cache hit path: Returns cached snapshot if available (O(1))
+   * Warm miss path: Rebuilds from cached base revision + incremental ops
+   * Cold miss path: Rebuilds from keyframe or from scratch using all operations
+   *
+   * @param documentId - The document identifier
+   * @param documentType - The document type for reducer lookup
+   * @param scope - The operation scope
+   * @param branch - The operation branch
+   * @param targetRevision - The target revision, or undefined for newest
+   * @param signal - Optional abort signal to cancel the operation
+   * @returns The document at the target revision
+   * @throws {Error} "Operation aborted" if signal is aborted
+   * @throws {ModuleNotFoundError} If document type not registered in registry
+   * @throws {Error} "Failed to rebuild document" if operation store fails
+   * @throws {Error} If reducer throws during operation application
+   * @throws {Error} If document serialization (structuredClone) fails
+   */
   async getState(
     documentId: string,
     documentType: string,
@@ -126,6 +154,21 @@ export class KyselyWriteCache implements IWriteCache {
     return structuredClone(document);
   }
 
+  /**
+   * Stores a document snapshot in the cache at a specific revision.
+   *
+   * The document is deep-copied to prevent external mutations.
+   * Updates LRU tracker and may evict least recently used stream if at capacity.
+   * Asynchronously persists keyframes at configured intervals (fire-and-forget).
+   *
+   * @param documentId - The document identifier
+   * @param documentType - The document type
+   * @param scope - The operation scope
+   * @param branch - The operation branch
+   * @param revision - The revision number
+   * @param document - The document to cache
+   * @throws {Error} If document serialization (structuredClone) fails
+   */
   putState(
     documentId: string,
     documentType: string,
@@ -146,6 +189,8 @@ export class KyselyWriteCache implements IWriteCache {
     stream.ringBuffer.push(snapshot);
 
     if (this.isKeyframeRevision(revision)) {
+      // Fire-and-forget keyframe persistence: errors are logged but don't fail putState
+      // This allows in-memory cache to continue working even if keyframe storage fails
       this.keyframeStore
         .putKeyframe(
           documentId,
@@ -164,6 +209,19 @@ export class KyselyWriteCache implements IWriteCache {
     }
   }
 
+  /**
+   * Invalidates cached document streams.
+   *
+   * Supports three invalidation scopes:
+   * - Document-level: invalidate(documentId) - removes all streams for document
+   * - Scope-level: invalidate(documentId, scope) - removes all branches for scope
+   * - Stream-level: invalidate(documentId, scope, branch) - removes specific stream
+   *
+   * @param documentId - The document identifier
+   * @param scope - Optional scope to narrow invalidation
+   * @param branch - Optional branch to narrow invalidation (requires scope)
+   * @returns The number of streams evicted
+   */
   invalidate(documentId: string, scope?: string, branch?: string): number {
     let evicted = 0;
 
@@ -195,6 +253,10 @@ export class KyselyWriteCache implements IWriteCache {
     return evicted;
   }
 
+  /**
+   * Clears the entire cache, removing all cached document streams.
+   * Resets LRU tracking state. This operation always succeeds.
+   */
   clear(): void {
     this.streams.clear();
     this.lruTracker.clear();
@@ -262,6 +324,7 @@ export class KyselyWriteCache implements IWriteCache {
       startRevision = 0;
     }
 
+    // Throws ModuleNotFoundError if document type not registered
     const module = this.registry.getModule(documentType);
     let cursor: string | undefined = undefined;
     const pageSize = 100;
@@ -295,6 +358,7 @@ export class KyselyWriteCache implements IWriteCache {
             document = module.utils.createDocument();
           }
 
+          // Fail-fast: if reducer throws, error propagates immediately without caching partial state
           document = module.reducer(document, operation.action);
         }
 
@@ -308,6 +372,7 @@ export class KyselyWriteCache implements IWriteCache {
 
         cursor = result.nextCursor;
       } catch (err) {
+        // Wrap errors with context to include document ID for debugging
         throw new Error(
           `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
         );
@@ -333,32 +398,44 @@ export class KyselyWriteCache implements IWriteCache {
     targetRevision: number | undefined,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
+    // Throws ModuleNotFoundError if document type not registered
     const module = this.registry.getModule(documentType);
     let document = structuredClone(baseDocument);
 
-    const pagedResults = await this.operationStore.getSince(
-      documentId,
-      scope,
-      branch,
-      baseRevision,
-      undefined,
-      signal,
-    );
+    try {
+      const pagedResults = await this.operationStore.getSince(
+        documentId,
+        scope,
+        branch,
+        baseRevision,
+        undefined,
+        signal,
+      );
 
-    for (const operation of pagedResults.items) {
-      if (signal?.aborted) {
-        throw new Error("Operation aborted");
+      for (const operation of pagedResults.items) {
+        if (signal?.aborted) {
+          throw new Error("Operation aborted");
+        }
+
+        if (targetRevision !== undefined && operation.index > targetRevision) {
+          break;
+        }
+
+        // Fail-fast: if reducer throws, error propagates immediately without caching partial state
+        document = module.reducer(document, operation.action);
+
+        if (
+          targetRevision !== undefined &&
+          operation.index === targetRevision
+        ) {
+          break;
+        }
       }
-
-      if (targetRevision !== undefined && operation.index > targetRevision) {
-        break;
-      }
-
-      document = module.reducer(document, operation.action);
-
-      if (targetRevision !== undefined && operation.index === targetRevision) {
-        break;
-      }
+    } catch (err) {
+      // Wrap errors with context to include document ID for debugging
+      throw new Error(
+        `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
 
     return document;

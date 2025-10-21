@@ -39,6 +39,11 @@ export interface IWriteCache {
    * @param targetRevision - The exact revision to retrieve (optional, defaults to latest)
    * @param signal - Optional abort signal
    * @returns The complete document at the specified revision
+   * @throws {Error} "Operation aborted" if signal is aborted
+   * @throws {Error} If document type not registered in registry
+   * @throws {Error} If operation store fails to load operations
+   * @throws {Error} If document reducer throws during operation application
+   * @throws {Error} If no operations found and document cannot be rebuilt
    */
   getState(
     documentId: string,
@@ -52,12 +57,16 @@ export interface IWriteCache {
   /**
    * Stores a document snapshot in the cache at the specified revision.
    *
+   * The document is deep-copied to prevent external mutations. Keyframes are persisted
+   * asynchronously at configured intervals (errors logged but do not fail the operation).
+   *
    * @param documentId - The document identifier
    * @param documentType - The document type
    * @param scope - Operation scope
    * @param branch - Branch name
    * @param revision - The revision this document represents
    * @param document - The complete document to cache
+   * @throws {Error} If document cannot be serialized (e.g., contains circular references)
    */
   putState(
     documentId: string,
