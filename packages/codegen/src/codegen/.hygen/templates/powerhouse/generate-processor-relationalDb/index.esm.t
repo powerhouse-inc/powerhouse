@@ -3,9 +3,9 @@ to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
 unless_exists: true
 ---
 import { RelationalDbProcessor } from "document-drive";
-import { type InternalTransmitterUpdate } from "document-drive";
+import type { InternalTransmitterUpdate } from "document-drive";
 import { up } from "./migrations.js";
-import { type DB } from "./schema.js";
+import type {  DB } from "./schema.js";
 
 export class <%= pascalName %>Processor extends RelationalDbProcessor<DB> {
   static override getNamespace(driveId: string): string {

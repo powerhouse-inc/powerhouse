@@ -71,14 +71,7 @@ describe("document model", () => {
       await hygenGenerateProcessor(
         "test-analytics-processor",
         ["billing-statement"],
-        {
-          "billing-statement": {
-            name: "BillingStatement",
-            importPath: "../../document-model/billing-statement/index.js",
-          },
-        },
         path.join(outPath, "processors"),
-        path.join(outPath, "document-model"),
         "analytics",
         {
           skipFormat: true,
@@ -100,14 +93,7 @@ describe("document model", () => {
       await hygenGenerateProcessor(
         "test1",
         ["billing-statement"],
-        {
-          "billing-statement": {
-            name: "BillingStatement",
-            importPath: "../../document-model/billing-statement/index.js",
-          },
-        },
         path.join(outPath, "processors"),
-        path.join(outPath, "document-model"),
         "analytics",
         {
           skipFormat: true,
@@ -117,14 +103,7 @@ describe("document model", () => {
       await hygenGenerateProcessor(
         "test2",
         ["billing-statement"],
-        {
-          "billing-statement": {
-            name: "BillingStatement",
-            importPath: "../../document-model/billing-statement/index.js",
-          },
-        },
         path.join(outPath, "processors"),
-        path.join(outPath, "document-model"),
         "analytics",
         {
           skipFormat: true,
@@ -134,15 +113,72 @@ describe("document model", () => {
       await hygenGenerateProcessor(
         "test3",
         ["billing-statement"],
-        {
-          "billing-statement": {
-            name: "BillingStatement",
-            importPath: "../../document-model/billing-statement/index.js",
-          },
-        },
         path.join(outPath, "processors"),
-        path.join(outPath, "document-model"),
         "analytics",
+        {
+          skipFormat: true,
+        },
+      );
+
+      await compile("tsconfig.document-model.test.json");
+    },
+  );
+
+  it(
+    "should generate a relational db processor and factory",
+    {
+      timeout: 10000,
+    },
+    async () => {
+      await generate();
+
+      await hygenGenerateProcessor(
+        "test-relational-processor",
+        ["billing-statement"],
+        path.join(outPath, "processors"),
+        "relationalDb",
+        {
+          skipFormat: true,
+        },
+      );
+
+      await compile("tsconfig.document-model.test.json");
+    },
+  );
+
+  it(
+    "should generate multiple relational db processors with composable factories",
+    {
+      timeout: 10000,
+    },
+    async () => {
+      await generate();
+
+      await hygenGenerateProcessor(
+        "test1",
+        ["billing-statement"],
+        path.join(outPath, "processors"),
+        "relationalDb",
+        {
+          skipFormat: true,
+        },
+      );
+
+      await hygenGenerateProcessor(
+        "test2",
+        ["billing-statement"],
+        path.join(outPath, "processors"),
+        "relationalDb",
+        {
+          skipFormat: true,
+        },
+      );
+
+      await hygenGenerateProcessor(
+        "test3",
+        ["billing-statement"],
+        path.join(outPath, "processors"),
+        "relationalDb",
         {
           skipFormat: true,
         },
