@@ -822,15 +822,15 @@ export class BaseDocumentDriveServer
     return driveStorage.header.id;
   }
 
+  getDocument<TDocument extends PHDocument>(
+    documentId: string,
+    options?: GetDocumentOptions,
+  ): Promise<TDocument>;
   /**
    * @deprecated Use getDocument(documentId, options) instead. This method will be removed in the future.
    */
   getDocument<TDocument extends PHDocument>(
     driveId: string,
-    documentId: string,
-    options?: GetDocumentOptions,
-  ): Promise<TDocument>;
-  getDocument<TDocument extends PHDocument>(
     documentId: string,
     options?: GetDocumentOptions,
   ): Promise<TDocument>;
@@ -1664,16 +1664,16 @@ export class BaseDocumentDriveServer
     };
   }
 
+  addOperation(
+    documentId: string,
+    operation: Operation,
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
   /**
    * @deprecated Use addOperation(documentId, operation, options) instead. This method will be removed in the future.
    */
   addOperation(
     driveId: string,
-    documentId: string,
-    operation: Operation,
-    options?: AddOperationOptions,
-  ): Promise<IOperationResult>;
-  addOperation(
     documentId: string,
     operation: Operation,
     options?: AddOperationOptions,
@@ -1788,16 +1788,16 @@ export class BaseDocumentDriveServer
     return promise;
   }
 
+  queueOperation(
+    documentId: string,
+    operation: Operation,
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
   /**
    * @deprecated Use queueOperation(documentId, operation, options) instead. This method will be removed in the future.
    */
   queueOperation(
     driveId: string,
-    documentId: string,
-    operation: Operation,
-    options?: AddOperationOptions,
-  ): Promise<IOperationResult>;
-  queueOperation(
     documentId: string,
     operation: Operation,
     options?: AddOperationOptions,
@@ -1868,16 +1868,16 @@ export class BaseDocumentDriveServer
     }
   }
 
+  queueOperations(
+    documentId: string,
+    operations: Operation[],
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
   /**
    * @deprecated Use queueOperations(documentId, operations, options) instead. This method will be removed in the future.
    */
   queueOperations(
     driveId: string,
-    documentId: string,
-    operations: Operation[],
-    options?: AddOperationOptions,
-  ): Promise<IOperationResult>;
-  queueOperations(
     documentId: string,
     operations: Operation[],
     options?: AddOperationOptions,
@@ -1960,16 +1960,16 @@ export class BaseDocumentDriveServer
     return promise;
   }
 
+  queueAction(
+    documentId: string,
+    action: Action,
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
   /**
    * @deprecated Use queueAction(documentId, action, options) instead. This method will be removed in the future.
    */
   queueAction(
     driveId: string,
-    documentId: string,
-    action: Action,
-    options?: AddOperationOptions,
-  ): Promise<IOperationResult>;
-  queueAction(
     documentId: string,
     action: Action,
     options?: AddOperationOptions,
@@ -1998,16 +1998,16 @@ export class BaseDocumentDriveServer
     return this._queueActions(documentId, [action], options);
   }
 
+  queueActions(
+    documentId: string,
+    actions: Action[],
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
   /**
    * @deprecated Use queueActions(documentId, actions, options) instead. This method will be removed in the future.
    */
   queueActions(
     driveId: string,
-    documentId: string,
-    actions: Action[],
-    options?: AddOperationOptions,
-  ): Promise<IOperationResult>;
-  queueActions(
     documentId: string,
     actions: Action[],
     options?: AddOperationOptions,
@@ -2131,16 +2131,16 @@ export class BaseDocumentDriveServer
     }
   }
 
+  addOperations(
+    documentId: string,
+    operations: Operation[],
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
   /**
    * @deprecated Use addOperations(documentId, operations, options) instead. This method will be removed in the future.
    */
   addOperations(
     driveId: string,
-    documentId: string,
-    operations: Operation[],
-    options?: AddOperationOptions,
-  ): Promise<IOperationResult>;
-  addOperations(
     documentId: string,
     operations: Operation[],
     options?: AddOperationOptions,
@@ -2687,19 +2687,16 @@ export class BaseDocumentDriveServer
     return operations;
   }
 
-  /**
-   * @deprecated Use addAction(documentId, action, options) instead. This method will be removed in the future.
-   */
+  addAction(
+    documentId: string,
+    action: Action,
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
   /**
    * @deprecated Use addAction(documentId, action, options) instead. This method will be removed in the future.
    */
   addAction(
     driveId: string,
-    documentId: string,
-    action: Action,
-    options?: AddOperationOptions,
-  ): Promise<IOperationResult>;
-  addAction(
     documentId: string,
     action: Action,
     options?: AddOperationOptions,
@@ -2736,16 +2733,16 @@ export class BaseDocumentDriveServer
     return this.addActions(documentId, [action], options);
   }
 
+  addActions(
+    documentId: string,
+    actions: Action[],
+    options?: AddOperationOptions,
+  ): Promise<IOperationResult>;
   /**
    * @deprecated Use addActions(documentId, actions, options) instead. This method will be removed in the future.
    */
   addActions(
     driveId: string,
-    documentId: string,
-    actions: Action[],
-    options?: AddOperationOptions,
-  ): Promise<IOperationResult>;
-  addActions(
     documentId: string,
     actions: Action[],
     options?: AddOperationOptions,
