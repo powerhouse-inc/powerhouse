@@ -25,6 +25,7 @@ export type PHGlobal = PHGlobalConfig & {
   selectedNodeId?: string;
   modal?: PHModal;
   selectedTimelineRevision?: string | number | null;
+  revisionHistoryVisible?: boolean;
 };
 
 export type PHGlobalKey = keyof PHGlobal;

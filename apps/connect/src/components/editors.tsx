@@ -11,12 +11,14 @@ import {
   RevisionHistory,
 } from "@powerhousedao/design-system";
 import {
+  setRevisionHistoryVisible,
   showPHModal,
   useDocumentById,
   useDocumentModelModuleById,
   useEditorModuleById,
   useFallbackEditorModule,
   useIsExternalControlsEnabled,
+  useRevisionHistoryVisible,
 } from "@powerhousedao/reactor-browser";
 import type { PHDocument } from "document-model";
 import { redo, undo } from "document-model/core";
@@ -56,7 +58,7 @@ export const DocumentEditor: React.FC<Props> = (props) => {
   } = props;
   const [selectedTimelineItem, setSelectedTimelineItem] =
     useState<TimelineItem | null>(null);
-  const [revisionHistoryVisible, setRevisionHistoryVisible] = useState(false);
+  const revisionHistoryVisible = useRevisionHistoryVisible();
   const [document, dispatch] = useDocumentById(initialDocument.header.id);
   const documentId = document?.header.id ?? undefined;
   const documentName = document?.header.name ?? undefined;

@@ -65,6 +65,12 @@ export {
 } from "./parent-folder.js";
 export { useProcessorModules, useProcessors } from "./processor-modules.js";
 export {
+  hideRevisionHistory,
+  setRevisionHistoryVisible,
+  showRevisionHistory,
+  useRevisionHistoryVisible,
+} from "./revision-history.js";
+export {
   useSelectedDocument,
   useSelectedDocumentId,
   useSelectedDocumentOfType,

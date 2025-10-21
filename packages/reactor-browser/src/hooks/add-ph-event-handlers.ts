@@ -59,6 +59,7 @@ import { addModalEventHandler } from "./modals.js";
 import { addProcessorManagerEventHandler } from "./processor-manager.js";
 import { addReactorEventHandler } from "./reactor.js";
 import { addRenownEventHandler } from "./renown.js";
+import { addRevisionHistoryVisibleEventHandler } from "./revision-history.js";
 import { addSelectedDriveIdEventHandler } from "./selected-drive.js";
 import { addSelectedNodeIdEventHandler } from "./selected-node.js";
 import { addSelectedTimelineRevisionEventHandler } from "./timeline-revision.js";
@@ -81,6 +82,7 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   selectedNodeId: addSelectedNodeIdEventHandler,
   vetraPackages: addVetraPackagesEventHandler,
   selectedTimelineRevision: addSelectedTimelineRevisionEventHandler,
+  revisionHistoryVisible: addRevisionHistoryVisibleEventHandler,
   routerBasename: addRouterBasenameEventHandler,
   version: addVersionEventHandler,
   logLevel: addLogLevelEventHandler,

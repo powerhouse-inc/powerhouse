@@ -1,4 +1,10 @@
 import { Icon } from "@powerhousedao/design-system";
+import {
+  setSelectedNode,
+  showRevisionHistory,
+  useNodeParentFolderById,
+  useSelectedDocument,
+} from "@powerhousedao/reactor-browser";
 import { useEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import type {
@@ -7,6 +13,7 @@ import type {
   TimelineDividerItem,
 } from "../document-timeline/document-timeline.js";
 import { DocumentTimeline } from "../document-timeline/document-timeline.js";
+import { exportDocument, useDocumentUndoRedo } from "./utils/index.js";
 
 export type DocumentToolbarV2Props = {
   title?: string;
@@ -16,8 +23,9 @@ export type DocumentToolbarV2Props = {
   canUndo?: boolean;
   canRedo?: boolean;
   onExport?: () => void;
-  onClose: () => void;
+  onClose?: () => void;
   onShowRevisionHistory?: () => void;
+  disableRevisionHistory?: boolean;
   timelineItems?: Array<TimelineBarItem | TimelineDividerItem>;
   onSwitchboardLinkClick?: () => void;
   initialTimelineVisible?: boolean;
@@ -36,6 +44,7 @@ export const DocumentToolbarV2: React.FC<DocumentToolbarV2Props> = (props) => {
     onExport,
     className,
     onShowRevisionHistory,
+    disableRevisionHistory = false,
     onSwitchboardLinkClick,
     timelineItems = [],
     onTimelineItemClick,
@@ -43,13 +52,26 @@ export const DocumentToolbarV2: React.FC<DocumentToolbarV2Props> = (props) => {
     timelineButtonVisible = false,
   } = props;
 
+  const [document] = useSelectedDocument();
+  const documentName = title || document?.header.name || undefined;
+  const parentFolder = useNodeParentFolderById(document?.header.id);
+  const handleClose = onClose || (() => setSelectedNode(parentFolder));
+  const handleExport = onExport || exportDocument;
+
+  const documentUndoRedo = useDocumentUndoRedo();
+  const handleUndo = undo || documentUndoRedo.undo;
+  const handleRedo = redo || documentUndoRedo.redo;
+  const handleCanUndo = canUndo ?? documentUndoRedo.canUndo;
+  const handleCanRedo = canRedo ?? documentUndoRedo.canRedo;
+  const handleShowRevisionHistory =
+    onShowRevisionHistory || showRevisionHistory;
+
   const [showTimeline, setShowTimeline] = useState(initialTimelineVisible);
 
-  const isUndoDisabled = !canUndo || !undo;
-  const isRedoDisabled = !canRedo || !redo;
-  const isExportDisabled = !onExport;
+  const isUndoDisabled = !handleCanUndo;
+  const isRedoDisabled = !handleCanRedo;
+  const isExportDisabled = !onExport && !document;
   const isSwitchboardLinkDisabled = !onSwitchboardLinkClick;
-  const isRevisionHistoryDisabled = !onShowRevisionHistory;
   const isTimelineDisabled = timelineItems.length === 0;
 
   useEffect(() => {
@@ -79,7 +101,7 @@ export const DocumentToolbarV2: React.FC<DocumentToolbarV2Props> = (props) => {
                 ? "cursor-not-allowed"
                 : "cursor-pointer active:opacity-70",
             )}
-            onClick={undo}
+            onClick={handleUndo}
             disabled={isUndoDisabled}
           >
             <Icon
@@ -95,7 +117,7 @@ export const DocumentToolbarV2: React.FC<DocumentToolbarV2Props> = (props) => {
                 ? "cursor-not-allowed"
                 : "cursor-pointer active:opacity-70",
             )}
-            onClick={redo}
+            onClick={handleRedo}
             disabled={isRedoDisabled}
           >
             <div className="-scale-x-100">
@@ -113,7 +135,7 @@ export const DocumentToolbarV2: React.FC<DocumentToolbarV2Props> = (props) => {
                 ? "cursor-not-allowed"
                 : "cursor-pointer active:opacity-70",
             )}
-            onClick={onExport}
+            onClick={() => void handleExport(document)}
             disabled={isExportDisabled}
           >
             <span
@@ -125,7 +147,7 @@ export const DocumentToolbarV2: React.FC<DocumentToolbarV2Props> = (props) => {
         </div>
 
         <div className="flex items-center">
-          <h1 className="text-sm font-medium text-gray-500">{title}</h1>
+          <h1 className="text-sm font-medium text-gray-500">{documentName}</h1>
         </div>
 
         <div className="flex items-center gap-x-2">
@@ -144,18 +166,18 @@ export const DocumentToolbarV2: React.FC<DocumentToolbarV2Props> = (props) => {
           <button
             className={twMerge(
               "grid size-8 place-items-center rounded-lg border border-gray-200 bg-white",
-              isRevisionHistoryDisabled
+              disableRevisionHistory
                 ? "cursor-not-allowed"
                 : "cursor-pointer active:opacity-70",
             )}
-            onClick={onShowRevisionHistory}
-            disabled={isRevisionHistoryDisabled}
+            onClick={handleShowRevisionHistory}
+            disabled={disableRevisionHistory}
           >
             <Icon
               name="History"
               size={16}
               className={
-                isRevisionHistoryDisabled ? "text-gray-500" : "text-gray-900"
+                disableRevisionHistory ? "text-gray-500" : "text-gray-900"
               }
             />
           </button>
@@ -184,7 +206,7 @@ export const DocumentToolbarV2: React.FC<DocumentToolbarV2Props> = (props) => {
           )}
           <button
             className="grid size-8 cursor-pointer place-items-center rounded-lg border border-gray-200 bg-white active:opacity-70"
-            onClick={onClose}
+            onClick={handleClose}
           >
             <Icon name="XmarkLight" size={16} className="text-gray-900" />
           </button>
