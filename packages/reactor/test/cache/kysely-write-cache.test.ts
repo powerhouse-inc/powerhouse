@@ -794,7 +794,11 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
   afterEach(async () => {
     await cache.shutdown();
     if (db) {
-      await db.destroy();
+      try {
+        await db.destroy();
+      } catch {
+        //
+      }
     }
   });
 
@@ -994,6 +998,8 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
       .where("documentId", "=", docId)
       .where("index", "<=", 50)
       .execute();
+
+    await keyframeStore.deleteKeyframes(docId, "global", "main");
 
     const doc65 = await cache.getState(docId, docType, "global", "main", 65);
     expect(doc65).toBeDefined();
