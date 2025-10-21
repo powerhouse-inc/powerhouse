@@ -1,4 +1,9 @@
+import { blake256 } from "@noble/hashes/blake1.js";
+import { blake2b, blake2s, } from "@noble/hashes/blake2.js";
 import { blake3 as blake3Hash } from "@noble/hashes/blake3.js";
+import { sha256, sha512 } from "@noble/hashes/sha2.js";
+import { keccak_256, sha3_256, shake256, shake256_64 } from "@noble/hashes/sha3.js";
+
 import stringifyJson from "safe-stable-stringify";
 import { createHash as createSha1Hash } from "sha1-uint8array";
 import type { ActionSignatureContext } from "./types.js";
@@ -18,7 +23,19 @@ export function generateUUIDBrowser() {
   return crypto.randomUUID();
 }
 
-export const supportedAlgorithms = ["sha1", "blake3"];
+export const supportedAlgorithms = [
+  "sha1",
+  "blake3",
+  "blake1",
+  "blake2b",
+  "blake2s",
+  "sha2_256",
+  "sha2_512",
+  "keccak_256",
+  "sha3_256",
+  "shake256",
+  "shake256_64",
+];
 export const supportedEncodings = ["base64", "hex"];
 const defaultAlg = "sha1"
 const defaultEnc = "base64"
@@ -89,7 +106,25 @@ function hashUIntArray(
     case "sha1":
       return createSha1Hash("sha1").update(bytes).digest();
     case "blake3":
-      return blake3Hash(bytes); // returns Uint8Array
+      return blake3Hash(bytes);
+    case "blake1":
+      return blake256(bytes);
+    case "blake2b":
+      return blake2b(bytes);
+    case "blake2s":
+      return blake2s(bytes);
+    case "sha2_256":
+      return sha256(bytes);
+    case "sha2_512":
+      return sha512(bytes);
+    case "keccak_256":
+      return keccak_256(bytes);
+    case "sha3_256":
+      return sha3_256(bytes);
+    case "shake256":
+      return shake256(bytes);
+    case "shake256_64":
+      return shake256_64(bytes);
     default:
       throw new Error(`Unsupported algorithm: ${algorithm}`);
   }
