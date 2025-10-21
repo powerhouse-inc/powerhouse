@@ -190,7 +190,7 @@ This is separate from IDocumentView (read-side projection) which optimizes queri
 - Tests verify LRU ordering behavior
 - 100% code coverage
 
-## Phase 4: Core Cache Structure (✅ Complete)
+## Phase 4: Core Cache Structure
 
 ### Task 4.1: Create cache storage structure
 - [x] Create `packages/reactor/src/cache/kysely-write-cache.ts`
@@ -293,7 +293,7 @@ putState(...): void {
 - Tests verify LRU eviction
 - All 18 tests passing
 
-## Phase 5: Cache Hit Path (getState) (✅ Complete)
+## Phase 5: Cache Hit Path (getState)
 
 ### Task 5.1: Implement cache hit path
 - [x] Implement basic `getState` with cache hit logic:
@@ -331,11 +331,11 @@ putState(...): void {
 ## Phase 6: Cold Miss Rebuild (with Keyframe Optimization)
 
 ### Task 6.1: Implement findNearestKeyframe helper
-- [ ] Add private method `findNearestKeyframe(documentId, documentType, scope, branch, targetRevision, signal): Promise<{revision: number, document: PHDocument} | undefined>`
-- [ ] Calculate possible keyframe revisions: target, target-10, target-20, ...
-- [ ] Try loading from K/V store in reverse order (newest first)
-- [ ] Return first found keyframe
-- [ ] Return undefined if no keyframes found
+- [x] Add private method `findNearestKeyframe(documentId, documentType, scope, branch, targetRevision, signal): Promise<{revision: number, document: PHDocument} | undefined>`
+- [x] Calculate possible keyframe revisions: target, target-10, target-20, ...
+- [x] Try loading from K/V store in reverse order (newest first)
+- [x] Return first found keyframe
+- [x] Return undefined if no keyframes found
 
 **Implementation:**
 ```typescript
@@ -375,31 +375,31 @@ private async findNearestKeyframe(...): Promise<...> {
 - Handles deserialization errors gracefully
 - Returns undefined if no keyframes exist
 
-### Task 6.2: Implement createInitialDocument helper
-- [ ] Add private method `createInitialDocument(documentId, documentType, operation): PHDocument`
-- [ ] Get module from registry
-- [ ] Use module's document model utilities to create initial document
-- [ ] Apply first operation if needed
-- [ ] Return initialized document
+### ~~Task 6.2: Implement createInitialDocument helper~~
+- ~~[ ] Add private method `createInitialDocument(documentId, documentType, operation): PHDocument`~~
+- ~~[ ] Get module from registry~~
+- ~~[ ] Use module's document model utilities to create initial document~~
+- ~~[ ] Apply first operation if needed~~
+- ~~[ ] Return initialized document~~
 
-**Acceptance Criteria:**
-- Method creates valid PHDocument
-- Integrates with IDocumentModelRegistry correctly
-- Handles different document types
+~~**Acceptance Criteria:**~~
+- ~~Method creates valid PHDocument~~
+- ~~Integrates with IDocumentModelRegistry correctly~~
+- ~~Handles different document types~~
 
 ### Task 6.3: Implement cold miss rebuild with keyframe optimization
-- [ ] Add private method `coldMissRebuild(documentId, documentType, scope, branch, targetRevision, signal): Promise<PHDocument>`
-- [ ] **NEW**: First, try to find nearest keyframe using `findNearestKeyframe()`
-- [ ] If keyframe found, use it as starting point (keyframe-accelerated rebuild)
-- [ ] If no keyframe, rebuild from scratch
-- [ ] Get reducer from registry using `registry.getModule(documentType).reducer`
-- [ ] Stream operations using `operationStore.getSince(documentId, scope, branch, startRevision, paging, signal)`
+- [x] Add private method `coldMissRebuild(documentId, documentType, scope, branch, targetRevision, signal): Promise<PHDocument>`
+- [x] **NEW**: First, try to find nearest keyframe using `findNearestKeyframe()`
+- [x] If keyframe found, use it as starting point (keyframe-accelerated rebuild)
+- [x] If no keyframe, rebuild from scratch
+- [x] Get reducer from registry using `registry.getModule(documentType).reducer`
+- [x] Stream operations using `operationStore.getSince(documentId, scope, branch, startRevision, paging, signal)`
   - startRevision = keyframe.revision if keyframe found, else 0
-- [ ] Use cursor-based paging with pageSize=100
-- [ ] Apply operations incrementally through reducer
-- [ ] Stop when targetRevision reached (if specified)
-- [ ] Handle abort signal between pages
-- [ ] Return built document
+- [x] Use cursor-based paging with pageSize=100
+- [x] Apply operations incrementally through reducer
+- [x] Stop when targetRevision reached (if specified)
+- [x] Handle abort signal between pages
+- [x] Return built document
 
 **Implementation:**
 ```typescript
@@ -445,11 +445,11 @@ private async coldMissRebuild(...): Promise<PHDocument> {
 - Does not load all operations into memory at once
 
 ### Task 6.4: Integrate cold miss into getState
-- [ ] Update `getState` to detect cold miss (no stream in cache)
-- [ ] Call `coldMissRebuild` on cold miss
-- [ ] Store result in cache using `putState`
-- [ ] Return built document
-- [ ] Handle errors during rebuild
+- [x] Update `getState` to detect cold miss (no stream in cache)
+- [x] Call `coldMissRebuild` on cold miss
+- [x] Store result in cache using `putState`
+- [x] Return built document
+- [x] Handle errors during rebuild
 
 **Acceptance Criteria:**
 - Cold miss triggers rebuild
@@ -457,17 +457,17 @@ private async coldMissRebuild(...): Promise<PHDocument> {
 - Errors propagate correctly
 
 ### Task 6.5: Create cold miss tests with keyframe scenarios
-- [ ] Create test document with 250 operations (requires paging)
-- [ ] Test: should rebuild document from scratch on cold miss (no keyframe)
-- [ ] Test: should use cursor-based paging for large operation sets
-- [ ] Test: should stop at targetRevision if specified
-- [ ] Test: should cache result after rebuild
-- [ ] Test: should apply operations through reducer correctly
-- [ ] Test: should handle abort signal during rebuild
-- [ ] **NEW** Test: should use keyframe if available (keyframe-accelerated rebuild)
-- [ ] **NEW** Test: should rebuild from keyframe + incremental ops
-- [ ] **NEW** Test: should fall back to full rebuild if keyframe corrupted
-- [ ] **NEW** Test: should find nearest keyframe (e.g., load @40 for target @47)
+- [x] Create test document with 250 operations (requires paging)
+- [x] Test: should rebuild document from scratch on cold miss (no keyframe)
+- [x] Test: should use cursor-based paging for large operation sets
+- [x] Test: should stop at targetRevision if specified
+- [x] Test: should cache result after rebuild
+- [x] Test: should apply operations through reducer correctly
+- [x] Test: should handle abort signal during rebuild
+- [x] **NEW** Test: should use keyframe if available (keyframe-accelerated rebuild)
+- [x] **NEW** Test: should rebuild from keyframe + incremental ops
+- [x] **NEW** Test: should fall back to full rebuild if keyframe corrupted
+- [x] **NEW** Test: should find nearest keyframe (e.g., load @40 for target @47)
 
 **Test Scenario:**
 ```typescript
