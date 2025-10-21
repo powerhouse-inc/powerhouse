@@ -110,9 +110,7 @@ describe("ReducerGenerator Integration", () => {
       );
 
       // Check generated methods
-      expect(content).toContain(
-        "setTestValueOperation(state, action, dispatch) {",
-      );
+      expect(content).toContain("setTestValueOperation(state, action) {");
       expect(content).toContain(
         '// TODO: Implement "setTestValueOperation" reducer',
       );
@@ -120,9 +118,7 @@ describe("ReducerGenerator Integration", () => {
         "throw new Error('Reducer \"setTestValueOperation\" not yet implemented');",
       );
 
-      expect(content).toContain(
-        "deleteItemOperation(state, action, dispatch) {",
-      );
+      expect(content).toContain("deleteItemOperation(state, action) {");
       expect(content).toContain(
         '// TODO: Implement "deleteItemOperation" reducer',
       );
@@ -193,10 +189,8 @@ describe("ReducerGenerator Integration", () => {
       const content = sourceFile!.getFullText();
 
       // Should have both methods
-      expect(content).toContain("setValueOperation(state, action, dispatch) {");
-      expect(content).toContain(
-        "deleteValueOperation(state, action, dispatch) {",
-      );
+      expect(content).toContain("setValueOperation(state, action) {");
+      expect(content).toContain("deleteValueOperation(state, action) {");
 
       // Should only have one import and one reducer declaration
       const importMatches = content.match(/import type/g);
@@ -317,9 +311,7 @@ describe("ReducerGenerator Integration", () => {
       expect(content).toContain("../../gen/test-module-name/operations.js");
 
       // Check camelCase method name
-      expect(content).toContain(
-        "setSpecialValueOperation(state, action, dispatch)",
-      );
+      expect(content).toContain("setSpecialValueOperation(state, action)");
     });
 
     it("should skip operations with null or empty names", async () => {
@@ -385,14 +377,10 @@ describe("ReducerGenerator Integration", () => {
       const content = sourceFile!.getFullText();
 
       // Should only have the valid operation method
-      expect(content).toContain(
-        "validActionOperation(state, action, dispatch)",
-      );
+      expect(content).toContain("validActionOperation(state, action)");
 
       // Should not have methods for null/empty names
-      const methodMatches = content.match(
-        /Operation\(state, action, dispatch\)/g,
-      );
+      const methodMatches = content.match(/Operation\(state, action\)/g);
       expect(methodMatches).toHaveLength(1); // Only one method
     });
 
