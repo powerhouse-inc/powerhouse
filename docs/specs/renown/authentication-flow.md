@@ -435,5 +435,3 @@ The integration of challenge-response mechanisms ensures **robust protection aga
 
 **Version**: 1.0.0
 **Last Updated**: 2025-10-21
-**For detailed flow**: See `authentication-flow-improved.mmd`
-**For implementation details**: See `renown-authentication-flow.md`
