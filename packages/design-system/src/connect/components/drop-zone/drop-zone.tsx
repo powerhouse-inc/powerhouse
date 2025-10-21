@@ -1,4 +1,5 @@
 import { Icon } from "@powerhousedao/design-system";
+import { setSelectedNode } from "@powerhousedao/reactor-browser";
 import type { Node } from "document-drive";
 import {
   type ComponentPropsWithoutRef,
@@ -20,17 +21,6 @@ export type DropZoneProps = ComponentPropsWithoutRef<"div"> & {
   readonly enable?: boolean;
   readonly children?: ReactNode;
   readonly onAddFile?: OnAddFileWithProgress;
-  readonly onMoveNode?: (
-    src: Node,
-    target: Node | undefined,
-  ) => Promise<void> | void;
-  readonly onCopyNode?: (
-    src: Node,
-    target: Node | undefined,
-  ) => Promise<void> | void;
-  readonly setSelectedNode?: (
-    nodeOrNodeSlug: Node | string | undefined,
-  ) => void;
   readonly useLocalStorage?: boolean;
   readonly driveId?: string;
   readonly acceptedFileExtensions?: string[];
@@ -44,9 +34,6 @@ export function DropZone(props: DropZoneProps) {
     enable = true,
     children,
     onAddFile,
-    onMoveNode,
-    onCopyNode,
-    setSelectedNode,
     useLocalStorage = false,
     driveId,
     acceptedFileExtensions = [".zip", ".phd", ".phdm"],
@@ -105,10 +92,8 @@ export function DropZone(props: DropZoneProps) {
   };
 
   const { isDropTarget, dropProps } = useDrop({
-    node,
-    onAddFile: handleAddFile,
-    onMoveNode: onMoveNode ?? (async () => {}),
-    onCopyNode: onCopyNode ?? (async () => {}),
+    target: node,
+    onAddFileOverride: handleAddFile,
     trackNestedDrag: true,
     acceptedFileExtensions,
   });

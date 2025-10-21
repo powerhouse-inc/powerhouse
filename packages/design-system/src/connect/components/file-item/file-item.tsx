@@ -1,4 +1,4 @@
-import type { NodeOption, TNodeActions } from "@powerhousedao/design-system";
+import type { NodeOption } from "@powerhousedao/design-system";
 import {
   ConnectDropdownMenu,
   defaultNodeOptions,
@@ -9,41 +9,35 @@ import {
   SyncStatusIcon,
   useDrag,
 } from "@powerhousedao/design-system";
-import type { FileNode, Node, SharingType, SyncStatus } from "document-drive";
+import {
+  getSyncStatusSync,
+  setSelectedNode,
+  showDeleteNodeModal,
+  useNodeActions,
+  useSelectedDriveSafe,
+  useUserPermissions,
+} from "@powerhousedao/reactor-browser";
+import { getDriveSharingType, type FileNode } from "document-drive";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 
-export type FileItemProps = TNodeActions & {
+type Props = {
   fileNode: FileNode;
-  sharingType: SharingType;
-  isAllowedToCreateDocuments: boolean;
-  customDocumentIconSrc?: string;
   className?: string;
-  getSyncStatusSync: (
-    syncId: string,
-    sharingType: SharingType,
-  ) => SyncStatus | undefined;
-  setSelectedNode: (node: Node | string | undefined) => void;
-  showDeleteNodeModal: (node: Node) => void;
+  customDocumentIconSrc?: string;
 };
 
-export function FileItem(props: FileItemProps) {
-  const {
-    fileNode,
-    sharingType,
-    className,
-    customDocumentIconSrc,
-    isAllowedToCreateDocuments,
-    getSyncStatusSync,
-    setSelectedNode,
-    onRenameNode,
-    onDuplicateNode,
-    showDeleteNodeModal,
-  } = props;
+export function FileItem(props: Props) {
+  const { fileNode, className, customDocumentIconSrc } = props;
   const [mode, setMode] = useState<"READ" | "WRITE">("READ");
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
+  const [selectedDrive] = useSelectedDriveSafe();
+  const sharingType = selectedDrive
+    ? getDriveSharingType(selectedDrive)
+    : "LOCAL";
   const { dragProps } = useDrag({ node: fileNode });
-
+  const { isAllowedToCreateDocuments } = useUserPermissions();
+  const { onRenameNode, onDuplicateNode } = useNodeActions();
   const isReadMode = mode === "READ";
   const syncStatus = getSyncStatusSync(fileNode.id, sharingType);
 
@@ -65,8 +59,13 @@ export function FileItem(props: FileItemProps) {
     );
 
   function onSubmit(name: string) {
-    onRenameNode(name, fileNode);
-    setMode("READ");
+    onRenameNode(name, fileNode)
+      .catch((error) => {
+        console.error(error);
+      })
+      .finally(() => {
+        setMode("READ");
+      });
   }
 
   function onCancel() {

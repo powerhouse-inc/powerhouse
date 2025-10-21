@@ -39,8 +39,6 @@ const meta: Meta<typeof DropZone> = {
         parentFolder: "mock-parent-id",
       };
     },
-    onMoveNode: action("onMoveNode"),
-    onCopyNode: action("onCopyNode"),
   },
 };
 
