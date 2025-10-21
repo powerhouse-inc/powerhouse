@@ -1,8 +1,7 @@
 import type { PHDocument } from "document-model";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
-import type { IOperationStore } from "../storage/interfaces.js";
+import type { IKeyframeStore, IOperationStore } from "../storage/interfaces.js";
 import { RingBuffer } from "./buffer/ring-buffer.js";
-import type { IKeyValueStore } from "./kv/interfaces.js";
 import { LRUTracker } from "./lru/lru-tracker.js";
 import type { CachedSnapshot, WriteCacheConfig } from "./types.js";
 import type { IWriteCache } from "./write/interfaces.js";
@@ -15,18 +14,18 @@ type DocumentStream = {
 export class KyselyWriteCache implements IWriteCache {
   private streams: Map<string, DocumentStream>;
   private lruTracker: LRUTracker<string>;
-  private kvStore: IKeyValueStore;
+  private keyframeStore: IKeyframeStore;
   private operationStore: IOperationStore;
   private registry: IDocumentModelRegistry;
   private config: Required<WriteCacheConfig>;
 
   constructor(
-    kvStore: IKeyValueStore,
+    keyframeStore: IKeyframeStore,
     operationStore: IOperationStore,
     registry: IDocumentModelRegistry,
     config: WriteCacheConfig,
   ) {
-    this.kvStore = kvStore;
+    this.keyframeStore = keyframeStore;
     this.operationStore = operationStore;
     this.registry = registry;
     this.config = {
@@ -39,11 +38,11 @@ export class KyselyWriteCache implements IWriteCache {
   }
 
   async startup(): Promise<void> {
-    await this.kvStore.startup();
+    return Promise.resolve();
   }
 
   async shutdown(): Promise<void> {
-    await this.kvStore.shutdown();
+    return Promise.resolve();
   }
 
   async getState(
@@ -118,18 +117,21 @@ export class KyselyWriteCache implements IWriteCache {
     stream.ringBuffer.push(snapshot);
 
     if (this.isKeyframeRevision(revision)) {
-      const keyframeKey = this.makeKeyframeKey(
-        documentId,
-        documentType,
-        scope,
-        branch,
-        revision,
-      );
-      const data = this.serializeKeyframe(safeCopy);
-
-      this.kvStore.put(keyframeKey, data).catch((err) => {
-        console.error(`Failed to persist keyframe ${keyframeKey}:`, err);
-      });
+      this.keyframeStore
+        .putKeyframe(
+          documentId,
+          documentType,
+          scope,
+          branch,
+          revision,
+          safeCopy,
+        )
+        .catch((err) => {
+          console.error(
+            `Failed to persist keyframe ${documentId}@${revision}:`,
+            err,
+          );
+        });
     }
   }
 
@@ -177,54 +179,17 @@ export class KyselyWriteCache implements IWriteCache {
     targetRevision: number,
     signal?: AbortSignal,
   ): Promise<{ revision: number; document: PHDocument } | undefined> {
-    const interval = this.config.keyframeInterval;
-
     if (targetRevision === Number.MAX_SAFE_INTEGER || targetRevision <= 0) {
       return undefined;
     }
 
-    const keyframeRevisions: number[] = [];
-
-    for (
-      let rev = Math.floor(targetRevision / interval) * interval;
-      rev > 0;
-      rev -= interval
-    ) {
-      keyframeRevisions.push(rev);
-      if (keyframeRevisions.length > 1000) {
-        break;
-      }
-    }
-
-    for (const rev of keyframeRevisions) {
-      if (signal?.aborted) {
-        throw new Error("Operation aborted");
-      }
-
-      const key = this.makeKeyframeKey(
-        documentId,
-        documentType,
-        scope,
-        branch,
-        rev,
-      );
-
-      try {
-        const data = await this.kvStore.get(key, signal);
-        if (data) {
-          try {
-            const document = this.deserializeKeyframe(data);
-            return { revision: rev, document };
-          } catch (err) {
-            console.warn(`Failed to deserialize keyframe ${key}:`, err);
-          }
-        }
-      } catch (err) {
-        console.warn(`Failed to load keyframe ${key}:`, err);
-      }
-    }
-
-    return undefined;
+    return this.keyframeStore.findNearestKeyframe(
+      documentId,
+      scope,
+      branch,
+      targetRevision,
+      signal,
+    );
   }
 
   private async coldMissRebuild(
@@ -351,25 +316,7 @@ export class KyselyWriteCache implements IWriteCache {
     return stream;
   }
 
-  private makeKeyframeKey(
-    documentId: string,
-    documentType: string,
-    scope: string,
-    branch: string,
-    revision: number,
-  ): string {
-    return `keyframe:${documentId}:${documentType}:${scope}:${branch}:${revision}`;
-  }
-
   private isKeyframeRevision(revision: number): boolean {
     return revision > 0 && revision % this.config.keyframeInterval === 0;
-  }
-
-  private serializeKeyframe(document: PHDocument): string {
-    return JSON.stringify(document);
-  }
-
-  private deserializeKeyframe(data: string): PHDocument {
-    return JSON.parse(data) as PHDocument;
   }
 }

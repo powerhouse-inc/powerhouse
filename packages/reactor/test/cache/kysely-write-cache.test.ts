@@ -1,11 +1,13 @@
 import type { Operation, PHDocument } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { InMemoryKeyValueStore } from "../../src/cache/kv/kv-store.js";
 import { KyselyWriteCache } from "../../src/cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../../src/cache/types.js";
 import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
-import type { IOperationStore } from "../../src/storage/interfaces.js";
+import type {
+  IKeyframeStore,
+  IOperationStore,
+} from "../../src/storage/interfaces.js";
 import { createTestOperation, createTestOperationStore } from "../factories.js";
 
 function createMockOperationStore(): IOperationStore {
@@ -14,6 +16,14 @@ function createMockOperationStore(): IOperationStore {
     getSince: vi.fn(),
     getSinceId: vi.fn(),
     getRevisions: vi.fn(),
+  };
+}
+
+function createMockKeyframeStore(): IKeyframeStore {
+  return {
+    putKeyframe: vi.fn().mockResolvedValue(undefined),
+    findNearestKeyframe: vi.fn().mockResolvedValue(undefined),
+    deleteKeyframes: vi.fn().mockResolvedValue(0),
   };
 }
 
@@ -34,13 +44,13 @@ function createMockDocument(): PHDocument {
 
 describe("KyselyWriteCache", () => {
   let cache: KyselyWriteCache;
-  let kvStore: InMemoryKeyValueStore;
+  let keyframeStore: IKeyframeStore;
   let operationStore: IOperationStore;
   let registry: IDocumentModelRegistry;
   let config: WriteCacheConfig;
 
   beforeEach(() => {
-    kvStore = new InMemoryKeyValueStore();
+    keyframeStore = createMockKeyframeStore();
     operationStore = createMockOperationStore();
     registry = createMockRegistry();
     config = {
@@ -48,7 +58,12 @@ describe("KyselyWriteCache", () => {
       ringBufferSize: 5,
       keyframeInterval: 10,
     };
-    cache = new KyselyWriteCache(kvStore, operationStore, registry, config);
+    cache = new KyselyWriteCache(
+      keyframeStore,
+      operationStore,
+      registry,
+      config,
+    );
   });
 
   describe("putState and basic tracking", () => {
@@ -138,7 +153,7 @@ describe("KyselyWriteCache", () => {
         keyframeInterval: 10,
       };
       cacheWithHigherCapacity = new KyselyWriteCache(
-        kvStore,
+        keyframeStore,
         operationStore,
         registry,
         highCapacityConfig,
@@ -247,14 +262,31 @@ describe("KyselyWriteCache", () => {
 
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      const key10 = "keyframe:doc1:test/type:global:main:10";
-      const key20 = "keyframe:doc1:test/type:global:main:20";
-
-      const stored10 = await kvStore.get(key10);
-      const stored20 = await kvStore.get(key20);
-
-      expect(stored10).toBeDefined();
-      expect(stored20).toBeDefined();
+      expect(keyframeStore.putKeyframe).toHaveBeenCalledTimes(2);
+      expect(keyframeStore.putKeyframe).toHaveBeenNthCalledWith(
+        1,
+        "doc1",
+        "test/type",
+        "global",
+        "main",
+        10,
+        expect.objectContaining({
+          state: expect.any(Object),
+          header: expect.any(Object),
+        }),
+      );
+      expect(keyframeStore.putKeyframe).toHaveBeenNthCalledWith(
+        2,
+        "doc1",
+        "test/type",
+        "global",
+        "main",
+        20,
+        expect.objectContaining({
+          state: expect.any(Object),
+          header: expect.any(Object),
+        }),
+      );
     });
 
     it("should not persist non-keyframe revisions", async () => {
@@ -266,24 +298,17 @@ describe("KyselyWriteCache", () => {
 
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      const key5 = "keyframe:doc1:test/type:global:main:5";
-      const key15 = "keyframe:doc1:test/type:global:main:15";
-
-      const stored5 = await kvStore.get(key5);
-      const stored15 = await kvStore.get(key15);
-
-      expect(stored5).toBeUndefined();
-      expect(stored15).toBeUndefined();
+      expect(keyframeStore.putKeyframe).not.toHaveBeenCalled();
     });
 
     it("should handle keyframe persistence errors gracefully", async () => {
-      const failingKvStore = new InMemoryKeyValueStore();
-      failingKvStore.put = vi
+      const failingKeyframeStore = createMockKeyframeStore();
+      failingKeyframeStore.putKeyframe = vi
         .fn()
         .mockRejectedValue(new Error("Storage error"));
 
       const failingCache = new KyselyWriteCache(
-        failingKvStore,
+        failingKeyframeStore,
         operationStore,
         registry,
         config,
@@ -300,16 +325,12 @@ describe("KyselyWriteCache", () => {
   });
 
   describe("startup and shutdown", () => {
-    it("should call kvStore startup", async () => {
-      const startupSpy = vi.spyOn(kvStore, "startup");
-      await cache.startup();
-      expect(startupSpy).toHaveBeenCalled();
+    it("should handle startup", async () => {
+      await expect(cache.startup()).resolves.toBeUndefined();
     });
 
-    it("should call kvStore shutdown", async () => {
-      const shutdownSpy = vi.spyOn(kvStore, "shutdown");
-      await cache.shutdown();
-      expect(shutdownSpy).toHaveBeenCalled();
+    it("should handle shutdown", async () => {
+      await expect(cache.shutdown()).resolves.toBeUndefined();
     });
   });
 
@@ -472,7 +493,7 @@ describe("KyselyWriteCache", () => {
       };
 
       const testCache = new KyselyWriteCache(
-        kvStore,
+        keyframeStore,
         mockOperationStore,
         mockRegistry,
         config,
@@ -486,7 +507,7 @@ describe("KyselyWriteCache", () => {
 });
 
 describe("KyselyWriteCache - Cold Miss Rebuild", () => {
-  let kvStore: InMemoryKeyValueStore;
+  let keyframeStore: IKeyframeStore;
   let operationStore: IOperationStore;
   let registry: IDocumentModelRegistry;
   let cache: KyselyWriteCache;
@@ -494,9 +515,9 @@ describe("KyselyWriteCache - Cold Miss Rebuild", () => {
   let db: any;
 
   beforeEach(async () => {
-    kvStore = new InMemoryKeyValueStore();
     const opStoreSetup = await createTestOperationStore();
     operationStore = opStoreSetup.store;
+    keyframeStore = opStoreSetup.keyframeStore;
     db = opStoreSetup.db;
 
     const mockRegistry = {
@@ -519,7 +540,12 @@ describe("KyselyWriteCache - Cold Miss Rebuild", () => {
       ringBufferSize: 5,
       keyframeInterval: 10,
     };
-    cache = new KyselyWriteCache(kvStore, operationStore, registry, config);
+    cache = new KyselyWriteCache(
+      keyframeStore,
+      operationStore,
+      registry,
+      config,
+    );
     await cache.startup();
   });
 

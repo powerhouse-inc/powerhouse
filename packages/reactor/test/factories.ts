@@ -34,18 +34,20 @@ import type { IReadModelCoordinator } from "../src/read-models/interfaces.js";
 import { DocumentModelRegistry } from "../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../src/registry/interfaces.js";
 import type { IOperationStore } from "../src/storage/interfaces.js";
+import { KyselyKeyframeStore } from "../src/storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../src/storage/kysely/store.js";
 import type { Database as DatabaseSchema } from "../src/storage/kysely/types.js";
 
 /**
  * Creates a real PGLite-backed KyselyOperationStore for testing.
- * Returns both the database instance and the operation store.
+ * Returns the database instance, operation store, and keyframe store.
  *
- * @returns Object containing db and store instances
+ * @returns Object containing db, store, and keyframeStore instances
  */
 export async function createTestOperationStore(): Promise<{
   db: Kysely<DatabaseSchema>;
   store: KyselyOperationStore;
+  keyframeStore: KyselyKeyframeStore;
 }> {
   // Create in-memory PGLite database
   const kyselyPGlite = await KyselyPGlite.create();
@@ -81,7 +83,7 @@ export async function createTestOperationStore(): Promise<{
     ])
     .execute();
 
-  // Create indexes
+  // Create indexes for Operation table
   await db.schema
     .createIndex("streamOperations")
     .on("Operation")
@@ -94,9 +96,38 @@ export async function createTestOperationStore(): Promise<{
     .columns(["documentId", "scope", "id"])
     .execute();
 
-  const store = new KyselyOperationStore(db);
+  // Create the Keyframe table
+  await db.schema
+    .createTable("Keyframe")
+    .addColumn("id", "serial", (col) => col.primaryKey())
+    .addColumn("documentId", "text", (col) => col.notNull())
+    .addColumn("documentType", "text", (col) => col.notNull())
+    .addColumn("scope", "text", (col) => col.notNull())
+    .addColumn("branch", "text", (col) => col.notNull())
+    .addColumn("revision", "integer", (col) => col.notNull())
+    .addColumn("document", "text", (col) => col.notNull())
+    .addColumn("createdAt", "timestamptz", (col) =>
+      col.notNull().defaultTo(new Date()),
+    )
+    .addUniqueConstraint("unique_keyframe", [
+      "documentId",
+      "scope",
+      "branch",
+      "revision",
+    ])
+    .execute();
 
-  return { db, store };
+  // Create index for fast nearest-keyframe lookups
+  await db.schema
+    .createIndex("keyframe_lookup")
+    .on("Keyframe")
+    .columns(["documentId", "scope", "branch", "revision"])
+    .execute();
+
+  const store = new KyselyOperationStore(db);
+  const keyframeStore = new KyselyKeyframeStore(db);
+
+  return { db, store, keyframeStore };
 }
 
 /**

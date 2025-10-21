@@ -112,8 +112,6 @@ export type {
 } from "./read-models/types.js";
 
 // Cache
-export { type IKeyValueStore } from "./cache/kv/interfaces.js";
-export { InMemoryKeyValueStore } from "./cache/kv/kv-store.js";
 export type {
   CachedSnapshot,
   DocumentStreamKey,

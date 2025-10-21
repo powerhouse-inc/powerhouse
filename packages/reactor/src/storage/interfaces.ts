@@ -89,6 +89,33 @@ export interface IOperationStore {
   ): Promise<DocumentRevisions>;
 }
 
+export interface IKeyframeStore {
+  putKeyframe(
+    documentId: string,
+    documentType: string,
+    scope: string,
+    branch: string,
+    revision: number,
+    document: PHDocument,
+    signal?: AbortSignal,
+  ): Promise<void>;
+
+  findNearestKeyframe(
+    documentId: string,
+    scope: string,
+    branch: string,
+    targetRevision: number,
+    signal?: AbortSignal,
+  ): Promise<{ revision: number; document: PHDocument } | undefined>;
+
+  deleteKeyframes(
+    documentId: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<number>;
+}
+
 export interface ViewFilter {
   branch?: string;
   scopes?: string[];
