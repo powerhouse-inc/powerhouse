@@ -1,3 +1,23 @@
+## 4.1.0-dev.80 (2025-10-21)
+
+### 🩹 Fixes
+
+- added recommended type to prisma storage ([d7c9b2f27](https://github.com/powerhouse-inc/powerhouse/commit/d7c9b2f27))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 4.1.0-dev.79 (2025-10-20)
+
+### 🩹 Fixes
+
+- **document-drive:** copy schema.prisma to dist on build ([f510653fd](https://github.com/powerhouse-inc/powerhouse/commit/f510653fd))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.78 (2025-10-20)
 
 ### 🩹 Fixes

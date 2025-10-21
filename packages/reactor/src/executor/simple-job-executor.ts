@@ -52,7 +52,7 @@ export class SimpleJobExecutor implements IJobExecutor {
    */
   private getNextIndexForScope(document: PHDocument, scope: string): number {
     const scopeOps = document.operations[scope];
-    if (!scopeOps || scopeOps.length === 0) {
+    if (scopeOps.length === 0) {
       return 0;
     }
 
@@ -185,7 +185,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
       const scope = job.scope;
       const operations = updatedDocument.operations[scope];
-      if (!operations || operations.length === 0) {
+      if (operations.length === 0) {
         throw new Error("No operation generated from action");
       }
 

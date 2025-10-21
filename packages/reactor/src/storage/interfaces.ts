@@ -56,31 +56,20 @@ export interface IOperationStore {
     signal?: AbortSignal,
   ): Promise<void>;
 
-  get(
-    documentId: string,
-    scope: string,
-    branch: string,
-    revision: number,
-    signal?: AbortSignal,
-  ): Promise<OperationWithContext>;
-
   getSince(
     documentId: string,
     scope: string,
     branch: string,
     revision: number,
+    paging?: PagingOptions,
     signal?: AbortSignal,
-  ): Promise<OperationWithContext[]>;
+  ): Promise<PagedResults<Operation>>;
 
-  getSinceTimestamp(
-    documentId: string,
-    scope: string,
-    branch: string,
-    timestampUtcMs: number,
+  getSinceId(
+    id: number,
+    paging?: PagingOptions,
     signal?: AbortSignal,
-  ): Promise<OperationWithContext[]>;
-
-  getSinceId(id: number, signal?: AbortSignal): Promise<OperationWithContext[]>;
+  ): Promise<PagedResults<OperationWithContext>>;
 
   /**
    * Gets the latest operation index for each scope of a document, along with

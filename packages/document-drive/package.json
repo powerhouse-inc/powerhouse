@@ -1,6 +1,6 @@
 {
   "name": "document-drive",
-  "version": "4.1.0-dev.78",
+  "version": "4.1.0-dev.80",
   "license": "AGPL-3.0-only",
   "type": "module",
   "types": "./dist/index.d.ts",
@@ -43,6 +43,7 @@
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
+    "build": "pnpm run copy-prisma",
     "release": "semantic-release",
     "test": "vitest run --coverage --exclude \"test/flaky/**\"",
     "test:flaky": "vitest run --coverage test/flaky",
