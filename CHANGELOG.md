@@ -1,3 +1,13 @@
+## 4.1.0-dev.80 (2025-10-21)
+
+### 🩹 Fixes
+
+- added recommended type to prisma storage ([d7c9b2f27](https://github.com/powerhouse-inc/powerhouse/commit/d7c9b2f27))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.79 (2025-10-20)
 
 ### 🩹 Fixes
