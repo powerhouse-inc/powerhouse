@@ -95,7 +95,7 @@ function StateEditor({
   return (
     <div className="grid grid-cols-2 gap-4">
       <div>
-        <h3 className="mb-2 text-lg capitalize">{scope} state schema</h3>
+        <h3 className="mb-2 text-lg capitalize">{scope} state schema *</h3>
         <Button
           onClick={handleToggleStandardLib}
           className="mb-2 flex w-fit items-center gap-2"
@@ -128,7 +128,7 @@ function StateEditor({
       <div>
         <div className="flex flex-col items-end">
           <h3 className="mb-2 text-right text-lg capitalize">
-            {scope} state initial value
+            {scope} state initial value *
           </h3>
           <Button
             onClick={handleSyncWithSchema}
@@ -204,7 +204,7 @@ export function StateSchemas({
       <TabsContent value="local" tabIndex={-1}>
         {!localStateSchema ? (
           <div className="">
-            <h3 className="mb-2 text-lg capitalize">local state schema</h3>
+            <h3 className="mb-2 text-lg capitalize">local state schema *</h3>
             <Button onClick={handleAddLocalState}>Add local state</Button>
           </div>
         ) : (
