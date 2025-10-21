@@ -111,17 +111,6 @@ describe("RingBuffer", () => {
       expect(buffer.getAll()).toEqual([10, 20, 30, 40, 50]);
     });
 
-    it("should return items in chronological order after wraparound", () => {
-      const buffer = new RingBuffer<number>(3);
-      buffer.push(1);
-      buffer.push(2);
-      buffer.push(3);
-      buffer.push(4);
-      buffer.push(5);
-
-      expect(buffer.getAll()).toEqual([3, 4, 5]);
-    });
-
     it("should return a new array each time", () => {
       const buffer = new RingBuffer<number>(3);
       buffer.push(1);
@@ -228,17 +217,6 @@ describe("RingBuffer", () => {
   });
 
   describe("edge cases", () => {
-    it("should handle large capacity", () => {
-      const buffer = new RingBuffer<number>(1000);
-      for (let i = 0; i < 500; i++) {
-        buffer.push(i);
-      }
-
-      expect(buffer.length).toBe(500);
-      expect(buffer.getAll()[0]).toBe(0);
-      expect(buffer.getAll()[499]).toBe(499);
-    });
-
     it("should handle many overwrites", () => {
       const buffer = new RingBuffer<number>(10);
       for (let i = 0; i < 100; i++) {

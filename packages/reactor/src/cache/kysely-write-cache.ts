@@ -75,6 +75,35 @@ export class KyselyWriteCache implements IWriteCache {
           this.lruTracker.touch(streamKey);
           return structuredClone(exactMatch.document);
         }
+
+        const newestOlder = this.findNearestOlderSnapshot(
+          snapshots,
+          targetRevision,
+        );
+        if (newestOlder) {
+          const document = await this.warmMissRebuild(
+            newestOlder.document,
+            newestOlder.revision,
+            documentId,
+            documentType,
+            scope,
+            branch,
+            targetRevision,
+            signal,
+          );
+
+          this.putState(
+            documentId,
+            documentType,
+            scope,
+            branch,
+            targetRevision,
+            document,
+          );
+          this.lruTracker.touch(streamKey);
+
+          return structuredClone(document);
+        }
       }
     }
 
@@ -284,6 +313,64 @@ export class KyselyWriteCache implements IWriteCache {
     }
 
     return document;
+  }
+
+  private async warmMissRebuild(
+    baseDocument: PHDocument,
+    baseRevision: number,
+    documentId: string,
+    documentType: string,
+    scope: string,
+    branch: string,
+    targetRevision: number | undefined,
+    signal?: AbortSignal,
+  ): Promise<PHDocument> {
+    const module = this.registry.getModule(documentType);
+    let document = structuredClone(baseDocument);
+
+    const pagedResults = await this.operationStore.getSince(
+      documentId,
+      scope,
+      branch,
+      baseRevision,
+      undefined,
+      signal,
+    );
+
+    for (const operation of pagedResults.items) {
+      if (signal?.aborted) {
+        throw new Error("Operation aborted");
+      }
+
+      if (targetRevision !== undefined && operation.index > targetRevision) {
+        break;
+      }
+
+      document = module.reducer(document, operation.action);
+
+      if (targetRevision !== undefined && operation.index === targetRevision) {
+        break;
+      }
+    }
+
+    return document;
+  }
+
+  private findNearestOlderSnapshot(
+    snapshots: CachedSnapshot[],
+    targetRevision: number,
+  ): CachedSnapshot | undefined {
+    let nearest: CachedSnapshot | undefined = undefined;
+
+    for (const snapshot of snapshots) {
+      if (snapshot.revision < targetRevision) {
+        if (!nearest || snapshot.revision > nearest.revision) {
+          nearest = snapshot;
+        }
+      }
+    }
+
+    return nearest;
   }
 
   private makeStreamKey(
