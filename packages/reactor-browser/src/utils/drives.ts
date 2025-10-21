@@ -69,19 +69,6 @@ export function getDriveAvailableOffline(
   return _availableOffline ?? false;
 }
 
-/** Makes a folder node from a drive, used for making breadcrumbs. */
-export function makeFolderNodeFromDrive(
-  drive: DocumentDriveDocument | null | undefined,
-): FolderNode | undefined {
-  if (!drive) return undefined;
-  return {
-    id: drive.header.id,
-    name: drive.state.global.name,
-    kind: "FOLDER",
-    parentFolder: null,
-  };
-}
-
 export async function getDocumentsForDriveId(
   reactor: IDocumentDriveServer | undefined,
   driveId: string | undefined,

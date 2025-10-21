@@ -1,12 +1,11 @@
+import { useNodeActions } from "@powerhousedao/reactor-browser";
 import type { Node } from "document-drive";
 import type { DragEvent } from "react";
 import { useCallback, useMemo, useRef, useState } from "react";
 
 type Props = {
-  node: Node | undefined;
-  onAddFile: (file: File, parent: Node | undefined) => Promise<void> | void;
-  onMoveNode: (src: Node, target: Node | undefined) => Promise<void> | void;
-  onCopyNode: (src: Node, target: Node | undefined) => Promise<void> | void;
+  target?: Node | undefined;
+  onAddFileOverride?: (file: File, parent: Node | undefined) => Promise<void>;
   /**
    * When true, uses drag depth tracking with onDragEnter/onDragLeave
    * to avoid flicker when moving across child elements.
@@ -19,17 +18,21 @@ type Props = {
    */
   acceptedFileExtensions?: string[];
 };
-export function useDrop(props: Props) {
+export function useDrop(props?: Props) {
   const {
-    node,
-    onAddFile,
-    onCopyNode,
-    onMoveNode,
+    target,
+    onAddFileOverride,
     trackNestedDrag = false,
     acceptedFileExtensions,
-  } = props;
+  } = props ?? {};
   const [isDropTarget, setIsDropTarget] = useState(false);
   const dragDepthRef = useRef(0);
+  const {
+    onMoveNode,
+    onCopyNode,
+    onAddFile: defaultOnAddFile,
+  } = useNodeActions();
+  const onAddFile = onAddFileOverride ?? defaultOnAddFile;
 
   /**
    * Check if the dragged content is valid based on accepted file extensions
@@ -127,7 +130,7 @@ export function useDrop(props: Props) {
       const dropTarget = event.target as HTMLElement;
       const closestDropZone = dropTarget.closest("[data-drop-zone]");
 
-      const dropZoneId = node?.id || "root";
+      const dropZoneId = target?.id || "root";
       const closestDropZoneId =
         closestDropZone?.getAttribute("data-drop-zone") || "root";
 
@@ -155,7 +158,7 @@ export function useDrop(props: Props) {
         if (droppedFiles.length) {
           for (const file of droppedFiles) {
             if (file) {
-              await onAddFile(file, node);
+              await onAddFile(file, target);
             }
           }
           return;
@@ -165,9 +168,9 @@ export function useDrop(props: Props) {
         const droppedNode = JSON.parse(data) as Node;
 
         if (altOrOptionKeyPressed) {
-          await onCopyNode(droppedNode, node);
+          await onCopyNode(droppedNode, target);
         } else {
-          await onMoveNode(droppedNode, node);
+          await onMoveNode(droppedNode, target);
         }
       } catch (error) {
         console.error(error);
@@ -176,14 +179,14 @@ export function useDrop(props: Props) {
         setIsDropTarget(false);
       }
     },
-    [onAddFile, onCopyNode, onMoveNode, parent, node?.id, trackNestedDrag],
+    [onAddFile, onCopyNode, onMoveNode, target, trackNestedDrag],
   );
 
   return useMemo(() => {
     const baseProps: Record<string, unknown> = {
       onDragOver,
       onDrop,
-      "data-drop-zone": node?.id || "root",
+      "data-drop-zone": target?.id || "root",
     };
 
     if (trackNestedDrag) {
@@ -199,7 +202,7 @@ export function useDrop(props: Props) {
     };
   }, [
     isDropTarget,
-    node?.id,
+    target?.id,
     onDragEnter,
     onDragLeaveDepth,
     onDragLeaveSimple,

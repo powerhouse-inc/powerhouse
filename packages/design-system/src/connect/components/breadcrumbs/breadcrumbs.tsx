@@ -1,47 +1,69 @@
 import { Icon, NodeInput } from "@powerhousedao/design-system";
-import type { Node } from "document-drive";
-import { Fragment, useCallback, useState } from "react";
+import {
+  addFolder,
+  setSelectedDrive,
+  setSelectedNode,
+  useSelectedDriveId,
+  useSelectedDriveSafe,
+  useSelectedNodePath,
+  useUserPermissions,
+} from "@powerhousedao/reactor-browser";
+import { Fragment, useState } from "react";
 
-export type BreadcrumbsProps<T extends boolean = boolean> = {
-  breadcrumbs: Node[];
-  onBreadcrumbSelected: (node: Node) => void;
-  createEnabled?: T;
-  onCreate: T extends true
-    ? (name: string, parentFolder: string | undefined) => void
-    : never;
-};
-
-export function Breadcrumbs(props: BreadcrumbsProps) {
-  const { breadcrumbs, createEnabled, onBreadcrumbSelected } = props;
+export function Breadcrumbs() {
+  const { isAllowedToCreateDocuments } = useUserPermissions();
+  const [selectedDrive] = useSelectedDriveSafe();
+  const selectedDriveId = useSelectedDriveId();
+  const selectedNodePath = useSelectedNodePath();
   const [isCreating, setIsCreating] = useState(false);
-  const onCreate = props.createEnabled ? props.onCreate : undefined;
-
   function onAddNew() {
     setIsCreating(true);
   }
 
-  const onSubmit = useCallback(
-    (name: string) => {
-      if (!createEnabled || !onCreate) return;
-      onCreate(name, breadcrumbs.at(-1)?.id);
-      setIsCreating(false);
-    },
-    [breadcrumbs, createEnabled, onCreate],
-  );
+  function onSubmit(name: string) {
+    if (!isAllowedToCreateDocuments || !selectedDriveId) return;
 
-  const onCancel = useCallback(() => {
+    addFolder(selectedDriveId, name, selectedNodePath.at(-1)?.id)
+      .then((node) => {
+        setSelectedNode(node);
+      })
+      .catch((error) => {
+        console.error(error);
+      })
+      .finally(() => {
+        setIsCreating(false);
+      });
+  }
+
+  function onCancel() {
     setIsCreating(false);
-  }, []);
+  }
+
+  const hasSelectedDrive = !!selectedDrive;
+  const hasNodePath = !!selectedNodePath.length;
 
   return (
     <div className="flex h-9 flex-row items-center gap-2 p-6 text-gray-500">
-      {breadcrumbs.map((node) => (
-        <Fragment key={node.id}>
-          <Breadcrumb node={node} onClick={onBreadcrumbSelected} />
+      {hasSelectedDrive && (
+        <>
+          <Breadcrumb
+            name={selectedDrive.state.global.name}
+            onClick={() => setSelectedDrive(selectedDrive)}
+          />
           <span>/</span>
-        </Fragment>
-      ))}
-      {createEnabled &&
+        </>
+      )}
+      {hasNodePath &&
+        selectedNodePath.map((node) => (
+          <Fragment key={node.id}>
+            <Breadcrumb
+              name={node.name}
+              onClick={() => setSelectedNode(node)}
+            />
+            <span>/</span>
+          </Fragment>
+        ))}
+      {isAllowedToCreateDocuments &&
         (isCreating ? (
           <NodeInput
             className="text-gray-800"
@@ -65,20 +87,20 @@ export function Breadcrumbs(props: BreadcrumbsProps) {
 }
 
 export type BreadcrumbProps = {
-  node: Node;
-  onClick: (node: Node) => void;
+  name: string;
+  onClick: () => void;
 };
 
 export function Breadcrumb(props: BreadcrumbProps) {
-  const { node, onClick } = props;
+  const { name, onClick } = props;
 
   return (
     <div
       className="transition-colors last-of-type:text-gray-800 hover:text-gray-800"
-      onClick={() => onClick(node)}
+      onClick={onClick}
       role="button"
     >
-      {node.name}
+      {name}
     </div>
   );
 }

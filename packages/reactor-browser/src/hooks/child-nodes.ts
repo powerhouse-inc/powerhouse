@@ -9,7 +9,8 @@ export function useNodesInSelectedDriveOrFolder(): Node[] {
   const selectedFolder = useSelectedFolder();
   const selectedFolderId = selectedFolder?.id;
   if (!nodes) return [];
-  if (!selectedFolderId) return sortNodesByName(nodes);
+  if (!selectedFolderId)
+    return sortNodesByName(nodes.filter((n) => !n.parentFolder));
   return sortNodesByName(
     nodes.filter((n) => n.parentFolder === selectedFolderId),
   );

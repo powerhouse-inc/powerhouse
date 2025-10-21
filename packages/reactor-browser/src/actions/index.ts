@@ -1,4 +1,4 @@
-export { addDocument, deleteNode, exportFile } from "./document.js";
+export { addDocument, addFolder, deleteNode, exportFile } from "./document.js";
 export {
   addDrive,
   addRemoteDrive,

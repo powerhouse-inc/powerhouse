@@ -42,23 +42,7 @@ export const Default: Story = {
     return (
       <div className="flex flex-wrap gap-2">
         {fileNodes.map((node) => (
-          <FileItem
-            key={node.id}
-            fileNode={node}
-            {...args}
-            onAddFile={() => Promise.resolve()}
-            onAddFolder={() => Promise.resolve(undefined)}
-            onRenameNode={() => Promise.resolve(undefined)}
-            onCopyNode={() => Promise.resolve(undefined)}
-            onMoveNode={() => Promise.resolve(undefined)}
-            onDuplicateNode={() => Promise.resolve(undefined)}
-            onAddAndSelectNewFolder={() => Promise.resolve(undefined)}
-            showDeleteNodeModal={() => Promise.resolve(undefined)}
-            setSelectedNode={() => {}}
-            sharingType="LOCAL"
-            getSyncStatusSync={() => undefined}
-            isAllowedToCreateDocuments={true}
-          />
+          <FileItem key={node.id} fileNode={node} {...args} />
         ))}
       </div>
     );
