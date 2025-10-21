@@ -4,6 +4,8 @@
 
 The Renown authentication system is a decentralized identity solution built on W3C Verifiable Credentials (VC) and Verifiable Presentations (VP) standards. It provides secure, privacy-preserving authentication with credential caching for optimal performance and includes robust protection against replay attacks through challenge-response mechanisms.
 
+![Renown Authentication Flow](./authentication-flow.svg)
+
 ## Core Architecture
 
 ### Participants
