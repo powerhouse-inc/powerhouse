@@ -202,7 +202,7 @@ export class ReducerGenerator extends FileGenerator {
     // if reducer doesn't exist, create it and set the code with the default code if no code is provided
     const method = objectLiteral.addMethod({
       name: methodName,
-      parameters: [{ name: "state" }, { name: "action" }, { name: "dispatch" }],
+      parameters: [{ name: "state" }, { name: "action" }],
     });
     this.setReducerMethodCode(method, reducerCode);
   }
