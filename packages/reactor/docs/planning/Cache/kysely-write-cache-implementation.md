@@ -519,10 +519,10 @@ await cache.getState(docId, type, scope, branch, 47);
 - [x] Return updated document
 
 **Acceptance Criteria:**
-- Only loads operations after base revision ✓
-- Applies operations incrementally ✓
-- Respects targetRevision ✓
-- Handles abort signal ✓
+- Only loads operations after base revision
+- Applies operations incrementally
+- Respects targetRevision
+- Handles abort signal
 
 ### Task 7.2: Integrate warm miss into getState
 - [x] Update `getState` to detect warm miss (has older revision)
@@ -532,9 +532,9 @@ await cache.getState(docId, type, scope, branch, 47);
 - [x] Return built document
 
 **Acceptance Criteria:**
-- Warm miss uses cached starting point ✓
-- Result automatically cached ✓
-- More efficient than cold miss ✓
+- Warm miss uses cached starting point
+- Result automatically cached
+- More efficient than cold miss
 
 ### Task 7.3: Create warm miss tests
 - [x] Test: should use cached base revision for warm miss
@@ -546,9 +546,9 @@ await cache.getState(docId, type, scope, branch, 47);
 - [x] Test: should handle warm miss with abort signal
 
 **Acceptance Criteria:**
-- Tests verify only incremental operations loaded ✓
-- Tests verify correct base revision selected ✓
-- Tests verify result correctness ✓
+- Tests verify only incremental operations loaded
+- Tests verify correct base revision selected
+- Tests verify result correctness
 
 ## Phase 8: Cache Management
 
@@ -562,9 +562,9 @@ await cache.getState(docId, type, scope, branch, 47);
 - [x] Return count of ring buffers evicted
 
 **Acceptance Criteria:**
-- All three invalidation scopes work correctly ✓
-- LRU tracker updated ✓
-- Returns correct eviction count ✓
+- All three invalidation scopes work correctly
+- LRU tracker updated
+- Returns correct eviction count
 
 ### Task 8.2: Implement clear method
 - [x] Implement `clear(): void`
@@ -573,8 +573,8 @@ await cache.getState(docId, type, scope, branch, 47);
 - [x] Reset any internal state
 
 **Acceptance Criteria:**
-- Cache completely emptied ✓
-- Subsequent operations work correctly ✓
+- Cache completely emptied
+- Subsequent operations work correctly
 
 ### Task 8.3: Create cache management tests
 - [x] Test: should invalidate all streams for a document
@@ -585,19 +585,19 @@ await cache.getState(docId, type, scope, branch, 47);
 - [x] Test: should handle invalidate of non-existent stream
 
 **Acceptance Criteria:**
-- All invalidation patterns tested ✓
-- Tests verify LRU cleanup ✓
+- All invalidation patterns tested
+- Tests verify LRU cleanup
 
 ## Phase 9: Integration Tests
 
 ### Task 9.1: Create end-to-end integration test
-- [ ] Create `packages/reactor/test/cache/write-cache-integration.test.ts`
-- [ ] Set up real KyselyOperationStore with PGLite
-- [ ] Set up DocumentModelRegistry with document-drive module
-- [ ] Create KyselyWriteCache instance
-- [ ] Test full flow: cold miss -> cache hit -> warm miss
-- [ ] Test with real document-drive operations (addFolder, addFile, etc.)
-- [ ] Verify document state correctness at each step
+- [x] Create `packages/reactor/test/cache/write-cache-integration.test.ts`
+- [x] Set up real KyselyOperationStore with PGLite
+- [x] Set up DocumentModelRegistry with document-drive module
+- [x] Create KyselyWriteCache instance
+- [x] Test full flow: cold miss -> cache hit -> warm miss
+- [x] Test with real document-drive operations (addFolder, addFile, etc.)
+- [x] Verify document state correctness at each step
 
 **Acceptance Criteria:**
 - Uses real IOperationStore implementation
@@ -769,19 +769,10 @@ These implementations would all use the same `IKeyframeStore` interface and bene
 - [x] Phases 1-6: Core cache implementation with keyframe support
 - [x] Phase 7: Warm miss rebuild
 - [x] Phase 8: Cache management (invalidate, clear, tests)
-- [ ] Phases 9-12: Integration tests, performance validation
+- [x] Phase 9 Task 9.1: End-to-end integration tests
+- [ ] Phase 9 Tasks 9.2-9.3: Multi-document stress tests, error handling tests
+- [ ] Phases 10-12: Test utilities, documentation, performance validation
 - [ ] Phase 14: Final integration and validation
-- [x] Keyframe store tests passing (23 tests)
-- [x] Write cache tests passing (33+ tests, all warm miss tests passing)
-- [ ] Documentation complete
-- [ ] Performance validated
-- [ ] Code reviewed and follows conventions
-- [ ] Ready for integration with job executor
-
-### Extended Implementations (Future Work)
-- [ ] Phase 13: Remote PostgreSQL keyframe store
-- [ ] Phase 13: Read replica support
-- [ ] Phase 13: Sharding support
 
 ## Notes
 

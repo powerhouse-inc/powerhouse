@@ -257,11 +257,9 @@ export class KyselyWriteCache implements IWriteCache {
     if (keyframe) {
       document = structuredClone(keyframe.document);
       startRevision = keyframe.revision;
-      console.log(`Cold miss: starting from keyframe@${startRevision}`);
     } else {
       document = undefined;
       startRevision = 0;
-      console.log(`Cold miss: no keyframe, rebuilding from scratch`);
     }
 
     const module = this.registry.getModule(documentType);
