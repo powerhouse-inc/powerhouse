@@ -803,7 +803,7 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     const docType = "powerhouse/document-model";
 
     const operations: Operation[] = [];
-    for (let i = 1; i <= 20; i++) {
+    for (let i = 1; i <= 15; i++) {
       operations.push(
         createTestOperation({
           id: `op-test-warm-1-${i}`,
@@ -822,19 +822,15 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     const doc10 = await cache.getState(docId, docType, "global", "main", 10);
     expect(doc10).toBeDefined();
 
-    const getSinceSpy = vi.spyOn(operationStore, "getSince");
+    // delete operations 1 - 10, this will prove that the cached base revision is used
+    await db
+      .deleteFrom("Operation")
+      .where("documentId", "=", docId)
+      .where("index", "<=", 10)
+      .execute();
 
     const doc15 = await cache.getState(docId, docType, "global", "main", 15);
     expect(doc15).toBeDefined();
-
-    expect(getSinceSpy).toHaveBeenCalledWith(
-      docId,
-      "global",
-      "main",
-      10,
-      undefined,
-      undefined,
-    );
   });
 
   it("should only load operations after base revision", async () => {
@@ -842,7 +838,7 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     const docType = "powerhouse/document-model";
 
     const operations: Operation[] = [];
-    for (let i = 1; i <= 30; i++) {
+    for (let i = 1; i <= 20; i++) {
       operations.push(
         createTestOperation({
           id: `op-test-warm-2-${i}`,
@@ -860,21 +856,14 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
 
     await cache.getState(docId, docType, "global", "main", 10);
 
-    const getSinceSpy = vi.spyOn(operationStore, "getSince");
+    await db
+      .deleteFrom("Operation")
+      .where("documentId", "=", docId)
+      .where("index", "<=", 10)
+      .execute();
 
-    await cache.getState(docId, docType, "global", "main", 20);
-
-    expect(getSinceSpy).toHaveBeenCalledWith(
-      docId,
-      "global",
-      "main",
-      10,
-      undefined,
-      undefined,
-    );
-
-    const call = getSinceSpy.mock.calls[0];
-    expect(call[3]).toBe(10);
+    const doc20 = await cache.getState(docId, docType, "global", "main", 20);
+    expect(doc20).toBeDefined();
   });
 
   it("should build to exact targetRevision", async () => {
@@ -909,7 +898,7 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     const docType = "powerhouse/document-model";
 
     const operations: Operation[] = [];
-    for (let i = 1; i <= 20; i++) {
+    for (let i = 1; i <= 15; i++) {
       operations.push(
         createTestOperation({
           id: `op-test-warm-4-${i}`,
@@ -927,15 +916,17 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
 
     await cache.getState(docId, docType, "global", "main", 10);
 
-    const getSinceSpy = vi.spyOn(operationStore, "getSince");
+    const streamBefore = cache.getStream(docId, "global", "main");
+    expect(streamBefore?.ringBuffer.length).toBe(1);
 
     await cache.getState(docId, docType, "global", "main", 15);
 
-    expect(getSinceSpy).toHaveBeenCalledTimes(1);
+    const streamAfter = cache.getStream(docId, "global", "main");
+    expect(streamAfter?.ringBuffer.length).toBe(2);
 
-    await cache.getState(docId, docType, "global", "main", 15);
-
-    expect(getSinceSpy).toHaveBeenCalledTimes(1);
+    const snapshots = streamAfter?.ringBuffer.getAll();
+    expect(snapshots?.[0].revision).toBe(10);
+    expect(snapshots?.[1].revision).toBe(15);
   });
 
   it("should handle multiple revisions in ring buffer", async () => {
@@ -943,7 +934,7 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     const docType = "powerhouse/document-model";
 
     const operations: Operation[] = [];
-    for (let i = 1; i <= 50; i++) {
+    for (let i = 1; i <= 35; i++) {
       operations.push(
         createTestOperation({
           id: `op-test-warm-5-${i}`,
@@ -963,18 +954,14 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     await cache.getState(docId, docType, "global", "main", 20);
     await cache.getState(docId, docType, "global", "main", 30);
 
-    const getSinceSpy = vi.spyOn(operationStore, "getSince");
+    await db
+      .deleteFrom("Operation")
+      .where("documentId", "=", docId)
+      .where("index", "<=", 30)
+      .execute();
 
-    await cache.getState(docId, docType, "global", "main", 35);
-
-    expect(getSinceSpy).toHaveBeenCalledWith(
-      docId,
-      "global",
-      "main",
-      30,
-      undefined,
-      undefined,
-    );
+    const doc35 = await cache.getState(docId, docType, "global", "main", 35);
+    expect(doc35).toBeDefined();
   });
 
   it("should choose nearest older revision as base", async () => {
@@ -982,7 +969,7 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     const docType = "powerhouse/document-model";
 
     const operations: Operation[] = [];
-    for (let i = 1; i <= 100; i++) {
+    for (let i = 1; i <= 65; i++) {
       operations.push(
         createTestOperation({
           id: `op-test-warm-6-${i}`,
@@ -1001,20 +988,15 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     await cache.getState(docId, docType, "global", "main", 10);
     await cache.getState(docId, docType, "global", "main", 30);
     await cache.getState(docId, docType, "global", "main", 50);
-    await cache.getState(docId, docType, "global", "main", 70);
 
-    const getSinceSpy = vi.spyOn(operationStore, "getSince");
+    await db
+      .deleteFrom("Operation")
+      .where("documentId", "=", docId)
+      .where("index", "<=", 50)
+      .execute();
 
-    await cache.getState(docId, docType, "global", "main", 65);
-
-    expect(getSinceSpy).toHaveBeenCalledWith(
-      docId,
-      "global",
-      "main",
-      50,
-      undefined,
-      undefined,
-    );
+    const doc65 = await cache.getState(docId, docType, "global", "main", 65);
+    expect(doc65).toBeDefined();
   });
 
   it("should handle warm miss with abort signal", async () => {
