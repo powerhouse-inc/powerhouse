@@ -10,9 +10,7 @@ type SwitchboardOptions = ReactorOptions & {
 };
 
 async function startLocalSwitchboard(options: SwitchboardOptions) {
-  console.log("Starting switchboard", options);
   if (options.basePath) {
-    console.log(`Setting BASE_PATH to ${options.basePath}`);
     process.env.BASE_PATH = options.basePath;
   }
 

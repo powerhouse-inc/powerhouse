@@ -116,7 +116,7 @@ export class ProcessorManager implements IProcessorManager {
             p.processor.namespace === processor.namespace,
         )
       ) {
-        this.logger.warn(
+        this.logger.debug(
           `Processor with namespace '${processor.namespace}' already registered for drive '${driveId}'.`,
         );
         continue;
