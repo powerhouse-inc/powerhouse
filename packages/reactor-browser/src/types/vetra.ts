@@ -4,6 +4,7 @@ import type {
   Action,
   Author,
   DocumentModelPHState,
+  DocumentModelUtils,
   DocumentSpecification,
   ImportScriptModule,
   PHDocumentHeader,
@@ -44,7 +45,7 @@ export type VetraDocumentModelModule = VetraMeta & {
   specifications: DocumentSpecification[];
   reducer: Reducer<any>;
   actions: Record<string, (input: any) => Action>;
-  utils: any;
+  utils: DocumentModelUtils<any>;
   documentModel: DocumentModelPHState;
 };
 export type VetraEditorModule = VetraMeta & {
