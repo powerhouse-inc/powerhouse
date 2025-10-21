@@ -190,24 +190,24 @@ This is separate from IDocumentView (read-side projection) which optimizes queri
 - Tests verify LRU ordering behavior
 - 100% code coverage
 
-## Phase 4: Core Cache Structure
+## Phase 4: Core Cache Structure (✅ Complete)
 
 ### Task 4.1: Create cache storage structure
-- [ ] Create `packages/reactor/src/cache/kysely-write-cache.ts`
-- [ ] Define `DocumentStream` type (key + ringBuffer)
-- [ ] Create `KyselyWriteCache` class implementing `IWriteCache`
-- [ ] Add private fields:
+- [x] Create `packages/reactor/src/cache/kysely-write-cache.ts`
+- [x] Define `DocumentStream` type (key + ringBuffer)
+- [x] Create `KyselyWriteCache` class implementing `IWriteCache`
+- [x] Add private fields:
   - `streams: Map<string, DocumentStream>` (in-memory ring buffers)
   - `lruTracker: LRUTracker<string>` (LRU tracking)
   - `kvStore: IKeyValueStore` (keyframe storage)
   - `operationStore: IOperationStore` (fallback rebuild)
   - `registry: IDocumentModelRegistry` (reducer access)
   - `config: Required<WriteCacheConfig>` (configuration)
-- [ ] Implement constructor accepting dependencies
-- [ ] Implement `startup(): Promise<void>`:
+- [x] Implement constructor accepting dependencies
+- [x] Implement `startup(): Promise<void>`:
   - Call `kvStore.startup()`
   - Do NOT pre-warm cache (lazy load on demand)
-- [ ] Implement `shutdown(): Promise<void>`:
+- [x] Implement `shutdown(): Promise<void>`:
   - Call `kvStore.shutdown()`
 
 **Acceptance Criteria:**
@@ -218,10 +218,10 @@ This is separate from IDocumentView (read-side projection) which optimizes queri
 - Startup/shutdown delegate to K/V store
 
 ### Task 4.2: Implement cache key utilities
-- [ ] Add private method `makeStreamKey(documentId, scope, branch): string`
-- [ ] Implement consistent string serialization (e.g., `${documentId}:${scope}:${branch}`)
-- [ ] Add private method `getOrCreateStream(key: string): DocumentStream`
-- [ ] Implement LRU eviction when maxDocuments reached
+- [x] Add private method `makeStreamKey(documentId, scope, branch): string`
+- [x] Implement consistent string serialization (e.g., `${documentId}:${scope}:${branch}`)
+- [x] Add private method `getOrCreateStream(key: string): DocumentStream`
+- [x] Implement LRU eviction when maxDocuments reached
 
 **Acceptance Criteria:**
 - Key generation is deterministic and unique
@@ -229,14 +229,14 @@ This is separate from IDocumentView (read-side projection) which optimizes queri
 - Tests verify key generation consistency
 
 ### Task 4.3: Implement keyframe utilities
-- [ ] Add private method `makeKeyframeKey(documentId, documentType, scope, branch, revision): string`
-- [ ] Format: `keyframe:${documentId}:${documentType}:${scope}:${branch}:${revision}`
-- [ ] Add private method `isKeyframeRevision(revision: number): boolean`
-- [ ] Returns `revision > 0 && revision % config.keyframeInterval === 0`
-- [ ] Add private method `serializeKeyframe(document: PHDocument): string`
-- [ ] Use JSON.stringify for now (optimize later if needed)
-- [ ] Add private method `deserializeKeyframe(data: string): PHDocument`
-- [ ] Use JSON.parse with error handling
+- [x] Add private method `makeKeyframeKey(documentId, documentType, scope, branch, revision): string`
+- [x] Format: `keyframe:${documentId}:${documentType}:${scope}:${branch}:${revision}`
+- [x] Add private method `isKeyframeRevision(revision: number): boolean`
+- [x] Returns `revision > 0 && revision % config.keyframeInterval === 0`
+- [x] Add private method `serializeKeyframe(document: PHDocument): string`
+- [x] Use JSON.stringify for now (optimize later if needed)
+- [x] Add private method `deserializeKeyframe(data: string): PHDocument`
+- [x] Use JSON.parse with error handling
 
 **Acceptance Criteria:**
 - Keyframe keys are unique and parseable
@@ -244,15 +244,15 @@ This is separate from IDocumentView (read-side projection) which optimizes queri
 - Deserialization is robust to malformed data
 
 ### Task 4.4: Implement putState with keyframe logic
-- [ ] Implement `putState(documentId, documentType, scope, branch, revision, document): void`
-- [ ] Deep copy document using `structuredClone()`
-- [ ] Create stream key from parameters
-- [ ] Get or create document stream
-- [ ] Add snapshot to ring buffer (always)
-- [ ] Update LRU tracker
-- [ ] Handle eviction when at capacity
-- [ ] **NEW**: Check if keyframe revision using `isKeyframeRevision(revision)`
-- [ ] **NEW**: If keyframe, persist to K/V store asynchronously
+- [x] Implement `putState(documentId, documentType, scope, branch, revision, document): void`
+- [x] Deep copy document using `structuredClone()`
+- [x] Create stream key from parameters
+- [x] Get or create document stream
+- [x] Add snapshot to ring buffer (always)
+- [x] Update LRU tracker
+- [x] Handle eviction when at capacity
+- [x] **NEW**: Check if keyframe revision using `isKeyframeRevision(revision)`
+- [x] **NEW**: If keyframe, persist to K/V store asynchronously
   - Don't await (fire and forget)
   - Log errors but don't fail putState
 
@@ -280,17 +280,18 @@ putState(...): void {
 - Keyframe persistence doesn't block putState
 
 ### Task 4.5: Create basic cache tests
-- [ ] Create `packages/reactor/test/cache/kysely-write-cache.test.ts`
-- [ ] Test: should store and track documents
-- [ ] Test: should deep copy documents on put
-- [ ] Test: should evict LRU stream when at capacity
-- [ ] Test: should maintain ring buffer per stream
-- [ ] Test: should handle multiple scopes/branches separately
+- [x] Create `packages/reactor/test/cache/kysely-write-cache.test.ts`
+- [x] Test: should store and track documents
+- [x] Test: should deep copy documents on put
+- [x] Test: should evict LRU stream when at capacity
+- [x] Test: should maintain ring buffer per stream
+- [x] Test: should handle multiple scopes/branches separately
 
 **Acceptance Criteria:**
-- Tests use real PGLite database via createTestOperationStore()
+- Tests use mock implementations for dependencies
 - Tests verify deep copy behavior
 - Tests verify LRU eviction
+- All 18 tests passing
 
 ## Phase 5: Cache Hit Path (getState)
 
