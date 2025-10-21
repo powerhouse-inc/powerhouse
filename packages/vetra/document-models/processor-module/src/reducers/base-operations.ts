@@ -2,12 +2,30 @@ import type { ProcessorModuleBaseOperationsOperations } from "../../gen/base-ope
 
 export const reducer: ProcessorModuleBaseOperationsOperations = {
   setProcessorNameOperation(state, action, dispatch) {
-    state.name = action.input.name;
+    const trimmedName = action.input.name.trim();
+    if (trimmedName === "") {
+      throw new Error("Processor name cannot be empty");
+    }
+    state.name = trimmedName;
   },
   setProcessorTypeOperation(state, action, dispatch) {
-    state.type = action.input.type;
+    const trimmedType = action.input.type.trim();
+    if (trimmedType === "") {
+      throw new Error("Processor type cannot be empty");
+    }
+    state.type = trimmedType;
   },
   addDocumentTypeOperation(state, action, dispatch) {
+    // Check for duplicate ID
+    const existingId = state.documentTypes.find(
+      (dt) => dt.id === action.input.id,
+    );
+    if (existingId) {
+      throw new Error(
+        `Document type with id "${action.input.id}" already exists`,
+      );
+    }
+
     state.documentTypes.push({
       id: action.input.id,
       documentType: action.input.documentType,

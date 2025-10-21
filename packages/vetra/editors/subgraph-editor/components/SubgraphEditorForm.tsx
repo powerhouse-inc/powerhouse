@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
-import { useDebounce } from "../../hooks/index.js";
+import { useEffect, useState } from "react";
 import { StatusPill } from "../../components/index.js";
+import { useDebounce } from "../../hooks/index.js";
 
 export interface SubgraphEditorFormProps {
   subgraphName?: string;
@@ -57,10 +57,14 @@ export const SubgraphEditorForm: React.FC<SubgraphEditorFormProps> = ({
 
       {/* Subgraph Name Field */}
       <div>
-        <label className="mb-2 block text-sm font-medium text-gray-700">
+        <label
+          htmlFor="subgraph-name"
+          className="mb-2 block text-sm font-medium text-gray-700"
+        >
           Subgraph Name
         </label>
         <input
+          id="subgraph-name"
           type="text"
           value={subgraphName}
           onChange={(e) => setSubgraphName(e.target.value)}

@@ -125,10 +125,14 @@ export const AppEditorForm = () => {
 
       {/* App Name Field */}
       <div>
-        <label className="mb-2 block text-sm font-medium text-gray-700">
+        <label
+          htmlFor="app-name"
+          className="mb-2 block text-sm font-medium text-gray-700"
+        >
           App Name
         </label>
         <input
+          id="app-name"
           type="text"
           value={appName}
           onChange={(e) => setAppName(e.target.value)}
@@ -142,7 +146,10 @@ export const AppEditorForm = () => {
 
       {/* Document Types Field */}
       <div>
-        <label className="mb-2 block text-sm font-medium text-gray-700">
+        <label
+          htmlFor="document-types"
+          className="mb-2 block text-sm font-medium text-gray-700"
+        >
           Document Types
         </label>
         <div className="space-y-2">
@@ -208,8 +215,9 @@ export const AppEditorForm = () => {
 
         {/* Enable/Disable Switch */}
         <div className="mb-4">
-          <label className="flex items-center">
+          <label htmlFor="drag-and-drop-enabled" className="flex items-center">
             <input
+              id="drag-and-drop-enabled"
               type="checkbox"
               checked={isDragAndDropEnabled}
               onChange={(e) => onDragAndDropToggle(e.target.checked)}
