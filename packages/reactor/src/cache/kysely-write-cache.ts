@@ -79,9 +79,23 @@ export class KyselyWriteCache implements IWriteCache {
       }
     }
 
-    throw new Error(
-      `Cache miss: document ${documentId} not found in cache (scope: ${scope}, branch: ${branch}, targetRevision: ${targetRevision})`,
+    const document = await this.coldMissRebuild(
+      documentId,
+      documentType,
+      scope,
+      branch,
+      targetRevision,
+      signal,
     );
+
+    let revision = targetRevision;
+    if (revision === undefined) {
+      revision = document.header.revision[scope] || 0;
+    }
+
+    this.putState(documentId, documentType, scope, branch, revision, document);
+
+    return structuredClone(document);
   }
 
   putState(
@@ -123,7 +137,7 @@ export class KyselyWriteCache implements IWriteCache {
     let evicted = 0;
 
     if (scope === undefined && branch === undefined) {
-      for (const [key, stream] of this.streams.entries()) {
+      for (const [key] of this.streams.entries()) {
         if (key.startsWith(`${documentId}:`)) {
           this.streams.delete(key);
           this.lruTracker.remove(key);
@@ -131,7 +145,7 @@ export class KyselyWriteCache implements IWriteCache {
         }
       }
     } else if (scope !== undefined && branch === undefined) {
-      for (const [key, stream] of this.streams.entries()) {
+      for (const [key] of this.streams.entries()) {
         if (key.startsWith(`${documentId}:${scope}:`)) {
           this.streams.delete(key);
           this.lruTracker.remove(key);
@@ -153,6 +167,158 @@ export class KyselyWriteCache implements IWriteCache {
   clear(): void {
     this.streams.clear();
     this.lruTracker.clear();
+  }
+
+  private async findNearestKeyframe(
+    documentId: string,
+    documentType: string,
+    scope: string,
+    branch: string,
+    targetRevision: number,
+    signal?: AbortSignal,
+  ): Promise<{ revision: number; document: PHDocument } | undefined> {
+    const interval = this.config.keyframeInterval;
+
+    if (targetRevision === Number.MAX_SAFE_INTEGER || targetRevision <= 0) {
+      return undefined;
+    }
+
+    const keyframeRevisions: number[] = [];
+
+    for (
+      let rev = Math.floor(targetRevision / interval) * interval;
+      rev > 0;
+      rev -= interval
+    ) {
+      keyframeRevisions.push(rev);
+      if (keyframeRevisions.length > 1000) {
+        break;
+      }
+    }
+
+    for (const rev of keyframeRevisions) {
+      if (signal?.aborted) {
+        throw new Error("Operation aborted");
+      }
+
+      const key = this.makeKeyframeKey(
+        documentId,
+        documentType,
+        scope,
+        branch,
+        rev,
+      );
+
+      try {
+        const data = await this.kvStore.get(key, signal);
+        if (data) {
+          try {
+            const document = this.deserializeKeyframe(data);
+            return { revision: rev, document };
+          } catch (err) {
+            console.warn(`Failed to deserialize keyframe ${key}:`, err);
+          }
+        }
+      } catch (err) {
+        console.warn(`Failed to load keyframe ${key}:`, err);
+      }
+    }
+
+    return undefined;
+  }
+
+  private async coldMissRebuild(
+    documentId: string,
+    documentType: string,
+    scope: string,
+    branch: string,
+    targetRevision: number | undefined,
+    signal?: AbortSignal,
+  ): Promise<PHDocument> {
+    const effectiveTargetRevision = targetRevision || Number.MAX_SAFE_INTEGER;
+
+    const keyframe = await this.findNearestKeyframe(
+      documentId,
+      documentType,
+      scope,
+      branch,
+      effectiveTargetRevision,
+      signal,
+    );
+
+    let document: PHDocument | undefined;
+    let startRevision: number;
+
+    if (keyframe) {
+      document = structuredClone(keyframe.document);
+      startRevision = keyframe.revision;
+      console.log(`Cold miss: starting from keyframe@${startRevision}`);
+    } else {
+      document = undefined;
+      startRevision = 0;
+      console.log(`Cold miss: no keyframe, rebuilding from scratch`);
+    }
+
+    const module = this.registry.getModule(documentType);
+    let cursor: string | undefined = undefined;
+    const pageSize = 100;
+
+    // todo: refactor
+    while (true) {
+      if (signal?.aborted) {
+        throw new Error("Operation aborted");
+      }
+
+      const paging = cursor ? { cursor, pageSize } : { pageSize };
+
+      try {
+        const result = await this.operationStore.getSince(
+          documentId,
+          scope,
+          branch,
+          startRevision,
+          paging,
+          signal,
+        );
+
+        for (const operation of result.items) {
+          if (
+            targetRevision !== undefined &&
+            operation.index > targetRevision
+          ) {
+            break;
+          }
+
+          if (document === undefined) {
+            document = module.utils.createDocument();
+          }
+
+          document = module.reducer(document, operation.action);
+        }
+
+        if (
+          !result.nextCursor ||
+          (targetRevision !== undefined &&
+            result.items.some((op) => op.index >= targetRevision))
+        ) {
+          break;
+        }
+
+        cursor = result.nextCursor;
+      } catch (err) {
+        throw new Error(
+          `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+
+    if (!document) {
+      throw new Error(
+        `Failed to rebuild document ${documentId}: no operations found`,
+      );
+    }
+
+    return document;
   }
 
   private makeStreamKey(
