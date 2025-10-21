@@ -4,6 +4,10 @@ import { blake3 as blake3Hash } from "@noble/hashes/blake3.js";
 import { sha256, sha512 } from "@noble/hashes/sha2.js";
 import { keccak_256, sha3_256, shake256, shake256_64 } from "@noble/hashes/sha3.js";
 
+import {
+  createBLAKE3 as blake3_wasm
+} from "hash-wasm";
+
 import stringifyJson from "safe-stable-stringify";
 import { createHash as createSha1Hash } from "sha1-uint8array";
 import type { ActionSignatureContext } from "./types.js";
@@ -35,6 +39,9 @@ export const supportedAlgorithms = [
   "sha3_256",
   "shake256",
   "shake256_64",
+  //"blake2b_wasm",
+  //"blake2s_wasm",
+  "blake3_wasm",
 ];
 export const supportedEncodings = ["base64", "hex"];
 const defaultAlg = "sha1"
@@ -96,6 +103,13 @@ function toUint8(data: string | Uint8Array | ArrayBufferView ): Uint8Array {
   return textEncoder.encode(String(data));
 }
 
+async function initAsyncHasher() {
+  const hasher = await blake3_wasm();
+  hasher.init();
+  return hasher;
+}
+const aHasher = await initAsyncHasher()
+
 function hashUIntArray(
   data: string | Uint8Array | ArrayBufferView,
   algorithm = "sha1",
@@ -125,6 +139,11 @@ function hashUIntArray(
       return shake256(bytes);
     case "shake256_64":
       return shake256_64(bytes);
+    case "blake3_wasm":
+      aHasher.update(bytes);
+      let hash = aHasher.digest("binary");
+      aHasher.init();
+      return hash;
     default:
       throw new Error(`Unsupported algorithm: ${algorithm}`);
   }
