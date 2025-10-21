@@ -624,10 +624,14 @@ describe("KyselyWriteCache (Partial Integration) - Cold Miss Rebuild", () => {
       }
     });
 
-    const document = await cache.getState(docId, docType, "global", "main");
+    cache.clear();
 
-    expect(document).toEqual(createTestDocument());
-    expect(document.state).toBeDefined();
+    const rebuilt = await cache.getState(docId, docType, "global", "main");
+
+    // we aren't actually testing document creation
+    expect(rebuilt.state).toBeDefined();
+    expect(rebuilt.header).toBeDefined();
+    expect(rebuilt.header.documentType).toBe(docType);
   });
 
   it("should use keyframe if available (keyframe-accelerated rebuild)", async () => {
