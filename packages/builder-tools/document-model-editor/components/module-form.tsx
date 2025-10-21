@@ -35,7 +35,7 @@ export function ModuleForm({
     <TextField
       key={module?.id ?? "new"}
       name="name"
-      label={isEdit ? "Module name" : "Add module"}
+      label={isEdit ? "Module name *" : "Add module *"}
       value={module?.name}
       onSubmit={handleSubmit}
       placeholder="Add module"

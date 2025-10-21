@@ -68,7 +68,7 @@ export function OperationForm({
     <TextField
       name="name"
       value={operation?.name}
-      label={isEdit ? "Operation name" : "Add operation"}
+      label={isEdit ? "Operation name *" : "Add operation *"}
       onSubmit={handleSubmit}
       onChange={handleChange}
       placeholder="Add operation"

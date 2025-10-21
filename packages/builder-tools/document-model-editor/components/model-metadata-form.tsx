@@ -2,9 +2,9 @@ import { useCallback } from "react";
 import { z } from "zod";
 import type { Scope } from "../types/documents.js";
 import {
+  handleModelNameChange,
   makeInitialSchemaDoc,
   renameSchemaType,
-  handleModelNameChange,
 } from "../utils/helpers.js";
 import { TextField } from "./text-field.js";
 
@@ -125,7 +125,7 @@ export function DocumentTypeForm(props: Props) {
 
   return (
     <TextField
-      label="Document Type"
+      label="Document Type *"
       name="powerhouse/document-model"
       value={documentType}
       onSubmit={setModelId}
@@ -143,7 +143,7 @@ export function ModelExtensionForm(props: Props) {
       name="extension"
       value={extension}
       onSubmit={setModelExtension}
-      label="Model Extension"
+      label="Model Extension *"
       placeholder="Example .phdm"
       required
     />
