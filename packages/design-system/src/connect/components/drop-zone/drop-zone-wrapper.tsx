@@ -1,5 +1,4 @@
 import {
-  setSelectedNode,
   useIsDragAndDropEnabled,
   useOnDropFile,
   useSelectedDriveId,
@@ -29,7 +28,6 @@ export function DropZoneWrapper({ children }: { children: React.ReactNode }) {
   return (
     <DropZone
       onAddFile={onAddFile}
-      setSelectedNode={setSelectedNode}
       driveId={selectedDriveId}
       useLocalStorage={true}
       style={{ height: "100%" }}

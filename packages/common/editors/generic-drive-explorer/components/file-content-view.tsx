@@ -1,21 +1,11 @@
-import type { TNodeActions } from "@powerhousedao/design-system";
 import { FileItem, useWindowSize } from "@powerhousedao/design-system";
+import {
+  isFileNodeKind,
+  useNodesInSelectedDriveOrFolder,
+} from "@powerhousedao/reactor-browser";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import type { FileNode, Node, SharingType, SyncStatus } from "document-drive";
+import type { FileNode } from "document-drive";
 import React, { useRef } from "react";
-import { useTranslation } from "react-i18next";
-
-type Props = TNodeActions & {
-  fileNodes: FileNode[];
-  isAllowedToCreateDocuments: boolean;
-  sharingType: SharingType;
-  getSyncStatusSync: (
-    syncId: string,
-    sharingType: SharingType,
-  ) => SyncStatus | undefined;
-  setSelectedNode: (id: Node | string | undefined) => void;
-  showDeleteNodeModal: (node: Node) => void;
-};
 
 const GAP = 8;
 const ITEM_WIDTH = 256;
@@ -23,13 +13,12 @@ const ITEM_HEIGHT = 48;
 
 const USED_SPACE = 420;
 
-export function FileContentView(props: Props) {
+export function FileContentView() {
   const parentRef = useRef(null);
-  const { t } = useTranslation();
   const windowSize = useWindowSize();
-  const { fileNodes } = props;
   const availableWidth = windowSize.innerWidth - USED_SPACE;
-
+  const nodes = useNodesInSelectedDriveOrFolder();
+  const fileNodes = nodes.filter((n) => isFileNodeKind(n));
   const columnCount = Math.floor(availableWidth / (ITEM_WIDTH + GAP)) || 1;
   const rowCount = Math.ceil(fileNodes.length / columnCount);
 
@@ -68,11 +57,7 @@ export function FileContentView(props: Props) {
 
   if (fileNodes.length === 0) {
     return (
-      <div className="mb-8 text-sm text-gray-400">
-        {t("folderView.sections.documents.empty", {
-          defaultValue: "No documents or files 📄",
-        })}
-      </div>
+      <div className="mb-8 text-sm text-gray-400">No documents or files 📄</div>
     );
   }
 
@@ -89,7 +74,7 @@ export function FileContentView(props: Props) {
           marginLeft: columnIndex === 0 ? 0 : GAP,
         }}
       >
-        <FileItem key={fileNode.id} fileNode={fileNode} {...props} />
+        <FileItem key={fileNode.id} fileNode={fileNode} />
       </div>
     );
   };

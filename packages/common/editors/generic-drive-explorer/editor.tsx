@@ -1,77 +1,20 @@
 import { CreateDocument, DriveLayout, FolderView } from "@powerhousedao/common";
-import {
-  Breadcrumbs,
-  useBreadcrumbs,
-  useDrop,
-} from "@powerhousedao/design-system";
-import {
-  getSyncStatusSync,
-  makeFolderNodeFromDrive,
-  setSelectedNode,
-  showCreateDocumentModal,
-  showDeleteNodeModal,
-  useDocumentModelModules,
-  useNodeActions,
-  useSelectedDrive,
-  useSelectedFolder,
-  useSelectedNodePath,
-  useSetPHDriveEditorConfig,
-  useUserPermissions,
-} from "@powerhousedao/reactor-browser";
-import { getDriveSharingType } from "document-drive";
-import type { DocumentModelModule, EditorProps } from "document-model";
+import { Breadcrumbs, useDrop } from "@powerhousedao/design-system";
+import { useSetPHDriveEditorConfig } from "@powerhousedao/reactor-browser";
+import type { EditorProps } from "document-model";
 import { editorConfig } from "./config.js";
 
 export function Editor(props: EditorProps) {
   useSetPHDriveEditorConfig(editorConfig);
   const { className, children } = props;
-  const [selectedDrive] = useSelectedDrive();
-  const {
-    onRenameNode,
-    onDuplicateNode,
-    onAddFolder,
-    onAddFile,
-    onCopyNode,
-    onMoveNode,
-  } = useNodeActions();
-  const selectedFolder = useSelectedFolder();
-  const selectedDriveAsFolderNode = makeFolderNodeFromDrive(selectedDrive);
-  const documentModels = useDocumentModelModules();
-  const selectedNodePath = useSelectedNodePath();
-  const { isAllowedToCreateDocuments } = useUserPermissions();
-  const onCreateDocument = (documentModel: DocumentModelModule) => {
-    showCreateDocumentModal(documentModel.documentModel.global.id);
-  };
-  const { isDropTarget, dropProps } = useDrop({
-    node: selectedDriveAsFolderNode,
-    onAddFile,
-    onCopyNode,
-    onMoveNode,
-  });
-
-  const { breadcrumbs, onBreadcrumbSelected } = useBreadcrumbs({
-    selectedNodePath,
-    setSelectedNode,
-  });
-  const sharingType = getDriveSharingType(selectedDrive);
-
-  async function onAddAndSelectNewFolder(name: string) {
-    await onAddFolder(name, selectedFolder);
-    setSelectedNode(selectedFolder);
-  }
-
+  const { isDropTarget, dropProps } = useDrop();
   const showDocumentEditor = !!children;
 
   return (
     <DriveLayout className={className}>
       {!showDocumentEditor && (
         <DriveLayout.Header>
-          <Breadcrumbs
-            breadcrumbs={breadcrumbs}
-            createEnabled={isAllowedToCreateDocuments}
-            onCreate={onAddAndSelectNewFolder}
-            onBreadcrumbSelected={onBreadcrumbSelected}
-          />
+          <Breadcrumbs />
         </DriveLayout.Header>
       )}
       {showDocumentEditor ? (
@@ -81,37 +24,12 @@ export function Editor(props: EditorProps) {
           {...dropProps}
           className={isDropTarget ? "rounded-xl bg-blue-100" : ""}
         >
-          <FolderView
-            node={selectedFolder ?? selectedDriveAsFolderNode}
-            sharingType={sharingType}
-            getSyncStatusSync={getSyncStatusSync}
-            setSelectedNode={setSelectedNode}
-            onRenameNode={onRenameNode}
-            onDuplicateNode={onDuplicateNode}
-            onAddFolder={onAddFolder}
-            onAddFile={onAddFile}
-            onCopyNode={onCopyNode}
-            onMoveNode={onMoveNode}
-            onAddAndSelectNewFolder={onAddAndSelectNewFolder}
-            showDeleteNodeModal={(node) => showDeleteNodeModal(node.id)}
-            isAllowedToCreateDocuments={isAllowedToCreateDocuments}
-          />
+          <FolderView />
         </DriveLayout.Content>
       )}
       {!showDocumentEditor && (
         <DriveLayout.Footer>
-          {isAllowedToCreateDocuments && (
-            <CreateDocument
-              documentModels={
-                documentModels?.filter(
-                  (module) =>
-                    module.documentModel.global.id !==
-                    "powerhouse/document-drive",
-                ) as unknown as DocumentModelModule[]
-              }
-              createDocument={onCreateDocument}
-            />
-          )}
+          <CreateDocument />
         </DriveLayout.Footer>
       )}
     </DriveLayout>

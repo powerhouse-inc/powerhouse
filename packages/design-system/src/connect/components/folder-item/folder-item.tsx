@@ -1,8 +1,4 @@
-import type {
-  NodeOption,
-  SyncStatus,
-  TNodeActions,
-} from "@powerhousedao/design-system";
+import type { NodeOption } from "@powerhousedao/design-system";
 import {
   ConnectDropdownMenu,
   defaultNodeOptions,
@@ -13,48 +9,35 @@ import {
   useDrag,
   useDrop,
 } from "@powerhousedao/design-system";
-import type { FolderNode, Node, SharingType } from "document-drive";
+import {
+  getSyncStatusSync,
+  setSelectedNode,
+  showDeleteNodeModal,
+  useNodeActions,
+  useSelectedDriveSafe,
+  useUserPermissions,
+} from "@powerhousedao/reactor-browser";
+import { getDriveSharingType, type FolderNode } from "document-drive";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 
-export type FolderItemProps = TNodeActions & {
+export function FolderItem(props: {
   folderNode: FolderNode;
-  sharingType: SharingType;
-  isAllowedToCreateDocuments: boolean;
   className?: string;
-  getSyncStatusSync: (
-    syncId: string,
-    sharingType: SharingType,
-  ) => SyncStatus | undefined;
-  setSelectedNode: (node: Node | string | undefined) => void;
-  showDeleteNodeModal: (node: Node) => void;
-};
-
-export function FolderItem(props: FolderItemProps) {
-  const {
-    folderNode,
-    sharingType,
-    isAllowedToCreateDocuments,
-    className,
-    setSelectedNode,
-    getSyncStatusSync,
-    onRenameNode,
-    onDuplicateNode,
-    showDeleteNodeModal,
-    onAddFile,
-    onCopyNode,
-    onMoveNode,
-  } = props;
+}) {
+  const { folderNode, className } = props;
+  const { isAllowedToCreateDocuments } = useUserPermissions();
   const [mode, setMode] = useState<"READ" | "WRITE">("READ");
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
+  const [selectedDrive] = useSelectedDriveSafe();
+  const sharingType = selectedDrive
+    ? getDriveSharingType(selectedDrive)
+    : "LOCAL";
   const { dragProps } = useDrag({ node: folderNode });
+  const { onRenameNode, onDuplicateNode } = useNodeActions();
   const { isDropTarget, dropProps } = useDrop({
-    node: folderNode,
-    onAddFile,
-    onCopyNode,
-    onMoveNode,
+    target: folderNode,
   });
-
   const isReadMode = mode === "READ";
   const syncStatus = getSyncStatusSync(folderNode.id, sharingType);
 
@@ -63,8 +46,13 @@ export function FolderItem(props: FolderItemProps) {
   }
 
   function onSubmit(name: string) {
-    onRenameNode(name, folderNode);
-    setMode("READ");
+    onRenameNode(name, folderNode)
+      .catch((error) => {
+        console.error(error);
+      })
+      .finally(() => {
+        setMode("READ");
+      });
   }
 
   const dropdownMenuHandlers: Partial<Record<NodeOption, () => void>> = {
