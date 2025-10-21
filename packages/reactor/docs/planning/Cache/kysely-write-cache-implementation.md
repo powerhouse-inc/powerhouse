@@ -553,40 +553,40 @@ await cache.getState(docId, type, scope, branch, 47);
 ## Phase 8: Cache Management
 
 ### Task 8.1: Implement invalidate method
-- [ ] Implement `invalidate(documentId, scope?, branch?): number`
-- [ ] Handle case: only documentId (invalidate all scopes/branches)
-- [ ] Handle case: documentId + scope (invalidate all branches for scope)
-- [ ] Handle case: documentId + scope + branch (invalidate specific stream)
-- [ ] Remove streams from cache Map
-- [ ] Remove from LRU tracker
-- [ ] Return count of ring buffers evicted
+- [x] Implement `invalidate(documentId, scope?, branch?): number`
+- [x] Handle case: only documentId (invalidate all scopes/branches)
+- [x] Handle case: documentId + scope (invalidate all branches for scope)
+- [x] Handle case: documentId + scope + branch (invalidate specific stream)
+- [x] Remove streams from cache Map
+- [x] Remove from LRU tracker
+- [x] Return count of ring buffers evicted
 
 **Acceptance Criteria:**
-- All three invalidation scopes work correctly
-- LRU tracker updated
-- Returns correct eviction count
+- All three invalidation scopes work correctly ✓
+- LRU tracker updated ✓
+- Returns correct eviction count ✓
 
 ### Task 8.2: Implement clear method
-- [ ] Implement `clear(): void`
-- [ ] Clear streams Map
-- [ ] Clear LRU tracker
-- [ ] Reset any internal state
+- [x] Implement `clear(): void`
+- [x] Clear streams Map
+- [x] Clear LRU tracker
+- [x] Reset any internal state
 
 **Acceptance Criteria:**
-- Cache completely emptied
-- Subsequent operations work correctly
+- Cache completely emptied ✓
+- Subsequent operations work correctly ✓
 
 ### Task 8.3: Create cache management tests
-- [ ] Test: should invalidate all streams for a document
-- [ ] Test: should invalidate streams for specific scope
-- [ ] Test: should invalidate specific stream
-- [ ] Test: should return correct eviction count
-- [ ] Test: should clear entire cache
-- [ ] Test: should handle invalidate of non-existent stream
+- [x] Test: should invalidate all streams for a document
+- [x] Test: should invalidate streams for specific scope
+- [x] Test: should invalidate specific stream
+- [x] Test: should return correct eviction count
+- [x] Test: should clear entire cache
+- [x] Test: should handle invalidate of non-existent stream
 
 **Acceptance Criteria:**
-- All invalidation patterns tested
-- Tests verify LRU cleanup
+- All invalidation patterns tested ✓
+- Tests verify LRU cleanup ✓
 
 ## Phase 9: Integration Tests
 
@@ -768,10 +768,11 @@ These implementations would all use the same `IKeyframeStore` interface and bene
 - [x] Phase 0: IKeyframeStore interface + KyselyKeyframeStore implementation
 - [x] Phases 1-6: Core cache implementation with keyframe support
 - [x] Phase 7: Warm miss rebuild
-- [ ] Phases 8-12: Cache management, integration tests, performance validation
+- [x] Phase 8: Cache management (invalidate, clear, tests)
+- [ ] Phases 9-12: Integration tests, performance validation
 - [ ] Phase 14: Final integration and validation
 - [x] Keyframe store tests passing (23 tests)
-- [x] Write cache tests passing (33+ tests, 5 out of 7 warm miss tests passing)
+- [x] Write cache tests passing (33+ tests, all warm miss tests passing)
 - [ ] Documentation complete
 - [ ] Performance validated
 - [ ] Code reviewed and follows conventions
