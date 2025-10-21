@@ -125,22 +125,11 @@ export async function generateProcessor(
   documentTypes: string[],
   config: PowerhouseConfig,
 ) {
-  const { documentModelsDir, skipFormat } = config;
-  const documentTypesMap = getDocumentTypesMap(documentModelsDir);
-
-  const invalidType = documentTypes.find(
-    (type) => !Object.keys(documentTypesMap).includes(type),
-  );
-  if (invalidType) {
-    throw new Error(
-      `Document model for ${invalidType} not found. Make sure the document model is available in the document-models directory (${documentModelsDir}) and has been properly generated.`,
-    );
-  }
+  const { skipFormat } = config;
 
   return hygenGenerateProcessor(
     name,
     documentTypes,
-    documentTypesMap,
     config.processorsDir,
     config.documentModelsDir,
     type,

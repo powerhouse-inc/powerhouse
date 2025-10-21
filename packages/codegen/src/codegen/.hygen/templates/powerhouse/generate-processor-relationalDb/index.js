@@ -8,7 +8,6 @@ module.exports = {
       documentTypes: args.documentTypes
         .split(",")
         .filter((type) => type !== ""),
-      documentTypesMap: JSON.parse(args.documentTypesMap),
     };
   },
 };
