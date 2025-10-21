@@ -2,7 +2,11 @@
 
 ### Summary
 
-The `IWriteCache` is an in-memory LRU cache that stores ring buffers of `PHDocument` snapshots for fast retrieval by the job executor. The cache provides two primary methods: `getState()` for retrieving a complete document at a specific revision (with automatic rebuilding on cache miss using `IDocumentModelRegistry` reducers), and `putState()` for storing the resulting document after job execution. By caching recent document snapshots at various revisions, the job executor can avoid replaying all operations from the beginning, significantly improving performance for documents with long operation histories.
+The `IWriteCache` is intended as the mechanism to most optimally retrieve and store a document tuple's latest state `(id, branch, scope)`, for use by the job executor.
+
+It keeps an in-memory LRU cache of ring-buffers that store recently needed revisions of documents. It also persistents "keyframes", or periodic `PHDocument` snapshots.
+
+The cache provides two primary methods: `getState()` for retrieving a complete document at a specific revision (with automatic rebuilding on cache miss, and `putState()` for storing the resulting document after job execution. By caching recent document snapshots in memory and persisting keyframes to the database at regular intervals, the job executor can avoid replaying all operations from the beginning, significantly improving performance for documents with long operation histories and enabling fast recovery after cold starts.
 
 ### Purpose and Use Case
 
@@ -130,8 +134,11 @@ flowchart TD
    - **On cache miss** (two types):
 
      **Cold miss** (no document in ring buffer for this stream):
+     - Checks `IKeyframeStore.findNearestKeyframe()` for the nearest persisted keyframe at or before targetRevision using indexed SQL query (O(log n))
+     - If keyframe found: uses it as starting point, significantly reducing operations to replay
+     - If no keyframe: starts from revision 0
      - Gets reducer from `IDocumentModelRegistry` using documentType
-     - Streams operations from `IOperationStore.getSince(documentId, scope, branch, 0, paging)` using cursor-based paging (e.g., 100 operations per page)
+     - Streams operations from `IOperationStore.getSince(documentId, scope, branch, startRevision, paging)` using cursor-based paging (e.g., 100 operations per page)
      - For each page of operations:
        - Applies operations through reducer incrementally
        - Builds up document state progressively
@@ -172,6 +179,7 @@ flowchart TD
    - Updates LRU tracking
    - Evicts oldest snapshot in ring buffer if full
    - Evicts least recently used document stream if at capacity
+   - If revision is at keyframe interval (e.g., every 10 revisions), persists to `IKeyframeStore` asynchronously
 
 6. **Cache automatically manages**:
    - Ring buffer storage and eviction
@@ -262,17 +270,42 @@ private async coldMissRebuild(
   targetRevision?: number,
   signal?: AbortSignal
 ): Promise<PHDocument> {
-  const reducer = this.registry.getModule(documentType).reducer;
-  let document: PHDocument | null = null;
+  const effectiveTargetRevision = targetRevision || Number.MAX_SAFE_INTEGER;
+
+  // Try to find nearest keyframe first (optimization)
+  const keyframe = await this.keyframeStore.findNearestKeyframe(
+    documentId,
+    scope,
+    branch,
+    effectiveTargetRevision,
+    signal
+  );
+
+  let document: PHDocument | undefined;
+  let startRevision: number;
+
+  if (keyframe) {
+    // Keyframe-accelerated rebuild
+    document = structuredClone(keyframe.document);
+    startRevision = keyframe.revision;
+    console.log(`Cold miss: starting from keyframe@${startRevision}`);
+  } else {
+    // Full rebuild from scratch
+    document = undefined;
+    startRevision = 0;
+    console.log(`Cold miss: no keyframe, rebuilding from scratch`);
+  }
+
+  const module = this.registry.getModule(documentType);
+  const reducer = module.reducer;
   const pageSize = 100;
 
-  // Stream operations using cursor-based paging with IOperationStore.getSince(0)
-  // Start from revision 0 to get all operations from the beginning
+  // Stream operations using cursor-based paging from startRevision
   let currentPage = await this.operationStore.getSince(
     documentId,
     scope,
     branch,
-    0,  // Start from beginning
+    startRevision,
     { cursor: "", limit: pageSize },
     signal
   );
@@ -286,11 +319,11 @@ private async coldMissRebuild(
       }
 
       if (!document) {
-        // Initialize document from first operation (CREATE_DOCUMENT)
-        document = this.createInitialDocument(documentId, documentType, operation);
-      } else {
-        document = reducer(document, operation.action);
+        // Initialize document from first operation
+        document = module.utils.createDocument();
       }
+
+      document = reducer(document, operation.action);
 
       // Stop if we've reached the target revision
       if (targetRevision !== undefined && operation.index === targetRevision) {
@@ -309,7 +342,7 @@ private async coldMissRebuild(
       documentId,
       scope,
       branch,
-      0,  // Keep using 0, cursor handles pagination
+      startRevision,
       { cursor: currentPage.nextCursor, limit: pageSize },
       signal
     );

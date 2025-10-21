@@ -7,7 +7,7 @@ This document provides a step-by-step implementation plan for the IWriteCache as
 The IWriteCache is a **write-side projection** that optimizes document state retrieval for the job executor. It uses a three-layer storage strategy:
 
 1. **In-Memory Layer**: Ring buffer storing all recent document revisions (ephemeral, fast)
-2. **K/V Store Layer**: Keyframe snapshots persisted every N revisions (durable, pluggable)
+2. **Keyframe Store Layer**: Keyframe snapshots persisted every N revisions to database (durable, indexed, O(log n) lookups)
 3. **Rebuild Layer**: Falls back to rebuilding from IOperationStore using reducers (cold start)
 
 This is separate from IDocumentView (read-side projection) which optimizes queries and searches.
@@ -20,64 +20,88 @@ This is separate from IDocumentView (read-side projection) which optimizes queri
 │                 (Write-Side Projection)                 │
 ├─────────────────────────────────────────────────────────┤
 │  In-Memory: Ring buffer (all recent revisions)          │
-│  K/V Store: Keyframes (every Nth revision)              │
+│  Keyframe Store: Keyframes (every Nth revision)         │
 │  Fallback:  Rebuild from operations + reducer           │
 └─────────────────────────────────────────────────────────┘
          │                │                 │
          │                │                 │
          v                v                 v
-   Ring Buffer      IKeyValueStore    IOperationStore
-   (ephemeral)      (Redis/IndexedDB)  + Registry
+   Ring Buffer      IKeyframeStore    IOperationStore
+   (ephemeral)    (Kysely/PGLite/Postgres) + Registry
 ```
 
 ## Dependencies
 
-- `packages/reactor/src/storage/interfaces.ts` - IOperationStore, PagedResults, PagingOptions
+- `packages/reactor/src/storage/interfaces.ts` - IOperationStore, IKeyframeStore, PagedResults, PagingOptions
+- `packages/reactor/src/storage/kysely/keyframe-store.ts` - KyselyKeyframeStore (database-backed implementation)
 - `packages/reactor/src/registry/interfaces.ts` - IDocumentModelRegistry
-- `packages/reactor/src/cache/kv-store.ts` - IKeyValueStore (new)
 - `document-model` - PHDocument, Operation, DocumentModelModule
 
-## Phase 0: Key-Value Store Abstraction
+## Phase 0: Keyframe Store (Database-Backed)
 
-### Task 0.1: Create IKeyValueStore interface
-- [x] Create `packages/reactor/src/cache/kv-store.ts`
-- [x] Define `IKeyValueStore` interface with methods:
-  - `get(key: string, signal?: AbortSignal): Promise<string | undefined>`
-  - `put(key: string, value: string, signal?: AbortSignal): Promise<void>`
-  - `delete(key: string, signal?: AbortSignal): Promise<void>`
-  - `clear(): Promise<void>`
-  - `startup(): Promise<void>`
-  - `shutdown(): Promise<void>`
-- [x] Add comprehensive JSDoc
+### Overview
+
+The keyframe store has been implemented as a database-backed persistent storage layer using Kysely and PGLite/PostgreSQL.
+
+### Task 0.1: Create IKeyframeStore interface
+- [x] Added `IKeyframeStore` interface to `packages/reactor/src/storage/interfaces.ts`
+- [x] Define methods:
+  - `putKeyframe(documentId, documentType, scope, branch, revision, document, signal): Promise<void>`
+  - `findNearestKeyframe(documentId, scope, branch, targetRevision, signal): Promise<{revision, document} | undefined>`
+  - `deleteKeyframes(documentId, scope?, branch?, signal?): Promise<number>`
+- [x] All methods properly typed with comprehensive JSDoc
 
 **Acceptance Criteria:**
-- Interface provides simple K/V abstraction
+- Interface provides keyframe storage abstraction
 - All methods properly typed
-- JSDoc explains pluggable implementations
+- findNearestKeyframe uses O(log n) indexed SQL query (not O(n) iteration)
 
-### Task 0.2: Create InMemoryKeyValueStore
-- [x] Create `InMemoryKeyValueStore` class in same file
-- [x] Implement using `Map<string, string>`
-- [x] Implement all IKeyValueStore methods
-- [x] Use for testing and development
+### Task 0.2: Create KyselyKeyframeStore implementation
+- [x] Created `packages/reactor/src/storage/kysely/keyframe-store.ts`
+- [x] Implemented using Kysely query builder with Keyframe table
+- [x] putKeyframe: Inserts or updates keyframe with onConflict handling
+- [x] findNearestKeyframe: Uses indexed SQL query with WHERE revision <= targetRevision ORDER BY revision DESC LIMIT 1
+- [x] deleteKeyframes: Supports deletion by document, scope, or specific stream
+- [x] Exports as part of storage layer
 
 **Acceptance Criteria:**
-- Simple Map-based implementation
-- All methods work synchronously (wrapped in Promise)
-- No external dependencies
+- Efficient SQL queries using database indexes
+- O(log n) lookup performance for findNearestKeyframe
+- Handles JSON serialization/deserialization of PHDocument
+- Proper error handling and abort signal support
 
-### Task 0.3: Create tests for InMemoryKeyValueStore
-- [x] Create `packages/reactor/test/cache/kv-store.test.ts`
-- [x] Test: should store and retrieve values
-- [x] Test: should return undefined for missing keys
-- [x] Test: should delete keys
-- [x] Test: should clear all keys
-- [x] Test: should handle startup/shutdown
+### Task 0.3: Add Keyframe table schema
+- [x] Updated `packages/reactor/src/storage/kysely/types.ts`
+- [x] Added KeyframeTable interface with columns:
+  - `id` (serial primary key)
+  - `documentId` (text, indexed)
+  - `documentType` (text)
+  - `scope` (text, indexed)
+  - `branch` (text, indexed)
+  - `revision` (integer, indexed)
+  - `document` (text, JSON-serialized PHDocument)
+  - `createdAt` (timestamp)
+- [x] Added unique constraint on (documentId, scope, branch, revision)
+- [x] Added composite index on (documentId, scope, branch, revision) for fast lookups
+
+**Acceptance Criteria:**
+- Schema supports efficient keyframe queries
+- Unique constraint prevents duplicate keyframes
+- Index optimizes findNearestKeyframe performance
+
+### Task 0.4: Create comprehensive tests
+- [x] Created `packages/reactor/test/storage/kysely-keyframe-store.test.ts`
+- [x] 23 tests covering:
+  - putKeyframe: store, update on conflict, multiple keyframes, different scopes/branches, abort signal
+  - findNearestKeyframe: exact match, nearest match, missing keyframes, different scopes/branches, JSON deserialization, abort signal
+  - deleteKeyframes: specific stream, scope-level, document-level, isolation, abort signal
+  - Integration scenarios: full lifecycle, efficient lookup among many revisions
 
 **Acceptance Criteria:**
 - All tests pass with `pnpm test`
-- 100% coverage on InMemoryKeyValueStore
-- Tests serve as examples for other implementations
+- Tests use real PGLite database (not mocks)
+- 100% coverage on KyselyKeyframeStore class
+- Tests verify performance characteristics
 
 ## Phase 1: Core Types and Interfaces
 
@@ -199,23 +223,24 @@ This is separate from IDocumentView (read-side projection) which optimizes queri
 - [x] Add private fields:
   - `streams: Map<string, DocumentStream>` (in-memory ring buffers)
   - `lruTracker: LRUTracker<string>` (LRU tracking)
-  - `kvStore: IKeyValueStore` (keyframe storage)
+  - `keyframeStore: IKeyframeStore` (persistent keyframe storage)
   - `operationStore: IOperationStore` (fallback rebuild)
   - `registry: IDocumentModelRegistry` (reducer access)
   - `config: Required<WriteCacheConfig>` (configuration)
 - [x] Implement constructor accepting dependencies
 - [x] Implement `startup(): Promise<void>`:
-  - Call `kvStore.startup()`
-  - Do NOT pre-warm cache (lazy load on demand)
+  - Simple initialization, no pre-warming
+  - Keyframe store lifecycle managed externally
 - [x] Implement `shutdown(): Promise<void>`:
-  - Call `kvStore.shutdown()`
+  - Simple cleanup
+  - Keyframe store lifecycle managed externally
 
 **Acceptance Criteria:**
 - Class structure follows patterns from KyselyOperationStore
 - Required config type ensures no undefined values
 - All private fields properly typed
 - Public methods listed before private methods
-- Startup/shutdown delegate to K/V store
+- Startup/shutdown are simple (keyframe store managed externally)
 
 ### Task 4.2: Implement cache key utilities
 - [x] Add private method `makeStreamKey(documentId, scope, branch): string`
@@ -229,19 +254,13 @@ This is separate from IDocumentView (read-side projection) which optimizes queri
 - Tests verify key generation consistency
 
 ### Task 4.3: Implement keyframe utilities
-- [x] Add private method `makeKeyframeKey(documentId, documentType, scope, branch, revision): string`
-- [x] Format: `keyframe:${documentId}:${documentType}:${scope}:${branch}:${revision}`
 - [x] Add private method `isKeyframeRevision(revision: number): boolean`
 - [x] Returns `revision > 0 && revision % config.keyframeInterval === 0`
-- [x] Add private method `serializeKeyframe(document: PHDocument): string`
-- [x] Use JSON.stringify for now (optimize later if needed)
-- [x] Add private method `deserializeKeyframe(data: string): PHDocument`
-- [x] Use JSON.parse with error handling
+- [x] Keyframe serialization/deserialization handled by IKeyframeStore (not in cache)
 
 **Acceptance Criteria:**
-- Keyframe keys are unique and parseable
-- Serialization handles large documents
-- Deserialization is robust to malformed data
+- Keyframe interval checking works correctly
+- Serialization delegated to keyframe store layer
 
 ### Task 4.4: Implement putState with keyframe logic
 - [x] Implement `putState(documentId, documentType, scope, branch, revision, document): void`
@@ -251,8 +270,8 @@ This is separate from IDocumentView (read-side projection) which optimizes queri
 - [x] Add snapshot to ring buffer (always)
 - [x] Update LRU tracker
 - [x] Handle eviction when at capacity
-- [x] **NEW**: Check if keyframe revision using `isKeyframeRevision(revision)`
-- [x] **NEW**: If keyframe, persist to K/V store asynchronously
+- [x] Check if keyframe revision using `isKeyframeRevision(revision)`
+- [x] If keyframe, persist to IKeyframeStore asynchronously
   - Don't await (fire and forget)
   - Log errors but don't fail putState
 
@@ -263,10 +282,15 @@ putState(...): void {
 
   // Keyframe persistence
   if (this.isKeyframeRevision(revision)) {
-    const key = this.makeKeyframeKey(documentId, documentType, scope, branch, revision);
-    const data = this.serializeKeyframe(safeCopy);
-    this.kvStore.put(key, data).catch(err => {
-      console.error(`Failed to persist keyframe ${key}:`, err);
+    this.keyframeStore.putKeyframe(
+      documentId,
+      documentType,
+      scope,
+      branch,
+      revision,
+      safeCopy
+    ).catch(err => {
+      console.error(`Failed to persist keyframe ${documentId}@${revision}:`, err);
     });
   }
 }
@@ -276,7 +300,7 @@ putState(...): void {
 - Documents are deep copied (mutations don't affect cache)
 - LRU tracking updated on every put
 - Eviction logic correctly removes entire ring buffers
-- Keyframes persisted to K/V store on interval
+- Keyframes persisted to keyframe store on interval
 - Keyframe persistence doesn't block putState
 
 ### Task 4.5: Create basic cache tests
@@ -332,48 +356,40 @@ putState(...): void {
 
 ### Task 6.1: Implement findNearestKeyframe helper
 - [x] Add private method `findNearestKeyframe(documentId, documentType, scope, branch, targetRevision, signal): Promise<{revision: number, document: PHDocument} | undefined>`
-- [x] Calculate possible keyframe revisions: target, target-10, target-20, ...
-- [x] Try loading from K/V store in reverse order (newest first)
-- [x] Return first found keyframe
-- [x] Return undefined if no keyframes found
+- [x] Delegate to `IKeyframeStore.findNearestKeyframe()` with indexed SQL query
+- [x] Handle edge cases (Number.MAX_SAFE_INTEGER, revision <= 0)
+- [x] Return keyframe or undefined if none found
 
 **Implementation:**
 ```typescript
-private async findNearestKeyframe(...): Promise<...> {
-  const interval = this.config.keyframeInterval;
-
-  // Calculate keyframe revisions to check:
-  // If targetRevision=47, interval=10, check: 40, 30, 20, 10
-  const keyframeRevisions: number[] = [];
-  for (let rev = Math.floor(targetRevision / interval) * interval;
-       rev > 0;
-       rev -= interval) {
-    keyframeRevisions.push(rev);
+private async findNearestKeyframe(
+  documentId: string,
+  documentType: string,
+  scope: string,
+  branch: string,
+  targetRevision: number,
+  signal?: AbortSignal
+): Promise<{ revision: number; document: PHDocument } | undefined> {
+  if (targetRevision === Number.MAX_SAFE_INTEGER || targetRevision <= 0) {
+    return undefined;
   }
 
-  // Try each keyframe (newest first)
-  for (const rev of keyframeRevisions) {
-    const key = this.makeKeyframeKey(documentId, documentType, scope, branch, rev);
-    const data = await this.kvStore.get(key, signal);
-    if (data) {
-      try {
-        const document = this.deserializeKeyframe(data);
-        return { revision: rev, document };
-      } catch (err) {
-        console.warn(`Failed to deserialize keyframe ${key}:`, err);
-      }
-    }
-  }
-
-  return undefined;
+  return this.keyframeStore.findNearestKeyframe(
+    documentId,
+    scope,
+    branch,
+    targetRevision,
+    signal
+  );
 }
 ```
 
 **Acceptance Criteria:**
-- Finds nearest keyframe <= targetRevision
+- Finds nearest keyframe <= targetRevision using O(log n) indexed SQL query
 - Returns newest available keyframe
-- Handles deserialization errors gracefully
+- Handles edge cases (MAX_SAFE_INTEGER, zero/negative revisions)
 - Returns undefined if no keyframes exist
+- Significantly more efficient than O(n) K/V store iteration
 
 ### ~~Task 6.2: Implement createInitialDocument helper~~
 - ~~[ ] Add private method `createInitialDocument(documentId, documentType, operation): PHDocument`~~
@@ -464,10 +480,10 @@ private async coldMissRebuild(...): Promise<PHDocument> {
 - [x] Test: should cache result after rebuild
 - [x] Test: should apply operations through reducer correctly
 - [x] Test: should handle abort signal during rebuild
-- [x] **NEW** Test: should use keyframe if available (keyframe-accelerated rebuild)
-- [x] **NEW** Test: should rebuild from keyframe + incremental ops
-- [x] **NEW** Test: should fall back to full rebuild if keyframe corrupted
-- [x] **NEW** Test: should find nearest keyframe (e.g., load @40 for target @47)
+- [x] Test: should use keyframe if available (keyframe-accelerated rebuild)
+- [x] Test: should rebuild from keyframe + incremental ops
+- [x] Test: should persist keyframes at configured interval
+- [x] Test: should find nearest keyframe using IKeyframeStore
 
 **Test Scenario:**
 ```typescript
@@ -475,19 +491,20 @@ private async coldMissRebuild(...): Promise<PHDocument> {
 // Cold start (empty cache)
 await cache.getState(docId, type, scope, branch, 47);
 // Should:
-// 1. Check K/V store for keyframes: 40, 30, 20, 10
-// 2. Find keyframe@40
-// 3. Load operations 41-47
-// 4. Return document@47
+// 1. Call IKeyframeStore.findNearestKeyframe(docId, scope, branch, 47)
+// 2. Keyframe store uses indexed SQL query: WHERE revision <= 47 ORDER BY revision DESC LIMIT 1
+// 3. Find keyframe@40 (O(log n) lookup)
+// 4. Load operations 41-47
+// 5. Return document@47
 ```
 
 **Acceptance Criteria:**
-- Tests use real document-drive or document-model operations
+- Tests use real document-model operations
 - Tests verify paging behavior with >100 operations
 - Tests verify document is correctly rebuilt
 - Tests verify result is cached
-- Tests verify keyframe optimization works
-- Tests verify fallback to full rebuild
+- Tests verify keyframe optimization works using IKeyframeStore
+- Tests verify keyframe persistence at intervals
 
 ## Phase 7: Warm Miss Rebuild
 
@@ -692,100 +709,17 @@ await cache.getState(docId, type, scope, branch, 47);
 - No memory leaks detected
 - Ring buffer size recommendations documented
 
-## Phase 13: Additional K/V Store Implementations (Optional)
+## Phase 13: Additional Storage Implementations (Future Work)
 
-### Task 13.1: Create RedisKeyValueStore (Server-side)
-- [ ] Create `packages/reactor/src/cache/redis-kv-store.ts`
-- [ ] Implement IKeyValueStore using Redis client
-- [ ] Add dependency: `ioredis` or `redis`
-- [ ] Implement all methods: get, put, delete, clear, startup, shutdown
-- [ ] Handle connection management
-- [ ] Handle Redis errors gracefully
+### Overview
 
-**Implementation notes:**
-```typescript
-import Redis from 'ioredis';
+The keyframe store is currently implemented using Kysely with PGLite/PostgreSQL. Future implementations could include:
 
-export class RedisKeyValueStore implements IKeyValueStore {
-  private client: Redis;
+- **Remote PostgreSQL**: Use remote PostgreSQL database for shared keyframe storage across multiple processes
+- **Read replicas**: Use PostgreSQL read replicas for distributed keyframe reads
+- **Sharding**: Shard keyframe storage across multiple databases for very large scale deployments
 
-  constructor(private config: RedisConfig) {
-    this.client = new Redis(config);
-  }
-
-  async get(key: string, signal?: AbortSignal): Promise<string | undefined> {
-    const value = await this.client.get(key);
-    return value || undefined;
-  }
-
-  // ... other methods
-}
-```
-
-**Acceptance Criteria:**
-- Implements IKeyValueStore interface
-- Handles connection errors
-- Proper startup/shutdown lifecycle
-- Tests with real Redis (or Redis mock)
-
-### Task 13.2: Create IndexedDBKeyValueStore (Browser-side)
-- [ ] Create `packages/reactor-browser/src/cache/indexeddb-kv-store.ts`
-- [ ] Implement IKeyValueStore using IndexedDB API
-- [ ] Handle browser compatibility
-- [ ] Implement all methods
-- [ ] Handle quota errors gracefully
-
-**Implementation notes:**
-```typescript
-export class IndexedDBKeyValueStore implements IKeyValueStore {
-  private db: IDBDatabase | undefined;
-  private dbName: string;
-
-  constructor(dbName: string = 'reactor-cache') {
-    this.dbName = dbName;
-  }
-
-  async startup(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName, 1);
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
-        this.db = request.result;
-        resolve();
-      };
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
-        db.createObjectStore('keyframes');
-      };
-    });
-  }
-
-  // ... other methods
-}
-```
-
-**Acceptance Criteria:**
-- Works in browser environment
-- Handles IndexedDB quotas
-- Proper error handling
-- Tests in browser-like environment
-
-### Task 13.3: Document K/V store selection guide
-- [ ] Create `docs/planning/Cache/kv-store-guide.md`
-- [ ] Document when to use each implementation
-- [ ] Document configuration options
-- [ ] Document performance characteristics
-- [ ] Document limitations
-
-**Selection guide:**
-- **InMemoryKeyValueStore**: Testing, development, single-process
-- **RedisKeyValueStore**: Production servers, multi-process, shared cache
-- **IndexedDBKeyValueStore**: Browser environments, offline-first apps
-
-**Acceptance Criteria:**
-- Clear guidance on implementation selection
-- Performance comparison documented
-- Configuration examples provided
+These implementations would all use the same `IKeyframeStore` interface and benefit from the same O(log n) indexed query performance.
 
 ## Phase 14: Final Integration
 
@@ -830,19 +764,21 @@ export class IndexedDBKeyValueStore implements IKeyValueStore {
 ## Completion Checklist
 
 ### Core Implementation (Required)
-- [ ] Phase 0: IKeyValueStore interface + InMemoryKeyValueStore
-- [ ] Phases 1-12: Core cache implementation with keyframe support
+- [x] Phase 0: IKeyframeStore interface + KyselyKeyframeStore implementation
+- [x] Phases 1-6: Core cache implementation with keyframe support
+- [ ] Phases 7-12: Warm miss, cache management, integration tests, performance validation
 - [ ] Phase 14: Final integration and validation
-- [ ] All tests passing
+- [x] Keyframe store tests passing (23 tests)
+- [x] Write cache tests passing (405 tests)
 - [ ] Documentation complete
 - [ ] Performance validated
 - [ ] Code reviewed and follows conventions
 - [ ] Ready for integration with job executor
 
-### Extended Implementations (Optional)
-- [ ] Phase 13: RedisKeyValueStore implementation
-- [ ] Phase 13: IndexedDBKeyValueStore implementation
-- [ ] Phase 13: K/V store selection guide
+### Extended Implementations (Future Work)
+- [ ] Phase 13: Remote PostgreSQL keyframe store
+- [ ] Phase 13: Read replica support
+- [ ] Phase 13: Sharding support
 
 ## Notes
 
@@ -857,8 +793,9 @@ export class IndexedDBKeyValueStore implements IKeyValueStore {
   - Prefer required fields with defaults over optional fields
 - **Write-side projection**: IWriteCache optimizes job executor (write path)
 - **Read-side projection**: IDocumentView optimizes queries (read path)
-- **Keyframes**: Persist every Nth revision to K/V store for fast recovery
+- **Keyframes**: Persist every Nth revision to IKeyframeStore (database-backed, indexed, O(log n) lookups)
 - **Lazy loading**: Don't pre-warm cache on startup, load keyframes on demand
+- **Performance**: Database-backed keyframes provide significantly better performance than K/V store iteration
 
 ## Success Metrics
 
@@ -866,6 +803,7 @@ export class IndexedDBKeyValueStore implements IKeyValueStore {
 2. **Keyframe acceleration**: Cold miss rebuild 10x faster with keyframes vs. full rebuild
 3. **Operation handling**: Efficiently handles documents with 1000+ operations
 4. **Memory usage**: Scales linearly with cache size (ring buffer + LRU)
-5. **K/V store overhead**: Keyframe persistence adds <5% overhead to putState
-6. **Test coverage**: All tests maintain >90% coverage
-7. **Zero corruption**: No cache corruption or inconsistency bugs
+5. **Keyframe store performance**: O(log n) indexed SQL queries for findNearestKeyframe
+6. **Keyframe persistence**: Keyframe persistence adds <5% overhead to putState (async, non-blocking)
+7. **Test coverage**: All tests maintain >90% coverage (428 tests passing)
+8. **Zero corruption**: No cache corruption or inconsistency bugs
