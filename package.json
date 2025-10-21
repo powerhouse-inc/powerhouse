@@ -8,7 +8,7 @@
     "check": "pnpm tsc:build && pnpm lint",
     "build": "pnpm tsc:build && pnpm build:misc && pnpm build:css && pnpm build:vite",
     "test": "pnpm -r --no-bail test",
-    "test:ci": "pnpm --filter !document-drive -r --no-bail test",
+    "test:ci": "pnpm --filter !document-drive --filter !reactor -r --no-bail test",
     "test:coverage": "pnpm vitest run --coverage",
     "simulate-ci-workflow": "pnpm clean && pnpm install:ci && pnpm check && pnpm build && pnpm install && pnpm test:ci && pnpm build:storybook",
     "lint": "NODE_OPTIONS=--max-old-space-size=8192 eslint --config eslint.config.js --quiet --fix --cache --cache-strategy content",

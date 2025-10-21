@@ -1,3 +1,30 @@
+## 4.1.0-dev.81 (2025-10-21)
+
+### 🚀 Features
+
+- **reactor-browser:** remove catch all wildcard ([f09931a88](https://github.com/powerhouse-inc/powerhouse/commit/f09931a88))
+- **reactor-browser:** add allowed document model modules hook ([d9fea4afc](https://github.com/powerhouse-inc/powerhouse/commit/d9fea4afc))
+- **reactor-browser,connect,vetra:** simplify document types workflow ([e665914e9](https://github.com/powerhouse-inc/powerhouse/commit/e665914e9))
+- **common,builder-tools:** always call editor config on mount ([7b246306b](https://github.com/powerhouse-inc/powerhouse/commit/7b246306b))
+- **reactor-browser,vetra,design-system:** use config hooks ([f6a62a099](https://github.com/powerhouse-inc/powerhouse/commit/f6a62a099))
+- **reactor-browser:** finalize config values ([c180f146c](https://github.com/powerhouse-inc/powerhouse/commit/c180f146c))
+- **reactor-browser:** organize and deduplicate state hooks ([e0ad408e7](https://github.com/powerhouse-inc/powerhouse/commit/e0ad408e7))
+- **reactor-browser:** tidy more exports ([965c66299](https://github.com/powerhouse-inc/powerhouse/commit/965c66299))
+- **reactor-browser:** tidy exports ([4f1adfb0f](https://github.com/powerhouse-inc/powerhouse/commit/4f1adfb0f))
+- **reactor-browser:** use one object for all event handler register fns ([bd5ebde02](https://github.com/powerhouse-inc/powerhouse/commit/bd5ebde02))
+- **reactor-browser,connect:** add global config setter helpers ([facfd5329](https://github.com/powerhouse-inc/powerhouse/commit/facfd5329))
+- **codegen:** update templates ([2715fccca](https://github.com/powerhouse-inc/powerhouse/commit/2715fccca))
+- **codegen:** add editor name codegen arg ([22334afb4](https://github.com/powerhouse-inc/powerhouse/commit/22334afb4))
+- **reactor-browser:** remove redundant types ([8108872e6](https://github.com/powerhouse-inc/powerhouse/commit/8108872e6))
+- **reactor-browser:** improve generics ([c08b0d79b](https://github.com/powerhouse-inc/powerhouse/commit/c08b0d79b))
+- **reactor-browser,connect:** use new window function factory ([7886c284f](https://github.com/powerhouse-inc/powerhouse/commit/7886c284f))
+- **reactor-browser,connect:** use factory for event functions where possible ([30aa4883d](https://github.com/powerhouse-inc/powerhouse/commit/30aa4883d))
+- **reactor-browser:** add factory function for ph event functions ([dc5a2952c](https://github.com/powerhouse-inc/powerhouse/commit/dc5a2952c))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
 ## 4.1.0-dev.80 (2025-10-21)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

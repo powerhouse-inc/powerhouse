@@ -1,3 +1,44 @@
+## 4.1.0-dev.81 (2025-10-21)
+
+### 🚀 Features
+
+- **codegen:** add editor name codegen arg ([22334afb4](https://github.com/powerhouse-inc/powerhouse/commit/22334afb4))
+- **codegen:** update template ([f6cd6fa93](https://github.com/powerhouse-inc/powerhouse/commit/f6cd6fa93))
+- **codegen:** update templates ([2715fccca](https://github.com/powerhouse-inc/powerhouse/commit/2715fccca))
+- **codegen:** update editor codegen templates ([6a32eb128](https://github.com/powerhouse-inc/powerhouse/commit/6a32eb128))
+- **common,builder-tools:** always call editor config on mount ([7b246306b](https://github.com/powerhouse-inc/powerhouse/commit/7b246306b))
+- **connect:** revert object field name ([4922cc47a](https://github.com/powerhouse-inc/powerhouse/commit/4922cc47a))
+- **connect:** move config call to after other value setters ([3e8c26e81](https://github.com/powerhouse-inc/powerhouse/commit/3e8c26e81))
+- **reactor-browser:** add factory function for ph event functions ([dc5a2952c](https://github.com/powerhouse-inc/powerhouse/commit/dc5a2952c))
+- **reactor-browser:** improve generics ([c08b0d79b](https://github.com/powerhouse-inc/powerhouse/commit/c08b0d79b))
+- **reactor-browser:** remove redundant types ([8108872e6](https://github.com/powerhouse-inc/powerhouse/commit/8108872e6))
+- **reactor-browser:** add config setter hook ([e81e0aa97](https://github.com/powerhouse-inc/powerhouse/commit/e81e0aa97))
+- **reactor-browser:** use one object for all event handler register fns ([bd5ebde02](https://github.com/powerhouse-inc/powerhouse/commit/bd5ebde02))
+- **reactor-browser:** tidy exports ([4f1adfb0f](https://github.com/powerhouse-inc/powerhouse/commit/4f1adfb0f))
+- **reactor-browser:** tidy more exports ([965c66299](https://github.com/powerhouse-inc/powerhouse/commit/965c66299))
+- **reactor-browser:** organize and deduplicate state hooks ([e0ad408e7](https://github.com/powerhouse-inc/powerhouse/commit/e0ad408e7))
+- **reactor-browser:** finalize config values ([c180f146c](https://github.com/powerhouse-inc/powerhouse/commit/c180f146c))
+- **reactor-browser:** add allowed document model modules hook ([d9fea4afc](https://github.com/powerhouse-inc/powerhouse/commit/d9fea4afc))
+- **reactor-browser:** remove catch all wildcard ([f09931a88](https://github.com/powerhouse-inc/powerhouse/commit/f09931a88))
+- **reactor-browser,connect:** use factory for event functions where possible ([30aa4883d](https://github.com/powerhouse-inc/powerhouse/commit/30aa4883d))
+- **reactor-browser,connect:** use new window function factory ([7886c284f](https://github.com/powerhouse-inc/powerhouse/commit/7886c284f))
+- **reactor-browser,connect:** add global config setter helpers ([facfd5329](https://github.com/powerhouse-inc/powerhouse/commit/facfd5329))
+- **reactor-browser,connect,vetra:** simplify document types workflow ([e665914e9](https://github.com/powerhouse-inc/powerhouse/commit/e665914e9))
+- **reactor-browser,connect,vetra:** use hooks for all editor values ([#1931](https://github.com/powerhouse-inc/powerhouse/pull/1931))
+- **reactor-browser,vetra,design-system:** use config hooks ([f6a62a099](https://github.com/powerhouse-inc/powerhouse/commit/f6a62a099))
+- **vetra:** re-run generate ([71d9c33ba](https://github.com/powerhouse-inc/powerhouse/commit/71d9c33ba))
+- **vetra:** add set document types operation/action ([dcb59d1d9](https://github.com/powerhouse-inc/powerhouse/commit/dcb59d1d9))
+
+### 🩹 Fixes
+
+- **connect:** fix runtime code import ([8e5ddf091](https://github.com/powerhouse-inc/powerhouse/commit/8e5ddf091))
+- **vetra,builder-tools,common:** revert constants for id and name ([7d5f21c8b](https://github.com/powerhouse-inc/powerhouse/commit/7d5f21c8b))
+
+### ❤️ Thank You
+
+- acaldas
+- ryanwolhuter @ryanwolhuter
+
 ## 4.1.0-dev.80 (2025-10-21)
 
 ### 🩹 Fixes
