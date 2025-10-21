@@ -199,7 +199,6 @@ export async function hygenGenerateProcessor(
   name: string,
   documentTypes: string[],
   outDir: string,
-  documentModelsDir: string,
   type: "analytics" | "relationalDb",
   { skipFormat = false, verbose = true } = {},
 ) {
@@ -217,8 +216,6 @@ export async function hygenGenerateProcessor(
       outDir,
       "--document-types",
       documentTypes.join(","),
-      "--document-models-dir",
-      documentModelsDir,
     ],
     { skipFormat, verbose },
   );

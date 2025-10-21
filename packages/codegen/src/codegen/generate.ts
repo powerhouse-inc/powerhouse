@@ -131,7 +131,6 @@ export async function generateProcessor(
     name,
     documentTypes,
     config.processorsDir,
-    config.documentModelsDir,
     type,
     { skipFormat },
   );
