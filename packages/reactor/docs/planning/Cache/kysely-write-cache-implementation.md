@@ -605,19 +605,7 @@ await cache.getState(docId, type, scope, branch, 47);
 - Verifies cache behavior in realistic scenario
 - Tests complete read-apply-write cycle
 
-### Task 9.2: Create multi-document stress test
-- [ ] Test: should handle 10+ documents with different streams
-- [ ] Test: should correctly evict LRU documents when at capacity
-- [ ] Test: should maintain correctness under eviction pressure
-- [ ] Test: should handle concurrent getState calls (same document)
-- [ ] Test: should handle interleaved puts and gets
-
-**Acceptance Criteria:**
-- Tests verify cache remains consistent
-- Tests verify LRU behavior under load
-- Tests use realistic cache capacity limits
-
-### Task 9.3: Create error handling tests
+### Task 9.2: Create error handling tests
 - [ ] Test: should handle operations that fail reducer application
 - [ ] Test: should handle abort signal at various points
 - [ ] Test: should handle invalid document type (not in registry)
