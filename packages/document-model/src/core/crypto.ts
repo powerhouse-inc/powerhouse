@@ -1,3 +1,4 @@
+import { blake3 as blake3Hash } from "@noble/hashes/blake3.js";
 import stringifyJson from "safe-stable-stringify";
 import { createHash as createSha1Hash } from "sha1-uint8array";
 import type { ActionSignatureContext } from "./types.js";
@@ -17,31 +18,36 @@ export function generateUUIDBrowser() {
   return crypto.randomUUID();
 }
 
+const supportedAlgorithms = ["sha1", "blake3"];
+const supportedEncodings = ["base64", "hex"];
+const defaultAlg = "sha1"
+const defaultEnc = "base64"
+
 export const hashBrowser = (
   data: string | Uint8Array | ArrayBufferView | DataView,
-  algorithm = "sha1",
-  encoding = "base64",
+  algorithm = defaultAlg,
+  encoding = defaultEnc,
   _params?: Record<string, unknown>,
 ) => {
-  if (!["sha1"].includes(algorithm)) {
+  if (!supportedAlgorithms.includes(algorithm)) {
     throw new Error(
-      `Hashing algorithm not supported: "${algorithm}". Available: sha1`,
+      `Hashing algorithm not supported: "${algorithm}". Available: ` + supportedAlgorithms.join(", "),
     );
   }
 
-  if (!["base64", "hex"].includes(encoding)) {
+  if (!supportedEncodings.includes(encoding)) {
     throw new Error(
-      `Hash encoding not supported: "${encoding}". Available: base64, hex`,
+      `Hash encoding not supported: "${encoding}". Available: ` + supportedEncodings.join(', '),
     );
   }
 
   const hash = hashUIntArray(data, algorithm);
-
-  if (encoding === "hex") {
-    return uint8ArrayToHex(hash);
+  switch (encoding) {
+    case "hex":
+      return uint8ArrayToHex(hash);
+    default:
+      return uint8ArrayToBase64(hash);
   }
-
-  return uint8ArrayToBase64(hash);
 };
 
 function uint8ArrayToBase64(uint8Array: Uint8Array) {
@@ -52,8 +58,7 @@ function uint8ArrayToBase64(uint8Array: Uint8Array) {
   }
 
   // Encode the binary string to base64
-  const base64String = btoa(binaryString);
-  return base64String;
+  return btoa(binaryString);
 }
 
 function uint8ArrayToHex(uint8Array: Uint8Array) {
@@ -62,16 +67,32 @@ function uint8ArrayToHex(uint8Array: Uint8Array) {
     .join("");
 }
 
+function toUint8(data: string | Uint8Array | ArrayBufferView ): Uint8Array {
+  const textEncoder = new TextEncoder();
+
+  if (typeof data === "string") return textEncoder.encode(data);
+  if (data instanceof Uint8Array) return data;
+  if (ArrayBuffer.isView(data)) {
+    return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+  }
+  // Fallback
+  return textEncoder.encode(String(data));
+}
+
 function hashUIntArray(
   data: string | Uint8Array | ArrayBufferView,
   algorithm = "sha1",
-) {
-  if (!["sha1"].includes(algorithm)) {
-    throw new Error("Hashing algorithm not supported: Available: sha1");
+): Uint8Array {
+  const bytes = toUint8(data);
+
+  switch (algorithm) {
+    case "sha1":
+      return createSha1Hash("sha1").update(bytes).digest();
+    case "blake3":
+      return blake3Hash(bytes); // returns Uint8Array
+    default:
+      throw new Error(`Unsupported algorithm: ${algorithm}`);
   }
-  return createSha1Hash("sha1")
-    .update(data as string)
-    .digest();
 }
 
 export function generateId(method?: "UUIDv4"): string {
@@ -93,13 +114,16 @@ export function buildOperationSignatureParams({
   signer,
   action,
   previousStateHash,
-}: ActionSignatureContext): [string, string, string, string] {
+  hashFormat,
+}: ActionSignatureContext): [string, string, string, string,] {
   const { /*id, timestamp,*/ scope, type } = action;
   return [
     /*getUnixTimestamp(timestamp)*/ getUnixTimestamp(new Date()),
     signer.app.key,
     hashBrowser(
       [documentId, scope, /*id,*/ type, stringifyJson(action.input)].join(""),
+      hashFormat?.algorithm || defaultAlg,
+      hashFormat?.encoding || defaultEnc,
     ),
     previousStateHash,
   ];

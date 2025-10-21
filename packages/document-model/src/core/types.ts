@@ -461,11 +461,17 @@ export type MappedOperation = {
 
 export type DocumentOperationsIgnoreMap = Record<string, MappedOperation[]>;
 
+export type HashFormat = {
+  algorithm: string;
+  encoding: string;
+}
+
 export type ActionSignatureContext = {
   documentId: string;
   signer: ActionSigner;
   action: Action;
   previousStateHash: string;
+  hashFormat?: HashFormat;
 };
 
 export type ActionSigningHandler = (message: Uint8Array) => Promise<Uint8Array>;

@@ -50,6 +50,7 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
+    "@noble/hashes": "^2.0.1",
     "change-case": "^5.4.4",
     "jszip": "^3.10.1",
     "mime": "^4.0.4",
