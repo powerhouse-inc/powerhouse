@@ -11,6 +11,42 @@ type DocumentStream = {
   ringBuffer: RingBuffer<CachedSnapshot>;
 };
 
+/**
+ * In-memory write cache with keyframe persistence for PHDocuments.
+ *
+ * Caches document snapshots in ring buffers with LRU eviction. On cache miss,
+ * rebuilds documents from nearest keyframe or full operation history.
+ *
+ * **Performance Characteristics:**
+ * - Cache hit: O(1) lookup in ring buffer
+ * - Cold miss: O(n) where n is total operation count, or O(k) where k is operations since keyframe
+ * - Warm miss: O(m) where m is operations since cached revision
+ * - Eviction: O(1) for LRU tracking and removal
+ *
+ * **Thread Safety:**
+ * Not thread-safe. Designed for single-threaded job executor environment.
+ * External synchronization required for concurrent access across multiple executors.
+ *
+ * **Example:**
+ * ```typescript
+ * const cache = new KyselyWriteCache(
+ *   keyframeStore,
+ *   operationStore,
+ *   registry,
+ *   { maxDocuments: 1000, ringBufferSize: 10, keyframeInterval: 10 }
+ * );
+ *
+ * await cache.startup();
+ *
+ * // Retrieve or rebuild document
+ * const doc = await cache.getState(docId, docType, scope, branch, revision);
+ *
+ * // Cache result after job execution
+ * cache.putState(docId, docType, scope, branch, newRevision, updatedDoc);
+ *
+ * await cache.shutdown();
+ * ```
+ */
 export class KyselyWriteCache implements IWriteCache {
   private streams: Map<string, DocumentStream>;
   private lruTracker: LRUTracker<string>;
