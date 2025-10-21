@@ -200,6 +200,19 @@ export class KyselyWriteCache implements IWriteCache {
     this.lruTracker.clear();
   }
 
+  /**
+   * Retrieves a specific stream for a document. Exposed on the implementation
+   * for testing, but not on the interface.
+   */
+  getStream(
+    documentId: string,
+    scope: string,
+    branch: string,
+  ): DocumentStream | undefined {
+    const key = this.makeStreamKey(documentId, scope, branch);
+    return this.streams.get(key);
+  }
+
   private async findNearestKeyframe(
     documentId: string,
     documentType: string,
