@@ -1,3 +1,15 @@
+## 4.1.0-dev.81 (2025-10-21)
+
+### 🚀 Features
+
+- **reactor-browser:** remove catch all wildcard ([f09931a88](https://github.com/powerhouse-inc/powerhouse/commit/f09931a88))
+- **reactor-browser,vetra,design-system:** use config hooks ([f6a62a099](https://github.com/powerhouse-inc/powerhouse/commit/f6a62a099))
+- **reactor-browser,connect:** use new window function factory ([7886c284f](https://github.com/powerhouse-inc/powerhouse/commit/7886c284f))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
 ## 4.1.0-dev.80 (2025-10-21)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
