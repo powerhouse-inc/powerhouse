@@ -1,3 +1,13 @@
+## 4.1.0-dev.82 (2025-10-21)
+
+### 🚀 Features
+
+- **builder-tools:** add HMR support for external packages ([85f94006b](https://github.com/powerhouse-inc/powerhouse/commit/85f94006b))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.81 (2025-10-21)
 
 ### 🚀 Features
