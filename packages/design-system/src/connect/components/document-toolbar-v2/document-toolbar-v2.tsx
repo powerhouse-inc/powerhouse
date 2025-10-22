@@ -4,18 +4,18 @@ import {
   setSelectedNode,
   setSelectedTimelineItem,
   showRevisionHistory,
-  useDocumentById,
   useDocumentTimeline,
   useNodeParentFolderById,
   useSelectedDocument,
 } from "@powerhousedao/reactor-browser";
+import type { PHDocument } from "document-model";
 import { useEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { DocumentTimeline } from "../document-timeline/document-timeline.js";
 import { useDocumentUndoRedo } from "./utils/use-document-undo-redo.js";
 
 export type DocumentToolbarV2Props = {
-  documentId?: string;
+  document?: PHDocument;
   className?: string;
   disableRevisionHistory?: boolean;
   onSwitchboardLinkClick?: () => void;
@@ -26,18 +26,17 @@ export type DocumentToolbarV2Props = {
 
 export const DocumentToolbarV2: React.FC<DocumentToolbarV2Props> = (props) => {
   const {
-    documentId,
-    className,
-    disableRevisionHistory = false,
-    onSwitchboardLinkClick,
-    initialTimelineVisible = false,
-    timelineButtonVisible = false,
     onClose,
+    className,
+    document: _document,
+    onSwitchboardLinkClick,
+    timelineButtonVisible = false,
+    disableRevisionHistory = false,
+    initialTimelineVisible = false,
   } = props;
 
-  const [selectedDoc] = useSelectedDocument();
-  const [docById] = useDocumentById(documentId);
-  const document = documentId ? docById : selectedDoc;
+  const [selectedDocument] = useSelectedDocument();
+  const document = _document ?? selectedDocument;
 
   const documentName = document?.header.name || undefined;
   const parentFolder = useNodeParentFolderById(document?.header.id);
