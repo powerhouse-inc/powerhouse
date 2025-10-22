@@ -1,4 +1,5 @@
 import { GenericDriveExplorer } from "@powerhousedao/common";
+import { DropZoneWrapper } from "@powerhousedao/design-system";
 import {
   useDefaultDriveEditorModule,
   useDriveEditorModuleById,
@@ -38,9 +39,11 @@ export function DriveEditorContainer() {
       fallbackRender={DriveEditorError}
       key={selectedDrive.header.id}
     >
-      <DriveEditorComponent>
-        {selectedDocument ? <DocumentEditorContainer /> : null}
-      </DriveEditorComponent>
+      <DropZoneWrapper>
+        <DriveEditorComponent>
+          {selectedDocument ? <DocumentEditorContainer /> : null}
+        </DriveEditorComponent>
+      </DropZoneWrapper>
     </ErrorBoundary>
   );
 }

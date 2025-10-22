@@ -10,8 +10,7 @@ export const module: EditorModule = {
   },
 };`;
 
-export const EXPECTED_EDITOR_CONTENT = `import { DropZoneWrapper } from "@powerhousedao/design-system";
-import { useSetPHDriveEditorConfig } from "@powerhousedao/reactor-browser";
+export const EXPECTED_EDITOR_CONTENT = `import { useSetPHDriveEditorConfig } from "@powerhousedao/reactor-browser";
 import type { EditorProps } from "document-model";
 import { DriveExplorer } from "./components/DriveExplorer.js";
 import { editorConfig } from "./config.js";
@@ -19,9 +18,7 @@ import { editorConfig } from "./config.js";
 export function Editor(props: EditorProps) {
   useSetPHDriveEditorConfig(editorConfig);
   return (
-    <DropZoneWrapper>
-      <DriveExplorer {...props} />
-    </DropZoneWrapper>
+    <DriveExplorer {...props} />
   );
 }`;
 
