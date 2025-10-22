@@ -1,3 +1,4 @@
+import { DocumentToolbar } from "@powerhousedao/design-system";
 import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
 import { pascalCase } from "change-case";
 import {
@@ -306,6 +307,7 @@ export function DocumentModelEditor() {
 
   return (
     <main className="min-h-dvh bg-gray-50">
+      <DocumentToolbar timelineButtonVisible />
       <SchemaContextProvider
         globalStateSchemaSdl={globalStateSchema}
         localStateSchemaSdl={localStateSchema}
