@@ -680,15 +680,42 @@ Factory exists as `createTestOperationStore()` at test/factories.ts:47-131. Test
 - Exports follow package conventions
 
 ### Task 14.2: Add to reactor initialization
-- [ ] Document how to add write cache to Reactor
-- [ ] Show integration with job executor
-- [ ] Document cache lifecycle (startup/shutdown)
-- [ ] Add cache configuration to ReactorBuilder if applicable
+
+#### Code Integration
+- [ ] Add `IWriteCache` parameter to `SimpleJobExecutor` constructor
+- [ ] Update executor factory in integration tests to provide cache instance
+- [ ] Replace `documentStorage.get(job.documentId)` with `writeCache.getState(job.documentId, documentType, job.scope, job.branch)` in regular action handling (line 113)
+- [ ] Replace `documentStorage.get(documentId)` with `writeCache.getState()` in DELETE_DOCUMENT action handler (line 434)
+- [ ] Replace `documentStorage.get(documentId)` with `writeCache.getState()` in UPGRADE_DOCUMENT action handler (line 588)
+- [ ] Add `writeCache.putState()` after successful operation application in regular action handling
+- [ ] Add `writeCache.putState()` after successful CREATE_DOCUMENT operation
+- [ ] Add `writeCache.putState()` after successful UPGRADE_DOCUMENT operation
+- [ ] Keep dual-write to legacy `IDocumentStorage` for parity testing (no changes to existing writes)
+- [ ] Document transaction boundary limitation: cache update is not atomic with operation store write
+
+#### Testing
+- [ ] Create integration test: Reactor + SimpleJobExecutor + KyselyWriteCache
+- [ ] Test cache hit path: execute job, verify cached, execute another job on same doc, verify cache used
+- [ ] Test cache miss path: clear cache, execute job, verify rebuild from IOperationStore
+- [ ] Test warm miss: cache has older revision, execute job, verify incremental rebuild
+- [ ] Test keyframe usage: cache cleared, operations exist, verify keyframe acceleration
+- [ ] Test cache updates: verify putState called after each successful job
+- [ ] Test cache invalidation: multiple scopes/branches maintain separate cache entries
+- [ ] Test dual-write parity: verify legacy storage and operation store stay in sync
+- [ ] Verify legacy IDocumentStorage still written to (parity requirement)
+
+#### Documentation
+- [ ] Document transaction boundary limitation in code comments
+- [ ] Add example showing executor initialization with cache
+- [ ] Document cache lifecycle: startup before executor.start(), shutdown after executor.stop()
+- [ ] Note that Reactor.get() still uses legacy storage (by design for now)
 
 **Acceptance Criteria:**
 - Clear integration path documented
 - Cache fits into reactor lifecycle
 - No breaking changes to existing APIs
+- All integration tests pass
+- Dual-write parity maintained
 
 ### Task 14.3: Final validation
 - [ ] Run full test suite: `pnpm test`
