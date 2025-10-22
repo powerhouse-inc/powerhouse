@@ -25,6 +25,7 @@ import type { DocumentModelModule } from "document-model";
 import { generateId } from "document-model/core";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { IWriteCache } from "../../src/cache/write/interfaces.js";
 import { Reactor } from "../../src/core/reactor.js";
 import { EventBus } from "../../src/events/event-bus.js";
 import { SimpleJobExecutorManager } from "../../src/executor/simple-job-executor-manager.js";
@@ -80,12 +81,26 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
     eventBus = new EventBus();
     queue = new InMemoryQueue(eventBus);
     const jobTracker = createTestJobTracker();
+
+    // Create mock write cache
+    const mockWriteCache: IWriteCache = {
+      getState: vi.fn().mockImplementation(async (docId) => {
+        return await storage.get(docId);
+      }),
+      putState: vi.fn(),
+      invalidate: vi.fn(),
+      clear: vi.fn(),
+      startup: vi.fn(),
+      shutdown: vi.fn(),
+    };
+
     executor = new SimpleJobExecutor(
       registry,
       storage as IDocumentStorage,
       storage as IDocumentOperationStorage,
       operationStore,
       eventBus,
+      mockWriteCache,
     );
 
     executorManager = new SimpleJobExecutorManager(

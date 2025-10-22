@@ -143,6 +143,7 @@ describe("SimpleJobExecutorManager", () => {
       const job: Job = {
         id: "job-1",
         documentId: "doc-1",
+        documentType: "powerhouse/document-drive",
         scope: "global",
         branch: "main",
         actions: [
@@ -172,6 +173,7 @@ describe("SimpleJobExecutorManager", () => {
       const job: Job = {
         id: "job-1",
         documentId: "doc-1",
+        documentType: "powerhouse/document-drive",
         scope: "global",
         branch: "main",
         actions: [

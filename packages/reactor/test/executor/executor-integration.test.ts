@@ -7,6 +7,7 @@ import type {
 import { MemoryStorage, driveDocumentModelModule } from "document-drive";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { IWriteCache } from "../../src/cache/write/interfaces.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
 import type { Job } from "../../src/queue/types.js";
 import { DocumentModelRegistry } from "../../src/registry/implementation.js";
@@ -35,6 +36,18 @@ describe("SimpleJobExecutor Integration", () => {
     db = setup.db;
     operationStore = setup.store;
 
+    // Create mock write cache
+    const mockWriteCache: IWriteCache = {
+      getState: vi.fn().mockImplementation(async (docId) => {
+        return await storage.get(docId);
+      }),
+      putState: vi.fn(),
+      invalidate: vi.fn(),
+      clear: vi.fn(),
+      startup: vi.fn(),
+      shutdown: vi.fn(),
+    };
+
     // Create executor with real storage and real operation store
     const eventBus = createTestEventBus();
     executor = new SimpleJobExecutor(
@@ -43,6 +56,7 @@ describe("SimpleJobExecutor Integration", () => {
       storage as IDocumentOperationStorage,
       operationStore,
       eventBus,
+      mockWriteCache,
     );
   });
 
@@ -60,6 +74,7 @@ describe("SimpleJobExecutor Integration", () => {
       const job: Job = {
         id: "job-1",
         documentId: document.header.id,
+        documentType: "powerhouse/document-drive",
         scope: "global",
         branch: "main",
         actions: [
@@ -124,6 +139,7 @@ describe("SimpleJobExecutor Integration", () => {
       const job1: Job = {
         id: "job-1",
         documentId: document.header.id,
+        documentType: "powerhouse/document-drive",
         scope: "global",
         branch: "main",
         actions: [
@@ -150,6 +166,7 @@ describe("SimpleJobExecutor Integration", () => {
       const job2: Job = {
         id: "job-2",
         documentId: document.header.id,
+        documentType: "powerhouse/document-drive",
         scope: "global",
         branch: "main",
         actions: [
@@ -210,6 +227,7 @@ describe("SimpleJobExecutor Integration", () => {
       const folderJob: Job = {
         id: "job-folder",
         documentId: document.header.id,
+        documentType: "powerhouse/document-drive",
         scope: "global",
         branch: "main",
         actions: [
@@ -235,6 +253,7 @@ describe("SimpleJobExecutor Integration", () => {
       const fileJob: Job = {
         id: "job-file",
         documentId: document.header.id,
+        documentType: "powerhouse/document-drive",
         scope: "global",
         branch: "main",
         actions: [
@@ -296,6 +315,18 @@ describe("SimpleJobExecutor Integration", () => {
       const fn = vi.fn().mockRejectedValue(new Error("Storage write failed"));
       storage.addDocumentOperations = fn;
 
+      // Create mock write cache for failing executor
+      const mockWriteCache: IWriteCache = {
+        getState: vi.fn().mockImplementation(async (docId) => {
+          return await storage.get(docId);
+        }),
+        putState: vi.fn(),
+        invalidate: vi.fn(),
+        clear: vi.fn(),
+        startup: vi.fn(),
+        shutdown: vi.fn(),
+      };
+
       const eventBus = createTestEventBus();
       const executorWithFailingStorage = new SimpleJobExecutor(
         registry,
@@ -303,12 +334,14 @@ describe("SimpleJobExecutor Integration", () => {
         storage as IDocumentOperationStorage,
         operationStore,
         eventBus,
+        mockWriteCache,
       );
 
       // Create a valid job
       const job: Job = {
         id: "job-1",
         documentId: document.header.id,
+        documentType: "powerhouse/document-drive",
         scope: "global",
         branch: "main",
         actions: [
@@ -364,6 +397,7 @@ describe("SimpleJobExecutor Integration", () => {
       const job: Job = {
         id: "job-1",
         documentId: document.header.id,
+        documentType: "powerhouse/document-drive",
         scope: "global",
         branch: "main",
         actions: [
@@ -409,6 +443,7 @@ describe("SimpleJobExecutor Integration", () => {
       const job: Job = {
         id: "job-1",
         documentId: document.header.id,
+        documentType: "powerhouse/document-drive",
         scope: "document",
         branch: "main",
         actions: [

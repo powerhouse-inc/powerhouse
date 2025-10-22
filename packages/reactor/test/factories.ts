@@ -19,6 +19,7 @@ import { Kysely } from "kysely";
 import { KyselyPGlite } from "kysely-pglite";
 import { v4 as uuidv4 } from "uuid";
 import { vi } from "vitest";
+import type { IWriteCache } from "../src/cache/write/interfaces.js";
 import { Reactor } from "../src/core/reactor.js";
 import { EventBus } from "../src/events/event-bus.js";
 import type { IEventBus } from "../src/events/interfaces.js";
@@ -137,6 +138,7 @@ export function createTestJob(overrides: Partial<Job> = {}): Job {
   const defaultJob: Job = {
     id: overrides.id || `job-${uuidv4()}`,
     documentId: "doc-1",
+    documentType: "powerhouse/document-drive",
     scope: "global",
     branch: "main",
     actions: overrides.actions || [createTestAction()],
@@ -159,6 +161,7 @@ export function createMinimalJob(overrides: Partial<Job> = {}): Job {
   return {
     id: overrides.id || `job-${uuidv4()}`,
     documentId: overrides.documentId || "doc-1",
+    documentType: overrides.documentType || "powerhouse/document-drive",
     scope: overrides.scope || "global",
     branch: overrides.branch || "main",
     actions: overrides.actions || [createMinimalAction()],
@@ -455,6 +458,18 @@ export async function createTestReactorSetup(
   // Create mock operation store for testing
   const operationStore = createMockOperationStore();
 
+  // Create mock write cache
+  const mockWriteCache: IWriteCache = {
+    getState: vi.fn().mockImplementation(async (docId: string) => {
+      return await storage.get(docId);
+    }),
+    putState: vi.fn(),
+    invalidate: vi.fn(),
+    clear: vi.fn(),
+    startup: vi.fn(),
+    shutdown: vi.fn(),
+  };
+
   // Create job executor with event bus
   const jobExecutor = new SimpleJobExecutor(
     registry,
@@ -462,6 +477,7 @@ export async function createTestReactorSetup(
     storage,
     operationStore,
     eventBus,
+    mockWriteCache,
   );
 
   // Create mock read model coordinator
