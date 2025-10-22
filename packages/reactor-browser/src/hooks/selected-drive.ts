@@ -59,11 +59,13 @@ export function setSelectedDrive(
       ? driveOrDriveSlug
       : driveOrDriveSlug?.header.slug;
   setSelectedNode(undefined);
-  setSelectedDriveId(driveSlug);
 
   // Find the drive by slug to get its actual ID
   const drive = window.ph?.drives?.find((d) => d.header.slug === driveSlug);
   const driveId = drive?.header.id;
+
+  setSelectedDriveId(driveId);
+
   if (!driveId) {
     window.history.pushState(null, "", resolveUrlPathname("/"));
     return;
