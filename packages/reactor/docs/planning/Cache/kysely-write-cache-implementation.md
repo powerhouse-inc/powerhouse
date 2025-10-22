@@ -664,30 +664,14 @@ Factory exists as `createTestOperationStore()` at test/factories.ts:47-131. Test
 - [x] JSDoc includes @param and @returns (all methods documented)
 - [x] Key algorithms explained (inline comments for error handling, keyframe logic)
 
-## Phase 12: Performance Validation
-
-### Task 12.1: Create performance benchmark
-- [ ] Create `packages/reactor/bench/write-cache.bench.ts`
-- [ ] Benchmark: cold miss rebuild (100 operations)
-- [ ] Benchmark: cold miss rebuild (1000 operations)
-- [ ] Benchmark: cache hit performance
-- [ ] Benchmark: warm miss rebuild (10 incremental ops)
-- [ ] Benchmark: LRU eviction performance
-- [ ] Compare with no-cache baseline
-
-**Acceptance Criteria:**
-- Uses vitest bench framework
-- Establishes performance baselines
-- Cache shows measurable improvement
-
 ## Phase 14: Final Integration
 
 ### Task 14.1: Export from main package
-- [ ] Update `packages/reactor/src/index.ts` with all cache exports
-- [ ] Export KyselyWriteCache class
-- [ ] Export IKeyValueStore interface
-- [ ] Export InMemoryKeyValueStore class
-- [ ] Export all types and interfaces
+- [ ] Export KyselyWriteCache class from `src/cache/kysely-write-cache.ts`
+- [ ] Export IKeyframeStore interface from `src/storage/interfaces.ts`
+- [ ] Export KyselyKeyframeStore class from `src/storage/kysely/keyframe-store.ts`
+- [ ] Verify cache types already exported (CachedSnapshot, DocumentStreamKey, KeyframeSnapshot, WriteCacheConfig)
+- [ ] Verify IWriteCache already exported from `src/cache/write/interfaces.ts`
 - [ ] Update package README if needed
 
 **Acceptance Criteria:**
