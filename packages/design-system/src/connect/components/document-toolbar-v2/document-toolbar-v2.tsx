@@ -21,6 +21,7 @@ export type DocumentToolbarV2Props = {
   onSwitchboardLinkClick?: () => void;
   initialTimelineVisible?: boolean;
   timelineButtonVisible?: boolean;
+  onClose?: () => void;
 };
 
 export const DocumentToolbarV2: React.FC<DocumentToolbarV2Props> = (props) => {
@@ -31,6 +32,7 @@ export const DocumentToolbarV2: React.FC<DocumentToolbarV2Props> = (props) => {
     onSwitchboardLinkClick,
     initialTimelineVisible = false,
     timelineButtonVisible = false,
+    onClose,
   } = props;
 
   const [selectedDoc] = useSelectedDocument();
@@ -39,7 +41,7 @@ export const DocumentToolbarV2: React.FC<DocumentToolbarV2Props> = (props) => {
 
   const documentName = document?.header.name || undefined;
   const parentFolder = useNodeParentFolderById(document?.header.id);
-  const handleClose = () => setSelectedNode(parentFolder);
+  const handleClose = onClose ?? (() => setSelectedNode(parentFolder));
   const handleExport = exportDocument;
 
   const documentUndoRedo = useDocumentUndoRedo(document?.header.id);
