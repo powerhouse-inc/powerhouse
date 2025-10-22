@@ -8,15 +8,28 @@ vi.mock("../hooks/useVetraDocument.js", () => ({
   useSelectedAppModuleDocument: vi.fn(),
 }));
 
-vi.mock("@powerhousedao/reactor-browser", () => ({
-  useDocumentTypesInSelectedDrive: vi.fn(() => [
-    "powerhouse/document-model",
-    "powerhouse/budget-statement",
-    "powerhouse/project-tracker",
-  ]),
-  useSupportedDocumentTypesInReactor: vi.fn(() => []),
-  useSetPHDocumentEditorConfig: vi.fn(),
-}));
+vi.mock("@powerhousedao/reactor-browser", async (importOriginal) => {
+  const actual = await importOriginal<any>();
+  return {
+    ...actual,
+    useDocumentTypesInSelectedDrive: vi.fn(() => [
+      "powerhouse/document-model",
+      "powerhouse/budget-statement",
+      "powerhouse/project-tracker",
+    ]),
+    useSupportedDocumentTypesInReactor: vi.fn(() => []),
+    useSetPHDocumentEditorConfig: vi.fn(),
+    // These are needed by DocumentToolbar but mocked in setupTests
+    useSelectedDocument: vi.fn(() => [null, vi.fn()]),
+    useDocumentById: vi.fn(() => [null, vi.fn()]),
+    useDocumentTimeline: vi.fn(() => []),
+    useNodeParentFolderById: vi.fn(() => null),
+    setSelectedNode: vi.fn(),
+    setSelectedTimelineItem: vi.fn(),
+    showRevisionHistory: vi.fn(),
+    exportDocument: vi.fn(),
+  };
+});
 
 describe("AppModule Editor", () => {
   let mockDispatch: ReturnType<typeof vi.fn>;
