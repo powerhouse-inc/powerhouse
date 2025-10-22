@@ -7,28 +7,28 @@ const baseLogger = childLogger([]); // No automatic tags
 export const logger = {
   debug: (...args: unknown[]): void =>
     baseLogger.debug(
-      cyan("[CodegenProcessor]"),
+      cyan("[Vetra]"),
       ...args.map((arg: unknown) =>
         typeof arg === "string" ? cyan(arg) : arg,
       ),
     ),
   info: (...args: unknown[]): void =>
     baseLogger.info(
-      cyan("[CodegenProcessor]"),
+      cyan("[Vetra]"),
       ...args.map((arg: unknown) =>
         typeof arg === "string" ? cyan(arg) : arg,
       ),
     ),
   warn: (...args: unknown[]): void =>
     baseLogger.warn(
-      cyan("[CodegenProcessor]"),
+      cyan("[Vetra]"),
       ...args.map((arg: unknown) =>
         typeof arg === "string" ? cyan(arg) : arg,
       ),
     ),
   error: (...args: unknown[]): void =>
     baseLogger.error(
-      cyan("[CodegenProcessor]"),
+      cyan("[Vetra]"),
       ...args.map((arg: unknown) =>
         typeof arg === "string" ? cyan(arg) : arg,
       ),

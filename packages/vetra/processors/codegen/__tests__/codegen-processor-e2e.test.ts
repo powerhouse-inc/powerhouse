@@ -865,5 +865,53 @@ describe("CodegenProcessor E2E Tests", () => {
       expect(generateEditor).not.toHaveBeenCalled();
       expect(generateManifest).not.toHaveBeenCalled();
     });
+
+    it("should debounce generate calls for same strand", async () => {
+      const { generateManifest } = await import("@powerhousedao/codegen");
+
+      const firstState = {
+        name: "Test Package",
+        category: "utility",
+        description: "A test package",
+        author: {
+          name: "Test Author",
+          website: "https://example.com",
+        },
+      } as VetraPackageState;
+
+      const secondState = {
+        ...firstState,
+        name: "Test Package 2",
+      };
+
+      const firstStrand: InternalTransmitterUpdate = {
+        documentId: "test-doc-1",
+        documentType: "powerhouse/package",
+        state: firstState,
+      } as any;
+
+      const secondStrand = {
+        ...firstStrand,
+        state: secondState,
+      };
+
+      await processor.onStrands([firstStrand]);
+      await processor.onStrands([secondStrand]);
+
+      await vi.runAllTimersAsync();
+
+      expect(generateManifest).toHaveBeenCalledExactlyOnceWith(
+        {
+          name: "Test Package 2",
+          category: "utility",
+          description: "A test package",
+          publisher: {
+            name: "Test Author",
+            url: "https://example.com",
+          },
+        },
+        mockConfig.CURRENT_WORKING_DIR,
+      );
+    });
   });
 });

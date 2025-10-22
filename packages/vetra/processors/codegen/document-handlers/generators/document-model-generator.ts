@@ -39,7 +39,7 @@ export class DocumentModelGenerator extends BaseDocumentGen {
         .map((error) => `  - ${error}`)
         .join("\n");
       logger.info(
-        `⚠️ Skipped code generation for '${state.name || strand.documentId}' due to validation errors:\n${errorList}`,
+        `⚠️  Skipped code generation for '${state.name || strand.documentId}' due to validation errors:\n${errorList}`,
       );
       return false;
     }
@@ -51,7 +51,7 @@ export class DocumentModelGenerator extends BaseDocumentGen {
     const state = strand.state as DocumentModelGlobalState;
 
     // Validation is already done in shouldProcess, so we can proceed directly
-    logger.info(
+    logger.debug(
       `🔄 Starting code generation for document model: ${state.name}`,
     );
     try {
@@ -70,7 +70,7 @@ export class DocumentModelGenerator extends BaseDocumentGen {
 
       // Update the manifest with the new document model
       try {
-        logger.info(
+        logger.debug(
           `🔄 Updating manifest with document model: ${state.name} (ID: ${state.id})`,
         );
 
@@ -86,7 +86,7 @@ export class DocumentModelGenerator extends BaseDocumentGen {
           this.config.CURRENT_WORKING_DIR,
         );
 
-        logger.info(
+        logger.debug(
           `✅ Manifest updated successfully for document model: ${state.name}`,
         );
       } catch (manifestError) {

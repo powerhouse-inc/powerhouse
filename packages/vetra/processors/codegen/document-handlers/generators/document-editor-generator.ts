@@ -79,7 +79,7 @@ export class DocumentEditorGenerator extends BaseDocumentGen {
 
       // Update the manifest with the new editor
       try {
-        logger.info(
+        logger.debug(
           `🔄 Updating manifest with editor: ${state.name} (ID: ${editorId})`,
         );
 
@@ -96,7 +96,7 @@ export class DocumentEditorGenerator extends BaseDocumentGen {
           this.config.CURRENT_WORKING_DIR,
         );
 
-        logger.info(
+        logger.debug(
           `✅ Manifest updated successfully for editor: ${state.name}`,
         );
       } catch (manifestError) {

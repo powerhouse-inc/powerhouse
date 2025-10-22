@@ -20,3 +20,4 @@ CLAUDE.md
 .claude
 coverage/
 coverage-reports/
+.env
