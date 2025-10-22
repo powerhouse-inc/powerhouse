@@ -39,7 +39,7 @@ export function DriveEditorContainer() {
       fallbackRender={DriveEditorError}
       key={selectedDrive.header.id}
     >
-      <DropZoneWrapper>
+      <DropZoneWrapper className="flex h-full flex-col overflow-auto">
         <DriveEditorComponent>
           {selectedDocument ? <DocumentEditorContainer /> : null}
         </DriveEditorComponent>

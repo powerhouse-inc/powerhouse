@@ -3,10 +3,14 @@ import {
   useOnDropFile,
   useSelectedDriveId,
 } from "@powerhousedao/reactor-browser";
+import type { ComponentPropsWithoutRef } from "react";
 import { DropZone } from "./drop-zone.js";
 import type { OnAddFileWithProgress } from "./utils.js";
 
-export function DropZoneWrapper({ children }: { children: React.ReactNode }) {
+export function DropZoneWrapper({
+  children,
+  ...props
+}: { children: React.ReactNode } & ComponentPropsWithoutRef<"div">) {
   const isDragAndDropEnabled = useIsDragAndDropEnabled();
   const selectedDriveId = useSelectedDriveId();
 
@@ -30,7 +34,7 @@ export function DropZoneWrapper({ children }: { children: React.ReactNode }) {
       onAddFile={onAddFile}
       driveId={selectedDriveId}
       useLocalStorage={true}
-      style={{ height: "100%" }}
+      {...props}
     >
       {children}
     </DropZone>
