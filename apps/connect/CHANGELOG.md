@@ -1,3 +1,15 @@
+## 4.1.0-dev.83 (2025-10-22)
+
+### 🚀 Features
+
+- **design-system,common:** update breadcrumbs and folder views ([#2011](https://github.com/powerhouse-inc/powerhouse/pull/2011))
+- add automated tests for vetra features ([#1962](https://github.com/powerhouse-inc/powerhouse/pull/1962))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 4.1.0-dev.82 (2025-10-21)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

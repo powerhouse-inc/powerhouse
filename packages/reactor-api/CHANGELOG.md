@@ -1,3 +1,18 @@
+## 4.1.0-dev.83 (2025-10-22)
+
+### 🚀 Features
+
+- add automated tests for vetra features ([#1962](https://github.com/powerhouse-inc/powerhouse/pull/1962))
+
+### 🩹 Fixes
+
+- **reactor-api:** either use provided Loader or default to ImportLoader ([da10246a7](https://github.com/powerhouse-inc/powerhouse/commit/da10246a7))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.82 (2025-10-21)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.

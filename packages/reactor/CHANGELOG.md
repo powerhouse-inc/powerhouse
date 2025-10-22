@@ -1,3 +1,33 @@
+## 4.1.0-dev.83 (2025-10-22)
+
+### 🚀 Features
+
+- write cache integration test updates and explicit error handling ([9f4d0a5b8](https://github.com/powerhouse-inc/powerhouse/commit/9f4d0a5b8))
+- full write cache integration tests using document-drive ([cd22c881b](https://github.com/powerhouse-inc/powerhouse/commit/cd22c881b))
+- proof of cache ([53ceae009](https://github.com/powerhouse-inc/powerhouse/commit/53ceae009))
+- testing ring buffers directly on the implementation ([bc46076fe](https://github.com/powerhouse-inc/powerhouse/commit/bc46076fe))
+- write cache and ring buffer tightening, removing some bad test cases ([f0915abbf](https://github.com/powerhouse-inc/powerhouse/commit/f0915abbf))
+- introducing the keyframe store ([fee0e7d2f](https://github.com/powerhouse-inc/powerhouse/commit/fee0e7d2f))
+- compatibility fixes ([34bc595c8](https://github.com/powerhouse-inc/powerhouse/commit/34bc595c8))
+- easy path -- cache hit ([2804e447f](https://github.com/powerhouse-inc/powerhouse/commit/2804e447f))
+- phase 4 of write cache plan ([ac339ff1a](https://github.com/powerhouse-inc/powerhouse/commit/ac339ff1a))
+- added a simple lru ([5651ecd17](https://github.com/powerhouse-inc/powerhouse/commit/5651ecd17))
+- added simple ring-buffer ([9b73aac39](https://github.com/powerhouse-inc/powerhouse/commit/9b73aac39))
+- created necessary interfaces ([f4c1bc9cf](https://github.com/powerhouse-inc/powerhouse/commit/f4c1bc9cf))
+- kv-store implementation ([25aa8cfd2](https://github.com/powerhouse-inc/powerhouse/commit/25aa8cfd2))
+- add automated tests for vetra features ([#1962](https://github.com/powerhouse-inc/powerhouse/pull/1962))
+
+### 🩹 Fixes
+
+- the last writecache unit test ([999f286a2](https://github.com/powerhouse-inc/powerhouse/commit/999f286a2))
+- all of the write cache tests should prove they are using snapshots correctly ([4badb3729](https://github.com/powerhouse-inc/powerhouse/commit/4badb3729))
+- offering yet more proof of correctness in base revision usage ([94370ca90](https://github.com/powerhouse-inc/powerhouse/commit/94370ca90))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.82 (2025-10-21)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

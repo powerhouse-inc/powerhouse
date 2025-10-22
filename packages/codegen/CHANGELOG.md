@@ -1,3 +1,23 @@
+## 4.1.0-dev.83 (2025-10-22)
+
+### 🚀 Features
+
+- **design-system,common:** update breadcrumbs and folder views ([#2011](https://github.com/powerhouse-inc/powerhouse/pull/2011))
+- add automated tests for vetra features ([#1962](https://github.com/powerhouse-inc/powerhouse/pull/1962))
+
+### 🩹 Fixes
+
+- **codegen:** remove dispatch argument from reducer boilerplate ([047e2b473](https://github.com/powerhouse-inc/powerhouse/commit/047e2b473))
+- **codegen:** removed no longer used arguments on generateProcessor ([c2fe33d53](https://github.com/powerhouse-inc/powerhouse/commit/c2fe33d53))
+- **codegen:** do not import selected document models on relational db template ([9b1f79152](https://github.com/powerhouse-inc/powerhouse/commit/9b1f79152))
+- **codegen:** inject processors factory export ([3f43413b1](https://github.com/powerhouse-inc/powerhouse/commit/3f43413b1))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 4.1.0-dev.82 (2025-10-21)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.

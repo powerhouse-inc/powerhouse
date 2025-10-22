@@ -1,3 +1,42 @@
+## 4.1.0-dev.83 (2025-10-22)
+
+### 🚀 Features
+
+- add automated tests for vetra features ([#1962](https://github.com/powerhouse-inc/powerhouse/pull/1962))
+- kv-store implementation ([25aa8cfd2](https://github.com/powerhouse-inc/powerhouse/commit/25aa8cfd2))
+- created necessary interfaces ([f4c1bc9cf](https://github.com/powerhouse-inc/powerhouse/commit/f4c1bc9cf))
+- added simple ring-buffer ([9b73aac39](https://github.com/powerhouse-inc/powerhouse/commit/9b73aac39))
+- added a simple lru ([5651ecd17](https://github.com/powerhouse-inc/powerhouse/commit/5651ecd17))
+- phase 4 of write cache plan ([ac339ff1a](https://github.com/powerhouse-inc/powerhouse/commit/ac339ff1a))
+- easy path -- cache hit ([2804e447f](https://github.com/powerhouse-inc/powerhouse/commit/2804e447f))
+- compatibility fixes ([34bc595c8](https://github.com/powerhouse-inc/powerhouse/commit/34bc595c8))
+- introducing the keyframe store ([fee0e7d2f](https://github.com/powerhouse-inc/powerhouse/commit/fee0e7d2f))
+- write cache and ring buffer tightening, removing some bad test cases ([f0915abbf](https://github.com/powerhouse-inc/powerhouse/commit/f0915abbf))
+- testing ring buffers directly on the implementation ([bc46076fe](https://github.com/powerhouse-inc/powerhouse/commit/bc46076fe))
+- proof of cache ([53ceae009](https://github.com/powerhouse-inc/powerhouse/commit/53ceae009))
+- full write cache integration tests using document-drive ([cd22c881b](https://github.com/powerhouse-inc/powerhouse/commit/cd22c881b))
+- write cache integration test updates and explicit error handling ([9f4d0a5b8](https://github.com/powerhouse-inc/powerhouse/commit/9f4d0a5b8))
+- **design-system,common:** update breadcrumbs and folder views ([#2011](https://github.com/powerhouse-inc/powerhouse/pull/2011))
+
+### 🩹 Fixes
+
+- offering yet more proof of correctness in base revision usage ([94370ca90](https://github.com/powerhouse-inc/powerhouse/commit/94370ca90))
+- all of the write cache tests should prove they are using snapshots correctly ([4badb3729](https://github.com/powerhouse-inc/powerhouse/commit/4badb3729))
+- the last writecache unit test ([999f286a2](https://github.com/powerhouse-inc/powerhouse/commit/999f286a2))
+- **codegen:** inject processors factory export ([3f43413b1](https://github.com/powerhouse-inc/powerhouse/commit/3f43413b1))
+- **codegen:** do not import selected document models on relational db template ([9b1f79152](https://github.com/powerhouse-inc/powerhouse/commit/9b1f79152))
+- **codegen:** removed no longer used arguments on generateProcessor ([c2fe33d53](https://github.com/powerhouse-inc/powerhouse/commit/c2fe33d53))
+- **codegen:** remove dispatch argument from reducer boilerplate ([047e2b473](https://github.com/powerhouse-inc/powerhouse/commit/047e2b473))
+- **reactor-api:** either use provided Loader or default to ImportLoader ([da10246a7](https://github.com/powerhouse-inc/powerhouse/commit/da10246a7))
+- **reactor-browser:** type vetra module utils ([c453a6f0d](https://github.com/powerhouse-inc/powerhouse/commit/c453a6f0d))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 4.1.0-dev.82 (2025-10-21)
 
 ### 🚀 Features
