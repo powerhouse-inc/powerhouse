@@ -7,7 +7,6 @@ export * from "./default-editor-loader/index.js";
 export * from "./disclosure/index.js";
 export * from "./divider/index.js";
 export * from "./document-timeline/index.js";
-export * from "./document-toolbar-v2/index.js";
 export * from "./document-toolbar/index.js";
 export * from "./drop-zone/index.js";
 export * from "./dropdown-menu/index.js";

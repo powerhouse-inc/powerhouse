@@ -1,56 +1,59 @@
 import { Icon } from "@powerhousedao/design-system";
-import type {
-  TimelineBarItem,
-  TimelineDividerItem,
+import {
+  exportDocument,
+  setSelectedNode,
+  setSelectedTimelineItem,
+  showRevisionHistory,
+  useDocumentTimeline,
+  useNodeParentFolderById,
+  useSelectedDocument,
 } from "@powerhousedao/reactor-browser";
+import type { PHDocument } from "document-model";
 import { useEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";
-import type { DocumentTimelineProps } from "../document-timeline/document-timeline.js";
 import { DocumentTimeline } from "../document-timeline/document-timeline.js";
+import { useDocumentUndoRedo } from "./utils/use-document-undo-redo.js";
 
 export type DocumentToolbarProps = {
-  title?: string;
+  document?: PHDocument;
   className?: string;
-  undo?: () => void;
-  redo?: () => void;
-  canUndo?: boolean;
-  canRedo?: boolean;
-  onExport?: () => void;
-  onClose: () => void;
-  onShowRevisionHistory?: () => void;
-  timelineItems?: Array<TimelineBarItem | TimelineDividerItem>;
+  disableRevisionHistory?: boolean;
   onSwitchboardLinkClick?: () => void;
   initialTimelineVisible?: boolean;
   timelineButtonVisible?: boolean;
-  onTimelineItemClick?: DocumentTimelineProps["onItemClick"];
+  onClose?: () => void;
 };
 
 export const DocumentToolbar: React.FC<DocumentToolbarProps> = (props) => {
   const {
-    undo,
-    canUndo,
-    redo,
-    canRedo,
-    title,
     onClose,
-    onExport,
     className,
-    onShowRevisionHistory,
+    document: _document,
     onSwitchboardLinkClick,
-    timelineItems = [],
-    onTimelineItemClick,
-    initialTimelineVisible = false,
     timelineButtonVisible = false,
+    disableRevisionHistory = false,
+    initialTimelineVisible = false,
   } = props;
+
+  const [selectedDocument] = useSelectedDocument();
+  const document = _document ?? selectedDocument;
+
+  const documentName = document?.header.name || undefined;
+  const parentFolder = useNodeParentFolderById(document?.header.id);
+  const handleClose = onClose ?? (() => setSelectedNode(parentFolder));
+  const handleExport = exportDocument;
+
+  const documentUndoRedo = useDocumentUndoRedo(document?.header.id);
+  const isUndoDisabled = !documentUndoRedo.canUndo;
+  const isRedoDisabled = !documentUndoRedo.canRedo;
+
+  const timelineItemsData = useDocumentTimeline(document?.header.id);
 
   const [showTimeline, setShowTimeline] = useState(initialTimelineVisible);
 
-  const isUndoDisabled = !canUndo || !undo;
-  const isRedoDisabled = !canRedo || !redo;
-  const isExportDisabled = !onExport;
+  const isExportDisabled = !document;
   const isSwitchboardLinkDisabled = !onSwitchboardLinkClick;
-  const isRevisionHistoryDisabled = !onShowRevisionHistory;
-  const isTimelineDisabled = timelineItems.length === 0;
+  const isTimelineDisabled = timelineItemsData.length === 0;
 
   useEffect(() => {
     if (initialTimelineVisible) {
@@ -79,7 +82,7 @@ export const DocumentToolbar: React.FC<DocumentToolbarProps> = (props) => {
                 ? "cursor-not-allowed"
                 : "cursor-pointer active:opacity-70",
             )}
-            onClick={undo}
+            onClick={documentUndoRedo.undo}
             disabled={isUndoDisabled}
           >
             <Icon
@@ -95,7 +98,7 @@ export const DocumentToolbar: React.FC<DocumentToolbarProps> = (props) => {
                 ? "cursor-not-allowed"
                 : "cursor-pointer active:opacity-70",
             )}
-            onClick={redo}
+            onClick={documentUndoRedo.redo}
             disabled={isRedoDisabled}
           >
             <div className="-scale-x-100">
@@ -113,7 +116,7 @@ export const DocumentToolbar: React.FC<DocumentToolbarProps> = (props) => {
                 ? "cursor-not-allowed"
                 : "cursor-pointer active:opacity-70",
             )}
-            onClick={onExport}
+            onClick={() => void handleExport(document)}
             disabled={isExportDisabled}
           >
             <span
@@ -125,7 +128,7 @@ export const DocumentToolbar: React.FC<DocumentToolbarProps> = (props) => {
         </div>
 
         <div className="flex items-center">
-          <h1 className="text-sm font-medium text-gray-500">{title}</h1>
+          <h1 className="text-sm font-medium text-gray-500">{documentName}</h1>
         </div>
 
         <div className="flex items-center gap-x-2">
@@ -144,18 +147,18 @@ export const DocumentToolbar: React.FC<DocumentToolbarProps> = (props) => {
           <button
             className={twMerge(
               "grid size-8 place-items-center rounded-lg border border-gray-200 bg-white",
-              isRevisionHistoryDisabled
+              disableRevisionHistory
                 ? "cursor-not-allowed"
                 : "cursor-pointer active:opacity-70",
             )}
-            onClick={onShowRevisionHistory}
-            disabled={isRevisionHistoryDisabled}
+            onClick={showRevisionHistory}
+            disabled={disableRevisionHistory}
           >
             <Icon
               name="History"
               size={16}
               className={
-                isRevisionHistoryDisabled ? "text-gray-500" : "text-gray-900"
+                disableRevisionHistory ? "text-gray-500" : "text-gray-900"
               }
             />
           </button>
@@ -184,7 +187,7 @@ export const DocumentToolbar: React.FC<DocumentToolbarProps> = (props) => {
           )}
           <button
             className="grid size-8 cursor-pointer place-items-center rounded-lg border border-gray-200 bg-white active:opacity-70"
-            onClick={onClose}
+            onClick={handleClose}
           >
             <Icon name="XmarkLight" size={16} className="text-gray-900" />
           </button>
@@ -194,8 +197,8 @@ export const DocumentToolbar: React.FC<DocumentToolbarProps> = (props) => {
       {showTimeline && (
         <div className="mt-2 w-full">
           <DocumentTimeline
-            timeline={timelineItems}
-            onItemClick={onTimelineItemClick}
+            timeline={timelineItemsData}
+            onItemClick={setSelectedTimelineItem}
           />
         </div>
       )}
