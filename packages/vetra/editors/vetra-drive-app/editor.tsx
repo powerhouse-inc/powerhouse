@@ -1,4 +1,4 @@
-import { DropZoneWrapper, WagmiContext } from "@powerhousedao/design-system";
+import { WagmiContext } from "@powerhousedao/design-system";
 
 import {
   addDocument,
@@ -114,19 +114,13 @@ export function BaseEditor(props: EditorProps) {
   );
 }
 
-const BaseEditorWithDropZone = (props: EditorProps) => (
-  <DropZoneWrapper>
-    <BaseEditor {...props} />
-  </DropZoneWrapper>
-);
-
 export function Editor(props: EditorProps) {
   useSetPHDriveEditorConfig(editorConfig);
   const analyticsDatabaseName = useAnalyticsDatabaseName();
   return (
     <WagmiContext>
       <AnalyticsProvider databaseName={analyticsDatabaseName}>
-        <BaseEditorWithDropZone {...props} />
+        <BaseEditor {...props} />
       </AnalyticsProvider>
     </WagmiContext>
   );
