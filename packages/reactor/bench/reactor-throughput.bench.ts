@@ -62,7 +62,6 @@ function createSimpleJob(): Job {
   return {
     id: `job-${jobCounter}`,
     documentId: "doc1",
-    documentType: "powerhouse/document-model",
     scope: "global",
     branch: "main",
     actions: [action],
@@ -85,7 +84,6 @@ function createComplexJob(): Job {
   return {
     id: `job-${++jobCounter}`,
     documentId: "doc1",
-    documentType: "powerhouse/document-model",
     scope: "global",
     branch: "main",
     actions: [action],

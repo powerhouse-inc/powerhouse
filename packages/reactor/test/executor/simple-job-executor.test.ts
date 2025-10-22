@@ -94,7 +94,6 @@ describe("SimpleJobExecutor", () => {
       const job: Job = {
         id: "job-2",
         documentId: "missing-doc",
-        documentType: "powerhouse/document-model",
         scope: "global",
         branch: "main",
         actions: [
@@ -135,7 +134,6 @@ describe("SimpleJobExecutor", () => {
       const job: Job = {
         id: "job-3",
         documentId: "doc-1",
-        documentType: "powerhouse/document-model",
         scope: "global",
         branch: "main",
         actions: [
@@ -168,7 +166,6 @@ describe("SimpleJobExecutor", () => {
       const job: Job = {
         id: "job-4",
         documentId: "doc-1",
-        documentType: "powerhouse/document-model",
         scope: "global",
         branch: "main",
         actions: [
@@ -198,7 +195,6 @@ describe("SimpleJobExecutor", () => {
       const job: Job = {
         id: "delete-job-1",
         documentId,
-        documentType: "powerhouse/document-model",
         scope: "document",
         branch: "main",
         actions: [
@@ -229,7 +225,6 @@ describe("SimpleJobExecutor", () => {
       const job: Job = {
         id: "delete-job-2",
         documentId,
-        documentType: "powerhouse/document-model",
         scope: "document",
         branch: "main",
         actions: [
@@ -261,7 +256,6 @@ describe("SimpleJobExecutor", () => {
       const job: Job = {
         id: "delete-job-3",
         documentId: "doc-missing-id",
-        documentType: "powerhouse/document-model",
         scope: "document",
         branch: "main",
         actions: [
@@ -295,7 +289,6 @@ describe("SimpleJobExecutor", () => {
         const job: Job = {
           id: "create-job-1",
           documentId,
-          documentType: "powerhouse/document-model",
           scope: "document",
           branch: "main",
           actions: [
@@ -356,7 +349,6 @@ describe("SimpleJobExecutor", () => {
         const job: Job = {
           id: "delete-job-index",
           documentId,
-          documentType: "powerhouse/document-model",
           scope: "document",
           branch: "main",
           actions: [
@@ -401,7 +393,6 @@ describe("SimpleJobExecutor", () => {
         const job: Job = {
           id: "delete-job-no-ops",
           documentId,
-          documentType: "powerhouse/document-model",
           scope: "document",
           branch: "main",
           actions: [
@@ -447,7 +438,6 @@ describe("SimpleJobExecutor", () => {
         const job: Job = {
           id: "upgrade-job-index",
           documentId,
-          documentType: "powerhouse/document-model",
           scope: "document",
           branch: "main",
           actions: [
@@ -485,7 +475,6 @@ describe("SimpleJobExecutor", () => {
         const job: Job = {
           id: "create-and-upgrade-job",
           documentId,
-          documentType: "powerhouse/document-model",
           scope: "document",
           branch: "main",
           actions: [
@@ -588,7 +577,6 @@ describe("SimpleJobExecutor", () => {
         const job: Job = {
           id: "delete-job",
           documentId,
-          documentType: "powerhouse/document-model",
           scope: "document",
           branch: "main",
           actions: [
@@ -641,7 +629,6 @@ describe("SimpleJobExecutor", () => {
         const job: Job = {
           id: "upgrade-job",
           documentId,
-          documentType: "powerhouse/document-model",
           scope: "document",
           branch: "main",
           actions: [
@@ -675,7 +662,6 @@ describe("SimpleJobExecutor", () => {
         const job: Job = {
           id: "create-and-upgrade-job",
           documentId,
-          documentType: "powerhouse/document-model",
           scope: "document",
           branch: "main",
           actions: [

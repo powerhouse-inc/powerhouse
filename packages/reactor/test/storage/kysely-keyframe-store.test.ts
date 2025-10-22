@@ -28,14 +28,7 @@ describe("KyselyKeyframeStore", () => {
     it("should store a keyframe", async () => {
       const doc = createMockDocument();
 
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "global",
-        "main",
-        10,
-        doc,
-      );
+      await keyframeStore.putKeyframe("doc1", "global", "main", 10, doc);
 
       const result = await keyframeStore.findNearestKeyframe(
         "doc1",
@@ -53,23 +46,9 @@ describe("KyselyKeyframeStore", () => {
       const doc1 = createMockDocument();
       const doc2 = createMockDocument();
 
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "global",
-        "main",
-        10,
-        doc1,
-      );
+      await keyframeStore.putKeyframe("doc1", "global", "main", 10, doc1);
 
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "global",
-        "main",
-        10,
-        doc2,
-      );
+      await keyframeStore.putKeyframe("doc1", "global", "main", 10, doc2);
 
       const result = await keyframeStore.findNearestKeyframe(
         "doc1",
@@ -87,30 +66,9 @@ describe("KyselyKeyframeStore", () => {
       const doc20 = createMockDocument();
       const doc30 = createMockDocument();
 
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "global",
-        "main",
-        10,
-        doc10,
-      );
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "global",
-        "main",
-        20,
-        doc20,
-      );
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "global",
-        "main",
-        30,
-        doc30,
-      );
+      await keyframeStore.putKeyframe("doc1", "global", "main", 10, doc10);
+      await keyframeStore.putKeyframe("doc1", "global", "main", 20, doc20);
+      await keyframeStore.putKeyframe("doc1", "global", "main", 30, doc30);
 
       const result10 = await keyframeStore.findNearestKeyframe(
         "doc1",
@@ -139,22 +97,8 @@ describe("KyselyKeyframeStore", () => {
     it("should store keyframes for different scopes separately", async () => {
       const doc = createMockDocument();
 
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "global",
-        "main",
-        10,
-        doc,
-      );
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "local",
-        "main",
-        10,
-        doc,
-      );
+      await keyframeStore.putKeyframe("doc1", "global", "main", 10, doc);
+      await keyframeStore.putKeyframe("doc1", "local", "main", 10, doc);
 
       const globalResult = await keyframeStore.findNearestKeyframe(
         "doc1",
@@ -176,22 +120,8 @@ describe("KyselyKeyframeStore", () => {
     it("should store keyframes for different branches separately", async () => {
       const doc = createMockDocument();
 
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "global",
-        "main",
-        10,
-        doc,
-      );
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "global",
-        "feature",
-        10,
-        doc,
-      );
+      await keyframeStore.putKeyframe("doc1", "global", "main", 10, doc);
+      await keyframeStore.putKeyframe("doc1", "global", "feature", 10, doc);
 
       const mainResult = await keyframeStore.findNearestKeyframe(
         "doc1",
@@ -218,7 +148,6 @@ describe("KyselyKeyframeStore", () => {
       await expect(
         keyframeStore.putKeyframe(
           "doc1",
-          "powerhouse/document-model",
           "global",
           "main",
           10,
@@ -233,14 +162,7 @@ describe("KyselyKeyframeStore", () => {
     it("should find exact revision match", async () => {
       const doc = createMockDocument();
 
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "global",
-        "main",
-        10,
-        doc,
-      );
+      await keyframeStore.putKeyframe("doc1", "global", "main", 10, doc);
 
       const result = await keyframeStore.findNearestKeyframe(
         "doc1",
@@ -257,22 +179,8 @@ describe("KyselyKeyframeStore", () => {
       const doc10 = createMockDocument();
       const doc20 = createMockDocument();
 
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "global",
-        "main",
-        10,
-        doc10,
-      );
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "global",
-        "main",
-        20,
-        doc20,
-      );
+      await keyframeStore.putKeyframe("doc1", "global", "main", 10, doc10);
+      await keyframeStore.putKeyframe("doc1", "global", "main", 20, doc20);
 
       const result = await keyframeStore.findNearestKeyframe(
         "doc1",
@@ -290,30 +198,9 @@ describe("KyselyKeyframeStore", () => {
       const doc20 = createMockDocument();
       const doc30 = createMockDocument();
 
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "global",
-        "main",
-        10,
-        doc10,
-      );
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "global",
-        "main",
-        20,
-        doc20,
-      );
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "global",
-        "main",
-        30,
-        doc30,
-      );
+      await keyframeStore.putKeyframe("doc1", "global", "main", 10, doc10);
+      await keyframeStore.putKeyframe("doc1", "global", "main", 20, doc20);
+      await keyframeStore.putKeyframe("doc1", "global", "main", 30, doc30);
 
       const result = await keyframeStore.findNearestKeyframe(
         "doc1",
@@ -340,14 +227,7 @@ describe("KyselyKeyframeStore", () => {
     it("should return undefined when target revision is before all keyframes", async () => {
       const doc = createMockDocument();
 
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "global",
-        "main",
-        10,
-        doc,
-      );
+      await keyframeStore.putKeyframe("doc1", "global", "main", 10, doc);
 
       const result = await keyframeStore.findNearestKeyframe(
         "doc1",
@@ -362,22 +242,8 @@ describe("KyselyKeyframeStore", () => {
     it("should return correct keyframe for different scopes", async () => {
       const doc = createMockDocument();
 
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "global",
-        "main",
-        10,
-        doc,
-      );
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "local",
-        "main",
-        20,
-        doc,
-      );
+      await keyframeStore.putKeyframe("doc1", "global", "main", 10, doc);
+      await keyframeStore.putKeyframe("doc1", "local", "main", 20, doc);
 
       const globalResult = await keyframeStore.findNearestKeyframe(
         "doc1",
@@ -399,22 +265,8 @@ describe("KyselyKeyframeStore", () => {
     it("should return correct keyframe for different branches", async () => {
       const doc = createMockDocument();
 
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "global",
-        "main",
-        10,
-        doc,
-      );
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "global",
-        "feature",
-        20,
-        doc,
-      );
+      await keyframeStore.putKeyframe("doc1", "global", "main", 10, doc);
+      await keyframeStore.putKeyframe("doc1", "global", "feature", 20, doc);
 
       const mainResult = await keyframeStore.findNearestKeyframe(
         "doc1",
@@ -436,14 +288,7 @@ describe("KyselyKeyframeStore", () => {
     it("should properly deserialize document from JSON", async () => {
       const doc = createMockDocument();
 
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "global",
-        "main",
-        10,
-        doc,
-      );
+      await keyframeStore.putKeyframe("doc1", "global", "main", 10, doc);
 
       const result = await keyframeStore.findNearestKeyframe(
         "doc1",
@@ -478,22 +323,8 @@ describe("KyselyKeyframeStore", () => {
     it("should delete keyframes for specific stream", async () => {
       const doc = createMockDocument();
 
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "global",
-        "main",
-        10,
-        doc,
-      );
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "global",
-        "main",
-        20,
-        doc,
-      );
+      await keyframeStore.putKeyframe("doc1", "global", "main", 10, doc);
+      await keyframeStore.putKeyframe("doc1", "global", "main", 20, doc);
 
       const deleted = await keyframeStore.deleteKeyframes(
         "doc1",
@@ -515,22 +346,8 @@ describe("KyselyKeyframeStore", () => {
     it("should delete keyframes for all branches in a scope", async () => {
       const doc = createMockDocument();
 
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "global",
-        "main",
-        10,
-        doc,
-      );
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "global",
-        "feature",
-        10,
-        doc,
-      );
+      await keyframeStore.putKeyframe("doc1", "global", "main", 10, doc);
+      await keyframeStore.putKeyframe("doc1", "global", "feature", 10, doc);
 
       const deleted = await keyframeStore.deleteKeyframes("doc1", "global");
 
@@ -556,30 +373,9 @@ describe("KyselyKeyframeStore", () => {
     it("should delete all keyframes for a document", async () => {
       const doc = createMockDocument();
 
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "global",
-        "main",
-        10,
-        doc,
-      );
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "local",
-        "main",
-        10,
-        doc,
-      );
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "global",
-        "feature",
-        10,
-        doc,
-      );
+      await keyframeStore.putKeyframe("doc1", "global", "main", 10, doc);
+      await keyframeStore.putKeyframe("doc1", "local", "main", 10, doc);
+      await keyframeStore.putKeyframe("doc1", "global", "feature", 10, doc);
 
       const deleted = await keyframeStore.deleteKeyframes("doc1");
 
@@ -612,22 +408,8 @@ describe("KyselyKeyframeStore", () => {
     it("should not affect keyframes for other documents", async () => {
       const doc = createMockDocument();
 
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "global",
-        "main",
-        10,
-        doc,
-      );
-      await keyframeStore.putKeyframe(
-        "doc2",
-        "powerhouse/document-model",
-        "global",
-        "main",
-        10,
-        doc,
-      );
+      await keyframeStore.putKeyframe("doc1", "global", "main", 10, doc);
+      await keyframeStore.putKeyframe("doc2", "global", "main", 10, doc);
 
       await keyframeStore.deleteKeyframes("doc1");
 
@@ -666,14 +448,7 @@ describe("KyselyKeyframeStore", () => {
     it("should handle full lifecycle: put, find, delete", async () => {
       const doc = createMockDocument();
 
-      await keyframeStore.putKeyframe(
-        "doc1",
-        "powerhouse/document-model",
-        "global",
-        "main",
-        10,
-        doc,
-      );
+      await keyframeStore.putKeyframe("doc1", "global", "main", 10, doc);
 
       let result = await keyframeStore.findNearestKeyframe(
         "doc1",
@@ -698,14 +473,7 @@ describe("KyselyKeyframeStore", () => {
       const doc = createMockDocument();
 
       for (let i = 10; i <= 100; i += 10) {
-        await keyframeStore.putKeyframe(
-          "doc1",
-          "powerhouse/document-model",
-          "global",
-          "main",
-          i,
-          doc,
-        );
+        await keyframeStore.putKeyframe("doc1", "global", "main", i, doc);
       }
 
       const result = await keyframeStore.findNearestKeyframe(

@@ -114,7 +114,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       try {
         document = await this.writeCache.getState(
           job.documentId,
-          job.documentType,
           job.scope,
           job.branch,
         );
@@ -209,7 +208,6 @@ export class SimpleJobExecutor implements IJobExecutor {
 
       this.writeCache.putState(
         job.documentId,
-        document.header.documentType,
         scope,
         job.branch,
         newOperation.index,
@@ -390,7 +388,6 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     this.writeCache.putState(
       document.header.id,
-      document.header.documentType,
       job.scope,
       job.branch,
       operation.index,
@@ -458,7 +455,6 @@ export class SimpleJobExecutor implements IJobExecutor {
     try {
       document = await this.writeCache.getState(
         documentId,
-        job.documentType,
         job.scope,
         job.branch,
       );
@@ -617,7 +613,6 @@ export class SimpleJobExecutor implements IJobExecutor {
     try {
       document = await this.writeCache.getState(
         documentId,
-        job.documentType,
         job.scope,
         job.branch,
       );
@@ -720,7 +715,6 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     this.writeCache.putState(
       documentId,
-      document.header.documentType,
       job.scope,
       job.branch,
       operation.index,

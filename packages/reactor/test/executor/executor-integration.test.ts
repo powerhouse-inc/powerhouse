@@ -74,7 +74,6 @@ describe("SimpleJobExecutor Integration", () => {
       const job: Job = {
         id: "job-1",
         documentId: document.header.id,
-        documentType: "powerhouse/document-drive",
         scope: "global",
         branch: "main",
         actions: [
@@ -139,7 +138,6 @@ describe("SimpleJobExecutor Integration", () => {
       const job1: Job = {
         id: "job-1",
         documentId: document.header.id,
-        documentType: "powerhouse/document-drive",
         scope: "global",
         branch: "main",
         actions: [
@@ -166,7 +164,6 @@ describe("SimpleJobExecutor Integration", () => {
       const job2: Job = {
         id: "job-2",
         documentId: document.header.id,
-        documentType: "powerhouse/document-drive",
         scope: "global",
         branch: "main",
         actions: [
@@ -227,7 +224,6 @@ describe("SimpleJobExecutor Integration", () => {
       const folderJob: Job = {
         id: "job-folder",
         documentId: document.header.id,
-        documentType: "powerhouse/document-drive",
         scope: "global",
         branch: "main",
         actions: [
@@ -253,7 +249,6 @@ describe("SimpleJobExecutor Integration", () => {
       const fileJob: Job = {
         id: "job-file",
         documentId: document.header.id,
-        documentType: "powerhouse/document-drive",
         scope: "global",
         branch: "main",
         actions: [
@@ -341,7 +336,6 @@ describe("SimpleJobExecutor Integration", () => {
       const job: Job = {
         id: "job-1",
         documentId: document.header.id,
-        documentType: "powerhouse/document-drive",
         scope: "global",
         branch: "main",
         actions: [
@@ -397,7 +391,6 @@ describe("SimpleJobExecutor Integration", () => {
       const job: Job = {
         id: "job-1",
         documentId: document.header.id,
-        documentType: "powerhouse/document-drive",
         scope: "global",
         branch: "main",
         actions: [
@@ -443,7 +436,6 @@ describe("SimpleJobExecutor Integration", () => {
       const job: Job = {
         id: "job-1",
         documentId: document.header.id,
-        documentType: "powerhouse/document-drive",
         scope: "document",
         branch: "main",
         actions: [

@@ -138,7 +138,6 @@ export function createTestJob(overrides: Partial<Job> = {}): Job {
   const defaultJob: Job = {
     id: overrides.id || `job-${uuidv4()}`,
     documentId: "doc-1",
-    documentType: "powerhouse/document-drive",
     scope: "global",
     branch: "main",
     actions: overrides.actions || [createTestAction()],
@@ -161,7 +160,6 @@ export function createMinimalJob(overrides: Partial<Job> = {}): Job {
   return {
     id: overrides.id || `job-${uuidv4()}`,
     documentId: overrides.documentId || "doc-1",
-    documentType: overrides.documentType || "powerhouse/document-drive",
     scope: overrides.scope || "global",
     branch: overrides.branch || "main",
     actions: overrides.actions || [createMinimalAction()],
@@ -190,6 +188,35 @@ export function createTestOperation(
 
   return {
     ...defaultOperation,
+    ...overrides,
+  };
+}
+
+/**
+ * Factory for creating CREATE_DOCUMENT operation
+ */
+export function createCreateDocumentOperation(
+  documentId: string,
+  documentType: string,
+  overrides: Partial<Operation> = {},
+): Operation {
+  return {
+    id: overrides.id || `${documentId}-create`,
+    index: 0,
+    skip: 0,
+    hash: overrides.hash || "hash-0",
+    timestampUtcMs: overrides.timestampUtcMs || new Date().toISOString(),
+    action: {
+      id: `${documentId}-create-action`,
+      type: "CREATE_DOCUMENT",
+      scope: "document",
+      timestampUtcMs: overrides.timestampUtcMs || new Date().toISOString(),
+      input: {
+        documentId,
+        model: documentType,
+        version: "0.0.0",
+      },
+    } as Action,
     ...overrides,
   };
 }

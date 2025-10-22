@@ -1,4 +1,4 @@
-import type { PHDocument } from "document-model";
+import type { CreateDocumentAction, PHDocument } from "document-model";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import type { IKeyframeStore, IOperationStore } from "../storage/interfaces.js";
 import { RingBuffer } from "./buffer/ring-buffer.js";
@@ -97,7 +97,6 @@ export class KyselyWriteCache implements IWriteCache {
    * Cold miss path: Rebuilds from keyframe or from scratch using all operations
    *
    * @param documentId - The document identifier
-   * @param documentType - The document type for reducer lookup
    * @param scope - The operation scope
    * @param branch - The operation branch
    * @param targetRevision - The target revision, or undefined for newest
@@ -111,7 +110,6 @@ export class KyselyWriteCache implements IWriteCache {
    */
   async getState(
     documentId: string,
-    documentType: string,
     scope: string,
     branch: string,
     targetRevision?: number,
@@ -149,21 +147,13 @@ export class KyselyWriteCache implements IWriteCache {
             newestOlder.document,
             newestOlder.revision,
             documentId,
-            documentType,
             scope,
             branch,
             targetRevision,
             signal,
           );
 
-          this.putState(
-            documentId,
-            documentType,
-            scope,
-            branch,
-            targetRevision,
-            document,
-          );
+          this.putState(documentId, scope, branch, targetRevision, document);
           this.lruTracker.touch(streamKey);
 
           return structuredClone(document);
@@ -173,7 +163,6 @@ export class KyselyWriteCache implements IWriteCache {
 
     const document = await this.coldMissRebuild(
       documentId,
-      documentType,
       scope,
       branch,
       targetRevision,
@@ -185,7 +174,7 @@ export class KyselyWriteCache implements IWriteCache {
       revision = document.header.revision[scope] || 0;
     }
 
-    this.putState(documentId, documentType, scope, branch, revision, document);
+    this.putState(documentId, scope, branch, revision, document);
 
     return structuredClone(document);
   }
@@ -198,7 +187,6 @@ export class KyselyWriteCache implements IWriteCache {
    * Asynchronously persists keyframes at configured intervals (fire-and-forget).
    *
    * @param documentId - The document identifier
-   * @param documentType - The document type
    * @param scope - The operation scope
    * @param branch - The operation branch
    * @param revision - The revision number
@@ -207,7 +195,6 @@ export class KyselyWriteCache implements IWriteCache {
    */
   putState(
     documentId: string,
-    documentType: string,
     scope: string,
     branch: string,
     revision: number,
@@ -225,17 +212,8 @@ export class KyselyWriteCache implements IWriteCache {
     stream.ringBuffer.push(snapshot);
 
     if (this.isKeyframeRevision(revision)) {
-      // Fire-and-forget keyframe persistence: errors are logged but don't fail putState
-      // This allows in-memory cache to continue working even if keyframe storage fails
       this.keyframeStore
-        .putKeyframe(
-          documentId,
-          documentType,
-          scope,
-          branch,
-          revision,
-          safeCopy,
-        )
+        .putKeyframe(documentId, scope, branch, revision, safeCopy)
         .catch((err) => {
           console.error(
             `Failed to persist keyframe ${documentId}@${revision}:`,
@@ -333,7 +311,6 @@ export class KyselyWriteCache implements IWriteCache {
 
   private async coldMissRebuild(
     documentId: string,
-    documentType: string,
     scope: string,
     branch: string,
     targetRevision: number | undefined,
@@ -351,16 +328,46 @@ export class KyselyWriteCache implements IWriteCache {
 
     let document: PHDocument | undefined;
     let startRevision: number;
+    let documentType: string;
 
     if (keyframe) {
       document = structuredClone(keyframe.document);
       startRevision = keyframe.revision;
+      documentType = keyframe.document.header.documentType;
     } else {
       document = undefined;
       startRevision = 0;
+      const createOpResult = await this.operationStore.getSince(
+        documentId,
+        "document",
+        branch,
+        -1,
+        { limit: 1 },
+        signal,
+      );
+
+      if (createOpResult.items.length === 0) {
+        throw new Error(
+          `Failed to rebuild document ${documentId}: no CREATE_DOCUMENT operation found in document scope`,
+        );
+      }
+
+      const createOp = createOpResult.items[0];
+      if (createOp.action.type !== "CREATE_DOCUMENT") {
+        throw new Error(
+          `Failed to rebuild document ${documentId}: first operation in document scope must be CREATE_DOCUMENT, found ${createOp.action.type}`,
+        );
+      }
+
+      const documentCreateAction = createOp.action as CreateDocumentAction;
+      documentType = documentCreateAction.input.model;
+      if (!documentType) {
+        throw new Error(
+          `Failed to rebuild document ${documentId}: CREATE_DOCUMENT action missing model in input`,
+        );
+      }
     }
 
-    // Throws ModuleNotFoundError if document type not registered
     const module = this.registry.getModule(documentType);
     let cursor: string | undefined = undefined;
     const pageSize = 100;
@@ -428,13 +435,12 @@ export class KyselyWriteCache implements IWriteCache {
     baseDocument: PHDocument,
     baseRevision: number,
     documentId: string,
-    documentType: string,
     scope: string,
     branch: string,
     targetRevision: number | undefined,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    // Throws ModuleNotFoundError if document type not registered
+    const documentType = baseDocument.header.documentType;
     const module = this.registry.getModule(documentType);
     let document = structuredClone(baseDocument);
 
