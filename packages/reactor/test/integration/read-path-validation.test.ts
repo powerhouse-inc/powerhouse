@@ -23,6 +23,7 @@ import type { Kysely } from "kysely";
 import fs from "node:fs/promises";
 import path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { IWriteCache } from "../../src/cache/write/interfaces.js";
 import { Reactor } from "../../src/core/reactor.js";
 import { EventBus } from "../../src/events/event-bus.js";
 import { SimpleJobExecutorManager } from "../../src/executor/simple-job-executor-manager.js";
@@ -125,12 +126,26 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     const eventBus = new EventBus();
     const queue = new InMemoryQueue(eventBus);
     const jobTracker = new InMemoryJobTracker();
+
+    // Create mock write cache
+    const mockWriteCache: IWriteCache = {
+      getState: vi.fn().mockImplementation(async (docId) => {
+        return await legacyStorage.get(docId);
+      }),
+      putState: vi.fn(),
+      invalidate: vi.fn(),
+      clear: vi.fn(),
+      startup: vi.fn(),
+      shutdown: vi.fn(),
+    };
+
     const executor = new SimpleJobExecutor(
       registry,
       legacyStorage as IDocumentStorage,
       legacyStorage,
       operationStore,
       eventBus,
+      mockWriteCache,
     );
     executorManager = new SimpleJobExecutorManager(
       () => executor,

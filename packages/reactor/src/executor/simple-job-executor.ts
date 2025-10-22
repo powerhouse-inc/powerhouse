@@ -12,6 +12,7 @@ import type {
   UpgradeDocumentActionInput,
 } from "document-model";
 import { createPresignedHeader, defaultBaseState } from "document-model/core";
+import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IEventBus } from "../events/interfaces.js";
 import { OperationEventTypes } from "../events/types.js";
 import type { Job } from "../queue/types.js";
@@ -39,6 +40,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     private operationStorage: IDocumentOperationStorage,
     private operationStore: IOperationStore,
     private eventBus: IEventBus,
+    private writeCache: IWriteCache,
   ) {}
 
   /**
@@ -110,7 +112,12 @@ export class SimpleJobExecutor implements IJobExecutor {
       // For regular actions, load the document and apply through reducer
       let document: PHDocument;
       try {
-        document = await this.documentStorage.get(job.documentId);
+        document = await this.writeCache.getState(
+          job.documentId,
+          job.documentType,
+          job.scope,
+          job.branch,
+        );
       } catch (error) {
         return {
           job,
@@ -199,6 +206,15 @@ export class SimpleJobExecutor implements IJobExecutor {
           duration: Date.now() - startTime,
         };
       }
+
+      this.writeCache.putState(
+        job.documentId,
+        document.header.documentType,
+        scope,
+        job.branch,
+        newOperation.index,
+        updatedDocument,
+      );
 
       operationsWithContext.push({
         operation: newOperation,
@@ -372,6 +388,15 @@ export class SimpleJobExecutor implements IJobExecutor {
       };
     }
 
+    this.writeCache.putState(
+      document.header.id,
+      document.header.documentType,
+      job.scope,
+      job.branch,
+      operation.index,
+      document,
+    );
+
     return {
       job,
       success: true,
@@ -431,7 +456,12 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     let document: PHDocument;
     try {
-      document = await this.documentStorage.get(documentId);
+      document = await this.writeCache.getState(
+        documentId,
+        job.documentType,
+        job.scope,
+        job.branch,
+      );
     } catch (error) {
       return {
         job,
@@ -582,10 +612,15 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     const documentId = input.documentId;
 
-    // Load the document from storage
+    // Load the document from write cache
     let document: PHDocument;
     try {
-      document = await this.documentStorage.get(documentId);
+      document = await this.writeCache.getState(
+        documentId,
+        job.documentType,
+        job.scope,
+        job.branch,
+      );
     } catch (error) {
       return {
         job,
@@ -682,6 +717,15 @@ export class SimpleJobExecutor implements IJobExecutor {
         duration: Date.now() - startTime,
       };
     }
+
+    this.writeCache.putState(
+      documentId,
+      document.header.documentType,
+      job.scope,
+      job.branch,
+      operation.index,
+      document,
+    );
 
     return {
       job,

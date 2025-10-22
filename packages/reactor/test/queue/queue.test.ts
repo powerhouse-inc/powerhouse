@@ -1133,6 +1133,7 @@ describe("InMemoryQueue", () => {
       const job = {
         id: "minimal-job",
         documentId: "doc-1",
+        documentType: "powerhouse/document-drive",
         scope: "global",
         branch: "main",
         actions: [createTestOperation().action],

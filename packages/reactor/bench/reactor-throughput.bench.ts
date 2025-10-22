@@ -1,6 +1,7 @@
 import { MemoryStorage } from "document-drive";
 import { documentModelDocumentModelModule } from "document-model";
-import { beforeAll, bench, describe } from "vitest";
+import { beforeAll, bench, describe, vi } from "vitest";
+import type { IWriteCache } from "../src/cache/write/interfaces.js";
 import { EventBus } from "../src/events/event-bus.js";
 import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
 import { InMemoryQueue } from "../src/queue/queue.js";
@@ -25,6 +26,18 @@ const storage = new MemoryStorage();
 // Create mock operation store for benchmarks
 const operationStore = createMockOperationStore();
 
+// Create mock write cache for benchmarks
+const mockWriteCache: IWriteCache = {
+  getState: vi.fn().mockImplementation(async (docId) => {
+    return await storage.get(docId);
+  }),
+  putState: vi.fn(),
+  invalidate: vi.fn(),
+  clear: vi.fn(),
+  startup: vi.fn(),
+  shutdown: vi.fn(),
+};
+
 // Create real executor with real storage
 const executor = new SimpleJobExecutor(
   registry,
@@ -32,6 +45,7 @@ const executor = new SimpleJobExecutor(
   storage,
   operationStore,
   eventBus,
+  mockWriteCache,
 );
 
 // Pre-create a document for benchmarks
@@ -48,6 +62,7 @@ function createSimpleJob(): Job {
   return {
     id: `job-${jobCounter}`,
     documentId: "doc1",
+    documentType: "powerhouse/document-model",
     scope: "global",
     branch: "main",
     actions: [action],
@@ -70,6 +85,7 @@ function createComplexJob(): Job {
   return {
     id: `job-${++jobCounter}`,
     documentId: "doc1",
+    documentType: "powerhouse/document-model",
     scope: "global",
     branch: "main",
     actions: [action],

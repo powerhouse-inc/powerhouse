@@ -7,6 +7,7 @@ import {
 import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { IWriteCache } from "../../src/cache/write/interfaces.js";
 import type { IReactorClient } from "../../src/client/types.js";
 import { ReactorClientBuilder } from "../../src/core/builder.js";
 import { Reactor } from "../../src/core/reactor.js";
@@ -66,6 +67,18 @@ describe("ReactorClient Passthrough Functions", () => {
     // Create operation store
     const operationStore = createMockOperationStore();
 
+    // Create mock write cache
+    const mockWriteCache: IWriteCache = {
+      getState: vi.fn().mockImplementation(async (docId) => {
+        return await storage.get(docId);
+      }),
+      putState: vi.fn(),
+      invalidate: vi.fn(),
+      clear: vi.fn(),
+      startup: vi.fn(),
+      shutdown: vi.fn(),
+    };
+
     // Create job executor
     const executor = new SimpleJobExecutor(
       registry,
@@ -73,6 +86,7 @@ describe("ReactorClient Passthrough Functions", () => {
       storage,
       operationStore,
       eventBus,
+      mockWriteCache,
     );
 
     // Create job tracker

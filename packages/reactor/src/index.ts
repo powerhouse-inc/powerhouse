@@ -92,11 +92,13 @@ export {
   type DocumentRevisions,
   type DocumentSnapshot,
   type IDocumentView,
+  type IKeyframeStore,
   type IOperationStore,
   type OperationContext,
   type OperationWithContext,
 } from "./storage/interfaces.js";
 export { KyselyOperationStore } from "./storage/kysely/store.js";
+export { KyselyKeyframeStore } from "./storage/kysely/keyframe-store.js";
 export type { Database, OperationTable } from "./storage/kysely/types.js";
 
 // Read Models
@@ -119,3 +121,4 @@ export type {
   WriteCacheConfig,
 } from "./cache/types.js";
 export { type IWriteCache } from "./cache/write/interfaces.js";
+export { KyselyWriteCache } from "./cache/kysely-write-cache.js";
