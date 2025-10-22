@@ -4,6 +4,10 @@
 
 Version 2 of the Renown authentication flow introduces a **pure DID-based architecture** that eliminates the need for Verifiable Credentials (VCs) and Verifiable Presentations (VPs). Instead, it leverages DID documents as the single source of truth for authorization.
 
+## Flow Diagram
+
+![Renown Authentication Flow v2](./authentication-flow-v2.svg)
+
 ## Key Concepts
 
 ### User DID: `did:renown:<phid>`
