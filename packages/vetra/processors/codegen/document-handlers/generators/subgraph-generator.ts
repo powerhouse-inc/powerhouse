@@ -59,7 +59,7 @@ export class SubgraphGenerator extends BaseDocumentGen {
 
         // Update the manifest with the new subgraph
         try {
-          logger.info(
+          logger.debug(
             `🔄 Updating manifest with subgraph: ${state.name} (ID: ${subgraphId})`,
           );
 
@@ -76,7 +76,7 @@ export class SubgraphGenerator extends BaseDocumentGen {
             this.config.CURRENT_WORKING_DIR,
           );
 
-          logger.info(
+          logger.debug(
             `✅ Manifest updated successfully for subgraph: ${state.name}`,
           );
         } catch (manifestError) {

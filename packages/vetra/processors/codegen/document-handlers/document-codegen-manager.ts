@@ -59,7 +59,7 @@ export class DocumentCodegenManager {
       this.generators.set(documentType, generator);
     }
 
-    logger.info(
+    logger.debug(
       `✅ Registered multi-type generator for document types: ${supportedTypes.join(", ")}`,
     );
   }
@@ -133,6 +133,7 @@ export class DocumentCodegenManager {
       }
 
       // Set up debounce timer for batch interactive processing
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises
       const debounceTimer = setTimeout(async () => {
         try {
           await this.interactiveManager.processQueueWithConfirmation(
@@ -162,6 +163,7 @@ export class DocumentCodegenManager {
       }
 
       // Set up new debounced generation (no interactive confirmation)
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises
       const debounceTimer = setTimeout(async () => {
         try {
           logger.debug(
@@ -170,7 +172,7 @@ export class DocumentCodegenManager {
 
           // Direct generation, no interactive confirmation
           await generator.generate(strand);
-          logger.info(
+          logger.debug(
             `✅ Successfully generated code for document type: ${documentType}`,
           );
         } catch (error) {
@@ -240,7 +242,7 @@ export class DocumentCodegenManager {
     try {
       logger.debug(`🔄 Generating code for document type: ${documentType}`);
       await generator.generate(strand);
-      logger.info(
+      logger.debug(
         `✅ Successfully generated code for document type: ${documentType}`,
       );
     } catch (error) {

@@ -66,7 +66,7 @@ export class AppGenerator extends BaseDocumentGen {
 
         // Update the manifest with the new app
         try {
-          logger.info(
+          logger.debug(
             `🔄 Updating manifest with app: ${state.name} (ID: ${appId})`,
           );
 
@@ -83,7 +83,7 @@ export class AppGenerator extends BaseDocumentGen {
             this.config.CURRENT_WORKING_DIR,
           );
 
-          logger.info(
+          logger.debug(
             `✅ Manifest updated successfully for app: ${state.name}`,
           );
         } catch (manifestError) {
