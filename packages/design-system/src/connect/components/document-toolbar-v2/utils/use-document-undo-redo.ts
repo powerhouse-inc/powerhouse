@@ -6,6 +6,8 @@ export function useDocumentUndoRedo(documentId?: string) {
 
   const globalRevisionNumber = document?.header.revision.global ?? 0;
   const localRevisionNumber = document?.header.revision.local ?? 0;
+
+  // TODO: check why undo and redo actions are not working
   const canUndo = globalRevisionNumber > 0 || localRevisionNumber > 0;
   const canRedo = !!document?.clipboard.length;
 
@@ -19,7 +21,7 @@ export function useDocumentUndoRedo(documentId?: string) {
   return {
     undo: handleUndo,
     redo: handleRedo,
-    canUndo,
-    canRedo,
+    canUndo: false,
+    canRedo: false,
   };
 }
