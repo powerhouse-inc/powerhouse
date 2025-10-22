@@ -4,14 +4,13 @@ import type {
 } from "document-drive";
 import type {
   Action,
-  CreateDocumentActionInput,
+  CreateDocumentAction,
   DeleteDocumentActionInput,
   DocumentModelModule,
   Operation,
   PHDocument,
   UpgradeDocumentActionInput,
 } from "document-model";
-import { createPresignedHeader, defaultBaseState } from "document-model/core";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IEventBus } from "../events/interfaces.js";
 import { OperationEventTypes } from "../events/types.js";
@@ -24,7 +23,12 @@ import type {
 } from "../storage/interfaces.js";
 import type { IJobExecutor } from "./interfaces.js";
 import type { JobResult } from "./types.js";
-import { getNextIndexForScope } from "./util.js";
+import {
+  applyDeleteDocumentAction,
+  applyUpgradeDocumentAction,
+  createDocumentFromAction,
+  getNextIndexForScope,
+} from "./util.js";
 
 /**
  * Simple job executor that processes a job by applying actions through document model reducers.
@@ -267,50 +271,18 @@ export class SimpleJobExecutor implements IJobExecutor {
       }>;
     }
   > {
-    const input = action.input as CreateDocumentActionInput;
-
-    // Reconstruct the document from CreateDocumentActionInput
-    const header = createPresignedHeader();
-    header.id = input.documentId;
-    header.documentType = input.model;
-
-    // If signing info is present, populate the header signature fields
-    if (input.signing) {
-      header.createdAtUtcIso = input.signing.createdAtUtcIso;
-      header.lastModifiedAtUtcIso = input.signing.createdAtUtcIso;
-      header.sig = {
-        publicKey: input.signing.publicKey,
-        nonce: input.signing.nonce,
+    if (job.scope !== "document") {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          `CREATE_DOCUMENT must be in "document" scope, got "${job.scope}"`,
+        ),
+        duration: Date.now() - startTime,
       };
     }
 
-    // Populate optional mutable header fields
-    if (input.slug !== undefined) {
-      header.slug = input.slug;
-    }
-    // Default slug to document ID if empty (matching legacy behavior)
-    if (!header.slug) {
-      header.slug = input.documentId;
-    }
-    if (input.name !== undefined) {
-      header.name = input.name;
-    }
-    if (input.branch !== undefined) {
-      header.branch = input.branch;
-    }
-    if (input.meta !== undefined) {
-      header.meta = input.meta;
-    }
-
-    // Construct the document with default base state (UPGRADE_DOCUMENT will set the full state)
-    const baseState = defaultBaseState();
-    const document: PHDocument = {
-      header,
-      operations: {},
-      state: baseState,
-      initialState: baseState,
-      clipboard: [],
-    };
+    const document = createDocumentFromAction(action as CreateDocumentAction);
 
     // Legacy: Store the document in storage
     try {
@@ -509,21 +481,13 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     // Mark the document as deleted in the state for read model indexing
-    const deletedAt = new Date().toISOString();
-    const updatedState = {
-      ...document.state,
-      document: {
-        ...document.state.document,
-        isDeleted: true,
-        deletedAtUtcIso: deletedAt,
-      },
-    };
+    applyDeleteDocumentAction(document, action as never);
 
     // Compute resultingState for passing via context (not persisted)
     // DELETE_DOCUMENT only affects header and document scopes
     const resultingStateObj: Record<string, unknown> = {
       header: document.header,
-      document: updatedState.document,
+      document: document.state.document,
     };
     const resultingState = JSON.stringify(resultingStateObj);
 
@@ -647,13 +611,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     // Apply the initialState from the upgrade action
     // The initialState from UPGRADE_DOCUMENT should be merged with the existing base state
     // to preserve auth and document scopes while adding model-specific scopes (global, local, etc.)
-    if (input.initialState) {
-      document.state = {
-        ...document.state,
-        ...input.initialState,
-      };
-      document.initialState = document.state;
-    }
+    applyUpgradeDocumentAction(document, action as never);
 
     // Create the UPGRADE_DOCUMENT operation with calculated index
     const operation: Operation = {

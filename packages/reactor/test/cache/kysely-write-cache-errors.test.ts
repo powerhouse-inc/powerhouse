@@ -1295,8 +1295,6 @@ describe("KyselyWriteCache - Error Handling (Integration)", () => {
 
   it("should handle real database errors gracefully", async () => {
     const docId = "test-error-doc";
-    const docType = "powerhouse/document-model";
-
     await db.destroy();
 
     await expect(cache.getState(docId, "global", "main", 1)).rejects.toThrow();

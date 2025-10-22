@@ -1,4 +1,9 @@
 import type { CreateDocumentAction, PHDocument } from "document-model";
+import {
+  applyDeleteDocumentAction,
+  applyUpgradeDocumentAction,
+  createDocumentFromAction,
+} from "../executor/util.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import type { IKeyframeStore, IOperationStore } from "../storage/interfaces.js";
 import { RingBuffer } from "./buffer/ring-buffer.js";
@@ -366,6 +371,32 @@ export class KyselyWriteCache implements IWriteCache {
           `Failed to rebuild document ${documentId}: CREATE_DOCUMENT action missing model in input`,
         );
       }
+
+      document = createDocumentFromAction(documentCreateAction);
+
+      const docModule = this.registry.getModule(documentType);
+      const docScopeOps = await this.operationStore.getSince(
+        documentId,
+        "document",
+        branch,
+        0,
+        undefined,
+        signal,
+      );
+
+      for (const operation of docScopeOps.items) {
+        if (operation.index === 0) {
+          continue;
+        }
+
+        if (operation.action.type === "UPGRADE_DOCUMENT") {
+          applyUpgradeDocumentAction(document, operation.action as never);
+        } else if (operation.action.type === "DELETE_DOCUMENT") {
+          applyDeleteDocumentAction(document, operation.action as never);
+        } else {
+          document = docModule.reducer(document, operation.action);
+        }
+      }
     }
 
     const module = this.registry.getModule(documentType);
@@ -396,10 +427,6 @@ export class KyselyWriteCache implements IWriteCache {
             operation.index > targetRevision
           ) {
             break;
-          }
-
-          if (document === undefined) {
-            document = module.utils.createDocument();
           }
 
           // Fail-fast: if reducer throws, error propagates immediately without caching partial state
