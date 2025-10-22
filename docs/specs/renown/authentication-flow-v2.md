@@ -98,10 +98,11 @@ await secureStorage.set('device-did-key', deviceKeypair.privateKey);
 ```
 
 #### Step 2: Redirect to Renown.id
+The Relying Party stores the challenge in their session and redirects:
 ```
 https://renown.id/authorize?
   deviceDid=did:key:zDevice...
-  &challenge=random-nonce-xyz
+  &state=abc123
   &redirectUri=https://vetra.io/callback
 ```
 
@@ -120,10 +121,13 @@ https://renown.id/authorize?
 - DID document updated and stored
 
 #### Step 5: Authentication Response
-- SDK receives confirmation
-- Caches device DID → user DID mapping
-- Signs challenge with device DID
-- Sends to RP for verification
+- Renown.id redirects back: `https://vetra.io/callback?state=abc123&userDid=did:renown:<phid>`
+- RP verifies state parameter
+- RP retrieves challenge from session
+- RP asks SDK to sign the challenge
+- SDK caches device DID → user DID mapping
+- SDK signs challenge with device DID
+- RP verifies signature against DID document
 - Session created for `did:renown:<phid>`
 
 ## Security Model
@@ -257,12 +261,30 @@ class RenownSDK {
   async authenticate(challenge: string, rpDID: string) {
     if (!this.deviceDID || !this.userDID) {
       // Need authorization - redirect to renown.id
-      return this.redirectToAuthorize(challenge);
+      return this.redirectToAuthorize();
     }
 
     // Sign challenge
     const response = await this.signChallenge(challenge, rpDID);
     return response;
+  }
+
+  // Handle callback after authorization
+  async handleCallback(state: string, userDID: string) {
+    const savedState = sessionStorage.getItem('renown-auth-state');
+    if (state !== savedState) {
+      throw new Error('Invalid state parameter');
+    }
+
+    // Store user DID mapping
+    this.userDID = userDID;
+    await this.storage.set('device-did', {
+      did: this.deviceDID,
+      keyPair: this.deviceKeyPair,
+      userDID
+    });
+
+    sessionStorage.removeItem('renown-auth-state');
   }
 
   private async signChallenge(nonce: string, audience: string) {
@@ -284,10 +306,13 @@ class RenownSDK {
     return createJWT(payload, signature);
   }
 
-  private redirectToAuthorize(challenge: string) {
+  private redirectToAuthorize() {
+    const state = crypto.randomUUID();
+    sessionStorage.setItem('renown-auth-state', state);
+
     const params = new URLSearchParams({
       deviceDid: this.deviceDID!,
-      challenge,
+      state,
       redirectUri: window.location.href
     });
 

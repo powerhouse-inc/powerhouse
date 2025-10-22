@@ -63,8 +63,9 @@ sequenceDiagram
         %% First-time or refresh flow
         Note over User,Wallet: 🔄 DID Setup & Authorization (First time or refresh)
 
-        Vetra->>Browser: Redirect to renown.id<br/>(with challenge + device DID in params)
-        Browser->>Renown: Load auth page<br/>?deviceDid=did:key:zDevice...<br/>&challenge=xyz
+        Vetra->>Vetra: Store challenge in session
+        Vetra->>Browser: Redirect to renown.id<br/>(with device DID + state)
+        Browser->>Renown: Load auth page<br/>?deviceDid=did:key:zDevice...<br/>&state=abc&redirectUri=vetra.io/callback
         activate Renown
 
         Note over Renown: Received device DID:<br/>did:key:zDevice...
@@ -113,10 +114,14 @@ sequenceDiagram
         Note over Renown: 📄 Updated DID Document<br/>════════════════════════<br/>{<br/>  "id": "did:renown:<phid>",<br/>  "controller": ["did:pkh:eip155:1:0x1AD3d7..."],<br/>  "authentication": [<br/>    {<br/>      "id": "did:renown:<phid>#eth-key-1",<br/>      "type": "EcdsaSecp256k1RecoveryMethod2020",<br/>      "controller": "did:renown:<phid>",<br/>      "blockchainAccountId": "eip155:1:0x1AD3d7..."<br/>    },<br/>    {<br/>      "id": "did:renown:<phid>#device-key-1",<br/>      "type": "Ed25519VerificationKey2020",<br/>      "controller": "did:renown:<phid>",<br/>      "publicKeyMultibase": "zDevice...",<br/>      "expiresAt": "2025-11-22T00:00:00Z"<br/>    }<br/>  ],<br/>  "assertionMethod": [...],<br/>  "capabilityDelegation": [...]<br/>}
 
         Renown->>Renown: Store DID document in drive
-        Renown->>Browser: Device authorized<br/>Return user DID + success
+        Renown->>Browser: Redirect to callback<br/>vetra.io/callback?state=abc&userDid=did:renown:<phid>
         deactivate Renown
 
-        Browser->>SDK: Store authorization<br/>(device DID + user DID mapping)
+        Browser->>Vetra: Return to callback with state
+        activate Vetra
+        Vetra->>Vetra: Verify state parameter<br/>Retrieve challenge from session
+
+        Vetra->>SDK: Request signed challenge
         activate SDK
         SDK->>SDK: Cache authorization:<br/>- Device DID → User DID mapping<br/>- Authorization timestamp<br/>- Expiration time
         SDK->>SDK: Sign challenge with device DID
@@ -137,13 +142,12 @@ sequenceDiagram
 
         Vetra->>Vetra: 1. Verify device DID in auth methods<br/>2. Verify signature with device public key<br/>3. Check not expired/revoked
         Vetra->>Vetra: Create session for did:renown:<phid>
+        deactivate Vetra
         Vetra->>Browser: Redirect to dashboard
         Browser->>User: Access granted
 
         Note over User: 🎉 Authenticated!<br/>(Device DID authorized)
     end
-
-    deactivate Vetra
 
     %% Background processes
     rect
