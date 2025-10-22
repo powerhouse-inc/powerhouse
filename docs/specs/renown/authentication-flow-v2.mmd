@@ -1,0 +1,189 @@
+sequenceDiagram
+    participant User as 👤 User
+    participant Browser as 🌐 Browser/App
+    participant SDK as 🔑 Renown SDK<br/>(with Cache)
+    participant Vetra as vetra.io<br/>(Verifier/RP)
+    participant Renown as renown.id<br/>(Issuer/IdP)
+    participant Wallet as 🦊 MetaMask<br/>(ETH Wallet)
+
+    Note over User,Wallet: 🚀 DID-Based Authentication Flow (v2)
+
+    %% Check for cached credential
+    User->>Vetra: Click "Login"
+    activate Vetra
+
+    Note over Vetra: 🔐 Generate challenge nonce<br/>(prevent replay attacks)
+    Vetra->>Vetra: Generate random challenge
+
+    Vetra->>SDK: Request auth + challenge nonce
+
+    alt Has valid device DID authorization
+        activate SDK
+        Note over SDK: ✅ Found valid device DID<br/>Not expired, not revoked
+
+        SDK->>SDK: Get device DID (did:key:zDevice...)<br/>& associated user DID (did:renown:<phid>)
+
+        Note over SDK: 🔐 Sign challenge with device DID
+        SDK->>SDK: Create signed authentication response
+
+        Note over SDK: 📦 Signed Challenge Response<br/>════════════════════════<br/>Header: {"typ":"JWT", "alg":"EdDSA"}<br/>────────────────────────<br/>Payload:<br/>{<br/>  "iss": "did:key:zDevice...",<br/>  "sub": "did:renown:<phid>",<br/>  "aud": "did:web:vetra.io",<br/>  "nonce": "random-nonce-xyz",<br/>  "iat": 1761028500,<br/>  "exp": 1761029100<br/>}<br/>────────────────────────<br/>Signature: [Device DID Private Key]
+
+        SDK->>Vetra: Return signed response<br/>(device DID + user DID + signature)
+        deactivate SDK
+
+        Note over Vetra: ⚡ Fast path verification
+        Vetra->>Vetra: 1. Verify challenge matches<br/>2. Extract device & user DIDs
+
+        %% Check device DID authorization
+        Vetra->>Renown: Fetch DID document<br/>did:renown:<phid>
+        activate Renown
+        Renown->>Renown: Retrieve DID document<br/>Check authentication methods
+        Renown->>Vetra: DID document with<br/>authorized device DIDs
+        deactivate Renown
+
+        Vetra->>Vetra: 1. Verify device DID in auth methods<br/>2. Verify signature with device public key<br/>3. Check not expired/revoked
+        Vetra->>Vetra: Create session for did:renown:<phid>
+        Vetra->>Browser: Redirect to dashboard
+        Browser->>User: Access granted
+
+        Note over User: 🎉 Instant Login!<br/>(~500ms)
+
+    else No device DID authorization
+        activate SDK
+        Note over SDK: ❌ No valid device DID authorization
+
+        Note over SDK: 🔑 Generate Device DID locally
+        SDK->>SDK: Generate device DID keypair<br/>did:key:zDevice...
+
+        Note over SDK: 💾 Store device key securely:<br/>- Browser: IndexedDB (encrypted)<br/>- Mobile: Secure Enclave<br/>- Desktop: OS Keychain
+
+        SDK->>Vetra: Need authorization<br/>(with device DID)
+        deactivate SDK
+
+        %% First-time or refresh flow
+        Note over User,Wallet: 🔄 DID Setup & Authorization (First time or refresh)
+
+        Vetra->>Browser: Redirect to renown.id<br/>(with challenge + device DID in params)
+        Browser->>Renown: Load auth page<br/>?deviceDid=did:key:zDevice...<br/>&challenge=xyz
+        activate Renown
+
+        Note over Renown: Received device DID:<br/>did:key:zDevice...
+
+        Renown->>Wallet: Request wallet connection
+        activate Wallet
+        Wallet->>User: Connect wallet request
+        User->>Wallet: Approve connection
+        Wallet->>Renown: Connected (0x1AD3d7...)
+        deactivate Wallet
+
+        alt User DID already exists (did:renown:<phid>)
+            Note over Renown: ✅ Found existing did:renown:<phid><br/>for wallet 0x1AD3d7...
+
+        else First time - Create user DID
+            Note over Renown: 🆕 Create did:renown:<phid>
+
+            Note over Renown: Create did:renown:<phid>
+            Renown->>Renown: Generate phid from eth address
+            Renown->>Renown: Create DID document
+
+            Note over Renown: 📄 DID Document<br/>════════════════════════<br/>{<br/>  "id": "did:renown:<phid>",<br/>  "controller": ["did:pkh:eip155:1:0x1AD3d7..."],<br/>  "authentication": [<br/>    {<br/>      "id": "did:renown:<phid>#eth-key-1",<br/>      "type": "EcdsaSecp256k1RecoveryMethod2020",<br/>      "controller": "did:renown:<phid>",<br/>      "blockchainAccountId": "eip155:1:0x1AD3d7..."<br/>    }<br/>  ],<br/>  "assertionMethod": [],<br/>  "capabilityDelegation": []<br/>}
+
+            Renown->>Wallet: Request signature to authorize DID
+            activate Wallet
+            Wallet->>User: Sign message<br/>"Authorize did:renown:<phid>"
+            User->>Wallet: Approve signature
+            Wallet->>Renown: Signature
+            deactivate Wallet
+
+            Renown->>Renown: Store DID document in drive
+        end
+
+        %% Authorize device DID
+        Note over Renown: 🔐 Authorize device DID<br/>did:key:zDevice...
+
+        Renown->>Wallet: Request signature to authorize device
+        activate Wallet
+        Wallet->>User: Sign authorization<br/>"Authorize device did:key:zDevice...<br/>to act on behalf of did:renown:<phid>"
+        User->>Wallet: Approve signature
+        Wallet->>Renown: Signature
+        deactivate Wallet
+
+        Renown->>Renown: Update DID document<br/>Add device to authentication
+
+        Note over Renown: 📄 Updated DID Document<br/>════════════════════════<br/>{<br/>  "id": "did:renown:<phid>",<br/>  "controller": ["did:pkh:eip155:1:0x1AD3d7..."],<br/>  "authentication": [<br/>    {<br/>      "id": "did:renown:<phid>#eth-key-1",<br/>      "type": "EcdsaSecp256k1RecoveryMethod2020",<br/>      "controller": "did:renown:<phid>",<br/>      "blockchainAccountId": "eip155:1:0x1AD3d7..."<br/>    },<br/>    {<br/>      "id": "did:renown:<phid>#device-key-1",<br/>      "type": "Ed25519VerificationKey2020",<br/>      "controller": "did:renown:<phid>",<br/>      "publicKeyMultibase": "zDevice...",<br/>      "expiresAt": "2025-11-22T00:00:00Z"<br/>    }<br/>  ],<br/>  "assertionMethod": [...],<br/>  "capabilityDelegation": [...]<br/>}
+
+        Renown->>Renown: Store DID document in drive
+        Renown->>Browser: Device authorized<br/>Return user DID + success
+        deactivate Renown
+
+        Browser->>SDK: Store authorization<br/>(device DID + user DID mapping)
+        activate SDK
+        SDK->>SDK: Cache authorization:<br/>- Device DID → User DID mapping<br/>- Authorization timestamp<br/>- Expiration time
+        SDK->>SDK: Sign challenge with device DID
+
+        Note over SDK: 📦 Signed Challenge Response<br/>════════════════════════<br/>Header: {"typ":"JWT", "alg":"EdDSA"}<br/>────────────────────────<br/>Payload:<br/>{<br/>  "iss": "did:key:zDevice...",<br/>  "sub": "did:renown:<phid>",<br/>  "aud": "did:web:vetra.io",<br/>  "nonce": "random-nonce-xyz",<br/>  "iat": 1761028500,<br/>  "exp": 1761029100<br/>}<br/>────────────────────────<br/>Signature: [Device DID Private Key]
+
+        SDK->>Vetra: Return signed response
+        deactivate SDK
+
+        %% Verification
+        Vetra->>Vetra: 1. Verify challenge matches<br/>2. Extract device & user DIDs
+
+        Vetra->>Renown: Fetch DID document<br/>did:renown:<phid>
+        activate Renown
+        Renown->>Renown: Retrieve DID document
+        Renown->>Vetra: DID document with<br/>authorized device DIDs
+        deactivate Renown
+
+        Vetra->>Vetra: 1. Verify device DID in auth methods<br/>2. Verify signature with device public key<br/>3. Check not expired/revoked
+        Vetra->>Vetra: Create session for did:renown:<phid>
+        Vetra->>Browser: Redirect to dashboard
+        Browser->>User: Access granted
+
+        Note over User: 🎉 Authenticated!<br/>(Device DID authorized)
+    end
+
+    deactivate Vetra
+
+    %% Background processes
+    rect
+        Note over SDK,Renown: 🔄 Background Optimizations
+
+        par Periodic authorization check
+            Note over SDK: Every 5 minutes
+            SDK->>Renown: Fetch DID document<br/>Check device still authorized
+            Renown->>SDK: DID document
+            alt Revoked/Expired
+                SDK->>SDK: Clear device DID<br/>Require re-authorization
+            end
+        and Session keep-alive
+            Note over Vetra: Extend session
+            Vetra->>Vetra: Refresh JWT token
+        and DID document caching
+            Note over SDK: Cache DID document<br/>(5 min TTL)
+            SDK->>SDK: Reduce network calls<br/>for frequent logins
+        end
+    end
+
+    %% Device management
+    rect
+        Note over User,Renown: 🔐 Device Management
+
+        opt User wants to manage devices
+            User->>Renown: View authorized devices
+            Renown->>Renown: List all device DIDs<br/>from DID document
+            Renown->>User: Show devices:<br/>- Browser (Chrome/Mac)<br/>- Mobile (iOS)<br/>- Desktop App
+
+            opt User revokes device
+                User->>Renown: Revoke device DID
+                Renown->>Wallet: Request signature
+                activate Wallet
+                Wallet->>User: Confirm revocation
+                User->>Wallet: Approve
+                Wallet->>Renown: Signature
+                deactivate Wallet
+                Renown->>Renown: Update DID document<br/>Remove device from authentication
+                Renown->>User: Device revoked
+            end
+        end
+    end
