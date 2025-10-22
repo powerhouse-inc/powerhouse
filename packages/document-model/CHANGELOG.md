@@ -1,3 +1,7 @@
+## 4.1.0-dev.84 (2025-10-22)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.83 (2025-10-22)
 
 ### 🚀 Features

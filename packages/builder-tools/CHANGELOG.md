@@ -1,3 +1,13 @@
+## 4.1.0-dev.84 (2025-10-22)
+
+### 🩹 Fixes
+
+- update form labels to indicate required fields ([1b76136e0](https://github.com/powerhouse-inc/powerhouse/commit/1b76136e0))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.83 (2025-10-22)
 
 ### 🚀 Features

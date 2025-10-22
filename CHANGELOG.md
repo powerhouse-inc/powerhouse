@@ -1,3 +1,19 @@
+## 4.1.0-dev.84 (2025-10-22)
+
+### 🚀 Features
+
+- **connect,codegen:** move dropzone wrapper component to connect ([#2018](https://github.com/powerhouse-inc/powerhouse/pull/2018))
+
+### 🩹 Fixes
+
+- update form labels to indicate required fields ([1b76136e0](https://github.com/powerhouse-inc/powerhouse/commit/1b76136e0))
+- **vetra:** improve logging for validation errors in document model generation ([700854ce0](https://github.com/powerhouse-inc/powerhouse/commit/700854ce0))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 4.1.0-dev.83 (2025-10-22)
 
 ### 🚀 Features

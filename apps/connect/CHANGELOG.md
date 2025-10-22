@@ -1,3 +1,13 @@
+## 4.1.0-dev.84 (2025-10-22)
+
+### 🚀 Features
+
+- **connect,codegen:** move dropzone wrapper component to connect ([#2018](https://github.com/powerhouse-inc/powerhouse/pull/2018))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 4.1.0-dev.83 (2025-10-22)
 
 ### 🚀 Features
