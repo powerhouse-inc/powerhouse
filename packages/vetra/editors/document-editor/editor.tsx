@@ -1,3 +1,4 @@
+import { DocumentToolbar } from "@powerhousedao/design-system";
 import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
 import { useCallback } from "react";
 import type {
@@ -43,6 +44,7 @@ export function Editor() {
 
   return (
     <div>
+      <DocumentToolbar timelineButtonVisible />
       <DocumentEditorForm
         status={document.state.global.status}
         editorName={document.state.global.name ?? ""}

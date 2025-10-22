@@ -1,3 +1,4 @@
+import { DocumentToolbar } from "@powerhousedao/design-system";
 import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
 import { useCallback } from "react";
 import { actions } from "../../document-models/vetra-package/index.js";
@@ -5,7 +6,12 @@ import { useSelectedDriveVetraPackage } from "../hooks/useVetraDocument.js";
 import { MetaForm } from "./components/MetaForm.js";
 import { editorConfig } from "./config.js";
 
-export function Editor() {
+export type EditorProps = {
+  displayToolbar?: boolean;
+};
+
+export function Editor(props: EditorProps) {
+  const { displayToolbar = true } = props;
   useSetPHDocumentEditorConfig(editorConfig);
   const [document, dispatch] = useSelectedDriveVetraPackage();
 
@@ -89,6 +95,7 @@ export function Editor() {
 
   return (
     <div>
+      {displayToolbar && <DocumentToolbar timelineButtonVisible />}
       <MetaForm
         name={document.state.global.name ?? ""}
         description={document.state.global.description ?? ""}
