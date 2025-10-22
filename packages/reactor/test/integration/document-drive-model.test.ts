@@ -60,6 +60,16 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
   let operationStore: KyselyOperationStore;
   let readModelCoordinator: ReadModelCoordinator;
 
+  async function createDocumentViaReactor(
+    document: DocumentDriveDocument,
+  ): Promise<void> {
+    const createJobInfo = await reactor.create(document);
+    await vi.waitUntil(async () => {
+      const jobStatus = await reactor.getJobStatus(createJobInfo.id);
+      return jobStatus.status === JobStatus.COMPLETED;
+    });
+  }
+
   beforeEach(async () => {
     // Setup real components
     storage = new MemoryStorage();
@@ -141,9 +151,9 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
 
   describe("ADD Operations", () => {
     it("should add a folder via reactor.mutate", async () => {
-      // Create a document-drive document
+      // Create a document-drive document using reactor.create()
       const document = driveDocumentModelModule.utils.createDocument();
-      await storage.create(document);
+      await createDocumentViaReactor(document);
 
       // Create an ADD_FOLDER action
       const folderId = generateId();
@@ -182,7 +192,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
 
     it("should add a file via reactor.mutate", async () => {
       const document = driveDocumentModelModule.utils.createDocument();
-      await storage.create(document);
+      await createDocumentViaReactor(document);
 
       // First add a folder
       const folderId = generateId();
@@ -243,7 +253,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
 
     it("should handle nested folder structure", async () => {
       const document = driveDocumentModelModule.utils.createDocument();
-      await storage.create(document);
+      await createDocumentViaReactor(document);
 
       // Create a hierarchy: root -> folder1 -> folder2 -> folder3
       const folder1Id = generateId();
@@ -300,7 +310,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
   describe("UPDATE Operations", () => {
     it("should update a file via reactor.mutate", async () => {
       const document = driveDocumentModelModule.utils.createDocument();
-      await storage.create(document);
+      await createDocumentViaReactor(document);
 
       // Add a file first
       const fileId = generateId();
@@ -350,7 +360,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
 
     it("should update a node (folder) via reactor.mutate", async () => {
       const document = driveDocumentModelModule.utils.createDocument();
-      await storage.create(document);
+      await createDocumentViaReactor(document);
 
       // Add a folder first
       const folderId = generateId();
@@ -399,7 +409,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
   describe("DELETE Operations", () => {
     it("should delete a node via reactor.mutate", async () => {
       const document = driveDocumentModelModule.utils.createDocument();
-      await storage.create(document);
+      await createDocumentViaReactor(document);
 
       // Add a folder first
       const folderId = generateId();
@@ -442,7 +452,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
 
     it("should delete children when parent is deleted", async () => {
       const document = driveDocumentModelModule.utils.createDocument();
-      await storage.create(document);
+      await createDocumentViaReactor(document);
 
       // Create parent folder with children
       const parentId = generateId();
@@ -507,7 +517,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
   describe("MOVE Operations", () => {
     it("should move a node to a different parent", async () => {
       const document = driveDocumentModelModule.utils.createDocument();
-      await storage.create(document);
+      await createDocumentViaReactor(document);
 
       // Create folder structure
       const folder1Id = generateId();
@@ -566,7 +576,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
 
     it("should move a node to root when targetParentFolder is null", async () => {
       const document = driveDocumentModelModule.utils.createDocument();
-      await storage.create(document);
+      await createDocumentViaReactor(document);
 
       // Create nested folder
       const parentId = generateId();
@@ -619,7 +629,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
 
     it("should prevent moving folder to its descendant", async () => {
       const document = driveDocumentModelModule.utils.createDocument();
-      await storage.create(document);
+      await createDocumentViaReactor(document);
 
       // Create nested folders
       const folder1Id = generateId();
@@ -681,7 +691,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
   describe("COPY Operations", () => {
     it("should copy a node to a different parent", async () => {
       const document = driveDocumentModelModule.utils.createDocument();
-      await storage.create(document);
+      await createDocumentViaReactor(document);
 
       // Create folder structure
       const folder1Id = generateId();
@@ -749,7 +759,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
 
     it("should copy a node with a new name", async () => {
       const document = driveDocumentModelModule.utils.createDocument();
-      await storage.create(document);
+      await createDocumentViaReactor(document);
 
       // Create source folder
       const sourceId = generateId();
@@ -796,7 +806,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
 
     it("should copy a single node", async () => {
       const document = driveDocumentModelModule.utils.createDocument();
-      await storage.create(document);
+      await createDocumentViaReactor(document);
 
       // Create source structure
       const parentId = generateId();
@@ -888,7 +898,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
   describe("Drive-level Operations", () => {
     it("should set drive name via reactor.mutate", async () => {
       const document = driveDocumentModelModule.utils.createDocument();
-      await storage.create(document);
+      await createDocumentViaReactor(document);
 
       // Set drive name
       const action = setDriveName({
@@ -911,7 +921,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
 
     it("should set drive icon via reactor.mutate", async () => {
       const document = driveDocumentModelModule.utils.createDocument();
-      await storage.create(document);
+      await createDocumentViaReactor(document);
 
       // Set drive icon
       const action = setDriveIcon({
@@ -934,7 +944,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
 
     it("should set sharing type via reactor.mutate", async () => {
       const document = driveDocumentModelModule.utils.createDocument();
-      await storage.create(document);
+      await createDocumentViaReactor(document);
 
       // Set sharing type (note: this is a local operation)
       const action = setSharingType({
@@ -957,7 +967,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
 
     it("should set available offline via reactor.mutate", async () => {
       const document = driveDocumentModelModule.utils.createDocument();
-      await storage.create(document);
+      await createDocumentViaReactor(document);
 
       // Set available offline (note: this is a local operation)
       const action = setAvailableOffline({
@@ -982,7 +992,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
   describe("Batch Operations", () => {
     it("should process multiple operations in a single mutate call", async () => {
       const document = driveDocumentModelModule.utils.createDocument();
-      await storage.create(document);
+      await createDocumentViaReactor(document);
 
       // Create multiple operations
       const folder1Id = generateId();
@@ -1050,7 +1060,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
 
     it("should maintain operation order in batch processing", async () => {
       const document = driveDocumentModelModule.utils.createDocument();
-      await storage.create(document);
+      await createDocumentViaReactor(document);
 
       // Operations that depend on each other
       const folderId = generateId();
@@ -1105,7 +1115,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
   describe("Error Handling", () => {
     it("should handle invalid node references gracefully", async () => {
       const document = driveDocumentModelModule.utils.createDocument();
-      await storage.create(document);
+      await createDocumentViaReactor(document);
 
       // Try to add a file to a non-existent folder
       const fileId = generateId();
@@ -1142,7 +1152,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
 
     it("should handle duplicate node IDs", async () => {
       const document = driveDocumentModelModule.utils.createDocument();
-      await storage.create(document);
+      await createDocumentViaReactor(document);
 
       const duplicateId = generateId();
 
@@ -1178,7 +1188,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
 
     it("should handle name collisions", async () => {
       const document = driveDocumentModelModule.utils.createDocument();
-      await storage.create(document);
+      await createDocumentViaReactor(document);
 
       const folder1Id = generateId();
       const folder2Id = generateId();
@@ -1219,7 +1229,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
 
     it("should continue processing after encountering an error", async () => {
       const document = driveDocumentModelModule.utils.createDocument();
-      await storage.create(document);
+      await createDocumentViaReactor(document);
 
       const folder1Id = generateId();
       const folder2Id = generateId();
@@ -1267,7 +1277,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
   describe("Complex Scenarios", () => {
     it("should handle complex file reorganization", async () => {
       const document = driveDocumentModelModule.utils.createDocument();
-      await storage.create(document);
+      await createDocumentViaReactor(document);
 
       // Create initial structure
       const docsId = generateId();
@@ -1378,7 +1388,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
 
     it("should handle project template creation", async () => {
       const document = driveDocumentModelModule.utils.createDocument();
-      await storage.create(document);
+      await createDocumentViaReactor(document);
 
       // Create a project template structure
       const projectId = generateId();

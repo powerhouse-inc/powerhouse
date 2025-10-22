@@ -36,6 +36,21 @@ describe("SimpleJobExecutor", () => {
           documentType: "powerhouse/document-model",
         },
         operations: {
+          document: [
+            {
+              index: 0,
+              action: {
+                type: "CREATE_DOCUMENT",
+                id: "create-action",
+                scope: "document",
+                timestampUtcMs: "1234567890",
+                input: {
+                  documentId: "doc-1",
+                  model: "powerhouse/document-model",
+                },
+              },
+            },
+          ],
           global: [],
           local: [],
         },
@@ -117,13 +132,30 @@ describe("SimpleJobExecutor", () => {
     });
 
     it("should handle missing reducer", async () => {
-      // Mock a document with unknown type
+      // Mock a document with unknown type but with CREATE_DOCUMENT to pass validation
       mockDocStorage.get = vi.fn().mockResolvedValue({
         header: {
           id: "doc-1",
           documentType: "unknown/type",
         },
-        operations: { global: [] },
+        operations: {
+          document: [
+            {
+              index: 0,
+              action: {
+                type: "CREATE_DOCUMENT",
+                id: "create-action",
+                scope: "document",
+                timestampUtcMs: "1234567890",
+                input: {
+                  documentId: "doc-1",
+                  model: "unknown/type",
+                },
+              },
+            },
+          ],
+          global: [],
+        },
         state: {
           document: {
             isDeleted: false,
@@ -192,6 +224,36 @@ describe("SimpleJobExecutor", () => {
   describe("executeDeleteDocument", () => {
     it("should delete document successfully", async () => {
       const documentId = "doc-to-delete";
+
+      mockDocStorage.get = vi.fn().mockResolvedValue({
+        header: {
+          id: documentId,
+          documentType: "powerhouse/document-model",
+        },
+        operations: {
+          document: [
+            {
+              index: 0,
+              action: {
+                type: "CREATE_DOCUMENT",
+                id: "create-action",
+                scope: "document",
+                timestampUtcMs: "1234567890",
+                input: {
+                  documentId,
+                  model: "powerhouse/document-model",
+                },
+              },
+            },
+          ],
+        },
+        state: {
+          document: {
+            isDeleted: false,
+          },
+        },
+      });
+
       const job: Job = {
         id: "delete-job-1",
         documentId,
@@ -222,6 +284,36 @@ describe("SimpleJobExecutor", () => {
 
     it("should return error if document deletion fails", async () => {
       const documentId = "doc-delete-fail";
+
+      mockDocStorage.get = vi.fn().mockResolvedValue({
+        header: {
+          id: documentId,
+          documentType: "powerhouse/document-model",
+        },
+        operations: {
+          document: [
+            {
+              index: 0,
+              action: {
+                type: "CREATE_DOCUMENT",
+                id: "create-action",
+                scope: "document",
+                timestampUtcMs: "1234567890",
+                input: {
+                  documentId,
+                  model: "powerhouse/document-model",
+                },
+              },
+            },
+          ],
+        },
+        state: {
+          document: {
+            isDeleted: false,
+          },
+        },
+      });
+
       const job: Job = {
         id: "delete-job-2",
         documentId,
@@ -373,47 +465,6 @@ describe("SimpleJobExecutor", () => {
         expect(result.operations?.length).toBe(1);
         // Should be 2 (next index in document scope), not 4 (global indexing)
         expect(result.operations?.[0].index).toBe(2);
-      });
-
-      it("should assign index 0 when document has no operations", async () => {
-        const documentId = "doc-no-ops";
-        mockDocStorage.get = vi.fn().mockResolvedValue({
-          header: {
-            id: documentId,
-            documentType: "powerhouse/document-model",
-          },
-          operations: {},
-          state: {
-            document: {
-              isDeleted: false,
-            },
-          },
-        });
-
-        const job: Job = {
-          id: "delete-job-no-ops",
-          documentId,
-          scope: "document",
-          branch: "main",
-          actions: [
-            {
-              id: "delete-action-no-ops",
-              type: "DELETE_DOCUMENT",
-              scope: "document",
-              timestampUtcMs: "1234567890",
-              input: { documentId },
-            },
-          ],
-          createdAt: "1234567890",
-          queueHint: [],
-        };
-
-        mockDocStorage.delete = vi.fn().mockResolvedValue(undefined);
-
-        const result = await executor.executeJob(job);
-
-        expect(result.success).toBe(true);
-        expect(result.operations?.[0].index).toBe(0);
       });
     });
 
@@ -738,6 +789,77 @@ describe("SimpleJobExecutor", () => {
         // Second operation (UPGRADE_DOCUMENT) should have index 1
         expect(result.operations?.[1].index).toBe(1);
         expect(result.operations?.[1].action.type).toBe("UPGRADE_DOCUMENT");
+      });
+    });
+  });
+
+  describe("CREATE_DOCUMENT guarantee", () => {
+    describe("CREATE_DOCUMENT scope validation", () => {
+      it("should reject CREATE_DOCUMENT in non-document scope", async () => {
+        const documentId = "new-doc-wrong-scope";
+        const job: Job = {
+          id: "create-job-wrong-scope",
+          documentId,
+          scope: "global",
+          branch: "main",
+          actions: [
+            {
+              id: "create-action-wrong-scope",
+              type: "CREATE_DOCUMENT",
+              scope: "global",
+              timestampUtcMs: "1234567890",
+              input: {
+                documentId,
+                model: "powerhouse/document-model",
+                slug: "test-doc",
+                name: "Test Document",
+              },
+            },
+          ],
+          createdAt: "1234567890",
+          queueHint: [],
+        };
+
+        const result = await executor.executeJob(job);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toBeDefined();
+        expect(result.error?.message).toContain(
+          'CREATE_DOCUMENT must be in "document" scope',
+        );
+      });
+
+      it("should accept CREATE_DOCUMENT in document scope", async () => {
+        const documentId = "new-doc-correct-scope";
+        const job: Job = {
+          id: "create-job-correct-scope",
+          documentId,
+          scope: "document",
+          branch: "main",
+          actions: [
+            {
+              id: "create-action-correct-scope",
+              type: "CREATE_DOCUMENT",
+              scope: "document",
+              timestampUtcMs: "1234567890",
+              input: {
+                documentId,
+                model: "powerhouse/document-model",
+                slug: "test-doc",
+                name: "Test Document",
+              },
+            },
+          ],
+          createdAt: "1234567890",
+          queueHint: [],
+        };
+
+        mockDocStorage.create = vi.fn().mockResolvedValue(undefined);
+
+        const result = await executor.executeJob(job);
+
+        expect(result.success).toBe(true);
+        expect(result.operations?.[0].index).toBe(0);
       });
     });
   });
