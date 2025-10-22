@@ -7,6 +7,7 @@ import {
   setSelectedNode,
   setSelectedTimelineItem,
   showRevisionHistory,
+  useDocumentById,
   useNodeParentFolderById,
   useSelectedDocument,
 } from "@powerhousedao/reactor-browser";
@@ -21,6 +22,7 @@ import {
 } from "./utils/index.js";
 
 export type DocumentToolbarV2Props = {
+  documentId?: string;
   title?: string;
   className?: string;
   undo?: () => void;
@@ -40,6 +42,7 @@ export type DocumentToolbarV2Props = {
 
 export const DocumentToolbarV2: React.FC<DocumentToolbarV2Props> = (props) => {
   const {
+    documentId,
     undo,
     canUndo,
     redo,
@@ -57,13 +60,16 @@ export const DocumentToolbarV2: React.FC<DocumentToolbarV2Props> = (props) => {
     timelineButtonVisible = false,
   } = props;
 
-  const [document] = useSelectedDocument();
+  const [selectedDoc] = useSelectedDocument();
+  const [docById] = useDocumentById(documentId);
+  const document = documentId ? docById : selectedDoc;
+
   const documentName = title || document?.header.name || undefined;
   const parentFolder = useNodeParentFolderById(document?.header.id);
   const handleClose = onClose || (() => setSelectedNode(parentFolder));
   const handleExport = onExport || exportDocument;
 
-  const documentUndoRedo = useDocumentUndoRedo();
+  const documentUndoRedo = useDocumentUndoRedo(document?.header.id);
   const handleUndo = undo || documentUndoRedo.undo;
   const handleRedo = redo || documentUndoRedo.redo;
   const handleCanUndo = canUndo ?? documentUndoRedo.canUndo;
@@ -71,7 +77,7 @@ export const DocumentToolbarV2: React.FC<DocumentToolbarV2Props> = (props) => {
   const handleShowRevisionHistory =
     onShowRevisionHistory || showRevisionHistory;
 
-  const timelineItemsData = useDocumentTimeline();
+  const timelineItemsData = useDocumentTimeline(document?.header.id);
   const handleTimelineItemClick =
     onTimelineItemClick || setSelectedTimelineItem;
   const finalTimelineItems = timelineItems || timelineItemsData;

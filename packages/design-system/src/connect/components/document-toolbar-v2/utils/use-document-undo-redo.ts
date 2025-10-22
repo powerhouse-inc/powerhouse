@@ -1,8 +1,8 @@
-import { useSelectedDocument } from "@powerhousedao/reactor-browser";
+import { useDocumentById } from "@powerhousedao/reactor-browser";
 import { redo, undo } from "document-model/core";
 
-export function useDocumentUndoRedo() {
-  const [document, dispatch] = useSelectedDocument();
+export function useDocumentUndoRedo(documentId?: string) {
+  const [document, dispatch] = useDocumentById(documentId);
 
   const globalRevisionNumber = document?.header.revision.global ?? 0;
   const localRevisionNumber = document?.header.revision.local ?? 0;

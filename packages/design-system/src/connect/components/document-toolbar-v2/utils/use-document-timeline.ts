@@ -1,13 +1,14 @@
 import {
-  useSelectedDocument,
+  useDocumentById,
   useTimelineItems,
 } from "@powerhousedao/reactor-browser";
 
-export function useDocumentTimeline() {
-  const [document] = useSelectedDocument();
-  const documentId = document?.header.id;
+export function useDocumentTimeline(documentId?: string) {
+  const [document] = useDocumentById(documentId);
+
+  const id = document?.header.id;
   const createdAt = document?.header.createdAtUtcIso;
-  const timelineItems = useTimelineItems(documentId, createdAt);
+  const timelineItems = useTimelineItems(id, createdAt);
 
   return timelineItems.data || [];
 }
