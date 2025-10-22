@@ -3,10 +3,7 @@ import {
   toast,
   useUndoRedoShortcuts,
 } from "@powerhousedao/connect";
-import {
-  PowerhouseButton,
-  RevisionHistory,
-} from "@powerhousedao/design-system";
+import { RevisionHistory } from "@powerhousedao/design-system";
 import {
   getRevisionFromDate,
   setRevisionHistoryVisible,
@@ -185,22 +182,6 @@ export const DocumentEditor: React.FC<Props> = (props) => {
 
   return (
     <div className="relative h-full" id="document-editor-context">
-      {!!isExternalControlsEnabled && (
-        <div className="mb-4 flex justify-end gap-10">
-          <PowerhouseButton onClick={onExport}>Export</PowerhouseButton>
-          <div className="flex gap-4">
-            <PowerhouseButton onClick={addUndoAction} disabled={!canUndo}>
-              Undo
-            </PowerhouseButton>
-            <PowerhouseButton onClick={addRedoAction} disabled={!canRedo}>
-              Redo
-            </PowerhouseButton>
-          </div>
-          <div className="flex gap-4">
-            <PowerhouseButton onClick={onClose}>Close</PowerhouseButton>
-          </div>
-        </div>
-      )}
       {revisionHistoryVisible ? (
         <RevisionHistory
           key={documentId}
