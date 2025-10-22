@@ -178,7 +178,7 @@ describe("KyselyWriteCache - End-to-End Integration", () => {
         });
       });
 
-      const doc3 = await cache.getState(docId, docType, scope, branch, 3);
+      const doc3 = await cache.getState(docId, scope, branch, 3);
       expect(doc3.header.documentType).toBe(docType);
 
       const driveDoc3 = doc3 as DocumentDriveDocument;
@@ -212,7 +212,7 @@ describe("KyselyWriteCache - End-to-End Integration", () => {
       expect(stream3).toBeDefined();
       expect(stream3?.ringBuffer.length).toBe(1);
 
-      const doc3Again = await cache.getState(docId, docType, scope, branch, 3);
+      const doc3Again = await cache.getState(docId, scope, branch, 3);
       expect(doc3Again).toEqual(doc3);
       expect(doc3Again).not.toBe(doc3);
 
@@ -257,7 +257,7 @@ describe("KyselyWriteCache - End-to-End Integration", () => {
         });
       });
 
-      const doc5 = await cache.getState(docId, docType, scope, branch, 5);
+      const doc5 = await cache.getState(docId, scope, branch, 5);
       expect(doc5).toBeDefined();
 
       const driveDoc5 = doc5 as DocumentDriveDocument;
@@ -366,11 +366,11 @@ describe("KyselyWriteCache - End-to-End Integration", () => {
         }
       });
 
-      const doc10 = await cache.getState(docId, docType, scope, branch, 10);
-      await keyframeStore.putKeyframe(docId, docType, scope, branch, 10, doc10);
+      const doc10 = await cache.getState(docId, scope, branch, 10);
+      await keyframeStore.putKeyframe(docId, scope, branch, 10, doc10);
 
-      const doc20 = await cache.getState(docId, docType, scope, branch, 20);
-      await keyframeStore.putKeyframe(docId, docType, scope, branch, 20, doc20);
+      const doc20 = await cache.getState(docId, scope, branch, 20);
+      await keyframeStore.putKeyframe(docId, scope, branch, 20, doc20);
 
       await db
         .deleteFrom("Operation")
@@ -380,7 +380,7 @@ describe("KyselyWriteCache - End-to-End Integration", () => {
 
       cache.clear();
 
-      const doc25 = await cache.getState(docId, docType, scope, branch, 25);
+      const doc25 = await cache.getState(docId, scope, branch, 25);
       expect(doc25).toBeDefined();
 
       const driveDoc25 = doc25 as DocumentDriveDocument;
@@ -476,8 +476,8 @@ describe("KyselyWriteCache - End-to-End Integration", () => {
       });
 
       for (let i = 10; i <= 30; i += 10) {
-        const doc = await cache.getState(docId, docType, scope, branch, i);
-        cache.putState(docId, docType, scope, branch, i, doc);
+        const doc = await cache.getState(docId, scope, branch, i);
+        cache.putState(docId, scope, branch, i, doc);
       }
 
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -706,7 +706,7 @@ describe("KyselyWriteCache - End-to-End Integration", () => {
         });
       });
 
-      const doc6 = await cache.getState(docId, docType, scope, branch, 6);
+      const doc6 = await cache.getState(docId, scope, branch, 6);
       expect(doc6).toBeDefined();
 
       const driveDoc6 = doc6 as DocumentDriveDocument;
@@ -739,7 +739,7 @@ describe("KyselyWriteCache - End-to-End Integration", () => {
       expect(projectBeta.parentFolder).toBe("projects");
       expect(notes.parentFolder).toBe("personal");
 
-      const doc2 = await cache.getState(docId, docType, scope, branch, 2);
+      const doc2 = await cache.getState(docId, scope, branch, 2);
       const driveDoc2 = doc2 as DocumentDriveDocument;
       const nodes2 = Object.values(driveDoc2.state.global.nodes);
       expect(nodes2).toHaveLength(2);
@@ -827,18 +827,18 @@ describe("KyselyWriteCache - End-to-End Integration", () => {
         }
       });
 
-      const doc5a = await cache.getState(docId, docType, scope, branch, 5);
-      const doc5b = await cache.getState(docId, docType, scope, branch, 5);
+      const doc5a = await cache.getState(docId, scope, branch, 5);
+      const doc5b = await cache.getState(docId, scope, branch, 5);
       expect(doc5a).toEqual(doc5b);
       expect(doc5a).not.toBe(doc5b);
 
-      const doc10a = await cache.getState(docId, docType, scope, branch, 10);
-      const doc10b = await cache.getState(docId, docType, scope, branch, 10);
+      const doc10a = await cache.getState(docId, scope, branch, 10);
+      const doc10b = await cache.getState(docId, scope, branch, 10);
       expect(doc10a).toEqual(doc10b);
       expect(doc10a).not.toBe(doc10b);
 
-      const doc15a = await cache.getState(docId, docType, scope, branch, 15);
-      const doc15b = await cache.getState(docId, docType, scope, branch, 15);
+      const doc15a = await cache.getState(docId, scope, branch, 15);
+      const doc15b = await cache.getState(docId, scope, branch, 15);
       expect(doc15a).toEqual(doc15b);
       expect(doc15a).not.toBe(doc15b);
 
@@ -937,7 +937,7 @@ describe("KyselyWriteCache - End-to-End Integration", () => {
       controller.abort();
 
       await expect(
-        cache.getState(docId, docType, scope, branch, 50, controller.signal),
+        cache.getState(docId, scope, branch, 50, controller.signal),
       ).rejects.toThrow("Operation aborted");
     });
   });

@@ -13,7 +13,6 @@ function createMinimalJob(): Job {
   return {
     id: `job-${++jobCounter}`,
     documentId: "doc1",
-    documentType: "powerhouse/document-drive",
     scope: "default",
     branch: "main",
     actions: [

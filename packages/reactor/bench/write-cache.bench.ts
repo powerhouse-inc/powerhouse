@@ -146,13 +146,7 @@ async function setupCacheWithCachedDocument(
 ): Promise<KyselyWriteCache> {
   const { cache } = await setupCacheWithData(operationCount);
 
-  await cache.getState(
-    DOCUMENT_ID,
-    DOCUMENT_TYPE,
-    SCOPE,
-    BRANCH,
-    cachedRevision,
-  );
+  await cache.getState(DOCUMENT_ID, SCOPE, BRANCH, cachedRevision);
 
   return cache;
 }
@@ -163,7 +157,7 @@ describe("Write Cache Cold Miss Performance", () => {
     async () => {
       const { cache } = await setupCacheWithData(100);
 
-      await cache.getState(DOCUMENT_ID, DOCUMENT_TYPE, SCOPE, BRANCH, 100);
+      await cache.getState(DOCUMENT_ID, SCOPE, BRANCH, 100);
     },
     { time: 2000 },
   );
@@ -173,7 +167,7 @@ describe("Write Cache Cold Miss Performance", () => {
     async () => {
       const { cache } = await setupCacheWithData(1000);
 
-      await cache.getState(DOCUMENT_ID, DOCUMENT_TYPE, SCOPE, BRANCH, 1000);
+      await cache.getState(DOCUMENT_ID, SCOPE, BRANCH, 1000);
     },
     { time: 5000 },
   );
@@ -187,20 +181,14 @@ describe("Write Cache Cold Miss Performance", () => {
         keyframeInterval: 50,
       });
 
-      const doc50 = await cache.getState(
-        DOCUMENT_ID,
-        DOCUMENT_TYPE,
-        SCOPE,
-        BRANCH,
-        50,
-      );
-      cache.putState(DOCUMENT_ID, DOCUMENT_TYPE, SCOPE, BRANCH, 50, doc50);
+      const doc50 = await cache.getState(DOCUMENT_ID, SCOPE, BRANCH, 50);
+      cache.putState(DOCUMENT_ID, SCOPE, BRANCH, 50, doc50);
 
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       cache.clear();
 
-      await cache.getState(DOCUMENT_ID, DOCUMENT_TYPE, SCOPE, BRANCH, 100);
+      await cache.getState(DOCUMENT_ID, SCOPE, BRANCH, 100);
     },
     { time: 2000 },
   );
@@ -212,7 +200,7 @@ describe("Write Cache Hit Performance", () => {
     async () => {
       const cache = await setupCacheWithCachedDocument(100, 50);
 
-      await cache.getState(DOCUMENT_ID, DOCUMENT_TYPE, SCOPE, BRANCH, 50);
+      await cache.getState(DOCUMENT_ID, SCOPE, BRANCH, 50);
     },
     { time: 1000 },
   );
@@ -222,7 +210,7 @@ describe("Write Cache Hit Performance", () => {
     async () => {
       const cache = await setupCacheWithCachedDocument(100, 100);
 
-      await cache.getState(DOCUMENT_ID, DOCUMENT_TYPE, SCOPE, BRANCH);
+      await cache.getState(DOCUMENT_ID, SCOPE, BRANCH);
     },
     { time: 1000 },
   );
@@ -233,17 +221,11 @@ describe("Write Cache Hit Performance", () => {
       const { cache } = await setupCacheWithData(100);
 
       for (let i = 91; i <= 100; i++) {
-        const doc = await cache.getState(
-          DOCUMENT_ID,
-          DOCUMENT_TYPE,
-          SCOPE,
-          BRANCH,
-          i,
-        );
-        cache.putState(DOCUMENT_ID, DOCUMENT_TYPE, SCOPE, BRANCH, i, doc);
+        const doc = await cache.getState(DOCUMENT_ID, SCOPE, BRANCH, i);
+        cache.putState(DOCUMENT_ID, SCOPE, BRANCH, i, doc);
       }
 
-      await cache.getState(DOCUMENT_ID, DOCUMENT_TYPE, SCOPE, BRANCH, 95);
+      await cache.getState(DOCUMENT_ID, SCOPE, BRANCH, 95);
     },
     { time: 1000 },
   );
@@ -255,7 +237,7 @@ describe("Write Cache Warm Miss Performance", () => {
     async () => {
       const cache = await setupCacheWithCachedDocument(100, 50);
 
-      await cache.getState(DOCUMENT_ID, DOCUMENT_TYPE, SCOPE, BRANCH, 60);
+      await cache.getState(DOCUMENT_ID, SCOPE, BRANCH, 60);
     },
     { time: 1000 },
   );
@@ -265,7 +247,7 @@ describe("Write Cache Warm Miss Performance", () => {
     async () => {
       const cache = await setupCacheWithCachedDocument(200, 50);
 
-      await cache.getState(DOCUMENT_ID, DOCUMENT_TYPE, SCOPE, BRANCH, 100);
+      await cache.getState(DOCUMENT_ID, SCOPE, BRANCH, 100);
     },
     { time: 1000 },
   );
@@ -275,9 +257,9 @@ describe("Write Cache Warm Miss Performance", () => {
     async () => {
       const { cache } = await setupCacheWithData(100);
 
-      await cache.getState(DOCUMENT_ID, DOCUMENT_TYPE, SCOPE, BRANCH, 90);
+      await cache.getState(DOCUMENT_ID, SCOPE, BRANCH, 90);
 
-      await cache.getState(DOCUMENT_ID, DOCUMENT_TYPE, SCOPE, BRANCH, 95);
+      await cache.getState(DOCUMENT_ID, SCOPE, BRANCH, 95);
     },
     { time: 1000 },
   );
@@ -332,14 +314,8 @@ describe("Write Cache LRU Eviction Performance", () => {
           },
         );
 
-        const doc = await cache.getState(
-          docId,
-          DOCUMENT_TYPE,
-          SCOPE,
-          BRANCH,
-          1,
-        );
-        cache.putState(docId, DOCUMENT_TYPE, SCOPE, BRANCH, 1, doc);
+        const doc = await cache.getState(docId, SCOPE, BRANCH, 1);
+        cache.putState(docId, SCOPE, BRANCH, 1, doc);
       }
     },
     { time: 2000 },
@@ -393,18 +369,12 @@ describe("Write Cache LRU Eviction Performance", () => {
           },
         );
 
-        const doc = await cache.getState(
-          docId,
-          DOCUMENT_TYPE,
-          SCOPE,
-          BRANCH,
-          1,
-        );
-        cache.putState(docId, DOCUMENT_TYPE, SCOPE, BRANCH, 1, doc);
+        const doc = await cache.getState(docId, SCOPE, BRANCH, 1);
+        cache.putState(docId, SCOPE, BRANCH, 1, doc);
       }
 
       for (let i = 1; i <= 5; i++) {
-        await cache.getState(`doc-${i}`, DOCUMENT_TYPE, SCOPE, BRANCH, 1);
+        await cache.getState(`doc-${i}`, SCOPE, BRANCH, 1);
       }
     },
     { time: 2000 },
@@ -488,7 +458,7 @@ describe("Write Cache vs No-Cache Baseline", () => {
     async () => {
       const { cache } = await setupCacheWithData(100);
 
-      await cache.getState(DOCUMENT_ID, DOCUMENT_TYPE, SCOPE, BRANCH, 100);
+      await cache.getState(DOCUMENT_ID, SCOPE, BRANCH, 100);
     },
     { time: 2000 },
   );
@@ -574,7 +544,7 @@ describe("Write Cache vs No-Cache Baseline", () => {
     async () => {
       const { cache } = await setupCacheWithData(1000);
 
-      await cache.getState(DOCUMENT_ID, DOCUMENT_TYPE, SCOPE, BRANCH, 1000);
+      await cache.getState(DOCUMENT_ID, SCOPE, BRANCH, 1000);
     },
     { time: 5000 },
   );
@@ -593,7 +563,7 @@ describe("Write Cache Keyframe Performance", () => {
       const baseDoc = driveDocumentModelModule.utils.createDocument();
 
       for (let i = 1; i <= 100; i++) {
-        cache.putState(DOCUMENT_ID, DOCUMENT_TYPE, SCOPE, BRANCH, i, baseDoc);
+        cache.putState(DOCUMENT_ID, SCOPE, BRANCH, i, baseDoc);
       }
 
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -613,7 +583,7 @@ describe("Write Cache Keyframe Performance", () => {
       const baseDoc = driveDocumentModelModule.utils.createDocument();
 
       for (let i = 1; i <= 100; i++) {
-        cache.putState(DOCUMENT_ID, DOCUMENT_TYPE, SCOPE, BRANCH, i, baseDoc);
+        cache.putState(DOCUMENT_ID, SCOPE, BRANCH, i, baseDoc);
       }
 
       await new Promise((resolve) => setTimeout(resolve, 100));

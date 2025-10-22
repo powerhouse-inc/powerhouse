@@ -357,7 +357,6 @@ export class Reactor implements IReactor {
     const job: Job = {
       id: uuidv4(),
       documentId: document.header.id,
-      documentType: document.header.documentType,
       scope: "document",
       branch: "main",
       actions: [createAction, upgradeAction],
@@ -394,11 +393,6 @@ export class Reactor implements IReactor {
       throw new AbortError();
     }
 
-    // this is stupid: we should not need to pass the document type for deletion
-    // todo: fix this
-    const document = await this.documentStorage.get(id);
-    const documentType = document.header.documentType;
-
     const deleteInput: DeleteDocumentActionInput = {
       documentId: id,
       propagate,
@@ -415,7 +409,6 @@ export class Reactor implements IReactor {
     const job: Job = {
       id: uuidv4(),
       documentId: id,
-      documentType: documentType,
       scope: "document",
       branch: "main",
       actions: [action],
@@ -442,12 +435,6 @@ export class Reactor implements IReactor {
   async mutate(id: string, actions: Action[]): Promise<JobInfo> {
     const createdAtUtcIso = new Date().toISOString();
 
-    const document = await this.documentStorage.get(id);
-
-    // this is stupid: we should not need to lookup a document to queue an action
-    // todo: fix this
-    const documentType = document.header.documentType;
-
     // Determine scope from first action (all actions should have the same scope)
     const scope = actions.length > 0 ? actions[0].scope || "global" : "global";
 
@@ -455,7 +442,6 @@ export class Reactor implements IReactor {
     const job: Job = {
       id: uuidv4(),
       documentId: id,
-      documentType: documentType,
       scope: scope,
       branch: "main", // Default to main branch
       actions: actions,

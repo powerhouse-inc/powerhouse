@@ -34,9 +34,6 @@ export type Job = {
   /** The document ID this job operates on */
   documentId: string;
 
-  /** The document type (model) this job operates on */
-  documentType: string;
-
   /** The scope of the operations */
   scope: string;
 

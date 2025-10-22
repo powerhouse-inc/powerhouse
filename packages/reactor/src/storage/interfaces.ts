@@ -92,7 +92,6 @@ export interface IOperationStore {
 export interface IKeyframeStore {
   putKeyframe(
     documentId: string,
-    documentType: string,
     scope: string,
     branch: string,
     revision: number,

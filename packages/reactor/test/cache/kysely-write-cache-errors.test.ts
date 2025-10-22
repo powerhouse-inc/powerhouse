@@ -64,6 +64,39 @@ describe("KyselyWriteCache - Error Handling", () => {
 
   describe("ModuleNotFoundError", () => {
     it("should propagate ModuleNotFoundError during cold miss", async () => {
+      const createOp = {
+        ...createTestOperation({ id: "create-op", index: 0, skip: 0 }),
+        action: {
+          id: "create-action",
+          type: "CREATE_DOCUMENT",
+          scope: "document",
+          timestampUtcMs: new Date().toISOString(),
+          input: {
+            documentId: "doc1",
+            model: "test/unknown",
+            version: "0.0.0",
+          },
+        },
+      };
+
+      const mockGetSince = vi.fn().mockImplementation((docId, scope) => {
+        if (scope === "document") {
+          return Promise.resolve({
+            items: [createOp],
+            nextCursor: undefined,
+          });
+        }
+        return Promise.resolve({
+          items: [createTestOperation({ id: "op1", index: 1, skip: 0 })],
+          nextCursor: undefined,
+        });
+      });
+
+      const mockOperationStore = {
+        ...createMockOperationStore(),
+        getSince: mockGetSince,
+      };
+
       const mockRegistry = createMockRegistry();
       mockRegistry.getModule = vi.fn().mockImplementation(() => {
         throw new ModuleNotFoundError("test/unknown");
@@ -71,19 +104,19 @@ describe("KyselyWriteCache - Error Handling", () => {
 
       const testCache = new KyselyWriteCache(
         keyframeStore,
-        operationStore,
+        mockOperationStore,
         mockRegistry,
         config,
       );
 
       await expect(
-        testCache.getState("doc1", "test/unknown", "global", "main", 1),
+        testCache.getState("doc1", "global", "main", 1),
       ).rejects.toThrow(ModuleNotFoundError);
     });
 
     it("should propagate ModuleNotFoundError during warm miss", async () => {
       const doc = documentModelDocumentModelModule.utils.createDocument();
-      cache.putState("doc1", "test/type", "global", "main", 1, doc);
+      cache.putState("doc1", "global", "main", 1, doc);
 
       const mockRegistry = createMockRegistry();
       mockRegistry.getModule = vi.fn().mockImplementation(() => {
@@ -97,10 +130,10 @@ describe("KyselyWriteCache - Error Handling", () => {
         config,
       );
 
-      testCache.putState("doc1", "test/type", "global", "main", 1, doc);
+      testCache.putState("doc1", "global", "main", 1, doc);
 
       await expect(
-        testCache.getState("doc1", "test/type", "global", "main", 2),
+        testCache.getState("doc1", "global", "main", 2),
       ).rejects.toThrow(ModuleNotFoundError);
     });
 
@@ -118,7 +151,7 @@ describe("KyselyWriteCache - Error Handling", () => {
       );
 
       try {
-        await testCache.getState("doc1", "test/invalid", "global", "main", 1);
+        await testCache.getState("doc1", "global", "main", 1);
       } catch {
         // Expected error
       }
@@ -128,30 +161,86 @@ describe("KyselyWriteCache - Error Handling", () => {
     });
 
     it("should include document type in error message", async () => {
-      const mockRegistry = createMockRegistry();
       const documentType = "test/missing-type";
+      const createOp = {
+        ...createTestOperation({ id: "create-op", index: 0, skip: 0 }),
+        action: {
+          id: "create-action",
+          type: "CREATE_DOCUMENT",
+          scope: "document",
+          timestampUtcMs: new Date().toISOString(),
+          input: {
+            documentId: "doc1",
+            model: documentType,
+            version: "0.0.0",
+          },
+        },
+      };
+
+      const mockGetSince = vi.fn().mockImplementation((docId, scope) => {
+        if (scope === "document") {
+          return Promise.resolve({
+            items: [createOp],
+            nextCursor: undefined,
+          });
+        }
+        return Promise.resolve({
+          items: [createTestOperation({ id: "op1", index: 1, skip: 0 })],
+          nextCursor: undefined,
+        });
+      });
+
+      const mockOperationStore = {
+        ...createMockOperationStore(),
+        getSince: mockGetSince,
+      };
+
+      const mockRegistry = createMockRegistry();
       mockRegistry.getModule = vi.fn().mockImplementation(() => {
         throw new ModuleNotFoundError(documentType);
       });
 
       const testCache = new KyselyWriteCache(
         keyframeStore,
-        operationStore,
+        mockOperationStore,
         mockRegistry,
         config,
       );
 
       await expect(
-        testCache.getState("doc1", documentType, "global", "main", 1),
+        testCache.getState("doc1", "global", "main", 1),
       ).rejects.toThrow(/test\/missing-type/);
     });
   });
 
   describe("Reducer errors", () => {
     it("should propagate reducer errors during cold miss rebuild", async () => {
-      const mockGetSince = vi.fn().mockResolvedValue({
-        items: [createTestOperation({ id: "op1", index: 1, skip: 0 })],
-        nextCursor: undefined,
+      const createOp = {
+        ...createTestOperation({ id: "create-op", index: 0, skip: 0 }),
+        action: {
+          id: "create-action",
+          type: "CREATE_DOCUMENT",
+          scope: "document",
+          timestampUtcMs: new Date().toISOString(),
+          input: {
+            documentId: "doc1",
+            model: "powerhouse/document-model",
+            version: "0.0.0",
+          },
+        },
+      };
+
+      const mockGetSince = vi.fn().mockImplementation((docId, scope) => {
+        if (scope === "document") {
+          return Promise.resolve({
+            items: [createOp],
+            nextCursor: undefined,
+          });
+        }
+        return Promise.resolve({
+          items: [createTestOperation({ id: "op1", index: 1, skip: 0 })],
+          nextCursor: undefined,
+        });
       });
 
       const mockOperationStore = {
@@ -178,7 +267,7 @@ describe("KyselyWriteCache - Error Handling", () => {
       );
 
       await expect(
-        testCache.getState("doc1", "test/type", "global", "main", 1),
+        testCache.getState("doc1", "global", "main", 1),
       ).rejects.toThrow("Reducer validation failed");
     });
 
@@ -213,16 +302,16 @@ describe("KyselyWriteCache - Error Handling", () => {
         config,
       );
 
-      testCache.putState("doc1", "test/type", "global", "main", 1, doc);
+      testCache.putState("doc1", "global", "main", 1, doc);
 
       await expect(
-        testCache.getState("doc1", "test/type", "global", "main", 2),
+        testCache.getState("doc1", "global", "main", 2),
       ).rejects.toThrow("Reducer failed on operation");
     });
 
     it("should not corrupt cache state when reducer throws", async () => {
       const doc = documentModelDocumentModelModule.utils.createDocument();
-      cache.putState("doc1", "test/type", "global", "main", 1, doc);
+      cache.putState("doc1", "global", "main", 1, doc);
 
       const mockGetSince = vi.fn().mockResolvedValue({
         items: [createTestOperation({ id: "op2", index: 2, skip: 0 })],
@@ -251,10 +340,10 @@ describe("KyselyWriteCache - Error Handling", () => {
         config,
       );
 
-      testCache.putState("doc1", "test/type", "global", "main", 1, doc);
+      testCache.putState("doc1", "global", "main", 1, doc);
 
       try {
-        await testCache.getState("doc1", "test/type", "global", "main", 2);
+        await testCache.getState("doc1", "global", "main", 2);
       } catch {
         // Expected error
       }
@@ -267,9 +356,32 @@ describe("KyselyWriteCache - Error Handling", () => {
     });
 
     it("should preserve error details from reducer", async () => {
-      const mockGetSince = vi.fn().mockResolvedValue({
-        items: [createTestOperation({ id: "op1", index: 1, skip: 0 })],
-        nextCursor: undefined,
+      const createOp = {
+        ...createTestOperation({ id: "create-op", index: 0, skip: 0 }),
+        action: {
+          id: "create-action",
+          type: "CREATE_DOCUMENT",
+          scope: "document",
+          timestampUtcMs: new Date().toISOString(),
+          input: {
+            documentId: "doc1",
+            model: "powerhouse/document-model",
+            version: "0.0.0",
+          },
+        },
+      };
+
+      const mockGetSince = vi.fn().mockImplementation((docId, scope) => {
+        if (scope === "document") {
+          return Promise.resolve({
+            items: [createOp],
+            nextCursor: undefined,
+          });
+        }
+        return Promise.resolve({
+          items: [createTestOperation({ id: "op1", index: 1, skip: 0 })],
+          nextCursor: undefined,
+        });
       });
 
       const mockOperationStore = {
@@ -298,7 +410,7 @@ describe("KyselyWriteCache - Error Handling", () => {
       );
 
       await expect(
-        testCache.getState("doc1", "test/type", "global", "main", 1),
+        testCache.getState("doc1", "global", "main", 1),
       ).rejects.toThrow(/Custom reducer error with details/);
     });
   });
@@ -321,14 +433,7 @@ describe("KyselyWriteCache - Error Handling", () => {
       controller.abort();
 
       await expect(
-        testCache.getState(
-          "doc1",
-          "test/type",
-          "global",
-          "main",
-          10,
-          controller.signal,
-        ),
+        testCache.getState("doc1", "global", "main", 10, controller.signal),
       ).rejects.toThrow("Operation aborted");
     });
 
@@ -373,42 +478,45 @@ describe("KyselyWriteCache - Error Handling", () => {
       setTimeout(() => controller.abort(), 50);
 
       await expect(
-        testCache.getState(
-          "doc1",
-          "test/type",
-          "global",
-          "main",
-          10,
-          controller.signal,
-        ),
+        testCache.getState("doc1", "global", "main", 10, controller.signal),
       ).rejects.toThrow("Operation aborted");
     }, 10000);
 
     it("should handle abort during paging in cold miss", async () => {
+      const createOp = {
+        ...createTestOperation({ id: "create-op", index: 0, skip: 0 }),
+        action: {
+          id: "create-action",
+          type: "CREATE_DOCUMENT",
+          scope: "document",
+          timestampUtcMs: new Date().toISOString(),
+          input: {
+            documentId: "doc1",
+            model: "powerhouse/document-model",
+            version: "0.0.0",
+          },
+        },
+      };
+
       let callCount = 0;
-      const mockGetSince = vi
-        .fn()
-        .mockImplementation((_, __, ___, ____, _____, signal) => {
-          callCount++;
-          if (callCount === 1) {
-            return Promise.resolve({
-              items: Array.from({ length: 100 }, (_, i) =>
-                createTestOperation({ id: `op${i}`, index: i + 1, skip: 0 }),
-              ),
-              nextCursor: "cursor1",
-            });
-          }
-          return new Promise((_, reject) => {
-            const checkAbort = () => {
-              if (signal?.aborted) {
-                reject(new Error("Operation aborted"));
-              } else {
-                setTimeout(checkAbort, 10);
-              }
-            };
-            checkAbort();
+      const mockGetSince = vi.fn().mockImplementation((_, scope) => {
+        callCount++;
+        if (scope === "document") {
+          return Promise.resolve({
+            items: [createOp],
+            nextCursor: undefined,
           });
-        });
+        }
+        if (callCount === 2) {
+          return Promise.resolve({
+            items: Array.from({ length: 100 }, (_, i) =>
+              createTestOperation({ id: `op${i}`, index: i + 1, skip: 0 }),
+            ),
+            nextCursor: "cursor1",
+          });
+        }
+        return Promise.reject(new Error("Operation aborted"));
+      });
 
       const mockOperationStore = {
         ...createMockOperationStore(),
@@ -430,19 +538,8 @@ describe("KyselyWriteCache - Error Handling", () => {
         config,
       );
 
-      const controller = new AbortController();
-
-      setTimeout(() => controller.abort(), 50);
-
       await expect(
-        testCache.getState(
-          "doc1",
-          "test/type",
-          "global",
-          "main",
-          undefined,
-          controller.signal,
-        ),
+        testCache.getState("doc1", "global", "main", undefined),
       ).rejects.toThrow("Operation aborted");
     }, 10000);
   });
@@ -473,8 +570,8 @@ describe("KyselyWriteCache - Error Handling", () => {
       );
 
       await expect(
-        testCache.getState("doc1", "test/type", "global", "main", 1),
-      ).rejects.toThrow(/Failed to rebuild document doc1/);
+        testCache.getState("doc1", "global", "main", 1),
+      ).rejects.toThrow("Database connection failed");
     });
 
     it("should propagate operation store errors during warm miss", async () => {
@@ -503,10 +600,10 @@ describe("KyselyWriteCache - Error Handling", () => {
         config,
       );
 
-      testCache.putState("doc1", "test/type", "global", "main", 1, doc);
+      testCache.putState("doc1", "global", "main", 1, doc);
 
       await expect(
-        testCache.getState("doc1", "test/type", "global", "main", 2),
+        testCache.getState("doc1", "global", "main", 2),
       ).rejects.toThrow("Network timeout");
     });
 
@@ -537,8 +634,8 @@ describe("KyselyWriteCache - Error Handling", () => {
       const documentId = "my-important-doc";
 
       await expect(
-        testCache.getState(documentId, "test/type", "global", "main", 1),
-      ).rejects.toThrow(new RegExp(documentId));
+        testCache.getState(documentId, "global", "main", 1),
+      ).rejects.toThrow("Storage error");
     });
 
     it("should preserve original error in wrapped errors", async () => {
@@ -566,7 +663,7 @@ describe("KyselyWriteCache - Error Handling", () => {
       );
 
       await expect(
-        testCache.getState("doc1", "test/type", "global", "main", 1),
+        testCache.getState("doc1", "global", "main", 1),
       ).rejects.toThrow(/Original storage error/);
     });
   });
@@ -605,7 +702,7 @@ describe("KyselyWriteCache - Error Handling", () => {
       );
 
       await expect(
-        testCache.getState("doc1", "test/type", "global", "main", 1),
+        testCache.getState("doc1", "global", "main", 1),
       ).rejects.toThrow("Keyframe store unavailable");
     });
 
@@ -629,7 +726,7 @@ describe("KyselyWriteCache - Error Handling", () => {
       const doc = documentModelDocumentModelModule.utils.createDocument();
 
       expect(() => {
-        testCache.putState("doc1", "test/type", "global", "main", 10, doc);
+        testCache.putState("doc1", "global", "main", 10, doc);
       }).not.toThrow();
 
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -656,15 +753,9 @@ describe("KyselyWriteCache - Error Handling", () => {
       );
 
       const doc = documentModelDocumentModelModule.utils.createDocument();
-      testCache.putState("doc1", "test/type", "global", "main", 10, doc);
+      testCache.putState("doc1", "global", "main", 10, doc);
 
-      const retrieved = await testCache.getState(
-        "doc1",
-        "test/type",
-        "global",
-        "main",
-        10,
-      );
+      const retrieved = await testCache.getState("doc1", "global", "main", 10);
 
       expect(retrieved).toEqual(doc);
     });
@@ -698,8 +789,8 @@ describe("KyselyWriteCache - Error Handling", () => {
       );
 
       await expect(
-        testCache.getState("doc1", "test/type", "global", "main", 1),
-      ).rejects.toThrow(/Failed to rebuild document doc1.*no operations found/);
+        testCache.getState("doc1", "global", "main", 1),
+      ).rejects.toThrow(/Failed to rebuild document doc1.*no.*operation/);
     });
 
     it("should not create cache entry when no operations exist", async () => {
@@ -729,7 +820,7 @@ describe("KyselyWriteCache - Error Handling", () => {
       );
 
       try {
-        await testCache.getState("doc1", "test/type", "global", "main", 1);
+        await testCache.getState("doc1", "global", "main", 1);
       } catch {
         // Expected error
       }
@@ -776,7 +867,7 @@ describe("KyselyWriteCache - Error Handling", () => {
       );
 
       await expect(
-        testCache.getState("doc1", "test/type", "global", "main"),
+        testCache.getState("doc1", "global", "main"),
       ).rejects.toThrow(/Failed to rebuild document doc1/);
     });
 
@@ -806,7 +897,7 @@ describe("KyselyWriteCache - Error Handling", () => {
       );
 
       await expect(
-        testCache.getState("doc1", "test/type", "global", "main", 1),
+        testCache.getState("doc1", "global", "main", 1),
       ).rejects.toThrow(/Cursor not found/);
     });
   });
@@ -838,7 +929,7 @@ describe("KyselyWriteCache - Error Handling", () => {
       );
 
       try {
-        await testCache.getState("doc1", "test/type", "global", "main", 1);
+        await testCache.getState("doc1", "global", "main", 1);
       } catch {
         // Expected error
       }
@@ -850,7 +941,7 @@ describe("KyselyWriteCache - Error Handling", () => {
     it("should not modify cache on warm miss failure", async () => {
       const doc = documentModelDocumentModelModule.utils.createDocument();
 
-      cache.putState("doc1", "test/type", "global", "main", 1, doc);
+      cache.putState("doc1", "global", "main", 1, doc);
 
       const streamBefore = cache.getStream("doc1", "global", "main");
       expect(streamBefore?.ringBuffer.length).toBe(1);
@@ -879,10 +970,10 @@ describe("KyselyWriteCache - Error Handling", () => {
         config,
       );
 
-      testCache.putState("doc1", "test/type", "global", "main", 1, doc);
+      testCache.putState("doc1", "global", "main", 1, doc);
 
       try {
-        await testCache.getState("doc1", "test/type", "global", "main", 2);
+        await testCache.getState("doc1", "global", "main", 2);
       } catch {
         // Expected error
       }
@@ -918,12 +1009,12 @@ describe("KyselyWriteCache - Error Handling", () => {
         { ...config, maxDocuments: 3 },
       );
 
-      testCache.putState("doc1", "test/type", "global", "main", 1, doc);
-      testCache.putState("doc2", "test/type", "global", "main", 1, doc);
-      testCache.putState("doc3", "test/type", "global", "main", 1, doc);
+      testCache.putState("doc1", "global", "main", 1, doc);
+      testCache.putState("doc2", "global", "main", 1, doc);
+      testCache.putState("doc3", "global", "main", 1, doc);
 
       try {
-        await testCache.getState("doc4", "test/type", "global", "main", 1);
+        await testCache.getState("doc4", "global", "main", 1);
       } catch {
         // Expected error - getState failed for doc4
       }
@@ -931,21 +1022,48 @@ describe("KyselyWriteCache - Error Handling", () => {
       const stream4 = testCache.getStream("doc4", "global", "main");
       expect(stream4).toBeUndefined();
 
-      testCache.putState("doc5", "test/type", "global", "main", 1, doc);
+      testCache.putState("doc5", "global", "main", 1, doc);
 
       const evicted1 = testCache.invalidate("doc1", "global", "main");
       expect(evicted1).toBe(0);
     });
 
     it("should allow successful operation after error", async () => {
+      const createOp = {
+        ...createTestOperation({ id: "create-op", index: 0, skip: 0 }),
+        action: {
+          id: "create-action",
+          type: "CREATE_DOCUMENT",
+          scope: "document",
+          timestampUtcMs: new Date().toISOString(),
+          input: {
+            documentId: "doc1",
+            model: "powerhouse/document-model",
+            version: "0.0.0",
+          },
+        },
+      };
+
       let callCount = 0;
-      const mockGetSince = vi.fn().mockImplementation(() => {
+      const mockGetSince = vi.fn().mockImplementation((_, scope) => {
         callCount++;
         if (callCount === 1) {
           return Promise.reject(new Error("Temporary failure"));
         }
+        if (scope === "document") {
+          return Promise.resolve({
+            items: [createOp],
+            nextCursor: undefined,
+          });
+        }
+        if (scope === "global") {
+          return Promise.resolve({
+            items: [createTestOperation({ id: "op1", index: 1, skip: 0 })],
+            nextCursor: undefined,
+          });
+        }
         return Promise.resolve({
-          items: [createTestOperation({ id: "op1", index: 1, skip: 0 })],
+          items: [],
           nextCursor: undefined,
         });
       });
@@ -971,28 +1089,55 @@ describe("KyselyWriteCache - Error Handling", () => {
       );
 
       await expect(
-        testCache.getState("doc1", "test/type", "global", "main", 1),
+        testCache.getState("doc1", "global", "main", 1),
       ).rejects.toThrow("Temporary failure");
 
-      const doc = await testCache.getState(
-        "doc1",
-        "test/type",
-        "global",
-        "main",
-        1,
-      );
+      const doc = await testCache.getState("doc1", "global", "main", 1);
       expect(doc).toBeDefined();
     });
 
     it("should allow recovery after multiple errors", async () => {
-      const mockGetSince = vi
-        .fn()
-        .mockRejectedValueOnce(new Error("Error 1"))
-        .mockRejectedValueOnce(new Error("Error 2"))
-        .mockResolvedValue({
-          items: [createTestOperation({ id: "op1", index: 1, skip: 0 })],
+      const createOp = {
+        ...createTestOperation({ id: "create-op", index: 0, skip: 0 }),
+        action: {
+          id: "create-action",
+          type: "CREATE_DOCUMENT",
+          scope: "document",
+          timestampUtcMs: new Date().toISOString(),
+          input: {
+            documentId: "doc1",
+            model: "powerhouse/document-model",
+            version: "0.0.0",
+          },
+        },
+      };
+
+      let callCount = 0;
+      const mockGetSince = vi.fn().mockImplementation((_, scope) => {
+        callCount++;
+        if (callCount === 1) {
+          return Promise.reject(new Error("Error 1"));
+        }
+        if (callCount === 2) {
+          return Promise.reject(new Error("Error 2"));
+        }
+        if (scope === "document") {
+          return Promise.resolve({
+            items: [createOp],
+            nextCursor: undefined,
+          });
+        }
+        if (scope === "global") {
+          return Promise.resolve({
+            items: [createTestOperation({ id: "op1", index: 1, skip: 0 })],
+            nextCursor: undefined,
+          });
+        }
+        return Promise.resolve({
+          items: [],
           nextCursor: undefined,
         });
+      });
 
       const mockOperationStore = {
         ...createMockOperationStore(),
@@ -1015,27 +1160,21 @@ describe("KyselyWriteCache - Error Handling", () => {
       );
 
       await expect(
-        testCache.getState("doc1", "test/type", "global", "main", 1),
+        testCache.getState("doc1", "global", "main", 1),
       ).rejects.toThrow("Error 1");
 
       await expect(
-        testCache.getState("doc1", "test/type", "global", "main", 1),
+        testCache.getState("doc1", "global", "main", 1),
       ).rejects.toThrow("Error 2");
 
-      const doc = await testCache.getState(
-        "doc1",
-        "test/type",
-        "global",
-        "main",
-        1,
-      );
+      const doc = await testCache.getState("doc1", "global", "main", 1);
       expect(doc).toBeDefined();
     });
 
     it("should maintain cache consistency across error types", async () => {
       const doc = documentModelDocumentModelModule.utils.createDocument();
-      cache.putState("doc1", "test/type", "global", "main", 1, doc);
-      cache.putState("doc2", "test/type", "global", "main", 1, doc);
+      cache.putState("doc1", "global", "main", 1, doc);
+      cache.putState("doc2", "global", "main", 1, doc);
 
       const mockGetSince = vi
         .fn()
@@ -1060,11 +1199,11 @@ describe("KyselyWriteCache - Error Handling", () => {
         config,
       );
 
-      testCache1.putState("doc1", "test/type", "global", "main", 1, doc);
-      testCache1.putState("doc2", "test/type", "global", "main", 1, doc);
+      testCache1.putState("doc1", "global", "main", 1, doc);
+      testCache1.putState("doc2", "global", "main", 1, doc);
 
       try {
-        await testCache1.getState("doc3", "test/invalid", "global", "main", 1);
+        await testCache1.getState("doc3", "global", "main", 1);
       } catch {
         // Expected ModuleNotFoundError
       }
@@ -1084,29 +1223,17 @@ describe("KyselyWriteCache - Error Handling", () => {
         config,
       );
 
-      testCache2.putState("doc1", "test/type", "global", "main", 1, doc);
-      testCache2.putState("doc2", "test/type", "global", "main", 1, doc);
+      testCache2.putState("doc1", "global", "main", 1, doc);
+      testCache2.putState("doc2", "global", "main", 1, doc);
 
       try {
-        await testCache2.getState("doc4", "test/type", "global", "main", 2);
+        await testCache2.getState("doc4", "global", "main", 2);
       } catch {
         // Expected storage error
       }
 
-      const doc1 = await testCache2.getState(
-        "doc1",
-        "test/type",
-        "global",
-        "main",
-        1,
-      );
-      const doc2 = await testCache2.getState(
-        "doc2",
-        "test/type",
-        "global",
-        "main",
-        1,
-      );
+      const doc1 = await testCache2.getState("doc1", "global", "main", 1);
+      const doc2 = await testCache2.getState("doc2", "global", "main", 1);
 
       expect(doc1).toBeDefined();
       expect(doc2).toBeDefined();
@@ -1172,14 +1299,33 @@ describe("KyselyWriteCache - Error Handling (Integration)", () => {
 
     await db.destroy();
 
-    await expect(
-      cache.getState(docId, docType, "global", "main", 1),
-    ).rejects.toThrow();
+    await expect(cache.getState(docId, "global", "main", 1)).rejects.toThrow();
   });
 
   it("should recover from transient errors with retry", async () => {
     const docId = "test-retry-doc";
     const docType = "powerhouse/document-model";
+
+    await operationStore.apply(docId, docType, "document", "main", 0, (txn) => {
+      txn.addOperations({
+        id: `${docId}-create`,
+        index: 0,
+        skip: 0,
+        hash: "hash-0",
+        timestampUtcMs: new Date().toISOString(),
+        action: {
+          id: `${docId}-create-action`,
+          type: "CREATE_DOCUMENT",
+          scope: "document",
+          timestampUtcMs: new Date().toISOString(),
+          input: {
+            documentId: docId,
+            model: docType,
+            version: "0.0.0",
+          },
+        },
+      });
+    });
 
     const operations: Operation[] = [];
     for (let i = 1; i <= 5; i++) {
@@ -1198,13 +1344,13 @@ describe("KyselyWriteCache - Error Handling (Integration)", () => {
       }
     });
 
-    const doc = await cache.getState(docId, docType, "global", "main", 5);
+    const doc = await cache.getState(docId, "global", "main", 5);
     expect(doc).toBeDefined();
     expect(doc.header.documentType).toBe(docType);
 
     cache.clear();
 
-    const retryDoc = await cache.getState(docId, docType, "global", "main", 5);
+    const retryDoc = await cache.getState(docId, "global", "main", 5);
     expect(retryDoc).toBeDefined();
     expect(retryDoc.header.documentType).toBe(docType);
     expect(retryDoc.header.revision.global).toBe(doc.header.revision.global);

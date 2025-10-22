@@ -8,7 +8,6 @@ export class KyselyKeyframeStore implements IKeyframeStore {
 
   async putKeyframe(
     documentId: string,
-    documentType: string,
     scope: string,
     branch: string,
     revision: number,
@@ -23,7 +22,7 @@ export class KyselyKeyframeStore implements IKeyframeStore {
       .insertInto("Keyframe")
       .values({
         documentId,
-        documentType,
+        documentType: document.header.documentType,
         scope,
         branch,
         revision,

@@ -11,7 +11,6 @@ export interface IWriteCache {
    * If targetRevision is not provided, retrieves the latest state.
    *
    * @param documentId - The document identifier
-   * @param documentType - The document type (needed for reducer lookup on cache miss)
    * @param scope - Operation scope
    * @param branch - Branch name
    * @param targetRevision - The exact revision to retrieve (optional, defaults to latest)
@@ -21,15 +20,14 @@ export interface IWriteCache {
    * @example
    * ```typescript
    * // Get latest document state
-   * const doc = await cache.getState(docId, 'makerdao/document-drive', 'global', 'main');
+   * const doc = await cache.getState(docId, 'global', 'main');
    *
    * // Get document at specific revision
-   * const doc = await cache.getState(docId, 'makerdao/document-drive', 'global', 'main', 42);
+   * const doc = await cache.getState(docId, 'global', 'main', 42);
    * ```
    */
   getState(
     documentId: string,
-    documentType: string,
     scope: string,
     branch: string,
     targetRevision?: number,
@@ -41,7 +39,6 @@ export interface IWriteCache {
    * The document will be deep copied to prevent external mutations.
    *
    * @param documentId - The document identifier
-   * @param documentType - The document type
    * @param scope - Operation scope
    * @param branch - Branch name
    * @param revision - The revision this document represents
@@ -49,12 +46,11 @@ export interface IWriteCache {
    *
    * @example
    * ```typescript
-   * cache.putState(docId, 'makerdao/document-drive', 'global', 'main', 42, document);
+   * cache.putState(docId, 'global', 'main', 42, document);
    * ```
    */
   putState(
     documentId: string,
-    documentType: string,
     scope: string,
     branch: string,
     revision: number,
