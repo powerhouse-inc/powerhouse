@@ -1,20 +1,18 @@
 import { Icon } from "@powerhousedao/design-system";
 import {
+  exportDocument,
   setSelectedNode,
   setSelectedTimelineItem,
   showRevisionHistory,
   useDocumentById,
+  useDocumentTimeline,
   useNodeParentFolderById,
   useSelectedDocument,
 } from "@powerhousedao/reactor-browser";
 import { useEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { DocumentTimeline } from "../document-timeline/document-timeline.js";
-import {
-  exportDocument,
-  useDocumentTimeline,
-  useDocumentUndoRedo,
-} from "./utils/index.js";
+import { useDocumentUndoRedo } from "./utils/use-document-undo-redo.js";
 
 export type DocumentToolbarV2Props = {
   documentId?: string;

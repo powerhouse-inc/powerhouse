@@ -8,6 +8,7 @@ import {
   validateModules,
   validateStateSchemaName,
 } from "document-model";
+
 export const validateDocument = (document: PHDocument) => {
   const errors: ValidationError[] = [];
 

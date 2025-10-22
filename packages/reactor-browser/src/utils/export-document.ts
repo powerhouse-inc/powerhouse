@@ -1,5 +1,6 @@
-import { exportFile, showPHModal } from "@powerhousedao/reactor-browser";
 import type { PHDocument } from "document-model";
+import { exportFile } from "../actions/document.js";
+import { showPHModal } from "../hooks/modals.js";
 import { validateDocument } from "./validate-document.js";
 
 export const exportDocument = (document?: PHDocument) => {

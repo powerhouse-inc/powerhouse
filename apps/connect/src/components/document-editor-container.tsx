@@ -1,8 +1,4 @@
-import {
-  DocumentEditor,
-  openUrl,
-  validateDocument,
-} from "@powerhousedao/connect";
+import { DocumentEditor, openUrl } from "@powerhousedao/connect";
 import {
   buildDocumentSubgraphUrl,
   exportFile,
@@ -13,6 +9,7 @@ import {
   useNodeParentFolderById,
   useSelectedDocument,
   useSelectedDrive,
+  validateDocument,
 } from "@powerhousedao/reactor-browser";
 import {
   useConnectCrypto,
