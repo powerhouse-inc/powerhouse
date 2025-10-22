@@ -1,3 +1,14 @@
+## 4.1.0-dev.85 (2025-10-22)
+
+### 🩹 Fixes
+
+- **connect, design-system:** keep full height on dropzone wrapper ([13f7c0e87](https://github.com/powerhouse-inc/powerhouse/commit/13f7c0e87))
+- **connect, reactor-browser:** set selected drive Id instead of slug ([0777280c2](https://github.com/powerhouse-inc/powerhouse/commit/0777280c2))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.84 (2025-10-22)
 
 ### 🚀 Features

@@ -1,3 +1,13 @@
+## 4.1.0-dev.85 (2025-10-22)
+
+### 🩹 Fixes
+
+- **connect, reactor-browser:** set selected drive Id instead of slug ([0777280c2](https://github.com/powerhouse-inc/powerhouse/commit/0777280c2))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.84 (2025-10-22)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

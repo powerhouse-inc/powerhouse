@@ -1,3 +1,13 @@
+## 4.1.0-dev.85 (2025-10-22)
+
+### 🩹 Fixes
+
+- **connect, design-system:** keep full height on dropzone wrapper ([13f7c0e87](https://github.com/powerhouse-inc/powerhouse/commit/13f7c0e87))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.84 (2025-10-22)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
