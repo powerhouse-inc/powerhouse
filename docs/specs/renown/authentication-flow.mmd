@@ -1,0 +1,160 @@
+sequenceDiagram
+    participant User as 👤 User
+    participant Browser as 🌐 Browser
+    participant SDK as 🔑 Renown SDK<br/>(with Cache)
+    participant Vetra as vetra.io<br/>(Verifier/RP)
+    participant Renown as renown.id<br/>(Issuer/IdP)
+    participant Wallet as 🦊 MetaMask<br/>(ETH Wallet)
+
+    Note over User,Wallet: 🚀 Improved Authentication Flow
+
+    %% Check for cached credential
+    User->>Vetra: Click "Login"
+    activate Vetra
+
+    Note over Vetra: 🔐 Generate challenge nonce<br/>(prevent replay attacks)
+    Vetra->>Vetra: Generate random challenge
+
+    Vetra->>SDK: Request auth + challenge nonce
+
+    alt Has valid cached credential
+        activate SDK
+        Note over SDK: ✅ Found valid credential in cache<br/>Not expired, not revoked
+
+        SDK->>SDK: Get cached VC JWT
+
+        Note over SDK: 🎭 Create VP with challenge
+        SDK->>SDK: Create & sign VP with challenge nonce
+
+        Note over SDK: 📦 Verifiable Presentation JWT<br/>════════════════════════<br/>Header: {"typ":"JWT", "alg":"EdDSA"}<br/>────────────────────────<br/>Payload:<br/>{<br/>  "vp": {<br/>    "@context": ["https://...v1"],<br/>    "type": ["VerifiablePresentation"],<br/>    "verifiableCredential": [<br/>      "eyJ0eXAi....[cached VC JWT]"<br/>    ],<br/>    "holder": "did:key:zDnae..."<br/>  },<br/>  "iss": "did:key:zDnae...",<br/>  "aud": "did:web:vetra.io",<br/>  "nonce": "random-nonce-xyz",<br/>  "iat": 1761028500<br/>}<br/>────────────────────────<br/>Signature: [Renown DID SDK]
+
+        SDK->>Vetra: Return signed VP
+        deactivate SDK
+
+        Note over Vetra: ⚡ Fast path verification
+        Vetra->>Vetra: 1. Verify challenge matches<br/>2. Verify VP & VC signatures<br/>3. Check not expired
+
+        %% Quick revocation check
+        Vetra->>Renown: Quick revocation check<br/>?docId=...
+        activate Renown
+        Renown->>Vetra: Not revoked
+        deactivate Renown
+
+        Vetra->>Vetra: Create session
+        Vetra->>Browser: Redirect to dashboard
+        Browser->>User: Access granted
+
+        Note over User: 🎉 Instant Login!<br/>(~500ms)
+
+    else No cached credential or expired
+        activate SDK
+        Note over SDK: ❌ No valid cached credential
+
+        SDK->>Vetra: Need new credential
+        deactivate SDK
+
+        %% First-time or refresh flow
+        Note over User,Wallet: 🔄 Credential Issuance (First time or refresh)
+
+        Vetra->>Browser: Redirect to renown.id<br/>(with challenge in state)
+        Browser->>Renown: Load auth page
+        activate Renown
+
+        Renown->>SDK: Check if wallet authorized
+        activate SDK
+
+        alt Wallet already authorized
+            Note over SDK: ✅ Previously authorized
+            SDK->>Renown: Reuse authorization
+
+        else First time authorization
+            SDK->>Wallet: Request authorization & signature
+            activate Wallet
+            Wallet->>User: Show authorization request<br/>"Authorize Renown SDK"
+            User->>Wallet: Approve once
+            Wallet->>SDK: Authorization granted
+            deactivate Wallet
+            SDK->>Renown: Send authorization
+        end
+
+        deactivate SDK
+
+        %% Create credential
+        Note over Renown: 🎫 Renown.id creates VC
+        Renown->>Wallet: Request signature for credential
+        activate Wallet
+        Wallet->>User: Sign credential
+        User->>Wallet: Approve signature
+        Wallet->>Renown: Signed credential
+        deactivate Wallet
+
+        Renown->>Renown: createVerifiableCredential()<br/>Store in drive
+
+        Note over Renown: 📄 Verifiable Credential JWT<br/>════════════════════════<br/>Header: {"typ":"JWT", "alg":"ES256K-R"}<br/>────────────────────────<br/>Payload:<br/>{<br/>  "vc": {<br/>    "@context": ["https://...v1"],<br/>    "type": ["VerifiableCredential",<br/>             "RenownCredential"],<br/>    "credentialSubject": {<br/>      "id": "did:key:zDnae...",<br/>      "address": "0x1AD3d7...",<br/>      "chainId": 1<br/>    }<br/>  },<br/>  "iss": "did:pkh:eip155:1:0x...",<br/>  "sub": "did:key:zDnae...",<br/>  "nbf": 1761028420,<br/>  "exp": 1761633220<br/>}<br/>────────────────────────<br/>Signature: [ETH wallet via MetaMask]
+
+        Renown->>Browser: Return VC JWT + metadata
+        deactivate Renown
+
+        Browser->>SDK: Store credential + challenge
+        activate SDK
+        SDK->>SDK: Cache in secure storage:<br/>- IndexedDB (encrypted)<br/>- Set expiration timer<br/>- Track revocation endpoint
+        SDK->>SDK: Create & sign VP with challenge
+
+        Note over SDK: 📦 Verifiable Presentation JWT<br/>════════════════════════<br/>Header: {"typ":"JWT", "alg":"EdDSA"}<br/>────────────────────────<br/>Payload:<br/>{<br/>  "vp": {<br/>    "@context": ["https://...v1"],<br/>    "type": ["VerifiablePresentation"],<br/>    "verifiableCredential": [<br/>      "eyJ0eXAi....[new VC JWT]"<br/>    ],<br/>    "holder": "did:key:zDnae..."<br/>  },<br/>  "iss": "did:key:zDnae...",<br/>  "aud": "did:web:vetra.io",<br/>  "nonce": "random-nonce-xyz",<br/>  "iat": 1761028500<br/>}<br/>────────────────────────<br/>Signature: [Renown DID SDK]
+
+        SDK->>Vetra: Return signed VP
+        deactivate SDK
+
+        %% Verification
+        Vetra->>Vetra: 1. Verify challenge matches<br/>2. Verify VP & VC signatures<br/>3. Check not expired
+
+        Vetra->>Renown: Check revocation status
+        activate Renown
+        Renown->>Vetra: Status OK
+        deactivate Renown
+
+        Vetra->>Vetra: Create session
+        Vetra->>Browser: Redirect to dashboard
+        Browser->>User: Access granted
+
+        Note over User: 🎉 Authenticated!<br/>(Only once, then fast path)
+    end
+
+    deactivate Vetra
+
+    %% Background processes
+    rect 
+        Note over SDK,Renown: 🔄 Background Optimizations
+
+        par Automatic credential refresh
+            Note over SDK: Before expiration (1 day before)
+            SDK->>Renown: Silent refresh<br/>(no user interaction)
+            Renown->>SDK: New VC
+            SDK->>SDK: Update cache
+        and Periodic revocation check
+            Note over SDK: Every 5 minutes
+            SDK->>Renown: Check revocation
+            Renown->>SDK: Status
+            alt Revoked
+                SDK->>SDK: Clear cache<br/>Require re-auth
+            end
+        and Session keep-alive
+            Note over Vetra: Extend session
+            Vetra->>Vetra: Refresh JWT token
+        end
+    end
+
+    %% Optional: Biometric enhancement
+    rect 
+        Note over User,SDK: 🔐 Optional: Enhanced Security
+
+        opt User enables biometric
+            User->>SDK: Enable biometric lock
+            SDK->>Browser: Register WebAuthn
+            Browser->>User: Set up fingerprint/face
+            User->>Browser: Biometric enrolled
+            Browser->>SDK: WebAuthn credential stored
+
+            Note over SDK: Future logins require biometric<br/>No wallet signature needed
+        end
+    end
