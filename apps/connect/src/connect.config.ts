@@ -30,6 +30,7 @@ function getPHGlobalConfigFromEnv(): PHGlobalConfig {
     isDragAndDropEnabled: true,
     isEditorDebugModeEnabled: false,
     isEditorReadModeEnabled: false,
+    isExternalControlsEnabled: false,
     version: env.PH_CONNECT_VERSION,
     logLevel: env.PH_CONNECT_LOG_LEVEL,
     requiresHardRefresh: env.PH_CONNECT_REQUIRES_HARD_REFRESH,
@@ -67,7 +68,6 @@ function getPHGlobalConfigFromEnv(): PHGlobalConfig {
     isDeleteCloudDrivesEnabled: !env.PH_CONNECT_DISABLE_DELETE_CLOUD_DRIVES,
     isAddLocalDrivesEnabled: !env.PH_CONNECT_DISABLE_ADD_LOCAL_DRIVES,
     isDeleteLocalDrivesEnabled: !env.PH_CONNECT_DISABLE_DELETE_LOCAL_DRIVES,
-    isExternalControlsEnabled: !env.PH_CONNECT_EXTERNAL_PACKAGES_DISABLED,
     isAnalyticsDatabaseWorkerEnabled:
       !env.PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED,
     isExternalPackagesEnabled: !env.PH_CONNECT_EXTERNAL_PACKAGES_DISABLED,
