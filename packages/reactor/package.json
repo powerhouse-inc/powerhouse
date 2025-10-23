@@ -21,7 +21,8 @@
     "build": "pnpm run build:tsc",
     "build:tsc": "tsc --build",
     "prebuild": "pnpm run clean",
-    "test": "vitest run",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest --coverage",
     "lint": "eslint",
     "bench": "vitest bench --run",
     "clean": "rimraf dist",
@@ -43,6 +44,7 @@
     "uuid": "^11.0.5"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^3.2.4",
     "typescript": "^5.7.3",
     "vitest": "^3.2.4"
   }
