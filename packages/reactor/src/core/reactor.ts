@@ -363,6 +363,7 @@ export class Reactor implements IReactor {
       createdAt: new Date().toISOString(),
       queueHint: [],
       maxRetries: 3,
+      errorHistory: [],
     };
 
     // Create job info and register with tracker
@@ -415,6 +416,7 @@ export class Reactor implements IReactor {
       createdAt: new Date().toISOString(),
       queueHint: [],
       maxRetries: 3,
+      errorHistory: [],
     };
 
     const jobInfo: JobInfo = {
@@ -448,6 +450,7 @@ export class Reactor implements IReactor {
       createdAt: new Date().toISOString(),
       queueHint: [],
       maxRetries: 3,
+      errorHistory: [],
     };
 
     // Create job info and register with tracker

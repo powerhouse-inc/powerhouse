@@ -546,6 +546,7 @@ describe("InMemoryQueue", () => {
       const job3 = createTestJob({
         id: "job-3",
         queueHint: ["job-1", "job-2"],
+        errorHistory: [],
       });
 
       await queue.enqueue(job1);
@@ -669,11 +670,13 @@ describe("InMemoryQueue", () => {
         id: "job-1",
         documentId: "doc-1",
         queueHint: [],
+        errorHistory: [],
       });
       const job2 = createTestJob({
         id: "job-2",
         documentId: "doc-2",
         queueHint: ["job-1"],
+        errorHistory: [],
       });
 
       await queue.enqueue(job1);
@@ -698,11 +701,13 @@ describe("InMemoryQueue", () => {
         id: "job-1",
         documentId: "doc-1",
         queueHint: ["job-0"],
+        errorHistory: [],
       });
       const job2 = createTestJob({
         id: "job-2",
         documentId: "doc-2",
         queueHint: [],
+        errorHistory: [],
       });
 
       await queue.enqueue(job1);
@@ -797,6 +802,7 @@ describe("InMemoryQueue", () => {
       const job = createTestJob({
         id: "job-3",
         queueHint: ["job-0", "job-1", "job-2"],
+        errorHistory: [],
       });
       await queue.enqueue(job);
 
@@ -1138,6 +1144,7 @@ describe("InMemoryQueue", () => {
         actions: [createTestOperation().action],
         createdAt: new Date().toISOString(),
         queueHint: [],
+        errorHistory: [],
         // retryCount and maxRetries are optional
       } satisfies Job;
 

@@ -145,6 +145,7 @@ export function createTestJob(overrides: Partial<Job> = {}): Job {
     queueHint: [],
     retryCount: 0,
     maxRetries: 3,
+    errorHistory: [],
   };
 
   return {
@@ -165,6 +166,7 @@ export function createMinimalJob(overrides: Partial<Job> = {}): Job {
     actions: overrides.actions || [createMinimalAction()],
     createdAt: overrides.createdAt || "2023-01-01T00:00:00.000Z",
     queueHint: overrides.queueHint || [],
+    errorHistory: overrides.errorHistory || [],
     ...overrides,
   };
 }

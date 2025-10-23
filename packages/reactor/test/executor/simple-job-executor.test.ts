@@ -122,6 +122,7 @@ describe("SimpleJobExecutor", () => {
         ],
         createdAt: "123",
         queueHint: [],
+        errorHistory: [],
       };
 
       const result = await executor.executeJob(job);
@@ -179,6 +180,7 @@ describe("SimpleJobExecutor", () => {
         ],
         createdAt: "123",
         queueHint: [],
+        errorHistory: [],
       };
 
       const result = await executor.executeJob(job);
@@ -211,6 +213,7 @@ describe("SimpleJobExecutor", () => {
         ],
         createdAt: "123",
         queueHint: [],
+        errorHistory: [],
       };
 
       const result = await executor.executeJob(job);
@@ -270,6 +273,7 @@ describe("SimpleJobExecutor", () => {
         ],
         createdAt: "1234567890",
         queueHint: [],
+        errorHistory: [],
       };
 
       mockDocStorage.delete = vi.fn().mockResolvedValue(undefined);
@@ -330,6 +334,7 @@ describe("SimpleJobExecutor", () => {
         ],
         createdAt: "1234567890",
         queueHint: [],
+        errorHistory: [],
       };
 
       mockDocStorage.delete = vi
@@ -361,6 +366,7 @@ describe("SimpleJobExecutor", () => {
         ],
         createdAt: "1234567890",
         queueHint: [],
+        errorHistory: [],
       };
 
       const result = await executor.executeJob(job);
@@ -399,6 +405,7 @@ describe("SimpleJobExecutor", () => {
           ],
           createdAt: "1234567890",
           queueHint: [],
+          errorHistory: [],
         };
 
         mockDocStorage.create = vi.fn().mockResolvedValue(undefined);
@@ -454,6 +461,7 @@ describe("SimpleJobExecutor", () => {
           ],
           createdAt: "1234567890",
           queueHint: [],
+          errorHistory: [],
         };
 
         mockDocStorage.delete = vi.fn().mockResolvedValue(undefined);
@@ -508,6 +516,7 @@ describe("SimpleJobExecutor", () => {
           ],
           createdAt: "1234567890",
           queueHint: [],
+          errorHistory: [],
         };
 
         const result = await executor.executeJob(job);
@@ -557,6 +566,7 @@ describe("SimpleJobExecutor", () => {
           ],
           createdAt: "1234567890",
           queueHint: [],
+          errorHistory: [],
         };
 
         mockDocStorage.create = vi.fn().mockResolvedValue(undefined);
@@ -641,6 +651,7 @@ describe("SimpleJobExecutor", () => {
           ],
           createdAt: "1234567890",
           queueHint: [],
+          errorHistory: [],
         };
 
         mockDocStorage.delete = vi.fn().mockResolvedValue(undefined);
@@ -696,6 +707,7 @@ describe("SimpleJobExecutor", () => {
           ],
           createdAt: "1234567890",
           queueHint: [],
+          errorHistory: [],
         };
 
         const result = await executor.executeJob(job);
@@ -744,6 +756,7 @@ describe("SimpleJobExecutor", () => {
           ],
           createdAt: "1234567890",
           queueHint: [],
+          errorHistory: [],
         };
 
         mockDocStorage.create = vi.fn().mockResolvedValue(undefined);
@@ -818,6 +831,7 @@ describe("SimpleJobExecutor", () => {
           ],
           createdAt: "1234567890",
           queueHint: [],
+          errorHistory: [],
         };
 
         const result = await executor.executeJob(job);
@@ -852,6 +866,7 @@ describe("SimpleJobExecutor", () => {
           ],
           createdAt: "1234567890",
           queueHint: [],
+          errorHistory: [],
         };
 
         mockDocStorage.create = vi.fn().mockResolvedValue(undefined);
