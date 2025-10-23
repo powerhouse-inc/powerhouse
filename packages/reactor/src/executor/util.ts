@@ -130,7 +130,11 @@ export function applyDeleteDocumentAction(
  * - Indexes start at 0 for each scope
  * - Different scopes can have operations with the same index value
  *
- * @param document - The document whose operations to inspect
+ * This function uses header.revision which is populated by the cache/storage layer
+ * and contains the next available index for each scope. This design avoids requiring
+ * the full operation history to be loaded, which is crucial for snapshot-based caching.
+ *
+ * @param document - The document whose header.revision to inspect
  * @param scope - The scope to calculate the next index for
  * @returns The next available index in the specified scope
  */
@@ -138,22 +142,5 @@ export const getNextIndexForScope = (
   document: PHDocument,
   scope: string,
 ): number => {
-  if (!document.operations[scope]) {
-    return 0;
-  }
-
-  const scopeOps = document.operations[scope];
-  if (scopeOps.length === 0) {
-    return 0;
-  }
-
-  // Find the highest index in this scope
-  let maxIndex = -1;
-  for (const op of scopeOps) {
-    if (op.index > maxIndex) {
-      maxIndex = op.index;
-    }
-  }
-
-  return maxIndex + 1;
+  return document.header.revision?.[scope] || 0;
 };
