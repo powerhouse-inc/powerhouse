@@ -3,11 +3,11 @@ import { generateId } from "document-model/core";
 import { Kysely } from "kysely";
 import { KyselyPGlite } from "kysely-pglite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { KyselyDocumentView } from "../../src/read-models/document-view.js";
-import type { DocumentViewDatabase } from "../../src/read-models/types.js";
-import type { IOperationStore } from "../../src/storage/interfaces.js";
-import { KyselyOperationStore } from "../../src/storage/kysely/store.js";
-import type { Database as StorageDatabase } from "../../src/storage/kysely/types.js";
+import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
+import type { DocumentViewDatabase } from "../../../src/read-models/types.js";
+import type { IOperationStore } from "../../../src/storage/interfaces.js";
+import { KyselyOperationStore } from "../../../src/storage/kysely/store.js";
+import type { Database as StorageDatabase } from "../../../src/storage/kysely/types.js";
 
 // Combined database type that includes both storage and view tables
 type Database = StorageDatabase & DocumentViewDatabase;

@@ -6,10 +6,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   DuplicateOperationError,
   RevisionMismatchError,
-} from "../../src/storage/interfaces.js";
-import type { KyselyOperationStore } from "../../src/storage/kysely/store.js";
-import type { Database as DatabaseSchema } from "../../src/storage/kysely/types.js";
-import { createTestOperationStore } from "../factories.js";
+} from "../../../src/storage/interfaces.js";
+import type { KyselyOperationStore } from "../../../src/storage/kysely/store.js";
+import type { Database as DatabaseSchema } from "../../../src/storage/kysely/types.js";
+import { createTestOperationStore } from "../../factories.js";
 
 describe("KyselyOperationStore", () => {
   let db: Kysely<DatabaseSchema>;
