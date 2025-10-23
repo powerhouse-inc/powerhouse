@@ -1,3 +1,13 @@
+## 4.1.0-dev.86 (2025-10-23)
+
+### 🩹 Fixes
+
+- **vetra:** added codegen debounce test and reduced logging ([bc360b8e0](https://github.com/powerhouse-inc/powerhouse/commit/bc360b8e0))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.85 (2025-10-22)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.

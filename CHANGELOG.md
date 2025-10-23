@@ -1,3 +1,18 @@
+## 4.1.0-dev.86 (2025-10-23)
+
+### 🚀 Features
+
+- initial write cache bench, but incomplete ([a9cbcf20e](https://github.com/powerhouse-inc/powerhouse/commit/a9cbcf20e))
+
+### 🩹 Fixes
+
+- **vetra:** added codegen debounce test and reduced logging ([bc360b8e0](https://github.com/powerhouse-inc/powerhouse/commit/bc360b8e0))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.85 (2025-10-22)
 
 ### 🩹 Fixes
