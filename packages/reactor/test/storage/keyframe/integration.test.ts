@@ -1,8 +1,8 @@
 import type { PHDocument } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { KyselyKeyframeStore } from "../../src/storage/kysely/keyframe-store.js";
-import { createTestOperationStore } from "../factories.js";
+import type { KyselyKeyframeStore } from "../../../src/storage/kysely/keyframe-store.js";
+import { createTestOperationStore } from "../../factories.js";
 
 describe("KyselyKeyframeStore", () => {
   let keyframeStore: KyselyKeyframeStore;

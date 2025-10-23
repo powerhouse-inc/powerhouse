@@ -136,7 +136,7 @@ export class JobAwaiter implements IJobAwaiter {
           return;
         }
 
-        // Use the first active waiter's signal for the status check
+        // let errors bubble up
         const jobInfo = await this.getJobStatus(jobId, activeWaiters[0].signal);
 
         // Check if job is complete
