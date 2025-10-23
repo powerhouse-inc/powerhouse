@@ -210,6 +210,11 @@ export class SimpleJobExecutor implements IJobExecutor {
         };
       }
 
+      updatedDocument.header.revision = {
+        ...updatedDocument.header.revision,
+        [scope]: newOperation.index + 1,
+      };
+
       this.writeCache.putState(
         job.documentId,
         scope,
@@ -357,6 +362,11 @@ export class SimpleJobExecutor implements IJobExecutor {
         duration: Date.now() - startTime,
       };
     }
+
+    document.header.revision = {
+      ...document.header.revision,
+      [job.scope]: operation.index + 1,
+    };
 
     this.writeCache.putState(
       document.header.id,
@@ -670,6 +680,11 @@ export class SimpleJobExecutor implements IJobExecutor {
         duration: Date.now() - startTime,
       };
     }
+
+    document.header.revision = {
+      ...document.header.revision,
+      [job.scope]: operation.index + 1,
+    };
 
     this.writeCache.putState(
       documentId,

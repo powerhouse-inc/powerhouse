@@ -449,10 +449,17 @@ export class KyselyWriteCache implements IWriteCache {
       }
     } while (hasMorePages);
 
-    if (!document) {
-      throw new Error(
-        `Failed to rebuild document ${documentId}: no operations found`,
+    try {
+      const revisions = await this.operationStore.getRevisions(
+        documentId,
+        branch,
+        signal,
       );
+      document.header.revision = revisions.revision;
+      document.header.lastModifiedAtUtcIso = revisions.latestTimestamp;
+    } catch (error) {
+      document.header.revision = {};
+      document.header.lastModifiedAtUtcIso = new Date().toISOString();
     }
 
     return document;
@@ -505,6 +512,19 @@ export class KyselyWriteCache implements IWriteCache {
       throw new Error(
         `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
       );
+    }
+
+    try {
+      const revisions = await this.operationStore.getRevisions(
+        documentId,
+        branch,
+        signal,
+      );
+      document.header.revision = revisions.revision;
+      document.header.lastModifiedAtUtcIso = revisions.latestTimestamp;
+    } catch (error) {
+      document.header.revision = {};
+      document.header.lastModifiedAtUtcIso = new Date().toISOString();
     }
 
     return document;

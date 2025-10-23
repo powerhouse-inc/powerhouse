@@ -49,7 +49,7 @@ import {
 // Combined database type
 type Database = StorageDatabase & DocumentViewDatabase;
 
-describe.skip("Integration Test: Reactor <> Document Drive Document Model", () => {
+describe("Integration Test: Reactor <> Document Drive Document Model", () => {
   let reactor: Reactor;
   let registry: IDocumentModelRegistry;
   let storage: MemoryStorage;
@@ -164,6 +164,37 @@ describe.skip("Integration Test: Reactor <> Document Drive Document Model", () =
     } catch {
       //
     }
+  });
+
+  describe("Document Creation", () => {
+    it("should create a document via reactor.create", async () => {
+      const document = driveDocumentModelModule.utils.createDocument();
+
+      const createJobInfo = await reactor.create(document);
+      expect(createJobInfo.status).toBe(JobStatus.PENDING);
+
+      await vi.waitUntil(
+        async () => {
+          const jobStatus = await reactor.getJobStatus(createJobInfo.id);
+          if (jobStatus.status === JobStatus.FAILED) {
+            throw new Error(
+              `Job failed: ${jobStatus.error || "unknown error"}`,
+            );
+          }
+          return jobStatus.status === JobStatus.COMPLETED;
+        },
+        { timeout: 5000 },
+      );
+
+      const { document: retrievedDocument } =
+        await reactor.get<DocumentDriveDocument>(document.header.id);
+      expect(retrievedDocument).toBeDefined();
+      expect(retrievedDocument.header.id).toBe(document.header.id);
+      expect(retrievedDocument.header.documentType).toBe(
+        document.header.documentType,
+      );
+      expect(retrievedDocument.state.global.nodes).toHaveLength(0);
+    });
   });
 
   describe("ADD Operations", () => {

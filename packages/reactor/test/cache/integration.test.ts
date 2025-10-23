@@ -4,6 +4,7 @@ import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { KyselyWriteCache } from "../../src/cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../../src/cache/types.js";
+import { getNextIndexForScope } from "../../src/executor/util.js";
 import { DocumentModelRegistry } from "../../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
 import type {
@@ -15,6 +16,7 @@ import {
   createCreateDocumentOperation,
   createTestOperation,
   createTestOperationStore,
+  createUpgradeDocumentOperation,
 } from "../factories.js";
 
 describe("KyselyWriteCache Integration Tests", () => {
@@ -450,6 +452,54 @@ describe("KyselyWriteCache Integration Tests", () => {
 
       expect(document.header.documentType).toBe(docType);
       expect(registry.getModule(docType)).toBeDefined();
+    });
+
+    it("should handle CREATE_DOCUMENT followed by UPGRADE_DOCUMENT in sequence", async () => {
+      const docId = "test-create-upgrade-sequence";
+      const docType = "powerhouse/document-model";
+
+      await operationStore.apply(
+        docId,
+        docType,
+        "document",
+        "main",
+        0,
+        (txn) => {
+          txn.addOperations(createCreateDocumentOperation(docId, docType));
+        },
+      );
+
+      const docAfterCreate = await cache.getState(docId, "document", "main", 0);
+      cache.putState(docId, "document", "main", 0, docAfterCreate);
+
+      const docForUpgrade = await cache.getState(docId, "document", "main");
+
+      expect(docForUpgrade.header.revision).toBeDefined();
+      expect(docForUpgrade.header.revision.document).toBe(1);
+
+      const nextIndex = getNextIndexForScope(docForUpgrade, "document");
+      expect(nextIndex).toBe(1);
+
+      await operationStore.apply(
+        docId,
+        docType,
+        "document",
+        "main",
+        nextIndex,
+        (txn) => {
+          txn.addOperations(
+            createUpgradeDocumentOperation(docId, nextIndex, {
+              global: { test: "state" },
+              local: {},
+            }),
+          );
+        },
+      );
+
+      cache.invalidate(docId, "document", "main");
+
+      const finalDoc = await cache.getState(docId, "document", "main");
+      expect(finalDoc.header.revision.document).toBe(2);
     });
   });
 

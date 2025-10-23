@@ -223,6 +223,32 @@ export function createCreateDocumentOperation(
   };
 }
 
+export function createUpgradeDocumentOperation(
+  documentId: string,
+  index: number,
+  initialState: Record<string, any> = {},
+  overrides: Partial<Operation> = {},
+): Operation {
+  return {
+    id: overrides.id || `${documentId}-upgrade-${index}`,
+    index,
+    skip: 0,
+    hash: overrides.hash || `hash-${index}`,
+    timestampUtcMs: overrides.timestampUtcMs || new Date().toISOString(),
+    action: {
+      id: `${documentId}-upgrade-action-${index}`,
+      type: "UPGRADE_DOCUMENT",
+      scope: "document",
+      timestampUtcMs: overrides.timestampUtcMs || new Date().toISOString(),
+      input: {
+        documentId,
+        initialState,
+      },
+    } as Action,
+    ...overrides,
+  };
+}
+
 /**
  * Factory for creating minimal Operation objects
  */

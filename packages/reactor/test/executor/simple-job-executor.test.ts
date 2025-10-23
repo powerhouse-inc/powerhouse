@@ -30,38 +30,41 @@ describe("SimpleJobExecutor", () => {
 
     // Setup mock document storage with additional mock for operations/state structure
     mockDocStorage = createMockDocumentStorage({
-      get: vi.fn().mockResolvedValue({
-        header: {
-          id: "doc-1",
-          documentType: "powerhouse/document-model",
-        },
-        operations: {
-          document: [
-            {
-              index: 0,
-              action: {
-                type: "CREATE_DOCUMENT",
-                id: "create-action",
-                scope: "document",
-                timestampUtcMs: "1234567890",
-                input: {
-                  documentId: "doc-1",
-                  model: "powerhouse/document-model",
+      get: vi.fn().mockImplementation((docId) =>
+        Promise.resolve({
+          header: {
+            id: docId,
+            documentType: "powerhouse/document-model",
+            revision: { document: 1 },
+          },
+          operations: {
+            document: [
+              {
+                index: 0,
+                action: {
+                  type: "CREATE_DOCUMENT",
+                  id: "create-action",
+                  scope: "document",
+                  timestampUtcMs: "1234567890",
+                  input: {
+                    documentId: docId,
+                    model: "powerhouse/document-model",
+                  },
                 },
               },
-            },
-          ],
-          global: [],
-          local: [],
-        },
-        state: {
-          global: {},
-          local: {},
-          document: {
-            isDeleted: false,
+            ],
+            global: [],
+            local: [],
           },
-        },
-      }),
+          state: {
+            global: {},
+            local: {},
+            document: {
+              isDeleted: false,
+            },
+          },
+        }),
+      ),
       exists: vi.fn().mockResolvedValue(true),
       resolveSlugs: vi.fn().mockResolvedValue([]),
     });
@@ -96,11 +99,6 @@ describe("SimpleJobExecutor", () => {
   });
 
   describe("executeJob", () => {
-    it.skip("should execute a job successfully", async () => {
-      // Skip this test as document-model has complex validation requirements
-      // The simplified executor concept has been proven with the other tests
-    });
-
     it("should handle document not found", async () => {
       mockDocStorage.get = vi
         .fn()
@@ -427,6 +425,10 @@ describe("SimpleJobExecutor", () => {
           header: {
             id: documentId,
             documentType: "powerhouse/document-model",
+            revision: {
+              document: 2,
+              global: 2,
+            },
           },
           operations: {
             document: [
@@ -483,6 +485,9 @@ describe("SimpleJobExecutor", () => {
           header: {
             id: documentId,
             documentType: "powerhouse/document-model",
+            revision: {
+              document: 1,
+            },
           },
           operations: {
             document: [{ index: 0, action: { type: "CREATE_DOCUMENT" } }],
@@ -575,6 +580,9 @@ describe("SimpleJobExecutor", () => {
           header: {
             id: documentId,
             documentType: "powerhouse/document-model",
+            revision: {
+              document: 1,
+            },
           },
           operations: {
             document: [
@@ -625,7 +633,15 @@ describe("SimpleJobExecutor", () => {
 
         // Set up document with index 0 in multiple scopes
         mockDocStorage.get = vi.fn().mockResolvedValue({
-          header: { id: documentId, documentType: "powerhouse/document-model" },
+          header: {
+            id: documentId,
+            documentType: "powerhouse/document-model",
+            revision: {
+              document: 1,
+              global: 1,
+              local: 1,
+            },
+          },
           operations: {
             document: [{ index: 0, action: { type: "CREATE_DOCUMENT" } }],
             global: [{ index: 0, action: { type: "SET_NAME" } }],
@@ -669,7 +685,15 @@ describe("SimpleJobExecutor", () => {
 
         // Create a document where different scopes have different index counts
         const document = {
-          header: { id: documentId, documentType: "powerhouse/document-model" },
+          header: {
+            id: documentId,
+            documentType: "powerhouse/document-model",
+            revision: {
+              document: 2,
+              global: 3,
+              local: 1,
+            },
+          },
           operations: {
             document: [
               { index: 0, action: { type: "CREATE_DOCUMENT" } },
@@ -766,6 +790,9 @@ describe("SimpleJobExecutor", () => {
           header: {
             id: documentId,
             documentType: "powerhouse/document-model",
+            revision: {
+              document: 1,
+            },
           },
           operations: {
             document: [
