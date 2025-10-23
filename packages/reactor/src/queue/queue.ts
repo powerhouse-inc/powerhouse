@@ -354,10 +354,13 @@ export class InMemoryQueue implements IQueue {
       this.markJobComplete(jobId, documentId);
     }
 
-    // update the job lastError
+    // update the job lastError and errorHistory
     const job = this.jobIndex.get(jobId);
     if (job) {
       job.lastError = error;
+      if (error) {
+        job.errorHistory.push(error);
+      }
     }
 
     // Remove from job index
@@ -390,6 +393,11 @@ export class InMemoryQueue implements IQueue {
     // Remove from indices
     this.jobIndex.delete(jobId);
     this.jobIdToQueueKey.delete(jobId);
+
+    // Add error to history
+    if (error) {
+      job.errorHistory.push(error);
+    }
 
     // Update retry count
     const updatedJob: Job = {

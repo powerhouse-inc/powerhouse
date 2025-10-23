@@ -155,10 +155,16 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
           handle.fail(errorMessage);
         }
       } else {
-        const errorMessage = result.error?.message || "Unknown error";
-        this.jobTracker.markFailed(handle.job.id, errorMessage);
+        const currentError = result.error?.message || "Unknown error";
 
-        handle.fail(errorMessage);
+        const fullErrorMessage = this.formatErrorHistory(
+          handle.job.errorHistory,
+          currentError,
+          retryCount + 1,
+        );
+
+        this.jobTracker.markFailed(handle.job.id, fullErrorMessage);
+        handle.fail(fullErrorMessage);
       }
     }
 
@@ -206,5 +212,24 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
         console.error("Error processing existing jobs:", error);
       }
     }
+  }
+
+  private formatErrorHistory(
+    errorHistory: string[],
+    currentError: string,
+    totalAttempts: number,
+  ): string {
+    const allErrors = [...errorHistory, currentError];
+
+    if (allErrors.length === 1) {
+      return currentError;
+    }
+
+    const lines = [`Job failed after ${totalAttempts} attempts:`];
+    allErrors.forEach((error, index) => {
+      lines.push(`[Attempt ${index + 1}] ${error}`);
+    });
+
+    return lines.join("\n");
   }
 }

@@ -171,6 +171,7 @@ describe("SimpleJobExecutor Integration", () => {
         ],
         createdAt: Date.now().toString(),
         queueHint: [],
+        errorHistory: [],
       };
 
       // Execute the job
@@ -235,6 +236,7 @@ describe("SimpleJobExecutor Integration", () => {
         ],
         createdAt: Date.now().toString(),
         queueHint: [],
+        errorHistory: [],
       };
 
       const result1 = await executor.executeJob(job1);
@@ -261,6 +263,7 @@ describe("SimpleJobExecutor Integration", () => {
         ],
         createdAt: (Date.now() + 1).toString(),
         queueHint: [],
+        errorHistory: [],
       };
 
       const result2 = await executor.executeJob(job2);
@@ -321,6 +324,7 @@ describe("SimpleJobExecutor Integration", () => {
         ],
         createdAt: Date.now().toString(),
         queueHint: [],
+        errorHistory: [],
       };
 
       await executor.executeJob(folderJob);
@@ -347,6 +351,7 @@ describe("SimpleJobExecutor Integration", () => {
         ],
         createdAt: (Date.now() + 1).toString(),
         queueHint: [],
+        errorHistory: [],
       };
 
       const result = await executor.executeJob(fileJob);
@@ -421,6 +426,7 @@ describe("SimpleJobExecutor Integration", () => {
         ],
         createdAt: Date.now().toString(),
         queueHint: [],
+        errorHistory: [],
       };
 
       // Execute the job
@@ -467,6 +473,7 @@ describe("SimpleJobExecutor Integration", () => {
         ],
         createdAt: new Date().toISOString(),
         queueHint: [],
+        errorHistory: [],
       };
 
       // Execute the job - should fail
@@ -502,6 +509,7 @@ describe("SimpleJobExecutor Integration", () => {
         ],
         createdAt: new Date().toISOString(),
         queueHint: [],
+        errorHistory: [],
       };
 
       const deleteResult = await executor.executeJob(deleteJob);
@@ -528,6 +536,7 @@ describe("SimpleJobExecutor Integration", () => {
         ],
         createdAt: Date.now().toString(),
         queueHint: [],
+        errorHistory: [],
       };
 
       // Execute the job
@@ -563,6 +572,7 @@ describe("SimpleJobExecutor Integration", () => {
         ],
         createdAt: new Date().toISOString(),
         queueHint: [],
+        errorHistory: [],
       };
 
       const deleteResult1 = await executor.executeJob(deleteJob1);
@@ -585,6 +595,7 @@ describe("SimpleJobExecutor Integration", () => {
         ],
         createdAt: new Date().toISOString(),
         queueHint: [],
+        errorHistory: [],
       };
 
       // Execute the job

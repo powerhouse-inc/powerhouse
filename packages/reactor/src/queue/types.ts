@@ -57,6 +57,9 @@ export type Job = {
 
   /** Last error message if job failed */
   lastError?: string;
+
+  /** History of all error messages from each attempt (ordered) */
+  errorHistory: string[];
 };
 
 /**

@@ -68,6 +68,7 @@ function createSimpleJob(): Job {
     maxRetries: 0,
     createdAt: new Date().toISOString(),
     queueHint: [],
+    errorHistory: [],
   };
 }
 
@@ -90,6 +91,7 @@ function createComplexJob(): Job {
     maxRetries: 0,
     createdAt: new Date().toISOString(),
     queueHint: [],
+    errorHistory: [],
   };
 }
 
