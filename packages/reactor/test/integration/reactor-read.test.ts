@@ -6,18 +6,32 @@ import {
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
-import { beforeEach, describe, expect, it } from "vitest";
+import type { Kysely } from "kysely";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { KyselyWriteCache } from "../../src/cache/kysely-write-cache.js";
+import type { WriteCacheConfig } from "../../src/cache/types.js";
 import { Reactor } from "../../src/core/reactor.js";
 import { EventBus } from "../../src/events/event-bus.js";
 import type { IEventBus } from "../../src/events/interfaces.js";
 import type { IQueue } from "../../src/queue/interfaces.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
+import { ReadModelCoordinator } from "../../src/read-models/coordinator.js";
+import { KyselyDocumentView } from "../../src/read-models/document-view.js";
+import type { DocumentViewDatabase } from "../../src/read-models/types.js";
+import { DocumentModelRegistry } from "../../src/registry/implementation.js";
+import type {
+  IKeyframeStore,
+  IOperationStore,
+} from "../../src/storage/interfaces.js";
+import type { Database as StorageDatabase } from "../../src/storage/kysely/types.js";
 import {
   createDocModelDocument,
-  createMockReadModelCoordinator,
   createTestDocuments,
   createTestJobTracker,
+  createTestOperationStore,
 } from "../factories.js";
+
+type Database = StorageDatabase & DocumentViewDatabase;
 
 describe("Reactor Read Interface", () => {
   let reactor: Reactor;
@@ -25,6 +39,12 @@ describe("Reactor Read Interface", () => {
   let storage: MemoryStorage;
   let eventBus: IEventBus;
   let queue: IQueue;
+  let db: Kysely<Database>;
+  let operationStore: IOperationStore;
+  let keyframeStore: IKeyframeStore;
+  let writeCache: KyselyWriteCache;
+  let readModelCoordinator: ReadModelCoordinator;
+  let registry: DocumentModelRegistry;
 
   const documentModels = [
     documentModelDocumentModelModule,
@@ -35,19 +55,52 @@ describe("Reactor Read Interface", () => {
     // Create shared storage
     storage = new MemoryStorage();
 
+    // Create registry
+    registry = new DocumentModelRegistry();
+    registry.registerModules(
+      documentModelDocumentModelModule,
+      driveDocumentModelModule,
+    );
+
     // Create real drive server with the storage
     const builder = new ReactorBuilder(documentModels);
     builder.withStorage(storage);
     driveServer = builder.build() as unknown as BaseDocumentDriveServer;
     await driveServer.initialize();
 
+    // Create in-memory database for operation store
+    const setup = await createTestOperationStore();
+    db = setup.db as unknown as Kysely<Database>;
+    operationStore = setup.store;
+    keyframeStore = setup.keyframeStore;
+
     // Create event bus and queue
     eventBus = new EventBus();
     queue = new InMemoryQueue(eventBus);
 
+    // Create write cache
+    const writeCacheConfig: WriteCacheConfig = {
+      maxDocuments: 100,
+      ringBufferSize: 10,
+      keyframeInterval: 10,
+    };
+
+    writeCache = new KyselyWriteCache(
+      keyframeStore,
+      operationStore,
+      registry,
+      writeCacheConfig,
+    );
+    await writeCache.startup();
+
+    // Create real document view and read model coordinator
+    const documentView = new KyselyDocumentView(db, operationStore);
+    await documentView.init();
+    readModelCoordinator = new ReadModelCoordinator(eventBus, [documentView]);
+    readModelCoordinator.start();
+
     // Create reactor facade with all required dependencies
     const jobTracker = createTestJobTracker();
-    const readModelCoordinator = createMockReadModelCoordinator();
     reactor = new Reactor(
       driveServer,
       storage,
@@ -55,6 +108,17 @@ describe("Reactor Read Interface", () => {
       jobTracker,
       readModelCoordinator,
     );
+  });
+
+  afterEach(async () => {
+    readModelCoordinator.stop();
+    await writeCache.shutdown();
+    writeCache.clear();
+    try {
+      await db.destroy();
+    } catch {
+      //
+    }
   });
 
   describe("getDocumentModels", () => {
