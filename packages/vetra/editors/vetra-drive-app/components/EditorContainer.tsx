@@ -23,7 +23,7 @@ export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
 
   return (
     <Suspense fallback={loadingContent}>
-      <EditorComponent documentId={documentId} />
+      <EditorComponent documentId={documentId} displayToolbar={false} />
     </Suspense>
   );
 };

@@ -1,3 +1,4 @@
+import { DocumentToolbar } from "@powerhousedao/design-system";
 import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
 import { useCallback } from "react";
 import { actions } from "../../document-models/subgraph-module/index.js";
@@ -23,6 +24,7 @@ export function Editor() {
 
   return (
     <div>
+      <DocumentToolbar />
       <SubgraphEditorForm
         subgraphName={document.state.global.name ?? ""}
         status={document.state.global.status}

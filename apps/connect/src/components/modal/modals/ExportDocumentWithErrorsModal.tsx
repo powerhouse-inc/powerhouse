@@ -4,9 +4,9 @@ import {
   exportFile,
   useDocumentById,
   usePHModal,
+  validateDocument,
 } from "@powerhousedao/reactor-browser";
 import { useTranslation } from "react-i18next";
-import { validateDocument } from "@powerhousedao/connect";
 export function ExportDocumentWithErrorsModal() {
   const phModal = usePHModal();
   const open = phModal?.type === "exportDocumentWithErrors";

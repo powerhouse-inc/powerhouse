@@ -1,3 +1,4 @@
+import { DocumentToolbar } from "@powerhousedao/design-system";
 import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
 import { useCallback } from "react";
 import { actions } from "../../document-models/processor-module/index.js";
@@ -46,6 +47,7 @@ export function Editor() {
 
   return (
     <div>
+      <DocumentToolbar />
       <ProcessorEditorForm
         onNameChange={onNameChange}
         onTypeChange={onTypeChange}

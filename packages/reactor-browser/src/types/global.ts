@@ -7,6 +7,7 @@ import type {
 import type { PHDocument } from "document-model";
 import type { PHGlobalConfig } from "./config.js";
 import type { PHModal } from "./modals.js";
+import type { TimelineItem } from "./timeline.js";
 import type { VetraPackage } from "./vetra.js";
 
 export type PHGlobal = PHGlobalConfig & {
@@ -25,6 +26,8 @@ export type PHGlobal = PHGlobalConfig & {
   selectedNodeId?: string;
   modal?: PHModal;
   selectedTimelineRevision?: string | number | null;
+  revisionHistoryVisible?: boolean;
+  selectedTimelineItem?: TimelineItem | null;
 };
 
 export type PHGlobalKey = keyof PHGlobal;

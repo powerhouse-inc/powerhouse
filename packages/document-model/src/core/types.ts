@@ -526,8 +526,8 @@ export type ImportScriptModule = {
   endpoint: string;
 };
 
-export type EditorModule = {
-  Component: FC<EditorProps>;
+export type EditorModule<TProps = any> = {
+  Component: FC<EditorProps & TProps>;
   documentTypes: string[];
   config: {
     id: string;

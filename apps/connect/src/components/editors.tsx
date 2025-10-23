@@ -1,22 +1,20 @@
-import { getRevisionFromDate, useTimelineItems } from "@powerhousedao/common";
 import {
   EditorLoader,
   toast,
   useUndoRedoShortcuts,
 } from "@powerhousedao/connect";
-import type { TimelineItem } from "@powerhousedao/design-system";
+import { RevisionHistory } from "@powerhousedao/design-system";
 import {
-  DocumentToolbar,
-  PowerhouseButton,
-  RevisionHistory,
-} from "@powerhousedao/design-system";
-import {
+  getRevisionFromDate,
+  setRevisionHistoryVisible,
   showPHModal,
   useDocumentById,
   useDocumentModelModuleById,
   useEditorModuleById,
   useFallbackEditorModule,
   useIsExternalControlsEnabled,
+  useRevisionHistoryVisible,
+  useSelectedTimelineItem,
 } from "@powerhousedao/reactor-browser";
 import type { PHDocument } from "document-model";
 import { redo, undo } from "document-model/core";
@@ -54,15 +52,13 @@ export const DocumentEditor: React.FC<Props> = (props) => {
     onExport,
     onOpenSwitchboardLink,
   } = props;
-  const [selectedTimelineItem, setSelectedTimelineItem] =
-    useState<TimelineItem | null>(null);
-  const [revisionHistoryVisible, setRevisionHistoryVisible] = useState(false);
+  const selectedTimelineItem = useSelectedTimelineItem();
+  const revisionHistoryVisible = useRevisionHistoryVisible();
   const [document, dispatch] = useDocumentById(initialDocument.header.id);
   const documentId = document?.header.id ?? undefined;
   const documentName = document?.header.name ?? undefined;
   const documentType = document?.header.documentType ?? undefined;
   const preferredEditor = document?.header.meta?.preferredEditor ?? undefined;
-  const createdAt = document?.header.createdAtUtcIso ?? undefined;
   const globalOperations = document?.operations.global ?? [];
   const localOperations = document?.operations.local ?? [];
   const globalRevisionNumber = document?.header.revision.global ?? 0;
@@ -71,7 +67,6 @@ export const DocumentEditor: React.FC<Props> = (props) => {
   const preferredEditorModule = useEditorModuleById(preferredEditor);
   const fallbackEditorModule = useFallbackEditorModule(documentType);
   const editorModule = preferredEditorModule ?? fallbackEditorModule;
-  const timelineItems = useTimelineItems(documentId, createdAt);
   const isExternalControlsEnabled = useIsExternalControlsEnabled();
   const isLoadingDocument = !document;
   const isLoadingEditor =
@@ -187,32 +182,6 @@ export const DocumentEditor: React.FC<Props> = (props) => {
 
   return (
     <div className="relative h-full" id="document-editor-context">
-      {!isExternalControlsEnabled && !revisionHistoryVisible && (
-        <DocumentToolbar
-          onClose={onClose}
-          onExport={onExport}
-          onShowRevisionHistory={() => setRevisionHistoryVisible(true)}
-          title={documentName}
-          timelineItems={timelineItems.data}
-          onTimelineItemClick={setSelectedTimelineItem}
-        />
-      )}
-      {!!isExternalControlsEnabled && (
-        <div className="mb-4 flex justify-end gap-10">
-          <PowerhouseButton onClick={onExport}>Export</PowerhouseButton>
-          <div className="flex gap-4">
-            <PowerhouseButton onClick={addUndoAction} disabled={!canUndo}>
-              Undo
-            </PowerhouseButton>
-            <PowerhouseButton onClick={addRedoAction} disabled={!canRedo}>
-              Redo
-            </PowerhouseButton>
-          </div>
-          <div className="flex gap-4">
-            <PowerhouseButton onClick={onClose}>Close</PowerhouseButton>
-          </div>
-        </div>
-      )}
       {revisionHistoryVisible ? (
         <RevisionHistory
           key={documentId}
