@@ -119,14 +119,6 @@ export class MemoryStorage
 
     // add slug to lookup if it exists
     if (slug) {
-      // check if the slug is already taken
-      if (this.slugToDocumentId[slug]) {
-        throw new DocumentAlreadyExistsError(
-          documentId,
-          DocumentAlreadyExistsReason.SLUG,
-        );
-      }
-
       this.slugToDocumentId[slug] = documentId;
     }
 
