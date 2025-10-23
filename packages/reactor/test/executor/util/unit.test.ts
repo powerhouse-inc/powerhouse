@@ -7,7 +7,7 @@ import {
   applyDeleteDocumentAction,
   applyUpgradeDocumentAction,
   createDocumentFromAction,
-} from "../../src/executor/util.js";
+} from "../../../src/executor/util.js";
 
 describe("createDocumentFromAction", () => {
   it("should create a document with minimal input", () => {

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   reshuffleByTimestamp,
   reshuffleByTimestampAndIndex,
-} from "../../src/utils/reshuffle.js";
+} from "../../../src/utils/reshuffle.js";
 
 type InputOperation = Partial<Omit<Operation, "index" | "skip">> & {
   index: number;

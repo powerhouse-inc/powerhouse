@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
-  createShutdownStatus,
   createMutableShutdownStatus,
-} from "../src/shared/factories.js";
+  createShutdownStatus,
+} from "../../src/shared/factories.js";
 
 describe("ShutdownStatus Factory Methods", () => {
   describe("createShutdownStatus", () => {

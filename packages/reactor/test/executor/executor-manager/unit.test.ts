@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { EventBus } from "../../src/events/event-bus.js";
-import type { IEventBus } from "../../src/events/interfaces.js";
-import type { IJobExecutor } from "../../src/executor/interfaces.js";
-import type { JobExecutorFactory } from "../../src/executor/simple-job-executor-manager.js";
-import { SimpleJobExecutorManager } from "../../src/executor/simple-job-executor-manager.js";
-import type { JobResult } from "../../src/executor/types.js";
-import type { IJobTracker } from "../../src/job-tracker/interfaces.js";
-import { InMemoryJobTracker } from "../../src/job-tracker/in-memory-job-tracker.js";
-import type { IQueue } from "../../src/queue/interfaces.js";
-import { InMemoryQueue } from "../../src/queue/queue.js";
-import type { IJobExecutionHandle, Job } from "../../src/queue/types.js";
-import { JobQueueState } from "../../src/queue/types.js";
+import { EventBus } from "../../../src/events/event-bus.js";
+import type { IEventBus } from "../../../src/events/interfaces.js";
+import type { IJobExecutor } from "../../../src/executor/interfaces.js";
+import type { JobExecutorFactory } from "../../../src/executor/simple-job-executor-manager.js";
+import { SimpleJobExecutorManager } from "../../../src/executor/simple-job-executor-manager.js";
+import type { JobResult } from "../../../src/executor/types.js";
+import { InMemoryJobTracker } from "../../../src/job-tracker/in-memory-job-tracker.js";
+import type { IJobTracker } from "../../../src/job-tracker/interfaces.js";
+import type { IQueue } from "../../../src/queue/interfaces.js";
+import { InMemoryQueue } from "../../../src/queue/queue.js";
+import type { IJobExecutionHandle, Job } from "../../../src/queue/types.js";
+import { JobQueueState } from "../../../src/queue/types.js";
 
 describe("SimpleJobExecutorManager", () => {
   let manager: SimpleJobExecutorManager;

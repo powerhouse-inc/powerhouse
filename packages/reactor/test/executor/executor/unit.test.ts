@@ -4,18 +4,18 @@ import type {
 } from "document-drive";
 import { documentModelDocumentModelModule } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { IWriteCache } from "../../src/cache/write/interfaces.js";
-import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
-import type { Job } from "../../src/queue/types.js";
-import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
-import type { IOperationStore } from "../../src/storage/interfaces.js";
+import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
+import { SimpleJobExecutor } from "../../../src/executor/simple-job-executor.js";
+import type { Job } from "../../../src/queue/types.js";
+import type { IDocumentModelRegistry } from "../../../src/registry/interfaces.js";
+import type { IOperationStore } from "../../../src/storage/interfaces.js";
 import {
   createMockDocumentStorage,
   createMockOperationStorage,
   createMockOperationStore,
   createTestEventBus,
   createTestRegistry,
-} from "../factories.js";
+} from "../../factories.js";
 
 describe("SimpleJobExecutor", () => {
   let executor: SimpleJobExecutor;
