@@ -1,31 +1,26 @@
 # Tool: Vetra Studio 
 
-This chapter introduces you to one of the most powerfull features of the Powerhouse development framework: Specification Driven AI-control.  In the **'Get Started'** chapter we've been making use of strict schema definition principles to communicate the intended use case of our reactive documents. 
-
 :::tip Important
-The **schema definition language**, is a not only a shared language that bridges the gap between developer, designer and analyst but also the gap between **builder and AI-agent**. 
-:::
 
 ## Vision: Specification Driven AI
 
-At Powerhouse we are embracing the progress of AI assisted coding while unlocking the next level of AI control through **specification driven AI control**.
+In the **'Get Started'** chapter we've been making use of strict schema definition principles to communicate the intended use case of our reactive documents. 
+The **schema definition language**, is a not only a shared language that bridges the gap between developer, designer and analyst but also the gap between builder and AI-agent through **specification driven AI control**.
 
 - Communicate your solution and intent through a structured specification framework designed for AI collaboration.
 - Specifications enable precise, iterative edits, since all our specification documents are machine-readable and executable.
-- Specifications offer the ability to update exact parameters and properties as your specs evolve in lock-step with your agent. 
-- Specifications turn fragile sandcastles into solid, editable, and maintainable functionality with predictable results.
-
-This approach allows for the creation of editable specifications, enabling business analysts to modify details and instruct the AI to generate code based on updated specifications.
-It results in composable, maintainable, and scalable functionality.
+:::
 
 ## Introducing Vetra Studio
 
-**Vetra Studio** serves as a centralized hub for developers to access and manage specifications. 
-It allows developers to open packages (Git repositories with metadata) from a Vetra package library, providing access to a remote Vetra drive where all specifications are stored. 
+**Vetra Studio Drive**: Serves as a hub for developers to access, manage & share specification through a remote Vetra drive.   
+**Vetra Package Library**: Store, publish and fork git repositories of packages in the Vetra Package Library.    
+Visit the [Vetra Package Library here](https://vetra.io/packages)
 
-This setup ensures that all necessary documentation and project requirements are in one accessible location, streamlining communication and agreement on requirements and operations. Additionally, **Vetra Studio** functions as the orchestration hub where you as a builder assemble all the necessary specifications for your intended use-case, software solution or package. For each of the different **modules** that together form a package a specification document can be created in **Vetra Studio**. 
+**Vetra Studio Drive** functions as the orchestration hub where you as a builder assemble all the necessary specifications for your intended use-case, software solution or package. For each of the different **modules** that together form a package a **specification document** can be created in Vetra Studio Drive. 
 
 As Vetra Studio matures each of these specification documents will offer an interface by which you as a builder get more control over the modules that make up your package. 
+For now they offer you a template for code generation. 
 
 <figure className="image-container">
   <img
@@ -37,14 +32,14 @@ As Vetra Studio matures each of these specification documents will offer an inte
 
 ### Module Categories
 
-#### 1. Document Models 
+### 1. Document Models 
 - **Document model specification**: Defines the structure and operations of a document model using GraphQL SDL, ensuring consistent data management and processing.
 
-#### 2. User Experiences
+### 2. User Experiences
 - **Editor specification**: Outlines the interface and functionalities of a document model editor, allowing users to interact with and modify document data.
 - **Drive-app specification**: Specifies the UI and interactions for managing documents within a Drive, providing tailored views and functionalities.
 
-#### 3. Data integrations
+### 3. Data integrations
 - **Subgraph specification**: Details the connections and relationships within a subgraph, facilitating efficient data querying and manipulation.
 - **Codegen Processor Specification**: Describes the process for automatically generating code from document model specifications, ensuring alignment with intended architecture.
 - **RelationalDb Processor Specification**: Defines how relational databases are structured and queried, supporting efficient data management and retrieval.
@@ -56,6 +51,31 @@ As Vetra Studio matures each of these specification documents will offer an inte
   />
   <figcaption>The Vetra Studio Drive, a builder app that collects all of the specification of a package.</figcaption>
 </figure>
+
+### Configure a Vetra drive in your project
+
+You can connect to a remote vetra drive instead of using the local one auto-generated when you run `ph vetra`
+If you run Vetra without the `--remote-drive` option: Vetra will create a Vetra drive for you that is local and lives in your local environment / local browser storage. 
+If you provide the remote drive with `--remote-drive` argument: Vetra will use this drive instead of creating a local one. the remote drive can be hosted whatever you want.
+The powerhouse config includes a Vetra URL for consistent project configuration across different environments.
+
+```vetra: {
+    driveId: string;
+    driveUrl: string;
+};
+```
+
+Imagine you are a builder and want to work on, or continue with a set of specifications from your team mates. 
+You could then add the specific remote Vetra drive to your powerhouse configuration in the `powerhouse.config.json`file to get going. 
+
+```
+"vetra": {
+    "driveId": "bai-specifications",
+    "driveUrl": "https://switchboard.staging.vetra.io/d/bai-specifications"
+  }
+```
+
+An example of a builder team building on the Powerhouse Vetra Ecosystem and it's complementary Vetra Studio Drive specifications for the different packages be found [here](https://vetra.io/builders/bai)
 
 ## Vetra Studio Workflow
 
@@ -72,6 +92,21 @@ In interactive mode:
 - Changes require explicit confirmation before being processed
 - Provides better control and visibility over document changes
 
+#### Watch Mode 
+
+```bash
+ph vetra --interactive --watch
+```
+In watch mode:
+
+- Adding `--watch` to your command enables dynamic loading for document-models and editors in Vetra studio and switchboard. 
+- When enabled, the system will watch for changes in these directories and reload them dynamically.
+
+:::warning Be Aware
+When you are building your document model the code can break the Vetra Studio environment. 
+A full overview of the Vetra Studio commands can be found in the [Powerhouse CLI](/academy/APIReferences/PowerhouseCLI#vetra)
+:::
+
 #### Standard Mode
 ```bash
 ph vetra
@@ -86,28 +121,42 @@ In standard mode:
 Vetra Studio integrates deeply with Claude through MCP (Model Control Protocol). This is where AI comes into the mix and you get the chance to have greater control and direction over what your llm is coding for you. 
 
 #### 1. Start the Reactor MCP:
+
+Make sure you are in the same directory as your project. 
+Claude will automatically recognize the necessary files and MCP tools. 
+
 ```bash
-ph mcp
+claude
+```
+
+Since you're interacting with a llm it has a high capacit for interpretating your intentions. 
+Any commands in the same trend will do the job. 
+
+```bash
+connect to the reactor mcp
 ```
 
 #### 2. Verify MCP connection:
 - Check that the Reactor MCP is available. 
 - Confirm Vetra Studio shows "Connected to Reactor MCP"
 
--  To learn what is a [Reactor] itself read (apps/academy/docs/academy/Architecture/WorkingWithTheReactor)
--  To learn more about the [Reactor MCP] read (apps/academy/docs/academy/GetStarted/ReactorMCP)
+```bash
+Connected to MCP successfully! I can see there's a
+  "vetra-4de7fa45" drive available. The reactor-mcp server is
+  running and ready for document model operations.
+```
 
-#### Key Reactor MCP Features:
-- Automatic document model creation from natural language descriptions
-- Smart editor generation based on document models
-- Automatically triggers code generation when documents reach valid state
+-  To learn what is a [Reactor](apps/academy/docs/academy/Architecture/WorkingWithTheReactor) read the reactor article
+-  To learn more about the [Reactor MCP](apps/academy/docs/academy/GetStarted/ReactorMCP) read the reactor MCP article
 
-The powerhouse config includes a vetra URL for consistent project configuration across different environments.
+### Key Reactor MCP Features
 
-:::tip
-- Vetra supports integration with custom remote drives, allowing users to create, share and manage documents within these drives.
+- It supports automatic document model creation from natural language descriptions
+- It implements a smart editor based on the underlying document models
+- It automatically triggers code generation when documents reach valid state
 - The MCP server enables the agent to work with both existing and newly created document models.
-:::
+- Vetra supports integration with custom remote drives, allowing users to create, share and manage documents within these drives.
+
 
 ### 3. Vetra Studio Package Creation Workflow
 
