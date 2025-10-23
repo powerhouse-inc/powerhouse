@@ -19,7 +19,10 @@ function createMockOperationStore(): IOperationStore {
     apply: vi.fn(),
     getSince: vi.fn(),
     getSinceId: vi.fn(),
-    getRevisions: vi.fn(),
+    getRevisions: vi.fn().mockResolvedValue({
+      revision: {},
+      latestTimestamp: new Date().toISOString(),
+    }),
   };
 }
 

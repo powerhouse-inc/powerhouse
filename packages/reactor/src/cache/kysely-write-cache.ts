@@ -449,18 +449,14 @@ export class KyselyWriteCache implements IWriteCache {
       }
     } while (hasMorePages);
 
-    try {
-      const revisions = await this.operationStore.getRevisions(
-        documentId,
-        branch,
-        signal,
-      );
-      document.header.revision = revisions.revision;
-      document.header.lastModifiedAtUtcIso = revisions.latestTimestamp;
-    } catch (error) {
-      document.header.revision = {};
-      document.header.lastModifiedAtUtcIso = new Date().toISOString();
-    }
+    // we let these errors bubble up to jobs
+    const revisions = await this.operationStore.getRevisions(
+      documentId,
+      branch,
+      signal,
+    );
+    document.header.revision = revisions.revision;
+    document.header.lastModifiedAtUtcIso = revisions.latestTimestamp;
 
     return document;
   }
@@ -514,18 +510,14 @@ export class KyselyWriteCache implements IWriteCache {
       );
     }
 
-    try {
-      const revisions = await this.operationStore.getRevisions(
-        documentId,
-        branch,
-        signal,
-      );
-      document.header.revision = revisions.revision;
-      document.header.lastModifiedAtUtcIso = revisions.latestTimestamp;
-    } catch (error) {
-      document.header.revision = {};
-      document.header.lastModifiedAtUtcIso = new Date().toISOString();
-    }
+    // we let these errors bubble up to jobs
+    const revisions = await this.operationStore.getRevisions(
+      documentId,
+      branch,
+      signal,
+    );
+    document.header.revision = revisions.revision;
+    document.header.lastModifiedAtUtcIso = revisions.latestTimestamp;
 
     return document;
   }
