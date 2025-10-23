@@ -307,7 +307,7 @@ export function DocumentModelEditor() {
 
   return (
     <main className="min-h-dvh bg-gray-50">
-      <DocumentToolbar timelineButtonVisible />
+      <DocumentToolbar />
       <SchemaContextProvider
         globalStateSchemaSdl={globalStateSchema}
         localStateSchemaSdl={localStateSchema}

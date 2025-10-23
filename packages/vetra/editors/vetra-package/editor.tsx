@@ -95,7 +95,7 @@ export function Editor(props: EditorProps) {
 
   return (
     <div>
-      {displayToolbar && <DocumentToolbar timelineButtonVisible />}
+      {displayToolbar && <DocumentToolbar />}
       <MetaForm
         name={document.state.global.name ?? ""}
         description={document.state.global.description ?? ""}

@@ -47,7 +47,7 @@ export function Editor() {
 
   return (
     <div>
-      <DocumentToolbar timelineButtonVisible />
+      <DocumentToolbar />
       <ProcessorEditorForm
         onNameChange={onNameChange}
         onTypeChange={onTypeChange}

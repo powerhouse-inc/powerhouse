@@ -24,7 +24,7 @@ export function Editor() {
 
   return (
     <div>
-      <DocumentToolbar timelineButtonVisible />
+      <DocumentToolbar />
       <SubgraphEditorForm
         subgraphName={document.state.global.name ?? ""}
         status={document.state.global.status}

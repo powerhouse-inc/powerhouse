@@ -8,7 +8,7 @@ export function Editor() {
 
   return (
     <div>
-      <DocumentToolbar timelineButtonVisible />
+      <DocumentToolbar />
       <AppEditorForm />
     </div>
   );

@@ -44,7 +44,7 @@ export function Editor() {
 
   return (
     <div>
-      <DocumentToolbar timelineButtonVisible />
+      <DocumentToolbar />
       <DocumentEditorForm
         status={document.state.global.status}
         editorName={document.state.global.name ?? ""}
