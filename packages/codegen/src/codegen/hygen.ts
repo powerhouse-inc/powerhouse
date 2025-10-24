@@ -322,7 +322,9 @@ export async function hygenGenerateDriveEditor(options: {
   } = options;
 
   const allowedDocumentTypesString = JSON.stringify(
-    allowedDocumentTypes?.split(",") ?? [],
+    allowedDocumentTypes && allowedDocumentTypes.length > 0
+      ? allowedDocumentTypes.split(",")
+      : [],
   );
 
   // Generate the drive editor files
