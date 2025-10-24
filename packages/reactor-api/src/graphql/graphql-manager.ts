@@ -145,7 +145,14 @@ export class GraphQLManager {
     coreSubgraphs: SubgraphClass[],
   ) {
     for (const subgraph of coreSubgraphs) {
-      await this.registerSubgraph(subgraph, supergraph, true);
+      try {
+        await this.registerSubgraph(subgraph, supergraph, true);
+      } catch (error) {
+        this.logger.error(
+          `Failed to setup core subgraph ${subgraph.name}`,
+          error,
+        );
+      }
     }
 
     // special case for drive
@@ -260,21 +267,27 @@ export class GraphQLManager {
     for (const [supergraph, subgraphs] of subgraphsMap.entries()) {
       for (const subgraph of subgraphs) {
         this.logger.debug(`Setting up subgraph ${subgraph.name}`);
+        try {
+          // create subgraph schema
+          const schema = createSchema(
+            this.reactor,
+            subgraph.resolvers,
+            subgraph.typeDefs,
+          );
 
-        // create subgraph schema
-        const schema = createSchema(
-          this.reactor,
-          subgraph.resolvers,
-          subgraph.typeDefs,
-        );
+          // create and start apollo server
+          const server = this.#createApolloServer(schema);
+          await server.start();
+          await this.#waitForServer(server);
 
-        // create and start apollo server
-        const server = this.#createApolloServer(schema);
-        await server.start();
-        await this.#waitForServer(server);
-
-        const path = this.#getSubgraphPath(subgraph, supergraph);
-        this.#setupApolloExpressMiddleware(server, router, path);
+          const path = this.#getSubgraphPath(subgraph, supergraph);
+          this.#setupApolloExpressMiddleware(server, router, path);
+        } catch (error) {
+          this.logger.error(
+            `Failed to setup subgraph ${subgraph.name} at path ${this.#getSubgraphPath(subgraph, supergraph)}`,
+          );
+          this.logger.error(error);
+        }
       }
     }
   }
