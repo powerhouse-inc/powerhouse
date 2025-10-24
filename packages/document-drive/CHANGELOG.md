@@ -1,3 +1,13 @@
+## 4.1.0-dev.88 (2025-10-24)
+
+### 🩹 Fixes
+
+- **document-drive:** enforce drive icon value to default to null ([64f4452b8](https://github.com/powerhouse-inc/powerhouse/commit/64f4452b8))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.87 (2025-10-24)
 
 ### 🩹 Fixes

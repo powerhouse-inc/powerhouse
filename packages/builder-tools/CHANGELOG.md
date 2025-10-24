@@ -1,3 +1,13 @@
+## 4.1.0-dev.88 (2025-10-24)
+
+### 🩹 Fixes
+
+- **builder-tools, reactor-api:** optimized vite watch ([4d241c8c6](https://github.com/powerhouse-inc/powerhouse/commit/4d241c8c6))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.87 (2025-10-24)
 
 ### 🚀 Features

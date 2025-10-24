@@ -1,3 +1,16 @@
+## 4.1.0-dev.88 (2025-10-24)
+
+### 🩹 Fixes
+
+- **builder-tools, reactor-api:** optimized vite watch ([4d241c8c6](https://github.com/powerhouse-inc/powerhouse/commit/4d241c8c6))
+- **document-drive:** enforce drive icon value to default to null ([64f4452b8](https://github.com/powerhouse-inc/powerhouse/commit/64f4452b8))
+- **reactor-api:** debounce local package updates and reduced logging ([96735b11a](https://github.com/powerhouse-inc/powerhouse/commit/96735b11a))
+- **reactor-api:** prevent subgraph errors from crashing the reactor api ([27e3605e1](https://github.com/powerhouse-inc/powerhouse/commit/27e3605e1))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.87 (2025-10-24)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
