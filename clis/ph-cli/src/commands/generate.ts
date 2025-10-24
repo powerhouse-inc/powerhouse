@@ -32,7 +32,10 @@ export function generateCommand(program: Command) {
     .option("--file <path>", "File path to document model")
     .option("--processors <type>", "Path to the processors directory")
     .option("-p, --processor <type>", "Processor Name")
-    .option("--processor-type <type>", "Processor Type")
+    .option(
+      "--processor-type <type>",
+      "Processor Type: 'relationalDb' or 'analytics'",
+    )
     .option("-s, --subgraph <type>", "Subgraph Name")
     .option("--document-models <type>", "Path to the document models directory")
     .option("--document-types <type>", "Supported document types by the editor")

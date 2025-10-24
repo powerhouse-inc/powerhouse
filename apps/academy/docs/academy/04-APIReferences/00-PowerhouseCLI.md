@@ -420,7 +420,7 @@ Options:
                         
   -p, --processor <name> Name of the processor to generate.
                         
-  --processor-type <type> Type of processor to generate.
+  --processor-type <type> Type of processor to generate. 'relationalDb' or 'analytics'
                         
   -s, --subgraph <name>  Name of the subgraph to use or create.
                         
@@ -447,7 +447,7 @@ Examples:
   $ ph generate my-document-model.zip                               # Generate from a specific model zip file
   $ ph generate -i                                                  # Run in interactive mode
   $ ph generate --editor ToDoList --document-types powerhouse/todo  # Generate a ToDoList editor for todo documents
-  $ ph generate -p MyProcessor                                      # Generate a specific processor
+  $ ph generate -p MyProcessor --processor-type relationalDb        # Generate a specific processor
   $ ph generate --watch                                             # Generate and watch for changes
   $ ph generate --drive-editor custom-drive-explorer                # Generate a custom drive editor
   $ ph generate -s MySubgraph                                       # Generate with a specific subgraph
