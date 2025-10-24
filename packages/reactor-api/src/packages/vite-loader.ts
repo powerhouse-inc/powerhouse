@@ -146,7 +146,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
         const documentModels = await this.loadDocumentModels(identifier);
         handler(documentModels);
       }
-    }, options?.debounce ?? 100);
+    }, options?.debounce ?? 500);
 
     this.vite.watcher.on("change", listener);
 
@@ -198,7 +198,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
 
 export async function startViteServer() {
   const vite = await createServer({
-    server: { middlewareMode: true },
+    server: { middlewareMode: true, watch: { ignored: ["**/.ph/**"] } },
     appType: "custom",
     build: {
       rollupOptions: {

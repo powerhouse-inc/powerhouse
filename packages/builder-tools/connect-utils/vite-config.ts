@@ -8,6 +8,7 @@ import tailwind from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { join } from "node:path";
 import {
+  createLogger,
   loadEnv,
   type HtmlTagDescriptor,
   type PluginOption,
@@ -108,6 +109,20 @@ function viteOptionsToEnv(options: IConnectOptions) {
   }
 
   return optionsEnv;
+}
+
+function viteLogger(warningsToSilence: string[]) {
+  const logger = createLogger();
+  const loggerWarn = logger.warn.bind(logger);
+
+  logger.warn = (msg, options) => {
+    if (warningsToSilence.some((warning) => msg.includes(warning))) {
+      return;
+    }
+    loggerWarn(msg, options);
+  };
+
+  return logger;
 }
 
 export function getConnectBaseViteConfig(options: IConnectOptions) {
@@ -218,8 +233,19 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
 
   const basePath = normalizeBasePath(env.PH_CONNECT_BASE_PATH || "/");
 
+  // hide warnings unless LOG_LEVEL is set to debug
+  const isDebug =
+    process.env.LOG_LEVEL === "debug" || env.PH_CONNECT_LOG_LEVEL === "debug";
+  const customLogger = isDebug
+    ? undefined
+    : viteLogger([
+        "@import must precede all other statements (besides @charset or empty @layer)",
+        "hmr update",
+      ]);
+
   const config: UserConfig = {
     base: basePath,
+    customLogger,
     envPrefix: ["PH_CONNECT_"],
     envDir: false,
     optimizeDeps: {
@@ -231,7 +257,11 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       sourcemap: true,
     },
     server: {
-      watch: env.PH_DISABLE_LOCAL_PACKAGE ? null : undefined,
+      watch: env.PH_DISABLE_LOCAL_PACKAGE
+        ? null
+        : {
+            ignored: ["**/.ph/**"],
+          },
       fs: {
         strict: false,
       },
