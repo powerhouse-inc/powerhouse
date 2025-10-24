@@ -49,6 +49,7 @@ import {
   SwitchboardPushTransmitter,
   childLogger,
   driveCreateDocument,
+  driveCreateState,
   filterOperationsByRevision,
   isActionJob,
   isAtRevision,
@@ -627,11 +628,12 @@ export class BaseDocumentDriveServer
     preferredEditor?: string,
   ): Promise<DocumentDriveDocument> {
     // Create document with custom global and local state
+    const { global } = driveCreateState();
     const document = driveCreateDocument({
       global: {
-        nodes: [],
-        icon: null,
-        ...input.global,
+        ...global,
+        name: input.global.name ?? global.name,
+        icon: input.global.icon ?? global.icon,
       },
       local: {
         availableOffline: input.local?.availableOffline ?? false,

@@ -285,7 +285,7 @@ describe("SystemSubgraph", () => {
       id: expect.any(String),
       slug: expect.any(String),
       name: "Minimal Drive",
-      icon: undefined,
+      icon: null,
     });
   });
 });
