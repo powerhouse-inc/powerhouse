@@ -1,3 +1,13 @@
+## 4.1.0-dev.89 (2025-10-24)
+
+### 🩹 Fixes
+
+- used fixed versions for codemirror dep ([183e487db](https://github.com/powerhouse-inc/powerhouse/commit/183e487db))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.88 (2025-10-24)
 
 This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.

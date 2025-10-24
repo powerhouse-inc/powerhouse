@@ -1,3 +1,17 @@
+## 4.1.0-dev.89 (2025-10-24)
+
+### 🚀 Features
+
+- enabled DocumentToolbar in editor template ([e4ded7de6](https://github.com/powerhouse-inc/powerhouse/commit/e4ded7de6))
+
+### 🩹 Fixes
+
+- used fixed versions for codemirror dep ([183e487db](https://github.com/powerhouse-inc/powerhouse/commit/183e487db))
+
+### ❤️ Thank You
+
+- Guillermo Puente
+
 ## 4.1.0-dev.88 (2025-10-24)
 
 ### 🩹 Fixes
