@@ -47,6 +47,7 @@ class AuthenticatedDataSource extends RemoteGraphQLDataSource {
 }
 
 export class GraphQLManager {
+  private initialized = false;
   private coreRouter: IRouter = Router();
   private coreSubgraphsMap = new Map<string, ISubgraph[]>();
   private reactorRouter: IRouter = Router();
@@ -179,24 +180,31 @@ export class GraphQLManager {
 
     const subgraphsMap = core ? this.coreSubgraphsMap : this.subgraphs;
 
-    if (!subgraphsMap.get(supergraph)) {
-      subgraphsMap.set(supergraph, []);
-    }
+    const subgraphs = subgraphsMap.get(supergraph) ?? [];
 
-    subgraphsMap.get(supergraph)?.push(subgraphInstance);
+    const existingSubgraph = subgraphs.find(
+      (it) => it.name === subgraphInstance.name,
+    );
+
+    subgraphs.push(subgraphInstance);
+
+    subgraphsMap.set(supergraph, subgraphs);
 
     // also add to global graphql supergraph
     if (supergraph !== "" && supergraph !== "graphql") {
       subgraphsMap.get("graphql")?.push(subgraphInstance);
     }
 
-    this.logger.info(
-      `Registered ${this.path.endsWith("/") ? this.path : this.path + "/"}${supergraph ? supergraph + "/" : ""}${subgraphInstance.name} subgraph.`,
-    );
+    const logMessage = `Registered ${this.path.endsWith("/") ? this.path : this.path + "/"}${supergraph ? supergraph + "/" : ""}${subgraphInstance.name} subgraph.`;
+    if (!existingSubgraph) {
+      this.logger.info(logMessage);
+    } else {
+      this.logger.debug(logMessage);
+    }
     return subgraphInstance;
   }
 
-  updateRouter = debounce(this._updateRouter.bind(this), 100);
+  updateRouter = debounce(this._updateRouter.bind(this), 1000);
 
   private async _updateRouter() {
     this.logger.debug("Updating router");
@@ -360,7 +368,11 @@ export class GraphQLManager {
         this.reactorRouter,
         superGraphPath,
       );
-      this.logger.info(`Registered ${superGraphPath} supergraph `);
+
+      if (!this.initialized) {
+        this.logger.info(`Registered ${superGraphPath} supergraph `);
+        this.initialized = true;
+      }
       return server;
     } catch (e) {
       if (e instanceof Error) {

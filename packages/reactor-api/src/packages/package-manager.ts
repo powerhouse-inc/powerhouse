@@ -14,6 +14,7 @@ import type {
   ISubscribablePackageLoader,
   PackageManagerResult,
 } from "./types.js";
+import { debounce } from "./util.js";
 export function getUniqueDocumentModels(
   ...documentModels: DocumentModelModule[][]
 ): DocumentModelModule[] {
@@ -39,6 +40,7 @@ export class PackageManager implements IPackageManager {
     ((module: IProcessorHostModule) => ProcessorFactory)[]
   >();
   private configWatcher: StatWatcher | undefined;
+  private debouncedUpdateCallbacks = new Map<string, () => void>();
   private eventEmitter = new EventEmitter<{
     documentModelsChange: [Record<string, DocumentModelModule[]>];
     subgraphsChange: [Map<string, SubgraphClass[]>];
@@ -207,18 +209,28 @@ export class PackageManager implements IPackageManager {
     return processorsMap;
   }
 
+  private async updateDocumentModelsForPackage(pkg: string): Promise<void> {
+    this.logger.debug(`Updating document models for package: ${pkg}`);
+    const documentModels = await this.loadDocumentModels([pkg]);
+    const documentModelsMap = new Map(this.docModelsMap);
+    documentModelsMap.set(pkg, documentModels.get(pkg) ?? []);
+    this.updatePackagesMap(documentModelsMap);
+  }
+
   private subscribePackages(packages: string[]) {
     const unsubs: (() => void)[] = [];
     for (const pkg of packages) {
+      if (!this.debouncedUpdateCallbacks.has(pkg)) {
+        this.debouncedUpdateCallbacks.set(
+          pkg,
+          debounce(() => this.updateDocumentModelsForPackage(pkg), 1000),
+        );
+      }
+      const debouncedCallback = this.debouncedUpdateCallbacks.get(pkg)!;
+
       for (const loader of this.loaders) {
         if (loader.onDocumentModelsChange) {
-          const unsub = loader.onDocumentModelsChange(pkg, async () => {
-            this.logger.info(`Updating document models for package: ${pkg}`);
-            const documentModels = await this.loadDocumentModels([pkg]);
-            const documentModelsMap = new Map(this.docModelsMap);
-            documentModelsMap.set(pkg, documentModels.get(pkg) ?? []);
-            this.updatePackagesMap(documentModelsMap);
-          });
+          const unsub = loader.onDocumentModelsChange(pkg, debouncedCallback);
           unsubs.push(unsub);
         }
       }
