@@ -1,3 +1,15 @@
+## 4.1.0-dev.87 (2025-10-24)
+
+### 🚀 Features
+
+- implement DocumentToolbar component ([#2017](https://github.com/powerhouse-inc/powerhouse/pull/2017))
+- **connect:** make external editors enabled false by default ([9e3a68e48](https://github.com/powerhouse-inc/powerhouse/commit/9e3a68e48))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+- ryanwolhuter @ryanwolhuter
+
 ## 4.1.0-dev.86 (2025-10-23)
 
 ### 🩹 Fixes

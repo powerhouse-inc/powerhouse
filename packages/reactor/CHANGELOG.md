@@ -1,3 +1,15 @@
+## 4.1.0-dev.87 (2025-10-24)
+
+### 🩹 Fixes
+
+- read tests had a type bug ([b0f21cddc](https://github.com/powerhouse-inc/powerhouse/commit/b0f21cddc))
+- let revision errors bubble up to jobs ([13e82cec9](https://github.com/powerhouse-inc/powerhouse/commit/13e82cec9))
+- fixing a deep issue where operations were being used to calculate index instead of revisions ([a6611501d](https://github.com/powerhouse-inc/powerhouse/commit/a6611501d))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.86 (2025-10-23)
 
 ### 🚀 Features

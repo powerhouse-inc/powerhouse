@@ -1,3 +1,23 @@
+## 4.1.0-dev.87 (2025-10-24)
+
+### 🚀 Features
+
+- implement DocumentToolbar component ([#2017](https://github.com/powerhouse-inc/powerhouse/pull/2017))
+- **connect:** make external editors enabled false by default ([9e3a68e48](https://github.com/powerhouse-inc/powerhouse/commit/9e3a68e48))
+
+### 🩹 Fixes
+
+- memory store had an edge case where it could throw even after it stored the document ([5383d9f52](https://github.com/powerhouse-inc/powerhouse/commit/5383d9f52))
+- fixing a deep issue where operations were being used to calculate index instead of revisions ([a6611501d](https://github.com/powerhouse-inc/powerhouse/commit/a6611501d))
+- let revision errors bubble up to jobs ([13e82cec9](https://github.com/powerhouse-inc/powerhouse/commit/13e82cec9))
+- read tests had a type bug ([b0f21cddc](https://github.com/powerhouse-inc/powerhouse/commit/b0f21cddc))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente Sandoval @gpuente
+- ryanwolhuter @ryanwolhuter
+
 ## 4.1.0-dev.86 (2025-10-23)
 
 ### 🚀 Features

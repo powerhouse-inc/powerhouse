@@ -1,3 +1,13 @@
+## 4.1.0-dev.87 (2025-10-24)
+
+### 🩹 Fixes
+
+- memory store had an edge case where it could throw even after it stored the document ([5383d9f52](https://github.com/powerhouse-inc/powerhouse/commit/5383d9f52))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.86 (2025-10-23)
 
 ### 🩹 Fixes
