@@ -57,6 +57,8 @@ export const supportedEncodings = ["base64", "hex"];
 const defaultAlg = "sha1"
 const defaultEnc = "base64"
 
+const textEncoder = new TextEncoder();
+
 export const hashBrowser = (
   data: string | Uint8Array | ArrayBufferView | DataView,
   algorithm = defaultAlg,
@@ -102,8 +104,6 @@ function uint8ArrayToHex(uint8Array: Uint8Array) {
 }
 
 function toUint8(data: string | Uint8Array | ArrayBufferView ): Uint8Array {
-  const textEncoder = new TextEncoder();
-
   if (typeof data === "string") return textEncoder.encode(data);
   if (data instanceof Uint8Array) return data;
   if (ArrayBuffer.isView(data)) {
@@ -265,14 +265,12 @@ export function buildOperationSignatureParams({
   ];
 }
 
-const textEncode = new TextEncoder();
-
 export function buildOperationSignatureMessage(
   params: [string, string, string, string],
 ): Uint8Array {
   const message = params.join("");
   const prefix = "\x19Signed Operation:\n" + message.length.toString();
-  return textEncode.encode(prefix + message);
+  return textEncoder.encode(prefix + message);
 }
 
 export function ab2hex(ab: ArrayBuffer | ArrayBufferView): string {
