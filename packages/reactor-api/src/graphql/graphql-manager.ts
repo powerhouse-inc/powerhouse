@@ -8,9 +8,9 @@ import {
   RemoteGraphQLDataSource,
 } from "@apollo/gateway";
 import { ApolloServer } from "@apollo/server";
-import { expressMiddleware } from "@apollo/server/express4";
 import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
 import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin/landingPage/default";
+import { expressMiddleware } from "@as-integrations/express4";
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import type { IReactorClient } from "@powerhousedao/reactor";
 import type {

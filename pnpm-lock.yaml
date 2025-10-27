@@ -1266,22 +1266,6 @@ importers:
       zod:
         specifier: ^3.24.3
         version: 3.25.76
-    optionalDependencies:
-      '@prisma/client':
-        specifier: 5.17.0
-        version: 5.17.0(prisma@5.17.0)
-      localforage:
-        specifier: ^1.10.0
-        version: 1.10.0
-      redis:
-        specifier: ^4.6.15
-        version: 4.7.1
-      sequelize:
-        specifier: ^6.37.3
-        version: 6.37.7(sqlite3@5.1.7)
-      sqlite3:
-        specifier: ^5.1.7
-        version: 5.1.7
     devDependencies:
       '@anatine/zod-mock':
         specifier: ^3.14.0
@@ -1319,6 +1303,22 @@ importers:
       webdriverio:
         specifier: ^9.0.9
         version: 9.20.0(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+    optionalDependencies:
+      '@prisma/client':
+        specifier: 5.17.0
+        version: 5.17.0(prisma@5.17.0)
+      localforage:
+        specifier: ^1.10.0
+        version: 1.10.0
+      redis:
+        specifier: ^4.6.15
+        version: 4.7.1
+      sequelize:
+        specifier: ^6.37.3
+        version: 6.37.7(sqlite3@5.1.7)
+      sqlite3:
+        specifier: ^5.1.7
+        version: 5.1.7
 
   packages/document-model:
     dependencies:
@@ -1412,14 +1412,17 @@ importers:
   packages/reactor-api:
     dependencies:
       '@apollo/gateway':
-        specifier: ^2.10.0
-        version: 2.11.2(encoding@0.1.13)(graphql@16.11.0)
+        specifier: ^2.11.3
+        version: 2.11.3(encoding@0.1.13)(graphql@16.11.0)
       '@apollo/server':
-        specifier: ^4.11.0
-        version: 4.12.2(encoding@0.1.13)(graphql@16.11.0)
+        specifier: ^5.0.0
+        version: 5.0.0(graphql@16.11.0)
       '@apollo/subgraph':
-        specifier: ^2.9.2
-        version: 2.11.2(graphql@16.11.0)
+        specifier: ^2.11.3
+        version: 2.11.3(graphql@16.11.0)
+      '@as-integrations/express4':
+        specifier: ^1.1.2
+        version: 1.1.2(@apollo/server@5.0.0(graphql@16.11.0))(express@4.21.2)
       '@electric-sql/pglite':
         specifier: 0.2.17
         version: 0.2.17
@@ -2321,8 +2324,8 @@ packages:
       subscriptions-transport-ws:
         optional: true
 
-  '@apollo/composition@2.11.2':
-    resolution: {integrity: sha512-ut/Kj/YMUXtV+VwsHFOoT0hvvZAJwOltkuMVZJUY1O0deecrc4Ceq8VeogPKXF/jeR59kMr6na1ZPHBRBe/rqQ==}
+  '@apollo/composition@2.11.3':
+    resolution: {integrity: sha512-R10CLo4b9kXaDOtpcJrNEXTfoozDI0BrL18LXcfCxZhPcPQiHfX2YO3lpwwjB5Qe3tnHGJC/9nKStGw4HnFgjA==}
     engines: {node: '>=14.15.0'}
     peerDependencies:
       graphql: ^16.5.0
@@ -2333,8 +2336,14 @@ packages:
     peerDependencies:
       graphql: ^16.5.0
 
-  '@apollo/gateway@2.11.2':
-    resolution: {integrity: sha512-QeE/aVYUhYJFxXJK0vF6zr0x6yRKpaSr5b9q7vxWVktihrzsAVS+GwALbcliU/hkGgntXwO+jvXwz9mEKrdwnw==}
+  '@apollo/federation-internals@2.11.3':
+    resolution: {integrity: sha512-TOiJc1hkf22LBRA9X0D6XnM3ve1iDJSyK5voypPzhpOkNAHhJToVMF8LaTmM56mDx5KuAfsQZp1D/285LmfcRw==}
+    engines: {node: '>=14.15.0'}
+    peerDependencies:
+      graphql: ^16.5.0
+
+  '@apollo/gateway@2.11.3':
+    resolution: {integrity: sha512-1fFyYJoD++XeaOiGhgfFAK7XRdAxp6Y3MppS10HwLaviKU9c8E2uC0jn77pBZ6BnKR8DXWGMax5KAtivsNGehQ==}
     engines: {node: '>=14.15.0'}
     peerDependencies:
       graphql: ^16.5.0
@@ -2343,14 +2352,14 @@ packages:
     resolution: {integrity: sha512-Lahx5zntHPZia35myYDBRuF58tlwPskwHc5CWBZC/4bMKB6siTBWwtMrkqXcsNwQiFSzSx5hKdRPUmemrEp3Gg==}
     hasBin: true
 
-  '@apollo/query-graphs@2.11.2':
-    resolution: {integrity: sha512-LwGumh0XkOMSA4+RhSVYY1Yd4wa3Mi8ylDk8GyhMl4kpFAOb2x+SRIka+kEDNPufu9wNSl457/rVeAxNw1zZ1Q==}
+  '@apollo/query-graphs@2.11.3':
+    resolution: {integrity: sha512-yRr6rexXd/unurxyFZMWZELgByOvjAc7ujlkiBm07BPItGtdTLfSbmx8E+7yCX0BJCnBDzW58ORDZKVtRupvnA==}
     engines: {node: '>=14.15.0'}
     peerDependencies:
       graphql: ^16.5.0
 
-  '@apollo/query-planner@2.11.2':
-    resolution: {integrity: sha512-wrJ10uryy+Ir5V3tOjDbuXOgHZMgI4/O5IcBYIayEFPrZBG2TaDWVNN14b0Ri0j27p+foxbGErs8t1Daphvbjg==}
+  '@apollo/query-planner@2.11.3':
+    resolution: {integrity: sha512-m8b077tgaohC9yAT6YPeRbQZ4f2EhmPgAEsUfx3LOkJS21d6UazeGbIgnjJwSy86y1NIJlcaO3HdlFk/Mwn5oA==}
     engines: {node: '>=14.15.0'}
     peerDependencies:
       graphql: ^16.5.0
@@ -2361,15 +2370,25 @@ packages:
     peerDependencies:
       graphql: 14.x || 15.x || 16.x
 
-  '@apollo/server@4.12.2':
-    resolution: {integrity: sha512-jKRlf+sBMMdKYrjMoiWKne42Eb6paBfDOr08KJnUaeaiyWFj+/040FjVPQI7YGLfdwnYIsl1NUUqS2UdgezJDg==}
-    engines: {node: '>=14.16.0'}
-    deprecated: Apollo Server v4 is deprecated and will transition to end-of-life on January 26, 2026. As long as you are already using a non-EOL version of Node.js, upgrading to v5 should take only a few minutes. See https://www.apollographql.com/docs/apollo-server/previous-versions for details.
+  '@apollo/server-gateway-interface@2.0.0':
+    resolution: {integrity: sha512-3HEMD6fSantG2My3jWkb9dvfkF9vJ4BDLRjMgsnD790VINtuPaEp+h3Hg9HOHiWkML6QsOhnaRqZ+gvhp3y8Nw==}
     peerDependencies:
-      graphql: ^16.6.0
+      graphql: 14.x || 15.x || 16.x
+
+  '@apollo/server@5.0.0':
+    resolution: {integrity: sha512-PHopOm7pr69k7eDJvCBU4cZy9Z19qyCFKB9/luLnf2YCatu2WOYhoQPNr3dAoe//xv0RZFhxXbRcnK6IXIP7Nw==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      graphql: ^16.11.0
 
   '@apollo/subgraph@2.11.2':
     resolution: {integrity: sha512-S14osF5Zc8pd6lzeNtX1QHboMcQK5PXcN9EumZyRYBF0TRbnEFLF8Me9zMcfR3QP7GCiggjd6PA2IAaPC9uCSQ==}
+    engines: {node: '>=14.15.0'}
+    peerDependencies:
+      graphql: ^16.5.0
+
+  '@apollo/subgraph@2.11.3':
+    resolution: {integrity: sha512-Tgk2WhEqfu50eEOtRFnthQ1eTCVfIYkzJZ1DPQzxZzK5x3FzYmQzRdJ5e32lPu+LPIt/m2kLaGDC6cVdVGmi4g==}
     engines: {node: '>=14.15.0'}
     peerDependencies:
       graphql: ^16.5.0
@@ -2381,6 +2400,10 @@ packages:
     resolution: {integrity: sha512-UkS3xqnVFLZ3JFpEmU/2cM2iKJotQXMoSTgxXsfQgXLC5gR1WaepoXagmYnPSA7Q/2cmnyTYK5OgAgoC4RULPg==}
     engines: {node: '>=14'}
 
+  '@apollo/utils.createhash@3.0.1':
+    resolution: {integrity: sha512-CKrlySj4eQYftBE5MJ8IzKwIibQnftDT7yGfsJy5KSEEnLlPASX0UTpbKqkjlVEwPPd4mEwI7WOM7XNxEuO05A==}
+    engines: {node: '>=16'}
+
   '@apollo/utils.dropunuseddefinitions@2.0.1':
     resolution: {integrity: sha512-EsPIBqsSt2BwDsv8Wu76LK5R1KtsVkNoO4b0M5aK0hx+dGg9xJXuqlr7Fo34Dl+y83jmzn+UvEW+t1/GP2melA==}
     engines: {node: '>=14'}
@@ -2391,17 +2414,33 @@ packages:
     resolution: {integrity: sha512-jvvon885hEyWXd4H6zpWeN3tl88QcWnHp5gWF5OPF34uhvoR+DFqcNxs9vrRaBBSY3qda3Qe0bdud7tz2zGx1A==}
     engines: {node: '>=14'}
 
+  '@apollo/utils.fetcher@3.1.0':
+    resolution: {integrity: sha512-Z3QAyrsQkvrdTuHAFwWDNd+0l50guwoQUoaDQssLOjkmnmVuvXlJykqlEJolio+4rFwBnWdoY1ByFdKaQEcm7A==}
+    engines: {node: '>=16'}
+
   '@apollo/utils.isnodelike@2.0.1':
     resolution: {integrity: sha512-w41XyepR+jBEuVpoRM715N2ZD0xMD413UiJx8w5xnAZD2ZkSJnMJBoIzauK83kJpSgNuR6ywbV29jG9NmxjK0Q==}
     engines: {node: '>=14'}
+
+  '@apollo/utils.isnodelike@3.0.0':
+    resolution: {integrity: sha512-xrjyjfkzunZ0DeF6xkHaK5IKR8F1FBq6qV+uZ+h9worIF/2YSzA0uoBxGv6tbTeo9QoIQnRW4PVFzGix5E7n/g==}
+    engines: {node: '>=16'}
 
   '@apollo/utils.keyvaluecache@2.1.1':
     resolution: {integrity: sha512-qVo5PvUUMD8oB9oYvq4ViCjYAMWnZ5zZwEjNF37L2m1u528x5mueMlU+Cr1UinupCgdB78g+egA1G98rbJ03Vw==}
     engines: {node: '>=14'}
 
+  '@apollo/utils.keyvaluecache@4.0.0':
+    resolution: {integrity: sha512-mKw1myRUkQsGPNB+9bglAuhviodJ2L2MRYLTafCMw5BIo7nbvCPNCkLnIHjZ1NOzH7SnMAr5c9LmXiqsgYqLZw==}
+    engines: {node: '>=20'}
+
   '@apollo/utils.logger@2.0.1':
     resolution: {integrity: sha512-YuplwLHaHf1oviidB7MxnCXAdHp3IqYV8n0momZ3JfLniae92eYqMIx+j5qJFX6WKJPs6q7bczmV4lXIsTu5Pg==}
     engines: {node: '>=14'}
+
+  '@apollo/utils.logger@3.0.0':
+    resolution: {integrity: sha512-M8V8JOTH0F2qEi+ktPfw4RL7MvUycDfKp7aEap2eWXfL5SqWHN6jTLbj5f5fj1cceHpyaUSOZlvlaaryaxZAmg==}
+    engines: {node: '>=16'}
 
   '@apollo/utils.printwithreducedwhitespace@2.0.1':
     resolution: {integrity: sha512-9M4LUXV/fQBh8vZWlLvb/HyyhjJ77/I5ZKu+NBWV/BmYGyRmoEP9EVAy7LCVoY3t8BDcyCAGfxJaLFCSuQkPUg==}
@@ -2433,9 +2472,9 @@ packages:
     peerDependencies:
       graphql: 14.x || 15.x || 16.x
 
-  '@apollo/utils.withrequired@2.0.1':
-    resolution: {integrity: sha512-YBDiuAX9i1lLc6GeTy1m7DGLFn/gMnvXqlalOIMjM7DeOgIacEjjfwPqb0M1CQ2v11HhR15d1NmxJoRCfrNqcA==}
-    engines: {node: '>=14'}
+  '@apollo/utils.withrequired@3.0.0':
+    resolution: {integrity: sha512-aaxeavfJ+RHboh7c2ofO5HHtQobGX4AgUujXP4CXpREHp9fQ9jPi6K9T1jrAKe7HIipoP0OJ1gd6JamSkFIpvA==}
+    engines: {node: '>=16'}
 
   '@ardatan/relay-compiler@12.0.0':
     resolution: {integrity: sha512-9anThAaj1dQr6IGmzBMcfzOQKTa5artjuPmw8NYK/fiGEMjADbSguBY2FMDykt+QhilR3wc9VA/3yVju7JHg7Q==}
@@ -2452,6 +2491,13 @@ packages:
   '@ardatan/sync-fetch@0.0.1':
     resolution: {integrity: sha512-xhlTqH0m31mnsG0tIP4ETgfSB6gXDaYYsUWTrlUV93fFQPI9dd8hE0Ot6MHLCtqgB32hwJAC3YZMWlXZw7AleA==}
     engines: {node: '>=14'}
+
+  '@as-integrations/express4@1.1.2':
+    resolution: {integrity: sha512-PGeMcwoOKdYnZ4LtsmM7aLNoel3tbK8wKnfyahdRau1qb7wLbuaXB35zg3w34Ov4bm3WJtO3yzd8Bw5jVE+aIQ==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      '@apollo/server': ^4.0.0 || ^5.0.0
+      express: ^4.0.0
 
   '@asamuzakjp/css-color@3.2.0':
     resolution: {integrity: sha512-K1A6z8tS3XsmCMM86xoWdn7Fkdn9m6RSVtocUrJYIwZnFVkng/PvkEoWtOWmP+Scc6saYWHWZYbndEEXxl24jw==}
@@ -14443,6 +14489,7 @@ packages:
 
   libsql@0.4.7:
     resolution: {integrity: sha512-T9eIRCs6b0J1SHKYIvD8+KCJMcWZ900iZyxdnSCdqxN12Z1ijzT+jY5nrk72Jw4B0HGzms2NgpryArlJqvc3Lw==}
+    cpu: [x64, arm64, wasm32]
     os: [darwin, linux, win32]
 
   lie@3.1.1:
@@ -20220,10 +20267,10 @@ snapshots:
     transitivePeerDependencies:
       - '@types/react'
 
-  '@apollo/composition@2.11.2(graphql@16.11.0)':
+  '@apollo/composition@2.11.3(graphql@16.11.0)':
     dependencies:
-      '@apollo/federation-internals': 2.11.2(graphql@16.11.0)
-      '@apollo/query-graphs': 2.11.2(graphql@16.11.0)
+      '@apollo/federation-internals': 2.11.3(graphql@16.11.0)
+      '@apollo/query-graphs': 2.11.3(graphql@16.11.0)
       graphql: 16.11.0
 
   '@apollo/federation-internals@2.11.2(graphql@16.11.0)':
@@ -20234,11 +20281,19 @@ snapshots:
       js-levenshtein: 1.1.6
       uuid: 9.0.1
 
-  '@apollo/gateway@2.11.2(encoding@0.1.13)(graphql@16.11.0)':
+  '@apollo/federation-internals@2.11.3(graphql@16.11.0)':
     dependencies:
-      '@apollo/composition': 2.11.2(graphql@16.11.0)
-      '@apollo/federation-internals': 2.11.2(graphql@16.11.0)
-      '@apollo/query-planner': 2.11.2(graphql@16.11.0)
+      '@types/uuid': 9.0.8
+      chalk: 4.1.2
+      graphql: 16.11.0
+      js-levenshtein: 1.1.6
+      uuid: 9.0.1
+
+  '@apollo/gateway@2.11.3(encoding@0.1.13)(graphql@16.11.0)':
+    dependencies:
+      '@apollo/composition': 2.11.3(graphql@16.11.0)
+      '@apollo/federation-internals': 2.11.3(graphql@16.11.0)
+      '@apollo/query-planner': 2.11.3(graphql@16.11.0)
       '@apollo/server-gateway-interface': 1.1.1(graphql@16.11.0)
       '@apollo/usage-reporting-protobuf': 4.1.1
       '@apollo/utils.createhash': 2.0.2
@@ -20274,18 +20329,18 @@ snapshots:
       '@types/long': 4.0.2
       long: 4.0.0
 
-  '@apollo/query-graphs@2.11.2(graphql@16.11.0)':
+  '@apollo/query-graphs@2.11.3(graphql@16.11.0)':
     dependencies:
-      '@apollo/federation-internals': 2.11.2(graphql@16.11.0)
+      '@apollo/federation-internals': 2.11.3(graphql@16.11.0)
       deep-equal: 2.2.3
       graphql: 16.11.0
       ts-graphviz: 1.8.2
       uuid: 9.0.1
 
-  '@apollo/query-planner@2.11.2(graphql@16.11.0)':
+  '@apollo/query-planner@2.11.3(graphql@16.11.0)':
     dependencies:
-      '@apollo/federation-internals': 2.11.2(graphql@16.11.0)
-      '@apollo/query-graphs': 2.11.2(graphql@16.11.0)
+      '@apollo/federation-internals': 2.11.3(graphql@16.11.0)
+      '@apollo/query-graphs': 2.11.3(graphql@16.11.0)
       '@apollo/utils.keyvaluecache': 2.1.1
       chalk: 4.1.2
       deep-equal: 2.2.3
@@ -20300,41 +20355,50 @@ snapshots:
       '@apollo/utils.logger': 2.0.1
       graphql: 16.11.0
 
-  '@apollo/server@4.12.2(encoding@0.1.13)(graphql@16.11.0)':
+  '@apollo/server-gateway-interface@2.0.0(graphql@16.11.0)':
+    dependencies:
+      '@apollo/usage-reporting-protobuf': 4.1.1
+      '@apollo/utils.fetcher': 3.1.0
+      '@apollo/utils.keyvaluecache': 4.0.0
+      '@apollo/utils.logger': 3.0.0
+      graphql: 16.11.0
+
+  '@apollo/server@5.0.0(graphql@16.11.0)':
     dependencies:
       '@apollo/cache-control-types': 1.0.3(graphql@16.11.0)
-      '@apollo/server-gateway-interface': 1.1.1(graphql@16.11.0)
+      '@apollo/server-gateway-interface': 2.0.0(graphql@16.11.0)
       '@apollo/usage-reporting-protobuf': 4.1.1
-      '@apollo/utils.createhash': 2.0.2
-      '@apollo/utils.fetcher': 2.0.1
-      '@apollo/utils.isnodelike': 2.0.1
-      '@apollo/utils.keyvaluecache': 2.1.1
-      '@apollo/utils.logger': 2.0.1
+      '@apollo/utils.createhash': 3.0.1
+      '@apollo/utils.fetcher': 3.1.0
+      '@apollo/utils.isnodelike': 3.0.0
+      '@apollo/utils.keyvaluecache': 4.0.0
+      '@apollo/utils.logger': 3.0.0
       '@apollo/utils.usagereporting': 2.1.0(graphql@16.11.0)
-      '@apollo/utils.withrequired': 2.0.1
-      '@graphql-tools/schema': 9.0.19(graphql@16.11.0)
-      '@types/express': 4.17.23
-      '@types/express-serve-static-core': 4.19.7
-      '@types/node-fetch': 2.6.13
+      '@apollo/utils.withrequired': 3.0.0
+      '@graphql-tools/schema': 10.0.25(graphql@16.11.0)
       async-retry: 1.3.3
+      body-parser: 2.2.0
       cors: 2.8.5
-      express: 4.21.2
+      finalhandler: 2.1.0
       graphql: 16.11.0
       loglevel: 1.9.2
-      lru-cache: 7.18.3
-      negotiator: 0.6.4
-      node-abort-controller: 3.1.1
-      node-fetch: 2.7.0(encoding@0.1.13)
-      uuid: 9.0.1
-      whatwg-mimetype: 3.0.0
+      lru-cache: 11.2.2
+      negotiator: 1.0.0
+      uuid: 11.1.0
+      whatwg-mimetype: 4.0.0
     transitivePeerDependencies:
-      - encoding
       - supports-color
 
   '@apollo/subgraph@2.11.2(graphql@16.11.0)':
     dependencies:
       '@apollo/cache-control-types': 1.0.3(graphql@16.11.0)
       '@apollo/federation-internals': 2.11.2(graphql@16.11.0)
+      graphql: 16.11.0
+
+  '@apollo/subgraph@2.11.3(graphql@16.11.0)':
+    dependencies:
+      '@apollo/cache-control-types': 1.0.3(graphql@16.11.0)
+      '@apollo/federation-internals': 2.11.3(graphql@16.11.0)
       graphql: 16.11.0
 
   '@apollo/usage-reporting-protobuf@4.1.1':
@@ -20346,20 +20410,36 @@ snapshots:
       '@apollo/utils.isnodelike': 2.0.1
       sha.js: 2.4.12
 
+  '@apollo/utils.createhash@3.0.1':
+    dependencies:
+      '@apollo/utils.isnodelike': 3.0.0
+      sha.js: 2.4.12
+
   '@apollo/utils.dropunuseddefinitions@2.0.1(graphql@16.11.0)':
     dependencies:
       graphql: 16.11.0
 
   '@apollo/utils.fetcher@2.0.1': {}
 
+  '@apollo/utils.fetcher@3.1.0': {}
+
   '@apollo/utils.isnodelike@2.0.1': {}
+
+  '@apollo/utils.isnodelike@3.0.0': {}
 
   '@apollo/utils.keyvaluecache@2.1.1':
     dependencies:
       '@apollo/utils.logger': 2.0.1
       lru-cache: 7.18.3
 
+  '@apollo/utils.keyvaluecache@4.0.0':
+    dependencies:
+      '@apollo/utils.logger': 3.0.0
+      lru-cache: 11.2.2
+
   '@apollo/utils.logger@2.0.1': {}
+
+  '@apollo/utils.logger@3.0.0': {}
 
   '@apollo/utils.printwithreducedwhitespace@2.0.1(graphql@16.11.0)':
     dependencies:
@@ -20388,7 +20468,7 @@ snapshots:
       '@apollo/utils.stripsensitiveliterals': 2.0.1(graphql@16.11.0)
       graphql: 16.11.0
 
-  '@apollo/utils.withrequired@2.0.1': {}
+  '@apollo/utils.withrequired@3.0.0': {}
 
   '@ardatan/relay-compiler@12.0.0(encoding@0.1.13)(graphql@16.11.0)':
     dependencies:
@@ -20436,6 +20516,11 @@ snapshots:
     transitivePeerDependencies:
       - encoding
 
+  '@as-integrations/express4@1.1.2(@apollo/server@5.0.0(graphql@16.11.0))(express@4.21.2)':
+    dependencies:
+      '@apollo/server': 5.0.0(graphql@16.11.0)
+      express: 4.21.2
+
   '@asamuzakjp/css-color@3.2.0':
     dependencies:
       '@csstools/css-calc': 2.1.4(@csstools/css-parser-algorithms@3.0.5(@csstools/css-tokenizer@3.0.4))(@csstools/css-tokenizer@3.0.4)
@@ -20467,7 +20552,7 @@ snapshots:
       '@babel/types': 7.28.4
       '@jridgewell/remapping': 2.3.5
       convert-source-map: 2.0.0
-      debug: 4.4.3(supports-color@5.5.0)
+      debug: 4.4.3
       gensync: 1.0.0-beta.2
       json5: 2.2.3
       semver: 6.3.1
@@ -21312,7 +21397,7 @@ snapshots:
       '@babel/parser': 7.28.4
       '@babel/template': 7.27.2
       '@babel/types': 7.28.4
-      debug: 4.4.3(supports-color@5.5.0)
+      debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
 
@@ -23907,7 +23992,7 @@ snapshots:
       '@types/js-yaml': 4.0.9
       '@whatwg-node/fetch': 0.10.11
       chalk: 4.1.2
-      debug: 4.4.3(supports-color@5.5.0)
+      debug: 4.4.3
       dotenv: 16.6.1
       graphql: 16.11.0
       graphql-request: 6.1.0(encoding@0.1.13)(graphql@16.11.0)
@@ -27041,7 +27126,7 @@ snapshots:
 
   '@puppeteer/browsers@2.10.10':
     dependencies:
-      debug: 4.4.3(supports-color@5.5.0)
+      debug: 4.4.3
       extract-zip: 2.0.1
       progress: 2.0.3
       proxy-agent: 6.5.0
@@ -30840,7 +30925,7 @@ snapshots:
 
   agent-base@6.0.2:
     dependencies:
-      debug: 4.4.3(supports-color@5.5.0)
+      debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
 
@@ -31197,6 +31282,14 @@ snapshots:
 
   aws4@1.13.2: {}
 
+  axios@1.12.2:
+    dependencies:
+      follow-redirects: 1.15.11(debug@4.3.7)
+      form-data: 4.0.4
+      proxy-from-env: 1.1.0
+    transitivePeerDependencies:
+      - debug
+
   axios@1.12.2(debug@4.4.3):
     dependencies:
       follow-redirects: 1.15.11(debug@4.4.3)
@@ -31528,7 +31621,7 @@ snapshots:
     dependencies:
       bytes: 3.1.2
       content-type: 1.0.5
-      debug: 4.4.3(supports-color@5.5.0)
+      debug: 4.4.3
       http-errors: 2.0.0
       iconv-lite: 0.6.3
       on-finished: 2.4.1
@@ -32848,6 +32941,10 @@ snapshots:
     dependencies:
       ms: 2.0.0
 
+  debug@3.2.7:
+    dependencies:
+      ms: 2.1.3
+
   debug@3.2.7(supports-color@8.1.1):
     dependencies:
       ms: 2.1.3
@@ -32863,6 +32960,10 @@ snapshots:
       ms: 2.1.3
 
   debug@4.4.1:
+    dependencies:
+      ms: 2.1.3
+
+  debug@4.4.3:
     dependencies:
       ms: 2.1.3
 
@@ -33036,7 +33137,7 @@ snapshots:
       '@types/tmp': 0.0.33
       application-config-path: 0.1.1
       command-exists: 1.2.9
-      debug: 3.2.7(supports-color@8.1.1)
+      debug: 3.2.7
       eol: 0.9.1
       get-port: 3.2.0
       glob: 7.2.3
@@ -33669,7 +33770,7 @@ snapshots:
 
   esbuild-register@3.6.0(esbuild@0.19.12):
     dependencies:
-      debug: 4.4.3(supports-color@5.5.0)
+      debug: 4.4.3
       esbuild: 0.19.12
     transitivePeerDependencies:
       - supports-color
@@ -34298,7 +34399,7 @@ snapshots:
 
   extract-zip@2.0.1:
     dependencies:
-      debug: 4.4.3(supports-color@5.5.0)
+      debug: 4.4.3
       get-stream: 5.2.0
       yauzl: 2.10.0
     optionalDependencies:
@@ -34504,7 +34605,7 @@ snapshots:
 
   finalhandler@2.1.0:
     dependencies:
-      debug: 4.4.3(supports-color@5.5.0)
+      debug: 4.4.3
       encodeurl: 2.0.0
       escape-html: 1.0.3
       on-finished: 2.4.1
@@ -34769,7 +34870,7 @@ snapshots:
     dependencies:
       basic-ftp: 5.0.5
       data-uri-to-buffer: 6.0.2
-      debug: 4.4.3(supports-color@5.5.0)
+      debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
 
@@ -35506,7 +35607,7 @@ snapshots:
     dependencies:
       '@tootallnate/once': 1.1.2
       agent-base: 6.0.2
-      debug: 4.4.3(supports-color@5.5.0)
+      debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
     optional: true
@@ -35515,14 +35616,14 @@ snapshots:
     dependencies:
       '@tootallnate/once': 2.0.0
       agent-base: 6.0.2
-      debug: 4.4.3(supports-color@5.5.0)
+      debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
 
   http-proxy-agent@7.0.2:
     dependencies:
       agent-base: 7.1.4
-      debug: 4.4.3(supports-color@5.5.0)
+      debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
 
@@ -35541,7 +35642,7 @@ snapshots:
   http-proxy@1.18.1:
     dependencies:
       eventemitter3: 4.0.7
-      follow-redirects: 1.15.11(debug@4.4.3)
+      follow-redirects: 1.15.11(debug@4.3.7)
       requires-port: 1.0.0
     transitivePeerDependencies:
       - debug
@@ -35562,14 +35663,14 @@ snapshots:
   https-proxy-agent@5.0.1:
     dependencies:
       agent-base: 6.0.2
-      debug: 4.4.3(supports-color@5.5.0)
+      debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
 
   https-proxy-agent@7.0.6:
     dependencies:
       agent-base: 7.1.4
-      debug: 4.4.3(supports-color@5.5.0)
+      debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
 
@@ -38368,7 +38469,7 @@ snapshots:
   micromark@4.0.2:
     dependencies:
       '@types/debug': 4.1.12
-      debug: 4.4.3(supports-color@5.5.0)
+      debug: 4.4.3
       decode-named-character-reference: 1.2.0
       devlop: 1.1.0
       micromark-core-commonmark: 2.0.3
@@ -38880,7 +38981,7 @@ snapshots:
       '@yarnpkg/lockfile': 1.1.0
       '@yarnpkg/parsers': 3.0.2
       '@zkochan/js-yaml': 0.0.7
-      axios: 1.12.2(debug@4.4.3)
+      axios: 1.12.2
       chalk: 4.1.2
       cli-cursor: 3.1.0
       cli-spinners: 2.6.1
@@ -38932,7 +39033,7 @@ snapshots:
       '@yarnpkg/lockfile': 1.1.0
       '@yarnpkg/parsers': 3.0.2
       '@zkochan/js-yaml': 0.0.7
-      axios: 1.12.2(debug@4.4.3)
+      axios: 1.12.2
       chalk: 4.1.2
       cli-cursor: 3.1.0
       cli-spinners: 2.6.1
@@ -39292,7 +39393,7 @@ snapshots:
     dependencies:
       '@tootallnate/quickjs-emscripten': 0.23.0
       agent-base: 7.1.4
-      debug: 4.4.3(supports-color@5.5.0)
+      debug: 4.4.3
       get-uri: 6.0.5
       http-proxy-agent: 7.0.2
       https-proxy-agent: 7.0.6
@@ -40328,7 +40429,7 @@ snapshots:
   proxy-agent@6.5.0:
     dependencies:
       agent-base: 7.1.4
-      debug: 4.4.3(supports-color@5.5.0)
+      debug: 4.4.3
       http-proxy-agent: 7.0.2
       https-proxy-agent: 7.0.6
       lru-cache: 7.18.3
@@ -41721,7 +41822,7 @@ snapshots:
   socks-proxy-agent@6.2.1:
     dependencies:
       agent-base: 6.0.2
-      debug: 4.4.3(supports-color@5.5.0)
+      debug: 4.4.3
       socks: 2.8.7
     transitivePeerDependencies:
       - supports-color
@@ -41730,7 +41831,7 @@ snapshots:
   socks-proxy-agent@7.0.0:
     dependencies:
       agent-base: 6.0.2
-      debug: 4.4.3(supports-color@5.5.0)
+      debug: 4.4.3
       socks: 2.8.7
     transitivePeerDependencies:
       - supports-color
@@ -41738,7 +41839,7 @@ snapshots:
   socks-proxy-agent@8.0.5:
     dependencies:
       agent-base: 7.1.4
-      debug: 4.4.3(supports-color@5.5.0)
+      debug: 4.4.3
       socks: 2.8.7
     transitivePeerDependencies:
       - supports-color
@@ -43095,7 +43196,7 @@ snapshots:
   vite-node@3.2.4(@types/node@24.7.0)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.0)(tsx@4.20.6)(yaml@2.8.1):
     dependencies:
       cac: 6.7.14
-      debug: 4.4.3(supports-color@5.5.0)
+      debug: 4.4.3
       es-module-lexer: 1.7.0
       pathe: 2.0.3
       vite: 7.1.9(@types/node@24.7.0)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.0)(tsx@4.20.6)(yaml@2.8.1)
@@ -43210,7 +43311,7 @@ snapshots:
       '@vitest/spy': 3.2.4
       '@vitest/utils': 3.2.4
       chai: 5.3.3
-      debug: 4.4.3(supports-color@5.5.0)
+      debug: 4.4.3
       expect-type: 1.2.2
       magic-string: 0.30.19
       pathe: 2.0.3
@@ -43347,7 +43448,7 @@ snapshots:
     dependencies:
       chalk: 4.1.2
       commander: 9.5.0
-      debug: 4.4.3(supports-color@5.5.0)
+      debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
 
