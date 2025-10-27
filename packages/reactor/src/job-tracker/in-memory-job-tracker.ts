@@ -1,3 +1,4 @@
+import type { ErrorInfo } from "../shared/types.js";
 import { JobStatus, type JobInfo } from "../shared/types.js";
 import type { IJobTracker } from "./interfaces.js";
 
@@ -57,7 +58,7 @@ export class InMemoryJobTracker implements IJobTracker {
     });
   }
 
-  markFailed(jobId: string, error: string): void {
+  markFailed(jobId: string, error: ErrorInfo): void {
     const job = this.jobs.get(jobId);
     if (!job) {
       // Job not found - create minimal failed entry

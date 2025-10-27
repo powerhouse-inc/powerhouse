@@ -1,4 +1,5 @@
 import type { Action } from "document-model";
+import type { ErrorInfo } from "../shared/types.js";
 
 /**
  * State of a job in the queue
@@ -21,7 +22,7 @@ export interface IJobExecutionHandle {
 
   start(): void;
   complete(): void;
-  fail(reason: string): void;
+  fail(error: ErrorInfo): void;
 }
 
 /**
@@ -55,11 +56,11 @@ export type Job = {
   /** Maximum number of retries allowed */
   maxRetries?: number;
 
-  /** Last error message if job failed */
-  lastError?: string;
+  /** Last error if job failed */
+  lastError?: ErrorInfo;
 
-  /** History of all error messages from each attempt (ordered) */
-  errorHistory: string[];
+  /** History of all errors from each attempt (ordered) */
+  errorHistory: ErrorInfo[];
 };
 
 /**

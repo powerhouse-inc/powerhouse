@@ -5,6 +5,14 @@
 export const SYSTEM_DOCUMENT_ID = "00000000-0000-0000-0000-000000000000";
 
 /**
+ * Information about an error including message and stack trace.
+ */
+export type ErrorInfo = {
+  message: string;
+  stack: string;
+};
+
+/**
  * Describes the status of a shutdown operation.
  */
 export type ShutdownStatus = {
@@ -44,7 +52,8 @@ export type JobInfo = {
   status: JobStatus;
   createdAtUtcIso: string;
   completedAtUtcIso?: string;
-  error?: string;
+  error?: ErrorInfo;
+  errorHistory?: ErrorInfo[];
   result?: any;
 };
 

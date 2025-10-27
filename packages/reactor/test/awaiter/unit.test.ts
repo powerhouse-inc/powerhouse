@@ -56,7 +56,7 @@ describe("JobAwaiter", () => {
         id: jobId,
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
-        error: "Job failed",
+        error: { message: "Job failed", stack: "" },
       };
 
       getJobStatusMock.mockResolvedValueOnce(failedJob);

@@ -31,7 +31,7 @@ import {
 
 import * as atlasModels from "@sky-ph/atlas/document-models";
 import type { Kysely } from "kysely";
-import path = require("node:path");
+import path from "node:path";
 
 type Database = StorageDatabase & DocumentViewDatabase;
 
@@ -97,9 +97,9 @@ describe("Atlas Recorded Operations Integration Test", () => {
     storage = new MemoryStorage();
     registry = new DocumentModelRegistry();
 
-    const documentModels = [
-      documentModelDocumentModelModule,
-      driveDocumentModelModule,
+    const documentModels: DocumentModelModule[] = [
+      documentModelDocumentModelModule as unknown as DocumentModelModule,
+      driveDocumentModelModule as unknown as DocumentModelModule,
       wrapAtlasModule(atlasModels.AtlasScope),
       wrapAtlasModule(atlasModels.AtlasFoundation),
       wrapAtlasModule(atlasModels.AtlasGrounding),
@@ -199,18 +199,15 @@ describe("Atlas Recorded Operations Integration Test", () => {
         driveDoc.header.slug = slug;
 
         const jobInfo = await reactor.create(driveDoc);
-        await vi.waitUntil(
-          async () => {
-            const status = await reactor.getJobStatus(jobInfo.id);
-            if (status.status === JobStatus.FAILED) {
-              throw new Error(
-                `createDrive failed: ${status.error || "unknown error"}`,
-              );
-            }
-            return status.status === JobStatus.COMPLETED;
-          },
-          { timeout: Infinity },
-        );
+        await vi.waitUntil(async () => {
+          const status = await reactor.getJobStatus(jobInfo.id);
+          if (status.status === JobStatus.FAILED) {
+            throw new Error(
+              `createDrive failed: ${status.error || "unknown error"}`,
+            );
+          }
+          return status.status === JobStatus.COMPLETED;
+        });
       } else if (name === "addDriveAction") {
         const { driveId, driveAction } = args;
 
@@ -230,18 +227,15 @@ describe("Atlas Recorded Operations Integration Test", () => {
           fileDoc.header.name = driveAction.input.name;
 
           const createJobInfo = await reactor.create(fileDoc);
-          await vi.waitUntil(
-            async () => {
-              const status = await reactor.getJobStatus(createJobInfo.id);
-              if (status.status === JobStatus.FAILED) {
-                throw new Error(
-                  `Failed to create child document: ${status.error || "unknown error"}`,
-                );
-              }
-              return status.status === JobStatus.COMPLETED;
-            },
-            { timeout: Infinity },
-          );
+          await vi.waitUntil(async () => {
+            const status = await reactor.getJobStatus(createJobInfo.id);
+            if (status.status === JobStatus.FAILED) {
+              throw new Error(
+                `Failed to create child document: ${status.error || "unknown error"}`,
+              );
+            }
+            return status.status === JobStatus.COMPLETED;
+          });
 
           const addFileAction: Action = {
             id: driveAction.id,
@@ -257,54 +251,52 @@ describe("Atlas Recorded Operations Integration Test", () => {
           };
 
           const jobInfo = await reactor.mutate(driveId, [addFileAction]);
-          await vi.waitUntil(
-            async () => {
-              const status = await reactor.getJobStatus(jobInfo.id);
-              if (status.status === JobStatus.FAILED) {
-                throw new Error(
-                  `ADD_FILE action failed: ${status.error || "unknown error"}`,
-                );
-              }
-              return status.status === JobStatus.COMPLETED;
-            },
-            { timeout: Infinity },
-          );
+          await vi.waitUntil(async () => {
+            const status = await reactor.getJobStatus(jobInfo.id);
+            if (status.status === JobStatus.FAILED) {
+              throw new Error(
+                `ADD_FILE action failed: ${status.error || "unknown error"}`,
+              );
+            }
+            return status.status === JobStatus.COMPLETED;
+          });
         } else {
           const cleanedAction = removeSynchronizationUnits(
             driveAction,
           ) as Action;
 
           const jobInfo = await reactor.mutate(driveId, [cleanedAction]);
-          await vi.waitUntil(
-            async () => {
-              const status = await reactor.getJobStatus(jobInfo.id);
-              if (status.status === JobStatus.FAILED) {
-                throw new Error(
-                  `addDriveAction failed: ${status.error || "unknown error"}`,
-                );
-              }
-              return status.status === JobStatus.COMPLETED;
-            },
-            { timeout: Infinity },
-          );
+          await vi.waitUntil(async () => {
+            const status = await reactor.getJobStatus(jobInfo.id);
+            if (status.status === JobStatus.FAILED) {
+              throw new Error(
+                `addDriveAction failed: ${status.error || "unknown error"}`,
+              );
+            }
+            return status.status === JobStatus.COMPLETED;
+          });
         }
       } else if (name === "addAction") {
         const { docId, action } = args;
         const cleanedAction = removeSynchronizationUnits(action) as Action;
 
         const jobInfo = await reactor.mutate(docId, [cleanedAction]);
-        await vi.waitUntil(
-          async () => {
-            const status = await reactor.getJobStatus(jobInfo.id);
-            if (status.status === JobStatus.FAILED) {
-              throw new Error(
-                `addAction failed: ${status.error || "unknown error"}`,
+        await vi.waitUntil(async () => {
+          const status = await reactor.getJobStatus(jobInfo.id);
+          if (status.status === JobStatus.FAILED) {
+            status.errorHistory?.forEach((error, index) => {
+              console.error(`[Attempt ${index + 1}] ${error.message}`);
+              console.error(
+                `[Attempt ${index + 1}] Stack trace:\n${error.stack}`,
               );
-            }
-            return status.status === JobStatus.COMPLETED;
-          },
-          { timeout: Infinity },
-        );
+            });
+
+            throw new Error(
+              `addAction failed: ${status.error?.message ?? "unknown error"}`,
+            );
+          }
+          return status.status === JobStatus.COMPLETED;
+        });
       }
     }
   });
