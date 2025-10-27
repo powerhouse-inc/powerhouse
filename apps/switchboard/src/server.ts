@@ -13,12 +13,17 @@ import {
   startViteServer,
 } from "@powerhousedao/reactor-api";
 import * as Sentry from "@sentry/node";
-import type { BaseDocumentDriveServer, IDocumentStorage } from "document-drive";
+import type {
+  BaseDocumentDriveServer,
+  ICache,
+  IDocumentStorage,
+} from "document-drive";
 import {
   DocumentAlreadyExistsError,
   InMemoryCache,
   ReactorBuilder,
   RedisCache,
+  childLogger,
   driveDocumentModelModule,
 } from "document-drive";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
@@ -37,7 +42,9 @@ import {
 } from "./feature-flags.js";
 import { initProfilerFromEnv } from "./profiler.js";
 import type { StartServerOptions, SwitchboardReactor } from "./types.js";
-import { addDefaultDrive } from "./utils.js";
+import { addDefaultDrive, isPostgresUrl } from "./utils.js";
+
+const logger = childLogger(["switchboard"]);
 
 dotenv.config();
 
@@ -45,7 +52,7 @@ dotenv.config();
 const app = express();
 
 if (process.env.SENTRY_DSN) {
-  console.log("Initialized Sentry with env:", process.env.SENTRY_ENV);
+  logger.info("Initialized Sentry with env:", process.env.SENTRY_ENV);
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
     environment: process.env.SENTRY_ENV,
@@ -56,8 +63,56 @@ if (process.env.SENTRY_DSN) {
 
 const DEFAULT_PORT = process.env.PORT ? Number(process.env.PORT) : 4001;
 
+async function initPrismaStorage(connectionString: string, cache: ICache) {
+  try {
+    const prismaFactory = new PrismaStorageFactory(connectionString, cache);
+    await prismaFactory.checkConnection();
+    return prismaFactory.build();
+  } catch (e) {
+    const prismaConnectError = "Can't reach database server at";
+    if (e instanceof Error && e.message.includes(prismaConnectError)) {
+      const dbUrl = connectionString;
+      const safeUrl = `${dbUrl.slice(0, dbUrl.indexOf(":") + 1)}{...}${dbUrl.slice(dbUrl.indexOf("@"), dbUrl.lastIndexOf("?"))}`;
+      logger.warn(`Can't reach database server at '${safeUrl}'`);
+    } else {
+      logger.error(e);
+    }
+    throw e;
+  }
+}
+
+async function initReactorStorage(
+  cache: ICache,
+  dbPath: string = "./.ph/drive-storage",
+) {
+  const isPostgres = isPostgresUrl(dbPath);
+
+  try {
+    if (isPostgres) {
+      const connectionString =
+        dbPath.includes("amazonaws") && !dbPath.includes("sslmode=no-verify")
+          ? dbPath + "?sslmode=no-verify"
+          : dbPath;
+
+      const storage = await initPrismaStorage(connectionString, cache);
+      return { storage, storagePath: dbPath };
+    }
+  } catch {
+    logger.warn("Falling back to filesystem storage");
+  }
+
+  // if url was postgres and connection failed, fallback to filesystem on default path
+  const filesystemPath = isPostgres ? "./.ph/drive-storage" : dbPath;
+  return {
+    storage: new FilesystemStorage(path.join(process.cwd(), filesystemPath)),
+    storagePath: filesystemPath,
+  };
+}
+
 async function initServer(serverPort: number, options: StartServerOptions) {
   const { dev, packages = [], remoteDrives = [] } = options;
+
+  const dbPath = options.dbPath ?? process.env.DATABASE_URL;
 
   // start redis if configured
   const redisUrl = process.env.REDIS_TLS_URL ?? process.env.REDIS_URL;
@@ -66,23 +121,17 @@ async function initServer(serverPort: number, options: StartServerOptions) {
     try {
       redis = await initRedis(redisUrl);
     } catch (e) {
-      console.error(e);
+      logger.error(e);
     }
   }
-  const connectionString = process.env.DATABASE_URL ?? "./.ph/drive-storage";
-  const dbUrl =
-    connectionString.includes("amazonaws") &&
-    !connectionString.includes("sslmode=no-verify")
-      ? connectionString + "?sslmode=no-verify"
-      : connectionString;
-
   const cache = redis ? new RedisCache(redis) : new InMemoryCache();
-  const storageFactory = dbUrl.startsWith("postgresql")
-    ? new PrismaStorageFactory(dbUrl, cache)
-    : undefined;
-  const storage = storageFactory
-    ? storageFactory.build()
-    : new FilesystemStorage(path.join(process.cwd(), dbUrl));
+  const { storage, storagePath } = await initReactorStorage(cache, dbPath);
+  // if dbPath is not configured, or it was a postgres url but the connection failed,
+  // use default path for read model storage
+  const readModelPath =
+    !dbPath || (isPostgresUrl(dbPath) && dbPath !== storagePath)
+      ? ".ph/read-storage"
+      : dbPath;
 
   const driveServer = new ReactorBuilder([
     documentModelDocumentModelModule,
@@ -112,8 +161,6 @@ async function initServer(serverPort: number, options: StartServerOptions) {
   );
   const client = new ReactorClientBuilder().withReactor(reactor).build();
 
-  const dbPath = dbUrl.startsWith("postgresql") ? dbUrl : ".ph/read-storage";
-
   let defaultDriveUrl: undefined | string = undefined;
 
   // Create default drive if provided
@@ -142,7 +189,7 @@ async function initServer(serverPort: number, options: StartServerOptions) {
   const api = await startAPI(driveServer, client, {
     express: app,
     port: serverPort,
-    dbPath: options.dbPath ?? dbPath,
+    dbPath: readModelPath,
     https: options.https,
     packageLoader,
     packages: packages,
@@ -174,13 +221,13 @@ async function initServer(serverPort: number, options: StartServerOptions) {
         }
       } catch (error) {
         if (error instanceof DocumentAlreadyExistsError) {
-          console.info(`Remote drive already added: ${remoteDriveUrl}`);
+          logger.debug(`Remote drive already added: ${remoteDriveUrl}`);
           // Still use this drive URL as default if not already set
           if (!defaultDriveUrl) {
             defaultDriveUrl = remoteDriveUrl;
           }
         } else {
-          console.error(
+          logger.error(
             `Failed to connect to remote drive ${remoteDriveUrl}:`,
             error,
           );
@@ -219,7 +266,7 @@ export const startSwitchboard = async (
       await initProfilerFromEnv(process.env);
     } catch (e) {
       Sentry.captureException(e);
-      console.error("Error starting profiler", e);
+      logger.error("Error starting profiler", e);
     }
   }
 
@@ -227,7 +274,7 @@ export const startSwitchboard = async (
     return await initServer(serverPort, options);
   } catch (e) {
     Sentry.captureException(e);
-    console.error("App crashed", e);
+    logger.error("App crashed", e);
     throw e;
   }
 };
