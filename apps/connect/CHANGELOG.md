@@ -1,3 +1,13 @@
+## 5.0.1-staging.5 (2025-10-27)
+
+### 🩹 Fixes
+
+- **connect:** remove redirect on heroku nfgnx ([e781aff1c](https://github.com/powerhouse-inc/powerhouse/commit/e781aff1c))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.0.1-staging.4 (2025-10-27)
 
 ### 🩹 Fixes
