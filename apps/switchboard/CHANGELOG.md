@@ -1,3 +1,17 @@
+## 4.1.0-dev.90 (2025-10-27)
+
+### 🚀 Features
+
+- **reactor-api:** updated apollo server to v5 ([66dffda7b](https://github.com/powerhouse-inc/powerhouse/commit/66dffda7b))
+
+### 🩹 Fixes
+
+- **switchboard:** fallback to filesystem storage if postgres db is unavailable ([97e40bbf5](https://github.com/powerhouse-inc/powerhouse/commit/97e40bbf5))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 4.1.0-dev.89 (2025-10-24)
 
 ### 🩹 Fixes

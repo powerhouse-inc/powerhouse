@@ -1,3 +1,13 @@
+## 4.1.0-dev.90 (2025-10-27)
+
+### 🚀 Features
+
+- **reactor-api:** updated apollo server to v5 ([66dffda7b](https://github.com/powerhouse-inc/powerhouse/commit/66dffda7b))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 4.1.0-dev.89 (2025-10-24)
 
 ### 🩹 Fixes

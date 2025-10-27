@@ -1,3 +1,19 @@
+## 4.1.0-dev.90 (2025-10-27)
+
+### 🚀 Features
+
+- **reactor-api:** updated apollo server to v5 ([66dffda7b](https://github.com/powerhouse-inc/powerhouse/commit/66dffda7b))
+
+### 🩹 Fixes
+
+- **switchboard:** fallback to filesystem storage if postgres db is unavailable ([97e40bbf5](https://github.com/powerhouse-inc/powerhouse/commit/97e40bbf5))
+- **reactor-api:** avoid MaxListenersWarning on startup ([b43efdc83](https://github.com/powerhouse-inc/powerhouse/commit/b43efdc83))
+- **reactor-api:** add prefix to interfaces on document model schemas ([e85855ce4](https://github.com/powerhouse-inc/powerhouse/commit/e85855ce4))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 4.1.0-dev.89 (2025-10-24)
 
 ### 🩹 Fixes

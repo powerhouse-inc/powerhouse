@@ -1,3 +1,22 @@
+## 4.1.0-dev.90 (2025-10-27)
+
+### 🚀 Features
+
+- **reactor-api:** updated apollo server to v5 ([66dffda7b](https://github.com/powerhouse-inc/powerhouse/commit/66dffda7b))
+
+### 🩹 Fixes
+
+- **codegen:** handle empty allowedDocumentTypes with empty array instead of empty string element ([1f34c4984](https://github.com/powerhouse-inc/powerhouse/commit/1f34c4984))
+- **codegen:** do not add doc state schema to subgraph ([811265356](https://github.com/powerhouse-inc/powerhouse/commit/811265356))
+- **reactor-api:** add prefix to interfaces on document model schemas ([e85855ce4](https://github.com/powerhouse-inc/powerhouse/commit/e85855ce4))
+- **reactor-api:** avoid MaxListenersWarning on startup ([b43efdc83](https://github.com/powerhouse-inc/powerhouse/commit/b43efdc83))
+- **switchboard:** fallback to filesystem storage if postgres db is unavailable ([97e40bbf5](https://github.com/powerhouse-inc/powerhouse/commit/97e40bbf5))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente
+
 ## 4.1.0-dev.89 (2025-10-24)
 
 ### 🚀 Features
