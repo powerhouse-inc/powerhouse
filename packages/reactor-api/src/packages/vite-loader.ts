@@ -78,6 +78,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
 
     let localSubgraphs: Record<string, Record<string, SubgraphClass>> = {};
     try {
+      console.log("LOAD", fullPath);
       localSubgraphs = await this.vite.ssrLoadModule(fullPath);
     } catch (e) {
       this.logger.debug(`  ➜  No Subgraphs found for: ${identifier}`, e);
@@ -162,11 +163,14 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
   ): () => void {
     const subgraphsPath = this.getSubgraphsPath(identifier);
     const listener = debounce(async (changedPath: string) => {
+      console.log(changedPath);
       if (isSubpath(subgraphsPath, changedPath)) {
         const subgraphs = await this.loadSubgraphs(identifier);
         handler(subgraphs);
       }
     }, options?.debounce ?? 100);
+    console.log("WATCHER ADD", subgraphsPath);
+    // this.vite.watcher.add(subgraphsPath);
     this.vite.watcher.on("change", listener);
 
     return () => {
@@ -198,7 +202,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
 
 export async function startViteServer() {
   const vite = await createServer({
-    server: { middlewareMode: true, watch: { ignored: ["**/.ph/**"] } },
+    server: { middlewareMode: true },
     appType: "custom",
     build: {
       rollupOptions: {

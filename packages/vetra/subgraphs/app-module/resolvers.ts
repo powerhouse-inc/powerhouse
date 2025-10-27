@@ -1,16 +1,16 @@
 import type { BaseSubgraph } from "@powerhousedao/reactor-api";
 import { addFile } from "document-drive";
+import { setName } from "document-model";
 import {
   actions,
+  type AddDocumentTypeInput,
+  type AppModuleDocument,
+  type RemoveDocumentTypeInput,
   type SetAppNameInput,
   type SetAppStatusInput,
-  type AddDocumentTypeInput,
-  type RemoveDocumentTypeInput,
   type SetDocumentTypesInput,
   type SetDragAndDropEnabledInput,
-  type AppModuleDocument,
 } from "../../document-models/app-module/index.js";
-import { setName } from "document-model";
 
 export const getResolvers = (
   subgraph: BaseSubgraph,
@@ -21,6 +21,7 @@ export const getResolvers = (
     Query: {
       AppModule: async () => {
         return {
+          hello: () => "Hello 2",
           getDocument: async (args: { docId: string; driveId: string }) => {
             const { docId, driveId } = args;
 

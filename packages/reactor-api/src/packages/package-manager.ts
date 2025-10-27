@@ -14,7 +14,6 @@ import type {
   ISubscribablePackageLoader,
   PackageManagerResult,
 } from "./types.js";
-import { debounce } from "./util.js";
 export function getUniqueDocumentModels(
   ...documentModels: DocumentModelModule[][]
 ): DocumentModelModule[] {
@@ -217,20 +216,29 @@ export class PackageManager implements IPackageManager {
     this.updatePackagesMap(documentModelsMap);
   }
 
+  private async updateSubgraphsForPackage(pkg: string): Promise<void> {
+    this.logger.debug(`Updating subgraphs for package: ${pkg}`);
+    const subgraphs = await this.loadSubgraphs([pkg]);
+    const subgraphsMap = new Map(this.subgraphsMap);
+    subgraphsMap.set(pkg, subgraphs.get(pkg) ?? []);
+    this.updateSubgraphsMap(subgraphsMap);
+  }
+
   private subscribePackages(packages: string[]) {
     const unsubs: (() => void)[] = [];
     for (const pkg of packages) {
-      if (!this.debouncedUpdateCallbacks.has(pkg)) {
-        this.debouncedUpdateCallbacks.set(
-          pkg,
-          debounce(() => this.updateDocumentModelsForPackage(pkg), 1000),
-        );
-      }
-      const debouncedCallback = this.debouncedUpdateCallbacks.get(pkg)!;
-
       for (const loader of this.loaders) {
         if (loader.onDocumentModelsChange) {
-          const unsub = loader.onDocumentModelsChange(pkg, debouncedCallback);
+          const unsub = loader.onDocumentModelsChange(pkg, () => {
+            this.updateDocumentModelsForPackage(pkg).catch(this.logger.error);
+          });
+          unsubs.push(unsub);
+        }
+
+        if (loader.onSubgraphsChange) {
+          const unsub = loader.onSubgraphsChange(pkg, () => {
+            this.updateSubgraphsForPackage(pkg).catch(this.logger.error);
+          });
           unsubs.push(unsub);
         }
       }
@@ -320,14 +328,18 @@ export class PackageManager implements IPackageManager {
   }
 
   onDocumentModelsChange(
-    handler: (documentModels: Record<string, DocumentModelModule[]>) => void,
+    handler: (
+      documentModels: Record<string, DocumentModelModule[]>,
+    ) => void | Promise<void>,
   ): void {
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     this.eventEmitter.on("documentModelsChange", handler);
   }
 
   onSubgraphsChange(
-    handler: (subgraphs: Map<string, SubgraphClass[]>) => void,
+    handler: (subgraphs: Map<string, SubgraphClass[]>) => void | Promise<void>,
   ): void {
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     this.eventEmitter.on("subgraphsChange", handler);
   }
 
@@ -337,8 +349,9 @@ export class PackageManager implements IPackageManager {
         string,
         ((module: IProcessorHostModule) => ProcessorFactory)[]
       >,
-    ) => void,
+    ) => void | Promise<void>,
   ): void {
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     this.eventEmitter.on("processorsChange", handler);
   }
 }

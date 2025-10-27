@@ -37,4 +37,8 @@ export class BaseSubgraph implements ISubgraph {
   async onSetup() {
     // noop
   }
+
+  async onTeardown() {
+    // noop
+  }
 }

@@ -185,18 +185,19 @@ export class GraphQLManager {
       path: this.path,
     });
 
-    await subgraphInstance.onSetup();
-
     const subgraphsMap = core ? this.coreSubgraphsMap : this.subgraphs;
 
     const subgraphs = subgraphsMap.get(supergraph) ?? [];
-
     const existingSubgraph = subgraphs.find(
       (it) => it.name === subgraphInstance.name,
     );
 
-    subgraphs.push(subgraphInstance);
+    // tear down existing subgraph and setup new instance
+    await existingSubgraph?.onTeardown?.();
+    await subgraphInstance.onSetup();
 
+    // update subgraphs map
+    subgraphs.push(subgraphInstance);
     subgraphsMap.set(supergraph, subgraphs);
 
     // also add to global graphql supergraph
@@ -204,12 +205,13 @@ export class GraphQLManager {
       subgraphsMap.get("graphql")?.push(subgraphInstance);
     }
 
-    const logMessage = `Registered ${this.path.endsWith("/") ? this.path : this.path + "/"}${supergraph ? supergraph + "/" : ""}${subgraphInstance.name} subgraph.`;
+    const logMessage = `${this.path.endsWith("/") ? this.path : this.path + "/"}${supergraph ? supergraph + "/" : ""}${subgraphInstance.name} subgraph.`;
     if (!existingSubgraph) {
-      this.logger.info(logMessage);
+      this.logger.info(`Registered ${logMessage}`);
     } else {
-      this.logger.debug(logMessage);
+      this.logger.info(`Updated ${logMessage}`);
     }
+
     return subgraphInstance;
   }
 
@@ -283,7 +285,7 @@ export class GraphQLManager {
   ) {
     for (const [supergraph, subgraphs] of subgraphsMap.entries()) {
       for (const subgraph of subgraphs) {
-        this.logger.debug(`Setting up subgraph ${subgraph.name}`);
+        this.logger.info(`Setting up subgraph ${subgraph.name}`);
         try {
           // create subgraph schema
           const schema = createSchema(

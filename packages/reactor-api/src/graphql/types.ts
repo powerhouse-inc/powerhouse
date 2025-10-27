@@ -31,6 +31,7 @@ export type ISubgraph = {
   reactor: IDocumentDriveServer;
   relationalDb: IRelationalDb;
   onSetup?: () => Promise<void>;
+  onTeardown?: () => Promise<void>;
 };
 
 export type SubgraphArgs = {
