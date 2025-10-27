@@ -79,12 +79,13 @@ export const getDocumentModelTypeDefs = (
 
     \n`;
 
-    const found = tmpDmSchema.match(/(type|enum|union)\s+(\w+)\s/g);
+    const found = tmpDmSchema.match(/(type|enum|union|interface)\s+(\w+)\s/g);
     const trimmedFound = found?.map((f) =>
       f
         .replaceAll("type ", "")
         .replaceAll("enum ", "")
         .replaceAll("union ", "")
+        .replaceAll("interface ", "")
         .trim(),
     );
     trimmedFound?.forEach((f) => {
