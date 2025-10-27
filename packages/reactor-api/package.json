@@ -62,9 +62,10 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
-    "@apollo/gateway": "^2.10.0",
-    "@apollo/server": "^4.11.0",
-    "@apollo/subgraph": "^2.9.2",
+    "@apollo/gateway": "^2.11.3",
+    "@apollo/server": "^5.0.0",
+    "@apollo/subgraph": "^2.11.3",
+    "@as-integrations/express4": "^1.1.2",
     "@electric-sql/pglite": "0.2.17",
     "@graphql-typed-document-node/core": "^3.2.0",
     "@originjs/vite-plugin-commonjs": "^1.0.3",
