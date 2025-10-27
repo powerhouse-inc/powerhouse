@@ -1,3 +1,13 @@
+## 5.0.1-staging.4 (2025-10-27)
+
+### 🩹 Fixes
+
+- **connect:** fix assets location on heroku nginx ([8ae783eda](https://github.com/powerhouse-inc/powerhouse/commit/8ae783eda))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.0.1-staging.3 (2025-10-27)
 
 ### 🩹 Fixes
