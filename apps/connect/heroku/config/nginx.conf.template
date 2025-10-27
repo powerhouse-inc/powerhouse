@@ -60,10 +60,6 @@ http {
             add_header Cache-Control "public, must-revalidate";
         }
 
-        location ${PH_CONNECT_BASE_PATH} {
-            try_files $uri $uri/ ${PH_CONNECT_BASE_PATH}index.html;
-        }
-
         location = ${PH_CONNECT_BASE_PATH}index.html {
             alias /app/dist/index.html;
             add_header Cache-Control "no-cache, no-store, must-revalidate";
@@ -71,7 +67,7 @@ http {
             add_header Expires "0";
         }
 
-        # Catch-all: redirect to base path only if base path is not /
+        # Main location: serve app or redirect to base path if needed
         location / {
             # Use X-Forwarded-Proto from Heroku to preserve https
             set $redirect_scheme $scheme;
@@ -79,10 +75,13 @@ http {
                 set $redirect_scheme https;
             }
 
+            # If request doesn't start with base path and base path is not /, redirect
             if ($request_uri !~ ^${PH_CONNECT_BASE_PATH}) {
                 return 301 $redirect_scheme://$host${PH_CONNECT_BASE_PATH};
             }
-            return 404;
+
+            # Serve the app
+            try_files $uri $uri/ ${PH_CONNECT_BASE_PATH}index.html;
         }
     }
 }
