@@ -17,6 +17,10 @@ export class PrismaStorageFactory {
     });
   }
 
+  checkConnection() {
+    return this.prisma.$queryRaw`SELECT 1`;
+  }
+
   build() {
     return new PrismaStorage(this.prisma, this.cache);
   }

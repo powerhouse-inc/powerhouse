@@ -26,3 +26,7 @@ export async function addDefaultDrive(
 
   return `http://localhost:${serverPort}/d/${driveId}`;
 }
+
+export function isPostgresUrl(url: string) {
+  return url.startsWith("postgresql") || url.startsWith("postgres");
+}
