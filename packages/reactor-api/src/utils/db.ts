@@ -10,7 +10,10 @@ import path from "node:path";
 type Db = Kysely<any>;
 
 function isPG(connectionString: string) {
-  if (connectionString.startsWith("postgresql://")) {
+  if (
+    connectionString.startsWith("postgresql://") ||
+    connectionString.startsWith("postgres://")
+  ) {
     return true;
   }
   return false;
