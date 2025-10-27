@@ -28,6 +28,7 @@ import {
 import type { Express } from "express";
 import express from "express";
 import fs from "node:fs";
+import type http from "node:http";
 import https from "node:https";
 import path from "node:path";
 import type { TlsOptions } from "node:tls";
@@ -116,6 +117,7 @@ async function initializeDatabaseAndAnalytics(
  */
 async function setupGraphQLManager(
   app: Express,
+  httpServer: http.Server,
   reactor: IDocumentDriveServer,
   client: IReactorClient,
   relationalDb: IRelationalDb,
@@ -134,6 +136,7 @@ async function setupGraphQLManager(
   const graphqlManager = new GraphQLManager(
     config.basePath,
     app,
+    httpServer,
     reactor,
     client,
     relationalDb,
@@ -218,7 +221,7 @@ async function startServer(
   app: Express,
   port: number,
   httpsOptions: Options["https"],
-): Promise<void> {
+): Promise<http.Server> {
   if (httpsOptions) {
     const currentDir = process.cwd();
     let server: https.Server;
@@ -246,8 +249,10 @@ async function startServer(
       }
     }
     server.listen(port);
+    return server;
   } else {
-    app.listen(port);
+    const server = app.listen(port);
+    return server;
   }
 }
 
@@ -405,14 +410,17 @@ export async function startAPI(
     await processorManager.registerDrive(drive.header.id);
   });
 
-  // set up subgraph manager
+  // Start the server
+  const server = await startServer(app, port, options.https);
 
+  // set up subgraph manager
   const coreSubgraphs: SubgraphClass[] = DefaultCoreSubgraphs.slice();
   if (options.subgraphs?.isReactorv2Enabled) {
     coreSubgraphs.push(ReactorSubgraph);
   }
   const graphqlManager = await setupGraphQLManager(
     app,
+    server,
     reactor,
     client,
     relationalDb,
@@ -442,9 +450,6 @@ export async function startAPI(
     await setupMcpServer(reactor, app);
     logger.info(`MCP server available at http://localhost:${port}/mcp`);
   }
-
-  // Start the server
-  await startServer(app, port, options.https);
 
   return { app, graphqlManager, processorManager, packages };
 }
