@@ -30,13 +30,15 @@ http {
         server_name _;
         root /app/dist;
 
-        location ${PH_CONNECT_BASE_PATH}assets/ {
+        location ^~ ${PH_CONNECT_BASE_PATH}assets/ {
             alias /app/dist/assets/;
             access_log off;
-            log_not_found off;
             etag off;
             expires max;
             add_header Cache-Control "public, max-age=31536000, immutable";
+
+            # 404 if the file isn't there instead of falling back to index.html
+            try_files $uri =404;
         }
 
         location = ${PH_CONNECT_BASE_PATH}service-worker.js {
