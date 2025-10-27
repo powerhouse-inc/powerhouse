@@ -9,6 +9,7 @@ import {
 } from "@apollo/gateway";
 import { ApolloServer } from "@apollo/server";
 import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
+import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
 import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin/landingPage/default";
 import { expressMiddleware } from "@as-integrations/express4";
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
@@ -31,6 +32,7 @@ import type express from "express";
 import type { IRouter } from "express";
 import { Router } from "express";
 import type { GraphQLSchema } from "graphql";
+import type http from "node:http";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 
@@ -56,9 +58,16 @@ export class GraphQLManager {
 
   private readonly logger = childLogger(["reactor-api", "graphql-manager"]);
 
+  private readonly apolloLogger = childLogger([
+    "reactor-api",
+    "graphql-manager",
+    "apollo",
+  ]);
+
   constructor(
     private readonly path: string,
     private readonly app: express.Express,
+    private readonly httpServer: http.Server,
     private readonly reactor: IDocumentDriveServer,
     private readonly reactorClient: IReactorClient,
     private readonly relationalDb: IRelationalDb,
@@ -243,8 +252,9 @@ export class GraphQLManager {
   }
 
   #createApolloServer(schema: GraphQLSchema) {
-    return new ApolloServer({
+    return new ApolloServer<Context>({
       schema,
+      logger: this.apolloLogger,
       introspection: true,
       plugins: [
         ApolloServerPluginInlineTraceDisabled(),
@@ -253,15 +263,14 @@ export class GraphQLManager {
     });
   }
 
-  async #waitForServer(server: ApolloServer): Promise<boolean> {
-    return new Promise((resolve) => {
-      try {
-        server.assertStarted("waitForServer");
-        resolve(true);
-      } catch (e) {
-        return setTimeout(100).then(() => this.#waitForServer(server));
-      }
-    });
+  async #waitForServer(server: ApolloServer<Context>): Promise<boolean> {
+    try {
+      server.assertStarted("waitForServer");
+      return true;
+    } catch {
+      await setTimeout(100);
+      return this.#waitForServer(server);
+    }
   }
 
   #getSubgraphPath(subgraph: ISubgraph, supergraph: string) {
@@ -285,7 +294,7 @@ export class GraphQLManager {
 
           // create and start apollo server
           const server = this.#createApolloServer(schema);
-          await server.start();
+          server.startInBackgroundHandlingStartupErrorsByLoggingAndFailingAllRequests();
           await this.#waitForServer(server);
 
           const path = this.#getSubgraphPath(subgraph, supergraph);
@@ -351,16 +360,21 @@ export class GraphQLManager {
         },
       });
 
-      const server = new ApolloServer({
+      const server = new ApolloServer<Context>({
         gateway,
+        logger: this.apolloLogger,
         introspection: true,
         plugins: [
+          ApolloServerPluginDrainHttpServer({
+            httpServer: this.httpServer,
+          }),
           ApolloServerPluginInlineTraceDisabled(),
           ApolloServerPluginLandingPageLocalDefault(),
         ],
       });
 
       await server.start();
+      await this.#waitForServer(server);
 
       const superGraphPath = path.join(this.path, "graphql");
       this.#setupApolloExpressMiddleware(
@@ -384,21 +398,21 @@ export class GraphQLManager {
   }
 
   #setupApolloExpressMiddleware(
-    server: ApolloServer,
+    server: ApolloServer<Context>,
     router: IRouter,
     path: string,
   ) {
     router.use(
       path,
-      // @ts-expect-error todo check type defs
       expressMiddleware(server, {
-        context: ({ req }): Context => ({
-          headers: req.headers,
-          driveId: req.params.drive ?? undefined,
-          driveServer: this.reactor,
-          db: this.relationalDb,
-          ...this.getAdditionalContextFields(),
-        }),
+        context: async ({ req }): Promise<Context> =>
+          Promise.resolve({
+            headers: req.headers,
+            driveId: req.params.drive ?? undefined,
+            driveServer: this.reactor,
+            db: this.relationalDb,
+            ...this.getAdditionalContextFields(),
+          }),
       }),
     );
   }
