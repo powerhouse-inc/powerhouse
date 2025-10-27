@@ -28,6 +28,7 @@ export {
 } from "./document-model-modules.js";
 export { useDocumentOfType } from "./document-of-type.js";
 export { useDocumentTypes } from "./document-types.js";
+export { useDriveByDocumentId } from "./drive-by-document-id.js";
 export { useDriveById } from "./drive-by-id.js";
 export { useDrives } from "./drives.js";
 export {
@@ -94,6 +95,7 @@ export {
   useSelectedTimelineRevision,
 } from "./timeline-revision.js";
 export { useDocumentTimeline } from "./use-document-timeline.js";
+export { useGetSwitchboardLink } from "./use-get-switchboard-link.js";
 export { useOnDropFile } from "./use-on-drop-file.js";
 export { useTimelineItems } from "./use-timeline-items.js";
 export { useUserPermissions } from "./user-permissions.js";
