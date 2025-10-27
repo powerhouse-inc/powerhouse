@@ -69,21 +69,9 @@ http {
             add_header Expires "0";
         }
 
-        # Main location: serve app or redirect to base path if needed
-        location / {
-            # Use X-Forwarded-Proto from Heroku to preserve https
-            set $redirect_scheme $scheme;
-            if ($http_x_forwarded_proto = 'https') {
-                set $redirect_scheme https;
-            }
-
-            # If request doesn't start with base path and base path is not /, redirect
-            if ($request_uri !~ ^${PH_CONNECT_BASE_PATH}) {
-                return 301 $redirect_scheme://$host${PH_CONNECT_BASE_PATH};
-            }
-
-            # Serve the app
-            try_files $uri $uri/ ${PH_CONNECT_BASE_PATH}index.html;
+        # Main location: serve app with SPA fallback
+        location ${PH_CONNECT_BASE_PATH} {
+            try_files $uri $uri/ /index.html;
         }
     }
 }
