@@ -1,3 +1,7 @@
+- Always use pnpm, never use npm or yarn.
+- Never add comments inside of function, only on function and class declarations.
+- When making changes to a package, but running tests in a different package, always run `pnpm tsc --build` in the package you are working on first.
+
 - Use `pnpm build` to build or typecheck the project.
 - Use `pnpm test` to run tests. Use `pnpm test <path/to/test.ts>` to run a specific test file.
 - Use `pnpm lint` to lint the project.
