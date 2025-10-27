@@ -1,3 +1,13 @@
+## 5.0.1-staging.3 (2025-10-27)
+
+### 🩹 Fixes
+
+- **connect:** fixed heroku nginx when base path is "/" ([4b6e08139](https://github.com/powerhouse-inc/powerhouse/commit/4b6e08139))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.0.1-staging.2 (2025-10-27)
 
 This was a version bump only, there were no code changes.

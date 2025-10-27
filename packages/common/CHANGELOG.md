@@ -1,3 +1,7 @@
+## 5.0.1-staging.3 (2025-10-27)
+
+This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
+
 ## 5.0.1-staging.2 (2025-10-27)
 
 This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
