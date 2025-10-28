@@ -1,0 +1,22 @@
+{
+  "name": "atlas",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@sky-ph/atlas": "^1.5.1",
+    "document-model": "workspace:*",
+    "document-drive": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4",
+    "@sky-ph/atlas": "^1.5.1"
+  }
+}

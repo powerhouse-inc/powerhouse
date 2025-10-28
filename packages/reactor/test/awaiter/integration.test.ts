@@ -70,12 +70,15 @@ describe("JobAwaiter Integration Tests", () => {
       jobTracker.markRunning("job-2");
       await vi.advanceTimersByTimeAsync(100);
 
-      jobTracker.markFailed("job-2", "Job execution failed");
+      jobTracker.markFailed("job-2", {
+        message: "Job execution failed",
+        stack: "",
+      });
       await vi.advanceTimersByTimeAsync(100);
 
       const result = await promise;
       expect(result.status).toBe(JobStatus.FAILED);
-      expect(result.error).toBe("Job execution failed");
+      expect(result.error?.message).toBe("Job execution failed");
     });
 
     it("should handle complete job lifecycle PENDING → RUNNING → COMPLETED", async () => {
@@ -140,7 +143,10 @@ describe("JobAwaiter Integration Tests", () => {
       jobTracker.markRunning("job-concurrent-2");
       await vi.advanceTimersByTimeAsync(100);
 
-      jobTracker.markFailed("job-concurrent-2", "Job 2 failed");
+      jobTracker.markFailed("job-concurrent-2", {
+        message: "Job 2 failed",
+        stack: "",
+      });
       jobTracker.markCompleted("job-concurrent-3");
       await vi.advanceTimersByTimeAsync(100);
 

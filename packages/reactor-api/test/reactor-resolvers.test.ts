@@ -500,7 +500,7 @@ describe("ReactorSubgraph Query Resolvers", () => {
         id: "job-456",
         status: JobStatus.FAILED,
         createdAtUtcIso: "2024-01-01T00:00:00Z",
-        error: "Job failed due to timeout",
+        error: { message: "Job failed due to timeout", stack: "stack trace" },
       };
 
       vi.mocked(mockReactorClient.getJobStatus).mockResolvedValue(mockJobInfo);

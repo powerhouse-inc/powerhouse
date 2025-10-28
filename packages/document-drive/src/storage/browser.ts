@@ -21,6 +21,8 @@ import {
   migrateDocumentOperationSignatures,
   operationsToRevision,
   resolveStorageUnitsFilter,
+  setIntersection,
+  setUnion,
 } from "document-drive";
 import type { Operation, PHDocument } from "document-model";
 import LocalForage from "localforage";
@@ -98,13 +100,13 @@ export class BrowserStorage
         const ids = await this.getChildren(parentId);
         ids.forEach((id) => childrenIds.add(id));
       }
-      documents = parentIds.union(childrenIds);
+      documents = setUnion(parentIds, childrenIds);
     } else {
       documents = new Set(documentKeys);
     }
 
     // apply document id filter
-    documents = documentIds ? documentIds.intersection(documents) : documents;
+    documents = documentIds ? setIntersection(documentIds, documents) : documents;
 
     for (const documentId of documents) {
       const document = await this.get(documentId).catch(() => null);

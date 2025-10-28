@@ -17,6 +17,7 @@ import type { Job } from "../queue/types.js";
 import type { IReadModelCoordinator } from "../read-models/interfaces.js";
 import { createMutableShutdownStatus } from "../shared/factories.js";
 import type {
+  ErrorInfo,
   JobInfo,
   PagedResults,
   PagingOptions,
@@ -495,7 +496,9 @@ export class Reactor implements IReactor {
         id: jobId,
         status: JobStatus.FAILED,
         createdAtUtcIso,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: this.toErrorInfo(
+          error instanceof Error ? error : "Unknown error",
+        ),
       };
     }
 
@@ -513,7 +516,9 @@ export class Reactor implements IReactor {
           id: jobId,
           status: JobStatus.FAILED,
           createdAtUtcIso,
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: this.toErrorInfo(
+            error instanceof Error ? error : "Unknown error",
+          ),
         };
       }
 
@@ -562,7 +567,9 @@ export class Reactor implements IReactor {
         id: jobId,
         status: JobStatus.FAILED,
         createdAtUtcIso,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: this.toErrorInfo(
+          error instanceof Error ? error : "Unknown error",
+        ),
       };
     }
 
@@ -599,7 +606,7 @@ export class Reactor implements IReactor {
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
         completedAtUtcIso: new Date().toISOString(),
-        error: "Job not found",
+        error: this.toErrorInfo("Job not found"),
       });
     }
 
@@ -876,6 +883,19 @@ export class Reactor implements IReactor {
         ? async () =>
             this.findByType(type, view, { cursor: nextCursor, limit }, signal)
         : undefined,
+    };
+  }
+
+  private toErrorInfo(error: Error | string): ErrorInfo {
+    if (error instanceof Error) {
+      return {
+        message: error.message,
+        stack: error.stack || new Error().stack || "",
+      };
+    }
+    return {
+      message: error,
+      stack: new Error().stack || "",
     };
   }
 }

@@ -396,7 +396,10 @@ describe("Reactor <> Queue Integration", () => {
 
         // Fail the job (failing the entire job with all its actions)
         if (job1) {
-          await queue.failJob(job1.job.id, "Test failure");
+          await queue.failJob(job1.job.id, {
+            message: "Test failure",
+            stack: "",
+          });
         }
 
         // After failure, no more jobs should be available

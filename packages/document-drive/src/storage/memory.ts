@@ -20,6 +20,8 @@ import {
   mergeOperations,
   operationsToRevision,
   resolveStorageUnitsFilter,
+  setIntersection,
+  setUnion,
 } from "document-drive";
 import type { Operation, PHDocument } from "document-model";
 
@@ -449,13 +451,13 @@ export class MemoryStorage
         const ids = await this.getChildren(parentId);
         ids.forEach((id) => childrenIds.add(id));
       }
-      documents = parentIds.union(childrenIds);
+      documents = setUnion(parentIds, childrenIds);
     } else {
       documents = new Set(Object.keys(this.documents));
     }
 
     // apply document id filter
-    documents = documentIds ? documentIds.intersection(documents) : documents;
+    documents = documentIds ? setIntersection(documentIds, documents) : documents;
 
     for (const documentId of documents) {
       const document = this.documents[documentId];

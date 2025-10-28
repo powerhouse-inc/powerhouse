@@ -1,3 +1,4 @@
+import type { ErrorInfo } from "../shared/types.js";
 import type { IJobExecutionHandle, Job } from "./types.js";
 import { JobQueueState } from "./types.js";
 
@@ -9,7 +10,7 @@ export class JobExecutionHandle implements IJobExecutionHandle {
   private _job: Job;
   private onStart?: () => void;
   private onComplete?: () => void;
-  private onFail?: (reason: string) => void;
+  private onFail?: (error: ErrorInfo) => void;
 
   private getStateName(state: JobQueueState): string {
     switch (state) {
@@ -34,7 +35,7 @@ export class JobExecutionHandle implements IJobExecutionHandle {
     callbacks?: {
       onStart?: () => void;
       onComplete?: () => void;
-      onFail?: (reason: string) => void;
+      onFail?: (error: ErrorInfo) => void;
     },
   ) {
     this._job = job;
@@ -72,13 +73,13 @@ export class JobExecutionHandle implements IJobExecutionHandle {
     this.onComplete?.();
   }
 
-  fail(reason: string): void {
+  fail(error: ErrorInfo): void {
     if (this._state !== JobQueueState.RUNNING) {
       throw new Error(
         `Cannot fail job in state ${this.getStateName(this._state)}`,
       );
     }
     this._state = JobQueueState.RESOLVED;
-    this.onFail?.(reason);
+    this.onFail?.(error);
   }
 }
