@@ -477,66 +477,23 @@ export class Reactor implements IReactor {
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<JobInfo> {
-    const createdAtUtcIso = new Date().toISOString();
-    const jobId = uuidv4();
-
-    // Check abort signal before starting
     if (signal?.aborted) {
       throw new AbortError();
     }
 
-    // TODO: Implement when drive server supports hierarchical documents
-    // For now, this is a placeholder implementation
+    const actions: Action[] = documentIds.map((childId) => ({
+      id: uuidv4(),
+      type: "ADD_RELATIONSHIP",
+      scope: "document",
+      timestampUtcMs: new Date().toISOString(),
+      input: {
+        sourceId: parentId,
+        targetId: childId,
+        relationshipType: "child",
+      },
+    }));
 
-    // Verify parent exists
-    try {
-      await this.driveServer.getDocument(parentId);
-    } catch (error) {
-      return {
-        id: jobId,
-        status: JobStatus.FAILED,
-        createdAtUtcIso,
-        error: this.toErrorInfo(
-          error instanceof Error ? error : "Unknown error",
-        ),
-      };
-    }
-
-    // Check abort signal after parent verification
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
-
-    // Verify all children exist
-    for (const childId of documentIds) {
-      try {
-        await this.driveServer.getDocument(childId);
-      } catch (error) {
-        return {
-          id: jobId,
-          status: JobStatus.FAILED,
-          createdAtUtcIso,
-          error: this.toErrorInfo(
-            error instanceof Error ? error : "Unknown error",
-          ),
-        };
-      }
-
-      // Check abort signal after each child verification
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-    }
-
-    // TODO: Actually establish parent-child relationships
-
-    // Return success job info
-    return {
-      id: jobId,
-      status: JobStatus.COMPLETED,
-      createdAtUtcIso,
-      completedAtUtcIso: new Date().toISOString(),
-    };
+    return await this.mutate(parentId, actions);
   }
 
   /**
@@ -548,45 +505,23 @@ export class Reactor implements IReactor {
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<JobInfo> {
-    const createdAtUtcIso = new Date().toISOString();
-    const jobId = uuidv4();
-
-    // Check abort signal before starting
     if (signal?.aborted) {
       throw new AbortError();
     }
 
-    // TODO: Implement when drive server supports hierarchical documents
-    // For now, this is a placeholder implementation
+    const actions: Action[] = documentIds.map((childId) => ({
+      id: uuidv4(),
+      type: "REMOVE_RELATIONSHIP",
+      scope: "document",
+      timestampUtcMs: new Date().toISOString(),
+      input: {
+        sourceId: parentId,
+        targetId: childId,
+        relationshipType: "child",
+      },
+    }));
 
-    // Verify parent exists
-    try {
-      await this.driveServer.getDocument(parentId);
-    } catch (error) {
-      return {
-        id: jobId,
-        status: JobStatus.FAILED,
-        createdAtUtcIso,
-        error: this.toErrorInfo(
-          error instanceof Error ? error : "Unknown error",
-        ),
-      };
-    }
-
-    // Check abort signal after parent verification
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
-
-    // TODO: Actually remove parent-child relationships
-
-    // Return success job info
-    return {
-      id: jobId,
-      status: JobStatus.COMPLETED,
-      createdAtUtcIso,
-      completedAtUtcIso: new Date().toISOString(),
-    };
+    return await this.mutate(parentId, actions);
   }
 
   /**

@@ -4,11 +4,13 @@ import type {
 } from "document-drive";
 import type {
   Action,
+  AddRelationshipActionInput,
   CreateDocumentAction,
   DeleteDocumentActionInput,
   DocumentModelModule,
   Operation,
   PHDocument,
+  RemoveRelationshipActionInput,
   UpgradeDocumentActionInput,
 } from "document-model";
 import type { IWriteCache } from "../cache/write/interfaces.js";
@@ -97,6 +99,42 @@ export class SimpleJobExecutor implements IJobExecutor {
 
       if (action.type === "UPGRADE_DOCUMENT") {
         const result = await this.executeUpgradeDocumentAction(
+          job,
+          action,
+          startTime,
+        );
+        if (!result.success) {
+          return result;
+        }
+        if (result.operations && result.operations.length > 0) {
+          generatedOperations.push(...result.operations);
+        }
+        if (result.operationsWithContext) {
+          operationsWithContext.push(...result.operationsWithContext);
+        }
+        continue;
+      }
+
+      if (action.type === "ADD_RELATIONSHIP") {
+        const result = await this.executeAddRelationshipAction(
+          job,
+          action,
+          startTime,
+        );
+        if (!result.success) {
+          return result;
+        }
+        if (result.operations && result.operations.length > 0) {
+          generatedOperations.push(...result.operations);
+        }
+        if (result.operationsWithContext) {
+          operationsWithContext.push(...result.operationsWithContext);
+        }
+        continue;
+      }
+
+      if (action.type === "REMOVE_RELATIONSHIP") {
+        const result = await this.executeRemoveRelationshipAction(
           job,
           action,
           startTime,
@@ -721,6 +759,267 @@ export class SimpleJobExecutor implements IJobExecutor {
             branch: job.branch,
             documentType: document.header.documentType,
             resultingState,
+          },
+        },
+      ],
+      duration: Date.now() - startTime,
+    };
+  }
+
+  private async executeAddRelationshipAction(
+    job: Job,
+    action: Action,
+    startTime: number,
+  ): Promise<
+    JobResult & {
+      operationsWithContext?: Array<{
+        operation: Operation;
+        context: {
+          documentId: string;
+          scope: string;
+          branch: string;
+          documentType: string;
+        };
+      }>;
+    }
+  > {
+    if (job.scope !== "document") {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          `ADD_RELATIONSHIP must be in "document" scope, got "${job.scope}"`,
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    const input = action.input as AddRelationshipActionInput;
+
+    if (!input.sourceId || !input.targetId || !input.relationshipType) {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          "ADD_RELATIONSHIP action requires sourceId, targetId, and relationshipType in input",
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    if (input.sourceId === input.targetId) {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          "ADD_RELATIONSHIP: sourceId and targetId cannot be the same (self-relationships not allowed)",
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    let sourceDoc: PHDocument;
+    try {
+      sourceDoc = await this.writeCache.getState(
+        input.sourceId,
+        "document",
+        job.branch,
+      );
+    } catch (error) {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          `ADD_RELATIONSHIP: source document ${input.sourceId} not found: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    let targetDoc: PHDocument;
+    try {
+      targetDoc = await this.writeCache.getState(
+        input.targetId,
+        "document",
+        job.branch,
+      );
+    } catch (error) {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          `ADD_RELATIONSHIP: target document ${input.targetId} not found: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    const targetDocState = targetDoc.state.document;
+    if (targetDocState.isDeleted) {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          `ADD_RELATIONSHIP: target document ${input.targetId} is deleted`,
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    const nextIndex = getNextIndexForScope(sourceDoc, job.scope);
+
+    const operation: Operation = {
+      index: nextIndex,
+      timestampUtcMs: action.timestampUtcMs || new Date().toISOString(),
+      hash: "",
+      skip: 0,
+      action: action,
+    };
+
+    try {
+      await this.operationStore.apply(
+        input.sourceId,
+        sourceDoc.header.documentType,
+        job.scope,
+        job.branch,
+        operation.index,
+        (txn) => {
+          txn.addOperations(operation);
+        },
+      );
+    } catch (error) {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          `Failed to write ADD_RELATIONSHIP operation to IOperationStore: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    return {
+      job,
+      success: true,
+      operations: [operation],
+      operationsWithContext: [
+        {
+          operation,
+          context: {
+            documentId: input.sourceId,
+            scope: job.scope,
+            branch: job.branch,
+            documentType: sourceDoc.header.documentType,
+          },
+        },
+      ],
+      duration: Date.now() - startTime,
+    };
+  }
+
+  private async executeRemoveRelationshipAction(
+    job: Job,
+    action: Action,
+    startTime: number,
+  ): Promise<
+    JobResult & {
+      operationsWithContext?: Array<{
+        operation: Operation;
+        context: {
+          documentId: string;
+          scope: string;
+          branch: string;
+          documentType: string;
+        };
+      }>;
+    }
+  > {
+    if (job.scope !== "document") {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          `REMOVE_RELATIONSHIP must be in "document" scope, got "${job.scope}"`,
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    const input = action.input as RemoveRelationshipActionInput;
+
+    if (!input.sourceId || !input.targetId || !input.relationshipType) {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          "REMOVE_RELATIONSHIP action requires sourceId, targetId, and relationshipType in input",
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    let sourceDoc: PHDocument;
+    try {
+      sourceDoc = await this.writeCache.getState(
+        input.sourceId,
+        "document",
+        job.branch,
+      );
+    } catch (error) {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          `REMOVE_RELATIONSHIP: source document ${input.sourceId} not found: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    const nextIndex = getNextIndexForScope(sourceDoc, job.scope);
+
+    const operation: Operation = {
+      index: nextIndex,
+      timestampUtcMs: action.timestampUtcMs || new Date().toISOString(),
+      hash: "",
+      skip: 0,
+      action: action,
+    };
+
+    try {
+      await this.operationStore.apply(
+        input.sourceId,
+        sourceDoc.header.documentType,
+        job.scope,
+        job.branch,
+        operation.index,
+        (txn) => {
+          txn.addOperations(operation);
+        },
+      );
+    } catch (error) {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          `Failed to write REMOVE_RELATIONSHIP operation to IOperationStore: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    return {
+      job,
+      success: true,
+      operations: [operation],
+      operationsWithContext: [
+        {
+          operation,
+          context: {
+            documentId: input.sourceId,
+            scope: job.scope,
+            branch: job.branch,
+            documentType: sourceDoc.header.documentType,
           },
         },
       ],
