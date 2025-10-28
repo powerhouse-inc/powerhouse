@@ -1,6 +1,7 @@
 import type { Operation } from "document-model";
 import { Kysely } from "kysely";
 import { KyselyPGlite } from "kysely-pglite";
+import { v4 as uuidv4 } from "uuid";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   IOperationStore,
@@ -88,10 +89,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
         .fn()
         .mockResolvedValue({ items: operations, hasMore: false });
 
-      const newIndexer = new KyselyDocumentIndexer(
-        db as any,
-        mockOperationStore,
-      );
+      const newIndexer = new KyselyDocumentIndexer(db, mockOperationStore);
       await newIndexer.init();
 
       const relationships = await newIndexer.getOutgoing("doc1");
@@ -104,7 +102,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
       const operations: OperationWithContext[] = [
         {
           operation: {
-            id: 1,
+            id: uuidv4(),
             index: 0,
             timestampUtcMs: new Date().toISOString(),
             hash: "hash1",
@@ -118,7 +116,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
                 relationshipType: "child",
               },
             },
-          } as any,
+          } as Operation,
           context: {
             documentId: "parent",
             documentType: "test",
