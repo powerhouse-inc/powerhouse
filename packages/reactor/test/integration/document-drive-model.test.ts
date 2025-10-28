@@ -147,7 +147,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
     await executorManager.start(1);
 
     // Create real document view and read model coordinator
-    const documentView = new KyselyDocumentView(db, operationStore);
+    const documentView = new KyselyDocumentView(db as any, operationStore);
     await documentView.init();
 
     documentIndexer = new KyselyDocumentIndexer(db as any, operationStore);

@@ -16,6 +16,32 @@ import type {
 } from "../shared/types.js";
 
 /**
+ * A single mutation job within a batch request.
+ */
+export type MutationJobPlan = {
+  key: string;
+  documentId: string;
+  scope: string;
+  branch: string;
+  actions: Action[];
+  dependsOn: string[];
+};
+
+/**
+ * Request for batch mutation operation.
+ */
+export type BatchMutationRequest = {
+  jobs: MutationJobPlan[];
+};
+
+/**
+ * Result from batch mutation operation.
+ */
+export type BatchMutationResult = {
+  jobs: Record<string, JobInfo>;
+};
+
+/**
  * The main Reactor interface that serves as a facade for document operations.
  * This interface provides a unified API for document management, including
  * creation, retrieval, mutation, and deletion operations.
@@ -139,6 +165,18 @@ export interface IReactor {
    * @returns The job id and status
    */
   mutate(id: string, actions: Action[]): Promise<JobInfo>;
+
+  /**
+   * Applies multiple mutations across documents with dependency management.
+   *
+   * @param request - Batch mutation request containing jobs with dependencies
+   * @param signal - Optional abort signal to cancel the request
+   * @returns Map of job keys to job information
+   */
+  mutateBatch(
+    request: BatchMutationRequest,
+    signal?: AbortSignal,
+  ): Promise<BatchMutationResult>;
 
   /**
    * Adds multiple documents as children to another
