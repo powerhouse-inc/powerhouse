@@ -353,6 +353,55 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       expect(folder2?.parentFolder).toBe(folder1Id);
       expect(folder3?.parentFolder).toBe(folder2Id);
     });
+
+    it("should add a file with full orchestration (new architecture pattern)", async () => {
+      const parentDrive = driveDocumentModelModule.utils.createDocument();
+      await createDocumentViaReactor(parentDrive);
+
+      const childDocument = driveDocumentModelModule.utils.createDocument();
+      await createDocumentViaReactor(childDocument);
+
+      const fileId = childDocument.header.id;
+      const fileAction = addFile({
+        id: fileId,
+        name: "Child Document.drive",
+        documentType: childDocument.header.documentType,
+        parentFolder: null,
+      });
+
+      const fileJobInfo = await reactor.mutate(parentDrive.header.id, [
+        fileAction,
+      ]);
+
+      await vi.waitUntil(async () => {
+        const jobStatus = await reactor.getJobStatus(fileJobInfo.id);
+        return jobStatus.status === JobStatus.COMPLETED;
+      });
+
+      const { document: childDoc } = await reactor.get<DocumentDriveDocument>(
+        childDocument.header.id,
+      );
+      expect(childDoc).toBeDefined();
+      expect(childDoc.header.id).toBe(fileId);
+      expect(childDoc.header.documentType).toBe(
+        childDocument.header.documentType,
+      );
+
+      const { document: parentDoc } = await reactor.get<DocumentDriveDocument>(
+        parentDrive.header.id,
+      );
+      const globalState = parentDoc.state.global;
+      expect(globalState.nodes).toHaveLength(1);
+
+      const file = globalState.nodes.find((n) => n.id === fileId);
+      expect(file).toMatchObject({
+        id: fileId,
+        name: "Child Document.drive",
+        documentType: childDocument.header.documentType,
+        parentFolder: null,
+        kind: "file",
+      });
+    });
   });
 
   describe("UPDATE Operations", () => {
