@@ -8,6 +8,8 @@ import {
   supportedEncodings,
 } from "../src/core/crypto.js";
 
+import type { HashConfig } from "../src/core/ph-types.js";
+
 // Node shim as it doesn't have `btoa`. Polyfill so the code's base64 path works if used
 (globalThis as any).btoa ??= (bin: string) =>
   Buffer.from(bin, "binary").toString("base64");
@@ -91,10 +93,10 @@ describe("signature pipeline", () => {
   for (const algorithm of supportedAlgorithms) {
     for (const encoding of supportedEncodings) {
       bench(`buildOperationSignatureParams (${algorithm}/${encoding})`, () => {
-        const params = buildOperationSignatureParams({
-          ...baseDocument,
-          hashFormat: { algorithm: algorithm, encoding: encoding },
-        } as any);
+        const params = buildOperationSignatureParams(
+          {...baseDocument} as any,
+          { algorithm, encoding } as HashConfig,
+        );
         buildOperationSignatureMessage(params);
       });
     }

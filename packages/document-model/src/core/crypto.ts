@@ -16,6 +16,7 @@ import {
 
 import stringifyJson from "safe-stable-stringify";
 import { createHash as createSha1Hash } from "sha1-uint8array";
+import type { HashConfig } from "./ph-types.js";
 import type { ActionSignatureContext } from "./types.js";
 
 /**
@@ -250,8 +251,8 @@ export function buildOperationSignatureParams({
   signer,
   action,
   previousStateHash,
-  hashFormat,
-}: ActionSignatureContext): [string, string, string, string,] {
+}: ActionSignatureContext,
+hashFormat?: HashConfig): [string, string, string, string,] {
   const { /*id, timestamp,*/ scope, type } = action;
   return [
     /*getUnixTimestamp(timestamp)*/ getUnixTimestamp(new Date()),
