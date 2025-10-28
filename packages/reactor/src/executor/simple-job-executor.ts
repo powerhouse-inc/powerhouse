@@ -908,14 +908,13 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     sourceDoc.operations = {
       ...sourceDoc.operations,
-      [job.scope]: [...(sourceDoc.operations?.[job.scope] ?? []), operation],
+      [job.scope]: [...(sourceDoc.operations[job.scope] ?? []), operation],
     };
 
-    const scopeState =
-      (sourceDoc.state as Record<string, unknown>)[job.scope] ?? {};
+    const scopeState = (sourceDoc.state as Record<string, unknown>)[job.scope];
     const resultingStateObj: Record<string, unknown> = {
-      header: JSON.parse(JSON.stringify(sourceDoc.header)),
-      [job.scope]: JSON.parse(JSON.stringify(scopeState)),
+      header: structuredClone(sourceDoc.header),
+      [job.scope]: scopeState === undefined ? {} : structuredClone(scopeState),
     };
     const resultingState = JSON.stringify(resultingStateObj);
 
@@ -1048,14 +1047,13 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     sourceDoc.operations = {
       ...sourceDoc.operations,
-      [job.scope]: [...(sourceDoc.operations?.[job.scope] ?? []), operation],
+      [job.scope]: [...(sourceDoc.operations[job.scope] ?? []), operation],
     };
 
-    const scopeState =
-      (sourceDoc.state as Record<string, unknown>)[job.scope] ?? {};
+    const scopeState = (sourceDoc.state as Record<string, unknown>)[job.scope];
     const resultingStateObj: Record<string, unknown> = {
-      header: JSON.parse(JSON.stringify(sourceDoc.header)),
-      [job.scope]: JSON.parse(JSON.stringify(scopeState)),
+      header: structuredClone(sourceDoc.header),
+      [job.scope]: scopeState === undefined ? {} : structuredClone(scopeState),
     };
     const resultingState = JSON.stringify(resultingStateObj);
 

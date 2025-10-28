@@ -72,7 +72,8 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       async () => {
         const jobStatus = await reactor.getJobStatus(createJobInfo.id);
         if (jobStatus.status === JobStatus.FAILED) {
-          throw new Error(`Job failed: ${jobStatus.error || "unknown error"}`);
+          const errorMessage = jobStatus.error?.message ?? "unknown error";
+          throw new Error(`Job failed: ${errorMessage}`);
         }
         return jobStatus.status === JobStatus.COMPLETED;
       },
@@ -177,9 +178,8 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         async () => {
           const jobStatus = await reactor.getJobStatus(createJobInfo.id);
           if (jobStatus.status === JobStatus.FAILED) {
-            throw new Error(
-              `Job failed: ${jobStatus.error || "unknown error"}`,
-            );
+            const errorMessage = jobStatus.error?.message ?? "unknown error";
+            throw new Error(`Job failed: ${errorMessage}`);
           }
           return jobStatus.status === JobStatus.COMPLETED;
         },

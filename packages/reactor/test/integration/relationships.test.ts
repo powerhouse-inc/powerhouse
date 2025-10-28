@@ -81,7 +81,7 @@ describe("Integration Test: Relationship Operations", () => {
           status.errorHistory?.forEach((error, index) => {
             console.error(`[Attempt ${index + 1}] ${error.message}`);
             console.error(
-              `[Attempt ${index + 1}] Stack trace:\n${error.stack ?? ""}`,
+              `[Attempt ${index + 1}] Stack trace:\n${error.stack}`,
             );
           });
 

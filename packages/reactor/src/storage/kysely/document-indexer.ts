@@ -111,7 +111,9 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
       sourceId: row.sourceId,
       targetId: row.targetId,
       relationshipType: row.relationshipType,
-      metadata: row.metadata ? (JSON.parse(row.metadata) as Record<string, unknown>) : undefined,
+      metadata: row.metadata
+        ? (JSON.parse(row.metadata) as Record<string, unknown>)
+        : undefined,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     }));
@@ -141,7 +143,9 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
       sourceId: row.sourceId,
       targetId: row.targetId,
       relationshipType: row.relationshipType,
-      metadata: row.metadata ? (JSON.parse(row.metadata) as Record<string, unknown>) : undefined,
+      metadata: row.metadata
+        ? (JSON.parse(row.metadata) as Record<string, unknown>)
+        : undefined,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     }));
@@ -198,7 +202,9 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
       sourceId: row.sourceId,
       targetId: row.targetId,
       relationshipType: row.relationshipType,
-      metadata: row.metadata ? (JSON.parse(row.metadata) as Record<string, unknown>) : undefined,
+      metadata: row.metadata
+        ? (JSON.parse(row.metadata) as Record<string, unknown>)
+        : undefined,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     }));
@@ -413,7 +419,9 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
       await this.db.schema
         .createTable("IndexerState")
         .ifNotExists()
-        .addColumn("id", "integer", (col) => col.primaryKey().generatedAlwaysAsIdentity())
+        .addColumn("id", "integer", (col) =>
+          col.primaryKey().generatedAlwaysAsIdentity(),
+        )
         .addColumn("lastOperationId", "integer", (col) => col.notNull())
         .addColumn("lastOperationTimestamp", "timestamptz", (col) =>
           col.defaultTo("now()").notNull(),

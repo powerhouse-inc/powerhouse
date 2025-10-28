@@ -202,9 +202,8 @@ describe.skip("Atlas Recorded Operations Integration Test", () => {
         await vi.waitUntil(async () => {
           const status = await reactor.getJobStatus(jobInfo.id);
           if (status.status === JobStatus.FAILED) {
-            throw new Error(
-              `createDrive failed: ${status.error || "unknown error"}`,
-            );
+            const errorMessage = status.error?.message ?? "unknown error";
+            throw new Error(`createDrive failed: ${errorMessage}`);
           }
           return status.status === JobStatus.COMPLETED;
         });
@@ -230,8 +229,9 @@ describe.skip("Atlas Recorded Operations Integration Test", () => {
           await vi.waitUntil(async () => {
             const status = await reactor.getJobStatus(createJobInfo.id);
             if (status.status === JobStatus.FAILED) {
+              const errorMessage = status.error?.message ?? "unknown error";
               throw new Error(
-                `Failed to create child document: ${status.error || "unknown error"}`,
+                `Failed to create child document: ${errorMessage}`,
               );
             }
             return status.status === JobStatus.COMPLETED;
@@ -254,9 +254,8 @@ describe.skip("Atlas Recorded Operations Integration Test", () => {
           await vi.waitUntil(async () => {
             const status = await reactor.getJobStatus(jobInfo.id);
             if (status.status === JobStatus.FAILED) {
-              throw new Error(
-                `ADD_FILE action failed: ${status.error || "unknown error"}`,
-              );
+              const errorMessage = status.error?.message ?? "unknown error";
+              throw new Error(`ADD_FILE action failed: ${errorMessage}`);
             }
             return status.status === JobStatus.COMPLETED;
           });
@@ -269,9 +268,8 @@ describe.skip("Atlas Recorded Operations Integration Test", () => {
           await vi.waitUntil(async () => {
             const status = await reactor.getJobStatus(jobInfo.id);
             if (status.status === JobStatus.FAILED) {
-              throw new Error(
-                `addDriveAction failed: ${status.error || "unknown error"}`,
-              );
+              const errorMessage = status.error?.message ?? "unknown error";
+              throw new Error(`addDriveAction failed: ${errorMessage}`);
             }
             return status.status === JobStatus.COMPLETED;
           });
