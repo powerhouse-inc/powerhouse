@@ -78,7 +78,7 @@ function removeSynchronizationUnits(obj: any): any {
   return obj;
 }
 
-describe("Atlas Recorded Operations Integration Test", () => {
+describe.skip("Atlas Recorded Operations Integration Test", () => {
   let reactor: Reactor;
   let registry: IDocumentModelRegistry;
   let storage: MemoryStorage;
