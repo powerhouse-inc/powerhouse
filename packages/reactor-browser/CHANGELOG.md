@@ -1,3 +1,13 @@
+## 4.1.0-dev.91 (2025-10-28)
+
+### 🚀 Features
+
+- **reactor-browser:** implement collision resolution for target names during node copy ([150284a04](https://github.com/powerhouse-inc/powerhouse/commit/150284a04))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.90 (2025-10-27)
 
 ### 🚀 Features
