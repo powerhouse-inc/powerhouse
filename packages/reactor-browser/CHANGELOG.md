@@ -1,3 +1,13 @@
+## 4.1.0-dev.92 (2025-10-28)
+
+### 🚀 Features
+
+- **reactor-browser:** add folder hooks ([#2050](https://github.com/powerhouse-inc/powerhouse/pull/2050))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 4.1.0-dev.91 (2025-10-28)
 
 ### 🚀 Features

@@ -1,3 +1,7 @@
+## 4.1.0-dev.92 (2025-10-28)
+
+This was a version bump only for @powerhousedao/reactor-local to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.91 (2025-10-28)
 
 This was a version bump only for @powerhousedao/reactor-local to align it with other projects, there were no code changes.
