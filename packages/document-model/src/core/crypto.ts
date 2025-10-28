@@ -1,17 +1,7 @@
-import { blake256 } from "@noble/hashes/blake1.js";
-import { blake2b, blake2s, } from "@noble/hashes/blake2.js";
-import { blake3 } from "@noble/hashes/blake3.js";
-import { sha256, sha512 } from "@noble/hashes/sha2.js";
-import { keccak_256, sha3_256, shake256, shake256_64 } from "@noble/hashes/sha3.js";
-
 import {
   createBLAKE2b as blake2b_wasm,
-  createBLAKE2s as blake2s_wasm,
   createBLAKE3 as blake3_wasm,
   createSHA1 as sha1_wasm,
-  createSHA256 as sha256_wasm,
-  createSHA3 as sha3_wasm,
-  createSHA512 as sha512_wasm,
 } from "hash-wasm";
 
 import stringifyJson from "safe-stable-stringify";
@@ -36,22 +26,8 @@ export function generateUUIDBrowser() {
 
 export const supportedAlgorithms = [
   "sha1",
-  "blake3",
-  "blake1",
-  "blake2b",
-  "blake2s",
-  "sha2_256",
-  "sha2_512",
-  "keccak_256",
-  "sha3_256",
-  "shake256",
-  "shake256_64",
   "sha1_wasm",
-  "sha256_wasm",
-  "sha512_wasm",
-  "sha3_wasm",
   "blake2b_wasm",
-  "blake2s_wasm",
   "blake3_wasm",
 ];
 export const supportedEncodings = ["base64", "hex"];
@@ -121,40 +97,12 @@ async function initAsyncSHA1Hasher() {
 }
 const sha1Hasher = await initAsyncSHA1Hasher();
 
-async function initAsyncSHA256Hasher() {
-  const hasher = await sha256_wasm();
-  hasher.init();
-  return hasher;
-}
-const sha256Hasher = await initAsyncSHA256Hasher();
-
-async function initAsyncSHA512Hasher() {
-  const hasher = await sha512_wasm();
-  hasher.init();
-  return hasher;
-}
-const sha512Hasher = await initAsyncSHA512Hasher();
-
-async function initAsyncSHA3Hasher() {
-  const hasher = await sha3_wasm();
-  hasher.init();
-  return hasher;
-}
-const sha3Hasher = await initAsyncSHA3Hasher();
-
 async function initAsyncBlake2bHasher() {
   const hasher = await blake2b_wasm();
   hasher.init();
   return hasher;
 }
 const blake2bHasher = await initAsyncBlake2bHasher();
-
-async function initAsyncBlake2sHasher() {
-  const hasher = await blake2s_wasm();
-  hasher.init();
-  return hasher;
-}
-const blake2sHasher = await initAsyncBlake2sHasher();
 
 async function initAsyncBlake3Hasher() {
   const hasher = await blake3_wasm();
@@ -172,56 +120,16 @@ function hashUIntArray(
   switch (algorithm) {
     case "sha1":
       return createSha1Hash("sha1").update(bytes).digest();
-    case "blake3":
-      return blake3(bytes);
-    case "blake1":
-      return blake256(bytes);
-    case "blake2b":
-      return blake2b(bytes);
-    case "blake2s":
-      return blake2s(bytes);
-    case "sha2_256":
-      return sha256(bytes);
-    case "sha2_512":
-      return sha512(bytes);
-    case "keccak_256":
-      return keccak_256(bytes);
-    case "sha3_256":
-      return sha3_256(bytes);
-    case "shake256":
-      return shake256(bytes);
-    case "shake256_64":
-      return shake256_64(bytes);
     case "sha1_wasm":
       sha1Hasher.update(bytes);
       let sha1Hash = sha1Hasher.digest("binary");
       sha1Hasher.init();
       return sha1Hash;
-    case "sha256_wasm":
-      sha256Hasher.update(bytes);
-      let sha256Hash = sha256Hasher.digest("binary");
-      sha256Hasher.init();
-      return sha256Hash;
-    case "sha512_wasm":
-      sha512Hasher.update(bytes);
-      let sha512Hash = sha512Hasher.digest("binary");
-      sha512Hasher.init();
-      return sha512Hash;
-    case "sha3_wasm":
-      sha3Hasher.update(bytes);
-      let sha3Hash = sha3Hasher.digest("binary");
-      sha3Hasher.init();
-      return sha3Hash;
     case "blake2b_wasm":
       blake2bHasher.update(bytes);
       let blake2bHash = blake2bHasher.digest("binary");
       blake2bHasher.init();
       return blake2bHash;
-    case "blake2s_wasm":
-      blake2sHasher.update(bytes);
-      let blake2sHash = blake2sHasher.digest("binary");
-      blake2sHasher.init();
-      return blake2sHash;
     case "blake3_wasm":
       blake3Hasher.update(bytes);
       let blake3HashDigest = blake3Hasher.digest("binary");
