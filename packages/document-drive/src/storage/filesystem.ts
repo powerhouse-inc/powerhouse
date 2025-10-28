@@ -98,7 +98,9 @@ export class FilesystemStorage
     }
 
     // apply document id filter
-    documents = documentIds ? setIntersection(documentIds, documents) : documents;
+    documents = documentIds
+      ? setIntersection(documentIds, documents)
+      : documents;
 
     for (const documentId of documents) {
       const document = await this.get(documentId).catch(() => null);

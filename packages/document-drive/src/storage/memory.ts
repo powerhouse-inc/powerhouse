@@ -457,7 +457,9 @@ export class MemoryStorage
     }
 
     // apply document id filter
-    documents = documentIds ? setIntersection(documentIds, documents) : documents;
+    documents = documentIds
+      ? setIntersection(documentIds, documents)
+      : documents;
 
     for (const documentId of documents) {
       const document = this.documents[documentId];

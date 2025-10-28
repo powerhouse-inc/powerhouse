@@ -44,10 +44,7 @@ export const setUnion = <T>(
   return result;
 };
 
-export const setIntersection = <T>(
-  left: Set<T>,
-  right: Set<T>,
-): Set<T> => {
+export const setIntersection = <T>(left: Set<T>, right: Set<T>): Set<T> => {
   const result = new Set<T>();
   for (const value of left) {
     if (right.has(value)) {
