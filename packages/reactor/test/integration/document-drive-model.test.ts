@@ -24,10 +24,12 @@ import {
 import type { DocumentModelModule } from "document-model";
 import { generateId } from "document-model/core";
 import type { Kysely } from "kysely";
+import { v4 as uuidv4 } from "uuid";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyWriteCache } from "../../src/cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../../src/cache/types.js";
 import { Reactor } from "../../src/core/reactor.js";
+import type { BatchMutationRequest } from "../../src/core/types.js";
 import { EventBus } from "../../src/events/event-bus.js";
 import { SimpleJobExecutorManager } from "../../src/executor/simple-job-executor-manager.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
@@ -383,41 +385,70 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         parentFolder: null,
       });
 
-      const fileJobInfo = await reactor.mutate(parentDrive.header.id, [
-        fileAction,
-      ]);
-
-      await vi.waitUntil(
-        async () => {
-          const jobStatus = await reactor.getJobStatus(fileJobInfo.id);
-          if (jobStatus.status === JobStatus.FAILED) {
-            console.error("Job failed:", jobStatus.error?.message);
-            console.error("Error history:", jobStatus.errorHistory);
-            throw new Error(
-              `Job failed: ${jobStatus.error?.message || "unknown error"}`,
-            );
-          }
-          return jobStatus.status === JobStatus.COMPLETED;
+      const addRelationshipAction = {
+        id: uuidv4(),
+        type: "ADD_RELATIONSHIP",
+        scope: "document",
+        timestampUtcMs: new Date().toISOString(),
+        input: {
+          sourceId: parentDrive.header.id,
+          targetId: childDocument.header.id,
+          relationshipType: "child",
         },
-        { timeout: 10000 },
-      );
+      };
 
-      const relationshipJobInfo = await reactor.addChildren(
-        parentDrive.header.id,
-        [childDocument.header.id],
-      );
+      const request: BatchMutationRequest = {
+        jobs: [
+          {
+            key: "addFile",
+            documentId: parentDrive.header.id,
+            scope: "global",
+            branch: "main",
+            actions: [fileAction],
+            dependsOn: [],
+          },
+          {
+            key: "linkChild",
+            documentId: parentDrive.header.id,
+            scope: "document",
+            branch: "main",
+            actions: [addRelationshipAction],
+            dependsOn: ["addFile"],
+          },
+        ],
+      };
+
+      const result = await reactor.mutateBatch(request);
 
       await vi.waitUntil(
         async () => {
-          const jobStatus = await reactor.getJobStatus(relationshipJobInfo.id);
-          if (jobStatus.status === JobStatus.FAILED) {
-            console.error("Relationship job failed:", jobStatus.error?.message);
-            console.error("Error history:", jobStatus.errorHistory);
+          const addFileStatus = await reactor.getJobStatus(
+            result.jobs.addFile.id,
+          );
+          const linkChildStatus = await reactor.getJobStatus(
+            result.jobs.linkChild.id,
+          );
+          if (addFileStatus.status === JobStatus.FAILED) {
+            console.error("Add file job failed:", addFileStatus.error?.message);
+            console.error("Error history:", addFileStatus.errorHistory);
             throw new Error(
-              `Relationship job failed: ${jobStatus.error?.message || "unknown error"}`,
+              `Add file job failed: ${addFileStatus.error?.message || "unknown error"}`,
             );
           }
-          return jobStatus.status === JobStatus.COMPLETED;
+          if (linkChildStatus.status === JobStatus.FAILED) {
+            console.error(
+              "Link child job failed:",
+              linkChildStatus.error?.message,
+            );
+            console.error("Error history:", linkChildStatus.errorHistory);
+            throw new Error(
+              `Link child job failed: ${linkChildStatus.error?.message || "unknown error"}`,
+            );
+          }
+          return (
+            addFileStatus.status === JobStatus.COMPLETED &&
+            linkChildStatus.status === JobStatus.COMPLETED
+          );
         },
         { timeout: 10000 },
       );
