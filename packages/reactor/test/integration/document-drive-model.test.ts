@@ -39,15 +39,21 @@ import { DocumentModelRegistry } from "../../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
 import { JobStatus } from "../../src/shared/types.js";
 import type { IKeyframeStore } from "../../src/storage/interfaces.js";
+import { KyselyDocumentIndexer } from "../../src/storage/kysely/document-indexer.js";
 import type { KyselyOperationStore } from "../../src/storage/kysely/store.js";
-import type { Database as StorageDatabase } from "../../src/storage/kysely/types.js";
+import type {
+  DocumentIndexerDatabase,
+  Database as StorageDatabase,
+} from "../../src/storage/kysely/types.js";
 import {
   createTestJobTracker,
   createTestOperationStore,
 } from "../factories.js";
 
 // Combined database type
-type Database = StorageDatabase & DocumentViewDatabase;
+type Database = StorageDatabase &
+  DocumentViewDatabase &
+  DocumentIndexerDatabase;
 
 describe("Integration Test: Reactor <> Document Drive Document Model", () => {
   let reactor: Reactor;
@@ -63,6 +69,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
   let keyframeStore: IKeyframeStore;
   let writeCache: KyselyWriteCache;
   let readModelCoordinator: ReadModelCoordinator;
+  let documentIndexer: KyselyDocumentIndexer;
 
   async function createDocumentViaReactor(
     document: DocumentDriveDocument,
@@ -142,7 +149,14 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
     // Create real document view and read model coordinator
     const documentView = new KyselyDocumentView(db, operationStore);
     await documentView.init();
-    readModelCoordinator = new ReadModelCoordinator(eventBus, [documentView]);
+
+    documentIndexer = new KyselyDocumentIndexer(db as any, operationStore);
+    await documentIndexer.init();
+
+    readModelCoordinator = new ReadModelCoordinator(eventBus, [
+      documentView,
+      documentIndexer,
+    ]);
     readModelCoordinator.start();
 
     // Create reactor with all components
@@ -373,10 +387,40 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         fileAction,
       ]);
 
-      await vi.waitUntil(async () => {
-        const jobStatus = await reactor.getJobStatus(fileJobInfo.id);
-        return jobStatus.status === JobStatus.COMPLETED;
-      });
+      await vi.waitUntil(
+        async () => {
+          const jobStatus = await reactor.getJobStatus(fileJobInfo.id);
+          if (jobStatus.status === JobStatus.FAILED) {
+            console.error("Job failed:", jobStatus.error?.message);
+            console.error("Error history:", jobStatus.errorHistory);
+            throw new Error(
+              `Job failed: ${jobStatus.error?.message || "unknown error"}`,
+            );
+          }
+          return jobStatus.status === JobStatus.COMPLETED;
+        },
+        { timeout: 10000 },
+      );
+
+      const relationshipJobInfo = await reactor.addChildren(
+        parentDrive.header.id,
+        [childDocument.header.id],
+      );
+
+      await vi.waitUntil(
+        async () => {
+          const jobStatus = await reactor.getJobStatus(relationshipJobInfo.id);
+          if (jobStatus.status === JobStatus.FAILED) {
+            console.error("Relationship job failed:", jobStatus.error?.message);
+            console.error("Error history:", jobStatus.errorHistory);
+            throw new Error(
+              `Relationship job failed: ${jobStatus.error?.message || "unknown error"}`,
+            );
+          }
+          return jobStatus.status === JobStatus.COMPLETED;
+        },
+        { timeout: 10000 },
+      );
 
       const { document: childDoc } = await reactor.get<DocumentDriveDocument>(
         childDocument.header.id,
@@ -400,6 +444,28 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         documentType: childDocument.header.documentType,
         parentFolder: null,
         kind: "file",
+      });
+
+      await vi.waitUntil(
+        async () => {
+          const relationships = await documentIndexer.getOutgoing(
+            parentDrive.header.id,
+            ["child"],
+          );
+          return relationships.length === 1;
+        },
+        { timeout: 5000 },
+      );
+
+      const relationships = await documentIndexer.getOutgoing(
+        parentDrive.header.id,
+        ["child"],
+      );
+      expect(relationships).toHaveLength(1);
+      expect(relationships[0]).toMatchObject({
+        sourceId: parentDrive.header.id,
+        targetId: childDocument.header.id,
+        relationshipType: "child",
       });
     });
   });
