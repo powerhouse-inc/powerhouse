@@ -18,6 +18,7 @@ import {
   isValidSlug,
   logger,
   resolveStorageUnitsFilter,
+  setIntersection,
   type ICache,
   type SynchronizationUnitQuery,
 } from "document-drive";
@@ -168,9 +169,10 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
           },
         })
         .then((docs) => docs.map((doc) => doc.documentId));
-      documents.unshift(
-        ...(documentIds ? parentIds.intersection(documentIds) : parentIds),
-      );
+      const parentDocumentIds = documentIds
+        ? setIntersection(parentIds, documentIds)
+        : parentIds;
+      documents.unshift(...parentDocumentIds);
     }
 
     const queryOptions: Prisma.DocumentFindManyArgs = {
