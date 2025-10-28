@@ -898,6 +898,35 @@ export class SimpleJobExecutor implements IJobExecutor {
       };
     }
 
+    sourceDoc.header.lastModifiedAtUtcIso =
+      operation.timestampUtcMs || new Date().toISOString();
+
+    sourceDoc.header.revision = {
+      ...sourceDoc.header.revision,
+      [job.scope]: operation.index + 1,
+    };
+
+    sourceDoc.operations = {
+      ...sourceDoc.operations,
+      [job.scope]: [...(sourceDoc.operations?.[job.scope] ?? []), operation],
+    };
+
+    const scopeState =
+      (sourceDoc.state as Record<string, unknown>)[job.scope] ?? {};
+    const resultingStateObj: Record<string, unknown> = {
+      header: JSON.parse(JSON.stringify(sourceDoc.header)),
+      [job.scope]: JSON.parse(JSON.stringify(scopeState)),
+    };
+    const resultingState = JSON.stringify(resultingStateObj);
+
+    this.writeCache.putState(
+      input.sourceId,
+      job.scope,
+      job.branch,
+      operation.index,
+      sourceDoc,
+    );
+
     return {
       job,
       success: true,
@@ -910,6 +939,7 @@ export class SimpleJobExecutor implements IJobExecutor {
             scope: job.scope,
             branch: job.branch,
             documentType: sourceDoc.header.documentType,
+            resultingState,
           },
         },
       ],
@@ -1008,6 +1038,35 @@ export class SimpleJobExecutor implements IJobExecutor {
       };
     }
 
+    sourceDoc.header.lastModifiedAtUtcIso =
+      operation.timestampUtcMs || new Date().toISOString();
+
+    sourceDoc.header.revision = {
+      ...sourceDoc.header.revision,
+      [job.scope]: operation.index + 1,
+    };
+
+    sourceDoc.operations = {
+      ...sourceDoc.operations,
+      [job.scope]: [...(sourceDoc.operations?.[job.scope] ?? []), operation],
+    };
+
+    const scopeState =
+      (sourceDoc.state as Record<string, unknown>)[job.scope] ?? {};
+    const resultingStateObj: Record<string, unknown> = {
+      header: JSON.parse(JSON.stringify(sourceDoc.header)),
+      [job.scope]: JSON.parse(JSON.stringify(scopeState)),
+    };
+    const resultingState = JSON.stringify(resultingStateObj);
+
+    this.writeCache.putState(
+      input.sourceId,
+      job.scope,
+      job.branch,
+      operation.index,
+      sourceDoc,
+    );
+
     return {
       job,
       success: true,
@@ -1020,6 +1079,7 @@ export class SimpleJobExecutor implements IJobExecutor {
             scope: job.scope,
             branch: job.branch,
             documentType: sourceDoc.header.documentType,
+            resultingState,
           },
         },
       ],
