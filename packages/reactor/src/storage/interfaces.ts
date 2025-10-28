@@ -193,3 +193,130 @@ export interface IDocumentView {
     signal?: AbortSignal,
   ): Promise<TDocument>;
 }
+
+export type DocumentRelationship = {
+  sourceId: string;
+  targetId: string;
+  relationshipType: string;
+  metadata?: Record<string, unknown>;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type DocumentGraphEdge = {
+  from: string;
+  to: string;
+  type: string;
+};
+
+export interface IDocumentGraph {
+  nodes: string[];
+  edges: DocumentGraphEdge[];
+}
+
+export interface IDocumentIndexer {
+  /**
+   * Initializes the indexer and catches up on any missed operations.
+   */
+  init(): Promise<void>;
+
+  /**
+   * Indexes a list of operations to update the relationship graph.
+   *
+   * @param operations - Operations to index. Will process ADD_RELATIONSHIP and
+   *                     REMOVE_RELATIONSHIP operations.
+   */
+  indexOperations(operations: OperationWithContext[]): Promise<void>;
+
+  /**
+   * Returns outgoing relationships from a document.
+   *
+   * @param documentId - The source document id
+   * @param types - Optional filter by relationship types
+   * @param signal - Optional abort signal to cancel the request
+   */
+  getOutgoing(
+    documentId: string,
+    types?: string[],
+    signal?: AbortSignal,
+  ): Promise<DocumentRelationship[]>;
+
+  /**
+   * Returns incoming relationships to a document.
+   *
+   * @param documentId - The target document id
+   * @param types - Optional filter by relationship types
+   * @param signal - Optional abort signal to cancel the request
+   */
+  getIncoming(
+    documentId: string,
+    types?: string[],
+    signal?: AbortSignal,
+  ): Promise<DocumentRelationship[]>;
+
+  /**
+   * Checks if a relationship exists between two documents.
+   *
+   * @param sourceId - The source document id
+   * @param targetId - The target document id
+   * @param types - Optional filter by relationship types
+   * @param signal - Optional abort signal to cancel the request
+   */
+  hasRelationship(
+    sourceId: string,
+    targetId: string,
+    types?: string[],
+    signal?: AbortSignal,
+  ): Promise<boolean>;
+
+  /**
+   * Returns all directed relationships between two documents.
+   *
+   * @param sourceId - The source document id
+   * @param targetId - The target document id
+   * @param types - Optional filter by relationship types
+   * @param signal - Optional abort signal to cancel the request
+   */
+  getDirectedRelationships(
+    sourceId: string,
+    targetId: string,
+    types?: string[],
+    signal?: AbortSignal,
+  ): Promise<DocumentRelationship[]>;
+
+  /**
+   * Finds a path from source to target following directed edges.
+   *
+   * @param sourceId - The source document id
+   * @param targetId - The target document id
+   * @param types - Optional filter by relationship types
+   * @param signal - Optional abort signal to cancel the request
+   * @returns Array of document ids representing the path, or null if no path exists
+   */
+  findPath(
+    sourceId: string,
+    targetId: string,
+    types?: string[],
+    signal?: AbortSignal,
+  ): Promise<string[] | null>;
+
+  /**
+   * Returns all ancestors of a document in the relationship graph.
+   *
+   * @param documentId - The document id
+   * @param types - Optional filter by relationship types
+   * @param signal - Optional abort signal to cancel the request
+   */
+  findAncestors(
+    documentId: string,
+    types?: string[],
+    signal?: AbortSignal,
+  ): Promise<IDocumentGraph>;
+
+  /**
+   * Returns all relationship types currently in the system.
+   *
+   * @param signal - Optional abort signal to cancel the request
+   */
+  getRelationshipTypes(signal?: AbortSignal): Promise<string[]>;
+}
