@@ -1,3 +1,19 @@
+## 4.1.0-dev.93 (2025-10-29)
+
+### 🚀 Features
+
+- first swing at a project to import these recorded operations ([41b139237](https://github.com/powerhouse-inc/powerhouse/commit/41b139237))
+
+### 🩹 Fixes
+
+- package link issues ([3415df513](https://github.com/powerhouse-inc/powerhouse/commit/3415df513))
+- compatibility updates ([687ac4075](https://github.com/powerhouse-inc/powerhouse/commit/687ac4075))
+- disabled bad test for now ([60d2e7682](https://github.com/powerhouse-inc/powerhouse/commit/60d2e7682))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.92 (2025-10-28)
 
 ### 🚀 Features
