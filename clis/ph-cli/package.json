@@ -41,6 +41,7 @@
   "dependencies": {
     "@powerhousedao/builder-tools": "workspace:*",
     "@powerhousedao/codegen": "workspace:*",
+    "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/reactor-local": "workspace:*",
     "@powerhousedao/switchboard": "workspace:*",

@@ -378,6 +378,9 @@ importers:
       '@powerhousedao/codegen':
         specifier: workspace:*
         version: link:../../packages/codegen
+      '@powerhousedao/common':
+        specifier: workspace:*
+        version: link:../../packages/common
       '@powerhousedao/config':
         specifier: workspace:*
         version: link:../../packages/config
@@ -424,6 +427,9 @@ importers:
       '@powerhousedao/codegen':
         specifier: workspace:*
         version: link:../../packages/codegen
+      '@powerhousedao/common':
+        specifier: workspace:*
+        version: link:../../packages/common
       commander:
         specifier: ^12.1.0
         version: 12.1.0
@@ -814,6 +820,9 @@ importers:
       document-model:
         specifier: workspace:*
         version: link:../document-model
+      graphql-request:
+        specifier: ^7.2.0
+        version: 7.2.0(graphql@16.11.0)
       luxon:
         specifier: ^3.7.1
         version: 3.7.2
@@ -1266,22 +1275,6 @@ importers:
       zod:
         specifier: ^3.24.3
         version: 3.25.76
-    optionalDependencies:
-      '@prisma/client':
-        specifier: 5.17.0
-        version: 5.17.0(prisma@5.17.0)
-      localforage:
-        specifier: ^1.10.0
-        version: 1.10.0
-      redis:
-        specifier: ^4.6.15
-        version: 4.7.1
-      sequelize:
-        specifier: ^6.37.3
-        version: 6.37.7(sqlite3@5.1.7)
-      sqlite3:
-        specifier: ^5.1.7
-        version: 5.1.7
     devDependencies:
       '@anatine/zod-mock':
         specifier: ^3.14.0
@@ -1319,6 +1312,22 @@ importers:
       webdriverio:
         specifier: ^9.0.9
         version: 9.20.0(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+    optionalDependencies:
+      '@prisma/client':
+        specifier: 5.17.0
+        version: 5.17.0(prisma@5.17.0)
+      localforage:
+        specifier: ^1.10.0
+        version: 1.10.0
+      redis:
+        specifier: ^4.6.15
+        version: 4.7.1
+      sequelize:
+        specifier: ^6.37.3
+        version: 6.37.7(sqlite3@5.1.7)
+      sqlite3:
+        specifier: ^5.1.7
+        version: 5.1.7
 
   packages/document-model:
     dependencies:
@@ -1861,7 +1870,7 @@ importers:
     dependencies:
       '@sky-ph/atlas':
         specifier: ^1.5.1
-        version: 1.5.1(bhamb6yilka4fg3vrslnp5pi7e)
+        version: 1.5.1(3e226bde1e82112e3b0e31a8a0a05fdf)
       document-drive:
         specifier: workspace:*
         version: link:../../../document-drive
@@ -14784,6 +14793,7 @@ packages:
 
   libsql@0.4.7:
     resolution: {integrity: sha512-T9eIRCs6b0J1SHKYIvD8+KCJMcWZ900iZyxdnSCdqxN12Z1ijzT+jY5nrk72Jw4B0HGzms2NgpryArlJqvc3Lw==}
+    cpu: [x64, arm64, wasm32]
     os: [darwin, linux, win32]
 
   lie@3.1.1:
@@ -27644,7 +27654,7 @@ snapshots:
       - supports-color
       - tedious
 
-  '@powerhousedao/builder-tools@4.0.6(paf6oro5tzo73wfcpljjbcxtn4)':
+  '@powerhousedao/builder-tools@4.0.6(f16e0eba9d7b78680e605aa4ba79e2ac)':
     dependencies:
       '@codemirror/autocomplete': 6.18.6
       '@codemirror/commands': 6.8.1
@@ -27835,9 +27845,9 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@powerhousedao/common@4.0.6(qst5h6onov4xaualzsb2w5f3ny)':
+  '@powerhousedao/common@4.0.6(279b316b02d80f53facd3e0886fddd2a)':
     dependencies:
-      '@powerhousedao/builder-tools': 4.0.6(paf6oro5tzo73wfcpljjbcxtn4)
+      '@powerhousedao/builder-tools': 4.0.6(f16e0eba9d7b78680e605aa4ba79e2ac)
       '@powerhousedao/design-system': 4.0.6(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@powerhousedao/reactor-browser': 4.0.6(@parcel/watcher@2.5.1)(@types/node@24.7.0)(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(jotai@2.15.0(@babel/core@7.28.4)(@babel/template@7.27.2)(@types/react@19.2.2)(react@19.2.0))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@tanstack/react-virtual': 3.13.12(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -29662,10 +29672,10 @@ snapshots:
     dependencies:
       '@sinonjs/commons': 3.0.1
 
-  '@sky-ph/atlas@1.5.1(bhamb6yilka4fg3vrslnp5pi7e)':
+  '@sky-ph/atlas@1.5.1(3e226bde1e82112e3b0e31a8a0a05fdf)':
     dependencies:
       '@hookform/resolvers': 3.10.0(react-hook-form@7.64.0(react@19.2.0))
-      '@powerhousedao/common': 4.0.6(qst5h6onov4xaualzsb2w5f3ny)
+      '@powerhousedao/common': 4.0.6(279b316b02d80f53facd3e0886fddd2a)
       '@powerhousedao/design-system': 4.0.6(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@powerhousedao/document-engineering': 1.22.0(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@powerhousedao/reactor-browser': 4.0.6(@parcel/watcher@2.5.1)(@types/node@24.7.0)(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(jotai@2.15.0(@babel/core@7.28.4)(@babel/template@7.27.2)(@types/react@19.2.2)(react@19.2.0))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)

@@ -33,6 +33,7 @@
   "author": "",
   "dependencies": {
     "@powerhousedao/codegen": "workspace:*",
+    "@powerhousedao/common": "workspace:*",
     "commander": "^12.1.0"
   },
   "devDependencies": {

@@ -32,6 +32,7 @@
     "@types/luxon": "^3.7.1",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
+    "graphql-request": "^7.2.0",
     "luxon": "^3.7.1",
     "react-i18next": "^13.5.0"
   },
