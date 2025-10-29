@@ -42,7 +42,7 @@ import {
 } from "./feature-flags.js";
 import { initProfilerFromEnv } from "./profiler.js";
 import type { StartServerOptions, SwitchboardReactor } from "./types.js";
-import { addDefaultDrive, isPostgresUrl } from "./utils.js";
+import { addDefaultDrive, addRemoteDrive, isPostgresUrl } from "./utils.js";
 
 const logger = childLogger(["switchboard"]);
 
@@ -208,29 +208,27 @@ async function initServer(serverPort: number, options: StartServerOptions) {
   // Connect to remote drives AFTER packages are loaded
   if (remoteDrives.length > 0) {
     for (const remoteDriveUrl of remoteDrives) {
+      let driveId: string | undefined;
+
       try {
-        await driveServer.addRemoteDrive(remoteDriveUrl, {
-          availableOffline: true,
-          sharingType: "public",
-          listeners: [],
-          triggers: [],
-        });
-        // Use the first remote drive URL as the default
-        if (!defaultDriveUrl) {
-          defaultDriveUrl = remoteDriveUrl;
-        }
+        const remoteDrive = await addRemoteDrive(driveServer, remoteDriveUrl);
+        driveId = remoteDrive.header.id;
+        logger.debug(`Remote drive ${remoteDriveUrl} synced`);
       } catch (error) {
         if (error instanceof DocumentAlreadyExistsError) {
           logger.debug(`Remote drive already added: ${remoteDriveUrl}`);
-          // Still use this drive URL as default if not already set
-          if (!defaultDriveUrl) {
-            defaultDriveUrl = remoteDriveUrl;
-          }
+          driveId = remoteDriveUrl.split("/").pop();
         } else {
           logger.error(
             `Failed to connect to remote drive ${remoteDriveUrl}:`,
             error,
           );
+        }
+      } finally {
+        // Construct local URL once in finally block
+        if (!defaultDriveUrl && driveId) {
+          const protocol = options.https ? "https" : "http";
+          defaultDriveUrl = `${protocol}://localhost:${serverPort}/d/${driveId}`;
         }
       }
     }

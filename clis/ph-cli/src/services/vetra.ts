@@ -219,7 +219,8 @@ export async function startVetra({
       },
       resolvedVetraUrl,
     );
-    const driveUrl: string = resolvedVetraUrl ?? switchboardResult.driveUrl;
+    const driveUrl: string =
+      switchboardResult.driveUrl || resolvedVetraUrl || "";
     const previewDriveUrl: string = switchboardResult.previewDriveUrl;
 
     if (verbose) {
