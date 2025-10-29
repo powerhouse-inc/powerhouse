@@ -24,6 +24,7 @@ vi.mock("@powerhousedao/reactor-browser", async (importOriginal) => {
     useDocumentById: vi.fn(() => [null, vi.fn()]),
     useDocumentTimeline: vi.fn(() => []),
     useNodeParentFolderById: vi.fn(() => null),
+    useGetSwitchboardLink: vi.fn(() => null),
     setSelectedNode: vi.fn(),
     setSelectedTimelineItem: vi.fn(),
     showRevisionHistory: vi.fn(),

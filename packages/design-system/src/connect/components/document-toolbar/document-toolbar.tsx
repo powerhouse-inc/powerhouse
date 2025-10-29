@@ -5,6 +5,7 @@ import {
   setSelectedTimelineItem,
   showRevisionHistory,
   useDocumentTimeline,
+  useGetSwitchboardLink,
   useNodeParentFolderById,
   useSelectedDocument,
 } from "@powerhousedao/reactor-browser";
@@ -38,7 +39,8 @@ type DocumentToolbarBaseProps = ComponentPropsWithoutRef<"div"> & {
   disableRevisionHistory?: boolean;
   /**
    * Callback function triggered when the switchboard link button is clicked.
-   * If not provided, the switchboard link button will not be shown.
+   * If not provided, will use the default behavior of opening the document in switchboard.
+   * The button will only be shown for documents in remote drives.
    */
   onSwitchboardLinkClick?: () => void;
   /**
@@ -124,8 +126,25 @@ export const DocumentToolbar: React.FC<DocumentToolbarProps> = (props) => {
 
   const [showTimeline, setShowTimeline] = useState(initialTimelineVisible);
 
+  const getSwitchboardLink = useGetSwitchboardLink(document);
+
+  const handleDefaultSwitchboardClick = async () => {
+    if (getSwitchboardLink) {
+      try {
+        const url = await getSwitchboardLink();
+        window.open(url, "_blank");
+      } catch (error) {
+        console.error("Error opening switchboard link:", error);
+      }
+    }
+  };
+
+  const resolvedSwitchboardHandler =
+    onSwitchboardLinkClick ??
+    (getSwitchboardLink ? handleDefaultSwitchboardClick : undefined);
+
   const isExportDisabled = !document;
-  const isSwitchboardLinkDisabled = !onSwitchboardLinkClick;
+  const isSwitchboardLinkDisabled = !resolvedSwitchboardHandler;
   const isTimelineDisabled = timelineItemsData.length === 0;
 
   useEffect(() => {
@@ -217,7 +236,7 @@ export const DocumentToolbar: React.FC<DocumentToolbarProps> = (props) => {
                 "grid size-8 place-items-center rounded-lg border border-gray-200 bg-white",
                 "cursor-pointer active:opacity-70",
               )}
-              onClick={onSwitchboardLinkClick}
+              onClick={resolvedSwitchboardHandler}
               disabled={isSwitchboardLinkDisabled}
             >
               <Icon name="Drive" size={16} className="text-gray-900" />
