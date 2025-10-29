@@ -1,3 +1,13 @@
+## 4.1.0-dev.94 (2025-10-29)
+
+### 🚀 Features
+
+- **ph-cli:** added vetra preview drive ([#2049](https://github.com/powerhouse-inc/powerhouse/pull/2049))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.93 (2025-10-29)
 
 ### 🚀 Features
