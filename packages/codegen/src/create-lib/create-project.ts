@@ -53,6 +53,7 @@ export interface ICreateProjectOptions {
   version: string;
   interactive: boolean;
   packageManager?: string;
+  vetraDriveUrl?: string;
 }
 
 const { prompt } = enquirer;
@@ -79,17 +80,27 @@ function buildPowerhouseConfig(
   appPath: string,
   documentModelsDir: string,
   editorsDir: string,
+  vetraDriveUrl?: string,
 ) {
   const filePath = path.join(appPath, "powerhouse.config.json");
   const packageJson = JSON.parse(fs.readFileSync(filePath, "utf-8")) as Record<
     string,
     any
   >;
-  const newPackage = {
+  const newPackage: Record<string, any> = {
     ...packageJson,
     documentModelsDir,
     editorsDir,
   };
+
+  // Add vetra configuration if vetraDriveUrl is provided
+  if (vetraDriveUrl) {
+    const driveId = vetraDriveUrl.split("/").pop();
+    newPackage.vetra = {
+      driveId: driveId ?? "",
+      driveUrl: vetraDriveUrl,
+    };
+  }
 
   fs.writeFileSync(filePath, JSON.stringify(newPackage, null, 2), "utf8");
 }
@@ -207,6 +218,7 @@ export async function createProject(options: ICreateProjectOptions) {
     editorsDir,
     options.version,
     options.packageManager,
+    options.vetraDriveUrl,
   );
 }
 
@@ -216,6 +228,7 @@ function handleCreateProject(
   editorsDir: string,
   version = "main",
   packageManager?: string,
+  vetraDriveUrl?: string,
 ) {
   packageManager = packageManager ?? envPackageManager;
 
@@ -249,7 +262,12 @@ function handleCreateProject(
       }
     }
     buildPackageJson(appPath, projectName);
-    buildPowerhouseConfig(appPath, documentModelsDir, editorsDir);
+    buildPowerhouseConfig(
+      appPath,
+      documentModelsDir,
+      editorsDir,
+      vetraDriveUrl,
+    );
     buildIndex(appPath, documentModelsDir, editorsDir);
 
     console.log("\x1b[32m", "The installation is done!", "\x1b[0m");
