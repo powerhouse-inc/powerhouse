@@ -1,7 +1,5 @@
 import { connectConfig } from "@powerhousedao/connect/config";
-
 import type { BrowserOptions } from "@sentry/react";
-
 import { childLogger } from "document-drive";
 import React, { useEffect } from "react";
 import {
@@ -9,7 +7,7 @@ import {
   matchRoutes,
   useLocation,
   useNavigationType,
-} from "react-router-dom";
+} from "react-router";
 import { useAcceptedCookies } from "./useAcceptedCookies.js";
 
 const logger = childLogger(["sentry"]);
@@ -32,7 +30,7 @@ async function initSentry() {
   ];
   if (connectConfig.sentry.tracing) {
     integrations.push(
-      Sentry.reactRouterV6BrowserTracingIntegration({
+      Sentry.reactRouterV7BrowserTracingIntegration({
         useEffect: React.useEffect,
         useLocation,
         useNavigationType,

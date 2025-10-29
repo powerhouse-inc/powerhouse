@@ -1,4 +1,4 @@
-import { AppLoader } from "@powerhousedao/connect";
 import { createRoot } from "react-dom/client";
+import { Router } from "./router.js";
 
-createRoot(document.getElementById("root")!).render(<AppLoader />);
+createRoot(document.getElementById("root")!).render(<Router />);

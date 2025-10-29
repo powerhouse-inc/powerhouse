@@ -13,6 +13,7 @@
   "files": [
     "dist"
   ],
+  "sideEffects": false,
   "exports": {
     ".": {
       "import": "./dist/src/index.js",

@@ -1,3 +1,4 @@
+import { phGlobalConfigFromEnv } from "@powerhousedao/connect/config";
 import {
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
@@ -19,30 +20,30 @@ import {
   setDefaultPHGlobalConfig,
   setDid,
   setDrives,
-  setProcessorManager,
   setReactor,
   setRenown,
 } from "@powerhousedao/reactor-browser/connect";
 import { initRenown } from "@renown/sdk";
-import type {
-  DocumentDriveDocument,
-  IDocumentAdminStorage,
-  IDocumentDriveServer,
+import {
+  childLogger,
+  type DocumentDriveDocument,
+  type IDocumentAdminStorage,
+  type IDocumentDriveServer,
 } from "document-drive";
-import { ProcessorManager, logger } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { generateId } from "document-model/core";
 import {
   initFeatureFlags,
   isDualActionCreateEnabled,
 } from "../../feature-flags.js";
-import { phGlobalConfigFromEnv } from "@powerhousedao/connect/config";
 import {
   createBrowserDocumentDriveServer,
   createBrowserStorage,
 } from "../utils/reactor.js";
 import { loadCommonPackage } from "./document-model.js";
 import { loadExternalPackages } from "./external-packages.js";
+
+const logger = childLogger(["reactor"]);
 
 let reactorStorage: IDocumentAdminStorage | undefined;
 
@@ -159,9 +160,6 @@ export async function createReactor() {
   // initialize the reactor
   await initReactor(reactor, renown, connectCrypto);
 
-  // create the processor manager
-  const processorManager = new ProcessorManager(reactor.listeners, reactor);
-
   // get the drives from the reactor
   let drives = await getDrives(reactor);
 
@@ -193,7 +191,6 @@ export async function createReactor() {
   setConnectCrypto(connectCrypto);
   setDid(did);
   setRenown(renown);
-  setProcessorManager(processorManager);
   setDrives(drives);
   setAllDocuments(documents);
   setVetraPackages(vetraPackages);
@@ -219,8 +216,6 @@ export async function createReactor() {
   });
   reactor.on("driveAdded", (...args) => {
     logger.verbose("driveAdded", ...args);
-    // register the drive with the processor manager
-    processorManager.registerDrive(args[0].header.id).catch(logger.error);
     refreshReactorData(reactor).catch(logger.error);
   });
   reactor.on("driveDeleted", (...args) => {
@@ -245,6 +240,7 @@ export async function createReactor() {
   });
 
   window.ph.loading = false;
+  return reactor;
 }
 
 function getDidFromUrl() {

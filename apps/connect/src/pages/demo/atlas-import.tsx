@@ -5,7 +5,7 @@ import { addRemoteDrive } from "@powerhousedao/reactor-browser";
 import { useReactor } from "@powerhousedao/reactor-browser/connect";
 import { gql, request } from "graphql-request";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router";
 import { toast } from "../../services/toast.js";
 
 const REACTOR_URL = "https://apps.powerhouse.io/sky-atlas/staging/switchboard";
@@ -32,7 +32,7 @@ async function forkAtlas(
   return await request(`${reactorUrl}graphql`, document, { docId });
 }
 
-export function AtlasImport() {
+export function AtlasImportPage() {
   const status = useRef<
     "initial" | "forking" | "forked" | "addingDrive" | "done" | "error"
   >("initial");

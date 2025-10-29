@@ -1,13 +1,13 @@
 import {
   Analytics,
   DocumentEditorDebugTools,
-  Router,
+  ProcessorManagerProvider,
   SentryProvider,
   serviceWorkerManager,
 } from "@powerhousedao/connect";
 import { ToastContainer, WagmiContext } from "@powerhousedao/design-system";
 import { useEffect } from "react";
-import { ProcessorManagerProvider } from "@powerhousedao/connect";
+import { Router } from "../router.js";
 
 export const App = () => {
   useEffect(() => {

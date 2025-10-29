@@ -1,5 +1,5 @@
 import IconCross from "@powerhousedao/connect/assets/icons/cross.svg?react";
-import { NavLink } from "react-router-dom";
+import { NavLink } from "react-router";
 
 const Settings = () => {
   return (

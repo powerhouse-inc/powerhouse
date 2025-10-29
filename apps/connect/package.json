@@ -8,6 +8,7 @@
   "engines": {
     "node": ">=22.0.0"
   },
+  "sideEffects": false,
   "files": [
     "dist",
     "lib",
@@ -100,7 +101,7 @@
     "react-error-boundary": "^4.0.11",
     "react-hotkeys-hook": "^4.5.0",
     "react-i18next": "^16.0.0",
-    "react-router-dom": "^6.11.2",
+    "react-router": "^7.9.4",
     "tailwind-merge": "^3.0.2",
     "tailwindcss": "^4.1.14",
     "vite": "^7.1.9",
@@ -110,6 +111,7 @@
   },
   "devDependencies": {
     "@types/cypress": "^1.1.6",
-    "cypress": "^14.5.4"
+    "cypress": "^14.5.4",
+    "vite-bundle-analyzer": "^1.2.3"
   }
 }
