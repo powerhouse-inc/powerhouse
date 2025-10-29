@@ -18,6 +18,7 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
   useNodeById: vi.fn(() => null),
   usePHModal: vi.fn(() => null),
   useReactor: vi.fn(() => null),
+  useGetSwitchboardLink: vi.fn(() => null),
   useNodeActions: vi.fn(() => ({
     addDocument: vi.fn(),
     addFolder: vi.fn(),
