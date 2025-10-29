@@ -33,6 +33,7 @@ const jsonStr = stringifyJson({
 const data1k = makeBytes(1024);
 const data64k = makeBytes(64 * 1024);
 const data1m = makeBytes(1024 * 1024);
+const data64m = makeBytes(64 * 1024 * 1024);
 
 const stringPayloads = {"smallStr": smallStr, "jsonStr": jsonStr}
 
@@ -79,11 +80,21 @@ describe("hashBrowser - bytes (64kb)", () => {
   }
 });
 
-describe("hashBrowser - bytes (lmb)", () => {
+describe("hashBrowser - bytes (1mb)", () => {
   for (const algorithm of supportedAlgorithms) {
     for (const encoding of supportedEncodings) {
       bench(`${algorithm} ${encoding}, 1mb`, () => {
         hashBrowser(data1m, algorithm, encoding);
+      });
+    }
+  }
+});
+
+describe("hashBrowser - bytes (64mb)", () => {
+  for (const algorithm of supportedAlgorithms) {
+    for (const encoding of supportedEncodings) {
+      bench(`${algorithm} ${encoding}, 64mb`, () => {
+        hashBrowser(data64m, algorithm, encoding);
       });
     }
   }

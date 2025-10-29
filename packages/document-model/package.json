@@ -34,7 +34,8 @@
     "tsc": "tsc",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest watch"
+    "test:watch": "vitest watch",
+    "bench": "vitest bench --run"
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^15.2.3",
