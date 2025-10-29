@@ -7,37 +7,34 @@ unless_exists: true
  * - change it by adding new tests or modifying the existing ones
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { generateMock } from '@powerhousedao/codegen';
-import utils from '../../gen/utils.js';
 import {
-    z,
-<% actions.forEach(action => { _%>
-    <%= 'type ' + h.changeCase.pascal(action.name) %>Input,
+  reducer,
+  utils,
+  <%= isPhDocumentOfTypeFunctionName %>,
+  <%= assertIsPhDocumentOfTypeFunctionName %>,
+  <% actions.forEach(action => { _%>
+    <%= h.changeCase.camel(action.name) %>,
+    <%= h.changeCase.pascal(action.name) %>InputSchema,
 <% }); _%> 
-} from '../../gen/schema/index.js';
-import { reducer } from '../../gen/reducer.js';
-import * as creators from '../../gen/<%= module %>/creators.js';
-import type { <%= h.changeCase.pascal(documentType) %>Document } from '../../gen/types.js';
+} from "<%= documentModelDir %>";
 
 describe('<%= h.changeCase.pascal(module) %> Operations', () => {
-    let document: <%= h.changeCase.pascal(documentType) %>Document;
-
-    beforeEach(() => {
-        document = utils.createDocument();
-    });
-
 <% actions.forEach(action => { _%>
     it('should handle <%= h.changeCase.camel(action.name) %> operation', () => {
-        const input: <%= h.changeCase.pascal(action.name) %>Input = generateMock(
-            z.<%= h.changeCase.pascal(action.name) %>InputSchema(),
+        const document = utils.createDocument();
+        const input = generateMock(
+            <%= h.changeCase.pascal(action.name) %>InputSchema(),
         );
 
         const updatedDocument = reducer(
             document,
-            creators.<%= h.changeCase.camel(action.name) %>(input),
+            <%= h.changeCase.camel(action.name) %>(input),
         );
 
+        expect(<%= isPhDocumentOfTypeFunctionName %>(updatedDocument)).toBe(true);
+        expect(<%= assertIsPhDocumentOfTypeFunctionName %>(updatedDocument)).not.toThrow();
         expect(updatedDocument.operations.<%= action.scope %>).toHaveLength(1);
         expect(updatedDocument.operations.<%= action.scope %>[0].action.type).toBe(
             '<%= h.changeCase.constant(action.name) %>',

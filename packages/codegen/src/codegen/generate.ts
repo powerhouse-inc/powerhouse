@@ -99,10 +99,7 @@ export async function generateSubgraphFromDocumentModel(
   config: PowerhouseConfig,
   options: CodegenOptions = {},
 ) {
-  return hygenGenerateSubgraph(name, documentModel, config.subgraphsDir, {
-    skipFormat: config.skipFormat,
-    verbose: options.verbose,
-  });
+  return hygenGenerateSubgraph(name, documentModel, { ...config, ...options });
 }
 
 export async function generateSubgraph(
@@ -114,8 +111,7 @@ export async function generateSubgraph(
   return hygenGenerateSubgraph(
     name,
     file !== null ? await loadDocumentModel(file) : null,
-    config.subgraphsDir,
-    { skipFormat: config.skipFormat, verbose: options.verbose },
+    { ...config, ...options },
   );
 }
 

@@ -23,9 +23,15 @@
       "import": "./dist/document-models/index.js",
       "types": "./dist/document-models/index.d.ts"
     },
-    "./document-models/*.js": {
-      "import": "./dist/document-models/*.js",
-      "types": "./dist/document-models/*.d.ts"
+    "./document-models/*": {
+      "development": "./document-models/*/index.ts",
+      "types": "./dist/document-models/*/index.d.ts",
+      "default": "./dist/document-models/*/index.js"
+    },
+    "./editors/*": {
+      "development": "./editors/*/index.ts",
+      "types": "./dist/editors/*/index.d.ts",
+      "default": "./dist/editors/*/index.js"
     },
     "./editors": {
       "import": "./dist/editors/index.js",

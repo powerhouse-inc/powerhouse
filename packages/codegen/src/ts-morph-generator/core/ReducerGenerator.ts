@@ -1,5 +1,6 @@
 import { camelCase, paramCase, pascalCase } from "change-case";
 import type { OperationErrorSpecification } from "document-model";
+import { readPackage } from "read-pkg";
 import type {
   MethodDeclaration,
   ObjectLiteralExpression,
@@ -23,9 +24,10 @@ export class ReducerGenerator extends FileGenerator {
       filePath,
     );
 
+    const packageName = await readPackage().then((pkg) => pkg.name);
     // Reducer-specific import logic
     const typeImportName = `${pascalCase(context.docModel.name)}${pascalCase(context.module.name)}Operations`;
-    const typeImportPath = `../../gen/${paramCase(context.module.name)}/operations.js`;
+    const typeImportPath = `${packageName}/document-models/${paramCase(context.docModel.name)}`;
 
     // Import management (shared utility)
     this.importManager.addTypeImport(
@@ -35,12 +37,7 @@ export class ReducerGenerator extends FileGenerator {
     );
 
     // AST logic (specific to reducers)
-    this.createReducerObject(
-      sourceFile,
-      typeImportName,
-      context.operations,
-      context.forceUpdate,
-    );
+    this.createReducerObject(sourceFile, typeImportName, context);
 
     // Detect and import error classes used in the actual reducer code (after generation)
     this.addErrorImports(sourceFile, context);
@@ -139,24 +136,28 @@ export class ReducerGenerator extends FileGenerator {
   private createReducerObject(
     sourceFile: SourceFile,
     typeName: string,
-    operations: CodegenOperation[],
-    forceUpdate = false,
+    context: GenerationContext,
   ): void {
-    let reducerVar = sourceFile.getVariableDeclaration("reducer");
-
+    const { operations, forceUpdate } = context;
+    const operationHandlersObjectName = `${camelCase(context.docModel.name)}${pascalCase(context.module.name)}Operations`;
+    let reducerVar = sourceFile.getVariableDeclaration(
+      operationHandlersObjectName,
+    );
     if (!reducerVar) {
       sourceFile.addVariableStatement({
         declarationKind: VariableDeclarationKind.Const,
         isExported: true,
         declarations: [
           {
-            name: "reducer",
+            name: operationHandlersObjectName,
             type: typeName,
             initializer: "{}",
           },
         ],
       });
-      reducerVar = sourceFile.getVariableDeclarationOrThrow("reducer");
+      reducerVar = sourceFile.getVariableDeclarationOrThrow(
+        operationHandlersObjectName,
+      );
     } else {
       // Ensure correct type
       const typeNode = reducerVar.getTypeNode();

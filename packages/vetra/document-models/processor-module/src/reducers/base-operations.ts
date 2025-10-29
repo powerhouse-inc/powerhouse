@@ -1,4 +1,5 @@
 import type { ProcessorModuleBaseOperationsOperations } from "../../gen/base-operations/operations.js";
+import type { ProcessorModuleBaseOperationsOperations } from "@powerhousedao/vetra/document-models/processor-module";
 
 export const reducer: ProcessorModuleBaseOperationsOperations = {
   setProcessorNameOperation(state, action, dispatch) {
@@ -39,4 +40,26 @@ export const reducer: ProcessorModuleBaseOperationsOperations = {
   setProcessorStatusOperation(state, action, dispatch) {
     state.status = action.input.status;
   },
+};
+export const processorModuleBaseOperationsOperations: ProcessorModuleBaseOperationsOperations = {
+    setProcessorNameOperation(state, action) {
+        // TODO: Implement "setProcessorNameOperation" reducer
+        throw new Error('Reducer "setProcessorNameOperation" not yet implemented');
+    },
+    setProcessorTypeOperation(state, action) {
+        // TODO: Implement "setProcessorTypeOperation" reducer
+        throw new Error('Reducer "setProcessorTypeOperation" not yet implemented');
+    },
+    addDocumentTypeOperation(state, action) {
+        // TODO: Implement "addDocumentTypeOperation" reducer
+        throw new Error('Reducer "addDocumentTypeOperation" not yet implemented');
+    },
+    removeDocumentTypeOperation(state, action) {
+        // TODO: Implement "removeDocumentTypeOperation" reducer
+        throw new Error('Reducer "removeDocumentTypeOperation" not yet implemented');
+    },
+    setProcessorStatusOperation(state, action) {
+        // TODO: Implement "setProcessorStatusOperation" reducer
+        throw new Error('Reducer "setProcessorStatusOperation" not yet implemented');
+    }
 };

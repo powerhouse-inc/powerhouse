@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 import * as creators from "../../gen/base-operations/creators.js";
 import { reducer } from "../../gen/reducer.js";
-import utils from "../../gen/utils.js";
+import { utils } from "@powerhousedao/vetra/document-models/vetra-package";
 
 describe("Vetra Package Document Model", () => {
   it("should have correct initial values", () => {

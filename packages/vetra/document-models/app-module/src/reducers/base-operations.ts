@@ -1,4 +1,5 @@
 import type { AppModuleBaseOperationsOperations } from "../../gen/base-operations/operations.js";
+import type { AppModuleBaseOperationsOperations } from "@powerhousedao/vetra/document-models/app-module";
 
 export const reducer: AppModuleBaseOperationsOperations = {
   setAppNameOperation(state, action, dispatch) {
@@ -31,4 +32,26 @@ export const reducer: AppModuleBaseOperationsOperations = {
   setDocumentTypesOperation(state, action, dispatch) {
     state.allowedDocumentTypes = action.input.documentTypes;
   },
+};
+export const appModuleBaseOperationsOperations: AppModuleBaseOperationsOperations = {
+    setAppNameOperation(state, action) {
+        // TODO: Implement "setAppNameOperation" reducer
+        throw new Error('Reducer "setAppNameOperation" not yet implemented');
+    },
+    setAppStatusOperation(state, action) {
+        // TODO: Implement "setAppStatusOperation" reducer
+        throw new Error('Reducer "setAppStatusOperation" not yet implemented');
+    },
+    addDocumentTypeOperation(state, action) {
+        // TODO: Implement "addDocumentTypeOperation" reducer
+        throw new Error('Reducer "addDocumentTypeOperation" not yet implemented');
+    },
+    removeDocumentTypeOperation(state, action) {
+        // TODO: Implement "removeDocumentTypeOperation" reducer
+        throw new Error('Reducer "removeDocumentTypeOperation" not yet implemented');
+    },
+    setDocumentTypesOperation(state, action) {
+        // TODO: Implement "setDocumentTypesOperation" reducer
+        throw new Error('Reducer "setDocumentTypesOperation" not yet implemented');
+    }
 };

@@ -50,15 +50,16 @@
   },
   "devDependencies": {
     "@graphql-codegen/core": "^4.0.2",
+    "@powerhousedao/analytics-engine-core": "^0.5.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
-    "@powerhousedao/analytics-engine-core": "^0.5.0",
     "copyfiles": "^2.4.1",
     "document-drive": "workspace:*",
     "esbuild-fix-imports-plugin": "^1.0.7",
     "husky": "^8.0.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "read-pkg": "^9.0.1",
     "vitest": "^3.2.4",
     "zod": "^3.24.3"
   }

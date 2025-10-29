@@ -1,8 +1,9 @@
-import type { DocumentTypesMap } from "@powerhousedao/codegen";
+import type { CodegenOptions, DocumentTypesMap } from "@powerhousedao/codegen";
 import {
   loadDocumentModel,
   TSMorphCodeGenerator,
 } from "@powerhousedao/codegen";
+import type { PowerhouseConfig } from "@powerhousedao/config";
 import { pascalCase } from "change-case";
 import type { DocumentModelGlobalState } from "document-model";
 import { Logger, runner } from "hygen";
@@ -10,6 +11,7 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { readPackage } from "read-pkg";
 
 const require = createRequire(import.meta.url);
 
@@ -116,6 +118,7 @@ export async function hygenGenerateDocumentModel(
 ) {
   const projectDir = path.dirname(dir);
   const documentModelDir = path.basename(dir);
+  const packageName = await readPackage().then((pkg) => pkg.name);
 
   // Generate the singular files for the document model logic
   await run(
@@ -126,6 +129,8 @@ export async function hygenGenerateDocumentModel(
       JSON.stringify(documentModelState),
       "--root-dir",
       dir,
+      "--package-name",
+      packageName,
     ],
     { watch, skipFormat, verbose },
   );
@@ -147,6 +152,8 @@ export async function hygenGenerateDocumentModel(
         dir,
         "--module",
         module.name,
+        "--package-name",
+        packageName,
       ],
       { watch, skipFormat, verbose },
     );
@@ -224,9 +231,12 @@ export async function hygenGenerateProcessor(
 export async function hygenGenerateSubgraph(
   name: string,
   documentModel: DocumentModelGlobalState | null,
-  dir: string,
-  { skipFormat = false, verbose = true } = {},
+  config?: PowerhouseConfig & CodegenOptions,
 ) {
+  const dir = config?.subgraphsDir || "";
+  const packageName = await readPackage().then((pkg) => pkg.name);
+  const skipFormat = config?.skipFormat || false;
+  const verbose = config?.verbose || false;
   const params = [
     "powerhouse",
     `generate-subgraph`,
@@ -236,6 +246,8 @@ export async function hygenGenerateSubgraph(
     pascalCase(name),
     "--root-dir",
     dir,
+    "--package-name",
+    packageName,
   ];
 
   if (documentModel) {
@@ -257,6 +269,8 @@ export async function hygenGenerateSubgraph(
         JSON.stringify(documentModel),
         "--root-dir",
         dir,
+        "--package-name",
+        packageName,
       ],
       { skipFormat, verbose },
     );
@@ -269,6 +283,8 @@ export async function hygenGenerateSubgraph(
         name,
         "--root-dir",
         dir,
+        "--package-name",
+        packageName,
       ],
       { skipFormat, verbose },
     );
