@@ -28,7 +28,6 @@ export {
 } from "./document-model-modules.js";
 export { useDocumentOfType } from "./document-of-type.js";
 export { useDocumentTypes } from "./document-types.js";
-export { useDriveByDocumentId } from "./drive-by-document-id.js";
 export { useDriveById } from "./drive-by-id.js";
 export { useDrives } from "./drives.js";
 export {

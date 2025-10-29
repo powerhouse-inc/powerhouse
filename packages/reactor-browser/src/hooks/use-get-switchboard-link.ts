@@ -6,7 +6,7 @@ import {
   getDriveRemoteUrl,
 } from "../utils/index.js";
 import { useConnectCrypto, useUser } from "./connect.js";
-import { useDriveByDocumentId } from "./drive-by-document-id.js";
+import { useSelectedDrive } from "./selected-drive.js";
 
 /**
  * Hook that returns a function to generate a document's switchboard URL.
@@ -22,7 +22,7 @@ import { useDriveByDocumentId } from "./drive-by-document-id.js";
 export function useGetSwitchboardLink(
   document: PHDocument | undefined,
 ): (() => Promise<string>) | null {
-  const drive = useDriveByDocumentId(document?.header.id);
+  const [drive] = useSelectedDrive();
   const isRemoteDrive = getDriveIsRemote(drive);
   const remoteUrl = getDriveRemoteUrl(drive);
   const connectCrypto = useConnectCrypto();
