@@ -6,6 +6,7 @@ import {
   getPackageManagerFromPath,
   PH_BIN_PATH,
   resolvePackageManagerOptions,
+  validateRemoteDrive,
   withCustomHelp,
 } from "../utils/index.js";
 
@@ -22,12 +23,14 @@ export type InitOptions = {
   pnpm?: boolean;
   yarn?: boolean;
   bun?: boolean;
+  remoteDrive?: string;
 };
 
 export const init: CommandActionType<
   [string | undefined, InitOptions]
 > = async (projectName, options) => {
   console.log("Initializing a new project...");
+
   try {
     await createProject({
       name: options.project ?? projectName,
@@ -40,6 +43,7 @@ export const init: CommandActionType<
       packageManager:
         resolvePackageManagerOptions(options) ??
         getPackageManagerFromPath(PH_BIN_PATH),
+      vetraDriveUrl: options.remoteDrive,
     });
   } catch (error) {
     console.error("Failed to initialize the project", error);
@@ -64,7 +68,44 @@ export function initCommand(program: Command): Command {
     .option("--npm", "Use 'npm' as package manager")
     .option("--pnpm", "Use 'pnpm' as package manager")
     .option("--yarn", "Use 'yarn' as package manager")
-    .option("--bun", "Use 'bun' as package manager");
+    .option("--bun", "Use 'bun' as package manager")
+    .option("-r, --remote-drive <remoteDrive>", "Remote drive identifier");
+
+  initCmd.hook("preAction", async (thisCommand) => {
+    const options = thisCommand.opts<InitOptions>();
+
+    if (options.remoteDrive) {
+      const isValid = await validateRemoteDrive(options.remoteDrive);
+      if (!isValid) {
+        process.exit(1); // Exit if validation fails
+      }
+    }
+  });
+
+  initCmd.hook("postAction", (thisCommand) => {
+    const options = thisCommand.opts<InitOptions>();
+    if (options.remoteDrive) {
+      const args = thisCommand.args as [string | undefined];
+      const projectName = options.project ?? args[0];
+
+      let branchName = "main";
+      if (options.dev) {
+        branchName = "dev";
+      } else if (options.staging) {
+        branchName = "staging";
+      }
+
+      console.log();
+      console.log("To link your project to GitHub:");
+      console.log();
+      console.log("  1. Create a new repository on GitHub");
+      console.log(`  2. cd ${projectName}`);
+      console.log("  3. git add . && git commit -m 'Initial commit'");
+      console.log("  4. git remote add origin <your-github-url>");
+      console.log(`  5. git push -u origin ${branchName}`);
+      console.log();
+    }
+  });
 
   // Use withCustomHelp instead of withHelpAction and addHelpText
   return withCustomHelp<[string | undefined, InitOptions]>(

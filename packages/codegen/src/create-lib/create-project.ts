@@ -1,35 +1,12 @@
 import { parseArgs, promptDirectories } from "@powerhousedao/codegen";
 import type arg from "arg";
-import { execSync } from "child_process";
 import enquirer from "enquirer";
 import fs from "node:fs";
 import path from "path";
+import { envPackageManager, runCmd } from "./utils.js";
 
 const BOILERPLATE_REPO =
   "https://github.com/powerhouse-inc/document-model-boilerplate.git";
-
-const packageManagers = ["npm", "yarn", "pnpm", "bun"] as const;
-const defaultPackageManager = "npm";
-
-type PackageManager = (typeof packageManagers)[number];
-
-function getPackageManager(userAgent?: string): PackageManager {
-  if (!userAgent) {
-    return defaultPackageManager;
-  }
-
-  const pkgSpec = userAgent.split(" ")[0];
-  const pkgSpecArr = pkgSpec.split("/");
-  const name = pkgSpecArr[0];
-
-  if (packageManagers.includes(name as PackageManager)) {
-    return name as PackageManager;
-  } else {
-    return defaultPackageManager;
-  }
-}
-
-const envPackageManager = getPackageManager(process.env.npm_config_user_agent);
 
 const defaultDirectories = {
   documentModelsDir: "./document-models",
@@ -53,6 +30,7 @@ export interface ICreateProjectOptions {
   version: string;
   interactive: boolean;
   packageManager?: string;
+  vetraDriveUrl?: string;
 }
 
 const { prompt } = enquirer;
@@ -79,17 +57,27 @@ function buildPowerhouseConfig(
   appPath: string,
   documentModelsDir: string,
   editorsDir: string,
+  vetraDriveUrl?: string,
 ) {
   const filePath = path.join(appPath, "powerhouse.config.json");
   const packageJson = JSON.parse(fs.readFileSync(filePath, "utf-8")) as Record<
     string,
     any
   >;
-  const newPackage = {
+  const newPackage: Record<string, any> = {
     ...packageJson,
     documentModelsDir,
     editorsDir,
   };
+
+  // Add vetra configuration if vetraDriveUrl is provided
+  if (vetraDriveUrl) {
+    const driveId = vetraDriveUrl.split("/").pop();
+    newPackage.vetra = {
+      driveId: driveId ?? "",
+      driveUrl: vetraDriveUrl,
+    };
+  }
 
   fs.writeFileSync(filePath, JSON.stringify(newPackage, null, 2), "utf8");
 }
@@ -112,14 +100,6 @@ export const editors = Object.values(editorsExports);
 `,
     "utf8",
   );
-}
-
-function runCmd(command: string) {
-  try {
-    execSync(command, { stdio: "inherit" });
-  } catch (error) {
-    console.log("\x1b[31m", error, "\x1b[0m");
-  }
 }
 
 export function parseVersion(args: {
@@ -207,6 +187,7 @@ export async function createProject(options: ICreateProjectOptions) {
     editorsDir,
     options.version,
     options.packageManager,
+    options.vetraDriveUrl,
   );
 }
 
@@ -216,6 +197,7 @@ function handleCreateProject(
   editorsDir: string,
   version = "main",
   packageManager?: string,
+  vetraDriveUrl?: string,
 ) {
   packageManager = packageManager ?? envPackageManager;
 
@@ -249,7 +231,12 @@ function handleCreateProject(
       }
     }
     buildPackageJson(appPath, projectName);
-    buildPowerhouseConfig(appPath, documentModelsDir, editorsDir);
+    buildPowerhouseConfig(
+      appPath,
+      documentModelsDir,
+      editorsDir,
+      vetraDriveUrl,
+    );
     buildIndex(appPath, documentModelsDir, editorsDir);
 
     console.log("\x1b[32m", "The installation is done!", "\x1b[0m");

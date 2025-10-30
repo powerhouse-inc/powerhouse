@@ -5,6 +5,10 @@ import { blue, red } from "colorette";
 import type { IDocumentDriveServer } from "document-drive";
 import { setLogLevel } from "document-drive";
 import { generateProjectDriveId } from "../utils.js";
+import {
+  configureVetraGithubUrl,
+  sleep,
+} from "../utils/configure-vetra-github-url.js";
 import { startConnectStudio } from "./connect.js";
 import type { ReactorOptions } from "./reactor.js";
 import { DefaultReactorOptions } from "./reactor.js";
@@ -222,6 +226,17 @@ export async function startVetra({
     const driveUrl: string =
       switchboardResult.driveUrl || resolvedVetraUrl || "";
     const previewDriveUrl: string = switchboardResult.previewDriveUrl;
+
+    // Configure GitHub URL if remote drive is set
+    if (resolvedVetraUrl) {
+      await configureVetraGithubUrl(
+        resolvedSwitchboardPort,
+        resolvedVetraUrl,
+        verbose,
+      );
+
+      await sleep(3000);
+    }
 
     if (verbose) {
       console.log("Starting Codegen Reactor...");
