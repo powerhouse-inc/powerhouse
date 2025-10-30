@@ -1,4 +1,4 @@
-import type { DocumentEditorBaseOperationsOperations } from "@powerhousedao/vetra/document-models/document-editor";
+import type { DocumentEditorBaseOperationsOperations } from "../../gen/base-operations/operations.js";
 
 export const reducer: DocumentEditorBaseOperationsOperations = {
   setEditorNameOperation(state, action, dispatch) {
@@ -32,22 +32,4 @@ export const reducer: DocumentEditorBaseOperationsOperations = {
   setEditorStatusOperation(state, action, dispatch) {
     state.status = action.input.status;
   },
-};
-export const documentEditorBaseOperationsOperations: DocumentEditorBaseOperationsOperations = {
-    setEditorNameOperation(state, action) {
-        // TODO: Implement "setEditorNameOperation" reducer
-        throw new Error('Reducer "setEditorNameOperation" not yet implemented');
-    },
-    addDocumentTypeOperation(state, action) {
-        // TODO: Implement "addDocumentTypeOperation" reducer
-        throw new Error('Reducer "addDocumentTypeOperation" not yet implemented');
-    },
-    removeDocumentTypeOperation(state, action) {
-        // TODO: Implement "removeDocumentTypeOperation" reducer
-        throw new Error('Reducer "removeDocumentTypeOperation" not yet implemented');
-    },
-    setEditorStatusOperation(state, action) {
-        // TODO: Implement "setEditorStatusOperation" reducer
-        throw new Error('Reducer "setEditorStatusOperation" not yet implemented');
-    }
 };
