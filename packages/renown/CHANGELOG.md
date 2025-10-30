@@ -1,3 +1,18 @@
+## 4.1.0-dev.95 (2025-10-30)
+
+### 🚀 Features
+
+- enabled ph init --remote-drives and ph checkout commands ([#2057](https://github.com/powerhouse-inc/powerhouse/pull/2057))
+
+### 🩹 Fixes
+
+- **renown:** use globalThis.crypto.subtle instead of conditional import ([f3ef9a139](https://github.com/powerhouse-inc/powerhouse/commit/f3ef9a139))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.94 (2025-10-29)
 
 This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
