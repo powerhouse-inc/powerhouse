@@ -1,3 +1,13 @@
+## 4.1.0-dev.96 (2025-10-30)
+
+### 🩹 Fixes
+
+- **ph-cmd:** replace checkoutProject with cloneRepository and installDependencies functions ([506bcb6f0](https://github.com/powerhouse-inc/powerhouse/commit/506bcb6f0))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.95 (2025-10-30)
 
 ### 🚀 Features

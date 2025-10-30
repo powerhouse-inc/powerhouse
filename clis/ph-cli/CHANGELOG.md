@@ -1,3 +1,13 @@
+## 4.1.0-dev.96 (2025-10-30)
+
+### 🩹 Fixes
+
+- **ph-cli:** adjust sleep durations for better user experience during GitHub URL configuration ([266cea2f3](https://github.com/powerhouse-inc/powerhouse/commit/266cea2f3))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.95 (2025-10-30)
 
 ### 🚀 Features
