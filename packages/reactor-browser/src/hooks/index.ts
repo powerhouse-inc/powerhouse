@@ -99,9 +99,7 @@ export {
   setSelectedTimelineRevision,
   useSelectedTimelineRevision,
 } from "./timeline-revision.js";
-export { useDocumentTimeline } from "./use-document-timeline.js";
 export { useGetSwitchboardLink } from "./use-get-switchboard-link.js";
 export { useOnDropFile } from "./use-on-drop-file.js";
-export { useTimelineItems } from "./use-timeline-items.js";
 export { useUserPermissions } from "./user-permissions.js";
 export { setVetraPackages, useVetraPackages } from "./vetra-packages.js";

@@ -21,6 +21,19 @@
       "import": "./dist/src/index.js",
       "types": "./dist/src/index.d.ts"
     },
+    "./ui": {
+      "import": "./dist/src/ui/index.js",
+      "types": "./dist/src/ui/index.d.ts"
+    },
+    "./ui/*": "./dist/src/ui/*",
+    "./utils": {
+      "import": "./dist/src/utils/index.js",
+      "types": "./dist/src/utils/index.d.ts"
+    },
+    "./connect": {
+      "import": "./dist/src/connect/index.js",
+      "types": "./dist/src/connect/index.d.ts"
+    },
     "./assets/*.mp4": "./assets/*.mp4",
     "./assets/*.png": "./assets/*.png",
     "./assets/*.svg": "./assets/*.svg",

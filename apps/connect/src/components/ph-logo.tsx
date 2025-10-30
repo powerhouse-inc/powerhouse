@@ -1,4 +1,4 @@
-import { openUrl } from "@powerhousedao/connect";
+import { openUrl } from "@powerhousedao/connect/utils/openUrl";
 import LogoMain from "@powerhousedao/connect/assets/icons/BBP-logo-hover-light.svg?react";
 
 export const PHLogo = () => {

@@ -1,7 +1,4 @@
-import {
-  loadDocumentModelEditor,
-  loadGenericDriveExplorerEditorModule,
-} from "@powerhousedao/connect";
+import { loadDocumentModelEditor, loadGenericDriveExplorerEditorModule } from "@powerhousedao/connect/store/editor";
 import type {
   VetraDocumentModelModule,
   VetraPackage,

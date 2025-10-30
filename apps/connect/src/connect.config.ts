@@ -45,7 +45,19 @@ function getPHGlobalConfigFromEnv(): PHGlobalConfig {
     drivesPreserveStrategy: env.PH_CONNECT_DRIVES_PRESERVE_STRATEGY,
     enabledEditors: env.PH_CONNECT_ENABLED_EDITORS?.split(","),
     disabledEditors: env.PH_CONNECT_DISABLED_EDITORS.split(","),
+
+    /* Processors */
+    isExternalProcessorsEnabled: env.PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED,
+    isAnalyticsEnabled: env.PH_CONNECT_ANALYTICS_ENABLED,
+    isAnalyticsExternalProcessorsEnabled:
+      env.PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED &&
+      env.PH_CONNECT_EXTERNAL_ANALYTICS_PROCESSORS_ENABLED,
     analyticsDatabaseName: env.PH_CONNECT_ANALYTICS_DATABASE_NAME,
+    isRelationalProcessorsEnabled: env.PH_CONNECT_RELATIONAL_PROCESSORS_ENABLED,
+    isExternalRelationalProcessorsEnabled:
+      env.PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED &&
+      env.PH_CONNECT_EXTERNAL_RELATIONAL_PROCESSORS_ENABLED,
+
     renownUrl: env.PH_CONNECT_RENOWN_URL,
     renownNetworkId: env.PH_CONNECT_RENOWN_NETWORK_ID,
     renownChainId: env.PH_CONNECT_RENOWN_CHAIN_ID,
@@ -58,7 +70,6 @@ function getPHGlobalConfigFromEnv(): PHGlobalConfig {
     isCloudDrivesEnabled: env.PH_CONNECT_CLOUD_DRIVES_ENABLED,
     isLocalDrivesEnabled: env.PH_CONNECT_LOCAL_DRIVES_ENABLED,
     isSentryTracingEnabled: env.PH_CONNECT_SENTRY_TRACING_ENABLED,
-    isExternalProcessorsEnabled: env.PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED,
     isDocumentModelSelectionSettingsEnabled:
       !env.PH_CONNECT_HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS,
     isAddDriveEnabled: !env.PH_CONNECT_DISABLE_ADD_DRIVE,
@@ -108,12 +119,22 @@ export const connectConfig = {
   appVersionCheckInterval: env.PH_CONNECT_VERSION_CHECK_INTERVAL,
   routerBasename: PH_CONNECT_BASE_PATH,
   externalPackagesEnabled: !env.PH_CONNECT_EXTERNAL_PACKAGES_DISABLED,
+  processors: {
+    enabled: env.PH_CONNECT_PROCESSORS_ENABLED,
+    externalProcessorsEnabled: env.PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED,
+  },
   analytics: {
+    enabled: env.PH_CONNECT_ANALYTICS_ENABLED,
     databaseName: PH_CONNECT_ANALYTICS_DATABASE_NAME,
     useWorker: !env.PH_CONNECT_ANALYTICS_DATABASE_WORKER_DISABLED,
     driveAnalyticsEnabled: env.PH_CONNECT_DRIVE_ANALYTICS_ENABLED,
     diffProcessorEnabled: env.PH_CONNECT_DIFF_ANALYTICS_ENABLED,
     externalProcessorsEnabled: env.PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED,
+  },
+  relational: {
+    enabled: env.PH_CONNECT_RELATIONAL_PROCESSORS_ENABLED,
+    externalProcessorsEnabled:
+      env.PH_CONNECT_EXTERNAL_RELATIONAL_PROCESSORS_ENABLED,
   },
   renown: {
     url: env.PH_CONNECT_RENOWN_URL,

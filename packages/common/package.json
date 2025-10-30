@@ -18,9 +18,13 @@
     "./utils": {
       "import": "./dist/utils/index.js",
       "types": "./dist/utils/index.d.ts"
+    },
+    "./analytics": {
+      "types": "./dist/src/analytics.d.ts",
+      "default": "./dist/src/analytics.js"
     }
   },
-  "types": "./dist/index.d.ts",
+  "sideEffects": false,
   "description": "The Powerhouse Common package contains the basic document model and drive UI (App) that is required to get started with Connect and visualize private & public apps.",
   "scripts": {
     "tsc": "tsc",

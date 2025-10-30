@@ -1,4 +1,4 @@
-import type { DocumentEditorDebugTools } from "@powerhousedao/connect";
+import type { DocumentEditorDebugTools } from "@powerhousedao/connect/utils";
 
 declare global {
   interface Window {

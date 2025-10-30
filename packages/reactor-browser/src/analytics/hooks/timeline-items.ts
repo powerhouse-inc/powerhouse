@@ -4,8 +4,8 @@ import {
   AnalyticsPath,
 } from "@powerhousedao/analytics-engine-core";
 import { DateTime } from "luxon";
-import type { UseAnalyticsQueryResult } from "../analytics/hooks.js";
-import { useAnalyticsQuery } from "../analytics/hooks.js";
+import type { UseAnalyticsQueryResult } from "./analytics-query.js";
+import { useAnalyticsQuery } from "./analytics-query.js";
 
 const getBarSize = (value: number) => {
   if (value <= 0) return 0;

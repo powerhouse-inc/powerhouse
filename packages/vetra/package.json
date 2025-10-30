@@ -55,6 +55,7 @@
     },
     "./style.css": "./dist/style.css"
   },
+  "sideEffects": false,
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",

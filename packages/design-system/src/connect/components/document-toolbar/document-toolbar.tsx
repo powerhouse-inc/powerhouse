@@ -4,7 +4,6 @@ import {
   setSelectedNode,
   setSelectedTimelineItem,
   showRevisionHistory,
-  useDocumentTimeline,
   useGetSwitchboardLink,
   useNodeParentFolderById,
   useSelectedDocument,
@@ -14,6 +13,12 @@ import { useEffect, useState, type ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 import { DocumentTimeline } from "../document-timeline/document-timeline.js";
 import { useDocumentUndoRedo } from "./utils/use-document-undo-redo.js";
+
+// TODO: Remove this when timeline analytics is available
+// import { useDocumentTimeline } from "@powerhousedao/reactor-browser/analytics";
+function useDocumentTimeline(documentId?: string) {
+  return [];
+}
 
 export type DocumentToolbarControl =
   | "undo"

@@ -6,6 +6,7 @@ import { AnalyticsPath } from "@powerhousedao/analytics-engine-core";
 import type { InternalTransmitterUpdate, IProcessor } from "document-drive";
 import { childLogger } from "document-drive";
 import { DateTime } from "luxon";
+import type { ActionType, NodeTarget } from "./types.js";
 
 const CREATE_NODE_ACTIONS = ["ADD_FILE", "ADD_FOLDER"];
 const DUPLICATE_NODE_ACTIONS = ["COPY_NODE"];
@@ -21,13 +22,6 @@ const NODE_ACTIONS = [
   ...REMOVE_NODE_ACTIONS,
 ];
 
-export type Target = "DRIVE" | "NODE";
-export type ActionType =
-  | "CREATED"
-  | "DUPLICATED"
-  | "REMOVED"
-  | "MOVED"
-  | "UPDATED";
 type NodeActionInput = { id?: string; targetId?: string; srcFolder?: string };
 
 export class DriveAnalyticsProcessor implements IProcessor {
@@ -69,7 +63,9 @@ export class DriveAnalyticsProcessor implements IProcessor {
         for (const operation of chunk) {
           const revision = operation.index;
           const actionType = this.getActionType(operation.action.type);
-          const target: Target = NODE_ACTIONS.includes(operation.action.type)
+          const target: NodeTarget = NODE_ACTIONS.includes(
+            operation.action.type,
+          )
             ? "NODE"
             : "DRIVE";
 

@@ -1,4 +1,5 @@
-import { DriveEditorContainer, DriveIcon } from "@powerhousedao/connect";
+import { DriveEditorContainer } from "@powerhousedao/connect/components/drive-editor-container";
+import { DriveIcon } from "@powerhousedao/connect/components/drive-icon";
 import {
   connectConfig,
   defaultPHDocumentEditorConfig,

@@ -1,4 +1,4 @@
-import { GenericDriveExplorer } from "@powerhousedao/common";
+// import { GenericDriveExplorer } from "@powerhousedao/common";
 import { DropZoneWrapper } from "@powerhousedao/design-system";
 import {
   useDefaultDriveEditorModule,
@@ -30,10 +30,12 @@ export function DriveEditorContainer() {
   const defaultDriveEditor = useDefaultDriveEditorModule();
 
   const DriveEditorComponent =
-    driveEditor?.Component ??
-    defaultDriveEditor?.Component ??
-    GenericDriveExplorer.Component;
+    driveEditor?.Component ?? defaultDriveEditor?.Component;
+  // ?? GenericDriveExplorer.Component;
 
+  if (!DriveEditorComponent) {
+    throw new Error("No drive editor component found");
+  }
   return (
     <ErrorBoundary
       fallbackRender={DriveEditorError}

@@ -17,6 +17,7 @@
     "./node": "./dist/src/node.js"
   },
   "types": "./dist/src/index.d.ts",
+  "sideEffects": false,
   "typesVersions": {
     "*": {
       "node": [
