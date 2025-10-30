@@ -1,6 +1,6 @@
-export const expectedBaseOperationsContent = `import type { TestDocBaseOperationsOperations } from "../../gen/base-operations/operations.js";
+export const expectedBaseOperationsContent = `import type { TestDocBaseOperationsOperations } from "@powerhousedao/codegen/document-models/test-doc";
 
-export const reducer: TestDocBaseOperationsOperations = {
+export const testDocBaseOperationsOperations: TestDocBaseOperationsOperations = {
     setTestIdOperation(state, action) {
         // TODO: Implement "setTestIdOperation" reducer
         throw new Error('Reducer "setTestIdOperation" not yet implemented');
@@ -19,9 +19,9 @@ export const reducer: TestDocBaseOperationsOperations = {
     }
 };`;
 
-export const expectedProOperationsContent = `import type { TestDocProOperationsOperations } from "../../gen/pro-operations/operations.js";
+export const expectedProOperationsContent = `import type { TestDocProOperationsOperations } from "@powerhousedao/codegen/document-models/test-doc";
 
-export const reducer: TestDocProOperationsOperations = {
+export const testDocProOperationsOperations: TestDocProOperationsOperations = {
     setNameAndValueOperation(state, action) {
         // TODO: Implement "setNameAndValueOperation" reducer
         throw new Error('Reducer "setNameAndValueOperation" not yet implemented');

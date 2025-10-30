@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { compile } from "./fixtures/typecheck.js";
 
 const testDir = import.meta.dirname;
+const testPackageName = "test";
 
 describe("document model", () => {
   const srcPath = path.join(testDir, "data", "document-models");
@@ -35,6 +36,7 @@ describe("document model", () => {
     await hygenGenerateDocumentModel(
       billingStatementDocumentModel,
       path.join(outPath, "document-model"),
+      testPackageName,
       { skipFormat: true },
     );
 
@@ -45,6 +47,7 @@ describe("document model", () => {
     await hygenGenerateDocumentModel(
       testDocDocumentModel,
       path.join(outPath, "document-model"),
+      testPackageName,
       { skipFormat: true },
     );
   };
@@ -244,6 +247,7 @@ describe("document model", () => {
       await hygenGenerateDocumentModel(
         testDocDocumentModelV2,
         path.join(outPath, "document-model"),
+        testPackageName,
         { skipFormat: true },
       );
 
@@ -395,6 +399,7 @@ describe("document model", () => {
       await hygenGenerateDocumentModel(
         testEmptyCodesDocumentModel,
         path.join(outPath, "document-model"),
+        testPackageName,
         { skipFormat: true },
       );
 

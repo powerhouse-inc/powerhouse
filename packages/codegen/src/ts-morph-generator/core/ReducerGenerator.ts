@@ -1,6 +1,5 @@
 import { camelCase, paramCase, pascalCase } from "change-case";
 import type { OperationErrorSpecification } from "document-model";
-import { readPackage } from "read-pkg";
 import type {
   MethodDeclaration,
   ObjectLiteralExpression,
@@ -24,7 +23,7 @@ export class ReducerGenerator extends FileGenerator {
       filePath,
     );
 
-    const packageName = await readPackage().then((pkg) => pkg.name);
+    const packageName = context.packageName;
     // Reducer-specific import logic
     const typeImportName = `${pascalCase(context.docModel.name)}${pascalCase(context.module.name)}Operations`;
     const typeImportPath = `${packageName}/document-models/${paramCase(context.docModel.name)}`;

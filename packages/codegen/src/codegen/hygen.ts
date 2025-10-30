@@ -77,10 +77,12 @@ export async function generateAll(
       continue;
     }
 
+    const packageName = await readPackage().then((pkg) => pkg.name);
+
     try {
       const documentModel = await loadDocumentModel(documentModelPath);
       documentModelStates.push(documentModel);
-      await hygenGenerateDocumentModel(documentModel, dir, {
+      await hygenGenerateDocumentModel(documentModel, dir, packageName, {
         watch,
         skipFormat,
         verbose,
@@ -96,11 +98,17 @@ export async function generateAll(
 
   const projectDir = path.dirname(dir);
   const documentModelDir = path.basename(dir);
+  const packageName = await readPackage().then((pkg) => pkg.name);
 
-  const generator = new TSMorphCodeGenerator(projectDir, documentModelStates, {
-    directories: { documentModelDir },
-    forceUpdate: force,
-  });
+  const generator = new TSMorphCodeGenerator(
+    projectDir,
+    documentModelStates,
+    packageName,
+    {
+      directories: { documentModelDir },
+      forceUpdate: force,
+    },
+  );
 
   await generator.generateReducers();
 }
@@ -108,6 +116,7 @@ export async function generateAll(
 export async function hygenGenerateDocumentModel(
   documentModelState: DocumentModelGlobalState,
   dir: string,
+  packageName: string,
   {
     watch = false,
     skipFormat = false,
@@ -118,8 +127,9 @@ export async function hygenGenerateDocumentModel(
 ) {
   const projectDir = path.dirname(dir);
   const documentModelDir = path.basename(dir);
-  const packageName = await readPackage().then((pkg) => pkg.name);
-
+  if (!fs.existsSync(path.join(dir, "document-models.ts"))) {
+    fs.writeFileSync(path.join(dir, "document-models.ts"), "");
+  }
   // Generate the singular files for the document model logic
   await run(
     [
@@ -163,6 +173,7 @@ export async function hygenGenerateDocumentModel(
     const generator = new TSMorphCodeGenerator(
       projectDir,
       [documentModelState],
+      packageName,
       { directories: { documentModelDir }, forceUpdate: force },
     );
 

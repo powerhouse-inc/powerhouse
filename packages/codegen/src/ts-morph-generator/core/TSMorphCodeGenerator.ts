@@ -32,13 +32,14 @@ export class TSMorphCodeGenerator {
   constructor(
     private rootDir: string,
     private docModels: DocumentModelGlobalState[],
+    private packageName: string,
     options: CodeGeneratorOptions = { directories: {}, forceUpdate: false },
   ) {
     this.directories = {
       ...this.directories,
       ...options.directories,
     };
-
+    this.packageName = packageName;
     this.forceUpdate = options.forceUpdate ?? false;
 
     this.setupGenerators();
@@ -139,6 +140,7 @@ export class TSMorphCodeGenerator {
 
     return {
       rootDir: this.rootDir,
+      packageName: this.packageName,
       docModel,
       module,
       project: this.project,

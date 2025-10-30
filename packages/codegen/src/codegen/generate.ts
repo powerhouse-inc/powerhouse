@@ -22,6 +22,7 @@ import { paramCase } from "change-case";
 import type { DocumentModelGlobalState } from "document-model";
 import fs from "node:fs";
 import { join } from "node:path";
+import { readPackage } from "read-pkg";
 
 export async function generate(config: PowerhouseConfig) {
   const { skipFormat, watch } = config;
@@ -325,14 +326,20 @@ async function generateFromDocumentModel(
     );
   }
 
+  const packageName = await readPackage().then((pkg) => pkg.name);
   await generateSchema(name, config.documentModelsDir, {
     skipFormat: config.skipFormat,
     verbose,
   });
-  await hygenGenerateDocumentModel(documentModel, config.documentModelsDir, {
-    skipFormat: config.skipFormat,
-    verbose,
-    force,
-  });
+  await hygenGenerateDocumentModel(
+    documentModel,
+    config.documentModelsDir,
+    packageName,
+    {
+      skipFormat: config.skipFormat,
+      verbose,
+      force,
+    },
+  );
   await generateSubgraph(name, filePath || null, config, { verbose });
 }

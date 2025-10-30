@@ -43,8 +43,12 @@ describe("ts-morph generator", () => {
 
   it("should generate reducers", async () => {
     const testDocDocumentModel = await loadDocumentModel(srcTestDocumentPathV4);
-
-    const generator = new TSMorphCodeGenerator(srcPath, [testDocDocumentModel]);
+    const packageName = "test";
+    const generator = new TSMorphCodeGenerator(
+      srcPath,
+      [testDocDocumentModel],
+      packageName,
+    );
 
     await generator.generateReducers();
 
@@ -87,9 +91,12 @@ describe("ts-morph generator", () => {
     const testDocV3DocumentModel = await loadDocumentModel(
       srcTestDocumentPathV3,
     );
-    const generatorV3 = new TSMorphCodeGenerator(srcPath, [
-      testDocV3DocumentModel,
-    ]);
+    const packageName = "test";
+    const generatorV3 = new TSMorphCodeGenerator(
+      srcPath,
+      [testDocV3DocumentModel],
+      packageName,
+    );
 
     await generatorV3.generateReducers();
 
@@ -114,9 +121,11 @@ describe("ts-morph generator", () => {
     const testDocV4DocumentModel = await loadDocumentModel(
       srcTestDocumentPathV4,
     );
-    const generatorV4 = new TSMorphCodeGenerator(srcPath, [
-      testDocV4DocumentModel,
-    ]);
+    const generatorV4 = new TSMorphCodeGenerator(
+      srcPath,
+      [testDocV4DocumentModel],
+      packageName,
+    );
 
     await generatorV4.generateReducers();
 

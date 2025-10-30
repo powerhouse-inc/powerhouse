@@ -25,6 +25,7 @@ export type CodegenOperation = {
 
 export interface GenerationContext {
   rootDir: string;
+  packageName: string;
   docModel: DocumentModelGlobalState;
   module: ModuleSpecification;
   project: Project;
