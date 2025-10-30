@@ -4,10 +4,42 @@ This document provides detailed information about the available commands in the 
 
 ## Table of Contents
 
+- [Checkout](#checkout)
 - [Init](#init)
 - [Setup Globals](#setup-globals)
 - [Update](#update)
 - [Use](#use)
+
+## Checkout
+
+```
+Command Overview:
+  The checkout command clones an existing Powerhouse project from a remote Vetra drive.
+  This allows you to work on projects that have been initialized and configured by others.
+
+  This command:
+  1. Fetches the GitHub repository URL from the specified Vetra remote drive
+  2. Clones the repository to your local machine
+  3. Installs all project dependencies
+
+Required Options:
+  -r, --remote-drive <url>   URL of the Vetra remote drive containing the project.
+                             The drive must have a Vetra package with a configured GitHub URL.
+
+Options:
+  --package-manager <pm>     Specify which package manager to use for installing dependencies.
+                             Supported: npm, yarn, pnpm, bun
+                             If not specified, uses the detected package manager from your environment.
+
+Examples:
+  $ ph checkout --remote-drive https://vetra.example.com/d/abc123                  # Clone project using default package manager
+  $ ph checkout --remote-drive https://vetra.example.com/d/abc123 --package-manager pnpm   # Clone and install with pnpm
+
+Notes:
+  - The remote drive must contain a Vetra package document with a GitHub URL configured
+  - If no GitHub URL is found, you'll need to use 'ph init --remote-drive' instead to create a new project
+  - The repository will be cloned into a directory named after the repository
+```
 
 ## Init
 
