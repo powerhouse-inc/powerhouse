@@ -2,6 +2,7 @@ import type { VetraProcessorConfigType } from "@powerhousedao/config";
 import { VETRA_PROCESSOR_CONFIG_KEY } from "@powerhousedao/config";
 import { getConfig } from "@powerhousedao/config/node";
 import { blue, red } from "colorette";
+import type { IDocumentDriveServer } from "document-drive";
 import { setLogLevel } from "document-drive";
 import { generateProjectDriveId } from "../utils.js";
 import { startConnectStudio } from "./connect.js";
@@ -29,6 +30,49 @@ export type DevOptions = {
 
 const getDriveId = (driveUrl: string | undefined): string =>
   driveUrl?.split("/").pop() ?? generateProjectDriveId(VETRA_DRIVE_NAME);
+
+async function startVetraPreviewDrive(
+  reactor: IDocumentDriveServer,
+  port: number,
+  verbose?: boolean,
+): Promise<string> {
+  const previewDriveId = generateProjectDriveId("preview");
+
+  const previewDrive = {
+    id: previewDriveId,
+    slug: previewDriveId,
+    global: {
+      name: "Vetra Preview",
+      icon: "https://azure-elderly-tortoise-212.mypinata.cloud/ipfs/bafkreifddkbopiyvcirf7vaqar74th424r5phlxkdxniirdyg3qgu2ajha",
+    },
+    local: {
+      availableOffline: true,
+      listeners: [],
+      sharingType: "public" as const,
+      triggers: [],
+    },
+  };
+
+  try {
+    await reactor.addDrive(previewDrive);
+    if (verbose) {
+      console.log(
+        blue(`[Vetra Switchboard]: Preview drive created: ${previewDriveId}`),
+      );
+    }
+  } catch {
+    // Drive might already exist, which is fine
+    if (verbose) {
+      console.log(
+        blue(
+          `[Vetra Switchboard]: Preview drive already exists: ${previewDriveId}`,
+        ),
+      );
+    }
+  }
+
+  return `http://localhost:${port}/d/${previewDriveId}`;
+}
 
 async function startLocalVetraSwitchboard(
   options?: ReactorOptions & {
@@ -74,6 +118,8 @@ async function startLocalVetraSwitchboard(
     const processorConfig = new Map<string, unknown>();
     processorConfig.set(VETRA_PROCESSOR_CONFIG_KEY, vetraProcessorConfig);
 
+    const vetraDriveId = generateProjectDriveId(VETRA_DRIVE_NAME);
+
     const switchboard = await startSwitchboard({
       port,
       configFile: configFile || undefined,
@@ -82,12 +128,19 @@ async function startLocalVetraSwitchboard(
       packages,
       remoteDrives,
       useVetraDrive: true, // Use Vetra drive instead of Powerhouse drive
-      vetraDriveId: generateProjectDriveId(VETRA_DRIVE_NAME),
+      vetraDriveId,
       https,
       mcp: true,
       processorConfig,
       disableLocalPackages: !options?.watch,
     });
+
+    // Add preview drive
+    const previewDriveUrl = await startVetraPreviewDrive(
+      switchboard.reactor,
+      port,
+      verbose,
+    );
 
     if (verbose) {
       console.log(blue(`[Vetra Switchboard]: Started successfully`));
@@ -102,7 +155,10 @@ async function startLocalVetraSwitchboard(
       console.log(`Switchboard initialized`);
       console.log(`   ➜ Drive URL: ${switchboard.defaultDriveUrl}`);
     }
-    return { driveUrl: switchboard.defaultDriveUrl || "" };
+    return {
+      driveUrl: switchboard.defaultDriveUrl || "",
+      previewDriveUrl,
+    };
   } catch (error) {
     console.error(
       red(
@@ -164,6 +220,7 @@ export async function startVetra({
       resolvedVetraUrl,
     );
     const driveUrl: string = resolvedVetraUrl ?? switchboardResult.driveUrl;
+    const previewDriveUrl: string = switchboardResult.previewDriveUrl;
 
     if (verbose) {
       console.log("Starting Codegen Reactor...");
@@ -173,10 +230,12 @@ export async function startVetra({
     if (!disableConnect) {
       if (verbose) {
         console.log("Starting Connect...");
-        console.log(`   ➜ Connect will use drive: ${driveUrl}`);
+        console.log(
+          `   ➜ Connect will use drives: ${driveUrl}, ${previewDriveUrl}`,
+        );
       }
       await startConnectStudio({
-        defaultDrivesUrl: [driveUrl],
+        defaultDrivesUrl: [driveUrl, previewDriveUrl],
         drivesPreserveStrategy: "preserve-all",
         disableLocalPackage: !watch,
         devServerOptions: {
