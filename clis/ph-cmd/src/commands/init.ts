@@ -82,6 +82,31 @@ export function initCommand(program: Command): Command {
     }
   });
 
+  initCmd.hook("postAction", (thisCommand) => {
+    const options = thisCommand.opts<InitOptions>();
+    if (options.remoteDrive) {
+      const args = thisCommand.args as [string | undefined];
+      const projectName = options.project ?? args[0];
+
+      let branchName = "main";
+      if (options.dev) {
+        branchName = "dev";
+      } else if (options.staging) {
+        branchName = "staging";
+      }
+
+      console.log();
+      console.log("To link your project to GitHub:");
+      console.log();
+      console.log("  1. Create a new repository on GitHub");
+      console.log(`  2. cd ${projectName}`);
+      console.log("  3. git add . && git commit -m 'Initial commit'");
+      console.log("  4. git remote add origin <your-github-url>");
+      console.log(`  5. git push -u origin ${branchName}`);
+      console.log();
+    }
+  });
+
   // Use withCustomHelp instead of withHelpAction and addHelpText
   return withCustomHelp<[string | undefined, InitOptions]>(
     initCmd,
