@@ -1,3 +1,7 @@
+## 4.1.0-dev.97 (2025-10-30)
+
+This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.96 (2025-10-30)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.

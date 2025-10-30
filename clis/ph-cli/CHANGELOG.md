@@ -1,3 +1,13 @@
+## 4.1.0-dev.97 (2025-10-30)
+
+### 🩹 Fixes
+
+- **ph-cli:** enable preview drive only in watch mode ([af854d2f3](https://github.com/powerhouse-inc/powerhouse/commit/af854d2f3))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.96 (2025-10-30)
 
 ### 🩹 Fixes
