@@ -1,8 +1,7 @@
-import {
-  isDocumentTypeSupported,
-  type ConflictResolution,
-  type DocumentTypeIcon,
-  type FileUploadProgressCallback,
+import type {
+  ConflictResolution,
+  DocumentTypeIcon,
+  FileUploadProgressCallback,
 } from "@powerhousedao/reactor-browser";
 import type {
   DocumentDriveDocument,
@@ -17,6 +16,7 @@ import {
   moveNode as baseMoveNode,
   updateFile as baseUpdateFile,
   generateNodesCopy,
+  handleTargetNameCollisions,
   isFileNode,
   isFolderNode,
   logger,
@@ -32,6 +32,7 @@ import {
   replayDocument,
 } from "document-model/core";
 import { UnsupportedDocumentTypeError } from "../errors.js";
+import { isDocumentTypeSupported } from "../utils/documents.js";
 import { getUserPermissions } from "../utils/user.js";
 import { queueActions, queueOperations, uploadOperations } from "./queue.js";
 
@@ -713,6 +714,22 @@ export async function copyNode(
     drive.state.global.nodes,
   );
 
+  // Pre-calculate collision-resolved names for all nodes to be copied
+  const resolvedNamesMap = new Map<string, string>();
+  for (const copyNodeInput of copyNodesInput) {
+    const node = drive.state.global.nodes.find(
+      (n) => n.id === copyNodeInput.srcId,
+    );
+    if (node) {
+      const resolvedName = handleTargetNameCollisions({
+        nodes: drive.state.global.nodes,
+        srcName: copyNodeInput.targetName || node.name,
+        targetParentFolder: copyNodeInput.targetParentFolder || null,
+      });
+      resolvedNamesMap.set(copyNodeInput.targetId, resolvedName);
+    }
+  }
+
   const fileNodesToCopy = copyNodesInput.filter((copyNodeInput) => {
     const node = drive.state.global.nodes.find(
       (node) => node.id === copyNodeInput.srcId,
@@ -729,6 +746,12 @@ export async function copyNode(
         document,
         fileNodeToCopy.targetId,
       );
+
+      // Set the header name to match the collision-resolved node name
+      const resolvedName = resolvedNamesMap.get(fileNodeToCopy.targetId);
+      if (resolvedName) {
+        duplicatedDocument.header.name = resolvedName;
+      }
 
       await reactor.addDocument(duplicatedDocument);
     } catch (e) {

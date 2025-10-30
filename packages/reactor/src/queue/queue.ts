@@ -1,4 +1,5 @@
 import type { IEventBus } from "../events/interfaces.js";
+import type { ErrorInfo } from "../shared/types.js";
 import type { IQueue } from "./interfaces.js";
 import { JobExecutionHandle } from "./job-execution-handle.js";
 import type { IJobExecutionHandle, Job, JobAvailableEvent } from "./types.js";
@@ -21,6 +22,19 @@ export class InMemoryQueue implements IQueue {
   private onDrainedCallback?: () => void;
 
   constructor(private eventBus: IEventBus) {}
+
+  private toErrorInfo(error: Error | string): ErrorInfo {
+    if (error instanceof Error) {
+      return {
+        message: error.message,
+        stack: error.stack || new Error().stack || "",
+      };
+    }
+    return {
+      message: error,
+      stack: new Error().stack || "",
+    };
+  }
 
   /**
    * Creates a unique key for a document/scope/branch combination
@@ -175,8 +189,8 @@ export class InMemoryQueue implements IQueue {
       onComplete: () => {
         void this.completeJob(job.id);
       },
-      onFail: (reason: string) => {
-        void this.failJob(job.id, reason);
+      onFail: (error: ErrorInfo) => {
+        void this.failJob(job.id, error);
       },
     });
 
@@ -223,8 +237,8 @@ export class InMemoryQueue implements IQueue {
             onComplete: () => {
               void this.completeJob(job.id);
             },
-            onFail: (reason: string) => {
-              void this.failJob(job.id, reason);
+            onFail: (error: ErrorInfo) => {
+              void this.failJob(job.id, error);
             },
           });
 
@@ -346,7 +360,7 @@ export class InMemoryQueue implements IQueue {
     this.checkDrained();
   }
 
-  async failJob(jobId: string, error?: string): Promise<void> {
+  async failJob(jobId: string, error?: ErrorInfo): Promise<void> {
     // Get the documentId for the executing job
     const documentId = this.jobIdToDocId.get(jobId);
     if (documentId) {
@@ -374,7 +388,7 @@ export class InMemoryQueue implements IQueue {
     this.checkDrained();
   }
 
-  async retryJob(jobId: string, error?: string): Promise<void> {
+  async retryJob(jobId: string, error?: ErrorInfo): Promise<void> {
     // Get the job from the index (it might be executing, not in queue)
     const job = this.jobIndex.get(jobId);
     if (!job) {

@@ -116,21 +116,27 @@ describe("InMemoryJobTracker", () => {
       };
 
       tracker.registerJob(jobInfo);
-      tracker.markFailed("job-1", "Something went wrong");
+      tracker.markFailed("job-1", {
+        message: "Something went wrong",
+        stack: "",
+      });
 
       const retrieved = tracker.getJobStatus("job-1");
       expect(retrieved?.status).toBe(JobStatus.FAILED);
-      expect(retrieved?.error).toBe("Something went wrong");
+      expect(retrieved?.error?.message).toBe("Something went wrong");
       expect(retrieved?.completedAtUtcIso).toBeDefined();
     });
 
     it("should create entry if job not found", () => {
-      tracker.markFailed("unknown-job", "Error occurred");
+      tracker.markFailed("unknown-job", {
+        message: "Error occurred",
+        stack: "",
+      });
 
       const retrieved = tracker.getJobStatus("unknown-job");
       expect(retrieved).not.toBeNull();
       expect(retrieved?.status).toBe(JobStatus.FAILED);
-      expect(retrieved?.error).toBe("Error occurred");
+      expect(retrieved?.error?.message).toBe("Error occurred");
     });
   });
 
@@ -196,10 +202,10 @@ describe("InMemoryJobTracker", () => {
       expect(tracker.getJobStatus("job-1")?.status).toBe(JobStatus.RUNNING);
 
       // Mark failed
-      tracker.markFailed("job-1", "Test error");
+      tracker.markFailed("job-1", { message: "Test error", stack: "" });
       const finalStatus = tracker.getJobStatus("job-1");
       expect(finalStatus?.status).toBe(JobStatus.FAILED);
-      expect(finalStatus?.error).toBe("Test error");
+      expect(finalStatus?.error?.message).toBe("Test error");
     });
 
     it("should handle marking completed before running", () => {
@@ -242,12 +248,14 @@ describe("InMemoryJobTracker", () => {
 
       // Update job2
       tracker.markRunning("job-2");
-      tracker.markFailed("job-2", "Job 2 failed");
+      tracker.markFailed("job-2", { message: "Job 2 failed", stack: "" });
 
       // Verify independent states
       expect(tracker.getJobStatus("job-1")?.status).toBe(JobStatus.COMPLETED);
       expect(tracker.getJobStatus("job-2")?.status).toBe(JobStatus.FAILED);
-      expect(tracker.getJobStatus("job-2")?.error).toBe("Job 2 failed");
+      expect(tracker.getJobStatus("job-2")?.error?.message).toBe(
+        "Job 2 failed",
+      );
     });
   });
 });

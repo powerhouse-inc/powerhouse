@@ -51,7 +51,7 @@ export interface IConnectCrypto {
 export type DID = `did:${string}`;
 
 export class ConnectCrypto implements IConnectCrypto {
-  #subtleCrypto: Promise<SubtleCrypto>;
+  #subtleCrypto: SubtleCrypto;
   #keyPair: CryptoKeyPair | undefined;
   #keyPairStorage: JsonWebKeyPairStorage;
 
@@ -69,30 +69,15 @@ export class ConnectCrypto implements IConnectCrypto {
     hash: "SHA-256",
   };
 
-  constructor(keyPairStorage: JsonWebKeyPairStorage) {
+  constructor(
+    keyPairStorage: JsonWebKeyPairStorage,
+    crypto: SubtleCrypto = globalThis.crypto.subtle,
+  ) {
     this.#keyPairStorage = keyPairStorage;
 
-    // Initializes the subtleCrypto module according to the host environment
-    this.#subtleCrypto = this.#initCrypto();
+    this.#subtleCrypto = crypto;
 
     this.#did = this.#initialize();
-  }
-
-  #initCrypto() {
-    return new Promise<SubtleCrypto>((resolve, reject) => {
-      if (typeof window === "undefined") {
-        import("node:crypto")
-          .then((module) => {
-            resolve(module.webcrypto.subtle as SubtleCrypto);
-          })
-          .catch(reject);
-      } else {
-        if (!window?.crypto.subtle) {
-          reject(new Error("Crypto module not available"));
-        }
-        resolve(window.crypto.subtle);
-      }
-    });
   }
 
   // loads the key pair from storage or generates a new one if none is stored
@@ -146,8 +131,7 @@ export class ConnectCrypto implements IConnectCrypto {
       throw new Error("No key pair available");
     }
 
-    const subtleCrypto = await this.#subtleCrypto;
-    const publicKeyRaw = await subtleCrypto.exportKey(
+    const publicKeyRaw = await this.#subtleCrypto.exportKey(
       "raw",
       this.#keyPair.publicKey,
     );
@@ -160,8 +144,7 @@ export class ConnectCrypto implements IConnectCrypto {
   }
 
   async #generateECDSAKeyPair() {
-    const subtleCrypto = await this.#subtleCrypto;
-    const keyPair = await subtleCrypto.generateKey(
+    const keyPair = await this.#subtleCrypto.generateKey(
       ConnectCrypto.algorithm,
       true,
       ["sign", "verify"],
@@ -173,25 +156,29 @@ export class ConnectCrypto implements IConnectCrypto {
     if (!this.#keyPair) {
       throw new Error("No key pair available");
     }
-    const subtleCrypto = await this.#subtleCrypto;
     const jwkKeyPair = {
-      publicKey: await subtleCrypto.exportKey("jwk", this.#keyPair.publicKey),
-      privateKey: await subtleCrypto.exportKey("jwk", this.#keyPair.privateKey),
+      publicKey: await this.#subtleCrypto.exportKey(
+        "jwk",
+        this.#keyPair.publicKey,
+      ),
+      privateKey: await this.#subtleCrypto.exportKey(
+        "jwk",
+        this.#keyPair.privateKey,
+      ),
     };
     return jwkKeyPair;
   }
 
   async #importKeyPair(jwkKeyPair: JwkKeyPair): Promise<CryptoKeyPair> {
-    const subtleCrypto = await this.#subtleCrypto;
     return {
-      publicKey: await subtleCrypto.importKey(
+      publicKey: await this.#subtleCrypto.importKey(
         "jwk",
         jwkKeyPair.publicKey,
         ConnectCrypto.algorithm,
         true,
         ["verify"],
       ),
-      privateKey: await subtleCrypto.importKey(
+      privateKey: await this.#subtleCrypto.importKey(
         "jwk",
         jwkKeyPair.privateKey,
         ConnectCrypto.algorithm,
@@ -204,13 +191,13 @@ export class ConnectCrypto implements IConnectCrypto {
   #sign = async (
     ...args: Parameters<SubtleCrypto["sign"]>
   ): Promise<ArrayBuffer> => {
-    return (await this.#subtleCrypto).sign(...args);
+    return await this.#subtleCrypto.sign(...args);
   };
 
   #verify = async (
     ...args: Parameters<SubtleCrypto["verify"]>
   ): Promise<boolean> => {
-    return (await this.#subtleCrypto).verify(...args);
+    return await this.#subtleCrypto.verify(...args);
   };
 
   #stringToBytes(s: string): Uint8Array {
@@ -222,9 +209,7 @@ export class ConnectCrypto implements IConnectCrypto {
       const dataBytes: Uint8Array =
         typeof data === "string" ? this.#stringToBytes(data) : data;
 
-      const subtleCrypto = await this.#subtleCrypto;
-
-      const arrayBuffer = await subtleCrypto.sign(
+      const arrayBuffer = await this.#subtleCrypto.sign(
         ConnectCrypto.signAlgorithm,
         this.#keyPair.privateKey,
         dataBytes.buffer as ArrayBuffer,

@@ -3,7 +3,6 @@ import type {
   QueryCallbackReturnType,
   useRelationalQueryOptions,
 } from "@powerhousedao/reactor-browser";
-import { useRelationalQuery } from "@powerhousedao/reactor-browser";
 import type {
   IRelationalQueryBuilder,
   RelationalDbProcessorClass,
@@ -11,6 +10,7 @@ import type {
 import type { CompiledQuery } from "kysely";
 import deepEqual from "lodash.isequal";
 import { useCallback, useMemo, useRef } from "react";
+import { useRelationalQuery } from "../hooks/useRelationalQuery.js";
 
 // Custom hook for parameter memoization
 function useStableParams<T>(params: T): T {
