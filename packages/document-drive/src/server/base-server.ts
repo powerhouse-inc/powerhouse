@@ -80,6 +80,7 @@ import {
   attachBranch,
   createPresignedHeader,
   defaultBaseState,
+  diffOperations,
   garbageCollect,
   garbageCollectDocumentOperations,
   groupOperationsByScope,
@@ -1593,6 +1594,8 @@ export class BaseDocumentDriveServer
           ));
     }
 
+    const operationsBeforeReducer = newDocument.operations[scope] || [];
+
     const operationSignals: (() => Promise<SignalResult>)[] = [];
     newDocument = documentModelModule.reducer(
       newDocument,
@@ -1623,6 +1626,38 @@ export class BaseDocumentDriveServer
         replayOptions: { operation },
       },
     );
+
+    // when we have NOOP operations with skip > 0 we need to populate the
+    // clipboard with the operations that were skipped to allow redo
+    if (
+      operation.action.type === "NOOP" &&
+      operation.skip > 0 &&
+      newDocument.clipboard.length === 0
+    ) {
+      const scopeOperationsAfter = newDocument.operations[scope] || [];
+
+      // Get operations AFTER garbageCollect (with NOOP)
+      const afterOperations = garbageCollect(
+        sortOperations(scopeOperationsAfter),
+      );
+
+      // Get operations BEFORE the reducer ran (before NOOP was applied)
+      const beforeOperations = garbageCollect(
+        sortOperations(operationsBeforeReducer),
+      );
+
+      // Calculate what was removed by comparing before vs after
+      // The diff shows operations that were in "before" but not in "after"
+      const diff = diffOperations(beforeOperations, afterOperations);
+
+      // Populate clipboard with skipped operations (excluding NOOPs)
+      newDocument = {
+        ...newDocument,
+        clipboard: sortOperations(
+          diff.filter((op: Operation) => op.action.type !== "NOOP"),
+        ).reverse(),
+      };
+    }
 
     const newDocScopeOperations =
       newDocument.operations[operation.action.scope];
