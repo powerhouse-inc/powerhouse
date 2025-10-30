@@ -229,13 +229,17 @@ export async function startVetra({
 
     // Configure GitHub URL if remote drive is set
     if (resolvedVetraUrl) {
+      // give some time for the drive to process initial strands
+      await sleep(3000);
+
       await configureVetraGithubUrl(
         resolvedSwitchboardPort,
         resolvedVetraUrl,
         verbose,
       );
 
-      await sleep(3000);
+      // give some time for the user to read log messages
+      await sleep(2000);
     }
 
     if (verbose) {
