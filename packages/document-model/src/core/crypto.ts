@@ -4,6 +4,9 @@ import {
   createSHA1 as sha1_wasm,
 } from "hash-wasm";
 
+import farmhash from "farmhash";
+import highwayhash from "highwayhash";
+
 import stringifyJson from "safe-stable-stringify";
 import { createHash as createSha1Hash } from "sha1-uint8array";
 import type { HashConfig } from "./ph-types.js";
@@ -29,10 +32,16 @@ export const supportedAlgorithms = [
   "sha1_wasm",
   "blake2b_wasm",
   "blake3_wasm",
+  "highwayhash",
+  "farmhash",
 ];
 export const supportedEncodings = ["base64", "hex"];
 const defaultAlg = "sha1"
 const defaultEnc = "base64"
+const HH_KEY = Buffer.from(
+  "70503c5cbe39a8da0fffd7c236f932700baf4906c048c8ebe3963ffff3871953",
+  "hex"
+);
 
 const textEncoder = new TextEncoder();
 
@@ -135,6 +144,13 @@ function hashUIntArray(
       let blake3HashDigest = blake3Hasher.digest("binary");
       blake3Hasher.init();
       return blake3HashDigest;
+    case "farmhash":
+      const buffer = Buffer.allocUnsafe(8);
+      buffer.writeBigUInt64BE(BigInt(farmhash.fingerprint64(Buffer.from(bytes))));
+      return new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+    case "highwayhash":
+      let buf = highwayhash.asBuffer(HH_KEY, Buffer.from(bytes));
+      return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
     default:
       throw new Error(`Unsupported algorithm: ${algorithm}`);
   }

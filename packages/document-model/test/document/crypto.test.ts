@@ -523,6 +523,138 @@ describe("hashBrowser", () => {
     });
   });
 
+  describe("FarmHash algorithm", () => {
+    // FarmHash produces 64-bit hashes (8 bytes)
+    const farmhashHelloWorldBase64Hash = "naDhy/rqKEI=";
+    const farmhashHelloWorldHexHash = "9da0e1cbfaea2842";
+    const farmhashEmptyStringBase64Hash = "muFqOy+QQE8=";
+    const farmhashEmptyStringHexHash = "9ae16a3b2f90404f";
+
+    it("should hash string with farmhash algorithm and base64 encoding", () => {
+      const result = hashBrowser(testString, "farmhash", "base64");
+      expect(result).toBe(farmhashHelloWorldBase64Hash);
+    });
+
+    it("should hash string with farmhash algorithm and hex encoding", () => {
+      const result = hashBrowser(testString, "farmhash", "hex");
+      expect(result).toBe(farmhashHelloWorldHexHash);
+    });
+
+    it("should hash Uint8Array with farmhash algorithm", () => {
+      const result = hashBrowser(testUint8Array, "farmhash", "base64");
+      expect(result).toBe(farmhashHelloWorldBase64Hash);
+    });
+
+    it("should hash empty string with farmhash", () => {
+      const resultBase64 = hashBrowser("", "farmhash", "base64");
+      const resultHex = hashBrowser("", "farmhash", "hex");
+
+      expect(resultBase64).toBe(farmhashEmptyStringBase64Hash);
+      expect(resultHex).toBe(farmhashEmptyStringHexHash);
+    });
+
+    it("should produce consistent hashes for farmhash", () => {
+      const result1 = hashBrowser(testString, "farmhash", "base64");
+      const result2 = hashBrowser(testString, "farmhash", "base64");
+      expect(result1).toBe(result2);
+      expect(result1).toBe(farmhashHelloWorldBase64Hash);
+    });
+
+    it("should handle different input strings with farmhash", () => {
+      const input1 = "test1";
+      const input2 = "test2";
+      const hash1 = hashBrowser(input1, "farmhash", "hex");
+      const hash2 = hashBrowser(input2, "farmhash", "hex");
+      
+      // Different inputs should produce different hashes
+      expect(hash1).not.toBe(hash2);
+      // Both should be 16 hex characters (64 bits = 8 bytes)
+      expect(hash1).toMatch(/^[0-9a-f]{16}$/);
+      expect(hash2).toMatch(/^[0-9a-f]{16}$/);
+    });
+
+    it("should handle special characters with farmhash", () => {
+      const specialString = "Hello, 世界! 🌍";
+      const result = hashBrowser(specialString, "farmhash", "hex");
+      expect(result).toMatch(/^[0-9a-f]{16}$/);
+    });
+
+    it("should handle binary data with farmhash", () => {
+      const binaryData = new Uint8Array([0, 1, 2, 3, 255, 254, 253]);
+      const result = hashBrowser(binaryData, "farmhash", "hex");
+      expect(result).toMatch(/^[0-9a-f]{16}$/);
+    });
+  });
+
+  describe("HighwayHash algorithm", () => {
+    // HighwayHash produces 64-bit hashes (8 bytes) by default
+    const highwayhashHelloWorldBase64Hash = "0nFK3A1UjeY=";
+    const highwayhashHelloWorldHexHash = "d2714adc0d548de6";
+    const highwayhashEmptyStringBase64Hash = "SV9C8I7omVg=";
+    const highwayhashEmptyStringHexHash = "495f42f08ee89958";
+
+    it("should hash string with highwayhash algorithm and base64 encoding", () => {
+      const result = hashBrowser(testString, "highwayhash", "base64");
+      expect(result).toBe(highwayhashHelloWorldBase64Hash);
+    });
+
+    it("should hash string with highwayhash algorithm and hex encoding", () => {
+      const result = hashBrowser(testString, "highwayhash", "hex");
+      expect(result).toBe(highwayhashHelloWorldHexHash);
+    });
+
+    it("should hash Uint8Array with highwayhash algorithm", () => {
+      const result = hashBrowser(testUint8Array, "highwayhash", "base64");
+      expect(result).toBe(highwayhashHelloWorldBase64Hash);
+    });
+
+    it("should hash empty string with highwayhash", () => {
+      const resultBase64 = hashBrowser("", "highwayhash", "base64");
+      const resultHex = hashBrowser("", "highwayhash", "hex");
+
+      expect(resultBase64).toBe(highwayhashEmptyStringBase64Hash);
+      expect(resultHex).toBe(highwayhashEmptyStringHexHash);
+    });
+
+    it("should produce consistent hashes for highwayhash", () => {
+      const result1 = hashBrowser(testString, "highwayhash", "base64");
+      const result2 = hashBrowser(testString, "highwayhash", "base64");
+      expect(result1).toBe(result2);
+      expect(result1).toBe(highwayhashHelloWorldBase64Hash);
+    });
+
+    it("should handle different input strings with highwayhash", () => {
+      const input1 = "test1";
+      const input2 = "test2";
+      const hash1 = hashBrowser(input1, "highwayhash", "hex");
+      const hash2 = hashBrowser(input2, "highwayhash", "hex");
+      
+      // Different inputs should produce different hashes
+      expect(hash1).not.toBe(hash2);
+      // Both should be 16 hex characters (64 bits = 8 bytes)
+      expect(hash1).toMatch(/^[0-9a-f]{16}$/);
+      expect(hash2).toMatch(/^[0-9a-f]{16}$/);
+    });
+
+    it("should handle special characters with highwayhash", () => {
+      const specialString = "Hello, 世界! 🌍";
+      const result = hashBrowser(specialString, "highwayhash", "hex");
+      expect(result).toMatch(/^[0-9a-f]{16}$/);
+    });
+
+    it("should handle binary data with highwayhash", () => {
+      const binaryData = new Uint8Array([0, 1, 2, 3, 255, 254, 253]);
+      const result = hashBrowser(binaryData, "highwayhash", "hex");
+      expect(result).toMatch(/^[0-9a-f]{16}$/);
+    });
+
+    it("should handle very long strings with highwayhash", () => {
+      const longString = "a".repeat(10000);
+      const result = hashBrowser(longString, "highwayhash", "hex");
+      expect(result).toMatch(/^[0-9a-f]{16}$/);
+    });
+  });
+
   describe("Different input types", () => {
     it("should handle ArrayBuffer view (Uint16Array)", () => {
       const uint16Array = new Uint16Array([72, 101, 108, 108, 111]); // "Hello" in character codes
@@ -579,10 +711,18 @@ describe("hashBrowser", () => {
       const blake3Result1 = hashBrowser(testString, "blake3_wasm", "hex");
       const blake3Result2 = hashBrowser(testString, "blake3_wasm", "hex");
       
+      const farmhashResult1 = hashBrowser(testString, "farmhash", "hex");
+      const farmhashResult2 = hashBrowser(testString, "farmhash", "hex");
+      
+      const highwayhashResult1 = hashBrowser(testString, "highwayhash", "hex");
+      const highwayhashResult2 = hashBrowser(testString, "highwayhash", "hex");
+      
       expect(sha1Result1).toBe(sha1Result2);
       expect(sha1WasmResult1).toBe(sha1WasmResult2);
       expect(blake2bResult1).toBe(blake2bResult2);
       expect(blake3Result1).toBe(blake3Result2);
+      expect(farmhashResult1).toBe(farmhashResult2);
+      expect(highwayhashResult1).toBe(highwayhashResult2);
     });
 
     it("should produce same result for sha1 and sha1_wasm", () => {
