@@ -1,3 +1,17 @@
+## 5.0.1-staging.6 (2025-10-30)
+
+### 🚀 Features
+
+- first swing at a project to import these recorded operations ([41b139237](https://github.com/powerhouse-inc/powerhouse/commit/41b139237))
+
+### 🩹 Fixes
+
+- package link issues ([3415df513](https://github.com/powerhouse-inc/powerhouse/commit/3415df513))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.0.1-staging.5 (2025-10-27)
 
 This was a version bump only for document-model to align it with other projects, there were no code changes.

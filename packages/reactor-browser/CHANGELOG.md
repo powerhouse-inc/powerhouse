@@ -1,3 +1,26 @@
+## 5.0.1-staging.6 (2025-10-30)
+
+### 🚀 Features
+
+- re-enable switchboard link on document toolbar ([#2048](https://github.com/powerhouse-inc/powerhouse/pull/2048))
+- **reactor-browser:** add folder hooks ([#2050](https://github.com/powerhouse-inc/powerhouse/pull/2050))
+- **reactor-browser:** implement collision resolution for target names during node copy ([150284a04](https://github.com/powerhouse-inc/powerhouse/commit/150284a04))
+- first swing at a project to import these recorded operations ([41b139237](https://github.com/powerhouse-inc/powerhouse/commit/41b139237))
+
+### 🩹 Fixes
+
+- **reactor-browser:** fix circular import ([4982a5ebe](https://github.com/powerhouse-inc/powerhouse/commit/4982a5ebe))
+- **reactor-browser:** removed circular import ([9d334701b](https://github.com/powerhouse-inc/powerhouse/commit/9d334701b))
+- package link issues ([3415df513](https://github.com/powerhouse-inc/powerhouse/commit/3415df513))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 5.0.1-staging.5 (2025-10-27)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

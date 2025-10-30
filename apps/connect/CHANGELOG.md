@@ -1,3 +1,19 @@
+## 5.0.1-staging.6 (2025-10-30)
+
+### 🚀 Features
+
+- **reactor-browser:** add folder hooks ([#2050](https://github.com/powerhouse-inc/powerhouse/pull/2050))
+- first swing at a project to import these recorded operations ([41b139237](https://github.com/powerhouse-inc/powerhouse/commit/41b139237))
+
+### 🩹 Fixes
+
+- package link issues ([3415df513](https://github.com/powerhouse-inc/powerhouse/commit/3415df513))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Ryan Wolhuter @ryanwolhuter
+
 ## 5.0.1-staging.5 (2025-10-27)
 
 ### 🩹 Fixes
