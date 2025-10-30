@@ -52,9 +52,17 @@ module.exports = {
     const phDocumentSchemaName = `${phDocumentTypeName}Schema`;
     const isPhDocumentOfTypeFunctionName = `is${phDocumentTypeName}`;
     const assertIsPhDocumentOfTypeFunctionName = `assertIs${phDocumentTypeName}`;
+    const useByIdHookName = `use${phDocumentTypeName}ById`;
+    const useSelectedHookName = `useSelected${phDocumentTypeName}`;
+    const useInSelectedDriveHookName = `use${phDocumentTypeName}sInSelectedDrive`;
+    const useInSelectedFolderHookName = `use${phDocumentTypeName}sInSelectedFolder`;
     return {
       rootDir,
       packageName,
+      useByIdHookName,
+      useSelectedHookName,
+      useInSelectedDriveHookName,
+      useInSelectedFolderHookName,
       documentModel: documentModelToString(documentModel),
       documentTypeVariableName,
       documentTypeId,

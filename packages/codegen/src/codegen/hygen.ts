@@ -187,6 +187,7 @@ export async function hygenGenerateEditor(
   documentTypesMap: DocumentTypesMap,
   dir: string,
   documentModelsDir: string,
+  packageName: string,
   { skipFormat = false, verbose = true } = {},
   editorId?: string,
 ) {
@@ -204,6 +205,8 @@ export async function hygenGenerateEditor(
     JSON.stringify(documentTypesMap),
     "--document-models-dir",
     documentModelsDir,
+    "--package-name",
+    packageName,
   ];
 
   if (editorId) {

@@ -83,12 +83,14 @@ export async function generateEditor(
       `Document model for ${invalidType} not found. Make sure the document model is available in the document-models directory (${documentModelsDir}) and has been properly generated.`,
     );
   }
+  const packageName = await readPackage().then((pkg) => pkg.name);
   return hygenGenerateEditor(
     name,
     documentTypes,
     documentTypesMap,
     config.editorsDir,
     config.documentModelsDir,
+    packageName,
     { skipFormat },
     editorId,
   );
