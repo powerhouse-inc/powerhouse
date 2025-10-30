@@ -3,6 +3,7 @@ import type { IJobTracker } from "../job-tracker/interfaces.js";
 import type { IQueue } from "../queue/interfaces.js";
 import type { IJobExecutionHandle } from "../queue/types.js";
 import { QueueEventTypes } from "../queue/types.js";
+import type { ErrorInfo } from "../shared/types.js";
 import type { IJobExecutor, IJobExecutorManager } from "./interfaces.js";
 import type { ExecutorManagerStatus, JobResult } from "./types.js";
 
@@ -121,13 +122,14 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     try {
       result = await executor.executeJob(handle.job);
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      console.error(`Error executing job ${handle.job.id}:`, errorMessage);
+      const errorInfo = this.toErrorInfo(
+        error instanceof Error ? error : String(error),
+      );
+      console.error(`Error executing job ${handle.job.id}:`, errorInfo.message);
 
-      handle.fail(errorMessage);
+      handle.fail(errorInfo);
       this.activeJobs--;
-      this.jobTracker.markFailed(handle.job.id, errorMessage);
+      this.jobTracker.markFailed(handle.job.id, errorInfo);
 
       await this.checkForMoreJobs();
       return;
@@ -144,27 +146,37 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
       const maxRetries = handle.job.maxRetries || 0;
 
       if (retryCount < maxRetries) {
-        try {
-          await this.queue.retryJob(handle.job.id, result.error?.message);
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : "Failed to retry job";
-          console.error(`Failed to retry job ${handle.job.id}:`, errorMessage);
+        const currentErrorInfo = result.error
+          ? this.toErrorInfo(result.error)
+          : this.toErrorInfo("Unknown error");
 
-          this.jobTracker.markFailed(handle.job.id, errorMessage);
-          handle.fail(errorMessage);
+        try {
+          await this.queue.retryJob(handle.job.id, currentErrorInfo);
+        } catch (error) {
+          const retryErrorInfo = this.toErrorInfo(
+            error instanceof Error ? error : "Failed to retry job",
+          );
+          console.error(
+            `Failed to retry job ${handle.job.id}:`,
+            retryErrorInfo.message,
+          );
+
+          this.jobTracker.markFailed(handle.job.id, retryErrorInfo);
+          handle.fail(retryErrorInfo);
         }
       } else {
-        const currentError = result.error?.message || "Unknown error";
+        const currentErrorInfo = result.error
+          ? this.toErrorInfo(result.error)
+          : this.toErrorInfo("Unknown error");
 
-        const fullErrorMessage = this.formatErrorHistory(
+        const fullErrorInfo = this.formatErrorHistory(
           handle.job.errorHistory,
-          currentError,
+          currentErrorInfo,
           retryCount + 1,
         );
 
-        this.jobTracker.markFailed(handle.job.id, fullErrorMessage);
-        handle.fail(fullErrorMessage);
+        this.jobTracker.markFailed(handle.job.id, fullErrorInfo);
+        handle.fail(fullErrorInfo);
       }
     }
 
@@ -214,22 +226,41 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     }
   }
 
+  private toErrorInfo(error: Error | string): ErrorInfo {
+    if (error instanceof Error) {
+      return {
+        message: error.message,
+        stack: error.stack || new Error().stack || "",
+      };
+    }
+    return {
+      message: error,
+      stack: new Error().stack || "",
+    };
+  }
+
   private formatErrorHistory(
-    errorHistory: string[],
-    currentError: string,
+    errorHistory: ErrorInfo[],
+    currentError: ErrorInfo,
     totalAttempts: number,
-  ): string {
+  ): ErrorInfo {
     const allErrors = [...errorHistory, currentError];
 
     if (allErrors.length === 1) {
       return currentError;
     }
 
-    const lines = [`Job failed after ${totalAttempts} attempts:`];
+    const messageLines = [`Job failed after ${totalAttempts} attempts:`];
+    const stackLines: string[] = [];
+
     allErrors.forEach((error, index) => {
-      lines.push(`[Attempt ${index + 1}] ${error}`);
+      messageLines.push(`[Attempt ${index + 1}] ${error.message}`);
+      stackLines.push(`[Attempt ${index + 1}] Stack trace:\n${error.stack}`);
     });
 
-    return lines.join("\n");
+    return {
+      message: messageLines.join("\n"),
+      stack: stackLines.join("\n\n"),
+    };
   }
 }

@@ -156,8 +156,22 @@ export class SimpleJobExecutor implements IJobExecutor {
         };
       }
 
-      // Reducer assigns index based on document's current operation count
-      const updatedDocument = module.reducer(document as PHDocument, action);
+      let updatedDocument: PHDocument;
+      try {
+        updatedDocument = module.reducer(document as PHDocument, action);
+      } catch (error) {
+        const contextMessage = `Failed to apply action to document:\n  Action type: ${action.type}\n  Document ID: ${job.documentId}\n  Document type: ${document.header.documentType}\n  Scope: ${job.scope}\n  Original error: ${error instanceof Error ? error.message : String(error)}`;
+        const enhancedError = new Error(contextMessage);
+        if (error instanceof Error && error.stack) {
+          enhancedError.stack = `${contextMessage}\n\nOriginal stack trace:\n${error.stack}`;
+        }
+        return {
+          job,
+          success: false,
+          error: enhancedError,
+          duration: Date.now() - startTime,
+        };
+      }
 
       const scope = job.scope;
       const operations = updatedDocument.operations[scope];

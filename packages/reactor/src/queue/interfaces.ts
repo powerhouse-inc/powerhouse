@@ -1,3 +1,4 @@
+import type { ErrorInfo } from "../shared/types.js";
 import type { IJobExecutionHandle, Job } from "./types.js";
 
 /**
@@ -90,18 +91,18 @@ export interface IQueue {
   /**
    * Mark a job as failed.
    * @param jobId - The ID of the job to mark as failed
-   * @param error - Optional error message
+   * @param error - Optional error information
    * @returns Promise that resolves when the job is marked as failed
    */
-  failJob(jobId: string, error?: string): Promise<void>;
+  failJob(jobId: string, error?: ErrorInfo): Promise<void>;
 
   /**
    * Retry a failed job.
    * @param jobId - The ID of the job to retry
-   * @param error - Optional error message from the failure
+   * @param error - Optional error information from the failure
    * @returns Promise that resolves when the job is requeued for retry
    */
-  retryJob(jobId: string, error?: string): Promise<void>;
+  retryJob(jobId: string, error?: ErrorInfo): Promise<void>;
 
   /**
    * Returns true if and only if all jobs have been resolved.

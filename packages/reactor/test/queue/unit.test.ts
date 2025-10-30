@@ -833,7 +833,7 @@ describe("InMemoryQueue", () => {
       // Dequeue and fail job 1
       const d1 = await queue.dequeue(job1.documentId, job1.scope, job1.branch);
       expect(d1?.job.id).toBe("job-1");
-      await queue.failJob("job-1", "Test error");
+      await queue.failJob("job-1", { message: "Test error", stack: "" });
 
       // Job 2 should still be blocked since job 1 wasn't completed
       const dequeuedJob = await queue.dequeue(
@@ -885,7 +885,10 @@ describe("InMemoryQueue", () => {
       const dequeuedJob = await queue.dequeueNext();
       expect(queue.isDrained).toBe(false);
 
-      await queue.failJob(dequeuedJob!.job.id, "Test failure");
+      await queue.failJob(dequeuedJob!.job.id, {
+        message: "Test failure",
+        stack: "",
+      });
       expect(queue.isDrained).toBe(true);
     });
 
@@ -1065,7 +1068,10 @@ describe("InMemoryQueue", () => {
 
       // Retry should fail because queue is blocked
       await expect(
-        queue.retryJob(dequeuedJob!.job.id, "Test error"),
+        queue.retryJob(dequeuedJob!.job.id, {
+          message: "Test error",
+          stack: "",
+        }),
       ).rejects.toThrow("Queue is blocked");
     });
 

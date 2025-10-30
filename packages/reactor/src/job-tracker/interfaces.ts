@@ -1,4 +1,4 @@
-import type { JobInfo } from "../shared/types.js";
+import type { ErrorInfo, JobInfo } from "../shared/types.js";
 
 /**
  * Interface for tracking job lifecycle status.
@@ -31,9 +31,9 @@ export interface IJobTracker {
    * Mark a job as failed.
    *
    * @param jobId - The job ID to mark as failed
-   * @param error - Error message describing the failure
+   * @param error - Error information including message and stack trace
    */
-  markFailed(jobId: string, error: string): void;
+  markFailed(jobId: string, error: ErrorInfo): void;
 
   /**
    * Retrieve the current status of a job.

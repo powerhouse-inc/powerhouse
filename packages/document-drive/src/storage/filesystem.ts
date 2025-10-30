@@ -19,6 +19,8 @@ import {
   mergeOperations,
   operationsToRevision,
   resolveStorageUnitsFilter,
+  setIntersection,
+  setUnion,
 } from "document-drive";
 import type { Operation, PHDocument } from "document-model";
 import { existsSync, mkdirSync } from "fs";
@@ -90,13 +92,15 @@ export class FilesystemStorage
         const ids = await this.getChildren(parentId);
         ids.forEach((id) => childrenIds.add(id));
       }
-      documents = parentIds.union(childrenIds);
+      documents = setUnion(parentIds, childrenIds);
     } else {
       documents = new Set(documentFiles);
     }
 
     // apply document id filter
-    documents = documentIds ? documentIds.intersection(documents) : documents;
+    documents = documentIds
+      ? setIntersection(documentIds, documents)
+      : documents;
 
     for (const documentId of documents) {
       const document = await this.get(documentId).catch(() => null);
