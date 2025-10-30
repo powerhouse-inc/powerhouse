@@ -2,6 +2,7 @@ import type { BaseDocumentDriveServer } from "document-drive";
 import {
   MemoryStorage,
   ReactorBuilder,
+  addFile,
   driveDocumentModelModule,
 } from "document-drive";
 import type { Action, DocumentModelModule } from "document-model";
@@ -11,6 +12,7 @@ import { beforeEach, describe, it, vi } from "vitest";
 import { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../../../src/cache/types.js";
 import { Reactor } from "../../../src/core/reactor.js";
+import type { BatchMutationRequest } from "../../../src/core/types.js";
 import { EventBus } from "../../../src/events/event-bus.js";
 import { SimpleJobExecutorManager } from "../../../src/executor/simple-job-executor-manager.js";
 import { SimpleJobExecutor } from "../../../src/executor/simple-job-executor.js";
@@ -32,6 +34,7 @@ import {
 import * as atlasModels from "@sky-ph/atlas/document-models";
 import type { Kysely } from "kysely";
 import path from "node:path";
+import { v4 as uuidv4 } from "uuid";
 
 type Database = StorageDatabase & DocumentViewDatabase;
 
@@ -78,7 +81,7 @@ function removeSynchronizationUnits(obj: any): any {
   return obj;
 }
 
-describe.skip("Atlas Recorded Operations Integration Test", () => {
+describe("Atlas Recorded Operations Integration Test", () => {
   let reactor: Reactor;
   let registry: IDocumentModelRegistry;
   let storage: MemoryStorage;
@@ -237,27 +240,71 @@ describe.skip("Atlas Recorded Operations Integration Test", () => {
             return status.status === JobStatus.COMPLETED;
           });
 
-          const addFileAction: Action = {
-            id: driveAction.id,
-            type: "ADD_FILE",
-            scope: driveAction.scope || "global",
-            timestampUtcMs: driveAction.timestampUtcMs,
+          const fileAction = addFile({
+            id: driveAction.input.id,
+            name: driveAction.input.name,
+            documentType: driveAction.input.documentType,
+            parentFolder: driveAction.input.parentFolder || null,
+          });
+
+          const addRelationshipAction = {
+            id: uuidv4(),
+            type: "ADD_RELATIONSHIP",
+            scope: "document",
+            timestampUtcMs: new Date().toISOString(),
             input: {
-              id: driveAction.input.id,
-              name: driveAction.input.name,
-              documentType: driveAction.input.documentType,
-              parentFolder: driveAction.input.parentFolder || null,
+              sourceId: driveId,
+              targetId: driveAction.input.id,
+              relationshipType: "child",
             },
           };
 
-          const jobInfo = await reactor.mutate(driveId, [addFileAction]);
+          const batchRequest: BatchMutationRequest = {
+            jobs: [
+              {
+                key: "addFile",
+                documentId: driveId,
+                scope: "global",
+                branch: "main",
+                actions: [fileAction],
+                dependsOn: [],
+              },
+              {
+                key: "linkChild",
+                documentId: driveId,
+                scope: "document",
+                branch: "main",
+                actions: [addRelationshipAction],
+                dependsOn: ["addFile"],
+              },
+            ],
+          };
+
+          const result = await reactor.mutateBatch(batchRequest);
+
           await vi.waitUntil(async () => {
-            const status = await reactor.getJobStatus(jobInfo.id);
-            if (status.status === JobStatus.FAILED) {
-              const errorMessage = status.error?.message ?? "unknown error";
+            const addFileStatus = await reactor.getJobStatus(
+              result.jobs.addFile.id,
+            );
+            const linkChildStatus = await reactor.getJobStatus(
+              result.jobs.linkChild.id,
+            );
+            if (addFileStatus.status === JobStatus.FAILED) {
+              const errorMessage =
+                addFileStatus.error?.message ?? "unknown error";
               throw new Error(`ADD_FILE action failed: ${errorMessage}`);
             }
-            return status.status === JobStatus.COMPLETED;
+            if (linkChildStatus.status === JobStatus.FAILED) {
+              const errorMessage =
+                linkChildStatus.error?.message ?? "unknown error";
+              throw new Error(
+                `ADD_RELATIONSHIP action failed: ${errorMessage}`,
+              );
+            }
+            return (
+              addFileStatus.status === JobStatus.COMPLETED &&
+              linkChildStatus.status === JobStatus.COMPLETED
+            );
           });
         } else {
           const cleanedAction = removeSynchronizationUnits(
@@ -290,7 +337,7 @@ describe.skip("Atlas Recorded Operations Integration Test", () => {
             });
 
             throw new Error(
-              `addAction failed: ${status.error?.message ?? "unknown error"}`,
+              `addAction failed: ${status.error?.message ?? "unknown error"}: ${status.error?.stack ?? "unknown stack"}`,
             );
           }
           return status.status === JobStatus.COMPLETED;
