@@ -139,12 +139,15 @@ async function startLocalVetraSwitchboard(
       disableLocalPackages: !options?.watch,
     });
 
-    // Add preview drive
-    const previewDriveUrl = await startVetraPreviewDrive(
-      switchboard.reactor,
-      port,
-      verbose,
-    );
+    // Add preview drive (only in watch mode)
+    let previewDriveUrl: string | null = null;
+    if (options?.watch) {
+      previewDriveUrl = await startVetraPreviewDrive(
+        switchboard.reactor,
+        port,
+        verbose,
+      );
+    }
 
     if (verbose) {
       console.log(blue(`[Vetra Switchboard]: Started successfully`));
@@ -161,7 +164,7 @@ async function startLocalVetraSwitchboard(
     }
     return {
       driveUrl: switchboard.defaultDriveUrl || "",
-      previewDriveUrl,
+      previewDriveUrl: previewDriveUrl,
     };
   } catch (error) {
     console.error(
@@ -225,7 +228,7 @@ export async function startVetra({
     );
     const driveUrl: string =
       switchboardResult.driveUrl || resolvedVetraUrl || "";
-    const previewDriveUrl: string = switchboardResult.previewDriveUrl;
+    const previewDriveUrl = switchboardResult.previewDriveUrl;
 
     // Configure GitHub URL if remote drive is set
     if (resolvedVetraUrl) {
@@ -250,12 +253,15 @@ export async function startVetra({
     if (!disableConnect) {
       if (verbose) {
         console.log("Starting Connect...");
-        console.log(
-          `   ➜ Connect will use drives: ${driveUrl}, ${previewDriveUrl}`,
-        );
+        const drives = previewDriveUrl
+          ? `${driveUrl}, ${previewDriveUrl}`
+          : driveUrl;
+        console.log(`   ➜ Connect will use drives: ${drives}`);
       }
       await startConnectStudio({
-        defaultDrivesUrl: [driveUrl, previewDriveUrl],
+        defaultDrivesUrl: previewDriveUrl
+          ? [driveUrl, previewDriveUrl]
+          : [driveUrl],
         drivesPreserveStrategy: "preserve-all",
         disableLocalPackage: !watch,
         devServerOptions: {
