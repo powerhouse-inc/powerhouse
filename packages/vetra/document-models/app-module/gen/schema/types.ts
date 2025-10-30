@@ -64,7 +64,7 @@ export type AppModuleState = {
   allowedDocumentTypes: Maybe<Array<Scalars["String"]["output"]>>;
   isDragAndDropEnabled: Scalars["Boolean"]["output"];
   name: Scalars["String"]["output"];
-  status: StatusType;
+  status: StatusType | `${StatusType}`;
 };
 
 export type RemoveDocumentTypeInput = {
@@ -76,7 +76,7 @@ export type SetAppNameInput = {
 };
 
 export type SetAppStatusInput = {
-  status: StatusType;
+  status: StatusType | `${StatusType}`;
 };
 
 export type SetDocumentTypesInput = {
