@@ -47,6 +47,10 @@ export function generateCommand(program: Command) {
       "-d, --drive-editor <name>",
       "Generate a drive editor with the specified name",
     )
+    .option(
+      "--allowed-document-types <types>",
+      "Supported document types for a drive editor",
+    )
     .option("--migration-file <path>", "Path to the migration file")
     .option(
       "--schema-file <path>",

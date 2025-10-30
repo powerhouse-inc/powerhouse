@@ -1,15 +1,15 @@
 ---
-to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/index.ts"
+to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/module.ts"
 force: true
 ---
 import { type EditorModule } from "document-model";
 import { Editor } from "./editor.js";
 
-export const module: EditorModule = {
+export const <%= pascalCaseDriveEditorName %>: EditorModule = {
   Component: Editor,
   documentTypes: ["powerhouse/document-drive"],
   config: {
-    id: "<%= appId %>",
+    id: "<%= appId || paramCaseDriveEditorName %>",
     name: "<%= name %>",
   },
 };
