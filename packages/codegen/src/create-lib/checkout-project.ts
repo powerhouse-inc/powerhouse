@@ -1,3 +1,4 @@
+import path from "node:path";
 import { envPackageManager, runCmd } from "./utils.js";
 
 export interface ICheckoutProjectOptions {
@@ -28,7 +29,7 @@ export function checkoutProject(options: ICheckoutProjectOptions): void {
       throw new Error("Could not determine project name from repository URL");
     }
 
-    const projectPath = process.cwd() + "/" + repoName;
+    const projectPath = path.join(process.cwd(), repoName);
     process.chdir(projectPath);
 
     console.log(

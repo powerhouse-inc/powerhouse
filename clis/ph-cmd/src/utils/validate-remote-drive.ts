@@ -11,6 +11,11 @@ export async function validateRemoteDrive(
     // Parse driveId from URL
     const driveId = remoteDriveUrl.split("/").pop();
 
+    if (!remoteDriveUrl || remoteDriveUrl.trim() === "") {
+      console.error("❌ Remote drive URL is required");
+      return false;
+    }
+
     // Construct GraphQL endpoint from base URL
     const url = new URL(remoteDriveUrl);
     const graphqlEndpoint = `${url.protocol}//${url.host}/graphql`;

@@ -232,7 +232,11 @@ export async function configureVetraGithubUrl(
 
   try {
     const graphqlEndpoint = `http://localhost:${switchboardPort}/graphql`;
-    const vetraDriveId = vetraDriveUrl.split("/").pop()!;
+    const vetraDriveId = vetraDriveUrl.split("/").pop();
+    if (!vetraDriveId) {
+      throw new Error("Invalid vetraDriveUrl: unable to extract drive ID");
+    }
+
     const documents = await getVetraDocuments(graphqlEndpoint, vetraDriveId);
 
     // Skip if already configured

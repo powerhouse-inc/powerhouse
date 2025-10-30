@@ -14,7 +14,14 @@ export async function getPackageDocument(
     const url = new URL(remoteDriveUrl);
     const graphqlEndpoint = `${url.protocol}//${url.host}/graphql`;
 
-    const documents = await getVetraDocuments(graphqlEndpoint, driveId!);
+    if (!driveId) {
+      return {
+        isValid: false,
+        error: "❌ Invalid remote drive URL: unable to extract drive ID",
+      };
+    }
+
+    const documents = await getVetraDocuments(graphqlEndpoint, driveId);
 
     // Check if no documents found
     if (documents.length === 0) {
