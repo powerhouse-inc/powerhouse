@@ -141,6 +141,14 @@ export class ReducerGenerator extends FileGenerator {
   ): void {
     const { operations, forceUpdate } = context;
     const operationHandlersObjectName = `${camelCase(context.docModel.name)}${pascalCase(context.module.name)}Operations`;
+    const legacyReducerVar = sourceFile.getVariableDeclaration("reducer");
+    if (legacyReducerVar) {
+      this.declarationManager.renameVariable(
+        sourceFile,
+        "reducer",
+        operationHandlersObjectName,
+      );
+    }
     let reducerVar = sourceFile.getVariableDeclaration(
       operationHandlersObjectName,
     );

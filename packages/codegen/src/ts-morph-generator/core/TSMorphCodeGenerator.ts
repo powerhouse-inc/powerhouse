@@ -1,4 +1,8 @@
-import { DirectoryManager, ImportManager } from "@powerhousedao/codegen";
+import {
+  DeclarationManager,
+  DirectoryManager,
+  ImportManager,
+} from "@powerhousedao/codegen";
 import type {
   DocumentModelGlobalState,
   ModuleSpecification,
@@ -43,11 +47,11 @@ export class TSMorphCodeGenerator {
   private setupGenerators(): void {
     const importManager = new ImportManager();
     const directoryManager = new DirectoryManager(this.directories);
-
+    const declarationManager = new DeclarationManager();
     // Register all generators
     this.generators.set(
       "reducers",
-      new ReducerGenerator(importManager, directoryManager),
+      new ReducerGenerator(importManager, directoryManager, declarationManager),
     );
   }
 

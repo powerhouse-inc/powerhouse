@@ -75,5 +75,6 @@ export class ImportManager {
       namedImports: [name],
       isTypeOnly,
     });
+    sourceFile.saveSync();
   }
 }

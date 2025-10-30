@@ -2,7 +2,11 @@ import type {
   CodegenOperation,
   GenerationContext,
 } from "@powerhousedao/codegen";
-import { DirectoryManager, ImportManager } from "@powerhousedao/codegen";
+import {
+  DeclarationManager,
+  DirectoryManager,
+  ImportManager,
+} from "@powerhousedao/codegen";
 import { Project } from "ts-morph";
 import { beforeEach, describe, expect, it } from "vitest";
 import { ReducerGenerator } from "../core/ReducerGenerator.js";
@@ -37,13 +41,19 @@ describe("ReducerGenerator Integration", () => {
   let project: Project;
   let importManager: ImportManager;
   let directoryManager: TestDirectoryManager;
+  let declarationManager: DeclarationManager;
 
   beforeEach(() => {
     // Use real instances with in-memory file system
     project = new Project({ useInMemoryFileSystem: true });
     importManager = new ImportManager();
     directoryManager = new TestDirectoryManager();
-    generator = new ReducerGenerator(importManager, directoryManager);
+    declarationManager = new DeclarationManager();
+    generator = new ReducerGenerator(
+      importManager,
+      directoryManager,
+      declarationManager,
+    );
   });
 
   describe("generate", () => {
