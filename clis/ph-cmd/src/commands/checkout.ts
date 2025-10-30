@@ -1,8 +1,9 @@
-import { checkoutProject } from "@powerhousedao/codegen";
+import { cloneRepository, installDependencies } from "@powerhousedao/codegen";
 import type { Command } from "commander";
 import { checkoutHelp } from "../help.js";
 import type { CommandActionType } from "../types.js";
 import { withCustomHelp } from "../utils/index.js";
+import { getPackageManagerFromLockfile } from "../utils/package-manager.js";
 import { getPackageDocument } from "../utils/validate-remote-drive-checkout.js";
 
 export type CheckoutOptions = {
@@ -24,11 +25,17 @@ export const checkout: CommandActionType<[CheckoutOptions]> = async (
       process.exit(1);
     }
 
-    // Clone repository and install dependencies
-    checkoutProject({
-      repositoryUrl: packageDocument.githubUrl!,
-      packageManager: options.packageManager,
-    });
+    // Clone repository
+    const projectPath = cloneRepository(packageDocument.githubUrl!);
+
+    // Detect package manager from lock files or use user-provided one
+    const detectedPackageManager = getPackageManagerFromLockfile(projectPath);
+    const packageManager = options.packageManager ?? detectedPackageManager;
+
+    // Install dependencies
+    installDependencies(projectPath, packageManager);
+
+    console.log("\x1b[32m", "Checkout completed successfully!", "\x1b[0m");
   } catch (error) {
     console.error(
       "Failed to checkout the project",
