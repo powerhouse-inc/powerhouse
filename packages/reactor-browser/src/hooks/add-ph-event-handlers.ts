@@ -16,6 +16,8 @@ import {
   addIsAddLocalDrivesEnabledEventHandler,
   addIsAddPublicDrivesEnabledEventHandler,
   addIsAnalyticsDatabaseWorkerEnabledEventHandler,
+  addIsAnalyticsEnabledEventHandler,
+  addIsAnalyticsExternalProcessorsEnabledEventHandler,
   addIsCloudDrivesEnabledEventHandler,
   addIsDeleteCloudDrivesEnabledEventHandler,
   addIsDeleteLocalDrivesEnabledEventHandler,
@@ -27,8 +29,10 @@ import {
   addIsEditorReadModeEnabledEventHandler,
   addIsExternalPackagesEnabledEventHandler,
   addIsExternalProcessorsEnabledEventHandler,
+  addIsExternalRelationalProcessorsEnabledEventHandler,
   addIsLocalDrivesEnabledEventHandler,
   addIsPublicDrivesEnabledEventHandler,
+  addIsRelationalProcessorsEnabledEventHandler,
   addIsSentryTracingEnabledEventHandler,
   addLogLevelEventHandler,
   addRenownChainIdEventHandler,
@@ -118,6 +122,12 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   isExternalControlsEnabled: addIsExternalControlsEnabledEventHandler,
   isEditorDebugModeEnabled: addIsEditorDebugModeEnabledEventHandler,
   isEditorReadModeEnabled: addIsEditorReadModeEnabledEventHandler,
+  isRelationalProcessorsEnabled: addIsRelationalProcessorsEnabledEventHandler,
+  isExternalRelationalProcessorsEnabled:
+    addIsExternalRelationalProcessorsEnabledEventHandler,
+  isAnalyticsEnabled: addIsAnalyticsEnabledEventHandler,
+  isAnalyticsExternalProcessorsEnabled:
+    addIsAnalyticsExternalProcessorsEnabledEventHandler,
   analyticsDatabaseName: addAnalyticsDatabaseNameEventHandler,
   isAnalyticsDatabaseWorkerEnabled:
     addIsAnalyticsDatabaseWorkerEnabledEventHandler,

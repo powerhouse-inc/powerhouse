@@ -1,5 +1,5 @@
-import type { IStorage } from "@powerhousedao/connect";
-import { BaseStorage } from "@powerhousedao/connect";
+import type { IStorage } from "@powerhousedao/connect/services/storage/base-storage";
+import { BaseStorage } from "@powerhousedao/connect/services/storage/base-storage";
 import { connectConfig } from "@powerhousedao/connect/config";
 
 const store: IStorage = {

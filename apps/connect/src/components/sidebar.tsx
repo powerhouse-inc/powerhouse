@@ -1,4 +1,4 @@
-import { DriveIcon } from "@powerhousedao/connect";
+import { DriveIcon } from "@powerhousedao/connect/components/drive-icon";
 import { connectConfig } from "@powerhousedao/connect/config";
 import {
   ConnectSidebar,

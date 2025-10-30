@@ -1,4 +1,5 @@
-import { ModalsContainer, Sidebar } from "@powerhousedao/connect";
+import { ModalsContainer } from "@powerhousedao/connect/components/modal/modals-container";
+import { Sidebar } from "@powerhousedao/connect/components/sidebar";
 import { Suspense } from "react";
 import { Outlet } from "react-router-dom";
 

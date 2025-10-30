@@ -36,6 +36,71 @@
       "import": "./lib/src/connect.config.js",
       "types": "./lib/src/connect.config.d.ts"
     },
+    "./components": {
+      "source": "./src/components/index.ts",
+      "import": "./lib/src/components/index.js",
+      "types": "./lib/src/components/index.d.ts"
+    },
+    "./hooks": {
+      "source": "./src/hooks/index.ts",
+      "import": "./lib/src/hooks/index.js",
+      "types": "./lib/src/hooks/index.d.ts"
+    },
+    "./services": {
+      "source": "./src/services/index.ts",
+      "import": "./lib/src/services/index.js",
+      "types": "./lib/src/services/index.d.ts"
+    },
+    "./store": {
+      "source": "./src/store/index.ts",
+      "import": "./lib/src/store/index.js",
+      "types": "./lib/src/store/index.d.ts"
+    },
+    "./context": {
+      "source": "./src/context/index.ts",
+      "import": "./lib/src/context/index.js",
+      "types": "./lib/src/context/index.d.ts"
+    },
+    "./utils": {
+      "source": "./src/utils/index.ts",
+      "import": "./lib/src/utils/index.js",
+      "types": "./lib/src/utils/index.d.ts"
+    },
+    "./components/*": {
+      "source": "./src/components/*",
+      "import": "./lib/src/components/*.js",
+      "types": "./lib/src/components/*.d.ts"
+    },
+    "./hooks/*": {
+      "source": "./src/hooks/*",
+      "import": "./lib/src/hooks/*.js",
+      "types": "./lib/src/hooks/*.d.ts"
+    },
+    "./services/*": {
+      "source": "./src/services/*",
+      "import": "./lib/src/services/*.js",
+      "types": "./lib/src/services/*.d.ts"
+    },
+    "./store/*": {
+      "source": "./src/store/*",
+      "import": "./lib/src/store/*.js",
+      "types": "./lib/src/store/*.d.ts"
+    },
+    "./context/*": {
+      "source": "./src/context/*",
+      "import": "./lib/src/context/*.js",
+      "types": "./lib/src/context/*.d.ts"
+    },
+    "./utils/*": {
+      "source": "./src/utils/*",
+      "import": "./lib/src/utils/*.js",
+      "types": "./lib/src/utils/*.d.ts"
+    },
+    "./pages/*": {
+      "source": "./src/pages/*",
+      "import": "./lib/src/pages/*.js",
+      "types": "./lib/src/pages/*.d.ts"
+    },
     "./custom.d.ts": "./lib/custom.d.ts",
     "./style.css": "./src/index.css",
     "./assets/*.mp4": "./assets/*.mp4",
@@ -48,6 +113,7 @@
     "./assets/*.avif": "./assets/*.avif",
     "./public/icon.ico": "./public/icon.ico"
   },
+  "sideEffects": false,
   "license": "AGPL-3.0-only",
   "author": "powerhouse.inc",
   "repository": {
@@ -64,6 +130,7 @@
     "postinstall": "cp ./package.json ./package.copy.json",
     "dev": "vite dev",
     "build:vite": "vite build",
+    "build:debug": "PH_DEBUG_BUILD=true vite build",
     "preview": "vite preview",
     "cy:open": "cypress open",
     "docker:build": "docker build -f ./Dockerfile --tag connect-test-dev --build-arg TAG=dev .",
@@ -110,6 +177,7 @@
   },
   "devDependencies": {
     "@types/cypress": "^1.1.6",
-    "cypress": "^14.5.4"
+    "cypress": "^14.5.4",
+    "vite-bundle-analyzer": "^1.2.3"
   }
 }

@@ -1,4 +1,4 @@
-import { serviceWorkerManager } from "@powerhousedao/connect";
+import { serviceWorkerManager } from "@powerhousedao/connect/utils";
 import { connectConfig } from "@powerhousedao/connect/config";
 import {
   Combobox,

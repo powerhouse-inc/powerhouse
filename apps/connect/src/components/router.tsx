@@ -1,5 +1,7 @@
-import { AtlasImport, Content, Root } from "@powerhousedao/connect";
+import { AtlasImport } from "@powerhousedao/connect/components/demo/atlas-import";
+import { Root } from "@powerhousedao/connect/components/root";
 import { connectConfig } from "@powerhousedao/connect/config";
+import { Content } from "@powerhousedao/connect/pages/content";
 import { Suspense } from "react";
 import type { RouteObject } from "react-router-dom";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
