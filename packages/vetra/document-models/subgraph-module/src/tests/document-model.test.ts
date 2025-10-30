@@ -3,10 +3,13 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
+import {
+  reducer,
+  setSubgraphName,
+  setSubgraphStatus,
+  utils,
+} from "@powerhousedao/vetra/document-models/subgraph-module";
 import { describe, expect, it } from "vitest";
-import * as creators from "../../gen/base-operations/creators.js";
-import { reducer } from "../../gen/reducer.js";
-import utils from "../../gen/utils.js";
 
 describe("Subgraph Module Document Model", () => {
   it("should have correct initial values", () => {
@@ -21,11 +24,11 @@ describe("Subgraph Module Document Model", () => {
 
     let updatedDoc = reducer(
       document,
-      creators.setSubgraphName({ name: "Test Subgraph" }),
+      setSubgraphName({ name: "Test Subgraph" }),
     );
     updatedDoc = reducer(
       updatedDoc,
-      creators.setSubgraphStatus({ status: "CONFIRMED" }),
+      setSubgraphStatus({ status: "CONFIRMED" }),
     );
 
     // Verify state consistency
@@ -39,14 +42,14 @@ describe("Subgraph Module Document Model", () => {
     // Step 1: Set subgraph name
     let updatedDoc = reducer(
       document,
-      creators.setSubgraphName({ name: "Production Subgraph" }),
+      setSubgraphName({ name: "Production Subgraph" }),
     );
     expect(updatedDoc.state.global.name).toBe("Production Subgraph");
 
     // Step 2: Confirm subgraph status
     updatedDoc = reducer(
       updatedDoc,
-      creators.setSubgraphStatus({ status: "CONFIRMED" }),
+      setSubgraphStatus({ status: "CONFIRMED" }),
     );
     expect(updatedDoc.state.global.status).toBe("CONFIRMED");
 

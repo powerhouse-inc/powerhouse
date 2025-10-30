@@ -4,10 +4,15 @@
  */
 
 import { describe, expect, it } from "vitest";
-import * as baseCreators from "../../gen/base-operations/creators.js";
-import * as dndCreators from "../../gen/dnd-operations/creators.js";
-import { reducer } from "../../gen/reducer.js";
-import utils from "../../gen/utils.js";
+import {
+  addDocumentType,
+  reducer,
+  removeDocumentType,
+  setAppName,
+  setAppStatus,
+  setDragAndDropEnabled,
+  utils,
+} from "@powerhousedao/vetra/document-models/app-module";
 
 describe("App Module Document Model", () => {
   it("should have correct initial values", () => {
@@ -22,17 +27,11 @@ describe("App Module Document Model", () => {
   it("should handle multiple operations and maintain consistency", () => {
     const document = utils.createDocument();
 
-    let updatedDoc = reducer(
-      document,
-      baseCreators.setAppName({ name: "Test App" }),
-    );
+    let updatedDoc = reducer(document, setAppName({ name: "Test App" }));
+    updatedDoc = reducer(updatedDoc, setAppStatus({ status: "CONFIRMED" }));
     updatedDoc = reducer(
       updatedDoc,
-      baseCreators.setAppStatus({ status: "CONFIRMED" }),
-    );
-    updatedDoc = reducer(
-      updatedDoc,
-      baseCreators.addDocumentType({
+      addDocumentType({
         documentType: "powerhouse/test",
       }),
     );
@@ -50,36 +49,33 @@ describe("App Module Document Model", () => {
       // Add some document types first
       let updatedDoc = reducer(
         document,
-        baseCreators.addDocumentType({ documentType: "powerhouse/type1" }),
+        addDocumentType({ documentType: "powerhouse/type1" }),
       );
       updatedDoc = reducer(
         updatedDoc,
-        baseCreators.addDocumentType({ documentType: "powerhouse/type2" }),
+        addDocumentType({ documentType: "powerhouse/type2" }),
       );
 
       // Disable drag and drop
       updatedDoc = reducer(
         updatedDoc,
-        dndCreators.setDragAndDropEnabled({ enabled: false }),
+        setDragAndDropEnabled({ enabled: false }),
       );
       expect(updatedDoc.state.global.isDragAndDropEnabled).toBe(false);
 
       // Remove all document types
       updatedDoc = reducer(
         updatedDoc,
-        baseCreators.removeDocumentType({ documentType: "powerhouse/type1" }),
+        removeDocumentType({ documentType: "powerhouse/type1" }),
       );
       updatedDoc = reducer(
         updatedDoc,
-        baseCreators.removeDocumentType({ documentType: "powerhouse/type2" }),
+        removeDocumentType({ documentType: "powerhouse/type2" }),
       );
       expect(updatedDoc.state.global.allowedDocumentTypes).toEqual([]);
 
       // Set as confirmed to "lock" it
-      updatedDoc = reducer(
-        updatedDoc,
-        baseCreators.setAppStatus({ status: "CONFIRMED" }),
-      );
+      updatedDoc = reducer(updatedDoc, setAppStatus({ status: "CONFIRMED" }));
 
       // Verify locked configuration
       expect(updatedDoc.state.global.isDragAndDropEnabled).toBe(false);
@@ -96,19 +92,19 @@ describe("App Module Document Model", () => {
       // Add new types from scratch
       let updatedDoc = reducer(
         document,
-        baseCreators.addDocumentType({
+        addDocumentType({
           documentType: "powerhouse/new1",
         }),
       );
       updatedDoc = reducer(
         updatedDoc,
-        baseCreators.addDocumentType({
+        addDocumentType({
           documentType: "powerhouse/new2",
         }),
       );
       updatedDoc = reducer(
         updatedDoc,
-        baseCreators.addDocumentType({
+        addDocumentType({
           documentType: "powerhouse/new3",
         }),
       );
@@ -138,29 +134,29 @@ describe("App Module Document Model", () => {
       // Add multiple types
       let updatedDoc = reducer(
         document,
-        baseCreators.addDocumentType({ documentType: "type-a" }),
+        addDocumentType({ documentType: "type-a" }),
       );
       updatedDoc = reducer(
         updatedDoc,
-        baseCreators.addDocumentType({ documentType: "type-b" }),
+        addDocumentType({ documentType: "type-b" }),
       );
       updatedDoc = reducer(
         updatedDoc,
-        baseCreators.addDocumentType({ documentType: "type-c" }),
+        addDocumentType({ documentType: "type-c" }),
       );
       expect(updatedDoc.state.global.allowedDocumentTypes).toHaveLength(3);
 
       // Remove middle one
       updatedDoc = reducer(
         updatedDoc,
-        baseCreators.removeDocumentType({ documentType: "type-b" }),
+        removeDocumentType({ documentType: "type-b" }),
       );
       expect(updatedDoc.state.global.allowedDocumentTypes).toHaveLength(2);
 
       // Add it back with different name
       updatedDoc = reducer(
         updatedDoc,
-        baseCreators.addDocumentType({ documentType: "type-b-new" }),
+        addDocumentType({ documentType: "type-b-new" }),
       );
       expect(updatedDoc.state.global.allowedDocumentTypes).toHaveLength(3);
 

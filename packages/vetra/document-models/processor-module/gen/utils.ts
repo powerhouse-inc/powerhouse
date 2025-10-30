@@ -12,6 +12,7 @@ import type {
 } from "./types.js";
 import type { ProcessorModulePHState } from "./types.js";
 import { reducer } from "./reducer.js";
+import { processorModuleDocumentType } from "./document-type.js";
 
 export const initialGlobalState: ProcessorModuleGlobalState = {
   name: "",
@@ -21,7 +22,7 @@ export const initialGlobalState: ProcessorModuleGlobalState = {
 };
 export const initialLocalState: ProcessorModuleLocalState = {};
 
-const utils: DocumentModelUtils<ProcessorModulePHState> = {
+export const utils: DocumentModelUtils<ProcessorModulePHState> = {
   fileExtension: ".phdm",
   createState(state) {
     return {
@@ -33,7 +34,7 @@ const utils: DocumentModelUtils<ProcessorModulePHState> = {
   createDocument(state) {
     const document = baseCreateDocument(utils.createState, state);
 
-    document.header.documentType = "powerhouse/processor";
+    document.header.documentType = processorModuleDocumentType;
 
     // for backwards compatibility, but this is NOT a valid signed document id
     document.header.id = generateId();
@@ -52,5 +53,3 @@ export const createDocument = utils.createDocument;
 export const createState = utils.createState;
 export const saveToFileHandle = utils.saveToFileHandle;
 export const loadFromInput = utils.loadFromInput;
-
-export default utils;

@@ -3,10 +3,21 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
+import {
+  addPackageKeyword,
+  reducer,
+  removePackageKeyword,
+  setPackageAuthor,
+  setPackageAuthorName,
+  setPackageAuthorWebsite,
+  setPackageCategory,
+  setPackageDescription,
+  setPackageGithubUrl,
+  setPackageName,
+  setPackageNpmUrl,
+  utils,
+} from "@powerhousedao/vetra/document-models/vetra-package";
 import { describe, expect, it } from "vitest";
-import * as creators from "../../gen/base-operations/creators.js";
-import { reducer } from "../../gen/reducer.js";
-import { utils } from "@powerhousedao/vetra/document-models/vetra-package";
 
 describe("Vetra Package Document Model", () => {
   it("should have correct initial values", () => {
@@ -29,23 +40,23 @@ describe("Vetra Package Document Model", () => {
 
     let updatedDoc = reducer(
       document,
-      creators.setPackageName({ name: "test-package" }),
+      setPackageName({ name: "test-package" }),
     );
     updatedDoc = reducer(
       updatedDoc,
-      creators.setPackageDescription({ description: "A test package" }),
+      setPackageDescription({ description: "A test package" }),
     );
     updatedDoc = reducer(
       updatedDoc,
-      creators.setPackageCategory({ category: "utility" }),
+      setPackageCategory({ category: "utility" }),
     );
     updatedDoc = reducer(
       updatedDoc,
-      creators.addPackageKeyword({ id: "kw-1", label: "react" }),
+      addPackageKeyword({ id: "kw-1", label: "react" }),
     );
     updatedDoc = reducer(
       updatedDoc,
-      creators.setPackageGithubUrl({
+      setPackageGithubUrl({
         url: "https://github.com/user/test-package",
       }),
     );
@@ -64,25 +75,22 @@ describe("Vetra Package Document Model", () => {
     const document = utils.createDocument();
 
     // Step 1: Set package metadata
-    let updatedDoc = reducer(
-      document,
-      creators.setPackageName({ name: "awesome-lib" }),
-    );
+    let updatedDoc = reducer(document, setPackageName({ name: "awesome-lib" }));
     updatedDoc = reducer(
       updatedDoc,
-      creators.setPackageDescription({
+      setPackageDescription({
         description: "An awesome library for everything",
       }),
     );
     updatedDoc = reducer(
       updatedDoc,
-      creators.setPackageCategory({ category: "library" }),
+      setPackageCategory({ category: "library" }),
     );
 
     // Step 2: Set author information
     updatedDoc = reducer(
       updatedDoc,
-      creators.setPackageAuthor({
+      setPackageAuthor({
         name: "Jane Developer",
         website: "https://janedeveloper.com",
       }),
@@ -91,27 +99,27 @@ describe("Vetra Package Document Model", () => {
     // Step 3: Add keywords
     updatedDoc = reducer(
       updatedDoc,
-      creators.addPackageKeyword({ id: "kw-1", label: "javascript" }),
+      addPackageKeyword({ id: "kw-1", label: "javascript" }),
     );
     updatedDoc = reducer(
       updatedDoc,
-      creators.addPackageKeyword({ id: "kw-2", label: "typescript" }),
+      addPackageKeyword({ id: "kw-2", label: "typescript" }),
     );
     updatedDoc = reducer(
       updatedDoc,
-      creators.addPackageKeyword({ id: "kw-3", label: "react" }),
+      addPackageKeyword({ id: "kw-3", label: "react" }),
     );
 
     // Step 4: Set repository URLs
     updatedDoc = reducer(
       updatedDoc,
-      creators.setPackageGithubUrl({
+      setPackageGithubUrl({
         url: "https://github.com/jane/awesome-lib",
       }),
     );
     updatedDoc = reducer(
       updatedDoc,
-      creators.setPackageNpmUrl({
+      setPackageNpmUrl({
         url: "https://npmjs.com/package/awesome-lib",
       }),
     );
@@ -136,7 +144,7 @@ describe("Vetra Package Document Model", () => {
       // Set full author
       let updatedDoc = reducer(
         document,
-        creators.setPackageAuthor({
+        setPackageAuthor({
           name: "John Doe",
           website: "https://johndoe.com",
         }),
@@ -149,7 +157,7 @@ describe("Vetra Package Document Model", () => {
       // Update only name
       updatedDoc = reducer(
         updatedDoc,
-        creators.setPackageAuthorName({ name: "Jane Doe" }),
+        setPackageAuthorName({ name: "Jane Doe" }),
       );
       expect(updatedDoc.state.global.author.name).toBe("Jane Doe");
       expect(updatedDoc.state.global.author.website).toBe(
@@ -159,7 +167,7 @@ describe("Vetra Package Document Model", () => {
       // Update only website
       updatedDoc = reducer(
         updatedDoc,
-        creators.setPackageAuthorWebsite({
+        setPackageAuthorWebsite({
           website: "https://janedoe.com",
         }),
       );
@@ -175,29 +183,26 @@ describe("Vetra Package Document Model", () => {
       // Add multiple keywords
       let updatedDoc = reducer(
         document,
-        creators.addPackageKeyword({ id: "kw-a", label: "react" }),
+        addPackageKeyword({ id: "kw-a", label: "react" }),
       );
       updatedDoc = reducer(
         updatedDoc,
-        creators.addPackageKeyword({ id: "kw-b", label: "vue" }),
+        addPackageKeyword({ id: "kw-b", label: "vue" }),
       );
       updatedDoc = reducer(
         updatedDoc,
-        creators.addPackageKeyword({ id: "kw-c", label: "angular" }),
+        addPackageKeyword({ id: "kw-c", label: "angular" }),
       );
       expect(updatedDoc.state.global.keywords).toHaveLength(3);
 
       // Remove middle one
-      updatedDoc = reducer(
-        updatedDoc,
-        creators.removePackageKeyword({ id: "kw-b" }),
-      );
+      updatedDoc = reducer(updatedDoc, removePackageKeyword({ id: "kw-b" }));
       expect(updatedDoc.state.global.keywords).toHaveLength(2);
 
       // Add it back with new label value
       updatedDoc = reducer(
         updatedDoc,
-        creators.addPackageKeyword({ id: "kw-b", label: "svelte" }),
+        addPackageKeyword({ id: "kw-b", label: "svelte" }),
       );
       expect(updatedDoc.state.global.keywords).toHaveLength(3);
 

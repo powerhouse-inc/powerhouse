@@ -30,10 +30,11 @@ export class ReducerGenerator extends FileGenerator {
     const typeImportPath = `${packageName}/document-models/${paramCase(context.docModel.name)}`;
 
     // Import management (shared utility)
-    this.importManager.addTypeImport(
+    this.importManager.replaceImportByName(
       sourceFile,
       typeImportName,
       typeImportPath,
+      true,
     );
 
     // AST logic (specific to reducers)

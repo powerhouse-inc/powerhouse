@@ -12,6 +12,7 @@ import type {
 } from "./types.js";
 import type { SubgraphModulePHState } from "./types.js";
 import { reducer } from "./reducer.js";
+import { subgraphModuleDocumentType } from "./document-type.js";
 
 export const initialGlobalState: SubgraphModuleGlobalState = {
   name: "",
@@ -19,7 +20,7 @@ export const initialGlobalState: SubgraphModuleGlobalState = {
 };
 export const initialLocalState: SubgraphModuleLocalState = {};
 
-const utils: DocumentModelUtils<SubgraphModulePHState> = {
+export const utils: DocumentModelUtils<SubgraphModulePHState> = {
   fileExtension: ".phdm",
   createState(state) {
     return {
@@ -31,7 +32,7 @@ const utils: DocumentModelUtils<SubgraphModulePHState> = {
   createDocument(state) {
     const document = baseCreateDocument(utils.createState, state);
 
-    document.header.documentType = "powerhouse/subgraph";
+    document.header.documentType = subgraphModuleDocumentType;
 
     // for backwards compatibility, but this is NOT a valid signed document id
     document.header.id = generateId();
@@ -50,5 +51,3 @@ export const createDocument = utils.createDocument;
 export const createState = utils.createState;
 export const saveToFileHandle = utils.saveToFileHandle;
 export const loadFromInput = utils.loadFromInput;
-
-export default utils;

@@ -1,12 +1,12 @@
 import { createAction } from "document-model/core";
 import {
-  z,
-  type SetSubgraphNameInput,
-  type SetSubgraphStatusInput,
-} from "../types.js";
-import {
-  type SetSubgraphNameAction,
-  type SetSubgraphStatusAction,
+  SetSubgraphNameInputSchema,
+  SetSubgraphStatusInputSchema,
+} from "../schema/zod.js";
+import type { SetSubgraphNameInput, SetSubgraphStatusInput } from "../types.js";
+import type {
+  SetSubgraphNameAction,
+  SetSubgraphStatusAction,
 } from "./actions.js";
 
 export const setSubgraphName = (input: SetSubgraphNameInput) =>
@@ -14,7 +14,7 @@ export const setSubgraphName = (input: SetSubgraphNameInput) =>
     "SET_SUBGRAPH_NAME",
     { ...input },
     undefined,
-    z.SetSubgraphNameInputSchema,
+    SetSubgraphNameInputSchema,
     "global",
   );
 
@@ -23,6 +23,6 @@ export const setSubgraphStatus = (input: SetSubgraphStatusInput) =>
     "SET_SUBGRAPH_STATUS",
     { ...input },
     undefined,
-    z.SetSubgraphStatusInputSchema,
+    SetSubgraphStatusInputSchema,
     "global",
   );

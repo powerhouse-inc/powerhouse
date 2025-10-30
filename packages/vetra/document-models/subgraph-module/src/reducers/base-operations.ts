@@ -1,4 +1,3 @@
-import type { SubgraphModuleBaseOperationsOperations } from "../../gen/base-operations/operations.js";
 import type { SubgraphModuleBaseOperationsOperations } from "@powerhousedao/vetra/document-models/subgraph-module";
 
 export const reducer: SubgraphModuleBaseOperationsOperations = {

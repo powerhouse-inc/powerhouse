@@ -1,4 +1,3 @@
-import type { DocumentEditorBaseOperationsOperations } from "../../gen/base-operations/operations.js";
 import type { DocumentEditorBaseOperationsOperations } from "@powerhousedao/vetra/document-models/document-editor";
 
 export const reducer: DocumentEditorBaseOperationsOperations = {

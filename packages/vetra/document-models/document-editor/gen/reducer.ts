@@ -3,12 +3,18 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import type { StateReducer } from "document-model";
 import { isDocumentAction, createReducer } from "document-model/core";
-import type { DocumentEditorPHState } from "./types.js";
-import { z } from "./types.js";
+import type { DocumentEditorPHState } from "@powerhousedao/vetra/document-models/document-editor";
 
-import { reducer as BaseOperationsReducer } from "../src/reducers/base-operations.js";
+import { documentEditorBaseOperationsOperations } from "../src/reducers/base-operations.js";
 
-export const stateReducer: StateReducer<DocumentEditorPHState> = (
+import {
+  SetEditorNameInputSchema,
+  AddDocumentTypeInputSchema,
+  RemoveDocumentTypeInputSchema,
+  SetEditorStatusInputSchema,
+} from "./schema/zod.js";
+
+const stateReducer: StateReducer<DocumentEditorPHState> = (
   state,
   action,
   dispatch,
@@ -19,8 +25,8 @@ export const stateReducer: StateReducer<DocumentEditorPHState> = (
 
   switch (action.type) {
     case "SET_EDITOR_NAME":
-      z.SetEditorNameInputSchema().parse(action.input);
-      BaseOperationsReducer.setEditorNameOperation(
+      SetEditorNameInputSchema().parse(action.input);
+      documentEditorBaseOperationsOperations.setEditorNameOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
@@ -28,8 +34,8 @@ export const stateReducer: StateReducer<DocumentEditorPHState> = (
       break;
 
     case "ADD_DOCUMENT_TYPE":
-      z.AddDocumentTypeInputSchema().parse(action.input);
-      BaseOperationsReducer.addDocumentTypeOperation(
+      AddDocumentTypeInputSchema().parse(action.input);
+      documentEditorBaseOperationsOperations.addDocumentTypeOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
@@ -37,8 +43,8 @@ export const stateReducer: StateReducer<DocumentEditorPHState> = (
       break;
 
     case "REMOVE_DOCUMENT_TYPE":
-      z.RemoveDocumentTypeInputSchema().parse(action.input);
-      BaseOperationsReducer.removeDocumentTypeOperation(
+      RemoveDocumentTypeInputSchema().parse(action.input);
+      documentEditorBaseOperationsOperations.removeDocumentTypeOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
@@ -46,8 +52,8 @@ export const stateReducer: StateReducer<DocumentEditorPHState> = (
       break;
 
     case "SET_EDITOR_STATUS":
-      z.SetEditorStatusInputSchema().parse(action.input);
-      BaseOperationsReducer.setEditorStatusOperation(
+      SetEditorStatusInputSchema().parse(action.input);
+      documentEditorBaseOperationsOperations.setEditorStatusOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,

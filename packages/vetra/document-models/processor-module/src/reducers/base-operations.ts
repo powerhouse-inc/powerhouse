@@ -1,4 +1,3 @@
-import type { ProcessorModuleBaseOperationsOperations } from "../../gen/base-operations/operations.js";
 import type { ProcessorModuleBaseOperationsOperations } from "@powerhousedao/vetra/document-models/processor-module";
 
 export const reducer: ProcessorModuleBaseOperationsOperations = {

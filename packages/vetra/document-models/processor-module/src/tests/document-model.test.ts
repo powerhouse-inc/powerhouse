@@ -3,10 +3,16 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
+import {
+  addDocumentType,
+  reducer,
+  removeDocumentType,
+  setProcessorName,
+  setProcessorStatus,
+  setProcessorType,
+  utils,
+} from "@powerhousedao/vetra/document-models/processor-module";
 import { describe, expect, it } from "vitest";
-import * as creators from "../../gen/base-operations/creators.js";
-import { reducer } from "../../gen/reducer.js";
-import utils from "../../gen/utils.js";
 
 describe("Processor Module Document Model", () => {
   it("should have correct initial values", () => {
@@ -23,22 +29,19 @@ describe("Processor Module Document Model", () => {
 
     let updatedDoc = reducer(
       document,
-      creators.setProcessorName({ name: "Test Processor" }),
+      setProcessorName({ name: "Test Processor" }),
     );
+    updatedDoc = reducer(updatedDoc, setProcessorType({ type: "analytics" }));
     updatedDoc = reducer(
       updatedDoc,
-      creators.setProcessorType({ type: "analytics" }),
-    );
-    updatedDoc = reducer(
-      updatedDoc,
-      creators.addDocumentType({
+      addDocumentType({
         id: "test-type",
         documentType: "powerhouse/test",
       }),
     );
     updatedDoc = reducer(
       updatedDoc,
-      creators.setProcessorStatus({ status: "CONFIRMED" }),
+      setProcessorStatus({ status: "CONFIRMED" }),
     );
 
     // Verify state consistency
@@ -55,27 +58,27 @@ describe("Processor Module Document Model", () => {
       // Step 1: Set processor name and type
       let updatedDoc = reducer(
         document,
-        creators.setProcessorName({ name: "Production Processor" }),
+        setProcessorName({ name: "Production Processor" }),
       );
       expect(updatedDoc.state.global.name).toBe("Production Processor");
 
       updatedDoc = reducer(
         updatedDoc,
-        creators.setProcessorType({ type: "data-analytics" }),
+        setProcessorType({ type: "data-analytics" }),
       );
       expect(updatedDoc.state.global.type).toBe("data-analytics");
 
       // Step 2: Add document types
       updatedDoc = reducer(
         updatedDoc,
-        creators.addDocumentType({
+        addDocumentType({
           id: "budget-docs",
           documentType: "powerhouse/budget",
         }),
       );
       updatedDoc = reducer(
         updatedDoc,
-        creators.addDocumentType({
+        addDocumentType({
           id: "invoice-docs",
           documentType: "powerhouse/invoice",
         }),
@@ -85,7 +88,7 @@ describe("Processor Module Document Model", () => {
       // Step 3: Confirm processor status
       updatedDoc = reducer(
         updatedDoc,
-        creators.setProcessorStatus({ status: "CONFIRMED" }),
+        setProcessorStatus({ status: "CONFIRMED" }),
       );
       expect(updatedDoc.state.global.status).toBe("CONFIRMED");
     });
@@ -96,14 +99,14 @@ describe("Processor Module Document Model", () => {
       // Add initial types
       let updatedDoc = reducer(
         document,
-        creators.addDocumentType({
+        addDocumentType({
           id: "old-type-1",
           documentType: "powerhouse/old1",
         }),
       );
       updatedDoc = reducer(
         updatedDoc,
-        creators.addDocumentType({
+        addDocumentType({
           id: "old-type-2",
           documentType: "powerhouse/old2",
         }),
@@ -113,32 +116,32 @@ describe("Processor Module Document Model", () => {
       // Remove all types
       updatedDoc = reducer(
         updatedDoc,
-        creators.removeDocumentType({ id: "old-type-1" }),
+        removeDocumentType({ id: "old-type-1" }),
       );
       updatedDoc = reducer(
         updatedDoc,
-        creators.removeDocumentType({ id: "old-type-2" }),
+        removeDocumentType({ id: "old-type-2" }),
       );
       expect(updatedDoc.state.global.documentTypes).toEqual([]);
 
       // Add new types from scratch
       updatedDoc = reducer(
         updatedDoc,
-        creators.addDocumentType({
+        addDocumentType({
           id: "new-type-1",
           documentType: "powerhouse/new1",
         }),
       );
       updatedDoc = reducer(
         updatedDoc,
-        creators.addDocumentType({
+        addDocumentType({
           id: "new-type-2",
           documentType: "powerhouse/new2",
         }),
       );
       updatedDoc = reducer(
         updatedDoc,
-        creators.addDocumentType({
+        addDocumentType({
           id: "new-type-3",
           documentType: "powerhouse/new3",
         }),
@@ -164,29 +167,26 @@ describe("Processor Module Document Model", () => {
       // Add multiple types
       let updatedDoc = reducer(
         document,
-        creators.addDocumentType({ id: "type-a", documentType: "a" }),
+        addDocumentType({ id: "type-a", documentType: "a" }),
       );
       updatedDoc = reducer(
         updatedDoc,
-        creators.addDocumentType({ id: "type-b", documentType: "b" }),
+        addDocumentType({ id: "type-b", documentType: "b" }),
       );
       updatedDoc = reducer(
         updatedDoc,
-        creators.addDocumentType({ id: "type-c", documentType: "c" }),
+        addDocumentType({ id: "type-c", documentType: "c" }),
       );
       expect(updatedDoc.state.global.documentTypes).toHaveLength(3);
 
       // Remove middle one
-      updatedDoc = reducer(
-        updatedDoc,
-        creators.removeDocumentType({ id: "type-b" }),
-      );
+      updatedDoc = reducer(updatedDoc, removeDocumentType({ id: "type-b" }));
       expect(updatedDoc.state.global.documentTypes).toHaveLength(2);
 
       // Add it back with new documentType
       updatedDoc = reducer(
         updatedDoc,
-        creators.addDocumentType({ id: "type-b", documentType: "b-new" }),
+        addDocumentType({ id: "type-b", documentType: "b-new" }),
       );
       expect(updatedDoc.state.global.documentTypes).toHaveLength(3);
 

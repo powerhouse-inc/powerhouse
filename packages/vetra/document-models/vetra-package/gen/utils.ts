@@ -12,6 +12,7 @@ import type {
 } from "./types.js";
 import type { VetraPackagePHState } from "./types.js";
 import { reducer } from "./reducer.js";
+import { vetraPackageDocumentType } from "./document-type.js";
 
 export const initialGlobalState: VetraPackageGlobalState = {
   name: null,
@@ -27,7 +28,7 @@ export const initialGlobalState: VetraPackageGlobalState = {
 };
 export const initialLocalState: VetraPackageLocalState = {};
 
-const utils: DocumentModelUtils<VetraPackagePHState> = {
+export const utils: DocumentModelUtils<VetraPackagePHState> = {
   fileExtension: ".phdm",
   createState(state) {
     return {
@@ -39,7 +40,7 @@ const utils: DocumentModelUtils<VetraPackagePHState> = {
   createDocument(state) {
     const document = baseCreateDocument(utils.createState, state);
 
-    document.header.documentType = "powerhouse/package";
+    document.header.documentType = vetraPackageDocumentType;
 
     // for backwards compatibility, but this is NOT a valid signed document id
     document.header.id = generateId();
@@ -58,5 +59,3 @@ export const createDocument = utils.createDocument;
 export const createState = utils.createState;
 export const saveToFileHandle = utils.saveToFileHandle;
 export const loadFromInput = utils.loadFromInput;
-
-export default utils;

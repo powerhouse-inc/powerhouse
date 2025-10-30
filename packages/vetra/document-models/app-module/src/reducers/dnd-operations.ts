@@ -1,4 +1,3 @@
-import type { AppModuleDndOperationsOperations } from "../../gen/dnd-operations/operations.js";
 import type { AppModuleDndOperationsOperations } from "@powerhousedao/vetra/document-models/app-module";
 
 export const reducer: AppModuleDndOperationsOperations = {

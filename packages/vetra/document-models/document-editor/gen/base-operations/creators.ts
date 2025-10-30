@@ -1,16 +1,21 @@
 import { createAction } from "document-model/core";
 import {
-  z,
-  type SetEditorNameInput,
-  type AddDocumentTypeInput,
-  type RemoveDocumentTypeInput,
-  type SetEditorStatusInput,
+  SetEditorNameInputSchema,
+  AddDocumentTypeInputSchema,
+  RemoveDocumentTypeInputSchema,
+  SetEditorStatusInputSchema,
+} from "../schema/zod.js";
+import type {
+  SetEditorNameInput,
+  AddDocumentTypeInput,
+  RemoveDocumentTypeInput,
+  SetEditorStatusInput,
 } from "../types.js";
-import {
-  type SetEditorNameAction,
-  type AddDocumentTypeAction,
-  type RemoveDocumentTypeAction,
-  type SetEditorStatusAction,
+import type {
+  SetEditorNameAction,
+  AddDocumentTypeAction,
+  RemoveDocumentTypeAction,
+  SetEditorStatusAction,
 } from "./actions.js";
 
 export const setEditorName = (input: SetEditorNameInput) =>
@@ -18,7 +23,7 @@ export const setEditorName = (input: SetEditorNameInput) =>
     "SET_EDITOR_NAME",
     { ...input },
     undefined,
-    z.SetEditorNameInputSchema,
+    SetEditorNameInputSchema,
     "global",
   );
 
@@ -27,7 +32,7 @@ export const addDocumentType = (input: AddDocumentTypeInput) =>
     "ADD_DOCUMENT_TYPE",
     { ...input },
     undefined,
-    z.AddDocumentTypeInputSchema,
+    AddDocumentTypeInputSchema,
     "global",
   );
 
@@ -36,7 +41,7 @@ export const removeDocumentType = (input: RemoveDocumentTypeInput) =>
     "REMOVE_DOCUMENT_TYPE",
     { ...input },
     undefined,
-    z.RemoveDocumentTypeInputSchema,
+    RemoveDocumentTypeInputSchema,
     "global",
   );
 
@@ -45,6 +50,6 @@ export const setEditorStatus = (input: SetEditorStatusInput) =>
     "SET_EDITOR_STATUS",
     { ...input },
     undefined,
-    z.SetEditorStatusInputSchema,
+    SetEditorStatusInputSchema,
     "global",
   );
