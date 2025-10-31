@@ -81,7 +81,7 @@ function removeSynchronizationUnits(obj: any): any {
   return obj;
 }
 
-describe("Atlas Recorded Operations Integration Test", () => {
+describe("Atlas Recorded Operations Reactor Test", () => {
   let reactor: Reactor;
   let registry: IDocumentModelRegistry;
   let storage: MemoryStorage;
@@ -173,7 +173,7 @@ describe("Atlas Recorded Operations Integration Test", () => {
   });
 
   it(
-    "should process all recorded operations without errors",
+    "should process all recorded operations without errors using Reactor",
     async () => {
       const recordedOpsContent = readFileSync(
         path.join(__dirname, "recorded-operations.json"),
@@ -351,6 +351,166 @@ describe("Atlas Recorded Operations Integration Test", () => {
           });
         }
       }
+    },
+    { timeout: 100000 },
+  );
+});
+
+describe("Atlas Recorded Operations Base Server Test", () => {
+  let driveServer: BaseDocumentDriveServer;
+  let storage: MemoryStorage;
+
+  it(
+    "should process all recorded operations without errors using base-server",
+    async ({ expect }) => {
+      storage = new MemoryStorage();
+
+      const documentModels: DocumentModelModule[] = [
+        documentModelDocumentModelModule as unknown as DocumentModelModule,
+        driveDocumentModelModule as unknown as DocumentModelModule,
+        wrapAtlasModule(atlasModels.AtlasScope),
+        wrapAtlasModule(atlasModels.AtlasFoundation),
+        wrapAtlasModule(atlasModels.AtlasGrounding),
+        wrapAtlasModule(atlasModels.AtlasExploratory),
+        wrapAtlasModule(atlasModels.AtlasMultiParent),
+        wrapAtlasModule(atlasModels.AtlasSet),
+        wrapAtlasModule(atlasModels.AtlasFeedbackIssues),
+      ];
+
+      const builder = new ReactorBuilder(documentModels).withStorage(storage);
+      driveServer = builder.build() as unknown as BaseDocumentDriveServer;
+      await driveServer.initialize();
+
+      const recordedOpsContent = readFileSync(
+        path.join(__dirname, "recorded-operations.json"),
+        "utf-8",
+      );
+      const operations: RecordedOperation[] = JSON.parse(recordedOpsContent);
+
+      const mutations = operations.filter((op) => op.type === "mutation");
+
+      console.log(`Processing ${mutations.length} mutations...`);
+
+      for (const mutation of mutations) {
+        const { name, args } = mutation;
+        if (name === "createDrive") {
+          console.log(`Creating drive: ${args.name}`);
+
+          const { id, name, slug } = args;
+          await driveServer.addDrive({
+            id,
+            slug,
+            global: {
+              name,
+              icon: "",
+            },
+            local: {
+              availableOffline: false,
+              sharingType: "PUBLIC",
+              listeners: [],
+              triggers: [],
+            },
+          });
+
+          const drive = await driveServer.getDrive(id);
+          expect(drive).toBeDefined();
+          expect(drive.header.id).toBe(id);
+        } else if (name === "addDriveAction") {
+          console.log(`Adding drive action: ${args.driveAction.type}`);
+          const { driveId, driveAction } = args;
+
+          if (driveAction.type === "ADD_FILE") {
+            const docType = driveAction.input.documentType;
+            const modules = driveServer.getDocumentModelModules();
+            const module = modules.find(
+              (m: DocumentModelModule) => m.documentModel.global.id === docType,
+            );
+
+            if (!module) {
+              throw new Error(`Document model not found for type: ${docType}`);
+            }
+
+            const fileDoc = module.utils.createDocument();
+            fileDoc.header.id = driveAction.input.id;
+            fileDoc.header.name = driveAction.input.name;
+
+            await driveServer.addDocument(fileDoc);
+
+            const fileAction = addFile({
+              id: driveAction.input.id,
+              name: driveAction.input.name,
+              documentType: driveAction.input.documentType,
+              parentFolder: driveAction.input.parentFolder || null,
+            });
+
+            const addFileResult = await driveServer.addDriveAction(
+              driveId,
+              fileAction,
+            );
+
+            if (addFileResult.status !== "SUCCESS") {
+              throw new Error(
+                `ADD_FILE action failed: ${addFileResult.error?.message ?? "unknown error"}`,
+              );
+            }
+
+            const addRelationshipAction = {
+              id: uuidv4(),
+              type: "ADD_RELATIONSHIP",
+              scope: "document",
+              timestampUtcMs: new Date().toISOString(),
+              input: {
+                sourceId: driveId,
+                targetId: driveAction.input.id,
+                relationshipType: "child",
+              },
+            };
+
+            const relationshipResult = await driveServer.addDriveAction(
+              driveId,
+              addRelationshipAction as any,
+            );
+
+            if (relationshipResult.status !== "SUCCESS") {
+              throw new Error(
+                `ADD_RELATIONSHIP action failed: ${relationshipResult.error?.message ?? "unknown error"}`,
+              );
+            }
+          } else {
+            const cleanedAction = removeSynchronizationUnits(
+              driveAction,
+            ) as Action;
+
+            const result = await driveServer.addDriveAction(
+              driveId,
+              cleanedAction,
+            );
+
+            if (result.status !== "SUCCESS") {
+              throw new Error(
+                `addDriveAction failed: ${result.error?.message ?? "unknown error"}`,
+              );
+            }
+          }
+        } else if (name === "addAction") {
+          console.log(`Adding action: ${args.action.type}`);
+
+          const { docId, action } = args;
+          const cleanedAction = removeSynchronizationUnits(action) as Action;
+
+          const result = await driveServer.addAction(docId, cleanedAction);
+
+          if (result.status !== "SUCCESS") {
+            throw new Error(
+              `addAction failed: ${result.error?.message ?? "unknown error"}`,
+            );
+          }
+        }
+      }
+
+      console.log(
+        "All operations processed successfully using base-server API",
+      );
     },
     { timeout: 100000 },
   );
