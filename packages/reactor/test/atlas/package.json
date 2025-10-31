@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run --printConsoleTrace=true --silent=false"
   },
   "keywords": [],
   "author": "",

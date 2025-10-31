@@ -172,177 +172,186 @@ describe("Atlas Recorded Operations Integration Test", () => {
     );
   });
 
-  it("should process all recorded operations without errors", async () => {
-    const recordedOpsContent = readFileSync(
-      path.join(__dirname, "recorded-operations.json"),
-      "utf-8",
-    );
-    const operations: RecordedOperation[] = JSON.parse(recordedOpsContent);
+  it(
+    "should process all recorded operations without errors",
+    async () => {
+      const recordedOpsContent = readFileSync(
+        path.join(__dirname, "recorded-operations.json"),
+        "utf-8",
+      );
+      const operations: RecordedOperation[] = JSON.parse(recordedOpsContent);
 
-    const mutations = operations.filter((op) => op.type === "mutation");
+      const mutations = operations.filter((op) => op.type === "mutation");
 
-    console.log(`Processing ${mutations.length} mutations...`);
+      console.log(`Processing ${mutations.length} mutations...`);
 
-    for (const mutation of mutations) {
-      const { name, args } = mutation;
-      if (name === "createDrive") {
-        const { id, name, slug } = args;
-        const modules = await reactor.getDocumentModels();
-        const driveModule = modules.results.find(
-          (m: DocumentModelModule) =>
-            m.documentModel.global.id === "powerhouse/document-drive",
-        );
-        if (!driveModule) {
-          throw new Error("Drive document model not found");
-        }
+      for (const mutation of mutations) {
+        const { name, args } = mutation;
+        if (name === "createDrive") {
+          console.log(`Creating drive: ${args.name}`);
 
-        const driveDoc = driveModule.utils.createDocument();
-        driveDoc.header.id = id;
-        driveDoc.header.name = name;
-        driveDoc.header.slug = slug;
-
-        const jobInfo = await reactor.create(driveDoc);
-        await vi.waitUntil(async () => {
-          const status = await reactor.getJobStatus(jobInfo.id);
-          if (status.status === JobStatus.FAILED) {
-            const errorMessage = status.error?.message ?? "unknown error";
-            throw new Error(`createDrive failed: ${errorMessage}`);
-          }
-          return status.status === JobStatus.COMPLETED;
-        });
-      } else if (name === "addDriveAction") {
-        const { driveId, driveAction } = args;
-
-        if (driveAction.type === "ADD_FILE") {
-          const docType = driveAction.input.documentType;
+          const { id, name, slug } = args;
           const modules = await reactor.getDocumentModels();
-          const module = modules.results.find(
-            (m: DocumentModelModule) => m.documentModel.global.id === docType,
+          const driveModule = modules.results.find(
+            (m: DocumentModelModule) =>
+              m.documentModel.global.id === "powerhouse/document-drive",
           );
-
-          if (!module) {
-            throw new Error(`Document model not found for type: ${docType}`);
+          if (!driveModule) {
+            throw new Error("Drive document model not found");
           }
 
-          const fileDoc = module.utils.createDocument();
-          fileDoc.header.id = driveAction.input.id;
-          fileDoc.header.name = driveAction.input.name;
+          const driveDoc = driveModule.utils.createDocument();
+          driveDoc.header.id = id;
+          driveDoc.header.name = name;
+          driveDoc.header.slug = slug;
 
-          const createJobInfo = await reactor.create(fileDoc);
-          await vi.waitUntil(async () => {
-            const status = await reactor.getJobStatus(createJobInfo.id);
-            if (status.status === JobStatus.FAILED) {
-              const errorMessage = status.error?.message ?? "unknown error";
-              throw new Error(
-                `Failed to create child document: ${errorMessage}`,
-              );
-            }
-            return status.status === JobStatus.COMPLETED;
-          });
-
-          const fileAction = addFile({
-            id: driveAction.input.id,
-            name: driveAction.input.name,
-            documentType: driveAction.input.documentType,
-            parentFolder: driveAction.input.parentFolder || null,
-          });
-
-          const addRelationshipAction = {
-            id: uuidv4(),
-            type: "ADD_RELATIONSHIP",
-            scope: "document",
-            timestampUtcMs: new Date().toISOString(),
-            input: {
-              sourceId: driveId,
-              targetId: driveAction.input.id,
-              relationshipType: "child",
-            },
-          };
-
-          const batchRequest: BatchMutationRequest = {
-            jobs: [
-              {
-                key: "addFile",
-                documentId: driveId,
-                scope: "global",
-                branch: "main",
-                actions: [fileAction],
-                dependsOn: [],
-              },
-              {
-                key: "linkChild",
-                documentId: driveId,
-                scope: "document",
-                branch: "main",
-                actions: [addRelationshipAction],
-                dependsOn: ["addFile"],
-              },
-            ],
-          };
-
-          const result = await reactor.mutateBatch(batchRequest);
-
-          await vi.waitUntil(async () => {
-            const addFileStatus = await reactor.getJobStatus(
-              result.jobs.addFile.id,
-            );
-            const linkChildStatus = await reactor.getJobStatus(
-              result.jobs.linkChild.id,
-            );
-            if (addFileStatus.status === JobStatus.FAILED) {
-              const errorMessage =
-                addFileStatus.error?.message ?? "unknown error";
-              throw new Error(`ADD_FILE action failed: ${errorMessage}`);
-            }
-            if (linkChildStatus.status === JobStatus.FAILED) {
-              const errorMessage =
-                linkChildStatus.error?.message ?? "unknown error";
-              throw new Error(
-                `ADD_RELATIONSHIP action failed: ${errorMessage}`,
-              );
-            }
-            return (
-              addFileStatus.status === JobStatus.COMPLETED &&
-              linkChildStatus.status === JobStatus.COMPLETED
-            );
-          });
-        } else {
-          const cleanedAction = removeSynchronizationUnits(
-            driveAction,
-          ) as Action;
-
-          const jobInfo = await reactor.mutate(driveId, [cleanedAction]);
+          const jobInfo = await reactor.create(driveDoc);
           await vi.waitUntil(async () => {
             const status = await reactor.getJobStatus(jobInfo.id);
             if (status.status === JobStatus.FAILED) {
               const errorMessage = status.error?.message ?? "unknown error";
-              throw new Error(`addDriveAction failed: ${errorMessage}`);
+              throw new Error(`createDrive failed: ${errorMessage}`);
+            }
+            return status.status === JobStatus.COMPLETED;
+          });
+        } else if (name === "addDriveAction") {
+          console.log(`Adding drive action: ${args.driveAction.type}`);
+          const { driveId, driveAction } = args;
+
+          if (driveAction.type === "ADD_FILE") {
+            const docType = driveAction.input.documentType;
+            const modules = await reactor.getDocumentModels();
+            const module = modules.results.find(
+              (m: DocumentModelModule) => m.documentModel.global.id === docType,
+            );
+
+            if (!module) {
+              throw new Error(`Document model not found for type: ${docType}`);
+            }
+
+            const fileDoc = module.utils.createDocument();
+            fileDoc.header.id = driveAction.input.id;
+            fileDoc.header.name = driveAction.input.name;
+
+            const createJobInfo = await reactor.create(fileDoc);
+            await vi.waitUntil(async () => {
+              const status = await reactor.getJobStatus(createJobInfo.id);
+              if (status.status === JobStatus.FAILED) {
+                const errorMessage = status.error?.message ?? "unknown error";
+                throw new Error(
+                  `Failed to create child document: ${errorMessage}`,
+                );
+              }
+              return status.status === JobStatus.COMPLETED;
+            });
+
+            const fileAction = addFile({
+              id: driveAction.input.id,
+              name: driveAction.input.name,
+              documentType: driveAction.input.documentType,
+              parentFolder: driveAction.input.parentFolder || null,
+            });
+
+            const addRelationshipAction = {
+              id: uuidv4(),
+              type: "ADD_RELATIONSHIP",
+              scope: "document",
+              timestampUtcMs: new Date().toISOString(),
+              input: {
+                sourceId: driveId,
+                targetId: driveAction.input.id,
+                relationshipType: "child",
+              },
+            };
+
+            const batchRequest: BatchMutationRequest = {
+              jobs: [
+                {
+                  key: "addFile",
+                  documentId: driveId,
+                  scope: "global",
+                  branch: "main",
+                  actions: [fileAction],
+                  dependsOn: [],
+                },
+                {
+                  key: "linkChild",
+                  documentId: driveId,
+                  scope: "document",
+                  branch: "main",
+                  actions: [addRelationshipAction],
+                  dependsOn: ["addFile"],
+                },
+              ],
+            };
+
+            const result = await reactor.mutateBatch(batchRequest);
+
+            await vi.waitUntil(async () => {
+              const addFileStatus = await reactor.getJobStatus(
+                result.jobs.addFile.id,
+              );
+              const linkChildStatus = await reactor.getJobStatus(
+                result.jobs.linkChild.id,
+              );
+              if (addFileStatus.status === JobStatus.FAILED) {
+                const errorMessage =
+                  addFileStatus.error?.message ?? "unknown error";
+                throw new Error(`ADD_FILE action failed: ${errorMessage}`);
+              }
+              if (linkChildStatus.status === JobStatus.FAILED) {
+                const errorMessage =
+                  linkChildStatus.error?.message ?? "unknown error";
+                throw new Error(
+                  `ADD_RELATIONSHIP action failed: ${errorMessage}`,
+                );
+              }
+              return (
+                addFileStatus.status === JobStatus.COMPLETED &&
+                linkChildStatus.status === JobStatus.COMPLETED
+              );
+            });
+          } else {
+            const cleanedAction = removeSynchronizationUnits(
+              driveAction,
+            ) as Action;
+
+            const jobInfo = await reactor.mutate(driveId, [cleanedAction]);
+            await vi.waitUntil(async () => {
+              const status = await reactor.getJobStatus(jobInfo.id);
+              if (status.status === JobStatus.FAILED) {
+                const errorMessage = status.error?.message ?? "unknown error";
+                throw new Error(`addDriveAction failed: ${errorMessage}`);
+              }
+              return status.status === JobStatus.COMPLETED;
+            });
+          }
+        } else if (name === "addAction") {
+          console.log(`Adding action: ${args.action.type}`);
+
+          const { docId, action } = args;
+          const cleanedAction = removeSynchronizationUnits(action) as Action;
+
+          const jobInfo = await reactor.mutate(docId, [cleanedAction]);
+          await vi.waitUntil(async () => {
+            const status = await reactor.getJobStatus(jobInfo.id);
+            if (status.status === JobStatus.FAILED) {
+              status.errorHistory?.forEach((error, index) => {
+                console.error(`[Attempt ${index + 1}] ${error.message}`);
+                console.error(
+                  `[Attempt ${index + 1}] Stack trace:\n${error.stack}`,
+                );
+              });
+
+              throw new Error(
+                `addAction failed: ${status.error?.message ?? "unknown error"}: ${status.error?.stack ?? "unknown stack"}`,
+              );
             }
             return status.status === JobStatus.COMPLETED;
           });
         }
-      } else if (name === "addAction") {
-        const { docId, action } = args;
-        const cleanedAction = removeSynchronizationUnits(action) as Action;
-
-        const jobInfo = await reactor.mutate(docId, [cleanedAction]);
-        await vi.waitUntil(async () => {
-          const status = await reactor.getJobStatus(jobInfo.id);
-          if (status.status === JobStatus.FAILED) {
-            status.errorHistory?.forEach((error, index) => {
-              console.error(`[Attempt ${index + 1}] ${error.message}`);
-              console.error(
-                `[Attempt ${index + 1}] Stack trace:\n${error.stack}`,
-              );
-            });
-
-            throw new Error(
-              `addAction failed: ${status.error?.message ?? "unknown error"}: ${status.error?.stack ?? "unknown stack"}`,
-            );
-          }
-          return status.status === JobStatus.COMPLETED;
-        });
       }
-    }
-  });
+    },
+    { timeout: 100000 },
+  );
 });
