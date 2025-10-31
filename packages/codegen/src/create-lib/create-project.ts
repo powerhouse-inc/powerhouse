@@ -3,6 +3,7 @@ import type arg from "arg";
 import enquirer from "enquirer";
 import fs from "node:fs";
 import path from "path";
+import { featureFlags } from "./feature-flags.js";
 import { envPackageManager, runCmd } from "./utils.js";
 
 const BOILERPLATE_REPO =
@@ -157,12 +158,14 @@ export async function createProject(options: ICreateProjectOptions) {
     projectName = result.projectName;
   }
 
-  const {
-    documentModelsDir,
-    editorsDir,
-  }: { documentModelsDir: string; editorsDir: string } = options.interactive
-    ? await promptDirectories(defaultDirectories)
-    : defaultDirectories;
+  let documentModelsDir = defaultDirectories.documentModelsDir;
+  let editorsDir = defaultDirectories.editorsDir;
+
+  if (featureFlags.allowCustomDirectories && options.interactive) {
+    const result = await promptDirectories(defaultDirectories);
+    documentModelsDir = result.documentModelsDir;
+    editorsDir = result.editorsDir;
+  }
 
   const appPath = path.join(process.cwd(), projectName);
 
