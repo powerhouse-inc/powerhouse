@@ -1,3 +1,20 @@
+## 4.1.0-dev.99 (2025-10-31)
+
+### 🚀 Features
+
+- **ph-cmd, codegen:** allow specifying custom boilerplate branch to checkout on init ([cd50f8d38](https://github.com/powerhouse-inc/powerhouse/commit/cd50f8d38))
+
+### 🩹 Fixes
+
+- **codegen:** disable custom directories promp by default ([a71a3d15a](https://github.com/powerhouse-inc/powerhouse/commit/a71a3d15a))
+- **connect:** reenable undo redo buttons ([c126ea768](https://github.com/powerhouse-inc/powerhouse/commit/c126ea768))
+- **connect:** fixed useCookieBanner filename ([d9e486a3f](https://github.com/powerhouse-inc/powerhouse/commit/d9e486a3f))
+- **ph-cmd, codegen:** always use tag instead of reserver argument --version ([802b0da83](https://github.com/powerhouse-inc/powerhouse/commit/802b0da83))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.98 (2025-10-31)
 
 ### 🩹 Fixes

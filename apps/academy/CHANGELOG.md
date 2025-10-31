@@ -1,3 +1,13 @@
+## 4.1.0-dev.99 (2025-10-31)
+
+### 🚀 Features
+
+- **ph-cmd, codegen:** allow specifying custom boilerplate branch to checkout on init ([cd50f8d38](https://github.com/powerhouse-inc/powerhouse/commit/cd50f8d38))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.98 (2025-10-31)
 
 This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.

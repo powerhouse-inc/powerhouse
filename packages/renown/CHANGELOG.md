@@ -1,3 +1,7 @@
+## 4.1.0-dev.99 (2025-10-31)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.98 (2025-10-31)
 
 This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.

@@ -1,3 +1,13 @@
+## 4.1.0-dev.99 (2025-10-31)
+
+### 🩹 Fixes
+
+- **connect:** reenable undo redo buttons ([c126ea768](https://github.com/powerhouse-inc/powerhouse/commit/c126ea768))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.98 (2025-10-31)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.

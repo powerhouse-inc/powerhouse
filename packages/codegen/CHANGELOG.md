@@ -1,3 +1,18 @@
+## 4.1.0-dev.99 (2025-10-31)
+
+### 🚀 Features
+
+- **ph-cmd, codegen:** allow specifying custom boilerplate branch to checkout on init ([cd50f8d38](https://github.com/powerhouse-inc/powerhouse/commit/cd50f8d38))
+
+### 🩹 Fixes
+
+- **ph-cmd, codegen:** always use tag instead of reserver argument --version ([802b0da83](https://github.com/powerhouse-inc/powerhouse/commit/802b0da83))
+- **codegen:** disable custom directories promp by default ([a71a3d15a](https://github.com/powerhouse-inc/powerhouse/commit/a71a3d15a))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.98 (2025-10-31)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
