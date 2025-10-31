@@ -1,8 +1,8 @@
-import type { BaseDocumentDriveServer } from "document-drive";
-import {
-  addFile,
-  driveDocumentModelModule,
+import type {
+  BaseDocumentDriveServer,
+  DocumentDriveDocument,
 } from "document-drive";
+import { addFile, driveDocumentModelModule } from "document-drive";
 import type { Action, DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { vi } from "vitest";
@@ -92,7 +92,8 @@ export async function processReactorMutation(
       throw new Error("Drive document model not found");
     }
 
-    const driveDoc = driveModule.utils.createDocument();
+    const driveDoc =
+      driveModule.utils.createDocument() as DocumentDriveDocument;
     driveDoc.header.id = id;
     driveDoc.header.name = name;
     driveDoc.header.slug = slug;
@@ -196,9 +197,7 @@ export async function processReactorMutation(
         if (linkChildStatus.status === JobStatus.FAILED) {
           const errorMessage =
             linkChildStatus.error?.message ?? "unknown error";
-          throw new Error(
-            `ADD_RELATIONSHIP action failed: ${errorMessage}`,
-          );
+          throw new Error(`ADD_RELATIONSHIP action failed: ${errorMessage}`);
         }
         return (
           addFileStatus.status === JobStatus.COMPLETED &&
@@ -226,11 +225,6 @@ export async function processReactorMutation(
     await vi.waitUntil(async () => {
       const status = await reactor.getJobStatus(jobInfo.id);
       if (status.status === JobStatus.FAILED) {
-        status.errorHistory?.forEach((error, index) => {
-          console.error(`[Attempt ${index + 1}] ${error.message}`);
-          console.error(`[Attempt ${index + 1}] Stack trace:\n${error.stack}`);
-        });
-
         throw new Error(
           `addAction failed: ${status.error?.message ?? "unknown error"}: ${status.error?.stack ?? "unknown stack"}`,
         );
@@ -297,29 +291,6 @@ export async function processBaseServerMutation(
       if (addFileResult.status !== "SUCCESS") {
         throw new Error(
           `ADD_FILE action failed: ${addFileResult.error?.message ?? "unknown error"}`,
-        );
-      }
-
-      const addRelationshipAction = {
-        id: uuidv4(),
-        type: "ADD_RELATIONSHIP",
-        scope: "document",
-        timestampUtcMs: new Date().toISOString(),
-        input: {
-          sourceId: driveId,
-          targetId: driveAction.input.id,
-          relationshipType: "child",
-        },
-      };
-
-      const relationshipResult = await driveServer.addDriveAction(
-        driveId,
-        addRelationshipAction as any,
-      );
-
-      if (relationshipResult.status !== "SUCCESS") {
-        throw new Error(
-          `ADD_RELATIONSHIP action failed: ${relationshipResult.error?.message ?? "unknown error"}`,
         );
       }
     } else {
