@@ -1,3 +1,7 @@
+# 5.0.0 (2025-10-31)
+
+This was a version bump only for document-drive to align it with other projects, there were no code changes.
+
 ## 4.0.6 (2025-08-14)
 
 This was a version bump only for document-drive to align it with other projects, there were no code changes.

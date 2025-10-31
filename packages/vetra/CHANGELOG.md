@@ -1,3 +1,7 @@
+# 5.0.0 (2025-10-31)
+
+This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
+
 ## 5.0.1-staging.6 (2025-10-30)
 
 ### 🚀 Features
