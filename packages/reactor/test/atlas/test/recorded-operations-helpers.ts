@@ -96,6 +96,12 @@ export async function processReactorMutation(
     driveDoc.header.id = id;
     driveDoc.header.name = name;
     driveDoc.header.slug = slug;
+    driveDoc.state.global.name = name;
+    driveDoc.state.global.icon = "";
+    driveDoc.state.local.sharingType = "PUBLIC";
+    driveDoc.state.local.availableOffline = false;
+    driveDoc.state.local.listeners = [];
+    driveDoc.state.local.triggers = [];
 
     const jobInfo = await reactor.create(driveDoc);
     await vi.waitUntil(async () => {
