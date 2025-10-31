@@ -17,7 +17,7 @@ export interface PackageJson {
 export type GlobalProjectOptions = {
   project?: string;
   interactive?: boolean;
-  version?: string;
+  tag?: string;
   dev?: boolean;
   staging?: boolean;
   packageManager?: string;
