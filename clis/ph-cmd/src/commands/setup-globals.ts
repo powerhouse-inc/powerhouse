@@ -31,7 +31,7 @@ export function setupGlobalsCommand(program: Command): Command {
     .option("-p, --project", "Name of the project")
     .option("-i, --interactive", "Run the command in interactive mode")
     .option(
-      "-v, --version",
+      "-t, --tag",
       'Specify development version to use. Defaults to "main"',
     )
     .option("--dev", 'Use "development" version of the boilerplate')

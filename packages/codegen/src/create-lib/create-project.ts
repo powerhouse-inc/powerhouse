@@ -18,18 +18,19 @@ export const createCommandSpec = {
   "--name": String,
   "--project-name": "--name",
   "--branch": String,
-  "--version": String,
+  "--tag": String,
   "--interactive": Boolean,
   "--dev": Boolean,
   "--staging": Boolean,
   "-p": "--name",
-  "-v": "--version",
+  "-b": "--branch",
+  "-t": "--tag",
   "--package-manager": String,
 } as const;
 
 export interface ICreateProjectOptions {
   name: string | undefined;
-  version: string;
+  tag: string;
   interactive: boolean;
   branch?: string;
   packageManager?: string;
@@ -105,13 +106,13 @@ export const editors = Object.values(editorsExports);
   );
 }
 
-export function parseVersion(args: {
-  version?: string;
+export function parseTag(args: {
+  tag?: string;
   dev?: boolean;
   staging?: boolean;
 }) {
-  if (args.version) {
-    return args.version;
+  if (args.tag) {
+    return args.tag;
   }
   if (args.dev) {
     return "dev";
@@ -122,9 +123,9 @@ export function parseVersion(args: {
   }
 }
 
-function parseVersionArgs(args: arg.Result<typeof createCommandSpec>) {
-  return parseVersion({
-    version: args["--version"],
+function parseTagArgs(args: arg.Result<typeof createCommandSpec>) {
+  return parseTag({
+    tag: args["--tag"],
     dev: args["--dev"],
     staging: args["--staging"],
   });
@@ -135,7 +136,7 @@ export function initCli() {
   const options: ICreateProjectOptions = {
     name: args["--name"] ?? args._.shift(),
     interactive: args["--interactive"] ?? false,
-    version: parseVersionArgs(args),
+    tag: parseTagArgs(args),
     branch: args["--branch"],
   };
   return createProject(options);
@@ -191,7 +192,7 @@ export async function createProject(options: ICreateProjectOptions) {
     projectName,
     documentModelsDir,
     editorsDir,
-    options.version,
+    options.tag,
     options.branch,
     options.packageManager,
     options.vetraDriveUrl,
@@ -202,12 +203,12 @@ function handleCreateProject(
   projectName: string,
   documentModelsDir: string,
   editorsDir: string,
-  version = "main",
+  tag = "main",
   branch?: string,
   packageManager?: string,
   vetraDriveUrl?: string,
 ) {
-  branch = branch ?? version;
+  branch = branch ?? tag;
   packageManager = packageManager ?? envPackageManager;
 
   try {
@@ -227,7 +228,7 @@ function handleCreateProject(
     runCmd(`${packageManager} install --loglevel error`);
 
     fs.rmSync(path.join(appPath, "./.git"), { recursive: true });
-    runCmd(`git init -b ${version}`);
+    runCmd(`git init -b ${tag}`);
 
     try {
       fs.mkdirSync(path.join(appPath, documentModelsDir));

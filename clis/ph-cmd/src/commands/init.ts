@@ -1,4 +1,4 @@
-import { createProject, parseVersion } from "@powerhousedao/codegen";
+import { createProject, parseTag } from "@powerhousedao/codegen";
 import type { Command } from "commander";
 import { initHelp } from "../help.js";
 import type { CommandActionType } from "../types.js";
@@ -35,8 +35,8 @@ export const init: CommandActionType<
     await createProject({
       name: options.project ?? projectName,
       interactive: options.interactive ?? false,
-      version: parseVersion({
-        version: options.tag,
+      tag: parseTag({
+        tag: options.tag,
         dev: options.dev,
         staging: options.staging,
       }),
