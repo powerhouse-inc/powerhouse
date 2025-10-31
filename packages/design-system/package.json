@@ -97,8 +97,8 @@
     "storybook-addon-pseudo-states": "^4.0.4",
     "tailwind-scrollbar": "^4.0.1",
     "tailwindcss": "^4.1.14",
-    "vite": "^7.1.9",
-    "vitest": "^3.2.4"
+    "vite": "catalog:",
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "react": "^19.2.0",

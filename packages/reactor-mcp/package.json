@@ -43,12 +43,12 @@
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "express": "^4.21.1",
-    "vite": "^7.1.9",
+    "vite": "catalog:",
     "zod": "^3.24.3"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
     "@types/node": "^24.6.1",
-    "vitest": "^3.2.4"
+    "vitest": "catalog:"
   }
 }
