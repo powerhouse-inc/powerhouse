@@ -81,9 +81,12 @@ jobs:
         id: ph-init
         run: |
           cd /tmp/ph-test-${{ matrix.package-manager }}
-          echo "Running: ph init project --${{ env.PH_TAG }} --${{ matrix.package-manager }}"
+          CMD="ph init project"
+          [ "$PH_TAG" != "latest" ] && CMD="$CMD --$PH_TAG"
+          CMD="$CMD --${{ matrix.package-manager }}"
+          echo "Running: $CMD"
           set -o pipefail
-          ph init project --${{ env.PH_TAG }} --${{ matrix.package-manager }} 2>&1 | tee ph-init.log
+          $CMD 2>&1 | tee ph-init.log
 
       - name: Parse ph init warnings
         if: always()
