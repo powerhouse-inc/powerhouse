@@ -13,7 +13,6 @@ import {
   reducer,
   utils,
   <%= isPhDocumentOfTypeFunctionName %>,
-  <%= assertIsPhDocumentOfTypeFunctionName %>,
   <% actions.forEach(action => { _%>
     <%= h.changeCase.camel(action.name) %>,
     <%= h.changeCase.pascal(action.name) %>InputSchema,
@@ -34,7 +33,6 @@ describe('<%= h.changeCase.pascal(module) %> Operations', () => {
         );
 
         expect(<%= isPhDocumentOfTypeFunctionName %>(updatedDocument)).toBe(true);
-        expect(<%= assertIsPhDocumentOfTypeFunctionName %>(updatedDocument)).not.toThrow();
         expect(updatedDocument.operations.<%= action.scope %>).toHaveLength(1);
         expect(updatedDocument.operations.<%= action.scope %>[0].action.type).toBe(
             '<%= h.changeCase.constant(action.name) %>',
