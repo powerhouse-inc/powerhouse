@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/ph-cli",
-  "version": "4.1.0-dev.94",
+  "version": "4.1.0-dev.99",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -41,6 +41,7 @@
   "dependencies": {
     "@powerhousedao/builder-tools": "workspace:*",
     "@powerhousedao/codegen": "workspace:*",
+    "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/reactor-local": "workspace:*",
     "@powerhousedao/switchboard": "workspace:*",

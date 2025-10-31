@@ -512,6 +512,7 @@ export class FilesystemStorage
           revision,
         },
         operations: mergedOperations,
+        clipboard: document.clipboard,
       }),
       {
         encoding: "utf-8",
@@ -548,6 +549,7 @@ export class FilesystemStorage
           revision,
         },
         operations: mergedOperations,
+        clipboard: document.clipboard,
       }),
       {
         encoding: "utf-8",

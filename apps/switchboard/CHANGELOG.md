@@ -1,3 +1,33 @@
+## 4.1.0-dev.99 (2025-10-31)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.98 (2025-10-31)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.97 (2025-10-30)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.96 (2025-10-30)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.95 (2025-10-30)
+
+### 🚀 Features
+
+- enabled ph init --remote-drives and ph checkout commands ([#2057](https://github.com/powerhouse-inc/powerhouse/pull/2057))
+
+### 🩹 Fixes
+
+- implement bidirectional sync and local-first architecture for remote drives in vetra ([#2053](https://github.com/powerhouse-inc/powerhouse/pull/2053))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.94 (2025-10-29)
 
 This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.

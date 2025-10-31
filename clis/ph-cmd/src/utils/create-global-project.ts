@@ -1,15 +1,15 @@
-import { createProject, parseVersion } from "@powerhousedao/codegen";
+import { createProject, parseTag } from "@powerhousedao/codegen";
 import { existsSync } from "node:fs";
-import {
-  getPackageManagerFromPath,
-  resolvePackageManagerOptions,
-} from "./package-manager.js";
 import {
   HOME_DIR,
   PH_BIN_PATH,
   PH_GLOBAL_PROJECT_NAME,
   POWERHOUSE_GLOBAL_DIR,
 } from "./constants.js";
+import {
+  getPackageManagerFromPath,
+  resolvePackageManagerOptions,
+} from "./package-manager.js";
 import type { GlobalProjectOptions } from "./types.js";
 
 export const createGlobalProject = async (
@@ -31,7 +31,7 @@ export const createGlobalProject = async (
     await createProject({
       name: PH_GLOBAL_PROJECT_NAME,
       interactive: false,
-      version: parseVersion(options),
+      tag: parseTag(options),
       packageManager:
         resolvePackageManagerOptions(options) ??
         getPackageManagerFromPath(PH_BIN_PATH),

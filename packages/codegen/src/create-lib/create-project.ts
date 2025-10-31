@@ -1,35 +1,13 @@
 import { parseArgs, promptDirectories } from "@powerhousedao/codegen";
 import type arg from "arg";
-import { execSync } from "child_process";
 import enquirer from "enquirer";
 import fs from "node:fs";
 import path from "path";
+import { featureFlags } from "./feature-flags.js";
+import { envPackageManager, runCmd } from "./utils.js";
 
 const BOILERPLATE_REPO =
   "https://github.com/powerhouse-inc/document-model-boilerplate.git";
-
-const packageManagers = ["npm", "yarn", "pnpm", "bun"] as const;
-const defaultPackageManager = "npm";
-
-type PackageManager = (typeof packageManagers)[number];
-
-function getPackageManager(userAgent?: string): PackageManager {
-  if (!userAgent) {
-    return defaultPackageManager;
-  }
-
-  const pkgSpec = userAgent.split(" ")[0];
-  const pkgSpecArr = pkgSpec.split("/");
-  const name = pkgSpecArr[0];
-
-  if (packageManagers.includes(name as PackageManager)) {
-    return name as PackageManager;
-  } else {
-    return defaultPackageManager;
-  }
-}
-
-const envPackageManager = getPackageManager(process.env.npm_config_user_agent);
 
 const defaultDirectories = {
   documentModelsDir: "./document-models",
@@ -39,20 +17,24 @@ const defaultDirectories = {
 export const createCommandSpec = {
   "--name": String,
   "--project-name": "--name",
-  "--version": String,
+  "--branch": String,
+  "--tag": String,
   "--interactive": Boolean,
   "--dev": Boolean,
   "--staging": Boolean,
   "-p": "--name",
-  "-v": "--version",
+  "-b": "--branch",
+  "-t": "--tag",
   "--package-manager": String,
 } as const;
 
 export interface ICreateProjectOptions {
   name: string | undefined;
-  version: string;
+  tag: string;
   interactive: boolean;
+  branch?: string;
   packageManager?: string;
+  vetraDriveUrl?: string;
 }
 
 const { prompt } = enquirer;
@@ -79,17 +61,27 @@ function buildPowerhouseConfig(
   appPath: string,
   documentModelsDir: string,
   editorsDir: string,
+  vetraDriveUrl?: string,
 ) {
   const filePath = path.join(appPath, "powerhouse.config.json");
   const packageJson = JSON.parse(fs.readFileSync(filePath, "utf-8")) as Record<
     string,
     any
   >;
-  const newPackage = {
+  const newPackage: Record<string, any> = {
     ...packageJson,
     documentModelsDir,
     editorsDir,
   };
+
+  // Add vetra configuration if vetraDriveUrl is provided
+  if (vetraDriveUrl) {
+    const driveId = vetraDriveUrl.split("/").pop();
+    newPackage.vetra = {
+      driveId: driveId ?? "",
+      driveUrl: vetraDriveUrl,
+    };
+  }
 
   fs.writeFileSync(filePath, JSON.stringify(newPackage, null, 2), "utf8");
 }
@@ -114,21 +106,13 @@ export const editors = Object.values(editorsExports);
   );
 }
 
-function runCmd(command: string) {
-  try {
-    execSync(command, { stdio: "inherit" });
-  } catch (error) {
-    console.log("\x1b[31m", error, "\x1b[0m");
-  }
-}
-
-export function parseVersion(args: {
-  version?: string;
+export function parseTag(args: {
+  tag?: string;
   dev?: boolean;
   staging?: boolean;
 }) {
-  if (args.version) {
-    return args.version;
+  if (args.tag) {
+    return args.tag;
   }
   if (args.dev) {
     return "dev";
@@ -139,9 +123,9 @@ export function parseVersion(args: {
   }
 }
 
-function parseVersionArgs(args: arg.Result<typeof createCommandSpec>) {
-  return parseVersion({
-    version: args["--version"],
+function parseTagArgs(args: arg.Result<typeof createCommandSpec>) {
+  return parseTag({
+    tag: args["--tag"],
     dev: args["--dev"],
     staging: args["--staging"],
   });
@@ -152,7 +136,8 @@ export function initCli() {
   const options: ICreateProjectOptions = {
     name: args["--name"] ?? args._.shift(),
     interactive: args["--interactive"] ?? false,
-    version: parseVersionArgs(args),
+    tag: parseTagArgs(args),
+    branch: args["--branch"],
   };
   return createProject(options);
 }
@@ -177,12 +162,14 @@ export async function createProject(options: ICreateProjectOptions) {
     projectName = result.projectName;
   }
 
-  const {
-    documentModelsDir,
-    editorsDir,
-  }: { documentModelsDir: string; editorsDir: string } = options.interactive
-    ? await promptDirectories(defaultDirectories)
-    : defaultDirectories;
+  let documentModelsDir = defaultDirectories.documentModelsDir;
+  let editorsDir = defaultDirectories.editorsDir;
+
+  if (featureFlags.allowCustomDirectories && options.interactive) {
+    const result = await promptDirectories(defaultDirectories);
+    documentModelsDir = result.documentModelsDir;
+    editorsDir = result.editorsDir;
+  }
 
   const appPath = path.join(process.cwd(), projectName);
 
@@ -205,8 +192,10 @@ export async function createProject(options: ICreateProjectOptions) {
     projectName,
     documentModelsDir,
     editorsDir,
-    options.version,
+    options.tag,
+    options.branch,
     options.packageManager,
+    options.vetraDriveUrl,
   );
 }
 
@@ -214,15 +203,18 @@ function handleCreateProject(
   projectName: string,
   documentModelsDir: string,
   editorsDir: string,
-  version = "main",
+  tag = "main",
+  branch?: string,
   packageManager?: string,
+  vetraDriveUrl?: string,
 ) {
+  branch = branch ?? tag;
   packageManager = packageManager ?? envPackageManager;
 
   try {
     console.log("\x1b[33m", "Downloading the project structure...", "\x1b[0m");
     runCmd(
-      `git clone --depth 1 -b ${version} ${BOILERPLATE_REPO} ${projectName}`,
+      `git clone --depth 1 -b ${branch} ${BOILERPLATE_REPO} ${projectName}`,
     );
 
     const appPath = path.join(process.cwd(), projectName);
@@ -236,7 +228,7 @@ function handleCreateProject(
     runCmd(`${packageManager} install --loglevel error`);
 
     fs.rmSync(path.join(appPath, "./.git"), { recursive: true });
-    runCmd(`git init -b ${version}`);
+    runCmd(`git init -b ${tag}`);
 
     try {
       fs.mkdirSync(path.join(appPath, documentModelsDir));
@@ -249,7 +241,12 @@ function handleCreateProject(
       }
     }
     buildPackageJson(appPath, projectName);
-    buildPowerhouseConfig(appPath, documentModelsDir, editorsDir);
+    buildPowerhouseConfig(
+      appPath,
+      documentModelsDir,
+      editorsDir,
+      vetraDriveUrl,
+    );
     buildIndex(appPath, documentModelsDir, editorsDir);
 
     console.log("\x1b[32m", "The installation is done!", "\x1b[0m");

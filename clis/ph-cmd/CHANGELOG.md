@@ -1,3 +1,45 @@
+## 4.1.0-dev.99 (2025-10-31)
+
+### 🚀 Features
+
+- **ph-cmd, codegen:** allow specifying custom boilerplate branch to checkout on init ([cd50f8d38](https://github.com/powerhouse-inc/powerhouse/commit/cd50f8d38))
+
+### 🩹 Fixes
+
+- **ph-cmd, codegen:** always use tag instead of reserver argument --version ([802b0da83](https://github.com/powerhouse-inc/powerhouse/commit/802b0da83))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.98 (2025-10-31)
+
+This was a version bump only for ph-cmd to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.97 (2025-10-30)
+
+This was a version bump only for ph-cmd to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.96 (2025-10-30)
+
+### 🩹 Fixes
+
+- **ph-cmd:** replace checkoutProject with cloneRepository and installDependencies functions ([506bcb6f0](https://github.com/powerhouse-inc/powerhouse/commit/506bcb6f0))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 4.1.0-dev.95 (2025-10-30)
+
+### 🚀 Features
+
+- enabled ph init --remote-drives and ph checkout commands ([#2057](https://github.com/powerhouse-inc/powerhouse/pull/2057))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.94 (2025-10-29)
 
 This was a version bump only for ph-cmd to align it with other projects, there were no code changes.

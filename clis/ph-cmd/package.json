@@ -1,6 +1,6 @@
 {
   "name": "ph-cmd",
-  "version": "4.1.0-dev.94",
+  "version": "4.1.0-dev.99",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -33,6 +33,7 @@
   "author": "",
   "dependencies": {
     "@powerhousedao/codegen": "workspace:*",
+    "@powerhousedao/common": "workspace:*",
     "commander": "^12.1.0"
   },
   "devDependencies": {

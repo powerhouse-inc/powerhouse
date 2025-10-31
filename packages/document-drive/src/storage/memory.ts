@@ -332,6 +332,7 @@ export class MemoryStorage
         revision,
       },
       operations: mergedOperations,
+      clipboard: document.clipboard,
     };
   }
 
@@ -358,6 +359,7 @@ export class MemoryStorage
         revision,
       },
       operations: mergedOperations,
+      clipboard: document.clipboard,
     };
   }
 

@@ -424,6 +424,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
                   *,
                   ROW_NUMBER() OVER (PARTITION BY scope ORDER BY index DESC) AS rn
               FROM "Operation"
+              WHERE "clipboard" IS NOT TRUE
               )
               SELECT
               "id",
@@ -494,11 +495,30 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
       branch: "main",
     };
 
+    // Load clipboard operations (stored with negative indices)
+    const clipboardOps = await prisma.operation.findMany({
+      where: {
+        documentId,
+        clipboard: true,
+      },
+      orderBy: {
+        index: 'desc', // desc because negative indices are reversed
+      },
+    });
+    // Restore original indices from clipboard operations
+    const clipboardOperations = clipboardOps.map((op) => {
+      const operation = operationFromStorage(op);
+      // The original index is stored as negative, restore it
+      // Note: We don't actually use the index in clipboard operations for processing,
+      // but restore it for consistency with the in-memory representation
+      return operation;
+    });
+
     const doc = {
       header,
       initialState: JSON.parse(dbDoc.initialState) as TDocument["initialState"],
       operations: operationsByScope,
-      clipboard: [],
+      clipboard: clipboardOperations,
       state: undefined as unknown as PHBaseState,
     } as PHDocument;
 
@@ -645,17 +665,27 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
       );
     }
 
-    // create the many-to-many relation
-    await this.db.drive.update({
-      where: {
-        id: parentId,
-      },
-      data: {
-        driveDocuments: {
-          create: { documentId: childId },
+    // Try to create the many-to-many relation
+    // If it already exists, the database will reject it with a unique constraint error
+    try {
+      await this.db.drive.update({
+        where: {
+          id: parentId,
         },
-      },
-    });
+        data: {
+          driveDocuments: {
+            create: { documentId: childId },
+          },
+        },
+      });
+    } catch (error) {
+      // P2002 = Unique constraint failed
+      if ((error as { code?: string }).code === "P2002") {
+        // Relationship already exists, ignore the error
+        return;
+      }
+      throw error;
+    }
   }
 
   async removeChild(parentId: string, childId: string) {
@@ -754,6 +784,38 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
             : undefined,
         })),
       });
+
+      // Delete existing clipboard operations
+      await tx.operation.deleteMany({
+        where: {
+          documentId: id,
+          clipboard: true,
+        },
+      });
+
+      // Create new clipboard operations with negative indices to avoid conflicts
+      if (document.clipboard && document.clipboard.length > 0) {
+        await tx.operation.createMany({
+          data: document.clipboard.map((op, idx) => ({
+            documentId: id,
+            hash: op.hash,
+            index: -(idx + 1), // Use negative indices to avoid conflicts with regular operations
+            actionId: op.action.id,
+            input: JSON.stringify(op.action.input),
+            timestamp: new Date(op.timestampUtcMs),
+            type: op.action.type,
+            scope: op.action.scope,
+            branch: "main",
+            opId: op.id,
+            skip: op.skip,
+            context: op.action?.context,
+            clipboard: true,
+            resultingState: op.resultingState
+              ? Buffer.from(op.resultingState)
+              : undefined,
+          })),
+        });
+      }
 
       await tx.document.update({
         where: {

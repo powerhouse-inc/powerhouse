@@ -1,3 +1,35 @@
+## 4.1.0-dev.99 (2025-10-31)
+
+### 🩹 Fixes
+
+- **connect:** reenable undo redo buttons ([c126ea768](https://github.com/powerhouse-inc/powerhouse/commit/c126ea768))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.98 (2025-10-31)
+
+This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.97 (2025-10-30)
+
+This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.96 (2025-10-30)
+
+This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.95 (2025-10-30)
+
+### 🚀 Features
+
+- enabled ph init --remote-drives and ph checkout commands ([#2057](https://github.com/powerhouse-inc/powerhouse/pull/2057))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.94 (2025-10-29)
 
 ### 🚀 Features

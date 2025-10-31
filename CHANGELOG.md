@@ -1,3 +1,69 @@
+## 4.1.0-dev.99 (2025-10-31)
+
+### 🚀 Features
+
+- **ph-cmd, codegen:** allow specifying custom boilerplate branch to checkout on init ([cd50f8d38](https://github.com/powerhouse-inc/powerhouse/commit/cd50f8d38))
+
+### 🩹 Fixes
+
+- **codegen:** disable custom directories promp by default ([a71a3d15a](https://github.com/powerhouse-inc/powerhouse/commit/a71a3d15a))
+- **connect:** reenable undo redo buttons ([c126ea768](https://github.com/powerhouse-inc/powerhouse/commit/c126ea768))
+- **connect:** fixed useCookieBanner filename ([d9e486a3f](https://github.com/powerhouse-inc/powerhouse/commit/d9e486a3f))
+- **ph-cmd, codegen:** always use tag instead of reserver argument --version ([802b0da83](https://github.com/powerhouse-inc/powerhouse/commit/802b0da83))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.98 (2025-10-31)
+
+### 🩹 Fixes
+
+- handle clipboard properly ([8f6f592c8](https://github.com/powerhouse-inc/powerhouse/commit/8f6f592c8))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 4.1.0-dev.97 (2025-10-30)
+
+### 🩹 Fixes
+
+- **ph-cli:** enable preview drive only in watch mode ([af854d2f3](https://github.com/powerhouse-inc/powerhouse/commit/af854d2f3))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 4.1.0-dev.96 (2025-10-30)
+
+### 🩹 Fixes
+
+- **ph-cli:** adjust sleep durations for better user experience during GitHub URL configuration ([266cea2f3](https://github.com/powerhouse-inc/powerhouse/commit/266cea2f3))
+- **ph-cmd:** replace checkoutProject with cloneRepository and installDependencies functions ([506bcb6f0](https://github.com/powerhouse-inc/powerhouse/commit/506bcb6f0))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 4.1.0-dev.95 (2025-10-30)
+
+### 🚀 Features
+
+- enabled ph init --remote-drives and ph checkout commands ([#2057](https://github.com/powerhouse-inc/powerhouse/pull/2057))
+
+### 🩹 Fixes
+
+- implement bidirectional sync and local-first architecture for remote drives in vetra ([#2053](https://github.com/powerhouse-inc/powerhouse/pull/2053))
+- **reactor-browser:** removed circular import ([9d334701b](https://github.com/powerhouse-inc/powerhouse/commit/9d334701b))
+- **reactor-browser:** fix circular import ([4982a5ebe](https://github.com/powerhouse-inc/powerhouse/commit/4982a5ebe))
+- **renown:** use globalThis.crypto.subtle instead of conditional import ([f3ef9a139](https://github.com/powerhouse-inc/powerhouse/commit/f3ef9a139))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.94 (2025-10-29)
 
 ### 🚀 Features

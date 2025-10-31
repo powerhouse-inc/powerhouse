@@ -378,6 +378,9 @@ importers:
       '@powerhousedao/codegen':
         specifier: workspace:*
         version: link:../../packages/codegen
+      '@powerhousedao/common':
+        specifier: workspace:*
+        version: link:../../packages/common
       '@powerhousedao/config':
         specifier: workspace:*
         version: link:../../packages/config
@@ -424,6 +427,9 @@ importers:
       '@powerhousedao/codegen':
         specifier: workspace:*
         version: link:../../packages/codegen
+      '@powerhousedao/common':
+        specifier: workspace:*
+        version: link:../../packages/common
       commander:
         specifier: ^12.1.0
         version: 12.1.0
@@ -817,6 +823,9 @@ importers:
       document-model:
         specifier: workspace:*
         version: link:../document-model
+      graphql-request:
+        specifier: ^7.2.0
+        version: 7.2.0(graphql@16.11.0)
       luxon:
         specifier: ^3.7.1
         version: 3.7.2
