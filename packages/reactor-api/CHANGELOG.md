@@ -1,3 +1,7 @@
+## 4.1.0-dev.98 (2025-10-31)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.97 (2025-10-30)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.

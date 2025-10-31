@@ -1,3 +1,13 @@
+## 4.1.0-dev.98 (2025-10-31)
+
+### 🩹 Fixes
+
+- handle clipboard properly ([8f6f592c8](https://github.com/powerhouse-inc/powerhouse/commit/8f6f592c8))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.97 (2025-10-30)
 
 ### 🩹 Fixes
