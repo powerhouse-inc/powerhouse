@@ -273,11 +273,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       sourcemap: true,
     },
     server: {
-      watch: env.PH_DISABLE_LOCAL_PACKAGE
-        ? null
-        : {
-            ignored: ["**/.ph/**"],
-          },
+      watch: env.PH_DISABLE_LOCAL_PACKAGE ? null : { ignored: ["**/.ph/**"] },
       fs: {
         strict: false,
       },

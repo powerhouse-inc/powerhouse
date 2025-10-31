@@ -17,6 +17,7 @@ import {
   setSelectedDrive,
   setSelectedNode,
   setVetraPackages,
+  type VetraPackage,
 } from "@powerhousedao/reactor-browser";
 import {
   addPHEventHandlers,
@@ -42,7 +43,10 @@ import {
   isDualActionCreateEnabled,
 } from "../../feature-flags.js";
 import { loadCommonPackage } from "./document-model.js";
-import { loadExternalPackages } from "./external-packages.js";
+import {
+  loadExternalPackages,
+  subscribeExternalPackages,
+} from "./external-packages.js";
 
 let reactorStorage: IDocumentAdminStorage | undefined;
 
@@ -55,10 +59,11 @@ export async function clearReactorStorage() {
   return !!reactorStorage;
 }
 
-async function loadVetraPackages() {
+async function updateVetraPackages(externalPackages: VetraPackage[]) {
   const commonPackage = await loadCommonPackage();
-  const externalPackages = await loadExternalPackages();
-  return [commonPackage, ...externalPackages];
+  const packages = [commonPackage, ...externalPackages];
+  setVetraPackages([commonPackage, ...externalPackages]);
+  return packages;
 }
 
 async function loadDriveFromRemoteUrl(
@@ -136,7 +141,9 @@ export async function createReactor() {
   setReactorStorage(storage);
 
   // load vetra packages
-  const vetraPackages = await loadVetraPackages();
+  const externalPackages = await loadExternalPackages();
+  const vetraPackages = await updateVetraPackages(externalPackages);
+  subscribeExternalPackages(updateVetraPackages);
 
   // get document models to set in the reactor
   const documentModelModules = vetraPackages
