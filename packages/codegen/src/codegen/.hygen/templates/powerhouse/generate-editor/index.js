@@ -4,9 +4,14 @@ const {
   capitalCase,
   camelCase,
 } = require("change-case");
+const { readdirSync, readFileSync } = require("fs");
+const { join } = require("path");
+const { getModuleExports } = require("../utils.js");
+
 // @ts-check
 module.exports = {
   params: ({ args }) => {
+    const rootDir = args.rootDir;
     const documentTypes = args.documentTypes
       .split(",")
       .map((type) => type.trim())
@@ -25,8 +30,12 @@ module.exports = {
     const pascalCaseDocumentType = pascalCase(documentType?.name);
     const paramCaseDocumentType = paramCase(documentType?.name);
     const camelCaseDocumentType = camelCase(documentType?.name);
-    const documentVariableName = documentType ? `${camelCaseDocumentType}Document` : "document";
-    const phDocumentTypeName = documentType ? `${pascalCaseDocumentType}Document` : "Document";
+    const documentVariableName = documentType
+      ? `${camelCaseDocumentType}Document`
+      : "document";
+    const phDocumentTypeName = documentType
+      ? `${pascalCaseDocumentType}Document`
+      : "Document";
     const actionTypeName = `${pascalCaseDocumentType}Action`;
     const documentModelDir = `${packageName}/document-models/${paramCaseDocumentType}`;
     const hooksDir = `${packageName}/editors/hooks`;
@@ -44,9 +53,24 @@ module.exports = {
     const useInSelectedFolderHookName = documentType
       ? `use${phDocumentTypeName}sInSelectedFolder`
       : "useDocumentsInSelectedFolder";
-    const editNameComponentName = documentType ? `Edit${pascalCaseDocumentType}Name` : "EditDocumentName";
+    const editNameComponentName = documentType
+      ? `Edit${pascalCaseDocumentType}Name`
+      : "EditDocumentName";
+    const moduleExports = getModuleExports(
+      rootDir,
+      /export\s+const\s+(\w+)\s*:\s*EditorModule\s*=/,
+      {
+        paramCaseName: paramCaseEditorName,
+        pascalCaseName: pascalCaseEditorName,
+      }
+    );
+    console.log({
+      rootDir,
+      moduleExports,
+    });
     return {
-      rootDir: args.rootDir,
+      rootDir,
+      moduleExports,
       documentModelsDir: args.documentModelsDir,
       name: args.name,
       pascalCaseEditorName,

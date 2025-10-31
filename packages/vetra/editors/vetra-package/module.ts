@@ -1,7 +1,7 @@
 import type { EditorModule } from "document-model";
 import { Editor, type EditorProps } from "./editor.js";
 
-export const module: EditorModule<EditorProps> = {
+export const VetraDriveApp: EditorModule<EditorProps> = {
   Component: Editor,
   documentTypes: ["powerhouse/package"],
   config: {

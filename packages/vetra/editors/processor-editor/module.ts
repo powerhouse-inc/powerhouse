@@ -1,7 +1,7 @@
 import type { EditorModule } from "document-model";
 import { Editor } from "./editor.js";
 
-export const module: EditorModule = {
+export const ProcessorEditor: EditorModule = {
   Component: Editor,
   documentTypes: ["powerhouse/processor"],
   config: {
@@ -9,5 +9,3 @@ export const module: EditorModule = {
     name: "Processor Module Editor",
   },
 };
-
-export default module;

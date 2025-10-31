@@ -1,7 +1,7 @@
 export const EXPECTED_INDEX_CONTENT = `import { type EditorModule } from "document-model";
 import { Editor } from "./editor.js";
 
-export const module: EditorModule = {
+export const AtlasDriveExplorer: EditorModule = {
   Component: Editor,
   documentTypes: ["powerhouse/document-drive"],
   config: {
@@ -27,13 +27,13 @@ export const EXPECTED_MAIN_INDEX_CONTENT = `/**
 * Delete the file and run the code generator again to have it reset
 */
 
-export { module as AtlasDriveExplorer } from './atlas-drive-explorer/index.js';`;
+export { AtlasDriveExplorer } from './atlas-drive-explorer/module.js';`;
 
 export const EXPECTED_HEADER_COMMENT = `/**
 * This is a scaffold file meant for customization.
 * Delete the file and run the code generator again to have it reset
 */`;
 
-export const EXPECTED_EXISTING_EDITOR_EXPORT = `export { module as ExistingEditor } from './existing-editor/index.js'`;
+export const EXPECTED_EXISTING_EDITOR_EXPORT = `export { ExistingEditor } from './existing-editor/module.js'`;
 
-export const EXPECTED_DRIVE_EXPLORER_EXPORT = `export { module as AtlasDriveExplorer } from './atlas-drive-explorer/index.js'`;
+export const EXPECTED_DRIVE_EXPLORER_EXPORT = `export { AtlasDriveExplorer } from './atlas-drive-explorer/module.js'`;

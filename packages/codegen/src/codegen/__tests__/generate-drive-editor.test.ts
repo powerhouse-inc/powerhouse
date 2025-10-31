@@ -97,7 +97,7 @@ describe("generateDriveEditor", () => {
     await compile("tsconfig.document-editor.test.json");
   });
 
-  it("should append new exports to existing index.ts file", async () => {
+  it("should append new exports to existing editors.ts file", async () => {
     const name = "Atlas Drive Explorer";
     const existingContent = `${EXPECTED_HEADER_COMMENT}
 

@@ -1,4 +1,4 @@
-export const expectedBaseOperationsContent = `import type { TestDocBaseOperationsOperations } from "@powerhousedao/codegen/document-models/test-doc";
+export const expectedBaseOperationsContent = `import type { TestDocBaseOperationsOperations } from "test/document-models/test-doc";
 
 export const testDocBaseOperationsOperations: TestDocBaseOperationsOperations = {
     setTestIdOperation(state, action) {
@@ -19,7 +19,7 @@ export const testDocBaseOperationsOperations: TestDocBaseOperationsOperations = 
     }
 };`;
 
-export const expectedProOperationsContent = `import type { TestDocProOperationsOperations } from "@powerhousedao/codegen/document-models/test-doc";
+export const expectedProOperationsContent = `import type { TestDocProOperationsOperations } from "test/document-models/test-doc";
 
 export const testDocProOperationsOperations: TestDocProOperationsOperations = {
     setNameAndValueOperation(state, action) {

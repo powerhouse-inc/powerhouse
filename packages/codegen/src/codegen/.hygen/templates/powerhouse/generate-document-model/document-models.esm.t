@@ -1,7 +1,13 @@
 ---
-inject: true
-append: true
+force: true
 to: "<%= rootDir %>/document-models.ts"
-skip_if: "<%= pascalCaseDocumentType %>"
 ---
-export { <%= pascalCaseDocumentType %> } from './<%= paramCaseDocumentType  %>/module.js';
+<% moduleExports.forEach(me => { _%>
+import { <%= me.pascalCaseName %> } from './<%= me.paramCaseName %>/module.js';
+<% }); _%>
+
+export const documentModels = [
+  <% moduleExports.forEach(me => { _%>
+<%= me.pascalCaseName %>,
+<% }); _%>
+]

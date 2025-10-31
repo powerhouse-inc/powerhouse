@@ -1,6 +1,6 @@
 // @ts-check
 const { paramCase, pascalCase, camelCase } = require("change-case");
-
+const { getModuleExports } = require("../utils.js");
 function documentModelToString(documentModel) {
   return JSON.stringify(
     {
@@ -56,6 +56,14 @@ module.exports = {
     const useSelectedHookName = `useSelected${phDocumentTypeName}`;
     const useInSelectedDriveHookName = `use${phDocumentTypeName}sInSelectedDrive`;
     const useInSelectedFolderHookName = `use${phDocumentTypeName}sInSelectedFolder`;
+    const moduleExports = getModuleExports(
+      rootDir,
+      /export\s+const\s+(\w+)\s*:\s*DocumentModelModule\s*<[^>]*>\s*=/,
+      {
+        paramCaseName: paramCaseDocumentType,
+        pascalCaseName: pascalCaseDocumentType,
+      }
+    );
     return {
       rootDir,
       packageName,
@@ -88,6 +96,7 @@ module.exports = {
         ...m,
         name: paramCase(m.name),
       })),
+      moduleExports,
       fileExtension: documentModel.extension,
       hasLocalSchema: latestSpec.state.local.schema !== "",
       ...getInitialStates(latestSpec.state),

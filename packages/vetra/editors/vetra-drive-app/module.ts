@@ -1,7 +1,7 @@
 import type { EditorModule } from "document-model";
 import { Editor } from "./editor.js";
 
-export const module: EditorModule = {
+export const VetraDriveApp: EditorModule = {
   Component: Editor,
   documentTypes: ["powerhouse/document-drive"],
   config: {
@@ -9,5 +9,3 @@ export const module: EditorModule = {
     name: "Vetra Drive App",
   },
 };
-
-export default module;

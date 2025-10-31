@@ -1,13 +1,12 @@
 import type { EditorModule } from "document-model";
 import { Editor } from "./editor.js";
 
-export const module: EditorModule = {
+/** Document editor module for the Todo List document type */
+export const AppEditor: EditorModule = {
   Component: Editor,
   documentTypes: ["powerhouse/app"],
   config: {
-    id: "app-module-editor",
-    name: "App Module Editor",
+    id: "app-editor",
+    name: "AppEditor",
   },
 };
-
-export default module;
