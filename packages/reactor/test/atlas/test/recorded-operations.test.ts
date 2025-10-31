@@ -515,3 +515,388 @@ describe("Atlas Recorded Operations Base Server Test", () => {
     { timeout: 100000 },
   );
 });
+
+describe("Atlas Recorded Operations State Comparison Test", () => {
+  let reactorDriveServer: BaseDocumentDriveServer;
+  let reactorStorage: MemoryStorage;
+  let reactor: Reactor;
+  let baseServerDriveServer: BaseDocumentDriveServer;
+  let baseServerStorage: MemoryStorage;
+  let driveIds: string[];
+
+  it(
+    "should produce identical final state in both Reactor and BaseDocumentDriveServer",
+    async ({ expect }) => {
+      reactorStorage = new MemoryStorage();
+      baseServerStorage = new MemoryStorage();
+      driveIds = [];
+
+      const documentModels: DocumentModelModule[] = [
+        documentModelDocumentModelModule as unknown as DocumentModelModule,
+        driveDocumentModelModule as unknown as DocumentModelModule,
+        wrapAtlasModule(atlasModels.AtlasScope),
+        wrapAtlasModule(atlasModels.AtlasFoundation),
+        wrapAtlasModule(atlasModels.AtlasGrounding),
+        wrapAtlasModule(atlasModels.AtlasExploratory),
+        wrapAtlasModule(atlasModels.AtlasMultiParent),
+        wrapAtlasModule(atlasModels.AtlasSet),
+        wrapAtlasModule(atlasModels.AtlasFeedbackIssues),
+      ];
+
+      const reactorBuilder = new ReactorBuilder(documentModels).withStorage(
+        reactorStorage,
+      );
+      reactorDriveServer =
+        reactorBuilder.build() as unknown as BaseDocumentDriveServer;
+      await reactorDriveServer.initialize();
+
+      const setup = await createTestOperationStore();
+      const db = setup.db as unknown as Kysely<Database>;
+      const operationStore = setup.store;
+      const keyframeStore = setup.keyframeStore;
+
+      const eventBus = new EventBus();
+      const queue = new InMemoryQueue(eventBus);
+
+      const registry = new DocumentModelRegistry();
+      registry.registerModules(...documentModels);
+
+      const writeCacheConfig: WriteCacheConfig = {
+        maxDocuments: 100,
+        ringBufferSize: 10,
+        keyframeInterval: 10,
+      };
+      const writeCache = new KyselyWriteCache(
+        keyframeStore,
+        operationStore,
+        registry,
+        writeCacheConfig,
+      );
+      await writeCache.startup();
+
+      const executor = new SimpleJobExecutor(
+        registry,
+        reactorStorage,
+        reactorStorage,
+        operationStore,
+        eventBus,
+        writeCache,
+      );
+
+      const documentView = new KyselyDocumentView(db, operationStore);
+      await documentView.init();
+      const readModelCoordinator = new ReadModelCoordinator(eventBus, [
+        documentView,
+      ]);
+
+      const jobTracker = createTestJobTracker();
+
+      const executorManager = new SimpleJobExecutorManager(
+        () => executor,
+        eventBus,
+        queue,
+        jobTracker,
+      );
+
+      await executorManager.start(1);
+
+      reactor = new Reactor(
+        reactorDriveServer,
+        reactorStorage,
+        queue,
+        jobTracker,
+        readModelCoordinator,
+      );
+
+      const baseServerBuilder = new ReactorBuilder(documentModels).withStorage(
+        baseServerStorage,
+      );
+      baseServerDriveServer =
+        baseServerBuilder.build() as unknown as BaseDocumentDriveServer;
+      await baseServerDriveServer.initialize();
+
+      const recordedOpsContent = readFileSync(
+        path.join(__dirname, "recorded-operations.json"),
+        "utf-8",
+      );
+      const operations: RecordedOperation[] = JSON.parse(recordedOpsContent);
+
+      const mutations = operations.filter((op) => op.type === "mutation");
+
+      console.log(
+        `Processing ${mutations.length} mutations through both systems...`,
+      );
+
+      for (const mutation of mutations) {
+        const { name, args } = mutation;
+
+        if (name === "createDrive") {
+          console.log(`Creating drive: ${args.name}`);
+
+          const { id, name, slug } = args;
+          driveIds.push(id);
+
+          const modules = await reactor.getDocumentModels();
+          const driveModule = modules.results.find(
+            (m: DocumentModelModule) =>
+              m.documentModel.global.id === "powerhouse/document-drive",
+          );
+          if (!driveModule) {
+            throw new Error("Drive document model not found");
+          }
+
+          const reactorDriveDoc = driveModule.utils.createDocument();
+          reactorDriveDoc.header.id = id;
+          reactorDriveDoc.header.name = name;
+          reactorDriveDoc.header.slug = slug;
+
+          const jobInfo = await reactor.create(reactorDriveDoc);
+          await vi.waitUntil(async () => {
+            const status = await reactor.getJobStatus(jobInfo.id);
+            if (status.status === JobStatus.FAILED) {
+              const errorMessage = status.error?.message ?? "unknown error";
+              throw new Error(`createDrive failed: ${errorMessage}`);
+            }
+            return status.status === JobStatus.COMPLETED;
+          });
+
+          await baseServerDriveServer.addDrive({
+            id,
+            slug,
+            global: {
+              name,
+              icon: "",
+            },
+            local: {
+              availableOffline: false,
+              sharingType: "PUBLIC",
+              listeners: [],
+              triggers: [],
+            },
+          });
+        } else if (name === "addDriveAction") {
+          console.log(`Adding drive action: ${args.driveAction.type}`);
+          const { driveId, driveAction } = args;
+
+          if (driveAction.type === "ADD_FILE") {
+            const docType = driveAction.input.documentType;
+            const modules = await reactor.getDocumentModels();
+            const module = modules.results.find(
+              (m: DocumentModelModule) => m.documentModel.global.id === docType,
+            );
+
+            if (!module) {
+              throw new Error(`Document model not found for type: ${docType}`);
+            }
+
+            const reactorFileDoc = module.utils.createDocument();
+            reactorFileDoc.header.id = driveAction.input.id;
+            reactorFileDoc.header.name = driveAction.input.name;
+
+            const createJobInfo = await reactor.create(reactorFileDoc);
+            await vi.waitUntil(async () => {
+              const status = await reactor.getJobStatus(createJobInfo.id);
+              if (status.status === JobStatus.FAILED) {
+                const errorMessage = status.error?.message ?? "unknown error";
+                throw new Error(
+                  `Failed to create child document: ${errorMessage}`,
+                );
+              }
+              return status.status === JobStatus.COMPLETED;
+            });
+
+            const baseServerFileDoc = module.utils.createDocument();
+            baseServerFileDoc.header.id = driveAction.input.id;
+            baseServerFileDoc.header.name = driveAction.input.name;
+
+            await baseServerDriveServer.addDocument(baseServerFileDoc);
+
+            const fileAction = addFile({
+              id: driveAction.input.id,
+              name: driveAction.input.name,
+              documentType: driveAction.input.documentType,
+              parentFolder: driveAction.input.parentFolder || null,
+            });
+
+            const addRelationshipAction = {
+              id: uuidv4(),
+              type: "ADD_RELATIONSHIP",
+              scope: "document",
+              timestampUtcMs: new Date().toISOString(),
+              input: {
+                sourceId: driveId,
+                targetId: driveAction.input.id,
+                relationshipType: "child",
+              },
+            };
+
+            const batchRequest: BatchMutationRequest = {
+              jobs: [
+                {
+                  key: "addFile",
+                  documentId: driveId,
+                  scope: "global",
+                  branch: "main",
+                  actions: [fileAction],
+                  dependsOn: [],
+                },
+                {
+                  key: "linkChild",
+                  documentId: driveId,
+                  scope: "document",
+                  branch: "main",
+                  actions: [addRelationshipAction],
+                  dependsOn: ["addFile"],
+                },
+              ],
+            };
+
+            const result = await reactor.mutateBatch(batchRequest);
+
+            await vi.waitUntil(async () => {
+              const addFileStatus = await reactor.getJobStatus(
+                result.jobs.addFile.id,
+              );
+              const linkChildStatus = await reactor.getJobStatus(
+                result.jobs.linkChild.id,
+              );
+              if (addFileStatus.status === JobStatus.FAILED) {
+                const errorMessage =
+                  addFileStatus.error?.message ?? "unknown error";
+                throw new Error(`ADD_FILE action failed: ${errorMessage}`);
+              }
+              if (linkChildStatus.status === JobStatus.FAILED) {
+                const errorMessage =
+                  linkChildStatus.error?.message ?? "unknown error";
+                throw new Error(
+                  `ADD_RELATIONSHIP action failed: ${errorMessage}`,
+                );
+              }
+              return (
+                addFileStatus.status === JobStatus.COMPLETED &&
+                linkChildStatus.status === JobStatus.COMPLETED
+              );
+            });
+
+            const addFileResult = await baseServerDriveServer.addDriveAction(
+              driveId,
+              fileAction,
+            );
+
+            if (addFileResult.status !== "SUCCESS") {
+              throw new Error(
+                `ADD_FILE action failed: ${addFileResult.error?.message ?? "unknown error"}`,
+              );
+            }
+
+            const relationshipResult =
+              await baseServerDriveServer.addDriveAction(
+                driveId,
+                addRelationshipAction as any,
+              );
+
+            if (relationshipResult.status !== "SUCCESS") {
+              throw new Error(
+                `ADD_RELATIONSHIP action failed: ${relationshipResult.error?.message ?? "unknown error"}`,
+              );
+            }
+          } else {
+            const cleanedAction = removeSynchronizationUnits(
+              driveAction,
+            ) as Action;
+
+            const jobInfo = await reactor.mutate(driveId, [cleanedAction]);
+            await vi.waitUntil(async () => {
+              const status = await reactor.getJobStatus(jobInfo.id);
+              if (status.status === JobStatus.FAILED) {
+                const errorMessage = status.error?.message ?? "unknown error";
+                throw new Error(`addDriveAction failed: ${errorMessage}`);
+              }
+              return status.status === JobStatus.COMPLETED;
+            });
+
+            const result = await baseServerDriveServer.addDriveAction(
+              driveId,
+              cleanedAction,
+            );
+
+            if (result.status !== "SUCCESS") {
+              throw new Error(
+                `addDriveAction failed: ${result.error?.message ?? "unknown error"}`,
+              );
+            }
+          }
+        } else if (name === "addAction") {
+          console.log(`Adding action: ${args.action.type}`);
+
+          const { docId, action } = args;
+          const cleanedAction = removeSynchronizationUnits(action) as Action;
+
+          const jobInfo = await reactor.mutate(docId, [cleanedAction]);
+          await vi.waitUntil(async () => {
+            const status = await reactor.getJobStatus(jobInfo.id);
+            if (status.status === JobStatus.FAILED) {
+              status.errorHistory?.forEach((error, index) => {
+                console.error(`[Attempt ${index + 1}] ${error.message}`);
+                console.error(
+                  `[Attempt ${index + 1}] Stack trace:\n${error.stack}`,
+                );
+              });
+
+              throw new Error(
+                `addAction failed: ${status.error?.message ?? "unknown error"}: ${status.error?.stack ?? "unknown stack"}`,
+              );
+            }
+            return status.status === JobStatus.COMPLETED;
+          });
+
+          const result = await baseServerDriveServer.addAction(
+            docId,
+            cleanedAction,
+          );
+
+          if (result.status !== "SUCCESS") {
+            throw new Error(
+              `addAction failed: ${result.error?.message ?? "unknown error"}`,
+            );
+          }
+        }
+      }
+
+      console.log("All operations completed. Comparing final states...");
+
+      for (const driveId of driveIds) {
+        console.log(`Comparing drive: ${driveId}`);
+
+        const reactorDrive = await reactorDriveServer.getDrive(driveId);
+        const baseServerDrive = await baseServerDriveServer.getDrive(driveId);
+
+        expect(reactorDrive.state).toEqual(baseServerDrive.state);
+
+        const reactorChildIds = await reactorStorage.getChildren(driveId);
+        const baseServerChildIds = await baseServerStorage.getChildren(driveId);
+
+        expect(reactorChildIds.sort()).toEqual(baseServerChildIds.sort());
+
+        console.log(
+          `Drive ${driveId} has ${reactorChildIds.length} child documents`,
+        );
+
+        for (const childId of reactorChildIds) {
+          console.log(`Comparing document: ${childId}`);
+
+          const reactorDoc = await reactorStorage.get(childId);
+          const baseServerDoc = await baseServerStorage.get(childId);
+
+          expect(reactorDoc.state).toEqual(baseServerDoc.state);
+          expect(reactorDoc.header).toEqual(baseServerDoc.header);
+        }
+      }
+
+      console.log(
+        "All states match between Reactor and BaseDocumentDriveServer!",
+      );
+    },
+    { timeout: 200000 },
+  );
+});
