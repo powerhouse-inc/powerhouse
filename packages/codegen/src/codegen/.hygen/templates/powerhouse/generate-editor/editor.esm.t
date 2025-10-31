@@ -2,7 +2,7 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/editor.tsx"
 unless_exists: true
 ---
-import { <%= editNameComponentName %> } from "./components/edit-name.js";
+import { <%= editNameComponentName %> } from "./components/EditName.js";
 
 /** Implement your editor behavior here */
 export function Editor() {
