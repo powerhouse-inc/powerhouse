@@ -49,6 +49,9 @@ export type JobExecutorConfig = {
 
   /** Maximum delay in milliseconds for exponential backoff retries */
   retryMaxDelayMs?: number;
+
+  /** Enable or disable legacy storage reads and writes. Default: true for backward compatibility */
+  legacyStorageEnabled?: boolean;
 };
 
 /**

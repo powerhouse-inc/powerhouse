@@ -24,7 +24,7 @@ import type {
   OperationWithContext,
 } from "../storage/interfaces.js";
 import type { IJobExecutor } from "./interfaces.js";
-import type { JobResult } from "./types.js";
+import type { JobExecutorConfig, JobResult } from "./types.js";
 import {
   applyDeleteDocumentAction,
   applyUpgradeDocumentAction,
@@ -40,6 +40,8 @@ import {
  * @see docs/planning/Jobs/reshuffle.md for skip mechanism details
  */
 export class SimpleJobExecutor implements IJobExecutor {
+  private config: Required<JobExecutorConfig>;
+
   constructor(
     private registry: IDocumentModelRegistry,
     private documentStorage: IDocumentStorage,
@@ -47,7 +49,16 @@ export class SimpleJobExecutor implements IJobExecutor {
     private operationStore: IOperationStore,
     private eventBus: IEventBus,
     private writeCache: IWriteCache,
-  ) {}
+    config?: JobExecutorConfig,
+  ) {
+    this.config = {
+      maxConcurrency: config?.maxConcurrency ?? 1,
+      jobTimeoutMs: config?.jobTimeoutMs ?? 30000,
+      retryBaseDelayMs: config?.retryBaseDelayMs ?? 100,
+      retryMaxDelayMs: config?.retryMaxDelayMs ?? 5000,
+      legacyStorageEnabled: config?.legacyStorageEnabled ?? true,
+    };
+  }
 
   /**
    * Execute a single job by applying all its actions through the appropriate reducers.
@@ -216,19 +227,21 @@ export class SimpleJobExecutor implements IJobExecutor {
       generatedOperations.push(newOperation);
 
       // Write the operation to legacy storage
-      try {
-        await this.operationStorage.addDocumentOperations(
-          job.documentId,
-          [newOperation],
-          updatedDocument,
-        );
-      } catch (error) {
-        return {
-          job,
-          success: false,
-          error: error instanceof Error ? error : new Error(String(error)),
-          duration: Date.now() - startTime,
-        };
+      if (this.config.legacyStorageEnabled) {
+        try {
+          await this.operationStorage.addDocumentOperations(
+            job.documentId,
+            [newOperation],
+            updatedDocument,
+          );
+        } catch (error) {
+          return {
+            job,
+            success: false,
+            error: error instanceof Error ? error : new Error(String(error)),
+            duration: Date.now() - startTime,
+          };
+        }
       }
 
       // Compute resultingState for passing via context (not persisted)
@@ -337,35 +350,39 @@ export class SimpleJobExecutor implements IJobExecutor {
     const document = createDocumentFromAction(action as CreateDocumentAction);
 
     // Legacy: Store the document in storage
-    try {
-      await this.documentStorage.create(document);
-    } catch (error) {
-      return this.buildErrorResult(
-        job,
-        new Error(
-          `Failed to create document in storage: ${error instanceof Error ? error.message : String(error)}`,
-        ),
-        startTime,
-      );
+    if (this.config.legacyStorageEnabled) {
+      try {
+        await this.documentStorage.create(document);
+      } catch (error) {
+        return this.buildErrorResult(
+          job,
+          new Error(
+            `Failed to create document in storage: ${error instanceof Error ? error.message : String(error)}`,
+          ),
+          startTime,
+        );
+      }
     }
 
     const operation = this.createOperation(action, 0);
 
     // Legacy: Write the CREATE_DOCUMENT operation to legacy storage
-    try {
-      await this.operationStorage.addDocumentOperations(
-        document.header.id,
-        [operation],
-        document,
-      );
-    } catch (error) {
-      return this.buildErrorResult(
-        job,
-        new Error(
-          `Failed to write CREATE_DOCUMENT operation to legacy storage: ${error instanceof Error ? error.message : String(error)}`,
-        ),
-        startTime,
-      );
+    if (this.config.legacyStorageEnabled) {
+      try {
+        await this.operationStorage.addDocumentOperations(
+          document.header.id,
+          [operation],
+          document,
+        );
+      } catch (error) {
+        return this.buildErrorResult(
+          job,
+          new Error(
+            `Failed to write CREATE_DOCUMENT operation to legacy storage: ${error instanceof Error ? error.message : String(error)}`,
+          ),
+          startTime,
+        );
+      }
     }
 
     // Compute resultingState for passing via context (not persisted)
@@ -475,16 +492,18 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     const operation = this.createOperation(action, nextIndex);
 
-    try {
-      await this.documentStorage.delete(documentId);
-    } catch (error) {
-      return this.buildErrorResult(
-        job,
-        new Error(
-          `Failed to delete document from legacy storage: ${error instanceof Error ? error.message : String(error)}`,
-        ),
-        startTime,
-      );
+    if (this.config.legacyStorageEnabled) {
+      try {
+        await this.documentStorage.delete(documentId);
+      } catch (error) {
+        return this.buildErrorResult(
+          job,
+          new Error(
+            `Failed to delete document from legacy storage: ${error instanceof Error ? error.message : String(error)}`,
+          ),
+          startTime,
+        );
+      }
     }
 
     // Mark the document as deleted in the state for read model indexing
@@ -588,20 +607,22 @@ export class SimpleJobExecutor implements IJobExecutor {
     const operation = this.createOperation(action, nextIndex);
 
     // Write the updated document to legacy storage
-    try {
-      await this.operationStorage.addDocumentOperations(
-        documentId,
-        [operation],
-        document,
-      );
-    } catch (error) {
-      return this.buildErrorResult(
-        job,
-        new Error(
-          `Failed to write UPGRADE_DOCUMENT operation to legacy storage: ${error instanceof Error ? error.message : String(error)}`,
-        ),
-        startTime,
-      );
+    if (this.config.legacyStorageEnabled) {
+      try {
+        await this.operationStorage.addDocumentOperations(
+          documentId,
+          [operation],
+          document,
+        );
+      } catch (error) {
+        return this.buildErrorResult(
+          job,
+          new Error(
+            `Failed to write UPGRADE_DOCUMENT operation to legacy storage: ${error instanceof Error ? error.message : String(error)}`,
+          ),
+          startTime,
+        );
+      }
     }
 
     // Compute resultingState for passing via context (not persisted)

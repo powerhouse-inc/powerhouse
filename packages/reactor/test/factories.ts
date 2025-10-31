@@ -26,6 +26,7 @@ import type { IEventBus } from "../src/events/interfaces.js";
 import type { IJobExecutor } from "../src/executor/interfaces.js";
 import { SimpleJobExecutorManager } from "../src/executor/simple-job-executor-manager.js";
 import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
+import type { JobExecutorConfig } from "../src/executor/types.js";
 import { InMemoryJobTracker } from "../src/job-tracker/in-memory-job-tracker.js";
 import type { IJobTracker } from "../src/job-tracker/interfaces.js";
 import type { IQueue } from "../src/queue/interfaces.js";
@@ -495,6 +496,7 @@ export async function createTestReactorSetup(
     documentModelDocumentModelModule,
     driveDocumentModelModule,
   ],
+  executorConfig?: JobExecutorConfig,
 ) {
   const storage = new MemoryStorage();
   const eventBus = new EventBus();
@@ -533,6 +535,7 @@ export async function createTestReactorSetup(
     operationStore,
     eventBus,
     mockWriteCache,
+    executorConfig,
   );
 
   // Create mock read model coordinator
