@@ -76,12 +76,14 @@ Options:
                         
   -i, --interactive     Run the command in interactive mode, which will guide you
                         through the project setup with customizable options.
+  
+  -t, --tag             Version of the Powerhouse dependencies to use. Defaults to "main"
                         
-  -v, --version         Specify the development version to use. Defaults to "main".
+  --dev                 Use the "development" version.
                         
-  --dev                 Use the "development" version of the boilerplate.
-                        
-  --staging             Use the "staging" version of the boilerplate.
+  --staging             Use the "staging" version.
+
+  -b, --branch          Specify custom boilerplate branch to use.
                         
   --package-manager     Override the auto-detected package manager with the specified one.
 

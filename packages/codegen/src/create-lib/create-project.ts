@@ -17,6 +17,7 @@ const defaultDirectories = {
 export const createCommandSpec = {
   "--name": String,
   "--project-name": "--name",
+  "--branch": String,
   "--version": String,
   "--interactive": Boolean,
   "--dev": Boolean,
@@ -30,6 +31,7 @@ export interface ICreateProjectOptions {
   name: string | undefined;
   version: string;
   interactive: boolean;
+  branch?: string;
   packageManager?: string;
   vetraDriveUrl?: string;
 }
@@ -134,6 +136,7 @@ export function initCli() {
     name: args["--name"] ?? args._.shift(),
     interactive: args["--interactive"] ?? false,
     version: parseVersionArgs(args),
+    branch: args["--branch"],
   };
   return createProject(options);
 }
@@ -189,6 +192,7 @@ export async function createProject(options: ICreateProjectOptions) {
     documentModelsDir,
     editorsDir,
     options.version,
+    options.branch,
     options.packageManager,
     options.vetraDriveUrl,
   );
@@ -199,15 +203,17 @@ function handleCreateProject(
   documentModelsDir: string,
   editorsDir: string,
   version = "main",
+  branch?: string,
   packageManager?: string,
   vetraDriveUrl?: string,
 ) {
+  branch = branch ?? version;
   packageManager = packageManager ?? envPackageManager;
 
   try {
     console.log("\x1b[33m", "Downloading the project structure...", "\x1b[0m");
     runCmd(
-      `git clone --depth 1 -b ${version} ${BOILERPLATE_REPO} ${projectName}`,
+      `git clone --depth 1 -b ${branch} ${BOILERPLATE_REPO} ${projectName}`,
     );
 
     const appPath = path.join(process.cwd(), projectName);

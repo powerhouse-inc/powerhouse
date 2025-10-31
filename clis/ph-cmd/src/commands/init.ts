@@ -36,10 +36,11 @@ export const init: CommandActionType<
       name: options.project ?? projectName,
       interactive: options.interactive ?? false,
       version: parseVersion({
-        version: options.branch ?? options.tag,
+        version: options.tag,
         dev: options.dev,
         staging: options.staging,
       }),
+      branch: options.branch,
       packageManager:
         resolvePackageManagerOptions(options) ??
         getPackageManagerFromPath(PH_BIN_PATH),
@@ -58,12 +59,15 @@ export function initCommand(program: Command): Command {
     .option("-p, --project", "Name of the project")
     .option("-i, --interactive", "Run the command in interactive mode")
     .option(
-      "--branch <branch>",
-      'Specify development branch to use. Defaults to "main"',
+      "-b, --branch <branch>",
+      "Specify custom boilerplate branch to use.",
     )
-    .option("--tag <tag>", "Same as --branch")
+    .option(
+      "-t, --tag <tag>",
+      'Version of the Powerhouse dependencies to use. Defaults to "main"',
+    )
     .option("--dev", 'Use "development" version of the boilerplate')
-    .option("--staging", 'Use "development" version of the boilerplate')
+    .option("--staging", 'Use "staging" version of the boilerplate')
     .option("--package-manager <packageManager>", "package manager to be used")
     .option("--npm", "Use 'npm' as package manager")
     .option("--pnpm", "Use 'pnpm' as package manager")
