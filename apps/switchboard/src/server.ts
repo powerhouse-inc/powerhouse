@@ -8,7 +8,10 @@ import {
   ReadModelCoordinator,
 } from "@powerhousedao/reactor";
 import {
+  ImportPackageLoader,
+  PackageManager,
   VitePackageLoader,
+  getUniqueDocumentModels,
   startAPI,
   startViteServer,
 } from "@powerhousedao/reactor-api";
@@ -133,10 +136,20 @@ async function initServer(serverPort: number, options: StartServerOptions) {
       ? ".ph/read-storage"
       : dbPath;
 
-  const driveServer = new ReactorBuilder([
-    documentModelDocumentModelModule,
-    driveDocumentModelModule,
-  ] as unknown as DocumentModelModule[])
+  const packageManager = new PackageManager([new ImportPackageLoader()], {
+    packages: options.packages ?? [],
+    configFile:
+      options.configFile ?? path.join(process.cwd(), "powerhouse.config.json"),
+  });
+  const { documentModels } = await packageManager.init();
+
+  const driveServer = new ReactorBuilder(
+    getUniqueDocumentModels([
+      documentModelDocumentModelModule,
+      driveDocumentModelModule,
+      ...documentModels,
+    ] as unknown as DocumentModelModule[]),
+  )
     .withStorage(storage)
     .withCache(cache)
     .withOptions({
