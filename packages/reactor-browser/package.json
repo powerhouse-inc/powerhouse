@@ -36,13 +36,13 @@
     "@types/react-dom": "^19.2.0",
     "@types/slug": "^5.0.9",
     "@types/wicg-file-system-access": "^2020.9.8",
-    "@vitejs/plugin-react": "^5.0.4",
+    "@vitejs/plugin-react": "catalog:",
     "@vitest/browser": "^3.2.4",
     "playwright": "^1.51.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "vite-plugin-node-polyfills": "^0.24.0",
-    "vitest": "^3.2.4",
+    "vitest": "catalog:",
     "vitest-browser-react": "^1.0.1"
   },
   "peerDependencies": {
