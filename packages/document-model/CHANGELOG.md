@@ -1,3 +1,13 @@
+## 5.0.1 (2025-11-03)
+
+### 🩹 Fixes
+
+- publish docker prod workflow ([d701f8dc0](https://github.com/powerhouse-inc/powerhouse/commit/d701f8dc0))
+
+### ❤️ Thank You
+
+- Frank
+
 # 5.0.0 (2025-10-31)
 
 This was a version bump only for document-model to align it with other projects, there were no code changes.

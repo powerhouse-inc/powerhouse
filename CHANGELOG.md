@@ -1,3 +1,15 @@
+## 5.0.1 (2025-11-03)
+
+### 🩹 Fixes
+
+- publish docker prod workflow ([d701f8dc0](https://github.com/powerhouse-inc/powerhouse/commit/d701f8dc0))
+- **builder-tools:** support cjs requires of react and react-dom on external packages ([c1c52a714](https://github.com/powerhouse-inc/powerhouse/commit/c1c52a714))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
 # 5.0.0 (2025-10-31)
 
 ### 🩹 Fixes
