@@ -25,6 +25,7 @@ import {
   createRelationalDb,
   ProcessorManager,
 } from "document-drive";
+import type { DocumentModelModule } from "document-model";
 import type { Express } from "express";
 import express from "express";
 import fs from "node:fs";
@@ -267,10 +268,16 @@ async function startServer(
  * @returns The API server.
  */
 export async function startAPI(
-  reactor: IDocumentDriveServer,
-  client: IReactorClient,
+  driveServer:
+    | IDocumentDriveServer
+    | ((
+        documentModelModules: DocumentModelModule[],
+      ) => Promise<IDocumentDriveServer>),
+  client:
+    | IReactorClient
+    | ((driveServer: IDocumentDriveServer) => IReactorClient),
   options: Options,
-): Promise<API> {
+): Promise<API & { driveServer: IDocumentDriveServer }> {
   const port = options.port ?? DEFAULT_PORT;
   const app = options.express ?? express();
   const mcpServerEnabled = options.mcp ?? true;
@@ -343,13 +350,24 @@ export async function startAPI(
 
   const { documentModels, processors, subgraphs } = await packages.init();
 
+  const isReactorInitializer = typeof driveServer === "function";
+  const isClientInitializer = typeof client === "function";
+
+  const reactor = isReactorInitializer
+    ? await driveServer(documentModels)
+    : driveServer;
+
   // set document model modules here, processors might use them immediately
-  reactor.setDocumentModelModules(
-    getUniqueDocumentModels([
-      ...reactor.getDocumentModelModules(),
-      ...documentModels,
-    ]),
-  );
+  if (!isReactorInitializer) {
+    reactor.setDocumentModelModules(
+      getUniqueDocumentModels([
+        ...reactor.getDocumentModelModules(),
+        ...documentModels,
+      ]),
+    );
+  }
+
+  const reactorClient = isClientInitializer ? await client(reactor) : client;
 
   // initialize processors
   const processorManager = new ProcessorManager(reactor.listeners, reactor);
@@ -422,7 +440,7 @@ export async function startAPI(
     app,
     server,
     reactor,
-    client,
+    reactorClient,
     relationalDb,
     analyticsStore,
     {
@@ -451,5 +469,11 @@ export async function startAPI(
     logger.info(`MCP server available at http://localhost:${port}/mcp`);
   }
 
-  return { app, graphqlManager, processorManager, packages };
+  return {
+    app,
+    graphqlManager,
+    processorManager,
+    packages,
+    driveServer: reactor,
+  };
 }

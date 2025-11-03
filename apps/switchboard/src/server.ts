@@ -8,8 +8,6 @@ import {
   ReadModelCoordinator,
 } from "@powerhousedao/reactor";
 import {
-  ImportPackageLoader,
-  PackageManager,
   VitePackageLoader,
   getUniqueDocumentModels,
   startAPI,
@@ -19,6 +17,7 @@ import * as Sentry from "@sentry/node";
 import type {
   BaseDocumentDriveServer,
   ICache,
+  IDocumentDriveServer,
   IDocumentStorage,
 } from "document-drive";
 import {
@@ -136,54 +135,47 @@ async function initServer(serverPort: number, options: StartServerOptions) {
       ? ".ph/read-storage"
       : dbPath;
 
-  const packageManager = new PackageManager([new ImportPackageLoader()], {
-    packages: options.packages ?? [],
-    configFile:
-      options.configFile ?? path.join(process.cwd(), "powerhouse.config.json"),
-  });
-  const { documentModels } = await packageManager.init();
+  const initializeDriveServer = async (
+    documentModels: DocumentModelModule[],
+  ) => {
+    const driveServer = new ReactorBuilder(
+      getUniqueDocumentModels([
+        documentModelDocumentModelModule,
+        driveDocumentModelModule,
+        ...documentModels,
+      ] as unknown as DocumentModelModule[]),
+    )
+      .withStorage(storage)
+      .withCache(cache)
+      .withOptions({
+        featureFlags: {
+          enableDualActionCreate:
+            options.reactorOptions?.enableDualActionCreate ?? false,
+        },
+      })
+      .build();
 
-  const driveServer = new ReactorBuilder(
-    getUniqueDocumentModels([
-      documentModelDocumentModelModule,
-      driveDocumentModelModule,
-      ...documentModels,
-    ] as unknown as DocumentModelModule[]),
-  )
-    .withStorage(storage)
-    .withCache(cache)
-    .withOptions({
-      featureFlags: {
-        enableDualActionCreate:
-          options.reactorOptions?.enableDualActionCreate ?? false,
-      },
-    })
-    .build();
+    // init drive server
+    await driveServer.initialize();
+    return driveServer;
+  };
 
-  // init drive server
-  await driveServer.initialize();
+  const initializeClient = (driveServer: IDocumentDriveServer) => {
+    const eventBus = new EventBus();
+    const queue = new InMemoryQueue(eventBus);
+    const reactor = new Reactor(
+      driveServer as unknown as BaseDocumentDriveServer,
+      storage as unknown as IDocumentStorage,
+      queue,
+      new InMemoryJobTracker(),
+      new ReadModelCoordinator(eventBus, []),
+    );
+    const client = new ReactorClientBuilder().withReactor(reactor).build();
 
-  const eventBus = new EventBus();
-  const queue = new InMemoryQueue(eventBus);
-  const reactor = new Reactor(
-    driveServer as unknown as BaseDocumentDriveServer,
-    storage as unknown as IDocumentStorage,
-    queue,
-    new InMemoryJobTracker(),
-    new ReadModelCoordinator(eventBus, []),
-  );
-  const client = new ReactorClientBuilder().withReactor(reactor).build();
+    return client;
+  };
 
   let defaultDriveUrl: undefined | string = undefined;
-
-  // Create default drive if provided
-  if (options.drive) {
-    defaultDriveUrl = await addDefaultDrive(
-      driveServer,
-      options.drive,
-      serverPort,
-    );
-  }
 
   // start vite server if dev mode is enabled
   const vite = dev ? await startViteServer() : undefined;
@@ -199,7 +191,7 @@ async function initServer(serverPort: number, options: StartServerOptions) {
   const packageLoader = vite ? await VitePackageLoader.build(vite) : undefined;
 
   // Start the API with the reactor and options
-  const api = await startAPI(driveServer, client, {
+  const api = await startAPI(initializeDriveServer, initializeClient, {
     express: app,
     port: serverPort,
     dbPath: readModelPath,
@@ -212,6 +204,17 @@ async function initServer(serverPort: number, options: StartServerOptions) {
     mcp: options.mcp ?? true,
     subgraphs: options.subgraphs,
   });
+
+  const { driveServer } = api;
+
+  // Create default drive if provided
+  if (options.drive) {
+    defaultDriveUrl = await addDefaultDrive(
+      driveServer,
+      options.drive,
+      serverPort,
+    );
+  }
 
   // add vite middleware after express app is initialized if applicable
   if (vite) {
