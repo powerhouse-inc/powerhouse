@@ -3,7 +3,12 @@ export { ReactorClient } from "./client/reactor-client.js";
 export { type IReactorClient } from "./client/types.js";
 export { ReactorClientBuilder } from "./core/builder.js";
 export { Reactor } from "./core/reactor.js";
-export { type IReactor } from "./core/types.js";
+export { ReactorBuilder } from "./core/reactor-builder.js";
+export {
+  type IReactor,
+  type ReactorFeatures,
+  type ReactorSetup,
+} from "./core/types.js";
 export { JobAwaiter, type IJobAwaiter } from "./shared/awaiter.js";
 export { createMutableShutdownStatus } from "./shared/factories.js";
 export {
