@@ -178,9 +178,16 @@ describe("Atlas Recorded Operations State Comparison Test", () => {
   let reactorDriveServer: BaseDocumentDriveServer;
   let reactorStorage: MemoryStorage;
   let reactor: Reactor;
+  let reactor2: Reactor;
   let baseServerDriveServer: BaseDocumentDriveServer;
   let baseServerStorage: MemoryStorage;
   let driveIds: string[];
+  let driveIds2: string[];
+  let reactorStorage2: MemoryStorage;
+  let reactorDriveServer2: BaseDocumentDriveServer;
+  let documentView2: KyselyDocumentView;
+  let db2: Kysely<Database>;
+  let operationStore2: KyselyOperationStore;
 
   it(
     "should produce identical final state in both Reactor and BaseDocumentDriveServer",
@@ -188,6 +195,7 @@ describe("Atlas Recorded Operations State Comparison Test", () => {
       reactorStorage = new MemoryStorage();
       baseServerStorage = new MemoryStorage();
       driveIds = [];
+      driveIds2 = [];
 
       const documentModels = getDocumentModels();
 
@@ -256,6 +264,70 @@ describe("Atlas Recorded Operations State Comparison Test", () => {
         readModelCoordinator,
       );
 
+      reactorStorage2 = new MemoryStorage();
+      const reactorBuilder2 = new ReactorBuilder(documentModels).withStorage(
+        reactorStorage2,
+      );
+      reactorDriveServer2 =
+        reactorBuilder2.build() as unknown as BaseDocumentDriveServer;
+      await reactorDriveServer2.initialize();
+
+      const setup2 = await createTestOperationStore();
+      db2 = setup2.db as unknown as Kysely<Database>;
+      operationStore2 = setup2.store;
+      const keyframeStore2 = setup2.keyframeStore;
+
+      const eventBus2 = new EventBus();
+      const queue2 = new InMemoryQueue(eventBus2);
+
+      const writeCacheConfig2: WriteCacheConfig = {
+        maxDocuments: 100,
+        ringBufferSize: 10,
+        keyframeInterval: 10,
+      };
+      const writeCache2 = new KyselyWriteCache(
+        keyframeStore2,
+        operationStore2,
+        registry,
+        writeCacheConfig2,
+      );
+      await writeCache2.startup();
+
+      const executor2 = new SimpleJobExecutor(
+        registry,
+        reactorStorage2,
+        reactorStorage2,
+        operationStore2,
+        eventBus2,
+        writeCache2,
+        { legacyStorageEnabled: false },
+      );
+
+      documentView2 = new KyselyDocumentView(db2, operationStore2);
+      await documentView2.init();
+      const readModelCoordinator2 = new ReadModelCoordinator(eventBus2, [
+        documentView2,
+      ]);
+
+      const jobTracker2 = createTestJobTracker();
+
+      const executorManager2 = new SimpleJobExecutorManager(
+        () => executor2,
+        eventBus2,
+        queue2,
+        jobTracker2,
+      );
+
+      await executorManager2.start(1);
+
+      reactor2 = new Reactor(
+        reactorDriveServer2,
+        reactorStorage2,
+        queue2,
+        jobTracker2,
+        readModelCoordinator2,
+      );
+
       const baseServerBuilder = new ReactorBuilder(documentModels).withStorage(
         baseServerStorage,
       );
@@ -271,21 +343,29 @@ describe("Atlas Recorded Operations State Comparison Test", () => {
       const mutations = operations.filter((op) => op.type === "mutation");
 
       console.log(
-        `Processing ${mutations.length} mutations through both systems...`,
+        `Processing ${mutations.length} mutations through all three systems...`,
       );
 
       for (const mutation of mutations) {
         await processReactorMutation(mutation, reactor, driveIds);
+        await processReactorMutation(mutation, reactor2, driveIds2);
         await processBaseServerMutation(mutation, baseServerDriveServer);
       }
 
       console.log("All operations completed. Comparing final states...");
 
-      for (const driveId of driveIds) {
+      expect(driveIds).toEqual(driveIds2);
+
+      for (let i = 0; i < driveIds.length; i++) {
+        const driveId = driveIds[i];
+        const driveId2 = driveIds2[i];
+
         const reactorDrive = await reactorDriveServer.getDrive(driveId);
+        const reactor2Drive = await documentView2.get(driveId2);
         const baseServerDrive = await baseServerDriveServer.getDrive(driveId);
 
         expect(reactorDrive.state).toEqual(baseServerDrive.state);
+        expect(reactor2Drive.state).toEqual(baseServerDrive.state);
 
         const fileIds = reactorDrive.state.global.nodes
           .filter((node: any) => node.kind === "file")
@@ -295,14 +375,16 @@ describe("Atlas Recorded Operations State Comparison Test", () => {
 
         for (const childId of fileIds) {
           const reactorDoc = await reactorStorage.get(childId);
+          const reactor2Doc = await documentView2.get(childId);
           const baseServerDoc = await baseServerStorage.get(childId);
 
           expect(reactorDoc.state).toEqual(baseServerDoc.state);
+          expect(reactor2Doc.state).toEqual(baseServerDoc.state);
         }
       }
 
       console.log(
-        "All states match between Reactor and BaseDocumentDriveServer!",
+        "All states match between Reactor (legacy reads), Reactor (documentView reads), and BaseDocumentDriveServer!",
       );
     },
     { timeout: 200000 },
