@@ -28,7 +28,7 @@ jobs:
             echo "ADDITIONAL_TAG=dev" >> $GITHUB_ENV
           elif [[ "${{ env.GITHUB_TAG }}" == *"-staging."* ]]; then
             echo "ADDITIONAL_TAG=staging" >> $GITHUB_ENV
-          elif [[ "${{ env.GITHUB_TAG }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          elif [[ "${{ env.GITHUB_TAG }}" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "ADDITIONAL_TAG=latest" >> $GITHUB_ENV
           else
             echo "ADDITIONAL_TAG=" >> $GITHUB_ENV
@@ -74,7 +74,7 @@ jobs:
             echo "ADDITIONAL_TAG=dev" >> $GITHUB_ENV
           elif [[ "${{ env.GITHUB_TAG }}" == *"-staging."* ]]; then
             echo "ADDITIONAL_TAG=staging" >> $GITHUB_ENV
-          elif [[ "${{ env.GITHUB_TAG }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          elif [[ "${{ env.GITHUB_TAG }}" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "ADDITIONAL_TAG=latest" >> $GITHUB_ENV
           else
             echo "ADDITIONAL_TAG=" >> $GITHUB_ENV
