@@ -4,7 +4,10 @@ export default defineConfig({
   test: {
     globals: true,
     include: ["src/**/__tests__/**/*.test.ts"],
-    exclude: ["src/codegen/__tests__/.out/**/*"],
+    exclude: [
+      "src/codegen/__tests__/.generate-editors-test-output/**/*",
+      "src/codegen/__tests__/.generate-document-models-test-output/**/*",
+    ],
     fileParallelism: false,
   },
   resolve: {

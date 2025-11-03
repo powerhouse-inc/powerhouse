@@ -70,5 +70,6 @@
   },
   "dependencies": {
     "@powerhousedao/codegen": "file:../../../../../"
+
   }
 }

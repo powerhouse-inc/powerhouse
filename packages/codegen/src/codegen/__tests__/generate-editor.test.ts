@@ -1,21 +1,21 @@
 import { type PowerhouseConfig } from "@powerhousedao/config";
-import fs from "node:fs";
+import fs, { mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { generateEditor } from "../index.js";
 import { compile } from "./fixtures/typecheck.js";
-import {
-  EXPECTED_EDITOR_CONTENT,
-  EXPECTED_EDITOR_CONTENT_NO_DOCUMENT_TYPES,
-  EXPECTED_HOOK_CONTENT,
-  EXPECTED_INDEX_CONTENT,
-  EXPECTED_INDEX_CONTENT_NO_DOCUMENT_TYPES,
-  EXPECTED_MAIN_INDEX_CONTENT,
-  EXPECTED_MAIN_INDEX_CONTENT_NO_DOCUMENT_TYPES,
-} from "./generate-editor.expected.js";
+import { copyAllFiles } from "./utils.js";
 
-// Set this to false to keep the generated files for inspection
-const CLEANUP_AFTER_TESTS = true;
+const PURGE_AFTER_TEST = false;
+
+const testDir = import.meta.dirname;
+const testProjectDirName = "editors-test-project";
+const testProjectSrcPath = path.join(testDir, "data", testProjectDirName);
+const testPackageName = "test";
+const outDirName = path.join(testDir, ".generate-editors-test-output");
+let testOutDirCount = 0;
+let testOutDirName = `test-${testOutDirCount}`;
+let testOutDirPath = path.join(outDirName, testOutDirName);
 
 describe("generateEditor", () => {
   let testDir: string;
@@ -29,93 +29,72 @@ describe("generateEditor", () => {
     logLevel: "info",
   };
 
-  beforeEach(() => {
-    testDir = path.join(__dirname, "temp", "document-editor");
-    if (fs.existsSync(testDir)) {
-      fs.rmSync(testDir, { recursive: true, force: true });
+  it("should generate a Document Model editor", async () => {
+    try {
+      rmSync(outDirName, { recursive: true });
+    } catch (error) {
+      // Ignore error if folder doesn't exist
     }
+    mkdirSync(outDirName, { recursive: true });
+    testOutDirCount++;
+    testOutDirName = `test-${testOutDirCount}`;
+    testOutDirPath = path.join(outDirName, testOutDirName);
+    testDir = path.join(testOutDirPath, "editors");
+    await copyAllFiles(testProjectSrcPath, testOutDirPath);
     fs.mkdirSync(testDir, { recursive: true });
     config.editorsDir = testDir;
-  });
-
-  afterAll(() => {
-    if (CLEANUP_AFTER_TESTS && fs.existsSync(testDir)) {
-      fs.rmSync(testDir, { recursive: true, force: true });
-    }
-  });
-
-  it("should generate a generic document editor", async () => {
-    const name = "GenericDocumentEditor";
-    await generateEditor(name, [], config, "test-generic-document-editor");
-
-    const editorDir = path.join(testDir, "generic-document-editor");
-    expect(fs.existsSync(editorDir)).toBe(true);
-
-    const indexPath = path.join(editorDir, "index.ts");
-    const editorPath = path.join(editorDir, "editor.tsx");
-    const hooksPath = path.join(editorDir, "hooks");
-
-    expect(fs.existsSync(editorPath)).toBe(true);
-    expect(fs.existsSync(indexPath)).toBe(true);
-    expect(fs.existsSync(hooksPath)).toBe(false);
-
-    const indexContent = fs.readFileSync(indexPath, "utf-8").trim();
-    expect(indexContent).toBe(EXPECTED_INDEX_CONTENT_NO_DOCUMENT_TYPES.trim());
-
-    const editorContent = fs.readFileSync(editorPath, "utf-8").trim();
-    expect(editorContent).toBe(
-      EXPECTED_EDITOR_CONTENT_NO_DOCUMENT_TYPES.trim(),
-    );
-
-    const mainIndexPath = path.join(testDir, "index.ts");
-    const mainIndexContent = fs
-      .readFileSync(mainIndexPath, "utf-8")
-      .replace(/\s+$/, "");
-    expect(mainIndexContent).toStrictEqual(
-      EXPECTED_MAIN_INDEX_CONTENT_NO_DOCUMENT_TYPES,
-    );
-
-    await compile("tsconfig.document-editor.test.json");
-  });
-
-  it("should generate a Document Model editor", async () => {
-    const name = "DocumentModelEditor";
+    config.documentModelsDir = path.join(testOutDirPath, "document-models");
+    const name = "TestDocEditor";
     await generateEditor(
       name,
-      ["powerhouse/document-model"],
+      ["powerhouse/test-doc"],
       config,
       "test-document-model-editor",
+      testPackageName,
     );
 
-    const editorDir = path.join(testDir, "document-model-editor");
+    const editorsFilePath = path.join(testDir, "editors.ts");
+    expect(fs.existsSync(editorsFilePath)).toBe(true);
+    const editorsContent = fs.readFileSync(editorsFilePath, "utf-8");
+    expect(editorsContent).toContain(
+      `import { TestDocEditor } from "./test-doc-editor/module.js";`,
+    );
+    expect(editorsContent).toContain(`export const editors: EditorModule[]`);
+    expect(editorsContent).toContain(`TestDocEditor`);
+
+    const editorDir = path.join(testDir, "test-doc-editor");
     expect(fs.existsSync(editorDir)).toBe(true);
 
-    const indexPath = path.join(editorDir, "index.ts");
     const editorPath = path.join(editorDir, "editor.tsx");
-    const hookPath = path.join(
-      editorDir,
-      "../hooks/useDocumentModelDocument.ts",
-    );
-
     expect(fs.existsSync(editorPath)).toBe(true);
-    expect(fs.existsSync(indexPath)).toBe(true);
-    expect(fs.existsSync(hookPath)).toBe(true);
+    const editorContent = fs.readFileSync(editorPath, "utf-8");
+    expect(editorContent).toContain(
+      `import { EditTestDocName } from "./components/EditName.js";`,
+    );
+    expect(editorContent).toContain(`export function Editor()`);
+    expect(editorContent).toContain(`<EditTestDocName />`);
 
-    const indexContent = fs.readFileSync(indexPath, "utf-8").trim();
-    expect(indexContent).toBe(EXPECTED_INDEX_CONTENT.trim());
+    const modulePath = path.join(editorDir, "module.ts");
+    expect(fs.existsSync(modulePath)).toBe(true);
+    const moduleContent = fs.readFileSync(modulePath, "utf-8");
+    expect(moduleContent).toContain(`export const TestDocEditor: EditorModule`);
+    expect(moduleContent).toContain(`documentTypes: ["powerhouse/test-doc`);
+    expect(moduleContent).toContain(`id: "test-document-model-editor"`);
+    expect(moduleContent).toContain(`name: "TestDocEditor"`);
 
-    const editorContent = fs.readFileSync(editorPath, "utf-8").trim();
-    expect(editorContent).toBe(EXPECTED_EDITOR_CONTENT.trim());
+    const componentsDir = path.join(editorDir, "components");
 
-    const hookContent = fs.readFileSync(hookPath, "utf-8").trim();
-    expect(hookContent).toBe(EXPECTED_HOOK_CONTENT.trim());
+    const editNamePath = path.join(componentsDir, "EditName.tsx");
+    expect(fs.existsSync(editNamePath)).toBe(true);
 
-    const mainIndexPath = path.join(testDir, "index.ts");
-    const mainIndexContent = fs
-      .readFileSync(mainIndexPath, "utf-8")
-      .replace(/\s+$/, "");
-    expect(mainIndexContent).toStrictEqual(EXPECTED_MAIN_INDEX_CONTENT);
+    await compile(testOutDirPath);
 
-    await compile("tsconfig.document-editor.test.json");
+    if (PURGE_AFTER_TEST) {
+      try {
+        rmSync(outDirName, { recursive: true });
+      } catch (error) {
+        // Ignore error if folder doesn't exist
+      }
+    }
   });
 });

@@ -69,11 +69,13 @@ export async function generateEditor(
   documentTypes: string[],
   config: PowerhouseConfig,
   editorId?: string,
+  specifiedPackageName?: string,
 ) {
   const pathOrigin = "../../";
 
   const { documentModelsDir, skipFormat } = config;
   const documentTypesMap = getDocumentTypesMap(documentModelsDir, pathOrigin);
+  console.log({ documentTypesMap, documentModelsDir, pathOrigin });
 
   const invalidType = documentTypes.find(
     (type) => !Object.keys(documentTypesMap).includes(type),
@@ -83,7 +85,10 @@ export async function generateEditor(
       `Document model for ${invalidType} not found. Make sure the document model is available in the document-models directory (${documentModelsDir}) and has been properly generated.`,
     );
   }
-  const packageName = await readPackage().then((pkg) => pkg.name);
+  const packageNameFromPackageJson = await readPackage().then(
+    (pkg) => pkg.name,
+  );
+  const packageName = specifiedPackageName ?? packageNameFromPackageJson;
   return hygenGenerateEditor(
     name,
     documentTypes,

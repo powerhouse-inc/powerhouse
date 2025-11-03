@@ -1,2 +1,4 @@
 .out/
 .test-project/
+.generate-document-models-test-output/
+.generate-editors-test-output/

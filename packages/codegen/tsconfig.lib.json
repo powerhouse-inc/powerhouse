@@ -13,7 +13,7 @@
     "**/*.spec.ts",
     "vitest.config.ts",
     "dist",
-    "node_modules"
+    "node_modules",
   ],
   "references": [
     { "path": "../document-model" },

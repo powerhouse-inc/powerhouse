@@ -4,54 +4,63 @@ import {
   hygenGenerateProcessor,
   loadDocumentModel,
 } from "@powerhousedao/codegen";
-import { copyFileSync, mkdirSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { compile } from "./fixtures/typecheck.js";
+import { copyAllFiles } from "./utils.js";
+
+const PURGE_AFTER_TEST = true;
 
 const testDir = import.meta.dirname;
 const testPackageName = "test";
 const documentModelsDirName = "document-models";
-const editorDirName = "editors";
+const testProjectDirName = "document-models-test-project";
 const processorsDirName = "processors";
-const subgraphsDirName = "subgraphs";
-const outDirs = [
-  documentModelsDirName,
-  editorDirName,
-  processorsDirName,
-  subgraphsDirName,
-  "dist",
-];
-const srcPath = path.join(testDir, "data", documentModelsDirName);
-const outDirName = path.join(testDir, ".out");
+
+const documentModelsSrcPath = path.join(testDir, "data", documentModelsDirName);
+const testProjectSrcPath = path.join(testDir, "data", testProjectDirName);
+const outDirName = path.join(testDir, ".generate-document-models-test-output");
 let testOutDirCount = 0;
 let testOutDirName = `test-${testOutDirCount}`;
 let testOutDirPath = path.join(outDirName, testOutDirName);
-const packageJsonPath = path.join(testDir, "data", "package.json");
-const tsConfigPath = path.join(testDir, "data", "tsconfig.json");
 
 describe("document model", () => {
-  try {
-    rmSync(outDirName, { recursive: true });
-  } catch (error) {
-    // Ignore error if folder doesn't exist
-  }
-  mkdirSync(outDirName, { recursive: true });
+  beforeAll(() => {
+    try {
+      rmSync(outDirName, { recursive: true });
+    } catch (error) {
+      // Ignore error if folder doesn't exist
+    }
+    mkdirSync(outDirName, { recursive: true });
+  });
+
+  afterAll(() => {
+    if (PURGE_AFTER_TEST) {
+      try {
+        rmSync(outDirName, { recursive: true });
+      } catch (error) {
+        // Ignore error if folder doesn't exist
+      }
+    }
+  });
 
   const generate = async () => {
     testOutDirCount++;
     testOutDirName = `test-${testOutDirCount}`;
     testOutDirPath = path.join(outDirName, testOutDirName);
-    mkdirSync(testOutDirPath, { recursive: true });
-    copyFileSync(packageJsonPath, path.join(testOutDirPath, "package.json"));
-    copyFileSync(tsConfigPath, path.join(testOutDirPath, "tsconfig.json"));
-    await generateSchemas(srcPath, {
+    await copyAllFiles(testProjectSrcPath, testOutDirPath);
+    await generateSchemas(documentModelsSrcPath, {
       skipFormat: true,
       outDir: path.join(testOutDirPath, documentModelsDirName),
     });
 
     const billingStatementDocumentModel = await loadDocumentModel(
-      path.join(srcPath, "billing-statement", "billing-statement.json"),
+      path.join(
+        documentModelsSrcPath,
+        "billing-statement",
+        "billing-statement.json",
+      ),
     );
 
     await hygenGenerateDocumentModel(
@@ -62,7 +71,7 @@ describe("document model", () => {
     );
 
     const testDocDocumentModel = await loadDocumentModel(
-      path.join(srcPath, "test-doc", "test-doc.json"),
+      path.join(documentModelsSrcPath, "test-doc", "test-doc.json"),
     );
 
     await hygenGenerateDocumentModel(
@@ -253,7 +262,7 @@ describe("document model", () => {
 
       const testDocDocumentModelV2 = await loadDocumentModel(
         path.join(
-          srcPath,
+          documentModelsSrcPath,
           "..",
           "test-doc-versions",
           "test-doc-v2",
@@ -414,14 +423,14 @@ describe("document model", () => {
     "should generate error codes for legacy documents with empty error codes",
     { timeout: 10000 },
     async () => {
-      await generateSchemas(srcPath, {
+      await generateSchemas(documentModelsSrcPath, {
         skipFormat: true,
         outDir: path.join(testOutDirPath, documentModelsDirName),
       });
 
       const testEmptyCodesDocumentModel = await loadDocumentModel(
         path.join(
-          srcPath,
+          documentModelsSrcPath,
           "test-empty-error-codes",
           "test-empty-error-codes.json",
         ),
