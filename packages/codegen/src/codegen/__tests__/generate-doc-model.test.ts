@@ -4,29 +4,50 @@ import {
   hygenGenerateProcessor,
   loadDocumentModel,
 } from "@powerhousedao/codegen";
-import { readFileSync } from "node:fs";
-import { rm } from "node:fs/promises";
+import { copyFileSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
-import { beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { compile } from "./fixtures/typecheck.js";
 
 const testDir = import.meta.dirname;
 const testPackageName = "test";
+const documentModelsDirName = "document-models";
+const editorDirName = "editors";
+const processorsDirName = "processors";
+const subgraphsDirName = "subgraphs";
+const outDirs = [
+  documentModelsDirName,
+  editorDirName,
+  processorsDirName,
+  subgraphsDirName,
+  "dist",
+];
+const srcPath = path.join(testDir, "data", documentModelsDirName);
+const outDirName = path.join(testDir, ".out");
+let testOutDirCount = 0;
+let testOutDirName = `test-${testOutDirCount}`;
+let testOutDirPath = path.join(outDirName, testOutDirName);
+const packageJsonPath = path.join(testDir, "data", "package.json");
+const tsConfigPath = path.join(testDir, "data", "tsconfig.json");
 
 describe("document model", () => {
-  const srcPath = path.join(testDir, "data", "document-models");
-
-  const outPath = path.join(testDir, ".out");
-
-  beforeEach(async () => {
-    // make sure to remove the outPath directory
-    await rm(outPath, { recursive: true, force: true });
-  });
+  try {
+    rmSync(outDirName, { recursive: true });
+  } catch (error) {
+    // Ignore error if folder doesn't exist
+  }
+  mkdirSync(outDirName, { recursive: true });
 
   const generate = async () => {
+    testOutDirCount++;
+    testOutDirName = `test-${testOutDirCount}`;
+    testOutDirPath = path.join(outDirName, testOutDirName);
+    mkdirSync(testOutDirPath, { recursive: true });
+    copyFileSync(packageJsonPath, path.join(testOutDirPath, "package.json"));
+    copyFileSync(tsConfigPath, path.join(testOutDirPath, "tsconfig.json"));
     await generateSchemas(srcPath, {
       skipFormat: true,
-      outDir: path.join(outPath, "document-model"),
+      outDir: path.join(testOutDirPath, documentModelsDirName),
     });
 
     const billingStatementDocumentModel = await loadDocumentModel(
@@ -35,7 +56,7 @@ describe("document model", () => {
 
     await hygenGenerateDocumentModel(
       billingStatementDocumentModel,
-      path.join(outPath, "document-model"),
+      path.join(testOutDirPath, documentModelsDirName),
       testPackageName,
       { skipFormat: true },
     );
@@ -46,7 +67,7 @@ describe("document model", () => {
 
     await hygenGenerateDocumentModel(
       testDocDocumentModel,
-      path.join(outPath, "document-model"),
+      path.join(testOutDirPath, documentModelsDirName),
       testPackageName,
       { skipFormat: true },
     );
@@ -59,7 +80,7 @@ describe("document model", () => {
     },
     async () => {
       await generate();
-      await compile("tsconfig.document-model.test.json");
+      await compile(testOutDirPath);
     },
   );
 
@@ -74,14 +95,14 @@ describe("document model", () => {
       await hygenGenerateProcessor(
         "test-analytics-processor",
         ["billing-statement"],
-        path.join(outPath, "processors"),
+        path.join(testOutDirPath, processorsDirName),
         "analytics",
         {
           skipFormat: true,
         },
       );
 
-      await compile("tsconfig.document-model.test.json");
+      await compile(testOutDirPath);
     },
   );
 
@@ -96,7 +117,7 @@ describe("document model", () => {
       await hygenGenerateProcessor(
         "test1",
         ["billing-statement"],
-        path.join(outPath, "processors"),
+        path.join(testOutDirPath, processorsDirName),
         "analytics",
         {
           skipFormat: true,
@@ -106,7 +127,7 @@ describe("document model", () => {
       await hygenGenerateProcessor(
         "test2",
         ["billing-statement"],
-        path.join(outPath, "processors"),
+        path.join(testOutDirPath, processorsDirName),
         "analytics",
         {
           skipFormat: true,
@@ -116,14 +137,14 @@ describe("document model", () => {
       await hygenGenerateProcessor(
         "test3",
         ["billing-statement"],
-        path.join(outPath, "processors"),
+        path.join(testOutDirPath, processorsDirName),
         "analytics",
         {
           skipFormat: true,
         },
       );
 
-      await compile("tsconfig.document-model.test.json");
+      await compile(testOutDirPath);
     },
   );
 
@@ -138,14 +159,14 @@ describe("document model", () => {
       await hygenGenerateProcessor(
         "test-relational-processor",
         ["billing-statement"],
-        path.join(outPath, "processors"),
+        path.join(testOutDirPath, processorsDirName),
         "relationalDb",
         {
           skipFormat: true,
         },
       );
 
-      await compile("tsconfig.document-model.test.json");
+      await compile(testOutDirPath);
     },
   );
 
@@ -160,7 +181,7 @@ describe("document model", () => {
       await hygenGenerateProcessor(
         "test1",
         ["billing-statement"],
-        path.join(outPath, "processors"),
+        path.join(testOutDirPath, processorsDirName),
         "relationalDb",
         {
           skipFormat: true,
@@ -170,7 +191,7 @@ describe("document model", () => {
       await hygenGenerateProcessor(
         "test2",
         ["billing-statement"],
-        path.join(outPath, "processors"),
+        path.join(testOutDirPath, processorsDirName),
         "relationalDb",
         {
           skipFormat: true,
@@ -180,36 +201,46 @@ describe("document model", () => {
       await hygenGenerateProcessor(
         "test3",
         ["billing-statement"],
-        path.join(outPath, "processors"),
+        path.join(testOutDirPath, processorsDirName),
         "relationalDb",
         {
           skipFormat: true,
         },
       );
 
-      await compile("tsconfig.document-model.test.json");
+      await compile(testOutDirPath);
     },
   );
 
   it(
-    "should generate multiple document models and export both in index.ts",
+    "should generate multiple document models and export both in document-models.ts",
     {
       timeout: 15000,
     },
     async () => {
       await generate();
-      await compile("tsconfig.document-model.test.json");
+      await compile(testOutDirPath);
 
-      const indexPath = path.join(outPath, "document-model", "index.ts");
-      const indexContent = readFileSync(indexPath, "utf-8");
+      const indexPath = path.join(
+        testOutDirPath,
+        documentModelsDirName,
+        "document-models.ts",
+      );
+      const documentModelsContent = readFileSync(indexPath, "utf-8");
 
       // Check that both models are exported
-      expect(indexContent).toContain(
-        "export { module as BillingStatement } from './billing-statement/index.js';",
+      expect(documentModelsContent).toContain(
+        "import { BillingStatement } from './billing-statement/module.js';",
       );
-      expect(indexContent).toContain(
-        "export { module as TestDoc } from './test-doc/index.js';",
+      expect(documentModelsContent).toContain(
+        "import { TestDoc } from './test-doc/module.js';",
       );
+      expect(documentModelsContent).toContain(
+        "export const documentModels: DocumentModelModule<any>[] = [",
+      );
+      expect(documentModelsContent).toContain("BillingStatement,");
+      expect(documentModelsContent).toContain("TestDoc,");
+      expect(documentModelsContent).toContain("]");
     },
   );
 
@@ -218,7 +249,7 @@ describe("document model", () => {
     { timeout: 10000 },
     async () => {
       await generate();
-      await compile("tsconfig.document-model.test.json");
+      await compile(testOutDirPath);
 
       const testDocDocumentModelV2 = await loadDocumentModel(
         path.join(
@@ -232,10 +263,10 @@ describe("document model", () => {
 
       // TODO: this is a hack to get the test to pass, we should be able to update the reducer file once is generated
       // remove .out/document-model/test-doc/src/reducers/base-operations.ts file
-      await rm(
+      rmSync(
         path.join(
-          outPath,
-          "document-model",
+          testOutDirPath,
+          documentModelsDirName,
           "test-doc",
           "src",
           "reducers",
@@ -246,15 +277,15 @@ describe("document model", () => {
 
       await hygenGenerateDocumentModel(
         testDocDocumentModelV2,
-        path.join(outPath, "document-model"),
+        path.join(testOutDirPath, documentModelsDirName),
         testPackageName,
         { skipFormat: true },
       );
 
       // expect .out/document-model/test-doc/src/reducers/base-operations.ts to contain setTestIdOperation, setTestNameOperation, setTestDescriptionOperation and setTestValueOperation
       const baseOperationsPath = path.join(
-        outPath,
-        "document-model",
+        testOutDirPath,
+        documentModelsDirName,
         "test-doc",
         "src",
         "reducers",
@@ -273,12 +304,12 @@ describe("document model", () => {
     { timeout: 10000 },
     async () => {
       await generate();
-      await compile("tsconfig.document-model.test.json");
+      await compile(testOutDirPath);
 
       // Check general module errors
       const generalErrorPath = path.join(
-        outPath,
-        "document-model",
+        testOutDirPath,
+        documentModelsDirName,
         "billing-statement",
         "gen",
         "general",
@@ -298,8 +329,8 @@ describe("document model", () => {
 
       // Check line_items module errors
       const lineItemsErrorPath = path.join(
-        outPath,
-        "document-model",
+        testOutDirPath,
+        documentModelsDirName,
         "billing-statement",
         "gen",
         "line-items",
@@ -331,12 +362,12 @@ describe("document model", () => {
     { timeout: 10000 },
     async () => {
       await generate();
-      await compile("tsconfig.document-model.test.json");
+      await compile(testOutDirPath);
 
       // Check that the general module reducer imports InvalidStatusTransition
       const generalReducerPath = path.join(
-        outPath,
-        "document-model",
+        testOutDirPath,
+        documentModelsDirName,
         "billing-statement",
         "src",
         "reducers",
@@ -357,8 +388,8 @@ describe("document model", () => {
 
       // Check that the line-items module reducer imports DuplicateLineItem
       const lineItemsReducerPath = path.join(
-        outPath,
-        "document-model",
+        testOutDirPath,
+        documentModelsDirName,
         "billing-statement",
         "src",
         "reducers",
@@ -385,7 +416,7 @@ describe("document model", () => {
     async () => {
       await generateSchemas(srcPath, {
         skipFormat: true,
-        outDir: path.join(outPath, "document-model"),
+        outDir: path.join(testOutDirPath, documentModelsDirName),
       });
 
       const testEmptyCodesDocumentModel = await loadDocumentModel(
@@ -398,15 +429,15 @@ describe("document model", () => {
 
       await hygenGenerateDocumentModel(
         testEmptyCodesDocumentModel,
-        path.join(outPath, "document-model"),
+        path.join(testOutDirPath, documentModelsDirName),
         testPackageName,
         { skipFormat: true },
       );
 
       // Check that error codes are generated from error names
       const testOperationsErrorPath = path.join(
-        outPath,
-        "document-model",
+        testOutDirPath,
+        documentModelsDirName,
         "test-empty-codes",
         "gen",
         "test-operations",

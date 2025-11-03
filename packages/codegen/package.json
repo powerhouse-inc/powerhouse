@@ -21,7 +21,7 @@
     "build:create-lib": "tsc --project src/create-lib/tsconfig.json",
     "publish:create-lib": "npm publish --cwd ./src/create-lib/",
     "start": "tsx src/cli.ts",
-    "pretest": "rimraf ./src/codegen/__tests__/.out && rimraf ./src/codegen/__tests__/.test-project",
+    "pretest": "rimraf ./src/codegen/__tests__/.test-project",
     "test": "npm run copy-hygen && vitest run"
   },
   "dependencies": {
