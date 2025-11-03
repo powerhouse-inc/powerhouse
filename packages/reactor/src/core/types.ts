@@ -15,25 +15,11 @@ import type {
   ViewFilter,
 } from "../shared/types.js";
 
-import type { BaseDocumentDriveServer } from "document-drive";
-import type { MemoryStorage } from "document-drive";
-import type { Kysely } from "kysely";
-import type { EventBus } from "../events/event-bus.js";
-import type { InMemoryQueue } from "../queue/queue.js";
-import type { InMemoryJobTracker } from "../job-tracker/in-memory-job-tracker.js";
-import type { SimpleJobExecutor } from "../executor/simple-job-executor.js";
-import type { SimpleJobExecutorManager } from "../executor/simple-job-executor-manager.js";
-import type { IKeyframeStore } from "../storage/interfaces.js";
-import type { KyselyOperationStore } from "../storage/kysely/store.js";
-import type { KyselyWriteCache } from "../cache/kysely-write-cache.js";
-import type { ReadModelCoordinator } from "../read-models/coordinator.js";
-import type { KyselyDocumentView } from "../read-models/document-view.js";
-import type { KyselyDocumentIndexer } from "../storage/kysely/document-indexer.js";
-import type { DocumentModelRegistry } from "../registry/implementation.js";
-import type { Database as StorageDatabase } from "../storage/kysely/types.js";
 import type { DocumentViewDatabase } from "../read-models/types.js";
-import type { DocumentIndexerDatabase } from "../storage/kysely/types.js";
-import type { Reactor } from "./reactor.js";
+import type {
+  DocumentIndexerDatabase,
+  Database as StorageDatabase,
+} from "../storage/kysely/types.js";
 
 /**
  * A single mutation job within a batch request.
@@ -247,36 +233,13 @@ export type ReactorFeatures = {
   legacyStorageEnabled?: boolean;
 };
 
+export type ExecutorConfig = {
+  count: number;
+};
+
 /**
  * Combined database type that includes all schemas
  */
 export type Database = StorageDatabase &
   DocumentViewDatabase &
   DocumentIndexerDatabase;
-
-/**
- * Complete reactor setup returned by ReactorBuilder
- */
-export type ReactorSetup = {
-  reactor: Reactor;
-  driveServer: BaseDocumentDriveServer;
-  storage: MemoryStorage;
-  registry: DocumentModelRegistry;
-  eventBus: EventBus;
-  queue: InMemoryQueue;
-  jobTracker: InMemoryJobTracker;
-  executor: SimpleJobExecutor;
-  executorManager: SimpleJobExecutorManager;
-  operationStore: KyselyOperationStore;
-  keyframeStore: IKeyframeStore;
-  writeCache: KyselyWriteCache;
-  readModelCoordinator: ReadModelCoordinator;
-  db: Kysely<Database>;
-  documentView?: KyselyDocumentView;
-  documentIndexer?: KyselyDocumentIndexer;
-
-  /**
-   * Cleanup method to properly tear down all resources
-   */
-  cleanup(): Promise<void>;
-};

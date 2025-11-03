@@ -1,7 +1,11 @@
-import type { BaseDocumentDriveServer } from "document-drive";
+import type {
+  BaseDocumentDriveServer,
+  IDocumentOperationStorage,
+  IDocumentStorage,
+} from "document-drive";
 import {
-  MemoryStorage,
   ReactorBuilder as DriveReactorBuilder,
+  MemoryStorage,
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { KyselyWriteCache } from "../cache/kysely-write-cache.js";
@@ -13,89 +17,71 @@ import { InMemoryJobTracker } from "../job-tracker/in-memory-job-tracker.js";
 import { InMemoryQueue } from "../queue/queue.js";
 import { ReadModelCoordinator } from "../read-models/coordinator.js";
 import { KyselyDocumentView } from "../read-models/document-view.js";
+import type { IReadModel } from "../read-models/interfaces.js";
 import { DocumentModelRegistry } from "../registry/implementation.js";
 import { KyselyDocumentIndexer } from "../storage/kysely/document-indexer.js";
 import { KyselyKeyframeStore } from "../storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../storage/kysely/store.js";
+import type { Database as StorageDatabase } from "../storage/kysely/types.js";
 import { Reactor } from "./reactor.js";
-import type { Database, ReactorFeatures, ReactorSetup } from "./types.js";
+import type {
+  Database,
+  ExecutorConfig,
+  IReactor,
+  ReactorFeatures,
+} from "./types.js";
 
+import type { IJobExecutorManager } from "#executor/interfaces.js";
 import { Kysely } from "kysely";
 import { KyselyPGlite } from "kysely-pglite";
 
-/**
- * Builder for creating a complete Reactor setup with all dependencies.
- * Reduces test boilerplate from ~150 lines to ~10 lines.
- */
 export class ReactorBuilder {
-  private documentModels: DocumentModelModule<any>[] = [];
-  private storage?: MemoryStorage;
+  private documentModels: DocumentModelModule[] = [];
+  private storage?: IDocumentStorage & IDocumentOperationStorage;
   private features: ReactorFeatures = { legacyStorageEnabled: true };
-  private includeDocumentView: boolean = false;
-  private includeDocumentIndexer: boolean = false;
-  private executorCount: number = 1;
+  private readModels: IReadModel[] = [];
+  private executorManager: IJobExecutorManager | undefined;
+  private executorConfig: ExecutorConfig = { count: 1 };
   private writeCacheConfig?: Partial<WriteCacheConfig>;
 
-  /**
-   * Specify document model modules to register
-   */
-  withDocumentModels(models: DocumentModelModule<any>[]): this {
+  withDocumentModels(models: DocumentModelModule[]): this {
     this.documentModels = models;
     return this;
   }
 
-  /**
-   * Provide custom storage (defaults to new MemoryStorage())
-   */
-  withStorage(storage: MemoryStorage): this {
+  withLegacyStorage(
+    storage: IDocumentStorage & IDocumentOperationStorage,
+  ): this {
     this.storage = storage;
     return this;
   }
 
-  /**
-   * Configure feature flags
-   */
   withFeatures(features: ReactorFeatures): this {
     this.features = { ...this.features, ...features };
     return this;
   }
 
-  /**
-   * Include document view in the setup
-   */
-  withDocumentView(): this {
-    this.includeDocumentView = true;
+  withReadModel(readModel: IReadModel): this {
+    this.readModels.push(readModel);
     return this;
   }
 
-  /**
-   * Include document indexer in the setup
-   */
-  withDocumentIndexer(): this {
-    this.includeDocumentIndexer = true;
+  withExecutor(executor: IJobExecutorManager): this {
+    this.executorManager = executor;
     return this;
   }
 
-  /**
-   * Set number of executor instances
-   */
-  withExecutorCount(count: number): this {
-    this.executorCount = count;
+  withExecutorConfig(config: Partial<ExecutorConfig>): this {
+    this.executorConfig = { ...this.executorConfig, ...config };
     return this;
   }
 
-  /**
-   * Configure write cache settings
-   */
   withWriteCacheConfig(config: Partial<WriteCacheConfig>): this {
     this.writeCacheConfig = config;
     return this;
   }
 
-  /**
-   * Build and initialize the complete reactor setup
-   */
-  async build(): Promise<ReactorSetup> {
+  async build(): Promise<IReactor> {
     const storage = this.storage || new MemoryStorage();
 
     const registry = new DocumentModelRegistry();
@@ -104,7 +90,7 @@ export class ReactorBuilder {
     }
 
     const builder = new DriveReactorBuilder(this.documentModels).withStorage(
-      storage,
+      storage as MemoryStorage,
     );
     const driveServer = builder.build() as unknown as BaseDocumentDriveServer;
     await driveServer.initialize();
@@ -179,8 +165,12 @@ export class ReactorBuilder {
       .columns(["documentId", "scope", "branch", "revision"])
       .execute();
 
-    const operationStore = new KyselyOperationStore(db as any);
-    const keyframeStore = new KyselyKeyframeStore(db as any);
+    const operationStore = new KyselyOperationStore(
+      db as unknown as Kysely<StorageDatabase>,
+    );
+    const keyframeStore = new KyselyKeyframeStore(
+      db as unknown as Kysely<StorageDatabase>,
+    );
 
     const eventBus = new EventBus();
     const queue = new InMemoryQueue(eventBus);
@@ -200,82 +190,52 @@ export class ReactorBuilder {
     );
     await writeCache.startup();
 
-    const executor = new SimpleJobExecutor(
-      registry,
-      storage,
-      storage,
-      operationStore,
-      eventBus,
-      writeCache,
-      { legacyStorageEnabled: this.features.legacyStorageEnabled },
-    );
-
-    const executorManager = new SimpleJobExecutorManager(
-      () => executor,
-      eventBus,
-      queue,
-      jobTracker,
-    );
-
-    await executorManager.start(this.executorCount);
-
-    const readModels: Array<KyselyDocumentView | KyselyDocumentIndexer> = [];
-
-    let documentView: KyselyDocumentView | undefined;
-    if (this.includeDocumentView) {
-      documentView = new KyselyDocumentView(db as any, operationStore);
-      await documentView.init();
-      readModels.push(documentView);
+    if (!this.executorManager) {
+      this.executorManager = new SimpleJobExecutorManager(
+        () =>
+          new SimpleJobExecutor(
+            registry,
+            storage,
+            storage,
+            operationStore,
+            eventBus,
+            writeCache,
+            { legacyStorageEnabled: this.features.legacyStorageEnabled },
+          ),
+        eventBus,
+        queue,
+        jobTracker,
+      );
     }
 
-    let documentIndexer: KyselyDocumentIndexer | undefined;
-    if (this.includeDocumentIndexer) {
-      documentIndexer = new KyselyDocumentIndexer(db as any, operationStore);
-      await documentIndexer.init();
-      readModels.push(documentIndexer);
-    }
+    await this.executorManager.start(this.executorConfig.count);
 
-    const readModelCoordinator = new ReadModelCoordinator(eventBus, readModels);
+    const readModelInstances: IReadModel[] = Array.from(
+      new Set([...this.readModels]),
+    );
+
+    // @ts-expect-error - Database type is a superset that includes all required tables
+    const documentView = new KyselyDocumentView(db, operationStore);
+    await documentView.init();
+    readModelInstances.push(documentView);
+
+    // @ts-expect-error - Database type is a superset that includes all required tables
+    const documentIndexer = new KyselyDocumentIndexer(db, operationStore);
+    await documentIndexer.init();
+    readModelInstances.push(documentIndexer);
+
+    const readModelCoordinator = new ReadModelCoordinator(
+      eventBus,
+      readModelInstances,
+    );
     readModelCoordinator.start();
 
-    const reactor = new Reactor(
+    return new Reactor(
       driveServer,
       storage,
       queue,
       jobTracker,
       readModelCoordinator,
     );
-
-    const cleanup = async () => {
-      await executorManager.stop();
-      readModelCoordinator.stop();
-      await writeCache.shutdown();
-      writeCache.clear();
-      try {
-        await db.destroy();
-      } catch {
-        // Ignore cleanup errors
-      }
-    };
-
-    return {
-      reactor,
-      driveServer,
-      storage,
-      registry,
-      eventBus,
-      queue,
-      jobTracker,
-      executor,
-      executorManager,
-      operationStore,
-      keyframeStore,
-      writeCache,
-      readModelCoordinator,
-      db,
-      documentView,
-      documentIndexer,
-      cleanup,
-    };
   }
 }

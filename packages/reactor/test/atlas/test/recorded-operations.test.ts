@@ -4,12 +4,31 @@ import {
   ReactorBuilder as DriveReactorBuilder,
 } from "document-drive";
 import { readFileSync } from "node:fs";
-import { beforeEach, describe, it } from "vitest";
-import { ReactorBuilder } from "../../../src/core/reactor-builder.js";
-import type { ReactorSetup } from "../../../src/core/types.js";
-
-import type { Kysely } from "kysely";
 import path from "node:path";
+import { describe, it } from "vitest";
+import { EventBus } from "../../../src/events/event-bus.js";
+import { SimpleJobExecutorManager } from "../../../src/executor/simple-job-executor-manager.js";
+import { SimpleJobExecutor } from "../../../src/executor/simple-job-executor.js";
+import { InMemoryJobTracker } from "../../../src/job-tracker/in-memory-job-tracker.js";
+import { InMemoryQueue } from "../../../src/queue/queue.js";
+import { ReadModelCoordinator } from "../../../src/read-models/coordinator.js";
+import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
+import { DocumentModelRegistry } from "../../../src/registry/implementation.js";
+import { KyselyDocumentIndexer } from "../../../src/storage/kysely/document-indexer.js";
+import { Reactor } from "../../../src/core/reactor.js";
+import type {
+  IDocumentStorage,
+  IDocumentOperationStorage,
+} from "document-drive";
+import { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";
+import type { WriteCacheConfig } from "../../../src/cache/types.js";
+import { KyselyKeyframeStore } from "../../../src/storage/kysely/keyframe-store.js";
+import { KyselyOperationStore } from "../../../src/storage/kysely/store.js";
+import { Kysely } from "kysely";
+import { KyselyPGlite } from "kysely-pglite";
+import type { Database as StorageDatabase } from "../../../src/storage/kysely/types.js";
+import type { DocumentViewDatabase } from "../../../src/read-models/types.js";
+import type { DocumentIndexerDatabase } from "../../../src/storage/kysely/types.js";
 import {
   type RecordedOperation,
   getDocumentModels,
@@ -17,91 +36,198 @@ import {
   processReactorMutation,
 } from "./recorded-operations-helpers.js";
 
-type Database = StorageDatabase & DocumentViewDatabase;
+type Database = StorageDatabase &
+  DocumentViewDatabase &
+  DocumentIndexerDatabase;
 
-describe("Atlas Recorded Operations Reactor Test", () => {
-  let reactor: Reactor;
-  let registry: IDocumentModelRegistry;
-  let storage: MemoryStorage;
-  let eventBus: EventBus;
-  let queue: InMemoryQueue;
-  let executor: SimpleJobExecutor;
-  let executorManager: SimpleJobExecutorManager;
-  let driveServer: BaseDocumentDriveServer;
-  let db: Kysely<Database>;
-  let operationStore: KyselyOperationStore;
-  let keyframeStore: IKeyframeStore;
-  let writeCache: KyselyWriteCache;
-  let readModelCoordinator: ReadModelCoordinator;
+type ReactorTestSetup = {
+  reactor: Reactor;
+  driveServer: BaseDocumentDriveServer;
+  storage: IDocumentStorage & IDocumentOperationStorage;
+  documentView?: KyselyDocumentView;
+  cleanup: () => Promise<void>;
+};
 
-  beforeEach(async () => {
-    storage = new MemoryStorage();
-    registry = new DocumentModelRegistry();
+async function createReactorSetup(
+  legacyStorageEnabled: boolean,
+  includeDocumentView: boolean,
+): Promise<ReactorTestSetup> {
+  const documentModels = getDocumentModels();
+  const storage = new MemoryStorage();
+  const registry = new DocumentModelRegistry();
+  registry.registerModules(...documentModels);
 
-    const documentModels = getDocumentModels();
-    registry.registerModules(...documentModels);
+  const builder = new DriveReactorBuilder(documentModels).withStorage(storage);
+  const driveServer = builder.build() as unknown as BaseDocumentDriveServer;
+  await driveServer.initialize();
 
-    const builder = new ReactorBuilder(documentModels).withStorage(storage);
-    driveServer = builder.build() as unknown as BaseDocumentDriveServer;
-    await driveServer.initialize();
-
-    const setup = await createTestOperationStore();
-    db = setup.db as unknown as Kysely<Database>;
-    operationStore = setup.store;
-    keyframeStore = setup.keyframeStore;
-
-    eventBus = new EventBus();
-    queue = new InMemoryQueue(eventBus);
-
-    const writeCacheConfig: WriteCacheConfig = {
-      maxDocuments: 100,
-      ringBufferSize: 10,
-      keyframeInterval: 10,
-    };
-    writeCache = new KyselyWriteCache(
-      keyframeStore,
-      operationStore,
-      registry,
-      writeCacheConfig,
-    );
-    await writeCache.startup();
-
-    executor = new SimpleJobExecutor(
-      registry,
-      storage,
-      storage,
-      operationStore,
-      eventBus,
-      writeCache,
-    );
-
-    const documentView = new KyselyDocumentView(db, operationStore);
-    await documentView.init();
-    readModelCoordinator = new ReadModelCoordinator(eventBus, [documentView]);
-
-    const jobTracker = createTestJobTracker();
-
-    executorManager = new SimpleJobExecutorManager(
-      () => executor,
-      eventBus,
-      queue,
-      jobTracker,
-    );
-
-    await executorManager.start(1);
-
-    reactor = new Reactor(
-      driveServer,
-      storage,
-      queue,
-      jobTracker,
-      readModelCoordinator,
-    );
+  const kyselyPGlite = await KyselyPGlite.create();
+  const db = new Kysely<Database>({
+    dialect: kyselyPGlite.dialect,
   });
 
+  await db.schema
+    .createTable("Operation")
+    .addColumn("id", "serial", (col) => col.primaryKey())
+    .addColumn("jobId", "text", (col) => col.notNull())
+    .addColumn("opId", "text", (col) => col.notNull().unique())
+    .addColumn("prevOpId", "text", (col) => col.notNull())
+    .addColumn("writeTimestampUtcMs", "timestamptz", (col) =>
+      col.notNull().defaultTo(new Date()),
+    )
+    .addColumn("documentId", "text", (col) => col.notNull())
+    .addColumn("documentType", "text", (col) => col.notNull())
+    .addColumn("scope", "text", (col) => col.notNull())
+    .addColumn("branch", "text", (col) => col.notNull())
+    .addColumn("timestampUtcMs", "timestamptz", (col) => col.notNull())
+    .addColumn("index", "integer", (col) => col.notNull())
+    .addColumn("action", "text", (col) => col.notNull())
+    .addColumn("skip", "integer", (col) => col.notNull())
+    .addColumn("error", "text")
+    .addColumn("hash", "text", (col) => col.notNull())
+    .addUniqueConstraint("unique_revision", [
+      "documentId",
+      "scope",
+      "branch",
+      "index",
+    ])
+    .execute();
+
+  await db.schema
+    .createIndex("streamOperations")
+    .on("Operation")
+    .columns(["documentId", "scope", "branch", "id"])
+    .execute();
+
+  await db.schema
+    .createIndex("branchlessStreamOperations")
+    .on("Operation")
+    .columns(["documentId", "scope", "id"])
+    .execute();
+
+  await db.schema
+    .createTable("Keyframe")
+    .addColumn("id", "serial", (col) => col.primaryKey())
+    .addColumn("documentId", "text", (col) => col.notNull())
+    .addColumn("documentType", "text", (col) => col.notNull())
+    .addColumn("scope", "text", (col) => col.notNull())
+    .addColumn("branch", "text", (col) => col.notNull())
+    .addColumn("revision", "integer", (col) => col.notNull())
+    .addColumn("document", "text", (col) => col.notNull())
+    .addColumn("createdAt", "timestamptz", (col) =>
+      col.notNull().defaultTo(new Date()),
+    )
+    .addUniqueConstraint("unique_keyframe", [
+      "documentId",
+      "scope",
+      "branch",
+      "revision",
+    ])
+    .execute();
+
+  await db.schema
+    .createIndex("keyframe_lookup")
+    .on("Keyframe")
+    .columns(["documentId", "scope", "branch", "revision"])
+    .execute();
+
+  const operationStore = new KyselyOperationStore(
+    db as unknown as Kysely<StorageDatabase>,
+  );
+  const keyframeStore = new KyselyKeyframeStore(
+    db as unknown as Kysely<StorageDatabase>,
+  );
+
+  const eventBus = new EventBus();
+  const queue = new InMemoryQueue(eventBus);
+  const jobTracker = new InMemoryJobTracker();
+
+  const writeCacheConfig: WriteCacheConfig = {
+    maxDocuments: 100,
+    ringBufferSize: 10,
+    keyframeInterval: 10,
+  };
+
+  const writeCache = new KyselyWriteCache(
+    keyframeStore,
+    operationStore,
+    registry,
+    writeCacheConfig,
+  );
+  await writeCache.startup();
+
+  const executor = new SimpleJobExecutor(
+    registry,
+    storage,
+    storage,
+    operationStore,
+    eventBus,
+    writeCache,
+    { legacyStorageEnabled },
+  );
+
+  const executorManager = new SimpleJobExecutorManager(
+    () => executor,
+    eventBus,
+    queue,
+    jobTracker,
+  );
+
+  await executorManager.start(1);
+
+  const readModels = [];
+  let documentView: KyselyDocumentView | undefined;
+
+  if (includeDocumentView) {
+    // @ts-expect-error - Database type is a superset that includes all required tables
+    documentView = new KyselyDocumentView(db, operationStore);
+    await documentView.init();
+    readModels.push(documentView);
+
+    // @ts-expect-error - Database type is a superset that includes all required tables
+    const documentIndexer = new KyselyDocumentIndexer(db, operationStore);
+    await documentIndexer.init();
+    readModels.push(documentIndexer);
+  }
+
+  const readModelCoordinator = new ReadModelCoordinator(eventBus, readModels);
+  readModelCoordinator.start();
+
+  const reactor = new Reactor(
+    driveServer,
+    storage,
+    queue,
+    jobTracker,
+    readModelCoordinator,
+  );
+
+  const cleanup = async () => {
+    await executorManager.stop();
+    readModelCoordinator.stop();
+    await writeCache.shutdown();
+    writeCache.clear();
+    try {
+      await db.destroy();
+    } catch {
+      // Ignore cleanup errors
+    }
+  };
+
+  return {
+    reactor,
+    driveServer,
+    storage,
+    documentView,
+    cleanup,
+  };
+}
+
+describe("Atlas Recorded Operations Reactor Test", () => {
   it(
     "should process all recorded operations without errors using Reactor",
     async () => {
+      const setup = await createReactorSetup(true, true);
+
       const recordedOpsContent = readFileSync(
         path.join(__dirname, "recorded-operations.json"),
         "utf-8",
@@ -112,25 +238,26 @@ describe("Atlas Recorded Operations Reactor Test", () => {
       console.log(`Processing ${mutations.length} mutations...`);
 
       for (const mutation of mutations) {
-        await processReactorMutation(mutation, reactor);
+        await processReactorMutation(mutation, setup.reactor);
       }
+
+      await setup.cleanup();
     },
     { timeout: 100000 },
   );
 });
 
 describe("Atlas Recorded Operations Base Server Test", () => {
-  let driveServer: BaseDocumentDriveServer;
-  let storage: MemoryStorage;
-
   it(
     "should process all recorded operations without errors using base-server",
     async () => {
-      storage = new MemoryStorage();
+      const storage = new MemoryStorage();
       const documentModels = getDocumentModels();
 
-      const builder = new ReactorBuilder(documentModels).withStorage(storage);
-      driveServer = builder.build() as unknown as BaseDocumentDriveServer;
+      const builder = new DriveReactorBuilder(documentModels).withStorage(
+        storage,
+      );
+      const driveServer = builder.build() as unknown as BaseDocumentDriveServer;
       await driveServer.initialize();
 
       const recordedOpsContent = readFileSync(
@@ -161,40 +288,26 @@ describe("Atlas Recorded Operations Base Server Test", () => {
 });
 
 describe("Atlas Recorded Operations State Comparison Test", () => {
-  let setup1: ReactorSetup;
-  let setup2: ReactorSetup;
-  let baseServerDriveServer: BaseDocumentDriveServer;
-  let baseServerStorage: MemoryStorage;
-  let driveIds: string[];
-  let driveIds2: string[];
-
   it(
     "should produce identical final state in both Reactor and BaseDocumentDriveServer",
     async ({ expect }) => {
-      driveIds = [];
-      driveIds2 = [];
+      const driveIds: string[] = [];
+      const driveIds2: string[] = [];
 
       const documentModels = getDocumentModels();
 
       // Setup reactor 1 (with legacy storage enabled)
-      setup1 = await new ReactorBuilder()
-        .withDocumentModels(documentModels)
-        .withDocumentView()
-        .build();
+      const setup1 = await createReactorSetup(true, true);
 
       // Setup reactor 2 (with legacy storage disabled)
-      setup2 = await new ReactorBuilder()
-        .withDocumentModels(documentModels)
-        .withFeatures({ legacyStorageEnabled: false })
-        .withDocumentView()
-        .build();
+      const setup2 = await createReactorSetup(false, true);
 
       // Setup base server for comparison
-      baseServerStorage = new MemoryStorage();
+      const baseServerStorage = new MemoryStorage();
       const baseServerBuilder = new DriveReactorBuilder(
         documentModels,
       ).withStorage(baseServerStorage);
-      baseServerDriveServer =
+      const baseServerDriveServer =
         baseServerBuilder.build() as unknown as BaseDocumentDriveServer;
       await baseServerDriveServer.initialize();
 
@@ -231,8 +344,8 @@ describe("Atlas Recorded Operations State Comparison Test", () => {
         expect(reactor2Drive.state).toEqual(baseServerDrive.state);
 
         const fileIds = reactorDrive.state.global.nodes
-          .filter((node: any) => node.kind === "file")
-          .map((node: any) => node.id);
+          .filter((node: unknown) => (node as { kind: string }).kind === "file")
+          .map((node: unknown) => (node as { id: string }).id);
 
         console.log(`Drive ${driveId} has ${fileIds.length} file documents`);
 
