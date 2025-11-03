@@ -1,19 +1,84 @@
 # Build a to-do list editor
 
+:::tip Tutorial Repository
+📦 **Reference Code**: 
+- **Editor Scaffolding**: [step-5-generate-todo-list-document-editor](https://github.com/powerhouse-inc/todo-tutorial/tree/step-5-generate-todo-list-document-editor)
+- **Complete Editor UI**: [step-6-add-basic-todo-editor-ui-components](https://github.com/powerhouse-inc/todo-tutorial/tree/step-6-add-basic-todo-editor-ui-components)
+
+This tutorial covers two steps:
+1. **Step 5**: Generating the editor template with `ph generate --editor`
+2. **Step 6**: Building a complete, interactive UI with components for adding, editing, and deleting todos
+
+Compare implementations: `git diff step-5-generate-todo-list-document-editor step-6-add-basic-todo-editor-ui-components`
+:::
+
+<details>
+<summary>📖 How to use this tutorial</summary>
+
+This tutorial shows building from **generated scaffolding** (step-5) to **complete UI** (step-6).
+
+### Compare your generated editor
+
+After running `ph generate --editor`:
+
+```bash
+# Compare generated scaffolding with step-5
+git diff tutorial/step-5-generate-todo-list-document-editor -- editors/
+
+# View the generated editor template
+git show tutorial/step-5-generate-todo-list-document-editor:editors/todo-list-editor/editor.tsx
+```
+
+### Compare your custom components
+
+After building your UI:
+
+```bash
+# Compare your complete editor with step-6
+git diff tutorial/step-6-add-basic-todo-editor-ui-components -- editors/
+
+# See what was added from scaffolding to complete UI
+git diff tutorial/step-5-generate-todo-list-document-editor..tutorial/step-6-add-basic-todo-editor-ui-components
+```
+
+### Browse the complete implementation
+
+Explore the production-ready component structure:
+
+```bash
+# List all components in step-6
+git ls-tree -r --name-only tutorial/step-6-add-basic-todo-editor-ui-components editors/todo-list-editor/components/
+
+# View a specific component
+git show tutorial/step-6-add-basic-todo-editor-ui-components:editors/todo-list-editor/components/TodoList.tsx
+```
+
+</details>
+
 In this chapter we will continue with the interface or editor implementation of the **To-do List** document model. This means you will create a simple user interface for the **To-do List** document model which will be used inside the Connect app to create, update and delete your ToDoList items.
 
 ## Generate the editor template
 
 Run the command below to generate the editor template for the **To-do List** document model.  
-This command reads the **To-do List** document model definition from the `document-models` folder and generates the editor template in the `editors/to-do-list` folder as `editor.tsx`.
+This command reads the **To-do List** document model definition from the `document-models` folder and generates the editor template in the `editors/todo-list-editor` folder.
 
-Notice the `--editor` flag which specifies the **To-do List** document model, and the `--document-types` flag defines the document type `powerhouse/todolist`.
+Notice the `--editor` flag which specifies the editor name, and the `--document-types` flag defines the document type `powerhouse/todo-list`.
 
 ```bash
-ph generate --editor ToDoList --document-types powerhouse/todolist
+ph generate --editor todo-list --document-types powerhouse/todo-list
 ```
 
-Once complete, navigate to the `editors/to-do-list/editor.tsx` file and open it in your editor.
+Once complete, you'll have a new directory structure:
+
+```
+editors/todo-list-editor/
+├── components/
+│   └── EditName.tsx          # Auto-generated component for editing document name
+├── editor.tsx                # Main editor component (to be customized)
+└── module.ts                 # Editor module configuration
+```
+
+Navigate to the `editors/todo-list-editor/editor.tsx` file and open it in your editor. You'll see a basic template ready for customization.
 
 ### Editor implementation options
 
@@ -28,7 +93,22 @@ Manual build steps are typically only needed when publishing packages.
 
 ## To-do List editor
 
-Below is the complete code for the To-Do List editor. Paste this code in `editors/to-do-list/editor.tsx`.
+We'll build the editor using a component-based approach for better organization and reusability. The complete implementation (step-6) includes separate components for different UI features.
+
+### Component-based architecture
+
+The final editor structure in step-6 includes:
+- `TodoList.tsx` - Main container component
+- `AddTodo.tsx` - Component for adding new todos
+- `Todo.tsx` - Individual todo item component with edit/delete functionality
+- `Todos.tsx` - List wrapper for rendering all todos
+- `TodoListName.tsx` - Component for displaying/editing the list name
+- `CloseButton.tsx` - Button to close the editor
+- `UndoRedoButtons.tsx` - Navigation through operation history
+
+### Simple editor implementation
+
+For this tutorial, we'll create a simplified version. Replace the content of `editors/todo-list-editor/editor.tsx` with:
 
 <details>
 <summary>Complete ToDoList Editor Example (using Tailwind CSS)</summary>
@@ -207,9 +287,42 @@ The editor will update dynamically, so you can play around with your editor styl
 Congratulations!
 If you managed to follow this tutorial until this point, you have successfully implemented the **To-do List** document model with its reducer operations and editor.
 
+## View the complete implementation
+
+The tutorial repository's step-6 branch shows a production-ready implementation with:
+
+**Component structure:**
+```
+editors/todo-list-editor/components/
+├── TodoList.tsx          # Main orchestrating component
+├── AddTodo.tsx           # Form for adding new todos
+├── Todo.tsx              # Individual todo with inline editing
+├── Todos.tsx             # List renderer
+├── TodoListName.tsx      # Editable document name
+├── CloseButton.tsx       # Editor close functionality
+└── UndoRedoButtons.tsx   # Operation history navigation
+```
+
+**Key features demonstrated:**
+- Modular component architecture
+- Document model hooks (`useSelectedTodoListDocument`)
+- Action dispatching (`addTodoItem`, `updateTodoItem`, `deleteTodoItem`)
+- Inline editing with local state management
+- Integration with document metadata (creation/modification times)
+
+To explore the complete implementation:
+
+```bash
+# Browse all component files
+git ls-tree -r --name-only tutorial/step-6-add-basic-todo-editor-ui-components editors/todo-list-editor/components/
+
+# View a specific component
+git show tutorial/step-6-add-basic-todo-editor-ui-components:editors/todo-list-editor/components/TodoList.tsx
+```
+
 ### Up next: Mastery Track
 
-In the [Mastery Track chapther: Document Model Creation](/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel) we guide you through the theoretics of the previous steps while created a more advanced version of the To-do List.
+In the [Mastery Track chapter: Document Model Creation](/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel) we guide you through the theoretics of the previous steps while creating a more advanced version of the To-do List.
 
 You will learn:
 
