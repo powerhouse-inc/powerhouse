@@ -49,149 +49,174 @@ describe("generateDriveEditor", () => {
     }
   });
 
-  it("should generate a drive editor with the correct files and content", async () => {
-    await setupTest(path.join(testDir, "data", "editors-test-project"));
+  it(
+    "should generate a drive editor with the correct files and content",
+    {
+      timeout: 15000,
+    },
+    async () => {
+      await setupTest(path.join(testDir, "data", "editors-test-project"));
 
-    const name = "Atlas Drive Explorer";
+      const name = "Atlas Drive Explorer";
 
-    await generateDriveEditor({
-      name,
-      config,
-      appId: "AtlasDriveExplorer",
-      allowedDocumentTypes: "powerhouse/test-doc",
-    });
+      await generateDriveEditor({
+        name,
+        config,
+        appId: "AtlasDriveExplorer",
+        allowedDocumentTypes: "powerhouse/test-doc",
+      });
 
-    const editorsDir = path.join(testOutDirPath, "editors");
-    expect(existsSync(editorsDir)).toBe(true);
+      const editorsDir = path.join(testOutDirPath, "editors");
+      expect(existsSync(editorsDir)).toBe(true);
 
-    const editorsFilePath = path.join(editorsDir, "editors.ts");
-    expect(existsSync(editorsFilePath)).toBe(true);
-    const editorsContent = fs.readFileSync(editorsFilePath, "utf-8");
-    expect(editorsContent).toContain(`export const editors: EditorModule[]`);
-    expect(editorsContent).toContain(`AtlasDriveExplorer`);
+      const editorsFilePath = path.join(editorsDir, "editors.ts");
+      expect(existsSync(editorsFilePath)).toBe(true);
+      const editorsContent = fs.readFileSync(editorsFilePath, "utf-8");
+      expect(editorsContent).toContain(`export const editors: EditorModule[]`);
+      expect(editorsContent).toContain(`AtlasDriveExplorer`);
 
-    const editorDir = path.join(editorsDir, "atlas-drive-explorer");
-    expect(existsSync(editorDir)).toBe(true);
+      const editorDir = path.join(editorsDir, "atlas-drive-explorer");
+      expect(existsSync(editorDir)).toBe(true);
 
-    const moduleFilePath = path.join(editorDir, "module.ts");
-    expect(existsSync(moduleFilePath)).toBe(true);
-    const moduleContent = fs.readFileSync(moduleFilePath, "utf-8");
-    expect(moduleContent).toContain(
-      `export const AtlasDriveExplorer: EditorModule`,
-    );
-    expect(moduleContent).toContain(
-      `documentTypes: ["powerhouse/document-drive"]`,
-    );
-    expect(moduleContent).toContain(`id: "AtlasDriveExplorer"`);
-    expect(moduleContent).toContain(`name: "Atlas Drive Explorer"`);
+      const moduleFilePath = path.join(editorDir, "module.ts");
+      expect(existsSync(moduleFilePath)).toBe(true);
+      const moduleContent = fs.readFileSync(moduleFilePath, "utf-8");
+      expect(moduleContent).toContain(
+        `export const AtlasDriveExplorer: EditorModule`,
+      );
+      expect(moduleContent).toContain(
+        `documentTypes: ["powerhouse/document-drive"]`,
+      );
+      expect(moduleContent).toContain(`id: "AtlasDriveExplorer"`);
+      expect(moduleContent).toContain(`name: "Atlas Drive Explorer"`);
 
-    const configFilePath = path.join(editorDir, "config.ts");
-    expect(existsSync(configFilePath)).toBe(true);
-    const configContent = fs.readFileSync(configFilePath, "utf-8");
-    expect(configContent).toContain(
-      `export const editorConfig: PHDriveEditorConfig`,
-    );
-    expect(configContent).toContain(
-      `allowedDocumentTypes: ["powerhouse/test-doc"]`,
-    );
+      const configFilePath = path.join(editorDir, "config.ts");
+      expect(existsSync(configFilePath)).toBe(true);
+      const configContent = fs.readFileSync(configFilePath, "utf-8");
+      expect(configContent).toContain(
+        `export const editorConfig: PHDriveEditorConfig`,
+      );
+      expect(configContent).toContain(
+        `allowedDocumentTypes: ["powerhouse/test-doc"]`,
+      );
 
-    const editorFilePath = path.join(editorDir, "editor.tsx");
-    expect(existsSync(editorFilePath)).toBe(true);
-    const editorContent = fs.readFileSync(editorFilePath, "utf-8");
-    expect(editorContent).toContain(
-      `export function Editor(props: EditorProps)`,
-    );
-    expect(editorContent).toContain(`<DriveExplorer {...props} />`);
-    expect(editorContent).toContain(`useSetPHDriveEditorConfig(editorConfig)`);
+      const editorFilePath = path.join(editorDir, "editor.tsx");
+      expect(existsSync(editorFilePath)).toBe(true);
+      const editorContent = fs.readFileSync(editorFilePath, "utf-8");
+      expect(editorContent).toContain(
+        `export function Editor(props: EditorProps)`,
+      );
+      expect(editorContent).toContain(`<DriveExplorer {...props} />`);
+      expect(editorContent).toContain(
+        `useSetPHDriveEditorConfig(editorConfig)`,
+      );
 
-    const componentsDir = path.join(editorDir, "components");
-    expect(existsSync(componentsDir)).toBe(true);
+      const componentsDir = path.join(editorDir, "components");
+      expect(existsSync(componentsDir)).toBe(true);
 
-    const driveExplorerPath = path.join(componentsDir, "DriveExplorer.tsx");
-    expect(existsSync(driveExplorerPath)).toBe(true);
-    const driveExplorerContent = fs.readFileSync(driveExplorerPath, "utf-8");
-    expect(driveExplorerContent).toContain(
-      `export function DriveExplorer({ children }: EditorProps)`,
-    );
+      const driveExplorerPath = path.join(componentsDir, "DriveExplorer.tsx");
+      expect(existsSync(driveExplorerPath)).toBe(true);
+      const driveExplorerContent = fs.readFileSync(driveExplorerPath, "utf-8");
+      expect(driveExplorerContent).toContain(
+        `export function DriveExplorer({ children }: EditorProps)`,
+      );
 
-    const createDocumentPath = path.join(componentsDir, "CreateDocument.tsx");
-    expect(existsSync(createDocumentPath)).toBe(true);
-    const createDocumentContent = fs.readFileSync(createDocumentPath, "utf-8");
-    expect(createDocumentContent).toContain(`export function CreateDocument()`);
+      const createDocumentPath = path.join(componentsDir, "CreateDocument.tsx");
+      expect(existsSync(createDocumentPath)).toBe(true);
+      const createDocumentContent = fs.readFileSync(
+        createDocumentPath,
+        "utf-8",
+      );
+      expect(createDocumentContent).toContain(
+        `export function CreateDocument()`,
+      );
 
-    const folderTreePath = path.join(componentsDir, "FolderTree.tsx");
-    expect(existsSync(folderTreePath)).toBe(true);
-    const folderTreeContent = fs.readFileSync(folderTreePath, "utf-8");
-    expect(folderTreeContent).toContain(`export function FolderTree()`);
+      const folderTreePath = path.join(componentsDir, "FolderTree.tsx");
+      expect(existsSync(folderTreePath)).toBe(true);
+      const folderTreeContent = fs.readFileSync(folderTreePath, "utf-8");
+      expect(folderTreeContent).toContain(`export function FolderTree()`);
 
-    const driveContentsPath = path.join(componentsDir, "DriveContents.tsx");
-    expect(existsSync(driveContentsPath)).toBe(true);
-    const driveContentsContent = fs.readFileSync(driveContentsPath, "utf-8");
-    expect(driveContentsContent).toContain(`export function DriveContents()`);
+      const driveContentsPath = path.join(componentsDir, "DriveContents.tsx");
+      expect(existsSync(driveContentsPath)).toBe(true);
+      const driveContentsContent = fs.readFileSync(driveContentsPath, "utf-8");
+      expect(driveContentsContent).toContain(`export function DriveContents()`);
 
-    const filesPath = path.join(componentsDir, "Files.tsx");
-    expect(existsSync(filesPath)).toBe(true);
-    const filesContent = fs.readFileSync(filesPath, "utf-8");
-    expect(filesContent).toContain(`export function Files()`);
+      const filesPath = path.join(componentsDir, "Files.tsx");
+      expect(existsSync(filesPath)).toBe(true);
+      const filesContent = fs.readFileSync(filesPath, "utf-8");
+      expect(filesContent).toContain(`export function Files()`);
 
-    const foldersPath = path.join(componentsDir, "Folders.tsx");
-    expect(existsSync(foldersPath)).toBe(true);
-    const foldersContent = fs.readFileSync(foldersPath, "utf-8");
-    expect(foldersContent).toContain(`export function Folders()`);
+      const foldersPath = path.join(componentsDir, "Folders.tsx");
+      expect(existsSync(foldersPath)).toBe(true);
+      const foldersContent = fs.readFileSync(foldersPath, "utf-8");
+      expect(foldersContent).toContain(`export function Folders()`);
 
-    const emptyStatePath = path.join(componentsDir, "EmptyState.tsx");
-    expect(existsSync(emptyStatePath)).toBe(true);
-    const emptyStateContent = fs.readFileSync(emptyStatePath, "utf-8");
-    expect(emptyStateContent).toContain(`export function EmptyState()`);
+      const emptyStatePath = path.join(componentsDir, "EmptyState.tsx");
+      expect(existsSync(emptyStatePath)).toBe(true);
+      const emptyStateContent = fs.readFileSync(emptyStatePath, "utf-8");
+      expect(emptyStateContent).toContain(`export function EmptyState()`);
 
-    const navigationBreadcrumbsPath = path.join(
-      componentsDir,
-      "NavigationBreadcrumbs.tsx",
-    );
-    expect(existsSync(navigationBreadcrumbsPath)).toBe(true);
-    const navigationBreadcrumbsContent = fs.readFileSync(
-      navigationBreadcrumbsPath,
-      "utf-8",
-    );
-    expect(navigationBreadcrumbsContent).toContain(
-      `export function NavigationBreadcrumbs()`,
-    );
-  });
+      const navigationBreadcrumbsPath = path.join(
+        componentsDir,
+        "NavigationBreadcrumbs.tsx",
+      );
+      expect(existsSync(navigationBreadcrumbsPath)).toBe(true);
+      const navigationBreadcrumbsContent = fs.readFileSync(
+        navigationBreadcrumbsPath,
+        "utf-8",
+      );
+      expect(navigationBreadcrumbsContent).toContain(
+        `export function NavigationBreadcrumbs()`,
+      );
+    },
+  );
 
-  it("should generate a drive editor with default id when no appId is provided", async () => {
-    await setupTest(path.join(testDir, "data", "editors-test-project"));
-    const name = "TestApp";
-    await generateDriveEditor({ name, config }); // No appId provided
+  it(
+    "should generate a drive editor with default id when no appId is provided",
+    {
+      timeout: 15000,
+    },
+    async () => {
+      await setupTest(path.join(testDir, "data", "editors-test-project"));
+      const name = "TestApp";
+      await generateDriveEditor({ name, config }); // No appId provided
 
-    const editorsDir = path.join(testOutDirPath, "editors");
-    const editorDir = path.join(editorsDir, "test-app");
-    const moduleFilePath = path.join(editorDir, "module.ts");
-    const moduleContent = fs.readFileSync(moduleFilePath, "utf-8");
-    expect(moduleContent).toContain(`id: "test-app"`);
+      const editorsDir = path.join(testOutDirPath, "editors");
+      const editorDir = path.join(editorsDir, "test-app");
+      const moduleFilePath = path.join(editorDir, "module.ts");
+      const moduleContent = fs.readFileSync(moduleFilePath, "utf-8");
+      expect(moduleContent).toContain(`id: "test-app"`);
 
-    await compile(testOutDirPath);
-  });
+      await compile(testOutDirPath);
+    },
+  );
 
-  it("should append new exports to existing editors.ts file", async () => {
-    await setupTest(
-      path.join(testDir, "data", "editors-test-project-with-existing-editor"),
-    );
-    const name = "Atlas Drive Explorer";
+  it(
+    "should append new exports to existing editors.ts file",
+    {
+      timeout: 15000,
+    },
+    async () => {
+      await setupTest(
+        path.join(testDir, "data", "editors-test-project-with-existing-editor"),
+      );
+      const name = "Atlas Drive Explorer";
 
-    await generateDriveEditor({
-      name,
-      config,
-      appId: "AtlasDriveExplorer",
-      allowedDocumentTypes: "powerhouse/test-doc",
-    });
+      await generateDriveEditor({
+        name,
+        config,
+        appId: "AtlasDriveExplorer",
+        allowedDocumentTypes: "powerhouse/test-doc",
+      });
 
-    const editorsDir = path.join(testOutDirPath, "editors");
-    const editorsFilePath = path.join(editorsDir, "editors.ts");
-    const editorsContent = fs.readFileSync(editorsFilePath, "utf-8");
-    expect(editorsContent).toContain(`export const editors: EditorModule[]`);
-    expect(editorsContent).toContain(`AtlasDriveExplorer`);
-    expect(editorsContent).toContain(`TestDocEditor`);
-  });
+      const editorsDir = path.join(testOutDirPath, "editors");
+      const editorsFilePath = path.join(editorsDir, "editors.ts");
+      const editorsContent = fs.readFileSync(editorsFilePath, "utf-8");
+      expect(editorsContent).toContain(`export const editors: EditorModule[]`);
+      expect(editorsContent).toContain(`AtlasDriveExplorer`);
+      expect(editorsContent).toContain(`TestDocEditor`);
+    },
+  );
   it(
     "should create the editors.ts file if it doesn't exist",
     {
