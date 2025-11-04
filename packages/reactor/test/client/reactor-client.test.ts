@@ -11,6 +11,7 @@ import {
   type PagedResults,
 } from "../../src/shared/types.js";
 import type { ISigner } from "../../src/signer/types.js";
+import { createEmptyConsistencyToken } from "../factories.js";
 import type { IReactorSubscriptionManager } from "../../src/subs/types.js";
 
 describe("ReactorClient Unit Tests", () => {
@@ -220,12 +221,14 @@ describe("ReactorClient Unit Tests", () => {
         id: "job-1",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       const completedJobInfo: JobInfo = {
         id: "job-1",
         status: JobStatus.COMPLETED,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       const mockDoc: PHDocument = {
@@ -264,6 +267,7 @@ describe("ReactorClient Unit Tests", () => {
         id: "job-1",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       vi.mocked(mockReactor.mutate).mockResolvedValue(jobInfo);
@@ -296,6 +300,7 @@ describe("ReactorClient Unit Tests", () => {
         id: "job-1",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       vi.mocked(mockReactor.mutate).mockResolvedValue(jobInfo);
@@ -339,6 +344,7 @@ describe("ReactorClient Unit Tests", () => {
         id: "job-1",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       });
 
       await client.mutateAsync(documentId, actions, undefined, signal);
@@ -356,6 +362,7 @@ describe("ReactorClient Unit Tests", () => {
         id: "job-1",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       const mockDoc: PHDocument = {
@@ -398,6 +405,7 @@ describe("ReactorClient Unit Tests", () => {
         id: "job-1",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       const mockDoc: PHDocument = {
@@ -439,6 +447,7 @@ describe("ReactorClient Unit Tests", () => {
         id: "job-1",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       vi.mocked(mockReactor.deleteDocument).mockResolvedValue(jobInfo);
@@ -465,6 +474,7 @@ describe("ReactorClient Unit Tests", () => {
         id: "job-1",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       vi.mocked(mockReactor.deleteDocument).mockResolvedValue(jobInfo);
@@ -486,6 +496,7 @@ describe("ReactorClient Unit Tests", () => {
         id: "job-1",
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       vi.mocked(mockReactor.getJobStatus).mockResolvedValue(jobInfo);
@@ -503,6 +514,7 @@ describe("ReactorClient Unit Tests", () => {
         id: "job-1",
         status: JobStatus.COMPLETED,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       });
 
       await client.getJobStatus("job-1", signal);
@@ -517,6 +529,7 @@ describe("ReactorClient Unit Tests", () => {
         id: "job-1",
         status: JobStatus.COMPLETED,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(completedJobInfo);
@@ -535,6 +548,7 @@ describe("ReactorClient Unit Tests", () => {
         id: "job-2",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       const completedJobInfo: JobInfo = {
@@ -560,6 +574,7 @@ describe("ReactorClient Unit Tests", () => {
         id: "job-1",
         status: JobStatus.COMPLETED,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       });
 
       await client.waitForJob("job-1", signal);
@@ -584,6 +599,7 @@ describe("ReactorClient Unit Tests", () => {
         id: "job-1",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       });
       vi.mocked(mockJobAwaiter.waitForJob).mockRejectedValue(error);
 

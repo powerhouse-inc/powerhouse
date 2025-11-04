@@ -1,4 +1,4 @@
-import type { ErrorInfo, JobInfo } from "../shared/types.js";
+import type { ConsistencyToken, ErrorInfo, JobInfo } from "../shared/types.js";
 
 /**
  * Interface for tracking job lifecycle status.
@@ -23,9 +23,14 @@ export interface IJobTracker {
    * Mark a job as completed successfully.
    *
    * @param jobId - The job ID to mark as completed
+   * @param consistencyToken - The consistency token representing operations written by this job
    * @param result - Optional result data from the job execution
    */
-  markCompleted(jobId: string, result?: any): void;
+  markCompleted(
+    jobId: string,
+    consistencyToken: ConsistencyToken,
+    result?: any,
+  ): void;
 
   /**
    * Mark a job as failed.

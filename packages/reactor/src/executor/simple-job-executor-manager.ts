@@ -6,6 +6,7 @@ import { QueueEventTypes } from "../queue/types.js";
 import type { ErrorInfo } from "../shared/types.js";
 import type { IJobExecutor, IJobExecutorManager } from "./interfaces.js";
 import type { ExecutorManagerStatus, JobResult } from "./types.js";
+import { createConsistencyToken } from "./util.js";
 
 export type JobExecutorFactory = () => IJobExecutor;
 
@@ -139,7 +140,14 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     if (result.success) {
       handle.complete();
       this.totalJobsProcessed++;
-      this.jobTracker.markCompleted(handle.job.id, result.operations);
+      const consistencyToken = createConsistencyToken(
+        result.operationsWithContext || [],
+      );
+      this.jobTracker.markCompleted(
+        handle.job.id,
+        consistencyToken,
+        result.operations,
+      );
     } else {
       // Handle retry logic
       const retryCount = handle.job.retryCount || 0;

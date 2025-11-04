@@ -383,6 +383,11 @@ export class Reactor implements IReactor {
       id: job.id,
       status: JobStatus.PENDING,
       createdAtUtcIso,
+      consistencyToken: {
+        version: 1,
+        createdAtUtcIso,
+        coordinates: [],
+      },
     };
     this.jobTracker.registerJob(jobInfo);
 
@@ -435,6 +440,11 @@ export class Reactor implements IReactor {
       id: job.id,
       status: JobStatus.PENDING,
       createdAtUtcIso,
+      consistencyToken: {
+        version: 1,
+        createdAtUtcIso,
+        coordinates: [],
+      },
     };
     this.jobTracker.registerJob(jobInfo);
 
@@ -470,6 +480,11 @@ export class Reactor implements IReactor {
       id: job.id,
       status: JobStatus.PENDING,
       createdAtUtcIso,
+      consistencyToken: {
+        version: 1,
+        createdAtUtcIso,
+        coordinates: [],
+      },
     };
     this.jobTracker.registerJob(jobInfo);
 
@@ -505,6 +520,11 @@ export class Reactor implements IReactor {
         id: jobId,
         status: JobStatus.PENDING,
         createdAtUtcIso,
+        consistencyToken: {
+          version: 1,
+          createdAtUtcIso,
+          coordinates: [],
+        },
       };
       this.jobTracker.registerJob(jobInfo);
       jobInfos.set(jobPlan.key, jobInfo);
@@ -626,12 +646,18 @@ export class Reactor implements IReactor {
 
     if (!jobInfo) {
       // Job not found - return FAILED status with appropriate error
+      const now = new Date().toISOString();
       return Promise.resolve({
         id: jobId,
         status: JobStatus.FAILED,
-        createdAtUtcIso: new Date().toISOString(),
-        completedAtUtcIso: new Date().toISOString(),
+        createdAtUtcIso: now,
+        completedAtUtcIso: now,
         error: toErrorInfo("Job not found"),
+        consistencyToken: {
+          version: 1,
+          createdAtUtcIso: now,
+          coordinates: [],
+        },
       });
     }
 

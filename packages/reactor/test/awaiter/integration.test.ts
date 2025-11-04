@@ -3,6 +3,7 @@ import { InMemoryJobTracker } from "../../src/job-tracker/in-memory-job-tracker.
 import type { IJobTracker } from "../../src/job-tracker/interfaces.js";
 import { JobAwaiter } from "../../src/shared/awaiter.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
+import { createEmptyConsistencyToken } from "../factories.js";
 
 describe("JobAwaiter Integration Tests", () => {
   let jobAwaiter: JobAwaiter;
@@ -32,6 +33,7 @@ describe("JobAwaiter Integration Tests", () => {
         id: "job-1",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       jobTracker.registerJob(jobInfo);
@@ -45,7 +47,9 @@ describe("JobAwaiter Integration Tests", () => {
 
       await vi.advanceTimersByTimeAsync(100);
 
-      jobTracker.markCompleted("job-1", { data: "success" });
+      jobTracker.markCompleted("job-1", createEmptyConsistencyToken(), {
+        data: "success",
+      });
 
       await vi.advanceTimersByTimeAsync(100);
 
@@ -59,6 +63,7 @@ describe("JobAwaiter Integration Tests", () => {
         id: "job-2",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       jobTracker.registerJob(jobInfo);
@@ -86,6 +91,7 @@ describe("JobAwaiter Integration Tests", () => {
         id: "job-3",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       jobTracker.registerJob(jobInfo);
@@ -99,7 +105,9 @@ describe("JobAwaiter Integration Tests", () => {
       await vi.advanceTimersByTimeAsync(100);
       expect(jobTracker.getJobStatus("job-3")?.status).toBe(JobStatus.RUNNING);
 
-      jobTracker.markCompleted("job-3", { result: "completed" });
+      jobTracker.markCompleted("job-3", createEmptyConsistencyToken(), {
+        result: "completed",
+      });
       await vi.advanceTimersByTimeAsync(100);
 
       const result = await promise;
@@ -112,16 +120,19 @@ describe("JobAwaiter Integration Tests", () => {
         id: "job-concurrent-1",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
       const job2: JobInfo = {
         id: "job-concurrent-2",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
       const job3: JobInfo = {
         id: "job-concurrent-3",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       jobTracker.registerJob(job1);
@@ -134,7 +145,10 @@ describe("JobAwaiter Integration Tests", () => {
 
       await vi.advanceTimersByTimeAsync(0);
 
-      jobTracker.markCompleted("job-concurrent-1");
+      jobTracker.markCompleted(
+        "job-concurrent-1",
+        createEmptyConsistencyToken(),
+      );
       await vi.advanceTimersByTimeAsync(100);
 
       const result1 = await promise1;
@@ -147,7 +161,10 @@ describe("JobAwaiter Integration Tests", () => {
         message: "Job 2 failed",
         stack: "",
       });
-      jobTracker.markCompleted("job-concurrent-3");
+      jobTracker.markCompleted(
+        "job-concurrent-3",
+        createEmptyConsistencyToken(),
+      );
       await vi.advanceTimersByTimeAsync(100);
 
       const [result2, result3] = await Promise.all([promise2, promise3]);
@@ -172,6 +189,7 @@ describe("JobAwaiter Integration Tests", () => {
         id: "job-duplicate",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       jobTracker.registerJob(jobInfo);
@@ -181,7 +199,9 @@ describe("JobAwaiter Integration Tests", () => {
 
       await vi.advanceTimersByTimeAsync(0);
 
-      jobTracker.markCompleted("job-duplicate", { data: "shared result" });
+      jobTracker.markCompleted("job-duplicate", createEmptyConsistencyToken(), {
+        data: "shared result",
+      });
       await vi.advanceTimersByTimeAsync(100);
 
       const [result1, result2] = await Promise.all([promise1, promise2]);
@@ -195,6 +215,7 @@ describe("JobAwaiter Integration Tests", () => {
         id: "job-abort",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       jobTracker.registerJob(jobInfo);
@@ -214,6 +235,7 @@ describe("JobAwaiter Integration Tests", () => {
         id: "job-long-running",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       jobTracker.registerJob(jobInfo);
@@ -241,7 +263,10 @@ describe("JobAwaiter Integration Tests", () => {
         JobStatus.RUNNING,
       );
 
-      jobTracker.markCompleted("job-long-running");
+      jobTracker.markCompleted(
+        "job-long-running",
+        createEmptyConsistencyToken(),
+      );
       await vi.advanceTimersByTimeAsync(100);
 
       const result = await promise;
@@ -265,11 +290,13 @@ describe("JobAwaiter Integration Tests", () => {
         id: "job-cleanup-1",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
       const job2: JobInfo = {
         id: "job-cleanup-2",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       jobTracker.registerJob(job1);
@@ -280,8 +307,8 @@ describe("JobAwaiter Integration Tests", () => {
 
       await vi.advanceTimersByTimeAsync(0);
 
-      jobTracker.markCompleted("job-cleanup-1");
-      jobTracker.markCompleted("job-cleanup-2");
+      jobTracker.markCompleted("job-cleanup-1", createEmptyConsistencyToken());
+      jobTracker.markCompleted("job-cleanup-2", createEmptyConsistencyToken());
       await vi.advanceTimersByTimeAsync(100);
 
       await Promise.all([promise1, promise2]);
@@ -295,6 +322,7 @@ describe("JobAwaiter Integration Tests", () => {
         status: JobStatus.COMPLETED,
         createdAtUtcIso: new Date().toISOString(),
         completedAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       jobTracker.registerJob(jobInfo);
@@ -312,6 +340,7 @@ describe("JobAwaiter Integration Tests", () => {
         id: "job-with-result",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       jobTracker.registerJob(jobInfo);
@@ -326,7 +355,11 @@ describe("JobAwaiter Integration Tests", () => {
         metadata: { processed: true },
       };
 
-      jobTracker.markCompleted("job-with-result", resultData);
+      jobTracker.markCompleted(
+        "job-with-result",
+        createEmptyConsistencyToken(),
+        resultData,
+      );
       await vi.advanceTimersByTimeAsync(100);
 
       const result = await promise;
@@ -341,11 +374,13 @@ describe("JobAwaiter Integration Tests", () => {
         id: "job-shutdown-1",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
       const job2: JobInfo = {
         id: "job-shutdown-2",
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       jobTracker.registerJob(job1);
@@ -365,6 +400,7 @@ describe("JobAwaiter Integration Tests", () => {
         id: "job-cycle-1",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       jobTracker.registerJob(jobInfo);
@@ -372,7 +408,7 @@ describe("JobAwaiter Integration Tests", () => {
 
       await vi.advanceTimersByTimeAsync(0);
 
-      jobTracker.markCompleted("job-cycle-1");
+      jobTracker.markCompleted("job-cycle-1", createEmptyConsistencyToken());
       await vi.advanceTimersByTimeAsync(100);
 
       await promise1;
@@ -381,6 +417,7 @@ describe("JobAwaiter Integration Tests", () => {
         id: "job-cycle-2",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       jobTracker.registerJob(jobInfo);
@@ -388,7 +425,7 @@ describe("JobAwaiter Integration Tests", () => {
 
       await vi.advanceTimersByTimeAsync(0);
 
-      jobTracker.markCompleted("job-cycle-2");
+      jobTracker.markCompleted("job-cycle-2", createEmptyConsistencyToken());
       await vi.advanceTimersByTimeAsync(100);
 
       await promise2;

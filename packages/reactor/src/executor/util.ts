@@ -6,6 +6,11 @@ import type {
   UpgradeDocumentAction,
 } from "document-model";
 import { createPresignedHeader, defaultBaseState } from "document-model/core";
+import type {
+  ConsistencyCoordinate,
+  ConsistencyToken,
+} from "../shared/types.js";
+import type { OperationWithContext } from "../storage/interfaces.js";
 
 /**
  * Creates a PHDocument from a CREATE_DOCUMENT action input.
@@ -144,3 +149,50 @@ export const getNextIndexForScope = (
 ): number => {
   return document.header.revision?.[scope] || 0;
 };
+
+/**
+ * Creates an empty consistency token with no coordinates.
+ * Used when a job is registered or fails without writing operations.
+ *
+ * @returns A consistency token with an empty coordinates array
+ */
+export function createEmptyConsistencyToken(): ConsistencyToken {
+  return {
+    version: 1,
+    createdAtUtcIso: new Date().toISOString(),
+    coordinates: [],
+  };
+}
+
+/**
+ * Creates a consistency token from operations written during job execution.
+ * Maps each operation to a consistency coordinate tracking (documentId, scope, branch, operationIndex).
+ * If no operations are provided, returns an empty token.
+ *
+ * @param operationsWithContext - Array of operations with their execution context
+ * @returns A consistency token representing all operations written
+ */
+export function createConsistencyToken(
+  operationsWithContext: OperationWithContext[],
+): ConsistencyToken {
+  if (!operationsWithContext || operationsWithContext.length === 0) {
+    return createEmptyConsistencyToken();
+  }
+
+  const coordinates: ConsistencyCoordinate[] = [];
+  for (let i = 0; i < operationsWithContext.length; i++) {
+    const opWithContext = operationsWithContext[i]!;
+    coordinates.push({
+      documentId: opWithContext.context.documentId,
+      scope: opWithContext.context.scope,
+      branch: opWithContext.context.branch,
+      operationIndex: opWithContext.operation.index,
+    });
+  }
+
+  return {
+    version: 1,
+    createdAtUtcIso: new Date().toISOString(),
+    coordinates,
+  };
+}

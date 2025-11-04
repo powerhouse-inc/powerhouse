@@ -55,6 +55,7 @@ export type JobInfo = {
   error?: ErrorInfo;
   errorHistory?: ErrorInfo[];
   result?: any;
+  consistencyToken: ConsistencyToken;
 };
 
 /**

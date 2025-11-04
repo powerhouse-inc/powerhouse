@@ -15,7 +15,10 @@ import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
 import type { DocumentViewDatabase } from "../../../src/read-models/types.js";
 import { DocumentModelRegistry } from "../../../src/registry/implementation.js";
 import type { Database as StorageDatabase } from "../../../src/storage/kysely/types.js";
-import { createTestJobTracker, createTestOperationStore } from "../../../test/factories.js";
+import {
+  createTestJobTracker,
+  createTestOperationStore,
+} from "../../../test/factories.js";
 
 import type { Kysely } from "kysely";
 import {

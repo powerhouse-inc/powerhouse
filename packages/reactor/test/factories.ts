@@ -685,3 +685,15 @@ export function createTestDocuments(
     }),
   );
 }
+
+/**
+ * Creates a JobInfo object with an empty consistency token.
+ * Useful for test scenarios where consistency token details don't matter.
+ */
+export function createEmptyConsistencyToken() {
+  return {
+    version: 1 as const,
+    createdAtUtcIso: new Date().toISOString(),
+    coordinates: [],
+  };
+}
