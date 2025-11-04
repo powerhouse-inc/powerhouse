@@ -6,11 +6,19 @@ export { Reactor } from "./core/reactor.js";
 export { ReactorBuilder } from "./core/reactor-builder.js";
 export { type IReactor, type ReactorFeatures } from "./core/types.js";
 export { JobAwaiter, type IJobAwaiter } from "./shared/awaiter.js";
+export {
+  ConsistencyTracker,
+  makeConsistencyKey,
+  type IConsistencyTracker,
+} from "./shared/consistency-tracker.js";
 export { createMutableShutdownStatus } from "./shared/factories.js";
 export {
   JobStatus,
   PropagationMode,
   RelationshipChangeType,
+  type ConsistencyCoordinate,
+  type ConsistencyKey,
+  type ConsistencyToken,
   type JobInfo,
   type PagedResults,
   type PagingOptions,
