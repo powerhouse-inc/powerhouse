@@ -2,3 +2,4 @@
 .test-project/
 .generate-document-models-test-output/
 .generate-editors-test-output/
+.generate-drive-editor-test-output/

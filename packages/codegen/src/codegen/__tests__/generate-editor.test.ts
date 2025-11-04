@@ -8,17 +8,13 @@ import { copyAllFiles } from "./utils.js";
 
 const PURGE_AFTER_TEST = false;
 
-const testDir = import.meta.dirname;
-const testProjectDirName = "editors-test-project";
-const testProjectSrcPath = path.join(testDir, "data", testProjectDirName);
-const testPackageName = "test";
-const outDirName = path.join(testDir, ".generate-editors-test-output");
-let testOutDirCount = 0;
-let testOutDirName = `test-${testOutDirCount}`;
-let testOutDirPath = path.join(outDirName, testOutDirName);
-
 describe("generateEditor", () => {
-  let testDir: string;
+  const testPackageName = "test";
+  const testDir = import.meta.dirname;
+  const outDirName = path.join(testDir, ".generate-editors-test-output");
+  let testOutDirCount = 0;
+  let testOutDirName = `test-${testOutDirCount}`;
+  let testOutDirPath = path.join(outDirName, testOutDirName);
   const config: PowerhouseConfig = {
     editorsDir: "",
     documentModelsDir: "",
@@ -28,22 +24,35 @@ describe("generateEditor", () => {
     skipFormat: true,
     logLevel: "info",
   };
-
-  it("should generate a Document Model editor", async () => {
-    try {
-      rmSync(outDirName, { recursive: true });
-    } catch (error) {
-      // Ignore error if folder doesn't exist
-    }
-    mkdirSync(outDirName, { recursive: true });
+  async function setupTest(testProjectSrcPath: string) {
     testOutDirCount++;
     testOutDirName = `test-${testOutDirCount}`;
     testOutDirPath = path.join(outDirName, testOutDirName);
-    testDir = path.join(testOutDirPath, "editors");
+
     await copyAllFiles(testProjectSrcPath, testOutDirPath);
-    fs.mkdirSync(testDir, { recursive: true });
-    config.editorsDir = testDir;
+
+    config.editorsDir = path.join(testOutDirPath, "editors");
     config.documentModelsDir = path.join(testOutDirPath, "document-models");
+  }
+
+  beforeAll(() => {
+    try {
+      rmSync(outDirName, { recursive: true, force: true });
+      mkdirSync(outDirName, { recursive: true });
+    } catch (error) {
+      // Ignore error if folder doesn't exist
+    }
+  });
+
+  afterAll(() => {
+    if (PURGE_AFTER_TEST) {
+      rmSync(outDirName, { recursive: true, force: true });
+    }
+  });
+
+  it("should generate a Document Model editor", async () => {
+    await setupTest(path.join(testDir, "data", "editors-test-project"));
+
     const name = "TestDocEditor";
     await generateEditor(
       name,
@@ -53,7 +62,8 @@ describe("generateEditor", () => {
       testPackageName,
     );
 
-    const editorsFilePath = path.join(testDir, "editors.ts");
+    const editorsDir = path.join(testOutDirPath, "editors");
+    const editorsFilePath = path.join(editorsDir, "editors.ts");
     expect(fs.existsSync(editorsFilePath)).toBe(true);
     const editorsContent = fs.readFileSync(editorsFilePath, "utf-8");
     expect(editorsContent).toContain(
@@ -62,7 +72,7 @@ describe("generateEditor", () => {
     expect(editorsContent).toContain(`export const editors: EditorModule[]`);
     expect(editorsContent).toContain(`TestDocEditor`);
 
-    const editorDir = path.join(testDir, "test-doc-editor");
+    const editorDir = path.join(editorsDir, "test-doc-editor");
     expect(fs.existsSync(editorDir)).toBe(true);
 
     const editorPath = path.join(editorDir, "editor.tsx");
@@ -88,13 +98,43 @@ describe("generateEditor", () => {
     expect(fs.existsSync(editNamePath)).toBe(true);
 
     await compile(testOutDirPath);
+  });
 
-    if (PURGE_AFTER_TEST) {
-      try {
-        rmSync(outDirName, { recursive: true });
-      } catch (error) {
-        // Ignore error if folder doesn't exist
-      }
-    }
+  it("should append new exports to existing editors.ts file", async () => {
+    await setupTest(
+      path.join(testDir, "data", "editors-test-project-with-existing-editor"),
+    );
+
+    const name = "TestDocEditorTwo";
+    await generateEditor(
+      name,
+      ["powerhouse/test-doc"],
+      config,
+      "test-document-model-editor-two",
+      testPackageName,
+    );
+    const editorsDir = path.join(testOutDirPath, "editors");
+    const editorsFilePath = path.join(editorsDir, "editors.ts");
+    const editorsContent = fs.readFileSync(editorsFilePath, "utf-8");
+    expect(editorsContent).toContain(`export const editors: EditorModule[]`);
+    expect(editorsContent).toContain(`TestDocEditorTwo`);
+    expect(editorsContent).toContain(`TestDocEditor`);
+  });
+  it("should create the editors.ts file if it doesn't exist", async () => {
+    await setupTest(path.join(testDir, "data", "editors-test-project"));
+
+    const editorsFilePath = path.join(testOutDirPath, "editors", "editors.ts");
+    rmSync(editorsFilePath, { force: true });
+    await generateEditor(
+      "TestDocEditor",
+      ["powerhouse/test-doc"],
+      config,
+      "test-document-model-editor",
+      testPackageName,
+    );
+    await compile(testOutDirPath);
+    const editorsContent = fs.readFileSync(editorsFilePath, "utf-8");
+    expect(editorsContent).toContain(`export const editors: EditorModule[]`);
+    expect(editorsContent).toContain(`TestDocEditor`);
   });
 });

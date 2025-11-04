@@ -154,7 +154,7 @@ export async function generateDriveEditor(options: {
   return hygenGenerateDriveEditor({
     name,
     dir,
-    appId: appId ?? "drive-editor-id",
+    appId: appId ?? paramCase(name),
     allowedDocumentTypes: allowedDocumentTypes,
     isDragAndDropEnabled: isDragAndDropEnabled ?? true,
     skipFormat,

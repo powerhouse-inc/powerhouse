@@ -5,8 +5,10 @@ export default defineConfig({
     globals: true,
     include: ["src/**/__tests__/**/*.test.ts"],
     exclude: [
+      "src/codegen/__tests__/data/**/*",
       "src/codegen/__tests__/.generate-editors-test-output/**/*",
       "src/codegen/__tests__/.generate-document-models-test-output/**/*",
+      "src/codegen/__tests__/.generate-drive-editor-test-output/**/*",
     ],
     fileParallelism: false,
   },
