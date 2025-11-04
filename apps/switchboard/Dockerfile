@@ -1,5 +1,4 @@
-FROM node:22-alpine AS build
-RUN apk update && apk add git
+FROM node:22 AS build
 WORKDIR /app
 COPY . .
 RUN chmod +x entrypoint.sh
@@ -36,7 +35,7 @@ ENV PH_SWITCHBOARD_PORT=$PORT
 # Other
 ARG TAG=latest
 ENV TAG=$TAG
-RUN apk add --no-cache openssl
+# RUN apk add --no-cache openssl
 RUN pnpm add -g ph-cmd@$TAG prisma
 RUN if [[ "$TAG" == *"dev"* ]]; then \
         ph init project --dev --package-manager pnpm; \
