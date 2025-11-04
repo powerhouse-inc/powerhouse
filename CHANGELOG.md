@@ -1,3 +1,42 @@
+## 4.1.0-dev.100 (2025-11-04)
+
+### 🚀 Features
+
+- initial types for relationship indexer ([151502633](https://github.com/powerhouse-inc/powerhouse/commit/151502633))
+- reactor and job executor have a separate path for relationships ([b1cabb7f5](https://github.com/powerhouse-inc/powerhouse/commit/b1cabb7f5))
+- first pass implementation with unit tests ([5bc7416ef](https://github.com/powerhouse-inc/powerhouse/commit/5bc7416ef))
+- first pass batch job implementation ([227305ec8](https://github.com/powerhouse-inc/powerhouse/commit/227305ec8))
+- migrating to mutateBatch API for addFile ([75ffe94e9](https://github.com/powerhouse-inc/powerhouse/commit/75ffe94e9))
+- added some broken tests that are in progress ([c92e1f057](https://github.com/powerhouse-inc/powerhouse/commit/c92e1f057))
+- added atlas import for base server ([9528d2c2c](https://github.com/powerhouse-inc/powerhouse/commit/9528d2c2c))
+- the mother of all tests -- base server + reactor deep compare post 1800+ actions ([52eddaeea](https://github.com/powerhouse-inc/powerhouse/commit/52eddaeea))
+- finally, a benchmark ([2771c446e](https://github.com/powerhouse-inc/powerhouse/commit/2771c446e))
+- feature flag to toggle write to legacy storage ([151e40d76](https://github.com/powerhouse-inc/powerhouse/commit/151e40d76))
+- added third piece where we also test the read model ([3c20fc925](https://github.com/powerhouse-inc/powerhouse/commit/3c20fc925))
+- create default vetra package document when ph vetra is started for a remote drive ([#2066](https://github.com/powerhouse-inc/powerhouse/pull/2066))
+
+### 🩹 Fixes
+
+- publish docker prod workflow ([ab7c4e6cb](https://github.com/powerhouse-inc/powerhouse/commit/ab7c4e6cb))
+- fixing unit test build and adding a couple comments ([d24d46b2d](https://github.com/powerhouse-inc/powerhouse/commit/d24d46b2d))
+- type fixes in the document indexer ([98cd03b92](https://github.com/powerhouse-inc/powerhouse/commit/98cd03b92))
+- add/remove children need special revision handling ([52b8bbd72](https://github.com/powerhouse-inc/powerhouse/commit/52b8bbd72))
+- linter issues ([bc1d2a569](https://github.com/powerhouse-inc/powerhouse/commit/bc1d2a569))
+- added a v1 addfile integration test ([47fae0474](https://github.com/powerhouse-inc/powerhouse/commit/47fae0474))
+- the full set of atlas actions applies ([18f08ba1b](https://github.com/powerhouse-inc/powerhouse/commit/18f08ba1b))
+- default state on test helper ([560fe7c99](https://github.com/powerhouse-inc/powerhouse/commit/560fe7c99))
+- proof of match between drive server and reactor ([f86a38b7e](https://github.com/powerhouse-inc/powerhouse/commit/f86a38b7e))
+- commenting out test that exports broke ([75cfba9b5](https://github.com/powerhouse-inc/powerhouse/commit/75cfba9b5))
+- prisma openssl not found ([535ace02c](https://github.com/powerhouse-inc/powerhouse/commit/535ace02c))
+- **monorepo:** fix lockfile and test filter ([#2069](https://github.com/powerhouse-inc/powerhouse/pull/2069))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 4.1.0-dev.99 (2025-10-31)
 
 ### 🚀 Features
