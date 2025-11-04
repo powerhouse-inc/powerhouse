@@ -64,10 +64,6 @@ module.exports = {
         pascalCaseName: pascalCaseEditorName,
       }
     );
-    console.log({
-      rootDir,
-      moduleExports,
-    });
     return {
       rootDir,
       moduleExports,
