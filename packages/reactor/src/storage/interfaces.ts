@@ -251,15 +251,31 @@ export interface IDocumentIndexer {
   indexOperations(operations: OperationWithContext[]): Promise<void>;
 
   /**
+   * Blocks until the indexer has processed the coordinates referenced by the
+   * provided consistency token.
+   *
+   * @param token - Consistency token derived from the originating job
+   * @param timeoutMs - Optional timeout window in milliseconds
+   * @param signal - Optional abort signal to cancel the wait
+   */
+  waitForConsistency(
+    token: ConsistencyToken,
+    timeoutMs?: number,
+    signal?: AbortSignal,
+  ): Promise<void>;
+
+  /**
    * Returns outgoing relationships from a document.
    *
    * @param documentId - The source document id
    * @param types - Optional filter by relationship types
+   * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    */
   getOutgoing(
     documentId: string,
     types?: string[],
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<DocumentRelationship[]>;
 
@@ -268,11 +284,13 @@ export interface IDocumentIndexer {
    *
    * @param documentId - The target document id
    * @param types - Optional filter by relationship types
+   * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    */
   getIncoming(
     documentId: string,
     types?: string[],
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<DocumentRelationship[]>;
 
@@ -282,14 +300,33 @@ export interface IDocumentIndexer {
    * @param sourceId - The source document id
    * @param targetId - The target document id
    * @param types - Optional filter by relationship types
+   * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    */
   hasRelationship(
     sourceId: string,
     targetId: string,
     types?: string[],
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<boolean>;
+
+  /**
+   * Returns all undirected relationships between two documents.
+   *
+   * @param a - The ID of the first document
+   * @param b - The ID of the second document
+   * @param types - Optional filter by relationship types
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
+   */
+  getUndirectedRelationships(
+    a: string,
+    b: string,
+    types?: string[],
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<DocumentRelationship[]>;
 
   /**
    * Returns all directed relationships between two documents.
@@ -297,12 +334,14 @@ export interface IDocumentIndexer {
    * @param sourceId - The source document id
    * @param targetId - The target document id
    * @param types - Optional filter by relationship types
+   * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    */
   getDirectedRelationships(
     sourceId: string,
     targetId: string,
     types?: string[],
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<DocumentRelationship[]>;
 
@@ -312,6 +351,7 @@ export interface IDocumentIndexer {
    * @param sourceId - The source document id
    * @param targetId - The target document id
    * @param types - Optional filter by relationship types
+   * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    * @returns Array of document ids representing the path, or null if no path exists
    */
@@ -319,6 +359,7 @@ export interface IDocumentIndexer {
     sourceId: string,
     targetId: string,
     types?: string[],
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<string[] | null>;
 
@@ -327,18 +368,24 @@ export interface IDocumentIndexer {
    *
    * @param documentId - The document id
    * @param types - Optional filter by relationship types
+   * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    */
   findAncestors(
     documentId: string,
     types?: string[],
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<IDocumentGraph>;
 
   /**
    * Returns all relationship types currently in the system.
    *
+   * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    */
-  getRelationshipTypes(signal?: AbortSignal): Promise<string[]>;
+  getRelationshipTypes(
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<string[]>;
 }

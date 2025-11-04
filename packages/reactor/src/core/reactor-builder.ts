@@ -225,8 +225,13 @@ export class ReactorBuilder {
     await documentView.init();
     readModelInstances.push(documentView);
 
-    // @ts-expect-error - Database type is a superset that includes all required tables
-    const documentIndexer = new KyselyDocumentIndexer(db, operationStore);
+    const documentIndexerConsistencyTracker = new ConsistencyTracker();
+    const documentIndexer = new KyselyDocumentIndexer(
+      // @ts-expect-error - Database type is a superset that includes all required tables
+      db,
+      operationStore,
+      documentIndexerConsistencyTracker,
+    );
     await documentIndexer.init();
     readModelInstances.push(documentIndexer);
 

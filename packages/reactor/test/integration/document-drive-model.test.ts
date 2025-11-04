@@ -150,15 +150,20 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
     await executorManager.start(1);
 
     // Create real document view and read model coordinator
-    const consistencyTracker = new ConsistencyTracker();
+    const documentViewConsistencyTracker = new ConsistencyTracker();
     const documentView = new KyselyDocumentView(
       db as any,
       operationStore,
-      consistencyTracker,
+      documentViewConsistencyTracker,
     );
     await documentView.init();
 
-    documentIndexer = new KyselyDocumentIndexer(db as any, operationStore);
+    const documentIndexerConsistencyTracker = new ConsistencyTracker();
+    documentIndexer = new KyselyDocumentIndexer(
+      db as any,
+      operationStore,
+      documentIndexerConsistencyTracker,
+    );
     await documentIndexer.init();
 
     readModelCoordinator = new ReadModelCoordinator(eventBus, [

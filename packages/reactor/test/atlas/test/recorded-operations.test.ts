@@ -180,18 +180,21 @@ async function createReactorSetup(
   let documentView: KyselyDocumentView | undefined;
 
   if (includeDocumentView) {
-    const consistencyTracker = new ConsistencyTracker();
-    // @ts-expect-error - Database type is a superset that includes all required tables
+    const documentViewConsistencyTracker = new ConsistencyTracker();
     documentView = new KyselyDocumentView(
-      db,
+      db as any,
       operationStore,
-      consistencyTracker,
+      documentViewConsistencyTracker,
     );
     await documentView.init();
     readModels.push(documentView);
 
-    // @ts-expect-error - Database type is a superset that includes all required tables
-    const documentIndexer = new KyselyDocumentIndexer(db, operationStore);
+    const documentIndexerConsistencyTracker = new ConsistencyTracker();
+    const documentIndexer = new KyselyDocumentIndexer(
+      db as any,
+      operationStore,
+      documentIndexerConsistencyTracker,
+    );
     await documentIndexer.init();
     readModels.push(documentIndexer);
   }
