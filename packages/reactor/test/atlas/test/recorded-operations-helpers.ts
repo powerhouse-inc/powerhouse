@@ -10,7 +10,7 @@ import type { Reactor } from "../../../src/core/reactor.js";
 import type { BatchMutationRequest } from "../../../src/core/types.js";
 import { JobStatus } from "../../../src/shared/types.js";
 
-import * as atlasModels from "@sky-ph/atlas/document-models";
+import { documentModels as atlasModels } from "@sky-ph/atlas";
 import { v4 as uuidv4 } from "uuid";
 
 export interface RecordedOperation {
@@ -60,13 +60,7 @@ export function getDocumentModels(): DocumentModelModule[] {
   return [
     documentModelDocumentModelModule as unknown as DocumentModelModule,
     driveDocumentModelModule as unknown as DocumentModelModule,
-    wrapAtlasModule(atlasModels.AtlasScope),
-    wrapAtlasModule(atlasModels.AtlasFoundation),
-    wrapAtlasModule(atlasModels.AtlasGrounding),
-    wrapAtlasModule(atlasModels.AtlasExploratory),
-    wrapAtlasModule(atlasModels.AtlasMultiParent),
-    wrapAtlasModule(atlasModels.AtlasSet),
-    wrapAtlasModule(atlasModels.AtlasFeedbackIssues),
+    ...atlasModels.map(wrapAtlasModule),
   ];
 }
 

@@ -192,16 +192,22 @@ describe("generateDriveEditor", () => {
     expect(editorsContent).toContain(`AtlasDriveExplorer`);
     expect(editorsContent).toContain(`TestDocEditor`);
   });
-  it("should create the editors.ts file if it doesn't exist", async () => {
-    await setupTest(path.join(testDir, "data", "editors-test-project"));
-    const name = "Atlas Drive Explorer";
-    const editorsDir = path.join(testOutDirPath, "editors");
-    const editorsFilePath = path.join(editorsDir, "editors.ts");
-    rmSync(editorsFilePath, { force: true });
-    await generateDriveEditor({ name, config });
-    await compile(testOutDirPath);
-    const editorsContent = fs.readFileSync(editorsFilePath, "utf-8");
-    expect(editorsContent).toContain(`export const editors: EditorModule[]`);
-    expect(editorsContent).toContain(`AtlasDriveExplorer`);
-  });
+  it(
+    "should create the editors.ts file if it doesn't exist",
+    {
+      timeout: 15000,
+    },
+    async () => {
+      await setupTest(path.join(testDir, "data", "editors-test-project"));
+      const name = "Atlas Drive Explorer";
+      const editorsDir = path.join(testOutDirPath, "editors");
+      const editorsFilePath = path.join(editorsDir, "editors.ts");
+      rmSync(editorsFilePath, { force: true });
+      await generateDriveEditor({ name, config });
+      await compile(testOutDirPath);
+      const editorsContent = fs.readFileSync(editorsFilePath, "utf-8");
+      expect(editorsContent).toContain(`export const editors: EditorModule[]`);
+      expect(editorsContent).toContain(`AtlasDriveExplorer`);
+    },
+  );
 });

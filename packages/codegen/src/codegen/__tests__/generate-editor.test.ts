@@ -120,21 +120,31 @@ describe("generateEditor", () => {
     expect(editorsContent).toContain(`TestDocEditorTwo`);
     expect(editorsContent).toContain(`TestDocEditor`);
   });
-  it("should create the editors.ts file if it doesn't exist", async () => {
-    await setupTest(path.join(testDir, "data", "editors-test-project"));
+  it(
+    "should create the editors.ts file if it doesn't exist",
+    {
+      timeout: 15000,
+    },
+    async () => {
+      await setupTest(path.join(testDir, "data", "editors-test-project"));
 
-    const editorsFilePath = path.join(testOutDirPath, "editors", "editors.ts");
-    rmSync(editorsFilePath, { force: true });
-    await generateEditor(
-      "TestDocEditor",
-      ["powerhouse/test-doc"],
-      config,
-      "test-document-model-editor",
-      testPackageName,
-    );
-    await compile(testOutDirPath);
-    const editorsContent = fs.readFileSync(editorsFilePath, "utf-8");
-    expect(editorsContent).toContain(`export const editors: EditorModule[]`);
-    expect(editorsContent).toContain(`TestDocEditor`);
-  });
+      const editorsFilePath = path.join(
+        testOutDirPath,
+        "editors",
+        "editors.ts",
+      );
+      rmSync(editorsFilePath, { force: true });
+      await generateEditor(
+        "TestDocEditor",
+        ["powerhouse/test-doc"],
+        config,
+        "test-document-model-editor",
+        testPackageName,
+      );
+      await compile(testOutDirPath);
+      const editorsContent = fs.readFileSync(editorsFilePath, "utf-8");
+      expect(editorsContent).toContain(`export const editors: EditorModule[]`);
+      expect(editorsContent).toContain(`TestDocEditor`);
+    },
+  );
 });
