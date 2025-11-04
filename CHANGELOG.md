@@ -1,3 +1,13 @@
+## 5.0.1-staging.7 (2025-11-04)
+
+### 🩹 Fixes
+
+- prisma openssl not found ([6ee25731c](https://github.com/powerhouse-inc/powerhouse/commit/6ee25731c))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.0.1-staging.6 (2025-10-30)
 
 ### 🚀 Features

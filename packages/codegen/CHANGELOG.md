@@ -1,3 +1,7 @@
+## 5.0.1-staging.7 (2025-11-04)
+
+This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
+
 ## 5.0.1-staging.6 (2025-10-30)
 
 ### 🚀 Features
