@@ -17,7 +17,6 @@ import type { Job } from "../queue/types.js";
 import type { IReadModelCoordinator } from "../read-models/interfaces.js";
 import { createMutableShutdownStatus } from "../shared/factories.js";
 import type {
-  ErrorInfo,
   JobInfo,
   PagedResults,
   PagingOptions,
