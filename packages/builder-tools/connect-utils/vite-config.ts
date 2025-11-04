@@ -256,7 +256,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     ? undefined
     : viteLogger([
         "@import must precede all other statements (besides @charset or empty @layer)",
-        "hmr update",
+        "@electric-sql+pglite",
       ]);
 
   const config: UserConfig = {
@@ -278,6 +278,15 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
         strict: false,
       },
       port: phConfig.studio?.port,
+      warmup: {
+        clientFiles: [
+          `./index.html`,
+          `!./${join("./", phConfig.documentModelsDir, "**/*.test.ts")}`,
+          `./${join("./", phConfig.documentModelsDir, "**/*.ts")}`,
+          `./${join("./", phConfig.editorsDir, "**/*.ts")}`,
+          `./${join("./", phConfig.editorsDir, "**/*.tsx")}`,
+        ],
+      },
     },
     worker: {
       format: "es",
