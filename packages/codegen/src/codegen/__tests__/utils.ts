@@ -2,7 +2,6 @@ import fs from "node:fs/promises";
 import path from "path";
 
 export async function copyAllFiles(srcDir: string, destDir: string) {
-  console.log(`Copying files from ${srcDir} to ${destDir}`);
   // Ensure destination exists
   await fs.mkdir(destDir, { recursive: true });
 
