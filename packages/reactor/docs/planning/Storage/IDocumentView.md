@@ -78,6 +78,22 @@ class DocumentDeletedError extends Error {
 }
 ```
 
+### Consistency Guarantees
+
+All read methods accept an optional `consistencyToken` parameter to provide read-after-write consistency guarantees. When a consistency token is provided:
+
+1. The method internally calls `waitForConsistency(token)` before executing the query
+2. The call blocks until all coordinates in the token have been indexed by the view
+3. This ensures the query will see all effects of the write operations that produced the token
+
+**Usage Pattern:**
+```typescript
+const jobInfo = await reactor.mutate(documentId, operations);
+const doc = await documentView.get(documentId, view, jobInfo.consistencyToken);
+```
+
+This pattern guarantees that the read will see the effects of the write, even if the view is catching up asynchronously.
+
 ### Interface
 
 ```tsx
@@ -101,12 +117,14 @@ interface IDocumentView {
    *
    * @param documentId - The document id
    * @param branch - The branch name
+   * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    * @returns The reconstructed document header
    */
   getHeader(
     documentId: string,
     branch: string,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<PHDocumentHeader>;
 
@@ -115,12 +133,14 @@ interface IDocumentView {
    *
    * @param slugs - Required, the list of document slugs
    * @param view - Optional filter containing branch and scopes information
+   * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    * @returns The parallel list of slugs
    */
   resolveIds(
     slugs: string[],
     view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<string[]>;
 
@@ -129,12 +149,14 @@ interface IDocumentView {
    *
    * @param ids - Required, the list of document ids
    * @param view - Optional filter containing branch and scopes information
+   * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    * @returns The parallel list of ids
    */
   resolveSlugs(
     ids: string[],
     view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<string[]>;
 
@@ -142,20 +164,27 @@ interface IDocumentView {
    * Returns true if and only if the documents exist.
    *
    * @param documentIds - The list of document ids to check.
+   * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    */
-  exists(documentIds: string[], signal?: AbortSignal): Promise<boolean[]>;
+  exists(
+    documentIds: string[],
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<boolean[]>;
 
   /**
    * Returns the document with the given id.
    *
    * @param documentId - The id of the document to get.
    * @param view - Optional filter containing branch and scopes information
+   * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    */
   get<TDocument extends PHDocument>(
     documentId: string,
     view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<TDocument>;
 
@@ -164,11 +193,13 @@ interface IDocumentView {
    *
    * @param documentIds - The list of document ids to get.
    * @param view - Optional filter containing branch and scopes information
+   * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    */
   getMany<TDocument extends PHDocument>(
     documentIds: string[],
     view: ViewFilter,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<TDocument[]>;
 
@@ -177,11 +208,13 @@ interface IDocumentView {
    *
    * @param slugs - The list of document slugs to get.
    * @param view - Optional filter containing branch and scopes information
+   * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    */
   getManyBySlugs<TDocument extends PHDocument>(
     slugs: string[],
     view: ViewFilter,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<TDocument[]>;
 
@@ -191,6 +224,7 @@ interface IDocumentView {
    * @param search - Search filter options (type, parentId, identifiers, includeDeleted)
    * @param view - Optional filter containing branch and scopes information
    * @param paging - Optional pagination options
+   * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    * @returns List of documents matching criteria and pagination cursor
    */
@@ -198,6 +232,7 @@ interface IDocumentView {
     search: SearchFilter,
     view?: ViewFilter,
     paging?: PagingOptions,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<PagedResults<TDocument>>;
 

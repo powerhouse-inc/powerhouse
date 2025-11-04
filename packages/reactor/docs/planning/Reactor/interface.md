@@ -100,9 +100,9 @@ interface IReactor {
    *
    * @param document - Document with optional id, slug, parent, model type, and initial state
    * @param signal - Optional abort signal to cancel the request
-   * @returns The job status
+   * @returns The job info including consistency token
    */
-  create(document: PHDocument, signal?: AbortSignal): Promise<JobStatus>;
+  create(document: PHDocument, signal?: AbortSignal): Promise<JobInfo>;
 
   /**
    * Deletes a document
