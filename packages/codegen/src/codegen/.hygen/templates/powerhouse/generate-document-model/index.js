@@ -37,12 +37,12 @@ module.exports = {
       documentModel: documentModelToString(documentModel),
       documentTypeId: documentModel.id,
       documentType: documentModel.name,
-      extension: documentModel.extension,
+      extension: documentModel.extension || "",
       modules: latestSpec.modules.map((m) => ({
         ...m,
         name: paramCase(m.name),
       })),
-      fileExtension: documentModel.extension,
+      fileExtension: documentModel.extension || "",
       hasLocalSchema: latestSpec.state.local.schema !== "",
       ...getInitialStates(latestSpec.state),
     };

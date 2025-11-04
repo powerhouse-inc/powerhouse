@@ -38,14 +38,9 @@ export function validateDocumentModelState(
     errors.push('Property "name" is required and must be a non-empty string');
   }
 
-  if (
-    !documentModelState.extension ||
-    typeof documentModelState.extension !== "string" ||
-    documentModelState.extension.trim() === ""
-  ) {
-    errors.push(
-      'Property "extension" is required and must be a non-empty string',
-    );
+  // Extension field is optional (can be empty string)
+  if (typeof documentModelState.extension !== "string") {
+    errors.push('Property "extension" must be a string');
   }
 
   // Validate specifications array
