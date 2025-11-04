@@ -22,6 +22,10 @@ interface SetPackageGithubUrlResponse {
   VetraPackage_setPackageGithubUrl: number;
 }
 
+interface CreateDocumentResponse {
+  VetraPackage_createDocument: string;
+}
+
 export async function getVetraDocuments(
   graphqlEndpoint: string,
   driveId: string,
@@ -86,4 +90,27 @@ export async function setPackageGithubUrl(
   });
 
   return response.VetraPackage_setPackageGithubUrl;
+}
+
+export async function createVetraDocument(
+  graphqlEndpoint: string,
+  driveId: string,
+  name = "vetra-package",
+): Promise<string> {
+  const client = new GraphQLClient(graphqlEndpoint, {
+    fetch,
+  });
+
+  const mutation = gql`
+    mutation CreateDocument($driveId: String, $name: String) {
+      VetraPackage_createDocument(driveId: $driveId, name: $name)
+    }
+  `;
+
+  const response = await client.request<CreateDocumentResponse>(mutation, {
+    driveId,
+    name,
+  });
+
+  return response.VetraPackage_createDocument;
 }

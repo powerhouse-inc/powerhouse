@@ -18,3 +18,4 @@ Manages DocumentModels and Documents with an asynchronous interface.
 - [Interface](interface.md)
 - [Usage](usage.md)
 - [Diagram](diagram.md)
+- [Batch Mutations](batches.md)

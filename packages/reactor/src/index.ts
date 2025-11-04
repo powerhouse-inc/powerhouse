@@ -3,7 +3,8 @@ export { ReactorClient } from "./client/reactor-client.js";
 export { type IReactorClient } from "./client/types.js";
 export { ReactorClientBuilder } from "./core/builder.js";
 export { Reactor } from "./core/reactor.js";
-export { type IReactor } from "./core/types.js";
+export { ReactorBuilder } from "./core/reactor-builder.js";
+export { type IReactor, type ReactorFeatures } from "./core/types.js";
 export { JobAwaiter, type IJobAwaiter } from "./shared/awaiter.js";
 export { createMutableShutdownStatus } from "./shared/factories.js";
 export {
@@ -89,8 +90,12 @@ export {
   OptimisticLockError,
   RevisionMismatchError,
   type AtomicTxn,
+  type DocumentGraphEdge,
+  type DocumentRelationship,
   type DocumentRevisions,
   type DocumentSnapshot,
+  type IDocumentGraph,
+  type IDocumentIndexer,
   type IDocumentView,
   type IKeyframeStore,
   type IOperationStore,
@@ -99,7 +104,12 @@ export {
 } from "./storage/interfaces.js";
 export { KyselyOperationStore } from "./storage/kysely/store.js";
 export { KyselyKeyframeStore } from "./storage/kysely/keyframe-store.js";
-export type { Database, OperationTable } from "./storage/kysely/types.js";
+export { KyselyDocumentIndexer } from "./storage/kysely/document-indexer.js";
+export type {
+  Database,
+  DocumentIndexerDatabase,
+  OperationTable,
+} from "./storage/kysely/types.js";
 
 // Read Models
 export { ReadModelCoordinator } from "./read-models/coordinator.js";

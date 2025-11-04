@@ -24,10 +24,12 @@ import {
 import type { DocumentModelModule } from "document-model";
 import { generateId } from "document-model/core";
 import type { Kysely } from "kysely";
+import { v4 as uuidv4 } from "uuid";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyWriteCache } from "../../src/cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../../src/cache/types.js";
 import { Reactor } from "../../src/core/reactor.js";
+import type { BatchMutationRequest } from "../../src/core/types.js";
 import { EventBus } from "../../src/events/event-bus.js";
 import { SimpleJobExecutorManager } from "../../src/executor/simple-job-executor-manager.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
@@ -39,15 +41,21 @@ import { DocumentModelRegistry } from "../../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
 import { JobStatus } from "../../src/shared/types.js";
 import type { IKeyframeStore } from "../../src/storage/interfaces.js";
+import { KyselyDocumentIndexer } from "../../src/storage/kysely/document-indexer.js";
 import type { KyselyOperationStore } from "../../src/storage/kysely/store.js";
-import type { Database as StorageDatabase } from "../../src/storage/kysely/types.js";
+import type {
+  DocumentIndexerDatabase,
+  Database as StorageDatabase,
+} from "../../src/storage/kysely/types.js";
 import {
   createTestJobTracker,
   createTestOperationStore,
 } from "../factories.js";
 
 // Combined database type
-type Database = StorageDatabase & DocumentViewDatabase;
+type Database = StorageDatabase &
+  DocumentViewDatabase &
+  DocumentIndexerDatabase;
 
 describe("Integration Test: Reactor <> Document Drive Document Model", () => {
   let reactor: Reactor;
@@ -63,6 +71,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
   let keyframeStore: IKeyframeStore;
   let writeCache: KyselyWriteCache;
   let readModelCoordinator: ReadModelCoordinator;
+  let documentIndexer: KyselyDocumentIndexer;
 
   async function createDocumentViaReactor(
     document: DocumentDriveDocument,
@@ -72,7 +81,8 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       async () => {
         const jobStatus = await reactor.getJobStatus(createJobInfo.id);
         if (jobStatus.status === JobStatus.FAILED) {
-          throw new Error(`Job failed: ${jobStatus.error || "unknown error"}`);
+          const errorMessage = jobStatus.error?.message ?? "unknown error";
+          throw new Error(`Job failed: ${errorMessage}`);
         }
         return jobStatus.status === JobStatus.COMPLETED;
       },
@@ -139,9 +149,16 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
     await executorManager.start(1);
 
     // Create real document view and read model coordinator
-    const documentView = new KyselyDocumentView(db, operationStore);
+    const documentView = new KyselyDocumentView(db as any, operationStore);
     await documentView.init();
-    readModelCoordinator = new ReadModelCoordinator(eventBus, [documentView]);
+
+    documentIndexer = new KyselyDocumentIndexer(db as any, operationStore);
+    await documentIndexer.init();
+
+    readModelCoordinator = new ReadModelCoordinator(eventBus, [
+      documentView,
+      documentIndexer,
+    ]);
     readModelCoordinator.start();
 
     // Create reactor with all components
@@ -177,9 +194,8 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
         async () => {
           const jobStatus = await reactor.getJobStatus(createJobInfo.id);
           if (jobStatus.status === JobStatus.FAILED) {
-            throw new Error(
-              `Job failed: ${jobStatus.error || "unknown error"}`,
-            );
+            const errorMessage = jobStatus.error?.message ?? "unknown error";
+            throw new Error(`Job failed: ${errorMessage}`);
           }
           return jobStatus.status === JobStatus.COMPLETED;
         },
@@ -352,6 +368,136 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       expect(folder1?.parentFolder).toBe(null);
       expect(folder2?.parentFolder).toBe(folder1Id);
       expect(folder3?.parentFolder).toBe(folder2Id);
+    });
+
+    it("should add a file with full orchestration (new architecture pattern)", async () => {
+      const parentDrive = driveDocumentModelModule.utils.createDocument();
+      await createDocumentViaReactor(parentDrive);
+
+      const childDocument = driveDocumentModelModule.utils.createDocument();
+      await createDocumentViaReactor(childDocument);
+
+      const fileId = childDocument.header.id;
+      const fileAction = addFile({
+        id: fileId,
+        name: "Child Document.drive",
+        documentType: childDocument.header.documentType,
+        parentFolder: null,
+      });
+
+      const addRelationshipAction = {
+        id: uuidv4(),
+        type: "ADD_RELATIONSHIP",
+        scope: "document",
+        timestampUtcMs: new Date().toISOString(),
+        input: {
+          sourceId: parentDrive.header.id,
+          targetId: childDocument.header.id,
+          relationshipType: "child",
+        },
+      };
+
+      const request: BatchMutationRequest = {
+        jobs: [
+          {
+            key: "addFile",
+            documentId: parentDrive.header.id,
+            scope: "global",
+            branch: "main",
+            actions: [fileAction],
+            dependsOn: [],
+          },
+          {
+            key: "linkChild",
+            documentId: parentDrive.header.id,
+            scope: "document",
+            branch: "main",
+            actions: [addRelationshipAction],
+            dependsOn: ["addFile"],
+          },
+        ],
+      };
+
+      const result = await reactor.mutateBatch(request);
+
+      await vi.waitUntil(
+        async () => {
+          const addFileStatus = await reactor.getJobStatus(
+            result.jobs.addFile.id,
+          );
+          const linkChildStatus = await reactor.getJobStatus(
+            result.jobs.linkChild.id,
+          );
+          if (addFileStatus.status === JobStatus.FAILED) {
+            console.error("Add file job failed:", addFileStatus.error?.message);
+            console.error("Error history:", addFileStatus.errorHistory);
+            throw new Error(
+              `Add file job failed: ${addFileStatus.error?.message || "unknown error"}`,
+            );
+          }
+          if (linkChildStatus.status === JobStatus.FAILED) {
+            console.error(
+              "Link child job failed:",
+              linkChildStatus.error?.message,
+            );
+            console.error("Error history:", linkChildStatus.errorHistory);
+            throw new Error(
+              `Link child job failed: ${linkChildStatus.error?.message || "unknown error"}`,
+            );
+          }
+          return (
+            addFileStatus.status === JobStatus.COMPLETED &&
+            linkChildStatus.status === JobStatus.COMPLETED
+          );
+        },
+        { timeout: 10000 },
+      );
+
+      const { document: childDoc } = await reactor.get<DocumentDriveDocument>(
+        childDocument.header.id,
+      );
+      expect(childDoc).toBeDefined();
+      expect(childDoc.header.id).toBe(fileId);
+      expect(childDoc.header.documentType).toBe(
+        childDocument.header.documentType,
+      );
+
+      const { document: parentDoc } = await reactor.get<DocumentDriveDocument>(
+        parentDrive.header.id,
+      );
+      const globalState = parentDoc.state.global;
+      expect(globalState.nodes).toHaveLength(1);
+
+      const file = globalState.nodes.find((n) => n.id === fileId);
+      expect(file).toMatchObject({
+        id: fileId,
+        name: "Child Document.drive",
+        documentType: childDocument.header.documentType,
+        parentFolder: null,
+        kind: "file",
+      });
+
+      await vi.waitUntil(
+        async () => {
+          const relationships = await documentIndexer.getOutgoing(
+            parentDrive.header.id,
+            ["child"],
+          );
+          return relationships.length === 1;
+        },
+        { timeout: 5000 },
+      );
+
+      const relationships = await documentIndexer.getOutgoing(
+        parentDrive.header.id,
+        ["child"],
+      );
+      expect(relationships).toHaveLength(1);
+      expect(relationships[0]).toMatchObject({
+        sourceId: parentDrive.header.id,
+        targetId: childDocument.header.id,
+        relationshipType: "child",
+      });
     });
   });
 

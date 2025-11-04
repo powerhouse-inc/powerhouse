@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor",
-  "version": "4.1.0-dev.99",
+  "version": "4.1.0-dev.100",
   "description": "",
   "repository": {
     "url": "https://github.com/powerhouse-inc/powerhouse",
@@ -21,7 +21,7 @@
     "build": "pnpm run build:tsc",
     "build:tsc": "tsc --build",
     "prebuild": "pnpm run clean",
-    "test": "vitest run --coverage",
+    "test": "vitest run --coverage --printConsoleTrace=true --silent=false",
     "test:watch": "vitest --coverage",
     "lint": "eslint",
     "bench": "vitest bench --run",

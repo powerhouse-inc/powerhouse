@@ -28,8 +28,19 @@ import type {
 } from "../shared/types.js";
 import { JobStatus } from "../shared/types.js";
 import { matchesScope } from "../shared/utils.js";
-import type { IReactor } from "./types.js";
-import { filterByParentId, filterByType } from "./utils.js";
+import type {
+  BatchMutationRequest,
+  BatchMutationResult,
+  IReactor,
+} from "./types.js";
+import {
+  filterByParentId,
+  filterByType,
+  toErrorInfo,
+  topologicalSort,
+  validateActionScopes,
+  validateBatchRequest,
+} from "./utils.js";
 
 /**
  * This class implements the IReactor interface and serves as the main entry point
@@ -469,6 +480,85 @@ export class Reactor implements IReactor {
   }
 
   /**
+   * Applies multiple mutations across documents with dependency management
+   */
+  async mutateBatch(
+    request: BatchMutationRequest,
+    signal?: AbortSignal,
+  ): Promise<BatchMutationResult> {
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+    validateBatchRequest(request.jobs);
+    for (const jobPlan of request.jobs) {
+      validateActionScopes(jobPlan);
+    }
+    const createdAtUtcIso = new Date().toISOString();
+    const planKeyToJobId = new Map<string, string>();
+    for (const jobPlan of request.jobs) {
+      planKeyToJobId.set(jobPlan.key, uuidv4());
+    }
+    const jobInfos = new Map<string, JobInfo>();
+    for (const jobPlan of request.jobs) {
+      const jobId = planKeyToJobId.get(jobPlan.key)!;
+      const jobInfo: JobInfo = {
+        id: jobId,
+        status: JobStatus.PENDING,
+        createdAtUtcIso,
+      };
+      this.jobTracker.registerJob(jobInfo);
+      jobInfos.set(jobPlan.key, jobInfo);
+    }
+    const sortedKeys = topologicalSort(request.jobs);
+    const enqueuedKeys: string[] = [];
+    try {
+      for (const key of sortedKeys) {
+        if (signal?.aborted) {
+          throw new AbortError();
+        }
+        const jobPlan = request.jobs.find((j) => j.key === key)!;
+        const jobId = planKeyToJobId.get(key)!;
+        const queueHint = jobPlan.dependsOn.map(
+          (depKey) => planKeyToJobId.get(depKey)!,
+        );
+        const job: Job = {
+          id: jobId,
+          documentId: jobPlan.documentId,
+          scope: jobPlan.scope,
+          branch: jobPlan.branch,
+          actions: jobPlan.actions,
+          createdAt: createdAtUtcIso,
+          queueHint,
+          maxRetries: 3,
+          errorHistory: [],
+        };
+        await this.queue.enqueue(job);
+        enqueuedKeys.push(key);
+      }
+    } catch (error) {
+      for (const key of enqueuedKeys) {
+        const jobId = planKeyToJobId.get(key)!;
+        try {
+          await this.queue.remove(jobId);
+        } catch (removeError) {
+          // Ignore removal errors during cleanup
+        }
+      }
+      for (const jobInfo of jobInfos.values()) {
+        this.jobTracker.markFailed(
+          jobInfo.id,
+          toErrorInfo("Batch enqueue failed"),
+        );
+      }
+      throw error;
+    }
+    const result: BatchMutationResult = {
+      jobs: Object.fromEntries(jobInfos),
+    };
+    return result;
+  }
+
+  /**
    * Adds multiple documents as children to another
    */
   async addChildren(
@@ -477,66 +567,23 @@ export class Reactor implements IReactor {
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<JobInfo> {
-    const createdAtUtcIso = new Date().toISOString();
-    const jobId = uuidv4();
-
-    // Check abort signal before starting
     if (signal?.aborted) {
       throw new AbortError();
     }
 
-    // TODO: Implement when drive server supports hierarchical documents
-    // For now, this is a placeholder implementation
+    const actions: Action[] = documentIds.map((childId) => ({
+      id: uuidv4(),
+      type: "ADD_RELATIONSHIP",
+      scope: "document",
+      timestampUtcMs: new Date().toISOString(),
+      input: {
+        sourceId: parentId,
+        targetId: childId,
+        relationshipType: "child",
+      },
+    }));
 
-    // Verify parent exists
-    try {
-      await this.driveServer.getDocument(parentId);
-    } catch (error) {
-      return {
-        id: jobId,
-        status: JobStatus.FAILED,
-        createdAtUtcIso,
-        error: this.toErrorInfo(
-          error instanceof Error ? error : "Unknown error",
-        ),
-      };
-    }
-
-    // Check abort signal after parent verification
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
-
-    // Verify all children exist
-    for (const childId of documentIds) {
-      try {
-        await this.driveServer.getDocument(childId);
-      } catch (error) {
-        return {
-          id: jobId,
-          status: JobStatus.FAILED,
-          createdAtUtcIso,
-          error: this.toErrorInfo(
-            error instanceof Error ? error : "Unknown error",
-          ),
-        };
-      }
-
-      // Check abort signal after each child verification
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-    }
-
-    // TODO: Actually establish parent-child relationships
-
-    // Return success job info
-    return {
-      id: jobId,
-      status: JobStatus.COMPLETED,
-      createdAtUtcIso,
-      completedAtUtcIso: new Date().toISOString(),
-    };
+    return await this.mutate(parentId, actions);
   }
 
   /**
@@ -548,45 +595,23 @@ export class Reactor implements IReactor {
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<JobInfo> {
-    const createdAtUtcIso = new Date().toISOString();
-    const jobId = uuidv4();
-
-    // Check abort signal before starting
     if (signal?.aborted) {
       throw new AbortError();
     }
 
-    // TODO: Implement when drive server supports hierarchical documents
-    // For now, this is a placeholder implementation
+    const actions: Action[] = documentIds.map((childId) => ({
+      id: uuidv4(),
+      type: "REMOVE_RELATIONSHIP",
+      scope: "document",
+      timestampUtcMs: new Date().toISOString(),
+      input: {
+        sourceId: parentId,
+        targetId: childId,
+        relationshipType: "child",
+      },
+    }));
 
-    // Verify parent exists
-    try {
-      await this.driveServer.getDocument(parentId);
-    } catch (error) {
-      return {
-        id: jobId,
-        status: JobStatus.FAILED,
-        createdAtUtcIso,
-        error: this.toErrorInfo(
-          error instanceof Error ? error : "Unknown error",
-        ),
-      };
-    }
-
-    // Check abort signal after parent verification
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
-
-    // TODO: Actually remove parent-child relationships
-
-    // Return success job info
-    return {
-      id: jobId,
-      status: JobStatus.COMPLETED,
-      createdAtUtcIso,
-      completedAtUtcIso: new Date().toISOString(),
-    };
+    return await this.mutate(parentId, actions);
   }
 
   /**
@@ -606,7 +631,7 @@ export class Reactor implements IReactor {
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
         completedAtUtcIso: new Date().toISOString(),
-        error: this.toErrorInfo("Job not found"),
+        error: toErrorInfo("Job not found"),
       });
     }
 
@@ -883,19 +908,6 @@ export class Reactor implements IReactor {
         ? async () =>
             this.findByType(type, view, { cursor: nextCursor, limit }, signal)
         : undefined,
-    };
-  }
-
-  private toErrorInfo(error: Error | string): ErrorInfo {
-    if (error instanceof Error) {
-      return {
-        message: error.message,
-        stack: error.stack || new Error().stack || "",
-      };
-    }
-    return {
-      message: error,
-      stack: new Error().stack || "",
     };
   }
 }
