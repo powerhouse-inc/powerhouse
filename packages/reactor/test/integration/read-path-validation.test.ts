@@ -195,7 +195,8 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
         if (jobStatus.status === JobStatus.FAILED) {
           // fail the test
-          expect.fail(`Job failed: ${jobStatus.error}`);
+          const errorMessage = jobStatus.error?.message ?? "unknown error";
+          expect.fail(`Job failed: ${errorMessage}`);
         }
 
         return jobStatus.status === JobStatus.COMPLETED;

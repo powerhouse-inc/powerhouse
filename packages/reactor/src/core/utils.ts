@@ -1,5 +1,140 @@
-import type { PHDocument } from "document-model";
-import type { PagedResults } from "../shared/types.js";
+import type { Action, PHDocument } from "document-model";
+import type { ErrorInfo, PagedResults } from "../shared/types.js";
+
+/**
+ * Represents a minimal job plan for validation purposes
+ */
+export type JobPlanForValidation = {
+  key: string;
+  actions: Action[];
+  dependsOn: string[];
+};
+
+/**
+ * Represents a job plan with scope information for action validation
+ */
+export type JobPlanWithScope = {
+  key: string;
+  scope: string;
+  actions: Action[];
+};
+
+/**
+ * Represents a job plan with dependencies for topological sorting
+ */
+export type JobPlanForSorting = {
+  key: string;
+  dependsOn: string[];
+};
+
+/**
+ * Validates a batch mutation request for common errors
+ */
+export function validateBatchRequest(jobs: JobPlanForValidation[]): void {
+  const keys = new Set<string>();
+  for (const job of jobs) {
+    if (keys.has(job.key)) {
+      throw new Error(`Duplicate plan key: ${job.key}`);
+    }
+    keys.add(job.key);
+  }
+  for (const job of jobs) {
+    for (const depKey of job.dependsOn) {
+      if (!keys.has(depKey)) {
+        throw new Error(
+          `Job '${job.key}' depends on non-existent key: ${depKey}`,
+        );
+      }
+    }
+  }
+  const visited = new Set<string>();
+  const recStack = new Set<string>();
+  const detectCycle = (key: string): boolean => {
+    visited.add(key);
+    recStack.add(key);
+    const job = jobs.find((j) => j.key === key);
+    if (job) {
+      for (const depKey of job.dependsOn) {
+        if (!visited.has(depKey)) {
+          if (detectCycle(depKey)) {
+            return true;
+          }
+        } else if (recStack.has(depKey)) {
+          return true;
+        }
+      }
+    }
+    recStack.delete(key);
+    return false;
+  };
+  for (const job of jobs) {
+    if (!visited.has(job.key)) {
+      if (detectCycle(job.key)) {
+        throw new Error(`Dependency cycle detected involving key: ${job.key}`);
+      }
+    }
+  }
+  for (const job of jobs) {
+    if (job.actions.length === 0) {
+      throw new Error(`Job '${job.key}' has empty actions array`);
+    }
+  }
+}
+
+/**
+ * Validates that all actions in a job match the declared scope
+ */
+export function validateActionScopes(job: JobPlanWithScope): void {
+  for (const action of job.actions) {
+    const actionScope = action.scope || "global";
+    if (actionScope !== job.scope) {
+      throw new Error(
+        `Job '${job.key}' declares scope '${job.scope}' but action has scope '${actionScope}'`,
+      );
+    }
+  }
+}
+
+/**
+ * Performs topological sort on jobs based on dependencies
+ */
+export function topologicalSort(jobs: JobPlanForSorting[]): string[] {
+  const result: string[] = [];
+  const visited = new Set<string>();
+  const visit = (key: string): void => {
+    if (visited.has(key)) {
+      return;
+    }
+    visited.add(key);
+    const job = jobs.find((j) => j.key === key);
+    if (job) {
+      for (const depKey of job.dependsOn) {
+        visit(depKey);
+      }
+    }
+    result.push(key);
+  };
+  for (const job of jobs) {
+    visit(job.key);
+  }
+  return result;
+}
+
+/**
+ * Converts an Error or string to ErrorInfo
+ */
+export function toErrorInfo(error: Error | string): ErrorInfo {
+  if (error instanceof Error) {
+    return {
+      message: error.message,
+      stack: error.stack || new Error().stack || "",
+    };
+  }
+  return {
+    message: error,
+    stack: new Error().stack || "",
+  };
+}
 
 /**
  * Filters paged results by parent ID
