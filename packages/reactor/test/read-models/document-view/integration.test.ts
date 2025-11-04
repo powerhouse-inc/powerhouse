@@ -5,6 +5,7 @@ import { KyselyPGlite } from "kysely-pglite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
 import type { DocumentViewDatabase } from "../../../src/read-models/types.js";
+import { ConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
 import type { IOperationStore } from "../../../src/storage/interfaces.js";
 import { KyselyOperationStore } from "../../../src/storage/kysely/store.js";
 import type { Database as StorageDatabase } from "../../../src/storage/kysely/types.js";
@@ -59,7 +60,8 @@ describe("KyselyDocumentView", () => {
     operationStore = new KyselyOperationStore(
       db as unknown as Kysely<StorageDatabase>,
     );
-    view = new KyselyDocumentView(db, operationStore);
+    const consistencyTracker = new ConsistencyTracker();
+    view = new KyselyDocumentView(db, operationStore, consistencyTracker);
   });
 
   afterEach(async () => {
@@ -384,7 +386,7 @@ describe("KyselyDocumentView", () => {
       controller.abort();
 
       await expect(
-        view.exists([generateId()], controller.signal),
+        view.exists([generateId()], undefined, controller.signal),
       ).rejects.toThrow("Operation aborted");
     });
   });
@@ -945,6 +947,7 @@ describe("KyselyDocumentView", () => {
         view.get(
           generateId(),
           { scopes: ["header"], branch: "main" },
+          undefined,
           controller.signal,
         ),
       ).rejects.toThrow("Operation aborted");

@@ -1,6 +1,11 @@
 import type { Operation, PHDocument, PHDocumentHeader } from "document-model";
 import type { Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
+import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
+import type {
+  ConsistencyCoordinate,
+  ConsistencyToken,
+} from "../shared/types.js";
 import type {
   IDocumentView,
   IOperationStore,
@@ -21,6 +26,7 @@ export class KyselyDocumentView implements IDocumentView {
   constructor(
     private db: Kysely<Database>,
     private operationStore: IOperationStore,
+    private consistencyTracker: IConsistencyTracker,
   ) {}
 
   async init(): Promise<void> {
@@ -182,12 +188,40 @@ export class KyselyDocumentView implements IDocumentView {
         }
       }
     });
+
+    const coordinates: ConsistencyCoordinate[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]!;
+      coordinates.push({
+        documentId: item.context.documentId,
+        scope: item.context.scope,
+        branch: item.context.branch,
+        operationIndex: item.operation.index,
+      });
+    }
+    this.consistencyTracker.update(coordinates);
+  }
+
+  async waitForConsistency(
+    token: ConsistencyToken,
+    timeoutMs?: number,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    if (token.coordinates.length === 0) {
+      return;
+    }
+    await this.consistencyTracker.waitFor(token.coordinates, timeoutMs, signal);
   }
 
   async exists(
     documentIds: string[],
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<boolean[]> {
+    if (consistencyToken) {
+      await this.waitForConsistency(consistencyToken, undefined, signal);
+    }
+
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
@@ -212,8 +246,13 @@ export class KyselyDocumentView implements IDocumentView {
   async get<TDocument extends PHDocument>(
     documentId: string,
     view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<TDocument> {
+    if (consistencyToken) {
+      await this.waitForConsistency(consistencyToken, undefined, signal);
+    }
+
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }

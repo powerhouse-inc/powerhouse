@@ -19,6 +19,7 @@ import { ReadModelCoordinator } from "../read-models/coordinator.js";
 import { KyselyDocumentView } from "../read-models/document-view.js";
 import type { IReadModel } from "../read-models/interfaces.js";
 import { DocumentModelRegistry } from "../registry/implementation.js";
+import { ConsistencyTracker } from "../shared/consistency-tracker.js";
 import { KyselyDocumentIndexer } from "../storage/kysely/document-indexer.js";
 import { KyselyKeyframeStore } from "../storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../storage/kysely/store.js";
@@ -214,8 +215,13 @@ export class ReactorBuilder {
       new Set([...this.readModels]),
     );
 
-    // @ts-expect-error - Database type is a superset that includes all required tables
-    const documentView = new KyselyDocumentView(db, operationStore);
+    const documentViewConsistencyTracker = new ConsistencyTracker();
+    const documentView = new KyselyDocumentView(
+      // @ts-expect-error - Database type is a superset that includes all required tables
+      db,
+      operationStore,
+      documentViewConsistencyTracker,
+    );
     await documentView.init();
     readModelInstances.push(documentView);
 

@@ -33,6 +33,7 @@ import { InMemoryQueue } from "../../src/queue/queue.js";
 import { ReadModelCoordinator } from "../../src/read-models/coordinator.js";
 import { KyselyDocumentView } from "../../src/read-models/document-view.js";
 import type { IReadModelCoordinator } from "../../src/read-models/interfaces.js";
+import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
 import type { DocumentViewDatabase } from "../../src/read-models/types.js";
 import { DocumentModelRegistry } from "../../src/registry/implementation.js";
 import { JobStatus } from "../../src/shared/types.js";
@@ -119,7 +120,12 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     operationStore = setup.store;
 
     // Create document view and initialize
-    documentView = new KyselyDocumentView(db, operationStore);
+    const consistencyTracker = new ConsistencyTracker();
+    documentView = new KyselyDocumentView(
+      db,
+      operationStore,
+      consistencyTracker,
+    );
     await documentView.init();
 
     // Create dependencies

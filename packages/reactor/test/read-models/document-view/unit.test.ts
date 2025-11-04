@@ -1,12 +1,14 @@
 import type { Kysely } from "kysely";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
+import type { IConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
 import type { IOperationStore } from "../../../src/storage/interfaces.js";
 
 describe("KyselyDocumentView Unit Tests", () => {
   let view: KyselyDocumentView;
   let mockDb: any;
   let mockOperationStore: IOperationStore;
+  let mockConsistencyTracker: IConsistencyTracker;
 
   beforeEach(() => {
     mockDb = createMockKyselyDb();
@@ -18,7 +20,19 @@ describe("KyselyDocumentView Unit Tests", () => {
       getRevisions: vi.fn(),
     };
 
-    view = new KyselyDocumentView(mockDb, mockOperationStore);
+    mockConsistencyTracker = {
+      update: vi.fn(),
+      getLatest: vi.fn(),
+      waitFor: vi.fn().mockResolvedValue(undefined),
+      serialize: vi.fn(),
+      hydrate: vi.fn(),
+    };
+
+    view = new KyselyDocumentView(
+      mockDb,
+      mockOperationStore,
+      mockConsistencyTracker,
+    );
   });
 
   function createMockKyselyDb(): Kysely<any> {
@@ -101,9 +115,9 @@ describe("KyselyDocumentView Unit Tests", () => {
       const controller = new AbortController();
       controller.abort();
 
-      await expect(view.exists(["doc-1"], controller.signal)).rejects.toThrow(
-        "Operation aborted",
-      );
+      await expect(
+        view.exists(["doc-1"], undefined, controller.signal),
+      ).rejects.toThrow("Operation aborted");
     });
   });
 
@@ -113,7 +127,7 @@ describe("KyselyDocumentView Unit Tests", () => {
       controller.abort();
 
       await expect(
-        view.get("doc-1", undefined, controller.signal),
+        view.get("doc-1", undefined, undefined, controller.signal),
       ).rejects.toThrow("Operation aborted");
     });
 

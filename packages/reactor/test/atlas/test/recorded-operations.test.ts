@@ -14,6 +14,7 @@ import { InMemoryQueue } from "../../../src/queue/queue.js";
 import { ReadModelCoordinator } from "../../../src/read-models/coordinator.js";
 import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
 import { DocumentModelRegistry } from "../../../src/registry/implementation.js";
+import { ConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
 import { KyselyDocumentIndexer } from "../../../src/storage/kysely/document-indexer.js";
 import { Reactor } from "../../../src/core/reactor.js";
 import type {
@@ -179,8 +180,13 @@ async function createReactorSetup(
   let documentView: KyselyDocumentView | undefined;
 
   if (includeDocumentView) {
+    const consistencyTracker = new ConsistencyTracker();
     // @ts-expect-error - Database type is a superset that includes all required tables
-    documentView = new KyselyDocumentView(db, operationStore);
+    documentView = new KyselyDocumentView(
+      db,
+      operationStore,
+      consistencyTracker,
+    );
     await documentView.init();
     readModels.push(documentView);
 

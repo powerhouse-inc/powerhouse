@@ -39,6 +39,7 @@ import { KyselyDocumentView } from "../../src/read-models/document-view.js";
 import type { DocumentViewDatabase } from "../../src/read-models/types.js";
 import { DocumentModelRegistry } from "../../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
+import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
 import { JobStatus } from "../../src/shared/types.js";
 import type { IKeyframeStore } from "../../src/storage/interfaces.js";
 import { KyselyDocumentIndexer } from "../../src/storage/kysely/document-indexer.js";
@@ -149,7 +150,12 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
     await executorManager.start(1);
 
     // Create real document view and read model coordinator
-    const documentView = new KyselyDocumentView(db as any, operationStore);
+    const consistencyTracker = new ConsistencyTracker();
+    const documentView = new KyselyDocumentView(
+      db as any,
+      operationStore,
+      consistencyTracker,
+    );
     await documentView.init();
 
     documentIndexer = new KyselyDocumentIndexer(db as any, operationStore);

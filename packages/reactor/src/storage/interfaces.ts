@@ -1,4 +1,5 @@
 import type { Operation, PHDocument } from "document-model";
+import type { ConsistencyToken } from "../shared/types.js";
 
 export type OperationContext = {
   documentId: string;
@@ -173,23 +174,44 @@ export interface IDocumentView {
   indexOperations(items: OperationWithContext[]): Promise<void>;
 
   /**
+   * Blocks until the view has processed the coordinates referenced by the
+   * provided consistency token.
+   *
+   * @param token - Consistency token derived from the originating job
+   * @param timeoutMs - Optional timeout window in milliseconds
+   * @param signal - Optional abort signal to cancel the wait
+   */
+  waitForConsistency(
+    token: ConsistencyToken,
+    timeoutMs?: number,
+    signal?: AbortSignal,
+  ): Promise<void>;
+
+  /**
    * Returns true if and only if the documents exist.
    *
    * @param documentIds - The list of document ids to check.
+   * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    */
-  exists(documentIds: string[], signal?: AbortSignal): Promise<boolean[]>;
+  exists(
+    documentIds: string[],
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<boolean[]>;
 
   /**
    * Returns the document with the given id.
    *
    * @param documentId - The id of the document to get.
    * @param view - Optional filter containing branch and scopes information
+   * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    */
   get<TDocument extends PHDocument>(
     documentId: string,
     view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<TDocument>;
 }

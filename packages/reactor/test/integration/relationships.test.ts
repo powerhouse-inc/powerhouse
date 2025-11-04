@@ -23,6 +23,7 @@ import type { IQueue } from "../../src/queue/interfaces.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
 import { ReadModelCoordinator } from "../../src/read-models/coordinator.js";
 import { KyselyDocumentView } from "../../src/read-models/document-view.js";
+import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
 import type { DocumentViewDatabase } from "../../src/read-models/types.js";
 import { DocumentModelRegistry } from "../../src/registry/implementation.js";
 import type { JobInfo } from "../../src/shared/types.js";
@@ -197,7 +198,12 @@ describe("Integration Test: Relationship Operations", () => {
 
     await executorManager.start(1);
 
-    const documentView = new KyselyDocumentView(db as any, operationStore);
+    const consistencyTracker = new ConsistencyTracker();
+    const documentView = new KyselyDocumentView(
+      db as any,
+      operationStore,
+      consistencyTracker,
+    );
     await documentView.init();
 
     documentIndexer = new KyselyDocumentIndexer(db as any, operationStore);

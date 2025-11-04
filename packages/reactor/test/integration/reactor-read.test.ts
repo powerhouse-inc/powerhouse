@@ -19,6 +19,7 @@ import { ReadModelCoordinator } from "../../src/read-models/coordinator.js";
 import { KyselyDocumentView } from "../../src/read-models/document-view.js";
 import type { DocumentViewDatabase } from "../../src/read-models/types.js";
 import { DocumentModelRegistry } from "../../src/registry/implementation.js";
+import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
 import type {
   IKeyframeStore,
   IOperationStore,
@@ -94,7 +95,12 @@ describe("Reactor Read Interface", () => {
     await writeCache.startup();
 
     // Create real document view and read model coordinator
-    const documentView = new KyselyDocumentView(db, operationStore);
+    const consistencyTracker = new ConsistencyTracker();
+    const documentView = new KyselyDocumentView(
+      db,
+      operationStore,
+      consistencyTracker,
+    );
     await documentView.init();
     readModelCoordinator = new ReadModelCoordinator(eventBus, [documentView]);
     readModelCoordinator.start();
