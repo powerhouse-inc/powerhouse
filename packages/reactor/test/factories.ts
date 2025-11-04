@@ -21,6 +21,7 @@ import { v4 as uuidv4 } from "uuid";
 import { vi } from "vitest";
 import type { IWriteCache } from "../src/cache/write/interfaces.js";
 import { Reactor } from "../src/core/reactor.js";
+import type { ReactorFeatures } from "../src/core/types.js";
 import { EventBus } from "../src/events/event-bus.js";
 import type { IEventBus } from "../src/events/interfaces.js";
 import type { IJobExecutor } from "../src/executor/interfaces.js";
@@ -35,7 +36,11 @@ import type { Job } from "../src/queue/types.js";
 import type { IReadModelCoordinator } from "../src/read-models/interfaces.js";
 import { DocumentModelRegistry } from "../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../src/registry/interfaces.js";
-import type { IOperationStore } from "../src/storage/interfaces.js";
+import type {
+  IDocumentIndexer,
+  IDocumentView,
+  IOperationStore,
+} from "../src/storage/interfaces.js";
 import { KyselyKeyframeStore } from "../src/storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../src/storage/kysely/store.js";
 import type { Database as DatabaseSchema } from "../src/storage/kysely/types.js";
@@ -541,6 +546,11 @@ export async function createTestReactorSetup(
   // Create mock read model coordinator
   const readModelCoordinator = createMockReadModelCoordinator();
 
+  // Create mock dependencies for new Reactor constructor parameters
+  const features = createMockReactorFeatures();
+  const documentView = createMockDocumentView();
+  const documentIndexer = createMockDocumentIndexer();
+
   // Create reactor
   const reactor = new Reactor(
     driveServer,
@@ -548,6 +558,9 @@ export async function createTestReactorSetup(
     queue,
     jobTracker,
     readModelCoordinator,
+    features,
+    documentView,
+    documentIndexer,
   );
 
   return {
@@ -695,5 +708,48 @@ export function createEmptyConsistencyToken() {
     version: 1 as const,
     createdAtUtcIso: new Date().toISOString(),
     coordinates: [],
+  };
+}
+
+/**
+ * Creates mock ReactorFeatures with legacy storage enabled by default.
+ */
+export function createMockReactorFeatures(
+  legacyStorageEnabled = true,
+): ReactorFeatures {
+  return {
+    legacyStorageEnabled,
+  };
+}
+
+/**
+ * Creates a mock IDocumentView for testing.
+ */
+export function createMockDocumentView(): IDocumentView {
+  return {
+    init: vi.fn().mockResolvedValue(undefined),
+    indexOperations: vi.fn().mockResolvedValue(undefined),
+    waitForConsistency: vi.fn().mockResolvedValue(undefined),
+    exists: vi.fn().mockResolvedValue([]),
+    get: vi.fn().mockRejectedValue(new Error("Not implemented")),
+  };
+}
+
+/**
+ * Creates a mock IDocumentIndexer for testing.
+ */
+export function createMockDocumentIndexer(): IDocumentIndexer {
+  return {
+    init: vi.fn().mockResolvedValue(undefined),
+    indexOperations: vi.fn().mockResolvedValue(undefined),
+    waitForConsistency: vi.fn().mockResolvedValue(undefined),
+    getOutgoing: vi.fn().mockResolvedValue([]),
+    getIncoming: vi.fn().mockResolvedValue([]),
+    hasRelationship: vi.fn().mockResolvedValue(false),
+    getUndirectedRelationships: vi.fn().mockResolvedValue([]),
+    getDirectedRelationships: vi.fn().mockResolvedValue([]),
+    findPath: vi.fn().mockResolvedValue(null),
+    findAncestors: vi.fn().mockResolvedValue({ nodes: [], edges: [] }),
+    getRelationshipTypes: vi.fn().mockResolvedValue([]),
   };
 }

@@ -121,6 +121,7 @@ describe("ReactorClient Unit Tests", () => {
         "doc-1",
         undefined,
         undefined,
+        undefined,
       );
       expect(result.document).toEqual(mockDoc);
     });
@@ -142,9 +143,11 @@ describe("ReactorClient Unit Tests", () => {
         "my-doc",
         undefined,
         undefined,
+        undefined,
       );
       expect(mockReactor.getBySlug).toHaveBeenCalledWith(
         "my-doc",
+        undefined,
         undefined,
         undefined,
       );
@@ -162,7 +165,12 @@ describe("ReactorClient Unit Tests", () => {
 
       await client.get("doc-1", view, signal);
 
-      expect(mockReactor.get).toHaveBeenCalledWith("doc-1", view, signal);
+      expect(mockReactor.get).toHaveBeenCalledWith(
+        "doc-1",
+        view,
+        undefined,
+        signal,
+      );
     });
   });
 
@@ -183,6 +191,7 @@ describe("ReactorClient Unit Tests", () => {
         undefined,
         undefined,
         undefined,
+        undefined,
       );
       expect(result).toEqual(mockResult);
     });
@@ -199,6 +208,7 @@ describe("ReactorClient Unit Tests", () => {
         search,
         view,
         paging,
+        undefined,
         signal,
       );
     });
@@ -253,6 +263,7 @@ describe("ReactorClient Unit Tests", () => {
         documentId,
         undefined,
         undefined,
+        undefined,
       );
       expect(result).toEqual(mockDoc);
     });
@@ -279,7 +290,12 @@ describe("ReactorClient Unit Tests", () => {
       await client.mutate(documentId, actions, view, signal);
 
       expect(mockJobAwaiter.waitForJob).toHaveBeenCalledWith("job-1", signal);
-      expect(mockReactor.get).toHaveBeenCalledWith(documentId, view, signal);
+      expect(mockReactor.get).toHaveBeenCalledWith(
+        documentId,
+        view,
+        undefined,
+        signal,
+      );
     });
   });
 
@@ -391,6 +407,7 @@ describe("ReactorClient Unit Tests", () => {
         parentId,
         undefined,
         undefined,
+        undefined,
       );
       expect(result).toEqual(mockDoc);
     });
@@ -432,6 +449,7 @@ describe("ReactorClient Unit Tests", () => {
       );
       expect(mockReactor.get).toHaveBeenCalledWith(
         parentId,
+        undefined,
         undefined,
         undefined,
       );

@@ -17,6 +17,8 @@ import { DocumentModelRegistry } from "../../../src/registry/implementation.js";
 import { ConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
 import type { Database as StorageDatabase } from "../../../src/storage/kysely/types.js";
 import {
+  createMockDocumentIndexer,
+  createMockReactorFeatures,
   createTestJobTracker,
   createTestOperationStore,
 } from "../../../test/factories.js";
@@ -110,6 +112,9 @@ async function setupReactor() {
     queue,
     jobTracker,
     readModelCoordinator,
+    createMockReactorFeatures(),
+    documentView,
+    createMockDocumentIndexer(),
   );
 
   return { reactor, executorManager };

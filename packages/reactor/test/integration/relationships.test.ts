@@ -40,6 +40,7 @@ import type {
 } from "../../src/storage/kysely/types.js";
 import {
   createDocModelDocument,
+  createMockReactorFeatures,
   createTestJobTracker,
   createTestOperationStore,
 } from "../factories.js";
@@ -226,6 +227,9 @@ describe("Integration Test: Relationship Operations", () => {
       queue,
       jobTracker,
       readModelCoordinator,
+      createMockReactorFeatures(),
+      documentView,
+      documentIndexer,
     );
   });
 

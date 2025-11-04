@@ -42,7 +42,11 @@ import type {
   IOperationStore,
 } from "../../src/storage/interfaces.js";
 import type { Database as StorageDatabase } from "../../src/storage/kysely/types.js";
-import { createTestOperationStore } from "../factories.js";
+import {
+  createMockDocumentIndexer,
+  createMockReactorFeatures,
+  createTestOperationStore,
+} from "../factories.js";
 
 // Combined database type
 type Database = StorageDatabase & DocumentViewDatabase;
@@ -173,6 +177,9 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       queue,
       jobTracker,
       readModelCoordinator,
+      createMockReactorFeatures(),
+      documentView,
+      createMockDocumentIndexer(),
     );
   });
 

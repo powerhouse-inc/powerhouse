@@ -17,6 +17,10 @@ import { DocumentModelRegistry } from "../../../src/registry/implementation.js";
 import { ConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
 import { KyselyDocumentIndexer } from "../../../src/storage/kysely/document-indexer.js";
 import { Reactor } from "../../../src/core/reactor.js";
+import {
+  createMockDocumentIndexer as createMockDocumentIndexerHelper,
+  createMockDocumentView as createMockDocumentViewHelper,
+} from "../../factories.js";
 import type {
   IDocumentStorage,
   IDocumentOperationStorage,
@@ -178,6 +182,7 @@ async function createReactorSetup(
 
   const readModels = [];
   let documentView: KyselyDocumentView | undefined;
+  let documentIndexer: KyselyDocumentIndexer | undefined;
 
   if (includeDocumentView) {
     const documentViewConsistencyTracker = new ConsistencyTracker();
@@ -190,7 +195,7 @@ async function createReactorSetup(
     readModels.push(documentView);
 
     const documentIndexerConsistencyTracker = new ConsistencyTracker();
-    const documentIndexer = new KyselyDocumentIndexer(
+    documentIndexer = new KyselyDocumentIndexer(
       db as any,
       operationStore,
       documentIndexerConsistencyTracker,
@@ -208,6 +213,9 @@ async function createReactorSetup(
     queue,
     jobTracker,
     readModelCoordinator,
+    { legacyStorageEnabled },
+    documentView ?? createMockDocumentViewHelper(),
+    documentIndexer ?? createMockDocumentIndexerHelper(),
   );
 
   const cleanup = async () => {

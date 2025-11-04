@@ -175,7 +175,7 @@ export function createEmptyConsistencyToken(): ConsistencyToken {
 export function createConsistencyToken(
   operationsWithContext: OperationWithContext[],
 ): ConsistencyToken {
-  if (!operationsWithContext || operationsWithContext.length === 0) {
+  if (operationsWithContext.length === 0) {
     return createEmptyConsistencyToken();
   }
 

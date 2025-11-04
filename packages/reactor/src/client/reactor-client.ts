@@ -66,10 +66,20 @@ export class ReactorClient implements IReactorClient {
   }> {
     // First try to get by ID
     try {
-      return await this.reactor.get<TDocument>(identifier, view, signal);
+      return await this.reactor.get<TDocument>(
+        identifier,
+        view,
+        undefined,
+        signal,
+      );
     } catch (error) {
       // If failed, try to get by slug
-      return await this.reactor.getBySlug<TDocument>(identifier, view, signal);
+      return await this.reactor.getBySlug<TDocument>(
+        identifier,
+        view,
+        undefined,
+        signal,
+      );
     }
   }
 
@@ -106,7 +116,7 @@ export class ReactorClient implements IReactorClient {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
-    return this.reactor.find(search, view, paging, signal);
+    return this.reactor.find(search, view, paging, undefined, signal);
   }
 
   /**

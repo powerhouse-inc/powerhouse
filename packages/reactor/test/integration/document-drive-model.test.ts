@@ -49,6 +49,7 @@ import type {
   Database as StorageDatabase,
 } from "../../src/storage/kysely/types.js";
 import {
+  createMockReactorFeatures,
   createTestJobTracker,
   createTestOperationStore,
 } from "../factories.js";
@@ -179,6 +180,9 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       queue,
       jobTracker,
       readModelCoordinator,
+      createMockReactorFeatures(),
+      documentView,
+      documentIndexer,
     );
   });
 

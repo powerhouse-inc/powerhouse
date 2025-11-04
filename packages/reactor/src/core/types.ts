@@ -6,6 +6,7 @@ import type {
 } from "document-model";
 
 import type {
+  ConsistencyToken,
   JobInfo,
   PagedResults,
   PagingOptions,
@@ -79,12 +80,14 @@ export interface IReactor {
    *
    * @param id - Required, this is the document id
    * @param view - Optional filter containing branch and scopes information
+   * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    * @returns The up-to-date PHDocument with scopes and list of child document ids
    */
   get<TDocument extends PHDocument>(
     id: string,
     view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<{
     document: TDocument;
@@ -96,12 +99,14 @@ export interface IReactor {
    *
    * @param slug - Required, this is the document slug
    * @param view - Optional filter containing branch and scopes information
+   * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    * @returns The up-to-date PHDocument with scopes and list of child document ids
    */
   getBySlug<TDocument extends PHDocument>(
     slug: string,
     view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<{
     document: TDocument;
@@ -114,6 +119,7 @@ export interface IReactor {
    * @param documentId - The document id
    * @param view - Optional filter containing branch and scopes information
    * @param paging - Optional pagination options
+   * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    * @returns The list of operations
    */
@@ -121,6 +127,7 @@ export interface IReactor {
     documentId: string,
     view?: ViewFilter,
     paging?: PagingOptions,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<Record<string, PagedResults<Operation>>>;
 
@@ -130,6 +137,7 @@ export interface IReactor {
    * @param search - Search filter options (type, parentId, identifiers)
    * @param view - Optional filter containing branch and scopes information
    * @param paging - Optional pagination options
+   * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    * @returns List of documents matching criteria and pagination cursor
    */
@@ -137,6 +145,7 @@ export interface IReactor {
     search: SearchFilter,
     view?: ViewFilter,
     paging?: PagingOptions,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>>;
 

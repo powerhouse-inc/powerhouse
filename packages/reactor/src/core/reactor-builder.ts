@@ -247,6 +247,9 @@ export class ReactorBuilder {
       queue,
       jobTracker,
       readModelCoordinator,
+      this.features,
+      documentView,
+      documentIndexer,
     );
   }
 }

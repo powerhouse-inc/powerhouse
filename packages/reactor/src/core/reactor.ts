@@ -17,6 +17,7 @@ import type { Job } from "../queue/types.js";
 import type { IReadModelCoordinator } from "../read-models/interfaces.js";
 import { createMutableShutdownStatus } from "../shared/factories.js";
 import type {
+  ConsistencyToken,
   JobInfo,
   PagedResults,
   PagingOptions,
@@ -27,10 +28,12 @@ import type {
 } from "../shared/types.js";
 import { JobStatus } from "../shared/types.js";
 import { matchesScope } from "../shared/utils.js";
+import type { IDocumentIndexer, IDocumentView } from "../storage/interfaces.js";
 import type {
   BatchMutationRequest,
   BatchMutationResult,
   IReactor,
+  ReactorFeatures,
 } from "./types.js";
 import {
   filterByParentId,
@@ -53,6 +56,9 @@ export class Reactor implements IReactor {
   private queue: IQueue;
   private jobTracker: IJobTracker;
   private readModelCoordinator: IReadModelCoordinator;
+  private features: ReactorFeatures;
+  private documentView: IDocumentView;
+  private documentIndexer: IDocumentIndexer;
 
   constructor(
     driveServer: BaseDocumentDriveServer,
@@ -60,6 +66,9 @@ export class Reactor implements IReactor {
     queue: IQueue,
     jobTracker: IJobTracker,
     readModelCoordinator: IReadModelCoordinator,
+    features: ReactorFeatures,
+    documentView: IDocumentView,
+    documentIndexer: IDocumentIndexer,
   ) {
     // Store required dependencies
     this.driveServer = driveServer;
@@ -67,6 +76,9 @@ export class Reactor implements IReactor {
     this.queue = queue;
     this.jobTracker = jobTracker;
     this.readModelCoordinator = readModelCoordinator;
+    this.features = features;
+    this.documentView = documentView;
+    this.documentIndexer = documentIndexer;
 
     // Start the read model coordinator
     this.readModelCoordinator.start();
@@ -143,35 +155,65 @@ export class Reactor implements IReactor {
   async get<TDocument extends PHDocument>(
     id: string,
     view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<{
     document: TDocument;
     childIds: string[];
   }> {
-    const document = await this.documentStorage.get<TDocument>(id);
+    if (this.features.legacyStorageEnabled) {
+      const document = await this.documentStorage.get<TDocument>(id);
 
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
-
-    const childIds = await this.documentStorage.getChildren(id);
-
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
-
-    // Apply view filter - This will be removed when we pass the viewfilter along
-    // to the underlying store, but is here now for the interface.
-    for (const scope in document.state) {
-      if (!matchesScope(view, scope)) {
-        delete document.state[scope as keyof PHBaseState];
+      if (signal?.aborted) {
+        throw new AbortError();
       }
-    }
 
-    return {
-      document,
-      childIds,
-    };
+      const childIds = await this.documentStorage.getChildren(id);
+
+      if (signal?.aborted) {
+        throw new AbortError();
+      }
+
+      for (const scope in document.state) {
+        if (!matchesScope(view, scope)) {
+          delete document.state[scope as keyof PHBaseState];
+        }
+      }
+
+      return {
+        document,
+        childIds,
+      };
+    } else {
+      const document = await this.documentView.get<TDocument>(
+        id,
+        view,
+        consistencyToken,
+        signal,
+      );
+
+      if (signal?.aborted) {
+        throw new AbortError();
+      }
+
+      const relationships = await this.documentIndexer.getOutgoing(
+        id,
+        ["child"],
+        consistencyToken,
+        signal,
+      );
+
+      if (signal?.aborted) {
+        throw new AbortError();
+      }
+
+      const childIds = relationships.map((rel) => rel.targetId);
+
+      return {
+        document,
+        childIds,
+      };
+    }
   }
 
   /**
@@ -180,17 +222,16 @@ export class Reactor implements IReactor {
   async getBySlug<TDocument extends PHDocument>(
     slug: string,
     view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<{
     document: TDocument;
     childIds: string[];
   }> {
-    // Use the storage layer to resolve slug to ID
     let ids: string[];
     try {
       ids = await this.documentStorage.resolveIds([slug], signal);
     } catch (error) {
-      // If the error is from resolveIds (document not found), wrap it with our message
       if (error instanceof Error && error.message.includes("not found")) {
         throw new Error(`Document not found with slug: ${slug}`);
       }
@@ -202,8 +243,7 @@ export class Reactor implements IReactor {
       throw new Error(`Document not found with slug: ${slug}`);
     }
 
-    // Now get the document by its resolved ID
-    return await this.get<TDocument>(ids[0], view, signal);
+    return await this.get<TDocument>(ids[0], view, consistencyToken, signal);
   }
 
   /**
@@ -213,6 +253,7 @@ export class Reactor implements IReactor {
     documentId: string,
     view?: ViewFilter,
     paging?: PagingOptions,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<Record<string, PagedResults<Operation>>> {
     // Use storage directly to get the document
@@ -256,6 +297,7 @@ export class Reactor implements IReactor {
     search: SearchFilter,
     view?: ViewFilter,
     paging?: PagingOptions,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
     let results: PagedResults<PHDocument>;
@@ -559,7 +601,7 @@ export class Reactor implements IReactor {
         const jobId = planKeyToJobId.get(key)!;
         try {
           await this.queue.remove(jobId);
-        } catch (removeError) {
+        } catch {
           // Ignore removal errors during cleanup
         }
       }

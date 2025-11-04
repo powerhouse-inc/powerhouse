@@ -27,6 +27,8 @@ import type {
 import type { Database as StorageDatabase } from "../../src/storage/kysely/types.js";
 import {
   createDocModelDocument,
+  createMockDocumentIndexer,
+  createMockReactorFeatures,
   createTestDocuments,
   createTestJobTracker,
   createTestOperationStore,
@@ -113,6 +115,9 @@ describe("Reactor Read Interface", () => {
       queue,
       jobTracker,
       readModelCoordinator,
+      createMockReactorFeatures(),
+      documentView,
+      createMockDocumentIndexer(),
     );
   });
 
