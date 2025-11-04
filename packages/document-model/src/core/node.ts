@@ -1,6 +1,6 @@
 import mime from "mime/lite";
-import type { BinaryLike, RandomUUIDOptions } from "node:crypto";
-import { createHash, randomUUID } from "node:crypto";
+import type { BinaryLike } from "node:crypto";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import https from "node:https";
 import { join } from "node:path";
@@ -110,16 +110,6 @@ export async function baseSaveToFile(
     fileName.endsWith(fileExtension) ? fileName : `${fileName}${fileExtension}`,
     file,
   );
-}
-/**
- * This should never be linked to directly. Instead, use the `#utils/misc`
- * module. This will automatically pick the correct implementation for the
- * current environment. See package.json for the mapping.
- *
- * Generates a secure UUID.
- */
-export function generateUUIDNode(options?: RandomUUIDOptions) {
-  return randomUUID(options);
 }
 
 export function writeFileNode(

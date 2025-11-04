@@ -15,7 +15,7 @@ import {
   useDrives,
   usePHModal,
 } from "@powerhousedao/reactor-browser";
-import { generateUUIDBrowser } from "document-model/core";
+import { generateId } from "document-model/core";
 import { useEffect, useState } from "react";
 
 type ComboboxOption = {
@@ -78,7 +78,7 @@ export const DebugSettingsModal: React.FC = () => {
       return;
     }
 
-    const triggerId = generateUUIDBrowser();
+    const triggerId = generateId();
 
     await addTrigger(selectedDrive, {
       id: `invalid-trigger-${triggerId}`,
