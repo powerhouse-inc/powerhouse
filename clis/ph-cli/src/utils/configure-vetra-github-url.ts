@@ -1,4 +1,5 @@
 import {
+  createVetraDocument,
   getVetraDocuments,
   setPackageGithubUrl,
 } from "@powerhousedao/common/utils";
@@ -245,15 +246,9 @@ export async function configureVetraGithubUrl(
       return;
     }
 
-    // Skip if no documents found
+    // Get or create target document
+    let targetDocumentId: string;
     const targetDocument = validateAndSelectDocument(documents);
-    if (!targetDocument) {
-      logVerbose(
-        "No Vetra documents found, skipping GitHub URL setup",
-        verbose,
-      );
-      return;
-    }
 
     // Collect user input
     const gitRemoteUrl = getGitRemoteUrl();
@@ -269,10 +264,24 @@ export async function configureVetraGithubUrl(
       shouldSetRemote = await promptYesNo("Set this as your git remote URL?");
     }
 
+    if (!targetDocument) {
+      logVerbose("No Vetra documents found, creating new document...", verbose);
+
+      targetDocumentId = await createVetraDocument(
+        graphqlEndpoint,
+        vetraDriveId,
+        "vetra-package",
+      );
+
+      logVerbose(`Created new document: ${targetDocumentId}`, verbose);
+    } else {
+      targetDocumentId = targetDocument.id;
+    }
+
     await applyGithubUrlConfiguration(
       graphqlEndpoint,
       vetraDriveId,
-      targetDocument.id,
+      targetDocumentId,
       selectedUrl,
       shouldSetRemote,
     );
