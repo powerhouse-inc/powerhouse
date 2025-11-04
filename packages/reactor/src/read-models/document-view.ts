@@ -10,6 +10,8 @@ import type {
   IDocumentView,
   IOperationStore,
   OperationWithContext,
+  PagedResults,
+  PagingOptions,
   ViewFilter,
 } from "../storage/interfaces.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
@@ -382,6 +384,131 @@ export class KyselyDocumentView implements IDocumentView {
     };
 
     return document as TDocument;
+  }
+
+  async findByType(
+    type: string,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<PHDocument>> {
+    if (consistencyToken) {
+      await this.waitForConsistency(consistencyToken, undefined, signal);
+    }
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    const branch = view?.branch || "main";
+
+    const startIndex = paging?.cursor ? parseInt(paging.cursor) : 0;
+    const limit = paging?.limit || 100;
+
+    const documents: PHDocument[] = [];
+    const processedDocumentIds = new Set<string>();
+    const allDocumentIds: string[] = [];
+
+    const snapshots = await this.db
+      .selectFrom("DocumentSnapshot")
+      .selectAll()
+      .where("documentType", "=", type)
+      .where("branch", "=", branch)
+      .where("isDeleted", "=", false)
+      .orderBy("lastUpdatedAt", "desc")
+      .execute();
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    for (const snapshot of snapshots) {
+      if (processedDocumentIds.has(snapshot.documentId)) {
+        continue;
+      }
+
+      processedDocumentIds.add(snapshot.documentId);
+      allDocumentIds.push(snapshot.documentId);
+    }
+
+    const docsToFetch = allDocumentIds.slice(startIndex, startIndex + limit);
+
+    for (const documentId of docsToFetch) {
+      if (signal?.aborted) {
+        throw new Error("Operation aborted");
+      }
+
+      try {
+        const document = await this.get<PHDocument>(
+          documentId,
+          view,
+          undefined,
+          signal,
+        );
+        documents.push(document);
+      } catch {
+        continue;
+      }
+    }
+
+    const hasMore = allDocumentIds.length > startIndex + limit;
+    const nextCursor = hasMore ? String(startIndex + limit) : undefined;
+
+    return {
+      items: documents,
+      nextCursor,
+      hasMore,
+    };
+  }
+
+  async resolveSlug(
+    slug: string,
+    view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<string | undefined> {
+    if (consistencyToken) {
+      await this.waitForConsistency(consistencyToken, undefined, signal);
+    }
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    const branch = view?.branch || "main";
+
+    const mapping = await this.db
+      .selectFrom("SlugMapping")
+      .select("documentId")
+      .where("slug", "=", slug)
+      .where("branch", "=", branch)
+      .executeTakeFirst();
+
+    if (!mapping) {
+      return undefined;
+    }
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    if (view?.scopes && view.scopes.length > 0) {
+      const scopeCheck = await this.db
+        .selectFrom("DocumentSnapshot")
+        .select("scope")
+        .where("documentId", "=", mapping.documentId)
+        .where("branch", "=", branch)
+        .where("scope", "in", view.scopes)
+        .where("isDeleted", "=", false)
+        .executeTakeFirst();
+
+      if (!scopeCheck) {
+        return undefined;
+      }
+    }
+
+    return mapping.documentId;
   }
 
   private async checkTablesExist(): Promise<boolean> {

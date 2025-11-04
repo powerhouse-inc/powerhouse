@@ -732,6 +732,12 @@ export function createMockDocumentView(): IDocumentView {
     waitForConsistency: vi.fn().mockResolvedValue(undefined),
     exists: vi.fn().mockResolvedValue([]),
     get: vi.fn().mockRejectedValue(new Error("Not implemented")),
+    findByType: vi.fn().mockResolvedValue({
+      items: [],
+      nextCursor: undefined,
+      hasMore: false,
+    }),
+    resolveSlug: vi.fn().mockResolvedValue(undefined),
   };
 }
 

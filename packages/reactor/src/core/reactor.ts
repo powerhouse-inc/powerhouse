@@ -228,22 +228,42 @@ export class Reactor implements IReactor {
     document: TDocument;
     childIds: string[];
   }> {
-    let ids: string[];
-    try {
-      ids = await this.documentStorage.resolveIds([slug], signal);
-    } catch (error) {
-      if (error instanceof Error && error.message.includes("not found")) {
+    if (this.features.legacyStorageEnabled) {
+      let ids: string[];
+      try {
+        ids = await this.documentStorage.resolveIds([slug], signal);
+      } catch (error) {
+        if (error instanceof Error && error.message.includes("not found")) {
+          throw new Error(`Document not found with slug: ${slug}`);
+        }
+
+        throw error;
+      }
+
+      if (ids.length === 0 || !ids[0]) {
         throw new Error(`Document not found with slug: ${slug}`);
       }
 
-      throw error;
-    }
+      return await this.get<TDocument>(ids[0], view, consistencyToken, signal);
+    } else {
+      const documentId = await this.documentView.resolveSlug(
+        slug,
+        view,
+        consistencyToken,
+        signal,
+      );
 
-    if (ids.length === 0 || !ids[0]) {
-      throw new Error(`Document not found with slug: ${slug}`);
-    }
+      if (!documentId) {
+        throw new Error(`Document not found with slug: ${slug}`);
+      }
 
-    return await this.get<TDocument>(ids[0], view, consistencyToken, signal);
+      return await this.get<TDocument>(
+        documentId,
+        view,
+        consistencyToken,
+        signal,
+      );
+    }
   }
 
   /**
@@ -714,56 +734,103 @@ export class Reactor implements IReactor {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
-    const documents: PHDocument[] = [];
+    if (this.features.legacyStorageEnabled) {
+      const documents: PHDocument[] = [];
 
-    // Fetch each document by ID using storage directly
-    for (const id of ids) {
+      // Fetch each document by ID using storage directly
+      for (const id of ids) {
+        if (signal?.aborted) {
+          throw new AbortError();
+        }
+
+        let document: PHDocument;
+        try {
+          document = await this.documentStorage.get<PHDocument>(id);
+        } catch {
+          // Skip documents that don't exist or can't be accessed
+          // This matches the behavior expected from a search operation
+          continue;
+        }
+
+        // Apply view filter - This will be removed when we pass the viewfilter along
+        // to the underlying store, but is here now for the interface.
+        for (const scope in document.state) {
+          if (!matchesScope(view, scope)) {
+            delete document.state[scope as keyof PHBaseState];
+          }
+        }
+
+        documents.push(document);
+      }
+
       if (signal?.aborted) {
         throw new AbortError();
       }
 
-      let document: PHDocument;
-      try {
-        document = await this.documentStorage.get<PHDocument>(id);
-      } catch {
-        // Skip documents that don't exist or can't be accessed
-        // This matches the behavior expected from a search operation
-        continue;
-      }
+      // Apply paging
+      const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
+      const limit = paging?.limit || documents.length;
+      const pagedDocuments = documents.slice(startIndex, startIndex + limit);
 
-      // Apply view filter - This will be removed when we pass the viewfilter along
-      // to the underlying store, but is here now for the interface.
-      for (const scope in document.state) {
-        if (!matchesScope(view, scope)) {
-          delete document.state[scope as keyof PHBaseState];
+      // Create paged results
+      const hasMore = startIndex + limit < documents.length;
+      const nextCursor = hasMore ? String(startIndex + limit) : undefined;
+
+      return {
+        results: pagedDocuments,
+        options: paging || { cursor: "0", limit: documents.length },
+        nextCursor,
+        next: hasMore
+          ? () =>
+              this.findByIds(ids, view, { cursor: nextCursor!, limit }, signal)
+          : undefined,
+      };
+    } else {
+      const documents: PHDocument[] = [];
+
+      // Fetch each document by ID using documentView
+      for (const id of ids) {
+        if (signal?.aborted) {
+          throw new AbortError();
+        }
+
+        try {
+          const document = await this.documentView.get<PHDocument>(
+            id,
+            view,
+            undefined,
+            signal,
+          );
+          documents.push(document);
+        } catch {
+          // Skip documents that don't exist or can't be accessed
+          continue;
         }
       }
 
-      documents.push(document);
+      if (signal?.aborted) {
+        throw new AbortError();
+      }
+
+      // Apply paging
+      const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
+      const limit = paging?.limit || documents.length;
+      const pagedDocuments = documents.slice(startIndex, startIndex + limit);
+
+      // Create paged results
+      const hasMore = startIndex + limit < documents.length;
+      const nextCursor = hasMore ? String(startIndex + limit) : undefined;
+
+      return {
+        results: pagedDocuments,
+        options: paging || { cursor: "0", limit: documents.length },
+        nextCursor,
+        next: hasMore
+          ? () =>
+              this.findByIds(ids, view, { cursor: nextCursor!, limit }, signal)
+          : undefined,
+      };
     }
-
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
-
-    // Apply paging
-    const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-    const limit = paging?.limit || documents.length;
-    const pagedDocuments = documents.slice(startIndex, startIndex + limit);
-
-    // Create paged results
-    const hasMore = startIndex + limit < documents.length;
-    const nextCursor = hasMore ? String(startIndex + limit) : undefined;
-
-    return {
-      results: pagedDocuments,
-      options: paging || { cursor: "0", limit: documents.length },
-      nextCursor,
-      next: hasMore
-        ? () =>
-            this.findByIds(ids, view, { cursor: nextCursor!, limit }, signal)
-        : undefined,
-    };
   }
 
   /**
@@ -775,71 +842,142 @@ export class Reactor implements IReactor {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
-    const documents: PHDocument[] = [];
+    if (this.features.legacyStorageEnabled) {
+      const documents: PHDocument[] = [];
 
-    // Use storage to resolve slugs to IDs
-    let ids: string[];
-    try {
-      ids = await this.documentStorage.resolveIds(slugs, signal);
-    } catch {
-      // If slug resolution fails, return empty results
-      // This matches the behavior expected from a search operation
-      ids = [];
-    }
+      // Use storage to resolve slugs to IDs
+      let ids: string[];
+      try {
+        ids = await this.documentStorage.resolveIds(slugs, signal);
+      } catch {
+        // If slug resolution fails, return empty results
+        // This matches the behavior expected from a search operation
+        ids = [];
+      }
 
-    // Fetch each document by resolved ID
-    for (const id of ids) {
+      // Fetch each document by resolved ID
+      for (const id of ids) {
+        if (signal?.aborted) {
+          throw new AbortError();
+        }
+
+        let document: PHDocument;
+        try {
+          document = await this.documentStorage.get<PHDocument>(id);
+        } catch {
+          // Skip documents that don't exist or can't be accessed
+          continue;
+        }
+
+        // Apply view filter - This will be removed when we pass the viewfilter along
+        // to the underlying store, but is here now for the interface.
+        for (const scope in document.state) {
+          if (!matchesScope(view, scope)) {
+            delete document.state[scope as keyof PHBaseState];
+          }
+        }
+
+        documents.push(document);
+      }
+
       if (signal?.aborted) {
         throw new AbortError();
       }
 
-      let document: PHDocument;
-      try {
-        document = await this.documentStorage.get<PHDocument>(id);
-      } catch {
-        // Skip documents that don't exist or can't be accessed
-        continue;
-      }
-
-      // Apply view filter - This will be removed when we pass the viewfilter along
+      // Apply paging - this will be removed when we pass the paging along
       // to the underlying store, but is here now for the interface.
-      for (const scope in document.state) {
-        if (!matchesScope(view, scope)) {
-          delete document.state[scope as keyof PHBaseState];
+      const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
+      const limit = paging?.limit || documents.length;
+      const pagedDocuments = documents.slice(startIndex, startIndex + limit);
+
+      // Create paged results
+      const hasMore = startIndex + limit < documents.length;
+      const nextCursor = hasMore ? String(startIndex + limit) : undefined;
+
+      return {
+        results: pagedDocuments,
+        options: paging || { cursor: "0", limit: documents.length },
+        nextCursor,
+        next: hasMore
+          ? () =>
+              this.findBySlugs(
+                slugs,
+                view,
+                { cursor: nextCursor!, limit },
+                signal,
+              )
+          : undefined,
+      };
+    } else {
+      const documents: PHDocument[] = [];
+
+      // Resolve each slug to a document ID
+      const documentIds: string[] = [];
+      for (const slug of slugs) {
+        if (signal?.aborted) {
+          throw new AbortError();
+        }
+
+        const documentId = await this.documentView.resolveSlug(
+          slug,
+          view,
+          undefined,
+          signal,
+        );
+
+        if (documentId) {
+          documentIds.push(documentId);
         }
       }
 
-      documents.push(document);
+      // Fetch each document
+      for (const documentId of documentIds) {
+        if (signal?.aborted) {
+          throw new AbortError();
+        }
+
+        try {
+          const document = await this.documentView.get<PHDocument>(
+            documentId,
+            view,
+            undefined,
+            signal,
+          );
+          documents.push(document);
+        } catch {
+          // Skip documents that don't exist or can't be accessed
+          continue;
+        }
+      }
+
+      if (signal?.aborted) {
+        throw new AbortError();
+      }
+
+      // Apply paging
+      const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
+      const limit = paging?.limit || documents.length;
+      const pagedDocuments = documents.slice(startIndex, startIndex + limit);
+
+      // Create paged results
+      const hasMore = startIndex + limit < documents.length;
+      const nextCursor = hasMore ? String(startIndex + limit) : undefined;
+
+      return {
+        results: pagedDocuments,
+        options: paging || { cursor: "0", limit: documents.length },
+        nextCursor,
+        next: hasMore
+          ? () =>
+              this.findBySlugs(
+                slugs,
+                view,
+                { cursor: nextCursor!, limit },
+                signal,
+              )
+          : undefined,
+      };
     }
-
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
-
-    // Apply paging - this will be removed when we pass the paging along
-    // to the underlying store, but is here now for the interface.
-    const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-    const limit = paging?.limit || documents.length;
-    const pagedDocuments = documents.slice(startIndex, startIndex + limit);
-
-    // Create paged results
-    const hasMore = startIndex + limit < documents.length;
-    const nextCursor = hasMore ? String(startIndex + limit) : undefined;
-
-    return {
-      results: pagedDocuments,
-      options: paging || { cursor: "0", limit: documents.length },
-      nextCursor,
-      next: hasMore
-        ? () =>
-            this.findBySlugs(
-              slugs,
-              view,
-              { cursor: nextCursor!, limit },
-              signal,
-            )
-        : undefined,
-    };
   }
 
   /**
@@ -851,68 +989,132 @@ export class Reactor implements IReactor {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
-    // Get child document IDs from storage
-    const childIds = await this.documentStorage.getChildren(parentId);
+    if (this.features.legacyStorageEnabled) {
+      // Get child document IDs from storage
+      const childIds = await this.documentStorage.getChildren(parentId);
 
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
-
-    const documents: PHDocument[] = [];
-
-    // Fetch each child document
-    for (const childId of childIds) {
       if (signal?.aborted) {
         throw new AbortError();
       }
 
-      let document: PHDocument;
-      try {
-        document = await this.documentStorage.get<PHDocument>(childId);
-      } catch {
-        // Skip documents that don't exist or can't be accessed
-        // This matches the behavior expected from a search operation
-        continue;
+      const documents: PHDocument[] = [];
+
+      // Fetch each child document
+      for (const childId of childIds) {
+        if (signal?.aborted) {
+          throw new AbortError();
+        }
+
+        let document: PHDocument;
+        try {
+          document = await this.documentStorage.get<PHDocument>(childId);
+        } catch {
+          // Skip documents that don't exist or can't be accessed
+          // This matches the behavior expected from a search operation
+          continue;
+        }
+
+        // Apply view filter - This will be removed when we pass the viewfilter along
+        // to the underlying store, but is here now for the interface.
+        for (const scope in document.state) {
+          if (!matchesScope(view, scope)) {
+            delete document.state[scope as keyof PHBaseState];
+          }
+        }
+
+        documents.push(document);
       }
 
-      // Apply view filter - This will be removed when we pass the viewfilter along
-      // to the underlying store, but is here now for the interface.
-      for (const scope in document.state) {
-        if (!matchesScope(view, scope)) {
-          delete document.state[scope as keyof PHBaseState];
+      if (signal?.aborted) {
+        throw new AbortError();
+      }
+
+      // Apply paging
+      const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
+      const limit = paging?.limit || documents.length;
+      const pagedDocuments = documents.slice(startIndex, startIndex + limit);
+
+      // Create paged results
+      const hasMore = startIndex + limit < documents.length;
+      const nextCursor = hasMore ? String(startIndex + limit) : undefined;
+
+      return {
+        results: pagedDocuments,
+        options: paging || { cursor: "0", limit: documents.length },
+        nextCursor,
+        next: hasMore
+          ? () =>
+              this.findByParentId(
+                parentId,
+                view,
+                { cursor: nextCursor!, limit },
+                signal,
+              )
+          : undefined,
+      };
+    } else {
+      // Get child relationships from indexer
+      const relationships = await this.documentIndexer.getOutgoing(
+        parentId,
+        ["child"],
+        undefined,
+        signal,
+      );
+
+      if (signal?.aborted) {
+        throw new AbortError();
+      }
+
+      const documents: PHDocument[] = [];
+
+      // Fetch each child document
+      for (const relationship of relationships) {
+        if (signal?.aborted) {
+          throw new AbortError();
+        }
+
+        try {
+          const document = await this.documentView.get<PHDocument>(
+            relationship.targetId,
+            view,
+            undefined,
+            signal,
+          );
+          documents.push(document);
+        } catch {
+          // Skip documents that don't exist or can't be accessed
+          continue;
         }
       }
 
-      documents.push(document);
+      if (signal?.aborted) {
+        throw new AbortError();
+      }
+
+      // Apply paging
+      const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
+      const limit = paging?.limit || documents.length;
+      const pagedDocuments = documents.slice(startIndex, startIndex + limit);
+
+      // Create paged results
+      const hasMore = startIndex + limit < documents.length;
+      const nextCursor = hasMore ? String(startIndex + limit) : undefined;
+
+      return {
+        results: pagedDocuments,
+        options: paging || { cursor: "0", limit: documents.length },
+        nextCursor,
+        next: hasMore
+          ? () =>
+              this.findByParentId(
+                parentId,
+                view,
+                { cursor: nextCursor!, limit },
+                signal,
+              )
+          : undefined,
+      };
     }
-
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
-
-    // Apply paging
-    const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-    const limit = paging?.limit || documents.length;
-    const pagedDocuments = documents.slice(startIndex, startIndex + limit);
-
-    // Create paged results
-    const hasMore = startIndex + limit < documents.length;
-    const nextCursor = hasMore ? String(startIndex + limit) : undefined;
-
-    return {
-      results: pagedDocuments,
-      options: paging || { cursor: "0", limit: documents.length },
-      nextCursor,
-      next: hasMore
-        ? () =>
-            this.findByParentId(
-              parentId,
-              view,
-              { cursor: nextCursor!, limit },
-              signal,
-            )
-        : undefined,
-    };
   }
 
   /**
@@ -924,57 +1126,89 @@ export class Reactor implements IReactor {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
-    const documents: PHDocument[] = [];
+    if (this.features.legacyStorageEnabled) {
+      const documents: PHDocument[] = [];
 
-    // Use storage's findByType method directly
-    const cursor = paging?.cursor;
-    const limit = paging?.limit || 100;
+      // Use storage's findByType method directly
+      const cursor = paging?.cursor;
+      const limit = paging?.limit || 100;
 
-    // Get document IDs of the specified type
-    const { documents: documentIds, nextCursor } =
-      await this.documentStorage.findByType(type, limit, cursor);
+      // Get document IDs of the specified type
+      const { documents: documentIds, nextCursor } =
+        await this.documentStorage.findByType(type, limit, cursor);
 
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
-
-    // Fetch each document by its ID
-    for (const documentId of documentIds) {
       if (signal?.aborted) {
         throw new AbortError();
       }
 
-      let document: PHDocument;
-      try {
-        document = await this.documentStorage.get<PHDocument>(documentId);
-      } catch {
-        // Skip documents that can't be retrieved
-        continue;
-      }
-
-      // Apply view filter
-      for (const scope in document.state) {
-        if (!matchesScope(view, scope)) {
-          delete document.state[scope as keyof PHBaseState];
+      // Fetch each document by its ID
+      for (const documentId of documentIds) {
+        if (signal?.aborted) {
+          throw new AbortError();
         }
+
+        let document: PHDocument;
+        try {
+          document = await this.documentStorage.get<PHDocument>(documentId);
+        } catch {
+          // Skip documents that can't be retrieved
+          continue;
+        }
+
+        // Apply view filter
+        for (const scope in document.state) {
+          if (!matchesScope(view, scope)) {
+            delete document.state[scope as keyof PHBaseState];
+          }
+        }
+
+        documents.push(document);
       }
 
-      documents.push(document);
-    }
+      if (signal?.aborted) {
+        throw new AbortError();
+      }
 
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
+      // Results are already paged from the storage layer
+      return {
+        results: documents,
+        options: paging || { cursor: cursor || "0", limit },
+        nextCursor,
+        next: nextCursor
+          ? async () =>
+              this.findByType(type, view, { cursor: nextCursor, limit }, signal)
+          : undefined,
+      };
+    } else {
+      const result = await this.documentView.findByType(
+        type,
+        view,
+        paging,
+        undefined,
+        signal,
+      );
 
-    // Results are already paged from the storage layer
-    return {
-      results: documents,
-      options: paging || { cursor: cursor || "0", limit },
-      nextCursor,
-      next: nextCursor
-        ? async () =>
-            this.findByType(type, view, { cursor: nextCursor, limit }, signal)
-        : undefined,
-    };
+      if (signal?.aborted) {
+        throw new AbortError();
+      }
+
+      const cursor = paging?.cursor;
+      const limit = paging?.limit || 100;
+
+      return {
+        results: result.items,
+        options: paging || { cursor: cursor || "0", limit },
+        nextCursor: result.nextCursor,
+        next: result.nextCursor
+          ? async () =>
+              this.findByType(
+                type,
+                view,
+                { cursor: result.nextCursor!, limit },
+                signal,
+              )
+          : undefined,
+      };
+    }
   }
 }

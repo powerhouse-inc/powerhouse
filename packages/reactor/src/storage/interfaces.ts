@@ -214,6 +214,39 @@ export interface IDocumentView {
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<TDocument>;
+
+  /**
+   * Finds documents by their document type.
+   *
+   * @param type - The document type to search for
+   * @param view - Optional filter containing branch and scopes information
+   * @param paging - Optional paging options for cursor-based pagination
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
+   */
+  findByType(
+    type: string,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<PHDocument>>;
+
+  /**
+   * Resolves a slug to a document ID.
+   *
+   * @param slug - The slug to resolve
+   * @param view - Optional filter containing branch and scopes information
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The document ID or undefined if the slug doesn't exist
+   */
+  resolveSlug(
+    slug: string,
+    view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<string | undefined>;
 }
 
 export type DocumentRelationship = {

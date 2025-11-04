@@ -42,6 +42,7 @@ describe("KyselyDocumentView Unit Tests", () => {
       selectAll: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
       distinct: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
       execute: vi.fn(),
       executeTakeFirst: vi.fn(),
       insertInto: vi.fn().mockReturnThis(),
@@ -223,6 +224,350 @@ describe("KyselyDocumentView Unit Tests", () => {
       await view.indexOperations([]);
 
       expect(mockDb.transaction).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("findByType", () => {
+    beforeEach(() => {
+      mockDb.execute.mockResolvedValue([]);
+      mockOperationStore.getRevisions = vi.fn().mockResolvedValue({
+        revision: {},
+        latestTimestamp: new Date().toISOString(),
+      });
+      mockOperationStore.getSinceId = vi.fn().mockResolvedValue({ items: [] });
+    });
+
+    it("should query by type and return empty results for no matches", async () => {
+      mockDb.execute.mockResolvedValue([]);
+
+      const result = await view.findByType("test-type");
+
+      expect(mockDb.selectFrom).toHaveBeenCalledWith("DocumentSnapshot");
+      expect(mockDb.where).toHaveBeenCalledWith(
+        "documentType",
+        "=",
+        "test-type",
+      );
+      expect(mockDb.where).toHaveBeenCalledWith("branch", "=", "main");
+      expect(mockDb.where).toHaveBeenCalledWith("isDeleted", "=", false);
+      expect(mockDb.orderBy).toHaveBeenCalledWith("lastUpdatedAt", "desc");
+      expect(result.items).toEqual([]);
+      expect(result.hasMore).toBe(false);
+      expect(result.nextCursor).toBeUndefined();
+    });
+
+    it("should apply view filter for branch", async () => {
+      mockDb.execute.mockResolvedValue([]);
+
+      await view.findByType("test-type", { branch: "feature" });
+
+      expect(mockDb.where).toHaveBeenCalledWith("branch", "=", "feature");
+    });
+
+    it("should apply pagination with cursor and limit", async () => {
+      const snapshots = [
+        {
+          documentId: "doc-1",
+          scope: "header",
+          content: JSON.stringify({ id: "doc-1", documentType: "test-type" }),
+        },
+        {
+          documentId: "doc-2",
+          scope: "header",
+          content: JSON.stringify({ id: "doc-2", documentType: "test-type" }),
+        },
+        {
+          documentId: "doc-3",
+          scope: "header",
+          content: JSON.stringify({ id: "doc-3", documentType: "test-type" }),
+        },
+      ];
+      mockDb.execute.mockResolvedValue(snapshots);
+
+      const result = await view.findByType("test-type", undefined, {
+        cursor: "1",
+        limit: 1,
+      });
+
+      expect(result.items).toHaveLength(1);
+      expect(result.nextCursor).toBe("2");
+      expect(result.hasMore).toBe(true);
+    });
+
+    it("should handle consistencyToken by calling waitForConsistency", async () => {
+      const token = {
+        version: 1 as const,
+        createdAtUtcIso: "2023-01-01",
+        coordinates: [
+          {
+            documentId: "doc-1",
+            scope: "global",
+            branch: "main",
+            operationIndex: 0,
+          },
+        ],
+      };
+
+      await view.findByType("test-type", undefined, undefined, token);
+
+      expect(mockConsistencyTracker.waitFor).toHaveBeenCalledWith(
+        [
+          {
+            documentId: "doc-1",
+            scope: "global",
+            branch: "main",
+            operationIndex: 0,
+          },
+        ],
+        undefined,
+        undefined,
+      );
+    });
+
+    it("should respect abort signal", async () => {
+      const controller = new AbortController();
+      controller.abort();
+
+      await expect(
+        view.findByType(
+          "test-type",
+          undefined,
+          undefined,
+          undefined,
+          controller.signal,
+        ),
+      ).rejects.toThrow("Operation aborted");
+    });
+
+    it("should return proper pagination info when hasMore is false", async () => {
+      const snapshots = [
+        {
+          documentId: "doc-1",
+          scope: "header",
+          content: JSON.stringify({ id: "doc-1", documentType: "test-type" }),
+        },
+      ];
+      mockDb.execute.mockResolvedValue(snapshots);
+
+      const result = await view.findByType("test-type", undefined, {
+        cursor: "0",
+        limit: 10,
+      });
+
+      expect(result.hasMore).toBe(false);
+      expect(result.nextCursor).toBeUndefined();
+    });
+
+    it("should deduplicate documents when multiple scopes exist", async () => {
+      const snapshots = [
+        {
+          documentId: "doc-1",
+          scope: "header",
+          content: JSON.stringify({ id: "doc-1", documentType: "test-type" }),
+          branch: "main",
+          isDeleted: false,
+          documentType: "test-type",
+          lastUpdatedAt: new Date(),
+        },
+        {
+          documentId: "doc-1",
+          scope: "document",
+          content: JSON.stringify({}),
+          branch: "main",
+          isDeleted: false,
+          documentType: "test-type",
+          lastUpdatedAt: new Date(),
+        },
+        {
+          documentId: "doc-2",
+          scope: "header",
+          content: JSON.stringify({ id: "doc-2", documentType: "test-type" }),
+          branch: "main",
+          isDeleted: false,
+          documentType: "test-type",
+          lastUpdatedAt: new Date(),
+        },
+      ];
+      mockDb.execute.mockResolvedValue(snapshots);
+
+      vi.spyOn(view, "get").mockResolvedValue({
+        header: { id: "doc-1", documentType: "test-type" },
+        state: {},
+        operations: {},
+        initialState: {},
+        clipboard: [],
+      } as any);
+
+      const result = await view.findByType("test-type");
+
+      expect(result.items).toHaveLength(2);
+    });
+
+    it("should skip documents that fail to retrieve", async () => {
+      const snapshots = [
+        {
+          documentId: "doc-1",
+          scope: "header",
+          content: JSON.stringify({ id: "doc-1", documentType: "test-type" }),
+          branch: "main",
+          isDeleted: false,
+          documentType: "test-type",
+          lastUpdatedAt: new Date(),
+        },
+      ];
+      mockDb.execute.mockResolvedValue(snapshots);
+
+      vi.spyOn(view, "get").mockRejectedValue(new Error("Document not found"));
+
+      const result = await view.findByType("test-type");
+
+      expect(result.items).toHaveLength(0);
+    });
+
+    it("should handle default limit of 100", async () => {
+      const snapshots = Array.from({ length: 150 }, (_, i) => ({
+        documentId: `doc-${i}`,
+        scope: "header",
+        content: JSON.stringify({ id: `doc-${i}`, documentType: "test-type" }),
+      }));
+      mockDb.execute.mockResolvedValue(snapshots);
+
+      const result = await view.findByType("test-type");
+
+      expect(result.hasMore).toBe(true);
+      expect(result.nextCursor).toBe("100");
+    });
+
+    it("should check abort signal after database query", async () => {
+      const controller = new AbortController();
+      mockDb.execute.mockImplementation(async () => {
+        controller.abort();
+        return [];
+      });
+
+      await expect(
+        view.findByType(
+          "test-type",
+          undefined,
+          undefined,
+          undefined,
+          controller.signal,
+        ),
+      ).rejects.toThrow("Operation aborted");
+    });
+  });
+
+  describe("resolveSlug", () => {
+    it("should resolve slug to documentId", async () => {
+      mockDb.executeTakeFirst.mockResolvedValue({ documentId: "doc-123" });
+
+      const result = await view.resolveSlug("my-slug");
+
+      expect(mockDb.selectFrom).toHaveBeenCalledWith("SlugMapping");
+      expect(mockDb.select).toHaveBeenCalledWith("documentId");
+      expect(mockDb.where).toHaveBeenCalledWith("slug", "=", "my-slug");
+      expect(mockDb.where).toHaveBeenCalledWith("branch", "=", "main");
+      expect(result).toBe("doc-123");
+    });
+
+    it("should return undefined for non-existent slug", async () => {
+      mockDb.executeTakeFirst.mockResolvedValue(undefined);
+
+      const result = await view.resolveSlug("non-existent-slug");
+
+      expect(result).toBeUndefined();
+    });
+
+    it("should apply view filter for branch", async () => {
+      mockDb.executeTakeFirst.mockResolvedValue({ documentId: "doc-123" });
+
+      await view.resolveSlug("my-slug", { branch: "feature" });
+
+      expect(mockDb.where).toHaveBeenCalledWith("branch", "=", "feature");
+    });
+
+    it("should handle consistencyToken by calling waitForConsistency", async () => {
+      const token = {
+        version: 1 as const,
+        createdAtUtcIso: "2023-01-01",
+        coordinates: [
+          {
+            documentId: "doc-1",
+            scope: "global",
+            branch: "main",
+            operationIndex: 0,
+          },
+        ],
+      };
+      mockDb.executeTakeFirst.mockResolvedValue({ documentId: "doc-123" });
+
+      await view.resolveSlug("my-slug", undefined, token);
+
+      expect(mockConsistencyTracker.waitFor).toHaveBeenCalledWith(
+        [
+          {
+            documentId: "doc-1",
+            scope: "global",
+            branch: "main",
+            operationIndex: 0,
+          },
+        ],
+        undefined,
+        undefined,
+      );
+    });
+
+    it("should respect abort signal before query", async () => {
+      const controller = new AbortController();
+      controller.abort();
+
+      await expect(
+        view.resolveSlug("my-slug", undefined, undefined, controller.signal),
+      ).rejects.toThrow("Operation aborted");
+    });
+
+    it("should respect abort signal after query", async () => {
+      const controller = new AbortController();
+      mockDb.executeTakeFirst.mockImplementation(async () => {
+        controller.abort();
+        return { documentId: "doc-123" };
+      });
+
+      await expect(
+        view.resolveSlug("my-slug", undefined, undefined, controller.signal),
+      ).rejects.toThrow("Operation aborted");
+    });
+
+    it("should check scope filter if view.scopes provided", async () => {
+      mockDb.executeTakeFirst
+        .mockResolvedValueOnce({ documentId: "doc-123" })
+        .mockResolvedValueOnce({ scope: "global" });
+
+      const result = await view.resolveSlug("my-slug", { scopes: ["global"] });
+
+      expect(mockDb.selectFrom).toHaveBeenCalledWith("DocumentSnapshot");
+      expect(mockDb.where).toHaveBeenCalledWith("documentId", "=", "doc-123");
+      expect(mockDb.where).toHaveBeenCalledWith("scope", "in", ["global"]);
+      expect(result).toBe("doc-123");
+    });
+
+    it("should return undefined if scope check fails", async () => {
+      mockDb.executeTakeFirst
+        .mockResolvedValueOnce({ documentId: "doc-123" })
+        .mockResolvedValueOnce(undefined);
+
+      const result = await view.resolveSlug("my-slug", { scopes: ["global"] });
+
+      expect(result).toBeUndefined();
+    });
+
+    it("should handle empty string slug", async () => {
+      mockDb.executeTakeFirst.mockResolvedValue(undefined);
+
+      const result = await view.resolveSlug("");
+
+      expect(mockDb.where).toHaveBeenCalledWith("slug", "=", "");
+      expect(result).toBeUndefined();
     });
   });
 
