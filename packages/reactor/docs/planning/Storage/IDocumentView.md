@@ -8,6 +8,7 @@ TLDR: Think of this as a smart, materialized view of the command store.
 - Reads from `IOperationStore` as needed.
 - Provides an API for `IReactor` or external systems to read document data from.
 - **Handles cross-scope concerns**: Reconstructs document headers by aggregating information from operations across multiple scopes (header, document, global, local, etc.). Headers contain metadata like revision tracking and lastModified timestamps that span all scopes.
+- Implements the `waitForConsistency` contract so read calls can block until the view has indexed the coordinates highlighted by a `ConsistencyToken` (see [Shared Interfaces](../Shared/interface.md)).
 
 ### Implementations
 
@@ -24,6 +25,10 @@ Only one implementation is provided: `KyselyDocumentIndexer`. This implementatio
 The `IDocumentView` must ensure that it has the latest information. It may be the case that the system crashed or shutdown after operations were generated, but before the `IDocumentView` was able to process the operations. In this case, the `IOperationStore` would have operations that have not yet been indexed.
 
 The view stores the last operation id it has processed synchronously in memory and also lazily updates the `ViewState` table.
+
+Read models share a [Consistency Tracker](../Shared/consistency-tracker.md) to
+record the latest `(documentId, scope, branch)` index. `waitForConsistency`
+consults this tracker before deciding whether to block the caller.
 
 #### Case 1: At Runtime
 
@@ -195,6 +200,20 @@ interface IDocumentView {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<TDocument>>;
+
+  /**
+   * Blocks until the view has processed the coordinates referenced by the
+   * provided consistency token.
+   *
+   * @param token - Consistency token derived from the originating job
+   * @param timeoutMs - Optional timeout window in milliseconds
+   * @param signal - Optional abort signal to cancel the wait
+   */
+  waitForConsistency(
+    token: ConsistencyToken,
+    timeoutMs?: number,
+    signal?: AbortSignal,
+  ): Promise<void>;
 }
 
 type SearchFilter = {

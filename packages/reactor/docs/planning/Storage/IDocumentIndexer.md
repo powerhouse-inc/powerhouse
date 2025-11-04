@@ -6,6 +6,7 @@
 - Indexes relationships between documents.
 - Forms a graph of documents and relationships.
 - Generally just needs to listen to the System Stream.
+- Exposes `waitForConsistency` so callers can block until specific coordinates from a `ConsistencyToken` are visible (see [Shared Interfaces](../Shared/interface.md)).
 
 ### Implementations
 
@@ -16,6 +17,11 @@ Only one implementation is provided: `KyselyDocumentIndexer`. This implementatio
 The `IDocumentIndexer` must ensure that is has the lastest operation information. It may be the case that the system crashed or shutdown after operations were applied, but before the `IDocumentIndexer` was able to process the operations. In this case, the `IOperationStore` would have operations that have not yet been indexed.
 
 The indexer stores the last operation id it has processed synchronously in memory and also lazily updates the `IndexerState` table.
+
+To support read-after-write guarantees, the indexer shares the
+[Consistency Tracker](../Shared/consistency-tracker.md) with other read models.
+It updates the tracker after committing relationship changes and consults it
+inside `waitForConsistency` to decide whether callers need to block.
 
 #### Case 1: At Runtime
 
@@ -207,6 +213,20 @@ interface IDocumentIndexer {
    * Retrieves all possible relationship types.
    */
   getRelationshipTypes(): Promise<string[]>;
+
+  /**
+   * Blocks until the indexer has processed the coordinates referenced by the
+   * provided consistency token.
+   *
+   * @param token - Consistency token derived from the originating job
+   * @param timeoutMs - Optional timeout window in milliseconds
+   * @param signal - Optional abort signal to cancel the wait
+   */
+  waitForConsistency(
+    token: ConsistencyToken,
+    timeoutMs?: number,
+    signal?: AbortSignal,
+  ): Promise<void>;
 }
 ```
 
