@@ -6,7 +6,7 @@ import { generateEditor } from "../index.js";
 import { compile } from "./fixtures/typecheck.js";
 import { copyAllFiles } from "./utils.js";
 
-const PURGE_AFTER_TEST = false;
+const PURGE_AFTER_TEST = true;
 
 describe("generateEditor", () => {
   const testPackageName = "test";

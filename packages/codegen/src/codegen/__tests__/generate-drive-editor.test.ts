@@ -6,7 +6,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { compile } from "./fixtures/typecheck.js";
 import { copyAllFiles } from "./utils.js";
 
-const PURGE_AFTER_TEST = false;
+const PURGE_AFTER_TEST = true;
 
 describe("generateDriveEditor", () => {
   const testDir = import.meta.dirname;

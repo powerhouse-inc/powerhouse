@@ -28,8 +28,7 @@ const normalIgnoredFiles = [
   "**/.out/",
   "**/flaky/",
   "apps/connect/lib/",
-  "packages/codegen/src/codegen/__tests__/temp",
-  "packages/codegen/src/codegen/__tests__/.test-project",
+  "packages/codegen/src/codegen/__tests__/.*",
 ];
 
 /** These files need to be ignored for builds to pass, but they do not have clear reasons to be ignored.
