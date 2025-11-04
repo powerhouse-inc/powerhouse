@@ -41,20 +41,34 @@ export async function run(
     debug: !!process.env.DEBUG,
   });
   if (!skipFormat) {
-    const execa = await import("execa");
+    const prettier = await import("prettier");
+    const fs = await import("fs/promises");
     const actions = result.actions as { status: string; subject: string }[];
-    actions
+
+    const filesToFormat = actions
       .filter((action) => ["added", "inject"].includes(action.status))
-      .forEach((action) => {
-        execa.$`npx prettier --ignore-path --write ${action.subject.replace(
-          ".",
-          process.cwd(),
-        )}`.catch((err: unknown) => {
-          if (verbose) {
-            console.log(err);
+      .map((action) => action.subject.replace(".", process.cwd()));
+
+    if (filesToFormat.length > 0) {
+      const config = await prettier.resolveConfig(process.cwd());
+
+      await Promise.all(
+        filesToFormat.map(async (filePath) => {
+          try {
+            const text = await fs.readFile(filePath, "utf8");
+            const formatted = await prettier.format(text, {
+              ...config,
+              filepath: filePath,
+            });
+            await fs.writeFile(filePath, formatted);
+          } catch (err: unknown) {
+            if (verbose) {
+              console.log(err);
+            }
           }
-        });
-      });
+        }),
+      );
+    }
   }
 
   return result;
