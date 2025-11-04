@@ -15,7 +15,7 @@
 // import { useProcessorManager } from "@powerhousedao/reactor-browser/connect";
 // import type { IRelationalDb, ProcessorManager } from "document-drive";
 // import { childLogger } from "document-drive";
-// import { generateUUIDBrowser } from "document-model/core";
+// import { generateId } from "document-model/core";
 // import type { PropsWithChildren } from "react";
 // import { useEffect, useRef } from "react";
 
@@ -162,7 +162,7 @@ import type { PropsWithChildren } from "react";
 //         manager,
 //         store.data,
 //         relationalDb.db,
-//         generateUUIDBrowser(),
+//         generateId(),
 //         processor,
 //       ).catch(logger.error);
 //     }
