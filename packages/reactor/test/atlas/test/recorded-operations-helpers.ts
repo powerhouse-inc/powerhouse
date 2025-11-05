@@ -261,10 +261,10 @@ export async function processReactorMutation(
   }
 }
 
-export async function submitAllMutationsWithQueueHints(
+export async function buildBatchMutationRequest(
   mutations: RecordedOperation[],
   reactor: IReactor,
-): Promise<{ jobs: Record<string, { id: string; status: JobStatus }> }> {
+): Promise<BatchMutationRequest> {
   const modules = await reactor.getDocumentModels();
   const jobs: Array<{
     key: string;
@@ -501,6 +501,14 @@ export async function submitAllMutationsWithQueueHints(
   }
 
   const batchRequest: BatchMutationRequest = { jobs };
+  return batchRequest;
+}
+
+export async function submitAllMutationsWithQueueHints(
+  mutations: RecordedOperation[],
+  reactor: IReactor,
+): Promise<{ jobs: Record<string, { id: string; status: JobStatus }> }> {
+  const batchRequest = await buildBatchMutationRequest(mutations, reactor);
   return await reactor.mutateBatch(batchRequest);
 }
 
