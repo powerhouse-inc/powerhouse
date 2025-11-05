@@ -22,7 +22,12 @@ import {
   logger,
   updateNode,
 } from "document-drive";
-import type { DocumentOperations, PHDocument } from "document-model";
+import type {
+  DocumentModelDocument,
+  DocumentOperations,
+  PHDocument,
+} from "document-model";
+import { documentModelDocumentType } from "document-model";
 import {
   baseLoadFromInput,
   baseSaveToFileHandle,
@@ -146,17 +151,14 @@ export async function exportFile(document: PHDocument, suggestedName?: string) {
   if (!reactor) {
     return;
   }
-  const documentModelModules = reactor.getDocumentModelModules();
-  const documentModelModule = documentModelModules.find(
-    (module) => module.documentModel.global.id === document.header.documentType,
-  );
 
   let extension = "";
-  const documentExtension = documentModelModule?.documentModel.global.extension;
 
-  if (documentExtension) {
-    const cleanExtension = documentExtension.replace(/^\.+|\.+$/g, "") || "";
-    extension = `.${cleanExtension}`;
+  if (document.header.documentType === documentModelDocumentType) {
+    const documentExtension = (document as DocumentModelDocument).state.global
+      .extension;
+    const cleanExtension = documentExtension.replace(/^\.+|\.+$/g, "");
+    extension = cleanExtension !== "" ? `.${cleanExtension}` : "";
   }
 
   const name = `${suggestedName || document.header.name || "Untitled"}${extension}.phd`;
