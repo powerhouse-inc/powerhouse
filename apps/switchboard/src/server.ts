@@ -10,7 +10,7 @@ import {
 import {
   VitePackageLoader,
   getUniqueDocumentModels,
-  startAPI,
+  initializeAndStartAPI,
   startViteServer,
 } from "@powerhousedao/reactor-api";
 import * as Sentry from "@sentry/node";
@@ -191,19 +191,24 @@ async function initServer(serverPort: number, options: StartServerOptions) {
   const packageLoader = vite ? await VitePackageLoader.build(vite) : undefined;
 
   // Start the API with the reactor and options
-  const api = await startAPI(initializeDriveServer, initializeClient, {
-    express: app,
-    port: serverPort,
-    dbPath: readModelPath,
-    https: options.https,
-    packageLoader,
-    packages: packages,
-    processorConfig: options.processorConfig,
-    configFile:
-      options.configFile ?? path.join(process.cwd(), "powerhouse.config.json"),
-    mcp: options.mcp ?? true,
-    subgraphs: options.subgraphs,
-  });
+  const api = await initializeAndStartAPI(
+    initializeDriveServer,
+    initializeClient,
+    {
+      express: app,
+      port: serverPort,
+      dbPath: readModelPath,
+      https: options.https,
+      packageLoader,
+      packages: packages,
+      processorConfig: options.processorConfig,
+      configFile:
+        options.configFile ??
+        path.join(process.cwd(), "powerhouse.config.json"),
+      mcp: options.mcp ?? true,
+      subgraphs: options.subgraphs,
+    },
+  );
 
   const { driveServer } = api;
 
