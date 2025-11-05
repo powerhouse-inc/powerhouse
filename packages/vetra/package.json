@@ -15,8 +15,8 @@
   ],
   "exports": {
     ".": {
-      "import": "./dist/index.js",
       "development": "./index.ts",
+      "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
     "./document-models": {
