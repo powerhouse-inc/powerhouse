@@ -33,6 +33,10 @@ describe("Vetra Package Document Model", () => {
     expect(document.state.global.keywords).toEqual([]);
     expect(document.state.global.githubUrl).toBeNull();
     expect(document.state.global.npmUrl).toBeNull();
+    expect(utils.isStateOfType(document.state)).toBe(true);
+    expect(utils.assertIsStateOfType(document.state)).toBeUndefined();
+    expect(utils.isDocumentOfType(document)).toBe(true);
+    expect(utils.assertIsDocumentOfType(document)).toBeUndefined();
   });
 
   it("should handle multiple operations and maintain consistency", () => {

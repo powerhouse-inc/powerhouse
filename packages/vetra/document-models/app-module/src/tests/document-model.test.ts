@@ -3,7 +3,6 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
-import { describe, expect, it } from "vitest";
 import {
   addDocumentType,
   reducer,
@@ -13,6 +12,7 @@ import {
   setDragAndDropEnabled,
   utils,
 } from "@powerhousedao/vetra/document-models/app-module";
+import { describe, expect, it } from "vitest";
 
 describe("App Module Document Model", () => {
   it("should have correct initial values", () => {
@@ -22,6 +22,10 @@ describe("App Module Document Model", () => {
     expect(document.state.global.status).toBe("DRAFT");
     expect(document.state.global.allowedDocumentTypes).toBeNull();
     expect(document.state.global.isDragAndDropEnabled).toBe(true);
+    expect(utils.isStateOfType(document.state)).toBe(true);
+    expect(utils.assertIsStateOfType(document.state)).toBeUndefined();
+    expect(utils.isDocumentOfType(document)).toBe(true);
+    expect(utils.assertIsDocumentOfType(document)).toBeUndefined();
   });
 
   it("should handle multiple operations and maintain consistency", () => {

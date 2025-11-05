@@ -13,6 +13,12 @@ import type {
 import type { SubgraphModulePHState } from "./types.js";
 import { reducer } from "./reducer.js";
 import { subgraphModuleDocumentType } from "./document-type.js";
+import {
+  isSubgraphModuleDocument,
+  assertIsSubgraphModuleDocument,
+  isSubgraphModuleState,
+  assertIsSubgraphModuleState,
+} from "./document-schema.js";
 
 export const initialGlobalState: SubgraphModuleGlobalState = {
   name: "",
@@ -45,9 +51,25 @@ export const utils: DocumentModelUtils<SubgraphModulePHState> = {
   loadFromInput(input) {
     return baseLoadFromInput(input, reducer);
   },
+  isStateOfType(state) {
+    return isSubgraphModuleState(state);
+  },
+  assertIsStateOfType(state) {
+    return assertIsSubgraphModuleState(state);
+  },
+  isDocumentOfType(document) {
+    return isSubgraphModuleDocument(document);
+  },
+  assertIsDocumentOfType(document) {
+    return assertIsSubgraphModuleDocument(document);
+  },
 };
 
 export const createDocument = utils.createDocument;
 export const createState = utils.createState;
 export const saveToFileHandle = utils.saveToFileHandle;
 export const loadFromInput = utils.loadFromInput;
+export const isStateOfType = utils.isStateOfType;
+export const assertIsStateOfType = utils.assertIsStateOfType;
+export const isDocumentOfType = utils.isDocumentOfType;
+export const assertIsDocumentOfType = utils.assertIsDocumentOfType;

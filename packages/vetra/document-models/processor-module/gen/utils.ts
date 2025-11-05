@@ -13,6 +13,12 @@ import type {
 import type { ProcessorModulePHState } from "./types.js";
 import { reducer } from "./reducer.js";
 import { processorModuleDocumentType } from "./document-type.js";
+import {
+  isProcessorModuleDocument,
+  assertIsProcessorModuleDocument,
+  isProcessorModuleState,
+  assertIsProcessorModuleState,
+} from "./document-schema.js";
 
 export const initialGlobalState: ProcessorModuleGlobalState = {
   name: "",
@@ -47,9 +53,25 @@ export const utils: DocumentModelUtils<ProcessorModulePHState> = {
   loadFromInput(input) {
     return baseLoadFromInput(input, reducer);
   },
+  isStateOfType(state) {
+    return isProcessorModuleState(state);
+  },
+  assertIsStateOfType(state) {
+    return assertIsProcessorModuleState(state);
+  },
+  isDocumentOfType(document) {
+    return isProcessorModuleDocument(document);
+  },
+  assertIsDocumentOfType(document) {
+    return assertIsProcessorModuleDocument(document);
+  },
 };
 
 export const createDocument = utils.createDocument;
 export const createState = utils.createState;
 export const saveToFileHandle = utils.saveToFileHandle;
 export const loadFromInput = utils.loadFromInput;
+export const isStateOfType = utils.isStateOfType;
+export const assertIsStateOfType = utils.assertIsStateOfType;
+export const isDocumentOfType = utils.isDocumentOfType;
+export const assertIsDocumentOfType = utils.assertIsDocumentOfType;

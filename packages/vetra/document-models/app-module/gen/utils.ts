@@ -10,6 +10,12 @@ import type { AppModuleGlobalState, AppModuleLocalState } from "./types.js";
 import type { AppModulePHState } from "./types.js";
 import { reducer } from "./reducer.js";
 import { appModuleDocumentType } from "./document-type.js";
+import {
+  isAppModuleDocument,
+  assertIsAppModuleDocument,
+  isAppModuleState,
+  assertIsAppModuleState,
+} from "./document-schema.js";
 
 export const initialGlobalState: AppModuleGlobalState = {
   name: "",
@@ -44,9 +50,25 @@ export const utils: DocumentModelUtils<AppModulePHState> = {
   loadFromInput(input) {
     return baseLoadFromInput(input, reducer);
   },
+  isStateOfType(state) {
+    return isAppModuleState(state);
+  },
+  assertIsStateOfType(state) {
+    return assertIsAppModuleState(state);
+  },
+  isDocumentOfType(document) {
+    return isAppModuleDocument(document);
+  },
+  assertIsDocumentOfType(document) {
+    return assertIsAppModuleDocument(document);
+  },
 };
 
 export const createDocument = utils.createDocument;
 export const createState = utils.createState;
 export const saveToFileHandle = utils.saveToFileHandle;
 export const loadFromInput = utils.loadFromInput;
+export const isStateOfType = utils.isStateOfType;
+export const assertIsStateOfType = utils.assertIsStateOfType;
+export const isDocumentOfType = utils.isDocumentOfType;
+export const assertIsDocumentOfType = utils.assertIsDocumentOfType;

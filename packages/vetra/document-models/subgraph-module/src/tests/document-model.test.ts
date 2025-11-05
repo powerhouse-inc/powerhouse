@@ -17,6 +17,10 @@ describe("Subgraph Module Document Model", () => {
 
     expect(document.state.global.name).toBe("");
     expect(document.state.global.status).toBe("DRAFT");
+    expect(utils.isStateOfType(document.state)).toBe(true);
+    expect(utils.assertIsStateOfType(document.state)).toBeUndefined();
+    expect(utils.isDocumentOfType(document)).toBe(true);
+    expect(utils.assertIsDocumentOfType(document)).toBeUndefined();
   });
 
   it("should handle multiple operations and maintain consistency", () => {
