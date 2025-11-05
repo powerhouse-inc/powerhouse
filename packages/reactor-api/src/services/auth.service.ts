@@ -6,6 +6,7 @@ export interface AuthConfig {
   guests: string[];
   users: string[];
   admins: string[];
+  freeEntry: boolean;
   cacheTtl?: number; // Cache TTL in milliseconds, defaults to 10 seconds
 }
 
@@ -20,6 +21,7 @@ export interface AuthenticatedRequest extends Request {
   admins: string[];
   users: string[];
   guests: string[];
+  freeEntry: boolean;
 }
 
 interface CacheEntry {
@@ -56,7 +58,7 @@ export class AuthService {
     req.users = this.config.users;
     req.guests = this.config.guests;
     req.auth_enabled = this.config.enabled;
-
+    req.freeEntry = this.config.freeEntry;
     const token = req.headers.authorization?.split(" ")[1];
     if (!token) {
       res.status(400).json({ error: "Missing authorization token" });
@@ -159,7 +161,7 @@ export class AuthService {
       ...this.config.users,
       ...this.config.guests,
     ];
-    return all.includes(address.toLocaleLowerCase());
+    return all.includes(address.toLocaleLowerCase()) || this.config.freeEntry;
   }
 
   /**
@@ -177,7 +179,8 @@ export class AuthService {
     return {
       isGuest: (address: string) =>
         this.config.enabled &&
-        this.config.guests?.includes(address.toLowerCase()),
+        (this.config.freeEntry ||
+          this.config.guests?.includes(address.toLowerCase())),
       isUser: (address: string) =>
         this.config.enabled &&
         this.config.users?.includes(address.toLowerCase()),

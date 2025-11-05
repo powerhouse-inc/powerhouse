@@ -56,6 +56,7 @@ type Options = {
     guests: string[];
     users: string[];
     admins: string[];
+    freeEntry: boolean;
   };
   https?:
     | {
@@ -132,6 +133,7 @@ async function setupGraphQLManager(
     guests: string[];
     users: string[];
     admins: string[];
+    freeEntry: boolean;
   },
 ): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager(
@@ -160,6 +162,7 @@ async function setupGraphQLManager(
     guests: auth?.guests ?? [],
     users: auth?.users ?? [],
     admins: auth?.admins ?? [],
+    freeEntry: auth?.freeEntry ?? false,
   });
 
   graphqlManager.setAdditionalContextFields(
@@ -269,6 +272,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     guests: string[];
     users: string[];
     admins: string[];
+    freeEntry: boolean;
   };
   relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
@@ -282,20 +286,22 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   let users: string[] = [];
   let guests: string[] = [];
   let authEnabled = false;
-
+  let freeEntry = false;
   if (options.configFile) {
     const config = getConfig(options.configFile);
     admins = config.auth?.admins?.map((a) => a.toLowerCase()) ?? [];
     users = config.auth?.users?.map((u) => u.toLowerCase()) ?? [];
     guests = config.auth?.guests?.map((g) => g.toLowerCase()) ?? [];
     authEnabled = config.auth?.enabled ?? false;
+    freeEntry = config.auth?.freeEntry ?? false;
   } else if (options.auth) {
     admins = options.auth?.admins?.map((a) => a.toLowerCase()) ?? [];
     users = options.auth?.users?.map((u) => u.toLowerCase()) ?? [];
     guests = options.auth?.guests?.map((g) => g.toLowerCase()) ?? [];
     authEnabled = options.auth?.enabled ?? false;
+    freeEntry = options.auth?.freeEntry ?? false;
   }
-  const { AUTH_ENABLED, GUESTS, USERS, ADMINS } = process.env;
+  const { AUTH_ENABLED, GUESTS, USERS, ADMINS, FREE_ENTRY } = process.env;
   if (AUTH_ENABLED !== undefined) {
     authEnabled = AUTH_ENABLED === "true";
   }
@@ -308,12 +314,15 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   if (ADMINS !== undefined) {
     admins = ADMINS.split(",").map((a) => a.toLowerCase());
   }
-
+  if (FREE_ENTRY !== undefined) {
+    freeEntry = FREE_ENTRY === "true";
+  }
   const authService = new AuthService({
     enabled: authEnabled,
     guests,
     users,
     admins,
+    freeEntry,
   });
 
   // add auth middleware if auth is enabled
@@ -352,6 +361,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
       guests,
       users,
       admins,
+      freeEntry,
     },
     relationalDb,
     analyticsStore,
@@ -381,6 +391,7 @@ async function _setupAPI(
     guests: string[];
     users: string[];
     admins: string[];
+    freeEntry: boolean;
   },
 ): Promise<API> {
   const module: IProcessorHostModule = { relationalDb, analyticsStore };
