@@ -13,8 +13,14 @@ import {
   GENERATE_DOC_MODEL_TEST_OUTPUT_DIR,
   TEST_PACKAGE_NAME,
 } from "./constants.js";
+import { runGeneratedTests } from "./fixtures/run-generated-tests.js";
 import { compile } from "./fixtures/typecheck.js";
-import { copyAllFiles, getTestDataDir, getTestOutputDir } from "./utils.js";
+import {
+  copyAllFiles,
+  getTestDataDir,
+  getTestOutDirPath,
+  getTestOutputDir,
+} from "./utils.js";
 
 describe("document model", () => {
   const testDir = import.meta.dirname;
@@ -25,15 +31,13 @@ describe("document model", () => {
   const testDataDir = getTestDataDir(testDir, DOCUMENT_MODELS_TEST_PROJECT);
 
   let testOutDirCount = 0;
-  let testOutDirName = `test-${testOutDirCount}`;
-  let testOutDirPath = path.join(outDirName, testOutDirName);
+  let testOutDirPath = getTestOutDirPath(testOutDirCount, outDirName);
   const documentModelsSrcPath = path.join(testDir, "data", "document-models");
   let documentModelsDirName = path.join(testOutDirPath, "document-models");
   let processorsDirName = path.join(testOutDirPath, "processors");
   async function setupTest(testDataDir: string) {
     testOutDirCount++;
-    testOutDirName = `test-${testOutDirCount}`;
-    testOutDirPath = path.join(outDirName, testOutDirName);
+    testOutDirPath = getTestOutDirPath(testOutDirCount, outDirName);
 
     await copyAllFiles(testDataDir, testOutDirPath);
 
@@ -104,6 +108,7 @@ describe("document model", () => {
     async () => {
       await generate();
       await compile(testOutDirPath);
+      await runGeneratedTests(testOutDirPath);
     },
   );
 

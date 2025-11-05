@@ -19,6 +19,8 @@ import {
   <%= documentTypeVariableName %>,
   <%= isPhDocumentOfTypeFunctionName %>,
   <%= assertIsPhDocumentOfTypeFunctionName %>,
+  <%= isPhStateOfTypeFunctionName %>,
+  <%= assertIsPhStateOfTypeFunctionName %>,
 } from "<%= documentModelDir %>";
 import { ZodError } from "zod";
 
@@ -35,6 +37,7 @@ describe("<%= pascalCaseDocumentType %> Document Model", () => {
     expect(document.state.global).toStrictEqual(initialGlobalState);
     expect(document.state.local).toStrictEqual(initialLocalState);
     expect(<%= isPhDocumentOfTypeFunctionName %>(document)).toBe(true);
+    expect(<%= isPhStateOfTypeFunctionName %>(document.state)).toBe(true);
   });
   it("should reject a document that is not a <%= pascalCaseDocumentType %> document", () => {
     const wrongDocumentType = utils.createDocument();
@@ -52,6 +55,8 @@ describe("<%= pascalCaseDocumentType %> Document Model", () => {
     ...{ notWhat: "you want" },
   };
   try {
+    expect(<%= isPhStateOfTypeFunctionName %>(wrongState.state)).toBe(false);
+    expect(<%= assertIsPhStateOfTypeFunctionName %>(wrongState.state)).toThrow();
     expect(<%= isPhDocumentOfTypeFunctionName %>(wrongState)).toBe(false);
     expect(<%= assertIsPhDocumentOfTypeFunctionName %>(wrongState)).toThrow();
   } catch (error) {
@@ -64,6 +69,8 @@ describe("<%= pascalCaseDocumentType %> Document Model", () => {
     ...{ notWhat: "you want" },
   };
   try {
+    expect(<%= isPhStateOfTypeFunctionName %>(wrongInitialState.state)).toBe(false);
+    expect(<%= assertIsPhStateOfTypeFunctionName %>(wrongInitialState.state)).toThrow();
     expect(<%= isPhDocumentOfTypeFunctionName %>(wrongInitialState)).toBe(false);
     expect(<%= assertIsPhDocumentOfTypeFunctionName %>(wrongInitialState)).toThrow();
   } catch (error) {

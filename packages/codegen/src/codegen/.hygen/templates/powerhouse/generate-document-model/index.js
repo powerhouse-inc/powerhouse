@@ -50,6 +50,8 @@ module.exports = {
     const documentModelDir = `${packageName}/document-models/${paramCaseDocumentType}`;
     const stateSchemaName = `${stateName}Schema`;
     const phDocumentSchemaName = `${phDocumentTypeName}Schema`;
+    const isPhStateOfTypeFunctionName = `is${stateName}`;
+    const assertIsPhStateOfTypeFunctionName = `assertIs${stateName}`;
     const isPhDocumentOfTypeFunctionName = `is${phDocumentTypeName}`;
     const assertIsPhDocumentOfTypeFunctionName = `assertIs${phDocumentTypeName}`;
     const useByIdHookName = `use${phDocumentTypeName}ById`;
@@ -62,7 +64,7 @@ module.exports = {
       {
         paramCaseName: paramCaseDocumentType,
         pascalCaseName: pascalCaseDocumentType,
-      }
+      },
     );
     return {
       rootDir,
@@ -90,8 +92,10 @@ module.exports = {
       phDocumentSchemaName,
       isPhDocumentOfTypeFunctionName,
       assertIsPhDocumentOfTypeFunctionName,
+      isPhStateOfTypeFunctionName,
+      assertIsPhStateOfTypeFunctionName,
       documentModelDir,
-      extension: documentModel.extension,
+      extension: documentModel.extension || "phdm",
       modules: latestSpec.modules.map((m) => ({
         ...m,
         name: paramCase(m.name),
