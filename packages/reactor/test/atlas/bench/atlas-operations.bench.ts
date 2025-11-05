@@ -26,15 +26,6 @@ const recordedOpsContent = readFileSync(
 const operations: RecordedOperation[] = JSON.parse(recordedOpsContent);
 const mutations = operations.filter((op) => op.type === "mutation");
 
-async function setupReactor() {
-  const documentModels = getDocumentModels();
-  const reactor = await new ReactorBuilder()
-    .withDocumentModels(documentModels)
-    .build();
-
-  return { reactor };
-}
-
 async function setupBaseServer() {
   const baseServerStorage = new MemoryStorage();
   const documentModels = getDocumentModels();
@@ -52,31 +43,79 @@ async function setupBaseServer() {
 async function main() {
   const bench = new Bench({ time: 60000 });
 
+  let reactorLegacyStorage: IReactor | null;
+  let reactorNoLegacyStorage: IReactor | null;
+  let legacyReactor: BaseDocumentDriveServer | null;
+
   bench
-    .add("Reactor - Process all operations", async () => {
-      let reactor: IReactor | undefined;
-
-      try {
-        const setup = await setupReactor();
-        reactor = setup.reactor;
+    .add(
+      "Reactor (Legacy Storage) - Process all operations",
+      async () => {
         const driveIds: string[] = [];
-
         for (const mutation of mutations) {
-          await processReactorMutation(mutation, reactor, driveIds);
+          await processReactorMutation(
+            mutation,
+            reactorLegacyStorage!,
+            driveIds,
+          );
         }
-      } finally {
-        if (reactor) {
-          reactor.kill();
+      },
+      {
+        beforeEach: async () => {
+          const documentModels = getDocumentModels();
+          reactorLegacyStorage = await new ReactorBuilder()
+            .withDocumentModels(documentModels)
+            .withFeatures({
+              legacyStorageEnabled: true,
+            })
+            .build();
+        },
+        afterEach: () => {
+          reactorLegacyStorage?.kill();
+        },
+      },
+    )
+    .add(
+      "Reactor - Process all operations",
+      async () => {
+        const driveIds: string[] = [];
+        for (const mutation of mutations) {
+          await processReactorMutation(
+            mutation,
+            reactorNoLegacyStorage!,
+            driveIds,
+          );
         }
-      }
-    })
-    .add("BaseServer - Process all operations", async () => {
-      const { baseServerDriveServer } = await setupBaseServer();
-
-      for (const mutation of mutations) {
-        await processBaseServerMutation(mutation, baseServerDriveServer);
-      }
-    });
+      },
+      {
+        beforeEach: async () => {
+          const documentModels = getDocumentModels();
+          reactorNoLegacyStorage = await new ReactorBuilder()
+            .withDocumentModels(documentModels)
+            .withFeatures({
+              legacyStorageEnabled: false,
+            })
+            .build();
+        },
+        afterEach: () => {
+          reactorNoLegacyStorage?.kill();
+        },
+      },
+    )
+    .add(
+      "BaseServer - Process all operations",
+      async () => {
+        for (const mutation of mutations) {
+          await processBaseServerMutation(mutation, legacyReactor!);
+        }
+      },
+      {
+        beforeEach: async () => {
+          const { baseServerDriveServer } = await setupBaseServer();
+          legacyReactor = baseServerDriveServer;
+        },
+      },
+    );
 
   await bench.run();
 
