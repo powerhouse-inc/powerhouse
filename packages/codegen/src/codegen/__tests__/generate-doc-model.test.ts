@@ -248,7 +248,7 @@ describe("document model", () => {
   );
 
   it(
-    "should create the document-models.ts file if it doesn't exist",
+    "should create the document-models.ts file if it does not exist",
     {
       timeout: 15000,
     },
@@ -270,10 +270,10 @@ describe("document model", () => {
 
       // Check that both models are exported
       expect(documentModelsContent).toContain(
-        "import { BillingStatement } from './billing-statement/module.js';",
+        `import { BillingStatement } from "./billing-statement/module.js";`,
       );
       expect(documentModelsContent).toContain(
-        "import { TestDoc } from './test-doc/module.js';",
+        `import { TestDoc } from "./test-doc/module.js";`,
       );
       expect(documentModelsContent).toContain(
         "export const documentModels: DocumentModelModule<any>[] = [",
@@ -304,10 +304,10 @@ describe("document model", () => {
 
       // Check that both models are exported
       expect(documentModelsContent).toContain(
-        "import { BillingStatement } from './billing-statement/module.js';",
+        `import { BillingStatement } from "./billing-statement/module.js";`,
       );
       expect(documentModelsContent).toContain(
-        "import { TestDoc } from './test-doc/module.js';",
+        `import { TestDoc } from "./test-doc/module.js";`,
       );
       expect(documentModelsContent).toContain(
         "export const documentModels: DocumentModelModule<any>[] = [",
