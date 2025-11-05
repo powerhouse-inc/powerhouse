@@ -4,6 +4,11 @@
     "outDir": "./dist",
     "resolveJsonModule": true
   },
+  "references": [
+    {
+      "path": "../e2e-utils"
+    }
+  ],
   "include": [
     "tests/**/*",
     "index.ts",

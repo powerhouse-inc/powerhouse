@@ -1,32 +1,22 @@
-import { type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { camelCase } from "change-case";
 
-export interface DocumentBasicData {
-  documentType: string;
-  authorName: string;
-  description: string;
-  authorWebsite: string;
-  extension: string;
-  global?: {
-    schema: string;
-    initialState: string;
-  };
-  modules?: {
-    name: string;
-    operations: {
-      name: string;
-      schema: string;
-      description?: string;
-      exceptions?: string[];
-    }[];
-  }[];
-}
+// Import shared types and functions from e2e-utils package
+export {
+  clickDocumentOperationHistory,
+  closeDocumentFromToolbar,
+  closeDocumentOperationHistory,
+} from "@powerhousedao/e2e-utils/helpers/document";
+export type { DocumentBasicData } from "@powerhousedao/e2e-utils/types";
+
+// Import the type for local use
+import type { DocumentBasicData } from "@powerhousedao/e2e-utils/types";
 
 /**
- * Helper function to create a new document
- * @param page Playwright Page object
- * @param documentType Type of document to create (e.g. "DocumentModel")
- * @param documentName Name for the new document
+ * Helper function to create a new document (Connect-specific implementation).
+ * @param page - Playwright Page object
+ * @param documentType - Type of document to create (e.g. "DocumentModel")
+ * @param documentName - Name for the new document
  */
 export async function createDocument(
   page: Page,
@@ -51,6 +41,11 @@ export async function createDocument(
   await page.getByText(documentName).first().waitFor({ state: "visible" });
 }
 
+/**
+ * Helper function to check if a document type is available for creation (Connect-specific).
+ * @param page - Playwright Page object
+ * @param documentType - Type of document to check
+ */
 export async function isDocumentAvailableForCreation(
   page: Page,
   documentType: string,
@@ -62,19 +57,10 @@ export async function isDocumentAvailableForCreation(
 }
 
 /**
- * Helper function to close document from toolbar
- * @param page Playwright Page object
- */
-export async function closeDocumentFromToolbar(page: Page) {
-  // Click the close button in the document toolbar (using the SVG path)
-  await page.getByLabel("Close document").click();
-}
-
-/**
- * Helper function to create a document and fill its basic data
- * @param page Playwright Page object
- * @param documentName Name for the new document
- * @param data Basic document data to fill
+ * Helper function to create a document and fill its basic data (Connect-specific).
+ * @param page - Playwright Page object
+ * @param documentName - Name for the new document
+ * @param data - Basic document data to fill
  */
 export async function createDocumentAndFillBasicData(
   page: Page,
@@ -105,7 +91,7 @@ export async function createDocumentAndFillBasicData(
     await page.click(".cm-editor");
 
     // Select all and delete
-    await page.keyboard.press("ControlOrMeta+A"); // Use 'Control+A' on Windows if needed
+    await page.keyboard.press("ControlOrMeta+A");
     await page.keyboard.press("Backspace");
 
     await page.locator(".cm-content").first().fill(data.global.schema);
@@ -145,7 +131,7 @@ export async function createDocumentAndFillBasicData(
 
         await operationEditor.click();
 
-        await page.keyboard.press("ControlOrMeta+A"); // Use 'Control+A' on Windows if needed
+        await page.keyboard.press("ControlOrMeta+A");
         await page.keyboard.press("Backspace");
 
         await page.keyboard.insertText(operation.schema);
@@ -159,18 +145,4 @@ export async function createDocumentAndFillBasicData(
 
   await page.getByText("Global State Schema").first().click();
   await page.waitForTimeout(1000);
-}
-
-export async function clickDocumentOperationHistory(page: Page) {
-  await page
-    .locator("#document-editor-context > *:first-child > *:first-child")
-    .locator("div")
-    .last()
-    .locator("button") // or whatever element type
-    .nth(0)
-    .click();
-}
-
-export async function closeDocumentOperationHistory(page: Page) {
-  await page.locator("button[name='close-revision-history']").first().click();
 }

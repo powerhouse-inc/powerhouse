@@ -3,7 +3,6 @@ import {
   clickDocumentOperationHistory,
   closeDocumentFromToolbar,
   closeDocumentOperationHistory,
-  createDocument,
   createFolder,
   deleteFolder,
   duplicateFolder,
@@ -11,7 +10,8 @@ import {
   navigateBackAndVerify,
   navigateIntoFolder,
   renameFolder,
-} from "./helpers/index.js";
+} from "@powerhousedao/e2e-utils";
+import { createDocument } from "./helpers/document.js";
 
 test.use({
   storageState: {
