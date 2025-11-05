@@ -1,4 +1,8 @@
-import { DirectoryManager, ImportManager } from "@powerhousedao/codegen";
+import {
+  DeclarationManager,
+  DirectoryManager,
+  ImportManager,
+} from "@powerhousedao/codegen";
 import type {
   DocumentModelGlobalState,
   ModuleSpecification,
@@ -28,13 +32,14 @@ export class TSMorphCodeGenerator {
   constructor(
     private rootDir: string,
     private docModels: DocumentModelGlobalState[],
+    private packageName: string,
     options: CodeGeneratorOptions = { directories: {}, forceUpdate: false },
   ) {
     this.directories = {
       ...this.directories,
       ...options.directories,
     };
-
+    this.packageName = packageName;
     this.forceUpdate = options.forceUpdate ?? false;
 
     this.setupGenerators();
@@ -43,11 +48,11 @@ export class TSMorphCodeGenerator {
   private setupGenerators(): void {
     const importManager = new ImportManager();
     const directoryManager = new DirectoryManager(this.directories);
-
+    const declarationManager = new DeclarationManager();
     // Register all generators
     this.generators.set(
       "reducers",
-      new ReducerGenerator(importManager, directoryManager),
+      new ReducerGenerator(importManager, directoryManager, declarationManager),
     );
   }
 
@@ -135,6 +140,7 @@ export class TSMorphCodeGenerator {
 
     return {
       rootDir: this.rootDir,
+      packageName: this.packageName,
       docModel,
       module,
       project: this.project,

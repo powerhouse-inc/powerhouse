@@ -1,18 +1,24 @@
 import { createAction } from "document-model/core";
 import {
-  z,
-  type SetAppNameInput,
-  type SetAppStatusInput,
-  type AddDocumentTypeInput,
-  type RemoveDocumentTypeInput,
-  type SetDocumentTypesInput,
+  SetAppNameInputSchema,
+  SetAppStatusInputSchema,
+  AddDocumentTypeInputSchema,
+  RemoveDocumentTypeInputSchema,
+  SetDocumentTypesInputSchema,
+} from "../schema/zod.js";
+import type {
+  SetAppNameInput,
+  SetAppStatusInput,
+  AddDocumentTypeInput,
+  RemoveDocumentTypeInput,
+  SetDocumentTypesInput,
 } from "../types.js";
-import {
-  type SetAppNameAction,
-  type SetAppStatusAction,
-  type AddDocumentTypeAction,
-  type RemoveDocumentTypeAction,
-  type SetDocumentTypesAction,
+import type {
+  SetAppNameAction,
+  SetAppStatusAction,
+  AddDocumentTypeAction,
+  RemoveDocumentTypeAction,
+  SetDocumentTypesAction,
 } from "./actions.js";
 
 export const setAppName = (input: SetAppNameInput) =>
@@ -20,7 +26,7 @@ export const setAppName = (input: SetAppNameInput) =>
     "SET_APP_NAME",
     { ...input },
     undefined,
-    z.SetAppNameInputSchema,
+    SetAppNameInputSchema,
     "global",
   );
 
@@ -29,7 +35,7 @@ export const setAppStatus = (input: SetAppStatusInput) =>
     "SET_APP_STATUS",
     { ...input },
     undefined,
-    z.SetAppStatusInputSchema,
+    SetAppStatusInputSchema,
     "global",
   );
 
@@ -38,7 +44,7 @@ export const addDocumentType = (input: AddDocumentTypeInput) =>
     "ADD_DOCUMENT_TYPE",
     { ...input },
     undefined,
-    z.AddDocumentTypeInputSchema,
+    AddDocumentTypeInputSchema,
     "global",
   );
 
@@ -47,7 +53,7 @@ export const removeDocumentType = (input: RemoveDocumentTypeInput) =>
     "REMOVE_DOCUMENT_TYPE",
     { ...input },
     undefined,
-    z.RemoveDocumentTypeInputSchema,
+    RemoveDocumentTypeInputSchema,
     "global",
   );
 
@@ -56,6 +62,6 @@ export const setDocumentTypes = (input: SetDocumentTypesInput) =>
     "SET_DOCUMENT_TYPES",
     { ...input },
     undefined,
-    z.SetDocumentTypesInputSchema,
+    SetDocumentTypesInputSchema,
     "global",
   );

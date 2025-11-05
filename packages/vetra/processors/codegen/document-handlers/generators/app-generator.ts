@@ -1,5 +1,5 @@
 import { generateDriveEditor, generateManifest } from "@powerhousedao/codegen";
-import type { AppModuleGlobalState } from "@powerhousedao/vetra/document-models/app-module/gen/types.js";
+import type { AppModuleGlobalState } from "@powerhousedao/vetra/document-models/app-module";
 import { kebabCase } from "change-case";
 import type { InternalTransmitterUpdate } from "document-drive";
 import { logger } from "../../logger.js";

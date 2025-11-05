@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useSelectedAppModuleDocument } from "../hooks/useVetraDocument.js";
-import { Editor } from "./editor.js";
+import Editor from "./editor.js";
 
 vi.mock("../hooks/useVetraDocument.js", () => ({
   useSelectedAppModuleDocument: vi.fn(),

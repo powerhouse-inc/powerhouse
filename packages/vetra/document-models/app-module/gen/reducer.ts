@@ -3,13 +3,21 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import type { StateReducer } from "document-model";
 import { isDocumentAction, createReducer } from "document-model/core";
-import type { AppModulePHState } from "./types.js";
-import { z } from "./types.js";
+import type { AppModulePHState } from "@powerhousedao/vetra/document-models/app-module";
 
-import { reducer as BaseOperationsReducer } from "../src/reducers/base-operations.js";
-import { reducer as DndOperationsReducer } from "../src/reducers/dnd-operations.js";
+import { appModuleBaseOperationsOperations } from "../src/reducers/base-operations.js";
+import { appModuleDndOperationsOperations } from "../src/reducers/dnd-operations.js";
 
-export const stateReducer: StateReducer<AppModulePHState> = (
+import {
+  SetAppNameInputSchema,
+  SetAppStatusInputSchema,
+  AddDocumentTypeInputSchema,
+  RemoveDocumentTypeInputSchema,
+  SetDocumentTypesInputSchema,
+  SetDragAndDropEnabledInputSchema,
+} from "./schema/zod.js";
+
+const stateReducer: StateReducer<AppModulePHState> = (
   state,
   action,
   dispatch,
@@ -20,8 +28,8 @@ export const stateReducer: StateReducer<AppModulePHState> = (
 
   switch (action.type) {
     case "SET_APP_NAME":
-      z.SetAppNameInputSchema().parse(action.input);
-      BaseOperationsReducer.setAppNameOperation(
+      SetAppNameInputSchema().parse(action.input);
+      appModuleBaseOperationsOperations.setAppNameOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
@@ -29,8 +37,8 @@ export const stateReducer: StateReducer<AppModulePHState> = (
       break;
 
     case "SET_APP_STATUS":
-      z.SetAppStatusInputSchema().parse(action.input);
-      BaseOperationsReducer.setAppStatusOperation(
+      SetAppStatusInputSchema().parse(action.input);
+      appModuleBaseOperationsOperations.setAppStatusOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
@@ -38,8 +46,8 @@ export const stateReducer: StateReducer<AppModulePHState> = (
       break;
 
     case "ADD_DOCUMENT_TYPE":
-      z.AddDocumentTypeInputSchema().parse(action.input);
-      BaseOperationsReducer.addDocumentTypeOperation(
+      AddDocumentTypeInputSchema().parse(action.input);
+      appModuleBaseOperationsOperations.addDocumentTypeOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
@@ -47,8 +55,8 @@ export const stateReducer: StateReducer<AppModulePHState> = (
       break;
 
     case "REMOVE_DOCUMENT_TYPE":
-      z.RemoveDocumentTypeInputSchema().parse(action.input);
-      BaseOperationsReducer.removeDocumentTypeOperation(
+      RemoveDocumentTypeInputSchema().parse(action.input);
+      appModuleBaseOperationsOperations.removeDocumentTypeOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
@@ -56,8 +64,8 @@ export const stateReducer: StateReducer<AppModulePHState> = (
       break;
 
     case "SET_DOCUMENT_TYPES":
-      z.SetDocumentTypesInputSchema().parse(action.input);
-      BaseOperationsReducer.setDocumentTypesOperation(
+      SetDocumentTypesInputSchema().parse(action.input);
+      appModuleBaseOperationsOperations.setDocumentTypesOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
@@ -65,8 +73,8 @@ export const stateReducer: StateReducer<AppModulePHState> = (
       break;
 
     case "SET_DRAG_AND_DROP_ENABLED":
-      z.SetDragAndDropEnabledInputSchema().parse(action.input);
-      DndOperationsReducer.setDragAndDropEnabledOperation(
+      SetDragAndDropEnabledInputSchema().parse(action.input);
+      appModuleDndOperationsOperations.setDragAndDropEnabledOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,

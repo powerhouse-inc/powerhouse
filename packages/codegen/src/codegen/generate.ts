@@ -22,6 +22,7 @@ import { paramCase } from "change-case";
 import type { DocumentModelGlobalState } from "document-model";
 import fs from "node:fs";
 import { join } from "node:path";
+import { readPackage } from "read-pkg";
 
 export async function generate(config: PowerhouseConfig) {
   const { skipFormat, watch } = config;
@@ -68,6 +69,7 @@ export async function generateEditor(
   documentTypes: string[],
   config: PowerhouseConfig,
   editorId?: string,
+  specifiedPackageName?: string,
 ) {
   const pathOrigin = "../../";
 
@@ -82,12 +84,17 @@ export async function generateEditor(
       `Document model for ${invalidType} not found. Make sure the document model is available in the document-models directory (${documentModelsDir}) and has been properly generated.`,
     );
   }
+  const packageNameFromPackageJson = await readPackage().then(
+    (pkg) => pkg.name,
+  );
+  const packageName = specifiedPackageName ?? packageNameFromPackageJson;
   return hygenGenerateEditor(
     name,
     documentTypes,
     documentTypesMap,
     config.editorsDir,
     config.documentModelsDir,
+    packageName,
     { skipFormat },
     editorId,
   );
@@ -99,10 +106,7 @@ export async function generateSubgraphFromDocumentModel(
   config: PowerhouseConfig,
   options: CodegenOptions = {},
 ) {
-  return hygenGenerateSubgraph(name, documentModel, config.subgraphsDir, {
-    skipFormat: config.skipFormat,
-    verbose: options.verbose,
-  });
+  return hygenGenerateSubgraph(name, documentModel, { ...config, ...options });
 }
 
 export async function generateSubgraph(
@@ -114,8 +118,7 @@ export async function generateSubgraph(
   return hygenGenerateSubgraph(
     name,
     file !== null ? await loadDocumentModel(file) : null,
-    config.subgraphsDir,
-    { skipFormat: config.skipFormat, verbose: options.verbose },
+    { ...config, ...options },
   );
 }
 
@@ -150,7 +153,7 @@ export async function generateDriveEditor(options: {
   return hygenGenerateDriveEditor({
     name,
     dir,
-    appId: appId ?? "drive-editor-id",
+    appId: appId ?? paramCase(name),
     allowedDocumentTypes: allowedDocumentTypes,
     isDragAndDropEnabled: isDragAndDropEnabled ?? true,
     skipFormat,
@@ -329,14 +332,20 @@ async function generateFromDocumentModel(
     );
   }
 
+  const packageName = await readPackage().then((pkg) => pkg.name);
   await generateSchema(name, config.documentModelsDir, {
     skipFormat: config.skipFormat,
     verbose,
   });
-  await hygenGenerateDocumentModel(documentModel, config.documentModelsDir, {
-    skipFormat: config.skipFormat,
-    verbose,
-    force,
-  });
+  await hygenGenerateDocumentModel(
+    documentModel,
+    config.documentModelsDir,
+    packageName,
+    {
+      skipFormat: config.skipFormat,
+      verbose,
+      force,
+    },
+  );
   await generateSubgraph(name, filePath || null, config, { verbose });
 }

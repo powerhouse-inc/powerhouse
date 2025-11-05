@@ -1,2 +1,2 @@
 export * from "./types.js";
-export * as z from "./zod.js";
+export * from "./zod.js";

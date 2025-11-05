@@ -16,13 +16,13 @@
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "copy-hygen": "cp -r src/codegen/.hygen dist/src/codegen/",
+    "copy-hygen": "rm -rf dist/src/codegen/.hygen && cp -r src/codegen/.hygen dist/src/codegen/",
     "build": "npm run copy-hygen",
     "build:create-lib": "tsc --project src/create-lib/tsconfig.json",
     "publish:create-lib": "npm publish --cwd ./src/create-lib/",
     "start": "tsx src/cli.ts",
-    "pretest": "rimraf ./src/codegen/__tests__/.out && rimraf ./src/codegen/__tests__/.test-project",
-    "test": "npm run copy-hygen && vitest run"
+    "test": "npm run copy-hygen && vitest run",
+    "test:keep": "KEEP_TEST_OUTPUT=true npm run test"
   },
   "dependencies": {
     "@acaldas/graphql-codegen-typescript-validation-schema": "^0.12.4",
@@ -50,15 +50,16 @@
   },
   "devDependencies": {
     "@graphql-codegen/core": "^4.0.2",
+    "@powerhousedao/analytics-engine-core": "^0.5.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
-    "@powerhousedao/analytics-engine-core": "^0.5.0",
     "copyfiles": "^2.4.1",
     "document-drive": "workspace:*",
     "esbuild-fix-imports-plugin": "^1.0.7",
     "husky": "^8.0.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "read-pkg": "^9.0.1",
     "vitest": "^3.2.4",
     "zod": "^3.24.3"
   }

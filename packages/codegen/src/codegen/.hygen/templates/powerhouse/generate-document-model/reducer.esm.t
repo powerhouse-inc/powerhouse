@@ -1,5 +1,5 @@
 ---
-to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/reducer.ts"
+to: "<%= rootDir %>/<%= paramCaseDocumentType %>/gen/reducer.ts"
 force: true
 ---
 // TODO: remove eslint-disable rules once refactor is done
@@ -7,14 +7,21 @@ force: true
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import type { StateReducer } from "document-model";
 import { isDocumentAction, createReducer } from "document-model/core";
-import type { <%= h.changeCase.pascal(documentType) %>PHState } from './types.js';
-import { z } from './types.js';
+import type { <%= phStateName %> } from "<%= documentModelDir %>";
 
-<% modules.forEach(m => { _%>
-import { reducer as <%= h.changeCase.pascal(m.name) %>Reducer } from '../src/reducers/<%= h.changeCase.param(m.name) %>.js';
+<% modules.forEach(module => { _%>
+import { <%= camelCaseDocumentType %><%= h.changeCase.pascal(module.name) %>Operations } from "../src/reducers/<%= h.changeCase.param(module.name) %>.js";
 <%_ }); %>
 
-export const stateReducer: StateReducer<<%= h.changeCase.pascal(documentType) %>PHState> =
+<% const schemas = modules.flatMap(m =>
+     m.operations.map(o => `${h.changeCase.pascalCase(o.name)}InputSchema`)
+   );
+%>
+import {
+  <%= schemas.join(',\n  ') %>
+} from "./schema/zod.js";
+
+const stateReducer: StateReducer<<%= phStateName %>> =
     (state, action, dispatch) => {
         if (isDocumentAction(action)) {
             return state;
@@ -25,9 +32,9 @@ export const stateReducer: StateReducer<<%= h.changeCase.pascal(documentType) %>
     modules.map(m => m.operations.map(o => 
         '            case "' + h.changeCase.constant(o.name) + '":\n' + 
         '                ' + (o.schema !== null ? 
-            'z.' + h.changeCase.pascalCase(o.name) + 'InputSchema().parse(action.input);\n' : 
+            h.changeCase.pascalCase(o.name) + 'InputSchema().parse(action.input);\n' : 
             'if (Object.keys(action.input).length > 0) throw new Error("Expected empty input for action ' + h.changeCase.constant(o.name) + '");\n') +
-        '                ' + h.changeCase.pascal(m.name) + 'Reducer.' + h.changeCase.camel(o.name) + 'Operation((state as any)[action.scope], action as any, dispatch);\n' +
+        '                ' + camelCaseDocumentType + h.changeCase.pascal(m.name)  + 'Operations.' + h.changeCase.camel(o.name) + 'Operation((state as any)[action.scope], action as any, dispatch);\n' +
         '                break;\n'        
     ).join('\n')).join('\n')
 %>
@@ -36,4 +43,4 @@ export const stateReducer: StateReducer<<%= h.changeCase.pascal(documentType) %>
         }
     }
 
-export const reducer = createReducer<<%= h.changeCase.pascal(documentType) %>PHState>(stateReducer);
+export const reducer = createReducer<<%= phStateName %>>(stateReducer);

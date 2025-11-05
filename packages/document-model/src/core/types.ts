@@ -464,6 +464,19 @@ export type SaveToFile = (
   name?: string,
 ) => string | Promise<string>;
 
+export type IsStateOfType<TState> = (state: unknown) => state is TState;
+
+export type AssertIsStateOfType<TState> = (
+  state: unknown,
+) => asserts state is TState;
+
+export type IsDocumentOfType<TState extends PHBaseState> = (
+  document: unknown,
+) => document is PHDocument<TState>;
+export type AssertIsDocumentOfType<TState extends PHBaseState> = (
+  document: unknown,
+) => asserts document is PHDocument<TState>;
+
 export type LoadFromInput<TState extends PHBaseState = PHBaseState> = (
   input: FileInput,
 ) => PHDocument<TState> | Promise<PHDocument<TState>>;

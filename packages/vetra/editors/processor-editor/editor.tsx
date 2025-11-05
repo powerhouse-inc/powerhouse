@@ -6,7 +6,7 @@ import { useSelectedProcessorModuleDocument } from "../hooks/useVetraDocument.js
 import { ProcessorEditorForm } from "./components/ProcessorEditorForm.js";
 import { editorConfig } from "./config.js";
 
-export function Editor() {
+export default function Editor() {
   useSetPHDocumentEditorConfig(editorConfig);
   const [document, dispatch] = useSelectedProcessorModuleDocument();
 

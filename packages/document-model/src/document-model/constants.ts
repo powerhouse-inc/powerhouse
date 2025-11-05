@@ -4,7 +4,6 @@ import type {
 } from "./types.js";
 
 export const documentModelFileExtension = "phdm" as const;
-export const documentModelDocumentType = "powerhouse/document-model" as const;
 
 export const documentModelInitialLocalState: DocumentModelLocalState = {};
 export const documentModelInitialGlobalState: DocumentModelGlobalState = {

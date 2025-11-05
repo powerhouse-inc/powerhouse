@@ -1,5 +1,7 @@
 export * from "./actions.js";
 export * from "./constants.js";
+export * from "./document-schema.js";
+export * from "./document-type.js";
 export * from "./files.js";
 export * from "./module.js";
 export * from "./reducers.js";

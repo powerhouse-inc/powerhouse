@@ -18,7 +18,7 @@ import type {
   SetPackageNpmUrlInput,
 } from "../../gen/schema/index.js";
 import type { VetraPackageDocument } from "../../gen/types.js";
-import utils from "../../gen/utils.js";
+import { utils } from "@powerhousedao/vetra/document-models/vetra-package";
 
 describe("BaseOperations Operations", () => {
   let document: VetraPackageDocument;
