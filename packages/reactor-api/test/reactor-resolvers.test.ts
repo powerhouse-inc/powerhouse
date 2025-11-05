@@ -1,6 +1,7 @@
 import {
   JobStatus,
   type IReactorClient,
+  type JobInfo,
   type PagedResults,
 } from "@powerhousedao/reactor";
 import {
@@ -471,12 +472,17 @@ describe("ReactorSubgraph Query Resolvers", () => {
 
   describe("jobStatus", () => {
     it("should transform completed job with all fields", async () => {
-      const mockJobInfo = {
+      const mockJobInfo: JobInfo = {
         id: "job-123",
         status: JobStatus.COMPLETED,
         createdAtUtcIso: "2024-01-01T00:00:00Z",
         completedAtUtcIso: "2024-01-01T00:05:00Z",
         result: { success: true, data: "test" },
+        consistencyToken: {
+          version: 1,
+          createdAtUtcIso: "2024-01-01T00:00:00Z",
+          coordinates: [],
+        },
       };
 
       vi.mocked(mockReactorClient.getJobStatus).mockResolvedValue(mockJobInfo);
@@ -496,11 +502,16 @@ describe("ReactorSubgraph Query Resolvers", () => {
     });
 
     it("should transform failed job with error", async () => {
-      const mockJobInfo = {
+      const mockJobInfo: JobInfo = {
         id: "job-456",
         status: JobStatus.FAILED,
         createdAtUtcIso: "2024-01-01T00:00:00Z",
         error: { message: "Job failed due to timeout", stack: "stack trace" },
+        consistencyToken: {
+          version: 1,
+          createdAtUtcIso: "2024-01-01T00:00:00Z",
+          coordinates: [],
+        },
       };
 
       vi.mocked(mockReactorClient.getJobStatus).mockResolvedValue(mockJobInfo);
@@ -520,10 +531,15 @@ describe("ReactorSubgraph Query Resolvers", () => {
     });
 
     it("should transform pending job with minimal fields", async () => {
-      const mockJobInfo = {
+      const mockJobInfo: JobInfo = {
         id: "job-789",
         status: JobStatus.PENDING,
         createdAtUtcIso: "2024-01-01T00:00:00Z",
+        consistencyToken: {
+          version: 1,
+          createdAtUtcIso: "2024-01-01T00:00:00Z",
+          coordinates: [],
+        },
       };
 
       vi.mocked(mockReactorClient.getJobStatus).mockResolvedValue(mockJobInfo);
@@ -543,13 +559,18 @@ describe("ReactorSubgraph Query Resolvers", () => {
     });
 
     it("should handle undefined optional fields as null", async () => {
-      const mockJobInfo = {
+      const mockJobInfo: JobInfo = {
         id: "job-999",
         status: JobStatus.RUNNING,
         createdAtUtcIso: "2024-01-01T00:00:00Z",
         completedAtUtcIso: undefined,
         error: undefined,
         result: undefined,
+        consistencyToken: {
+          version: 1,
+          createdAtUtcIso: "2024-01-01T00:00:00Z",
+          coordinates: [],
+        },
       };
 
       vi.mocked(mockReactorClient.getJobStatus).mockResolvedValue(mockJobInfo);

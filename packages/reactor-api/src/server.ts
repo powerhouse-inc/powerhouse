@@ -553,7 +553,10 @@ export async function initializeAndStartAPI(
   driveServerInitializer: (
     documentModelModules: DocumentModelModule[],
   ) => Promise<IDocumentDriveServer>,
-  clientInitializer: (driveServer: IDocumentDriveServer) => IReactorClient,
+  clientInitializer: (
+    driveServer: IDocumentDriveServer,
+    documentModels: DocumentModelModule[],
+  ) => Promise<IReactorClient>,
   options: Options,
 ): Promise<
   API & { driveServer: IDocumentDriveServer; client: IReactorClient }
@@ -563,7 +566,7 @@ export async function initializeAndStartAPI(
 
   const { documentModels, processors, subgraphs } = await packages.init();
   const reactor = await driveServerInitializer(documentModels);
-  const reactorClient = clientInitializer(reactor);
+  const reactorClient = await clientInitializer(reactor, documentModels);
 
   const api = await _setupAPI(
     reactor,

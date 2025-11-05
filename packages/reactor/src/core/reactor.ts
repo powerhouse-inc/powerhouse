@@ -740,7 +740,7 @@ export class Reactor implements IReactor {
   async addChildren(
     parentId: string,
     documentIds: string[],
-    view?: ViewFilter,
+    _view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<JobInfo> {
     if (signal?.aborted) {
@@ -768,7 +768,7 @@ export class Reactor implements IReactor {
   async removeChildren(
     parentId: string,
     documentIds: string[],
-    view?: ViewFilter,
+    _view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<JobInfo> {
     if (signal?.aborted) {
@@ -885,7 +885,13 @@ export class Reactor implements IReactor {
         nextCursor,
         next: hasMore
           ? () =>
-              this.findByIds(ids, view, { cursor: nextCursor!, limit }, signal)
+              this.findByIds(
+                ids,
+                view,
+                { cursor: nextCursor!, limit },
+                undefined,
+                signal,
+              )
           : undefined,
       };
     } else {
@@ -930,7 +936,13 @@ export class Reactor implements IReactor {
         nextCursor,
         next: hasMore
           ? () =>
-              this.findByIds(ids, view, { cursor: nextCursor!, limit }, signal)
+              this.findByIds(
+                ids,
+                view,
+                { cursor: nextCursor!, limit },
+                undefined,
+                signal,
+              )
           : undefined,
       };
     }
@@ -1015,6 +1027,7 @@ export class Reactor implements IReactor {
                 slugs,
                 view,
                 { cursor: nextCursor!, limit },
+                undefined,
                 signal,
               )
           : undefined,
@@ -1084,6 +1097,7 @@ export class Reactor implements IReactor {
                 slugs,
                 view,
                 { cursor: nextCursor!, limit },
+                undefined,
                 signal,
               )
           : undefined,
@@ -1295,7 +1309,13 @@ export class Reactor implements IReactor {
         nextCursor,
         next: nextCursor
           ? async () =>
-              this.findByType(type, view, { cursor: nextCursor, limit }, signal)
+              this.findByType(
+                type,
+                view,
+                { cursor: nextCursor, limit },
+                undefined,
+                signal,
+              )
           : undefined,
       };
     } else {
@@ -1324,6 +1344,7 @@ export class Reactor implements IReactor {
                 type,
                 view,
                 { cursor: result.nextCursor!, limit },
+                undefined,
                 signal,
               )
           : undefined,

@@ -1,12 +1,5 @@
 #!/usr/bin/env node
-import {
-  EventBus,
-  InMemoryJobTracker,
-  InMemoryQueue,
-  Reactor,
-  ReactorClientBuilder,
-  ReadModelCoordinator,
-} from "@powerhousedao/reactor";
+import { ReactorBuilder, ReactorClientBuilder } from "@powerhousedao/reactor";
 import {
   VitePackageLoader,
   getUniqueDocumentModels,
@@ -14,16 +7,11 @@ import {
   startViteServer,
 } from "@powerhousedao/reactor-api";
 import * as Sentry from "@sentry/node";
-import type {
-  BaseDocumentDriveServer,
-  ICache,
-  IDocumentDriveServer,
-  IDocumentStorage,
-} from "document-drive";
+import type { ICache, IDocumentDriveServer } from "document-drive";
 import {
   DocumentAlreadyExistsError,
   InMemoryCache,
-  ReactorBuilder,
+  ReactorBuilder as LegacyReactorBuilder,
   RedisCache,
   childLogger,
   driveDocumentModelModule,
@@ -138,7 +126,7 @@ async function initServer(serverPort: number, options: StartServerOptions) {
   const initializeDriveServer = async (
     documentModels: DocumentModelModule[],
   ) => {
-    const driveServer = new ReactorBuilder(
+    const driveServer = new LegacyReactorBuilder(
       getUniqueDocumentModels([
         documentModelDocumentModelModule,
         driveDocumentModelModule,
@@ -160,16 +148,22 @@ async function initServer(serverPort: number, options: StartServerOptions) {
     return driveServer;
   };
 
-  const initializeClient = (driveServer: IDocumentDriveServer) => {
-    const eventBus = new EventBus();
-    const queue = new InMemoryQueue(eventBus);
-    const reactor = new Reactor(
-      driveServer as unknown as BaseDocumentDriveServer,
-      storage as unknown as IDocumentStorage,
-      queue,
-      new InMemoryJobTracker(),
-      new ReadModelCoordinator(eventBus, []),
-    );
+  const initializeClient = async (
+    driveServer: IDocumentDriveServer,
+    documentModels: DocumentModelModule[],
+  ) => {
+    const builder = new ReactorBuilder()
+      .withDocumentModels([
+        documentModelDocumentModelModule,
+        driveDocumentModelModule,
+        ...documentModels,
+      ] as unknown as DocumentModelModule[])
+      .withLegacyStorage(storage)
+      .withFeatures({
+        legacyStorageEnabled: true,
+      });
+
+    const reactor = await builder.build();
     const client = new ReactorClientBuilder().withReactor(reactor).build();
 
     return client;
