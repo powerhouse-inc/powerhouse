@@ -12,7 +12,12 @@ import {
   MANIFEST_TEST_PROJECT,
   MANIFEST_TEST_PROJECT_WITH_EXISTING_MANIFEST,
 } from "./constants.js";
-import { copyAllFiles, getTestDataDir, getTestOutputDir } from "./utils.js";
+import {
+  copyAllFiles,
+  getTestDataDir,
+  getTestOutDirPath,
+  getTestOutputDir,
+} from "./utils.js";
 
 describe("generateManifest", () => {
   const testDir = import.meta.dirname;
@@ -21,13 +26,11 @@ describe("generateManifest", () => {
     GENERATE_MANIFEST_TEST_OUTPUT_DIR,
   );
   let testOutDirCount = 0;
-  let testOutDirName = `test-${testOutDirCount}`;
-  let testOutDirPath = path.join(outDirName, testOutDirName);
+  let testOutDirPath = getTestOutDirPath(testOutDirCount, outDirName);
 
   async function setupTest(testDataDir: string) {
     testOutDirCount++;
-    testOutDirName = `test-${testOutDirCount}`;
-    testOutDirPath = path.join(outDirName, testOutDirName);
+    testOutDirPath = getTestOutDirPath(testOutDirCount, outDirName);
 
     await copyAllFiles(testDataDir, testOutDirPath);
   }
