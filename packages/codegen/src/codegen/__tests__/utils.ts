@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "path";
 import { TEST_DATA_DIR, TEST_OUTPUT_DIR } from "./constants.js";

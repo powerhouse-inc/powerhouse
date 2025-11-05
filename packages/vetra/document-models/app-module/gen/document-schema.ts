@@ -1,23 +1,25 @@
-import type { PHDocument } from "document-model";
+import {
+  BaseDocumentHeaderSchema,
+  BaseDocumentStateSchema,
+  type PHDocument,
+} from "document-model";
 import { z } from "zod";
 import { appModuleDocumentType } from "./document-type.js";
 import { AppModuleStateSchema } from "./schema/zod.js";
 import type { AppModuleDocument } from "./types.js";
 
+export const AppModuleDocumentHeaderSchema = BaseDocumentHeaderSchema.extend({
+  documentType: z.literal(appModuleDocumentType),
+});
+
+export const AppModuleDocumentStateSchema = BaseDocumentStateSchema.extend({
+  global: AppModuleStateSchema(),
+});
+
 export const AppModuleDocumentSchema = z.object({
-  header: z.object({
-    id: z.string(),
-    name: z.string(),
-    createdAtUtcIso: z.string(),
-    lastModifiedAtUtcIso: z.string(),
-    documentType: z.literal(appModuleDocumentType),
-  }),
-  state: z.object({
-    global: AppModuleStateSchema(),
-  }),
-  initialState: z.object({
-    global: AppModuleStateSchema(),
-  }),
+  header: AppModuleDocumentHeaderSchema,
+  state: AppModuleDocumentStateSchema,
+  initialState: AppModuleDocumentStateSchema,
 });
 
 /** Simple helper function to check if a document is a AppModule document */
