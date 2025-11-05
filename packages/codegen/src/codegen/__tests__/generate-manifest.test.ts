@@ -4,7 +4,14 @@ import type {
 } from "@powerhousedao/config";
 import fs, { mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  type TestContext,
+} from "vitest";
 import { generateManifest } from "../generate.js";
 import { PURGE_AFTER_TEST } from "./config.js";
 import {
@@ -25,12 +32,10 @@ describe("generateManifest", () => {
     testDir,
     GENERATE_MANIFEST_TEST_OUTPUT_DIR,
   );
-  let testOutDirCount = 0;
-  let testOutDirPath = getTestOutDirPath(testOutDirCount, outDirName);
+  let testOutDirPath = getTestOutDirPath("initial", outDirName);
 
-  async function setupTest(testDataDir: string) {
-    testOutDirCount++;
-    testOutDirPath = getTestOutDirPath(testOutDirCount, outDirName);
+  async function setupTest(context: TestContext, testDataDir: string) {
+    testOutDirPath = getTestOutDirPath(context.task.name, outDirName);
 
     await copyAllFiles(testDataDir, testOutDirPath);
   }
@@ -53,8 +58,8 @@ describe("generateManifest", () => {
       }
     }
   });
-  it("should generate a new manifest from scratch with partial data", async () => {
-    await setupTest(getTestDataDir(testDir, MANIFEST_TEST_PROJECT));
+  it("should generate a new manifest from scratch with partial data", async (context) => {
+    await setupTest(context, getTestDataDir(testDir, MANIFEST_TEST_PROJECT));
     const manifestData = {
       name: "@test/package",
       description: "Test package description",
@@ -81,8 +86,9 @@ describe("generateManifest", () => {
     expect(manifest.importScripts).toEqual([]);
   });
 
-  it("should update existing manifest preserving all existing fields", async () => {
+  it("should update existing manifest preserving all existing fields", async (context) => {
     await setupTest(
+      context,
       getTestDataDir(testDir, MANIFEST_TEST_PROJECT_WITH_EXISTING_MANIFEST),
     );
 
@@ -136,8 +142,9 @@ describe("generateManifest", () => {
     ]);
   });
 
-  it("should update publisher fields partially", async () => {
+  it("should update publisher fields partially", async (context) => {
     await setupTest(
+      context,
       getTestDataDir(testDir, MANIFEST_TEST_PROJECT_WITH_EXISTING_MANIFEST),
     );
     const updateData: PartialPowerhouseManifest = {
@@ -157,8 +164,8 @@ describe("generateManifest", () => {
     });
   });
 
-  it("should handle malformed existing manifest gracefully", async () => {
-    await setupTest(getTestDataDir(testDir, MANIFEST_TEST_PROJECT));
+  it("should handle malformed existing manifest gracefully", async (context) => {
+    await setupTest(context, getTestDataDir(testDir, MANIFEST_TEST_PROJECT));
     const manifestPath = path.join(testOutDirPath, "powerhouse.manifest.json");
     fs.writeFileSync(manifestPath, "{ invalid json }");
 
@@ -201,8 +208,8 @@ describe("generateManifest", () => {
     }
   });
 
-  it("should validate JSON structure matches expected format", async () => {
-    await setupTest(getTestDataDir(testDir, MANIFEST_TEST_PROJECT));
+  it("should validate JSON structure matches expected format", async (context) => {
+    await setupTest(context, getTestDataDir(testDir, MANIFEST_TEST_PROJECT));
     const manifestData = {
       name: "@test/package",
       description: "Test package",

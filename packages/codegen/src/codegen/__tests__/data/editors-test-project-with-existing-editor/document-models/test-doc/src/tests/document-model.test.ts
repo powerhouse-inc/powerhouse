@@ -15,6 +15,8 @@ import {
   testDocDocumentType,
   isTestDocDocument,
   assertIsTestDocDocument,
+  isTestDocState,
+  assertIsTestDocState,
 } from "test/document-models/test-doc";
 import { ZodError } from "zod";
 
@@ -31,6 +33,7 @@ describe("TestDoc Document Model", () => {
     expect(document.state.global).toStrictEqual(initialGlobalState);
     expect(document.state.local).toStrictEqual(initialLocalState);
     expect(isTestDocDocument(document)).toBe(true);
+    expect(isTestDocState(document.state)).toBe(true);
   });
   it("should reject a document that is not a TestDoc document", () => {
     const wrongDocumentType = utils.createDocument();
@@ -48,6 +51,8 @@ describe("TestDoc Document Model", () => {
     ...{ notWhat: "you want" },
   };
   try {
+    expect(isTestDocState(wrongState.state)).toBe(false);
+    expect(assertIsTestDocState(wrongState.state)).toThrow();
     expect(isTestDocDocument(wrongState)).toBe(false);
     expect(assertIsTestDocDocument(wrongState)).toThrow();
   } catch (error) {
@@ -60,6 +65,8 @@ describe("TestDoc Document Model", () => {
     ...{ notWhat: "you want" },
   };
   try {
+    expect(isTestDocState(wrongInitialState.state)).toBe(false);
+    expect(assertIsTestDocState(wrongInitialState.state)).toThrow();
     expect(isTestDocDocument(wrongInitialState)).toBe(false);
     expect(assertIsTestDocDocument(wrongInitialState)).toThrow();
   } catch (error) {

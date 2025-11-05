@@ -2,10 +2,18 @@ import { generateDriveEditor } from "@powerhousedao/codegen";
 import type { PowerhouseConfig } from "@powerhousedao/config";
 import fs, { existsSync, mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  type TestContext,
+} from "vitest";
 import { PURGE_AFTER_TEST } from "./config.js";
 import {
   EDITORS_TEST_PROJECT,
+  EDITORS_TEST_PROJECT_WITH_EXISTING_EDITOR,
   GENERATE_DRIVE_EDITOR_TEST_OUTPUT_DIR,
 } from "./constants.js";
 import { compile } from "./fixtures/typecheck.js";
@@ -23,8 +31,7 @@ describe("generateDriveEditor", () => {
     GENERATE_DRIVE_EDITOR_TEST_OUTPUT_DIR,
   );
   const testDataDir = getTestDataDir(testDir, EDITORS_TEST_PROJECT);
-  let testOutDirCount = 0;
-  let testOutDirPath = getTestOutDirPath(testOutDirCount, outDirName);
+  let testOutDirPath = getTestOutDirPath("initial", outDirName);
   const config: PowerhouseConfig = {
     editorsDir: "",
     documentModelsDir: "",
@@ -34,11 +41,13 @@ describe("generateDriveEditor", () => {
     skipFormat: true,
     logLevel: "info",
   };
-  async function setupTest(testProjectSrcPath: string) {
-    testOutDirCount++;
-    testOutDirPath = getTestOutDirPath(testOutDirCount, outDirName);
+  async function setupTest(
+    context: TestContext,
+    testDataDirOverride = testDataDir,
+  ) {
+    testOutDirPath = getTestOutDirPath(context.task.name, outDirName);
 
-    await copyAllFiles(testProjectSrcPath, testOutDirPath);
+    await copyAllFiles(testDataDirOverride, testOutDirPath);
 
     config.editorsDir = path.join(testOutDirPath, "editors");
     config.documentModelsDir = path.join(testOutDirPath, "document-models");
@@ -64,9 +73,8 @@ describe("generateDriveEditor", () => {
     {
       timeout: 15000,
     },
-    async () => {
-      await setupTest(testDataDir);
-
+    async (context) => {
+      await setupTest(context);
       const name = "Atlas Drive Explorer";
 
       await generateDriveEditor({
@@ -186,8 +194,11 @@ describe("generateDriveEditor", () => {
     {
       timeout: 15000,
     },
-    async () => {
-      await setupTest(path.join(testDir, "data", "editors-test-project"));
+    async (context) => {
+      await setupTest(
+        context,
+        getTestDataDir(testDir, EDITORS_TEST_PROJECT_WITH_EXISTING_EDITOR),
+      );
       const name = "TestApp";
       await generateDriveEditor({ name, config }); // No appId provided
 
@@ -206,9 +217,10 @@ describe("generateDriveEditor", () => {
     {
       timeout: 15000,
     },
-    async () => {
+    async (context) => {
       await setupTest(
-        path.join(testDir, "data", "editors-test-project-with-existing-editor"),
+        context,
+        getTestDataDir(testDir, EDITORS_TEST_PROJECT_WITH_EXISTING_EDITOR),
       );
       const name = "Atlas Drive Explorer";
 
@@ -228,12 +240,12 @@ describe("generateDriveEditor", () => {
     },
   );
   it(
-    "should create the editors.ts file if it doesn't exist",
+    "should create the editors.ts file if it does not exist",
     {
       timeout: 15000,
     },
-    async () => {
-      await setupTest(path.join(testDir, "data", "editors-test-project"));
+    async (context) => {
+      await setupTest(context);
       const name = "Atlas Drive Explorer";
       const editorsDir = path.join(testOutDirPath, "editors");
       const editorsFilePath = path.join(editorsDir, "editors.ts");

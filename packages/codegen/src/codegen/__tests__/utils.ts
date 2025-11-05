@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { paramCase } from "change-case";
 import fs from "node:fs/promises";
 import path from "path";
 import { TEST_DATA_DIR, TEST_OUTPUT_DIR } from "./constants.js";
@@ -31,6 +31,6 @@ export function getTestDataDir(testDir: string, testDataDir: string) {
   return path.join(testDir, TEST_DATA_DIR, testDataDir);
 }
 
-export function getTestOutDirPath(testOutDirCount: number, outDirName: string) {
-  return path.join(outDirName, `test-${testOutDirCount}`);
+export function getTestOutDirPath(testName: string, outDirName: string) {
+  return path.join(outDirName, `test-${paramCase(testName)}`);
 }

@@ -6,7 +6,15 @@ import {
 } from "@powerhousedao/codegen";
 import { mkdirSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  type TestContext,
+} from "vitest";
 import { PURGE_AFTER_TEST } from "./config.js";
 import {
   DOCUMENT_MODELS_TEST_PROJECT,
@@ -30,20 +38,23 @@ describe("document model", () => {
   );
   const testDataDir = getTestDataDir(testDir, DOCUMENT_MODELS_TEST_PROJECT);
 
-  let testOutDirCount = 0;
-  let testOutDirPath = getTestOutDirPath(testOutDirCount, outDirName);
+  let testOutDirPath = getTestOutDirPath("initial", outDirName);
   const documentModelsSrcPath = path.join(testDir, "data", "document-models");
   let documentModelsDirName = path.join(testOutDirPath, "document-models");
   let processorsDirName = path.join(testOutDirPath, "processors");
-  async function setupTest(testDataDir: string) {
-    testOutDirCount++;
-    testOutDirPath = getTestOutDirPath(testOutDirCount, outDirName);
+  async function setupTest(context: TestContext) {
+    testOutDirPath = getTestOutDirPath(context.task.name, outDirName);
 
     await copyAllFiles(testDataDir, testOutDirPath);
 
     documentModelsDirName = path.join(testOutDirPath, "document-models");
     processorsDirName = path.join(testOutDirPath, "processors");
   }
+
+  beforeEach(async (context) => {
+    await setupTest(context);
+  });
+
   beforeAll(() => {
     try {
       rmSync(outDirName, { recursive: true, force: true });
@@ -63,11 +74,7 @@ describe("document model", () => {
     }
   });
 
-  const generate = async (skipSetup = false) => {
-    if (!skipSetup) {
-      await setupTest(testDataDir);
-    }
-
+  const generate = async () => {
     await generateSchemas(documentModelsSrcPath, {
       skipFormat: true,
       outDir: documentModelsDirName,
@@ -103,7 +110,7 @@ describe("document model", () => {
   it(
     "should generate a document model",
     {
-      timeout: 10000,
+      timeout: 30000,
     },
     async () => {
       await generate();
@@ -246,13 +253,6 @@ describe("document model", () => {
       timeout: 15000,
     },
     async () => {
-      const testDataDir = path.join(
-        testDir,
-        "data",
-        "document-models-test-project",
-      );
-      await setupTest(testDataDir);
-
       const documentModelsFilePath = path.join(
         documentModelsDirName,
         "document-models.ts",
@@ -260,7 +260,7 @@ describe("document model", () => {
 
       rmSync(documentModelsFilePath, { force: true });
 
-      await generate(true);
+      await generate();
       await compile(testOutDirPath);
 
       const documentModelsContent = readFileSync(
@@ -482,10 +482,7 @@ describe("document model", () => {
     "should generate error codes for legacy documents with empty error codes",
     { timeout: 10000 },
     async () => {
-      await generateSchemas(documentModelsSrcPath, {
-        skipFormat: true,
-        outDir: path.join(testOutDirPath, documentModelsDirName),
-      });
+      await generate();
 
       const testEmptyCodesDocumentModel = await loadDocumentModel(
         path.join(

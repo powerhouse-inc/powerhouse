@@ -17,7 +17,6 @@ import { describe, expect, it } from "vitest";
 describe("App Module Document Model", () => {
   it("should have correct initial values", () => {
     const document = utils.createDocument();
-
     expect(document.state.global.name).toBe("");
     expect(document.state.global.status).toBe("DRAFT");
     expect(document.state.global.allowedDocumentTypes).toBeNull();
