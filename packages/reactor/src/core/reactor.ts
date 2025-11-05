@@ -403,7 +403,13 @@ export class Reactor implements IReactor {
         throw new Error("Cannot use both ids and slugs in the same search");
       }
 
-      results = await this.findByIds(search.ids, view, paging, signal);
+      results = await this.findByIds(
+        search.ids,
+        view,
+        paging,
+        consistencyToken,
+        signal,
+      );
 
       if (search.parentId) {
         results = filterByParentId(results, search.parentId);
@@ -413,7 +419,13 @@ export class Reactor implements IReactor {
         results = filterByType(results, search.type);
       }
     } else if (search.slugs) {
-      results = await this.findBySlugs(search.slugs, view, paging, signal);
+      results = await this.findBySlugs(
+        search.slugs,
+        view,
+        paging,
+        consistencyToken,
+        signal,
+      );
 
       if (search.parentId) {
         results = filterByParentId(results, search.parentId);
@@ -434,7 +446,13 @@ export class Reactor implements IReactor {
         results = filterByType(results, search.type);
       }
     } else if (search.type) {
-      results = await this.findByType(search.type, view, paging, signal);
+      results = await this.findByType(
+        search.type,
+        view,
+        paging,
+        consistencyToken,
+        signal,
+      );
     } else {
       throw new Error("No search criteria provided");
     }
@@ -809,8 +827,16 @@ export class Reactor implements IReactor {
     ids: string[],
     view?: ViewFilter,
     paging?: PagingOptions,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
+    if (consistencyToken) {
+      await this.documentView.waitForConsistency(
+        consistencyToken,
+        undefined,
+        signal,
+      );
+    }
     if (this.features.legacyStorageEnabled) {
       const documents: PHDocument[] = [];
 
@@ -917,8 +943,16 @@ export class Reactor implements IReactor {
     slugs: string[],
     view?: ViewFilter,
     paging?: PagingOptions,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
+    if (consistencyToken) {
+      await this.documentView.waitForConsistency(
+        consistencyToken,
+        undefined,
+        signal,
+      );
+    }
     if (this.features.legacyStorageEnabled) {
       const documents: PHDocument[] = [];
 
@@ -1201,8 +1235,16 @@ export class Reactor implements IReactor {
     type: string,
     view?: ViewFilter,
     paging?: PagingOptions,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
+    if (consistencyToken) {
+      await this.documentView.waitForConsistency(
+        consistencyToken,
+        undefined,
+        signal,
+      );
+    }
     if (this.features.legacyStorageEnabled) {
       const documents: PHDocument[] = [];
 
