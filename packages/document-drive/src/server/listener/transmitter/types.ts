@@ -7,7 +7,7 @@ import type {
   StrandUpdate,
   Trigger,
 } from "document-drive";
-import type { Operation, PHBaseState } from "document-model";
+import type { Operation, PHBaseState, PHDocument } from "document-model";
 
 export type StrandUpdateSource =
   | {
@@ -40,6 +40,7 @@ export type InternalOperationUpdate<TState extends PHBaseState = PHBaseState> =
   };
 
 export type InternalTransmitterUpdate = {
+  document: PHDocument;
   driveId: string;
   documentId: string;
   documentType: string;
