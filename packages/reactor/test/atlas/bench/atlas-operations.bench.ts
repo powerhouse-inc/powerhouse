@@ -1,29 +1,14 @@
 import type { BaseDocumentDriveServer } from "document-drive";
-import { MemoryStorage, ReactorBuilder } from "document-drive";
+import {
+  ReactorBuilder as DriveReactorBuilder,
+  MemoryStorage,
+} from "document-drive";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { bench, describe } from "vitest";
-import { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";
-import type { WriteCacheConfig } from "../../../src/cache/types.js";
-import { Reactor } from "../../../src/core/reactor.js";
-import { EventBus } from "../../../src/events/event-bus.js";
-import { SimpleJobExecutorManager } from "../../../src/executor/simple-job-executor-manager.js";
-import { SimpleJobExecutor } from "../../../src/executor/simple-job-executor.js";
-import { InMemoryQueue } from "../../../src/queue/queue.js";
-import { ReadModelCoordinator } from "../../../src/read-models/coordinator.js";
-import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
-import type { DocumentViewDatabase } from "../../../src/read-models/types.js";
-import { DocumentModelRegistry } from "../../../src/registry/implementation.js";
-import { ConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
-import type { Database as StorageDatabase } from "../../../src/storage/kysely/types.js";
-import {
-  createMockDocumentIndexer,
-  createMockReactorFeatures,
-  createTestJobTracker,
-  createTestOperationStore,
-} from "../../../test/factories.js";
-
-import type { Kysely } from "kysely";
+import { fileURLToPath } from "node:url";
+import { Bench } from "tinybench";
+import { ReactorBuilder } from "../../../src/core/reactor-builder.js";
+import type { IReactor } from "../../../src/core/types.js";
 import {
   type RecordedOperation,
   getDocumentModels,
@@ -31,7 +16,8 @@ import {
   processReactorMutation,
 } from "../test/recorded-operations-helpers.js";
 
-type Database = StorageDatabase & DocumentViewDatabase;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const recordedOpsContent = readFileSync(
   path.join(__dirname, "../test/recorded-operations.json"),
@@ -41,91 +27,19 @@ const operations: RecordedOperation[] = JSON.parse(recordedOpsContent);
 const mutations = operations.filter((op) => op.type === "mutation");
 
 async function setupReactor() {
-  const reactorStorage = new MemoryStorage();
   const documentModels = getDocumentModels();
+  const reactor = await new ReactorBuilder()
+    .withDocumentModels(documentModels)
+    .build();
 
-  const reactorBuilder = new ReactorBuilder(documentModels).withStorage(
-    reactorStorage,
-  );
-  const reactorDriveServer =
-    reactorBuilder.build() as unknown as BaseDocumentDriveServer;
-  await reactorDriveServer.initialize();
-
-  const setup = await createTestOperationStore();
-  const db = setup.db as unknown as Kysely<Database>;
-  const operationStore = setup.store;
-  const keyframeStore = setup.keyframeStore;
-
-  const eventBus = new EventBus();
-  const queue = new InMemoryQueue(eventBus);
-
-  const registry = new DocumentModelRegistry();
-  registry.registerModules(...documentModels);
-
-  const writeCacheConfig: WriteCacheConfig = {
-    maxDocuments: 100,
-    ringBufferSize: 10,
-    keyframeInterval: 10,
-  };
-  const writeCache = new KyselyWriteCache(
-    keyframeStore,
-    operationStore,
-    registry,
-    writeCacheConfig,
-  );
-  await writeCache.startup();
-
-  const executor = new SimpleJobExecutor(
-    registry,
-    reactorStorage,
-    reactorStorage,
-    operationStore,
-    eventBus,
-    writeCache,
-  );
-
-  const consistencyTracker = new ConsistencyTracker();
-  const documentView = new KyselyDocumentView(
-    db,
-    operationStore,
-    consistencyTracker,
-  );
-  await documentView.init();
-  const readModelCoordinator = new ReadModelCoordinator(eventBus, [
-    documentView,
-  ]);
-
-  const jobTracker = createTestJobTracker();
-
-  const executorManager = new SimpleJobExecutorManager(
-    () => executor,
-    eventBus,
-    queue,
-    jobTracker,
-  );
-
-  await executorManager.start(1);
-
-  const reactor = new Reactor(
-    reactorDriveServer,
-    reactorStorage,
-    queue,
-    jobTracker,
-    readModelCoordinator,
-    createMockReactorFeatures(),
-    documentView,
-    createMockDocumentIndexer(),
-    operationStore,
-  );
-
-  return { reactor, executorManager };
+  return { reactor };
 }
 
 async function setupBaseServer() {
   const baseServerStorage = new MemoryStorage();
   const documentModels = getDocumentModels();
 
-  const baseServerBuilder = new ReactorBuilder(documentModels).withStorage(
+  const baseServerBuilder = new DriveReactorBuilder(documentModels).withStorage(
     baseServerStorage,
   );
   const baseServerDriveServer =
@@ -135,31 +49,39 @@ async function setupBaseServer() {
   return { baseServerDriveServer };
 }
 
-describe("Atlas Operations Processing", () => {
-  bench(
-    "Reactor - Process all operations",
-    async () => {
-      const { reactor, executorManager } = await setupReactor();
-      const driveIds: string[] = [];
+async function main() {
+  const bench = new Bench({ time: 60000 });
 
-      for (const mutation of mutations) {
-        await processReactorMutation(mutation, reactor, driveIds);
+  bench
+    .add("Reactor - Process all operations", async () => {
+      let reactor: IReactor | undefined;
+
+      try {
+        const setup = await setupReactor();
+        reactor = setup.reactor;
+        const driveIds: string[] = [];
+
+        for (const mutation of mutations) {
+          await processReactorMutation(mutation, reactor, driveIds);
+        }
+      } finally {
+        if (reactor) {
+          reactor.kill();
+        }
       }
-
-      await executorManager.stop();
-    },
-    { time: 60000 },
-  );
-
-  bench(
-    "BaseServer - Process all operations",
-    async () => {
+    })
+    .add("BaseServer - Process all operations", async () => {
       const { baseServerDriveServer } = await setupBaseServer();
 
       for (const mutation of mutations) {
         await processBaseServerMutation(mutation, baseServerDriveServer);
       }
-    },
-    { time: 60000 },
-  );
-});
+    });
+
+  await bench.run();
+
+  console.log("\nAtlas Operations Processing Benchmark\n");
+  console.table(bench.table());
+}
+
+main().catch(console.error);

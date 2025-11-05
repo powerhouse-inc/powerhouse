@@ -5,7 +5,8 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "vitest run --printConsoleTrace=true --silent=false"
+    "test": "vitest run --printConsoleTrace=true --silent=false",
+    "bench": "node --import tsx bench/atlas-operations.bench.ts"
   },
   "keywords": [],
   "author": "",
@@ -16,6 +17,7 @@
     "document-model": "workspace:*"
   },
   "devDependencies": {
+    "tinybench": "^2.9.0",
     "vitest": "^3.2.4"
   }
 }

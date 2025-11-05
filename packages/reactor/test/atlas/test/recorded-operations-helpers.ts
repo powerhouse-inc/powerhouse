@@ -5,13 +5,35 @@ import type {
 import { addFile, driveDocumentModelModule } from "document-drive";
 import type { Action, DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
-import { vi } from "vitest";
-import type { Reactor } from "../../../src/core/reactor.js";
-import type { BatchMutationRequest } from "../../../src/core/types.js";
+import type {
+  BatchMutationRequest,
+  IReactor,
+} from "../../../src/core/types.js";
 import { JobStatus } from "../../../src/shared/types.js";
 
 import * as atlasModels from "@sky-ph/atlas/document-models";
 import { v4 as uuidv4 } from "uuid";
+
+async function waitUntil(
+  condition: () => boolean | Promise<boolean>,
+  options: { timeout?: number; interval?: number } = {},
+): Promise<void> {
+  const { timeout = 30000, interval = 100 } = options;
+  const startTime = Date.now();
+
+  while (true) {
+    const result = await condition();
+    if (result) {
+      return;
+    }
+
+    if (Date.now() - startTime > timeout) {
+      throw new Error("waitUntil timeout exceeded");
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, interval));
+  }
+}
 
 export interface RecordedOperation {
   type: string;
@@ -72,7 +94,7 @@ export function getDocumentModels(): DocumentModelModule[] {
 
 export async function processReactorMutation(
   mutation: RecordedOperation,
-  reactor: Reactor,
+  reactor: IReactor,
   driveIds?: string[],
 ): Promise<void> {
   const { name, args } = mutation;
@@ -105,7 +127,7 @@ export async function processReactorMutation(
     driveDoc.state.local.triggers = [];
 
     const jobInfo = await reactor.create(driveDoc);
-    await vi.waitUntil(async () => {
+    await waitUntil(async () => {
       const status = await reactor.getJobStatus(jobInfo.id);
       if (status.status === JobStatus.FAILED) {
         const errorMessage = status.error?.message ?? "unknown error";
@@ -132,7 +154,7 @@ export async function processReactorMutation(
       fileDoc.header.name = driveAction.input.name;
 
       const createJobInfo = await reactor.create(fileDoc);
-      await vi.waitUntil(async () => {
+      await waitUntil(async () => {
         const status = await reactor.getJobStatus(createJobInfo.id);
         if (status.status === JobStatus.FAILED) {
           const errorMessage = status.error?.message ?? "unknown error";
@@ -183,7 +205,7 @@ export async function processReactorMutation(
 
       const result = await reactor.mutateBatch(batchRequest);
 
-      await vi.waitUntil(async () => {
+      await waitUntil(async () => {
         const addFileStatus = await reactor.getJobStatus(
           result.jobs.addFile.id,
         );
@@ -208,7 +230,7 @@ export async function processReactorMutation(
       const cleanedAction = removeSynchronizationUnits(driveAction) as Action;
 
       const jobInfo = await reactor.mutate(driveId, [cleanedAction]);
-      await vi.waitUntil(async () => {
+      await waitUntil(async () => {
         const status = await reactor.getJobStatus(jobInfo.id);
         if (status.status === JobStatus.FAILED) {
           const errorMessage = status.error?.message ?? "unknown error";
@@ -222,7 +244,7 @@ export async function processReactorMutation(
     const cleanedAction = removeSynchronizationUnits(action) as Action;
 
     const jobInfo = await reactor.mutate(docId, [cleanedAction]);
-    await vi.waitUntil(async () => {
+    await waitUntil(async () => {
       const status = await reactor.getJobStatus(jobInfo.id);
       if (status.status === JobStatus.FAILED) {
         throw new Error(
