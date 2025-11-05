@@ -7,8 +7,8 @@
   "scripts": {
     "test": "vitest run --printConsoleTrace=true --silent=false",
     "bench": "node --import tsx bench/atlas-operations.bench.ts",
-    "profile:mutation:sequential": "node --cpu-prof --cpu-prof-name='single-mutation-sequential.cpuprofile' --import tsx scripts/run-single-mutation.ts -- --mode=sequential",
-    "profile:mutation:batch": "node --cpu-prof --cpu-prof-name='single-mutation-batch.cpuprofile' --import tsx scripts/run-single-mutation.ts -- --mode=batch"
+    "profile:mutation:sequential": "node --import tsx scripts/run-single-mutation.ts -- --mode=sequential --profile-output=profiles/single-mutation-sequential.cpuprofile",
+    "profile:mutation:batch": "node --import tsx scripts/run-single-mutation.ts -- --mode=batch --profile-output=profiles/single-mutation-batch.cpuprofile"
   },
   "keywords": [],
   "author": "",

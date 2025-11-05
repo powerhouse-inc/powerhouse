@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import inspector from "node:inspector";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -17,6 +18,11 @@ const __dirname = path.dirname(__filename);
 
 type ExecutionMode = "sequential" | "batch";
 
+interface CliOptions {
+  mode: ExecutionMode;
+  profileOutput?: string;
+}
+
 function loadMutations(): RecordedOperation[] {
   const recordedOpsPath = path.join(
     __dirname,
@@ -32,20 +38,23 @@ async function createReactor(): Promise<IReactor> {
   return new ReactorBuilder().withDocumentModels(documentModels).build();
 }
 
-function parseExecutionMode(): ExecutionMode {
-  const arg = process.argv.find((value) => value.startsWith("--mode="));
-  if (!arg) {
-    return "sequential";
-  }
+function parseCliOptions(): CliOptions {
+  const modeArg = process.argv.find((value) => value.startsWith("--mode="));
+  const profileArg = process.argv.find((value) =>
+    value.startsWith("--profile-output="),
+  );
 
-  const mode = arg.split("=")[1];
+  const mode = modeArg ? modeArg.split("=")[1] : "sequential";
+
   if (mode !== "sequential" && mode !== "batch") {
     throw new Error(
       `Invalid mode "${mode}". Supported values are "sequential" or "batch".`,
     );
   }
 
-  return mode;
+  const profileOutput = profileArg ? profileArg.split("=")[1] : undefined;
+
+  return { mode, profileOutput };
 }
 
 async function runSequential(
@@ -109,24 +118,77 @@ async function runBatch(
   await waitForBatchCompletion(reactor, result.jobs);
 }
 
+async function withProfiling<T>(
+  outputPath: string | undefined,
+  fn: () => Promise<T>,
+): Promise<T> {
+  if (!outputPath) {
+    return fn();
+  }
+
+  const session = new inspector.Session();
+  session.connect();
+
+  const post = <TParams, TResult>(
+    method: string,
+    params?: TParams,
+  ): Promise<TResult> =>
+    new Promise((resolve, reject) => {
+      session.post(
+        method,
+        // @ts-expect-error - ignore
+        params ?? ({} as TParams),
+        // @ts-expect-error - ignore
+        (error, result: TResult) => {
+          if (error) {
+            reject(error as Error);
+          } else {
+            resolve(result);
+          }
+        },
+      );
+    });
+
+  await post("Profiler.enable");
+  await post("Profiler.start");
+
+  try {
+    const result = await fn();
+    const { profile } = await post<undefined, { profile: unknown }>(
+      "Profiler.stop",
+    );
+
+    const dir = path.dirname(outputPath);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(outputPath, JSON.stringify(profile));
+    console.log(`CPU profile written to ${outputPath}`);
+
+    return result;
+  } finally {
+    session.disconnect();
+  }
+}
+
 async function run(): Promise<void> {
   const mutations = loadMutations();
-  const mode = parseExecutionMode();
+  const { mode, profileOutput } = parseCliOptions();
 
   const reactor = await createReactor();
 
   console.log(`Initialized reactor (mode=${mode}).`);
 
-  try {
-    if (mode === "batch") {
-      await runBatch(reactor, mutations);
-    } else {
-      await runSequential(reactor, mutations);
+  await withProfiling(profileOutput, async () => {
+    try {
+      if (mode === "batch") {
+        await runBatch(reactor, mutations);
+      } else {
+        await runSequential(reactor, mutations);
+      }
+      console.log("Mutations processed successfully.");
+    } finally {
+      reactor.kill();
     }
-    console.log("Mutations processed successfully.");
-  } finally {
-    reactor.kill();
-  }
+  });
 }
 
 run().catch((error) => {
