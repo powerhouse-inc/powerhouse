@@ -1,3 +1,13 @@
+## 5.0.1-staging.9 (2025-11-05)
+
+### 🩹 Fixes
+
+- **switchboard:** use POSIX-compliant syntax ([21262f7ce](https://github.com/powerhouse-inc/powerhouse/commit/21262f7ce))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.0.1-staging.8 (2025-11-04)
 
 This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
