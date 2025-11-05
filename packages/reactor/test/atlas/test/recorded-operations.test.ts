@@ -1,11 +1,20 @@
-import type { BaseDocumentDriveServer } from "document-drive";
-import {
-  MemoryStorage,
-  ReactorBuilder as DriveReactorBuilder,
+import type {
+  BaseDocumentDriveServer,
+  IDocumentOperationStorage,
+  IDocumentStorage,
 } from "document-drive";
+import {
+  ReactorBuilder as DriveReactorBuilder,
+  MemoryStorage,
+} from "document-drive";
+import { Kysely } from "kysely";
+import { KyselyPGlite } from "kysely-pglite";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, it } from "vitest";
+import { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";
+import type { WriteCacheConfig } from "../../../src/cache/types.js";
+import { Reactor } from "../../../src/core/reactor.js";
 import { EventBus } from "../../../src/events/event-bus.js";
 import { SimpleJobExecutorManager } from "../../../src/executor/simple-job-executor-manager.js";
 import { SimpleJobExecutor } from "../../../src/executor/simple-job-executor.js";
@@ -13,32 +22,27 @@ import { InMemoryJobTracker } from "../../../src/job-tracker/in-memory-job-track
 import { InMemoryQueue } from "../../../src/queue/queue.js";
 import { ReadModelCoordinator } from "../../../src/read-models/coordinator.js";
 import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
+import type { DocumentViewDatabase } from "../../../src/read-models/types.js";
 import { DocumentModelRegistry } from "../../../src/registry/implementation.js";
 import { ConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
+import { JobStatus } from "../../../src/shared/types.js";
 import { KyselyDocumentIndexer } from "../../../src/storage/kysely/document-indexer.js";
-import { Reactor } from "../../../src/core/reactor.js";
+import { KyselyKeyframeStore } from "../../../src/storage/kysely/keyframe-store.js";
+import { KyselyOperationStore } from "../../../src/storage/kysely/store.js";
+import type {
+  DocumentIndexerDatabase,
+  Database as StorageDatabase,
+} from "../../../src/storage/kysely/types.js";
 import {
   createMockDocumentIndexer as createMockDocumentIndexerHelper,
   createMockDocumentView as createMockDocumentViewHelper,
 } from "../../factories.js";
-import type {
-  IDocumentStorage,
-  IDocumentOperationStorage,
-} from "document-drive";
-import { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";
-import type { WriteCacheConfig } from "../../../src/cache/types.js";
-import { KyselyKeyframeStore } from "../../../src/storage/kysely/keyframe-store.js";
-import { KyselyOperationStore } from "../../../src/storage/kysely/store.js";
-import { Kysely } from "kysely";
-import { KyselyPGlite } from "kysely-pglite";
-import type { Database as StorageDatabase } from "../../../src/storage/kysely/types.js";
-import type { DocumentViewDatabase } from "../../../src/read-models/types.js";
-import type { DocumentIndexerDatabase } from "../../../src/storage/kysely/types.js";
 import {
   type RecordedOperation,
   getDocumentModels,
   processBaseServerMutation,
   processReactorMutation,
+  submitAllMutationsWithQueueHints,
 } from "./recorded-operations-helpers.js";
 
 type Database = StorageDatabase &
@@ -259,6 +263,75 @@ describe("Atlas Recorded Operations Reactor Test", () => {
         await processReactorMutation(mutation, setup.reactor);
       }
 
+      await setup.cleanup();
+    },
+    { timeout: 100000 },
+  );
+
+  it(
+    "should submit all mutations with queue hints and process them correctly",
+    async () => {
+      const setup = await createReactorSetup(true, true);
+
+      const recordedOpsContent = readFileSync(
+        path.join(__dirname, "recorded-operations.json"),
+        "utf-8",
+      );
+      const operations: RecordedOperation[] = JSON.parse(recordedOpsContent);
+      const mutations = operations.filter((op) => op.type === "mutation");
+
+      console.log(
+        `Submitting ${mutations.length} mutations with queue hints...`,
+      );
+
+      const batchResult = await submitAllMutationsWithQueueHints(
+        mutations,
+        setup.reactor,
+      );
+
+      const jobIds = Object.values(batchResult.jobs).map((job) => job.id);
+      console.log(`Submitted ${jobIds.length} jobs`);
+
+      const waitForAllJobs = async (): Promise<void> => {
+        const timeout = 100000;
+        const interval = 100;
+        const startTime = Date.now();
+
+        while (true) {
+          const statuses = await Promise.all(
+            jobIds.map((jobId) => setup.reactor.getJobStatus(jobId)),
+          );
+
+          const allCompleted = statuses.every(
+            (status) => status.status === JobStatus.COMPLETED,
+          );
+          const anyFailed = statuses.some(
+            (status) => status.status === JobStatus.FAILED,
+          );
+
+          if (anyFailed) {
+            const failedJobs = statuses.filter(
+              (status) => status.status === JobStatus.FAILED,
+            );
+            throw new Error(
+              `Some jobs failed: ${failedJobs.map((job) => `${job.id}: ${job.error?.message}`).join(", ")}`,
+            );
+          }
+
+          if (allCompleted) {
+            console.log("All jobs completed successfully");
+            return;
+          }
+
+          if (Date.now() - startTime > timeout) {
+            throw new Error("Timeout waiting for all jobs to complete");
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, interval));
+        }
+      };
+
+      await waitForAllJobs();
       await setup.cleanup();
     },
     { timeout: 100000 },
