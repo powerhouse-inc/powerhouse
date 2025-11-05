@@ -37,13 +37,11 @@ ARG TAG=latest
 ENV TAG=$TAG
 # RUN apk add --no-cache openssl
 RUN pnpm add -g ph-cmd@$TAG prisma
-RUN if [[ "$TAG" == *"dev"* ]]; then \
-        ph init project --dev --package-manager pnpm; \
-    elif [[ "$TAG" == *"staging"* ]]; then \
-        ph init project --staging --package-manager pnpm; \
-    else \
-        ph init project --package-manager pnpm; \
-    fi
+RUN case "$TAG" in \
+        *dev*) ph init project --dev --package-manager pnpm ;; \
+        *staging*) ph init project --staging --package-manager pnpm ;; \
+        *) ph init project --package-manager pnpm ;; \
+    esac
 
 
 WORKDIR /app/project
