@@ -113,7 +113,12 @@ export function phExternalPackagesPlugin(phPackages: string[]) {
       const importedModules =
         localPackageModules.get(localPackage) || new Set<string>();
       const virtualModule = server.moduleGraph.getModuleById(virtualModuleId);
-      if (virtualModule && !packageModules) {
+
+      if (
+        virtualModule &&
+        !packageModules &&
+        virtualModule.importedModules.size > 0 // wait for virtual module to be built
+      ) {
         buildImportedModulesSet(virtualModule, localPackage, importedModules);
         localPackageModules.set(localPackage, importedModules);
       }

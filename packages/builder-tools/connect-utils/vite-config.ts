@@ -112,15 +112,27 @@ function viteOptionsToEnv(options: IConnectOptions) {
   return optionsEnv;
 }
 
-function viteLogger(warningsToSilence: string[]) {
+function viteLogger({
+  silence,
+}: {
+  silence?: { warnings?: string[]; errors?: string[] };
+}) {
   const logger = createLogger();
   const loggerWarn = logger.warn.bind(logger);
+  const loggerError = logger.error.bind(logger);
 
   logger.warn = (msg, options) => {
-    if (warningsToSilence.some((warning) => msg.includes(warning))) {
+    if (silence?.warnings?.some((warning) => msg.includes(warning))) {
       return;
     }
     loggerWarn(msg, options);
+  };
+
+  logger.error = (msg, options) => {
+    if (silence?.errors?.some((error) => msg.includes(error))) {
+      return;
+    }
+    loggerError(msg, options);
   };
 
   return logger;
@@ -254,10 +266,14 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     process.env.LOG_LEVEL === "debug" || env.PH_CONNECT_LOG_LEVEL === "debug";
   const customLogger = isDebug
     ? undefined
-    : viteLogger([
-        "@import must precede all other statements (besides @charset or empty @layer)",
-        "@electric-sql+pglite",
-      ]);
+    : viteLogger({
+        silence: {
+          warnings: [
+            "@import must precede all other statements (besides @charset or empty @layer)", // tailwindcss error when importing font file
+          ],
+          errors: ["Unterminated string literal"],
+        },
+      });
 
   const config: UserConfig = {
     base: basePath,
@@ -278,15 +294,6 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
         strict: false,
       },
       port: phConfig.studio?.port,
-      warmup: {
-        clientFiles: [
-          `./index.html`,
-          `!./${join("./", phConfig.documentModelsDir, "**/*.test.ts")}`,
-          `./${join("./", phConfig.documentModelsDir, "**/*.ts")}`,
-          `./${join("./", phConfig.editorsDir, "**/*.ts")}`,
-          `./${join("./", phConfig.editorsDir, "**/*.tsx")}`,
-        ],
-      },
     },
     worker: {
       format: "es",
