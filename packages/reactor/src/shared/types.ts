@@ -55,6 +55,7 @@ export type JobInfo = {
   error?: ErrorInfo;
   errorHistory?: ErrorInfo[];
   result?: any;
+  consistencyToken: ConsistencyToken;
 };
 
 /**
@@ -110,4 +111,29 @@ export type PagedResults<T> = {
 
   next?: () => Promise<PagedResults<T>>;
   nextCursor?: string;
+};
+
+/**
+ * A string key in the format `documentId:scope:branch` used to identify a consistency checkpoint.
+ */
+export type ConsistencyKey = `${string}:${string}:${string}`;
+
+/**
+ * Describes a specific point in a document's operation history.
+ */
+export type ConsistencyCoordinate = {
+  documentId: string;
+  scope: string;
+  branch: string;
+  operationIndex: number;
+};
+
+/**
+ * A token that captures the state of write operations at a point in time.
+ * Can be used to ensure read-after-write consistency.
+ */
+export type ConsistencyToken = {
+  version: 1;
+  createdAtUtcIso: string;
+  coordinates: ConsistencyCoordinate[];
 };

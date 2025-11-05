@@ -19,6 +19,7 @@ import { ReadModelCoordinator } from "../read-models/coordinator.js";
 import { KyselyDocumentView } from "../read-models/document-view.js";
 import type { IReadModel } from "../read-models/interfaces.js";
 import { DocumentModelRegistry } from "../registry/implementation.js";
+import { ConsistencyTracker } from "../shared/consistency-tracker.js";
 import { KyselyDocumentIndexer } from "../storage/kysely/document-indexer.js";
 import { KyselyKeyframeStore } from "../storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../storage/kysely/store.js";
@@ -34,6 +35,13 @@ import type {
 import type { IJobExecutorManager } from "#executor/interfaces.js";
 import { Kysely } from "kysely";
 import { KyselyPGlite } from "kysely-pglite";
+import type { IEventBus } from "../events/interfaces.js";
+import type { IReadModelCoordinator } from "../read-models/interfaces.js";
+
+export type IReadModelCoordinatorFactory = (
+  eventBus: IEventBus,
+  readModels: IReadModel[],
+) => IReadModelCoordinator;
 
 export class ReactorBuilder {
   private documentModels: DocumentModelModule[] = [];
@@ -43,6 +51,7 @@ export class ReactorBuilder {
   private executorManager: IJobExecutorManager | undefined;
   private executorConfig: ExecutorConfig = { count: 1 };
   private writeCacheConfig?: Partial<WriteCacheConfig>;
+  private readModelCoordinatorFactory?: IReadModelCoordinatorFactory;
 
   withDocumentModels(models: DocumentModelModule[]): this {
     this.documentModels = models;
@@ -63,6 +72,11 @@ export class ReactorBuilder {
 
   withReadModel(readModel: IReadModel): this {
     this.readModels.push(readModel);
+    return this;
+  }
+
+  withReadModelCoordinatorFactory(factory: IReadModelCoordinatorFactory): this {
+    this.readModelCoordinatorFactory = factory;
     return this;
   }
 
@@ -214,20 +228,29 @@ export class ReactorBuilder {
       new Set([...this.readModels]),
     );
 
-    // @ts-expect-error - Database type is a superset that includes all required tables
-    const documentView = new KyselyDocumentView(db, operationStore);
+    const documentViewConsistencyTracker = new ConsistencyTracker();
+    const documentView = new KyselyDocumentView(
+      // @ts-expect-error - Database type is a superset that includes all required tables
+      db,
+      operationStore,
+      documentViewConsistencyTracker,
+    );
     await documentView.init();
     readModelInstances.push(documentView);
 
-    // @ts-expect-error - Database type is a superset that includes all required tables
-    const documentIndexer = new KyselyDocumentIndexer(db, operationStore);
+    const documentIndexerConsistencyTracker = new ConsistencyTracker();
+    const documentIndexer = new KyselyDocumentIndexer(
+      // @ts-expect-error - Database type is a superset that includes all required tables
+      db,
+      operationStore,
+      documentIndexerConsistencyTracker,
+    );
     await documentIndexer.init();
     readModelInstances.push(documentIndexer);
 
-    const readModelCoordinator = new ReadModelCoordinator(
-      eventBus,
-      readModelInstances,
-    );
+    const readModelCoordinator = this.readModelCoordinatorFactory
+      ? this.readModelCoordinatorFactory(eventBus, readModelInstances)
+      : new ReadModelCoordinator(eventBus, readModelInstances);
     readModelCoordinator.start();
 
     return new Reactor(
@@ -236,6 +259,10 @@ export class ReactorBuilder {
       queue,
       jobTracker,
       readModelCoordinator,
+      this.features,
+      documentView,
+      documentIndexer,
+      operationStore,
     );
   }
 }

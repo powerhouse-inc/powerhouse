@@ -11,9 +11,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@sky-ph/atlas": "^1.5.1",
-    "document-model": "workspace:*",
-    "document-drive": "workspace:*"
+    "@sky-ph/atlas": "2.0.0-canary.1",
+    "document-drive": "workspace:*",
+    "document-model": "workspace:*"
   },
   "devDependencies": {
     "vitest": "^3.2.4"

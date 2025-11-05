@@ -310,6 +310,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       job,
       success: true,
       operations: generatedOperations,
+      operationsWithContext,
       duration: Date.now() - startTime,
     };
   }

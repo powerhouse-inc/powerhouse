@@ -1,6 +1,11 @@
 import type { Operation } from "document-model";
 import type { Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
+import type { IConsistencyTracker } from "../../shared/consistency-tracker.js";
+import type {
+  ConsistencyCoordinate,
+  ConsistencyToken,
+} from "../../shared/types.js";
 import type {
   DocumentGraphEdge,
   DocumentRelationship,
@@ -23,6 +28,7 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
   constructor(
     private db: Kysely<Database>,
     private operationStore: IOperationStore,
+    private consistencyTracker: IConsistencyTracker,
   ) {}
 
   async init(): Promise<void> {
@@ -85,13 +91,40 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
           .execute();
       }
     });
+
+    const coordinates: ConsistencyCoordinate[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]!;
+      coordinates.push({
+        documentId: item.context.documentId,
+        scope: item.context.scope,
+        branch: item.context.branch,
+        operationIndex: item.operation.index,
+      });
+    }
+    this.consistencyTracker.update(coordinates);
+  }
+
+  async waitForConsistency(
+    token: ConsistencyToken,
+    timeoutMs?: number,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    if (token.coordinates.length === 0) {
+      return;
+    }
+    await this.consistencyTracker.waitFor(token.coordinates, timeoutMs, signal);
   }
 
   async getOutgoing(
     documentId: string,
     types?: string[],
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<DocumentRelationship[]> {
+    if (consistencyToken) {
+      await this.waitForConsistency(consistencyToken, undefined, signal);
+    }
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
@@ -122,8 +155,13 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
   async getIncoming(
     documentId: string,
     types?: string[],
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<DocumentRelationship[]> {
+    if (consistencyToken) {
+      await this.waitForConsistency(consistencyToken, undefined, signal);
+    }
+
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
@@ -155,8 +193,13 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
     sourceId: string,
     targetId: string,
     types?: string[],
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<boolean> {
+    if (consistencyToken) {
+      await this.waitForConsistency(consistencyToken, undefined, signal);
+    }
+
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
@@ -176,12 +219,60 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
     return result !== undefined;
   }
 
+  async getUndirectedRelationships(
+    a: string,
+    b: string,
+    types?: string[],
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<DocumentRelationship[]> {
+    if (consistencyToken) {
+      await this.waitForConsistency(consistencyToken, undefined, signal);
+    }
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    let query = this.db
+      .selectFrom("DocumentRelationship")
+      .selectAll()
+      .where((eb) =>
+        eb.or([
+          eb.and([eb("sourceId", "=", a), eb("targetId", "=", b)]),
+          eb.and([eb("sourceId", "=", b), eb("targetId", "=", a)]),
+        ]),
+      );
+
+    if (types && types.length > 0) {
+      query = query.where("relationshipType", "in", types);
+    }
+
+    const rows = await query.execute();
+
+    return rows.map((row) => ({
+      sourceId: row.sourceId,
+      targetId: row.targetId,
+      relationshipType: row.relationshipType,
+      metadata: row.metadata
+        ? (JSON.parse(row.metadata) as Record<string, unknown>)
+        : undefined,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }));
+  }
+
   async getDirectedRelationships(
     sourceId: string,
     targetId: string,
     types?: string[],
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<DocumentRelationship[]> {
+    if (consistencyToken) {
+      await this.waitForConsistency(consistencyToken, undefined, signal);
+    }
+
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
@@ -214,8 +305,13 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
     sourceId: string,
     targetId: string,
     types?: string[],
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<string[] | null> {
+    if (consistencyToken) {
+      await this.waitForConsistency(consistencyToken, undefined, signal);
+    }
+
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
@@ -242,7 +338,12 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
 
       visited.add(current.id);
 
-      const outgoing = await this.getOutgoing(current.id, types, signal);
+      const outgoing = await this.getOutgoing(
+        current.id,
+        types,
+        undefined,
+        signal,
+      );
 
       for (const rel of outgoing) {
         if (!visited.has(rel.targetId)) {
@@ -260,8 +361,13 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
   async findAncestors(
     documentId: string,
     types?: string[],
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<IDocumentGraph> {
+    if (consistencyToken) {
+      await this.waitForConsistency(consistencyToken, undefined, signal);
+    }
+
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
@@ -280,7 +386,12 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
 
       visited.add(currentId);
 
-      const incoming = await this.getIncoming(currentId, types, signal);
+      const incoming = await this.getIncoming(
+        currentId,
+        types,
+        undefined,
+        signal,
+      );
 
       for (const rel of incoming) {
         nodes.add(rel.sourceId);
@@ -302,7 +413,14 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
     };
   }
 
-  async getRelationshipTypes(signal?: AbortSignal): Promise<string[]> {
+  async getRelationshipTypes(
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<string[]> {
+    if (consistencyToken) {
+      await this.waitForConsistency(consistencyToken, undefined, signal);
+    }
+
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }

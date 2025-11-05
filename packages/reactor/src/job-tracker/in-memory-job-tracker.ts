@@ -1,4 +1,5 @@
-import type { ErrorInfo } from "../shared/types.js";
+import { createEmptyConsistencyToken } from "../executor/util.js";
+import type { ConsistencyToken, ErrorInfo } from "../shared/types.js";
 import { JobStatus, type JobInfo } from "../shared/types.js";
 import type { IJobTracker } from "./interfaces.js";
 
@@ -22,6 +23,7 @@ export class InMemoryJobTracker implements IJobTracker {
         id: jobId,
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       });
       return;
     }
@@ -33,7 +35,11 @@ export class InMemoryJobTracker implements IJobTracker {
     });
   }
 
-  markCompleted(jobId: string, result?: any): void {
+  markCompleted(
+    jobId: string,
+    consistencyToken: ConsistencyToken,
+    result?: any,
+  ): void {
     const job = this.jobs.get(jobId);
     if (!job) {
       // Job not found - create minimal completed entry
@@ -44,6 +50,7 @@ export class InMemoryJobTracker implements IJobTracker {
         completedAtUtcIso: new Date().toISOString(),
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         result,
+        consistencyToken,
       });
       return;
     }
@@ -55,6 +62,7 @@ export class InMemoryJobTracker implements IJobTracker {
       completedAtUtcIso: new Date().toISOString(),
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       result,
+      consistencyToken,
     });
   }
 
@@ -68,6 +76,7 @@ export class InMemoryJobTracker implements IJobTracker {
         createdAtUtcIso: new Date().toISOString(),
         completedAtUtcIso: new Date().toISOString(),
         error,
+        consistencyToken: createEmptyConsistencyToken(),
       });
       return;
     }
@@ -78,6 +87,7 @@ export class InMemoryJobTracker implements IJobTracker {
       status: JobStatus.FAILED,
       completedAtUtcIso: new Date().toISOString(),
       error,
+      consistencyToken: createEmptyConsistencyToken(),
     });
   }
 

@@ -7,6 +7,7 @@ import { Kysely } from "kysely";
 import { KyselyPGlite } from "kysely-pglite";
 import { v4 as uuidv4 } from "uuid";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { IConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
 import type {
   IOperationStore,
   OperationContext,
@@ -22,6 +23,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
   let db: Kysely<Database & DocumentIndexerDatabase>;
   let indexer: KyselyDocumentIndexer;
   let mockOperationStore: IOperationStore;
+  let mockConsistencyTracker: IConsistencyTracker;
 
   beforeEach(async () => {
     const kyselyPGlite = await KyselyPGlite.create();
@@ -36,7 +38,19 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
       getRevisions: vi.fn(),
     };
 
-    indexer = new KyselyDocumentIndexer(db, mockOperationStore);
+    mockConsistencyTracker = {
+      update: vi.fn(),
+      getLatest: vi.fn(),
+      waitFor: vi.fn().mockResolvedValue(undefined),
+      serialize: vi.fn(),
+      hydrate: vi.fn(),
+    };
+
+    indexer = new KyselyDocumentIndexer(
+      db,
+      mockOperationStore,
+      mockConsistencyTracker,
+    );
     await indexer.init();
   });
 
@@ -100,7 +114,11 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
         .fn()
         .mockResolvedValue({ items: operations, hasMore: false });
 
-      const newIndexer = new KyselyDocumentIndexer(db, mockOperationStore);
+      const newIndexer = new KyselyDocumentIndexer(
+        db,
+        mockOperationStore,
+        mockConsistencyTracker,
+      );
       await newIndexer.init();
 
       const relationships = await newIndexer.getOutgoing("doc1");
@@ -439,7 +457,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
       controller.abort();
 
       await expect(
-        indexer.getOutgoing("parent", undefined, controller.signal),
+        indexer.getOutgoing("parent", undefined, undefined, controller.signal),
       ).rejects.toThrow("Operation aborted");
     });
   });
@@ -563,7 +581,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
       controller.abort();
 
       await expect(
-        indexer.getIncoming("child", undefined, controller.signal),
+        indexer.getIncoming("child", undefined, undefined, controller.signal),
       ).rejects.toThrow("Operation aborted");
     });
   });
@@ -635,6 +653,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
           "parent",
           "child",
           undefined,
+          undefined,
           controller.signal,
         ),
       ).rejects.toThrow("Operation aborted");
@@ -705,6 +724,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
         indexer.getDirectedRelationships(
           "parent",
           "child",
+          undefined,
           undefined,
           controller.signal,
         ),
@@ -798,7 +818,13 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
       controller.abort();
 
       await expect(
-        indexer.findPath("doc1", "doc3", undefined, controller.signal),
+        indexer.findPath(
+          "doc1",
+          "doc3",
+          undefined,
+          undefined,
+          controller.signal,
+        ),
       ).rejects.toThrow("Operation aborted");
     });
   });
@@ -888,7 +914,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
       controller.abort();
 
       await expect(
-        indexer.findAncestors("child", undefined, controller.signal),
+        indexer.findAncestors("child", undefined, undefined, controller.signal),
       ).rejects.toThrow("Operation aborted");
     });
   });
@@ -966,7 +992,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
       controller.abort();
 
       await expect(
-        indexer.getRelationshipTypes(controller.signal),
+        indexer.getRelationshipTypes(undefined, controller.signal),
       ).rejects.toThrow("Operation aborted");
     });
   });

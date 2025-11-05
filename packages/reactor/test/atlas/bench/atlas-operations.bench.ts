@@ -14,8 +14,14 @@ import { ReadModelCoordinator } from "../../../src/read-models/coordinator.js";
 import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
 import type { DocumentViewDatabase } from "../../../src/read-models/types.js";
 import { DocumentModelRegistry } from "../../../src/registry/implementation.js";
+import { ConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
 import type { Database as StorageDatabase } from "../../../src/storage/kysely/types.js";
-import { createTestJobTracker, createTestOperationStore } from "../../../test/factories.js";
+import {
+  createMockDocumentIndexer,
+  createMockReactorFeatures,
+  createTestJobTracker,
+  createTestOperationStore,
+} from "../../../test/factories.js";
 
 import type { Kysely } from "kysely";
 import {
@@ -78,7 +84,12 @@ async function setupReactor() {
     writeCache,
   );
 
-  const documentView = new KyselyDocumentView(db, operationStore);
+  const consistencyTracker = new ConsistencyTracker();
+  const documentView = new KyselyDocumentView(
+    db,
+    operationStore,
+    consistencyTracker,
+  );
   await documentView.init();
   const readModelCoordinator = new ReadModelCoordinator(eventBus, [
     documentView,
@@ -101,6 +112,10 @@ async function setupReactor() {
     queue,
     jobTracker,
     readModelCoordinator,
+    createMockReactorFeatures(),
+    documentView,
+    createMockDocumentIndexer(),
+    operationStore,
   );
 
   return { reactor, executorManager };

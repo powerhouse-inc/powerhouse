@@ -8,6 +8,12 @@ import { EventBus } from "../../src/events/event-bus.js";
 import { InMemoryJobTracker } from "../../src/job-tracker/in-memory-job-tracker.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
 import { ReadModelCoordinator } from "../../src/read-models/coordinator.js";
+import {
+  createMockDocumentIndexer,
+  createMockDocumentView,
+  createMockOperationStore,
+  createMockReactorFeatures,
+} from "../factories.js";
 
 describe("mutateBatch validation", () => {
   const createMockDriveServer = (): BaseDocumentDriveServer => {
@@ -34,6 +40,10 @@ describe("mutateBatch validation", () => {
       queue,
       jobTracker,
       readModelCoordinator,
+      createMockReactorFeatures(),
+      createMockDocumentView(),
+      createMockDocumentIndexer(),
+      createMockOperationStore(),
     );
   };
 

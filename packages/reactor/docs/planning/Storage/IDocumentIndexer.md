@@ -6,6 +6,7 @@
 - Indexes relationships between documents.
 - Forms a graph of documents and relationships.
 - Generally just needs to listen to the System Stream.
+- Exposes `waitForConsistency` so callers can block until specific coordinates from a `ConsistencyToken` are visible (see [Shared Interfaces](../Shared/interface.md)).
 
 ### Implementations
 
@@ -16,6 +17,11 @@ Only one implementation is provided: `KyselyDocumentIndexer`. This implementatio
 The `IDocumentIndexer` must ensure that is has the lastest operation information. It may be the case that the system crashed or shutdown after operations were applied, but before the `IDocumentIndexer` was able to process the operations. In this case, the `IOperationStore` would have operations that have not yet been indexed.
 
 The indexer stores the last operation id it has processed synchronously in memory and also lazily updates the `IndexerState` table.
+
+To support read-after-write guarantees, the indexer shares the
+[Consistency Tracker](../Shared/consistency-tracker.md) with other read models.
+It updates the tracker after committing relationship changes and consults it
+inside `waitForConsistency` to decide whether callers need to block.
 
 #### Case 1: At Runtime
 
@@ -40,6 +46,22 @@ this.indexOperations(operations);
 ### Dependencies
 
 - [IOperationStore](IOperationStore.md)
+
+### Consistency Guarantees
+
+All query methods accept an optional `consistencyToken` parameter to provide read-after-write consistency guarantees. When a consistency token is provided:
+
+1. The method internally calls `waitForConsistency(token)` before executing the query
+2. The call blocks until all coordinates in the token have been indexed
+3. This ensures the query will see all effects of the write operations that produced the token
+
+**Usage Pattern:**
+```typescript
+const jobInfo = await reactor.addChildren(parentId, childIds);
+const path = await documentIndexer.findPath(parentId, childId, undefined, jobInfo.consistencyToken);
+```
+
+This pattern guarantees that the relationship query will see the effects of the write, even if the indexer is catching up asynchronously.
 
 ### Interface
 
@@ -110,6 +132,8 @@ interface IDocumentIndexer {
    * @param a - The ID of the first document.
    * @param b - The ID of the second document.
    * @param types - The types of relationships to check for, or all if not provided
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
    *
    * @returns The relationships between the two documents.
    */
@@ -117,6 +141,8 @@ interface IDocumentIndexer {
     a: string,
     b: string,
     types?: string[],
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
   ): Promise<DocumentRelationship[]>;
 
   /**
@@ -125,6 +151,8 @@ interface IDocumentIndexer {
    * @param sourceId - The ID of the source document.
    * @param targetId - The ID of the target document.
    * @param types - The types of relationships to check for, or all if not provided
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
    *
    * @returns The relationships from the document to the other document.
    */
@@ -132,22 +160,25 @@ interface IDocumentIndexer {
     sourceId: string,
     targetId: string,
     types?: string[],
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
   ): Promise<DocumentRelationship[]>;
 
-  /**
-   * Retrieves all relationships from a document.
-   */
   /**
    * Retrieves all relationships from a document.
    *
    * @param documentId - The ID of the document.
    * @param types - The types of relationships to check for, or all if not provided
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
    *
    * @returns The relationships from the document.
    */
   getOutgoing(
     documentId: string,
     types?: string[],
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
   ): Promise<DocumentRelationship[]>;
 
   /**
@@ -155,12 +186,16 @@ interface IDocumentIndexer {
    *
    * @param documentId - The ID of the document.
    * @param types - The types of relationships to check for, or all if not provided
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
    *
    * @returns The relationships into the document.
    */
   getIncoming(
     documentId: string,
     types?: string[],
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
   ): Promise<DocumentRelationship[]>;
 
   /**
@@ -169,6 +204,8 @@ interface IDocumentIndexer {
    * @param sourceId - The ID of the source document.
    * @param targetId - The ID of the target document.
    * @param types - The types of relationships to check for, or all if not provided
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
    *
    * @returns The path between the two documents, or null if no path exists.
    */
@@ -176,6 +213,8 @@ interface IDocumentIndexer {
     sourceId: string,
     targetId: string,
     types?: string[],
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
   ): Promise<string[] | null>;
 
   /**
@@ -183,10 +222,17 @@ interface IDocumentIndexer {
    *
    * @param documentId - The ID of the document.
    * @param types - The types of relationships to check for, or all if not provided
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
    *
    * @returns The ancestor graph of the document.
    */
-  findAncestors(documentId: string, types?: string[]): Promise<IDocumentGraph>;
+  findAncestors(
+    documentId: string,
+    types?: string[],
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<IDocumentGraph>;
 
   /**
    * Checks if a relationship exists between two documents.
@@ -194,6 +240,8 @@ interface IDocumentIndexer {
    * @param sourceId - The ID of the source document.
    * @param targetId - The ID of the target document.
    * @param types - The types of relationships to check for, or all if not provided
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
    *
    * @returns True if a relationship exists, false otherwise.
    */
@@ -201,12 +249,34 @@ interface IDocumentIndexer {
     sourceId: string,
     targetId: string,
     types?: string[],
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
   ): Promise<boolean>;
 
   /**
    * Retrieves all possible relationship types.
+   *
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
    */
-  getRelationshipTypes(): Promise<string[]>;
+  getRelationshipTypes(
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<string[]>;
+
+  /**
+   * Blocks until the indexer has processed the coordinates referenced by the
+   * provided consistency token.
+   *
+   * @param token - Consistency token derived from the originating job
+   * @param timeoutMs - Optional timeout window in milliseconds
+   * @param signal - Optional abort signal to cancel the wait
+   */
+  waitForConsistency(
+    token: ConsistencyToken,
+    timeoutMs?: number,
+    signal?: AbortSignal,
+  ): Promise<void>;
 }
 ```
 

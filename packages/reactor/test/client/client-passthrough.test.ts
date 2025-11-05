@@ -22,7 +22,10 @@ import { DocumentModelRegistry } from "../../src/registry/implementation.js";
 import type { ISigner } from "../../src/signer/types.js";
 import {
   createDocModelDocument,
+  createMockDocumentIndexer,
+  createMockDocumentView,
   createMockOperationStore,
+  createMockReactorFeatures,
   createMockReadModelCoordinator,
   createTestDocuments,
   createTestJobTracker,
@@ -109,6 +112,10 @@ describe("ReactorClient Passthrough Functions", () => {
       queue,
       jobTracker,
       readModelCoordinator,
+      createMockReactorFeatures(),
+      createMockDocumentView(),
+      createMockDocumentIndexer(),
+      createMockOperationStore(),
     );
 
     // Create mock signer for testing
@@ -195,7 +202,13 @@ describe("ReactorClient Passthrough Functions", () => {
       const signal = new AbortController().signal;
 
       // Get result from reactor
-      const reactorResult = await reactor.find(search, view, paging, signal);
+      const reactorResult = await reactor.find(
+        search,
+        view,
+        paging,
+        undefined,
+        signal,
+      );
 
       // Get result from client
       const clientResult = await client.find(search, view, paging, signal);
@@ -247,7 +260,7 @@ describe("ReactorClient Passthrough Functions", () => {
       const signal = new AbortController().signal;
 
       // Get result from reactor
-      const reactorResult = await reactor.get(id, view, signal);
+      const reactorResult = await reactor.get(id, view, undefined, signal);
 
       // Get result from client
       const clientResult = await client.get(id, view, signal);
@@ -262,7 +275,12 @@ describe("ReactorClient Passthrough Functions", () => {
       const signal = new AbortController().signal;
 
       // Get result from reactor using getBySlug
-      const reactorResult = await reactor.getBySlug(slug, view, signal);
+      const reactorResult = await reactor.getBySlug(
+        slug,
+        view,
+        undefined,
+        signal,
+      );
 
       // Get result from client (should automatically detect this is a slug)
       const clientResult = await client.get(slug, view, signal);

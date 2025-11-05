@@ -3,6 +3,8 @@
 ### Summary
 
 Manages DocumentModels and Documents with an asynchronous interface.
+- Surfaces `ConsistencyToken`s from completed jobs and coordinates with read models
+  to provide read-after-write guarantees when callers supply those tokens.
 
 ### Dependencies
 

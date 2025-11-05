@@ -26,12 +26,14 @@ interface IReactor {
    *
    * @param id - Required, this is the document id
    * @param view - Optional filter containing branch and scopes information
+   * @param consistencyToken - Optional consistency token to enforce read-after-write semantics
    * @param signal - Optional abort signal to cancel the request
    * @returns The up-to-date PHDocument with scopes and list of child document ids
    */
   get<TDocument extends PHDocument>(
     id: string,
     view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<{
     document: TDocument;
@@ -43,12 +45,14 @@ interface IReactor {
    *
    * @param slug - Required, this is the document slug
    * @param view - Optional filter containing branch and scopes information
+   * @param consistencyToken - Optional consistency token to enforce read-after-write semantics
    * @param signal - Optional abort signal to cancel the request
    * @returns The up-to-date PHDocument with scopes and list of child document ids
    */
   getBySlug<TDocument extends PHDocument>(
     slug: string,
     view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<{
     document: TDocument;
@@ -61,6 +65,7 @@ interface IReactor {
    * @param documentId - The document id
    * @param view - Optional filter containing branch and scopes information
    * @param paging - Optional pagination options
+   * @param consistencyToken - Optional consistency token to enforce read-after-write semantics
    * @param signal - Optional abort signal to cancel the request
    * @returns The list of operations
    */
@@ -68,6 +73,7 @@ interface IReactor {
     documentId: string,
     view?: ViewFilter,
     paging?: PagingOptions,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<PagedResults<Operation>>;
 
@@ -77,6 +83,7 @@ interface IReactor {
    * @param search - Search filter options (type, parentId, identifiers)
    * @param view - Optional filter containing branch and scopes information
    * @param paging - Optional pagination options
+   * @param consistencyToken - Optional consistency token to enforce read-after-write semantics
    * @param signal - Optional abort signal to cancel the request
    * @returns List of documents matching criteria and pagination cursor
    */
@@ -84,6 +91,7 @@ interface IReactor {
     search: SearchFilter,
     view?: ViewFilter,
     paging?: PagingOptions,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>>;
 
@@ -92,9 +100,9 @@ interface IReactor {
    *
    * @param document - Document with optional id, slug, parent, model type, and initial state
    * @param signal - Optional abort signal to cancel the request
-   * @returns The job status
+   * @returns The job info including consistency token
    */
-  create(document: PHDocument, signal?: AbortSignal): Promise<JobStatus>;
+  create(document: PHDocument, signal?: AbortSignal): Promise<JobInfo>;
 
   /**
    * Deletes a document

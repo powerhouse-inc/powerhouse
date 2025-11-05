@@ -14,8 +14,13 @@ import { InMemoryQueue } from "../../../src/queue/queue.js";
 import { ReadModelCoordinator } from "../../../src/read-models/coordinator.js";
 import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
 import { DocumentModelRegistry } from "../../../src/registry/implementation.js";
+import { ConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
 import { KyselyDocumentIndexer } from "../../../src/storage/kysely/document-indexer.js";
 import { Reactor } from "../../../src/core/reactor.js";
+import {
+  createMockDocumentIndexer as createMockDocumentIndexerHelper,
+  createMockDocumentView as createMockDocumentViewHelper,
+} from "../../factories.js";
 import type {
   IDocumentStorage,
   IDocumentOperationStorage,
@@ -177,15 +182,24 @@ async function createReactorSetup(
 
   const readModels = [];
   let documentView: KyselyDocumentView | undefined;
+  let documentIndexer: KyselyDocumentIndexer | undefined;
 
   if (includeDocumentView) {
-    // @ts-expect-error - Database type is a superset that includes all required tables
-    documentView = new KyselyDocumentView(db, operationStore);
+    const documentViewConsistencyTracker = new ConsistencyTracker();
+    documentView = new KyselyDocumentView(
+      db as any,
+      operationStore,
+      documentViewConsistencyTracker,
+    );
     await documentView.init();
     readModels.push(documentView);
 
-    // @ts-expect-error - Database type is a superset that includes all required tables
-    const documentIndexer = new KyselyDocumentIndexer(db, operationStore);
+    const documentIndexerConsistencyTracker = new ConsistencyTracker();
+    documentIndexer = new KyselyDocumentIndexer(
+      db as any,
+      operationStore,
+      documentIndexerConsistencyTracker,
+    );
     await documentIndexer.init();
     readModels.push(documentIndexer);
   }
@@ -199,6 +213,10 @@ async function createReactorSetup(
     queue,
     jobTracker,
     readModelCoordinator,
+    { legacyStorageEnabled },
+    documentView ?? createMockDocumentViewHelper(),
+    documentIndexer ?? createMockDocumentIndexerHelper(),
+    operationStore,
   );
 
   const cleanup = async () => {

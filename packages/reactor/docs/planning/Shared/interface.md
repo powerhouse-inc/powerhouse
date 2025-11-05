@@ -43,6 +43,12 @@ type JobInfo = {
   completedAtUtcIso?: string;
   error?: string;
   result?: any;
+  /**
+   * Required consistency token that downstream reads must use to ensure all
+   * write-side effects for this job are visible. Even jobs that do not emit
+   * operations return a token with an empty coordinate list.
+   */
+  consistencyToken: ConsistencyToken;
 };
 
 /**
@@ -97,5 +103,25 @@ type PagedResults<T> = {
 
   next?: () => Promise<PagedResults<T>>;
   nextCursor?: string;
+};
+
+/**
+ * Identifies a specific write-side position that a read model must reach.
+ */
+type ConsistencyCoordinate = {
+  documentId: string;
+  scope: string;
+  branch: string;
+  operationIndex: number;
+};
+
+/**
+ * Opaque token returned with a completed job indicating the furthest write-side
+ * offsets that must be observed by read models before a query can proceed.
+ */
+type ConsistencyToken = {
+  version: 1;
+  createdAtUtcIso: string;
+  coordinates: ConsistencyCoordinate[];
 };
 ```
