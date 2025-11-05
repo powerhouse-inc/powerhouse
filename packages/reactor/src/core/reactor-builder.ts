@@ -35,6 +35,13 @@ import type {
 import type { IJobExecutorManager } from "#executor/interfaces.js";
 import { Kysely } from "kysely";
 import { KyselyPGlite } from "kysely-pglite";
+import type { IEventBus } from "../events/interfaces.js";
+import type { IReadModelCoordinator } from "../read-models/interfaces.js";
+
+export type IReadModelCoordinatorFactory = (
+  eventBus: IEventBus,
+  readModels: IReadModel[],
+) => IReadModelCoordinator;
 
 export class ReactorBuilder {
   private documentModels: DocumentModelModule[] = [];
@@ -44,6 +51,7 @@ export class ReactorBuilder {
   private executorManager: IJobExecutorManager | undefined;
   private executorConfig: ExecutorConfig = { count: 1 };
   private writeCacheConfig?: Partial<WriteCacheConfig>;
+  private readModelCoordinatorFactory?: IReadModelCoordinatorFactory;
 
   withDocumentModels(models: DocumentModelModule[]): this {
     this.documentModels = models;
@@ -64,6 +72,11 @@ export class ReactorBuilder {
 
   withReadModel(readModel: IReadModel): this {
     this.readModels.push(readModel);
+    return this;
+  }
+
+  withReadModelCoordinatorFactory(factory: IReadModelCoordinatorFactory): this {
+    this.readModelCoordinatorFactory = factory;
     return this;
   }
 
@@ -235,10 +248,9 @@ export class ReactorBuilder {
     await documentIndexer.init();
     readModelInstances.push(documentIndexer);
 
-    const readModelCoordinator = new ReadModelCoordinator(
-      eventBus,
-      readModelInstances,
-    );
+    const readModelCoordinator = this.readModelCoordinatorFactory
+      ? this.readModelCoordinatorFactory(eventBus, readModelInstances)
+      : new ReadModelCoordinator(eventBus, readModelInstances);
     readModelCoordinator.start();
 
     return new Reactor(
