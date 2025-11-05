@@ -25,6 +25,7 @@ import {
   createRelationalDb,
   ProcessorManager,
 } from "document-drive";
+import type { DocumentModelModule } from "document-model";
 import type { Express } from "express";
 import express from "express";
 import fs from "node:fs";
@@ -257,24 +258,26 @@ async function startServer(
 }
 
 /**
- * Starts the API server.
- *
- * @param reactor - The document drive server.
- * @param client - The reactor client. For now, this sits side-by-side with the reactor. In the future, we will want to replace one with the other.
- * @param options - Additional options for server configuration. These options intended to be serializable.
- * @param overrides - System overrides. These overrides are intended to be object references.
- *
- * @returns The API server.
+ * Private helper function that sets up common infrastructure before API initialization.
+ * This includes auth configuration, database setup, and package manager initialization.
  */
-export async function startAPI(
-  reactor: IDocumentDriveServer,
-  client: IReactorClient,
-  options: Options,
-): Promise<API> {
+async function _setupCommonInfrastructure(options: Options): Promise<{
+  port: number;
+  app: Express;
+  auth: {
+    enabled: boolean;
+    guests: string[];
+    users: string[];
+    admins: string[];
+  };
+  relationalDb: IRelationalDb;
+  analyticsStore: IAnalyticsStore;
+  packages: PackageManager;
+}> {
   const port = options.port ?? DEFAULT_PORT;
   const app = options.express ?? express();
-  const mcpServerEnabled = options.mcp ?? true;
 
+  // Setup auth configuration
   let admins: string[] = [];
   let users: string[] = [];
   let guests: string[] = [];
@@ -312,6 +315,7 @@ export async function startAPI(
     users,
     admins,
   });
+
   // add auth middleware if auth is enabled
   if (authEnabled) {
     logger.info("Setting up Auth middleware");
@@ -330,7 +334,6 @@ export async function startAPI(
   const { relationalDb, analyticsStore } = await initializeDatabaseAndAnalytics(
     options.dbPath,
   );
-  const module: IProcessorHostModule = { relationalDb, analyticsStore };
 
   // Initialize package manager
   const packageLoader = options.packageLoader ?? new ImportPackageLoader();
@@ -341,15 +344,47 @@ export async function startAPI(
     packages: options.packages ?? [],
   });
 
-  const { documentModels, processors, subgraphs } = await packages.init();
+  return {
+    port,
+    app,
+    auth: {
+      enabled: authEnabled,
+      guests,
+      users,
+      admins,
+    },
+    relationalDb,
+    analyticsStore,
+    packages,
+  };
+}
 
-  // set document model modules here, processors might use them immediately
-  reactor.setDocumentModelModules(
-    getUniqueDocumentModels([
-      ...reactor.getDocumentModelModules(),
-      ...documentModels,
-    ]),
-  );
+/**
+ * Private helper function containing common setup logic for API initialization
+ */
+async function _setupAPI(
+  reactor: IDocumentDriveServer,
+  reactorClient: IReactorClient,
+  app: Express,
+  port: number,
+  packages: PackageManager,
+  relationalDb: IRelationalDb,
+  analyticsStore: IAnalyticsStore,
+  processors: Map<
+    string,
+    ((module: IProcessorHostModule) => ProcessorFactory)[]
+  >,
+  subgraphs: Map<string, SubgraphClass[]>,
+  options: Options,
+  auth: {
+    enabled: boolean;
+    guests: string[];
+    users: string[];
+    admins: string[];
+  },
+): Promise<API> {
+  const module: IProcessorHostModule = { relationalDb, analyticsStore };
+  const mcpServerEnabled = options.mcp ?? true;
 
   // initialize processors
   const processorManager = new ProcessorManager(reactor.listeners, reactor);
@@ -360,8 +395,6 @@ export async function startAPI(
     const factories = fns.map((fn) => {
       try {
         return fn({
-          // TODO: figure out why this type comes out as any
-
           analyticsStore: module.analyticsStore,
           relationalDb: module.relationalDb,
           config: options.processorConfig,
@@ -422,19 +455,14 @@ export async function startAPI(
     app,
     server,
     reactor,
-    client,
+    reactorClient,
     relationalDb,
     analyticsStore,
     {
       extended: subgraphs,
       core: coreSubgraphs,
     },
-    {
-      enabled: authEnabled,
-      guests,
-      users,
-      admins,
-    },
+    auth,
   );
 
   // Set up event listeners
@@ -451,5 +479,98 @@ export async function startAPI(
     logger.info(`MCP server available at http://localhost:${port}/mcp`);
   }
 
-  return { app, graphqlManager, processorManager, packages };
+  return {
+    app,
+    graphqlManager,
+    processorManager,
+    packages,
+  };
+}
+
+/**
+ * Starts the API server with pre-initialized drive server and client instances.
+ *
+ * @param driveServer - An already-initialized document drive server instance.
+ * @param client - An already-initialized reactor client instance.
+ * @param options - Additional options for server configuration.
+ *
+ * @returns The API server components.
+ */
+export async function startAPI(
+  driveServer: IDocumentDriveServer,
+  client: IReactorClient,
+  options: Options,
+): Promise<API> {
+  const { port, app, auth, relationalDb, analyticsStore, packages } =
+    await _setupCommonInfrastructure(options);
+
+  const { documentModels, processors, subgraphs } = await packages.init();
+  driveServer.setDocumentModelModules(
+    getUniqueDocumentModels([
+      ...driveServer.getDocumentModelModules(),
+      ...documentModels,
+    ]),
+  );
+
+  return _setupAPI(
+    driveServer,
+    client,
+    app,
+    port,
+    packages,
+    relationalDb,
+    analyticsStore,
+    processors,
+    subgraphs,
+    options,
+    auth,
+  );
+}
+
+/**
+ * Initializes and starts the API server using initializer functions.
+ * This function first loads packages to get document models, then calls the initializer functions
+ * to create the drive server and client instances with the appropriate dependencies.
+ *
+ * @param driveServerInitializer - Initializer function that creates the document drive server with document models.
+ * @param clientInitializer - Initializer function that creates the reactor client with the drive server.
+ * @param options - Additional options for server configuration.
+ *
+ * @returns The API server components along with the created drive server and client instances.
+ */
+export async function initializeAndStartAPI(
+  driveServerInitializer: (
+    documentModelModules: DocumentModelModule[],
+  ) => Promise<IDocumentDriveServer>,
+  clientInitializer: (driveServer: IDocumentDriveServer) => IReactorClient,
+  options: Options,
+): Promise<
+  API & { driveServer: IDocumentDriveServer; client: IReactorClient }
+> {
+  const { port, app, auth, relationalDb, analyticsStore, packages } =
+    await _setupCommonInfrastructure(options);
+
+  const { documentModels, processors, subgraphs } = await packages.init();
+  const reactor = await driveServerInitializer(documentModels);
+  const reactorClient = clientInitializer(reactor);
+
+  const api = await _setupAPI(
+    reactor,
+    reactorClient,
+    app,
+    port,
+    packages,
+    relationalDb,
+    analyticsStore,
+    processors,
+    subgraphs,
+    options,
+    auth,
+  );
+
+  return {
+    ...api,
+    driveServer: reactor,
+    client: reactorClient,
+  };
 }
