@@ -153,11 +153,13 @@ async function initServer(serverPort: number, options: StartServerOptions) {
     documentModels: DocumentModelModule[],
   ) => {
     const builder = new ReactorBuilder()
-      .withDocumentModels([
-        documentModelDocumentModelModule,
-        driveDocumentModelModule,
-        ...documentModels,
-      ] as unknown as DocumentModelModule[])
+      .withDocumentModels(
+        getUniqueDocumentModels([
+          documentModelDocumentModelModule,
+          driveDocumentModelModule,
+          ...documentModels,
+        ] as unknown as DocumentModelModule[]),
+      )
       .withLegacyStorage(storage)
       .withFeatures({
         legacyStorageEnabled: true,
