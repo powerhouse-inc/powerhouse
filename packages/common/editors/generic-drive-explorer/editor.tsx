@@ -4,7 +4,7 @@ import { useSetPHDriveEditorConfig } from "@powerhousedao/reactor-browser";
 import type { EditorProps } from "document-model";
 import { editorConfig } from "./config.js";
 
-export function Editor(props: EditorProps) {
+export default function Editor(props: EditorProps) {
   useSetPHDriveEditorConfig(editorConfig);
   const { className, children } = props;
   const { isDropTarget, dropProps } = useDrop();

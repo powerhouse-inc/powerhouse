@@ -1,8 +1,8 @@
 import type { EditorModule } from "document-model";
-import { Editor } from "./editor.js";
+import { lazy } from "react";
 
 export const ProcessorEditor: EditorModule = {
-  Component: Editor,
+  Component: lazy(() => import("./editor.js")),
   documentTypes: ["powerhouse/processor"],
   config: {
     id: "processor-module-editor",

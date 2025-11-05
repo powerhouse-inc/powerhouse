@@ -102,7 +102,7 @@ describe("generateEditor", () => {
       expect(editorContent).toContain(
         `import { EditTestDocName } from "./components/EditName.js";`,
       );
-      expect(editorContent).toContain(`export function Editor()`);
+      expect(editorContent).toContain(`export default function Editor()`);
       expect(editorContent).toContain(`<EditTestDocName />`);
 
       const modulePath = path.join(editorDir, "module.ts");

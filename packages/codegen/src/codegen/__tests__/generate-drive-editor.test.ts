@@ -122,7 +122,7 @@ describe("generateDriveEditor", () => {
       expect(existsSync(editorFilePath)).toBe(true);
       const editorContent = fs.readFileSync(editorFilePath, "utf-8");
       expect(editorContent).toContain(
-        `export function Editor(props: EditorProps)`,
+        `export default function Editor(props: EditorProps)`,
       );
       expect(editorContent).toContain(`<DriveExplorer {...props} />`);
       expect(editorContent).toContain(

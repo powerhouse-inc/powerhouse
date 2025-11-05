@@ -1,8 +1,8 @@
 import type { EditorModule } from "document-model";
-import { Editor } from "./editor.js";
+import { lazy } from "react";
 
 export const SubgraphEditor: EditorModule = {
-  Component: Editor,
+  Component: lazy(() => import("./editor.js")),
   documentTypes: ["powerhouse/subgraph"],
   config: {
     id: "subgraph-module-editor",

@@ -114,7 +114,7 @@ export function BaseEditor(props: EditorProps) {
   );
 }
 
-export function Editor(props: EditorProps) {
+export default function Editor(props: EditorProps) {
   useSetPHDriveEditorConfig(editorConfig);
   const analyticsDatabaseName = useAnalyticsDatabaseName();
   return (

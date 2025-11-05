@@ -6,7 +6,7 @@ import { useSelectedSubgraphModuleDocument } from "../hooks/useVetraDocument.js"
 import { SubgraphEditorForm } from "./components/SubgraphEditorForm.js";
 import { editorConfig } from "./config.js";
 
-export function Editor() {
+export default function Editor() {
   useSetPHDocumentEditorConfig(editorConfig);
   const [document, dispatch] = useSelectedSubgraphModuleDocument();
 

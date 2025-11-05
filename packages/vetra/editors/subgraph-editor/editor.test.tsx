@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useSelectedSubgraphModuleDocument } from "../hooks/useVetraDocument.js";
-import { Editor } from "./editor.js";
+import Editor from "./editor.js";
 
 vi.mock("../hooks/useVetraDocument.js", () => ({
   useSelectedSubgraphModuleDocument: vi.fn(),

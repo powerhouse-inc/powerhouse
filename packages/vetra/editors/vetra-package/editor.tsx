@@ -10,7 +10,7 @@ export type EditorProps = {
   displayToolbar?: boolean;
 };
 
-export function Editor(props: EditorProps) {
+export default function Editor(props: EditorProps) {
   const { displayToolbar = true } = props;
   useSetPHDocumentEditorConfig(editorConfig);
   const [document, dispatch] = useSelectedDriveVetraPackage();

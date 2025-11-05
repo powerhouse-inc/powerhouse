@@ -3,10 +3,10 @@ to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/module.ts"
 force: true
 ---
 import { type EditorModule } from "document-model";
-import { Editor } from "./editor.js";
+import { lazy } from "react";
 
 export const <%= pascalCaseDriveEditorName %>: EditorModule = {
-  Component: Editor,
+  Component: lazy(() => import("./editor.js")),
   documentTypes: ["powerhouse/document-drive"],
   config: {
     id: "<%= appId || paramCaseDriveEditorName %>",
