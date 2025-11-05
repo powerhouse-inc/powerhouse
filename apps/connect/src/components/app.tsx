@@ -1,7 +1,9 @@
 import { Analytics } from "@powerhousedao/connect/components/analytics";
 import { Router } from "@powerhousedao/connect/components/router";
-import { ProcessorManagerProvider } from "@powerhousedao/connect/context/processor-manager";
-import { SentryProvider } from "@powerhousedao/connect/context/sentry-provider";
+import {
+  ProcessorManagerProvider,
+  SentryProvider,
+} from "@powerhousedao/connect/context";
 import {
   DocumentEditorDebugTools,
   serviceWorkerManager,

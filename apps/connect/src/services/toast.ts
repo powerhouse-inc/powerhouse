@@ -3,12 +3,14 @@ import {
   ToastContainer as BaseToastContainer,
   toast as baseToast,
 } from "@powerhousedao/design-system";
+import { createElement } from "react";
 
 export const CONNECT_TOAST_CONTAINER_ID = "connect";
 
-export const ToastContainer = () => (
-  <BaseToastContainer containerId={CONNECT_TOAST_CONTAINER_ID} />
-);
+export const ToastContainer = () =>
+  createElement(BaseToastContainer, {
+    containerId: CONNECT_TOAST_CONTAINER_ID,
+  });
 
 type ToastArgs = Parameters<typeof baseToast>;
 export function toast(content: ToastArgs[0], options?: ConnectToastOptions) {

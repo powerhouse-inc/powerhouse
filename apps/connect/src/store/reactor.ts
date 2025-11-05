@@ -2,7 +2,7 @@ import { phGlobalConfigFromEnv } from "@powerhousedao/connect/config";
 import {
   createBrowserDocumentDriveServer,
   createBrowserStorage,
-} from "@powerhousedao/connect/utils/reactor";
+} from "@powerhousedao/connect/utils";
 import {
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
