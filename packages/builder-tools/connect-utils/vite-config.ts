@@ -1,5 +1,6 @@
 import {
   phExternalPackagesPlugin,
+  resolveConnectPackageJson,
   stripVersionFromPackage,
 } from "@powerhousedao/builder-tools";
 import { getConfig } from "@powerhousedao/config/node";
@@ -125,6 +126,13 @@ function viteLogger(warningsToSilence: string[]) {
   return logger;
 }
 
+function resolveConnectVersion() {
+  const connectPackageJson = resolveConnectPackageJson();
+  return connectPackageJson && "version" in connectPackageJson
+    ? (connectPackageJson.version as string)
+    : null;
+}
+
 export function getConnectBaseViteConfig(options: IConnectOptions) {
   const mode = options.mode;
   const envDir = options.envDir ?? options.dirname;
@@ -139,6 +147,14 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     optionsEnv,
     fileEnv,
   });
+
+  // if PH_CONNECT_VERSION is unknown, try to resolve it from the package.json
+  if (env.PH_CONNECT_VERSION === "unknown") {
+    const connectVersion = resolveConnectVersion();
+    if (connectVersion) {
+      env.PH_CONNECT_VERSION = connectVersion;
+    }
+  }
 
   // set the resolved env to process.env so it's loaded by vite
   setConnectEnv(env);
@@ -215,7 +231,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     plugins.push(
       sentryVitePlugin({
         release: {
-          name: release,
+          name: release ?? "unknown",
           inject: false, // prevent it from injecting the release id in the service worker code, this is done in 'src/app/sentry.ts' instead
         },
         authToken,
