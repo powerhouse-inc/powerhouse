@@ -103,7 +103,7 @@ export async function baseSaveToFile(
     streamFiles: true,
   });
   const fileName = name ?? document.header.name;
-  const fileExtension = `.${extension}.phd`;
+  const fileExtension = extension ? `.${extension}.phd` : ".phd";
 
   return writeFileNode(
     path,
