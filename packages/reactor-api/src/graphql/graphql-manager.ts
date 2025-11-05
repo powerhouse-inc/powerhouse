@@ -405,8 +405,8 @@ export class GraphQLManager {
     router.use(
       path,
       expressMiddleware(server, {
-        context: async ({ req }): Promise<Context> =>
-          Promise.resolve({
+        context: ({ req }) =>
+          Promise.resolve<Context>({
             headers: req.headers,
             driveId: req.params.drive ?? undefined,
             driveServer: this.reactor,
