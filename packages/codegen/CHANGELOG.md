@@ -1,3 +1,18 @@
+## 4.1.0-dev.101 (2025-11-05)
+
+### 🚀 Features
+
+- **codegen, vetra:** update codegen templates ([#2056](https://github.com/powerhouse-inc/powerhouse/pull/2056))
+
+### 🩹 Fixes
+
+- make document model extension optional ([#2076](https://github.com/powerhouse-inc/powerhouse/pull/2076))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 4.1.0-dev.100 (2025-11-04)
 
 ### 🚀 Features
