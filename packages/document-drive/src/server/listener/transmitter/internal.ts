@@ -108,6 +108,7 @@ export class InternalTransmitter implements ITransmitter {
           documentType: document.header.documentType,
           operations,
           state,
+          document,
         });
       }
 

@@ -4,6 +4,7 @@ import type { InternalTransmitterUpdate } from "document-drive";
 import type { SubgraphModuleState } from "../../../../document-models/subgraph-module/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
+import { backupDocument } from "./utils.js";
 
 /**
  * Generator for subgraph documents
@@ -86,6 +87,14 @@ export class SubgraphGenerator extends BaseDocumentGen {
           );
           // Don't throw here - subgraph generation was successful
         }
+
+        // Backup the document
+        await backupDocument(
+          strand.document,
+          this.config.CURRENT_WORKING_DIR,
+          undefined,
+          state.name,
+        );
       } catch (error) {
         logger.error(
           `❌ Error during subgraph generation for ${state.name}:`,
