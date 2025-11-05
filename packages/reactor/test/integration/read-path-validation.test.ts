@@ -180,6 +180,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       createMockReactorFeatures(),
       documentView,
       createMockDocumentIndexer(),
+      operationStore,
     );
   });
 

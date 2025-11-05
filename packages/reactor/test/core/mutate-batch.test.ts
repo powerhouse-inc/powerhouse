@@ -11,6 +11,7 @@ import { ReadModelCoordinator } from "../../src/read-models/coordinator.js";
 import {
   createMockDocumentIndexer,
   createMockDocumentView,
+  createMockOperationStore,
   createMockReactorFeatures,
 } from "../factories.js";
 
@@ -42,6 +43,7 @@ describe("mutateBatch validation", () => {
       createMockReactorFeatures(),
       createMockDocumentView(),
       createMockDocumentIndexer(),
+      createMockOperationStore(),
     );
   };
 

@@ -561,6 +561,7 @@ export async function createTestReactorSetup(
     features,
     documentView,
     documentIndexer,
+    operationStore,
   );
 
   return {

@@ -115,6 +115,7 @@ async function setupReactor() {
     createMockReactorFeatures(),
     documentView,
     createMockDocumentIndexer(),
+    operationStore,
   );
 
   return { reactor, executorManager };

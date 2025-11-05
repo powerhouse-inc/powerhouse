@@ -230,6 +230,7 @@ describe("Integration Test: Relationship Operations", () => {
       createMockReactorFeatures(),
       documentView,
       documentIndexer,
+      operationStore,
     );
   });
 

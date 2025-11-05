@@ -28,7 +28,11 @@ import type {
 } from "../shared/types.js";
 import { JobStatus } from "../shared/types.js";
 import { matchesScope } from "../shared/utils.js";
-import type { IDocumentIndexer, IDocumentView } from "../storage/interfaces.js";
+import type {
+  IDocumentIndexer,
+  IDocumentView,
+  IOperationStore,
+} from "../storage/interfaces.js";
 import type {
   BatchMutationRequest,
   BatchMutationResult,
@@ -59,6 +63,7 @@ export class Reactor implements IReactor {
   private features: ReactorFeatures;
   private documentView: IDocumentView;
   private documentIndexer: IDocumentIndexer;
+  private operationStore: IOperationStore;
 
   constructor(
     driveServer: BaseDocumentDriveServer,
@@ -69,6 +74,7 @@ export class Reactor implements IReactor {
     features: ReactorFeatures,
     documentView: IDocumentView,
     documentIndexer: IDocumentIndexer,
+    operationStore: IOperationStore,
   ) {
     // Store required dependencies
     this.driveServer = driveServer;
@@ -79,6 +85,7 @@ export class Reactor implements IReactor {
     this.features = features;
     this.documentView = documentView;
     this.documentIndexer = documentIndexer;
+    this.operationStore = operationStore;
 
     // Start the read model coordinator
     this.readModelCoordinator.start();
@@ -276,38 +283,108 @@ export class Reactor implements IReactor {
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<Record<string, PagedResults<Operation>>> {
-    // Use storage directly to get the document
-    const document = await this.documentStorage.get(documentId);
+    if (this.features.legacyStorageEnabled) {
+      // Use storage directly to get the document
+      const document = await this.documentStorage.get(documentId);
 
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
+      if (signal?.aborted) {
+        throw new AbortError();
+      }
 
-    const operations = document.operations;
-    const result: Record<string, PagedResults<Operation>> = {};
+      const operations = document.operations;
+      const result: Record<string, PagedResults<Operation>> = {};
 
-    // apply view filter, per scope -- this will be removed when we pass the viewfilter along
-    // to the underlying store, but is here now for the interface.
-    for (const scope in operations) {
-      if (matchesScope(view, scope)) {
-        const scopeOperations = operations[scope];
+      // apply view filter, per scope -- this will be removed when we pass the viewfilter along
+      // to the underlying store, but is here now for the interface.
+      for (const scope in operations) {
+        if (matchesScope(view, scope)) {
+          const scopeOperations = operations[scope];
 
-        // apply paging too
-        const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-        const limit = paging?.limit || scopeOperations.length;
-        const pagedOperations = scopeOperations.slice(
-          startIndex,
-          startIndex + limit,
+          // apply paging too
+          const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
+          const limit = paging?.limit || scopeOperations.length;
+          const pagedOperations = scopeOperations.slice(
+            startIndex,
+            startIndex + limit,
+          );
+
+          result[scope] = {
+            results: pagedOperations,
+            options: { cursor: String(startIndex + limit), limit },
+          };
+        }
+      }
+
+      return Promise.resolve(result);
+    } else {
+      // Use operation store to get operations
+      const branch = view?.branch || "main";
+
+      // Get all scopes for this document
+      const revisions = await this.operationStore.getRevisions(
+        documentId,
+        branch,
+        signal,
+      );
+
+      if (signal?.aborted) {
+        throw new AbortError();
+      }
+
+      const allScopes = Object.keys(revisions.revision);
+      const result: Record<string, PagedResults<Operation>> = {};
+
+      // Filter scopes based on view filter and query operations for each
+      for (const scope of allScopes) {
+        if (!matchesScope(view, scope)) {
+          continue;
+        }
+
+        if (signal?.aborted) {
+          throw new AbortError();
+        }
+
+        // Get operations for this scope
+        const scopeResult = await this.operationStore.getSince(
+          documentId,
+          scope,
+          branch,
+          -1,
+          paging,
+          signal,
         );
 
+        // Transform to Reactor's PagedResults format
+        const currentCursor = paging?.cursor ? parseInt(paging.cursor) : 0;
+        const currentLimit = paging?.limit || 100;
+
         result[scope] = {
-          results: pagedOperations,
-          options: { cursor: String(startIndex + limit), limit },
+          results: scopeResult.items,
+          options: {
+            cursor: scopeResult.nextCursor || String(currentCursor),
+            limit: currentLimit,
+          },
+          nextCursor: scopeResult.nextCursor,
+          next: scopeResult.hasMore
+            ? async () => {
+                const nextPage = await this.getOperations(
+                  documentId,
+                  view,
+                  {
+                    cursor: scopeResult.nextCursor!,
+                    limit: currentLimit,
+                  },
+                  consistencyToken,
+                  signal,
+                );
+                return nextPage[scope];
+              }
+            : undefined,
         };
       }
-    }
 
-    return Promise.resolve(result);
+      return result;
+    }
   }
 
   /**

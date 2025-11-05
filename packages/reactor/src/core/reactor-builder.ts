@@ -250,6 +250,7 @@ export class ReactorBuilder {
       this.features,
       documentView,
       documentIndexer,
+      operationStore,
     );
   }
 }

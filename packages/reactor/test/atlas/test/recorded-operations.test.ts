@@ -216,6 +216,7 @@ async function createReactorSetup(
     { legacyStorageEnabled },
     documentView ?? createMockDocumentViewHelper(),
     documentIndexer ?? createMockDocumentIndexerHelper(),
+    operationStore,
   );
 
   const cleanup = async () => {

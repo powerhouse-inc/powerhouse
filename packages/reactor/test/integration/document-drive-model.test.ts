@@ -183,6 +183,7 @@ describe("Integration Test: Reactor <> Document Drive Document Model", () => {
       createMockReactorFeatures(),
       documentView,
       documentIndexer,
+      operationStore,
     );
   });
 

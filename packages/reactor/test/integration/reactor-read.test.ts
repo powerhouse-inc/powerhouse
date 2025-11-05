@@ -36,7 +36,7 @@ import {
 
 type Database = StorageDatabase & DocumentViewDatabase;
 
-describe("Reactor Read Interface", () => {
+describe("Reactor Legacy Read Interface", () => {
   let reactor: Reactor;
   let driveServer: BaseDocumentDriveServer;
   let storage: MemoryStorage;
@@ -118,6 +118,7 @@ describe("Reactor Read Interface", () => {
       createMockReactorFeatures(),
       documentView,
       createMockDocumentIndexer(),
+      operationStore,
     );
   });
 

@@ -115,6 +115,7 @@ describe("ReactorClient Passthrough Functions", () => {
       createMockReactorFeatures(),
       createMockDocumentView(),
       createMockDocumentIndexer(),
+      createMockOperationStore(),
     );
 
     // Create mock signer for testing
