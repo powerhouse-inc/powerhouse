@@ -5,8 +5,7 @@ import { ModalsContainer } from "@powerhousedao/connect/components/modal/modals-
 import { useCheckLatestVersion } from "@powerhousedao/connect/hooks";
 import "@powerhousedao/connect/i18n";
 import { useSubscribeToVetraPackages } from "@powerhousedao/connect/services";
-import { useSetSentryUser } from "@powerhousedao/connect/store";
-import { createReactor } from "@powerhousedao/connect/store/reactor";
+import { createReactor, useSetSentryUser } from "@powerhousedao/connect/store";
 import { lazy, StrictMode, Suspense, type ReactNode } from "react";
 
 export const Load = lazy(async () => {

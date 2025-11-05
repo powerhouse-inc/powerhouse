@@ -1,6 +1,6 @@
 import AtlasIcon from "@powerhousedao/connect/assets/icons/Atlas-Logomark.svg?react";
 import RefreshIcon from "@powerhousedao/connect/assets/icons/refresh.svg?react";
-import { toast } from "@powerhousedao/connect/services/toast";
+import { toast } from "@powerhousedao/connect/services";
 import { PowerhouseButton } from "@powerhousedao/design-system";
 import { addRemoteDrive } from "@powerhousedao/reactor-browser";
 import { useReactor } from "@powerhousedao/reactor-browser/connect";

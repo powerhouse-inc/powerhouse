@@ -43,60 +43,65 @@
       "import": "./lib/src/components/index.js",
       "types": "./lib/src/components/index.d.ts"
     },
-    "./hooks": {
-      "source": "./src/hooks/index.ts",
-      "import": "./lib/src/hooks/index.js",
-      "types": "./lib/src/hooks/index.d.ts"
-    },
-    "./services": {
-      "source": "./src/services/index.ts",
-      "import": "./lib/src/services/index.js",
-      "types": "./lib/src/services/index.d.ts"
-    },
-    "./store": {
-      "source": "./src/store/index.ts",
-      "import": "./lib/src/store/index.js",
-      "types": "./lib/src/store/index.d.ts"
-    },
-    "./context": {
-      "source": "./src/context/index.ts",
-      "import": "./lib/src/context/index.js",
-      "types": "./lib/src/context/index.d.ts"
-    },
-    "./utils": {
-      "source": "./src/utils/index.ts",
-      "import": "./lib/src/utils/index.js",
-      "types": "./lib/src/utils/index.d.ts"
-    },
     "./components/*": {
       "source": "./src/components/*",
       "import": "./lib/src/components/*.js",
       "types": "./lib/src/components/*.d.ts"
+    },
+    "./hooks": {
+      "source": "./src/hooks/index.ts",
+      "import": "./lib/src/hooks/index.js",
+      "types": "./lib/src/hooks/index.d.ts"
     },
     "./hooks/*": {
       "source": "./src/hooks/*",
       "import": "./lib/src/hooks/*.js",
       "types": "./lib/src/hooks/*.d.ts"
     },
+    "./services": {
+      "source": "./src/services/index.ts",
+      "import": "./lib/src/services/index.js",
+      "types": "./lib/src/services/index.d.ts"
+    },
     "./services/*": {
       "source": "./src/services/*",
       "import": "./lib/src/services/*.js",
       "types": "./lib/src/services/*.d.ts"
+    },
+    "./store": {
+      "source": "./src/store/index.ts",
+      "import": "./lib/src/store/index.js",
+      "types": "./lib/src/store/index.d.ts"
     },
     "./store/*": {
       "source": "./src/store/*",
       "import": "./lib/src/store/*.js",
       "types": "./lib/src/store/*.d.ts"
     },
+    "./context": {
+      "source": "./src/context/index.ts",
+      "import": "./lib/src/context/index.js",
+      "types": "./lib/src/context/index.d.ts"
+    },
     "./context/*": {
       "source": "./src/context/*",
       "import": "./lib/src/context/*.js",
       "types": "./lib/src/context/*.d.ts"
     },
+    "./utils": {
+      "source": "./src/utils/index.ts",
+      "import": "./lib/src/utils/index.js",
+      "types": "./lib/src/utils/index.d.ts"
+    },
     "./utils/*": {
       "source": "./src/utils/*",
       "import": "./lib/src/utils/*.js",
       "types": "./lib/src/utils/*.d.ts"
+    },
+    "./pages": {
+      "source": "./src/pages/index.ts",
+      "import": "./lib/src/pages/index.js",
+      "types": "./lib/src/pages/index.d.ts"
     },
     "./pages/*": {
       "source": "./src/pages/*",
