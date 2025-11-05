@@ -36,6 +36,10 @@ import {
 
 type Database = StorageDatabase & DocumentViewDatabase;
 
+/**
+ * These tests show that writing to the legacy reactor and reading from the new
+ * reactor, when using legacy storage, works correctly.
+ */
 describe("Reactor Legacy Read Interface", () => {
   let reactor: Reactor;
   let driveServer: BaseDocumentDriveServer;

@@ -1,38 +1,14 @@
-import type {
-  BaseDocumentDriveServer,
-  IDocumentOperationStorage,
-  IDocumentStorage,
-} from "document-drive";
-import {
-  MemoryStorage,
-  ReactorBuilder,
-  driveDocumentModelModule,
-} from "document-drive";
-import type { DocumentModelModule } from "document-model";
+import { MemoryStorage, driveDocumentModelModule } from "document-drive";
 import { documentModelDocumentModelModule } from "document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { KyselyWriteCache } from "../../src/cache/kysely-write-cache.js";
-import type { WriteCacheConfig } from "../../src/cache/types.js";
-import { Reactor } from "../../src/core/reactor.js";
-import { EventBus } from "../../src/events/event-bus.js";
-import type { IEventBus } from "../../src/events/interfaces.js";
-import { SimpleJobExecutorManager } from "../../src/executor/simple-job-executor-manager.js";
-import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
-import type { IQueue } from "../../src/queue/interfaces.js";
-import { InMemoryQueue } from "../../src/queue/queue.js";
-import { ReadModelCoordinator } from "../../src/read-models/coordinator.js";
-import { KyselyDocumentView } from "../../src/read-models/document-view.js";
-import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
+import { ReactorBuilder } from "../../src/core/reactor-builder.js";
+import type { IReactor } from "../../src/core/types.js";
 import type { DocumentViewDatabase } from "../../src/read-models/types.js";
-import { DocumentModelRegistry } from "../../src/registry/implementation.js";
+import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
 import type { JobInfo } from "../../src/shared/types.js";
 import { JobStatus } from "../../src/shared/types.js";
-import type {
-  DocumentRelationship,
-  IKeyframeStore,
-  IOperationStore,
-} from "../../src/storage/interfaces.js";
+import type { DocumentRelationship } from "../../src/storage/interfaces.js";
 import { KyselyDocumentIndexer } from "../../src/storage/kysely/document-indexer.js";
 import type {
   DocumentIndexerDatabase,
@@ -40,35 +16,18 @@ import type {
 } from "../../src/storage/kysely/types.js";
 import {
   createDocModelDocument,
-  createMockReactorFeatures,
-  createTestJobTracker,
   createTestOperationStore,
 } from "../factories.js";
-
-const documentModels = [
-  documentModelDocumentModelModule,
-  driveDocumentModelModule,
-] as DocumentModelModule<any>[];
 
 type Database = StorageDatabase &
   DocumentViewDatabase &
   DocumentIndexerDatabase;
 
 describe("Integration Test: Relationship Operations", () => {
-  let reactor: Reactor;
-  let driveServer: BaseDocumentDriveServer;
+  let reactor: IReactor;
   let storage: MemoryStorage;
-  let eventBus: IEventBus;
-  let queue: IQueue;
   let db: Kysely<Database>;
-  let operationStore: IOperationStore;
-  let keyframeStore: IKeyframeStore;
-  let writeCache: KyselyWriteCache;
-  let readModelCoordinator: ReadModelCoordinator;
-  let registry: DocumentModelRegistry;
   let documentIndexer: KyselyDocumentIndexer;
-  let executor: SimpleJobExecutor;
-  let executorManager: SimpleJobExecutorManager;
 
   async function createDocument(doc: any): Promise<void> {
     const jobInfo = await reactor.create(doc);
@@ -146,66 +105,10 @@ describe("Integration Test: Relationship Operations", () => {
   beforeEach(async () => {
     storage = new MemoryStorage();
 
-    registry = new DocumentModelRegistry();
-    registry.registerModules(
-      documentModelDocumentModelModule,
-      driveDocumentModelModule,
-    );
-
-    const builder = new ReactorBuilder(documentModels);
-    builder.withStorage(storage);
-    driveServer = builder.build() as unknown as BaseDocumentDriveServer;
-    await driveServer.initialize();
-
+    // Create documentIndexer that we need a reference to
     const setup = await createTestOperationStore();
     db = setup.db as unknown as Kysely<Database>;
-    operationStore = setup.store;
-    keyframeStore = setup.keyframeStore;
-
-    eventBus = new EventBus();
-    queue = new InMemoryQueue(eventBus);
-
-    const writeCacheConfig: WriteCacheConfig = {
-      maxDocuments: 100,
-      ringBufferSize: 10,
-      keyframeInterval: 10,
-    };
-
-    writeCache = new KyselyWriteCache(
-      keyframeStore,
-      operationStore,
-      registry,
-      writeCacheConfig,
-    );
-    await writeCache.startup();
-
-    executor = new SimpleJobExecutor(
-      registry,
-      storage as IDocumentStorage,
-      storage as IDocumentOperationStorage,
-      operationStore,
-      eventBus,
-      writeCache,
-    );
-
-    const jobTracker = createTestJobTracker();
-
-    executorManager = new SimpleJobExecutorManager(
-      () => executor,
-      eventBus,
-      queue,
-      jobTracker,
-    );
-
-    await executorManager.start(1);
-
-    const documentViewConsistencyTracker = new ConsistencyTracker();
-    const documentView = new KyselyDocumentView(
-      db as any,
-      operationStore,
-      documentViewConsistencyTracker,
-    );
-    await documentView.init();
+    const operationStore = setup.store;
 
     const documentIndexerConsistencyTracker = new ConsistencyTracker();
     documentIndexer = new KyselyDocumentIndexer(
@@ -215,35 +118,20 @@ describe("Integration Test: Relationship Operations", () => {
     );
     await documentIndexer.init();
 
-    readModelCoordinator = new ReadModelCoordinator(eventBus, [
-      documentView,
-      documentIndexer,
-    ]);
-    readModelCoordinator.start();
+    // Use ReactorBuilder from reactor package
+    const builder = new ReactorBuilder()
+      .withDocumentModels([
+        documentModelDocumentModelModule as any,
+        driveDocumentModelModule as any,
+      ])
+      .withLegacyStorage(storage)
+      .withReadModel(documentIndexer);
 
-    reactor = new Reactor(
-      driveServer,
-      storage as IDocumentStorage,
-      queue,
-      jobTracker,
-      readModelCoordinator,
-      createMockReactorFeatures(),
-      documentView,
-      documentIndexer,
-      operationStore,
-    );
+    reactor = await builder.build();
   });
 
-  afterEach(async () => {
-    await executorManager.stop();
-    readModelCoordinator.stop();
-    await writeCache.shutdown();
-    writeCache.clear();
-    try {
-      await db.destroy();
-    } catch {
-      // ignore shutdown errors in tests
-    }
+  afterEach(() => {
+    reactor.kill();
   });
 
   describe("addChildren", () => {

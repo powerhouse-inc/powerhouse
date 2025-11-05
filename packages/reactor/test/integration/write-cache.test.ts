@@ -17,6 +17,10 @@ import type {
 import type { Database as DatabaseSchema } from "../../src/storage/kysely/types.js";
 import { createTestOperationStore } from "../factories.js";
 
+/**
+ * These tests show that the write cache works correctly, given an
+ * operation store and keyframe store to pull from.
+ */
 describe("KyselyWriteCache - End-to-End Integration", () => {
   let cache: KyselyWriteCache;
   let registry: IDocumentModelRegistry;

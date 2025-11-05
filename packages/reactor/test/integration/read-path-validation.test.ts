@@ -33,9 +33,9 @@ import { InMemoryQueue } from "../../src/queue/queue.js";
 import { ReadModelCoordinator } from "../../src/read-models/coordinator.js";
 import { KyselyDocumentView } from "../../src/read-models/document-view.js";
 import type { IReadModelCoordinator } from "../../src/read-models/interfaces.js";
-import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
 import type { DocumentViewDatabase } from "../../src/read-models/types.js";
 import { DocumentModelRegistry } from "../../src/registry/implementation.js";
+import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
 import { JobStatus } from "../../src/shared/types.js";
 import type {
   IDocumentView,
@@ -67,6 +67,7 @@ const storageLayers = [
 
 /**
  * These tests validate the entire pipeline:
+ *
  * 1. Operations go through Reactor interface (create, mutate, delete)
  * 2. Jobs flow through Queue -> Executor with dual-writing
  * 3. Compare results from legacy storage vs IDocumentView
