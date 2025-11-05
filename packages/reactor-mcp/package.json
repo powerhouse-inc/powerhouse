@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-mcp",
-  "version": "4.1.0-dev.99",
+  "version": "4.1.0-dev.100",
   "description": "MCP server for document model operations in the Powerhouse ecosystem. For document model creation tasks, consider using the document-model-creator agent which provides a more guided experience.",
   "type": "module",
   "repository": {
@@ -47,7 +47,7 @@
     "zod": "^3.24.3"
   },
   "devDependencies": {
-    "@types/express": "^5.0.0",
+    "@types/express": "^4.17.25",
     "@types/node": "^24.6.1",
     "vitest": "^3.2.4"
   }
