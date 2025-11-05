@@ -1,11 +1,24 @@
-import type { CreateState, PHBaseState } from "document-model";
+import type {
+  AssertIsDocumentOfType,
+  AssertIsStateOfType,
+  CreateState,
+  IsDocumentOfType,
+  IsStateOfType,
+  PHBaseState,
+} from "document-model";
+import {
+  assertIsDocumentModelDocument,
+  assertIsDocumentModelState,
+  documentModelDocumentType,
+  isDocumentModelDocument,
+  isDocumentModelState,
+} from "document-model";
 import {
   baseCreateDocument,
   createBaseState,
   defaultBaseState,
 } from "document-model/core";
 import {
-  documentModelDocumentType,
   documentModelInitialGlobalState,
   documentModelInitialLocalState,
 } from "./constants.js";
@@ -94,3 +107,25 @@ export function documentModelCreateDocument(
 
   return document;
 }
+
+export const isStateOfType: IsStateOfType<DocumentModelPHState> = (state) => {
+  return isDocumentModelState(state);
+};
+
+export const assertIsStateOfType: AssertIsStateOfType<DocumentModelPHState> = (
+  state,
+) => {
+  assertIsDocumentModelState(state);
+};
+
+export const isDocumentOfType: IsDocumentOfType<DocumentModelPHState> = (
+  document,
+) => {
+  return isDocumentModelDocument(document);
+};
+
+export const assertIsDocumentOfType: AssertIsDocumentOfType<
+  DocumentModelPHState
+> = (document) => {
+  assertIsDocumentModelDocument(document);
+};

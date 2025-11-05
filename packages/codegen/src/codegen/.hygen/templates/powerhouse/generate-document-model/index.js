@@ -95,7 +95,7 @@ module.exports = {
       isPhStateOfTypeFunctionName,
       assertIsPhStateOfTypeFunctionName,
       documentModelDir,
-      extension: documentModel.extension || "phdm",
+      extension: documentModel.extension || ".phdm",
       modules: latestSpec.modules.map((m) => ({
         ...m,
         name: paramCase(m.name),

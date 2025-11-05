@@ -5,8 +5,12 @@ import type {
 } from "document-drive";
 import { driveDocumentReducer, driveDocumentType } from "document-drive";
 import type {
+  AssertIsDocumentOfType,
+  AssertIsStateOfType,
   CreateDocument,
   CreateState,
+  IsDocumentOfType,
+  IsStateOfType,
   LoadFromInput,
   SaveToFileHandle,
 } from "document-model";
@@ -17,6 +21,12 @@ import {
   defaultBaseState,
   generateId,
 } from "document-model/core";
+import {
+  assertIsDriveDocument,
+  assertIsDriveState,
+  isDriveDocument,
+  isDriveState,
+} from "./document-schema.js";
 
 export const initialGlobalState: DocumentDriveGlobalState = {
   name: "",
@@ -61,4 +71,26 @@ export const driveLoadFromInput: LoadFromInput<DocumentDrivePHState> = (
   input,
 ) => {
   return baseLoadFromInput(input, driveDocumentReducer);
+};
+
+export const isStateOfType: IsStateOfType<DocumentDrivePHState> = (state) => {
+  return isDriveState(state);
+};
+
+export const assertIsStateOfType: AssertIsStateOfType<DocumentDrivePHState> = (
+  state,
+) => {
+  assertIsDriveState(state);
+};
+
+export const isDocumentOfType: IsDocumentOfType<DocumentDrivePHState> = (
+  document,
+) => {
+  return isDriveDocument(document);
+};
+
+export const assertIsDocumentOfType: AssertIsDocumentOfType<
+  DocumentDrivePHState
+> = (document) => {
+  assertIsDriveDocument(document);
 };
