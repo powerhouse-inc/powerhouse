@@ -3,7 +3,7 @@
   "productName": "Powerhouse-Connect",
   "version": "4.1.0-dev.102",
   "description": "Powerhouse Connect",
-  "main": "./dist/index.html",
+  "main": "dist/index.html",
   "type": "module",
   "engines": {
     "node": ">=22.0.0"
@@ -18,9 +18,11 @@
     "public",
     "heroku",
     ".env",
-    "./src/index.css"
+    "./src/index.css",
+    "./package.copy.json"
   ],
   "exports": {
+    "./package.json": "./package.copy.json",
     ".": {
       "source": "./src/index.ts",
       "import": "./lib/src/index.js",
@@ -100,6 +102,11 @@
       "source": "./src/pages/*",
       "import": "./lib/src/pages/*.js",
       "types": "./lib/src/pages/*.d.ts"
+    },
+    "./i18n": {
+      "source": "./src/i18n/index.ts",
+      "import": "./lib/src/i18n/index.js",
+      "types": "./lib/src/i18n/index.d.ts"
     },
     "./custom.d.ts": "./lib/custom.d.ts",
     "./style.css": "./src/index.css",
