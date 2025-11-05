@@ -1,3 +1,15 @@
+## 5.0.2 (2025-11-05)
+
+### 🩹 Fixes
+
+- **switchboard:** use POSIX-compliant syntax ([09f64bf3b](https://github.com/powerhouse-inc/powerhouse/commit/09f64bf3b))
+- prisma openssl not found ([1c9370a93](https://github.com/powerhouse-inc/powerhouse/commit/1c9370a93))
+- publish docker prod workflow ([d701f8dc0](https://github.com/powerhouse-inc/powerhouse/commit/d701f8dc0))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.0.1 (2025-11-03)
 
 ### 🩹 Fixes

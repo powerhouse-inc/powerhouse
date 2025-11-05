@@ -1,3 +1,17 @@
+## 5.0.2 (2025-11-05)
+
+### 🩹 Fixes
+
+- publish docker prod workflow ([d701f8dc0](https://github.com/powerhouse-inc/powerhouse/commit/d701f8dc0))
+- prisma openssl not found ([1c9370a93](https://github.com/powerhouse-inc/powerhouse/commit/1c9370a93))
+- **builder-tools:** support cjs requires of react and react-dom on external packages ([c1c52a714](https://github.com/powerhouse-inc/powerhouse/commit/c1c52a714))
+- **switchboard:** use POSIX-compliant syntax ([09f64bf3b](https://github.com/powerhouse-inc/powerhouse/commit/09f64bf3b))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
 ## 5.0.1 (2025-11-03)
 
 ### 🩹 Fixes

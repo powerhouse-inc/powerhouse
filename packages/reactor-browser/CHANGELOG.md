@@ -1,3 +1,13 @@
+## 5.0.2 (2025-11-05)
+
+### 🩹 Fixes
+
+- publish docker prod workflow ([d701f8dc0](https://github.com/powerhouse-inc/powerhouse/commit/d701f8dc0))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.0.1 (2025-11-03)
 
 ### 🩹 Fixes
