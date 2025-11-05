@@ -697,7 +697,7 @@ importers:
     dependencies:
       '@acaldas/graphql-codegen-typescript-validation-schema':
         specifier: ^0.12.4
-        version: 0.12.4(graphql@16.12.0)
+        version: 0.12.4(encoding@0.1.13)(graphql@16.12.0)
       '@anatine/zod-mock':
         specifier: ^3.13.3
         version: 3.14.0(@faker-js/faker@8.4.1)(zod@3.25.76)
@@ -20913,7 +20913,7 @@ packages:
 
 snapshots:
 
-  '@acaldas/graphql-codegen-typescript-validation-schema@0.12.4(graphql@16.12.0)':
+  '@acaldas/graphql-codegen-typescript-validation-schema@0.12.4(encoding@0.1.13)(graphql@16.12.0)':
     dependencies:
       '@graphql-codegen/plugin-helpers': 5.1.1(graphql@16.12.0)
       '@graphql-codegen/schema-ast': 4.0.0(graphql@16.12.0)
@@ -22491,7 +22491,7 @@ snapshots:
       '@solana/kit': 3.0.3(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))
       '@solana/web3.js': 1.98.4(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10)
       abitype: 1.0.6(typescript@5.9.3)(zod@3.25.76)
-      axios: 1.13.1(debug@4.4.3)
+      axios: 1.13.1
       axios-retry: 4.5.0(axios@1.13.1)
       jose: 6.1.0
       md5: 2.3.0
@@ -22514,7 +22514,7 @@ snapshots:
       '@solana/kit': 3.0.3(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))
       '@solana/web3.js': 1.98.4(bufferutil@4.0.9)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10)
       abitype: 1.0.6(typescript@5.9.3)(zod@3.25.76)
-      axios: 1.13.1(debug@4.4.3)
+      axios: 1.13.1
       axios-retry: 4.5.0(axios@1.13.1)
       jose: 6.1.0
       md5: 2.3.0
@@ -33420,8 +33420,16 @@ snapshots:
 
   axios-retry@4.5.0(axios@1.13.1):
     dependencies:
-      axios: 1.13.1(debug@4.4.3)
+      axios: 1.13.1
       is-retry-allowed: 2.2.0
+
+  axios@1.13.1:
+    dependencies:
+      follow-redirects: 1.15.11(debug@4.3.7)
+      form-data: 4.0.4
+      proxy-from-env: 1.1.0
+    transitivePeerDependencies:
+      - debug
 
   axios@1.13.1(debug@4.4.3):
     dependencies:
@@ -37357,7 +37365,7 @@ snapshots:
   graphql-ts-client@10.4.0(typescript@5.9.3):
     dependencies:
       '@types/md5': 2.3.6
-      axios: 1.13.1(debug@4.4.3)
+      axios: 1.13.1
       axios-retry: 3.9.1
       case: 1.6.3
       esbuild: 0.18.20
@@ -37908,7 +37916,7 @@ snapshots:
   http-proxy@1.18.1:
     dependencies:
       eventemitter3: 4.0.7
-      follow-redirects: 1.15.11(debug@4.4.3)
+      follow-redirects: 1.15.11(debug@4.3.7)
       requires-port: 1.0.0
     transitivePeerDependencies:
       - debug
@@ -41366,7 +41374,7 @@ snapshots:
       '@yarnpkg/lockfile': 1.1.0
       '@yarnpkg/parsers': 3.0.2
       '@zkochan/js-yaml': 0.0.7
-      axios: 1.13.1(debug@4.4.3)
+      axios: 1.13.1
       chalk: 4.1.2
       cli-cursor: 3.1.0
       cli-spinners: 2.6.1
@@ -41418,7 +41426,7 @@ snapshots:
       '@yarnpkg/lockfile': 1.1.0
       '@yarnpkg/parsers': 3.0.2
       '@zkochan/js-yaml': 0.0.7
-      axios: 1.13.1(debug@4.4.3)
+      axios: 1.13.1
       chalk: 4.1.2
       cli-cursor: 3.1.0
       cli-spinners: 2.6.1
