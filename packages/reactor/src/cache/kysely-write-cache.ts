@@ -111,7 +111,7 @@ export class KyselyWriteCache implements IWriteCache {
    * @throws {ModuleNotFoundError} If document type not registered in registry
    * @throws {Error} "Failed to rebuild document" if operation store fails
    * @throws {Error} If reducer throws during operation application
-   * @throws {Error} If document serialization (structuredClone) fails
+   * @throws {Error} If document serialization fails
    */
   async getState(
     documentId: string,
@@ -134,13 +134,13 @@ export class KyselyWriteCache implements IWriteCache {
         if (snapshots.length > 0) {
           const newest = snapshots[snapshots.length - 1];
           this.lruTracker.touch(streamKey);
-          return structuredClone(newest.document);
+          return newest.document;
         }
       } else {
         const exactMatch = snapshots.find((s) => s.revision === targetRevision);
         if (exactMatch) {
           this.lruTracker.touch(streamKey);
-          return structuredClone(exactMatch.document);
+          return exactMatch.document;
         }
 
         const newestOlder = this.findNearestOlderSnapshot(
@@ -161,7 +161,7 @@ export class KyselyWriteCache implements IWriteCache {
           this.putState(documentId, scope, branch, targetRevision, document);
           this.lruTracker.touch(streamKey);
 
-          return structuredClone(document);
+          return document;
         }
       }
     }
@@ -181,13 +181,14 @@ export class KyselyWriteCache implements IWriteCache {
 
     this.putState(documentId, scope, branch, revision, document);
 
-    return structuredClone(document);
+    return document;
   }
 
   /**
    * Stores a document snapshot in the cache at a specific revision.
    *
-   * The document is deep-copied to prevent external mutations.
+   * Stores the document reference as-is. Callers must avoid mutating cached
+   * snapshots if they need to preserve historical revisions.
    * Updates LRU tracker and may evict least recently used stream if at capacity.
    * Asynchronously persists keyframes at configured intervals (fire-and-forget).
    *
@@ -196,7 +197,7 @@ export class KyselyWriteCache implements IWriteCache {
    * @param branch - The operation branch
    * @param revision - The revision number
    * @param document - The document to cache
-   * @throws {Error} If document serialization (structuredClone) fails
+   * @throws {Error} If document serialization fails
    */
   putState(
     documentId: string,
@@ -205,20 +206,19 @@ export class KyselyWriteCache implements IWriteCache {
     revision: number,
     document: PHDocument,
   ): void {
-    const safeCopy = structuredClone(document);
     const streamKey = this.makeStreamKey(documentId, scope, branch);
     const stream = this.getOrCreateStream(streamKey);
 
     const snapshot: CachedSnapshot = {
       revision,
-      document: safeCopy,
+      document,
     };
 
     stream.ringBuffer.push(snapshot);
 
     if (this.isKeyframeRevision(revision)) {
       this.keyframeStore
-        .putKeyframe(documentId, scope, branch, revision, safeCopy)
+        .putKeyframe(documentId, scope, branch, revision, document)
         .catch((err) => {
           console.error(
             `Failed to persist keyframe ${documentId}@${revision}:`,
@@ -336,7 +336,7 @@ export class KyselyWriteCache implements IWriteCache {
     let documentType: string;
 
     if (keyframe) {
-      document = structuredClone(keyframe.document);
+      document = keyframe.document;
       startRevision = keyframe.revision;
       documentType = keyframe.document.header.documentType;
     } else {
@@ -472,7 +472,7 @@ export class KyselyWriteCache implements IWriteCache {
   ): Promise<PHDocument> {
     const documentType = baseDocument.header.documentType;
     const module = this.registry.getModule(documentType);
-    let document = structuredClone(baseDocument);
+    let document = baseDocument;
 
     try {
       const pagedResults = await this.operationStore.getSince(

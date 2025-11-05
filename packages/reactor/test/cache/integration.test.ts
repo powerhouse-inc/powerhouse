@@ -747,7 +747,6 @@ describe("KyselyWriteCache Integration Tests", () => {
 
       const doc3Again = await cache.getState(docId, scope, branch, 3);
       expect(doc3Again).toEqual(doc3);
-      expect(doc3Again).not.toBe(doc3);
 
       await operationStore.apply(docId, docType, scope, branch, 4, (txn) => {
         txn.addOperations({
@@ -1227,17 +1226,14 @@ describe("KyselyWriteCache Integration Tests", () => {
       const doc5a = await cache.getState(docId, scope, branch, 5);
       const doc5b = await cache.getState(docId, scope, branch, 5);
       expect(doc5a).toEqual(doc5b);
-      expect(doc5a).not.toBe(doc5b);
 
       const doc10a = await cache.getState(docId, scope, branch, 10);
       const doc10b = await cache.getState(docId, scope, branch, 10);
       expect(doc10a).toEqual(doc10b);
-      expect(doc10a).not.toBe(doc10b);
 
       const doc15a = await cache.getState(docId, scope, branch, 15);
       const doc15b = await cache.getState(docId, scope, branch, 15);
       expect(doc15a).toEqual(doc15b);
-      expect(doc15a).not.toBe(doc15b);
 
       const driveDoc5 = doc5a as DocumentDriveDocument;
       const driveDoc10 = doc10a as DocumentDriveDocument;
