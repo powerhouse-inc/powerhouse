@@ -3,58 +3,81 @@ import {
   TSMorphCodeGenerator,
 } from "@powerhousedao/codegen";
 import fs from "fs/promises";
+import { mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { PURGE_AFTER_TEST } from "./config.js";
+import {
+  TEST_PACKAGE_NAME,
+  TS_MORPH_GENERATOR_TEST_OUTPUT_DIR,
+} from "./constants.js";
 import { expectedProOperationsV3Content } from "./fixtures/expected-reducer-content-v3.js";
 import {
   expectedBaseOperationsContent,
   expectedProOperationsContent,
 } from "./fixtures/expected-reducer-content.js";
-
-const testDir = path.join(import.meta.dirname);
+import {
+  getTestDataDir,
+  getTestOutDirPath,
+  getTestOutputDir,
+} from "./utils.js";
 
 describe("ts-morph generator", () => {
-  const srcPath = path.join(testDir, ".test-project");
+  const testDir = import.meta.dirname;
+  const outDirName = getTestOutputDir(
+    testDir,
+    TS_MORPH_GENERATOR_TEST_OUTPUT_DIR,
+  );
+  let testOutDirCount = 0;
+  let testOutDirPath = getTestOutDirPath(testOutDirCount, outDirName);
+  const testDataDir = getTestDataDir(testDir, "test-doc-versions");
 
   const srcTestDocumentPathV3 = path.join(
-    testDir,
-    "data",
-    "test-doc-versions",
+    testDataDir,
     "test-doc-v3",
     "test-doc.json",
   );
 
   const srcTestDocumentPathV4 = path.join(
-    testDir,
-    "data",
-    "test-doc-versions",
+    testDataDir,
     "test-doc-v4",
     "test-doc.json",
   );
 
-  beforeEach(async () => {
-    // Clean up .test-project folder before each test
+  async function setupTest() {
+    testOutDirCount++;
+    testOutDirPath = getTestOutDirPath(testOutDirCount, outDirName);
+  }
+
+  beforeAll(() => {
     try {
-      await fs.rm(srcPath, { recursive: true });
+      rmSync(outDirName, { recursive: true, force: true });
+      mkdirSync(outDirName, { recursive: true });
     } catch (error) {
       // Ignore error if folder doesn't exist
     }
   });
 
+  afterAll(() => {
+    if (PURGE_AFTER_TEST) {
+      rmSync(outDirName, { recursive: true, force: true });
+    }
+  });
+
   it("should generate reducers", async () => {
+    await setupTest();
     const testDocDocumentModel = await loadDocumentModel(srcTestDocumentPathV4);
-    const packageName = "test";
     const generator = new TSMorphCodeGenerator(
-      srcPath,
+      testOutDirPath,
       [testDocDocumentModel],
-      packageName,
+      TEST_PACKAGE_NAME,
     );
 
     await generator.generateReducers();
 
     // Check base-operations.ts file exists and has correct content
     const baseOperationsPath = path.join(
-      srcPath,
+      testOutDirPath,
       "document-model",
       "test-doc",
       "src",
@@ -72,7 +95,7 @@ describe("ts-morph generator", () => {
 
     // Check pro-operations.ts file exists and has correct content
     const proOperationsPath = path.join(
-      srcPath,
+      testOutDirPath,
       "document-model",
       "test-doc",
       "src",
@@ -87,22 +110,22 @@ describe("ts-morph generator", () => {
   });
 
   it("should update reducers when document version changes", async () => {
+    await setupTest();
     // First, generate reducers for v3 (only has setNameAndValueOperation)
     const testDocV3DocumentModel = await loadDocumentModel(
       srcTestDocumentPathV3,
     );
-    const packageName = "test";
     const generatorV3 = new TSMorphCodeGenerator(
-      srcPath,
+      testOutDirPath,
       [testDocV3DocumentModel],
-      packageName,
+      TEST_PACKAGE_NAME,
     );
 
     await generatorV3.generateReducers();
 
     // Verify v3 only has setNameAndValueOperation in pro-operations.ts
     const proOperationsPath = path.join(
-      srcPath,
+      testOutDirPath,
       "document-model",
       "test-doc",
       "src",
@@ -122,9 +145,9 @@ describe("ts-morph generator", () => {
       srcTestDocumentPathV4,
     );
     const generatorV4 = new TSMorphCodeGenerator(
-      srcPath,
+      testOutDirPath,
       [testDocV4DocumentModel],
-      packageName,
+      TEST_PACKAGE_NAME,
     );
 
     await generatorV4.generateReducers();
@@ -140,7 +163,7 @@ describe("ts-morph generator", () => {
 
     // Verify base operations are unchanged
     const baseOperationsPath = path.join(
-      srcPath,
+      testOutDirPath,
       "document-model",
       "test-doc",
       "src",

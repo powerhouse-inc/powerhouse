@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "path";
+import { TEST_DATA_DIR, TEST_OUTPUT_DIR } from "./constants.js";
 
 export async function copyAllFiles(srcDir: string, destDir: string) {
   // Ensure destination exists
@@ -19,4 +20,16 @@ export async function copyAllFiles(srcDir: string, destDir: string) {
       await fs.copyFile(srcPath, destPath);
     }
   }
+}
+
+export function getTestOutputDir(testDir: string, testOutputDir: string) {
+  return path.join(testDir, TEST_OUTPUT_DIR, testOutputDir);
+}
+
+export function getTestDataDir(testDir: string, testDataDir: string) {
+  return path.join(testDir, TEST_DATA_DIR, testDataDir);
+}
+
+export function getTestOutDirPath(testOutDirCount: number, outDirName: string) {
+  return path.join(outDirName, `test-${testOutDirCount}`);
 }

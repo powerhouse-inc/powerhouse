@@ -6,31 +6,36 @@ import {
 } from "@powerhousedao/codegen";
 import { mkdirSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { PURGE_AFTER_TEST } from "./config.js";
+import {
+  DOCUMENT_MODELS_TEST_PROJECT,
+  GENERATE_DOC_MODEL_TEST_OUTPUT_DIR,
+  TEST_PACKAGE_NAME,
+} from "./constants.js";
 import { compile } from "./fixtures/typecheck.js";
-import { copyAllFiles } from "./utils.js";
-
-const PURGE_AFTER_TEST = true;
+import { copyAllFiles, getTestDataDir, getTestOutputDir } from "./utils.js";
 
 describe("document model", () => {
-  const testPackageName = "test";
   const testDir = import.meta.dirname;
-  const outDirName = path.join(
+  const outDirName = getTestOutputDir(
     testDir,
-    ".generate-document-models-test-output",
+    GENERATE_DOC_MODEL_TEST_OUTPUT_DIR,
   );
+  const testDataDir = getTestDataDir(testDir, DOCUMENT_MODELS_TEST_PROJECT);
+
   let testOutDirCount = 0;
   let testOutDirName = `test-${testOutDirCount}`;
   let testOutDirPath = path.join(outDirName, testOutDirName);
   const documentModelsSrcPath = path.join(testDir, "data", "document-models");
   let documentModelsDirName = path.join(testOutDirPath, "document-models");
   let processorsDirName = path.join(testOutDirPath, "processors");
-  async function setupTest(testProjectSrcPath: string) {
+  async function setupTest(testDataDir: string) {
     testOutDirCount++;
     testOutDirName = `test-${testOutDirCount}`;
     testOutDirPath = path.join(outDirName, testOutDirName);
 
-    await copyAllFiles(testProjectSrcPath, testOutDirPath);
+    await copyAllFiles(testDataDir, testOutDirPath);
 
     documentModelsDirName = path.join(testOutDirPath, "document-models");
     processorsDirName = path.join(testOutDirPath, "processors");
@@ -55,13 +60,8 @@ describe("document model", () => {
   });
 
   const generate = async (skipSetup = false) => {
-    const testProjectSrcPath = path.join(
-      testDir,
-      "data",
-      "document-models-test-project",
-    );
     if (!skipSetup) {
-      await setupTest(testProjectSrcPath);
+      await setupTest(testDataDir);
     }
 
     await generateSchemas(documentModelsSrcPath, {
@@ -80,7 +80,7 @@ describe("document model", () => {
     await hygenGenerateDocumentModel(
       billingStatementDocumentModel,
       documentModelsDirName,
-      testPackageName,
+      TEST_PACKAGE_NAME,
       { skipFormat: true },
     );
 
@@ -91,7 +91,7 @@ describe("document model", () => {
     await hygenGenerateDocumentModel(
       testDocDocumentModel,
       documentModelsDirName,
-      testPackageName,
+      TEST_PACKAGE_NAME,
       { skipFormat: true },
     );
   };
@@ -241,12 +241,12 @@ describe("document model", () => {
       timeout: 15000,
     },
     async () => {
-      const testProjectSrcPath = path.join(
+      const testDataDir = path.join(
         testDir,
         "data",
         "document-models-test-project",
       );
-      await setupTest(testProjectSrcPath);
+      await setupTest(testDataDir);
 
       const documentModelsFilePath = path.join(
         documentModelsDirName,
@@ -346,7 +346,7 @@ describe("document model", () => {
       await hygenGenerateDocumentModel(
         testDocDocumentModelV2,
         documentModelsDirName,
-        testPackageName,
+        TEST_PACKAGE_NAME,
         { skipFormat: true },
       );
 
@@ -493,7 +493,7 @@ describe("document model", () => {
       await hygenGenerateDocumentModel(
         testEmptyCodesDocumentModel,
         documentModelsDirName,
-        testPackageName,
+        TEST_PACKAGE_NAME,
         { skipFormat: true },
       );
 

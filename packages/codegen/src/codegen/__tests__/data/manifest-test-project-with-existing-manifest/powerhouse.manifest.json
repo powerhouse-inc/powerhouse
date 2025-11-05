@@ -1,0 +1,51 @@
+{
+    "name": "@existing/package",
+    "description": "Existing description",
+    "category": "test-category",
+    "publisher": {
+        "name": "@existing",
+        "url": "https://example.com/existing"
+    },
+    "documentModels": [
+        {
+            "id": "test/document",
+            "name": "Test Document"
+        }
+    ],
+    "editors": [
+        {
+            "id": "test-editor",
+            "name": "Test Editor",
+            "documentTypes": [
+                "test/document"
+            ]
+        }
+    ],
+    "apps": [
+        {
+            "id": "test-app",
+            "name": "Test App",
+            "documentTypes": [
+                "test/document"
+            ]
+        }
+    ],
+    "subgraphs": [
+        {
+            "id": "test-subgraph",
+            "name": "Test Subgraph",
+            "documentTypes": [
+                "test/document"
+            ]
+        }
+    ],
+    "importScripts": [
+        {
+            "id": "test-script",
+            "name": "Test Script",
+            "documentTypes": [
+                "test/document"
+            ]
+        }
+    ]
+}

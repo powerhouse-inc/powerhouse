@@ -2,19 +2,60 @@ import * as validationPlugin from "@acaldas/graphql-codegen-typescript-validatio
 import { codegen } from "@graphql-codegen/core";
 import * as typescriptPlugin from "@graphql-codegen/typescript";
 import { parse } from "graphql";
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { scalars, tsConfig, zodConfig } from "../graphql.js";
-
-const documentDriveSchema = readFileSync(
-  path.join(fileURLToPath(import.meta.url), "../schema.graphql"),
-  "utf-8",
-);
+import { PURGE_AFTER_TEST } from "./config.js";
+import {
+  GENERATE_SCHEMAS_TEST_OUTPUT_DIR,
+  SCHEMAS_TEST_PROJECT,
+} from "./constants.js";
+import {
+  copyAllFiles,
+  getTestDataDir,
+  getTestOutDirPath,
+  getTestOutputDir,
+} from "./utils.js";
 
 describe("graphql codegen", () => {
+  const testDir = import.meta.dirname;
+  const outDirName = getTestOutputDir(
+    testDir,
+    GENERATE_SCHEMAS_TEST_OUTPUT_DIR,
+  );
+  const testDataDir = getTestDataDir(testDir, SCHEMAS_TEST_PROJECT);
+  let testOutDirCount = 0;
+  let testOutDirPath = getTestOutDirPath(testOutDirCount, outDirName);
+  const documentDriveSchema = readFileSync(
+    path.join(testDataDir, "schema.graphql"),
+    "utf-8",
+  );
+
+  async function setupTest(testDataDir: string) {
+    testOutDirCount++;
+    testOutDirPath = getTestOutDirPath(testOutDirCount, outDirName);
+
+    await copyAllFiles(testDataDir, testOutDirPath);
+  }
+
+  beforeAll(() => {
+    try {
+      rmSync(outDirName, { recursive: true, force: true });
+      mkdirSync(outDirName, { recursive: true });
+    } catch (error) {
+      // Ignore error if folder doesn't exist
+    }
+  });
+
+  afterAll(() => {
+    if (PURGE_AFTER_TEST) {
+      rmSync(outDirName, { recursive: true, force: true });
+    }
+  });
+
   it("should generate correct typescript code for schema", async () => {
+    await setupTest(testDataDir);
     const schema = `
       ${Object.keys(scalars)
         .map((scalar) => `scalar ${scalar}`)
@@ -51,6 +92,7 @@ describe("graphql codegen", () => {
   });
 
   it("should generate correct zod code for schema", async () => {
+    await setupTest(testDataDir);
     const schema = `
       ${Object.keys(scalars)
         .map((scalar) => `scalar ${scalar}`)
@@ -87,6 +129,7 @@ describe("graphql codegen", () => {
   });
 
   it("should generate correct typescript code for drive schema", async () => {
+    await setupTest(testDataDir);
     const result = await codegen({
       filename: "",
       plugins: [
@@ -104,6 +147,7 @@ describe("graphql codegen", () => {
     expect(result).toMatchSnapshot();
   });
   it("should generate correct zod code for drive schema", async () => {
+    await setupTest(testDataDir);
     const result = await codegen({
       filename: "",
       plugins: [

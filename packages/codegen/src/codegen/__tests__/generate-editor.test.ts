@@ -1,17 +1,21 @@
 import { type PowerhouseConfig } from "@powerhousedao/config";
 import fs, { mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { generateEditor } from "../index.js";
+import { PURGE_AFTER_TEST } from "./config.js";
+import {
+  EDITORS_TEST_PROJECT,
+  EDITORS_TEST_PROJECT_WITH_EXISTING_EDITOR,
+  GENERATE_EDITOR_TEST_OUTPUT_DIR,
+  TEST_PACKAGE_NAME,
+} from "./constants.js";
 import { compile } from "./fixtures/typecheck.js";
-import { copyAllFiles } from "./utils.js";
-
-const PURGE_AFTER_TEST = true;
+import { copyAllFiles, getTestDataDir, getTestOutputDir } from "./utils.js";
 
 describe("generateEditor", () => {
-  const testPackageName = "test";
   const testDir = import.meta.dirname;
-  const outDirName = path.join(testDir, ".generate-editors-test-output");
+  const outDirName = getTestOutputDir(testDir, GENERATE_EDITOR_TEST_OUTPUT_DIR);
   let testOutDirCount = 0;
   let testOutDirName = `test-${testOutDirCount}`;
   let testOutDirPath = path.join(outDirName, testOutDirName);
@@ -24,12 +28,12 @@ describe("generateEditor", () => {
     skipFormat: true,
     logLevel: "info",
   };
-  async function setupTest(testProjectSrcPath: string) {
+  async function setupTest(testDataDir: string) {
     testOutDirCount++;
     testOutDirName = `test-${testOutDirCount}`;
     testOutDirPath = path.join(outDirName, testOutDirName);
 
-    await copyAllFiles(testProjectSrcPath, testOutDirPath);
+    await copyAllFiles(testDataDir, testOutDirPath);
 
     config.editorsDir = path.join(testOutDirPath, "editors");
     config.documentModelsDir = path.join(testOutDirPath, "document-models");
@@ -56,7 +60,7 @@ describe("generateEditor", () => {
       timeout: 15000,
     },
     async () => {
-      await setupTest(path.join(testDir, "data", "editors-test-project"));
+      await setupTest(getTestDataDir(testDir, EDITORS_TEST_PROJECT));
 
       const name = "TestDocEditor";
       await generateEditor(
@@ -64,7 +68,7 @@ describe("generateEditor", () => {
         ["powerhouse/test-doc"],
         config,
         "test-document-model-editor",
-        testPackageName,
+        TEST_PACKAGE_NAME,
       );
 
       const editorsDir = path.join(testOutDirPath, "editors");
@@ -115,7 +119,7 @@ describe("generateEditor", () => {
     },
     async () => {
       await setupTest(
-        path.join(testDir, "data", "editors-test-project-with-existing-editor"),
+        getTestDataDir(testDir, EDITORS_TEST_PROJECT_WITH_EXISTING_EDITOR),
       );
 
       const name = "TestDocEditorTwo";
@@ -124,7 +128,7 @@ describe("generateEditor", () => {
         ["powerhouse/test-doc"],
         config,
         "test-document-model-editor-two",
-        testPackageName,
+        TEST_PACKAGE_NAME,
       );
       const editorsDir = path.join(testOutDirPath, "editors");
       const editorsFilePath = path.join(editorsDir, "editors.ts");
@@ -140,7 +144,7 @@ describe("generateEditor", () => {
       timeout: 15000,
     },
     async () => {
-      await setupTest(path.join(testDir, "data", "editors-test-project"));
+      await setupTest(getTestDataDir(testDir, EDITORS_TEST_PROJECT));
 
       const editorsFilePath = path.join(
         testOutDirPath,
@@ -153,7 +157,7 @@ describe("generateEditor", () => {
         ["powerhouse/test-doc"],
         config,
         "test-document-model-editor",
-        testPackageName,
+        TEST_PACKAGE_NAME,
       );
       await compile(testOutDirPath);
       const editorsContent = fs.readFileSync(editorsFilePath, "utf-8");

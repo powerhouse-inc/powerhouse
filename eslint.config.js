@@ -26,9 +26,9 @@ const normalIgnoredFiles = [
   "commitlint.config.cjs",
   // test artifacts
   "**/.out/",
+  "**/.test-output/",
   "**/flaky/",
   "apps/connect/lib/",
-  "packages/codegen/src/codegen/__tests__/.*",
 ];
 
 /** These files need to be ignored for builds to pass, but they do not have clear reasons to be ignored.
@@ -45,8 +45,6 @@ const unsafeIgnoredFiles = [
   "**/.storybook/",
   // TODO: investigate why our benchmark tests fail so many lint checks
   "**/*.bench.ts",
-  // TODO: replace with something more robust
-  "packages/codegen/src/codegen/__tests__/.test-project",
   // TODO: replace with something more robust
   "packages/codegen/src/codegen/.hygen/",
   // TODO: replace with something more robust

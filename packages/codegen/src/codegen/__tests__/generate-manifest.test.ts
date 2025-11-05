@@ -2,41 +2,67 @@ import type {
   PartialPowerhouseManifest,
   PowerhouseManifest,
 } from "@powerhousedao/config";
-import fs from "node:fs";
+import fs, { mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { generateManifest } from "../generate.js";
-
-// Set this to false to keep the generated files for inspection
-const CLEANUP_AFTER_TESTS = true;
+import { PURGE_AFTER_TEST } from "./config.js";
+import {
+  GENERATE_MANIFEST_TEST_OUTPUT_DIR,
+  MANIFEST_TEST_PROJECT,
+  MANIFEST_TEST_PROJECT_WITH_EXISTING_MANIFEST,
+} from "./constants.js";
+import { copyAllFiles, getTestDataDir, getTestOutputDir } from "./utils.js";
 
 describe("generateManifest", () => {
-  let testDir: string;
+  const testDir = import.meta.dirname;
+  const outDirName = getTestOutputDir(
+    testDir,
+    GENERATE_MANIFEST_TEST_OUTPUT_DIR,
+  );
+  let testOutDirCount = 0;
+  let testOutDirName = `test-${testOutDirCount}`;
+  let testOutDirPath = path.join(outDirName, testOutDirName);
 
-  beforeEach(() => {
-    testDir = path.join(import.meta.dirname, "temp");
-    if (fs.existsSync(testDir)) {
-      fs.rmSync(testDir, { recursive: true, force: true });
+  async function setupTest(testDataDir: string) {
+    testOutDirCount++;
+    testOutDirName = `test-${testOutDirCount}`;
+    testOutDirPath = path.join(outDirName, testOutDirName);
+
+    await copyAllFiles(testDataDir, testOutDirPath);
+  }
+
+  beforeAll(() => {
+    try {
+      rmSync(outDirName, { recursive: true, force: true });
+    } catch (error) {
+      // Ignore error if folder doesn't exist
     }
-    fs.mkdirSync(testDir, { recursive: true });
+    mkdirSync(outDirName, { recursive: true });
   });
 
   afterAll(() => {
-    if (CLEANUP_AFTER_TESTS && fs.existsSync(testDir)) {
-      fs.rmSync(testDir, { recursive: true, force: true });
+    if (PURGE_AFTER_TEST) {
+      try {
+        rmSync(outDirName, { recursive: true, force: true });
+      } catch (error) {
+        // Ignore error if folder doesn't exist
+      }
     }
   });
-
-  it("should generate a new manifest from scratch with partial data", () => {
+  it("should generate a new manifest from scratch with partial data", async () => {
+    await setupTest(getTestDataDir(testDir, MANIFEST_TEST_PROJECT));
     const manifestData = {
       name: "@test/package",
       description: "Test package description",
     };
 
-    const manifestPath = generateManifest(manifestData, testDir);
+    const manifestPath = generateManifest(manifestData, testOutDirPath);
 
     expect(fs.existsSync(manifestPath)).toBe(true);
-    expect(manifestPath).toBe(path.join(testDir, "powerhouse.manifest.json"));
+    expect(manifestPath).toBe(
+      path.join(testOutDirPath, "powerhouse.manifest.json"),
+    );
 
     const content = fs.readFileSync(manifestPath, "utf-8");
     const manifest = JSON.parse(content) as PowerhouseManifest;
@@ -52,57 +78,19 @@ describe("generateManifest", () => {
     expect(manifest.importScripts).toEqual([]);
   });
 
-  it("should update existing manifest preserving all existing fields", () => {
-    const existingManifest: PowerhouseManifest = {
-      name: "@existing/package",
-      description: "Existing description",
-      category: "test-category",
-      publisher: {
-        name: "@existing",
-        url: "https://example.com/existing",
-      },
-      documentModels: [{ id: "test/document", name: "Test Document" }],
-      editors: [
-        {
-          id: "test-editor",
-          name: "Test Editor",
-          documentTypes: ["test/document"],
-        },
-      ],
-      apps: [
-        {
-          id: "test-app",
-          name: "Test App",
-          documentTypes: ["test/document"],
-        },
-      ],
-      subgraphs: [
-        {
-          id: "test-subgraph",
-          name: "Test Subgraph",
-          documentTypes: ["test/document"],
-        },
-      ],
-      importScripts: [
-        {
-          id: "test-script",
-          name: "Test Script",
-          documentTypes: ["test/document"],
-        },
-      ],
-    };
-
-    const manifestPath = path.join(testDir, "powerhouse.manifest.json");
-    fs.writeFileSync(manifestPath, JSON.stringify(existingManifest, null, 4));
+  it("should update existing manifest preserving all existing fields", async () => {
+    await setupTest(
+      getTestDataDir(testDir, MANIFEST_TEST_PROJECT_WITH_EXISTING_MANIFEST),
+    );
 
     const updateData = {
       name: "@updated/package",
       description: "Updated description",
     };
 
-    generateManifest(updateData, testDir);
-
+    const manifestPath = generateManifest(updateData, testOutDirPath);
     const content = fs.readFileSync(manifestPath, "utf-8");
+
     const manifest = JSON.parse(content) as PowerhouseManifest;
 
     expect(manifest.name).toBe("@updated/package");
@@ -145,32 +133,17 @@ describe("generateManifest", () => {
     ]);
   });
 
-  it("should update publisher fields partially", () => {
-    const existingManifest: PowerhouseManifest = {
-      name: "@existing/package",
-      description: "Existing description",
-      category: "",
-      publisher: {
-        name: "@existing",
-        url: "https://example.com/existing",
-      },
-      documentModels: [],
-      editors: [],
-      apps: [],
-      subgraphs: [],
-      importScripts: [],
-    };
-
-    const manifestPath = path.join(testDir, "powerhouse.manifest.json");
-    fs.writeFileSync(manifestPath, JSON.stringify(existingManifest, null, 4));
-
+  it("should update publisher fields partially", async () => {
+    await setupTest(
+      getTestDataDir(testDir, MANIFEST_TEST_PROJECT_WITH_EXISTING_MANIFEST),
+    );
     const updateData: PartialPowerhouseManifest = {
       publisher: {
         name: "@updated",
       },
     };
 
-    generateManifest(updateData, testDir);
+    const manifestPath = generateManifest(updateData, testOutDirPath);
 
     const content = fs.readFileSync(manifestPath, "utf-8");
     const manifest = JSON.parse(content) as PowerhouseManifest;
@@ -181,8 +154,9 @@ describe("generateManifest", () => {
     });
   });
 
-  it("should handle malformed existing manifest gracefully", () => {
-    const manifestPath = path.join(testDir, "powerhouse.manifest.json");
+  it("should handle malformed existing manifest gracefully", async () => {
+    await setupTest(getTestDataDir(testDir, MANIFEST_TEST_PROJECT));
+    const manifestPath = path.join(testOutDirPath, "powerhouse.manifest.json");
     fs.writeFileSync(manifestPath, "{ invalid json }");
 
     const updateData = {
@@ -190,7 +164,7 @@ describe("generateManifest", () => {
       description: "Test description",
     };
 
-    const resultPath = generateManifest(updateData, testDir);
+    const resultPath = generateManifest(updateData, testOutDirPath);
 
     expect(fs.existsSync(resultPath)).toBe(true);
 
@@ -217,11 +191,15 @@ describe("generateManifest", () => {
       expect(manifestPath).toBe(path.join(testDir, "powerhouse.manifest.json"));
       expect(fs.existsSync(manifestPath)).toBe(true);
     } finally {
+      fs.rmSync(path.join(testDir, "powerhouse.manifest.json"), {
+        force: true,
+      });
       process.chdir(originalCwd);
     }
   });
 
-  it("should validate JSON structure matches expected format", () => {
+  it("should validate JSON structure matches expected format", async () => {
+    await setupTest(getTestDataDir(testDir, MANIFEST_TEST_PROJECT));
     const manifestData = {
       name: "@test/package",
       description: "Test package",
@@ -261,7 +239,7 @@ describe("generateManifest", () => {
       ],
     };
 
-    const manifestPath = generateManifest(manifestData, testDir);
+    const manifestPath = generateManifest(manifestData, testOutDirPath);
     const content = fs.readFileSync(manifestPath, "utf-8");
 
     // Verify it's properly formatted JSON

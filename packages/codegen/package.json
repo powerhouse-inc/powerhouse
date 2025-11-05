@@ -16,12 +16,11 @@
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "copy-hygen": "cp -r src/codegen/.hygen dist/src/codegen/",
+    "copy-hygen": "rm -rf dist/src/codegen/.hygen && cp -r src/codegen/.hygen dist/src/codegen/",
     "build": "npm run copy-hygen",
     "build:create-lib": "tsc --project src/create-lib/tsconfig.json",
     "publish:create-lib": "npm publish --cwd ./src/create-lib/",
     "start": "tsx src/cli.ts",
-    "pretest": "rimraf ./src/codegen/__tests__/.test-project",
     "test": "npm run copy-hygen && vitest run"
   },
   "dependencies": {

@@ -69,7 +69,7 @@
     "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh"
   },
   "dependencies": {
-    "@powerhousedao/codegen": "file:../../../../../",
-    "@powerhousedao/reactor-browser": "file:../../../../../packages/reactor-browser"
+    "@powerhousedao/codegen": "file:../../../../../../",
+    "@powerhousedao/reactor-browser": "file:../../../../../../packages/reactor-browser"
   }
 }

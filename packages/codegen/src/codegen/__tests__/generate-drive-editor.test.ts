@@ -2,18 +2,29 @@ import { generateDriveEditor } from "@powerhousedao/codegen";
 import type { PowerhouseConfig } from "@powerhousedao/config";
 import fs, { existsSync, mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { PURGE_AFTER_TEST } from "./config.js";
+import {
+  EDITORS_TEST_PROJECT,
+  GENERATE_DRIVE_EDITOR_TEST_OUTPUT_DIR,
+} from "./constants.js";
 import { compile } from "./fixtures/typecheck.js";
-import { copyAllFiles } from "./utils.js";
-
-const PURGE_AFTER_TEST = true;
+import {
+  copyAllFiles,
+  getTestDataDir,
+  getTestOutDirPath,
+  getTestOutputDir,
+} from "./utils.js";
 
 describe("generateDriveEditor", () => {
   const testDir = import.meta.dirname;
-  const outDirName = path.join(testDir, ".generate-drive-editor-test-output");
+  const outDirName = getTestOutputDir(
+    testDir,
+    GENERATE_DRIVE_EDITOR_TEST_OUTPUT_DIR,
+  );
+  const testDataDir = getTestDataDir(testDir, EDITORS_TEST_PROJECT);
   let testOutDirCount = 0;
-  let testOutDirName = `test-${testOutDirCount}`;
-  let testOutDirPath = path.join(outDirName, testOutDirName);
+  let testOutDirPath = getTestOutDirPath(testOutDirCount, outDirName);
   const config: PowerhouseConfig = {
     editorsDir: "",
     documentModelsDir: "",
@@ -25,8 +36,7 @@ describe("generateDriveEditor", () => {
   };
   async function setupTest(testProjectSrcPath: string) {
     testOutDirCount++;
-    testOutDirName = `test-${testOutDirCount}`;
-    testOutDirPath = path.join(outDirName, testOutDirName);
+    testOutDirPath = getTestOutDirPath(testOutDirCount, outDirName);
 
     await copyAllFiles(testProjectSrcPath, testOutDirPath);
 
@@ -55,7 +65,7 @@ describe("generateDriveEditor", () => {
       timeout: 15000,
     },
     async () => {
-      await setupTest(path.join(testDir, "data", "editors-test-project"));
+      await setupTest(testDataDir);
 
       const name = "Atlas Drive Explorer";
 
