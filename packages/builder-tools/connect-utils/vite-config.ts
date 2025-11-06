@@ -1,8 +1,3 @@
-import {
-  phExternalPackagesPlugin,
-  resolveConnectPackageJson,
-  stripVersionFromPackage,
-} from "@powerhousedao/builder-tools";
 import { getConfig } from "@powerhousedao/config/node";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwind from "@tailwindcss/vite";
@@ -24,7 +19,12 @@ import {
   setConnectEnv,
   type ConnectEnv,
 } from "./env-config.js";
+import {
+  resolveConnectPackageJson,
+  stripVersionFromPackage,
+} from "./helpers.js";
 import type { IConnectOptions } from "./types.js";
+import { phExternalPackagesPlugin } from "./vite-plugins/ph-external-packages.js";
 
 export const connectClientConfig = {
   meta: [
