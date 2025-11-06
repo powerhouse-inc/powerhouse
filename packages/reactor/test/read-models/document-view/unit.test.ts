@@ -440,9 +440,9 @@ describe("KyselyDocumentView Unit Tests", () => {
 
     it("should check abort signal after database query", async () => {
       const controller = new AbortController();
-      mockDb.execute.mockImplementation(async () => {
+      mockDb.execute.mockImplementation(() => {
         controller.abort();
-        return [];
+        return Promise.resolve([]);
       });
 
       await expect(
@@ -528,9 +528,9 @@ describe("KyselyDocumentView Unit Tests", () => {
 
     it("should respect abort signal after query", async () => {
       const controller = new AbortController();
-      mockDb.executeTakeFirst.mockImplementation(async () => {
+      mockDb.executeTakeFirst.mockImplementation(() => {
         controller.abort();
-        return { documentId: "doc-123" };
+        return Promise.resolve({ documentId: "doc-123" });
       });
 
       await expect(

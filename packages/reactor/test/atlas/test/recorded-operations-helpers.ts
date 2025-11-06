@@ -26,7 +26,7 @@ async function waitUntil(
   const { timeout = 30000, interval = 100 } = options;
   const startTime = Date.now();
 
-  while (true) {
+  for (;;) {
     const result = await condition();
     if (result) {
       return;

@@ -22,8 +22,8 @@ const migrations = {
 };
 
 class ProgrammaticMigrationProvider implements MigrationProvider {
-  async getMigrations() {
-    return migrations;
+  getMigrations() {
+    return Promise.resolve(migrations);
   }
 }
 

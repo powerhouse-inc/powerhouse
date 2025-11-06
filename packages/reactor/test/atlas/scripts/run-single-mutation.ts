@@ -76,7 +76,7 @@ async function waitForBatchCompletion(
   const intervalMs = 50;
   const start = Date.now();
 
-  while (true) {
+  for (;;) {
     const statuses = await Promise.all(
       jobIds.map((id) => reactor.getJobStatus(id)),
     );
