@@ -3,7 +3,18 @@ import type { StartServerOptions } from "@powerhousedao/switchboard/server";
 import { startSwitchboard as startSwitchboardServer } from "@powerhousedao/switchboard/server";
 import path from "node:path";
 
-const defaultSwitchboardOptions: Partial<StartServerOptions> = {
+export type LocalSwitchboardOptions = StartServerOptions & {
+  configFile?: string;
+  generate?: boolean;
+  watch?: boolean;
+  basePath?: string;
+  dbPath?: string;
+  disableDefaultDrive?: boolean;
+  remoteDrives?: string;
+  remoteDrivesConfig?: string;
+};
+
+export const defaultSwitchboardOptions = {
   port: 4001,
   dbPath: path.join(process.cwd(), ".ph/read-model.db"),
   drive: {
@@ -20,7 +31,8 @@ const defaultSwitchboardOptions: Partial<StartServerOptions> = {
       triggers: [],
     },
   },
-};
+  mcp: true,
+} satisfies StartServerOptions;
 
 function getDefaultVetraSwitchboardOptions(
   vetraDriveId: string,

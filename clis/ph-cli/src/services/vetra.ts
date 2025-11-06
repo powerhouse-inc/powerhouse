@@ -10,8 +10,8 @@ import {
   sleep,
 } from "../utils/configure-vetra-github-url.js";
 import { startConnectStudio } from "./connect.js";
-import type { ReactorOptions } from "./reactor.js";
-import { DefaultReactorOptions } from "./reactor.js";
+import type { LocalSwitchboardOptions } from "./switchboard.js";
+import { defaultSwitchboardOptions } from "./switchboard.js";
 
 const VETRA_DRIVE_NAME = "vetra";
 
@@ -79,7 +79,7 @@ async function startVetraPreviewDrive(
 }
 
 async function startLocalVetraSwitchboard(
-  options?: ReactorOptions & {
+  options?: LocalSwitchboardOptions & {
     verbose?: boolean;
     interactiveCodegen?: boolean;
     watch?: boolean;
@@ -197,7 +197,9 @@ export async function startVetra({
 
     // Use config port if no CLI port provided, fallback to default
     const resolvedSwitchboardPort =
-      switchboardPort ?? baseConfig.reactor?.port ?? DefaultReactorOptions.port;
+      switchboardPort ??
+      baseConfig.reactor?.port ??
+      defaultSwitchboardOptions.port;
     const https = baseConfig.reactor?.https;
 
     // Use vetraUrl from config if no explicit remoteDrive is provided
