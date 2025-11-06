@@ -23,6 +23,7 @@ import {
   processBaseServerMutation,
   processReactorMutation,
 } from "../test/recorded-operations-helpers.js";
+import { truncateAllTables } from "../test/truncate-db.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,14 +47,7 @@ async function setupBaseServer() {
     },
   });
 
-  // TODO: create tables if they don't exist
-
-  // clean up db
-  await prismaClient.$executeRawUnsafe('DELETE FROM "Attachment";');
-  await prismaClient.$executeRawUnsafe('DELETE FROM "Operation";');
-  await prismaClient.$executeRawUnsafe('DELETE FROM "DriveDocument";');
-  await prismaClient.$executeRawUnsafe('DELETE FROM "Document";');
-  await prismaClient.$executeRawUnsafe('DELETE FROM "Drive";');
+  await truncateAllTables(prismaClient);
 
   const baseServerStorage = new PrismaStorage(prismaClient as any, cache);
   const documentModels = getDocumentModels();
@@ -107,14 +101,7 @@ async function main() {
             },
           });
 
-          // TODO: create tables if they don't exist
-
-          // clean up db
-          await prismaClient.$executeRawUnsafe('DELETE FROM "Attachment";');
-          await prismaClient.$executeRawUnsafe('DELETE FROM "Operation";');
-          await prismaClient.$executeRawUnsafe('DELETE FROM "DriveDocument";');
-          await prismaClient.$executeRawUnsafe('DELETE FROM "Document";');
-          await prismaClient.$executeRawUnsafe('DELETE FROM "Drive";');
+          await truncateAllTables(prismaClient);
 
           const documentModels = getDocumentModels();
           reactorLegacyStorage = await new ReactorBuilder()

@@ -426,8 +426,8 @@ describe("Atlas Recorded Operations State Comparison Test", () => {
       );
 
       for (const mutation of mutations) {
-        await processReactorMutation(mutation, setup1.reactor, driveIds);
-        await processReactorMutation(mutation, setup2.reactor, driveIds2);
+        await processReactorMutation(mutation, setup1.reactor);
+        await processReactorMutation(mutation, setup2.reactor);
         await processBaseServerMutation(mutation, baseServerDriveServer);
       }
 

@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "test": "vitest run --printConsoleTrace=true --silent=false",
-    "bench": "node --import tsx bench/atlas-operations.bench.ts",
+    "bench": "./setup-db.sh && node --import tsx bench/atlas-operations.bench.ts",
     "profile:mutation:sequential": "node --import tsx scripts/run-single-mutation.ts -- --mode=sequential --profile-output=profiles/single-mutation-sequential.cpuprofile",
     "profile:mutation:batch": "node --import tsx scripts/run-single-mutation.ts -- --mode=batch --profile-output=profiles/single-mutation-batch.cpuprofile"
   },
