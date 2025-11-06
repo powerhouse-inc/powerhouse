@@ -4,7 +4,7 @@ import {
   hygenGenerateProcessor,
   loadDocumentModel,
 } from "@powerhousedao/codegen";
-import { mkdirSync, readFileSync, rmSync } from "node:fs";
+import { readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import {
   afterAll,
@@ -15,7 +15,6 @@ import {
   it,
   type TestContext,
 } from "vitest";
-import { PURGE_AFTER_TEST } from "./config.js";
 import {
   DOCUMENT_MODELS_TEST_PROJECT,
   GENERATE_DOC_MODEL_TEST_OUTPUT_DIR,
@@ -28,6 +27,8 @@ import {
   getTestDataDir,
   getTestOutDirPath,
   getTestOutputDir,
+  purgeDirAfterTest,
+  resetDirForTest,
 } from "./utils.js";
 
 describe("document model", () => {
@@ -56,22 +57,11 @@ describe("document model", () => {
   });
 
   beforeAll(() => {
-    try {
-      rmSync(outDirName, { recursive: true, force: true });
-    } catch (error) {
-      // Ignore error if folder doesn't exist
-    }
-    mkdirSync(outDirName, { recursive: true });
+    resetDirForTest(outDirName);
   });
 
   afterAll(() => {
-    if (PURGE_AFTER_TEST) {
-      try {
-        rmSync(outDirName, { recursive: true, force: true });
-      } catch (error) {
-        // Ignore error if folder doesn't exist
-      }
-    }
+    purgeDirAfterTest(outDirName);
   });
 
   const generate = async () => {

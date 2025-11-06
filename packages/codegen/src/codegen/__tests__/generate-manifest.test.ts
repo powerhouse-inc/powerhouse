@@ -2,7 +2,7 @@ import type {
   PartialPowerhouseManifest,
   PowerhouseManifest,
 } from "@powerhousedao/config";
-import fs, { mkdirSync, rmSync } from "node:fs";
+import fs from "node:fs";
 import path from "node:path";
 import {
   afterAll,
@@ -13,7 +13,6 @@ import {
   type TestContext,
 } from "vitest";
 import { generateManifest } from "../generate.js";
-import { PURGE_AFTER_TEST } from "./config.js";
 import {
   GENERATE_MANIFEST_TEST_OUTPUT_DIR,
   MANIFEST_TEST_PROJECT,
@@ -24,6 +23,8 @@ import {
   getTestDataDir,
   getTestOutDirPath,
   getTestOutputDir,
+  purgeDirAfterTest,
+  resetDirForTest,
 } from "./utils.js";
 
 describe("generateManifest", () => {
@@ -41,22 +42,11 @@ describe("generateManifest", () => {
   }
 
   beforeAll(() => {
-    try {
-      rmSync(outDirName, { recursive: true, force: true });
-    } catch (error) {
-      // Ignore error if folder doesn't exist
-    }
-    mkdirSync(outDirName, { recursive: true });
+    resetDirForTest(outDirName);
   });
 
   afterAll(() => {
-    if (PURGE_AFTER_TEST) {
-      try {
-        rmSync(outDirName, { recursive: true, force: true });
-      } catch (error) {
-        // Ignore error if folder doesn't exist
-      }
-    }
+    purgeDirAfterTest(outDirName);
   });
   it("should generate a new manifest from scratch with partial data", async (context) => {
     await setupTest(context, getTestDataDir(testDir, MANIFEST_TEST_PROJECT));

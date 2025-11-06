@@ -1,6 +1,6 @@
 import { generateDriveEditor } from "@powerhousedao/codegen";
 import type { PowerhouseConfig } from "@powerhousedao/config";
-import fs, { existsSync, mkdirSync, rmSync } from "node:fs";
+import fs, { existsSync, rmSync } from "node:fs";
 import path from "node:path";
 import {
   afterAll,
@@ -10,7 +10,6 @@ import {
   it,
   type TestContext,
 } from "vitest";
-import { PURGE_AFTER_TEST } from "./config.js";
 import {
   EDITORS_TEST_PROJECT,
   EDITORS_TEST_PROJECT_WITH_EXISTING_EDITOR,
@@ -22,6 +21,8 @@ import {
   getTestDataDir,
   getTestOutDirPath,
   getTestOutputDir,
+  purgeDirAfterTest,
+  resetDirForTest,
 } from "./utils.js";
 
 describe("generateDriveEditor", () => {
@@ -54,18 +55,11 @@ describe("generateDriveEditor", () => {
   }
 
   beforeAll(() => {
-    try {
-      rmSync(outDirName, { recursive: true, force: true });
-      mkdirSync(outDirName, { recursive: true });
-    } catch (error) {
-      // Ignore error if folder doesn't exist
-    }
+    resetDirForTest(outDirName);
   });
 
   afterAll(() => {
-    if (PURGE_AFTER_TEST) {
-      rmSync(outDirName, { recursive: true, force: true });
-    }
+    purgeDirAfterTest(outDirName);
   });
 
   it(
