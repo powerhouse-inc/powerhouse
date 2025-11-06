@@ -30,6 +30,7 @@
     "tsc": "tsc",
     "lint": "eslint",
     "dev": "ph-cli dev --config-file ./powerhouse.config.json",
+    "check-circular-imports": "npx dpdm -T ./index.ts",
     "build:css": "pnpm dlx @tailwindcss/cli -i ./editors/styles.css -o ./dist/editors/styles.css",
     "storybook": "storybook dev -p 6006"
   },

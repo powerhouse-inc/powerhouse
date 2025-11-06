@@ -22,6 +22,7 @@
     "publish:create-lib": "npm publish --cwd ./src/create-lib/",
     "start": "tsx src/cli.ts",
     "test": "npm run copy-hygen && vitest run",
+    "check-circular-imports": "npx dpdm -T ./index.ts",
     "test:keep": "KEEP_TEST_OUTPUT=true npm run test"
   },
   "dependencies": {

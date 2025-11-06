@@ -33,6 +33,7 @@
     "tsc": "tsc",
     "lint": "eslint",
     "build:css": "npx @tailwindcss/cli -i ./style.css -o ./dist/style.css",
+    "check-circular-imports": "npx dpdm -T ./index.ts",
     "storybook": "storybook dev -p 6006"
   },
   "devDependencies": {

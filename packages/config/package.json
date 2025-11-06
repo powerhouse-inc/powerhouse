@@ -25,7 +25,8 @@
   },
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check-circular-imports": "npx dpdm -T ./src/index.ts"
   },
   "dependencies": {
     "@microsoft/api-extractor": "^7.48.1"

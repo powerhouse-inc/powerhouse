@@ -49,6 +49,7 @@
     "test:flaky": "vitest run --coverage test/flaky",
     "test:watch": "vitest --coverage --exclude \"test/flaky/**\"",
     "bench": "vitest bench",
+    "check-circular-imports": "npx dpdm -T ./index.ts",
     "migrate": "prisma generate && prisma db push",
     "copy-prisma": "copyfiles prisma/schema.prisma dist/ && copyfiles 'src/storage/prisma/client/**/*' dist/",
     "prisma-generate": "prisma generate --no-hints && npm run copy-prisma"

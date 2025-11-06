@@ -12,6 +12,7 @@
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
+    "check-circular-imports": "npx dpdm -T ./src/index.ts",
     "dev": "vite",
     "build:vite": "vite build",
     "preview": "vite preview"

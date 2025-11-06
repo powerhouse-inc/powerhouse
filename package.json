@@ -18,7 +18,8 @@
     "build:vite": "pnpm -r --no-bail build:vite",
     "build:storybook": "pnpm -r --no-bail run build-storybook",
     "clean": "pnpm exec scripts/simulate-fresh-git-clone.sh",
-    "prepare": "husky"
+    "prepare": "husky",
+    "check-circular-imports": "npx dpdm -T ./**/* --tree false --warning false"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",

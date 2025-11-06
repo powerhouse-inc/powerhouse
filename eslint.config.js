@@ -13,7 +13,6 @@ const normalIgnoredFiles = [
   "**/coverage/",
   "**/dist/",
   "**/ts-build/",
-  "**/.ph/",
   "**/storybook-static/",
   "**/.vite/",
   "**/.nx/",
