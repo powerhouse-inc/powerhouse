@@ -35,6 +35,8 @@
     "@types/node": "^24.6.1",
     "concurrently": "^9.1.2",
     "copyfiles": "^2.4.1",
+    "document-drive": "workspace:*",
+    "document-model": "workspace:*",
     "nodemon": "^3.1.9",
     "vitest": "^3.2.4"
   },
@@ -43,12 +45,8 @@
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
-    "@powerhousedao/reactor-local": "workspace:*",
     "@powerhousedao/switchboard": "workspace:*",
     "colorette": "^2.0.20",
-    "commander": "^12.1.0",
-    "document-drive": "workspace:*",
-    "document-model": "workspace:*",
-    "pm2": "^5.4.3"
+    "commander": "^12.1.0"
   }
 }

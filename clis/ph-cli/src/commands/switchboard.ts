@@ -1,15 +1,11 @@
 import type { SwitchboardReactor } from "@powerhousedao/switchboard/server";
 import type { Command } from "commander";
 import { switchboardHelp } from "../help.js";
-import type { ReactorOptions } from "../services/reactor.js";
+import type { LocalSwitchboardOptions } from "../services/switchboard.js";
 import type { CommandActionType } from "../types.js";
 import { setCustomHelp } from "../utils.js";
 
-type SwitchboardOptions = ReactorOptions & {
-  basePath?: string;
-};
-
-async function startLocalSwitchboard(options: SwitchboardOptions) {
+async function startLocalSwitchboard(options: LocalSwitchboardOptions) {
   if (options.basePath) {
     process.env.BASE_PATH = options.basePath;
   }
@@ -32,7 +28,7 @@ async function startLocalSwitchboard(options: SwitchboardOptions) {
 }
 
 export const runStartLocalSwitchboard: CommandActionType<
-  [ReactorOptions],
+  [LocalSwitchboardOptions],
   Promise<SwitchboardReactor>
 > = async (options) => {
   return await startLocalSwitchboard(options);
@@ -41,6 +37,7 @@ export const runStartLocalSwitchboard: CommandActionType<
 export function switchboardCommand(program: Command) {
   const command = program
     .command("switchboard")
+    .alias("reactor")
     .description("Starts local switchboard")
     .option("--port <PORT>", "port to host the api", "4001")
     .option(
@@ -62,7 +59,7 @@ export function switchboardCommand(program: Command) {
       "base path for the API endpoints (sets the BASE_PATH environment variable)",
     )
     .option("--mcp", "enable Mcp route at /mcp. Default: true")
-    .action(async (...args: [ReactorOptions]) => {
+    .action(async (...args: [LocalSwitchboardOptions]) => {
       const { defaultDriveUrl } = await runStartLocalSwitchboard(...args);
       console.log("   ➜  Switchboard:", defaultDriveUrl);
     });
@@ -72,7 +69,9 @@ export function switchboardCommand(program: Command) {
 
 if (process.argv.at(2) === "spawn") {
   const optionsArg = process.argv.at(3);
-  const options = optionsArg ? (JSON.parse(optionsArg) as ReactorOptions) : {};
+  const options = optionsArg
+    ? (JSON.parse(optionsArg) as LocalSwitchboardOptions)
+    : {};
   startLocalSwitchboard(options)
     .then((reactor) => {
       process.send?.(`driveUrl:${reactor.defaultDriveUrl}`);
