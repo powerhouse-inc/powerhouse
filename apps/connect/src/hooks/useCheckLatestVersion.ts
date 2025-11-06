@@ -1,11 +1,9 @@
-import {
-  isLatestVersion,
-  ReloadConnectToast,
-  toast,
-} from "@powerhousedao/connect";
+import { isLatestVersion } from "@powerhousedao/connect/hooks/utils";
+import { ReloadConnectToast } from "@powerhousedao/connect/components/toast/reload-connect-toast";
+import { toast } from "@powerhousedao/connect/services";
 import { connectConfig } from "@powerhousedao/connect/config";
 import { logger } from "document-drive";
-import { useEffect } from "react";
+import { createElement, useEffect } from "react";
 
 export const useCheckLatestVersion = () => {
   async function checkLatestVersion() {
@@ -25,7 +23,7 @@ export const useCheckLatestVersion = () => {
         `Connect is outdated: \nCurrent: ${result.currentVersion}\nLatest: ${result.latestVersion}`,
       );
     } else {
-      toast(<ReloadConnectToast />, {
+      toast(createElement(ReloadConnectToast), {
         type: "connect-warning",
         toastId: "outdated-app",
         autoClose: false,

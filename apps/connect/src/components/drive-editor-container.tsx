@@ -34,6 +34,9 @@ export function DriveEditorContainer() {
     defaultDriveEditor?.Component ??
     GenericDriveExplorer.Component;
 
+  if (!DriveEditorComponent) {
+    throw new Error("No drive editor component found");
+  }
   return (
     <ErrorBoundary
       fallbackRender={DriveEditorError}

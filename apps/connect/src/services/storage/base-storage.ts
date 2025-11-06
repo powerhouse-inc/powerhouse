@@ -1,4 +1,4 @@
-import type { IStorage } from "@powerhousedao/connect";
+import type { IStorage } from "./types.js";
 
 export class BaseStorage<
   T extends Record<string, unknown> = Record<string, unknown>,

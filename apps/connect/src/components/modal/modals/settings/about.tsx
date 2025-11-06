@@ -1,6 +1,6 @@
 import { connectConfig } from "@powerhousedao/connect/config";
+import packageJson from "@powerhousedao/connect/package.json" with { type: "json" };
 import { About as BaseAbout } from "@powerhousedao/design-system";
-import packageJson from "../../../../../package.copy.json" with { type: "json" };
 
 export const About: React.FC = () => {
   return (

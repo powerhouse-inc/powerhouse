@@ -3,9 +3,10 @@ export type PHGlobalConfig = PHCommonGlobalConfig &
   PHDocumentEditorConfig &
   PHDrivesGlobalConfig &
   PHAnalyticsGlobalConfig &
+  PHRelationalProcessorsGlobalConfig &
+  PHProcessorsGlobalConfig &
   PHRenownGlobalConfig &
-  PHSentryGlobalConfig &
-  PHProcessorsGlobalConfig;
+  PHSentryGlobalConfig;
 
 export type PHGlobalConfigKey = keyof PHGlobalConfig;
 export type PHGlobalConfigSetters =
@@ -78,9 +79,21 @@ export type PHDrivesGlobalConfig = {
 };
 
 export type PHAnalyticsGlobalConfig = {
+  isAnalyticsEnabled?: boolean;
   isAnalyticsDatabaseWorkerEnabled?: boolean;
   isDiffAnalyticsEnabled?: boolean;
   isDriveAnalyticsEnabled?: boolean;
+  isAnalyticsExternalProcessorsEnabled?: boolean;
+};
+
+export type PHRelationalProcessorsGlobalConfig = {
+  isRelationalProcessorsEnabled?: boolean;
+  isExternalRelationalProcessorsEnabled?: boolean;
+};
+
+export type PHProcessorsGlobalConfig = {
+  isExternalProcessorsEnabled?: boolean;
+  isExternalPackagesEnabled?: boolean;
 };
 
 export type PHRenownGlobalConfig = {
@@ -94,11 +107,6 @@ export type PHSentryGlobalConfig = {
   sentryDsn?: string;
   sentryEnv?: string;
   isSentryTracingEnabled?: boolean;
-};
-
-export type PHProcessorsGlobalConfig = {
-  isExternalProcessorsEnabled?: boolean;
-  isExternalPackagesEnabled?: boolean;
 };
 
 export type PHGlobalConfigSettersForKey<T extends PHGlobalConfigKey> = {

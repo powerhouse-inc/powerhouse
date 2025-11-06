@@ -74,6 +74,20 @@ export function resolvePackage(packageName: string, root = process.cwd()) {
   return require.resolve(packageName, { paths: [root] });
 }
 
+export function resolveConnectPackageJson(root = process.cwd()) {
+  try {
+    const connectPackageJsonPath = resolvePackage(
+      "@powerhousedao/connect/package.json",
+      root,
+    );
+    const fileContents = fs.readFileSync(connectPackageJsonPath, "utf-8");
+    return JSON.parse(fileContents) as JSON;
+  } catch (error) {
+    console.error(`Error reading Connect package.json:`, error);
+    return null;
+  }
+}
+
 /**
  * Finds the dist dir of Connect on the local machine
  */

@@ -1,9 +1,7 @@
-import {
-  About,
-  DangerZone,
-  DefaultEditor,
-  PackageManager,
-} from "@powerhousedao/connect";
+import { About } from "@powerhousedao/connect/components/modal/modals/settings/about";
+import { DangerZone } from "@powerhousedao/connect/components/modal/modals/settings/danger-zone";
+import { DefaultEditor } from "@powerhousedao/connect/components/modal/modals/settings/default-editor";
+import { PackageManager } from "@powerhousedao/connect/components/modal/modals/settings/package-manager";
 import {
   Icon,
   SettingsModal as SettingsModalV2,

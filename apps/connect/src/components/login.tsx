@@ -1,4 +1,4 @@
-import { DotsLoader } from "@powerhousedao/connect";
+import { DotsLoader } from "@powerhousedao/connect/components/dots-loader";
 import IconRenown from "@powerhousedao/connect/assets/icons/renown.svg?react";
 import { PowerhouseButton } from "@powerhousedao/design-system";
 import { openRenown } from "@powerhousedao/reactor-browser";

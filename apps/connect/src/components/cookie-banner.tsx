@@ -1,8 +1,6 @@
-import {
-  i18n,
-  useAcceptedCookies,
-  useCookieBanner,
-} from "@powerhousedao/connect";
+import { useAcceptedCookies } from "@powerhousedao/connect/hooks/useAcceptedCookies";
+import { useCookieBanner } from "@powerhousedao/connect/hooks/useCookieBanner";
+import { i18n } from "@powerhousedao/connect/i18n";
 import type { CookieInput } from "@powerhousedao/design-system";
 import { CookieBanner as PHCookieBanner } from "@powerhousedao/design-system";
 import { showPHModal } from "@powerhousedao/reactor-browser";

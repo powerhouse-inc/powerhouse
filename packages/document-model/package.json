@@ -30,6 +30,7 @@
     }
   },
   "types": "./dist/src/index.d.ts",
+  "sideEffects": false,
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
