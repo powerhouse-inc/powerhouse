@@ -38,8 +38,6 @@ import {
 } from "../utils.js";
 import type { Prisma, PrismaClient } from "./client/index.js";
 
-export * from "./factory.js";
-
 type Transaction =
   | Omit<
       PrismaClient<Prisma.PrismaClientOptions, never>,
