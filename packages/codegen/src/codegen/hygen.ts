@@ -1,8 +1,3 @@
-import type { CodegenOptions, DocumentTypesMap } from "@powerhousedao/codegen";
-import {
-  loadDocumentModel,
-  TSMorphCodeGenerator,
-} from "@powerhousedao/codegen";
 import type { PowerhouseConfig } from "@powerhousedao/config";
 import { pascalCase } from "change-case";
 import type { DocumentModelGlobalState } from "document-model";
@@ -12,6 +7,9 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readPackage } from "read-pkg";
+import { TSMorphCodeGenerator } from "../ts-morph-generator/index.js";
+import type { CodegenOptions, DocumentTypesMap } from "./types.js";
+import { loadDocumentModel } from "./utils.js";
 
 const require = createRequire(import.meta.url);
 
