@@ -1,14 +1,5 @@
 import type { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
-import type {
-  Context,
-  InternalStrandUpdate,
-  SubgraphArgs,
-} from "@powerhousedao/reactor-api";
-import {
-  processAcknowledge,
-  processGetStrands,
-  processPushUpdate,
-} from "@powerhousedao/reactor-api";
+
 import { pascalCase } from "change-case";
 import type {
   DocumentDriveDocument,
@@ -30,6 +21,16 @@ import type { DocumentModelInput, Operation, PHDocument } from "document-model";
 import { generateId } from "document-model/core";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
+import type {
+  Context,
+  InternalStrandUpdate,
+  SubgraphArgs,
+} from "@powerhousedao/reactor-api";
+import {
+  processAcknowledge,
+  processGetStrands,
+  processPushUpdate,
+} from "../sync/utils.js";
 import { BaseSubgraph } from "./base-subgraph.js";
 import type { Asset } from "./temp-hack-rwa-type-defs.js";
 
