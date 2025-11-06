@@ -1,7 +1,8 @@
 import type { DocumentDriveDocument, ICache } from "document-drive";
-import { childLogger, trimResultingState } from "document-drive";
+import { childLogger } from "document-drive/utils/logger";
 import type { PHDocument } from "document-model";
 import type { RedisClientType } from "redis";
+import { trimResultingState } from "./util.js";
 
 export class RedisCache implements ICache {
   private logger = childLogger(["RedisCache"]);

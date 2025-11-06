@@ -5,10 +5,8 @@ import type {
   ITransmitterFactory,
   ServerListener,
 } from "document-drive";
-import {
-  PullResponderTransmitter,
-  SwitchboardPushTransmitter,
-} from "document-drive";
+import { PullResponderTransmitter } from "./pull-responder.js";
+import { SwitchboardPushTransmitter } from "./switchboard-push.js";
 
 export class TransmitterFactory implements ITransmitterFactory {
   private readonly listenerManager: IListenerManager;

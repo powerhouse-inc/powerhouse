@@ -1,13 +1,13 @@
 import type { IQueueManager } from "document-drive";
 import {
   addFolder,
-  buildOperations,
   driveCreateDocument,
   driveDocumentModelModule,
-  EventQueueManager,
-  MemoryStorage,
-  ReactorBuilder,
-} from "document-drive";
+} from "document-drive/drive-document-model";
+import { EventQueueManager } from "document-drive/queue/event";
+import { ReactorBuilder } from "document-drive/server/builder";
+import { MemoryStorage } from "document-drive/storage/memory";
+import { buildOperations } from "document-drive/utils/test";
 import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { createPresignedHeader, generateId } from "document-model/core";

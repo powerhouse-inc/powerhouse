@@ -2,7 +2,7 @@ import type {
   BaseDocumentDriveServer,
   IDocumentDriveServer,
 } from "document-drive";
-import { driveDocumentModelModule } from "document-drive";
+import { driveDocumentModelModule } from "document-drive/drive-document-model";
 import type {
   Action,
   DocumentModelModule,

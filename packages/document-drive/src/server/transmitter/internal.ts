@@ -1,18 +1,18 @@
 import type {
-  GetDocumentOptions,
   IBaseDocumentDriveServer,
   IDocumentDriveServer,
-  InternalOperationUpdate,
   IProcessor,
   ITransmitter,
+  InternalOperationUpdate,
   ListenerRevision,
   RunAsap,
   StrandUpdate,
   StrandUpdateSource,
 } from "document-drive";
-import { logger, operationsToRevision } from "document-drive";
-import { runAsap, runAsapAsync } from "document-drive/run-asap";
-import type { Action, PHBaseState } from "document-model";
+import { logger } from "document-drive/utils/logger";
+import { operationsToRevision } from "document-drive/utils/misc";
+import { runAsap, runAsapAsync } from "document-drive/utils/run-asap";
+import type { Action, GetDocumentOptions, PHBaseState } from "document-model";
 
 export class InternalTransmitter implements ITransmitter {
   protected drive: IBaseDocumentDriveServer;

@@ -13,6 +13,14 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
+    "./*": {
+      "import": "./dist/src/*.js",
+      "types": "./dist/src/*.d.ts"
+    },
+    "./drive-document-model": {
+      "import": "./dist/src/drive-document-model/index.js",
+      "types": "./dist/src/drive-document-model/index.d.ts"
+    },
     "./storage/filesystem": {
       "import": "./dist/src/storage/filesystem.js",
       "types": "./dist/src/storage/filesystem.d.ts"

@@ -1,27 +1,23 @@
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import type {
+  DocumentDriveDocument,
+  ICache,
   IDocumentStorage,
   IDriveOperationStorage,
   IStorageUnit,
   IStorageUnitFilter,
+  SynchronizationUnitQuery,
 } from "document-drive";
 import {
-  AbortError,
   ConflictOperationError,
   DocumentAlreadyExistsError,
   DocumentAlreadyExistsReason,
   DocumentIdValidationError,
   DocumentNotFoundError,
   DocumentSlugValidationError,
-  childLogger,
-  isValidDocumentId,
-  isValidSlug,
-  logger,
-  resolveStorageUnitsFilter,
-  setIntersection,
-  type ICache,
-  type SynchronizationUnitQuery,
-} from "document-drive";
+} from "document-drive/server/error";
+import { AbortError } from "document-drive/utils/errors";
+import { childLogger, logger } from "document-drive/utils/logger";
 import type {
   Action,
   AttachmentInput,
@@ -34,7 +30,12 @@ import type {
 } from "document-model";
 import { actionContext } from "document-model/core";
 import { backOff, type IBackOffOptions } from "exponential-backoff";
-import { type DocumentDriveDocument } from "../../drive-document-model/gen/types.js";
+import {
+  isValidDocumentId,
+  isValidSlug,
+  resolveStorageUnitsFilter,
+  setIntersection,
+} from "../utils.js";
 import type { Prisma, PrismaClient } from "./client/index.js";
 
 export * from "./factory.js";
@@ -502,7 +503,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
         clipboard: true,
       },
       orderBy: {
-        index: 'desc', // desc because negative indices are reversed
+        index: "desc", // desc because negative indices are reversed
       },
     });
     // Restore original indices from clipboard operations
