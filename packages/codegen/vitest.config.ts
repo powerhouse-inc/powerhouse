@@ -8,6 +8,7 @@ export default defineConfig({
       "src/codegen/__tests__/.test-output/**/*",
     ],
     fileParallelism: false,
+    globalSetup: "./src/codegen/__tests__/global-setup.ts",
   },
   resolve: {
     dedupe: ["graphql"],

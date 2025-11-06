@@ -1,6 +1,8 @@
 import { paramCase } from "change-case";
+import { mkdirSync, rmSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "path";
+import { PURGE_AFTER_TEST } from "./config.js";
 import { TEST_DATA_DIR, TEST_OUTPUT_DIR } from "./constants.js";
 
 export async function copyAllFiles(srcDir: string, destDir: string) {
@@ -33,4 +35,23 @@ export function getTestDataDir(testDir: string, testDataDir: string) {
 
 export function getTestOutDirPath(testName: string, outDirName: string) {
   return path.join(outDirName, `test-${paramCase(testName)}`);
+}
+
+export function resetDirForTest(outDirName: string) {
+  try {
+    rmSync(outDirName, { recursive: true, force: true });
+    mkdirSync(outDirName, { recursive: true });
+  } catch (error) {
+    // Ignore error if folder doesn't exist
+  }
+}
+
+export function purgeDirAfterTest(outDirName: string) {
+  if (PURGE_AFTER_TEST) {
+    try {
+      rmSync(outDirName, { recursive: true, force: true });
+    } catch (error) {
+      // Ignore error if folder doesn't exist
+    }
+  }
 }
