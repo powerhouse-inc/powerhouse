@@ -175,11 +175,18 @@ export interface IReactor {
   /**
    * Applies a list of actions to a document.
    *
-   * @param id - Document id
+   * @param docId - Document id
+   * @param branch - Branch to apply actions to
    * @param actions - List of actions to apply
+   * @param signal - Optional abort signal to cancel the request
    * @returns The job id and status
    */
-  mutate(id: string, actions: Action[]): Promise<JobInfo>;
+  mutate(
+    docId: string,
+    branch: string,
+    actions: Action[],
+    signal?: AbortSignal,
+  ): Promise<JobInfo>;
 
   /**
    * Applies multiple mutations across documents with dependency management.

@@ -229,7 +229,7 @@ export async function processReactorMutation(
     } else {
       const cleanedAction = removeSynchronizationUnits(driveAction) as Action;
 
-      const jobInfo = await reactor.mutate(driveId, [cleanedAction]);
+      const jobInfo = await reactor.mutate(driveId, "main", [cleanedAction]);
       await waitUntil(async () => {
         const status = await reactor.getJobStatus(jobInfo.id);
         if (status.status === JobStatus.FAILED) {
@@ -243,7 +243,7 @@ export async function processReactorMutation(
     const { docId, action } = args;
     const cleanedAction = removeSynchronizationUnits(action) as Action;
 
-    const jobInfo = await reactor.mutate(docId, [cleanedAction]);
+    const jobInfo = await reactor.mutate(docId, "main", [cleanedAction]);
     await waitUntil(async () => {
       const status = await reactor.getJobStatus(jobInfo.id);
       if (status.status === JobStatus.FAILED) {

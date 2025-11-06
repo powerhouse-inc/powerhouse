@@ -337,7 +337,7 @@ describe("ReactorClient Passthrough Functions", () => {
         ];
 
         // Apply mutation through client
-        const doc = await client.mutate(documentId, actions);
+        const doc = await client.mutate(documentId, "main", actions);
 
         const { document: reactorDoc } = await reactor.get(documentId);
 

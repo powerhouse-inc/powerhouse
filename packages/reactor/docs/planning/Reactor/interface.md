@@ -121,16 +121,33 @@ interface IReactor {
   /**
    * Applies a list of actions to a document.
    *
-   * @param id - Document id
+   * @param docId - Document id
+   * @param branch - Branch to apply actions to
    * @param actions - List of actions to apply
-   * @param view - Optional filter containing branch and scopes information
    * @param signal - Optional abort signal to cancel the request
    * @returns The job id and status
    */
   mutate(
-    id: string,
+    docId: string,
+    branch: string,
     actions: Action[],
-    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<JobInfo>;
+
+  /**
+   * Loads operations from another reactor into this document.
+   * Operations are enqueued for verification and reshuffling by timestamp.
+   *
+   * @param docId - Document id
+   * @param branch - Branch to load operations into
+   * @param operations - List of operations to load
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The job id and status
+   */
+  load(
+    docId: string,
+    branch: string,
+    operations: Operation[],
     signal?: AbortSignal,
   ): Promise<JobInfo>;
 

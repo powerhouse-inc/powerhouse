@@ -288,6 +288,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
       const mutation1JobInfo = await reactor.mutate(
         documentId,
+        "main",
         mutation1Actions,
       );
 
@@ -326,6 +327,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
       const mutation2JobInfo = await reactor.mutate(
         documentId,
+        "main",
         mutation2Actions,
       );
 
@@ -362,6 +364,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
       const mutation3JobInfo = await reactor.mutate(
         documentId,
+        "main",
         mutation3Actions,
       );
 
