@@ -1,4 +1,3 @@
-import { RWATableTextInput } from "@powerhousedao/design-system";
 import type { ComponentPropsWithRef } from "react";
 import type {
   Control,
@@ -9,6 +8,7 @@ import type {
 import { Controller } from "react-hook-form";
 import { NumericFormat } from "react-number-format";
 import { twMerge } from "tailwind-merge";
+import { RWATableTextInput } from "./text-input.js";
 
 type Props<ControlInputs extends FieldValues> = ComponentPropsWithRef<
   typeof RWATableTextInput

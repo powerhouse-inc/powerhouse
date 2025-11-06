@@ -8,14 +8,6 @@ import type {
   TableItemType,
   TableName,
 } from "@powerhousedao/design-system";
-import {
-  getActionOperationType,
-  getCashAsset,
-  getFixedIncomeAssets,
-  getStateKeyForTableName,
-  getTableNameFor,
-  makeTableData,
-} from "@powerhousedao/design-system";
 import type { ReactNode } from "react";
 import {
   createContext,
@@ -27,6 +19,13 @@ import {
   useRef,
   useState,
 } from "react";
+import {
+  getActionOperationType,
+  getStateKeyForTableName,
+  getTableNameFor,
+} from "../constants/table.js";
+import { makeTableData } from "../utils/table.js";
+import { getCashAsset, getFixedIncomeAssets } from "../utils/validators.js";
 
 export type RWAEditorContextProps = {
   readonly isAllowedToCreateDocuments: boolean;

@@ -1,7 +1,5 @@
-import {
-  GroupTransactionsTable,
-  RwaTabContent,
-} from "@powerhousedao/design-system";
+import { GroupTransactionsTable } from "../table/transactions/group-transactions-table.js";
+import { RwaTabContent } from "./rwa-tab-content.js";
 
 export function TransactionsTab() {
   return (

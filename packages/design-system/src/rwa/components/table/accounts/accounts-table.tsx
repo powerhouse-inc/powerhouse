@@ -1,12 +1,12 @@
 import type { TableColumn } from "@powerhousedao/design-system";
-import {
-  Icon,
-  tableNames,
-  useEditorContext,
-} from "@powerhousedao/design-system";
+import { Icon } from "@powerhousedao/design-system";
 import { useCallback } from "react";
 import { Fragment } from "react/jsx-runtime";
-import { RWATableCell, RWATableRow, TableWithForm } from "../base/index.js";
+import { tableNames } from "../../../constants/names.js";
+import { useEditorContext } from "../../../context/editor-context.js";
+import { RWATableCell } from "../base/table-cell.js";
+import { RWATableRow } from "../base/table-row.js";
+import { TableWithForm } from "../base/table-with-form.js";
 
 export function AccountsTable() {
   const { accounts, principalLenderAccountId } = useEditorContext();

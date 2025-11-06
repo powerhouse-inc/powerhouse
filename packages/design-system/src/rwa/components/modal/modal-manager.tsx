@@ -1,9 +1,18 @@
-import type {
-  ModalPropsMapping,
-  ModalType,
-} from "@powerhousedao/design-system";
-import { modals } from "@powerhousedao/design-system";
 import React, { useCallback, useContext, useMemo, useState } from "react";
+import { RWACreateItemModal } from "./create-item-modal.js";
+import { RWADeleteItemModal } from "./delete-item-modal.js";
+
+export const modals = {
+  createItem: RWACreateItemModal,
+  deleteItem: RWADeleteItemModal,
+};
+export type Modals = typeof modals;
+
+export type ModalType = keyof Modals;
+
+export type ModalPropsMapping = {
+  [K in ModalType]: React.ComponentProps<Modals[K]>;
+};
 
 type MapModalProps<T> = {
   [K in keyof T]: Omit<T[K], "open" | "onOpenChange">;

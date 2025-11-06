@@ -1,15 +1,13 @@
-import type { TableName } from "@powerhousedao/design-system";
-import {
-  FormInputs,
-  Icon,
-  RWAButton,
-  tableLabels,
-  useDependentItemProps,
-  useEditorContext,
-  useModal,
-  useTableForm,
-} from "@powerhousedao/design-system";
+import { Icon, type TableName } from "@powerhousedao/design-system";
+
 import { memo, useCallback } from "react";
+import { useDependentItemProps } from "../../../constants/dependent-items.js";
+import { tableLabels } from "../../../constants/names.js";
+import { useEditorContext } from "../../../context/editor-context.js";
+import { useTableForm } from "../../../hooks/useTableForm.js";
+import { RWAButton } from "../../button/button.js";
+import { FormInputs } from "../../inputs/form-inputs.js";
+import { useModal } from "../../modal/modal-manager.js";
 
 type Props = {
   readonly tableName: TableName;

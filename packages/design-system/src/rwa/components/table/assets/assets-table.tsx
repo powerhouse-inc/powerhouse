@@ -1,14 +1,13 @@
 import type { TableColumn } from "@powerhousedao/design-system";
-import {
-  RWATableCell,
-  RWATableRow,
-  TableWithForm,
-  handleTableDatum,
-  sumTotalForProperty,
-  tableNames,
-  useEditorContext,
-} from "@powerhousedao/design-system";
+
 import { Fragment, useCallback, useMemo } from "react";
+import { tableNames } from "../../../constants/names.js";
+import { useEditorContext } from "../../../context/editor-context.js";
+import { sumTotalForProperty } from "../../../utils/calculations.js";
+import { handleTableDatum } from "../../../utils/table.js";
+import { RWATableCell } from "../base/table-cell.js";
+import { RWATableRow } from "../base/table-row.js";
+import { TableWithForm } from "../base/table-with-form.js";
 
 export function AssetsTable() {
   const tableName = tableNames.ASSET;

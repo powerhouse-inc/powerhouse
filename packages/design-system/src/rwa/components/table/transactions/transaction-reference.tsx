@@ -3,12 +3,12 @@ import {
   ConnectTooltip,
   ConnectTooltipProvider,
   getIsTransaction,
-  RWATableTextInput,
 } from "@powerhousedao/design-system";
 import type { ComponentPropsWithRef, ForwardedRef } from "react";
 import { forwardRef } from "react";
 import type { Control } from "react-hook-form";
 import { useWatch } from "react-hook-form";
+import { RWATableTextInput } from "../../inputs/text-input.js";
 
 export const TransactionReference = forwardRef(function TransactionReference(
   props: ComponentPropsWithRef<typeof RWATableTextInput> & {

@@ -1,4 +1,5 @@
-import { AssetsTable, RwaTabContent } from "@powerhousedao/design-system";
+import { AssetsTable } from "../table/assets/assets-table.js";
+import { RwaTabContent } from "./rwa-tab-content.js";
 
 export function PortfolioTab() {
   return (

@@ -2,14 +2,12 @@ import type {
   GroupTransactionFormInputs,
   ServiceProviderFeeType,
 } from "@powerhousedao/design-system";
-import {
-  Icon,
-  RWANumberInput,
-  RWATableSelect,
-} from "@powerhousedao/design-system";
+import { Icon } from "@powerhousedao/design-system";
 import type { Control, FieldErrors, Path } from "react-hook-form";
 import { useFieldArray } from "react-hook-form";
 import { twMerge } from "tailwind-merge";
+import { RWANumberInput } from "../../inputs/number-input.js";
+import { RWATableSelect } from "../../inputs/select.js";
 
 type Props = {
   readonly canHaveTransactionFees: boolean;

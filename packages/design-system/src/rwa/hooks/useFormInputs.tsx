@@ -1,30 +1,3 @@
-import type {
-  Account,
-  FormInputsByTableName,
-  Operation,
-  TableItemType,
-  TableName,
-} from "@powerhousedao/design-system";
-import {
-  allGroupTransactionTypes,
-  assetGroupTransactions,
-  CashBalanceChange,
-  EntryTimeLabel,
-  feesTransactions,
-  FeeTransactionsTable,
-  formatDateForDisplay,
-  groupTransactionTypeLabels,
-  handleTableDatum,
-  makeFixedIncomeOptionLabel,
-  RWANumberInput,
-  RWATableSelect,
-  RWATableTextInput,
-  tableNames,
-  TransactionReference,
-  UnitPrice,
-  useEditorContext,
-  useModal,
-} from "@powerhousedao/design-system";
 import type { ReactElement, ReactNode } from "react";
 import { useCallback, useMemo } from "react";
 import type {
@@ -33,6 +6,34 @@ import type {
   UseFormRegister,
   UseFormWatch,
 } from "react-hook-form";
+import { EntryTimeLabel } from "../components/inputs/entry-time-label.js";
+import { RWANumberInput } from "../components/inputs/number-input.js";
+import { RWATableSelect } from "../components/inputs/select.js";
+import { RWATableTextInput } from "../components/inputs/text-input.js";
+import { useModal } from "../components/modal/modal-manager.js";
+
+import { CashBalanceChange } from "../components/table/transactions/cash-balance-change.js";
+import { FeeTransactionsTable } from "../components/table/transactions/fee-transactions-table.js";
+import { TransactionReference } from "../components/table/transactions/transaction-reference.js";
+import { UnitPrice } from "../components/table/transactions/unit-price.js";
+import { tableNames } from "../constants/names.js";
+import {
+  allGroupTransactionTypes,
+  assetGroupTransactions,
+  feesTransactions,
+  groupTransactionTypeLabels,
+} from "../constants/transactions.js";
+import { useEditorContext } from "../context/editor-context.js";
+import type {
+  Account,
+  FormInputsByTableName,
+  Operation,
+  TableItemType,
+  TableName,
+} from "../types.js";
+import { formatDateForDisplay } from "../utils/date.js";
+import { makeFixedIncomeOptionLabel } from "../utils/form.js";
+import { handleTableDatum } from "../utils/table.js";
 
 type Input = {
   label: string;

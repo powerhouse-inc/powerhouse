@@ -1,14 +1,11 @@
 import type { TableName } from "@powerhousedao/design-system";
-import {
-  Icon,
-  Modal,
-  ModalFormInputs,
-  tableLabels,
-  useTableForm,
-} from "@powerhousedao/design-system";
+import { Icon, Modal } from "@powerhousedao/design-system";
 import type { ComponentPropsWithoutRef } from "react";
 import { memo, useCallback } from "react";
 import { twMerge } from "tailwind-merge";
+import { tableLabels } from "../../constants/names.js";
+import { useTableForm } from "../../hooks/useTableForm.js";
+import { ModalFormInputs } from "./modal-form-inputs.js";
 
 export type RWACreateItemModalProps = ComponentPropsWithoutRef<typeof Modal> & {
   readonly open: boolean;

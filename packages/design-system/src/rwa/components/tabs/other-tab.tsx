@@ -1,5 +1,6 @@
-import { tableNames, TableWithForm } from "@powerhousedao/design-system";
+import { tableNames } from "../../constants/names.js";
 import { AccountsTable } from "../table/accounts/index.js";
+import { TableWithForm } from "../table/base/table-with-form.js";
 
 export function OtherTab() {
   return (

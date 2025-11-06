@@ -4,8 +4,8 @@ import type {
   ServiceProviderFeeType,
   TableName,
 } from "@powerhousedao/design-system";
-import { useEditorContext } from "@powerhousedao/design-system";
 import { useMemo } from "react";
+import { useEditorContext } from "../context/editor-context.js";
 
 export type DependentItemProps = {
   dependentTableName: TableName;

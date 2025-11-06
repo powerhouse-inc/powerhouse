@@ -1,17 +1,16 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Combobox } from "../../../../connect/index.js";
+import { Pagination, usePagination } from "../../../../powerhouse/index.js";
+import { tableNames } from "../../../constants/names.js";
 import {
   allGroupTransactionTypes,
-  Combobox,
   groupTransactionTypeLabels,
-  ItemDetails,
-  makeFixedIncomeOptionLabel,
-  Pagination,
-  Table,
-  tableNames,
-  useEditorContext,
-  usePagination,
-  useTableData,
-} from "@powerhousedao/design-system";
-import { useCallback, useEffect, useMemo, useState } from "react";
+} from "../../../constants/transactions.js";
+import { useEditorContext } from "../../../context/editor-context.js";
+import { useTableData } from "../../../hooks/useTableData.js";
+import { makeFixedIncomeOptionLabel } from "../../../utils/form.js";
+import { ItemDetails } from "../base/item-details.js";
+import { Table } from "../base/table.js";
 
 export function GroupTransactionsTable() {
   const tableName = tableNames.TRANSACTION;

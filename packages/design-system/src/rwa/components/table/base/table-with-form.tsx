@@ -1,12 +1,9 @@
 import type { TableColumn, TableName } from "@powerhousedao/design-system";
-import {
-  ItemDetails,
-  Pagination,
-  Table,
-  useEditorContext,
-  usePagination,
-  useTableData,
-} from "@powerhousedao/design-system";
+import { Pagination, usePagination } from "@powerhousedao/design-system";
+import { useEditorContext } from "../../../context/editor-context.js";
+import { useTableData } from "../../../hooks/useTableData.js";
+import { ItemDetails } from "./item-details.js";
+import { Table } from "./table.js";
 
 type Props = {
   readonly tableName: TableName;

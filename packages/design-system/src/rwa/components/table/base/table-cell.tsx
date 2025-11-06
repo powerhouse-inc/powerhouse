@@ -1,9 +1,13 @@
-import type { TableItemType, TableName } from "@powerhousedao/design-system";
-import { Icon, useEditorContext } from "@powerhousedao/design-system";
+import {
+  Icon,
+  type TableItemType,
+  type TableName,
+} from "@powerhousedao/design-system";
 
 import type { ComponentPropsWithoutRef } from "react";
 import { useCallback } from "react";
 import { twMerge } from "tailwind-merge";
+import { useEditorContext } from "../../../context/editor-context.js";
 
 export const RWATableCell: React.FC<ComponentPropsWithoutRef<"td">> = (
   props,

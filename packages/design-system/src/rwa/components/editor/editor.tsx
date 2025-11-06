@@ -1,4 +1,5 @@
-import { ModalManager, RWATabs } from "@powerhousedao/design-system";
+import { ModalManager } from "../modal/modal-manager.js";
+import { RWATabs } from "../tabs/tabs.js";
 
 export function RWAEditor() {
   return (

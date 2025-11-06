@@ -1,20 +1,21 @@
 import type { ActionOutputFor } from "@powerhousedao/design-system";
-import {
-  mockAccounts,
-  mockFixedIncomes,
-  mockFixedIncomeTypes,
-  mockGroupTransactions,
-  mockServiceProviderFeeTypes,
-  mockSPVs,
-  mockStateInitial,
-  mockStateWithData,
-  RWAEditor,
-  RWAEditorContextProvider,
-} from "@powerhousedao/design-system";
+
 import type { Meta, StoryObj } from "@storybook/react";
 import type { ComponentPropsWithoutRef } from "react";
 import { useState } from "react";
 import { useInterval } from "usehooks-ts";
+import { RWAEditorContextProvider } from "../../context/editor-context.js";
+import {
+  mockAccounts,
+  mockFixedIncomeTypes,
+  mockFixedIncomes,
+  mockGroupTransactions,
+  mockSPVs,
+  mockServiceProviderFeeTypes,
+  mockStateInitial,
+  mockStateWithData,
+} from "../../mocks.js";
+import { RWAEditor } from "./editor.js";
 
 const meta: Meta<typeof RWAEditor> = {
   title: "RWA/Components/Editor",
