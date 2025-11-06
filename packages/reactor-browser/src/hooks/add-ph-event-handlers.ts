@@ -65,7 +65,10 @@ import { addReactorEventHandler } from "./reactor.js";
 import { addRenownEventHandler } from "./renown.js";
 import { addRevisionHistoryVisibleEventHandler } from "./revision-history.js";
 import { addSelectedDriveIdEventHandler } from "./selected-drive.js";
-import { addSelectedNodeIdEventHandler } from "./selected-node.js";
+import {
+  addResetSelectedNodeEventHandler,
+  addSelectedNodeIdEventHandler,
+} from "./selected-node.js";
 import { addSelectedTimelineItemEventHandler } from "./selected-timeline-item.js";
 import { addSelectedTimelineRevisionEventHandler } from "./timeline-revision.js";
 import { addUserEventHandler } from "./user.js";
@@ -83,7 +86,10 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   processorManager: addProcessorManagerEventHandler,
   drives: addDrivesEventHandler,
   documents: addAllDocumentsEventHandler,
-  selectedDriveId: addSelectedDriveIdEventHandler,
+  selectedDriveId: () => {
+    addSelectedDriveIdEventHandler();
+    addResetSelectedNodeEventHandler();
+  },
   selectedNodeId: addSelectedNodeIdEventHandler,
   vetraPackages: addVetraPackagesEventHandler,
   selectedTimelineRevision: addSelectedTimelineRevisionEventHandler,

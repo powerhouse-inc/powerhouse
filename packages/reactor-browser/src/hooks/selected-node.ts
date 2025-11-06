@@ -47,3 +47,9 @@ export function setSelectedNode(nodeOrNodeSlug: Node | string | undefined) {
     resolveUrlPathname(`/d/${driveSlugFromPath}/${nodeSlug}`),
   );
 }
+
+export function addResetSelectedNodeEventHandler() {
+  window.addEventListener("ph:selectedDriveIdUpdated", () => {
+    setSelectedNodeId(undefined);
+  });
+}
