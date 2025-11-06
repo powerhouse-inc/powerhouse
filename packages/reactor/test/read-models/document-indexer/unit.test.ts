@@ -18,6 +18,7 @@ import type {
   Database,
   DocumentIndexerDatabase,
 } from "../../../src/storage/kysely/types.js";
+import { runMigrations } from "../../../src/storage/migrations/migrator.js";
 
 describe("KyselyDocumentIndexer Unit Tests", () => {
   let db: Kysely<Database & DocumentIndexerDatabase>;
@@ -30,6 +31,12 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
     db = new Kysely<Database & DocumentIndexerDatabase>({
       dialect: kyselyPGlite.dialect,
     });
+
+    // Run migrations to create all tables
+    const result = await runMigrations(db);
+    if (!result.success && result.error) {
+      throw new Error(`Test migration failed: ${result.error.message}`);
+    }
 
     mockOperationStore = {
       apply: vi.fn(),

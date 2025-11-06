@@ -44,6 +44,7 @@ import type {
 import { KyselyKeyframeStore } from "../src/storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../src/storage/kysely/store.js";
 import type { Database as DatabaseSchema } from "../src/storage/kysely/types.js";
+import { runMigrations } from "../src/storage/migrations/migrator.js";
 
 /**
  * Creates a real PGLite-backed KyselyOperationStore for testing.
@@ -56,80 +57,15 @@ export async function createTestOperationStore(): Promise<{
   store: KyselyOperationStore;
   keyframeStore: KyselyKeyframeStore;
 }> {
-  // Create in-memory PGLite database
   const kyselyPGlite = await KyselyPGlite.create();
   const db = new Kysely<DatabaseSchema>({
     dialect: kyselyPGlite.dialect,
   });
 
-  // Create the Operation table
-  await db.schema
-    .createTable("Operation")
-    .addColumn("id", "serial", (col) => col.primaryKey())
-    .addColumn("jobId", "text", (col) => col.notNull())
-    .addColumn("opId", "text", (col) => col.notNull().unique())
-    .addColumn("prevOpId", "text", (col) => col.notNull())
-    .addColumn("writeTimestampUtcMs", "timestamptz", (col) =>
-      col.notNull().defaultTo(new Date()),
-    )
-    .addColumn("documentId", "text", (col) => col.notNull())
-    .addColumn("documentType", "text", (col) => col.notNull())
-    .addColumn("scope", "text", (col) => col.notNull())
-    .addColumn("branch", "text", (col) => col.notNull())
-    .addColumn("timestampUtcMs", "timestamptz", (col) => col.notNull())
-    .addColumn("index", "integer", (col) => col.notNull())
-    .addColumn("action", "text", (col) => col.notNull())
-    .addColumn("skip", "integer", (col) => col.notNull())
-    .addColumn("error", "text")
-    .addColumn("hash", "text", (col) => col.notNull())
-    .addUniqueConstraint("unique_revision", [
-      "documentId",
-      "scope",
-      "branch",
-      "index",
-    ])
-    .execute();
-
-  // Create indexes for Operation table
-  await db.schema
-    .createIndex("streamOperations")
-    .on("Operation")
-    .columns(["documentId", "scope", "branch", "id"])
-    .execute();
-
-  await db.schema
-    .createIndex("branchlessStreamOperations")
-    .on("Operation")
-    .columns(["documentId", "scope", "id"])
-    .execute();
-
-  // Create the Keyframe table
-  await db.schema
-    .createTable("Keyframe")
-    .addColumn("id", "serial", (col) => col.primaryKey())
-    .addColumn("documentId", "text", (col) => col.notNull())
-    .addColumn("documentType", "text", (col) => col.notNull())
-    .addColumn("scope", "text", (col) => col.notNull())
-    .addColumn("branch", "text", (col) => col.notNull())
-    .addColumn("revision", "integer", (col) => col.notNull())
-    .addColumn("document", "text", (col) => col.notNull())
-    .addColumn("createdAt", "timestamptz", (col) =>
-      col.notNull().defaultTo(new Date()),
-    )
-    .addUniqueConstraint("unique_keyframe", [
-      "documentId",
-      "scope",
-      "branch",
-      "revision",
-    ])
-    .execute();
-
-  // Create index for fast nearest-keyframe lookups
-  await db.schema
-    .createIndex("keyframe_lookup")
-    .on("Keyframe")
-    .columns(["documentId", "scope", "branch", "revision"])
-    .execute();
+  const result = await runMigrations(db);
+  if (!result.success && result.error) {
+    throw new Error(`Test migration failed: ${result.error.message}`);
+  }
 
   const store = new KyselyOperationStore(db);
   const keyframeStore = new KyselyKeyframeStore(db);

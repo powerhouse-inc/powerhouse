@@ -37,6 +37,8 @@ import { Kysely } from "kysely";
 import { KyselyPGlite } from "kysely-pglite";
 import type { IEventBus } from "../events/interfaces.js";
 import type { IReadModelCoordinator } from "../read-models/interfaces.js";
+import type { MigrationStrategy } from "../storage/migrations/types.js";
+import { runMigrations } from "../storage/migrations/migrator.js";
 
 export type IReadModelCoordinatorFactory = (
   eventBus: IEventBus,
@@ -52,6 +54,7 @@ export class ReactorBuilder {
   private executorConfig: ExecutorConfig = { count: 1 };
   private writeCacheConfig?: Partial<WriteCacheConfig>;
   private readModelCoordinatorFactory?: IReadModelCoordinatorFactory;
+  private migrationStrategy: MigrationStrategy = "auto";
 
   withDocumentModels(models: DocumentModelModule[]): this {
     this.documentModels = models;
@@ -95,6 +98,11 @@ export class ReactorBuilder {
     return this;
   }
 
+  setMigrationStrategy(strategy: MigrationStrategy): this {
+    this.migrationStrategy = strategy;
+    return this;
+  }
+
   async build(): Promise<IReactor> {
     const storage = this.storage || new MemoryStorage();
 
@@ -114,70 +122,12 @@ export class ReactorBuilder {
       dialect: kyselyPGlite.dialect,
     });
 
-    await db.schema
-      .createTable("Operation")
-      .addColumn("id", "serial", (col) => col.primaryKey())
-      .addColumn("jobId", "text", (col) => col.notNull())
-      .addColumn("opId", "text", (col) => col.notNull().unique())
-      .addColumn("prevOpId", "text", (col) => col.notNull())
-      .addColumn("writeTimestampUtcMs", "timestamptz", (col) =>
-        col.notNull().defaultTo(new Date()),
-      )
-      .addColumn("documentId", "text", (col) => col.notNull())
-      .addColumn("documentType", "text", (col) => col.notNull())
-      .addColumn("scope", "text", (col) => col.notNull())
-      .addColumn("branch", "text", (col) => col.notNull())
-      .addColumn("timestampUtcMs", "timestamptz", (col) => col.notNull())
-      .addColumn("index", "integer", (col) => col.notNull())
-      .addColumn("action", "text", (col) => col.notNull())
-      .addColumn("skip", "integer", (col) => col.notNull())
-      .addColumn("error", "text")
-      .addColumn("hash", "text", (col) => col.notNull())
-      .addUniqueConstraint("unique_revision", [
-        "documentId",
-        "scope",
-        "branch",
-        "index",
-      ])
-      .execute();
-
-    await db.schema
-      .createIndex("streamOperations")
-      .on("Operation")
-      .columns(["documentId", "scope", "branch", "id"])
-      .execute();
-
-    await db.schema
-      .createIndex("branchlessStreamOperations")
-      .on("Operation")
-      .columns(["documentId", "scope", "id"])
-      .execute();
-
-    await db.schema
-      .createTable("Keyframe")
-      .addColumn("id", "serial", (col) => col.primaryKey())
-      .addColumn("documentId", "text", (col) => col.notNull())
-      .addColumn("documentType", "text", (col) => col.notNull())
-      .addColumn("scope", "text", (col) => col.notNull())
-      .addColumn("branch", "text", (col) => col.notNull())
-      .addColumn("revision", "integer", (col) => col.notNull())
-      .addColumn("document", "text", (col) => col.notNull())
-      .addColumn("createdAt", "timestamptz", (col) =>
-        col.notNull().defaultTo(new Date()),
-      )
-      .addUniqueConstraint("unique_keyframe", [
-        "documentId",
-        "scope",
-        "branch",
-        "revision",
-      ])
-      .execute();
-
-    await db.schema
-      .createIndex("keyframe_lookup")
-      .on("Keyframe")
-      .columns(["documentId", "scope", "branch", "revision"])
-      .execute();
+    if (this.migrationStrategy === "auto") {
+      const result = await runMigrations(db);
+      if (!result.success && result.error) {
+        throw new Error(`Database migration failed: ${result.error.message}`);
+      }
+    }
 
     const operationStore = new KyselyOperationStore(
       db as unknown as Kysely<StorageDatabase>,

@@ -171,12 +171,12 @@ describe("KyselyDocumentView Unit Tests", () => {
         {
           documentId: "doc-1",
           scope: "header",
-          content: JSON.stringify({ id: "doc-1", documentType: "test" }),
+          content: { id: "doc-1", documentType: "test" },
         },
         {
           documentId: "doc-1",
           scope: "document",
-          content: JSON.stringify({ isDeleted: false }),
+          content: { isDeleted: false },
         },
       ]);
 
@@ -269,17 +269,17 @@ describe("KyselyDocumentView Unit Tests", () => {
         {
           documentId: "doc-1",
           scope: "header",
-          content: JSON.stringify({ id: "doc-1", documentType: "test-type" }),
+          content: { id: "doc-1", documentType: "test-type" },
         },
         {
           documentId: "doc-2",
           scope: "header",
-          content: JSON.stringify({ id: "doc-2", documentType: "test-type" }),
+          content: { id: "doc-2", documentType: "test-type" },
         },
         {
           documentId: "doc-3",
           scope: "header",
-          content: JSON.stringify({ id: "doc-3", documentType: "test-type" }),
+          content: { id: "doc-3", documentType: "test-type" },
         },
       ];
       mockDb.execute.mockResolvedValue(snapshots);
@@ -344,7 +344,7 @@ describe("KyselyDocumentView Unit Tests", () => {
         {
           documentId: "doc-1",
           scope: "header",
-          content: JSON.stringify({ id: "doc-1", documentType: "test-type" }),
+          content: { id: "doc-1", documentType: "test-type" },
         },
       ];
       mockDb.execute.mockResolvedValue(snapshots);
@@ -363,7 +363,7 @@ describe("KyselyDocumentView Unit Tests", () => {
         {
           documentId: "doc-1",
           scope: "header",
-          content: JSON.stringify({ id: "doc-1", documentType: "test-type" }),
+          content: { id: "doc-1", documentType: "test-type" },
           branch: "main",
           isDeleted: false,
           documentType: "test-type",
@@ -372,7 +372,7 @@ describe("KyselyDocumentView Unit Tests", () => {
         {
           documentId: "doc-1",
           scope: "document",
-          content: JSON.stringify({}),
+          content: {},
           branch: "main",
           isDeleted: false,
           documentType: "test-type",
@@ -381,7 +381,7 @@ describe("KyselyDocumentView Unit Tests", () => {
         {
           documentId: "doc-2",
           scope: "header",
-          content: JSON.stringify({ id: "doc-2", documentType: "test-type" }),
+          content: { id: "doc-2", documentType: "test-type" },
           branch: "main",
           isDeleted: false,
           documentType: "test-type",
@@ -408,7 +408,7 @@ describe("KyselyDocumentView Unit Tests", () => {
         {
           documentId: "doc-1",
           scope: "header",
-          content: JSON.stringify({ id: "doc-1", documentType: "test-type" }),
+          content: { id: "doc-1", documentType: "test-type" },
           branch: "main",
           isDeleted: false,
           documentType: "test-type",
@@ -428,7 +428,7 @@ describe("KyselyDocumentView Unit Tests", () => {
       const snapshots = Array.from({ length: 150 }, (_, i) => ({
         documentId: `doc-${i}`,
         scope: "header",
-        content: JSON.stringify({ id: `doc-${i}`, documentType: "test-type" }),
+        content: { id: `doc-${i}`, documentType: "test-type" },
       }));
       mockDb.execute.mockResolvedValue(snapshots);
 

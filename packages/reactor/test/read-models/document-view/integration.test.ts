@@ -9,6 +9,7 @@ import { ConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
 import type { IOperationStore } from "../../../src/storage/interfaces.js";
 import { KyselyOperationStore } from "../../../src/storage/kysely/store.js";
 import type { Database as StorageDatabase } from "../../../src/storage/kysely/types.js";
+import { runMigrations } from "../../../src/storage/migrations/migrator.js";
 
 // Combined database type that includes both storage and view tables
 type Database = StorageDatabase & DocumentViewDatabase;
@@ -27,34 +28,11 @@ describe("KyselyDocumentView", () => {
       dialect,
     });
 
-    // Create the Operation table for the store
-    await db.schema
-      .createTable("Operation")
-      .addColumn("id", "serial", (col) => col.primaryKey())
-      .addColumn("jobId", "text", (col) => col.notNull())
-      .addColumn("opId", "text", (col) => col.notNull().unique())
-      .addColumn("prevOpId", "text", (col) => col.notNull())
-      .addColumn("writeTimestampUtcMs", "timestamptz", (col) =>
-        col.notNull().defaultTo(new Date()),
-      )
-      .addColumn("documentId", "text", (col) => col.notNull())
-      .addColumn("documentType", "text", (col) => col.notNull())
-      .addColumn("scope", "text", (col) => col.notNull())
-      .addColumn("branch", "text", (col) => col.notNull())
-      .addColumn("timestampUtcMs", "timestamptz", (col) => col.notNull())
-      .addColumn("index", "integer", (col) => col.notNull())
-      .addColumn("action", "text", (col) => col.notNull())
-      .addColumn("skip", "integer", (col) => col.notNull())
-      .addColumn("resultingState", "text")
-      .addColumn("error", "text")
-      .addColumn("hash", "text", (col) => col.notNull())
-      .addUniqueConstraint("unique_revision", [
-        "documentId",
-        "scope",
-        "branch",
-        "index",
-      ])
-      .execute();
+    // Run migrations to create all tables
+    const result = await runMigrations(db);
+    if (!result.success && result.error) {
+      throw new Error(`Test migration failed: ${result.error.message}`);
+    }
 
     // Cast db to the appropriate types for each component
     operationStore = new KyselyOperationStore(
