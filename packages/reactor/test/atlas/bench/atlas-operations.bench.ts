@@ -2,6 +2,7 @@ import type { BaseDocumentDriveServer } from "document-drive";
 import {
   ReactorBuilder as DriveReactorBuilder,
   InMemoryCache,
+  MemoryStorage,
 } from "document-drive";
 import { PrismaStorage } from "document-drive/storage/prisma";
 import { PrismaClient } from "document-drive/storage/prisma/client";
@@ -44,6 +45,10 @@ async function setupBaseServer() {
       },
     },
   });
+
+  // TODO: create tables if they don't exist
+
+  // clean up db
   await prismaClient.$executeRawUnsafe('DELETE FROM "Attachment";');
   await prismaClient.$executeRawUnsafe('DELETE FROM "Operation";');
   await prismaClient.$executeRawUnsafe('DELETE FROM "DriveDocument";');
@@ -65,33 +70,13 @@ async function setupBaseServer() {
 
 async function main() {
   console.log("Building batch mutation request...");
+
   const documentModels = getDocumentModels();
-  const tempPrismaClient = new PrismaClient({
-    datasources: {
-      db: {
-        url: DATABASE_URL,
-      },
-    },
-  });
-  await tempPrismaClient.$executeRawUnsafe('DELETE FROM "Attachment";');
-  await tempPrismaClient.$executeRawUnsafe('DELETE FROM "Operation";');
-  await tempPrismaClient.$executeRawUnsafe('DELETE FROM "DriveDocument";');
-  await tempPrismaClient.$executeRawUnsafe('DELETE FROM "Document";');
-  await tempPrismaClient.$executeRawUnsafe('DELETE FROM "Drive";');
-
-  const tempReactor = await new ReactorBuilder()
-    .withDocumentModels(documentModels)
-    .withFeatures({
-      legacyStorageEnabled: true,
-    })
-    .withLegacyStorage(new PrismaStorage(tempPrismaClient as any, cache))
-    .build();
-
-  const batchRequest: BatchMutationRequest = await buildBatchMutationRequest(
+  const batchRequest: BatchMutationRequest = buildBatchMutationRequest(
+    documentModels,
     mutations,
-    tempReactor,
   );
-  tempReactor.kill();
+
   console.log(
     `Batch request built with ${Object.keys(batchRequest.jobs).length} jobs\n`,
   );
@@ -107,13 +92,9 @@ async function main() {
     .add(
       "Reactor (Legacy Storage) - Process all operations",
       async () => {
-        const driveIds: string[] = [];
+        // sequentially process all operations
         for (const mutation of mutations) {
-          await processReactorMutation(
-            mutation,
-            reactorLegacyStorage!,
-            driveIds,
-          );
+          await processReactorMutation(mutation, reactorLegacyStorage!);
         }
       },
       {
@@ -125,6 +106,10 @@ async function main() {
               },
             },
           });
+
+          // TODO: create tables if they don't exist
+
+          // clean up db
           await prismaClient.$executeRawUnsafe('DELETE FROM "Attachment";');
           await prismaClient.$executeRawUnsafe('DELETE FROM "Operation";');
           await prismaClient.$executeRawUnsafe('DELETE FROM "DriveDocument";');
@@ -148,37 +133,21 @@ async function main() {
     .add(
       "Reactor - Process all operations",
       async () => {
-        const driveIds: string[] = [];
+        // sequentially process all operations
         for (const mutation of mutations) {
-          await processReactorMutation(
-            mutation,
-            reactorNoLegacyStorage!,
-            driveIds,
-          );
+          await processReactorMutation(mutation, reactorNoLegacyStorage!);
         }
       },
       {
         beforeEach: async () => {
-          const prismaClient = new PrismaClient({
-            datasources: {
-              db: {
-                url: DATABASE_URL,
-              },
-            },
-          });
-          await prismaClient.$executeRawUnsafe('DELETE FROM "Attachment";');
-          await prismaClient.$executeRawUnsafe('DELETE FROM "Operation";');
-          await prismaClient.$executeRawUnsafe('DELETE FROM "DriveDocument";');
-          await prismaClient.$executeRawUnsafe('DELETE FROM "Document";');
-          await prismaClient.$executeRawUnsafe('DELETE FROM "Drive";');
-
           const documentModels = getDocumentModels();
           reactorNoLegacyStorage = await new ReactorBuilder()
             .withDocumentModels(documentModels)
             .withFeatures({
               legacyStorageEnabled: false,
             })
-            .withLegacyStorage(new PrismaStorage(prismaClient as any, cache))
+            // not used
+            .withLegacyStorage(new MemoryStorage())
             .build();
         },
         afterEach: () => {
@@ -245,26 +214,14 @@ async function main() {
       },
       {
         beforeEach: async () => {
-          const prismaClient = new PrismaClient({
-            datasources: {
-              db: {
-                url: DATABASE_URL,
-              },
-            },
-          });
-          await prismaClient.$executeRawUnsafe('DELETE FROM "Attachment";');
-          await prismaClient.$executeRawUnsafe('DELETE FROM "Operation";');
-          await prismaClient.$executeRawUnsafe('DELETE FROM "DriveDocument";');
-          await prismaClient.$executeRawUnsafe('DELETE FROM "Document";');
-          await prismaClient.$executeRawUnsafe('DELETE FROM "Drive";');
-
           const documentModels = getDocumentModels();
           reactorBatchSubmission = await new ReactorBuilder()
             .withDocumentModels(documentModels)
             .withFeatures({
-              legacyStorageEnabled: true,
+              legacyStorageEnabled: false,
             })
-            .withLegacyStorage(new PrismaStorage(prismaClient as any, cache))
+            // not used
+            .withLegacyStorage(new MemoryStorage())
             .build();
         },
         afterEach: () => {

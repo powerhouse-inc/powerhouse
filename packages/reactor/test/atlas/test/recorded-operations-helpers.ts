@@ -100,16 +100,11 @@ export function getDocumentModels(): DocumentModelModule[] {
 export async function processReactorMutation(
   mutation: RecordedOperation,
   reactor: IReactor,
-  driveIds?: string[],
 ): Promise<void> {
   const { name, args } = mutation;
 
   if (name === "createDrive") {
     const { id, name, slug } = args;
-    if (driveIds) {
-      driveIds.push(id);
-    }
-
     const modules = await reactor.getDocumentModels();
     const driveModule = modules.results.find(
       (m: DocumentModelModule) =>
@@ -261,11 +256,10 @@ export async function processReactorMutation(
   }
 }
 
-export async function buildBatchMutationRequest(
+export function buildBatchMutationRequest(
+  modules: DocumentModelModule[],
   mutations: RecordedOperation[],
-  reactor: IReactor,
-): Promise<BatchMutationRequest> {
-  const modules = await reactor.getDocumentModels();
+): BatchMutationRequest {
   const jobs: Array<{
     key: string;
     documentId: string;
@@ -284,7 +278,7 @@ export async function buildBatchMutationRequest(
     if (name === "createDrive") {
       const { id, name, slug } = args;
 
-      const driveModule = modules.results.find(
+      const driveModule = modules.find(
         (m: DocumentModelModule) =>
           m.documentModel.global.id === "powerhouse/document-drive",
       );
@@ -361,7 +355,7 @@ export async function buildBatchMutationRequest(
 
       if (driveAction.type === "ADD_FILE") {
         const docType = driveAction.input.documentType;
-        const module = modules.results.find(
+        const module = modules.find(
           (m: DocumentModelModule) => m.documentModel.global.id === docType,
         );
 
@@ -508,7 +502,12 @@ export async function submitAllMutationsWithQueueHints(
   mutations: RecordedOperation[],
   reactor: IReactor,
 ): Promise<{ jobs: Record<string, { id: string; status: JobStatus }> }> {
-  const batchRequest = await buildBatchMutationRequest(mutations, reactor);
+  const documentModels = await reactor.getDocumentModels();
+  const batchRequest = buildBatchMutationRequest(
+    documentModels.results,
+    mutations,
+  );
+
   return await reactor.mutateBatch(batchRequest);
 }
 
