@@ -1,5 +1,4 @@
 export * from "./constants.js";
-export * from "./create-global-project.js";
 export * from "./dependencies.js";
 export * from "./help-formatting.js";
 export * from "./help.js";
