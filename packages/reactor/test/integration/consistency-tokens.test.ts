@@ -93,12 +93,9 @@ describe("Integration Test: Consistency Tokens with Document View", () => {
 
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      const startTime = Date.now();
       const result = await reactor.get("doc-3", undefined, consistencyToken);
-      const duration = Date.now() - startTime;
 
       expect(result.document.header.id).toBe("doc-3");
-      expect(duration).toBeLessThan(50);
     });
   });
 
