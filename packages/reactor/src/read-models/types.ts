@@ -18,8 +18,8 @@ export interface DocumentSnapshotTable {
   lastOperationHash: string;
   lastUpdatedAt: Generated<Date>;
   snapshotVersion: Generated<number>;
-  identifiers: unknown | null; // JSONB type - stored as object
-  metadata: unknown | null; // JSONB type - stored as object
+  identifiers: unknown; // JSONB type - stored as object
+  metadata: unknown; // JSONB type - stored as object
   isDeleted: Generated<boolean>;
   deletedAt: Date | null;
 }

@@ -53,7 +53,7 @@ export interface DocumentRelationshipTable {
   sourceId: string;
   targetId: string;
   relationshipType: string;
-  metadata: unknown | null; // JSONB type - stored as object
+  metadata: unknown; // JSONB type - stored as object
   createdAt: Generated<Date>;
   updatedAt: Generated<Date>;
 }
