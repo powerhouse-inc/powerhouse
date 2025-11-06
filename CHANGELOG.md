@@ -1,3 +1,39 @@
+## 4.1.0-dev.102 (2025-11-06)
+
+### 🚀 Features
+
+- working out how consistency guarantees are provided through consistency tokens ([18737020e](https://github.com/powerhouse-inc/powerhouse/commit/18737020e))
+- consistency tracker implementation ([73449ab68](https://github.com/powerhouse-inc/powerhouse/commit/73449ab68))
+- added consistency token to the job interface ([f5077680c](https://github.com/powerhouse-inc/powerhouse/commit/f5077680c))
+- updated read model specs with consistency token ([3a7d6f91a](https://github.com/powerhouse-inc/powerhouse/commit/3a7d6f91a))
+- adding consistency tracking to the document indexer ([3e4b694e6](https://github.com/powerhouse-inc/powerhouse/commit/3e4b694e6))
+- adding consistency tracking to the document indexer ([a2a0b4e9c](https://github.com/powerhouse-inc/powerhouse/commit/a2a0b4e9c))
+- starting to migrate reactor to use the legacy storage feature flag ([c24a9829e](https://github.com/powerhouse-inc/powerhouse/commit/c24a9829e))
+- integration tests for consistency token ([030744ec2](https://github.com/powerhouse-inc/powerhouse/commit/030744ec2))
+- switching to tinybench for benchmarks ([5b915e025](https://github.com/powerhouse-inc/powerhouse/commit/5b915e025))
+- implement vetra document backup functionality in generators ([#2077](https://github.com/powerhouse-inc/powerhouse/pull/2077))
+- batch insert helper for atlas ([fd60534c6](https://github.com/powerhouse-inc/powerhouse/commit/fd60534c6))
+- compare atlas results from batch insert ([10ce147cd](https://github.com/powerhouse-inc/powerhouse/commit/10ce147cd))
+- added batch insert as a benchmark option ([09989be49](https://github.com/powerhouse-inc/powerhouse/commit/09989be49))
+- test script for profiling ([7abfe885a](https://github.com/powerhouse-inc/powerhouse/commit/7abfe885a))
+- updating single mutation script to ignore pglite warmup ([3ad625632](https://github.com/powerhouse-inc/powerhouse/commit/3ad625632))
+- **reactor-api:** added free entry flag which allows unauthenticated users to reach guest level ([d2d17ab44](https://github.com/powerhouse-inc/powerhouse/commit/d2d17ab44))
+
+### 🩹 Fixes
+
+- update atlas packages ([fa174d00e](https://github.com/powerhouse-inc/powerhouse/commit/fa174d00e))
+- broke the build, fixing with reactorbuilder ([2c4ade4e6](https://github.com/powerhouse-inc/powerhouse/commit/2c4ade4e6))
+- trying a completely fresh lockfile ([c9888939a](https://github.com/powerhouse-inc/powerhouse/commit/c9888939a))
+- try again with a pnpm upgrade ([ec081f743](https://github.com/powerhouse-inc/powerhouse/commit/ec081f743))
+- **switchboard:** removed duplicated document models in client initializer ([30b9dbeb3](https://github.com/powerhouse-inc/powerhouse/commit/30b9dbeb3))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.101 (2025-11-05)
 
 ### 🚀 Features

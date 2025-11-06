@@ -1,3 +1,22 @@
+## 4.1.0-dev.102 (2025-11-06)
+
+### 🚀 Features
+
+- switching to tinybench for benchmarks ([5b915e025](https://github.com/powerhouse-inc/powerhouse/commit/5b915e025))
+
+### 🩹 Fixes
+
+- **switchboard:** removed duplicated document models in client initializer ([30b9dbeb3](https://github.com/powerhouse-inc/powerhouse/commit/30b9dbeb3))
+- try again with a pnpm upgrade ([ec081f743](https://github.com/powerhouse-inc/powerhouse/commit/ec081f743))
+- trying a completely fresh lockfile ([c9888939a](https://github.com/powerhouse-inc/powerhouse/commit/c9888939a))
+- broke the build, fixing with reactorbuilder ([2c4ade4e6](https://github.com/powerhouse-inc/powerhouse/commit/2c4ade4e6))
+- update atlas packages ([fa174d00e](https://github.com/powerhouse-inc/powerhouse/commit/fa174d00e))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.101 (2025-11-05)
 
 ### 🚀 Features
