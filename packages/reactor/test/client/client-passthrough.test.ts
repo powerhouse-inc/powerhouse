@@ -90,6 +90,7 @@ describe("ReactorClient Passthrough Functions", () => {
       operationStore,
       eventBus,
       mockWriteCache,
+      { legacyStorageEnabled: true },
     );
 
     // Create job tracker

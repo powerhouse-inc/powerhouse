@@ -157,6 +157,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       operationStore,
       eventBus,
       mockWriteCache,
+      { legacyStorageEnabled: true },
     );
     executorManager = new SimpleJobExecutorManager(
       () => executor,

@@ -95,6 +95,7 @@ describe("SimpleJobExecutor", () => {
       mockOperationStore,
       eventBus,
       mockWriteCache,
+      { legacyStorageEnabled: true },
     );
   });
 
@@ -230,6 +231,7 @@ describe("SimpleJobExecutor", () => {
         header: {
           id: documentId,
           documentType: "powerhouse/document-model",
+          revision: { document: 1 },
         },
         operations: {
           document: [
@@ -247,8 +249,12 @@ describe("SimpleJobExecutor", () => {
               },
             },
           ],
+          global: [],
+          local: [],
         },
         state: {
+          global: {},
+          local: {},
           document: {
             isDeleted: false,
           },
@@ -291,6 +297,7 @@ describe("SimpleJobExecutor", () => {
         header: {
           id: documentId,
           documentType: "powerhouse/document-model",
+          revision: { document: 1 },
         },
         operations: {
           document: [
@@ -308,8 +315,12 @@ describe("SimpleJobExecutor", () => {
               },
             },
           ],
+          global: [],
+          local: [],
         },
         state: {
+          global: {},
+          local: {},
           document: {
             isDeleted: false,
           },

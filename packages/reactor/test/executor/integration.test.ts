@@ -132,6 +132,7 @@ describe("SimpleJobExecutor Integration", () => {
       operationStore,
       eventBus,
       writeCache,
+      { legacyStorageEnabled: true },
     );
   });
 
@@ -403,6 +404,7 @@ describe("SimpleJobExecutor Integration", () => {
         operationStore,
         eventBus,
         writeCache,
+        { legacyStorageEnabled: true },
       );
 
       // Create a valid job

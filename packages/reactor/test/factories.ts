@@ -476,7 +476,7 @@ export async function createTestReactorSetup(
     operationStore,
     eventBus,
     mockWriteCache,
-    executorConfig,
+    executorConfig ?? { legacyStorageEnabled: true },
   );
 
   // Create mock read model coordinator
