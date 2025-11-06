@@ -14,7 +14,7 @@ import type {
   <%= phDocumentTypeName %>,
   <%= actionTypeName %>,
 } from "<%= documentModelDir %>";
-import { <%= isPhDocumentOfTypeFunctionName %> } from "<%= documentModelDir %>";
+import { <%= isPhDocumentOfTypeFunctionName %> } from "./gen/document-schema.js";
 
 /** Hook to get a <%= pascalCaseDocumentType %> document by its id */
 export function <%= useByIdHookName %>(
