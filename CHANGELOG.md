@@ -1,3 +1,30 @@
+## 4.1.0-dev.103 (2025-11-06)
+
+### 🚀 Features
+
+- **builder-tools:** warmup local files on ph connect ([03f80d4a4](https://github.com/powerhouse-inc/powerhouse/commit/03f80d4a4))
+- **codegen:** add test artifact purge util functions ([#2081](https://github.com/powerhouse-inc/powerhouse/pull/2081))
+- **connect:** remove circular imports ([a1632d41e](https://github.com/powerhouse-inc/powerhouse/commit/a1632d41e))
+- **design-system:** show all powerhouse dependencies on about modal ([9947a6cbd](https://github.com/powerhouse-inc/powerhouse/commit/9947a6cbd))
+
+### 🩹 Fixes
+
+- **builder-tools:** improved hmr on Connect ([3de4ebdc6](https://github.com/powerhouse-inc/powerhouse/commit/3de4ebdc6))
+- **builder-tools:** removed warmup to avoid hmr issues ([e632d75ad](https://github.com/powerhouse-inc/powerhouse/commit/e632d75ad))
+- **codegen:** run prettier programmatically ([23f948c4d](https://github.com/powerhouse-inc/powerhouse/commit/23f948c4d))
+- **codegen:** move read-pkg to runtime dependency ([939f01045](https://github.com/powerhouse-inc/powerhouse/commit/939f01045))
+- **connect:** fixed app version retrieval from package.json ([7be168b1a](https://github.com/powerhouse-inc/powerhouse/commit/7be168b1a))
+- **connect:** fixed some import inconsistencies ([32e83efcb](https://github.com/powerhouse-inc/powerhouse/commit/32e83efcb))
+- **connect:** improved hmr plugin ([b65ff940e](https://github.com/powerhouse-inc/powerhouse/commit/b65ff940e))
+- **document-model:** export single generateId function ([6c1a7d9a0](https://github.com/powerhouse-inc/powerhouse/commit/6c1a7d9a0))
+- **vetra:** increased codegen debounce to 3 seconds ([ca880217a](https://github.com/powerhouse-inc/powerhouse/commit/ca880217a))
+- **vetra:** added development export ([f4e169fa9](https://github.com/powerhouse-inc/powerhouse/commit/f4e169fa9))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Ryan Wolhuter @ryanwolhuter
+
 ## 4.1.0-dev.102 (2025-11-06)
 
 ### 🚀 Features

@@ -1,3 +1,22 @@
+## 4.1.0-dev.103 (2025-11-06)
+
+### 🚀 Features
+
+- **connect:** remove circular imports ([a1632d41e](https://github.com/powerhouse-inc/powerhouse/commit/a1632d41e))
+
+### 🩹 Fixes
+
+- **codegen:** move read-pkg to runtime dependency ([939f01045](https://github.com/powerhouse-inc/powerhouse/commit/939f01045))
+- **connect:** improved hmr plugin ([b65ff940e](https://github.com/powerhouse-inc/powerhouse/commit/b65ff940e))
+- **document-model:** export single generateId function ([6c1a7d9a0](https://github.com/powerhouse-inc/powerhouse/commit/6c1a7d9a0))
+- **codegen:** run prettier programmatically ([23f948c4d](https://github.com/powerhouse-inc/powerhouse/commit/23f948c4d))
+- **connect:** fixed some import inconsistencies ([32e83efcb](https://github.com/powerhouse-inc/powerhouse/commit/32e83efcb))
+- **connect:** fixed app version retrieval from package.json ([7be168b1a](https://github.com/powerhouse-inc/powerhouse/commit/7be168b1a))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.102 (2025-11-06)
 
 ### 🚀 Features

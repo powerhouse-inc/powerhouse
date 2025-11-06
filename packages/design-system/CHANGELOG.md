@@ -1,3 +1,19 @@
+## 4.1.0-dev.103 (2025-11-06)
+
+### 🚀 Features
+
+- **design-system:** show all powerhouse dependencies on about modal ([9947a6cbd](https://github.com/powerhouse-inc/powerhouse/commit/9947a6cbd))
+- **connect:** remove circular imports ([a1632d41e](https://github.com/powerhouse-inc/powerhouse/commit/a1632d41e))
+
+### 🩹 Fixes
+
+- **codegen:** move read-pkg to runtime dependency ([939f01045](https://github.com/powerhouse-inc/powerhouse/commit/939f01045))
+- **codegen:** run prettier programmatically ([23f948c4d](https://github.com/powerhouse-inc/powerhouse/commit/23f948c4d))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.102 (2025-11-06)
 
 ### 🚀 Features
