@@ -25,6 +25,7 @@ describe("Batch mutation queue ordering", () => {
     queueHint: string[] = [],
   ): Job => ({
     id: uuidv4(),
+    kind: "mutation",
     documentId,
     scope,
     branch,
@@ -37,6 +38,7 @@ describe("Batch mutation queue ordering", () => {
         input: {},
       } as Action,
     ],
+    operations: [],
     createdAt: new Date().toISOString(),
     queueHint,
     maxRetries: 3,
@@ -48,6 +50,7 @@ describe("Batch mutation queue ordering", () => {
     const job2Id = uuidv4();
     const job1: Job = {
       id: job1Id,
+      kind: "mutation",
       documentId: "doc1",
       scope: "global",
       branch: "main",
@@ -60,6 +63,7 @@ describe("Batch mutation queue ordering", () => {
           input: {},
         } as Action,
       ],
+      operations: [],
       createdAt: new Date().toISOString(),
       queueHint: [],
       maxRetries: 3,
@@ -67,6 +71,7 @@ describe("Batch mutation queue ordering", () => {
     };
     const job2: Job = {
       id: job2Id,
+      kind: "mutation",
       documentId: "doc2",
       scope: "global",
       branch: "main",
@@ -79,6 +84,7 @@ describe("Batch mutation queue ordering", () => {
           input: {},
         } as Action,
       ],
+      operations: [],
       createdAt: new Date().toISOString(),
       queueHint: [job1Id],
       maxRetries: 3,
@@ -115,6 +121,7 @@ describe("Batch mutation queue ordering", () => {
     const job3Id = uuidv4();
     const job1: Job = {
       id: job1Id,
+      kind: "mutation",
       documentId: "doc1",
       scope: "global",
       branch: "main",
@@ -127,6 +134,7 @@ describe("Batch mutation queue ordering", () => {
           input: {},
         } as Action,
       ],
+      operations: [],
       createdAt: new Date().toISOString(),
       queueHint: [],
       maxRetries: 3,
@@ -134,6 +142,7 @@ describe("Batch mutation queue ordering", () => {
     };
     const job2: Job = {
       id: job2Id,
+      kind: "mutation",
       documentId: "doc2",
       scope: "global",
       branch: "main",
@@ -146,6 +155,7 @@ describe("Batch mutation queue ordering", () => {
           input: {},
         } as Action,
       ],
+      operations: [],
       createdAt: new Date().toISOString(),
       queueHint: [job1Id],
       maxRetries: 3,
@@ -153,6 +163,7 @@ describe("Batch mutation queue ordering", () => {
     };
     const job3: Job = {
       id: job3Id,
+      kind: "mutation",
       documentId: "doc2",
       scope: "document",
       branch: "main",
@@ -165,6 +176,7 @@ describe("Batch mutation queue ordering", () => {
           input: {},
         } as Action,
       ],
+      operations: [],
       createdAt: new Date().toISOString(),
       queueHint: [job2Id],
       maxRetries: 3,

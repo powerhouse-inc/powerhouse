@@ -23,6 +23,7 @@ import type {
   IOperationStore,
   OperationWithContext,
 } from "../storage/interfaces.js";
+import { reshuffleByTimestampAndIndex } from "../utils/reshuffle.js";
 import type { IJobExecutor } from "./interfaces.js";
 import type { JobExecutorConfig, JobResult } from "./types.js";
 import {
@@ -68,6 +69,10 @@ export class SimpleJobExecutor implements IJobExecutor {
     const startTime = Date.now();
     const generatedOperations: Operation[] = [];
     const operationsWithContext: OperationWithContext[] = [];
+
+    if (job.kind === "load") {
+      return await this.executeLoadJob(job, startTime);
+    }
 
     // Process each action in the job sequentially
     for (const action of job.actions) {
@@ -927,6 +932,120 @@ export class SimpleJobExecutor implements IJobExecutor {
       hash: "",
       skip: 0,
       action: action,
+    };
+  }
+
+  private async executeLoadJob(
+    job: Job,
+    startTime: number,
+  ): Promise<JobResult> {
+    if (job.operations.length === 0) {
+      return this.buildErrorResult(
+        job,
+        new Error("Load job must include at least one operation"),
+        startTime,
+      );
+    }
+
+    const scope = job.scope;
+
+    let document: PHDocument;
+    try {
+      document = await this.writeCache.getState(
+        job.documentId,
+        scope,
+        job.branch,
+      );
+    } catch (error) {
+      return this.buildErrorResult(
+        job,
+        error instanceof Error ? error : new Error(String(error)),
+        startTime,
+      );
+    }
+
+    let latestRevision = 0;
+    try {
+      const revisions = await this.operationStore.getRevisions(
+        job.documentId,
+        job.branch,
+      );
+      latestRevision = revisions.revision[scope] ?? 0;
+    } catch (error) {
+      return this.buildErrorResult(
+        job,
+        error instanceof Error ? error : new Error(String(error)),
+        startTime,
+      );
+    }
+
+    const minIncomingIndex = job.operations.reduce(
+      (min, operation) => Math.min(min, operation.index),
+      Number.POSITIVE_INFINITY,
+    );
+
+    const skipCount =
+      minIncomingIndex === Number.POSITIVE_INFINITY
+        ? 0
+        : Math.max(0, latestRevision - minIncomingIndex);
+
+    const reshuffledOperations = reshuffleByTimestampAndIndex(
+      {
+        index: latestRevision,
+        skip: skipCount,
+      },
+      [],
+      job.operations.map((operation) => ({
+        ...operation,
+        id: operation.id,
+      })),
+    );
+
+    for (const operation of reshuffledOperations) {
+      const writeError = await this.writeOperationToStore(
+        job.documentId,
+        document.header.documentType,
+        scope,
+        job.branch,
+        operation,
+        job,
+        startTime,
+      );
+      if (writeError !== null) {
+        return writeError;
+      }
+    }
+
+    const operationsWithContext: OperationWithContext[] =
+      reshuffledOperations.map((operation) => ({
+        operation,
+        context: {
+          documentId: job.documentId,
+          scope,
+          branch: job.branch,
+          documentType: document.header.documentType,
+          resultingState: operation.resultingState,
+        },
+      }));
+
+    if (operationsWithContext.length > 0) {
+      this.eventBus
+        .emit(OperationEventTypes.OPERATION_WRITTEN, {
+          operations: operationsWithContext,
+        })
+        .catch(() => {
+          // TODO: log error channel once logging is wired
+        });
+    }
+
+    this.writeCache.invalidate(job.documentId, scope, job.branch);
+
+    return {
+      job,
+      success: true,
+      operations: reshuffledOperations,
+      operationsWithContext,
+      duration: Date.now() - startTime,
     };
   }
 
