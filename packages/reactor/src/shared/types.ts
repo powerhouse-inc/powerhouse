@@ -55,6 +55,10 @@ export type JobInfo = {
   error?: ErrorInfo;
   errorHistory?: ErrorInfo[];
   result?: any;
+
+  /**
+   * A token for coordinating reads, only valid once a job reaches COMPLETED.
+   */
   consistencyToken: ConsistencyToken;
 };
 

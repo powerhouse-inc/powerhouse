@@ -2,7 +2,7 @@
 
 ### Summary
 - Introduces `load` to accept pre-existing operations from other reactors.
-- Operations are enqueued for verification and automatically reshuffled by timestamp alongside existing operations.
+- Incoming operations may trigger the reshuffle flow; conflicts generate a batch of new operations whose first entry includes a `skip` value that rewinds the log before applying the regenerated sequence, while conflict-free operations are appended as-is.
 - Returns `JobInfo` for tracking the load job through the job queue.
 
 ### Motivation
@@ -46,15 +46,15 @@ const jobInfo = await reactor.load(
 
 #### Reshuffling
 - The job executor merges incoming operations with existing operations in the document.
-- All operations (existing and incoming) are reshuffled by timestamp using the existing `reshuffleByTimestamp` or `reshuffleByTimestampAndIndex` utilities.
-- Operations that conflict are reordered, and `skip` values are calculated for the first reshuffled operation.
-- New indices and hashes are assigned to reshuffled operations.
-- See [Reshuffle documentation](../Jobs/reshuffle.md) for detailed reshuffling semantics.
+- If conflicts are detected, the combined set is reshuffled by timestamp using the existing `reshuffleByTimestamp` or `reshuffleByTimestampAndIndex` utilities.
+- During a reshuffle, the first generated operation in the batch includes a `skip` value to rewind the log back to the common ancestor before applying the remainder of the regenerated operations.
+- Conflict-free imports skip the reshuffle path and are simply appended. Existing operations in the log remain immutable and are never rewritten.
+- See [Reshuffle documentation](../Jobs/reshuffle.md) for detailed semantics.
 
 #### Storage
-- Verified and reshuffled operations are persisted to `IOperationStore`.
+- Verified operations (reshuffled when necessary) are persisted to `IOperationStore`.
 - Write-cache revisions are updated.
-- Operation events are emitted for read models to consume.
+- Operation events are emitted for read models to consume. When an event carries a `skip > 0`, read models should call `IOperationStore.getSinceId` with that operation id (or earlier) to replay the slice needed to rebuild state; otherwise they continue processing incrementally.
 
 ### Relationship to Mutate
 
@@ -63,8 +63,9 @@ const jobInfo = await reactor.load(
 | Input | `Action[]` | `Operation[]` |
 | Purpose | Apply new changes | Import existing operations |
 | Operation generation | Reducer generates operations | Operations already exist |
-| Reshuffling | Only if conflicts detected | Always reshuffles by timestamp |
+| Reshuffling | Only if conflicts detected | Only if conflicts detected (skip carried on first op of batch) |
 | Use case | Local modifications | Cross-reactor synchronization |
+| Consistency token | Returned with `JobInfo` | Returned with `JobInfo` |
 
 ### Testing
 - Unit tests for validation failures: invalid operations, missing metadata, hash mismatches.
@@ -75,4 +76,3 @@ const jobInfo = await reactor.load(
 ### Follow-Up
 - Add `load` to all `IReactor` implementations.
 - Consider optimization for bulk operation loading.
-- Evaluate whether consistency tokens should be supported for read-after-write semantics on load operations.
