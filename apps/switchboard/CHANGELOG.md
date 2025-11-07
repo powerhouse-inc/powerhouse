@@ -1,3 +1,13 @@
+## 4.1.0-dev.104 (2025-11-07)
+
+### 🚀 Features
+
+- **ph-cli:** remove reactor-local command ([029e5db7d](https://github.com/powerhouse-inc/powerhouse/commit/029e5db7d))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.103 (2025-11-06)
 
 ### 🚀 Features

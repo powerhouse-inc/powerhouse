@@ -1,3 +1,20 @@
+## 4.1.0-dev.104 (2025-11-07)
+
+### 🚀 Features
+
+- **ph-cli:** remove reactor-local command ([029e5db7d](https://github.com/powerhouse-inc/powerhouse/commit/029e5db7d))
+- **connect:** show loading animation on drive editor container ([90f554b24](https://github.com/powerhouse-inc/powerhouse/commit/90f554b24))
+
+### 🩹 Fixes
+
+- linter fixes ([39a187eca](https://github.com/powerhouse-inc/powerhouse/commit/39a187eca))
+- **connect:** show error on non existing editor ([ae43a43c4](https://github.com/powerhouse-inc/powerhouse/commit/ae43a43c4))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.103 (2025-11-06)
 
 ### 🚀 Features

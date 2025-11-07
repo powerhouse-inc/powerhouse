@@ -1,3 +1,27 @@
+## 4.1.0-dev.104 (2025-11-07)
+
+### 🚀 Features
+
+- migration scripts for all storage ([804f5838c](https://github.com/powerhouse-inc/powerhouse/commit/804f5838c))
+- work on getting both benchmarks hitting postgres ([d035c79b9](https://github.com/powerhouse-inc/powerhouse/commit/d035c79b9))
+- **connect:** show loading animation on drive editor container ([90f554b24](https://github.com/powerhouse-inc/powerhouse/commit/90f554b24))
+- **ph-cli:** remove reactor-local command ([029e5db7d](https://github.com/powerhouse-inc/powerhouse/commit/029e5db7d))
+
+### 🩹 Fixes
+
+- linting fixes ([2ab0f01ed](https://github.com/powerhouse-inc/powerhouse/commit/2ab0f01ed))
+- removing race condition from test ([251531bf4](https://github.com/powerhouse-inc/powerhouse/commit/251531bf4))
+- linting warnings ([5f79fcf98](https://github.com/powerhouse-inc/powerhouse/commit/5f79fcf98))
+- require job executor config, and fix mock data in unit tests ([7c7362325](https://github.com/powerhouse-inc/powerhouse/commit/7c7362325))
+- adding a very basic claude settings file because it keeps getting wiped in clean ([3bfa35222](https://github.com/powerhouse-inc/powerhouse/commit/3bfa35222))
+- linter fixes ([39a187eca](https://github.com/powerhouse-inc/powerhouse/commit/39a187eca))
+- **connect:** show error on non existing editor ([ae43a43c4](https://github.com/powerhouse-inc/powerhouse/commit/ae43a43c4))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.103 (2025-11-06)
 
 ### 🚀 Features
