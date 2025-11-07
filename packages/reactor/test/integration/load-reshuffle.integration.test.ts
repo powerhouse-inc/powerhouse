@@ -90,12 +90,12 @@ describe("Load reshuffle integration", () => {
       document.header.id,
       {
         branch: "main",
-        scopes: ["global"],
+        scopes: ["document"],
       },
       undefined,
       loadTokenB,
     );
-    expect(bOperations.global.results).toHaveLength(2); /*
+    expect(bOperations.document.results).toHaveLength(2); /*
 
     const mutateJob = await reactorA.mutate(document.header.id, "main", [
       setName("A1"),

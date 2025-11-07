@@ -67,16 +67,55 @@ export class SimpleJobExecutor implements IJobExecutor {
    */
   async executeJob(job: Job): Promise<JobResult> {
     const startTime = Date.now();
-    const generatedOperations: Operation[] = [];
-    const operationsWithContext: OperationWithContext[] = [];
 
     if (job.kind === "load") {
       return await this.executeLoadJob(job, startTime);
     }
 
-    // Process each action in the job sequentially
-    for (const action of job.actions) {
-      // Handle system actions specially (CREATE_DOCUMENT, DELETE_DOCUMENT, etc.)
+    const result = await this.processActions(job, job.actions, startTime);
+
+    if (!result.success) {
+      return {
+        job,
+        success: false,
+        error: result.error,
+        duration: Date.now() - startTime,
+      };
+    }
+
+    if (result.operationsWithContext.length > 0) {
+      this.eventBus
+        .emit(OperationEventTypes.OPERATION_WRITTEN, {
+          operations: result.operationsWithContext,
+        })
+        .catch(() => {
+          // TODO: Log error
+        });
+    }
+
+    return {
+      job,
+      success: true,
+      operations: result.generatedOperations,
+      operationsWithContext: result.operationsWithContext,
+      duration: Date.now() - startTime,
+    };
+  }
+
+  private async processActions(
+    job: Job,
+    actions: Action[],
+    startTime: number,
+  ): Promise<{
+    success: boolean;
+    generatedOperations: Operation[];
+    operationsWithContext: OperationWithContext[];
+    error?: Error;
+  }> {
+    const generatedOperations: Operation[] = [];
+    const operationsWithContext: OperationWithContext[] = [];
+
+    for (const action of actions) {
       if (action.type === "CREATE_DOCUMENT") {
         const result = await this.executeCreateDocumentAction(
           job,
@@ -89,7 +128,12 @@ export class SimpleJobExecutor implements IJobExecutor {
           operationsWithContext,
         );
         if (error !== null) {
-          return error;
+          return {
+            success: false,
+            generatedOperations,
+            operationsWithContext,
+            error: error.error,
+          };
         }
         continue;
       }
@@ -106,7 +150,12 @@ export class SimpleJobExecutor implements IJobExecutor {
           operationsWithContext,
         );
         if (error !== null) {
-          return error;
+          return {
+            success: false,
+            generatedOperations,
+            operationsWithContext,
+            error: error.error,
+          };
         }
         continue;
       }
@@ -123,7 +172,12 @@ export class SimpleJobExecutor implements IJobExecutor {
           operationsWithContext,
         );
         if (error !== null) {
-          return error;
+          return {
+            success: false,
+            generatedOperations,
+            operationsWithContext,
+            error: error.error,
+          };
         }
         continue;
       }
@@ -140,7 +194,12 @@ export class SimpleJobExecutor implements IJobExecutor {
           operationsWithContext,
         );
         if (error !== null) {
-          return error;
+          return {
+            success: false,
+            generatedOperations,
+            operationsWithContext,
+            error: error.error,
+          };
         }
         continue;
       }
@@ -157,12 +216,16 @@ export class SimpleJobExecutor implements IJobExecutor {
           operationsWithContext,
         );
         if (error !== null) {
-          return error;
+          return {
+            success: false,
+            generatedOperations,
+            operationsWithContext,
+            error: error.error,
+          };
         }
         continue;
       }
 
-      // For regular actions, load the document and apply through reducer
       let document: PHDocument;
       try {
         document = await this.writeCache.getState(
@@ -172,24 +235,23 @@ export class SimpleJobExecutor implements IJobExecutor {
         );
       } catch (error) {
         return {
-          job,
           success: false,
+          generatedOperations,
+          operationsWithContext,
           error: error instanceof Error ? error : new Error(String(error)),
-          duration: Date.now() - startTime,
         };
       }
 
-      // Check if document is deleted
       const documentState = document.state.document;
       if (documentState.isDeleted) {
         return {
-          job,
           success: false,
+          generatedOperations,
+          operationsWithContext,
           error: new DocumentDeletedError(
             job.documentId,
             documentState.deletedAtUtcIso,
           ),
-          duration: Date.now() - startTime,
         };
       }
 
@@ -198,10 +260,10 @@ export class SimpleJobExecutor implements IJobExecutor {
         module = this.registry.getModule(document.header.documentType);
       } catch (error) {
         return {
-          job,
           success: false,
+          generatedOperations,
+          operationsWithContext,
           error: error instanceof Error ? error : new Error(String(error)),
-          duration: Date.now() - startTime,
         };
       }
 
@@ -215,23 +277,27 @@ export class SimpleJobExecutor implements IJobExecutor {
           enhancedError.stack = `${contextMessage}\n\nOriginal stack trace:\n${error.stack}`;
         }
         return {
-          job,
           success: false,
+          generatedOperations,
+          operationsWithContext,
           error: enhancedError,
-          duration: Date.now() - startTime,
         };
       }
 
       const scope = job.scope;
       const operations = updatedDocument.operations[scope];
       if (operations.length === 0) {
-        throw new Error("No operation generated from action");
+        return {
+          success: false,
+          generatedOperations,
+          operationsWithContext,
+          error: new Error("No operation generated from action"),
+        };
       }
 
       const newOperation = operations[operations.length - 1];
       generatedOperations.push(newOperation);
 
-      // Write the operation to legacy storage
       if (this.config.legacyStorageEnabled) {
         try {
           await this.operationStorage.addDocumentOperations(
@@ -241,18 +307,16 @@ export class SimpleJobExecutor implements IJobExecutor {
           );
         } catch (error) {
           return {
-            job,
             success: false,
+            generatedOperations,
+            operationsWithContext,
             error: error instanceof Error ? error : new Error(String(error)),
-            duration: Date.now() - startTime,
           };
         }
       }
 
-      // Compute resultingState for passing via context (not persisted)
       const resultingState = JSON.stringify(updatedDocument.state);
 
-      // Write the operation to new IOperationStore (dual-writing)
       try {
         await this.operationStore.apply(
           job.documentId,
@@ -266,12 +330,12 @@ export class SimpleJobExecutor implements IJobExecutor {
         );
       } catch (error) {
         return {
-          job,
           success: false,
+          generatedOperations,
+          operationsWithContext,
           error: new Error(
             `Failed to write operation to IOperationStore: ${error instanceof Error ? error.message : String(error)}`,
           ),
-          duration: Date.now() - startTime,
         };
       }
 
@@ -295,28 +359,15 @@ export class SimpleJobExecutor implements IJobExecutor {
           scope,
           branch: job.branch,
           documentType: document.header.documentType,
-          resultingState, // Ephemeral, passed via events only
+          resultingState,
         },
       });
     }
 
-    // Emit event for read models with all operations - non-blocking
-    if (operationsWithContext.length > 0) {
-      this.eventBus
-        .emit(OperationEventTypes.OPERATION_WRITTEN, {
-          operations: operationsWithContext,
-        })
-        .catch(() => {
-          // TODO: Log error
-        });
-    }
-
     return {
-      job,
       success: true,
-      operations: generatedOperations,
+      generatedOperations,
       operationsWithContext,
-      duration: Date.now() - startTime,
     };
   }
 
@@ -949,21 +1000,6 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     const scope = job.scope;
 
-    let document: PHDocument;
-    try {
-      document = await this.writeCache.getState(
-        job.documentId,
-        scope,
-        job.branch,
-      );
-    } catch (error) {
-      return this.buildErrorResult(
-        job,
-        error instanceof Error ? error : new Error(String(error)),
-        startTime,
-      );
-    }
-
     let latestRevision = 0;
     try {
       const revisions = await this.operationStore.getRevisions(
@@ -972,11 +1008,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
       latestRevision = revisions.revision[scope] ?? 0;
     } catch (error) {
-      return this.buildErrorResult(
-        job,
-        error instanceof Error ? error : new Error(String(error)),
-        startTime,
-      );
+      latestRevision = 0;
     }
 
     const minIncomingIndex = job.operations.reduce(
@@ -1001,37 +1033,23 @@ export class SimpleJobExecutor implements IJobExecutor {
       })),
     );
 
-    for (const operation of reshuffledOperations) {
-      const writeError = await this.writeOperationToStore(
-        job.documentId,
-        document.header.documentType,
-        scope,
-        job.branch,
-        operation,
+    const actions = reshuffledOperations.map((operation) => operation.action);
+
+    const result = await this.processActions(job, actions, startTime);
+
+    if (!result.success) {
+      return {
         job,
-        startTime,
-      );
-      if (writeError !== null) {
-        return writeError;
-      }
+        success: false,
+        error: result.error,
+        duration: Date.now() - startTime,
+      };
     }
 
-    const operationsWithContext: OperationWithContext[] =
-      reshuffledOperations.map((operation) => ({
-        operation,
-        context: {
-          documentId: job.documentId,
-          scope,
-          branch: job.branch,
-          documentType: document.header.documentType,
-          resultingState: operation.resultingState,
-        },
-      }));
-
-    if (operationsWithContext.length > 0) {
+    if (result.operationsWithContext.length > 0) {
       this.eventBus
         .emit(OperationEventTypes.OPERATION_WRITTEN, {
-          operations: operationsWithContext,
+          operations: result.operationsWithContext,
         })
         .catch(() => {
           // TODO: log error channel once logging is wired
@@ -1043,8 +1061,8 @@ export class SimpleJobExecutor implements IJobExecutor {
     return {
       job,
       success: true,
-      operations: reshuffledOperations,
-      operationsWithContext,
+      operations: result.generatedOperations,
+      operationsWithContext: result.operationsWithContext,
       duration: Date.now() - startTime,
     };
   }
