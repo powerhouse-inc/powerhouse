@@ -1,5 +1,6 @@
-import { ConnectTooltip, Icon } from "@powerhousedao/design-system";
 import { useCopyToClipboard } from "usehooks-ts";
+import { Icon } from "../../../../powerhouse/components/icon/icon.js";
+import { ConnectTooltip } from "../../tooltip/tooltip.js";
 
 export type RevisionNumberProps = {
   readonly operationIndex: number;

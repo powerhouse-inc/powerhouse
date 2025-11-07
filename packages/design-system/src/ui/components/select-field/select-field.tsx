@@ -1,22 +1,14 @@
-import type {
-  FieldErrorHandling,
-  InputBaseProps,
-  SelectOption,
-  SelectProps,
-} from "@powerhousedao/design-system";
-import {
-  Button,
-  cn,
-  Command,
-  FormDescription,
-  FormGroup,
-  FormLabel,
-  FormMessageList,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@powerhousedao/design-system";
 import React, { useCallback, useId } from "react";
+import { cn } from "../../../utils/cn.js";
+import type { FieldErrorHandling, InputBaseProps } from "../../types.js";
+import { Button } from "../button/button.js";
+import { Command } from "../command/command.js";
+import type { SelectOption, SelectProps } from "../enum-field/types.js";
+import { FormDescription } from "../form-description/form-description.js";
+import { FormGroup } from "../form-group/form-group.js";
+import { FormLabel } from "../form-label/form-label.js";
+import { FormMessageList } from "../form-message/message-list.js";
+import { Popover, PopoverContent, PopoverTrigger } from "../popover/popover.js";
 import { withFieldValidation } from "../with-field-validation/with-field-validation.js";
 import { Content } from "./content.js";
 import { SelectedContent } from "./selected-content.js";

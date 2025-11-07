@@ -1,16 +1,14 @@
-import type {
-  DivProps,
-  DriveSettingsFormSubmitHandler,
-} from "@powerhousedao/design-system";
-import {
-  Divider,
-  DriveSettingsForm,
-  Icon,
-  Modal,
-} from "@powerhousedao/design-system";
 import type { DocumentDriveDocument, SharingType } from "document-drive";
 import type { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
+import { Icon } from "../../../powerhouse/components/icon/icon.js";
+import { Modal } from "../../../powerhouse/components/modal/modal.js";
+import type { DivProps } from "../../../powerhouse/types/helpers.js";
+import { Divider } from "../divider/divider.js";
+import {
+  type DriveSettingsFormSubmitHandler,
+  DriveSettingsForm,
+} from "../form/drive-settings-form.js";
 
 type ModalProps = ComponentPropsWithoutRef<typeof Modal>;
 

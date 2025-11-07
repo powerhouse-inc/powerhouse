@@ -1,7 +1,6 @@
 import { useArgs } from "@storybook/preview-api";
 import type { Meta, StoryObj } from "@storybook/react";
-import { Disclosure } from "./index.js";
-
+import { Disclosure } from "./disclosure.js";
 const meta = {
   title: "Connect/Components/Disclosure",
   component: Disclosure,

@@ -1,6 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Combobox } from "../../../../connect/index.js";
-import { Pagination, usePagination } from "../../../../powerhouse/index.js";
 import { tableNames } from "../../../constants/names.js";
 import {
   allGroupTransactionTypes,
@@ -11,6 +9,9 @@ import { useTableData } from "../../../hooks/useTableData.js";
 import { makeFixedIncomeOptionLabel } from "../../../utils/form.js";
 import { ItemDetails } from "../base/item-details.js";
 import { Table } from "../base/table.js";
+import { Combobox } from "../../../../connect/components/combobox/combobox.js";
+import { Pagination } from "../../../../powerhouse/components/pagination/pagination.js";
+import { usePagination } from "../../../../powerhouse/hooks/usePagination.js";
 
 export function GroupTransactionsTable() {
   const tableName = tableNames.TRANSACTION;

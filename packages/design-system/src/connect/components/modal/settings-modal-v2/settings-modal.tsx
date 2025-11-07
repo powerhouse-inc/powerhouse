@@ -1,8 +1,9 @@
-import { Icon, Modal } from "@powerhousedao/design-system";
 import type { ComponentProps } from "react";
 
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
+import { Icon } from "../../../../powerhouse/components/icon/icon.js";
+import { Modal } from "../../../../powerhouse/components/modal/modal.js";
 
 export type SettingsTab = {
   id: string;

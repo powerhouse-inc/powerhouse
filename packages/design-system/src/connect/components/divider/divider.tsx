@@ -1,5 +1,5 @@
-import type { DivProps } from "@powerhousedao/design-system";
 import { twMerge } from "tailwind-merge";
+import type { DivProps } from "../../../powerhouse/types/helpers.js";
 
 export function Divider(props: DivProps) {
   return (

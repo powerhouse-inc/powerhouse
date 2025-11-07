@@ -1,18 +1,18 @@
-import type {
-  AddLocalDriveInput,
-  AddRemoteDriveInput,
-  DivProps,
-} from "@powerhousedao/design-system";
-import {
-  AddLocalDriveForm,
-  AddRemoteDriveForm,
-  Modal,
-  TabContent,
-  Tabs,
-} from "@powerhousedao/design-system";
 import type { App } from "document-model";
 import type { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
+import { Modal } from "../../../../powerhouse/components/modal/modal.js";
+import type { DivProps } from "../../../../powerhouse/types/helpers.js";
+import {
+  type AddLocalDriveInput,
+  AddLocalDriveForm,
+} from "../../form/add-local-drive-form.js";
+import {
+  type AddRemoteDriveInput,
+  AddRemoteDriveForm,
+} from "../../form/add-remote-drive-form.js";
+import { TabContent } from "../../tabs/tab-content.js";
+import { Tabs } from "../../tabs/tabs.js";
 
 type ModalProps = ComponentPropsWithoutRef<typeof Modal>;
 export type AddDriveModalProps = {

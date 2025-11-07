@@ -1,6 +1,7 @@
-import { ConnectTooltipProvider } from "@powerhousedao/design-system";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { HDivider, TimelineBar } from "./components/index.js";
+import { ConnectTooltipProvider } from "../tooltip/tooltip.js";
+import { HDivider } from "./components/h-divider.js";
+import { TimelineBar } from "./components/timeline-bar.js";
 
 export type TimelineBarItem = {
   id: string;

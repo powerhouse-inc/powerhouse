@@ -1,13 +1,3 @@
-import type {
-  CashAsset,
-  EditorAction,
-  EditorDispatcher,
-  FixedIncome,
-  Operation,
-  RealWorldAssetsState,
-  TableItemType,
-  TableName,
-} from "@powerhousedao/design-system";
 import type { ReactNode } from "react";
 import {
   createContext,
@@ -24,6 +14,16 @@ import {
   getStateKeyForTableName,
   getTableNameFor,
 } from "../constants/table.js";
+import type {
+  CashAsset,
+  EditorAction,
+  EditorDispatcher,
+  FixedIncome,
+  Operation,
+  RealWorldAssetsState,
+  TableItemType,
+  TableName,
+} from "../types.js";
 import { makeTableData } from "../utils/table.js";
 import { getCashAsset, getFixedIncomeAssets } from "../utils/validators.js";
 

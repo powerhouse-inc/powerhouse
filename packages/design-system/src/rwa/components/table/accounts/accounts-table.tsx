@@ -1,9 +1,9 @@
-import type { TableColumn } from "@powerhousedao/design-system";
-import { Icon } from "@powerhousedao/design-system";
 import { useCallback } from "react";
 import { Fragment } from "react/jsx-runtime";
+import { Icon } from "../../../../powerhouse/components/icon/icon.js";
 import { tableNames } from "../../../constants/names.js";
 import { useEditorContext } from "../../../context/editor-context.js";
+import type { TableColumn } from "../../../types.js";
 import { RWATableCell } from "../base/table-cell.js";
 import { RWATableRow } from "../base/table-row.js";
 import { TableWithForm } from "../base/table-with-form.js";

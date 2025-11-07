@@ -1,6 +1,7 @@
-import type { DivProps, DriveLocation } from "@powerhousedao/design-system";
-import { Icon } from "@powerhousedao/design-system";
 import { twMerge } from "tailwind-merge";
+import { Icon } from "../../../../powerhouse/components/icon/icon.js";
+import type { DivProps } from "../../../../powerhouse/types/helpers.js";
+import type { DriveLocation } from "../../../types/drives.js";
 
 type DriveAppProps = DivProps & {
   readonly location: DriveLocation;

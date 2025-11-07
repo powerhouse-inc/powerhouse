@@ -1,4 +1,3 @@
-import { Icon } from "@powerhousedao/design-system";
 import {
   exportDocument,
   setSelectedNode,
@@ -11,6 +10,7 @@ import {
 import type { PHDocument } from "document-model";
 import { useEffect, useState, type ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
+import { Icon } from "../../../powerhouse/components/icon/icon.js";
 import { DocumentTimeline } from "../document-timeline/document-timeline.js";
 import { useDocumentUndoRedo } from "./utils/use-document-undo-redo.js";
 

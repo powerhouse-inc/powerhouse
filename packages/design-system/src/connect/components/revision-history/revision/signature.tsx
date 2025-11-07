@@ -1,5 +1,6 @@
-import type { Signature } from "@powerhousedao/design-system";
-import { ConnectTooltip, Icon } from "@powerhousedao/design-system";
+import { Icon } from "../../../../powerhouse/index.js";
+import { ConnectTooltip } from "../../tooltip/tooltip.js";
+import type { Signature } from "../types.js";
 
 export type SignatureProps = {
   readonly signatures: Signature[] | undefined;

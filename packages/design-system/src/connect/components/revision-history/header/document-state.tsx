@@ -1,5 +1,5 @@
-import { Icon } from "@powerhousedao/design-system";
 import { useCopyToClipboard } from "usehooks-ts";
+import { Icon } from "../../../../powerhouse/components/icon/icon.js";
 
 export type DocumentStateProps = {
   readonly documentState: object;

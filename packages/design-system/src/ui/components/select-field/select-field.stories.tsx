@@ -1,13 +1,13 @@
 import type { IconName } from "@powerhousedao/design-system";
+import type { Meta, StoryObj } from "@storybook/react";
+import { Icon } from "../../../powerhouse/components/icon/icon.js";
+import { withForm } from "../../lib/decorators.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
-  Icon,
   PrebuiltArgTypes,
   StorybookControlCategory,
-  withForm,
-} from "@powerhousedao/design-system";
-import type { Meta, StoryObj } from "@storybook/react";
+} from "../../lib/storybook-arg-types.js";
 import { SelectField } from "./select-field.js";
 
 const meta: Meta<typeof SelectField> = {

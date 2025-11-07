@@ -1,6 +1,6 @@
-import { Icon } from "@powerhousedao/design-system";
 import type { ReactNode } from "react";
 import { twJoin, twMerge } from "tailwind-merge";
+import { Icon } from "../../../powerhouse/components/icon/icon.js";
 
 type DisclosureProps = {
   title: ReactNode;

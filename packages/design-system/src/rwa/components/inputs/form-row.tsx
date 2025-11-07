@@ -1,5 +1,5 @@
-import type { DivProps } from "@powerhousedao/design-system";
-import { mergeClassNameProps } from "@powerhousedao/design-system";
+import type { DivProps } from "../../../powerhouse/types/helpers.js";
+import { mergeClassNameProps } from "../../../powerhouse/utils/mergeClassNameProps.js";
 
 export interface RWAFormRowProps extends DivProps {
   readonly label?: React.ReactNode;

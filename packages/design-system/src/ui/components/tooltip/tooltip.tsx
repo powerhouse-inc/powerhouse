@@ -1,4 +1,3 @@
-import { cn } from "@powerhousedao/design-system";
 import type {
   TooltipContentProps,
   TooltipProps as TooltipPrimitiveProps,
@@ -11,6 +10,7 @@ import {
   Trigger,
 } from "@radix-ui/react-tooltip";
 import { forwardRef } from "react";
+import { cn } from "../../../utils/cn.js";
 
 interface TooltipProps
   extends TooltipPrimitiveProps,

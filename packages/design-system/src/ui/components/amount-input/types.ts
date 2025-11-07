@@ -1,5 +1,4 @@
 import type { IconName } from "@powerhousedao/design-system";
-
 export interface Currency {
   ticker: string;
   crypto: boolean;

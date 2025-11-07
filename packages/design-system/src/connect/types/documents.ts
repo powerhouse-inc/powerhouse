@@ -1,4 +1,4 @@
-import type { documentTypes } from "@powerhousedao/design-system";
+import type { documentTypes } from "../constants/documents.js";
 
 export type DocumentTypes = typeof documentTypes;
 

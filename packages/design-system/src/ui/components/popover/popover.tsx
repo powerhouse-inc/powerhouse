@@ -1,6 +1,6 @@
-import { cn } from "@powerhousedao/design-system";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import React from "react";
+import { cn } from "../../../utils/cn.js";
 
 export const Popover = PopoverPrimitive.Root;
 export const PopoverAnchor = PopoverPrimitive.Anchor;

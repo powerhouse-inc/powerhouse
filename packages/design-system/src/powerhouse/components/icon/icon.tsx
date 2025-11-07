@@ -1,8 +1,8 @@
-import type { Color, IconName, Size } from "@powerhousedao/design-system";
-import { getDimensions, iconComponents } from "@powerhousedao/design-system";
 import type { ComponentPropsWithoutRef } from "react";
 import { Suspense } from "react";
-
+import type { Color, Size } from "../../types/images.js";
+import { getDimensions } from "../../utils/getDimensions.js";
+import { iconComponents, type IconName } from "../icon-components/index.js";
 export type IconProps = ComponentPropsWithoutRef<"svg"> & {
   readonly name: IconName;
   readonly size?: Size;

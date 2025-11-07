@@ -1,4 +1,5 @@
-import { ConnectTooltip, Icon } from "@powerhousedao/design-system";
+import { Icon } from "../../../../powerhouse/components/icon/icon.js";
+import { ConnectTooltip } from "../../tooltip/tooltip.js";
 
 export type OperationProps = {
   readonly operationType: string;

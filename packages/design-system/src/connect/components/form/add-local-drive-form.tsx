@@ -1,15 +1,13 @@
-import {
-  AppFormInput,
-  AvailableOfflineToggle,
-  FormInput,
-  Label,
-  PowerhouseButton,
-  SharingTypeFormInput,
-} from "@powerhousedao/design-system";
 import type { SharingType } from "document-drive";
 import type { App } from "document-model";
 import type { SubmitHandler } from "react-hook-form";
 import { useForm } from "react-hook-form";
+import { PowerhouseButton } from "../../../powerhouse/components/button/button.js";
+import { FormInput } from "../form-input/form-input.js";
+import { AppFormInput } from "./inputs/app-form-input.js";
+import { AvailableOfflineToggle } from "./inputs/available-offline-toggle.js";
+import { Label } from "./inputs/label.js";
+import { SharingTypeFormInput } from "./inputs/sharing-type-form-input.js";
 
 export type AddLocalDriveInput = {
   name: string;

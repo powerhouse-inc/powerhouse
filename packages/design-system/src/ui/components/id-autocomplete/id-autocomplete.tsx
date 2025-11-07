@@ -1,19 +1,15 @@
-import type { TransformerType } from "@powerhousedao/design-system";
-import {
-  cn,
-  Command,
-  FormDescription,
-  FormGroup,
-  FormLabel,
-  FormMessageList,
-  Input,
-  Popover,
-  PopoverAnchor,
-  PopoverContent,
-  sharedValueTransformers,
-  ValueTransformer,
-} from "@powerhousedao/design-system";
+import { Command } from "cmdk";
 import React, { useId, useMemo, useRef } from "react";
+import { cn } from "../../../utils/cn.js";
+import { sharedValueTransformers } from "../../lib/shared-value-transformers.js";
+import { FormDescription } from "../form-description/form-description.js";
+import { FormGroup } from "../form-group/form-group.js";
+import { FormLabel } from "../form-label/form-label.js";
+import { FormMessageList } from "../form-message/message-list.js";
+import { Input } from "../input/input.js";
+import { Popover, PopoverAnchor, PopoverContent } from "../popover/popover.js";
+import type { TransformerType } from "../value-transformer/value-transformer.js";
+import { ValueTransformer } from "../value-transformer/value-transformer.js";
 import { IdAutocompleteInputContainer } from "./id-autocomplete-input-container.js";
 import { IdAutocompleteListOption } from "./id-autocomplete-list-option.js";
 import { IdAutocompleteList } from "./id-autocomplete-list.js";

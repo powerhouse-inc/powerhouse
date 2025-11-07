@@ -1,4 +1,4 @@
-import type { TransformerObject } from "@powerhousedao/design-system";
+import type { TransformerObject } from "../components/value-transformer/value-transformer.js";
 
 export const sharedValueTransformers: Record<
   string,

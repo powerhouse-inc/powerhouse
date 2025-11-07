@@ -1,7 +1,7 @@
-import type { GroupTransactionFormInputs } from "@powerhousedao/design-system";
 import type { Control } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 import { twMerge } from "tailwind-merge";
+import type { GroupTransactionFormInputs } from "../../../types.js";
 import { calculateUnitPrice } from "../../../utils/table.js";
 import { FormattedNumber } from "../base/formatted-number.js";
 

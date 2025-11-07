@@ -1,6 +1,7 @@
-import type { SidebarHeaderProps } from "@powerhousedao/design-system";
-import { Icon, SidebarHeader } from "@powerhousedao/design-system";
 import { twMerge } from "tailwind-merge";
+import { Icon } from "../../../powerhouse/components/icon/icon.js";
+import type { SidebarHeaderProps } from "../../../powerhouse/components/sidebar/sidebar.js";
+import { SidebarHeader } from "../../../powerhouse/components/sidebar/sidebar.js";
 
 export interface ConnectSidebarHeaderProps extends SidebarHeaderProps {
   onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;

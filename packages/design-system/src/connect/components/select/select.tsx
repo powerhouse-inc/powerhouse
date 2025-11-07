@@ -1,4 +1,3 @@
-import { Icon } from "@powerhousedao/design-system";
 import type {
   CSSProperties,
   ForwardedRef,
@@ -8,6 +7,7 @@ import type {
 } from "react";
 import { forwardRef, useState } from "react";
 import { twJoin, twMerge } from "tailwind-merge";
+import { Icon } from "../../../powerhouse/components/icon/icon.js";
 
 export type ConnectSelectItem<TValue extends string> = {
   readonly value: TValue;

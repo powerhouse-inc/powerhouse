@@ -1,5 +1,5 @@
 import { withThemeByClassName } from "@storybook/addon-themes";
-import type { Preview, ReactRenderer } from "@storybook/react";
+import { Preview, ReactRenderer } from "@storybook/react";
 import "../dist/style.css";
 import "../style.css";
 

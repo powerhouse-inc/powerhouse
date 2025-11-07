@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { ConnectUpgradeDriveModal } from "@powerhousedao/design-system";
 import { it, vi } from "vitest";
+import { ConnectUpgradeDriveModal } from "./upgrade-drive-modal.js";
 describe("UpgradeDriveModal Component", () => {
   it("should match snapshot", () => {
     render(

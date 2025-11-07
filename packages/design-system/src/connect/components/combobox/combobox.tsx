@@ -1,4 +1,3 @@
-import { Icon } from "@powerhousedao/design-system";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import type {
   ClearIndicatorProps,
@@ -6,6 +5,7 @@ import type {
   MenuListProps,
 } from "react-select";
 import Select, { components } from "react-select";
+import { Icon } from "../../../powerhouse/components/icon/icon.js";
 
 type SelectProps = ComponentPropsWithoutRef<typeof Select>;
 

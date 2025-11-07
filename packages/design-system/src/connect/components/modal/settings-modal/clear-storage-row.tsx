@@ -1,4 +1,5 @@
-import { Icon, PowerhouseButton } from "@powerhousedao/design-system";
+import { PowerhouseButton } from "../../../../powerhouse/components/button/button.js";
+import { Icon } from "../../../../powerhouse/components/icon/icon.js";
 import type { SettingsRowProps } from "./row.js";
 import { SettingsRow } from "./row.js";
 

@@ -1,7 +1,7 @@
-import { Icon } from "@powerhousedao/design-system";
 import type { FC } from "react";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
+import { Icon } from "../../../powerhouse/components/icon/icon.js";
 
 export interface AccountPopoverLoginProps {
   onLogin: (() => void) | undefined;

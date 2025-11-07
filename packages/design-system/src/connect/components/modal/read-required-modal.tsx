@@ -1,9 +1,10 @@
-import type { DivProps } from "@powerhousedao/design-system";
-import { Modal, mergeClassNameProps } from "@powerhousedao/design-system";
 import type { ComponentPropsWithoutRef } from "react";
 
 import { useEffect, useRef, useState } from "react";
 import { twMerge } from "tailwind-merge";
+import { Modal } from "../../../powerhouse/components/modal/modal.js";
+import type { DivProps } from "../../../powerhouse/types/helpers.js";
+import { mergeClassNameProps } from "../../../powerhouse/utils/mergeClassNameProps.js";
 
 const buttonStyles =
   "min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all";

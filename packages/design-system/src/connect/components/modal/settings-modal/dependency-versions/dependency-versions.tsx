@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { object, record, string } from "zod";
-import { Disclosure } from "../../../disclosure/index.js";
+import { Disclosure } from "../../../disclosure/disclosure.js";
 
 const PH_DEPENDENCIES = [
   /^@powerhousedao\/.+$/,

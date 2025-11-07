@@ -1,39 +1,7 @@
-import React, { useCallback, useContext, useMemo, useState } from "react";
-import { RWACreateItemModal } from "./create-item-modal.js";
-import { RWADeleteItemModal } from "./delete-item-modal.js";
-
-export const modals = {
-  createItem: RWACreateItemModal,
-  deleteItem: RWADeleteItemModal,
-};
-export type Modals = typeof modals;
-
-export type ModalType = keyof Modals;
-
-export type ModalPropsMapping = {
-  [K in ModalType]: React.ComponentProps<Modals[K]>;
-};
-
-type MapModalProps<T> = {
-  [K in keyof T]: Omit<T[K], "open" | "onOpenChange">;
-};
-
-type ModalProps = MapModalProps<ModalPropsMapping>;
-
-interface ModalContextValue {
-  showModal: <T extends ModalType>(modalType: T, props?: ModalProps[T]) => void;
-  closeModal: () => void;
-}
-
-export const ModalContext = React.createContext<ModalContextValue>({
-  showModal: () => {},
-  closeModal: () => {},
-});
-
-export const useModal = () => {
-  const context = useContext(ModalContext);
-  return context;
-};
+import React, { useCallback, useMemo, useState } from "react";
+import { modals } from "./modal-components.js";
+import { ModalContext } from "./modal-context.js";
+import type { ModalContextValue, ModalProps, ModalType } from "./types.js";
 
 export const ModalManager: React.FC<{
   readonly children?: React.ReactNode;

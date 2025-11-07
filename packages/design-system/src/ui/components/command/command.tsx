@@ -1,6 +1,7 @@
-import { Icon, cn } from "@powerhousedao/design-system";
 import { Command as CommandPrimitive } from "cmdk";
 import React from "react";
+import { Icon } from "../../../powerhouse/components/icon/icon.js";
+import { cn } from "../../../utils/cn.js";
 
 const Command = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive>,

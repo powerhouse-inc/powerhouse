@@ -1,10 +1,10 @@
+import type { Node, SharingType } from "document-drive";
+import type { ReactNode } from "react";
 import type {
   debugNodeOptions,
   nodeOptions,
   normalNodeOptions,
-} from "@powerhousedao/design-system";
-import type { Node, SharingType } from "document-drive";
-import type { ReactNode } from "react";
+} from "../constants/options.js";
 
 export type OptionMetadata = {
   label: ReactNode;

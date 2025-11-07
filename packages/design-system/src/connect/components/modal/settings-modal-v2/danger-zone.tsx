@@ -1,8 +1,10 @@
-import { cn, ConnectDropdownMenu, Icon } from "@powerhousedao/design-system";
 import { capitalCase } from "change-case";
 import type { DocumentDriveDocument } from "document-drive";
 import { getDriveSharingType } from "document-drive";
 import { useState } from "react";
+import { Icon } from "../../../../powerhouse/components/icon/icon.js";
+import { cn } from "../../../../utils/cn.js";
+import { ConnectDropdownMenu } from "../../dropdown-menu/dropdown-menu.js";
 
 type ModifyDrivesProps = {
   drives: DocumentDriveDocument[];

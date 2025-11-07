@@ -1,11 +1,9 @@
-import {
-  ConnectSelect,
-  sharingTypeOptions,
-} from "@powerhousedao/design-system";
 import type { SharingType } from "document-drive";
 import type { ComponentPropsWithRef } from "react";
 import type { Control, Path } from "react-hook-form";
 import { Controller } from "react-hook-form";
+import { sharingTypeOptions } from "../../../constants/options.js";
+import { ConnectSelect } from "../../select/select.js";
 
 type SharingTypeFormInputProps<T extends { sharingType: SharingType }> = Omit<
   ComponentPropsWithRef<typeof ConnectSelect>,

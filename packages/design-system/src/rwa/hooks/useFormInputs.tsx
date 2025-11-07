@@ -10,7 +10,7 @@ import { EntryTimeLabel } from "../components/inputs/entry-time-label.js";
 import { RWANumberInput } from "../components/inputs/number-input.js";
 import { RWATableSelect } from "../components/inputs/select.js";
 import { RWATableTextInput } from "../components/inputs/text-input.js";
-import { useModal } from "../components/modal/modal-manager.js";
+import { useModal } from "../components/modal/use-modal.js";
 
 import { CashBalanceChange } from "../components/table/transactions/cash-balance-change.js";
 import { FeeTransactionsTable } from "../components/table/transactions/fee-transactions-table.js";

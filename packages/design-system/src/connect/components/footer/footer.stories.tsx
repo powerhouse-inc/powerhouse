@@ -1,5 +1,5 @@
-import { Icon } from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
+import { Icon } from "../../../powerhouse/components/icon/icon.js";
 import { FooterLink } from "./footer-link.js";
 import { Footer } from "./footer.js";
 

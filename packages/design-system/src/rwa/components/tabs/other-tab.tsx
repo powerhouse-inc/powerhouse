@@ -1,5 +1,5 @@
 import { tableNames } from "../../constants/names.js";
-import { AccountsTable } from "../table/accounts/index.js";
+import { AccountsTable } from "../table/accounts/accounts-table.js";
 import { TableWithForm } from "../table/base/table-with-form.js";
 
 export function OtherTab() {

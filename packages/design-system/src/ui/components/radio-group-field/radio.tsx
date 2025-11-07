@@ -1,6 +1,7 @@
-import { cn, FormLabel } from "@powerhousedao/design-system";
 import * as RadioGroupPrimitive from "@radix-ui/react-radio-group";
 import React, { useId } from "react";
+import { cn } from "../../../utils/cn.js";
+import { FormLabel } from "../form-label/form-label.js";
 
 export interface RadioProps
   extends React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Item> {

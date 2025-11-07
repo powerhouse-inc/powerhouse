@@ -1,9 +1,10 @@
-import type { ConnectSelectItem } from "@powerhousedao/design-system";
-import { ConnectSelect, Icon } from "@powerhousedao/design-system";
 import type { App } from "document-model";
 import type { ComponentPropsWithRef } from "react";
 import type { Control, Path } from "react-hook-form";
 import { Controller } from "react-hook-form";
+import { Icon } from "../../../../powerhouse/components/icon/icon.js";
+import type { ConnectSelectItem } from "../../select/select.js";
+import { ConnectSelect } from "../../select/select.js";
 
 export function appToInputOption(app: App): ConnectSelectItem<string> {
   return {

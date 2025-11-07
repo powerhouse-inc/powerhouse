@@ -1,4 +1,4 @@
-import type { syncStatuses } from "@powerhousedao/design-system";
+import type { syncStatuses } from "../constants/syncing.js";
 
 export type SyncStatuses = typeof syncStatuses;
 export type SyncStatus = SyncStatuses[number];

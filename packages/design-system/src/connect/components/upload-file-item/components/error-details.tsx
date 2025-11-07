@@ -1,4 +1,4 @@
-import type { UploadFileItemStatus } from "@powerhousedao/design-system";
+import type { UploadFileItemStatus } from "../upload-file-item.js";
 
 type ErrorDetailsProps = {
   readonly status: UploadFileItemStatus;

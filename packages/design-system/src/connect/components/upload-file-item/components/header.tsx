@@ -1,8 +1,7 @@
-import type { IconName } from "@powerhousedao/design-system";
-import { Icon } from "@powerhousedao/design-system";
 import type { DocumentTypeIcon } from "@powerhousedao/reactor-browser";
 import type { ComponentPropsWithoutRef } from "react";
-
+import { Icon } from "../../../../powerhouse/components/icon/icon.js";
+import type { IconName } from "../../../../powerhouse/index.js";
 type HeaderProps = ComponentPropsWithoutRef<"div"> & {
   readonly fileName: string;
   readonly fileSize: string;

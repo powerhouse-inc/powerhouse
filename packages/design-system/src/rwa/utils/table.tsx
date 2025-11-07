@@ -1,29 +1,29 @@
-import type {
-  GroupTransactionType,
-  Item,
-  ItemData,
-  RealWorldAssetsState,
-  TableItem,
-  TableItemType,
-  TableName,
-  TransactionFeeInput,
-} from "@powerhousedao/design-system";
 import type { InputMaybe } from "document-model";
 import { FormattedNumber } from "../components/table/base/formatted-number.js";
 import {
-  assetTransactionSignByTransactionType,
-  cashTransactionSignByTransactionType,
+    assetTransactionSignByTransactionType,
+    cashTransactionSignByTransactionType,
 } from "../constants/table.js";
 import {
-  FEES_INCOME,
-  feesTransactions,
-  groupTransactionTypeLabels,
+    FEES_INCOME,
+    feesTransactions,
+    groupTransactionTypeLabels,
 } from "../constants/transactions.js";
+import type {
+    GroupTransactionType,
+    Item,
+    ItemData,
+    RealWorldAssetsState,
+    TableItem,
+    TableItemType,
+    TableName,
+    TransactionFeeInput,
+} from "../types.js";
 import { calculateCurrentValue } from "./calculations.js";
 import { formatDateForDisplay, isISODate } from "./date.js";
 import {
-  getFixedIncomeAssets,
-  isAssetGroupTransactionType,
+    getFixedIncomeAssets,
+    isAssetGroupTransactionType,
 } from "./validators.js";
 
 export function handleDateInTable(

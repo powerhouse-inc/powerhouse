@@ -1,13 +1,11 @@
-import {
-  FormInput,
-  Icon,
-  Modal,
-  PowerhouseButton,
-} from "@powerhousedao/design-system";
 import { isValidName } from "document-drive";
 import type { ComponentPropsWithoutRef } from "react";
 import { useCallback, useState } from "react";
 import { twMerge } from "tailwind-merge";
+import { PowerhouseButton } from "../../../powerhouse/components/button/button.js";
+import { Icon } from "../../../powerhouse/components/icon/icon.js";
+import { Modal } from "../../../powerhouse/components/modal/modal.js";
+import { FormInput } from "../form-input/form-input.js";
 
 const buttonStyles =
   "min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all";

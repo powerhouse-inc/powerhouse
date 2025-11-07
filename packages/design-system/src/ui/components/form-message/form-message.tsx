@@ -1,4 +1,4 @@
-import { cn } from "@powerhousedao/design-system";
+import { cn } from "../../../utils/cn.js";
 
 export type FormMessageType = "error" | "info" | "warning";
 

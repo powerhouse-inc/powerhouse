@@ -1,5 +1,5 @@
-import { Icon } from "@powerhousedao/design-system";
 import { format } from "date-fns";
+import { Icon } from "../../../../powerhouse/components/icon/icon.js";
 
 export function Day(props: { readonly timestampUtcMs: string }) {
   const { timestampUtcMs: timestamp } = props;

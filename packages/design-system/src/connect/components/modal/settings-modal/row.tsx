@@ -1,4 +1,4 @@
-import type { DivProps } from "@powerhousedao/design-system";
+import type { DivProps } from "../../../../powerhouse/types/helpers.js";
 
 export interface SettingsRowProps extends Omit<DivProps, "title"> {
   readonly title?: React.ReactNode;

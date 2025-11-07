@@ -1,6 +1,9 @@
-import type { IconName, SelectProps } from "@powerhousedao/design-system";
-import { cn, CommandItem, Icon } from "@powerhousedao/design-system";
 import React from "react";
+import type { IconName } from "../../../../powerhouse/components/icon-components/index.js";
+import { Icon } from "../../../../powerhouse/components/icon/icon.js";
+import { cn } from "../../../../utils/cn.js";
+import { CommandItem } from "../../command/command.js";
+import type { SelectProps } from "../../enum-field/types.js";
 
 interface FavoriteOptionsProps {
   options: SelectProps["options"];

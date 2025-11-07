@@ -8,9 +8,7 @@ import {
   ToastContainer as RToastContainer,
   toast as rToast,
 } from "react-toastify";
-
-import { Icon } from "@powerhousedao/design-system";
-
+import { Icon } from "../../../powerhouse/components/icon/icon.js";
 export type ConnectTypeOptions =
   | "connect-success"
   | "connect-warning"

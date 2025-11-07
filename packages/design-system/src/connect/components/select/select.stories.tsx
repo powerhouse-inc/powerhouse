@@ -1,7 +1,8 @@
-import type { ConnectSelectItem } from "@powerhousedao/design-system";
-import { ConnectSelect, Icon } from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
+import { Icon } from "../../../powerhouse/components/icon/icon.js";
+import type { ConnectSelectItem } from "./select.js";
+import { ConnectSelect } from "./select.js";
 
 const meta: Meta<typeof ConnectSelect> = {
   title: "Connect/Components/Select",

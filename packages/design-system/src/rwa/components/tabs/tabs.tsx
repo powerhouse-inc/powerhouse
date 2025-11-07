@@ -1,11 +1,10 @@
-import { EditorActionButtons } from "@powerhousedao/design-system";
 import { Content, List, Root, Trigger } from "@radix-ui/react-tabs";
 import { useCallback } from "react";
+import { EditorActionButtons } from "../../../connect/components/editor-action-buttons/editor-action-buttons.js";
 import { useEditorContext } from "../../context/editor-context.js";
 import { OtherTab } from "./other-tab.js";
 import { PortfolioTab } from "./portfolio-tab.js";
 import { TransactionsTab } from "./transactions-tab.js";
-
 export function RWATabs() {
   const tabs = ["Portfolio", "Transactions", "Other"] as const;
   const {

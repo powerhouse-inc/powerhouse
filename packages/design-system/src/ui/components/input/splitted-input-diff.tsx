@@ -1,12 +1,9 @@
-import type { WithDifference } from "@powerhousedao/design-system";
-import {
-  cn,
-  Icon,
-  Tooltip,
-  TooltipProvider,
-} from "@powerhousedao/design-system";
 import { useCallback, useState } from "react";
 import { useMediaQuery } from "usehooks-ts";
+import { Icon } from "../../../powerhouse/index.js";
+import { cn } from "../../../utils/cn.js";
+import type { WithDifference } from "../../types.js";
+import { Tooltip, TooltipProvider } from "../tooltip/tooltip.js";
 import { InputDiff } from "./subcomponent/input-diff.js";
 import { TextDiff } from "./subcomponent/text-diff.js";
 interface CopyIconProps {

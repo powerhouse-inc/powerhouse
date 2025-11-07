@@ -1,5 +1,5 @@
-import type { UploadFileItemStatus } from "@powerhousedao/design-system";
 import { twMerge } from "tailwind-merge";
+import type { UploadFileItemStatus } from "../upload-file-item.js";
 
 type StatusRowProps = {
   readonly status: UploadFileItemStatus;

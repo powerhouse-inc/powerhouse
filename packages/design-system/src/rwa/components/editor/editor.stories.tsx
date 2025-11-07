@@ -1,5 +1,3 @@
-import type { ActionOutputFor } from "@powerhousedao/design-system";
-
 import type { Meta, StoryObj } from "@storybook/react";
 import type { ComponentPropsWithoutRef } from "react";
 import { useState } from "react";
@@ -15,6 +13,7 @@ import {
   mockStateInitial,
   mockStateWithData,
 } from "../../mocks.js";
+import type { ActionOutputFor } from "../../types.js";
 import { RWAEditor } from "./editor.js";
 
 const meta: Meta<typeof RWAEditor> = {

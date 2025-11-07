@@ -1,6 +1,6 @@
-import { cn } from "@powerhousedao/design-system/utils";
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import * as React from "react";
+import { cn } from "../../../utils/cn.js";
 
 type CheckboxValue = boolean | "indeterminate";
 

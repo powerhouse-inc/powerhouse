@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { ConnectTooltipProvider } from "@powerhousedao/design-system";
+import { ConnectTooltipProvider } from "../../tooltip/tooltip.js";
 import { RevisionNumber } from "./revision-number.js";
 
 const meta = {

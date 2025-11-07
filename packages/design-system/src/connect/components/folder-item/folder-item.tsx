@@ -1,14 +1,3 @@
-import type { NodeOption } from "@powerhousedao/design-system";
-import {
-  ConnectDropdownMenu,
-  defaultNodeOptions,
-  Icon,
-  NodeInput,
-  nodeOptionsMap,
-  SyncStatusIcon,
-  useDrag,
-  useDrop,
-} from "@powerhousedao/design-system";
 import {
   getSyncStatusSync,
   setSelectedNode,
@@ -20,6 +9,14 @@ import {
 import { getDriveSharingType, type FolderNode } from "document-drive";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
+import { Icon } from "../../../powerhouse/components/icon/icon.js";
+import { defaultNodeOptions, nodeOptionsMap } from "../../constants/options.js";
+import { useDrag } from "../../hooks/drag-and-drop/use-drag.js";
+import { useDrop } from "../../hooks/drag-and-drop/use-drop.js";
+import type { NodeOption } from "../../types/options.js";
+import { ConnectDropdownMenu } from "../dropdown-menu/dropdown-menu.js";
+import { NodeInput } from "../node-input/node-input.js";
+import { SyncStatusIcon } from "../status-icon/sync-status-icon.js";
 
 export function FolderItem(props: {
   folderNode: FolderNode;

@@ -1,5 +1,5 @@
-import type { DivProps } from "@powerhousedao/design-system";
-import { AnimatedLoader } from "@powerhousedao/design-system";
+import type { DivProps } from "../../../powerhouse/types/helpers.js";
+import { AnimatedLoader } from "../animated-loader/animated-loader.js";
 
 type DefaultEditorLoaderProps = DivProps & {
   readonly message?: string;

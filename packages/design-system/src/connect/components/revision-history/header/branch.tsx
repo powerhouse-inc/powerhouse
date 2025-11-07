@@ -1,4 +1,4 @@
-import { Icon } from "@powerhousedao/design-system";
+import { Icon } from "../../../../powerhouse/components/icon/icon.js";
 
 type Props = {
   readonly branch?: string;
