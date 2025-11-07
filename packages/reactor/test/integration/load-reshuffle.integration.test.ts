@@ -1,6 +1,6 @@
 import { ReactorBuilder, type IReactor } from "#index.js";
 import { driveDocumentModelModule, MemoryStorage } from "document-drive";
-import { documentModelDocumentModelModule } from "document-model";
+import { documentModelDocumentModelModule, setName } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { JobStatus, type ConsistencyToken } from "../../src/shared/types.js";
 import { createDocModelDocument } from "../factories.js";
@@ -53,7 +53,6 @@ describe("Load reshuffle integration", () => {
   });
 
   it("appends reshuffled operations with skip to the log", async () => {
-    // create on reactor A
     const document = createDocModelDocument({
       id: "reshuffle-doc",
       slug: "reshuffle-doc",
@@ -65,25 +64,18 @@ describe("Load reshuffle integration", () => {
       document.header.id,
       {
         branch: "main",
+        scopes: ["document"],
       },
       undefined,
       createTokenA,
     );
     expect(aCreateOperations.document.results).toHaveLength(2);
-    // eslint-disable-next-line no-console
-    console.log(
-      "load ops action types",
-      aCreateOperations.document.results.map((op) => op.action.type),
-    );
-
-    // forward to reactor B
 
     info = await reactorB.load(
       document.header.id,
       "main",
       aCreateOperations.document.results,
     );
-
     const loadTokenB = await waitForJobCompletion(reactorB, info.id);
 
     const bOperations = await reactorB.getOperations(
@@ -95,16 +87,22 @@ describe("Load reshuffle integration", () => {
       undefined,
       loadTokenB,
     );
-    expect(bOperations.document.results).toHaveLength(2); /*
+    expect(bOperations.document.results).toHaveLength(2);
 
-    const mutateJob = await reactorA.mutate(document.header.id, "main", [
+    const mutateJobA = await reactorA.mutate(document.header.id, "main", [
       setName("A1"),
       setName("A2"),
       setName("A3"),
     ]);
-    const tokenA = await waitForJobCompletion(reactorA, mutateJob.id);
+    const tokenA = await waitForJobCompletion(reactorA, mutateJobA.id);
 
-    const aOperations = await reactorA.getOperations(
+    const mutateJobB = await reactorB.mutate(document.header.id, "main", [
+      setName("B1"),
+      setName("B2"),
+    ]);
+    const tokenB = await waitForJobCompletion(reactorB, mutateJobB.id);
+
+    const aOperationsAfterMutate = await reactorA.getOperations(
       document.header.id,
       {
         branch: "main",
@@ -113,7 +111,52 @@ describe("Load reshuffle integration", () => {
       undefined,
       tokenA,
     );
-    expect(aOperations.global.results).toHaveLength(3);*/
+    expect(aOperationsAfterMutate.global.results).toHaveLength(3);
+
+    const bOperationsBeforeLoad = await reactorB.getOperations(
+      document.header.id,
+      {
+        branch: "main",
+        scopes: ["global"],
+      },
+      undefined,
+      tokenB,
+    );
+    expect(bOperationsBeforeLoad.global.results).toHaveLength(2);
+
+    info = await reactorB.load(
+      document.header.id,
+      "main",
+      aOperationsAfterMutate.global.results,
+    );
+    const finalTokenB = await waitForJobCompletion(reactorB, info.id);
+
+    const bOperationsAfterLoad = await reactorB.getOperations(
+      document.header.id,
+      {
+        branch: "main",
+        scopes: ["global"],
+      },
+      undefined,
+      finalTokenB,
+    );
+
+    expect(bOperationsAfterLoad.global.results).toHaveLength(5);
+
+    const bOpsWithSkip = bOperationsAfterLoad.global.results.filter(
+      (op) => op.skip > 0,
+    );
+    expect(bOpsWithSkip.length).toBeGreaterThan(0);
+
+    const firstLoadedOpIndex = bOperationsAfterLoad.global.results.findIndex(
+      (op) => op.skip > 0,
+    );
+    expect(firstLoadedOpIndex).toBeGreaterThan(-1);
+
+    const firstLoadedOp =
+      bOperationsAfterLoad.global.results[firstLoadedOpIndex];
+    expect(firstLoadedOp.skip).toBe(2);
+    expect(firstLoadedOp.index).toBe(2);
   });
 });
 

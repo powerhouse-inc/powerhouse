@@ -106,6 +106,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     job: Job,
     actions: Action[],
     startTime: number,
+    skipValues?: number[],
   ): Promise<{
     success: boolean;
     generatedOperations: Operation[];
@@ -114,6 +115,7 @@ export class SimpleJobExecutor implements IJobExecutor {
   }> {
     const generatedOperations: Operation[] = [];
     const operationsWithContext: OperationWithContext[] = [];
+    let actionIndex = 0;
 
     for (const action of actions) {
       if (action.type === "CREATE_DOCUMENT") {
@@ -121,6 +123,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           job,
           action,
           startTime,
+          skipValues?.[actionIndex],
         );
         const error = this.accumulateResultOrReturnError(
           result,
@@ -135,6 +138,7 @@ export class SimpleJobExecutor implements IJobExecutor {
             error: error.error,
           };
         }
+        actionIndex++;
         continue;
       }
 
@@ -157,6 +161,7 @@ export class SimpleJobExecutor implements IJobExecutor {
             error: error.error,
           };
         }
+        actionIndex++;
         continue;
       }
 
@@ -165,6 +170,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           job,
           action,
           startTime,
+          skipValues?.[actionIndex],
         );
         const error = this.accumulateResultOrReturnError(
           result,
@@ -179,6 +185,7 @@ export class SimpleJobExecutor implements IJobExecutor {
             error: error.error,
           };
         }
+        actionIndex++;
         continue;
       }
 
@@ -201,6 +208,7 @@ export class SimpleJobExecutor implements IJobExecutor {
             error: error.error,
           };
         }
+        actionIndex++;
         continue;
       }
 
@@ -223,6 +231,7 @@ export class SimpleJobExecutor implements IJobExecutor {
             error: error.error,
           };
         }
+        actionIndex++;
         continue;
       }
 
@@ -296,6 +305,9 @@ export class SimpleJobExecutor implements IJobExecutor {
       }
 
       const newOperation = operations[operations.length - 1];
+      if (skipValues && actionIndex < skipValues.length) {
+        newOperation.skip = skipValues[actionIndex];
+      }
       generatedOperations.push(newOperation);
 
       if (this.config.legacyStorageEnabled) {
@@ -362,6 +374,8 @@ export class SimpleJobExecutor implements IJobExecutor {
           resultingState,
         },
       });
+
+      actionIndex++;
     }
 
     return {
@@ -380,6 +394,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     job: Job,
     action: Action,
     startTime: number,
+    skip: number = 0,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -421,7 +436,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       }
     }
 
-    const operation = this.createOperation(action, 0);
+    const operation = this.createOperation(action, 0, skip);
 
     // Legacy: Write the CREATE_DOCUMENT operation to legacy storage
     if (this.config.legacyStorageEnabled) {
@@ -606,6 +621,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     job: Job,
     action: Action,
     startTime: number,
+    skip: number = 0,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -661,7 +677,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     applyUpgradeDocumentAction(document, action as never);
 
-    const operation = this.createOperation(action, nextIndex);
+    const operation = this.createOperation(action, nextIndex, skip);
 
     // Write the updated document to legacy storage
     if (this.config.legacyStorageEnabled) {
@@ -976,12 +992,16 @@ export class SimpleJobExecutor implements IJobExecutor {
     );
   }
 
-  private createOperation(action: Action, index: number): Operation {
+  private createOperation(
+    action: Action,
+    index: number,
+    skip: number = 0,
+  ): Operation {
     return {
       index: index,
       timestampUtcMs: action.timestampUtcMs || new Date().toISOString(),
       hash: "",
-      skip: 0,
+      skip: skip,
       action: action,
     };
   }
@@ -1034,8 +1054,9 @@ export class SimpleJobExecutor implements IJobExecutor {
     );
 
     const actions = reshuffledOperations.map((operation) => operation.action);
+    const skipValues = reshuffledOperations.map((operation) => operation.skip);
 
-    const result = await this.processActions(job, actions, startTime);
+    const result = await this.processActions(job, actions, startTime, skipValues);
 
     if (!result.success) {
       return {
