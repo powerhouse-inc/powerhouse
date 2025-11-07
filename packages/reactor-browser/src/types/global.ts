@@ -4,7 +4,6 @@ import type {
   IDocumentDriveServer,
   ProcessorManager,
 } from "document-drive";
-import type { PHDocument } from "document-model";
 import type { PHGlobalConfig } from "./config.js";
 import type { PHModal } from "./modals.js";
 import type { TimelineItem } from "./timeline.js";
@@ -21,7 +20,7 @@ export type PHGlobal = PHGlobalConfig & {
   vetraPackages?: VetraPackage[];
   processorManager?: ProcessorManager;
   drives?: DocumentDriveDocument[];
-  documents?: PHDocument[];
+  // documents?: PHDocument[];
   selectedDriveId?: string;
   selectedNodeId?: string;
   modal?: PHModal;

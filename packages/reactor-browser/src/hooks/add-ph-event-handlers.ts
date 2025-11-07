@@ -1,5 +1,5 @@
 import type { PHGlobalEventHandlerAdders } from "@powerhousedao/reactor-browser";
-import { addAllDocumentsEventHandler } from "./all-documents.js";
+// import { addAllDocumentsEventHandler } from "./all-documents.js";
 import {
   addAllowListEventHandler,
   addAnalyticsDatabaseNameEventHandler,
@@ -82,7 +82,7 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   user: addUserEventHandler,
   processorManager: addProcessorManagerEventHandler,
   drives: addDrivesEventHandler,
-  documents: addAllDocumentsEventHandler,
+  // documents: addAllDocumentsEventHandler,
   selectedDriveId: addSelectedDriveIdEventHandler,
   selectedNodeId: addSelectedNodeIdEventHandler,
   vetraPackages: addVetraPackagesEventHandler,

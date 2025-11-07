@@ -6,9 +6,8 @@ import type {
   IDocumentDriveServer,
 } from "document-drive";
 import { generateId } from "document-model/core";
-import { setAllDocuments } from "./hooks/all-documents.js";
 import { setDrives } from "./hooks/drives.js";
-import { getDocuments, getDrives } from "./utils/drives.js";
+import { getDrives } from "./utils/drives.js";
 
 export type ReactorDefaultDrivesConfig = {
   defaultDrivesUrl?: string[];
@@ -74,9 +73,7 @@ const DEFAULT_IMMEDIATE_THRESHOLD_MS = 1000;
 async function _refreshReactorData(reactor: IDocumentDriveServer | undefined) {
   if (!reactor) return;
   const drives = await getDrives(reactor);
-  const documents = await getDocuments(reactor);
   setDrives(drives);
-  setAllDocuments(documents);
 }
 
 function createDebouncedRefreshReactorData(

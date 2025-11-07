@@ -6,14 +6,12 @@ import {
 import {
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
-  getDocuments,
   getDrives,
   getReactorDefaultDrivesConfig,
   initConnectCrypto,
   initReactor,
   login,
   refreshReactorData,
-  setAllDocuments,
   setSelectedDrive,
   setSelectedNode,
   setVetraPackages,
@@ -184,7 +182,6 @@ export async function createReactor() {
   }
 
   // get the documents from the reactor
-  const documents = await getDocuments(reactor);
 
   // set the selected drive and node from the path
   const path = window.location.pathname;
@@ -202,7 +199,6 @@ export async function createReactor() {
   setRenown(renown);
   setProcessorManager(processorManager);
   setDrives(drives);
-  setAllDocuments(documents);
   setVetraPackages(vetraPackages);
   setSelectedDrive(driveSlug);
   setSelectedNode(nodeSlug);
