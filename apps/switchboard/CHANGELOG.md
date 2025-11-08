@@ -1,3 +1,7 @@
+## 4.1.0-dev.105 (2025-11-08)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.104 (2025-11-07)
 
 ### 🚀 Features
