@@ -1,4 +1,4 @@
-import { Icon } from "../../../../powerhouse/index.js";
+import { Icon } from "../../../../powerhouse/components/icon/icon.js";
 import { ConnectTooltip } from "../../tooltip/tooltip.js";
 import type { Signature } from "../types.js";
 

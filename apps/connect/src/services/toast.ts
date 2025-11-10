@@ -1,8 +1,8 @@
-import type { ConnectToastOptions } from "@powerhousedao/design-system";
+import type { ConnectToastOptions } from "@powerhousedao/design-system/connect/components/toast/toast";
 import {
   ToastContainer as BaseToastContainer,
   toast as baseToast,
-} from "@powerhousedao/design-system";
+} from "@powerhousedao/design-system/connect/components/toast/toast";
 import { createElement } from "react";
 
 export const CONNECT_TOAST_CONTAINER_ID = "connect";

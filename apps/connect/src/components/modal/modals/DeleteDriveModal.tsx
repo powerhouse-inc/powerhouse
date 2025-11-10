@@ -1,4 +1,5 @@
-import { ConnectDeleteDriveModal, toast } from "@powerhousedao/design-system";
+import { ConnectDeleteDriveModal } from "@powerhousedao/design-system/connect/components/modal/delete-drive-modal";
+import { toast } from "@powerhousedao/connect/services/toast";
 import {
   closePHModal,
   deleteDrive,

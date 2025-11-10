@@ -1,11 +1,10 @@
 import { DriveIcon } from "@powerhousedao/connect/components/drive-icon";
 import { connectConfig } from "@powerhousedao/connect/config";
-import {
-  ConnectSidebar,
-  Icon,
-  SidebarAddDriveItem,
-  SidebarItem,
-} from "@powerhousedao/design-system";
+import { ConnectSidebar } from "@powerhousedao/design-system/connect/components/sidebar/sidebar";
+import { SidebarAddDriveItem } from "@powerhousedao/design-system/connect/components/sidebar/sidebar-add-drive-item";
+import { SidebarItem } from "@powerhousedao/design-system/connect/components/sidebar/sidebar-item";
+import { Icon } from "@powerhousedao/design-system/powerhouse/components/icon/icon";
+
 import {
   logout,
   openRenown,

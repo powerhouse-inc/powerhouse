@@ -1,7 +1,7 @@
 import { EditorLoader } from "@powerhousedao/connect/components/editor-loader";
-import { toast } from "@powerhousedao/connect/services";
-import { useUndoRedoShortcuts } from "@powerhousedao/connect/hooks";
-import { RevisionHistory } from "@powerhousedao/design-system";
+import { toast } from "@powerhousedao/connect/services/toast";
+import { useUndoRedoShortcuts } from "@powerhousedao/connect/hooks/useUndoRedoShortcuts";
+import { RevisionHistory } from "@powerhousedao/design-system/connect/components/revision-history/revision-history";
 import {
   getRevisionFromDate,
   setRevisionHistoryVisible,

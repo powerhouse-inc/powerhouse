@@ -1,4 +1,4 @@
-import { ReadRequiredModal } from "@powerhousedao/design-system";
+import { ReadRequiredModal } from "@powerhousedao/design-system/connect/components/modal/read-required-modal";
 import { closePHModal, usePHModal } from "@powerhousedao/reactor-browser";
 import { Trans, useTranslation } from "react-i18next";
 

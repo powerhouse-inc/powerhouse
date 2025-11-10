@@ -5,11 +5,9 @@ import {
   defaultPHDocumentEditorConfig,
   defaultPHDriveEditorConfig,
 } from "@powerhousedao/connect/config";
-import {
-  HomeScreen,
-  HomeScreenAddDriveItem,
-  HomeScreenItem,
-} from "@powerhousedao/design-system";
+import { HomeScreen } from "@powerhousedao/design-system/connect/components/home-screen/home-screen";
+import { HomeScreenItem } from "@powerhousedao/design-system/connect/components/home-screen/home-screen-item/home-screen-item";
+import { HomeScreenAddDriveItem } from "@powerhousedao/design-system/connect/components/home-screen/home-screen-add-drive-item/home-screen-add-drive-item";
 import {
   setPHDocumentEditorConfig,
   setPHDriveEditorConfig,

@@ -1,4 +1,4 @@
-import { PowerhouseButton } from "@powerhousedao/design-system";
+import { PowerhouseButton } from "@powerhousedao/design-system/powerhouse/components/button/button";
 import {
   showCreateDocumentModal,
   useDocumentModelModules,

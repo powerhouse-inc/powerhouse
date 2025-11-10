@@ -1,7 +1,7 @@
-import { isLatestVersion } from "@powerhousedao/connect/hooks/utils";
 import { ReloadConnectToast } from "@powerhousedao/connect/components/toast/reload-connect-toast";
-import { toast } from "@powerhousedao/connect/services";
 import { connectConfig } from "@powerhousedao/connect/config";
+import { isLatestVersion } from "@powerhousedao/connect/hooks/utils";
+import { toast } from "@powerhousedao/connect/services/toast";
 import { logger } from "document-drive";
 import { createElement, useEffect } from "react";
 

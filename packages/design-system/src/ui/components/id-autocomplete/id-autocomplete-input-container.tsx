@@ -1,7 +1,7 @@
 import { Command as CommandPrimitive } from "cmdk";
 import React, { useMemo, useState } from "react";
 import { useMediaQuery } from "usehooks-ts";
-import { Icon } from "../../../powerhouse/index.js";
+import { Icon } from "../../../powerhouse/components/icon/icon.js";
 import { cn } from "../../../utils/cn.js";
 import { sharedValueTransformers } from "../../lib/shared-value-transformers.js";
 import type { InputBaseProps } from "../../types.js";

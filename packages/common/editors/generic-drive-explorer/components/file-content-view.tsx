@@ -1,4 +1,5 @@
-import { FileItem, useWindowSize } from "@powerhousedao/design-system";
+import { FileItem } from "@powerhousedao/design-system/connect/components/file-item/file-item";
+import { useWindowSize } from "@powerhousedao/design-system/powerhouse/hooks/useWindowSize";
 import {
   isFileNodeKind,
   useNodesInSelectedDriveOrFolder,

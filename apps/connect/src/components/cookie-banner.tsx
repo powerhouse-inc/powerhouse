@@ -1,8 +1,8 @@
 import { useAcceptedCookies } from "@powerhousedao/connect/hooks/useAcceptedCookies";
 import { useCookieBanner } from "@powerhousedao/connect/hooks/useCookieBanner";
-import { i18n } from "@powerhousedao/connect/i18n";
-import type { CookieInput } from "@powerhousedao/design-system";
-import { CookieBanner as PHCookieBanner } from "@powerhousedao/design-system";
+import { i18n } from "@powerhousedao/connect/i18n/i18n";
+import type { CookieInput } from "@powerhousedao/design-system/connect/components/cookie-banner/cookie-banner";
+import { CookieBanner as PHCookieBanner } from "@powerhousedao/design-system/connect/components/cookie-banner/cookie-banner";
 import { showPHModal } from "@powerhousedao/reactor-browser";
 import { Trans, useTranslation } from "react-i18next";
 

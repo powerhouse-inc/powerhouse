@@ -7,7 +7,5 @@ export const documentModelEditorModule: EditorModule = {
     name: "Document Model Editor",
   },
   documentTypes: ["powerhouse/document-model"],
-  Component: lazy(() =>
-    import("./editor.js").then((m) => ({ default: m.DocumentModelEditor })),
-  ),
+  Component: lazy(() => import("./editor.js")),
 };

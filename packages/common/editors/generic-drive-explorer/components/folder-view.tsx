@@ -1,4 +1,5 @@
-import { FolderItem, useDrop } from "@powerhousedao/design-system";
+import { FolderItem } from "@powerhousedao/design-system/connect/components/folder-item/folder-item";
+import { useDrop } from "@powerhousedao/design-system/connect/hooks/drag-and-drop/use-drop";
 import {
   isFolderNodeKind,
   useNodesInSelectedDriveOrFolder,

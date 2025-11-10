@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { useMediaQuery } from "usehooks-ts";
-import { Icon } from "../../../powerhouse/index.js";
+import { Icon } from "../../../powerhouse/components/icon/icon.js";
 import { cn } from "../../../utils/cn.js";
 import type { WithDifference } from "../../types.js";
 import { Tooltip, TooltipProvider } from "../tooltip/tooltip.js";

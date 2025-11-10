@@ -1,7 +1,7 @@
 import type { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 import { Icon } from "../../../powerhouse/components/icon/icon.js";
-import type { IconName } from "../../../powerhouse/components/index.js";
+import type { IconName } from "../../../powerhouse/components/icon-components/index.js";
 import {
   CONFLICT,
   ERROR,

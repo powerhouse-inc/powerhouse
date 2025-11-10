@@ -1,4 +1,4 @@
-import { Icon } from "@powerhousedao/design-system";
+import { Icon } from "@powerhousedao/design-system/powerhouse/components/icon/icon";
 import { getDriveSharingType } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "document-drive";
 

@@ -1,4 +1,4 @@
-import { DefaultEditorLoader } from "@powerhousedao/design-system";
+import { DefaultEditorLoader } from "@powerhousedao/design-system/connect/components/default-editor-loader/default-editor-loader";
 import { useEditorModuleById } from "@powerhousedao/reactor-browser";
 import { Suspense } from "react";
 

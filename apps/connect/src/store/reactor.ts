@@ -2,7 +2,7 @@ import { phGlobalConfigFromEnv } from "@powerhousedao/connect/config";
 import {
   createBrowserDocumentDriveServer,
   createBrowserStorage,
-} from "@powerhousedao/connect/utils";
+} from "@powerhousedao/connect/utils/reactor";
 import {
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
@@ -40,7 +40,7 @@ import { generateId } from "document-model/core";
 import {
   initFeatureFlags,
   isDualActionCreateEnabled,
-} from "../../feature-flags.js";
+} from "@powerhousedao/connect/feature-flags";
 import { loadCommonPackage } from "./document-model.js";
 import { loadExternalPackages } from "./external-packages.js";
 

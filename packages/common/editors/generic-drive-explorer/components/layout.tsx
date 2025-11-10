@@ -1,4 +1,4 @@
-import { cn } from "@powerhousedao/design-system";
+import { cn } from "@powerhousedao/design-system/utils/cn";
 import type { BaseProps } from "@powerhousedao/common";
 
 export function DriveLayout({ children, className, ...props }: BaseProps) {

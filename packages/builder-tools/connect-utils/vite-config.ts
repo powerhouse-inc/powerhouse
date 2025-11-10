@@ -266,11 +266,41 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     envDir: false,
     optimizeDeps: {
       exclude: ["@electric-sql/pglite"],
+      include: ["react/jsx-runtime"],
     },
     plugins,
+    resolve: {
+      dedupe: [
+        "react",
+        "react-dom",
+        "react/jsx-runtime",
+        "document-drive",
+        "document-model",
+        "@powerhousedao/reactor-browser",
+        "@powerhousedao/common",
+        "@powerhousedao/config",
+      ],
+    },
     build: {
-      minify: false,
-      sourcemap: true,
+      minify: true,
+      sourcemap: false,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            sentry: ["@sentry/browser", "@sentry/react"],
+            react: ["react", "react-dom", "react/jsx-runtime"],
+            graphql: ["graphql", "graphql-request"],
+            zod: ["zod"],
+            document_model: ["document-model"],
+            document_drive: ["document-drive"],
+            drive_explorer: ["@powerhousedao/common/generic-drive-explorer"],
+            document_model_editor: ["@powerhousedao/builder-tools/editor"],
+            reactor_browser: ["@powerhousedao/reactor-browser"],
+            common: ["@powerhousedao/common"],
+            config: ["@powerhousedao/config"],
+          },
+        },
+      },
     },
     server: {
       watch: env.PH_DISABLE_LOCAL_PACKAGE
@@ -285,9 +315,6 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     },
     worker: {
       format: "es",
-    },
-    resolve: {
-      dedupe: ["react", "react-dom"], // needed when linked to the monorepo
     },
   };
   return config;

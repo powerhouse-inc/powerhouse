@@ -1,4 +1,4 @@
-import { Icon } from "@powerhousedao/design-system";
+import { Icon } from "@powerhousedao/design-system/powerhouse/components/icon/icon";
 import React from "react";
 import { EditorContainer } from "./EditorContainer.js";
 import { SectionAccordion } from "./SectionAccordion.js";

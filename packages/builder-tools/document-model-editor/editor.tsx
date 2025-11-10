@@ -1,4 +1,4 @@
-import { DocumentToolbar } from "@powerhousedao/design-system";
+import { DocumentToolbar } from "@powerhousedao/design-system/connect/components/document-toolbar/document-toolbar";
 import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
 import { pascalCase } from "change-case";
 import {
@@ -38,7 +38,7 @@ import {
   makeOperationInitialDoc,
 } from "./utils/helpers.js";
 
-export function DocumentModelEditor() {
+export default function Editor() {
   useSetPHDocumentEditorConfig(editorConfig);
   const [document, dispatch] = useSelectedDocumentModelDocument();
   const [scope, setScope] = useState<Scope>("global");

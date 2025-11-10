@@ -1,4 +1,4 @@
-import { DocumentToolbar } from "@powerhousedao/design-system";
+import { DocumentToolbar } from "@powerhousedao/design-system/connect/components/document-toolbar/document-toolbar";
 import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
 import { AppEditorForm } from "./components/AppEditorForm.js";
 import { editorConfig } from "./config.js";

@@ -1,4 +1,4 @@
-import { DriveSettingsModal as ConnectDriveSettingsModal } from "@powerhousedao/design-system";
+import { DriveSettingsModal as ConnectDriveSettingsModal } from "@powerhousedao/design-system/connect/components/modal/drive-settings-modal";
 import {
   closePHModal,
   renameDrive,

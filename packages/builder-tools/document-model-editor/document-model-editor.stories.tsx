@@ -4,15 +4,15 @@ import type { DocumentSpecification } from "document-model";
 import { documentModelCreateState } from "document-model";
 import { defaultBaseState, generateId } from "document-model/core";
 import { v7 as uuidv7 } from "uuid";
-import { DocumentModelEditor } from "./editor.js";
+import Editor from "./editor.js";
 
 export const { meta, CreateDocumentStory: Empty } = createDocumentStory(
-  DocumentModelEditor,
+  Editor,
   documentModelCreateState(),
 );
 
 export const { CreateDocumentStory: WithData } = createDocumentStory(
-  DocumentModelEditor,
+  Editor,
   documentModelCreateState({
     ...defaultBaseState(),
     global: {
@@ -113,7 +113,7 @@ export const { CreateDocumentStory: WithData } = createDocumentStory(
 
 export const { CreateDocumentStory: WithBackgroundUpdates } =
   createDocumentStory(
-    DocumentModelEditor,
+    Editor,
     documentModelCreateState({
       ...defaultBaseState(),
       global: {
@@ -311,4 +311,4 @@ type TestLocalDefinition${id} {
     },
   );
 
-export default meta as Meta<typeof DocumentModelEditor>;
+export default meta as Meta<typeof Editor>;

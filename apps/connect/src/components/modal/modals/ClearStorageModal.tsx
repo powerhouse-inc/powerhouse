@@ -1,5 +1,5 @@
 import { clearReactorStorage } from "@powerhousedao/connect/store/reactor";
-import { ConnectConfirmationModal } from "@powerhousedao/design-system";
+import { ConnectConfirmationModal } from "@powerhousedao/design-system/connect/components/modal/confirmation-modal";
 import {
   closePHModal,
   setSelectedDrive,

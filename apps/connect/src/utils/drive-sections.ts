@@ -3,7 +3,7 @@ import {
   debugNodeOptions,
   defaultDriveOptions,
   defaultNodeOptions,
-} from "@powerhousedao/design-system";
+} from "@powerhousedao/design-system/connect/constants/options";
 import type { SharingType } from "document-drive";
 import type { ReactNode } from "react";
 

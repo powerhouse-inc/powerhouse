@@ -15,6 +15,10 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
+    "./generic-drive-explorer": {
+      "import": "./dist/editors/generic-drive-explorer/module.js",
+      "types": "./dist/editors/generic-drive-explorer/module.d.ts"
+    },
     "./utils": {
       "import": "./dist/utils/index.js",
       "types": "./dist/utils/index.d.ts"
