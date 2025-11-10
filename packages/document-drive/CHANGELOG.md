@@ -1,3 +1,28 @@
+## 4.1.0-dev.107 (2025-11-10)
+
+### 🚀 Features
+
+- **monorepo:** exit with error code if circular import found ([3ca6d3512](https://github.com/powerhouse-inc/powerhouse/commit/3ca6d3512))
+- **connect:** do not use redundant dev deps ([2a847e944](https://github.com/powerhouse-inc/powerhouse/commit/2a847e944))
+- **connect,builder-tools:** improve chunking ([c089c7678](https://github.com/powerhouse-inc/powerhouse/commit/c089c7678))
+- **reactor-browser, connect:** use suspense based hooks to load documents ([67eb9831e](https://github.com/powerhouse-inc/powerhouse/commit/67eb9831e))
+- **codegen,design-system:** update path for import connect components ([f8f387023](https://github.com/powerhouse-inc/powerhouse/commit/f8f387023))
+- **monorepo:** add circular imports check in ci ([d6e46a869](https://github.com/powerhouse-inc/powerhouse/commit/d6e46a869))
+- **design-system:** resolve remaining circular imports ([b82cc2e3c](https://github.com/powerhouse-inc/powerhouse/commit/b82cc2e3c))
+- **document-drive:** fix circular import in prisma ([321a4b934](https://github.com/powerhouse-inc/powerhouse/commit/321a4b934))
+- **document-drive:** fix circular imports ([f2db50c23](https://github.com/powerhouse-inc/powerhouse/commit/f2db50c23))
+- **monorepo:** add check circular imports scripts ([d633b37c2](https://github.com/powerhouse-inc/powerhouse/commit/d633b37c2))
+
+### 🩹 Fixes
+
+- publish docker prod workflow ([d701f8dc0](https://github.com/powerhouse-inc/powerhouse/commit/d701f8dc0))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+- ryanwolhuter @ryanwolhuter
+
 ## 4.1.0-dev.106 (2025-11-10)
 
 This was a version bump only for document-drive to align it with other projects, there were no code changes.

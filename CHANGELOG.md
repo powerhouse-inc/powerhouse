@@ -1,3 +1,73 @@
+## 4.1.0-dev.107 (2025-11-10)
+
+### 🚀 Features
+
+- merge branch 'main' into merge/main-to-5.0.1 ([3b182d161](https://github.com/powerhouse-inc/powerhouse/commit/3b182d161))
+- first pass load impl on write side ([85ef79df9](https://github.com/powerhouse-inc/powerhouse/commit/85ef79df9))
+- wip load-reshuffle test ([fa05f1666](https://github.com/powerhouse-inc/powerhouse/commit/fa05f1666))
+- **builder-tools:** fix circular imports ([954a82d18](https://github.com/powerhouse-inc/powerhouse/commit/954a82d18))
+- **codegen:** fix circular imports ([d9f2f40dc](https://github.com/powerhouse-inc/powerhouse/commit/d9f2f40dc))
+- **codegen,design-system:** update path for import connect components ([f8f387023](https://github.com/powerhouse-inc/powerhouse/commit/f8f387023))
+- **common:** fix circular imports ([15e5f27e7](https://github.com/powerhouse-inc/powerhouse/commit/15e5f27e7))
+- **connect:** add import route for components ([e0f629465](https://github.com/powerhouse-inc/powerhouse/commit/e0f629465))
+- **connect:** use nice import paths ([1288a57d2](https://github.com/powerhouse-inc/powerhouse/commit/1288a57d2))
+- **connect:** do not use redundant dev deps ([2a847e944](https://github.com/powerhouse-inc/powerhouse/commit/2a847e944))
+- **connect:** remove redundant async logic ([b9784dfd6](https://github.com/powerhouse-inc/powerhouse/commit/b9784dfd6))
+- **connect,builder-tools:** improve chunking ([c089c7678](https://github.com/powerhouse-inc/powerhouse/commit/c089c7678))
+- **connect,design-system:** fix connect component imports ([22f192c72](https://github.com/powerhouse-inc/powerhouse/commit/22f192c72))
+- **design-system:** first pass of circular import fixes ([712fda94f](https://github.com/powerhouse-inc/powerhouse/commit/712fda94f))
+- **design-system:** fix circular imports with ugly paths for now ([3cab4d756](https://github.com/powerhouse-inc/powerhouse/commit/3cab4d756))
+- **design-system:** resolve remaining circular imports ([b82cc2e3c](https://github.com/powerhouse-inc/powerhouse/commit/b82cc2e3c))
+- **design-system:** update powerhouse type imports ([10d8a44cc](https://github.com/powerhouse-inc/powerhouse/commit/10d8a44cc))
+- **design-system:** fix icon component type imports ([2541ab67e](https://github.com/powerhouse-inc/powerhouse/commit/2541ab67e))
+- **design-system:** fix icon name type imports ([8c49cc8a8](https://github.com/powerhouse-inc/powerhouse/commit/8c49cc8a8))
+- **design-system:** fix powerhouse component type imports ([87a81e18c](https://github.com/powerhouse-inc/powerhouse/commit/87a81e18c))
+- **design-system:** fix cn util import ([956e94779](https://github.com/powerhouse-inc/powerhouse/commit/956e94779))
+- **design-system:** fix rwa exports ([5d4a1fa85](https://github.com/powerhouse-inc/powerhouse/commit/5d4a1fa85))
+- **design-system:** fix ui dir package layout ([0204418bc](https://github.com/powerhouse-inc/powerhouse/commit/0204418bc))
+- **design-system,connect:** fix connect component imports ([ed5b5a264](https://github.com/powerhouse-inc/powerhouse/commit/ed5b5a264))
+- **design-system,connect:** fix ui import paths ([6ef0d35c9](https://github.com/powerhouse-inc/powerhouse/commit/6ef0d35c9))
+- **document-drive:** fix circular imports ([f2db50c23](https://github.com/powerhouse-inc/powerhouse/commit/f2db50c23))
+- **document-drive:** fix circular import in prisma ([321a4b934](https://github.com/powerhouse-inc/powerhouse/commit/321a4b934))
+- **document-model:** fix circular imports ([e1c9d1305](https://github.com/powerhouse-inc/powerhouse/commit/e1c9d1305))
+- **monorepo:** add check circular imports scripts ([d633b37c2](https://github.com/powerhouse-inc/powerhouse/commit/d633b37c2))
+- **monorepo:** add circular imports check in ci ([d6e46a869](https://github.com/powerhouse-inc/powerhouse/commit/d6e46a869))
+- **monorepo:** exit with error code if circular import found ([3ca6d3512](https://github.com/powerhouse-inc/powerhouse/commit/3ca6d3512))
+- **monorepo:** fix circular imports ([#2088](https://github.com/powerhouse-inc/powerhouse/pull/2088))
+- **ph-cmd,ph-cli:** fix circular imports ([f193ddf8e](https://github.com/powerhouse-inc/powerhouse/commit/f193ddf8e))
+- **reactor-api:** fix circular imports ([0eed9b3f9](https://github.com/powerhouse-inc/powerhouse/commit/0eed9b3f9))
+- **reactor-browser:** fix circular imports ([68c94dbda](https://github.com/powerhouse-inc/powerhouse/commit/68c94dbda))
+- **reactor-browser:** initial work on suspense compatible document store ([5651ff473](https://github.com/powerhouse-inc/powerhouse/commit/5651ff473))
+- **reactor-browser:** re-added dispatchActions export ([6e6d7626e](https://github.com/powerhouse-inc/powerhouse/commit/6e6d7626e))
+- **reactor-browser, connect:** use suspense based hooks to load documents ([67eb9831e](https://github.com/powerhouse-inc/powerhouse/commit/67eb9831e))
+- **vetra:** fix circular imports ([a513ad28a](https://github.com/powerhouse-inc/powerhouse/commit/a513ad28a))
+
+### 🩹 Fixes
+
+- publish docker prod workflow ([d701f8dc0](https://github.com/powerhouse-inc/powerhouse/commit/d701f8dc0))
+- prisma openssl not found ([1c9370a93](https://github.com/powerhouse-inc/powerhouse/commit/1c9370a93))
+- reshuffles work a bit differently ([0cf39c12d](https://github.com/powerhouse-inc/powerhouse/commit/0cf39c12d))
+- fix issue with resuffling ([7bcb931b7](https://github.com/powerhouse-inc/powerhouse/commit/7bcb931b7))
+- fixing lint issues ([3afde3ebd](https://github.com/powerhouse-inc/powerhouse/commit/3afde3ebd))
+- **builder-tools:** support cjs requires of react and react-dom on external packages ([c1c52a714](https://github.com/powerhouse-inc/powerhouse/commit/c1c52a714))
+- **connect:** fixed heroku nginx when base path is "/" ([4b6e08139](https://github.com/powerhouse-inc/powerhouse/commit/4b6e08139))
+- **connect:** fix assets location on heroku nginx ([8ae783eda](https://github.com/powerhouse-inc/powerhouse/commit/8ae783eda))
+- **connect:** remove redirect on heroku nfgnx ([e781aff1c](https://github.com/powerhouse-inc/powerhouse/commit/e781aff1c))
+- **connect:** re-added root export for AppLoader ([f810bbd11](https://github.com/powerhouse-inc/powerhouse/commit/f810bbd11))
+- **connect,reactor-api:** fix merge conflict ([8786cdae4](https://github.com/powerhouse-inc/powerhouse/commit/8786cdae4))
+- **design-system:** do not show sync status on folders ([60ca2c575](https://github.com/powerhouse-inc/powerhouse/commit/60ca2c575))
+- **design-system:** do not show sync status on folders ([#2090](https://github.com/powerhouse-inc/powerhouse/pull/2090))
+- **switchboard:** use POSIX-compliant syntax ([09f64bf3b](https://github.com/powerhouse-inc/powerhouse/commit/09f64bf3b))
+- **vetra:** fix set app name debounce on app editor ([a441013f7](https://github.com/powerhouse-inc/powerhouse/commit/a441013f7))
+- **vetra:** re-added vetra package editor export ([fd8e88d4c](https://github.com/powerhouse-inc/powerhouse/commit/fd8e88d4c))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+- ryanwolhuter @ryanwolhuter
+
 ## 4.1.0-dev.106 (2025-11-10)
 
 ### 🩹 Fixes

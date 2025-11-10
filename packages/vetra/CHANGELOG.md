@@ -1,3 +1,31 @@
+## 4.1.0-dev.107 (2025-11-10)
+
+### 🚀 Features
+
+- **monorepo:** exit with error code if circular import found ([3ca6d3512](https://github.com/powerhouse-inc/powerhouse/commit/3ca6d3512))
+- **connect:** do not use redundant dev deps ([2a847e944](https://github.com/powerhouse-inc/powerhouse/commit/2a847e944))
+- **connect,builder-tools:** improve chunking ([c089c7678](https://github.com/powerhouse-inc/powerhouse/commit/c089c7678))
+- **codegen,design-system:** update path for import connect components ([f8f387023](https://github.com/powerhouse-inc/powerhouse/commit/f8f387023))
+- **connect,design-system:** fix connect component imports ([22f192c72](https://github.com/powerhouse-inc/powerhouse/commit/22f192c72))
+- **design-system,connect:** fix connect component imports ([ed5b5a264](https://github.com/powerhouse-inc/powerhouse/commit/ed5b5a264))
+- **monorepo:** add circular imports check in ci ([d6e46a869](https://github.com/powerhouse-inc/powerhouse/commit/d6e46a869))
+- **design-system:** resolve remaining circular imports ([b82cc2e3c](https://github.com/powerhouse-inc/powerhouse/commit/b82cc2e3c))
+- **vetra:** fix circular imports ([a513ad28a](https://github.com/powerhouse-inc/powerhouse/commit/a513ad28a))
+- **document-drive:** fix circular imports ([f2db50c23](https://github.com/powerhouse-inc/powerhouse/commit/f2db50c23))
+- **monorepo:** add check circular imports scripts ([d633b37c2](https://github.com/powerhouse-inc/powerhouse/commit/d633b37c2))
+
+### 🩹 Fixes
+
+- **vetra:** re-added vetra package editor export ([fd8e88d4c](https://github.com/powerhouse-inc/powerhouse/commit/fd8e88d4c))
+- **vetra:** fix set app name debounce on app editor ([a441013f7](https://github.com/powerhouse-inc/powerhouse/commit/a441013f7))
+- publish docker prod workflow ([d701f8dc0](https://github.com/powerhouse-inc/powerhouse/commit/d701f8dc0))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+- ryanwolhuter @ryanwolhuter
+
 ## 4.1.0-dev.106 (2025-11-10)
 
 ### 🩹 Fixes
