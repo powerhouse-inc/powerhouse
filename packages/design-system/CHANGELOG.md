@@ -1,3 +1,13 @@
+## 4.1.0-dev.106 (2025-11-10)
+
+### 🩹 Fixes
+
+- **design-system:** implement form submission handling in CreateDocumentModal ([#2085](https://github.com/powerhouse-inc/powerhouse/pull/2085))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.105 (2025-11-08)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
