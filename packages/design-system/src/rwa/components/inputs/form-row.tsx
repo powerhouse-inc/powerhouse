@@ -1,4 +1,4 @@
-import type { DivProps } from "../../../powerhouse/types/helpers.js";
+import type { DivProps } from "@powerhousedao/design-system";
 import { mergeClassNameProps } from "../../../powerhouse/utils/mergeClassNameProps.js";
 
 export interface RWAFormRowProps extends DivProps {

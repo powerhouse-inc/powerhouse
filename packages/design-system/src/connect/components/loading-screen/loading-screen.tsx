@@ -1,5 +1,5 @@
+import type { Size } from "@powerhousedao/design-system";
 import { twMerge } from "tailwind-merge";
-import type { Size } from "../../../powerhouse/types/images.js";
 import { AnimatedLoader } from "../animated-loader/animated-loader.js";
 
 export interface LoadingScreenProps {

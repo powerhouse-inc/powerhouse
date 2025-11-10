@@ -1,4 +1,4 @@
-import type { Size } from "../types/images.js";
+import type { Size } from "@powerhousedao/design-system";
 
 export function getDimensions(size?: Size) {
   if (!size) return {};
