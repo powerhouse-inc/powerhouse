@@ -1,7 +1,7 @@
 import type { ComponentPropsWithoutRef } from "react";
 
+import { Modal } from "@powerhousedao/design-system";
 import { twMerge } from "tailwind-merge";
-import { Modal } from "../../../powerhouse/components/modal/modal.js";
 
 const buttonStyles =
   "min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all";

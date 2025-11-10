@@ -1,6 +1,6 @@
+import { cn } from "@powerhousedao/design-system";
 import { diffSentences, diffWords } from "diff";
 import { useMemo } from "react";
-import { cn } from "../../../../utils/cn.js";
 import type { WithDifference } from "../../../types.js";
 
 interface TextDiffProps extends WithDifference<string> {

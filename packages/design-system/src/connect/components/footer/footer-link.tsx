@@ -1,4 +1,4 @@
-import { mergeClassNameProps } from "../../../powerhouse/utils/mergeClassNameProps.js";
+import { mergeClassNameProps } from "@powerhousedao/design-system";
 
 type FooterLinkProps<E extends React.ElementType> = {
   readonly as?: E;

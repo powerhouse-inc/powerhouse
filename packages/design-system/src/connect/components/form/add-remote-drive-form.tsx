@@ -1,8 +1,8 @@
+import { PowerhouseButton } from "@powerhousedao/design-system";
 import type { SharingType } from "document-drive";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useDebounceValue } from "usehooks-ts";
-import { PowerhouseButton } from "../../../powerhouse/components/button/button.js";
 import { Disclosure } from "../disclosure/disclosure.js";
 import { Divider } from "../divider/divider.js";
 import { FormInput } from "../form-input/form-input.js";

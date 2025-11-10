@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { withForm } from "../../lib/decorators.js";
 import {
-    getDefaultArgTypes,
-    getValidationArgTypes,
-    StorybookControlCategory,
+  getDefaultArgTypes,
+  getValidationArgTypes,
+  StorybookControlCategory,
 } from "../../lib/storybook-arg-types.js";
 import { RadioGroupField } from "./radio-group-field.js";
 

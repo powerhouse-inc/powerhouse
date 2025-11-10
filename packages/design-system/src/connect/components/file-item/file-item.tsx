@@ -1,12 +1,12 @@
 import type { NodeOption } from "@powerhousedao/design-system";
 import { Icon } from "@powerhousedao/design-system";
 import {
-    getSyncStatusSync,
-    setSelectedNode,
-    showDeleteNodeModal,
-    useNodeActions,
-    useSelectedDriveSafe,
-    useUserPermissions,
+  getSyncStatusSync,
+  setSelectedNode,
+  showDeleteNodeModal,
+  useNodeActions,
+  useSelectedDriveSafe,
+  useUserPermissions,
 } from "@powerhousedao/reactor-browser";
 import { getDriveSharingType, type FileNode } from "document-drive";
 import { useState } from "react";

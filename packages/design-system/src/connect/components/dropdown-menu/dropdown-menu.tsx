@@ -1,11 +1,11 @@
-import type { ReactNode } from "react";
-import { twMerge } from "tailwind-merge";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "../../../powerhouse/components/dropdown-menu/dropdown-menu.js";
+} from "@powerhousedao/design-system";
+import type { ReactNode } from "react";
+import { twMerge } from "tailwind-merge";
 
 export type ConnectDropdownMenuItem<TItemId extends string> = {
   id: TItemId;

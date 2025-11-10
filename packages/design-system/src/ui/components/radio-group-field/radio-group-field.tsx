@@ -1,6 +1,6 @@
+import { cn } from "@powerhousedao/design-system";
 import type { HTMLAttributes, Ref } from "react";
 import { forwardRef, useId } from "react";
-import { cn } from "../../../utils/cn.js";
 import type { FieldErrorHandling, InputBaseProps } from "../../types.js";
 import type { RadioGroupProps } from "../enum-field/types.js";
 import { FormLabel } from "../form-label/form-label.js";

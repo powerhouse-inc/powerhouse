@@ -1,5 +1,5 @@
+import { cn } from "@powerhousedao/design-system";
 import React, { useCallback, useId } from "react";
-import { cn } from "../../../utils/cn.js";
 import type { FieldErrorHandling, InputBaseProps } from "../../types.js";
 import { Button } from "../button/button.js";
 import { Command } from "../command/command.js";

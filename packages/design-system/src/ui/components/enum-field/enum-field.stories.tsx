@@ -3,9 +3,9 @@ import { Icon } from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
 import { withForm } from "../../lib/decorators.js";
 import {
-    getDefaultArgTypes,
-    getValidationArgTypes,
-    StorybookControlCategory,
+  getDefaultArgTypes,
+  getValidationArgTypes,
+  StorybookControlCategory,
 } from "../../lib/storybook-arg-types.js";
 import { EnumField } from "./enum-field.js";
 

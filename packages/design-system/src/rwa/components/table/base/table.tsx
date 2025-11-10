@@ -8,11 +8,11 @@ import { useEditorContext } from "../../../context/editor-context.js";
 import { useColumnPriority } from "../../../hooks/useColumnPriority.js";
 import { useTableHeight } from "../../../hooks/useTableHeight.js";
 import type {
-    SortDirection,
-    TableColumn,
-    TableItemType,
-    TableName,
-    TableProps,
+  SortDirection,
+  TableColumn,
+  TableItemType,
+  TableName,
+  TableProps,
 } from "../../../types.js";
 import { handleTableDatum } from "../../../utils/table.js";
 import { TableBase } from "./table-base.js";

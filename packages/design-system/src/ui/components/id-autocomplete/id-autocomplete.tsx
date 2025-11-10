@@ -1,6 +1,6 @@
+import { cn } from "@powerhousedao/design-system";
 import { Command } from "cmdk";
 import React, { useId, useMemo, useRef } from "react";
-import { cn } from "../../../utils/cn.js";
 import { sharedValueTransformers } from "../../lib/shared-value-transformers.js";
 import { FormDescription } from "../form-description/form-description.js";
 import { FormGroup } from "../form-group/form-group.js";

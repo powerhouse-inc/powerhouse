@@ -1,11 +1,11 @@
+import { cn } from "@powerhousedao/design-system";
 import { useCommandState } from "cmdk";
 import React, { useEffect } from "react";
-import { cn } from "../../../utils/cn.js";
 import {
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-  CommandList,
+    CommandEmpty,
+    CommandGroup,
+    CommandItem,
+    CommandList,
 } from "../command/command.js";
 import { IdAutocompleteListOption } from "./id-autocomplete-list-option.js";
 import type { IdAutocompleteOption, IdAutocompleteProps } from "./types.js";

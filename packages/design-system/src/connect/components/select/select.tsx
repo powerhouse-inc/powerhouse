@@ -1,10 +1,10 @@
 import { Icon } from "@powerhousedao/design-system";
 import type {
-    CSSProperties,
-    ForwardedRef,
-    ReactNode,
-    Ref,
-    RefAttributes,
+  CSSProperties,
+  ForwardedRef,
+  ReactNode,
+  Ref,
+  RefAttributes,
 } from "react";
 import { forwardRef, useState } from "react";
 import { twJoin, twMerge } from "tailwind-merge";

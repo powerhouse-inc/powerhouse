@@ -1,8 +1,7 @@
-import { Icon } from "@powerhousedao/design-system";
+import { cn, Icon } from "@powerhousedao/design-system";
 import { Command as CommandPrimitive } from "cmdk";
 import React, { useMemo, useState } from "react";
 import { useMediaQuery } from "usehooks-ts";
-import { cn } from "../../../utils/cn.js";
 import { sharedValueTransformers } from "../../lib/shared-value-transformers.js";
 import type { InputBaseProps } from "../../types.js";
 import { Input } from "../input/input.js";

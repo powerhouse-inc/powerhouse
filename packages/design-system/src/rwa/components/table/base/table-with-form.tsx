@@ -1,5 +1,4 @@
-import { Pagination } from "../../../../powerhouse/components/pagination/pagination.js";
-import { usePagination } from "../../../../powerhouse/hooks/usePagination.js";
+import { Pagination, usePagination } from "@powerhousedao/design-system";
 import { useEditorContext } from "../../../context/editor-context.js";
 import { useTableData } from "../../../hooks/useTableData.js";
 import type { TableColumn, TableName } from "../../../types.js";

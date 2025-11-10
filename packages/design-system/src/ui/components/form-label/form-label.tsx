@@ -1,5 +1,4 @@
-import { Icon } from "@powerhousedao/design-system";
-import { cn } from "../../../utils/cn.js";
+import { cn, Icon } from "@powerhousedao/design-system";
 import { Tooltip, TooltipProvider } from "../tooltip/tooltip.js";
 
 export interface FormLabelProps

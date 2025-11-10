@@ -1,4 +1,4 @@
-import { cn } from "../../../utils/cn.js";
+import { cn } from "@powerhousedao/design-system";
 import type { FormMessageType } from "./form-message.js";
 import { FormMessage } from "./form-message.js";
 

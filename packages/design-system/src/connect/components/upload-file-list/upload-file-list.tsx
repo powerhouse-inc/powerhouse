@@ -3,8 +3,8 @@ import type { ComponentPropsWithoutRef } from "react";
 import { useMemo, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import {
-    type UploadFileItemProps,
-    UploadFileItem,
+  type UploadFileItemProps,
+  UploadFileItem,
 } from "../upload-file-item/upload-file-item.js";
 import { getUploadListTitle } from "./utils.js";
 

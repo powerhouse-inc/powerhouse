@@ -1,12 +1,12 @@
 import { Icon } from "@powerhousedao/design-system";
 import {
-    exportDocument,
-    setSelectedNode,
-    setSelectedTimelineItem,
-    showRevisionHistory,
-    useGetSwitchboardLink,
-    useNodeParentFolderById,
-    useSelectedDocument,
+  exportDocument,
+  setSelectedNode,
+  setSelectedTimelineItem,
+  showRevisionHistory,
+  useGetSwitchboardLink,
+  useNodeParentFolderById,
+  useSelectedDocument,
 } from "@powerhousedao/reactor-browser";
 import type { PHDocument } from "document-model";
 import { useEffect, useState, type ComponentPropsWithoutRef } from "react";

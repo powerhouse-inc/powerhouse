@@ -1,7 +1,6 @@
-import { Icon } from "@powerhousedao/design-system";
+import { cn, Icon } from "@powerhousedao/design-system";
 import { useCommandState } from "cmdk";
 import React, { useEffect } from "react";
-import { cn } from "../../../utils/cn.js";
 import {
     CommandEmpty,
     CommandGroup,

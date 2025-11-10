@@ -3,10 +3,10 @@ import { Icon } from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
 import { withForm } from "../../lib/decorators.js";
 import {
-    getDefaultArgTypes,
-    getValidationArgTypes,
-    PrebuiltArgTypes,
-    StorybookControlCategory,
+  getDefaultArgTypes,
+  getValidationArgTypes,
+  PrebuiltArgTypes,
+  StorybookControlCategory,
 } from "../../lib/storybook-arg-types.js";
 import { SelectField } from "./select-field.js";
 

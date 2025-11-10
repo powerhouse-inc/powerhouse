@@ -1,7 +1,6 @@
-import { Icon } from "@powerhousedao/design-system";
+import { cn, Icon } from "@powerhousedao/design-system";
 import { useCallback, useState } from "react";
 import { useMediaQuery } from "usehooks-ts";
-import { cn } from "../../../utils/cn.js";
 import type { WithDifference } from "../../types.js";
 import { Tooltip, TooltipProvider } from "../tooltip/tooltip.js";
 import { InputDiff } from "./subcomponent/input-diff.js";

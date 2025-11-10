@@ -3,12 +3,12 @@ import { Icon } from "@powerhousedao/design-system";
 import type { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 import {
-    CONFLICT,
-    ERROR,
-    INITIAL_SYNC,
-    MISSING,
-    SUCCESS,
-    SYNCING,
+  CONFLICT,
+  ERROR,
+  INITIAL_SYNC,
+  MISSING,
+  SUCCESS,
+  SYNCING,
 } from "../../constants/syncing.js";
 
 const syncIcons: Record<SyncStatus, IconName> = {

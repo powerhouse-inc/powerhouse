@@ -1,7 +1,7 @@
+import { Icon } from "@powerhousedao/design-system";
 import type { ReactNode } from "react";
 import { useCallback, useState } from "react";
 import { twMerge } from "tailwind-merge";
-import { Icon } from "../../../../../powerhouse/components/icon/icon.js";
 import { ConnectDropdownMenu } from "../../../dropdown-menu/dropdown-menu.js";
 
 export type PackageDetails = {

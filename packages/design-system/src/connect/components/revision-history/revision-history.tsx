@@ -1,8 +1,7 @@
+import { Pagination, usePagination } from "@powerhousedao/design-system";
 import type { Operation } from "document-model";
 import { garbageCollect, sortOperations } from "document-model/core";
 import { useMemo, useState } from "react";
-import { Pagination } from "../../../powerhouse/components/pagination/pagination.js";
-import { usePagination } from "../../../powerhouse/hooks/usePagination.js";
 import { ConnectTooltipProvider } from "../tooltip/tooltip.js";
 import { Header } from "./header/header.js";
 import { Timeline } from "./timeline/timeline.js";

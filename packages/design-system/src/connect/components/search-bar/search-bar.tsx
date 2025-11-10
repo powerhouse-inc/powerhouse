@@ -1,14 +1,14 @@
-import { Icon } from "@powerhousedao/design-system";
-import type { ChangeEvent } from "react";
-import { useMemo } from "react";
-import { twMerge } from "tailwind-merge";
 import {
+    cn,
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
-} from "../../../powerhouse/components/dropdown-menu/dropdown-menu.js";
-import { cn } from "../../../utils/cn.js";
+    Icon,
+} from "@powerhousedao/design-system";
+import type { ChangeEvent } from "react";
+import { useMemo } from "react";
+import { twMerge } from "tailwind-merge";
 import type { FilterItemType } from "./filter-item.js";
 import { FilterItem } from "./filter-item.js";
 

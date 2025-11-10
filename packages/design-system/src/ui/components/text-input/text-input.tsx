@@ -1,5 +1,5 @@
+import { cn } from "@powerhousedao/design-system";
 import { forwardRef, useId, useMemo } from "react";
-import { cn } from "../../../utils/cn.js";
 import { sharedValueTransformers } from "../../lib/shared-value-transformers.js";
 import type { DiffMode, InputBaseProps, WithDifference } from "../../types.js";
 import { CharacterCounter } from "../character-counter/character-counter.js";
