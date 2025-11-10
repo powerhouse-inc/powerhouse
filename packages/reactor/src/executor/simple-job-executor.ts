@@ -1056,7 +1056,12 @@ export class SimpleJobExecutor implements IJobExecutor {
     const actions = reshuffledOperations.map((operation) => operation.action);
     const skipValues = reshuffledOperations.map((operation) => operation.skip);
 
-    const result = await this.processActions(job, actions, startTime, skipValues);
+    const result = await this.processActions(
+      job,
+      actions,
+      startTime,
+      skipValues,
+    );
 
     if (!result.success) {
       return {

@@ -30,8 +30,31 @@ describe("SimpleJobExecutor load jobs", () => {
   let registry: IDocumentModelRegistry;
 
   beforeEach(() => {
+    const mockReducer = vi.fn().mockImplementation((doc, action) => {
+      const nextIndex =
+        Math.max(
+          ...Object.values(doc.header.revision as Record<string, number>),
+        ) || 0;
+      return {
+        ...doc,
+        operations: {
+          ...doc.operations,
+          [action.scope]: [
+            ...(doc.operations[action.scope] || []),
+            {
+              index: nextIndex,
+              skip: 0,
+              hash: "test-hash",
+              timestampUtcMs: action.timestampUtcMs,
+              action: action,
+            },
+          ],
+        },
+      };
+    });
+
     registry = {
-      getModule: vi.fn().mockReturnValue({ reducer: vi.fn() }),
+      getModule: vi.fn().mockReturnValue({ reducer: mockReducer }),
       registerModules: vi.fn(),
     } as unknown as IDocumentModelRegistry;
 
@@ -45,7 +68,16 @@ describe("SimpleJobExecutor load jobs", () => {
           documentType: "powerhouse/document",
           revision: { document: 5 },
         },
-        state: {},
+        state: {
+          document: {
+            isDeleted: false,
+          },
+          global: {},
+        },
+        operations: {
+          document: [],
+          global: [],
+        },
       }),
       putState: vi.fn(),
       invalidate: vi.fn(),
@@ -231,8 +263,6 @@ describe("Reactor.load", () => {
 
     await expect(
       reactor.load("doc-1", "main", operations as Operation[]),
-    ).rejects.toThrow(
-      /hash/,
-    );
+    ).rejects.toThrow(/hash/);
   });
 });
