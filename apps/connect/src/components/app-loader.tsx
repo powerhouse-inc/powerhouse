@@ -1,7 +1,4 @@
-import { App } from "@powerhousedao/connect/components/app";
-import { AppSkeleton } from "@powerhousedao/connect/components/app-skeleton";
-import { CookieBanner } from "@powerhousedao/connect/components/cookie-banner";
-import { ModalsContainer } from "@powerhousedao/connect/components/modal/modals-container";
+import { App, AppSkeleton, CookieBanner, ModalsContainer } from "@powerhousedao/connect/components";
 import { useCheckLatestVersion } from "@powerhousedao/connect/hooks/useCheckLatestVersion";
 import "@powerhousedao/connect/i18n/i18n";
 import { useSubscribeToVetraPackages } from "@powerhousedao/connect/services/hmr";

@@ -27,6 +27,11 @@
       "import": "./lib/src/*.js",
       "types": "./lib/src/*.d.ts"
     },
+    "./components": {
+      "source": "./src/components/index.ts",
+      "import": "./lib/src/components/index.js",
+      "types": "./lib/src/components/index.d.ts"
+    },
     "./main.js": {
       "source": "./src/main.tsx",
       "import": "./lib/src/main.js",

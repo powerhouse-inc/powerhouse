@@ -1,4 +1,4 @@
-import { DocumentEditor } from "@powerhousedao/connect/components/editors";
+import { DocumentEditor } from "@powerhousedao/connect/components";
 import { openUrl } from "@powerhousedao/connect/utils/openUrl";
 import {
   buildDocumentSubgraphUrl,

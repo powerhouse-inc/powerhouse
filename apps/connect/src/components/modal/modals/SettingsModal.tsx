@@ -1,7 +1,4 @@
-import { About } from "@powerhousedao/connect/components/modal/modals/settings/about";
-import { DangerZone } from "@powerhousedao/connect/components/modal/modals/settings/danger-zone";
-import { DefaultEditor } from "@powerhousedao/connect/components/modal/modals/settings/default-editor";
-import { ConnectPackageManager } from "@powerhousedao/connect/components/modal/modals/settings/package-manager";
+import { About, ConnectPackageManager, DangerZone, DefaultEditor } from "@powerhousedao/connect/components";
 import { Icon } from "@powerhousedao/design-system";
 import { SettingsModal as SettingsModalV2 } from "@powerhousedao/design-system/connect";
 import { closePHModal, usePHModal } from "@powerhousedao/reactor-browser";

@@ -1,4 +1,4 @@
-import { ReloadConnectToast } from "@powerhousedao/connect/components/toast/reload-connect-toast";
+import { ReloadConnectToast } from "../components/reload-connect-toast.js";
 import { connectConfig } from "@powerhousedao/connect/config";
 import { isLatestVersion } from "@powerhousedao/connect/hooks/utils";
 import { toast } from "@powerhousedao/connect/services/toast";
