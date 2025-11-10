@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { vi, it } from "vitest";
-import { Modal } from "./index.js";
-
+import { it, vi } from "vitest";
+import { Modal } from "./modal.js";
 describe("Modal Component", () => {
   it("should match snapshot", () => {
     render(

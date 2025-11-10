@@ -1,8 +1,9 @@
-import { ConnectTooltip, Icon } from "@powerhousedao/design-system";
+import { Icon } from "@powerhousedao/design-system";
 import type { TimelineBarItem } from "@powerhousedao/reactor-browser";
 import { format, parseISO } from "date-fns";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
+import { ConnectTooltip } from "../../tooltip/tooltip.js";
 
 export interface TimelineBarProps
   extends Omit<

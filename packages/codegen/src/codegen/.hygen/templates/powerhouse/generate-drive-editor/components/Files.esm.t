@@ -2,7 +2,7 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/components/Files.tsx"
 unless_exists: true
 ---
-import { FileItem } from "@powerhousedao/design-system";
+import { FileItem } from "@powerhousedao/design-system/connect";
 import {
   useNodesInSelectedDriveOrFolder,
   isFileNodeKind,

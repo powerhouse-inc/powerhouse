@@ -1,8 +1,9 @@
-import type { SidebarHeaderProps } from "@powerhousedao/design-system";
 import { Icon, SidebarHeader } from "@powerhousedao/design-system";
+import type { ComponentProps } from "react";
 import { twMerge } from "tailwind-merge";
 
-export interface ConnectSidebarHeaderProps extends SidebarHeaderProps {
+export interface ConnectSidebarHeaderProps
+  extends ComponentProps<typeof SidebarHeader> {
   onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
 }
 

@@ -2,11 +2,7 @@ import BudgetStatementImg from "@powerhousedao/design-system/assets/icons/budget
 import MakerdaoRWAPortfolioImg from "@powerhousedao/design-system/assets/icons/rwa-report.png";
 import DefaultImg from "@powerhousedao/design-system/assets/icons/template.png";
 import type { TDocumentType } from "@powerhousedao/design-system";
-import {
-  BUDGET,
-  DEFAULT,
-  MAKERDAO_RWA_PORTFOLIO,
-} from "@powerhousedao/design-system";
+import { BUDGET, DEFAULT, MAKERDAO_RWA_PORTFOLIO } from "./documents.js";
 
 export const iconMap: Record<TDocumentType, string> = {
   [BUDGET]: BudgetStatementImg,

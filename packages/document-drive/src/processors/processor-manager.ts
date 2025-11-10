@@ -6,12 +6,10 @@ import type {
   ProcessorRecord,
   ServerListener,
 } from "document-drive";
-import {
-  childLogger,
-  InternalTransmitter,
-  isRelationalDbProcessor,
-} from "document-drive";
+import { InternalTransmitter } from "document-drive/server/transmitter/internal";
+import { childLogger } from "document-drive/utils/logger";
 import { generateId } from "document-model/core";
+import { isRelationalDbProcessor } from "./relational.js";
 
 export class ProcessorManager implements IProcessorManager {
   private readonly logger = childLogger([

@@ -3,9 +3,8 @@ import {
   AnimatedLoader,
   ConnectSidebar,
   HomeScreen,
-} from "@powerhousedao/design-system";
+} from "@powerhousedao/design-system/connect";
 import { useEffect, useState } from "react";
-
 const LOADER_DELAY = 250;
 
 const Loader = ({ delay = LOADER_DELAY }: { delay?: number }) => {

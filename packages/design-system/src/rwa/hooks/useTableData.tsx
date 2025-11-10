@@ -1,10 +1,8 @@
-import type { TableItemType, TableName } from "@powerhousedao/design-system";
-import {
-  makeTableData,
-  useEditorContext,
-  useSortTableItems,
-} from "@powerhousedao/design-system";
 import { useMemo } from "react";
+import { useEditorContext } from "../context/editor-context.js";
+import type { TableItemType, TableName } from "../types.js";
+import { makeTableData } from "../utils/table.js";
+import { useSortTableItems } from "./useSortTableItems.js";
 
 export function useTableData<TTableName extends TableName>(
   tableName: TTableName,

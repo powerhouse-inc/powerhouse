@@ -1,23 +1,22 @@
 import type {
   AddListenerAction,
-  AddTriggerAction,
-  RemoveListenerAction,
-  RemoveTriggerAction,
-  SetAvailableOfflineAction,
-  SetDriveIconAction,
-  SetDriveNameAction,
-  SetSharingTypeAction,
-} from "document-drive";
-import type {
   AddListenerInput,
+  AddTriggerAction,
   AddTriggerInput,
+  RemoveListenerAction,
   RemoveListenerInput,
+  RemoveTriggerAction,
   RemoveTriggerInput,
+  SetAvailableOfflineAction,
   SetAvailableOfflineInput,
+  SetDriveIconAction,
   SetDriveIconInput,
+  SetDriveNameAction,
   SetDriveNameInput,
+  SetSharingTypeAction,
   SetSharingTypeInput,
 } from "document-drive";
+import { createAction } from "document-model/core";
 import {
   AddListenerInputSchema,
   AddTriggerInputSchema,
@@ -27,8 +26,7 @@ import {
   SetDriveIconInputSchema,
   SetDriveNameInputSchema,
   SetSharingTypeInputSchema,
-} from "document-drive";
-import { createAction } from "document-model/core";
+} from "../schema/zod.js";
 
 export const setDriveName = (input: SetDriveNameInput) =>
   createAction<SetDriveNameAction>(

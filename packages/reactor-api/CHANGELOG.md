@@ -1,3 +1,17 @@
+## 4.1.0-dev.106 (2025-11-10)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.105 (2025-11-08)
+
+### 🚀 Features
+
+- **reactor-api:** added driveDocument and driveDocuments route ([a30d78e84](https://github.com/powerhouse-inc/powerhouse/commit/a30d78e84))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.104 (2025-11-07)
 
 ### 🚀 Features

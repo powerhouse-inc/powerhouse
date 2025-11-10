@@ -1,4 +1,3 @@
-export * from "../pages/demo/index.js";
 export * from "./analytics.js";
 export * from "./app-loader.js";
 export * from "./app-skeleton.js";
@@ -15,8 +14,8 @@ export * from "./footer.js";
 export * from "./login.js";
 export * from "./modal/index.js";
 export * from "./ph-logo.js";
+export * from "./reload-connect-toast.js";
 export * from "./root.js";
 export * from "./router.js";
 export * from "./search-bar.js";
 export * from "./sidebar.js";
-export * from "./toast/index.js";

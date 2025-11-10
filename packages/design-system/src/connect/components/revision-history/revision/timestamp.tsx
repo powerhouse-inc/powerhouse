@@ -1,5 +1,5 @@
-import { ConnectTooltip } from "@powerhousedao/design-system";
 import { format } from "date-fns";
+import { ConnectTooltip } from "../../tooltip/tooltip.js";
 
 export type TimestampProps = {
   readonly timestampUtcMs: number | string;

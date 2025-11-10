@@ -1,3 +1,19 @@
+## 4.1.0-dev.106 (2025-11-10)
+
+### 🩹 Fixes
+
+- **vetra:** update package.json to change export key from 'development' to 'source' ([6193acc85](https://github.com/powerhouse-inc/powerhouse/commit/6193acc85))
+- **vetra:** fix set app name debounce on app editor ([b776e9a28](https://github.com/powerhouse-inc/powerhouse/commit/b776e9a28))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+
+## 4.1.0-dev.105 (2025-11-08)
+
+This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.104 (2025-11-07)
 
 ### 🚀 Features

@@ -1,6 +1,6 @@
 {
   "name": "document-drive",
-  "version": "4.1.0-dev.104",
+  "version": "4.1.0-dev.106",
   "license": "AGPL-3.0-only",
   "type": "module",
   "types": "./dist/index.d.ts",
@@ -13,6 +13,14 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
+    "./*": {
+      "import": "./dist/src/*.js",
+      "types": "./dist/src/*.d.ts"
+    },
+    "./drive-document-model": {
+      "import": "./dist/src/drive-document-model/index.js",
+      "types": "./dist/src/drive-document-model/index.d.ts"
+    },
     "./storage/filesystem": {
       "import": "./dist/src/storage/filesystem.js",
       "types": "./dist/src/storage/filesystem.d.ts"
@@ -22,8 +30,8 @@
       "types": "./dist/src/storage/ipfs.d.ts"
     },
     "./storage/prisma": {
-      "import": "./dist/src/storage/prisma/prisma.js",
-      "types": "./dist/src/storage/prisma/prisma.d.ts"
+      "import": "./dist/src/storage/prisma/index.js",
+      "types": "./dist/src/storage/prisma/index.d.ts"
     },
     "./storage/prisma/client": {
       "import": "./src/storage/prisma/client/default.js",

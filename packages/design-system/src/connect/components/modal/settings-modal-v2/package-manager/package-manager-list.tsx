@@ -1,8 +1,8 @@
-import { ConnectDropdownMenu, Icon } from "@powerhousedao/design-system";
-
+import { Icon } from "@powerhousedao/design-system";
 import type { ReactNode } from "react";
 import { useCallback, useState } from "react";
 import { twMerge } from "tailwind-merge";
+import { ConnectDropdownMenu } from "../../../dropdown-menu/dropdown-menu.js";
 
 export type PackageDetails = {
   id: string;

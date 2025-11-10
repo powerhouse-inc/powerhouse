@@ -1,10 +1,10 @@
+import { it } from "vitest";
 import type { FileStatus } from "./get-folder-status.js";
 import {
   getFolderStatus,
   removeSuccessFiles,
   sortFilesByStatus,
 } from "./get-folder-status.js";
-import { it } from "vitest";
 const filesStatus: FileStatus[] = [
   {
     path: "fol1/doc1",

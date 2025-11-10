@@ -2,7 +2,6 @@ import type { IconName } from "@powerhousedao/design-system";
 import { Icon } from "@powerhousedao/design-system";
 import type { DocumentTypeIcon } from "@powerhousedao/reactor-browser";
 import type { ComponentPropsWithoutRef } from "react";
-
 type HeaderProps = ComponentPropsWithoutRef<"div"> & {
   readonly fileName: string;
   readonly fileSize: string;

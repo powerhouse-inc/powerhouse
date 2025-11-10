@@ -9,7 +9,7 @@ import type {
   ProcessorModuleDocument,
   ProcessorModuleAction,
 } from "@powerhousedao/vetra/document-models/processor-module";
-import { isProcessorModuleDocument } from "@powerhousedao/vetra/document-models/processor-module";
+import { isProcessorModuleDocument } from "./gen/document-schema.js";
 
 /** Hook to get a ProcessorModule document by its id */
 export function useProcessorModuleDocumentById(

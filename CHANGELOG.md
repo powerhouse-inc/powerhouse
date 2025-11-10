@@ -1,3 +1,29 @@
+## 4.1.0-dev.106 (2025-11-10)
+
+### 🩹 Fixes
+
+- **connect:** removed duplicated ModalsContainer ([#2086](https://github.com/powerhouse-inc/powerhouse/pull/2086))
+- **design-system:** implement form submission handling in CreateDocumentModal ([#2085](https://github.com/powerhouse-inc/powerhouse/pull/2085))
+- **vetra:** fix set app name debounce on app editor ([b776e9a28](https://github.com/powerhouse-inc/powerhouse/commit/b776e9a28))
+- **vetra:** update package.json to change export key from 'development' to 'source' ([6193acc85](https://github.com/powerhouse-inc/powerhouse/commit/6193acc85))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
+## 4.1.0-dev.105 (2025-11-08)
+
+### 🚀 Features
+
+- **document-drive:** set drive name on document header ([0019751f0](https://github.com/powerhouse-inc/powerhouse/commit/0019751f0))
+- **reactor-api:** added driveDocument and driveDocuments route ([a30d78e84](https://github.com/powerhouse-inc/powerhouse/commit/a30d78e84))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.104 (2025-11-07)
 
 ### 🚀 Features

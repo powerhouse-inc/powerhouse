@@ -7,13 +7,6 @@ import type {
   PHBaseState,
 } from "document-model";
 import {
-  assertIsDocumentModelDocument,
-  assertIsDocumentModelState,
-  documentModelDocumentType,
-  isDocumentModelDocument,
-  isDocumentModelState,
-} from "document-model";
-import {
   baseCreateDocument,
   createBaseState,
   defaultBaseState,
@@ -22,6 +15,13 @@ import {
   documentModelInitialGlobalState,
   documentModelInitialLocalState,
 } from "./constants.js";
+import {
+  assertIsDocumentModelDocument,
+  assertIsDocumentModelState,
+  isDocumentModelDocument,
+  isDocumentModelState,
+} from "./document-schema.js";
+import { documentModelDocumentType } from "./document-type.js";
 import type {
   DocumentModelDocument,
   DocumentModelGlobalState,

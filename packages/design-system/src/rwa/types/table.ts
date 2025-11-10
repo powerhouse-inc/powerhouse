@@ -1,3 +1,6 @@
+import type { Identifier, Order } from "natural-orderby";
+import type { JSX, ReactNode, RefObject } from "react";
+import type { tableNames } from "../constants/names.js";
 import type {
   Account,
   FixedIncome,
@@ -5,10 +8,7 @@ import type {
   GroupTransaction,
   ServiceProviderFeeType,
   SPV,
-  tableNames,
-} from "@powerhousedao/design-system";
-import type { Identifier, Order } from "natural-orderby";
-import type { JSX, ReactNode, RefObject } from "react";
+} from "./state.js";
 
 export type ColumnCountByTableWidth = Record<number, number>;
 

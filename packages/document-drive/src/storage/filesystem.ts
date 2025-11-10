@@ -7,26 +7,30 @@ import type {
   SynchronizationUnitQuery,
 } from "document-drive";
 import {
-  AbortError,
-  childLogger,
   DocumentAlreadyExistsError,
   DocumentAlreadyExistsReason,
   DocumentIdValidationError,
   DocumentNotFoundError,
   DocumentSlugValidationError,
-  isValidDocumentId,
-  isValidSlug,
+} from "document-drive/server/error";
+import { AbortError } from "document-drive/utils/errors";
+import { childLogger } from "document-drive/utils/logger";
+import {
   mergeOperations,
   operationsToRevision,
-  resolveStorageUnitsFilter,
-  setIntersection,
-  setUnion,
-} from "document-drive";
+} from "document-drive/utils/misc";
 import type { Operation, PHDocument } from "document-model";
 import { existsSync, mkdirSync } from "fs";
 import fs from "fs/promises";
 import stringify from "json-stringify-deterministic";
 import path from "path";
+import {
+  isValidDocumentId,
+  isValidSlug,
+  resolveStorageUnitsFilter,
+  setIntersection,
+  setUnion,
+} from "./utils.js";
 
 // Interface for drive manifest that tracks document IDs in a drive
 interface DriveManifest {

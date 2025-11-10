@@ -1,11 +1,9 @@
+import { toast } from "@powerhousedao/connect/services";
 import type {
   AddLocalDriveInput,
   AddRemoteDriveInput,
-} from "@powerhousedao/design-system";
-import {
-  AddDriveModal as ConnectAddLocalDriveModal,
-  toast,
-} from "@powerhousedao/design-system";
+} from "@powerhousedao/design-system/connect";
+import { AddDriveModal as ConnectAddLocalDriveModal } from "@powerhousedao/design-system/connect";
 import {
   addDrive,
   addRemoteDrive,

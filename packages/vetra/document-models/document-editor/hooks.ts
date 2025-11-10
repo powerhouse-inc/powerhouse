@@ -9,7 +9,7 @@ import type {
   DocumentEditorDocument,
   DocumentEditorAction,
 } from "@powerhousedao/vetra/document-models/document-editor";
-import { isDocumentEditorDocument } from "@powerhousedao/vetra/document-models/document-editor";
+import { isDocumentEditorDocument } from "./gen/document-schema.js";
 
 /** Hook to get a DocumentEditor document by its id */
 export function useDocumentEditorDocumentById(

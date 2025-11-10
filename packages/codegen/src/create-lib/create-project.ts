@@ -1,10 +1,10 @@
-import { parseArgs, promptDirectories } from "@powerhousedao/codegen";
 import type arg from "arg";
 import enquirer from "enquirer";
 import fs from "node:fs";
 import path from "path";
 import { featureFlags } from "./feature-flags.js";
 import { envPackageManager, runCmd } from "./utils.js";
+import { parseArgs, promptDirectories } from "../utils/cli.js";
 
 const BOILERPLATE_REPO =
   "https://github.com/powerhouse-inc/document-model-boilerplate.git";

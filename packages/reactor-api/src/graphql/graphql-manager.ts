@@ -19,11 +19,6 @@ import type {
   ISubgraph,
   SubgraphClass,
 } from "@powerhousedao/reactor-api";
-import {
-  DriveSubgraph,
-  buildSubgraphSchemaModule,
-  createSchema,
-} from "@powerhousedao/reactor-api";
 import bodyParser from "body-parser";
 import cors from "cors";
 import type { IDocumentDriveServer, IRelationalDb } from "document-drive";
@@ -35,6 +30,11 @@ import type { GraphQLSchema } from "graphql";
 import type http from "node:http";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import {
+  buildSubgraphSchemaModule,
+  createSchema,
+} from "../utils/create-schema.js";
+import { DriveSubgraph } from "./drive-subgraph.js";
 
 class AuthenticatedDataSource extends RemoteGraphQLDataSource {
   willSendRequest(options: GraphQLDataSourceProcessOptions) {

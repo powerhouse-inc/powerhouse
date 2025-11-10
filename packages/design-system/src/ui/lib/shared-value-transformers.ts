@@ -1,4 +1,4 @@
-import type { TransformerObject } from "@powerhousedao/design-system";
+import type { TransformerObject } from "./types.js";
 
 export const sharedValueTransformers: Record<
   string,
