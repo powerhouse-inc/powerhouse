@@ -79,10 +79,12 @@ export async function createTestOperationStore(): Promise<{
 export function createTestJob(overrides: Partial<Job> = {}): Job {
   const defaultJob: Job = {
     id: overrides.id || `job-${uuidv4()}`,
+    kind: overrides.kind ?? "mutation",
     documentId: "doc-1",
     scope: "global",
     branch: "main",
     actions: overrides.actions || [createTestAction()],
+    operations: overrides.operations || [],
     createdAt: new Date().toISOString(),
     queueHint: [],
     retryCount: 0,
@@ -102,10 +104,12 @@ export function createTestJob(overrides: Partial<Job> = {}): Job {
 export function createMinimalJob(overrides: Partial<Job> = {}): Job {
   return {
     id: overrides.id || `job-${uuidv4()}`,
+    kind: overrides.kind ?? "mutation",
     documentId: overrides.documentId || "doc-1",
     scope: overrides.scope || "global",
     branch: overrides.branch || "main",
     actions: overrides.actions || [createMinimalAction()],
+    operations: overrides.operations || [],
     createdAt: overrides.createdAt || "2023-01-01T00:00:00.000Z",
     queueHint: overrides.queueHint || [],
     errorHistory: overrides.errorHistory || [],
@@ -128,6 +132,7 @@ export function createTestOperation(
       overrides.action ? { ...overrides.action } : undefined,
     ),
     id: "op-1",
+    resultingState: JSON.stringify({ state: "test" }),
   };
 
   return {
@@ -161,6 +166,9 @@ export function createCreateDocumentOperation(
         version: "0.0.0",
       },
     } as Action,
+    resultingState:
+      overrides.resultingState ||
+      JSON.stringify({ document: { id: documentId } }),
     ...overrides,
   };
 }
@@ -187,6 +195,9 @@ export function createUpgradeDocumentOperation(
         initialState,
       },
     } as Action,
+    resultingState:
+      overrides.resultingState ||
+      JSON.stringify({ document: { id: documentId, index } }),
     ...overrides,
   };
 }
@@ -204,6 +215,8 @@ export function createMinimalOperation(
     skip: overrides.skip ?? 0,
     action: overrides.action || createMinimalAction(),
     id: overrides.id || `op-${uuidv4()}`,
+    resultingState:
+      overrides.resultingState || JSON.stringify({ state: "minimal" }),
   };
 }
 

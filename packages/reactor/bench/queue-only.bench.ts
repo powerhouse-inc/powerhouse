@@ -12,6 +12,7 @@ let jobCounter = 0;
 function createMinimalJob(): Job {
   return {
     id: `job-${++jobCounter}`,
+    kind: "mutation",
     documentId: "doc1",
     scope: "default",
     branch: "main",
@@ -24,6 +25,7 @@ function createMinimalJob(): Job {
         scope: "default",
       },
     ],
+    operations: [],
     maxRetries: 0,
     createdAt: "2023-01-01T00:00:00.000Z",
     queueHint: [],

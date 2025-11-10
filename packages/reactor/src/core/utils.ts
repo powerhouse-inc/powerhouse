@@ -1,4 +1,4 @@
-import type { Action, PHDocument } from "document-model";
+import type { Action, Operation, PHDocument } from "document-model";
 import type { ErrorInfo, PagedResults } from "../shared/types.js";
 
 /**
@@ -174,4 +174,26 @@ export function filterByType(
         }
       : undefined,
   };
+}
+
+/**
+ * Validates that all operations share the same scope.
+ * Throws an error if any operation has a different scope.
+ */
+export function getSharedScope(operations: Operation[]): string {
+  if (operations.length === 0) {
+    throw new Error("No operations provided");
+  }
+
+  const baseScope = operations[0].action.scope;
+  for (const [index, operation] of operations.entries()) {
+    const scope = operation.action.scope;
+    if (scope !== baseScope) {
+      throw new Error(
+        `All operations in load must share the same scope. Expected '${baseScope}', received '${scope}' at position ${index}`,
+      );
+    }
+  }
+
+  return baseScope;
 }

@@ -1144,10 +1144,12 @@ describe("InMemoryQueue", () => {
     it("should handle jobs with optional properties", async () => {
       const job = {
         id: "minimal-job",
+        kind: "mutation",
         documentId: "doc-1",
         scope: "global",
         branch: "main",
         actions: [createTestOperation().action],
+        operations: [],
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],

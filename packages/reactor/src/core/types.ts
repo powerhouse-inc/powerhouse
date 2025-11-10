@@ -189,6 +189,16 @@ export interface IReactor {
   ): Promise<JobInfo>;
 
   /**
+   * Loads existing operations generated elsewhere into this reactor.
+   */
+  load(
+    docId: string,
+    branch: string,
+    operations: Operation[],
+    signal?: AbortSignal,
+  ): Promise<JobInfo>;
+
+  /**
    * Applies multiple mutations across documents with dependency management.
    *
    * @param request - Batch mutation request containing jobs with dependencies
