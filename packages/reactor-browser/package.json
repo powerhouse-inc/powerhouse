@@ -36,8 +36,7 @@
     "tsc": "tsc",
     "lint": "eslint",
     "test:browser": "vitest run",
-    "install:playwright": "playwright install",
-    "check-circular-imports": "npx dpdm -T ./src/index.ts"
+    "install:playwright": "playwright install"
   },
   "devDependencies": {
     "@types/lodash.isequal": "^4.5.8",

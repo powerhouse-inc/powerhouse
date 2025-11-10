@@ -26,7 +26,6 @@
     "lint": "eslint",
     "test": "vitest run",
     "bench": "vitest bench",
-    "check-circular-imports": "npx dpdm -T ./index.ts",
     "codegen": "graphql-codegen --config codegen.ts && prettier --write src/graphql/reactor/gen/*.ts && eslint --fix src/graphql/reactor/gen/*.ts --no-warn-ignored",
     "codegen:watch": "graphql-codegen --config codegen.ts --watch"
   },

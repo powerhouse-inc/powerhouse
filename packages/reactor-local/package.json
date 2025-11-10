@@ -13,8 +13,7 @@
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "start": "vite-node src/index.ts",
-    "check-circular-imports": "npx dpdm -T ./index.ts"
+    "start": "vite-node src/index.ts"
   },
   "exports": "./dist/index.js",
   "types": "./dist/index.d.ts",

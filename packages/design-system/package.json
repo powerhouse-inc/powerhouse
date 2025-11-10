@@ -59,7 +59,6 @@
     "build-storybook": "storybook build",
     "test": "vitest run --exclude \"src/scalars/**\"",
     "test:watch": "vitest watch",
-    "check-circular-imports": "npx dpdm -T ./src/index.ts",
     "chromatic": "npx chromatic --project-token=chpt_b9c79db0df52861"
   },
   "author": {

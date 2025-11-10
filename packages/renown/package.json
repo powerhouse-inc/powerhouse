@@ -30,8 +30,7 @@
   ],
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint",
-    "check-circular-imports": "npx dpdm -T ./src/index.ts"
+    "lint": "eslint"
   },
   "peerDependencies": {
     "document-model": "workspace:*",

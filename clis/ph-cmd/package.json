@@ -27,8 +27,7 @@
     "build": "npm run generate-commands-md && npm run generate-version",
     "dev": "tsx src/cli.ts",
     "test": "vitest run",
-    "test:watch": "vitest watch",
-    "check-circular-imports": "npx dpdm -T ./src/index.ts"
+    "test:watch": "vitest watch"
   },
   "keywords": [],
   "author": "",

@@ -26,7 +26,6 @@
     "generate-version": "tsx scripts/generate-version.ts",
     "build": "npm run generate-commands-md && npm run generate-version && tsc && npm run copy-scripts",
     "copy-scripts": "copyfiles scripts/* dist/",
-    "check-circular-imports": "npx dpdm -T ./src/index.ts",
     "dev": "concurrently -P 'pnpm -w run tsc --watch' 'nodemon --watch \"../..\" -e ts,tsx,js,json dist/src/cli.js -- {@}' --",
     "test": "vitest --run"
   },

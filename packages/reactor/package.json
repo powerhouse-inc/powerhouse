@@ -24,7 +24,6 @@
     "test": "vitest run --coverage --printConsoleTrace=true --silent=false",
     "test:watch": "vitest --coverage",
     "lint": "eslint",
-    "check-circular-imports": "npx dpdm -T ./src/index.ts",
     "bench": "vitest bench --run",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules",

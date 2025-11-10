@@ -22,8 +22,7 @@
     "test": "vitest run",
     "test:run": "vitest run",
     "test:watch": "vitest",
-    "bench": "vitest bench",
-    "check-circular-imports": "npx dpdm -T ./src/index.ts"
+    "bench": "vitest bench"
   },
   "publishConfig": {
     "access": "public"

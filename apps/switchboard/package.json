@@ -25,7 +25,6 @@
     "lint": "eslint",
     "build": "pnpm run install-packages",
     "start": "node dist/src/index.js",
-    "check-circular-imports": "npx dpdm -T ./src/index.ts",
     "dev": "concurrently -P 'pnpm -w run tsc --watch' 'nodemon --trace-warnings --watch \"../..\" -e ts,tsx,js,json dist/src/index.js -- {@}' --",
     "install-packages": "node dist/src/install-packages.js"
   },

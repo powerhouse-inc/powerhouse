@@ -62,7 +62,6 @@
     "build:css": "npx @tailwindcss/cli -i ./style.css -o ./dist/style.css",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check-circular-imports": "npx dpdm -T ./index.ts",
     "test:document-models": "vitest run document-models",
     "test:editors": "vitest run editors",
     "test:processors": "vitest run processors",

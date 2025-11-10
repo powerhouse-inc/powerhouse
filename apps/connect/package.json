@@ -63,7 +63,6 @@
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "check-circular-imports": "npx dpdm -T ./src/index.ts",
     "postinstall": "cp ./package.json ./package.copy.json",
     "dev": "vite dev",
     "build:vite": "vite build",

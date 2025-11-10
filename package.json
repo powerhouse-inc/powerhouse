@@ -5,7 +5,6 @@
   "scripts": {
     "tsc": "tsc",
     "tsc:build": "tsc --build",
-    "check": "pnpm tsc:build && pnpm lint",
     "build": "pnpm tsc:build && pnpm build:misc && pnpm build:css && pnpm build:vite",
     "test": "pnpm -r --no-bail test",
     "test:ci": "pnpm --filter !document-drive --filter !./packages/reactor/** -r --no-bail test",
@@ -19,7 +18,7 @@
     "build:storybook": "pnpm -r --no-bail run build-storybook",
     "clean": "pnpm exec scripts/simulate-fresh-git-clone.sh",
     "prepare": "husky",
-    "check-circular-imports": "npx dpdm -T ./**/* --tree false --warning false"
+    "check-circular-imports": "dpdm -T ./**/* --tree false --warning false"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
@@ -27,6 +26,7 @@
     "@eslint/js": "^9.36.0",
     "@jscutlery/semver": "^5.6.0",
     "@nx/devkit": "20.4.6",
+    "@nx/js": "20.4.6",
     "@nx/plugin": "^20.4.6",
     "@swc-node/register": "~1.10.9",
     "@swc/cli": "~0.6.0",
@@ -35,6 +35,7 @@
     "@types/node": "^24.6.1",
     "@types/semver": "^7.7.0",
     "@types/yargs": "^17.0.33",
+    "dpdm": "^3.14.0",
     "eslint": "^9.36.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
@@ -45,7 +46,6 @@
     "husky": "^9.1.7",
     "monocart-coverage-reports": "^2.12.8",
     "nx": "20.4.6",
-    "@nx/js": "20.4.6",
     "playwright": "^1.55.0",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.6.14",
