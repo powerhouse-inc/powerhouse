@@ -1,3 +1,7 @@
+## 4.1.0-dev.109 (2025-11-10)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.108 (2025-11-10)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

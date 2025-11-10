@@ -1,3 +1,13 @@
+## 4.1.0-dev.109 (2025-11-10)
+
+### 🩹 Fixes
+
+- **codegen:** remove shared types and enums from subgraph schema template ([8de6e6429](https://github.com/powerhouse-inc/powerhouse/commit/8de6e6429))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.108 (2025-11-10)
 
 ### 🩹 Fixes
