@@ -1,5 +1,5 @@
-import { useCookieBanner } from "@powerhousedao/connect/hooks/useCookieBanner";
-import { openUrl } from "@powerhousedao/connect/utils/openUrl";
+import { useCookieBanner } from "@powerhousedao/connect/hooks";
+import { openUrl } from "@powerhousedao/connect/utils";
 import { Icon } from "@powerhousedao/design-system";
 import {
   Footer as DesignSystemFooter,

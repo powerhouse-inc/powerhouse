@@ -3,7 +3,7 @@ import { PH_PACKAGES } from "@powerhousedao/config";
 import {
   addExternalPackage,
   removeExternalPackage,
-} from "@powerhousedao/connect/services/hmr";
+} from "@powerhousedao/connect/services";
 import { PackageManager } from "@powerhousedao/design-system/connect";
 import {
   makeVetraPackageManifest,

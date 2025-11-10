@@ -23,7 +23,13 @@
   ],
   "exports": {
     "./package.json": "./package.copy.json",
-    "./*": {
+    "./main.js": {
+      "source": "./src/main.tsx",
+      "import": "./lib/src/main.js",
+      "types": "./lib/src/main.d.ts"
+    },
+    "./*.js": {
+      "source": "./src/*.ts",
       "import": "./lib/src/*.js",
       "types": "./lib/src/*.d.ts"
     },
@@ -32,15 +38,45 @@
       "import": "./lib/src/components/index.js",
       "types": "./lib/src/components/index.d.ts"
     },
-    "./main.js": {
-      "source": "./src/main.tsx",
-      "import": "./lib/src/main.js",
-      "types": "./lib/src/main.d.ts"
+    "./pages": {
+      "source": "./src/pages/index.ts",
+      "import": "./lib/src/pages/index.js",
+      "types": "./lib/src/pages/index.d.ts"
+    },
+    "./services": {
+      "source": "./src/services/index.ts",
+      "import": "./lib/src/services/index.js",
+      "types": "./lib/src/services/index.d.ts"
+    },
+    "./context": {
+      "source": "./src/context/index.ts",
+      "import": "./lib/src/context/index.js",
+      "types": "./lib/src/context/index.d.ts"
+    },
+    "./hooks": {
+      "source": "./src/hooks/index.ts",
+      "import": "./lib/src/hooks/index.js",
+      "types": "./lib/src/hooks/index.d.ts"
+    },
+    "./store": {
+      "source": "./src/store/index.ts",
+      "import": "./lib/src/store/index.js",
+      "types": "./lib/src/store/index.d.ts"
+    },
+    "./utils": {
+      "source": "./src/utils/index.ts",
+      "import": "./lib/src/utils/index.js",
+      "types": "./lib/src/utils/index.d.ts"
     },
     "./config": {
       "source": "./src/connect.config.ts",
       "import": "./lib/src/connect.config.js",
       "types": "./lib/src/connect.config.d.ts"
+    },
+    "./i18n": {
+      "source": "./src/i18n/index.ts",
+      "import": "./lib/src/i18n/index.js",
+      "types": "./lib/src/i18n/index.d.ts"
     },
     "./custom.d.ts": "./lib/custom.d.ts",
     "./style.css": "./src/index.css",

@@ -1,4 +1,4 @@
-import { getBasePath } from "@powerhousedao/connect/utils/browser";
+import { getBasePath } from "@powerhousedao/connect/utils";
 import {
   AnimatedLoader,
   ConnectSidebar,

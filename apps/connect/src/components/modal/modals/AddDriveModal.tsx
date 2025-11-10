@@ -1,4 +1,4 @@
-import { toast } from "@powerhousedao/connect/services/toast";
+import { toast } from "@powerhousedao/connect/services";
 import type {
   AddLocalDriveInput,
   AddRemoteDriveInput,

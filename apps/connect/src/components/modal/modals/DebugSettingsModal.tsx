@@ -1,5 +1,5 @@
 import { connectConfig } from "@powerhousedao/connect/config";
-import { serviceWorkerManager } from "@powerhousedao/connect/utils/registerServiceWorker";
+import { serviceWorkerManager } from "@powerhousedao/connect/utils";
 import { Icon, Modal, PowerhouseButton } from "@powerhousedao/design-system";
 import { Combobox, FormInput } from "@powerhousedao/design-system/connect";
 import {
