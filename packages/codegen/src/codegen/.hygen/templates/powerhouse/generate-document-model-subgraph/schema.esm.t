@@ -28,16 +28,23 @@ type Mutation {
 
 <% modules.forEach(module => { _%>
 <% module.operations.forEach(op => { _%>
-    <%- h.changeCase.pascal(documentType) + '_' + h.changeCase.camel(op.name) 
-    %>(driveId:String, docId:PHID, input:<%- 
+    <%- h.changeCase.pascal(documentType) + '_' + h.changeCase.camel(op.name)
+    %>(driveId:String, docId:PHID, input:<%-
         h.changeCase.pascal(documentType) + '_' + h.changeCase.pascal(op.name) %>Input): Int
 <%_ })}); %>}
+<% if (schema && schema.trim()) { _%>
+
+"""
+Shared types and enums from state schema
+"""
+<%- schema %>
+<% } _%>
 <% modules.forEach(module => { _%>
 
 """
 Module: <%= h.changeCase.pascal(module.name) %>
 """
 <% module.operations.forEach(op => { _%>
-<%- op.schema.replace('input ', 'input ' + h.changeCase.pascal(documentType) + '_').replace('type ', 'type ' + h.changeCase.pascal(documentType) + '_') %>
+<%- op.schema %>
 <%_ })}); %>
 `
