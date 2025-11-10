@@ -1,3 +1,13 @@
+## 4.1.0-dev.108 (2025-11-10)
+
+### 🩹 Fixes
+
+- **codegen:** include enums and schema types in subgraph schema ([#2092](https://github.com/powerhouse-inc/powerhouse/pull/2092))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.107 (2025-11-10)
 
 ### 🚀 Features
