@@ -2,17 +2,15 @@
 
 Synchronization refers to synchronizing the operations of one reactor with another. This is a key part of the Reactor architecture.
 
-- We focus on synchronizing the `IOperationsStore`, and bubbling outward.
-  - This allows us to decouple sync and Document View updates.
-  - This consolidates `IListenerManager`, `ISyncManager`, and `IDocumentView` update flows into a single dispatch pattern.
+- We focus on synchronizing the `IOperationStore`, and bubbling outward.
+  - This allows us to decouple sync and read-model updates.
+  - This consolidates multiple legacy systems into a single dispatch pattern.
 
 ## ISyncManager
 
 This object manages the synchronization of operations between reactors.
 
-- **`ISyncManager`**
-  - In the following diagrams, this object is not an exact mapping to the current `ISyncManager`.
-  - The `ISyncManager` has its own storage mechanism and rather than being tied so the internal mechanisms of the Reactor, propagates from the event bus.
+The `ISyncManager` has its own storage mechanism and rather than being tied so the internal mechanisms of the Reactor, propagates from the event bus.
 
 ### Push
 
@@ -21,8 +19,7 @@ Describes a one-way flow of data from one Reactor to another, pushing operations
 ```mermaid
 graph
     subgraph "IReactor A"
-        AQueue["IQueue"] -->|"(1)"| AJobs["IJobExecutor"] -->|"(2) Write"| AOS["IOperationsStore"]
-        AOS -->|"(3)"| APub
+        Mutate["mutate()"] -->|"Action[]"| JE["Job Execution"] -->|"Operation[]"| APub
 
         subgraph AEvents["IEventBus"]
             APub["emit()"]
@@ -30,13 +27,11 @@ graph
         end
     end
 
-    ASub -->|"(4)"| ASync["ISyncManager"]
-    ASync -->|"(5)"| ISyncStorage
-    ASync -->|"(6)"| Trigger -->|"(7)"| IChannel -->|"(8)"| BQueue
+    ASub --> ASync["ISyncManager"]
+    ASync --> IChannel -->|"Transport"| Load
 
     subgraph "Reactor B"
-        BQueue["IQueue"] -->|"(9)"| BJobs["IJobExecutor"] -->|"(10) Write"| BOS["IOperationsStore"]
-        BOS -->|"(11)"| BPub
+        Load["load()"] -->|"Operation[]"| JEB["Job Execution"] -->|"Operation[]"| BPub
 
         subgraph BEvents["IEventBus"]
             BPub["emit()"]
@@ -51,30 +46,22 @@ Describes a one-way flow of data from one Reactor to another, pulling operations
 
 ```mermaid
 graph
+    BScheduler["Scheduler"] --> BSync["ISyncManager"]
+    IChannel <-->|"(1) Query"| AOI
+    BSync --> IChannel -->|"(2) Transport"| Load
+
     subgraph "IReactor A"
-        ADV["IDocumentView"]
+        AOI["IOperationIndex"]
     end
 
     subgraph "Reactor B"
-        BQueue --> BJobs["IJobExecutor"] --> BOS["IOperationsStore"]
-        BOS --> BPub
-
-        subgraph BEvents["IEventBus"]
-            BPub["emit()"]
-            BSub["on()"]
-        end
+        Load["load()"] -->|"Operations[]"| JEB["Job Execution"]
     end
-
-    BScheduler["Scheduler Interval"] -->|"(1) Interval"| BSync["ISyncManager"]
-    BSync -->|"(2) Query"| IChannel
-    IChannel -->|"(3) Read"| ADV
-    IChannel -->|"(4) Operations"| BSync
-    BSync -->|"(5) Enqueue"| BQueue["IQueue"]
 ```
 
 ### Ping-Pong
 
-Since both `Push-to-Switchboard` and `Pull-from-Switchboard` are one-way flows, we combine them into a ping-pong pattern. This is where both reactors are pushing and pulling through the `IChannel` interface.
+Since both `Push` and `Pull` are one-way flows, we combine them into a ping-pong pattern. This is where both reactors are pushing and pulling through the `IChannel` interface.
 
 The schedulers are "smart" and understand how to optimimally set intervals based on a number of factors, including:
 
@@ -87,8 +74,7 @@ The schedulers are "smart" and understand how to optimimally set intervals based
 graph
     %% === Reactor A ===
     subgraph "IReactor A"
-        AQueue["IQueue"] --> AJobs["IJobExecutor"] --> AOS["IOperationsStore"]
-        AOS --> APub
+        AMutate["mutate()"] -->|"Action[]"| AJE["Job Execution"] -->|"Operation[]"| APub
 
         subgraph AEventBus["IEventBus"]
             APub["emit()"]
@@ -97,23 +83,21 @@ graph
 
         subgraph ASyncManager["Synchronization"]
             AScheduler["Scheduler"] --> ASync["ISyncManager"]
-            ASync --> ASyncStore["ISyncStorage"]
         end
 
         ASub --> ASync
-        ASync --> AQueue
+        ASync --> AIChannel["IChannel"]
+        AIChannel <-->|"Query"| AOI["IOperationIndex"]
     end
 
     %% Network
-    ASync <--> AIChannel["IChannel"]
-    AIChannel <--> Transport["Memory / HTTP / WebSocket / etc."]
-    Transport <--> BAIChannel["IChannel"]
-    BAIChannel <--> BSync
+    AIChannel -->|"Transport"| Transport["Memory / HTTP / WebSocket / etc."]
+    Transport -->|"Transport"| BIChannel["IChannel"]
+    BIChannel <-->|"Query"| BOI["IOperationIndex"]
 
     %% === Reactor B ===
     subgraph "IReactor B"
-        BQueue["IQueue"] --> BJobs["IJobExecutor"] --> BOS["IOperationsStore"]
-        BOS --> BPub
+        BMutate["mutate()"] -->|"Action[]"| BJE["Job Execution"] -->|"Operation[]"| BPub
 
         subgraph BEventBus["IEventBus"]
             BPub["emit()"]
@@ -122,12 +106,21 @@ graph
 
         subgraph BSyncManager["Synchronization"]
             BScheduler["Scheduler"] --> BSync["ISyncManager"]
-            BSync --> BSyncStore["ISyncStorage"]
         end
 
         BSub --> BSync
-        BSync --> BQueue
+        BSync --> BIChannel
     end
+
+    %% Push flows (A -> B)
+    AIChannel -->|"Transport"| BLoad["load()"] -->|"Operations[]"| BJE
+
+    %% Push flows (B -> A)
+    BIChannel -->|"Transport"| ALoad["load()"] -->|"Operations[]"| AJE
+
+    %% Pull flows
+    ASync -->|"Pull"| AIChannel
+    BSync -->|"Pull"| BIChannel
 ```
 
 ### Ping-Pong: Sequence
@@ -135,39 +128,35 @@ graph
 ```mermaid
 sequenceDiagram
     participant EBA as Event Bus A
-    participant QA as Queue A
     participant SMA as Sync Manager A
+    participant AChannel as IChannel A
+    participant AOI as IOperationIndex A
+    participant LoadA as load()
+    participant JEA as Job Execution A
+
+    participant BChannel as IChannel B
+    participant LoadB as load()
+    participant JEB as Job Execution B
     participant SMB as Sync Manager B
-    participant QB as Queue B
+    participant SchedulerB as Scheduler B
     participant EBB as Event Bus B
 
-    Note over EBA, EBB: Push sync
+    %% Reactor A pushes operations
+    EBA->>SMA: Operation[]
+    SMA->>AChannel: send(Operation[])
+    AChannel->>BChannel: Transport
+    BChannel->>LoadB: load(Operation[])
+    LoadB->>JEB: Operation[]
+    JEB->>EBB: Operation[]
 
-    %% Reactor A initiates sync
-    EBA->>SMA: operations added
-    SMA->>SMB: push(operations)
-    SMB->>QB: enqueue(operations)
-
-    %% Reactor B responds with its operations
-    EBB->>SMB: operations added
-    SMB->>SMA: push(operations)
-    SMA->>QA: enqueue(operations)
-
-    %% Continued ping-pong
-    EBA->>SMA: operations added
-    SMA->>SMB: push(operations)
-    SMB->>QB: enqueue(operations)
-
-    Note over EBA, EBB: Pull sync
-
-    %% Pull-based sync (scheduled)
-    SMA->>SMB: pull() request
-    SMB-->>SMA: return(latest operations)
-    SMA->>QA: enqueue(operations)
-
-    SMB->>SMA: pull() request
-    SMA-->>SMB: return(latest operations)
-    SMB->>QB: enqueue(operations)
+    %% Reactor B pulls operations
+    SchedulerB->>SMB: Interval
+    SMB->>BChannel: Query
+    BChannel->>AOI: Query
+    AOI-->>BChannel: Operations[]
+    BChannel->>AChannel: Transport
+    AChannel->>LoadA: load()
+    LoadA->>JEA: Operations[]
 ```
 
 ## IChannel
@@ -195,6 +184,7 @@ enum JobChannelStatus {
 }
 
 enum ChannelErrorSource {
+  None = "none",
   Channel = "channel",
   Inbox = "inbox",
   Outbox = "outbox",
@@ -216,7 +206,7 @@ class ChannelError extends Error {
   error: Error;
 
   constructor(source: ChannelErrorSource, error: Error) {
-    super(message);
+    super(`ChannelError[${source}]: ${error.message}`);
 
     this.source = source;
     this.error = error;
@@ -276,7 +266,7 @@ class MutableJobHandle extends JobHandle {
   /**
    * Moves job from any state to Error.
    */
-  failed(error: Error): void;
+  failed(error: ChannelError): void;
 }
 
 class Mailbox<T> {
@@ -320,7 +310,7 @@ interface IChannel {
   /**
    * The incoming queue of operations that need to be applied to the local reactor.
    *
-   * These are of type `PullJobHandle` to expose mutable functions to the consumer.
+   * These are of type `MutableJobHandle` to expose mutable functions to the consumer.
    */
   inbox: Mailbox<MutableJobHandle>;
 
@@ -353,7 +343,7 @@ interface IChannel {
 const channel = new WebSocketChannel();
 
 // when something is added to our inbox...
-channel.inbox.added((handle) => {
+channel.inbox.onAdded(async (handle) => {
   // create a job from the handle
   const job = createJob(handle);
 
@@ -372,7 +362,7 @@ channel.inbox.added((handle) => {
 });
 
 // when something is added to our outbox...
-channel.outbox.added((job) => {
+channel.outbox.onAdded((job) => {
   console.log(
     `Remote server is applying ${job.operations.length} operations...`,
   );
@@ -381,7 +371,7 @@ channel.outbox.added((job) => {
 });
 
 // when something is removed from our outbox...
-channel.outbox.removed((job) => {
+channel.outbox.onRemoved((job) => {
   console.log(
     `Remote server has applied ${job.operations.length} operations...`,
   );
@@ -390,7 +380,7 @@ channel.outbox.removed((job) => {
 });
 
 // when a job has permanently failed to be applied...
-channel.deadLetter.added((job) => {
+channel.deadLetter.onAdded((job) => {
   console.log(`Job ${job.id} has failed to be applied...`);
 });
 
