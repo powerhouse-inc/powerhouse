@@ -1,4 +1,3 @@
-export { setAllDocuments, useAllDocuments } from "./all-documents.js";
 export { useAllowedDocumentModelModules } from "./allowed-document-model-modules.js";
 export { useNodesInSelectedDriveOrFolder } from "./child-nodes.js";
 export {
@@ -22,6 +21,12 @@ export {
   usePHDriveEditorConfigByKey,
 } from "./config/use-value-by-key.js";
 export { useDocumentById } from "./document-by-id.js";
+export {
+  useDocumentCache,
+  useGetDocument,
+  useGetDocumentAsync,
+  useGetDocuments,
+} from "./document-cache.js";
 export {
   useDocumentModelModuleById,
   useDocumentModelModules,

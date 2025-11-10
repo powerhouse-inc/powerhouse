@@ -1,7 +1,7 @@
 import type { FileNode, FolderNode } from "document-drive";
 import type { DocumentModelDocument, PHDocument } from "document-model";
 import { isFileNodeKind, isFolderNodeKind } from "../utils/nodes.js";
-import { useAllDocuments } from "./all-documents.js";
+import { useDocumentsByIds } from "./document-by-id.js";
 import { useSelectedDriveSafe } from "./selected-drive.js";
 
 /** Returns the nodes in the selected drive. */
@@ -24,10 +24,9 @@ export function useFolderNodesInSelectedDrive(): FolderNode[] | undefined {
 
 /** Returns the documents in the selected drive. */
 export function useDocumentsInSelectedDrive(): PHDocument[] | undefined {
-  const documents = useAllDocuments();
   const fileNodes = useFileNodesInSelectedDrive();
   const fileNodeIds = fileNodes?.map((node) => node.id);
-  return documents?.filter((d) => fileNodeIds?.includes(d.header.id));
+  return useDocumentsByIds(fileNodeIds);
 }
 
 /** Returns the document types supported by the selected drive, as defined by the document model documents present in the drive */
