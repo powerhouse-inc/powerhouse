@@ -1,16 +1,14 @@
 import { connectConfig } from "@powerhousedao/connect/config";
 import { serviceWorkerManager } from "@powerhousedao/connect/utils/registerServiceWorker";
+import { Icon, Modal, PowerhouseButton } from "@powerhousedao/design-system";
 import { Combobox, FormInput } from "@powerhousedao/design-system/connect";
-import { PowerhouseButton } from "@powerhousedao/design-system/powerhouse/components/button/button";
-import { Icon } from "@powerhousedao/design-system/powerhouse/components/icon/icon";
-import { Modal } from "@powerhousedao/design-system/powerhouse/components/modal/modal";
 import {
-    addTrigger,
-    closePHModal,
-    registerNewPullResponderTrigger,
-    removeTrigger,
-    useDrives,
-    usePHModal,
+  addTrigger,
+  closePHModal,
+  registerNewPullResponderTrigger,
+  removeTrigger,
+  useDrives,
+  usePHModal,
 } from "@powerhousedao/reactor-browser";
 import { generateUUIDBrowser } from "document-model/core";
 import { useEffect, useState } from "react";

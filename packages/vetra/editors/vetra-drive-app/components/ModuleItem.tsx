@@ -1,8 +1,9 @@
-import { ConnectDropdownMenu } from "@powerhousedao/design-system/connect";
-import { nodeOptionsMap } from "@powerhousedao/design-system/connect/constants/options";
-import type { NodeOption } from "@powerhousedao/design-system/connect/types/options";
-import { Icon } from "@powerhousedao/design-system/powerhouse/components/icon/icon";
-import { cn } from "@powerhousedao/design-system/utils/cn";
+import type { NodeOption } from "@powerhousedao/design-system";
+import { cn, Icon } from "@powerhousedao/design-system";
+import {
+  ConnectDropdownMenu,
+  nodeOptionsMap,
+} from "@powerhousedao/design-system/connect";
 import type { FileNode } from "document-drive";
 import React, { useState } from "react";
 import { DOCUMENT_TYPES } from "../document-types.js";

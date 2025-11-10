@@ -1,7 +1,7 @@
 import { DriveIcon } from "@powerhousedao/connect/components/drive-icon";
 import { connectConfig } from "@powerhousedao/connect/config";
+import { Icon } from "@powerhousedao/design-system";
 import { ConnectSidebar, SidebarAddDriveItem, SidebarItem } from "@powerhousedao/design-system/connect";
-import { Icon } from "@powerhousedao/design-system/powerhouse/components/icon/icon";
 
 import {
     logout,

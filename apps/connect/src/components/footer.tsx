@@ -1,7 +1,7 @@
 import { useCookieBanner } from "@powerhousedao/connect/hooks/useCookieBanner";
 import { openUrl } from "@powerhousedao/connect/utils/openUrl";
+import { Icon } from "@powerhousedao/design-system";
 import { Footer as DesignSystemFooter, FooterLink } from "@powerhousedao/design-system/connect";
-import { Icon } from "@powerhousedao/design-system/powerhouse/components/icon/icon";
 import { showPHModal } from "@powerhousedao/reactor-browser";
 import { Trans } from "react-i18next";
 

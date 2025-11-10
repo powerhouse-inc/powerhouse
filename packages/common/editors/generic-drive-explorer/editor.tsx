@@ -1,5 +1,5 @@
 import { Breadcrumbs } from "@powerhousedao/design-system/connect";
-import { useDrop } from "@powerhousedao/design-system/connect/hooks/drag-and-drop/use-drop";
+import { useDrop } from "@powerhousedao/design-system/connect";
 import { useSetPHDriveEditorConfig } from "@powerhousedao/reactor-browser";
 import type { EditorProps } from "document-model";
 import { CreateDocument } from "./components/create-document.js";

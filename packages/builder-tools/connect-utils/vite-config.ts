@@ -279,6 +279,9 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
         "@powerhousedao/reactor-browser",
         "@powerhousedao/common",
         "@powerhousedao/config",
+        "@powerhousedao/design-system",
+        "@powerhousedao/design-system/connect",
+        "@powerhousedao/connect",
       ],
     },
     build: {

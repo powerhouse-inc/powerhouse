@@ -2,13 +2,13 @@ import { Icon } from "@powerhousedao/design-system";
 import { setSelectedNode } from "@powerhousedao/reactor-browser";
 import type { Node } from "document-drive";
 import {
-  type ComponentPropsWithoutRef,
-  type ReactNode,
-  useEffect,
-  useState,
+    type ComponentPropsWithoutRef,
+    type ReactNode,
+    useEffect,
+    useState,
 } from "react";
 import { twMerge } from "tailwind-merge";
-import { useDrop } from "../../hooks/drag-and-drop/use-drop.js";
+import { useDrop } from "../../hooks/use-drop.js";
 import { ConnectReplaceDuplicateModal } from "../modal/replace-duplicate-modal.js";
 import { UploadFileListContainer } from "./upload-file-list-container.js";
 import { useUploadTracker } from "./use-upload-tracker.js";

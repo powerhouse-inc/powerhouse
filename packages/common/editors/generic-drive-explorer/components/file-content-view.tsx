@@ -1,8 +1,8 @@
+import { useWindowSize } from "@powerhousedao/design-system";
 import { FileItem } from "@powerhousedao/design-system/connect";
-import { useWindowSize } from "@powerhousedao/design-system/powerhouse/hooks/useWindowSize";
 import {
-    isFileNodeKind,
-    useNodesInSelectedDriveOrFolder,
+  isFileNodeKind,
+  useNodesInSelectedDriveOrFolder,
 } from "@powerhousedao/reactor-browser";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { FileNode } from "document-drive";
