@@ -18,7 +18,7 @@
     "build:storybook": "pnpm -r --no-bail run build-storybook",
     "clean": "pnpm exec scripts/simulate-fresh-git-clone.sh",
     "prepare": "husky",
-    "check-circular-imports": "dpdm -T ./**/* --tree false --warning false"
+    "check-circular-imports": "dpdm -T ./**/* --no-tree --no-warning --exit-code circular:1"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
