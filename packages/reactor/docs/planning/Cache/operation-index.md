@@ -25,6 +25,7 @@ Thus, `IOperationIndex` is a write model and approach (1) is the more viable opt
 ### Requirements
 
 - `IOperationIndex` must have a rollback mechanism, in order to support optimistic writes, in the case that writes to the `IOperationStore` fail.
+  - Because the index is not append-only, every write already has full update/delete capabilities. If the paired write to `IOperationStore` fails after we have staged index mutations, we simply open a compensating transaction that reverses the affected rows (delete new ordinals, restore previous metadata), so both stores remain in sync without needing special append-only rollback semantics.
 
 - Ideally, collections are not created lazily, they are created when new operations are made available.
 
@@ -40,7 +41,7 @@ Operations are kept in the `IOperationStore` as a table of `Operation`s. The ful
 | 2   | 1     | 2    | 1        | 2021-01-01 00:00:00 | doc1       | scope1 | branch1 | 2021-01-01 00:00:00 | 2     | { "type": "update", "data": { "id": "1", "name": "New Name" } } | 0    |
 | 3   | 1     | 3    | 2        | 2021-01-01 00:00:00 | doc1       | scope1 | branch1 | 2021-01-01 00:00:00 | 3     | { "type": "delete", "data": { "id": "1" } }                     | 0    |
 
-The `IOperationIndex` defines a new table that relates documents to each other, in a flat structure we call a **Collection**. A collection is the set of all documents that have ever been in that drive. A drive is always a member of it's own collection. While documents are free to exist in a graph structure (with some restrictions), the `IOperationIndex` only stores flat collections of documents.
+The `IOperationIndex` defines a new table that relates documents to each other, in a flat structure we call a **Collection**. A collection is the set of all documents that have ever been attached to the same collection root. The root document is always a member of its own collection. While documents are free to exist in a graph structure (with some restrictions), the `IOperationIndex` only stores flat collections of documents.
 
 | documentId | collectionId |
 | ---------- | ------------ |
@@ -48,15 +49,19 @@ The `IOperationIndex` defines a new table that relates documents to each other, 
 | doc2       | collection1  |
 | doc3       | collection2  |
 
+Collections are materialized directly from the operation log. When a `CREATE_DOCUMENT` operation is processed for a collection root document (currently only the `document-drive` model), we create the backing collection row (`collection.{documentId}`). Relationship updates keep membership fresh: `ADD_RELATIONSHIP` inserts the related document ids into the appropriate collections, while `REMOVE_RELATIONSHIP` deletes them. Because those actions describe every collection/document association, multi-collection membership falls out naturally without bespoke bookkeeping.
+
+> Today only document-drive models act as collection roots, but the mechanism leaves room for additional types later.
+
 Additionally, the `IOperationIndex` stores a table very similar to the `IOperationStore` table, so that a join can be performed on `documentId`.
 
-| ordinal | opId | documentId | documentType  | scope  | branch  | timestampUtcMs      | index | action                                                          |
-| ------- | ---- | ---------- | ------------- | ------ | ------- | ------------------- | ----- | --------------------------------------------------------------- |
-| 1       | 1    | doc1       | documentType1 | scope1 | branch1 | 2021-01-01 00:00:00 | 1     | { "type": "create", "data": { "id": "1" } }                     |
-| 2       | 1    | doc1       | documentType1 | scope1 | branch1 | 2021-01-01 00:00:00 | 2     | { "type": "update", "data": { "id": "1", "name": "New Name" } } |
-| 3       | 1    | doc1       | documentType1 | scope1 | branch1 | 2021-01-01 00:00:00 | 3     | { "type": "delete", "data": { "id": "1" } }                     |
+| ordinal | opId | jobId | prevOpId | documentId | documentType  | scope  | branch  | timestampUtcMs      | writeTimestampUtcMs | index | skip | hash     | action                                                          |
+| ------- | ---- | ----- | -------- | ---------- | ------------- | ------ | ------- | ------------------- | ------------------- | ----- | ---- | -------- | --------------------------------------------------------------- |
+| 1       | 1    | job1  | null     | doc1       | documentType1 | scope1 | branch1 | 2021-01-01 00:00:00 | 2021-01-01 00:00:00 | 1     | 0    | hash-001 | { "type": "create", "data": { "id": "1" } }                     |
+| 2       | 2    | job1  | 1        | doc1       | documentType1 | scope1 | branch1 | 2021-01-01 00:00:00 | 2021-01-01 00:00:01 | 2     | 0    | hash-002 | { "type": "update", "data": { "id": "1", "name": "New Name" } } |
+| 3       | 3    | job1  | 2        | doc1       | documentType1 | scope1 | branch1 | 2021-01-01 00:00:00 | 2021-01-01 00:00:02 | 3     | 0    | hash-003 | { "type": "delete", "data": { "id": "1" } }                     |
 
-The main difference is that the `IOperationIndex` table is not append-only. It is garbage collected and thus has no skip, only ordered streams.
+The column set mirrors `IOperationStore`, but the `IOperationIndex` table is still not append-only. Because it can be garbage collected or rebalanced, we rely on `ordinal` for ordering rather than physical insertion order, while retaining `skip`, `hash`, and other reducer outputs for downstream consumers.
 
 **Note on DELETE_DOCUMENT Operations**: DELETE_DOCUMENT operations are indexed like any other operation. They represent a state transition (marking the document as deleted) rather than physical removal. The read models (like `IDocumentView`) are responsible for interpreting these operations and filtering out deleted documents in queries. The `IOperationIndex` simply ensures these operations are available to read models and listeners.
 
@@ -66,77 +71,45 @@ A query to get all operations for a collection and branch would look like someth
 SELECT
     oi.ordinal,
     oi.opId,
+    oi.jobId,
+    oi.prevOpId,
     oi.documentId,
     oi.documentType,
     oi.scope,
     oi.branch,
     oi.timestampUtcMs,
+    oi.writeTimestampUtcMs,
     oi.index,
+    oi.skip,
+    oi.hash,
     oi.action
 FROM operation_index_operations oi
 JOIN document_collections dc ON oi.documentId = dc.documentId
 WHERE 1=1
-    AND dc.collectionId in ('collection1', 'collection2')
-    AND oi.documentType in ('documentType1', 'documentType2')
-    AND oi.branch in ('branch1', 'branch2')
-    AND oi.scope in ('scope1', 'scope2')
+    AND dc.collectionId = 'collection.doc-123'
+    AND oi.branch = 'main'
+    AND oi.documentType IN ('documentType1', 'documentType2')
+    AND oi.scope IN ('scope1', 'scope2')
 ORDER BY oi.ordinal;
 ```
 
-### `OperationFilter` --> Collection Id
+### Collection Derivation
 
-Collection ids are able to be explicitly created from an `OperationFilter`. This ensures that the `IOperationIndex` can forward-create collections for Listeners that may not exist yet.
-
-Here is the definition of the `OperationFilter` type:
+`ISyncManager` and `IOperationIndex` share the same rule for constructing collection identifiers so they can both pre-create and query the same sets. Because collection roots currently map 1:1 with their backing documents, the collection id is simply derived from that document id:
 
 ```ts
-type OperationFilter = {
-  driveId: string[];
-  documentId: string[];
-  branch: string[];
-  documentType: string[];
-  scope: string[];
-};
+const toCollectionId = (collectionRootId: string): string =>
+  `collection.${collectionRootId}`;
 ```
 
-From this, we derive a _set_ of collection ids.
-
-```ts
-const constructCollectionIds = (filter: OperationFilter): string[] => {
-  const collectionIds = new Set<string>();
-
-  for (const driveId of filter.driveId) {
-    collectionIds.add(`drive.${driveId}`);
-  }
-
-  return Array.from(collectionIds);
-};
-```
-
-We do not need to keep branch, type, or scope in the collection id as these will be present in the join query. It is tempting to use some sort of composite or delimited string to represent the filter and use a `LIKE` query-- however, this would be a significant performance overhead as a `LIKE '%foo%'` query cannot use B-tree indexes and requires a full table scan.
-
-Instead, we opt to multi-insert into the `document_collections` table.
+When reducers emit a `CREATE_DOCUMENT` for a new collection root, the job executor calls `txn.createCollection(toCollectionId(collectionRootId))` and the index inserts the derived id into `document_collections`:
 
 ```sql
-INSERT INTO document_collections (documentId, collectionId) VALUES ('doc1', 'drive.drive1');
-INSERT INTO document_collections (documentId, collectionId) VALUES ('doc1', 'drive.drive2');
+INSERT INTO document_collections (documentId, collectionId)
+VALUES ('doc-123', 'collection.doc-123');
 ```
 
-For building the query, branch and scope may be left out if a wildcard is used (`branch: ['*']`).
-
-If `driveId` is not provided, we need no join at all and can directly query the `operation_index_operations` table.
-
-#### Hashing Document Ids
-
-Additionally, we may experiment with using hashed document ids to reduce the DB performance impact of string matching, as this grows linearly with string length. Recall that `documentId` is a signature, so it will be of considerable length (88 characters for Ed25519). For example, here is a Base64-encoded Ed25519 signature:
-
-`iPejYCq5-74u_Wx221SpApZxPiiOGcNuJoN9LBwcYWGYZSd-o5trViqqoC8OJmc5xMhTlJrL3hXOsPbxFbzLCg==`
-
-We can use SHA256 (for example, but there are cheaper variants) to reduce the length to 44 characters with negligible collision risk:
-
-`7x0QaStA6zgPGAuRYfuaJDMiOnsQ1p3Rf/sQXFBgS9c=`
-
-Obviously, this creates a CPU-side performance impact from running SHA256. This could be mitigated by creating the hash only on document creation. Additionally, putting the performance impact in CPU worker threads may still be preferable in real-world testing.
+Relationship operations call `txn.addToCollection(toCollectionId(collectionRootId), documentId)` to keep membership current. Consumers later call `find(collectionId, view, paging)` where `collectionId` is explicit and `view` is just the standard `ViewFilter` (branch, scopes, document types, etc.). Because these filters live on the operations table we avoid encoding them into the collection id (preventing wildcard scans) and keep the join lookup cheap. When internal tooling needs to query every collection, it can bypass the join entirely and scan `operation_index_operations` directly.
 
 ### Cursors
 

@@ -49,7 +49,7 @@ Describes a one-way flow of data from one Reactor to another, pulling operations
 ```mermaid
 graph
     BScheduler["Scheduler"] --> BSync["ISyncManager"]
-    IChannel <-->|"(1) Query"| AOI
+    IChannel <-->|"(1) Query(filter)"| AOI
     BSync --> IChannel -->|"(2) Transport"| Load
 
     subgraph "IReactor A"
@@ -60,6 +60,25 @@ graph
         Load["load()"] -->|"Operations[]"| JEB["Job Execution"]
     end
 ```
+
+Here we introduce the concept of a "filter" for queries. This filter is optimized for the requirements of the synchronization system.
+
+#### `IOperationIndex`
+
+`IOperationIndex` (see [Operation Index](../Cache/operation-index.md)) flattens the operations of every document in a collection into a single, ordinal-ordered stream. Inside each job executor we write both to the `IOperationStore` (authoritative log) and to the index, so the index behaves like a write model: it participates in the same transaction, rolls back if the store write fails, and exposes the same ordering guarantees to consumers. The pull loop relies on those properties:
+
+- **Collection cursors.** Each remote/remote-filter keeps a cursor (ordinal) into the index. Collections represent “documents ever attached to a drive”, so a remote that subscribes to an entire drive advances one cursor instead of tracking every `(documentId, scope, branch)` tuple.
+- **Filter projection.** The index stores document metadata (type, identifiers) alongside the operations table described in the index spec. The `"(1) Query(filter)"` arrow means the sync manager asks, “give me all operations since ordinal N for collection C matching my remote filter.” We never have to replay documents just to check filters.
+- **No read-model lag.** Because the index is written synchronously with the job executor (Option #1 in the index doc), pull latency is bounded by network time. If we ever switch to async/index-lag mode we must document the reconciliation/catch-up process here.
+- **IOperationStore fallback.** When reconciliation detects a gap (`MISSING_OPERATIONS`), the sync manager can fall back to `IOperationStore.getSince` to rebuild a strand—but the steady-state pull path never hits the store directly; it streams from the index.
+
+Algorithmically, when the scheduler fires:
+
+1. `ISyncManager` reads the remote’s stored ordinal + filter.
+2. It queries `IOperationIndex` for the next batch (API TBD, e.g. `getSince(collectionId, ordinal, filter, limit)`), receiving ordered operations plus the new ordinal.
+3. The results are wrapped in `MutableJobHandle`s and placed into the channel inbox so the channel can transport them to the remote reactor.
+
+If a remote only tracks a handful of documents, we still leverage the index by building a logical collection over that document set and keeping an ordinal per remote-filter pair. The important point is that the pull architecture is defined in terms of the index, not by directly scanning the operation store.
 
 ### Ping-Pong
 
