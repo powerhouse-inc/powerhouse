@@ -10,18 +10,16 @@ import type {
   ISynchronizationManager,
   ITransmitterFactory,
 } from "document-drive";
-import {
-  SynchronizationManager,
-  DefaultEventEmitter,
-  DefaultListenerManagerOptions,
-  DocumentDriveServer,
-  EventQueueManager,
-  InMemoryCache,
-  ListenerManager,
-  MemoryStorage,
-  TransmitterFactory,
-} from "document-drive";
+import { InMemoryCache } from "document-drive/cache/memory";
+import { EventQueueManager } from "document-drive/queue/event";
+import { MemoryStorage } from "document-drive/storage/memory";
 import type { DocumentModelModule } from "document-model";
+import { DocumentDriveServer } from "./base-server.js";
+import { DefaultEventEmitter } from "./event-emitter.js";
+import { DefaultListenerManagerOptions } from "./listener/constants.js";
+import { ListenerManager } from "./listener/listener-manager.js";
+import { SynchronizationManager } from "./sync-manager.js";
+import { TransmitterFactory } from "./transmitter/factory.js";
 
 /**
  * Builder class for constructing Reactor instances with proper configuration

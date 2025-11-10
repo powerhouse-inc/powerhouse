@@ -1,3 +1,4 @@
+import { Icon } from "@powerhousedao/design-system";
 import type {
   ToastContainerProps,
   ToastContent,
@@ -8,9 +9,6 @@ import {
   ToastContainer as RToastContainer,
   toast as rToast,
 } from "react-toastify";
-
-import { Icon } from "@powerhousedao/design-system";
-
 export type ConnectTypeOptions =
   | "connect-success"
   | "connect-warning"

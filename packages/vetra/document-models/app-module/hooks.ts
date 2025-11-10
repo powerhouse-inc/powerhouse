@@ -9,7 +9,7 @@ import type {
   AppModuleDocument,
   AppModuleAction,
 } from "@powerhousedao/vetra/document-models/app-module";
-import { isAppModuleDocument } from "@powerhousedao/vetra/document-models/app-module";
+import { isAppModuleDocument } from "./gen/document-schema.js";
 
 /** Hook to get a AppModule document by its id */
 export function useAppModuleDocumentById(

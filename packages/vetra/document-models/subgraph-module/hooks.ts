@@ -9,7 +9,7 @@ import type {
   SubgraphModuleDocument,
   SubgraphModuleAction,
 } from "@powerhousedao/vetra/document-models/subgraph-module";
-import { isSubgraphModuleDocument } from "@powerhousedao/vetra/document-models/subgraph-module";
+import { isSubgraphModuleDocument } from "./gen/document-schema.js";
 
 /** Hook to get a SubgraphModule document by its id */
 export function useSubgraphModuleDocumentById(

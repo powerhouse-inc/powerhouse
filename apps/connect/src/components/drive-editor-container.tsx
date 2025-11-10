@@ -1,5 +1,5 @@
-import { GenericDriveExplorer } from "@powerhousedao/common";
-import { DropZoneWrapper } from "@powerhousedao/design-system";
+import { GenericDriveExplorer } from "@powerhousedao/common/generic-drive-explorer";
+import { DropZoneWrapper } from "@powerhousedao/design-system/connect";
 import {
   useDefaultDriveEditorModule,
   useDriveEditorModuleById,

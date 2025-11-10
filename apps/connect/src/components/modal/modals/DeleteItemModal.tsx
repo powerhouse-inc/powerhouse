@@ -1,4 +1,5 @@
-import { ConnectDeleteItemModal, toast } from "@powerhousedao/design-system";
+import { toast } from "@powerhousedao/connect/services";
+import { ConnectDeleteItemModal } from "@powerhousedao/design-system/connect";
 import {
   closePHModal,
   deleteNode,

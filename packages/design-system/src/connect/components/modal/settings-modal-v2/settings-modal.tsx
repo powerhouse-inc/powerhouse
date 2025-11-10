@@ -1,6 +1,6 @@
-import { Icon, Modal } from "@powerhousedao/design-system";
 import type { ComponentProps } from "react";
 
+import { Icon, Modal } from "@powerhousedao/design-system";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 

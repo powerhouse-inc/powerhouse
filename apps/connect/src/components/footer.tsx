@@ -1,10 +1,10 @@
 import { useCookieBanner } from "@powerhousedao/connect/hooks";
-import { openUrl } from "@powerhousedao/connect/utils/openUrl";
+import { openUrl } from "@powerhousedao/connect/utils";
+import { Icon } from "@powerhousedao/design-system";
 import {
   Footer as DesignSystemFooter,
   FooterLink,
-  Icon,
-} from "@powerhousedao/design-system";
+} from "@powerhousedao/design-system/connect";
 import { showPHModal } from "@powerhousedao/reactor-browser";
 import { Trans } from "react-i18next";
 

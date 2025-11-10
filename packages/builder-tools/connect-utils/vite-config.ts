@@ -1,8 +1,3 @@
-import {
-  phExternalPackagesPlugin,
-  resolveConnectPackageJson,
-  stripVersionFromPackage,
-} from "@powerhousedao/builder-tools";
 import { getConfig } from "@powerhousedao/config/node";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwind from "@tailwindcss/vite";
@@ -24,7 +19,12 @@ import {
   setConnectEnv,
   type ConnectEnv,
 } from "./env-config.js";
+import {
+  resolveConnectPackageJson,
+  stripVersionFromPackage,
+} from "./helpers.js";
 import type { IConnectOptions } from "./types.js";
+import { phExternalPackagesPlugin } from "./vite-plugins/ph-external-packages.js";
 
 export const connectClientConfig = {
   meta: [
@@ -284,9 +284,12 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       exclude: ["@electric-sql/pglite"],
     },
     plugins,
+    resolve: {
+      dedupe: ["react", "react-dom", "react/jsx-runtime"],
+    },
     build: {
-      minify: false,
-      sourcemap: true,
+      minify: true,
+      sourcemap: false,
     },
     server: {
       watch: env.PH_DISABLE_LOCAL_PACKAGE ? null : { ignored: ["**/.ph/**"] },
@@ -297,9 +300,6 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     },
     worker: {
       format: "es",
-    },
-    resolve: {
-      dedupe: ["react", "react-dom"], // needed when linked to the monorepo
     },
   };
   return config;

@@ -1,5 +1,9 @@
 import { phGlobalConfigFromEnv } from "@powerhousedao/connect/config";
 import {
+  initFeatureFlags,
+  isDualActionCreateEnabled,
+} from "@powerhousedao/connect/feature-flags.js";
+import {
   createBrowserDocumentDriveServer,
   createBrowserStorage,
 } from "@powerhousedao/connect/utils";
@@ -38,10 +42,6 @@ import type {
 import { ProcessorManager, logger } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { generateId } from "document-model/core";
-import {
-  initFeatureFlags,
-  isDualActionCreateEnabled,
-} from "../../feature-flags.js";
 import { loadCommonPackage } from "./document-model.js";
 import {
   loadExternalPackages,

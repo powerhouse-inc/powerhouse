@@ -1,4 +1,4 @@
-import { Sidebar } from "@powerhousedao/connect/components/sidebar";
+import { Sidebar } from "@powerhousedao/connect/components";
 import { Suspense } from "react";
 import { Outlet } from "react-router-dom";
 

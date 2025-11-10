@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/connect",
   "productName": "Powerhouse-Connect",
-  "version": "4.1.0-dev.105",
+  "version": "4.1.0-dev.106",
   "description": "Powerhouse Connect",
   "main": "dist/index.html",
   "type": "module",
@@ -23,90 +23,55 @@
   ],
   "exports": {
     "./package.json": "./package.copy.json",
-    ".": {
-      "source": "./src/index.ts",
-      "import": "./lib/src/index.js",
-      "types": "./lib/src/index.d.ts"
-    },
     "./main.js": {
       "source": "./src/main.tsx",
       "import": "./lib/src/main.js",
       "types": "./lib/src/main.d.ts"
     },
-    "./config": {
-      "source": "./src/connect.config.ts",
-      "import": "./lib/src/connect.config.js",
-      "types": "./lib/src/connect.config.d.ts"
+    "./*.js": {
+      "source": "./src/*.ts",
+      "import": "./lib/src/*.js",
+      "types": "./lib/src/*.d.ts"
     },
     "./components": {
       "source": "./src/components/index.ts",
       "import": "./lib/src/components/index.js",
       "types": "./lib/src/components/index.d.ts"
     },
-    "./components/*": {
-      "source": "./src/components/*",
-      "import": "./lib/src/components/*.js",
-      "types": "./lib/src/components/*.d.ts"
-    },
-    "./hooks": {
-      "source": "./src/hooks/index.ts",
-      "import": "./lib/src/hooks/index.js",
-      "types": "./lib/src/hooks/index.d.ts"
-    },
-    "./hooks/*": {
-      "source": "./src/hooks/*",
-      "import": "./lib/src/hooks/*.js",
-      "types": "./lib/src/hooks/*.d.ts"
+    "./pages": {
+      "source": "./src/pages/index.ts",
+      "import": "./lib/src/pages/index.js",
+      "types": "./lib/src/pages/index.d.ts"
     },
     "./services": {
       "source": "./src/services/index.ts",
       "import": "./lib/src/services/index.js",
       "types": "./lib/src/services/index.d.ts"
     },
-    "./services/*": {
-      "source": "./src/services/*",
-      "import": "./lib/src/services/*.js",
-      "types": "./lib/src/services/*.d.ts"
+    "./context": {
+      "source": "./src/context/index.ts",
+      "import": "./lib/src/context/index.js",
+      "types": "./lib/src/context/index.d.ts"
+    },
+    "./hooks": {
+      "source": "./src/hooks/index.ts",
+      "import": "./lib/src/hooks/index.js",
+      "types": "./lib/src/hooks/index.d.ts"
     },
     "./store": {
       "source": "./src/store/index.ts",
       "import": "./lib/src/store/index.js",
       "types": "./lib/src/store/index.d.ts"
     },
-    "./store/*": {
-      "source": "./src/store/*",
-      "import": "./lib/src/store/*.js",
-      "types": "./lib/src/store/*.d.ts"
-    },
-    "./context": {
-      "source": "./src/context/index.ts",
-      "import": "./lib/src/context/index.js",
-      "types": "./lib/src/context/index.d.ts"
-    },
-    "./context/*": {
-      "source": "./src/context/*",
-      "import": "./lib/src/context/*.js",
-      "types": "./lib/src/context/*.d.ts"
-    },
     "./utils": {
       "source": "./src/utils/index.ts",
       "import": "./lib/src/utils/index.js",
       "types": "./lib/src/utils/index.d.ts"
     },
-    "./utils/*": {
-      "source": "./src/utils/*",
-      "import": "./lib/src/utils/*.js",
-      "types": "./lib/src/utils/*.d.ts"
-    },
-    "./pages": {
-      "source": "./src/pages/index.ts",
-      "import": "./lib/src/pages/index.js",
-      "types": "./lib/src/pages/index.d.ts"
-    },
-    "./pages/*": {
-      "source": "./src/pages/*",
-      "import": "./lib/src/pages/*.js",
-      "types": "./lib/src/pages/*.d.ts"
+    "./config": {
+      "source": "./src/connect.config.ts",
+      "import": "./lib/src/connect.config.js",
+      "types": "./lib/src/connect.config.d.ts"
     },
     "./i18n": {
       "source": "./src/i18n/index.ts",
@@ -153,7 +118,6 @@
     "@openfeature/core": "^1.9.1",
     "@openfeature/web-sdk": "^1.6.2",
     "@powerhousedao/analytics-engine-core": "^0.5.0",
-    "@powerhousedao/builder-tools": "workspace:*",
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
@@ -185,9 +149,10 @@
     "vite": "^7.1.9",
     "vite-plugin-html": "^3.2.2",
     "vite-plugin-node-polyfills": "^0.24.0",
-    "vite-plugin-svgr": "^4.5.0"
-  },
-  "devDependencies": {
+    "vite-plugin-svgr": "^4.5.0",
+    "zod": "^3.24.3",
+    "@powerhousedao/builder-tools": "workspace:*",
+    "@powerhousedao/document-engineering": "^1.39.0",
     "@types/cypress": "^1.1.6",
     "cypress": "^14.5.4",
     "vite-bundle-analyzer": "^1.2.3"

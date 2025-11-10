@@ -291,6 +291,7 @@ export const DocumentToolbar: React.FC<DocumentToolbarProps> = (props) => {
             </button>
           )}
           <button
+            aria-label="Close document"
             className="grid size-8 cursor-pointer place-items-center rounded-lg border border-gray-200 bg-white active:opacity-70"
             onClick={handleClose}
           >

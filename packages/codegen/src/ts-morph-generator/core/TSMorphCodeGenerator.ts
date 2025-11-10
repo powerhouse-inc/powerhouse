@@ -1,14 +1,12 @@
-import {
-  DeclarationManager,
-  DirectoryManager,
-  ImportManager,
-} from "@powerhousedao/codegen";
 import type {
   DocumentModelGlobalState,
   ModuleSpecification,
 } from "document-model";
 import fs from "fs/promises";
 import { Project } from "ts-morph";
+import { DeclarationManager } from "../utilities/DeclarationManager.js";
+import { DirectoryManager } from "../utilities/DirectoryManager.js";
+import { ImportManager } from "../utilities/ImportManager.js";
 import type { FileGenerator } from "./FileGenerator.js";
 import type {
   CodeGeneratorOptions,

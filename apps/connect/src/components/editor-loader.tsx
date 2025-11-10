@@ -1,4 +1,4 @@
-import { DefaultEditorLoader } from "@powerhousedao/design-system";
+import { DefaultEditorLoader } from "@powerhousedao/design-system/connect";
 import type { ComponentProps, ReactNode } from "react";
 import { useEffect, useState } from "react";
 

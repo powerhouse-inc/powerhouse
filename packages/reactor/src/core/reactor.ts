@@ -42,6 +42,7 @@ import type {
 import {
   filterByParentId,
   filterByType,
+  getSharedScope,
   toErrorInfo,
   topologicalSort,
   validateActionScopes,
@@ -524,10 +525,12 @@ export class Reactor implements IReactor {
     // Create a single job with both CREATE_DOCUMENT and UPGRADE_DOCUMENT actions
     const job: Job = {
       id: uuidv4(),
+      kind: "mutation",
       documentId: document.header.id,
       scope: "document",
       branch: "main",
       actions: [createAction, upgradeAction],
+      operations: [],
       createdAt: new Date().toISOString(),
       queueHint: [],
       maxRetries: 3,
@@ -582,10 +585,12 @@ export class Reactor implements IReactor {
 
     const job: Job = {
       id: uuidv4(),
+      kind: "mutation",
       documentId: id,
       scope: "document",
       branch: "main",
       actions: [action],
+      operations: [],
       createdAt: new Date().toISOString(),
       queueHint: [],
       maxRetries: 3,
@@ -630,10 +635,12 @@ export class Reactor implements IReactor {
     // Create a single job with all actions
     const job: Job = {
       id: uuidv4(),
+      kind: "mutation",
       documentId: docId,
       scope: scope,
       branch: branch,
       actions: actions,
+      operations: [],
       createdAt: new Date().toISOString(),
       queueHint: [],
       maxRetries: 3,
@@ -654,6 +661,74 @@ export class Reactor implements IReactor {
     this.jobTracker.registerJob(jobInfo);
 
     // Enqueue the job
+    await this.queue.enqueue(job);
+
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    return jobInfo;
+  }
+
+  /**
+   * Imports pre-existing operations that were produced by another reactor.
+   * This function may cause a reshuffle, which will generate additional
+   * operations.
+   */
+  async load(
+    docId: string,
+    branch: string,
+    operations: Operation[],
+    signal?: AbortSignal,
+  ): Promise<JobInfo> {
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    if (operations.length === 0) {
+      throw new Error("load requires at least one operation");
+    }
+
+    // validate the operations
+    const scope = getSharedScope(operations);
+    operations.forEach((operation, index) => {
+      if (!operation.timestampUtcMs) {
+        throw new Error(
+          `Operation at position ${index} is missing timestampUtcMs`,
+        );
+      }
+      if (operation.hash === undefined || operation.hash === null) {
+        throw new Error(`Operation at position ${index} is missing hash`);
+      }
+    });
+    const createdAtUtcIso = new Date().toISOString();
+
+    const job: Job = {
+      id: uuidv4(),
+      kind: "load",
+      documentId: docId,
+      scope,
+      branch,
+      actions: [],
+      operations,
+      createdAt: createdAtUtcIso,
+      queueHint: [],
+      maxRetries: 3,
+      errorHistory: [],
+    };
+
+    const jobInfo: JobInfo = {
+      id: job.id,
+      status: JobStatus.PENDING,
+      createdAtUtcIso,
+      consistencyToken: {
+        version: 1,
+        createdAtUtcIso,
+        coordinates: [],
+      },
+    };
+    this.jobTracker.registerJob(jobInfo);
+
     await this.queue.enqueue(job);
 
     if (signal?.aborted) {
@@ -712,10 +787,12 @@ export class Reactor implements IReactor {
         );
         const job: Job = {
           id: jobId,
+          kind: "mutation",
           documentId: jobPlan.documentId,
           scope: jobPlan.scope,
           branch: jobPlan.branch,
           actions: jobPlan.actions,
+          operations: [],
           createdAt: createdAtUtcIso,
           queueHint,
           maxRetries: 3,

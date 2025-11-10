@@ -1,4 +1,4 @@
-import type { SyncStatus } from "../types/index.js";
+import type { SyncStatus } from "document-drive";
 
 export type FileStatus = { path: string; status?: SyncStatus };
 

@@ -1,13 +1,5 @@
 import type { NodeOption } from "@powerhousedao/design-system";
-import {
-  ConnectDropdownMenu,
-  defaultNodeOptions,
-  Icon,
-  NodeInput,
-  nodeOptionsMap,
-  useDrag,
-  useDrop,
-} from "@powerhousedao/design-system";
+import { Icon } from "@powerhousedao/design-system";
 import {
   setSelectedNode,
   showDeleteNodeModal,
@@ -17,6 +9,12 @@ import {
 import { type FolderNode } from "document-drive";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
+import { defaultNodeOptions, nodeOptionsMap } from "../../constants/options.js";
+import { useDrag } from "../../hooks/use-drag.js";
+import { useDrop } from "../../hooks/use-drop.js";
+import { ConnectDropdownMenu } from "../dropdown-menu/dropdown-menu.js";
+import { NodeInput } from "../node-input/node-input.js";
+import { SyncStatusIcon } from "../status-icon/sync-status-icon.js";
 
 export function FolderItem(props: {
   folderNode: FolderNode;

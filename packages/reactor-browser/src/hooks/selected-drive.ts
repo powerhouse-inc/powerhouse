@@ -7,7 +7,6 @@ import { resolveUrlPathname } from "../utils/url.js";
 import { useDispatch } from "./dispatch.js";
 import { useDrives } from "./drives.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
-import { setSelectedNode } from "./selected-node.js";
 
 const selectedDriveIdEventFunctions = makePHEventFunctions("selectedDriveId");
 
@@ -58,7 +57,6 @@ export function setSelectedDrive(
     typeof driveOrDriveSlug === "string"
       ? driveOrDriveSlug
       : driveOrDriveSlug?.header.slug;
-  setSelectedNode(undefined);
 
   // Find the drive by slug to get its actual ID
   const drive = window.ph?.drives?.find((d) => d.header.slug === driveSlug);

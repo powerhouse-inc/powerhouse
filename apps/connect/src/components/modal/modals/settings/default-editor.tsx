@@ -1,4 +1,4 @@
-import { DefaultEditor as BaseDefaultEditor } from "@powerhousedao/design-system";
+import { DefaultEditor as BaseDefaultEditor } from "@powerhousedao/design-system/connect";
 import { useCallback, useState } from "react";
 
 const documentModelEditorOptions = [

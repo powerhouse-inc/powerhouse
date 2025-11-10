@@ -11,7 +11,6 @@ import type {
   DriveEvents,
   DriveInput,
   DriveOperationResult,
-  GetDocumentOptions,
   IBaseDocumentDriveServer,
   ICache,
   IDefaultDrivesManager,
@@ -32,49 +31,36 @@ import type {
   ServerListener,
   StrandUpdate,
   StrandUpdateSource,
-  SyncStatus,
-  SyncUnitStatusObject,
   SynchronizationUnit,
   SynchronizationUnitNotFoundError,
+  SyncStatus,
+  SyncUnitStatusObject,
   Trigger,
 } from "document-drive";
 import {
-  ConflictOperationError,
-  DefaultDrivesManager,
-  DefaultListenerManagerOptions,
-  DocumentAlreadyExistsError,
-  OperationError,
-  PullResponderTransmitter,
-  ReadModeServer,
-  SwitchboardPushTransmitter,
-  childLogger,
-  driveCreateDocument,
-  driveCreateState,
-  filterOperationsByRevision,
   isActionJob,
-  isAtRevision,
-  isDocumentDrive,
   isDocumentJob,
   isOperationJob,
-  removeListener,
-  removeTrigger,
-  requestPublicDriveWithTokenFromReactor,
-  resolveCreateDocumentInput,
-  setSharingType,
-} from "document-drive";
-import { runAsap, runAsapAsync } from "document-drive/run-asap";
-import {
-  type Action,
-  type CreateDocumentActionInput,
-  type DocumentModelModule,
-  type DocumentOperations,
-  type Operation,
-  type PHDocument,
-  type PHDocumentHeader,
-  type PHDocumentMeta,
-  type Signal,
-  type SignalResult,
-  type UpgradeDocumentActionInput,
+} from "document-drive/queue/utils";
+import { ReadModeServer } from "document-drive/read-mode/server";
+import { DefaultDrivesManager } from "document-drive/utils/default-drives-manager";
+import { requestPublicDriveWithTokenFromReactor } from "document-drive/utils/graphql";
+import { childLogger } from "document-drive/utils/logger";
+import { isDocumentDrive } from "document-drive/utils/misc";
+import { runAsap, runAsapAsync } from "document-drive/utils/run-asap";
+import type {
+  Action,
+  CreateDocumentActionInput,
+  DocumentModelModule,
+  DocumentOperations,
+  GetDocumentOptions,
+  Operation,
+  PHDocument,
+  PHDocumentHeader,
+  PHDocumentMeta,
+  Signal,
+  SignalResult,
+  UpgradeDocumentActionInput,
 } from "document-model";
 import {
   attachBranch,
@@ -96,6 +82,26 @@ import {
 } from "document-model/core";
 import { ClientError } from "graphql-request";
 import type { Unsubscribe } from "nanoevents";
+import {
+  driveCreateDocument,
+  driveCreateState,
+  removeListener,
+  removeTrigger,
+  setSharingType,
+} from "../drive-document-model/index.js";
+import {
+  ConflictOperationError,
+  DocumentAlreadyExistsError,
+  OperationError,
+} from "./error.js";
+import { DefaultListenerManagerOptions } from "./listener/constants.js";
+import { PullResponderTransmitter } from "./transmitter/pull-responder.js";
+import { SwitchboardPushTransmitter } from "./transmitter/switchboard-push.js";
+import {
+  filterOperationsByRevision,
+  isAtRevision,
+  resolveCreateDocumentInput,
+} from "./utils.js";
 
 export class BaseDocumentDriveServer
   implements IBaseDocumentDriveServer, IDefaultDrivesManager

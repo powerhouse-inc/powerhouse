@@ -8,24 +8,28 @@ import type {
   SynchronizationUnitQuery,
 } from "document-drive";
 import {
-  AbortError,
-  childLogger,
   DocumentAlreadyExistsError,
   DocumentAlreadyExistsReason,
   DocumentIdValidationError,
   DocumentNotFoundError,
   DocumentSlugValidationError,
+} from "document-drive/server/error";
+import { AbortError } from "document-drive/utils/errors";
+import { childLogger } from "document-drive/utils/logger";
+import { migrateDocumentOperationSignatures } from "document-drive/utils/migrations";
+import {
+  mergeOperations,
+  operationsToRevision,
+} from "document-drive/utils/misc";
+import type { Operation, PHDocument } from "document-model";
+import LocalForage from "localforage";
+import {
   isValidDocumentId,
   isValidSlug,
-  mergeOperations,
-  migrateDocumentOperationSignatures,
-  operationsToRevision,
   resolveStorageUnitsFilter,
   setIntersection,
   setUnion,
-} from "document-drive";
-import type { Operation, PHDocument } from "document-model";
-import LocalForage from "localforage";
+} from "./utils.js";
 
 // Interface for drive manifest that tracks document IDs in a drive
 interface DriveManifest {

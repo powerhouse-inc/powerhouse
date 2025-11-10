@@ -1,5 +1,7 @@
-import type { Action } from "document-model";
+import type { Action, Operation } from "document-model";
 import type { ErrorInfo } from "../shared/types.js";
+
+export type JobKind = "mutation" | "load";
 
 /**
  * State of a job in the queue
@@ -32,6 +34,9 @@ export type Job = {
   /** Unique identifier for the job */
   id: string;
 
+  /** Classification of the job so executors can switch behavior */
+  kind: JobKind;
+
   /** The document ID this job operates on */
   documentId: string;
 
@@ -43,6 +48,9 @@ export type Job = {
 
   /** The actions to be executed (processed sequentially) */
   actions: Action[];
+
+  /** Pre-existing operations to import (used for load jobs) */
+  operations: Operation[];
 
   /** Timestamp when the job was created */
   createdAt: string;

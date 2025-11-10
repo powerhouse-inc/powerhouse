@@ -1,9 +1,9 @@
-import { withFieldValidation } from "@powerhousedao/design-system";
 import { fireEvent, render } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { FormProvider, useForm } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
 import { ValueTransformer } from "./value-transformer.js";
+import { withFieldValidation } from "../with-field-validation/with-field-validation.js";
 
 const TestWrapper = ({ children }: { children: React.ReactNode }) => {
   const methods = useForm();

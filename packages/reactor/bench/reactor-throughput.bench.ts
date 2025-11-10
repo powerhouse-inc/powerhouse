@@ -62,10 +62,12 @@ function createSimpleJob(): Job {
 
   return {
     id: `job-${jobCounter}`,
+    kind: "mutation",
     documentId: "doc1",
     scope: "global",
     branch: "main",
     actions: [action],
+    operations: [],
     maxRetries: 0,
     createdAt: new Date().toISOString(),
     queueHint: [],
@@ -85,10 +87,12 @@ function createComplexJob(): Job {
 
   return {
     id: `job-${++jobCounter}`,
+    kind: "mutation",
     documentId: "doc1",
     scope: "global",
     branch: "main",
     actions: [action],
+    operations: [],
     maxRetries: 0,
     createdAt: new Date().toISOString(),
     queueHint: [],

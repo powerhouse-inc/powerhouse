@@ -1,11 +1,11 @@
+import { useMemo } from "react";
+import { useEditorContext } from "../context/editor-context.js";
 import type {
   FixedIncome,
   GroupTransaction,
   ServiceProviderFeeType,
   TableName,
-} from "@powerhousedao/design-system";
-import { useEditorContext } from "@powerhousedao/design-system";
-import { useMemo } from "react";
+} from "../types.js";
 
 export type DependentItemProps = {
   dependentTableName: TableName;
