@@ -1,14 +1,217 @@
 # Release Changelog
 
-## 🚀 **(PRE-RELEASE)**
+## 🚀 **v5.0.0**
+
+✨ **Highlights**
+
+This release introduces four major changes:
+
+1. **Vetra Development Workflow** (`ph vetra`) - A complete development environment for building Powerhouse packages
+2. **AI-Assisted Package Development** - Build document models interactively using Claude Code and Model Context Protocol (MCP)
+3. **New React Hooks** - Simplified hooks for document editor development
+4. **React 19 Upgrade** - Updated to React 19 with latest features and improvements
+
+## NEW FEATURES
+
+### **Vetra Development Workflow** (`ph vetra`)
+
+A complete development environment for building Powerhouse packages with real-time collaboration and code generation.
+
+**What is Vetra?**
+
+Vetra provides an integrated development flow that combines:
+
+- Local Switchboard server
+- Connect Studio UI for visual editing
+- Real-time document synchronization
+- Automatic code generation for document models, editors, processors and subgraphs
+- Support for remote Vetra drives
+
+**Key Features:**
+
+- Start a complete development environment with one command: `ph vetra`
+- Hot reload for document models and editors during development (`--watch`)
+- Interactive code generation mode (`--interactive`)
+- Connect to remote drives for collaborative development
+
+**Getting Started:**
+
+```bash
+# Start Vetra with defaults
+ph vetra
+
+# Development mode with hot reload
+ph vetra --watch
+
+# Interactive code generation
+ph vetra --interactive
+
+# Connect to a remote drive
+ph vetra --remote-drive https://switchboard.phd/d/vetra
+```
+
+### **AI-Assisted Package Development** (Model Context Protocol)
+
+Build document models interactively using Claude Code through the Model Context Protocol (MCP) server.
+
+**What is reactor-mcp?**
+
+The reactor-mcp server exposes Powerhouse's document model system to AI assistants like Claude Code, enabling:
+
+- Accessing and interacting with documents available on a Switchboard instance
+- Interactive document model creation through conversation
+- State schema design assistance
+- Operation and reducer implementation
+- Document editor UI implementation
+- Real-time validation and feedback
+
+**Available MCP Tools:**
+
+Document Operations:
+
+- `createDocument` - Create a new document
+- `getDocument` - Retrieve a document by ID
+- `getDocuments` - List documents in a drive
+- `deleteDocument` - Delete a document
+- `addActions` - Add actions to a document
+
+Drive Operations:
+
+- `getDrives` - List all drives
+- `addDrive` - Create a new drive
+- `getDrive` - Get a specific drive
+- `deleteDrive` - Delete a drive
+- `addRemoteDrive` - Connect to a remote drive
+
+Document Model Operations:
+
+- `getDocumentModels` - Get list of available document models
+- `getDocumentModelSchema` - Get the schema of a specific document model
+
+**Getting Started:**
+
+1. Projects are generated with Claude Code pre-configured:
+
+```bash
+ph init
+```
+
+2. Start Vetra to start the MCP:
+
+```bash
+ph vetra
+```
+
+3. Ask Claude to help build your document model:
+
+```
+"Create a document model for tracking project milestones with completion status, deadlines, and dependencies"
+```
+
+4. Claude will guide you through:
+   - Requirements gathering
+   - State schema design
+   - Operation definition
+   - Reducer implementation
+   - Code generation
+
+**Workflow:**
+
+1. Describe your requirements to Claude
+2. Review and approve the proposed design
+3. Claude creates the model using MCP tools
+4. Code is generated automatically
+5. Test and iterate in Vetra environment
 
 ## BREAKING CHANGES
 
-### `ProcessorFactory` signature change.
+### **New Hooks-Based State Management System**
+
+The most significant change in v5.0.0 is the introduction of a comprehensive hooks-based state management system. This fundamentally changes how editors should be implemented.
+
+**What Changed:**
+
+- State management has been moved to reactor-browser hooks
+- New hooks for accessing documents, drives, folders, and UI state
+- Event-based updates replace direct state manipulation
+- Simplified editor implementation patterns
+
+**Impact on Editors:**
+
+- Document and Drive editors need to adopt the new hook patterns from `@powerhousedao/reactor-browser`
+- Navigation and selection state is now managed through hooks instead of props
+
+**Learn More:** Complete hooks documentation and examples are available at https://staging.powerhouse.academy/academy/APIReferences/ReactHooks
+
+**Migration Required:** Existing editors will need to be refactored to use the new hooks API. See Migration Guide below.
+
+### **React 19 Upgrade**
+
+This release upgrades to React 19, which includes breaking changes.
+
+**What You Need to Know:**
+
+- Review the official React 19 upgrade guide: https://react.dev/blog/2024/04/25/react-19-upgrade-guide
+- Most React 18 code will continue to work, but deprecated patterns should be updated
+- New React 19 features are now available
+
+### **DocumentToolbar Component**
+
+A new `DocumentToolbar` component is now available for editors to provide standard document operations UI. This replaces the previous config-based approach with a more flexible component-based implementation.
+
+**What Changed:**
+
+Previously, the document toolbar was configured using editor config parameters:
+
+```typescript
+// Old approach (v4.x)
+{
+  disableExternalControls: true,
+  documentToolbarEnabled: true,
+  showSwitchboardLink: true,
+  timelineEnabled: true,
+}
+```
+
+Now, you import and use the `DocumentToolbar` component directly in your editor:
+
+```typescript
+// New approach (v5.0)
+import { DocumentToolbar } from "@powerhousedao/design-system";
+
+<DocumentToolbar
+  enabledControls={["undo", "redo", "export", "history"]}
+/>
+```
+
+**Key Features:**
+
+- **Flexible Control Configuration**: Choose which controls to display with `enabledControls` prop
+- **Undo/Redo Operations**: Built-in support for document undo and redo
+- **Export Functionality**: Document export with customizable handler
+- **Revision History**: Access to document revision history
+- **Switchboard Integration**: Automatic link generation for remote drives
+- **Customizable Handlers**: Override default behaviors with custom callbacks
+
+**Available Controls:**
+
+- `undo` - Undo last operation
+- `redo` - Redo last undone operation
+- `export` - Export document
+- `history` - Show revision history
+
+**Migration Steps:**
+
+1. Remove old config parameters from your editor configuration
+2. Import `DocumentToolbar` from `@powerhousedao/design-system`
+3. Add the component to your editor JSX with desired props
+4. Customize behavior with optional callbacks (`onClose`, `onExport`, `onSwitchboardLinkClick`)
+
+### **`ProcessorFactory` Signature Change**
 
 The `ProcessorFactory` now takes a `PHDocumentHeader` instead of a `driveId`.
 
-**Before (v5.0):**
+**Before (v4.x):**
 
 ```typescript
 export type ProcessorFactory = (
@@ -16,7 +219,7 @@ export type ProcessorFactory = (
 ) => ProcessorRecord[] | Promise<ProcessorRecord[]>;
 ```
 
-**After (v5.1):**
+**After (v5.0):**
 
 ```typescript
 export type ProcessorFactory = (
@@ -24,21 +227,16 @@ export type ProcessorFactory = (
 ) => ProcessorRecord[] | Promise<ProcessorRecord[]>;
 ```
 
-## Migration Steps
+**Migration Steps:**
 
-1. Update your processor factories to take a `PHDocumentHeader` instead of a `driveId`.
-2. If necessary, regenerate your processor with `ph generate` to get the latest changes.
+1. Update your processor factories to take a `PHDocumentHeader` instead of a `driveId`
+2. If necessary, regenerate your processor with `ph generate` to get the latest changes
 
-## Updating document model
-
-1. It's still possible to generate from zip files, but due to breaking changes in the document structure, zips exported from older versions no longer work
-2. Instead: use ph generate document-models/<yourdocument>/<yourdocument>.json
-
-### Type parameters have been removed
+### **Type Parameters Removed**
 
 The `Action` type parameters have been removed, `Operation` type parameters have been removed, and the last `PHDocument` type parameter has been removed.
 
-**Before (v5.0):**
+**Before (v4.x):**
 
 ```typescript
 const action: Action<MyDocModelActionType, unknown> = {
@@ -49,7 +247,7 @@ const action: Action<MyDocModelActionType, unknown> = {
 };
 ```
 
-**After (v5.1):**
+**After (v5.0):**
 
 ```typescript
 const action: Action<unknown> = {
@@ -60,11 +258,11 @@ const action: Action<unknown> = {
 };
 ```
 
-### `OperationScope` has been removed
+### **`OperationScope` Removed**
 
 Previously, an enum existed called `OperationScope` that was used to define the scope of an operation. This has been removed and replaced with a string type.
 
-**Before (v5.0):**
+**Before (v4.x):**
 
 ```typescript
 const operation: Operation = {
@@ -72,7 +270,7 @@ const operation: Operation = {
 };
 ```
 
-**After (v5.1):**
+**After (v5.0):**
 
 ```typescript
 const operation: Operation = {
@@ -80,32 +278,108 @@ const operation: Operation = {
 };
 ```
 
-### `PHBaseState` changes
+### **`PHBaseState` Changes**
 
 The `PHBaseState` type has a number of changes:
 
-- It no longer has a type parameter.
-- `document` and `auth` scopes are now required.
+- It no longer has a type parameter
+- `document` and `auth` scopes are now required
 
-### `Action` and `Operation` changes
+### **`Action` and `Operation` Changes**
 
 The `Action` and `Operation` types have a number of changes:
 
-- `Operation` no longer extends `Action`, it _has_ one.
-- Some fields have been renamed or removed.
+- `Operation` no longer extends `Action`, it _has_ one
+- Some fields have been renamed or removed
 
-### `ExtendedState` has been removed
+### **`ExtendedState` Removed**
 
 This includes `createExtendedState`, `ExtendedStateFromDocument`, and `CreateExtendedState` functions.
 
-## Migration Steps
+## IMPROVEMENTS
 
-1. Update to the lastest `codegen` package.
-2. Regenerate your document models.
+### **Improved Connect Build System**
 
-## 🚀 **v5.0.0**
+The `ph connect build` and `ph connect preview` commands have been completely reimplemented.
 
-## BREAKING CHANGES
+**Key improvements:**
+
+- More reliable production builds
+- Better handling of external packages
+- Improved build performance
+- Cleaner build output
+
+### **Hot Module Replacement (HMR) for External Packages**
+
+Development experience has been significantly improved with HMR support for external packages.
+
+**What this means:**
+
+- Changes to external document models and editors update instantly during development
+- Faster iteration cycles when building custom packages
+- No more full page reloads when editing external code
+
+### **Relational Database Processors with Namespacing**
+
+Operational processors now support namespace isolation per drive.
+
+**Key features:**
+
+- Each drive gets its own database namespace
+- Prevents data conflicts between processors
+- Better data organization and querying
+- Schema generation with `ph generate schema` command
+
+## MIGRATION GUIDE
+
+This release includes several breaking changes. Here's what you need to update:
+
+1. **Project Structure** - Significant changes require creating a new project or applying manual updates
+2. **Document Models** - Must be regenerated with new templates
+3. **Editors** - Must adopt new hooks-based API
+4. **DocumentToolbar** - Config-based approach replaced with component
+5. **ProcessorFactory** - Signature change requires updates
+6. **Document Creation** - New pattern for creating documents
+7. **Server Interface** - Simplified method signatures
+
+### **Update your project**
+
+There are significant breaking changes in the project structure. It is recommended to create a new project from scratch and migrate your code to it.
+If you wish to migrate manually then follow these steps:
+
+1. Update to the latest version with `ph update`
+2. Apply these changes: https://github.com/powerhouse-inc/document-model-boilerplate/pull/42/files
+
+### **Regenerate Document Models**
+
+Run `ph generate` to regenerate your document models with updated templates.
+
+**Note:**
+It's still possible to generate from zip files, but due to breaking changes in the document structure, zips exported from older versions no longer work.
+Instead: use `ph generate document-models/<yourdocument>/<yourdocument>.json`
+
+### **Migrate editors to use the new hooks**
+
+The new hooks-based state management system is the primary breaking change affecting editor implementations.
+Editors no longer receive `document` and `dispatch` as props and must use the new hooks instead.
+
+**Replace state access patterns on editors**
+
+```typescript
+// Before
+function Editor(props) {
+  const { document, dispatch } = props;
+}
+
+// After
+function Editor() {
+  const [document, dispatch] = useSelectedDocument();
+}
+```
+
+### **React 19 Migration**
+
+Refer to the official guide: https://react.dev/blog/2024/04/25/react-19-upgrade-guide
 
 ### **New Document Creation Pattern**
 

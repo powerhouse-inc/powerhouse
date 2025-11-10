@@ -30,13 +30,15 @@ http {
         server_name _;
         root /app/dist;
 
-        location ${PH_CONNECT_BASE_PATH}assets/ {
+        location ^~ ${PH_CONNECT_BASE_PATH}assets/ {
             alias /app/dist/assets/;
             access_log off;
-            log_not_found off;
             etag off;
             expires max;
             add_header Cache-Control "public, max-age=31536000, immutable";
+
+            # 404 if the file isn't there instead of falling back to index.html
+            try_files $uri =404;
         }
 
         location = ${PH_CONNECT_BASE_PATH}service-worker.js {
@@ -60,10 +62,6 @@ http {
             add_header Cache-Control "public, must-revalidate";
         }
 
-        location ${PH_CONNECT_BASE_PATH} {
-            try_files $uri $uri/ ${PH_CONNECT_BASE_PATH}index.html;
-        }
-
         location = ${PH_CONNECT_BASE_PATH}index.html {
             alias /app/dist/index.html;
             add_header Cache-Control "no-cache, no-store, must-revalidate";
@@ -71,18 +69,9 @@ http {
             add_header Expires "0";
         }
 
-        # Catch-all: redirect to base path only if base path is not /
-        location / {
-            # Use X-Forwarded-Proto from Heroku to preserve https
-            set $redirect_scheme $scheme;
-            if ($http_x_forwarded_proto = 'https') {
-                set $redirect_scheme https;
-            }
-
-            if ($request_uri !~ ^${PH_CONNECT_BASE_PATH}) {
-                return 301 $redirect_scheme://$host${PH_CONNECT_BASE_PATH};
-            }
-            return 404;
+        # Main location: serve app with SPA fallback
+        location ${PH_CONNECT_BASE_PATH} {
+            try_files $uri $uri/ /index.html;
         }
     }
 }
