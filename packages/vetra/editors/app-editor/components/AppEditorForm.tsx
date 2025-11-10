@@ -2,7 +2,7 @@ import {
   useDocumentTypesInSelectedDrive,
   useSupportedDocumentTypesInReactor,
 } from "@powerhousedao/reactor-browser";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { actions } from "../../../document-models/app-module/index.js";
 import { StatusPill } from "../../components/index.js";
 import { useDebounce } from "../../hooks/index.js";
@@ -28,10 +28,14 @@ export const AppEditorForm = () => {
 
   // Use the debounce hook for name changes
 
-  const onNameChange = (name: string) => {
-    if (name === documentName) return;
-    dispatch(actions.setAppName({ name }));
-  };
+  const onNameChange = useCallback(
+    (name: string) => {
+      if (name === documentName) return;
+      console.log("onNameChange", name);
+      dispatch(actions.setAppName({ name }));
+    },
+    [documentName],
+  );
 
   useDebounce(appName, onNameChange, 300);
 
