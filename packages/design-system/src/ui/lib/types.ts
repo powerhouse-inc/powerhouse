@@ -2,7 +2,7 @@ export type DateFieldValue = string | Date | undefined;
 export type DatePickerView = "years" | "months" | "days";
 export type WeekStartDayNumber = 0 | 1 | 2 | 3 | 4 | 5 | 6 | undefined;
 
-export type ValueTransformer = (value?: any) => any;
+export type ValueTransformerFn = (value?: any) => any;
 
 export type TransformerTrigger = "blur" | "change" | "keyDown";
 
@@ -10,7 +10,7 @@ export type TransformerObject = {
   /**
    * The transformer function
    */
-  transformer: ValueTransformer;
+  transformer: ValueTransformerFn;
   options?: {
     /**
      * The event that triggers the transformer.
@@ -25,7 +25,7 @@ export type TransformerObject = {
   };
 };
 
-export type TransformerType = TransformerObject[] | ValueTransformer[];
+export type TransformerType = TransformerObject[] | ValueTransformerFn[];
 
 export interface ValueTransformerProps {
   transformers: TransformerType;

@@ -3,7 +3,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "../../../ui/components/popover/popover.js";
+} from "@powerhousedao/design-system/ui";
 
 export interface AccountPopoverProps {
   children: ReactNode;

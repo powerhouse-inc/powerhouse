@@ -1,6 +1,6 @@
+import type { SelectOption } from "@powerhousedao/design-system/ui";
+import { SelectFieldRaw } from "@powerhousedao/design-system/ui";
 import { twMerge } from "tailwind-merge";
-import type { SelectOption } from "../../../../ui/components/enum-field/types.js";
-import { SelectFieldRaw } from "../../../../ui/components/select-field/select-field.js";
 
 type Props = {
   documentModelEditor: string;

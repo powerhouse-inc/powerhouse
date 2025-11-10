@@ -1,6 +1,6 @@
+import type { SelectOption } from "@powerhousedao/design-system/ui";
+import { SelectFieldRaw } from "@powerhousedao/design-system/ui";
 import { useCallback } from "react";
-import type { SelectOption } from "../../../../../ui/components/enum-field/types.js";
-import { SelectFieldRaw } from "../../../../../ui/components/select-field/select-field.js";
 
 export type PackageManagerReactorSelectProps = {
   reactorOptions: SelectOption[];
