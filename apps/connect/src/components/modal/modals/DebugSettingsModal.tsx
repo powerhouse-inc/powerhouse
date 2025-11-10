@@ -1,12 +1,7 @@
-import { serviceWorkerManager } from "@powerhousedao/connect/utils";
 import { connectConfig } from "@powerhousedao/connect/config";
-import {
-  Combobox,
-  FormInput,
-  Icon,
-  Modal,
-  PowerhouseButton,
-} from "@powerhousedao/design-system";
+import { serviceWorkerManager } from "@powerhousedao/connect/utils";
+import { Icon, Modal, PowerhouseButton } from "@powerhousedao/design-system";
+import { Combobox, FormInput } from "@powerhousedao/design-system/connect";
 import {
   addTrigger,
   closePHModal,

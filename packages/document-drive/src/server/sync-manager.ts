@@ -8,24 +8,21 @@ import type {
   IStorageUnit,
   ISynchronizationManager,
   OperationUpdate,
-  SyncStatus,
-  SyncUnitStatusObject,
   SynchronizationUnit,
   SynchronizationUnitId,
   SynchronizationUnitQuery,
+  SyncStatus,
+  SyncUnitStatusObject,
 } from "document-drive";
-import {
-  SyncUnitMap,
-  SynchronizationUnitNotFoundError,
-  childLogger,
-  isBefore,
-  operationsToRevision,
-} from "document-drive";
+import { childLogger } from "document-drive/utils/logger";
+import { isBefore, operationsToRevision } from "document-drive/utils/misc";
 import type { DocumentModelModule, PHDocument } from "document-model";
 import {
   garbageCollectDocumentOperations,
   replayDocument,
 } from "document-model/core";
+import { SynchronizationUnitNotFoundError } from "./error.js";
+import { SyncUnitMap } from "./sync-unit-map.js";
 
 export class SynchronizationManager implements ISynchronizationManager {
   private syncStatus = new SyncUnitMap<SyncUnitStatusObject>();

@@ -3,13 +3,6 @@ import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
 import { getConfig } from "@powerhousedao/config/node";
 import type { IReactorClient } from "@powerhousedao/reactor";
-import {
-  getUniqueDocumentModels,
-  GraphQLManager,
-  PackageManager,
-  renderGraphqlPlayground,
-  type SubgraphClass,
-} from "@powerhousedao/reactor-api";
 import { setupMcpServer } from "@powerhousedao/reactor-mcp";
 import devcert from "devcert";
 import type {
@@ -35,8 +28,15 @@ import path from "node:path";
 import type { TlsOptions } from "node:tls";
 import type { Pool } from "pg";
 import { config, DefaultCoreSubgraphs } from "./config.js";
+import { GraphQLManager } from "./graphql/graphql-manager.js";
+import { renderGraphqlPlayground } from "./graphql/playground.js";
 import { ReactorSubgraph } from "./graphql/reactor/subgraph.js";
+import type { SubgraphClass } from "./graphql/types.js";
 import { ImportPackageLoader } from "./packages/import-loader.js";
+import {
+  getUniqueDocumentModels,
+  PackageManager,
+} from "./packages/package-manager.js";
 import type { AuthenticatedRequest } from "./services/auth.service.js";
 import { AuthService } from "./services/auth.service.js";
 import type { API, IPackageLoader, Processor } from "./types.js";

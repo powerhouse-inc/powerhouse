@@ -1,17 +1,3 @@
-import type { CodegenOptions } from "@powerhousedao/codegen";
-import {
-  generateAll,
-  generateSchema,
-  generateSchemas,
-  getDocumentTypesMap,
-  hygenGenerateDocumentModel,
-  hygenGenerateDriveEditor,
-  hygenGenerateEditor,
-  hygenGenerateImportScript,
-  hygenGenerateProcessor,
-  hygenGenerateSubgraph,
-  loadDocumentModel,
-} from "@powerhousedao/codegen";
 import type {
   PartialPowerhouseManifest,
   PowerhouseConfig,
@@ -23,6 +9,18 @@ import type { DocumentModelGlobalState } from "document-model";
 import fs from "node:fs";
 import { join } from "node:path";
 import { readPackage } from "read-pkg";
+import { generateSchema, generateSchemas } from "./graphql.js";
+import {
+  generateAll,
+  hygenGenerateDocumentModel,
+  hygenGenerateDriveEditor,
+  hygenGenerateEditor,
+  hygenGenerateImportScript,
+  hygenGenerateProcessor,
+  hygenGenerateSubgraph,
+} from "./hygen.js";
+import type { CodegenOptions } from "./types.js";
+import { getDocumentTypesMap, loadDocumentModel } from "./utils.js";
 
 export async function generate(config: PowerhouseConfig) {
   const { skipFormat, watch } = config;

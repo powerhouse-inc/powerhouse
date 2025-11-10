@@ -1,19 +1,20 @@
 import type {
-  Account,
   AccountFormInputs,
   AssetFormInputs,
+  FixedIncomeTypeFormInputs,
+  GroupTransactionFormInputs,
+  ServiceProviderFeeTypeFormInputs,
+  SPVFormInputs,
+} from "./form.js";
+import type {
+  Account,
   FixedIncome,
   FixedIncomeType,
-  FixedIncomeTypeFormInputs,
   GroupTransaction,
-  GroupTransactionFormInputs,
   ServiceProviderFeeType,
-  ServiceProviderFeeTypeFormInputs,
   SPV,
-  SPVFormInputs,
-  TableDataByTableName,
-  TableName,
-} from "@powerhousedao/design-system";
+} from "./state.js";
+import type { TableDataByTableName, TableName } from "./table.js";
 
 export type FormInputsByTableName = {
   ASSET: AssetFormInputs;

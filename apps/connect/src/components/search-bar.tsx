@@ -1,5 +1,6 @@
-import type { ConnectSearchBarProps } from "@powerhousedao/design-system";
-import { ConnectSearchBar, Icon } from "@powerhousedao/design-system";
+import { Icon } from "@powerhousedao/design-system";
+import type { ConnectSearchBarProps } from "@powerhousedao/design-system/connect";
+import { ConnectSearchBar } from "@powerhousedao/design-system/connect";
 import { useTranslation } from "react-i18next";
 
 const defaultFilterItems: ConnectSearchBarProps["filterItems"] = [

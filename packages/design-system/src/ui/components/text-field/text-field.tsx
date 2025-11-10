@@ -1,11 +1,8 @@
-import type {
-  FieldErrorHandling,
-  TextInputProps,
-  WithDifference,
-} from "@powerhousedao/design-system";
-import { TextInput, withFieldValidation } from "@powerhousedao/design-system";
 import type { Ref } from "react";
 import { forwardRef } from "react";
+import type { FieldErrorHandling, WithDifference } from "../../types.js";
+import { type TextInputProps, TextInput } from "../text-input/text-input.js";
+import { withFieldValidation } from "../with-field-validation/with-field-validation.js";
 
 export type TextFieldProps = TextInputProps &
   FieldErrorHandling &

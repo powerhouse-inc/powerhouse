@@ -1,4 +1,4 @@
-import { Root } from "@powerhousedao/connect/components/root";
+import { Root } from "@powerhousedao/connect/components";
 import { connectConfig } from "@powerhousedao/connect/config";
 import { AtlasImport, Content } from "@powerhousedao/connect/pages";
 import { Suspense } from "react";

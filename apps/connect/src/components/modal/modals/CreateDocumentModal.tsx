@@ -1,4 +1,4 @@
-import { CreateDocumentModal as ConnectCreateDocumentModal } from "@powerhousedao/design-system";
+import { CreateDocumentModal as ConnectCreateDocumentModal } from "@powerhousedao/design-system/connect";
 import {
   addDocument,
   closePHModal,

@@ -1,3 +1,4 @@
+import type { InputMaybe } from "document-model";
 import type {
   Asset,
   BaseTransaction,
@@ -8,8 +9,7 @@ import type {
   RealWorldAssetsState,
   SPV,
   TransactionFeeInput,
-} from "@powerhousedao/design-system";
-import type { InputMaybe } from "document-model";
+} from "./types.js";
 
 const cashTransactionSignByTransactionType: Record<
   GroupTransactionType,

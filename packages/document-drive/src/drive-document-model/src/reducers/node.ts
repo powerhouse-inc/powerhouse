@@ -5,14 +5,15 @@
  */
 
 import type { DocumentDriveNodeOperations, FileNode } from "document-drive";
-import { DocumentIdValidationError, isValidDocumentId } from "document-drive";
+import { DocumentIdValidationError } from "document-drive/server/error";
+import { isValidDocumentId } from "document-drive/storage/utils";
 import {
   getDescendants,
   handleTargetNameCollisions,
   isFileNode,
   isFolderNode,
   isValidName,
-} from "document-drive";
+} from "../utils.js";
 
 export const nodeReducer: DocumentDriveNodeOperations = {
   addFileOperation(state, action, dispatch) {

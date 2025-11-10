@@ -1,7 +1,7 @@
-import type { Item, TableItem } from "@powerhousedao/design-system";
 import type { Identifier, Order } from "natural-orderby";
 import { orderBy } from "natural-orderby";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { Item, TableItem } from "../types.js";
 
 /**
  * Takes a list of items and returns a sorted list of items and a sort descriptor.

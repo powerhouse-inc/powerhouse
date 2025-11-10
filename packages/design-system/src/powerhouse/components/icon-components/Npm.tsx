@@ -1,5 +1,5 @@
-import type { Props } from "./index.js";
-export default function Npm(props: Props) {
+import type { IconComponentProps } from "@powerhousedao/design-system";
+export default function Npm(props: IconComponentProps) {
   return (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
       <path

@@ -1,10 +1,4 @@
 import type {
-  DocumentDriveGlobalState,
-  DocumentDriveLocalState,
-  DocumentDrivePHState,
-} from "document-drive";
-import { driveDocumentReducer, driveDocumentType } from "document-drive";
-import type {
   AssertIsDocumentOfType,
   AssertIsStateOfType,
   CreateDocument,
@@ -27,6 +21,13 @@ import {
   isDriveDocument,
   isDriveState,
 } from "./document-schema.js";
+import { driveDocumentType } from "./document-type.js";
+import { driveDocumentReducer } from "./reducer.js";
+import type {
+  DocumentDriveGlobalState,
+  DocumentDriveLocalState,
+  DocumentDrivePHState,
+} from "document-drive";
 
 export const initialGlobalState: DocumentDriveGlobalState = {
   name: "",

@@ -1,4 +1,4 @@
-import { ConnectConfirmationModal } from "@powerhousedao/design-system";
+import { ConnectConfirmationModal } from "@powerhousedao/design-system/connect";
 import {
   closePHModal,
   exportFile,

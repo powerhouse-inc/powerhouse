@@ -1,18 +1,13 @@
-import type {
-  FieldErrorHandling,
-  InputBaseProps,
-  RadioGroupProps,
-} from "@powerhousedao/design-system";
-import {
-  cn,
-  FormLabel,
-  FormMessageList,
-  Radio,
-  RadioGroup,
-  withFieldValidation,
-} from "@powerhousedao/design-system";
+import { cn } from "@powerhousedao/design-system";
 import type { HTMLAttributes, Ref } from "react";
 import { forwardRef, useId } from "react";
+import type { FieldErrorHandling, InputBaseProps } from "../../types.js";
+import type { RadioGroupProps } from "../enum-field/types.js";
+import { FormLabel } from "../form-label/form-label.js";
+import { FormMessageList } from "../form-message/message-list.js";
+import { withFieldValidation } from "../with-field-validation/with-field-validation.js";
+import { RadioGroup } from "./radio-group.js";
+import { Radio } from "./radio.js";
 type RadioGroupFieldBaseProps = Omit<
   HTMLAttributes<HTMLDivElement>,
   | keyof InputBaseProps<string>

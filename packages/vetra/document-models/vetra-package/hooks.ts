@@ -9,7 +9,7 @@ import type {
   VetraPackageDocument,
   VetraPackageAction,
 } from "@powerhousedao/vetra/document-models/vetra-package";
-import { isVetraPackageDocument } from "@powerhousedao/vetra/document-models/vetra-package";
+import { isVetraPackageDocument } from "./gen/document-schema.js";
 
 /** Hook to get a VetraPackage document by its id */
 export function useVetraPackageDocumentById(

@@ -7,22 +7,26 @@ import type {
   ReadDriveOptions,
 } from "document-drive";
 import {
-  DocumentModelNotFoundError,
   driveDocumentModelModule,
   driveDocumentType,
+} from "document-drive/drive-document-model";
+import { DocumentModelNotFoundError } from "document-drive/server/error";
+import {
   fetchDocument,
-  ReadDocumentNotFoundError,
-  ReadDriveError,
-  ReadDriveNotFoundError,
-  ReadDriveSlugNotFoundError,
   requestPublicDrive,
-} from "document-drive";
+} from "document-drive/utils/graphql";
 import type {
   DocumentModelModule,
   PHBaseState,
   PHDocument,
 } from "document-model";
 import type { GraphQLError } from "graphql";
+import {
+  ReadDocumentNotFoundError,
+  ReadDriveError,
+  ReadDriveNotFoundError,
+  ReadDriveSlugNotFoundError,
+} from "./errors.js";
 
 export class ReadModeService implements IReadModeDriveService {
   #getDocumentModelModule: GetDocumentModelModule;

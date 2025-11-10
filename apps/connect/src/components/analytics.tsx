@@ -1,6 +1,6 @@
 import { connectConfig } from "@powerhousedao/connect/config";
+import { useAcceptedCookies } from "@powerhousedao/connect/hooks";
 import { useEffect } from "react";
-import { useAcceptedCookies } from "@powerhousedao/connect/hooks/useAcceptedCookies";
 
 declare global {
   interface Window {

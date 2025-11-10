@@ -1,7 +1,3 @@
-import type {
-  ColumnCountByTableWidth,
-  TableColumn,
-} from "@powerhousedao/design-system";
 import {
   useCallback,
   useEffect,
@@ -9,6 +5,7 @@ import {
   useState,
   type RefObject,
 } from "react";
+import type { ColumnCountByTableWidth, TableColumn } from "../types.js";
 
 type Props<TColumn extends TableColumn> = {
   columns: TColumn[] | undefined;

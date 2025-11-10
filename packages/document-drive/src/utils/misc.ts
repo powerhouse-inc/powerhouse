@@ -1,6 +1,7 @@
 import { pascalCase } from "change-case";
 import type { DocumentDriveDocument, ListenerRevision } from "document-drive";
-import { driveDocumentType, OperationError } from "document-drive";
+import { driveDocumentType } from "document-drive/drive-document-model";
+import { OperationError } from "document-drive/server/error";
 import type { DocumentOperations, Operation, PHDocument } from "document-model";
 
 export function isDocumentDrive(

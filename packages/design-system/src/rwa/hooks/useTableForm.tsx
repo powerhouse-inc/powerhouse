@@ -1,6 +1,7 @@
-import type { FormHookProps } from "@powerhousedao/design-system";
-import { useFormInputs, useSubmit } from "@powerhousedao/design-system";
 import { useMemo } from "react";
+import type { FormHookProps } from "../types.js";
+import { useFormInputs } from "./useFormInputs.js";
+import { useSubmit } from "./useSubmit.js";
 
 export function useTableForm(props: FormHookProps) {
   const { operation, tableName, tableItem } = props;

@@ -1,10 +1,10 @@
-import { WagmiContext } from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "@storybook/test";
 import type { DocumentDriveDocument } from "document-drive";
 import type { ComponentPropsWithoutRef } from "react";
-import { ConnectSidebar } from "../index.js";
+import { WagmiContext } from "../../context/WagmiContext.js";
 import { SidebarItem } from "./sidebar-item.js";
+import { ConnectSidebar } from "./sidebar.js";
 
 type Args = ComponentPropsWithoutRef<typeof ConnectSidebar> & {
   drives?: DocumentDriveDocument[];

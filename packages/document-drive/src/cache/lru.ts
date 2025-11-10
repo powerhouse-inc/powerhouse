@@ -1,9 +1,8 @@
-import type { LRUCacheStorageOptions } from "document-drive";
-import { childLogger } from "document-drive";
+import type { ICacheStorage, LRUCacheStorageOptions } from "document-drive";
+import { childLogger } from "document-drive/utils/logger";
 import type { LRUCache } from "lru-cache";
 import { LRUCache as BaseLRUCache } from "lru-cache";
 import sizeof from "object-sizeof";
-import type { ICacheStorage } from "document-drive";
 
 /**
  * An implementation of a Least Recently Used (LRU) cache storage that evicts items
