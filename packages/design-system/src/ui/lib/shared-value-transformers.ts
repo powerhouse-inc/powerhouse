@@ -1,4 +1,4 @@
-import type { TransformerObject } from "../components/value-transformer/value-transformer.js";
+import type { TransformerObject } from "./types.js";
 
 export const sharedValueTransformers: Record<
   string,

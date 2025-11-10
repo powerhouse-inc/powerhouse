@@ -29,6 +29,10 @@
       "import": "./dist/src/ui/index.js",
       "types": "./dist/src/ui/index.d.ts"
     },
+    "./ui/lib": {
+      "import": "./dist/src/ui/lib/index.js",
+      "types": "./dist/src/ui/lib/index.d.ts"
+    },
     "./ui/*": "./dist/src/ui/*",
     "./utils": {
       "import": "./dist/src/utils/index.js",
@@ -52,7 +56,7 @@
     "./assets/*.avif": "./assets/*.avif",
     "./style.css": "./dist/style.css",
     "./theme.css": "./theme.css",
-    "./testing": "./dist/src/ui/lib/testing.js"
+    "./testing": "./dist/src/ui/testing.js"
   },
   "scripts": {
     "tsc": "tsc",

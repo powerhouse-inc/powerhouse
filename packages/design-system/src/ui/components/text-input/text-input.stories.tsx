@@ -4,7 +4,7 @@ import {
   getValidationArgTypes,
   PrebuiltArgTypes,
   StorybookControlCategory,
-} from "../../lib/storybook-arg-types.js";
+} from "../storybook-arg-types.js";
 import { TextInput } from "./text-input.js";
 
 /**

@@ -1,3 +1,5 @@
+export type * from "./components/types.js";
+export type * from "./lib/types.js";
 export type ErrorMessage = string;
 
 export type ValidatorResult = ErrorMessage | boolean;

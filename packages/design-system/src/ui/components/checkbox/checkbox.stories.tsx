@@ -3,7 +3,7 @@ import {
   getDefaultArgTypes,
   getValidationArgTypes,
   StorybookControlCategory,
-} from "../../lib/storybook-arg-types.js";
+} from "../storybook-arg-types.js";
 import { Checkbox } from "./checkbox.js";
 
 /**

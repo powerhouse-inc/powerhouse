@@ -2,7 +2,7 @@ import { act, render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { createRef, forwardRef } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { renderWithForm } from "../../lib/testing.js";
+import { renderWithForm } from "../testing.js";
 import type { ValidatorHandler } from "../../types.js";
 import { FormGroup } from "../form-group/form-group.js";
 import { FormLabel } from "../form-label/form-label.js";
