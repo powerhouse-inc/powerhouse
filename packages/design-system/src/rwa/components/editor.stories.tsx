@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import type { ComponentPropsWithoutRef } from "react";
 import { useState } from "react";
 import { useInterval } from "usehooks-ts";
-import { RWAEditorContextProvider } from "../../context/editor-context.js";
+import { RWAEditorContextProvider } from "../context/editor-context.js";
 import {
   mockAccounts,
   mockFixedIncomeTypes,
@@ -12,8 +12,8 @@ import {
   mockServiceProviderFeeTypes,
   mockStateInitial,
   mockStateWithData,
-} from "../../mocks.js";
-import type { ActionOutputFor } from "../../types.js";
+} from "../mocks.js";
+import type { ActionOutputFor } from "../types.js";
 import { RWAEditor } from "./editor.js";
 
 const meta: Meta<typeof RWAEditor> = {

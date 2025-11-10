@@ -3,7 +3,7 @@ import type { Order } from "natural-orderby";
 import { Icon } from "@powerhousedao/design-system";
 import { useState } from "react";
 import { twJoin, twMerge } from "tailwind-merge";
-import type { SortDirection, TableBaseProps } from "../../../types.js";
+import type { SortDirection, TableBaseProps } from "../types.js";
 
 /**
  * Base table component

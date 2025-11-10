@@ -1,8 +1,6 @@
-import type { DivProps } from "@powerhousedao/design-system";
+import type { DivProps, DriveLocation } from "@powerhousedao/design-system";
 import { twMerge } from "tailwind-merge";
 import { locationInfoByLocation } from "../../../constants/options.js";
-import type { DriveLocation } from "@powerhousedao/design-system";
-
 type LocationInfoProps = DivProps & {
   readonly location: DriveLocation;
 };

@@ -38,6 +38,10 @@
       "import": "./dist/src/connect/index.js",
       "types": "./dist/src/connect/index.d.ts"
     },
+    "./rwa": {
+      "import": "./dist/src/rwa/index.js",
+      "types": "./dist/src/rwa/index.d.ts"
+    },
     "./assets/*.mp4": "./assets/*.mp4",
     "./assets/*.png": "./assets/*.png",
     "./assets/*.svg": "./assets/*.svg",

@@ -5,10 +5,10 @@ import { useWatch } from "react-hook-form";
 import {
   ConnectTooltip,
   ConnectTooltipProvider,
-} from "../../../../connect/components/tooltip/tooltip.js";
-import { getIsTransaction } from "../../../../services/viem.js";
-import type { GroupTransactionFormInputs } from "../../../types.js";
-import { RWATableTextInput } from "../../inputs/text-input.js";
+} from "@powerhousedao/design-system/connect";
+import type { GroupTransactionFormInputs } from "../types.js";
+import { RWATableTextInput } from "./text-input.js";
+import { getIsTransaction } from "../../services/viem.js";
 
 export const TransactionReference = forwardRef(function TransactionReference(
   props: ComponentPropsWithRef<typeof RWATableTextInput> & {

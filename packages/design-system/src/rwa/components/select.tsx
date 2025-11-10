@@ -1,3 +1,4 @@
+import { Combobox } from "@powerhousedao/design-system/connect";
 import type { ComponentPropsWithoutRef } from "react";
 import type {
   Control,
@@ -7,7 +8,6 @@ import type {
 } from "react-hook-form";
 import { Controller } from "react-hook-form";
 import { twMerge } from "tailwind-merge";
-import { Combobox } from "../../../connect/components/combobox/combobox.js";
 
 export type RWATableSelectProps<ControlInputs extends FieldValues> = Omit<
   ComponentPropsWithoutRef<typeof Combobox>,

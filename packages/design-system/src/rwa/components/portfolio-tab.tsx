@@ -1,13 +1,13 @@
-import { GroupTransactionsTable } from "../table/transactions/group-transactions-table.js";
+import { AssetsTable } from "./assets-table.js";
 import { RwaTabContent } from "./rwa-tab-content.js";
 
-export function TransactionsTab() {
+export function PortfolioTab() {
   return (
     <RwaTabContent
       description="Details on the distribution of assets among different financial institutions or investment vehicles."
-      label="Transactions"
+      label="Portfolio"
     >
-      <GroupTransactionsTable />
+      <AssetsTable />
     </RwaTabContent>
   );
 }

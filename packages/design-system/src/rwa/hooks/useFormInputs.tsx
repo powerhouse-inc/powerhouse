@@ -6,16 +6,15 @@ import type {
   UseFormRegister,
   UseFormWatch,
 } from "react-hook-form";
-import { EntryTimeLabel } from "../components/inputs/entry-time-label.js";
-import { RWANumberInput } from "../components/inputs/number-input.js";
-import { RWATableSelect } from "../components/inputs/select.js";
-import { RWATableTextInput } from "../components/inputs/text-input.js";
-import { useModal } from "../components/modal/use-modal.js";
-
-import { CashBalanceChange } from "../components/table/transactions/cash-balance-change.js";
-import { FeeTransactionsTable } from "../components/table/transactions/fee-transactions-table.js";
-import { TransactionReference } from "../components/table/transactions/transaction-reference.js";
-import { UnitPrice } from "../components/table/transactions/unit-price.js";
+import { CashBalanceChange } from "../components/cash-balance-change.js";
+import { EntryTimeLabel } from "../components/entry-time-label.js";
+import { FeeTransactionsTable } from "../components/fee-transactions-table.js";
+import { RWANumberInput } from "../components/number-input.js";
+import { RWATableSelect } from "../components/select.js";
+import { RWATableTextInput } from "../components/text-input.js";
+import { TransactionReference } from "../components/transaction-reference.js";
+import { UnitPrice } from "../components/unit-price.js";
+import { useModal } from "../components/use-modal.js";
 import { tableNames } from "../constants/names.js";
 import {
   allGroupTransactionTypes,

@@ -1,8 +1,8 @@
 import type { Control } from "react-hook-form";
 import { useWatch } from "react-hook-form";
-import type { GroupTransactionFormInputs } from "../../../types.js";
-import { calculateCashBalanceChange } from "../../../utils/table.js";
-import { FormattedNumber } from "../base/formatted-number.js";
+import type { GroupTransactionFormInputs } from "../types.js";
+import { calculateCashBalanceChange } from "../utils/table.js";
+import { FormattedNumber } from "./formatted-number.js";
 
 export function CashBalanceChange(props: {
   readonly control: Control<GroupTransactionFormInputs>;

@@ -5,9 +5,9 @@ import { twMerge } from "tailwind-merge";
 import type {
   GroupTransactionFormInputs,
   ServiceProviderFeeType,
-} from "../../../types.js";
-import { RWANumberInput } from "../../inputs/number-input.js";
-import { RWATableSelect } from "../../inputs/select.js";
+} from "../types.js";
+import { RWANumberInput } from "./number-input.js";
+import { RWATableSelect } from "./select.js";
 
 type Props = {
   readonly canHaveTransactionFees: boolean;

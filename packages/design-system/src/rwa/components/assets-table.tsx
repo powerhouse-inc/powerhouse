@@ -1,12 +1,12 @@
 import { Fragment, useCallback, useMemo } from "react";
-import { tableNames } from "../../../constants/names.js";
-import { useEditorContext } from "../../../context/editor-context.js";
-import type { TableColumn } from "../../../types.js";
-import { sumTotalForProperty } from "../../../utils/calculations.js";
-import { handleTableDatum } from "../../../utils/table.js";
-import { RWATableCell } from "../base/table-cell.js";
-import { RWATableRow } from "../base/table-row.js";
-import { TableWithForm } from "../base/table-with-form.js";
+import { tableNames } from "../constants/names.js";
+import { useEditorContext } from "../context/editor-context.js";
+import type { TableColumn } from "../types.js";
+import { sumTotalForProperty } from "../utils/calculations.js";
+import { handleTableDatum } from "../utils/table.js";
+import { RWATableCell } from "./table-cell.js";
+import { RWATableRow } from "./table-row.js";
+import { TableWithForm } from "./table-with-form.js";
 
 export function AssetsTable() {
   const tableName = tableNames.ASSET;
