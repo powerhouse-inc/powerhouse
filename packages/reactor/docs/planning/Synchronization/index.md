@@ -61,7 +61,11 @@ graph
     end
 ```
 
-Here we introduce the concept of a "filter" for queries. This filter is optimized for the requirements of the synchronization system.
+Here we introduce the concept of a "filter" for queries. These consist of a collection id, a cursor, and a `ViewFilter`. The collection id, as described in the [Operation Index](../Cache/operation-index.md) documentation, is generally derived from the drive id and branch.
+
+The cursor is a monotonically increasing integer that represents the ordinal of the last operation that was processed.
+
+The `ViewFilter` is a standard `ViewFilter` object, as described in the [Shared interface](../Shared/interface.md) documentation.
 
 #### `IOperationIndex`
 
@@ -74,8 +78,8 @@ Here we introduce the concept of a "filter" for queries. This filter is optimize
 
 Algorithmically, when the scheduler fires:
 
-1. `ISyncManager` reads the remote’s stored ordinal + filter.
-2. It queries `IOperationIndex` for the next batch (API TBD, e.g. `getSince(collectionId, ordinal, filter, limit)`), receiving ordered operations plus the new ordinal.
+1. `ISyncManager` reads the remote’s stored (filter, cursor) pairs.
+2. It queries `IOperationIndex` using the `find` method (`find(collectionId, cursor, view, paging)`), receiving ordered operations plus the new ordinal.
 3. The results are wrapped in `MutableJobHandle`s and placed into the channel inbox so the channel can transport them to the remote reactor.
 
 If a remote only tracks a handful of documents, we still leverage the index by building a logical collection over that document set and keeping an ordinal per remote-filter pair. The important point is that the pull architecture is defined in terms of the index, not by directly scanning the operation store.
@@ -580,7 +584,7 @@ This would mean that a remote reactor is trying to submit an extremely out of da
 
 #### `GRACEFUL_ABORT`
 
-For all sources, the `ISyncManager` will either write the mailboxes to disk (for processing later) or simply ignore and discard.
+For all sources, the `ISyncManager` will simply ignore and discard, allowing the system to catchup on next startup.
 
 ### Channel Errors
 

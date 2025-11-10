@@ -29,11 +29,6 @@ export interface IOperationIndexTxn {
   write(operations: OperationIndexEntry[]): void;
 }
 
-export type OperationIndexCursor = {
-  /** Starting ordinal (exclusive) to query from */
-  ordinal: number;
-};
-
 export interface IOperationIndex {
   /** Starts a new transaction */
   start(): IOperationIndexTxn;
@@ -51,8 +46,9 @@ export interface IOperationIndex {
    */
   find(
     collectionId: string, // <-- already has branch information
-    cursor: OperationIndexCursor,
-    paging: PagingOptions,
+    cursor?: number, // <-- starting ordinal (exclusive) to query from
+    view?: ViewFilter,
+    paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<OperationIndexEntry>>;
 }
@@ -93,6 +89,7 @@ await operationIndex.commit(txn);
 // Query operations for a collection
 const page = await operationIndex.find(
   'collection.doc-123',
+  -1,
   { branch: 'main', scopes: ['document'] },
   { cursor: '', limit: 100 },
 );
