@@ -1,13 +1,13 @@
+import type { IconName } from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
+import { Icon } from "../../../powerhouse/components/icon/icon.js";
 import { withForm } from "../../lib/decorators.js";
 import {
-  getDefaultArgTypes,
-  getValidationArgTypes,
-  StorybookControlCategory,
+    getDefaultArgTypes,
+    getValidationArgTypes,
+    StorybookControlCategory,
 } from "../../lib/storybook-arg-types.js";
 import { EnumField } from "./enum-field.js";
-import type { IconName } from "../../../powerhouse/components/icon-components/index.js";
-import { Icon } from "../../../powerhouse/components/icon/icon.js";
 
 const meta: Meta<typeof EnumField> = {
   title: "UI/Enum Field",

@@ -1,8 +1,8 @@
 import type { PowerhousePackage } from "@powerhousedao/config";
 
+import type { IconName } from "@powerhousedao/design-system";
 import { useCallback, useMemo, useState } from "react";
 import { PowerhouseButton } from "../../../../../powerhouse/components/button/button.js";
-import type { IconName } from "../../../../../powerhouse/components/icon-components/index.js";
 import { Icon } from "../../../../../powerhouse/components/icon/icon.js";
 import { IdAutocomplete } from "../../../../../ui/components/id-autocomplete/id-autocomplete.js";
 import type { IdAutocompleteProps } from "../../../../../ui/components/id-autocomplete/types.js";

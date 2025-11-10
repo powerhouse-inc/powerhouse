@@ -1,5 +1,5 @@
+import type { IconName } from "@powerhousedao/design-system";
 import React from "react";
-import type { IconName } from "../../../../powerhouse/components/icon-components/index.js";
 import { Icon } from "../../../../powerhouse/components/icon/icon.js";
 import { cn } from "../../../../utils/cn.js";
 import { CommandItem } from "../../command/command.js";

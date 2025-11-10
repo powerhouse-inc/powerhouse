@@ -1,14 +1,14 @@
+import type { IconName } from "@powerhousedao/design-system";
 import type { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 import { Icon } from "../../../powerhouse/components/icon/icon.js";
-import type { IconName } from "../../../powerhouse/components/icon-components/index.js";
 import {
-  CONFLICT,
-  ERROR,
-  INITIAL_SYNC,
-  MISSING,
-  SUCCESS,
-  SYNCING,
+    CONFLICT,
+    ERROR,
+    INITIAL_SYNC,
+    MISSING,
+    SUCCESS,
+    SYNCING,
 } from "../../constants/syncing.js";
 import type { SyncStatus } from "../../types/syncing.js";
 

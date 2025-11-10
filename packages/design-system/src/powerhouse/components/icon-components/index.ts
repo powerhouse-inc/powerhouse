@@ -125,6 +125,7 @@ import XTwitter from "./XTwitter.js";
 import Xmark from "./Xmark.js";
 import XmarkLight from "./XmarkLight.js";
 import Youtube from "./Youtube.js";
+import type { IconName } from "./types.js";
 export const iconNames = [
   "CalendarTime",
   "CaretLeft",
@@ -253,8 +254,6 @@ export const iconNames = [
   "Xmark",
   "Youtube",
 ] as const;
-
-export type IconName = (typeof iconNames)[number];
 export const iconComponents: Record<
   IconName,
   (props: IconComponentProps) => React.JSX.Element

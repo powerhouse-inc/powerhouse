@@ -1,4 +1,4 @@
-import type { IconName } from "../../../powerhouse/components/icon-components/index.js";
+import type { IconName } from "@powerhousedao/design-system";
 
 export interface Currency {
   ticker: string;
