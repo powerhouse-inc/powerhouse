@@ -1,6 +1,6 @@
+import { Icon } from "@powerhousedao/design-system";
 import type { ComponentPropsWithoutRef } from "react";
 import { memo, useCallback } from "react";
-import { Icon } from "../../../powerhouse/components/icon/icon.js";
 import { Modal } from "../../../powerhouse/components/modal/modal.js";
 import type { DependentItemProps } from "../../constants/dependent-items.js";
 import { tableLabels } from "../../constants/names.js";

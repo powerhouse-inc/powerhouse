@@ -1,5 +1,5 @@
+import { Icon } from "@powerhousedao/design-system";
 import { twMerge } from "tailwind-merge";
-import { Icon } from "../../../powerhouse/components/icon/icon.js";
 
 export type EditorUndoRedoButtonsProps = {
   readonly canUndo: boolean;

@@ -1,5 +1,5 @@
+import { Icon } from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
-import { Icon } from "../../../../powerhouse/components/icon/icon.js";
 import { HomeScreenItem } from "./home-screen-item.js";
 
 const meta = {

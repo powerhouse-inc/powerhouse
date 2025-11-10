@@ -1,6 +1,6 @@
+import { Icon } from "@powerhousedao/design-system";
 import { useCallback, useRef } from "react";
 import { Fragment } from "react/jsx-runtime";
-import { Icon } from "../../../../powerhouse/components/icon/icon.js";
 import { columnsByTableName } from "../../../constants/columns.js";
 import { tableLabels } from "../../../constants/names.js";
 import { defaultColumnCountByTableWidth } from "../../../constants/table.js";
@@ -8,11 +8,11 @@ import { useEditorContext } from "../../../context/editor-context.js";
 import { useColumnPriority } from "../../../hooks/useColumnPriority.js";
 import { useTableHeight } from "../../../hooks/useTableHeight.js";
 import type {
-  SortDirection,
-  TableColumn,
-  TableItemType,
-  TableName,
-  TableProps,
+    SortDirection,
+    TableColumn,
+    TableItemType,
+    TableName,
+    TableProps,
 } from "../../../types.js";
 import { handleTableDatum } from "../../../utils/table.js";
 import { TableBase } from "./table-base.js";

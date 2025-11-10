@@ -1,6 +1,6 @@
 import type { IconName } from "@powerhousedao/design-system";
+import { Icon } from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
-import { Icon } from "../../../powerhouse/components/icon/icon.js";
 import { withForm } from "../../lib/decorators.js";
 import {
     getDefaultArgTypes,

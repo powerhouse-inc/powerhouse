@@ -1,8 +1,8 @@
 import type { ComponentPropsWithoutRef } from "react";
 
+import { Icon } from "@powerhousedao/design-system";
 import { twMerge } from "tailwind-merge";
 import { PowerhouseButton } from "../../../../powerhouse/components/button/button.js";
-import { Icon } from "../../../../powerhouse/components/icon/icon.js";
 import { Modal } from "../../../../powerhouse/components/modal/modal.js";
 
 export type SettingsModalOldProps = ComponentPropsWithoutRef<typeof Modal> & {

@@ -1,7 +1,7 @@
-import type { IconName } from "@powerhousedao/design-system";
+import type { IconName, SyncStatus } from "@powerhousedao/design-system";
+import { Icon } from "@powerhousedao/design-system";
 import type { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
-import { Icon } from "../../../powerhouse/components/icon/icon.js";
 import {
     CONFLICT,
     ERROR,
@@ -10,7 +10,6 @@ import {
     SUCCESS,
     SYNCING,
 } from "../../constants/syncing.js";
-import type { SyncStatus } from "../../types/syncing.js";
 
 const syncIcons: Record<SyncStatus, IconName> = {
   SYNCING: "Syncing",

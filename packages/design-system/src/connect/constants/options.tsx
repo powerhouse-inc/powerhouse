@@ -4,7 +4,7 @@ import type {
   NodeOption,
   NormalNodeOption,
   OptionMetadata,
-} from "../types/options.js";
+} from "@powerhousedao/design-system";
 
 export const defaultDriveOptions = [
   "NEW_FOLDER",

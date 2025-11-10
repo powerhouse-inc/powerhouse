@@ -1,10 +1,10 @@
+import { Icon } from "@powerhousedao/design-system";
 import type { Control, FieldErrors, Path } from "react-hook-form";
 import { useFieldArray } from "react-hook-form";
 import { twMerge } from "tailwind-merge";
-import { Icon } from "../../../../powerhouse/components/icon/icon.js";
 import type {
-  GroupTransactionFormInputs,
-  ServiceProviderFeeType,
+    GroupTransactionFormInputs,
+    ServiceProviderFeeType,
 } from "../../../types.js";
 import { RWANumberInput } from "../../inputs/number-input.js";
 import { RWATableSelect } from "../../inputs/select.js";

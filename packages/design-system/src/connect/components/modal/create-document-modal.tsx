@@ -1,9 +1,9 @@
+import { Icon } from "@powerhousedao/design-system";
 import { isValidName } from "document-drive";
 import type { ComponentPropsWithoutRef } from "react";
 import { useCallback, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { PowerhouseButton } from "../../../powerhouse/components/button/button.js";
-import { Icon } from "../../../powerhouse/components/icon/icon.js";
 import { Modal } from "../../../powerhouse/components/modal/modal.js";
 import { FormInput } from "../form-input/form-input.js";
 

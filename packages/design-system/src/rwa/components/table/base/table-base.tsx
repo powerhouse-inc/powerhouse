@@ -1,8 +1,8 @@
 import type { Order } from "natural-orderby";
 
+import { Icon } from "@powerhousedao/design-system";
 import { useState } from "react";
 import { twJoin, twMerge } from "tailwind-merge";
-import { Icon } from "../../../../powerhouse/components/icon/icon.js";
 import type { SortDirection, TableBaseProps } from "../../../types.js";
 
 /**

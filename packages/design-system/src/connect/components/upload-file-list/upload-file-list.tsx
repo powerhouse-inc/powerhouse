@@ -1,10 +1,10 @@
+import { Icon } from "@powerhousedao/design-system";
 import type { ComponentPropsWithoutRef } from "react";
 import { useMemo, useState } from "react";
 import { twMerge } from "tailwind-merge";
-import { Icon } from "../../../powerhouse/components/icon/icon.js";
 import {
-  type UploadFileItemProps,
-  UploadFileItem,
+    type UploadFileItemProps,
+    UploadFileItem,
 } from "../upload-file-item/upload-file-item.js";
 import { getUploadListTitle } from "./utils.js";
 

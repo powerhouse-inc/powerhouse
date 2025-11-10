@@ -1,5 +1,5 @@
+import { Icon } from "@powerhousedao/design-system";
 import { memo, useCallback } from "react";
-import { Icon } from "../../../../powerhouse/components/icon/icon.js";
 import { useDependentItemProps } from "../../../constants/dependent-items.js";
 import { tableLabels } from "../../../constants/names.js";
 import { useEditorContext } from "../../../context/editor-context.js";

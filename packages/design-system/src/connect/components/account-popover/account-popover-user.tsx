@@ -1,8 +1,8 @@
+import { Icon } from "@powerhousedao/design-system";
 import type { FC } from "react";
 import { useCallback, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { PowerhouseButton } from "../../../powerhouse/components/button/button.js";
-import { Icon } from "../../../powerhouse/components/icon/icon.js";
 
 export interface AccountPopoverUserProps {
   address: `0x${string}`;

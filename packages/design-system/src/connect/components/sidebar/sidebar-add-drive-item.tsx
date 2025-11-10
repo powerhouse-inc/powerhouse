@@ -1,4 +1,4 @@
-import { Icon } from "../../../powerhouse/components/icon/icon.js";
+import { Icon } from "@powerhousedao/design-system";
 import { SidebarItem } from "./sidebar-item.js";
 
 type SidebarAddDriveItemProps = {

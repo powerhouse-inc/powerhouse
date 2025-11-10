@@ -1,4 +1,4 @@
-import { Icon } from "../../../powerhouse/components/icon/icon.js";
+import { Icon } from "@powerhousedao/design-system";
 import { cn } from "../../../utils/cn.js";
 import { Tooltip, TooltipProvider } from "../tooltip/tooltip.js";
 

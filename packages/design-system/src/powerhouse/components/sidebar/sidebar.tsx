@@ -1,30 +1,31 @@
-import { useRef } from "react";
+import { useRef, type HTMLAttributes } from "react";
 import { twMerge } from "tailwind-merge";
 
-export interface SidebarProps extends React.HTMLAttributes<HTMLElement> {
+export function SidebarHeader({
+  className,
+  ...props
+}: HTMLAttributes<HTMLElement>) {
+  return <div className={twMerge("shrink-0", className)} {...props} />;
+}
+
+export function SidebarFooter({
+  className,
+  ...props
+}: HTMLAttributes<HTMLElement>) {
+  return <div className={twMerge("shrink-0", className)} {...props} />;
+}
+
+type SidebarProps = HTMLAttributes<HTMLElement> & {
   maxWidth: string;
   minWidth: string;
-}
-
-export type SidebarHeaderProps = React.HTMLAttributes<HTMLElement>;
-
-export function SidebarHeader({ className, ...props }: SidebarHeaderProps) {
-  return <div className={twMerge("shrink-0", className)} {...props} />;
-}
-
-export type SidebarFooterProps = React.HTMLAttributes<HTMLElement>;
-
-export function SidebarFooter({ className, ...props }: SidebarFooterProps) {
-  return <div className={twMerge("shrink-0", className)} {...props} />;
-}
-
-export const Sidebar: React.FC<SidebarProps> = ({
+};
+export function Sidebar({
   maxWidth = "304px",
   minWidth = "80px",
   className,
   children,
   ...props
-}) => {
+}: SidebarProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   return (
@@ -39,4 +40,4 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {children}
     </div>
   );
-};
+}

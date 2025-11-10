@@ -1,8 +1,8 @@
+import { Icon } from "@powerhousedao/design-system";
 import type { TimelineBarItem } from "@powerhousedao/reactor-browser";
 import { format, parseISO } from "date-fns";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
-import { Icon } from "../../../../powerhouse/components/icon/icon.js";
 import { ConnectTooltip } from "../../tooltip/tooltip.js";
 
 export interface TimelineBarProps

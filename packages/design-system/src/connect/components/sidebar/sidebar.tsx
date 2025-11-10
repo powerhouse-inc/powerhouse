@@ -1,13 +1,12 @@
-import { SidebarPanel } from "../../../powerhouse/components/sidebar/sidebar-panel.js";
-import type { SidebarProps } from "../../../powerhouse/components/sidebar/sidebar.js";
-import { Sidebar } from "../../../powerhouse/components/sidebar/sidebar.js";
+import { Sidebar, SidebarPanel } from "@powerhousedao/design-system";
+import type { HTMLAttributes } from "react";
 import type { ConnectSidebarFooterProps } from "./sidebar-footer.js";
 import { ConnectSidebarFooter } from "./sidebar-footer.js";
 import type { ConnectSidebarHeaderProps } from "./sidebar-header.js";
 import { ConnectSidebarHeader } from "./sidebar-header.js";
 
 export interface ConnectSidebarProps
-  extends Omit<SidebarProps, "maxWidth" | "minWidth">,
+  extends HTMLAttributes<HTMLElement>,
     ConnectSidebarHeaderProps,
     ConnectSidebarFooterProps {
   maxWidth?: string;

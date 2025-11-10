@@ -1,6 +1,6 @@
 import { DEFAULT, documentTypes } from "../constants/documents.js";
 import { iconMap } from "../constants/icons.js";
-import type { TDocumentType } from "../types/documents.js";
+import type { TDocumentType } from "@powerhousedao/design-system";
 
 export function getDocumentIconSrc(
   documentType: TDocumentType,

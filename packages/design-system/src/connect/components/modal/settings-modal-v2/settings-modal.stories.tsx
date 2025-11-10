@@ -1,7 +1,7 @@
+import { Icon } from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
 import type { DocumentDriveDocument } from "document-drive";
 import React from "react";
-import { Icon } from "../../../../powerhouse/components/icon/icon.js";
 // @ts-expect-error - json file needs { with: "json" } but storybook doesn't support it
 import mockPackageJson from "../../../utils/mocks/mock-package-json.json";
 import { About } from "./about.js";
