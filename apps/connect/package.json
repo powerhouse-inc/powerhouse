@@ -22,6 +22,11 @@
     "./package.copy.json"
   ],
   "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "import": "./lib/src/index.js",
+      "types": "./lib/src/index.d.ts"
+    },
     "./package.json": "./package.copy.json",
     "./main.js": {
       "source": "./src/main.tsx",

@@ -19,7 +19,7 @@ function makeImportScriptFromPackages(packages: string[]) {
               ...module,
           });
       } catch (error) {
-          console.error("Error loading package", pkg, error);
+          console.error("Error loading package: '${pkg}'", error);
       }`,
         )
         .join("\n")}
