@@ -1,7 +1,10 @@
 # Interface
 
 ```tsx
-export type OperationIndexEntry = {
+export type OperationIndexEntry = Operation & {
+  /** Cursor position */
+  ordinal: number;
+
   /** Document identifier */
   documentId: string;
 
@@ -13,9 +16,6 @@ export type OperationIndexEntry = {
 
   /** Scope that the operation belongs to */
   scope: string;
-
-  /** Full operation payload as written to IOperationStore */
-  operation: Operation;
 };
 
 export interface IOperationIndexTxn {
@@ -28,6 +28,11 @@ export interface IOperationIndexTxn {
   /** Writes operation rows to the index */
   write(operations: OperationIndexEntry[]): void;
 }
+
+export type OperationIndexCursor = {
+  /** Starting ordinal (exclusive) to query from */
+  ordinal: number;
+};
 
 export interface IOperationIndex {
   /** Starts a new transaction */
@@ -42,13 +47,12 @@ export interface IOperationIndex {
   ): Promise<void>;
 
   /**
-   * Streams operations for a collection (optionally filtered by ViewFilter /
-   * paged with PagingOptions).
+   * Streams operations for a collection.
    */
   find(
-    collectionId: string,
-    view?: ViewFilter,
-    paging?: PagingOptions,
+    collectionId: string, // <-- already has branch information
+    cursor: OperationIndexCursor,
+    paging: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<OperationIndexEntry>>;
 }

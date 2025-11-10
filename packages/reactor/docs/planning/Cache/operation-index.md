@@ -33,13 +33,7 @@ Thus, `IOperationIndex` is a write model and approach (1) is the more viable opt
 
 ### Data Structure
 
-Operations are kept in the `IOperationStore` as a table of `Operation`s. The full schema is defined in the [`IOperationStore`](../Storage/IOperationStore.md) documentation, but below is a non-authoritative example of what the table might look like:
-
-| id  | jobId | opId | prevOpId | writeTimestampUtcMs | documentId | scope  | branch  | timestampUtcMs      | index | action                                                          | skip |
-| --- | ----- | ---- | -------- | ------------------- | ---------- | ------ | ------- | ------------------- | ----- | --------------------------------------------------------------- | ---- |
-| 1   | 1     | 1    | null     | 2021-01-01 00:00:00 | doc1       | scope1 | branch1 | 2021-01-01 00:00:00 | 1     | { "type": "create", "data": { "id": "1" } }                     | 0    |
-| 2   | 1     | 2    | 1        | 2021-01-01 00:00:00 | doc1       | scope1 | branch1 | 2021-01-01 00:00:00 | 2     | { "type": "update", "data": { "id": "1", "name": "New Name" } } | 0    |
-| 3   | 1     | 3    | 2        | 2021-01-01 00:00:00 | doc1       | scope1 | branch1 | 2021-01-01 00:00:00 | 3     | { "type": "delete", "data": { "id": "1" } }                     | 0    |
+Operations are kept in the `IOperationStore` as a table of `Operation`s. The full schema is defined in the [`IOperationStore`](../Storage/IOperationStore.md) documentation.
 
 The `IOperationIndex` defines a new table that relates documents to each other, in a flat structure we call a **Collection**. A collection is the set of all documents that have ever been attached to the same collection root. The root document is always a member of its own collection. While documents are free to exist in a graph structure (with some restrictions), the `IOperationIndex` only stores flat collections of documents.
 
@@ -55,13 +49,13 @@ Collections are materialized directly from the operation log. When a `CREATE_DOC
 
 Additionally, the `IOperationIndex` stores a table very similar to the `IOperationStore` table, so that a join can be performed on `documentId`.
 
-| ordinal | opId | jobId | prevOpId | documentId | documentType  | scope  | branch  | timestampUtcMs      | writeTimestampUtcMs | index | skip | hash     | action                                                          |
-| ------- | ---- | ----- | -------- | ---------- | ------------- | ------ | ------- | ------------------- | ------------------- | ----- | ---- | -------- | --------------------------------------------------------------- |
-| 1       | 1    | job1  | null     | doc1       | documentType1 | scope1 | branch1 | 2021-01-01 00:00:00 | 2021-01-01 00:00:00 | 1     | 0    | hash-001 | { "type": "create", "data": { "id": "1" } }                     |
-| 2       | 2    | job1  | 1        | doc1       | documentType1 | scope1 | branch1 | 2021-01-01 00:00:00 | 2021-01-01 00:00:01 | 2     | 0    | hash-002 | { "type": "update", "data": { "id": "1", "name": "New Name" } } |
-| 3       | 3    | job1  | 2        | doc1       | documentType1 | scope1 | branch1 | 2021-01-01 00:00:00 | 2021-01-01 00:00:02 | 3     | 0    | hash-003 | { "type": "delete", "data": { "id": "1" } }                     |
+| ordinal | opId | documentId | documentType  | scope  | branch  | timestampUtcMs      | writeTimestampUtcMs | index | skip | hash     | action                                                          |
+| ------- | ---- | ---------- | ------------- | ------ | ------- | ------------------- | ------------------- | ----- | ---- | -------- | --------------------------------------------------------------- |
+| 1       | 1    | doc1       | documentType1 | scope1 | branch1 | 2021-01-01 00:00:00 | 2021-01-01 00:00:00 | 1     | 0    | hash-001 | { "type": "create", "data": { "id": "1" } }                     |
+| 2       | 2    | doc1       | documentType1 | scope1 | branch1 | 2021-01-01 00:00:00 | 2021-01-01 00:00:01 | 2     | 0    | hash-002 | { "type": "update", "data": { "id": "1", "name": "New Name" } } |
+| 3       | 3    | doc1       | documentType1 | scope1 | branch1 | 2021-01-01 00:00:00 | 2021-01-01 00:00:02 | 3     | 0    | hash-003 | { "type": "delete", "data": { "id": "1" } }                     |
 
-The column set mirrors `IOperationStore`, but the `IOperationIndex` table is still not append-only. Because it can be garbage collected or rebalanced, we rely on `ordinal` for ordering rather than physical insertion order, while retaining `skip`, `hash`, and other reducer outputs for downstream consumers.
+The column set mirrors `IOperationStore`, but the `IOperationIndex` table is not append-only.
 
 **Note on DELETE_DOCUMENT Operations**: DELETE_DOCUMENT operations are indexed like any other operation. They represent a state transition (marking the document as deleted) rather than physical removal. The read models (like `IDocumentView`) are responsible for interpreting these operations and filtering out deleted documents in queries. The `IOperationIndex` simply ensures these operations are available to read models and listeners.
 
@@ -71,8 +65,6 @@ A query to get all operations for a collection and branch would look like someth
 SELECT
     oi.ordinal,
     oi.opId,
-    oi.jobId,
-    oi.prevOpId,
     oi.documentId,
     oi.documentType,
     oi.scope,
@@ -98,18 +90,18 @@ ORDER BY oi.ordinal;
 `ISyncManager` and `IOperationIndex` share the same rule for constructing collection identifiers so they can both pre-create and query the same sets. Because collection roots currently map 1:1 with their backing documents, the collection id is simply derived from that document id:
 
 ```ts
-const toCollectionId = (collectionRootId: string): string =>
-  `collection.${collectionRootId}`;
+const toCollectionId = (driveId: string, branch: string): string =>
+  `drive.${branch}.${driveId}`;
 ```
 
-When reducers emit a `CREATE_DOCUMENT` for a new collection root, the job executor calls `txn.createCollection(toCollectionId(collectionRootId))` and the index inserts the derived id into `document_collections`:
+When reducers emit a `CREATE_DOCUMENT` for a new collection root (which is currently only the `document-drive` model), the job executor calls `txn.createCollection(toCollectionId(driveId, branch))` and the index inserts the derived id into `document_collections`:
 
 ```sql
 INSERT INTO document_collections (documentId, collectionId)
-VALUES ('doc-123', 'collection.doc-123');
+VALUES ('doc-123', 'collection.main.doc-123');
 ```
 
-Relationship operations call `txn.addToCollection(toCollectionId(collectionRootId), documentId)` to keep membership current. Consumers later call `find(collectionId, view, paging)` where `collectionId` is explicit and `view` is just the standard `ViewFilter` (branch, scopes, document types, etc.). Because these filters live on the operations table we avoid encoding them into the collection id (preventing wildcard scans) and keep the join lookup cheap. When internal tooling needs to query every collection, it can bypass the join entirely and scan `operation_index_operations` directly.
+Relationship operations call `txn.addToCollection(toCollectionId(driveId, branch), documentId)` to keep membership current. Consumers later call `find(collectionId, view, paging)` where `collectionId` is explicit and `view` is just the standard `ViewFilter` (branch, scopes, document types, etc.). Because these filters live on the operations table we avoid encoding them into the collection id (preventing wildcard scans) and keep the join lookup cheap. When internal tooling needs to query every collection, it can bypass the join entirely and scan `operation_index_operations` directly.
 
 ### Cursors
 
@@ -121,13 +113,9 @@ The cursor into the `IOperationStore` is a simple integer that represents the or
 
 #### Cursors into `IOperationIndex`
 
-The `IListenerManager` and `ISyncManager` both have cursors into the `IOperationIndex`. The `IListenerManager` has a cursor for each listener, and the `ISyncManager` has a cursor for each registered synchronization channel (currently, pull responders).
+The `IListenerManager` and `ISyncManager` both have cursors into the `IOperationIndex`. The `IListenerManager` has a cursor for each listener, and the `ISyncManager` has a cursor for each registered synchronization channel .
 
 These cursors are kept in storage mechanisms specific to the `IListenerManager` and `ISyncManager`.
-
-### Sharding
-
-TODO
 
 ### Summary
 
