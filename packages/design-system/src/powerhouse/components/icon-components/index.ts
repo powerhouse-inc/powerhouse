@@ -1,8 +1,4 @@
-import type { ComponentPropsWithoutRef } from "react";
-
-import CalendarTime from "./CalendarTime.js";
-import CaretLeft from "./CaretLeft.js";
-import CaretRight from "./CaretRight.js";
+import type { IconComponentProps } from "@powerhousedao/design-system";
 import AnalyticsProcessorModule from "./AnalyticsProcessorModule.js";
 import AppModule from "./AppModule.js";
 import ArrowCouterclockwise from "./ArrowCouterclockwise.js";
@@ -17,25 +13,28 @@ import Branch from "./Branch.js";
 import BrickGlobe from "./BrickGlobe.js";
 import Briefcase from "./Briefcase.js";
 import Calendar from "./Calendar.js";
-import CaretDown from "./CaretDown.js";
-import CaretSort from "./CaretSort.js";
+import CalendarTime from "./CalendarTime.js";
 import Caret from "./Caret.js";
-import CheckCircleFill from "./CheckCircleFill.js";
-import CheckCircle from "./CheckCircle.js";
+import CaretDown from "./CaretDown.js";
+import CaretLeft from "./CaretLeft.js";
+import CaretRight from "./CaretRight.js";
+import CaretSort from "./CaretSort.js";
 import Check from "./Check.js";
+import CheckCircle from "./CheckCircle.js";
+import CheckCircleFill from "./CheckCircleFill.js";
 import Checkmark from "./Checkmark.js";
 import ChevronDown from "./ChevronDown.js";
-import CircleInfo from "./CircleInfo.js";
 import Circle from "./Circle.js";
+import CircleInfo from "./CircleInfo.js";
+import Clock from "./Clock.js";
 import ClockFill from "./ClockFill.js";
 import ClockHistory from "./ClockHistory.js";
-import Clock from "./Clock.js";
 import CloudSlash from "./CloudSlash.js";
 import CodegenProcessorModule from "./CodegenProcessorModule.js";
 import Collapse from "./Collapse.js";
 import Compass from "./Compass.js";
-import ConnectSmall from "./ConnectSmall.js";
 import Connect from "./Connect.js";
+import ConnectSmall from "./ConnectSmall.js";
 import Copy from "./Copy.js";
 import Created from "./Created.js";
 import CrossCircle from "./CrossCircle.js";
@@ -45,8 +44,8 @@ import DescendenceModified from "./DescendenceModified.js";
 import Disconnect from "./Disconnect.js";
 import Discord from "./Discord.js";
 import DocumentIcons from "./DocumentIcons.js";
-import DocumentModelModule from "./DocumentModelModule.js";
 import DocumentModel from "./DocumentModel.js";
+import DocumentModelModule from "./DocumentModelModule.js";
 import DownloadFile from "./DownloadFile.js";
 import Drive from "./Drive.js";
 import Duplicated from "./Duplicated.js";
@@ -69,8 +68,8 @@ import FolderPlus from "./FolderPlus.js";
 import Forum from "./Forum.js";
 import Gear from "./Gear.js";
 import Github from "./Github.js";
-import GlobeWww from "./GlobeWww.js";
 import Globe from "./Globe.js";
+import GlobeWww from "./GlobeWww.js";
 import Hdd from "./Hdd.js";
 import History from "./History.js";
 import InfoSquare from "./InfoSquare.js";
@@ -84,14 +83,14 @@ import Npm from "./Npm.js";
 import PackageManager from "./PackageManager.js";
 import PackageModule from "./PackageModule.js";
 import Pencil from "./Pencil.js";
-import PeopleFill from "./PeopleFill.js";
 import People from "./People.js";
+import PeopleFill from "./PeopleFill.js";
 import Person from "./Person.js";
-import PinFilled from "./PinFilled.js";
 import Pin from "./Pin.js";
+import PinFilled from "./PinFilled.js";
+import Plus from "./Plus.js";
 import PlusCircle from "./PlusCircle.js";
 import PlusSquare from "./PlusSquare.js";
-import Plus from "./Plus.js";
 import PowerhouseDocumentModule from "./PowerhouseDocumentModule.js";
 import PowerhouseLogoSmall from "./PowerhouseLogoSmall.js";
 import Project from "./Project.js";
@@ -100,9 +99,9 @@ import RedoArrow from "./RedoArrow.js";
 import RelationalProcessorModule from "./RelationalProcessorModule.js";
 import Reload from "./Reload.js";
 import Removed from "./Removed.js";
+import Renown from "./Renown.js";
 import RenownHover from "./RenownHover.js";
 import RenownLight from "./RenownLight.js";
-import Renown from "./Renown.js";
 import Ring from "./Ring.js";
 import Save from "./Save.js";
 import Search from "./Search.js";
@@ -112,10 +111,10 @@ import SubgraphModule from "./SubgraphModule.js";
 import Synced from "./Synced.js";
 import Syncing from "./Syncing.js";
 import Tabler from "./Tabler.js";
-import TimelineCaret from "./TimelineCaret.js";
 import Timeline from "./Timeline.js";
-import TrashFill from "./TrashFill.js";
+import TimelineCaret from "./TimelineCaret.js";
 import Trash from "./Trash.js";
+import TrashFill from "./TrashFill.js";
 import TreeViewSlash from "./TreeViewSlash.js";
 import TriangleDown from "./TriangleDown.js";
 import Tube from "./Tube.js";
@@ -123,11 +122,9 @@ import VariantArrowLeft from "./VariantArrowLeft.js";
 import VerticalDots from "./VerticalDots.js";
 import WarningFill from "./WarningFill.js";
 import XTwitter from "./XTwitter.js";
-import XmarkLight from "./XmarkLight.js";
 import Xmark from "./Xmark.js";
+import XmarkLight from "./XmarkLight.js";
 import Youtube from "./Youtube.js";
-export type Props = ComponentPropsWithoutRef<"svg">;
-
 export const iconNames = [
   "CalendarTime",
   "CaretLeft",
@@ -260,7 +257,7 @@ export const iconNames = [
 export type IconName = (typeof iconNames)[number];
 export const iconComponents: Record<
   IconName,
-  (props: Props) => React.JSX.Element
+  (props: IconComponentProps) => React.JSX.Element
 > = {
   CalendarTime,
   CaretLeft,

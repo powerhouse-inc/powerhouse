@@ -1,5 +1,5 @@
-import type { Props } from "./index.js";
-export default function PowerhouseLogoSmall(props: Props) {
+import type { IconComponentProps } from "@powerhousedao/design-system";
+export default function PowerhouseLogoSmall(props: IconComponentProps) {
   return (
     <svg {...props} viewBox="0 0 16 16" fill="currentcolor">
       <path

@@ -1,5 +1,5 @@
-import type { Props } from "./index.js";
-export default function ConnectSmall(props: Props) {
+import type { IconComponentProps } from "@powerhousedao/design-system";
+export default function ConnectSmall(props: IconComponentProps) {
   return (
     <svg
       {...props}

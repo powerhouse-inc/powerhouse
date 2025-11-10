@@ -1,5 +1,5 @@
-import type { Props } from "./index.js";
-export default function CaretSort(props: Props) {
+import type { IconComponentProps } from "@powerhousedao/design-system";
+export default function CaretSort(props: IconComponentProps) {
   return (
     <svg {...props} viewBox="0 0 15 16" fill="currentcolor">
       <path

@@ -9,3 +9,5 @@ export type DivWithRefProps = ComponentPropsWithRef<"div">;
 
 export type Size = CSSProperties["width"];
 export type Color = CSSProperties["color"];
+
+export type IconComponentProps = ComponentPropsWithoutRef<"svg">;
