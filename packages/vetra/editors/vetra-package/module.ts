@@ -2,7 +2,7 @@ import type { EditorModule } from "document-model";
 import { lazy } from "react";
 import { type EditorProps } from "./editor.js";
 
-export const VetraDriveApp: EditorModule<EditorProps> = {
+export const VetraPackageEditor: EditorModule<EditorProps> = {
   Component: lazy(() => import("./editor.js")),
   documentTypes: ["powerhouse/package"],
   config: {
@@ -10,5 +10,3 @@ export const VetraDriveApp: EditorModule<EditorProps> = {
     name: "Vetra Package Editor",
   },
 };
-
-export default module;
