@@ -1064,7 +1064,11 @@ export class BaseDocumentDriveServer
       }
     }
 
-    return await this.getDocument<TDocument>(documentStorage.header.id);
+    const addedDocument = await this.getDocument<TDocument>(
+      documentStorage.header.id,
+    );
+    this.eventEmitter.emit("documentAdded", addedDocument);
+    return addedDocument;
   }
 
   private async createDocumentDualAction<TDocument extends PHDocument>(
@@ -1284,9 +1288,14 @@ export class BaseDocumentDriveServer
     await this.documentStorage.create(documentToStore);
 
     // Force rebuild to ensure operations are properly merged
-    return await this.getDocument<TDocument>(documentToStore.header.id, {
-      checkHashes: true,
-    });
+    const addedDocument = await this.getDocument<TDocument>(
+      documentToStore.header.id,
+      {
+        checkHashes: true,
+      },
+    );
+    this.eventEmitter.emit("documentAdded", addedDocument);
+    return addedDocument;
   }
 
   async deleteDocument(documentId: string) {
@@ -1310,8 +1319,11 @@ export class BaseDocumentDriveServer
     } catch (error) {
       this.logger.warn("Error deleting document", error);
     }
-    await this.cache.deleteDocument(documentId);
-    await this.documentStorage.delete(documentId);
+    await Promise.allSettled([
+      this.cache.deleteDocument(documentId).catch(this.logger.warn),
+      this.documentStorage.delete(documentId).catch(this.logger.warn),
+    ]);
+    this.eventEmitter.emit("documentDeleted", documentId);
   }
 
   async _processOperations(

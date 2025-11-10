@@ -22,6 +22,12 @@ export {
 } from "./config/use-value-by-key.js";
 export { useDocumentById } from "./document-by-id.js";
 export {
+  useDocumentCache,
+  useGetDocument,
+  useGetDocumentAsync,
+  useGetDocuments,
+} from "./document-cache.js";
+export {
   useDocumentModelModuleById,
   useDocumentModelModules,
 } from "./document-model-modules.js";

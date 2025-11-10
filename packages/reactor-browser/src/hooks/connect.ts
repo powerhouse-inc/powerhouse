@@ -96,6 +96,7 @@ export {
 export { usePHGlobalConfigByKey } from "./config/use-value-by-key.js";
 export { setConnectCrypto, useConnectCrypto, useSign } from "./crypto.js";
 export { setDid, useDid } from "./did.js";
+export { setDocumentCache, useDocumentCache } from "./document-cache.js";
 export { setDrives } from "./drives.js";
 export { setLoading, useLoading } from "./loading.js";
 export { setLoginStatus, useLoginStatus } from "./login-status.js";

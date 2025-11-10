@@ -19,6 +19,7 @@ export const App = () => {
       serviceWorkerManager.registerServiceWorker(false);
     }
   }, []);
+
   return (
     <SentryProvider>
       <WagmiContext>

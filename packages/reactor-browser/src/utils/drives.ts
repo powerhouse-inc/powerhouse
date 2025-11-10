@@ -1,6 +1,5 @@
 import type {
   DocumentDriveDocument,
-  FolderNode,
   IDocumentDriveServer,
   SharingType,
   SyncStatus,
@@ -92,14 +91,21 @@ export async function getDrives(
   return handleSettledResults(drives);
 }
 
+export async function getDocumentIds(
+  reactor: IDocumentDriveServer | undefined,
+): Promise<string[]> {
+  if (!reactor) return [];
+  const driveIds = await reactor.getDrives();
+  return handleSettledResults(
+    await Promise.allSettled(driveIds.map((id) => reactor.getDocuments(id))),
+  ).flat();
+}
+
 export async function getDocuments(
   reactor: IDocumentDriveServer | undefined,
 ): Promise<PHDocument[]> {
   if (!reactor) return [];
-  const driveIds = await reactor.getDrives();
-  const documentIds = handleSettledResults(
-    await Promise.allSettled(driveIds.map((id) => reactor.getDocuments(id))),
-  ).flat();
+  const documentIds = await getDocumentIds(reactor);
   return handleSettledResults(
     await Promise.allSettled(documentIds.map((id) => reactor.getDocument(id))),
   );

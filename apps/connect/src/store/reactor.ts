@@ -9,6 +9,7 @@ import {
   getDrives,
   getReactorDefaultDrivesConfig,
   initConnectCrypto,
+  initDocumentCache,
   initReactor,
   login,
   refreshReactorData,
@@ -22,6 +23,7 @@ import {
   setConnectCrypto,
   setDefaultPHGlobalConfig,
   setDid,
+  setDocumentCache,
   setDrives,
   setProcessorManager,
   setReactor,
@@ -164,6 +166,9 @@ export async function createReactor() {
   // initialize the reactor
   await initReactor(reactor, renown, connectCrypto);
 
+  // initialize the document cache
+  const documentCache = initDocumentCache(reactor);
+
   // create the processor manager
   const processorManager = new ProcessorManager(reactor.listeners, reactor);
 
@@ -191,9 +196,11 @@ export async function createReactor() {
   // initialize user
   const didFromUrl = getDidFromUrl();
   await login(didFromUrl, reactor, renown, connectCrypto);
+
   // dispatch the events to set the values in the window object
   setDefaultPHGlobalConfig(phGlobalConfigFromEnv);
   setReactor(reactor);
+  setDocumentCache(documentCache);
   setConnectCrypto(connectCrypto);
   setDid(did);
   setRenown(renown);
@@ -204,14 +211,6 @@ export async function createReactor() {
   setSelectedNode(nodeSlug);
 
   // subscribe to reactor events
-  reactor.on("syncStatus", (...args) => {
-    logger.verbose("syncStatus", ...args);
-    refreshReactorData(reactor).catch(logger.error);
-  });
-  reactor.on("strandUpdate", (...args) => {
-    logger.verbose("strandUpdate", ...args);
-    refreshReactorData(reactor).catch(logger.error);
-  });
   reactor.on("defaultRemoteDrive", (...args) => {
     logger.verbose("defaultRemoteDrive", ...args);
     refreshReactorData(reactor).catch(logger.error);
@@ -234,16 +233,8 @@ export async function createReactor() {
     logger.verbose("documentModelModules", ...args);
     refreshReactorData(reactor).catch(logger.error);
   });
-  reactor.on("documentOperationsAdded", (...args) => {
-    logger.verbose("documentOperationsAdded", ...args);
-    refreshReactorData(reactor).catch(logger.error);
-  });
   reactor.on("driveOperationsAdded", (...args) => {
     logger.verbose("driveOperationsAdded", ...args);
-    refreshReactorData(reactor).catch(logger.error);
-  });
-  reactor.on("operationsAdded", (...args) => {
-    logger.verbose("operationsAdded", ...args);
     refreshReactorData(reactor).catch(logger.error);
   });
 
