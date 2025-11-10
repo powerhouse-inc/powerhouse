@@ -27,16 +27,6 @@ import type { DocumentModelInput, Operation } from "document-model";
 import { generateId } from "document-model/core";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
-import type {
-  Context,
-  InternalStrandUpdate,
-  SubgraphArgs,
-} from "@powerhousedao/reactor-api";
-import {
-  processAcknowledge,
-  processGetStrands,
-  processPushUpdate,
-} from "../sync/utils.js";
 import {
   processAcknowledge,
   processGetStrands,
