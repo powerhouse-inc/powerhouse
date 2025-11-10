@@ -6,6 +6,8 @@ Synchronization refers to synchronizing the operations of one reactor with anoth
   - This allows us to decouple sync and read-model updates.
   - This consolidates multiple legacy systems into a single dispatch pattern.
 
+We synchronize the `IOperationStore` by pulling from the `IOperationIndex`, which contains good, fast cursors for operations.
+
 ## ISyncManager
 
 This object manages the synchronization of operations between reactors.
@@ -131,21 +133,21 @@ sequenceDiagram
     participant SMA as Sync Manager A
     participant AChannel as IChannel A
     participant AOI as IOperationIndex A
-    participant LoadA as load()
+    participant LoadA as load(docId, branch, Operation[])
     participant JEA as Job Execution A
 
     participant BChannel as IChannel B
-    participant LoadB as load()
+    participant LoadB as load(docId, branch, Operation[])
     participant JEB as Job Execution B
     participant SMB as Sync Manager B
     participant SchedulerB as Scheduler B
     participant EBB as Event Bus B
 
     %% Reactor A pushes operations
-    EBA->>SMA: Operation[]
-    SMA->>AChannel: send(Operation[])
+    EBA->>SMA: (docId, branch, Operation[])
+    SMA->>AChannel: send(docId, branch, Operation[])
     AChannel->>BChannel: Transport
-    BChannel->>LoadB: load(Operation[])
+    BChannel->>LoadB: load(docId, branch, Operation[])
     LoadB->>JEB: Operation[]
     JEB->>EBB: Operation[]
 
@@ -155,7 +157,7 @@ sequenceDiagram
     BChannel->>AOI: Query
     AOI-->>BChannel: Operations[]
     BChannel->>AChannel: Transport
-    AChannel->>LoadA: load()
+    AChannel->>LoadA: load(docId, branch, Operation[])
     LoadA->>JEA: Operations[]
 ```
 
@@ -331,9 +333,11 @@ interface IChannel {
   /**
    * Sends operations to the remote reactor.
    *
+   * @param docId - The document id that the operations are operating on
+   * @param branch - The branch that the operations are operating on
    * @param operations - The operations to send
    */
-  send(operations: Operation[]): void;
+  send(docId: string, branch: string, operations: Operation[]): void;
 }
 ```
 
@@ -355,7 +359,8 @@ channel.inbox.onAdded(async (handle) => {
 
   // set status
   if (result.error) {
-    handle.failed(result.error);
+    handle.failed(
+      new ChannelError(ChannelErrorSource.Inbox, result.error))
   } else {
     handle.executed();
   }
@@ -397,7 +402,7 @@ events.on(JobExecutorEventTypes.JOB_COMPLETED, (job, result) => {
   }
 
   // this isn't a job from another reactor, instead we need to send it to the remote server
-  channel.send(job.operations);
+  channel.send(job.documentId, job.branch, job.operations);
 });
 ```
 
@@ -424,7 +429,7 @@ For example:
 ```tsx
 const channel = new WebSocketChannel();
 
-channel.deadLetter.added((job) => {
+channel.deadLetter.onAdded((job) => {
   // inspect error
   const error = job.error;
   const source = error.source;
@@ -522,7 +527,15 @@ This is not a valid source for this error code, and should never happen. However
 
 ##### ChannelErrorSource.Inbox
 
+This would mean that a local reactor is trying to submit an operation with a later operation index than the latest local index. In this case:
+
+- The job will be discarded.
+
 ##### ChannelErrorSource.Outbox
+
+This would mean that we received an operation with a later index than the latest we have locally. In this case:
+
+- We must pull the missing operations fromt the remote reactor.
 
 #### `EXCESSIVE_SHUFFLE`
 
