@@ -195,6 +195,9 @@ importers:
       '@powerhousedao/analytics-engine-core':
         specifier: ^0.5.0
         version: 0.5.0
+      '@powerhousedao/builder-tools':
+        specifier: workspace:*
+        version: link:../../packages/builder-tools
       '@powerhousedao/common':
         specifier: workspace:*
         version: link:../../packages/common
@@ -204,6 +207,9 @@ importers:
       '@powerhousedao/design-system':
         specifier: workspace:*
         version: link:../../packages/design-system
+      '@powerhousedao/document-engineering':
+        specifier: ^1.39.0
+        version: 1.39.0(@types/express@4.17.25)(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@powerhousedao/reactor-browser':
         specifier: workspace:*
         version: link:../../packages/reactor-browser
@@ -222,6 +228,9 @@ importers:
       '@tailwindcss/vite':
         specifier: ^4.1.14
         version: 4.1.16(vite@7.2.0(@types/node@24.10.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.1))
+      '@types/cypress':
+        specifier: ^1.1.6
+        version: 1.1.6
       '@types/node':
         specifier: ^24.7.0
         version: 24.10.0
@@ -237,6 +246,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^5.0.4
         version: 5.1.0(vite@7.2.0(@types/node@24.10.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.1))
+      cypress:
+        specifier: ^14.5.4
+        version: 14.5.4
       document-drive:
         specifier: link:../../packages/document-drive
         version: link:../../packages/document-drive
@@ -282,6 +294,9 @@ importers:
       vite:
         specifier: ^7.1.9
         version: 7.2.0(@types/node@24.10.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.1)
+      vite-bundle-analyzer:
+        specifier: ^1.2.3
+        version: 1.2.3
       vite-plugin-html:
         specifier: ^3.2.2
         version: 3.2.2(vite@7.2.0(@types/node@24.10.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.1))
@@ -294,22 +309,6 @@ importers:
       zod:
         specifier: ^3.24.3
         version: 3.25.76
-    devDependencies:
-      '@powerhousedao/builder-tools':
-        specifier: workspace:*
-        version: link:../../packages/builder-tools
-      '@powerhousedao/document-engineering':
-        specifier: ^1.39.0
-        version: 1.39.0(@types/express@4.17.25)(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
-      '@types/cypress':
-        specifier: ^1.1.6
-        version: 1.1.6
-      cypress:
-        specifier: ^14.5.4
-        version: 14.5.4
-      vite-bundle-analyzer:
-        specifier: ^1.2.3
-        version: 1.2.3
 
   apps/switchboard:
     dependencies:
@@ -703,7 +702,7 @@ importers:
     dependencies:
       '@acaldas/graphql-codegen-typescript-validation-schema':
         specifier: ^0.12.4
-        version: 0.12.4(encoding@0.1.13)(graphql@16.12.0)
+        version: 0.12.4(graphql@16.12.0)
       '@anatine/zod-mock':
         specifier: ^3.13.3
         version: 3.14.0(@faker-js/faker@8.4.1)(zod@3.25.76)
@@ -1884,7 +1883,7 @@ importers:
     dependencies:
       '@sky-ph/atlas':
         specifier: 2.0.0-canary.1
-        version: 2.0.0-canary.1(e363cdc44c332bde4b0dfd2580e31a96)
+        version: 2.0.0-canary.1(0f382f003c577946d57e8fab8f650cb5)
       document-drive:
         specifier: link:../../../document-drive
         version: link:../../../document-drive
@@ -20775,7 +20774,7 @@ packages:
 
 snapshots:
 
-  '@acaldas/graphql-codegen-typescript-validation-schema@0.12.4(encoding@0.1.13)(graphql@16.12.0)':
+  '@acaldas/graphql-codegen-typescript-validation-schema@0.12.4(graphql@16.12.0)':
     dependencies:
       '@graphql-codegen/plugin-helpers': 5.1.1(graphql@16.12.0)
       '@graphql-codegen/schema-ast': 4.0.0(graphql@16.12.0)
@@ -27693,7 +27692,7 @@ snapshots:
       - supports-color
       - tedious
 
-  '@powerhousedao/builder-tools@4.1.0-dev.105(40efebc019d8a0f2f2fe20c76e38d1c9)':
+  '@powerhousedao/builder-tools@4.1.0-dev.105(c025b85fa09983ecb156802ce530ac19)':
     dependencies:
       '@codemirror/autocomplete': 6.18.6
       '@codemirror/commands': 6.8.1
@@ -27709,7 +27708,7 @@ snapshots:
       '@graphql-tools/utils': 10.10.1(graphql@16.12.0)
       '@hookform/resolvers': 5.2.2(react-hook-form@7.66.0(react@19.2.0))
       '@powerhousedao/config': 4.1.0-dev.105(@types/node@24.10.0)
-      '@powerhousedao/design-system': 4.1.0-dev.105(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
+      '@powerhousedao/design-system': 4.1.0-dev.105(@types/express@4.17.25)(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@powerhousedao/document-engineering': 1.39.0(@types/express@4.17.25)(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@powerhousedao/reactor-browser': 4.1.0-dev.105(@powerhousedao/analytics-engine-knex@0.6.0(@powerhousedao/analytics-engine-core@0.5.0))(@types/node@24.10.0)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)
       '@prettier/sync': 0.5.5(prettier@3.6.2)
@@ -27818,11 +27817,11 @@ snapshots:
       - vite
       - ws
 
-  '@powerhousedao/common@4.1.0-dev.105(e9305147517dca4563f7f490c2c6d9ce)':
+  '@powerhousedao/common@4.1.0-dev.105(99f59e2068045f7ba0892b6f919912d0)':
     dependencies:
       '@powerhousedao/analytics-engine-core': 0.5.0
-      '@powerhousedao/builder-tools': 4.1.0-dev.105(40efebc019d8a0f2f2fe20c76e38d1c9)
-      '@powerhousedao/design-system': 4.1.0-dev.105(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
+      '@powerhousedao/builder-tools': 4.1.0-dev.105(c025b85fa09983ecb156802ce530ac19)
+      '@powerhousedao/design-system': 4.1.0-dev.105(@types/express@4.17.25)(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@tanstack/react-virtual': 3.13.12(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@types/luxon': 3.7.1
       document-drive: link:packages/document-drive
@@ -27982,7 +27981,7 @@ snapshots:
       - utf-8-validate
       - ws
 
-  '@powerhousedao/design-system@4.1.0-dev.105(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)':
+  '@powerhousedao/design-system@4.1.0-dev.105(@types/express@4.17.25)(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)':
     dependencies:
       '@internationalized/date': 3.10.0
       '@powerhousedao/document-engineering': 1.39.0(@types/express@4.17.25)(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
@@ -29627,11 +29626,11 @@ snapshots:
     dependencies:
       '@sinonjs/commons': 3.0.1
 
-  '@sky-ph/atlas@2.0.0-canary.1(e363cdc44c332bde4b0dfd2580e31a96)':
+  '@sky-ph/atlas@2.0.0-canary.1(0f382f003c577946d57e8fab8f650cb5)':
     dependencies:
       '@hookform/resolvers': 3.10.0(react-hook-form@7.66.0(react@19.2.0))
-      '@powerhousedao/common': 4.1.0-dev.105(e9305147517dca4563f7f490c2c6d9ce)
-      '@powerhousedao/design-system': 4.1.0-dev.105(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
+      '@powerhousedao/common': 4.1.0-dev.105(99f59e2068045f7ba0892b6f919912d0)
+      '@powerhousedao/design-system': 4.1.0-dev.105(@types/express@4.17.25)(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@powerhousedao/document-engineering': 1.22.0(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@powerhousedao/reactor-browser': 4.1.0-dev.105(@powerhousedao/analytics-engine-knex@0.6.0(@powerhousedao/analytics-engine-core@0.5.0))(@types/node@24.10.0)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)
       '@radix-ui/react-dialog': 1.1.15(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
