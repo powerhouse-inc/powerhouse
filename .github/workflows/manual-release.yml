@@ -39,9 +39,9 @@ jobs:
         run: echo "Branch name is ${{ github.ref_name }}"
 
       - name: Checkout repository
-          uses: actions/checkout@v4
-          with:
-            fetch-depth: 0
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
