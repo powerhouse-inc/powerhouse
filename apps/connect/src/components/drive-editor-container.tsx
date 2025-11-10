@@ -1,10 +1,10 @@
 import { GenericDriveExplorer } from "@powerhousedao/common";
 import { DropZoneWrapper } from "@powerhousedao/design-system/connect";
 import {
-    useDefaultDriveEditorModule,
-    useDriveEditorModuleById,
-    useSelectedDocument,
-    useSelectedDrive,
+  useDefaultDriveEditorModule,
+  useDriveEditorModuleById,
+  useSelectedDocument,
+  useSelectedDrive,
 } from "@powerhousedao/reactor-browser";
 import type { FallbackProps } from "react-error-boundary";
 import { ErrorBoundary } from "react-error-boundary";

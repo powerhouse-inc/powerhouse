@@ -1,12 +1,12 @@
 import { toast } from "@powerhousedao/connect/services/toast";
 import { ConnectDeleteDriveModal } from "@powerhousedao/design-system/connect";
 import {
-    closePHModal,
-    deleteDrive,
-    setSelectedDrive,
-    useDriveById,
-    useDrives,
-    usePHModal,
+  closePHModal,
+  deleteDrive,
+  setSelectedDrive,
+  useDriveById,
+  useDrives,
+  usePHModal,
 } from "@powerhousedao/reactor-browser";
 import { useTranslation } from "react-i18next";
 

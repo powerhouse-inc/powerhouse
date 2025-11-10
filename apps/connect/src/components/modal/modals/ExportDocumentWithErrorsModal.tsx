@@ -1,10 +1,10 @@
 import { ConnectConfirmationModal } from "@powerhousedao/design-system/connect";
 import {
-    closePHModal,
-    exportFile,
-    useDocumentById,
-    usePHModal,
-    validateDocument,
+  closePHModal,
+  exportFile,
+  useDocumentById,
+  usePHModal,
+  validateDocument,
 } from "@powerhousedao/reactor-browser";
 import { useTranslation } from "react-i18next";
 export function ExportDocumentWithErrorsModal() {

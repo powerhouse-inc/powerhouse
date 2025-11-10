@@ -2,8 +2,8 @@ import { DocumentToolbar } from "@powerhousedao/design-system/connect";
 import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
 import { useCallback } from "react";
 import type {
-    AddDocumentTypeInput,
-    RemoveDocumentTypeInput,
+  AddDocumentTypeInput,
+  RemoveDocumentTypeInput,
 } from "../../document-models/document-editor/index.js";
 import { actions } from "../../document-models/document-editor/index.js";
 import { useSelectedDocumentEditorDocument } from "../hooks/useVetraDocument.js";

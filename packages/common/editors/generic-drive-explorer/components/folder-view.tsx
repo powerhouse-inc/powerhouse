@@ -1,9 +1,9 @@
 import { FolderItem } from "@powerhousedao/design-system/connect";
 import { useDrop } from "@powerhousedao/design-system/connect";
 import {
-    isFolderNodeKind,
-    useNodesInSelectedDriveOrFolder,
-    useSelectedFolder,
+  isFolderNodeKind,
+  useNodesInSelectedDriveOrFolder,
+  useSelectedFolder,
 } from "@powerhousedao/reactor-browser";
 import { twMerge } from "tailwind-merge";
 import { FileContentView } from "./file-content-view.js";

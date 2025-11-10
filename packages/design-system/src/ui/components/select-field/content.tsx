@@ -2,11 +2,11 @@ import { cn, Icon } from "@powerhousedao/design-system";
 import { useCommandState } from "cmdk";
 import React, { useEffect } from "react";
 import {
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
 } from "../command/command.js";
 import type { SelectProps } from "../enum-field/types.js";
 import { CommandItemList } from "./subcomponents/CommandItemList.js";

@@ -1,15 +1,19 @@
 import { DriveIcon } from "@powerhousedao/connect/components/drive-icon";
 import { connectConfig } from "@powerhousedao/connect/config";
 import { Icon } from "@powerhousedao/design-system";
-import { ConnectSidebar, SidebarAddDriveItem, SidebarItem } from "@powerhousedao/design-system/connect";
+import {
+  ConnectSidebar,
+  SidebarAddDriveItem,
+  SidebarItem,
+} from "@powerhousedao/design-system/connect";
 
 import {
-    logout,
-    openRenown,
-    setSelectedDrive,
-    showPHModal,
-    useDrives,
-    useSelectedDriveSafe,
+  logout,
+  openRenown,
+  setSelectedDrive,
+  showPHModal,
+  useDrives,
+  useSelectedDriveSafe,
 } from "@powerhousedao/reactor-browser";
 import { useUser } from "@powerhousedao/reactor-browser/connect";
 import { logger } from "document-drive";

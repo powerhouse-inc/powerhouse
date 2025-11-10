@@ -1,14 +1,14 @@
 import { cn } from "@powerhousedao/design-system";
 import type {
-    TooltipContentProps,
-    TooltipProps as TooltipPrimitiveProps,
+  TooltipContentProps,
+  TooltipProps as TooltipPrimitiveProps,
 } from "@radix-ui/react-tooltip";
 import {
-    Content,
-    Portal,
-    Provider,
-    Root,
-    Trigger,
+  Content,
+  Portal,
+  Provider,
+  Root,
+  Trigger,
 } from "@radix-ui/react-tooltip";
 import { forwardRef } from "react";
 
@@ -83,11 +83,10 @@ const Tooltip: React.FC<TooltipProps> = ({
 };
 
 export {
-    Tooltip,
-    TooltipContent,
-    Provider as TooltipProvider,
-    Root as TooltipRoot,
-    Trigger as TooltipTrigger,
-    type TooltipProps
+  Tooltip,
+  TooltipContent,
+  Provider as TooltipProvider,
+  Root as TooltipRoot,
+  Trigger as TooltipTrigger,
+  type TooltipProps,
 };
-
