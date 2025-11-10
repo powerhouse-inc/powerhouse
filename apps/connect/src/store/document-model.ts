@@ -63,9 +63,9 @@ export async function loadCommonPackage(): Promise<VetraPackage> {
   const documentModelDocumentModelModule =
     await loadDocumentModelDocumentModelModule();
   const driveDocumentModelModule = await loadDriveDocumentModelModule();
-  const documentModelEditorModule = await loadDocumentModelEditor();
+  const documentModelEditorModule = loadDocumentModelEditor();
   const genericDriveExplorerEditorModule =
-    await loadGenericDriveExplorerEditorModule();
+    loadGenericDriveExplorerEditorModule();
   const vetraPackage: VetraPackage = {
     id: COMMON_PACKAGE_ID,
     name: "Common",
