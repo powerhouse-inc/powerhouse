@@ -154,6 +154,7 @@
   },
   "devDependencies": {
     "@powerhousedao/builder-tools": "workspace:*",
+    "@powerhousedao/document-engineering": "^1.39.0",
     "@types/cypress": "^1.1.6",
     "cypress": "^14.5.4",
     "vite-bundle-analyzer": "^1.2.3"

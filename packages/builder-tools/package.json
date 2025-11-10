@@ -19,8 +19,12 @@
       "types": "./dist/index.d.ts"
     },
     "./editor": {
-      "import": "./dist/document-model-editor/index.js",
-      "types": "./dist/document-model-editor/index.d.ts"
+      "import": "./dist/document-model-editor/module.js",
+      "types": "./dist/document-model-editor/module.d.ts"
+    },
+    "./document-model-editor/hooks": {
+      "import": "./dist/document-model-editor/hooks/index.js",
+      "types": "./dist/document-model-editor/hooks/index.d.ts"
     },
     "./browser": {
       "import": "./dist/browser.js",
