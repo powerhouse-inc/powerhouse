@@ -1,13 +1,13 @@
-import { ConnectDeleteItemModal } from "@powerhousedao/design-system/connect/components/modal/delete-item-modal";
 import { toast } from "@powerhousedao/connect/services/toast";
+import { ConnectDeleteItemModal } from "@powerhousedao/design-system/connect";
 import {
-  closePHModal,
-  deleteNode,
-  setSelectedNode,
-  useNodeById,
-  useNodeParentFolderById,
-  usePHModal,
-  useSelectedDriveId,
+    closePHModal,
+    deleteNode,
+    setSelectedNode,
+    useNodeById,
+    useNodeParentFolderById,
+    usePHModal,
+    useSelectedDriveId,
 } from "@powerhousedao/reactor-browser";
 import React from "react";
 import { useTranslation } from "react-i18next";

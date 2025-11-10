@@ -1,11 +1,11 @@
 import { clearReactorStorage } from "@powerhousedao/connect/store/reactor";
-import { ConnectConfirmationModal } from "@powerhousedao/design-system/connect/components/modal/confirmation-modal";
+import { ConnectConfirmationModal } from "@powerhousedao/design-system/connect";
 import {
-  closePHModal,
-  setSelectedDrive,
-  setSelectedNode,
-  showPHModal,
-  usePHModal,
+    closePHModal,
+    setSelectedDrive,
+    setSelectedNode,
+    showPHModal,
+    usePHModal,
 } from "@powerhousedao/reactor-browser";
 import { childLogger } from "document-drive";
 import { useState } from "react";

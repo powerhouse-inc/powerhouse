@@ -1,14 +1,14 @@
-import { DriveSettingsModal as ConnectDriveSettingsModal } from "@powerhousedao/design-system/connect/components/modal/drive-settings-modal";
+import { DriveSettingsModal as ConnectDriveSettingsModal } from "@powerhousedao/design-system/connect";
 import {
-  closePHModal,
-  renameDrive,
-  setDriveAvailableOffline,
-  setDriveSharingType,
-  showPHModal,
-  getDriveAvailableOffline,
-  useDriveById,
-  getDriveSharingType,
-  usePHModal,
+    closePHModal,
+    getDriveAvailableOffline,
+    getDriveSharingType,
+    renameDrive,
+    setDriveAvailableOffline,
+    setDriveSharingType,
+    showPHModal,
+    useDriveById,
+    usePHModal,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument, SharingType } from "document-drive";
 

@@ -1,26 +1,26 @@
-import { DocumentToolbar } from "@powerhousedao/design-system/connect/components/document-toolbar/document-toolbar";
+import { DocumentToolbar } from "@powerhousedao/design-system/connect";
 import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
 import { pascalCase } from "change-case";
 import {
-  addModule,
-  addOperation,
-  addOperationError,
-  deleteModule,
-  deleteOperation,
-  deleteOperationError,
-  setAuthorName,
-  setAuthorWebsite,
-  setInitialState,
-  setModelDescription,
-  setModelExtension,
-  setModelId,
-  setModelName,
-  setModuleName,
-  setOperationDescription,
-  setOperationErrorName,
-  setOperationName,
-  setOperationSchema,
-  setStateSchema,
+    addModule,
+    addOperation,
+    addOperationError,
+    deleteModule,
+    deleteOperation,
+    deleteOperationError,
+    setAuthorName,
+    setAuthorWebsite,
+    setInitialState,
+    setModelDescription,
+    setModelExtension,
+    setModelId,
+    setModelName,
+    setModuleName,
+    setOperationDescription,
+    setOperationErrorName,
+    setOperationName,
+    setOperationSchema,
+    setStateSchema,
 } from "document-model";
 import { generateId } from "document-model/core";
 import { useEffect, useRef, useState } from "react";
@@ -33,9 +33,9 @@ import { SchemaContextProvider } from "./context/schema-context.js";
 import { useSelectedDocumentModelDocument } from "./hooks/useDocumentModelDocument.js";
 import type { Scope } from "./types/documents.js";
 import {
-  compareStringsWithoutWhitespace,
-  initializeModelSchema,
-  makeOperationInitialDoc,
+    compareStringsWithoutWhitespace,
+    initializeModelSchema,
+    makeOperationInitialDoc,
 } from "./utils/helpers.js";
 
 export default function Editor() {

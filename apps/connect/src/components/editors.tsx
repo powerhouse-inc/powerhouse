@@ -1,18 +1,18 @@
 import { EditorLoader } from "@powerhousedao/connect/components/editor-loader";
-import { toast } from "@powerhousedao/connect/services/toast";
 import { useUndoRedoShortcuts } from "@powerhousedao/connect/hooks/useUndoRedoShortcuts";
-import { RevisionHistory } from "@powerhousedao/design-system/connect/components/revision-history/revision-history";
+import { toast } from "@powerhousedao/connect/services/toast";
+import { RevisionHistory } from "@powerhousedao/design-system/connect";
 import {
-  getRevisionFromDate,
-  setRevisionHistoryVisible,
-  showPHModal,
-  useDocumentById,
-  useDocumentModelModuleById,
-  useEditorModuleById,
-  useFallbackEditorModule,
-  useIsExternalControlsEnabled,
-  useRevisionHistoryVisible,
-  useSelectedTimelineItem,
+    getRevisionFromDate,
+    setRevisionHistoryVisible,
+    showPHModal,
+    useDocumentById,
+    useDocumentModelModuleById,
+    useEditorModuleById,
+    useFallbackEditorModule,
+    useIsExternalControlsEnabled,
+    useRevisionHistoryVisible,
+    useSelectedTimelineItem,
 } from "@powerhousedao/reactor-browser";
 import type { PHDocument } from "document-model";
 import { redo, undo } from "document-model/core";

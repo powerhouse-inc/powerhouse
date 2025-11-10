@@ -1,18 +1,17 @@
 import { toast } from "@powerhousedao/connect/services/toast";
-import type { AddLocalDriveInput } from "@powerhousedao/design-system/connect/components/form/add-local-drive-form";
-import type { AddRemoteDriveInput } from "@powerhousedao/design-system/connect/components/form/add-remote-drive-form";
-import { AddDriveModal as ConnectAddLocalDriveModal } from "@powerhousedao/design-system/connect/components/modal/add-drive-modal/add-drive-modal";
+import type { AddLocalDriveInput, AddRemoteDriveInput } from "@powerhousedao/design-system/connect";
+import { AddDriveModal as ConnectAddLocalDriveModal } from "@powerhousedao/design-system/connect";
 import {
-  addDrive,
-  addRemoteDrive,
-  closePHModal,
-  setSelectedDrive,
-  useDriveEditorModules,
-  usePHModal,
+    addDrive,
+    addRemoteDrive,
+    closePHModal,
+    setSelectedDrive,
+    useDriveEditorModules,
+    usePHModal,
 } from "@powerhousedao/reactor-browser";
 import {
-  useConnectCrypto,
-  useUser,
+    useConnectCrypto,
+    useUser,
 } from "@powerhousedao/reactor-browser/connect";
 import { requestPublicDrive } from "document-drive";
 import { t } from "i18next";

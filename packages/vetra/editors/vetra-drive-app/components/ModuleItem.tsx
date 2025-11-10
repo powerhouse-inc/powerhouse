@@ -1,4 +1,4 @@
-import { ConnectDropdownMenu } from "@powerhousedao/design-system/connect/components/dropdown-menu/dropdown-menu";
+import { ConnectDropdownMenu } from "@powerhousedao/design-system/connect";
 import { nodeOptionsMap } from "@powerhousedao/design-system/connect/constants/options";
 import type { NodeOption } from "@powerhousedao/design-system/connect/types/options";
 import { Icon } from "@powerhousedao/design-system/powerhouse/components/icon/icon";

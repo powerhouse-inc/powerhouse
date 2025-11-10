@@ -1,13 +1,13 @@
-import { CreateDocumentModal as ConnectCreateDocumentModal } from "@powerhousedao/design-system/connect/components/modal/create-document-modal";
+import { CreateDocumentModal as ConnectCreateDocumentModal } from "@powerhousedao/design-system/connect";
 import {
-  addDocument,
-  closePHModal,
-  setSelectedNode,
-  useDocumentModelModuleById,
-  useParentFolderForSelectedNode,
-  usePHModal,
-  useSelectedDriveSafe,
-  useSelectedFolder,
+    addDocument,
+    closePHModal,
+    setSelectedNode,
+    useDocumentModelModuleById,
+    useParentFolderForSelectedNode,
+    usePHModal,
+    useSelectedDriveSafe,
+    useSelectedFolder,
 } from "@powerhousedao/reactor-browser";
 
 export const CreateDocumentModal: React.FC = () => {

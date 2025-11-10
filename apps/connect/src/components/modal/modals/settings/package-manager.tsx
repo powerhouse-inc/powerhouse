@@ -1,14 +1,14 @@
 import { PH_PACKAGES } from "@powerhousedao/config";
 
 import {
-  addExternalPackage,
-  removeExternalPackage,
+    addExternalPackage,
+    removeExternalPackage,
 } from "@powerhousedao/connect/services/hmr";
-import { PackageManager } from "@powerhousedao/design-system/connect/components/modal/settings-modal-v2/package-manager/package-manager";
+import { PackageManager } from "@powerhousedao/design-system/connect";
 import {
-  makeVetraPackageManifest,
-  useDrives,
-  useVetraPackages,
+    makeVetraPackageManifest,
+    useDrives,
+    useVetraPackages,
 } from "@powerhousedao/reactor-browser";
 import type { Manifest } from "document-model";
 import React, { useCallback, useEffect, useMemo, useState } from "react";

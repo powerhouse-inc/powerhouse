@@ -1,5 +1,5 @@
-import type { ConnectSearchBarProps } from "@powerhousedao/design-system/connect/components/search-bar/search-bar";
-import { ConnectSearchBar } from "@powerhousedao/design-system/connect/components/search-bar/search-bar";
+import type { ConnectSearchBarProps } from "@powerhousedao/design-system/connect";
+import { ConnectSearchBar } from "@powerhousedao/design-system/connect";
 import { Icon } from "@powerhousedao/design-system/powerhouse/components/icon/icon";
 import { useTranslation } from "react-i18next";
 

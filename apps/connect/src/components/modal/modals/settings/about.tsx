@@ -1,6 +1,6 @@
 import { connectConfig } from "@powerhousedao/connect/config";
 import packageJson from "@powerhousedao/connect/package.json" with { type: "json" };
-import { About as BaseAbout } from "@powerhousedao/design-system/connect/components/modal/settings-modal-v2/about";
+import { About as BaseAbout } from "@powerhousedao/design-system/connect";
 
 export const About: React.FC = () => {
   return (
