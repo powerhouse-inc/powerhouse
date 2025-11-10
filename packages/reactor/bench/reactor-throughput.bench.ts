@@ -46,6 +46,7 @@ const executor = new SimpleJobExecutor(
   operationStore,
   eventBus,
   mockWriteCache,
+  { legacyStorageEnabled: true },
 );
 
 // Pre-create a document for benchmarks

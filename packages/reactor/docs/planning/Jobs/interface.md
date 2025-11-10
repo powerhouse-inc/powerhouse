@@ -108,6 +108,10 @@ export type JobInfo = {
   error?: ErrorInfo;
   errorHistory?: ErrorInfo[];
   result?: any;
+
+  /**
+   * Consistency token, only valid once a job reaches COMPLETED.
+   */
   consistencyToken: ConsistencyToken;
 };
 

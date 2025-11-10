@@ -147,7 +147,7 @@ export const getNextIndexForScope = (
   document: PHDocument,
   scope: string,
 ): number => {
-  return document.header.revision?.[scope] || 0;
+  return document.header.revision[scope] || 0;
 };
 
 /**

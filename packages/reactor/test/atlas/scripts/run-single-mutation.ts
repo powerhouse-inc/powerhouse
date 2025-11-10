@@ -61,9 +61,8 @@ async function runSequential(
   reactor: IReactor,
   mutations: RecordedOperation[],
 ): Promise<void> {
-  const driveIds: string[] = [];
   for (const mutation of mutations) {
-    await processReactorMutation(mutation, reactor, driveIds);
+    await processReactorMutation(mutation, reactor);
   }
 }
 
@@ -76,7 +75,7 @@ async function waitForBatchCompletion(
   const intervalMs = 50;
   const start = Date.now();
 
-  while (true) {
+  for (;;) {
     const statuses = await Promise.all(
       jobIds.map((id) => reactor.getJobStatus(id)),
     );
@@ -113,7 +112,11 @@ async function runBatch(
   reactor: IReactor,
   mutations: RecordedOperation[],
 ): Promise<void> {
-  const batchRequest = await buildBatchMutationRequest(mutations, reactor);
+  const documentModels = await reactor.getDocumentModels();
+  const batchRequest = buildBatchMutationRequest(
+    documentModels.results,
+    mutations,
+  );
   const result = await reactor.mutateBatch(batchRequest);
   await waitForBatchCompletion(reactor, result.jobs);
 }

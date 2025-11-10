@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/vetra",
-  "version": "4.1.0-dev.102",
+  "version": "4.1.0-dev.105",
   "license": "AGPL-3.0-only",
   "type": "module",
   "repository": {
@@ -15,8 +15,8 @@
   ],
   "exports": {
     ".": {
-      "import": "./dist/index.js",
       "development": "./index.ts",
+      "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
     "./document-models": {

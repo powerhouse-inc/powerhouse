@@ -1,3 +1,43 @@
+## 4.1.0-dev.105 (2025-11-08)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.104 (2025-11-07)
+
+### 🚀 Features
+
+- **ph-cli:** remove reactor-local command ([029e5db7d](https://github.com/powerhouse-inc/powerhouse/commit/029e5db7d))
+- **connect:** show loading animation on drive editor container ([90f554b24](https://github.com/powerhouse-inc/powerhouse/commit/90f554b24))
+
+### 🩹 Fixes
+
+- linter fixes ([39a187eca](https://github.com/powerhouse-inc/powerhouse/commit/39a187eca))
+- **connect:** show error on non existing editor ([ae43a43c4](https://github.com/powerhouse-inc/powerhouse/commit/ae43a43c4))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
+## 4.1.0-dev.103 (2025-11-06)
+
+### 🚀 Features
+
+- **connect:** remove circular imports ([a1632d41e](https://github.com/powerhouse-inc/powerhouse/commit/a1632d41e))
+
+### 🩹 Fixes
+
+- **codegen:** move read-pkg to runtime dependency ([939f01045](https://github.com/powerhouse-inc/powerhouse/commit/939f01045))
+- **connect:** improved hmr plugin ([b65ff940e](https://github.com/powerhouse-inc/powerhouse/commit/b65ff940e))
+- **document-model:** export single generateId function ([6c1a7d9a0](https://github.com/powerhouse-inc/powerhouse/commit/6c1a7d9a0))
+- **codegen:** run prettier programmatically ([23f948c4d](https://github.com/powerhouse-inc/powerhouse/commit/23f948c4d))
+- **connect:** fixed some import inconsistencies ([32e83efcb](https://github.com/powerhouse-inc/powerhouse/commit/32e83efcb))
+- **connect:** fixed app version retrieval from package.json ([7be168b1a](https://github.com/powerhouse-inc/powerhouse/commit/7be168b1a))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.102 (2025-11-06)
 
 ### 🚀 Features

@@ -612,7 +612,16 @@ export class Reactor implements IReactor {
   /**
    * Applies a list of actions to a document
    */
-  async mutate(id: string, actions: Action[]): Promise<JobInfo> {
+  async mutate(
+    docId: string,
+    branch: string,
+    actions: Action[],
+    signal?: AbortSignal,
+  ): Promise<JobInfo> {
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
     const createdAtUtcIso = new Date().toISOString();
 
     // Determine scope from first action (all actions should have the same scope)
@@ -621,9 +630,9 @@ export class Reactor implements IReactor {
     // Create a single job with all actions
     const job: Job = {
       id: uuidv4(),
-      documentId: id,
+      documentId: docId,
       scope: scope,
-      branch: "main", // Default to main branch
+      branch: branch,
       actions: actions,
       createdAt: new Date().toISOString(),
       queueHint: [],
@@ -646,6 +655,10 @@ export class Reactor implements IReactor {
 
     // Enqueue the job
     await this.queue.enqueue(job);
+
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
 
     return jobInfo;
   }
@@ -759,7 +772,8 @@ export class Reactor implements IReactor {
       },
     }));
 
-    return await this.mutate(parentId, actions);
+    const branch = _view?.branch || "main";
+    return await this.mutate(parentId, branch, actions, signal);
   }
 
   /**
@@ -787,7 +801,8 @@ export class Reactor implements IReactor {
       },
     }));
 
-    return await this.mutate(parentId, actions);
+    const branch = _view?.branch || "main";
+    return await this.mutate(parentId, branch, actions, signal);
   }
 
   /**

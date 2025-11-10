@@ -32,8 +32,6 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
   ) {}
 
   async init(): Promise<void> {
-    await this.createTablesIfNotExist();
-
     const indexerState = await this.db
       .selectFrom("IndexerState")
       .selectAll()
@@ -145,7 +143,7 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
       targetId: row.targetId,
       relationshipType: row.relationshipType,
       metadata: row.metadata
-        ? (JSON.parse(row.metadata) as Record<string, unknown>)
+        ? (row.metadata as Record<string, unknown>)
         : undefined,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
@@ -182,7 +180,7 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
       targetId: row.targetId,
       relationshipType: row.relationshipType,
       metadata: row.metadata
-        ? (JSON.parse(row.metadata) as Record<string, unknown>)
+        ? (row.metadata as Record<string, unknown>)
         : undefined,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
@@ -255,7 +253,7 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
       targetId: row.targetId,
       relationshipType: row.relationshipType,
       metadata: row.metadata
-        ? (JSON.parse(row.metadata) as Record<string, unknown>)
+        ? (row.metadata as Record<string, unknown>)
         : undefined,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
@@ -294,7 +292,7 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
       targetId: row.targetId,
       relationshipType: row.relationshipType,
       metadata: row.metadata
-        ? (JSON.parse(row.metadata) as Record<string, unknown>)
+        ? (row.metadata as Record<string, unknown>)
         : undefined,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
@@ -489,7 +487,7 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
         sourceId: input.sourceId,
         targetId: input.targetId,
         relationshipType: input.relationshipType,
-        metadata: input.metadata ? JSON.stringify(input.metadata) : null,
+        metadata: input.metadata || null,
       };
 
       await trx
@@ -515,87 +513,5 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
       .where("targetId", "=", input.targetId)
       .where("relationshipType", "=", input.relationshipType)
       .execute();
-  }
-
-  private async checkTablesExist(): Promise<boolean> {
-    try {
-      await this.db
-        .selectFrom("IndexerState")
-        .select("lastOperationId")
-        .limit(1)
-        .execute();
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  private async createTablesIfNotExist(): Promise<void> {
-    const tablesExist = await this.checkTablesExist();
-
-    if (!tablesExist) {
-      await this.db.schema
-        .createTable("IndexerState")
-        .ifNotExists()
-        .addColumn("id", "integer", (col) =>
-          col.primaryKey().generatedAlwaysAsIdentity(),
-        )
-        .addColumn("lastOperationId", "integer", (col) => col.notNull())
-        .addColumn("lastOperationTimestamp", "timestamptz", (col) =>
-          col.defaultTo("now()").notNull(),
-        )
-        .execute();
-
-      await this.db.schema
-        .createTable("Document")
-        .ifNotExists()
-        .addColumn("id", "text", (col) => col.primaryKey())
-        .addColumn("createdAt", "timestamptz", (col) =>
-          col.defaultTo("now()").notNull(),
-        )
-        .addColumn("updatedAt", "timestamptz", (col) =>
-          col.defaultTo("now()").notNull(),
-        )
-        .execute();
-
-      await this.db.schema
-        .createTable("DocumentRelationship")
-        .ifNotExists()
-        .addColumn("id", "text", (col) => col.primaryKey())
-        .addColumn("sourceId", "text", (col) => col.notNull())
-        .addColumn("targetId", "text", (col) => col.notNull())
-        .addColumn("relationshipType", "text", (col) => col.notNull())
-        .addColumn("metadata", "text")
-        .addColumn("createdAt", "timestamptz", (col) =>
-          col.defaultTo("now()").notNull(),
-        )
-        .addColumn("updatedAt", "timestamptz", (col) =>
-          col.defaultTo("now()").notNull(),
-        )
-        .addUniqueConstraint("unique_source_target_type", [
-          "sourceId",
-          "targetId",
-          "relationshipType",
-        ])
-        .execute();
-
-      await this.db.schema
-        .createIndex("idx_relationship_source")
-        .on("DocumentRelationship")
-        .column("sourceId")
-        .execute();
-
-      await this.db.schema
-        .createIndex("idx_relationship_target")
-        .on("DocumentRelationship")
-        .column("targetId")
-        .execute();
-
-      await this.db.schema
-        .createIndex("idx_relationship_type")
-        .on("DocumentRelationship")
-        .column("relationshipType")
-        .execute();
-    }
   }
 }

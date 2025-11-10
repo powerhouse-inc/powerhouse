@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor",
-  "version": "4.1.0-dev.102",
+  "version": "4.1.0-dev.105",
   "description": "",
   "repository": {
     "url": "https://github.com/powerhouse-inc/powerhouse",
@@ -27,7 +27,9 @@
     "bench": "vitest bench --run",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules",
-    "claude": "pnpm build && pnpm test && npx prettier --write \"**/*.ts\" && pnpm lint"
+    "claude": "pnpm build && pnpm test && npx prettier --write \"**/*.ts\" && pnpm lint",
+    "migrate": "tsx src/storage/migrations/run-migrations.ts",
+    "migrate:status": "tsx src/storage/migrations/run-migrations.ts status"
   },
   "publishConfig": {
     "access": "public"
@@ -45,6 +47,7 @@
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^3.2.4",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "vitest": "^3.2.4"
   }

@@ -1,3 +1,37 @@
+## 4.1.0-dev.105 (2025-11-08)
+
+This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.104 (2025-11-07)
+
+### 🚀 Features
+
+- **ph-cli:** remove reactor-local command ([029e5db7d](https://github.com/powerhouse-inc/powerhouse/commit/029e5db7d))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.103 (2025-11-06)
+
+### 🚀 Features
+
+- **builder-tools:** warmup local files on ph connect ([03f80d4a4](https://github.com/powerhouse-inc/powerhouse/commit/03f80d4a4))
+- **connect:** remove circular imports ([a1632d41e](https://github.com/powerhouse-inc/powerhouse/commit/a1632d41e))
+
+### 🩹 Fixes
+
+- **codegen:** move read-pkg to runtime dependency ([939f01045](https://github.com/powerhouse-inc/powerhouse/commit/939f01045))
+- **builder-tools:** removed warmup to avoid hmr issues ([e632d75ad](https://github.com/powerhouse-inc/powerhouse/commit/e632d75ad))
+- **builder-tools:** improved hmr on Connect ([3de4ebdc6](https://github.com/powerhouse-inc/powerhouse/commit/3de4ebdc6))
+- **connect:** improved hmr plugin ([b65ff940e](https://github.com/powerhouse-inc/powerhouse/commit/b65ff940e))
+- **codegen:** run prettier programmatically ([23f948c4d](https://github.com/powerhouse-inc/powerhouse/commit/23f948c4d))
+- **connect:** fixed app version retrieval from package.json ([7be168b1a](https://github.com/powerhouse-inc/powerhouse/commit/7be168b1a))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.102 (2025-11-06)
 
 ### 🚀 Features

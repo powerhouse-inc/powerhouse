@@ -1,119 +1,152 @@
-import type { PluginOption } from "vite";
+import type { ModuleNode, PluginOption } from "vite";
 
 /**
  * Takes a list of Powerhouse project packages, by name or path and
  * returns a js module that exports those packages for use in Connect.
  */
 function makeImportScriptFromPackages(packages: string[]) {
-  const imports: string[] = [];
-  const moduleNames: string[] = [];
-  let counter = 0;
-
-  for (const packageName of packages) {
-    const moduleName = `module${counter}`;
-    moduleNames.push(moduleName);
-    imports.push(`import * as ${moduleName} from '${packageName}';`);
-    imports.push(`import '${packageName}/style.css';`);
-    counter++;
-  }
-
-  const exports = moduleNames.map(
-    (name, index) => `{
-      id: "${packages[index]}",
-      ...${name},
-    }`,
-  );
-
-  const exportsString = exports.length
-    ? `
-        ${exports.join(",\n")}
-    `
-    : "";
-
-  const exportStatement = `export default [${exportsString}];`;
-
-  // Add HMR boundary to prevent page reload
-  const hmrCode = `
-// HMR boundary - accept updates to prevent full page reload
-if (import.meta.hot) {
-  import.meta.hot.accept();
-}`;
-
-  const fileContent = `${imports.join("\n")}\n\n${exportStatement}\n${hmrCode}`;
-
-  return fileContent;
+  return `
+   export async function loadExternalPackages() {
+      const modules = [];
+      ${packages
+        .map(
+          (pkg, index) =>
+            `try {
+          const module = await import('${pkg}');
+          await import('${pkg}/style.css');
+          modules.push({
+              id: 'module${index}',
+              ...module,
+          });
+      } catch (error) {
+          console.error("Error loading package", pkg, error);
+      }`,
+        )
+        .join("\n")}
+      return modules;
+    }
+  `;
 }
 
 export function phExternalPackagesPlugin(phPackages: string[]) {
   const virtualModuleId = "virtual:ph:external-packages";
-  const resolvedVirtualModuleId = "\0" + virtualModuleId;
+
+  const localPackageModules = new Map<string, Set<ModuleNode["url"]>>();
+
+  /**
+   * Checks if a module should be skipped based on the following conditions:
+   * - It is not a file
+   * - It is a node_modules file
+   * - It is already in the set of imported modules
+   * - It is not part of the local package
+   */
+  function shouldSkipModule(
+    module: ModuleNode,
+    rootPath: string,
+    allModules: Set<string>,
+  ) {
+    return (
+      !module.file ||
+      module.file.includes("node_modules") ||
+      allModules.has(module.file) ||
+      (!module.file.startsWith(rootPath) && module.file !== virtualModuleId)
+    );
+  }
+
+  /**
+   * Recursively builds a set of imported modules for a given module.
+   * @param currentModule The module to build the set for.
+   * @param rootPath The root path of the local package.
+   * @param allModules The set of imported modules.
+   */
+  function buildImportedModulesSet(
+    currentModule: ModuleNode,
+    rootPath: string,
+    allModules: Set<string>,
+  ) {
+    const isVirtualModule = currentModule.file === virtualModuleId;
+    const skipModule = shouldSkipModule(currentModule, rootPath, allModules);
+    if (skipModule) {
+      return;
+    }
+
+    if (!isVirtualModule) {
+      allModules.add(currentModule.file!);
+    }
+    for (const importer of currentModule.importedModules) {
+      if (!shouldSkipModule(importer, rootPath, allModules)) {
+        buildImportedModulesSet(importer, rootPath, allModules);
+      }
+    }
+    return allModules;
+  }
 
   const plugin: PluginOption = {
     name: "ph-external-packages",
     enforce: "pre",
     resolveId(id) {
       if (id === virtualModuleId) {
-        return resolvedVirtualModuleId;
+        return id;
       }
     },
     load(id) {
-      if (id === resolvedVirtualModuleId) {
+      if (id === virtualModuleId) {
         return makeImportScriptFromPackages(phPackages);
       }
     },
     handleHotUpdate({ file, server, modules }) {
       // Check if the changed file is part of any local package
-      const isLocalPackageFile = phPackages.some((pkg) => {
+      const localPackage = phPackages.find((pkg) => {
         if (pkg.startsWith("/") || pkg.startsWith(".")) {
           return file.startsWith(pkg);
         }
         return false;
       });
 
-      if (isLocalPackageFile) {
-        const virtualModule = server.moduleGraph.getModuleById(
-          resolvedVirtualModuleId,
-        );
+      // if the changed file is not part of any local package, do not override HMR
+      if (!localPackage) {
+        return undefined;
+      }
 
-        if (virtualModule) {
-          // Invalidate the virtual module so it re-executes with new imports
-          server.moduleGraph.invalidateModule(virtualModule);
+      // iterate through all local package imports to build set of imported modules, if not already built
+      const packageModules = localPackageModules.get(localPackage);
+      const importedModules =
+        localPackageModules.get(localPackage) || new Set<string>();
+      const virtualModule = server.moduleGraph.getModuleById(virtualModuleId);
 
-          // Notify clients about package updates via WebSocket
-          const clientUrl = `/@id/${resolvedVirtualModuleId}`;
-          server.ws.send("studio:external-packages-updated", {
-            url: clientUrl,
-            timestamp: Date.now().toString(),
-          });
+      if (
+        virtualModule &&
+        !packageModules &&
+        virtualModule.importedModules.size > 0 // wait for virtual module to be built
+      ) {
+        buildImportedModulesSet(virtualModule, localPackage, importedModules);
+        localPackageModules.set(localPackage, importedModules);
+      }
 
-          // Deduplicate modules by file path, preferring modules with defined IDs
-          const modulesByFile = new Map<string, (typeof modules)[0]>();
-          for (const module of modules) {
-            if (module.file) {
-              const existing = modulesByFile.get(module.file);
-              // Prefer modules with defined IDs over ones without IDs
-              if (!existing || (module.id && !existing.id)) {
-                modulesByFile.set(module.file, module);
-              }
-            }
-          }
-          const deduplicatedModules = Array.from(modulesByFile.values()).filter(
-            (m) => m.id && m.id !== resolvedVirtualModuleId,
-          );
-
-          // For React components (.tsx, .jsx), let Fast Refresh handle them
-          const isReactComponent =
-            file.endsWith(".tsx") || file.endsWith(".jsx");
-
-          if (isReactComponent) {
-            return [...deduplicatedModules, virtualModule];
-          } else {
-            return [virtualModule];
-          }
+      // checks if there are new modules being imported by a watched module and adds them to the set
+      for (const module of modules) {
+        if (
+          module.file &&
+          !importedModules.has(module.file) &&
+          !shouldSkipModule(module, localPackage, importedModules) &&
+          module.importers
+            .values()
+            .some((m) => m.file && importedModules.has(m.file))
+        ) {
+          buildImportedModulesSet(module, localPackage, importedModules);
         }
       }
 
-      return undefined;
+      // returns only modules that are actually imported by Connect
+      const modulesToRefresh = modules.filter(
+        (m) =>
+          m.id &&
+          m.id !== virtualModuleId &&
+          m.file &&
+          importedModules.has(m.file),
+      );
+
+      return modulesToRefresh;
     },
   };
 

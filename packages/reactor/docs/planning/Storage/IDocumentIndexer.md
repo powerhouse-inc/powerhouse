@@ -23,6 +23,12 @@ To support read-after-write guarantees, the indexer shares the
 It updates the tracker after committing relationship changes and consults it
 inside `waitForConsistency` to decide whether callers need to block.
 
+### Handling Reshuffles / `skip` Values
+
+- When a load conflict forces a reshuffle, the regenerated operations’ first entry carries a `skip` value to rewind the log; conflict-free imports append operations without any skip metadata, and earlier log entries stay immutable.
+- When the indexer processes an operation with `skip > 0`, it uses that signal to locate the base revision and replays operations starting from that point via `IOperationStore.getSinceId` (or another suitable range query).
+- Reprocessing that slice allows the relationship graph to drop superseded edges and apply the regenerated operations deterministically without needing additional state from the write side.
+
 #### Case 1: At Runtime
 
 If the document indexer receives an operation that has a later id than the last operation it has processed, it must catch up to the latest operation by querying the `IOperationStore` for all operations with an id greater than the last operation it knows about.
@@ -57,8 +63,13 @@ All query methods accept an optional `consistencyToken` parameter to provide rea
 
 **Usage Pattern:**
 ```typescript
-const jobInfo = await reactor.addChildren(parentId, childIds);
-const path = await documentIndexer.findPath(parentId, childId, undefined, jobInfo.consistencyToken);
+const queuedJob = await reactor.addChildren(parentId, childIds);
+const completedJob = await reactor.getJobStatus(queuedJob.id); // ensure COMPLETED
+const path = await documentIndexer.findPath(parentId, childId, undefined, completedJob.consistencyToken);
+
+const loadQueued = await reactor.load(parentId, "main", importedOperations);
+const loadCompleted = await reactor.getJobStatus(loadQueued.id);
+await documentIndexer.waitForConsistency(loadCompleted.consistencyToken);
 ```
 
 This pattern guarantees that the relationship query will see the effects of the write, even if the indexer is catching up asynchronously.

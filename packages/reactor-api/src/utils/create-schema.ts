@@ -7,6 +7,7 @@ import { typeDefs as scalarsTypeDefs } from "@powerhousedao/document-engineering
 import type { Context } from "@powerhousedao/reactor-api";
 import { pascalCase } from "change-case";
 import { childLogger, type IDocumentDriveServer } from "document-drive";
+import type { DocumentModelPHState } from "document-model";
 import type { DocumentNode } from "graphql";
 import { gql } from "graphql-tag";
 import { GraphQLJSONObject } from "graphql-type-json";
@@ -38,6 +39,12 @@ export const createSchema = (
   );
 };
 
+export function getDocumentModelSchemaName(
+  documentModel: DocumentModelPHState,
+) {
+  return pascalCase(documentModel.global.name.replaceAll("/", " "));
+}
+
 export const getDocumentModelTypeDefs = (
   documentDriveServer: IDocumentDriveServer,
   typeDefs: DocumentNode,
@@ -47,9 +54,7 @@ export const getDocumentModelTypeDefs = (
 
   const addedDocumentModels = new Set<string>();
   documentModels.forEach(({ documentModel }) => {
-    const dmSchemaName = pascalCase(
-      documentModel.global.name.replaceAll("/", " "),
-    );
+    const dmSchemaName = getDocumentModelSchemaName(documentModel);
     if (addedDocumentModels.has(dmSchemaName)) {
       logger.debug(
         `Skipping document model with duplicate name: ${dmSchemaName}`,
@@ -175,6 +180,7 @@ export const getDocumentModelTypeDefs = (
       error: String
       context: PHOperationContext
     }
+
     interface IDocument {
       id: String!
       name: String!
@@ -186,6 +192,17 @@ export const getDocumentModelTypeDefs = (
       stateJSON: JSONObject
     }
     ${dmSchema.replaceAll(";", "")}
+
+    type GqlDocument implements IDocument {
+      id: String!
+      name: String!
+      documentType: String!
+      revision: Int!
+      createdAtUtcIso: DateTime!
+      lastModifiedAtUtcIso: DateTime!
+      operations(first: Int, skip: Int): [Operation!]!
+      stateJSON: JSONObject
+    }
 
     type DriveDocument implements IDocument {
       id: String!

@@ -658,6 +658,10 @@ export class BaseDocumentDriveServer
       document.header.slug = input.slug;
     }
 
+    if (input.global.name) {
+      document.header.name = input.global.name;
+    }
+
     const editorToUse = input.preferredEditor || preferredEditor;
     if (editorToUse) {
       document.header.meta = {

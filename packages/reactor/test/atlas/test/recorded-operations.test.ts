@@ -297,7 +297,7 @@ describe("Atlas Recorded Operations Reactor Test", () => {
         const interval = 100;
         const startTime = Date.now();
 
-        while (true) {
+        for (;;) {
           const statuses = await Promise.all(
             jobIds.map((jobId) => setup.reactor.getJobStatus(jobId)),
           );
@@ -426,8 +426,8 @@ describe("Atlas Recorded Operations State Comparison Test", () => {
       );
 
       for (const mutation of mutations) {
-        await processReactorMutation(mutation, setup1.reactor, driveIds);
-        await processReactorMutation(mutation, setup2.reactor, driveIds2);
+        await processReactorMutation(mutation, setup1.reactor);
+        await processReactorMutation(mutation, setup2.reactor);
         await processBaseServerMutation(mutation, baseServerDriveServer);
       }
 
@@ -437,7 +437,7 @@ describe("Atlas Recorded Operations State Comparison Test", () => {
         const interval = 100;
         const startTime = Date.now();
 
-        while (true) {
+        for (;;) {
           const statuses = await Promise.all(
             batchJobIds.map((jobId) => setup3.reactor.getJobStatus(jobId)),
           );

@@ -1,14 +1,21 @@
 import type { BaseDocumentDriveServer } from "document-drive";
 import {
   ReactorBuilder as DriveReactorBuilder,
+  InMemoryCache,
   MemoryStorage,
 } from "document-drive";
+import { PrismaStorage } from "document-drive/storage/prisma";
+import { PrismaClient } from "document-drive/storage/prisma/client";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Bench } from "tinybench";
 import { ReactorBuilder } from "../../../src/core/reactor-builder.js";
-import type { IReactor } from "../../../src/core/types.js";
+import type {
+  BatchMutationRequest,
+  IReactor,
+} from "../../../src/core/types.js";
+import { JobStatus } from "../../../src/shared/types.js";
 import {
   type RecordedOperation,
   buildBatchMutationRequest,
@@ -16,8 +23,7 @@ import {
   processBaseServerMutation,
   processReactorMutation,
 } from "../test/recorded-operations-helpers.js";
-import type { BatchMutationRequest } from "../../../src/core/types.js";
-import { JobStatus } from "../../../src/shared/types.js";
+import { truncateAllTables } from "../test/truncate-db.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,8 +35,21 @@ const recordedOpsContent = readFileSync(
 const operations: RecordedOperation[] = JSON.parse(recordedOpsContent);
 const mutations = operations.filter((op) => op.type === "mutation");
 
+const DATABASE_URL = "postgresql://postgres:postgres@localhost:5400/postgres";
+const cache = new InMemoryCache();
+
 async function setupBaseServer() {
-  const baseServerStorage = new MemoryStorage();
+  const prismaClient = new PrismaClient({
+    datasources: {
+      db: {
+        url: DATABASE_URL,
+      },
+    },
+  });
+
+  await truncateAllTables(prismaClient);
+
+  const baseServerStorage = new PrismaStorage(prismaClient as any, cache);
   const documentModels = getDocumentModels();
 
   const baseServerBuilder = new DriveReactorBuilder(documentModels).withStorage(
@@ -45,19 +64,13 @@ async function setupBaseServer() {
 
 async function main() {
   console.log("Building batch mutation request...");
-  const documentModels = getDocumentModels();
-  const tempReactor = await new ReactorBuilder()
-    .withDocumentModels(documentModels)
-    .withFeatures({
-      legacyStorageEnabled: true,
-    })
-    .build();
 
-  const batchRequest: BatchMutationRequest = await buildBatchMutationRequest(
+  const documentModels = getDocumentModels();
+  const batchRequest: BatchMutationRequest = buildBatchMutationRequest(
+    documentModels,
     mutations,
-    tempReactor,
   );
-  tempReactor.kill();
+
   console.log(
     `Batch request built with ${Object.keys(batchRequest.jobs).length} jobs\n`,
   );
@@ -73,23 +86,30 @@ async function main() {
     .add(
       "Reactor (Legacy Storage) - Process all operations",
       async () => {
-        const driveIds: string[] = [];
+        // sequentially process all operations
         for (const mutation of mutations) {
-          await processReactorMutation(
-            mutation,
-            reactorLegacyStorage!,
-            driveIds,
-          );
+          await processReactorMutation(mutation, reactorLegacyStorage!);
         }
       },
       {
         beforeEach: async () => {
+          const prismaClient = new PrismaClient({
+            datasources: {
+              db: {
+                url: DATABASE_URL,
+              },
+            },
+          });
+
+          await truncateAllTables(prismaClient);
+
           const documentModels = getDocumentModels();
           reactorLegacyStorage = await new ReactorBuilder()
             .withDocumentModels(documentModels)
             .withFeatures({
               legacyStorageEnabled: true,
             })
+            .withLegacyStorage(new PrismaStorage(prismaClient as any, cache))
             .build();
         },
         afterEach: () => {
@@ -100,13 +120,9 @@ async function main() {
     .add(
       "Reactor - Process all operations",
       async () => {
-        const driveIds: string[] = [];
+        // sequentially process all operations
         for (const mutation of mutations) {
-          await processReactorMutation(
-            mutation,
-            reactorNoLegacyStorage!,
-            driveIds,
-          );
+          await processReactorMutation(mutation, reactorNoLegacyStorage!);
         }
       },
       {
@@ -117,6 +133,8 @@ async function main() {
             .withFeatures({
               legacyStorageEnabled: false,
             })
+            // not used
+            .withLegacyStorage(new MemoryStorage())
             .build();
         },
         afterEach: () => {
@@ -141,9 +159,8 @@ async function main() {
     .add(
       "Reactor (Batch Submission) - Submit all mutations with queue hints",
       async () => {
-        const batchResult = await reactorBatchSubmission!.mutateBatch(
-          batchRequest,
-        );
+        const batchResult =
+          await reactorBatchSubmission!.mutateBatch(batchRequest);
         const jobIds = Object.values(batchResult.jobs).map((job) => job.id);
 
         const timeout = 60000;
@@ -152,9 +169,7 @@ async function main() {
 
         while (true) {
           const statuses = await Promise.all(
-            jobIds.map((jobId) =>
-              reactorBatchSubmission!.getJobStatus(jobId),
-            ),
+            jobIds.map((jobId) => reactorBatchSubmission!.getJobStatus(jobId)),
           );
 
           const allCompleted = statuses.every(
@@ -190,8 +205,10 @@ async function main() {
           reactorBatchSubmission = await new ReactorBuilder()
             .withDocumentModels(documentModels)
             .withFeatures({
-              legacyStorageEnabled: true,
+              legacyStorageEnabled: false,
             })
+            // not used
+            .withLegacyStorage(new MemoryStorage())
             .build();
         },
         afterEach: () => {

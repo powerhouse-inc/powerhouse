@@ -41,6 +41,13 @@ type ConsistencyToken = {
 - `IJobTracker.markCompleted` requires the resolved token so `JobInfo` can
   expose it to clients.
 
+### JobInfo Lifecycle
+
+- Reactor write APIs (e.g., `mutate`, `load`, `create`) register a job and return a freshly created `JobInfo`.
+- At this point the job is typically `PENDING` (though not guaranteed to be) and its `consistencyToken.coordinates` array is empty because no operations have been committed yet.
+- Once the executor marks the job `COMPLETED`, the tracker overwrites the same `JobInfo` with the final timestamps, result metadata, error history (if any), and the fully populated token.
+- Callers MUST wait for the completion event—either by polling `getJobStatus`, subscribing to job events, or calling `JobTracker.watch`—before relying on the token. Reading the `JobInfo` that was returned during queuing is a race and will almost always expose an empty coordinate list.
+
 ### Read-After-Write Flow
 
 1. A job finishes and surfaces a `JobInfo` with the consistency token.

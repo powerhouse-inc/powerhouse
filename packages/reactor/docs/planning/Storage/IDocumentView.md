@@ -30,6 +30,13 @@ Read models share a [Consistency Tracker](../Shared/consistency-tracker.md) to
 record the latest `(documentId, scope, branch)` index. `waitForConsistency`
 consults this tracker before deciding whether to block the caller.
 
+### Handling Reshuffles / `skip` Values
+
+- When a load triggers a reshuffle, the regenerated batch’s first operation includes a `skip` value to rewind the log; prior operations remain immutable, and conflict-free batches omit the skip entirely.
+- Whenever `IDocumentView` indexes an operation whose `skip` value is greater than zero, it treats this as a signal to rebuild the affected document’s state from the base revision referenced by that skip count.
+- The view can issue `IOperationStore.getSinceId` with the id of the operation carrying the skip (or any earlier ancestor) and re-run `indexOperations` on that slice to reconstruct the state deterministically.
+- This keeps the view self-sufficient: no snapshots are pushed from the write side—only operations and their metadata.
+
 #### Case 1: At Runtime
 
 If the document view receives an operation that has a later id than the last operation it has processed, it must catch up to the latest operation by querying the `IOperationStore` for all operations with an id greater than the last operation it knows about.
@@ -88,8 +95,13 @@ All read methods accept an optional `consistencyToken` parameter to provide read
 
 **Usage Pattern:**
 ```typescript
-const jobInfo = await reactor.mutate(documentId, operations);
-const doc = await documentView.get(documentId, view, jobInfo.consistencyToken);
+const queuedJob = await reactor.mutate(documentId, "main", operations);
+const completedJob = await reactor.getJobStatus(queuedJob.id); // poll until COMPLETED
+const doc = await documentView.get(documentId, view, completedJob.consistencyToken);
+
+const loadQueued = await reactor.load(documentId, "main", importedOperations);
+const loadCompleted = await reactor.getJobStatus(loadQueued.id); // same wait
+const loadedDoc = await documentView.get(documentId, view, loadCompleted.consistencyToken);
 ```
 
 This pattern guarantees that the read will see the effects of the write, even if the view is catching up asynchronously.

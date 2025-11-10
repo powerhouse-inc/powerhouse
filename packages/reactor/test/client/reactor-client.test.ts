@@ -252,16 +252,21 @@ describe("ReactorClient Unit Tests", () => {
         childIds: [],
       });
 
-      const result = await client.mutate(documentId, actions);
+      const result = await client.mutate(documentId, "main", actions);
 
-      expect(mockReactor.mutate).toHaveBeenCalledWith(documentId, actions);
+      expect(mockReactor.mutate).toHaveBeenCalledWith(
+        documentId,
+        "main",
+        actions,
+        undefined,
+      );
       expect(mockJobAwaiter.waitForJob).toHaveBeenCalledWith(
         "job-1",
         undefined,
       );
       expect(mockReactor.get).toHaveBeenCalledWith(
         documentId,
-        undefined,
+        { branch: "main" },
         undefined,
         undefined,
       );
@@ -271,7 +276,7 @@ describe("ReactorClient Unit Tests", () => {
     it("should pass view and signal parameters", async () => {
       const documentId = "doc-1";
       const actions: Action[] = [];
-      const view = { branch: "feature" };
+      const branch = "feature";
       const signal = new AbortController().signal;
 
       const jobInfo: JobInfo = {
@@ -287,12 +292,12 @@ describe("ReactorClient Unit Tests", () => {
         childIds: [],
       });
 
-      await client.mutate(documentId, actions, view, signal);
+      await client.mutate(documentId, branch, actions, signal);
 
       expect(mockJobAwaiter.waitForJob).toHaveBeenCalledWith("job-1", signal);
       expect(mockReactor.get).toHaveBeenCalledWith(
         documentId,
-        view,
+        { branch },
         undefined,
         signal,
       );
@@ -321,11 +326,12 @@ describe("ReactorClient Unit Tests", () => {
 
       vi.mocked(mockReactor.mutate).mockResolvedValue(jobInfo);
 
-      const result = await client.mutateAsync(documentId, actions);
+      const result = await client.mutateAsync(documentId, "main", actions);
 
       expect(mockSigner.sign).toHaveBeenCalledWith(actions[0], undefined);
       expect(mockReactor.mutate).toHaveBeenCalledWith(
         documentId,
+        "main",
         expect.arrayContaining([
           expect.objectContaining({
             id: "action-1",
@@ -339,6 +345,7 @@ describe("ReactorClient Unit Tests", () => {
             }),
           }),
         ]),
+        undefined,
       );
       expect(result).toEqual(jobInfo);
     });
@@ -363,7 +370,7 @@ describe("ReactorClient Unit Tests", () => {
         consistencyToken: createEmptyConsistencyToken(),
       });
 
-      await client.mutateAsync(documentId, actions, undefined, signal);
+      await client.mutateAsync(documentId, "main", actions, signal);
 
       expect(mockSigner.sign).toHaveBeenCalledWith(actions[0], signal);
     });
@@ -621,7 +628,7 @@ describe("ReactorClient Unit Tests", () => {
       });
       vi.mocked(mockJobAwaiter.waitForJob).mockRejectedValue(error);
 
-      await expect(client.mutate("doc-1", [])).rejects.toThrow(
+      await expect(client.mutate("doc-1", "main", [])).rejects.toThrow(
         "Job wait failed",
       );
     });
@@ -631,7 +638,7 @@ describe("ReactorClient Unit Tests", () => {
       vi.mocked(mockSigner.sign).mockRejectedValue(error);
 
       await expect(
-        client.mutateAsync("doc-1", [
+        client.mutateAsync("doc-1", "main", [
           {
             id: "action-1",
             type: "TEST",

@@ -1,3 +1,43 @@
+## 4.1.0-dev.105 (2025-11-08)
+
+### 🚀 Features
+
+- **reactor-api:** added driveDocument and driveDocuments route ([a30d78e84](https://github.com/powerhouse-inc/powerhouse/commit/a30d78e84))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.104 (2025-11-07)
+
+### 🚀 Features
+
+- **ph-cli:** remove reactor-local command ([029e5db7d](https://github.com/powerhouse-inc/powerhouse/commit/029e5db7d))
+
+### 🩹 Fixes
+
+- linter fixes ([39a187eca](https://github.com/powerhouse-inc/powerhouse/commit/39a187eca))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
+## 4.1.0-dev.103 (2025-11-06)
+
+### 🚀 Features
+
+- **connect:** remove circular imports ([a1632d41e](https://github.com/powerhouse-inc/powerhouse/commit/a1632d41e))
+
+### 🩹 Fixes
+
+- **codegen:** move read-pkg to runtime dependency ([939f01045](https://github.com/powerhouse-inc/powerhouse/commit/939f01045))
+- **codegen:** run prettier programmatically ([23f948c4d](https://github.com/powerhouse-inc/powerhouse/commit/23f948c4d))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.102 (2025-11-06)
 
 ### 🚀 Features

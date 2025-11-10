@@ -176,7 +176,9 @@ describe.each([
         });
 
         // Submit via reactor.mutate
-        const jobInfo = await reactor.mutate(document.header.id, [action]);
+        const jobInfo = await reactor.mutate(document.header.id, "main", [
+          action,
+        ]);
         expect(jobInfo.status).toBe(JobStatus.PENDING);
 
         // Wait for job completion and document view update
@@ -211,7 +213,7 @@ describe.each([
           parentFolder: null,
         });
 
-        const folderJobInfo = await reactor.mutate(document.header.id, [
+        const folderJobInfo = await reactor.mutate(document.header.id, "main", [
           folderAction,
         ]);
 
@@ -228,7 +230,7 @@ describe.each([
           parentFolder: folderId,
         });
 
-        const fileJobInfo = await reactor.mutate(document.header.id, [
+        const fileJobInfo = await reactor.mutate(document.header.id, "main", [
           fileAction,
         ]);
 
@@ -284,7 +286,11 @@ describe.each([
         ];
 
         // Submit all actions at once
-        const jobInfo = await reactor.mutate(document.header.id, actions);
+        const jobInfo = await reactor.mutate(
+          document.header.id,
+          "main",
+          actions,
+        );
 
         // Wait for job completion and document view update
 
@@ -456,7 +462,7 @@ describe.each([
           parentFolder: null,
         });
 
-        const addJobInfo = await reactor.mutate(document.header.id, [
+        const addJobInfo = await reactor.mutate(document.header.id, "main", [
           addAction,
         ]);
 
@@ -469,7 +475,7 @@ describe.each([
           documentType: "text/markdown",
         });
 
-        const updateJobInfo = await reactor.mutate(document.header.id, [
+        const updateJobInfo = await reactor.mutate(document.header.id, "main", [
           updateAction,
         ]);
 
@@ -501,7 +507,7 @@ describe.each([
           parentFolder: null,
         });
 
-        const addJobInfo = await reactor.mutate(document.header.id, [
+        const addJobInfo = await reactor.mutate(document.header.id, "main", [
           addAction,
         ]);
 
@@ -513,7 +519,7 @@ describe.each([
           name: "Renamed Folder",
         });
 
-        const updateJobInfo = await reactor.mutate(document.header.id, [
+        const updateJobInfo = await reactor.mutate(document.header.id, "main", [
           updateAction,
         ]);
 
@@ -546,7 +552,7 @@ describe.each([
           parentFolder: null,
         });
 
-        const addJobInfo = await reactor.mutate(document.header.id, [
+        const addJobInfo = await reactor.mutate(document.header.id, "main", [
           addAction,
         ]);
 
@@ -557,7 +563,7 @@ describe.each([
           id: folderId,
         });
 
-        const deleteJobInfo = await reactor.mutate(document.header.id, [
+        const deleteJobInfo = await reactor.mutate(document.header.id, "main", [
           deleteAction,
         ]);
 
@@ -607,7 +613,11 @@ describe.each([
           }),
         ];
 
-        const setupJobInfo = await reactor.mutate(document.header.id, actions);
+        const setupJobInfo = await reactor.mutate(
+          document.header.id,
+          "main",
+          actions,
+        );
 
         await waitForJobAndDocumentUpdate(setupJobInfo.id, document.header.id);
 
@@ -616,7 +626,7 @@ describe.each([
           id: parentId,
         });
 
-        const deleteJobInfo = await reactor.mutate(document.header.id, [
+        const deleteJobInfo = await reactor.mutate(document.header.id, "main", [
           deleteAction,
         ]);
 
@@ -659,7 +669,11 @@ describe.each([
           }),
         ];
 
-        const setupJobInfo = await reactor.mutate(document.header.id, actions);
+        const setupJobInfo = await reactor.mutate(
+          document.header.id,
+          "main",
+          actions,
+        );
 
         await waitForJobAndDocumentUpdate(setupJobInfo.id, document.header.id);
 
@@ -669,7 +683,7 @@ describe.each([
           targetParentFolder: folder2Id,
         });
 
-        const moveJobInfo = await reactor.mutate(document.header.id, [
+        const moveJobInfo = await reactor.mutate(document.header.id, "main", [
           moveAction,
         ]);
 
@@ -706,7 +720,11 @@ describe.each([
           }),
         ];
 
-        const setupJobInfo = await reactor.mutate(document.header.id, actions);
+        const setupJobInfo = await reactor.mutate(
+          document.header.id,
+          "main",
+          actions,
+        );
 
         await waitForJobAndDocumentUpdate(setupJobInfo.id, document.header.id);
 
@@ -716,7 +734,7 @@ describe.each([
           targetParentFolder: null,
         });
 
-        const moveJobInfo = await reactor.mutate(document.header.id, [
+        const moveJobInfo = await reactor.mutate(document.header.id, "main", [
           moveAction,
         ]);
 
@@ -759,7 +777,11 @@ describe.each([
           }),
         ];
 
-        const setupJobInfo = await reactor.mutate(document.header.id, actions);
+        const setupJobInfo = await reactor.mutate(
+          document.header.id,
+          "main",
+          actions,
+        );
 
         await waitForJobAndDocumentUpdate(setupJobInfo.id, document.header.id);
 
@@ -769,7 +791,7 @@ describe.each([
           targetParentFolder: folder3Id,
         });
 
-        const moveJobInfo = await reactor.mutate(document.header.id, [
+        const moveJobInfo = await reactor.mutate(document.header.id, "main", [
           moveAction,
         ]);
 
@@ -815,7 +837,11 @@ describe.each([
           }),
         ];
 
-        const setupJobInfo = await reactor.mutate(document.header.id, actions);
+        const setupJobInfo = await reactor.mutate(
+          document.header.id,
+          "main",
+          actions,
+        );
 
         await waitForJobAndDocumentUpdate(setupJobInfo.id, document.header.id);
 
@@ -827,7 +853,7 @@ describe.each([
           targetParentFolder: folder2Id,
         });
 
-        const copyJobInfo = await reactor.mutate(document.header.id, [
+        const copyJobInfo = await reactor.mutate(document.header.id, "main", [
           copyAction,
         ]);
 
@@ -862,7 +888,7 @@ describe.each([
           parentFolder: null,
         });
 
-        const addJobInfo = await reactor.mutate(document.header.id, [
+        const addJobInfo = await reactor.mutate(document.header.id, "main", [
           addAction,
         ]);
 
@@ -877,7 +903,7 @@ describe.each([
           targetParentFolder: null,
         });
 
-        const copyJobInfo = await reactor.mutate(document.header.id, [
+        const copyJobInfo = await reactor.mutate(document.header.id, "main", [
           copyAction,
         ]);
 
@@ -927,7 +953,11 @@ describe.each([
           }),
         ];
 
-        const setupJobInfo = await reactor.mutate(document.header.id, actions);
+        const setupJobInfo = await reactor.mutate(
+          document.header.id,
+          "main",
+          actions,
+        );
 
         await waitForJobAndDocumentUpdate(setupJobInfo.id, document.header.id);
 
@@ -939,7 +969,7 @@ describe.each([
           targetParentFolder: null,
         });
 
-        const copyJobInfo = await reactor.mutate(document.header.id, [
+        const copyJobInfo = await reactor.mutate(document.header.id, "main", [
           copyAction,
         ]);
 
@@ -988,7 +1018,9 @@ describe.each([
           name: "My Drive",
         });
 
-        const jobInfo = await reactor.mutate(document.header.id, [action]);
+        const jobInfo = await reactor.mutate(document.header.id, "main", [
+          action,
+        ]);
 
         await waitForJobAndDocumentUpdate(jobInfo.id, document.header.id);
 
@@ -1008,7 +1040,9 @@ describe.each([
           icon: "folder-open",
         });
 
-        const jobInfo = await reactor.mutate(document.header.id, [action]);
+        const jobInfo = await reactor.mutate(document.header.id, "main", [
+          action,
+        ]);
 
         await waitForJobAndDocumentUpdate(jobInfo.id, document.header.id);
 
@@ -1028,7 +1062,9 @@ describe.each([
           type: "PUBLIC",
         });
 
-        const jobInfo = await reactor.mutate(document.header.id, [action]);
+        const jobInfo = await reactor.mutate(document.header.id, "main", [
+          action,
+        ]);
 
         await waitForJobAndDocumentUpdate(jobInfo.id, document.header.id);
 
@@ -1048,7 +1084,9 @@ describe.each([
           availableOffline: true,
         });
 
-        const jobInfo = await reactor.mutate(document.header.id, [action]);
+        const jobInfo = await reactor.mutate(document.header.id, "main", [
+          action,
+        ]);
 
         await waitForJobAndDocumentUpdate(jobInfo.id, document.header.id);
 
@@ -1100,7 +1138,11 @@ describe.each([
         ];
 
         // Submit all at once
-        const jobInfo = await reactor.mutate(document.header.id, actions);
+        const jobInfo = await reactor.mutate(
+          document.header.id,
+          "main",
+          actions,
+        );
 
         await waitForJobAndDocumentUpdate(jobInfo.id, document.header.id);
 
@@ -1160,7 +1202,11 @@ describe.each([
           }),
         ];
 
-        const jobInfo = await reactor.mutate(document.header.id, actions);
+        const jobInfo = await reactor.mutate(
+          document.header.id,
+          "main",
+          actions,
+        );
 
         await waitForJobAndDocumentUpdate(jobInfo.id, document.header.id);
 
@@ -1191,7 +1237,9 @@ describe.each([
           parentFolder: "non-existent-folder",
         });
 
-        const jobInfo = await reactor.mutate(document.header.id, [action]);
+        const jobInfo = await reactor.mutate(document.header.id, "main", [
+          action,
+        ]);
 
         // Wait for job completion and document view update
 
@@ -1233,7 +1281,11 @@ describe.each([
           }),
         ];
 
-        const jobInfo = await reactor.mutate(document.header.id, actions);
+        const jobInfo = await reactor.mutate(
+          document.header.id,
+          "main",
+          actions,
+        );
 
         await waitForJobAndDocumentUpdate(jobInfo.id, document.header.id);
 
@@ -1269,7 +1321,11 @@ describe.each([
           }),
         ];
 
-        const jobInfo = await reactor.mutate(document.header.id, actions);
+        const jobInfo = await reactor.mutate(
+          document.header.id,
+          "main",
+          actions,
+        );
 
         await waitForJobAndDocumentUpdate(jobInfo.id, document.header.id);
 
@@ -1313,7 +1369,11 @@ describe.each([
           }),
         ];
 
-        const jobInfo = await reactor.mutate(document.header.id, actions);
+        const jobInfo = await reactor.mutate(
+          document.header.id,
+          "main",
+          actions,
+        );
 
         await waitForJobAndDocumentUpdate(jobInfo.id, document.header.id);
 
@@ -1383,6 +1443,7 @@ describe.each([
 
         const setupJobInfo = await reactor.mutate(
           document.header.id,
+          "main",
           setupActions,
         );
 
@@ -1412,6 +1473,7 @@ describe.each([
 
         const reorganizeJobInfo = await reactor.mutate(
           document.header.id,
+          "main",
           reorganizeActions,
         );
 
@@ -1511,6 +1573,7 @@ describe.each([
 
         const jobInfo = await reactor.mutate(
           document.header.id,
+          "main",
           templateActions,
         );
 

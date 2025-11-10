@@ -49,14 +49,14 @@ export class SimpleJobExecutor implements IJobExecutor {
     private operationStore: IOperationStore,
     private eventBus: IEventBus,
     private writeCache: IWriteCache,
-    config?: JobExecutorConfig,
+    config: JobExecutorConfig,
   ) {
     this.config = {
-      maxConcurrency: config?.maxConcurrency ?? 1,
-      jobTimeoutMs: config?.jobTimeoutMs ?? 30000,
-      retryBaseDelayMs: config?.retryBaseDelayMs ?? 100,
-      retryMaxDelayMs: config?.retryMaxDelayMs ?? 5000,
-      legacyStorageEnabled: config?.legacyStorageEnabled ?? true,
+      maxConcurrency: config.maxConcurrency ?? 1,
+      jobTimeoutMs: config.jobTimeoutMs ?? 30000,
+      retryBaseDelayMs: config.retryBaseDelayMs ?? 100,
+      retryMaxDelayMs: config.retryMaxDelayMs ?? 5000,
+      legacyStorageEnabled: config.legacyStorageEnabled ?? true,
     };
   }
 

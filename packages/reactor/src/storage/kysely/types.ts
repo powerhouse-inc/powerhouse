@@ -12,7 +12,7 @@ export interface OperationTable {
   branch: string;
   timestampUtcMs: Date;
   index: number;
-  action: string; // JSON string
+  action: unknown; // JSONB type - stored as object
   skip: number;
   error?: string | null;
   hash: string;
@@ -25,7 +25,7 @@ export interface KeyframeTable {
   scope: string;
   branch: string;
   revision: number;
-  document: string; // JSON-serialized PHDocument
+  document: unknown; // JSONB type - stored as object
   createdAt: Generated<Date>;
 }
 
@@ -53,7 +53,7 @@ export interface DocumentRelationshipTable {
   sourceId: string;
   targetId: string;
   relationshipType: string;
-  metadata: string | null;
+  metadata: unknown; // JSONB type - stored as object
   createdAt: Generated<Date>;
   updatedAt: Generated<Date>;
 }

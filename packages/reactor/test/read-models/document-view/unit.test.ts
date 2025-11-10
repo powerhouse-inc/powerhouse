@@ -171,12 +171,12 @@ describe("KyselyDocumentView Unit Tests", () => {
         {
           documentId: "doc-1",
           scope: "header",
-          content: JSON.stringify({ id: "doc-1", documentType: "test" }),
+          content: { id: "doc-1", documentType: "test" },
         },
         {
           documentId: "doc-1",
           scope: "document",
-          content: JSON.stringify({ isDeleted: false }),
+          content: { isDeleted: false },
         },
       ]);
 
@@ -269,17 +269,17 @@ describe("KyselyDocumentView Unit Tests", () => {
         {
           documentId: "doc-1",
           scope: "header",
-          content: JSON.stringify({ id: "doc-1", documentType: "test-type" }),
+          content: { id: "doc-1", documentType: "test-type" },
         },
         {
           documentId: "doc-2",
           scope: "header",
-          content: JSON.stringify({ id: "doc-2", documentType: "test-type" }),
+          content: { id: "doc-2", documentType: "test-type" },
         },
         {
           documentId: "doc-3",
           scope: "header",
-          content: JSON.stringify({ id: "doc-3", documentType: "test-type" }),
+          content: { id: "doc-3", documentType: "test-type" },
         },
       ];
       mockDb.execute.mockResolvedValue(snapshots);
@@ -344,7 +344,7 @@ describe("KyselyDocumentView Unit Tests", () => {
         {
           documentId: "doc-1",
           scope: "header",
-          content: JSON.stringify({ id: "doc-1", documentType: "test-type" }),
+          content: { id: "doc-1", documentType: "test-type" },
         },
       ];
       mockDb.execute.mockResolvedValue(snapshots);
@@ -363,7 +363,7 @@ describe("KyselyDocumentView Unit Tests", () => {
         {
           documentId: "doc-1",
           scope: "header",
-          content: JSON.stringify({ id: "doc-1", documentType: "test-type" }),
+          content: { id: "doc-1", documentType: "test-type" },
           branch: "main",
           isDeleted: false,
           documentType: "test-type",
@@ -372,7 +372,7 @@ describe("KyselyDocumentView Unit Tests", () => {
         {
           documentId: "doc-1",
           scope: "document",
-          content: JSON.stringify({}),
+          content: {},
           branch: "main",
           isDeleted: false,
           documentType: "test-type",
@@ -381,7 +381,7 @@ describe("KyselyDocumentView Unit Tests", () => {
         {
           documentId: "doc-2",
           scope: "header",
-          content: JSON.stringify({ id: "doc-2", documentType: "test-type" }),
+          content: { id: "doc-2", documentType: "test-type" },
           branch: "main",
           isDeleted: false,
           documentType: "test-type",
@@ -408,7 +408,7 @@ describe("KyselyDocumentView Unit Tests", () => {
         {
           documentId: "doc-1",
           scope: "header",
-          content: JSON.stringify({ id: "doc-1", documentType: "test-type" }),
+          content: { id: "doc-1", documentType: "test-type" },
           branch: "main",
           isDeleted: false,
           documentType: "test-type",
@@ -428,7 +428,7 @@ describe("KyselyDocumentView Unit Tests", () => {
       const snapshots = Array.from({ length: 150 }, (_, i) => ({
         documentId: `doc-${i}`,
         scope: "header",
-        content: JSON.stringify({ id: `doc-${i}`, documentType: "test-type" }),
+        content: { id: `doc-${i}`, documentType: "test-type" },
       }));
       mockDb.execute.mockResolvedValue(snapshots);
 
@@ -440,9 +440,9 @@ describe("KyselyDocumentView Unit Tests", () => {
 
     it("should check abort signal after database query", async () => {
       const controller = new AbortController();
-      mockDb.execute.mockImplementation(async () => {
+      mockDb.execute.mockImplementation(() => {
         controller.abort();
-        return [];
+        return Promise.resolve([]);
       });
 
       await expect(
@@ -528,9 +528,9 @@ describe("KyselyDocumentView Unit Tests", () => {
 
     it("should respect abort signal after query", async () => {
       const controller = new AbortController();
-      mockDb.executeTakeFirst.mockImplementation(async () => {
+      mockDb.executeTakeFirst.mockImplementation(() => {
         controller.abort();
-        return { documentId: "doc-123" };
+        return Promise.resolve({ documentId: "doc-123" });
       });
 
       await expect(

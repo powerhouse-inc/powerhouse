@@ -1,5 +1,11 @@
 import type { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
-
+import type {
+  Context,
+  GqlDriveDocument,
+  GqlOperation,
+  InternalStrandUpdate,
+  SubgraphArgs,
+} from "@powerhousedao/reactor-api";
 import { pascalCase } from "change-case";
 import type {
   DocumentDriveDocument,
@@ -12,12 +18,12 @@ import type {
   StrandUpdateGraphQL,
 } from "document-drive";
 import {
-  PullResponderTransmitter,
   childLogger,
+  PullResponderTransmitter,
   responseForDocument,
   responseForDrive,
 } from "document-drive";
-import type { DocumentModelInput, Operation, PHDocument } from "document-model";
+import type { DocumentModelInput, Operation } from "document-model";
 import { generateId } from "document-model/core";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
@@ -31,12 +37,31 @@ import {
   processGetStrands,
   processPushUpdate,
 } from "../sync/utils.js";
+import {
+  processAcknowledge,
+  processGetStrands,
+  processPushUpdate,
+} from "../sync/utils.js";
 import { BaseSubgraph } from "./base-subgraph.js";
 import type { Asset } from "./temp-hack-rwa-type-defs.js";
+import { buildGraphQlDriveDocument, IDocumentGraphql } from "./utils.js";
 
 const driveKindTypeNames: Record<string, string> = {
   file: "DocumentDrive_FileNode",
   folder: "DocumentDrive_FolderNode",
+};
+
+export const DocumentDriveResolvers = {
+  DocumentDrive_Node: {
+    __resolveType: (obj: FileNode) => {
+      return obj.documentType
+        ? driveKindTypeNames.file
+        : driveKindTypeNames.folder;
+    },
+  },
+  DocumentDrive: {
+    operations: IDocumentGraphql.resolvers.IDocument.operations,
+  },
 };
 
 export class DriveSubgraph extends BaseSubgraph {
@@ -63,10 +88,15 @@ export class DriveSubgraph extends BaseSubgraph {
     extend type DocumentDrive_DocumentDriveState {
       meta: DriveMeta
     }
+    extend type DocumentDrive {
+      meta: DriveMeta
+      slug: String!
+    }
 
     type Query {
       system: System
       drive: DriveInfo
+      driveDocument: DocumentDrive
       document(id: String!): DriveDocument
       documents: [String!]!
     }
@@ -254,28 +284,16 @@ export class DriveSubgraph extends BaseSubgraph {
           : driveKindTypeNames.folder;
       },
     },
-    DocumentDrive_Node: {
-      __resolveType: (obj: FileNode) => {
-        return obj.documentType
-          ? driveKindTypeNames.file
-          : driveKindTypeNames.folder;
-      },
-    },
-    Document: {
-      operations: async (
-        obj: PHDocument,
-        { first, skip }: { first: number; skip: number },
-        ctx: Context,
-      ) => {
-        const limit = first ?? 0;
-        const start = skip ?? 0;
-        return obj.operations.global?.slice(start, start + limit) ?? [];
-      },
-    },
     Operation: {
-      type: (operation: Operation) => operation.action.type,
-      id: (operation: Operation) => operation.id ?? operation.action.id,
+      type: (operation: Operation | GqlOperation) =>
+        "type" in operation ? operation.type : operation.action.type,
+      id: (operation: Operation | GqlOperation) =>
+        "id" in operation ? operation.id : operation.action.id,
     },
+    DriveDocument: {
+      operations: IDocumentGraphql.resolvers.IDocument.operations,
+    },
+    ...DocumentDriveResolvers,
     Query: {
       drive: async (
         _: unknown,
@@ -286,8 +304,19 @@ export class DriveSubgraph extends BaseSubgraph {
 
         if (!ctx.driveId) throw new Error("Drive ID is required");
         const drive = await this.getDriveBySlugOrId(ctx.driveId);
-
         return responseForDrive(drive);
+      },
+      driveDocument: async (
+        _: unknown,
+        args: unknown,
+        ctx: Context,
+      ): Promise<GqlDriveDocument> => {
+        this.logger.verbose(`driveDocument()`, JSON.stringify(args));
+
+        if (!ctx.driveId) throw new Error("Drive ID is required");
+        const drive = await this.getDriveBySlugOrId(ctx.driveId);
+        ctx.document = drive;
+        return buildGraphQlDriveDocument(drive);
       },
       documents: async (_: unknown, args: unknown, ctx: Context) => {
         this.logger.verbose(`documents(drive: ${ctx.driveId})`, args);
