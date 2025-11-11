@@ -9,7 +9,7 @@ import { documentModelDocumentModelModule } from "document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { KyselyWriteCache } from "../../src/cache/kysely-write-cache.js";
-import type { WriteCacheConfig } from "../../src/cache/types.js";
+import type { WriteCacheConfig } from "../../src/cache/write-cache-types.js";
 import { getNextIndexForScope } from "../../src/executor/util.js";
 import { DocumentModelRegistry } from "../../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";

@@ -9,7 +9,7 @@ import { documentModelDocumentModelModule } from "document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { KyselyWriteCache } from "../../src/cache/kysely-write-cache.js";
-import type { WriteCacheConfig } from "../../src/cache/types.js";
+import type { WriteCacheConfig } from "../../src/cache/write-cache-types.js";
 import { Reactor } from "../../src/core/reactor.js";
 import { EventBus } from "../../src/events/event-bus.js";
 import type { IEventBus } from "../../src/events/interfaces.js";

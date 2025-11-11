@@ -8,7 +8,7 @@ import { MemoryStorage, driveDocumentModelModule } from "document-drive";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyWriteCache } from "../../src/cache/kysely-write-cache.js";
-import type { WriteCacheConfig } from "../../src/cache/types.js";
+import type { WriteCacheConfig } from "../../src/cache/write-cache-types.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
 import type { Job } from "../../src/queue/types.js";
 import { DocumentModelRegistry } from "../../src/registry/implementation.js";
