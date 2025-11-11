@@ -30,6 +30,7 @@ import { JobStatus } from "../../../src/shared/types.js";
 import { KyselyDocumentIndexer } from "../../../src/storage/kysely/document-indexer.js";
 import { KyselyKeyframeStore } from "../../../src/storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../../../src/storage/kysely/store.js";
+import { runMigrations } from "../../../src/storage/migrations/migrator.js";
 import type {
   DocumentIndexerDatabase,
   Database as StorageDatabase,
@@ -71,70 +72,12 @@ async function createReactorSetup(
     dialect: kyselyPGlite.dialect,
   });
 
-  await db.schema
-    .createTable("Operation")
-    .addColumn("id", "serial", (col) => col.primaryKey())
-    .addColumn("jobId", "text", (col) => col.notNull())
-    .addColumn("opId", "text", (col) => col.notNull().unique())
-    .addColumn("prevOpId", "text", (col) => col.notNull())
-    .addColumn("writeTimestampUtcMs", "timestamptz", (col) =>
-      col.notNull().defaultTo(new Date()),
-    )
-    .addColumn("documentId", "text", (col) => col.notNull())
-    .addColumn("documentType", "text", (col) => col.notNull())
-    .addColumn("scope", "text", (col) => col.notNull())
-    .addColumn("branch", "text", (col) => col.notNull())
-    .addColumn("timestampUtcMs", "timestamptz", (col) => col.notNull())
-    .addColumn("index", "integer", (col) => col.notNull())
-    .addColumn("action", "text", (col) => col.notNull())
-    .addColumn("skip", "integer", (col) => col.notNull())
-    .addColumn("error", "text")
-    .addColumn("hash", "text", (col) => col.notNull())
-    .addUniqueConstraint("unique_revision", [
-      "documentId",
-      "scope",
-      "branch",
-      "index",
-    ])
-    .execute();
-
-  await db.schema
-    .createIndex("streamOperations")
-    .on("Operation")
-    .columns(["documentId", "scope", "branch", "id"])
-    .execute();
-
-  await db.schema
-    .createIndex("branchlessStreamOperations")
-    .on("Operation")
-    .columns(["documentId", "scope", "id"])
-    .execute();
-
-  await db.schema
-    .createTable("Keyframe")
-    .addColumn("id", "serial", (col) => col.primaryKey())
-    .addColumn("documentId", "text", (col) => col.notNull())
-    .addColumn("documentType", "text", (col) => col.notNull())
-    .addColumn("scope", "text", (col) => col.notNull())
-    .addColumn("branch", "text", (col) => col.notNull())
-    .addColumn("revision", "integer", (col) => col.notNull())
-    .addColumn("document", "text", (col) => col.notNull())
-    .addColumn("createdAt", "timestamptz", (col) =>
-      col.notNull().defaultTo(new Date()),
-    )
-    .addUniqueConstraint("unique_keyframe", [
-      "documentId",
-      "scope",
-      "branch",
-      "revision",
-    ])
-    .execute();
-
-  await db.schema
-    .createIndex("keyframe_lookup")
-    .on("Keyframe")
-    .columns(["documentId", "scope", "branch", "revision"])
-    .execute();
+  const migrationResult = await runMigrations(db);
+  if (!migrationResult.success) {
+    throw new Error(
+      `Failed to run migrations: ${migrationResult.error?.message}`,
+    );
+  }
 
   const operationStore = new KyselyOperationStore(
     db as unknown as Kysely<StorageDatabase>,
