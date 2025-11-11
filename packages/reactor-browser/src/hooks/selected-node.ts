@@ -2,6 +2,7 @@ import type { Node } from "document-drive";
 import {
   extractDriveSlugFromPath,
   extractNodeIdFromSlug,
+  extractNodeSlugFromPath,
   makeNodeSlug,
   resolveUrlPathname,
 } from "../utils/url.js";
@@ -34,22 +35,33 @@ export function setSelectedNode(nodeOrNodeSlug: Node | string | undefined) {
     return;
   }
   if (!nodeSlug) {
-    window.history.pushState(
-      null,
-      "",
-      resolveUrlPathname(`/d/${driveSlugFromPath}`),
-    );
+    const pathname = resolveUrlPathname(`/d/${driveSlugFromPath}`);
+    if (pathname === window.location.pathname) {
+      return;
+    }
+    window.history.pushState(null, "", pathname);
     return;
   }
-  window.history.pushState(
-    null,
-    "",
-    resolveUrlPathname(`/d/${driveSlugFromPath}/${nodeSlug}`),
-  );
+  const pathname = resolveUrlPathname(`/d/${driveSlugFromPath}/${nodeSlug}`);
+  if (pathname === window.location.pathname) {
+    return;
+  }
+  window.history.pushState(null, "", pathname);
 }
 
 export function addResetSelectedNodeEventHandler() {
   window.addEventListener("ph:selectedDriveIdUpdated", () => {
     setSelectedNodeId(undefined);
+  });
+}
+
+export function addSetSelectedNodeOnPopStateEventHandler() {
+  window.addEventListener("popstate", () => {
+    const pathname = window.location.pathname;
+    const nodeSlug = extractNodeSlugFromPath(pathname);
+    const selectedNodeId = window.ph?.selectedNodeId;
+    if (nodeSlug !== selectedNodeId) {
+      setSelectedNode(nodeSlug);
+    }
   });
 }
