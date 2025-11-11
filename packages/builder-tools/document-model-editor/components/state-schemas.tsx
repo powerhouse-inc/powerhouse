@@ -1,5 +1,6 @@
+import { cn } from "@powerhousedao/design-system";
 import { Kind } from "graphql";
-import { useCallback, useState } from "react";
+import { lazy, useCallback, useState } from "react";
 import { typeDefsDoc } from "../constants/documents.js";
 import { safeParseSdl, useSchemaContext } from "../context/schema-context.js";
 import type { Scope } from "../types/documents.js";
@@ -9,12 +10,10 @@ import {
   makeStateSchemaNameForScope,
 } from "../utils/helpers.js";
 import { ensureValidStateSchemaName } from "../utils/linting.js";
-import { cn } from "../utils/style.js";
 import { Button } from "./button.js";
-import { GraphqlEditor } from "./code-editors/graphql-editor.js";
-import { JSONEditor } from "./code-editors/json-editor.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs.js";
-
+const GraphqlEditor = lazy(() => import("./code-editors/graphql-editor.js"));
+const JSONEditor = lazy(() => import("./code-editors/json-editor.js"));
 type Props = {
   modelName: string;
   globalStateSchema: string;
@@ -159,7 +158,7 @@ function StateEditor({
   );
 }
 
-export function StateSchemas({
+export default function StateSchemas({
   modelName,
   globalStateSchema,
   localStateSchema,

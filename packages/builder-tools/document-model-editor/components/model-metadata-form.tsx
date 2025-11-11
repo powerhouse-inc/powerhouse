@@ -31,7 +31,7 @@ type Props = MetadataFormValues & {
   setStateSchema: (schema: string, scope: Scope) => void;
 };
 
-export function ModelMetadata(props: Props) {
+export default function ModelMetadata(props: Props) {
   return (
     <div>
       <ModelNameForm {...props} />

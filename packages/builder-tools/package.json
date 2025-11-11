@@ -22,6 +22,10 @@
       "import": "./dist/document-model-editor/module.js",
       "types": "./dist/document-model-editor/module.d.ts"
     },
+    "./editor-component": {
+      "import": "./dist/document-model-editor/editor.js",
+      "types": "./dist/document-model-editor/editor.d.ts"
+    },
     "./document-model-editor/hooks": {
       "import": "./dist/document-model-editor/hooks/index.js",
       "types": "./dist/document-model-editor/hooks/index.d.ts"
