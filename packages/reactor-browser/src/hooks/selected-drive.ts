@@ -3,7 +3,7 @@ import type {
   DocumentDriveAction,
   DocumentDriveDocument,
 } from "document-drive";
-import { resolveUrlPathname } from "../utils/url.js";
+import { extractDriveIdFromPath, resolveUrlPathname } from "../utils/url.js";
 import { useDispatch } from "./dispatch.js";
 import { useDrives } from "./drives.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
@@ -77,4 +77,15 @@ export function setSelectedDrive(
     return;
   }
   window.history.pushState(null, "", pathname);
+}
+
+export function addSetSelectedDriveOnPopStateEventHandler() {
+  window.addEventListener("popstate", () => {
+    const pathname = window.location.pathname;
+    const driveId = extractDriveIdFromPath(pathname);
+    const selectedDriveId = window.ph?.selectedDriveId;
+    if (driveId !== selectedDriveId) {
+      setSelectedDrive(driveId);
+    }
+  });
 }
