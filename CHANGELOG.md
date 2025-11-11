@@ -1,3 +1,21 @@
+## 4.1.0-dev.110 (2025-11-11)
+
+### 🚀 Features
+
+- **connect,common,builder-tools:** optimize connect bundle chunks ([#2093](https://github.com/powerhouse-inc/powerhouse/pull/2093))
+
+### 🩹 Fixes
+
+- read data is missing vetra packages ([cc0323cf6](https://github.com/powerhouse-inc/powerhouse/commit/cc0323cf6))
+- **builder-tools:** fix hmr on connect ([f72047359](https://github.com/powerhouse-inc/powerhouse/commit/f72047359))
+- **reactor-browser:** handle node and drive navigation on window popstate event ([#2094](https://github.com/powerhouse-inc/powerhouse/pull/2094))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+
 ## 4.1.0-dev.109 (2025-11-10)
 
 ### 🩹 Fixes
