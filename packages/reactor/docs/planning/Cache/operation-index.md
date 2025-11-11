@@ -87,11 +87,10 @@ ORDER BY oi.ordinal;
 
 ### Collection Derivation
 
-`ISyncManager` and `IOperationIndex` share the same rule for constructing collection identifiers so they can both pre-create and query the same sets. Because collection roots currently map 1:1 with their backing documents, the collection id is simply derived from that document id:
+`ISyncManager` and `IOperationIndex` share the same rule for constructing collection identifiers so they can both pre-create and query the same sets. Because collection roots currently map 1:1 with their backing documents, the collection id is derived via the canonical `driveCollectionId(branch, driveId)` helper:
 
 ```ts
-const toCollectionId = (driveId: string, branch: string): string =>
-  `drive.${branch}.${driveId}`;
+const toCollectionId = driveCollectionId; // => `drive.${branch}.${driveId}`
 ```
 
 When reducers emit a `CREATE_DOCUMENT` for a new collection root (which is currently only the `document-drive` model), the job executor calls `txn.createCollection(toCollectionId(driveId, branch))` and the index inserts the derived id into `document_collections`:

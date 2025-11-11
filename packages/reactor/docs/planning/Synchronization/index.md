@@ -49,7 +49,7 @@ Describes a one-way flow of data from one Reactor to another, pulling operations
 ```mermaid
 graph
     BScheduler["Scheduler"] --> BSync["ISyncManager"]
-    IChannel <-->|"(1) Query(filter)"| AOI
+    BSync <-->|"(1) Query(filter)"| AOI
     BSync --> IChannel -->|"(2) Transport"| Load
 
     subgraph "IReactor A"
@@ -61,7 +61,7 @@ graph
     end
 ```
 
-Here we introduce the concept of a "filter" for queries. These consist of a collection id, a cursor, and a `ViewFilter`. The collection id, as described in the [Operation Index](../Cache/operation-index.md) documentation, is generally derived from the drive id and branch.
+Here we introduce the concept of a "filter" for queries. These consist of a collection id, a cursor, and a `ViewFilter`. Collection ids are **always** computed via the `driveCollectionId(branch, driveId)` helper (implemented alongside the operation-index types) so today only drive documents can act as collection roots and every cursor derives from those drives.
 
 The cursor is a monotonically increasing integer that represents the ordinal of the last operation that was processed.
 
@@ -72,7 +72,7 @@ The `ViewFilter` is a standard `ViewFilter` object, as described in the [Shared 
 `IOperationIndex` (see [Operation Index](../Cache/operation-index.md)) flattens the operations of every document in a collection into a single, ordinal-ordered stream. Inside each job executor we write both to the `IOperationStore` (authoritative log) and to the index, so the index behaves like a write model: it participates in the same transaction, rolls back if the store write fails, and exposes the same ordering guarantees to consumers. The pull loop relies on those properties:
 
 - **Collection cursors.** Each remote/remote-filter keeps a cursor (ordinal) into the index. Collections represent “documents ever attached to a drive”, so a remote that subscribes to an entire drive advances one cursor instead of tracking every `(documentId, scope, branch)` tuple.
-- **Filter projection.** The index stores document metadata (type, identifiers) alongside the operations table described in the index spec. The `"(1) Query(filter)"` arrow means the sync manager asks, “give me all operations since ordinal N for collection C matching my remote filter.” We never have to replay documents just to check filters.
+- **Filter projection.** The index stores document metadata (type, identifiers) alongside the operations table described in the index spec. The `"(1) Query(filter)"` arrow means the sync manager asks, “give me all operations since ordinal N for collection C matching my remote filter.” We never have to replay documents just to check filters, and channels never talk to the index directly.
 - **No read-model lag.** Because the index is written synchronously with the job executor (Option #1 in the index doc), pull latency is bounded by network time. If we ever switch to async/index-lag mode we must document the reconciliation/catch-up process here.
 - **IOperationStore fallback.** When reconciliation detects a gap (`MISSING_OPERATIONS`), the sync manager can fall back to `IOperationStore.getSince` to rebuild a strand—but the steady-state pull path never hits the store directly; it streams from the index.
 
@@ -95,6 +95,7 @@ The schedulers are "smart" and understand how to optimimally set intervals based
 - Reactor characteristics (CPU, memory, etc.)
 - Recent pushes from other reactor
 
+*Coordinated backpressure and fairness across remotes is tracked as a future improvement; the initial implementation only tracks health metrics and simple interval tuning.*
 ```mermaid
 graph
     %% === Reactor A ===
@@ -112,13 +113,13 @@ graph
 
         ASub --> ASync
         ASync --> AIChannel["IChannel"]
-        AIChannel <-->|"Query"| AOI["IOperationIndex"]
+        ASync <-->|"Query"| AOI["IOperationIndex"]
     end
 
     %% Network
     AIChannel -->|"Transport"| Transport["Memory / HTTP / WebSocket / etc."]
     Transport -->|"Transport"| BIChannel["IChannel"]
-    BIChannel <-->|"Query"| BOI["IOperationIndex"]
+    BSync <-->|"Query"| BOI["IOperationIndex"]
 
     %% === Reactor B ===
     subgraph "IReactor B"
@@ -176,9 +177,9 @@ sequenceDiagram
 
     %% Reactor B pulls operations
     SchedulerB->>SMB: Interval
-    SMB->>BChannel: Query
-    BChannel->>AOI: Query
-    AOI-->>BChannel: Operations[]
+    SMB->>AOI: Query
+    AOI-->>SMB: Operations[]
+    SMB->>BChannel: enqueue(handles)
     BChannel->>AChannel: Transport
     AChannel->>LoadA: load(docId, branch, Operation[])
     LoadA->>JEA: Operations[]
@@ -434,6 +435,12 @@ events.on(JobExecutorEventTypes.JOB_COMPLETED, (job, result) => {
 The `IChannel` implementation is responsible for retrying failed push and pull operations due to network conditions. Implementations should use exponential backoff with jitter when applicable, according to a retry policy.
 
 Network errors should not bubble up from the `IChannel` unless the retry policy is exhausted.
+
+Transport failures (connection drops, TLS errors, broker disconnects, etc.) flow through this same retry/disable pathway: the channel records them as `ChannelErrorSource.Channel`, increments the remote’s health counters, and once retries are exhausted the sync manager disables the remote just like any other fatal error.
+
+### Consistency Tokens
+
+Consistency tokens are strictly a local read-model coordination tool (see [Jobs](../Jobs/index.md)). Sync never transmits or interprets those tokens; once operations have been transported, each reactor’s own read models are responsible for waiting on their tokens independently.
 
 ### Optimization
 

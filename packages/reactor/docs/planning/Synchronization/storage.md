@@ -6,7 +6,7 @@ The synchronization subsystem needs durable state that is independent from the r
 
 - **Remote registry** — the list of remotes (`name`, channel configuration, filter, options, operational status).
 - **Per-remote cursors** — for every `(remote, collectionId)` pair we store the last ordinal pulled from the `IOperationIndex`, along with the `ViewFilter` that was used to derive that stream.
-- **Derived collections** — the exact `collectionId`s a remote cares about (deterministically derived from drive/branch pairs) so sync and the operation index agree on namespace.
+- **Derived collections** — the exact `collectionId`s a remote cares about (deterministically derived from drive/branch pairs via `driveCollectionId(branch, driveId)`) so sync and the operation index agree on namespace.
 - **Health metadata** — timestamps and failure counts that allow the scheduler to backoff or surface telemetry.
 
 The storage implementation is intentionally lightweight: a single relational database (Kysely + PG/PGLite) with JSON columns for filters/options. Because `IOperationIndex` already holds the operations themselves, no operation payloads live here—only metadata that lets the sync manager resume querying the index.
@@ -72,6 +72,7 @@ export interface ISyncStorage {
 - `channelType` + `channelConfig` tell the orchestrator how to re-create an `IChannel` implementation on restart (for example, `websocket` with URL/headers).
 - `RemoteFilter` and `RemoteOptions` are the same structures defined in `Synchronization/interface.md`.
 - `RemoteCursor.cursorOrdinal` is always **exclusive** (i.e. the next call to `IOperationIndex.find` uses this ordinal as `cursor`).
+- Collection identifiers are always computed with `driveCollectionId(branch, driveId)`; today that means only drive documents can seed sync cursors.
 
 ## Schema
 
