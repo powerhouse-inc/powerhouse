@@ -1,3 +1,56 @@
+## 5.0.1-staging.12 (2025-11-11)
+
+### 🚀 Features
+
+- **connect,common,builder-tools:** optimize connect bundle chunks ([#2093](https://github.com/powerhouse-inc/powerhouse/pull/2093))
+- **monorepo:** exit with error code if circular import found ([3ca6d3512](https://github.com/powerhouse-inc/powerhouse/commit/3ca6d3512))
+- **connect:** do not use redundant dev deps ([2a847e944](https://github.com/powerhouse-inc/powerhouse/commit/2a847e944))
+- **connect,builder-tools:** improve chunking ([c089c7678](https://github.com/powerhouse-inc/powerhouse/commit/c089c7678))
+- **codegen,design-system:** update path for import connect components ([f8f387023](https://github.com/powerhouse-inc/powerhouse/commit/f8f387023))
+- **connect,design-system:** fix connect component imports ([22f192c72](https://github.com/powerhouse-inc/powerhouse/commit/22f192c72))
+- **design-system,connect:** fix connect component imports ([ed5b5a264](https://github.com/powerhouse-inc/powerhouse/commit/ed5b5a264))
+- **monorepo:** add circular imports check in ci ([d6e46a869](https://github.com/powerhouse-inc/powerhouse/commit/d6e46a869))
+- **design-system:** resolve remaining circular imports ([b82cc2e3c](https://github.com/powerhouse-inc/powerhouse/commit/b82cc2e3c))
+- **ph-cli:** remove reactor-local command ([029e5db7d](https://github.com/powerhouse-inc/powerhouse/commit/029e5db7d))
+- **vetra:** fix circular imports ([a513ad28a](https://github.com/powerhouse-inc/powerhouse/commit/a513ad28a))
+- **document-drive:** fix circular imports ([f2db50c23](https://github.com/powerhouse-inc/powerhouse/commit/f2db50c23))
+- **monorepo:** add check circular imports scripts ([d633b37c2](https://github.com/powerhouse-inc/powerhouse/commit/d633b37c2))
+- **connect:** remove circular imports ([a1632d41e](https://github.com/powerhouse-inc/powerhouse/commit/a1632d41e))
+- implement vetra document backup functionality in generators ([#2077](https://github.com/powerhouse-inc/powerhouse/pull/2077))
+- switching to tinybench for benchmarks ([5b915e025](https://github.com/powerhouse-inc/powerhouse/commit/5b915e025))
+- **codegen, vetra:** update codegen templates ([#2056](https://github.com/powerhouse-inc/powerhouse/pull/2056))
+- create default vetra package document when ph vetra is started for a remote drive ([#2066](https://github.com/powerhouse-inc/powerhouse/pull/2066))
+- added some broken tests that are in progress ([c92e1f057](https://github.com/powerhouse-inc/powerhouse/commit/c92e1f057))
+- enabled ph init --remote-drives and ph checkout commands ([#2057](https://github.com/powerhouse-inc/powerhouse/pull/2057))
+
+### 🩹 Fixes
+
+- read data is missing vetra packages ([cc0323cf6](https://github.com/powerhouse-inc/powerhouse/commit/cc0323cf6))
+- **vetra:** re-added vetra package editor export ([fd8e88d4c](https://github.com/powerhouse-inc/powerhouse/commit/fd8e88d4c))
+- **vetra:** update package.json to change export key from 'development' to 'source' ([6193acc85](https://github.com/powerhouse-inc/powerhouse/commit/6193acc85))
+- **vetra:** fix set app name debounce on app editor ([b776e9a28](https://github.com/powerhouse-inc/powerhouse/commit/b776e9a28))
+- **vetra:** fix set app name debounce on app editor ([a441013f7](https://github.com/powerhouse-inc/powerhouse/commit/a441013f7))
+- linter fixes ([39a187eca](https://github.com/powerhouse-inc/powerhouse/commit/39a187eca))
+- **codegen:** move read-pkg to runtime dependency ([939f01045](https://github.com/powerhouse-inc/powerhouse/commit/939f01045))
+- **vetra:** added development export ([f4e169fa9](https://github.com/powerhouse-inc/powerhouse/commit/f4e169fa9))
+- **vetra:** increased codegen debounce to 3 seconds ([ca880217a](https://github.com/powerhouse-inc/powerhouse/commit/ca880217a))
+- **codegen:** run prettier programmatically ([23f948c4d](https://github.com/powerhouse-inc/powerhouse/commit/23f948c4d))
+- try again with a pnpm upgrade ([ec081f743](https://github.com/powerhouse-inc/powerhouse/commit/ec081f743))
+- trying a completely fresh lockfile ([c9888939a](https://github.com/powerhouse-inc/powerhouse/commit/c9888939a))
+- **monorepo:** fix lockfile and test filter ([#2069](https://github.com/powerhouse-inc/powerhouse/pull/2069))
+- update atlas packages ([fa174d00e](https://github.com/powerhouse-inc/powerhouse/commit/fa174d00e))
+- publish docker prod workflow ([ab7c4e6cb](https://github.com/powerhouse-inc/powerhouse/commit/ab7c4e6cb))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
 ## 5.0.1-staging.11 (2025-11-11)
 
 ### 🚀 Features
