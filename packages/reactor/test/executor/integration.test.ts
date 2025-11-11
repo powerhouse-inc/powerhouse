@@ -85,6 +85,30 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
         txn.addOperations(upgradeOperation);
       },
     );
+
+    const indexTxn = operationIndex.start();
+    if (documentType === "powerhouse/document-drive") {
+      const collectionId = driveCollectionId("main", documentId);
+      indexTxn.createCollection(collectionId);
+      indexTxn.addToCollection(collectionId, documentId);
+    }
+    indexTxn.write([
+      {
+        ...createOperation,
+        documentId,
+        documentType,
+        branch: "main",
+        scope: "document",
+      },
+      {
+        ...upgradeOperation,
+        documentId,
+        documentType,
+        branch: "main",
+        scope: "document",
+      },
+    ]);
+    await operationIndex.commit(indexTxn);
   }
 
   beforeEach(async () => {
@@ -606,16 +630,16 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
 
       expect(result.success).toBe(true);
 
-      const indexedOps = await db
-        .selectFrom("operation_index_operations")
-        .selectAll()
-        .where("documentId", "=", "new-doc-1")
-        .execute();
+      const collectionId = driveCollectionId("main", "new-doc-1");
+      const indexedOps = await operationIndex.find(collectionId);
 
-      expect(indexedOps).toHaveLength(1);
-      expect(indexedOps[0].documentType).toBe("powerhouse/document-drive");
-      expect(indexedOps[0].scope).toBe("document");
-      expect(indexedOps[0].branch).toBe("main");
+      expect(indexedOps.items).toHaveLength(1);
+      expect(indexedOps.items[0].documentId).toBe("new-doc-1");
+      expect(indexedOps.items[0].documentType).toBe(
+        "powerhouse/document-drive",
+      );
+      expect(indexedOps.items[0].scope).toBe("document");
+      expect(indexedOps.items[0].branch).toBe("main");
     });
 
     it("should create collection when creating a document-drive document", async () => {
@@ -648,16 +672,11 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
 
       expect(result.success).toBe(true);
 
-      const collections = await db
-        .selectFrom("document_collections")
-        .selectAll()
-        .where("collectionId", "=", driveCollectionId("main", driveId))
-        .execute();
+      const collectionId = driveCollectionId("main", driveId);
+      const collectionOps = await operationIndex.find(collectionId);
 
-      expect(collections).toHaveLength(1);
-      expect(collections[0].collectionId).toBe(
-        driveCollectionId("main", driveId),
-      );
+      expect(collectionOps.items).toHaveLength(1);
+      expect(collectionOps.items[0].documentId).toBe(driveId);
     });
 
     it("should add documents to collection when adding relationships", async () => {
@@ -711,17 +730,13 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
       }
       expect(result.success).toBe(true);
 
-      const collectionMemberships = await db
-        .selectFrom("document_collections")
-        .selectAll()
-        .where("documentId", "=", childDocId)
-        .execute();
+      const collectionId = driveCollectionId("main", driveId);
+      const collectionOps = await operationIndex.find(collectionId);
 
-      expect(collectionMemberships.length).toBeGreaterThan(0);
-      const membership = collectionMemberships.find(
-        (m) => m.collectionId === driveCollectionId("main", driveId),
+      const childOps = collectionOps.items.filter(
+        (op) => op.documentId === childDocId,
       );
-      expect(membership).toBeDefined();
+      expect(childOps.length).toBeGreaterThan(0);
     });
 
     it("should write all operation types to the index", async () => {
@@ -760,13 +775,14 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
 
       expect(result.success).toBe(true);
 
-      const indexedOps = await db
-        .selectFrom("operation_index_operations")
-        .selectAll()
-        .where("documentId", "=", document.header.id)
-        .execute();
+      const collectionId = driveCollectionId("main", document.header.id);
+      const collectionOps = await operationIndex.find(collectionId);
 
-      expect(indexedOps.length).toBeGreaterThan(0);
+      expect(collectionOps.items.length).toBeGreaterThan(0);
+      const upgradeOps = collectionOps.items.filter(
+        (op) => op.action.type === "UPGRADE_DOCUMENT",
+      );
+      expect(upgradeOps.length).toBeGreaterThan(0);
     });
   });
 });

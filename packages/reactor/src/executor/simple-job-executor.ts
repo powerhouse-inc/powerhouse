@@ -517,6 +517,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     if (document.header.documentType === "powerhouse/document-drive") {
       const collectionId = driveCollectionId(job.branch, document.header.id);
       indexTxn.createCollection(collectionId);
+      indexTxn.addToCollection(collectionId, document.header.id);
     }
 
     indexTxn.write([
