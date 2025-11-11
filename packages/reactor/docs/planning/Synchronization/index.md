@@ -61,7 +61,7 @@ graph
     end
 ```
 
-Here we introduce the concept of a "filter" for queries. These consist of a collection id, a cursor, and a `ViewFilter`. Collection ids are **always** computed via the `driveCollectionId(branch, driveId)` helper (implemented alongside the operation-index types) so today only drive documents can act as collection roots and every cursor derives from those drives.
+Here we introduce the concept of a "filter" for queries. These consist of a collection id, a cursor, and a `ViewFilter`. Collection ids are **always** computed via the `driveCollectionId(branch, driveId)` helper (implemented alongside the operation-index types) so today only drive documents can act as collection roots and every cursor derives from those drives. Remote filters supplied by callers are decomposed into one or more concrete remote queries by the sync manager using this same helper plus the provided `ViewFilter`. If a filter cannot be expressed as a set of drive-derived collection ids (for example, "watch this single non-drive document"), the manager must throw during `add()` or `setFilter()` so that every remote ultimately operates on well-defined collection cursors.
 
 The cursor is a monotonically increasing integer that represents the ordinal of the last operation that was processed.
 
@@ -242,6 +242,9 @@ class ChannelError extends Error {
 class JobHandle {
   /** The unique id of the job */
   id: string;
+
+  /** Remote name associated with this job (source for inbox, destination for outbox) */
+  remoteName: string;
 
   /** The document id that the job is operating on */
   documentId: string;
@@ -429,6 +432,17 @@ events.on(JobExecutorEventTypes.JOB_COMPLETED, (job, result) => {
   channel.send(job.documentId, job.branch, job.operations);
 });
 ```
+
+### Acknowledgement Flow
+
+Channels must provide an explicit acknowledgement (ACK) protocol so that both sides agree when a job has been durably applied. The flow is:
+
+1. The sending reactor enqueues operations into its `outbox`. Each `JobHandle` contains the `remoteName`.
+2. The receiving reactor dequeues a `MutableJobHandle` from its `inbox`, executes it locally, and once `JobExecutorEventTypes.JOB_COMPLETED` fires without error it emits an ACK back across the channel that references the original job id and remoteName.
+3. Upon receiving the ACK, the sender removes the handle from its `outbox`, advances any remote cursor, and updates the remote’s health counters in `sync_remotes`.
+4. If execution fails, the receiver emits a NACK (negative acknowledgement) with the error payload so the sender can move the handle into the `deadLetter` mailbox and apply retry/disable policy.
+
+Transport implementations (HTTP, WebSocket, in-memory) are responsible for guaranteeing ordered ACK/NACK delivery per remote. Without an ACK the sender must assume the job was not applied and retry according to channel policy; duplicate ACKs are idempotent because the `JobHandle` is removed only once.
 
 ### Retries
 
