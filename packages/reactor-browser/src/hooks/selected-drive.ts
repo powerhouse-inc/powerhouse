@@ -65,8 +65,16 @@ export function setSelectedDrive(
   setSelectedDriveId(driveId);
 
   if (!driveId) {
-    window.history.pushState(null, "", resolveUrlPathname("/"));
+    const pathname = resolveUrlPathname("/");
+    if (pathname === window.location.pathname) {
+      return;
+    }
+    window.history.pushState(null, "", pathname);
     return;
   }
-  window.history.pushState(null, "", resolveUrlPathname(`/d/${driveSlug}`));
+  const pathname = resolveUrlPathname(`/d/${driveSlug}`);
+  if (pathname === window.location.pathname) {
+    return;
+  }
+  window.history.pushState(null, "", pathname);
 }

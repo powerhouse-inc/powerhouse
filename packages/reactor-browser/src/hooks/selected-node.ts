@@ -34,18 +34,18 @@ export function setSelectedNode(nodeOrNodeSlug: Node | string | undefined) {
     return;
   }
   if (!nodeSlug) {
-    window.history.pushState(
-      null,
-      "",
-      resolveUrlPathname(`/d/${driveSlugFromPath}`),
-    );
+    const pathname = resolveUrlPathname(`/d/${driveSlugFromPath}`);
+    if (pathname === window.location.pathname) {
+      return;
+    }
+    window.history.pushState(null, "", pathname);
     return;
   }
-  window.history.pushState(
-    null,
-    "",
-    resolveUrlPathname(`/d/${driveSlugFromPath}/${nodeSlug}`),
-  );
+  const pathname = resolveUrlPathname(`/d/${driveSlugFromPath}/${nodeSlug}`);
+  if (pathname === window.location.pathname) {
+    return;
+  }
+  window.history.pushState(null, "", pathname);
 }
 
 export function addResetSelectedNodeEventHandler() {
