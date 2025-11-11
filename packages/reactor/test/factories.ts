@@ -21,11 +21,13 @@ import { v4 as uuidv4 } from "uuid";
 import { vi } from "vitest";
 import type { IWriteCache } from "../src/cache/write/interfaces.js";
 import { Reactor } from "../src/core/reactor.js";
+import type { ReactorFeatures } from "../src/core/types.js";
 import { EventBus } from "../src/events/event-bus.js";
 import type { IEventBus } from "../src/events/interfaces.js";
 import type { IJobExecutor } from "../src/executor/interfaces.js";
 import { SimpleJobExecutorManager } from "../src/executor/simple-job-executor-manager.js";
 import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
+import type { JobExecutorConfig } from "../src/executor/types.js";
 import { InMemoryJobTracker } from "../src/job-tracker/in-memory-job-tracker.js";
 import type { IJobTracker } from "../src/job-tracker/interfaces.js";
 import type { IQueue } from "../src/queue/interfaces.js";
@@ -34,10 +36,15 @@ import type { Job } from "../src/queue/types.js";
 import type { IReadModelCoordinator } from "../src/read-models/interfaces.js";
 import { DocumentModelRegistry } from "../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../src/registry/interfaces.js";
-import type { IOperationStore } from "../src/storage/interfaces.js";
+import type {
+  IDocumentIndexer,
+  IDocumentView,
+  IOperationStore,
+} from "../src/storage/interfaces.js";
 import { KyselyKeyframeStore } from "../src/storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../src/storage/kysely/store.js";
 import type { Database as DatabaseSchema } from "../src/storage/kysely/types.js";
+import { runMigrations } from "../src/storage/migrations/migrator.js";
 
 /**
  * Creates a real PGLite-backed KyselyOperationStore for testing.
@@ -50,80 +57,15 @@ export async function createTestOperationStore(): Promise<{
   store: KyselyOperationStore;
   keyframeStore: KyselyKeyframeStore;
 }> {
-  // Create in-memory PGLite database
   const kyselyPGlite = await KyselyPGlite.create();
   const db = new Kysely<DatabaseSchema>({
     dialect: kyselyPGlite.dialect,
   });
 
-  // Create the Operation table
-  await db.schema
-    .createTable("Operation")
-    .addColumn("id", "serial", (col) => col.primaryKey())
-    .addColumn("jobId", "text", (col) => col.notNull())
-    .addColumn("opId", "text", (col) => col.notNull().unique())
-    .addColumn("prevOpId", "text", (col) => col.notNull())
-    .addColumn("writeTimestampUtcMs", "timestamptz", (col) =>
-      col.notNull().defaultTo(new Date()),
-    )
-    .addColumn("documentId", "text", (col) => col.notNull())
-    .addColumn("documentType", "text", (col) => col.notNull())
-    .addColumn("scope", "text", (col) => col.notNull())
-    .addColumn("branch", "text", (col) => col.notNull())
-    .addColumn("timestampUtcMs", "timestamptz", (col) => col.notNull())
-    .addColumn("index", "integer", (col) => col.notNull())
-    .addColumn("action", "text", (col) => col.notNull())
-    .addColumn("skip", "integer", (col) => col.notNull())
-    .addColumn("error", "text")
-    .addColumn("hash", "text", (col) => col.notNull())
-    .addUniqueConstraint("unique_revision", [
-      "documentId",
-      "scope",
-      "branch",
-      "index",
-    ])
-    .execute();
-
-  // Create indexes for Operation table
-  await db.schema
-    .createIndex("streamOperations")
-    .on("Operation")
-    .columns(["documentId", "scope", "branch", "id"])
-    .execute();
-
-  await db.schema
-    .createIndex("branchlessStreamOperations")
-    .on("Operation")
-    .columns(["documentId", "scope", "id"])
-    .execute();
-
-  // Create the Keyframe table
-  await db.schema
-    .createTable("Keyframe")
-    .addColumn("id", "serial", (col) => col.primaryKey())
-    .addColumn("documentId", "text", (col) => col.notNull())
-    .addColumn("documentType", "text", (col) => col.notNull())
-    .addColumn("scope", "text", (col) => col.notNull())
-    .addColumn("branch", "text", (col) => col.notNull())
-    .addColumn("revision", "integer", (col) => col.notNull())
-    .addColumn("document", "text", (col) => col.notNull())
-    .addColumn("createdAt", "timestamptz", (col) =>
-      col.notNull().defaultTo(new Date()),
-    )
-    .addUniqueConstraint("unique_keyframe", [
-      "documentId",
-      "scope",
-      "branch",
-      "revision",
-    ])
-    .execute();
-
-  // Create index for fast nearest-keyframe lookups
-  await db.schema
-    .createIndex("keyframe_lookup")
-    .on("Keyframe")
-    .columns(["documentId", "scope", "branch", "revision"])
-    .execute();
+  const result = await runMigrations(db);
+  if (!result.success && result.error) {
+    throw new Error(`Test migration failed: ${result.error.message}`);
+  }
 
   const store = new KyselyOperationStore(db);
   const keyframeStore = new KyselyKeyframeStore(db);
@@ -137,10 +79,12 @@ export async function createTestOperationStore(): Promise<{
 export function createTestJob(overrides: Partial<Job> = {}): Job {
   const defaultJob: Job = {
     id: overrides.id || `job-${uuidv4()}`,
+    kind: overrides.kind ?? "mutation",
     documentId: "doc-1",
     scope: "global",
     branch: "main",
     actions: overrides.actions || [createTestAction()],
+    operations: overrides.operations || [],
     createdAt: new Date().toISOString(),
     queueHint: [],
     retryCount: 0,
@@ -160,10 +104,12 @@ export function createTestJob(overrides: Partial<Job> = {}): Job {
 export function createMinimalJob(overrides: Partial<Job> = {}): Job {
   return {
     id: overrides.id || `job-${uuidv4()}`,
+    kind: overrides.kind ?? "mutation",
     documentId: overrides.documentId || "doc-1",
     scope: overrides.scope || "global",
     branch: overrides.branch || "main",
     actions: overrides.actions || [createMinimalAction()],
+    operations: overrides.operations || [],
     createdAt: overrides.createdAt || "2023-01-01T00:00:00.000Z",
     queueHint: overrides.queueHint || [],
     errorHistory: overrides.errorHistory || [],
@@ -186,6 +132,7 @@ export function createTestOperation(
       overrides.action ? { ...overrides.action } : undefined,
     ),
     id: "op-1",
+    resultingState: JSON.stringify({ state: "test" }),
   };
 
   return {
@@ -219,6 +166,9 @@ export function createCreateDocumentOperation(
         version: "0.0.0",
       },
     } as Action,
+    resultingState:
+      overrides.resultingState ||
+      JSON.stringify({ document: { id: documentId } }),
     ...overrides,
   };
 }
@@ -245,6 +195,9 @@ export function createUpgradeDocumentOperation(
         initialState,
       },
     } as Action,
+    resultingState:
+      overrides.resultingState ||
+      JSON.stringify({ document: { id: documentId, index } }),
     ...overrides,
   };
 }
@@ -262,6 +215,8 @@ export function createMinimalOperation(
     skip: overrides.skip ?? 0,
     action: overrides.action || createMinimalAction(),
     id: overrides.id || `op-${uuidv4()}`,
+    resultingState:
+      overrides.resultingState || JSON.stringify({ state: "minimal" }),
   };
 }
 
@@ -495,6 +450,7 @@ export async function createTestReactorSetup(
     documentModelDocumentModelModule,
     driveDocumentModelModule,
   ],
+  executorConfig?: JobExecutorConfig,
 ) {
   const storage = new MemoryStorage();
   const eventBus = new EventBus();
@@ -533,10 +489,16 @@ export async function createTestReactorSetup(
     operationStore,
     eventBus,
     mockWriteCache,
+    executorConfig ?? { legacyStorageEnabled: true },
   );
 
   // Create mock read model coordinator
   const readModelCoordinator = createMockReadModelCoordinator();
+
+  // Create mock dependencies for new Reactor constructor parameters
+  const features = createMockReactorFeatures();
+  const documentView = createMockDocumentView();
+  const documentIndexer = createMockDocumentIndexer();
 
   // Create reactor
   const reactor = new Reactor(
@@ -545,6 +507,10 @@ export async function createTestReactorSetup(
     queue,
     jobTracker,
     readModelCoordinator,
+    features,
+    documentView,
+    documentIndexer,
+    operationStore,
   );
 
   return {
@@ -681,4 +647,65 @@ export function createTestDocuments(
       ...baseOverrides,
     }),
   );
+}
+
+/**
+ * Creates a JobInfo object with an empty consistency token.
+ * Useful for test scenarios where consistency token details don't matter.
+ */
+export function createEmptyConsistencyToken() {
+  return {
+    version: 1 as const,
+    createdAtUtcIso: new Date().toISOString(),
+    coordinates: [],
+  };
+}
+
+/**
+ * Creates mock ReactorFeatures with legacy storage enabled by default.
+ */
+export function createMockReactorFeatures(
+  legacyStorageEnabled = true,
+): ReactorFeatures {
+  return {
+    legacyStorageEnabled,
+  };
+}
+
+/**
+ * Creates a mock IDocumentView for testing.
+ */
+export function createMockDocumentView(): IDocumentView {
+  return {
+    init: vi.fn().mockResolvedValue(undefined),
+    indexOperations: vi.fn().mockResolvedValue(undefined),
+    waitForConsistency: vi.fn().mockResolvedValue(undefined),
+    exists: vi.fn().mockResolvedValue([]),
+    get: vi.fn().mockRejectedValue(new Error("Not implemented")),
+    findByType: vi.fn().mockResolvedValue({
+      items: [],
+      nextCursor: undefined,
+      hasMore: false,
+    }),
+    resolveSlug: vi.fn().mockResolvedValue(undefined),
+  };
+}
+
+/**
+ * Creates a mock IDocumentIndexer for testing.
+ */
+export function createMockDocumentIndexer(): IDocumentIndexer {
+  return {
+    init: vi.fn().mockResolvedValue(undefined),
+    indexOperations: vi.fn().mockResolvedValue(undefined),
+    waitForConsistency: vi.fn().mockResolvedValue(undefined),
+    getOutgoing: vi.fn().mockResolvedValue([]),
+    getIncoming: vi.fn().mockResolvedValue([]),
+    hasRelationship: vi.fn().mockResolvedValue(false),
+    getUndirectedRelationships: vi.fn().mockResolvedValue([]),
+    getDirectedRelationships: vi.fn().mockResolvedValue([]),
+    findPath: vi.fn().mockResolvedValue(null),
+    findAncestors: vi.fn().mockResolvedValue({ nodes: [], edges: [] }),
+    getRelationshipTypes: vi.fn().mockResolvedValue([]),
+  };
 }

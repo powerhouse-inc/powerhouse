@@ -78,7 +78,7 @@ describe("Internal Listener", () => {
   });
 
   test("should call transmit function of listener and acknowledge", async () => {
-    const transmitFn = vitest.fn((args) => {
+    const transmitFn = vitest.fn(() => {
       return Promise.resolve();
     });
 
@@ -92,6 +92,7 @@ describe("Internal Listener", () => {
     expect(transmitFn).toHaveBeenCalledWith([
       {
         branch: "main",
+        document: drive,
         documentId: drive.header.id,
         documentType: "powerhouse/document-drive",
         driveId: drive.header.id,
@@ -121,6 +122,7 @@ describe("Internal Listener", () => {
     expect(transmitFn).toHaveBeenCalledWith([
       expect.objectContaining({
         branch: "main",
+        document: result.document,
         documentId: drive.header.id,
         documentType: "powerhouse/document-drive",
         driveId: drive.header.id,
@@ -157,6 +159,7 @@ describe("Internal Listener", () => {
       }),
       expect.objectContaining({
         branch: "main",
+        document: document,
         documentId: document.header.id,
         documentType: "powerhouse/document-model",
         driveId: drive.header.id,
@@ -204,6 +207,14 @@ describe("Internal Listener", () => {
     expect(transmitFn).toHaveBeenLastCalledWith([
       expect.objectContaining({
         branch: "main",
+        document: expect.objectContaining({
+          header: expect.objectContaining({
+            id: documentId,
+          }),
+          state: expect.objectContaining({
+            global: state,
+          }),
+        }),
         documentType: "powerhouse/document-model",
         documentId,
         driveId,
@@ -239,6 +250,14 @@ describe("Internal Listener", () => {
     expect(transmitFn).toHaveBeenLastCalledWith([
       expect.objectContaining({
         branch: "main",
+        document: expect.objectContaining({
+          header: expect.objectContaining({
+            id: documentId,
+          }),
+          state: expect.objectContaining({
+            global: expect.objectContaining({ name: "test 2" }),
+          }),
+        }),
         documentType: "powerhouse/document-model",
         documentId,
         driveId,

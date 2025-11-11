@@ -1,23 +1,20 @@
 import { isLogLevel } from "@powerhousedao/config";
-import {
-  EventBus,
-  InMemoryJobTracker,
-  InMemoryQueue,
-  Reactor,
-  ReactorClientBuilder,
-  ReadModelCoordinator,
-} from "@powerhousedao/reactor";
+import { ReactorBuilder, ReactorClientBuilder } from "@powerhousedao/reactor";
 import {
   VitePackageLoader,
   startAPI,
   startViteServer,
 } from "@powerhousedao/reactor-api";
 import type {
-  BaseDocumentDriveServer,
   DefaultRemoteDriveInput,
+  IDocumentOperationStorage,
   IDocumentStorage,
 } from "document-drive";
-import { InMemoryCache, ReactorBuilder, logger } from "document-drive";
+import {
+  InMemoryCache,
+  ReactorBuilder as LegacyReactorBuilder,
+  logger,
+} from "document-drive";
 import dotenv from "dotenv";
 import path from "node:path";
 import {
@@ -119,7 +116,7 @@ const startServer = async (
   // create document drive server with all available document models & storage
   const cache = new InMemoryCache();
   const storageImpl = createStorage(storage, cache);
-  const reactorBuilder = new ReactorBuilder([])
+  const reactorBuilder = new LegacyReactorBuilder([])
     .withCache(cache)
     .withStorage(storageImpl)
     .withOptions({
@@ -130,15 +127,15 @@ const startServer = async (
 
   const driveServer = reactorBuilder.build();
 
-  const eventBus = new EventBus();
-  const queue = new InMemoryQueue(eventBus);
-  const reactor = new Reactor(
-    driveServer as unknown as BaseDocumentDriveServer,
-    storageImpl as unknown as IDocumentStorage,
-    queue,
-    new InMemoryJobTracker(),
-    new ReadModelCoordinator(eventBus, []),
-  );
+  const builder = new ReactorBuilder()
+    .withLegacyStorage(
+      storageImpl as unknown as IDocumentStorage & IDocumentOperationStorage,
+    )
+    .withFeatures({
+      legacyStorageEnabled: true,
+    });
+
+  const reactor = await builder.build();
   const client = new ReactorClientBuilder().withReactor(reactor).build();
 
   // init drive server + conditionally add a default drive

@@ -1,4 +1,4 @@
-import type { Action, DocumentAction } from "document-model";
+import type { Action, DocumentAction, PHDocument } from "document-model";
 
 export type DocumentDispatch<TAction extends Action> = (
   actionOrActions:
@@ -8,3 +8,21 @@ export type DocumentDispatch<TAction extends Action> = (
     | DocumentAction[]
     | undefined,
 ) => void;
+
+export type PromiseWithState<T> = Promise<T> & {
+  status?: "pending" | "fulfilled" | "rejected";
+  value?: T;
+  reason?: unknown;
+};
+
+export type PromiseState<T> =
+  | {
+      status: "pending";
+    }
+  | { status: "fulfilled"; value: T }
+  | { status: "rejected"; reason: unknown };
+
+export interface IDocumentCache {
+  get(id: string, refetch?: boolean): Promise<PHDocument>;
+  subscribe(id: string | string[], callback: () => void): () => void;
+}

@@ -4,12 +4,17 @@
  */
 
 import { generateMock } from "@powerhousedao/codegen";
+import type {
+  AppModuleDocument,
+  SetDragAndDropEnabledInput,
+} from "@powerhousedao/vetra/document-models/app-module";
+import {
+  reducer,
+  setDragAndDropEnabled,
+  SetDragAndDropEnabledInputSchema,
+  utils,
+} from "@powerhousedao/vetra/document-models/app-module";
 import { beforeEach, describe, expect, it } from "vitest";
-import * as creators from "../../gen/dnd-operations/creators.js";
-import { reducer } from "../../gen/reducer.js";
-import { z, type SetDragAndDropEnabledInput } from "../../gen/schema/index.js";
-import type { AppModuleDocument } from "../../gen/types.js";
-import utils from "../../gen/utils.js";
 
 describe("DndOperations Operations", () => {
   let document: AppModuleDocument;
@@ -21,13 +26,10 @@ describe("DndOperations Operations", () => {
   describe("setDragAndDropEnabled", () => {
     it("should handle setDragAndDropEnabled operation", () => {
       const input: SetDragAndDropEnabledInput = generateMock(
-        z.SetDragAndDropEnabledInputSchema(),
+        SetDragAndDropEnabledInputSchema(),
       );
 
-      const updatedDocument = reducer(
-        document,
-        creators.setDragAndDropEnabled(input),
-      );
+      const updatedDocument = reducer(document, setDragAndDropEnabled(input));
 
       expect(updatedDocument.operations.global).toHaveLength(1);
       expect(updatedDocument.operations.global[0].action.type).toBe(
@@ -42,10 +44,7 @@ describe("DndOperations Operations", () => {
     it("should mutate state with new enabled value", () => {
       const input: SetDragAndDropEnabledInput = { enabled: false };
 
-      const updatedDocument = reducer(
-        document,
-        creators.setDragAndDropEnabled(input),
-      );
+      const updatedDocument = reducer(document, setDragAndDropEnabled(input));
 
       expect(updatedDocument.state.global.isDragAndDropEnabled).toBe(false);
     });
@@ -56,7 +55,7 @@ describe("DndOperations Operations", () => {
 
       const updatedDocument = reducer(
         document,
-        creators.setDragAndDropEnabled({ enabled: true }),
+        setDragAndDropEnabled({ enabled: true }),
       );
 
       expect(updatedDocument.state.global.isDragAndDropEnabled).toBe(true);
@@ -65,7 +64,7 @@ describe("DndOperations Operations", () => {
     it("should disable drag and drop", () => {
       const updatedDocument = reducer(
         document,
-        creators.setDragAndDropEnabled({ enabled: false }),
+        setDragAndDropEnabled({ enabled: false }),
       );
 
       expect(updatedDocument.state.global.isDragAndDropEnabled).toBe(false);
@@ -74,19 +73,19 @@ describe("DndOperations Operations", () => {
     it("should toggle drag and drop in sequence", () => {
       let updatedDoc = reducer(
         document,
-        creators.setDragAndDropEnabled({ enabled: false }),
+        setDragAndDropEnabled({ enabled: false }),
       );
       expect(updatedDoc.state.global.isDragAndDropEnabled).toBe(false);
 
       updatedDoc = reducer(
         updatedDoc,
-        creators.setDragAndDropEnabled({ enabled: true }),
+        setDragAndDropEnabled({ enabled: true }),
       );
       expect(updatedDoc.state.global.isDragAndDropEnabled).toBe(true);
 
       updatedDoc = reducer(
         updatedDoc,
-        creators.setDragAndDropEnabled({ enabled: false }),
+        setDragAndDropEnabled({ enabled: false }),
       );
       expect(updatedDoc.state.global.isDragAndDropEnabled).toBe(false);
 
@@ -96,7 +95,7 @@ describe("DndOperations Operations", () => {
     it("should update boolean field directly", () => {
       const updatedDocument = reducer(
         document,
-        creators.setDragAndDropEnabled({ enabled: false }),
+        setDragAndDropEnabled({ enabled: false }),
       );
 
       expect(updatedDocument.state.global.isDragAndDropEnabled).toBeDefined();

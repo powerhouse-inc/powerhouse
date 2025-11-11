@@ -1,4 +1,4 @@
-import { DocumentToolbar } from "@powerhousedao/design-system";
+import { DocumentToolbar } from "@powerhousedao/design-system/connect";
 import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
 import { useCallback } from "react";
 import type {
@@ -10,7 +10,7 @@ import { useSelectedDocumentEditorDocument } from "../hooks/useVetraDocument.js"
 import { DocumentEditorForm } from "./components/DocumentEditorForm.js";
 import { editorConfig } from "./config.js";
 
-export function Editor() {
+export default function Editor() {
   useSetPHDocumentEditorConfig(editorConfig);
   const [document, dispatch] = useSelectedDocumentEditorDocument();
 

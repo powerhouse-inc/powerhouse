@@ -1,12 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { it } from "vitest";
-import {
-  Sidebar,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarPanel,
-} from "./index.js";
-
+import { SidebarPanel } from "./sidebar-panel.js";
+import { Sidebar, SidebarFooter, SidebarHeader } from "./sidebar.js";
 describe("Sidebar Component", () => {
   it("should match snapshot", () => {
     const { asFragment } = render(

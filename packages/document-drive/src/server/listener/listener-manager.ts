@@ -16,14 +16,11 @@ import type {
   SynchronizationUnitId,
   SyncronizationUnitState,
 } from "document-drive";
-import {
-  childLogger,
-  DefaultListenerManagerOptions,
-  OperationError,
-  SyncUnitMap,
-} from "document-drive";
-
-import { debounce } from "document-drive";
+import { childLogger } from "document-drive/utils/logger";
+import { OperationError } from "../error.js";
+import { SyncUnitMap } from "../sync-unit-map.js";
+import { DefaultListenerManagerOptions } from "./constants.js";
+import { debounce } from "./util.js";
 
 export class ListenerManager implements IListenerManager {
   static LISTENER_UPDATE_DELAY = 250;

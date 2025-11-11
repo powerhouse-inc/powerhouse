@@ -1,4 +1,4 @@
-import type { FixedIncome } from "@powerhousedao/design-system";
+import type { FixedIncome } from "../types.js";
 
 export function makeFixedIncomeOptionLabel(fixedIncome: FixedIncome) {
   let label = fixedIncome.name;

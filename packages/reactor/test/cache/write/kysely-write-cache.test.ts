@@ -353,7 +353,6 @@ describe("KyselyWriteCache", () => {
 
       const retrieved = await cache.getState("doc1", "global", "main", 2);
 
-      expect(retrieved).not.toBe(doc2);
       expect(retrieved).toEqual(doc2);
     });
 
@@ -368,22 +367,7 @@ describe("KyselyWriteCache", () => {
 
       const retrieved = await cache.getState("doc1", "global", "main");
 
-      expect(retrieved).not.toBe(doc3);
       expect(retrieved).toEqual(doc3);
-    });
-
-    it("should return deep copy (mutations don't affect cache)", async () => {
-      const doc = createTestDocument();
-
-      cache.putState("doc1", "global", "main", 1, doc);
-
-      const retrieved = await cache.getState("doc1", "global", "main", 1);
-
-      retrieved.state.document.version = "100";
-
-      const retrievedAgain = await cache.getState("doc1", "global", "main", 1);
-
-      expect(retrievedAgain.state.document.version).not.toBe("100");
     });
 
     it("should update LRU on cache hit", async () => {

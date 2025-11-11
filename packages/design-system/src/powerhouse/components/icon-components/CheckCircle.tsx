@@ -1,5 +1,5 @@
-import type { Props } from "./index.js";
-export default function CheckCircle(props: Props) {
+import type { IconComponentProps } from "@powerhousedao/design-system";
+export default function CheckCircle(props: IconComponentProps) {
   return (
     <svg {...props} viewBox="0 0 24 24" fill="none">
       <circle cx="12" cy="12" r="10" fill="none" />

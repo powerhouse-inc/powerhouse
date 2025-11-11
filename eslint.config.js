@@ -13,7 +13,6 @@ const normalIgnoredFiles = [
   "**/coverage/",
   "**/dist/",
   "**/ts-build/",
-  "**/.ph/",
   "**/storybook-static/",
   "**/.vite/",
   "**/.nx/",
@@ -26,10 +25,9 @@ const normalIgnoredFiles = [
   "commitlint.config.cjs",
   // test artifacts
   "**/.out/",
+  "**/.test-output/",
   "**/flaky/",
   "apps/connect/lib/",
-  "packages/codegen/src/codegen/__tests__/temp",
-  "packages/codegen/src/codegen/__tests__/.test-project",
 ];
 
 /** These files need to be ignored for builds to pass, but they do not have clear reasons to be ignored.
@@ -46,8 +44,6 @@ const unsafeIgnoredFiles = [
   "**/.storybook/",
   // TODO: investigate why our benchmark tests fail so many lint checks
   "**/*.bench.ts",
-  // TODO: replace with something more robust
-  "packages/codegen/src/codegen/__tests__/.test-project",
   // TODO: replace with something more robust
   "packages/codegen/src/codegen/.hygen/",
   // TODO: replace with something more robust
@@ -119,7 +115,7 @@ const filesWithUnsafeRules = [
   "packages/design-system/src/powerhouse/utils/fixedForwardRef.ts",
   "packages/design-system/src/ui/components/value-transformer/value-transformer.tsx",
   "packages/document-drive/src/processors/relational.ts",
-  "packages/document-drive/src/server/listener/transmitter/internal.ts",
+  "packages/document-drive/src/server/transmitter/internal.ts",
   "packages/document-drive/src/utils/run-asap.ts",
   "packages/document-model/src/document/utils/document-helpers.ts",
   "packages/document-drive/src/utils/graphql.ts",

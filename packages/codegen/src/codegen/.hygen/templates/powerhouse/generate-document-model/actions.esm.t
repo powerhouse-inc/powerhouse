@@ -1,13 +1,13 @@
 ---
-to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/actions.ts"
+to: "<%= rootDir %>/<%= paramCaseDocumentType %>/gen/actions.ts"
 force: true
 ---
 <% modules.forEach(module => { _%>
-import type { <%= h.changeCase.pascal(documentType) %><%= h.changeCase.pascal(module.name) %>Action } from './<%= module.name %>/actions.js';
+import type { <%= h.changeCase.pascal(documentType) %><%= h.changeCase.pascal(module.name) %>Action } from './<%= h.changeCase.param(module.name) %>/actions.js';
 <% }); _%>
 
 <% modules.forEach(module => { _%>
-export * from './<%= module.name %>/actions.js';
+export * from './<%= h.changeCase.param(module.name) %>/actions.js';
 <% }); _%>
 
 export <%= 'type ' + h.changeCase.pascal(documentType) %>Action =

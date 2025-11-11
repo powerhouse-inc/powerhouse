@@ -1,10 +1,9 @@
-import type { ValueCast } from "@powerhousedao/design-system";
+import type { ValueCast } from "@powerhousedao/design-system/ui/lib";
 import {
   castValue,
   deepEqual,
-  FormServerErrorMessage,
   isEmpty,
-} from "@powerhousedao/design-system";
+} from "@powerhousedao/design-system/ui/lib";
 import {
   forwardRef,
   useCallback,
@@ -14,6 +13,7 @@ import {
 } from "react";
 import type { UseFormProps, UseFormReturn } from "react-hook-form";
 import { FormProvider, useForm } from "react-hook-form";
+import { FormServerErrorMessage } from "../form-message/form-server-error-message.js";
 import { defaultOnError } from "./utils.js";
 
 type FormMethods = UseFormReturn & {

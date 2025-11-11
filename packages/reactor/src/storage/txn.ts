@@ -19,7 +19,9 @@ export class AtomicTransaction implements IAtomicTxn {
   addOperations(...operations: Operation[]): void {
     for (const op of operations) {
       this.operations.push({
+        // WRONG
         jobId: uuidv4(),
+        // WRONG
         opId: op.id || uuidv4(),
         prevOpId: "", // Will be set during apply
         documentId: this.documentId,

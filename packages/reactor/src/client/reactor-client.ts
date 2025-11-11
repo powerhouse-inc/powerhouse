@@ -66,10 +66,20 @@ export class ReactorClient implements IReactorClient {
   }> {
     // First try to get by ID
     try {
-      return await this.reactor.get<TDocument>(identifier, view, signal);
+      return await this.reactor.get<TDocument>(
+        identifier,
+        view,
+        undefined,
+        signal,
+      );
     } catch (error) {
       // If failed, try to get by slug
-      return await this.reactor.getBySlug<TDocument>(identifier, view, signal);
+      return await this.reactor.getBySlug<TDocument>(
+        identifier,
+        view,
+        undefined,
+        signal,
+      );
     }
   }
 
@@ -106,7 +116,7 @@ export class ReactorClient implements IReactorClient {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
-    return this.reactor.find(search, view, paging, signal);
+    return this.reactor.find(search, view, paging, undefined, signal);
   }
 
   /**
@@ -136,14 +146,20 @@ export class ReactorClient implements IReactorClient {
    */
   async mutate<TDocument extends PHDocument>(
     documentIdentifier: string,
+    branch: string,
     actions: Action[],
-    view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    const jobInfo = await this.reactor.mutate(documentIdentifier, actions);
+    const jobInfo = await this.reactor.mutate(
+      documentIdentifier,
+      branch,
+      actions,
+      signal,
+    );
 
     await this.waitForJob(jobInfo, signal);
 
+    const view: ViewFilter = { branch };
     const document = await this.get<TDocument>(
       documentIdentifier,
       view,
@@ -157,8 +173,8 @@ export class ReactorClient implements IReactorClient {
    */
   async mutateAsync(
     documentIdentifier: string,
+    branch: string,
     actions: Action[],
-    view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<JobInfo> {
     // Sign actions with the required signer
@@ -186,8 +202,12 @@ export class ReactorClient implements IReactorClient {
       }),
     );
 
-    // Note: reactor.mutate doesn't use view or signal currently
-    return this.reactor.mutate(documentIdentifier, signedActions);
+    return this.reactor.mutate(
+      documentIdentifier,
+      branch,
+      signedActions,
+      signal,
+    );
   }
 
   /**

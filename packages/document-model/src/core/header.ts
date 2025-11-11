@@ -1,6 +1,6 @@
-import { generateUUIDBrowser } from "./crypto.js";
 import type { PHDocumentHeader } from "./ph-types.js";
 import type { ISigner, SigningParameters } from "./types.js";
+import { generateId } from "./utils.js";
 
 /**
  * Generates a deterministic payload from signing parameters
@@ -165,7 +165,7 @@ export const validateHeader = async (
  * @returns An unsigned header for a document.
  */
 export const createPresignedHeader = (
-  id: string = generateUUIDBrowser(),
+  id: string = generateId(),
   documentType = "",
 ): PHDocumentHeader => {
   return {
@@ -205,7 +205,7 @@ export const createSignedHeader = async (
   const parameters: SigningParameters = {
     documentType,
     createdAtUtcIso: unsignedHeader.createdAtUtcIso,
-    nonce: generateUUIDBrowser(),
+    nonce: generateId(),
   };
 
   const signature = await sign(parameters, signer);

@@ -2,14 +2,23 @@
 export { ReactorClient } from "./client/reactor-client.js";
 export { type IReactorClient } from "./client/types.js";
 export { ReactorClientBuilder } from "./core/builder.js";
+export { ReactorBuilder } from "./core/reactor-builder.js";
 export { Reactor } from "./core/reactor.js";
-export { type IReactor } from "./core/types.js";
+export { type IReactor, type ReactorFeatures } from "./core/types.js";
 export { JobAwaiter, type IJobAwaiter } from "./shared/awaiter.js";
+export {
+  ConsistencyTracker,
+  makeConsistencyKey,
+  type IConsistencyTracker,
+} from "./shared/consistency-tracker.js";
 export { createMutableShutdownStatus } from "./shared/factories.js";
 export {
   JobStatus,
   PropagationMode,
   RelationshipChangeType,
+  type ConsistencyCoordinate,
+  type ConsistencyKey,
+  type ConsistencyToken,
   type JobInfo,
   type PagedResults,
   type PagingOptions,
@@ -89,17 +98,26 @@ export {
   OptimisticLockError,
   RevisionMismatchError,
   type AtomicTxn,
+  type DocumentGraphEdge,
+  type DocumentRelationship,
   type DocumentRevisions,
   type DocumentSnapshot,
+  type IDocumentGraph,
+  type IDocumentIndexer,
   type IDocumentView,
   type IKeyframeStore,
   type IOperationStore,
   type OperationContext,
   type OperationWithContext,
 } from "./storage/interfaces.js";
-export { KyselyOperationStore } from "./storage/kysely/store.js";
+export { KyselyDocumentIndexer } from "./storage/kysely/document-indexer.js";
 export { KyselyKeyframeStore } from "./storage/kysely/keyframe-store.js";
-export type { Database, OperationTable } from "./storage/kysely/types.js";
+export { KyselyOperationStore } from "./storage/kysely/store.js";
+export type {
+  Database,
+  DocumentIndexerDatabase,
+  OperationTable,
+} from "./storage/kysely/types.js";
 
 // Read Models
 export { ReadModelCoordinator } from "./read-models/coordinator.js";
@@ -114,6 +132,7 @@ export type {
 } from "./read-models/types.js";
 
 // Cache
+export { KyselyWriteCache } from "./cache/kysely-write-cache.js";
 export type {
   CachedSnapshot,
   DocumentStreamKey,
@@ -121,4 +140,3 @@ export type {
   WriteCacheConfig,
 } from "./cache/types.js";
 export { type IWriteCache } from "./cache/write/interfaces.js";
-export { KyselyWriteCache } from "./cache/kysely-write-cache.js";

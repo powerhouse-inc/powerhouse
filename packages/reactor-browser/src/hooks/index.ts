@@ -1,4 +1,3 @@
-export { setAllDocuments, useAllDocuments } from "./all-documents.js";
 export { useAllowedDocumentModelModules } from "./allowed-document-model-modules.js";
 export { useNodesInSelectedDriveOrFolder } from "./child-nodes.js";
 export {
@@ -22,6 +21,12 @@ export {
   usePHDriveEditorConfigByKey,
 } from "./config/use-value-by-key.js";
 export { useDocumentById } from "./document-by-id.js";
+export {
+  useDocumentCache,
+  useGetDocument,
+  useGetDocumentAsync,
+  useGetDocuments,
+} from "./document-cache.js";
 export {
   useDocumentModelModuleById,
   useDocumentModelModules,
@@ -99,9 +104,7 @@ export {
   setSelectedTimelineRevision,
   useSelectedTimelineRevision,
 } from "./timeline-revision.js";
-export { useDocumentTimeline } from "./use-document-timeline.js";
 export { useGetSwitchboardLink } from "./use-get-switchboard-link.js";
 export { useOnDropFile } from "./use-on-drop-file.js";
-export { useTimelineItems } from "./use-timeline-items.js";
 export { useUserPermissions } from "./user-permissions.js";
 export { setVetraPackages, useVetraPackages } from "./vetra-packages.js";

@@ -1,6 +1,6 @@
-import { UploadFileItem } from "@powerhousedao/design-system";
 import { type Meta, type StoryObj } from "@storybook/react";
 import { fn } from "@storybook/test";
+import { UploadFileItem } from "./upload-file-item.js";
 
 const meta: Meta<typeof UploadFileItem> = {
   title: "Connect/Components/UploadFileItem",

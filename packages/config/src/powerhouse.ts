@@ -54,6 +54,7 @@ export type PowerhouseConfig = {
     guests: string[];
     users: string[];
     admins: string[];
+    freeEntry?: boolean;
   };
   switchboard?: {
     database?: {

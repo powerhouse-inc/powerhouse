@@ -12,14 +12,14 @@ export interface DocumentSnapshotTable {
   name: string | null;
   scope: string;
   branch: string;
-  content: string; // JSON string
+  content: unknown; // JSONB type - stored as object
   documentType: string;
   lastOperationIndex: number;
   lastOperationHash: string;
   lastUpdatedAt: Generated<Date>;
   snapshotVersion: Generated<number>;
-  identifiers: string | null; // JSON string
-  metadata: string | null; // JSON string
+  identifiers: unknown; // JSONB type - stored as object
+  metadata: unknown; // JSONB type - stored as object
   isDeleted: Generated<boolean>;
   deletedAt: Date | null;
 }

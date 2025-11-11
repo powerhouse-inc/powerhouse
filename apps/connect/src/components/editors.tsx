@@ -1,9 +1,7 @@
-import {
-  EditorLoader,
-  toast,
-  useUndoRedoShortcuts,
-} from "@powerhousedao/connect";
-import { RevisionHistory } from "@powerhousedao/design-system";
+import { EditorLoader } from "@powerhousedao/connect/components";
+import { useUndoRedoShortcuts } from "@powerhousedao/connect/hooks";
+import { toast } from "@powerhousedao/connect/services";
+import { RevisionHistory } from "@powerhousedao/design-system/connect";
 import {
   getRevisionFromDate,
   setRevisionHistoryVisible,
@@ -12,7 +10,6 @@ import {
   useDocumentModelModuleById,
   useEditorModuleById,
   useFallbackEditorModule,
-  useIsExternalControlsEnabled,
   useRevisionHistoryVisible,
   useSelectedTimelineItem,
 } from "@powerhousedao/reactor-browser";
@@ -67,14 +64,12 @@ export const DocumentEditor: React.FC<Props> = (props) => {
   const preferredEditorModule = useEditorModuleById(preferredEditor);
   const fallbackEditorModule = useFallbackEditorModule(documentType);
   const editorModule = preferredEditorModule ?? fallbackEditorModule;
-  const isExternalControlsEnabled = useIsExternalControlsEnabled();
   const isLoadingDocument = !document;
   const isLoadingEditor =
-    editorModule === undefined ||
-    (editorModule &&
-      documentType &&
-      !editorModule.documentTypes.includes(documentType) &&
-      !editorModule.documentTypes.includes("*"));
+    editorModule &&
+    documentType &&
+    !editorModule.documentTypes.includes(documentType) &&
+    !editorModule.documentTypes.includes("*");
 
   const canUndo = globalRevisionNumber > 0 || localRevisionNumber > 0;
   const canRedo = !!document?.clipboard.length;
@@ -177,7 +172,6 @@ export const DocumentEditor: React.FC<Props> = (props) => {
       />
     );
   }
-
   const EditorComponent = editorModule.Component;
 
   return (
@@ -196,7 +190,10 @@ export const DocumentEditor: React.FC<Props> = (props) => {
           }}
         />
       ) : (
-        <Suspense fallback={<EditorLoader />} name="EditorLoader">
+        <Suspense
+          fallback={<EditorLoader message="Loading editor" />}
+          name="EditorLoader"
+        >
           <ErrorBoundary
             fallbackRender={FallbackEditorError}
             key={documentId}

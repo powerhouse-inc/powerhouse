@@ -1,4 +1,4 @@
-import { createRemoveOldRemoteDrivesConfig } from "@powerhousedao/connect";
+import { createRemoveOldRemoteDrivesConfig } from "./drive-preservation.js";
 import type {
   DefaultRemoteDriveInput,
   DocumentDriveServerOptions,

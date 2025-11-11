@@ -12,7 +12,7 @@ exports[`IdAutocomplete Component > should match snapshot 1`] = `
       Id Autocomplete Field
     </label>
     <div
-      class="flex size-full flex-col rounded-md [&_[cmdk-label]]:hidden dark:bg-charcoal-900 bg-gray-100"
+      class="dark:bg-charcoal-900 bg-gray-100"
       cmdk-root=""
       tabindex="-1"
     >

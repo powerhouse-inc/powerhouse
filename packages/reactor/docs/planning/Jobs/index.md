@@ -7,6 +7,57 @@
 - It provides configurable concurrency, retry logic with exponential backoff, and monitoring capabilities.
 - Jobs are made up of a set of `Action`s. Job execution creates one or more `Operation` objects (note that `Action` and `Operation` do not necessarily have a 1:1 relationship).
 - The `IQueue` is responsible for persisting jobs for later execution, but the `IJobExecutor` is not. It simply pulls jobs from the queue and executes them.
+- When a job reaches `COMPLETED`, the `JobInfo` returned to callers now includes a `ConsistencyToken` that records the highest operation index written so read models can wait for the corresponding write-side updates.
+
+### Consistency Tokens
+
+Successful jobs must always emit a consistency token. The token captures the
+furthest write-side progress that the job made so read APIs can block until
+their read models have indexed the same operations.
+
+```ts
+type ConsistencyCoordinate = {
+  documentId: string;
+  scope: string;
+  branch: string;
+  operationIndex: number;
+};
+
+type ConsistencyToken = {
+  version: 1;
+  createdAtUtcIso: string;
+  coordinates: ConsistencyCoordinate[];
+};
+```
+
+- Tokens always exist. Jobs that do not generate operations return a token with
+  an empty `coordinates` array.
+- `createdAtUtcIso` records when the token was produced, aiding debugging and
+  telemetry.
+- If a job emits multiple operations for the same `(documentId, scope, branch)`
+  tuple, the executor keeps only the highest index.
+- The executor manager owns token construction because it already aggregates the
+  `OperationWithContext` payloads coming back from individual executors.
+- `IJobTracker.markCompleted` requires the resolved token so `JobInfo` can
+  expose it to clients.
+
+### JobInfo Lifecycle
+
+- Reactor write APIs (e.g., `mutate`, `load`, `create`) register a job and return a freshly created `JobInfo`.
+- At this point the job is typically `PENDING` (though not guaranteed to be) and its `consistencyToken.coordinates` array is empty because no operations have been committed yet.
+- Once the executor marks the job `COMPLETED`, the tracker overwrites the same `JobInfo` with the final timestamps, result metadata, error history (if any), and the fully populated token.
+- Callers MUST wait for the completion event—either by polling `getJobStatus`, subscribing to job events, or calling `JobTracker.watch`—before relying on the token. Reading the `JobInfo` that was returned during queuing is a race and will almost always expose an empty coordinate list.
+
+### Read-After-Write Flow
+
+1. A job finishes and surfaces a `JobInfo` with the consistency token.
+2. Callers hand the token to the `ReadModelCoordinator`, which fans the request
+   out to every registered read model's `waitForConsistency` implementation.
+3. Each read model uses the shared [Consistency Tracker](../Shared/consistency-tracker.md)
+   to know whether it has indexed past every coordinate. If not, it waits until
+   indexing catches up, respecting optional `timeoutMs` and `AbortSignal`.
+4. Once all read models confirm, the original read request executes, ensuring
+   the write is visible.
 
 ### Workers
 

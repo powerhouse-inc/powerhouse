@@ -1,25 +1,20 @@
 import type { NodeOption } from "@powerhousedao/design-system";
+import { Icon } from "@powerhousedao/design-system";
 import {
-  ConnectDropdownMenu,
-  defaultNodeOptions,
-  Icon,
-  NodeInput,
-  nodeOptionsMap,
-  SyncStatusIcon,
-  useDrag,
-  useDrop,
-} from "@powerhousedao/design-system";
-import {
-  getSyncStatusSync,
   setSelectedNode,
   showDeleteNodeModal,
   useNodeActions,
-  useSelectedDriveSafe,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
-import { getDriveSharingType, type FolderNode } from "document-drive";
+import { type FolderNode } from "document-drive";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
+import { defaultNodeOptions, nodeOptionsMap } from "../../constants/options.js";
+import { useDrag } from "../../hooks/use-drag.js";
+import { useDrop } from "../../hooks/use-drop.js";
+import { ConnectDropdownMenu } from "../dropdown-menu/dropdown-menu.js";
+import { NodeInput } from "../node-input/node-input.js";
+import { SyncStatusIcon } from "../status-icon/sync-status-icon.js";
 
 export function FolderItem(props: {
   folderNode: FolderNode;
@@ -29,18 +24,12 @@ export function FolderItem(props: {
   const { isAllowedToCreateDocuments } = useUserPermissions();
   const [mode, setMode] = useState<"READ" | "WRITE">("READ");
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
-  const [selectedDrive] = useSelectedDriveSafe();
-  const sharingType = selectedDrive
-    ? getDriveSharingType(selectedDrive)
-    : "LOCAL";
   const { dragProps } = useDrag({ node: folderNode });
   const { onRenameNode, onDuplicateNode } = useNodeActions();
   const { isDropTarget, dropProps } = useDrop({
     target: folderNode,
   });
   const isReadMode = mode === "READ";
-  const syncStatus = getSyncStatusSync(folderNode.id, sharingType);
-
   function onCancel() {
     setMode("READ");
   }
@@ -109,18 +98,6 @@ export function FolderItem(props: {
           <div className="p-1">
             <div className="relative">
               <Icon name="FolderClose" size={24} />
-              {isReadMode && syncStatus ? (
-                <div className="absolute bottom-[-3px] right-[-2px] size-3 rounded-full bg-white">
-                  <div className="absolute left-[-2px] top-[-2px]">
-                    <SyncStatusIcon
-                      overrideSyncIcons={{
-                        SUCCESS: "CheckCircleFill",
-                      }}
-                      syncStatus={syncStatus}
-                    />
-                  </div>
-                </div>
-              ) : null}
             </div>
           </div>
           {content}

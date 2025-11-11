@@ -132,6 +132,7 @@ describe("SimpleJobExecutor Integration", () => {
       operationStore,
       eventBus,
       writeCache,
+      { legacyStorageEnabled: true },
     );
   });
 
@@ -153,6 +154,7 @@ describe("SimpleJobExecutor Integration", () => {
       // Create a job to add a folder
       const job: Job = {
         id: "job-1",
+        kind: "mutation",
         documentId: document.header.id,
         scope: "global",
         branch: "main",
@@ -169,6 +171,7 @@ describe("SimpleJobExecutor Integration", () => {
             },
           },
         ],
+        operations: [],
         createdAt: Date.now().toString(),
         queueHint: [],
         errorHistory: [],
@@ -218,6 +221,7 @@ describe("SimpleJobExecutor Integration", () => {
       // Execute first job - add folder
       const job1: Job = {
         id: "job-1",
+        kind: "mutation",
         documentId: document.header.id,
         scope: "global",
         branch: "main",
@@ -234,6 +238,7 @@ describe("SimpleJobExecutor Integration", () => {
             },
           },
         ],
+        operations: [],
         createdAt: Date.now().toString(),
         queueHint: [],
         errorHistory: [],
@@ -245,6 +250,7 @@ describe("SimpleJobExecutor Integration", () => {
       // Execute second job - add child folder
       const job2: Job = {
         id: "job-2",
+        kind: "mutation",
         documentId: document.header.id,
         scope: "global",
         branch: "main",
@@ -261,6 +267,7 @@ describe("SimpleJobExecutor Integration", () => {
             },
           },
         ],
+        operations: [],
         createdAt: (Date.now() + 1).toString(),
         queueHint: [],
         errorHistory: [],
@@ -306,6 +313,7 @@ describe("SimpleJobExecutor Integration", () => {
       // First add a folder
       const folderJob: Job = {
         id: "job-folder",
+        kind: "mutation",
         documentId: document.header.id,
         scope: "global",
         branch: "main",
@@ -322,6 +330,7 @@ describe("SimpleJobExecutor Integration", () => {
             },
           },
         ],
+        operations: [],
         createdAt: Date.now().toString(),
         queueHint: [],
         errorHistory: [],
@@ -332,6 +341,7 @@ describe("SimpleJobExecutor Integration", () => {
       // Then add a file to the folder
       const fileJob: Job = {
         id: "job-file",
+        kind: "mutation",
         documentId: document.header.id,
         scope: "global",
         branch: "main",
@@ -349,6 +359,7 @@ describe("SimpleJobExecutor Integration", () => {
             },
           },
         ],
+        operations: [],
         createdAt: (Date.now() + 1).toString(),
         queueHint: [],
         errorHistory: [],
@@ -403,11 +414,13 @@ describe("SimpleJobExecutor Integration", () => {
         operationStore,
         eventBus,
         writeCache,
+        { legacyStorageEnabled: true },
       );
 
       // Create a valid job
       const job: Job = {
         id: "job-1",
+        kind: "mutation",
         documentId: document.header.id,
         scope: "global",
         branch: "main",
@@ -424,6 +437,7 @@ describe("SimpleJobExecutor Integration", () => {
             },
           },
         ],
+        operations: [],
         createdAt: Date.now().toString(),
         queueHint: [],
         errorHistory: [],
@@ -455,6 +469,7 @@ describe("SimpleJobExecutor Integration", () => {
       // Try to add a folder to a document that doesn't exist
       const job: Job = {
         id: "job-non-existent",
+        kind: "mutation",
         documentId,
         scope: "global",
         branch: "main",
@@ -471,6 +486,7 @@ describe("SimpleJobExecutor Integration", () => {
             },
           },
         ],
+        operations: [],
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
@@ -495,6 +511,7 @@ describe("SimpleJobExecutor Integration", () => {
       // First, delete the document by executing a DELETE_DOCUMENT job
       const deleteJob: Job = {
         id: "delete-job",
+        kind: "mutation",
         documentId: document.header.id,
         scope: "document",
         branch: "main",
@@ -507,6 +524,7 @@ describe("SimpleJobExecutor Integration", () => {
             input: { documentId: document.header.id },
           },
         ],
+        operations: [],
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
@@ -518,6 +536,7 @@ describe("SimpleJobExecutor Integration", () => {
       // Now try to add a folder to the deleted document
       const job: Job = {
         id: "job-1",
+        kind: "mutation",
         documentId: document.header.id,
         scope: "global",
         branch: "main",
@@ -534,6 +553,7 @@ describe("SimpleJobExecutor Integration", () => {
             },
           },
         ],
+        operations: [],
         createdAt: Date.now().toString(),
         queueHint: [],
         errorHistory: [],
@@ -558,6 +578,7 @@ describe("SimpleJobExecutor Integration", () => {
       // First, delete the document
       const deleteJob1: Job = {
         id: "delete-job-1",
+        kind: "mutation",
         documentId: document.header.id,
         scope: "document",
         branch: "main",
@@ -570,6 +591,7 @@ describe("SimpleJobExecutor Integration", () => {
             input: { documentId: document.header.id },
           },
         ],
+        operations: [],
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
@@ -581,6 +603,7 @@ describe("SimpleJobExecutor Integration", () => {
       // Try to delete the already-deleted document
       const deleteJob2: Job = {
         id: "delete-job-2",
+        kind: "mutation",
         documentId: document.header.id,
         scope: "document",
         branch: "main",
@@ -593,6 +616,7 @@ describe("SimpleJobExecutor Integration", () => {
             input: { documentId: document.header.id },
           },
         ],
+        operations: [],
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],

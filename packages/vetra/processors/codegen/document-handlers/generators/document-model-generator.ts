@@ -8,6 +8,7 @@ import type { InternalTransmitterUpdate } from "document-drive";
 import type { DocumentModelGlobalState } from "document-model";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
+import { backupDocument } from "./utils.js";
 
 /**
  * Generator for document model documents
@@ -96,6 +97,15 @@ export class DocumentModelGenerator extends BaseDocumentGen {
         );
         // Don't throw here - code generation was successful
       }
+
+      // Backup the document
+      const extension = state.extension?.replace(/^\.+|\.+$/g, "") || "";
+      await backupDocument(
+        strand.document,
+        this.config.CURRENT_WORKING_DIR,
+        extension,
+        state.name,
+      );
     } catch (error) {
       logger.error(`❌ Error during code generation for ${state.name}:`, error);
       // Don't throw - let codegen continue with other documents

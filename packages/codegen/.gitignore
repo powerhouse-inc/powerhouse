@@ -4,4 +4,4 @@
 /.yacl
 yalc.lock
 
-src/codegen/__tests__/temp/
+**/.test-output

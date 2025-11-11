@@ -1,4 +1,4 @@
-import { DocumentToolbar } from "@powerhousedao/design-system";
+import { DocumentToolbar } from "@powerhousedao/design-system/connect";
 import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
 import { pascalCase } from "change-case";
 import {
@@ -23,11 +23,8 @@ import {
   setStateSchema,
 } from "document-model";
 import { generateId } from "document-model/core";
-import { useEffect, useRef, useState } from "react";
+import { lazy, useEffect, useRef, useState } from "react";
 import { Divider } from "./components/divider.js";
-import { ModelMetadata } from "./components/model-metadata-form.js";
-import { Modules } from "./components/modules.js";
-import { StateSchemas } from "./components/state-schemas.js";
 import { editorConfig } from "./config.js";
 import { SchemaContextProvider } from "./context/schema-context.js";
 import { useSelectedDocumentModelDocument } from "./hooks/useDocumentModelDocument.js";
@@ -37,8 +34,11 @@ import {
   initializeModelSchema,
   makeOperationInitialDoc,
 } from "./utils/helpers.js";
+import ModelMetadata from "./components/model-metadata-form.js";
+import Modules from "./components/modules.js";
+const StateSchemas = lazy(() => import("./components/state-schemas.js"));
 
-export function DocumentModelEditor() {
+export default function Editor() {
   useSetPHDocumentEditorConfig(editorConfig);
   const [document, dispatch] = useSelectedDocumentModelDocument();
   const [scope, setScope] = useState<Scope>("global");

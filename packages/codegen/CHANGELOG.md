@@ -24,106 +24,13 @@ This was a version bump only for @powerhousedao/codegen to align it with other p
 
 - Benjamin Jordan (@thegoldenmule)
 
-## 5.0.1-staging.5 (2025-10-27)
+## 4.1.0-dev.92 (2025-10-28)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
 
-## 5.0.1-staging.4 (2025-10-27)
+## 4.1.0-dev.91 (2025-10-28)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
-
-## 5.0.1-staging.3 (2025-10-27)
-
-This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
-
-## 5.0.1-staging.2 (2025-10-27)
-
-This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
-
-## 5.0.1-staging.1 (2025-10-27)
-
-### 🚀 Features
-
-- **reactor-api:** updated apollo server to v5 ([66dffda7b](https://github.com/powerhouse-inc/powerhouse/commit/66dffda7b))
-- enabled DocumentToolbar in editor template ([e4ded7de6](https://github.com/powerhouse-inc/powerhouse/commit/e4ded7de6))
-- **connect,codegen:** move dropzone wrapper component to connect ([#2018](https://github.com/powerhouse-inc/powerhouse/pull/2018))
-- **design-system,common:** update breadcrumbs and folder views ([#2011](https://github.com/powerhouse-inc/powerhouse/pull/2011))
-- add automated tests for vetra features ([#1962](https://github.com/powerhouse-inc/powerhouse/pull/1962))
-- **vetra:** add set document types operation/action ([dcb59d1d9](https://github.com/powerhouse-inc/powerhouse/commit/dcb59d1d9))
-- **reactor-browser:** remove catch all wildcard ([f09931a88](https://github.com/powerhouse-inc/powerhouse/commit/f09931a88))
-- **reactor-browser:** add allowed document model modules hook ([d9fea4afc](https://github.com/powerhouse-inc/powerhouse/commit/d9fea4afc))
-- **reactor-browser,connect,vetra:** simplify document types workflow ([e665914e9](https://github.com/powerhouse-inc/powerhouse/commit/e665914e9))
-- **codegen:** update editor codegen templates ([6a32eb128](https://github.com/powerhouse-inc/powerhouse/commit/6a32eb128))
-- **reactor-browser:** organize and deduplicate state hooks ([e0ad408e7](https://github.com/powerhouse-inc/powerhouse/commit/e0ad408e7))
-- **renown:** added login button ([f109c7305](https://github.com/powerhouse-inc/powerhouse/commit/f109c7305))
-- **codegen:** update templates ([2715fccca](https://github.com/powerhouse-inc/powerhouse/commit/2715fccca))
-- **vetra:** add open button to Package Information section ([#1930](https://github.com/powerhouse-inc/powerhouse/pull/1930))
-- **codegen:** update template ([f6cd6fa93](https://github.com/powerhouse-inc/powerhouse/commit/f6cd6fa93))
-- **codegen:** add editor name codegen arg ([22334afb4](https://github.com/powerhouse-inc/powerhouse/commit/22334afb4))
-- update @electric-sql/pglite version ([fa3529328](https://github.com/powerhouse-inc/powerhouse/commit/fa3529328))
-- **reactor-browser,connect:** use new window function factory ([7886c284f](https://github.com/powerhouse-inc/powerhouse/commit/7886c284f))
-- **vetra:** added read model to fetch vetra packages ([23c55364d](https://github.com/powerhouse-inc/powerhouse/commit/23c55364d))
-- **monorepo:** use latest versions of react related deps ([#1905](https://github.com/powerhouse-inc/powerhouse/pull/1905))
-- **monorepo:** remove global storybook installs ([#1903](https://github.com/powerhouse-inc/powerhouse/pull/1903))
-- **monorepo:** update to react 19 ([#1902](https://github.com/powerhouse-inc/powerhouse/pull/1902))
-- **vetra:** enabled HMR in dev mode ([8cf19757e](https://github.com/powerhouse-inc/powerhouse/commit/8cf19757e))
-- **vetra:** new connect build setup on vetra ([8dd11a849](https://github.com/powerhouse-inc/powerhouse/commit/8dd11a849))
-- **reactor-browser,codegen:** unify new and existing drive hooks ([7ed734b23](https://github.com/powerhouse-inc/powerhouse/commit/7ed734b23))
-- **monorepo:** revert package versions ([8a1a02628](https://github.com/powerhouse-inc/powerhouse/commit/8a1a02628))
-- **codegen:** fix index file code lost in merge ([ded0c91e5](https://github.com/powerhouse-inc/powerhouse/commit/ded0c91e5))
-- **monorepo:** update eslint config ([ac97af97d](https://github.com/powerhouse-inc/powerhouse/commit/ac97af97d))
-- adding feature flags to reactor-mcp ([fe4f2f683](https://github.com/powerhouse-inc/powerhouse/commit/fe4f2f683))
-- stubbing out feature flag + reactor setup in connect and deleting unused code in reactor-browser ([793bbd7af](https://github.com/powerhouse-inc/powerhouse/commit/793bbd7af))
-- syncing feature flag behavior between switchboard and reactor-local ([e45dc2bf7](https://github.com/powerhouse-inc/powerhouse/commit/e45dc2bf7))
-- **codegen:** fix some type errors ([0f5eec72a](https://github.com/powerhouse-inc/powerhouse/commit/0f5eec72a))
-- added initial pieces of the kysely operation store implementation ([3fbece162](https://github.com/powerhouse-inc/powerhouse/commit/3fbece162))
-- **connect,builder-tools:** build rework ([#1871](https://github.com/powerhouse-inc/powerhouse/pull/1871))
-- restructure document model to avoid circular imports ([#1874](https://github.com/powerhouse-inc/powerhouse/pull/1874))
-- **monorepo:** rename tsc to tsc:build ([c1385418b](https://github.com/powerhouse-inc/powerhouse/commit/c1385418b))
-- adding feature flag to switchboard for controlling reactorv2 api ([4486c8a8d](https://github.com/powerhouse-inc/powerhouse/commit/4486c8a8d))
-- **monorepo:** empty commit to satisfy naming ([5aa18f417](https://github.com/powerhouse-inc/powerhouse/commit/5aa18f417))
-- **monorepo:** merge main ([79f6472b1](https://github.com/powerhouse-inc/powerhouse/commit/79f6472b1))
-- **monorepo:** update release branch workflow ([e9c221ab5](https://github.com/powerhouse-inc/powerhouse/commit/e9c221ab5))
-
-### 🩹 Fixes
-
-- **codegen:** do not add doc state schema to subgraph ([811265356](https://github.com/powerhouse-inc/powerhouse/commit/811265356))
-- **codegen:** handle empty allowedDocumentTypes with empty array instead of empty string element ([1f34c4984](https://github.com/powerhouse-inc/powerhouse/commit/1f34c4984))
-- used fixed versions for codemirror dep ([183e487db](https://github.com/powerhouse-inc/powerhouse/commit/183e487db))
-- **vetra:** added codegen debounce test and reduced logging ([bc360b8e0](https://github.com/powerhouse-inc/powerhouse/commit/bc360b8e0))
-- **codegen:** remove dispatch argument from reducer boilerplate ([047e2b473](https://github.com/powerhouse-inc/powerhouse/commit/047e2b473))
-- **codegen:** removed no longer used arguments on generateProcessor ([c2fe33d53](https://github.com/powerhouse-inc/powerhouse/commit/c2fe33d53))
-- **codegen:** do not import selected document models on relational db template ([9b1f79152](https://github.com/powerhouse-inc/powerhouse/commit/9b1f79152))
-- **codegen:** inject processors factory export ([3f43413b1](https://github.com/powerhouse-inc/powerhouse/commit/3f43413b1))
-- add missing @openfeature/core peer dependency ([2c4a904b0](https://github.com/powerhouse-inc/powerhouse/commit/2c4a904b0))
-- **codegen:** update graphql dependency in package.json ([257f368ac](https://github.com/powerhouse-inc/powerhouse/commit/257f368ac))
-- **codegen:** update analytics processor imports to use in processor templates ([#1954](https://github.com/powerhouse-inc/powerhouse/pull/1954))
-- broken templates, drive app styles, local state schema and validation ([#1941](https://github.com/powerhouse-inc/powerhouse/pull/1941))
-- **codegen:** generate dm subgraphs ([a7be027f1](https://github.com/powerhouse-inc/powerhouse/commit/a7be027f1))
-- **codegen:** add /index.js to import path on templates ([37bc2e9ef](https://github.com/powerhouse-inc/powerhouse/commit/37bc2e9ef))
-- **builder-tools,codegen,reactor-browser,vetra:** better error handling on useSelectedDocumentOfType ([2c2d15e06](https://github.com/powerhouse-inc/powerhouse/commit/2c2d15e06))
-- **codegen:** do not rely on global installation of prettier ([67076c5a5](https://github.com/powerhouse-inc/powerhouse/commit/67076c5a5))
-- **codegen, document-model:** export actions object from document-model ([66c2b2b4b](https://github.com/powerhouse-inc/powerhouse/commit/66c2b2b4b))
-- **codegen:** do not overwrite existing subgraphs ([b4b553441](https://github.com/powerhouse-inc/powerhouse/commit/b4b553441))
-- **builder-tools:** declare @storybook/preview-api dependency ([705ac8da1](https://github.com/powerhouse-inc/powerhouse/commit/705ac8da1))
-- updating codegen ([5585bd012](https://github.com/powerhouse-inc/powerhouse/commit/5585bd012))
-- part 2 of build fixes for module changes ([3000a13c3](https://github.com/powerhouse-inc/powerhouse/commit/3000a13c3))
-- lots of type fixes for modules ([8f4cf02fe](https://github.com/powerhouse-inc/powerhouse/commit/8f4cf02fe))
-- codegen package needs to copy before testing ([9115c7968](https://github.com/powerhouse-inc/powerhouse/commit/9115c7968))
-- test fix for document-drive package ([40f4b6416](https://github.com/powerhouse-inc/powerhouse/commit/40f4b6416))
-- **monorepo:** re-add nx js plugin ([d477a49d7](https://github.com/powerhouse-inc/powerhouse/commit/d477a49d7))
-- **monorepo:** regenerate lockfile ([7811171ff](https://github.com/powerhouse-inc/powerhouse/commit/7811171ff))
-- **monorepo:** linting and type checking ([#1776](https://github.com/powerhouse-inc/powerhouse/pull/1776))
-
-### ❤️ Thank You
-
-- acaldas @acaldas
-- Benjamin Jordan (@thegoldenmule)
-- Frank
-- Guillermo Puente @gpuente
-- Guillermo Puente Sandoval @gpuente
-- Ryan Wolhuter @ryanwolhuter
-- ryanwolhuter @ryanwolhuter
 
 ## 4.1.0-dev.90 (2025-10-27)
 

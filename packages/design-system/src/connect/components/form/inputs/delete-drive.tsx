@@ -1,10 +1,7 @@
-import {
-  DriveNameInput,
-  Icon,
-  PowerhouseButton,
-} from "@powerhousedao/design-system";
+import { Icon, PowerhouseButton } from "@powerhousedao/design-system";
 import type { DocumentDriveDocument } from "document-drive";
 import { useState } from "react";
+import { DriveNameInput } from "./drive-name-input.js";
 
 export type DeleteDriveProps = {
   drive: DocumentDriveDocument;

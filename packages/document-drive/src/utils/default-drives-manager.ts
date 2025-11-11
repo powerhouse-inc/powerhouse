@@ -10,7 +10,8 @@ import type {
   RemoveDriveStrategy,
   RemoveOldRemoteDrivesOption,
 } from "document-drive";
-import { logger, requestPublicDriveWithTokenFromReactor } from "document-drive";
+import { requestPublicDriveWithTokenFromReactor } from "../utils/graphql.js";
+import { logger } from "../utils/logger.js";
 
 function isReadModeDriveServer(obj: unknown): obj is IReadModeDriveServer {
   return typeof (obj as IReadModeDriveServer).getReadDrives === "function";

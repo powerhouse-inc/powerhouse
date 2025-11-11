@@ -1,17 +1,17 @@
 import { PH_PACKAGES } from "@powerhousedao/config";
+
 import {
   addExternalPackage,
   removeExternalPackage,
-} from "@powerhousedao/connect";
-import { PackageManager as BasePackageManager } from "@powerhousedao/design-system";
+} from "@powerhousedao/connect/services";
+import { PackageManager } from "@powerhousedao/design-system/connect";
 import {
   makeVetraPackageManifest,
   useDrives,
   useVetraPackages,
 } from "@powerhousedao/reactor-browser";
 import type { Manifest } from "document-model";
-import React from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 const LOCAL_REACTOR_VALUE = "local-reactor";
 const LOCAL_REACTOR_LABEL = "Local Reactor";
@@ -40,7 +40,7 @@ function manifestToDetails(
   };
 }
 
-export const PackageManager: React.FC = () => {
+export const ConnectPackageManager: React.FC = () => {
   const vetraPackages = useVetraPackages();
   const drives = useDrives();
   const [reactor, setReactor] = useState("");
@@ -117,7 +117,7 @@ export const PackageManager: React.FC = () => {
   );
 
   return (
-    <BasePackageManager
+    <PackageManager
       mutable={true}
       reactorOptions={options ?? []}
       reactor={reactor}

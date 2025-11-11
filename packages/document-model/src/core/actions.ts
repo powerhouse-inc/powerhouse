@@ -3,7 +3,6 @@ import {
   ab2hex,
   buildOperationSignatureMessage,
   buildOperationSignatureParams,
-  generateId,
   hex2ab,
 } from "./crypto.js";
 import {
@@ -38,6 +37,7 @@ import type {
   SchemaPruneAction,
   UndoAction,
 } from "./types.js";
+import { generateId } from "./utils.js";
 
 /**
  * Cancels the last `count` operations.

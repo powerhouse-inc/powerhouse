@@ -95,6 +95,7 @@ describe("SimpleJobExecutor", () => {
       mockOperationStore,
       eventBus,
       mockWriteCache,
+      { legacyStorageEnabled: true },
     );
   });
 
@@ -105,6 +106,7 @@ describe("SimpleJobExecutor", () => {
         .mockRejectedValue(new Error("Document not found"));
 
       const job: Job = {
+        kind: "mutation",
         id: "job-2",
         documentId: "missing-doc",
         scope: "global",
@@ -118,6 +120,7 @@ describe("SimpleJobExecutor", () => {
             input: { name: "Test" },
           },
         ],
+        operations: [],
         createdAt: "123",
         queueHint: [],
         errorHistory: [],
@@ -163,6 +166,7 @@ describe("SimpleJobExecutor", () => {
       });
 
       const job: Job = {
+        kind: "mutation",
         id: "job-3",
         documentId: "doc-1",
         scope: "global",
@@ -176,6 +180,7 @@ describe("SimpleJobExecutor", () => {
             input: {},
           },
         ],
+        operations: [],
         createdAt: "123",
         queueHint: [],
         errorHistory: [],
@@ -196,6 +201,7 @@ describe("SimpleJobExecutor", () => {
         .mockRejectedValue(new Error("Storage error"));
 
       const job: Job = {
+        kind: "mutation",
         id: "job-4",
         documentId: "doc-1",
         scope: "global",
@@ -209,6 +215,7 @@ describe("SimpleJobExecutor", () => {
             input: { name: "Test" },
           },
         ],
+        operations: [],
         createdAt: "123",
         queueHint: [],
         errorHistory: [],
@@ -230,6 +237,7 @@ describe("SimpleJobExecutor", () => {
         header: {
           id: documentId,
           documentType: "powerhouse/document-model",
+          revision: { document: 1 },
         },
         operations: {
           document: [
@@ -247,8 +255,12 @@ describe("SimpleJobExecutor", () => {
               },
             },
           ],
+          global: [],
+          local: [],
         },
         state: {
+          global: {},
+          local: {},
           document: {
             isDeleted: false,
           },
@@ -256,6 +268,7 @@ describe("SimpleJobExecutor", () => {
       });
 
       const job: Job = {
+        kind: "mutation",
         id: "delete-job-1",
         documentId,
         scope: "document",
@@ -269,6 +282,7 @@ describe("SimpleJobExecutor", () => {
             input: { documentId },
           },
         ],
+        operations: [],
         createdAt: "1234567890",
         queueHint: [],
         errorHistory: [],
@@ -291,6 +305,7 @@ describe("SimpleJobExecutor", () => {
         header: {
           id: documentId,
           documentType: "powerhouse/document-model",
+          revision: { document: 1 },
         },
         operations: {
           document: [
@@ -308,8 +323,12 @@ describe("SimpleJobExecutor", () => {
               },
             },
           ],
+          global: [],
+          local: [],
         },
         state: {
+          global: {},
+          local: {},
           document: {
             isDeleted: false,
           },
@@ -317,6 +336,7 @@ describe("SimpleJobExecutor", () => {
       });
 
       const job: Job = {
+        kind: "mutation",
         id: "delete-job-2",
         documentId,
         scope: "document",
@@ -330,6 +350,7 @@ describe("SimpleJobExecutor", () => {
             input: { documentId },
           },
         ],
+        operations: [],
         createdAt: "1234567890",
         queueHint: [],
         errorHistory: [],
@@ -349,6 +370,7 @@ describe("SimpleJobExecutor", () => {
 
     it("should return error if documentId is missing from input", async () => {
       const job: Job = {
+        kind: "mutation",
         id: "delete-job-3",
         documentId: "doc-missing-id",
         scope: "document",
@@ -362,6 +384,7 @@ describe("SimpleJobExecutor", () => {
             input: {},
           },
         ],
+        operations: [],
         createdAt: "1234567890",
         queueHint: [],
         errorHistory: [],
@@ -383,6 +406,7 @@ describe("SimpleJobExecutor", () => {
       it("should assign index 0 for new document", async () => {
         const documentId = "new-doc-1";
         const job: Job = {
+          kind: "mutation",
           id: "create-job-1",
           documentId,
           scope: "document",
@@ -401,6 +425,7 @@ describe("SimpleJobExecutor", () => {
               },
             },
           ],
+          operations: [],
           createdAt: "1234567890",
           queueHint: [],
           errorHistory: [],
@@ -448,6 +473,7 @@ describe("SimpleJobExecutor", () => {
         });
 
         const job: Job = {
+          kind: "mutation",
           id: "delete-job-index",
           documentId,
           scope: "document",
@@ -461,6 +487,7 @@ describe("SimpleJobExecutor", () => {
               input: { documentId },
             },
           ],
+          operations: [],
           createdAt: "1234567890",
           queueHint: [],
           errorHistory: [],
@@ -500,6 +527,7 @@ describe("SimpleJobExecutor", () => {
         });
 
         const job: Job = {
+          kind: "mutation",
           id: "upgrade-job-index",
           documentId,
           scope: "document",
@@ -519,6 +547,7 @@ describe("SimpleJobExecutor", () => {
               },
             },
           ],
+          operations: [],
           createdAt: "1234567890",
           queueHint: [],
           errorHistory: [],
@@ -538,6 +567,7 @@ describe("SimpleJobExecutor", () => {
       it("should assign sequential indexes for CREATE and UPGRADE", async () => {
         const documentId = "new-doc-with-upgrade";
         const job: Job = {
+          kind: "mutation",
           id: "create-and-upgrade-job",
           documentId,
           scope: "document",
@@ -569,6 +599,7 @@ describe("SimpleJobExecutor", () => {
               },
             },
           ],
+          operations: [],
           createdAt: "1234567890",
           queueHint: [],
           errorHistory: [],
@@ -652,6 +683,7 @@ describe("SimpleJobExecutor", () => {
 
         // Test DELETE in document scope gets index 1
         const job: Job = {
+          kind: "mutation",
           id: "delete-job",
           documentId,
           scope: "document",
@@ -665,6 +697,7 @@ describe("SimpleJobExecutor", () => {
               input: { documentId },
             },
           ],
+          operations: [],
           createdAt: "1234567890",
           queueHint: [],
           errorHistory: [],
@@ -713,6 +746,7 @@ describe("SimpleJobExecutor", () => {
 
         // Test UPGRADE in document scope (should be 2, not 4)
         const job: Job = {
+          kind: "mutation",
           id: "upgrade-job",
           documentId,
           scope: "document",
@@ -729,6 +763,7 @@ describe("SimpleJobExecutor", () => {
               },
             },
           ],
+          operations: [],
           createdAt: "1234567890",
           queueHint: [],
           errorHistory: [],
@@ -747,6 +782,7 @@ describe("SimpleJobExecutor", () => {
       it("should handle CREATE→UPGRADE with correct indexes", async () => {
         const documentId = "new-doc-multi-action";
         const job: Job = {
+          kind: "mutation",
           id: "create-and-upgrade-job",
           documentId,
           scope: "document",
@@ -778,6 +814,7 @@ describe("SimpleJobExecutor", () => {
               },
             },
           ],
+          operations: [],
           createdAt: "1234567890",
           queueHint: [],
           errorHistory: [],
@@ -838,6 +875,7 @@ describe("SimpleJobExecutor", () => {
       it("should reject CREATE_DOCUMENT in non-document scope", async () => {
         const documentId = "new-doc-wrong-scope";
         const job: Job = {
+          kind: "mutation",
           id: "create-job-wrong-scope",
           documentId,
           scope: "global",
@@ -856,6 +894,7 @@ describe("SimpleJobExecutor", () => {
               },
             },
           ],
+          operations: [],
           createdAt: "1234567890",
           queueHint: [],
           errorHistory: [],
@@ -873,6 +912,7 @@ describe("SimpleJobExecutor", () => {
       it("should accept CREATE_DOCUMENT in document scope", async () => {
         const documentId = "new-doc-correct-scope";
         const job: Job = {
+          kind: "mutation",
           id: "create-job-correct-scope",
           documentId,
           scope: "document",
@@ -891,6 +931,7 @@ describe("SimpleJobExecutor", () => {
               },
             },
           ],
+          operations: [],
           createdAt: "1234567890",
           queueHint: [],
           errorHistory: [],

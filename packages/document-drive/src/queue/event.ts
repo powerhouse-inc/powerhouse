@@ -8,16 +8,12 @@ import type {
   JobId,
   QueueEvents,
 } from "document-drive";
-import {
-  childLogger,
-  isDocumentJob,
-  isOperationJob,
-  logger,
-  MemoryQueue,
-} from "document-drive";
+import { childLogger, logger } from "document-drive/utils/logger";
 import { generateId } from "document-model/core";
 import type { Unsubscribe } from "nanoevents";
 import { createNanoEvents } from "nanoevents";
+import { MemoryQueue } from "./base.js";
+import { isDocumentJob, isOperationJob } from "./utils.js";
 
 type DocId = string;
 

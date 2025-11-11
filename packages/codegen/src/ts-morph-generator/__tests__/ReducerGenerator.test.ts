@@ -2,10 +2,22 @@ import type {
   CodegenOperation,
   GenerationContext,
 } from "@powerhousedao/codegen";
-import { DirectoryManager, ImportManager } from "@powerhousedao/codegen";
+import {
+  DeclarationManager,
+  DirectoryManager,
+  ImportManager,
+} from "@powerhousedao/codegen";
+import { camelCase, paramCase, pascalCase } from "change-case";
 import { Project } from "ts-morph";
 import { beforeEach, describe, expect, it } from "vitest";
 import { ReducerGenerator } from "../core/ReducerGenerator.js";
+
+function makeVariableAndTypeNamesFromContext(context: GenerationContext) {
+  const typeImportPath = `${context.packageName}/document-models/${paramCase(context.docModel.name)}`;
+  const typeImportName = `${pascalCase(context.docModel.name)}${pascalCase(context.module.name)}Operations`;
+  const operationHandlersObjectName = `${camelCase(context.docModel.name)}${pascalCase(context.module.name)}Operations`;
+  return { typeImportPath, typeImportName, operationHandlersObjectName };
+}
 
 // Custom DirectoryManager for testing that works with in-memory file system
 class TestDirectoryManager extends DirectoryManager {
@@ -37,13 +49,19 @@ describe("ReducerGenerator Integration", () => {
   let project: Project;
   let importManager: ImportManager;
   let directoryManager: TestDirectoryManager;
+  let declarationManager: DeclarationManager;
 
   beforeEach(() => {
     // Use real instances with in-memory file system
     project = new Project({ useInMemoryFileSystem: true });
     importManager = new ImportManager();
     directoryManager = new TestDirectoryManager();
-    generator = new ReducerGenerator(importManager, directoryManager);
+    declarationManager = new DeclarationManager();
+    generator = new ReducerGenerator(
+      importManager,
+      directoryManager,
+      declarationManager,
+    );
   });
 
   describe("generate", () => {
@@ -81,6 +99,7 @@ describe("ReducerGenerator Integration", () => {
 
       const context: GenerationContext = {
         rootDir: "/test",
+        packageName: "test",
         docModel: { name: "TestDoc" } as any,
         module: { name: "testModule" } as any,
         project,
@@ -94,6 +113,8 @@ describe("ReducerGenerator Integration", () => {
       const expectedPath =
         "/test/document-model/test-doc/src/reducers/test-module.ts";
       const sourceFile = project.getSourceFile(expectedPath);
+      const typeImportPath = `${context.packageName}/document-models/${paramCase(context.docModel.name)}`;
+      const operationHandlersObjectName = `${camelCase(context.docModel.name)}${pascalCase(context.module.name)}Operations`;
 
       expect(sourceFile).toBeDefined();
 
@@ -101,12 +122,12 @@ describe("ReducerGenerator Integration", () => {
 
       // Check type import
       expect(content).toContain(
-        'import type { TestDocTestModuleOperations } from "../../gen/test-module/operations.js";',
+        `import type { TestDocTestModuleOperations } from "${typeImportPath}";`,
       );
 
       // Check reducer variable declaration
       expect(content).toContain(
-        "export const reducer: TestDocTestModuleOperations = {",
+        `export const ${operationHandlersObjectName}: TestDocTestModuleOperations = {`,
       );
 
       // Check generated methods
@@ -148,6 +169,7 @@ describe("ReducerGenerator Integration", () => {
 
       const context: GenerationContext = {
         rootDir: "/test",
+        packageName: "test",
         docModel: { name: "MyDoc" } as any,
         module: { name: "myModule" } as any,
         project,
@@ -195,14 +217,19 @@ describe("ReducerGenerator Integration", () => {
       // Should only have one import and one reducer declaration
       const importMatches = content.match(/import type/g);
       expect(importMatches).toHaveLength(1);
+      const { typeImportName, operationHandlersObjectName } =
+        makeVariableAndTypeNamesFromContext(context);
 
-      const reducerMatches = content.match(/export const reducer/g);
+      const reducerMatches = content.match(
+        `export const ${operationHandlersObjectName}: ${typeImportName} = {`,
+      );
       expect(reducerMatches).toHaveLength(1);
     });
 
     it("should update existing reducer type when different", async () => {
       const context: GenerationContext = {
         rootDir: "/test",
+        packageName: "test",
         docModel: { name: "TestDoc" } as any,
         module: { name: "firstModule" } as any,
         project,
@@ -233,11 +260,22 @@ describe("ReducerGenerator Integration", () => {
       let sourceFile = project.getSourceFile(filePath);
       let content = sourceFile!.getFullText();
 
-      expect(content).toContain("TestDocFirstModuleOperations");
+      const typeImportPath = `${context.packageName}/document-models/${paramCase(context.docModel.name)}`;
+      const typeImportName = `${pascalCase(context.docModel.name)}${pascalCase(context.module.name)}Operations`;
+      const operationHandlersObjectName = `${camelCase(context.docModel.name)}${pascalCase(context.module.name)}Operations`;
+
+      expect(content).toContain(
+        `import type { ${typeImportName} } from "${typeImportPath}";`,
+      );
+      expect(content).toContain(
+        `export const ${operationHandlersObjectName}: ${typeImportName} = {`,
+      );
 
       // Manually change the reducer variable type to simulate an outdated file
-      const reducerVar = sourceFile!.getVariableDeclaration("reducer");
-      reducerVar!.setType("OldTestDocOperations");
+      const reducerVar = sourceFile!.getVariableDeclaration(
+        operationHandlersObjectName,
+      );
+      reducerVar!.setType(`Old${typeImportName}`);
 
       // Generate again - should update the type
       await generator.generate(context);
@@ -246,13 +284,14 @@ describe("ReducerGenerator Integration", () => {
       content = sourceFile!.getFullText();
 
       // Should have the correct type now
-      expect(content).toContain("TestDocFirstModuleOperations");
-      expect(content).not.toContain("OldTestDocOperations");
+      expect(content).toContain(operationHandlersObjectName);
+      expect(content).not.toContain(`Old${typeImportName}`);
     });
 
     it("should skip generation when no operations provided", async () => {
       const context: GenerationContext = {
         rootDir: "/test",
+        packageName: "test",
         docModel: { name: "TestDoc" } as any,
         module: { name: "emptyModule" } as any,
         project,
@@ -290,6 +329,7 @@ describe("ReducerGenerator Integration", () => {
 
       const context: GenerationContext = {
         rootDir: "/test",
+        packageName: "test",
         docModel: { name: "test_doc_name" } as any,
         module: { name: "test_module_name" } as any,
         project,
@@ -298,17 +338,20 @@ describe("ReducerGenerator Integration", () => {
       };
 
       await generator.generate(context);
-
+      const { typeImportPath, typeImportName, operationHandlersObjectName } =
+        makeVariableAndTypeNamesFromContext(context);
       const expectedPath =
         "/test/document-model/test-doc-name/src/reducers/test-module-name.ts";
       const sourceFile = project.getSourceFile(expectedPath);
       const content = sourceFile!.getFullText();
 
       // Check PascalCase type name
-      expect(content).toContain("TestDocNameTestModuleNameOperations");
+      expect(content).toContain(typeImportName);
 
       // Check param-case import path
-      expect(content).toContain("../../gen/test-module-name/operations.js");
+      expect(content).toContain(
+        `import type { ${typeImportName} } from "${typeImportPath}";`,
+      );
 
       // Check camelCase method name
       expect(content).toContain("setSpecialValueOperation(state, action)");
@@ -362,6 +405,7 @@ describe("ReducerGenerator Integration", () => {
 
       const context: GenerationContext = {
         rootDir: "/test",
+        packageName: "test",
         docModel: { name: "TestDoc" } as any,
         module: { name: "testModule" } as any,
         project,
@@ -404,6 +448,7 @@ describe("ReducerGenerator Integration", () => {
 
       const context: GenerationContext = {
         rootDir: "/test",
+        packageName: "test",
         docModel: { name: "TestDoc" } as any,
         module: { name: "testModule" } as any,
         project,
@@ -448,6 +493,7 @@ describe("ReducerGenerator Integration", () => {
 
       const context: GenerationContext = {
         rootDir: "/test",
+        packageName: "test",
         docModel: { name: "TestDoc" } as any,
         module: { name: "testModule" } as any,
         project,
@@ -524,6 +570,7 @@ describe("ReducerGenerator Integration", () => {
 
       const context: GenerationContext = {
         rootDir: "/test",
+        packageName: "test",
         docModel: { name: "TestDoc" } as any,
         module: { name: "testModule" } as any,
         project,

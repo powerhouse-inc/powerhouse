@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach } from "vitest";
 import { InMemoryJobTracker } from "../../src/job-tracker/in-memory-job-tracker.js";
 import { JobStatus } from "../../src/shared/types.js";
 import type { JobInfo } from "../../src/shared/types.js";
+import { createEmptyConsistencyToken } from "../factories.js";
 
 describe("InMemoryJobTracker", () => {
   let tracker: InMemoryJobTracker;
@@ -16,6 +17,7 @@ describe("InMemoryJobTracker", () => {
         id: "job-1",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       tracker.registerJob(jobInfo);
@@ -29,6 +31,7 @@ describe("InMemoryJobTracker", () => {
         id: "job-1",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       tracker.registerJob(jobInfo);
@@ -48,6 +51,7 @@ describe("InMemoryJobTracker", () => {
         id: "job-1",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       tracker.registerJob(jobInfo);
@@ -73,10 +77,11 @@ describe("InMemoryJobTracker", () => {
         id: "job-1",
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       tracker.registerJob(jobInfo);
-      tracker.markCompleted("job-1");
+      tracker.markCompleted("job-1", createEmptyConsistencyToken());
 
       const retrieved = tracker.getJobStatus("job-1");
       expect(retrieved?.status).toBe(JobStatus.COMPLETED);
@@ -88,18 +93,21 @@ describe("InMemoryJobTracker", () => {
         id: "job-1",
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       const result = { data: "success" };
       tracker.registerJob(jobInfo);
-      tracker.markCompleted("job-1", result);
+      tracker.markCompleted("job-1", createEmptyConsistencyToken(), result);
 
       const retrieved = tracker.getJobStatus("job-1");
       expect(retrieved?.result).toEqual(result);
     });
 
     it("should create entry if job not found", () => {
-      tracker.markCompleted("unknown-job", { data: "test" });
+      tracker.markCompleted("unknown-job", createEmptyConsistencyToken(), {
+        data: "test",
+      });
 
       const retrieved = tracker.getJobStatus("unknown-job");
       expect(retrieved).not.toBeNull();
@@ -113,6 +121,7 @@ describe("InMemoryJobTracker", () => {
         id: "job-1",
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       tracker.registerJob(jobInfo);
@@ -151,6 +160,7 @@ describe("InMemoryJobTracker", () => {
         id: "job-1",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       tracker.registerJob(jobInfo);
@@ -171,6 +181,7 @@ describe("InMemoryJobTracker", () => {
         id: "job-1",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       // Register as pending
@@ -182,7 +193,7 @@ describe("InMemoryJobTracker", () => {
       expect(tracker.getJobStatus("job-1")?.status).toBe(JobStatus.RUNNING);
 
       // Mark completed
-      tracker.markCompleted("job-1");
+      tracker.markCompleted("job-1", createEmptyConsistencyToken());
       expect(tracker.getJobStatus("job-1")?.status).toBe(JobStatus.COMPLETED);
     });
 
@@ -191,6 +202,7 @@ describe("InMemoryJobTracker", () => {
         id: "job-1",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       // Register as pending
@@ -213,12 +225,13 @@ describe("InMemoryJobTracker", () => {
         id: "job-1",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       tracker.registerJob(jobInfo);
 
       // Skip running and go straight to completed
-      tracker.markCompleted("job-1");
+      tracker.markCompleted("job-1", createEmptyConsistencyToken());
 
       const retrieved = tracker.getJobStatus("job-1");
       expect(retrieved?.status).toBe(JobStatus.COMPLETED);
@@ -231,12 +244,14 @@ describe("InMemoryJobTracker", () => {
         id: "job-1",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       const job2: JobInfo = {
         id: "job-2",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       tracker.registerJob(job1);
@@ -244,7 +259,7 @@ describe("InMemoryJobTracker", () => {
 
       // Update job1
       tracker.markRunning("job-1");
-      tracker.markCompleted("job-1");
+      tracker.markCompleted("job-1", createEmptyConsistencyToken());
 
       // Update job2
       tracker.markRunning("job-2");

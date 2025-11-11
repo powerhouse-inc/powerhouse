@@ -3,12 +3,16 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import type { StateReducer } from "document-model";
 import { isDocumentAction, createReducer } from "document-model/core";
-import type { SubgraphModulePHState } from "./types.js";
-import { z } from "./types.js";
+import type { SubgraphModulePHState } from "@powerhousedao/vetra/document-models/subgraph-module";
 
-import { reducer as BaseOperationsReducer } from "../src/reducers/base-operations.js";
+import { subgraphModuleBaseOperationsOperations } from "../src/reducers/base-operations.js";
 
-export const stateReducer: StateReducer<SubgraphModulePHState> = (
+import {
+  SetSubgraphNameInputSchema,
+  SetSubgraphStatusInputSchema,
+} from "./schema/zod.js";
+
+const stateReducer: StateReducer<SubgraphModulePHState> = (
   state,
   action,
   dispatch,
@@ -19,8 +23,8 @@ export const stateReducer: StateReducer<SubgraphModulePHState> = (
 
   switch (action.type) {
     case "SET_SUBGRAPH_NAME":
-      z.SetSubgraphNameInputSchema().parse(action.input);
-      BaseOperationsReducer.setSubgraphNameOperation(
+      SetSubgraphNameInputSchema().parse(action.input);
+      subgraphModuleBaseOperationsOperations.setSubgraphNameOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
@@ -28,8 +32,8 @@ export const stateReducer: StateReducer<SubgraphModulePHState> = (
       break;
 
     case "SET_SUBGRAPH_STATUS":
-      z.SetSubgraphStatusInputSchema().parse(action.input);
-      BaseOperationsReducer.setSubgraphStatusOperation(
+      SetSubgraphStatusInputSchema().parse(action.input);
+      subgraphModuleBaseOperationsOperations.setSubgraphStatusOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,

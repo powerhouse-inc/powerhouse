@@ -11,7 +11,7 @@ import { TextField } from "./text-field.js";
 export const MetadataFormSchema = z.object({
   name: z.string(),
   documentType: z.string(),
-  extension: z.string(),
+  extension: z.string().optional().default(""),
   description: z.string(),
   authorName: z.string(),
   authorWebsite: z.string(),
@@ -31,7 +31,7 @@ type Props = MetadataFormValues & {
   setStateSchema: (schema: string, scope: Scope) => void;
 };
 
-export function ModelMetadata(props: Props) {
+export default function ModelMetadata(props: Props) {
   return (
     <div>
       <ModelNameForm {...props} />
@@ -143,9 +143,9 @@ export function ModelExtensionForm(props: Props) {
       name="extension"
       value={extension}
       onSubmit={setModelExtension}
-      label="Model Extension *"
+      label="Model Extension"
       placeholder="Example .phdm"
-      required
+      allowEmpty
     />
   );
 }

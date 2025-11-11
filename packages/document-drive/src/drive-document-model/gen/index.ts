@@ -1,5 +1,6 @@
 export * from "./creators.js";
 export * from "./document-model.js";
+export * from "./document-type.js";
 export * from "./drive/index.js";
 export * from "./node/index.js";
 export * from "./ph-factories.js";

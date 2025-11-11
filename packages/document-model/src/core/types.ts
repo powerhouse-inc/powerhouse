@@ -238,6 +238,19 @@ export type DeleteDocumentActionInput = {
   propagate?: "none" | "cascade"; // Deletion propagation mode
 };
 
+export type AddRelationshipActionInput = {
+  sourceId: string;
+  targetId: string;
+  relationshipType: string;
+  metadata?: Record<string, unknown>;
+};
+
+export type RemoveRelationshipActionInput = {
+  sourceId: string;
+  targetId: string;
+  relationshipType: string;
+};
+
 export type CreateDocumentAction = Action & {
   type: "CREATE_DOCUMENT";
   input: CreateDocumentActionInput;
@@ -251,6 +264,16 @@ export type UpgradeDocumentAction = Action & {
 export type DeleteDocumentAction = Action & {
   type: "DELETE_DOCUMENT";
   input: DeleteDocumentActionInput;
+};
+
+export type AddRelationshipAction = Action & {
+  type: "ADD_RELATIONSHIP";
+  input: AddRelationshipActionInput;
+};
+
+export type RemoveRelationshipAction = Action & {
+  type: "REMOVE_RELATIONSHIP";
+  input: RemoveRelationshipActionInput;
 };
 
 export type DocumentAction =
@@ -440,6 +463,19 @@ export type SaveToFile = (
   path: string,
   name?: string,
 ) => string | Promise<string>;
+
+export type IsStateOfType<TState> = (state: unknown) => state is TState;
+
+export type AssertIsStateOfType<TState> = (
+  state: unknown,
+) => asserts state is TState;
+
+export type IsDocumentOfType<TState extends PHBaseState> = (
+  document: unknown,
+) => document is PHDocument<TState>;
+export type AssertIsDocumentOfType<TState extends PHBaseState> = (
+  document: unknown,
+) => asserts document is PHDocument<TState>;
 
 export type LoadFromInput<TState extends PHBaseState = PHBaseState> = (
   input: FileInput,

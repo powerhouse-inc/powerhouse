@@ -1,12 +1,12 @@
 import { viteCommonjs } from "@originjs/vite-plugin-commonjs";
 import type { SubgraphClass } from "@powerhousedao/reactor-api";
-import { isSubgraphClass } from "@powerhousedao/reactor-api";
 import type { IProcessorHostModule, ProcessorFactory } from "document-drive";
 import { childLogger } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import path from "node:path";
 import type { ViteDevServer } from "vite";
 import { createServer } from "vite";
+import { isSubgraphClass } from "../graphql/utils.js";
 import type {
   ISubscribablePackageLoader,
   ISubscriptionOptions,

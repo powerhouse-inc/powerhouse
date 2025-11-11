@@ -1,5 +1,5 @@
-import type { Props } from "./index.js";
-export default function FolderClose(props: Props) {
+import type { IconComponentProps } from "@powerhousedao/design-system";
+export default function FolderClose(props: IconComponentProps) {
   return (
     <svg {...props} viewBox="0 0 18 19" fill="currentcolor">
       <path

@@ -1,7 +1,7 @@
 export * from "./actions.js";
 export * from "./document-model.js";
 export * from "./types.js";
-export * as actions from "./creators.js";
+export * from "./creators.js";
 export {
   createAppModuleDocument,
   createState,
@@ -9,3 +9,10 @@ export {
   defaultGlobalState,
   defaultLocalState,
 } from "./ph-factories.js";
+export * from "./utils.js";
+export * from "./reducer.js";
+export * from "./schema/index.js";
+export * from "./document-type.js";
+export * from "./document-schema.js";
+export * from "./base-operations/operations.js";
+export * from "./dnd-operations/operations.js";

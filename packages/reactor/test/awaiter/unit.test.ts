@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { JobAwaiter } from "../../src/shared/awaiter.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
+import { createEmptyConsistencyToken } from "../factories.js";
 
 describe("JobAwaiter", () => {
   let jobAwaiter: JobAwaiter;
@@ -25,6 +26,7 @@ describe("JobAwaiter", () => {
         id: jobId,
         status: JobStatus.COMPLETED,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       // First call returns pending, second returns completed
@@ -57,6 +59,7 @@ describe("JobAwaiter", () => {
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
         error: { message: "Job failed", stack: "" },
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       getJobStatusMock.mockResolvedValueOnce(failedJob);
@@ -76,16 +79,19 @@ describe("JobAwaiter", () => {
         id: "job-1",
         status: JobStatus.COMPLETED,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
       const job2: JobInfo = {
         id: "job-2",
         status: JobStatus.COMPLETED,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
       const job3: JobInfo = {
         id: "job-3",
         status: JobStatus.COMPLETED,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       let job2Calls = 0;
@@ -191,11 +197,13 @@ describe("JobAwaiter", () => {
         id: "job-1",
         status: JobStatus.COMPLETED,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
       const job2: JobInfo = {
         id: "job-2",
         status: JobStatus.COMPLETED,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       getJobStatusMock.mockImplementation((jobId) => {
@@ -273,6 +281,7 @@ describe("JobAwaiter", () => {
         id: jobId,
         status: JobStatus.COMPLETED,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
       getJobStatusMock.mockResolvedValue(completedJob);

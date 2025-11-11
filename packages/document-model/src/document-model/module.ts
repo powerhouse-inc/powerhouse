@@ -10,9 +10,13 @@ import {
 } from "./files.js";
 import { documentModelReducer } from "./reducers.js";
 import {
+  assertIsDocumentOfType,
+  assertIsStateOfType,
   createState,
   documentModelCreateDocument,
   documentModelCreateState,
+  isDocumentOfType,
+  isStateOfType,
 } from "./state.js";
 import type { DocumentModelDocumentModelModule } from "./types.js";
 
@@ -22,6 +26,10 @@ const utils = {
   createDocument: documentModelCreateDocument,
   loadFromInput: documentModelLoadFromInput,
   saveToFileHandle: documentModelSaveToFileHandle,
+  isStateOfType,
+  assertIsStateOfType,
+  isDocumentOfType,
+  assertIsDocumentOfType,
 };
 
 export const documentModelDocumentModelModule: DocumentModelDocumentModelModule =
