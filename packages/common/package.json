@@ -19,6 +19,10 @@
       "import": "./dist/editors/generic-drive-explorer/module.js",
       "types": "./dist/editors/generic-drive-explorer/module.d.ts"
     },
+    "./generic-drive-explorer/editor-component": {
+      "import": "./dist/editors/generic-drive-explorer/editor.js",
+      "types": "./dist/editors/generic-drive-explorer/editor.d.ts"
+    },
     "./utils": {
       "import": "./dist/utils/index.js",
       "types": "./dist/utils/index.d.ts"

@@ -1,4 +1,4 @@
-import { cn } from "../utils/style.js";
+import { cn } from "@powerhousedao/design-system";
 
 type Props = {
   className?: string;

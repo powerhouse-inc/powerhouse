@@ -7,18 +7,19 @@ import { buildSchema } from "graphql";
 import { memo, useEffect, useRef } from "react";
 import { ayuLight } from "thememirror";
 import { useSchemaContext } from "../../context/schema-context.js";
+import { baseEditorExtensions, baseKeymap } from "./constants.js";
 import {
-  baseEditorExtensions,
-  baseKeymap,
   makeFocusHandler,
-  makeLinter,
   makePasteHandler,
   makeUpdateHandler,
+} from "./factories.js";
+import {
   useDocumentSync,
   useEditorCleanup,
   useEditorRefs,
   useHandlerReconfiguration,
-} from "./utils.js";
+} from "./hooks.js";
+import { makeLinter } from "./linting.js";
 
 type Props = {
   doc: string;
@@ -27,7 +28,7 @@ type Props = {
   customLinter?: (doc: string) => Diagnostic[];
 };
 
-export const GraphqlEditor = memo(function GraphqlEditor(props: Props) {
+const GraphqlEditor = memo(function GraphqlEditor(props: Props) {
   const { doc, readonly = false, updateDocumentInModel, customLinter } = props;
   const {
     editorRef,
@@ -112,3 +113,5 @@ export const GraphqlEditor = memo(function GraphqlEditor(props: Props) {
 
   return <div ref={editorRef} />;
 });
+
+export default GraphqlEditor;
