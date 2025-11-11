@@ -35,10 +35,6 @@ import type {
   Database as StorageDatabase,
 } from "../../../src/storage/kysely/types.js";
 import {
-  createMockDocumentIndexer as createMockDocumentIndexerHelper,
-  createMockDocumentView as createMockDocumentViewHelper,
-} from "../../factories.js";
-import {
   type RecordedOperation,
   getDocumentModels,
   processBaseServerMutation,
@@ -54,13 +50,12 @@ type ReactorTestSetup = {
   reactor: Reactor;
   driveServer: BaseDocumentDriveServer;
   storage: IDocumentStorage & IDocumentOperationStorage;
-  documentView?: KyselyDocumentView;
+  documentView: KyselyDocumentView;
   cleanup: () => Promise<void>;
 };
 
 async function createReactorSetup(
   legacyStorageEnabled: boolean,
-  includeDocumentView: boolean,
 ): Promise<ReactorTestSetup> {
   const documentModels = getDocumentModels();
   const storage = new MemoryStorage();
@@ -194,25 +189,23 @@ async function createReactorSetup(
   let documentView: KyselyDocumentView | undefined;
   let documentIndexer: KyselyDocumentIndexer | undefined;
 
-  if (includeDocumentView) {
-    const documentViewConsistencyTracker = new ConsistencyTracker();
-    documentView = new KyselyDocumentView(
-      db as any,
-      operationStore,
-      documentViewConsistencyTracker,
-    );
-    await documentView.init();
-    readModels.push(documentView);
+  const documentViewConsistencyTracker = new ConsistencyTracker();
+  documentView = new KyselyDocumentView(
+    db as any,
+    operationStore,
+    documentViewConsistencyTracker,
+  );
+  await documentView.init();
+  readModels.push(documentView);
 
-    const documentIndexerConsistencyTracker = new ConsistencyTracker();
-    documentIndexer = new KyselyDocumentIndexer(
-      db as any,
-      operationStore,
-      documentIndexerConsistencyTracker,
-    );
-    await documentIndexer.init();
-    readModels.push(documentIndexer);
-  }
+  const documentIndexerConsistencyTracker = new ConsistencyTracker();
+  documentIndexer = new KyselyDocumentIndexer(
+    db as any,
+    operationStore,
+    documentIndexerConsistencyTracker,
+  );
+  await documentIndexer.init();
+  readModels.push(documentIndexer);
 
   const readModelCoordinator = new ReadModelCoordinator(eventBus, readModels);
   readModelCoordinator.start();
@@ -224,8 +217,8 @@ async function createReactorSetup(
     jobTracker,
     readModelCoordinator,
     { legacyStorageEnabled },
-    documentView ?? createMockDocumentViewHelper(),
-    documentIndexer ?? createMockDocumentIndexerHelper(),
+    documentView,
+    documentIndexer,
     operationStore,
   );
 
@@ -254,7 +247,7 @@ describe("Atlas Recorded Operations Reactor Test", () => {
   it(
     "should process all recorded operations without errors using Reactor",
     async () => {
-      const setup = await createReactorSetup(true, true);
+      const setup = await createReactorSetup(true);
 
       const recordedOpsContent = readFileSync(
         path.join(__dirname, "recorded-operations.json"),
@@ -277,7 +270,7 @@ describe("Atlas Recorded Operations Reactor Test", () => {
   it(
     "should submit all mutations with queue hints and process them correctly",
     async () => {
-      const setup = await createReactorSetup(true, true);
+      const setup = await createReactorSetup(true);
 
       const recordedOpsContent = readFileSync(
         path.join(__dirname, "recorded-operations.json"),
@@ -394,13 +387,13 @@ describe("Atlas Recorded Operations State Comparison Test", () => {
       const documentModels = getDocumentModels();
 
       // Setup reactor 1 (with legacy storage enabled)
-      const setup1 = await createReactorSetup(true, true);
+      const setup1 = await createReactorSetup(true);
 
       // Setup reactor 2 (with legacy storage disabled)
-      const setup2 = await createReactorSetup(false, true);
+      const setup2 = await createReactorSetup(false);
 
       // Setup reactor 3 (with batch submission via queue hints)
-      const setup3 = await createReactorSetup(true, true);
+      const setup3 = await createReactorSetup(true);
 
       // Setup base server for comparison
       const baseServerStorage = new MemoryStorage();
@@ -488,7 +481,7 @@ describe("Atlas Recorded Operations State Comparison Test", () => {
         const driveId2 = driveIds2[i];
 
         const reactorDrive = await setup1.driveServer.getDrive(driveId);
-        const reactor2Drive = await setup2.documentView!.get(driveId2);
+        const reactor2Drive = await setup2.documentView.get(driveId2);
         const reactor3Drive = await setup3.driveServer.getDrive(driveId);
         const baseServerDrive = await baseServerDriveServer.getDrive(driveId);
 
@@ -504,7 +497,7 @@ describe("Atlas Recorded Operations State Comparison Test", () => {
 
         for (const childId of fileIds) {
           const reactorDoc = await setup1.storage.get(childId);
-          const reactor2Doc = await setup2.documentView!.get(childId);
+          const reactor2Doc = await setup2.documentView.get(childId);
           const reactor3Doc = await setup3.storage.get(childId);
           const baseServerDoc = await baseServerStorage.get(childId);
 
