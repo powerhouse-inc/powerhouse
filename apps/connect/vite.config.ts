@@ -14,6 +14,9 @@ export default defineConfig(({ mode }) => {
   const additionalViteConfig: UserConfig = {
     // add your own vite config here
     plugins: [process.env.PH_DEBUG_BUILD === "true" ? analyzer() : undefined],
+    resolve: {
+      conditions: ["source", "browser", "module", "jsnext:main", "jsnext"],
+    },
     build: {
       sourcemap: false,
       minify: true,
