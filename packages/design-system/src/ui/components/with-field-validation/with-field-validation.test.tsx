@@ -1,19 +1,15 @@
-import type {
-  TextFieldProps,
-  ValidatorHandler,
-} from "@powerhousedao/design-system";
-import {
-  Form,
-  FormGroup,
-  FormLabel,
-  FormMessageList,
-  Input,
-} from "@powerhousedao/design-system";
-import { renderWithForm } from "@powerhousedao/design-system/testing";
 import { act, render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { createRef, forwardRef } from "react";
 import { describe, expect, it, vi } from "vitest";
+import { renderWithForm } from "../testing.js";
+import type { ValidatorHandler } from "../../types.js";
+import { FormGroup } from "../form-group/form-group.js";
+import { FormLabel } from "../form-label/form-label.js";
+import { FormMessageList } from "../form-message/message-list.js";
+import { Form } from "../form/form.js";
+import { Input } from "../input/input.js";
+import type { TextFieldProps } from "../text-field/text-field.js";
 import { withFieldValidation } from "./with-field-validation.js";
 
 // Test component that will be wrapped

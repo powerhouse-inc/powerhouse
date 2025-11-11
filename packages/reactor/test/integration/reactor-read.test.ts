@@ -19,6 +19,7 @@ import { ReadModelCoordinator } from "../../src/read-models/coordinator.js";
 import { KyselyDocumentView } from "../../src/read-models/document-view.js";
 import type { DocumentViewDatabase } from "../../src/read-models/types.js";
 import { DocumentModelRegistry } from "../../src/registry/implementation.js";
+import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
 import type {
   IKeyframeStore,
   IOperationStore,
@@ -26,6 +27,8 @@ import type {
 import type { Database as StorageDatabase } from "../../src/storage/kysely/types.js";
 import {
   createDocModelDocument,
+  createMockDocumentIndexer,
+  createMockReactorFeatures,
   createTestDocuments,
   createTestJobTracker,
   createTestOperationStore,
@@ -33,7 +36,11 @@ import {
 
 type Database = StorageDatabase & DocumentViewDatabase;
 
-describe("Reactor Read Interface", () => {
+/**
+ * These tests show that writing to the legacy reactor and reading from the new
+ * reactor, when using legacy storage, works correctly.
+ */
+describe("Reactor Legacy Read Interface", () => {
   let reactor: Reactor;
   let driveServer: BaseDocumentDriveServer;
   let storage: MemoryStorage;
@@ -94,7 +101,12 @@ describe("Reactor Read Interface", () => {
     await writeCache.startup();
 
     // Create real document view and read model coordinator
-    const documentView = new KyselyDocumentView(db, operationStore);
+    const consistencyTracker = new ConsistencyTracker();
+    const documentView = new KyselyDocumentView(
+      db,
+      operationStore,
+      consistencyTracker,
+    );
     await documentView.init();
     readModelCoordinator = new ReadModelCoordinator(eventBus, [documentView]);
     readModelCoordinator.start();
@@ -107,6 +119,10 @@ describe("Reactor Read Interface", () => {
       queue,
       jobTracker,
       readModelCoordinator,
+      createMockReactorFeatures(),
+      documentView,
+      createMockDocumentIndexer(),
+      operationStore,
     );
   });
 

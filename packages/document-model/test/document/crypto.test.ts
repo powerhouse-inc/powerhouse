@@ -15,7 +15,7 @@ import {
   buildOperationSignatureMessage,
   buildOperationSignatureParams,
   buildSignedAction,
-  generateUUIDBrowser,
+  generateId,
   hashDocumentStateForScope,
   hex2ab,
   sign,
@@ -370,7 +370,7 @@ describe("Crypto utils", () => {
     const parameters: SigningParameters = {
       documentType: "powerhouse/counter",
       createdAtUtcIso: new Date().toISOString(),
-      nonce: generateUUIDBrowser(),
+      nonce: generateId(),
     };
 
     const keyPair = await crypto.subtle.generateKey("Ed25519", true, [

@@ -1,5 +1,7 @@
-import type { ConfirmationModalProps } from "@powerhousedao/design-system";
-import { ConnectConfirmationModal } from "@powerhousedao/design-system";
+import {
+  type ConfirmationModalProps,
+  ConnectConfirmationModal,
+} from "./confirmation-modal.js";
 
 export interface ConnectDeleteItemModalProps
   extends Omit<ConfirmationModalProps, "onContinue" | "continueLabel"> {

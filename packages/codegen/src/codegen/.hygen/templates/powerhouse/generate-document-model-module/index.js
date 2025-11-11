@@ -42,12 +42,27 @@ module.exports = {
       return acc;
     }, []);
 
+    const documentType = documentModel.name;
+    const pascalCaseDocumentType = pascalCase(documentType);
+    const phDocumentTypeName = `${pascalCaseDocumentType}Document`;
+    const isPhDocumentOfTypeFunctionName = `is${phDocumentTypeName}`;
+    const assertIsPhDocumentOfTypeFunctionName = `assertIs${phDocumentTypeName}`;
+    const paramCaseDocumentType = paramCase(documentType);
+    const packageName = args.packageName;
+    const documentModelDir = `${packageName}/document-models/${paramCaseDocumentType}`;
     return {
       rootDir: args.rootDir,
       documentType: documentModel.name,
       module: paramCase(args.module),
       actions,
       errors,
+      pascalCaseDocumentType,
+      paramCaseDocumentType,
+      packageName,
+      documentModelDir,
+      phDocumentTypeName,
+      isPhDocumentOfTypeFunctionName,
+      assertIsPhDocumentOfTypeFunctionName,
     };
   },
 };

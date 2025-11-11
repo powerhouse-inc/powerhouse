@@ -1,16 +1,14 @@
-import {
-  AvailableOfflineToggle,
-  Disclosure,
-  Divider,
-  DriveName,
-  FormInput,
-  LocationInfo,
-  PowerhouseButton,
-} from "@powerhousedao/design-system";
+import { PowerhouseButton } from "@powerhousedao/design-system";
 import type { SharingType } from "document-drive";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useDebounceValue } from "usehooks-ts";
+import { Disclosure } from "../disclosure/disclosure.js";
+import { Divider } from "../divider/divider.js";
+import { FormInput } from "../form-input/form-input.js";
+import { AvailableOfflineToggle } from "./inputs/available-offline-toggle.js";
+import { DriveName } from "./inputs/drive-name.js";
+import { LocationInfo } from "./inputs/location-info.js";
 
 type RemoteDriveDetails = {
   id: string;

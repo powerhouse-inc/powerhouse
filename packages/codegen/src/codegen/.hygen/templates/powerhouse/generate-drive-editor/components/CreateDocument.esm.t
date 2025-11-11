@@ -2,13 +2,10 @@
 to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/components/CreateDocument.tsx"
 unless_exists: true
 ---
-import { Button } from "@powerhousedao/design-system";
+import type { VetraDocumentModelModule } from "@powerhousedao/reactor-browser";
 import {
   showCreateDocumentModal,
   useAllowedDocumentModelModules,
-  useDocumentModelModules,
-  useSelectedDriveId,
-  type VetraDocumentModelModule,
 } from "@powerhousedao/reactor-browser";
 
 /**
@@ -16,17 +13,7 @@ import {
  * Displays available document types as clickable buttons.
  */
 export function CreateDocument() {
-  const selectedDriveId = useSelectedDriveId();
   const allowedDocumentModelModules = useAllowedDocumentModelModules();
-
-  function handleAddDocument(module: VetraDocumentModelModule) {
-    if (!selectedDriveId) {
-      return;
-    }
-
-    // Display the Create Document modal on the host app
-    showCreateDocumentModal(module.documentModel.global.id);
-  }
 
   return (
     <div>
@@ -38,24 +25,34 @@ export function CreateDocument() {
       <div className="flex w-full flex-wrap gap-4">
         {allowedDocumentModelModules?.map((documentModelModule) => {
           return (
-            <Button
+            <CreateDocumentButton
               key={documentModelModule.documentModel.global.id}
-              color="light" // Customize button appearance
-              className="cursor-pointer bg-gray-200 p-2 hover:bg-gray-300"
-              title={documentModelModule.documentModel.global.name}
-              aria-description={
-                documentModelModule.documentModel.global.description
-              }
-              onClick={() => handleAddDocument(documentModelModule)}
-            >
-              {/* Customize document type display format */}
-              <span className="text-sm">
-                {documentModelModule.documentModel.global.name}
-              </span>
-            </Button>
+              documentModelModule={documentModelModule}
+            />
           );
         })}
       </div>
     </div>
+  );
+}
+
+type Props = {
+  documentModelModule: VetraDocumentModelModule;
+};
+function CreateDocumentButton({ documentModelModule }: Props) {
+  const documentType = documentModelModule.documentModel.global.id;
+  const documentModelName =
+    documentModelModule.documentModel.global.name || documentType;
+  const documentModelDescription =
+    documentModelModule.documentModel.global.description;
+  return (
+    <button
+      className="cursor-pointer rounded-md bg-gray-200 py-2 px-3 hover:bg-gray-300"
+      title={documentModelName}
+      aria-description={documentModelDescription}
+      onClick={() => showCreateDocumentModal(documentType)}
+    >
+      {documentModelName}
+    </button>
   );
 }

@@ -1,4 +1,4 @@
-import { ConnectUpgradeDriveModal } from "@powerhousedao/design-system";
+import { ConnectUpgradeDriveModal } from "@powerhousedao/design-system/connect";
 import { closePHModal, usePHModal } from "@powerhousedao/reactor-browser";
 import React from "react";
 import { useTranslation } from "react-i18next";

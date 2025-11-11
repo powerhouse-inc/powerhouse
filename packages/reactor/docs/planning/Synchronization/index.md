@@ -2,17 +2,17 @@
 
 Synchronization refers to synchronizing the operations of one reactor with another. This is a key part of the Reactor architecture.
 
-- We focus on synchronizing the `IOperationsStore`, and bubbling outward.
-  - This allows us to decouple sync and Document View updates.
-  - This consolidates `IListenerManager`, `ISyncManager`, and `IDocumentView` update flows into a single dispatch pattern.
+- We focus on synchronizing the `IOperationStore`, and bubbling outward.
+  - This allows us to decouple sync and read-model updates.
+  - This consolidates multiple legacy systems into a single dispatch pattern.
+
+We synchronize the `IOperationStore` by pulling from the `IOperationIndex`, which contains good, fast cursors for operations.
 
 ## ISyncManager
 
 This object manages the synchronization of operations between reactors.
 
-- **`ISyncManager`**
-  - In the following diagrams, this object is not an exact mapping to the current `ISyncManager`.
-  - The `ISyncManager` has its own storage mechanism and rather than being tied so the internal mechanisms of the Reactor, propagates from the event bus.
+The `ISyncManager` has its own storage mechanism and rather than being tied so the internal mechanisms of the Reactor, propagates from the event bus.
 
 ### Push
 
@@ -21,8 +21,7 @@ Describes a one-way flow of data from one Reactor to another, pushing operations
 ```mermaid
 graph
     subgraph "IReactor A"
-        AQueue["IQueue"] -->|"(1)"| AJobs["IJobExecutor"] -->|"(2) Write"| AOS["IOperationsStore"]
-        AOS -->|"(3)"| APub
+        Mutate["mutate()"] -->|"Action[]"| JE["Job Execution"] -->|"Operation[]"| APub
 
         subgraph AEvents["IEventBus"]
             APub["emit()"]
@@ -30,13 +29,11 @@ graph
         end
     end
 
-    ASub -->|"(4)"| ASync["ISyncManager"]
-    ASync -->|"(5)"| ISyncStorage
-    ASync -->|"(6)"| Trigger -->|"(7)"| IChannel -->|"(8)"| BQueue
+    ASub --> ASync["ISyncManager"]
+    ASync --> IChannel -->|"Transport"| Load
 
     subgraph "Reactor B"
-        BQueue["IQueue"] -->|"(9)"| BJobs["IJobExecutor"] -->|"(10) Write"| BOS["IOperationsStore"]
-        BOS -->|"(11)"| BPub
+        Load["load()"] -->|"Operation[]"| JEB["Job Execution"] -->|"Operation[]"| BPub
 
         subgraph BEvents["IEventBus"]
             BPub["emit()"]
@@ -51,30 +48,45 @@ Describes a one-way flow of data from one Reactor to another, pulling operations
 
 ```mermaid
 graph
+    BScheduler["Scheduler"] --> BSync["ISyncManager"]
+    IChannel <-->|"(1) Query(filter)"| AOI
+    BSync --> IChannel -->|"(2) Transport"| Load
+
     subgraph "IReactor A"
-        ADV["IDocumentView"]
+        AOI["IOperationIndex"]
     end
 
     subgraph "Reactor B"
-        BQueue --> BJobs["IJobExecutor"] --> BOS["IOperationsStore"]
-        BOS --> BPub
-
-        subgraph BEvents["IEventBus"]
-            BPub["emit()"]
-            BSub["on()"]
-        end
+        Load["load()"] -->|"Operations[]"| JEB["Job Execution"]
     end
-
-    BScheduler["Scheduler Interval"] -->|"(1) Interval"| BSync["ISyncManager"]
-    BSync -->|"(2) Query"| IChannel
-    IChannel -->|"(3) Read"| ADV
-    IChannel -->|"(4) Operations"| BSync
-    BSync -->|"(5) Enqueue"| BQueue["IQueue"]
 ```
+
+Here we introduce the concept of a "filter" for queries. These consist of a collection id, a cursor, and a `ViewFilter`. The collection id, as described in the [Operation Index](../Cache/operation-index.md) documentation, is generally derived from the drive id and branch.
+
+The cursor is a monotonically increasing integer that represents the ordinal of the last operation that was processed.
+
+The `ViewFilter` is a standard `ViewFilter` object, as described in the [Shared interface](../Shared/interface.md) documentation.
+
+#### `IOperationIndex`
+
+`IOperationIndex` (see [Operation Index](../Cache/operation-index.md)) flattens the operations of every document in a collection into a single, ordinal-ordered stream. Inside each job executor we write both to the `IOperationStore` (authoritative log) and to the index, so the index behaves like a write model: it participates in the same transaction, rolls back if the store write fails, and exposes the same ordering guarantees to consumers. The pull loop relies on those properties:
+
+- **Collection cursors.** Each remote/remote-filter keeps a cursor (ordinal) into the index. Collections represent “documents ever attached to a drive”, so a remote that subscribes to an entire drive advances one cursor instead of tracking every `(documentId, scope, branch)` tuple.
+- **Filter projection.** The index stores document metadata (type, identifiers) alongside the operations table described in the index spec. The `"(1) Query(filter)"` arrow means the sync manager asks, “give me all operations since ordinal N for collection C matching my remote filter.” We never have to replay documents just to check filters.
+- **No read-model lag.** Because the index is written synchronously with the job executor (Option #1 in the index doc), pull latency is bounded by network time. If we ever switch to async/index-lag mode we must document the reconciliation/catch-up process here.
+- **IOperationStore fallback.** When reconciliation detects a gap (`MISSING_OPERATIONS`), the sync manager can fall back to `IOperationStore.getSince` to rebuild a strand—but the steady-state pull path never hits the store directly; it streams from the index.
+
+Algorithmically, when the scheduler fires:
+
+1. `ISyncManager` reads the remote’s stored (filter, cursor) pairs.
+2. It queries `IOperationIndex` using the `find` method (`find(collectionId, cursor, view, paging)`), receiving ordered operations plus the new ordinal.
+3. The results are wrapped in `MutableJobHandle`s and placed into the channel inbox so the channel can transport them to the remote reactor.
+
+If a remote only tracks a handful of documents, we still leverage the index by building a logical collection over that document set and keeping an ordinal per remote-filter pair. The important point is that the pull architecture is defined in terms of the index, not by directly scanning the operation store.
 
 ### Ping-Pong
 
-Since both `Push-to-Switchboard` and `Pull-from-Switchboard` are one-way flows, we combine them into a ping-pong pattern. This is where both reactors are pushing and pulling through the `IChannel` interface.
+Since both `Push` and `Pull` are one-way flows, we combine them into a ping-pong pattern. This is where both reactors are pushing and pulling through the `IChannel` interface.
 
 The schedulers are "smart" and understand how to optimimally set intervals based on a number of factors, including:
 
@@ -87,8 +99,7 @@ The schedulers are "smart" and understand how to optimimally set intervals based
 graph
     %% === Reactor A ===
     subgraph "IReactor A"
-        AQueue["IQueue"] --> AJobs["IJobExecutor"] --> AOS["IOperationsStore"]
-        AOS --> APub
+        AMutate["mutate()"] -->|"Action[]"| AJE["Job Execution"] -->|"Operation[]"| APub
 
         subgraph AEventBus["IEventBus"]
             APub["emit()"]
@@ -97,23 +108,21 @@ graph
 
         subgraph ASyncManager["Synchronization"]
             AScheduler["Scheduler"] --> ASync["ISyncManager"]
-            ASync --> ASyncStore["ISyncStorage"]
         end
 
         ASub --> ASync
-        ASync --> AQueue
+        ASync --> AIChannel["IChannel"]
+        AIChannel <-->|"Query"| AOI["IOperationIndex"]
     end
 
     %% Network
-    ASync <--> AIChannel["IChannel"]
-    AIChannel <--> Transport["Memory / HTTP / WebSocket / etc."]
-    Transport <--> BAIChannel["IChannel"]
-    BAIChannel <--> BSync
+    AIChannel -->|"Transport"| Transport["Memory / HTTP / WebSocket / etc."]
+    Transport -->|"Transport"| BIChannel["IChannel"]
+    BIChannel <-->|"Query"| BOI["IOperationIndex"]
 
     %% === Reactor B ===
     subgraph "IReactor B"
-        BQueue["IQueue"] --> BJobs["IJobExecutor"] --> BOS["IOperationsStore"]
-        BOS --> BPub
+        BMutate["mutate()"] -->|"Action[]"| BJE["Job Execution"] -->|"Operation[]"| BPub
 
         subgraph BEventBus["IEventBus"]
             BPub["emit()"]
@@ -122,12 +131,21 @@ graph
 
         subgraph BSyncManager["Synchronization"]
             BScheduler["Scheduler"] --> BSync["ISyncManager"]
-            BSync --> BSyncStore["ISyncStorage"]
         end
 
         BSub --> BSync
-        BSync --> BQueue
+        BSync --> BIChannel
     end
+
+    %% Push flows (A -> B)
+    AIChannel -->|"Transport"| BLoad["load()"] -->|"Operations[]"| BJE
+
+    %% Push flows (B -> A)
+    BIChannel -->|"Transport"| ALoad["load()"] -->|"Operations[]"| AJE
+
+    %% Pull flows
+    ASync -->|"Pull"| AIChannel
+    BSync -->|"Pull"| BIChannel
 ```
 
 ### Ping-Pong: Sequence
@@ -135,39 +153,35 @@ graph
 ```mermaid
 sequenceDiagram
     participant EBA as Event Bus A
-    participant QA as Queue A
     participant SMA as Sync Manager A
+    participant AChannel as IChannel A
+    participant AOI as IOperationIndex A
+    participant LoadA as load(docId, branch, Operation[])
+    participant JEA as Job Execution A
+
+    participant BChannel as IChannel B
+    participant LoadB as load(docId, branch, Operation[])
+    participant JEB as Job Execution B
     participant SMB as Sync Manager B
-    participant QB as Queue B
+    participant SchedulerB as Scheduler B
     participant EBB as Event Bus B
 
-    Note over EBA, EBB: Push sync
+    %% Reactor A pushes operations
+    EBA->>SMA: (docId, branch, Operation[])
+    SMA->>AChannel: send(docId, branch, Operation[])
+    AChannel->>BChannel: Transport
+    BChannel->>LoadB: load(docId, branch, Operation[])
+    LoadB->>JEB: Operation[]
+    JEB->>EBB: Operation[]
 
-    %% Reactor A initiates sync
-    EBA->>SMA: operations added
-    SMA->>SMB: push(operations)
-    SMB->>QB: enqueue(operations)
-
-    %% Reactor B responds with its operations
-    EBB->>SMB: operations added
-    SMB->>SMA: push(operations)
-    SMA->>QA: enqueue(operations)
-
-    %% Continued ping-pong
-    EBA->>SMA: operations added
-    SMA->>SMB: push(operations)
-    SMB->>QB: enqueue(operations)
-
-    Note over EBA, EBB: Pull sync
-
-    %% Pull-based sync (scheduled)
-    SMA->>SMB: pull() request
-    SMB-->>SMA: return(latest operations)
-    SMA->>QA: enqueue(operations)
-
-    SMB->>SMA: pull() request
-    SMA-->>SMB: return(latest operations)
-    SMB->>QB: enqueue(operations)
+    %% Reactor B pulls operations
+    SchedulerB->>SMB: Interval
+    SMB->>BChannel: Query
+    BChannel->>AOI: Query
+    AOI-->>BChannel: Operations[]
+    BChannel->>AChannel: Transport
+    AChannel->>LoadA: load(docId, branch, Operation[])
+    LoadA->>JEA: Operations[]
 ```
 
 ## IChannel
@@ -195,6 +209,7 @@ enum JobChannelStatus {
 }
 
 enum ChannelErrorSource {
+  None = "none",
   Channel = "channel",
   Inbox = "inbox",
   Outbox = "outbox",
@@ -216,7 +231,7 @@ class ChannelError extends Error {
   error: Error;
 
   constructor(source: ChannelErrorSource, error: Error) {
-    super(message);
+    super(`ChannelError[${source}]: ${error.message}`);
 
     this.source = source;
     this.error = error;
@@ -276,7 +291,7 @@ class MutableJobHandle extends JobHandle {
   /**
    * Moves job from any state to Error.
    */
-  failed(error: Error): void;
+  failed(error: ChannelError): void;
 }
 
 class Mailbox<T> {
@@ -320,7 +335,7 @@ interface IChannel {
   /**
    * The incoming queue of operations that need to be applied to the local reactor.
    *
-   * These are of type `PullJobHandle` to expose mutable functions to the consumer.
+   * These are of type `MutableJobHandle` to expose mutable functions to the consumer.
    */
   inbox: Mailbox<MutableJobHandle>;
 
@@ -341,9 +356,11 @@ interface IChannel {
   /**
    * Sends operations to the remote reactor.
    *
+   * @param docId - The document id that the operations are operating on
+   * @param branch - The branch that the operations are operating on
    * @param operations - The operations to send
    */
-  send(operations: Operation[]): void;
+  send(docId: string, branch: string, operations: Operation[]): void;
 }
 ```
 
@@ -353,7 +370,7 @@ interface IChannel {
 const channel = new WebSocketChannel();
 
 // when something is added to our inbox...
-channel.inbox.added((handle) => {
+channel.inbox.onAdded(async (handle) => {
   // create a job from the handle
   const job = createJob(handle);
 
@@ -365,14 +382,15 @@ channel.inbox.added((handle) => {
 
   // set status
   if (result.error) {
-    handle.failed(result.error);
+    handle.failed(
+      new ChannelError(ChannelErrorSource.Inbox, result.error))
   } else {
     handle.executed();
   }
 });
 
 // when something is added to our outbox...
-channel.outbox.added((job) => {
+channel.outbox.onAdded((job) => {
   console.log(
     `Remote server is applying ${job.operations.length} operations...`,
   );
@@ -381,7 +399,7 @@ channel.outbox.added((job) => {
 });
 
 // when something is removed from our outbox...
-channel.outbox.removed((job) => {
+channel.outbox.onRemoved((job) => {
   console.log(
     `Remote server has applied ${job.operations.length} operations...`,
   );
@@ -390,7 +408,7 @@ channel.outbox.removed((job) => {
 });
 
 // when a job has permanently failed to be applied...
-channel.deadLetter.added((job) => {
+channel.deadLetter.onAdded((job) => {
   console.log(`Job ${job.id} has failed to be applied...`);
 });
 
@@ -407,7 +425,7 @@ events.on(JobExecutorEventTypes.JOB_COMPLETED, (job, result) => {
   }
 
   // this isn't a job from another reactor, instead we need to send it to the remote server
-  channel.send(job.operations);
+  channel.send(job.documentId, job.branch, job.operations);
 });
 ```
 
@@ -434,7 +452,7 @@ For example:
 ```tsx
 const channel = new WebSocketChannel();
 
-channel.deadLetter.added((job) => {
+channel.deadLetter.onAdded((job) => {
   // inspect error
   const error = job.error;
   const source = error.source;
@@ -532,7 +550,15 @@ This is not a valid source for this error code, and should never happen. However
 
 ##### ChannelErrorSource.Inbox
 
+This would mean that a local reactor is trying to submit an operation with a later operation index than the latest local index. In this case:
+
+- The job will be discarded.
+
 ##### ChannelErrorSource.Outbox
+
+This would mean that we received an operation with a later index than the latest we have locally. In this case:
+
+- We must pull the missing operations fromt the remote reactor.
 
 #### `EXCESSIVE_SHUFFLE`
 
@@ -558,7 +584,7 @@ This would mean that a remote reactor is trying to submit an extremely out of da
 
 #### `GRACEFUL_ABORT`
 
-For all sources, the `ISyncManager` will either write the mailboxes to disk (for processing later) or simply ignore and discard.
+For all sources, the `ISyncManager` will simply ignore and discard, allowing the system to catchup on next startup.
 
 ### Channel Errors
 

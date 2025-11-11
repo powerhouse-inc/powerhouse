@@ -1,18 +1,24 @@
 import { createAction } from "document-model/core";
 import {
-  z,
-  type SetProcessorNameInput,
-  type SetProcessorTypeInput,
-  type AddDocumentTypeInput,
-  type RemoveDocumentTypeInput,
-  type SetProcessorStatusInput,
+  SetProcessorNameInputSchema,
+  SetProcessorTypeInputSchema,
+  AddDocumentTypeInputSchema,
+  RemoveDocumentTypeInputSchema,
+  SetProcessorStatusInputSchema,
+} from "../schema/zod.js";
+import type {
+  SetProcessorNameInput,
+  SetProcessorTypeInput,
+  AddDocumentTypeInput,
+  RemoveDocumentTypeInput,
+  SetProcessorStatusInput,
 } from "../types.js";
-import {
-  type SetProcessorNameAction,
-  type SetProcessorTypeAction,
-  type AddDocumentTypeAction,
-  type RemoveDocumentTypeAction,
-  type SetProcessorStatusAction,
+import type {
+  SetProcessorNameAction,
+  SetProcessorTypeAction,
+  AddDocumentTypeAction,
+  RemoveDocumentTypeAction,
+  SetProcessorStatusAction,
 } from "./actions.js";
 
 export const setProcessorName = (input: SetProcessorNameInput) =>
@@ -20,7 +26,7 @@ export const setProcessorName = (input: SetProcessorNameInput) =>
     "SET_PROCESSOR_NAME",
     { ...input },
     undefined,
-    z.SetProcessorNameInputSchema,
+    SetProcessorNameInputSchema,
     "global",
   );
 
@@ -29,7 +35,7 @@ export const setProcessorType = (input: SetProcessorTypeInput) =>
     "SET_PROCESSOR_TYPE",
     { ...input },
     undefined,
-    z.SetProcessorTypeInputSchema,
+    SetProcessorTypeInputSchema,
     "global",
   );
 
@@ -38,7 +44,7 @@ export const addDocumentType = (input: AddDocumentTypeInput) =>
     "ADD_DOCUMENT_TYPE",
     { ...input },
     undefined,
-    z.AddDocumentTypeInputSchema,
+    AddDocumentTypeInputSchema,
     "global",
   );
 
@@ -47,7 +53,7 @@ export const removeDocumentType = (input: RemoveDocumentTypeInput) =>
     "REMOVE_DOCUMENT_TYPE",
     { ...input },
     undefined,
-    z.RemoveDocumentTypeInputSchema,
+    RemoveDocumentTypeInputSchema,
     "global",
   );
 
@@ -56,6 +62,6 @@ export const setProcessorStatus = (input: SetProcessorStatusInput) =>
     "SET_PROCESSOR_STATUS",
     { ...input },
     undefined,
-    z.SetProcessorStatusInputSchema,
+    SetProcessorStatusInputSchema,
     "global",
   );

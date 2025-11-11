@@ -1,10 +1,14 @@
 import type {
   Action,
+  AssertIsDocumentOfType,
+  AssertIsStateOfType,
   CreateDocument,
   CreateState,
   EditorModule,
   ImportScriptModule,
   InputMaybe,
+  IsDocumentOfType,
+  IsStateOfType,
   LoadFromInput,
   Manifest,
   Maybe,
@@ -28,6 +32,10 @@ export type DocumentModelUtils<TState extends PHBaseState = PHBaseState> = {
   createDocument: CreateDocument<TState>;
   loadFromInput: LoadFromInput<TState>;
   saveToFileHandle: SaveToFileHandle;
+  isStateOfType: IsStateOfType<TState>;
+  assertIsStateOfType: AssertIsStateOfType<TState>;
+  isDocumentOfType: IsDocumentOfType<TState>;
+  assertIsDocumentOfType: AssertIsDocumentOfType<TState>;
 };
 export type DocumentModelLib<TState extends PHBaseState = PHBaseState> = {
   manifest: Manifest;

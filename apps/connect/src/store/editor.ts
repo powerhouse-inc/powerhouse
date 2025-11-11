@@ -1,14 +1,14 @@
 import "@powerhousedao/builder-tools/style.css";
-
-import { documentModelEditorModule } from "@powerhousedao/builder-tools/editor";
-import { GenericDriveExplorer as genericDriveExplorerEditorModule } from "@powerhousedao/common";
+import DriveExplorerEditor from "@powerhousedao/common/generic-drive-explorer/editor-component";
+import DocumentModelEditor from "@powerhousedao/builder-tools/editor-component";
 import type { VetraEditorModule } from "@powerhousedao/reactor-browser";
 import { DEFAULT_DRIVE_EDITOR_ID } from "@powerhousedao/reactor-browser";
+import { lazy } from "react";
 
-export async function loadGenericDriveExplorerEditorModule(): Promise<VetraEditorModule> {
+export function loadGenericDriveExplorerEditorModule(): VetraEditorModule {
   const name = "Generic Drive Explorer";
-  const documentTypes = genericDriveExplorerEditorModule.documentTypes;
-  const Component = genericDriveExplorerEditorModule.Component;
+  const documentTypes = ["powerhouse/document-drive"];
+  const Component = DriveExplorerEditor;
   const vetraEditorModule: VetraEditorModule = {
     id: DEFAULT_DRIVE_EDITOR_ID,
     name,
@@ -18,11 +18,11 @@ export async function loadGenericDriveExplorerEditorModule(): Promise<VetraEdito
   return vetraEditorModule;
 }
 
-export async function loadDocumentModelEditor(): Promise<VetraEditorModule> {
+export function loadDocumentModelEditor(): VetraEditorModule {
   const name = "Document Model Editor";
   const id = "document-model-editor-v2";
-  const documentTypes = documentModelEditorModule.documentTypes;
-  const Component = documentModelEditorModule.Component;
+  const documentTypes = ["powerhouse/document-model"];
+  const Component = DocumentModelEditor;
   const vetraEditorModule: VetraEditorModule = {
     id,
     name,

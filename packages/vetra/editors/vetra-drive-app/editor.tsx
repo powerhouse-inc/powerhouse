@@ -1,8 +1,5 @@
-import { WagmiContext } from "@powerhousedao/design-system";
-
 import {
   addDocument,
-  AnalyticsProvider,
   setSelectedNode,
   showCreateDocumentModal,
   showDeleteNodeModal,
@@ -10,7 +7,6 @@ import {
   useSelectedDrive,
   useSetPHDriveEditorConfig,
 } from "@powerhousedao/reactor-browser";
-import { useAnalyticsDatabaseName } from "@powerhousedao/reactor-browser/connect";
 import type { FileNode } from "document-drive";
 import type { EditorProps } from "document-model";
 import { useCallback } from "react";
@@ -114,14 +110,7 @@ export function BaseEditor(props: EditorProps) {
   );
 }
 
-export function Editor(props: EditorProps) {
+export default function Editor(props: EditorProps) {
   useSetPHDriveEditorConfig(editorConfig);
-  const analyticsDatabaseName = useAnalyticsDatabaseName();
-  return (
-    <WagmiContext>
-      <AnalyticsProvider databaseName={analyticsDatabaseName}>
-        <BaseEditor {...props} />
-      </AnalyticsProvider>
-    </WagmiContext>
-  );
+  return <BaseEditor {...props} />;
 }

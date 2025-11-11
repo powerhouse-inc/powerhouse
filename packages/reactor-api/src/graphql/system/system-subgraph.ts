@@ -1,8 +1,10 @@
-import type { Context } from "@powerhousedao/reactor-api";
-import { childLogger } from "document-drive";
+import type { Context, GqlDriveDocument } from "@powerhousedao/reactor-api";
+import { childLogger, type DocumentDriveDocument } from "document-drive";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
 import { BaseSubgraph } from "../base-subgraph.js";
+import { DocumentDriveResolvers } from "../drive-subgraph.js";
+import { buildGraphQlDriveDocument } from "../utils.js";
 
 type SystemContext = Context;
 
@@ -12,9 +14,19 @@ export class SystemSubgraph extends BaseSubgraph {
   name = "system";
 
   typeDefs = gql`
+    type DriveMeta {
+      preferredEditor: String
+    }
+    extend type DocumentDrive {
+      meta: DriveMeta
+      slug: String!
+    }
+
     type Query {
       drives: [String!]!
       driveIdBySlug(slug: String!): String
+      driveDocument(idOrSlug: String!): DocumentDrive
+      driveDocuments: [DocumentDrive!]!
     }
 
     type Mutation {
@@ -48,8 +60,38 @@ export class SystemSubgraph extends BaseSubgraph {
 
   resolvers = {
     Query: {
+      driveIdBySlug: async (
+        parent: unknown,
+        args: { slug: string },
+        ctx: SystemContext,
+      ) => {
+        return await this.reactor.getDriveIdBySlug(args.slug);
+      },
       drives: async () => {
         return await this.reactor.getDrivesSlugs();
+      },
+      driveDocument: async (
+        parent: unknown,
+        args: { idOrSlug: string },
+        ctx: SystemContext,
+      ): Promise<GqlDriveDocument> => {
+        let drive: DocumentDriveDocument;
+        try {
+          drive = await this.reactor.getDriveBySlug(args.idOrSlug);
+        } catch {
+          drive = await this.reactor.getDrive(args.idOrSlug);
+        }
+        ctx.document = drive;
+        return buildGraphQlDriveDocument(drive);
+      },
+      driveDocuments: async (parent: unknown, args: {}, ctx: SystemContext) => {
+        const docIds = await this.reactor.getDrives();
+        const docs = await Promise.allSettled(
+          docIds.map((docId) => this.reactor.getDrive(docId)),
+        );
+        return docs
+          .filter((doc) => doc.status === "fulfilled")
+          .map((doc) => buildGraphQlDriveDocument(doc.value));
       },
     },
     Mutation: {
@@ -102,7 +144,6 @@ export class SystemSubgraph extends BaseSubgraph {
           throw e instanceof Error ? e : new Error(e as string);
         }
       },
-
       deleteDrive: async (
         parent: unknown,
         args: { id: string },
@@ -124,6 +165,7 @@ export class SystemSubgraph extends BaseSubgraph {
         }
       },
     },
+    ...DocumentDriveResolvers,
   };
 
   async onSetup() {

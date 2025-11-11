@@ -1,5 +1,5 @@
-import type { Props } from "./index.js";
-export default function AnalyticsProcessorModule(props: Props) {
+import type { IconComponentProps } from "@powerhousedao/design-system";
+export default function AnalyticsProcessorModule(props: IconComponentProps) {
   return (
     <svg
       {...props}

@@ -1,5 +1,5 @@
 import stringifyJson, { stringify } from "safe-stable-stringify";
-import { generateId, hashBrowser } from "./crypto.js";
+import { hashBrowser } from "./crypto.js";
 import { HashMismatchError } from "./errors.js";
 import { createPresignedHeader } from "./header.js";
 import type {
@@ -25,6 +25,7 @@ import type {
   UndoAction,
   UndoRedoAction,
 } from "./types.js";
+import { generateId } from "./utils.js";
 
 export function isNoopOperation<
   TOp extends {

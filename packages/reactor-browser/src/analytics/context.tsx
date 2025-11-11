@@ -1,7 +1,8 @@
 import type { BrowserAnalyticsStoreOptions } from "@powerhousedao/analytics-engine-browser";
-import { BrowserAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
-import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import { AnalyticsQueryEngine } from "@powerhousedao/analytics-engine-core";
+import type {
+  AnalyticsQueryEngine,
+  IAnalyticsStore,
+} from "@powerhousedao/analytics-engine-core";
 import { getGlobal, setGlobal } from "@powerhousedao/reactor-browser";
 import {
   QueryClient,
@@ -26,11 +27,22 @@ export const analyticsStoreKey = ["analytics", "store"] as const;
 export const analyticsEngineKey = ["analytics", "store"] as const;
 
 async function createAnalyticsStore(options: CreateStoreOptions) {
+  const { BrowserAnalyticsStore } = await import(
+    "@powerhousedao/analytics-engine-browser"
+  );
   const store = new BrowserAnalyticsStore(options);
   await store.init();
 
+  const { AnalyticsQueryEngine } = await import(
+    "@powerhousedao/analytics-engine-core"
+  );
+
   const engine = new AnalyticsQueryEngine(store);
-  return { store, engine, options };
+  return {
+    store: store as IAnalyticsStore,
+    engine: engine,
+    options,
+  };
 }
 
 export async function getAnalyticsStore(
@@ -81,7 +93,7 @@ export async function createOrGetAnalyticsStore(
     .catch((e) => {
       logger.error("Analytics store creation failed", e);
     });
-  return (await analytics).store;
+  return (await analytics).store as IAnalyticsStore;
 }
 
 export function useAnalyticsStoreOptions() {

@@ -1,13 +1,9 @@
-import {
-  FormInput,
-  Icon,
-  Modal,
-  PowerhouseButton,
-} from "@powerhousedao/design-system";
+import { Icon, Modal, PowerhouseButton } from "@powerhousedao/design-system";
 import { isValidName } from "document-drive";
 import type { ComponentPropsWithoutRef } from "react";
 import { useCallback, useState } from "react";
 import { twMerge } from "tailwind-merge";
+import { FormInput } from "../form-input/form-input.js";
 
 const buttonStyles =
   "min-h-[48px] min-w-[142px] text-base font-semibold py-3 px-6 rounded-xl outline-none active:opacity-75 hover:scale-105 transform transition-all";
@@ -41,6 +37,14 @@ export function CreateDocumentModal(props: CreateDocumentModalProps) {
     setTimeout(() => setNodeName(""), CLOSE_ANIMATION_DURATION);
   }, [isValid, nodeName, onContinue]);
 
+  const handleSubmit = useCallback(
+    (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      handleCreate();
+    },
+    [handleCreate],
+  );
+
   return (
     <Modal
       contentProps={{
@@ -54,7 +58,11 @@ export function CreateDocumentModal(props: CreateDocumentModalProps) {
       }}
       {...restProps}
     >
-      <form name="create-document" className="w-[400px] p-6 text-slate-300">
+      <form
+        name="create-document"
+        className="w-[400px] p-6 text-slate-300"
+        onSubmit={handleSubmit}
+      >
         <div className="border-b border-slate-50 pb-2 text-2xl font-bold text-gray-800">
           Create a new document
         </div>
@@ -78,6 +86,7 @@ export function CreateDocumentModal(props: CreateDocumentModalProps) {
         </div>
         <div className="mt-8 flex justify-between gap-3">
           <button
+            type="button"
             className={twMerge(
               buttonStyles,
               "flex-1 bg-slate-50 text-slate-800",
@@ -87,8 +96,8 @@ export function CreateDocumentModal(props: CreateDocumentModalProps) {
             Cancel
           </button>
           <PowerhouseButton
+            type="submit"
             className={twMerge(buttonStyles, "flex-1 bg-gray-800 text-gray-50")}
-            onClick={handleCreate}
             disabled={!isValid}
           >
             Create

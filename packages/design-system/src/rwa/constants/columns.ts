@@ -1,4 +1,4 @@
-import type { TableColumn, TableName } from "@powerhousedao/design-system";
+import type { TableColumn, TableName } from "../types.js";
 
 export type ColumnsByTableName = {
   [K in TableName]: TableColumn[];

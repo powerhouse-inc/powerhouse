@@ -4,15 +4,26 @@ force: true
 ---
 import type { BaseSubgraph } from "@powerhousedao/reactor-api";
 import { addFile } from "document-drive";
-import { actions <% modules.forEach(module => { %><% module.operations.forEach(op => { %>, type <%- h.changeCase.pascal(op.name) %>Input<%_ })}); %>, type <%- h.changeCase.pascal(documentType) %>Document } from "../../document-models/<%- h.changeCase.param(documentType) %>/index.js";
 import { setName } from "document-model";
+import {
+  actions,
+  <%= documentTypeVariableName %>,
+} from "<%= documentModelDir %>";
+<% const inputTypes = modules.flatMap(m =>
+     m.operations.map(o => `${h.changeCase.pascalCase(o.name)}Input`)
+   );
+%>
+import type {
+  <%= phDocumentTypeName %>,
+  <%= inputTypes.join(',\n  ') %>
+} from "<%= documentModelDir %>";
 
 export const getResolvers = (subgraph: BaseSubgraph): Record<string, unknown> => {
   const reactor = subgraph.reactor;
 
   return ({
     Query: {
-      <%- h.changeCase.pascal(documentType) %>: async () => {
+      <%- pascalCaseDocumentType %>: async () => {
         return {
           getDocument: async (args: { docId: string, driveId: string }) => {
             const { docId, driveId } = args;
@@ -28,7 +39,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, unknown> =>
               }
             }
 
-            const doc = await reactor.getDocument<<%- h.changeCase.pascal(documentType) %>Document>(docId);
+            const doc = await reactor.getDocument<<%= phDocumentTypeName %>>(docId);
             return {
               driveId: driveId,
               ...doc,
@@ -45,7 +56,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, unknown> =>
             const docsIds = await reactor.getDocuments(driveId);
             const docs = await Promise.all(
               docsIds.map(async (docId) => {
-                const doc = await reactor.getDocument<<%- h.changeCase.pascal(documentType) %>Document>(docId);
+                const doc = await reactor.getDocument<<%= phDocumentTypeName %>>(docId);
                 return {
                   driveId: driveId,
                   ...doc,
@@ -60,16 +71,16 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, unknown> =>
             );
 
             return docs.filter(
-              (doc) => doc.header.documentType === "<%- documentTypeId %>",
+              (doc) => doc.header.documentType === <%= documentTypeVariableName %>,
             );
           },
         };
       },
     },
     Mutation: {
-      <%- h.changeCase.pascal(documentType) %>_createDocument: async (_: unknown, args: { name: string, driveId?: string }) => {
+      <%- pascalCaseDocumentType %>_createDocument: async (_: unknown, args: { name: string, driveId?: string }) => {
         const { driveId, name } = args;
-        const document = await reactor.addDocument("<%- documentTypeId %>");
+        const document = await reactor.addDocument(<%= documentTypeVariableName %>);
         
         if(driveId) {
           await reactor.addAction(
@@ -77,7 +88,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, unknown> =>
             addFile({
               name,
               id: document.header.id,
-              documentType: "<%- documentTypeId %>",
+              documentType: <%= documentTypeVariableName %>,
             }),
           );
         }
@@ -94,9 +105,9 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, unknown> =>
 
 <% modules.forEach(module => { _%>
 <% module.operations.forEach(op => { _%>
-        <%- h.changeCase.pascal(documentType) + '_' + h.changeCase.camel(op.name) %>: async (_: unknown, args: { docId: string, input: <%- h.changeCase.pascal(op.name) %>Input}) => {
+        <%- pascalCaseDocumentType + '_' + h.changeCase.camel(op.name) %>: async (_: unknown, args: { docId: string, input: <%- h.changeCase.pascal(op.name) %>Input}) => {
             const { docId, input } = args;
-            const doc = await reactor.getDocument<<%- h.changeCase.pascal(documentType) %>Document>(docId);
+            const doc = await reactor.getDocument<<%- pascalCaseDocumentType %>Document>(docId);
             if(!doc) {
               throw new Error("Document not found");
             }

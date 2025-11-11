@@ -1,12 +1,7 @@
-import { serviceWorkerManager } from "@powerhousedao/connect";
 import { connectConfig } from "@powerhousedao/connect/config";
-import {
-  Combobox,
-  FormInput,
-  Icon,
-  Modal,
-  PowerhouseButton,
-} from "@powerhousedao/design-system";
+import { serviceWorkerManager } from "@powerhousedao/connect/utils";
+import { Icon, Modal, PowerhouseButton } from "@powerhousedao/design-system";
+import { Combobox, FormInput } from "@powerhousedao/design-system/connect";
 import {
   addTrigger,
   closePHModal,
@@ -15,7 +10,7 @@ import {
   useDrives,
   usePHModal,
 } from "@powerhousedao/reactor-browser";
-import { generateUUIDBrowser } from "document-model/core";
+import { generateId } from "document-model/core";
 import { useEffect, useState } from "react";
 
 type ComboboxOption = {
@@ -78,7 +73,7 @@ export const DebugSettingsModal: React.FC = () => {
       return;
     }
 
-    const triggerId = generateUUIDBrowser();
+    const triggerId = generateId();
 
     await addTrigger(selectedDrive, {
       id: `invalid-trigger-${triggerId}`,

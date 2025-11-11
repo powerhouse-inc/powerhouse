@@ -1,10 +1,10 @@
+import { all, create } from "mathjs";
+import { ASSET_PURCHASE, ASSET_SALE } from "../constants/transactions.js";
 import type {
   FixedIncome,
   FixedIncomeType,
   GroupTransaction,
-} from "@powerhousedao/design-system";
-import { ASSET_PURCHASE, ASSET_SALE } from "@powerhousedao/design-system";
-import { all, create } from "mathjs";
+} from "../types.js";
 
 type NumericKeys<T> = {
   [K in keyof T]: T[K] extends number ? K : never;

@@ -5,9 +5,11 @@ import { KyselyPGlite } from "kysely-pglite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
 import type { DocumentViewDatabase } from "../../../src/read-models/types.js";
+import { ConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
 import type { IOperationStore } from "../../../src/storage/interfaces.js";
 import { KyselyOperationStore } from "../../../src/storage/kysely/store.js";
 import type { Database as StorageDatabase } from "../../../src/storage/kysely/types.js";
+import { runMigrations } from "../../../src/storage/migrations/migrator.js";
 
 // Combined database type that includes both storage and view tables
 type Database = StorageDatabase & DocumentViewDatabase;
@@ -26,40 +28,18 @@ describe("KyselyDocumentView", () => {
       dialect,
     });
 
-    // Create the Operation table for the store
-    await db.schema
-      .createTable("Operation")
-      .addColumn("id", "serial", (col) => col.primaryKey())
-      .addColumn("jobId", "text", (col) => col.notNull())
-      .addColumn("opId", "text", (col) => col.notNull().unique())
-      .addColumn("prevOpId", "text", (col) => col.notNull())
-      .addColumn("writeTimestampUtcMs", "timestamptz", (col) =>
-        col.notNull().defaultTo(new Date()),
-      )
-      .addColumn("documentId", "text", (col) => col.notNull())
-      .addColumn("documentType", "text", (col) => col.notNull())
-      .addColumn("scope", "text", (col) => col.notNull())
-      .addColumn("branch", "text", (col) => col.notNull())
-      .addColumn("timestampUtcMs", "timestamptz", (col) => col.notNull())
-      .addColumn("index", "integer", (col) => col.notNull())
-      .addColumn("action", "text", (col) => col.notNull())
-      .addColumn("skip", "integer", (col) => col.notNull())
-      .addColumn("resultingState", "text")
-      .addColumn("error", "text")
-      .addColumn("hash", "text", (col) => col.notNull())
-      .addUniqueConstraint("unique_revision", [
-        "documentId",
-        "scope",
-        "branch",
-        "index",
-      ])
-      .execute();
+    // Run migrations to create all tables
+    const result = await runMigrations(db);
+    if (!result.success && result.error) {
+      throw new Error(`Test migration failed: ${result.error.message}`);
+    }
 
     // Cast db to the appropriate types for each component
     operationStore = new KyselyOperationStore(
       db as unknown as Kysely<StorageDatabase>,
     );
-    view = new KyselyDocumentView(db, operationStore);
+    const consistencyTracker = new ConsistencyTracker();
+    view = new KyselyDocumentView(db, operationStore, consistencyTracker);
   });
 
   afterEach(async () => {
@@ -384,7 +364,7 @@ describe("KyselyDocumentView", () => {
       controller.abort();
 
       await expect(
-        view.exists([generateId()], controller.signal),
+        view.exists([generateId()], undefined, controller.signal),
       ).rejects.toThrow("Operation aborted");
     });
   });
@@ -945,9 +925,573 @@ describe("KyselyDocumentView", () => {
         view.get(
           generateId(),
           { scopes: ["header"], branch: "main" },
+          undefined,
           controller.signal,
         ),
       ).rejects.toThrow("Operation aborted");
+    });
+  });
+
+  describe("findByType", () => {
+    beforeEach(async () => {
+      await view.init();
+    });
+
+    it("should find documents after they are indexed", async () => {
+      const documentId = generateId();
+      const documentType = "powerhouse/document-drive";
+      const scope = "document";
+      const branch = "main";
+
+      const action = addFolder({
+        id: generateId(),
+        name: "Test Folder",
+        parentFolder: null,
+      });
+
+      await operationStore.apply(
+        documentId,
+        documentType,
+        scope,
+        branch,
+        0,
+        (txn) => {
+          txn.addOperations({
+            index: 0,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "hash-0",
+            skip: 0,
+            id: generateId(),
+            action,
+          });
+        },
+      );
+
+      await view.indexOperations([
+        {
+          operation: {
+            index: 0,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "hash-0",
+            skip: 0,
+            id: generateId(),
+            action,
+          },
+          context: {
+            documentId,
+            documentType,
+            scope,
+            branch,
+            resultingState: JSON.stringify({
+              header: { id: documentId, documentType },
+              document: {},
+            }),
+          },
+        },
+      ]);
+
+      const result = await view.findByType(documentType);
+
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0]?.header.id).toBe(documentId);
+      expect(result.items[0]?.header.documentType).toBe(documentType);
+      expect(result.hasMore).toBe(false);
+    });
+
+    it("should respect consistency token for read-after-write consistency", async () => {
+      const documentId = generateId();
+      const documentType = "powerhouse/document-drive";
+      const scope = "document";
+      const branch = "main";
+
+      const action = addFolder({
+        id: generateId(),
+        name: "Test Folder",
+        parentFolder: null,
+      });
+
+      await operationStore.apply(
+        documentId,
+        documentType,
+        scope,
+        branch,
+        0,
+        (txn) => {
+          txn.addOperations({
+            index: 0,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "hash-0",
+            skip: 0,
+            id: generateId(),
+            action,
+          });
+        },
+      );
+
+      const indexPromise = view.indexOperations([
+        {
+          operation: {
+            index: 0,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "hash-0",
+            skip: 0,
+            id: generateId(),
+            action,
+          },
+          context: {
+            documentId,
+            documentType,
+            scope,
+            branch,
+            resultingState: JSON.stringify({
+              header: { id: documentId, documentType },
+              document: {},
+            }),
+          },
+        },
+      ]);
+
+      const consistencyToken = {
+        version: 1 as const,
+        createdAtUtcIso: new Date().toISOString(),
+        coordinates: [
+          {
+            documentId,
+            scope,
+            branch,
+            operationIndex: 0,
+          },
+        ],
+      };
+
+      const resultPromise = view.findByType(
+        documentType,
+        undefined,
+        undefined,
+        consistencyToken,
+      );
+
+      await Promise.all([indexPromise, resultPromise]);
+
+      const result = await resultPromise;
+
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0]?.header.id).toBe(documentId);
+    });
+
+    it("should paginate through large result sets", async () => {
+      const documentType = "powerhouse/document-drive";
+      const scope = "document";
+      const branch = "main";
+
+      for (let i = 0; i < 5; i++) {
+        const documentId = generateId();
+        const action = addFolder({
+          id: generateId(),
+          name: `Folder ${i}`,
+          parentFolder: null,
+        });
+
+        await operationStore.apply(
+          documentId,
+          documentType,
+          scope,
+          branch,
+          0,
+          (txn) => {
+            txn.addOperations({
+              index: 0,
+              timestampUtcMs: new Date().toISOString(),
+              hash: `hash-${i}`,
+              skip: 0,
+              id: generateId(),
+              action,
+            });
+          },
+        );
+
+        await view.indexOperations([
+          {
+            operation: {
+              index: 0,
+              timestampUtcMs: new Date().toISOString(),
+              hash: `hash-${i}`,
+              skip: 0,
+              id: generateId(),
+              action,
+            },
+            context: {
+              documentId,
+              documentType,
+              scope,
+              branch,
+              resultingState: JSON.stringify({
+                header: { id: documentId, documentType },
+                document: {},
+              }),
+            },
+          },
+        ]);
+      }
+
+      const firstPage = await view.findByType(documentType, undefined, {
+        cursor: "0",
+        limit: 2,
+      });
+
+      expect(firstPage.items).toHaveLength(2);
+      expect(firstPage.hasMore).toBe(true);
+      expect(firstPage.nextCursor).toBe("2");
+
+      const secondPage = await view.findByType(documentType, undefined, {
+        cursor: firstPage.nextCursor,
+        limit: 2,
+      });
+
+      expect(secondPage.items).toHaveLength(2);
+      expect(secondPage.hasMore).toBe(true);
+    });
+
+    it("should filter by branch correctly when multiple branches exist", async () => {
+      const documentId = generateId();
+      const documentType = "powerhouse/document-drive";
+      const scope = "document";
+
+      for (const branch of ["main", "feature"]) {
+        const action = addFolder({
+          id: generateId(),
+          name: `Folder ${branch}`,
+          parentFolder: null,
+        });
+
+        await operationStore.apply(
+          documentId,
+          documentType,
+          scope,
+          branch,
+          0,
+          (txn) => {
+            txn.addOperations({
+              index: 0,
+              timestampUtcMs: new Date().toISOString(),
+              hash: `hash-${branch}`,
+              skip: 0,
+              id: generateId(),
+              action,
+            });
+          },
+        );
+
+        await view.indexOperations([
+          {
+            operation: {
+              index: 0,
+              timestampUtcMs: new Date().toISOString(),
+              hash: `hash-${branch}`,
+              skip: 0,
+              id: generateId(),
+              action,
+            },
+            context: {
+              documentId,
+              documentType,
+              scope,
+              branch,
+              resultingState: JSON.stringify({
+                header: { id: documentId, documentType },
+                document: {},
+              }),
+            },
+          },
+        ]);
+      }
+
+      const mainResult = await view.findByType(documentType, {
+        branch: "main",
+      });
+      const featureResult = await view.findByType(documentType, {
+        branch: "feature",
+      });
+
+      expect(mainResult.items).toHaveLength(1);
+      expect(featureResult.items).toHaveLength(1);
+    });
+
+    it("should exclude deleted documents from results", async () => {
+      const documentId = generateId();
+      const documentType = "powerhouse/document-drive";
+      const scope = "document";
+      const branch = "main";
+
+      const action = addFolder({
+        id: generateId(),
+        name: "Test Folder",
+        parentFolder: null,
+      });
+
+      await operationStore.apply(
+        documentId,
+        documentType,
+        scope,
+        branch,
+        0,
+        (txn) => {
+          txn.addOperations({
+            index: 0,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "hash-0",
+            skip: 0,
+            id: generateId(),
+            action,
+          });
+        },
+      );
+
+      await view.indexOperations([
+        {
+          operation: {
+            index: 0,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "hash-0",
+            skip: 0,
+            id: generateId(),
+            action,
+          },
+          context: {
+            documentId,
+            documentType,
+            scope,
+            branch,
+            resultingState: JSON.stringify({
+              header: { id: documentId, documentType },
+              document: {},
+            }),
+          },
+        },
+      ]);
+
+      await db
+        .updateTable("DocumentSnapshot")
+        .set({ isDeleted: true })
+        .where("documentId", "=", documentId)
+        .execute();
+
+      const result = await view.findByType(documentType);
+
+      expect(result.items).toHaveLength(0);
+    });
+  });
+
+  describe("resolveSlug", () => {
+    beforeEach(async () => {
+      await view.init();
+    });
+
+    it("should resolve slug after document with slug is indexed", async () => {
+      const documentId = generateId();
+      const slug = "my-test-slug";
+      const documentType = "powerhouse/document-drive";
+      const scope = "header";
+      const branch = "main";
+
+      const action = addFolder({
+        id: generateId(),
+        name: "Test Folder",
+        parentFolder: null,
+      });
+
+      await operationStore.apply(
+        documentId,
+        documentType,
+        scope,
+        branch,
+        0,
+        (txn) => {
+          txn.addOperations({
+            index: 0,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "hash-0",
+            skip: 0,
+            id: generateId(),
+            action,
+          });
+        },
+      );
+
+      await db
+        .insertInto("SlugMapping")
+        .values({
+          slug,
+          documentId,
+          scope,
+          branch,
+        })
+        .execute();
+
+      const result = await view.resolveSlug(slug);
+
+      expect(result).toBe(documentId);
+    });
+
+    it("should respect consistency token for read-after-write consistency", async () => {
+      const documentId = generateId();
+      const slug = "my-test-slug";
+      const documentType = "powerhouse/document-drive";
+      const scope = "header";
+      const branch = "main";
+
+      const action = addFolder({
+        id: generateId(),
+        name: "Test Folder",
+        parentFolder: null,
+      });
+
+      await operationStore.apply(
+        documentId,
+        documentType,
+        scope,
+        branch,
+        0,
+        (txn) => {
+          txn.addOperations({
+            index: 0,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "hash-0",
+            skip: 0,
+            id: generateId(),
+            action,
+          });
+        },
+      );
+
+      await db
+        .insertInto("SlugMapping")
+        .values({
+          slug,
+          documentId,
+          scope,
+          branch,
+        })
+        .execute();
+
+      await view.indexOperations([
+        {
+          operation: {
+            index: 0,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "hash-0",
+            skip: 0,
+            id: generateId(),
+            action,
+          },
+          context: {
+            documentId,
+            documentType,
+            scope,
+            branch,
+            resultingState: JSON.stringify({
+              header: { id: documentId, documentType },
+            }),
+          },
+        },
+      ]);
+
+      const consistencyToken = {
+        version: 1 as const,
+        createdAtUtcIso: new Date().toISOString(),
+        coordinates: [
+          {
+            documentId,
+            scope,
+            branch,
+            operationIndex: 0,
+          },
+        ],
+      };
+
+      const result = await view.resolveSlug(slug, undefined, consistencyToken);
+
+      expect(result).toBe(documentId);
+    });
+
+    it("should return undefined before document is indexed", async () => {
+      const result = await view.resolveSlug("non-existent-slug");
+
+      expect(result).toBeUndefined();
+    });
+
+    it("should filter by branch correctly when slug exists on multiple branches", async () => {
+      const documentId = generateId();
+      const slug = "my-slug";
+      const scope = "header";
+
+      for (const branch of ["main", "feature"]) {
+        await db
+          .insertInto("SlugMapping")
+          .values({
+            slug: `${slug}-${branch}`,
+            documentId,
+            scope,
+            branch,
+          })
+          .execute();
+      }
+
+      const mainResult = await view.resolveSlug(`${slug}-main`, {
+        branch: "main",
+      });
+      const featureResult = await view.resolveSlug(`${slug}-feature`, {
+        branch: "feature",
+      });
+
+      expect(mainResult).toBe(documentId);
+      expect(featureResult).toBe(documentId);
+    });
+
+    it("should resolve slug immediately after indexing", async () => {
+      const documentId = generateId();
+      const slug = "immediate-slug";
+      const documentType = "powerhouse/document-drive";
+      const scope = "header";
+      const branch = "main";
+
+      const action = addFolder({
+        id: generateId(),
+        name: "Test Folder",
+        parentFolder: null,
+      });
+
+      await operationStore.apply(
+        documentId,
+        documentType,
+        scope,
+        branch,
+        0,
+        (txn) => {
+          txn.addOperations({
+            index: 0,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "hash-0",
+            skip: 0,
+            id: generateId(),
+            action,
+          });
+        },
+      );
+
+      await db
+        .insertInto("SlugMapping")
+        .values({
+          slug,
+          documentId,
+          scope,
+          branch,
+        })
+        .execute();
+
+      const result = await view.resolveSlug(slug);
+
+      expect(result).toBe(documentId);
     });
   });
 });

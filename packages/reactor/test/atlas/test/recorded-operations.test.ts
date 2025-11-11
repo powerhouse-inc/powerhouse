@@ -1,303 +1,522 @@
-import type { BaseDocumentDriveServer } from "document-drive";
-import {
-  MemoryStorage,
-  ReactorBuilder,
-  driveDocumentModelModule,
+import type {
+  BaseDocumentDriveServer,
+  IDocumentOperationStorage,
+  IDocumentStorage,
 } from "document-drive";
-import type { Action, DocumentModelModule } from "document-model";
-import { documentModelDocumentModelModule } from "document-model";
+import {
+  ReactorBuilder as DriveReactorBuilder,
+  MemoryStorage,
+} from "document-drive";
+import { Kysely } from "kysely";
+import { KyselyPGlite } from "kysely-pglite";
 import { readFileSync } from "node:fs";
-import { beforeEach, describe, it, vi } from "vitest";
+import path from "node:path";
+import { describe, it } from "vitest";
 import { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../../../src/cache/types.js";
 import { Reactor } from "../../../src/core/reactor.js";
 import { EventBus } from "../../../src/events/event-bus.js";
 import { SimpleJobExecutorManager } from "../../../src/executor/simple-job-executor-manager.js";
 import { SimpleJobExecutor } from "../../../src/executor/simple-job-executor.js";
+import { InMemoryJobTracker } from "../../../src/job-tracker/in-memory-job-tracker.js";
 import { InMemoryQueue } from "../../../src/queue/queue.js";
 import { ReadModelCoordinator } from "../../../src/read-models/coordinator.js";
 import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
 import type { DocumentViewDatabase } from "../../../src/read-models/types.js";
 import { DocumentModelRegistry } from "../../../src/registry/implementation.js";
-import type { IDocumentModelRegistry } from "../../../src/registry/interfaces.js";
+import { ConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
 import { JobStatus } from "../../../src/shared/types.js";
-import type { IKeyframeStore } from "../../../src/storage/interfaces.js";
-import type { KyselyOperationStore } from "../../../src/storage/kysely/store.js";
-import type { Database as StorageDatabase } from "../../../src/storage/kysely/types.js";
+import { KyselyDocumentIndexer } from "../../../src/storage/kysely/document-indexer.js";
+import { KyselyKeyframeStore } from "../../../src/storage/kysely/keyframe-store.js";
+import { KyselyOperationStore } from "../../../src/storage/kysely/store.js";
+import type {
+  DocumentIndexerDatabase,
+  Database as StorageDatabase,
+} from "../../../src/storage/kysely/types.js";
 import {
-  createTestJobTracker,
-  createTestOperationStore,
+  createMockDocumentIndexer as createMockDocumentIndexerHelper,
+  createMockDocumentView as createMockDocumentViewHelper,
 } from "../../factories.js";
+import {
+  type RecordedOperation,
+  getDocumentModels,
+  processBaseServerMutation,
+  processReactorMutation,
+  submitAllMutationsWithQueueHints,
+} from "./recorded-operations-helpers.js";
 
-import * as atlasModels from "@sky-ph/atlas/document-models";
-import type { Kysely } from "kysely";
-import path from "node:path";
+type Database = StorageDatabase &
+  DocumentViewDatabase &
+  DocumentIndexerDatabase;
 
-type Database = StorageDatabase & DocumentViewDatabase;
+type ReactorTestSetup = {
+  reactor: Reactor;
+  driveServer: BaseDocumentDriveServer;
+  storage: IDocumentStorage & IDocumentOperationStorage;
+  documentView?: KyselyDocumentView;
+  cleanup: () => Promise<void>;
+};
 
-interface RecordedOperation {
-  type: string;
-  name: string;
-  timestamp: string;
-  args: Record<string, any>;
-}
+async function createReactorSetup(
+  legacyStorageEnabled: boolean,
+  includeDocumentView: boolean,
+): Promise<ReactorTestSetup> {
+  const documentModels = getDocumentModels();
+  const storage = new MemoryStorage();
+  const registry = new DocumentModelRegistry();
+  registry.registerModules(...documentModels);
 
-function wrapAtlasModule(module: any): DocumentModelModule<any> {
-  if (module.documentModel?.global?.id) {
-    return module;
+  const builder = new DriveReactorBuilder(documentModels).withStorage(storage);
+  const driveServer = builder.build() as unknown as BaseDocumentDriveServer;
+  await driveServer.initialize();
+
+  const kyselyPGlite = await KyselyPGlite.create();
+  const db = new Kysely<Database>({
+    dialect: kyselyPGlite.dialect,
+  });
+
+  await db.schema
+    .createTable("Operation")
+    .addColumn("id", "serial", (col) => col.primaryKey())
+    .addColumn("jobId", "text", (col) => col.notNull())
+    .addColumn("opId", "text", (col) => col.notNull().unique())
+    .addColumn("prevOpId", "text", (col) => col.notNull())
+    .addColumn("writeTimestampUtcMs", "timestamptz", (col) =>
+      col.notNull().defaultTo(new Date()),
+    )
+    .addColumn("documentId", "text", (col) => col.notNull())
+    .addColumn("documentType", "text", (col) => col.notNull())
+    .addColumn("scope", "text", (col) => col.notNull())
+    .addColumn("branch", "text", (col) => col.notNull())
+    .addColumn("timestampUtcMs", "timestamptz", (col) => col.notNull())
+    .addColumn("index", "integer", (col) => col.notNull())
+    .addColumn("action", "text", (col) => col.notNull())
+    .addColumn("skip", "integer", (col) => col.notNull())
+    .addColumn("error", "text")
+    .addColumn("hash", "text", (col) => col.notNull())
+    .addUniqueConstraint("unique_revision", [
+      "documentId",
+      "scope",
+      "branch",
+      "index",
+    ])
+    .execute();
+
+  await db.schema
+    .createIndex("streamOperations")
+    .on("Operation")
+    .columns(["documentId", "scope", "branch", "id"])
+    .execute();
+
+  await db.schema
+    .createIndex("branchlessStreamOperations")
+    .on("Operation")
+    .columns(["documentId", "scope", "id"])
+    .execute();
+
+  await db.schema
+    .createTable("Keyframe")
+    .addColumn("id", "serial", (col) => col.primaryKey())
+    .addColumn("documentId", "text", (col) => col.notNull())
+    .addColumn("documentType", "text", (col) => col.notNull())
+    .addColumn("scope", "text", (col) => col.notNull())
+    .addColumn("branch", "text", (col) => col.notNull())
+    .addColumn("revision", "integer", (col) => col.notNull())
+    .addColumn("document", "text", (col) => col.notNull())
+    .addColumn("createdAt", "timestamptz", (col) =>
+      col.notNull().defaultTo(new Date()),
+    )
+    .addUniqueConstraint("unique_keyframe", [
+      "documentId",
+      "scope",
+      "branch",
+      "revision",
+    ])
+    .execute();
+
+  await db.schema
+    .createIndex("keyframe_lookup")
+    .on("Keyframe")
+    .columns(["documentId", "scope", "branch", "revision"])
+    .execute();
+
+  const operationStore = new KyselyOperationStore(
+    db as unknown as Kysely<StorageDatabase>,
+  );
+  const keyframeStore = new KyselyKeyframeStore(
+    db as unknown as Kysely<StorageDatabase>,
+  );
+
+  const eventBus = new EventBus();
+  const queue = new InMemoryQueue(eventBus);
+  const jobTracker = new InMemoryJobTracker();
+
+  const writeCacheConfig: WriteCacheConfig = {
+    maxDocuments: 100,
+    ringBufferSize: 10,
+    keyframeInterval: 10,
+  };
+
+  const writeCache = new KyselyWriteCache(
+    keyframeStore,
+    operationStore,
+    registry,
+    writeCacheConfig,
+  );
+  await writeCache.startup();
+
+  const executor = new SimpleJobExecutor(
+    registry,
+    storage,
+    storage,
+    operationStore,
+    eventBus,
+    writeCache,
+    { legacyStorageEnabled },
+  );
+
+  const executorManager = new SimpleJobExecutorManager(
+    () => executor,
+    eventBus,
+    queue,
+    jobTracker,
+  );
+
+  await executorManager.start(1);
+
+  const readModels = [];
+  let documentView: KyselyDocumentView | undefined;
+  let documentIndexer: KyselyDocumentIndexer | undefined;
+
+  if (includeDocumentView) {
+    const documentViewConsistencyTracker = new ConsistencyTracker();
+    documentView = new KyselyDocumentView(
+      db as any,
+      operationStore,
+      documentViewConsistencyTracker,
+    );
+    await documentView.init();
+    readModels.push(documentView);
+
+    const documentIndexerConsistencyTracker = new ConsistencyTracker();
+    documentIndexer = new KyselyDocumentIndexer(
+      db as any,
+      operationStore,
+      documentIndexerConsistencyTracker,
+    );
+    await documentIndexer.init();
+    readModels.push(documentIndexer);
   }
 
+  const readModelCoordinator = new ReadModelCoordinator(eventBus, readModels);
+  readModelCoordinator.start();
+
+  const reactor = new Reactor(
+    driveServer,
+    storage,
+    queue,
+    jobTracker,
+    readModelCoordinator,
+    { legacyStorageEnabled },
+    documentView ?? createMockDocumentViewHelper(),
+    documentIndexer ?? createMockDocumentIndexerHelper(),
+    operationStore,
+  );
+
+  const cleanup = async () => {
+    await executorManager.stop();
+    readModelCoordinator.stop();
+    await writeCache.shutdown();
+    writeCache.clear();
+    try {
+      await db.destroy();
+    } catch {
+      // Ignore cleanup errors
+    }
+  };
+
   return {
-    ...module,
-    documentModel: {
-      ...module.documentModel,
-      global: module.documentModel,
-    },
+    reactor,
+    driveServer,
+    storage,
+    documentView,
+    cleanup,
   };
 }
 
-function removeSynchronizationUnits(obj: any): any {
-  if (obj === null || obj === undefined) {
-    return obj;
-  }
+describe("Atlas Recorded Operations Reactor Test", () => {
+  it(
+    "should process all recorded operations without errors using Reactor",
+    async () => {
+      const setup = await createReactorSetup(true, true);
 
-  if (Array.isArray(obj)) {
-    return obj.map(removeSynchronizationUnits);
-  }
+      const recordedOpsContent = readFileSync(
+        path.join(__dirname, "recorded-operations.json"),
+        "utf-8",
+      );
+      const operations: RecordedOperation[] = JSON.parse(recordedOpsContent);
+      const mutations = operations.filter((op) => op.type === "mutation");
 
-  if (typeof obj === "object") {
-    const result: Record<string, any> = {};
-    for (const [key, value] of Object.entries(obj)) {
-      if (key !== "synchronizationUnits") {
-        result[key] = removeSynchronizationUnits(value);
+      console.log(`Processing ${mutations.length} mutations...`);
+
+      for (const mutation of mutations) {
+        await processReactorMutation(mutation, setup.reactor);
       }
-    }
-    return result;
-  }
 
-  return obj;
-}
+      await setup.cleanup();
+    },
+    { timeout: 100000 },
+  );
 
-describe.skip("Atlas Recorded Operations Integration Test", () => {
-  let reactor: Reactor;
-  let registry: IDocumentModelRegistry;
-  let storage: MemoryStorage;
-  let eventBus: EventBus;
-  let queue: InMemoryQueue;
-  let executor: SimpleJobExecutor;
-  let executorManager: SimpleJobExecutorManager;
-  let driveServer: BaseDocumentDriveServer;
-  let db: Kysely<Database>;
-  let operationStore: KyselyOperationStore;
-  let keyframeStore: IKeyframeStore;
-  let writeCache: KyselyWriteCache;
-  let readModelCoordinator: ReadModelCoordinator;
+  it(
+    "should submit all mutations with queue hints and process them correctly",
+    async () => {
+      const setup = await createReactorSetup(true, true);
 
-  beforeEach(async () => {
-    storage = new MemoryStorage();
-    registry = new DocumentModelRegistry();
+      const recordedOpsContent = readFileSync(
+        path.join(__dirname, "recorded-operations.json"),
+        "utf-8",
+      );
+      const operations: RecordedOperation[] = JSON.parse(recordedOpsContent);
+      const mutations = operations.filter((op) => op.type === "mutation");
 
-    const documentModels: DocumentModelModule[] = [
-      documentModelDocumentModelModule as unknown as DocumentModelModule,
-      driveDocumentModelModule as unknown as DocumentModelModule,
-      wrapAtlasModule(atlasModels.AtlasScope),
-      wrapAtlasModule(atlasModels.AtlasFoundation),
-      wrapAtlasModule(atlasModels.AtlasGrounding),
-      wrapAtlasModule(atlasModels.AtlasExploratory),
-      wrapAtlasModule(atlasModels.AtlasMultiParent),
-      wrapAtlasModule(atlasModels.AtlasSet),
-      wrapAtlasModule(atlasModels.AtlasFeedbackIssues),
-    ];
+      console.log(
+        `Submitting ${mutations.length} mutations with queue hints...`,
+      );
 
-    registry.registerModules(...documentModels);
+      const batchResult = await submitAllMutationsWithQueueHints(
+        mutations,
+        setup.reactor,
+      );
 
-    const builder = new ReactorBuilder(documentModels).withStorage(storage);
-    driveServer = builder.build() as unknown as BaseDocumentDriveServer;
-    await driveServer.initialize();
+      const jobIds = Object.values(batchResult.jobs).map((job) => job.id);
+      console.log(`Submitted ${jobIds.length} jobs`);
 
-    const setup = await createTestOperationStore();
-    db = setup.db as unknown as Kysely<Database>;
-    operationStore = setup.store;
-    keyframeStore = setup.keyframeStore;
+      const waitForAllJobs = async (): Promise<void> => {
+        const timeout = 100000;
+        const interval = 100;
+        const startTime = Date.now();
 
-    eventBus = new EventBus();
-    queue = new InMemoryQueue(eventBus);
-
-    const writeCacheConfig: WriteCacheConfig = {
-      maxDocuments: 100,
-      ringBufferSize: 10,
-      keyframeInterval: 10,
-    };
-    writeCache = new KyselyWriteCache(
-      keyframeStore,
-      operationStore,
-      registry,
-      writeCacheConfig,
-    );
-    await writeCache.startup();
-
-    executor = new SimpleJobExecutor(
-      registry,
-      storage,
-      storage,
-      operationStore,
-      eventBus,
-      writeCache,
-    );
-
-    const documentView = new KyselyDocumentView(db, operationStore);
-    await documentView.init();
-    readModelCoordinator = new ReadModelCoordinator(eventBus, [documentView]);
-
-    const jobTracker = createTestJobTracker();
-
-    executorManager = new SimpleJobExecutorManager(
-      () => executor,
-      eventBus,
-      queue,
-      jobTracker,
-    );
-
-    await executorManager.start(1);
-
-    reactor = new Reactor(
-      driveServer,
-      storage,
-      queue,
-      jobTracker,
-      readModelCoordinator,
-    );
-  });
-
-  it("should process all recorded operations without errors", async () => {
-    const recordedOpsContent = readFileSync(
-      path.join(__dirname, "recorded-operations.json"),
-      "utf-8",
-    );
-    const operations: RecordedOperation[] = JSON.parse(recordedOpsContent);
-
-    const mutations = operations.filter((op) => op.type === "mutation");
-
-    console.log(`Processing ${mutations.length} mutations...`);
-
-    for (const mutation of mutations) {
-      const { name, args } = mutation;
-      if (name === "createDrive") {
-        const { id, name, slug } = args;
-        const modules = await reactor.getDocumentModels();
-        const driveModule = modules.results.find(
-          (m: DocumentModelModule) =>
-            m.documentModel.global.id === "powerhouse/document-drive",
-        );
-        if (!driveModule) {
-          throw new Error("Drive document model not found");
-        }
-
-        const driveDoc = driveModule.utils.createDocument();
-        driveDoc.header.id = id;
-        driveDoc.header.name = name;
-        driveDoc.header.slug = slug;
-
-        const jobInfo = await reactor.create(driveDoc);
-        await vi.waitUntil(async () => {
-          const status = await reactor.getJobStatus(jobInfo.id);
-          if (status.status === JobStatus.FAILED) {
-            throw new Error(
-              `createDrive failed: ${status.error || "unknown error"}`,
-            );
-          }
-          return status.status === JobStatus.COMPLETED;
-        });
-      } else if (name === "addDriveAction") {
-        const { driveId, driveAction } = args;
-
-        if (driveAction.type === "ADD_FILE") {
-          const docType = driveAction.input.documentType;
-          const modules = await reactor.getDocumentModels();
-          const module = modules.results.find(
-            (m: DocumentModelModule) => m.documentModel.global.id === docType,
+        for (;;) {
+          const statuses = await Promise.all(
+            jobIds.map((jobId) => setup.reactor.getJobStatus(jobId)),
           );
 
-          if (!module) {
-            throw new Error(`Document model not found for type: ${docType}`);
-          }
+          const allCompleted = statuses.every(
+            (status) => status.status === JobStatus.COMPLETED,
+          );
+          const anyFailed = statuses.some(
+            (status) => status.status === JobStatus.FAILED,
+          );
 
-          const fileDoc = module.utils.createDocument();
-          fileDoc.header.id = driveAction.input.id;
-          fileDoc.header.name = driveAction.input.name;
-
-          const createJobInfo = await reactor.create(fileDoc);
-          await vi.waitUntil(async () => {
-            const status = await reactor.getJobStatus(createJobInfo.id);
-            if (status.status === JobStatus.FAILED) {
-              throw new Error(
-                `Failed to create child document: ${status.error || "unknown error"}`,
-              );
-            }
-            return status.status === JobStatus.COMPLETED;
-          });
-
-          const addFileAction: Action = {
-            id: driveAction.id,
-            type: "ADD_FILE",
-            scope: driveAction.scope || "global",
-            timestampUtcMs: driveAction.timestampUtcMs,
-            input: {
-              id: driveAction.input.id,
-              name: driveAction.input.name,
-              documentType: driveAction.input.documentType,
-              parentFolder: driveAction.input.parentFolder || null,
-            },
-          };
-
-          const jobInfo = await reactor.mutate(driveId, [addFileAction]);
-          await vi.waitUntil(async () => {
-            const status = await reactor.getJobStatus(jobInfo.id);
-            if (status.status === JobStatus.FAILED) {
-              throw new Error(
-                `ADD_FILE action failed: ${status.error || "unknown error"}`,
-              );
-            }
-            return status.status === JobStatus.COMPLETED;
-          });
-        } else {
-          const cleanedAction = removeSynchronizationUnits(
-            driveAction,
-          ) as Action;
-
-          const jobInfo = await reactor.mutate(driveId, [cleanedAction]);
-          await vi.waitUntil(async () => {
-            const status = await reactor.getJobStatus(jobInfo.id);
-            if (status.status === JobStatus.FAILED) {
-              throw new Error(
-                `addDriveAction failed: ${status.error || "unknown error"}`,
-              );
-            }
-            return status.status === JobStatus.COMPLETED;
-          });
-        }
-      } else if (name === "addAction") {
-        const { docId, action } = args;
-        const cleanedAction = removeSynchronizationUnits(action) as Action;
-
-        const jobInfo = await reactor.mutate(docId, [cleanedAction]);
-        await vi.waitUntil(async () => {
-          const status = await reactor.getJobStatus(jobInfo.id);
-          if (status.status === JobStatus.FAILED) {
-            status.errorHistory?.forEach((error, index) => {
-              console.error(`[Attempt ${index + 1}] ${error.message}`);
-              console.error(
-                `[Attempt ${index + 1}] Stack trace:\n${error.stack}`,
-              );
-            });
-
+          if (anyFailed) {
+            const failedJobs = statuses.filter(
+              (status) => status.status === JobStatus.FAILED,
+            );
             throw new Error(
-              `addAction failed: ${status.error?.message ?? "unknown error"}`,
+              `Some jobs failed: ${failedJobs.map((job) => `${job.id}: ${job.error?.message}`).join(", ")}`,
             );
           }
-          return status.status === JobStatus.COMPLETED;
-        });
+
+          if (allCompleted) {
+            console.log("All jobs completed successfully");
+            return;
+          }
+
+          if (Date.now() - startTime > timeout) {
+            throw new Error("Timeout waiting for all jobs to complete");
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, interval));
+        }
+      };
+
+      await waitForAllJobs();
+      await setup.cleanup();
+    },
+    { timeout: 100000 },
+  );
+});
+
+describe("Atlas Recorded Operations Base Server Test", () => {
+  it(
+    "should process all recorded operations without errors using base-server",
+    async () => {
+      const storage = new MemoryStorage();
+      const documentModels = getDocumentModels();
+
+      const builder = new DriveReactorBuilder(documentModels).withStorage(
+        storage,
+      );
+      const driveServer = builder.build() as unknown as BaseDocumentDriveServer;
+      await driveServer.initialize();
+
+      const recordedOpsContent = readFileSync(
+        path.join(__dirname, "recorded-operations.json"),
+        "utf-8",
+      );
+      const operations: RecordedOperation[] = JSON.parse(recordedOpsContent);
+      const mutations = operations.filter((op) => op.type === "mutation");
+
+      console.log(`Processing ${mutations.length} mutations...`);
+
+      for (const mutation of mutations) {
+        await processBaseServerMutation(mutation, driveServer);
       }
-    }
-  });
+
+      console.log(
+        "All operations processed successfully using base-server API",
+      );
+
+      const driveId = "atlas_20251027_1647";
+      const children = await storage.getChildren(driveId);
+      console.log(
+        `BaseServer standalone test - total children: ${children.length}`,
+      );
+    },
+    { timeout: 100000 },
+  );
+});
+
+describe("Atlas Recorded Operations State Comparison Test", () => {
+  it(
+    "should produce identical final state in both Reactor and BaseDocumentDriveServer",
+    async ({ expect }) => {
+      const driveIds: string[] = [];
+      const driveIds2: string[] = [];
+
+      const documentModels = getDocumentModels();
+
+      // Setup reactor 1 (with legacy storage enabled)
+      const setup1 = await createReactorSetup(true, true);
+
+      // Setup reactor 2 (with legacy storage disabled)
+      const setup2 = await createReactorSetup(false, true);
+
+      // Setup reactor 3 (with batch submission via queue hints)
+      const setup3 = await createReactorSetup(true, true);
+
+      // Setup base server for comparison
+      const baseServerStorage = new MemoryStorage();
+      const baseServerBuilder = new DriveReactorBuilder(
+        documentModels,
+      ).withStorage(baseServerStorage);
+      const baseServerDriveServer =
+        baseServerBuilder.build() as unknown as BaseDocumentDriveServer;
+      await baseServerDriveServer.initialize();
+
+      const recordedOpsContent = readFileSync(
+        path.join(__dirname, "recorded-operations.json"),
+        "utf-8",
+      );
+      const operations: RecordedOperation[] = JSON.parse(recordedOpsContent);
+      const mutations = operations.filter((op) => op.type === "mutation");
+
+      console.log(
+        `Processing ${mutations.length} mutations through all four systems...`,
+      );
+
+      const batchResult = await submitAllMutationsWithQueueHints(
+        mutations,
+        setup3.reactor,
+      );
+      const batchJobIds = Object.values(batchResult.jobs).map((job) => job.id);
+      console.log(
+        `Reactor 3 (batch): Submitted ${batchJobIds.length} jobs with queue hints`,
+      );
+
+      for (const mutation of mutations) {
+        await processReactorMutation(mutation, setup1.reactor);
+        await processReactorMutation(mutation, setup2.reactor);
+        await processBaseServerMutation(mutation, baseServerDriveServer);
+      }
+
+      console.log("Waiting for batch jobs to complete...");
+      const waitForBatchJobs = async (): Promise<void> => {
+        const timeout = 200000;
+        const interval = 100;
+        const startTime = Date.now();
+
+        for (;;) {
+          const statuses = await Promise.all(
+            batchJobIds.map((jobId) => setup3.reactor.getJobStatus(jobId)),
+          );
+
+          const allCompleted = statuses.every(
+            (status) => status.status === JobStatus.COMPLETED,
+          );
+          const anyFailed = statuses.some(
+            (status) => status.status === JobStatus.FAILED,
+          );
+
+          if (anyFailed) {
+            const failedJobs = statuses.filter(
+              (status) => status.status === JobStatus.FAILED,
+            );
+            throw new Error(
+              `Batch jobs failed: ${failedJobs.map((job) => `${job.id}: ${job.error?.message}`).join(", ")}`,
+            );
+          }
+
+          if (allCompleted) {
+            console.log("All batch jobs completed successfully");
+            break;
+          }
+
+          if (Date.now() - startTime > timeout) {
+            throw new Error("Timeout waiting for batch jobs to complete");
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, interval));
+        }
+      };
+
+      await waitForBatchJobs();
+
+      console.log("All operations completed. Comparing final states...");
+
+      expect(driveIds).toEqual(driveIds2);
+
+      for (let i = 0; i < driveIds.length; i++) {
+        const driveId = driveIds[i];
+        const driveId2 = driveIds2[i];
+
+        const reactorDrive = await setup1.driveServer.getDrive(driveId);
+        const reactor2Drive = await setup2.documentView!.get(driveId2);
+        const reactor3Drive = await setup3.driveServer.getDrive(driveId);
+        const baseServerDrive = await baseServerDriveServer.getDrive(driveId);
+
+        expect(reactorDrive.state).toEqual(baseServerDrive.state);
+        expect(reactor2Drive.state).toEqual(baseServerDrive.state);
+        expect(reactor3Drive.state).toEqual(baseServerDrive.state);
+
+        const fileIds = reactorDrive.state.global.nodes
+          .filter((node: unknown) => (node as { kind: string }).kind === "file")
+          .map((node: unknown) => (node as { id: string }).id);
+
+        console.log(`Drive ${driveId} has ${fileIds.length} file documents`);
+
+        for (const childId of fileIds) {
+          const reactorDoc = await setup1.storage.get(childId);
+          const reactor2Doc = await setup2.documentView!.get(childId);
+          const reactor3Doc = await setup3.storage.get(childId);
+          const baseServerDoc = await baseServerStorage.get(childId);
+
+          expect(reactorDoc.state).toEqual(baseServerDoc.state);
+          expect(reactor2Doc.state).toEqual(baseServerDoc.state);
+          expect(reactor3Doc.state).toEqual(baseServerDoc.state);
+        }
+      }
+
+      // Cleanup
+      await setup1.cleanup();
+      await setup2.cleanup();
+      await setup3.cleanup();
+
+      console.log(
+        "All states match between Reactor (legacy reads), Reactor (documentView reads), Reactor (batch with queue hints), and BaseDocumentDriveServer!",
+      );
+    },
+    { timeout: 200000 },
+  );
 });

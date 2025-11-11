@@ -1,7 +1,6 @@
 import { useArgs } from "@storybook/preview-api";
 import type { Meta, StoryObj } from "@storybook/react";
-import { Modal } from "./index.js";
-
+import { Modal } from "./modal.js";
 const meta = {
   title: "Powerhouse/Components/Modal",
   component: Modal,

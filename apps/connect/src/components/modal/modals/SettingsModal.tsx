@@ -1,13 +1,11 @@
 import {
   About,
+  ConnectPackageManager,
   DangerZone,
   DefaultEditor,
-  PackageManager,
-} from "@powerhousedao/connect";
-import {
-  Icon,
-  SettingsModal as SettingsModalV2,
-} from "@powerhousedao/design-system";
+} from "@powerhousedao/connect/components";
+import { Icon } from "@powerhousedao/design-system";
+import { SettingsModal as SettingsModalV2 } from "@powerhousedao/design-system/connect";
 import { closePHModal, usePHModal } from "@powerhousedao/reactor-browser";
 import { t } from "i18next";
 import React, { useMemo } from "react";
@@ -25,7 +23,7 @@ export const SettingsModal: React.FC = () => {
         id: "package-manager",
         icon: <Icon name="PackageManager" size={12} />,
         label: "Package Manager",
-        content: PackageManager,
+        content: ConnectPackageManager,
       },
       {
         id: "default-editors",

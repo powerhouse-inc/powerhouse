@@ -1,5 +1,5 @@
-import type { SelectOption } from "@powerhousedao/design-system";
-import { SelectFieldRaw } from "@powerhousedao/design-system";
+import type { SelectOption } from "@powerhousedao/design-system/ui";
+import { SelectFieldRaw } from "@powerhousedao/design-system/ui";
 import { twMerge } from "tailwind-merge";
 
 type Props = {

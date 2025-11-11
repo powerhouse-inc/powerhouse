@@ -3,16 +3,22 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
-import { beforeEach, describe, expect, it } from "vitest";
-import * as creators from "../../gen/base-operations/creators.js";
-import { reducer } from "../../gen/reducer.js";
 import type {
   AddDocumentTypeInput,
+  ProcessorModuleDocument,
   SetProcessorNameInput,
   SetProcessorTypeInput,
-} from "../../gen/schema/index.js";
-import type { ProcessorModuleDocument } from "../../gen/types.js";
-import utils from "../../gen/utils.js";
+} from "@powerhousedao/vetra/document-models/processor-module";
+import {
+  addDocumentType,
+  reducer,
+  removeDocumentType,
+  setProcessorName,
+  setProcessorStatus,
+  setProcessorType,
+  utils,
+} from "@powerhousedao/vetra/document-models/processor-module";
+import { beforeEach, describe, expect, it } from "vitest";
 
 describe("BaseOperations Operations", () => {
   let document: ProcessorModuleDocument;
@@ -25,10 +31,7 @@ describe("BaseOperations Operations", () => {
     it("should mutate state with new name", () => {
       const input: SetProcessorNameInput = { name: "My Processor" };
 
-      const updatedDocument = reducer(
-        document,
-        creators.setProcessorName(input),
-      );
+      const updatedDocument = reducer(document, setProcessorName(input));
 
       expect(updatedDocument.state.global.name).toBe("My Processor");
     });
@@ -36,10 +39,7 @@ describe("BaseOperations Operations", () => {
     it("should reject empty string and store error in operation", () => {
       const input: SetProcessorNameInput = { name: "" };
 
-      const updatedDocument = reducer(
-        document,
-        creators.setProcessorName(input),
-      );
+      const updatedDocument = reducer(document, setProcessorName(input));
 
       expect(updatedDocument.operations.global).toHaveLength(1);
       expect(updatedDocument.operations.global[0].error).toBe(
@@ -53,10 +53,7 @@ describe("BaseOperations Operations", () => {
     it("should mutate state with new type", () => {
       const input: SetProcessorTypeInput = { type: "analytics" };
 
-      const updatedDocument = reducer(
-        document,
-        creators.setProcessorType(input),
-      );
+      const updatedDocument = reducer(document, setProcessorType(input));
 
       expect(updatedDocument.state.global.type).toBe("analytics");
     });
@@ -64,10 +61,7 @@ describe("BaseOperations Operations", () => {
     it("should reject empty string and store error in operation", () => {
       const input: SetProcessorTypeInput = { type: "" };
 
-      const updatedDocument = reducer(
-        document,
-        creators.setProcessorType(input),
-      );
+      const updatedDocument = reducer(document, setProcessorType(input));
 
       expect(updatedDocument.operations.global).toHaveLength(1);
       expect(updatedDocument.operations.global[0].error).toBe(
@@ -81,10 +75,7 @@ describe("BaseOperations Operations", () => {
     it("should mutate state with new status", () => {
       const input = { status: "CONFIRMED" as const };
 
-      const updatedDocument = reducer(
-        document,
-        creators.setProcessorStatus(input),
-      );
+      const updatedDocument = reducer(document, setProcessorStatus(input));
 
       expect(updatedDocument.state.global.status).toBe("CONFIRMED");
     });
@@ -94,7 +85,7 @@ describe("BaseOperations Operations", () => {
 
       const updatedDocument = reducer(
         document,
-        creators.setProcessorStatus({ status: "CONFIRMED" }),
+        setProcessorStatus({ status: "CONFIRMED" }),
       );
 
       expect(updatedDocument.state.global.status).toBe("CONFIRMED");
@@ -103,12 +94,12 @@ describe("BaseOperations Operations", () => {
     it("should transition from CONFIRMED to DRAFT", () => {
       const confirmedDoc = reducer(
         document,
-        creators.setProcessorStatus({ status: "CONFIRMED" }),
+        setProcessorStatus({ status: "CONFIRMED" }),
       );
 
       const updatedDocument = reducer(
         confirmedDoc,
-        creators.setProcessorStatus({ status: "DRAFT" }),
+        setProcessorStatus({ status: "DRAFT" }),
       );
 
       expect(updatedDocument.state.global.status).toBe("DRAFT");
@@ -122,10 +113,7 @@ describe("BaseOperations Operations", () => {
         documentType: "powerhouse/test",
       };
 
-      const updatedDocument = reducer(
-        document,
-        creators.addDocumentType(input),
-      );
+      const updatedDocument = reducer(document, addDocumentType(input));
 
       expect(updatedDocument.state.global.documentTypes).toContainEqual({
         id: "test-type-1",
@@ -141,10 +129,7 @@ describe("BaseOperations Operations", () => {
         documentType: "powerhouse/first",
       };
 
-      const updatedDocument = reducer(
-        document,
-        creators.addDocumentType(input),
-      );
+      const updatedDocument = reducer(document, addDocumentType(input));
 
       expect(updatedDocument.state.global.documentTypes).toEqual([
         { id: "first-type", documentType: "powerhouse/first" },
@@ -154,21 +139,21 @@ describe("BaseOperations Operations", () => {
     it("should add multiple document types sequentially", () => {
       let updatedDoc = reducer(
         document,
-        creators.addDocumentType({
+        addDocumentType({
           id: "type-1",
           documentType: "powerhouse/a",
         }),
       );
       updatedDoc = reducer(
         updatedDoc,
-        creators.addDocumentType({
+        addDocumentType({
           id: "type-2",
           documentType: "powerhouse/b",
         }),
       );
       updatedDoc = reducer(
         updatedDoc,
-        creators.addDocumentType({
+        addDocumentType({
           id: "type-3",
           documentType: "powerhouse/c",
         }),
@@ -195,13 +180,13 @@ describe("BaseOperations Operations", () => {
         documentType: "powerhouse/first",
       };
 
-      let updatedDoc = reducer(document, creators.addDocumentType(input));
+      let updatedDoc = reducer(document, addDocumentType(input));
       expect(updatedDoc.state.global.documentTypes).toHaveLength(1);
       expect(updatedDoc.operations.global[0].error).toBeUndefined();
 
       updatedDoc = reducer(
         updatedDoc,
-        creators.addDocumentType({
+        addDocumentType({
           id: "duplicate",
           documentType: "powerhouse/second",
         }),
@@ -219,16 +204,13 @@ describe("BaseOperations Operations", () => {
     it("should mutate state by removing document type from array", () => {
       let updatedDoc = reducer(
         document,
-        creators.addDocumentType({
+        addDocumentType({
           id: "to-remove",
           documentType: "powerhouse/test",
         }),
       );
 
-      updatedDoc = reducer(
-        updatedDoc,
-        creators.removeDocumentType({ id: "to-remove" }),
-      );
+      updatedDoc = reducer(updatedDoc, removeDocumentType({ id: "to-remove" }));
 
       expect(updatedDoc.state.global.documentTypes).not.toContainEqual({
         id: "to-remove",
@@ -239,7 +221,7 @@ describe("BaseOperations Operations", () => {
     it("should remove existing ID", () => {
       let updatedDoc = reducer(
         document,
-        creators.addDocumentType({
+        addDocumentType({
           id: "existing",
           documentType: "powerhouse/test",
         }),
@@ -247,10 +229,7 @@ describe("BaseOperations Operations", () => {
 
       const lengthBefore = updatedDoc.state.global.documentTypes.length;
 
-      updatedDoc = reducer(
-        updatedDoc,
-        creators.removeDocumentType({ id: "existing" }),
-      );
+      updatedDoc = reducer(updatedDoc, removeDocumentType({ id: "existing" }));
 
       expect(updatedDoc.state.global.documentTypes.length).toBe(
         lengthBefore - 1,
@@ -267,7 +246,7 @@ describe("BaseOperations Operations", () => {
 
       const updatedDocument = reducer(
         document,
-        creators.removeDocumentType({ id: "non-existent-id" }),
+        removeDocumentType({ id: "non-existent-id" }),
       );
 
       expect(updatedDocument.state.global.documentTypes).toEqual(initialState);
@@ -278,7 +257,7 @@ describe("BaseOperations Operations", () => {
 
       const updatedDocument = reducer(
         document,
-        creators.removeDocumentType({ id: "any-id" }),
+        removeDocumentType({ id: "any-id" }),
       );
 
       expect(updatedDocument.state.global.documentTypes).toEqual([]);
@@ -287,16 +266,13 @@ describe("BaseOperations Operations", () => {
     it("should add then immediately remove item", () => {
       let updatedDoc = reducer(
         document,
-        creators.addDocumentType({
+        addDocumentType({
           id: "temp-type",
           documentType: "powerhouse/temp",
         }),
       );
 
-      updatedDoc = reducer(
-        updatedDoc,
-        creators.removeDocumentType({ id: "temp-type" }),
-      );
+      updatedDoc = reducer(updatedDoc, removeDocumentType({ id: "temp-type" }));
 
       expect(
         updatedDoc.state.global.documentTypes.find(

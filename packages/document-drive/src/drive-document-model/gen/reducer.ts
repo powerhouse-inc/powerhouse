@@ -1,4 +1,7 @@
-import type { DocumentDrivePHState } from "document-drive";
+import type { Reducer, StateReducer } from "document-model";
+import { createReducer, isDocumentAction } from "document-model/core";
+import { driveReducer } from "../src/reducers/drive.js";
+import { nodeReducer } from "../src/reducers/node.js";
 import {
   AddFileInputSchema,
   AddFolderInputSchema,
@@ -6,9 +9,7 @@ import {
   AddTriggerInputSchema,
   CopyNodeInputSchema,
   DeleteNodeInputSchema,
-  driveReducer,
   MoveNodeInputSchema,
-  nodeReducer,
   RemoveListenerInputSchema,
   RemoveTriggerInputSchema,
   SetAvailableOfflineInputSchema,
@@ -17,9 +18,8 @@ import {
   SetSharingTypeInputSchema,
   UpdateFileInputSchema,
   UpdateNodeInputSchema,
-} from "document-drive";
-import type { Reducer, StateReducer } from "document-model";
-import { createReducer, isDocumentAction } from "document-model/core";
+} from "./schema/zod.js";
+import type { DocumentDrivePHState } from "./types.js";
 
 const driveStateReducer: StateReducer<DocumentDrivePHState> = (
   state,

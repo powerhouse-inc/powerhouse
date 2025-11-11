@@ -35,13 +35,18 @@ import { KyselyDocumentView } from "../../src/read-models/document-view.js";
 import type { IReadModelCoordinator } from "../../src/read-models/interfaces.js";
 import type { DocumentViewDatabase } from "../../src/read-models/types.js";
 import { DocumentModelRegistry } from "../../src/registry/implementation.js";
+import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
 import { JobStatus } from "../../src/shared/types.js";
 import type {
   IDocumentView,
   IOperationStore,
 } from "../../src/storage/interfaces.js";
 import type { Database as StorageDatabase } from "../../src/storage/kysely/types.js";
-import { createTestOperationStore } from "../factories.js";
+import {
+  createMockDocumentIndexer,
+  createMockReactorFeatures,
+  createTestOperationStore,
+} from "../factories.js";
 
 // Combined database type
 type Database = StorageDatabase & DocumentViewDatabase;
@@ -62,6 +67,7 @@ const storageLayers = [
 
 /**
  * These tests validate the entire pipeline:
+ *
  * 1. Operations go through Reactor interface (create, mutate, delete)
  * 2. Jobs flow through Queue -> Executor with dual-writing
  * 3. Compare results from legacy storage vs IDocumentView
@@ -119,7 +125,12 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
     operationStore = setup.store;
 
     // Create document view and initialize
-    documentView = new KyselyDocumentView(db, operationStore);
+    const consistencyTracker = new ConsistencyTracker();
+    documentView = new KyselyDocumentView(
+      db,
+      operationStore,
+      consistencyTracker,
+    );
     await documentView.init();
 
     // Create dependencies
@@ -146,6 +157,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       operationStore,
       eventBus,
       mockWriteCache,
+      { legacyStorageEnabled: true },
     );
     executorManager = new SimpleJobExecutorManager(
       () => executor,
@@ -167,6 +179,10 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       queue,
       jobTracker,
       readModelCoordinator,
+      createMockReactorFeatures(),
+      documentView,
+      createMockDocumentIndexer(),
+      operationStore,
     );
   });
 
@@ -195,7 +211,8 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
         if (jobStatus.status === JobStatus.FAILED) {
           // fail the test
-          expect.fail(`Job failed: ${jobStatus.error}`);
+          const errorMessage = jobStatus.error?.message ?? "unknown error";
+          expect.fail(`Job failed: ${errorMessage}`);
         }
 
         return jobStatus.status === JobStatus.COMPLETED;
@@ -271,6 +288,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
       const mutation1JobInfo = await reactor.mutate(
         documentId,
+        "main",
         mutation1Actions,
       );
 
@@ -309,6 +327,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
       const mutation2JobInfo = await reactor.mutate(
         documentId,
+        "main",
         mutation2Actions,
       );
 
@@ -345,6 +364,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
 
       const mutation3JobInfo = await reactor.mutate(
         documentId,
+        "main",
         mutation3Actions,
       );
 

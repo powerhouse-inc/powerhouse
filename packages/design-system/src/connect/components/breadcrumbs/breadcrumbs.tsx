@@ -1,4 +1,4 @@
-import { Icon, NodeInput } from "@powerhousedao/design-system";
+import { Icon } from "@powerhousedao/design-system";
 import {
   addFolder,
   setSelectedDrive,
@@ -9,6 +9,7 @@ import {
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
 import { Fragment, useState } from "react";
+import { NodeInput } from "../node-input/node-input.js";
 
 export function Breadcrumbs() {
   const { isAllowedToCreateDocuments } = useUserPermissions();

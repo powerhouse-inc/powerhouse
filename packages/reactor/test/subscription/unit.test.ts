@@ -10,6 +10,7 @@ import type {
   ISubscriptionErrorHandler,
   SubscriptionErrorContext,
 } from "../../src/subs/types.js";
+import { DefaultSubscriptionErrorHandler } from "../../src/subs/default-error-handler.js";
 
 describe("ReactorSubscriptionManager", () => {
   let manager: ReactorSubscriptionManager;
@@ -944,11 +945,7 @@ describe("ReactorSubscriptionManager", () => {
     });
 
     describe("Default Error Handler", () => {
-      it("should throw enhanced errors with context", async () => {
-        const { DefaultSubscriptionErrorHandler } = await import(
-          "../../src/subs/default-error-handler.js"
-        );
-
+      it("should throw enhanced errors with context", () => {
         const throwingHandler = new DefaultSubscriptionErrorHandler();
         const throwingManager = new ReactorSubscriptionManager(throwingHandler);
 
@@ -964,11 +961,7 @@ describe("ReactorSubscriptionManager", () => {
         }).toThrow("Subscription error in created");
       });
 
-      it("should handle non-Error objects in default handler", async () => {
-        const { DefaultSubscriptionErrorHandler } = await import(
-          "../../src/subs/default-error-handler.js"
-        );
-
+      it("should handle non-Error objects in default handler", () => {
         const throwingHandler = new DefaultSubscriptionErrorHandler();
         const throwingManager = new ReactorSubscriptionManager(throwingHandler);
 

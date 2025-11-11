@@ -1,6 +1,17 @@
+const {
+  pascalCase,
+  paramCase,
+  capitalCase,
+  camelCase,
+} = require("change-case");
+const { readdirSync, readFileSync } = require("fs");
+const { join } = require("path");
+const { getModuleExports } = require("../utils.js");
+
 // @ts-check
 module.exports = {
   params: ({ args }) => {
+    const rootDir = args.rootDir;
     const documentTypes = args.documentTypes
       .split(",")
       .map((type) => type.trim())
@@ -13,17 +24,75 @@ module.exports = {
     const documentType = singleDocumentType
       ? { ...documentTypesMap[singleDocumentType], type: singleDocumentType }
       : undefined;
-
+    const packageName = args.packageName;
+    const pascalCaseEditorName = pascalCase(args.name);
+    const paramCaseEditorName = paramCase(args.name);
+    const pascalCaseDocumentType = pascalCase(documentType?.name);
+    const paramCaseDocumentType = paramCase(documentType?.name);
+    const camelCaseDocumentType = camelCase(documentType?.name);
+    const documentVariableName = documentType
+      ? `${camelCaseDocumentType}Document`
+      : "document";
+    const phDocumentTypeName = documentType
+      ? `${pascalCaseDocumentType}Document`
+      : "Document";
+    const actionTypeName = `${pascalCaseDocumentType}Action`;
+    const documentModelDir = `${packageName}/document-models/${paramCaseDocumentType}`;
+    const hooksDir = `${packageName}/editors/hooks`;
+    const isDocumentOfTypeFunctionName = `is${phDocumentTypeName}`;
+    const assertIsDocumentOfTypeFunctionName = `assertIs${phDocumentTypeName}`;
+    const useByIdHookName = documentType
+      ? `use${phDocumentTypeName}ById`
+      : "useDocumentById";
+    const useSelectedHookName = documentType
+      ? `useSelected${phDocumentTypeName}`
+      : "useSelectedDocument";
+    const useInSelectedDriveHookName = documentType
+      ? `use${phDocumentTypeName}sInSelectedDrive`
+      : "useDocumentsInSelectedDrive";
+    const useInSelectedFolderHookName = documentType
+      ? `use${phDocumentTypeName}sInSelectedFolder`
+      : "useDocumentsInSelectedFolder";
+    const editNameComponentName = documentType
+      ? `Edit${pascalCaseDocumentType}Name`
+      : "EditDocumentName";
+    const moduleExports = getModuleExports(
+      rootDir,
+      /export\s+const\s+(\w+)\s*:\s*EditorModule\s*=/,
+      {
+        paramCaseName: paramCaseEditorName,
+        pascalCaseName: pascalCaseEditorName,
+      }
+    );
     return {
-      rootDir: args.rootDir,
+      rootDir,
+      moduleExports,
       documentModelsDir: args.documentModelsDir,
       name: args.name,
+      pascalCaseEditorName,
+      paramCaseEditorName,
+      pascalCaseDocumentType,
+      paramCaseDocumentType,
+      camelCaseDocumentType,
+      documentVariableName,
+      phDocumentTypeName,
+      actionTypeName,
+      hooksDir,
+      documentModelDir,
+      isDocumentOfTypeFunctionName,
+      assertIsDocumentOfTypeFunctionName,
+      useByIdHookName,
+      useSelectedHookName,
+      useInSelectedDriveHookName,
+      useInSelectedFolderHookName,
+      editNameComponentName,
       documentTypes: args.documentTypes
         .split(",")
         .filter((type) => type !== ""),
       documentTypesMap,
       editorId: args.editorId,
       documentType,
+      packageName,
     };
   },
 };

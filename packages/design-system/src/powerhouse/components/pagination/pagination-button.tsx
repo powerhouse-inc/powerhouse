@@ -1,10 +1,9 @@
-import type { PowerhouseButtonProps } from "@powerhousedao/design-system";
+import { twMerge } from "tailwind-merge";
+import { mergeClassNameProps } from "../../utils/mergeClassNameProps.js";
 import {
   PowerhouseButton,
-  mergeClassNameProps,
-} from "@powerhousedao/design-system";
-
-import { twMerge } from "tailwind-merge";
+  type PowerhouseButtonProps,
+} from "../button/button.js";
 
 export interface PaginationButtonProps extends PowerhouseButtonProps {
   readonly active?: boolean;

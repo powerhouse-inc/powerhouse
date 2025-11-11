@@ -21,8 +21,17 @@
     "./connect": {
       "types": "./dist/src/connect.d.ts",
       "default": "./dist/src/connect.js"
+    },
+    "./analytics": {
+      "types": "./dist/src/analytics.d.ts",
+      "default": "./dist/src/analytics.js"
+    },
+    "./analytics/hooks": {
+      "types": "./dist/src/analytics/hooks/index.d.ts",
+      "default": "./dist/src/analytics/hooks/index.js"
     }
   },
+  "sideEffects": false,
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",

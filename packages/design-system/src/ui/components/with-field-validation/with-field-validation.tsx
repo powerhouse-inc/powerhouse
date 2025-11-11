@@ -1,9 +1,4 @@
 import type {
-  FieldErrorHandling,
-  InputBaseProps,
-  ValidatorHandler,
-} from "@powerhousedao/design-system";
-import type {
   ChangeEvent,
   ComponentType,
   ElementRef,
@@ -14,6 +9,11 @@ import type {
 } from "react";
 import { forwardRef, useCallback, useEffect, useState } from "react";
 import { Controller, useFormContext, useFormState } from "react-hook-form";
+import type {
+  FieldErrorHandling,
+  InputBaseProps,
+  ValidatorHandler,
+} from "../../types.js";
 
 interface PossibleProps extends InputBaseProps<unknown>, FieldErrorHandling {
   pattern?: RegExp;

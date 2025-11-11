@@ -26,12 +26,12 @@ export class KyselyKeyframeStore implements IKeyframeStore {
         scope,
         branch,
         revision,
-        document: JSON.stringify(document),
+        document,
       })
       .onConflict((oc) =>
         oc
           .columns(["documentId", "scope", "branch", "revision"])
-          .doUpdateSet({ document: JSON.stringify(document) }),
+          .doUpdateSet({ document }),
       )
       .execute();
   }
@@ -62,19 +62,10 @@ export class KyselyKeyframeStore implements IKeyframeStore {
       return undefined;
     }
 
-    try {
-      const document = JSON.parse(row.document) as PHDocument;
-      return {
-        revision: row.revision,
-        document,
-      };
-    } catch (err) {
-      console.warn(
-        `Failed to parse keyframe for ${documentId}@${row.revision}:`,
-        err,
-      );
-      return undefined;
-    }
+    return {
+      revision: row.revision,
+      document: row.document as PHDocument,
+    };
   }
 
   async deleteKeyframes(

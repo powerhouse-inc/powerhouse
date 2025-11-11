@@ -1,3 +1,14 @@
+import type { InputMaybe } from "document-model";
+import { FormattedNumber } from "../components/formatted-number.js";
+import {
+  assetTransactionSignByTransactionType,
+  cashTransactionSignByTransactionType,
+} from "../constants/table.js";
+import {
+  FEES_INCOME,
+  feesTransactions,
+  groupTransactionTypeLabels,
+} from "../constants/transactions.js";
 import type {
   GroupTransactionType,
   Item,
@@ -7,21 +18,13 @@ import type {
   TableItemType,
   TableName,
   TransactionFeeInput,
-} from "@powerhousedao/design-system";
+} from "../types.js";
+import { calculateCurrentValue } from "./calculations.js";
+import { formatDateForDisplay, isISODate } from "./date.js";
 import {
-  assetTransactionSignByTransactionType,
-  calculateCurrentValue,
-  cashTransactionSignByTransactionType,
-  FEES_INCOME,
-  feesTransactions,
-  formatDateForDisplay,
-  FormattedNumber,
   getFixedIncomeAssets,
-  groupTransactionTypeLabels,
   isAssetGroupTransactionType,
-  isISODate,
-} from "@powerhousedao/design-system";
-import type { InputMaybe } from "document-model";
+} from "./validators.js";
 
 export function handleDateInTable(
   maybeDate: string | Date,

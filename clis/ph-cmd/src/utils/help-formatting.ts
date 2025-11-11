@@ -3,7 +3,7 @@ import {
   forwardPHCommand,
   getPackageManagerFromLockfile,
   getProjectInfo,
-} from "ph-cmd";
+} from "./package-manager.js";
 
 // Configuration constants for help formatting
 export const HELP_FORMATTING_CONFIG = {
