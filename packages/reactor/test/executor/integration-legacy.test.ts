@@ -7,6 +7,8 @@ import type {
 import { MemoryStorage, driveDocumentModelModule } from "document-drive";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { KyselyOperationIndex } from "../../src/cache/kysely-operation-index.js";
+import type { IOperationIndex } from "../../src/cache/operation-index-types.js";
 import { KyselyWriteCache } from "../../src/cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../../src/cache/write-cache-types.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
@@ -28,6 +30,7 @@ describe("SimpleJobExecutor Integration", () => {
   let operationStore: IOperationStore;
   let keyframeStore: IKeyframeStore;
   let writeCache: KyselyWriteCache;
+  let operationIndex: IOperationIndex;
 
   async function createDocumentWithCreateOperation(
     document: DocumentDriveDocument,
@@ -123,6 +126,8 @@ describe("SimpleJobExecutor Integration", () => {
 
     await writeCache.startup();
 
+    operationIndex = new KyselyOperationIndex(db);
+
     // Create executor with real storage, real operation store, and real write cache
     const eventBus = createTestEventBus();
     executor = new SimpleJobExecutor(
@@ -132,6 +137,7 @@ describe("SimpleJobExecutor Integration", () => {
       operationStore,
       eventBus,
       writeCache,
+      operationIndex,
       { legacyStorageEnabled: true },
     );
   });
@@ -414,6 +420,7 @@ describe("SimpleJobExecutor Integration", () => {
         operationStore,
         eventBus,
         writeCache,
+        operationIndex,
         { legacyStorageEnabled: true },
       );
 

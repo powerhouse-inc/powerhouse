@@ -7,7 +7,7 @@ import type {
 } from "../storage/interfaces.js";
 
 export type OperationIndexEntry = Operation & {
-  ordinal: number;
+  ordinal?: number;
   documentId: string;
   documentType: string;
   branch: string;
@@ -62,3 +62,7 @@ export type InsertableOperationIndexOperation =
   Insertable<OperationIndexOperationTable>;
 export type UpdateableOperationIndexOperation =
   Updateable<OperationIndexOperationTable>;
+
+export function driveCollectionId(branch: string, driveId: string): string {
+  return `drive.${branch}.${driveId}`;
+}

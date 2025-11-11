@@ -12,6 +12,7 @@ import { KyselyPGlite } from "kysely-pglite";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, it } from "vitest";
+import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
 import { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../../../src/cache/write-cache-types.js";
 import { Reactor } from "../../../src/core/reactor.js";
@@ -165,6 +166,10 @@ async function createReactorSetup(
   );
   await writeCache.startup();
 
+  const operationIndex = new KyselyOperationIndex(
+    db as unknown as Kysely<StorageDatabase>,
+  );
+
   const executor = new SimpleJobExecutor(
     registry,
     storage,
@@ -172,6 +177,7 @@ async function createReactorSetup(
     operationStore,
     eventBus,
     writeCache,
+    operationIndex,
     { legacyStorageEnabled },
   );
 

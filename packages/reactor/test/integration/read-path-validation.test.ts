@@ -150,6 +150,16 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       shutdown: vi.fn(),
     };
 
+    const mockOperationIndex: any = {
+      start: vi.fn().mockReturnValue({
+        createCollection: vi.fn(),
+        addToCollection: vi.fn(),
+        write: vi.fn(),
+      }),
+      commit: vi.fn().mockResolvedValue(undefined),
+      find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+    };
+
     const executor = new SimpleJobExecutor(
       registry,
       legacyStorage as IDocumentStorage,
@@ -157,6 +167,7 @@ describe.each(storageLayers)("%s", (storageName, buildStorage) => {
       operationStore,
       eventBus,
       mockWriteCache,
+      mockOperationIndex,
       { legacyStorageEnabled: true },
     );
     executorManager = new SimpleJobExecutorManager(

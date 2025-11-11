@@ -82,6 +82,17 @@ describe("ReactorClient Passthrough Functions", () => {
       shutdown: vi.fn(),
     };
 
+    // Create mock operation index
+    const mockOperationIndex: any = {
+      start: vi.fn().mockReturnValue({
+        createCollection: vi.fn(),
+        addToCollection: vi.fn(),
+        write: vi.fn(),
+      }),
+      commit: vi.fn().mockResolvedValue(undefined),
+      find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+    };
+
     // Create job executor
     const executor = new SimpleJobExecutor(
       registry,
@@ -90,6 +101,7 @@ describe("ReactorClient Passthrough Functions", () => {
       operationStore,
       eventBus,
       mockWriteCache,
+      mockOperationIndex,
       { legacyStorageEnabled: true },
     );
 

@@ -8,6 +8,7 @@ import {
   MemoryStorage,
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
+import { KyselyOperationIndex } from "../cache/kysely-operation-index.js";
 import { KyselyWriteCache } from "../cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../cache/write-cache-types.js";
 import { EventBus } from "../events/event-bus.js";
@@ -154,6 +155,10 @@ export class ReactorBuilder {
     );
     await writeCache.startup();
 
+    const operationIndex = new KyselyOperationIndex(
+      db as unknown as Kysely<StorageDatabase>,
+    );
+
     if (!this.executorManager) {
       this.executorManager = new SimpleJobExecutorManager(
         () =>
@@ -164,6 +169,7 @@ export class ReactorBuilder {
             operationStore,
             eventBus,
             writeCache,
+            operationIndex,
             { legacyStorageEnabled: this.features.legacyStorageEnabled },
           ),
         eventBus,

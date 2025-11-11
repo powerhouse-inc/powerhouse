@@ -1,7 +1,10 @@
 import { driveDocumentModelModule } from "document-drive";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { KyselyOperationIndex } from "../../src/cache/kysely-operation-index.js";
 import { KyselyWriteCache } from "../../src/cache/kysely-write-cache.js";
+import type { IOperationIndex } from "../../src/cache/operation-index-types.js";
+import { driveCollectionId } from "../../src/cache/operation-index-types.js";
 import type { WriteCacheConfig } from "../../src/cache/write-cache-types.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
 import type { Job } from "../../src/queue/types.js";
@@ -21,6 +24,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
   let operationStore: IOperationStore;
   let keyframeStore: IKeyframeStore;
   let writeCache: KyselyWriteCache;
+  let operationIndex: IOperationIndex;
 
   async function createDocumentWithCreateOperation(
     documentId: string,
@@ -107,6 +111,8 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
 
     await writeCache.startup();
 
+    operationIndex = new KyselyOperationIndex(db);
+
     const eventBus = createTestEventBus();
     executor = new SimpleJobExecutor(
       registry,
@@ -115,6 +121,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
       operationStore,
       eventBus,
       writeCache,
+      operationIndex,
       { legacyStorageEnabled: false },
     );
   });
@@ -566,6 +573,200 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
       expect(result.error?.name).toBe("DocumentDeletedError");
       expect(result.error?.message).toContain(document.header.id);
       expect(result.error?.message).toContain("deleted");
+    });
+  });
+
+  describe("Operation Index Integration", () => {
+    it("should write operations to the operation index when creating a document", async () => {
+      const job: Job = {
+        id: "job-create",
+        kind: "mutation",
+        documentId: "new-doc-1",
+        scope: "document",
+        branch: "main",
+        actions: [
+          {
+            id: "create-action",
+            type: "CREATE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: new Date().toISOString(),
+            input: {
+              documentId: "new-doc-1",
+              model: "powerhouse/document-drive",
+            },
+          },
+        ],
+        operations: [],
+        createdAt: new Date().toISOString(),
+        queueHint: [],
+        errorHistory: [],
+      };
+
+      const result = await executor.executeJob(job);
+
+      expect(result.success).toBe(true);
+
+      const indexedOps = await db
+        .selectFrom("operation_index_operations")
+        .selectAll()
+        .where("documentId", "=", "new-doc-1")
+        .execute();
+
+      expect(indexedOps).toHaveLength(1);
+      expect(indexedOps[0].documentType).toBe("powerhouse/document-drive");
+      expect(indexedOps[0].scope).toBe("document");
+      expect(indexedOps[0].branch).toBe("main");
+    });
+
+    it("should create collection when creating a document-drive document", async () => {
+      const driveId = "drive-collection-test";
+      const job: Job = {
+        id: "job-create-drive",
+        kind: "mutation",
+        documentId: driveId,
+        scope: "document",
+        branch: "main",
+        actions: [
+          {
+            id: "create-drive-action",
+            type: "CREATE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: new Date().toISOString(),
+            input: {
+              documentId: driveId,
+              model: "powerhouse/document-drive",
+            },
+          },
+        ],
+        operations: [],
+        createdAt: new Date().toISOString(),
+        queueHint: [],
+        errorHistory: [],
+      };
+
+      const result = await executor.executeJob(job);
+
+      expect(result.success).toBe(true);
+
+      const collections = await db
+        .selectFrom("document_collections")
+        .selectAll()
+        .where("collectionId", "=", driveCollectionId("main", driveId))
+        .execute();
+
+      expect(collections).toHaveLength(1);
+      expect(collections[0].collectionId).toBe(
+        driveCollectionId("main", driveId),
+      );
+    });
+
+    it("should add documents to collection when adding relationships", async () => {
+      const driveDoc = driveDocumentModelModule.utils.createDocument();
+      const driveId = driveDoc.header.id;
+      const childDocId = "child-doc-1";
+
+      await createDocumentWithCreateOperation(
+        driveId,
+        driveDoc.header.documentType,
+        driveDoc.state,
+      );
+
+      const childDoc = driveDocumentModelModule.utils.createDocument();
+      childDoc.header.id = childDocId;
+      await createDocumentWithCreateOperation(
+        childDocId,
+        childDoc.header.documentType,
+        childDoc.state,
+      );
+
+      const job: Job = {
+        id: "job-add-relationship",
+        kind: "mutation",
+        documentId: driveId,
+        scope: "document",
+        branch: "main",
+        actions: [
+          {
+            id: "add-rel-action",
+            type: "ADD_RELATIONSHIP",
+            scope: "document",
+            timestampUtcMs: new Date().toISOString(),
+            input: {
+              sourceId: driveId,
+              targetId: childDocId,
+              relationshipType: "child",
+            },
+          },
+        ],
+        operations: [],
+        createdAt: new Date().toISOString(),
+        queueHint: [],
+        errorHistory: [],
+      };
+
+      const result = await executor.executeJob(job);
+
+      if (!result.success) {
+        console.error("ADD_RELATIONSHIP job failed:", result.error?.message);
+      }
+      expect(result.success).toBe(true);
+
+      const collectionMemberships = await db
+        .selectFrom("document_collections")
+        .selectAll()
+        .where("documentId", "=", childDocId)
+        .execute();
+
+      expect(collectionMemberships.length).toBeGreaterThan(0);
+      const membership = collectionMemberships.find(
+        (m) => m.collectionId === driveCollectionId("main", driveId),
+      );
+      expect(membership).toBeDefined();
+    });
+
+    it("should write all operation types to the index", async () => {
+      const document = driveDocumentModelModule.utils.createDocument();
+      await createDocumentWithCreateOperation(
+        document.header.id,
+        document.header.documentType,
+        document.state,
+      );
+
+      const job: Job = {
+        id: "job-upgrade",
+        kind: "mutation",
+        documentId: document.header.id,
+        scope: "document",
+        branch: "main",
+        actions: [
+          {
+            id: "upgrade-action",
+            type: "UPGRADE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: new Date().toISOString(),
+            input: {
+              documentId: document.header.id,
+              state: { ...document.state },
+            },
+          },
+        ],
+        operations: [],
+        createdAt: new Date().toISOString(),
+        queueHint: [],
+        errorHistory: [],
+      };
+
+      const result = await executor.executeJob(job);
+
+      expect(result.success).toBe(true);
+
+      const indexedOps = await db
+        .selectFrom("operation_index_operations")
+        .selectAll()
+        .where("documentId", "=", document.header.id)
+        .execute();
+
+      expect(indexedOps.length).toBeGreaterThan(0);
     });
   });
 });

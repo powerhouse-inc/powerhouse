@@ -100,18 +100,27 @@ export class KyselyOperationIndex implements IOperationIndex {
 
       if (operations.length > 0) {
         const operationRows: InsertableOperationIndexOperation[] =
-          operations.map((op) => ({
-            opId: op.id || "",
-            documentId: op.documentId,
-            documentType: op.documentType,
-            scope: op.scope,
-            branch: op.branch,
-            timestampUtcMs: BigInt(op.timestampUtcMs),
-            index: op.index,
-            skip: op.skip,
-            hash: op.hash,
-            action: op.action as unknown,
-          }));
+          operations.map((op) => {
+            const timestamp = op.timestampUtcMs;
+            let timestampMs: number;
+            if (/^\d+$/.test(timestamp)) {
+              timestampMs = Number(timestamp);
+            } else {
+              timestampMs = new Date(timestamp).getTime();
+            }
+            return {
+              opId: op.id || "",
+              documentId: op.documentId,
+              documentType: op.documentType,
+              scope: op.scope,
+              branch: op.branch,
+              timestampUtcMs: BigInt(timestampMs || 0),
+              index: op.index,
+              skip: op.skip,
+              hash: op.hash,
+              action: op.action as unknown,
+            };
+          });
 
         await trx
           .insertInto("operation_index_operations")
