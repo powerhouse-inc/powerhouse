@@ -95,7 +95,7 @@
     "./assets/*.avif": "./assets/*.avif",
     "./public/icon.ico": "./public/icon.ico"
   },
-  "sideEffects": false,
+  "sideEffects": ["lib/src/main.js"],
   "license": "AGPL-3.0-only",
   "author": "powerhouse.inc",
   "repository": {
