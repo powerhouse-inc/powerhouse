@@ -286,6 +286,15 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     plugins,
     resolve: {
       dedupe: ["react", "react-dom", "react/jsx-runtime"],
+      conditions: [
+        "development",
+        "production",
+        "source",
+        "browser",
+        "module",
+        "jsnext:main",
+        "jsnext",
+      ],
     },
     build: {
       minify: true,

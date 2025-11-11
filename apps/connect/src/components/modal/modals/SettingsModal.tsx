@@ -1,4 +1,9 @@
-import { About, ConnectPackageManager, DangerZone, DefaultEditor } from "@powerhousedao/connect/components";
+import {
+  About,
+  ConnectPackageManager,
+  DangerZone,
+  DefaultEditor,
+} from "@powerhousedao/connect/components";
 import { Icon } from "@powerhousedao/design-system";
 import { SettingsModal as SettingsModalV2 } from "@powerhousedao/design-system/connect";
 import { closePHModal, usePHModal } from "@powerhousedao/reactor-browser";

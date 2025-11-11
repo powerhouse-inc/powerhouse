@@ -1,4 +1,9 @@
-import { App, AppSkeleton, CookieBanner, ModalsContainer } from "@powerhousedao/connect/components";
+import {
+  App,
+  AppSkeleton,
+  CookieBanner,
+  ModalsContainer,
+} from "@powerhousedao/connect/components";
 import { useCheckLatestVersion } from "@powerhousedao/connect/hooks";
 import { useSubscribeToVetraPackages } from "@powerhousedao/connect/services";
 import { createReactor, useSetSentryUser } from "@powerhousedao/connect/store";
