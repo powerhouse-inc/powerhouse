@@ -19,7 +19,10 @@ export type GenerateOptions = {
   skipFormat?: boolean;
   force?: boolean;
   watch?: boolean;
+  specifiedPackageName?: string;
   editor?: string;
+  editorId?: string;
+  editorDirName?: string;
   processor?: string;
   documentTypes?: string;
   allowedDocumentTypes?: string;
@@ -30,6 +33,7 @@ export type GenerateOptions = {
   file?: string;
   driveEditor?: string;
   driveEditorAppId?: string;
+  driveEditorDirName?: string;
   migrationFile?: string;
   schemaFile?: string;
 };
@@ -55,8 +59,11 @@ export async function startGenerate(
   };
 
   const command = {
+    specifiedPackageName: options.specifiedPackageName,
     editor: !!options.editor,
     editorName: options.editor,
+    editorId: options.editorId,
+    editorDirName: options.editorDirName,
     documentTypes: options.documentTypes,
     allowedDocumentTypes: options.allowedDocumentTypes,
     processor: !!options.processor,
@@ -69,6 +76,7 @@ export async function startGenerate(
     driveEditor: !!options.driveEditor,
     driveEditorName: options.driveEditor,
     driveEditorAppId: options.driveEditorAppId,
+    driveEditorDirName: options.driveEditorDirName,
     isDragAndDropEnabled: options.isDragAndDropEnabled,
     migrationFile: options.migrationFile,
     schemaFile: options.schemaFile,
@@ -84,16 +92,20 @@ export async function startGenerate(
       appId: command.driveEditorAppId,
       allowedDocumentTypes: command.allowedDocumentTypes,
       isDragAndDropEnabled: command.isDragAndDropEnabled,
+      driveEditorDirName: command.driveEditorDirName,
     });
   } else if (command.editor) {
     if (!command.editorName) {
       throw new Error("Editor name is required (--editor or -e)");
     }
-    await generateEditor(
-      command.editorName,
-      command.documentTypes?.split(/[|,;]/g) ?? [],
-      config,
-    );
+    await generateEditor({
+      name: command.editorName,
+      documentTypes: command.documentTypes?.split(/[|,;]/g) ?? [],
+      config: config,
+      editorId: command.editorId,
+      specifiedPackageName: command.specifiedPackageName,
+      editorDirName: command.editorDirName,
+    });
   } else if (command.processor && options.processor) {
     const processorType =
       options.processorType === "relationalDb" ? "relationalDb" : "analytics";

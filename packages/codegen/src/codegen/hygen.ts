@@ -45,7 +45,12 @@ export async function run(
 
     const filesToFormat = actions
       .filter((action) => ["added", "inject"].includes(action.status))
-      .map((action) => action.subject.replace(".", process.cwd()));
+      .map((action) => action.subject.replace("./", `${process.cwd()}/`))
+      .map((filePath) =>
+        filePath.startsWith(process.cwd())
+          ? filePath
+          : `${process.cwd()}/${filePath}`,
+      );
 
     if (filesToFormat.length > 0) {
       const config = await prettier.resolveConfig(process.cwd());
@@ -193,16 +198,33 @@ export async function hygenGenerateDocumentModel(
   }
 }
 
+type HygenGenerateEditorArgs = {
+  name: string;
+  documentTypes: string[];
+  documentTypesMap: DocumentTypesMap;
+  dir: string;
+  documentModelsDir: string;
+  packageName: string;
+  skipFormat?: boolean;
+  verbose?: boolean;
+  editorId?: string;
+  editorDirName?: string;
+};
 export async function hygenGenerateEditor(
-  name: string,
-  documentTypes: string[],
-  documentTypesMap: DocumentTypesMap,
-  dir: string,
-  documentModelsDir: string,
-  packageName: string,
-  { skipFormat = false, verbose = true } = {},
-  editorId?: string,
+  hygenGenerateEditorArgs: HygenGenerateEditorArgs,
 ) {
+  const {
+    name,
+    documentTypes,
+    documentTypesMap,
+    dir,
+    documentModelsDir,
+    packageName,
+    skipFormat = false,
+    verbose = true,
+    editorId,
+    editorDirName,
+  } = hygenGenerateEditorArgs;
   // Generate the singular files for the document model logic
   const args = [
     "powerhouse",
@@ -223,6 +245,10 @@ export async function hygenGenerateEditor(
 
   if (editorId) {
     args.push("--editor-id", editorId);
+  }
+
+  if (editorDirName) {
+    args.push("--editor-dir-name", editorDirName);
   }
 
   await run(args, { skipFormat, verbose });
@@ -353,6 +379,7 @@ export async function hygenGenerateDriveEditor(options: {
   allowedDocumentTypes: string | undefined | null;
   isDragAndDropEnabled: boolean;
   skipFormat?: boolean;
+  driveEditorDirName?: string;
 }) {
   const {
     name,
@@ -361,6 +388,7 @@ export async function hygenGenerateDriveEditor(options: {
     skipFormat,
     allowedDocumentTypes,
     isDragAndDropEnabled,
+    driveEditorDirName,
   } = options;
 
   const allowedDocumentTypesString = JSON.stringify(
@@ -384,6 +412,10 @@ export async function hygenGenerateDriveEditor(options: {
     "--is-drag-and-drop-enabled",
     isDragAndDropEnabled ? "true" : "false",
   ];
+
+  if (driveEditorDirName) {
+    args.push("--drive-editor-dir-name", driveEditorDirName);
+  }
 
   await run(args, { skipFormat });
 }
