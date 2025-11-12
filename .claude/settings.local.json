@@ -4,6 +4,11 @@
       "mcp__context7__resolve-library-id",
       "mcp__context7__get-library-docs",
       "Bash(pnpm:*)",
+      "Bash(cat:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(pwd:*)",
+      "Bash(tree:*)",
       "Skill(codex:*)"
     ],
     "deny": [],

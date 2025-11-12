@@ -29,9 +29,31 @@ export interface KeyframeTable {
   createdAt: Generated<Date>;
 }
 
+export interface DocumentCollectionTable {
+  documentId: string;
+  collectionId: string;
+}
+
+export interface OperationIndexOperationTable {
+  ordinal: Generated<number>;
+  opId: string;
+  documentId: string;
+  documentType: string;
+  scope: string;
+  branch: string;
+  timestampUtcMs: bigint;
+  writeTimestampUtcMs: Generated<Date>;
+  index: number;
+  skip: number;
+  hash: string;
+  action: unknown;
+}
+
 export interface Database {
   Operation: OperationTable;
   Keyframe: KeyframeTable;
+  document_collections: DocumentCollectionTable;
+  operation_index_operations: OperationIndexOperationTable;
 }
 
 export type OperationRow = Selectable<OperationTable>;
@@ -83,3 +105,14 @@ export type UpdateableDocumentRelationship =
 export type IndexerStateRow = Selectable<IndexerStateTable>;
 export type InsertableIndexerState = Insertable<IndexerStateTable>;
 export type UpdateableIndexerState = Updateable<IndexerStateTable>;
+
+export type DocumentCollectionRow = Selectable<DocumentCollectionTable>;
+export type InsertableDocumentCollection = Insertable<DocumentCollectionTable>;
+export type UpdateableDocumentCollection = Updateable<DocumentCollectionTable>;
+
+export type OperationIndexOperationRow =
+  Selectable<OperationIndexOperationTable>;
+export type InsertableOperationIndexOperation =
+  Insertable<OperationIndexOperationTable>;
+export type UpdateableOperationIndexOperation =
+  Updateable<OperationIndexOperationTable>;

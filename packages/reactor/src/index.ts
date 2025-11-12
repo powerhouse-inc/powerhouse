@@ -138,5 +138,5 @@ export type {
   DocumentStreamKey,
   KeyframeSnapshot,
   WriteCacheConfig,
-} from "./cache/types.js";
+} from "./cache/write-cache-types.js";
 export { type IWriteCache } from "./cache/write/interfaces.js";

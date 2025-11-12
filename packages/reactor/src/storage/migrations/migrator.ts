@@ -9,6 +9,7 @@ import * as migration005 from "./005_create_indexer_state_table.js";
 import * as migration006 from "./006_create_document_snapshot_table.js";
 import * as migration007 from "./007_create_slug_mapping_table.js";
 import * as migration008 from "./008_create_view_state_table.js";
+import * as migration009 from "./009_create_operation_index_tables.js";
 
 const migrations = {
   "001_create_operation_table": migration001,
@@ -19,6 +20,7 @@ const migrations = {
   "006_create_document_snapshot_table": migration006,
   "007_create_slug_mapping_table": migration007,
   "008_create_view_state_table": migration008,
+  "009_create_operation_index_tables": migration009,
 };
 
 class ProgrammaticMigrationProvider implements MigrationProvider {

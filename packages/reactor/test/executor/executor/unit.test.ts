@@ -87,6 +87,17 @@ describe("SimpleJobExecutor", () => {
       shutdown: vi.fn(),
     };
 
+    // Create mock operation index
+    const mockOperationIndex: any = {
+      start: vi.fn().mockReturnValue({
+        createCollection: vi.fn(),
+        addToCollection: vi.fn(),
+        write: vi.fn(),
+      }),
+      commit: vi.fn().mockResolvedValue(undefined),
+      find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+    };
+
     const eventBus = createTestEventBus();
     executor = new SimpleJobExecutor(
       registry,
@@ -95,6 +106,7 @@ describe("SimpleJobExecutor", () => {
       mockOperationStore,
       eventBus,
       mockWriteCache,
+      mockOperationIndex,
       { legacyStorageEnabled: true },
     );
   });
