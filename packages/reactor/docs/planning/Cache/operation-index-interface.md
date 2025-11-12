@@ -23,7 +23,10 @@ export interface IOperationIndexTxn {
   createCollection(collectionId: string): void;
 
   /** Adds a document to an existing collection (via relationship operations) */
-  addToCollection(collectionId: string, documentId: string): void;
+  addToCollection(collectionId: string, documentId: string, ordinal: number): void;
+
+  /** Removes a document from a collection (via relationship operations) */
+  removeFromCollection(collectionId: string, documentId: string, ordinal: number): void;
 
   /** Writes operation rows to the index */
   write(operations: OperationIndexEntry[]): void;
@@ -82,7 +85,7 @@ txn.write([
   },
 ]);
 
-txn.addToCollection('collection.doc-123', 'doc-1');
+txn.addToCollection('collection.doc-123', 'doc-1', 1);
 
 await operationIndex.commit(txn);
 

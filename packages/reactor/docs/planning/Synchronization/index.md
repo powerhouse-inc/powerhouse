@@ -128,12 +128,13 @@ if (operation.action.type === "ADD_RELATIONSHIP") {
   index.addToCollection(
     driveCollectionId(branch, parentId),
     documentId,
+    ordinal,
   );
 } else if (operation.action.type === "REMOVE_RELATIONSHIP") {
   index.removeFromCollection(
     driveCollectionId(branch, parentId),
     documentId,
-    revision,
+    ordinal,
   );
 }
 ```

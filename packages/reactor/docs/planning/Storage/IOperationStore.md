@@ -39,10 +39,11 @@ interface IOperationStore {
   // the changes cannot be applied atomically
   apply(
     documentId: string,
+    documentType: string,
     scope: string,
     branch: string,
     revision: number,
-    (txn: AtomicTxn) => void,
+    fn: (txn: AtomicTxn) => Promise<void>,
     signal?: AbortSignal,
   ): Promise<void>;
 
@@ -100,7 +101,7 @@ interface AtomicTxn {
 ### Usage
 
 ```tsx
-await operations.apply(documentId, scope, branch, revision, async (txn) => {
+await operations.apply(documentId, documentType, scope, branch, revision, async (txn) => {
   // get current state to pass to reducers
   const currentState = await readModel.get(documentId, scope, branch, revision);
   const { operations } = await applyReducers(currentState);
