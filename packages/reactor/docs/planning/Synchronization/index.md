@@ -29,11 +29,19 @@ Prerequisite reading:
 
 ### What Are We Synchronizing?
 
-At the heart of synchronization is the **operation stream** — a totally-ordered stream of operations that, when reduced, produces a document's current state. Every operation stream is identified by a quadruple:
+At the heart of synchronization is the **operation stream** — a totally-ordered stream of operations that, when reduced, produces a document's current state. In the storage layer (`IOperationStore`), every operation stream is identified by a triple:
+
+```
+(documentId, scope, branch)
+```
+
+At the synchronization layer, we add routing metadata to determine where operations flow to/from:
 
 ```
 (remote, documentId, scope, branch)
 ```
+
+Where **remote** is synchronization-layer metadata (not part of the storage identity) that specifies the destination or source reactor instance.
 
 **Key properties:**
 - Operations within a stream are **append-only** with monotonically increasing indices
@@ -47,21 +55,38 @@ We define three levels of synchronization granularity that compose hierarchicall
 
 #### 1. Synchronization Strand
 
-The most granular level on which synchronization logic is defined is the **strand**. A strand synchronizes exactly one operation stream from source to destination:
+The most granular level on which synchronization logic is defined is the **strand**. A strand is a synchronization-layer concept that represents the flow of operations for a single storage-layer stream between two reactor instances:
+
+```
+Storage stream: (documentId, scope, branch)
+Synchronization flow: remote₁ → remote₂
+```
+
+Or more explicitly:
 
 ```
 (remote₁, documentId₁, scope₁, branch₁) → (remote₂, documentId₂, scope₂, branch₂)
 ```
 
+Where `remote₁` and `remote₂` identify the source and destination reactor instances.
+
 **Properties:**
 - All synchronization behavior (conflict detection, cursor tracking, ACK/NACK) is defined at strand granularity
-- A strand maps to a single operation stream in the core `IOperationStorage` object
+- A strand maps operations from a single storage stream `(documentId, scope, branch)` in the source `IOperationStore` to the destination `IOperationStore`
+- The remote identifiers determine routing but are not part of the operation stream identity in storage
 
-**Example:** Synchronizing the `main` branch of the `public` scope of document `doc-123` from Drive A to Drive B creates one strand.
+**Example:** Synchronizing the `main` branch of the `public` scope of document `doc-123` from Drive A to Drive B creates one strand that flows operations from one reactor's storage to another's.
 
 #### 2. Synchronization Thread
 
-A **document-level** synchronization channel. A thread synchronizes one or more strands for the same document pair:
+A **document-level** synchronization channel. A thread synchronizes one or more storage streams (identified by different scopes/branches) for the same document, flowing from one remote to another:
+
+```
+Storage streams: (documentId, scope*, branch*)
+Synchronization flow: remote₁ → remote₂
+```
+
+Or more explicitly:
 
 ```
 (remote₁, documentId₁, ?, ?) → (remote₂, documentId₂, ?, ?)
@@ -77,7 +102,14 @@ A **document-level** synchronization channel. A thread synchronizes one or more 
 
 #### 3. Synchronization Cable
 
-A **drive-level** synchronization channel. A cable synchronizes multiple threads between two drive instances:
+A **drive-level** synchronization channel. A cable synchronizes multiple storage streams (for multiple documents) between two reactor instances:
+
+```
+Storage streams: (documentId*, scope*, branch*)
+Synchronization flow: remote₁ → remote₂
+```
+
+Or more explicitly:
 
 ```
 (remote₁, ?, ?, ?) → (remote₂, ?, ?, ?)
@@ -93,7 +125,7 @@ A **drive-level** synchronization channel. A cable synchronizes multiple threads
 
 While strand/thread/cable provide conceptual clarity, **collections** provide implementation efficiency.
 
-The `IOperationStore` can be thought of as an an object that stores _strands_, i.e. it stores ordered operations for `(documentId, scope, branch)` tuples (see the [getSince()](../Storage/IOperationStore.md#interface) method). Therefore, it can easily be used to support synchronization of strands.
+The `IOperationStore` stores operation streams identified by `(documentId, scope, branch)` tuples (see the [getSince()](../Storage/IOperationStore.md#interface) method). Each storage stream can be synchronized as a strand by adding remote routing information at the sync layer. Therefore, `IOperationStore` can easily support strand synchronization.
 
 To support thread synchronization, we can use `getSince` to query across multiple scopes.
 
