@@ -187,6 +187,10 @@ Now that we have an understanding of strands/threads/cables and collections, we 
 - Each `IChannel` is responsible for managing and storing its own cursor.
 - Cursors can be updated using outgoing and incoming operations.
 
+### `SyncEnvelope`
+
+The `SyncEnvelope` object (defined below), contains a `type` field that indicates whether the envelope contains `operations` or an `ack`. These two are semantically distinct, as `operations` envelopes need to wait for an ACK, but `ack` envelopes do not.
+
 ### Push Pattern
 
 **Trigger:** Sender-initiated (event-driven)
@@ -205,11 +209,13 @@ sequenceDiagram
 
   LocalBus->>SyncMgr: (1) OperationWithContext[]
   SyncMgr->>Channel: (2) channel.outbox.add()
-  Channel-->>RemoteChannel: (3) { channelMeta, operations }
+  Channel-->>RemoteChannel: (3) SyncEnvelope { type: "operations", operations }
   RemoteChannel->>RemoteSyncMgr: (4) channel.inbox.onAdded()
   RemoteSyncMgr<<->>RemoteLoad: (5) load(documentId, branch, Operation[])
-  RemoteSyncMgr->>RemoteChannel: (6) channel.inbox.remove()
-  RemoteChannel-->>Channel: (7) (ACK) { channelMeta, operations }
+  RemoteSyncMgr->>RemoteChannel: (6a) channel.outbox.add()
+  RemoteSyncMgr->>RemoteChannel: (6b) channel.inbox.remove()
+  RemoteChannel-->>Channel: (7) SyncEnvelope { type: "ack", operations }
+  Channel->>Channel: (8) channel.outbox.remove()
   Channel->>SyncMgr: (8) channel.outbox.onRemoved()
 ```
 
@@ -231,20 +237,25 @@ sequenceDiagram
   participant RemoteSyncMgr as Sync Manager (Remote)
   participant RemoteIndex as IOperationIndex (Remote)
 
-  SyncMgr->>Channel: (1) pull()
-  Channel-->>RemoteChannel: (2) { channelMeta, cursor }
-  RemoteChannel->>RemoteSyncMgr: (3) channel.onPull()
+  SyncMgr->>Channel: (1) channel.outbox.add()
+  Channel-->>RemoteChannel: (2) SyncEnvelope { type: "operations", cursor }
+  RemoteChannel->>RemoteSyncMgr: (3) channel.inbox.onAdded()
   RemoteSyncMgr<<->>RemoteIndex: (4) index.find(collectionId, cursor, filter, paging)
-  RemoteSyncMgr->>RemoteChannel: (5) channel.outbox.add()
-  RemoteChannel-->>Channel: (6) { channelMeta, operations }
+  RemoteSyncMgr->>RemoteChannel: (5a) channel.outbox.add()
+  RemoteSyncMgr->>RemoteChannel: (5b) channel.inbox.remove()
+  RemoteChannel-->>Channel: (6) SyncEnvelope { type: "operations", operations }
   Channel->>SyncMgr: (7) channel.inbox.onAdded()
   SyncMgr<<->>LocalLoad: (8) load(documentId, branch, Operation[])
-  SyncMgr->>Channel: (9) channel.inbox.remove()
-  Channel->>RemoteChannel: (10) ACK ({ channelMeta, operations })
+  SyncMgr->>Channel: (9a) channel.outbox.add()
+  SyncMgr->>Channel: (9b) channel.inbox.remove()
+  Channel->>RemoteChannel: (10a) SyncEnvelope { type: "ack", operations }
+  Channel->>Channel: (10b) channel.outbox.remove()
   RemoteChannel->>RemoteSyncMgr: (11) channel.outbox.onRemoved()
 ```
 
 ### Ping-Pong Pattern
+
+The ping-pong pattern composes push and pull patterns. You can see this broken into Push, Pull, and ACK flows. Also notice that the `SyncEnvelope` object is able to compose both cursor and operations flows in a single envelope: the former used for pull, the latter used for push.
 
 **Trigger:** Bidirectional (both push and pull)
 
@@ -266,26 +277,28 @@ sequenceDiagram
   participant ReactorB as IReactor (B)
 
   Note over ChannelA,ChannelB: Transport
-  ChannelB->>ChannelA: { channelMeta, operations, cursor }
-  ChannelA->>ChannelB: { channelMeta, operations, cursor }
+  ChannelB->>ChannelA: SyncEnvelope { type: "operations", operations, cursor }
+  ChannelA->>ChannelB: SyncEnvelope { type: "operations", operations, cursor }
 
   Note over ChannelA,ChannelB: ACK A → B
-  ChannelA->>ChannelB: ACK ({ channelMeta, operations })
+  ChannelA->>ChannelB: SyncEnvelope { type: "ack", operations }
   ChannelB->>SyncMgrB: channel.outbox.onRemoved()
 
   Note over ChannelB,ChannelA: ACK B → A
-  ChannelB->>ChannelA: ACK ({ channelMeta, operations })
+  ChannelB->>ChannelA: SyncEnvelope { type: "ack", operations }
   ChannelA->>SyncMgrA: channel.outbox.onRemoved()
 
   Note over ChannelA,IndexB: Pull A ← B
-  ChannelB->>SyncMgrB: channel.onPull()
+  ChannelB->>SyncMgrB: channel.inbox.onAdded()
   SyncMgrB<<->>IndexB: index.find(collectionId, cursor, filter, paging)
   SyncMgrB->>ChannelB: channel.outbox.add()
+  SyncMgrB->>ChannelB: channel.inbox.remove()
 
   Note over ChannelB,IndexA: Pull B ← A
-  ChannelA->>SyncMgrA: channel.onPull()
+  ChannelA->>SyncMgrA: channel.inbox.onAdded()
   SyncMgrA<<->>IndexA: index.find(collectionId, cursor, filter, paging)
   SyncMgrA->>ChannelA: channel.outbox.add()
+  SyncMgrA->>ChannelA: channel.inbox.remove()
 
   Note over ReactorA,ChannelA: Push A → B
   ReactorA->>BusA: OperationWithContext[]
@@ -402,8 +415,10 @@ The `ChannelMeta` contains metadata that identifies the channel and its configur
 
 ```ts
 type ChannelMeta = {
-  //
+  id: string; // unique identifier for the channel, probably a UUID
 };
+
+type SyncEnvelopeType = "operations" | "ack";
 
 type SyncEnvelope = {
   type: string;
@@ -549,7 +564,7 @@ class JobHandle {
   branch: string;
 
   /** The operations */
-  operations: Operation[];
+  operations: OperationWithContext[];
 
   /** The status of the job */
   status: JobChannelStatus = JobChannelStatus.Unknown;
