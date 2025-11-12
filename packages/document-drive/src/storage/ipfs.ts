@@ -1,6 +1,7 @@
 // @ts-nocheck
 // TODO fix interface errors
-import { mfs, type MFS } from "@helia/mfs";
+import type { MFS } from "@helia/mfs";
+import { mfs } from "@helia/mfs";
 import type {
   IDocumentOperationStorage,
   IDocumentStorage,
@@ -23,7 +24,7 @@ import {
   type PHDocument,
   type PHDocumentHeader,
 } from "document-model";
-import { type Helia } from "helia";
+import type { Helia } from "helia";
 import stringify from "json-stringify-deterministic";
 
 // Interface for drive manifest that tracks document IDs in a drive

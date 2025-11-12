@@ -481,6 +481,17 @@ export async function createTestReactorSetup(
     shutdown: vi.fn(),
   };
 
+  // Create mock operation index
+  const mockOperationIndex: any = {
+    start: vi.fn().mockReturnValue({
+      createCollection: vi.fn(),
+      addToCollection: vi.fn(),
+      write: vi.fn(),
+    }),
+    commit: vi.fn().mockResolvedValue(undefined),
+    find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+  };
+
   // Create job executor with event bus
   const jobExecutor = new SimpleJobExecutor(
     registry,
@@ -489,6 +500,7 @@ export async function createTestReactorSetup(
     operationStore,
     eventBus,
     mockWriteCache,
+    mockOperationIndex,
     executorConfig ?? { legacyStorageEnabled: true },
   );
 
