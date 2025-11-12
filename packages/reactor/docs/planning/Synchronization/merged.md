@@ -149,6 +149,7 @@ Now that we have an understanding of strands/threads/cables and collections, we 
 - There is one `IChannel` per `(remote, collectionId)` tuple.
 - The `ISyncManager` is responsible for mapping operations to appropriate channels. It does this by reading meta information on `OperationWithContext`.
 - Each `IChannel` is responsible for managing and storing its own cursor.
+- Cursors can be updated using outgoing and incoming operations.
 
 ### Push Pattern
 
@@ -159,21 +160,21 @@ Now that we have an understanding of strands/threads/cables and collections, we 
 **Flow:**
 ```mermaid
 sequenceDiagram
-    participant LocalBus as Event Bus (Local)
-    participant SyncMgr as Sync Manager (Local)
-    participant Channel as IChannel (Local)
-    participant RemoteChannel as IChannel (Remote)
-    participant RemoteSyncMgr as Sync Manager (Remote)
-    participant RemoteLoad as IReactor (Remote)
+  participant LocalBus as Event Bus (Local)
+  participant SyncMgr as Sync Manager (Local)
+  participant Channel as IChannel (Local)
+  participant RemoteChannel as IChannel (Remote)
+  participant RemoteSyncMgr as Sync Manager (Remote)
+  participant RemoteLoad as IReactor (Remote)
 
-    LocalBus->>SyncMgr: (1) OperationWithContext[]
-    SyncMgr->>Channel: (2) channel.outbox.add()
-    Channel-->>RemoteChannel: (3) { channelMeta, operations }
-    RemoteChannel->>RemoteSyncMgr: (4) channel.inbox.onAdded()
-    RemoteSyncMgr<<->>RemoteLoad: (5) load(documentId, branch, Operation[])
-    RemoteSyncMgr->>RemoteChannel: (6) channel.inbox.remove()
-    RemoteChannel-->>Channel: (7) { channelMeta, operations }
-    Channel->>SyncMgr: (8) channel.outbox.onRemoved()
+  LocalBus->>SyncMgr: (1) OperationWithContext[]
+  SyncMgr->>Channel: (2) channel.outbox.add()
+  Channel-->>RemoteChannel: (3) { channelMeta, operations }
+  RemoteChannel->>RemoteSyncMgr: (4) channel.inbox.onAdded()
+  RemoteSyncMgr<<->>RemoteLoad: (5) load(documentId, branch, Operation[])
+  RemoteSyncMgr->>RemoteChannel: (6) channel.inbox.remove()
+  RemoteChannel-->>Channel: (7) { channelMeta, operations }
+  Channel->>SyncMgr: (8) channel.outbox.onRemoved()
 ```
 
 ### Pull Pattern
@@ -187,146 +188,78 @@ sequenceDiagram
 **Flow:**
 ```mermaid
 sequenceDiagram
-    participant LocalLoad as IReactor (Local)
-    participant SyncMgr as Sync Manager (Local)
-    participant Channel as IChannel (Local)
-    participant RemoteChannel as IChannel (Remote)
-    participant RemoteSyncMgr as Sync Manager (Remote)
-    participant RemoteIndex as IOperationIndex (Remote)
+  participant LocalLoad as IReactor (Local)
+  participant SyncMgr as Sync Manager (Local)
+  participant Channel as IChannel (Local)
+  participant RemoteChannel as IChannel (Remote)
+  participant RemoteSyncMgr as Sync Manager (Remote)
+  participant RemoteIndex as IOperationIndex (Remote)
 
-    SyncMgr->>Channel: (1) pull()
-    Channel-->>RemoteChannel: (2) { channelMeta, cursor }
-    RemoteChannel->>RemoteSyncMgr: (3) channel.onPull()
-    RemoteSyncMgr<<->>RemoteIndex: (4) index.find(collectionId, cursor, filter, paging)
-    RemoteSyncMgr->>RemoteChannel: (5) channel.outbox.add()
-    RemoteChannel-->>Channel: (6) { channelMeta, operations }
-    Channel->>SyncMgr: (7) channel.inbox.onAdded()
-    SyncMgr<<->>LocalLoad: (8) load(documentId, branch, Operation[])
-    SyncMgr->>Channel: (9) channel.inbox.remove()
+  SyncMgr->>Channel: (1) pull()
+  Channel-->>RemoteChannel: (2) { channelMeta, cursor }
+  RemoteChannel->>RemoteSyncMgr: (3) channel.onPull()
+  RemoteSyncMgr<<->>RemoteIndex: (4) index.find(collectionId, cursor, filter, paging)
+  RemoteSyncMgr->>RemoteChannel: (5) channel.outbox.add()
+  RemoteChannel-->>Channel: (6) { channelMeta, operations }
+  Channel->>SyncMgr: (7) channel.inbox.onAdded()
+  SyncMgr<<->>LocalLoad: (8) load(documentId, branch, Operation[])
+  SyncMgr->>Channel: (9) channel.inbox.remove()
 ```
 
 ### Ping-Pong Pattern
 
 **Trigger:** Bidirectional (both push and pull)
 
-**Flow:** Combines push and pull patterns with smart schedulers that adapt intervals based on:
-- Recent push activity (back off pull interval if pushes are frequent)
-- Network characteristics (latency, bandwidth)
-- Operation volume (size, frequency)
-- Reactor resource usage (CPU, memory)
+**Example:** Two reactors are pushing and pulling operations to keep in sync.
+
+**Flow:**
 
 ```mermaid
-graph TB
-    subgraph "Reactor A"
-        A_Events["Event Bus"] --> A_Sync["Sync Manager"]
-        A_Scheduler["Scheduler"] --> A_Sync
-        A_Sync <--> A_Index["IOperationIndex"]
-        A_Sync <--> A_Channel["IChannel"]
-    end
+sequenceDiagram
+  participant ReactorA as IReactor (A)
+  participant BusA as Event Bus (A)
+  participant IndexA as IOperationIndex (A)
+  participant SyncMgrA as Sync Manager (A)
+  participant ChannelA as IChannel (A)
+  participant ChannelB as IChannel (B)
+  participant SyncMgrB as Sync Manager (B)
+  participant IndexB as IOperationIndex (B)
+  participant BusB as Event Bus (B)
+  participant ReactorB as IReactor (B)
 
-    subgraph "Reactor B"
-        B_Events["Event Bus"] --> B_Sync["Sync Manager"]
-        B_Scheduler["Scheduler"] --> B_Sync
-        B_Sync <--> B_Index["IOperationIndex"]
-        B_Sync <--> B_Channel["IChannel"]
-    end
+  Note over ChannelA,ChannelB: Transport
+  ChannelB->>ChannelA: { channelMeta, operations, cursor }
+  ChannelA->>ChannelB: { channelMeta, operations, cursor }
 
-    A_Channel <-->|Transport| B_Channel
-```
+  Note over ChannelA,IndexB: Pull A ← B
+  ChannelB->>SyncMgrB: channel.onPull()
+  SyncMgrB<<->>IndexB: index.find(collectionId, cursor, filter, paging)
+  SyncMgrB->>ChannelB: channel.outbox.add()
 
-**Use cases:**
-- Peer-to-peer synchronization (both sides produce operations)
-- Collaborative editing (bidirectional real-time updates)
-- Drive mirroring (complete cable, both directions)
+  Note over ChannelB,IndexA: Pull B ← A
+  ChannelA->>SyncMgrA: channel.onPull()
+  SyncMgrA<<->>IndexA: index.find(collectionId, cursor, filter, paging)
+  SyncMgrA->>ChannelA: channel.outbox.add()
 
-## Use Cases
+  Note over ReactorA,ChannelA: Push A → B
+  ReactorA->>BusA: OperationWithContext[]
+  BusA->>SyncMgrA: OperationWithContext[]
+  SyncMgrA->>ChannelA: channel.outbox.add()
 
-### 1. CQRS Read-Model Updates
+  Note over ReactorB,ChannelB: Push B → A
+  ReactorB->>BusB: OperationWithContext[]
+  BusB->>SyncMgrB: OperationWithContext[]
+  SyncMgrB->>ChannelB: channel.outbox.add()
 
-**Pattern:** Push (event-driven)
-**Granularity:** Thread or cable (all documents in a drive)
-**Filter:** Typically all scopes, main branch only
+  Note over ChannelA,ReactorA: Apply B Operations to A
+  ChannelA->>SyncMgrA: channel.inbox.onAdded()
+  SyncMgrA<<->>ReactorA: load(documentId, branch, Operation[])
+  SyncMgrA->>ChannelA: channel.inbox.remove()  
 
-Internal listeners consume operations from the event bus and update read models (operational database tables, analytics data, search indices) in real time.
-
-**Example:**
-```typescript
-// System-managed listener updates analytics tables
-remote: "analytics-read-model"
-channel: InternalChannel
-filter: { documentType: ["*"], scope: ["*"], branch: ["main"] }
-```
-
-### 2. Backup and Replication
-
-**Pattern:** Pull (scheduled) or Push (event-driven)
-**Granularity:** Complete cable (entire drive)
-**Filter:** All documents, all scopes, all branches
-
-Achieve an identical copy of a drive instance for disaster recovery or geographic distribution.
-
-**Example:**
-```typescript
-// Complete backup to secondary region
-remote: "backup-us-west"
-channel: HTTPChannel("https://backup.example.com")
-filter: { documentType: ["*"], scope: ["*"], branch: ["*"] }
-```
-
-### 3. Public Drive Synchronization
-
-**Pattern:** Pull (scheduled or user-initiated)
-**Granularity:** Partial cable (public scope only)
-**Filter:** Public documents, main branch only
-
-Users download public documents from a shared drive (e.g., templates, reference data).
-
-**Example:**
-```typescript
-// Pull public documents from shared drive
-remote: "public-templates"
-channel: HTTPChannel("https://public.example.com")
-filter: { documentType: ["*"], scope: ["public"], branch: ["main"] }
-```
-
-### 4. Webhook Delivery
-
-**Pattern:** Push (event-driven)
-**Granularity:** Strand or thread (specific documents)
-**Filter:** User-defined (specific document types or IDs)
-
-Notify external services when specific documents change.
-
-**Example:**
-```typescript
-// Webhook for portfolio document changes
-remote: "portfolio-webhook"
-channel: RESTWebhookChannel("https://api.example.com/webhook")
-filter: {
-  documentType: ["maker/rwa-portfolio"],
-  scope: ["public"],
-  branch: ["main"]
-}
-```
-
-### 5. Secure Cloud Drive Collaboration
-
-**Pattern:** Ping-pong (bidirectional)
-**Granularity:** Partial cable (public + protected scopes)
-**Filter:** Authenticated user's permitted documents
-
-Multiple team members collaborate on shared documents through a central cloud drive.
-
-**Example:**
-```typescript
-// Bidirectional sync with team drive
-remote: "team-cloud-drive"
-channel: WebSocketChannel("wss://team.example.com")
-filter: {
-  documentType: ["*"],
-  scope: ["public", "protected"],
-  branch: ["*"]
-}
+  Note over ChannelB,ReactorB: Apply A Operations to B
+  ChannelB->>SyncMgrB: channel.inbox.onAdded()
+  SyncMgrB<<->>ReactorB: load(documentId, branch, Operation[])
+  SyncMgrB->>ChannelB: channel.inbox.remove()
 ```
 
 ## Direction and Roles
