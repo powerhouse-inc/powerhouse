@@ -262,166 +262,269 @@ sequenceDiagram
   SyncMgrB->>ChannelB: channel.inbox.remove()
 ```
 
-## Direction and Roles
-
-### Sender vs Receiver
-
-For any unidirectional synchronization flow:
-- **Sender (S):** The side with operations to transmit (operation history MUST NOT change during sync)
-- **Receiver (R):** The side that appends operations to its history (operation history CAN change during sync)
-
-### Push vs Pull
-
-Decouples the sender/receiver role from who initiates:
-- **Push:** Sender initiates (sender triggers, receiver accepts)
-- **Pull:** Receiver initiates (receiver polls, sender responds)
-
-**Notation:**
-- Push: `S → R` (operations flow left to right, initiated by sender)
-- Pull: `R ← S` (operations flow right to left, initiated by receiver)
-
-### Bidirectional Synchronization
-
-A bidirectional channel is shorthand for two opposite unidirectional channels:
-
-```
-A ↔ B  =  (A → B) + (B → A)
-```
-
-Each direction has independent:
-- Cursors (per collection, per direction)
-- Health tracking (push health and pull health)
-- Error handling (inbox and outbox mailboxes)
-
----
-
 # Layer 2: Protocol Specification
 
 ## Synchronization Primitives
 
-### Operations
+### `OperationWithContext`
 
-The fundamental unit of synchronization. Each operation represents a state mutation:
+This is the primitive we are synchronizing. It is passed back and forth between reactors.
 
-```typescript
-type Operation = {
-  index: number;           // Monotonically increasing within history
-  timestamp: number;       // Committed timestamp (UTC ms)
-  type: string;           // Operation type (e.g., "ADD_TRANSACTION")
-  input: unknown;         // Operation-specific parameters
-  hash: string;           // State hash after applying this operation
-  skip: number;           // Number of prior operations to undo (default 0)
-  scope: string[];        // Affected scopes
-  context?: unknown;      // Additional metadata
+This object is defined in [src/storage/interfaces.ts](../../src/storage/interfaces.ts) and looks something like this:
+
+```ts
+export type OperationContext = {
+  documentId: string;
+  documentType: string;
+  scope: string;
+  branch: string;
+  resultingState?: string; // populated only locally, in memory
+};
+
+export type OperationWithContext = {
+  operation: Operation;
+  context: OperationContext;
 };
 ```
 
-**Invariants:**
-- Operations within a history have **unique, sequential indices**
-- Each operation's hash is **deterministic** (same input + same prior state = same hash)
-- The `skip` parameter enables **operation undo/redo** without mutating history
+### `Remote`
 
-### Collections
+```ts
+type RemoteOptions = {
+  // future configuration options
+};
 
-A collection is a **virtual stream** of operations from all documents attached to a drive:
+type RemoteFilter = {
+  /**
+   * Array of document ids. If specified, this further refines documents in a
+   * collection.
+   */
+  documentId: string[];
 
-```typescript
-type CollectionId = string; // Format: "collection.{branch}.{driveId}"
+  /** Array of operation scopes to include, use ["*"] for all */
+  scope: string[];
 
-function driveCollectionId(branch: string, driveId: string): CollectionId {
-  return `collection.${branch}.${driveId}`;
-}
+  /** Branch to filter for. Use "main" for default behavior. */
+  branch: string;
+};
+
+type Remote = {
+  /** The name of the remote. Must be unique. Intended to be human
+   * readable, but does not affect anything.
+   */
+  name: string;
+
+  /** The id of the collection this remote is tracking */
+  collectionId: string;
+
+  /** Applies additional filtering on top of collections */
+  filter: RemoteFilter;
+
+  /** The channel connected to this remote */
+  channel: IChannel;
+
+  /** Options for the remote */
+  options: RemoteOptions;
+};
 ```
 
-**Properties:**
-- Collections are **ordinal-indexed** (monotonic integer cursor)
-- Operations retain their original history context (documentId, scope, branch)
-- Collections are **computed views** over the `IOperationIndex` — no additional storage
-- Only **drive documents** can seed collections
+**Remote semantics:**
+- Remotes are 1:1 with collections
+- Remotes may have additional filtering logic on them through `RemoteFilter`
 
-### Cursors
+### `RemoteCursor`
 
-A cursor tracks progress through a collection:
+A cursor tracks progress through a collection. This object is passed back and forth and also stored for catchup.
 
 ```typescript
 type RemoteCursor = {
-  remoteName: string;      // Which remote owns this cursor
-  collectionId: string;    // Which collection this cursor tracks
-  cursorOrdinal: number;   // Last processed ordinal (exclusive)
-  view: ViewFilter;        // Filters applied to the collection
-  lastPulledAtUtcMs?: number;
+  remoteName: string;         // Which remote owns this cursor
+  cursorOrdinal: number;      // Last processed ordinal (exclusive)
+  lastSyncedAtUtcMs?: number; // Timestamp of last sync (which may have been push or pull)
 };
 ```
 
 **Cursor semantics:**
 - Cursors are **exclusive** — the next query starts at `cursorOrdinal + 1`
 - Cursors advance **atomically** with operation application (transactional)
-- Cursors are **per-remote, per-collection** — a remote with multiple collections has multiple cursors
-
-### Filters
-
-Filters control which operations flow through a synchronization channel.
-
-#### RemoteFilter
-
-Coarse-grained filter that defines the scope of a remote:
-
-```typescript
-type RemoteFilter = {
-  documentType: string[];  // e.g., ["maker/*"], ["*"]
-  documentId: string[];    // Drive IDs (required for collection derivation)
-  scope: string[];         // e.g., ["public"], ["*"]
-  branch: string[];        // e.g., ["main"], ["*"]
-};
-```
-
-**Constraint:** Must be decomposable into collection queries. This means at least one entry in `documentId` must reference a drive document for each branch.
-
-#### ViewFilter
-
-Fine-grained filter applied at query time:
-
-```typescript
-type ViewFilter = {
-  documentType?: string[];
-  documentId?: string[];
-  scope?: string[];
-  // Note: branch is NOT in ViewFilter; branch is part of the collection ID
-};
-```
-
-**Usage:** The sync manager queries `IOperationIndex.find(collectionId, cursor, view, paging)` where `view` further restricts the collection stream.
+- Cursors are **per-remote**
 
 ## Channel Model
 
-### Mailbox Architecture
+### `IChannel`
 
-Every `IChannel` has three mailboxes that hold `JobHandle` objects:
+Every `IChannel` has three mailboxes that hold `JobHandle` objects (which are defined below):
 
 1. **Inbox:** Operations received from remote (awaiting local execution)
 2. **Outbox:** Operations sent to remote (awaiting remote confirmation)
-3. **DeadLetter:** Operations that failed permanently (retry exhausted)
+3. **DeadLetter:** Operations that failed permanently (retry exhausted, fatal error)
 
-```mermaid
-graph LR
-    subgraph "IChannel"
-        Inbox["Inbox<br/>(MutableJobHandle)"]
-        Outbox["Outbox<br/>(JobHandle)"]
-        DeadLetter["DeadLetter<br/>(JobHandle)"]
-    end
+```ts
+interface IChannel {
+  /**
+   * The incoming queue of operations that need to be applied to the local reactor.
+   */
+  inbox: Mailbox<JobHandle>;
 
-    Remote -->|Receive| Inbox
-    Inbox -->|Execute| LocalReactor
-    LocalReactor -->|ACK| Inbox
-    Inbox -.->|Failure| DeadLetter
+  /**
+   * The outgoing queue of operations being applied to the remote reactor.
+   */
+  outbox: Mailbox<JobHandle>;
 
-    LocalReactor -->|Produce| Outbox
-    Outbox -->|Send| Remote
-    Remote -->|ACK| Outbox
-    Outbox -.->|Failure| DeadLetter
+  /**
+   * The dead letter queue of operations that have failed for any reason.
+   */
+  deadLetter: Mailbox<JobHandle>;
+}
 ```
 
-### JobHandle Lifecycle
+### `Mailbox`
+
+Each mailbox contains a set of objects, and dispatches when objects are added and removed.
+
+```ts
+class Mailbox<T> {
+  /**
+   * The items in the mailbox.
+   */
+  get items(): ReadonlyArray<T>;
+
+  /**
+   * Gets an item from the mailbox.
+   */
+  get(id: string): T | undefined;
+
+  /**
+   * Adds an item to the mailbox.
+   */
+  add(item: T): void;
+
+  /**
+   * Removes an item from the mailbox.
+   */
+  remove(item: T): void;
+
+  /**
+   * Subscribes to new items being added to the mailbox.
+   */
+  onAdded(callback: (item: T) => void): void;
+
+  /**
+   * Subscribes to items being removed from the mailbox.
+   */
+  onRemoved(callback: (item: T) => void): void;
+}
+```
+
+### `JobHandle`
+
+The `JobHandle` is the mutable data structure that tracks execution of a set of operations. They are named `JobHandle` because they follow the atomicity guarantees of `Job`s.
+
+```ts
+enum JobChannelStatus {
+  /** The job status is not known */
+  Unknown = -1,
+
+  /** The job is being transported */
+  TransportPending,
+
+  /** The job is being executed */
+  ExecutionPending,
+
+  /** The job has been applied */
+  Applied,
+
+  /** The job has failed */
+  Error,
+}
+
+enum ChannelErrorSource {
+  None = "none",
+  Channel = "channel",
+  Inbox = "inbox",
+  Outbox = "outbox",
+}
+
+class InternalChannelError extends Error {
+  // ...
+}
+
+class ChannelError extends Error {
+  /**
+   * The source of the error.
+   */
+  source: ChannelErrorSource;
+
+  /**
+   * The error that occurred.
+   */
+  error: Error;
+
+  constructor(source: ChannelErrorSource, error: Error) {
+    super(`ChannelError[${source}]: ${error.message}`);
+
+    this.source = source;
+    this.error = error;
+  }
+}
+
+class JobHandle {
+  /** The unique id of the job */
+  id: string;
+
+  /** Remote name associated with this job (source for inbox, destination for outbox) */
+  remoteName: string;
+
+  /** The document id that the job is operating on */
+  documentId: string;
+
+  /** The scopes affected */
+  scopes: string[];
+
+  /** The branch that the job is operating on */
+  branch: string;
+
+  /** The operations */
+  operations: Operation[];
+
+  /** The status of the job */
+  status: JobChannelStatus = JobChannelStatus.Unknown;
+
+  /** The error that occurred, if any */
+  error?: ChannelError;
+
+  /**
+   * Subscribes to changes in the job status.
+   */
+  on(
+    callback: (
+      job: JobHandle,
+      prev: JobChannelStatus,
+      next: JobChannelStatus,
+    ) => void,
+  ): void;
+
+  /**
+   * Moves job from Unknown to TransportPending.
+   */
+  started(): void;
+
+  /**
+   * Moves job from TransportPending to ExecutionPending.
+   */
+  transported(): void;
+
+  /**
+   * Moves job from ExecutionPending to Applied.
+   */
+  executed(): void;
+
+  /**
+   * Moves job from any state to Error.
+   */
+  failed(error: ChannelError): void;
+}
+```
 
 A `JobHandle` represents a unit of work (one or more operations for a single document/branch):
 
@@ -439,7 +542,7 @@ stateDiagram-v2
 
 **State transitions:**
 - `Unknown` → `TransportPending`: Job entered channel, transport layer activated
-- `TransportPending` → `ExecutionPending`: Job arrived at destination, queued for execution
+- `TransportPending` → `ExecutionPending`: Job sent, queued for execution
 - `ExecutionPending` → `Applied`: Job executed successfully, operations appended to history
 - Any state → `Error`: Failure occurred (signature invalid, hash mismatch, library error, etc.)
 
