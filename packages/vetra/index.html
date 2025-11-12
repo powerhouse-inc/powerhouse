@@ -18,15 +18,15 @@
     <style>
       @import "tailwindcss";
       @import "@powerhousedao/design-system/style.css";
+      @import "@powerhousedao/document-engineering/style.css";
       @source "./node_modules/@powerhousedao/connect";
     </style>
   </head>
   <body>
     <div id="root"></div>
     <script type="module">
-      import { AppLoader } from "@powerhousedao/connect";
-      import { createRoot } from "react-dom/client";
-      createRoot(document.getElementById("root")).render(AppLoader());
+      // initializes Connect on '<div id="root"></div>'
+      import "@powerhousedao/connect/main.js";
     </script>
   </body>
 </html>
