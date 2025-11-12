@@ -1,3 +1,13 @@
+## 4.1.0-dev.113 (2025-11-12)
+
+### 🩹 Fixes
+
+- **builder-tools/vetra:** run tsc watch alongside connect studio and import transpiled files instead of source ([eb33cfe29](https://github.com/powerhouse-inc/powerhouse/commit/eb33cfe29))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.112 (2025-11-12)
 
 This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.

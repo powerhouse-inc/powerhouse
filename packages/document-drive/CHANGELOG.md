@@ -1,3 +1,13 @@
+## 4.1.0-dev.113 (2025-11-12)
+
+### 🩹 Fixes
+
+- **document-drive:** fix helia type import ([7b8a7b850](https://github.com/powerhouse-inc/powerhouse/commit/7b8a7b850))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.112 (2025-11-12)
 
 This was a version bump only for document-drive to align it with other projects, there were no code changes.

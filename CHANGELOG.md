@@ -1,3 +1,14 @@
+## 4.1.0-dev.113 (2025-11-12)
+
+### 🩹 Fixes
+
+- **builder-tools/vetra:** run tsc watch alongside connect studio and import transpiled files instead of source ([eb33cfe29](https://github.com/powerhouse-inc/powerhouse/commit/eb33cfe29))
+- **document-drive:** fix helia type import ([7b8a7b850](https://github.com/powerhouse-inc/powerhouse/commit/7b8a7b850))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.112 (2025-11-12)
 
 ### 🩹 Fixes
