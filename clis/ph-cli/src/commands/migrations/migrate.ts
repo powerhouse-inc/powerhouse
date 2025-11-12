@@ -20,6 +20,32 @@ import {
 } from "./templates/packageJson.js";
 import { tsConfigTemplate } from "./templates/tsConfig.js";
 
+/** Run all migrations */
+async function migrate() {
+  await migratePackageJson();
+  await migrateTsConfig();
+  await runGenerateOnAllDocumentModels();
+  await runGenerateOnAllEditors();
+  const project = new Project({
+    tsConfigFilePath: path.resolve("tsconfig.json"),
+    compilerOptions: {
+      verbatimModuleSyntax: false,
+    },
+  });
+  deleteLegacyEditorDirIndexFiles(project);
+  migrateEditorFiles(project);
+  migrateRootIndex(project);
+  removeZDotSchemaUsage(project);
+  removeCreatorsUsage(project);
+  removeUtilsDefaultExportUsage(project);
+  fixImports(project);
+}
+
+export function migrateCommand(program: Command) {
+  program.command("migrate").description("Run migrations").action(migrate);
+}
+
+/** Ensure that the project package.json has the correct scripts and exports. */
 async function migratePackageJson() {
   const packageJson = await readPackage();
   const existingScripts = packageJson.scripts;
@@ -42,11 +68,13 @@ async function migratePackageJson() {
   await writePackage(packageJson);
 }
 
+/** Ensure that the project tsconfig.json matches the boilerplate tsconfig.json. */
 async function migrateTsConfig() {
   const tsConfigPath = path.join(process.cwd(), "tsconfig.json");
   await writeFile(tsConfigPath, tsConfigTemplate);
 }
 
+/** Ensure that the project index.ts file uses the new exports for editors and document models */
 function migrateRootIndex(project: Project) {
   const indexPath = path.join(process.cwd(), "index.ts");
   let source = project.getSourceFile(indexPath);
@@ -57,6 +85,7 @@ function migrateRootIndex(project: Project) {
   project.saveSync();
 }
 
+/** Ensure that the project's editor.tsx files use default exports for lazy loading */
 function migrateEditorFiles(project: Project) {
   const editorsPath = path.join(process.cwd(), "editors");
   const dirs = readdirSync(editorsPath, { withFileTypes: true })
@@ -76,6 +105,7 @@ function migrateEditorFiles(project: Project) {
   }
 }
 
+/** Delete the legacy index files in editor directories which are now replaced by module.ts files */
 function deleteLegacyEditorDirIndexFiles(project: Project) {
   const editorsPath = path.join(process.cwd(), "editors");
   const dirs = readdirSync(editorsPath, { withFileTypes: true })
@@ -90,6 +120,7 @@ function deleteLegacyEditorDirIndexFiles(project: Project) {
   }
 }
 
+/** Remove usage of the `z` re-export of document model schemas which caused naming conflicts */
 function removeZDotSchemaUsage(project: Project) {
   const sourceFiles = project.getSourceFiles();
   for (const sourceFile of sourceFiles) {
@@ -104,6 +135,7 @@ function removeZDotSchemaUsage(project: Project) {
   }
 }
 
+/** Remove usage of the `creators` as an aliased full module export which is no longer needed */
 function removeCreatorsUsage(project: Project) {
   const sourceFiles = project.getSourceFiles();
   for (const sourceFile of sourceFiles) {
@@ -126,6 +158,7 @@ function removeCreatorsUsage(project: Project) {
   }
 }
 
+/** Remove usage of the `utils` import which is no longer exported as a default import */
 function removeUtilsDefaultExportUsage(project: Project) {
   const sourceFiles = project.getSourceFiles();
   for (const sourceFile of sourceFiles) {
@@ -143,6 +176,7 @@ function removeUtilsDefaultExportUsage(project: Project) {
   }
 }
 
+/** Fix missing imports in the project */
 function fixImports(project: Project) {
   const sourceFiles = project.getSourceFiles();
   for (const sourceFile of sourceFiles) {
@@ -160,115 +194,12 @@ function fixImports(project: Project) {
   }
 }
 
+/** Run the generate command on all document models */
 async function runGenerateOnAllDocumentModels() {
   await generate(undefined, {});
 }
 
-function getVariableDeclarationByTypeName(
-  sourceFile: SourceFile,
-  typeName: string,
-) {
-  const variableDeclarations = sourceFile.getVariableDeclarations();
-  return variableDeclarations.find((declaration) =>
-    declaration.getType().getText().includes(typeName),
-  );
-}
-
-function getStringLiteralValue(stringLiteral: StringLiteral | undefined) {
-  return stringLiteral?.getText().replace(/["']/g, "");
-}
-
-function getObjectProperty<T extends SyntaxKind>(
-  object: ObjectLiteralExpression | undefined,
-  propertyName: string,
-  propertyType: T,
-) {
-  return object
-    ?.getProperty(propertyName)
-    ?.asKind(SyntaxKind.PropertyAssignment)
-    ?.getChildren()
-    .find((child) => child.getKind() === propertyType)
-    ?.asKind(propertyType);
-}
-
-function getArrayLiteralExpressionElementsText(
-  arrayLiteralExpression: ArrayLiteralExpression | undefined,
-) {
-  return arrayLiteralExpression
-    ?.getElements()
-    .map((element) => element.getText())
-    .map((text) => text.replace(/["']/g, ""));
-}
-
-function extractEditorModuleInfo(filePath: string) {
-  const project = new Project({
-    tsConfigFilePath: path.resolve("tsconfig.json"),
-    compilerOptions: {
-      verbatimModuleSyntax: false,
-    },
-  });
-  const sourceFile = project.getSourceFileOrThrow(filePath);
-  const moduleDeclaration = getVariableDeclarationByTypeName(
-    sourceFile,
-    "EditorModule",
-  );
-
-  const variable = moduleDeclaration?.getInitializerIfKind(
-    SyntaxKind.ObjectLiteralExpression,
-  );
-  const documentTypes = getObjectProperty(
-    variable,
-    "documentTypes",
-    SyntaxKind.ArrayLiteralExpression,
-  )
-    ?.getElements()
-    .map((element) => element.getText())
-    .map((text) => text.replace(/["']/g, ""));
-
-  const configProperty = getObjectProperty(
-    variable,
-    "config",
-    SyntaxKind.ObjectLiteralExpression,
-  );
-
-  const id = getStringLiteralValue(
-    getObjectProperty(configProperty, "id", SyntaxKind.StringLiteral),
-  );
-
-  const name = getStringLiteralValue(
-    getObjectProperty(configProperty, "name", SyntaxKind.StringLiteral),
-  );
-  const isDriveEditor = documentTypes?.includes("powerhouse/document-drive");
-  return { id, name, documentTypes, isDriveEditor };
-}
-
-export function extractAllowedDocumentTypes(filePath: string) {
-  const project = new Project({
-    tsConfigFilePath: path.resolve("tsconfig.json"),
-    compilerOptions: {
-      verbatimModuleSyntax: false,
-    },
-  });
-  const sourceFile = project.getSourceFile(filePath);
-  if (!sourceFile) return;
-  const configVariableDeclaration = getVariableDeclarationByTypeName(
-    sourceFile,
-    "PHDriveEditorConfig",
-  );
-  const configVariable = configVariableDeclaration?.getInitializerIfKind(
-    SyntaxKind.ObjectLiteralExpression,
-  );
-  if (!configVariable) return;
-  const allowedDocumentTypes = getArrayLiteralExpressionElementsText(
-    getObjectProperty(
-      configVariable,
-      "allowedDocumentTypes",
-      SyntaxKind.ArrayLiteralExpression,
-    ),
-  );
-  return allowedDocumentTypes;
-}
-
+/** Run the generate command on all editors */
 async function runGenerateOnAllEditors() {
   const editorsPath = path.join(process.cwd(), "editors");
   const dirs = (await readdir(editorsPath, { withFileTypes: true }))
@@ -319,39 +250,109 @@ async function runGenerateOnAllEditors() {
   }
 }
 
-type Args = {
-  migratePackageJson?: boolean;
-  migrateTsConfig?: boolean;
-  runGenerateOnAllDocumentModels?: boolean;
-  runGenerateOnAllEditors?: boolean;
-  migrateRootIndex?: boolean;
-  migrateDocumentModels?: boolean;
-  migrateEditors?: boolean;
-  removeZDotSchemaUsage?: boolean;
-  removeCreatorsUsage?: boolean;
-  removeUtilsDefaultExportUsage?: boolean;
-  fixImports?: boolean;
-};
-async function migrate(args: Args) {
-  await migratePackageJson();
-  await migrateTsConfig();
-  await runGenerateOnAllDocumentModels();
-  await runGenerateOnAllEditors();
+/** Extract the name, id, document types, and whether the editor is a drive editor from the editor module */
+function extractEditorModuleInfo(filePath: string) {
   const project = new Project({
     tsConfigFilePath: path.resolve("tsconfig.json"),
     compilerOptions: {
       verbatimModuleSyntax: false,
     },
   });
-  deleteLegacyEditorDirIndexFiles(project);
-  migrateEditorFiles(project);
-  migrateRootIndex(project);
-  removeZDotSchemaUsage(project);
-  removeCreatorsUsage(project);
-  removeUtilsDefaultExportUsage(project);
-  fixImports(project);
+  const sourceFile = project.getSourceFileOrThrow(filePath);
+  const moduleDeclaration = getVariableDeclarationByTypeName(
+    sourceFile,
+    "EditorModule",
+  );
+
+  const variable = moduleDeclaration?.getInitializerIfKind(
+    SyntaxKind.ObjectLiteralExpression,
+  );
+  const documentTypes = getObjectProperty(
+    variable,
+    "documentTypes",
+    SyntaxKind.ArrayLiteralExpression,
+  )
+    ?.getElements()
+    .map((element) => element.getText())
+    .map((text) => text.replace(/["']/g, ""));
+
+  const configProperty = getObjectProperty(
+    variable,
+    "config",
+    SyntaxKind.ObjectLiteralExpression,
+  );
+
+  const id = getStringLiteralValue(
+    getObjectProperty(configProperty, "id", SyntaxKind.StringLiteral),
+  );
+
+  const name = getStringLiteralValue(
+    getObjectProperty(configProperty, "name", SyntaxKind.StringLiteral),
+  );
+  const isDriveEditor = documentTypes?.includes("powerhouse/document-drive");
+  return { id, name, documentTypes, isDriveEditor };
 }
 
-export function migrateCommand(program: Command) {
-  program.command("migrate").description("Run migrations").action(migrate);
+/** Extract the allowed document types from the drive editor config */
+function extractAllowedDocumentTypes(filePath: string) {
+  const project = new Project({
+    tsConfigFilePath: path.resolve("tsconfig.json"),
+    compilerOptions: {
+      verbatimModuleSyntax: false,
+    },
+  });
+  const sourceFile = project.getSourceFile(filePath);
+  if (!sourceFile) return;
+  const configVariableDeclaration = getVariableDeclarationByTypeName(
+    sourceFile,
+    "PHDriveEditorConfig",
+  );
+  const configVariable = configVariableDeclaration?.getInitializerIfKind(
+    SyntaxKind.ObjectLiteralExpression,
+  );
+  if (!configVariable) return;
+  const allowedDocumentTypes = getArrayLiteralExpressionElementsText(
+    getObjectProperty(
+      configVariable,
+      "allowedDocumentTypes",
+      SyntaxKind.ArrayLiteralExpression,
+    ),
+  );
+  return allowedDocumentTypes;
+}
+
+function getVariableDeclarationByTypeName(
+  sourceFile: SourceFile,
+  typeName: string,
+) {
+  const variableDeclarations = sourceFile.getVariableDeclarations();
+  return variableDeclarations.find((declaration) =>
+    declaration.getType().getText().includes(typeName),
+  );
+}
+
+function getStringLiteralValue(stringLiteral: StringLiteral | undefined) {
+  return stringLiteral?.getText().replace(/["']/g, "");
+}
+
+function getObjectProperty<T extends SyntaxKind>(
+  object: ObjectLiteralExpression | undefined,
+  propertyName: string,
+  propertyType: T,
+) {
+  return object
+    ?.getProperty(propertyName)
+    ?.asKind(SyntaxKind.PropertyAssignment)
+    ?.getChildren()
+    .find((child) => child.getKind() === propertyType)
+    ?.asKind(propertyType);
+}
+
+function getArrayLiteralExpressionElementsText(
+  arrayLiteralExpression: ArrayLiteralExpression | undefined,
+) {
+  return arrayLiteralExpression
+    ?.getElements()
+    .map((element) => element.getText())
+    .map((text) => text.replace(/["']/g, ""));
 }
