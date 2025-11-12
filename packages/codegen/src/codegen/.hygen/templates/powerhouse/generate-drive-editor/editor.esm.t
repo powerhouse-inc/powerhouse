@@ -1,5 +1,5 @@
 ---
-to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/editor.tsx"
+to: "<%= driveEditorDir %>/editor.tsx"
 unless_exists: true
 ---
 import { useSetPHDriveEditorConfig } from "@powerhousedao/reactor-browser";

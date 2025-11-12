@@ -1,5 +1,5 @@
 ---
-to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/editor.tsx"
+to: "<%= editorDir %>/editor.tsx"
 unless_exists: true
 ---
 import { <%= editNameComponentName %> } from "./components/EditName.js";

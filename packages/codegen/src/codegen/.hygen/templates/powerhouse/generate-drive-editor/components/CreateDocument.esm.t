@@ -1,5 +1,5 @@
 ---
-to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/components/CreateDocument.tsx"
+to: "<%= driveEditorDir %>/components/CreateDocument.tsx"
 unless_exists: true
 ---
 import type { VetraDocumentModelModule } from "@powerhousedao/reactor-browser";

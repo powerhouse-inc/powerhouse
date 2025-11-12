@@ -1,5 +1,5 @@
 ---
-to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/module.ts"
+to: "<%= driveEditorDir %>/module.ts"
 force: true
 ---
 import { type EditorModule } from "document-model";

@@ -1,5 +1,5 @@
 ---
-to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/components/DriveContents.tsx"
+to: "<%= driveEditorDir %>/components/DriveContents.tsx"
 unless_exists: true
 ---
 import { CreateDocument } from "./CreateDocument.js";

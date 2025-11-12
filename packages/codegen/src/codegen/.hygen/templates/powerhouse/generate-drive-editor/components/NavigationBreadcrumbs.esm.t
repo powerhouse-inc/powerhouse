@@ -1,5 +1,5 @@
 ---
-to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/components/NavigationBreadcrumbs.tsx"
+to: "<%= driveEditorDir %>/components/NavigationBreadcrumbs.tsx"
 unless_exists: true
 ---
 import { Breadcrumbs } from "@powerhousedao/design-system/connect";
