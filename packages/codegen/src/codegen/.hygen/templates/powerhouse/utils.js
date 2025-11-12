@@ -22,12 +22,9 @@ function getModuleExports(dirPath, matcher, newEntry) {
 
       if (match) {
         const result = {
-          dirPath,
-          modulePath,
           paramCaseName: entry.name,
           pascalCaseName: match[1],
         };
-        console.log("result", result);
         moduleExports.push(result);
       }
     } catch (_) {
