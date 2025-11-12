@@ -145,6 +145,11 @@ if (operation.action.type === "ADD_RELATIONSHIP") {
 
 Now that we have an understanding of strands/threads/cables and collections, we can describe the high level synchronization sequence.
 
+**Requisites:**
+- There is one `IChannel` per `(remote, collectionId)` tuple.
+- The `ISyncManager` is responsible for mapping operations to appropriate channels. It does this by reading meta information on `OperationWithContext`.
+- Each `IChannel` is responsible for managing and storing its own cursor.
+
 ### Push Pattern
 
 **Trigger:** Sender-initiated (event-driven)
@@ -159,16 +164,16 @@ sequenceDiagram
     participant Channel as IChannel (Local)
     participant RemoteChannel as IChannel (Remote)
     participant RemoteSyncMgr as Sync Manager (Remote)
-    participant RemoteLoad as load() (Remote)
+    participant RemoteLoad as IReactor (Remote)
 
-    LocalBus->>SyncMgr: (1) Operation[]
-    SyncMgr->>Channel: (2) outbox.add()
-    Channel-->>RemoteChannel: (3) Transport (HTTP, etc)
-    RemoteChannel->>RemoteSyncMgr: (4) inbox.onAdded()
-    RemoteSyncMgr->>RemoteLoad: (5) load(documentId, branch, Operation[])
-    RemoteSyncMgr->>RemoteChannel: (6) inbox.remove()
-    RemoteChannel-->>Channel: (7) Transport (HTTP, etc)
-    Channel->>SyncMgr: (8) outbox.onRemoved()
+    LocalBus->>SyncMgr: (1) OperationWithContext[]
+    SyncMgr->>Channel: (2) channel.outbox.add()
+    Channel-->>RemoteChannel: (3) { channelMeta, operations }
+    RemoteChannel->>RemoteSyncMgr: (4) channel.inbox.onAdded()
+    RemoteSyncMgr<<->>RemoteLoad: (5) load(documentId, branch, Operation[])
+    RemoteSyncMgr->>RemoteChannel: (6) channel.inbox.remove()
+    RemoteChannel-->>Channel: (7) { channelMeta, operations }
+    Channel->>SyncMgr: (8) channel.outbox.onRemoved()
 ```
 
 ### Pull Pattern
@@ -180,33 +185,25 @@ sequenceDiagram
 **Example:** A reactor is offline for a period of time and needs to catch up.
 
 **Flow:**
-1. Scheduler fires on interval
-2. Sync manager queries `IOperationIndex` with `(collectionId, cursor, filter)`
-3. Index returns operations since cursor
-4. Operations wrapped in `MutableJobHandle` and placed in inbox
-5. Local reactor loads and executes operations
-6. Cursor advanced in storage
-7. Health metrics updated
-
 ```mermaid
 sequenceDiagram
-    participant Scheduler as Scheduler
-    participant SyncMgr as Sync Manager
-    participant Index as IOperationIndex (Remote)
-    participant LocalLoad as load() (Local)
+    participant LocalLoad as IReactor (Local)
+    participant SyncMgr as Sync Manager (Local)
+    participant Channel as IChannel (Local)
+    participant RemoteChannel as IChannel (Remote)
+    participant RemoteSyncMgr as Sync Manager (Remote)
+    participant RemoteIndex as IOperationIndex (Remote)
 
-    Scheduler->>SyncMgr: Interval
-    SyncMgr->>Index: find(collectionId, cursor, filter)
-    Index-->>SyncMgr: Operation[]
-    SyncMgr->>LocalLoad: JobHandle[]
-    LocalLoad->>SyncMgr: advance cursor
+    SyncMgr->>Channel: (1) pull()
+    Channel-->>RemoteChannel: (2) { channelMeta, cursor }
+    RemoteChannel->>RemoteSyncMgr: (3) channel.onPull()
+    RemoteSyncMgr<<->>RemoteIndex: (4) index.find(collectionId, cursor, filter, paging)
+    RemoteSyncMgr->>RemoteChannel: (5) channel.outbox.add()
+    RemoteChannel-->>Channel: (6) { channelMeta, operations }
+    Channel->>SyncMgr: (7) channel.inbox.onAdded()
+    SyncMgr<<->>LocalLoad: (8) load(documentId, branch, Operation[])
+    SyncMgr->>Channel: (9) channel.inbox.remove()
 ```
-
-**Use cases:**
-- Polling external drives (remote may not push)
-- Client/server constraints (server can't call client)
-- Offline/online transitions (client pulls on reconnect)
-- Scheduled data ingestion (periodic batch updates)
 
 ### Ping-Pong Pattern
 
