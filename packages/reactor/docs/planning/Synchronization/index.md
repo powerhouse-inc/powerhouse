@@ -1,447 +1,888 @@
-# Synchronization
+# Reactor Synchronization Specification
 
-Synchronization refers to synchronizing the operations of one reactor with another. This is a key part of the Reactor architecture.
+## Table of Contents
 
-- We focus on synchronizing the `IOperationStore`, and bubbling outward.
-  - This allows us to decouple sync and read-model updates.
-  - This consolidates multiple legacy systems into a single dispatch pattern.
+- [Layer 1: Overview & Conceptual Model](#layer-1-overview--conceptual-model)
+- [Layer 2: Protocol Specification](#layer-2-protocol-specification)
+- [Layer 3: Implementation Details](#layer-3-implementation-details)
+- [Appendix: Legacy to New Concept Mapping](#appendix-legacy-to-new-concept-mapping)
 
-We synchronize the `IOperationStore` by pulling from the `IOperationIndex`, which contains good, fast cursors for operations.
+---
 
-## ISyncManager
+# Layer 1: Overview & Conceptual Model
 
-This object manages the synchronization of operations between reactors.
+## Introduction
 
-The `ISyncManager` has its own storage mechanism and rather than being tied so the internal mechanisms of the Reactor, propagates from the event bus.
+Reactor synchronization enables distributed operation-based collaboration between autonomous reactor instances. Operations (representing state mutations) flow bidirectionally through channels, maintaining eventual consistency while preserving causal ordering and supporting offline/online transitions.
 
-### Push
+This specification unifies two perspectives:
 
-Describes a one-way flow of data from one Reactor to another, pushing operations through an `IChannel` interface.
+- **Conceptual granularity** (strand/thread/cable taxonomy) — helps reason about what we're synchronizing
+- **Implementation optimization** (collection-based streams) — makes it efficient and scalable
 
-```mermaid
-graph
-    subgraph "IReactor A"
-        Mutate["mutate()"] -->|"Action[]"| JE["Job Execution"] -->|"Operation[]"| APub
+## Core Concepts
 
-        subgraph AEvents["IEventBus"]
-            APub["emit()"]
-            ASub["on()"]
-        end
-    end
+Prerequisite reading:
 
-    ASub --> ASync["ISyncManager"]
-    ASync --> IChannel -->|"Transport"| Load
+- [Operations](../Operations/index.md)
+- [IOperationStore](../Storage/IOperationStore.md)
 
-    subgraph "Reactor B"
-        Load["load()"] -->|"Operation[]"| JEB["Job Execution"] -->|"Operation[]"| BPub
+### What Are We Synchronizing?
 
-        subgraph BEvents["IEventBus"]
-            BPub["emit()"]
-            BSub["on()"]
-        end
-    end
+At the heart of synchronization is the **operation stream** — a totally-ordered stream of operations that, when reduced, produces a document's current state. Every operation stream is identified by a quadruple:
+
+```
+(remote, documentId, scope, branch)
 ```
 
-### Pull
+**Key properties:**
+- Operations within a stream are **append-only** with monotonically increasing indices
+- Each operation carries a **state hash** for verification
+- Operations may be **skipped or undone** through the skip parameter mechanism
+- Streams are **causally ordered** — operations depend on all preceding operations in the same stream
 
-Describes a one-way flow of data from one Reactor to another, pulling operations through an `IChannel` interface on an interval.
+### Synchronization Granularity: Strand, Thread, Cable
 
-```mermaid
-graph
-    BScheduler["Scheduler"] --> BSync["ISyncManager"]
-    BSync <-->|"(1) Query(filter)"| AOI
-    BSync --> IChannel -->|"(2) Transport"| Load
+We define three levels of synchronization granularity that compose hierarchically:
 
-    subgraph "IReactor A"
-        AOI["IOperationIndex"]
-    end
+#### 1. Synchronization Strand
 
-    subgraph "Reactor B"
-        Load["load()"] -->|"Operations[]"| JEB["Job Execution"]
-    end
+The most granular level on which synchronization logic is defined is the **strand**. A strand synchronizes exactly one operation stream from source to destination:
+
+```
+(remote₁, documentId₁, scope₁, branch₁) → (remote₂, documentId₂, scope₂, branch₂)
 ```
 
-Here we introduce the concept of a "filter" for queries. These consist of a collection id, a cursor, and a `ViewFilter`. Collection ids are **always** computed via the `driveCollectionId(branch, driveId)` helper (implemented alongside the operation-index types) so today only drive documents can act as collection roots and every cursor derives from those drives. Remote filters supplied by callers are decomposed into one or more concrete remote queries by the sync manager using this same helper plus the provided `ViewFilter`. If a filter cannot be expressed as a set of drive-derived collection ids (for example, "watch this single non-drive document"), the manager must throw during `add()` or `setFilter()` so that every remote ultimately operates on well-defined collection cursors.
+**Properties:**
+- All synchronization behavior (conflict detection, cursor tracking, ACK/NACK) is defined at strand granularity
+- A strand maps to a single operation stream in the core `IOperationStorage` object
 
-The cursor is a monotonically increasing integer that represents the ordinal of the last operation that was processed.
+**Example:** Synchronizing the `main` branch of the `public` scope of document `doc-123` from Drive A to Drive B creates one strand.
 
-The `ViewFilter` is a standard `ViewFilter` object, as described in the [Shared interface](../Shared/interface.md) documentation.
+#### 2. Synchronization Thread
 
-#### `IOperationIndex`
+A **document-level** synchronization channel. A thread synchronizes one or more strands for the same document pair:
 
-`IOperationIndex` (see [Operation Index](../Cache/operation-index.md)) flattens the operations of every document in a collection into a single, ordinal-ordered stream. Inside each job executor we write both to the `IOperationStore` (authoritative log) and to the index, so the index behaves like a write model: it participates in the same transaction, rolls back if the store write fails, and exposes the same ordering guarantees to consumers. The pull loop relies on those properties:
-
-- **Collection cursors.** Each remote/remote-filter keeps a cursor (ordinal) into the index. Collections represent “documents ever attached to a drive”, so a remote that subscribes to an entire drive advances one cursor instead of tracking every `(documentId, scope, branch)` tuple.
-- **Filter projection.** The index stores document metadata (type, identifiers) alongside the operations table described in the index spec. The `"(1) Query(filter)"` arrow means the sync manager asks, “give me all operations since ordinal N for collection C matching my remote filter.” We never have to replay documents just to check filters, and channels never talk to the index directly.
-- **No read-model lag.** Because the index is written synchronously with the job executor (Option #1 in the index doc), pull latency is bounded by network time. If we ever switch to async/index-lag mode we must document the reconciliation/catch-up process here.
-- **IOperationStore fallback.** When reconciliation detects a gap (`MISSING_OPERATIONS`), the sync manager can fall back to `IOperationStore.getSince` to rebuild a strand—but the steady-state pull path never hits the store directly; it streams from the index.
-
-Algorithmically, when the scheduler fires:
-
-1. `ISyncManager` reads the remote’s stored (filter, cursor) pairs.
-2. It queries `IOperationIndex` using the `find` method (`find(collectionId, cursor, view, paging)`), receiving ordered operations plus the new ordinal.
-3. The results are wrapped in `MutableJobHandle`s and placed into the channel inbox so the channel can transport them to the remote reactor.
-
-If a remote only tracks a handful of documents, we still leverage the index by building a logical collection over that document set and keeping an ordinal per remote-filter pair. The important point is that the pull architecture is defined in terms of the index, not by directly scanning the operation store.
-
-### Ping-Pong
-
-Since both `Push` and `Pull` are one-way flows, we combine them into a ping-pong pattern. This is where both reactors are pushing and pulling through the `IChannel` interface.
-
-The schedulers are "smart" and understand how to optimimally set intervals based on a number of factors, including:
-
-- Operation characteristics (size, frequency, etc.)
-- Network characteristics (latency, bandwidth, etc.)
-- Reactor characteristics (CPU, memory, etc.)
-- Recent pushes from other reactor
-
-*Coordinated backpressure and fairness across remotes is tracked as a future improvement; the initial implementation only tracks health metrics and simple interval tuning.*
-```mermaid
-graph
-    %% === Reactor A ===
-    subgraph "IReactor A"
-        AMutate["mutate()"] -->|"Action[]"| AJE["Job Execution"] -->|"Operation[]"| APub
-
-        subgraph AEventBus["IEventBus"]
-            APub["emit()"]
-            ASub["on()"]
-        end
-
-        subgraph ASyncManager["Synchronization"]
-            AScheduler["Scheduler"] --> ASync["ISyncManager"]
-        end
-
-        ASub --> ASync
-        ASync --> AIChannel["IChannel"]
-        ASync <-->|"Query"| AOI["IOperationIndex"]
-    end
-
-    %% Network
-    AIChannel -->|"Transport"| Transport["Memory / HTTP / WebSocket / etc."]
-    Transport -->|"Transport"| BIChannel["IChannel"]
-    BSync <-->|"Query"| BOI["IOperationIndex"]
-
-    %% === Reactor B ===
-    subgraph "IReactor B"
-        BMutate["mutate()"] -->|"Action[]"| BJE["Job Execution"] -->|"Operation[]"| BPub
-
-        subgraph BEventBus["IEventBus"]
-            BPub["emit()"]
-            BSub["on()"]
-        end
-
-        subgraph BSyncManager["Synchronization"]
-            BScheduler["Scheduler"] --> BSync["ISyncManager"]
-        end
-
-        BSub --> BSync
-        BSync --> BIChannel
-    end
-
-    %% Push flows (A -> B)
-    AIChannel -->|"Transport"| BLoad["load()"] -->|"Operations[]"| BJE
-
-    %% Push flows (B -> A)
-    BIChannel -->|"Transport"| ALoad["load()"] -->|"Operations[]"| AJE
-
-    %% Pull flows
-    ASync -->|"Pull"| AIChannel
-    BSync -->|"Pull"| BIChannel
+```
+(remote₁, documentId₁, ?, ?) → (remote₂, documentId₂, ?, ?)
 ```
 
-### Ping-Pong: Sequence
+**Thread types:**
+- **Single-document thread:** `documentId₁ = documentId₂` (default, most common)
+- **Cross-document thread:** `documentId₁ ≠ documentId₂` (for templates or copies)
+- **Complete thread:** Synchronizes all scopes and branches of a document (leads to identical document instances)
+- **Partial thread:** Synchronizes a subset of scopes/branches (e.g., only `public` scope or only `main` branch)
+
+**Example:** Synchronizing both `public` and `protected` scopes of document `doc-123` from Drive A to Drive B creates a thread containing two strands (assuming one branch each).
+
+#### 3. Synchronization Cable
+
+A **drive-level** synchronization channel. A cable synchronizes multiple threads between two drive instances:
+
+```
+(remote₁, ?, ?, ?) → (remote₂, ?, ?, ?)
+```
+
+**Cable types:**
+- **Complete cable:** Synchronizes all documents, scopes, and branches (leads to identical drive instances)
+- **Partial cable:** Synchronizes a filtered subset (e.g., only public documents, only specific document types)
+
+**Example:** Synchronizing all public documents from Drive A to Drive B creates a cable containing many threads (one per document).
+
+### Collection-Based Optimization
+
+While strand/thread/cable provide conceptual clarity, **collections** provide implementation efficiency.
+
+The `IOperationStore` can be thought of as an an object that stores _strands_, i.e. it stores ordered operations for `(documentId, scope, branch)` tuples (see the [getSince()](../Storage/IOperationStore.md#interface) method). Therefore, it can easily be used to support synchronization of strands.
+
+To support thread synchronization, we can use `getSince` to query across multiple scopes.
+
+However, to support cable synchronization, we would need to make an arbitrary number of queries: one for the drive url, then at least one for each document contained in the drive. This is why we need to introduce the notion of **collections** (see [operation-index-membership-plan.md](../Cache/operation-index-membership-plan.md) for how collections remember every document that has ever belonged to a drive while still emitting operations only for the intervals when the membership was active).
+
+A **collection** is a flattened stream of threads. This means that, given a set of threads `T = {(driveId, docId, scope, branch) | driveId = d}` for some constant `d`, a collection reduces `T` to a single ordered stream of operations by merging all operations from threads in `T`. We can then keep a single cursor for `T`, rather than a cursor for every element of `T`.
+
+Practically, the job executor uses the [`IOperationIndex`](../Cache/operation-index.md) to forward-create collections as operations are executed. While, technically, arbitrary collections could be created, at first, the job executor will create collections based only on `document-drive` model creation:
+
+```ts
+const txn = index.start();
+
+// elided
+
+if (documentType === "powerhouse/document-drive") {
+  // the driveCollectionId helper is defined in src/cache/operation-index-types.ts
+  collectionId = driveCollectionId(branch, documentId)
+  txn.createCollection(collectionId);
+}
+
+// elided
+
+await index.commit(txn);
+```
+
+> Future iterations of this system will introduce a new action, like CREATE_COLLECTION. This would explicitly tell the job executor to create a collection, rather than requiring core components to reference specific document models. This would also allow any other document model to have children.
+
+The job executor then updates the collection based on relationship actions:
+
+```ts
+if (operation.action.type === "ADD_RELATIONSHIP") {
+  index.addToCollection(
+    driveCollectionId(branch, parentId),
+    documentId,
+  );
+} else if (operation.action.type === "REMOVE_RELATIONSHIP") {
+  index.removeFromCollection(
+    driveCollectionId(branch, parentId),
+    documentId,
+    revision,
+  );
+}
+```
+
+This means that when specifying remotes (described later), there will be a 1:1 correlation between a remote and a **drive cable**. This will be done with the `driveCollectionId` function on both ends: the job executor will use it to create the collections, and other reactors will have to use it to create remotes with the correct `collectionId`.
+
+**Key insight:** Instead of tracking cursors for thousands of individual strands `(remote, documentId, scope, branch)`, we track a single cursor per `(remote, collectionId)` pair. Because collection membership records include both the “join” and “leave” ordinals (see the membership plan), that cursor will automatically skip operations that occurred outside the membership window even though historical membership is still available for audit queries.
+
+**Example:** A cable synchronizing Drive A (100 documents) to Drive B requires only one cursor per branch rather than 100+ strand-level cursors.
+
+## Synchronization Patterns
+
+Now that we have an understanding of strands/threads/cables and collections, we can describe the high level synchronization sequence.
+
+**Requisites:**
+- There is one `IChannel` per `(remote, collectionId)` tuple.
+- The `ISyncManager` is responsible for mapping operations to appropriate channels. It does this by reading meta information on `OperationWithContext`.
+- Each `IChannel` is responsible for managing and storing its own cursor.
+- Cursors can be updated using outgoing and incoming operations.
+
+### Push Pattern
+
+**Trigger:** Sender-initiated (event-driven)
+
+**Example:** A user checks a box in a document model editor, which applies some action, like `SET_FLAG`.
+
+**Flow:**
+```mermaid
+sequenceDiagram
+  participant LocalBus as Event Bus (Local)
+  participant SyncMgr as Sync Manager (Local)
+  participant Channel as IChannel (Local)
+  participant RemoteChannel as IChannel (Remote)
+  participant RemoteSyncMgr as Sync Manager (Remote)
+  participant RemoteLoad as IReactor (Remote)
+
+  LocalBus->>SyncMgr: (1) OperationWithContext[]
+  SyncMgr->>Channel: (2) channel.outbox.add()
+  Channel-->>RemoteChannel: (3) { channelMeta, operations }
+  RemoteChannel->>RemoteSyncMgr: (4) channel.inbox.onAdded()
+  RemoteSyncMgr<<->>RemoteLoad: (5) load(documentId, branch, Operation[])
+  RemoteSyncMgr->>RemoteChannel: (6) channel.inbox.remove()
+  RemoteChannel-->>Channel: (7) (ACK) { channelMeta, operations }
+  Channel->>SyncMgr: (8) channel.outbox.onRemoved()
+```
+
+### Pull Pattern
+
+**Trigger:** Receiver-initiated (scheduled, cursor-based)
+
+**Example:** A reactor regularly polls the remote for new operations.
+**Example:** A reactor starts up and pulls all operations from the remote to catch up.
+**Example:** A reactor is offline for a period of time and needs to catch up.
+
+**Flow:**
+```mermaid
+sequenceDiagram
+  participant LocalLoad as IReactor (Local)
+  participant SyncMgr as Sync Manager (Local)
+  participant Channel as IChannel (Local)
+  participant RemoteChannel as IChannel (Remote)
+  participant RemoteSyncMgr as Sync Manager (Remote)
+  participant RemoteIndex as IOperationIndex (Remote)
+
+  SyncMgr->>Channel: (1) pull()
+  Channel-->>RemoteChannel: (2) { channelMeta, cursor }
+  RemoteChannel->>RemoteSyncMgr: (3) channel.onPull()
+  RemoteSyncMgr<<->>RemoteIndex: (4) index.find(collectionId, cursor, filter, paging)
+  RemoteSyncMgr->>RemoteChannel: (5) channel.outbox.add()
+  RemoteChannel-->>Channel: (6) { channelMeta, operations }
+  Channel->>SyncMgr: (7) channel.inbox.onAdded()
+  SyncMgr<<->>LocalLoad: (8) load(documentId, branch, Operation[])
+  SyncMgr->>Channel: (9) channel.inbox.remove()
+  Channel->>RemoteChannel: (10) ACK ({ channelMeta, operations })
+  RemoteChannel->>RemoteSyncMgr: (11) channel.outbox.onRemoved()
+```
+
+### Ping-Pong Pattern
+
+**Trigger:** Bidirectional (both push and pull)
+
+**Example:** Two reactors are pushing and pulling operations to keep in sync.
+
+**Flow:**
 
 ```mermaid
 sequenceDiagram
-    participant EBA as Event Bus A
-    participant SMA as Sync Manager A
-    participant AChannel as IChannel A
-    participant AOI as IOperationIndex A
-    participant LoadA as load(docId, branch, Operation[])
-    participant JEA as Job Execution A
+  participant ReactorA as IReactor (A)
+  participant BusA as Event Bus (A)
+  participant IndexA as IOperationIndex (A)
+  participant SyncMgrA as Sync Manager (A)
+  participant ChannelA as IChannel (A)
+  participant ChannelB as IChannel (B)
+  participant SyncMgrB as Sync Manager (B)
+  participant IndexB as IOperationIndex (B)
+  participant BusB as Event Bus (B)
+  participant ReactorB as IReactor (B)
 
-    participant BChannel as IChannel B
-    participant LoadB as load(docId, branch, Operation[])
-    participant JEB as Job Execution B
-    participant SMB as Sync Manager B
-    participant SchedulerB as Scheduler B
-    participant EBB as Event Bus B
+  Note over ChannelA,ChannelB: Transport
+  ChannelB->>ChannelA: { channelMeta, operations, cursor }
+  ChannelA->>ChannelB: { channelMeta, operations, cursor }
 
-    %% Reactor A pushes operations
-    EBA->>SMA: (docId, branch, Operation[])
-    SMA->>AChannel: send(docId, branch, Operation[])
-    AChannel->>BChannel: Transport
-    BChannel->>LoadB: load(docId, branch, Operation[])
-    LoadB->>JEB: Operation[]
-    JEB->>EBB: Operation[]
+  Note over ChannelA,ChannelB: ACK A → B
+  ChannelA->>ChannelB: ACK ({ channelMeta, operations })
+  ChannelB->>SyncMgrB: channel.outbox.onRemoved()
 
-    %% Reactor B pulls operations
-    SchedulerB->>SMB: Interval
-    SMB->>AOI: Query
-    AOI-->>SMB: Operations[]
-    SMB->>BChannel: enqueue(handles)
-    BChannel->>AChannel: Transport
-    AChannel->>LoadA: load(docId, branch, Operation[])
-    LoadA->>JEA: Operations[]
+  Note over ChannelB,ChannelA: ACK B → A
+  ChannelB->>ChannelA: ACK ({ channelMeta, operations })
+  ChannelA->>SyncMgrA: channel.outbox.onRemoved()
+
+  Note over ChannelA,IndexB: Pull A ← B
+  ChannelB->>SyncMgrB: channel.onPull()
+  SyncMgrB<<->>IndexB: index.find(collectionId, cursor, filter, paging)
+  SyncMgrB->>ChannelB: channel.outbox.add()
+
+  Note over ChannelB,IndexA: Pull B ← A
+  ChannelA->>SyncMgrA: channel.onPull()
+  SyncMgrA<<->>IndexA: index.find(collectionId, cursor, filter, paging)
+  SyncMgrA->>ChannelA: channel.outbox.add()
+
+  Note over ReactorA,ChannelA: Push A → B
+  ReactorA->>BusA: OperationWithContext[]
+  BusA->>SyncMgrA: OperationWithContext[]
+  SyncMgrA->>ChannelA: channel.outbox.add()
+
+  Note over ReactorB,ChannelB: Push B → A
+  ReactorB->>BusB: OperationWithContext[]
+  BusB->>SyncMgrB: OperationWithContext[]
+  SyncMgrB->>ChannelB: channel.outbox.add()
+
+  Note over ChannelA,ReactorA: Apply B Operations to A
+  ChannelA->>SyncMgrA: channel.inbox.onAdded()
+  SyncMgrA<<->>ReactorA: load(documentId, branch, Operation[])
+  SyncMgrA->>ChannelA: channel.inbox.remove()  
+
+  Note over ChannelB,ReactorB: Apply A Operations to B
+  ChannelB->>SyncMgrB: channel.inbox.onAdded()
+  SyncMgrB<<->>ReactorB: load(documentId, branch, Operation[])
+  SyncMgrB->>ChannelB: channel.inbox.remove()
 ```
 
-## IChannel
+# Layer 2: Protocol Specification
 
-The `IChannel` interface is a bi-directional interface for sending, receiving, and tracking operations. We do this with `inbox` and `outbox` queues of `JobHandle` objects. Each handle tracks a job that is being applied by a server (local or remote, depending on the mailbox).
+## Synchronization Primitives
 
-### Usage
+### `OperationWithContext`
 
-```tsx
-const channel = new WebSocketChannel();
+This is the primitive we are synchronizing. It is passed back and forth between reactors.
 
-// when something is added to our inbox...
-channel.inbox.onAdded(async (handle) => {
-  // create a job from the handle
-  const job = createJob(handle);
+This object is defined in [src/storage/interfaces.ts](../../src/storage/interfaces.ts) and looks something like this:
 
-  // queue the job for execution
-  await queue.enqueue(job);
+```ts
+export type OperationContext = {
+  documentId: string;
+  documentType: string;
+  scope: string;
+  branch: string;
+  resultingState?: string; // populated only locally, in memory
+};
 
-  // watch for local job completion
-  const result = await jobs.watch(job.id);
-
-  // set status
-  if (result.error) {
-    handle.failed(
-      new ChannelError(ChannelErrorSource.Inbox, result.error))
-  } else {
-    handle.executed();
-  }
-});
-
-// when something is added to our outbox...
-channel.outbox.onAdded((job) => {
-  console.log(
-    `Remote server is applying ${job.operations.length} operations...`,
-  );
-
-  // eg - update progress indicator or status bar
-});
-
-// when something is removed from our outbox...
-channel.outbox.onRemoved((job) => {
-  console.log(
-    `Remote server has applied ${job.operations.length} operations...`,
-  );
-
-  // eg - update progress indicator or status bar
-});
-
-// when a job has permanently failed to be applied...
-channel.deadLetter.onAdded((job) => {
-  console.log(`Job ${job.id} has failed to be applied...`);
-});
-
-// listen for local job completion
-events.on(JobExecutorEventTypes.JOB_COMPLETED, (job, result) => {
-  // is this a job in our inbox?
-  const handle = channel.inbox.get(job.id);
-  if (handle) {
-    handle.executed();
-
-    // the channel will remove it from the inbox queue
-
-    return;
-  }
-
-  // this isn't a job from another reactor, instead we need to send it to the remote server
-  channel.send(job.documentId, job.branch, job.operations);
-});
+export type OperationWithContext = {
+  operation: Operation;
+  context: OperationContext;
+};
 ```
 
-### Acknowledgement Flow
+### `Remote`
 
-Channels must provide an explicit acknowledgement (ACK) protocol so that both sides agree when a job has been durably applied. The flow is:
+```ts
+type RemoteOptions = {
+  // future configuration options
+};
 
-1. The sending reactor enqueues operations into its `outbox`. Each `JobHandle` contains the `remoteName`.
-2. The receiving reactor dequeues a `MutableJobHandle` from its `inbox`, executes it locally, and once `JobExecutorEventTypes.JOB_COMPLETED` fires without error it emits an ACK back across the channel that references the original job id and remoteName.
-3. Upon receiving the ACK, the sender removes the handle from its `outbox`, advances any remote cursor, and updates the remote’s health counters in `sync_remotes`.
-4. If execution fails, the receiver emits a NACK (negative acknowledgement) with the error payload so the sender can move the handle into the `deadLetter` mailbox and apply retry/disable policy.
+type RemoteFilter = {
+  /**
+   * Array of document ids. If specified, this further refines documents in a
+   * collection.
+   */
+  documentId: string[];
 
-Transport implementations (HTTP, WebSocket, in-memory) are responsible for guaranteeing ordered ACK/NACK delivery per remote. Without an ACK the sender must assume the job was not applied and retry according to channel policy; duplicate ACKs are idempotent because the `JobHandle` is removed only once.
+  /** Array of operation scopes to include, use ["*"] for all */
+  scope: string[];
 
-### Retries
+  /** Branch to filter for. Use "main" for default behavior. */
+  branch: string;
+};
 
-The `IChannel` implementation is responsible for retrying failed push and pull operations due to network conditions. Implementations should use exponential backoff with jitter when applicable, according to a retry policy.
+type Remote = {
+  /** The name of the remote. Must be unique. Intended to be human
+   * readable, but does not affect anything.
+   */
+  name: string;
 
-Network errors should not bubble up from the `IChannel` unless the retry policy is exhausted.
+  /** The id of the collection this remote is tracking */
+  collectionId: string;
 
-Transport failures (connection drops, TLS errors, broker disconnects, etc.) flow through this same retry/disable pathway: the channel records them as `ChannelErrorSource.Channel`, increments the remote’s health counters, and once retries are exhausted the sync manager disables the remote just like any other fatal error.
+  /** Applies additional filtering on top of collections */
+  filter: RemoteFilter;
 
-### Consistency Tokens
+  /** Options for the remote */
+  options: RemoteOptions;
 
-Consistency tokens are strictly a local read-model coordination tool (see [Jobs](../Jobs/index.md)). Sync never transmits or interprets those tokens; once operations have been transported, each reactor’s own read models are responsible for waiting on their tokens independently.
+  /** The channel connected to this remote */
+  channel: IChannel;
+};
+```
 
-### Optimization
+**Remote semantics:**
+- Remotes are 1:1 with collections
+- Remotes may have additional filtering logic on them through `RemoteFilter`
 
-The `IChannel` implementation is free to optimize in a number of ways. For instance, it may batch `push` operations and send them in the `pull` request. Over HTTP, for example, this would result in a single `pull` request that will decompose nicely when there is no socket available.
+### `RemoteCursor`
 
-## Error Handling
+A cursor tracks progress through a collection. This object is passed back and forth and also stored for catchup.
 
-The synchronization system must have a robust error handling strategy. All possible errors must be explicitly defined here with a clear description of the error, the conditions under which it occurs, and recovery strategies.
+```typescript
+type RemoteCursor = {
+  remoteName: string;         // Which remote owns this cursor
+  cursorOrdinal: number;      // Last processed ordinal (exclusive)
+  lastSyncedAtUtcMs?: number; // Timestamp of last sync (which may have been push or pull)
+};
+```
+
+**Cursor semantics:**
+- Cursors are **exclusive** — the next query starts at `cursorOrdinal + 1`
+- Cursors are **per-remote**
+
+### `SyncEnvelope`
+
+The `SyncEnvelope` is the object sent/received by the transport layer. In general, this will travel over HTTP, but other transport layers are possible.
+
+The `ChannelMeta` contains metadata that identifies the channel and its configuration.
+
+```ts
+type ChannelMeta = {
+  //
+};
+
+type SyncEnvelope = {
+  type: string;
+  channelMeta: ChannelMeta;
+  operations?: OperationWithContext[];
+  cursor?: RemoteCursor;
+};
+```
+
+## Channel Model
 
 ### `IChannel`
 
-`IChannel` implementations communicate errors in one single way: the `error` object on `JobHandle` objects in the `deadLetter` mailbox. Every error that can occur in a channel is communicated to the consumer of the channel through this mailbox.
+Every `IChannel` has three mailboxes that hold `JobHandle` objects (which are defined below):
 
-For example:
+1. **Inbox:** Operations received from remote (awaiting local execution)
+2. **Outbox:** Operations sent to remote (awaiting remote confirmation)
+3. **DeadLetter:** Operations that failed permanently (retry exhausted, fatal error)
 
-```tsx
-const channel = new WebSocketChannel();
+```ts
+interface IChannel {
+  /**
+   * The incoming queue of operations that need to be applied to the local reactor.
+   */
+  inbox: Mailbox<JobHandle>;
 
-channel.deadLetter.onAdded((job) => {
-  // inspect error
-  const error = job.error;
-  const source = error.source;
+  /**
+   * The outgoing queue of operations being applied to the remote reactor.
+   */
+  outbox: Mailbox<JobHandle>;
 
-  // handle ...
-});
+  /**
+   * The dead letter queue of operations that have failed for any reason.
+   */
+  deadLetter: Mailbox<JobHandle>;
+}
 ```
 
-The `ChannelError` object has a `source` property that indicates the source of the error (could be inbox, outbox, or channel).
+### `Mailbox`
 
-The `error` property can be one of two types:
+Each mailbox contains a set of objects, and dispatches when objects are added and removed.
 
-- **JobError** - these are propagated job execution errors, documented in the [Jobs interface](../Jobs/interface.md).
-- **InternalChannelError** - these are errors from the channel itself, not the job.
-
-### Job Errors
-
-#### `SIGNATURE_INVALID`
-
-##### ChannelErrorSource.None
-
-This is not a valid source for this error code, and should never happen. However, in the case that this does happen:
-
-- The job will be logged as an error.
-- The job will be removed from the inbox queue.
-
-##### ChannelErrorSource.Inbox
-
-This indicates that a remote operation could not be applied to the local reactor because of a signature mismatch. This should never happen _except in the case of a malicious actor_, as remote reactors are already validating signatures.
-
-In the case that this does happen:
-
-- The remote will be marked as invalid and no further operations will be sent to or received from it.
-- The job will be removed from the inbox queue.
-
-##### ChannelErrorSource.Outbox
-
-This indicates that a local operation could not be applied to the remote reactor because of a signature mismatch. This means that while we were able to verify a signature, the remote was not. This is an unrecoverable error, signaling a problem with a remote reactor itself:
-
-- The remote will be marked as invalid and no further operations will be sent to or received from it.
-- The job will be removed from the outbox queue.
-
-#### `HASH_MISMATCH`
-
-##### ChannelErrorSource.None
-
-This is not a valid source for this error code, and should never happen. However, in the case that this does happen:
-
-- The job will be logged as an error.
-- The job will be removed from the inbox queue.
-
-##### ChannelErrorSource.Inbox
-
-This indicates that a remote operation could not be applied to the local reactor because of an unrecoverable hash mismatch (note that retry/reshuffle has already been attempted). In this case:
-
-- Create a branch at the last known good state.
-- Re-apply the operation to the branch.
-- Push the branch to the remote reactor.
-
-##### ChannelErrorSource.Outbox
-
-This indicates that a local operation could not be applied to the remote reactor because of a hash mismatch. This case should be handled by the receiving Reactor. In this case:
-
-- The job will be discarded.
-
-#### `LIBRARY_ERROR`
-
-##### ChannelErrorSource.None
-
-This is not a valid source for this error code, and should never happen. However, in the case that this does happen:
-
-- The job will be discarded.
-
-##### ChannelErrorSource.Inbox
-
-This indicates that an error occurred in job execution locally, but not remotely. In this case:
-
-- Create a branch at the last known good state.
-- Re-apply the operation to the branch.
-- Push the branch to the remote reactor.
-
-##### ChannelErrorSource.Outbox
-
-This indicates that an error occurred in job execution remotely, but not locally. The receiving Reactor should handle this case. In this case:
-
-- The job will be discarded.
-
-#### `MISSING_OPERATIONS`
-
-##### ChannelErrorSource.None
-
-This is not a valid source for this error code, and should never happen. However, in the case that this does happen:
-
-- The job will be discarded.
-
-##### ChannelErrorSource.Inbox
-
-This would mean that a local reactor is trying to submit an operation with a later operation index than the latest local index. In this case:
-
-- The job will be discarded.
-
-##### ChannelErrorSource.Outbox
-
-This would mean that we received an operation with a later index than the latest we have locally. In this case:
-
-- We must pull the missing operations fromt the remote reactor.
-
-#### `EXCESSIVE_SHUFFLE`
-
-##### ChannelErrorSource.None
-
-This is not a valid source for this error code, and should never happen. However, in the case that this does happen:
-
-- The job will be discarded.
-
-##### ChannelErrorSource.Inbox
-
-This would mean that a local reactor is trying to submit an extremely out of date `Action`. In this case:
-
-- Get latest operations from the remote reactor.
-- Rebase locally.
-- The action needs to be updated with the latest index and re-queued as a new job.
-
-##### ChannelErrorSource.Outbox
-
-This would mean that a remote reactor is trying to submit an extremely out of date `Action`. In this case:
-
-- Notify the remote reactor that their operation has been rejected and they must locally rebase before resubmitting.
-
-#### `GRACEFUL_ABORT`
-
-For all sources, the `ISyncManager` will simply ignore and discard, allowing the system to catchup on next startup.
-
-### Channel Errors
-
-Channel errors will be documented here, depending on the implementation of the `IChannel` interface.
-
-```tsx
-class UnrecoverableRemoteError extends Error {
+```ts
+class Mailbox<T> {
   /**
-   * The name of the remote that is unrecoverable.
+   * The items in the mailbox.
    */
-  remote: string;
+  get items(): ReadonlyArray<T>;
+
+  /**
+   * Gets an item from the mailbox.
+   */
+  get(id: string): T | undefined;
+
+  /**
+   * Adds an item to the mailbox.
+   */
+  add(item: T): void;
+
+  /**
+   * Removes an item from the mailbox.
+   */
+  remove(item: T): void;
+
+  /**
+   * Subscribes to new items being added to the mailbox.
+   */
+  onAdded(callback: (item: T) => void): void;
+
+  /**
+   * Subscribes to items being removed from the mailbox.
+   */
+  onRemoved(callback: (item: T) => void): void;
+}
+```
+
+### `JobHandle`
+
+The `JobHandle` is the mutable data structure that tracks execution of a set of operations. They are named `JobHandle` because they follow the atomicity guarantees of `Job`s.
+
+```ts
+enum JobChannelStatus {
+  /** The job status is not known */
+  Unknown = -1,
+
+  /** The job is being transported */
+  TransportPending,
+
+  /** The job is being executed */
+  ExecutionPending,
+
+  /** The job has been applied */
+  Applied,
+
+  /** The job has failed */
+  Error,
+}
+
+enum ChannelErrorSource {
+  None = "none",
+  Channel = "channel",
+  Inbox = "inbox",
+  Outbox = "outbox",
+}
+
+class InternalChannelError extends Error {
+  // ...
+}
+
+class ChannelError extends Error {
+  /**
+   * The source of the error.
+   */
+  source: ChannelErrorSource;
 
   /**
    * The error that occurred.
    */
   error: Error;
+
+  constructor(source: ChannelErrorSource, error: Error) {
+    super(`ChannelError[${source}]: ${error.message}`);
+
+    this.source = source;
+    this.error = error;
+  }
+}
+
+class JobHandle {
+  /** The unique id of the job */
+  id: string;
+
+  /** Remote name associated with this job (source for inbox, destination for outbox) */
+  remoteName: string;
+
+  /** The document id that the job is operating on */
+  documentId: string;
+
+  /** The scopes affected */
+  scopes: string[];
+
+  /** The branch that the job is operating on */
+  branch: string;
+
+  /** The operations */
+  operations: Operation[];
+
+  /** The status of the job */
+  status: JobChannelStatus = JobChannelStatus.Unknown;
+
+  /** The error that occurred, if any */
+  error?: ChannelError;
+
+  /**
+   * Subscribes to changes in the job status.
+   */
+  on(
+    callback: (
+      job: JobHandle,
+      prev: JobChannelStatus,
+      next: JobChannelStatus,
+    ) => void,
+  ): void;
+
+  /**
+   * Moves job from Unknown to TransportPending.
+   */
+  started(): void;
+
+  /**
+   * Moves job from TransportPending to ExecutionPending.
+   */
+  transported(): void;
+
+  /**
+   * Moves job from ExecutionPending to Applied.
+   */
+  executed(): void;
+
+  /**
+   * Moves job from any state to Error.
+   */
+  failed(error: ChannelError): void;
 }
 ```
+
+A `JobHandle` represents a unit of work (one or more operations for a single document/branch):
+
+```mermaid
+stateDiagram-v2
+    [*] --> Unknown: Created
+    Unknown --> TransportPending: started()
+    TransportPending --> ExecutionPending: transported()
+    ExecutionPending --> Applied: executed()
+    TransportPending --> Error: failed()
+    ExecutionPending --> Error: failed()
+    Applied --> [*]
+    Error --> DeadLetter
+```
+
+**State transitions:**
+- `Unknown` → `TransportPending`: Job entered channel, transport layer activated
+- `TransportPending` → `ExecutionPending`: Job sent, queued for execution
+- `ExecutionPending` → `Applied`: Job executed successfully, operations appended to history
+- Any state → `Error`: Failure occurred (signature invalid, hash mismatch, library error, etc.)
+
+### ACK Protocol
+
+The ACK flow is described in Pull, Push, and Ping-Pong flows above. Essentially, the receiver sends an ACK, which removes the job from the outbox of the original sender. It indicates an ACK by using the `type` field of the `SyncEnvelope`.
+
+## Error Handling and Recovery
+
+### Error Taxonomy
+
+Errors are categorized by **source** and **type**:
+
+```typescript
+enum ChannelErrorSource {
+  None = "none",         // Error origin unknown
+  Channel = "channel",   // Transport/network error
+  Inbox = "inbox",       // Error applying received operations
+  Outbox = "outbox"      // Error sending operations
+}
+
+type JobErrorType =
+  | "SIGNATURE_INVALID"
+  | "HASH_MISMATCH"
+  | "LIBRARY_ERROR"
+  | "MISSING_OPERATIONS"
+  | "EXCESSIVE_SHUFFLE"
+  | "GRACEFUL_ABORT";
+```
+
+### Error Handling Matrix
+
+| Error Type | Source: Inbox | Source: Outbox | Source: Channel |
+|---|---|---|---|
+| **SIGNATURE_INVALID** | Mark remote invalid, disable remote | Mark remote invalid, disable remote | N/A |
+| **HASH_MISMATCH** | Create branch, reapply operation, push to remote | Discard job (remote handles) | N/A |
+| **LIBRARY_ERROR** | Create branch, reapply operation, push to remote | Discard job (remote handles) | N/A |
+| **MISSING_OPERATIONS** | Discard job | Pull missing operations, resend | N/A |
+| **EXCESSIVE_SHUFFLE** | Pull latest, rebase, re-queue as new job | Notify remote to rebase | N/A |
+| **GRACEFUL_ABORT** | Discard, catch up next cycle | Discard, catch up next cycle | Discard, catch up next cycle |
+| **Transport Failure** | N/A | N/A | Retry with backoff, then disable |
+
+### Retry Policy
+
+**Exponential backoff with jitter:**
+```
+retryDelayMs = min(maxDelay, baseDelay * 2^failureCount + jitter)
+```
+
+**Default values:**
+- `baseDelay` = 1000ms
+- `maxDelay` = 300000ms (5 minutes)
+- `maxRetries` = 5
+
+**Failure threshold:**
+- After 5 consecutive failures, remote is marked as `error` state
+- User intervention required to re-enable (or automatic re-enable after health check)
+
+### Health Tracking
+
+```typescript
+type ChannelHealth = {
+  state: "idle" | "running" | "error";
+  lastSuccessUtcMs?: number;
+  lastFailureUtcMs?: number;
+  failureCount: number;
+};
+
+type RemoteStatus = {
+  push: ChannelHealth;
+  pull: ChannelHealth;
+};
+```
+
+**State transitions:**
+- `idle` → `running`: Sync operation started
+- `running` → `idle`: Sync operation succeeded
+- `running` → `error`: Sync operation failed after retries exhausted
+- `error` → `idle`: User re-enabled remote or health check passed
+
+---
+
+# Layer 3: Implementation Details
+
+## Core Interfaces
+
+### ISyncManager
+
+The orchestrator for all synchronization activity.
+
+```typescript
+type ChannelConfig = {
+  /**
+   * The type of the channel.
+   */
+  type: string;
+
+  /**
+   * Parameters for the channel.
+   */
+  parameters: Record<string, any>;
+}
+
+interface ISynchronizationManager {
+  /**
+   * Starts the synchronization manager. This recreates remotes and preps for catch up.
+   *
+   * @returns Promise that resolves when the manager is started
+   */
+  startup(): Promise<void>;
+
+  /**
+   * Shuts down the synchronization manager. This cleans up resources and stops all synchronization.
+   */
+  shutdown(): ShutdownStatus;
+
+  /**
+   * Get details of a specific remote
+   *
+   * @param name - The name of the remote
+   * @returns The remote
+   */
+  get(name: string): Remote;
+
+  /**
+   * Add a new remote
+   *
+   * @param name - The name of the remote
+   * @param collectionId - The collection id to use for this remote
+   * @param channelConfig - The configuration for the channel to use for this remote
+   * @param filter - The filter to use for this remote
+   * @param options - The options for this remote
+   * @returns The remote
+   */
+  add(
+    name: string,
+    collectionId: string,
+    channelConfig: ChannelConfig,
+    filter?: RemoteFilter,
+    options?: RemoteOptions,
+  ): Promise<Remote>;
+
+  /**
+   * Remove an existing remote
+   *
+   * @param name - The name of the remote
+   * @returns The remote
+   */
+  remove(name: string): Promise<void>;
+
+  /**
+   * List all configured remotes
+   *
+   * @returns The remotes
+   */
+  list(): Remote[];
+}
+
+interface IChannelFactory {
+  /**
+   * Creates a new instance of the channel.
+   *
+   * @param config - The configuration for the channel
+   * @param cursorStorage - The cursor storage to use for the channel
+   * @returns The channel
+   */
+  instance(config: ChannelConfig, cursorStorage: ISyncCursorStorage): IChannel;
+}
+```
+
+### ISyncRemoteStorage
+
+Durable storage for remote metadata. The `ISyncManager` owns this object, re-creates objects on `startup()`, and persists changes based on remote add/remove.
+
+Initial implementations will simply be in-memory.
+
+```typescript
+type RemoteRecord = {
+  name: string;
+  channelConfig: JsonObject;
+  filter: RemoteFilter;
+  options: RemoteOptions;
+  status: RemoteStatus;
+};
+
+interface ISyncRemoteStorage {
+  /**
+   * Lists all remotes.
+   *
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The remotes
+   */
+  list(signal?: AbortSignal): Promise<RemoteRecord[]>;
+
+  /**
+   * Gets a remote by name.
+   *
+   * @param name - The name of the remote
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The remote
+   */
+  get(name: string, signal?: AbortSignal): Promise<RemoteRecord>;
+
+  /**
+   * Upserts a remote.
+   *
+   * @param remote - The remote to upsert
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The remote
+   */
+  upsert(remote: RemoteRecord, signal?: AbortSignal): Promise<void>;
+
+  /**
+   * Removes a remote by name.
+   *
+   * @param name - The name of the remote
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The remote
+   */
+  remove(name: string, signal?: AbortSignal): Promise<void>;
+}
+```
+
+### ISyncCursorStorage
+
+Durable storage for synchronization cursors. The `ISyncManager` owns this object and passes it to the `IChannelFactory` when creating a new channel. The `IChannel` is responsible for updating the cursor when operations are applied.
+
+Initial implementations will simply be in-memory.
+
+```typescript
+interface ISyncCursorStorage {
+  /**
+   * Lists all cursors for a remote.
+   *
+   * @param remoteName - The name of the remote
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The cursors
+   */
+  list(remoteName: string, signal?: AbortSignal): Promise<RemoteCursor[]>;
+
+  /**
+   * Gets a cursor for a remote.
+   *
+   * @param remoteName - The name of the remote
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The cursor
+   */
+  get(remoteName: string, signal?: AbortSignal): Promise<RemoteCursor>;
+
+  /**
+   * Upserts a cursor.
+   *
+   * @param cursor - The cursor to upsert
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The cursor
+   */
+  upsert(cursor: RemoteCursor, signal?: AbortSignal): Promise<void>;
+
+  /**
+   * Removes a cursor for a remote.
+   *
+   * @param remoteName - The name of the remote
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The cursor
+   */
+  remove(remoteName: string, signal?: AbortSignal): Promise<void>;
+}
+```
+
+## Channel Implementations
+
+### `InternalChannel`
+
+**Use case:** In-memory synchronization within a single process
+
+**Transport:** Direct function call (no network)
+
+**Example:**
+```typescript
+const channel = new InternalChannel();
+channel.inbox.onAdded(async (handle) => {
+  // pass to reactor to load
+  const job = await reactor.load(handle.documentId, handle.branch, handle.operations);
+  
+  // elided: wait for job completion
+
+  // update handle
+  if (result.error) {
+    handle.failed(new ChannelError(ChannelErrorSource.Inbox, result.error));
+  } else {
+    handle.executed();
+  }
+
+  // send ACK
+  channel.outbox.add({
+    type: "ack",
+    // elided
+  });
+
+  // remove handle from inbox
+  channel.inbox.remove(handle);
+});
+```
+
+### `GqlChannel`
+
+**Use case:** Synchronization over GraphQL
+
+**Transport:** GraphQL
+
+**Example:**
+
