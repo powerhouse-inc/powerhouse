@@ -8,7 +8,7 @@ import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import type { IKeyframeStore, IOperationStore } from "../storage/interfaces.js";
 import { RingBuffer } from "./buffer/ring-buffer.js";
 import { LRUTracker } from "./lru/lru-tracker.js";
-import type { CachedSnapshot, WriteCacheConfig } from "./types.js";
+import type { CachedSnapshot, WriteCacheConfig } from "./write-cache-types.js";
 import type { IWriteCache } from "./write/interfaces.js";
 
 type DocumentStream = {

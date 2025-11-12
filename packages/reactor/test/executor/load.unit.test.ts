@@ -86,6 +86,16 @@ describe("SimpleJobExecutor load jobs", () => {
       shutdown: vi.fn(),
     };
 
+    const mockOperationIndex: any = {
+      start: vi.fn().mockReturnValue({
+        createCollection: vi.fn(),
+        addToCollection: vi.fn(),
+        write: vi.fn(),
+      }),
+      commit: vi.fn().mockResolvedValue(undefined),
+      find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+    };
+
     executor = new SimpleJobExecutor(
       registry,
       mockDocStorage,
@@ -96,6 +106,7 @@ describe("SimpleJobExecutor load jobs", () => {
         subscribe: vi.fn(),
       } as any,
       mockWriteCache,
+      mockOperationIndex,
       { legacyStorageEnabled: true },
     );
   });

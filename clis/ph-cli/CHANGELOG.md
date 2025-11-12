@@ -1,3 +1,25 @@
+## 4.1.0-dev.113 (2025-11-12)
+
+This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.112 (2025-11-12)
+
+This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.111 (2025-11-12)
+
+This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.110 (2025-11-11)
+
+### 🚀 Features
+
+- **connect,common,builder-tools:** optimize connect bundle chunks ([#2093](https://github.com/powerhouse-inc/powerhouse/pull/2093))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 4.1.0-dev.109 (2025-11-10)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.

@@ -30,6 +30,7 @@ function makeImportScriptFromPackages(packages: string[]) {
 
 export function phExternalPackagesPlugin(phPackages: string[]) {
   const virtualModuleId = "virtual:ph:external-packages";
+  const resolvedVirtualModuleId = "\0" + virtualModuleId;
 
   const localPackageModules = new Map<string, Set<ModuleNode["url"]>>();
 
@@ -49,7 +50,8 @@ export function phExternalPackagesPlugin(phPackages: string[]) {
       !module.file ||
       module.file.includes("node_modules") ||
       allModules.has(module.file) ||
-      (!module.file.startsWith(rootPath) && module.file !== virtualModuleId)
+      (!module.file.startsWith(rootPath) &&
+        module.file !== resolvedVirtualModuleId)
     );
   }
 
@@ -64,7 +66,7 @@ export function phExternalPackagesPlugin(phPackages: string[]) {
     rootPath: string,
     allModules: Set<string>,
   ) {
-    const isVirtualModule = currentModule.file === virtualModuleId;
+    const isVirtualModule = currentModule.file === resolvedVirtualModuleId;
     const skipModule = shouldSkipModule(currentModule, rootPath, allModules);
     if (skipModule) {
       return;
@@ -73,6 +75,13 @@ export function phExternalPackagesPlugin(phPackages: string[]) {
     if (!isVirtualModule) {
       allModules.add(currentModule.file!);
     }
+    if (
+      currentModule.file?.endsWith(".css") ||
+      currentModule.file?.endsWith(".html")
+    ) {
+      return;
+    }
+
     for (const importer of currentModule.importedModules) {
       if (!shouldSkipModule(importer, rootPath, allModules)) {
         buildImportedModulesSet(importer, rootPath, allModules);
@@ -86,67 +95,13 @@ export function phExternalPackagesPlugin(phPackages: string[]) {
     enforce: "pre",
     resolveId(id) {
       if (id === virtualModuleId) {
-        return id;
+        return resolvedVirtualModuleId;
       }
     },
     load(id) {
-      if (id === virtualModuleId) {
+      if (id === resolvedVirtualModuleId) {
         return makeImportScriptFromPackages(phPackages);
       }
-    },
-    handleHotUpdate({ file, server, modules }) {
-      // Check if the changed file is part of any local package
-      const localPackage = phPackages.find((pkg) => {
-        if (pkg.startsWith("/") || pkg.startsWith(".")) {
-          return file.startsWith(pkg);
-        }
-        return false;
-      });
-
-      // if the changed file is not part of any local package, do not override HMR
-      if (!localPackage) {
-        return undefined;
-      }
-
-      // iterate through all local package imports to build set of imported modules, if not already built
-      const packageModules = localPackageModules.get(localPackage);
-      const importedModules =
-        localPackageModules.get(localPackage) || new Set<string>();
-      const virtualModule = server.moduleGraph.getModuleById(virtualModuleId);
-
-      if (
-        virtualModule &&
-        !packageModules &&
-        virtualModule.importedModules.size > 0 // wait for virtual module to be built
-      ) {
-        buildImportedModulesSet(virtualModule, localPackage, importedModules);
-        localPackageModules.set(localPackage, importedModules);
-      }
-
-      // checks if there are new modules being imported by a watched module and adds them to the set
-      for (const module of modules) {
-        if (
-          module.file &&
-          !importedModules.has(module.file) &&
-          !shouldSkipModule(module, localPackage, importedModules) &&
-          module.importers
-            .values()
-            .some((m) => m.file && importedModules.has(m.file))
-        ) {
-          buildImportedModulesSet(module, localPackage, importedModules);
-        }
-      }
-
-      // returns only modules that are actually imported by Connect
-      const modulesToRefresh = modules.filter(
-        (m) =>
-          m.id &&
-          m.id !== virtualModuleId &&
-          m.file &&
-          importedModules.has(m.file),
-      );
-
-      return modulesToRefresh;
     },
   };
 

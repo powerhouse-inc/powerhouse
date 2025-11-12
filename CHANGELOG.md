@@ -1,3 +1,59 @@
+## 4.1.0-dev.113 (2025-11-12)
+
+### 🩹 Fixes
+
+- **builder-tools/vetra:** run tsc watch alongside connect studio and import transpiled files instead of source ([eb33cfe29](https://github.com/powerhouse-inc/powerhouse/commit/eb33cfe29))
+- **document-drive:** fix helia type import ([7b8a7b850](https://github.com/powerhouse-inc/powerhouse/commit/7b8a7b850))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.112 (2025-11-12)
+
+### 🩹 Fixes
+
+- **connect:** update sideEffects in package.json to include main.js ([ea9dba718](https://github.com/powerhouse-inc/powerhouse/commit/ea9dba718))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 4.1.0-dev.111 (2025-11-12)
+
+### 🚀 Features
+
+- initial implementation of operation index ([906588091](https://github.com/powerhouse-inc/powerhouse/commit/906588091))
+- splitting job integration tests into legacy and current ([413ead70c](https://github.com/powerhouse-inc/powerhouse/commit/413ead70c))
+- first pass operation-index integration ([4e5b1e191](https://github.com/powerhouse-inc/powerhouse/commit/4e5b1e191))
+- adding operation index to executor integration tests ([63b51b84f](https://github.com/powerhouse-inc/powerhouse/commit/63b51b84f))
+
+### 🩹 Fixes
+
+- remove db construction and use migrations instead ([6835d37d4](https://github.com/powerhouse-inc/powerhouse/commit/6835d37d4))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 4.1.0-dev.110 (2025-11-11)
+
+### 🚀 Features
+
+- **connect,common,builder-tools:** optimize connect bundle chunks ([#2093](https://github.com/powerhouse-inc/powerhouse/pull/2093))
+
+### 🩹 Fixes
+
+- read data is missing vetra packages ([cc0323cf6](https://github.com/powerhouse-inc/powerhouse/commit/cc0323cf6))
+- **builder-tools:** fix hmr on connect ([f72047359](https://github.com/powerhouse-inc/powerhouse/commit/f72047359))
+- **reactor-browser:** handle node and drive navigation on window popstate event ([#2094](https://github.com/powerhouse-inc/powerhouse/pull/2094))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+
 ## 4.1.0-dev.109 (2025-11-10)
 
 ### 🩹 Fixes

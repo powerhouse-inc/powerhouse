@@ -13,6 +13,11 @@ import type {
   RemoveRelationshipActionInput,
   UpgradeDocumentActionInput,
 } from "document-model";
+import type {
+  IOperationIndex,
+  IOperationIndexTxn,
+} from "../cache/operation-index-types.js";
+import { driveCollectionId } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IEventBus } from "../events/interfaces.js";
 import { OperationEventTypes } from "../events/types.js";
@@ -50,6 +55,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     private operationStore: IOperationStore,
     private eventBus: IEventBus,
     private writeCache: IWriteCache,
+    private operationIndex: IOperationIndex,
     config: JobExecutorConfig,
   ) {
     this.config = {
@@ -67,12 +73,22 @@ export class SimpleJobExecutor implements IJobExecutor {
    */
   async executeJob(job: Job): Promise<JobResult> {
     const startTime = Date.now();
+    const indexTxn = this.operationIndex.start();
 
     if (job.kind === "load") {
-      return await this.executeLoadJob(job, startTime);
+      const result = await this.executeLoadJob(job, startTime, indexTxn);
+      if (result.success) {
+        await this.operationIndex.commit(indexTxn);
+      }
+      return result;
     }
 
-    const result = await this.processActions(job, job.actions, startTime);
+    const result = await this.processActions(
+      job,
+      job.actions,
+      startTime,
+      indexTxn,
+    );
 
     if (!result.success) {
       return {
@@ -82,6 +98,8 @@ export class SimpleJobExecutor implements IJobExecutor {
         duration: Date.now() - startTime,
       };
     }
+
+    await this.operationIndex.commit(indexTxn);
 
     if (result.operationsWithContext.length > 0) {
       this.eventBus
@@ -106,6 +124,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     job: Job,
     actions: Action[],
     startTime: number,
+    indexTxn: IOperationIndexTxn,
     skipValues?: number[],
   ): Promise<{
     success: boolean;
@@ -123,6 +142,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           job,
           action,
           startTime,
+          indexTxn,
           skipValues?.[actionIndex],
         );
         const error = this.accumulateResultOrReturnError(
@@ -147,6 +167,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           job,
           action,
           startTime,
+          indexTxn,
         );
         const error = this.accumulateResultOrReturnError(
           result,
@@ -170,6 +191,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           job,
           action,
           startTime,
+          indexTxn,
           skipValues?.[actionIndex],
         );
         const error = this.accumulateResultOrReturnError(
@@ -194,6 +216,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           job,
           action,
           startTime,
+          indexTxn,
         );
         const error = this.accumulateResultOrReturnError(
           result,
@@ -217,6 +240,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           job,
           action,
           startTime,
+          indexTxn,
         );
         const error = this.accumulateResultOrReturnError(
           result,
@@ -394,6 +418,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     job: Job,
     action: Action,
     startTime: number,
+    indexTxn: IOperationIndexTxn,
     skip: number = 0,
   ): Promise<
     JobResult & {
@@ -489,6 +514,22 @@ export class SimpleJobExecutor implements IJobExecutor {
       document,
     );
 
+    if (document.header.documentType === "powerhouse/document-drive") {
+      const collectionId = driveCollectionId(job.branch, document.header.id);
+      indexTxn.createCollection(collectionId);
+      indexTxn.addToCollection(collectionId, document.header.id);
+    }
+
+    indexTxn.write([
+      {
+        ...operation,
+        documentId: document.header.id,
+        documentType: document.header.documentType,
+        branch: job.branch,
+        scope: job.scope,
+      },
+    ]);
+
     return this.buildSuccessResult(
       job,
       operation,
@@ -508,6 +549,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     job: Job,
     action: Action,
     startTime: number,
+    indexTxn: IOperationIndexTxn,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -602,6 +644,16 @@ export class SimpleJobExecutor implements IJobExecutor {
       return writeError;
     }
 
+    indexTxn.write([
+      {
+        ...operation,
+        documentId: documentId,
+        documentType: document.header.documentType,
+        branch: job.branch,
+        scope: job.scope,
+      },
+    ]);
+
     return this.buildSuccessResult(
       job,
       operation,
@@ -621,6 +673,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     job: Job,
     action: Action,
     startTime: number,
+    indexTxn: IOperationIndexTxn,
     skip: number = 0,
   ): Promise<
     JobResult & {
@@ -728,6 +781,16 @@ export class SimpleJobExecutor implements IJobExecutor {
       document,
     );
 
+    indexTxn.write([
+      {
+        ...operation,
+        documentId: documentId,
+        documentType: document.header.documentType,
+        branch: job.branch,
+        scope: job.scope,
+      },
+    ]);
+
     return this.buildSuccessResult(
       job,
       operation,
@@ -742,6 +805,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     job: Job,
     action: Action,
     startTime: number,
+    indexTxn: IOperationIndexTxn,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -874,6 +938,21 @@ export class SimpleJobExecutor implements IJobExecutor {
       sourceDoc,
     );
 
+    if (sourceDoc.header.documentType === "powerhouse/document-drive") {
+      const collectionId = driveCollectionId(job.branch, input.sourceId);
+      indexTxn.addToCollection(collectionId, input.targetId);
+    }
+
+    indexTxn.write([
+      {
+        ...operation,
+        documentId: input.sourceId,
+        documentType: sourceDoc.header.documentType,
+        branch: job.branch,
+        scope: job.scope,
+      },
+    ]);
+
     return this.buildSuccessResult(
       job,
       operation,
@@ -888,6 +967,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     job: Job,
     action: Action,
     startTime: number,
+    indexTxn: IOperationIndexTxn,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -982,6 +1062,16 @@ export class SimpleJobExecutor implements IJobExecutor {
       sourceDoc,
     );
 
+    indexTxn.write([
+      {
+        ...operation,
+        documentId: input.sourceId,
+        documentType: sourceDoc.header.documentType,
+        branch: job.branch,
+        scope: job.scope,
+      },
+    ]);
+
     return this.buildSuccessResult(
       job,
       operation,
@@ -1009,6 +1099,7 @@ export class SimpleJobExecutor implements IJobExecutor {
   private async executeLoadJob(
     job: Job,
     startTime: number,
+    indexTxn: IOperationIndexTxn,
   ): Promise<JobResult> {
     if (job.operations.length === 0) {
       return this.buildErrorResult(
@@ -1060,6 +1151,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       job,
       actions,
       startTime,
+      indexTxn,
       skipValues,
     );
 

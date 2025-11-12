@@ -2,7 +2,7 @@ import { driveDocumentModelModule } from "document-drive";
 import type { PHDocument } from "document-model";
 import { afterEach, bench, describe } from "vitest";
 import { KyselyWriteCache } from "../src/cache/kysely-write-cache.js";
-import type { WriteCacheConfig } from "../src/cache/types.js";
+import type { WriteCacheConfig } from "../src/cache/write-cache-types.js";
 import { DocumentModelRegistry } from "../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../src/registry/interfaces.js";
 import { createTestOperationStore } from "../test/factories.js";

@@ -1,3 +1,37 @@
+## 4.1.0-dev.113 (2025-11-12)
+
+### 🩹 Fixes
+
+- **document-drive:** fix helia type import ([7b8a7b850](https://github.com/powerhouse-inc/powerhouse/commit/7b8a7b850))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.112 (2025-11-12)
+
+This was a version bump only for document-drive to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.111 (2025-11-12)
+
+### 🚀 Features
+
+- initial implementation of operation index ([906588091](https://github.com/powerhouse-inc/powerhouse/commit/906588091))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 4.1.0-dev.110 (2025-11-11)
+
+### 🚀 Features
+
+- **connect,common,builder-tools:** optimize connect bundle chunks ([#2093](https://github.com/powerhouse-inc/powerhouse/pull/2093))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 4.1.0-dev.109 (2025-11-10)
 
 This was a version bump only for document-drive to align it with other projects, there were no code changes.

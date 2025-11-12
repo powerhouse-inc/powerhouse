@@ -4,7 +4,10 @@ import {
   ProcessorManagerProvider,
   SentryProvider,
 } from "@powerhousedao/connect/context";
-import { DocumentEditorDebugTools, serviceWorkerManager } from "@powerhousedao/connect/utils";
+import {
+  DocumentEditorDebugTools,
+  serviceWorkerManager,
+} from "@powerhousedao/connect/utils";
 import {
   ToastContainer,
   WagmiContext,

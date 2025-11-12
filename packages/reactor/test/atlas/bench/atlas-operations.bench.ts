@@ -4,8 +4,8 @@ import {
   InMemoryCache,
   MemoryStorage,
 } from "document-drive";
-import { PrismaStorage } from "document-drive/storage/prisma";
 import { PrismaClient } from "document-drive/storage/prisma/client";
+import { PrismaStorage } from "document-drive/storage/prisma/prisma";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

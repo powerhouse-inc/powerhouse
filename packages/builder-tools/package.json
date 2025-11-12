@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/builder-tools",
-  "version": "4.1.0-dev.109",
+  "version": "4.1.0-dev.113",
   "type": "module",
   "license": "AGPL-3.0-only",
   "publishConfig": {
@@ -21,6 +21,10 @@
     "./editor": {
       "import": "./dist/document-model-editor/module.js",
       "types": "./dist/document-model-editor/module.d.ts"
+    },
+    "./editor-component": {
+      "import": "./dist/document-model-editor/editor.js",
+      "types": "./dist/document-model-editor/editor.d.ts"
     },
     "./document-model-editor/hooks": {
       "import": "./dist/document-model-editor/hooks/index.js",
