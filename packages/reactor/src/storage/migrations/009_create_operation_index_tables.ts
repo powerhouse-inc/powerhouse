@@ -6,6 +6,8 @@ export async function up(db: Kysely<any>): Promise<void> {
     .createTable("document_collections")
     .addColumn("documentId", "text", (col) => col.notNull())
     .addColumn("collectionId", "text", (col) => col.notNull())
+    .addColumn("joinedOrdinal", "bigint", (col) => col.notNull().defaultTo(0))
+    .addColumn("leftOrdinal", "bigint")
     .addPrimaryKeyConstraint("document_collections_pkey", [
       "documentId",
       "collectionId",
@@ -16,6 +18,12 @@ export async function up(db: Kysely<any>): Promise<void> {
     .createIndex("idx_document_collections_collectionId")
     .on("document_collections")
     .column("collectionId")
+    .execute();
+
+  await db.schema
+    .createIndex("idx_doc_collections_collection_range")
+    .on("document_collections")
+    .columns(["collectionId", "joinedOrdinal"])
     .execute();
 
   await db.schema

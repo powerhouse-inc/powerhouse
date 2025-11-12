@@ -514,12 +514,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       document,
     );
 
-    if (document.header.documentType === "powerhouse/document-drive") {
-      const collectionId = driveCollectionId(job.branch, document.header.id);
-      indexTxn.createCollection(collectionId);
-      indexTxn.addToCollection(collectionId, document.header.id);
-    }
-
     indexTxn.write([
       {
         ...operation,
@@ -529,6 +523,14 @@ export class SimpleJobExecutor implements IJobExecutor {
         scope: job.scope,
       },
     ]);
+
+    // collection membership has to be _after_ the write, as it requires the
+    // ordinal of the operation to be set
+    if (document.header.documentType === "powerhouse/document-drive") {
+      const collectionId = driveCollectionId(job.branch, document.header.id);
+      indexTxn.createCollection(collectionId);
+      indexTxn.addToCollection(collectionId, document.header.id);
+    }
 
     return this.buildSuccessResult(
       job,
@@ -938,11 +940,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       sourceDoc,
     );
 
-    if (sourceDoc.header.documentType === "powerhouse/document-drive") {
-      const collectionId = driveCollectionId(job.branch, input.sourceId);
-      indexTxn.addToCollection(collectionId, input.targetId);
-    }
-
     indexTxn.write([
       {
         ...operation,
@@ -952,6 +949,13 @@ export class SimpleJobExecutor implements IJobExecutor {
         scope: job.scope,
       },
     ]);
+
+    // collection membership has to be _after_ the write, as it requires the
+    // ordinal of the operation to be set
+    if (sourceDoc.header.documentType === "powerhouse/document-drive") {
+      const collectionId = driveCollectionId(job.branch, input.sourceId);
+      indexTxn.addToCollection(collectionId, input.targetId);
+    }
 
     return this.buildSuccessResult(
       job,
@@ -1071,6 +1075,13 @@ export class SimpleJobExecutor implements IJobExecutor {
         scope: job.scope,
       },
     ]);
+
+    // collection membership has to be _after_ the write, as it requires the
+    // ordinal of the operation to be set
+    if (sourceDoc.header.documentType === "powerhouse/document-drive") {
+      const collectionId = driveCollectionId(job.branch, input.sourceId);
+      indexTxn.removeFromCollection(collectionId, input.targetId);
+    }
 
     return this.buildSuccessResult(
       job,

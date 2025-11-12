@@ -87,11 +87,6 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
     );
 
     const indexTxn = operationIndex.start();
-    if (documentType === "powerhouse/document-drive") {
-      const collectionId = driveCollectionId("main", documentId);
-      indexTxn.createCollection(collectionId);
-      indexTxn.addToCollection(collectionId, documentId);
-    }
     indexTxn.write([
       {
         ...createOperation,
@@ -108,6 +103,13 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
         scope: "document",
       },
     ]);
+
+    if (documentType === "powerhouse/document-drive") {
+      const collectionId = driveCollectionId("main", documentId);
+      indexTxn.createCollection(collectionId);
+      indexTxn.addToCollection(collectionId, documentId);
+    }
+
     await operationIndex.commit(indexTxn);
   }
 
@@ -698,7 +700,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
         childDoc.state,
       );
 
-      const job: Job = {
+      const addRelJob: Job = {
         id: "job-add-relationship",
         kind: "mutation",
         documentId: driveId,
@@ -723,20 +725,18 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
         errorHistory: [],
       };
 
-      const result = await executor.executeJob(job);
-
-      if (!result.success) {
-        console.error("ADD_RELATIONSHIP job failed:", result.error?.message);
-      }
-      expect(result.success).toBe(true);
+      const addRelResult = await executor.executeJob(addRelJob);
+      expect(addRelResult.success).toBe(true);
 
       const collectionId = driveCollectionId("main", driveId);
       const collectionOps = await operationIndex.find(collectionId);
 
-      const childOps = collectionOps.items.filter(
-        (op) => op.documentId === childDocId,
+      const addRelOp = collectionOps.items.find(
+        (op) =>
+          op.documentId === driveId && op.action?.type === "ADD_RELATIONSHIP",
       );
-      expect(childOps.length).toBeGreaterThan(0);
+      expect(addRelOp).toBeDefined();
+      expect(addRelOp?.documentId).toBe(driveId);
     });
 
     it("should write all operation types to the index", async () => {
