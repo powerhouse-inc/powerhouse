@@ -1,3 +1,13 @@
+## 4.1.0-dev.111 (2025-11-12)
+
+### 🚀 Features
+
+- initial implementation of operation index ([906588091](https://github.com/powerhouse-inc/powerhouse/commit/906588091))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.110 (2025-11-11)
 
 ### 🚀 Features

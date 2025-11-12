@@ -1,3 +1,20 @@
+## 4.1.0-dev.111 (2025-11-12)
+
+### 🚀 Features
+
+- initial implementation of operation index ([906588091](https://github.com/powerhouse-inc/powerhouse/commit/906588091))
+- splitting job integration tests into legacy and current ([413ead70c](https://github.com/powerhouse-inc/powerhouse/commit/413ead70c))
+- first pass operation-index integration ([4e5b1e191](https://github.com/powerhouse-inc/powerhouse/commit/4e5b1e191))
+- adding operation index to executor integration tests ([63b51b84f](https://github.com/powerhouse-inc/powerhouse/commit/63b51b84f))
+
+### 🩹 Fixes
+
+- remove db construction and use migrations instead ([6835d37d4](https://github.com/powerhouse-inc/powerhouse/commit/6835d37d4))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.110 (2025-11-11)
 
 ### 🚀 Features
