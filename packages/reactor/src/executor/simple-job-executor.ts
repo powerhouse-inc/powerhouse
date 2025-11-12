@@ -1129,7 +1129,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         job.branch,
       );
       latestRevision = revisions.revision[scope] ?? 0;
-    } catch (error) {
+    } catch {
       latestRevision = 0;
     }
 

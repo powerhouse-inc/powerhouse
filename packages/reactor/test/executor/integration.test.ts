@@ -733,7 +733,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
 
       const addRelOp = collectionOps.items.find(
         (op) =>
-          op.documentId === driveId && op.action?.type === "ADD_RELATIONSHIP",
+          op.documentId === driveId && op.action.type === "ADD_RELATIONSHIP",
       );
       expect(addRelOp).toBeDefined();
       expect(addRelOp?.documentId).toBe(driveId);

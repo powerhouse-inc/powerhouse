@@ -697,12 +697,9 @@ export class Reactor implements IReactor {
           `Operation at position ${index} is missing timestampUtcMs`,
         );
       }
-      if (operation.hash === undefined || operation.hash === null) {
-        throw new Error(`Operation at position ${index} is missing hash`);
-      }
     });
-    const createdAtUtcIso = new Date().toISOString();
 
+    const createdAtUtcIso = new Date().toISOString();
     const job: Job = {
       id: uuidv4(),
       kind: "load",
