@@ -1,3 +1,13 @@
+## 4.1.0-dev.112 (2025-11-12)
+
+### 🩹 Fixes
+
+- **connect:** update sideEffects in package.json to include main.js ([ea9dba718](https://github.com/powerhouse-inc/powerhouse/commit/ea9dba718))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.111 (2025-11-12)
 
 ### 🚀 Features
