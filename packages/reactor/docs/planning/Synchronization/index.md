@@ -173,7 +173,7 @@ if (operation.action.type === "ADD_RELATIONSHIP") {
 
 This means that when specifying remotes (described later), there will be a 1:1 correlation between a remote and a **drive cable**. This will be done with the `driveCollectionId` function on both ends: the job executor will use it to create the collections, and other reactors will have to use it to create remotes with the correct `collectionId`.
 
-**Key insight:** Instead of tracking cursors for thousands of individual strands `(remote, documentId, scope, branch)`, we track a single cursor per `(remote, collectionId)` pair. Because collection membership records include both the “join” and “leave” ordinals (see the membership plan), that cursor will automatically skip operations that occurred outside the membership window even though historical membership is still available for audit queries.
+**Key insight:** Instead of tracking cursors for many individual strands `(remote, documentId, scope, branch)`, we track a single cursor per `collectionId` (this is shown below by a 1:1 correspondence between a `Remote` and a `collectionId`). Because collection membership records include both the “join” and “leave” ordinals (see the membership plan), that cursor will automatically skip operations that occurred outside the membership window even though historical membership is still available for audit queries.
 
 **Example:** A cable synchronizing Drive A (100 documents) to Drive B requires only one cursor per branch rather than 100+ strand-level cursors.
 
@@ -376,7 +376,7 @@ type Remote = {
   /** The id of the collection this remote is tracking */
   collectionId: string;
 
-  /** Applies additional filtering on top of collections */
+  /** Applies additional filtering on top of collections, generally in memory */
   filter: RemoteFilter;
 
   /** Options for the remote */
@@ -462,36 +462,36 @@ interface IChannel {
 Each mailbox contains a set of objects, and dispatches when objects are added and removed.
 
 ```ts
-class Mailbox<T> {
+class Mailbox {
   /**
    * The items in the mailbox.
    */
-  get items(): ReadonlyArray<T>;
+  get items(): ReadonlyArray<JobHandle>;
 
   /**
    * Gets an item from the mailbox.
    */
-  get(id: string): T | undefined;
+  get(id: string): JobHandle | undefined;
 
   /**
    * Adds an item to the mailbox.
    */
-  add(item: T): void;
+  add(item: JobHandle): void;
 
   /**
    * Removes an item from the mailbox.
    */
-  remove(item: T): void;
+  remove(item: JobHandle): void;
 
   /**
    * Subscribes to new items being added to the mailbox.
    */
-  onAdded(callback: (item: T) => void): void;
+  onAdded(callback: (item: JobHandle) => void): void;
 
   /**
    * Subscribes to items being removed from the mailbox.
    */
-  onRemoved(callback: (item: T) => void): void;
+  onRemoved(callback: (item: JobHandle) => void): void;
 }
 ```
 
@@ -801,7 +801,8 @@ Initial implementations will simply be in-memory.
 ```typescript
 type RemoteRecord = {
   name: string;
-  channelConfig: JsonObject;
+  collectionId: string;
+  channelConfig: ChannelConfig;
   filter: RemoteFilter;
   options: RemoteOptions;
   status: RemoteStatus;
