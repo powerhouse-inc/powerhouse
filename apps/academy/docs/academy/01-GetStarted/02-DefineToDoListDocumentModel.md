@@ -38,9 +38,14 @@ git ls-tree -r --name-only tutorial/step-2-generate-todo-list-document-model doc
 git show tutorial/step-2-generate-todo-list-document-model:document-models/todo-list/schema.graphql
 ```
 
-### Visual comparison
+### Visual comparison with GitHub Desktop
 
-Use your IDE's git tools to visually compare branches (see step 1 for details).
+After making a commit, use GitHub Desktop for visual diff:
+1. **Branch** menu → **"Compare to Branch..."**
+2. Select `tutorial/step-2-generate-todo-list-document-model`
+3. Review all file differences in the visual interface
+
+See step 1 for detailed GitHub Desktop instructions.
 
 </details>
 
@@ -150,7 +155,7 @@ Check below screenshot for the complete implementation:
 
 ## Verify your document model generation
 
-After running `ph generate TodoList.phdm.zip`, your project should have the following structure in `document-models/todo-list/`:
+After running `pnpm generate TodoList.phd`, your project should have the following structure in `document-models/todo-list/`:
 
 ```
 document-models/todo-list/

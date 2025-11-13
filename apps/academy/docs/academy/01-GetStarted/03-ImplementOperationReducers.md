@@ -41,6 +41,15 @@ git diff tutorial/step-4-implement-tests-for-todos-operations -- document-models
 git diff tutorial/step-3-implement-reducer-operation-handlers..tutorial/step-4-implement-tests-for-todos-operations
 ```
 
+### Visual comparison with GitHub Desktop
+
+After committing your work, compare visually:
+1. **Branch** menu → **"Compare to Branch..."**
+2. Select `tutorial/step-3-implement-reducer-operation-handlers` or `tutorial/step-4-implement-tests-for-todos-operations`
+3. Review differences in the visual interface
+
+See step 1 for detailed GitHub Desktop instructions.
+
 ### If you get stuck
 
 View or reset to a specific step:
@@ -86,7 +95,7 @@ To write the operation reducers of the **To-do List** document model, you need t
 To do this, run the following command in the terminal:
 
 ```bash
-ph generate TodoList.phdm.zip
+ph generate TodoList.phd
 ```
 
 Now you can navigate to `/document-models/todo-list/src/reducers/todos.ts` and start writing the operation reducers.
@@ -304,10 +313,13 @@ pnpm run test
 Output should be as follows:
 
 ```bash
+ ✓ document-models/todo-list/src/tests/document-model.test.ts (3 tests) 1ms
+ ✓ document-models/todo-list/src/tests/todos.test.ts (4 tests) 8ms
+
  Test Files  2 passed (2)
-      Tests  5 passed (5)
-   Start at  12:04:57
-   Duration  417ms (transform 79ms, setup 0ms, collect 174ms, tests 12ms, environment 0ms, prepare 158ms)
+      Tests  7 passed (7)
+   Start at  19:37:33
+   Duration  1.84s (transform 75ms, setup 0ms, collect 2.03s, tests 9ms, environment 0ms, prepare 92ms)
 ```
 
 If you got the same output, you have successfully implemented the operation reducers and tests for the **To-do List** document model. Congratulations, you've successfully set up the backbone for a simple **To-do List** document.

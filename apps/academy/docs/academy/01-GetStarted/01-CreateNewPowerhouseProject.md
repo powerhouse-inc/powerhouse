@@ -21,14 +21,19 @@ This tutorial is designed for you to **build your own project from scratch** whi
    mkdir ph-projects
    cd ph-projects
    ph init
-   # When prompted, enter project name: getting-started
-   cd getting-started
+   # When prompted, enter project name: todo-tutorial
+   cd todo-tutorial
    ```
 
 2. **Add the tutorial repository as a remote** to access reference branches:
    ```bash
    git remote add tutorial https://github.com/powerhouse-inc/todo-tutorial.git
    git fetch tutorial --prune
+   ```
+
+3. **Create your own branch** to keep your work organized:
+   ```bash
+   git checkout -b my-todo-project
    ```
 
 Now you have access to all tutorial step branches while working on your own code!
@@ -48,11 +53,29 @@ git diff tutorial/step-1-initialize-with-ph-init..tutorial/step-2-generate-todo-
 git diff tutorial/step-1-initialize-with-ph-init -- package.json
 ```
 
-### Visual diff in your IDE
+### Visual diff with GitHub Desktop
 
-Use GitHub Desktop or VS Code for visual comparison:
-- **GitHub Desktop**: Branch menu → "Compare to Branch" → select `tutorial/step-X`
-- **VS Code**: Use Git Graph extension or command palette → "Git: Compare with Branch"
+For a more visual comparison, use GitHub Desktop:
+
+1. **First, make your initial commit** (GitHub Desktop won't show your branch until you have at least one commit):
+   ```bash
+   git add .
+   git commit -m "Initial project setup"
+   ```
+
+2. **Open GitHub Desktop** and open your repository
+
+3. **Compare branches visually**:
+   - Click on **Branch** menu in the top menu bar
+   - Select **"Compare to Branch..."**
+   - Choose the tutorial branch you want to compare with (e.g., `tutorial/step-1-initialize-with-ph-init`)
+   - GitHub Desktop will show you all file differences in a visual interface
+
+4. **Review the differences**:
+   - Click on any file to see side-by-side or unified diff view
+   - See exactly what's different between your code and the reference
+
+**Tip**: You can also use VS Code's Git Graph extension or the command palette → "Git: Compare with Branch"
 
 ### If you get stuck
 
@@ -106,19 +129,19 @@ ph init
    ````bash
     you@yourmachine:~/ph-projects % ph init
 
-    ? What is the project name? ‣ getting-started
+    ? What is the project name? ‣ todo-tutorial
     ```
 
 
 Once the project is created, you will see the following output:
     ```bash
-    Initialized empty Git repository in /Users/you/ph-projects/getting-started/.git/
+    Initialized empty Git repository in /Users/you/ph-projects/todo-tutorial/.git/
     The installation is done!
     ```
 
 Navigate to the newly created project directory:
     ```bash
-    cd getting-started
+    cd todo-tutorial
     ```
 
 ## Develop a single document model in Connect
