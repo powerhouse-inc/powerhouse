@@ -1,4 +1,4 @@
-type MailboxItem = {
+export type MailboxItem = {
   id: string;
 };
 
