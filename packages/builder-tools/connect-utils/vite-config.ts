@@ -2,7 +2,8 @@ import { getConfig } from "@powerhousedao/config/node";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwind from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
+import { readPackageSync } from "read-pkg";
 import {
   createLogger,
   loadEnv,
@@ -20,13 +21,11 @@ import {
   type ConnectEnv,
 } from "./env-config.js";
 import {
-  DEFAULT_CONNECT_OUTDIR,
   resolveConnectPackageJson,
   stripVersionFromPackage,
 } from "./helpers.js";
 import type { IConnectOptions } from "./types.js";
 import { phExternalPackagesPlugin } from "./vite-plugins/ph-external-packages.js";
-import { phTypescriptPlugin } from "./vite-plugins/ph-typescript.js";
 
 export const connectClientConfig = {
   meta: [
@@ -173,6 +172,9 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   // set the resolved env to process.env so it's loaded by vite
   setConnectEnv(env);
 
+  // load package.json
+  const packageJson = readPackageSync({ cwd: options.dirname });
+
   // load powerhouse config
   const phConfigPath =
     env.PH_CONFIG_PATH ?? join(options.dirname, "powerhouse.config.json");
@@ -229,7 +231,6 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     svgr(),
     react(),
     phExternalPackagesPlugin(phPackages),
-    localPackage ? phTypescriptPlugin(localPackage) : undefined,
     createHtmlPlugin({
       minify: false,
       inject: {
@@ -279,6 +280,8 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
         },
       });
 
+  const watchTimeout = options.watchTimeout ?? env.PH_WATCH_TIMEOUT;
+
   const config: UserConfig = {
     base: basePath,
     customLogger,
@@ -289,10 +292,12 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     },
     plugins,
     resolve: {
+      alias: {
+        [packageJson.name]: options.dirname,
+      },
       dedupe: ["react", "react-dom", "react/jsx-runtime"],
     },
     build: {
-      outDir: DEFAULT_CONNECT_OUTDIR, // defined so that the watch plugin can find the files in the `/dist` folder
       minify: true,
       sourcemap: false,
     },
@@ -300,15 +305,16 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       watch: env.PH_DISABLE_LOCAL_PACKAGE
         ? null
         : {
-            ignored: (f) => {
-              if (!localPackage) return true;
-              if (f === localPackage) return false;
-
-              const localPackageDist = join(localPackage, "dist");
-              const file = resolve(f);
-              return !file.startsWith(localPackageDist);
+            ignored: [
+              "**/.ph/**",
+              "**/dist/**",
+              "**/node_modules/**",
+              "**/backup-documents/**",
+            ],
+            awaitWriteFinish: {
+              stabilityThreshold: watchTimeout,
+              pollInterval: 100,
             },
-            awaitWriteFinish: { stabilityThreshold: 2000, pollInterval: 100 },
           },
       fs: {
         strict: false,
