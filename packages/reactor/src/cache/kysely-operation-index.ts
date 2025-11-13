@@ -1,25 +1,33 @@
 import type { Kysely } from "kysely";
-import type { Database } from "../storage/kysely/types.js";
+import { sql } from "kysely";
 import type {
   PagedResults,
   PagingOptions,
   ViewFilter,
 } from "../storage/interfaces.js";
+import type { Database } from "../storage/kysely/types.js";
 import type {
+  InsertableDocumentCollection,
+  InsertableOperationIndexOperation,
   IOperationIndex,
   IOperationIndexTxn,
   OperationIndexEntry,
-  InsertableOperationIndexOperation,
-  InsertableDocumentCollection,
   OperationIndexOperationRow,
 } from "./operation-index-types.js";
 
+type CollectionMembershipRecord = {
+  collectionId: string;
+  documentId: string;
+
+  // this is NOT operation.index -- it is the index of the operation in the
+  // operations array
+  operationIndex: number;
+};
+
 class KyselyOperationIndexTxn implements IOperationIndexTxn {
   private collections: string[] = [];
-  private collectionMemberships: Array<{
-    collectionId: string;
-    documentId: string;
-  }> = [];
+  private collectionMemberships: CollectionMembershipRecord[] = [];
+  private collectionRemovals: CollectionMembershipRecord[] = [];
   private operations: OperationIndexEntry[] = [];
 
   createCollection(collectionId: string): void {
@@ -27,7 +35,31 @@ class KyselyOperationIndexTxn implements IOperationIndexTxn {
   }
 
   addToCollection(collectionId: string, documentId: string): void {
-    this.collectionMemberships.push({ collectionId, documentId });
+    const lastOpIndex = this.operations.length - 1;
+    if (lastOpIndex < 0) {
+      throw new Error(
+        "addToCollection must be called after write() - no operations in transaction",
+      );
+    }
+    this.collectionMemberships.push({
+      collectionId,
+      documentId,
+      operationIndex: lastOpIndex,
+    });
+  }
+
+  removeFromCollection(collectionId: string, documentId: string): void {
+    const lastOpIndex = this.operations.length - 1;
+    if (lastOpIndex < 0) {
+      throw new Error(
+        "removeFromCollection must be called after write() - no operations in transaction",
+      );
+    }
+    this.collectionRemovals.push({
+      collectionId,
+      documentId,
+      operationIndex: lastOpIndex,
+    });
   }
 
   write(operations: OperationIndexEntry[]): void {
@@ -38,11 +70,12 @@ class KyselyOperationIndexTxn implements IOperationIndexTxn {
     return this.collections;
   }
 
-  getCollectionMemberships(): Array<{
-    collectionId: string;
-    documentId: string;
-  }> {
+  getCollectionMemberships(): CollectionMembershipRecord[] {
     return this.collectionMemberships;
+  }
+
+  getCollectionRemovals(): CollectionMembershipRecord[] {
+    return this.collectionRemovals;
   }
 
   getOperations(): OperationIndexEntry[] {
@@ -65,6 +98,7 @@ export class KyselyOperationIndex implements IOperationIndex {
     const kyselyTxn = txn as KyselyOperationIndexTxn;
     const collections = kyselyTxn.getCollections();
     const memberships = kyselyTxn.getCollectionMemberships();
+    const removals = kyselyTxn.getCollectionRemovals();
     const operations = kyselyTxn.getOperations();
 
     await this.db.transaction().execute(async (trx) => {
@@ -73,6 +107,8 @@ export class KyselyOperationIndex implements IOperationIndex {
           (collectionId) => ({
             documentId: collectionId,
             collectionId,
+            joinedOrdinal: BigInt(0),
+            leftOrdinal: null,
           }),
         );
 
@@ -83,21 +119,7 @@ export class KyselyOperationIndex implements IOperationIndex {
           .execute();
       }
 
-      if (memberships.length > 0) {
-        const membershipRows: InsertableDocumentCollection[] = memberships.map(
-          (m) => ({
-            documentId: m.documentId,
-            collectionId: m.collectionId,
-          }),
-        );
-
-        await trx
-          .insertInto("document_collections")
-          .values(membershipRows)
-          .onConflict((oc) => oc.doNothing())
-          .execute();
-      }
-
+      let operationOrdinals: number[] = [];
       if (operations.length > 0) {
         const operationRows: InsertableOperationIndexOperation[] =
           operations.map((op) => {
@@ -122,10 +144,53 @@ export class KyselyOperationIndex implements IOperationIndex {
             };
           });
 
-        await trx
+        const insertedOps = await trx
           .insertInto("operation_index_operations")
           .values(operationRows)
+          .returning("ordinal")
           .execute();
+
+        operationOrdinals = insertedOps.map((row) => row.ordinal);
+      }
+
+      if (memberships.length > 0) {
+        for (const m of memberships) {
+          // this is guaranteed to be defined because we enforce in KyselyOperationIndexTxn
+          const ordinal = operationOrdinals[m.operationIndex];
+
+          await trx
+            .insertInto("document_collections")
+            .values({
+              documentId: m.documentId,
+              collectionId: m.collectionId,
+              joinedOrdinal: BigInt(ordinal),
+              leftOrdinal: null,
+            })
+            .onConflict((oc) =>
+              oc.columns(["documentId", "collectionId"]).doUpdateSet({
+                joinedOrdinal: BigInt(ordinal),
+                leftOrdinal: null,
+              }),
+            )
+            .execute();
+        }
+      }
+
+      if (removals.length > 0) {
+        for (const r of removals) {
+          // this is guaranteed to be defined because we enforce in KyselyOperationIndexTxn
+          const ordinal = operationOrdinals[r.operationIndex];
+
+          await trx
+            .updateTable("document_collections")
+            .set({
+              leftOrdinal: BigInt(ordinal),
+            })
+            .where("collectionId", "=", r.collectionId)
+            .where("documentId", "=", r.documentId)
+            .where("leftOrdinal", "is", null)
+            .execute();
+        }
       }
     });
   }
@@ -147,6 +212,10 @@ export class KyselyOperationIndex implements IOperationIndex {
       .selectAll("oi")
       .select(["dc.documentId", "dc.collectionId"])
       .where("dc.collectionId", "=", collectionId)
+      .whereRef("oi.ordinal", ">=", "dc.joinedOrdinal")
+      .where(
+        sql<boolean>`dc."leftOrdinal" IS NULL OR oi.ordinal < dc."leftOrdinal"`,
+      )
       .orderBy("oi.ordinal", "asc");
 
     if (cursor !== undefined) {

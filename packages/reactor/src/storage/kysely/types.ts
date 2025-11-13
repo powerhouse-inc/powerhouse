@@ -32,6 +32,8 @@ export interface KeyframeTable {
 export interface DocumentCollectionTable {
   documentId: string;
   collectionId: string;
+  joinedOrdinal: bigint;
+  leftOrdinal: bigint | null;
 }
 
 export interface OperationIndexOperationTable {

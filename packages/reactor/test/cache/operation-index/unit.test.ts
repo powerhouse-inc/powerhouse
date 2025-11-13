@@ -7,19 +7,26 @@ function createMockKysely() {
   const mockLimit = vi.fn();
   const mockOrderBy = vi.fn();
   const mockWhere = vi.fn();
+  const mockWhereRef = vi.fn();
   const mockSelect = vi.fn();
   const mockSelectAll = vi.fn();
   const mockInnerJoin = vi.fn();
   const mockSelectFrom = vi.fn();
+  const mockReturning = vi.fn();
+  const mockSet = vi.fn();
+  const mockUpdateTable = vi.fn();
+  const mockDoUpdateSet = vi.fn();
 
   const chainable = {
     innerJoin: mockInnerJoin,
     selectAll: mockSelectAll,
     select: mockSelect,
     where: mockWhere,
+    whereRef: mockWhereRef,
     orderBy: mockOrderBy,
     limit: mockLimit,
     execute: mockExecute,
+    set: mockSet,
   };
 
   mockSelectFrom.mockReturnValue(chainable);
@@ -27,15 +34,34 @@ function createMockKysely() {
   mockSelectAll.mockReturnValue(chainable);
   mockSelect.mockReturnValue(chainable);
   mockWhere.mockReturnValue(chainable);
+  mockWhereRef.mockReturnValue(chainable);
   mockOrderBy.mockReturnValue(chainable);
   mockLimit.mockReturnValue(chainable);
+  mockSet.mockReturnValue(chainable);
+  mockUpdateTable.mockReturnValue(chainable);
 
-  const mockOnConflict = vi.fn(() => ({ execute: mockExecute }));
-  const mockDoNothing = vi.fn(() => ({ execute: mockExecute }));
+  const mockOnConflict = vi.fn((cb) => {
+    const conflictChain = {
+      doNothing: vi.fn(() => ({ execute: mockExecute })),
+      columns: vi.fn(() => ({
+        doUpdateSet: mockDoUpdateSet,
+      })),
+    };
+    if (cb) {
+      return cb(conflictChain);
+    }
+    return conflictChain;
+  });
+
   const mockValues = vi.fn(() => ({
     onConflict: mockOnConflict,
+    returning: mockReturning,
     execute: mockExecute,
   }));
+
+  mockReturning.mockReturnValue({ execute: mockExecute });
+  mockDoUpdateSet.mockReturnValue({ execute: mockExecute });
+
   const mockInsertInto = vi.fn(() => ({
     values: mockValues,
     execute: mockExecute,
@@ -49,6 +75,7 @@ function createMockKysely() {
   const db = {
     selectFrom: mockSelectFrom,
     insertInto: mockInsertInto,
+    updateTable: mockUpdateTable,
     transaction: mockTransaction,
   } as any;
 
@@ -60,13 +87,17 @@ function createMockKysely() {
       selectAll: mockSelectAll,
       select: mockSelect,
       where: mockWhere,
+      whereRef: mockWhereRef,
       orderBy: mockOrderBy,
       limit: mockLimit,
       execute: mockExecute,
       insertInto: mockInsertInto,
+      updateTable: mockUpdateTable,
       values: mockValues,
       onConflict: mockOnConflict,
-      doNothing: mockDoNothing,
+      doUpdateSet: mockDoUpdateSet,
+      returning: mockReturning,
+      set: mockSet,
       transaction: mockTransaction,
       transactionExecute: mockTransactionExecute,
     },
@@ -89,10 +120,34 @@ describe("KyselyOperationIndexTxn", () => {
     const index = new KyselyOperationIndex(db);
     const txn = index.start();
 
+    const operation: OperationIndexEntry = {
+      documentId: "doc-456",
+      documentType: "budget",
+      branch: "main",
+      scope: "document",
+      index: 0,
+      timestampUtcMs: "1609459200000",
+      hash: "hash-001",
+      skip: 0,
+      action: {
+        id: "action-1",
+        type: "CREATE_DOCUMENT",
+        input: {},
+        timestampUtcMs: "1609459200000",
+        scope: "document",
+      },
+      id: "op-1",
+    };
+
+    txn.write([operation]);
     txn.addToCollection("collection.doc-123", "doc-456");
 
     expect((txn as any).collectionMemberships).toEqual([
-      { collectionId: "collection.doc-123", documentId: "doc-456" },
+      {
+        collectionId: "collection.doc-123",
+        documentId: "doc-456",
+        operationIndex: 0,
+      },
     ]);
   });
 
@@ -131,9 +186,49 @@ describe("KyselyOperationIndexTxn", () => {
     const index = new KyselyOperationIndex(db);
     const txn = index.start();
 
+    const op1: OperationIndexEntry = {
+      documentId: "doc-789",
+      documentType: "budget",
+      branch: "main",
+      scope: "document",
+      index: 0,
+      timestampUtcMs: "1609459200000",
+      hash: "hash-001",
+      skip: 0,
+      action: {
+        id: "action-1",
+        type: "CREATE_DOCUMENT",
+        input: {},
+        timestampUtcMs: "1609459200000",
+        scope: "document",
+      },
+      id: "op-1",
+    };
+
+    const op2: OperationIndexEntry = {
+      documentId: "doc-012",
+      documentType: "budget",
+      branch: "main",
+      scope: "document",
+      index: 1,
+      timestampUtcMs: "1609459200001",
+      hash: "hash-002",
+      skip: 0,
+      action: {
+        id: "action-2",
+        type: "CREATE_DOCUMENT",
+        input: {},
+        timestampUtcMs: "1609459200001",
+        scope: "document",
+      },
+      id: "op-2",
+    };
+
     txn.createCollection("collection.doc-123");
     txn.createCollection("collection.doc-456");
+    txn.write([op1]);
     txn.addToCollection("collection.doc-123", "doc-789");
+    txn.write([op2]);
     txn.addToCollection("collection.doc-123", "doc-012");
 
     expect((txn as any).collections).toEqual([
@@ -141,8 +236,16 @@ describe("KyselyOperationIndexTxn", () => {
       "collection.doc-456",
     ]);
     expect((txn as any).collectionMemberships).toEqual([
-      { collectionId: "collection.doc-123", documentId: "doc-789" },
-      { collectionId: "collection.doc-123", documentId: "doc-012" },
+      {
+        collectionId: "collection.doc-123",
+        documentId: "doc-789",
+        operationIndex: 0,
+      },
+      {
+        collectionId: "collection.doc-123",
+        documentId: "doc-012",
+        operationIndex: 1,
+      },
     ]);
   });
 });
@@ -210,37 +313,55 @@ describe("KyselyOperationIndex.commit()", () => {
       {
         documentId: "collection.doc-123",
         collectionId: "collection.doc-123",
+        joinedOrdinal: BigInt(0),
+        leftOrdinal: null,
       },
     ]);
     expect(mocks.onConflict).toHaveBeenCalled();
   });
 
-  it("inserts collection memberships with ON CONFLICT DO NOTHING", async () => {
+  it("inserts collection memberships after operations", async () => {
     const { db, mocks } = createMockKysely();
     const index = new KyselyOperationIndex(db);
     const txn = index.start();
 
+    const operation: OperationIndexEntry = {
+      documentId: "doc-456",
+      documentType: "budget",
+      branch: "main",
+      scope: "document",
+      index: 0,
+      timestampUtcMs: "1609459200000",
+      hash: "hash-001",
+      skip: 0,
+      action: {
+        id: "action-1",
+        type: "CREATE_DOCUMENT",
+        input: {},
+        timestampUtcMs: "1609459200000",
+        scope: "document",
+      },
+      id: "op-1",
+    };
+
+    txn.write([operation]);
     txn.addToCollection("collection.doc-123", "doc-456");
 
     mocks.transactionExecute.mockImplementation(async (fn) => {
       const mockTrx = {
         insertInto: mocks.insertInto,
       };
+      mocks.execute.mockResolvedValueOnce([{ ordinal: 1 }]);
       return await fn(mockTrx);
     });
 
     await index.commit(txn);
 
-    expect(mocks.insertInto).toHaveBeenCalledWith("document_collections");
-    expect(mocks.values).toHaveBeenCalledWith([
-      {
-        documentId: "doc-456",
-        collectionId: "collection.doc-123",
-      },
-    ]);
+    expect(mocks.insertInto).toHaveBeenCalledWith("operation_index_operations");
+    expect(mocks.returning).toHaveBeenCalledWith("ordinal");
   });
 
-  it("inserts all operations", async () => {
+  it("inserts all operations with returning", async () => {
     const { db, mocks } = createMockKysely();
     const index = new KyselyOperationIndex(db);
     const txn = index.start();
@@ -271,6 +392,7 @@ describe("KyselyOperationIndex.commit()", () => {
       const mockTrx = {
         insertInto: mocks.insertInto,
       };
+      mocks.execute.mockResolvedValueOnce([{ ordinal: 1 }]);
       return await fn(mockTrx);
     });
 
@@ -350,10 +472,14 @@ describe("KyselyOperationIndex.commit()", () => {
       {
         documentId: "collection.doc-123",
         collectionId: "collection.doc-123",
+        joinedOrdinal: BigInt(0),
+        leftOrdinal: null,
       },
       {
         documentId: "collection.doc-123",
         collectionId: "collection.doc-123",
+        joinedOrdinal: BigInt(0),
+        leftOrdinal: null,
       },
     ]);
   });
