@@ -53,29 +53,29 @@ export interface OperationIndexOperationTable {
 
 export interface SyncRemoteTable {
   name: string;
-  collectionId: string;
-  channelType: string;
-  channelParameters: unknown;
-  filterDocumentIds: unknown | null;
-  filterScopes: unknown | null;
-  filterBranch: string;
-  pushState: string;
-  pushLastSuccessUtcMs: bigint | null;
-  pushLastFailureUtcMs: bigint | null;
-  pushFailureCount: number;
-  pullState: string;
-  pullLastSuccessUtcMs: bigint | null;
-  pullLastFailureUtcMs: bigint | null;
-  pullFailureCount: number;
-  createdAt: Generated<Date>;
-  updatedAt: Generated<Date>;
+  collection_id: string;
+  channel_type: string;
+  channel_parameters: unknown;
+  filter_document_ids: unknown;
+  filter_scopes: unknown;
+  filter_branch: string;
+  push_state: string;
+  push_last_success_utc_ms: bigint | null;
+  push_last_failure_utc_ms: bigint | null;
+  push_failure_count: number;
+  pull_state: string;
+  pull_last_success_utc_ms: bigint | null;
+  pull_last_failure_utc_ms: bigint | null;
+  pull_failure_count: number;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
 }
 
 export interface SyncCursorTable {
-  remoteName: string;
-  cursorOrdinal: bigint;
-  lastSyncedAtUtcMs: bigint | null;
-  updatedAt: Generated<Date>;
+  remote_name: string;
+  cursor_ordinal: bigint;
+  last_synced_at_utc_ms: bigint | null;
+  updated_at: Generated<Date>;
 }
 
 export interface Database {

@@ -1,52 +1,43 @@
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
+import type { RemoteRecord } from "../../sync/types.js";
 import type { ISyncRemoteStorage } from "../interfaces.js";
-import type {
-  RemoteRecord,
-  ChannelConfig,
-  RemoteFilter,
-  RemoteStatus,
-} from "../../sync/types.js";
-import type {
-  Database,
-  SyncRemoteRow,
-  InsertableSyncRemote,
-} from "./types.js";
+import type { Database, InsertableSyncRemote, SyncRemoteRow } from "./types.js";
 
 function rowToRemoteRecord(row: SyncRemoteRow): RemoteRecord {
   return {
     name: row.name,
-    collectionId: row.collectionId,
+    collectionId: row.collection_id,
     channelConfig: {
-      type: row.channelType,
-      parameters: (row.channelParameters as Record<string, unknown>) ?? {},
+      type: row.channel_type,
+      parameters: (row.channel_parameters ?? {}) as Record<string, unknown>,
     },
     filter: {
-      documentId: (row.filterDocumentIds as string[]) ?? [],
-      scope: (row.filterScopes as string[]) ?? [],
-      branch: row.filterBranch,
+      documentId: (row.filter_document_ids ?? []) as string[],
+      scope: (row.filter_scopes ?? []) as string[],
+      branch: row.filter_branch,
     },
     options: {},
     status: {
       push: {
-        state: row.pushState as "idle" | "running" | "error",
-        lastSuccessUtcMs: row.pushLastSuccessUtcMs
-          ? Number(row.pushLastSuccessUtcMs)
+        state: row.push_state as "idle" | "running" | "error",
+        lastSuccessUtcMs: row.push_last_success_utc_ms
+          ? Number(row.push_last_success_utc_ms)
           : undefined,
-        lastFailureUtcMs: row.pushLastFailureUtcMs
-          ? Number(row.pushLastFailureUtcMs)
+        lastFailureUtcMs: row.push_last_failure_utc_ms
+          ? Number(row.push_last_failure_utc_ms)
           : undefined,
-        failureCount: row.pushFailureCount,
+        failureCount: row.push_failure_count,
       },
       pull: {
-        state: row.pullState as "idle" | "running" | "error",
-        lastSuccessUtcMs: row.pullLastSuccessUtcMs
-          ? Number(row.pullLastSuccessUtcMs)
+        state: row.pull_state as "idle" | "running" | "error",
+        lastSuccessUtcMs: row.pull_last_success_utc_ms
+          ? Number(row.pull_last_success_utc_ms)
           : undefined,
-        lastFailureUtcMs: row.pullLastFailureUtcMs
-          ? Number(row.pullLastFailureUtcMs)
+        lastFailureUtcMs: row.pull_last_failure_utc_ms
+          ? Number(row.pull_last_failure_utc_ms)
           : undefined,
-        failureCount: row.pullFailureCount,
+        failureCount: row.pull_failure_count,
       },
     },
   };
@@ -55,44 +46,45 @@ function rowToRemoteRecord(row: SyncRemoteRow): RemoteRecord {
 function remoteRecordToRow(remote: RemoteRecord): InsertableSyncRemote {
   return {
     name: remote.name,
-    collectionId: remote.collectionId,
-    channelType: remote.channelConfig.type,
-    channelParameters: remote.channelConfig.parameters,
-    filterDocumentIds:
+    collection_id: remote.collectionId,
+    channel_type: remote.channelConfig.type,
+    channel_parameters: remote.channelConfig.parameters,
+    filter_document_ids:
       remote.filter.documentId.length > 0 ? remote.filter.documentId : null,
-    filterScopes: remote.filter.scope.length > 0 ? remote.filter.scope : null,
-    filterBranch: remote.filter.branch,
-    pushState: remote.status.push.state,
-    pushLastSuccessUtcMs: remote.status.push.lastSuccessUtcMs
+    filter_scopes: remote.filter.scope.length > 0 ? remote.filter.scope : null,
+    filter_branch: remote.filter.branch,
+    push_state: remote.status.push.state,
+    push_last_success_utc_ms: remote.status.push.lastSuccessUtcMs
       ? BigInt(remote.status.push.lastSuccessUtcMs)
       : null,
-    pushLastFailureUtcMs: remote.status.push.lastFailureUtcMs
+    push_last_failure_utc_ms: remote.status.push.lastFailureUtcMs
       ? BigInt(remote.status.push.lastFailureUtcMs)
       : null,
-    pushFailureCount: remote.status.push.failureCount,
-    pullState: remote.status.pull.state,
-    pullLastSuccessUtcMs: remote.status.pull.lastSuccessUtcMs
+    push_failure_count: remote.status.push.failureCount,
+    pull_state: remote.status.pull.state,
+    pull_last_success_utc_ms: remote.status.pull.lastSuccessUtcMs
       ? BigInt(remote.status.pull.lastSuccessUtcMs)
       : null,
-    pullLastFailureUtcMs: remote.status.pull.lastFailureUtcMs
+    pull_last_failure_utc_ms: remote.status.pull.lastFailureUtcMs
       ? BigInt(remote.status.pull.lastFailureUtcMs)
       : null,
-    pullFailureCount: remote.status.pull.failureCount,
+    pull_failure_count: remote.status.pull.failureCount,
   };
 }
 
 export class KyselySyncRemoteStorage implements ISyncRemoteStorage {
-  constructor(private db: Kysely<Database>) {}
+  constructor(private readonly db: Kysely<Database>) {}
 
   async list(signal?: AbortSignal): Promise<RemoteRecord[]> {
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
 
-    const rows = await this.db
-      .selectFrom("sync_remotes")
-      .selectAll()
-      .execute();
+    const rows = await this.db.selectFrom("sync_remotes").selectAll().execute();
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
 
     return rows.map(rowToRemoteRecord);
   }
@@ -107,6 +99,10 @@ export class KyselySyncRemoteStorage implements ISyncRemoteStorage {
       .selectAll()
       .where("name", "=", name)
       .executeTakeFirst();
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
 
     if (!row) {
       throw new Error(`Remote not found: ${name}`);
@@ -129,11 +125,15 @@ export class KyselySyncRemoteStorage implements ISyncRemoteStorage {
         .onConflict((oc) =>
           oc.column("name").doUpdateSet({
             ...insertable,
-            updatedAt: sql`NOW()`,
+            updated_at: sql`NOW()`,
           }),
         )
         .execute();
     });
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
   }
 
   async remove(name: string, signal?: AbortSignal): Promise<void> {
@@ -144,5 +144,9 @@ export class KyselySyncRemoteStorage implements ISyncRemoteStorage {
     await this.db.transaction().execute(async (trx) => {
       await trx.deleteFrom("sync_remotes").where("name", "=", name).execute();
     });
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
   }
 }

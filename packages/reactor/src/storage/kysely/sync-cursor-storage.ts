@@ -1,37 +1,36 @@
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
-import type { ISyncCursorStorage } from "../interfaces.js";
 import type { RemoteCursor } from "../../sync/types.js";
-import type {
-  Database,
-  SyncCursorRow,
-  InsertableSyncCursor,
-} from "./types.js";
+import type { ISyncCursorStorage } from "../interfaces.js";
+import type { Database, InsertableSyncCursor, SyncCursorRow } from "./types.js";
 
 function rowToRemoteCursor(row: SyncCursorRow): RemoteCursor {
   return {
-    remoteName: row.remoteName,
-    cursorOrdinal: Number(row.cursorOrdinal),
-    lastSyncedAtUtcMs: row.lastSyncedAtUtcMs
-      ? Number(row.lastSyncedAtUtcMs)
+    remoteName: row.remote_name,
+    cursorOrdinal: Number(row.cursor_ordinal),
+    lastSyncedAtUtcMs: row.last_synced_at_utc_ms
+      ? Number(row.last_synced_at_utc_ms)
       : undefined,
   };
 }
 
 function remoteCursorToRow(cursor: RemoteCursor): InsertableSyncCursor {
   return {
-    remoteName: cursor.remoteName,
-    cursorOrdinal: BigInt(cursor.cursorOrdinal),
-    lastSyncedAtUtcMs: cursor.lastSyncedAtUtcMs
+    remote_name: cursor.remoteName,
+    cursor_ordinal: BigInt(cursor.cursorOrdinal),
+    last_synced_at_utc_ms: cursor.lastSyncedAtUtcMs
       ? BigInt(cursor.lastSyncedAtUtcMs)
       : null,
   };
 }
 
 export class KyselySyncCursorStorage implements ISyncCursorStorage {
-  constructor(private db: Kysely<Database>) {}
+  constructor(private readonly db: Kysely<Database>) {}
 
-  async list(remoteName: string, signal?: AbortSignal): Promise<RemoteCursor[]> {
+  async list(
+    remoteName: string,
+    signal?: AbortSignal,
+  ): Promise<RemoteCursor[]> {
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
@@ -39,8 +38,12 @@ export class KyselySyncCursorStorage implements ISyncCursorStorage {
     const rows = await this.db
       .selectFrom("sync_cursors")
       .selectAll()
-      .where("remoteName", "=", remoteName)
+      .where("remote_name", "=", remoteName)
       .execute();
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
 
     return rows.map(rowToRemoteCursor);
   }
@@ -53,8 +56,12 @@ export class KyselySyncCursorStorage implements ISyncCursorStorage {
     const row = await this.db
       .selectFrom("sync_cursors")
       .selectAll()
-      .where("remoteName", "=", remoteName)
+      .where("remote_name", "=", remoteName)
       .executeTakeFirst();
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
 
     if (!row) {
       return {
@@ -78,13 +85,17 @@ export class KyselySyncCursorStorage implements ISyncCursorStorage {
         .insertInto("sync_cursors")
         .values(insertable)
         .onConflict((oc) =>
-          oc.column("remoteName").doUpdateSet({
+          oc.column("remote_name").doUpdateSet({
             ...insertable,
-            updatedAt: sql`NOW()`,
+            updated_at: sql`NOW()`,
           }),
         )
         .execute();
     });
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
   }
 
   async remove(remoteName: string, signal?: AbortSignal): Promise<void> {
@@ -95,8 +106,12 @@ export class KyselySyncCursorStorage implements ISyncCursorStorage {
     await this.db.transaction().execute(async (trx) => {
       await trx
         .deleteFrom("sync_cursors")
-        .where("remoteName", "=", remoteName)
+        .where("remote_name", "=", remoteName)
         .execute();
     });
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
   }
 }

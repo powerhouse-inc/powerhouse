@@ -43,6 +43,8 @@ import type {
 } from "../src/storage/interfaces.js";
 import { KyselyKeyframeStore } from "../src/storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../src/storage/kysely/store.js";
+import { KyselySyncCursorStorage } from "../src/storage/kysely/sync-cursor-storage.js";
+import { KyselySyncRemoteStorage } from "../src/storage/kysely/sync-remote-storage.js";
 import type { Database as DatabaseSchema } from "../src/storage/kysely/types.js";
 import { runMigrations } from "../src/storage/migrations/migrator.js";
 
@@ -720,4 +722,31 @@ export function createMockDocumentIndexer(): IDocumentIndexer {
     findAncestors: vi.fn().mockResolvedValue({ nodes: [], edges: [] }),
     getRelationshipTypes: vi.fn().mockResolvedValue([]),
   };
+}
+
+/**
+ * Creates a real PGLite-backed sync storage for testing.
+ * Returns the database instance, sync remote storage, and sync cursor storage.
+ *
+ * @returns Object containing db, syncRemoteStorage, and syncCursorStorage instances
+ */
+export async function createTestSyncStorage(): Promise<{
+  db: Kysely<DatabaseSchema>;
+  syncRemoteStorage: KyselySyncRemoteStorage;
+  syncCursorStorage: KyselySyncCursorStorage;
+}> {
+  const kyselyPGlite = await KyselyPGlite.create();
+  const db = new Kysely<DatabaseSchema>({
+    dialect: kyselyPGlite.dialect,
+  });
+
+  const result = await runMigrations(db);
+  if (!result.success && result.error) {
+    throw new Error(`Test migration failed: ${result.error.message}`);
+  }
+
+  const syncRemoteStorage = new KyselySyncRemoteStorage(db);
+  const syncCursorStorage = new KyselySyncCursorStorage(db);
+
+  return { db, syncRemoteStorage, syncCursorStorage };
 }

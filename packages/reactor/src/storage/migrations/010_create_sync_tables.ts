@@ -43,18 +43,13 @@ export async function up(db: Kysely<any>): Promise<void> {
 
   await db.schema
     .createTable("sync_cursors")
-    .addColumn("remote_name", "text", (col) => col.primaryKey())
+    .addColumn("remote_name", "text", (col) =>
+      col.primaryKey().references("sync_remotes.name").onDelete("cascade"),
+    )
     .addColumn("cursor_ordinal", "bigint", (col) => col.notNull().defaultTo(0))
     .addColumn("last_synced_at_utc_ms", "bigint")
     .addColumn("updated_at", "timestamptz", (col) =>
       col.notNull().defaultTo(sql`NOW()`),
-    )
-    .addForeignKeyConstraint(
-      "fk_sync_cursors_remote_name",
-      ["remote_name"],
-      "sync_remotes",
-      ["name"],
-      (cb) => cb.onDelete("cascade"),
     )
     .execute();
 
