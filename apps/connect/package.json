@@ -96,7 +96,8 @@
     "./public/icon.ico": "./public/icon.ico"
   },
   "sideEffects": [
-    "lib/src/main.js"
+    "lib/src/main.js",
+    "src/main.tsx"
   ],
   "license": "AGPL-3.0-only",
   "author": "powerhouse.inc",
