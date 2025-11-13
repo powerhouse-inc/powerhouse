@@ -39,9 +39,20 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     return path.join(identifier, "./processors");
   }
 
-  async loadDocumentModels(identifier: string): Promise<DocumentModelModule[]> {
+  public loadDocumentModels(identifier: string, immediate = false) {
+    return this.#loadDocumentModelsWithDebounce(immediate, identifier);
+  }
+
+  #loadDocumentModelsWithDebounce = debounce(
+    this.#loadDocumentModels.bind(this),
+    500,
+  );
+
+  async #loadDocumentModels(
+    identifier: string,
+  ): Promise<DocumentModelModule[]> {
     const fullPath = this.getDocumentModelsPath(identifier);
-    this.logger.info("Loading document models from", fullPath);
+    this.logger.debug("Loading document models from", fullPath);
 
     try {
       const localDMs = (await this.vite.ssrLoadModule(fullPath)) as Record<
