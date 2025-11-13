@@ -1,5 +1,5 @@
 ---
-to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/components/EmptyState.tsx"
+to: "<%= driveEditorDir %>/components/EmptyState.tsx"
 unless_exists: true
 ---
 import { useNodesInSelectedDriveOrFolder } from "@powerhousedao/reactor-browser";

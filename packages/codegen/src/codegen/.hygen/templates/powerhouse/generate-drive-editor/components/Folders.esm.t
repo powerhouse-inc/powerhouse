@@ -1,5 +1,5 @@
 ---
-to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/components/Folders.tsx"
+to: "<%= driveEditorDir %>/components/Folders.tsx"
 unless_exists: true
 ---
 import { FolderItem } from "@powerhousedao/design-system/connect";

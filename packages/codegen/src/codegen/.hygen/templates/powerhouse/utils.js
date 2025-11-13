@@ -4,7 +4,7 @@ const {
   capitalCase,
   camelCase,
 } = require("change-case");
-const { readdirSync, readFileSync } = require("fs");
+const { readdirSync, readFileSync, existsSync } = require("fs");
 const { join } = require("path");
 
 function getModuleExports(dirPath, matcher, newEntry) {
@@ -21,17 +21,20 @@ function getModuleExports(dirPath, matcher, newEntry) {
       const match = content.match(matcher);
 
       if (match) {
-        moduleExports.push({
+        const result = {
           paramCaseName: entry.name,
           pascalCaseName: match[1],
-        });
+        };
+        moduleExports.push(result);
       }
     } catch (_) {
       continue;
     }
   }
 
-  if (!moduleExports.find(me => me.paramCaseName === newEntry.paramCaseName)) {
+  if (
+    !moduleExports.find((me) => me.paramCaseName === newEntry.paramCaseName)
+  ) {
     moduleExports.push(newEntry);
   }
 

@@ -62,13 +62,23 @@ export async function generateFromDocument(
   await generateFromDocumentModel(documentModelState, config, null, options);
 }
 
-export async function generateEditor(
-  name: string,
-  documentTypes: string[],
-  config: PowerhouseConfig,
-  editorId?: string,
-  specifiedPackageName?: string,
-) {
+type GenerateEditorArgs = {
+  name: string;
+  documentTypes: string[];
+  config: PowerhouseConfig;
+  editorId?: string;
+  specifiedPackageName?: string;
+  editorDirName?: string;
+};
+export async function generateEditor(args: GenerateEditorArgs) {
+  const {
+    name,
+    documentTypes,
+    config,
+    editorId,
+    specifiedPackageName,
+    editorDirName,
+  } = args;
   const pathOrigin = "../../";
 
   const { documentModelsDir, skipFormat } = config;
@@ -85,17 +95,18 @@ export async function generateEditor(
   const packageNameFromPackageJson = await readPackage().then(
     (pkg) => pkg.name,
   );
-  const packageName = specifiedPackageName ?? packageNameFromPackageJson;
-  return hygenGenerateEditor(
+  const packageName = specifiedPackageName || packageNameFromPackageJson;
+  return hygenGenerateEditor({
     name,
     documentTypes,
     documentTypesMap,
-    config.editorsDir,
-    config.documentModelsDir,
+    dir: config.editorsDir,
+    documentModelsDir: config.documentModelsDir,
     packageName,
-    { skipFormat },
+    skipFormat,
     editorId,
-  );
+    editorDirName,
+  });
 }
 
 export async function generateSubgraphFromDocumentModel(
@@ -142,9 +153,16 @@ export async function generateDriveEditor(options: {
   appId?: string;
   allowedDocumentTypes?: string;
   isDragAndDropEnabled?: boolean;
+  driveEditorDirName?: string;
 }) {
-  const { name, config, appId, allowedDocumentTypes, isDragAndDropEnabled } =
-    options;
+  const {
+    name,
+    config,
+    appId,
+    allowedDocumentTypes,
+    isDragAndDropEnabled,
+    driveEditorDirName,
+  } = options;
   const dir = config.editorsDir;
   const skipFormat = config.skipFormat;
 
@@ -155,6 +173,7 @@ export async function generateDriveEditor(options: {
     allowedDocumentTypes: allowedDocumentTypes,
     isDragAndDropEnabled: isDragAndDropEnabled ?? true,
     skipFormat,
+    driveEditorDirName,
   });
 }
 

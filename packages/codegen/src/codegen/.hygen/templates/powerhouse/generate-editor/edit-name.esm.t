@@ -1,5 +1,5 @@
 ---
-to: "<%= rootDir %>/<%= paramCaseEditorName %>/components/EditName.tsx"
+to: "<%= editorDir %>/components/EditName.tsx"
 unless_exists: true
 ---
 import { setName } from "document-model";

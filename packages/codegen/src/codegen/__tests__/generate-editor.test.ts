@@ -69,13 +69,13 @@ describe("generateEditor", () => {
       await setupTest(context);
 
       const name = "TestDocEditor";
-      await generateEditor(
-        name,
-        ["powerhouse/test-doc"],
-        config,
-        "test-document-model-editor",
-        TEST_PACKAGE_NAME,
-      );
+      await generateEditor({
+        name: name,
+        documentTypes: ["powerhouse/test-doc"],
+        config: config,
+        editorId: "test-document-model-editor",
+        specifiedPackageName: TEST_PACKAGE_NAME,
+      });
 
       const editorsDir = path.join(testOutDirPath, "editors");
       const editorsFilePath = path.join(editorsDir, "editors.ts");
@@ -130,13 +130,13 @@ describe("generateEditor", () => {
       );
 
       const name = "TestDocEditorTwo";
-      await generateEditor(
-        name,
-        ["powerhouse/test-doc"],
-        config,
-        "test-document-model-editor-two",
-        TEST_PACKAGE_NAME,
-      );
+      await generateEditor({
+        name: name,
+        documentTypes: ["powerhouse/test-doc"],
+        config: config,
+        editorId: "test-document-model-editor-two",
+        specifiedPackageName: TEST_PACKAGE_NAME,
+      });
       const editorsDir = path.join(testOutDirPath, "editors");
       const editorsFilePath = path.join(editorsDir, "editors.ts");
       const editorsContent = fs.readFileSync(editorsFilePath, "utf-8");
@@ -162,13 +162,13 @@ describe("generateEditor", () => {
         "editors.ts",
       );
       rmSync(editorsFilePath, { force: true });
-      await generateEditor(
-        "TestDocEditor",
-        ["powerhouse/test-doc"],
-        config,
-        "test-document-model-editor",
-        TEST_PACKAGE_NAME,
-      );
+      await generateEditor({
+        name: "TestDocEditor",
+        documentTypes: ["powerhouse/test-doc"],
+        config: config,
+        editorId: "test-document-model-editor",
+        specifiedPackageName: TEST_PACKAGE_NAME,
+      });
       await compile(testOutDirPath);
       const editorsContent = fs.readFileSync(editorsFilePath, "utf-8");
       expect(editorsContent).toContain(`export const editors: EditorModule[]`);

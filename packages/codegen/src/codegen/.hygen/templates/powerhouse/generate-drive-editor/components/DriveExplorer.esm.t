@@ -1,5 +1,5 @@
 ---
-to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/components/DriveExplorer.tsx"
+to: "<%= driveEditorDir %>/components/DriveExplorer.tsx"
 unless_exists: true
 ---
 import type { EditorProps } from "document-model";

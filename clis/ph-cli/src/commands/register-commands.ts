@@ -9,7 +9,7 @@ import { serviceCommand } from "./service.js";
 import { switchboardCommand } from "./switchboard.js";
 import { uninstallCommand } from "./uninstall.js";
 import { vetraCommand } from "./vetra.js";
-
+import { migrateCommand } from "./migrations/migrate.js";
 export const commands = [
   connectCommand,
   generateCommand,
@@ -21,6 +21,7 @@ export const commands = [
   inspectCommand,
   switchboardCommand,
   vetraCommand,
+  migrateCommand,
 ];
 
 export function registerCommands(program: Command) {
