@@ -1,3 +1,19 @@
+## 4.1.0-dev.115 (2025-11-13)
+
+### 🚀 Features
+
+- **ph-cli:** ph migrate command ([#2099](https://github.com/powerhouse-inc/powerhouse/pull/2099))
+
+### 🩹 Fixes
+
+- **builder-tools:** use alias for self-reference import on ts instead of loading from dist ([b23b772c0](https://github.com/powerhouse-inc/powerhouse/commit/b23b772c0))
+- **reactor-api,switchboard:** load local package by default and resolve self reference import on ts files ([2b2d29ba6](https://github.com/powerhouse-inc/powerhouse/commit/2b2d29ba6))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Ryan Wolhuter @ryanwolhuter
+
 ## 4.1.0-dev.114 (2025-11-13)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
