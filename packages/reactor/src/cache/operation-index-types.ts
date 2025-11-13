@@ -17,6 +17,7 @@ export type OperationIndexEntry = Operation & {
 export interface IOperationIndexTxn {
   createCollection(collectionId: string): void;
   addToCollection(collectionId: string, documentId: string): void;
+  removeFromCollection(collectionId: string, documentId: string): void;
   write(operations: OperationIndexEntry[]): void;
 }
 
@@ -35,6 +36,8 @@ export interface IOperationIndex {
 export interface DocumentCollectionTable {
   documentId: string;
   collectionId: string;
+  joinedOrdinal: bigint;
+  leftOrdinal: bigint | null;
 }
 
 export interface OperationIndexOperationTable {

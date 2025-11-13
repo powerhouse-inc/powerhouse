@@ -28,6 +28,7 @@ const normalIgnoredFiles = [
   "**/.test-output/",
   "**/flaky/",
   "apps/connect/lib/",
+  "clis/ph-cli/src/commands/migrations/templates",
 ];
 
 /** These files need to be ignored for builds to pass, but they do not have clear reasons to be ignored.

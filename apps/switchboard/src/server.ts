@@ -173,18 +173,18 @@ async function initServer(serverPort: number, options: StartServerOptions) {
 
   let defaultDriveUrl: undefined | string = undefined;
 
+  // TODO get path from powerhouse config
   // start vite server if dev mode is enabled
-  const vite = dev ? await startViteServer() : undefined;
+  const basePath = process.cwd();
+  const vite = dev ? await startViteServer(process.cwd()) : undefined;
 
   // get paths to local document models
-  if (dev && !options.disableLocalPackages) {
-    // TODO get path from powerhouse config
-    const basePath = process.cwd();
+  if (!options.disableLocalPackages) {
     packages.push(basePath);
   }
 
   // create loader
-  const packageLoader = vite ? await VitePackageLoader.build(vite) : undefined;
+  const packageLoader = vite ? VitePackageLoader.build(vite) : undefined;
 
   // Start the API with the reactor and options
   const api = await initializeAndStartAPI(

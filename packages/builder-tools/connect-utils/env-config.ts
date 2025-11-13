@@ -51,6 +51,12 @@ const buildEnvSchema = z.object({
   PH_DISABLE_LOCAL_PACKAGE: booleanString.default(false),
 
   /**
+   * Amount of time to wait before a file is considered changed
+   * @default 300
+   */
+  PH_WATCH_TIMEOUT: numberString.default(300),
+
+  /**
    * Sentry authentication token for uploading source maps
    */
   PH_SENTRY_AUTH_TOKEN: z.string().optional(),

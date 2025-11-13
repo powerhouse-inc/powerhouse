@@ -1,5 +1,5 @@
 ---
-to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/components/Files.tsx"
+to: "<%= driveEditorDir %>/components/Files.tsx"
 unless_exists: true
 ---
 import { FileItem } from "@powerhousedao/design-system/connect";

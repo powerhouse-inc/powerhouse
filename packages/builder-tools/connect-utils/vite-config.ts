@@ -3,6 +3,7 @@ import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwind from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { join } from "node:path";
+import { readPackageSync } from "read-pkg";
 import {
   createLogger,
   loadEnv,
@@ -171,6 +172,9 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   // set the resolved env to process.env so it's loaded by vite
   setConnectEnv(env);
 
+  // load package.json
+  const packageJson = readPackageSync({ cwd: options.dirname });
+
   // load powerhouse config
   const phConfigPath =
     env.PH_CONFIG_PATH ?? join(options.dirname, "powerhouse.config.json");
@@ -196,12 +200,13 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     ),
   ];
 
+  const localPackage = !env.PH_DISABLE_LOCAL_PACKAGE
+    ? (env.PH_LOCAL_PACKAGE ?? options.dirname)
+    : undefined;
+
   // if local package is provided and not disabled, add it to the packages to be loaded
-  if (!env.PH_DISABLE_LOCAL_PACKAGE) {
-    const localPackage = env.PH_LOCAL_PACKAGE ?? options.dirname;
-    if (localPackage) {
-      allPackages.push(localPackage);
-    }
+  if (localPackage) {
+    allPackages.push(localPackage);
   }
 
   // remove duplicates and empty strings
@@ -275,6 +280,8 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
         },
       });
 
+  const watchTimeout = options.watchTimeout ?? env.PH_WATCH_TIMEOUT;
+
   const config: UserConfig = {
     base: basePath,
     customLogger,
@@ -285,6 +292,11 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     },
     plugins,
     resolve: {
+      alias: localPackage
+        ? {
+            [packageJson.name]: localPackage,
+          }
+        : undefined,
       dedupe: ["react", "react-dom", "react/jsx-runtime"],
     },
     build: {
@@ -295,8 +307,16 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       watch: env.PH_DISABLE_LOCAL_PACKAGE
         ? null
         : {
-            ignored: ["**/.ph/**", "**/backup-documents/**"],
-            awaitWriteFinish: { stabilityThreshold: 2000, pollInterval: 100 },
+            ignored: [
+              "**/.ph/**",
+              "**/dist/**",
+              "**/node_modules/**",
+              "**/backup-documents/**",
+            ],
+            awaitWriteFinish: {
+              stabilityThreshold: watchTimeout,
+              pollInterval: 100,
+            },
           },
       fs: {
         strict: false,

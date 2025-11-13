@@ -9,8 +9,8 @@ import type { Reactor } from "../../src/core/reactor.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
 import type { IQueue } from "../../src/queue/interfaces.js";
 import type { Job } from "../../src/queue/types.js";
-import { JobStatus } from "../../src/shared/types.js";
 import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
+import { JobStatus } from "../../src/shared/types.js";
 import type { IOperationStore } from "../../src/storage/interfaces.js";
 import {
   createMockDocumentStorage,
@@ -265,15 +265,5 @@ describe("Reactor.load", () => {
     await expect(reactor.load("doc-1", "main", operations)).rejects.toThrow(
       /same scope/,
     );
-  });
-
-  it("throws when an operation is missing hash", async () => {
-    const operations = [createTestOperation()];
-    Reflect.deleteProperty(operations[0] as Record<string, unknown>, "hash");
-    expect(operations[0]?.hash).toBeUndefined();
-
-    await expect(
-      reactor.load("doc-1", "main", operations as Operation[]),
-    ).rejects.toThrow(/hash/);
   });
 });

@@ -104,12 +104,15 @@ describe("CodegenProcessor E2E Tests", () => {
       // Advance timers to trigger debounced generation
       await vi.runAllTimersAsync();
 
-      expect(generateEditor).toHaveBeenCalledWith(
-        "Test Editor",
-        ["powerhouse/document-model", "powerhouse/budget-statement"],
-        mockConfig.PH_CONFIG,
-        "test-editor",
-      );
+      expect(generateEditor).toHaveBeenCalledWith({
+        name: "Test Editor",
+        documentTypes: [
+          "powerhouse/document-model",
+          "powerhouse/budget-statement",
+        ],
+        config: mockConfig.PH_CONFIG,
+        editorId: "test-editor",
+      });
 
       expect(generateManifest).toHaveBeenCalledWith(
         {
@@ -697,12 +700,12 @@ describe("CodegenProcessor E2E Tests", () => {
       await processor.onStrands(strands);
       await vi.runAllTimersAsync();
 
-      expect(generateEditor).toHaveBeenCalledWith(
-        "Test Editor",
-        ["powerhouse/document-model"],
-        mockConfig.PH_CONFIG,
-        "test-editor",
-      );
+      expect(generateEditor).toHaveBeenCalledWith({
+        name: "Test Editor",
+        documentTypes: ["powerhouse/document-model"],
+        config: mockConfig.PH_CONFIG,
+        editorId: "test-editor",
+      });
 
       expect(generateSubgraph).toHaveBeenCalledWith(
         "Test Subgraph",
@@ -749,12 +752,12 @@ describe("CodegenProcessor E2E Tests", () => {
       await vi.runAllTimersAsync();
 
       // Valid strand should be processed
-      expect(generateEditor).toHaveBeenCalledWith(
-        "Test Editor",
-        ["powerhouse/document-model"],
-        mockConfig.PH_CONFIG,
-        "test-editor",
-      );
+      expect(generateEditor).toHaveBeenCalledWith({
+        name: "Test Editor",
+        documentTypes: ["powerhouse/document-model"],
+        config: mockConfig.PH_CONFIG,
+        editorId: "test-editor",
+      });
 
       // Invalid strand should NOT be processed
       expect(generateSubgraph).not.toHaveBeenCalled();

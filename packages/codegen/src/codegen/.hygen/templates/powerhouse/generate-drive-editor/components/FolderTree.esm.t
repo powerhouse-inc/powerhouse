@@ -1,5 +1,5 @@
 ---
-to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/components/FolderTree.tsx"
+to: "<%= driveEditorDir %>/components/FolderTree.tsx"
 unless_exists: true
 ---
 import {

@@ -12,6 +12,8 @@ const { getModuleExports } = require("../utils.js");
 module.exports = {
   params: ({ args }) => {
     const rootDir = args.rootDir;
+    const editorDirName = args.editorDirName || paramCase(args.name);
+    const editorDir = join(rootDir, editorDirName);
     const documentTypes = args.documentTypes
       .split(",")
       .map((type) => type.trim())
@@ -60,12 +62,14 @@ module.exports = {
       rootDir,
       /export\s+const\s+(\w+)\s*:\s*EditorModule\s*=/,
       {
-        paramCaseName: paramCaseEditorName,
+        paramCaseName: editorDirName,
         pascalCaseName: pascalCaseEditorName,
-      }
+      },
     );
+
     return {
       rootDir,
+      editorDir,
       moduleExports,
       documentModelsDir: args.documentModelsDir,
       name: args.name,

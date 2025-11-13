@@ -103,93 +103,43 @@ export function phExternalPackagesPlugin(phPackages: string[]) {
         return makeImportScriptFromPackages(phPackages);
       }
     },
-    handleHotUpdate({ file, server, modules, timestamp }) {
+    handleHotUpdate({ file, server, modules }) {
       // Check if the changed file is part of any local package
-      const localPackage = phPackages.find((pkg) => {
+      const isLocalPackageFile = phPackages.some((pkg) => {
         if (pkg.startsWith("/") || pkg.startsWith(".")) {
           return file.startsWith(pkg);
         }
         return false;
       });
 
-      // if the changed file is not part of any local package, do not override HMR
-      if (!localPackage) {
+      if (!isLocalPackageFile) {
         return undefined;
       }
 
-      // iterate through all local package imports to build set of imported modules, if not already built
-      const packageModules = localPackageModules.get(localPackage);
-      const importedModules =
-        localPackageModules.get(localPackage) || new Set<string>();
       const virtualModule = server.moduleGraph.getModuleById(
         resolvedVirtualModuleId,
       );
 
-      if (
-        virtualModule &&
-        !packageModules &&
-        virtualModule.importedModules.size > 0 // wait for virtual module to be built
-      ) {
-        buildImportedModulesSet(virtualModule, localPackage, importedModules);
-        localPackageModules.set(localPackage, importedModules);
+      if (!virtualModule) {
+        return undefined;
       }
 
-      // checks if there are new modules being imported by a watched module and adds them to the set
+      // Deduplicate modules by file path, preferring modules with defined IDs
+      const modulesByFile = new Map<string, (typeof modules)[0]>();
       for (const module of modules) {
-        if (
-          module.file &&
-          !importedModules.has(module.file) &&
-          !shouldSkipModule(module, localPackage, importedModules) &&
-          module.importers
-            .values()
-            .some(
-              (m) =>
-                m.file &&
-                !m.file.endsWith(".css") &&
-                importedModules.has(m.file),
-            )
-        ) {
-          buildImportedModulesSet(module, localPackage, importedModules);
+        if (module.file) {
+          const existing = modulesByFile.get(module.file);
+          // Prefer modules with defined IDs over ones without IDs
+          if (!existing || (module.id && !existing.id)) {
+            modulesByFile.set(module.file, module);
+          }
         }
       }
+      const deduplicatedModules = Array.from(modulesByFile.values()).filter(
+        (m) => m.id && m.id !== resolvedVirtualModuleId,
+      );
 
-      let refreshVirtualModule = false;
-      const modulesToRefresh: ModuleNode[] = [];
-
-      for (const module of modules) {
-        if (
-          !(
-            module.id &&
-            module.id !== resolvedVirtualModuleId &&
-            module.file &&
-            importedModules.has(module.file)
-          )
-        ) {
-          // returns only modules that are actually imported by Connect
-          continue;
-        }
-
-        // lets react modules be handled by react-refresh
-        if (module.file.endsWith(".tsx") || module.file.endsWith(".jsx")) {
-          modulesToRefresh.push(module);
-        } else {
-          // invalidates non-react modules to trigger HMR
-          server.moduleGraph.invalidateModule(
-            module,
-            new Set(),
-            timestamp,
-            true,
-          );
-        }
-        refreshVirtualModule = true;
-      }
-
-      // if a module was invalidated then triggers HMR on the external packages module
-      if (refreshVirtualModule && virtualModule) {
-        modulesToRefresh.push(virtualModule);
-      }
-
-      return modulesToRefresh;
+      return deduplicatedModules;
     },
   };
 
