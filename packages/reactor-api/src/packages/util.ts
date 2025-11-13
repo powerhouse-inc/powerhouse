@@ -4,6 +4,7 @@ import { childLogger } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { execSync } from "node:child_process";
 import path from "node:path";
+import { cwd } from "node:process";
 import { resolveLinkedPackage } from "./import-resolver.js";
 
 // Define the expected module export structures
@@ -83,7 +84,7 @@ async function loadDependency<T = unknown>(
 
       // Only log when ALL attempts have failed
       logger.warn(
-        `Unable to load dependency ${fullPath} - tried standard import, suggested paths, resolved paths, and workspace patterns`,
+        `Unable to load dependency ${fullPath}.${packageName === cwd() ? " Did you build your project?" : ""}`,
       );
       logger.debug(e);
     } else if (
