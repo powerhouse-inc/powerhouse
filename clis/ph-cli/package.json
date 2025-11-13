@@ -38,10 +38,7 @@
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "nodemon": "^3.1.9",
-    "read-pkg": "^9.0.1",
-    "ts-morph": "^26.0.0",
-    "vitest": "^3.2.4",
-    "write-pkg": "^7.0.0"
+    "vitest": "^3.2.4"
   },
   "dependencies": {
     "@powerhousedao/builder-tools": "workspace:*",
@@ -50,6 +47,9 @@
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/switchboard": "workspace:*",
     "colorette": "^2.0.20",
-    "commander": "^12.1.0"
+    "commander": "^12.1.0",
+    "read-pkg": "^9.0.1",
+    "ts-morph": "^26.0.0",
+    "write-pkg": "^7.0.0"
   }
 }
