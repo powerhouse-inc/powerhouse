@@ -40,6 +40,7 @@ import type {
   IDocumentIndexer,
   IDocumentView,
   IOperationStore,
+  ISyncCursorStorage,
 } from "../src/storage/interfaces.js";
 import { KyselyKeyframeStore } from "../src/storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../src/storage/kysely/store.js";
@@ -47,6 +48,9 @@ import { KyselySyncCursorStorage } from "../src/storage/kysely/sync-cursor-stora
 import { KyselySyncRemoteStorage } from "../src/storage/kysely/sync-remote-storage.js";
 import type { Database as DatabaseSchema } from "../src/storage/kysely/types.js";
 import { runMigrations } from "../src/storage/migrations/migrator.js";
+import { InternalChannel } from "../src/sync/channels/internal-channel.js";
+import type { IChannel, IChannelFactory } from "../src/sync/interfaces.js";
+import type { ChannelConfig, SyncEnvelope } from "../src/sync/types.js";
 
 /**
  * Creates a real PGLite-backed KyselyOperationStore for testing.
@@ -749,4 +753,43 @@ export async function createTestSyncStorage(): Promise<{
   const syncCursorStorage = new KyselySyncCursorStorage(db);
 
   return { db, syncRemoteStorage, syncCursorStorage };
+}
+
+/**
+ * Creates an IChannelFactory for testing that creates InternalChannel instances.
+ * InternalChannels are wired together by storing them in a shared registry and
+ * passing a send function that delivers envelopes to the peer's receive method.
+ *
+ * @param channels - Optional map to store created channels for cross-wiring
+ * @returns IChannelFactory implementation for testing
+ */
+export function createTestChannelFactory(
+  channels?: Map<string, InternalChannel>,
+): IChannelFactory {
+  const channelRegistry = channels || new Map<string, InternalChannel>();
+
+  return {
+    instance(
+      config: ChannelConfig,
+      cursorStorage: ISyncCursorStorage,
+    ): IChannel {
+      const send = (envelope: SyncEnvelope): void => {
+        const peerChannel = channelRegistry.get(config.channelId);
+        if (peerChannel) {
+          peerChannel.receive(envelope);
+        }
+      };
+
+      const channel = new InternalChannel(
+        config.channelId,
+        config.remoteName,
+        cursorStorage,
+        send,
+      );
+
+      channelRegistry.set(config.channelId, channel);
+
+      return channel;
+    },
+  };
 }

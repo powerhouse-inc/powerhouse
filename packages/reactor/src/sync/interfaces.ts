@@ -36,6 +36,11 @@ export interface IChannel {
    * These jobs require manual intervention or should be logged for debugging.
    */
   deadLetter: Mailbox<JobHandle>;
+
+  /**
+   * Shuts down the channel and prevents further operations.
+   */
+  shutdown(): void;
 }
 
 /**
