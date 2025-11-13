@@ -100,13 +100,13 @@ const startServer = async (
   logger.debug(`Setting log level to ${logLevel}.`);
   const serverPort = Number(process.env.PORT ?? port);
 
+  // TODO get path from powerhouse config
+  const basePath = process.cwd();
   // start vite server if dev
-  const vite = dev ? await startViteServer() : undefined;
+  const vite = dev ? await startViteServer(basePath) : undefined;
 
   // get paths to local document models
   if (dev) {
-    // TODO get path from powerhouse config
-    const basePath = process.cwd();
     packages.push(basePath);
   }
 
@@ -145,7 +145,7 @@ const startServer = async (
     : await addDefaultDrive(driveServer, drive, serverPort);
 
   // create loader
-  const packageLoader = vite ? await VitePackageLoader.build(vite) : undefined;
+  const packageLoader = vite ? VitePackageLoader.build(vite) : undefined;
 
   // start api
   const api = await startAPI(driveServer, client, {
