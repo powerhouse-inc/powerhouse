@@ -51,11 +51,40 @@ export interface OperationIndexOperationTable {
   action: unknown;
 }
 
+export interface SyncRemoteTable {
+  name: string;
+  collectionId: string;
+  channelType: string;
+  channelParameters: unknown;
+  filterDocumentIds: unknown | null;
+  filterScopes: unknown | null;
+  filterBranch: string;
+  pushState: string;
+  pushLastSuccessUtcMs: bigint | null;
+  pushLastFailureUtcMs: bigint | null;
+  pushFailureCount: number;
+  pullState: string;
+  pullLastSuccessUtcMs: bigint | null;
+  pullLastFailureUtcMs: bigint | null;
+  pullFailureCount: number;
+  createdAt: Generated<Date>;
+  updatedAt: Generated<Date>;
+}
+
+export interface SyncCursorTable {
+  remoteName: string;
+  cursorOrdinal: bigint;
+  lastSyncedAtUtcMs: bigint | null;
+  updatedAt: Generated<Date>;
+}
+
 export interface Database {
   Operation: OperationTable;
   Keyframe: KeyframeTable;
   document_collections: DocumentCollectionTable;
   operation_index_operations: OperationIndexOperationTable;
+  sync_remotes: SyncRemoteTable;
+  sync_cursors: SyncCursorTable;
 }
 
 export type OperationRow = Selectable<OperationTable>;
@@ -118,3 +147,11 @@ export type InsertableOperationIndexOperation =
   Insertable<OperationIndexOperationTable>;
 export type UpdateableOperationIndexOperation =
   Updateable<OperationIndexOperationTable>;
+
+export type SyncRemoteRow = Selectable<SyncRemoteTable>;
+export type InsertableSyncRemote = Insertable<SyncRemoteTable>;
+export type UpdateableSyncRemote = Updateable<SyncRemoteTable>;
+
+export type SyncCursorRow = Selectable<SyncCursorTable>;
+export type InsertableSyncCursor = Insertable<SyncCursorTable>;
+export type UpdateableSyncCursor = Updateable<SyncCursorTable>;
