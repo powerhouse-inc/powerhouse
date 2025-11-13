@@ -55,6 +55,8 @@ export interface SyncRemoteTable {
   name: string;
   collection_id: string;
   channel_type: string;
+  channel_id: string;
+  remote_name: string;
   channel_parameters: unknown;
   filter_document_ids: unknown;
   filter_scopes: unknown;

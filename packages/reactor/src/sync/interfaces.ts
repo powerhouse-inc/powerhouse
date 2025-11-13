@@ -2,12 +2,7 @@ import type { ShutdownStatus } from "../shared/types.js";
 import type { ISyncCursorStorage } from "../storage/interfaces.js";
 import type { JobHandle } from "./job-handle.js";
 import type { Mailbox } from "./mailbox.js";
-import type {
-  ChannelConfig,
-  RemoteFilter,
-  RemoteOptions,
-  RemoteRecord,
-} from "./types.js";
+import type { ChannelConfig, RemoteFilter, RemoteOptions } from "./types.js";
 
 /**
  * Represents a bidirectional synchronization channel between two reactor instances.
@@ -97,13 +92,6 @@ export type Remote = {
 
 /**
  * Orchestrates all synchronization activity for a reactor instance.
- *
- * The sync manager is responsible for:
- * - Creating and managing remotes
- * - Persisting remote configurations
- * - Routing operations to appropriate channels
- * - Managing channel lifecycle
- * - Coordinating with the operation index for collection-based queries
  */
 export interface ISyncManager {
   /**

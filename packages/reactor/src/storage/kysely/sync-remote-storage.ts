@@ -10,6 +10,8 @@ function rowToRemoteRecord(row: SyncRemoteRow): RemoteRecord {
     collectionId: row.collection_id,
     channelConfig: {
       type: row.channel_type,
+      channelId: row.channel_id,
+      remoteName: row.remote_name,
       parameters: (row.channel_parameters ?? {}) as Record<string, unknown>,
     },
     filter: {
@@ -48,6 +50,8 @@ function remoteRecordToRow(remote: RemoteRecord): InsertableSyncRemote {
     name: remote.name,
     collection_id: remote.collectionId,
     channel_type: remote.channelConfig.type,
+    channel_id: remote.channelConfig.channelId,
+    remote_name: remote.channelConfig.remoteName,
     channel_parameters: remote.channelConfig.parameters,
     filter_document_ids:
       remote.filter.documentId.length > 0 ? remote.filter.documentId : null,

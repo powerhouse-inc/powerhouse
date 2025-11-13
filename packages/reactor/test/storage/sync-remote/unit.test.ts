@@ -31,6 +31,8 @@ describe("KyselySyncRemoteStorage", () => {
         collectionId: "collection-1",
         channelConfig: {
           type: "gql",
+          channelId: "channel-remote-1",
+          remoteName: "remote-1",
           parameters: { url: "https://api.example.com/graphql" },
         },
         filter: {
@@ -50,6 +52,8 @@ describe("KyselySyncRemoteStorage", () => {
         collectionId: "collection-2",
         channelConfig: {
           type: "internal",
+          channelId: "channel-remote-2",
+          remoteName: "remote-2",
           parameters: {},
         },
         filter: {
@@ -97,6 +101,8 @@ describe("KyselySyncRemoteStorage", () => {
         collectionId: "main:drive-123",
         channelConfig: {
           type: "gql",
+          channelId: "channel-test-remote",
+          remoteName: "test-remote",
           parameters: {
             url: "https://api.example.com/graphql",
             token: "secret-token",
@@ -130,6 +136,8 @@ describe("KyselySyncRemoteStorage", () => {
         collectionId: "main:drive-123",
         channelConfig: {
           type: "gql",
+          channelId: "channel-test-remote",
+          remoteName: "test-remote",
           parameters: {
             url: "https://api.example.com/graphql",
             token: "secret-token",
@@ -172,6 +180,8 @@ describe("KyselySyncRemoteStorage", () => {
         collectionId: "collection-1",
         channelConfig: {
           type: "gql",
+          channelId: "channel-new-remote",
+          remoteName: "new-remote",
           parameters: { url: "https://api.example.com" },
         },
         filter: {
@@ -199,6 +209,8 @@ describe("KyselySyncRemoteStorage", () => {
         collectionId: "collection-1",
         channelConfig: {
           type: "gql",
+          channelId: "channel-update-remote",
+          remoteName: "update-remote",
           parameters: { url: "https://api.example.com" },
         },
         filter: {
@@ -239,6 +251,8 @@ describe("KyselySyncRemoteStorage", () => {
         collectionId: "collection-1",
         channelConfig: {
           type: "internal",
+          channelId: "channel-empty-filter-remote",
+          remoteName: "empty-filter-remote",
           parameters: {},
         },
         filter: {
@@ -266,6 +280,8 @@ describe("KyselySyncRemoteStorage", () => {
         collectionId: "collection-1",
         channelConfig: {
           type: "gql",
+          channelId: "channel-jsonb-remote",
+          remoteName: "jsonb-remote",
           parameters: {
             url: "https://api.example.com",
             headers: {
@@ -309,6 +325,8 @@ describe("KyselySyncRemoteStorage", () => {
         collectionId: "collection-1",
         channelConfig: {
           type: "internal",
+          channelId: "channel-timestamp-remote",
+          remoteName: "timestamp-remote",
           parameters: {},
         },
         filter: {
@@ -349,7 +367,12 @@ describe("KyselySyncRemoteStorage", () => {
       const remote: RemoteRecord = {
         name: "abort-remote",
         collectionId: "collection-1",
-        channelConfig: { type: "internal", parameters: {} },
+        channelConfig: {
+          type: "internal",
+          channelId: "channel-test",
+          remoteName: "test",
+          parameters: {},
+        },
         filter: { documentId: [], scope: [], branch: "main" },
         options: {},
         status: {
@@ -371,6 +394,8 @@ describe("KyselySyncRemoteStorage", () => {
         collectionId: "collection-1",
         channelConfig: {
           type: "internal",
+          channelId: "channel-remove-remote",
+          remoteName: "remove-remote",
           parameters: {},
         },
         filter: {
@@ -416,6 +441,8 @@ describe("KyselySyncRemoteStorage", () => {
         collectionId: "collection-1",
         channelConfig: {
           type: "internal",
+          channelId: "channel-concurrent-remote",
+          remoteName: "concurrent-remote",
           parameters: {},
         },
         filter: {

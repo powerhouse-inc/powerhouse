@@ -140,3 +140,36 @@ export type {
   WriteCacheConfig,
 } from "./cache/write-cache-types.js";
 export { type IWriteCache } from "./cache/write/interfaces.js";
+
+// Synchronization
+export {
+  ChannelError,
+  InternalChannelError,
+  InternalChannel,
+  JobHandle,
+  Mailbox,
+  type ChannelConfig,
+  type ChannelHealth,
+  type ChannelMeta,
+  ChannelErrorSource,
+  type IChannel,
+  type IChannelFactory,
+  type ISyncManager,
+  type JobErrorType,
+  JobChannelStatus,
+  type MailboxItem,
+  type Remote,
+  type RemoteCursor,
+  type RemoteFilter,
+  type RemoteOptions,
+  type RemoteRecord,
+  type RemoteStatus,
+  type SyncEnvelope,
+  type SyncEnvelopeType,
+} from "./sync/index.js";
+export {
+  KyselySyncCursorStorage,
+  KyselySyncRemoteStorage,
+  type ISyncCursorStorage,
+  type ISyncRemoteStorage,
+} from "./storage/index.js";

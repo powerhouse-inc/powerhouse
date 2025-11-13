@@ -17,6 +17,8 @@ describe("KyselySyncCursorStorage", () => {
       collectionId: "collection-1",
       channelConfig: {
         type: "internal",
+        channelId: `channel-${name}`,
+        remoteName: name,
         parameters: {},
       },
       filter: {
@@ -272,6 +274,8 @@ describe("KyselySyncCursorStorage", () => {
         collectionId: "collection-1",
         channelConfig: {
           type: "internal",
+          channelId: "channel-cascade-remote",
+          remoteName: "cascade-remote",
           parameters: {},
         },
         filter: {

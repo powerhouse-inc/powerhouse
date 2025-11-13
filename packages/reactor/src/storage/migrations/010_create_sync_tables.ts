@@ -7,6 +7,8 @@ export async function up(db: Kysely<any>): Promise<void> {
     .addColumn("name", "text", (col) => col.primaryKey())
     .addColumn("collection_id", "text", (col) => col.notNull())
     .addColumn("channel_type", "text", (col) => col.notNull())
+    .addColumn("channel_id", "text", (col) => col.notNull().defaultTo(""))
+    .addColumn("remote_name", "text", (col) => col.notNull().defaultTo(""))
     .addColumn("channel_parameters", "jsonb", (col) =>
       col.notNull().defaultTo(sql`'{}'::jsonb`),
     )
