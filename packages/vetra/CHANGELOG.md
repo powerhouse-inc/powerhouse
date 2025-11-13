@@ -1,3 +1,13 @@
+## 5.0.3 (2025-11-13)
+
+### 🩹 Fixes
+
+- read data is missing vetra packages ([8caa1f441](https://github.com/powerhouse-inc/powerhouse/commit/8caa1f441))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.0.2 (2025-11-05)
 
 ### 🩹 Fixes

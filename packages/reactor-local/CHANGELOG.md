@@ -1,3 +1,7 @@
+## 5.0.3 (2025-11-13)
+
+This was a version bump only for @powerhousedao/reactor-local to align it with other projects, there were no code changes.
+
 ## 5.0.2 (2025-11-05)
 
 ### 🩹 Fixes
