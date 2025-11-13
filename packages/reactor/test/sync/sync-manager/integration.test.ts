@@ -1,6 +1,7 @@
 import type { Operation } from "document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
 import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
 import type { IReactor } from "../../../src/core/types.js";
 import { EventBus } from "../../../src/events/event-bus.js";
@@ -27,7 +28,7 @@ describe("SyncManager Integration", () => {
   let syncRemoteStorage: ISyncRemoteStorage;
   let syncCursorStorage: ISyncCursorStorage;
   let eventBus: IEventBus;
-  let mockOperationIndex: IOperationIndex;
+  let operationIndex: IOperationIndex;
   let mockReactor: IReactor;
   let channelRegistry: Map<string, InternalChannel>;
   let channelFactory: IChannelFactory;
@@ -41,11 +42,7 @@ describe("SyncManager Integration", () => {
 
     eventBus = new EventBus();
 
-    mockOperationIndex = {
-      start: vi.fn(),
-      commit: vi.fn(),
-      find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
-    };
+    operationIndex = new KyselyOperationIndex(db);
 
     mockReactor = {
       load: vi.fn().mockResolvedValue({ status: "ok" }),
@@ -58,7 +55,7 @@ describe("SyncManager Integration", () => {
       syncRemoteStorage,
       syncCursorStorage,
       channelFactory,
-      mockOperationIndex,
+      operationIndex,
       mockReactor,
       eventBus,
     );
