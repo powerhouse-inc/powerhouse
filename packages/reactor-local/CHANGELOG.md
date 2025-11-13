@@ -1,3 +1,13 @@
+## 4.1.0-dev.116 (2025-11-13)
+
+### 🩹 Fixes
+
+- **ph-cli:** added missing runtime dependencies ([da1b66e73](https://github.com/powerhouse-inc/powerhouse/commit/da1b66e73))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.115 (2025-11-13)
 
 ### 🚀 Features
