@@ -1,3 +1,13 @@
+## 4.1.0-dev.117 (2025-11-13)
+
+### 🩹 Fixes
+
+- **reactor-api:** re-added reactor-api debounce on loadDocumentModels ([fc9e7d47e](https://github.com/powerhouse-inc/powerhouse/commit/fc9e7d47e))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.116 (2025-11-13)
 
 ### 🩹 Fixes
