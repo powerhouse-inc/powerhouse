@@ -19,7 +19,7 @@ module.exports = {
         pascalCaseName: pascalCaseDriveEditorName,
       },
     );
-    console.log("moduleExports", moduleExports);
+
     return {
       rootDir,
       driveEditorDir,

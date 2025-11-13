@@ -66,7 +66,7 @@ module.exports = {
         pascalCaseName: pascalCaseEditorName,
       },
     );
-    console.log("moduleExports", moduleExports);
+
     return {
       rootDir,
       editorDir,

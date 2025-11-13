@@ -1,4 +1,3 @@
-import type { Command } from "commander";
 import { existsSync, readdirSync } from "node:fs";
 import { readdir, writeFile } from "node:fs/promises";
 import path from "path";
@@ -11,17 +10,17 @@ import type {
 } from "ts-morph";
 import { Project, SyntaxKind } from "ts-morph";
 import { writePackage } from "write-pkg";
-import type { GenerateOptions } from "../../services/generate.js";
-import { generate } from "../generate.js";
-import { indexTsTemplate } from "./templates/index.js";
+import { generate } from "../../commands/generate.js";
+import type { GenerateOptions } from "../generate.js";
+import { indexTsTemplate } from "./migrations/templates/index.js";
 import {
   packageJsonExportsTemplate,
   packageJsonScriptsTemplate,
-} from "./templates/packageJson.js";
-import { tsConfigTemplate } from "./templates/tsConfig.js";
+} from "./migrations/templates/packageJson.js";
+import { tsConfigTemplate } from "./migrations/templates/tsConfig.js";
 
 /** Run all migrations */
-async function migrate() {
+export async function migrate() {
   await migratePackageJson();
   await migrateTsConfig();
   await runGenerateOnAllDocumentModels();
@@ -39,10 +38,6 @@ async function migrate() {
   removeCreatorsUsage(project);
   removeUtilsDefaultExportUsage(project);
   fixImports(project);
-}
-
-export function migrateCommand(program: Command) {
-  program.command("migrate").description("Run migrations").action(migrate);
 }
 
 /** Ensure that the project package.json has the correct scripts and exports. */
