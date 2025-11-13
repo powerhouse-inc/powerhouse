@@ -1,3 +1,17 @@
+## 4.1.0-dev.114 (2025-11-13)
+
+### 🚀 Features
+
+- implementation of the new join on ordinal in the index ([ad621af7a](https://github.com/powerhouse-inc/powerhouse/commit/ad621af7a))
+
+### 🩹 Fixes
+
+- linter fixes ([d0b6e63d7](https://github.com/powerhouse-inc/powerhouse/commit/d0b6e63d7))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.113 (2025-11-12)
 
 ### 🩹 Fixes
