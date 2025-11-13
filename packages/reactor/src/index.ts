@@ -148,6 +148,7 @@ export {
   InternalChannel,
   JobHandle,
   Mailbox,
+  SyncBuilder,
   type ChannelConfig,
   type ChannelHealth,
   type ChannelMeta,

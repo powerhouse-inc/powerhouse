@@ -25,6 +25,7 @@ import { KyselyDocumentIndexer } from "../storage/kysely/document-indexer.js";
 import { KyselyKeyframeStore } from "../storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../storage/kysely/store.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
+import type { SyncBuilder } from "../sync/sync-builder.js";
 import { Reactor } from "./reactor.js";
 import type {
   Database,
@@ -56,6 +57,7 @@ export class ReactorBuilder {
   private writeCacheConfig?: Partial<WriteCacheConfig>;
   private readModelCoordinatorFactory?: IReadModelCoordinatorFactory;
   private migrationStrategy: MigrationStrategy = "auto";
+  private syncBuilder?: SyncBuilder;
 
   withDocumentModels(models: DocumentModelModule[]): this {
     this.documentModels = models;
@@ -101,6 +103,11 @@ export class ReactorBuilder {
 
   setMigrationStrategy(strategy: MigrationStrategy): this {
     this.migrationStrategy = strategy;
+    return this;
+  }
+
+  withSync(syncBuilder: SyncBuilder): this {
+    this.syncBuilder = syncBuilder;
     return this;
   }
 
@@ -209,7 +216,7 @@ export class ReactorBuilder {
       : new ReadModelCoordinator(eventBus, readModelInstances);
     readModelCoordinator.start();
 
-    return new Reactor(
+    const reactor = new Reactor(
       driveServer,
       storage,
       queue,
@@ -220,5 +227,18 @@ export class ReactorBuilder {
       documentIndexer,
       operationStore,
     );
+
+    if (this.syncBuilder) {
+      const syncManager = this.syncBuilder.build(
+        reactor,
+        operationIndex,
+        eventBus,
+        db as unknown as Kysely<StorageDatabase>,
+      );
+      reactor.setSync(syncManager);
+      await syncManager.startup();
+    }
+
+    return reactor;
   }
 }

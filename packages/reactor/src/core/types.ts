@@ -21,6 +21,7 @@ import type {
   DocumentIndexerDatabase,
   Database as StorageDatabase,
 } from "../storage/kysely/types.js";
+import type { ISyncManager } from "../sync/interfaces.js";
 
 /**
  * A single mutation job within a batch request.
@@ -56,6 +57,11 @@ export type BatchMutationResult = {
  * Phase 2 of the refactoring plan: IReactor Facade (Strangler Fig Pattern)
  */
 export interface IReactor {
+  /**
+   * Gets the sync manager if synchronization is enabled.
+   */
+  get syncManager(): ISyncManager | undefined;
+
   /**
    * Signals that the reactor should shutdown.
    */

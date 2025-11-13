@@ -33,6 +33,7 @@ import type {
   IDocumentView,
   IOperationStore,
 } from "../storage/interfaces.js";
+import type { ISyncManager } from "../sync/interfaces.js";
 import type {
   BatchMutationRequest,
   BatchMutationResult,
@@ -65,6 +66,7 @@ export class Reactor implements IReactor {
   private documentView: IDocumentView;
   private documentIndexer: IDocumentIndexer;
   private operationStore: IOperationStore;
+  private _syncManager?: ISyncManager;
 
   constructor(
     driveServer: BaseDocumentDriveServer,
@@ -97,12 +99,25 @@ export class Reactor implements IReactor {
     this.setShutdown = setter;
   }
 
+  get syncManager(): ISyncManager | undefined {
+    return this._syncManager;
+  }
+
+  setSync(syncManager: ISyncManager): void {
+    this._syncManager = syncManager;
+  }
+
   /**
    * Signals that the reactor should shutdown.
    */
   kill(): ShutdownStatus {
     // Mark the reactor as shutdown
     this.setShutdown(true);
+
+    // Stop the sync manager if enabled
+    if (this._syncManager) {
+      this._syncManager.shutdown();
+    }
 
     // Stop the read model coordinator
     this.readModelCoordinator.stop();

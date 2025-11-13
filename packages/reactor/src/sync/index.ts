@@ -31,5 +31,6 @@ export { ChannelError, InternalChannelError } from "./errors.js";
 export { InternalChannel } from "./channels/index.js";
 
 export { SyncManager } from "./sync-manager.js";
+export { SyncBuilder } from "./sync-builder.js";
 
 export { createIdleHealth, filterOperations } from "./utils.js";
