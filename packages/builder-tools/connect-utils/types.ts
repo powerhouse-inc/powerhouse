@@ -7,6 +7,7 @@ export type IConnectOptions = {
   envDir?: string;
   powerhouseConfig?: PowerhouseConfig;
   localPackage?: string | false; // path to local package to be loaded.
+  watchTimeout?: number;
 };
 
 // Re-export types from env-config

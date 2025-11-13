@@ -103,6 +103,44 @@ export function phExternalPackagesPlugin(phPackages: string[]) {
         return makeImportScriptFromPackages(phPackages);
       }
     },
+    handleHotUpdate({ file, server, modules }) {
+      // Check if the changed file is part of any local package
+      const isLocalPackageFile = phPackages.some((pkg) => {
+        if (pkg.startsWith("/") || pkg.startsWith(".")) {
+          return file.startsWith(pkg);
+        }
+        return false;
+      });
+
+      if (!isLocalPackageFile) {
+        return undefined;
+      }
+
+      const virtualModule = server.moduleGraph.getModuleById(
+        resolvedVirtualModuleId,
+      );
+
+      if (!virtualModule) {
+        return undefined;
+      }
+
+      // Deduplicate modules by file path, preferring modules with defined IDs
+      const modulesByFile = new Map<string, (typeof modules)[0]>();
+      for (const module of modules) {
+        if (module.file) {
+          const existing = modulesByFile.get(module.file);
+          // Prefer modules with defined IDs over ones without IDs
+          if (!existing || (module.id && !existing.id)) {
+            modulesByFile.set(module.file, module);
+          }
+        }
+      }
+      const deduplicatedModules = Array.from(modulesByFile.values()).filter(
+        (m) => m.id && m.id !== resolvedVirtualModuleId,
+      );
+
+      return deduplicatedModules;
+    },
   };
 
   return plugin;

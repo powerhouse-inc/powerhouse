@@ -606,6 +606,9 @@ importers:
       react-hook-form:
         specifier: ^7.56.1
         version: 7.66.0(react@19.2.0)
+      read-pkg:
+        specifier: ^9.0.1
+        version: 9.0.1
       resolve.exports:
         specifier: ^2.0.3
         version: 2.0.3
@@ -711,7 +714,7 @@ importers:
     dependencies:
       '@acaldas/graphql-codegen-typescript-validation-schema':
         specifier: ^0.12.4
-        version: 0.12.4(graphql@16.12.0)
+        version: 0.12.4(encoding@0.1.13)(graphql@16.12.0)
       '@anatine/zod-mock':
         specifier: ^3.13.3
         version: 3.14.0(@faker-js/faker@8.4.1)(zod@3.25.76)
@@ -1895,7 +1898,7 @@ importers:
     dependencies:
       '@sky-ph/atlas':
         specifier: 2.0.0-canary.1
-        version: 2.0.0-canary.1(5c10180c53267da2008c795f76af7e8f)
+        version: 2.0.0-canary.1(e363cdc44c332bde4b0dfd2580e31a96)
       document-drive:
         specifier: link:../../../document-drive
         version: link:../../../document-drive
@@ -20807,7 +20810,7 @@ packages:
 
 snapshots:
 
-  '@acaldas/graphql-codegen-typescript-validation-schema@0.12.4(graphql@16.12.0)':
+  '@acaldas/graphql-codegen-typescript-validation-schema@0.12.4(encoding@0.1.13)(graphql@16.12.0)':
     dependencies:
       '@graphql-codegen/plugin-helpers': 5.1.1(graphql@16.12.0)
       '@graphql-codegen/schema-ast': 4.0.0(graphql@16.12.0)
@@ -27725,7 +27728,7 @@ snapshots:
       - supports-color
       - tedious
 
-  '@powerhousedao/builder-tools@4.1.0-dev.114(2d93d249d8c29b8bc3e9c413e4f6a482)':
+  '@powerhousedao/builder-tools@4.1.0-dev.114(40efebc019d8a0f2f2fe20c76e38d1c9)':
     dependencies:
       '@codemirror/autocomplete': 6.18.6
       '@codemirror/commands': 6.8.1
@@ -27850,10 +27853,10 @@ snapshots:
       - vite
       - ws
 
-  '@powerhousedao/common@4.1.0-dev.114(f2cb69653d7154c89b4765f6b61318a9)':
+  '@powerhousedao/common@4.1.0-dev.114(e9305147517dca4563f7f490c2c6d9ce)':
     dependencies:
       '@powerhousedao/analytics-engine-core': 0.5.0
-      '@powerhousedao/builder-tools': 4.1.0-dev.114(2d93d249d8c29b8bc3e9c413e4f6a482)
+      '@powerhousedao/builder-tools': 4.1.0-dev.114(40efebc019d8a0f2f2fe20c76e38d1c9)
       '@powerhousedao/design-system': 4.1.0-dev.114(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@tanstack/react-virtual': 3.13.12(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@types/luxon': 3.7.1
@@ -29659,10 +29662,10 @@ snapshots:
     dependencies:
       '@sinonjs/commons': 3.0.1
 
-  '@sky-ph/atlas@2.0.0-canary.1(5c10180c53267da2008c795f76af7e8f)':
+  '@sky-ph/atlas@2.0.0-canary.1(e363cdc44c332bde4b0dfd2580e31a96)':
     dependencies:
       '@hookform/resolvers': 3.10.0(react-hook-form@7.66.0(react@19.2.0))
-      '@powerhousedao/common': 4.1.0-dev.114(f2cb69653d7154c89b4765f6b61318a9)
+      '@powerhousedao/common': 4.1.0-dev.114(e9305147517dca4563f7f490c2c6d9ce)
       '@powerhousedao/design-system': 4.1.0-dev.114(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@powerhousedao/document-engineering': 1.22.0(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@powerhousedao/reactor-browser': 4.1.0-dev.114(@powerhousedao/analytics-engine-knex@0.6.0(@powerhousedao/analytics-engine-core@0.5.0))(@types/node@24.10.0)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)
