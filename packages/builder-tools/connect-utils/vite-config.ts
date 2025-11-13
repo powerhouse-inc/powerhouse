@@ -292,9 +292,11 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     },
     plugins,
     resolve: {
-      alias: {
-        [packageJson.name]: options.dirname,
-      },
+      alias: localPackage
+        ? {
+            [packageJson.name]: localPackage,
+          }
+        : undefined,
       dedupe: ["react", "react-dom", "react/jsx-runtime"],
     },
     build: {
