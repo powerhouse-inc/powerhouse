@@ -25,6 +25,7 @@
     "test:watch": "vitest --coverage",
     "lint": "eslint",
     "bench": "vitest bench --run",
+    "bench:sync": "node --import tsx bench/two-reactor-sync.bench.ts",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules",
     "claude": "pnpm build && pnpm test && npx prettier --write \"**/*.ts\" && pnpm lint",
@@ -47,6 +48,7 @@
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^3.2.4",
+    "tinybench": "^2.9.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "vitest": "^3.2.4"
