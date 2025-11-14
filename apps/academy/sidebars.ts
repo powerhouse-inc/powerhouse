@@ -12,6 +12,14 @@ const sidebars = {
   // By default, Docusaurus generates a sidebar from the docs folder structure
   academySidebar: [
     {
+      type: "doc",
+      id: "academy/EthereumArgentinaHackathon",
+      label: "ETH Argentina Hackathon",
+      customProps: {
+        icon: "/img/ethereum-logo.jpg",
+      },
+    },
+    {
       type: "category",
       label: "Get started",
       link: {
