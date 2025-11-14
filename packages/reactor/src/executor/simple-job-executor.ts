@@ -38,6 +38,8 @@ import {
   getNextIndexForScope,
 } from "./util.js";
 
+const MAX_SKIP_THRESHOLD = 100;
+
 /**
  * Simple job executor that processes a job by applying actions through document model reducers.
  *
@@ -1142,6 +1144,18 @@ export class SimpleJobExecutor implements IJobExecutor {
       minIncomingIndex === Number.POSITIVE_INFINITY
         ? 0
         : Math.max(0, latestRevision - minIncomingIndex);
+
+    if (skipCount > MAX_SKIP_THRESHOLD) {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          `Excessive reshuffle detected: skip count of ${skipCount} exceeds threshold of ${MAX_SKIP_THRESHOLD}. ` +
+            `This indicates an attempt to insert an operation at index ${minIncomingIndex} when the latest revision is ${latestRevision}.`,
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
 
     const reshuffledOperations = reshuffleByTimestampAndIndex(
       {

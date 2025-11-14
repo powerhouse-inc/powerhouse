@@ -374,9 +374,7 @@ bench
         const docA = await reactorA.get(docId, { branch: "main" });
         const docB = await reactorB.get(docId, { branch: "main" });
         if (JSON.stringify(docA.document) !== JSON.stringify(docB.document)) {
-          throw new Error(
-            `Documents ${docId} not synced with deep hierarchy`,
-          );
+          throw new Error(`Documents ${docId} not synced with deep hierarchy`);
         }
       }
     },

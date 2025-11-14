@@ -536,4 +536,60 @@ describe("Two-Reactor Sync Integration", () => {
 
     expect(docFromA.document).toEqual(docFromB.document);
   }, 15000);
+
+  it("should trigger excessive reshuffle error when loading operation with index far in the past", async () => {
+    const testReactor = await new ReactorBuilder()
+      .withDocumentModels([driveDocumentModelModule as any])
+      .build();
+
+    try {
+      const document = driveDocumentModelModule.utils.createDocument();
+      const createJobInfo = await testReactor.create(document);
+      await waitForJobCompletion(testReactor, createJobInfo.id);
+
+      const actions = [];
+      for (let i = 0; i < 150; i++) {
+        actions.push(
+          driveDocumentModelModule.actions.setDriveName({ name: `Drive ${i}` }),
+        );
+      }
+
+      const mutateJobInfo = await testReactor.mutate(
+        document.header.id,
+        "main",
+        actions,
+      );
+      await waitForJobCompletion(testReactor, mutateJobInfo.id);
+
+      const operations = await testReactor.getOperations(document.header.id, {
+        branch: "main",
+      });
+      const globalOps = operations.global.results;
+
+      expect(globalOps.length).toBe(150);
+
+      const latestIndex = Math.max(...globalOps.map((op) => op.index));
+      expect(latestIndex).toBeGreaterThanOrEqual(149);
+
+      const oldOperation = {
+        ...globalOps[0],
+        index: 0,
+        timestampUtcMs: new Date(Date.now() - 1000000).toISOString(),
+      };
+
+      const loadJobInfo = await testReactor.load(document.header.id, "main", [
+        oldOperation,
+      ]);
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const status = await testReactor.getJobStatus(loadJobInfo.id);
+
+      expect(status.status).toBe(JobStatus.FAILED);
+      expect(status.error?.message).toContain("Excessive reshuffle detected");
+      expect(status.error?.message).toContain("exceeds threshold of 100");
+    } finally {
+      testReactor.kill();
+    }
+  }, 15000);
 });
