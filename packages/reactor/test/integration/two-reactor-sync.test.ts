@@ -79,6 +79,38 @@ async function waitForOperationsReady(
   });
 }
 
+async function waitForMultipleOperationsReady(
+  eventBus: IEventBus,
+  expectedCount: number,
+  timeoutMs = 5000,
+): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    let count = 0;
+
+    const timeout = setTimeout(() => {
+      unsubscribe();
+      reject(
+        new Error(
+          `Expected ${expectedCount} OPERATIONS_READY events but received ${count} within ${timeoutMs}ms`,
+        ),
+      );
+    }, timeoutMs);
+
+    const unsubscribe = eventBus.subscribe(
+      OperationEventTypes.OPERATIONS_READY,
+      () => {
+        count++;
+
+        if (count >= expectedCount) {
+          clearTimeout(timeout);
+          unsubscribe();
+          resolve();
+        }
+      },
+    );
+  });
+}
+
 async function setupTwoReactors(): Promise<TwoReactorSetup> {
   const channelRegistry = new Map<string, InternalChannel>();
   const peerMapping = new Map<string, string>();
@@ -248,4 +280,137 @@ describe("Two-Reactor Sync Integration", () => {
 
     expect(docA.document).toEqual(docB.document);
   });
+
+  it("should sync multiple documents with concurrent operations from both reactors", async () => {
+    const docA = driveDocumentModelModule.utils.createDocument();
+    const docB = driveDocumentModelModule.utils.createDocument();
+    const docC = driveDocumentModelModule.utils.createDocument();
+    const docD = driveDocumentModelModule.utils.createDocument();
+
+    const waitForCreatesA = waitForMultipleOperationsReady(eventBusA, 2, 10000);
+    const waitForCreatesB = waitForMultipleOperationsReady(eventBusB, 2, 10000);
+
+    void reactorA.create(docA);
+    void reactorB.create(docC);
+    void reactorA.create(docB);
+    void reactorB.create(docD);
+
+    await waitForCreatesA;
+    await waitForCreatesB;
+
+    const waitForMutatesA = waitForMultipleOperationsReady(eventBusA, 2, 10000);
+    const waitForMutatesB = waitForMultipleOperationsReady(eventBusB, 2, 10000);
+
+    void reactorA.mutate(docA.header.id, "main", [
+      driveDocumentModelModule.actions.setDriveName({ name: "Drive A1" }),
+      driveDocumentModelModule.actions.addFolder({
+        id: "folder-a1",
+        name: "Folder A1",
+        parentFolder: null,
+      }),
+    ]);
+
+    void reactorB.mutate(docC.header.id, "main", [
+      driveDocumentModelModule.actions.setDriveName({ name: "Drive C1" }),
+      driveDocumentModelModule.actions.addFolder({
+        id: "folder-c1",
+        name: "Folder C1",
+        parentFolder: null,
+      }),
+    ]);
+
+    void reactorA.mutate(docB.header.id, "main", [
+      driveDocumentModelModule.actions.setDriveIcon({ icon: "icon-b1" }),
+      driveDocumentModelModule.actions.addFolder({
+        id: "folder-b1",
+        name: "Folder B1",
+        parentFolder: null,
+      }),
+    ]);
+
+    void reactorB.mutate(docD.header.id, "main", [
+      driveDocumentModelModule.actions.setDriveName({ name: "Drive D1" }),
+      driveDocumentModelModule.actions.updateNode({
+        id: docD.header.id,
+        name: "Updated D1",
+      }),
+    ]);
+
+    void reactorA.mutate(docA.header.id, "main", [
+      driveDocumentModelModule.actions.addFile({
+        id: "file-a1",
+        name: "File A1",
+        documentType: "powerhouse/document-model",
+        parentFolder: "folder-a1",
+      }),
+    ]);
+
+    void reactorB.mutate(docC.header.id, "main", [
+      driveDocumentModelModule.actions.addFile({
+        id: "file-c1",
+        name: "File C1",
+        documentType: "powerhouse/document-model",
+        parentFolder: "folder-c1",
+      }),
+    ]);
+
+    void reactorA.mutate(docB.header.id, "main", [
+      driveDocumentModelModule.actions.updateFile({
+        id: "file-b1",
+        name: "Updated File B1",
+      }),
+    ]);
+
+    void reactorB.mutate(docD.header.id, "main", [
+      driveDocumentModelModule.actions.setDriveIcon({ icon: "icon-d1" }),
+    ]);
+
+    void reactorA.mutate(docA.header.id, "main", [
+      driveDocumentModelModule.actions.updateNode({
+        id: "folder-a1",
+        name: "Updated Folder A1",
+      }),
+    ]);
+
+    void reactorB.mutate(docC.header.id, "main", [
+      driveDocumentModelModule.actions.updateFile({
+        id: "file-c1",
+        name: "Updated File C1",
+      }),
+    ]);
+
+    await waitForMutatesA;
+    await waitForMutatesB;
+
+    const documents = [
+      { id: docA.header.id, name: "docA" },
+      { id: docB.header.id, name: "docB" },
+      { id: docC.header.id, name: "docC" },
+      { id: docD.header.id, name: "docD" },
+    ];
+
+    for (const doc of documents) {
+      const resultA = await reactorA.getOperations(doc.id, {
+        branch: "main",
+      });
+      const opsA = Object.values(resultA).flatMap((scope) => scope.results);
+
+      const resultB = await reactorB.getOperations(doc.id, {
+        branch: "main",
+      });
+      const opsB = Object.values(resultB).flatMap((scope) => scope.results);
+
+      expect(opsA.length).toBeGreaterThan(0);
+      expect(opsB.length).toBe(opsA.length);
+
+      for (let i = 0; i < opsA.length; i++) {
+        expect(opsB[i]).toEqual(opsA[i]);
+      }
+
+      const docFromA = await reactorA.get(doc.id, { branch: "main" });
+      const docFromB = await reactorB.get(doc.id, { branch: "main" });
+
+      expect(docFromA.document).toEqual(docFromB.document);
+    }
+  }, 15000);
 });
