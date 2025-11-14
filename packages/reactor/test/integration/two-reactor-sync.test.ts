@@ -2,6 +2,12 @@ import { driveDocumentModelModule } from "document-drive";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { IReactor } from "../../src/core/types.js";
+import { EventBus } from "../../src/events/event-bus.js";
+import type { IEventBus } from "../../src/events/interfaces.js";
+import {
+  OperationEventTypes,
+  type OperationsReadyEvent,
+} from "../../src/events/types.js";
 import { JobStatus } from "../../src/shared/types.js";
 import type { ISyncCursorStorage } from "../../src/storage/interfaces.js";
 import { InternalChannel } from "../../src/sync/channels/internal-channel.js";
@@ -13,6 +19,8 @@ type TwoReactorSetup = {
   reactorA: IReactor;
   reactorB: IReactor;
   channelRegistry: Map<string, InternalChannel>;
+  eventBusA: IEventBus;
+  eventBusB: IEventBus;
 };
 
 async function waitForJobCompletion(
@@ -39,35 +47,36 @@ async function waitForJobCompletion(
   throw new Error(`Job did not complete within ${timeoutMs}ms`);
 }
 
-async function waitForOperationsToSync(
-  reactor: IReactor,
+async function waitForOperationsReady(
+  eventBus: IEventBus,
   documentId: string,
-  expectedCount: number,
   timeoutMs = 2000,
 ): Promise<void> {
-  const startTime = Date.now();
+  return new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      unsubscribe();
+      reject(
+        new Error(
+          `OPERATIONS_READY event for document ${documentId} not received within ${timeoutMs}ms`,
+        ),
+      );
+    }, timeoutMs);
 
-  while (Date.now() - startTime < timeoutMs) {
-    try {
-      const result = await reactor.getOperations(documentId, {
-        branch: "main",
-      });
+    const unsubscribe = eventBus.subscribe(
+      OperationEventTypes.OPERATIONS_READY,
+      (type: number, event: OperationsReadyEvent) => {
+        const hasDocument = event.operations.some(
+          (op) => op.context.documentId === documentId,
+        );
 
-      const ops = Object.values(result).flatMap((scope) => scope.results);
-
-      if (ops.length >= expectedCount) {
-        return;
-      }
-    } catch {
-      // Document might not exist yet
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-
-  throw new Error(
-    `Operations did not sync to reactor within ${timeoutMs}ms. Expected ${expectedCount} operations for document ${documentId}`,
-  );
+        if (hasDocument) {
+          clearTimeout(timeout);
+          unsubscribe();
+          resolve();
+        }
+      },
+    );
+  });
 }
 
 async function setupTwoReactors(): Promise<TwoReactorSetup> {
@@ -111,11 +120,16 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
     };
   };
 
+  const eventBusA = new EventBus();
+  const eventBusB = new EventBus();
+
   const reactorA = await new ReactorBuilder()
+    .withEventBus(eventBusA)
     .withSync(new SyncBuilder().withChannelFactory(createChannelFactory()))
     .build();
 
   const reactorB = await new ReactorBuilder()
+    .withEventBus(eventBusB)
     .withSync(new SyncBuilder().withChannelFactory(createChannelFactory()))
     .build();
 
@@ -151,17 +165,21 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
     },
   );
 
-  return { reactorA, reactorB, channelRegistry };
+  return { reactorA, reactorB, channelRegistry, eventBusA, eventBusB };
 }
 
 describe("Two-Reactor Sync Integration", () => {
   let reactorA: IReactor;
   let reactorB: IReactor;
+  let eventBusA: IEventBus;
+  let eventBusB: IEventBus;
 
   beforeEach(async () => {
     const setup = await setupTwoReactors();
     reactorA = setup.reactorA;
     reactorB = setup.reactorB;
+    eventBusA = setup.eventBusA;
+    eventBusB = setup.eventBusB;
   });
 
   afterEach(() => {
@@ -180,7 +198,7 @@ describe("Two-Reactor Sync Integration", () => {
     });
     const opsA = Object.values(resultA).flatMap((scope) => scope.results);
 
-    await waitForOperationsToSync(reactorB, document.header.id, opsA.length);
+    await waitForOperationsReady(eventBusB, document.header.id);
 
     const resultB = await reactorB.getOperations(document.header.id, {
       branch: "main",
@@ -211,7 +229,7 @@ describe("Two-Reactor Sync Integration", () => {
     });
     const opsB = Object.values(resultB).flatMap((scope) => scope.results);
 
-    await waitForOperationsToSync(reactorA, document.header.id, opsB.length);
+    await waitForOperationsReady(eventBusA, document.header.id);
 
     const resultA = await reactorA.getOperations(document.header.id, {
       branch: "main",

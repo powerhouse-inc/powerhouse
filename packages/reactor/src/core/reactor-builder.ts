@@ -58,6 +58,7 @@ export class ReactorBuilder {
   private readModelCoordinatorFactory?: IReadModelCoordinatorFactory;
   private migrationStrategy: MigrationStrategy = "auto";
   private syncBuilder?: SyncBuilder;
+  private eventBus?: IEventBus;
 
   withDocumentModels(models: DocumentModelModule[]): this {
     this.documentModels = models;
@@ -111,6 +112,11 @@ export class ReactorBuilder {
     return this;
   }
 
+  withEventBus(eventBus: IEventBus): this {
+    this.eventBus = eventBus;
+    return this;
+  }
+
   async build(): Promise<IReactor> {
     const storage = this.storage || new MemoryStorage();
 
@@ -144,7 +150,7 @@ export class ReactorBuilder {
       db as unknown as Kysely<StorageDatabase>,
     );
 
-    const eventBus = new EventBus();
+    const eventBus = this.eventBus || new EventBus();
     const queue = new InMemoryQueue(eventBus);
     const jobTracker = new InMemoryJobTracker();
 

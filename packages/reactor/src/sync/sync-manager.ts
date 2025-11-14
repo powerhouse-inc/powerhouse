@@ -6,7 +6,12 @@ import {
   OperationEventTypes,
   type OperationWrittenEvent,
 } from "../events/types.js";
-import { JobStatus, type ShutdownStatus } from "../shared/types.js";
+import {
+  JobStatus,
+  type JobInfo,
+  type ShutdownStatus,
+} from "../shared/types.js";
+import { JobAwaiter } from "../shared/awaiter.js";
 import type {
   ISyncCursorStorage,
   ISyncRemoteStorage,
@@ -32,8 +37,11 @@ export class SyncManager implements ISyncManager {
   private readonly reactor: IReactor;
   private readonly eventBus: IEventBus;
   private readonly remotes: Map<string, Remote>;
+  private readonly awaiter: JobAwaiter;
   private isShutdown: boolean;
   private eventUnsubscribe?: () => void;
+
+  public loadJobs: Map<string, JobInfo> = new Map();
 
   constructor(
     remoteStorage: ISyncRemoteStorage,
@@ -50,6 +58,9 @@ export class SyncManager implements ISyncManager {
     this.reactor = reactor;
     this.eventBus = eventBus;
     this.remotes = new Map();
+    this.awaiter = new JobAwaiter((jobId, signal) =>
+      reactor.getJobStatus(jobId, signal),
+    );
     this.isShutdown = false;
   }
 
@@ -239,9 +250,9 @@ export class SyncManager implements ISyncManager {
   ): Promise<void> {
     const operations: Operation[] = syncOp.operations.map((op) => op.operation);
 
-    let result;
+    let jobInfo;
     try {
-      result = await this.reactor.load(
+      jobInfo = await this.reactor.load(
         syncOp.documentId,
         syncOp.branch,
         operations,
@@ -255,11 +266,26 @@ export class SyncManager implements ISyncManager {
       return;
     }
 
-    if (result.status === JobStatus.FAILED) {
+    let completedJobInfo;
+    try {
+      completedJobInfo = await this.awaiter.waitForJob(jobInfo.id);
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      const channelError = new ChannelError(ChannelErrorSource.Inbox, err);
+      syncOp.failed(channelError);
+      remote.channel.deadLetter.add(syncOp);
+      remote.channel.inbox.remove(syncOp);
+      return;
+    }
+
+    const jobKey = `${syncOp.documentId}:${syncOp.branch}`;
+    this.loadJobs.set(jobKey, completedJobInfo);
+
+    if (completedJobInfo.status === JobStatus.FAILED) {
       const error = new ChannelError(
         ChannelErrorSource.Inbox,
         new Error(
-          `Failed to apply operations: ${result.error?.message || "Unknown error"}`,
+          `Failed to apply operations: ${completedJobInfo.error?.message || "Unknown error"}`,
         ),
       );
       syncOp.failed(error);

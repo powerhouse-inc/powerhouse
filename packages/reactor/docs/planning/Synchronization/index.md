@@ -629,6 +629,36 @@ stateDiagram-v2
 
 The ACK flow is described in Pull, Push, and Ping-Pong flows above. Essentially, the receiver sends an ACK, which removes the sync operation from the outbox of the original sender. It indicates an ACK by using the `type` field of the `SyncEnvelope`.
 
+## Read Model Integration
+
+When operations are loaded via `reactor.load()` (either from local mutations or synced from remotes), they flow through the reactor's event system to update read models:
+
+### Event Flow
+
+1. **OPERATION_WRITTEN** - Emitted after operations are written to the operation store
+   - Triggered by: `SimpleJobExecutor` after successful job completion
+   - Subscribers: `SyncManager` (for outbound sync), `ReadModelCoordinator` (for read model updates)
+   - Payload: `{ operations: OperationWithContext[] }`
+
+2. **OPERATIONS_READY** - Emitted after all read models have finished indexing
+   - Triggered by: `ReadModelCoordinator` after all read models complete `indexOperations()`
+   - Guarantees: All read models (DocumentView, DocumentIndexer, etc.) have processed the operations
+   - Payload: `{ operations: OperationWithContext[] }`
+   - Use cases: Test synchronization, observability, event-driven workflows
+
+### Read-After-Write Consistency
+
+For production code requiring read-after-write consistency across the write/read boundary:
+
+- **Use consistency tokens**: Pass the `JobInfo.consistencyToken` from completed jobs to query methods (`reactor.get()`, `reactor.find()`, etc.)
+- **Tokens guarantee**: Queries block until read models have indexed up to the specified operation indices
+
+For test code where deterministic ordering is sufficient:
+
+- **Use OPERATIONS_READY event**: Subscribe to know when read models have finished processing
+- **Simpler than tokens**: No need to track job completion or extract tokens
+- **Event-driven**: Natural fit for test frameworks using async/await
+
 ## Error Handling and Recovery
 
 ### Error Taxonomy
