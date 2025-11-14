@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { InternalChannel } from "../../../../src/sync/channels/internal-channel.js";
-import { JobHandle } from "../../../../src/sync/job-handle.js";
+import { SyncOperation } from "../../../../src/sync/sync-operation.js";
 import {
   ChannelErrorSource,
-  JobChannelStatus,
+  SyncOperationStatus,
   type SyncEnvelope,
 } from "../../../../src/sync/types.js";
 import { ChannelError } from "../../../../src/sync/errors.js";
@@ -26,8 +26,11 @@ const createMockOperationContext = (): OperationContext => ({
   branch: "main",
 });
 
-const createMockJobHandle = (id: string, remoteName: string): JobHandle => {
-  return new JobHandle(id, remoteName, "doc-1", ["public"], "main", [
+const createMockSyncOperation = (
+  id: string,
+  remoteName: string,
+): SyncOperation => {
+  return new SyncOperation(id, remoteName, "doc-1", ["public"], "main", [
     {
       operation: {
         index: 0,
@@ -92,7 +95,7 @@ describe("InternalChannel", () => {
         sendFn,
       );
 
-      const job = createMockJobHandle("job-1", "remote-1");
+      const job = createMockSyncOperation("job-1", "remote-1");
       channel.outbox.add(job);
 
       expect(sendFn).toHaveBeenCalledTimes(1);
@@ -112,20 +115,20 @@ describe("InternalChannel", () => {
         sendFn,
       );
 
-      const job = createMockJobHandle("job-1", "remote-1");
+      const job = createMockSyncOperation("job-1", "remote-1");
       const statusCallback = vi.fn();
       job.on(statusCallback);
 
-      expect(job.status).toBe(JobChannelStatus.Unknown);
+      expect(job.status).toBe(SyncOperationStatus.Unknown);
 
       channel.outbox.add(job);
 
-      expect(job.status).toBe(JobChannelStatus.TransportPending);
+      expect(job.status).toBe(SyncOperationStatus.TransportPending);
       expect(statusCallback).toHaveBeenCalledTimes(1);
       expect(statusCallback).toHaveBeenCalledWith(
         job,
-        JobChannelStatus.Unknown,
-        JobChannelStatus.TransportPending,
+        SyncOperationStatus.Unknown,
+        SyncOperationStatus.TransportPending,
       );
     });
 
@@ -139,9 +142,9 @@ describe("InternalChannel", () => {
         sendFn,
       );
 
-      const job1 = createMockJobHandle("job-1", "remote-1");
-      const job2 = createMockJobHandle("job-2", "remote-1");
-      const job3 = createMockJobHandle("job-3", "remote-1");
+      const job1 = createMockSyncOperation("job-1", "remote-1");
+      const job2 = createMockSyncOperation("job-2", "remote-1");
+      const job3 = createMockSyncOperation("job-3", "remote-1");
 
       channel.outbox.add(job1);
       channel.outbox.add(job2);
@@ -192,7 +195,7 @@ describe("InternalChannel", () => {
       const job = channel.inbox.items[0];
       expect(job.remoteName).toBe("remote-1");
       expect(job.documentId).toBe("doc-1");
-      expect(job.status).toBe(JobChannelStatus.ExecutionPending);
+      expect(job.status).toBe(SyncOperationStatus.ExecutionPending);
     });
 
     it("should throw error when receiving after shutdown", () => {
@@ -257,13 +260,13 @@ describe("InternalChannel", () => {
         (envelope) => channel1.receive(envelope),
       );
 
-      const job = createMockJobHandle("job-1", "remote-1");
+      const job = createMockSyncOperation("job-1", "remote-1");
       channel1.outbox.add(job);
 
       expect(channel2.inbox.items).toHaveLength(1);
       expect(channel2.inbox.items[0].remoteName).toBe("remote-2");
       expect(channel2.inbox.items[0].status).toBe(
-        JobChannelStatus.ExecutionPending,
+        SyncOperationStatus.ExecutionPending,
       );
     });
   });
@@ -348,11 +351,11 @@ describe("InternalChannel", () => {
       channel.receive(envelope);
 
       const job = channel.inbox.items[0];
-      expect(job.status).toBe(JobChannelStatus.ExecutionPending);
+      expect(job.status).toBe(SyncOperationStatus.ExecutionPending);
 
       job.executed();
 
-      expect(job.status).toBe(JobChannelStatus.Applied);
+      expect(job.status).toBe(SyncOperationStatus.Applied);
     });
 
     it("should allow jobs to be marked as failed", () => {
@@ -398,7 +401,7 @@ describe("InternalChannel", () => {
       );
       job.failed(error);
 
-      expect(job.status).toBe(JobChannelStatus.Error);
+      expect(job.status).toBe(SyncOperationStatus.Error);
       expect(job.error).toBe(error);
     });
 
@@ -558,10 +561,10 @@ describe("InternalChannel", () => {
         sendFn,
       );
 
-      const job = createMockJobHandle("job-1", "remote-1");
+      const job = createMockSyncOperation("job-1", "remote-1");
       channel.outbox.add(job);
 
-      expect(job.status).toBe(JobChannelStatus.Error);
+      expect(job.status).toBe(SyncOperationStatus.Error);
       expect(channel.deadLetter.items).toHaveLength(1);
       expect(channel.outbox.items).toHaveLength(0);
     });
@@ -634,7 +637,7 @@ describe("InternalChannel", () => {
 
       channel.shutdown();
 
-      const job = createMockJobHandle("job-1", "remote-1");
+      const job = createMockSyncOperation("job-1", "remote-1");
       channel.outbox.add(job);
 
       expect(sendFn).not.toHaveBeenCalled();
@@ -650,7 +653,7 @@ describe("InternalChannel", () => {
         sendFn,
       );
 
-      const job = createMockJobHandle("job-1", "remote-1");
+      const job = createMockSyncOperation("job-1", "remote-1");
       channel.outbox.add(job);
 
       channel.shutdown();

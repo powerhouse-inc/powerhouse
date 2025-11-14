@@ -17,7 +17,7 @@ import type { InternalChannel } from "../../../src/sync/channels/internal-channe
 import type { IChannelFactory } from "../../../src/sync/interfaces.js";
 import { SyncManager } from "../../../src/sync/sync-manager.js";
 import type { ChannelConfig } from "../../../src/sync/types.js";
-import { JobChannelStatus } from "../../../src/sync/types.js";
+import { SyncOperationStatus } from "../../../src/sync/types.js";
 import {
   createTestChannelFactory,
   createTestSyncStorage,
@@ -474,7 +474,7 @@ describe("SyncManager Integration", () => {
       const remote = syncManager.get("remote1");
       expect(remote.channel.deadLetter.items).toHaveLength(1);
       expect(remote.channel.deadLetter.items[0].status).toBe(
-        JobChannelStatus.Error,
+        SyncOperationStatus.Error,
       );
     });
   });

@@ -30,7 +30,7 @@ export type SyncEnvelope = {
   cursor?: RemoteCursor;
 };
 
-export enum JobChannelStatus {
+export enum SyncOperationStatus {
   Unknown = -1,
   TransportPending = 0,
   ExecutionPending = 1,
@@ -45,7 +45,7 @@ export enum ChannelErrorSource {
   Outbox = "outbox",
 }
 
-export type JobErrorType =
+export type SyncOperationErrorType =
   | "SIGNATURE_INVALID"
   | "HASH_MISMATCH"
   | "LIBRARY_ERROR"

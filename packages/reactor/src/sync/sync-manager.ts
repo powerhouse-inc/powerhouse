@@ -13,7 +13,7 @@ import type {
 } from "../storage/interfaces.js";
 import { ChannelError } from "./errors.js";
 import type { IChannelFactory, ISyncManager, Remote } from "./interfaces.js";
-import { JobHandle } from "./job-handle.js";
+import { SyncOperation } from "./sync-operation.js";
 import type {
   ChannelConfig,
   RemoteFilter,
@@ -21,7 +21,7 @@ import type {
   RemoteRecord,
   RemoteStatus,
 } from "./types.js";
-import { ChannelErrorSource, JobChannelStatus } from "./types.js";
+import { ChannelErrorSource, SyncOperationStatus } from "./types.js";
 import { createIdleHealth, filterOperations } from "./utils.js";
 
 export class SyncManager implements ISyncManager {
@@ -182,12 +182,12 @@ export class SyncManager implements ISyncManager {
   }
 
   private wireChannelCallbacks(remote: Remote): void {
-    remote.channel.inbox.onAdded((job) => {
-      this.handleInboxJob(remote, job);
+    remote.channel.inbox.onAdded((syncOp) => {
+      this.handleInboxJob(remote, syncOp);
     });
 
-    remote.channel.outbox.onAdded((job) => {
-      this.handleOutboxJob(remote, job);
+    remote.channel.outbox.onAdded((syncOp) => {
+      this.handleOutboxJob(remote, syncOp);
     });
   }
 
@@ -202,7 +202,7 @@ export class SyncManager implements ISyncManager {
         continue;
       }
 
-      const job = new JobHandle(
+      const syncOp = new SyncOperation(
         crypto.randomUUID(),
         remote.name,
         filteredOps[0].context.documentId,
@@ -211,40 +211,47 @@ export class SyncManager implements ISyncManager {
         filteredOps,
       );
 
-      remote.channel.outbox.add(job);
+      remote.channel.outbox.add(syncOp);
     }
   }
 
-  private handleInboxJob(remote: Remote, job: JobHandle): void {
+  private handleInboxJob(remote: Remote, syncOp: SyncOperation): void {
     if (this.isShutdown) {
       return;
     }
 
-    void this.applyInboxJob(remote, job);
+    void this.applyInboxJob(remote, syncOp);
   }
 
-  private handleOutboxJob(remote: Remote, job: JobHandle): void {
-    job.on((job, _prev, next) => {
-      if (next === JobChannelStatus.Applied) {
-        remote.channel.outbox.remove(job);
-      } else if (next === JobChannelStatus.Error) {
-        remote.channel.outbox.remove(job);
+  private handleOutboxJob(remote: Remote, syncOp: SyncOperation): void {
+    syncOp.on((syncOp, _prev, next) => {
+      if (next === SyncOperationStatus.Applied) {
+        remote.channel.outbox.remove(syncOp);
+      } else if (next === SyncOperationStatus.Error) {
+        remote.channel.outbox.remove(syncOp);
       }
     });
   }
 
-  private async applyInboxJob(remote: Remote, job: JobHandle): Promise<void> {
-    const operations: Operation[] = job.operations.map((op) => op.operation);
+  private async applyInboxJob(
+    remote: Remote,
+    syncOp: SyncOperation,
+  ): Promise<void> {
+    const operations: Operation[] = syncOp.operations.map((op) => op.operation);
 
     let result;
     try {
-      result = await this.reactor.load(job.documentId, job.branch, operations);
+      result = await this.reactor.load(
+        syncOp.documentId,
+        syncOp.branch,
+        operations,
+      );
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
       const channelError = new ChannelError(ChannelErrorSource.Inbox, err);
-      job.failed(channelError);
-      remote.channel.deadLetter.add(job);
-      remote.channel.inbox.remove(job);
+      syncOp.failed(channelError);
+      remote.channel.deadLetter.add(syncOp);
+      remote.channel.inbox.remove(syncOp);
       return;
     }
 
@@ -255,12 +262,12 @@ export class SyncManager implements ISyncManager {
           `Failed to apply operations: ${result.error?.message || "Unknown error"}`,
         ),
       );
-      job.failed(error);
-      remote.channel.deadLetter.add(job);
+      syncOp.failed(error);
+      remote.channel.deadLetter.add(syncOp);
     } else {
-      job.executed();
+      syncOp.executed();
     }
 
-    remote.channel.inbox.remove(job);
+    remote.channel.inbox.remove(syncOp);
   }
 }

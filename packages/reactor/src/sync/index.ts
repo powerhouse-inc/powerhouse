@@ -10,7 +10,7 @@ export type { ShutdownStatus } from "../shared/types.js";
 export type {
   ChannelConfig,
   ChannelHealth,
-  JobErrorType,
+  SyncOperationErrorType,
   RemoteFilter,
   RemoteOptions,
   RemoteRecord,
@@ -21,9 +21,12 @@ export type {
   ChannelMeta,
 } from "./types.js";
 
-export { ChannelErrorSource, JobChannelStatus } from "./types.js";
+export { ChannelErrorSource, SyncOperationStatus } from "./types.js";
 
-export { JobHandle } from "./job-handle.js";
+export {
+  SyncOperation,
+  SyncOperationAggregateError,
+} from "./sync-operation.js";
 export { Mailbox, type MailboxItem } from "./mailbox.js";
 
 export { ChannelError, InternalChannelError } from "./errors.js";

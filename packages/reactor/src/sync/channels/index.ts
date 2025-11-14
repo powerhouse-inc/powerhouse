@@ -1,2 +1,2 @@
 export { InternalChannel } from "./internal-channel.js";
-export { envelopeToJobHandle } from "./utils.js";
+export { envelopeToSyncOperation } from "./utils.js";

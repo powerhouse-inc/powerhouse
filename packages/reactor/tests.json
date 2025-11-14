@@ -7988,224 +7988,224 @@
     }
   },
   {
-    "text": "This unit test validates that initialize with correct properties. It is part of the JobHandle within constructor test suite. Located in unit.test.ts. Test name: \"should initialize with correct properties\".",
+    "text": "This unit test validates that initialize with correct properties. It is part of the SyncOperation within constructor test suite. Located in unit.test.ts. Test name: \"should initialize with correct properties\".",
     "metadata": {
       "test_name": "should initialize with correct properties",
-      "file": "test/sync/job-handle/unit.test.ts",
+      "file": "test/sync/sync-operation/unit.test.ts",
       "suite_hierarchy": [
-        "JobHandle",
+        "SyncOperation",
         "constructor"
       ],
       "test_type": "unit",
-      "full_test_path": "test/sync/job-handle/unit.test.ts > JobHandle > constructor > should initialize with correct properties"
+      "full_test_path": "test/sync/sync-operation/unit.test.ts > JobHandle > constructor > should initialize with correct properties"
     }
   },
   {
-    "text": "This unit test validates that transition from Unknown to TransportPending. It is part of the JobHandle within state transitions test suite. Located in unit.test.ts. Test name: \"should transition from Unknown to TransportPending\".",
+    "text": "This unit test validates that transition from Unknown to TransportPending. It is part of the SyncOperation within state transitions test suite. Located in unit.test.ts. Test name: \"should transition from Unknown to TransportPending\".",
     "metadata": {
       "test_name": "should transition from Unknown to TransportPending",
-      "file": "test/sync/job-handle/unit.test.ts",
+      "file": "test/sync/sync-operation/unit.test.ts",
       "suite_hierarchy": [
-        "JobHandle",
+        "SyncOperation",
         "state transitions"
       ],
       "test_type": "unit",
-      "full_test_path": "test/sync/job-handle/unit.test.ts > JobHandle > state transitions > should transition from Unknown to TransportPending"
+      "full_test_path": "test/sync/sync-operation/unit.test.ts > JobHandle > state transitions > should transition from Unknown to TransportPending"
     }
   },
   {
-    "text": "This unit test validates that transition from TransportPending to ExecutionPending. It is part of the JobHandle within state transitions test suite. Located in unit.test.ts. Test name: \"should transition from TransportPending to ExecutionPending\".",
+    "text": "This unit test validates that transition from TransportPending to ExecutionPending. It is part of the SyncOperation within state transitions test suite. Located in unit.test.ts. Test name: \"should transition from TransportPending to ExecutionPending\".",
     "metadata": {
       "test_name": "should transition from TransportPending to ExecutionPending",
-      "file": "test/sync/job-handle/unit.test.ts",
+      "file": "test/sync/sync-operation/unit.test.ts",
       "suite_hierarchy": [
-        "JobHandle",
+        "SyncOperation",
         "state transitions"
       ],
       "test_type": "unit",
-      "full_test_path": "test/sync/job-handle/unit.test.ts > JobHandle > state transitions > should transition from TransportPending to ExecutionPending"
+      "full_test_path": "test/sync/sync-operation/unit.test.ts > JobHandle > state transitions > should transition from TransportPending to ExecutionPending"
     }
   },
   {
-    "text": "This unit test validates that transition from ExecutionPending to Applied. It is part of the JobHandle within state transitions test suite. Located in unit.test.ts. Test name: \"should transition from ExecutionPending to Applied\".",
+    "text": "This unit test validates that transition from ExecutionPending to Applied. It is part of the SyncOperation within state transitions test suite. Located in unit.test.ts. Test name: \"should transition from ExecutionPending to Applied\".",
     "metadata": {
       "test_name": "should transition from ExecutionPending to Applied",
-      "file": "test/sync/job-handle/unit.test.ts",
+      "file": "test/sync/sync-operation/unit.test.ts",
       "suite_hierarchy": [
-        "JobHandle",
+        "SyncOperation",
         "state transitions"
       ],
       "test_type": "unit",
-      "full_test_path": "test/sync/job-handle/unit.test.ts > JobHandle > state transitions > should transition from ExecutionPending to Applied"
+      "full_test_path": "test/sync/sync-operation/unit.test.ts > JobHandle > state transitions > should transition from ExecutionPending to Applied"
     }
   },
   {
-    "text": "This unit test validates that transition to Error from any state. It is part of the JobHandle within state transitions test suite. Located in unit.test.ts. Test name: \"should transition to Error from any state\".",
+    "text": "This unit test validates that transition to Error from any state. It is part of the SyncOperation within state transitions test suite. Located in unit.test.ts. Test name: \"should transition to Error from any state\".",
     "metadata": {
       "test_name": "should transition to Error from any state",
-      "file": "test/sync/job-handle/unit.test.ts",
+      "file": "test/sync/sync-operation/unit.test.ts",
       "suite_hierarchy": [
-        "JobHandle",
+        "SyncOperation",
         "state transitions"
       ],
       "test_type": "unit",
-      "full_test_path": "test/sync/job-handle/unit.test.ts > JobHandle > state transitions > should transition to Error from any state"
+      "full_test_path": "test/sync/sync-operation/unit.test.ts > JobHandle > state transitions > should transition to Error from any state"
     }
   },
   {
-    "text": "This unit test validates that complete full lifecycle: Unknown -> TransportPending -> ExecutionPending -> Applied. It is part of the JobHandle within state transitions test suite. Located in unit.test.ts. Test name: \"should complete full lifecycle: Unknown -> TransportPending -> ExecutionPending -> Applied\".",
+    "text": "This unit test validates that complete full lifecycle: Unknown -> TransportPending -> ExecutionPending -> Applied. It is part of the SyncOperation within state transitions test suite. Located in unit.test.ts. Test name: \"should complete full lifecycle: Unknown -> TransportPending -> ExecutionPending -> Applied\".",
     "metadata": {
       "test_name": "should complete full lifecycle: Unknown -> TransportPending -> ExecutionPending -> Applied",
-      "file": "test/sync/job-handle/unit.test.ts",
+      "file": "test/sync/sync-operation/unit.test.ts",
       "suite_hierarchy": [
-        "JobHandle",
+        "SyncOperation",
         "state transitions"
       ],
       "test_type": "unit",
-      "full_test_path": "test/sync/job-handle/unit.test.ts > JobHandle > state transitions > should complete full lifecycle: Unknown -> TransportPending -> ExecutionPending -> Applied"
+      "full_test_path": "test/sync/sync-operation/unit.test.ts > JobHandle > state transitions > should complete full lifecycle: Unknown -> TransportPending -> ExecutionPending -> Applied"
     }
   },
   {
-    "text": "This unit test validates that notify all registered callbacks on state change. It is part of the JobHandle within event subscription test suite. Located in unit.test.ts. Test name: \"should notify all registered callbacks on state change\".",
+    "text": "This unit test validates that notify all registered callbacks on state change. It is part of the SyncOperation within event subscription test suite. Located in unit.test.ts. Test name: \"should notify all registered callbacks on state change\".",
     "metadata": {
       "test_name": "should notify all registered callbacks on state change",
-      "file": "test/sync/job-handle/unit.test.ts",
+      "file": "test/sync/sync-operation/unit.test.ts",
       "suite_hierarchy": [
-        "JobHandle",
+        "SyncOperation",
         "event subscription"
       ],
       "test_type": "unit",
-      "full_test_path": "test/sync/job-handle/unit.test.ts > JobHandle > event subscription > should notify all registered callbacks on state change"
+      "full_test_path": "test/sync/sync-operation/unit.test.ts > JobHandle > event subscription > should notify all registered callbacks on state change"
     }
   },
   {
-    "text": "This unit test validates that call callbacks in registration order. It is part of the JobHandle within event subscription test suite. Located in unit.test.ts. Test name: \"should call callbacks in registration order\".",
+    "text": "This unit test validates that call callbacks in registration order. It is part of the SyncOperation within event subscription test suite. Located in unit.test.ts. Test name: \"should call callbacks in registration order\".",
     "metadata": {
       "test_name": "should call callbacks in registration order",
-      "file": "test/sync/job-handle/unit.test.ts",
+      "file": "test/sync/sync-operation/unit.test.ts",
       "suite_hierarchy": [
-        "JobHandle",
+        "SyncOperation",
         "event subscription"
       ],
       "test_type": "unit",
-      "full_test_path": "test/sync/job-handle/unit.test.ts > JobHandle > event subscription > should call callbacks in registration order"
+      "full_test_path": "test/sync/sync-operation/unit.test.ts > JobHandle > event subscription > should call callbacks in registration order"
     }
   },
   {
-    "text": "This unit test validates that include previous and next status in callback. It is part of the JobHandle within event subscription test suite. Located in unit.test.ts. Test name: \"should include previous and next status in callback\".",
+    "text": "This unit test validates that include previous and next status in callback. It is part of the SyncOperation within event subscription test suite. Located in unit.test.ts. Test name: \"should include previous and next status in callback\".",
     "metadata": {
       "test_name": "should include previous and next status in callback",
-      "file": "test/sync/job-handle/unit.test.ts",
+      "file": "test/sync/sync-operation/unit.test.ts",
       "suite_hierarchy": [
-        "JobHandle",
+        "SyncOperation",
         "event subscription"
       ],
       "test_type": "unit",
-      "full_test_path": "test/sync/job-handle/unit.test.ts > JobHandle > event subscription > should include previous and next status in callback"
+      "full_test_path": "test/sync/sync-operation/unit.test.ts > JobHandle > event subscription > should include previous and next status in callback"
     }
   },
   {
-    "text": "This unit test validates that handle callbacks registered after state changes. It is part of the JobHandle within event subscription test suite. Located in unit.test.ts. Test name: \"should handle callbacks registered after state changes\".",
+    "text": "This unit test validates that handle callbacks registered after state changes. It is part of the SyncOperation within event subscription test suite. Located in unit.test.ts. Test name: \"should handle callbacks registered after state changes\".",
     "metadata": {
       "test_name": "should handle callbacks registered after state changes",
-      "file": "test/sync/job-handle/unit.test.ts",
+      "file": "test/sync/sync-operation/unit.test.ts",
       "suite_hierarchy": [
-        "JobHandle",
+        "SyncOperation",
         "event subscription"
       ],
       "test_type": "unit",
-      "full_test_path": "test/sync/job-handle/unit.test.ts > JobHandle > event subscription > should handle callbacks registered after state changes"
+      "full_test_path": "test/sync/sync-operation/unit.test.ts > JobHandle > event subscription > should handle callbacks registered after state changes"
     }
   },
   {
-    "text": "This unit test validates that store error when failed. It is part of the JobHandle within error handling test suite. Located in unit.test.ts. Test name: \"should store error when failed\".",
+    "text": "This unit test validates that store error when failed. It is part of the SyncOperation within error handling test suite. Located in unit.test.ts. Test name: \"should store error when failed\".",
     "metadata": {
       "test_name": "should store error when failed",
-      "file": "test/sync/job-handle/unit.test.ts",
+      "file": "test/sync/sync-operation/unit.test.ts",
       "suite_hierarchy": [
-        "JobHandle",
+        "SyncOperation",
         "error handling"
       ],
       "test_type": "unit",
-      "full_test_path": "test/sync/job-handle/unit.test.ts > JobHandle > error handling > should store error when failed"
+      "full_test_path": "test/sync/sync-operation/unit.test.ts > JobHandle > error handling > should store error when failed"
     }
   },
   {
-    "text": "This unit test validates that notify callbacks when error occurs. It is part of the JobHandle within error handling test suite. Located in unit.test.ts. Test name: \"should notify callbacks when error occurs\".",
+    "text": "This unit test validates that notify callbacks when error occurs. It is part of the SyncOperation within error handling test suite. Located in unit.test.ts. Test name: \"should notify callbacks when error occurs\".",
     "metadata": {
       "test_name": "should notify callbacks when error occurs",
-      "file": "test/sync/job-handle/unit.test.ts",
+      "file": "test/sync/sync-operation/unit.test.ts",
       "suite_hierarchy": [
-        "JobHandle",
+        "SyncOperation",
         "error handling"
       ],
       "test_type": "unit",
-      "full_test_path": "test/sync/job-handle/unit.test.ts > JobHandle > error handling > should notify callbacks when error occurs"
+      "full_test_path": "test/sync/sync-operation/unit.test.ts > JobHandle > error handling > should notify callbacks when error occurs"
     }
   },
   {
-    "text": "This unit test validates that transition to error from TransportPending. It is part of the JobHandle within error handling test suite. Located in unit.test.ts. Test name: \"should transition to error from TransportPending\".",
+    "text": "This unit test validates that transition to error from TransportPending. It is part of the SyncOperation within error handling test suite. Located in unit.test.ts. Test name: \"should transition to error from TransportPending\".",
     "metadata": {
       "test_name": "should transition to error from TransportPending",
-      "file": "test/sync/job-handle/unit.test.ts",
+      "file": "test/sync/sync-operation/unit.test.ts",
       "suite_hierarchy": [
-        "JobHandle",
+        "SyncOperation",
         "error handling"
       ],
       "test_type": "unit",
-      "full_test_path": "test/sync/job-handle/unit.test.ts > JobHandle > error handling > should transition to error from TransportPending"
+      "full_test_path": "test/sync/sync-operation/unit.test.ts > JobHandle > error handling > should transition to error from TransportPending"
     }
   },
   {
-    "text": "This unit test validates that transition to error from ExecutionPending. It is part of the JobHandle within error handling test suite. Located in unit.test.ts. Test name: \"should transition to error from ExecutionPending\".",
+    "text": "This unit test validates that transition to error from ExecutionPending. It is part of the SyncOperation within error handling test suite. Located in unit.test.ts. Test name: \"should transition to error from ExecutionPending\".",
     "metadata": {
       "test_name": "should transition to error from ExecutionPending",
-      "file": "test/sync/job-handle/unit.test.ts",
+      "file": "test/sync/sync-operation/unit.test.ts",
       "suite_hierarchy": [
-        "JobHandle",
+        "SyncOperation",
         "error handling"
       ],
       "test_type": "unit",
-      "full_test_path": "test/sync/job-handle/unit.test.ts > JobHandle > error handling > should transition to error from ExecutionPending"
+      "full_test_path": "test/sync/sync-operation/unit.test.ts > JobHandle > error handling > should transition to error from ExecutionPending"
     }
   },
   {
-    "text": "This unit test validates that have readonly properties. It is part of the JobHandle within immutability test suite. Located in unit.test.ts. Test name: \"should have readonly properties\".",
+    "text": "This unit test validates that have readonly properties. It is part of the SyncOperation within immutability test suite. Located in unit.test.ts. Test name: \"should have readonly properties\".",
     "metadata": {
       "test_name": "should have readonly properties",
-      "file": "test/sync/job-handle/unit.test.ts",
+      "file": "test/sync/sync-operation/unit.test.ts",
       "suite_hierarchy": [
-        "JobHandle",
+        "SyncOperation",
         "immutability"
       ],
       "test_type": "unit",
-      "full_test_path": "test/sync/job-handle/unit.test.ts > JobHandle > immutability > should have readonly properties"
+      "full_test_path": "test/sync/sync-operation/unit.test.ts > JobHandle > immutability > should have readonly properties"
     }
   },
   {
-    "text": "This unit test validates that handle multiple scopes. It is part of the JobHandle within multiple scopes test suite. Located in unit.test.ts. Test name: \"should handle multiple scopes\".",
+    "text": "This unit test validates that handle multiple scopes. It is part of the SyncOperation within multiple scopes test suite. Located in unit.test.ts. Test name: \"should handle multiple scopes\".",
     "metadata": {
       "test_name": "should handle multiple scopes",
-      "file": "test/sync/job-handle/unit.test.ts",
+      "file": "test/sync/sync-operation/unit.test.ts",
       "suite_hierarchy": [
-        "JobHandle",
+        "SyncOperation",
         "multiple scopes"
       ],
       "test_type": "unit",
-      "full_test_path": "test/sync/job-handle/unit.test.ts > JobHandle > multiple scopes > should handle multiple scopes"
+      "full_test_path": "test/sync/sync-operation/unit.test.ts > JobHandle > multiple scopes > should handle multiple scopes"
     }
   },
   {
-    "text": "This unit test validates that handle empty scopes array. It is part of the JobHandle within multiple scopes test suite. Located in unit.test.ts. Test name: \"should handle empty scopes array\".",
+    "text": "This unit test validates that handle empty scopes array. It is part of the SyncOperation within multiple scopes test suite. Located in unit.test.ts. Test name: \"should handle empty scopes array\".",
     "metadata": {
       "test_name": "should handle empty scopes array",
-      "file": "test/sync/job-handle/unit.test.ts",
+      "file": "test/sync/sync-operation/unit.test.ts",
       "suite_hierarchy": [
-        "JobHandle",
+        "SyncOperation",
         "multiple scopes"
       ],
       "test_type": "unit",
-      "full_test_path": "test/sync/job-handle/unit.test.ts > JobHandle > multiple scopes > should handle empty scopes array"
+      "full_test_path": "test/sync/sync-operation/unit.test.ts > JobHandle > multiple scopes > should handle empty scopes array"
     }
   },
   {

@@ -1,13 +1,13 @@
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { InternalChannel } from "../../../../src/sync/channels/internal-channel.js";
-import { JobHandle } from "../../../../src/sync/job-handle.js";
+import { SyncOperation } from "../../../../src/sync/sync-operation.js";
 import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
 import type { KyselySyncRemoteStorage } from "../../../../src/storage/kysely/sync-remote-storage.js";
 import type { Database } from "../../../../src/storage/kysely/types.js";
 import type { OperationContext } from "../../../../src/storage/interfaces.js";
 import type { RemoteRecord } from "../../../../src/sync/types.js";
-import { JobChannelStatus } from "../../../../src/sync/types.js";
+import { SyncOperationStatus } from "../../../../src/sync/types.js";
 import { createTestSyncStorage } from "../../../factories.js";
 
 describe("InternalChannel Integration", () => {
@@ -22,12 +22,12 @@ describe("InternalChannel Integration", () => {
     branch: "main",
   });
 
-  const createMockJobHandle = (
+  const createMockSyncOperation = (
     id: string,
     remoteName: string,
     ordinal: number,
-  ): JobHandle => {
-    return new JobHandle(id, remoteName, "doc-1", ["public"], "main", [
+  ): SyncOperation => {
+    return new SyncOperation(id, remoteName, "doc-1", ["public"], "main", [
       {
         operation: {
           index: ordinal,
@@ -104,8 +104,8 @@ describe("InternalChannel Integration", () => {
         (envelope) => channelA.receive(envelope),
       );
 
-      const jobFromA = createMockJobHandle("job-a-1", "remote-a", 1);
-      const jobFromB = createMockJobHandle("job-b-1", "remote-b", 1);
+      const jobFromA = createMockSyncOperation("job-a-1", "remote-a", 1);
+      const jobFromB = createMockSyncOperation("job-b-1", "remote-b", 1);
 
       channelA.outbox.add(jobFromA);
       channelB.outbox.add(jobFromB);
@@ -113,13 +113,13 @@ describe("InternalChannel Integration", () => {
       expect(channelB.inbox.items).toHaveLength(1);
       expect(channelB.inbox.items[0].remoteName).toBe("remote-b");
       expect(channelB.inbox.items[0].status).toBe(
-        JobChannelStatus.ExecutionPending,
+        SyncOperationStatus.ExecutionPending,
       );
 
       expect(channelA.inbox.items).toHaveLength(1);
       expect(channelA.inbox.items[0].remoteName).toBe("remote-a");
       expect(channelA.inbox.items[0].status).toBe(
-        JobChannelStatus.ExecutionPending,
+        SyncOperationStatus.ExecutionPending,
       );
     });
 
@@ -175,18 +175,18 @@ describe("InternalChannel Integration", () => {
         (envelope) => channelA.receive(envelope),
       );
 
-      const job1 = createMockJobHandle("job-1", "remote-a", 1);
-      const job2 = createMockJobHandle("job-2", "remote-a", 2);
-      const job3 = createMockJobHandle("job-3", "remote-a", 3);
+      const job1 = createMockSyncOperation("job-1", "remote-a", 1);
+      const job2 = createMockSyncOperation("job-2", "remote-a", 2);
+      const job3 = createMockSyncOperation("job-3", "remote-a", 3);
 
       channelA.outbox.add(job1);
       channelA.outbox.add(job2);
       channelA.outbox.add(job3);
 
       expect(channelB.inbox.items).toHaveLength(3);
-      expect(channelB.inbox.items[0].id).toContain("job-");
-      expect(channelB.inbox.items[1].id).toContain("job-");
-      expect(channelB.inbox.items[2].id).toContain("job-");
+      expect(channelB.inbox.items[0].id).toContain("syncop-");
+      expect(channelB.inbox.items[1].id).toContain("syncop-");
+      expect(channelB.inbox.items[2].id).toContain("syncop-");
     });
   });
 
@@ -212,7 +212,7 @@ describe("InternalChannel Integration", () => {
       );
 
       const jobs = Array.from({ length: 5 }, (_, i) =>
-        createMockJobHandle(`job-${i}`, "remote-a", i),
+        createMockSyncOperation(`job-${i}`, "remote-a", i),
       );
 
       jobs.forEach((job) => channelA.outbox.add(job));
@@ -248,7 +248,7 @@ describe("InternalChannel Integration", () => {
       );
 
       const jobs = Array.from({ length: 3 }, (_, i) =>
-        createMockJobHandle(`job-${i}`, "remote-a", i + 1),
+        createMockSyncOperation(`job-${i}`, "remote-a", i + 1),
       );
 
       jobs.forEach((job) => channelA.outbox.add(job));
@@ -281,7 +281,7 @@ describe("InternalChannel Integration", () => {
         (envelope) => channelA.receive(envelope),
       );
 
-      const job = createMockJobHandle("job-1", "remote-a", 1);
+      const job = createMockSyncOperation("job-1", "remote-a", 1);
 
       channelA.outbox.add(job);
 
@@ -320,7 +320,7 @@ describe("InternalChannel Integration", () => {
         (envelope) => channelA.receive(envelope),
       );
 
-      const job = createMockJobHandle("job-1", "remote-a", 1);
+      const job = createMockSyncOperation("job-1", "remote-a", 1);
 
       channelA.outbox.add(job);
 
@@ -339,7 +339,7 @@ describe("InternalChannel Integration", () => {
       expect(channelB.inbox.items).toHaveLength(0);
       expect(channelB.deadLetter.items).toHaveLength(1);
       expect(channelB.deadLetter.items[0].id).toBe(receivedJob.id);
-      expect(receivedJob.status).toBe(JobChannelStatus.Error);
+      expect(receivedJob.status).toBe(SyncOperationStatus.Error);
     });
 
     it("should not advance cursor on failure", async () => {
@@ -364,7 +364,7 @@ describe("InternalChannel Integration", () => {
 
       await channelB.updateCursor(5);
 
-      const job = createMockJobHandle("job-1", "remote-a", 6);
+      const job = createMockSyncOperation("job-1", "remote-a", 6);
       channelA.outbox.add(job);
 
       const receivedJob = channelB.inbox.items[0];

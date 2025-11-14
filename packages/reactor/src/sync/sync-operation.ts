@@ -1,37 +1,37 @@
 import type { OperationWithContext } from "../storage/interfaces.js";
 import type { ChannelError } from "./errors.js";
-import { JobChannelStatus } from "./types.js";
+import { SyncOperationStatus } from "./types.js";
 
-type JobStatusCallback = (
-  job: JobHandle,
-  prev: JobChannelStatus,
-  next: JobChannelStatus,
+type SyncOperationStatusCallback = (
+  syncOp: SyncOperation,
+  prev: SyncOperationStatus,
+  next: SyncOperationStatus,
 ) => void;
 
-export class JobHandleAggregateError extends Error {
+export class SyncOperationAggregateError extends Error {
   errors: Error[];
 
   constructor(errors: Error[]) {
     const messages = errors.map((e) => e.message).join("; ");
     super(
-      `JobHandle callback failed with ${errors.length} error(s): ${messages}`,
+      `SyncOperation callback failed with ${errors.length} error(s): ${messages}`,
     );
-    this.name = "JobHandleAggregateError";
+    this.name = "SyncOperationAggregateError";
     this.errors = errors;
   }
 }
 
-export class JobHandle {
+export class SyncOperation {
   readonly id: string;
   readonly remoteName: string;
   readonly documentId: string;
   readonly scopes: string[];
   readonly branch: string;
   readonly operations: OperationWithContext[];
-  status: JobChannelStatus;
+  status: SyncOperationStatus;
   error?: ChannelError;
 
-  private callbacks: JobStatusCallback[] = [];
+  private callbacks: SyncOperationStatusCallback[] = [];
 
   constructor(
     id: string,
@@ -47,31 +47,31 @@ export class JobHandle {
     this.scopes = scopes;
     this.branch = branch;
     this.operations = operations;
-    this.status = JobChannelStatus.Unknown;
+    this.status = SyncOperationStatus.Unknown;
   }
 
-  on(callback: JobStatusCallback): void {
+  on(callback: SyncOperationStatusCallback): void {
     this.callbacks.push(callback);
   }
 
   started(): void {
-    this.transition(JobChannelStatus.TransportPending);
+    this.transition(SyncOperationStatus.TransportPending);
   }
 
   transported(): void {
-    this.transition(JobChannelStatus.ExecutionPending);
+    this.transition(SyncOperationStatus.ExecutionPending);
   }
 
   executed(): void {
-    this.transition(JobChannelStatus.Applied);
+    this.transition(SyncOperationStatus.Applied);
   }
 
   failed(error: ChannelError): void {
     this.error = error;
-    this.transition(JobChannelStatus.Error);
+    this.transition(SyncOperationStatus.Error);
   }
 
-  private transition(next: JobChannelStatus): void {
+  private transition(next: SyncOperationStatus): void {
     const prev = this.status;
     this.status = next;
     const errors: Error[] = [];
@@ -83,7 +83,7 @@ export class JobHandle {
       }
     }
     if (errors.length > 0) {
-      throw new JobHandleAggregateError(errors);
+      throw new SyncOperationAggregateError(errors);
     }
   }
 }

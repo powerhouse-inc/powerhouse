@@ -1,25 +1,27 @@
-import { JobHandle } from "../job-handle.js";
+import { SyncOperation } from "../sync-operation.js";
 import type { SyncEnvelope } from "../types.js";
 
-let jobCounter = 0;
+let syncOpCounter = 0;
 
 /**
- * Converts a SyncEnvelope containing operations into a JobHandle.
+ * Converts a SyncEnvelope containing operations into a SyncOperation.
  *
  * Extracts the necessary metadata from the envelope's operations to create
- * a job handle that can be processed by the receiving channel.
+ * a sync operation that can be processed by the receiving channel.
  *
  * @param envelope - The sync envelope containing operations
- * @param remoteName - The name of the remote this job is associated with
- * @returns A new JobHandle containing the envelope's operations
+ * @param remoteName - The name of the remote this sync operation is associated with
+ * @returns A new SyncOperation containing the envelope's operations
  * @throws Error if envelope has no operations or operations array is empty
  */
-export function envelopeToJobHandle(
+export function envelopeToSyncOperation(
   envelope: SyncEnvelope,
   remoteName: string,
-): JobHandle {
+): SyncOperation {
   if (!envelope.operations || envelope.operations.length === 0) {
-    throw new Error("Cannot create JobHandle from envelope without operations");
+    throw new Error(
+      "Cannot create SyncOperation from envelope without operations",
+    );
   }
 
   const operations = envelope.operations;
@@ -28,10 +30,10 @@ export function envelopeToJobHandle(
   const branch = firstOp.context.branch;
   const scopes = [...new Set(operations.map((op) => op.context.scope))];
 
-  const jobId = `job-${envelope.channelMeta.id}-${Date.now()}-${jobCounter++}`;
+  const syncOpId = `syncop-${envelope.channelMeta.id}-${Date.now()}-${syncOpCounter++}`;
 
-  return new JobHandle(
-    jobId,
+  return new SyncOperation(
+    syncOpId,
     remoteName,
     documentId,
     scopes,

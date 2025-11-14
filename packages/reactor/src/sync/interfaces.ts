@@ -1,6 +1,6 @@
 import type { ShutdownStatus } from "../shared/types.js";
 import type { ISyncCursorStorage } from "../storage/interfaces.js";
-import type { JobHandle } from "./job-handle.js";
+import type { SyncOperation } from "./sync-operation.js";
 import type { Mailbox } from "./mailbox.js";
 import type { ChannelConfig, RemoteFilter, RemoteOptions } from "./types.js";
 
@@ -8,34 +8,34 @@ import type { ChannelConfig, RemoteFilter, RemoteOptions } from "./types.js";
  * Represents a bidirectional synchronization channel between two reactor instances.
  *
  * A channel manages three mailboxes:
- * - inbox: Jobs received from the remote that need to be applied locally
- * - outbox: Jobs to be sent to the remote
- * - deadLetter: Jobs that failed and cannot be retried
+ * - inbox: Sync operations received from the remote that need to be applied locally
+ * - outbox: Sync operations to be sent to the remote
+ * - deadLetter: Sync operations that failed and cannot be retried
  *
  * Channels are responsible for:
  * - Transporting sync envelopes between reactor instances
- * - Managing job lifecycle through status transitions
- * - Handling errors and moving failed jobs to dead letter queue
+ * - Managing sync operation lifecycle through status transitions
+ * - Handling errors and moving failed sync operations to dead letter queue
  * - Updating cursors as operations are applied
  */
 export interface IChannel {
   /**
-   * Mailbox containing jobs received from the remote that need to be applied locally.
-   * Consumers should register callbacks via onAdded to process incoming jobs.
+   * Mailbox containing sync operations received from the remote that need to be applied locally.
+   * Consumers should register callbacks via onAdded to process incoming sync operations.
    */
-  inbox: Mailbox<JobHandle>;
+  inbox: Mailbox<SyncOperation>;
 
   /**
-   * Mailbox containing jobs that need to be sent to the remote.
-   * The channel is responsible for transporting these jobs and handling ACKs.
+   * Mailbox containing sync operations that need to be sent to the remote.
+   * The channel is responsible for transporting these sync operations and handling ACKs.
    */
-  outbox: Mailbox<JobHandle>;
+  outbox: Mailbox<SyncOperation>;
 
   /**
-   * Mailbox containing jobs that failed and cannot be retried.
-   * These jobs require manual intervention or should be logged for debugging.
+   * Mailbox containing sync operations that failed and cannot be retried.
+   * These sync operations require manual intervention or should be logged for debugging.
    */
-  deadLetter: Mailbox<JobHandle>;
+  deadLetter: Mailbox<SyncOperation>;
 
   /**
    * Shuts down the channel and prevents further operations.
@@ -154,7 +154,7 @@ export interface ISyncManager {
    * Removes a remote and stops its channel.
    *
    * The remote configuration is removed from storage and the channel is shut down.
-   * Any pending jobs in the channel's mailboxes will be processed before shutdown.
+   * Any pending sync operations in the channel's mailboxes will be processed before shutdown.
    *
    * @param name - The name of the remote to remove
    * @returns Promise that resolves when the remote is removed

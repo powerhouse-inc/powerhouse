@@ -1,11 +1,11 @@
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import { ChannelError, InternalChannelError } from "../errors.js";
 import type { IChannel } from "../interfaces.js";
-import type { JobHandle } from "../job-handle.js";
+import type { SyncOperation } from "../sync-operation.js";
 import { Mailbox } from "../mailbox.js";
 import type { RemoteCursor, SyncEnvelope } from "../types.js";
 import { ChannelErrorSource } from "../types.js";
-import { envelopeToJobHandle } from "./utils.js";
+import { envelopeToSyncOperation } from "./utils.js";
 
 /**
  * In-memory synchronization channel for testing purposes only.
@@ -15,9 +15,9 @@ import { envelopeToJobHandle } from "./utils.js";
  * a send function that delivers envelopes to the peer's inbox.
  */
 export class InternalChannel implements IChannel {
-  readonly inbox: Mailbox<JobHandle>;
-  readonly outbox: Mailbox<JobHandle>;
-  readonly deadLetter: Mailbox<JobHandle>;
+  readonly inbox: Mailbox<SyncOperation>;
+  readonly outbox: Mailbox<SyncOperation>;
+  readonly deadLetter: Mailbox<SyncOperation>;
 
   private readonly channelId: string;
   private readonly remoteName: string;
@@ -37,12 +37,12 @@ export class InternalChannel implements IChannel {
     this.send = send;
     this.isShutdown = false;
 
-    this.inbox = new Mailbox<JobHandle>();
-    this.outbox = new Mailbox<JobHandle>();
-    this.deadLetter = new Mailbox<JobHandle>();
+    this.inbox = new Mailbox<SyncOperation>();
+    this.outbox = new Mailbox<SyncOperation>();
+    this.deadLetter = new Mailbox<SyncOperation>();
 
-    this.outbox.onAdded((job) => {
-      this.handleOutboxAdded(job);
+    this.outbox.onAdded((syncOp) => {
+      this.handleOutboxAdded(syncOp);
     });
   }
 
@@ -70,9 +70,9 @@ export class InternalChannel implements IChannel {
     }
 
     if (envelope.type === "operations" && envelope.operations) {
-      const job = envelopeToJobHandle(envelope, this.remoteName);
-      job.transported();
-      this.inbox.add(job);
+      const syncOp = envelopeToSyncOperation(envelope, this.remoteName);
+      syncOp.transported();
+      this.inbox.add(syncOp);
     }
   }
 
@@ -96,34 +96,34 @@ export class InternalChannel implements IChannel {
   }
 
   /**
-   * Handles jobs added to the outbox by sending them to the peer.
+   * Handles sync operations added to the outbox by sending them to the peer.
    *
    * This method is called automatically via the outbox.onAdded callback.
-   * It converts the job to a SyncEnvelope and sends it via the send function.
+   * It converts the sync operation to a SyncEnvelope and sends it via the send function.
    *
-   * @param job - The job to transport
+   * @param syncOp - The sync operation to transport
    */
-  private handleOutboxAdded(job: JobHandle): void {
+  private handleOutboxAdded(syncOp: SyncOperation): void {
     if (this.isShutdown) {
       return;
     }
 
     try {
-      job.started();
+      syncOp.started();
 
       const envelope: SyncEnvelope = {
         type: "operations",
         channelMeta: { id: this.channelId },
-        operations: job.operations,
+        operations: syncOp.operations,
       };
 
       this.send(envelope);
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
       const channelError = new ChannelError(ChannelErrorSource.Outbox, err);
-      job.failed(channelError);
-      this.deadLetter.add(job);
-      this.outbox.remove(job);
+      syncOp.failed(channelError);
+      this.deadLetter.add(syncOp);
+      this.outbox.remove(syncOp);
     }
   }
 }

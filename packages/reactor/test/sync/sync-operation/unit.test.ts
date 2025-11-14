@@ -1,16 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 import { ChannelError } from "../../../src/sync/errors.js";
 import {
-  JobHandle,
-  JobHandleAggregateError,
-} from "../../../src/sync/job-handle.js";
+  SyncOperation,
+  SyncOperationAggregateError,
+} from "../../../src/sync/sync-operation.js";
 import {
   ChannelErrorSource,
-  JobChannelStatus,
+  SyncOperationStatus,
 } from "../../../src/sync/types.js";
 import type { OperationWithContext } from "../../../src/storage/interfaces.js";
 
-describe("JobHandle", () => {
+describe("SyncOperation", () => {
   const createTestOperations = (): OperationWithContext[] => {
     return [
       {
@@ -42,7 +42,7 @@ describe("JobHandle", () => {
   describe("constructor", () => {
     it("should initialize with correct properties", () => {
       const operations = createTestOperations();
-      const handle = new JobHandle(
+      const handle = new SyncOperation(
         "job1",
         "remote1",
         "doc1",
@@ -57,14 +57,14 @@ describe("JobHandle", () => {
       expect(handle.scopes).toEqual(["global"]);
       expect(handle.branch).toBe("main");
       expect(handle.operations).toBe(operations);
-      expect(handle.status).toBe(JobChannelStatus.Unknown);
+      expect(handle.status).toBe(SyncOperationStatus.Unknown);
       expect(handle.error).toBeUndefined();
     });
   });
 
   describe("state transitions", () => {
     it("should transition from Unknown to TransportPending", () => {
-      const handle = new JobHandle(
+      const handle = new SyncOperation(
         "job1",
         "remote1",
         "doc1",
@@ -78,17 +78,17 @@ describe("JobHandle", () => {
 
       handle.started();
 
-      expect(handle.status).toBe(JobChannelStatus.TransportPending);
+      expect(handle.status).toBe(SyncOperationStatus.TransportPending);
       expect(callback).toHaveBeenCalledWith(
         handle,
-        JobChannelStatus.Unknown,
-        JobChannelStatus.TransportPending,
+        SyncOperationStatus.Unknown,
+        SyncOperationStatus.TransportPending,
       );
       expect(callback).toHaveBeenCalledTimes(1);
     });
 
     it("should transition from TransportPending to ExecutionPending", () => {
-      const handle = new JobHandle(
+      const handle = new SyncOperation(
         "job1",
         "remote1",
         "doc1",
@@ -104,17 +104,17 @@ describe("JobHandle", () => {
 
       handle.transported();
 
-      expect(handle.status).toBe(JobChannelStatus.ExecutionPending);
+      expect(handle.status).toBe(SyncOperationStatus.ExecutionPending);
       expect(callback).toHaveBeenCalledWith(
         handle,
-        JobChannelStatus.TransportPending,
-        JobChannelStatus.ExecutionPending,
+        SyncOperationStatus.TransportPending,
+        SyncOperationStatus.ExecutionPending,
       );
       expect(callback).toHaveBeenCalledTimes(1);
     });
 
     it("should transition from ExecutionPending to Applied", () => {
-      const handle = new JobHandle(
+      const handle = new SyncOperation(
         "job1",
         "remote1",
         "doc1",
@@ -131,17 +131,17 @@ describe("JobHandle", () => {
 
       handle.executed();
 
-      expect(handle.status).toBe(JobChannelStatus.Applied);
+      expect(handle.status).toBe(SyncOperationStatus.Applied);
       expect(callback).toHaveBeenCalledWith(
         handle,
-        JobChannelStatus.ExecutionPending,
-        JobChannelStatus.Applied,
+        SyncOperationStatus.ExecutionPending,
+        SyncOperationStatus.Applied,
       );
       expect(callback).toHaveBeenCalledTimes(1);
     });
 
     it("should transition to Error from any state", () => {
-      const handle = new JobHandle(
+      const handle = new SyncOperation(
         "job1",
         "remote1",
         "doc1",
@@ -161,18 +161,18 @@ describe("JobHandle", () => {
       );
       handle.failed(error);
 
-      expect(handle.status).toBe(JobChannelStatus.Error);
+      expect(handle.status).toBe(SyncOperationStatus.Error);
       expect(handle.error).toBe(error);
       expect(callback).toHaveBeenCalledWith(
         handle,
-        JobChannelStatus.TransportPending,
-        JobChannelStatus.Error,
+        SyncOperationStatus.TransportPending,
+        SyncOperationStatus.Error,
       );
       expect(callback).toHaveBeenCalledTimes(1);
     });
 
     it("should complete full lifecycle: Unknown -> TransportPending -> ExecutionPending -> Applied", () => {
-      const handle = new JobHandle(
+      const handle = new SyncOperation(
         "job1",
         "remote1",
         "doc1",
@@ -181,7 +181,7 @@ describe("JobHandle", () => {
         createTestOperations(),
       );
 
-      const states: JobChannelStatus[] = [];
+      const states: SyncOperationStatus[] = [];
       handle.on((job, prev, next) => {
         states.push(next);
       });
@@ -191,17 +191,17 @@ describe("JobHandle", () => {
       handle.executed();
 
       expect(states).toEqual([
-        JobChannelStatus.TransportPending,
-        JobChannelStatus.ExecutionPending,
-        JobChannelStatus.Applied,
+        SyncOperationStatus.TransportPending,
+        SyncOperationStatus.ExecutionPending,
+        SyncOperationStatus.Applied,
       ]);
-      expect(handle.status).toBe(JobChannelStatus.Applied);
+      expect(handle.status).toBe(SyncOperationStatus.Applied);
     });
   });
 
   describe("event subscription", () => {
     it("should notify all registered callbacks on state change", () => {
-      const handle = new JobHandle(
+      const handle = new SyncOperation(
         "job1",
         "remote1",
         "doc1",
@@ -226,13 +226,13 @@ describe("JobHandle", () => {
 
       expect(callback1).toHaveBeenCalledWith(
         handle,
-        JobChannelStatus.Unknown,
-        JobChannelStatus.TransportPending,
+        SyncOperationStatus.Unknown,
+        SyncOperationStatus.TransportPending,
       );
     });
 
     it("should call callbacks in registration order", () => {
-      const handle = new JobHandle(
+      const handle = new SyncOperation(
         "job1",
         "remote1",
         "doc1",
@@ -253,7 +253,7 @@ describe("JobHandle", () => {
     });
 
     it("should include previous and next status in callback", () => {
-      const handle = new JobHandle(
+      const handle = new SyncOperation(
         "job1",
         "remote1",
         "doc1",
@@ -263,8 +263,8 @@ describe("JobHandle", () => {
       );
 
       const transitions: Array<{
-        prev: JobChannelStatus;
-        next: JobChannelStatus;
+        prev: SyncOperationStatus;
+        next: SyncOperationStatus;
       }> = [];
 
       handle.on((job, prev, next) => {
@@ -277,22 +277,22 @@ describe("JobHandle", () => {
 
       expect(transitions).toEqual([
         {
-          prev: JobChannelStatus.Unknown,
-          next: JobChannelStatus.TransportPending,
+          prev: SyncOperationStatus.Unknown,
+          next: SyncOperationStatus.TransportPending,
         },
         {
-          prev: JobChannelStatus.TransportPending,
-          next: JobChannelStatus.ExecutionPending,
+          prev: SyncOperationStatus.TransportPending,
+          next: SyncOperationStatus.ExecutionPending,
         },
         {
-          prev: JobChannelStatus.ExecutionPending,
-          next: JobChannelStatus.Applied,
+          prev: SyncOperationStatus.ExecutionPending,
+          next: SyncOperationStatus.Applied,
         },
       ]);
     });
 
     it("should handle callbacks registered after state changes", () => {
-      const handle = new JobHandle(
+      const handle = new SyncOperation(
         "job1",
         "remote1",
         "doc1",
@@ -314,13 +314,13 @@ describe("JobHandle", () => {
       expect(callback).toHaveBeenCalledTimes(1);
       expect(callback).toHaveBeenCalledWith(
         handle,
-        JobChannelStatus.ExecutionPending,
-        JobChannelStatus.Applied,
+        SyncOperationStatus.ExecutionPending,
+        SyncOperationStatus.Applied,
       );
     });
 
     it("should guarantee delivery even if callbacks throw errors", () => {
-      const handle = new JobHandle(
+      const handle = new SyncOperation(
         "job1",
         "remote1",
         "doc1",
@@ -343,38 +343,38 @@ describe("JobHandle", () => {
       handle.on(callback3);
       handle.on(callback4);
 
-      expect(() => handle.started()).toThrow(JobHandleAggregateError);
+      expect(() => handle.started()).toThrow(SyncOperationAggregateError);
 
       expect(callback1).toHaveBeenCalledWith(
         handle,
-        JobChannelStatus.Unknown,
-        JobChannelStatus.TransportPending,
+        SyncOperationStatus.Unknown,
+        SyncOperationStatus.TransportPending,
       );
       expect(callback2).toHaveBeenCalledWith(
         handle,
-        JobChannelStatus.Unknown,
-        JobChannelStatus.TransportPending,
+        SyncOperationStatus.Unknown,
+        SyncOperationStatus.TransportPending,
       );
       expect(callback3).toHaveBeenCalledWith(
         handle,
-        JobChannelStatus.Unknown,
-        JobChannelStatus.TransportPending,
+        SyncOperationStatus.Unknown,
+        SyncOperationStatus.TransportPending,
       );
       expect(callback4).toHaveBeenCalledWith(
         handle,
-        JobChannelStatus.Unknown,
-        JobChannelStatus.TransportPending,
+        SyncOperationStatus.Unknown,
+        SyncOperationStatus.TransportPending,
       );
 
       try {
         handle.transported();
       } catch (error) {
-        expect(error).toBeInstanceOf(JobHandleAggregateError);
-        expect((error as JobHandleAggregateError).errors).toHaveLength(2);
-        expect((error as JobHandleAggregateError).errors[0].message).toBe(
+        expect(error).toBeInstanceOf(SyncOperationAggregateError);
+        expect((error as SyncOperationAggregateError).errors).toHaveLength(2);
+        expect((error as SyncOperationAggregateError).errors[0].message).toBe(
           "Callback 1 error",
         );
-        expect((error as JobHandleAggregateError).errors[1].message).toBe(
+        expect((error as SyncOperationAggregateError).errors[1].message).toBe(
           "Callback 3 error",
         );
       }
@@ -383,7 +383,7 @@ describe("JobHandle", () => {
 
   describe("error handling", () => {
     it("should store error when failed", () => {
-      const handle = new JobHandle(
+      const handle = new SyncOperation(
         "job1",
         "remote1",
         "doc1",
@@ -400,11 +400,11 @@ describe("JobHandle", () => {
       handle.failed(error);
 
       expect(handle.error).toBe(error);
-      expect(handle.status).toBe(JobChannelStatus.Error);
+      expect(handle.status).toBe(SyncOperationStatus.Error);
     });
 
     it("should notify callbacks when error occurs", () => {
-      const handle = new JobHandle(
+      const handle = new SyncOperation(
         "job1",
         "remote1",
         "doc1",
@@ -425,13 +425,13 @@ describe("JobHandle", () => {
 
       expect(callback).toHaveBeenCalledWith(
         handle,
-        JobChannelStatus.Unknown,
-        JobChannelStatus.Error,
+        SyncOperationStatus.Unknown,
+        SyncOperationStatus.Error,
       );
     });
 
     it("should transition to error from TransportPending", () => {
-      const handle = new JobHandle(
+      const handle = new SyncOperation(
         "job1",
         "remote1",
         "doc1",
@@ -449,12 +449,12 @@ describe("JobHandle", () => {
 
       handle.failed(error);
 
-      expect(handle.status).toBe(JobChannelStatus.Error);
+      expect(handle.status).toBe(SyncOperationStatus.Error);
       expect(handle.error).toBe(error);
     });
 
     it("should transition to error from ExecutionPending", () => {
-      const handle = new JobHandle(
+      const handle = new SyncOperation(
         "job1",
         "remote1",
         "doc1",
@@ -473,7 +473,7 @@ describe("JobHandle", () => {
 
       handle.failed(error);
 
-      expect(handle.status).toBe(JobChannelStatus.Error);
+      expect(handle.status).toBe(SyncOperationStatus.Error);
       expect(handle.error).toBe(error);
     });
   });
@@ -481,7 +481,7 @@ describe("JobHandle", () => {
   describe("immutability", () => {
     it("should have readonly properties", () => {
       const operations = createTestOperations();
-      const handle = new JobHandle(
+      const handle = new SyncOperation(
         "job1",
         "remote1",
         "doc1",
@@ -499,7 +499,7 @@ describe("JobHandle", () => {
 
   describe("multiple scopes", () => {
     it("should handle multiple scopes", () => {
-      const handle = new JobHandle(
+      const handle = new SyncOperation(
         "job1",
         "remote1",
         "doc1",
@@ -512,7 +512,7 @@ describe("JobHandle", () => {
     });
 
     it("should handle empty scopes array", () => {
-      const handle = new JobHandle(
+      const handle = new SyncOperation(
         "job1",
         "remote1",
         "doc1",

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { envelopeToJobHandle } from "../../../src/sync/channels/utils.js";
+import { envelopeToSyncOperation } from "../../../src/sync/channels/utils.js";
 import type { SyncEnvelope } from "../../../src/sync/types.js";
-import { JobChannelStatus } from "../../../src/sync/types.js";
+import { SyncOperationStatus } from "../../../src/sync/types.js";
 
-describe("envelopeToJobHandle", () => {
-  it("should convert envelope to job handle", () => {
+describe("envelopeToSyncOperation", () => {
+  it("should convert envelope to sync operation", () => {
     const envelope: SyncEnvelope = {
       type: "operations",
       channelMeta: { id: "channel-1" },
@@ -34,14 +34,14 @@ describe("envelopeToJobHandle", () => {
       ],
     };
 
-    const job = envelopeToJobHandle(envelope, "remote-1");
+    const syncOp = envelopeToSyncOperation(envelope, "remote-1");
 
-    expect(job.remoteName).toBe("remote-1");
-    expect(job.documentId).toBe("doc-1");
-    expect(job.branch).toBe("main");
-    expect(job.scopes).toEqual(["public"]);
-    expect(job.operations).toBe(envelope.operations);
-    expect(job.status).toBe(JobChannelStatus.Unknown);
+    expect(syncOp.remoteName).toBe("remote-1");
+    expect(syncOp.documentId).toBe("doc-1");
+    expect(syncOp.branch).toBe("main");
+    expect(syncOp.scopes).toEqual(["public"]);
+    expect(syncOp.operations).toBe(envelope.operations);
+    expect(syncOp.status).toBe(SyncOperationStatus.Unknown);
   });
 
   it("should extract multiple scopes from operations", () => {
@@ -96,9 +96,9 @@ describe("envelopeToJobHandle", () => {
       ],
     };
 
-    const job = envelopeToJobHandle(envelope, "remote-1");
+    const syncOp = envelopeToSyncOperation(envelope, "remote-1");
 
-    expect(job.scopes).toEqual(["public", "protected"]);
+    expect(syncOp.scopes).toEqual(["public", "protected"]);
   });
 
   it("should deduplicate scopes", () => {
@@ -153,12 +153,12 @@ describe("envelopeToJobHandle", () => {
       ],
     };
 
-    const job = envelopeToJobHandle(envelope, "remote-1");
+    const syncOp = envelopeToSyncOperation(envelope, "remote-1");
 
-    expect(job.scopes).toEqual(["public"]);
+    expect(syncOp.scopes).toEqual(["public"]);
   });
 
-  it("should generate unique job ID", () => {
+  it("should generate unique sync operation ID", () => {
     const envelope: SyncEnvelope = {
       type: "operations",
       channelMeta: { id: "channel-1" },
@@ -188,12 +188,12 @@ describe("envelopeToJobHandle", () => {
       ],
     };
 
-    const job1 = envelopeToJobHandle(envelope, "remote-1");
-    const job2 = envelopeToJobHandle(envelope, "remote-1");
+    const syncOp1 = envelopeToSyncOperation(envelope, "remote-1");
+    const syncOp2 = envelopeToSyncOperation(envelope, "remote-1");
 
-    expect(job1.id).not.toBe(job2.id);
-    expect(job1.id).toContain("job-channel-1-");
-    expect(job2.id).toContain("job-channel-1-");
+    expect(syncOp1.id).not.toBe(syncOp2.id);
+    expect(syncOp1.id).toContain("syncop-channel-1-");
+    expect(syncOp2.id).toContain("syncop-channel-1-");
   });
 
   it("should throw error if envelope has no operations", () => {
@@ -203,8 +203,8 @@ describe("envelopeToJobHandle", () => {
       operations: undefined,
     };
 
-    expect(() => envelopeToJobHandle(envelope, "remote-1")).toThrow(
-      "Cannot create JobHandle from envelope without operations",
+    expect(() => envelopeToSyncOperation(envelope, "remote-1")).toThrow(
+      "Cannot create SyncOperation from envelope without operations",
     );
   });
 
@@ -215,8 +215,8 @@ describe("envelopeToJobHandle", () => {
       operations: [],
     };
 
-    expect(() => envelopeToJobHandle(envelope, "remote-1")).toThrow(
-      "Cannot create JobHandle from envelope without operations",
+    expect(() => envelopeToSyncOperation(envelope, "remote-1")).toThrow(
+      "Cannot create SyncOperation from envelope without operations",
     );
   });
 });
