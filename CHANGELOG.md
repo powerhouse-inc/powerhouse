@@ -1,3 +1,13 @@
+## 4.1.0-dev.118 (2025-11-14)
+
+### 🩹 Fixes
+
+- **builder-tools:** improved hmr for connect ([adf4f8374](https://github.com/powerhouse-inc/powerhouse/commit/adf4f8374))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.117 (2025-11-13)
 
 ### 🩹 Fixes
