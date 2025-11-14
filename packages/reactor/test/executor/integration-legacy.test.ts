@@ -510,7 +510,7 @@ describe("SimpleJobExecutor Integration", () => {
   });
 
   describe("Deletion State Checking", () => {
-    it.skip("should reject operations on deleted documents", async () => {
+    it("should reject operations on deleted documents", async () => {
       // Create a document
       const document = driveDocumentModelModule.utils.createDocument();
       await createDocumentWithCreateOperation(document);
@@ -577,7 +577,7 @@ describe("SimpleJobExecutor Integration", () => {
       expect(result.error?.message).toContain("deleted");
     });
 
-    it.skip("should reject double-deletion attempts", async () => {
+    it("should reject double-deletion attempts", async () => {
       // Create a document
       const document = driveDocumentModelModule.utils.createDocument();
       await createDocumentWithCreateOperation(document);

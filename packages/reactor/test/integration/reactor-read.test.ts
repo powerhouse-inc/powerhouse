@@ -177,8 +177,7 @@ describe("Reactor Legacy Read Interface", () => {
       expect(result.childIds).toEqual([]);
     });
 
-    it.skip("should filter by scopes when view filter is provided", async () => {
-      // Skipping as scope filtering with custom state is complex with real documents
+    it("should filter by scopes when view filter is provided", async () => {
       const document = createDocModelDocument({
         id: "doc1",
         state: {
@@ -349,10 +348,7 @@ describe("Reactor Legacy Read Interface", () => {
   });
 
   describe("find", () => {
-    it.skip("should filter documents by type", async () => {
-      // Skip this test as it relies on drive-document relationships
-      // which aren't properly established in the current test setup
-      // The Reactor facade should use storage directly per phase 2.5
+    it("should filter documents by type", async () => {
       const doc1 = documentModelDocumentModelModule.utils.createDocument();
       doc1.header.id = "doc1";
 
@@ -406,8 +402,7 @@ describe("Reactor Legacy Read Interface", () => {
       expect(result.results.map((d) => d.header.id)).toEqual(["doc1", "doc3"]);
     });
 
-    it.skip("should filter documents by scopes when view filter is provided", async () => {
-      // Skipping as scope filtering with custom state is complex with real documents
+    it("should filter documents by scopes when view filter is provided", async () => {
       const document = createDocModelDocument({
         id: "doc1",
         state: {
@@ -430,8 +425,12 @@ describe("Reactor Legacy Read Interface", () => {
       });
       await driveServer.addDocument(document);
 
-      const result = await reactor.find({}, { scopes: ["global"] });
+      const result = await reactor.find(
+        { type: "powerhouse/document-model" },
+        { scopes: ["global"] },
+      );
 
+      expect(result.results.length).toBeGreaterThan(0);
       expect(result.results[0].state).toHaveProperty("global");
       expect(result.results[0].state).not.toHaveProperty("local");
       expect(result.results[0].state).not.toHaveProperty("private");

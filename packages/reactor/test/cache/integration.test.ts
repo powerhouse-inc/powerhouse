@@ -63,7 +63,12 @@ describe("KyselyWriteCache Integration Tests", () => {
 
   afterEach(async () => {
     await cache.shutdown();
-    await db.destroy();
+
+    try {
+      await db.destroy();
+    } catch {
+      //
+    }
   });
 
   describe("Full Integration Flow", () => {
@@ -164,7 +169,7 @@ describe("KyselyWriteCache Integration Tests", () => {
       expect(keyframe20?.revision).toBe(20);
     });
 
-    it.skip("should use keyframes to accelerate document rebuilds", async () => {
+    it("should use keyframes to accelerate document rebuilds", async () => {
       const docId = "integration-test-doc-3";
       const docType = "powerhouse/document-model";
 
@@ -552,7 +557,7 @@ describe("KyselyWriteCache Integration Tests", () => {
   });
 
   describe("Performance Integration", () => {
-    it.skip("should handle moderate operation sets efficiently", async () => {
+    it("should handle moderate operation sets efficiently", async () => {
       const docId = "integration-test-doc-9";
       const docType = "powerhouse/document-model";
 
