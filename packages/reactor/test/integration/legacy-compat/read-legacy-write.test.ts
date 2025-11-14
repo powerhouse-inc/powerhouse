@@ -8,23 +8,23 @@ import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { KyselyWriteCache } from "../../src/cache/kysely-write-cache.js";
-import type { WriteCacheConfig } from "../../src/cache/write-cache-types.js";
-import { Reactor } from "../../src/core/reactor.js";
-import { EventBus } from "../../src/events/event-bus.js";
-import type { IEventBus } from "../../src/events/interfaces.js";
-import type { IQueue } from "../../src/queue/interfaces.js";
-import { InMemoryQueue } from "../../src/queue/queue.js";
-import { ReadModelCoordinator } from "../../src/read-models/coordinator.js";
-import { KyselyDocumentView } from "../../src/read-models/document-view.js";
-import type { DocumentViewDatabase } from "../../src/read-models/types.js";
-import { DocumentModelRegistry } from "../../src/registry/implementation.js";
-import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
+import { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";
+import type { WriteCacheConfig } from "../../../src/cache/write-cache-types.js";
+import { Reactor } from "../../../src/core/reactor.js";
+import { EventBus } from "../../../src/events/event-bus.js";
+import type { IEventBus } from "../../../src/events/interfaces.js";
+import type { IQueue } from "../../../src/queue/interfaces.js";
+import { InMemoryQueue } from "../../../src/queue/queue.js";
+import { ReadModelCoordinator } from "../../../src/read-models/coordinator.js";
+import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
+import type { DocumentViewDatabase } from "../../../src/read-models/types.js";
+import { DocumentModelRegistry } from "../../../src/registry/implementation.js";
+import { ConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
 import type {
   IKeyframeStore,
   IOperationStore,
-} from "../../src/storage/interfaces.js";
-import type { Database as StorageDatabase } from "../../src/storage/kysely/types.js";
+} from "../../../src/storage/interfaces.js";
+import type { Database as StorageDatabase } from "../../../src/storage/kysely/types.js";
 import {
   createDocModelDocument,
   createMockDocumentIndexer,
@@ -32,7 +32,7 @@ import {
   createTestDocuments,
   createTestJobTracker,
   createTestOperationStore,
-} from "../factories.js";
+} from "../../factories.js";
 
 type Database = StorageDatabase & DocumentViewDatabase;
 
@@ -40,7 +40,7 @@ type Database = StorageDatabase & DocumentViewDatabase;
  * These tests show that writing to the legacy reactor and reading from the new
  * reactor, when using legacy storage, works correctly.
  */
-describe("Reactor Legacy Read Interface", () => {
+describe("Legacy Write -> Read", () => {
   let reactor: Reactor;
   let driveServer: BaseDocumentDriveServer;
   let storage: MemoryStorage;

@@ -200,7 +200,7 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
   return { reactorA, reactorB, channelRegistry, eventBusA, eventBusB };
 }
 
-describe("Two-Reactor Sync Integration", () => {
+describe("Two-Reactor Sync", () => {
   let reactorA: IReactor;
   let reactorB: IReactor;
   let eventBusA: IEventBus;

@@ -5,7 +5,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { JobStatus, type ConsistencyToken } from "../../src/shared/types.js";
 import { createDocModelDocument } from "../factories.js";
 
-describe("Load reshuffle integration", () => {
+/**
+ * This suite verifies that when loading operations into a reactor, the operations
+ * are reshuffled correctly to maintain consistency.
+ */
+describe("Load Reshuffles", () => {
   let reactorA: IReactor;
   let reactorB: IReactor;
 

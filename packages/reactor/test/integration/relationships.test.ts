@@ -23,7 +23,7 @@ type Database = StorageDatabase &
   DocumentViewDatabase &
   DocumentIndexerDatabase;
 
-describe("Integration Test: Relationship Operations", () => {
+describe("Relationship Operations", () => {
   let reactor: IReactor;
   let storage: MemoryStorage;
   let db: Kysely<Database>;

@@ -8,7 +8,7 @@ import { JobStatus } from "../../src/shared/types.js";
 import { createDocModelDocument } from "../factories.js";
 import { TestReadModelCoordinator } from "../utils/test-read-model-coordinator.js";
 
-describe("Integration Test: Consistency Tokens with Document View", () => {
+describe("Consistency Tokens with Document View", () => {
   let reactor: IReactor;
   let storage: MemoryStorage;
   let testCoordinator: TestReadModelCoordinator;
