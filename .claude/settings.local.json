@@ -9,7 +9,8 @@
       "Bash(ls:*)",
       "Bash(pwd:*)",
       "Bash(tree:*)",
-      "Skill(codex:*)"
+      "Skill(codex:*)",
+      "Bash(java:*)"
     ],
     "deny": [],
     "ask": []
