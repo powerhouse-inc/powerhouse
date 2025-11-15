@@ -1,3 +1,34 @@
+## 4.1.0-dev.119 (2025-11-15)
+
+### 🚀 Features
+
+- updating the reactor find() method to use the new document indexer ([e2f5de1b7](https://github.com/powerhouse-inc/powerhouse/commit/e2f5de1b7))
+- reshuffle tests ([e4bac1d84](https://github.com/powerhouse-inc/powerhouse/commit/e4bac1d84))
+- excessive reshuffles ([17d551321](https://github.com/powerhouse-inc/powerhouse/commit/17d551321))
+- initial tla spec ([ced4140e0](https://github.com/powerhouse-inc/powerhouse/commit/ced4140e0))
+- spammy benchmarks ([bea3671a1](https://github.com/powerhouse-inc/powerhouse/commit/bea3671a1))
+- add conflict resolution test for concurrent modifications ([d938cbfd5](https://github.com/powerhouse-inc/powerhouse/commit/d938cbfd5))
+- added big test where lots of docs are synced ([9b856ce93](https://github.com/powerhouse-inc/powerhouse/commit/9b856ce93))
+- opearations_ready flow for waiting for sync ([f8d96b1e1](https://github.com/powerhouse-inc/powerhouse/commit/f8d96b1e1))
+- major rename to avoid issues -- syncoperation rather than job handle ([28a1a5c54](https://github.com/powerhouse-inc/powerhouse/commit/28a1a5c54))
+- initial dual reactor sync test ([51414e67d](https://github.com/powerhouse-inc/powerhouse/commit/51414e67d))
+- sync-builder ([a422dd23d](https://github.com/powerhouse-inc/powerhouse/commit/a422dd23d))
+- initial sync-manager implementation ([00c693e4b](https://github.com/powerhouse-inc/powerhouse/commit/00c693e4b))
+- internalchannel implementation and types ([644ef1695](https://github.com/powerhouse-inc/powerhouse/commit/644ef1695))
+- getting types in place for implementation ([bbc146227](https://github.com/powerhouse-inc/powerhouse/commit/bbc146227))
+- initial implementations of cursor and remotes storage for sync ([1e7fadcf4](https://github.com/powerhouse-inc/powerhouse/commit/1e7fadcf4))
+- plan and implementation for kysely sync storage ([7ccc7ae67](https://github.com/powerhouse-inc/powerhouse/commit/7ccc7ae67))
+- first pass implementation of job-handle and mailbox ([b86e87803](https://github.com/powerhouse-inc/powerhouse/commit/b86e87803))
+
+### 🩹 Fixes
+
+- unskipping skipped tests and fixing ([f28bd79f2](https://github.com/powerhouse-inc/powerhouse/commit/f28bd79f2))
+- use real operation store ([97fac3d7f](https://github.com/powerhouse-inc/powerhouse/commit/97fac3d7f))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.118 (2025-11-14)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

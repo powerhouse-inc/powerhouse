@@ -1,3 +1,13 @@
+## 4.1.0-dev.119 (2025-11-15)
+
+### 🚀 Features
+
+- spammy benchmarks ([bea3671a1](https://github.com/powerhouse-inc/powerhouse/commit/bea3671a1))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.118 (2025-11-14)
 
 This was a version bump only for document-model to align it with other projects, there were no code changes.
