@@ -137,18 +137,6 @@ export function toErrorInfo(error: Error | string): ErrorInfo {
 }
 
 /**
- * Filters paged results by parent ID
- */
-export function filterByParentId(
-  results: PagedResults<PHDocument>,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  parentId: string,
-): PagedResults<PHDocument> {
-  // TODO: Implement filterByParentId
-  return results;
-}
-
-/**
  * Filters paged results by document type
  */
 export function filterByType(

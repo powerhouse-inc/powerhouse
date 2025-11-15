@@ -41,7 +41,6 @@ import type {
   ReactorFeatures,
 } from "./types.js";
 import {
-  filterByParentId,
   filterByType,
   getSharedScope,
   toErrorInfo,
@@ -427,10 +426,6 @@ export class Reactor implements IReactor {
         signal,
       );
 
-      if (search.parentId) {
-        results = filterByParentId(results, search.parentId);
-      }
-
       if (search.type) {
         results = filterByType(results, search.type);
       }
@@ -442,10 +437,6 @@ export class Reactor implements IReactor {
         consistencyToken,
         signal,
       );
-
-      if (search.parentId) {
-        results = filterByParentId(results, search.parentId);
-      }
 
       if (search.type) {
         results = filterByType(results, search.type);
@@ -1218,132 +1209,81 @@ export class Reactor implements IReactor {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
-    if (this.features.legacyStorageEnabled) {
-      // Get child document IDs from storage
-      const childIds = await this.documentStorage.getChildren(parentId);
+    // Get child relationships from indexer
+    const relationships = await this.documentIndexer.getOutgoing(
+      parentId,
+      ["child"],
+      undefined,
+      signal,
+    );
 
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    const documents: PHDocument[] = [];
+
+    // Fetch each child document using the appropriate storage method
+    for (const relationship of relationships) {
       if (signal?.aborted) {
         throw new AbortError();
       }
 
-      const documents: PHDocument[] = [];
-
-      // Fetch each child document
-      for (const childId of childIds) {
-        if (signal?.aborted) {
-          throw new AbortError();
-        }
-
+      try {
         let document: PHDocument;
-        try {
-          document = await this.documentStorage.get<PHDocument>(childId);
-        } catch {
-          // Skip documents that don't exist or can't be accessed
-          // This matches the behavior expected from a search operation
-          continue;
-        }
+        if (this.features.legacyStorageEnabled) {
+          document = await this.documentStorage.get<PHDocument>(
+            relationship.targetId,
+          );
 
-        // Apply view filter - This will be removed when we pass the viewfilter along
-        // to the underlying store, but is here now for the interface.
-        for (const scope in document.state) {
-          if (!matchesScope(view, scope)) {
-            delete document.state[scope as keyof PHBaseState];
+          // Apply view filter for legacy storage
+          for (const scope in document.state) {
+            if (!matchesScope(view, scope)) {
+              delete document.state[scope as keyof PHBaseState];
+            }
           }
-        }
-
-        documents.push(document);
-      }
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      // Apply paging
-      const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-      const limit = paging?.limit || documents.length;
-      const pagedDocuments = documents.slice(startIndex, startIndex + limit);
-
-      // Create paged results
-      const hasMore = startIndex + limit < documents.length;
-      const nextCursor = hasMore ? String(startIndex + limit) : undefined;
-
-      return {
-        results: pagedDocuments,
-        options: paging || { cursor: "0", limit: documents.length },
-        nextCursor,
-        next: hasMore
-          ? () =>
-              this.findByParentId(
-                parentId,
-                view,
-                { cursor: nextCursor!, limit },
-                signal,
-              )
-          : undefined,
-      };
-    } else {
-      // Get child relationships from indexer
-      const relationships = await this.documentIndexer.getOutgoing(
-        parentId,
-        ["child"],
-        undefined,
-        signal,
-      );
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      const documents: PHDocument[] = [];
-
-      // Fetch each child document
-      for (const relationship of relationships) {
-        if (signal?.aborted) {
-          throw new AbortError();
-        }
-
-        try {
-          const document = await this.documentView.get<PHDocument>(
+        } else {
+          document = await this.documentView.get<PHDocument>(
             relationship.targetId,
             view,
             undefined,
             signal,
           );
-          documents.push(document);
-        } catch {
-          // Skip documents that don't exist or can't be accessed
-          continue;
         }
+        documents.push(document);
+      } catch {
+        // Skip documents that don't exist or can't be accessed
+        continue;
       }
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      // Apply paging
-      const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-      const limit = paging?.limit || documents.length;
-      const pagedDocuments = documents.slice(startIndex, startIndex + limit);
-
-      // Create paged results
-      const hasMore = startIndex + limit < documents.length;
-      const nextCursor = hasMore ? String(startIndex + limit) : undefined;
-
-      return {
-        results: pagedDocuments,
-        options: paging || { cursor: "0", limit: documents.length },
-        nextCursor,
-        next: hasMore
-          ? () =>
-              this.findByParentId(
-                parentId,
-                view,
-                { cursor: nextCursor!, limit },
-                signal,
-              )
-          : undefined,
-      };
     }
+
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    // Apply paging
+    const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
+    const limit = paging?.limit || documents.length;
+    const pagedDocuments = documents.slice(startIndex, startIndex + limit);
+
+    // Create paged results
+    const hasMore = startIndex + limit < documents.length;
+    const nextCursor = hasMore ? String(startIndex + limit) : undefined;
+
+    return {
+      results: pagedDocuments,
+      options: paging || { cursor: "0", limit: documents.length },
+      nextCursor,
+      next: hasMore
+        ? () =>
+            this.findByParentId(
+              parentId,
+              view,
+              { cursor: nextCursor!, limit },
+              signal,
+            )
+        : undefined,
+    };
   }
 
   /**
