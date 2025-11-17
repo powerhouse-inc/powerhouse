@@ -32,7 +32,6 @@ export async function setupRemoteDrive(
       );
       try {
         await createVetraDocument(graphqlEndpoint, driveId!, "vetra-package");
-        console.log("✅ Vetra package document created successfully");
 
         // Re-fetch documents after creation
         documents = await getVetraDocuments(graphqlEndpoint, driveId!);
@@ -43,6 +42,8 @@ export async function setupRemoteDrive(
           );
           return false;
         }
+
+        console.log("✅ Vetra package document created successfully");
       } catch (createError) {
         console.error(
           "❌ Failed to create vetra package document:",
