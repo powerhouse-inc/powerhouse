@@ -204,11 +204,6 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     ? (env.PH_LOCAL_PACKAGE ?? options.dirname)
     : undefined;
 
-  // if local package is provided and not disabled, add it to the packages to be loaded
-  if (localPackage) {
-    allPackages.push(localPackage);
-  }
-
   // remove duplicates and empty strings
   const phPackages = [...new Set(allPackages.filter((p) => p.trim().length))];
 
@@ -230,7 +225,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     tailwind(),
     svgr(),
     react(),
-    phExternalPackagesPlugin(phPackages),
+    phExternalPackagesPlugin(phPackages, localPackage),
     createHtmlPlugin({
       minify: false,
       inject: {
