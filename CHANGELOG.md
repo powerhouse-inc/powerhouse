@@ -1,3 +1,13 @@
+## 4.1.0-dev.121 (2025-11-17)
+
+### 🩹 Fixes
+
+- **builder-tools:** load index.ts even if local package is built ([a1c910b04](https://github.com/powerhouse-inc/powerhouse/commit/a1c910b04))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.120 (2025-11-17)
 
 ### 🩹 Fixes

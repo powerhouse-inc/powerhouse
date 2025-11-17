@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard",
   "type": "module",
-  "version": "4.1.0-dev.120",
+  "version": "4.1.0-dev.121",
   "main": "dist/src/index.js",
   "exports": {
     ".": {
