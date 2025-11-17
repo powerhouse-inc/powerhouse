@@ -11,7 +11,11 @@
       "Bash(tree:*)",
       "Skill(codex:*)",
       "Bash(java:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(git show:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git status:*)"
     ],
     "deny": [],
     "ask": []
