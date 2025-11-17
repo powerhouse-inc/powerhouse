@@ -1,3 +1,13 @@
+## 4.1.0-dev.120 (2025-11-17)
+
+### 🩹 Fixes
+
+- ensure version.ts is generated before TypeScript compilation in CI ([dd49fdd4f](https://github.com/powerhouse-inc/powerhouse/commit/dd49fdd4f))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.119 (2025-11-15)
 
 ### 🚀 Features
