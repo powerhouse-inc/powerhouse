@@ -26,7 +26,7 @@ describe("JobAwaiter", () => {
       const jobId = "job-already-completed";
       const completedJob: JobInfo = {
         id: jobId,
-        status: JobStatus.COMPLETED,
+        status: JobStatus.READ_MODELS_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
       };
@@ -35,22 +35,6 @@ describe("JobAwaiter", () => {
 
       const result = await jobAwaiter.waitForJob(jobId);
       expect(result).toEqual(completedJob);
-      expect(getJobStatusMock).toHaveBeenCalledTimes(1);
-    });
-
-    it("should resolve immediately when job has WRITE_COMPLETED status", async () => {
-      const jobId = "job-write-completed";
-      const writeCompletedJob: JobInfo = {
-        id: jobId,
-        status: JobStatus.WRITE_COMPLETED,
-        createdAtUtcIso: new Date().toISOString(),
-        consistencyToken: createEmptyConsistencyToken(),
-      };
-
-      getJobStatusMock.mockResolvedValue(writeCompletedJob);
-
-      const result = await jobAwaiter.waitForJob(jobId);
-      expect(result).toEqual(writeCompletedJob);
       expect(getJobStatusMock).toHaveBeenCalledTimes(1);
     });
 
@@ -87,7 +71,7 @@ describe("JobAwaiter", () => {
       expect(result.status).toBe(JobStatus.FAILED);
     });
 
-    it("should resolve when OPERATION_WRITTEN event is emitted", async () => {
+    it("should resolve when OPERATIONS_READY event is emitted after OPERATION_WRITTEN", async () => {
       const jobId = "job-1";
       const runningJob: JobInfo = {
         id: jobId,
@@ -97,7 +81,7 @@ describe("JobAwaiter", () => {
       };
       const completedJob: JobInfo = {
         id: jobId,
-        status: JobStatus.WRITE_COMPLETED,
+        status: JobStatus.READ_MODELS_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
       };
@@ -111,6 +95,21 @@ describe("JobAwaiter", () => {
       getJobStatusMock.mockResolvedValue(completedJob);
 
       await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+        jobId,
+        operations: [
+          {
+            operation: {} as any,
+            context: {
+              documentId: "doc-1",
+              documentType: "type-1",
+              scope: "scope",
+              branch: "main",
+            },
+          },
+        ],
+      });
+
+      await eventBus.emit(OperationEventTypes.OPERATIONS_READY, {
         jobId,
         operations: [
           {
@@ -208,7 +207,7 @@ describe("JobAwaiter", () => {
     it("should handle multiple jobs concurrently", async () => {
       const job1: JobInfo = {
         id: "job-1",
-        status: JobStatus.WRITE_COMPLETED,
+        status: JobStatus.READ_MODELS_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
       };
@@ -302,7 +301,7 @@ describe("JobAwaiter", () => {
       };
       const completedJob: JobInfo = {
         id: jobId,
-        status: JobStatus.WRITE_COMPLETED,
+        status: JobStatus.READ_MODELS_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
       };
@@ -317,6 +316,21 @@ describe("JobAwaiter", () => {
       getJobStatusMock.mockResolvedValue(completedJob);
 
       await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+        jobId,
+        operations: [
+          {
+            operation: {} as any,
+            context: {
+              documentId: "doc-1",
+              documentType: "type-1",
+              scope: "scope",
+              branch: "main",
+            },
+          },
+        ],
+      });
+
+      await eventBus.emit(OperationEventTypes.OPERATIONS_READY, {
         jobId,
         operations: [
           {

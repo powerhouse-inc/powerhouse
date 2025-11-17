@@ -1,6 +1,7 @@
 import type { IEventBus } from "../../src/events/interfaces.js";
 import {
   OperationEventTypes,
+  type OperationsReadyEvent,
   type OperationWrittenEvent,
   type Unsubscribe,
 } from "../../src/events/types.js";
@@ -14,7 +15,7 @@ export class TestReadModelCoordinator implements IReadModelCoordinator {
   private unsubscribe?: Unsubscribe;
   private isRunning = false;
   private isPaused = false;
-  private operationQueue: OperationWithContext[][] = [];
+  private operationQueue: OperationWrittenEvent[] = [];
 
   constructor(
     private eventBus: IEventBus,
@@ -58,15 +59,25 @@ export class TestReadModelCoordinator implements IReadModelCoordinator {
   }
 
   async flush(): Promise<void> {
-    const queuedOperations = [...this.operationQueue];
+    const queuedEvents = [...this.operationQueue];
     this.operationQueue = [];
 
-    for (const operations of queuedOperations) {
+    for (const event of queuedEvents) {
       await Promise.all(
         this.readModels.map((readModel) =>
-          readModel.indexOperations(operations),
+          readModel.indexOperations(event.operations),
         ),
       );
+
+      const readyEvent: OperationsReadyEvent = {
+        jobId: event.jobId,
+        operations: event.operations,
+      };
+      this.eventBus
+        .emit(OperationEventTypes.OPERATIONS_READY, readyEvent)
+        .catch(() => {
+          // No-op: Event emission is fire-and-forget
+        });
     }
   }
 
@@ -78,7 +89,7 @@ export class TestReadModelCoordinator implements IReadModelCoordinator {
     event: OperationWrittenEvent,
   ): Promise<void> {
     if (this.isPaused) {
-      this.operationQueue.push(event.operations);
+      this.operationQueue.push(event);
       return;
     }
 
@@ -87,5 +98,15 @@ export class TestReadModelCoordinator implements IReadModelCoordinator {
         readModel.indexOperations(event.operations),
       ),
     );
+
+    const readyEvent: OperationsReadyEvent = {
+      jobId: event.jobId,
+      operations: event.operations,
+    };
+    this.eventBus
+      .emit(OperationEventTypes.OPERATIONS_READY, readyEvent)
+      .catch(() => {
+        // No-op: Event emission is fire-and-forget
+      });
   }
 }

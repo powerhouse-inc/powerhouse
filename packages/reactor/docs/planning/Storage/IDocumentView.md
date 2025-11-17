@@ -96,7 +96,7 @@ All read methods accept an optional `consistencyToken` parameter to provide read
 **Usage Pattern:**
 ```typescript
 const queuedJob = await reactor.mutate(documentId, "main", operations);
-const completedJob = await reactor.getJobStatus(queuedJob.id); // poll until COMPLETED
+const completedJob = await reactor.getJobStatus(queuedJob.id); // poll until READ_MODELS_READY
 const doc = await documentView.get(documentId, view, completedJob.consistencyToken);
 
 const loadQueued = await reactor.load(documentId, "main", importedOperations);

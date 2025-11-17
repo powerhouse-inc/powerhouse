@@ -38,7 +38,7 @@ describe("InMemoryJobTracker", () => {
       tracker.registerJob(jobInfo);
 
       // Modify original
-      jobInfo.status = JobStatus.COMPLETED;
+      jobInfo.status = JobStatus.READ_MODELS_READY;
 
       // Should not affect stored version
       const retrieved = tracker.getJobStatus("job-1");
@@ -69,50 +69,6 @@ describe("InMemoryJobTracker", () => {
       expect(retrieved).not.toBeNull();
       expect(retrieved?.status).toBe(JobStatus.RUNNING);
       expect(retrieved?.id).toBe("unknown-job");
-    });
-  });
-
-  describe("markCompleted", () => {
-    it("should update job to COMPLETED status", () => {
-      const jobInfo: JobInfo = {
-        id: "job-1",
-        status: JobStatus.RUNNING,
-        createdAtUtcIso: new Date().toISOString(),
-        consistencyToken: createEmptyConsistencyToken(),
-      };
-
-      tracker.registerJob(jobInfo);
-      tracker.markCompleted("job-1", createEmptyConsistencyToken());
-
-      const retrieved = tracker.getJobStatus("job-1");
-      expect(retrieved?.status).toBe(JobStatus.COMPLETED);
-      expect(retrieved?.completedAtUtcIso).toBeDefined();
-    });
-
-    it("should store result when provided", () => {
-      const jobInfo: JobInfo = {
-        id: "job-1",
-        status: JobStatus.RUNNING,
-        createdAtUtcIso: new Date().toISOString(),
-        consistencyToken: createEmptyConsistencyToken(),
-      };
-
-      const result = { data: "success" };
-      tracker.registerJob(jobInfo);
-      tracker.markCompleted("job-1", createEmptyConsistencyToken(), result);
-
-      const retrieved = tracker.getJobStatus("job-1");
-      expect(retrieved?.result).toEqual(result);
-    });
-
-    it("should create entry if job not found", () => {
-      tracker.markCompleted("unknown-job", createEmptyConsistencyToken(), {
-        data: "test",
-      });
-
-      const retrieved = tracker.getJobStatus("unknown-job");
-      expect(retrieved).not.toBeNull();
-      expect(retrieved?.status).toBe(JobStatus.COMPLETED);
     });
   });
 
@@ -168,7 +124,7 @@ describe("InMemoryJobTracker", () => {
       const retrieved = tracker.getJobStatus("job-1");
 
       // Modify retrieved
-      retrieved!.status = JobStatus.COMPLETED;
+      retrieved!.status = JobStatus.READ_MODELS_READY;
 
       // Should not affect stored version
       const retrievedAgain = tracker.getJobStatus("job-1");
@@ -177,7 +133,7 @@ describe("InMemoryJobTracker", () => {
   });
 
   describe("job lifecycle", () => {
-    it("should handle PENDING → RUNNING → COMPLETED lifecycle", () => {
+    it("should handle PENDING → RUNNING lifecycle", () => {
       const jobInfo: JobInfo = {
         id: "job-1",
         status: JobStatus.PENDING,
@@ -192,10 +148,6 @@ describe("InMemoryJobTracker", () => {
       // Mark running
       tracker.markRunning("job-1");
       expect(tracker.getJobStatus("job-1")?.status).toBe(JobStatus.RUNNING);
-
-      // Mark completed
-      tracker.markCompleted("job-1", createEmptyConsistencyToken());
-      expect(tracker.getJobStatus("job-1")?.status).toBe(JobStatus.COMPLETED);
     });
 
     it("should handle PENDING → RUNNING → FAILED lifecycle", () => {
@@ -220,23 +172,6 @@ describe("InMemoryJobTracker", () => {
       expect(finalStatus?.status).toBe(JobStatus.FAILED);
       expect(finalStatus?.error?.message).toBe("Test error");
     });
-
-    it("should handle marking completed before running", () => {
-      const jobInfo: JobInfo = {
-        id: "job-1",
-        status: JobStatus.PENDING,
-        createdAtUtcIso: new Date().toISOString(),
-        consistencyToken: createEmptyConsistencyToken(),
-      };
-
-      tracker.registerJob(jobInfo);
-
-      // Skip running and go straight to completed
-      tracker.markCompleted("job-1", createEmptyConsistencyToken());
-
-      const retrieved = tracker.getJobStatus("job-1");
-      expect(retrieved?.status).toBe(JobStatus.COMPLETED);
-    });
   });
 
   describe("multiple jobs", () => {
@@ -260,14 +195,13 @@ describe("InMemoryJobTracker", () => {
 
       // Update job1
       tracker.markRunning("job-1");
-      tracker.markCompleted("job-1", createEmptyConsistencyToken());
 
       // Update job2
       tracker.markRunning("job-2");
       tracker.markFailed("job-2", { message: "Job 2 failed", stack: "" });
 
       // Verify independent states
-      expect(tracker.getJobStatus("job-1")?.status).toBe(JobStatus.COMPLETED);
+      expect(tracker.getJobStatus("job-1")?.status).toBe(JobStatus.RUNNING);
       expect(tracker.getJobStatus("job-2")?.status).toBe(JobStatus.FAILED);
       expect(tracker.getJobStatus("job-2")?.error?.message).toBe(
         "Job 2 failed",

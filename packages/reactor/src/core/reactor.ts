@@ -89,9 +89,6 @@ export class Reactor implements IReactor {
     this.documentIndexer = documentIndexer;
     this.operationStore = operationStore;
 
-    // Start the read model coordinator
-    this.readModelCoordinator.start();
-
     // Create mutable shutdown status using factory method
     const [status, setter] = createMutableShutdownStatus(false);
     this.shutdownStatus = status;

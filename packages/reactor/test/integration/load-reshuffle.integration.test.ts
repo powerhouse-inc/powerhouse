@@ -22,13 +22,7 @@ describe("Load Reshuffles", () => {
       .withFeatures({
         legacyStorageEnabled: false,
       })
-      .withLegacyStorage(new MemoryStorage())
-      .withReadModelCoordinatorFactory(() => {
-        return {
-          start: vi.fn(),
-          stop: vi.fn(),
-        };
-      });
+      .withLegacyStorage(new MemoryStorage());
 
     reactorA = await builderA.build();
 
@@ -40,13 +34,7 @@ describe("Load Reshuffles", () => {
       .withFeatures({
         legacyStorageEnabled: false,
       })
-      .withLegacyStorage(new MemoryStorage())
-      .withReadModelCoordinatorFactory(() => {
-        return {
-          start: vi.fn(),
-          stop: vi.fn(),
-        };
-      });
+      .withLegacyStorage(new MemoryStorage());
 
     reactorB = await builderB.build();
   });
@@ -173,7 +161,7 @@ async function waitForJobCompletion(
     if (status.status === JobStatus.FAILED) {
       throw new Error(status.error?.message || "Job failed");
     }
-    return status.status === JobStatus.COMPLETED;
+    return status.status === JobStatus.READ_MODELS_READY;
   });
 
   const status = await reactor.getJobStatus(jobId);

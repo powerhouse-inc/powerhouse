@@ -39,16 +39,9 @@ describe("JobAwaiter Integration Tests", () => {
       };
 
       jobTracker.registerJob(jobInfo);
-
-      const promise = jobAwaiter.waitForJob("job-1");
-
-      expect(jobTracker.getJobStatus("job-1")?.status).toBe(JobStatus.PENDING);
-
       jobTracker.markRunning("job-1");
 
-      jobTracker.markCompleted("job-1", createEmptyConsistencyToken(), {
-        data: "success",
-      });
+      const promise = jobAwaiter.waitForJob("job-1");
 
       await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
         jobId: "job-1",
@@ -65,9 +58,27 @@ describe("JobAwaiter Integration Tests", () => {
         ],
       });
 
+      expect(jobTracker.getJobStatus("job-1")?.status).toBe(
+        JobStatus.WRITE_COMPLETED,
+      );
+
+      await eventBus.emit(OperationEventTypes.OPERATIONS_READY, {
+        jobId: "job-1",
+        operations: [
+          {
+            operation: {} as any,
+            context: {
+              documentId: "doc-1",
+              documentType: "type-1",
+              scope: "scope",
+              branch: "main",
+            },
+          },
+        ],
+      });
+
       const result = await promise;
-      expect(result.status).toBe(JobStatus.COMPLETED);
-      expect(result.result).toEqual({ data: "success" });
+      expect(result.status).toBe(JobStatus.READ_MODELS_READY);
     });
 
     it("should handle job with WRITE_COMPLETED status via OPERATION_WRITTEN event", async () => {
@@ -80,8 +91,6 @@ describe("JobAwaiter Integration Tests", () => {
 
       jobTracker.registerJob(jobInfo);
       jobTracker.markRunning("job-write");
-
-      const promise = jobAwaiter.waitForJob("job-write");
 
       await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
         jobId: "job-write",
@@ -98,8 +107,8 @@ describe("JobAwaiter Integration Tests", () => {
         ],
       });
 
-      const result = await promise;
-      expect(result.status).toBe(JobStatus.WRITE_COMPLETED);
+      const status = jobTracker.getJobStatus("job-write");
+      expect(status?.status).toBe(JobStatus.WRITE_COMPLETED);
     });
 
     it("should handle job with READ_MODELS_READY status via OPERATIONS_READY event", async () => {
@@ -112,8 +121,6 @@ describe("JobAwaiter Integration Tests", () => {
 
       jobTracker.registerJob(jobInfo);
       jobTracker.markRunning("job-read");
-
-      const promise = jobAwaiter.waitForJob("job-read");
 
       await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
         jobId: "job-read",
@@ -130,8 +137,9 @@ describe("JobAwaiter Integration Tests", () => {
         ],
       });
 
-      const result = await promise;
-      expect(result.status).toBe(JobStatus.WRITE_COMPLETED);
+      expect(jobTracker.getJobStatus("job-read")?.status).toBe(
+        JobStatus.WRITE_COMPLETED,
+      );
 
       await eventBus.emit(OperationEventTypes.OPERATIONS_READY, {
         jobId: "job-read",
@@ -209,9 +217,6 @@ describe("JobAwaiter Integration Tests", () => {
         ],
       });
 
-      const result = await promise;
-      expect(result.status).toBe(JobStatus.WRITE_COMPLETED);
-
       expect(jobTracker.getJobStatus("job-3")?.status).toBe(
         JobStatus.WRITE_COMPLETED,
       );
@@ -230,6 +235,9 @@ describe("JobAwaiter Integration Tests", () => {
           },
         ],
       });
+
+      const result = await promise;
+      expect(result.status).toBe(JobStatus.READ_MODELS_READY);
 
       expect(jobTracker.getJobStatus("job-3")?.status).toBe(
         JobStatus.READ_MODELS_READY,
@@ -264,10 +272,7 @@ describe("JobAwaiter Integration Tests", () => {
       const promise2 = jobAwaiter.waitForJob("job-concurrent-2");
       const promise3 = jobAwaiter.waitForJob("job-concurrent-3");
 
-      jobTracker.markCompleted(
-        "job-concurrent-1",
-        createEmptyConsistencyToken(),
-      );
+      jobTracker.markRunning("job-concurrent-1");
 
       await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
         jobId: "job-concurrent-1",
@@ -284,8 +289,23 @@ describe("JobAwaiter Integration Tests", () => {
         ],
       });
 
+      await eventBus.emit(OperationEventTypes.OPERATIONS_READY, {
+        jobId: "job-concurrent-1",
+        operations: [
+          {
+            operation: {} as any,
+            context: {
+              documentId: "doc-1",
+              documentType: "type-1",
+              scope: "scope",
+              branch: "main",
+            },
+          },
+        ],
+      });
+
       const result1 = await promise1;
-      expect(result1.status).toBe(JobStatus.COMPLETED);
+      expect(result1.status).toBe(JobStatus.READ_MODELS_READY);
 
       jobTracker.markRunning("job-concurrent-2");
 
@@ -294,10 +314,7 @@ describe("JobAwaiter Integration Tests", () => {
         error: new Error("Job 2 failed"),
       });
 
-      jobTracker.markCompleted(
-        "job-concurrent-3",
-        createEmptyConsistencyToken(),
-      );
+      jobTracker.markRunning("job-concurrent-3");
 
       await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
         jobId: "job-concurrent-3",
@@ -314,9 +331,24 @@ describe("JobAwaiter Integration Tests", () => {
         ],
       });
 
+      await eventBus.emit(OperationEventTypes.OPERATIONS_READY, {
+        jobId: "job-concurrent-3",
+        operations: [
+          {
+            operation: {} as any,
+            context: {
+              documentId: "doc-1",
+              documentType: "type-1",
+              scope: "scope",
+              branch: "main",
+            },
+          },
+        ],
+      });
+
       const [result2, result3] = await Promise.all([promise2, promise3]);
       expect(result2.status).toBe(JobStatus.FAILED);
-      expect(result3.status).toBe(JobStatus.COMPLETED);
+      expect(result3.status).toBe(JobStatus.READ_MODELS_READY);
     });
 
     it("should reject when job is not found in tracker", async () => {
@@ -338,9 +370,7 @@ describe("JobAwaiter Integration Tests", () => {
       const promise1 = jobAwaiter.waitForJob("job-duplicate");
       const promise2 = jobAwaiter.waitForJob("job-duplicate");
 
-      jobTracker.markCompleted("job-duplicate", createEmptyConsistencyToken(), {
-        data: "shared result",
-      });
+      jobTracker.markRunning("job-duplicate");
 
       await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
         jobId: "job-duplicate",
@@ -357,10 +387,24 @@ describe("JobAwaiter Integration Tests", () => {
         ],
       });
 
+      await eventBus.emit(OperationEventTypes.OPERATIONS_READY, {
+        jobId: "job-duplicate",
+        operations: [
+          {
+            operation: {} as any,
+            context: {
+              documentId: "doc-1",
+              documentType: "type-1",
+              scope: "scope",
+              branch: "main",
+            },
+          },
+        ],
+      });
+
       const [result1, result2] = await Promise.all([promise1, promise2]);
       expect(result1).toEqual(result2);
-      expect(result1.status).toBe(JobStatus.COMPLETED);
-      expect(result1.result).toEqual({ data: "shared result" });
+      expect(result1.status).toBe(JobStatus.READ_MODELS_READY);
     });
 
     it("should handle abort signals with real job tracker", async () => {
@@ -394,7 +438,7 @@ describe("JobAwaiter Integration Tests", () => {
     it("should handle immediate job completion", async () => {
       const jobInfo: JobInfo = {
         id: "job-immediate",
-        status: JobStatus.COMPLETED,
+        status: JobStatus.READ_MODELS_READY,
         createdAtUtcIso: new Date().toISOString(),
         completedAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -405,7 +449,7 @@ describe("JobAwaiter Integration Tests", () => {
       const promise = jobAwaiter.waitForJob("job-immediate");
 
       const result = await promise;
-      expect(result.status).toBe(JobStatus.COMPLETED);
+      expect(result.status).toBe(JobStatus.READ_MODELS_READY);
     });
 
     it("should handle job completion with result data", async () => {
@@ -420,17 +464,7 @@ describe("JobAwaiter Integration Tests", () => {
 
       const promise = jobAwaiter.waitForJob("job-with-result");
 
-      const resultData = {
-        documentId: "doc-123",
-        operationCount: 5,
-        metadata: { processed: true },
-      };
-
-      jobTracker.markCompleted(
-        "job-with-result",
-        createEmptyConsistencyToken(),
-        resultData,
-      );
+      jobTracker.markRunning("job-with-result");
 
       await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
         jobId: "job-with-result",
@@ -447,9 +481,23 @@ describe("JobAwaiter Integration Tests", () => {
         ],
       });
 
+      await eventBus.emit(OperationEventTypes.OPERATIONS_READY, {
+        jobId: "job-with-result",
+        operations: [
+          {
+            operation: {} as any,
+            context: {
+              documentId: "doc-1",
+              documentType: "type-1",
+              scope: "scope",
+              branch: "main",
+            },
+          },
+        ],
+      });
+
       const result = await promise;
-      expect(result.status).toBe(JobStatus.COMPLETED);
-      expect(result.result).toEqual(resultData);
+      expect(result.status).toBe(JobStatus.READ_MODELS_READY);
     });
   });
 
@@ -493,11 +541,25 @@ describe("JobAwaiter Integration Tests", () => {
       };
 
       jobTracker.registerJob(jobInfo);
+      jobTracker.markRunning("job-cycle-1");
       const promise1 = jobAwaiter.waitForJob("job-cycle-1");
 
-      jobTracker.markCompleted("job-cycle-1", createEmptyConsistencyToken());
-
       await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+        jobId: "job-cycle-1",
+        operations: [
+          {
+            operation: {} as any,
+            context: {
+              documentId: "doc-1",
+              documentType: "type-1",
+              scope: "scope",
+              branch: "main",
+            },
+          },
+        ],
+      });
+
+      await eventBus.emit(OperationEventTypes.OPERATIONS_READY, {
         jobId: "job-cycle-1",
         operations: [
           {
@@ -524,8 +586,6 @@ describe("JobAwaiter Integration Tests", () => {
       jobTracker.registerJob(jobInfo);
       jobTracker.markRunning("job-cycle-2");
 
-      const promise2 = jobAwaiter.waitForJob("job-cycle-2");
-
       await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
         jobId: "job-cycle-2",
         operations: [
@@ -541,8 +601,9 @@ describe("JobAwaiter Integration Tests", () => {
         ],
       });
 
-      const result2 = await promise2;
-      expect(result2.status).toBe(JobStatus.WRITE_COMPLETED);
+      expect(jobTracker.getJobStatus("job-cycle-2")?.status).toBe(
+        JobStatus.WRITE_COMPLETED,
+      );
     });
   });
 });

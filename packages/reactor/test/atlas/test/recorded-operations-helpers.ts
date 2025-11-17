@@ -133,7 +133,7 @@ export async function processReactorMutation(
         const errorMessage = status.error?.message ?? "unknown error";
         throw new Error(`createDrive failed: ${errorMessage}`);
       }
-      return status.status === JobStatus.COMPLETED;
+      return status.status === JobStatus.READ_MODELS_READY;
     });
   } else if (name === "addDriveAction") {
     const { driveId, driveAction } = args;
@@ -160,7 +160,7 @@ export async function processReactorMutation(
           const errorMessage = status.error?.message ?? "unknown error";
           throw new Error(`Failed to create child document: ${errorMessage}`);
         }
-        return status.status === JobStatus.COMPLETED;
+        return status.status === JobStatus.READ_MODELS_READY;
       });
 
       const fileAction = addFile({
@@ -222,8 +222,8 @@ export async function processReactorMutation(
           throw new Error(`ADD_RELATIONSHIP action failed: ${errorMessage}`);
         }
         return (
-          addFileStatus.status === JobStatus.COMPLETED &&
-          linkChildStatus.status === JobStatus.COMPLETED
+          addFileStatus.status === JobStatus.READ_MODELS_READY &&
+          linkChildStatus.status === JobStatus.READ_MODELS_READY
         );
       });
     } else {
@@ -236,7 +236,7 @@ export async function processReactorMutation(
           const errorMessage = status.error?.message ?? "unknown error";
           throw new Error(`addDriveAction failed: ${errorMessage}`);
         }
-        return status.status === JobStatus.COMPLETED;
+        return status.status === JobStatus.READ_MODELS_READY;
       });
     }
   } else if (name === "addAction") {
@@ -251,7 +251,7 @@ export async function processReactorMutation(
           `addAction failed: ${status.error?.message ?? "unknown error"}: ${status.error?.stack ?? "unknown stack"}`,
         );
       }
-      return status.status === JobStatus.COMPLETED;
+      return status.status === JobStatus.READ_MODELS_READY;
     });
   }
 }

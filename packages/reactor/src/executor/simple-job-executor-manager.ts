@@ -148,14 +148,6 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     if (result.success) {
       handle.complete();
       this.totalJobsProcessed++;
-      const consistencyToken = createConsistencyToken(
-        result.operationsWithContext || [],
-      );
-      this.jobTracker.markCompleted(
-        handle.job.id,
-        consistencyToken,
-        result.operations,
-      );
     } else {
       // Handle retry logic
       const retryCount = handle.job.retryCount || 0;

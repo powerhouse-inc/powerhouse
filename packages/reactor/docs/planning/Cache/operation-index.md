@@ -129,7 +129,7 @@ flowchart LR
   ISyncManager -->|"(Action, Index, Skip, Hash)[]"| Queue
   Queue --> IQueueJournal --> QDB[(Redis / PGLite)]
 
-  IJobExecutorManager -->|"JobStatus.COMPLETED"| Emit
+  IJobExecutorManager -->|"JobStatus.WRITE_COMPLETED"| Emit
 
   subgraph JA["IJobExecutor (Worker / Process)"]
     JAJ["execute()"]
@@ -179,8 +179,8 @@ flowchart LR
     Emit["emit()"]
   end
 
-  On -->|"JobStatus.COMPLETED"| ReadModels --> Listeners
-  On -->|"JobStatus.COMPLETED"| ISyncManager
+  On -->|"JobStatus.WRITE_COMPLETED"| ReadModels --> Listeners
+  On -->|"JobStatus.WRITE_COMPLETED"| ISyncManager
 
   subgraph ReadModels["Read Models"]
     IDocumentView --> IDocumentIndexer --> Etc

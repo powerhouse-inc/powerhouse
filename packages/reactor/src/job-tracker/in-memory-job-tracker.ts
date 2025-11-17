@@ -6,7 +6,10 @@ import {
   type OperationWrittenEvent,
   type Unsubscribe,
 } from "../events/types.js";
-import { createEmptyConsistencyToken } from "../executor/util.js";
+import {
+  createConsistencyToken,
+  createEmptyConsistencyToken,
+} from "../executor/util.js";
 import type { ConsistencyToken, ErrorInfo } from "../shared/types.js";
 import { JobStatus, type JobInfo } from "../shared/types.js";
 import type { IJobTracker } from "./interfaces.js";
@@ -57,9 +60,11 @@ export class InMemoryJobTracker implements IJobTracker {
     const jobId = event.jobId;
     const job = this.jobs.get(jobId);
     if (job && job.status === JobStatus.RUNNING) {
+      const consistencyToken = createConsistencyToken(event.operations);
       this.jobs.set(jobId, {
         ...job,
         status: JobStatus.WRITE_COMPLETED,
+        consistencyToken,
       });
     }
   }
@@ -111,37 +116,6 @@ export class InMemoryJobTracker implements IJobTracker {
     this.jobs.set(jobId, {
       ...job,
       status: JobStatus.RUNNING,
-    });
-  }
-
-  markCompleted(
-    jobId: string,
-    consistencyToken: ConsistencyToken,
-    result?: any,
-  ): void {
-    const job = this.jobs.get(jobId);
-    if (!job) {
-      // Job not found - create minimal completed entry
-      this.jobs.set(jobId, {
-        id: jobId,
-        status: JobStatus.COMPLETED,
-        createdAtUtcIso: new Date().toISOString(),
-        completedAtUtcIso: new Date().toISOString(),
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        result,
-        consistencyToken,
-      });
-      return;
-    }
-
-    // Update existing job
-    this.jobs.set(jobId, {
-      ...job,
-      status: JobStatus.COMPLETED,
-      completedAtUtcIso: new Date().toISOString(),
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      result,
-      consistencyToken,
     });
   }
 

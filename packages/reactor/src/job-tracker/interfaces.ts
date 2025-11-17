@@ -20,19 +20,6 @@ export interface IJobTracker {
   markRunning(jobId: string): void;
 
   /**
-   * Mark a job as completed successfully.
-   *
-   * @param jobId - The job ID to mark as completed
-   * @param consistencyToken - The consistency token representing operations written by this job
-   * @param result - Optional result data from the job execution
-   */
-  markCompleted(
-    jobId: string,
-    consistencyToken: ConsistencyToken,
-    result?: any,
-  ): void;
-
-  /**
    * Mark a job as failed.
    *
    * @param jobId - The job ID to mark as failed

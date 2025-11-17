@@ -54,7 +54,7 @@ describe("ReactorClient Unit Tests", () => {
     mockJobAwaiter = {
       waitForJob: vi.fn().mockResolvedValue({
         id: "job-1",
-        status: JobStatus.COMPLETED,
+        status: JobStatus.READ_MODELS_READY,
         createdAtUtcIso: new Date().toISOString(),
       }),
       shutdown: vi.fn(),
@@ -236,7 +236,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const completedJobInfo: JobInfo = {
         id: "job-1",
-        status: JobStatus.COMPLETED,
+        status: JobStatus.READ_MODELS_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
       };
@@ -537,7 +537,7 @@ describe("ReactorClient Unit Tests", () => {
 
       vi.mocked(mockReactor.getJobStatus).mockResolvedValue({
         id: "job-1",
-        status: JobStatus.COMPLETED,
+        status: JobStatus.READ_MODELS_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
       });
@@ -552,7 +552,7 @@ describe("ReactorClient Unit Tests", () => {
     it("should call jobAwaiter.waitForJob with job ID string", async () => {
       const completedJobInfo: JobInfo = {
         id: "job-1",
-        status: JobStatus.COMPLETED,
+        status: JobStatus.READ_MODELS_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
       };
@@ -578,7 +578,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const completedJobInfo: JobInfo = {
         ...jobInfo,
-        status: JobStatus.COMPLETED,
+        status: JobStatus.READ_MODELS_READY,
       };
 
       vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(completedJobInfo);
@@ -597,7 +597,7 @@ describe("ReactorClient Unit Tests", () => {
 
       vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue({
         id: "job-1",
-        status: JobStatus.COMPLETED,
+        status: JobStatus.READ_MODELS_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
       });

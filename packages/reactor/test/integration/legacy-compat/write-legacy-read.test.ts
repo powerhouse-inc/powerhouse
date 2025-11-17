@@ -229,7 +229,7 @@ describe.each(storageLayers)(
             expect.fail(`Job failed: ${errorMessage}`);
           }
 
-          return jobStatus.status === JobStatus.COMPLETED;
+          return jobStatus.status === JobStatus.READ_MODELS_READY;
         });
 
         // Wait for the document to be fully indexed in the document view (with all scopes)
@@ -267,7 +267,7 @@ describe.each(storageLayers)(
         // Wait for create job to complete
         await vi.waitUntil(async () => {
           const jobStatus = await reactor.getJobStatus(createJobInfo.id);
-          return jobStatus.status === JobStatus.COMPLETED;
+          return jobStatus.status === JobStatus.READ_MODELS_READY;
         });
 
         // Wait for the document to be fully indexed in the document view (with all scopes)
@@ -309,7 +309,7 @@ describe.each(storageLayers)(
 
         await vi.waitUntil(async () => {
           const jobStatus = await reactor.getJobStatus(mutation1JobInfo.id);
-          return jobStatus.status === JobStatus.COMPLETED;
+          return jobStatus.status === JobStatus.READ_MODELS_READY;
         });
 
         // Wait for document view to be indexed after mutation 1
@@ -348,7 +348,7 @@ describe.each(storageLayers)(
 
         await vi.waitUntil(async () => {
           const jobStatus = await reactor.getJobStatus(mutation2JobInfo.id);
-          return jobStatus.status === JobStatus.COMPLETED;
+          return jobStatus.status === JobStatus.READ_MODELS_READY;
         });
 
         // Wait for document view to be indexed after mutation 2
@@ -385,7 +385,7 @@ describe.each(storageLayers)(
 
         await vi.waitUntil(async () => {
           const jobStatus = await reactor.getJobStatus(mutation3JobInfo.id);
-          return jobStatus.status === JobStatus.COMPLETED;
+          return jobStatus.status === JobStatus.READ_MODELS_READY;
         });
 
         // Wait for document view to be indexed after mutation 3

@@ -32,14 +32,11 @@ type JobWaiter = {
 
 /**
  * Checks if a job status is terminal (job has finished).
+ * WRITE_COMPLETED is not terminal - it's an intermediate state.
+ * Only READ_MODELS_READY and FAILED are truly terminal.
  */
 function isTerminalStatus(status: JobStatus): boolean {
-  return (
-    status === JobStatus.WRITE_COMPLETED ||
-    status === JobStatus.READ_MODELS_READY ||
-    status === JobStatus.COMPLETED ||
-    status === JobStatus.FAILED
-  );
+  return status === JobStatus.READ_MODELS_READY || status === JobStatus.FAILED;
 }
 
 /**

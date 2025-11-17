@@ -48,8 +48,9 @@ type ConsistencyToken = {
 - As the job executes, it transitions through multiple states that align with operation events:
   - `PENDING` → `RUNNING` → `WRITE_COMPLETED` → `READ_MODELS_READY`
   - Or on failure: `PENDING` → `RUNNING` → `FAILED`
-- Once the executor marks the job `COMPLETED` or reaches a terminal state, the tracker updates the `JobInfo` with the final timestamps, result metadata, error history (if any), and the fully populated token.
-- Callers MUST wait for the completion event—either by using the [JobAwaiter](./job-awaiter.md), polling `getJobStatus`, or subscribing to job events—before relying on the token. Reading the `JobInfo` that was returned during queuing is a race and will almost always expose an empty coordinate list.
+- The consistency token is populated once the job reaches `WRITE_COMPLETED`, when the `OPERATION_WRITTEN` event fires. This token captures the write-side state (the highest operation indices that were written), not the read-side state.
+- Once the job reaches a terminal state (`READ_MODELS_READY`, or `FAILED`), the tracker updates the `JobInfo` with the final timestamps, result metadata, and error history (if any).
+- Callers MUST wait for the `WRITE_COMPLETED` event (or later)—either by using the [JobAwaiter](./job-awaiter.md), polling `getJobStatus`, or subscribing to job events—before relying on the token. Reading the `JobInfo` that was returned during queuing is a race and will almost always expose an empty coordinate list.
 
 ### Job Status States
 
@@ -61,7 +62,6 @@ enum JobStatus {
   RUNNING = "RUNNING",                     // Job execution started
   WRITE_COMPLETED = "WRITE_COMPLETED",     // Operations written (OPERATION_WRITTEN event)
   READ_MODELS_READY = "READ_MODELS_READY", // Read models indexed (OPERATIONS_READY event)
-  COMPLETED = "COMPLETED",                 // Legacy terminal state
   FAILED = "FAILED",                       // Job failed (JOB_FAILED event)
 }
 ```

@@ -82,4 +82,4 @@ unsubscribeJobCompleted();
 unsubscribeJobFailed();
 ```
 
-When the queue-driven flow is used, callers now receive a `JobInfo` with a `consistencyToken` once the job reaches `COMPLETED`. Pass this token along to read-model queries so they can block until the underlying operation index has been indexed, guaranteeing you observe the write you just performed.
+When the queue-driven flow is used, callers receive a `JobInfo` with a `consistencyToken` once the job reaches `WRITE_COMPLETED`. This token captures the write-side state and can be passed along to read-model queries so they can block until their read models have indexed the corresponding operations, guaranteeing you observe the write you just performed.
