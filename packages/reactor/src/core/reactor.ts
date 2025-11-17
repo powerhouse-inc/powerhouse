@@ -288,6 +288,79 @@ export class Reactor implements IReactor {
   }
 
   /**
+   * Retrieves a specific PHDocument by identifier (either id or slug)
+   */
+  async getByIdOrSlug<TDocument extends PHDocument>(
+    identifier: string,
+    view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<{
+    document: TDocument;
+    childIds: string[];
+  }> {
+    if (this.features.legacyStorageEnabled) {
+      try {
+        return await this.get<TDocument>(
+          identifier,
+          view,
+          consistencyToken,
+          signal,
+        );
+      } catch {
+        try {
+          const ids = await this.documentStorage.resolveIds(
+            [identifier],
+            signal,
+          );
+
+          if (ids.length === 0 || !ids[0]) {
+            throw new Error(`Document not found: ${identifier}`);
+          }
+
+          return await this.get<TDocument>(
+            ids[0],
+            view,
+            consistencyToken,
+            signal,
+          );
+        } catch {
+          throw new Error(`Document not found: ${identifier}`);
+        }
+      }
+    } else {
+      const document = await this.documentView.getByIdOrSlug<TDocument>(
+        identifier,
+        view,
+        consistencyToken,
+        signal,
+      );
+
+      if (signal?.aborted) {
+        throw new AbortError();
+      }
+
+      const relationships = await this._documentIndexer.getOutgoing(
+        document.header.id,
+        ["child"],
+        consistencyToken,
+        signal,
+      );
+
+      if (signal?.aborted) {
+        throw new AbortError();
+      }
+
+      const childIds = relationships.map((rel) => rel.targetId);
+
+      return {
+        document,
+        childIds,
+      };
+    }
+  }
+
+  /**
    * Retrieves the operations for a document
    */
   async getOperations(

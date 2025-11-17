@@ -217,6 +217,23 @@ export interface IDocumentView {
   ): Promise<TDocument>;
 
   /**
+   * Returns the document with the given identifier (either id or slug).
+   * Throws an error if the identifier matches both an id and a slug that refer to different documents.
+   *
+   * @param identifier - The id or slug of the document to get.
+   * @param view - Optional filter containing branch and scopes information
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
+   * @throws {Error} If identifier matches both an ID and slug referring to different documents
+   */
+  getByIdOrSlug<TDocument extends PHDocument>(
+    identifier: string,
+    view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<TDocument>;
+
+  /**
    * Finds documents by their document type.
    *
    * @param type - The document type to search for

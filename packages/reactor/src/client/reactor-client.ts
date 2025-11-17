@@ -74,23 +74,12 @@ export class ReactorClient implements IReactorClient {
     document: TDocument;
     childIds: string[];
   }> {
-    // First try to get by ID
-    try {
-      return await this.reactor.get<TDocument>(
-        identifier,
-        view,
-        undefined,
-        signal,
-      );
-    } catch (error) {
-      // If failed, try to get by slug
-      return await this.reactor.getBySlug<TDocument>(
-        identifier,
-        view,
-        undefined,
-        signal,
-      );
-    }
+    return await this.reactor.getByIdOrSlug<TDocument>(
+      identifier,
+      view,
+      undefined,
+      signal,
+    );
   }
 
   /**
@@ -102,25 +91,13 @@ export class ReactorClient implements IReactorClient {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
-    let parentId: string;
-
-    try {
-      const parentDoc = await this.reactor.get(
-        parentIdentifier,
-        view,
-        undefined,
-        signal,
-      );
-      parentId = parentDoc.document.header.id;
-    } catch {
-      const parentDoc = await this.reactor.getBySlug(
-        parentIdentifier,
-        view,
-        undefined,
-        signal,
-      );
-      parentId = parentDoc.document.header.id;
-    }
+    const parentDoc = await this.reactor.getByIdOrSlug(
+      parentIdentifier,
+      view,
+      undefined,
+      signal,
+    );
+    const parentId = parentDoc.document.header.id;
 
     const relationships = await this.documentIndexer.getOutgoing(
       parentId,
@@ -156,25 +133,13 @@ export class ReactorClient implements IReactorClient {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
-    let childId: string;
-
-    try {
-      const childDoc = await this.reactor.get(
-        childIdentifier,
-        view,
-        undefined,
-        signal,
-      );
-      childId = childDoc.document.header.id;
-    } catch {
-      const childDoc = await this.reactor.getBySlug(
-        childIdentifier,
-        view,
-        undefined,
-        signal,
-      );
-      childId = childDoc.document.header.id;
-    }
+    const childDoc = await this.reactor.getByIdOrSlug(
+      childIdentifier,
+      view,
+      undefined,
+      signal,
+    );
+    const childId = childDoc.document.header.id;
 
     const relationships = await this.documentIndexer.getIncoming(
       childId,
@@ -291,23 +256,13 @@ export class ReactorClient implements IReactorClient {
     const completedJob = await this.waitForJob(jobInfo, signal);
 
     const view: ViewFilter = { branch };
-    try {
-      const result = await this.reactor.get<TDocument>(
-        documentIdentifier,
-        view,
-        completedJob.consistencyToken,
-        signal,
-      );
-      return result.document;
-    } catch {
-      const result = await this.reactor.getBySlug<TDocument>(
-        documentIdentifier,
-        view,
-        completedJob.consistencyToken,
-        signal,
-      );
-      return result.document;
-    }
+    const result = await this.reactor.getByIdOrSlug<TDocument>(
+      documentIdentifier,
+      view,
+      completedJob.consistencyToken,
+      signal,
+    );
+    return result.document;
   }
 
   /**
@@ -388,23 +343,13 @@ export class ReactorClient implements IReactorClient {
 
     const completedJob = await this.waitForJob(jobInfo, signal);
 
-    try {
-      const result = await this.reactor.get<PHDocument>(
-        parentIdentifier,
-        view,
-        completedJob.consistencyToken,
-        signal,
-      );
-      return result.document;
-    } catch {
-      const result = await this.reactor.getBySlug<PHDocument>(
-        parentIdentifier,
-        view,
-        completedJob.consistencyToken,
-        signal,
-      );
-      return result.document;
-    }
+    const result = await this.reactor.getByIdOrSlug<PHDocument>(
+      parentIdentifier,
+      view,
+      completedJob.consistencyToken,
+      signal,
+    );
+    return result.document;
   }
 
   /**
@@ -425,23 +370,13 @@ export class ReactorClient implements IReactorClient {
 
     const completedJob = await this.waitForJob(jobInfo, signal);
 
-    try {
-      const result = await this.reactor.get<PHDocument>(
-        parentIdentifier,
-        view,
-        completedJob.consistencyToken,
-        signal,
-      );
-      return result.document;
-    } catch {
-      const result = await this.reactor.getBySlug<PHDocument>(
-        parentIdentifier,
-        view,
-        completedJob.consistencyToken,
-        signal,
-      );
-      return result.document;
-    }
+    const result = await this.reactor.getByIdOrSlug<PHDocument>(
+      parentIdentifier,
+      view,
+      completedJob.consistencyToken,
+      signal,
+    );
+    return result.document;
   }
 
   /**
@@ -475,45 +410,24 @@ export class ReactorClient implements IReactorClient {
 
     const addCompletedJob = await this.waitForJob(addJobInfo, signal);
 
-    try {
-      const sourceResult = await this.reactor.get<PHDocument>(
-        sourceParentIdentifier,
-        view,
-        removeCompletedJob.consistencyToken,
-        signal,
-      );
+    const sourceResult = await this.reactor.getByIdOrSlug<PHDocument>(
+      sourceParentIdentifier,
+      view,
+      removeCompletedJob.consistencyToken,
+      signal,
+    );
 
-      const targetResult = await this.reactor.get<PHDocument>(
-        targetParentIdentifier,
-        view,
-        addCompletedJob.consistencyToken,
-        signal,
-      );
+    const targetResult = await this.reactor.getByIdOrSlug<PHDocument>(
+      targetParentIdentifier,
+      view,
+      addCompletedJob.consistencyToken,
+      signal,
+    );
 
-      return {
-        source: sourceResult.document,
-        target: targetResult.document,
-      };
-    } catch {
-      const sourceResult = await this.reactor.getBySlug<PHDocument>(
-        sourceParentIdentifier,
-        view,
-        removeCompletedJob.consistencyToken,
-        signal,
-      );
-
-      const targetResult = await this.reactor.getBySlug<PHDocument>(
-        targetParentIdentifier,
-        view,
-        addCompletedJob.consistencyToken,
-        signal,
-      );
-
-      return {
-        source: sourceResult.document,
-        target: targetResult.document,
-      };
-    }
+    return {
+      source: sourceResult.document,
+      target: targetResult.document,
+    };
   }
 
   /**
