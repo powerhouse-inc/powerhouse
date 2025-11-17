@@ -7,7 +7,6 @@ import { QueueEventTypes } from "../queue/types.js";
 import type { ErrorInfo } from "../shared/types.js";
 import type { IJobExecutor, IJobExecutorManager } from "./interfaces.js";
 import type { ExecutorManagerStatus, JobResult } from "./types.js";
-import { createConsistencyToken } from "./util.js";
 
 export type JobExecutorFactory = () => IJobExecutor;
 

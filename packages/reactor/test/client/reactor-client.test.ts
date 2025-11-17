@@ -11,6 +11,7 @@ import {
   type PagedResults,
 } from "../../src/shared/types.js";
 import type { ISigner } from "../../src/signer/types.js";
+import type { IDocumentIndexer } from "../../src/storage/interfaces.js";
 import { createEmptyConsistencyToken } from "../factories.js";
 import type { IReactorSubscriptionManager } from "../../src/subs/types.js";
 
@@ -20,9 +21,17 @@ describe("ReactorClient Unit Tests", () => {
   let mockSigner: ISigner;
   let mockSubscriptionManager: IReactorSubscriptionManager;
   let mockJobAwaiter: IJobAwaiter;
+  let mockDocumentIndexer: IDocumentIndexer;
 
   beforeEach(() => {
+    mockDocumentIndexer = {
+      getOutgoing: vi.fn().mockResolvedValue([]),
+      getIncoming: vi.fn().mockResolvedValue([]),
+      waitForConsistency: vi.fn().mockResolvedValue(undefined),
+    } as unknown as IDocumentIndexer;
+
     mockReactor = {
+      documentIndexer: mockDocumentIndexer,
       getDocumentModels: vi.fn().mockResolvedValue({
         results: [],
         options: { cursor: "", limit: 10 },
@@ -65,6 +74,7 @@ describe("ReactorClient Unit Tests", () => {
       mockSigner,
       mockSubscriptionManager,
       mockJobAwaiter,
+      mockDocumentIndexer,
     );
   });
 
@@ -267,7 +277,7 @@ describe("ReactorClient Unit Tests", () => {
       expect(mockReactor.get).toHaveBeenCalledWith(
         documentId,
         { branch: "main" },
-        undefined,
+        completedJobInfo.consistencyToken,
         undefined,
       );
       expect(result).toEqual(mockDoc);
@@ -388,11 +398,19 @@ describe("ReactorClient Unit Tests", () => {
         consistencyToken: createEmptyConsistencyToken(),
       };
 
+      const completedJobInfo: JobInfo = {
+        id: "job-1",
+        status: JobStatus.READ_MODELS_READY,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
       const mockDoc: PHDocument = {
         header: { id: parentId, documentType: "test" },
       } as PHDocument;
 
       vi.mocked(mockReactor.addChildren).mockResolvedValue(jobInfo);
+      vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(completedJobInfo);
       vi.mocked(mockReactor.get).mockResolvedValue({
         document: mockDoc,
         childIds: ["child-1", "child-2"],
@@ -413,7 +431,7 @@ describe("ReactorClient Unit Tests", () => {
       expect(mockReactor.get).toHaveBeenCalledWith(
         parentId,
         undefined,
-        undefined,
+        completedJobInfo.consistencyToken,
         undefined,
       );
       expect(result).toEqual(mockDoc);
@@ -432,11 +450,19 @@ describe("ReactorClient Unit Tests", () => {
         consistencyToken: createEmptyConsistencyToken(),
       };
 
+      const completedJobInfo: JobInfo = {
+        id: "job-1",
+        status: JobStatus.READ_MODELS_READY,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
       const mockDoc: PHDocument = {
         header: { id: parentId, documentType: "test" },
       } as PHDocument;
 
       vi.mocked(mockReactor.removeChildren).mockResolvedValue(jobInfo);
+      vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(completedJobInfo);
       vi.mocked(mockReactor.get).mockResolvedValue({
         document: mockDoc,
         childIds: [],
@@ -457,7 +483,7 @@ describe("ReactorClient Unit Tests", () => {
       expect(mockReactor.get).toHaveBeenCalledWith(
         parentId,
         undefined,
-        undefined,
+        completedJobInfo.consistencyToken,
         undefined,
       );
       expect(result).toEqual(mockDoc);

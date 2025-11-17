@@ -35,6 +35,7 @@ import type {
 } from "./types.js";
 
 import type { IJobExecutorManager } from "#executor/interfaces.js";
+import type { IDocumentIndexer } from "#storage/interfaces.js";
 import { Kysely } from "kysely";
 import { KyselyPGlite } from "kysely-pglite";
 import type { IEventBus } from "../events/interfaces.js";
@@ -59,6 +60,7 @@ export class ReactorBuilder {
   private migrationStrategy: MigrationStrategy = "auto";
   private syncBuilder?: SyncBuilder;
   private eventBus?: IEventBus;
+  public documentIndexer?: IDocumentIndexer;
 
   withDocumentModels(models: DocumentModelModule[]): this {
     this.documentModels = models;
@@ -115,6 +117,10 @@ export class ReactorBuilder {
   withEventBus(eventBus: IEventBus): this {
     this.eventBus = eventBus;
     return this;
+  }
+
+  get events(): IEventBus | undefined {
+    return this.eventBus;
   }
 
   async build(): Promise<IReactor> {
@@ -208,14 +214,14 @@ export class ReactorBuilder {
     readModelInstances.push(documentView);
 
     const documentIndexerConsistencyTracker = new ConsistencyTracker();
-    const documentIndexer = new KyselyDocumentIndexer(
+    this.documentIndexer = new KyselyDocumentIndexer(
       // @ts-expect-error - Database type is a superset that includes all required tables
       db,
       operationStore,
       documentIndexerConsistencyTracker,
     );
-    await documentIndexer.init();
-    readModelInstances.push(documentIndexer);
+    await this.documentIndexer.init();
+    readModelInstances.push(this.documentIndexer);
 
     const readModelCoordinator = this.readModelCoordinatorFactory
       ? this.readModelCoordinatorFactory(eventBus, readModelInstances)
@@ -229,7 +235,7 @@ export class ReactorBuilder {
       readModelCoordinator,
       this.features,
       documentView,
-      documentIndexer,
+      this.documentIndexer,
       operationStore,
     );
 

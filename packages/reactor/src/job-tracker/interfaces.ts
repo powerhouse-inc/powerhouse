@@ -1,4 +1,4 @@
-import type { ConsistencyToken, ErrorInfo, JobInfo } from "../shared/types.js";
+import type { ErrorInfo, JobInfo } from "../shared/types.js";
 
 /**
  * Interface for tracking job lifecycle status.

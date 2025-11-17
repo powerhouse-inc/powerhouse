@@ -10,7 +10,7 @@ import {
   createConsistencyToken,
   createEmptyConsistencyToken,
 } from "../executor/util.js";
-import type { ConsistencyToken, ErrorInfo } from "../shared/types.js";
+import type { ErrorInfo } from "../shared/types.js";
 import { JobStatus, type JobInfo } from "../shared/types.js";
 import type { IJobTracker } from "./interfaces.js";
 

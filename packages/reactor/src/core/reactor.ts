@@ -63,7 +63,7 @@ export class Reactor implements IReactor {
   private readModelCoordinator: IReadModelCoordinator;
   private features: ReactorFeatures;
   private documentView: IDocumentView;
-  private documentIndexer: IDocumentIndexer;
+  private _documentIndexer: IDocumentIndexer;
   private operationStore: IOperationStore;
   private _syncManager?: ISyncManager;
 
@@ -86,7 +86,7 @@ export class Reactor implements IReactor {
     this.readModelCoordinator = readModelCoordinator;
     this.features = features;
     this.documentView = documentView;
-    this.documentIndexer = documentIndexer;
+    this._documentIndexer = documentIndexer;
     this.operationStore = operationStore;
 
     // Create mutable shutdown status using factory method
@@ -217,7 +217,7 @@ export class Reactor implements IReactor {
         throw new AbortError();
       }
 
-      const relationships = await this.documentIndexer.getOutgoing(
+      const relationships = await this._documentIndexer.getOutgoing(
         id,
         ["child"],
         consistencyToken,
@@ -1209,7 +1209,7 @@ export class Reactor implements IReactor {
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
     // Get child relationships from indexer
-    const relationships = await this.documentIndexer.getOutgoing(
+    const relationships = await this._documentIndexer.getOutgoing(
       parentId,
       ["child"],
       undefined,

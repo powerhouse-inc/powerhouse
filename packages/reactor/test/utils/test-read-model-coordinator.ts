@@ -9,7 +9,6 @@ import type {
   IReadModel,
   IReadModelCoordinator,
 } from "../../src/read-models/interfaces.js";
-import type { OperationWithContext } from "../../src/storage/interfaces.js";
 
 export class TestReadModelCoordinator implements IReadModelCoordinator {
   private unsubscribe?: Unsubscribe;
