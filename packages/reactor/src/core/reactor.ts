@@ -121,8 +121,8 @@ export class Reactor implements IReactor {
     // Stop the read model coordinator
     this.readModelCoordinator.stop();
 
-    // TODO: Phase 3+ - Implement graceful shutdown for queue, executors, etc.
-    // For now, we just mark as shutdown and return status
+    // Stop the job tracker
+    this.jobTracker.shutdown();
 
     return this.shutdownStatus;
   }

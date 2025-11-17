@@ -1,4 +1,5 @@
 import { describe, expect, it, beforeEach } from "vitest";
+import { EventBus } from "../../src/events/event-bus.js";
 import { InMemoryJobTracker } from "../../src/job-tracker/in-memory-job-tracker.js";
 import { JobStatus } from "../../src/shared/types.js";
 import type { JobInfo } from "../../src/shared/types.js";
@@ -8,7 +9,7 @@ describe("InMemoryJobTracker", () => {
   let tracker: InMemoryJobTracker;
 
   beforeEach(() => {
-    tracker = new InMemoryJobTracker();
+    tracker = new InMemoryJobTracker(new EventBus());
   });
 
   describe("registerJob", () => {

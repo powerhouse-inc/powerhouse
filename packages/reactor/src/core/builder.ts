@@ -1,3 +1,4 @@
+import type { IEventBus } from "#events/interfaces.js";
 import { ReactorClient } from "../client/reactor-client.js";
 import { JobAwaiter, type IJobAwaiter } from "../shared/awaiter.js";
 import { PassthroughSigner } from "../signer/passthrough-signer.js";
@@ -15,9 +16,11 @@ export class ReactorClientBuilder {
   private signer?: ISigner;
   private subscriptionManager?: IReactorSubscriptionManager;
   private jobAwaiter?: IJobAwaiter;
+  private eventBus?: IEventBus;
 
-  public withReactor(reactor: IReactor): this {
+  public withReactor(reactor: IReactor, eventBus: IEventBus): this {
     this.reactor = reactor;
+    this.eventBus = eventBus;
     return this;
   }
 
@@ -43,6 +46,10 @@ export class ReactorClientBuilder {
       throw new Error("Reactor is required to build ReactorClient");
     }
 
+    if (!this.eventBus) {
+      throw new Error("Event bus is required to build ReactorClient");
+    }
+
     if (!this.signer) {
       this.signer = new PassthroughSigner();
     }
@@ -55,7 +62,7 @@ export class ReactorClientBuilder {
     }
 
     if (!this.jobAwaiter) {
-      this.jobAwaiter = new JobAwaiter((jobId, signal) =>
+      this.jobAwaiter = new JobAwaiter(this.eventBus, (jobId, signal) =>
         this.reactor!.getJobStatus(jobId, signal),
       );
     }

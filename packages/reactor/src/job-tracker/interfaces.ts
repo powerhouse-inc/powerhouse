@@ -47,4 +47,10 @@ export interface IJobTracker {
    * @returns The job information, or null if the job is not found
    */
   getJobStatus(jobId: string): JobInfo | null;
+
+  /**
+   * Shutdown the job tracker and clean up resources.
+   * Unsubscribes from all event bus subscriptions.
+   */
+  shutdown(): void;
 }

@@ -1,4 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { EventBus } from "../../src/events/event-bus.js";
+import { OperationEventTypes } from "../../src/events/types.js";
 import { InMemoryJobTracker } from "../../src/job-tracker/in-memory-job-tracker.js";
 import type { IJobTracker } from "../../src/job-tracker/interfaces.js";
 import { JobAwaiter } from "../../src/shared/awaiter.js";
@@ -8,27 +10,27 @@ import { createEmptyConsistencyToken } from "../factories.js";
 describe("JobAwaiter Integration Tests", () => {
   let jobAwaiter: JobAwaiter;
   let jobTracker: IJobTracker;
+  let eventBus: EventBus;
 
   beforeEach(() => {
-    vi.useFakeTimers();
-    jobTracker = new InMemoryJobTracker();
-    jobAwaiter = new JobAwaiter((jobId) => {
+    eventBus = new EventBus();
+    jobTracker = new InMemoryJobTracker(eventBus);
+    jobAwaiter = new JobAwaiter(eventBus, (jobId) => {
       const status = jobTracker.getJobStatus(jobId);
       if (!status) {
         return Promise.reject(new Error(`Job not found: ${jobId}`));
       }
       return Promise.resolve(status);
-    }, 100);
+    });
   });
 
   afterEach(() => {
     jobAwaiter.shutdown();
-    vi.useRealTimers();
-    vi.clearAllMocks();
+    jobTracker.shutdown();
   });
 
   describe("Integration with Real JobTracker", () => {
-    it("should wait for job completion using real job tracker", async () => {
+    it("should wait for job completion using real job tracker and event bus", async () => {
       const jobInfo: JobInfo = {
         id: "job-1",
         status: JobStatus.PENDING,
@@ -40,25 +42,118 @@ describe("JobAwaiter Integration Tests", () => {
 
       const promise = jobAwaiter.waitForJob("job-1");
 
-      await vi.advanceTimersByTimeAsync(0);
       expect(jobTracker.getJobStatus("job-1")?.status).toBe(JobStatus.PENDING);
 
       jobTracker.markRunning("job-1");
-
-      await vi.advanceTimersByTimeAsync(100);
 
       jobTracker.markCompleted("job-1", createEmptyConsistencyToken(), {
         data: "success",
       });
 
-      await vi.advanceTimersByTimeAsync(100);
+      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+        jobId: "job-1",
+        operations: [
+          {
+            operation: {} as any,
+            context: {
+              documentId: "doc-1",
+              documentType: "type-1",
+              scope: "scope",
+              branch: "main",
+            },
+          },
+        ],
+      });
 
       const result = await promise;
       expect(result.status).toBe(JobStatus.COMPLETED);
       expect(result.result).toEqual({ data: "success" });
     });
 
-    it("should handle job failure through real job tracker", async () => {
+    it("should handle job with WRITE_COMPLETED status via OPERATION_WRITTEN event", async () => {
+      const jobInfo: JobInfo = {
+        id: "job-write",
+        status: JobStatus.PENDING,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
+      jobTracker.registerJob(jobInfo);
+      jobTracker.markRunning("job-write");
+
+      const promise = jobAwaiter.waitForJob("job-write");
+
+      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+        jobId: "job-write",
+        operations: [
+          {
+            operation: {} as any,
+            context: {
+              documentId: "doc-1",
+              documentType: "type-1",
+              scope: "scope",
+              branch: "main",
+            },
+          },
+        ],
+      });
+
+      const result = await promise;
+      expect(result.status).toBe(JobStatus.WRITE_COMPLETED);
+    });
+
+    it("should handle job with READ_MODELS_READY status via OPERATIONS_READY event", async () => {
+      const jobInfo: JobInfo = {
+        id: "job-read",
+        status: JobStatus.PENDING,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
+      jobTracker.registerJob(jobInfo);
+      jobTracker.markRunning("job-read");
+
+      const promise = jobAwaiter.waitForJob("job-read");
+
+      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+        jobId: "job-read",
+        operations: [
+          {
+            operation: {} as any,
+            context: {
+              documentId: "doc-1",
+              documentType: "type-1",
+              scope: "scope",
+              branch: "main",
+            },
+          },
+        ],
+      });
+
+      const result = await promise;
+      expect(result.status).toBe(JobStatus.WRITE_COMPLETED);
+
+      await eventBus.emit(OperationEventTypes.OPERATIONS_READY, {
+        jobId: "job-read",
+        operations: [
+          {
+            operation: {} as any,
+            context: {
+              documentId: "doc-1",
+              documentType: "type-1",
+              scope: "scope",
+              branch: "main",
+            },
+          },
+        ],
+      });
+
+      expect(jobTracker.getJobStatus("job-read")?.status).toBe(
+        JobStatus.READ_MODELS_READY,
+      );
+    });
+
+    it("should handle job failure through real job tracker via JOB_FAILED event", async () => {
       const jobInfo: JobInfo = {
         id: "job-2",
         status: JobStatus.PENDING,
@@ -70,23 +165,19 @@ describe("JobAwaiter Integration Tests", () => {
 
       const promise = jobAwaiter.waitForJob("job-2");
 
-      await vi.advanceTimersByTimeAsync(0);
-
       jobTracker.markRunning("job-2");
-      await vi.advanceTimersByTimeAsync(100);
 
-      jobTracker.markFailed("job-2", {
-        message: "Job execution failed",
-        stack: "",
+      await eventBus.emit(OperationEventTypes.JOB_FAILED, {
+        jobId: "job-2",
+        error: new Error("Job execution failed"),
       });
-      await vi.advanceTimersByTimeAsync(100);
 
       const result = await promise;
       expect(result.status).toBe(JobStatus.FAILED);
       expect(result.error?.message).toBe("Job execution failed");
     });
 
-    it("should handle complete job lifecycle PENDING → RUNNING → COMPLETED", async () => {
+    it("should handle complete job lifecycle PENDING → RUNNING → WRITE_COMPLETED → READ_MODELS_READY", async () => {
       const jobInfo: JobInfo = {
         id: "job-3",
         status: JobStatus.PENDING,
@@ -98,21 +189,51 @@ describe("JobAwaiter Integration Tests", () => {
 
       const promise = jobAwaiter.waitForJob("job-3");
 
-      await vi.advanceTimersByTimeAsync(0);
       expect(jobTracker.getJobStatus("job-3")?.status).toBe(JobStatus.PENDING);
 
       jobTracker.markRunning("job-3");
-      await vi.advanceTimersByTimeAsync(100);
       expect(jobTracker.getJobStatus("job-3")?.status).toBe(JobStatus.RUNNING);
 
-      jobTracker.markCompleted("job-3", createEmptyConsistencyToken(), {
-        result: "completed",
+      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+        jobId: "job-3",
+        operations: [
+          {
+            operation: {} as any,
+            context: {
+              documentId: "doc-1",
+              documentType: "type-1",
+              scope: "scope",
+              branch: "main",
+            },
+          },
+        ],
       });
-      await vi.advanceTimersByTimeAsync(100);
 
       const result = await promise;
-      expect(result.status).toBe(JobStatus.COMPLETED);
-      expect(result.result).toEqual({ result: "completed" });
+      expect(result.status).toBe(JobStatus.WRITE_COMPLETED);
+
+      expect(jobTracker.getJobStatus("job-3")?.status).toBe(
+        JobStatus.WRITE_COMPLETED,
+      );
+
+      await eventBus.emit(OperationEventTypes.OPERATIONS_READY, {
+        jobId: "job-3",
+        operations: [
+          {
+            operation: {} as any,
+            context: {
+              documentId: "doc-1",
+              documentType: "type-1",
+              scope: "scope",
+              branch: "main",
+            },
+          },
+        ],
+      });
+
+      expect(jobTracker.getJobStatus("job-3")?.status).toBe(
+        JobStatus.READ_MODELS_READY,
+      );
     });
 
     it("should handle multiple concurrent jobs with real job tracker", async () => {
@@ -143,29 +264,55 @@ describe("JobAwaiter Integration Tests", () => {
       const promise2 = jobAwaiter.waitForJob("job-concurrent-2");
       const promise3 = jobAwaiter.waitForJob("job-concurrent-3");
 
-      await vi.advanceTimersByTimeAsync(0);
-
       jobTracker.markCompleted(
         "job-concurrent-1",
         createEmptyConsistencyToken(),
       );
-      await vi.advanceTimersByTimeAsync(100);
+
+      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+        jobId: "job-concurrent-1",
+        operations: [
+          {
+            operation: {} as any,
+            context: {
+              documentId: "doc-1",
+              documentType: "type-1",
+              scope: "scope",
+              branch: "main",
+            },
+          },
+        ],
+      });
 
       const result1 = await promise1;
       expect(result1.status).toBe(JobStatus.COMPLETED);
 
       jobTracker.markRunning("job-concurrent-2");
-      await vi.advanceTimersByTimeAsync(100);
 
-      jobTracker.markFailed("job-concurrent-2", {
-        message: "Job 2 failed",
-        stack: "",
+      await eventBus.emit(OperationEventTypes.JOB_FAILED, {
+        jobId: "job-concurrent-2",
+        error: new Error("Job 2 failed"),
       });
+
       jobTracker.markCompleted(
         "job-concurrent-3",
         createEmptyConsistencyToken(),
       );
-      await vi.advanceTimersByTimeAsync(100);
+
+      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+        jobId: "job-concurrent-3",
+        operations: [
+          {
+            operation: {} as any,
+            context: {
+              documentId: "doc-1",
+              documentType: "type-1",
+              scope: "scope",
+              branch: "main",
+            },
+          },
+        ],
+      });
 
       const [result2, result3] = await Promise.all([promise2, promise3]);
       expect(result2.status).toBe(JobStatus.FAILED);
@@ -175,13 +322,7 @@ describe("JobAwaiter Integration Tests", () => {
     it("should reject when job is not found in tracker", async () => {
       const promise = jobAwaiter.waitForJob("non-existent-job");
 
-      const rejectionPromise = expect(promise).rejects.toThrow(
-        "Job not found: non-existent-job",
-      );
-
-      await vi.advanceTimersByTimeAsync(0);
-
-      await rejectionPromise;
+      await expect(promise).rejects.toThrow("Job not found: non-existent-job");
     });
 
     it("should handle same job being waited on multiple times", async () => {
@@ -197,12 +338,24 @@ describe("JobAwaiter Integration Tests", () => {
       const promise1 = jobAwaiter.waitForJob("job-duplicate");
       const promise2 = jobAwaiter.waitForJob("job-duplicate");
 
-      await vi.advanceTimersByTimeAsync(0);
-
       jobTracker.markCompleted("job-duplicate", createEmptyConsistencyToken(), {
         data: "shared result",
       });
-      await vi.advanceTimersByTimeAsync(100);
+
+      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+        jobId: "job-duplicate",
+        operations: [
+          {
+            operation: {} as any,
+            context: {
+              documentId: "doc-1",
+              documentType: "type-1",
+              scope: "scope",
+              branch: "main",
+            },
+          },
+        ],
+      });
 
       const [result1, result2] = await Promise.all([promise1, promise2]);
       expect(result1).toEqual(result2);
@@ -223,97 +376,19 @@ describe("JobAwaiter Integration Tests", () => {
       const controller = new AbortController();
       const promise = jobAwaiter.waitForJob("job-abort", controller.signal);
 
-      await vi.advanceTimersByTimeAsync(50);
+      await new Promise((resolve) => setTimeout(resolve, 5));
 
       controller.abort();
 
       await expect(promise).rejects.toThrow("Operation aborted");
     });
 
-    it("should handle long-running jobs with multiple status checks", async () => {
-      const jobInfo: JobInfo = {
-        id: "job-long-running",
-        status: JobStatus.PENDING,
-        createdAtUtcIso: new Date().toISOString(),
-        consistencyToken: createEmptyConsistencyToken(),
-      };
-
-      jobTracker.registerJob(jobInfo);
-
-      const promise = jobAwaiter.waitForJob("job-long-running");
-
-      await vi.advanceTimersByTimeAsync(0);
-      expect(jobTracker.getJobStatus("job-long-running")?.status).toBe(
-        JobStatus.PENDING,
-      );
-
-      await vi.advanceTimersByTimeAsync(100);
-      expect(jobTracker.getJobStatus("job-long-running")?.status).toBe(
-        JobStatus.PENDING,
-      );
-
-      jobTracker.markRunning("job-long-running");
-      await vi.advanceTimersByTimeAsync(100);
-      expect(jobTracker.getJobStatus("job-long-running")?.status).toBe(
-        JobStatus.RUNNING,
-      );
-
-      await vi.advanceTimersByTimeAsync(100);
-      expect(jobTracker.getJobStatus("job-long-running")?.status).toBe(
-        JobStatus.RUNNING,
-      );
-
-      jobTracker.markCompleted(
-        "job-long-running",
-        createEmptyConsistencyToken(),
-      );
-      await vi.advanceTimersByTimeAsync(100);
-
-      const result = await promise;
-      expect(result.status).toBe(JobStatus.COMPLETED);
-    });
-
     it("should reject when job is not found after registration", async () => {
       const promise = jobAwaiter.waitForJob("job-not-registered");
 
-      const rejectionPromise = expect(promise).rejects.toThrow(
+      await expect(promise).rejects.toThrow(
         "Job not found: job-not-registered",
       );
-
-      await vi.advanceTimersByTimeAsync(0);
-
-      await rejectionPromise;
-    });
-
-    it("should properly clean up when jobs complete", async () => {
-      const job1: JobInfo = {
-        id: "job-cleanup-1",
-        status: JobStatus.PENDING,
-        createdAtUtcIso: new Date().toISOString(),
-        consistencyToken: createEmptyConsistencyToken(),
-      };
-      const job2: JobInfo = {
-        id: "job-cleanup-2",
-        status: JobStatus.PENDING,
-        createdAtUtcIso: new Date().toISOString(),
-        consistencyToken: createEmptyConsistencyToken(),
-      };
-
-      jobTracker.registerJob(job1);
-      jobTracker.registerJob(job2);
-
-      const promise1 = jobAwaiter.waitForJob("job-cleanup-1");
-      const promise2 = jobAwaiter.waitForJob("job-cleanup-2");
-
-      await vi.advanceTimersByTimeAsync(0);
-
-      jobTracker.markCompleted("job-cleanup-1", createEmptyConsistencyToken());
-      jobTracker.markCompleted("job-cleanup-2", createEmptyConsistencyToken());
-      await vi.advanceTimersByTimeAsync(100);
-
-      await Promise.all([promise1, promise2]);
-
-      await vi.advanceTimersByTimeAsync(500);
     });
 
     it("should handle immediate job completion", async () => {
@@ -328,8 +403,6 @@ describe("JobAwaiter Integration Tests", () => {
       jobTracker.registerJob(jobInfo);
 
       const promise = jobAwaiter.waitForJob("job-immediate");
-
-      await vi.advanceTimersByTimeAsync(0);
 
       const result = await promise;
       expect(result.status).toBe(JobStatus.COMPLETED);
@@ -347,8 +420,6 @@ describe("JobAwaiter Integration Tests", () => {
 
       const promise = jobAwaiter.waitForJob("job-with-result");
 
-      await vi.advanceTimersByTimeAsync(0);
-
       const resultData = {
         documentId: "doc-123",
         operationCount: 5,
@@ -360,7 +431,21 @@ describe("JobAwaiter Integration Tests", () => {
         createEmptyConsistencyToken(),
         resultData,
       );
-      await vi.advanceTimersByTimeAsync(100);
+
+      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+        jobId: "job-with-result",
+        operations: [
+          {
+            operation: {} as any,
+            context: {
+              documentId: "doc-1",
+              documentType: "type-1",
+              scope: "scope",
+              branch: "main",
+            },
+          },
+        ],
+      });
 
       const result = await promise;
       expect(result.status).toBe(JobStatus.COMPLETED);
@@ -389,13 +474,17 @@ describe("JobAwaiter Integration Tests", () => {
       const promise1 = jobAwaiter.waitForJob("job-shutdown-1");
       const promise2 = jobAwaiter.waitForJob("job-shutdown-2");
 
+      await new Promise((resolve) => setTimeout(resolve, 5));
+
       jobAwaiter.shutdown();
 
-      await expect(promise1).rejects.toThrow("JobAwaiter destroyed");
-      await expect(promise2).rejects.toThrow("JobAwaiter destroyed");
+      await Promise.all([
+        expect(promise1).rejects.toThrow("JobAwaiter destroyed"),
+        expect(promise2).rejects.toThrow("JobAwaiter destroyed"),
+      ]);
     });
 
-    it("should work correctly after multiple start-stop cycles", async () => {
+    it("should work correctly with event-driven updates", async () => {
       let jobInfo: JobInfo = {
         id: "job-cycle-1",
         status: JobStatus.PENDING,
@@ -406,10 +495,22 @@ describe("JobAwaiter Integration Tests", () => {
       jobTracker.registerJob(jobInfo);
       const promise1 = jobAwaiter.waitForJob("job-cycle-1");
 
-      await vi.advanceTimersByTimeAsync(0);
-
       jobTracker.markCompleted("job-cycle-1", createEmptyConsistencyToken());
-      await vi.advanceTimersByTimeAsync(100);
+
+      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+        jobId: "job-cycle-1",
+        operations: [
+          {
+            operation: {} as any,
+            context: {
+              documentId: "doc-1",
+              documentType: "type-1",
+              scope: "scope",
+              branch: "main",
+            },
+          },
+        ],
+      });
 
       await promise1;
 
@@ -421,14 +522,27 @@ describe("JobAwaiter Integration Tests", () => {
       };
 
       jobTracker.registerJob(jobInfo);
+      jobTracker.markRunning("job-cycle-2");
+
       const promise2 = jobAwaiter.waitForJob("job-cycle-2");
 
-      await vi.advanceTimersByTimeAsync(0);
+      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+        jobId: "job-cycle-2",
+        operations: [
+          {
+            operation: {} as any,
+            context: {
+              documentId: "doc-1",
+              documentType: "type-1",
+              scope: "scope",
+              branch: "main",
+            },
+          },
+        ],
+      });
 
-      jobTracker.markCompleted("job-cycle-2", createEmptyConsistencyToken());
-      await vi.advanceTimersByTimeAsync(100);
-
-      await promise2;
+      const result2 = await promise2;
+      expect(result2.status).toBe(JobStatus.WRITE_COMPLETED);
     });
   });
 });

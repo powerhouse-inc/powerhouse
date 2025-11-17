@@ -30,11 +30,11 @@ import { JobStatus } from "../../../src/shared/types.js";
 import { KyselyDocumentIndexer } from "../../../src/storage/kysely/document-indexer.js";
 import { KyselyKeyframeStore } from "../../../src/storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../../../src/storage/kysely/store.js";
-import { runMigrations } from "../../../src/storage/migrations/migrator.js";
 import type {
   DocumentIndexerDatabase,
   Database as StorageDatabase,
 } from "../../../src/storage/kysely/types.js";
+import { runMigrations } from "../../../src/storage/migrations/migrator.js";
 import {
   type RecordedOperation,
   getDocumentModels,
@@ -88,7 +88,7 @@ async function createReactorSetup(
 
   const eventBus = new EventBus();
   const queue = new InMemoryQueue(eventBus);
-  const jobTracker = new InMemoryJobTracker();
+  const jobTracker = new InMemoryJobTracker(eventBus);
 
   const writeCacheConfig: WriteCacheConfig = {
     maxDocuments: 100,

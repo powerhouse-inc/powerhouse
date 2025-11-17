@@ -38,7 +38,7 @@ describe("SimpleJobExecutorManager", () => {
     mockExecutors = [];
     eventBus = new EventBus();
     queue = new InMemoryQueue(eventBus);
-    jobTracker = new InMemoryJobTracker();
+    jobTracker = new InMemoryJobTracker(eventBus);
 
     // Create factory that returns mock executors
     executorFactory = vi.fn(() => createMockExecutor());

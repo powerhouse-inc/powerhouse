@@ -213,7 +213,7 @@ describe("SyncManager - Unit Tests", () => {
     it("should unsubscribe from event bus", async () => {
       await syncManager.startup();
 
-      expect(eventSubscribers.size).toBe(1);
+      expect(eventSubscribers.size).toBe(3);
 
       syncManager.shutdown();
 

@@ -84,6 +84,7 @@ export class ReadModelCoordinator implements IReadModelCoordinator {
     // Emit OPERATIONS_READY event after all read models have completed
     // Use fire-and-forget pattern to avoid blocking
     const readyEvent: OperationsReadyEvent = {
+      jobId: event.jobId,
       operations: event.operations,
     };
     this.eventBus

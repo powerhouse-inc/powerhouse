@@ -58,7 +58,7 @@ export class SyncManager implements ISyncManager {
     this.reactor = reactor;
     this.eventBus = eventBus;
     this.remotes = new Map();
-    this.awaiter = new JobAwaiter((jobId, signal) =>
+    this.awaiter = new JobAwaiter(eventBus, (jobId, signal) =>
       reactor.getJobStatus(jobId, signal),
     );
     this.isShutdown = false;
@@ -101,6 +101,8 @@ export class SyncManager implements ISyncManager {
       this.eventUnsubscribe();
       this.eventUnsubscribe = undefined;
     }
+
+    this.awaiter.shutdown();
 
     for (const remote of this.remotes.values()) {
       try {

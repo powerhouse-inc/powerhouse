@@ -330,8 +330,8 @@ export function createTestQueue(eventBus?: IEventBus): IQueue {
 /**
  * Factory for creating test JobTracker instances
  */
-export function createTestJobTracker(): IJobTracker {
-  return new InMemoryJobTracker();
+export function createTestJobTracker(eventBus?: IEventBus): IJobTracker {
+  return new InMemoryJobTracker(eventBus || new EventBus());
 }
 
 /**
@@ -461,7 +461,7 @@ export async function createTestReactorSetup(
   const storage = new MemoryStorage();
   const eventBus = new EventBus();
   const queue = new InMemoryQueue(eventBus);
-  const jobTracker = new InMemoryJobTracker();
+  const jobTracker = new InMemoryJobTracker(eventBus);
 
   // Create real drive server
   const builder = new ReactorBuilder(documentModels).withStorage(storage);

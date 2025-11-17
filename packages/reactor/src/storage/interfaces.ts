@@ -1,6 +1,6 @@
 import type { Operation, PHDocument } from "document-model";
 import type { ConsistencyToken } from "../shared/types.js";
-import type { RemoteRecord, RemoteCursor } from "../sync/types.js";
+import type { RemoteCursor, RemoteRecord } from "../sync/types.js";
 
 export type OperationContext = {
   documentId: string;

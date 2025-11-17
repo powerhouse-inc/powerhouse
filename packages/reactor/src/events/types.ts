@@ -46,6 +46,7 @@ export class EventBusAggregateError extends Error {
 export const OperationEventTypes = {
   OPERATION_WRITTEN: 10001,
   OPERATIONS_READY: 10002,
+  JOB_FAILED: 10003,
 } as const;
 
 /**
@@ -53,6 +54,7 @@ export const OperationEventTypes = {
  * Contains the operations directly to avoid round-trip queries.
  */
 export type OperationWrittenEvent = {
+  jobId: string;
   operations: OperationWithContext[];
 };
 
@@ -69,5 +71,16 @@ export type OperationWrittenEvent = {
  * - Event-driven workflows (triggering downstream processes)
  */
 export type OperationsReadyEvent = {
+  jobId: string;
   operations: OperationWithContext[];
+};
+
+/**
+ * Event emitted when a job fails with an unrecoverable error.
+ * This event allows the JobAwaiter and other subscribers to react to job failures
+ * without polling.
+ */
+export type JobFailedEvent = {
+  jobId: string;
+  error: Error;
 };

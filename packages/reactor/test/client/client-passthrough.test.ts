@@ -139,7 +139,7 @@ describe("ReactorClient Passthrough Functions", () => {
     // Create ReactorClient using the builder
     // The builder will use default subscription manager if not provided
     client = new ReactorClientBuilder()
-      .withReactor(reactor)
+      .withReactor(reactor, eventBus)
       .withSigner(mockSigner)
       .build();
 

@@ -139,7 +139,7 @@ describe.each(storageLayers)(
       // Create dependencies
       const eventBus = new EventBus();
       const queue = new InMemoryQueue(eventBus);
-      const jobTracker = new InMemoryJobTracker();
+      const jobTracker = new InMemoryJobTracker(eventBus);
 
       // Create mock write cache
       const mockWriteCache: IWriteCache = {

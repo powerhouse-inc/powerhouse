@@ -31,7 +31,7 @@ describe("mutateBatch validation", () => {
     const storage = createMockStorage();
     const eventBus = new EventBus();
     const queue = new InMemoryQueue(eventBus);
-    const jobTracker = new InMemoryJobTracker();
+    const jobTracker = new InMemoryJobTracker(eventBus);
     const readModelCoordinator = new ReadModelCoordinator(eventBus, []);
     readModelCoordinator.start();
     return new Reactor(

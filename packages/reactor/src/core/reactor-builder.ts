@@ -152,7 +152,7 @@ export class ReactorBuilder {
 
     const eventBus = this.eventBus || new EventBus();
     const queue = new InMemoryQueue(eventBus);
-    const jobTracker = new InMemoryJobTracker();
+    const jobTracker = new InMemoryJobTracker(eventBus);
 
     const cacheConfig: WriteCacheConfig = {
       maxDocuments: this.writeCacheConfig?.maxDocuments ?? 100,
