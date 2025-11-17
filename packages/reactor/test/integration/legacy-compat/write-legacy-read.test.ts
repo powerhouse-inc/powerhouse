@@ -184,7 +184,6 @@ describe.each(storageLayers)(
 
       // Create real read model coordinator with document view
       readModelCoordinator = new ReadModelCoordinator(eventBus, [documentView]);
-      readModelCoordinator.start();
 
       // Create reactor
       reactor = new Reactor(

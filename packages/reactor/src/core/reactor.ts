@@ -93,6 +93,8 @@ export class Reactor implements IReactor {
     const [status, setter] = createMutableShutdownStatus(false);
     this.shutdownStatus = status;
     this.setShutdown = setter;
+
+    this.readModelCoordinator.start();
   }
 
   get syncManager(): ISyncManager | undefined {

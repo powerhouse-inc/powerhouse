@@ -33,7 +33,6 @@ describe("mutateBatch validation", () => {
     const queue = new InMemoryQueue(eventBus);
     const jobTracker = new InMemoryJobTracker(eventBus);
     const readModelCoordinator = new ReadModelCoordinator(eventBus, []);
-    readModelCoordinator.start();
     return new Reactor(
       driveServer,
       storage,

@@ -220,7 +220,6 @@ export class ReactorBuilder {
     const readModelCoordinator = this.readModelCoordinatorFactory
       ? this.readModelCoordinatorFactory(eventBus, readModelInstances)
       : new ReadModelCoordinator(eventBus, readModelInstances);
-    readModelCoordinator.start();
 
     const reactor = new Reactor(
       driveServer,
