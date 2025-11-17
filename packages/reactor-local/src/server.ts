@@ -141,9 +141,8 @@ const startServer = async (
       legacyStorageEnabled: true,
     });
 
-  const reactor = await builder.build();
-  const client = new ReactorClientBuilder()
-    .withReactor(reactor, eventBus)
+  const client = await new ReactorClientBuilder()
+    .withReactorBuilder(builder)
     .build();
 
   // init drive server + conditionally add a default drive

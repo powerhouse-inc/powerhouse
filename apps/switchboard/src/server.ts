@@ -171,9 +171,8 @@ async function initServer(serverPort: number, options: StartServerOptions) {
         legacyStorageEnabled: true,
       });
 
-    const reactor = await builder.build();
     const client = new ReactorClientBuilder()
-      .withReactor(reactor, eventBus)
+      .withReactorBuilder(builder)
       .build();
 
     return client;
