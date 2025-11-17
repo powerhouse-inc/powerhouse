@@ -203,7 +203,7 @@ describe("Atlas Recorded Operations Reactor Test", () => {
     }
 
     await setup.cleanup();
-  }, 100000);
+  }, 10000);
 
   it("should submit all mutations with queue hints and process them correctly", async () => {
     const setup = await createReactorSetup(true);
@@ -266,7 +266,7 @@ describe("Atlas Recorded Operations Reactor Test", () => {
 
     await waitForAllJobs();
     await setup.cleanup();
-  }, 100000);
+  }, 10000);
 });
 
 describe("Atlas Recorded Operations Base Server Test", () => {
@@ -300,7 +300,7 @@ describe("Atlas Recorded Operations Base Server Test", () => {
     console.log(
       `BaseServer standalone test - total children: ${children.length}`,
     );
-  }, 100000);
+  }, 10000);
 });
 
 describe("Atlas Recorded Operations State Comparison Test", () => {
@@ -441,5 +441,5 @@ describe("Atlas Recorded Operations State Comparison Test", () => {
     console.log(
       "All states match between Reactor (legacy reads), Reactor (documentView reads), Reactor (batch with queue hints), and BaseDocumentDriveServer!",
     );
-  }, 200000);
+  }, 60000);
 });
