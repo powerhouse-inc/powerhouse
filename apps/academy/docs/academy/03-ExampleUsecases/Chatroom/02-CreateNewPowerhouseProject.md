@@ -73,7 +73,10 @@ Watching local document editors at '/home/you/Powerhouse/ChatRoom/editors'...
 
 A new browser window will open and you will see the Connect application. If it doesn't open automatically, you can open it manually by navigating to `http://localhost:3000/` in your browser.
 
-Create a new document model by clicking on the `DocumentModel` button by the "New Document" section. The Gif below shows you where to click.
+If you don't have a local drive created yet, create one using the Generic Drive Explorer app.
+
+Open your Local Drive and create a new document model by clicking the `DocumentModel` button in the "New Document" section. The GIF below shows where to click.
+
 
 ![Create New Document Model](./images/ChatRoomConnectApp.gif)
 

@@ -9,7 +9,7 @@ Run below command to generate the editor template for the `Chatroom` document mo
 Notice the `--editor` flag which defines the `chatroom` document model editor. And the `--document-types` flag which defines the document type `powerhouse/chatroom`.
 
 ```bash
-ph generate -- --editor ChatRoomEditor --document-types powerhouse/chat-room
+ph generate --editor ChatRoomEditor --document-types powerhouse/chat-room
 ```
 
 Once complete, navigate to the `editors/chat-room/editor.tsx` file and open it in your editor.
@@ -37,36 +37,41 @@ The utils function will help you with mapping information from the document mode
 Now, let's copy & paste the code below into the `editor.tsx` file located at `editors/chat-room-editor`and save the file.
 
 ```typescript
-/* eslint-disable react/jsx-no-bind */
-import { EditorProps } from "document-model/document";
+import { generateId } from "document-model/core";
+import { useUser } from "@powerhousedao/reactor-browser/connect";
+import { useSelectedChatRoomDocument } from "../../document-models/chat-room/hooks.js";
 import {
-  ChatRoomState,
-  ChatRoomAction,
-  ChatRoomLocalState,
-  ReactionType,
-  actions,
-} from "../../document-models/chat-room";
-import { utils as documentModelUtils } from "document-model/document";
-import { ChatRoom, ChatRoomProps, MessageProps } from "./components";
-import { reactionKeyToReactionType, mapReactions } from "./utils";
+  addMessage,
+  addEmojiReaction,
+  removeEmojiReaction,
+  editChatName,
+  editChatDescription,
+} from "../../document-models/chat-room/gen/creators.js";
+import {
+  ChatRoom,
+  type ChatRoomProps,
+  type MessageProps,
+} from "./components/index.js";
+import { reactionKeyToReactionType, mapReactions } from "./utils.js";
 
-export type IProps = EditorProps<
-  ChatRoomState,
-  ChatRoomAction,
-  ChatRoomLocalState
->;
+export default function Editor() {
+  const [document, dispatch] = useSelectedChatRoomDocument();
+  const user = useUser();
 
-export default function Editor(props: IProps) {
-  const disableChatRoom = !props.context.user;          // we're disabling the chatroom when a user is not logged in.
+  const disableChatRoom = !user;
+
+  if (!document) {
+    return <div>Loading...</div>;
+  }
 
   const messages: ChatRoomProps["messages"] =
-    props.document.state.global.messages.map((message) => ({    // this object comes from the document state with a mapping that validates which message which user has send.
+    document.state.global.messages.map((message) => ({
       id: message.id,
       message: message.content || "",
       timestamp: message.sentAt,
       userName: message.sender.name || message.sender.id,
-      imgUrl: message.sender.avatarUrl || undefined,        // if the user has an avatar set we'll use it.
-      isCurrentUser: message.sender.id === props.context.user?.address,
+      imgUrl: message.sender.avatarUrl || undefined,
+      isCurrentUser: message.sender.id === user?.address,
       reactions: mapReactions(message.reactions),
     }));
 
@@ -75,14 +80,14 @@ export default function Editor(props: IProps) {
       return;
     }
 
-    props.dispatch(
-      actions.addMessage({
-        messageId: documentModelUtils.hashKey(),
+    dispatch(
+      addMessage({
+        messageId: generateId(),
         content: message,
         sender: {
-          id: props.context.user?.address || "anon-user",
-          name: props.context.user?.ens?.name || null,  // The context of the editor allows us to get hold of the users profile information.
-          avatarUrl: props.context.user?.ens?.avatarUrl || null,
+          id: user?.address || "anon-user",
+          name: user?.ens?.name || null,
+          avatarUrl: user?.ens?.avatarUrl || null,
         },
         sentAt: new Date().toISOString(),
       }),
@@ -92,10 +97,10 @@ export default function Editor(props: IProps) {
   const addReaction = (
     messageId: string,
     userId: string,
-    reactionType: ReactionType,
+    reactionType: "HEART" | "THUMBS_UP" | "THUMBS_DOWN" | "LAUGH" | "CRY",
   ) => {
-    props.dispatch(
-      actions.addEmojiReaction({
+    dispatch(
+      addEmojiReaction({
         messageId,
         reactedBy: userId,
         type: reactionType,
@@ -106,10 +111,10 @@ export default function Editor(props: IProps) {
   const removeReaction = (
     messageId: string,
     userId: string,
-    reactionType: ReactionType,
+    reactionType: "HEART" | "THUMBS_UP" | "THUMBS_DOWN" | "LAUGH" | "CRY",
   ) => {
-    props.dispatch(
-      actions.removeEmojiReaction({
+    dispatch(
+      removeEmojiReaction({
         messageId,
         senderId: userId,
         type: reactionType,
@@ -117,7 +122,7 @@ export default function Editor(props: IProps) {
     );
   };
 
-  const onClickReaction: MessageProps["onClickReaction"] = (reaction) => {      // This allows us to increase the reactions on a emoji that already has been used as a reaction to a message.
+  const onClickReaction: MessageProps["onClickReaction"] = (reaction) => {
     const message = messages.find(
       (message) => message.id === reaction.messageId,
     );
@@ -128,7 +133,7 @@ export default function Editor(props: IProps) {
 
     const messageId = reaction.messageId;
     const reactionType = reactionKeyToReactionType(reaction.type);
-    const currentUserId = props.context.user?.address || "anon-user";
+    const currentUserId = user?.address || "anon-user";
 
     const existingReaction = message.reactions?.find(
       (r) => r.type === reaction.type,
@@ -146,13 +151,13 @@ export default function Editor(props: IProps) {
   };
 
   const onSubmitTitle: ChatRoomProps["onSubmitTitle"] = (title) => {
-    props.dispatch(actions.editChatName({ name: title }));
+    dispatch(editChatName({ name: title }));
   };
 
   const onSubmitDescription: ChatRoomProps["onSubmitDescription"] = (
     description,
   ) => {
-    props.dispatch(actions.editChatDescription({ description }));
+    dispatch(editChatDescription({ description }));
   };
 
   return (
@@ -163,18 +168,19 @@ export default function Editor(props: IProps) {
     >
       <ChatRoom
         description={
-          props.document.state.global.description || "This is a chat room demo"
+          document.state.global.description || "This is a chat room demo"
         }
-        disabled={disableChatRoom}      // we're disabling the chatroom when a user is not logged in.
-        messages={messages}             // the list of messages users are submitting
+        disabled={disableChatRoom}
+        messages={messages}
         onClickReaction={onClickReaction}
         onSendMessage={onSendMessage}
         onSubmitDescription={onSubmitDescription}
         onSubmitTitle={onSubmitTitle}
-        title={props.document.state.global.name || "Chat Room Demo"}
+        title={document.state.global.name || "Chat Room Demo"}
       />
     </div>
   );
+}
 ```
 
 Now you can run the Connect app and see the `Chatroom` editor in action.
