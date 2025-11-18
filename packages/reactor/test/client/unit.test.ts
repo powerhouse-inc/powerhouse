@@ -12,8 +12,8 @@ import {
 } from "../../src/shared/types.js";
 import type { ISigner } from "../../src/signer/types.js";
 import type { IDocumentIndexer } from "../../src/storage/interfaces.js";
-import { createEmptyConsistencyToken } from "../factories.js";
 import type { IReactorSubscriptionManager } from "../../src/subs/types.js";
+import { createEmptyConsistencyToken } from "../factories.js";
 
 describe("ReactorClient Unit Tests", () => {
   let client: IReactorClient;
