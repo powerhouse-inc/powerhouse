@@ -8,7 +8,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readPackage } from "read-pkg";
 import { TSMorphCodeGenerator } from "../ts-morph-generator/index.js";
-import { makeModulesFile } from "../ts-morph-utils.js";
+import { makeModulesFile, makeSubgraphsIndexFile } from "../ts-morph-utils.js";
 import type { CodegenOptions, DocumentTypesMap } from "./types.js";
 import { loadDocumentModel } from "./utils.js";
 
@@ -359,6 +359,8 @@ export async function hygenGenerateSubgraph(
       { skipFormat, verbose },
     );
   }
+
+  makeSubgraphsIndexFile({ projectDir: path.dirname(dir) });
 }
 
 export async function hygenGenerateImportScript(
