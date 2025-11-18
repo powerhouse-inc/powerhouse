@@ -13,7 +13,13 @@ import {
 import type { ISigner } from "../../src/signer/types.js";
 import type { IDocumentIndexer } from "../../src/storage/interfaces.js";
 import type { IReactorSubscriptionManager } from "../../src/subs/types.js";
-import { createEmptyConsistencyToken } from "../factories.js";
+import {
+  createEmptyConsistencyToken,
+  createMockDocumentIndexer,
+  createMockJobAwaiter,
+  createMockSigner,
+  createMockSubscriptionManager,
+} from "../factories.js";
 
 describe("ReactorClient Unit Tests", () => {
   let client: IReactorClient;
@@ -24,11 +30,7 @@ describe("ReactorClient Unit Tests", () => {
   let mockDocumentIndexer: IDocumentIndexer;
 
   beforeEach(() => {
-    mockDocumentIndexer = {
-      getOutgoing: vi.fn().mockResolvedValue([]),
-      getIncoming: vi.fn().mockResolvedValue([]),
-      waitForConsistency: vi.fn().mockResolvedValue(undefined),
-    } as unknown as IDocumentIndexer;
+    mockDocumentIndexer = createMockDocumentIndexer();
 
     mockReactor = {
       documentIndexer: mockDocumentIndexer,
@@ -50,25 +52,11 @@ describe("ReactorClient Unit Tests", () => {
       getJobStatus: vi.fn(),
     } as unknown as IReactor;
 
-    mockSigner = {
-      sign: vi.fn().mockResolvedValue(["mock-signature", "", "", "", ""]),
-    };
+    mockSigner = createMockSigner();
 
-    mockSubscriptionManager = {
-      onDocumentCreated: vi.fn(),
-      onDocumentDeleted: vi.fn(),
-      onDocumentStateUpdated: vi.fn(),
-      onRelationshipChanged: vi.fn(),
-    };
+    mockSubscriptionManager = createMockSubscriptionManager();
 
-    mockJobAwaiter = {
-      waitForJob: vi.fn().mockResolvedValue({
-        id: "job-1",
-        status: JobStatus.READ_MODELS_READY,
-        createdAtUtcIso: new Date().toISOString(),
-      }),
-      shutdown: vi.fn(),
-    };
+    mockJobAwaiter = createMockJobAwaiter();
 
     client = new ReactorClient(
       mockReactor,
@@ -302,7 +290,7 @@ describe("ReactorClient Unit Tests", () => {
       expect(mockReactor.getByIdOrSlug).toHaveBeenCalledWith(
         documentId,
         { branch },
-        undefined,
+        expect.any(Object),
         signal,
       );
     });
