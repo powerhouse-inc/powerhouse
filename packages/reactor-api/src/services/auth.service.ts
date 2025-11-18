@@ -60,13 +60,16 @@ export class AuthService {
     req.auth_enabled = this.config.enabled;
     req.freeEntry = this.config.freeEntry;
     const token = req.headers.authorization?.split(" ")[1];
-    if (!token) {
+    if (!token && !this.config.freeEntry) {
       res.status(400).json({ error: "Missing authorization token" });
+      return;
+    } else if (!token && this.config.freeEntry) {
+      next();
       return;
     }
 
     try {
-      const verified = (await this.verifyToken(token)) as {
+      const verified = (await this.verifyToken(token!)) as {
         issuer: string;
         verifiableCredential?: {
           credentialSubject?: {
