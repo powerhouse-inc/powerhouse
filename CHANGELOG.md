@@ -1,3 +1,15 @@
+## 4.1.0-dev.123 (2025-11-18)
+
+### 🚀 Features
+
+- **codegen:** use ts morph for generating module export files ([d61029bc9](https://github.com/powerhouse-inc/powerhouse/commit/d61029bc9))
+- **codegen:** add comments ([b43130230](https://github.com/powerhouse-inc/powerhouse/commit/b43130230))
+- **codegen:** remove unused var ([c2f03d359](https://github.com/powerhouse-inc/powerhouse/commit/c2f03d359))
+
+### ❤️ Thank You
+
+- ryanwolhuter
+
 ## 4.1.0-dev.122 (2025-11-18)
 
 ### 🚀 Features
