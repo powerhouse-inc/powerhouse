@@ -543,13 +543,13 @@ describe("ReactorClient Unit Tests", () => {
           sourceId: parentId,
           targetId: childId,
           relationshipType: "child",
+          createdAt: new Date(),
+          updatedAt: new Date(),
         },
       ]);
 
       vi.mocked(mockReactor.deleteDocument).mockResolvedValue(childJobInfo);
-      vi.mocked(mockReactor.deleteDocument).mockResolvedValueOnce(
-        childJobInfo,
-      );
+      vi.mocked(mockReactor.deleteDocument).mockResolvedValueOnce(childJobInfo);
       vi.mocked(mockReactor.deleteDocument).mockResolvedValueOnce(
         parentJobInfo,
       );
