@@ -490,7 +490,6 @@ describe("ReactorClient Unit Tests", () => {
       expect(mockReactor.deleteDocument).toHaveBeenCalledWith(
         documentId,
         undefined,
-        undefined,
       );
       expect(mockJobAwaiter.waitForJob).toHaveBeenCalledWith(
         "job-1",
@@ -498,9 +497,8 @@ describe("ReactorClient Unit Tests", () => {
       );
     });
 
-    it("should pass propagate and signal parameters", async () => {
+    it("should pass signal parameter", async () => {
       const documentId = "doc-1";
-      const propagate = PropagationMode.Cascade;
       const signal = new AbortController().signal;
 
       const jobInfo: JobInfo = {
@@ -512,14 +510,61 @@ describe("ReactorClient Unit Tests", () => {
 
       vi.mocked(mockReactor.deleteDocument).mockResolvedValue(jobInfo);
 
-      await client.deleteDocument(documentId, propagate, signal);
+      await client.deleteDocument(documentId, PropagationMode.None, signal);
 
       expect(mockReactor.deleteDocument).toHaveBeenCalledWith(
         documentId,
-        propagate,
         signal,
       );
       expect(mockJobAwaiter.waitForJob).toHaveBeenCalledWith("job-1", signal);
+    });
+
+    it("should cascade delete children when propagate is Cascade", async () => {
+      const parentId = "parent-1";
+      const childId = "child-1";
+      const signal = new AbortController().signal;
+
+      const parentJobInfo: JobInfo = {
+        id: "job-parent",
+        status: JobStatus.PENDING,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
+      const childJobInfo: JobInfo = {
+        id: "job-child",
+        status: JobStatus.PENDING,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
+      vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue([
+        {
+          sourceId: parentId,
+          targetId: childId,
+          relationshipType: "child",
+        },
+      ]);
+
+      vi.mocked(mockReactor.deleteDocument).mockResolvedValue(childJobInfo);
+      vi.mocked(mockReactor.deleteDocument).mockResolvedValueOnce(
+        childJobInfo,
+      );
+      vi.mocked(mockReactor.deleteDocument).mockResolvedValueOnce(
+        parentJobInfo,
+      );
+
+      await client.deleteDocument(parentId, PropagationMode.Cascade, signal);
+
+      expect(mockDocumentIndexer.getOutgoing).toHaveBeenCalledWith(
+        parentId,
+        ["child"],
+        undefined,
+        signal,
+      );
+      expect(mockReactor.deleteDocument).toHaveBeenCalledTimes(2);
+      expect(mockReactor.deleteDocument).toHaveBeenCalledWith(childId, signal);
+      expect(mockReactor.deleteDocument).toHaveBeenCalledWith(parentId, signal);
     });
   });
 
