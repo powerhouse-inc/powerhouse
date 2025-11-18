@@ -119,6 +119,7 @@ describe("ReactorClient Passthrough Functions", () => {
 
     // Create reactor facade with all required dependencies
     const readModelCoordinator = createMockReadModelCoordinator();
+    const mockDocumentIndexer = createMockDocumentIndexer();
     reactor = new Reactor(
       driveServer,
       storage,
@@ -127,7 +128,7 @@ describe("ReactorClient Passthrough Functions", () => {
       readModelCoordinator,
       createMockReactorFeatures(),
       createMockDocumentView(),
-      createMockDocumentIndexer(),
+      mockDocumentIndexer,
       createMockOperationStore(),
     );
 
@@ -138,8 +139,8 @@ describe("ReactorClient Passthrough Functions", () => {
 
     // Create ReactorClient using the builder
     // The builder will use default subscription manager if not provided
-    client = new ReactorClientBuilder()
-      .withReactor(reactor)
+    client = await new ReactorClientBuilder()
+      .withReactor(reactor, eventBus, mockDocumentIndexer)
       .withSigner(mockSigner)
       .build();
 

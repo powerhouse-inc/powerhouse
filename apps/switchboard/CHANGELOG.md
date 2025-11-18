@@ -1,3 +1,27 @@
+## 4.1.0-dev.122 (2025-11-18)
+
+### 🩹 Fixes
+
+- build fix for reactor-local and switchboard ([f99c45b34](https://github.com/powerhouse-inc/powerhouse/commit/f99c45b34))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 4.1.0-dev.121 (2025-11-17)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 4.1.0-dev.120 (2025-11-17)
+
+### 🩹 Fixes
+
+- ensure version.ts is generated before TypeScript compilation in CI ([dd49fdd4f](https://github.com/powerhouse-inc/powerhouse/commit/dd49fdd4f))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.119 (2025-11-15)
 
 ### 🚀 Features

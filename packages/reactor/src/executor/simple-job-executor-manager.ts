@@ -1,4 +1,5 @@
 import type { IEventBus } from "../events/interfaces.js";
+import { OperationEventTypes } from "../events/types.js";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
 import type { IQueue } from "../queue/interfaces.js";
 import type { IJobExecutionHandle } from "../queue/types.js";
@@ -6,7 +7,6 @@ import { QueueEventTypes } from "../queue/types.js";
 import type { ErrorInfo } from "../shared/types.js";
 import type { IJobExecutor, IJobExecutorManager } from "./interfaces.js";
 import type { ExecutorManagerStatus, JobResult } from "./types.js";
-import { createConsistencyToken } from "./util.js";
 
 export type JobExecutorFactory = () => IJobExecutor;
 
@@ -132,6 +132,13 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
       this.activeJobs--;
       this.jobTracker.markFailed(handle.job.id, errorInfo);
 
+      this.eventBus
+        .emit(OperationEventTypes.JOB_FAILED, {
+          jobId: handle.job.id,
+          error: new Error(errorInfo.message),
+        })
+        .catch(() => {});
+
       await this.checkForMoreJobs();
       return;
     }
@@ -140,14 +147,6 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     if (result.success) {
       handle.complete();
       this.totalJobsProcessed++;
-      const consistencyToken = createConsistencyToken(
-        result.operationsWithContext || [],
-      );
-      this.jobTracker.markCompleted(
-        handle.job.id,
-        consistencyToken,
-        result.operations,
-      );
     } else {
       // Handle retry logic
       const retryCount = handle.job.retryCount || 0;
@@ -170,6 +169,14 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
           );
 
           this.jobTracker.markFailed(handle.job.id, retryErrorInfo);
+
+          this.eventBus
+            .emit(OperationEventTypes.JOB_FAILED, {
+              jobId: handle.job.id,
+              error: new Error(retryErrorInfo.message),
+            })
+            .catch(() => {});
+
           handle.fail(retryErrorInfo);
         }
       } else {
@@ -184,6 +191,14 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
         );
 
         this.jobTracker.markFailed(handle.job.id, fullErrorInfo);
+
+        this.eventBus
+          .emit(OperationEventTypes.JOB_FAILED, {
+            jobId: handle.job.id,
+            error: new Error(fullErrorInfo.message),
+          })
+          .catch(() => {});
+
         handle.fail(fullErrorInfo);
       }
     }

@@ -63,7 +63,7 @@ export class Reactor implements IReactor {
   private readModelCoordinator: IReadModelCoordinator;
   private features: ReactorFeatures;
   private documentView: IDocumentView;
-  private documentIndexer: IDocumentIndexer;
+  private _documentIndexer: IDocumentIndexer;
   private operationStore: IOperationStore;
   private _syncManager?: ISyncManager;
 
@@ -86,16 +86,15 @@ export class Reactor implements IReactor {
     this.readModelCoordinator = readModelCoordinator;
     this.features = features;
     this.documentView = documentView;
-    this.documentIndexer = documentIndexer;
+    this._documentIndexer = documentIndexer;
     this.operationStore = operationStore;
-
-    // Start the read model coordinator
-    this.readModelCoordinator.start();
 
     // Create mutable shutdown status using factory method
     const [status, setter] = createMutableShutdownStatus(false);
     this.shutdownStatus = status;
     this.setShutdown = setter;
+
+    this.readModelCoordinator.start();
   }
 
   get syncManager(): ISyncManager | undefined {
@@ -121,8 +120,8 @@ export class Reactor implements IReactor {
     // Stop the read model coordinator
     this.readModelCoordinator.stop();
 
-    // TODO: Phase 3+ - Implement graceful shutdown for queue, executors, etc.
-    // For now, we just mark as shutdown and return status
+    // Stop the job tracker
+    this.jobTracker.shutdown();
 
     return this.shutdownStatus;
   }
@@ -218,7 +217,7 @@ export class Reactor implements IReactor {
         throw new AbortError();
       }
 
-      const relationships = await this.documentIndexer.getOutgoing(
+      const relationships = await this._documentIndexer.getOutgoing(
         id,
         ["child"],
         consistencyToken,
@@ -285,6 +284,79 @@ export class Reactor implements IReactor {
         consistencyToken,
         signal,
       );
+    }
+  }
+
+  /**
+   * Retrieves a specific PHDocument by identifier (either id or slug)
+   */
+  async getByIdOrSlug<TDocument extends PHDocument>(
+    identifier: string,
+    view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<{
+    document: TDocument;
+    childIds: string[];
+  }> {
+    if (this.features.legacyStorageEnabled) {
+      try {
+        return await this.get<TDocument>(
+          identifier,
+          view,
+          consistencyToken,
+          signal,
+        );
+      } catch {
+        try {
+          const ids = await this.documentStorage.resolveIds(
+            [identifier],
+            signal,
+          );
+
+          if (ids.length === 0 || !ids[0]) {
+            throw new Error(`Document not found: ${identifier}`);
+          }
+
+          return await this.get<TDocument>(
+            ids[0],
+            view,
+            consistencyToken,
+            signal,
+          );
+        } catch {
+          throw new Error(`Document not found: ${identifier}`);
+        }
+      }
+    } else {
+      const document = await this.documentView.getByIdOrSlug<TDocument>(
+        identifier,
+        view,
+        consistencyToken,
+        signal,
+      );
+
+      if (signal?.aborted) {
+        throw new AbortError();
+      }
+
+      const relationships = await this._documentIndexer.getOutgoing(
+        document.header.id,
+        ["child"],
+        consistencyToken,
+        signal,
+      );
+
+      if (signal?.aborted) {
+        throw new AbortError();
+      }
+
+      const childIds = relationships.map((rel) => rel.targetId);
+
+      return {
+        document,
+        childIds,
+      };
     }
   }
 
@@ -1210,7 +1282,7 @@ export class Reactor implements IReactor {
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
     // Get child relationships from indexer
-    const relationships = await this.documentIndexer.getOutgoing(
+    const relationships = await this._documentIndexer.getOutgoing(
       parentId,
       ["child"],
       undefined,

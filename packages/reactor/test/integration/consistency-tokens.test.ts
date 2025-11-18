@@ -28,7 +28,10 @@ describe("Consistency Tokens with Document View", () => {
           throw new Error(status.error?.message || "Job failed");
         }
 
-        return status.status === JobStatus.COMPLETED;
+        return (
+          status.status === JobStatus.READ_MODELS_READY ||
+          status.status === JobStatus.WRITE_COMPLETED
+        );
       },
       { timeout: 5000 },
     );

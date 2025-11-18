@@ -33,7 +33,7 @@ async function waitForJobCompletion(
   while (Date.now() - startTime < timeoutMs) {
     const status = await reactor.getJobStatus(jobId);
 
-    if (status.status === JobStatus.COMPLETED) {
+    if (status.status === JobStatus.READ_MODELS_READY) {
       return;
     }
 
@@ -221,6 +221,7 @@ describe("Two-Reactor Sync", () => {
 
   it("should sync operation from ReactorA to ReactorB", async () => {
     const document = driveDocumentModelModule.utils.createDocument();
+    const readyPromise = waitForOperationsReady(eventBusB, document.header.id);
     const jobInfo = await reactorA.create(document);
 
     await waitForJobCompletion(reactorA, jobInfo.id);
@@ -230,7 +231,7 @@ describe("Two-Reactor Sync", () => {
     });
     const opsA = Object.values(resultA).flatMap((scope) => scope.results);
 
-    await waitForOperationsReady(eventBusB, document.header.id);
+    await readyPromise;
 
     const resultB = await reactorB.getOperations(document.header.id, {
       branch: "main",
@@ -252,6 +253,7 @@ describe("Two-Reactor Sync", () => {
 
   it("should sync operation from ReactorB to ReactorA", async () => {
     const document = driveDocumentModelModule.utils.createDocument();
+    const readyPromise = waitForOperationsReady(eventBusA, document.header.id);
     const jobInfo = await reactorB.create(document);
 
     await waitForJobCompletion(reactorB, jobInfo.id);
@@ -261,7 +263,7 @@ describe("Two-Reactor Sync", () => {
     });
     const opsB = Object.values(resultB).flatMap((scope) => scope.results);
 
-    await waitForOperationsReady(eventBusA, document.header.id);
+    await readyPromise;
 
     const resultA = await reactorA.getOperations(document.header.id, {
       branch: "main",
@@ -417,10 +419,11 @@ describe("Two-Reactor Sync", () => {
   it("should handle concurrent modifications to the same document from both reactors", async () => {
     const doc = driveDocumentModelModule.utils.createDocument();
 
+    const readyPromise = waitForOperationsReady(eventBusB, doc.header.id);
     const createJob = await reactorA.create(doc);
     await waitForJobCompletion(reactorA, createJob.id);
 
-    await waitForOperationsReady(eventBusB, doc.header.id);
+    await readyPromise;
 
     const docOnB = await reactorB.get(doc.header.id, { branch: "main" });
     expect(docOnB.document).toBeDefined();

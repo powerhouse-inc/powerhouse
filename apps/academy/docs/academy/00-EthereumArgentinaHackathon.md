@@ -11,23 +11,44 @@ Welcome to the Vetra hacker page for the Ethereum Argentina Hackathon! We're exc
 
 ## Overview
 
-Join us for two days of intensive development support as you build decentralized applications using the Powerhouse framework. Our team will be available online and at the mentor's table to help you navigate the platform, answer questions, and guide you through best practices.
+Join us for two days of intensive development support as you build decentralized applications using the Vetra framework. Our team will be available online and at the mentor's table to help you navigate the builder platform, answer questions, and guide you through best practices.
 
 ## 📅 Event Details
 
 - **Dates**: November 19-20, 2024
 - **Format**: Online & IRL Developer Support
 - **Time Zone**: Argentina Time (ART)
-- **Support Hours at Mentor Table @ la Rural**: TBD
-- **Hackathon informations**: https://taikai.network/ethargentina/hackathons/tierra-de-buidlers-2025/overview
-- Discord: [Join our server](#)
+- **Support Hours at Mentor Table @ la Rural**: Please get in touch [on Discord to schedule](https://discord.gg/pwQJwgaQKd)
+- **Hackathon informations**: [Taiki Hackathon](https://taikai.network/ethargentina/hackathons/tierra-de-buidlers-2025/overview)
 
 ## 🚀 Getting Started
 
 <details>
 <summary> Vetra Introduction & Follow Along Demo </summary>
 
-Here you will soon find our follow along introduction Demo Video
+Please Rewatch our Hackathon introduction & follow along tutorial. 
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/R5MAaGaopJg" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+
+Find a complete overview of how to use the Vetra Studio for you project [here](./01-GetStarted/05-VetraStudio.md)
+
+**Quick Start Summary**
+
+- Step 1: Install the powerhouse-CLI: `pnpm install -g ph-cmd`
+- Step 2: Initialize a project & directory `ph init my-project-name`
+- Step 3: CD into you project directory
+- Step 4: Launch Vetra Studio with the `ph vetra`command
+- Step 5: Add the necessary document models & editors for your intended solution in Vetra Studio
+- Step 6: If you're well versed in schema creation or graphql. Just talk with an agent about your imagined solution.
+- Step 7: Start your preferred agent to help you with the initial scaffolding of your schema, operations and reducers. 
+- Step 8: Test your implementation in the "Vetra Preview Drive" with the `ph vetra --watch`command. 
+- Step 9: Run pnpm build and push your project to a remote repository. Follow the package publishing [Tutorial](./02-MasteryTrack/05-Launch/02-PublishYourProject.md)
+
+**Basic tips** 
+- 1️⃣ Write a detailed description of your intented functionality inside the document model specification manifest
+- 2️⃣ Ask your agent to ask for clarifying questions before starting any ideation process. 
+- 3️⃣ For each document model you'll want to create an accompanying editor in vetra studio. 
+- 4️⃣ An 'App' specifcation is an drive that can act as an app because of the specific interface you create for it. 
 
 ### Before the Hackathon
 
@@ -46,17 +67,20 @@ Here you will soon find our follow along introduction Demo Video
 
 </details>
 
+:::tip Use your preferred AI agent
+Vetra studio is compatible with Cursor, Claude and Gemini. Find the dedicated markdown files to guide your agent with the correct instruction in your directory. Your agent should also have access to the MCP's available. 
+::: 
 
 
-## **Example Project Ideas**
+## **Hackathon Project Ideas**
 
 Powerhouse is perfect for building:
 
 - **Real World Use-cases**: Every document can act as a mini ledger/blockchain. 
-- **Decentralized Applications**: Create apps with built-in version control and collaboration
-- **Document-Based Systems**: Build structured data applications
-- **Collaborative Tools**: Enable real-time multi-user editing
-- **Data Management Platforms**: Create systems with queryable, structured data
+- **Decentralized Applications**: Create apps with built-in version control and collaboration.
+- **Document-Based Systems**: Build structured data applications.
+- **Collaborative Tools**: Enable real-time multi-user editing.
+- **Data Management Platforms**: Create systems with queryable, structured data.
 
 ### Coordination & DAO Design
 
@@ -179,5 +203,5 @@ The Powerhouse team will add you as a builder on the Vetra platform and host you
 
 **Good luck, and happy hacking! 🚀**
 
-*Last updated: November 13, 2024*
+*Last updated: November 17, 2025*
 

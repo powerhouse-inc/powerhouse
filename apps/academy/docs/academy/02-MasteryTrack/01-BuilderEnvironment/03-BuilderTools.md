@@ -20,6 +20,12 @@ The Powerhouse CLI (`ph-cmd`) is a command-line interface tool that provides ess
 pnpm install -g ph-cmd
 ```
 
+Or if you're using npm:
+
+```bash
+npm install -g ph-cmd
+```
+
 Key commands include:
 
 - `ph connect` for running the Connect application locally
@@ -36,9 +42,9 @@ When installing or using the Powerhouse CLI commands you are able to make use of
 
 | Command                            | Description                                           |
 | ---------------------------------- | ----------------------------------------------------- |
-| **pnpm install -g ph-cmd**         | Install latest stable version                         |
-| **pnpm install -g ph-cmd@dev**     | Install development version                           |
-| **pnpm install -g ph-cmd@staging** | Install staging version                               |
+| **pnpm install -g ph-cmd** or **npm install -g ph-cmd **         | Install latest stable version                         |
+| **pnpm install -g ph-cmd@dev** or **npm install -g ph-cmd@dev**     | Install development version                           |
+| **pnpm install -g ph-cmd@staging** or **npm install -g ph-cmd@staging** | Install staging version                               |
 | **ph init**                        | Use latest stable version of the boilerplate          |
 | **ph init --dev**                  | Use development version of the boilerplate            |
 | **ph init --staging**              | Use staging version of the boilerplate                |
@@ -62,6 +68,8 @@ If you need to perform a clean reinstallation of the Powerhouse CLI (`ph-cmd`), 
 
 ```bash
 pnpm uninstall -g ph-cmd
+# or with npm
+npm uninstall -g ph-cmd
 ```
 
 2. Remove the Powerhouse configuration directory:
@@ -75,12 +83,18 @@ rm -rf ~/.ph
 ```bash
 # For the latest stable version
 pnpm install -g ph-cmd
+# or with npm
+npm install -g ph-cmd 
 
 # For the staging version
 pnpm install -g ph-cmd@staging
+# or with npm
+npm install -g ph-cmd@staging
 
 # For a specific version
 pnpm install -g ph-cmd@<version>
+# or with npm
+npm install -g ph-cmd@<version>
 ```
 
 This process ensures a clean slate by removing both the CLI tool and its configuration files before installing the desired version. It's particularly useful when:

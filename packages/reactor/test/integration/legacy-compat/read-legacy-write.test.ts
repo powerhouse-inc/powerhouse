@@ -109,7 +109,6 @@ describe("Legacy Write -> Read", () => {
     );
     await documentView.init();
     readModelCoordinator = new ReadModelCoordinator(eventBus, [documentView]);
-    readModelCoordinator.start();
 
     // Create reactor facade with all required dependencies
     const jobTracker = createTestJobTracker();

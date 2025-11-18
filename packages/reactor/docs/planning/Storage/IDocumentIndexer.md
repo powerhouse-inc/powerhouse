@@ -64,7 +64,7 @@ All query methods accept an optional `consistencyToken` parameter to provide rea
 **Usage Pattern:**
 ```typescript
 const queuedJob = await reactor.addChildren(parentId, childIds);
-const completedJob = await reactor.getJobStatus(queuedJob.id); // ensure COMPLETED
+const completedJob = await reactor.getJobStatus(queuedJob.id); // ensure READ_MODELS_READY
 const path = await documentIndexer.findPath(parentId, childId, undefined, completedJob.consistencyToken);
 
 const loadQueued = await reactor.load(parentId, "main", importedOperations);

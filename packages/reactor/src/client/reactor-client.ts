@@ -1,8 +1,10 @@
 import type { Action, DocumentModelModule, PHDocument } from "document-model";
+import { actions } from "document-model";
 
 import type { IReactor } from "../core/types.js";
 import { type IJobAwaiter } from "../shared/awaiter.js";
 import {
+  RelationshipChangeType,
   type JobInfo,
   type PagedResults,
   type PagingOptions,
@@ -11,8 +13,13 @@ import {
   type ViewFilter,
 } from "../shared/types.js";
 import type { ISigner } from "../signer/types.js";
+import type { IDocumentIndexer } from "../storage/interfaces.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
-import type { DocumentChangeEvent, IReactorClient } from "./types.js";
+import {
+  DocumentChangeType,
+  type DocumentChangeEvent,
+  type IReactorClient,
+} from "./types.js";
 
 /**
  * ReactorClient implementation that wraps lower-level APIs to provide
@@ -29,17 +36,20 @@ export class ReactorClient implements IReactorClient {
   private signer: ISigner;
   private subscriptionManager: IReactorSubscriptionManager;
   private jobAwaiter: IJobAwaiter;
+  private documentIndexer: IDocumentIndexer;
 
   constructor(
     reactor: IReactor,
     signer: ISigner,
     subscriptionManager: IReactorSubscriptionManager,
     jobAwaiter: IJobAwaiter,
+    documentIndexer: IDocumentIndexer,
   ) {
     this.reactor = reactor;
     this.signer = signer;
     this.subscriptionManager = subscriptionManager;
     this.jobAwaiter = jobAwaiter;
+    this.documentIndexer = documentIndexer;
   }
 
   /**
@@ -64,23 +74,12 @@ export class ReactorClient implements IReactorClient {
     document: TDocument;
     childIds: string[];
   }> {
-    // First try to get by ID
-    try {
-      return await this.reactor.get<TDocument>(
-        identifier,
-        view,
-        undefined,
-        signal,
-      );
-    } catch (error) {
-      // If failed, try to get by slug
-      return await this.reactor.getBySlug<TDocument>(
-        identifier,
-        view,
-        undefined,
-        signal,
-      );
-    }
+    return await this.reactor.getByIdOrSlug<TDocument>(
+      identifier,
+      view,
+      undefined,
+      signal,
+    );
   }
 
   /**
@@ -92,7 +91,37 @@ export class ReactorClient implements IReactorClient {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
-    throw new Error("Method not implemented.");
+    const parentDoc = await this.reactor.getByIdOrSlug(
+      parentIdentifier,
+      view,
+      undefined,
+      signal,
+    );
+    const parentId = parentDoc.document.header.id;
+
+    const relationships = await this.documentIndexer.getOutgoing(
+      parentId,
+      undefined,
+      undefined,
+      signal,
+    );
+
+    const childIds = relationships.map((rel) => rel.targetId);
+
+    if (childIds.length === 0) {
+      return {
+        results: [],
+        options: paging || { cursor: "0", limit: 0 },
+      };
+    }
+
+    return this.reactor.find(
+      { ids: childIds },
+      view,
+      paging,
+      undefined,
+      signal,
+    );
   }
 
   /**
@@ -104,7 +133,37 @@ export class ReactorClient implements IReactorClient {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
-    throw new Error("Method not implemented.");
+    const childDoc = await this.reactor.getByIdOrSlug(
+      childIdentifier,
+      view,
+      undefined,
+      signal,
+    );
+    const childId = childDoc.document.header.id;
+
+    const relationships = await this.documentIndexer.getIncoming(
+      childId,
+      undefined,
+      undefined,
+      signal,
+    );
+
+    const parentIds = relationships.map((rel) => rel.sourceId);
+
+    if (parentIds.length === 0) {
+      return {
+        results: [],
+        options: paging || { cursor: "0", limit: 0 },
+      };
+    }
+
+    return this.reactor.find(
+      { ids: parentIds },
+      view,
+      paging,
+      undefined,
+      signal,
+    );
   }
 
   /**
@@ -127,7 +186,24 @@ export class ReactorClient implements IReactorClient {
     parentIdentifier?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    throw new Error("Method not implemented.");
+    const jobInfo = await this.reactor.create(document, signal);
+
+    const completedJob = await this.waitForJob(jobInfo, signal);
+
+    const documentId = document.header.id;
+
+    const result = await this.reactor.get<PHDocument>(
+      documentId,
+      undefined,
+      completedJob.consistencyToken,
+      signal,
+    );
+
+    if (parentIdentifier) {
+      await this.addChildren(parentIdentifier, [documentId], undefined, signal);
+    }
+
+    return result.document;
   }
 
   /**
@@ -138,7 +214,27 @@ export class ReactorClient implements IReactorClient {
     parentIdentifier?: string,
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    throw new Error("Method not implemented.");
+    const modulesResult = await this.reactor.getDocumentModels(
+      undefined,
+      undefined,
+      signal,
+    );
+
+    const module = modulesResult.results.find(
+      (m) => m.documentModel.global.id === documentType,
+    );
+
+    if (!module) {
+      throw new Error(`Document model not found for type: ${documentType}`);
+    }
+
+    const document = module.utils.createDocument();
+
+    return this.create(
+      document,
+      parentIdentifier,
+      signal,
+    ) as Promise<TDocument>;
   }
 
   /**
@@ -157,15 +253,16 @@ export class ReactorClient implements IReactorClient {
       signal,
     );
 
-    await this.waitForJob(jobInfo, signal);
+    const completedJob = await this.waitForJob(jobInfo, signal);
 
     const view: ViewFilter = { branch };
-    const document = await this.get<TDocument>(
+    const result = await this.reactor.getByIdOrSlug<TDocument>(
       documentIdentifier,
       view,
+      completedJob.consistencyToken,
       signal,
     );
-    return document.document;
+    return result.document;
   }
 
   /**
@@ -219,7 +316,13 @@ export class ReactorClient implements IReactorClient {
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    throw new Error("Method not implemented.");
+    const branch = view?.branch || "main";
+    return this.mutate(
+      documentIdentifier,
+      branch,
+      [actions.setName(name)],
+      signal,
+    );
   }
 
   /**
@@ -231,7 +334,6 @@ export class ReactorClient implements IReactorClient {
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    // Call reactor.addChildren to get JobInfo
     const jobInfo = await this.reactor.addChildren(
       parentIdentifier,
       documentIdentifiers,
@@ -239,11 +341,14 @@ export class ReactorClient implements IReactorClient {
       signal,
     );
 
-    // Wait for job completion
-    await this.waitForJob(jobInfo, signal);
+    const completedJob = await this.waitForJob(jobInfo, signal);
 
-    // Fetch and return updated parent document
-    const result = await this.get<PHDocument>(parentIdentifier, view, signal);
+    const result = await this.reactor.getByIdOrSlug<PHDocument>(
+      parentIdentifier,
+      view,
+      completedJob.consistencyToken,
+      signal,
+    );
     return result.document;
   }
 
@@ -256,7 +361,6 @@ export class ReactorClient implements IReactorClient {
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    // Call reactor.removeChildren to get JobInfo
     const jobInfo = await this.reactor.removeChildren(
       parentIdentifier,
       documentIdentifiers,
@@ -264,11 +368,14 @@ export class ReactorClient implements IReactorClient {
       signal,
     );
 
-    // Wait for job completion
-    await this.waitForJob(jobInfo, signal);
+    const completedJob = await this.waitForJob(jobInfo, signal);
 
-    // Fetch and return updated parent document
-    const result = await this.get<PHDocument>(parentIdentifier, view, signal);
+    const result = await this.reactor.getByIdOrSlug<PHDocument>(
+      parentIdentifier,
+      view,
+      completedJob.consistencyToken,
+      signal,
+    );
     return result.document;
   }
 
@@ -285,7 +392,42 @@ export class ReactorClient implements IReactorClient {
     source: PHDocument;
     target: PHDocument;
   }> {
-    throw new Error("Method not implemented.");
+    const removeJobInfo = await this.reactor.removeChildren(
+      sourceParentIdentifier,
+      documentIdentifiers,
+      view,
+      signal,
+    );
+
+    const removeCompletedJob = await this.waitForJob(removeJobInfo, signal);
+
+    const addJobInfo = await this.reactor.addChildren(
+      targetParentIdentifier,
+      documentIdentifiers,
+      view,
+      signal,
+    );
+
+    const addCompletedJob = await this.waitForJob(addJobInfo, signal);
+
+    const sourceResult = await this.reactor.getByIdOrSlug<PHDocument>(
+      sourceParentIdentifier,
+      view,
+      removeCompletedJob.consistencyToken,
+      signal,
+    );
+
+    const targetResult = await this.reactor.getByIdOrSlug<PHDocument>(
+      targetParentIdentifier,
+      view,
+      addCompletedJob.consistencyToken,
+      signal,
+    );
+
+    return {
+      source: sourceResult.document,
+      target: targetResult.document,
+    };
   }
 
   /**
@@ -318,7 +460,11 @@ export class ReactorClient implements IReactorClient {
     propagate?: PropagationMode,
     signal?: AbortSignal,
   ): Promise<void> {
-    throw new Error("Method not implemented.");
+    const deletePromises = identifiers.map((identifier) =>
+      this.deleteDocument(identifier, propagate, signal),
+    );
+
+    await Promise.all(deletePromises);
   }
 
   /**
@@ -347,6 +493,75 @@ export class ReactorClient implements IReactorClient {
     callback: (event: DocumentChangeEvent) => void,
     view?: ViewFilter,
   ): () => void {
-    throw new Error("Method not implemented.");
+    const unsubscribeCreated = this.subscriptionManager.onDocumentCreated(
+      (result) => {
+        void (async () => {
+          try {
+            const documents = await Promise.all(
+              result.results.map((id) =>
+                this.reactor
+                  .get(id, view, undefined, undefined)
+                  .then((res) => res.document),
+              ),
+            );
+
+            callback({
+              type: DocumentChangeType.Created,
+              documents,
+            });
+          } catch {
+            // Silently ignore errors when fetching created documents
+          }
+        })();
+      },
+      search,
+    );
+
+    const unsubscribeDeleted = this.subscriptionManager.onDocumentDeleted(
+      (documentIds) => {
+        callback({
+          type: DocumentChangeType.Deleted,
+          documents: [],
+          context: { childId: documentIds[0] },
+        });
+      },
+      search,
+    );
+
+    const unsubscribeUpdated = this.subscriptionManager.onDocumentStateUpdated(
+      (result) => {
+        callback({
+          type: DocumentChangeType.Updated,
+          documents: result.results,
+        });
+      },
+      search,
+      view,
+    );
+
+    const unsubscribeRelationship =
+      this.subscriptionManager.onRelationshipChanged(
+        (parentId, childId, changeType) => {
+          callback({
+            type:
+              changeType === RelationshipChangeType.Added
+                ? DocumentChangeType.ChildAdded
+                : DocumentChangeType.ChildRemoved,
+            documents: [],
+            context: {
+              parentId,
+              childId,
+            },
+          });
+        },
+        search,
+      );
+
+    return () => {
+      unsubscribeCreated();
+      unsubscribeDeleted();
+      unsubscribeUpdated();
+      unsubscribeRelationship();
+    };
   }
 }

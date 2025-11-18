@@ -1,14 +1,98 @@
-import { createEmptyConsistencyToken } from "../executor/util.js";
-import type { ConsistencyToken, ErrorInfo } from "../shared/types.js";
+import type { IEventBus } from "../events/interfaces.js";
+import {
+  OperationEventTypes,
+  type JobFailedEvent,
+  type OperationsReadyEvent,
+  type OperationWrittenEvent,
+  type Unsubscribe,
+} from "../events/types.js";
+import {
+  createConsistencyToken,
+  createEmptyConsistencyToken,
+} from "../executor/util.js";
+import type { ErrorInfo } from "../shared/types.js";
 import { JobStatus, type JobInfo } from "../shared/types.js";
 import type { IJobTracker } from "./interfaces.js";
 
 /**
  * In-memory implementation of IJobTracker.
  * Maintains job status in a Map for synchronous access.
+ * Subscribes to operation events to update job states.
  */
 export class InMemoryJobTracker implements IJobTracker {
   private jobs = new Map<string, JobInfo>();
+  private unsubscribers: Unsubscribe[] = [];
+
+  constructor(private eventBus: IEventBus) {
+    this.subscribeToEvents();
+  }
+
+  private subscribeToEvents(): void {
+    this.unsubscribers.push(
+      this.eventBus.subscribe(
+        OperationEventTypes.OPERATION_WRITTEN,
+        (_type, event: OperationWrittenEvent) => {
+          this.handleOperationWritten(event);
+        },
+      ),
+    );
+
+    this.unsubscribers.push(
+      this.eventBus.subscribe(
+        OperationEventTypes.OPERATIONS_READY,
+        (_type, event: OperationsReadyEvent) => {
+          this.handleOperationsReady(event);
+        },
+      ),
+    );
+
+    this.unsubscribers.push(
+      this.eventBus.subscribe(
+        OperationEventTypes.JOB_FAILED,
+        (_type, event: JobFailedEvent) => {
+          this.handleJobFailed(event);
+        },
+      ),
+    );
+  }
+
+  private handleOperationWritten(event: OperationWrittenEvent): void {
+    const jobId = event.jobId;
+    const job = this.jobs.get(jobId);
+    if (job && job.status === JobStatus.RUNNING) {
+      const consistencyToken = createConsistencyToken(event.operations);
+      this.jobs.set(jobId, {
+        ...job,
+        status: JobStatus.WRITE_COMPLETED,
+        consistencyToken,
+      });
+    }
+  }
+
+  private handleOperationsReady(event: OperationsReadyEvent): void {
+    const jobId = event.jobId;
+    const job = this.jobs.get(jobId);
+    if (job && job.status === JobStatus.WRITE_COMPLETED) {
+      this.jobs.set(jobId, {
+        ...job,
+        status: JobStatus.READ_MODELS_READY,
+      });
+    }
+  }
+
+  private handleJobFailed(event: JobFailedEvent): void {
+    this.markFailed(event.jobId, {
+      message: event.error.message,
+      stack: event.error.stack || "",
+    });
+  }
+
+  shutdown(): void {
+    for (const unsubscribe of this.unsubscribers) {
+      unsubscribe();
+    }
+    this.unsubscribers = [];
+  }
 
   registerJob(jobInfo: JobInfo): void {
     this.jobs.set(jobInfo.id, { ...jobInfo });
@@ -32,37 +116,6 @@ export class InMemoryJobTracker implements IJobTracker {
     this.jobs.set(jobId, {
       ...job,
       status: JobStatus.RUNNING,
-    });
-  }
-
-  markCompleted(
-    jobId: string,
-    consistencyToken: ConsistencyToken,
-    result?: any,
-  ): void {
-    const job = this.jobs.get(jobId);
-    if (!job) {
-      // Job not found - create minimal completed entry
-      this.jobs.set(jobId, {
-        id: jobId,
-        status: JobStatus.COMPLETED,
-        createdAtUtcIso: new Date().toISOString(),
-        completedAtUtcIso: new Date().toISOString(),
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        result,
-        consistencyToken,
-      });
-      return;
-    }
-
-    // Update existing job
-    this.jobs.set(jobId, {
-      ...job,
-      status: JobStatus.COMPLETED,
-      completedAtUtcIso: new Date().toISOString(),
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      result,
-      consistencyToken,
     });
   }
 

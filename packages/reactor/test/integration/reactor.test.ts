@@ -57,7 +57,7 @@ describe.each([
             const errorMessage = jobStatus.error?.message ?? "unknown error";
             throw new Error(`Job failed: ${errorMessage}`);
           }
-          return jobStatus.status === JobStatus.COMPLETED;
+          return jobStatus.status === JobStatus.READ_MODELS_READY;
         },
         { timeout: 5000 },
       );
@@ -88,7 +88,7 @@ describe.each([
             const errorMessage = jobStatus.error?.message ?? "unknown error";
             throw new Error(`Job failed: ${errorMessage}`);
           }
-          return jobStatus.status === JobStatus.COMPLETED;
+          return jobStatus.status === JobStatus.READ_MODELS_READY;
         },
         { timeout: 5000 },
       );
@@ -394,8 +394,8 @@ describe.each([
               );
             }
             return (
-              addFileStatus.status === JobStatus.COMPLETED &&
-              linkChildStatus.status === JobStatus.COMPLETED
+              addFileStatus.status === JobStatus.READ_MODELS_READY &&
+              linkChildStatus.status === JobStatus.READ_MODELS_READY
             );
           },
           { timeout: 10000 },
@@ -1640,7 +1640,7 @@ describe.each([
           await vi.waitUntil(
             async () => {
               const jobStatus = await reactor.getJobStatus(createJobInfo.id);
-              return jobStatus.status === JobStatus.COMPLETED;
+              return jobStatus.status === JobStatus.READ_MODELS_READY;
             },
             { timeout: 5000 },
           );

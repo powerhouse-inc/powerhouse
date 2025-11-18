@@ -1,5 +1,9 @@
 #!/usr/bin/env node
-import { ReactorBuilder, ReactorClientBuilder } from "@powerhousedao/reactor";
+import {
+  EventBus,
+  ReactorBuilder,
+  ReactorClientBuilder,
+} from "@powerhousedao/reactor";
 import {
   VitePackageLoader,
   getUniqueDocumentModels,
@@ -152,7 +156,9 @@ async function initServer(serverPort: number, options: StartServerOptions) {
     driveServer: IDocumentDriveServer,
     documentModels: DocumentModelModule[],
   ) => {
+    const eventBus = new EventBus();
     const builder = new ReactorBuilder()
+      .withEventBus(eventBus)
       .withDocumentModels(
         getUniqueDocumentModels([
           documentModelDocumentModelModule,
@@ -165,8 +171,9 @@ async function initServer(serverPort: number, options: StartServerOptions) {
         legacyStorageEnabled: true,
       });
 
-    const reactor = await builder.build();
-    const client = new ReactorClientBuilder().withReactor(reactor).build();
+    const client = new ReactorClientBuilder()
+      .withReactorBuilder(builder)
+      .build();
 
     return client;
   };

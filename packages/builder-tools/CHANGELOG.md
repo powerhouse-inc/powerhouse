@@ -1,3 +1,33 @@
+## 4.1.0-dev.122 (2025-11-18)
+
+### 🩹 Fixes
+
+- **builder-tools:** fix style import from external package ([c7b491ada](https://github.com/powerhouse-inc/powerhouse/commit/c7b491ada))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.121 (2025-11-17)
+
+### 🩹 Fixes
+
+- **builder-tools:** load index.ts even if local package is built ([a1c910b04](https://github.com/powerhouse-inc/powerhouse/commit/a1c910b04))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 4.1.0-dev.120 (2025-11-17)
+
+### 🩹 Fixes
+
+- ensure version.ts is generated before TypeScript compilation in CI ([dd49fdd4f](https://github.com/powerhouse-inc/powerhouse/commit/dd49fdd4f))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.119 (2025-11-15)
 
 ### 🚀 Features

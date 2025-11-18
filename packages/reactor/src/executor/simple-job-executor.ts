@@ -20,7 +20,10 @@ import type {
 import { driveCollectionId } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IEventBus } from "../events/interfaces.js";
-import { OperationEventTypes } from "../events/types.js";
+import {
+  OperationEventTypes,
+  type OperationWrittenEvent,
+} from "../events/types.js";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import { DocumentDeletedError } from "../shared/errors.js";
@@ -104,10 +107,12 @@ export class SimpleJobExecutor implements IJobExecutor {
     await this.operationIndex.commit(indexTxn);
 
     if (result.operationsWithContext.length > 0) {
+      const event: OperationWrittenEvent = {
+        jobId: job.id,
+        operations: result.operationsWithContext,
+      };
       this.eventBus
-        .emit(OperationEventTypes.OPERATION_WRITTEN, {
-          operations: result.operationsWithContext,
-        })
+        .emit(OperationEventTypes.OPERATION_WRITTEN, event)
         .catch(() => {
           // TODO: Log error
         });
@@ -1190,10 +1195,12 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     if (result.operationsWithContext.length > 0) {
+      const event: OperationWrittenEvent = {
+        jobId: job.id,
+        operations: result.operationsWithContext,
+      };
       this.eventBus
-        .emit(OperationEventTypes.OPERATION_WRITTEN, {
-          operations: result.operationsWithContext,
-        })
+        .emit(OperationEventTypes.OPERATION_WRITTEN, event)
         .catch(() => {
           // TODO: log error channel once logging is wired
         });
