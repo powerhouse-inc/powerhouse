@@ -1,6 +1,10 @@
 // Reactor Interface and Implementation
 export { ReactorClient } from "./client/reactor-client.js";
-export { type IReactorClient } from "./client/types.js";
+export {
+  DocumentChangeType,
+  type DocumentChangeEvent,
+  type IReactorClient,
+} from "./client/types.js";
 export { ReactorClientBuilder } from "./core/builder.js";
 export { ReactorBuilder } from "./core/reactor-builder.js";
 export { Reactor } from "./core/reactor.js";

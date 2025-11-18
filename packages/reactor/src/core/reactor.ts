@@ -639,7 +639,6 @@ export class Reactor implements IReactor {
    */
   async deleteDocument(
     id: string,
-    propagate?: PropagationMode,
     signal?: AbortSignal,
   ): Promise<JobInfo> {
     const createdAtUtcIso = new Date().toISOString();
@@ -650,7 +649,6 @@ export class Reactor implements IReactor {
 
     const deleteInput: DeleteDocumentActionInput = {
       documentId: id,
-      propagate,
     };
 
     const action: Action = {

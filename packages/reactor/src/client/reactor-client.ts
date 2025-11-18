@@ -4,11 +4,11 @@ import { actions } from "document-model";
 import type { IReactor } from "../core/types.js";
 import { type IJobAwaiter } from "../shared/awaiter.js";
 import {
+  PropagationMode,
   RelationshipChangeType,
   type JobInfo,
   type PagedResults,
   type PagingOptions,
-  type PropagationMode,
   type SearchFilter,
   type ViewFilter,
 } from "../shared/types.js";
@@ -438,18 +438,51 @@ export class ReactorClient implements IReactorClient {
     propagate?: PropagationMode,
     signal?: AbortSignal,
   ): Promise<void> {
-    // Call reactor.deleteDocument to get JobInfo
-    const jobInfo = await this.reactor.deleteDocument(
-      identifier,
-      propagate,
-      signal,
-    );
+    const jobs: JobInfo[] = [];
 
-    // Wait for job completion
-    await this.waitForJob(jobInfo, signal);
+    if (propagate === PropagationMode.Cascade) {
+      const descendants: string[] = [];
+      const queue: string[] = [identifier];
+      const visited = new Set<string>();
 
-    // Return void
-    return;
+      while (queue.length > 0) {
+        const currentId = queue.shift()!;
+
+        if (visited.has(currentId)) {
+          continue;
+        }
+
+        visited.add(currentId);
+
+        if (signal?.aborted) {
+          throw new Error("Operation aborted");
+        }
+
+        const relationships = await this.documentIndexer.getOutgoing(
+          currentId,
+          ["child"],
+          undefined,
+          signal,
+        );
+
+        for (const rel of relationships) {
+          if (!visited.has(rel.targetId)) {
+            descendants.push(rel.targetId);
+            queue.push(rel.targetId);
+          }
+        }
+      }
+
+      for (const descendantId of descendants) {
+        const jobInfo = await this.reactor.deleteDocument(descendantId, signal);
+        jobs.push(jobInfo);
+      }
+    }
+
+    const jobInfo = await this.reactor.deleteDocument(identifier, signal);
+    jobs.push(jobInfo);
+
+    await Promise.all(jobs.map((job) => this.waitForJob(job, signal)));
   }
 
   /**
