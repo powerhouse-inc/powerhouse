@@ -30,11 +30,15 @@ import type { GraphQLSchema } from "graphql";
 import type http from "node:http";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import type { WebSocketServer } from "ws";
+import type { AuthConfig } from "../services/auth.service.js";
+import { AuthService } from "../services/auth.service.js";
 import {
   buildSubgraphSchemaModule,
   createSchema,
 } from "../utils/create-schema.js";
 import { DriveSubgraph } from "./drive-subgraph.js";
+import { useServer } from "./websocket.js";
 
 class AuthenticatedDataSource extends RemoteGraphQLDataSource {
   willSendRequest(options: GraphQLDataSourceProcessOptions) {
@@ -55,6 +59,7 @@ export class GraphQLManager {
   private reactorRouter: IRouter = Router();
   private contextFields: Record<string, any> = {};
   private readonly subgraphs = new Map<string, ISubgraph[]>();
+  private authService: AuthService | null = null;
 
   private readonly logger = childLogger(["reactor-api", "graphql-manager"]);
 
@@ -68,11 +73,20 @@ export class GraphQLManager {
     private readonly path: string,
     private readonly app: express.Express,
     private readonly httpServer: http.Server,
+    private readonly wsServer: WebSocketServer,
     private readonly reactor: IDocumentDriveServer,
     private readonly reactorClient: IReactorClient,
     private readonly relationalDb: IRelationalDb,
     private readonly analyticsStore: IAnalyticsStore,
-  ) {}
+    authConfig?: AuthConfig,
+  ) {
+    if (authConfig) {
+      this.authService = new AuthService(authConfig);
+      this.setAdditionalContextFields(
+        this.authService.getAdditionalContextFields(),
+      );
+    }
+  }
 
   async init(coreSubgraphs: SubgraphClass[]) {
     this.logger.debug(`Initializing Subgraph Manager...`);
@@ -240,6 +254,33 @@ export class GraphQLManager {
     this.contextFields = { ...this.contextFields, ...fields };
   }
 
+  async #createWebSocketContext(
+    connectionParams: Record<string, unknown>,
+  ): Promise<Context> {
+    let user = null;
+
+    if (this.authService) {
+      user =
+        await this.authService.authenticateWebSocketConnection(
+          connectionParams,
+        );
+    }
+
+    const context: Context = {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      headers: connectionParams as any,
+      driveServer: this.reactor,
+      db: this.relationalDb,
+      ...this.getAdditionalContextFields(),
+    };
+
+    if (user) {
+      context.user = user;
+    }
+
+    return context;
+  }
+
   setSupergraph(supergraph: string, subgraphs: ISubgraph[]) {
     this.subgraphs.set(supergraph, subgraphs);
     const globalSubgraphs = this.subgraphs.get("graphql");
@@ -249,6 +290,17 @@ export class GraphQLManager {
       this.subgraphs.set("graphql", subgraphs);
     }
     return this.updateRouter();
+  }
+
+  async shutdown(): Promise<void> {
+    this.logger.info("Shutting down GraphQL Manager");
+
+    return new Promise((resolve) => {
+      this.wsServer.close(() => {
+        this.logger.info("WebSocket server closed");
+        resolve();
+      });
+    });
   }
 
   #createApolloServer(schema: GraphQLSchema) {
@@ -296,6 +348,26 @@ export class GraphQLManager {
           const server = this.#createApolloServer(schema);
           server.startInBackgroundHandlingStartupErrorsByLoggingAndFailingAllRequests();
           await this.#waitForServer(server);
+
+          if (subgraph.hasSubscriptions) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+            useServer(
+              {
+                schema,
+                context: async (ctx: {
+                  connectionParams?: Record<string, unknown>;
+                }) => {
+                  const connectionParams = (ctx.connectionParams ??
+                    {}) as Record<string, unknown>;
+                  return this.#createWebSocketContext(connectionParams);
+                },
+              },
+              this.wsServer,
+            );
+            this.logger.info(
+              `WebSocket subscriptions enabled for ${subgraph.name}`,
+            );
+          }
 
           const path = this.#getSubgraphPath(subgraph, supergraph);
           this.#setupApolloExpressMiddleware(server, router, path);

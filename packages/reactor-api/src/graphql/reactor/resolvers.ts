@@ -21,8 +21,8 @@ import {
 import type {
   DocumentModelResultPage,
   JobInfo as GqlJobInfo,
-  PhDocumentResultPage,
   PropagationMode as GqlPropagationMode,
+  PhDocumentResultPage,
 } from "./gen/graphql.js";
 
 export async function documentModels(
@@ -354,7 +354,10 @@ export async function createEmptyDocument(
 
   let result: PHDocument;
   try {
-    result = await reactorClient.createEmpty(args.documentType, parentIdentifier);
+    result = await reactorClient.createEmpty(
+      args.documentType,
+      parentIdentifier,
+    );
   } catch (error) {
     throw new GraphQLError(
       `Failed to create empty document: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -491,7 +494,11 @@ export async function renameDocument(
 
   let result: PHDocument;
   try {
-    result = await reactorClient.rename(args.documentIdentifier, args.name, view);
+    result = await reactorClient.rename(
+      args.documentIdentifier,
+      args.name,
+      view,
+    );
   } catch (error) {
     throw new GraphQLError(
       `Failed to rename document: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -651,7 +658,9 @@ export async function deleteDocument(
     propagate?: GqlPropagationMode | null;
   },
 ): Promise<boolean> {
-  const propagate = fromInputMaybe(args.propagate) as PropagationMode | undefined;
+  const propagate = fromInputMaybe(args.propagate) as
+    | PropagationMode
+    | undefined;
 
   try {
     await reactorClient.deleteDocument(args.identifier, propagate);
@@ -670,7 +679,9 @@ export async function deleteDocuments(
     propagate?: GqlPropagationMode | null;
   },
 ): Promise<boolean> {
-  const propagate = fromInputMaybe(args.propagate) as PropagationMode | undefined;
+  const propagate = fromInputMaybe(args.propagate) as
+    | PropagationMode
+    | undefined;
   const identifiers = [...args.identifiers];
 
   try {

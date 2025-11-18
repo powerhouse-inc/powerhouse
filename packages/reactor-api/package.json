@@ -23,6 +23,7 @@
   "sideEffects": false,
   "scripts": {
     "tsc": "tsc",
+    "build": "pnpm tsc --build",
     "lint": "eslint",
     "test": "vitest run",
     "bench": "vitest bench",
@@ -99,6 +100,7 @@
     "@types/ms": "^0.7.34",
     "@types/node": "^24.6.1",
     "@types/pg": "^8.11.10",
+    "@types/ws": "^8.18.1",
     "esbuild": "^0.24.0",
     "graphql-codegen-typescript-validation-schema": "^0.12.0",
     "graphql-tag": "^2.12.6",

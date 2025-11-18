@@ -27,6 +27,7 @@ import https from "node:https";
 import path from "node:path";
 import type { TlsOptions } from "node:tls";
 import type { Pool } from "pg";
+import { WebSocketServer } from "ws";
 import { config, DefaultCoreSubgraphs } from "./config.js";
 import { GraphQLManager } from "./graphql/graphql-manager.js";
 import { renderGraphqlPlayground } from "./graphql/playground.js";
@@ -120,6 +121,7 @@ async function initializeDatabaseAndAnalytics(
 async function setupGraphQLManager(
   app: Express,
   httpServer: http.Server,
+  wsServer: WebSocketServer,
   reactor: IDocumentDriveServer,
   client: IReactorClient,
   relationalDb: IRelationalDb,
@@ -140,10 +142,18 @@ async function setupGraphQLManager(
     config.basePath,
     app,
     httpServer,
+    wsServer,
     reactor,
     client,
     relationalDb,
     analyticsStore,
+    {
+      enabled: auth?.enabled ?? false,
+      guests: auth?.guests ?? [],
+      users: auth?.users ?? [],
+      admins: auth?.admins ?? [],
+      freeEntry: auth?.freeEntry ?? false,
+    },
   );
 
   await graphqlManager.init(subgraphs.core);
@@ -156,18 +166,6 @@ async function setupGraphQLManager(
 
   await graphqlManager.updateRouter();
 
-  // Create auth service for context fields
-  const authService = new AuthService({
-    enabled: auth?.enabled ?? false,
-    guests: auth?.guests ?? [],
-    users: auth?.users ?? [],
-    admins: auth?.admins ?? [],
-    freeEntry: auth?.freeEntry ?? false,
-  });
-
-  graphqlManager.setAdditionalContextFields(
-    authService.getAdditionalContextFields(),
-  );
   return graphqlManager;
 }
 
@@ -219,19 +217,20 @@ function setupEventListeners(
 }
 
 /**
- * Starts the server (HTTP or HTTPS)
+ * Starts the server (HTTP or HTTPS) and attaches WebSocket server
  */
 async function startServer(
   app: Express,
   port: number,
   httpsOptions: Options["https"],
-): Promise<http.Server> {
+): Promise<{ httpServer: http.Server; wsServer: WebSocketServer }> {
+  let httpServer: http.Server;
+
   if (httpsOptions) {
     const currentDir = process.cwd();
-    let server: https.Server;
 
     if (typeof httpsOptions === "object") {
-      server = https.createServer(
+      httpServer = https.createServer(
         {
           key: fs.readFileSync(path.join(currentDir, httpsOptions.keyPath)),
           cert: fs.readFileSync(path.join(currentDir, httpsOptions.certPath)),
@@ -246,18 +245,25 @@ async function startServer(
         if (!cert || !key) {
           throw new Error("Invalid certificate generated");
         }
-        server = https.createServer({ cert, key }, app);
+        httpServer = https.createServer({ cert, key }, app);
       } catch (err) {
         console.error("Failed to get HTTPS certificate:", err);
         throw new Error("Failed to start HTTPS server");
       }
     }
-    server.listen(port);
-    return server;
+    httpServer.listen(port);
   } else {
-    const server = app.listen(port);
-    return server;
+    httpServer = app.listen(port);
   }
+
+  const wsServer = new WebSocketServer({
+    server: httpServer,
+    path: "/graphql/subscriptions",
+  });
+
+  logger.info("WebSocket server attached at /graphql/subscriptions");
+
+  return { httpServer, wsServer };
 }
 
 /**
@@ -455,7 +461,7 @@ async function _setupAPI(
   });
 
   // Start the server
-  const server = await startServer(app, port, options.https);
+  const { httpServer, wsServer } = await startServer(app, port, options.https);
 
   // set up subgraph manager
   const coreSubgraphs: SubgraphClass[] = DefaultCoreSubgraphs.slice();
@@ -464,7 +470,8 @@ async function _setupAPI(
   }
   const graphqlManager = await setupGraphQLManager(
     app,
-    server,
+    httpServer,
+    wsServer,
     reactor,
     reactorClient,
     relationalDb,

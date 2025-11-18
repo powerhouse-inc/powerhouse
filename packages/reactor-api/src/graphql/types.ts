@@ -36,6 +36,7 @@ export type ISubgraph = {
   typeDefs: DocumentNode;
   reactor: IDocumentDriveServer;
   relationalDb: IRelationalDb;
+  hasSubscriptions?: boolean;
   onSetup?: () => Promise<void>;
 };
 

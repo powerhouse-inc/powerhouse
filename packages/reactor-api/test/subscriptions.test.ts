@@ -1,4 +1,7 @@
-import type { DocumentChangeEvent, IReactorClient } from "@powerhousedao/reactor";
+import type {
+  DocumentChangeEvent,
+  IReactorClient,
+} from "@powerhousedao/reactor";
 import { DocumentChangeType } from "@powerhousedao/reactor";
 import type { PHDocument } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -30,24 +33,25 @@ describe("Subscription Filtering", () => {
   });
 
   describe("matchesSearchFilter", () => {
-    const createMockDocument = (type: string, id: string): PHDocument => ({
-      header: {
-        id,
-        documentType: type,
-        name: "Test Doc",
-        slug: "test",
-        createdAtUtcIso: "2024-01-01T00:00:00Z",
-        lastModifiedAtUtcIso: "2024-01-01T00:00:00Z",
-        branch: "main",
-        sig: { publicKey: {} as JsonWebKey, nonce: "test" },
-        revision: { global: 1 },
-      },
-      state: {},
-      history: {},
-      initialState: {},
-      operations: {},
-      clipboard: [],
-    } as unknown as PHDocument);
+    const createMockDocument = (type: string, id: string): PHDocument =>
+      ({
+        header: {
+          id,
+          documentType: type,
+          name: "Test Doc",
+          slug: "test",
+          createdAtUtcIso: "2024-01-01T00:00:00Z",
+          lastModifiedAtUtcIso: "2024-01-01T00:00:00Z",
+          branch: "main",
+          sig: { publicKey: {} as JsonWebKey, nonce: "test" },
+          revision: { global: 1 },
+        },
+        state: {},
+        history: {},
+        initialState: {},
+        operations: {},
+        clipboard: [],
+      }) as unknown as PHDocument;
 
     it("should match events with correct document type", () => {
       const event: DocumentChangeEvent = {
