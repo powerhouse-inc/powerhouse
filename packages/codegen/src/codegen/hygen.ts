@@ -7,7 +7,6 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readPackage } from "read-pkg";
-import { Project } from "ts-morph";
 import { TSMorphCodeGenerator } from "../ts-morph-generator/index.js";
 import { makeModulesFile } from "../ts-morph-utils.js";
 import type { CodegenOptions, DocumentTypesMap } from "./types.js";
@@ -201,7 +200,7 @@ export async function hygenGenerateDocumentModel(
   makeModulesFile({
     projectDir,
     modulesDir: "document-models",
-    moduleFileName: "document-models.ts",
+    outputFileName: "document-models.ts",
     typeName: "DocumentModelModule",
     variableName: "documentModels",
     variableType: "DocumentModelModule<any>[]",
@@ -267,7 +266,7 @@ export async function hygenGenerateEditor(
   makeModulesFile({
     projectDir,
     modulesDir: "editors",
-    moduleFileName: "editors.ts",
+    outputFileName: "editors.ts",
     typeName: "EditorModule",
     variableName: "editors",
     variableType: "EditorModule[]",
@@ -444,7 +443,7 @@ export async function hygenGenerateDriveEditor(options: {
   makeModulesFile({
     projectDir,
     modulesDir: "editors",
-    moduleFileName: "editors.ts",
+    outputFileName: "editors.ts",
     typeName: "EditorModule",
     variableName: "editors",
     variableType: "EditorModule[]",
