@@ -10,6 +10,7 @@ import type { IOperationStore } from "../../../src/storage/interfaces.js";
 import { KyselyOperationStore } from "../../../src/storage/kysely/store.js";
 import type { Database as StorageDatabase } from "../../../src/storage/kysely/types.js";
 import { runMigrations } from "../../../src/storage/migrations/migrator.js";
+import { createTestOperation } from "../../factories.js";
 
 // Combined database type that includes both storage and view tables
 type Database = StorageDatabase & DocumentViewDatabase;
@@ -1492,6 +1493,213 @@ describe("KyselyDocumentView", () => {
       const result = await view.resolveSlug(slug);
 
       expect(result).toBe(documentId);
+    });
+
+    describe("automatic slug indexing", () => {
+      beforeEach(async () => {
+        await view.init();
+      });
+
+      it("should create slug mapping when indexing header with slug", async () => {
+        const documentId = generateId();
+        const slug = "auto-indexed-slug";
+        const documentType = "powerhouse/document-model";
+        const branch = "main";
+
+        const headerState = {
+          id: documentId,
+          documentType,
+          slug,
+          name: "Test Document",
+        };
+
+        const resultingState = JSON.stringify({
+          header: headerState,
+          document: {},
+        });
+
+        await view.indexOperations([
+          {
+            operation: createTestOperation({
+              index: 0,
+              action: {
+                type: "CREATE_DOCUMENT",
+                scope: "document",
+                input: {},
+              } as any,
+            }),
+            context: {
+              documentId,
+              documentType,
+              scope: "header",
+              branch,
+              resultingState,
+            },
+          },
+        ]);
+
+        const resolvedId = await view.resolveSlug(slug, branch);
+
+        expect(resolvedId).toBe(documentId);
+      });
+
+      it("should not create mapping when slug equals documentId", async () => {
+        const documentId = generateId();
+        const slug = documentId;
+        const documentType = "powerhouse/document-model";
+        const branch = "main";
+
+        const headerState = {
+          id: documentId,
+          documentType,
+          slug,
+        };
+
+        const resultingState = JSON.stringify({
+          header: headerState,
+          document: {},
+        });
+
+        await view.indexOperations([
+          {
+            operation: createTestOperation({
+              index: 0,
+              action: {
+                type: "CREATE_DOCUMENT",
+                scope: "document",
+                input: {},
+              } as any,
+            }),
+            context: {
+              documentId,
+              documentType,
+              scope: "header",
+              branch,
+              resultingState,
+            },
+          },
+        ]);
+
+        const result = await db
+          .selectFrom("SlugMapping")
+          .selectAll()
+          .where("slug", "=", slug)
+          .where("branch", "=", branch)
+          .executeTakeFirst();
+
+        expect(result).toBeUndefined();
+      });
+
+      it("should create slug mapping for document with slug", async () => {
+        const documentId = generateId();
+        const slug = "test-document-slug";
+        const documentType = "powerhouse/document-model";
+        const branch = "main";
+
+        const headerState = {
+          id: documentId,
+          documentType,
+          slug,
+        };
+
+        const resultingState = JSON.stringify({
+          header: headerState,
+          document: {},
+        });
+
+        await view.indexOperations([
+          {
+            operation: createTestOperation({
+              index: 0,
+              action: {
+                type: "CREATE_DOCUMENT",
+                scope: "document",
+                input: {},
+              } as any,
+            }),
+            context: {
+              documentId,
+              documentType,
+              scope: "header",
+              branch,
+              resultingState,
+            },
+          },
+        ]);
+
+        const resolvedId = await view.resolveSlug(slug, branch);
+        expect(resolvedId).toBe(documentId);
+      });
+
+      it("should handle multiple documents with different slugs", async () => {
+        const doc1Id = generateId();
+        const doc2Id = generateId();
+        const slug1 = "document-one";
+        const slug2 = "document-two";
+        const documentType = "powerhouse/document-model";
+        const branch = "main";
+
+        const headerState1 = {
+          id: doc1Id,
+          documentType,
+          slug: slug1,
+        };
+
+        const headerState2 = {
+          id: doc2Id,
+          documentType,
+          slug: slug2,
+        };
+
+        await view.indexOperations([
+          {
+            operation: createTestOperation({
+              index: 0,
+              action: {
+                type: "CREATE_DOCUMENT",
+                scope: "document",
+                input: {},
+              } as any,
+            }),
+            context: {
+              documentId: doc1Id,
+              documentType,
+              scope: "header",
+              branch,
+              resultingState: JSON.stringify({
+                header: headerState1,
+                document: {},
+              }),
+            },
+          },
+          {
+            operation: createTestOperation({
+              index: 0,
+              action: {
+                type: "CREATE_DOCUMENT",
+                scope: "document",
+                input: {},
+              } as any,
+            }),
+            context: {
+              documentId: doc2Id,
+              documentType,
+              scope: "header",
+              branch,
+              resultingState: JSON.stringify({
+                header: headerState2,
+                document: {},
+              }),
+            },
+          },
+        ]);
+
+        const resolved1 = await view.resolveSlug(slug1, branch);
+        expect(resolved1).toBe(doc1Id);
+
+        const resolved2 = await view.resolveSlug(slug2, branch);
+        expect(resolved2).toBe(doc2Id);
+      });
     });
   });
 });
