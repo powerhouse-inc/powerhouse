@@ -1,3 +1,31 @@
+## 4.1.0-dev.124 (2025-11-18)
+
+### 🚀 Features
+
+- mutation resolver implementation ([4734cd186](https://github.com/powerhouse-inc/powerhouse/commit/4734cd186))
+- reactor-client handles deletion propagation ([a28706734](https://github.com/powerhouse-inc/powerhouse/commit/a28706734))
+- reactor gql subscriptions ([cb23eb953](https://github.com/powerhouse-inc/powerhouse/commit/cb23eb953))
+- first pass web-sockets in subgraphs ([cf39dd0dc](https://github.com/powerhouse-inc/powerhouse/commit/cf39dd0dc))
+- mutation resolver implementation ([569697f58](https://github.com/powerhouse-inc/powerhouse/commit/569697f58))
+- reactor-client handles deletion propagation ([58b5e6646](https://github.com/powerhouse-inc/powerhouse/commit/58b5e6646))
+- reactor gql subscriptions ([522d502ba](https://github.com/powerhouse-inc/powerhouse/commit/522d502ba))
+- first pass web-sockets in subgraphs ([41b0aff7a](https://github.com/powerhouse-inc/powerhouse/commit/41b0aff7a))
+- **codegen:** use ts morph to generate subgraphs index file ([#2108](https://github.com/powerhouse-inc/powerhouse/pull/2108))
+
+### 🩹 Fixes
+
+- slug mappings were not being inserted properly ([d1864769a](https://github.com/powerhouse-inc/powerhouse/commit/d1864769a))
+- reactor document-model filtering was busted ([4700ad9f3](https://github.com/powerhouse-inc/powerhouse/commit/4700ad9f3))
+- build and lint fixes ([efeece878](https://github.com/powerhouse-inc/powerhouse/commit/efeece878))
+- slug mappings were not being inserted properly ([1ddc6f349](https://github.com/powerhouse-inc/powerhouse/commit/1ddc6f349))
+- reactor document-model filtering was busted ([98bb94668](https://github.com/powerhouse-inc/powerhouse/commit/98bb94668))
+- build and lint fixes ([ddbb423c6](https://github.com/powerhouse-inc/powerhouse/commit/ddbb423c6))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Ryan Wolhuter @ryanwolhuter
+
 ## 4.1.0-dev.123 (2025-11-18)
 
 ### 🚀 Features

@@ -1,3 +1,18 @@
+## 4.1.0-dev.124 (2025-11-18)
+
+### 🚀 Features
+
+- **codegen:** use ts morph to generate subgraphs index file ([#2108](https://github.com/powerhouse-inc/powerhouse/pull/2108))
+- first pass web-sockets in subgraphs ([41b0aff7a](https://github.com/powerhouse-inc/powerhouse/commit/41b0aff7a))
+- reactor gql subscriptions ([522d502ba](https://github.com/powerhouse-inc/powerhouse/commit/522d502ba))
+- first pass web-sockets in subgraphs ([cf39dd0dc](https://github.com/powerhouse-inc/powerhouse/commit/cf39dd0dc))
+- reactor gql subscriptions ([cb23eb953](https://github.com/powerhouse-inc/powerhouse/commit/cb23eb953))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Ryan Wolhuter @ryanwolhuter
+
 ## 4.1.0-dev.123 (2025-11-18)
 
 ### 🚀 Features
