@@ -1,4 +1,4 @@
-import { DocumentToolbar } from "@powerhousedao/design-system";
+import { DocumentToolbar } from "@powerhousedao/design-system/connect";
 import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
 import { useCallback } from "react";
 import { actions } from "../../document-models/processor-module/index.js";
@@ -6,7 +6,7 @@ import { useSelectedProcessorModuleDocument } from "../hooks/useVetraDocument.js
 import { ProcessorEditorForm } from "./components/ProcessorEditorForm.js";
 import { editorConfig } from "./config.js";
 
-export function Editor() {
+export default function Editor() {
   useSetPHDocumentEditorConfig(editorConfig);
   const [document, dispatch] = useSelectedProcessorModuleDocument();
 

@@ -4,6 +4,7 @@ import { childLogger } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { execSync } from "node:child_process";
 import path from "node:path";
+import { cwd } from "node:process";
 import { resolveLinkedPackage } from "./import-resolver.js";
 
 // Define the expected module export structures
@@ -83,7 +84,7 @@ async function loadDependency<T = unknown>(
 
       // Only log when ALL attempts have failed
       logger.warn(
-        `Unable to load dependency ${fullPath} - tried standard import, suggested paths, resolved paths, and workspace patterns`,
+        `Unable to load dependency ${fullPath}.${packageName === cwd() ? " Did you build your project?" : ""}`,
       );
       logger.debug(e);
     } else if (
@@ -102,14 +103,28 @@ async function loadDependency<T = unknown>(
   }
 }
 
-export function debounce<T extends (...args: any[]) => void>(
-  func: T,
-  delay = 100,
-): (...args: Parameters<T>) => void {
-  let timeoutId: ReturnType<typeof setTimeout>;
-  return (...args: Parameters<T>): void => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => func(...args), delay);
+export function debounce<T extends unknown[], R>(
+  func: (...args: T) => Promise<R>,
+  delay = 250,
+) {
+  let timer: number;
+  return (immediate = false, ...args: T) => {
+    if (timer) {
+      clearTimeout(timer);
+    }
+    return new Promise<R>((resolve, reject) => {
+      if (immediate) {
+        func(...args)
+          .then(resolve)
+          .catch(reject);
+      } else {
+        timer = setTimeout(() => {
+          func(...args)
+            .then(resolve)
+            .catch(reject);
+        }, delay) as unknown as number;
+      }
+    });
   };
 }
 

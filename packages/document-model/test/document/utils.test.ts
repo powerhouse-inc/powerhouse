@@ -1,12 +1,12 @@
 import {
   baseCreateDocument,
   createReducer,
-  generateUUIDBrowser,
+  generateId,
   hashBrowser,
   replayDocument,
   validateOperations,
 } from "document-model/core";
-import { generateUUIDNode, getLocalFile, hashNode } from "document-model/node";
+import { getLocalFile, hashNode } from "document-model/node";
 
 import type { CountPHState } from "document-model/test";
 import {
@@ -52,15 +52,10 @@ describe("Base utils", () => {
     await expect(getLocalFile("as")).rejects.toBeDefined();
   });
 
-  it("should generateId in browser and node", () => {
-    expect(generateUUIDNode()).toMatch(
+  it("should return uuidv4 on generateId", () => {
+    expect(generateId()).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
     );
-    expect(generateUUIDBrowser()).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-    );
-    expect(generateUUIDNode().length).toEqual(generateUUIDBrowser().length);
-    expect(generateUUIDNode()).not.toEqual(generateUUIDBrowser());
   });
 
   it("should hash in browser and node", () => {

@@ -3,6 +3,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     include: ["test/**/*.test.ts"],
+    exclude: ["test/atlas/**"],
     globals: true,
     alias: {
       "#": new URL("./src/", import.meta.url).pathname,

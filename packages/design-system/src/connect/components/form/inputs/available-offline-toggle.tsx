@@ -1,6 +1,6 @@
-import { Toggle } from "@powerhousedao/design-system";
 import type { ComponentPropsWithRef, ForwardedRef } from "react";
 import { forwardRef } from "react";
+import { Toggle } from "../../toggle/toggle.js";
 
 type AvailableOfflineToggleProps = Omit<
   ComponentPropsWithRef<typeof Toggle>,

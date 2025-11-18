@@ -27,7 +27,7 @@ type Props = {
     name: string,
   ) => void;
 };
-export function Modules({
+export default function Modules({
   modules,
   allOperations,
   addModule,

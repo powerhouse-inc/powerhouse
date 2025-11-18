@@ -38,7 +38,7 @@ describe("SimpleJobExecutorManager", () => {
     mockExecutors = [];
     eventBus = new EventBus();
     queue = new InMemoryQueue(eventBus);
-    jobTracker = new InMemoryJobTracker();
+    jobTracker = new InMemoryJobTracker(eventBus);
 
     // Create factory that returns mock executors
     executorFactory = vi.fn(() => createMockExecutor());
@@ -142,6 +142,7 @@ describe("SimpleJobExecutorManager", () => {
 
       const job: Job = {
         id: "job-1",
+        kind: "mutation",
         documentId: "doc-1",
         scope: "global",
         branch: "main",
@@ -154,6 +155,7 @@ describe("SimpleJobExecutorManager", () => {
             input: {},
           },
         ],
+        operations: [],
         createdAt: "123",
         queueHint: [],
         errorHistory: [],
@@ -172,6 +174,7 @@ describe("SimpleJobExecutorManager", () => {
     it("should call start() on the job execution handle", async () => {
       const job: Job = {
         id: "job-1",
+        kind: "mutation",
         documentId: "doc-1",
         scope: "global",
         branch: "main",
@@ -184,6 +187,7 @@ describe("SimpleJobExecutorManager", () => {
             input: {},
           },
         ],
+        operations: [],
         createdAt: "123",
         queueHint: [],
         errorHistory: [],

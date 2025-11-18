@@ -1,6 +1,6 @@
-export { module as AppEditor } from "./app-editor/index.js";
-export { module as DocumentEditor } from "./document-editor/index.js";
-export { module as ProcessorEditor } from "./processor-editor/index.js";
-export { module as SubgraphEditor } from "./subgraph-editor/index.js";
-export { module as VetraDriveApp } from "./vetra-drive-app/index.js";
-export { module as VetraPackage } from "./vetra-package/index.js";
+export { AppEditor } from "./app-editor/module.js";
+export { DocumentEditor } from "./document-editor/module.js";
+export { ProcessorEditor } from "./processor-editor/module.js";
+export { SubgraphEditor } from "./subgraph-editor/module.js";
+export { VetraDriveApp } from "./vetra-drive-app/module.js";
+export { VetraPackageEditor } from "./vetra-package/module.js";

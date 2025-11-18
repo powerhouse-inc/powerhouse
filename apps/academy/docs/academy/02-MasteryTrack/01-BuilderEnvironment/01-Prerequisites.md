@@ -3,7 +3,7 @@
 Let's set up your machine to start building your first Document Model. Don't worry if this is your first time setting up a development environment - we'll guide you through each step!
 
 :::info
-If you've already set up **Git, Node, and pnpm**, your most important step is to install the **Powerhouse CLI** with the command: `pnpm install ph-cmd`. A global install is recommended if you want to use the command from any directory as a power user. In this case use `pnpm install -g ph-cmd`. The Powerhouse CLI is used to create, build, and run your Document Models and gives you direct access to a series of Powerhouse Builder Tools. Move to the end of this page to [verify your installation.](#verify-installation)
+If you've already set up **Git, Node.js 22, and a package manager (pnpm or npm)**, your most important step is to install the **Powerhouse CLI** with the command: `pnpm install -g ph-cmd` or `npm install -g ph-cmd`. A global install is recommended if you want to use the command from any directory as a power user. The Powerhouse CLI is used to create, build, and run your Document Models and gives you direct access to a series of Powerhouse Builder Tools. Move to the end of this page to [verify your installation.](#verify-installation)
 :::
 
 ---
@@ -43,13 +43,15 @@ node.js 22 is a tool that lets us run our application. Let's install it step by 
    - Once the installer downloads, double-click it to start installation
    - Click "Next" through the installation wizard, leaving all settings at their defaults
 
-3. **Install pnpm:**
+3. **Install a package manager (pnpm or npm):**
    - Open PowerShell (no need for admin mode)
-   - Type this command and press Enter:
+   - For pnpm (recommended), type this command and press Enter:
 
    ```powershell
    npm install -g pnpm
    ```
+   
+   - Note: Node.js comes with npm by default, so npm is already available after installing Node.js
 
 4. **Verify Installation:**
    - Open PowerShell (no need for admin mode)
@@ -57,9 +59,11 @@ node.js 22 is a tool that lets us run our application. Let's install it step by 
    ```powershell
    node --version
    pnpm --version
+   # or
+   npm --version
    ```
 
-   - You should see version numbers appear after each command (e.g., v18.17.0). If you do, congratulations - Node.js and pnpm are installed!
+   - You should see version numbers appear after each command (e.g., v22.x.x for Node.js). If you do, congratulations - Node.js and your package manager are installed!
 
 > **Note**: If node.js 22 commands don't work in VS Code, restart VS Code to refresh environment variables.
 
@@ -82,7 +86,7 @@ node.js 22 is a tool that lets us run our application. Let's install it step by 
    brew install node@22
    ```
 
-   - Then, install pnpm:
+   - Then, optionally install pnpm (npm comes with Node.js):
 
    ```bash
    brew install pnpm
@@ -93,9 +97,11 @@ node.js 22 is a tool that lets us run our application. Let's install it step by 
    ```bash
    node --version
    pnpm --version
+   # or
+   npm --version
    ```
 
-   - If you see version numbers, you've successfully installed Node.js and pnpm!
+   - If you see version numbers, you've successfully installed Node.js and your package manager!
 
 #### For Linux (Ubuntu/Debian):
 
@@ -109,10 +115,12 @@ node.js 22 is a tool that lets us run our application. Let's install it step by 
    sudo apt update
    ```
 
-3. **Install node.js 22 and pnpm:**
+3. **Install node.js 22 and optionally pnpm:**
 
    ```bash
-   sudo apt install nodejs pnpm
+   sudo apt install nodejs
+   # Optionally install pnpm (npm comes with Node.js)
+   sudo apt install pnpm
    ```
 
 4. **Verify Installation:**
@@ -120,6 +128,8 @@ node.js 22 is a tool that lets us run our application. Let's install it step by 
    ```bash
    node --version
    pnpm --version
+   # or
+   npm --version
    ```
 
    - If you see version numbers, you're all set!
@@ -232,6 +242,12 @@ The Powerhouse CLI (installed via the `ph-cmd` package) is a command-line interf
 
 ```bash
 pnpm install -g ph-cmd
+```
+
+Or if you're using npm:
+
+```bash
+npm install -g ph-cmd
 ```
 
 Key commands include:

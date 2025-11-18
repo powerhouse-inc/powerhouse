@@ -1,20 +1,21 @@
-import { linter, forceLinting } from "@codemirror/lint";
+import { json, jsonLanguage, jsonParseLinter } from "@codemirror/lang-json";
+import { forceLinting, linter } from "@codemirror/lint";
 import { EditorState } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { memo, useEffect } from "react";
 import { ayuLight } from "thememirror";
-import { json, jsonLanguage, jsonParseLinter } from "@codemirror/lang-json";
+import { baseEditorExtensions, baseKeymap } from "./constants.js";
 import {
-  useEditorRefs,
-  baseEditorExtensions,
-  baseKeymap,
-  makeUpdateHandler,
   makeFocusHandler,
   makePasteHandler,
-  useEditorCleanup,
-  useHandlerReconfiguration,
+  makeUpdateHandler,
+} from "./factories.js";
+import {
   useDocumentSync,
-} from "./utils.js";
+  useEditorCleanup,
+  useEditorRefs,
+  useHandlerReconfiguration,
+} from "./hooks.js";
 
 type Props = {
   doc: string;
@@ -23,7 +24,7 @@ type Props = {
   updateDocumentInModel?: (newDoc: string) => void;
 };
 
-export const JSONEditor = memo(function JSONEditor(props: Props) {
+const JSONEditor = memo(function JSONEditor(props: Props) {
   const { doc, readonly = false, updateDocumentInModel } = props;
   const {
     editorRef,
@@ -82,3 +83,5 @@ export const JSONEditor = memo(function JSONEditor(props: Props) {
 
   return <div ref={editorRef} />;
 });
+
+export default JSONEditor;

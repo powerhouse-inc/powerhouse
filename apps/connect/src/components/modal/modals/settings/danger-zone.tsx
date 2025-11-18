@@ -1,4 +1,4 @@
-import { DangerZone as BaseDangerZone } from "@powerhousedao/design-system";
+import { DangerZone as BaseDangerZone } from "@powerhousedao/design-system/connect";
 import {
   deleteDrive,
   setSelectedDrive,

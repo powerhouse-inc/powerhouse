@@ -4,8 +4,8 @@ import type {
   ICacheStorage,
   ICacheStorageManager,
 } from "document-drive";
-import { trimResultingState } from "document-drive";
 import type { PHDocument } from "document-model";
+import { trimResultingState } from "./util.js";
 
 export class CacheStorageManager implements ICacheStorageManager {
   private index = 0;

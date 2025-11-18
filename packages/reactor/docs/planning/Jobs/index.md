@@ -7,6 +7,88 @@
 - It provides configurable concurrency, retry logic with exponential backoff, and monitoring capabilities.
 - Jobs are made up of a set of `Action`s. Job execution creates one or more `Operation` objects (note that `Action` and `Operation` do not necessarily have a 1:1 relationship).
 - The `IQueue` is responsible for persisting jobs for later execution, but the `IJobExecutor` is not. It simply pulls jobs from the queue and executes them.
+- When a job reaches `COMPLETED`, the `JobInfo` returned to callers now includes a `ConsistencyToken` that records the highest operation index written so read models can wait for the corresponding write-side updates.
+
+### Consistency Tokens
+
+Successful jobs must always emit a consistency token. The token captures the
+furthest write-side progress that the job made so read APIs can block until
+their read models have indexed the same operations.
+
+```ts
+type ConsistencyCoordinate = {
+  documentId: string;
+  scope: string;
+  branch: string;
+  operationIndex: number;
+};
+
+type ConsistencyToken = {
+  version: 1;
+  createdAtUtcIso: string;
+  coordinates: ConsistencyCoordinate[];
+};
+```
+
+- Tokens always exist. Jobs that do not generate operations return a token with
+  an empty `coordinates` array.
+- `createdAtUtcIso` records when the token was produced, aiding debugging and
+  telemetry.
+- If a job emits multiple operations for the same `(documentId, scope, branch)`
+  tuple, the executor keeps only the highest index.
+- The executor manager owns token construction because it already aggregates the
+  `OperationWithContext` payloads coming back from individual executors.
+- `IJobTracker.markCompleted` requires the resolved token so `JobInfo` can
+  expose it to clients.
+
+### JobInfo Lifecycle
+
+- Reactor write APIs (e.g., `mutate`, `load`, `create`) register a job and return a freshly created `JobInfo`.
+- At this point the job is typically `PENDING` (though not guaranteed to be) and its `consistencyToken.coordinates` array is empty because no operations have been committed yet.
+- As the job executes, it transitions through multiple states that align with operation events:
+  - `PENDING` → `RUNNING` → `WRITE_COMPLETED` → `READ_MODELS_READY`
+  - Or on failure: `PENDING` → `RUNNING` → `FAILED`
+- The consistency token is populated once the job reaches `WRITE_COMPLETED`, when the `OPERATION_WRITTEN` event fires. This token captures the write-side state (the highest operation indices that were written), not the read-side state.
+- Once the job reaches a terminal state (`READ_MODELS_READY`, or `FAILED`), the tracker updates the `JobInfo` with the final timestamps, result metadata, and error history (if any).
+- Callers MUST wait for the `WRITE_COMPLETED` event (or later)—either by using the [JobAwaiter](./job-awaiter.md), polling `getJobStatus`, or subscribing to job events—before relying on the token. Reading the `JobInfo` that was returned during queuing is a race and will almost always expose an empty coordinate list.
+
+### Job Status States
+
+Jobs transition through multiple states that align with operation events:
+
+```typescript
+enum JobStatus {
+  PENDING = "PENDING",                    // Job queued, not started
+  RUNNING = "RUNNING",                     // Job execution started
+  WRITE_COMPLETED = "WRITE_COMPLETED",     // Operations written (OPERATION_WRITTEN event)
+  READ_MODELS_READY = "READ_MODELS_READY", // Read models indexed (OPERATIONS_READY event)
+  FAILED = "FAILED",                       // Job failed (JOB_FAILED event)
+}
+```
+
+**State Transitions**:
+- Successful: `PENDING` → `RUNNING` → `WRITE_COMPLETED` → `READ_MODELS_READY`
+- Failed: `PENDING` → `RUNNING` → `FAILED`
+
+**Event Alignment**:
+| Job Status | Event | Description |
+|------------|-------|-------------|
+| `WRITE_COMPLETED` | `OPERATION_WRITTEN` (10001) | Operations persisted to IOperationStore |
+| `READ_MODELS_READY` | `OPERATIONS_READY` (10002) | Read models updated, queries will see data |
+| `FAILED` | `JOB_FAILED` (10003) | Unrecoverable error occurred |
+
+See [Job Awaiter Documentation](./job-awaiter.md) for details on event-driven job waiting.
+
+### Read-After-Write Flow
+
+1. A job finishes and surfaces a `JobInfo` with the consistency token.
+2. Callers hand the token to the `ReadModelCoordinator`, which fans the request
+   out to every registered read model's `waitForConsistency` implementation.
+3. Each read model uses the shared [Consistency Tracker](../Shared/consistency-tracker.md)
+   to know whether it has indexed past every coordinate. If not, it waits until
+   indexing catches up, respecting optional `timeoutMs` and `AbortSignal`.
+4. Once all read models confirm, the original read request executes, ensuring
+   the write is visible.
 
 ### Workers
 

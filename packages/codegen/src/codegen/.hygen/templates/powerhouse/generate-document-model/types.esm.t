@@ -1,31 +1,31 @@
 ---
-to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/types.ts"
+to: "<%= rootDir %>/<%= paramCaseDocumentType %>/gen/types.ts"
 force: true
 ---
 import type { PHDocument, PHBaseState } from 'document-model';
-import type { <%= h.changeCase.pascal(documentType) %>Action } from './actions.js';
+import type { <%= actionTypeName %> } from './actions.js';
 import type {
-  <%= h.changeCase.pascal(documentType) %>State as <%= h.changeCase.pascal(documentType) %>GlobalState,
+  <%= stateName %> as <%= globalStateName %>,
 <% if(hasLocalSchema) { -%>
-  <%= h.changeCase.pascal(documentType) %>LocalState,
+  <%= localStateName %>,
 <%} -%>
 } from './schema/types.js';
 
-export { z } from './schema/index.js';
-export * from './schema/types.js';
 <% if(!hasLocalSchema) { -%>
-<%= 'type ' + h.changeCase.pascal(documentType) %>LocalState = Record<PropertyKey, never>;
+<%= 'type ' + localStateName %> = Record<PropertyKey, never>;
 <%} -%>
-type <%= h.changeCase.pascal(documentType) %>PHState = PHBaseState & {
-  global: <%= h.changeCase.pascal(documentType) %>GlobalState;
-  local: <%= h.changeCase.pascal(documentType) %>LocalState;
+type <%= phStateName %> = PHBaseState & {
+  global: <%= globalStateName %>;
+  local: <%= localStateName %>;
 };
-type <%= h.changeCase.pascal(documentType) %>Document = PHDocument<<%= h.changeCase.pascal(documentType) %>PHState>;
+type <%= phDocumentTypeName %> = PHDocument<<%= phStateName %>>;
+
+export * from './schema/types.js';
 
 export type { 
-  <%= h.changeCase.pascal(documentType) %>GlobalState, 
-  <%= h.changeCase.pascal(documentType) %>LocalState,
-  <%= h.changeCase.pascal(documentType) %>PHState, 
-  <%= h.changeCase.pascal(documentType) %>Action,
-  <%= h.changeCase.pascal(documentType) %>Document,
+  <%= globalStateName %>, 
+  <%= localStateName %>,
+  <%= phStateName %>, 
+  <%= actionTypeName %>,
+  <%= phDocumentTypeName %>,
 };

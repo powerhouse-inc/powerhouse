@@ -4,7 +4,7 @@ import type {
   FileUploadProgress,
 } from "@powerhousedao/reactor-browser";
 import type { Node } from "document-drive";
-import type { UploadFileItemProps } from "../upload-file-item/index.js";
+import type { UploadFileItemProps } from "../upload-file-item/upload-file-item.js";
 
 // Upload tracking types
 export type UploadTracker = {

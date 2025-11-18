@@ -1,4 +1,7 @@
-import { DriveEditorContainer, DriveIcon } from "@powerhousedao/connect";
+import {
+  DriveEditorContainer,
+  DriveIcon,
+} from "@powerhousedao/connect/components";
 import {
   connectConfig,
   defaultPHDocumentEditorConfig,
@@ -8,7 +11,7 @@ import {
   HomeScreen,
   HomeScreenAddDriveItem,
   HomeScreenItem,
-} from "@powerhousedao/design-system";
+} from "@powerhousedao/design-system/connect";
 import {
   setPHDocumentEditorConfig,
   setPHDriveEditorConfig,

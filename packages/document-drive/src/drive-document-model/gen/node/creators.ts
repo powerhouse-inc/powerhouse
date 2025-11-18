@@ -16,6 +16,7 @@ import type {
   UpdateNodeAction,
   UpdateNodeInput,
 } from "document-drive";
+import { createAction } from "document-model/core";
 import {
   AddFileInputSchema,
   AddFolderInputSchema,
@@ -24,8 +25,7 @@ import {
   MoveNodeInputSchema,
   UpdateFileInputSchema,
   UpdateNodeInputSchema,
-} from "document-drive";
-import { createAction } from "document-model/core";
+} from "../schema/zod.js";
 
 /**
  * @deprecated Use addFile with {@link AddFileInput} instead. This overload will be removed in the future.

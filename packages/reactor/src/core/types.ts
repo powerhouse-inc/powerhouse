@@ -6,6 +6,7 @@ import type {
 } from "document-model";
 
 import type {
+  ConsistencyToken,
   JobInfo,
   PagedResults,
   PagingOptions,
@@ -15,6 +16,39 @@ import type {
   ViewFilter,
 } from "../shared/types.js";
 
+import type { DocumentViewDatabase } from "../read-models/types.js";
+import type {
+  DocumentIndexerDatabase,
+  Database as StorageDatabase,
+} from "../storage/kysely/types.js";
+import type { ISyncManager } from "../sync/interfaces.js";
+
+/**
+ * A single mutation job within a batch request.
+ */
+export type MutationJobPlan = {
+  key: string;
+  documentId: string;
+  scope: string;
+  branch: string;
+  actions: Action[];
+  dependsOn: string[];
+};
+
+/**
+ * Request for batch mutation operation.
+ */
+export type BatchMutationRequest = {
+  jobs: MutationJobPlan[];
+};
+
+/**
+ * Result from batch mutation operation.
+ */
+export type BatchMutationResult = {
+  jobs: Record<string, JobInfo>;
+};
+
 /**
  * The main Reactor interface that serves as a facade for document operations.
  * This interface provides a unified API for document management, including
@@ -23,6 +57,11 @@ import type {
  * Phase 2 of the refactoring plan: IReactor Facade (Strangler Fig Pattern)
  */
 export interface IReactor {
+  /**
+   * Gets the sync manager if synchronization is enabled.
+   */
+  get syncManager(): ISyncManager | undefined;
+
   /**
    * Signals that the reactor should shutdown.
    */
@@ -47,12 +86,14 @@ export interface IReactor {
    *
    * @param id - Required, this is the document id
    * @param view - Optional filter containing branch and scopes information
+   * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    * @returns The up-to-date PHDocument with scopes and list of child document ids
    */
   get<TDocument extends PHDocument>(
     id: string,
     view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<{
     document: TDocument;
@@ -64,12 +105,35 @@ export interface IReactor {
    *
    * @param slug - Required, this is the document slug
    * @param view - Optional filter containing branch and scopes information
+   * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    * @returns The up-to-date PHDocument with scopes and list of child document ids
    */
   getBySlug<TDocument extends PHDocument>(
     slug: string,
     view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<{
+    document: TDocument;
+    childIds: string[];
+  }>;
+
+  /**
+   * Retrieves a specific PHDocument by identifier (either id or slug).
+   * Throws an error if the identifier matches both an id and a slug that refer to different documents.
+   *
+   * @param identifier - Required, this is the document id or slug
+   * @param view - Optional filter containing branch and scopes information
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The up-to-date PHDocument with scopes and list of child document ids
+   * @throws {Error} If identifier matches both an ID and slug referring to different documents
+   */
+  getByIdOrSlug<TDocument extends PHDocument>(
+    identifier: string,
+    view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<{
     document: TDocument;
@@ -82,6 +146,7 @@ export interface IReactor {
    * @param documentId - The document id
    * @param view - Optional filter containing branch and scopes information
    * @param paging - Optional pagination options
+   * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    * @returns The list of operations
    */
@@ -89,6 +154,7 @@ export interface IReactor {
     documentId: string,
     view?: ViewFilter,
     paging?: PagingOptions,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<Record<string, PagedResults<Operation>>>;
 
@@ -98,6 +164,7 @@ export interface IReactor {
    * @param search - Search filter options (type, parentId, identifiers)
    * @param view - Optional filter containing branch and scopes information
    * @param paging - Optional pagination options
+   * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
    * @returns List of documents matching criteria and pagination cursor
    */
@@ -105,6 +172,7 @@ export interface IReactor {
     search: SearchFilter,
     view?: ViewFilter,
     paging?: PagingOptions,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>>;
 
@@ -134,11 +202,40 @@ export interface IReactor {
   /**
    * Applies a list of actions to a document.
    *
-   * @param id - Document id
+   * @param docId - Document id
+   * @param branch - Branch to apply actions to
    * @param actions - List of actions to apply
+   * @param signal - Optional abort signal to cancel the request
    * @returns The job id and status
    */
-  mutate(id: string, actions: Action[]): Promise<JobInfo>;
+  mutate(
+    docId: string,
+    branch: string,
+    actions: Action[],
+    signal?: AbortSignal,
+  ): Promise<JobInfo>;
+
+  /**
+   * Loads existing operations generated elsewhere into this reactor.
+   */
+  load(
+    docId: string,
+    branch: string,
+    operations: Operation[],
+    signal?: AbortSignal,
+  ): Promise<JobInfo>;
+
+  /**
+   * Applies multiple mutations across documents with dependency management.
+   *
+   * @param request - Batch mutation request containing jobs with dependencies
+   * @param signal - Optional abort signal to cancel the request
+   * @returns Map of job keys to job information
+   */
+  mutateBatch(
+    request: BatchMutationRequest,
+    signal?: AbortSignal,
+  ): Promise<BatchMutationResult>;
 
   /**
    * Adds multiple documents as children to another
@@ -180,3 +277,22 @@ export interface IReactor {
    */
   getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobInfo>;
 }
+
+/**
+ * Feature flags for reactor configuration
+ */
+export type ReactorFeatures = {
+  /** Enable or disable legacy storage reads and writes. Default: true for backward compatibility */
+  legacyStorageEnabled?: boolean;
+};
+
+export type ExecutorConfig = {
+  count: number;
+};
+
+/**
+ * Combined database type that includes all schemas
+ */
+export type Database = StorageDatabase &
+  DocumentViewDatabase &
+  DocumentIndexerDatabase;

@@ -1,5 +1,4 @@
 import type { PHGlobalEventHandlerAdders } from "@powerhousedao/reactor-browser";
-import { addAllDocumentsEventHandler } from "./all-documents.js";
 import {
   addAllowListEventHandler,
   addAnalyticsDatabaseNameEventHandler,
@@ -16,6 +15,8 @@ import {
   addIsAddLocalDrivesEnabledEventHandler,
   addIsAddPublicDrivesEnabledEventHandler,
   addIsAnalyticsDatabaseWorkerEnabledEventHandler,
+  addIsAnalyticsEnabledEventHandler,
+  addIsAnalyticsExternalProcessorsEnabledEventHandler,
   addIsCloudDrivesEnabledEventHandler,
   addIsDeleteCloudDrivesEnabledEventHandler,
   addIsDeleteLocalDrivesEnabledEventHandler,
@@ -27,8 +28,10 @@ import {
   addIsEditorReadModeEnabledEventHandler,
   addIsExternalPackagesEnabledEventHandler,
   addIsExternalProcessorsEnabledEventHandler,
+  addIsExternalRelationalProcessorsEnabledEventHandler,
   addIsLocalDrivesEnabledEventHandler,
   addIsPublicDrivesEnabledEventHandler,
+  addIsRelationalProcessorsEnabledEventHandler,
   addIsSentryTracingEnabledEventHandler,
   addLogLevelEventHandler,
   addRenownChainIdEventHandler,
@@ -52,6 +55,7 @@ import {
 } from "./config/editor.js";
 import { addConnectCryptoEventHandler } from "./crypto.js";
 import { addDidEventHandler } from "./did.js";
+import { addDocumentCacheEventHandler } from "./document-cache.js";
 import { addDrivesEventHandler } from "./drives.js";
 import { addLoadingEventHandler } from "./loading.js";
 import { addLoginStatusEventHandler } from "./login-status.js";
@@ -60,8 +64,15 @@ import { addProcessorManagerEventHandler } from "./processor-manager.js";
 import { addReactorEventHandler } from "./reactor.js";
 import { addRenownEventHandler } from "./renown.js";
 import { addRevisionHistoryVisibleEventHandler } from "./revision-history.js";
-import { addSelectedDriveIdEventHandler } from "./selected-drive.js";
-import { addSelectedNodeIdEventHandler } from "./selected-node.js";
+import {
+  addSelectedDriveIdEventHandler,
+  addSetSelectedDriveOnPopStateEventHandler,
+} from "./selected-drive.js";
+import {
+  addResetSelectedNodeEventHandler,
+  addSelectedNodeIdEventHandler,
+  addSetSelectedNodeOnPopStateEventHandler,
+} from "./selected-node.js";
 import { addSelectedTimelineItemEventHandler } from "./selected-timeline-item.js";
 import { addSelectedTimelineRevisionEventHandler } from "./timeline-revision.js";
 import { addUserEventHandler } from "./user.js";
@@ -78,9 +89,16 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   user: addUserEventHandler,
   processorManager: addProcessorManagerEventHandler,
   drives: addDrivesEventHandler,
-  documents: addAllDocumentsEventHandler,
-  selectedDriveId: addSelectedDriveIdEventHandler,
-  selectedNodeId: addSelectedNodeIdEventHandler,
+  documentCache: addDocumentCacheEventHandler,
+  selectedDriveId: () => {
+    addSelectedDriveIdEventHandler();
+    addSetSelectedDriveOnPopStateEventHandler();
+    addResetSelectedNodeEventHandler();
+  },
+  selectedNodeId: () => {
+    addSelectedNodeIdEventHandler();
+    addSetSelectedNodeOnPopStateEventHandler();
+  },
   vetraPackages: addVetraPackagesEventHandler,
   selectedTimelineRevision: addSelectedTimelineRevisionEventHandler,
   revisionHistoryVisible: addRevisionHistoryVisibleEventHandler,
@@ -118,6 +136,12 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   isExternalControlsEnabled: addIsExternalControlsEnabledEventHandler,
   isEditorDebugModeEnabled: addIsEditorDebugModeEnabledEventHandler,
   isEditorReadModeEnabled: addIsEditorReadModeEnabledEventHandler,
+  isRelationalProcessorsEnabled: addIsRelationalProcessorsEnabledEventHandler,
+  isExternalRelationalProcessorsEnabled:
+    addIsExternalRelationalProcessorsEnabledEventHandler,
+  isAnalyticsEnabled: addIsAnalyticsEnabledEventHandler,
+  isAnalyticsExternalProcessorsEnabled:
+    addIsAnalyticsExternalProcessorsEnabledEventHandler,
   analyticsDatabaseName: addAnalyticsDatabaseNameEventHandler,
   isAnalyticsDatabaseWorkerEnabled:
     addIsAnalyticsDatabaseWorkerEnabledEventHandler,

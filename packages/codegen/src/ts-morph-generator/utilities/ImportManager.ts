@@ -10,10 +10,9 @@ export interface ImportSpec {
 export class ImportManager {
   addImport(sourceFile: SourceFile, spec: ImportSpec): void {
     // Check if import already exists
-    const existing = sourceFile
-      .getImportDeclarations()
-      .find((imp) => imp.getModuleSpecifierValue() === spec.moduleSpecifier);
-
+    const existing = sourceFile.getImportDeclaration(
+      (imp) => imp.getFullText() === spec.moduleSpecifier,
+    );
     if (existing) {
       this.mergeImports(existing, spec);
     } else {
@@ -57,5 +56,25 @@ export class ImportManager {
         existingImport.addNamedImports(newNames);
       }
     }
+  }
+
+  replaceImportByName(
+    sourceFile: SourceFile,
+    name: string,
+    path: string,
+    isTypeOnly = false,
+  ): void {
+    const existing = sourceFile
+      .getImportDeclarations()
+      .filter((imp) =>
+        imp.getNamedImports().find((ni) => ni.getName() === name),
+      );
+    existing.forEach((imp) => imp.remove());
+    sourceFile.addImportDeclaration({
+      moduleSpecifier: path,
+      namedImports: [name],
+      isTypeOnly,
+    });
+    sourceFile.saveSync();
   }
 }

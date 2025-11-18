@@ -1,36 +1,11 @@
-import { deepEqual } from "@powerhousedao/design-system";
+import type {
+  TransformerTrigger,
+  TransformerType,
+  ValueTransformerProps,
+} from "@powerhousedao/design-system";
+import { deepEqual } from "@powerhousedao/design-system/ui/lib";
 import React, { useEffect } from "react";
 import { useFormContext } from "react-hook-form";
-
-export type ValueTransformer = (value?: any) => any;
-
-export type TransformerTrigger = "blur" | "change" | "keyDown";
-
-export type TransformerObject = {
-  /**
-   * The transformer function
-   */
-  transformer: ValueTransformer;
-  options?: {
-    /**
-     * The event that triggers the transformer.
-     * @default "blur"
-     */
-    trigger?: TransformerTrigger;
-    /**
-     * If true, the transformer will be applied.
-     * @default true
-     */
-    if?: boolean;
-  };
-};
-
-export type TransformerType = TransformerObject[] | ValueTransformer[];
-
-interface ValueTransformerProps {
-  transformers: TransformerType;
-  children: React.ReactElement;
-}
 
 // Workaround to set the value of an input element
 // following react core team recommendation

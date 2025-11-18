@@ -1,11 +1,10 @@
+import { getBasePath } from "@powerhousedao/connect/utils";
 import {
   AnimatedLoader,
   ConnectSidebar,
   HomeScreen,
-} from "@powerhousedao/design-system";
+} from "@powerhousedao/design-system/connect";
 import { useEffect, useState } from "react";
-import { getBasePath } from "../utils/browser.js";
-
 const LOADER_DELAY = 250;
 
 const Loader = ({ delay = LOADER_DELAY }: { delay?: number }) => {

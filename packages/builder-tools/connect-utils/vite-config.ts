@@ -1,12 +1,9 @@
-import {
-  phExternalPackagesPlugin,
-  stripVersionFromPackage,
-} from "@powerhousedao/builder-tools";
 import { getConfig } from "@powerhousedao/config/node";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwind from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { join } from "node:path";
+import { readPackageSync } from "read-pkg";
 import {
   createLogger,
   loadEnv,
@@ -23,7 +20,12 @@ import {
   setConnectEnv,
   type ConnectEnv,
 } from "./env-config.js";
+import {
+  resolveConnectPackageJson,
+  stripVersionFromPackage,
+} from "./helpers.js";
 import type { IConnectOptions } from "./types.js";
+import { phExternalPackagesPlugin } from "./vite-plugins/ph-external-packages.js";
 
 export const connectClientConfig = {
   meta: [
@@ -111,18 +113,37 @@ function viteOptionsToEnv(options: IConnectOptions) {
   return optionsEnv;
 }
 
-function viteLogger(warningsToSilence: string[]) {
+function viteLogger({
+  silence,
+}: {
+  silence?: { warnings?: string[]; errors?: string[] };
+}) {
   const logger = createLogger();
   const loggerWarn = logger.warn.bind(logger);
+  const loggerError = logger.error.bind(logger);
 
   logger.warn = (msg, options) => {
-    if (warningsToSilence.some((warning) => msg.includes(warning))) {
+    if (silence?.warnings?.some((warning) => msg.includes(warning))) {
       return;
     }
     loggerWarn(msg, options);
   };
 
+  logger.error = (msg, options) => {
+    if (silence?.errors?.some((error) => msg.includes(error))) {
+      return;
+    }
+    loggerError(msg, options);
+  };
+
   return logger;
+}
+
+function resolveConnectVersion() {
+  const connectPackageJson = resolveConnectPackageJson();
+  return connectPackageJson && "version" in connectPackageJson
+    ? (connectPackageJson.version as string)
+    : null;
 }
 
 export function getConnectBaseViteConfig(options: IConnectOptions) {
@@ -140,8 +161,19 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     fileEnv,
   });
 
+  // if PH_CONNECT_VERSION is unknown, try to resolve it from the package.json
+  if (env.PH_CONNECT_VERSION === "unknown") {
+    const connectVersion = resolveConnectVersion();
+    if (connectVersion) {
+      env.PH_CONNECT_VERSION = connectVersion;
+    }
+  }
+
   // set the resolved env to process.env so it's loaded by vite
   setConnectEnv(env);
+
+  // load package.json
+  const packageJson = readPackageSync({ cwd: options.dirname });
 
   // load powerhouse config
   const phConfigPath =
@@ -168,13 +200,9 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     ),
   ];
 
-  // if local package is provided and not disabled, add it to the packages to be loaded
-  if (!env.PH_DISABLE_LOCAL_PACKAGE) {
-    const localPackage = env.PH_LOCAL_PACKAGE ?? options.dirname;
-    if (localPackage) {
-      allPackages.push(localPackage);
-    }
-  }
+  const localPackage = !env.PH_DISABLE_LOCAL_PACKAGE
+    ? (env.PH_LOCAL_PACKAGE ?? options.dirname)
+    : undefined;
 
   // remove duplicates and empty strings
   const phPackages = [...new Set(allPackages.filter((p) => p.trim().length))];
@@ -197,7 +225,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     tailwind(),
     svgr(),
     react(),
-    phExternalPackagesPlugin(phPackages),
+    phExternalPackagesPlugin(phPackages, localPackage),
     createHtmlPlugin({
       minify: false,
       inject: {
@@ -215,7 +243,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     plugins.push(
       sentryVitePlugin({
         release: {
-          name: release,
+          name: release ?? "unknown",
           inject: false, // prevent it from injecting the release id in the service worker code, this is done in 'src/app/sentry.ts' instead
         },
         authToken,
@@ -238,10 +266,16 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     process.env.LOG_LEVEL === "debug" || env.PH_CONNECT_LOG_LEVEL === "debug";
   const customLogger = isDebug
     ? undefined
-    : viteLogger([
-        "@import must precede all other statements (besides @charset or empty @layer)",
-        "hmr update",
-      ]);
+    : viteLogger({
+        silence: {
+          warnings: [
+            "@import must precede all other statements (besides @charset or empty @layer)", // tailwindcss error when importing font file
+          ],
+          errors: ["Unterminated string literal"],
+        },
+      });
+
+  const watchTimeout = options.watchTimeout ?? env.PH_WATCH_TIMEOUT;
 
   const config: UserConfig = {
     base: basePath,
@@ -252,15 +286,32 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       exclude: ["@electric-sql/pglite"],
     },
     plugins,
+    resolve: {
+      alias: localPackage
+        ? {
+            [packageJson.name]: localPackage,
+          }
+        : undefined,
+      dedupe: ["react", "react-dom", "react/jsx-runtime"],
+    },
     build: {
-      minify: false,
-      sourcemap: true,
+      minify: true,
+      sourcemap: false,
     },
     server: {
       watch: env.PH_DISABLE_LOCAL_PACKAGE
         ? null
         : {
-            ignored: ["**/.ph/**"],
+            ignored: [
+              "**/.ph/**",
+              "**/dist/**",
+              "**/node_modules/**",
+              "**/backup-documents/**",
+            ],
+            awaitWriteFinish: {
+              stabilityThreshold: watchTimeout,
+              pollInterval: 100,
+            },
           },
       fs: {
         strict: false,
@@ -269,9 +320,6 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     },
     worker: {
       format: "es",
-    },
-    resolve: {
-      dedupe: ["react", "react-dom"], // needed when linked to the monorepo
     },
   };
   return config;

@@ -1,6 +1,7 @@
-import { Radio, RadioGroup } from "@powerhousedao/design-system";
 import { render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
+import { RadioGroup } from "./radio-group.js";
+import { Radio } from "./radio.js";
 
 describe("RadioGroup Component", () => {
   it("should match snapshot", () => {

@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs",
+      "Bash(pnpm:*)",
+      "Bash(cat:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(pwd:*)",
+      "Bash(tree:*)",
+      "Skill(codex:*)",
+      "Bash(java:*)",
+      "Bash(echo:*)",
+      "Bash(git show:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git status:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

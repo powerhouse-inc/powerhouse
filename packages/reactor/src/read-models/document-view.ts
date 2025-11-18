@@ -1,10 +1,17 @@
 import type { Operation, PHDocument, PHDocumentHeader } from "document-model";
 import type { Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
+import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
+import type {
+  ConsistencyCoordinate,
+  ConsistencyToken,
+} from "../shared/types.js";
 import type {
   IDocumentView,
   IOperationStore,
   OperationWithContext,
+  PagedResults,
+  PagingOptions,
   ViewFilter,
 } from "../storage/interfaces.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
@@ -21,11 +28,10 @@ export class KyselyDocumentView implements IDocumentView {
   constructor(
     private db: Kysely<Database>,
     private operationStore: IOperationStore,
+    private consistencyTracker: IConsistencyTracker,
   ) {}
 
   async init(): Promise<void> {
-    await this.createTablesIfNotExist();
-
     const viewState = await this.db
       .selectFrom("ViewState")
       .selectAll()
@@ -154,7 +160,7 @@ export class KyselyDocumentView implements IDocumentView {
                 lastOperationHash: hash,
                 lastUpdatedAt: new Date(),
                 snapshotVersion: existingSnapshot.snapshotVersion + 1,
-                content: JSON.stringify(newState),
+                content: newState,
               })
               .where("documentId", "=", documentId)
               .where("scope", "=", scopeName)
@@ -168,7 +174,7 @@ export class KyselyDocumentView implements IDocumentView {
               name: null,
               scope: scopeName,
               branch,
-              content: JSON.stringify(newState),
+              content: newState,
               documentType,
               lastOperationIndex: index,
               lastOperationHash: hash,
@@ -182,12 +188,40 @@ export class KyselyDocumentView implements IDocumentView {
         }
       }
     });
+
+    const coordinates: ConsistencyCoordinate[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]!;
+      coordinates.push({
+        documentId: item.context.documentId,
+        scope: item.context.scope,
+        branch: item.context.branch,
+        operationIndex: item.operation.index,
+      });
+    }
+    this.consistencyTracker.update(coordinates);
+  }
+
+  async waitForConsistency(
+    token: ConsistencyToken,
+    timeoutMs?: number,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    if (token.coordinates.length === 0) {
+      return;
+    }
+    await this.consistencyTracker.waitFor(token.coordinates, timeoutMs, signal);
   }
 
   async exists(
     documentIds: string[],
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<boolean[]> {
+    if (consistencyToken) {
+      await this.waitForConsistency(consistencyToken, undefined, signal);
+    }
+
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
@@ -212,8 +246,13 @@ export class KyselyDocumentView implements IDocumentView {
   async get<TDocument extends PHDocument>(
     documentId: string,
     view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<TDocument> {
+    if (consistencyToken) {
+      await this.waitForConsistency(consistencyToken, undefined, signal);
+    }
+
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
@@ -261,15 +300,8 @@ export class KyselyDocumentView implements IDocumentView {
       throw new Error(`Document header not found: ${documentId}`);
     }
 
-    // Parse the header
-    let header: PHDocumentHeader;
-    try {
-      header = JSON.parse(headerSnapshot.content) as PHDocumentHeader;
-    } catch (error) {
-      throw new Error(
-        `Failed to parse header for document ${documentId}: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
+    // Get the header from JSONB content (already parsed)
+    const header = headerSnapshot.content as PHDocumentHeader;
 
     // Reconstruct cross-scope header metadata (revision, lastModifiedAtUtcIso)
     // by aggregating information from all scopes
@@ -290,13 +322,8 @@ export class KyselyDocumentView implements IDocumentView {
         continue;
       }
 
-      try {
-        const scopeState = JSON.parse(snapshot.content) as unknown;
-        state[snapshot.scope] = scopeState;
-      } catch {
-        // Failed to parse snapshot content, use empty state
-        state[snapshot.scope] = {};
-      }
+      // Content is already an object from JSONB
+      state[snapshot.scope] = snapshot.content;
     }
 
     // Retrieve operations from the operation store to match legacy storage format
@@ -345,120 +372,187 @@ export class KyselyDocumentView implements IDocumentView {
     return document as TDocument;
   }
 
-  private async checkTablesExist(): Promise<boolean> {
-    try {
-      // Try to query ViewState table
-      await this.db
-        .selectFrom("ViewState")
-        .select("lastOperationId")
-        .limit(1)
-        .execute();
-      return true;
-    } catch {
-      return false;
+  async getByIdOrSlug<TDocument extends PHDocument>(
+    identifier: string,
+    view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    if (consistencyToken) {
+      await this.waitForConsistency(consistencyToken, undefined, signal);
     }
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    const branch = view?.branch || "main";
+
+    const idCheckPromise = this.db
+      .selectFrom("DocumentSnapshot")
+      .select("documentId")
+      .where("documentId", "=", identifier)
+      .where("branch", "=", branch)
+      .where("isDeleted", "=", false)
+      .executeTakeFirst();
+
+    const slugCheckPromise = this.db
+      .selectFrom("SlugMapping")
+      .select("documentId")
+      .where("slug", "=", identifier)
+      .where("branch", "=", branch)
+      .executeTakeFirst();
+
+    const [idMatch, slugMatch] = await Promise.all([
+      idCheckPromise,
+      slugCheckPromise,
+    ]);
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    const idMatchDocId = idMatch?.documentId;
+    const slugMatchDocId = slugMatch?.documentId;
+
+    if (idMatchDocId && slugMatchDocId && idMatchDocId !== slugMatchDocId) {
+      throw new Error(
+        `Ambiguous identifier "${identifier}": matches both document ID "${idMatchDocId}" and slug for document ID "${slugMatchDocId}". ` +
+          `Please use get() for ID or resolveSlug() + get() for slug to be explicit.`,
+      );
+    }
+
+    const resolvedDocumentId = idMatchDocId || slugMatchDocId;
+
+    if (!resolvedDocumentId) {
+      throw new Error(`Document not found: ${identifier}`);
+    }
+
+    return this.get<TDocument>(resolvedDocumentId, view, undefined, signal);
   }
 
-  private async createTablesIfNotExist(): Promise<void> {
-    // Check if tables exist by trying to query them
-    const tablesExist = await this.checkTablesExist();
-
-    if (!tablesExist) {
-      // Create ViewState table
-      await this.db.schema
-        .createTable("ViewState")
-        .ifNotExists()
-        .addColumn("lastOperationId", "integer", (col) => col.primaryKey())
-        .addColumn("lastOperationTimestamp", "timestamptz", (col) =>
-          col.defaultTo("now()").notNull(),
-        )
-        .execute();
-
-      // Create DocumentSnapshot table
-      await this.db.schema
-        .createTable("DocumentSnapshot")
-        .ifNotExists()
-        .addColumn("id", "text", (col) => col.primaryKey())
-        .addColumn("documentId", "text", (col) => col.notNull())
-        .addColumn("slug", "text")
-        .addColumn("name", "text")
-        .addColumn("scope", "text", (col) => col.notNull())
-        .addColumn("branch", "text", (col) => col.notNull())
-        .addColumn("content", "text", (col) => col.notNull())
-        .addColumn("documentType", "text", (col) => col.notNull())
-        .addColumn("lastOperationIndex", "integer", (col) => col.notNull())
-        .addColumn("lastOperationHash", "text", (col) => col.notNull())
-        .addColumn("lastUpdatedAt", "timestamptz", (col) =>
-          col.defaultTo("now()").notNull(),
-        )
-        .addColumn("snapshotVersion", "integer", (col) =>
-          col.defaultTo(1).notNull(),
-        )
-        .addColumn("identifiers", "text")
-        .addColumn("metadata", "text")
-        .addColumn("isDeleted", "boolean", (col) =>
-          col.defaultTo(false).notNull(),
-        )
-        .addColumn("deletedAt", "timestamptz")
-        .addUniqueConstraint("unique_doc_scope_branch", [
-          "documentId",
-          "scope",
-          "branch",
-        ])
-        .execute();
-
-      // Create indexes for DocumentSnapshot
-      await this.db.schema
-        .createIndex("idx_slug_scope_branch")
-        .on("DocumentSnapshot")
-        .columns(["slug", "scope", "branch"])
-        .execute();
-
-      await this.db.schema
-        .createIndex("idx_doctype_scope_branch")
-        .on("DocumentSnapshot")
-        .columns(["documentType", "scope", "branch"])
-        .execute();
-
-      await this.db.schema
-        .createIndex("idx_last_updated")
-        .on("DocumentSnapshot")
-        .column("lastUpdatedAt")
-        .execute();
-
-      await this.db.schema
-        .createIndex("idx_is_deleted")
-        .on("DocumentSnapshot")
-        .column("isDeleted")
-        .execute();
-
-      // Create SlugMapping table
-      await this.db.schema
-        .createTable("SlugMapping")
-        .ifNotExists()
-        .addColumn("slug", "text", (col) => col.primaryKey())
-        .addColumn("documentId", "text", (col) => col.notNull())
-        .addColumn("scope", "text", (col) => col.notNull())
-        .addColumn("branch", "text", (col) => col.notNull())
-        .addColumn("createdAt", "timestamptz", (col) =>
-          col.defaultTo("now()").notNull(),
-        )
-        .addColumn("updatedAt", "timestamptz", (col) =>
-          col.defaultTo("now()").notNull(),
-        )
-        .addUniqueConstraint("unique_docid_scope_branch", [
-          "documentId",
-          "scope",
-          "branch",
-        ])
-        .execute();
-
-      // Create index for SlugMapping
-      await this.db.schema
-        .createIndex("idx_slug_documentid")
-        .on("SlugMapping")
-        .column("documentId")
-        .execute();
+  async findByType(
+    type: string,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<PHDocument>> {
+    if (consistencyToken) {
+      await this.waitForConsistency(consistencyToken, undefined, signal);
     }
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    const branch = view?.branch || "main";
+
+    const startIndex = paging?.cursor ? parseInt(paging.cursor) : 0;
+    const limit = paging?.limit || 100;
+
+    const documents: PHDocument[] = [];
+    const processedDocumentIds = new Set<string>();
+    const allDocumentIds: string[] = [];
+
+    const snapshots = await this.db
+      .selectFrom("DocumentSnapshot")
+      .selectAll()
+      .where("documentType", "=", type)
+      .where("branch", "=", branch)
+      .where("isDeleted", "=", false)
+      .orderBy("lastUpdatedAt", "desc")
+      .execute();
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    for (const snapshot of snapshots) {
+      if (processedDocumentIds.has(snapshot.documentId)) {
+        continue;
+      }
+
+      processedDocumentIds.add(snapshot.documentId);
+      allDocumentIds.push(snapshot.documentId);
+    }
+
+    const docsToFetch = allDocumentIds.slice(startIndex, startIndex + limit);
+
+    for (const documentId of docsToFetch) {
+      if (signal?.aborted) {
+        throw new Error("Operation aborted");
+      }
+
+      try {
+        const document = await this.get<PHDocument>(
+          documentId,
+          view,
+          undefined,
+          signal,
+        );
+        documents.push(document);
+      } catch {
+        continue;
+      }
+    }
+
+    const hasMore = allDocumentIds.length > startIndex + limit;
+    const nextCursor = hasMore ? String(startIndex + limit) : undefined;
+
+    return {
+      items: documents,
+      nextCursor,
+      hasMore,
+    };
+  }
+
+  async resolveSlug(
+    slug: string,
+    view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<string | undefined> {
+    if (consistencyToken) {
+      await this.waitForConsistency(consistencyToken, undefined, signal);
+    }
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    const branch = view?.branch || "main";
+
+    const mapping = await this.db
+      .selectFrom("SlugMapping")
+      .select("documentId")
+      .where("slug", "=", slug)
+      .where("branch", "=", branch)
+      .executeTakeFirst();
+
+    if (!mapping) {
+      return undefined;
+    }
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    if (view?.scopes && view.scopes.length > 0) {
+      const scopeCheck = await this.db
+        .selectFrom("DocumentSnapshot")
+        .select("scope")
+        .where("documentId", "=", mapping.documentId)
+        .where("branch", "=", branch)
+        .where("scope", "in", view.scopes)
+        .where("isDeleted", "=", false)
+        .executeTakeFirst();
+
+      if (!scopeCheck) {
+        return undefined;
+      }
+    }
+
+    return mapping.documentId;
   }
 }

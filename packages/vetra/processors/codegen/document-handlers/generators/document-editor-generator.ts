@@ -4,6 +4,7 @@ import type { InternalTransmitterUpdate } from "document-drive";
 import type { DocumentEditorState } from "../../../../document-models/document-editor/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
+import { backupDocument } from "./utils.js";
 
 /**
  * Generator for document editor documents
@@ -66,12 +67,12 @@ export class DocumentEditorGenerator extends BaseDocumentGen {
       const editorId: string = kebabCase(state.name);
 
       // Generate the editor using the codegen function
-      await generateEditor(
-        state.name,
-        documentTypes,
-        this.config.PH_CONFIG,
-        editorId,
-      );
+      await generateEditor({
+        name: state.name,
+        documentTypes: documentTypes,
+        config: this.config.PH_CONFIG,
+        editorId: editorId,
+      });
 
       logger.info(
         `✅ Editor generation completed successfully for: ${state.name}`,
@@ -106,6 +107,14 @@ export class DocumentEditorGenerator extends BaseDocumentGen {
         );
         // Don't throw here - editor generation was successful
       }
+
+      // Backup the document
+      await backupDocument(
+        strand.document,
+        this.config.CURRENT_WORKING_DIR,
+        undefined,
+        state.name,
+      );
     } catch (error) {
       logger.error(
         `❌ Error during editor generation for ${state.name}:`,

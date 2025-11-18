@@ -1,7 +1,8 @@
-import { ConnectTooltip, Icon } from "@powerhousedao/design-system";
+import { Icon } from "@powerhousedao/design-system";
 import { formatDistanceToNow } from "date-fns";
 import { useEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";
+import { ConnectTooltip } from "../../tooltip/tooltip.js";
 
 export interface HDividerProps {
   className?: string;

@@ -1,27 +1,21 @@
 #!/usr/bin/env node
 import {
   EventBus,
-  InMemoryJobTracker,
-  InMemoryQueue,
-  Reactor,
+  ReactorBuilder,
   ReactorClientBuilder,
-  ReadModelCoordinator,
 } from "@powerhousedao/reactor";
 import {
   VitePackageLoader,
-  startAPI,
+  getUniqueDocumentModels,
+  initializeAndStartAPI,
   startViteServer,
 } from "@powerhousedao/reactor-api";
 import * as Sentry from "@sentry/node";
-import type {
-  BaseDocumentDriveServer,
-  ICache,
-  IDocumentStorage,
-} from "document-drive";
+import type { ICache, IDocumentDriveServer } from "document-drive";
 import {
   DocumentAlreadyExistsError,
   InMemoryCache,
-  ReactorBuilder,
+  ReactorBuilder as LegacyReactorBuilder,
   RedisCache,
   childLogger,
   driveDocumentModelModule,
@@ -42,7 +36,7 @@ import {
 } from "./feature-flags.js";
 import { initProfilerFromEnv } from "./profiler.js";
 import type { StartServerOptions, SwitchboardReactor } from "./types.js";
-import { addDefaultDrive, isPostgresUrl } from "./utils.js";
+import { addDefaultDrive, addRemoteDrive, isPostgresUrl } from "./utils.js";
 
 const logger = childLogger(["switchboard"]);
 
@@ -133,35 +127,93 @@ async function initServer(serverPort: number, options: StartServerOptions) {
       ? ".ph/read-storage"
       : dbPath;
 
-  const driveServer = new ReactorBuilder([
-    documentModelDocumentModelModule,
-    driveDocumentModelModule,
-  ] as unknown as DocumentModelModule[])
-    .withStorage(storage)
-    .withCache(cache)
-    .withOptions({
-      featureFlags: {
-        enableDualActionCreate:
-          options.reactorOptions?.enableDualActionCreate ?? false,
-      },
-    })
-    .build();
+  const initializeDriveServer = async (
+    documentModels: DocumentModelModule[],
+  ) => {
+    const driveServer = new LegacyReactorBuilder(
+      getUniqueDocumentModels([
+        documentModelDocumentModelModule,
+        driveDocumentModelModule,
+        ...documentModels,
+      ] as unknown as DocumentModelModule[]),
+    )
+      .withStorage(storage)
+      .withCache(cache)
+      .withOptions({
+        featureFlags: {
+          enableDualActionCreate:
+            options.reactorOptions?.enableDualActionCreate ?? false,
+        },
+      })
+      .build();
 
-  // init drive server
-  await driveServer.initialize();
+    // init drive server
+    await driveServer.initialize();
+    return driveServer;
+  };
 
-  const eventBus = new EventBus();
-  const queue = new InMemoryQueue(eventBus);
-  const reactor = new Reactor(
-    driveServer as unknown as BaseDocumentDriveServer,
-    storage as unknown as IDocumentStorage,
-    queue,
-    new InMemoryJobTracker(),
-    new ReadModelCoordinator(eventBus, []),
-  );
-  const client = new ReactorClientBuilder().withReactor(reactor).build();
+  const initializeClient = async (
+    driveServer: IDocumentDriveServer,
+    documentModels: DocumentModelModule[],
+  ) => {
+    const eventBus = new EventBus();
+    const builder = new ReactorBuilder()
+      .withEventBus(eventBus)
+      .withDocumentModels(
+        getUniqueDocumentModels([
+          documentModelDocumentModelModule,
+          driveDocumentModelModule,
+          ...documentModels,
+        ] as unknown as DocumentModelModule[]),
+      )
+      .withLegacyStorage(storage)
+      .withFeatures({
+        legacyStorageEnabled: true,
+      });
+
+    const client = new ReactorClientBuilder()
+      .withReactorBuilder(builder)
+      .build();
+
+    return client;
+  };
 
   let defaultDriveUrl: undefined | string = undefined;
+
+  // TODO get path from powerhouse config
+  // start vite server if dev mode is enabled
+  const basePath = process.cwd();
+  const vite = dev ? await startViteServer(process.cwd()) : undefined;
+
+  // get paths to local document models
+  if (!options.disableLocalPackages) {
+    packages.push(basePath);
+  }
+
+  // create loader
+  const packageLoader = vite ? VitePackageLoader.build(vite) : undefined;
+
+  // Start the API with the reactor and options
+  const api = await initializeAndStartAPI(
+    initializeDriveServer,
+    initializeClient,
+    {
+      express: app,
+      port: serverPort,
+      dbPath: readModelPath,
+      https: options.https,
+      packageLoader,
+      packages: packages,
+      processorConfig: options.processorConfig,
+      configFile:
+        options.configFile ??
+        path.join(process.cwd(), "powerhouse.config.json"),
+      mcp: options.mcp ?? true,
+      subgraphs: options.subgraphs,
+    },
+  );
+
+  const { driveServer } = api;
 
   // Create default drive if provided
   if (options.drive) {
@@ -172,34 +224,6 @@ async function initServer(serverPort: number, options: StartServerOptions) {
     );
   }
 
-  // start vite server if dev mode is enabled
-  const vite = dev ? await startViteServer() : undefined;
-
-  // get paths to local document models
-  if (dev && !options.disableLocalPackages) {
-    // TODO get path from powerhouse config
-    const basePath = process.cwd();
-    packages.push(basePath);
-  }
-
-  // create loader
-  const packageLoader = vite ? await VitePackageLoader.build(vite) : undefined;
-
-  // Start the API with the reactor and options
-  const api = await startAPI(driveServer, client, {
-    express: app,
-    port: serverPort,
-    dbPath: readModelPath,
-    https: options.https,
-    packageLoader,
-    packages: packages,
-    processorConfig: options.processorConfig,
-    configFile:
-      options.configFile ?? path.join(process.cwd(), "powerhouse.config.json"),
-    mcp: options.mcp ?? true,
-    subgraphs: options.subgraphs,
-  });
-
   // add vite middleware after express app is initialized if applicable
   if (vite) {
     api.app.use(vite.middlewares);
@@ -208,29 +232,27 @@ async function initServer(serverPort: number, options: StartServerOptions) {
   // Connect to remote drives AFTER packages are loaded
   if (remoteDrives.length > 0) {
     for (const remoteDriveUrl of remoteDrives) {
+      let driveId: string | undefined;
+
       try {
-        await driveServer.addRemoteDrive(remoteDriveUrl, {
-          availableOffline: true,
-          sharingType: "public",
-          listeners: [],
-          triggers: [],
-        });
-        // Use the first remote drive URL as the default
-        if (!defaultDriveUrl) {
-          defaultDriveUrl = remoteDriveUrl;
-        }
+        const remoteDrive = await addRemoteDrive(driveServer, remoteDriveUrl);
+        driveId = remoteDrive.header.id;
+        logger.debug(`Remote drive ${remoteDriveUrl} synced`);
       } catch (error) {
         if (error instanceof DocumentAlreadyExistsError) {
           logger.debug(`Remote drive already added: ${remoteDriveUrl}`);
-          // Still use this drive URL as default if not already set
-          if (!defaultDriveUrl) {
-            defaultDriveUrl = remoteDriveUrl;
-          }
+          driveId = remoteDriveUrl.split("/").pop();
         } else {
           logger.error(
             `Failed to connect to remote drive ${remoteDriveUrl}:`,
             error,
           );
+        }
+      } finally {
+        // Construct local URL once in finally block
+        if (!defaultDriveUrl && driveId) {
+          const protocol = options.https ? "https" : "http";
+          defaultDriveUrl = `${protocol}://localhost:${serverPort}/d/${driveId}`;
         }
       }
     }

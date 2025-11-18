@@ -28,7 +28,6 @@ import type {
   SignalResult,
 } from "document-model";
 import type { Unsubscribe } from "nanoevents";
-export * from "./listener/types.js";
 
 export type Constructor<T = object> = new (...args: any[]) => T;
 
@@ -230,6 +229,8 @@ export interface DriveEvents {
   documentModelModules: (documentModelModules: DocumentModelModule[]) => void;
   driveAdded: (drive: DocumentDriveDocument) => void;
   driveDeleted: (driveId: string) => void;
+  documentAdded: (document: PHDocument) => void;
+  documentDeleted: (documentId: string) => void;
   documentOperationsAdded: (
     documentId: string,
     operations: Operation[],

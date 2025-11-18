@@ -1,7 +1,7 @@
 import type { Node } from "document-drive";
 import { type ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
-import { UploadFileList } from "../upload-file-list/index.js";
+import { UploadFileList } from "../upload-file-list/upload-file-list.js";
 import { mapUploadsToFileItems, type UploadTracker } from "./utils.js";
 
 export type UploadFileListContainerProps = ComponentPropsWithoutRef<"div"> & {

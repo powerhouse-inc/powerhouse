@@ -267,6 +267,67 @@ export const useDisabledEditors = disabledEditorsEventFunctions.useValue;
 export const addDisabledEditorsEventHandler =
   disabledEditorsEventFunctions.addEventHandler;
 
+const isRelationalProcessorsEnabled = makePHEventFunctions(
+  "isRelationalProcessorsEnabled",
+);
+
+/** Sets the isRelationalProcessorsEnabled for Connect. */
+export const setIsRelationalProcessorsEnabled =
+  isRelationalProcessorsEnabled.setValue;
+
+/** Gets the isRelationalProcessorsEnabled for Connect. */
+export const useIsRelationalProcessorsEnabled =
+  isRelationalProcessorsEnabled.useValue;
+
+/** Adds an event handler for when the isRelationalProcessorsEnabled for Connect changes. */
+export const addIsRelationalProcessorsEnabledEventHandler =
+  isRelationalProcessorsEnabled.addEventHandler;
+
+const isExternalRelationalProcessorsEnabled = makePHEventFunctions(
+  "isExternalRelationalProcessorsEnabled",
+);
+
+/** Sets the isExternalRelationalProcessorsEnabled for Connect. */
+export const setIsExternalRelationalProcessorsEnabled =
+  isExternalRelationalProcessorsEnabled.setValue;
+
+/** Gets the isExternalRelationalProcessorsEnabled for Connect. */
+export const useIsExternalRelationalProcessorsEnabled =
+  isExternalRelationalProcessorsEnabled.useValue;
+
+/** Adds an event handler for when the isExternalRelationalProcessorsEnabled for Connect changes. */
+export const addIsExternalRelationalProcessorsEnabledEventHandler =
+  isExternalRelationalProcessorsEnabled.addEventHandler;
+
+const isAnalyticsEnabledEventFunctions =
+  makePHEventFunctions("isAnalyticsEnabled");
+
+/** Sets the isAnalyticsEnabled for Connect. */
+export const setIsAnalyticsEnabled = isAnalyticsEnabledEventFunctions.setValue;
+
+/** Gets the isAnalyticsEnabled for Connect. */
+export const useIsAnalyticsEnabled = isAnalyticsEnabledEventFunctions.useValue;
+
+/** Adds an event handler for when the isAnalyticsEnabled for Connect changes. */
+export const addIsAnalyticsEnabledEventHandler =
+  isAnalyticsEnabledEventFunctions.addEventHandler;
+
+const isAnalyticsExternalProcessorsEnabled = makePHEventFunctions(
+  "isAnalyticsExternalProcessorsEnabled",
+);
+
+/** Sets the isAnalyticsExternalProcessorsEnabled for Connect. */
+export const setIsAnalyticsExternalProcessorsEnabled =
+  isAnalyticsExternalProcessorsEnabled.setValue;
+
+/** Gets the isAnalyticsExternalProcessorsEnabled for Connect. */
+export const useIsAnalyticsExternalProcessorsEnabled =
+  isAnalyticsExternalProcessorsEnabled.useValue;
+
+/** Adds an event handler for when the isAnalyticsExternalProcessorsEnabled for Connect changes. */
+export const addIsAnalyticsExternalProcessorsEnabledEventHandler =
+  isAnalyticsExternalProcessorsEnabled.addEventHandler;
+
 const analyticsDatabaseNameEventFunctions = makePHEventFunctions(
   "analyticsDatabaseName",
 );
@@ -339,6 +400,12 @@ const nonUserConfigSetters: NonUserConfigSetters = {
   isDeleteLocalDrivesEnabled: setIsDeleteLocalDrivesEnabled,
   isEditorDebugModeEnabled: setIsEditorDebugModeEnabled,
   isEditorReadModeEnabled: setIsEditorReadModeEnabled,
+  isRelationalProcessorsEnabled: setIsRelationalProcessorsEnabled,
+  isExternalRelationalProcessorsEnabled:
+    setIsExternalRelationalProcessorsEnabled,
+  isAnalyticsEnabled: setIsAnalyticsEnabled,
+  analyticsDatabaseName: setAnalyticsDatabaseName,
+  isAnalyticsExternalProcessorsEnabled: setIsAnalyticsExternalProcessorsEnabled,
   isAnalyticsDatabaseWorkerEnabled: setIsAnalyticsDatabaseWorkerEnabled,
   isDiffAnalyticsEnabled: setIsDiffAnalyticsEnabled,
   isDriveAnalyticsEnabled: setIsDriveAnalyticsEnabled,
@@ -352,7 +419,6 @@ const nonUserConfigSetters: NonUserConfigSetters = {
   isExternalProcessorsEnabled: setIsExternalProcessorsEnabled,
   isExternalPackagesEnabled: setIsExternalPackagesEnabled,
   allowList: setAllowList,
-  analyticsDatabaseName: setAnalyticsDatabaseName,
   logLevel: setLogLevel,
   disabledEditors: setDisabledEditors,
   enabledEditors: setEnabledEditors,
@@ -404,6 +470,11 @@ const nonUserConfigHooks: NonUserConfigHooks = {
   isExternalProcessorsEnabled: useIsExternalProcessorsEnabled,
   isExternalPackagesEnabled: useIsExternalPackagesEnabled,
   allowList: useAllowList,
+  isAnalyticsEnabled: useIsAnalyticsEnabled,
+  isAnalyticsExternalProcessorsEnabled: useIsAnalyticsExternalProcessorsEnabled,
+  isRelationalProcessorsEnabled: useIsRelationalProcessorsEnabled,
+  isExternalRelationalProcessorsEnabled:
+    useIsExternalRelationalProcessorsEnabled,
   analyticsDatabaseName: useAnalyticsDatabaseName,
   logLevel: useLogLevel,
   disabledEditors: useDisabledEditors,

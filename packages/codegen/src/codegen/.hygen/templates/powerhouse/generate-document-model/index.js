@@ -1,6 +1,6 @@
 // @ts-check
-const { paramCase } = require("change-case");
-
+const { paramCase, pascalCase, camelCase } = require("change-case");
+const { getModuleExports } = require("../utils.js");
 function documentModelToString(documentModel) {
   return JSON.stringify(
     {
@@ -31,18 +31,77 @@ module.exports = {
     const documentModel = JSON.parse(args.documentModel);
     const latestSpec =
       documentModel.specifications[documentModel.specifications.length - 1];
-
+    const documentType = documentModel.name;
+    const documentTypeId = documentModel.id;
+    const rootDir = args.rootDir;
+    const paramCaseDocumentType = paramCase(documentType);
+    const pascalCaseDocumentType = pascalCase(documentType);
+    const camelCaseDocumentType = camelCase(documentType);
+    const documentTypeVariableName = `${camelCaseDocumentType}DocumentType`;
+    const stateName = `${pascalCaseDocumentType}State`;
+    const globalStateName = `${pascalCaseDocumentType}GlobalState`;
+    const localStateName = `${pascalCaseDocumentType}LocalState`;
+    const phStateName = `${pascalCaseDocumentType}PHState`;
+    const phDocumentTypeName = `${pascalCaseDocumentType}Document`;
+    const actionTypeName = `${pascalCaseDocumentType}Action`;
+    const actionsTypeName = `${actionTypeName}s`;
+    const actionsName = camelCase(actionsTypeName);
+    const packageName = args.packageName;
+    const documentModelDir = `${packageName}/document-models/${paramCaseDocumentType}`;
+    const stateSchemaName = `${stateName}Schema`;
+    const phDocumentSchemaName = `${phDocumentTypeName}Schema`;
+    const isPhStateOfTypeFunctionName = `is${stateName}`;
+    const assertIsPhStateOfTypeFunctionName = `assertIs${stateName}`;
+    const isPhDocumentOfTypeFunctionName = `is${phDocumentTypeName}`;
+    const assertIsPhDocumentOfTypeFunctionName = `assertIs${phDocumentTypeName}`;
+    const useByIdHookName = `use${phDocumentTypeName}ById`;
+    const useSelectedHookName = `useSelected${phDocumentTypeName}`;
+    const useInSelectedDriveHookName = `use${phDocumentTypeName}sInSelectedDrive`;
+    const useInSelectedFolderHookName = `use${phDocumentTypeName}sInSelectedFolder`;
+    const moduleExports = getModuleExports(
+      rootDir,
+      /export\s+const\s+(\w+)\s*:\s*DocumentModelModule\s*<[^>]*>\s*=/,
+      {
+        paramCaseName: paramCaseDocumentType,
+        pascalCaseName: pascalCaseDocumentType,
+      },
+    );
     return {
-      rootDir: args.rootDir,
+      rootDir,
+      packageName,
+      useByIdHookName,
+      useSelectedHookName,
+      useInSelectedDriveHookName,
+      useInSelectedFolderHookName,
       documentModel: documentModelToString(documentModel),
-      documentTypeId: documentModel.id,
-      documentType: documentModel.name,
+      documentTypeVariableName,
+      documentTypeId,
+      documentType,
+      camelCaseDocumentType,
+      paramCaseDocumentType,
+      pascalCaseDocumentType,
+      stateName,
+      globalStateName,
+      localStateName,
+      phDocumentTypeName,
+      phStateName,
+      actionTypeName,
+      actionsTypeName,
+      actionsName,
+      stateSchemaName,
+      phDocumentSchemaName,
+      isPhDocumentOfTypeFunctionName,
+      assertIsPhDocumentOfTypeFunctionName,
+      isPhStateOfTypeFunctionName,
+      assertIsPhStateOfTypeFunctionName,
+      documentModelDir,
       extension: documentModel.extension,
       modules: latestSpec.modules.map((m) => ({
         ...m,
         name: paramCase(m.name),
       })),
-      fileExtension: documentModel.extension,
+      moduleExports,
+      fileExtension: documentModel.extension || "",
       hasLocalSchema: latestSpec.state.local.schema !== "",
       ...getInitialStates(latestSpec.state),
     };

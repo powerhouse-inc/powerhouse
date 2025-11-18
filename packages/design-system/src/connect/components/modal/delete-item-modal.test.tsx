@@ -1,6 +1,6 @@
-import { ConnectDeleteItemModal } from "@powerhousedao/design-system";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { it, vi } from "vitest";
+import { ConnectDeleteItemModal } from "./delete-item-modal.js";
 describe("Modal Component", () => {
   it("should match snapshot", () => {
     render(

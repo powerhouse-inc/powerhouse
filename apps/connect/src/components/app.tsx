@@ -1,14 +1,18 @@
-import {
-  Analytics,
-  DocumentEditorDebugTools,
-  Router,
-  SentryProvider,
-  serviceWorkerManager,
-} from "@powerhousedao/connect";
-import { ToastContainer, WagmiContext } from "@powerhousedao/design-system";
-import { useEffect } from "react";
-import { ProcessorManagerProvider } from "@powerhousedao/connect";
+import { Analytics, Router } from "@powerhousedao/connect/components";
 
+import {
+  ProcessorManagerProvider,
+  SentryProvider,
+} from "@powerhousedao/connect/context";
+import {
+  DocumentEditorDebugTools,
+  serviceWorkerManager,
+} from "@powerhousedao/connect/utils";
+import {
+  ToastContainer,
+  WagmiContext,
+} from "@powerhousedao/design-system/connect";
+import { useEffect } from "react";
 export const App = () => {
   useEffect(() => {
     if (import.meta.env.MODE === "development") {
@@ -17,6 +21,7 @@ export const App = () => {
       serviceWorkerManager.registerServiceWorker(false);
     }
   }, []);
+
   return (
     <SentryProvider>
       <WagmiContext>

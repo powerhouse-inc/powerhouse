@@ -1,4 +1,4 @@
-import { DocumentToolbar } from "@powerhousedao/design-system";
+import { DocumentToolbar } from "@powerhousedao/design-system/connect";
 import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
 import { useCallback } from "react";
 import { actions } from "../../document-models/vetra-package/index.js";
@@ -10,7 +10,7 @@ export type EditorProps = {
   displayToolbar?: boolean;
 };
 
-export function Editor(props: EditorProps) {
+export default function Editor(props: EditorProps) {
   const { displayToolbar = true } = props;
   useSetPHDocumentEditorConfig(editorConfig);
   const [document, dispatch] = useSelectedDriveVetraPackage();

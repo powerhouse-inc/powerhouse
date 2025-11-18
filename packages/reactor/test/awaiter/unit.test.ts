@@ -1,70 +1,203 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { EventBus } from "../../src/events/event-bus.js";
+import { OperationEventTypes } from "../../src/events/types.js";
 import { JobAwaiter } from "../../src/shared/awaiter.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
+import { createEmptyConsistencyToken } from "../factories.js";
 
 describe("JobAwaiter", () => {
   let jobAwaiter: JobAwaiter;
+  let eventBus: EventBus;
   let getJobStatusMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    vi.useFakeTimers();
+    eventBus = new EventBus();
     getJobStatusMock = vi.fn();
-    jobAwaiter = new JobAwaiter(getJobStatusMock, 100);
+    jobAwaiter = new JobAwaiter(eventBus, getJobStatusMock);
   });
 
   afterEach(() => {
     jobAwaiter.shutdown();
-    vi.useRealTimers();
     vi.clearAllMocks();
   });
 
   describe("waitForJob", () => {
-    it("should resolve when job completes successfully", async () => {
-      const jobId = "job-1";
+    it("should resolve immediately when job is already completed", async () => {
+      const jobId = "job-already-completed";
       const completedJob: JobInfo = {
         id: jobId,
-        status: JobStatus.COMPLETED,
+        status: JobStatus.READ_MODELS_READY,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
-      // First call returns pending, second returns completed
-      getJobStatusMock
-        .mockResolvedValueOnce({
-          id: jobId,
-          status: JobStatus.PENDING,
-          createdAtUtcIso: new Date().toISOString(),
-        })
-        .mockResolvedValueOnce(completedJob);
+      getJobStatusMock.mockResolvedValue(completedJob);
 
-      const promise = jobAwaiter.waitForJob(jobId);
-
-      // Advance time to trigger first check
-      await vi.advanceTimersByTimeAsync(0);
-      expect(getJobStatusMock).toHaveBeenCalledTimes(1);
-
-      // Advance time to trigger second check
-      await vi.advanceTimersByTimeAsync(100);
-      expect(getJobStatusMock).toHaveBeenCalledTimes(2);
-
-      const result = await promise;
+      const result = await jobAwaiter.waitForJob(jobId);
       expect(result).toEqual(completedJob);
+      expect(getJobStatusMock).toHaveBeenCalledTimes(1);
     });
 
-    it("should resolve when job fails", async () => {
-      const jobId = "job-2";
+    it("should resolve immediately when job has READ_MODELS_READY status", async () => {
+      const jobId = "job-read-models-ready";
+      const readModelsReadyJob: JobInfo = {
+        id: jobId,
+        status: JobStatus.READ_MODELS_READY,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
+      getJobStatusMock.mockResolvedValue(readModelsReadyJob);
+
+      const result = await jobAwaiter.waitForJob(jobId);
+      expect(result).toEqual(readModelsReadyJob);
+      expect(getJobStatusMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("should resolve when job is already failed", async () => {
+      const jobId = "job-already-failed";
       const failedJob: JobInfo = {
         id: jobId,
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
         error: { message: "Job failed", stack: "" },
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
-      getJobStatusMock.mockResolvedValueOnce(failedJob);
+      getJobStatusMock.mockResolvedValue(failedJob);
+
+      const result = await jobAwaiter.waitForJob(jobId);
+      expect(result).toEqual(failedJob);
+      expect(result.status).toBe(JobStatus.FAILED);
+    });
+
+    it("should resolve when OPERATIONS_READY event is emitted after OPERATION_WRITTEN", async () => {
+      const jobId = "job-1";
+      const runningJob: JobInfo = {
+        id: jobId,
+        status: JobStatus.RUNNING,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+      const completedJob: JobInfo = {
+        id: jobId,
+        status: JobStatus.READ_MODELS_READY,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
+      getJobStatusMock.mockResolvedValue(runningJob);
 
       const promise = jobAwaiter.waitForJob(jobId);
 
-      // Advance time to trigger check
-      await vi.advanceTimersByTimeAsync(0);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+
+      getJobStatusMock.mockResolvedValue(completedJob);
+
+      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+        jobId,
+        operations: [
+          {
+            operation: {} as any,
+            context: {
+              documentId: "doc-1",
+              documentType: "type-1",
+              scope: "scope",
+              branch: "main",
+            },
+          },
+        ],
+      });
+
+      await eventBus.emit(OperationEventTypes.OPERATIONS_READY, {
+        jobId,
+        operations: [
+          {
+            operation: {} as any,
+            context: {
+              documentId: "doc-1",
+              documentType: "type-1",
+              scope: "scope",
+              branch: "main",
+            },
+          },
+        ],
+      });
+
+      const result = await promise;
+      expect(result).toEqual(completedJob);
+    });
+
+    it("should resolve when OPERATIONS_READY event is emitted", async () => {
+      const jobId = "job-2";
+      const runningJob: JobInfo = {
+        id: jobId,
+        status: JobStatus.RUNNING,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+      const completedJob: JobInfo = {
+        id: jobId,
+        status: JobStatus.READ_MODELS_READY,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
+      getJobStatusMock.mockResolvedValue(runningJob);
+
+      const promise = jobAwaiter.waitForJob(jobId);
+
+      await new Promise((resolve) => setTimeout(resolve, 5));
+
+      getJobStatusMock.mockResolvedValue(completedJob);
+
+      await eventBus.emit(OperationEventTypes.OPERATIONS_READY, {
+        jobId,
+        operations: [
+          {
+            operation: {} as any,
+            context: {
+              documentId: "doc-1",
+              documentType: "type-1",
+              scope: "scope",
+              branch: "main",
+            },
+          },
+        ],
+      });
+
+      const result = await promise;
+      expect(result).toEqual(completedJob);
+    });
+
+    it("should resolve when JOB_FAILED event is emitted", async () => {
+      const jobId = "job-failed";
+      const runningJob: JobInfo = {
+        id: jobId,
+        status: JobStatus.RUNNING,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+      const failedJob: JobInfo = {
+        id: jobId,
+        status: JobStatus.FAILED,
+        createdAtUtcIso: new Date().toISOString(),
+        error: { message: "Job failed", stack: "" },
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
+      getJobStatusMock.mockResolvedValue(runningJob);
+
+      const promise = jobAwaiter.waitForJob(jobId);
+
+      await new Promise((resolve) => setTimeout(resolve, 5));
+
+      getJobStatusMock.mockResolvedValue(failedJob);
+
+      await eventBus.emit(OperationEventTypes.JOB_FAILED, {
+        jobId,
+        error: new Error("Job failed"),
+      });
 
       const result = await promise;
       expect(result).toEqual(failedJob);
@@ -74,48 +207,30 @@ describe("JobAwaiter", () => {
     it("should handle multiple jobs concurrently", async () => {
       const job1: JobInfo = {
         id: "job-1",
-        status: JobStatus.COMPLETED,
+        status: JobStatus.READ_MODELS_READY,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
       const job2: JobInfo = {
         id: "job-2",
-        status: JobStatus.COMPLETED,
+        status: JobStatus.READ_MODELS_READY,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
       const job3: JobInfo = {
         id: "job-3",
-        status: JobStatus.COMPLETED,
+        status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
+        error: { message: "Job 3 failed", stack: "" },
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
-      let job2Calls = 0;
-      let job3Calls = 0;
-
-      // Mock different completion times for each job
       getJobStatusMock.mockImplementation((jobId) => {
         if (jobId === "job-1") {
           return Promise.resolve(job1);
         } else if (jobId === "job-2") {
-          job2Calls++;
-          // job-2: pending then completed
-          if (job2Calls <= 1) {
-            return Promise.resolve({
-              id: "job-2",
-              status: JobStatus.PENDING,
-              createdAtUtcIso: new Date().toISOString(),
-            });
-          }
           return Promise.resolve(job2);
         } else if (jobId === "job-3") {
-          job3Calls++;
-          // job-3: running then completed
-          if (job3Calls <= 1) {
-            return Promise.resolve({
-              id: "job-3",
-              status: JobStatus.RUNNING,
-              createdAtUtcIso: new Date().toISOString(),
-            });
-          }
           return Promise.resolve(job3);
         }
         return Promise.reject(new Error("Unknown job"));
@@ -125,14 +240,12 @@ describe("JobAwaiter", () => {
       const promise2 = jobAwaiter.waitForJob("job-2");
       const promise3 = jobAwaiter.waitForJob("job-3");
 
-      // First check - job-1 completes
-      await vi.advanceTimersByTimeAsync(0);
-      expect(await promise1).toEqual(job1);
-
-      // Second check - job-2 and job-3 complete
-      await vi.advanceTimersByTimeAsync(100);
-
-      const [result2, result3] = await Promise.all([promise2, promise3]);
+      const [result1, result2, result3] = await Promise.all([
+        promise1,
+        promise2,
+        promise3,
+      ]);
+      expect(result1).toEqual(job1);
       expect(result2).toEqual(job2);
       expect(result3).toEqual(job3);
     });
@@ -143,14 +256,14 @@ describe("JobAwaiter", () => {
 
       getJobStatusMock.mockResolvedValue({
         id: jobId,
-        status: JobStatus.PENDING,
+        status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       });
 
       const promise = jobAwaiter.waitForJob(jobId, abortController.signal);
 
-      // Wait a moment then abort the signal
-      await vi.advanceTimersByTimeAsync(5);
+      await new Promise((resolve) => setTimeout(resolve, 5));
       abortController.abort();
 
       await expect(promise).rejects.toThrow("Operation aborted");
@@ -175,121 +288,100 @@ describe("JobAwaiter", () => {
 
       const promise = jobAwaiter.waitForJob(jobId);
 
-      // We need to handle the rejection immediately
-      const rejectionPromise = expect(promise).rejects.toThrow(
-        "Failed to get job status",
-      );
-
-      // Advance time to trigger check
-      await vi.advanceTimersByTimeAsync(0);
-
-      await rejectionPromise;
-    });
-
-    it("should stop interval when all jobs complete", async () => {
-      const job1: JobInfo = {
-        id: "job-1",
-        status: JobStatus.COMPLETED,
-        createdAtUtcIso: new Date().toISOString(),
-      };
-      const job2: JobInfo = {
-        id: "job-2",
-        status: JobStatus.COMPLETED,
-        createdAtUtcIso: new Date().toISOString(),
-      };
-
-      getJobStatusMock.mockImplementation((jobId) => {
-        if (jobId === "job-1") {
-          return Promise.resolve(job1);
-        } else if (jobId === "job-2") {
-          return Promise.resolve(job2);
-        }
-        return Promise.reject(new Error("Unknown job"));
-      });
-
-      const promise1 = jobAwaiter.waitForJob("job-1");
-      const promise2 = jobAwaiter.waitForJob("job-2");
-
-      // Initial check
-      await vi.advanceTimersByTimeAsync(0);
-
-      await Promise.all([promise1, promise2]);
-
-      // Clear mock to track new calls
-      getJobStatusMock.mockClear();
-
-      // Advance time - no more checks should occur
-      await vi.advanceTimersByTimeAsync(500);
-      expect(getJobStatusMock).not.toHaveBeenCalled();
-    });
-
-    it("should continue polling while jobs are pending", async () => {
-      const jobId = "job-long-running";
-
-      getJobStatusMock
-        .mockResolvedValueOnce({
-          id: jobId,
-          status: JobStatus.PENDING,
-          createdAtUtcIso: new Date().toISOString(),
-        })
-        .mockResolvedValueOnce({
-          id: jobId,
-          status: JobStatus.RUNNING,
-          createdAtUtcIso: new Date().toISOString(),
-        })
-        .mockResolvedValueOnce({
-          id: jobId,
-          status: JobStatus.RUNNING,
-          createdAtUtcIso: new Date().toISOString(),
-        })
-        .mockResolvedValueOnce({
-          id: jobId,
-          status: JobStatus.COMPLETED,
-          createdAtUtcIso: new Date().toISOString(),
-        });
-
-      const promise = jobAwaiter.waitForJob(jobId);
-
-      // Advance through multiple polling cycles
-      await vi.advanceTimersByTimeAsync(0);
-      expect(getJobStatusMock).toHaveBeenCalledTimes(1);
-
-      await vi.advanceTimersByTimeAsync(100);
-      expect(getJobStatusMock).toHaveBeenCalledTimes(2);
-
-      await vi.advanceTimersByTimeAsync(100);
-      expect(getJobStatusMock).toHaveBeenCalledTimes(3);
-
-      await vi.advanceTimersByTimeAsync(100);
-      expect(getJobStatusMock).toHaveBeenCalledTimes(4);
-
-      const result = await promise;
-      expect(result.status).toBe(JobStatus.COMPLETED);
+      await expect(promise).rejects.toThrow("Failed to get job status");
     });
 
     it("should handle the same job ID being waited on multiple times", async () => {
       const jobId = "job-duplicate";
+      const runningJob: JobInfo = {
+        id: jobId,
+        status: JobStatus.RUNNING,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
       const completedJob: JobInfo = {
         id: jobId,
-        status: JobStatus.COMPLETED,
+        status: JobStatus.READ_MODELS_READY,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       };
 
-      getJobStatusMock.mockResolvedValue(completedJob);
+      getJobStatusMock.mockResolvedValue(runningJob);
 
-      // Start waiting for the same job twice
       const promise1 = jobAwaiter.waitForJob(jobId);
       const promise2 = jobAwaiter.waitForJob(jobId);
 
-      // Advance time to trigger check
-      await vi.advanceTimersByTimeAsync(0);
+      await new Promise((resolve) => setTimeout(resolve, 5));
 
-      // Both promises should resolve with the same result
+      getJobStatusMock.mockResolvedValue(completedJob);
+
+      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+        jobId,
+        operations: [
+          {
+            operation: {} as any,
+            context: {
+              documentId: "doc-1",
+              documentType: "type-1",
+              scope: "scope",
+              branch: "main",
+            },
+          },
+        ],
+      });
+
+      await eventBus.emit(OperationEventTypes.OPERATIONS_READY, {
+        jobId,
+        operations: [
+          {
+            operation: {} as any,
+            context: {
+              documentId: "doc-1",
+              documentType: "type-1",
+              scope: "scope",
+              branch: "main",
+            },
+          },
+        ],
+      });
+
       const [result1, result2] = await Promise.all([promise1, promise2]);
       expect(result1).toEqual(completedJob);
       expect(result2).toEqual(completedJob);
 
-      // Should only check status once per interval
+      expect(getJobStatusMock).toHaveBeenCalledTimes(3);
+    });
+
+    it("should ignore events for unrelated jobs", async () => {
+      const jobId = "job-waiting";
+      const otherJobId = "job-other";
+
+      getJobStatusMock.mockResolvedValue({
+        id: jobId,
+        status: JobStatus.RUNNING,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      });
+
+      jobAwaiter.waitForJob(jobId).catch(() => {});
+
+      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+        jobId: otherJobId,
+        operations: [
+          {
+            operation: {} as any,
+            context: {
+              documentId: "doc-1",
+              documentType: "type-1",
+              scope: "scope",
+              branch: "main",
+            },
+          },
+        ],
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
       expect(getJobStatusMock).toHaveBeenCalledTimes(1);
     });
   });
@@ -301,107 +393,53 @@ describe("JobAwaiter", () => {
 
       getJobStatusMock.mockResolvedValue({
         id: "any",
-        status: JobStatus.PENDING,
+        status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       });
 
       const promise1 = jobAwaiter.waitForJob(jobId1);
       const promise2 = jobAwaiter.waitForJob(jobId2);
 
-      // Shutdown the awaiter
+      await new Promise((resolve) => setTimeout(resolve, 5));
+
       jobAwaiter.shutdown();
 
       await expect(promise1).rejects.toThrow("JobAwaiter destroyed");
       await expect(promise2).rejects.toThrow("JobAwaiter destroyed");
     });
 
-    it("should stop interval when destroyed", async () => {
-      const jobId = "job-destroy-interval";
+    it("should unsubscribe from event bus when destroyed", async () => {
+      const jobId = "job-destroy-subscription";
 
       getJobStatusMock.mockResolvedValue({
         id: jobId,
-        status: JobStatus.PENDING,
+        status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
       });
 
-      jobAwaiter.waitForJob(jobId).catch(() => {
-        // Expected rejection
-      });
+      jobAwaiter.waitForJob(jobId).catch(() => {});
 
-      // Initial check
-      await vi.advanceTimersByTimeAsync(0);
-      expect(getJobStatusMock).toHaveBeenCalledTimes(1);
-
-      // Destroy the awaiter
       jobAwaiter.shutdown();
       getJobStatusMock.mockClear();
 
-      // Advance time - no more checks should occur
-      await vi.advanceTimersByTimeAsync(500);
-      expect(getJobStatusMock).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("interval management", () => {
-    it("should start interval only when first job is added", async () => {
-      // No jobs yet, advance time
-      await vi.advanceTimersByTimeAsync(200);
-      expect(getJobStatusMock).not.toHaveBeenCalled();
-
-      // Add first job
-      getJobStatusMock.mockResolvedValue({
-        id: "job-1",
-        status: JobStatus.COMPLETED,
-        createdAtUtcIso: new Date().toISOString(),
+      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+        jobId,
+        operations: [
+          {
+            operation: {} as any,
+            context: {
+              documentId: "doc-1",
+              documentType: "type-1",
+              scope: "scope",
+              branch: "main",
+            },
+          },
+        ],
       });
 
-      const promise = jobAwaiter.waitForJob("job-1");
-
-      // Should check immediately
-      await vi.advanceTimersByTimeAsync(0);
-      expect(getJobStatusMock).toHaveBeenCalledTimes(1);
-
-      await promise;
-    });
-
-    it("should use custom poll interval", async () => {
-      // Create awaiter with 50ms interval
-      const customAwaiter = new JobAwaiter(getJobStatusMock, 50);
-
-      const jobId = "job-custom-interval";
-      getJobStatusMock
-        .mockResolvedValueOnce({
-          id: jobId,
-          status: JobStatus.PENDING,
-          createdAtUtcIso: new Date().toISOString(),
-        })
-        .mockResolvedValueOnce({
-          id: jobId,
-          status: JobStatus.PENDING,
-          createdAtUtcIso: new Date().toISOString(),
-        })
-        .mockResolvedValueOnce({
-          id: jobId,
-          status: JobStatus.COMPLETED,
-          createdAtUtcIso: new Date().toISOString(),
-        });
-
-      const promise = customAwaiter.waitForJob(jobId);
-
-      // Initial check
-      await vi.advanceTimersByTimeAsync(0);
-      expect(getJobStatusMock).toHaveBeenCalledTimes(1);
-
-      // After 50ms
-      await vi.advanceTimersByTimeAsync(50);
-      expect(getJobStatusMock).toHaveBeenCalledTimes(2);
-
-      // After another 50ms
-      await vi.advanceTimersByTimeAsync(50);
-      expect(getJobStatusMock).toHaveBeenCalledTimes(3);
-
-      await promise;
-      customAwaiter.shutdown();
+      expect(getJobStatusMock).not.toHaveBeenCalled();
     });
   });
 });

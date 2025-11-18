@@ -19,9 +19,6 @@
       "path": "../../packages/document-model"
     },
     {
-      "path": "../../packages/reactor-local"
-    },
-    {
       "path": "../../packages/builder-tools"
     },
     {

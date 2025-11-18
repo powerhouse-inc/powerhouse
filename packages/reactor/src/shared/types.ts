@@ -55,6 +55,11 @@ export type JobInfo = {
   error?: ErrorInfo;
   errorHistory?: ErrorInfo[];
   result?: any;
+
+  /**
+   * A token for coordinating reads, only valid once a job reaches COMPLETED.
+   */
+  consistencyToken: ConsistencyToken;
 };
 
 /**
@@ -65,8 +70,10 @@ export enum JobStatus {
   PENDING = "PENDING",
   /** Job is currently being executed */
   RUNNING = "RUNNING",
-  /** Job completed successfully */
-  COMPLETED = "COMPLETED",
+  /** Operations have been written to the operation store (OPERATION_WRITTEN event) */
+  WRITE_COMPLETED = "WRITE_COMPLETED",
+  /** Read models have finished indexing operations (OPERATIONS_READY event) */
+  READ_MODELS_READY = "READ_MODELS_READY",
   /** Job failed (may be retried) */
   FAILED = "FAILED",
 }
@@ -110,4 +117,29 @@ export type PagedResults<T> = {
 
   next?: () => Promise<PagedResults<T>>;
   nextCursor?: string;
+};
+
+/**
+ * A string key in the format `documentId:scope:branch` used to identify a consistency checkpoint.
+ */
+export type ConsistencyKey = `${string}:${string}:${string}`;
+
+/**
+ * Describes a specific point in a document's operation history.
+ */
+export type ConsistencyCoordinate = {
+  documentId: string;
+  scope: string;
+  branch: string;
+  operationIndex: number;
+};
+
+/**
+ * A token that captures the state of write operations at a point in time.
+ * Can be used to ensure read-after-write consistency.
+ */
+export type ConsistencyToken = {
+  version: 1;
+  createdAtUtcIso: string;
+  coordinates: ConsistencyCoordinate[];
 };

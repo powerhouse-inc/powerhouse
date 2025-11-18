@@ -11,7 +11,6 @@ import type {
   DriveEvents,
   DriveInput,
   DriveOperationResult,
-  GetDocumentOptions,
   IBaseDocumentDriveServer,
   ICache,
   IDefaultDrivesManager,
@@ -32,54 +31,42 @@ import type {
   ServerListener,
   StrandUpdate,
   StrandUpdateSource,
-  SyncStatus,
-  SyncUnitStatusObject,
   SynchronizationUnit,
   SynchronizationUnitNotFoundError,
+  SyncStatus,
+  SyncUnitStatusObject,
   Trigger,
 } from "document-drive";
 import {
-  ConflictOperationError,
-  DefaultDrivesManager,
-  DefaultListenerManagerOptions,
-  DocumentAlreadyExistsError,
-  OperationError,
-  PullResponderTransmitter,
-  ReadModeServer,
-  SwitchboardPushTransmitter,
-  childLogger,
-  driveCreateDocument,
-  driveCreateState,
-  filterOperationsByRevision,
   isActionJob,
-  isAtRevision,
-  isDocumentDrive,
   isDocumentJob,
   isOperationJob,
-  removeListener,
-  removeTrigger,
-  requestPublicDriveWithTokenFromReactor,
-  resolveCreateDocumentInput,
-  setSharingType,
-} from "document-drive";
-import { runAsap, runAsapAsync } from "document-drive/run-asap";
-import {
-  type Action,
-  type CreateDocumentActionInput,
-  type DocumentModelModule,
-  type DocumentOperations,
-  type Operation,
-  type PHDocument,
-  type PHDocumentHeader,
-  type PHDocumentMeta,
-  type Signal,
-  type SignalResult,
-  type UpgradeDocumentActionInput,
+} from "document-drive/queue/utils";
+import { ReadModeServer } from "document-drive/read-mode/server";
+import { DefaultDrivesManager } from "document-drive/utils/default-drives-manager";
+import { requestPublicDriveWithTokenFromReactor } from "document-drive/utils/graphql";
+import { childLogger } from "document-drive/utils/logger";
+import { isDocumentDrive } from "document-drive/utils/misc";
+import { runAsap, runAsapAsync } from "document-drive/utils/run-asap";
+import type {
+  Action,
+  CreateDocumentActionInput,
+  DocumentModelModule,
+  DocumentOperations,
+  GetDocumentOptions,
+  Operation,
+  PHDocument,
+  PHDocumentHeader,
+  PHDocumentMeta,
+  Signal,
+  SignalResult,
+  UpgradeDocumentActionInput,
 } from "document-model";
 import {
   attachBranch,
   createPresignedHeader,
   defaultBaseState,
+  diffOperations,
   garbageCollect,
   garbageCollectDocumentOperations,
   groupOperationsByScope,
@@ -95,6 +82,26 @@ import {
 } from "document-model/core";
 import { ClientError } from "graphql-request";
 import type { Unsubscribe } from "nanoevents";
+import {
+  driveCreateDocument,
+  driveCreateState,
+  removeListener,
+  removeTrigger,
+  setSharingType,
+} from "../drive-document-model/index.js";
+import {
+  ConflictOperationError,
+  DocumentAlreadyExistsError,
+  OperationError,
+} from "./error.js";
+import { DefaultListenerManagerOptions } from "./listener/constants.js";
+import { PullResponderTransmitter } from "./transmitter/pull-responder.js";
+import { SwitchboardPushTransmitter } from "./transmitter/switchboard-push.js";
+import {
+  filterOperationsByRevision,
+  isAtRevision,
+  resolveCreateDocumentInput,
+} from "./utils.js";
 
 export class BaseDocumentDriveServer
   implements IBaseDocumentDriveServer, IDefaultDrivesManager
@@ -651,6 +658,10 @@ export class BaseDocumentDriveServer
       document.header.slug = input.slug;
     }
 
+    if (input.global.name) {
+      document.header.name = input.global.name;
+    }
+
     const editorToUse = input.preferredEditor || preferredEditor;
     if (editorToUse) {
       document.header.meta = {
@@ -1059,7 +1070,11 @@ export class BaseDocumentDriveServer
       }
     }
 
-    return await this.getDocument<TDocument>(documentStorage.header.id);
+    const addedDocument = await this.getDocument<TDocument>(
+      documentStorage.header.id,
+    );
+    this.eventEmitter.emit("documentAdded", addedDocument);
+    return addedDocument;
   }
 
   private async createDocumentDualAction<TDocument extends PHDocument>(
@@ -1279,9 +1294,14 @@ export class BaseDocumentDriveServer
     await this.documentStorage.create(documentToStore);
 
     // Force rebuild to ensure operations are properly merged
-    return await this.getDocument<TDocument>(documentToStore.header.id, {
-      checkHashes: true,
-    });
+    const addedDocument = await this.getDocument<TDocument>(
+      documentToStore.header.id,
+      {
+        checkHashes: true,
+      },
+    );
+    this.eventEmitter.emit("documentAdded", addedDocument);
+    return addedDocument;
   }
 
   async deleteDocument(documentId: string) {
@@ -1305,8 +1325,11 @@ export class BaseDocumentDriveServer
     } catch (error) {
       this.logger.warn("Error deleting document", error);
     }
-    await this.cache.deleteDocument(documentId);
-    await this.documentStorage.delete(documentId);
+    await Promise.allSettled([
+      this.cache.deleteDocument(documentId).catch(this.logger.warn),
+      this.documentStorage.delete(documentId).catch(this.logger.warn),
+    ]);
+    this.eventEmitter.emit("documentDeleted", documentId);
   }
 
   async _processOperations(
@@ -1593,6 +1616,8 @@ export class BaseDocumentDriveServer
           ));
     }
 
+    const operationsBeforeReducer = newDocument.operations[scope] || [];
+
     const operationSignals: (() => Promise<SignalResult>)[] = [];
     newDocument = documentModelModule.reducer(
       newDocument,
@@ -1623,6 +1648,38 @@ export class BaseDocumentDriveServer
         replayOptions: { operation },
       },
     );
+
+    // when we have NOOP operations with skip > 0 we need to populate the
+    // clipboard with the operations that were skipped to allow redo
+    if (
+      operation.action.type === "NOOP" &&
+      operation.skip > 0 &&
+      newDocument.clipboard.length === 0
+    ) {
+      const scopeOperationsAfter = newDocument.operations[scope] || [];
+
+      // Get operations AFTER garbageCollect (with NOOP)
+      const afterOperations = garbageCollect(
+        sortOperations(scopeOperationsAfter),
+      );
+
+      // Get operations BEFORE the reducer ran (before NOOP was applied)
+      const beforeOperations = garbageCollect(
+        sortOperations(operationsBeforeReducer),
+      );
+
+      // Calculate what was removed by comparing before vs after
+      // The diff shows operations that were in "before" but not in "after"
+      const diff = diffOperations(beforeOperations, afterOperations);
+
+      // Populate clipboard with skipped operations (excluding NOOPs)
+      newDocument = {
+        ...newDocument,
+        clipboard: sortOperations(
+          diff.filter((op: Operation) => op.action.type !== "NOOP"),
+        ).reverse(),
+      };
+    }
 
     const newDocScopeOperations =
       newDocument.operations[operation.action.scope];

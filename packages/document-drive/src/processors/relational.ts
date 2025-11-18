@@ -7,7 +7,7 @@ import type {
   RelationalDbProcessorClass,
   RelationalDbProcessorFilter,
 } from "document-drive";
-import { relationalDbToQueryBuilder } from "document-drive";
+import { relationalDbToQueryBuilder } from "./utils.js";
 
 const IS_RELATIONAL_DB_PROCESSOR = Symbol.for("ph.IS_RELATIONAL_DB_PROCESSOR");
 

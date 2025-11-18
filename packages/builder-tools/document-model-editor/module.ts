@@ -1,5 +1,5 @@
-import { DocumentModelEditor } from "@powerhousedao/builder-tools/editor";
 import type { EditorModule } from "document-model";
+import { lazy } from "react";
 
 export const documentModelEditorModule: EditorModule = {
   config: {
@@ -7,5 +7,5 @@ export const documentModelEditorModule: EditorModule = {
     name: "Document Model Editor",
   },
   documentTypes: ["powerhouse/document-model"],
-  Component: DocumentModelEditor,
+  Component: lazy(() => import("./editor.js")),
 };

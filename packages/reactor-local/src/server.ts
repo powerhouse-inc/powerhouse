@@ -1,11 +1,8 @@
 import { isLogLevel } from "@powerhousedao/config";
 import {
   EventBus,
-  InMemoryJobTracker,
-  InMemoryQueue,
-  Reactor,
+  ReactorBuilder,
   ReactorClientBuilder,
-  ReadModelCoordinator,
 } from "@powerhousedao/reactor";
 import {
   VitePackageLoader,
@@ -13,11 +10,15 @@ import {
   startViteServer,
 } from "@powerhousedao/reactor-api";
 import type {
-  BaseDocumentDriveServer,
   DefaultRemoteDriveInput,
+  IDocumentOperationStorage,
   IDocumentStorage,
 } from "document-drive";
-import { InMemoryCache, ReactorBuilder, logger } from "document-drive";
+import {
+  InMemoryCache,
+  ReactorBuilder as LegacyReactorBuilder,
+  logger,
+} from "document-drive";
 import dotenv from "dotenv";
 import path from "node:path";
 import {
@@ -103,13 +104,13 @@ const startServer = async (
   logger.debug(`Setting log level to ${logLevel}.`);
   const serverPort = Number(process.env.PORT ?? port);
 
+  // TODO get path from powerhouse config
+  const basePath = process.cwd();
   // start vite server if dev
-  const vite = dev ? await startViteServer() : undefined;
+  const vite = dev ? await startViteServer(basePath) : undefined;
 
   // get paths to local document models
   if (dev) {
-    // TODO get path from powerhouse config
-    const basePath = process.cwd();
     packages.push(basePath);
   }
 
@@ -119,7 +120,7 @@ const startServer = async (
   // create document drive server with all available document models & storage
   const cache = new InMemoryCache();
   const storageImpl = createStorage(storage, cache);
-  const reactorBuilder = new ReactorBuilder([])
+  const reactorBuilder = new LegacyReactorBuilder([])
     .withCache(cache)
     .withStorage(storageImpl)
     .withOptions({
@@ -131,15 +132,18 @@ const startServer = async (
   const driveServer = reactorBuilder.build();
 
   const eventBus = new EventBus();
-  const queue = new InMemoryQueue(eventBus);
-  const reactor = new Reactor(
-    driveServer as unknown as BaseDocumentDriveServer,
-    storageImpl as unknown as IDocumentStorage,
-    queue,
-    new InMemoryJobTracker(),
-    new ReadModelCoordinator(eventBus, []),
-  );
-  const client = new ReactorClientBuilder().withReactor(reactor).build();
+  const builder = new ReactorBuilder()
+    .withEventBus(eventBus)
+    .withLegacyStorage(
+      storageImpl as unknown as IDocumentStorage & IDocumentOperationStorage,
+    )
+    .withFeatures({
+      legacyStorageEnabled: true,
+    });
+
+  const client = await new ReactorClientBuilder()
+    .withReactorBuilder(builder)
+    .build();
 
   // init drive server + conditionally add a default drive
   await driveServer.initialize();
@@ -148,7 +152,7 @@ const startServer = async (
     : await addDefaultDrive(driveServer, drive, serverPort);
 
   // create loader
-  const packageLoader = vite ? await VitePackageLoader.build(vite) : undefined;
+  const packageLoader = vite ? VitePackageLoader.build(vite) : undefined;
 
   // start api
   const api = await startAPI(driveServer, client, {

@@ -67,7 +67,7 @@ export async function isDocumentAvailableForCreation(
  */
 export async function closeDocumentFromToolbar(page: Page) {
   // Click the close button in the document toolbar (using the SVG path)
-  await page.click('button:has(svg path[d^="M3.32875"])');
+  await page.getByLabel("Close document").click();
 }
 
 /**

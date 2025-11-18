@@ -256,7 +256,7 @@ export class KyselyOperationStore implements IOperationStore {
       skip: row.skip,
       error: row.error || undefined,
       id: row.opId,
-      action: JSON.parse(row.action) as Operation["action"],
+      action: row.action as Operation["action"],
     };
   }
 

@@ -3,6 +3,7 @@ import type { InternalTransmitterUpdate } from "document-drive";
 import type { VetraPackageState } from "../../../../document-models/vetra-package/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
+import { backupDocument } from "./utils.js";
 
 /**
  * Generator for package documents
@@ -45,5 +46,13 @@ export class PackageGenerator extends BaseDocumentGen {
       this.config.CURRENT_WORKING_DIR,
     );
     logger.info("✅ Manifest generated successfully");
+
+    // Backup the document
+    await backupDocument(
+      strand.document,
+      this.config.CURRENT_WORKING_DIR,
+      undefined,
+      "vetra-package",
+    );
   }
 }

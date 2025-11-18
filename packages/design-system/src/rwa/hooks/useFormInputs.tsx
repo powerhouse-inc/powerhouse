@@ -1,30 +1,3 @@
-import type {
-  Account,
-  FormInputsByTableName,
-  Operation,
-  TableItemType,
-  TableName,
-} from "@powerhousedao/design-system";
-import {
-  allGroupTransactionTypes,
-  assetGroupTransactions,
-  CashBalanceChange,
-  EntryTimeLabel,
-  feesTransactions,
-  FeeTransactionsTable,
-  formatDateForDisplay,
-  groupTransactionTypeLabels,
-  handleTableDatum,
-  makeFixedIncomeOptionLabel,
-  RWANumberInput,
-  RWATableSelect,
-  RWATableTextInput,
-  tableNames,
-  TransactionReference,
-  UnitPrice,
-  useEditorContext,
-  useModal,
-} from "@powerhousedao/design-system";
 import type { ReactElement, ReactNode } from "react";
 import { useCallback, useMemo } from "react";
 import type {
@@ -33,6 +6,33 @@ import type {
   UseFormRegister,
   UseFormWatch,
 } from "react-hook-form";
+import { CashBalanceChange } from "../components/cash-balance-change.js";
+import { EntryTimeLabel } from "../components/entry-time-label.js";
+import { FeeTransactionsTable } from "../components/fee-transactions-table.js";
+import { RWANumberInput } from "../components/number-input.js";
+import { RWATableSelect } from "../components/select.js";
+import { RWATableTextInput } from "../components/text-input.js";
+import { TransactionReference } from "../components/transaction-reference.js";
+import { UnitPrice } from "../components/unit-price.js";
+import { useModal } from "../components/use-modal.js";
+import { tableNames } from "../constants/names.js";
+import {
+  allGroupTransactionTypes,
+  assetGroupTransactions,
+  feesTransactions,
+  groupTransactionTypeLabels,
+} from "../constants/transactions.js";
+import { useEditorContext } from "../context/editor-context.js";
+import type {
+  Account,
+  FormInputsByTableName,
+  Operation,
+  TableItemType,
+  TableName,
+} from "../types.js";
+import { formatDateForDisplay } from "../utils/date.js";
+import { makeFixedIncomeOptionLabel } from "../utils/form.js";
+import { handleTableDatum } from "../utils/table.js";
 
 type Input = {
   label: string;

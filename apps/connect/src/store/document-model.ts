@@ -1,7 +1,3 @@
-import {
-  loadDocumentModelEditor,
-  loadGenericDriveExplorerEditorModule,
-} from "@powerhousedao/connect";
 import type {
   VetraDocumentModelModule,
   VetraPackage,
@@ -10,6 +6,10 @@ import { COMMON_PACKAGE_ID } from "@powerhousedao/reactor-browser";
 import { driveDocumentModelModule } from "document-drive";
 import { createState, documentModelDocumentModelModule } from "document-model";
 import { defaultBaseState } from "document-model/core";
+import {
+  loadDocumentModelEditor,
+  loadGenericDriveExplorerEditorModule,
+} from "./editor.js";
 
 async function loadDocumentModelDocumentModelModule(): Promise<VetraDocumentModelModule> {
   const global = documentModelDocumentModelModule.documentModel.global;
@@ -63,9 +63,9 @@ export async function loadCommonPackage(): Promise<VetraPackage> {
   const documentModelDocumentModelModule =
     await loadDocumentModelDocumentModelModule();
   const driveDocumentModelModule = await loadDriveDocumentModelModule();
-  const documentModelEditorModule = await loadDocumentModelEditor();
+  const documentModelEditorModule = loadDocumentModelEditor();
   const genericDriveExplorerEditorModule =
-    await loadGenericDriveExplorerEditorModule();
+    loadGenericDriveExplorerEditorModule();
   const vetraPackage: VetraPackage = {
     id: COMMON_PACKAGE_ID,
     name: "Common",

@@ -1,14 +1,16 @@
-import { GenericDriveExplorer } from "@powerhousedao/common";
-import { DropZoneWrapper } from "@powerhousedao/design-system";
+import { GenericDriveExplorer } from "@powerhousedao/common/generic-drive-explorer";
+import { DropZoneWrapper } from "@powerhousedao/design-system/connect";
 import {
   useDefaultDriveEditorModule,
   useDriveEditorModuleById,
   useSelectedDocument,
   useSelectedDrive,
 } from "@powerhousedao/reactor-browser";
+import { Suspense } from "react";
 import type { FallbackProps } from "react-error-boundary";
 import { ErrorBoundary } from "react-error-boundary";
 import { DocumentEditorContainer } from "./document-editor-container.js";
+import { EditorLoader } from "./editor-loader.js";
 
 function DriveEditorError({ error }: FallbackProps) {
   return (
@@ -34,16 +36,21 @@ export function DriveEditorContainer() {
     defaultDriveEditor?.Component ??
     GenericDriveExplorer.Component;
 
+  if (!DriveEditorComponent) {
+    throw new Error("No drive editor component found");
+  }
   return (
     <ErrorBoundary
       fallbackRender={DriveEditorError}
       key={selectedDrive.header.id}
     >
-      <DropZoneWrapper className="flex h-full flex-col overflow-auto">
-        <DriveEditorComponent>
-          {selectedDocument ? <DocumentEditorContainer /> : null}
-        </DriveEditorComponent>
-      </DropZoneWrapper>
+      <Suspense fallback={<EditorLoader />}>
+        <DropZoneWrapper className="flex h-full flex-col overflow-auto">
+          <DriveEditorComponent>
+            {selectedDocument ? <DocumentEditorContainer /> : null}
+          </DriveEditorComponent>
+        </DropZoneWrapper>
+      </Suspense>
     </ErrorBoundary>
   );
 }

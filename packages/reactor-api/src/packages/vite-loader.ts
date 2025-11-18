@@ -1,12 +1,13 @@
 import { viteCommonjs } from "@originjs/vite-plugin-commonjs";
 import type { SubgraphClass } from "@powerhousedao/reactor-api";
-import { isSubgraphClass } from "@powerhousedao/reactor-api";
 import type { IProcessorHostModule, ProcessorFactory } from "document-drive";
 import { childLogger } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import path from "node:path";
+import { readPackage } from "read-pkg";
 import type { ViteDevServer } from "vite";
 import { createServer } from "vite";
+import { isSubgraphClass } from "../graphql/utils.js";
 import type {
   ISubscribablePackageLoader,
   ISubscriptionOptions,
@@ -18,9 +19,8 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
 
   private readonly vite: ViteDevServer;
 
-  static async build(vite?: ViteDevServer) {
-    const server = vite ?? (await startViteServer());
-    return new VitePackageLoader(server);
+  static build(vite: ViteDevServer) {
+    return new VitePackageLoader(vite);
   }
 
   constructor(vite: ViteDevServer) {
@@ -39,9 +39,20 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     return path.join(identifier, "./processors");
   }
 
-  async loadDocumentModels(identifier: string): Promise<DocumentModelModule[]> {
+  public loadDocumentModels(identifier: string, immediate = false) {
+    return this.#loadDocumentModelsWithDebounce(immediate, identifier);
+  }
+
+  #loadDocumentModelsWithDebounce = debounce(
+    this.#loadDocumentModels.bind(this),
+    500,
+  );
+
+  async #loadDocumentModels(
+    identifier: string,
+  ): Promise<DocumentModelModule[]> {
     const fullPath = this.getDocumentModelsPath(identifier);
-    this.logger.verbose("Loading document models from", fullPath);
+    this.logger.debug("Loading document models from", fullPath);
 
     try {
       const localDMs = (await this.vite.ssrLoadModule(fullPath)) as Record<
@@ -139,14 +150,13 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     handler: (documentModels: DocumentModelModule[]) => void,
     options?: ISubscriptionOptions,
   ): () => void {
-    const documentModelsPath = this.getDocumentModelsPath(identifier);
-
-    const listener = debounce(async (changedPath: string) => {
+    const listener = async (changedPath: string) => {
+      const documentModelsPath = this.getDocumentModelsPath(identifier);
       if (isSubpath(documentModelsPath, changedPath)) {
         const documentModels = await this.loadDocumentModels(identifier);
         handler(documentModels);
       }
-    }, options?.debounce ?? 500);
+    };
 
     this.vite.watcher.on("change", listener);
 
@@ -182,12 +192,12 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     options?: ISubscriptionOptions,
   ): () => void {
     const processorsPath = this.getProcessorsPath(identifier);
-    const listener = debounce(async (changedPath: string) => {
+    const listener = async (changedPath: string) => {
       if (isSubpath(processorsPath, changedPath)) {
         const processors = await this.loadProcessors(identifier);
         handler(processors);
       }
-    }, options?.debounce ?? 100);
+    };
     this.vite.watcher.on("change", listener);
 
     return () => {
@@ -196,13 +206,22 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
   }
 }
 
-export async function startViteServer() {
+export async function startViteServer(root: string) {
+  const packageJson = await readPackage({ cwd: root });
+
   const vite = await createServer({
+    root,
+    configFile: false,
     server: { middlewareMode: true, watch: { ignored: ["**/.ph/**"] } },
     appType: "custom",
     build: {
       rollupOptions: {
         input: [],
+      },
+    },
+    resolve: {
+      alias: {
+        [packageJson.name]: root,
       },
     },
     plugins: [

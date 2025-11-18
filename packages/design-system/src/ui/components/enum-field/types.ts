@@ -1,5 +1,4 @@
 import type { IconName } from "@powerhousedao/design-system";
-
 export interface RadioGroupProps {
   options?: {
     value: string;

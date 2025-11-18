@@ -1,10 +1,11 @@
-import type { SidebarFooterProps } from "@powerhousedao/design-system";
 import { Icon, SidebarFooter } from "@powerhousedao/design-system";
+import type { ComponentProps } from "react";
 import { twMerge } from "tailwind-merge";
 import { SidebarLogin } from "./sidebar-login.js";
 import { SidebarUser } from "./sidebar-user.js";
 
-export interface ConnectSidebarFooterProps extends SidebarFooterProps {
+export interface ConnectSidebarFooterProps
+  extends ComponentProps<typeof SidebarFooter> {
   address: `0x${string}` | undefined;
   onClickSettings: (() => void) | undefined;
   onLogin: (() => void) | undefined;

@@ -1,12 +1,23 @@
 {
   "extends": "../../tsconfig.options.json",
-  "files": [],
+  "compilerOptions": {
+    "outDir": "./dist",
+    "lib": ["ESNext", "dom", "dom.iterable"],
+    "jsx": "preserve"
+  },
+  "types": ["vitest/globals"],
+  "include": ["**/*"],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "src/codegen/__tests__/data",
+  ],
   "references": [
-    {
-      "path": "tsconfig.lib.json"
-    },
-    {
-      "path": "tsconfig.test.json"
-    }
+    { "path": "../document-model" },
+    { "path": "../document-drive" },
+    { "path": "../reactor-browser" },
+    { "path": "../design-system" },
+    { "path": "../common" },
+    { "path": "../config" }
   ]
 }

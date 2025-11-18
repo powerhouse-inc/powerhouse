@@ -1,15 +1,14 @@
-import type { SelectProps } from "@powerhousedao/design-system";
+import { cn, Icon } from "@powerhousedao/design-system";
+import { useCommandState } from "cmdk";
+import React, { useEffect } from "react";
 import {
-  cn,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
-  Icon,
-} from "@powerhousedao/design-system";
-import { useCommandState } from "cmdk";
-import React, { useEffect } from "react";
+} from "../command/command.js";
+import type { SelectProps } from "../enum-field/types.js";
 import { CommandItemList } from "./subcomponents/CommandItemList.js";
 interface ContentProps {
   searchable?: boolean;

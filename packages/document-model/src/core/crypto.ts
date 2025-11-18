@@ -2,21 +2,6 @@ import stringifyJson from "safe-stable-stringify";
 import { createHash as createSha1Hash } from "sha1-uint8array";
 import type { ActionSignatureContext } from "./types.js";
 
-/**
- * This should never be linked to directly. Instead, use the `#utils/misc`
- * module. This will automatically pick the correct implementation for the
- * current environment. See package.json for the mapping.
- *
- * Generates a secure UUID.
- */
-export function generateUUIDBrowser() {
-  if (typeof crypto === "undefined" || !crypto.randomUUID) {
-    throw new Error("generateUUID is not available in unsecure contexts.");
-  }
-
-  return crypto.randomUUID();
-}
-
 export const hashBrowser = (
   data: string | Uint8Array | ArrayBufferView | DataView,
   algorithm = "sha1",
@@ -72,16 +57,6 @@ function hashUIntArray(
   return createSha1Hash("sha1")
     .update(data as string)
     .digest();
-}
-
-export function generateId(method?: "UUIDv4"): string {
-  if (method && method.toString() !== "UUIDv4") {
-    throw new Error(
-      `Id generation method not supported: "${method.toString()}"`,
-    );
-  }
-
-  return generateUUIDBrowser();
 }
 
 export function getUnixTimestamp(date: Date | string): string {

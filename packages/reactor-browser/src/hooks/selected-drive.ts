@@ -3,11 +3,10 @@ import type {
   DocumentDriveAction,
   DocumentDriveDocument,
 } from "document-drive";
-import { resolveUrlPathname } from "../utils/url.js";
+import { extractDriveIdFromPath, resolveUrlPathname } from "../utils/url.js";
 import { useDispatch } from "./dispatch.js";
 import { useDrives } from "./drives.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
-import { setSelectedNode } from "./selected-node.js";
 
 const selectedDriveIdEventFunctions = makePHEventFunctions("selectedDriveId");
 
@@ -58,7 +57,6 @@ export function setSelectedDrive(
     typeof driveOrDriveSlug === "string"
       ? driveOrDriveSlug
       : driveOrDriveSlug?.header.slug;
-  setSelectedNode(undefined);
 
   // Find the drive by slug to get its actual ID
   const drive = window.ph?.drives?.find((d) => d.header.slug === driveSlug);
@@ -67,8 +65,27 @@ export function setSelectedDrive(
   setSelectedDriveId(driveId);
 
   if (!driveId) {
-    window.history.pushState(null, "", resolveUrlPathname("/"));
+    const pathname = resolveUrlPathname("/");
+    if (pathname === window.location.pathname) {
+      return;
+    }
+    window.history.pushState(null, "", pathname);
     return;
   }
-  window.history.pushState(null, "", resolveUrlPathname(`/d/${driveSlug}`));
+  const pathname = resolveUrlPathname(`/d/${driveSlug}`);
+  if (pathname === window.location.pathname) {
+    return;
+  }
+  window.history.pushState(null, "", pathname);
+}
+
+export function addSetSelectedDriveOnPopStateEventHandler() {
+  window.addEventListener("popstate", () => {
+    const pathname = window.location.pathname;
+    const driveId = extractDriveIdFromPath(pathname);
+    const selectedDriveId = window.ph?.selectedDriveId;
+    if (driveId !== selectedDriveId) {
+      setSelectedDrive(driveId);
+    }
+  });
 }

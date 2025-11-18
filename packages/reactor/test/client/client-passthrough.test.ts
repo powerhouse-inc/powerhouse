@@ -22,7 +22,10 @@ import { DocumentModelRegistry } from "../../src/registry/implementation.js";
 import type { ISigner } from "../../src/signer/types.js";
 import {
   createDocModelDocument,
+  createMockDocumentIndexer,
+  createMockDocumentView,
   createMockOperationStore,
+  createMockReactorFeatures,
   createMockReadModelCoordinator,
   createTestDocuments,
   createTestJobTracker,
@@ -79,6 +82,17 @@ describe("ReactorClient Passthrough Functions", () => {
       shutdown: vi.fn(),
     };
 
+    // Create mock operation index
+    const mockOperationIndex: any = {
+      start: vi.fn().mockReturnValue({
+        createCollection: vi.fn(),
+        addToCollection: vi.fn(),
+        write: vi.fn(),
+      }),
+      commit: vi.fn().mockResolvedValue(undefined),
+      find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+    };
+
     // Create job executor
     const executor = new SimpleJobExecutor(
       registry,
@@ -87,6 +101,8 @@ describe("ReactorClient Passthrough Functions", () => {
       operationStore,
       eventBus,
       mockWriteCache,
+      mockOperationIndex,
+      { legacyStorageEnabled: true },
     );
 
     // Create job tracker
@@ -103,12 +119,17 @@ describe("ReactorClient Passthrough Functions", () => {
 
     // Create reactor facade with all required dependencies
     const readModelCoordinator = createMockReadModelCoordinator();
+    const mockDocumentIndexer = createMockDocumentIndexer();
     reactor = new Reactor(
       driveServer,
       storage,
       queue,
       jobTracker,
       readModelCoordinator,
+      createMockReactorFeatures(),
+      createMockDocumentView(),
+      mockDocumentIndexer,
+      createMockOperationStore(),
     );
 
     // Create mock signer for testing
@@ -118,8 +139,8 @@ describe("ReactorClient Passthrough Functions", () => {
 
     // Create ReactorClient using the builder
     // The builder will use default subscription manager if not provided
-    client = new ReactorClientBuilder()
-      .withReactor(reactor)
+    client = await new ReactorClientBuilder()
+      .withReactor(reactor, eventBus, mockDocumentIndexer)
       .withSigner(mockSigner)
       .build();
 
@@ -195,7 +216,13 @@ describe("ReactorClient Passthrough Functions", () => {
       const signal = new AbortController().signal;
 
       // Get result from reactor
-      const reactorResult = await reactor.find(search, view, paging, signal);
+      const reactorResult = await reactor.find(
+        search,
+        view,
+        paging,
+        undefined,
+        signal,
+      );
 
       // Get result from client
       const clientResult = await client.find(search, view, paging, signal);
@@ -247,7 +274,7 @@ describe("ReactorClient Passthrough Functions", () => {
       const signal = new AbortController().signal;
 
       // Get result from reactor
-      const reactorResult = await reactor.get(id, view, signal);
+      const reactorResult = await reactor.get(id, view, undefined, signal);
 
       // Get result from client
       const clientResult = await client.get(id, view, signal);
@@ -262,7 +289,12 @@ describe("ReactorClient Passthrough Functions", () => {
       const signal = new AbortController().signal;
 
       // Get result from reactor using getBySlug
-      const reactorResult = await reactor.getBySlug(slug, view, signal);
+      const reactorResult = await reactor.getBySlug(
+        slug,
+        view,
+        undefined,
+        signal,
+      );
 
       // Get result from client (should automatically detect this is a slug)
       const clientResult = await client.get(slug, view, signal);
@@ -318,7 +350,7 @@ describe("ReactorClient Passthrough Functions", () => {
         ];
 
         // Apply mutation through client
-        const doc = await client.mutate(documentId, actions);
+        const doc = await client.mutate(documentId, "main", actions);
 
         const { document: reactorDoc } = await reactor.get(documentId);
 

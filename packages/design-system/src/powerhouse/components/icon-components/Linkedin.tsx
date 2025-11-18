@@ -1,5 +1,5 @@
-import type { Props } from "./index.js";
-export default function Linkedin(props: Props) {
+import type { IconComponentProps } from "@powerhousedao/design-system";
+export default function Linkedin(props: IconComponentProps) {
   return (
     <svg
       {...props}

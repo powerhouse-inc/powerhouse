@@ -434,15 +434,14 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
     options.replayOptions?.operation,
   );
 
-  const isUndoAction = isUndo(action);
-
-  if (isUndoAction) {
+  // Only process undo for actual UNDO actions, not for NOOP operations
+  // NOOP operations with skip > 0 will have their clipboard populated server-side
+  if (isUndo(action)) {
     const result = processUndoOperation(
       newDocument,
       action.scope,
       customReducer,
     );
-
     return result;
   }
 
