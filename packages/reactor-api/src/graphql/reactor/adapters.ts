@@ -1,4 +1,5 @@
 import type {
+  DocumentChangeEvent,
   IReactorClient,
   JobInfo as ClientJobInfo,
   PagedResults,
@@ -13,6 +14,7 @@ import type {
 } from "document-model";
 import { GraphQLError } from "graphql";
 import type {
+  DocumentChangeEvent as GqlDocumentChangeEvent,
   DocumentModelResultPage,
   DocumentModelGlobalState as GqlDocumentModelGlobalState,
   JobInfo as GqlJobInfo,
@@ -327,4 +329,66 @@ export async function validateActions(
   }
 
   return convertedActions;
+}
+
+export function toGqlDocumentChangeEvent(
+  event: DocumentChangeEvent,
+): GqlDocumentChangeEvent {
+  const typeMap: Record<string, string> = {
+    created: "CREATED",
+    deleted: "DELETED",
+    updated: "UPDATED",
+    parent_added: "PARENT_ADDED",
+    parent_removed: "PARENT_REMOVED",
+    child_added: "CHILD_ADDED",
+    child_removed: "CHILD_REMOVED",
+  };
+
+  const mappedType = typeMap[event.type];
+  if (!mappedType) {
+    throw new GraphQLError(`Unknown document change type: ${event.type}`);
+  }
+
+  return {
+    type: mappedType as GqlDocumentChangeEvent["type"],
+    documents: event.documents.map(toGqlPhDocument),
+    context: event.context
+      ? {
+          parentId: event.context.parentId ?? null,
+          childId: event.context.childId ?? null,
+        }
+      : null,
+  };
+}
+
+export function matchesSearchFilter(
+  event: DocumentChangeEvent,
+  search: { type?: string | null; parentId?: string | null },
+): boolean {
+  if (search.type) {
+    const matchesType = event.documents.some(
+      (doc) => doc.header.documentType === search.type,
+    );
+    if (!matchesType) {
+      return false;
+    }
+  }
+
+  if (search.parentId) {
+    if (
+      !event.context?.parentId ||
+      event.context.parentId !== search.parentId
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+export function matchesJobFilter(
+  payload: { jobId: string },
+  args: { jobId: string },
+): boolean {
+  return payload.jobId === args.jobId;
 }

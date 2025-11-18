@@ -1,11 +1,24 @@
 import { childLogger } from "document-drive";
 import fs from "fs";
-import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
+import { withFilter } from "graphql-subscriptions";
 import path from "path";
 import { BaseSubgraph } from "../base-subgraph.js";
 import type { SubgraphArgs } from "../types.js";
+import {
+  matchesJobFilter,
+  matchesSearchFilter,
+  toGqlDocumentChangeEvent,
+} from "./adapters.js";
 import type { Resolvers } from "./gen/graphql.js";
+import {
+  ensureGlobalDocumentSubscription,
+  ensureJobSubscription,
+  getPubSub,
+  SUBSCRIPTION_TRIGGERS,
+  type DocumentChangesPayload,
+  type JobChangesPayload,
+} from "./pubsub.js";
 import * as resolvers from "./resolvers.js";
 
 export class ReactorSubgraph extends BaseSubgraph {
@@ -193,21 +206,60 @@ export class ReactorSubgraph extends BaseSubgraph {
 
     Subscription: {
       documentChanges: {
-        subscribe: () => {
-          // TODO: Implement using IReactorClient.subscribe
-          throw new GraphQLError("Not implemented yet");
+        subscribe: withFilter(
+          (() => {
+            this.logger.debug("documentChanges subscription started");
+            ensureGlobalDocumentSubscription(this.reactorClient);
+
+            return getPubSub().asyncIterableIterator<DocumentChangesPayload>(
+              SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES,
+            );
+          }) as any,
+          ((
+            payload: DocumentChangesPayload | undefined,
+            args: { search: { type?: string | null; parentId?: string | null } },
+          ) => {
+            if (!payload) {
+              return false;
+            }
+
+            const search = {
+              type: args.search.type ?? undefined,
+              parentId: args.search.parentId ?? undefined,
+            };
+
+            return matchesSearchFilter(payload.documentChanges, search);
+          }) as any,
+        ) as any,
+        resolve: (payload: DocumentChangesPayload) => {
+          return toGqlDocumentChangeEvent(payload.documentChanges);
         },
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-        resolve: (payload: any) => payload as any,
       },
 
       jobChanges: {
-        subscribe: () => {
-          // TODO: Implement job subscription
-          throw new GraphQLError("Not implemented yet");
+        subscribe: withFilter(
+          ((_parent: unknown, args: { jobId: string }) => {
+            this.logger.debug("jobChanges subscription", args);
+            ensureJobSubscription(this.reactorClient, args.jobId);
+
+            return getPubSub().asyncIterableIterator<JobChangesPayload>(
+              SUBSCRIPTION_TRIGGERS.JOB_CHANGES,
+            );
+          }) as any,
+          ((
+            payload: JobChangesPayload | undefined,
+            args: { jobId: string },
+          ) => {
+            if (!payload) {
+              return false;
+            }
+
+            return matchesJobFilter(payload, args);
+          }) as any,
+        ) as any,
+        resolve: (payload: JobChangesPayload) => {
+          return payload.jobChanges;
         },
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-        resolve: (payload: any) => payload as any,
       },
     },
   };
