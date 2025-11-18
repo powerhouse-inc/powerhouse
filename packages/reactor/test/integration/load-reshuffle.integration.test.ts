@@ -5,7 +5,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { JobStatus, type ConsistencyToken } from "../../src/shared/types.js";
 import { createDocModelDocument } from "../factories.js";
 
-describe("Load reshuffle integration", () => {
+/**
+ * This suite verifies that when loading operations into a reactor, the operations
+ * are reshuffled correctly to maintain consistency.
+ */
+describe("Load Reshuffles", () => {
   let reactorA: IReactor;
   let reactorB: IReactor;
 
@@ -18,13 +22,7 @@ describe("Load reshuffle integration", () => {
       .withFeatures({
         legacyStorageEnabled: false,
       })
-      .withLegacyStorage(new MemoryStorage())
-      .withReadModelCoordinatorFactory(() => {
-        return {
-          start: vi.fn(),
-          stop: vi.fn(),
-        };
-      });
+      .withLegacyStorage(new MemoryStorage());
 
     reactorA = await builderA.build();
 
@@ -36,13 +34,7 @@ describe("Load reshuffle integration", () => {
       .withFeatures({
         legacyStorageEnabled: false,
       })
-      .withLegacyStorage(new MemoryStorage())
-      .withReadModelCoordinatorFactory(() => {
-        return {
-          start: vi.fn(),
-          stop: vi.fn(),
-        };
-      });
+      .withLegacyStorage(new MemoryStorage());
 
     reactorB = await builderB.build();
   });
@@ -169,7 +161,7 @@ async function waitForJobCompletion(
     if (status.status === JobStatus.FAILED) {
       throw new Error(status.error?.message || "Job failed");
     }
-    return status.status === JobStatus.COMPLETED;
+    return status.status === JobStatus.READ_MODELS_READY;
   });
 
   const status = await reactor.getJobStatus(jobId);

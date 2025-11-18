@@ -1,5 +1,9 @@
 import { isLogLevel } from "@powerhousedao/config";
-import { ReactorBuilder, ReactorClientBuilder } from "@powerhousedao/reactor";
+import {
+  EventBus,
+  ReactorBuilder,
+  ReactorClientBuilder,
+} from "@powerhousedao/reactor";
 import {
   VitePackageLoader,
   startAPI,
@@ -127,7 +131,9 @@ const startServer = async (
 
   const driveServer = reactorBuilder.build();
 
+  const eventBus = new EventBus();
   const builder = new ReactorBuilder()
+    .withEventBus(eventBus)
     .withLegacyStorage(
       storageImpl as unknown as IDocumentStorage & IDocumentOperationStorage,
     )
@@ -135,8 +141,9 @@ const startServer = async (
       legacyStorageEnabled: true,
     });
 
-  const reactor = await builder.build();
-  const client = new ReactorClientBuilder().withReactor(reactor).build();
+  const client = await new ReactorClientBuilder()
+    .withReactorBuilder(builder)
+    .build();
 
   // init drive server + conditionally add a default drive
   await driveServer.initialize();

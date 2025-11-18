@@ -23,7 +23,7 @@ type Database = StorageDatabase &
   DocumentViewDatabase &
   DocumentIndexerDatabase;
 
-describe("Integration Test: Relationship Operations", () => {
+describe("Relationship Operations", () => {
   let reactor: IReactor;
   let storage: MemoryStorage;
   let db: Kysely<Database>;
@@ -49,7 +49,7 @@ describe("Integration Test: Relationship Operations", () => {
           throw new Error(status.error?.message || "Job failed");
         }
 
-        return status.status === JobStatus.COMPLETED;
+        return status.status === JobStatus.READ_MODELS_READY;
       },
       { timeout: 5000 },
     );
@@ -59,7 +59,7 @@ describe("Integration Test: Relationship Operations", () => {
     await vi.waitUntil(
       async () => {
         const status = await reactor.getJobStatus(jobId);
-        if (status.status === JobStatus.COMPLETED) {
+        if (status.status === JobStatus.READ_MODELS_READY) {
           throw new Error("Expected job to fail but it completed successfully");
         }
         return status.status === JobStatus.FAILED;

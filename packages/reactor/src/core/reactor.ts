@@ -33,6 +33,7 @@ import type {
   IDocumentView,
   IOperationStore,
 } from "../storage/interfaces.js";
+import type { ISyncManager } from "../sync/interfaces.js";
 import type {
   BatchMutationRequest,
   BatchMutationResult,
@@ -40,7 +41,6 @@ import type {
   ReactorFeatures,
 } from "./types.js";
 import {
-  filterByParentId,
   filterByType,
   getSharedScope,
   toErrorInfo,
@@ -63,8 +63,9 @@ export class Reactor implements IReactor {
   private readModelCoordinator: IReadModelCoordinator;
   private features: ReactorFeatures;
   private documentView: IDocumentView;
-  private documentIndexer: IDocumentIndexer;
+  private _documentIndexer: IDocumentIndexer;
   private operationStore: IOperationStore;
+  private _syncManager?: ISyncManager;
 
   constructor(
     driveServer: BaseDocumentDriveServer,
@@ -85,16 +86,23 @@ export class Reactor implements IReactor {
     this.readModelCoordinator = readModelCoordinator;
     this.features = features;
     this.documentView = documentView;
-    this.documentIndexer = documentIndexer;
+    this._documentIndexer = documentIndexer;
     this.operationStore = operationStore;
-
-    // Start the read model coordinator
-    this.readModelCoordinator.start();
 
     // Create mutable shutdown status using factory method
     const [status, setter] = createMutableShutdownStatus(false);
     this.shutdownStatus = status;
     this.setShutdown = setter;
+
+    this.readModelCoordinator.start();
+  }
+
+  get syncManager(): ISyncManager | undefined {
+    return this._syncManager;
+  }
+
+  setSync(syncManager: ISyncManager): void {
+    this._syncManager = syncManager;
   }
 
   /**
@@ -104,11 +112,16 @@ export class Reactor implements IReactor {
     // Mark the reactor as shutdown
     this.setShutdown(true);
 
+    // Stop the sync manager if enabled
+    if (this._syncManager) {
+      this._syncManager.shutdown();
+    }
+
     // Stop the read model coordinator
     this.readModelCoordinator.stop();
 
-    // TODO: Phase 3+ - Implement graceful shutdown for queue, executors, etc.
-    // For now, we just mark as shutdown and return status
+    // Stop the job tracker
+    this.jobTracker.shutdown();
 
     return this.shutdownStatus;
   }
@@ -204,7 +217,7 @@ export class Reactor implements IReactor {
         throw new AbortError();
       }
 
-      const relationships = await this.documentIndexer.getOutgoing(
+      const relationships = await this._documentIndexer.getOutgoing(
         id,
         ["child"],
         consistencyToken,
@@ -271,6 +284,79 @@ export class Reactor implements IReactor {
         consistencyToken,
         signal,
       );
+    }
+  }
+
+  /**
+   * Retrieves a specific PHDocument by identifier (either id or slug)
+   */
+  async getByIdOrSlug<TDocument extends PHDocument>(
+    identifier: string,
+    view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<{
+    document: TDocument;
+    childIds: string[];
+  }> {
+    if (this.features.legacyStorageEnabled) {
+      try {
+        return await this.get<TDocument>(
+          identifier,
+          view,
+          consistencyToken,
+          signal,
+        );
+      } catch {
+        try {
+          const ids = await this.documentStorage.resolveIds(
+            [identifier],
+            signal,
+          );
+
+          if (ids.length === 0 || !ids[0]) {
+            throw new Error(`Document not found: ${identifier}`);
+          }
+
+          return await this.get<TDocument>(
+            ids[0],
+            view,
+            consistencyToken,
+            signal,
+          );
+        } catch {
+          throw new Error(`Document not found: ${identifier}`);
+        }
+      }
+    } else {
+      const document = await this.documentView.getByIdOrSlug<TDocument>(
+        identifier,
+        view,
+        consistencyToken,
+        signal,
+      );
+
+      if (signal?.aborted) {
+        throw new AbortError();
+      }
+
+      const relationships = await this._documentIndexer.getOutgoing(
+        document.header.id,
+        ["child"],
+        consistencyToken,
+        signal,
+      );
+
+      if (signal?.aborted) {
+        throw new AbortError();
+      }
+
+      const childIds = relationships.map((rel) => rel.targetId);
+
+      return {
+        document,
+        childIds,
+      };
     }
   }
 
@@ -412,10 +498,6 @@ export class Reactor implements IReactor {
         signal,
       );
 
-      if (search.parentId) {
-        results = filterByParentId(results, search.parentId);
-      }
-
       if (search.type) {
         results = filterByType(results, search.type);
       }
@@ -427,10 +509,6 @@ export class Reactor implements IReactor {
         consistencyToken,
         signal,
       );
-
-      if (search.parentId) {
-        results = filterByParentId(results, search.parentId);
-      }
 
       if (search.type) {
         results = filterByType(results, search.type);
@@ -1203,132 +1281,81 @@ export class Reactor implements IReactor {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
-    if (this.features.legacyStorageEnabled) {
-      // Get child document IDs from storage
-      const childIds = await this.documentStorage.getChildren(parentId);
+    // Get child relationships from indexer
+    const relationships = await this._documentIndexer.getOutgoing(
+      parentId,
+      ["child"],
+      undefined,
+      signal,
+    );
 
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    const documents: PHDocument[] = [];
+
+    // Fetch each child document using the appropriate storage method
+    for (const relationship of relationships) {
       if (signal?.aborted) {
         throw new AbortError();
       }
 
-      const documents: PHDocument[] = [];
-
-      // Fetch each child document
-      for (const childId of childIds) {
-        if (signal?.aborted) {
-          throw new AbortError();
-        }
-
+      try {
         let document: PHDocument;
-        try {
-          document = await this.documentStorage.get<PHDocument>(childId);
-        } catch {
-          // Skip documents that don't exist or can't be accessed
-          // This matches the behavior expected from a search operation
-          continue;
-        }
+        if (this.features.legacyStorageEnabled) {
+          document = await this.documentStorage.get<PHDocument>(
+            relationship.targetId,
+          );
 
-        // Apply view filter - This will be removed when we pass the viewfilter along
-        // to the underlying store, but is here now for the interface.
-        for (const scope in document.state) {
-          if (!matchesScope(view, scope)) {
-            delete document.state[scope as keyof PHBaseState];
+          // Apply view filter for legacy storage
+          for (const scope in document.state) {
+            if (!matchesScope(view, scope)) {
+              delete document.state[scope as keyof PHBaseState];
+            }
           }
-        }
-
-        documents.push(document);
-      }
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      // Apply paging
-      const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-      const limit = paging?.limit || documents.length;
-      const pagedDocuments = documents.slice(startIndex, startIndex + limit);
-
-      // Create paged results
-      const hasMore = startIndex + limit < documents.length;
-      const nextCursor = hasMore ? String(startIndex + limit) : undefined;
-
-      return {
-        results: pagedDocuments,
-        options: paging || { cursor: "0", limit: documents.length },
-        nextCursor,
-        next: hasMore
-          ? () =>
-              this.findByParentId(
-                parentId,
-                view,
-                { cursor: nextCursor!, limit },
-                signal,
-              )
-          : undefined,
-      };
-    } else {
-      // Get child relationships from indexer
-      const relationships = await this.documentIndexer.getOutgoing(
-        parentId,
-        ["child"],
-        undefined,
-        signal,
-      );
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      const documents: PHDocument[] = [];
-
-      // Fetch each child document
-      for (const relationship of relationships) {
-        if (signal?.aborted) {
-          throw new AbortError();
-        }
-
-        try {
-          const document = await this.documentView.get<PHDocument>(
+        } else {
+          document = await this.documentView.get<PHDocument>(
             relationship.targetId,
             view,
             undefined,
             signal,
           );
-          documents.push(document);
-        } catch {
-          // Skip documents that don't exist or can't be accessed
-          continue;
         }
+        documents.push(document);
+      } catch {
+        // Skip documents that don't exist or can't be accessed
+        continue;
       }
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      // Apply paging
-      const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-      const limit = paging?.limit || documents.length;
-      const pagedDocuments = documents.slice(startIndex, startIndex + limit);
-
-      // Create paged results
-      const hasMore = startIndex + limit < documents.length;
-      const nextCursor = hasMore ? String(startIndex + limit) : undefined;
-
-      return {
-        results: pagedDocuments,
-        options: paging || { cursor: "0", limit: documents.length },
-        nextCursor,
-        next: hasMore
-          ? () =>
-              this.findByParentId(
-                parentId,
-                view,
-                { cursor: nextCursor!, limit },
-                signal,
-              )
-          : undefined,
-      };
     }
+
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    // Apply paging
+    const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
+    const limit = paging?.limit || documents.length;
+    const pagedDocuments = documents.slice(startIndex, startIndex + limit);
+
+    // Create paged results
+    const hasMore = startIndex + limit < documents.length;
+    const nextCursor = hasMore ? String(startIndex + limit) : undefined;
+
+    return {
+      results: pagedDocuments,
+      options: paging || { cursor: "0", limit: documents.length },
+      nextCursor,
+      next: hasMore
+        ? () =>
+            this.findByParentId(
+              parentId,
+              view,
+              { cursor: nextCursor!, limit },
+              signal,
+            )
+        : undefined,
+    };
   }
 
   /**

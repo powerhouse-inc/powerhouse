@@ -432,7 +432,7 @@ type SyncEnvelope = {
 
 ### `IChannel`
 
-Every `IChannel` has three mailboxes that hold `JobHandle` objects (which are defined below):
+Every `IChannel` has three mailboxes that hold `SyncOperation` objects (which are defined below):
 
 1. **Inbox:** Operations received from remote (awaiting local execution)
 2. **Outbox:** Operations sent to remote (awaiting remote confirmation)
@@ -443,17 +443,17 @@ interface IChannel {
   /**
    * The incoming queue of operations that need to be applied to the local reactor.
    */
-  inbox: Mailbox<JobHandle>;
+  inbox: Mailbox<SyncOperation>;
 
   /**
    * The outgoing queue of operations being applied to the remote reactor.
    */
-  outbox: Mailbox<JobHandle>;
+  outbox: Mailbox<SyncOperation>;
 
   /**
    * The dead letter queue of operations that have failed for any reason.
    */
-  deadLetter: Mailbox<JobHandle>;
+  deadLetter: Mailbox<SyncOperation>;
 }
 ```
 
@@ -495,25 +495,25 @@ class Mailbox {
 }
 ```
 
-### `JobHandle`
+### `SyncOperation`
 
-The `JobHandle` is the mutable data structure that tracks execution of a set of operations. They are named `JobHandle` because they follow the atomicity guarantees of `Job`s.
+The `SyncOperation` is the mutable data structure that tracks execution of a set of operations through the sync pipeline.
 
 ```ts
-enum JobChannelStatus {
-  /** The job status is not known */
+enum SyncOperationStatus {
+  /** The sync operation status is not known */
   Unknown = -1,
 
-  /** The job is being transported */
+  /** The sync operation is being transported */
   TransportPending,
 
-  /** The job is being executed */
+  /** The sync operation is being executed */
   ExecutionPending,
 
-  /** The job has been applied */
+  /** The sync operation has been applied */
   Applied,
 
-  /** The job has failed */
+  /** The sync operation has failed */
   Error,
 }
 
@@ -547,65 +547,65 @@ class ChannelError extends Error {
   }
 }
 
-class JobHandle {
-  /** The unique id of the job */
+class SyncOperation {
+  /** The unique id of the sync operation */
   id: string;
 
-  /** Remote name associated with this job (source for inbox, destination for outbox) */
+  /** Remote name associated with this sync operation (source for inbox, destination for outbox) */
   remoteName: string;
 
-  /** The document id that the job is operating on */
+  /** The document id that the sync operation is operating on */
   documentId: string;
 
   /** The scopes affected */
   scopes: string[];
 
-  /** The branch that the job is operating on */
+  /** The branch that the sync operation is operating on */
   branch: string;
 
   /** The operations */
   operations: OperationWithContext[];
 
-  /** The status of the job */
-  status: JobChannelStatus = JobChannelStatus.Unknown;
+  /** The status of the sync operation */
+  status: SyncOperationStatus = SyncOperationStatus.Unknown;
 
   /** The error that occurred, if any */
   error?: ChannelError;
 
   /**
-   * Subscribes to changes in the job status.
+   * Subscribes to changes in the sync operation status.
    */
   on(
     callback: (
-      job: JobHandle,
-      prev: JobChannelStatus,
-      next: JobChannelStatus,
+      syncOp: SyncOperation,
+      prev: SyncOperationStatus,
+      next: SyncOperationStatus,
     ) => void,
   ): void;
 
   /**
-   * Moves job from Unknown to TransportPending.
+   * Moves sync operation from Unknown to TransportPending.
    */
   started(): void;
 
   /**
-   * Moves job from TransportPending to ExecutionPending.
+   * Moves sync operation from TransportPending to ExecutionPending.
    */
   transported(): void;
 
   /**
-   * Moves job from ExecutionPending to Applied.
+   * Moves sync operation from ExecutionPending to Applied.
    */
   executed(): void;
 
   /**
-   * Moves job from any state to Error.
+   * Moves sync operation from any state to Error.
    */
   failed(error: ChannelError): void;
 }
 ```
 
-A `JobHandle` represents a unit of work (one or more operations for a single document/branch):
+A `SyncOperation` represents a unit of work (one or more operations for a single document/branch):
 
 ```mermaid
 stateDiagram-v2
@@ -620,14 +620,44 @@ stateDiagram-v2
 ```
 
 **State transitions:**
-- `Unknown` → `TransportPending`: Job entered channel, transport layer activated
-- `TransportPending` → `ExecutionPending`: Job sent, queued for execution
-- `ExecutionPending` → `Applied`: Job executed successfully, operations appended to history
+- `Unknown` → `TransportPending`: Sync operation entered channel, transport layer activated
+- `TransportPending` → `ExecutionPending`: Sync operation sent, queued for execution
+- `ExecutionPending` → `Applied`: Sync operation executed successfully, operations appended to history
 - Any state → `Error`: Failure occurred (signature invalid, hash mismatch, library error, etc.)
 
 ### ACK Protocol
 
-The ACK flow is described in Pull, Push, and Ping-Pong flows above. Essentially, the receiver sends an ACK, which removes the job from the outbox of the original sender. It indicates an ACK by using the `type` field of the `SyncEnvelope`.
+The ACK flow is described in Pull, Push, and Ping-Pong flows above. Essentially, the receiver sends an ACK, which removes the sync operation from the outbox of the original sender. It indicates an ACK by using the `type` field of the `SyncEnvelope`.
+
+## Read Model Integration
+
+When operations are loaded via `reactor.load()` (either from local mutations or synced from remotes), they flow through the reactor's event system to update read models:
+
+### Event Flow
+
+1. **OPERATION_WRITTEN** - Emitted after operations are written to the operation store
+   - Triggered by: `SimpleJobExecutor` after successful job completion
+   - Subscribers: `SyncManager` (for outbound sync), `ReadModelCoordinator` (for read model updates)
+   - Payload: `{ operations: OperationWithContext[] }`
+
+2. **OPERATIONS_READY** - Emitted after all read models have finished indexing
+   - Triggered by: `ReadModelCoordinator` after all read models complete `indexOperations()`
+   - Guarantees: All read models (DocumentView, DocumentIndexer, etc.) have processed the operations
+   - Payload: `{ operations: OperationWithContext[] }`
+   - Use cases: Test synchronization, observability, event-driven workflows
+
+### Read-After-Write Consistency
+
+For production code requiring read-after-write consistency across the write/read boundary:
+
+- **Use consistency tokens**: Pass the `JobInfo.consistencyToken` from completed jobs to query methods (`reactor.get()`, `reactor.find()`, etc.)
+- **Tokens guarantee**: Queries block until read models have indexed up to the specified operation indices
+
+For test code where deterministic ordering is sufficient:
+
+- **Use OPERATIONS_READY event**: Subscribe to know when read models have finished processing
+- **Simpler than tokens**: No need to track job completion or extract tokens
+- **Event-driven**: Natural fit for test frameworks using async/await
 
 ## Error Handling and Recovery
 
@@ -657,10 +687,10 @@ type JobErrorType =
 | Error Type | Source: Inbox | Source: Outbox | Source: Channel |
 |---|---|---|---|
 | **SIGNATURE_INVALID** | Mark remote invalid, disable remote | Mark remote invalid, disable remote | N/A |
-| **HASH_MISMATCH** | Create branch, reapply operation, push to remote | Discard job (remote handles) | N/A |
-| **LIBRARY_ERROR** | Create branch, reapply operation, push to remote | Discard job (remote handles) | N/A |
-| **MISSING_OPERATIONS** | Discard job | Pull missing operations, resend | N/A |
-| **EXCESSIVE_SHUFFLE** | Pull latest, rebase, re-queue as new job | Notify remote to rebase | N/A |
+| **HASH_MISMATCH** | Create branch, reapply operation, push to remote | Discard sync operation (remote handles) | N/A |
+| **LIBRARY_ERROR** | Create branch, reapply operation, push to remote | Discard sync operation (remote handles) | N/A |
+| **MISSING_OPERATIONS** | Discard sync operation | Pull missing operations, resend | N/A |
+| **EXCESSIVE_SHUFFLE** | Pull latest, rebase, re-queue as new sync operation | Notify remote to rebase | N/A |
 | **GRACEFUL_ABORT** | Discard, catch up next cycle | Discard, catch up next cycle | Discard, catch up next cycle |
 | **Transport Failure** | N/A | N/A | Retry with backoff, then disable |
 

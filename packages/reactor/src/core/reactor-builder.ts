@@ -25,6 +25,7 @@ import { KyselyDocumentIndexer } from "../storage/kysely/document-indexer.js";
 import { KyselyKeyframeStore } from "../storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../storage/kysely/store.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
+import type { SyncBuilder } from "../sync/sync-builder.js";
 import { Reactor } from "./reactor.js";
 import type {
   Database,
@@ -34,6 +35,7 @@ import type {
 } from "./types.js";
 
 import type { IJobExecutorManager } from "#executor/interfaces.js";
+import type { IDocumentIndexer } from "#storage/interfaces.js";
 import { Kysely } from "kysely";
 import { KyselyPGlite } from "kysely-pglite";
 import type { IEventBus } from "../events/interfaces.js";
@@ -56,6 +58,9 @@ export class ReactorBuilder {
   private writeCacheConfig?: Partial<WriteCacheConfig>;
   private readModelCoordinatorFactory?: IReadModelCoordinatorFactory;
   private migrationStrategy: MigrationStrategy = "auto";
+  private syncBuilder?: SyncBuilder;
+  private eventBus?: IEventBus;
+  public documentIndexer?: IDocumentIndexer;
 
   withDocumentModels(models: DocumentModelModule[]): this {
     this.documentModels = models;
@@ -104,6 +109,20 @@ export class ReactorBuilder {
     return this;
   }
 
+  withSync(syncBuilder: SyncBuilder): this {
+    this.syncBuilder = syncBuilder;
+    return this;
+  }
+
+  withEventBus(eventBus: IEventBus): this {
+    this.eventBus = eventBus;
+    return this;
+  }
+
+  get events(): IEventBus | undefined {
+    return this.eventBus;
+  }
+
   async build(): Promise<IReactor> {
     const storage = this.storage || new MemoryStorage();
 
@@ -137,9 +156,9 @@ export class ReactorBuilder {
       db as unknown as Kysely<StorageDatabase>,
     );
 
-    const eventBus = new EventBus();
+    const eventBus = this.eventBus || new EventBus();
     const queue = new InMemoryQueue(eventBus);
-    const jobTracker = new InMemoryJobTracker();
+    const jobTracker = new InMemoryJobTracker(eventBus);
 
     const cacheConfig: WriteCacheConfig = {
       maxDocuments: this.writeCacheConfig?.maxDocuments ?? 100,
@@ -195,21 +214,20 @@ export class ReactorBuilder {
     readModelInstances.push(documentView);
 
     const documentIndexerConsistencyTracker = new ConsistencyTracker();
-    const documentIndexer = new KyselyDocumentIndexer(
+    this.documentIndexer = new KyselyDocumentIndexer(
       // @ts-expect-error - Database type is a superset that includes all required tables
       db,
       operationStore,
       documentIndexerConsistencyTracker,
     );
-    await documentIndexer.init();
-    readModelInstances.push(documentIndexer);
+    await this.documentIndexer.init();
+    readModelInstances.push(this.documentIndexer);
 
     const readModelCoordinator = this.readModelCoordinatorFactory
       ? this.readModelCoordinatorFactory(eventBus, readModelInstances)
       : new ReadModelCoordinator(eventBus, readModelInstances);
-    readModelCoordinator.start();
 
-    return new Reactor(
+    const reactor = new Reactor(
       driveServer,
       storage,
       queue,
@@ -217,8 +235,21 @@ export class ReactorBuilder {
       readModelCoordinator,
       this.features,
       documentView,
-      documentIndexer,
+      this.documentIndexer,
       operationStore,
     );
+
+    if (this.syncBuilder) {
+      const syncManager = this.syncBuilder.build(
+        reactor,
+        operationIndex,
+        eventBus,
+        db as unknown as Kysely<StorageDatabase>,
+      );
+      reactor.setSync(syncManager);
+      await syncManager.startup();
+    }
+
+    return reactor;
   }
 }

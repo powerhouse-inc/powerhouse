@@ -21,6 +21,7 @@ import type {
   DocumentIndexerDatabase,
   Database as StorageDatabase,
 } from "../storage/kysely/types.js";
+import type { ISyncManager } from "../sync/interfaces.js";
 
 /**
  * A single mutation job within a batch request.
@@ -56,6 +57,11 @@ export type BatchMutationResult = {
  * Phase 2 of the refactoring plan: IReactor Facade (Strangler Fig Pattern)
  */
 export interface IReactor {
+  /**
+   * Gets the sync manager if synchronization is enabled.
+   */
+  get syncManager(): ISyncManager | undefined;
+
   /**
    * Signals that the reactor should shutdown.
    */
@@ -105,6 +111,27 @@ export interface IReactor {
    */
   getBySlug<TDocument extends PHDocument>(
     slug: string,
+    view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<{
+    document: TDocument;
+    childIds: string[];
+  }>;
+
+  /**
+   * Retrieves a specific PHDocument by identifier (either id or slug).
+   * Throws an error if the identifier matches both an id and a slug that refer to different documents.
+   *
+   * @param identifier - Required, this is the document id or slug
+   * @param view - Optional filter containing branch and scopes information
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The up-to-date PHDocument with scopes and list of child document ids
+   * @throws {Error} If identifier matches both an ID and slug referring to different documents
+   */
+  getByIdOrSlug<TDocument extends PHDocument>(
+    identifier: string,
     view?: ViewFilter,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,

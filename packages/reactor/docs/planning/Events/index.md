@@ -11,6 +11,20 @@ The `IEventBus` is an async pub/sub mechanism. We can use an event bus to de-dup
 - Does NOT require idempotent subscribers.
 - Does NOT retry.
 
+### Event Types
+
+The event bus supports several categories of events:
+
+#### Operation Events (10001-10099)
+
+- **OPERATION_WRITTEN (10001)**: Emitted when operations are written to IOperationStore
+- **OPERATIONS_READY (10002)**: Emitted after all read models have finished processing operations
+- **JOB_FAILED (10003)**: Emitted when a job fails with an unrecoverable error
+
+See [Operation Events Documentation](../ReadModels/coordinator.md) for detailed information about OPERATION_WRITTEN and OPERATIONS_READY.
+
+See [Job Awaiter Documentation](../Jobs/job-awaiter.md) for information about JOB_FAILED and job lifecycle events.
+
 ### Persistence
 
 The `IEventBus` is an in-memory implementation that does not persist events. Instead, the `IQueue` provides durability guarantees at the `Job` level.

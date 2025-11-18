@@ -45,8 +45,39 @@ type ConsistencyToken = {
 
 - Reactor write APIs (e.g., `mutate`, `load`, `create`) register a job and return a freshly created `JobInfo`.
 - At this point the job is typically `PENDING` (though not guaranteed to be) and its `consistencyToken.coordinates` array is empty because no operations have been committed yet.
-- Once the executor marks the job `COMPLETED`, the tracker overwrites the same `JobInfo` with the final timestamps, result metadata, error history (if any), and the fully populated token.
-- Callers MUST wait for the completion event—either by polling `getJobStatus`, subscribing to job events, or calling `JobTracker.watch`—before relying on the token. Reading the `JobInfo` that was returned during queuing is a race and will almost always expose an empty coordinate list.
+- As the job executes, it transitions through multiple states that align with operation events:
+  - `PENDING` → `RUNNING` → `WRITE_COMPLETED` → `READ_MODELS_READY`
+  - Or on failure: `PENDING` → `RUNNING` → `FAILED`
+- The consistency token is populated once the job reaches `WRITE_COMPLETED`, when the `OPERATION_WRITTEN` event fires. This token captures the write-side state (the highest operation indices that were written), not the read-side state.
+- Once the job reaches a terminal state (`READ_MODELS_READY`, or `FAILED`), the tracker updates the `JobInfo` with the final timestamps, result metadata, and error history (if any).
+- Callers MUST wait for the `WRITE_COMPLETED` event (or later)—either by using the [JobAwaiter](./job-awaiter.md), polling `getJobStatus`, or subscribing to job events—before relying on the token. Reading the `JobInfo` that was returned during queuing is a race and will almost always expose an empty coordinate list.
+
+### Job Status States
+
+Jobs transition through multiple states that align with operation events:
+
+```typescript
+enum JobStatus {
+  PENDING = "PENDING",                    // Job queued, not started
+  RUNNING = "RUNNING",                     // Job execution started
+  WRITE_COMPLETED = "WRITE_COMPLETED",     // Operations written (OPERATION_WRITTEN event)
+  READ_MODELS_READY = "READ_MODELS_READY", // Read models indexed (OPERATIONS_READY event)
+  FAILED = "FAILED",                       // Job failed (JOB_FAILED event)
+}
+```
+
+**State Transitions**:
+- Successful: `PENDING` → `RUNNING` → `WRITE_COMPLETED` → `READ_MODELS_READY`
+- Failed: `PENDING` → `RUNNING` → `FAILED`
+
+**Event Alignment**:
+| Job Status | Event | Description |
+|------------|-------|-------------|
+| `WRITE_COMPLETED` | `OPERATION_WRITTEN` (10001) | Operations persisted to IOperationStore |
+| `READ_MODELS_READY` | `OPERATIONS_READY` (10002) | Read models updated, queries will see data |
+| `FAILED` | `JOB_FAILED` (10003) | Unrecoverable error occurred |
+
+See [Job Awaiter Documentation](./job-awaiter.md) for details on event-driven job waiting.
 
 ### Read-After-Write Flow
 

@@ -58,6 +58,9 @@ jobs:
       - name: Install deps (frozen lockfile)
         run: pnpm install:ci
 
+      - name: Generate pre-build files
+        run: pnpm generate-prebuild-files
+
       - name: Build typescript project
         run: pnpm tsc:build
 

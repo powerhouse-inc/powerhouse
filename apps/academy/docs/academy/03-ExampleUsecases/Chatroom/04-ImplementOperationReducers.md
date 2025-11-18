@@ -22,7 +22,7 @@ To write the opearation reducers of the `ChatRoom` document model, you need to g
 To do this, run the following command in the terminal:
 
 ```bash
-ph generate ChatRoom.phdm.zip
+ph generate ChatRoom.phdm.phd
 ```
 
 You will see that this action created a range of files for you. Before diving in we'll look at this simple schema to make you familiar with the structure you've defined in the document model once more. It shows how each type is connected to the next one.
@@ -47,97 +47,95 @@ Open the `general-operations.ts` file and you should see the code that needs to 
  * - delete the file and run the code generator again to have it reset
  */
 
-import { ChatRoomAddMessageOperations } from "../../gen/add-message/operations";
-import { MessageContentCannotBeEmpty } from "../../gen/add-message/error";
+import { MessageContentCannotBeEmpty } from "../../gen/general-operations/error.js";
+import type { ChatRoomGeneralOperationsOperations } from "chatroom/document-models/chat-room";
 
-export const reducer: ChatRoomAddMessageOperations = {
-  addMessageOperation(state, action, dispatch) {
-    if (action.input.content === "") {
-      throw new MessageContentCannotBeEmpty(); // Your reducer exception is used here as a custom error.
-    }
-
-    state.messages.push({
-      id: action.input.messageId,
-      content: action.input.content,
-      sender: action.input.sender,
-      sentAt: action.input.sentAt,
-      reactions: [],
-    });
-  },
-  addEmojiReactionOperation(state, action, dispatch) {
-    const message = state.messages.find(
-      (message) => message.id === action.input.messageId, // the reducer checks the existence of the message you want to react to.
-    );
-
-    if (!message) {
-      throw new Error("Message not found");
-    }
-
-    const reactions = message.reactions || [];
-
-    const existingReaction = reactions.find(
-      (reaction) => reaction.type === action.input.type,
-    );
-
-    if (existingReaction) {
-      // if the message reaction exists a new reactedBy gets added.
-      message.reactions = reactions.map((reaction) => {
-        if (reaction.type === action.input.type) {
-          return {
-            ...reaction,
-            reactedBy: [...reaction.reactedBy, action.input.reactedBy],
-          };
-        }
-
-        return reaction;
-      });
-    } else {
-      message.reactions = [
-        ...reactions,
-        {
-          reactedBy: [action.input.reactedBy], // if the message reaction doesn't exist yet a new reaction gets created
-          type: action.input.type,
-        },
-      ];
-    }
-
-    state.messages = state.messages.map((_message) => {
-      // the state of the chatroom documents messages gets updated
-      if (_message.id === message.id) {
-        return message;
+export const chatRoomGeneralOperationsOperations: ChatRoomGeneralOperationsOperations =
+  {
+    addMessageOperation(state, action) {
+      if (action.input.content === "") {
+        throw new MessageContentCannotBeEmpty();
       }
 
-      return _message;
-    });
-  },
-  removeEmojiReactionOperation(state, action, dispatch) {
-    // To remove a reaction the address is removed from the reactedBy object in the reactions type.
-    state.messages = state.messages.map((message) => {
-      if (message.id === action.input.messageId) {
-        message.reactions = (message.reactions || []).map((reaction) => {
-          if (reaction.type === action.input.type) {
-            return {
-              ...reaction,
-              reactedBy: reaction.reactedBy.filter(
-                (reactedBy) => reactedBy !== action.input.senderId, // We're removing the sender of the reaction from the the reactedBy object
-              ),
-            };
-          }
+      const newMessage = {
+        id: action.input.messageId,
+        sender: {
+          id: action.input.sender.id,
+          name: action.input.sender.name || null,
+          avatarUrl: action.input.sender.avatarUrl || null,
+        },
+        content: action.input.content,
+        sentAt: action.input.sentAt,
+        reactions: [],
+      };
 
-          return reaction;
+      state.messages.push(newMessage);
+    },
+    addEmojiReactionOperation(state, action) {
+      const message = state.messages.find(
+        (m) => m.id === action.input.messageId,
+      );
+      if (!message) {
+        return state;
+      }
+
+      if (!message.reactions) {
+        message.reactions = [];
+      }
+
+      const existingReaction = message.reactions.find(
+        (r) => r.type === action.input.type,
+      );
+
+      if (existingReaction) {
+        if (!existingReaction.reactedBy.includes(action.input.reactedBy)) {
+          existingReaction.reactedBy.push(action.input.reactedBy);
+        }
+      } else {
+        message.reactions.push({
+          type: action.input.type,
+          reactedBy: [action.input.reactedBy],
         });
       }
+    },
+    removeEmojiReactionOperation(state, action) {
+      const message = state.messages.find(
+        (m) => m.id === action.input.messageId,
+      );
+      if (!message) {
+        return state;
+      }
 
-      return message; // We're updating the document state with our changes
-    });
-  },
-  editChatNameOperation(state, action, dispatch) {
-    state.name = action.input.name || "";
-  },
-  editChatDescriptionOperation(state, action, dispatch) {
-    state.description = action.input.description || "";
-  },
-};
+      if (!message.reactions) {
+        return;
+      }
+
+      const reactionIndex = message.reactions.findIndex(
+        (r) => r.type === action.input.type,
+      );
+      if (reactionIndex === -1) {
+        return;
+      }
+
+      const reaction = message.reactions[reactionIndex];
+      const userIndex = reaction.reactedBy.indexOf(action.input.senderId);
+
+      if (userIndex !== -1) {
+        reaction.reactedBy.splice(userIndex, 1);
+
+        if (reaction.reactedBy.length === 0) {
+          message.reactions.splice(reactionIndex, 1);
+        }
+      }
+    },
+    editChatNameOperation(state, action) {
+      state.name = action.input.name || "";
+    },
+    editChatDescriptionOperation(state, action) {
+      state.description = action.input.description || "";
+    },
+  };
+
 ```
 
 ## Write the Operation Reducers Tests
@@ -156,34 +154,38 @@ Here are the tests for the five operations written in the reducers file.
  * - change it by adding new tests or modifying the existing ones
  */
 
-import { generateMock } from "@powerhousedao/codegen";
-import { utils as documentModelUtils } from "document-model/document";
-
-import utils from "../../gen/utils";
+import { describe, it, expect, beforeEach } from "vitest";
+import { generateId } from "document-model/core";
 import {
-  z,
+  reducer,
+  utils,
+  addMessage,
+  addEmojiReaction,
+  removeEmojiReaction,
+  editChatName,
+  editChatDescription,
+} from "../../gen/index.js";
+import type {
+  ChatRoomDocument,
   AddMessageInput,
   AddEmojiReactionInput,
   RemoveEmojiReactionInput,
   EditChatNameInput,
   EditChatDescriptionInput,
-} from "../../gen/schema";
-import { reducer } from "../../gen/reducer";
-import * as creators from "../../gen/add-message/creators";
-import { ChatRoomDocument } from "../../gen/types";
+} from "../../gen/types.js";
 
-describe("AddMessage Operations", () => {
+describe("GeneralOperations Operations", () => {
   let document: ChatRoomDocument;
 
   beforeEach(() => {
     document = utils.createDocument();
   });
 
-  const addMessage = (): [ChatRoomDocument, AddMessageInput] => {
-    // This is a helper function for our upcoming test
+  const addMessageHelper = (): [ChatRoomDocument, AddMessageInput] => {
+    // This is a helper function for our upcoming tests
     const input: AddMessageInput = {
       content: "Hello, World!",
-      messageId: documentModelUtils.hashKey(),
+      messageId: generateId(),
       sender: {
         id: "anon-user",
         name: null,
@@ -192,17 +194,21 @@ describe("AddMessage Operations", () => {
       sentAt: new Date().toISOString(),
     };
 
-    const updatedDocument = reducer(document, creators.addMessage(input));
+    const updatedDocument = reducer(document, addMessage(input));
 
     return [updatedDocument, input];
   };
 
   it("should handle addMessage operation", () => {
-    const [updatedDocument, input] = addMessage();
+    const [updatedDocument, input] = addMessageHelper();
 
     expect(updatedDocument.operations.global).toHaveLength(1); // We're validating that the message is being added to the operations history
-    expect(updatedDocument.operations.global[0].type).toBe("ADD_MESSAGE");
-    expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "ADD_MESSAGE",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
 
     expect(updatedDocument.state.global.messages).toHaveLength(1); // We're validating that the message is present in the message state of the document
@@ -217,7 +223,7 @@ describe("AddMessage Operations", () => {
 
   it("should handle addEmojiReaction operation", () => {
     // We're validating that we can react using an emoji with a helper function
-    const [doc, addMessageInput] = addMessage();
+    const [doc, addMessageInput] = addMessageHelper();
 
     let updatedDocument = doc;
 
@@ -229,14 +235,14 @@ describe("AddMessage Operations", () => {
 
     updatedDocument = reducer(
       updatedDocument,
-      creators.addEmojiReaction(addEmojiReactionInput),
+      addEmojiReaction(addEmojiReactionInput),
     );
 
     expect(updatedDocument.operations.global).toHaveLength(2); // We're validating that the emoji reaction is added to the operation history of the doc.
-    expect(updatedDocument.operations.global[1].type).toBe(
+    expect(updatedDocument.operations.global[1].action.type).toBe(
       "ADD_EMOJI_REACTION",
     );
-    expect(updatedDocument.operations.global[1].input).toStrictEqual(
+    expect(updatedDocument.operations.global[1].action.input).toStrictEqual(
       addEmojiReactionInput,
     );
     expect(updatedDocument.operations.global[1].index).toEqual(1);
@@ -251,28 +257,25 @@ describe("AddMessage Operations", () => {
   });
 
   it("should handle addEmojiReaction operation to a non existing message", () => {
-    // We're testing that an error is thrown when reacting to a non-existing message
+    // We're testing that the state doesn't change when reacting to a non-existing message
     const input: AddEmojiReactionInput = {
       messageId: "invalid-message-id",
       reactedBy: "anon-user",
       type: "THUMBS_UP",
     };
 
-    const updatedDocument = reducer(document, creators.addEmojiReaction(input));
+    const updatedDocument = reducer(document, addEmojiReaction(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].type).toBe(
+    expect(updatedDocument.operations.global[0].action.type).toBe(
       "ADD_EMOJI_REACTION",
-    );
-    expect(updatedDocument.operations.global[0].error).toBe(
-      "Message not found",
     );
     expect(updatedDocument.state.global.messages).toHaveLength(0);
   });
 
   it("should handle removeEmojiReaction operation", () => {
     // We're making use of a helper function to check if we can remove an EmojiReaction
-    const [doc, addMessageInput] = addMessage();
+    const [doc, addMessageInput] = addMessageHelper();
 
     let updatedDocument = doc;
 
@@ -284,7 +287,7 @@ describe("AddMessage Operations", () => {
 
     updatedDocument = reducer(
       updatedDocument,
-      creators.addEmojiReaction(addEmojiReactionInput),
+      addEmojiReaction(addEmojiReactionInput),
     );
 
     const input: RemoveEmojiReactionInput = {
@@ -294,22 +297,19 @@ describe("AddMessage Operations", () => {
       type: "THUMBS_UP",
     };
 
-    updatedDocument = reducer(
-      updatedDocument,
-      creators.removeEmojiReaction(input),
-    );
+    updatedDocument = reducer(updatedDocument, removeEmojiReaction(input));
 
     expect(updatedDocument.operations.global).toHaveLength(3); // We're validating that the operation was added to the operation history.
-    expect(updatedDocument.operations.global[2].type).toBe(
+    expect(updatedDocument.operations.global[2].action.type).toBe(
       "REMOVE_EMOJI_REACTION",
     );
-    expect(updatedDocument.operations.global[2].input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[2].action.input).toStrictEqual(
+      input,
+    );
     expect(updatedDocument.operations.global[2].index).toEqual(2);
 
-    expect(updatedDocument.state.global.messages[0].reactions).toHaveLength(1); // The reaction should still exist but no-one should have reacted to it
-    expect(
-      updatedDocument.state.global.messages[0].reactions?.[0]?.reactedBy,
-    ).toHaveLength(0);
+    // When the last user removes their reaction, the entire reaction should be removed
+    expect(updatedDocument.state.global.messages[0].reactions).toHaveLength(0);
   });
 
   it("should handle editChatName operation", () => {
@@ -317,11 +317,15 @@ describe("AddMessage Operations", () => {
       name: "New Chat Name",
     };
 
-    const updatedDocument = reducer(document, creators.editChatName(input));
+    const updatedDocument = reducer(document, editChatName(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1); // We're validating that the operation is added to the operations history
-    expect(updatedDocument.operations.global[0].type).toBe("EDIT_CHAT_NAME");
-    expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "EDIT_CHAT_NAME",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
 
     expect(updatedDocument.state.global.name).toBe(input.name);
@@ -332,16 +336,15 @@ describe("AddMessage Operations", () => {
       description: "New Chat Description",
     };
 
-    const updatedDocument = reducer(
-      document,
-      creators.editChatDescription(input),
-    );
+    const updatedDocument = reducer(document, editChatDescription(input));
 
     expect(updatedDocument.operations.global).toHaveLength(1); // We're validating that the operation is added to the operations history
-    expect(updatedDocument.operations.global[0].type).toBe(
+    expect(updatedDocument.operations.global[0].action.type).toBe(
       "EDIT_CHAT_DESCRIPTION",
     );
-    expect(updatedDocument.operations.global[0].input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
 
     expect(updatedDocument.state.global.description).toBe(input.description);

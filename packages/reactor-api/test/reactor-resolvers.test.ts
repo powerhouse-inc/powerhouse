@@ -474,7 +474,7 @@ describe("ReactorSubgraph Query Resolvers", () => {
     it("should transform completed job with all fields", async () => {
       const mockJobInfo: JobInfo = {
         id: "job-123",
-        status: JobStatus.COMPLETED,
+        status: JobStatus.READ_MODELS_READY,
         createdAtUtcIso: "2024-01-01T00:00:00Z",
         completedAtUtcIso: "2024-01-01T00:05:00Z",
         result: { success: true, data: "test" },
@@ -493,7 +493,7 @@ describe("ReactorSubgraph Query Resolvers", () => {
 
       expect(result).toEqual({
         id: "job-123",
-        status: JobStatus.COMPLETED,
+        status: JobStatus.READ_MODELS_READY,
         createdAt: "2024-01-01T00:00:00Z",
         completedAt: "2024-01-01T00:05:00Z",
         error: null,

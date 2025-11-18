@@ -1,6 +1,7 @@
 import type { IEventBus } from "../events/interfaces.js";
 import {
   OperationEventTypes,
+  type OperationsReadyEvent,
   type OperationWrittenEvent,
   type Unsubscribe,
 } from "../events/types.js";
@@ -79,5 +80,17 @@ export class ReadModelCoordinator implements IReadModelCoordinator {
         readModel.indexOperations(event.operations),
       ),
     );
+
+    // Emit OPERATIONS_READY event after all read models have completed
+    // Use fire-and-forget pattern to avoid blocking
+    const readyEvent: OperationsReadyEvent = {
+      jobId: event.jobId,
+      operations: event.operations,
+    };
+    this.eventBus
+      .emit(OperationEventTypes.OPERATIONS_READY, readyEvent)
+      .catch(() => {
+        // No-op: Event emission is fire-and-forget
+      });
   }
 }

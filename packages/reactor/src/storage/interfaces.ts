@@ -1,5 +1,6 @@
 import type { Operation, PHDocument } from "document-model";
 import type { ConsistencyToken } from "../shared/types.js";
+import type { RemoteCursor, RemoteRecord } from "../sync/types.js";
 
 export type OperationContext = {
   documentId: string;
@@ -216,6 +217,23 @@ export interface IDocumentView {
   ): Promise<TDocument>;
 
   /**
+   * Returns the document with the given identifier (either id or slug).
+   * Throws an error if the identifier matches both an id and a slug that refer to different documents.
+   *
+   * @param identifier - The id or slug of the document to get.
+   * @param view - Optional filter containing branch and scopes information
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
+   * @throws {Error} If identifier matches both an ID and slug referring to different documents
+   */
+  getByIdOrSlug<TDocument extends PHDocument>(
+    identifier: string,
+    view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<TDocument>;
+
+  /**
    * Finds documents by their document type.
    *
    * @param type - The document type to search for
@@ -421,4 +439,79 @@ export interface IDocumentIndexer {
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<string[]>;
+}
+
+export interface ISyncRemoteStorage {
+  /**
+   * Lists all remotes.
+   *
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The remotes
+   */
+  list(signal?: AbortSignal): Promise<RemoteRecord[]>;
+
+  /**
+   * Gets a remote by name.
+   *
+   * @param name - The name of the remote
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The remote
+   */
+  get(name: string, signal?: AbortSignal): Promise<RemoteRecord>;
+
+  /**
+   * Upserts a remote.
+   *
+   * @param remote - The remote to upsert
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The remote
+   */
+  upsert(remote: RemoteRecord, signal?: AbortSignal): Promise<void>;
+
+  /**
+   * Removes a remote by name.
+   *
+   * @param name - The name of the remote
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The remote
+   */
+  remove(name: string, signal?: AbortSignal): Promise<void>;
+}
+
+export interface ISyncCursorStorage {
+  /**
+   * Lists all cursors for a remote.
+   *
+   * @param remoteName - The name of the remote
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The cursors
+   */
+  list(remoteName: string, signal?: AbortSignal): Promise<RemoteCursor[]>;
+
+  /**
+   * Gets a cursor for a remote.
+   *
+   * @param remoteName - The name of the remote
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The cursor
+   */
+  get(remoteName: string, signal?: AbortSignal): Promise<RemoteCursor>;
+
+  /**
+   * Upserts a cursor.
+   *
+   * @param cursor - The cursor to upsert
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The cursor
+   */
+  upsert(cursor: RemoteCursor, signal?: AbortSignal): Promise<void>;
+
+  /**
+   * Removes a cursor for a remote.
+   *
+   * @param remoteName - The name of the remote
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The cursor
+   */
+  remove(remoteName: string, signal?: AbortSignal): Promise<void>;
 }

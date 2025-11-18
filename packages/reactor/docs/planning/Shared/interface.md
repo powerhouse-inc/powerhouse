@@ -59,8 +59,10 @@ enum JobStatus {
   PENDING = "PENDING",
   /** Job is currently being executed */
   RUNNING = "RUNNING",
-  /** Job completed successfully */
-  COMPLETED = "COMPLETED",
+  /** Write side completed, operations persisted */
+  WRITE_COMPLETED = "WRITE_COMPLETED",
+  /** Read models have indexed all operations */
+  READ_MODELS_READY = "READ_MODELS_READY",
   /** Job failed (may be retried) */
   FAILED = "FAILED",
 }

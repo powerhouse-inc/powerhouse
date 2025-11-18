@@ -8,7 +8,7 @@ import { JobStatus } from "../../src/shared/types.js";
 import { createDocModelDocument } from "../factories.js";
 import { TestReadModelCoordinator } from "../utils/test-read-model-coordinator.js";
 
-describe("Integration Test: Consistency Tokens with Document View", () => {
+describe("Consistency Tokens with Document View", () => {
   let reactor: IReactor;
   let storage: MemoryStorage;
   let testCoordinator: TestReadModelCoordinator;
@@ -28,7 +28,10 @@ describe("Integration Test: Consistency Tokens with Document View", () => {
           throw new Error(status.error?.message || "Job failed");
         }
 
-        return status.status === JobStatus.COMPLETED;
+        return (
+          status.status === JobStatus.READ_MODELS_READY ||
+          status.status === JobStatus.WRITE_COMPLETED
+        );
       },
       { timeout: 5000 },
     );

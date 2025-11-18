@@ -9,8 +9,10 @@ export enum JobStatus {
   PENDING = "PENDING",
   /** Job is currently being executed */
   RUNNING = "RUNNING",
-  /** Job completed successfully */
-  COMPLETED = "COMPLETED",
+  /** Write side completed, operations persisted */
+  WRITE_COMPLETED = "WRITE_COMPLETED",
+  /** Read models have indexed all operations */
+  READ_MODELS_READY = "READ_MODELS_READY",
   /** Job failed (may be retried) */
   FAILED = "FAILED",
 }
@@ -110,7 +112,8 @@ export type JobInfo = {
   result?: any;
 
   /**
-   * Consistency token, only valid once a job reaches COMPLETED.
+   * Consistency token, populated once a job reaches WRITE_COMPLETED (when operations are persisted).
+   * Captures the write-side state to enable read-after-write consistency.
    */
   consistencyToken: ConsistencyToken;
 };

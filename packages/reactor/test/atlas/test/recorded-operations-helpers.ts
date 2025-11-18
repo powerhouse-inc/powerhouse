@@ -14,31 +14,10 @@ import type {
   BatchMutationRequest,
   IReactor,
 } from "../../../src/core/types.js";
-import { JobStatus } from "../../../src/shared/types.js";
+import type { JobStatus } from "../../../src/shared/types.js";
 
 import * as atlasModels from "@sky-ph/atlas/document-models";
 import { v4 as uuidv4 } from "uuid";
-
-async function waitUntil(
-  condition: () => boolean | Promise<boolean>,
-  options: { timeout?: number; interval?: number } = {},
-): Promise<void> {
-  const { timeout = 30000, interval = 100 } = options;
-  const startTime = Date.now();
-
-  for (;;) {
-    const result = await condition();
-    if (result) {
-      return;
-    }
-
-    if (Date.now() - startTime > timeout) {
-      throw new Error("waitUntil timeout exceeded");
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, interval));
-  }
-}
 
 export interface RecordedOperation {
   type: string;
@@ -126,15 +105,7 @@ export async function processReactorMutation(
     driveDoc.state.local.listeners = [];
     driveDoc.state.local.triggers = [];
 
-    const jobInfo = await reactor.create(driveDoc);
-    await waitUntil(async () => {
-      const status = await reactor.getJobStatus(jobInfo.id);
-      if (status.status === JobStatus.FAILED) {
-        const errorMessage = status.error?.message ?? "unknown error";
-        throw new Error(`createDrive failed: ${errorMessage}`);
-      }
-      return status.status === JobStatus.COMPLETED;
-    });
+    await reactor.create(driveDoc);
   } else if (name === "addDriveAction") {
     const { driveId, driveAction } = args;
 
@@ -153,15 +124,7 @@ export async function processReactorMutation(
       fileDoc.header.id = driveAction.input.id;
       fileDoc.header.name = driveAction.input.name;
 
-      const createJobInfo = await reactor.create(fileDoc);
-      await waitUntil(async () => {
-        const status = await reactor.getJobStatus(createJobInfo.id);
-        if (status.status === JobStatus.FAILED) {
-          const errorMessage = status.error?.message ?? "unknown error";
-          throw new Error(`Failed to create child document: ${errorMessage}`);
-        }
-        return status.status === JobStatus.COMPLETED;
-      });
+      await reactor.create(fileDoc);
 
       const fileAction = addFile({
         id: driveAction.input.id,
@@ -203,56 +166,17 @@ export async function processReactorMutation(
         ],
       };
 
-      const result = await reactor.mutateBatch(batchRequest);
-
-      await waitUntil(async () => {
-        const addFileStatus = await reactor.getJobStatus(
-          result.jobs.addFile.id,
-        );
-        const linkChildStatus = await reactor.getJobStatus(
-          result.jobs.linkChild.id,
-        );
-        if (addFileStatus.status === JobStatus.FAILED) {
-          const errorMessage = addFileStatus.error?.message ?? "unknown error";
-          throw new Error(`ADD_FILE action failed: ${errorMessage}`);
-        }
-        if (linkChildStatus.status === JobStatus.FAILED) {
-          const errorMessage =
-            linkChildStatus.error?.message ?? "unknown error";
-          throw new Error(`ADD_RELATIONSHIP action failed: ${errorMessage}`);
-        }
-        return (
-          addFileStatus.status === JobStatus.COMPLETED &&
-          linkChildStatus.status === JobStatus.COMPLETED
-        );
-      });
+      await reactor.mutateBatch(batchRequest);
     } else {
       const cleanedAction = removeSynchronizationUnits(driveAction) as Action;
 
-      const jobInfo = await reactor.mutate(driveId, "main", [cleanedAction]);
-      await waitUntil(async () => {
-        const status = await reactor.getJobStatus(jobInfo.id);
-        if (status.status === JobStatus.FAILED) {
-          const errorMessage = status.error?.message ?? "unknown error";
-          throw new Error(`addDriveAction failed: ${errorMessage}`);
-        }
-        return status.status === JobStatus.COMPLETED;
-      });
+      await reactor.mutate(driveId, "main", [cleanedAction]);
     }
   } else if (name === "addAction") {
     const { docId, action } = args;
     const cleanedAction = removeSynchronizationUnits(action) as Action;
 
-    const jobInfo = await reactor.mutate(docId, "main", [cleanedAction]);
-    await waitUntil(async () => {
-      const status = await reactor.getJobStatus(jobInfo.id);
-      if (status.status === JobStatus.FAILED) {
-        throw new Error(
-          `addAction failed: ${status.error?.message ?? "unknown error"}: ${status.error?.stack ?? "unknown stack"}`,
-        );
-      }
-      return status.status === JobStatus.COMPLETED;
-    });
+    await reactor.mutate(docId, "main", [cleanedAction]);
   }
 }
 

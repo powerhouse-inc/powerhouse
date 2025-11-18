@@ -40,11 +40,17 @@ import type {
   IDocumentIndexer,
   IDocumentView,
   IOperationStore,
+  ISyncCursorStorage,
 } from "../src/storage/interfaces.js";
 import { KyselyKeyframeStore } from "../src/storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../src/storage/kysely/store.js";
+import { KyselySyncCursorStorage } from "../src/storage/kysely/sync-cursor-storage.js";
+import { KyselySyncRemoteStorage } from "../src/storage/kysely/sync-remote-storage.js";
 import type { Database as DatabaseSchema } from "../src/storage/kysely/types.js";
 import { runMigrations } from "../src/storage/migrations/migrator.js";
+import { InternalChannel } from "../src/sync/channels/internal-channel.js";
+import type { IChannel, IChannelFactory } from "../src/sync/interfaces.js";
+import type { ChannelConfig, SyncEnvelope } from "../src/sync/types.js";
 
 /**
  * Creates a real PGLite-backed KyselyOperationStore for testing.
@@ -324,8 +330,8 @@ export function createTestQueue(eventBus?: IEventBus): IQueue {
 /**
  * Factory for creating test JobTracker instances
  */
-export function createTestJobTracker(): IJobTracker {
-  return new InMemoryJobTracker();
+export function createTestJobTracker(eventBus?: IEventBus): IJobTracker {
+  return new InMemoryJobTracker(eventBus || new EventBus());
 }
 
 /**
@@ -455,7 +461,7 @@ export async function createTestReactorSetup(
   const storage = new MemoryStorage();
   const eventBus = new EventBus();
   const queue = new InMemoryQueue(eventBus);
-  const jobTracker = new InMemoryJobTracker();
+  const jobTracker = new InMemoryJobTracker(eventBus);
 
   // Create real drive server
   const builder = new ReactorBuilder(documentModels).withStorage(storage);
@@ -694,6 +700,7 @@ export function createMockDocumentView(): IDocumentView {
     waitForConsistency: vi.fn().mockResolvedValue(undefined),
     exists: vi.fn().mockResolvedValue([]),
     get: vi.fn().mockRejectedValue(new Error("Not implemented")),
+    getByIdOrSlug: vi.fn().mockRejectedValue(new Error("Not implemented")),
     findByType: vi.fn().mockResolvedValue({
       items: [],
       nextCursor: undefined,
@@ -719,5 +726,71 @@ export function createMockDocumentIndexer(): IDocumentIndexer {
     findPath: vi.fn().mockResolvedValue(null),
     findAncestors: vi.fn().mockResolvedValue({ nodes: [], edges: [] }),
     getRelationshipTypes: vi.fn().mockResolvedValue([]),
+  };
+}
+
+/**
+ * Creates a real PGLite-backed sync storage for testing.
+ * Returns the database instance, sync remote storage, and sync cursor storage.
+ *
+ * @returns Object containing db, syncRemoteStorage, and syncCursorStorage instances
+ */
+export async function createTestSyncStorage(): Promise<{
+  db: Kysely<DatabaseSchema>;
+  syncRemoteStorage: KyselySyncRemoteStorage;
+  syncCursorStorage: KyselySyncCursorStorage;
+}> {
+  const kyselyPGlite = await KyselyPGlite.create();
+  const db = new Kysely<DatabaseSchema>({
+    dialect: kyselyPGlite.dialect,
+  });
+
+  const result = await runMigrations(db);
+  if (!result.success && result.error) {
+    throw new Error(`Test migration failed: ${result.error.message}`);
+  }
+
+  const syncRemoteStorage = new KyselySyncRemoteStorage(db);
+  const syncCursorStorage = new KyselySyncCursorStorage(db);
+
+  return { db, syncRemoteStorage, syncCursorStorage };
+}
+
+/**
+ * Creates an IChannelFactory for testing that creates InternalChannel instances.
+ * InternalChannels are wired together by storing them in a shared registry and
+ * passing a send function that delivers envelopes to the peer's receive method.
+ *
+ * @param channels - Optional map to store created channels for cross-wiring
+ * @returns IChannelFactory implementation for testing
+ */
+export function createTestChannelFactory(
+  channels?: Map<string, InternalChannel>,
+): IChannelFactory {
+  const channelRegistry = channels || new Map<string, InternalChannel>();
+
+  return {
+    instance(
+      config: ChannelConfig,
+      cursorStorage: ISyncCursorStorage,
+    ): IChannel {
+      const send = (envelope: SyncEnvelope): void => {
+        const peerChannel = channelRegistry.get(config.channelId);
+        if (peerChannel) {
+          peerChannel.receive(envelope);
+        }
+      };
+
+      const channel = new InternalChannel(
+        config.channelId,
+        config.remoteName,
+        cursorStorage,
+        send,
+      );
+
+      channelRegistry.set(config.channelId, channel);
+
+      return channel;
+    },
   };
 }
