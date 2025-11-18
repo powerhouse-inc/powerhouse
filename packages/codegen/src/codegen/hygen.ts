@@ -145,7 +145,6 @@ export async function hygenGenerateDocumentModel(
 ) {
   const projectDir = path.dirname(dir);
   const documentModelDir = path.basename(dir);
-  const documentModelsDir = dir;
 
   // Generate the singular files for the document model logic
   await run(
@@ -382,15 +381,7 @@ export async function hygenGenerateImportScript(
     { skipFormat, verbose },
   );
 }
-/* 
-name: string,
-  dir: string,
-  { skipFormat = false } = {},
-  appId?: string,
-  editorOptions?: {
-    documentTypes: string[];
-  },
-*/
+
 export async function hygenGenerateDriveEditor(options: {
   name: string;
   dir: string;
