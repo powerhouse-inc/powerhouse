@@ -90,64 +90,104 @@ export class ReactorSubgraph extends BaseSubgraph {
     },
 
     Mutation: {
-      createDocument: (_parent, args) => {
+      createDocument: async (_parent, args) => {
         this.logger.debug("createDocument", args);
-        // TODO: Implement using IReactorClient.create
-        throw new GraphQLError("Not implemented yet");
+        try {
+          return await resolvers.createDocument(this.reactorClient, args);
+        } catch (error) {
+          this.logger.error("Error in createDocument:", error);
+          throw error;
+        }
       },
 
-      createEmptyDocument: (_parent, args) => {
+      createEmptyDocument: async (_parent, args) => {
         this.logger.debug("createEmptyDocument", args);
-        // TODO: Implement using IReactorClient.createEmpty
-        throw new GraphQLError("Not implemented yet");
+        try {
+          return await resolvers.createEmptyDocument(this.reactorClient, args);
+        } catch (error) {
+          this.logger.error("Error in createEmptyDocument:", error);
+          throw error;
+        }
       },
 
-      mutateDocument: (_parent, args) => {
+      mutateDocument: async (_parent, args) => {
         this.logger.debug("mutateDocument", args);
-        // TODO: Implement using IReactorClient.mutate
-        throw new GraphQLError("Not implemented yet");
+        try {
+          return await resolvers.mutateDocument(this.reactorClient, args);
+        } catch (error) {
+          this.logger.error("Error in mutateDocument:", error);
+          throw error;
+        }
       },
 
-      mutateDocumentAsync: (_parent, args) => {
+      mutateDocumentAsync: async (_parent, args) => {
         this.logger.debug("mutateDocumentAsync", args);
-        // TODO: Implement using IReactorClient.mutateAsync
-        throw new GraphQLError("Not implemented yet");
+        try {
+          return await resolvers.mutateDocumentAsync(this.reactorClient, args);
+        } catch (error) {
+          this.logger.error("Error in mutateDocumentAsync:", error);
+          throw error;
+        }
       },
 
-      renameDocument: (_parent, args) => {
+      renameDocument: async (_parent, args) => {
         this.logger.debug("renameDocument", args);
-        // TODO: Implement using IReactorClient.rename
-        throw new GraphQLError("Not implemented yet");
+        try {
+          return await resolvers.renameDocument(this.reactorClient, args);
+        } catch (error) {
+          this.logger.error("Error in renameDocument:", error);
+          throw error;
+        }
       },
 
-      addChildren: (_parent, args) => {
+      addChildren: async (_parent, args) => {
         this.logger.debug("addChildren", args);
-        // TODO: Implement using IReactorClient.addChildren
-        throw new GraphQLError("Not implemented yet");
+        try {
+          return await resolvers.addChildren(this.reactorClient, args);
+        } catch (error) {
+          this.logger.error("Error in addChildren:", error);
+          throw error;
+        }
       },
 
-      removeChildren: (_parent, args) => {
+      removeChildren: async (_parent, args) => {
         this.logger.debug("removeChildren", args);
-        // TODO: Implement using IReactorClient.removeChildren
-        throw new GraphQLError("Not implemented yet");
+        try {
+          return await resolvers.removeChildren(this.reactorClient, args);
+        } catch (error) {
+          this.logger.error("Error in removeChildren:", error);
+          throw error;
+        }
       },
 
-      moveChildren: (_parent, args) => {
+      moveChildren: async (_parent, args) => {
         this.logger.debug("moveChildren", args);
-        // TODO: Implement using IReactorClient.moveChildren
-        throw new GraphQLError("Not implemented yet");
+        try {
+          return await resolvers.moveChildren(this.reactorClient, args);
+        } catch (error) {
+          this.logger.error("Error in moveChildren:", error);
+          throw error;
+        }
       },
 
-      deleteDocument: (_parent, args) => {
+      deleteDocument: async (_parent, args) => {
         this.logger.debug("deleteDocument", args);
-        // TODO: Implement using IReactorClient.deleteDocument
-        throw new GraphQLError("Not implemented yet");
+        try {
+          return await resolvers.deleteDocument(this.reactorClient, args);
+        } catch (error) {
+          this.logger.error("Error in deleteDocument:", error);
+          throw error;
+        }
       },
 
-      deleteDocuments: (_parent, args) => {
+      deleteDocuments: async (_parent, args) => {
         this.logger.debug("deleteDocuments", args);
-        // TODO: Implement using IReactorClient.deleteDocuments
-        throw new GraphQLError("Not implemented yet");
+        try {
+          return await resolvers.deleteDocuments(this.reactorClient, args);
+        } catch (error) {
+          this.logger.error("Error in deleteDocuments:", error);
+          throw error;
+        }
       },
     },
 
