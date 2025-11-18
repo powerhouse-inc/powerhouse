@@ -1,3 +1,7 @@
+## 5.0.5 (2025-11-18)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
 ## 5.0.4 (2025-11-18)
 
 This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.

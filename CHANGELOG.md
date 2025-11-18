@@ -1,3 +1,13 @@
+## 5.0.5 (2025-11-18)
+
+### 🩹 Fixes
+
+- **reactor-api:** free entry ([138ac6e91](https://github.com/powerhouse-inc/powerhouse/commit/138ac6e91))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.0.4 (2025-11-18)
 
 This was a version bump only, there were no code changes.
