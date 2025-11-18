@@ -12,7 +12,7 @@ function makeImportScriptFromPackages(
   const packageImports = packages.map((pkg) => ({
     name: pkg,
     js: pkg,
-    css: pkg,
+    css: pkg + "/style.css",
   }));
 
   if (localPackage) {
