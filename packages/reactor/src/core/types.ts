@@ -10,7 +10,6 @@ import type {
   JobInfo,
   PagedResults,
   PagingOptions,
-  PropagationMode,
   SearchFilter,
   ShutdownStatus,
   ViewFilter,

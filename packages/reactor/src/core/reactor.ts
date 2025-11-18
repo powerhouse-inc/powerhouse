@@ -21,7 +21,6 @@ import type {
   JobInfo,
   PagedResults,
   PagingOptions,
-  PropagationMode,
   SearchFilter,
   ShutdownStatus,
   ViewFilter,
@@ -637,10 +636,7 @@ export class Reactor implements IReactor {
   /**
    * Deletes a document
    */
-  async deleteDocument(
-    id: string,
-    signal?: AbortSignal,
-  ): Promise<JobInfo> {
+  async deleteDocument(id: string, signal?: AbortSignal): Promise<JobInfo> {
     const createdAtUtcIso = new Date().toISOString();
 
     if (signal?.aborted) {

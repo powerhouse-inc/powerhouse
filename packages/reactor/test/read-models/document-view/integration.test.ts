@@ -1538,7 +1538,7 @@ describe("KyselyDocumentView", () => {
           },
         ]);
 
-        const resolvedId = await view.resolveSlug(slug, branch);
+        const resolvedId = await view.resolveSlug(slug, { branch });
 
         expect(resolvedId).toBe(documentId);
       });
@@ -1627,7 +1627,7 @@ describe("KyselyDocumentView", () => {
           },
         ]);
 
-        const resolvedId = await view.resolveSlug(slug, branch);
+        const resolvedId = await view.resolveSlug(slug, { branch });
         expect(resolvedId).toBe(documentId);
       });
 
@@ -1694,10 +1694,10 @@ describe("KyselyDocumentView", () => {
           },
         ]);
 
-        const resolved1 = await view.resolveSlug(slug1, branch);
+        const resolved1 = await view.resolveSlug(slug1, { branch });
         expect(resolved1).toBe(doc1Id);
 
-        const resolved2 = await view.resolveSlug(slug2, branch);
+        const resolved2 = await view.resolveSlug(slug2, { branch });
         expect(resolved2).toBe(doc2Id);
       });
     });
