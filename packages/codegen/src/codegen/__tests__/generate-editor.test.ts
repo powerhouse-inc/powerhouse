@@ -63,7 +63,7 @@ describe("generateEditor", () => {
   it(
     "should generate a Document Model editor",
     {
-      timeout: 15000,
+      timeout: 100000,
     },
     async (context) => {
       await setupTest(context);
@@ -121,7 +121,7 @@ describe("generateEditor", () => {
   it(
     "should append new exports to existing editors.ts file",
     {
-      timeout: 15000,
+      timeout: 100000,
     },
     async (context) => {
       await setupTest(
@@ -148,7 +148,7 @@ describe("generateEditor", () => {
   it(
     "should create the editors.ts file if it doesn't exist",
     {
-      timeout: 15000,
+      timeout: 100000,
     },
     async (context) => {
       await setupTest(

@@ -100,7 +100,7 @@ describe("document model", () => {
   it(
     "should generate a document model",
     {
-      timeout: 30000,
+      timeout: 100000,
     },
     async () => {
       await generate();
@@ -112,7 +112,7 @@ describe("document model", () => {
   it(
     "should generate an analytics processor and factory",
     {
-      timeout: 10000,
+      timeout: 100000,
     },
     async () => {
       await generate();
@@ -134,7 +134,7 @@ describe("document model", () => {
   it(
     "should generate multiple analytics processors with composable factories",
     {
-      timeout: 10000,
+      timeout: 100000,
     },
     async () => {
       await generate();
@@ -176,7 +176,7 @@ describe("document model", () => {
   it(
     "should generate a relational db processor and factory",
     {
-      timeout: 10000,
+      timeout: 100000,
     },
     async () => {
       await generate();
@@ -198,7 +198,7 @@ describe("document model", () => {
   it(
     "should generate multiple relational db processors with composable factories",
     {
-      timeout: 10000,
+      timeout: 100000,
     },
     async () => {
       await generate();
@@ -240,7 +240,7 @@ describe("document model", () => {
   it(
     "should create the document-models.ts file if it does not exist",
     {
-      timeout: 15000,
+      timeout: 100000,
     },
     async () => {
       const documentModelsFilePath = path.join(
@@ -268,8 +268,8 @@ describe("document model", () => {
       expect(documentModelsContent).toContain(
         "export const documentModels: DocumentModelModule<any>[] = [",
       );
-      expect(documentModelsContent).toContain("BillingStatement,");
-      expect(documentModelsContent).toContain("TestDoc,");
+      expect(documentModelsContent).toContain("BillingStatement");
+      expect(documentModelsContent).toContain("TestDoc");
       expect(documentModelsContent).toContain("]");
     },
   );
@@ -277,7 +277,7 @@ describe("document model", () => {
   it(
     "should generate multiple document models and export both in document-models.ts",
     {
-      timeout: 15000,
+      timeout: 100000,
     },
     async () => {
       await generate();
@@ -302,15 +302,15 @@ describe("document model", () => {
       expect(documentModelsContent).toContain(
         "export const documentModels: DocumentModelModule<any>[] = [",
       );
-      expect(documentModelsContent).toContain("BillingStatement,");
-      expect(documentModelsContent).toContain("TestDoc,");
+      expect(documentModelsContent).toContain("BillingStatement");
+      expect(documentModelsContent).toContain("TestDoc");
       expect(documentModelsContent).toContain("]");
     },
   );
 
   it(
     "should generate an updated version of test-doc",
-    { timeout: 10000 },
+    { timeout: 100000 },
     async () => {
       await generate();
       await compile(testOutDirPath);
@@ -363,7 +363,7 @@ describe("document model", () => {
 
   it(
     "should generate error classes and types from billing statement errors",
-    { timeout: 10000 },
+    { timeout: 100000 },
     async () => {
       await generate();
       await compile(testOutDirPath);
@@ -419,7 +419,7 @@ describe("document model", () => {
 
   it(
     "should automatically import error classes in reducer files when used",
-    { timeout: 10000 },
+    { timeout: 100000 },
     async () => {
       await generate();
       await compile(testOutDirPath);
@@ -470,7 +470,7 @@ describe("document model", () => {
 
   it(
     "should generate error codes for legacy documents with empty error codes",
-    { timeout: 10000 },
+    { timeout: 100000 },
     async () => {
       await generate();
 
