@@ -10,13 +10,13 @@ Please start with the '**Get Started**' Chapter or '**Document Model Creation**'
 <details>
 <summary>Key commands that you'll use in this flow</summary>
 
-- `pnpm install -g ph-cmd`: Installs the Powerhouse CLI globally.
+- `pnpm install -g ph-cmd` or `npm install -g ph-cmd`: Installs the Powerhouse CLI globally.
 - `ph init`: Initializes a new Powerhouse project or sets up the local environment.
 - `ph connect`: Runs Connect in Studio Mode for local development and testing.
 - `ph generate <YourModelName.phdm.zip>`: Generates scaffolding code from an exported document model specification.
 - `ph generate --editor YourModelName --document-types powerhouse/YourModelName`: Generates an editor template for a document model.
-- `pnpm build`: Builds the project for production.
-- `pnpm run test`: Runs unit tests.
+- `pnpm build` or `npm run build`: Builds the project for production.
+- `pnpm run test` or `npm test`: Runs unit tests.
 - `npm login`: Logs into your NPM account.
 - `npm publish`: Publishes your package to NPM.
 - `ph install @your-org-ph/your-package-name`: Installs a published package into a local Powerhouse environment.
@@ -33,8 +33,14 @@ Ensure you have the Powerhouse Command Line Interface (`ph-cmd`) installed. This
 pnpm install -g ph-cmd
 ```
 
+Or if you're using npm:
+
+```bash
+npm install -g ph-cmd
+```
+
 :::info **Prerequisites**
-The [Prerequisites](/academy/MasteryTrack/BuilderEnvironment/Prerequisites) guide for detailed installation instructions for Node.js, pnpm, and Git if you haven't set them up yet.
+See the [Prerequisites](/academy/MasteryTrack/BuilderEnvironment/Prerequisites) guide for detailed installation instructions for Node.js 22, package managers (pnpm or npm), and Git if you haven't set them up yet.
 :::
 
 ### 1.2. Initialize your project environment
@@ -54,9 +60,9 @@ When installing or using the Powerhouse CLI commands you are able to make use of
 
 | Command                            | Description                                           |
 | ---------------------------------- | ----------------------------------------------------- |
-| **pnpm install -g ph-cmd**         | Install latest stable version                         |
-| **pnpm install -g ph-cmd@dev**     | Install development version                           |
-| **pnpm install -g ph-cmd@staging** | Install staging version                               |
+| **pnpm install -g ph-cmd** or **npm install -g ph-cmd**         | Install latest stable version                         |
+| **pnpm install -g ph-cmd@dev** or **npm install -g ph-cmd@dev**     | Install development version                           |
+| **pnpm install -g ph-cmd@staging** or **npm install -g ph-cmd@staging** | Install staging version                               |
 | **ph init**                        | Use latest stable version of the boilerplate          |
 | **ph init --dev**                  | Use development version of the boilerplate            |
 | **ph init --staging**              | Use staging version of the boilerplate                |
@@ -141,6 +147,12 @@ It's crucial to test your reducer logic. Write unit tests in the `document-model
 
 ```bash
 pnpm run test
+```
+
+Or with npm:
+
+```bash
+npm test
 ```
 
 ### 3.4. Implement the document editor
@@ -260,6 +272,12 @@ Compile and optimize your project for production:
 
 ```bash
 pnpm build
+```
+
+Or with npm:
+
+```bash
+npm run build
 ```
 
 This command typically creates a `dist/` or `build/` directory with the compiled assets. Ensure your `package.json`'s `files` array includes this directory and other necessary assets like `manifest.json`, `document-models`, and `editors` if they are not part of the build output but need to be in the package.
