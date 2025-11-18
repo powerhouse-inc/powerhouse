@@ -1,7 +1,7 @@
 import { childLogger } from "document-drive";
 import fs from "fs";
-import { gql } from "graphql-tag";
 import { withFilter } from "graphql-subscriptions";
+import { gql } from "graphql-tag";
 import path from "path";
 import { BaseSubgraph } from "../base-subgraph.js";
 import type { SubgraphArgs } from "../types.js";
@@ -33,6 +33,7 @@ export class ReactorSubgraph extends BaseSubgraph {
   }
 
   name = "r/:reactor";
+  hasSubscriptions = true;
 
   // Load schema from file
   typeDefs = gql(
@@ -206,7 +207,9 @@ export class ReactorSubgraph extends BaseSubgraph {
 
     Subscription: {
       documentChanges: {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         subscribe: withFilter(
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           (() => {
             this.logger.debug("documentChanges subscription started");
             ensureGlobalDocumentSubscription(this.reactorClient);
@@ -215,9 +218,12 @@ export class ReactorSubgraph extends BaseSubgraph {
               SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES,
             );
           }) as any,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           ((
             payload: DocumentChangesPayload | undefined,
-            args: { search: { type?: string | null; parentId?: string | null } },
+            args: {
+              search: { type?: string | null; parentId?: string | null };
+            },
           ) => {
             if (!payload) {
               return false;
@@ -237,7 +243,9 @@ export class ReactorSubgraph extends BaseSubgraph {
       },
 
       jobChanges: {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         subscribe: withFilter(
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           ((_parent: unknown, args: { jobId: string }) => {
             this.logger.debug("jobChanges subscription", args);
             ensureJobSubscription(this.reactorClient, args.jobId);
@@ -246,6 +254,7 @@ export class ReactorSubgraph extends BaseSubgraph {
               SUBSCRIPTION_TRIGGERS.JOB_CHANGES,
             );
           }) as any,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           ((
             payload: JobChangesPayload | undefined,
             args: { jobId: string },

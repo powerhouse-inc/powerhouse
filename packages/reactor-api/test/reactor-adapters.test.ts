@@ -1,7 +1,4 @@
-import type {
-  IReactorClient,
-  PagedResults,
-} from "@powerhousedao/reactor";
+import type { IReactorClient, PagedResults } from "@powerhousedao/reactor";
 import type { Action, DocumentModelModule, PHDocument } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as adapters from "../src/graphql/reactor/adapters.js";
@@ -458,9 +455,7 @@ describe("Reactor Adapters", () => {
       const result = adapters.validateDocumentModelAction(mockModule, action);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContainEqual(
-        expect.stringContaining("scope"),
-      );
+      expect(result.errors).toContainEqual(expect.stringContaining("scope"));
     });
   });
 
@@ -756,4 +751,3 @@ describe("Reactor Adapters", () => {
     });
   });
 });
-
