@@ -1,3 +1,22 @@
+## 4.1.0-dev.122 (2025-11-18)
+
+### 🚀 Features
+
+- initial implementation of reactor-client missing methods ([b9a0d5c18](https://github.com/powerhouse-inc/powerhouse/commit/b9a0d5c18))
+- added new get by id or slug so that reactor-client -> reactor can use it ([189294fac](https://github.com/powerhouse-inc/powerhouse/commit/189294fac))
+
+### 🩹 Fixes
+
+- pull readmodel coordinator init back into reactor ([bf3a4261b](https://github.com/powerhouse-inc/powerhouse/commit/bf3a4261b))
+- fixing atlas tests ([1c80d2807](https://github.com/powerhouse-inc/powerhouse/commit/1c80d2807))
+- build fix for reactor-local and switchboard ([f99c45b34](https://github.com/powerhouse-inc/powerhouse/commit/f99c45b34))
+- **builder-tools:** fix style import from external package ([c7b491ada](https://github.com/powerhouse-inc/powerhouse/commit/c7b491ada))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
 ## 4.1.0-dev.121 (2025-11-17)
 
 ### 🩹 Fixes

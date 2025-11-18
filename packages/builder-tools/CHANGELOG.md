@@ -1,3 +1,13 @@
+## 4.1.0-dev.122 (2025-11-18)
+
+### 🩹 Fixes
+
+- **builder-tools:** fix style import from external package ([c7b491ada](https://github.com/powerhouse-inc/powerhouse/commit/c7b491ada))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.121 (2025-11-17)
 
 ### 🩹 Fixes
