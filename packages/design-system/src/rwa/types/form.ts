@@ -1,9 +1,5 @@
-import type {
-  GroupTransactionType,
-  Operation,
-  TableItemType,
-  TableName,
-} from "@powerhousedao/design-system";
+import type { GroupTransactionType } from "./state.js";
+import type { Operation, TableItemType, TableName } from "./table.js";
 
 export type AssetFormInputs = {
   id?: string;

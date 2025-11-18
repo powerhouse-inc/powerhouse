@@ -5,10 +5,14 @@ import * as actions from "./gen/creators.js";
 import { driveDocumentModel } from "./gen/document-model.js";
 import { driveDocumentReducer } from "./gen/reducer.js";
 import {
+  assertIsDocumentOfType,
+  assertIsStateOfType,
   driveCreateDocument,
   driveCreateState,
   driveLoadFromInput,
   driveSaveToFileHandle,
+  isDocumentOfType,
+  isStateOfType,
 } from "./gen/utils.js";
 import type { DriveDocumentModelModule } from "./types.js";
 export const driveDocumentModelModule: DriveDocumentModelModule = {
@@ -21,5 +25,9 @@ export const driveDocumentModelModule: DriveDocumentModelModule = {
     createDocument: driveCreateDocument,
     loadFromInput: driveLoadFromInput,
     saveToFileHandle: driveSaveToFileHandle,
+    isStateOfType,
+    assertIsStateOfType,
+    isDocumentOfType,
+    assertIsDocumentOfType,
   },
 };

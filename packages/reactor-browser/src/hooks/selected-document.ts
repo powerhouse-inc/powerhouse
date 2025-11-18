@@ -1,17 +1,15 @@
 import type { DocumentDispatch } from "@powerhousedao/reactor-browser";
+import { isFileNode } from "document-drive";
 import type { Action, PHDocument } from "document-model";
 import { NoSelectedDocumentError } from "../errors.js";
 import { useDocumentById } from "./document-by-id.js";
 import { useDocumentOfType } from "./document-of-type.js";
-import { useDocumentsInSelectedDrive } from "./items-in-selected-drive.js";
 import { useSelectedNode } from "./selected-node.js";
 
 /** Returns the selected document id */
 export function useSelectedDocumentId() {
   const selectedNode = useSelectedNode();
-  const selectedDriveDocuments = useDocumentsInSelectedDrive();
-  return selectedDriveDocuments?.find((d) => d.header.id === selectedNode?.id)
-    ?.header.id;
+  return selectedNode && isFileNode(selectedNode) ? selectedNode.id : undefined;
 }
 
 /** Returns the selected document. */

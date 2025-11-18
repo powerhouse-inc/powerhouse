@@ -65,9 +65,15 @@ enum ReactionType {
 
 input AddMessageInput {
   messageId: OID! # ID of the message that is being added
-  sender: Sender! # ID of the user sending the message
+  sender: SenderInput! # ID of the user sending the message
   content: String! # Content of the message
   sentAt: DateTime!
+}
+
+input SenderInput {
+  id: ID! # Unique identifier for the sender
+  name: String
+  avatarUrl: URL # Allows us to pull the ENS and/or nft of the persons profile
 }
 
 input AddEmojiReactionInput {
@@ -106,14 +112,14 @@ The steps below show you how to do this:
 
 3. In the code editor, you can see the SDL for the document model. Replace the existing SDL with the SDL defined in the [State Schema](#state-schema) section above. Only copy and paste the types, leaving the inputs for the next step. You can however already press 'Sync with schema' button to set the initial state of your document model based on your Schema Definition Language. Verify that your Global State Initial Value looks like this.
 
-```graphql
+```json
 {
   "id": "",
   "name": "",
-  "description": "",
-  "createdAt": "",
-  "createdBy": "",
-  "messages": ""
+  "description": null,
+  "createdAt": null,
+  "createdBy": null,
+  "messages": []
 }
 ```
 
@@ -123,10 +129,16 @@ The steps below show you how to do this:
 
 ```graphql
 input AddMessageInput {
-  messageId: OID! # ID of the message that is being added
-  sender: Sender! # ID of the user sending the message
-  content: String! # Content of the message
+  messageId: OID!
+  sender: SenderInput!
+  content: String!
   sentAt: DateTime!
+}
+
+input SenderInput {
+  id: ID! # Unique identifier for the sender
+  name: String
+  avatarUrl: URL # Allows us to pull the ENS and/or nft of the persons profile
 }
 ```
 

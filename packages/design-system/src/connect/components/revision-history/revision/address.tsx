@@ -1,10 +1,8 @@
-import {
-  ConnectTooltip,
-  ENSAvatar,
-  formatEthAddress,
-  Icon,
-} from "@powerhousedao/design-system";
+import { Icon } from "@powerhousedao/design-system";
 import { useCopyToClipboard } from "usehooks-ts";
+import { formatEthAddress } from "../../../utils/address.js";
+import { ENSAvatar } from "../../ens-avatar/ens-avatar.js";
+import { ConnectTooltip } from "../../tooltip/tooltip.js";
 
 export type AddressProps = {
   readonly address: `0x${string}` | undefined;

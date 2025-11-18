@@ -1,17 +1,17 @@
+import { useCallback, useEffect, useMemo } from "react";
+import {
+  useForm,
+  type DefaultValues,
+  type FieldValues,
+  type SubmitHandler,
+} from "react-hook-form";
+import { useEditorContext } from "../context/editor-context.js";
 import type {
   FormInputsByTableName,
   Operation,
   TableItemType,
   TableName,
-} from "@powerhousedao/design-system";
-import { useEditorContext } from "@powerhousedao/design-system";
-import { useCallback, useEffect, useMemo } from "react";
-import type {
-  DefaultValues,
-  FieldValues,
-  SubmitHandler,
-} from "react-hook-form";
-import { useForm } from "react-hook-form";
+} from "../types.js";
 import { useDefaultFormValues } from "./useDefaultFormValues.js";
 
 function useWrappedForm<TValues extends FieldValues>(defaultValues: TValues) {

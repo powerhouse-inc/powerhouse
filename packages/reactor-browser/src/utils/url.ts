@@ -38,7 +38,7 @@ export function makeNodeSlug(node: Node | undefined) {
 export function extractNodeSlugFromPath(path: string) {
   const currentPath = getPathWithoutBase(path);
   const match = /^\/d\/[^/]+\/([^/]+)$/.exec(currentPath);
-  return match?.[1] ?? "";
+  return match?.[1];
 }
 
 /** Finds a UUID in a string, used for extracting node ids from node slugs in the URL. */

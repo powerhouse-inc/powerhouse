@@ -1,19 +1,16 @@
-import {
-  AvailableOfflineToggle,
-  DeleteDrive,
-  Disclosure,
-  Divider,
-  DriveNameInput,
-  Icon,
-  Label,
-  LocationInfo,
-  PowerhouseButton,
-  SharingTypeFormInput,
-} from "@powerhousedao/design-system";
+import { Icon, PowerhouseButton } from "@powerhousedao/design-system";
 import type { DocumentDriveDocument, SharingType } from "document-drive";
 import { useState } from "react";
 import type { SubmitHandler } from "react-hook-form";
 import { useForm } from "react-hook-form";
+import { Disclosure } from "../disclosure/disclosure.js";
+import { Divider } from "../divider/divider.js";
+import { AvailableOfflineToggle } from "./inputs/available-offline-toggle.js";
+import { DeleteDrive } from "./inputs/delete-drive.js";
+import { DriveNameInput } from "./inputs/drive-name-input.js";
+import { Label } from "./inputs/label.js";
+import { LocationInfo } from "./inputs/location-info.js";
+import { SharingTypeFormInput } from "./inputs/sharing-type-form-input.js";
 
 type Inputs = {
   name: string;

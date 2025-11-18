@@ -174,13 +174,104 @@ function MyEditorComponent() {
 
 ### Documents
 
-#### useAllDocuments/useDocumentsInSelectedDrive
+#### useDocumentById
 
 ```ts
-function useAllDocuments(): PHDocument[] | undefined;
+function useDocumentById(id: string | null | undefined): PHDocument | undefined;
 ```
 
-Returns all of the documents in the reactor.
+Returns a document and a dispatch function by id.
+
+##### Usage
+
+```jsx
+import { useDocumentById } from "@powerhousedao/state";
+
+function MyEditorComponent() {
+  const myDocumentId = "some-document-id";
+  const [document, dispatch] = useDocumentById(myDocumentId);
+}
+```
+
+#### useGetDocument
+
+```ts
+function useGetDocument(id: string | null | undefined): PHDocument | undefined;
+```
+
+Retrieves a document from the reactor and subscribes to changes using React Suspense. This hook will suspend rendering while the document is loading.
+
+##### Usage
+
+```jsx
+import { useGetDocument } from "@powerhousedao/state";
+
+function MyEditorComponent() {
+  const documentId = "some-document-id";
+  const document = useGetDocument(documentId);
+}
+```
+
+#### useGetDocuments
+
+```ts
+function useGetDocuments(
+  ids: string[] | null | undefined,
+): PHDocument[] | undefined;
+```
+
+Retrieves multiple documents from the reactor using React Suspense. This hook will suspend rendering while any of the documents are loading.
+
+##### Usage
+
+```jsx
+import { useGetDocuments } from "@powerhousedao/state";
+
+function MyEditorComponent() {
+  const documentIds = ["doc-id-1", "doc-id-2", "doc-id-3"];
+  const documents = useGetDocuments(documentIds);
+}
+```
+
+#### useGetDocumentAsync
+
+```ts
+function useGetDocumentAsync(id: string | null | undefined): {
+  status: "initial" | "pending" | "success" | "error";
+  data: PHDocument | undefined;
+  isPending: boolean;
+  error: unknown;
+  reload: (() => void) | undefined;
+};
+```
+
+Retrieves a document from the reactor without suspending rendering. Returns the current state of the document loading operation, including status, data, error, and a reload function.
+
+##### Usage
+
+```jsx
+import { useGetDocumentAsync } from "@powerhousedao/state";
+
+function MyEditorComponent() {
+  const documentId = "some-document-id";
+  const { status, data, isPending, error, reload } =
+    useGetDocumentAsync(documentId);
+
+  if (isPending) {
+    return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error.message}</div>;
+  }
+
+  if (status === "success" && data) {
+    return <div>Document: {data.name}</div>;
+  }
+}
+```
+
+#### useDocumentsInSelectedDrive
 
 ```ts
 function useDocumentsInSelectedDrive(): PHDocument[] | undefined;
@@ -191,13 +282,9 @@ Returns the documents in the reactor for the selected drive.
 ##### Usage
 
 ```jsx
-import {
-  useAllDocuments,
-  useDocumentsInSelectedDrive,
-} from "@powerhousedao/state";
+import { useDocumentsInSelectedDrive } from "@powerhousedao/state";
 
 function MyEditorComponent() {
-  const allDocuments = useAllDocuments();
   const selectedDriveDocuments = useDocumentsInSelectedDrive();
 }
 ```
@@ -217,25 +304,6 @@ import { useSelectedDocument } from "@powerhousedao/state";
 
 function MyEditorComponent() {
   const selectedDocument = useSelectedDocument();
-}
-```
-
-#### useDocumentById
-
-```ts
-function useDocumentById(id: string | null | undefined): PHDocument | undefined;
-```
-
-Returns a document by id.
-
-##### Usage
-
-```jsx
-import { useDocumentById } from "@powerhousedao/state";
-
-function MyEditorComponent() {
-  const myDocumentId = "some-document-id";
-  const documentById = useDocumentById(myDocumentId);
 }
 ```
 

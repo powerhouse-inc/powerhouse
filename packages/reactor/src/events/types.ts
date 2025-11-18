@@ -45,6 +45,8 @@ export class EventBusAggregateError extends Error {
  */
 export const OperationEventTypes = {
   OPERATION_WRITTEN: 10001,
+  OPERATIONS_READY: 10002,
+  JOB_FAILED: 10003,
 } as const;
 
 /**
@@ -52,5 +54,33 @@ export const OperationEventTypes = {
  * Contains the operations directly to avoid round-trip queries.
  */
 export type OperationWrittenEvent = {
+  jobId: string;
   operations: OperationWithContext[];
+};
+
+/**
+ * Event emitted after all read models have finished processing operations.
+ * This event fires after OPERATION_WRITTEN and guarantees that:
+ * - All read models (DocumentView, DocumentIndexer, etc.) have indexed the operations
+ * - All consistency trackers have been updated with the new operation indices
+ * - Queries without consistency tokens will now see the updated data
+ *
+ * This event is useful for:
+ * - Test synchronization (knowing when read models are ready)
+ * - Observability (measuring read model latency)
+ * - Event-driven workflows (triggering downstream processes)
+ */
+export type OperationsReadyEvent = {
+  jobId: string;
+  operations: OperationWithContext[];
+};
+
+/**
+ * Event emitted when a job fails with an unrecoverable error.
+ * This event allows the JobAwaiter and other subscribers to react to job failures
+ * without polling.
+ */
+export type JobFailedEvent = {
+  jobId: string;
+  error: Error;
 };

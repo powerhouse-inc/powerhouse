@@ -5,7 +5,7 @@ import {
 import type { Meta, StoryObj } from "@storybook/react";
 import { driveDocumentModelModule } from "document-drive";
 import { defaultBaseState } from "document-model/core";
-import { Editor } from "./editor.js";
+import Editor from "./editor.js";
 
 function createDriveStory<T extends (props: any) => React.JSX.Element>(
   Editor: T,

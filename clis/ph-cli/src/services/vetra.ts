@@ -5,9 +5,13 @@ import { blue, red } from "colorette";
 import type { IDocumentDriveServer } from "document-drive";
 import { setLogLevel } from "document-drive";
 import { generateProjectDriveId } from "../utils.js";
+import {
+  configureVetraGithubUrl,
+  sleep,
+} from "../utils/configure-vetra-github-url.js";
 import { startConnectStudio } from "./connect.js";
-import type { ReactorOptions } from "./reactor.js";
-import { DefaultReactorOptions } from "./reactor.js";
+import type { LocalSwitchboardOptions } from "./switchboard.js";
+import { defaultSwitchboardOptions } from "./switchboard.js";
 
 const VETRA_DRIVE_NAME = "vetra";
 
@@ -75,7 +79,7 @@ async function startVetraPreviewDrive(
 }
 
 async function startLocalVetraSwitchboard(
-  options?: ReactorOptions & {
+  options?: LocalSwitchboardOptions & {
     verbose?: boolean;
     interactiveCodegen?: boolean;
     watch?: boolean;
@@ -135,12 +139,15 @@ async function startLocalVetraSwitchboard(
       disableLocalPackages: !options?.watch,
     });
 
-    // Add preview drive
-    const previewDriveUrl = await startVetraPreviewDrive(
-      switchboard.reactor,
-      port,
-      verbose,
-    );
+    // Add preview drive (only in watch mode)
+    let previewDriveUrl: string | null = null;
+    if (options?.watch) {
+      previewDriveUrl = await startVetraPreviewDrive(
+        switchboard.reactor,
+        port,
+        verbose,
+      );
+    }
 
     if (verbose) {
       console.log(blue(`[Vetra Switchboard]: Started successfully`));
@@ -157,7 +164,7 @@ async function startLocalVetraSwitchboard(
     }
     return {
       driveUrl: switchboard.defaultDriveUrl || "",
-      previewDriveUrl,
+      previewDriveUrl: previewDriveUrl,
     };
   } catch (error) {
     console.error(
@@ -190,7 +197,9 @@ export async function startVetra({
 
     // Use config port if no CLI port provided, fallback to default
     const resolvedSwitchboardPort =
-      switchboardPort ?? baseConfig.reactor?.port ?? DefaultReactorOptions.port;
+      switchboardPort ??
+      baseConfig.reactor?.port ??
+      defaultSwitchboardOptions.port;
     const https = baseConfig.reactor?.https;
 
     // Use vetraUrl from config if no explicit remoteDrive is provided
@@ -219,8 +228,24 @@ export async function startVetra({
       },
       resolvedVetraUrl,
     );
-    const driveUrl: string = resolvedVetraUrl ?? switchboardResult.driveUrl;
-    const previewDriveUrl: string = switchboardResult.previewDriveUrl;
+    const driveUrl: string =
+      switchboardResult.driveUrl || resolvedVetraUrl || "";
+    const previewDriveUrl = switchboardResult.previewDriveUrl;
+
+    // Configure GitHub URL if remote drive is set
+    if (resolvedVetraUrl) {
+      // give some time for the drive to process initial strands
+      await sleep(3000);
+
+      await configureVetraGithubUrl(
+        resolvedSwitchboardPort,
+        resolvedVetraUrl,
+        verbose,
+      );
+
+      // give some time for the user to read log messages
+      await sleep(2000);
+    }
 
     if (verbose) {
       console.log("Starting Codegen Reactor...");
@@ -230,12 +255,15 @@ export async function startVetra({
     if (!disableConnect) {
       if (verbose) {
         console.log("Starting Connect...");
-        console.log(
-          `   ➜ Connect will use drives: ${driveUrl}, ${previewDriveUrl}`,
-        );
+        const drives = previewDriveUrl
+          ? `${driveUrl}, ${previewDriveUrl}`
+          : driveUrl;
+        console.log(`   ➜ Connect will use drives: ${drives}`);
       }
       await startConnectStudio({
-        defaultDrivesUrl: [driveUrl, previewDriveUrl],
+        defaultDrivesUrl: previewDriveUrl
+          ? [driveUrl, previewDriveUrl]
+          : [driveUrl],
         drivesPreserveStrategy: "preserve-all",
         disableLocalPackage: !watch,
         devServerOptions: {

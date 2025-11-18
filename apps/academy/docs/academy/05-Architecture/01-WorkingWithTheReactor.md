@@ -47,5 +47,3 @@ In addition to the choice of storage, Reactors also have other configurations.
 
 - The **operational data** and **read models** associated with the document models inside a reactor allow to query the gathered data inside a document model or quickly visualize the crucial insights at a glance.
 - **Listeners**, which continuously listen to any changes in a document model, help us to connect additional tools such as codegenerators and scripts to the reactors and the document models it holds
-
-> Jump to: Configure a listener for your reactor and add a codegenerator

@@ -66,7 +66,7 @@ readdir(iconsDir, (err, files) => {
           return `${camelCase(attrName)}="${attrValue}"`;
         },
       );
-    let iconContent = 'import type { Props } from "./index.js";\n';
+    let iconContent = 'import { Props } from "./index.js";\n';
     iconContent += `export default function ${componentName}(props: Props) {\n`;
     iconContent += `  return (\n${svgDataWithProps}\n  );\n`;
     iconContent += `}\n\n`;
@@ -81,8 +81,7 @@ readdir(iconsDir, (err, files) => {
     iconNames.push(componentName);
   });
 
-  let indexContent =
-    "import type { ComponentPropsWithoutRef } from 'react';\n\n";
+  let indexContent = "import { ComponentPropsWithoutRef } from 'react';\n\n";
   for (const iconName of iconNames) {
     indexContent += `import ${iconName} from "./${iconName}.js";\n`;
   }

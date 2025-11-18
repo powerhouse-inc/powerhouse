@@ -112,6 +112,12 @@ Now, run the tests from your project's root directory to verify your implementat
 pnpm run test
 ```
 
+Or with npm:
+
+```bash
+npm test
+```
+
 If all tests pass, you have successfully verified the core logic of your `To-do List` document model. This ensures that the reducers you wrote behave exactly as expected.
 
 </details>
@@ -128,7 +134,7 @@ While the tutorial provides a concrete example, keep these general best practice
   - **Assert**: Check if the outcome is as expected using `expect()`.
 - **Test Immutability**: A key assertion is to ensure the state is not mutated directly. You can check that a new array or object was created: `expect(newState.items).not.toBe(oldState.items);`.
 - **Cover Edge Cases**: Test what happens when an operation receives invalid input (e.g., trying to update an item that doesn't exist). Your test should confirm the reducer either throws an error or returns the state unchanged, depending on your implementation.
-- **Run Tests Frequently**: Integrate testing into your development workflow. Run tests after making changes to ensure you haven't broken anything. The `pnpm run test` command is your friend.
+- **Run Tests Frequently**: Integrate testing into your development workflow. Run tests after making changes to ensure you haven't broken anything. The `pnpm run test` (or `npm test`) command is your friend.
 
 ## Conclusion: The payoff of diligent testing
 

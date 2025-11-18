@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { Icon } from "../index.js";
-import { PowerhouseButton } from "./index.js";
-
+import { Icon } from "../icon/icon.js";
+import { PowerhouseButton } from "./button.js";
 const meta = {
   title: "Powerhouse/Components/Button",
   component: PowerhouseButton,

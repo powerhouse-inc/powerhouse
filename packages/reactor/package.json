@@ -21,13 +21,15 @@
     "build": "pnpm run build:tsc",
     "build:tsc": "tsc --build",
     "prebuild": "pnpm run clean",
-    "test": "vitest run --coverage",
+    "test": "vitest run --coverage --printConsoleTrace=true --silent=false",
     "test:watch": "vitest --coverage",
     "lint": "eslint",
     "bench": "vitest bench --run",
     "clean": "rimraf dist",
     "clean:node_modules": "rimraf node_modules",
-    "claude": "pnpm build && pnpm test && npx prettier --write \"**/*.ts\" && pnpm lint"
+    "claude": "pnpm build && pnpm test && npx prettier --write \"**/*.ts\" && pnpm lint",
+    "migrate": "tsx src/storage/migrations/run-migrations.ts",
+    "migrate:status": "tsx src/storage/migrations/run-migrations.ts status"
   },
   "publishConfig": {
     "access": "public"
@@ -45,6 +47,7 @@
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^3.2.4",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "vitest": "^3.2.4"
   }

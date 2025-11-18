@@ -1,52 +1,81 @@
-import type { PluginOption } from "vite";
+import { join } from "path";
+import type { ModuleNode, PluginOption } from "vite";
 
 /**
  * Takes a list of Powerhouse project packages, by name or path and
  * returns a js module that exports those packages for use in Connect.
  */
-function makeImportScriptFromPackages(packages: string[]) {
-  const imports: string[] = [];
-  const moduleNames: string[] = [];
-  let counter = 0;
+function makeImportScriptFromPackages(
+  packages: string[],
+  localPackage?: string,
+) {
+  const packageImports = packages.map((pkg) => ({
+    name: pkg,
+    js: pkg,
+    css: pkg + "/style.css",
+  }));
 
-  for (const packageName of packages) {
-    const moduleName = `module${counter}`;
-    moduleNames.push(moduleName);
-    imports.push(`import * as ${moduleName} from '${packageName}';`);
-    imports.push(`import '${packageName}/style.css';`);
-    counter++;
+  if (localPackage) {
+    packageImports.push({
+      name: localPackage,
+      js: join(localPackage, "/index.ts"),
+      css: join(localPackage, "/style.css"),
+    });
   }
 
-  const exports = moduleNames.map(
-    (name, index) => `{
-      id: "${packages[index]}",
-      ...${name},
-    }`,
-  );
-
-  const exportsString = exports.length
-    ? `
-        ${exports.join(",\n")}
-    `
-    : "";
-
-  const exportStatement = `export default [${exportsString}];`;
-
-  // Add HMR boundary to prevent page reload
-  const hmrCode = `
-// HMR boundary - accept updates to prevent full page reload
-if (import.meta.hot) {
-  import.meta.hot.accept();
-}`;
-
-  const fileContent = `${imports.join("\n")}\n\n${exportStatement}\n${hmrCode}`;
-
-  return fileContent;
+  return `
+   export async function loadExternalPackages() {
+      const modules = [];
+      ${packageImports
+        .map(
+          (pkg, index) =>
+            `try {
+          const module = await import('${pkg.js}');
+          await import('${pkg.css}');
+          modules.push({
+              id: 'module${index}',
+              ...module,
+          });
+      } catch (error) {
+          console.error("Error loading package: '${pkg.name}'", error);
+      }`,
+        )
+        .join("\n")}
+      return modules;
+    }
+  `;
 }
 
-export function phExternalPackagesPlugin(phPackages: string[]) {
+export function phExternalPackagesPlugin(
+  phPackages: string[],
+  localPackage?: string,
+) {
   const virtualModuleId = "virtual:ph:external-packages";
   const resolvedVirtualModuleId = "\0" + virtualModuleId;
+
+  function isSameModule(moduleA: ModuleNode, moduleB: ModuleNode) {
+    return (
+      moduleA === moduleB ||
+      moduleA.id === moduleB.id ||
+      moduleA.url === moduleB.url ||
+      (moduleA.file && moduleA.file === moduleB.file)
+    );
+  }
+
+  function isImported(module: ModuleNode, rootModule: ModuleNode) {
+    if (isSameModule(module, rootModule)) return true;
+
+    const importers = module.importers
+      .values()
+      .filter(
+        (m) => m.file && !m.file.endsWith(".html") && !m.file.endsWith(".css"),
+      );
+    if (importers.some((m) => isImported(m, rootModule))) return true;
+
+    if (importers.some((m) => isImported(m, rootModule))) return true;
+
+    return false;
+  }
 
   const plugin: PluginOption = {
     name: "ph-external-packages",
@@ -58,62 +87,47 @@ export function phExternalPackagesPlugin(phPackages: string[]) {
     },
     load(id) {
       if (id === resolvedVirtualModuleId) {
-        return makeImportScriptFromPackages(phPackages);
+        return makeImportScriptFromPackages(phPackages, localPackage);
       }
     },
-    handleHotUpdate({ file, server, modules }) {
-      // Check if the changed file is part of any local package
-      const isLocalPackageFile = phPackages.some((pkg) => {
-        if (pkg.startsWith("/") || pkg.startsWith(".")) {
-          return file.startsWith(pkg);
-        }
-        return false;
-      });
-
-      if (isLocalPackageFile) {
-        const virtualModule = server.moduleGraph.getModuleById(
-          resolvedVirtualModuleId,
-        );
-
-        if (virtualModule) {
-          // Invalidate the virtual module so it re-executes with new imports
-          server.moduleGraph.invalidateModule(virtualModule);
-
-          // Notify clients about package updates via WebSocket
-          const clientUrl = `/@id/${resolvedVirtualModuleId}`;
-          server.ws.send("studio:external-packages-updated", {
-            url: clientUrl,
-            timestamp: Date.now().toString(),
-          });
-
-          // Deduplicate modules by file path, preferring modules with defined IDs
-          const modulesByFile = new Map<string, (typeof modules)[0]>();
-          for (const module of modules) {
-            if (module.file) {
-              const existing = modulesByFile.get(module.file);
-              // Prefer modules with defined IDs over ones without IDs
-              if (!existing || (module.id && !existing.id)) {
-                modulesByFile.set(module.file, module);
-              }
-            }
-          }
-          const deduplicatedModules = Array.from(modulesByFile.values()).filter(
-            (m) => m.id && m.id !== resolvedVirtualModuleId,
-          );
-
-          // For React components (.tsx, .jsx), let Fast Refresh handle them
-          const isReactComponent =
-            file.endsWith(".tsx") || file.endsWith(".jsx");
-
-          if (isReactComponent) {
-            return [...deduplicatedModules, virtualModule];
-          } else {
-            return [virtualModule];
-          }
-        }
+    handleHotUpdate({ file, server, modules, timestamp }) {
+      const virtualModule = server.moduleGraph.getModuleById(
+        resolvedVirtualModuleId,
+      );
+      if (!virtualModule) {
+        return [];
       }
 
-      return undefined;
+      let refreshVirtualModule = false;
+      const modulesToRefresh: ModuleNode[] = [];
+
+      for (const module of modules) {
+        if (!isImported(module, virtualModule)) {
+          // returns only modules that are actually imported by Connect
+          continue;
+        }
+
+        // lets react modules be handled by react-refresh
+        if (module.file?.endsWith(".tsx") || module.file?.endsWith(".jsx")) {
+          modulesToRefresh.push(module);
+        } else {
+          // invalidates non-react modules to trigger HMR
+          server.moduleGraph.invalidateModule(
+            module,
+            new Set(),
+            timestamp,
+            true,
+          );
+        }
+        refreshVirtualModule = true;
+      }
+
+      // if a module was invalidated then triggers HMR on the external packages module
+      if (refreshVirtualModule) {
+        modulesToRefresh.push(virtualModule);
+      }
+
+      return modulesToRefresh;
     },
   };
 

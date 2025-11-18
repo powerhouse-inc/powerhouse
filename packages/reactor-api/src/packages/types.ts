@@ -1,12 +1,19 @@
+import type { SubgraphClass } from "@powerhousedao/reactor-api";
 import type { IProcessorHostModule, ProcessorFactory } from "document-drive";
 import type { DocumentModelModule } from "document-model";
-import type { SubgraphClass } from "@powerhousedao/reactor-api";
 
 export interface IPackageLoader {
-  loadDocumentModels(identifier: string): Promise<DocumentModelModule[]>;
-  loadSubgraphs(identifier: string): Promise<SubgraphClass[]>;
+  loadDocumentModels(
+    identifier: string,
+    immediate?: boolean,
+  ): Promise<DocumentModelModule[]>;
+  loadSubgraphs(
+    identifier: string,
+    immediate?: boolean,
+  ): Promise<SubgraphClass[]>;
   loadProcessors(
     identifier: string,
+    immediate?: boolean,
   ): Promise<((module: IProcessorHostModule) => ProcessorFactory) | null>;
 }
 

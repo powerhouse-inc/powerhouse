@@ -10,8 +10,29 @@
     "type": "git",
     "url": "https://github.com/powerhouse-inc/powerhouse"
   },
-  "exports": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./generic-drive-explorer": {
+      "import": "./dist/editors/generic-drive-explorer/module.js",
+      "types": "./dist/editors/generic-drive-explorer/module.d.ts"
+    },
+    "./generic-drive-explorer/editor-component": {
+      "import": "./dist/editors/generic-drive-explorer/editor.js",
+      "types": "./dist/editors/generic-drive-explorer/editor.d.ts"
+    },
+    "./utils": {
+      "import": "./dist/utils/index.js",
+      "types": "./dist/utils/index.d.ts"
+    },
+    "./analytics": {
+      "types": "./dist/src/analytics.d.ts",
+      "default": "./dist/src/analytics.js"
+    }
+  },
+  "sideEffects": false,
   "description": "The Powerhouse Common package contains the basic document model and drive UI (App) that is required to get started with Connect and visualize private & public apps.",
   "scripts": {
     "tsc": "tsc",
@@ -32,6 +53,7 @@
     "@types/luxon": "^3.7.1",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
+    "graphql-request": "^7.2.0",
     "luxon": "^3.7.1",
     "react-i18next": "^13.5.0"
   },

@@ -51,6 +51,12 @@ const buildEnvSchema = z.object({
   PH_DISABLE_LOCAL_PACKAGE: booleanString.default(false),
 
   /**
+   * Amount of time to wait before a file is considered changed
+   * @default 300
+   */
+  PH_WATCH_TIMEOUT: numberString.default(300),
+
+  /**
    * Sentry authentication token for uploading source maps
    */
   PH_SENTRY_AUTH_TOKEN: z.string().optional(),
@@ -178,6 +184,17 @@ const featureFlagsSchema = z.object({
    * @default "powerhouse/document-drive"
    */
   PH_CONNECT_DISABLED_EDITORS: z.string().default("powerhouse/document-drive"),
+
+  /**
+   * Google Analytics tracking ID
+   */
+  PH_CONNECT_GA_TRACKING_ID: z.string().optional(),
+
+  /**
+   * Disable loading of external packages
+   * @default false
+   */
+  PH_CONNECT_EXTERNAL_PACKAGES_DISABLED: booleanString.default(false),
 });
 
 // ============================================================================
@@ -244,13 +261,19 @@ const drivesConfigSchema = z.object({
 });
 
 // ============================================================================
-// Analytics Configuration
+// Analytics Processor Configuration
 // ============================================================================
 
 /**
- * Analytics configuration schema
+ * Analytics processor configuration schema
  */
-const analyticsConfigSchema = z.object({
+const analyticsProcessorsConfigSchema = z.object({
+  /**
+   * Enable analytics
+   * @default true
+   */
+  PH_CONNECT_ANALYTICS_ENABLED: booleanString.default(true),
+
   /**
    * Name of the analytics database
    * Defaults to basename + ":analytics"
@@ -276,22 +299,50 @@ const analyticsConfigSchema = z.object({
   PH_CONNECT_DRIVE_ANALYTICS_ENABLED: booleanString.default(true),
 
   /**
-   * Enable external processors for analytics
+   * Enable external analytics processors
+   * @default true
+   */
+  PH_CONNECT_EXTERNAL_ANALYTICS_PROCESSORS_ENABLED: booleanString.default(true),
+});
+
+/**
+ * Relational DB processor configuration schema
+ */
+const relationalProcessorsConfigSchema = z.object({
+  /**
+   * Enable relational processors
+   * @default true
+   */
+  PH_CONNECT_RELATIONAL_PROCESSORS_ENABLED: booleanString.default(true),
+
+  /**
+   * Enable external relational processors
+   * @default true
+   */
+  PH_CONNECT_EXTERNAL_RELATIONAL_PROCESSORS_ENABLED:
+    booleanString.default(true),
+});
+
+/**
+ * External processors configuration schema
+ */
+const processorsBaseConfigSchema = z.object({
+  /**
+   * Enable processors
+   * @default true
+   */
+  PH_CONNECT_PROCESSORS_ENABLED: booleanString.default(true),
+
+  /**
+   * Enable external processors
    * @default true
    */
   PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED: booleanString.default(true),
-
-  /**
-   * Disable loading of external packages
-   * @default false
-   */
-  PH_CONNECT_EXTERNAL_PACKAGES_DISABLED: booleanString.default(false),
-
-  /**
-   * Google Analytics tracking ID
-   */
-  PH_CONNECT_GA_TRACKING_ID: z.string().optional(),
 });
+
+const processorsConfigSchema = processorsBaseConfigSchema
+  .merge(analyticsProcessorsConfigSchema)
+  .merge(relationalProcessorsConfigSchema);
 
 // ============================================================================
 // Sentry Configuration
@@ -362,7 +413,7 @@ const renownConfigSchema = z.object({
 export const runtimeEnvSchema = appConfigSchema
   .merge(featureFlagsSchema)
   .merge(drivesConfigSchema)
-  .merge(analyticsConfigSchema)
+  .merge(processorsConfigSchema)
   .merge(sentryConfigSchema)
   .merge(renownConfigSchema);
 

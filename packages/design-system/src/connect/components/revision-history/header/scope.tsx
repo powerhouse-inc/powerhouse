@@ -1,4 +1,4 @@
-import { ConnectSelect } from "@powerhousedao/design-system";
+import { ConnectSelect } from "../../select/select.js";
 
 type Props = {
   readonly value: string;

@@ -1,5 +1,5 @@
-import { gql } from "graphql-tag";
 import type { DocumentNode } from "graphql";
+import { gql } from "graphql-tag";
 
 export const schema: DocumentNode = gql`
   """
@@ -30,7 +30,7 @@ export const schema: DocumentNode = gql`
   """
   type VetraPackageQueries {
     getDocument(driveId: String, docId: PHID): VetraPackage
-    getDocuments: [VetraPackage!]
+    getDocuments(driveId: String!): [VetraPackage!]
   }
 
   type Query {

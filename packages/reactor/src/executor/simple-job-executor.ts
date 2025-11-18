@@ -4,16 +4,26 @@ import type {
 } from "document-drive";
 import type {
   Action,
+  AddRelationshipActionInput,
   CreateDocumentAction,
   DeleteDocumentActionInput,
   DocumentModelModule,
   Operation,
   PHDocument,
+  RemoveRelationshipActionInput,
   UpgradeDocumentActionInput,
 } from "document-model";
+import type {
+  IOperationIndex,
+  IOperationIndexTxn,
+} from "../cache/operation-index-types.js";
+import { driveCollectionId } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IEventBus } from "../events/interfaces.js";
-import { OperationEventTypes } from "../events/types.js";
+import {
+  OperationEventTypes,
+  type OperationWrittenEvent,
+} from "../events/types.js";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import { DocumentDeletedError } from "../shared/errors.js";
@@ -21,14 +31,17 @@ import type {
   IOperationStore,
   OperationWithContext,
 } from "../storage/interfaces.js";
+import { reshuffleByTimestampAndIndex } from "../utils/reshuffle.js";
 import type { IJobExecutor } from "./interfaces.js";
-import type { JobResult } from "./types.js";
+import type { JobExecutorConfig, JobResult } from "./types.js";
 import {
   applyDeleteDocumentAction,
   applyUpgradeDocumentAction,
   createDocumentFromAction,
   getNextIndexForScope,
 } from "./util.js";
+
+const MAX_SKIP_THRESHOLD = 100;
 
 /**
  * Simple job executor that processes a job by applying actions through document model reducers.
@@ -38,6 +51,8 @@ import {
  * @see docs/planning/Jobs/reshuffle.md for skip mechanism details
  */
 export class SimpleJobExecutor implements IJobExecutor {
+  private config: Required<JobExecutorConfig>;
+
   constructor(
     private registry: IDocumentModelRegistry,
     private documentStorage: IDocumentStorage,
@@ -45,7 +60,17 @@ export class SimpleJobExecutor implements IJobExecutor {
     private operationStore: IOperationStore,
     private eventBus: IEventBus,
     private writeCache: IWriteCache,
-  ) {}
+    private operationIndex: IOperationIndex,
+    config: JobExecutorConfig,
+  ) {
+    this.config = {
+      maxConcurrency: config.maxConcurrency ?? 1,
+      jobTimeoutMs: config.jobTimeoutMs ?? 30000,
+      retryBaseDelayMs: config.retryBaseDelayMs ?? 100,
+      retryMaxDelayMs: config.retryMaxDelayMs ?? 5000,
+      legacyStorageEnabled: config.legacyStorageEnabled ?? true,
+    };
+  }
 
   /**
    * Execute a single job by applying all its actions through the appropriate reducers.
@@ -53,27 +78,94 @@ export class SimpleJobExecutor implements IJobExecutor {
    */
   async executeJob(job: Job): Promise<JobResult> {
     const startTime = Date.now();
+    const indexTxn = this.operationIndex.start();
+
+    if (job.kind === "load") {
+      const result = await this.executeLoadJob(job, startTime, indexTxn);
+      if (result.success) {
+        await this.operationIndex.commit(indexTxn);
+      }
+      return result;
+    }
+
+    const result = await this.processActions(
+      job,
+      job.actions,
+      startTime,
+      indexTxn,
+    );
+
+    if (!result.success) {
+      return {
+        job,
+        success: false,
+        error: result.error,
+        duration: Date.now() - startTime,
+      };
+    }
+
+    await this.operationIndex.commit(indexTxn);
+
+    if (result.operationsWithContext.length > 0) {
+      const event: OperationWrittenEvent = {
+        jobId: job.id,
+        operations: result.operationsWithContext,
+      };
+      this.eventBus
+        .emit(OperationEventTypes.OPERATION_WRITTEN, event)
+        .catch(() => {
+          // TODO: Log error
+        });
+    }
+
+    return {
+      job,
+      success: true,
+      operations: result.generatedOperations,
+      operationsWithContext: result.operationsWithContext,
+      duration: Date.now() - startTime,
+    };
+  }
+
+  private async processActions(
+    job: Job,
+    actions: Action[],
+    startTime: number,
+    indexTxn: IOperationIndexTxn,
+    skipValues?: number[],
+  ): Promise<{
+    success: boolean;
+    generatedOperations: Operation[];
+    operationsWithContext: OperationWithContext[];
+    error?: Error;
+  }> {
     const generatedOperations: Operation[] = [];
     const operationsWithContext: OperationWithContext[] = [];
+    let actionIndex = 0;
 
-    // Process each action in the job sequentially
-    for (const action of job.actions) {
-      // Handle system actions specially (CREATE_DOCUMENT, DELETE_DOCUMENT, etc.)
+    for (const action of actions) {
       if (action.type === "CREATE_DOCUMENT") {
         const result = await this.executeCreateDocumentAction(
           job,
           action,
           startTime,
+          indexTxn,
+          skipValues?.[actionIndex],
         );
-        if (!result.success) {
-          return result;
+        const error = this.accumulateResultOrReturnError(
+          result,
+          generatedOperations,
+          operationsWithContext,
+        );
+        if (error !== null) {
+          return {
+            success: false,
+            generatedOperations,
+            operationsWithContext,
+            error: error.error,
+          };
         }
-        if (result.operations && result.operations.length > 0) {
-          generatedOperations.push(...result.operations);
-        }
-        if (result.operationsWithContext) {
-          operationsWithContext.push(...result.operationsWithContext);
-        }
+        actionIndex++;
         continue;
       }
 
@@ -82,16 +174,22 @@ export class SimpleJobExecutor implements IJobExecutor {
           job,
           action,
           startTime,
+          indexTxn,
         );
-        if (!result.success) {
-          return result;
+        const error = this.accumulateResultOrReturnError(
+          result,
+          generatedOperations,
+          operationsWithContext,
+        );
+        if (error !== null) {
+          return {
+            success: false,
+            generatedOperations,
+            operationsWithContext,
+            error: error.error,
+          };
         }
-        if (result.operations && result.operations.length > 0) {
-          generatedOperations.push(...result.operations);
-        }
-        if (result.operationsWithContext) {
-          operationsWithContext.push(...result.operationsWithContext);
-        }
+        actionIndex++;
         continue;
       }
 
@@ -100,20 +198,74 @@ export class SimpleJobExecutor implements IJobExecutor {
           job,
           action,
           startTime,
+          indexTxn,
+          skipValues?.[actionIndex],
         );
-        if (!result.success) {
-          return result;
+        const error = this.accumulateResultOrReturnError(
+          result,
+          generatedOperations,
+          operationsWithContext,
+        );
+        if (error !== null) {
+          return {
+            success: false,
+            generatedOperations,
+            operationsWithContext,
+            error: error.error,
+          };
         }
-        if (result.operations && result.operations.length > 0) {
-          generatedOperations.push(...result.operations);
-        }
-        if (result.operationsWithContext) {
-          operationsWithContext.push(...result.operationsWithContext);
-        }
+        actionIndex++;
         continue;
       }
 
-      // For regular actions, load the document and apply through reducer
+      if (action.type === "ADD_RELATIONSHIP") {
+        const result = await this.executeAddRelationshipAction(
+          job,
+          action,
+          startTime,
+          indexTxn,
+        );
+        const error = this.accumulateResultOrReturnError(
+          result,
+          generatedOperations,
+          operationsWithContext,
+        );
+        if (error !== null) {
+          return {
+            success: false,
+            generatedOperations,
+            operationsWithContext,
+            error: error.error,
+          };
+        }
+        actionIndex++;
+        continue;
+      }
+
+      if (action.type === "REMOVE_RELATIONSHIP") {
+        const result = await this.executeRemoveRelationshipAction(
+          job,
+          action,
+          startTime,
+          indexTxn,
+        );
+        const error = this.accumulateResultOrReturnError(
+          result,
+          generatedOperations,
+          operationsWithContext,
+        );
+        if (error !== null) {
+          return {
+            success: false,
+            generatedOperations,
+            operationsWithContext,
+            error: error.error,
+          };
+        }
+        actionIndex++;
+        continue;
+      }
+
       let document: PHDocument;
       try {
         document = await this.writeCache.getState(
@@ -123,24 +275,23 @@ export class SimpleJobExecutor implements IJobExecutor {
         );
       } catch (error) {
         return {
-          job,
           success: false,
+          generatedOperations,
+          operationsWithContext,
           error: error instanceof Error ? error : new Error(String(error)),
-          duration: Date.now() - startTime,
         };
       }
 
-      // Check if document is deleted
       const documentState = document.state.document;
       if (documentState.isDeleted) {
         return {
-          job,
           success: false,
+          generatedOperations,
+          operationsWithContext,
           error: new DocumentDeletedError(
             job.documentId,
             documentState.deletedAtUtcIso,
           ),
-          duration: Date.now() - startTime,
         };
       }
 
@@ -149,10 +300,10 @@ export class SimpleJobExecutor implements IJobExecutor {
         module = this.registry.getModule(document.header.documentType);
       } catch (error) {
         return {
-          job,
           success: false,
+          generatedOperations,
+          operationsWithContext,
           error: error instanceof Error ? error : new Error(String(error)),
-          duration: Date.now() - startTime,
         };
       }
 
@@ -166,42 +317,49 @@ export class SimpleJobExecutor implements IJobExecutor {
           enhancedError.stack = `${contextMessage}\n\nOriginal stack trace:\n${error.stack}`;
         }
         return {
-          job,
           success: false,
+          generatedOperations,
+          operationsWithContext,
           error: enhancedError,
-          duration: Date.now() - startTime,
         };
       }
 
       const scope = job.scope;
       const operations = updatedDocument.operations[scope];
       if (operations.length === 0) {
-        throw new Error("No operation generated from action");
-      }
-
-      const newOperation = operations[operations.length - 1];
-      generatedOperations.push(newOperation);
-
-      // Write the operation to legacy storage
-      try {
-        await this.operationStorage.addDocumentOperations(
-          job.documentId,
-          [newOperation],
-          updatedDocument,
-        );
-      } catch (error) {
         return {
-          job,
           success: false,
-          error: error instanceof Error ? error : new Error(String(error)),
-          duration: Date.now() - startTime,
+          generatedOperations,
+          operationsWithContext,
+          error: new Error("No operation generated from action"),
         };
       }
 
-      // Compute resultingState for passing via context (not persisted)
+      const newOperation = operations[operations.length - 1];
+      if (skipValues && actionIndex < skipValues.length) {
+        newOperation.skip = skipValues[actionIndex];
+      }
+      generatedOperations.push(newOperation);
+
+      if (this.config.legacyStorageEnabled) {
+        try {
+          await this.operationStorage.addDocumentOperations(
+            job.documentId,
+            [newOperation],
+            updatedDocument,
+          );
+        } catch (error) {
+          return {
+            success: false,
+            generatedOperations,
+            operationsWithContext,
+            error: error instanceof Error ? error : new Error(String(error)),
+          };
+        }
+      }
+
       const resultingState = JSON.stringify(updatedDocument.state);
 
-      // Write the operation to new IOperationStore (dual-writing)
       try {
         await this.operationStore.apply(
           job.documentId,
@@ -215,12 +373,12 @@ export class SimpleJobExecutor implements IJobExecutor {
         );
       } catch (error) {
         return {
-          job,
           success: false,
+          generatedOperations,
+          operationsWithContext,
           error: new Error(
             `Failed to write operation to IOperationStore: ${error instanceof Error ? error.message : String(error)}`,
           ),
-          duration: Date.now() - startTime,
         };
       }
 
@@ -244,27 +402,17 @@ export class SimpleJobExecutor implements IJobExecutor {
           scope,
           branch: job.branch,
           documentType: document.header.documentType,
-          resultingState, // Ephemeral, passed via events only
+          resultingState,
         },
       });
-    }
 
-    // Emit event for read models with all operations - non-blocking
-    if (operationsWithContext.length > 0) {
-      this.eventBus
-        .emit(OperationEventTypes.OPERATION_WRITTEN, {
-          operations: operationsWithContext,
-        })
-        .catch(() => {
-          // TODO: Log error
-        });
+      actionIndex++;
     }
 
     return {
-      job,
       success: true,
-      operations: generatedOperations,
-      duration: Date.now() - startTime,
+      generatedOperations,
+      operationsWithContext,
     };
   }
 
@@ -277,6 +425,8 @@ export class SimpleJobExecutor implements IJobExecutor {
     job: Job,
     action: Action,
     startTime: number,
+    indexTxn: IOperationIndexTxn,
+    skip: number = 0,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -304,44 +454,39 @@ export class SimpleJobExecutor implements IJobExecutor {
     const document = createDocumentFromAction(action as CreateDocumentAction);
 
     // Legacy: Store the document in storage
-    try {
-      await this.documentStorage.create(document);
-    } catch (error) {
-      return {
-        job,
-        success: false,
-        error: new Error(
-          `Failed to create document in storage: ${error instanceof Error ? error.message : String(error)}`,
-        ),
-        duration: Date.now() - startTime,
-      };
+    if (this.config.legacyStorageEnabled) {
+      try {
+        await this.documentStorage.create(document);
+      } catch (error) {
+        return this.buildErrorResult(
+          job,
+          new Error(
+            `Failed to create document in storage: ${error instanceof Error ? error.message : String(error)}`,
+          ),
+          startTime,
+        );
+      }
     }
 
-    // Create the operation with index 0 (first operation for a new document)
-    const operation: Operation = {
-      index: 0,
-      timestampUtcMs: action.timestampUtcMs || new Date().toISOString(),
-      hash: "", // Will be computed later
-      skip: 0, // Always 0 for new operations; skip > 0 only during reshuffle
-      action: action,
-    };
+    const operation = this.createOperation(action, 0, skip);
 
     // Legacy: Write the CREATE_DOCUMENT operation to legacy storage
-    try {
-      await this.operationStorage.addDocumentOperations(
-        document.header.id,
-        [operation],
-        document,
-      );
-    } catch (error) {
-      return {
-        job,
-        success: false,
-        error: new Error(
-          `Failed to write CREATE_DOCUMENT operation to legacy storage: ${error instanceof Error ? error.message : String(error)}`,
-        ),
-        duration: Date.now() - startTime,
-      };
+    if (this.config.legacyStorageEnabled) {
+      try {
+        await this.operationStorage.addDocumentOperations(
+          document.header.id,
+          [operation],
+          document,
+        );
+      } catch (error) {
+        return this.buildErrorResult(
+          job,
+          new Error(
+            `Failed to write CREATE_DOCUMENT operation to legacy storage: ${error instanceof Error ? error.message : String(error)}`,
+          ),
+          startTime,
+        );
+      }
     }
 
     // Compute resultingState for passing via context (not persisted)
@@ -353,36 +498,22 @@ export class SimpleJobExecutor implements IJobExecutor {
     };
     const resultingState = JSON.stringify(resultingStateObj);
 
-    // Write the operation to new IOperationStore (dual-writing)
-    // Note: resultingState is NOT persisted in IOperationStore
-    try {
-      await this.operationStore.apply(
-        document.header.id,
-        document.header.documentType,
-        job.scope,
-        job.branch,
-        operation.index,
-        (txn) => {
-          txn.addOperations(operation);
-        },
-      );
-    } catch (error) {
-      return {
-        job,
-        success: false,
-        error: new Error(
-          `Failed to write CREATE_DOCUMENT operation to IOperationStore: ${error instanceof Error ? error.message : String(error)}`,
-        ),
-        duration: Date.now() - startTime,
-      };
+    const writeError = await this.writeOperationToStore(
+      document.header.id,
+      document.header.documentType,
+      job.scope,
+      job.branch,
+      operation,
+      job,
+      startTime,
+    );
+    if (writeError !== null) {
+      return writeError;
     }
 
-    document.header.revision = {
-      ...document.header.revision,
-      [job.scope]: operation.index + 1,
-    };
+    this.updateDocumentRevision(document, job.scope, operation.index);
 
-    this.writeCache.putState(
+    this.writeCacheState(
       document.header.id,
       job.scope,
       job.branch,
@@ -390,24 +521,32 @@ export class SimpleJobExecutor implements IJobExecutor {
       document,
     );
 
-    return {
+    indexTxn.write([
+      {
+        ...operation,
+        documentId: document.header.id,
+        documentType: document.header.documentType,
+        branch: job.branch,
+        scope: job.scope,
+      },
+    ]);
+
+    // collection membership has to be _after_ the write, as it requires the
+    // ordinal of the operation to be set
+    if (document.header.documentType === "powerhouse/document-drive") {
+      const collectionId = driveCollectionId(job.branch, document.header.id);
+      indexTxn.createCollection(collectionId);
+      indexTxn.addToCollection(collectionId, document.header.id);
+    }
+
+    return this.buildSuccessResult(
       job,
-      success: true,
-      operations: [operation],
-      operationsWithContext: [
-        {
-          operation,
-          context: {
-            documentId: document.header.id,
-            scope: job.scope,
-            branch: job.branch,
-            documentType: document.header.documentType,
-            resultingState,
-          },
-        },
-      ],
-      duration: Date.now() - startTime,
-    };
+      operation,
+      document.header.id,
+      document.header.documentType,
+      resultingState,
+      startTime,
+    );
   }
 
   /**
@@ -419,6 +558,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     job: Job,
     action: Action,
     startTime: number,
+    indexTxn: IOperationIndexTxn,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -435,14 +575,11 @@ export class SimpleJobExecutor implements IJobExecutor {
     const input = action.input as DeleteDocumentActionInput;
 
     if (!input.documentId) {
-      return {
+      return this.buildErrorResult(
         job,
-        success: false,
-        error: new Error(
-          "DELETE_DOCUMENT action requires a documentId in input",
-        ),
-        duration: Date.now() - startTime,
-      };
+        new Error("DELETE_DOCUMENT action requires a documentId in input"),
+        startTime,
+      );
     }
 
     const documentId = input.documentId;
@@ -455,53 +592,41 @@ export class SimpleJobExecutor implements IJobExecutor {
         job.branch,
       );
     } catch (error) {
-      return {
+      return this.buildErrorResult(
         job,
-        success: false,
-        error: new Error(
+        new Error(
           `Failed to fetch document before deletion: ${error instanceof Error ? error.message : String(error)}`,
         ),
-        duration: Date.now() - startTime,
-      };
+        startTime,
+      );
     }
 
     // Check if document is already deleted
     const documentState = document.state.document;
     if (documentState.isDeleted) {
-      return {
+      return this.buildErrorResult(
         job,
-        success: false,
-        error: new DocumentDeletedError(
-          documentId,
-          documentState.deletedAtUtcIso,
-        ),
-        duration: Date.now() - startTime,
-      };
+        new DocumentDeletedError(documentId, documentState.deletedAtUtcIso),
+        startTime,
+      );
     }
 
-    // Determine the next operation index for this scope only (per-scope indexing)
     const nextIndex = getNextIndexForScope(document, job.scope);
 
-    // Create the DELETE_DOCUMENT operation
-    const operation: Operation = {
-      index: nextIndex,
-      timestampUtcMs: action.timestampUtcMs || new Date().toISOString(),
-      hash: "", // Will be computed later
-      skip: 0, // Always 0 for new operations; skip > 0 only during reshuffle
-      action: action,
-    };
+    const operation = this.createOperation(action, nextIndex);
 
-    try {
-      await this.documentStorage.delete(documentId);
-    } catch (error) {
-      return {
-        job,
-        success: false,
-        error: new Error(
-          `Failed to delete document from legacy storage: ${error instanceof Error ? error.message : String(error)}`,
-        ),
-        duration: Date.now() - startTime,
-      };
+    if (this.config.legacyStorageEnabled) {
+      try {
+        await this.documentStorage.delete(documentId);
+      } catch (error) {
+        return this.buildErrorResult(
+          job,
+          new Error(
+            `Failed to delete document from legacy storage: ${error instanceof Error ? error.message : String(error)}`,
+          ),
+          startTime,
+        );
+      }
     }
 
     // Mark the document as deleted in the state for read model indexing
@@ -515,48 +640,37 @@ export class SimpleJobExecutor implements IJobExecutor {
     };
     const resultingState = JSON.stringify(resultingStateObj);
 
-    // Write the DELETE_DOCUMENT operation to IOperationStore
-    // Note: resultingState is NOT persisted in IOperationStore
-    try {
-      await this.operationStore.apply(
-        documentId,
-        document.header.documentType,
-        job.scope,
-        job.branch,
-        operation.index,
-        (txn) => {
-          txn.addOperations(operation);
-        },
-      );
-    } catch (error) {
-      return {
-        job,
-        success: false,
-        error: new Error(
-          `Failed to write DELETE_DOCUMENT operation to IOperationStore: ${error instanceof Error ? error.message : String(error)}`,
-        ),
-        duration: Date.now() - startTime,
-      };
+    const writeError = await this.writeOperationToStore(
+      documentId,
+      document.header.documentType,
+      job.scope,
+      job.branch,
+      operation,
+      job,
+      startTime,
+    );
+    if (writeError !== null) {
+      return writeError;
     }
 
-    return {
+    indexTxn.write([
+      {
+        ...operation,
+        documentId: documentId,
+        documentType: document.header.documentType,
+        branch: job.branch,
+        scope: job.scope,
+      },
+    ]);
+
+    return this.buildSuccessResult(
       job,
-      success: true,
-      operations: [operation],
-      operationsWithContext: [
-        {
-          operation,
-          context: {
-            documentId,
-            scope: job.scope,
-            branch: job.branch,
-            documentType: document.header.documentType,
-            resultingState,
-          },
-        },
-      ],
-      duration: Date.now() - startTime,
-    };
+      operation,
+      documentId,
+      document.header.documentType,
+      resultingState,
+      startTime,
+    );
   }
 
   /**
@@ -568,6 +682,8 @@ export class SimpleJobExecutor implements IJobExecutor {
     job: Job,
     action: Action,
     startTime: number,
+    indexTxn: IOperationIndexTxn,
+    skip: number = 0,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -584,19 +700,15 @@ export class SimpleJobExecutor implements IJobExecutor {
     const input = action.input as UpgradeDocumentActionInput;
 
     if (!input.documentId) {
-      return {
+      return this.buildErrorResult(
         job,
-        success: false,
-        error: new Error(
-          "UPGRADE_DOCUMENT action requires a documentId in input",
-        ),
-        duration: Date.now() - startTime,
-      };
+        new Error("UPGRADE_DOCUMENT action requires a documentId in input"),
+        startTime,
+      );
     }
 
     const documentId = input.documentId;
 
-    // Load the document from write cache
     let document: PHDocument;
     try {
       document = await this.writeCache.getState(
@@ -605,63 +717,47 @@ export class SimpleJobExecutor implements IJobExecutor {
         job.branch,
       );
     } catch (error) {
-      return {
+      return this.buildErrorResult(
         job,
-        success: false,
-        error: new Error(
+        new Error(
           `Failed to fetch document for upgrade: ${error instanceof Error ? error.message : String(error)}`,
         ),
-        duration: Date.now() - startTime,
-      };
+        startTime,
+      );
     }
 
-    // Check if document is deleted
     const documentState = document.state.document;
     if (documentState.isDeleted) {
-      return {
+      return this.buildErrorResult(
         job,
-        success: false,
-        error: new DocumentDeletedError(
-          documentId,
-          documentState.deletedAtUtcIso,
-        ),
-        duration: Date.now() - startTime,
-      };
+        new DocumentDeletedError(documentId, documentState.deletedAtUtcIso),
+        startTime,
+      );
     }
 
-    // Determine the next operation index for this scope only (per-scope indexing)
     const nextIndex = getNextIndexForScope(document, job.scope);
 
-    // Apply the initialState from the upgrade action
-    // The initialState from UPGRADE_DOCUMENT should be merged with the existing base state
-    // to preserve auth and document scopes while adding model-specific scopes (global, local, etc.)
     applyUpgradeDocumentAction(document, action as never);
 
-    // Create the UPGRADE_DOCUMENT operation with calculated index
-    const operation: Operation = {
-      index: nextIndex,
-      timestampUtcMs: action.timestampUtcMs || new Date().toISOString(),
-      hash: "", // Will be computed later
-      skip: 0, // Always 0 for new operations; skip > 0 only during reshuffle
-      action: action,
-    };
+    const operation = this.createOperation(action, nextIndex, skip);
 
     // Write the updated document to legacy storage
-    try {
-      await this.operationStorage.addDocumentOperations(
-        documentId,
-        [operation],
-        document,
-      );
-    } catch (error) {
-      return {
-        job,
-        success: false,
-        error: new Error(
-          `Failed to write UPGRADE_DOCUMENT operation to legacy storage: ${error instanceof Error ? error.message : String(error)}`,
-        ),
-        duration: Date.now() - startTime,
-      };
+    if (this.config.legacyStorageEnabled) {
+      try {
+        await this.operationStorage.addDocumentOperations(
+          documentId,
+          [operation],
+          document,
+        );
+      } catch (error) {
+        return this.buildErrorResult(
+          job,
+          new Error(
+            `Failed to write UPGRADE_DOCUMENT operation to legacy storage: ${error instanceof Error ? error.message : String(error)}`,
+          ),
+          startTime,
+        );
+      }
     }
 
     // Compute resultingState for passing via context (not persisted)
@@ -671,36 +767,22 @@ export class SimpleJobExecutor implements IJobExecutor {
     };
     const resultingState = JSON.stringify(resultingStateObj);
 
-    // Write the operation to new IOperationStore (dual-writing)
-    // Note: resultingState is NOT persisted in IOperationStore
-    try {
-      await this.operationStore.apply(
-        documentId,
-        document.header.documentType,
-        job.scope,
-        job.branch,
-        operation.index,
-        (txn) => {
-          txn.addOperations(operation);
-        },
-      );
-    } catch (error) {
-      return {
-        job,
-        success: false,
-        error: new Error(
-          `Failed to write UPGRADE_DOCUMENT operation to IOperationStore: ${error instanceof Error ? error.message : String(error)}`,
-        ),
-        duration: Date.now() - startTime,
-      };
+    const writeError = await this.writeOperationToStore(
+      documentId,
+      document.header.documentType,
+      job.scope,
+      job.branch,
+      operation,
+      job,
+      startTime,
+    );
+    if (writeError !== null) {
+      return writeError;
     }
 
-    document.header.revision = {
-      ...document.header.revision,
-      [job.scope]: operation.index + 1,
-    };
+    this.updateDocumentRevision(document, job.scope, operation.index);
 
-    this.writeCache.putState(
+    this.writeCacheState(
       documentId,
       job.scope,
       job.branch,
@@ -708,6 +790,501 @@ export class SimpleJobExecutor implements IJobExecutor {
       document,
     );
 
+    indexTxn.write([
+      {
+        ...operation,
+        documentId: documentId,
+        documentType: document.header.documentType,
+        branch: job.branch,
+        scope: job.scope,
+      },
+    ]);
+
+    return this.buildSuccessResult(
+      job,
+      operation,
+      documentId,
+      document.header.documentType,
+      resultingState,
+      startTime,
+    );
+  }
+
+  private async executeAddRelationshipAction(
+    job: Job,
+    action: Action,
+    startTime: number,
+    indexTxn: IOperationIndexTxn,
+  ): Promise<
+    JobResult & {
+      operationsWithContext?: Array<{
+        operation: Operation;
+        context: {
+          documentId: string;
+          scope: string;
+          branch: string;
+          documentType: string;
+        };
+      }>;
+    }
+  > {
+    if (job.scope !== "document") {
+      return this.buildErrorResult(
+        job,
+        new Error(
+          `ADD_RELATIONSHIP must be in "document" scope, got "${job.scope}"`,
+        ),
+        startTime,
+      );
+    }
+
+    const input = action.input as AddRelationshipActionInput;
+
+    if (!input.sourceId || !input.targetId || !input.relationshipType) {
+      return this.buildErrorResult(
+        job,
+        new Error(
+          "ADD_RELATIONSHIP action requires sourceId, targetId, and relationshipType in input",
+        ),
+        startTime,
+      );
+    }
+
+    if (input.sourceId === input.targetId) {
+      return this.buildErrorResult(
+        job,
+        new Error(
+          "ADD_RELATIONSHIP: sourceId and targetId cannot be the same (self-relationships not allowed)",
+        ),
+        startTime,
+      );
+    }
+
+    let sourceDoc: PHDocument;
+    try {
+      sourceDoc = await this.writeCache.getState(
+        input.sourceId,
+        "document",
+        job.branch,
+      );
+    } catch (error) {
+      return this.buildErrorResult(
+        job,
+        new Error(
+          `ADD_RELATIONSHIP: source document ${input.sourceId} not found: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+        startTime,
+      );
+    }
+
+    let targetDoc: PHDocument;
+    try {
+      targetDoc = await this.writeCache.getState(
+        input.targetId,
+        "document",
+        job.branch,
+      );
+    } catch (error) {
+      return this.buildErrorResult(
+        job,
+        new Error(
+          `ADD_RELATIONSHIP: target document ${input.targetId} not found: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+        startTime,
+      );
+    }
+
+    const targetDocState = targetDoc.state.document;
+    if (targetDocState.isDeleted) {
+      return this.buildErrorResult(
+        job,
+        new Error(
+          `ADD_RELATIONSHIP: target document ${input.targetId} is deleted`,
+        ),
+        startTime,
+      );
+    }
+
+    const nextIndex = getNextIndexForScope(sourceDoc, job.scope);
+
+    const operation = this.createOperation(action, nextIndex);
+
+    const writeError = await this.writeOperationToStore(
+      input.sourceId,
+      sourceDoc.header.documentType,
+      job.scope,
+      job.branch,
+      operation,
+      job,
+      startTime,
+    );
+    if (writeError !== null) {
+      return writeError;
+    }
+
+    sourceDoc.header.lastModifiedAtUtcIso =
+      operation.timestampUtcMs || new Date().toISOString();
+
+    this.updateDocumentRevision(sourceDoc, job.scope, operation.index);
+
+    sourceDoc.operations = {
+      ...sourceDoc.operations,
+      [job.scope]: [...(sourceDoc.operations[job.scope] ?? []), operation],
+    };
+
+    const scopeState = (sourceDoc.state as Record<string, unknown>)[job.scope];
+    const resultingStateObj: Record<string, unknown> = {
+      header: structuredClone(sourceDoc.header),
+      [job.scope]: scopeState === undefined ? {} : structuredClone(scopeState),
+    };
+    const resultingState = JSON.stringify(resultingStateObj);
+
+    this.writeCacheState(
+      input.sourceId,
+      job.scope,
+      job.branch,
+      operation.index,
+      sourceDoc,
+    );
+
+    indexTxn.write([
+      {
+        ...operation,
+        documentId: input.sourceId,
+        documentType: sourceDoc.header.documentType,
+        branch: job.branch,
+        scope: job.scope,
+      },
+    ]);
+
+    // collection membership has to be _after_ the write, as it requires the
+    // ordinal of the operation to be set
+    if (sourceDoc.header.documentType === "powerhouse/document-drive") {
+      const collectionId = driveCollectionId(job.branch, input.sourceId);
+      indexTxn.addToCollection(collectionId, input.targetId);
+    }
+
+    return this.buildSuccessResult(
+      job,
+      operation,
+      input.sourceId,
+      sourceDoc.header.documentType,
+      resultingState,
+      startTime,
+    );
+  }
+
+  private async executeRemoveRelationshipAction(
+    job: Job,
+    action: Action,
+    startTime: number,
+    indexTxn: IOperationIndexTxn,
+  ): Promise<
+    JobResult & {
+      operationsWithContext?: Array<{
+        operation: Operation;
+        context: {
+          documentId: string;
+          scope: string;
+          branch: string;
+          documentType: string;
+        };
+      }>;
+    }
+  > {
+    if (job.scope !== "document") {
+      return this.buildErrorResult(
+        job,
+        new Error(
+          `REMOVE_RELATIONSHIP must be in "document" scope, got "${job.scope}"`,
+        ),
+        startTime,
+      );
+    }
+
+    const input = action.input as RemoveRelationshipActionInput;
+
+    if (!input.sourceId || !input.targetId || !input.relationshipType) {
+      return this.buildErrorResult(
+        job,
+        new Error(
+          "REMOVE_RELATIONSHIP action requires sourceId, targetId, and relationshipType in input",
+        ),
+        startTime,
+      );
+    }
+
+    let sourceDoc: PHDocument;
+    try {
+      sourceDoc = await this.writeCache.getState(
+        input.sourceId,
+        "document",
+        job.branch,
+      );
+    } catch (error) {
+      return this.buildErrorResult(
+        job,
+        new Error(
+          `REMOVE_RELATIONSHIP: source document ${input.sourceId} not found: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+        startTime,
+      );
+    }
+
+    const nextIndex = getNextIndexForScope(sourceDoc, job.scope);
+
+    const operation = this.createOperation(action, nextIndex);
+
+    const writeError = await this.writeOperationToStore(
+      input.sourceId,
+      sourceDoc.header.documentType,
+      job.scope,
+      job.branch,
+      operation,
+      job,
+      startTime,
+    );
+    if (writeError !== null) {
+      return writeError;
+    }
+
+    sourceDoc.header.lastModifiedAtUtcIso =
+      operation.timestampUtcMs || new Date().toISOString();
+
+    this.updateDocumentRevision(sourceDoc, job.scope, operation.index);
+
+    sourceDoc.operations = {
+      ...sourceDoc.operations,
+      [job.scope]: [...(sourceDoc.operations[job.scope] ?? []), operation],
+    };
+
+    const scopeState = (sourceDoc.state as Record<string, unknown>)[job.scope];
+    const resultingStateObj: Record<string, unknown> = {
+      header: structuredClone(sourceDoc.header),
+      [job.scope]: scopeState === undefined ? {} : structuredClone(scopeState),
+    };
+    const resultingState = JSON.stringify(resultingStateObj);
+
+    this.writeCacheState(
+      input.sourceId,
+      job.scope,
+      job.branch,
+      operation.index,
+      sourceDoc,
+    );
+
+    indexTxn.write([
+      {
+        ...operation,
+        documentId: input.sourceId,
+        documentType: sourceDoc.header.documentType,
+        branch: job.branch,
+        scope: job.scope,
+      },
+    ]);
+
+    // collection membership has to be _after_ the write, as it requires the
+    // ordinal of the operation to be set
+    if (sourceDoc.header.documentType === "powerhouse/document-drive") {
+      const collectionId = driveCollectionId(job.branch, input.sourceId);
+      indexTxn.removeFromCollection(collectionId, input.targetId);
+    }
+
+    return this.buildSuccessResult(
+      job,
+      operation,
+      input.sourceId,
+      sourceDoc.header.documentType,
+      resultingState,
+      startTime,
+    );
+  }
+
+  private createOperation(
+    action: Action,
+    index: number,
+    skip: number = 0,
+  ): Operation {
+    return {
+      index: index,
+      timestampUtcMs: action.timestampUtcMs || new Date().toISOString(),
+      hash: "",
+      skip: skip,
+      action: action,
+    };
+  }
+
+  private async executeLoadJob(
+    job: Job,
+    startTime: number,
+    indexTxn: IOperationIndexTxn,
+  ): Promise<JobResult> {
+    if (job.operations.length === 0) {
+      return this.buildErrorResult(
+        job,
+        new Error("Load job must include at least one operation"),
+        startTime,
+      );
+    }
+
+    const scope = job.scope;
+
+    let latestRevision = 0;
+    try {
+      const revisions = await this.operationStore.getRevisions(
+        job.documentId,
+        job.branch,
+      );
+      latestRevision = revisions.revision[scope] ?? 0;
+    } catch {
+      latestRevision = 0;
+    }
+
+    const minIncomingIndex = job.operations.reduce(
+      (min, operation) => Math.min(min, operation.index),
+      Number.POSITIVE_INFINITY,
+    );
+
+    const skipCount =
+      minIncomingIndex === Number.POSITIVE_INFINITY
+        ? 0
+        : Math.max(0, latestRevision - minIncomingIndex);
+
+    if (skipCount > MAX_SKIP_THRESHOLD) {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          `Excessive reshuffle detected: skip count of ${skipCount} exceeds threshold of ${MAX_SKIP_THRESHOLD}. ` +
+            `This indicates an attempt to insert an operation at index ${minIncomingIndex} when the latest revision is ${latestRevision}.`,
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    const reshuffledOperations = reshuffleByTimestampAndIndex(
+      {
+        index: latestRevision,
+        skip: skipCount,
+      },
+      [],
+      job.operations.map((operation) => ({
+        ...operation,
+        id: operation.id,
+      })),
+    );
+
+    const actions = reshuffledOperations.map((operation) => operation.action);
+    const skipValues = reshuffledOperations.map((operation) => operation.skip);
+
+    const result = await this.processActions(
+      job,
+      actions,
+      startTime,
+      indexTxn,
+      skipValues,
+    );
+
+    if (!result.success) {
+      return {
+        job,
+        success: false,
+        error: result.error,
+        duration: Date.now() - startTime,
+      };
+    }
+
+    if (result.operationsWithContext.length > 0) {
+      const event: OperationWrittenEvent = {
+        jobId: job.id,
+        operations: result.operationsWithContext,
+      };
+      this.eventBus
+        .emit(OperationEventTypes.OPERATION_WRITTEN, event)
+        .catch(() => {
+          // TODO: log error channel once logging is wired
+        });
+    }
+
+    this.writeCache.invalidate(job.documentId, scope, job.branch);
+
+    return {
+      job,
+      success: true,
+      operations: result.generatedOperations,
+      operationsWithContext: result.operationsWithContext,
+      duration: Date.now() - startTime,
+    };
+  }
+
+  private async writeOperationToStore(
+    documentId: string,
+    documentType: string,
+    scope: string,
+    branch: string,
+    operation: Operation,
+    job: Job,
+    startTime: number,
+  ): Promise<JobResult | null> {
+    try {
+      await this.operationStore.apply(
+        documentId,
+        documentType,
+        scope,
+        branch,
+        operation.index,
+        (txn) => {
+          txn.addOperations(operation);
+        },
+      );
+      return null;
+    } catch (error) {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          `Failed to write operation to IOperationStore: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+  }
+
+  private updateDocumentRevision(
+    document: PHDocument,
+    scope: string,
+    operationIndex: number,
+  ): void {
+    document.header.revision = {
+      ...document.header.revision,
+      [scope]: operationIndex + 1,
+    };
+  }
+
+  private writeCacheState(
+    documentId: string,
+    scope: string,
+    branch: string,
+    operationIndex: number,
+    document: PHDocument,
+  ): void {
+    this.writeCache.putState(
+      documentId,
+      scope,
+      branch,
+      operationIndex,
+      document,
+    );
+  }
+
+  private buildSuccessResult(
+    job: Job,
+    operation: Operation,
+    documentId: string,
+    documentType: string,
+    resultingState: string,
+    startTime: number,
+  ): JobResult {
     return {
       job,
       success: true,
@@ -716,15 +1293,45 @@ export class SimpleJobExecutor implements IJobExecutor {
         {
           operation,
           context: {
-            documentId,
+            documentId: documentId,
             scope: job.scope,
             branch: job.branch,
-            documentType: document.header.documentType,
+            documentType: documentType,
             resultingState,
           },
         },
       ],
       duration: Date.now() - startTime,
     };
+  }
+
+  private buildErrorResult(
+    job: Job,
+    error: Error,
+    startTime: number,
+  ): JobResult {
+    return {
+      job,
+      success: false,
+      error: error,
+      duration: Date.now() - startTime,
+    };
+  }
+
+  private accumulateResultOrReturnError(
+    result: JobResult,
+    generatedOperations: Operation[],
+    operationsWithContext: OperationWithContext[],
+  ): JobResult | null {
+    if (!result.success) {
+      return result;
+    }
+    if (result.operations && result.operations.length > 0) {
+      generatedOperations.push(...result.operations);
+    }
+    if (result.operationsWithContext) {
+      operationsWithContext.push(...result.operationsWithContext);
+    }
+    return null;
   }
 }

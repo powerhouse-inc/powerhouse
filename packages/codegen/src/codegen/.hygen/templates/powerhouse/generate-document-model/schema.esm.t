@@ -1,6 +1,6 @@
 ---
-to: "<%= rootDir %>/<%= h.changeCase.param(documentType) %>/gen/schema/index.ts"
+to: "<%= rootDir %>/<%= paramCaseDocumentType %>/gen/schema/index.ts"
 force: true
 ---
 export * from "./types.js";
-export * as z from "./zod.js";
+export * from "./zod.js";

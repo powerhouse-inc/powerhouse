@@ -1,6 +1,7 @@
 # Interface
 
 ```tsx
+// ConsistencyToken is defined in ../Shared/interface.md.
 interface IReactorClient {
   /**
    * Retrieves a list of document model specifications
@@ -21,6 +22,7 @@ interface IReactorClient {
    *
    * @param identifier - Required, this is either a document "id" field or a "slug"
    * @param view - Optional filter containing branch and scopes information
+   * @param consistencyToken - Optional consistency token to enforce read-after-write semantics
    * @param signal - Optional abort signal to cancel the request
    *
    * @returns The up-to-date PHDocument with scopes and list of child document ids
@@ -28,6 +30,7 @@ interface IReactorClient {
   get<TDocument extends PHDocument>(
     identifier: string,
     view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<{
     document: TDocument;
@@ -40,6 +43,7 @@ interface IReactorClient {
    * @param parentIdentifier - Required, this is either a document "id" field or a "slug"
    * @param view - Optional filter containing branch and scopes information
    * @param signal - Optional abort signal to cancel the request
+   * @param consistencyToken - Optional consistency token to enforce read-after-write semantics
    *
    * @returns The up-to-date PHDocument and paging cursor
    */
@@ -47,6 +51,7 @@ interface IReactorClient {
     parentIdentifier: string,
     view?: ViewFilter,
     paging?: PagingOptions,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>>;
 
@@ -56,6 +61,7 @@ interface IReactorClient {
    * @param childIdentifier - Required, this is either a document "id" field or a "slug"
    * @param view - Optional filter containing branch and scopes information
    * @param signal - Optional abort signal to cancel the request
+   * @param consistencyToken - Optional consistency token to enforce read-after-write semantics
    *
    * @returns The up-to-date PHDocument and paging cursor
    */
@@ -63,6 +69,7 @@ interface IReactorClient {
     childIdentifier: string,
     view?: ViewFilter,
     paging?: PagingOptions,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>>;
 
@@ -72,6 +79,7 @@ interface IReactorClient {
    * @param search - Search filter options (type, parentId, identifiers)
    * @param view - Optional filter containing branch and scopes information
    * @param paging - Optional pagination options
+   * @param consistencyToken - Optional consistency token to enforce read-after-write semantics
    * @param signal - Optional abort signal to cancel the request
    *
    * @returns List of documents matching criteria and pagination cursor
@@ -80,6 +88,7 @@ interface IReactorClient {
     search: SearchFilter,
     view?: ViewFilter,
     paging?: PagingOptions,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>>;
 
@@ -253,7 +262,7 @@ interface IReactorClient {
    *
    * @param jobId - The job id or job object
    * @param signal - Optional abort signal to cancel the request
-   * @returns The result of the job
+   * @returns The result of the job with a populated consistency token
    */
   waitForJob(jobId: string | JobInfo, signal?: AbortSignal): Promise<JobInfo>;
 

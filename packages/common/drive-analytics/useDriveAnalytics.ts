@@ -3,9 +3,9 @@ import {
   AnalyticsGranularity,
   AnalyticsPath,
 } from "@powerhousedao/analytics-engine-core";
-import type { ActionType, Target } from "@powerhousedao/common";
-import { useAnalyticsQuery } from "@powerhousedao/reactor-browser";
+import { useAnalyticsQuery } from "@powerhousedao/reactor-browser/analytics";
 import { DateTime } from "luxon";
+import type { ActionType, NodeTarget } from "./processor/types.js";
 
 export type UseDriveAnalyticsOptions = {
   from?: string;
@@ -20,7 +20,7 @@ export type UseDriveAnalyticsOptions = {
   filters?: {
     driveId?: string[];
     operation?: string[];
-    target?: Target[];
+    target?: NodeTarget[];
     actionType?: ActionType[];
   };
 };

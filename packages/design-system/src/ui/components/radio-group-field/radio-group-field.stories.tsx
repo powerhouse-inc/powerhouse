@@ -1,11 +1,11 @@
+import type { Meta, StoryObj } from "@storybook/react";
+import { withForm } from "../decorators.js";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
-  RadioGroupField,
   StorybookControlCategory,
-  withForm,
-} from "@powerhousedao/design-system";
-import type { Meta, StoryObj } from "@storybook/react";
+} from "../storybook-arg-types.js";
+import { RadioGroupField } from "./radio-group-field.js";
 
 const meta = {
   title: "UI/RadioGroupField",

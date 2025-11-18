@@ -1,3 +1,5 @@
+- Read all docs in the `docs/planning` folder as a prerequisite for all tasks.
+
 # Test Organization
 
 - **Unit tests**: Test a single component with mocked dependencies. Named `<component>/unit.test.ts`

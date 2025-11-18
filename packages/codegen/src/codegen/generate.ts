@@ -1,17 +1,3 @@
-import type { CodegenOptions } from "@powerhousedao/codegen";
-import {
-  generateAll,
-  generateSchema,
-  generateSchemas,
-  getDocumentTypesMap,
-  hygenGenerateDocumentModel,
-  hygenGenerateDriveEditor,
-  hygenGenerateEditor,
-  hygenGenerateImportScript,
-  hygenGenerateProcessor,
-  hygenGenerateSubgraph,
-  loadDocumentModel,
-} from "@powerhousedao/codegen";
 import type {
   PartialPowerhouseManifest,
   PowerhouseConfig,
@@ -22,6 +8,19 @@ import { paramCase } from "change-case";
 import type { DocumentModelGlobalState } from "document-model";
 import fs from "node:fs";
 import { join } from "node:path";
+import { readPackage } from "read-pkg";
+import { generateSchema, generateSchemas } from "./graphql.js";
+import {
+  generateAll,
+  hygenGenerateDocumentModel,
+  hygenGenerateDriveEditor,
+  hygenGenerateEditor,
+  hygenGenerateImportScript,
+  hygenGenerateProcessor,
+  hygenGenerateSubgraph,
+} from "./hygen.js";
+import type { CodegenOptions } from "./types.js";
+import { getDocumentTypesMap, loadDocumentModel } from "./utils.js";
 
 export async function generate(config: PowerhouseConfig) {
   const { skipFormat, watch } = config;
@@ -63,12 +62,23 @@ export async function generateFromDocument(
   await generateFromDocumentModel(documentModelState, config, null, options);
 }
 
-export async function generateEditor(
-  name: string,
-  documentTypes: string[],
-  config: PowerhouseConfig,
-  editorId?: string,
-) {
+type GenerateEditorArgs = {
+  name: string;
+  documentTypes: string[];
+  config: PowerhouseConfig;
+  editorId?: string;
+  specifiedPackageName?: string;
+  editorDirName?: string;
+};
+export async function generateEditor(args: GenerateEditorArgs) {
+  const {
+    name,
+    documentTypes,
+    config,
+    editorId,
+    specifiedPackageName,
+    editorDirName,
+  } = args;
   const pathOrigin = "../../";
 
   const { documentModelsDir, skipFormat } = config;
@@ -82,15 +92,21 @@ export async function generateEditor(
       `Document model for ${invalidType} not found. Make sure the document model is available in the document-models directory (${documentModelsDir}) and has been properly generated.`,
     );
   }
-  return hygenGenerateEditor(
+  const packageNameFromPackageJson = await readPackage().then(
+    (pkg) => pkg.name,
+  );
+  const packageName = specifiedPackageName || packageNameFromPackageJson;
+  return hygenGenerateEditor({
     name,
     documentTypes,
     documentTypesMap,
-    config.editorsDir,
-    config.documentModelsDir,
-    { skipFormat },
+    dir: config.editorsDir,
+    documentModelsDir: config.documentModelsDir,
+    packageName,
+    skipFormat,
     editorId,
-  );
+    editorDirName,
+  });
 }
 
 export async function generateSubgraphFromDocumentModel(
@@ -99,10 +115,7 @@ export async function generateSubgraphFromDocumentModel(
   config: PowerhouseConfig,
   options: CodegenOptions = {},
 ) {
-  return hygenGenerateSubgraph(name, documentModel, config.subgraphsDir, {
-    skipFormat: config.skipFormat,
-    verbose: options.verbose,
-  });
+  return hygenGenerateSubgraph(name, documentModel, { ...config, ...options });
 }
 
 export async function generateSubgraph(
@@ -114,8 +127,7 @@ export async function generateSubgraph(
   return hygenGenerateSubgraph(
     name,
     file !== null ? await loadDocumentModel(file) : null,
-    config.subgraphsDir,
-    { skipFormat: config.skipFormat, verbose: options.verbose },
+    { ...config, ...options },
   );
 }
 
@@ -141,19 +153,27 @@ export async function generateDriveEditor(options: {
   appId?: string;
   allowedDocumentTypes?: string;
   isDragAndDropEnabled?: boolean;
+  driveEditorDirName?: string;
 }) {
-  const { name, config, appId, allowedDocumentTypes, isDragAndDropEnabled } =
-    options;
+  const {
+    name,
+    config,
+    appId,
+    allowedDocumentTypes,
+    isDragAndDropEnabled,
+    driveEditorDirName,
+  } = options;
   const dir = config.editorsDir;
   const skipFormat = config.skipFormat;
 
   return hygenGenerateDriveEditor({
     name,
     dir,
-    appId: appId ?? "drive-editor-id",
+    appId: appId ?? paramCase(name),
     allowedDocumentTypes: allowedDocumentTypes,
     isDragAndDropEnabled: isDragAndDropEnabled ?? true,
     skipFormat,
+    driveEditorDirName,
   });
 }
 
@@ -329,14 +349,20 @@ async function generateFromDocumentModel(
     );
   }
 
+  const packageName = await readPackage().then((pkg) => pkg.name);
   await generateSchema(name, config.documentModelsDir, {
     skipFormat: config.skipFormat,
     verbose,
   });
-  await hygenGenerateDocumentModel(documentModel, config.documentModelsDir, {
-    skipFormat: config.skipFormat,
-    verbose,
-    force,
-  });
+  await hygenGenerateDocumentModel(
+    documentModel,
+    config.documentModelsDir,
+    packageName,
+    {
+      skipFormat: config.skipFormat,
+      verbose,
+      force,
+    },
+  );
   await generateSubgraph(name, filePath || null, config, { verbose });
 }

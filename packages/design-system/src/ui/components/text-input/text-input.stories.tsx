@@ -1,10 +1,10 @@
+import type { Meta, StoryObj } from "@storybook/react";
 import {
   getDefaultArgTypes,
   getValidationArgTypes,
   PrebuiltArgTypes,
   StorybookControlCategory,
-} from "@powerhousedao/design-system";
-import type { Meta, StoryObj } from "@storybook/react";
+} from "../storybook-arg-types.js";
 import { TextInput } from "./text-input.js";
 
 /**

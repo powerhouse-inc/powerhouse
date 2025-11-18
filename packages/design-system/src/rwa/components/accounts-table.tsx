@@ -1,0 +1,49 @@
+import { Icon } from "@powerhousedao/design-system";
+import { useCallback } from "react";
+import { Fragment } from "react/jsx-runtime";
+import { tableNames } from "../constants/names.js";
+import { useEditorContext } from "../context/editor-context.js";
+import type { TableColumn } from "../types.js";
+import { RWATableCell } from "./table-cell.js";
+import { RWATableRow } from "./table-row.js";
+import { TableWithForm } from "./table-with-form.js";
+
+export function AccountsTable() {
+  const { accounts, principalLenderAccountId } = useEditorContext();
+  const principalLenderAccount = accounts.find(
+    (account) => account.id === principalLenderAccountId,
+  );
+
+  const renderPrincipalLenderRow = useCallback(
+    (c: TableColumn[]) => (
+      <RWATableRow>
+        {c.map((column) => (
+          <Fragment key={column.key}>
+            {column.key === "label" ? (
+              <RWATableCell>
+                {principalLenderAccount?.label}
+                <span className="ml-2 inline-flex items-center gap-1 rounded bg-green-100 px-1 font-extralight">
+                  Lender <Icon name="CheckCircle" size={14} />
+                </span>
+              </RWATableCell>
+            ) : (
+              <RWATableCell />
+            )}
+          </Fragment>
+        ))}
+      </RWATableRow>
+    ),
+    [principalLenderAccount?.label],
+  );
+
+  const specialFirstRow = principalLenderAccount?.label
+    ? renderPrincipalLenderRow
+    : undefined;
+
+  return (
+    <TableWithForm
+      specialFirstRow={specialFirstRow}
+      tableName={tableNames.ACCOUNT}
+    />
+  );
+}

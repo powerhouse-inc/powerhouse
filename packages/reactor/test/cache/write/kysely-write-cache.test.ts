@@ -2,7 +2,7 @@ import type { Operation, PHDocument } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";
-import type { WriteCacheConfig } from "../../../src/cache/types.js";
+import type { WriteCacheConfig } from "../../../src/cache/write-cache-types.js";
 import type { IDocumentModelRegistry } from "../../../src/registry/interfaces.js";
 import type {
   IKeyframeStore,
@@ -353,7 +353,6 @@ describe("KyselyWriteCache", () => {
 
       const retrieved = await cache.getState("doc1", "global", "main", 2);
 
-      expect(retrieved).not.toBe(doc2);
       expect(retrieved).toEqual(doc2);
     });
 
@@ -368,22 +367,7 @@ describe("KyselyWriteCache", () => {
 
       const retrieved = await cache.getState("doc1", "global", "main");
 
-      expect(retrieved).not.toBe(doc3);
       expect(retrieved).toEqual(doc3);
-    });
-
-    it("should return deep copy (mutations don't affect cache)", async () => {
-      const doc = createTestDocument();
-
-      cache.putState("doc1", "global", "main", 1, doc);
-
-      const retrieved = await cache.getState("doc1", "global", "main", 1);
-
-      retrieved.state.document.version = "100";
-
-      const retrievedAgain = await cache.getState("doc1", "global", "main", 1);
-
-      expect(retrievedAgain.state.document.version).not.toBe("100");
     });
 
     it("should update LRU on cache hit", async () => {

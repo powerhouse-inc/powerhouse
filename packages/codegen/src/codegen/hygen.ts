@@ -1,8 +1,4 @@
-import type { DocumentTypesMap } from "@powerhousedao/codegen";
-import {
-  loadDocumentModel,
-  TSMorphCodeGenerator,
-} from "@powerhousedao/codegen";
+import type { PowerhouseConfig } from "@powerhousedao/config";
 import { pascalCase } from "change-case";
 import type { DocumentModelGlobalState } from "document-model";
 import { Logger, runner } from "hygen";
@@ -10,6 +6,10 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { readPackage } from "read-pkg";
+import { TSMorphCodeGenerator } from "../ts-morph-generator/index.js";
+import type { CodegenOptions, DocumentTypesMap } from "./types.js";
+import { loadDocumentModel } from "./utils.js";
 
 const require = createRequire(import.meta.url);
 
@@ -39,20 +39,39 @@ export async function run(
     debug: !!process.env.DEBUG,
   });
   if (!skipFormat) {
-    const execa = await import("execa");
+    const prettier = await import("prettier");
+    const fs = await import("fs/promises");
     const actions = result.actions as { status: string; subject: string }[];
-    actions
+
+    const filesToFormat = actions
       .filter((action) => ["added", "inject"].includes(action.status))
-      .forEach((action) => {
-        execa.$`npx prettier --ignore-path --write ${action.subject.replace(
-          ".",
-          process.cwd(),
-        )}`.catch((err: unknown) => {
-          if (verbose) {
-            console.log(err);
+      .map((action) => action.subject.replace("./", `${process.cwd()}/`))
+      .map((filePath) =>
+        filePath.startsWith(process.cwd())
+          ? filePath
+          : `${process.cwd()}/${filePath}`,
+      );
+
+    if (filesToFormat.length > 0) {
+      const config = await prettier.resolveConfig(process.cwd());
+
+      await Promise.all(
+        filesToFormat.map(async (filePath) => {
+          try {
+            const text = await fs.readFile(filePath, "utf8");
+            const formatted = await prettier.format(text, {
+              ...config,
+              filepath: filePath,
+            });
+            await fs.writeFile(filePath, formatted);
+          } catch (err: unknown) {
+            if (verbose) {
+              console.log(err);
+            }
           }
-        });
-      });
+        }),
+      );
+    }
   }
 
   return result;
@@ -75,10 +94,12 @@ export async function generateAll(
       continue;
     }
 
+    const packageName = await readPackage().then((pkg) => pkg.name);
+
     try {
       const documentModel = await loadDocumentModel(documentModelPath);
       documentModelStates.push(documentModel);
-      await hygenGenerateDocumentModel(documentModel, dir, {
+      await hygenGenerateDocumentModel(documentModel, dir, packageName, {
         watch,
         skipFormat,
         verbose,
@@ -94,11 +115,17 @@ export async function generateAll(
 
   const projectDir = path.dirname(dir);
   const documentModelDir = path.basename(dir);
+  const packageName = await readPackage().then((pkg) => pkg.name);
 
-  const generator = new TSMorphCodeGenerator(projectDir, documentModelStates, {
-    directories: { documentModelDir },
-    forceUpdate: force,
-  });
+  const generator = new TSMorphCodeGenerator(
+    projectDir,
+    documentModelStates,
+    packageName,
+    {
+      directories: { documentModelDir },
+      forceUpdate: force,
+    },
+  );
 
   await generator.generateReducers();
 }
@@ -106,6 +133,7 @@ export async function generateAll(
 export async function hygenGenerateDocumentModel(
   documentModelState: DocumentModelGlobalState,
   dir: string,
+  packageName: string,
   {
     watch = false,
     skipFormat = false,
@@ -116,7 +144,9 @@ export async function hygenGenerateDocumentModel(
 ) {
   const projectDir = path.dirname(dir);
   const documentModelDir = path.basename(dir);
-
+  if (!fs.existsSync(path.join(dir, "document-models.ts"))) {
+    fs.writeFileSync(path.join(dir, "document-models.ts"), "");
+  }
   // Generate the singular files for the document model logic
   await run(
     [
@@ -126,6 +156,8 @@ export async function hygenGenerateDocumentModel(
       JSON.stringify(documentModelState),
       "--root-dir",
       dir,
+      "--package-name",
+      packageName,
     ],
     { watch, skipFormat, verbose },
   );
@@ -147,6 +179,8 @@ export async function hygenGenerateDocumentModel(
         dir,
         "--module",
         module.name,
+        "--package-name",
+        packageName,
       ],
       { watch, skipFormat, verbose },
     );
@@ -156,6 +190,7 @@ export async function hygenGenerateDocumentModel(
     const generator = new TSMorphCodeGenerator(
       projectDir,
       [documentModelState],
+      packageName,
       { directories: { documentModelDir }, forceUpdate: force },
     );
 
@@ -163,15 +198,33 @@ export async function hygenGenerateDocumentModel(
   }
 }
 
+type HygenGenerateEditorArgs = {
+  name: string;
+  documentTypes: string[];
+  documentTypesMap: DocumentTypesMap;
+  dir: string;
+  documentModelsDir: string;
+  packageName: string;
+  skipFormat?: boolean;
+  verbose?: boolean;
+  editorId?: string;
+  editorDirName?: string;
+};
 export async function hygenGenerateEditor(
-  name: string,
-  documentTypes: string[],
-  documentTypesMap: DocumentTypesMap,
-  dir: string,
-  documentModelsDir: string,
-  { skipFormat = false, verbose = true } = {},
-  editorId?: string,
+  hygenGenerateEditorArgs: HygenGenerateEditorArgs,
 ) {
+  const {
+    name,
+    documentTypes,
+    documentTypesMap,
+    dir,
+    documentModelsDir,
+    packageName,
+    skipFormat = false,
+    verbose = true,
+    editorId,
+    editorDirName,
+  } = hygenGenerateEditorArgs;
   // Generate the singular files for the document model logic
   const args = [
     "powerhouse",
@@ -186,10 +239,16 @@ export async function hygenGenerateEditor(
     JSON.stringify(documentTypesMap),
     "--document-models-dir",
     documentModelsDir,
+    "--package-name",
+    packageName,
   ];
 
   if (editorId) {
     args.push("--editor-id", editorId);
+  }
+
+  if (editorDirName) {
+    args.push("--editor-dir-name", editorDirName);
   }
 
   await run(args, { skipFormat, verbose });
@@ -224,9 +283,12 @@ export async function hygenGenerateProcessor(
 export async function hygenGenerateSubgraph(
   name: string,
   documentModel: DocumentModelGlobalState | null,
-  dir: string,
-  { skipFormat = false, verbose = true } = {},
+  config?: PowerhouseConfig & CodegenOptions,
 ) {
+  const dir = config?.subgraphsDir || "";
+  const packageName = await readPackage().then((pkg) => pkg.name);
+  const skipFormat = config?.skipFormat || false;
+  const verbose = config?.verbose || false;
   const params = [
     "powerhouse",
     `generate-subgraph`,
@@ -236,6 +298,8 @@ export async function hygenGenerateSubgraph(
     pascalCase(name),
     "--root-dir",
     dir,
+    "--package-name",
+    packageName,
   ];
 
   if (documentModel) {
@@ -257,6 +321,8 @@ export async function hygenGenerateSubgraph(
         JSON.stringify(documentModel),
         "--root-dir",
         dir,
+        "--package-name",
+        packageName,
       ],
       { skipFormat, verbose },
     );
@@ -269,6 +335,8 @@ export async function hygenGenerateSubgraph(
         name,
         "--root-dir",
         dir,
+        "--package-name",
+        packageName,
       ],
       { skipFormat, verbose },
     );
@@ -311,6 +379,7 @@ export async function hygenGenerateDriveEditor(options: {
   allowedDocumentTypes: string | undefined | null;
   isDragAndDropEnabled: boolean;
   skipFormat?: boolean;
+  driveEditorDirName?: string;
 }) {
   const {
     name,
@@ -319,6 +388,7 @@ export async function hygenGenerateDriveEditor(options: {
     skipFormat,
     allowedDocumentTypes,
     isDragAndDropEnabled,
+    driveEditorDirName,
   } = options;
 
   const allowedDocumentTypesString = JSON.stringify(
@@ -342,6 +412,10 @@ export async function hygenGenerateDriveEditor(options: {
     "--is-drag-and-drop-enabled",
     isDragAndDropEnabled ? "true" : "false",
   ];
+
+  if (driveEditorDirName) {
+    args.push("--drive-editor-dir-name", driveEditorDirName);
+  }
 
   await run(args, { skipFormat });
 }

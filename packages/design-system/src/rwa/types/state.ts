@@ -1,8 +1,8 @@
+import type { Maybe, Scalars } from "document-model";
 import type {
   allGroupTransactionTypes,
   assetGroupTransactions,
-} from "@powerhousedao/design-system";
-import type { Maybe, Scalars } from "document-model";
+} from "../constants/transactions.js";
 
 export type RealWorldAssetsState = {
   accounts: Account[];

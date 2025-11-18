@@ -3,13 +3,12 @@ import {
   AppSkeleton,
   CookieBanner,
   ModalsContainer,
-  useCheckLatestVersion,
-  useSubscribeToVetraPackages,
-  useSetSentryUser,
-  createReactor,
-} from "@powerhousedao/connect";
-import "../i18n/index.js";
+} from "@powerhousedao/connect/components";
+import { useCheckLatestVersion } from "@powerhousedao/connect/hooks";
+import { useSubscribeToVetraPackages } from "@powerhousedao/connect/services";
+import { createReactor, useSetSentryUser } from "@powerhousedao/connect/store";
 import { lazy, StrictMode, Suspense, type ReactNode } from "react";
+import "@powerhousedao/connect/i18n";
 
 export const Load = lazy(async () => {
   await createReactor();

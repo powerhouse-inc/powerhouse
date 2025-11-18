@@ -3,12 +3,19 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import type { StateReducer } from "document-model";
 import { isDocumentAction, createReducer } from "document-model/core";
-import type { ProcessorModulePHState } from "./types.js";
-import { z } from "./types.js";
+import type { ProcessorModulePHState } from "@powerhousedao/vetra/document-models/processor-module";
 
-import { reducer as BaseOperationsReducer } from "../src/reducers/base-operations.js";
+import { processorModuleBaseOperationsOperations } from "../src/reducers/base-operations.js";
 
-export const stateReducer: StateReducer<ProcessorModulePHState> = (
+import {
+  SetProcessorNameInputSchema,
+  SetProcessorTypeInputSchema,
+  AddDocumentTypeInputSchema,
+  RemoveDocumentTypeInputSchema,
+  SetProcessorStatusInputSchema,
+} from "./schema/zod.js";
+
+const stateReducer: StateReducer<ProcessorModulePHState> = (
   state,
   action,
   dispatch,
@@ -19,8 +26,8 @@ export const stateReducer: StateReducer<ProcessorModulePHState> = (
 
   switch (action.type) {
     case "SET_PROCESSOR_NAME":
-      z.SetProcessorNameInputSchema().parse(action.input);
-      BaseOperationsReducer.setProcessorNameOperation(
+      SetProcessorNameInputSchema().parse(action.input);
+      processorModuleBaseOperationsOperations.setProcessorNameOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
@@ -28,8 +35,8 @@ export const stateReducer: StateReducer<ProcessorModulePHState> = (
       break;
 
     case "SET_PROCESSOR_TYPE":
-      z.SetProcessorTypeInputSchema().parse(action.input);
-      BaseOperationsReducer.setProcessorTypeOperation(
+      SetProcessorTypeInputSchema().parse(action.input);
+      processorModuleBaseOperationsOperations.setProcessorTypeOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
@@ -37,8 +44,8 @@ export const stateReducer: StateReducer<ProcessorModulePHState> = (
       break;
 
     case "ADD_DOCUMENT_TYPE":
-      z.AddDocumentTypeInputSchema().parse(action.input);
-      BaseOperationsReducer.addDocumentTypeOperation(
+      AddDocumentTypeInputSchema().parse(action.input);
+      processorModuleBaseOperationsOperations.addDocumentTypeOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
@@ -46,8 +53,8 @@ export const stateReducer: StateReducer<ProcessorModulePHState> = (
       break;
 
     case "REMOVE_DOCUMENT_TYPE":
-      z.RemoveDocumentTypeInputSchema().parse(action.input);
-      BaseOperationsReducer.removeDocumentTypeOperation(
+      RemoveDocumentTypeInputSchema().parse(action.input);
+      processorModuleBaseOperationsOperations.removeDocumentTypeOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
@@ -55,8 +62,8 @@ export const stateReducer: StateReducer<ProcessorModulePHState> = (
       break;
 
     case "SET_PROCESSOR_STATUS":
-      z.SetProcessorStatusInputSchema().parse(action.input);
-      BaseOperationsReducer.setProcessorStatusOperation(
+      SetProcessorStatusInputSchema().parse(action.input);
+      processorModuleBaseOperationsOperations.setProcessorStatusOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,

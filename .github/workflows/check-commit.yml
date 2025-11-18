@@ -71,6 +71,9 @@ jobs:
       - name: Run CI tests (excludes document-drive and reactor)
         run: pnpm test:ci
 
+      - name: Run circular imports check
+        run: pnpm check-circular-imports
+
   notify-discord:
     if: failure() && github.event_name != 'pull_request'
     needs: [check]

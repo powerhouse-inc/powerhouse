@@ -3,12 +3,24 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import type { StateReducer } from "document-model";
 import { isDocumentAction, createReducer } from "document-model/core";
-import type { VetraPackagePHState } from "./types.js";
-import { z } from "./types.js";
+import type { VetraPackagePHState } from "@powerhousedao/vetra/document-models/vetra-package";
 
-import { reducer as BaseOperationsReducer } from "../src/reducers/base-operations.js";
+import { vetraPackageBaseOperationsOperations } from "../src/reducers/base-operations.js";
 
-export const stateReducer: StateReducer<VetraPackagePHState> = (
+import {
+  SetPackageNameInputSchema,
+  SetPackageDescriptionInputSchema,
+  SetPackageCategoryInputSchema,
+  SetPackageAuthorInputSchema,
+  SetPackageAuthorNameInputSchema,
+  SetPackageAuthorWebsiteInputSchema,
+  AddPackageKeywordInputSchema,
+  RemovePackageKeywordInputSchema,
+  SetPackageGithubUrlInputSchema,
+  SetPackageNpmUrlInputSchema,
+} from "./schema/zod.js";
+
+const stateReducer: StateReducer<VetraPackagePHState> = (
   state,
   action,
   dispatch,
@@ -19,8 +31,8 @@ export const stateReducer: StateReducer<VetraPackagePHState> = (
 
   switch (action.type) {
     case "SET_PACKAGE_NAME":
-      z.SetPackageNameInputSchema().parse(action.input);
-      BaseOperationsReducer.setPackageNameOperation(
+      SetPackageNameInputSchema().parse(action.input);
+      vetraPackageBaseOperationsOperations.setPackageNameOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
@@ -28,8 +40,8 @@ export const stateReducer: StateReducer<VetraPackagePHState> = (
       break;
 
     case "SET_PACKAGE_DESCRIPTION":
-      z.SetPackageDescriptionInputSchema().parse(action.input);
-      BaseOperationsReducer.setPackageDescriptionOperation(
+      SetPackageDescriptionInputSchema().parse(action.input);
+      vetraPackageBaseOperationsOperations.setPackageDescriptionOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
@@ -37,8 +49,8 @@ export const stateReducer: StateReducer<VetraPackagePHState> = (
       break;
 
     case "SET_PACKAGE_CATEGORY":
-      z.SetPackageCategoryInputSchema().parse(action.input);
-      BaseOperationsReducer.setPackageCategoryOperation(
+      SetPackageCategoryInputSchema().parse(action.input);
+      vetraPackageBaseOperationsOperations.setPackageCategoryOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
@@ -46,8 +58,8 @@ export const stateReducer: StateReducer<VetraPackagePHState> = (
       break;
 
     case "SET_PACKAGE_AUTHOR":
-      z.SetPackageAuthorInputSchema().parse(action.input);
-      BaseOperationsReducer.setPackageAuthorOperation(
+      SetPackageAuthorInputSchema().parse(action.input);
+      vetraPackageBaseOperationsOperations.setPackageAuthorOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
@@ -55,8 +67,8 @@ export const stateReducer: StateReducer<VetraPackagePHState> = (
       break;
 
     case "SET_PACKAGE_AUTHOR_NAME":
-      z.SetPackageAuthorNameInputSchema().parse(action.input);
-      BaseOperationsReducer.setPackageAuthorNameOperation(
+      SetPackageAuthorNameInputSchema().parse(action.input);
+      vetraPackageBaseOperationsOperations.setPackageAuthorNameOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
@@ -64,8 +76,8 @@ export const stateReducer: StateReducer<VetraPackagePHState> = (
       break;
 
     case "SET_PACKAGE_AUTHOR_WEBSITE":
-      z.SetPackageAuthorWebsiteInputSchema().parse(action.input);
-      BaseOperationsReducer.setPackageAuthorWebsiteOperation(
+      SetPackageAuthorWebsiteInputSchema().parse(action.input);
+      vetraPackageBaseOperationsOperations.setPackageAuthorWebsiteOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
@@ -73,8 +85,8 @@ export const stateReducer: StateReducer<VetraPackagePHState> = (
       break;
 
     case "ADD_PACKAGE_KEYWORD":
-      z.AddPackageKeywordInputSchema().parse(action.input);
-      BaseOperationsReducer.addPackageKeywordOperation(
+      AddPackageKeywordInputSchema().parse(action.input);
+      vetraPackageBaseOperationsOperations.addPackageKeywordOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
@@ -82,8 +94,8 @@ export const stateReducer: StateReducer<VetraPackagePHState> = (
       break;
 
     case "REMOVE_PACKAGE_KEYWORD":
-      z.RemovePackageKeywordInputSchema().parse(action.input);
-      BaseOperationsReducer.removePackageKeywordOperation(
+      RemovePackageKeywordInputSchema().parse(action.input);
+      vetraPackageBaseOperationsOperations.removePackageKeywordOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
@@ -91,8 +103,8 @@ export const stateReducer: StateReducer<VetraPackagePHState> = (
       break;
 
     case "SET_PACKAGE_GITHUB_URL":
-      z.SetPackageGithubUrlInputSchema().parse(action.input);
-      BaseOperationsReducer.setPackageGithubUrlOperation(
+      SetPackageGithubUrlInputSchema().parse(action.input);
+      vetraPackageBaseOperationsOperations.setPackageGithubUrlOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
@@ -100,8 +112,8 @@ export const stateReducer: StateReducer<VetraPackagePHState> = (
       break;
 
     case "SET_PACKAGE_NPM_URL":
-      z.SetPackageNpmUrlInputSchema().parse(action.input);
-      BaseOperationsReducer.setPackageNpmUrlOperation(
+      SetPackageNpmUrlInputSchema().parse(action.input);
+      vetraPackageBaseOperationsOperations.setPackageNpmUrlOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,

@@ -43,6 +43,12 @@ type JobInfo = {
   completedAtUtcIso?: string;
   error?: string;
   result?: any;
+  /**
+   * Required consistency token that downstream reads must use to ensure all
+   * write-side effects for this job are visible. Even jobs that do not emit
+   * operations return a token with an empty coordinate list.
+   */
+  consistencyToken: ConsistencyToken;
 };
 
 /**
@@ -53,8 +59,10 @@ enum JobStatus {
   PENDING = "PENDING",
   /** Job is currently being executed */
   RUNNING = "RUNNING",
-  /** Job completed successfully */
-  COMPLETED = "COMPLETED",
+  /** Write side completed, operations persisted */
+  WRITE_COMPLETED = "WRITE_COMPLETED",
+  /** Read models have indexed all operations */
+  READ_MODELS_READY = "READ_MODELS_READY",
   /** Job failed (may be retried) */
   FAILED = "FAILED",
 }
@@ -97,5 +105,25 @@ type PagedResults<T> = {
 
   next?: () => Promise<PagedResults<T>>;
   nextCursor?: string;
+};
+
+/**
+ * Identifies a specific write-side position that a read model must reach.
+ */
+type ConsistencyCoordinate = {
+  documentId: string;
+  scope: string;
+  branch: string;
+  operationIndex: number;
+};
+
+/**
+ * Opaque token returned with a completed job indicating the furthest write-side
+ * offsets that must be observed by read models before a query can proceed.
+ */
+type ConsistencyToken = {
+  version: 1;
+  createdAtUtcIso: string;
+  coordinates: ConsistencyCoordinate[];
 };
 ```

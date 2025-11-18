@@ -1,11 +1,13 @@
-import { DriveLayout, FileContentView } from "@powerhousedao/common";
-import { FolderItem, useDrop } from "@powerhousedao/design-system";
+import { FolderItem } from "@powerhousedao/design-system/connect";
+import { useDrop } from "@powerhousedao/design-system/connect";
 import {
   isFolderNodeKind,
   useNodesInSelectedDriveOrFolder,
   useSelectedFolder,
 } from "@powerhousedao/reactor-browser";
 import { twMerge } from "tailwind-merge";
+import { FileContentView } from "./file-content-view.js";
+import { DriveLayout } from "./layout.js";
 
 export function FolderView(props: { className?: string }) {
   const { className } = props;

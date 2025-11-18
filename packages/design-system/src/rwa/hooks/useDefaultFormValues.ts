@@ -1,3 +1,6 @@
+import { useMemo } from "react";
+import { tableNames } from "../constants/names.js";
+import { allGroupTransactionTypes } from "../constants/transactions.js";
 import type {
   Account,
   AccountFormInputs,
@@ -5,18 +8,13 @@ import type {
   FixedIncomeType,
   FixedIncomeTypeFormInputs,
   GroupTransactionFormInputs,
-  ServiceProviderFeeTypeFormInputs,
   SPV,
   SPVFormInputs,
+  ServiceProviderFeeTypeFormInputs,
   TableItemType,
   TableName,
-} from "@powerhousedao/design-system";
-import {
-  allGroupTransactionTypes,
-  isoDateStringToDateInput,
-  tableNames,
-} from "@powerhousedao/design-system";
-import { useMemo } from "react";
+} from "../types.js";
+import { isoDateStringToDateInput } from "../utils/date.js";
 
 export function useDefaultFormValues(args: {
   tableName: TableName;

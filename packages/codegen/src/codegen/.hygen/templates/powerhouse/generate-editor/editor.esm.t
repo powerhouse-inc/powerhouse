@@ -1,111 +1,14 @@
 ---
-to: "<%= rootDir %>/<%= h.changeCase.param(name) %>/editor.tsx"
+to: "<%= editorDir %>/editor.tsx"
 unless_exists: true
 ---
-import { DocumentToolbar } from "@powerhousedao/design-system";
-import {
-  Button,
-  Form,
-  FormLabel,
-  StringField,
-} from "@powerhousedao/document-engineering";
-import {
-  setSelectedNode,
-  useParentFolderForSelectedNode,
-} from "@powerhousedao/reactor-browser";
-<% if(!documentType){ %>import { useSelectedDocument } from "@powerhousedao/reactor-browser";<% } else { %>import { useSelected<%= documentType.name %>Document %>} from "../hooks/use<%= documentType.name %>Document%>.js";<% } %>
-import { setName } from "document-model";<% if(documentType) { %>
-import { actions } from "<%= documentType.importPath %>";<% } %>
+import { <%= editNameComponentName %> } from "./components/EditName.js";
 
-export function Editor() {
-  const [document, dispatch] = <% if(documentType) { %>useSelected<%= documentType.name %>Document()<% } else { %>useSelectedDocument()<% } %>;
-  
-  // Get the parent folder node for the currently selected node
-  const parentFolder = useParentFolderForSelectedNode();
-
-<% if(!documentType){ %>
-  if (!document) {
-    return null;
-  }
-<% } %>
-  function handleSetName(values: { name: string }) {
-    if (values.name) {
-      dispatch(setName(values.name));
-    }
-  }
-
-  // Set the selected node to the parent folder node (close the editor)
-  function handleClose() {
-    setSelectedNode(parentFolder?.id);
-  }
-
+/** Implement your editor behavior here */
+export default function Editor() {
   return (
-    <div>
-      <DocumentToolbar document={document} onClose={handleClose} />
-      <div className="ph-default-styles py-10 text-center">
-        <div className="inline-flex flex-col gap-10 text-start">
-          {/* Edit document name form */}
-          <section className="flex justify-between">
-            <h1 className="text-start">{document.header.name}</h1>
-            <div className="flex flex-col space-y-2">
-              <Form
-                onSubmit={handleSetName}
-                defaultValues={{ name: document.header.name }}
-                className="flex flex-col gap-3 pt-2"
-              >
-                <div className="flex items-end gap-3">
-                  <div>
-                    <FormLabel htmlFor="name">
-                      <b className="mb-1">Change document name</b>
-                    </FormLabel>
-                    <StringField
-                      name="name"
-                      placeholder="Enter document name"
-                      className="mt-1"
-                    />
-                  </div>
-                  <Button type="submit">Edit</Button>
-                </div>
-              </Form>
-            </div>
-          </section>
-
-          {/* Document metadata */}
-          <section>
-            <ul className="grid grid-cols-2 gap-x-4 gap-y-1 text-gray-700">
-              <li>
-                <b className="mr-1">Id:</b>
-                {document.header.id}
-              </li>
-              <li>
-                <b className="mr-1">Created:</b>
-                {new Date(document.header.createdAtUtcIso).toLocaleString()}
-              </li>
-              <li>
-                <b className="mr-1">Type:</b>
-                {document.header.documentType}
-              </li>
-              <li>
-                <b className="mr-1">Last Modified:</b>
-                {new Date(
-                  document.header.lastModifiedAtUtcIso,
-                ).toLocaleString()}
-              </li>
-            </ul>
-          </section>
-
-          {/* Document state */}
-          <section className="inline-block">
-            <h2 className="mb-4">Document state</h2>
-            <textarea
-              rows={10}
-              readOnly
-              value={JSON.stringify(document.state, null, 2)}
-              className="font-mono"
-            ></textarea>
-          </section>
-        </div>
-      </div>
+    <div className="py-4 px-8">
+      <<%= editNameComponentName %> />
     </div>
   );
 }

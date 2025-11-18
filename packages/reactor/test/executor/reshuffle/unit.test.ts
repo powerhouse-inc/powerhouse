@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   reshuffleByTimestamp,
   reshuffleByTimestampAndIndex,
+  sortOperations,
 } from "../../../src/utils/reshuffle.js";
 
 type InputOperation = Partial<Omit<Operation, "index" | "skip">> & {
@@ -462,6 +463,138 @@ describe("Reshuffle Functions", () => {
 
       expect(baseOperations.length).toBe(5);
       expect(firstReshuffled.index - firstReshuffled.skip).toBe(2);
+    });
+  });
+
+  describe("sortOperations", () => {
+    it("should sort operations by index then by skip", () => {
+      const operations = [
+        { index: 0, skip: 0 },
+        { index: 2, skip: 0 },
+        { index: 1, skip: 0 },
+        { index: 3, skip: 3 },
+        { index: 3, skip: 1 },
+      ];
+
+      const sorted = sortOperations(operations);
+
+      expect(sorted).toEqual([
+        { index: 0, skip: 0 },
+        { index: 1, skip: 0 },
+        { index: 2, skip: 0 },
+        { index: 3, skip: 1 },
+        { index: 3, skip: 3 },
+      ]);
+    });
+
+    it("should sort with different index values", () => {
+      const operations = [
+        { index: 5, skip: 0 },
+        { index: 2, skip: 0 },
+        { index: 8, skip: 0 },
+        { index: 1, skip: 0 },
+      ];
+
+      const sorted = sortOperations(operations);
+
+      expect(sorted).toEqual([
+        { index: 1, skip: 0 },
+        { index: 2, skip: 0 },
+        { index: 5, skip: 0 },
+        { index: 8, skip: 0 },
+      ]);
+    });
+
+    it("should sort with same index but different skip values", () => {
+      const operations = [
+        { index: 5, skip: 5 },
+        { index: 5, skip: 1 },
+        { index: 5, skip: 3 },
+        { index: 5, skip: 0 },
+      ];
+
+      const sorted = sortOperations(operations);
+
+      expect(sorted).toEqual([
+        { index: 5, skip: 0 },
+        { index: 5, skip: 1 },
+        { index: 5, skip: 3 },
+        { index: 5, skip: 5 },
+      ]);
+    });
+
+    it("should handle empty array", () => {
+      const operations: { index: number; skip: number }[] = [];
+
+      const sorted = sortOperations(operations);
+
+      expect(sorted).toEqual([]);
+    });
+
+    it("should handle single operation", () => {
+      const operations = [{ index: 42, skip: 7 }];
+
+      const sorted = sortOperations(operations);
+
+      expect(sorted).toEqual([{ index: 42, skip: 7 }]);
+    });
+
+    it("should handle already sorted operations", () => {
+      const operations = [
+        { index: 0, skip: 0 },
+        { index: 1, skip: 0 },
+        { index: 2, skip: 0 },
+        { index: 3, skip: 0 },
+      ];
+
+      const sorted = sortOperations(operations);
+
+      expect(sorted).toEqual(operations);
+    });
+
+    it("should handle reverse ordered operations", () => {
+      const operations = [
+        { index: 4, skip: 0 },
+        { index: 3, skip: 0 },
+        { index: 2, skip: 0 },
+        { index: 1, skip: 0 },
+      ];
+
+      const sorted = sortOperations(operations);
+
+      expect(sorted).toEqual([
+        { index: 1, skip: 0 },
+        { index: 2, skip: 0 },
+        { index: 3, skip: 0 },
+        { index: 4, skip: 0 },
+      ]);
+    });
+
+    it("should not mutate original array", () => {
+      const operations = [
+        { index: 3, skip: 0 },
+        { index: 1, skip: 0 },
+        { index: 2, skip: 0 },
+      ];
+      const originalCopy = [...operations];
+
+      sortOperations(operations);
+
+      expect(operations).toEqual(originalCopy);
+    });
+
+    it("should work with Operation type including all fields", () => {
+      const operations: Operation[] = [
+        buildOperation({ index: 3, skip: 0, type: "OP_3" }),
+        buildOperation({ index: 1, skip: 0, type: "OP_1" }),
+        buildOperation({ index: 2, skip: 0, type: "OP_2" }),
+      ];
+
+      const sorted = sortOperations(operations);
+
+      expect(sorted[0].action.type).toBe("OP_1");
+      expect(sorted[1].action.type).toBe("OP_2");
+      expect(sorted[2].action.type).toBe("OP_3");
     });
   });
 });

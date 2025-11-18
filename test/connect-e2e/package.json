@@ -2,8 +2,52 @@
   "name": "connect-e2e",
   "version": "1.0.237-dev.0",
   "description": "",
-  "main": "index.js",
   "type": "module",
+  "files": [
+    "/dist"
+  ],
+  "exports": {
+    ".": {
+      "development": "./index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./document-models": {
+      "development": "./document-models/index.ts",
+      "types": "./dist/document-models/index.d.ts",
+      "default": "./dist/document-models/index.js"
+    },
+    "./editors": {
+      "development": "./editors/index.ts",
+      "types": "./dist/editors/index.d.ts",
+      "default": "./dist/editors/index.js"
+    },
+    "./document-models/*": {
+      "development": "./document-models/*/index.ts",
+      "types": "./dist/document-models/*/index.d.ts",
+      "default": "./dist/document-models/*/index.js"
+    },
+    "./editors/*": {
+      "development": "./editors/*/index.ts",
+      "types": "./dist/editors/*/index.d.ts",
+      "default": "./dist/editors/*/index.js"
+    },
+    "./subgraphs": {
+      "development": "./subgraphs/index.ts",
+      "types": "./dist/subgraphs/index.d.ts",
+      "default": "./dist/subgraphs/index.js"
+    },
+    "./processors": {
+      "development": "./processors/index.ts",
+      "types": "./dist/processors/index.d.ts",
+      "default": "./dist/processors/index.js"
+    },
+    "./manifest": {
+      "development": "./powerhouse.manifest.json",
+      "default": "./dist/powerhouse.manifest.json"
+    },
+    "./style.css": "./dist/style.css"
+  },
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
@@ -46,6 +90,5 @@
     "vite-plugin-node-polyfills": "^0.24.0",
     "zod": "^3.24.3"
   },
-  "dependencies": {
-  }
+  "dependencies": {}
 }

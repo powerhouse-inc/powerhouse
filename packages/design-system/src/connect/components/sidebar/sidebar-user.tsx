@@ -1,9 +1,7 @@
-import {
-  AccountPopover,
-  AccountPopoverUser,
-  ENSAvatar,
-} from "@powerhousedao/design-system";
 import { useEnsName } from "wagmi";
+import { AccountPopoverUser } from "../account-popover/account-popover-user.js";
+import { AccountPopover } from "../account-popover/account-popover.js";
+import { ENSAvatar } from "../ens-avatar/ens-avatar.js";
 
 export interface SidebarUserProps {
   address: `0x${string}`;

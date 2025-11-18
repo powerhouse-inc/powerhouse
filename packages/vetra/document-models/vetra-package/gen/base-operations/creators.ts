@@ -1,28 +1,39 @@
 import { createAction } from "document-model/core";
 import {
-  z,
-  type SetPackageNameInput,
-  type SetPackageDescriptionInput,
-  type SetPackageCategoryInput,
-  type SetPackageAuthorInput,
-  type SetPackageAuthorNameInput,
-  type SetPackageAuthorWebsiteInput,
-  type AddPackageKeywordInput,
-  type RemovePackageKeywordInput,
-  type SetPackageGithubUrlInput,
-  type SetPackageNpmUrlInput,
+  SetPackageNameInputSchema,
+  SetPackageDescriptionInputSchema,
+  SetPackageCategoryInputSchema,
+  SetPackageAuthorInputSchema,
+  SetPackageAuthorNameInputSchema,
+  SetPackageAuthorWebsiteInputSchema,
+  AddPackageKeywordInputSchema,
+  RemovePackageKeywordInputSchema,
+  SetPackageGithubUrlInputSchema,
+  SetPackageNpmUrlInputSchema,
+} from "../schema/zod.js";
+import type {
+  SetPackageNameInput,
+  SetPackageDescriptionInput,
+  SetPackageCategoryInput,
+  SetPackageAuthorInput,
+  SetPackageAuthorNameInput,
+  SetPackageAuthorWebsiteInput,
+  AddPackageKeywordInput,
+  RemovePackageKeywordInput,
+  SetPackageGithubUrlInput,
+  SetPackageNpmUrlInput,
 } from "../types.js";
-import {
-  type SetPackageNameAction,
-  type SetPackageDescriptionAction,
-  type SetPackageCategoryAction,
-  type SetPackageAuthorAction,
-  type SetPackageAuthorNameAction,
-  type SetPackageAuthorWebsiteAction,
-  type AddPackageKeywordAction,
-  type RemovePackageKeywordAction,
-  type SetPackageGithubUrlAction,
-  type SetPackageNpmUrlAction,
+import type {
+  SetPackageNameAction,
+  SetPackageDescriptionAction,
+  SetPackageCategoryAction,
+  SetPackageAuthorAction,
+  SetPackageAuthorNameAction,
+  SetPackageAuthorWebsiteAction,
+  AddPackageKeywordAction,
+  RemovePackageKeywordAction,
+  SetPackageGithubUrlAction,
+  SetPackageNpmUrlAction,
 } from "./actions.js";
 
 export const setPackageName = (input: SetPackageNameInput) =>
@@ -30,7 +41,7 @@ export const setPackageName = (input: SetPackageNameInput) =>
     "SET_PACKAGE_NAME",
     { ...input },
     undefined,
-    z.SetPackageNameInputSchema,
+    SetPackageNameInputSchema,
     "global",
   );
 
@@ -39,7 +50,7 @@ export const setPackageDescription = (input: SetPackageDescriptionInput) =>
     "SET_PACKAGE_DESCRIPTION",
     { ...input },
     undefined,
-    z.SetPackageDescriptionInputSchema,
+    SetPackageDescriptionInputSchema,
     "global",
   );
 
@@ -48,7 +59,7 @@ export const setPackageCategory = (input: SetPackageCategoryInput) =>
     "SET_PACKAGE_CATEGORY",
     { ...input },
     undefined,
-    z.SetPackageCategoryInputSchema,
+    SetPackageCategoryInputSchema,
     "global",
   );
 
@@ -57,7 +68,7 @@ export const setPackageAuthor = (input: SetPackageAuthorInput) =>
     "SET_PACKAGE_AUTHOR",
     { ...input },
     undefined,
-    z.SetPackageAuthorInputSchema,
+    SetPackageAuthorInputSchema,
     "global",
   );
 
@@ -66,7 +77,7 @@ export const setPackageAuthorName = (input: SetPackageAuthorNameInput) =>
     "SET_PACKAGE_AUTHOR_NAME",
     { ...input },
     undefined,
-    z.SetPackageAuthorNameInputSchema,
+    SetPackageAuthorNameInputSchema,
     "global",
   );
 
@@ -75,7 +86,7 @@ export const setPackageAuthorWebsite = (input: SetPackageAuthorWebsiteInput) =>
     "SET_PACKAGE_AUTHOR_WEBSITE",
     { ...input },
     undefined,
-    z.SetPackageAuthorWebsiteInputSchema,
+    SetPackageAuthorWebsiteInputSchema,
     "global",
   );
 
@@ -84,7 +95,7 @@ export const addPackageKeyword = (input: AddPackageKeywordInput) =>
     "ADD_PACKAGE_KEYWORD",
     { ...input },
     undefined,
-    z.AddPackageKeywordInputSchema,
+    AddPackageKeywordInputSchema,
     "global",
   );
 
@@ -93,7 +104,7 @@ export const removePackageKeyword = (input: RemovePackageKeywordInput) =>
     "REMOVE_PACKAGE_KEYWORD",
     { ...input },
     undefined,
-    z.RemovePackageKeywordInputSchema,
+    RemovePackageKeywordInputSchema,
     "global",
   );
 
@@ -102,7 +113,7 @@ export const setPackageGithubUrl = (input: SetPackageGithubUrlInput) =>
     "SET_PACKAGE_GITHUB_URL",
     { ...input },
     undefined,
-    z.SetPackageGithubUrlInputSchema,
+    SetPackageGithubUrlInputSchema,
     "global",
   );
 
@@ -111,6 +122,6 @@ export const setPackageNpmUrl = (input: SetPackageNpmUrlInput) =>
     "SET_PACKAGE_NPM_URL",
     { ...input },
     undefined,
-    z.SetPackageNpmUrlInputSchema,
+    SetPackageNpmUrlInputSchema,
     "global",
   );

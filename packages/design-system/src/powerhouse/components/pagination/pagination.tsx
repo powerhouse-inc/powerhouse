@@ -1,8 +1,8 @@
 import type {
   PageItem,
   UsePaginationBaseResult,
-} from "@powerhousedao/design-system";
-import { Icon } from "@powerhousedao/design-system";
+} from "../../hooks/usePagination.js";
+import { Icon } from "../icon/icon.js";
 import { PaginationButton } from "./pagination-button.js";
 
 export type PaginationEvent = {

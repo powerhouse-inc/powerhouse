@@ -81,3 +81,5 @@ await jobExecutor.stop(true); // true = wait for current jobs to complete
 unsubscribeJobCompleted();
 unsubscribeJobFailed();
 ```
+
+When the queue-driven flow is used, callers receive a `JobInfo` with a `consistencyToken` once the job reaches `WRITE_COMPLETED`. This token captures the write-side state and can be passed along to read-model queries so they can block until their read models have indexed the corresponding operations, guaranteeing you observe the write you just performed.

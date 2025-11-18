@@ -1,5 +1,5 @@
-import type { Props } from "./index.js";
-export default function RenownHover(props: Props) {
+import type { IconComponentProps } from "@powerhousedao/design-system";
+export default function RenownHover(props: IconComponentProps) {
   return (
     <svg {...props} viewBox="0 0 71 19" fill="currentcolor">
       <path d="M53.6211 18.4887V9.0342H56.435V10.8096H56.4923C56.7377 10.181 57.1085 9.70244 57.6047 9.37398C58.101 9.03986 58.6981 8.8728 59.3962 8.8728C60.4105 8.8728 61.2039 9.1871 61.7765 9.8157C62.3546 10.4443 62.6436 11.3164 62.6436 12.432V18.4887H59.7397V13.0776C59.7397 12.5283 59.6007 12.1007 59.3225 11.7949C59.0499 11.4835 58.6654 11.3277 58.1692 11.3277C57.6784 11.3277 57.2803 11.4976 56.9749 11.8374C56.6695 12.1772 56.5168 12.6161 56.5168 13.1541V18.4887H53.6211Z" />

@@ -7,6 +7,7 @@
 - Wraps Jobs with Promises.
 - Wraps subscription interface with `ViewFilter`s. This means that, for example, while the `ISubscriptionManager` only returns ids for create events, the client allows you to specify a view to auto-populate.
 - Manages signing of submitted `Action` objects.
+- Surfaces `ConsistencyToken`s from job completions and offers helpers to apply them to follow-up reads.
 
 ### Signing
 

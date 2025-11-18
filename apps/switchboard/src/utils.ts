@@ -1,5 +1,10 @@
-import type { DriveInput, IDocumentDriveServer } from "document-drive";
+import type {
+  DocumentDriveDocument,
+  DriveInput,
+  IDocumentDriveServer,
+} from "document-drive";
 import { DocumentAlreadyExistsError } from "document-drive";
+import { generateId } from "document-model/core";
 
 export async function addDefaultDrive(
   driveServer: IDocumentDriveServer,
@@ -29,4 +34,34 @@ export async function addDefaultDrive(
 
 export function isPostgresUrl(url: string) {
   return url.startsWith("postgresql") || url.startsWith("postgres");
+}
+
+export async function addRemoteDrive(
+  driveServer: IDocumentDriveServer,
+  remoteDriveUrl: string,
+): Promise<DocumentDriveDocument> {
+  return await driveServer.addRemoteDrive(remoteDriveUrl, {
+    availableOffline: true,
+    sharingType: "public",
+    listeners: [
+      {
+        block: true,
+        callInfo: {
+          data: remoteDriveUrl,
+          name: "switchboard-push",
+          transmitterType: "SwitchboardPush",
+        },
+        filter: {
+          branch: ["main"],
+          documentId: ["*"],
+          documentType: ["*"],
+          scope: ["global"],
+        },
+        label: "Switchboard Sync",
+        listenerId: generateId(),
+        system: true,
+      },
+    ],
+    triggers: [],
+  });
 }

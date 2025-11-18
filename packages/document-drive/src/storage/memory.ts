@@ -8,22 +8,26 @@ import type {
   SynchronizationUnitQuery,
 } from "document-drive";
 import {
-  AbortError,
-  childLogger,
   DocumentAlreadyExistsError,
   DocumentAlreadyExistsReason,
   DocumentIdValidationError,
   DocumentNotFoundError,
   DocumentSlugValidationError,
-  isValidDocumentId,
-  isValidSlug,
+} from "document-drive/server/error";
+import { AbortError } from "document-drive/utils/errors";
+import { childLogger } from "document-drive/utils/logger";
+import {
   mergeOperations,
   operationsToRevision,
+} from "document-drive/utils/misc";
+import type { Operation, PHDocument } from "document-model";
+import {
+  isValidDocumentId,
+  isValidSlug,
   resolveStorageUnitsFilter,
   setIntersection,
   setUnion,
-} from "document-drive";
-import type { Operation, PHDocument } from "document-model";
+} from "./utils.js";
 
 type DriveManifest = {
   documentIds: Set<string>;
@@ -332,6 +336,7 @@ export class MemoryStorage
         revision,
       },
       operations: mergedOperations,
+      clipboard: document.clipboard,
     };
   }
 
@@ -358,6 +363,7 @@ export class MemoryStorage
         revision,
       },
       operations: mergedOperations,
+      clipboard: document.clipboard,
     };
   }
 

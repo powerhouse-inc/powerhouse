@@ -1,17 +1,12 @@
 import { useState } from "react";
 import { object, record, string } from "zod";
-import { Disclosure } from "../../../disclosure/index.js";
+import { Disclosure } from "../../../disclosure/disclosure.js";
 
-const REQUIRED_DEPENDENCIES = [
-  "@powerhousedao/design-system",
+const PH_DEPENDENCIES = [
+  /^@powerhousedao\/.+$/,
   "document-drive",
   "document-model",
-] as const;
-
-type RequiredDependencies = Record<
-  (typeof REQUIRED_DEPENDENCIES)[number],
-  string
->;
+];
 
 const PackageJsonSchema = object({
   version: string({ message: "Missing version field in package.json" }),
@@ -28,33 +23,23 @@ const PackageJsonSchema = object({
       ...data.devDependencies,
     };
 
-    // Check if all required dependencies exist
-    const missingDeps = REQUIRED_DEPENDENCIES.filter(
-      (dep) =>
-        !allDependencies[dep] || typeof allDependencies[dep] !== "string",
-    );
-
-    if (missingDeps.length > 0) {
-      console.error(
-        "Missing or invalid dependencies:",
-        missingDeps,
-        "Available dependencies:",
-        Object.keys(allDependencies),
-      );
-      return false;
-    }
-
     return {
       version: data.version,
       dependencies: Object.fromEntries(
-        REQUIRED_DEPENDENCIES.map((dep) => [dep, allDependencies[dep]]),
-      ) as RequiredDependencies,
+        Object.entries(allDependencies).filter(([key]) =>
+          PH_DEPENDENCIES.some((regexOrName) =>
+            typeof regexOrName === "string"
+              ? regexOrName === key
+              : regexOrName.test(key),
+          ),
+        ),
+      ),
     };
   });
 
 type ValidatedPackageJson = {
   version: string;
-  dependencies: RequiredDependencies;
+  dependencies: Record<string, string>;
 };
 
 export function verifyPackageJsonFields(
@@ -91,12 +76,10 @@ export function DependencyVersions(props: Props) {
       toggleClassName="text-gray-900 text-sm"
     >
       <ul className="text-sm text-gray-600">
-        {REQUIRED_DEPENDENCIES.map((dep) => (
+        {Object.entries(validatedData.dependencies).map(([dep, version]) => (
           <li key={dep} className="my-1 flex justify-between pr-1">
             <span>{dep.replace("@powerhousedao/", "")}:</span>
-            <span className="font-normal">
-              {validatedData.dependencies[dep]}
-            </span>
+            <span className="font-normal">{version}</span>
           </li>
         ))}
         {phCliVersion && (

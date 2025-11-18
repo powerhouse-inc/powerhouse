@@ -1,8 +1,7 @@
-import { syncStatuses } from "@powerhousedao/design-system";
 import type { Meta, StoryObj } from "@storybook/react";
 import { capitalCase } from "change-case";
-import { SyncStatusIcon } from "./index.js";
-
+import { syncStatuses } from "../../constants/syncing.js";
+import { SyncStatusIcon } from "./sync-status-icon.js";
 const meta = {
   title: "Connect/Components/SyncStatusIcon",
   component: SyncStatusIcon,

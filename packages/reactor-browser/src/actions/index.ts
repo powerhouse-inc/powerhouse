@@ -1,3 +1,4 @@
+export { dispatchActions } from "./dispatch.js";
 export { addDocument, addFolder, deleteNode, exportFile } from "./document.js";
 export {
   addDrive,
