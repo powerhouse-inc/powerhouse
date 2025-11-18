@@ -1,3 +1,69 @@
+## 5.0.1-staging.16 (2025-11-18)
+
+### 🚀 Features
+
+- spammy benchmarks ([bea3671a1](https://github.com/powerhouse-inc/powerhouse/commit/bea3671a1))
+- **ph-cli:** ph migrate command ([#2099](https://github.com/powerhouse-inc/powerhouse/pull/2099))
+- **connect,common,builder-tools:** optimize connect bundle chunks ([#2093](https://github.com/powerhouse-inc/powerhouse/pull/2093))
+- **monorepo:** exit with error code if circular import found ([3ca6d3512](https://github.com/powerhouse-inc/powerhouse/commit/3ca6d3512))
+- **connect:** do not use redundant dev deps ([2a847e944](https://github.com/powerhouse-inc/powerhouse/commit/2a847e944))
+- **connect,builder-tools:** improve chunking ([c089c7678](https://github.com/powerhouse-inc/powerhouse/commit/c089c7678))
+- **codegen,design-system:** update path for import connect components ([f8f387023](https://github.com/powerhouse-inc/powerhouse/commit/f8f387023))
+- **design-system,connect:** fix ui import paths ([6ef0d35c9](https://github.com/powerhouse-inc/powerhouse/commit/6ef0d35c9))
+- **design-system:** fix ui dir package layout ([0204418bc](https://github.com/powerhouse-inc/powerhouse/commit/0204418bc))
+- **design-system:** fix rwa exports ([5d4a1fa85](https://github.com/powerhouse-inc/powerhouse/commit/5d4a1fa85))
+- **connect,design-system:** fix connect component imports ([22f192c72](https://github.com/powerhouse-inc/powerhouse/commit/22f192c72))
+- **design-system,connect:** fix connect component imports ([ed5b5a264](https://github.com/powerhouse-inc/powerhouse/commit/ed5b5a264))
+- **design-system:** fix cn util import ([956e94779](https://github.com/powerhouse-inc/powerhouse/commit/956e94779))
+- **design-system:** fix powerhouse component type imports ([87a81e18c](https://github.com/powerhouse-inc/powerhouse/commit/87a81e18c))
+- **design-system:** fix icon name type imports ([8c49cc8a8](https://github.com/powerhouse-inc/powerhouse/commit/8c49cc8a8))
+- **design-system:** fix icon component type imports ([2541ab67e](https://github.com/powerhouse-inc/powerhouse/commit/2541ab67e))
+- **design-system:** update powerhouse type imports ([10d8a44cc](https://github.com/powerhouse-inc/powerhouse/commit/10d8a44cc))
+- **monorepo:** add circular imports check in ci ([d6e46a869](https://github.com/powerhouse-inc/powerhouse/commit/d6e46a869))
+- **design-system:** resolve remaining circular imports ([b82cc2e3c](https://github.com/powerhouse-inc/powerhouse/commit/b82cc2e3c))
+- **design-system:** fix circular imports with ugly paths for now ([3cab4d756](https://github.com/powerhouse-inc/powerhouse/commit/3cab4d756))
+- **design-system:** first pass of circular import fixes ([712fda94f](https://github.com/powerhouse-inc/powerhouse/commit/712fda94f))
+- **ph-cli:** remove reactor-local command ([029e5db7d](https://github.com/powerhouse-inc/powerhouse/commit/029e5db7d))
+- **document-drive:** fix circular imports ([f2db50c23](https://github.com/powerhouse-inc/powerhouse/commit/f2db50c23))
+- **monorepo:** add check circular imports scripts ([d633b37c2](https://github.com/powerhouse-inc/powerhouse/commit/d633b37c2))
+- **design-system:** show all powerhouse dependencies on about modal ([9947a6cbd](https://github.com/powerhouse-inc/powerhouse/commit/9947a6cbd))
+- **connect:** remove circular imports ([a1632d41e](https://github.com/powerhouse-inc/powerhouse/commit/a1632d41e))
+- switching to tinybench for benchmarks ([5b915e025](https://github.com/powerhouse-inc/powerhouse/commit/5b915e025))
+- **codegen, vetra:** update codegen templates ([#2056](https://github.com/powerhouse-inc/powerhouse/pull/2056))
+- create default vetra package document when ph vetra is started for a remote drive ([#2066](https://github.com/powerhouse-inc/powerhouse/pull/2066))
+- added some broken tests that are in progress ([c92e1f057](https://github.com/powerhouse-inc/powerhouse/commit/c92e1f057))
+- enabled ph init --remote-drives and ph checkout commands ([#2057](https://github.com/powerhouse-inc/powerhouse/pull/2057))
+
+### 🩹 Fixes
+
+- ensure version.ts is generated before TypeScript compilation in CI ([dd49fdd4f](https://github.com/powerhouse-inc/powerhouse/commit/dd49fdd4f))
+- added missing dependencies ([ffda3cfcc](https://github.com/powerhouse-inc/powerhouse/commit/ffda3cfcc))
+- updated lockfile ([73f7c8503](https://github.com/powerhouse-inc/powerhouse/commit/73f7c8503))
+- **ph-cli:** added missing runtime dependencies ([da1b66e73](https://github.com/powerhouse-inc/powerhouse/commit/da1b66e73))
+- **builder-tools:** use alias for self-reference import on ts instead of loading from dist ([b23b772c0](https://github.com/powerhouse-inc/powerhouse/commit/b23b772c0))
+- **reactor-api,switchboard:** load local package by default and resolve self reference import on ts files ([2b2d29ba6](https://github.com/powerhouse-inc/powerhouse/commit/2b2d29ba6))
+- **design-system:** remove testing export from components index ([07236f2a8](https://github.com/powerhouse-inc/powerhouse/commit/07236f2a8))
+- **design-system:** do not show sync status on folders ([60ca2c575](https://github.com/powerhouse-inc/powerhouse/commit/60ca2c575))
+- **design-system:** implement form submission handling in CreateDocumentModal ([#2085](https://github.com/powerhouse-inc/powerhouse/pull/2085))
+- **codegen:** move read-pkg to runtime dependency ([939f01045](https://github.com/powerhouse-inc/powerhouse/commit/939f01045))
+- **codegen:** run prettier programmatically ([23f948c4d](https://github.com/powerhouse-inc/powerhouse/commit/23f948c4d))
+- try again with a pnpm upgrade ([ec081f743](https://github.com/powerhouse-inc/powerhouse/commit/ec081f743))
+- trying a completely fresh lockfile ([c9888939a](https://github.com/powerhouse-inc/powerhouse/commit/c9888939a))
+- **monorepo:** fix lockfile and test filter ([#2069](https://github.com/powerhouse-inc/powerhouse/pull/2069))
+- update atlas packages ([fa174d00e](https://github.com/powerhouse-inc/powerhouse/commit/fa174d00e))
+- publish docker prod workflow ([ab7c4e6cb](https://github.com/powerhouse-inc/powerhouse/commit/ab7c4e6cb))
+- **connect:** reenable undo redo buttons ([c126ea768](https://github.com/powerhouse-inc/powerhouse/commit/c126ea768))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
 ## 5.0.1-staging.15 (2025-11-14)
 
 ### 🚀 Features
