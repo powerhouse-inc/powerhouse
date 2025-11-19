@@ -145,9 +145,7 @@ export async function hygenGenerateDocumentModel(
 ) {
   const projectDir = path.dirname(dir);
   const documentModelDir = path.basename(dir);
-  if (!fs.existsSync(path.join(dir, "document-models.ts"))) {
-    fs.writeFileSync(path.join(dir, "document-models.ts"), "");
-  }
+
   // Generate the singular files for the document model logic
   await run(
     [
