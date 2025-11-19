@@ -4,8 +4,9 @@ import { navigateIntoFolder } from "./navigation.js";
 
 /**
  * Helper function to create a new folder in the current drive
- * @param page Playwright Page object
- * @param folderName Name of the folder to create
+ * @param page - Playwright Page object
+ * @param folderName - Name of the folder to create
+ * @param parentFolderName - Optional parent folder to navigate into first
  */
 export async function createFolder(
   page: Page,
@@ -29,9 +30,9 @@ export async function createFolder(
 
 /**
  * Helper function to rename a folder
- * @param page Playwright Page object
- * @param oldName Current name of the folder
- * @param newName New name for the folder
+ * @param page - Playwright Page object
+ * @param oldName - Current name of the folder
+ * @param newName - New name for the folder
  */
 export async function renameFolder(
   page: Page,
@@ -67,8 +68,8 @@ export async function renameFolder(
 
 /**
  * Helper function to duplicate a folder
- * @param page Playwright Page object
- * @param folderName Name of the folder to duplicate
+ * @param page - Playwright Page object
+ * @param folderName - Name of the folder to duplicate
  */
 export async function duplicateFolder(page: Page, folderName: string) {
   const folder = page.locator("[draggable=true]", {
@@ -93,8 +94,8 @@ export async function duplicateFolder(page: Page, folderName: string) {
 
 /**
  * Helper function to delete a folder
- * @param page Playwright Page object
- * @param folderName Name of the folder to delete
+ * @param page - Playwright Page object
+ * @param folderName - Name of the folder to delete
  */
 export async function deleteFolder(page: Page, folderName: string) {
   const folder = page.locator("[draggable=true]", {

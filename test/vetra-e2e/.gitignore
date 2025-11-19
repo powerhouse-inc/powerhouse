@@ -1,0 +1,18 @@
+dist
+coverage
+node_modules
+.eslintcache
+
+.env.local
+
+.ph
+projects-import.js
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# Test artifacts
+downloads/

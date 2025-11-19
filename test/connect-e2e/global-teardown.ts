@@ -26,11 +26,15 @@ async function globalTeardown() {
       fs.rmSync(documentModelsDir, { recursive: true, force: true });
       console.log("✅ Cleaned up document-models folder");
 
-      // rebuild empty document-models
+      // rebuild empty document-models with base state
       fs.mkdirSync(documentModelsDir);
       fs.writeFileSync(
         path.join(documentModelsDir, "index.ts"),
         "export {};\n",
+      );
+      fs.writeFileSync(
+        path.join(documentModelsDir, "document-models.ts"),
+        'import type { DocumentModelModule } from "document-model";\n\nexport const documentModels: DocumentModelModule<any>[] = [];\n',
       );
     }
 
@@ -51,9 +55,13 @@ async function globalTeardown() {
       fs.rmSync(editorsDir, { recursive: true, force: true });
       console.log("✅ Cleaned up editors folder");
 
-      // rebuild empty editors
+      // rebuild empty editors with base state
       fs.mkdirSync(editorsDir);
       fs.writeFileSync(path.join(editorsDir, "index.ts"), "export {};\n");
+      fs.writeFileSync(
+        path.join(editorsDir, "editors.ts"),
+        'import type { EditorModule } from "document-model";\n\nexport const editors: EditorModule[] = [];\n',
+      );
     }
 
     console.log("🎯 Global teardown completed successfully!");

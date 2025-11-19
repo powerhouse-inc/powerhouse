@@ -63,6 +63,12 @@
     },
     {
       "path": "./test/connect-e2e"
+    },
+    {
+      "path": "./test/e2e-utils"
+    },
+    {
+      "path": "./test/vetra-e2e"
     }
   ],
   "files": []
