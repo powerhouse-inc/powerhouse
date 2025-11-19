@@ -337,7 +337,8 @@ export type OperationContext = {
   documentType: string;
   scope: string;
   branch: string;
-  resultingState?: string; // populated only locally, in memory
+  // Note: resultingState is NOT included in sync operations
+  // It is ephemeral and recalculated locally, never transported
 };
 
 export type OperationWithContext = {
@@ -959,9 +960,40 @@ channel.inbox.onAdded(async (handle) => {
 
 ### `GqlChannel`
 
-**Use case:** Synchronization over GraphQL
+**Use case:** Network synchronization between distributed reactor instances
 
-**Transport:** GraphQL
+**Transport:** HTTP/GraphQL with polling
+
+**Features:**
+- Cursor-based incremental sync
+- Exponential backoff retry strategy
+- Authentication via bearer tokens
+- Configurable polling intervals
+- Health monitoring and failure thresholds
 
 **Example:**
+
+```typescript
+import { GqlChannelFactory } from "@powerhousedao/reactor";
+
+const factory = new GqlChannelFactory();
+
+const channel = factory.instance(
+  {
+    type: "gql",
+    channelId: "550e8400-e29b-41d4-a716-446655440000",
+    remoteName: "production-reactor",
+    parameters: {
+      url: "https://reactor.prod.example.com/graphql",
+      authToken: process.env.REACTOR_AUTH_TOKEN,
+      pollIntervalMs: 5000,
+    },
+  },
+  cursorStorage,
+);
+
+// Channel automatically starts polling and processing operations
+```
+
+For detailed documentation, see [GqlChannel Documentation](./gql-channel.md).
 
