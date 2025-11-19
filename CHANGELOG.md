@@ -1,3 +1,14 @@
+## 4.1.0-dev.125 (2025-11-19)
+
+### 🩹 Fixes
+
+- **reactor-api:** fixed graphql-ws import ([22e2d862e](https://github.com/powerhouse-inc/powerhouse/commit/22e2d862e))
+- **reactor-api:** type issue on ws server ([12a9901f6](https://github.com/powerhouse-inc/powerhouse/commit/12a9901f6))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.124 (2025-11-18)
 
 ### 🚀 Features
