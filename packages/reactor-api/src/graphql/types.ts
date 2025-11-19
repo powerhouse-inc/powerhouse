@@ -47,6 +47,7 @@ export type SubgraphArgs = {
   relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
   graphqlManager: GraphQLManager;
+  syncManager?: unknown;
   path?: string;
 };
 

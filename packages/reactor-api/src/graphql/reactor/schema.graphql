@@ -154,6 +154,103 @@ type AttachmentInput {
   fileName: String
 }
 
+# Synchronization types
+type Operation {
+  index: Int!
+  timestampUtcMs: String!
+  hash: String!
+  skip: Int!
+  error: String
+  id: String
+  action: Action!
+}
+
+input OperationInput {
+  index: Int!
+  timestampUtcMs: String!
+  hash: String!
+  skip: Int!
+  error: String
+  id: String
+  action: JSONObject!
+}
+
+type OperationContext {
+  documentId: String!
+  documentType: String!
+  scope: String!
+  branch: String!
+}
+
+input OperationContextInput {
+  documentId: String!
+  documentType: String!
+  scope: String!
+  branch: String!
+}
+
+type OperationWithContext {
+  operation: Operation!
+  context: OperationContext!
+}
+
+input OperationWithContextInput {
+  operation: OperationInput!
+  context: OperationContextInput!
+}
+
+type ChannelMeta {
+  id: String!
+}
+
+input ChannelMetaInput {
+  id: String!
+}
+
+type RemoteCursor {
+  remoteName: String!
+  cursorOrdinal: Int!
+  lastSyncedAtUtcMs: String
+}
+
+input RemoteCursorInput {
+  remoteName: String!
+  cursorOrdinal: Int!
+  lastSyncedAtUtcMs: String
+}
+
+enum SyncEnvelopeType {
+  OPERATIONS
+  ACK
+}
+
+type SyncEnvelope {
+  type: SyncEnvelopeType!
+  channelMeta: ChannelMeta!
+  operations: [OperationWithContext!]
+  cursor: RemoteCursor
+}
+
+input SyncEnvelopeInput {
+  type: SyncEnvelopeType!
+  channelMeta: ChannelMetaInput!
+  operations: [OperationWithContextInput!]
+  cursor: RemoteCursorInput
+}
+
+input RemoteFilterInput {
+  documentId: [String!]!
+  scope: [String!]!
+  branch: String!
+}
+
+input CreateChannelInput {
+  id: String!
+  name: String!
+  collectionId: String!
+  filter: RemoteFilterInput!
+}
+
 type Query {
   # Get document models for a namespace
   documentModels(
@@ -190,6 +287,12 @@ type Query {
 
   # Get job status
   jobStatus(jobId: String!): JobInfo
+
+  # Poll for sync envelopes from a channel
+  pollSyncEnvelopes(
+    channelId: String!
+    cursorOrdinal: Int!
+  ): [SyncEnvelope!]!
 }
 
 type Mutation {
@@ -258,6 +361,16 @@ type Mutation {
   deleteDocuments(
     identifiers: [String!]!
     propagate: PropagationMode
+  ): Boolean!
+
+  # Create or update a channel for sync
+  createChannel(
+    input: CreateChannelInput!
+  ): Boolean!
+
+  # Push sync envelope to a channel
+  pushSyncEnvelope(
+    envelope: SyncEnvelopeInput!
   ): Boolean!
 }
 

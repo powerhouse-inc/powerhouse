@@ -101,6 +101,22 @@ export class ReactorSubgraph extends BaseSubgraph {
           throw error;
         }
       },
+
+      pollSyncEnvelopes: async (
+        _parent: unknown,
+        args: { channelId: string; cursorOrdinal: number },
+      ) => {
+        this.logger.debug("pollSyncEnvelopes", args);
+        if (!this.syncManager) {
+          throw new Error("SyncManager not available");
+        }
+        try {
+          return await resolvers.pollSyncEnvelopes(this.syncManager as any, args);
+        } catch (error) {
+          this.logger.error("Error in pollSyncEnvelopes:", error);
+          throw error;
+        }
+      },
     },
 
     Mutation: {
@@ -200,6 +216,68 @@ export class ReactorSubgraph extends BaseSubgraph {
           return await resolvers.deleteDocuments(this.reactorClient, args);
         } catch (error) {
           this.logger.error("Error in deleteDocuments:", error);
+          throw error;
+        }
+      },
+
+      createChannel: async (
+        _parent: unknown,
+        args: {
+          input: {
+            id: string;
+            name: string;
+            collectionId: string;
+            filter: {
+              documentId: readonly string[];
+              scope: readonly string[];
+              branch: string;
+            };
+          };
+        },
+      ) => {
+        this.logger.debug("createChannel", args);
+        if (!this.syncManager) {
+          throw new Error("SyncManager not available");
+        }
+        try {
+          return await resolvers.createChannel(this.syncManager as any, args);
+        } catch (error) {
+          this.logger.error("Error in createChannel:", error);
+          throw error;
+        }
+      },
+
+      pushSyncEnvelope: async (
+        _parent: unknown,
+        args: {
+          envelope: {
+            type: string;
+            channelMeta: { id: string };
+            operations?: Array<{
+              operation: any;
+              context: {
+                documentId: string;
+                documentType: string;
+                scope: string;
+                branch: string;
+              };
+            }> | null;
+            cursor?: {
+              remoteName: string;
+              cursorOrdinal: number;
+              lastSyncedAtUtcMs?: string | null;
+            } | null;
+          };
+        },
+      ) => {
+        this.logger.debug("pushSyncEnvelope", args);
+        if (!this.syncManager) {
+          throw new Error("SyncManager not available");
+        }
+        try {
+          return await resolvers.pushSyncEnvelope(this.syncManager as any, args);
+        } catch (error) {
+          this.logger.error("Error in pushSyncEnvelope:", error);
           throw error;
         }
       },

@@ -1,10 +1,13 @@
 import type {
   IReactorClient,
+  ISyncManager,
   JobInfo,
   PagedResults,
   PagingOptions,
   PropagationMode,
+  RemoteFilter,
   SearchFilter,
+  SyncOperation,
   ViewFilter,
 } from "@powerhousedao/reactor";
 import type { DocumentModelModule, PHDocument } from "document-model";
@@ -692,4 +695,157 @@ export async function deleteDocuments(
       `Failed to delete documents: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
+}
+
+export async function createChannel(
+  syncManager: ISyncManager,
+  args: {
+    input: {
+      id: string;
+      name: string;
+      collectionId: string;
+      filter: {
+        documentId: readonly string[];
+        scope: readonly string[];
+        branch: string;
+      };
+    };
+  },
+): Promise<boolean> {
+  try {
+    const existing = syncManager.getById(args.input.id);
+    if (existing) {
+      return true;
+    }
+  } catch {
+  }
+
+  const filter: RemoteFilter = {
+    documentId: [...args.input.filter.documentId],
+    scope: [...args.input.filter.scope],
+    branch: args.input.filter.branch,
+  };
+
+  try {
+    await syncManager.add(
+      args.input.name,
+      args.input.collectionId,
+      {
+        type: "gql",
+        parameters: {},
+      },
+      filter,
+      {},
+      args.input.id,
+    );
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to create channel: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  return true;
+}
+
+export async function pollSyncEnvelopes(
+  syncManager: ISyncManager,
+  args: {
+    channelId: string;
+    cursorOrdinal: number;
+  },
+): Promise<any[]> {
+  let remote;
+  try {
+    remote = syncManager.getById(args.channelId);
+  } catch (error) {
+    throw new GraphQLError(`Channel not found: ${args.channelId}`);
+  }
+
+  const operations = remote.channel.outbox.items;
+
+  const envelopes = operations.map((syncOp: SyncOperation) => ({
+    type: "OPERATIONS",
+    channelMeta: {
+      id: args.channelId,
+    },
+    operations: syncOp.operations.map((op) => ({
+      operation: op.operation,
+      context: op.context,
+    })),
+    cursor: {
+      remoteName: remote.name,
+      cursorOrdinal: args.cursorOrdinal + 1,
+      lastSyncedAtUtcMs: Date.now().toString(),
+    },
+  }));
+
+  return envelopes;
+}
+
+export async function pushSyncEnvelope(
+  syncManager: ISyncManager,
+  args: {
+    envelope: {
+      type: string;
+      channelMeta: { id: string };
+      operations?: Array<{
+        operation: any;
+        context: {
+          documentId: string;
+          documentType: string;
+          scope: string;
+          branch: string;
+        };
+      }> | null;
+      cursor?: {
+        remoteName: string;
+        cursorOrdinal: number;
+        lastSyncedAtUtcMs?: string | null;
+      } | null;
+    };
+  },
+): Promise<boolean> {
+  let remote;
+  try {
+    remote = syncManager.getById(args.envelope.channelMeta.id);
+  } catch (error) {
+    throw new GraphQLError(
+      `Channel not found: ${args.envelope.channelMeta.id}`,
+    );
+  }
+
+  if (!args.envelope.operations || args.envelope.operations.length === 0) {
+    return true;
+  }
+
+  const syncOp = {
+    id: crypto.randomUUID(),
+    remoteName: remote.name,
+    documentId: args.envelope.operations[0].context.documentId,
+    scopes: [
+      ...new Set(args.envelope.operations.map((op) => op.context.scope)),
+    ],
+    branch: args.envelope.operations[0].context.branch,
+    operations: args.envelope.operations.map((op) => ({
+      operation: op.operation,
+      context: {
+        documentId: op.context.documentId,
+        documentType: op.context.documentType,
+        scope: op.context.scope,
+        branch: op.context.branch,
+      },
+    })),
+    status: 0,
+    error: undefined,
+  } as unknown as SyncOperation;
+
+  try {
+    remote.channel.inbox.add(syncOp);
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to push sync envelope: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  return true;
 }

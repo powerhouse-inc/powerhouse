@@ -25,12 +25,14 @@ export class BaseSubgraph implements ISubgraph {
   reactorClient: IReactorClient;
   graphqlManager: GraphQLManager;
   relationalDb: IRelationalDb;
+  syncManager?: unknown;
 
   constructor(args: SubgraphArgs) {
     this.reactor = args.reactor;
     this.reactorClient = args.reactorClient;
     this.graphqlManager = args.graphqlManager;
     this.relationalDb = args.relationalDb;
+    this.syncManager = args.syncManager;
     this.path = args.path ?? "";
   }
 
