@@ -1,16 +1,403 @@
+import { camelCase, paramCase, pascalCase } from "change-case";
 import path from "node:path";
 import type {
   ArrayLiteralExpression,
   ObjectLiteralExpression,
   SourceFile,
   StringLiteral,
+  VariableStatement,
 } from "ts-morph";
 import {
   IndentationText,
   Project,
+  StructureKind,
   SyntaxKind,
   VariableDeclarationKind,
+  ts,
 } from "ts-morph";
+
+function getOrCreateSourceFile(project: Project, filePath: string) {
+  const sourceFile = project.getSourceFile(filePath);
+  if (!sourceFile) {
+    return project.createSourceFile(filePath, "");
+  }
+  console.log(`Source file ${filePath} already exists`);
+  console.log(sourceFile.getFullText());
+  return sourceFile;
+}
+
+function getDefaultProjectOptions(tsConfigFilePath: string) {
+  const DEFAULT_PROJECT_OPTIONS = {
+    // don't add files from the tsconfig.json file, only use the ones we need
+    skipAddingFilesFromTsConfig: true,
+    // don't load library files, we only need the files we're adding
+    skipLoadingLibFiles: true,
+    // use formatting rules which match prettier
+    manipulationSettings: {
+      useTrailingCommas: true,
+      indentationText: IndentationText.TwoSpaces,
+      indentMultiLineObjectLiteralBeginningOnBlankLine: true,
+    },
+  };
+  return {
+    ...DEFAULT_PROJECT_OPTIONS,
+    tsConfigFilePath,
+  };
+}
+
+function buildClassNameAttribute(value: string) {
+  const classAttr = ts.factory.createJsxAttribute(
+    ts.factory.createIdentifier("className"),
+    ts.factory.createStringLiteral(value),
+  );
+
+  return classAttr;
+}
+
+function buildJsxElement(
+  identifierText: string,
+  children: readonly ts.JsxChild[] = [],
+  attributes: readonly ts.JsxAttributeLike[] = [],
+  typeArguments?: readonly ts.TypeNode[],
+) {
+  const identifier = ts.factory.createIdentifier(identifierText);
+  const openingElement = ts.factory.createJsxOpeningElement(
+    identifier,
+    typeArguments,
+    ts.factory.createJsxAttributes(attributes),
+  );
+  const closingElement = ts.factory.createJsxClosingElement(identifier);
+
+  const element = ts.factory.createJsxElement(
+    openingElement,
+    children,
+    closingElement,
+  );
+
+  return element;
+}
+
+function buildSelfClosingJsxElement(
+  identifierText: string,
+  attributes: readonly ts.JsxAttributeLike[] = [],
+  typeArguments?: readonly ts.TypeNode[],
+) {
+  const identifier = ts.factory.createIdentifier(identifierText);
+  const element = ts.factory.createJsxSelfClosingElement(
+    identifier,
+    typeArguments,
+    ts.factory.createJsxAttributes(attributes),
+  );
+
+  return element;
+}
+
+function buildIfStatement(
+  condition: ts.Expression,
+  thenStatement: ts.Statement,
+) {
+  return ts.factory.createIfStatement(condition, thenStatement);
+}
+
+function printNode(node: ts.Node, sourceFile: ts.SourceFile) {
+  const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
+
+  return printer.printNode(ts.EmitHint.Unspecified, node, sourceFile);
+}
+
+type MakeEditDocumentNameComponentArgs = {
+  projectDir: string;
+  editorDir: string;
+  packageName: string;
+  documentType: string;
+  documentModelDir: string;
+};
+export function makeEditDocumentNameComponent({
+  projectDir,
+  editorDir,
+  packageName,
+  documentType,
+  documentModelDir,
+}: MakeEditDocumentNameComponentArgs) {
+  const tsConfigFilePath = path.join(projectDir, "tsconfig.json");
+  const project = new Project(getDefaultProjectOptions(tsConfigFilePath));
+  const editDocumentNameComponentFilePath = path.join(
+    projectDir,
+    "editors",
+    editorDir,
+    "components",
+    "_EditName.tsx",
+  );
+  const editDocumentNameComponentSourceFile = getOrCreateSourceFile(
+    project,
+    editDocumentNameComponentFilePath,
+  );
+
+  const pascalCaseDocumentType = pascalCase(documentType);
+  const paramCaseDocumentType = paramCase(documentType);
+  const camelCaseDocumentType = camelCase(documentType);
+  const editDocumentNameComponentName = `Edit${pascalCaseDocumentType}Name`;
+  const useSelectedDocumentHookName = `useSelected${pascalCaseDocumentType}Document`;
+
+  editDocumentNameComponentSourceFile.addImportDeclarations([
+    {
+      namedImports: ["setName"],
+      moduleSpecifier: "document-model",
+    },
+    {
+      namedImports: [useSelectedDocumentHookName],
+      moduleSpecifier: `${packageName}/document-models/${paramCaseDocumentType}`,
+    },
+    {
+      namedImports: ["useState"],
+      moduleSpecifier: "react",
+    },
+    {
+      namedImports: ["FormEventHandler", "MouseEventHandler"],
+      moduleSpecifier: "react",
+      isTypeOnly: true,
+    },
+  ]);
+
+  const editNameComponent = editDocumentNameComponentSourceFile.addFunction({
+    name: editDocumentNameComponentName,
+    isExported: true,
+    parameters: [],
+    statements: [],
+    docs: [
+      `Displays the name of the selected ${documentType} document and allows editing it`,
+    ],
+  });
+
+  editNameComponent.addStatements([
+    {
+      kind: StructureKind.VariableStatement,
+      declarationKind: VariableDeclarationKind.Const,
+      declarations: [
+        {
+          name: `[${camelCaseDocumentType}Document, dispatch]`,
+          initializer: `${useSelectedDocumentHookName}()`,
+        },
+      ],
+    },
+    {
+      kind: StructureKind.VariableStatement,
+      declarationKind: VariableDeclarationKind.Const,
+      declarations: [
+        {
+          name: `[isEditing, setIsEditing]`,
+          initializer: `useState(false)`,
+        },
+      ],
+    },
+  ]);
+
+  editNameComponent.addStatements([
+    printNode(
+      buildIfStatement(
+        ts.factory.createLogicalNot(
+          ts.factory.createIdentifier(`${camelCaseDocumentType}Document`),
+        ),
+        ts.factory.createReturnStatement(ts.factory.createNull()),
+      ),
+      editDocumentNameComponentSourceFile.compilerNode,
+    ),
+  ]);
+
+  editNameComponent.addStatements([
+    {
+      kind: StructureKind.VariableStatement,
+      declarationKind: VariableDeclarationKind.Const,
+      declarations: [
+        {
+          name: `${camelCaseDocumentType}DocumentName`,
+          initializer: `${camelCaseDocumentType}Document.header.name`,
+        },
+      ],
+    },
+    {
+      kind: StructureKind.VariableStatement,
+      declarationKind: VariableDeclarationKind.Const,
+      declarations: [
+        {
+          type: "MouseEventHandler<HTMLButtonElement>",
+          name: `onClickEdit${pascalCaseDocumentType}Name`,
+          initializer: `() => {
+            setIsEditing(true);
+          }`,
+        },
+      ],
+    },
+    {
+      kind: StructureKind.VariableStatement,
+      declarationKind: VariableDeclarationKind.Const,
+      declarations: [
+        {
+          type: "MouseEventHandler<HTMLButtonElement>",
+          name: `onClickCancelEdit${pascalCaseDocumentType}Name`,
+          initializer: `() => {
+            setIsEditing(false);
+          }`,
+        },
+      ],
+    },
+  ]);
+
+  editDocumentNameComponentSourceFile.formatText();
+  project.saveSync();
+}
+
+type MakeEditorComponentArgs = {
+  projectDir: string;
+  editorDir: string;
+  documentType: string;
+};
+export function makeEditorComponent({
+  projectDir,
+  editorDir,
+  documentType,
+}: MakeEditorComponentArgs) {
+  // use the local tsconfig.json file for a given project
+  const tsConfigFilePath = path.join(projectDir, "tsconfig.json");
+
+  const project = new Project(getDefaultProjectOptions(tsConfigFilePath));
+
+  const editorFilePath = path.join(
+    projectDir,
+    "editors",
+    editorDir,
+    "editor.tsx",
+  );
+
+  const editorSourceFile = getOrCreateSourceFile(project, editorFilePath);
+  const editNameComponentName = `Edit${pascalCase(documentType)}Name`;
+
+  editorSourceFile.addImportDeclaration({
+    moduleSpecifier: "./components/EditName.js",
+    namedImports: [editNameComponentName],
+  });
+
+  const editNameComponent = buildSelfClosingJsxElement(editNameComponentName);
+
+  const editorWrapperDiv = buildJsxElement(
+    "div",
+    [editNameComponent],
+    [buildClassNameAttribute("py-4 px-8")],
+  );
+  const returnStatement = ts.factory.createReturnStatement(editorWrapperDiv);
+  const returnStatementText = printNode(
+    returnStatement,
+    editorSourceFile.compilerNode,
+  );
+
+  editorSourceFile.addFunction({
+    name: "Editor",
+    isDefaultExport: true,
+    parameters: [],
+    statements: [returnStatementText],
+    docs: ["Implement your editor behavior here"],
+  });
+
+  project.saveSync();
+}
+
+type MakeEditorModuleFileArgs = {
+  projectDir: string;
+  editorDir: string;
+  documentTypeName: string;
+  editorName: string;
+  editorId: string;
+};
+export function makeEditorModuleFile({
+  projectDir,
+  editorDir,
+  documentTypeName,
+  editorName,
+  editorId,
+}: MakeEditorModuleFileArgs) {
+  const editorNamePascalCase = pascalCase(editorName);
+  const tsConfigFilePath = path.join(projectDir, "tsconfig.json");
+  const project = new Project(getDefaultProjectOptions(tsConfigFilePath));
+  const editorModuleFilePath = path.join(
+    projectDir,
+    "editors",
+    editorDir,
+    "module.ts",
+  );
+  const editorModuleSourceFile = getOrCreateSourceFile(
+    project,
+    editorModuleFilePath,
+  );
+
+  editorModuleSourceFile.addImportDeclarations([
+    {
+      namedImports: ["EditorModule"],
+      moduleSpecifier: "document-model",
+      isTypeOnly: true,
+    },
+    {
+      namedImports: ["lazy"],
+      moduleSpecifier: "react",
+    },
+  ]);
+
+  const moduleVariableStatement = editorModuleSourceFile.addVariableStatement({
+    declarationKind: VariableDeclarationKind.Const,
+    isExported: true,
+    declarations: [
+      {
+        name: editorNamePascalCase,
+        type: "EditorModule",
+        initializer: "{}",
+      },
+    ],
+  });
+
+  const objectLiteral = getObjectLiteral(moduleVariableStatement);
+
+  if (!objectLiteral) {
+    throw new Error("Object literal not found");
+  }
+
+  objectLiteral.addPropertyAssignment({
+    name: "Component",
+    initializer: `lazy(() => import("./editor.js"))`,
+  });
+
+  objectLiteral.addPropertyAssignment({
+    name: "documentTypes",
+    initializer: `["${documentTypeName}"]`,
+  });
+
+  objectLiteral.addPropertyAssignment({
+    name: "config",
+    initializer: "{}",
+  });
+
+  const configProperty = getObjectProperty(
+    objectLiteral,
+    "config",
+    SyntaxKind.ObjectLiteralExpression,
+  );
+
+  if (!configProperty) {
+    throw new Error("Config property not found");
+  }
+
+  configProperty.addPropertyAssignment({
+    name: "id",
+    initializer: `"${editorId}"`,
+  });
+
+  configProperty.addPropertyAssignment({
+    name: "name",
+    initializer: `"${editorName}"`,
+  });
+
+  editorModuleSourceFile.formatText();
+
+  project.saveSync();
+}
 
 type MakeSubgraphsIndexFileArgs = { projectDir: string };
 export function makeSubgraphsIndexFile({
@@ -111,18 +498,7 @@ export function makeModulesFile({
   // use the local tsconfig.json file for a given project
   const tsConfigFilePath = path.join(projectDir, "tsconfig.json");
 
-  const project = new Project({
-    tsConfigFilePath,
-    // don't add files from the tsconfig.json file, only use the ones we need
-    skipAddingFilesFromTsConfig: true,
-    // don't load library files, we only need the files we're adding
-    skipLoadingLibFiles: true,
-    // use formatting rules which match prettier
-    manipulationSettings: {
-      useTrailingCommas: true,
-      indentationText: IndentationText.TwoSpaces,
-    },
-  });
+  const project = new Project(getDefaultProjectOptions(tsConfigFilePath));
 
   // we only need the files in the directory we're creating the modules file from
   project.addSourceFilesAtPaths(`${projectDir}/${modulesDir}/**/*`);
@@ -331,4 +707,11 @@ export function getArrayLiteralExpressionElementsText(
     ?.getElements()
     .map((element) => element.getText())
     .map((text) => text.replace(/["']/g, ""));
+}
+
+function getObjectLiteral(statement: VariableStatement | undefined) {
+  return statement
+    ?.getDeclarations()
+    .at(0)
+    ?.getInitializerIfKind(SyntaxKind.ObjectLiteralExpression);
 }

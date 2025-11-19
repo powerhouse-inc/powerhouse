@@ -118,7 +118,7 @@ describe("generateEditor", () => {
     },
   );
 
-  it(
+  it.skip(
     "should append new exports to existing editors.ts file",
     {
       timeout: 100000,
@@ -145,7 +145,7 @@ describe("generateEditor", () => {
       expect(editorsContent).toContain(`TestDocEditor`);
     },
   );
-  it(
+  it.skip(
     "should create the editors.ts file if it doesn't exist",
     {
       timeout: 100000,

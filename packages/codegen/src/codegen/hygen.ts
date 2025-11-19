@@ -1,5 +1,5 @@
 import type { PowerhouseConfig } from "@powerhousedao/config";
-import { pascalCase } from "change-case";
+import { paramCase, pascalCase } from "change-case";
 import type { DocumentModelGlobalState } from "document-model";
 import { Logger, runner } from "hygen";
 import fs from "node:fs";
@@ -8,7 +8,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readPackage } from "read-pkg";
 import { TSMorphCodeGenerator } from "../ts-morph-generator/index.js";
-import { makeModulesFile, makeSubgraphsIndexFile } from "../ts-morph-utils.js";
+import {
+  makeEditDocumentNameComponent,
+  makeEditorComponent,
+  makeEditorModuleFile,
+  makeModulesFile,
+  makeSubgraphsIndexFile,
+} from "../ts-morph-utils.js";
 import type { CodegenOptions, DocumentTypesMap } from "./types.js";
 import { loadDocumentModel } from "./utils.js";
 
@@ -259,8 +265,40 @@ export async function hygenGenerateEditor(
     args.push("--editor-dir-name", editorDirName);
   }
 
-  await run(args, { skipFormat, verbose });
   const projectDir = path.dirname(dir);
+
+  if (documentTypes.length > 1) {
+    throw new Error("Multiple document types are not supported yet");
+  }
+  const documentTypeName = documentTypes[0];
+  const documentType = documentTypesMap[documentTypeName].name;
+  const documentModelDir = documentTypesMap[documentTypeName].importPath;
+
+  const editorDir = editorDirName || paramCase(name);
+
+  makeEditDocumentNameComponent({
+    projectDir,
+    editorDir,
+    documentType,
+    documentModelDir,
+    packageName,
+  });
+
+  makeEditorComponent({
+    projectDir,
+    editorDir,
+    documentType,
+  });
+
+  makeEditorModuleFile({
+    projectDir,
+    editorDir,
+    editorName: name,
+    editorId: editorId || paramCase(name),
+    documentTypeName,
+  });
+
+  await run(args, { skipFormat, verbose });
 
   makeModulesFile({
     projectDir,
