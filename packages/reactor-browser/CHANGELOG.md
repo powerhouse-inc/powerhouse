@@ -1,3 +1,13 @@
+## 4.1.0-dev.127 (2025-11-19)
+
+### 🚀 Features
+
+- **reactor-browser,academy:** update hooks documentation ([#2110](https://github.com/powerhouse-inc/powerhouse/pull/2110))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 4.1.0-dev.126 (2025-11-19)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

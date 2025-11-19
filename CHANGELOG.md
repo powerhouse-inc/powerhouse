@@ -1,3 +1,19 @@
+## 4.1.0-dev.127 (2025-11-19)
+
+### 🚀 Features
+
+- **reactor-browser,academy:** update hooks documentation ([#2110](https://github.com/powerhouse-inc/powerhouse/pull/2110))
+
+### 🩹 Fixes
+
+- free entry for register pull responder listener ([f69688fd0](https://github.com/powerhouse-inc/powerhouse/commit/f69688fd0))
+- **reactor-api:** downgraded prisma ([9a8a5cefd](https://github.com/powerhouse-inc/powerhouse/commit/9a8a5cefd))
+
+### ❤️ Thank You
+
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+
 ## 4.1.0-dev.126 (2025-11-19)
 
 ### 🩹 Fixes

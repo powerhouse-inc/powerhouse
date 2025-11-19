@@ -1,3 +1,13 @@
+## 4.1.0-dev.127 (2025-11-19)
+
+### 🩹 Fixes
+
+- **reactor-api:** downgraded prisma ([9a8a5cefd](https://github.com/powerhouse-inc/powerhouse/commit/9a8a5cefd))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 4.1.0-dev.126 (2025-11-19)
 
 ### 🩹 Fixes
