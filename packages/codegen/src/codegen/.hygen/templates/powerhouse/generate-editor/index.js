@@ -6,7 +6,6 @@ const {
 } = require("change-case");
 const { readdirSync, readFileSync } = require("fs");
 const { join } = require("path");
-const { getModuleExports } = require("../utils.js");
 
 // @ts-check
 module.exports = {
@@ -58,19 +57,10 @@ module.exports = {
     const editNameComponentName = documentType
       ? `Edit${pascalCaseDocumentType}Name`
       : "EditDocumentName";
-    const moduleExports = getModuleExports(
-      rootDir,
-      /export\s+const\s+(\w+)\s*:\s*EditorModule\s*=/,
-      {
-        paramCaseName: editorDirName,
-        pascalCaseName: pascalCaseEditorName,
-      },
-    );
 
     return {
       rootDir,
       editorDir,
-      moduleExports,
       documentModelsDir: args.documentModelsDir,
       name: args.name,
       pascalCaseEditorName,

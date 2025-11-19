@@ -36,12 +36,16 @@ import type { Job } from "../src/queue/types.js";
 import type { IReadModelCoordinator } from "../src/read-models/interfaces.js";
 import { DocumentModelRegistry } from "../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../src/registry/interfaces.js";
+import type { IJobAwaiter } from "../src/shared/awaiter.js";
+import { JobStatus } from "../src/shared/types.js";
+import type { ISigner } from "../src/signer/types.js";
 import type {
   IDocumentIndexer,
   IDocumentView,
   IOperationStore,
   ISyncCursorStorage,
 } from "../src/storage/interfaces.js";
+import type { IReactorSubscriptionManager } from "../src/subs/types.js";
 import { KyselyKeyframeStore } from "../src/storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../src/storage/kysely/store.js";
 import { KyselySyncCursorStorage } from "../src/storage/kysely/sync-cursor-storage.js";
@@ -754,6 +758,49 @@ export async function createTestSyncStorage(): Promise<{
   const syncCursorStorage = new KyselySyncCursorStorage(db);
 
   return { db, syncRemoteStorage, syncCursorStorage };
+}
+
+/**
+ * Creates a mock ISigner for testing.
+ */
+export function createMockSigner(overrides: Partial<ISigner> = {}): ISigner {
+  return {
+    sign: vi.fn().mockResolvedValue(["mock-signature", "", "", "", ""]),
+    ...overrides,
+  };
+}
+
+/**
+ * Creates a mock IReactorSubscriptionManager for testing.
+ */
+export function createMockSubscriptionManager(
+  overrides: Partial<IReactorSubscriptionManager> = {},
+): IReactorSubscriptionManager {
+  return {
+    onDocumentCreated: vi.fn(),
+    onDocumentDeleted: vi.fn(),
+    onDocumentStateUpdated: vi.fn(),
+    onRelationshipChanged: vi.fn(),
+    ...overrides,
+  };
+}
+
+/**
+ * Creates a mock IJobAwaiter for testing.
+ */
+export function createMockJobAwaiter(
+  overrides: Partial<IJobAwaiter> = {},
+): IJobAwaiter {
+  return {
+    waitForJob: vi.fn().mockResolvedValue({
+      id: "job-1",
+      status: JobStatus.READ_MODELS_READY,
+      createdAtUtcIso: new Date().toISOString(),
+      consistencyToken: createEmptyConsistencyToken(),
+    }),
+    shutdown: vi.fn(),
+    ...overrides,
+  };
 }
 
 /**

@@ -620,3 +620,728 @@ describe("ReactorSubgraph Query Resolvers", () => {
     });
   });
 });
+
+describe("ReactorSubgraph Mutation Resolvers", () => {
+  let mockReactorClient: IReactorClient;
+
+  const createMockDocument = (overrides = {}): PHDocument =>
+    ({
+      header: {
+        id: "doc-1",
+        name: "Test Document",
+        documentType: "powerhouse/document-model",
+        slug: "test-doc",
+        createdAtUtcIso: "2024-01-01T00:00:00Z",
+        lastModifiedAtUtcIso: "2024-01-02T00:00:00Z",
+        branch: "main",
+        sig: {
+          publicKey: {} as JsonWebKey,
+          nonce: "test-nonce",
+        },
+        revision: { global: 1 },
+      },
+      state: { data: "test" },
+      history: {},
+      initialState: {},
+      operations: {},
+      clipboard: [],
+      ...overrides,
+    }) as unknown as PHDocument;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    mockReactorClient = {
+      getDocumentModels: vi.fn(),
+      get: vi.fn(),
+      getChildren: vi.fn(),
+      getParents: vi.fn(),
+      find: vi.fn(),
+      getJobStatus: vi.fn(),
+      waitForJob: vi.fn(),
+      create: vi.fn(),
+      createEmpty: vi.fn(),
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+      rename: vi.fn(),
+      addChildren: vi.fn(),
+      removeChildren: vi.fn(),
+      moveChildren: vi.fn(),
+      deleteDocument: vi.fn(),
+      deleteDocuments: vi.fn(),
+      subscribe: vi.fn(),
+    };
+  });
+
+  describe("createDocument", () => {
+    it("should create a document and transform to GraphQL format", async () => {
+      const inputDocument = createMockDocument();
+      const createdDocument = createMockDocument({
+        header: {
+          ...inputDocument.header,
+          id: "new-doc-id",
+        },
+      });
+
+      vi.mocked(mockReactorClient.create).mockResolvedValue(createdDocument);
+
+      const result = await resolvers.createDocument(mockReactorClient, {
+        document: inputDocument,
+        parentIdentifier: "parent-1",
+      });
+
+      expect(mockReactorClient.create).toHaveBeenCalledWith(
+        inputDocument,
+        "parent-1",
+      );
+      expect(result.id).toBe("new-doc-id");
+      expect(result.name).toBe("Test Document");
+      expect(result.documentType).toBe("powerhouse/document-model");
+    });
+
+    it("should handle null parentIdentifier", async () => {
+      const inputDocument = createMockDocument();
+      vi.mocked(mockReactorClient.create).mockResolvedValue(inputDocument);
+
+      await resolvers.createDocument(mockReactorClient, {
+        document: inputDocument,
+        parentIdentifier: null,
+      });
+
+      expect(mockReactorClient.create).toHaveBeenCalledWith(
+        inputDocument,
+        undefined,
+      );
+    });
+
+    it("should reject invalid document input", async () => {
+      await expect(
+        resolvers.createDocument(mockReactorClient, {
+          document: null,
+          parentIdentifier: null,
+        }),
+      ).rejects.toThrow("Invalid document: must be an object");
+    });
+
+    it("should reject document without header", async () => {
+      await expect(
+        resolvers.createDocument(mockReactorClient, {
+          document: { state: {} },
+          parentIdentifier: null,
+        }),
+      ).rejects.toThrow("Invalid document: missing or invalid header");
+    });
+
+    it("should handle creation errors", async () => {
+      const inputDocument = createMockDocument();
+      vi.mocked(mockReactorClient.create).mockRejectedValue(
+        new Error("Database error"),
+      );
+
+      await expect(
+        resolvers.createDocument(mockReactorClient, {
+          document: inputDocument,
+          parentIdentifier: null,
+        }),
+      ).rejects.toThrow("Failed to create document: Database error");
+    });
+  });
+
+  describe("createEmptyDocument", () => {
+    it("should create an empty document of specified type", async () => {
+      const emptyDocument = createMockDocument();
+      vi.mocked(mockReactorClient.createEmpty).mockResolvedValue(emptyDocument);
+
+      const result = await resolvers.createEmptyDocument(mockReactorClient, {
+        documentType: "powerhouse/document-model",
+        parentIdentifier: "parent-1",
+      });
+
+      expect(mockReactorClient.createEmpty).toHaveBeenCalledWith(
+        "powerhouse/document-model",
+        "parent-1",
+      );
+      expect(result.id).toBe("doc-1");
+      expect(result.documentType).toBe("powerhouse/document-model");
+    });
+
+    it("should handle null parentIdentifier", async () => {
+      const emptyDocument = createMockDocument();
+      vi.mocked(mockReactorClient.createEmpty).mockResolvedValue(emptyDocument);
+
+      await resolvers.createEmptyDocument(mockReactorClient, {
+        documentType: "powerhouse/document-model",
+        parentIdentifier: null,
+      });
+
+      expect(mockReactorClient.createEmpty).toHaveBeenCalledWith(
+        "powerhouse/document-model",
+        undefined,
+      );
+    });
+
+    it("should handle creation errors", async () => {
+      vi.mocked(mockReactorClient.createEmpty).mockRejectedValue(
+        new Error("Invalid document type"),
+      );
+
+      await expect(
+        resolvers.createEmptyDocument(mockReactorClient, {
+          documentType: "invalid/type",
+          parentIdentifier: null,
+        }),
+      ).rejects.toThrow(
+        "Failed to create empty document: Invalid document type",
+      );
+    });
+  });
+
+  describe("renameDocument", () => {
+    it("should rename a document", async () => {
+      const renamedDocument = createMockDocument({
+        header: {
+          ...createMockDocument().header,
+          name: "New Name",
+        },
+      });
+      vi.mocked(mockReactorClient.rename).mockResolvedValue(renamedDocument);
+
+      const result = await resolvers.renameDocument(mockReactorClient, {
+        documentIdentifier: "doc-1",
+        name: "New Name",
+        view: { branch: "main", scopes: ["global"] },
+      });
+
+      expect(mockReactorClient.rename).toHaveBeenCalledWith(
+        "doc-1",
+        "New Name",
+        { branch: "main", scopes: ["global"] },
+      );
+      expect(result.name).toBe("New Name");
+    });
+
+    it("should handle null view filter", async () => {
+      const renamedDocument = createMockDocument();
+      vi.mocked(mockReactorClient.rename).mockResolvedValue(renamedDocument);
+
+      await resolvers.renameDocument(mockReactorClient, {
+        documentIdentifier: "doc-1",
+        name: "New Name",
+        view: null,
+      });
+
+      expect(mockReactorClient.rename).toHaveBeenCalledWith(
+        "doc-1",
+        "New Name",
+        undefined,
+      );
+    });
+
+    it("should handle rename errors", async () => {
+      vi.mocked(mockReactorClient.rename).mockRejectedValue(
+        new Error("Document not found"),
+      );
+
+      await expect(
+        resolvers.renameDocument(mockReactorClient, {
+          documentIdentifier: "doc-1",
+          name: "New Name",
+          view: null,
+        }),
+      ).rejects.toThrow("Failed to rename document: Document not found");
+    });
+  });
+
+  describe("addChildren", () => {
+    it("should add children to a parent document", async () => {
+      const parentDocument = createMockDocument();
+      vi.mocked(mockReactorClient.addChildren).mockResolvedValue(
+        parentDocument,
+      );
+
+      const result = await resolvers.addChildren(mockReactorClient, {
+        parentIdentifier: "parent-1",
+        documentIdentifiers: ["child-1", "child-2"],
+        view: { branch: "main", scopes: null },
+      });
+
+      expect(mockReactorClient.addChildren).toHaveBeenCalledWith(
+        "parent-1",
+        ["child-1", "child-2"],
+        { branch: "main", scopes: undefined },
+      );
+      expect(result.id).toBe("doc-1");
+    });
+
+    it("should handle errors when adding children", async () => {
+      vi.mocked(mockReactorClient.addChildren).mockRejectedValue(
+        new Error("Child not found"),
+      );
+
+      await expect(
+        resolvers.addChildren(mockReactorClient, {
+          parentIdentifier: "parent-1",
+          documentIdentifiers: ["child-1"],
+          view: null,
+        }),
+      ).rejects.toThrow("Failed to add children: Child not found");
+    });
+  });
+
+  describe("removeChildren", () => {
+    it("should remove children from a parent document", async () => {
+      const parentDocument = createMockDocument();
+      vi.mocked(mockReactorClient.removeChildren).mockResolvedValue(
+        parentDocument,
+      );
+
+      const result = await resolvers.removeChildren(mockReactorClient, {
+        parentIdentifier: "parent-1",
+        documentIdentifiers: ["child-1", "child-2"],
+        view: null,
+      });
+
+      expect(mockReactorClient.removeChildren).toHaveBeenCalledWith(
+        "parent-1",
+        ["child-1", "child-2"],
+        undefined,
+      );
+      expect(result.id).toBe("doc-1");
+    });
+
+    it("should handle errors when removing children", async () => {
+      vi.mocked(mockReactorClient.removeChildren).mockRejectedValue(
+        new Error("Child relationship not found"),
+      );
+
+      await expect(
+        resolvers.removeChildren(mockReactorClient, {
+          parentIdentifier: "parent-1",
+          documentIdentifiers: ["child-1"],
+          view: null,
+        }),
+      ).rejects.toThrow(
+        "Failed to remove children: Child relationship not found",
+      );
+    });
+  });
+
+  describe("moveChildren", () => {
+    it("should move children between parent documents", async () => {
+      const sourceDocument = createMockDocument();
+      const targetDocument = createMockDocument();
+      // Update IDs after creation
+      sourceDocument.header.id = "source-1";
+      targetDocument.header.id = "target-1";
+
+      vi.mocked(mockReactorClient.moveChildren).mockResolvedValue({
+        source: sourceDocument,
+        target: targetDocument,
+      });
+
+      const result = await resolvers.moveChildren(mockReactorClient, {
+        sourceParentIdentifier: "source-1",
+        targetParentIdentifier: "target-1",
+        documentIdentifiers: ["child-1", "child-2"],
+        view: { branch: "main", scopes: ["global"] },
+      });
+
+      expect(mockReactorClient.moveChildren).toHaveBeenCalledWith(
+        "source-1",
+        "target-1",
+        ["child-1", "child-2"],
+        { branch: "main", scopes: ["global"] },
+      );
+      expect(result.source.id).toBe("source-1");
+      expect(result.target.id).toBe("target-1");
+    });
+
+    it("should handle errors when moving children", async () => {
+      vi.mocked(mockReactorClient.moveChildren).mockRejectedValue(
+        new Error("Target parent not found"),
+      );
+
+      await expect(
+        resolvers.moveChildren(mockReactorClient, {
+          sourceParentIdentifier: "source-1",
+          targetParentIdentifier: "target-1",
+          documentIdentifiers: ["child-1"],
+          view: null,
+        }),
+      ).rejects.toThrow("Failed to move children: Target parent not found");
+    });
+  });
+
+  describe("deleteDocument", () => {
+    it("should delete a document without propagation", async () => {
+      vi.mocked(mockReactorClient.deleteDocument).mockResolvedValue();
+
+      const result = await resolvers.deleteDocument(mockReactorClient, {
+        identifier: "doc-1",
+        propagate: null,
+      });
+
+      expect(mockReactorClient.deleteDocument).toHaveBeenCalledWith(
+        "doc-1",
+        undefined,
+      );
+      expect(result).toBe(true);
+    });
+
+    it("should delete a document with CASCADE propagation", async () => {
+      vi.mocked(mockReactorClient.deleteDocument).mockResolvedValue();
+
+      const result = await resolvers.deleteDocument(mockReactorClient, {
+        identifier: "doc-1",
+        propagate: "CASCADE" as any,
+      });
+
+      expect(mockReactorClient.deleteDocument).toHaveBeenCalledWith(
+        "doc-1",
+        "CASCADE",
+      );
+      expect(result).toBe(true);
+    });
+
+    it("should handle deletion errors", async () => {
+      vi.mocked(mockReactorClient.deleteDocument).mockRejectedValue(
+        new Error("Document not found"),
+      );
+
+      await expect(
+        resolvers.deleteDocument(mockReactorClient, {
+          identifier: "doc-1",
+          propagate: null,
+        }),
+      ).rejects.toThrow("Failed to delete document: Document not found");
+    });
+  });
+
+  describe("deleteDocuments", () => {
+    it("should delete multiple documents", async () => {
+      vi.mocked(mockReactorClient.deleteDocuments).mockResolvedValue();
+
+      const result = await resolvers.deleteDocuments(mockReactorClient, {
+        identifiers: ["doc-1", "doc-2", "doc-3"],
+        propagate: "ORPHAN" as any,
+      });
+
+      expect(mockReactorClient.deleteDocuments).toHaveBeenCalledWith(
+        ["doc-1", "doc-2", "doc-3"],
+        "ORPHAN",
+      );
+      expect(result).toBe(true);
+    });
+
+    it("should handle batch deletion errors", async () => {
+      vi.mocked(mockReactorClient.deleteDocuments).mockRejectedValue(
+        new Error("Partial deletion failed"),
+      );
+
+      await expect(
+        resolvers.deleteDocuments(mockReactorClient, {
+          identifiers: ["doc-1", "doc-2"],
+          propagate: null,
+        }),
+      ).rejects.toThrow("Failed to delete documents: Partial deletion failed");
+    });
+  });
+
+  describe("mutateDocument", () => {
+    it("should mutate a document with validated actions", async () => {
+      const mockDocument = createMockDocument();
+      const mockActions = [
+        {
+          type: "SET_NAME",
+          scope: "global",
+          input: { name: "New Name" },
+          id: "action-1",
+          timestampUtcMs: "2024-01-01T00:00:00Z",
+        },
+      ];
+
+      const mockModule = {
+        documentModel: {
+          global: {
+            name: "powerhouse/document-model",
+            specifications: [
+              {
+                modules: [
+                  {
+                    operations: [{ name: "SET_NAME", scope: "global" }],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        actions: {
+          setName: vi.fn((input: any) => mockActions[0]),
+        },
+      };
+
+      vi.mocked(mockReactorClient.get).mockResolvedValue({
+        document: mockDocument,
+        childIds: [],
+      });
+      vi.mocked(mockReactorClient.getDocumentModels).mockResolvedValue({
+        results: [mockModule as any],
+        options: { cursor: "", limit: 10 },
+      });
+      vi.mocked(mockReactorClient.mutate).mockResolvedValue(mockDocument);
+
+      const result = await resolvers.mutateDocument(mockReactorClient, {
+        documentIdentifier: "doc-1",
+        actions: mockActions,
+        view: { branch: "main", scopes: null },
+      });
+
+      expect(mockReactorClient.mutate).toHaveBeenCalledWith(
+        "doc-1",
+        "main",
+        mockActions,
+      );
+      expect(result.id).toBe("doc-1");
+    });
+
+    it("should use default branch when view is null", async () => {
+      const mockDocument = createMockDocument();
+      const mockActions = [
+        {
+          type: "SET_NAME",
+          scope: "global",
+          input: { name: "New Name" },
+          id: "action-1",
+          timestampUtcMs: "2024-01-01T00:00:00Z",
+        },
+      ];
+
+      const mockModule = {
+        documentModel: {
+          global: {
+            name: "powerhouse/document-model",
+            specifications: [
+              {
+                modules: [
+                  {
+                    operations: [{ name: "SET_NAME", scope: "global" }],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        actions: {
+          setName: vi.fn((input: any) => mockActions[0]),
+        },
+      };
+
+      vi.mocked(mockReactorClient.get).mockResolvedValue({
+        document: mockDocument,
+        childIds: [],
+      });
+      vi.mocked(mockReactorClient.getDocumentModels).mockResolvedValue({
+        results: [mockModule as any],
+        options: { cursor: "", limit: 10 },
+      });
+      vi.mocked(mockReactorClient.mutate).mockResolvedValue(mockDocument);
+
+      await resolvers.mutateDocument(mockReactorClient, {
+        documentIdentifier: "doc-1",
+        actions: mockActions,
+        view: null,
+      });
+
+      expect(mockReactorClient.mutate).toHaveBeenCalledWith(
+        "doc-1",
+        "main",
+        mockActions,
+      );
+    });
+
+    it("should reject invalid action structure", async () => {
+      await expect(
+        resolvers.mutateDocument(mockReactorClient, {
+          documentIdentifier: "doc-1",
+          actions: [{ invalidAction: true }],
+          view: null,
+        }),
+      ).rejects.toThrow("Action at index 0");
+    });
+
+    it("should handle mutation errors", async () => {
+      const mockDocument = createMockDocument();
+      const mockActions = [
+        {
+          type: "SET_NAME",
+          scope: "global",
+          input: { name: "New Name" },
+          id: "action-1",
+          timestampUtcMs: "2024-01-01T00:00:00Z",
+        },
+      ];
+
+      const mockModule = {
+        documentModel: {
+          global: {
+            name: "powerhouse/document-model",
+            specifications: [
+              {
+                modules: [
+                  {
+                    operations: [{ name: "SET_NAME", scope: "global" }],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        actions: {
+          setName: vi.fn((input: any) => mockActions[0]),
+        },
+      };
+
+      vi.mocked(mockReactorClient.get).mockResolvedValue({
+        document: mockDocument,
+        childIds: [],
+      });
+      vi.mocked(mockReactorClient.getDocumentModels).mockResolvedValue({
+        results: [mockModule as any],
+        options: { cursor: "", limit: 10 },
+      });
+      vi.mocked(mockReactorClient.mutate).mockRejectedValue(
+        new Error("Mutation failed"),
+      );
+
+      await expect(
+        resolvers.mutateDocument(mockReactorClient, {
+          documentIdentifier: "doc-1",
+          actions: mockActions,
+          view: null,
+        }),
+      ).rejects.toThrow("Failed to mutate document: Mutation failed");
+    });
+  });
+
+  describe("mutateDocumentAsync", () => {
+    it("should submit actions asynchronously and return job ID", async () => {
+      const mockDocument = createMockDocument();
+      const mockActions = [
+        {
+          type: "SET_NAME",
+          scope: "global",
+          input: { name: "New Name" },
+          id: "action-1",
+          timestampUtcMs: "2024-01-01T00:00:00Z",
+        },
+      ];
+
+      const mockModule = {
+        documentModel: {
+          global: {
+            name: "powerhouse/document-model",
+            specifications: [
+              {
+                modules: [
+                  {
+                    operations: [{ name: "SET_NAME", scope: "global" }],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        actions: {
+          setName: vi.fn((input: any) => mockActions[0]),
+        },
+      };
+
+      const mockJobInfo: JobInfo = {
+        id: "job-123",
+        status: JobStatus.PENDING,
+        createdAtUtcIso: "2024-01-01T00:00:00Z",
+        consistencyToken: {
+          version: 1,
+          createdAtUtcIso: "2024-01-01T00:00:00Z",
+          coordinates: [],
+        },
+      };
+
+      vi.mocked(mockReactorClient.get).mockResolvedValue({
+        document: mockDocument,
+        childIds: [],
+      });
+      vi.mocked(mockReactorClient.getDocumentModels).mockResolvedValue({
+        results: [mockModule as any],
+        options: { cursor: "", limit: 10 },
+      });
+      vi.mocked(mockReactorClient.mutateAsync).mockResolvedValue(mockJobInfo);
+
+      const result = await resolvers.mutateDocumentAsync(mockReactorClient, {
+        documentIdentifier: "doc-1",
+        actions: mockActions,
+        view: { branch: "develop", scopes: null },
+      });
+
+      expect(mockReactorClient.mutateAsync).toHaveBeenCalledWith(
+        "doc-1",
+        "develop",
+        mockActions,
+      );
+      expect(result).toBe("job-123");
+    });
+
+    it("should handle async mutation errors", async () => {
+      const mockDocument = createMockDocument();
+      const mockActions = [
+        {
+          type: "SET_NAME",
+          scope: "global",
+          input: { name: "New Name" },
+          id: "action-1",
+          timestampUtcMs: "2024-01-01T00:00:00Z",
+        },
+      ];
+
+      const mockModule = {
+        documentModel: {
+          global: {
+            name: "powerhouse/document-model",
+            specifications: [
+              {
+                modules: [
+                  {
+                    operations: [{ name: "SET_NAME", scope: "global" }],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        actions: {
+          setName: vi.fn((input: any) => mockActions[0]),
+        },
+      };
+
+      vi.mocked(mockReactorClient.get).mockResolvedValue({
+        document: mockDocument,
+        childIds: [],
+      });
+      vi.mocked(mockReactorClient.getDocumentModels).mockResolvedValue({
+        results: [mockModule as any],
+        options: { cursor: "", limit: 10 },
+      });
+      vi.mocked(mockReactorClient.mutateAsync).mockRejectedValue(
+        new Error("Queue full"),
+      );
+
+      await expect(
+        resolvers.mutateDocumentAsync(mockReactorClient, {
+          documentIdentifier: "doc-1",
+          actions: mockActions,
+          view: null,
+        }),
+      ).rejects.toThrow("Failed to submit document mutation: Queue full");
+    });
+  });
+});
