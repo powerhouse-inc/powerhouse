@@ -1,3 +1,13 @@
+## 5.0.7 (2025-11-19)
+
+### 🩹 Fixes
+
+- free entry for register pull responder listener ([5a58acd6f](https://github.com/powerhouse-inc/powerhouse/commit/5a58acd6f))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.0.6 (2025-11-19)
 
 ### 🩹 Fixes

@@ -1,3 +1,7 @@
+## 5.0.7 (2025-11-19)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
 ## 5.0.6 (2025-11-19)
 
 This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
