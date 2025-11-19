@@ -1,10 +1,14 @@
-import { getVetraDocuments } from "@powerhousedao/common/utils";
+import {
+  createVetraDocument,
+  getVetraDocuments,
+} from "@powerhousedao/common/utils";
 
 /**
- * Validates a remote drive for initialization.
- * Returns true if validation passes, false if it should stop execution.
+ * Sets up a remote drive for initialization by validating and creating
+ * a Vetra document if needed.
+ * Returns true if setup succeeds, false if it should stop execution.
  */
-export async function validateRemoteDrive(
+export async function setupRemoteDrive(
   remoteDriveUrl: string,
 ): Promise<boolean> {
   try {
@@ -20,13 +24,33 @@ export async function validateRemoteDrive(
     const url = new URL(remoteDriveUrl);
     const graphqlEndpoint = `${url.protocol}//${url.host}/graphql`;
 
-    const documents = await getVetraDocuments(graphqlEndpoint, driveId!);
+    let documents = await getVetraDocuments(graphqlEndpoint, driveId!);
 
     if (documents.length === 0) {
-      console.error(
-        "❌ No vetra package document were found in the provided drive",
+      console.log(
+        "No vetra package document found in the provided drive, creating one...",
       );
-      return false;
+      try {
+        await createVetraDocument(graphqlEndpoint, driveId!, "vetra-package");
+
+        // Re-fetch documents after creation
+        documents = await getVetraDocuments(graphqlEndpoint, driveId!);
+
+        if (documents.length === 0) {
+          console.error(
+            "❌ Failed to create vetra package document in the remote drive",
+          );
+          return false;
+        }
+
+        console.log("✅ Vetra package document created successfully");
+      } catch (createError) {
+        console.error(
+          "❌ Failed to create vetra package document:",
+          createError,
+        );
+        return false;
+      }
     }
 
     if (documents.length > 1) {
