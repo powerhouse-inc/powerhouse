@@ -371,7 +371,12 @@ export class DriveSubgraph extends BaseSubgraph {
         const isAdmin = ctx.isAdmin?.(ctx.user?.address ?? "");
         const isUser = ctx.isUser?.(ctx.user?.address ?? "");
         const isGuest = ctx.isGuest?.(ctx.user?.address ?? "");
-        if (!isAdmin && !isUser && !isGuest) {
+        if (
+          process.env.FREE_ENTRY !== "true" &&
+          !isAdmin &&
+          !isUser &&
+          !isGuest
+        ) {
           throw new GraphQLError("Forbidden");
         }
 
