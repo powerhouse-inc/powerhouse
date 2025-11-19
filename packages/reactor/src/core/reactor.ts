@@ -21,7 +21,6 @@ import type {
   JobInfo,
   PagedResults,
   PagingOptions,
-  PropagationMode,
   SearchFilter,
   ShutdownStatus,
   ViewFilter,
@@ -138,7 +137,7 @@ export class Reactor implements IReactor {
     const modules = this.driveServer.getDocumentModelModules();
     const filteredModels = modules.filter(
       (module) =>
-        !namespace || module.documentModel.global.name.startsWith(namespace),
+        !namespace || module.documentModel.global.id.startsWith(namespace),
     );
 
     // Apply paging
@@ -637,11 +636,7 @@ export class Reactor implements IReactor {
   /**
    * Deletes a document
    */
-  async deleteDocument(
-    id: string,
-    propagate?: PropagationMode,
-    signal?: AbortSignal,
-  ): Promise<JobInfo> {
+  async deleteDocument(id: string, signal?: AbortSignal): Promise<JobInfo> {
     const createdAtUtcIso = new Date().toISOString();
 
     if (signal?.aborted) {
@@ -650,7 +645,6 @@ export class Reactor implements IReactor {
 
     const deleteInput: DeleteDocumentActionInput = {
       documentId: id,
-      propagate,
     };
 
     const action: Action = {

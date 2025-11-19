@@ -111,9 +111,62 @@ export class AuthService {
       }
 
       next();
-    } catch (error) {
+    } catch {
       res.status(401).json({ error: "Authentication failed" });
     }
+  }
+
+  async authenticateWebSocketConnection(
+    connectionParams: Record<string, unknown>,
+  ): Promise<User | null> {
+    if (!this.config.enabled) {
+      return null;
+    }
+
+    const authHeader = connectionParams.authorization as string | undefined;
+    if (!authHeader) {
+      throw new Error("Missing authorization in connection parameters");
+    }
+
+    const token = authHeader.split(" ")[1];
+    if (!token) {
+      throw new Error("Invalid authorization format");
+    }
+
+    const verified = (await this.verifyToken(token)) as {
+      issuer: string;
+      verifiableCredential?: {
+        credentialSubject?: {
+          address: string;
+          chainId: number;
+          networkId: string;
+        };
+      };
+    };
+
+    if (!verified) {
+      throw new Error("Token verification failed");
+    }
+
+    const user = this.extractUserFromVerification(verified);
+    if (!user) {
+      throw new Error("Invalid credentials");
+    }
+
+    const credentialExists = await this.verifyCredentialExists(
+      user.address,
+      user.chainId,
+      verified.issuer,
+    );
+    if (!credentialExists) {
+      throw new Error("Credentials no longer valid");
+    }
+
+    if (!this.isUserAllowed(user.address)) {
+      throw new Error("User not authorized");
+    }
+
+    return user;
   }
 
   /**
@@ -150,7 +203,7 @@ export class AuthService {
         chainId,
         networkId,
       };
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -244,7 +297,7 @@ export class AuthService {
         addressVerfied.toLocaleLowerCase() === address.toLocaleLowerCase() &&
         chainIdVerfied === chainId.toString()
       );
-    } catch (error) {
+    } catch {
       return false;
     }
   }

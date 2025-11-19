@@ -10,7 +10,6 @@ import type {
   JobInfo,
   PagedResults,
   PagingOptions,
-  PropagationMode,
   SearchFilter,
   ShutdownStatus,
   ViewFilter,
@@ -189,15 +188,10 @@ export interface IReactor {
    * Deletes a document
    *
    * @param id - Document id
-   * @param propagate - Optional mode for handling children, CASCADE deletes child documents
    * @param signal - Optional abort signal to cancel the request
    * @returns The job id and status
    */
-  deleteDocument(
-    id: string,
-    propagate?: PropagationMode,
-    signal?: AbortSignal,
-  ): Promise<JobInfo>;
+  deleteDocument(id: string, signal?: AbortSignal): Promise<JobInfo>;
 
   /**
    * Applies a list of actions to a document.

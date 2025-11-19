@@ -2,6 +2,23 @@ import { dirname, resolve } from "node:path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      "graphql-ws/lib/use/ws": resolve(
+        __dirname,
+        "../../node_modules/graphql-ws/lib/use/ws.mjs",
+      ),
+    },
+  },
+  test: {
+    deps: {
+      optimizer: {
+        web: {
+          include: ["graphql-ws"],
+        },
+      },
+    },
+  },
   plugins: [
     {
       name: "graphql-path-resolver",

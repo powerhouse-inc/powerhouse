@@ -3,6 +3,7 @@ import type {
   JobInfo,
   PagedResults,
   PagingOptions,
+  PropagationMode,
   SearchFilter,
   ViewFilter,
 } from "@powerhousedao/reactor";
@@ -15,10 +16,12 @@ import {
   toGqlPhDocument,
   toMutableArray,
   toPhDocumentResultPage,
+  validateActions,
 } from "./adapters.js";
 import type {
   DocumentModelResultPage,
   JobInfo as GqlJobInfo,
+  PropagationMode as GqlPropagationMode,
   PhDocumentResultPage,
 } from "./gen/graphql.js";
 
@@ -297,6 +300,396 @@ export async function jobStatus(
   } catch (error) {
     throw new GraphQLError(
       `Failed to convert job status to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
+export async function createDocument(
+  reactorClient: IReactorClient,
+  args: {
+    document: unknown;
+    parentIdentifier?: string | null;
+  },
+): Promise<ReturnType<typeof toGqlPhDocument>> {
+  // Validate that document is a PHDocument
+  if (!args.document || typeof args.document !== "object") {
+    throw new GraphQLError("Invalid document: must be an object");
+  }
+
+  const document = args.document as PHDocument;
+
+  // Validate required fields
+  if (!document.header || typeof document.header !== "object") {
+    throw new GraphQLError("Invalid document: missing or invalid header");
+  }
+
+  const parentIdentifier = fromInputMaybe(args.parentIdentifier);
+
+  let result: PHDocument;
+  try {
+    result = await reactorClient.create(document, parentIdentifier);
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to create document: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  try {
+    return toGqlPhDocument(result);
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to convert created document to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
+export async function createEmptyDocument(
+  reactorClient: IReactorClient,
+  args: {
+    documentType: string;
+    parentIdentifier?: string | null;
+  },
+): Promise<ReturnType<typeof toGqlPhDocument>> {
+  const parentIdentifier = fromInputMaybe(args.parentIdentifier);
+
+  let result: PHDocument;
+  try {
+    result = await reactorClient.createEmpty(
+      args.documentType,
+      parentIdentifier,
+    );
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to create empty document: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  try {
+    return toGqlPhDocument(result);
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to convert created document to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
+export async function mutateDocument(
+  reactorClient: IReactorClient,
+  args: {
+    documentIdentifier: string;
+    actions: readonly unknown[];
+    view?: {
+      branch?: string | null;
+      scopes?: readonly string[] | null;
+    } | null;
+  },
+): Promise<ReturnType<typeof toGqlPhDocument>> {
+  // Validate actions
+  let validatedActions;
+  try {
+    validatedActions = await validateActions(
+      reactorClient,
+      args.documentIdentifier,
+      args.actions,
+    );
+  } catch (error) {
+    if (error instanceof GraphQLError) {
+      throw error;
+    }
+    throw new GraphQLError(
+      `Action validation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  // Extract branch from view filter (default to "main")
+  const branch = args.view?.branch ?? "main";
+
+  let result: PHDocument;
+  try {
+    result = await reactorClient.mutate(
+      args.documentIdentifier,
+      branch,
+      validatedActions,
+    );
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to mutate document: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  try {
+    return toGqlPhDocument(result);
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to convert mutated document to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
+export async function mutateDocumentAsync(
+  reactorClient: IReactorClient,
+  args: {
+    documentIdentifier: string;
+    actions: readonly unknown[];
+    view?: {
+      branch?: string | null;
+      scopes?: readonly string[] | null;
+    } | null;
+  },
+): Promise<string> {
+  // Validate actions
+  let validatedActions;
+  try {
+    validatedActions = await validateActions(
+      reactorClient,
+      args.documentIdentifier,
+      args.actions,
+    );
+  } catch (error) {
+    if (error instanceof GraphQLError) {
+      throw error;
+    }
+    throw new GraphQLError(
+      `Action validation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  // Extract branch from view filter (default to "main")
+  const branch = args.view?.branch ?? "main";
+
+  let result: JobInfo;
+  try {
+    result = await reactorClient.mutateAsync(
+      args.documentIdentifier,
+      branch,
+      validatedActions,
+    );
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to submit document mutation: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  return result.id;
+}
+
+export async function renameDocument(
+  reactorClient: IReactorClient,
+  args: {
+    documentIdentifier: string;
+    name: string;
+    view?: {
+      branch?: string | null;
+      scopes?: readonly string[] | null;
+    } | null;
+  },
+): Promise<ReturnType<typeof toGqlPhDocument>> {
+  let view: ViewFilter | undefined;
+  if (args.view) {
+    view = {
+      branch: fromInputMaybe(args.view.branch),
+      scopes: toMutableArray(fromInputMaybe(args.view.scopes)),
+    };
+  }
+
+  let result: PHDocument;
+  try {
+    result = await reactorClient.rename(
+      args.documentIdentifier,
+      args.name,
+      view,
+    );
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to rename document: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  try {
+    return toGqlPhDocument(result);
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to convert renamed document to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
+export async function addChildren(
+  reactorClient: IReactorClient,
+  args: {
+    parentIdentifier: string;
+    documentIdentifiers: readonly string[];
+    view?: {
+      branch?: string | null;
+      scopes?: readonly string[] | null;
+    } | null;
+  },
+): Promise<ReturnType<typeof toGqlPhDocument>> {
+  let view: ViewFilter | undefined;
+  if (args.view) {
+    view = {
+      branch: fromInputMaybe(args.view.branch),
+      scopes: toMutableArray(fromInputMaybe(args.view.scopes)),
+    };
+  }
+
+  const documentIdentifiers = [...args.documentIdentifiers];
+
+  let result: PHDocument;
+  try {
+    result = await reactorClient.addChildren(
+      args.parentIdentifier,
+      documentIdentifiers,
+      view,
+    );
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to add children: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  try {
+    return toGqlPhDocument(result);
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to convert document to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
+export async function removeChildren(
+  reactorClient: IReactorClient,
+  args: {
+    parentIdentifier: string;
+    documentIdentifiers: readonly string[];
+    view?: {
+      branch?: string | null;
+      scopes?: readonly string[] | null;
+    } | null;
+  },
+): Promise<ReturnType<typeof toGqlPhDocument>> {
+  let view: ViewFilter | undefined;
+  if (args.view) {
+    view = {
+      branch: fromInputMaybe(args.view.branch),
+      scopes: toMutableArray(fromInputMaybe(args.view.scopes)),
+    };
+  }
+
+  const documentIdentifiers = [...args.documentIdentifiers];
+
+  let result: PHDocument;
+  try {
+    result = await reactorClient.removeChildren(
+      args.parentIdentifier,
+      documentIdentifiers,
+      view,
+    );
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to remove children: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  try {
+    return toGqlPhDocument(result);
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to convert document to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
+export async function moveChildren(
+  reactorClient: IReactorClient,
+  args: {
+    sourceParentIdentifier: string;
+    targetParentIdentifier: string;
+    documentIdentifiers: readonly string[];
+    view?: {
+      branch?: string | null;
+      scopes?: readonly string[] | null;
+    } | null;
+  },
+): Promise<{
+  source: ReturnType<typeof toGqlPhDocument>;
+  target: ReturnType<typeof toGqlPhDocument>;
+}> {
+  let view: ViewFilter | undefined;
+  if (args.view) {
+    view = {
+      branch: fromInputMaybe(args.view.branch),
+      scopes: toMutableArray(fromInputMaybe(args.view.scopes)),
+    };
+  }
+
+  const documentIdentifiers = [...args.documentIdentifiers];
+
+  let result: { source: PHDocument; target: PHDocument };
+  try {
+    result = await reactorClient.moveChildren(
+      args.sourceParentIdentifier,
+      args.targetParentIdentifier,
+      documentIdentifiers,
+      view,
+    );
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to move children: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  try {
+    return {
+      source: toGqlPhDocument(result.source),
+      target: toGqlPhDocument(result.target),
+    };
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to convert documents to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
+export async function deleteDocument(
+  reactorClient: IReactorClient,
+  args: {
+    identifier: string;
+    propagate?: GqlPropagationMode | null;
+  },
+): Promise<boolean> {
+  const propagate = fromInputMaybe(args.propagate) as
+    | PropagationMode
+    | undefined;
+
+  try {
+    await reactorClient.deleteDocument(args.identifier, propagate);
+    return true;
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to delete document: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
+export async function deleteDocuments(
+  reactorClient: IReactorClient,
+  args: {
+    identifiers: readonly string[];
+    propagate?: GqlPropagationMode | null;
+  },
+): Promise<boolean> {
+  const propagate = fromInputMaybe(args.propagate) as
+    | PropagationMode
+    | undefined;
+  const identifiers = [...args.identifiers];
+
+  try {
+    await reactorClient.deleteDocuments(identifiers, propagate);
+    return true;
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to delete documents: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 }

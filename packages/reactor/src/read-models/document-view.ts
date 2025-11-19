@@ -152,6 +152,40 @@ export class KyselyDocumentView implements IDocumentView {
               ? (scopeState as Record<string, unknown>)
               : {};
 
+          let slug: string | null = existingSnapshot?.slug ?? null;
+          let name: string | null = existingSnapshot?.name ?? null;
+
+          if (scopeName === "header") {
+            const headerSlug = newState.slug;
+            const headerName = newState.name;
+
+            if (typeof headerSlug === "string") {
+              slug = headerSlug;
+            }
+            if (typeof headerName === "string") {
+              name = headerName;
+            }
+
+            if (slug && slug !== documentId) {
+              await trx
+                .insertInto("SlugMapping")
+                .values({
+                  slug,
+                  documentId,
+                  scope: scopeName,
+                  branch,
+                })
+                .onConflict((oc) =>
+                  oc.column("slug").doUpdateSet({
+                    documentId,
+                    scope: scopeName,
+                    branch,
+                  }),
+                )
+                .execute();
+            }
+          }
+
           if (existingSnapshot) {
             await trx
               .updateTable("DocumentSnapshot")
@@ -161,6 +195,8 @@ export class KyselyDocumentView implements IDocumentView {
                 lastUpdatedAt: new Date(),
                 snapshotVersion: existingSnapshot.snapshotVersion + 1,
                 content: newState,
+                slug,
+                name,
               })
               .where("documentId", "=", documentId)
               .where("scope", "=", scopeName)
@@ -170,8 +206,8 @@ export class KyselyDocumentView implements IDocumentView {
             const snapshot: InsertableDocumentSnapshot = {
               id: uuidv4(),
               documentId,
-              slug: null,
-              name: null,
+              slug,
+              name,
               scope: scopeName,
               branch,
               content: newState,

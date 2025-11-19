@@ -8,6 +8,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readPackage } from "read-pkg";
 import { TSMorphCodeGenerator } from "../ts-morph-generator/index.js";
+import { makeModulesFile, makeSubgraphsIndexFile } from "../ts-morph-utils.js";
 import type { CodegenOptions, DocumentTypesMap } from "./types.js";
 import { loadDocumentModel } from "./utils.js";
 
@@ -196,6 +197,15 @@ export async function hygenGenerateDocumentModel(
 
     await generator.generateReducers();
   }
+
+  makeModulesFile({
+    projectDir,
+    modulesDir: "document-models",
+    outputFileName: "document-models.ts",
+    typeName: "DocumentModelModule",
+    variableName: "documentModels",
+    variableType: "DocumentModelModule<any>[]",
+  });
 }
 
 type HygenGenerateEditorArgs = {
@@ -252,6 +262,16 @@ export async function hygenGenerateEditor(
   }
 
   await run(args, { skipFormat, verbose });
+  const projectDir = path.dirname(dir);
+
+  makeModulesFile({
+    projectDir,
+    modulesDir: "editors",
+    outputFileName: "editors.ts",
+    typeName: "EditorModule",
+    variableName: "editors",
+    variableType: "EditorModule[]",
+  });
 }
 
 export async function hygenGenerateProcessor(
@@ -341,6 +361,8 @@ export async function hygenGenerateSubgraph(
       { skipFormat, verbose },
     );
   }
+
+  makeSubgraphsIndexFile({ projectDir: path.dirname(dir) });
 }
 
 export async function hygenGenerateImportScript(
@@ -363,15 +385,7 @@ export async function hygenGenerateImportScript(
     { skipFormat, verbose },
   );
 }
-/* 
-name: string,
-  dir: string,
-  { skipFormat = false } = {},
-  appId?: string,
-  editorOptions?: {
-    documentTypes: string[];
-  },
-*/
+
 export async function hygenGenerateDriveEditor(options: {
   name: string;
   dir: string;
@@ -418,4 +432,15 @@ export async function hygenGenerateDriveEditor(options: {
   }
 
   await run(args, { skipFormat });
+
+  const projectDir = path.dirname(dir);
+
+  makeModulesFile({
+    projectDir,
+    modulesDir: "editors",
+    outputFileName: "editors.ts",
+    typeName: "EditorModule",
+    variableName: "editors",
+    variableType: "EditorModule[]",
+  });
 }

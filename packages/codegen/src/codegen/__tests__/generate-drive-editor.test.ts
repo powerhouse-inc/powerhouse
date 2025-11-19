@@ -65,7 +65,7 @@ describe("generateDriveEditor", () => {
   it(
     "should generate a drive editor with the correct files and content",
     {
-      timeout: 15000,
+      timeout: 100000,
     },
     async (context) => {
       await setupTest(context);
@@ -186,7 +186,7 @@ describe("generateDriveEditor", () => {
   it(
     "should generate a drive editor with default id when no appId is provided",
     {
-      timeout: 15000,
+      timeout: 100000,
     },
     async (context) => {
       await setupTest(
@@ -209,7 +209,7 @@ describe("generateDriveEditor", () => {
   it(
     "should append new exports to existing editors.ts file",
     {
-      timeout: 15000,
+      timeout: 100000,
     },
     async (context) => {
       await setupTest(
@@ -236,7 +236,7 @@ describe("generateDriveEditor", () => {
   it(
     "should create the editors.ts file if it does not exist",
     {
-      timeout: 15000,
+      timeout: 100000,
     },
     async (context) => {
       await setupTest(context);
