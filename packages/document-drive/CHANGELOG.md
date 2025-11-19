@@ -1,3 +1,13 @@
+## 4.1.0-dev.126 (2025-11-19)
+
+### 🩹 Fixes
+
+- **switchboard, ph-cli, document-drive:** --skip-generate on prisma db push ([a37f816a4](https://github.com/powerhouse-inc/powerhouse/commit/a37f816a4))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 4.1.0-dev.125 (2025-11-19)
 
 This was a version bump only for document-drive to align it with other projects, there were no code changes.
