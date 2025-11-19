@@ -13,12 +13,11 @@ describe("KyselySyncCursorStorage", () => {
 
   const createTestRemote = async (name: string): Promise<void> => {
     const remote: RemoteRecord = {
+      id: `channel-${name}`,
       name,
       collectionId: "collection-1",
       channelConfig: {
         type: "internal",
-        channelId: `channel-${name}`,
-        remoteName: name,
         parameters: {},
       },
       filter: {
@@ -220,7 +219,7 @@ describe("KyselySyncCursorStorage", () => {
       controller.abort();
 
       const cursor: RemoteCursor = {
-        remoteName: "abort-remote",
+        remoteName: "test-remote",
         cursorOrdinal: 0,
       };
 
@@ -270,12 +269,11 @@ describe("KyselySyncCursorStorage", () => {
   describe("cascade delete", () => {
     it("should cascade delete cursor when remote is removed", async () => {
       const remote: RemoteRecord = {
+        id: "channel-cascade-remote",
         name: "cascade-remote",
         collectionId: "collection-1",
         channelConfig: {
           type: "internal",
-          channelId: "channel-cascade-remote",
-          remoteName: "cascade-remote",
           parameters: {},
         },
         filter: {

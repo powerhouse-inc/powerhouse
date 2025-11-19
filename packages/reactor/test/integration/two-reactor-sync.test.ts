@@ -120,10 +120,11 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
   const createChannelFactory = (): IChannelFactory => {
     return {
       instance(
+        remoteId: string,
+        remoteName: string,
         config: ChannelConfig,
         cursorStorage: ISyncCursorStorage,
       ): InternalChannel {
-        const remoteName = config.remoteName;
         const peerName = peerMapping.get(remoteName);
 
         const send = (envelope: SyncEnvelope): void => {
@@ -139,8 +140,8 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
         };
 
         const channel = new InternalChannel(
-          config.channelId,
-          config.remoteName,
+          remoteId,
+          remoteName,
           cursorStorage,
           send,
         );
@@ -170,8 +171,6 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
     "collection1",
     {
       type: "internal",
-      channelId: "channelB",
-      remoteName: "remoteB",
       parameters: {},
     },
     {
@@ -186,8 +185,6 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
     "collection1",
     {
       type: "internal",
-      channelId: "channelA",
-      remoteName: "remoteA",
       parameters: {},
     },
     {

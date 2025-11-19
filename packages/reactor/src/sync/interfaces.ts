@@ -53,11 +53,18 @@ export interface IChannelFactory {
   /**
    * Creates a new channel instance with the given configuration.
    *
+   * @param remoteId - Unique identifier for the remote
+   * @param remoteName - Name of the remote
    * @param config - Channel configuration including type and parameters
    * @param cursorStorage - Storage for persisting synchronization cursors
    * @returns A new channel instance
    */
-  instance(config: ChannelConfig, cursorStorage: ISyncCursorStorage): IChannel;
+  instance(
+    remoteId: string,
+    remoteName: string,
+    config: ChannelConfig,
+    cursorStorage: ISyncCursorStorage,
+  ): IChannel;
 }
 
 /**
@@ -67,6 +74,11 @@ export interface IChannelFactory {
  * The remote name is used as a unique identifier across the system.
  */
 export type Remote = {
+  /**
+   * Unique identifier for this remote.
+   */
+  id: string;
+
   /**
    * Unique name for this remote.
    */
@@ -126,7 +138,16 @@ export interface ISyncManager {
    * @returns The remote
    * @throws Error if the remote does not exist
    */
-  get(name: string): Remote;
+  getByName(name: string): Remote;
+
+  /**
+   * Gets a remote by ID.
+   *
+   * @param id - The ID of the remote
+   * @returns The remote
+   * @throws Error if the remote does not exist
+   */
+  getById(id: string): Remote;
 
   /**
    * Adds a new remote and starts its channel.
@@ -139,6 +160,7 @@ export interface ISyncManager {
    * @param channelConfig - Configuration for the channel type and parameters
    * @param filter - Optional filter for operations (defaults to no filtering)
    * @param options - Optional remote configuration options
+   * @param id - Optional ID for the remote (generated if not provided)
    * @returns Promise that resolves with the created remote
    * @throws Error if a remote with this name already exists
    */
@@ -148,6 +170,7 @@ export interface ISyncManager {
     channelConfig: ChannelConfig,
     filter?: RemoteFilter,
     options?: RemoteOptions,
+    id?: string,
   ): Promise<Remote>;
 
   /**

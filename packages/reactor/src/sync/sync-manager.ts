@@ -73,10 +73,13 @@ export class SyncManager implements ISyncManager {
 
     for (const record of remoteRecords) {
       const channel = this.channelFactory.instance(
+        record.id,
+        record.name,
         record.channelConfig,
         this.cursorStorage,
       );
       const remote: Remote = {
+        id: record.id,
         name: record.name,
         collectionId: record.collectionId,
         filter: record.filter,
@@ -121,12 +124,21 @@ export class SyncManager implements ISyncManager {
     };
   }
 
-  get(name: string): Remote {
+  getByName(name: string): Remote {
     const remote = this.remotes.get(name);
     if (!remote) {
       throw new Error(`Remote with name '${name}' does not exist`);
     }
     return remote;
+  }
+
+  getById(id: string): Remote {
+    for (const remote of this.remotes.values()) {
+      if (remote.id === id) {
+        return remote;
+      }
+    }
+    throw new Error(`Remote with id '${id}' does not exist`);
   }
 
   async add(
@@ -135,6 +147,7 @@ export class SyncManager implements ISyncManager {
     channelConfig: ChannelConfig,
     filter: RemoteFilter = { documentId: [], scope: [], branch: "" },
     options: RemoteOptions = {},
+    id?: string,
   ): Promise<Remote> {
     if (this.isShutdown) {
       throw new Error("SyncManager is shutdown and cannot add remotes");
@@ -144,12 +157,15 @@ export class SyncManager implements ISyncManager {
       throw new Error(`Remote with name '${name}' already exists`);
     }
 
+    const remoteId = id ?? crypto.randomUUID();
+
     const status: RemoteStatus = {
       push: createIdleHealth(),
       pull: createIdleHealth(),
     };
 
     const remoteRecord: RemoteRecord = {
+      id: remoteId,
       name,
       collectionId,
       channelConfig,
@@ -161,10 +177,13 @@ export class SyncManager implements ISyncManager {
     await this.remoteStorage.upsert(remoteRecord);
 
     const channel = this.channelFactory.instance(
+      remoteId,
+      name,
       channelConfig,
       this.cursorStorage,
     );
     const remote: Remote = {
+      id: remoteId,
       name,
       collectionId,
       filter,

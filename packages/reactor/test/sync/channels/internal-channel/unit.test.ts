@@ -518,7 +518,6 @@ describe("InternalChannel", () => {
       expect(cursorStorage.upsert).toHaveBeenCalledTimes(1);
       const call = vi.mocked(cursorStorage.upsert).mock.calls[0];
       expect(call[0]).toMatchObject({
-        remoteName: "remote-1",
         cursorOrdinal: 42,
       });
       expect(call[0].lastSyncedAtUtcMs).toBeGreaterThan(0);

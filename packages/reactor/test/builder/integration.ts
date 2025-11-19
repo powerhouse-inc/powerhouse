@@ -20,16 +20,18 @@ describe("Reactor with SyncBuilder Integration", () => {
 
       const channelFactory: IChannelFactory = {
         instance: (
+          remoteId: string,
+          remoteName: string,
           config: ChannelConfig,
           cursorStorage: ISyncCursorStorage,
         ) => {
           const channel = new InternalChannel(
-            config.channelId,
-            config.remoteName,
+            remoteId,
+            remoteName,
             cursorStorage,
             () => {},
           );
-          channelRegistry.set(config.channelId, channel);
+          channelRegistry.set(remoteId, channel);
           return channel;
         },
       };
@@ -47,16 +49,18 @@ describe("Reactor with SyncBuilder Integration", () => {
 
       const channelFactory: IChannelFactory = {
         instance: (
+          remoteId: string,
+          remoteName: string,
           config: ChannelConfig,
           cursorStorage: ISyncCursorStorage,
         ) => {
           const channel = new InternalChannel(
-            config.channelId,
-            config.remoteName,
+            remoteId,
+            remoteName,
             cursorStorage,
             () => {},
           );
-          channelRegistry.set(config.channelId, channel);
+          channelRegistry.set(remoteId, channel);
           return channel;
         },
       };
@@ -72,8 +76,7 @@ describe("Reactor with SyncBuilder Integration", () => {
         "test-collection",
         {
           type: "internal",
-          channelId: "test-channel",
-          remoteName: "test-remote",
+
           parameters: {},
         },
         {
@@ -96,16 +99,18 @@ describe("Reactor with SyncBuilder Integration", () => {
 
       const channelFactory: IChannelFactory = {
         instance: (
+          remoteId: string,
+          remoteName: string,
           config: ChannelConfig,
           cursorStorage: ISyncCursorStorage,
         ) => {
           const channel = new InternalChannel(
-            config.channelId,
-            config.remoteName,
+            remoteId,
+            remoteName,
             cursorStorage,
             () => {},
           );
-          channelRegistry.set(config.channelId, channel);
+          channelRegistry.set(remoteId, channel);
           return channel;
         },
       };
@@ -116,8 +121,7 @@ describe("Reactor with SyncBuilder Integration", () => {
 
       await reactor.syncManager!.add("test-remote", "test-collection", {
         type: "internal",
-        channelId: "test-channel",
-        remoteName: "test-remote",
+
         parameters: {},
       });
 
@@ -136,16 +140,18 @@ describe("Reactor with SyncBuilder Integration", () => {
 
       const channelFactory: IChannelFactory = {
         instance: (
+          remoteId: string,
+          remoteName: string,
           config: ChannelConfig,
           cursorStorage: ISyncCursorStorage,
         ) => {
           const channel = new InternalChannel(
-            config.channelId,
-            config.remoteName,
+            remoteId,
+            remoteName,
             cursorStorage,
             () => {},
           );
-          channelRegistry.set(config.channelId, channel);
+          channelRegistry.set(remoteId, channel);
           return channel;
         },
       };
@@ -159,8 +165,7 @@ describe("Reactor with SyncBuilder Integration", () => {
         "persistent-collection",
         {
           type: "internal",
-          channelId: "persistent-channel",
-          remoteName: "persistent-remote",
+
           parameters: {},
         },
       );
@@ -186,16 +191,18 @@ describe("Reactor with SyncBuilder Integration", () => {
 
       const channelFactory: IChannelFactory = {
         instance: (
+          remoteId: string,
+          remoteName: string,
           config: ChannelConfig,
           cursorStorage: ISyncCursorStorage,
         ) => {
           const channel = new InternalChannel(
-            config.channelId,
-            config.remoteName,
+            remoteId,
+            remoteName,
             cursorStorage,
             () => {},
           );
-          channelRegistry.set(config.channelId, channel);
+          channelRegistry.set(remoteId, channel);
           return channel;
         },
       };
@@ -208,8 +215,7 @@ describe("Reactor with SyncBuilder Integration", () => {
 
       await reactor.syncManager!.add("test-remote", "test-collection", {
         type: "internal",
-        channelId: "test-channel",
-        remoteName: "test-remote",
+
         parameters: {},
       });
 

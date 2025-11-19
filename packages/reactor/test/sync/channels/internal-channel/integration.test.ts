@@ -50,12 +50,11 @@ describe("InternalChannel Integration", () => {
 
   const createTestRemote = async (name: string): Promise<void> => {
     const remote: RemoteRecord = {
+      id: "channel-1",
       name,
       collectionId: "collection-1",
       channelConfig: {
         type: "internal",
-        channelId: `channel-${name}`,
-        remoteName: name,
         parameters: {},
       },
       filter: {

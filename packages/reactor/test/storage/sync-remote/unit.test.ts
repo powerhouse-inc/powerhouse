@@ -27,12 +27,11 @@ describe("KyselySyncRemoteStorage", () => {
 
     it("should return all remotes", async () => {
       const remote1: RemoteRecord = {
+        id: "test-id",
         name: "remote-1",
         collectionId: "collection-1",
         channelConfig: {
           type: "gql",
-          channelId: "channel-remote-1",
-          remoteName: "remote-1",
           parameters: { url: "https://api.example.com/graphql" },
         },
         filter: {
@@ -48,12 +47,11 @@ describe("KyselySyncRemoteStorage", () => {
       };
 
       const remote2: RemoteRecord = {
+        id: "test-id",
         name: "remote-2",
         collectionId: "collection-2",
         channelConfig: {
           type: "internal",
-          channelId: "channel-remote-2",
-          remoteName: "remote-2",
           parameters: {},
         },
         filter: {
@@ -97,12 +95,11 @@ describe("KyselySyncRemoteStorage", () => {
 
     it("should retrieve existing remote", async () => {
       const remote: RemoteRecord = {
+        id: "test-id",
         name: "test-remote",
         collectionId: "main:drive-123",
         channelConfig: {
           type: "gql",
-          channelId: "channel-test-remote",
-          remoteName: "test-remote",
           parameters: {
             url: "https://api.example.com/graphql",
             token: "secret-token",
@@ -136,8 +133,6 @@ describe("KyselySyncRemoteStorage", () => {
         collectionId: "main:drive-123",
         channelConfig: {
           type: "gql",
-          channelId: "channel-test-remote",
-          remoteName: "test-remote",
           parameters: {
             url: "https://api.example.com/graphql",
             token: "secret-token",
@@ -176,12 +171,11 @@ describe("KyselySyncRemoteStorage", () => {
   describe("upsert", () => {
     it("should insert new remote", async () => {
       const remote: RemoteRecord = {
+        id: "test-id",
         name: "new-remote",
         collectionId: "collection-1",
         channelConfig: {
           type: "gql",
-          channelId: "channel-new-remote",
-          remoteName: "new-remote",
           parameters: { url: "https://api.example.com" },
         },
         filter: {
@@ -205,12 +199,11 @@ describe("KyselySyncRemoteStorage", () => {
 
     it("should update existing remote", async () => {
       const remote: RemoteRecord = {
+        id: "test-id",
         name: "update-remote",
         collectionId: "collection-1",
         channelConfig: {
           type: "gql",
-          channelId: "channel-update-remote",
-          remoteName: "update-remote",
           parameters: { url: "https://api.example.com" },
         },
         filter: {
@@ -247,12 +240,11 @@ describe("KyselySyncRemoteStorage", () => {
 
     it("should handle empty arrays in filter", async () => {
       const remote: RemoteRecord = {
+        id: "test-id",
         name: "empty-filter-remote",
         collectionId: "collection-1",
         channelConfig: {
           type: "internal",
-          channelId: "channel-empty-filter-remote",
-          remoteName: "empty-filter-remote",
           parameters: {},
         },
         filter: {
@@ -276,12 +268,11 @@ describe("KyselySyncRemoteStorage", () => {
 
     it("should handle JSONB parameters correctly", async () => {
       const remote: RemoteRecord = {
+        id: "test-id",
         name: "jsonb-remote",
         collectionId: "collection-1",
         channelConfig: {
           type: "gql",
-          channelId: "channel-jsonb-remote",
-          remoteName: "jsonb-remote",
           parameters: {
             url: "https://api.example.com",
             headers: {
@@ -321,12 +312,11 @@ describe("KyselySyncRemoteStorage", () => {
     it("should handle bigint timestamp conversions", async () => {
       const now = Date.now();
       const remote: RemoteRecord = {
+        id: "test-id",
         name: "timestamp-remote",
         collectionId: "collection-1",
         channelConfig: {
           type: "internal",
-          channelId: "channel-timestamp-remote",
-          remoteName: "timestamp-remote",
           parameters: {},
         },
         filter: {
@@ -365,12 +355,11 @@ describe("KyselySyncRemoteStorage", () => {
       controller.abort();
 
       const remote: RemoteRecord = {
+        id: "test-id",
         name: "abort-remote",
         collectionId: "collection-1",
         channelConfig: {
           type: "internal",
-          channelId: "channel-test",
-          remoteName: "test",
           parameters: {},
         },
         filter: { documentId: [], scope: [], branch: "main" },
@@ -390,12 +379,11 @@ describe("KyselySyncRemoteStorage", () => {
   describe("remove", () => {
     it("should remove existing remote", async () => {
       const remote: RemoteRecord = {
+        id: "test-id",
         name: "remove-remote",
         collectionId: "collection-1",
         channelConfig: {
           type: "internal",
-          channelId: "channel-remove-remote",
-          remoteName: "remove-remote",
           parameters: {},
         },
         filter: {
@@ -437,12 +425,11 @@ describe("KyselySyncRemoteStorage", () => {
   describe("transaction behavior", () => {
     it("should handle concurrent upserts correctly", async () => {
       const remote: RemoteRecord = {
+        id: "test-id",
         name: "concurrent-remote",
         collectionId: "collection-1",
         channelConfig: {
           type: "internal",
-          channelId: "channel-concurrent-remote",
-          remoteName: "concurrent-remote",
           parameters: {},
         },
         filter: {
