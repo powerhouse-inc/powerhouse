@@ -52,6 +52,7 @@
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-mcp": "workspace:*",
     "@renown/sdk": "workspace:*",
+    "@types/ws": "^8.18.1",
     "body-parser": "^1.20.3",
     "change-case": "^5.4.4",
     "cors": "^2.8.5",
