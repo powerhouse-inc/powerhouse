@@ -1,3 +1,14 @@
+## 5.0.10 (2025-11-19)
+
+### 🩹 Fixes
+
+- **codegen:** removed legacy hygen check ([b6dbede19](https://github.com/powerhouse-inc/powerhouse/commit/b6dbede19))
+- **codegen:** deleted legacy hygen templates ([6701baae5](https://github.com/powerhouse-inc/powerhouse/commit/6701baae5))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.0.9 (2025-11-19)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
