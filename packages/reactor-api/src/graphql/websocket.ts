@@ -4,7 +4,7 @@ if (process.env.VITEST !== "true" && process.env.NODE_ENV !== "test") {
   try {
     // @ts-expect-error - graphql-ws subpath not resolved by TypeScript
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const mod = await import("graphql-ws/lib/use/ws");
+    const mod = await import("graphql-ws/use/ws");
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     useServerImpl = mod.useServer;
   } catch (error) {
