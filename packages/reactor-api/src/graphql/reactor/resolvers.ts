@@ -718,6 +718,7 @@ export async function createChannel(
       return true;
     }
   } catch {
+    // Ignore errors when checking for existing sync connection
   }
 
   const filter: RemoteFilter = {
@@ -818,15 +819,17 @@ export async function pushSyncEnvelope(
     return true;
   }
 
+  const firstOp = args.envelope.operations[0];
   const syncOp = {
     id: crypto.randomUUID(),
     remoteName: remote.name,
-    documentId: args.envelope.operations[0].context.documentId,
+    documentId: firstOp.context.documentId,
     scopes: [
       ...new Set(args.envelope.operations.map((op) => op.context.scope)),
     ],
-    branch: args.envelope.operations[0].context.branch,
+    branch: firstOp.context.branch,
     operations: args.envelope.operations.map((op) => ({
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       operation: op.operation,
       context: {
         documentId: op.context.documentId,

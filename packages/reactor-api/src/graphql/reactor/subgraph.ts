@@ -111,7 +111,8 @@ export class ReactorSubgraph extends BaseSubgraph {
           throw new Error("SyncManager not available");
         }
         try {
-          return await resolvers.pollSyncEnvelopes(this.syncManager as any, args);
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+          return await resolvers.pollSyncEnvelopes(this.syncManager, args);
         } catch (error) {
           this.logger.error("Error in pollSyncEnvelopes:", error);
           throw error;
@@ -240,7 +241,7 @@ export class ReactorSubgraph extends BaseSubgraph {
           throw new Error("SyncManager not available");
         }
         try {
-          return await resolvers.createChannel(this.syncManager as any, args);
+          return await resolvers.createChannel(this.syncManager, args);
         } catch (error) {
           this.logger.error("Error in createChannel:", error);
           throw error;
@@ -275,7 +276,7 @@ export class ReactorSubgraph extends BaseSubgraph {
           throw new Error("SyncManager not available");
         }
         try {
-          return await resolvers.pushSyncEnvelope(this.syncManager as any, args);
+          return await resolvers.pushSyncEnvelope(this.syncManager, args);
         } catch (error) {
           this.logger.error("Error in pushSyncEnvelope:", error);
           throw error;

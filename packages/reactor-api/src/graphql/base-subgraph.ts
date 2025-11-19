@@ -1,4 +1,4 @@
-import type { IReactorClient } from "@powerhousedao/reactor";
+import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
 import type {
   GraphQLManager,
   ISubgraph,
@@ -25,7 +25,7 @@ export class BaseSubgraph implements ISubgraph {
   reactorClient: IReactorClient;
   graphqlManager: GraphQLManager;
   relationalDb: IRelationalDb;
-  syncManager?: unknown;
+  syncManager?: ISyncManager;
 
   constructor(args: SubgraphArgs) {
     this.reactor = args.reactor;
