@@ -1,3 +1,7 @@
+## 5.0.6 (2025-11-19)
+
+This was a version bump only for ph-cmd to align it with other projects, there were no code changes.
+
 ## 5.0.5 (2025-11-18)
 
 This was a version bump only for ph-cmd to align it with other projects, there were no code changes.

@@ -1,3 +1,13 @@
+## 5.0.6 (2025-11-19)
+
+### 🩹 Fixes
+
+- **reactor-api:** fix free entry for register pull responder ([1c7830cb1](https://github.com/powerhouse-inc/powerhouse/commit/1c7830cb1))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.0.5 (2025-11-18)
 
 ### 🩹 Fixes
