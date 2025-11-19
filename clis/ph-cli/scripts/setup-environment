@@ -383,7 +383,7 @@ EOF
     # =============================================================================
     # Database Schema Setup
     # =============================================================================
-    pnpm prisma db push --schema node_modules/document-drive/dist/prisma/schema.prisma
+    pnpm prisma db push --schema node_modules/document-drive/dist/prisma/schema.prisma --skip-generate
 
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "  Environment setup complete!"

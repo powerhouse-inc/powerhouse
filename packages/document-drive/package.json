@@ -57,7 +57,7 @@
     "test:flaky": "vitest run --coverage test/flaky",
     "test:watch": "vitest --coverage --exclude \"test/flaky/**\"",
     "bench": "vitest bench",
-    "migrate": "prisma generate && prisma db push",
+    "migrate": "prisma generate && prisma db push --skip-generate",
     "copy-prisma": "copyfiles prisma/schema.prisma dist/ && copyfiles 'src/storage/prisma/client/**/*' dist/",
     "prisma-generate": "prisma generate --no-hints && npm run copy-prisma"
   },
