@@ -36,7 +36,7 @@ ENV PH_SWITCHBOARD_PORT=$PORT
 ARG TAG=latest
 ENV TAG=$TAG
 # RUN apk add --no-cache openssl
-RUN pnpm add -g ph-cmd@$TAG prisma
+RUN pnpm add -g ph-cmd@$TAG prisma@5.17.0
 RUN case "$TAG" in \
         *dev*) ph init project --dev --package-manager pnpm ;; \
         *staging*) ph init project --staging --package-manager pnpm ;; \
