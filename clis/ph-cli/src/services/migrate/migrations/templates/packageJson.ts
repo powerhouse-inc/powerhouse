@@ -3,7 +3,7 @@ export const packageJsonScriptsTemplate = {
   test: "vitest run",
   "test:watch": "vitest",
   lint: "eslint --config eslint.config.js --cache --cache-strategy content",
-  "lint:fix": "npm run lint --fix",
+  "lint:fix": "npm run lint -- --fix",
   tsc: "tsc",
   "tsc:watch": "tsc --watch",
   tailwind: "npx @tailwindcss/cli -i ./style.css -o ./dist/style.css",
