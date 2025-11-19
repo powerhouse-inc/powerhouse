@@ -1,3 +1,13 @@
+## 5.0.9 (2025-11-19)
+
+### 🩹 Fixes
+
+- **switchboard:** use prisma 5.17 on schema push ([17412eb12](https://github.com/powerhouse-inc/powerhouse/commit/17412eb12))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.0.8 (2025-11-19)
 
 ### 🚀 Features
