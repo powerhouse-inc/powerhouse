@@ -1,3 +1,19 @@
+## 4.1.0-dev.128 (2025-11-20)
+
+### 🚀 Features
+
+- **ph-cmd:** create vetra document on init ([824fed331](https://github.com/powerhouse-inc/powerhouse/commit/824fed331))
+- **ph-cmd:** create vetra document on init ([#2101](https://github.com/powerhouse-inc/powerhouse/pull/2101))
+
+### 🩹 Fixes
+
+- **ph-cmd:** move console log for vetra package document creation ([dbdbdf99b](https://github.com/powerhouse-inc/powerhouse/commit/dbdbdf99b))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 4.1.0-dev.127 (2025-11-19)
 
 ### 🚀 Features

@@ -1,3 +1,17 @@
+## 4.1.0-dev.128 (2025-11-20)
+
+### 🚀 Features
+
+- **ph-cmd:** create vetra document on init ([824fed331](https://github.com/powerhouse-inc/powerhouse/commit/824fed331))
+
+### 🩹 Fixes
+
+- **ph-cmd:** move console log for vetra package document creation ([dbdbdf99b](https://github.com/powerhouse-inc/powerhouse/commit/dbdbdf99b))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 4.1.0-dev.127 (2025-11-19)
 
 This was a version bump only for ph-cmd to align it with other projects, there were no code changes.

@@ -1,3 +1,7 @@
+## 4.1.0-dev.128 (2025-11-20)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
 ## 4.1.0-dev.127 (2025-11-19)
 
 This was a version bump only for document-model to align it with other projects, there were no code changes.
