@@ -48,7 +48,7 @@ export const AppSkeleton = () => {
   const isSSR = typeof window === "undefined";
   const isHomeScreen = !isSSR && window.location.pathname === getBasePath();
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen bg-white">
       <ConnectSidebar
         className="animate-pulse"
         onLogin={undefined}

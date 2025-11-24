@@ -4,7 +4,7 @@ import { Outlet } from "react-router-dom";
 
 export function Root() {
   return (
-    <div className="h-screen">
+    <div className="h-screen bg-white">
       <div
         className={`flex h-screen items-stretch overflow-auto`}
         role="presentation"
