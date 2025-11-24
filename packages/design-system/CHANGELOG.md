@@ -1,3 +1,13 @@
+## 5.0.11 (2025-11-24)
+
+### 🩹 Fixes
+
+- **design-system:** add background color to home screen ([d08c4aa75](https://github.com/powerhouse-inc/powerhouse/commit/d08c4aa75))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.0.10 (2025-11-19)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.

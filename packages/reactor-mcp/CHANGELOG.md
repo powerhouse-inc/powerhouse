@@ -1,3 +1,13 @@
+## 5.0.11 (2025-11-24)
+
+### 🩹 Fixes
+
+- **reactor-mcp:** update output schema of tools ([422b19f72](https://github.com/powerhouse-inc/powerhouse/commit/422b19f72))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.0.10 (2025-11-19)
 
 This was a version bump only for @powerhousedao/reactor-mcp to align it with other projects, there were no code changes.

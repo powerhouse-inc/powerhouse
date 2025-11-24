@@ -1,3 +1,7 @@
+## 5.0.11 (2025-11-24)
+
+This was a version bump only for @powerhousedao/switchboard-gui to align it with other projects, there were no code changes.
+
 ## 5.0.10 (2025-11-19)
 
 This was a version bump only for @powerhousedao/switchboard-gui to align it with other projects, there were no code changes.

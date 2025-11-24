@@ -1,3 +1,14 @@
+## 5.0.11 (2025-11-24)
+
+### 🩹 Fixes
+
+- **design-system:** add background color to home screen ([d08c4aa75](https://github.com/powerhouse-inc/powerhouse/commit/d08c4aa75))
+- **reactor-mcp:** update output schema of tools ([422b19f72](https://github.com/powerhouse-inc/powerhouse/commit/422b19f72))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.0.10 (2025-11-19)
 
 ### 🩹 Fixes
