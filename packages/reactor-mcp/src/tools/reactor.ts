@@ -1,6 +1,14 @@
-import type { IDocumentDriveServer } from "document-drive";
+import {
+  DocumentDriveLocalStateSchema,
+  DocumentDriveStateSchema,
+  type IDocumentDriveServer,
+} from "document-drive";
+import { DriveDocumentHeaderSchema } from "document-drive/drive-document-model/gen/document-schema";
 import type { DocumentModelGlobalState } from "document-model";
-import { DocumentModelGlobalStateSchema } from "document-model";
+import {
+  BaseDocumentHeaderSchema,
+  DocumentModelGlobalStateSchema,
+} from "document-model";
 import { generateId } from "document-model/core";
 import { z } from "zod";
 import type { ToolSchema, ToolWithCallback } from "./types.js";
@@ -26,7 +34,12 @@ export const getDocumentTool = {
     id: z.string().describe("ID of the document to retrieve"),
   },
   outputSchema: {
-    document: z.object({}).describe("The retrieved Document"),
+    document: z
+      .object({
+        header: BaseDocumentHeaderSchema.passthrough(),
+        state: z.unknown(),
+      })
+      .describe("The retrieved Document"),
   },
 } as const satisfies ToolSchema;
 
@@ -198,7 +211,15 @@ export const getDriveTool = {
       .describe("Optional get document options"),
   },
   outputSchema: {
-    drive: z.object({}).describe("Drive document"), // TODO: Define DocumentDriveDocument schema
+    drive: z
+      .object({
+        header: DriveDocumentHeaderSchema.passthrough(),
+        state: z.object({
+          global: DocumentDriveStateSchema(),
+          local: DocumentDriveLocalStateSchema(),
+        }),
+      })
+      .describe("Drive document"), // TODO: Define DocumentDriveDocument schema
   },
 } as const satisfies ToolSchema;
 
@@ -456,11 +477,16 @@ export async function createReactorMcpProvider(reactor: IDocumentDriveServer) {
     }),
 
     getDrive: toolWithCallback(getDriveTool, async (params) => {
-      const { header, state } = await reactor.getDrive(
-        params.driveId,
-        params.options,
-      );
-      return { drive: { header, state } };
+      const {
+        header,
+        state: { global, local },
+      } = await reactor.getDrive(params.driveId, params.options);
+      return {
+        drive: {
+          header: header as z.infer<typeof DriveDocumentHeaderSchema>,
+          state: { global, local },
+        },
+      };
     }),
 
     deleteDrive: toolWithCallback(deleteDriveTool, async (params) => {
@@ -520,6 +546,15 @@ export async function createReactorMcpProvider(reactor: IDocumentDriveServer) {
         if (!schema) {
           throw new Error(`Document model '${params.type}' not found`);
         }
+
+        if ("auth" in schema) {
+          delete schema["auth"];
+        }
+
+        if ("document" in schema) {
+          delete schema["document"];
+        }
+
         return { schema };
       },
     ),
