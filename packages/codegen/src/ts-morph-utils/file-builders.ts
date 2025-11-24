@@ -22,29 +22,10 @@ import {
 
 import { buildModulesOutputFilePath } from "./name-builders/common-files.js";
 import {
-  buildDocumentModelsDirPath,
-  buildDocumentModelsSourceFilesPath,
-} from "./name-builders/document-model-files.js";
-import {
-  buildEditDocumentNameComponentFilePath,
-  buildEditorFilePath,
-  buildEditorModuleFilePath,
-  buildEditorSourceFilesPath,
-  buildEditorsDirPath,
-} from "./name-builders/editor-files.js";
-import {
-  buildDispatchFunctionName,
-  buildDocumentNameVariableName,
-  buildDocumentVariableName,
-  buildEditDocumentNameComponentName,
-  buildIsEditingVariableName,
-  buildOnCancelEditHandlerName,
-  buildOnClickHandlerName,
-  buildOnSubmitSetNameFunctionName,
-  buildSetIsEditingFunctionName,
-  buildSetNameActionName,
-  buildUseSelectedDocumentHookName,
-} from "./name-builders/variables.js";
+  getDocumentModelFilePaths,
+  getEditorFilePaths,
+} from "./name-builders/get-file-paths.js";
+import { getEditorVariableNames } from "./name-builders/get-variable-names.js";
 import {
   buildArrowFunction,
   buildClassNameAttribute,
@@ -92,100 +73,50 @@ export function tsMorphGenerateEditor({
   editorId,
   documentModelId,
 }: GenerateEditorArgs) {
-  const documentModelsSourceFilesPath =
-    buildDocumentModelsSourceFilesPath(projectDir);
-  const editorSourceFilesPath = buildEditorSourceFilesPath(projectDir);
-
+  const documentModelFilePaths = getDocumentModelFilePaths(projectDir);
+  const editorFilePaths = getEditorFilePaths(projectDir, editorDir);
   const project = buildTsMorphProject(projectDir);
+  project.addSourceFilesAtPaths(
+    documentModelFilePaths.documentModelsSourceFilesPath,
+  );
+  project.addSourceFilesAtPaths(editorFilePaths.editorSourceFilesPath);
 
-  project.addSourceFilesAtPaths(documentModelsSourceFilesPath);
-  project.addSourceFilesAtPaths(editorSourceFilesPath);
+  const documentTypeMetadata = getDocumentTypeMetadata({
+    project,
+    packageName,
+    documentModelId,
+    ...documentModelFilePaths,
+  });
 
-  const documentModelsDirPath = buildDocumentModelsDirPath(projectDir);
-  const editorsDirPath = buildEditorsDirPath(projectDir);
-
-  const { documentModelDocumentTypeName, documentModelImportPath } =
-    getDocumentTypeMetadata({
-      project,
-      packageName,
-      documentModelId,
-      documentModelsDirPath,
-    });
-
-  const documentVariableName = buildDocumentVariableName(
-    documentModelDocumentTypeName,
+  const editorVariableNames = getEditorVariableNames(
+    documentTypeMetadata.documentModelDocumentTypeName,
   );
-  const editDocumentNameComponentName = buildEditDocumentNameComponentName(
-    documentModelDocumentTypeName,
-  );
-  const useSelectedDocumentHookName = buildUseSelectedDocumentHookName(
-    documentModelDocumentTypeName,
-  );
-  const documentNameVariableName = buildDocumentNameVariableName(
-    documentModelDocumentTypeName,
-  );
-  const dispatchFunctionName = buildDispatchFunctionName(
-    documentModelDocumentTypeName,
-  );
-  const onClickEditHandlerName = buildOnClickHandlerName(
-    documentModelDocumentTypeName,
-  );
-  const onCancelEditHandlerName = buildOnCancelEditHandlerName(
-    documentModelDocumentTypeName,
-  );
-  const setNameActionName = buildSetNameActionName(
-    documentModelDocumentTypeName,
-  );
-  const isEditingVariableName = buildIsEditingVariableName(
-    documentModelDocumentTypeName,
-  );
-  const setIsEditingFunctionName = buildSetIsEditingFunctionName(
-    documentModelDocumentTypeName,
-  );
-  const onSubmitSetNameFunctionName = buildOnSubmitSetNameFunctionName(
-    documentModelDocumentTypeName,
-  );
-  const editDocumentNameComponentFilePath =
-    buildEditDocumentNameComponentFilePath(projectDir, editorDir);
-  const editorFilePath = buildEditorFilePath(projectDir, editorDir);
-  const editorModuleFilePath = buildEditorModuleFilePath(projectDir, editorDir);
 
   makeEditDocumentNameComponent({
     project,
-    documentModelDocumentTypeName,
-    documentModelImportPath,
-    documentVariableName,
-    onClickEditHandlerName,
-    onCancelEditHandlerName,
-    setNameActionName,
-    useSelectedDocumentHookName,
-    dispatchFunctionName,
-    isEditingVariableName,
-    setIsEditingFunctionName,
-    onSubmitSetNameFunctionName,
-    documentNameVariableName,
-    editDocumentNameComponentName,
-    editDocumentNameComponentFilePath,
+    ...documentTypeMetadata,
+    ...editorVariableNames,
+    ...editorFilePaths,
   });
 
   makeEditorComponent({
     project,
-    editorFilePath,
-    editDocumentNameComponentName,
+    ...editorFilePaths,
+    ...editorVariableNames,
   });
 
   makeEditorModuleFile({
     project,
-    editorModuleFilePath,
     editorName,
     editorId,
     documentModelId,
+    ...editorFilePaths,
   });
 
   makeModulesFile({
     project,
-    modulesDirPath: editorsDirPath,
-    modulesSourceFilesPath: editorSourceFilesPath,
+    modulesDirPath: editorFilePaths.editorsDirPath,
+    modulesSourceFilesPath: editorFilePaths.editorSourceFilesPath,
     outputFileName: editorModuleOutputFileName,
     typeName: editorModuleTypeName,
     variableName: editorModuleVariableName,

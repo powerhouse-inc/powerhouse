@@ -4,5 +4,6 @@ import { buildTsConfigFilePath } from "./name-builders/common-files.js";
 
 export function buildTsMorphProject(projectDir: string) {
   const tsConfigFilePath = buildTsConfigFilePath(projectDir);
-  return new Project(getDefaultProjectOptions(tsConfigFilePath));
+  const project = new Project(getDefaultProjectOptions(tsConfigFilePath));
+  return project;
 }
