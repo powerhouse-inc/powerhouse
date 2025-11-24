@@ -94,10 +94,10 @@ describe("generateEditor", () => {
       expect(fs.existsSync(editorPath)).toBe(true);
       const editorContent = fs.readFileSync(editorPath, "utf-8");
       expect(editorContent).toContain(
-        `import { EditTestDocName } from "./components/EditName.js";`,
+        `import { EditTestDocDocumentName } from "./components/EditName.js";`,
       );
       expect(editorContent).toContain(`export default function Editor()`);
-      expect(editorContent).toContain(`<EditTestDocName />`);
+      expect(editorContent).toContain(`<EditTestDocDocumentName />`);
 
       const modulePath = path.join(editorDir, "module.ts");
       expect(fs.existsSync(modulePath)).toBe(true);
@@ -109,16 +109,11 @@ describe("generateEditor", () => {
       expect(moduleContent).toContain(`id: "test-document-model-editor"`);
       expect(moduleContent).toContain(`name: "TestDocEditor"`);
 
-      const componentsDir = path.join(editorDir, "components");
-
-      const editNamePath = path.join(componentsDir, "EditName.tsx");
-      expect(fs.existsSync(editNamePath)).toBe(true);
-
       await compile(testOutDirPath);
     },
   );
 
-  it.skip(
+  it(
     "should append new exports to existing editors.ts file",
     {
       timeout: 100000,
@@ -145,7 +140,7 @@ describe("generateEditor", () => {
       expect(editorsContent).toContain(`TestDocEditor`);
     },
   );
-  it.skip(
+  it(
     "should create the editors.ts file if it doesn't exist",
     {
       timeout: 100000,
@@ -163,10 +158,10 @@ describe("generateEditor", () => {
       );
       rmSync(editorsFilePath, { force: true });
       await generateEditor({
-        name: "TestDocEditor",
+        name: "TestDocEditor2",
         documentTypes: ["powerhouse/test-doc"],
         config: config,
-        editorId: "test-document-model-editor",
+        editorId: "test-doc-editor-2",
         specifiedPackageName: TEST_PACKAGE_NAME,
       });
       await compile(testOutDirPath);

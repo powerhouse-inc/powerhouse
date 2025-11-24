@@ -9,12 +9,19 @@ import { fileURLToPath } from "node:url";
 import { readPackage } from "read-pkg";
 import { TSMorphCodeGenerator } from "../ts-morph-generator/index.js";
 import {
-  makeEditDocumentNameComponent,
-  makeEditorComponent,
-  makeEditorModuleFile,
   makeModulesFile,
   makeSubgraphsIndexFile,
-} from "../ts-morph-utils.js";
+  tsMorphGenerateEditor,
+} from "../ts-morph-utils/file-builders.js";
+import {
+  buildDocumentModelsDirPath,
+  buildDocumentModelsSourceFilesPath,
+} from "../ts-morph-utils/name-builders/document-model-files.js";
+import {
+  buildEditorsDirPath,
+  buildEditorSourceFilesPath,
+} from "../ts-morph-utils/name-builders/editor-files.js";
+import { buildTsMorphProject } from "../ts-morph-utils/ts-morph-project.js";
 import type { CodegenOptions, DocumentTypesMap } from "./types.js";
 import { loadDocumentModel } from "./utils.js";
 
@@ -202,9 +209,12 @@ export async function hygenGenerateDocumentModel(
     await generator.generateReducers();
   }
 
+  const project = buildTsMorphProject(projectDir);
+
   makeModulesFile({
-    projectDir,
-    modulesDir: "document-models",
+    project,
+    modulesDirPath: buildDocumentModelsDirPath(projectDir),
+    modulesSourceFilesPath: buildDocumentModelsSourceFilesPath(projectDir),
     outputFileName: "document-models.ts",
     typeName: "DocumentModelModule",
     variableName: "documentModels",
@@ -224,7 +234,7 @@ type HygenGenerateEditorArgs = {
   editorId?: string;
   editorDirName?: string;
 };
-export async function hygenGenerateEditor(
+export function hygenGenerateEditor(
   hygenGenerateEditorArgs: HygenGenerateEditorArgs,
 ) {
   const {
@@ -236,7 +246,7 @@ export async function hygenGenerateEditor(
     packageName,
     skipFormat = false,
     verbose = true,
-    editorId,
+    editorId = paramCase(name),
     editorDirName,
   } = hygenGenerateEditorArgs;
   // Generate the singular files for the document model logic
@@ -270,43 +280,17 @@ export async function hygenGenerateEditor(
   if (documentTypes.length > 1) {
     throw new Error("Multiple document types are not supported yet");
   }
-  const documentTypeName = documentTypes[0];
-  const documentType = documentTypesMap[documentTypeName].name;
-  const documentModelDir = documentTypesMap[documentTypeName].importPath;
+  const documentModelId = documentTypes[0];
+  const editorName = name;
+  const editorDir = editorDirName || paramCase(editorName);
 
-  const editorDir = editorDirName || paramCase(name);
-
-  makeEditDocumentNameComponent({
-    projectDir,
-    editorDir,
-    documentType,
-    documentModelDir,
+  tsMorphGenerateEditor({
     packageName,
-  });
-
-  makeEditorComponent({
     projectDir,
     editorDir,
-    documentType,
-  });
-
-  makeEditorModuleFile({
-    projectDir,
-    editorDir,
-    editorName: name,
-    editorId: editorId || paramCase(name),
-    documentTypeName,
-  });
-
-  await run(args, { skipFormat, verbose });
-
-  makeModulesFile({
-    projectDir,
-    modulesDir: "editors",
-    outputFileName: "editors.ts",
-    typeName: "EditorModule",
-    variableName: "editors",
-    variableType: "EditorModule[]",
+    documentModelId,
+    editorName,
+    editorId,
   });
 }
 
@@ -470,10 +454,12 @@ export async function hygenGenerateDriveEditor(options: {
   await run(args, { skipFormat });
 
   const projectDir = path.dirname(dir);
+  const project = buildTsMorphProject(projectDir);
 
   makeModulesFile({
-    projectDir,
-    modulesDir: "editors",
+    project,
+    modulesDirPath: buildEditorsDirPath(projectDir),
+    modulesSourceFilesPath: buildEditorSourceFilesPath(projectDir),
     outputFileName: "editors.ts",
     typeName: "EditorModule",
     variableName: "editors",
