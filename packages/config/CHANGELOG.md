@@ -1,3 +1,7 @@
+## 5.0.12 (2025-11-24)
+
+This was a version bump only for @powerhousedao/config to align it with other projects, there were no code changes.
+
 ## 5.0.11 (2025-11-24)
 
 This was a version bump only for @powerhousedao/config to align it with other projects, there were no code changes.

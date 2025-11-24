@@ -1,3 +1,13 @@
+## 5.0.12 (2025-11-24)
+
+### 🩹 Fixes
+
+- **connect:** add background to root elements ([b673e2d43](https://github.com/powerhouse-inc/powerhouse/commit/b673e2d43))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.0.11 (2025-11-24)
 
 ### 🩹 Fixes
