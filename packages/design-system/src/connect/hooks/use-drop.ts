@@ -52,6 +52,10 @@ export function useDrop(props?: Props) {
       if (dataTransfer.types.includes("Files")) {
         const items = Array.from(dataTransfer.items);
 
+        if (items.length === 0) {
+          return true;
+        }
+
         return items.some((item) => {
           if (item.kind === "file") {
             // Check MIME types for zip files
