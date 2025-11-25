@@ -4,7 +4,10 @@ import {
   buildDocumentModelsSourceFilesPath,
 } from "./document-model-files.js";
 import {
+  buildDriveContentsFilePath,
   buildEditDocumentNameComponentFilePath,
+  buildEditorComponentsDirPath,
+  buildEditorConfigFilePath,
   buildEditorFilePath,
   buildEditorModuleFilePath,
   buildEditorSourceFilesPath,
@@ -34,5 +37,11 @@ export function getEditorFilePaths(
       projectDir,
       editorDir,
     ),
+    editorComponentsDirPath: buildEditorComponentsDirPath(
+      projectDir,
+      editorDir,
+    ),
+    editorConfigFilePath: buildEditorConfigFilePath(projectDir, editorDir),
+    driveContentsFilePath: buildDriveContentsFilePath(projectDir, editorDir),
   };
 }

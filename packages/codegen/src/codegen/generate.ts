@@ -15,7 +15,6 @@ import { generateSchema, generateSchemas } from "./graphql.js";
 import {
   generateAll,
   hygenGenerateDocumentModel,
-  hygenGenerateDriveEditor,
   hygenGenerateImportScript,
   hygenGenerateProcessor,
   hygenGenerateSubgraph,
@@ -128,16 +127,6 @@ export async function generateDriveEditor(options: {
   const dir = config.editorsDir;
   const skipFormat = config.skipFormat;
 
-  await hygenGenerateDriveEditor({
-    name,
-    dir,
-    appId: appId ?? paramCase(name),
-    allowedDocumentTypes: allowedDocumentTypes,
-    isDragAndDropEnabled: isDragAndDropEnabled ?? true,
-    skipFormat,
-    driveEditorDirName,
-  });
-
   const packageNameFromPackageJson = await readPackage().then(
     (pkg) => pkg.name,
   );
@@ -152,6 +141,7 @@ export async function generateDriveEditor(options: {
     editorId: appId ?? paramCase(name),
     packageName,
     allowedDocumentModelIds: allowedDocumentTypes?.split(",") ?? [],
+    isDragAndDropEnabled: isDragAndDropEnabled ?? true,
   });
 }
 

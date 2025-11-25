@@ -33,6 +33,25 @@ export function buildEditDocumentNameComponentFilePath(
   return path.join(editorComponentsDirPath, "EditName.tsx");
 }
 
+export function buildEditorConfigFilePath(
+  projectDir: string,
+  editorDir: string,
+) {
+  const editorDirPath = buildEditorDirPath(projectDir, editorDir);
+  return path.join(editorDirPath, "config.ts");
+}
+
+export function buildDriveContentsFilePath(
+  projectDir: string,
+  editorDir: string,
+) {
+  const editorComponentsDirPath = buildEditorComponentsDirPath(
+    projectDir,
+    editorDir,
+  );
+  return path.join(editorComponentsDirPath, "DriveContents.tsx");
+}
+
 export function buildEditorModuleFilePath(
   projectDir: string,
   editorDir: string,

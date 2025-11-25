@@ -16,6 +16,9 @@ export type EditorFilePaths = {
   editorFilePath: string;
   editorModuleFilePath: string;
   editDocumentNameComponentFilePath: string;
+  editorConfigFilePath: string;
+  driveContentsFilePath: string;
+  editorComponentsDirPath: string;
 };
 
 export type EditorVariableNames = {

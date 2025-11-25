@@ -211,6 +211,12 @@ export function buildArrayAssignment(elements: string[]) {
   );
 }
 
+export function buildArrayLiteralWithStringElements(elements: string[]) {
+  return ts.factory.createArrayLiteralExpression(
+    elements.map((element) => ts.factory.createStringLiteral(element)),
+  );
+}
+
 type BuildDestructuredArrayHookCallArgs = {
   hookName: string;
   destructuredElements: string[];
