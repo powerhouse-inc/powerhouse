@@ -1,5 +1,7 @@
 import { camelCase, paramCase, pascalCase } from "change-case";
+import type { DocumentModelGlobalState } from "document-model";
 import path from "node:path";
+import { getInitialStates } from "../templates/utils.js";
 import type {
   DocumentModelDocumentTypeMetadata,
   EditorVariableNames,
@@ -57,15 +59,21 @@ export function getEditorVariableNames({
 }
 
 type GetDocumentModelVariableNamesArgs = {
-  documentType: string;
   packageName: string;
   projectDir: string;
+  documentModelState: DocumentModelGlobalState;
 };
 export function getDocumentModelVariableNames({
-  documentType,
   packageName,
   projectDir,
+  documentModelState,
 }: GetDocumentModelVariableNamesArgs) {
+  const documentType = documentModelState.name;
+  const documentTypeId = documentModelState.id;
+  const latestSpec =
+    documentModelState.specifications[
+      documentModelState.specifications.length - 1
+    ];
   const paramCaseDocumentType = paramCase(documentType);
   const pascalCaseDocumentType = pascalCase(documentType);
   const camelCaseDocumentType = camelCase(documentType);
@@ -94,8 +102,12 @@ export function getDocumentModelVariableNames({
   const useSelectedHookName = `useSelected${phDocumentTypeName}`;
   const useInSelectedDriveHookName = `use${phDocumentTypeName}sInSelectedDrive`;
   const useInSelectedFolderHookName = `use${phDocumentTypeName}sInSelectedFolder`;
-
+  const fileExtension = documentModelState.extension;
+  const { initialGlobalState, initialLocalState } = getInitialStates(
+    latestSpec.state,
+  );
   return {
+    documentTypeId,
     paramCaseDocumentType,
     pascalCaseDocumentType,
     camelCaseDocumentType,
@@ -120,5 +132,8 @@ export function getDocumentModelVariableNames({
     useSelectedHookName,
     useInSelectedDriveHookName,
     useInSelectedFolderHookName,
+    fileExtension,
+    initialGlobalState,
+    initialLocalState,
   };
 }

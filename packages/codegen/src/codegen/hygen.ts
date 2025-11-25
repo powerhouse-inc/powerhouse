@@ -12,6 +12,7 @@ import { tsMorphGenerateEditor } from "../ts-morph-utils/file-builders/document-
 import {
   makeDocumentModelModuleFile,
   makeDocumentModelModulesFile,
+  makeDocumentModelUtilsFile,
 } from "../ts-morph-utils/file-builders/document-model.js";
 import { makeSubgraphsIndexFile } from "../ts-morph-utils/file-builders/subgraphs.js";
 import { getDocumentModelFilePaths } from "../ts-morph-utils/name-builders/get-file-paths.js";
@@ -208,16 +209,17 @@ export async function hygenGenerateDocumentModel(
   const { documentModelsSourceFilesPath } =
     getDocumentModelFilePaths(projectDir);
   project.addSourceFilesAtPaths(documentModelsSourceFilesPath);
-  const documentType = documentModelState.name;
 
   const documentModelVariableNames = getDocumentModelVariableNames({
-    documentType,
     packageName,
     projectDir,
+    documentModelState,
   });
+
+  makeDocumentModelUtilsFile({ project, ...documentModelVariableNames });
+
   makeDocumentModelModuleFile({
     project,
-    projectDir,
     ...documentModelVariableNames,
   });
   project.saveSync();

@@ -1,7 +1,20 @@
----
-to: "<%= rootDir %>/<%= paramCaseDocumentType %>/gen/utils.ts"
-force: true
----
+import { ts } from "@tmpl/core";
+import type { DocumentModelVariableNames } from "../../name-builders/types.js";
+
+export const documentModelUtilsTemplate = ({
+  globalStateName,
+  localStateName,
+  phStateName,
+  documentTypeVariableName,
+  isPhDocumentOfTypeFunctionName,
+  assertIsPhDocumentOfTypeFunctionName,
+  isPhStateOfTypeFunctionName,
+  assertIsPhStateOfTypeFunctionName,
+  fileExtension,
+  initialGlobalState,
+  initialLocalState,
+}: DocumentModelVariableNames) =>
+  ts`
 import type {
     DocumentModelUtils,
 } from "document-model";
@@ -13,24 +26,24 @@ import {
     generateId,
  } from 'document-model/core';
 import type { 
-  <%= globalStateName %>,
-  <%= localStateName %>
+  ${globalStateName},
+  ${localStateName}
 } from './types.js';
-import type { <%= phStateName %> } from './types.js';
+import type { ${phStateName} } from './types.js';
 import { reducer } from './reducer.js';
-import { <%= documentTypeVariableName %> } from "./document-type.js";
+import { ${documentTypeVariableName} } from "./document-type.js";
 import {
-  <%= isPhDocumentOfTypeFunctionName %>,
-  <%= assertIsPhDocumentOfTypeFunctionName %>,
-  <%= isPhStateOfTypeFunctionName %>,
-  <%= assertIsPhStateOfTypeFunctionName %>,
+  ${isPhDocumentOfTypeFunctionName},
+  ${assertIsPhDocumentOfTypeFunctionName},
+  ${isPhStateOfTypeFunctionName},
+  ${assertIsPhStateOfTypeFunctionName},
 } from "./document-schema.js";
 
-export const initialGlobalState: <%= globalStateName %> = <%- initialGlobalState %>;
-export const initialLocalState: <%= localStateName %> = <%- initialLocalState %>;
+export const initialGlobalState: ${globalStateName} = ${initialGlobalState};
+export const initialLocalState: ${localStateName} = ${initialLocalState};
 
-export const utils: DocumentModelUtils<<%= phStateName %>> = {
-    fileExtension: '<%- fileExtension %>',
+export const utils: DocumentModelUtils<${phStateName}> = {
+    fileExtension: "${fileExtension}",
     createState(state) {
         return { ...defaultBaseState(), global: { ...initialGlobalState, ...state?.global }, local: { ...initialLocalState, ...state?.local } };
     },
@@ -40,7 +53,7 @@ export const utils: DocumentModelUtils<<%= phStateName %>> = {
             state
         );
 
-        document.header.documentType = <%= documentTypeVariableName %>;
+        document.header.documentType = ${documentTypeVariableName};
 
         // for backwards compatibility, but this is NOT a valid signed document id
         document.header.id = generateId();
@@ -54,16 +67,16 @@ export const utils: DocumentModelUtils<<%= phStateName %>> = {
         return baseLoadFromInput(input, reducer);
     },
     isStateOfType(state) {
-        return <%= isPhStateOfTypeFunctionName %>(state);
+        return ${isPhStateOfTypeFunctionName}(state);
     },
     assertIsStateOfType(state) {
-        return <%= assertIsPhStateOfTypeFunctionName %>(state);
+        return ${assertIsPhStateOfTypeFunctionName}(state);
     },
     isDocumentOfType(document) {
-        return <%= isPhDocumentOfTypeFunctionName %>(document);
+        return ${isPhDocumentOfTypeFunctionName}(document);
     },
     assertIsDocumentOfType(document) {
-        return <%= assertIsPhDocumentOfTypeFunctionName %>(document);
+        return ${assertIsPhDocumentOfTypeFunctionName}(document);
     },
 };
 
@@ -75,3 +88,4 @@ export const isStateOfType = utils.isStateOfType;
 export const assertIsStateOfType = utils.assertIsStateOfType;
 export const isDocumentOfType = utils.isDocumentOfType;
 export const assertIsDocumentOfType = utils.assertIsDocumentOfType;
+`.raw;

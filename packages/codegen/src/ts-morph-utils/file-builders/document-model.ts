@@ -11,8 +11,14 @@ import {
   getOrCreateSourceFile,
 } from "../file-utils.js";
 import { getDocumentModelFilePaths } from "../name-builders/get-file-paths.js";
-import { documentModelModuleFileTemplate } from "../templates/document-model.js";
+import type { DocumentModelVariableNames } from "../name-builders/types.js";
+import { documentModelModuleFileTemplate } from "../templates/document-model/document-model.js";
+import { documentModelUtilsTemplate } from "../templates/document-model/utils.js";
 import { makeModulesFile } from "./module-files.js";
+
+type DocumentModelFileMakerArgs = DocumentModelVariableNames & {
+  project: Project;
+};
 
 export function makeDocumentModelModulesFile(
   project: Project,
@@ -31,13 +37,8 @@ export function makeDocumentModelModulesFile(
   });
 }
 
-type MakeDocumentModelModuleFileArgs = {
+type MakeDocumentModelModuleFileArgs = DocumentModelVariableNames & {
   project: Project;
-  projectDir: string;
-  phStateName: string;
-  pascalCaseDocumentType: string;
-  documentModelDir: string;
-  documentModelDirPath: string;
 };
 export function makeDocumentModelModuleFile({
   project,
@@ -61,4 +62,19 @@ export function makeDocumentModelModuleFile({
   documentModelModuleSourceFile.replaceWithText(template);
 
   formatSourceFileWithPrettier(documentModelModuleSourceFile);
+}
+
+export function makeDocumentModelUtilsFile({
+  project,
+  ...variableNames
+}: DocumentModelFileMakerArgs) {
+  const template = documentModelUtilsTemplate(variableNames);
+  const { documentModelDirPath } = variableNames;
+  const utilsFilePath = path.join(documentModelDirPath, "gen", "utils.ts");
+  const { sourceFile: utilsSourceFile } = getOrCreateSourceFile(
+    project,
+    utilsFilePath,
+  );
+  utilsSourceFile.replaceWithText(template);
+  formatSourceFileWithPrettier(utilsSourceFile);
 }
