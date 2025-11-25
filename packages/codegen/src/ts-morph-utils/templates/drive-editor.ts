@@ -29,7 +29,7 @@ export function DriveExplorer({ children }: EditorProps) {
     </div>
   );
 }
-`;
+`.raw;
 
 export const folderTreeFileTemplate = tsx`
   import {
@@ -136,7 +136,7 @@ export function FolderTree() {
     </SidebarProvider>
   );
 }
-`;
+`.raw;
 
 export const emptyStateFileTemplate = tsx`
 import { useNodesInSelectedDriveOrFolder } from "@powerhousedao/reactor-browser";
@@ -154,7 +154,7 @@ export function EmptyState() {
     </div>
   );
 }
-`;
+`.raw;
 
 export const createDocumentFileTemplate = tsx`
 import type { VetraDocumentModelModule } from "@powerhousedao/reactor-browser";
@@ -211,4 +211,4 @@ function CreateDocumentButton({ documentModelModule }: Props) {
     </button>
   );
 }
-`;
+`.raw;

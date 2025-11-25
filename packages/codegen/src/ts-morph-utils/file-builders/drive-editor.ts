@@ -395,7 +395,7 @@ return (
       ))}
     </div>
   </div>
-);`,
+);`.raw,
     ],
   });
 
@@ -431,10 +431,10 @@ export function makeFilesFile({
   filesSourceFile.addImportDeclarations(importDeclarations);
 
   const statements = [
-    tsx`const nodes = useNodesInSelectedDriveOrFolder();`,
-    tsx`const fileNodes = nodes.filter((n) => isFileNodeKind(n));`,
-    tsx`const hasFiles = fileNodes.length > 0;`,
-    tsx`if (!hasFiles) return null;`,
+    tsx`const nodes = useNodesInSelectedDriveOrFolder();`.raw,
+    tsx`const fileNodes = nodes.filter((n) => isFileNodeKind(n));`.raw,
+    tsx`const hasFiles = fileNodes.length > 0;`.raw,
+    tsx`if (!hasFiles) return null;`.raw,
     tsx`return (
     <div>
       <h3 className="mb-2 text-sm font-semibold text-gray-600">Documents</h3>
@@ -444,7 +444,7 @@ export function makeFilesFile({
         ))}
       </div>
     </div>
-  );`,
+  );`.raw,
   ];
 
   filesSourceFile.addFunction({
