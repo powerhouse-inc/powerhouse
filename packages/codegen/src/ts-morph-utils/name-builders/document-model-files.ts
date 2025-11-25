@@ -15,3 +15,24 @@ export function buildDocumentModelImportPath(
 ) {
   return path.join(packageName, "document-models", documentModelDirName);
 }
+
+export function buildDocumentModelRootDirFilePath(
+  documentModelDirPath: string,
+  fileName: string,
+) {
+  return path.join(documentModelDirPath, fileName);
+}
+
+export function buildDocumentModelSrcDirFilePath(
+  documentModelDirPath: string,
+  fileName: string,
+) {
+  return path.join(documentModelDirPath, "src", fileName);
+}
+
+export function buildDocumentModelGenDirFilePath(
+  documentModelDirPath: string,
+  fileName: string,
+) {
+  return path.join(documentModelDirPath, "gen", fileName);
+}

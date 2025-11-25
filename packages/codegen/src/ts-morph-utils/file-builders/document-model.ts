@@ -1,4 +1,3 @@
-import path from "node:path";
 import type { Project } from "ts-morph";
 import {
   documentModelModulesOutputFileName,
@@ -10,9 +9,14 @@ import {
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
 } from "../file-utils.js";
+import {
+  buildDocumentModelGenDirFilePath,
+  buildDocumentModelRootDirFilePath,
+} from "../name-builders/document-model-files.js";
 import { getDocumentModelFilePaths } from "../name-builders/get-file-paths.js";
 import type { DocumentModelVariableNames } from "../name-builders/types.js";
-import { documentModelModuleFileTemplate } from "../templates/document-model/document-model.js";
+import { documentModelGenUtilsTemplate } from "../templates/document-model/gen/utils.js";
+import { documentModelModuleFileTemplate } from "../templates/document-model/module.js";
 import { documentModelUtilsTemplate } from "../templates/document-model/utils.js";
 import { makeModulesFile } from "./module-files.js";
 
@@ -53,7 +57,10 @@ export function makeDocumentModelModuleFile({
     pascalCaseDocumentType,
   });
 
-  const moduleFilePath = path.join(documentModelDirPath, "module.ts");
+  const moduleFilePath = buildDocumentModelRootDirFilePath(
+    documentModelDirPath,
+    "module.ts",
+  );
   const { sourceFile: documentModelModuleSourceFile } = getOrCreateSourceFile(
     project,
     moduleFilePath,
@@ -64,13 +71,36 @@ export function makeDocumentModelModuleFile({
   formatSourceFileWithPrettier(documentModelModuleSourceFile);
 }
 
+export function makeDocumentModelGenUtilsFile({
+  project,
+  ...variableNames
+}: DocumentModelFileMakerArgs) {
+  const template = documentModelGenUtilsTemplate(variableNames);
+  const { documentModelDirPath } = variableNames;
+  const utilsFilePath = buildDocumentModelGenDirFilePath(
+    documentModelDirPath,
+    "utils.ts",
+  );
+  const { sourceFile: utilsSourceFile } = getOrCreateSourceFile(
+    project,
+    utilsFilePath,
+  );
+  utilsSourceFile.replaceWithText(template);
+  formatSourceFileWithPrettier(utilsSourceFile);
+}
+
 export function makeDocumentModelUtilsFile({
   project,
   ...variableNames
 }: DocumentModelFileMakerArgs) {
   const template = documentModelUtilsTemplate(variableNames);
   const { documentModelDirPath } = variableNames;
-  const utilsFilePath = path.join(documentModelDirPath, "gen", "utils.ts");
+
+  const utilsFilePath = buildDocumentModelRootDirFilePath(
+    documentModelDirPath,
+    "utils.ts",
+  );
+
   const { sourceFile: utilsSourceFile } = getOrCreateSourceFile(
     project,
     utilsFilePath,

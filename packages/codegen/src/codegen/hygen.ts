@@ -10,6 +10,7 @@ import { readPackage } from "read-pkg";
 import { TSMorphCodeGenerator } from "../ts-morph-generator/index.js";
 import { tsMorphGenerateEditor } from "../ts-morph-utils/file-builders/document-editor.js";
 import {
+  makeDocumentModelGenUtilsFile,
   makeDocumentModelModuleFile,
   makeDocumentModelModulesFile,
   makeDocumentModelUtilsFile,
@@ -216,14 +217,12 @@ export async function hygenGenerateDocumentModel(
     documentModelState,
   });
 
+  makeDocumentModelGenUtilsFile({ project, ...documentModelVariableNames });
   makeDocumentModelUtilsFile({ project, ...documentModelVariableNames });
-
   makeDocumentModelModuleFile({
     project,
     ...documentModelVariableNames,
   });
-  project.saveSync();
-
   makeDocumentModelModulesFile(project, projectDir);
 
   project.saveSync();
