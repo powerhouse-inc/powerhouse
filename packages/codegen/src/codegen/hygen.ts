@@ -8,19 +8,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readPackage } from "read-pkg";
 import { TSMorphCodeGenerator } from "../ts-morph-generator/index.js";
-import {
-  makeModulesFile,
-  makeSubgraphsIndexFile,
-  tsMorphGenerateEditor,
-} from "../ts-morph-utils/file-builders.js";
+import { tsMorphGenerateEditor } from "../ts-morph-utils/file-builders/document-editor.js";
+import { makeModulesFile } from "../ts-morph-utils/file-builders/module-files.js";
+import { makeSubgraphsIndexFile } from "../ts-morph-utils/file-builders/subgraphs.js";
 import {
   buildDocumentModelsDirPath,
   buildDocumentModelsSourceFilesPath,
 } from "../ts-morph-utils/name-builders/document-model-files.js";
-import {
-  buildEditorsDirPath,
-  buildEditorSourceFilesPath,
-} from "../ts-morph-utils/name-builders/editor-files.js";
 import { buildTsMorphProject } from "../ts-morph-utils/ts-morph-project.js";
 import type { CodegenOptions, DocumentTypesMap } from "./types.js";
 import { loadDocumentModel } from "./utils.js";
@@ -452,17 +446,4 @@ export async function hygenGenerateDriveEditor(options: {
   }
 
   await run(args, { skipFormat });
-
-  const projectDir = path.dirname(dir);
-  const project = buildTsMorphProject(projectDir);
-
-  makeModulesFile({
-    project,
-    modulesDirPath: buildEditorsDirPath(projectDir),
-    modulesSourceFilesPath: buildEditorSourceFilesPath(projectDir),
-    outputFileName: "editors.ts",
-    typeName: "EditorModule",
-    variableName: "editors",
-    variableType: "EditorModule[]",
-  });
 }

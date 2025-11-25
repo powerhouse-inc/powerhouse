@@ -52,6 +52,13 @@ export function buildJsxAttribute(name: string, value: string) {
   );
   return attribute;
 }
+
+export function buildJsxSpreadAttribute(name: string) {
+  const attribute = ts.factory.createJsxSpreadAttribute(
+    ts.factory.createIdentifier(name),
+  );
+  return attribute;
+}
 export function buildClassNameAttribute(value: string) {
   const classAttr = ts.factory.createJsxAttribute(
     ts.factory.createIdentifier("className"),

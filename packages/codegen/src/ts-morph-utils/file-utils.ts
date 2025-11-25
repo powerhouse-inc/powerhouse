@@ -1,3 +1,4 @@
+import { format } from "prettier";
 import type { Project, SourceFile } from "ts-morph";
 import { IndentationText, SyntaxKind, ts } from "ts-morph";
 import {
@@ -19,11 +20,16 @@ import type { DocumentModelDocumentTypeMetadata } from "./types.js";
 export function getOrCreateSourceFile(project: Project, filePath: string) {
   const sourceFile = project.getSourceFile(filePath);
   if (!sourceFile) {
-    return project.createSourceFile(filePath, "");
+    const newSourceFile = project.createSourceFile(filePath, "");
+    return {
+      alreadyExists: false,
+      sourceFile: newSourceFile,
+    };
   }
-  console.log(`Source file ${filePath} already exists`);
-  console.log(sourceFile.getFullText());
-  return sourceFile;
+  return {
+    alreadyExists: true,
+    sourceFile,
+  };
 }
 
 export function getDefaultProjectOptions(tsConfigFilePath: string) {
@@ -123,4 +129,18 @@ export function getDocumentTypeMetadata({
   }
 
   return documentTypeMetadata;
+}
+
+export function formatSourceFileWithPrettier(sourceFile: SourceFile) {
+  const sourceText = sourceFile.getFullText();
+
+  format(sourceText, {
+    parser: "typescript",
+  })
+    .then((formattedText) => {
+      sourceFile.replaceWithText(formattedText);
+    })
+    .catch((error) => {
+      console.error("Error formatting source file:", error);
+    });
 }

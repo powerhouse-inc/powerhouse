@@ -1,4 +1,7 @@
-import type { EditorVariableNames } from "../types.js";
+import type {
+  DocumentModelDocumentTypeMetadata,
+  EditorVariableNames,
+} from "../types.js";
 import {
   buildDispatchFunctionName,
   buildDocumentNameVariableName,
@@ -13,23 +16,40 @@ import {
   buildUseSelectedDocumentHookName,
 } from "./variables.js";
 
-export function getEditorVariableNames(
-  documentTypeName: string,
-): EditorVariableNames {
+export function getEditorVariableNames({
+  documentModelDocumentTypeName,
+}: DocumentModelDocumentTypeMetadata): EditorVariableNames {
   return {
-    documentVariableName: buildDocumentVariableName(documentTypeName),
-    editDocumentNameComponentName:
-      buildEditDocumentNameComponentName(documentTypeName),
-    useSelectedDocumentHookName:
-      buildUseSelectedDocumentHookName(documentTypeName),
-    documentNameVariableName: buildDocumentNameVariableName(documentTypeName),
-    dispatchFunctionName: buildDispatchFunctionName(documentTypeName),
-    onClickEditHandlerName: buildOnClickHandlerName(documentTypeName),
-    onCancelEditHandlerName: buildOnCancelEditHandlerName(documentTypeName),
-    setNameActionName: buildSetNameActionName(documentTypeName),
-    isEditingVariableName: buildIsEditingVariableName(documentTypeName),
-    setIsEditingFunctionName: buildSetIsEditingFunctionName(documentTypeName),
-    onSubmitSetNameFunctionName:
-      buildOnSubmitSetNameFunctionName(documentTypeName),
+    documentVariableName: buildDocumentVariableName(
+      documentModelDocumentTypeName,
+    ),
+    editDocumentNameComponentName: buildEditDocumentNameComponentName(
+      documentModelDocumentTypeName,
+    ),
+    useSelectedDocumentHookName: buildUseSelectedDocumentHookName(
+      documentModelDocumentTypeName,
+    ),
+    documentNameVariableName: buildDocumentNameVariableName(
+      documentModelDocumentTypeName,
+    ),
+    dispatchFunctionName: buildDispatchFunctionName(
+      documentModelDocumentTypeName,
+    ),
+    onClickEditHandlerName: buildOnClickHandlerName(
+      documentModelDocumentTypeName,
+    ),
+    onCancelEditHandlerName: buildOnCancelEditHandlerName(
+      documentModelDocumentTypeName,
+    ),
+    setNameActionName: buildSetNameActionName(documentModelDocumentTypeName),
+    isEditingVariableName: buildIsEditingVariableName(
+      documentModelDocumentTypeName,
+    ),
+    setIsEditingFunctionName: buildSetIsEditingFunctionName(
+      documentModelDocumentTypeName,
+    ),
+    onSubmitSetNameFunctionName: buildOnSubmitSetNameFunctionName(
+      documentModelDocumentTypeName,
+    ),
   };
 }

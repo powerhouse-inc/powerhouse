@@ -7,20 +7,21 @@ import { typeDefs } from "@powerhousedao/document-engineering/graphql";
 import { paramCase } from "change-case";
 import type { DocumentModelGlobalState } from "document-model";
 import fs from "node:fs";
-import { join } from "node:path";
+import path, { join } from "node:path";
 import { readPackage } from "read-pkg";
+import { tsMorphGenerateEditor } from "../ts-morph-utils/file-builders/document-editor.js";
+import { tsMorphGenerateDriveEditor } from "../ts-morph-utils/file-builders/drive-editor.js";
 import { generateSchema, generateSchemas } from "./graphql.js";
 import {
   generateAll,
   hygenGenerateDocumentModel,
   hygenGenerateDriveEditor,
-  hygenGenerateEditor,
   hygenGenerateImportScript,
   hygenGenerateProcessor,
   hygenGenerateSubgraph,
 } from "./hygen.js";
 import type { CodegenOptions } from "./types.js";
-import { getDocumentTypesMap, loadDocumentModel } from "./utils.js";
+import { loadDocumentModel } from "./utils.js";
 
 export async function generate(config: PowerhouseConfig) {
   const { skipFormat, watch } = config;
@@ -75,37 +76,82 @@ export async function generateEditor(args: GenerateEditorArgs) {
     name,
     documentTypes,
     config,
-    editorId,
+    editorId: editorIdArg,
     specifiedPackageName,
     editorDirName,
   } = args;
-  const pathOrigin = "../../";
 
-  const { documentModelsDir, skipFormat } = config;
-  const documentTypesMap = getDocumentTypesMap(documentModelsDir, pathOrigin);
-
-  const invalidType = documentTypes.find(
-    (type) => !Object.keys(documentTypesMap).includes(type),
-  );
-  if (invalidType) {
-    throw new Error(
-      `Document model for ${invalidType} not found. Make sure the document model is available in the document-models directory (${documentModelsDir}) and has been properly generated.`,
-    );
-  }
   const packageNameFromPackageJson = await readPackage().then(
     (pkg) => pkg.name,
   );
   const packageName = specifiedPackageName || packageNameFromPackageJson;
-  return hygenGenerateEditor({
-    name,
-    documentTypes,
-    documentTypesMap,
-    dir: config.editorsDir,
-    documentModelsDir: config.documentModelsDir,
+
+  const projectDir = path.dirname(config.editorsDir);
+
+  if (documentTypes.length > 1) {
+    throw new Error("Multiple document types are not supported yet");
+  }
+
+  const documentModelId = documentTypes[0];
+  const editorName = name;
+  const editorId = editorIdArg || paramCase(editorName);
+  const editorDir = editorDirName || paramCase(editorName);
+
+  tsMorphGenerateEditor({
     packageName,
-    skipFormat,
+    projectDir,
+    editorDir,
+    documentModelId,
+    editorName,
     editorId,
-    editorDirName,
+  });
+}
+
+export async function generateDriveEditor(options: {
+  name: string;
+  config: PowerhouseConfig;
+  appId?: string;
+  allowedDocumentTypes?: string;
+  isDragAndDropEnabled?: boolean;
+  driveEditorDirName?: string;
+  specifiedPackageName?: string;
+}) {
+  const {
+    name,
+    config,
+    appId,
+    allowedDocumentTypes,
+    isDragAndDropEnabled,
+    driveEditorDirName,
+    specifiedPackageName,
+  } = options;
+  const dir = config.editorsDir;
+  const skipFormat = config.skipFormat;
+
+  await hygenGenerateDriveEditor({
+    name,
+    dir,
+    appId: appId ?? paramCase(name),
+    allowedDocumentTypes: allowedDocumentTypes,
+    isDragAndDropEnabled: isDragAndDropEnabled ?? true,
+    skipFormat,
+    driveEditorDirName,
+  });
+
+  const packageNameFromPackageJson = await readPackage().then(
+    (pkg) => pkg.name,
+  );
+  const packageName = specifiedPackageName || packageNameFromPackageJson;
+
+  const projectDir = path.dirname(dir);
+
+  tsMorphGenerateDriveEditor({
+    projectDir,
+    editorDir: driveEditorDirName || paramCase(name),
+    editorName: name,
+    editorId: appId ?? paramCase(name),
+    packageName,
+    allowedDocumentModelIds: allowedDocumentTypes?.split(",") ?? [],
   });
 }
 
@@ -146,35 +192,6 @@ export async function generateProcessor(
     type,
     { skipFormat },
   );
-}
-export async function generateDriveEditor(options: {
-  name: string;
-  config: PowerhouseConfig;
-  appId?: string;
-  allowedDocumentTypes?: string;
-  isDragAndDropEnabled?: boolean;
-  driveEditorDirName?: string;
-}) {
-  const {
-    name,
-    config,
-    appId,
-    allowedDocumentTypes,
-    isDragAndDropEnabled,
-    driveEditorDirName,
-  } = options;
-  const dir = config.editorsDir;
-  const skipFormat = config.skipFormat;
-
-  return hygenGenerateDriveEditor({
-    name,
-    dir,
-    appId: appId ?? paramCase(name),
-    allowedDocumentTypes: allowedDocumentTypes,
-    isDragAndDropEnabled: isDragAndDropEnabled ?? true,
-    skipFormat,
-    driveEditorDirName,
-  });
 }
 
 export async function generateImportScript(
