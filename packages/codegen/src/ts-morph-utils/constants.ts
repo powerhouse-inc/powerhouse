@@ -15,3 +15,8 @@ export const editorModuleTypeName = "EditorModule";
 export const editorModuleVariableName = "editors";
 export const editorModuleVariableType = "EditorModule[]";
 export const editorModuleOutputFileName = "editors.ts";
+
+export const documentModelModuleTypeName = "DocumentModelModule";
+export const documentModelModulesVariableName = "documentModels";
+export const documentModelModulesVariableType = "DocumentModelModule<any>[]";
+export const documentModelModulesOutputFileName = "document-models.ts";

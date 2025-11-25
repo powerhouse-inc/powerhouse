@@ -9,12 +9,9 @@ import { fileURLToPath } from "node:url";
 import { readPackage } from "read-pkg";
 import { TSMorphCodeGenerator } from "../ts-morph-generator/index.js";
 import { tsMorphGenerateEditor } from "../ts-morph-utils/file-builders/document-editor.js";
-import { makeModulesFile } from "../ts-morph-utils/file-builders/module-files.js";
+import { makeDocumentModelModulesFile } from "../ts-morph-utils/file-builders/document-model.js";
 import { makeSubgraphsIndexFile } from "../ts-morph-utils/file-builders/subgraphs.js";
-import {
-  buildDocumentModelsDirPath,
-  buildDocumentModelsSourceFilesPath,
-} from "../ts-morph-utils/name-builders/document-model-files.js";
+import { getDocumentModelFilePaths } from "../ts-morph-utils/name-builders/get-file-paths.js";
 import { buildTsMorphProject } from "../ts-morph-utils/ts-morph-project.js";
 import type { CodegenOptions, DocumentTypesMap } from "./types.js";
 import { loadDocumentModel } from "./utils.js";
@@ -205,15 +202,7 @@ export async function hygenGenerateDocumentModel(
 
   const project = buildTsMorphProject(projectDir);
 
-  makeModulesFile({
-    project,
-    modulesDirPath: buildDocumentModelsDirPath(projectDir),
-    modulesSourceFilesPath: buildDocumentModelsSourceFilesPath(projectDir),
-    outputFileName: "document-models.ts",
-    typeName: "DocumentModelModule",
-    variableName: "documentModels",
-    variableType: "DocumentModelModule<any>[]",
-  });
+  makeDocumentModelModulesFile(project, projectDir);
 }
 
 type HygenGenerateEditorArgs = {

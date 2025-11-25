@@ -1,3 +1,4 @@
+import { tsx } from "@tmpl/core";
 import path from "path";
 import { VariableDeclarationKind, type Project } from "ts-morph";
 import {
@@ -425,11 +426,11 @@ export function makeFilesFile({
   filesSourceFile.addImportDeclarations(importDeclarations);
 
   const statements = [
-    `const nodes = useNodesInSelectedDriveOrFolder();`,
-    `const fileNodes = nodes.filter((n) => isFileNodeKind(n));`,
-    `const hasFiles = fileNodes.length > 0;`,
-    `if (!hasFiles) return null;`,
-    `return (
+    tsx`const nodes = useNodesInSelectedDriveOrFolder();`,
+    tsx`const fileNodes = nodes.filter((n) => isFileNodeKind(n));`,
+    tsx`const hasFiles = fileNodes.length > 0;`,
+    tsx`if (!hasFiles) return null;`,
+    tsx`return (
     <div>
       <h3 className="mb-2 text-sm font-semibold text-gray-600">Documents</h3>
       <div className="flex flex-wrap gap-4">
@@ -469,7 +470,8 @@ function makeDriveExplorerFile({
 
   if (alreadyExists) return;
 
-  const driveExplorerFileTemplate = `import type { EditorProps } from "document-model";
+  const driveExplorerFileTemplate = tsx`
+import type { EditorProps } from "document-model";
 import { FolderTree } from "./FolderTree.js";
 import { DriveContents } from "./DriveContents.js";
 
@@ -521,7 +523,8 @@ export function makeFolderTreeFile({
 
   if (alreadyExists) return;
 
-  const folderTreeFileTemplate = `import {
+  const folderTreeFileTemplate = tsx`
+  import {
   Sidebar,
   SidebarProvider,
   type SidebarNode,
@@ -649,7 +652,8 @@ export function makeEmptyStateFile({
 
   if (alreadyExists) return;
 
-  const emptyStateFileTemplate = `import { useNodesInSelectedDriveOrFolder } from "@powerhousedao/reactor-browser";
+  const emptyStateFileTemplate = tsx`
+import { useNodesInSelectedDriveOrFolder } from "@powerhousedao/reactor-browser";
 
 /** Shows a message when the selected drive or folder is empty */
 export function EmptyState() {
@@ -688,7 +692,8 @@ export function makeCreateDocumentFile({
 
   if (alreadyExists) return;
 
-  const createDocumentFileTemplate = `import type { VetraDocumentModelModule } from "@powerhousedao/reactor-browser";
+  const createDocumentFileTemplate = tsx`
+import type { VetraDocumentModelModule } from "@powerhousedao/reactor-browser";
 import {
   showCreateDocumentModal,
   useAllowedDocumentModelModules,
