@@ -1,3 +1,5 @@
+import { camelCase, paramCase, pascalCase } from "change-case";
+import path from "node:path";
 import type {
   DocumentModelDocumentTypeMetadata,
   EditorVariableNames,
@@ -51,5 +53,72 @@ export function getEditorVariableNames({
     onSubmitSetNameFunctionName: buildOnSubmitSetNameFunctionName(
       documentModelDocumentTypeName,
     ),
+  };
+}
+
+type GetDocumentModelVariableNamesArgs = {
+  documentType: string;
+  packageName: string;
+  projectDir: string;
+};
+export function getDocumentModelVariableNames({
+  documentType,
+  packageName,
+  projectDir,
+}: GetDocumentModelVariableNamesArgs) {
+  const paramCaseDocumentType = paramCase(documentType);
+  const pascalCaseDocumentType = pascalCase(documentType);
+  const camelCaseDocumentType = camelCase(documentType);
+  const documentTypeVariableName = `${camelCaseDocumentType}DocumentType`;
+  const stateName = `${pascalCaseDocumentType}State`;
+  const globalStateName = `${pascalCaseDocumentType}GlobalState`;
+  const localStateName = `${pascalCaseDocumentType}LocalState`;
+  const phStateName = `${pascalCaseDocumentType}PHState`;
+  const phDocumentTypeName = `${pascalCaseDocumentType}Document`;
+  const actionTypeName = `${pascalCaseDocumentType}Action`;
+  const actionsTypeName = `${actionTypeName}s`;
+  const actionsName = camelCase(actionsTypeName);
+  const documentModelDir = `${packageName}/document-models/${paramCaseDocumentType}`;
+  const documentModelDirPath = path.join(
+    projectDir,
+    "document-models",
+    paramCaseDocumentType,
+  );
+  const stateSchemaName = `${stateName}Schema`;
+  const phDocumentSchemaName = `${phDocumentTypeName}Schema`;
+  const isPhStateOfTypeFunctionName = `is${stateName}`;
+  const assertIsPhStateOfTypeFunctionName = `assertIs${stateName}`;
+  const isPhDocumentOfTypeFunctionName = `is${phDocumentTypeName}`;
+  const assertIsPhDocumentOfTypeFunctionName = `assertIs${phDocumentTypeName}`;
+  const useByIdHookName = `use${phDocumentTypeName}ById`;
+  const useSelectedHookName = `useSelected${phDocumentTypeName}`;
+  const useInSelectedDriveHookName = `use${phDocumentTypeName}sInSelectedDrive`;
+  const useInSelectedFolderHookName = `use${phDocumentTypeName}sInSelectedFolder`;
+
+  return {
+    paramCaseDocumentType,
+    pascalCaseDocumentType,
+    camelCaseDocumentType,
+    documentTypeVariableName,
+    stateName,
+    globalStateName,
+    localStateName,
+    phStateName,
+    phDocumentTypeName,
+    actionTypeName,
+    actionsTypeName,
+    actionsName,
+    documentModelDir,
+    documentModelDirPath,
+    stateSchemaName,
+    phDocumentSchemaName,
+    isPhStateOfTypeFunctionName,
+    assertIsPhStateOfTypeFunctionName,
+    isPhDocumentOfTypeFunctionName,
+    assertIsPhDocumentOfTypeFunctionName,
+    useByIdHookName,
+    useSelectedHookName,
+    useInSelectedDriveHookName,
+    useInSelectedFolderHookName,
   };
 }

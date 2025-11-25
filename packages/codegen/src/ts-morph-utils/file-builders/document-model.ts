@@ -1,3 +1,4 @@
+import path from "node:path";
 import type { Project } from "ts-morph";
 import {
   documentModelModulesOutputFileName,
@@ -36,14 +37,14 @@ type MakeDocumentModelModuleFileArgs = {
   phStateName: string;
   pascalCaseDocumentType: string;
   documentModelDir: string;
-  moduleFilePath: string;
+  documentModelDirPath: string;
 };
 export function makeDocumentModelModuleFile({
   project,
   phStateName,
   pascalCaseDocumentType,
   documentModelDir,
-  moduleFilePath,
+  documentModelDirPath,
 }: MakeDocumentModelModuleFileArgs) {
   const template = documentModelModuleFileTemplate({
     phStateName,
@@ -51,18 +52,13 @@ export function makeDocumentModelModuleFile({
     pascalCaseDocumentType,
   });
 
-  console.log({ template });
-
+  const moduleFilePath = path.join(documentModelDirPath, "module.ts");
   const { sourceFile: documentModelModuleSourceFile } = getOrCreateSourceFile(
     project,
     moduleFilePath,
   );
 
-  console.log("!!!test1", documentModelModuleSourceFile.getText());
-
   documentModelModuleSourceFile.replaceWithText(template);
-
-  console.log("!!!test2", documentModelModuleSourceFile.getText());
 
   formatSourceFileWithPrettier(documentModelModuleSourceFile);
 }

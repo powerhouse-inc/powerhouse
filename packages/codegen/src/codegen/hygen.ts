@@ -15,6 +15,7 @@ import {
 } from "../ts-morph-utils/file-builders/document-model.js";
 import { makeSubgraphsIndexFile } from "../ts-morph-utils/file-builders/subgraphs.js";
 import { getDocumentModelFilePaths } from "../ts-morph-utils/name-builders/get-file-paths.js";
+import { getDocumentModelVariableNames } from "../ts-morph-utils/name-builders/get-variable-names.js";
 import { buildTsMorphProject } from "../ts-morph-utils/ts-morph-project.js";
 import type { CodegenOptions, DocumentTypesMap } from "./types.js";
 import { loadDocumentModel } from "./utils.js";
@@ -208,26 +209,16 @@ export async function hygenGenerateDocumentModel(
     getDocumentModelFilePaths(projectDir);
   project.addSourceFilesAtPaths(documentModelsSourceFilesPath);
   const documentType = documentModelState.name;
-  const pascalCaseDocumentType = pascalCase(documentType);
-  const paramCaseDocumentType = paramCase(documentType);
-  const phStateName = `${pascalCaseDocumentType}PHState`;
-  const moduleFilePath = path.join(
+
+  const documentModelVariableNames = getDocumentModelVariableNames({
+    documentType,
+    packageName,
     projectDir,
-    "document-models",
-    paramCaseDocumentType,
-    "module.ts",
-  );
+  });
   makeDocumentModelModuleFile({
     project,
     projectDir,
-    phStateName,
-    pascalCaseDocumentType,
-    documentModelDir: path.join(
-      packageName,
-      "document-models",
-      paramCaseDocumentType,
-    ),
-    moduleFilePath,
+    ...documentModelVariableNames,
   });
   project.saveSync();
 
