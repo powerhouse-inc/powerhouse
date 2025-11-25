@@ -36,10 +36,12 @@ export function tsMorphGenerateDriveEditor({
   allowedDocumentModelIds,
   isDragAndDropEnabled,
 }: GenerateDriveEditorArgs) {
-  const { documentModelsSourceFilesPath, ...documentModelFilePaths } =
+  const { documentModelsSourceFilesPath } =
     getDocumentModelFilePaths(projectDir);
-  const { editorSourceFilesPath, editorsDirPath, ...editorFilePaths } =
-    getEditorFilePaths(projectDir, editorDir);
+  const { editorSourceFilesPath, ...editorFilePaths } = getEditorFilePaths(
+    projectDir,
+    editorDir,
+  );
 
   const project = buildTsMorphProject(projectDir);
   project.addSourceFilesAtPaths(documentModelsSourceFilesPath);
@@ -118,8 +120,11 @@ export function makeDriveEditorComponent({
   project,
   editorFilePath,
 }: MakeDriveEditorComponentArgs) {
-  const { alreadyExists, sourceFile: driveEditorComponentSourceFile } =
-    getOrCreateSourceFile(project, editorFilePath);
+  const { sourceFile: driveEditorComponentSourceFile } = getOrCreateSourceFile(
+    project,
+    editorFilePath,
+  );
+
   const printNode = buildNodePrinter(driveEditorComponentSourceFile);
 
   const importDeclarations = [
@@ -180,8 +185,10 @@ export function makeDriveEditorConfigFile({
   allowedDocumentModelIds,
   isDragAndDropEnabled,
 }: MakeDriveEditorConfigFileArgs) {
-  const { alreadyExists, sourceFile: driveEditorConfigSourceFile } =
-    getOrCreateSourceFile(project, editorConfigFilePath);
+  const { sourceFile: driveEditorConfigSourceFile } = getOrCreateSourceFile(
+    project,
+    editorConfigFilePath,
+  );
 
   driveEditorConfigSourceFile.addImportDeclaration({
     moduleSpecifier: "@powerhousedao/reactor-browser",
@@ -234,6 +241,9 @@ export function makeDriveContentsFile({
 }: MakeDriveContentsFileArgs) {
   const { alreadyExists, sourceFile: driveContentsSourceFile } =
     getOrCreateSourceFile(project, driveContentsFilePath);
+
+  if (alreadyExists) return;
+
   const printNode = buildNodePrinter(driveContentsSourceFile);
 
   const importDeclarations = [
@@ -299,6 +309,9 @@ export function makeNavigationBreadcrumbsFile({
   );
   const { alreadyExists, sourceFile: navigationBreadcrumbsSourceFile } =
     getOrCreateSourceFile(project, navigationBreadcrumbsFilePath);
+
+  if (alreadyExists) return;
+
   const printNode = buildNodePrinter(navigationBreadcrumbsSourceFile);
 
   const importDeclarations = [
@@ -339,6 +352,9 @@ export function makeFoldersFile({
   const foldersFilePath = path.join(editorComponentsDirPath, "Folders.tsx");
   const { alreadyExists, sourceFile: foldersSourceFile } =
     getOrCreateSourceFile(project, foldersFilePath);
+
+  if (alreadyExists) return;
+
   const printNode = buildNodePrinter(foldersSourceFile);
 
   const importDeclarations = [
@@ -393,6 +409,8 @@ export function makeFilesFile({
     project,
     filesFilePath,
   );
+
+  if (alreadyExists) return;
 
   const importDeclarations = [
     {
@@ -449,6 +467,8 @@ function makeDriveExplorerFile({
   const { alreadyExists, sourceFile: driveExplorerSourceFile } =
     getOrCreateSourceFile(project, driveExplorerFilePath);
 
+  if (alreadyExists) return;
+
   const driveExplorerFileTemplate = `import type { EditorProps } from "document-model";
 import { FolderTree } from "./FolderTree.js";
 import { DriveContents } from "./DriveContents.js";
@@ -498,6 +518,8 @@ export function makeFolderTreeFile({
   );
   const { alreadyExists, sourceFile: folderTreeSourceFile } =
     getOrCreateSourceFile(project, folderTreeFilePath);
+
+  if (alreadyExists) return;
 
   const folderTreeFileTemplate = `import {
   Sidebar,
@@ -624,6 +646,9 @@ export function makeEmptyStateFile({
   );
   const { alreadyExists, sourceFile: emptyStateSourceFile } =
     getOrCreateSourceFile(project, emptyStateFilePath);
+
+  if (alreadyExists) return;
+
   const emptyStateFileTemplate = `import { useNodesInSelectedDriveOrFolder } from "@powerhousedao/reactor-browser";
 
 /** Shows a message when the selected drive or folder is empty */
@@ -660,6 +685,8 @@ export function makeCreateDocumentFile({
   );
   const { alreadyExists, sourceFile: createDocumentSourceFile } =
     getOrCreateSourceFile(project, createDocumentFilePath);
+
+  if (alreadyExists) return;
 
   const createDocumentFileTemplate = `import type { VetraDocumentModelModule } from "@powerhousedao/reactor-browser";
 import {

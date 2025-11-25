@@ -38,29 +38,74 @@ import {
 } from "../syntax-builders.js";
 import { getObjectLiteral, getObjectProperty } from "../syntax-getters.js";
 import { buildTsMorphProject } from "../ts-morph-project.js";
+import type { EditorFilePaths, EditorVariableNames } from "../types.js";
 import { makeEditorsModulesFile } from "./editor-common.js";
 import type {
   CommonGenerateEditorArgs,
   CommonMakeEditorComponentArgs,
 } from "./types.js";
 
-type MakeEditDocumentNameComponentArgs = {
-  project: Project;
-  documentModelDocumentTypeName: string;
-  documentModelImportPath: string;
-  documentVariableName: string;
-  onClickEditHandlerName: string;
-  onCancelEditHandlerName: string;
-  setNameActionName: string;
-  useSelectedDocumentHookName: string;
-  dispatchFunctionName: string;
-  isEditingVariableName: string;
-  setIsEditingFunctionName: string;
-  onSubmitSetNameFunctionName: string;
-  documentNameVariableName: string;
-  editDocumentNameComponentName: string;
-  editDocumentNameComponentFilePath: string;
+type GenerateEditorArgs = CommonGenerateEditorArgs & {
+  documentModelId: string;
 };
+export function tsMorphGenerateEditor({
+  packageName,
+  projectDir,
+  editorDir,
+  editorName,
+  editorId,
+  documentModelId,
+}: GenerateEditorArgs) {
+  const documentModelFilePaths = getDocumentModelFilePaths(projectDir);
+  const { documentModelsSourceFilesPath } = documentModelFilePaths;
+  const editorFilePaths = getEditorFilePaths(projectDir, editorDir);
+  const { editorSourceFilesPath } = editorFilePaths;
+
+  const project = buildTsMorphProject(projectDir);
+  project.addSourceFilesAtPaths(documentModelsSourceFilesPath);
+  project.addSourceFilesAtPaths(editorSourceFilesPath);
+
+  const documentTypeMetadata = getDocumentTypeMetadata({
+    project,
+    packageName,
+    documentModelId,
+    ...documentModelFilePaths,
+  });
+
+  const editorVariableNames = getEditorVariableNames(documentTypeMetadata);
+
+  makeEditDocumentNameComponent({
+    project,
+    ...documentTypeMetadata,
+    ...editorVariableNames,
+    ...editorFilePaths,
+  });
+
+  makeEditorComponent({
+    project,
+    ...editorFilePaths,
+    ...editorVariableNames,
+  });
+
+  makeEditorModuleFile({
+    project,
+    editorName,
+    editorId,
+    documentModelId,
+    ...editorFilePaths,
+  });
+
+  makeEditorsModulesFile(project, projectDir);
+
+  project.saveSync();
+}
+
+type MakeEditDocumentNameComponentArgs = EditorVariableNames &
+  EditorFilePaths & {
+    project: Project;
+    documentModelDocumentTypeName: string;
+    documentModelImportPath: string;
+  };
 export function makeEditDocumentNameComponent({
   project,
   documentModelDocumentTypeName,
@@ -80,6 +125,8 @@ export function makeEditDocumentNameComponent({
 }: MakeEditDocumentNameComponentArgs) {
   const { alreadyExists, sourceFile: editDocumentNameComponentSourceFile } =
     getOrCreateSourceFile(project, editDocumentNameComponentFilePath);
+
+  if (alreadyExists) return;
 
   const printNode = buildNodePrinter(editDocumentNameComponentSourceFile);
 
@@ -322,6 +369,15 @@ export function makeEditorComponent({
     project,
     editorFilePath,
   );
+
+  if (alreadyExists) {
+    const functionDeclaration = editorSourceFile.getFunction("Editor");
+    if (functionDeclaration && !functionDeclaration.isDefaultExport()) {
+      functionDeclaration.setIsDefaultExport(true);
+    }
+    return;
+  }
+
   const printNode = buildNodePrinter(editorSourceFile);
 
   editorSourceFile.addImportDeclaration({
@@ -363,8 +419,10 @@ export function makeEditorModuleFile({
   documentModelId,
   editorId,
 }: MakeEditorModuleFileArgs) {
-  const { alreadyExists, sourceFile: editorModuleSourceFile } =
-    getOrCreateSourceFile(project, editorModuleFilePath);
+  const { sourceFile: editorModuleSourceFile } = getOrCreateSourceFile(
+    project,
+    editorModuleFilePath,
+  );
 
   const pascalCaseEditorName = pascalCase(editorName);
 
@@ -432,61 +490,6 @@ export function makeEditorModuleFile({
     name: "name",
     initializer: `"${editorName}"`,
   });
-
-  project.saveSync();
-}
-
-type GenerateEditorArgs = CommonGenerateEditorArgs & {
-  documentModelId: string;
-};
-export function tsMorphGenerateEditor({
-  packageName,
-  projectDir,
-  editorDir,
-  editorName,
-  editorId,
-  documentModelId,
-}: GenerateEditorArgs) {
-  const { documentModelsSourceFilesPath, ...documentModelFilePaths } =
-    getDocumentModelFilePaths(projectDir);
-  const { editorSourceFilesPath, editorsDirPath, ...editorFilePaths } =
-    getEditorFilePaths(projectDir, editorDir);
-
-  const project = buildTsMorphProject(projectDir);
-  project.addSourceFilesAtPaths(documentModelsSourceFilesPath);
-  project.addSourceFilesAtPaths(editorSourceFilesPath);
-
-  const documentTypeMetadata = getDocumentTypeMetadata({
-    project,
-    packageName,
-    documentModelId,
-    ...documentModelFilePaths,
-  });
-
-  const editorVariableNames = getEditorVariableNames(documentTypeMetadata);
-
-  makeEditDocumentNameComponent({
-    project,
-    ...documentTypeMetadata,
-    ...editorVariableNames,
-    ...editorFilePaths,
-  });
-
-  makeEditorComponent({
-    project,
-    ...editorFilePaths,
-    ...editorVariableNames,
-  });
-
-  makeEditorModuleFile({
-    project,
-    editorName,
-    editorId,
-    documentModelId,
-    ...editorFilePaths,
-  });
-
-  makeEditorsModulesFile(project, projectDir);
 
   project.saveSync();
 }
