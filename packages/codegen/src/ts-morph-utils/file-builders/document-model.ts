@@ -13,6 +13,7 @@ import {
 import {
   buildDocumentModelGenDirFilePath,
   buildDocumentModelRootDirFilePath,
+  buildDocumentModelSrcDirFilePath,
 } from "../name-builders/document-model-files.js";
 import { getDocumentModelFilePaths } from "../name-builders/get-file-paths.js";
 import { getDocumentModelVariableNames } from "../name-builders/get-variable-names.js";
@@ -20,6 +21,7 @@ import type { DocumentModelVariableNames } from "../name-builders/types.js";
 import { documentModelGenUtilsTemplate } from "../templates/document-model/gen/utils.js";
 import { documentModelIndexTemplate } from "../templates/document-model/index.js";
 import { documentModelModuleFileTemplate } from "../templates/document-model/module.js";
+import { documentModelSrcUtilsTemplate } from "../templates/document-model/src/utils.js";
 import { documentModelUtilsTemplate } from "../templates/document-model/utils.js";
 import { buildTsMorphProject } from "../ts-morph-project.js";
 import { makeModulesFile } from "./module-files.js";
@@ -52,6 +54,7 @@ export function tsMorphGenerateDocumentModel({
 
   makeDocumentModelIndexFile(fileMakerArgs);
   makeDocumentModelGenUtilsFile(fileMakerArgs);
+  makeDocumentModelSrcUtilsFile(fileMakerArgs);
   makeDocumentModelUtilsFile(fileMakerArgs);
   makeDocumentModelModuleFile(fileMakerArgs);
   makeDocumentModelModulesFile(project, projectDir);
@@ -167,4 +170,27 @@ export function makeDocumentModelIndexFile({
 
   indexSourceFile.replaceWithText(template);
   formatSourceFileWithPrettier(indexSourceFile);
+}
+
+export function makeDocumentModelSrcUtilsFile({
+  project,
+  ...variableNames
+}: DocumentModelFileMakerArgs) {
+  const template = documentModelSrcUtilsTemplate;
+  const { documentModelDirPath } = variableNames;
+
+  const utilsFilePath = buildDocumentModelSrcDirFilePath(
+    documentModelDirPath,
+    "utils.ts",
+  );
+
+  const { alreadyExists, sourceFile: utilsSourceFile } = getOrCreateSourceFile(
+    project,
+    utilsFilePath,
+  );
+
+  if (alreadyExists) return;
+
+  utilsSourceFile.replaceWithText(template);
+  formatSourceFileWithPrettier(utilsSourceFile);
 }
