@@ -9,16 +9,8 @@ import { fileURLToPath } from "node:url";
 import { readPackage } from "read-pkg";
 import { TSMorphCodeGenerator } from "../ts-morph-generator/index.js";
 import { tsMorphGenerateEditor } from "../ts-morph-utils/file-builders/document-editor.js";
-import {
-  makeDocumentModelGenUtilsFile,
-  makeDocumentModelModuleFile,
-  makeDocumentModelModulesFile,
-  makeDocumentModelUtilsFile,
-} from "../ts-morph-utils/file-builders/document-model.js";
+import { tsMorphGenerateDocumentModel } from "../ts-morph-utils/file-builders/document-model.js";
 import { makeSubgraphsIndexFile } from "../ts-morph-utils/file-builders/subgraphs.js";
-import { getDocumentModelFilePaths } from "../ts-morph-utils/name-builders/get-file-paths.js";
-import { getDocumentModelVariableNames } from "../ts-morph-utils/name-builders/get-variable-names.js";
-import { buildTsMorphProject } from "../ts-morph-utils/ts-morph-project.js";
 import type { CodegenOptions, DocumentTypesMap } from "./types.js";
 import { loadDocumentModel } from "./utils.js";
 
@@ -206,26 +198,11 @@ export async function hygenGenerateDocumentModel(
     await generator.generateReducers();
   }
 
-  const project = buildTsMorphProject(projectDir);
-  const { documentModelsSourceFilesPath } =
-    getDocumentModelFilePaths(projectDir);
-  project.addSourceFilesAtPaths(documentModelsSourceFilesPath);
-
-  const documentModelVariableNames = getDocumentModelVariableNames({
-    packageName,
+  tsMorphGenerateDocumentModel({
     projectDir,
+    packageName,
     documentModelState,
   });
-
-  makeDocumentModelGenUtilsFile({ project, ...documentModelVariableNames });
-  makeDocumentModelUtilsFile({ project, ...documentModelVariableNames });
-  makeDocumentModelModuleFile({
-    project,
-    ...documentModelVariableNames,
-  });
-  makeDocumentModelModulesFile(project, projectDir);
-
-  project.saveSync();
 }
 
 type HygenGenerateEditorArgs = {

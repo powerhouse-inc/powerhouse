@@ -1,4 +1,5 @@
-import type { Project } from "ts-morph";
+import type { DocumentModelGlobalState } from "document-model";
+import { type Project } from "ts-morph";
 import {
   documentModelModulesOutputFileName,
   documentModelModulesVariableName,
@@ -14,11 +15,49 @@ import {
   buildDocumentModelRootDirFilePath,
 } from "../name-builders/document-model-files.js";
 import { getDocumentModelFilePaths } from "../name-builders/get-file-paths.js";
+import { getDocumentModelVariableNames } from "../name-builders/get-variable-names.js";
 import type { DocumentModelVariableNames } from "../name-builders/types.js";
 import { documentModelGenUtilsTemplate } from "../templates/document-model/gen/utils.js";
+import { documentModelIndexTemplate } from "../templates/document-model/index.js";
 import { documentModelModuleFileTemplate } from "../templates/document-model/module.js";
 import { documentModelUtilsTemplate } from "../templates/document-model/utils.js";
+import { buildTsMorphProject } from "../ts-morph-project.js";
 import { makeModulesFile } from "./module-files.js";
+
+type GenerateDocumentModelArgs = {
+  projectDir: string;
+  packageName: string;
+  documentModelState: DocumentModelGlobalState;
+};
+export function tsMorphGenerateDocumentModel({
+  projectDir,
+  packageName,
+  documentModelState,
+}: GenerateDocumentModelArgs) {
+  const project = buildTsMorphProject(projectDir);
+  const { documentModelsSourceFilesPath } =
+    getDocumentModelFilePaths(projectDir);
+  project.addSourceFilesAtPaths(documentModelsSourceFilesPath);
+
+  const documentModelVariableNames = getDocumentModelVariableNames({
+    packageName,
+    projectDir,
+    documentModelState,
+  });
+
+  const fileMakerArgs = {
+    project,
+    ...documentModelVariableNames,
+  };
+
+  makeDocumentModelIndexFile(fileMakerArgs);
+  makeDocumentModelGenUtilsFile(fileMakerArgs);
+  makeDocumentModelUtilsFile(fileMakerArgs);
+  makeDocumentModelModuleFile(fileMakerArgs);
+  makeDocumentModelModulesFile(project, projectDir);
+
+  project.saveSync();
+}
 
 type DocumentModelFileMakerArgs = DocumentModelVariableNames & {
   project: Project;
@@ -107,4 +146,25 @@ export function makeDocumentModelUtilsFile({
   );
   utilsSourceFile.replaceWithText(template);
   formatSourceFileWithPrettier(utilsSourceFile);
+}
+
+export function makeDocumentModelIndexFile({
+  project,
+  ...variableNames
+}: DocumentModelFileMakerArgs) {
+  const template = documentModelIndexTemplate;
+  const { documentModelDirPath } = variableNames;
+
+  const indexFilePath = buildDocumentModelRootDirFilePath(
+    documentModelDirPath,
+    "index.ts",
+  );
+
+  const { sourceFile: indexSourceFile } = getOrCreateSourceFile(
+    project,
+    indexFilePath,
+  );
+
+  indexSourceFile.replaceWithText(template);
+  formatSourceFileWithPrettier(indexSourceFile);
 }
