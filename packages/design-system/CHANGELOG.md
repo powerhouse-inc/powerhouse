@@ -1,3 +1,14 @@
+## 5.1.0-dev.1 (2025-11-26)
+
+### 🩹 Fixes
+
+- **design-system:** use import types for preview and ReactRenderer ([0d769a72f](https://github.com/powerhouse-inc/powerhouse/commit/0d769a72f))
+- **design-system:** handle Safari empty dataTransfer.items in drag events ([c9317471c](https://github.com/powerhouse-inc/powerhouse/commit/c9317471c))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 5.1.0-dev.0 (2025-11-20)
 
 ### 🚀 Features
