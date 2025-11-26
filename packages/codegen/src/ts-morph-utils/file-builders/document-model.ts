@@ -18,6 +18,7 @@ import {
 import { getDocumentModelFilePaths } from "../name-builders/get-file-paths.js";
 import { getDocumentModelVariableNames } from "../name-builders/get-variable-names.js";
 import type { DocumentModelVariableNames } from "../name-builders/types.js";
+import { documentModelDocumentTypeTemplate } from "../templates/document-model/gen/document-type.js";
 import { documentModelGenUtilsTemplate } from "../templates/document-model/gen/utils.js";
 import { documentModelIndexTemplate } from "../templates/document-model/index.js";
 import { documentModelModuleFileTemplate } from "../templates/document-model/module.js";
@@ -54,6 +55,7 @@ export function tsMorphGenerateDocumentModel({
 
   makeDocumentModelIndexFile(fileMakerArgs);
   makeDocumentModelGenUtilsFile(fileMakerArgs);
+  makeDocumentModelDocumentTypeFile(fileMakerArgs);
   makeDocumentModelSrcUtilsFile(fileMakerArgs);
   makeDocumentModelUtilsFile(fileMakerArgs);
   makeDocumentModelModuleFile(fileMakerArgs);
@@ -193,4 +195,22 @@ export function makeDocumentModelSrcUtilsFile({
 
   utilsSourceFile.replaceWithText(template);
   formatSourceFileWithPrettier(utilsSourceFile);
+}
+
+export function makeDocumentModelDocumentTypeFile({
+  project,
+  ...variableNames
+}: DocumentModelFileMakerArgs) {
+  const template = documentModelDocumentTypeTemplate(variableNames);
+  const { documentModelDirPath } = variableNames;
+
+  const filePath = buildDocumentModelGenDirFilePath(
+    documentModelDirPath,
+    "document-type.ts",
+  );
+
+  const { sourceFile } = getOrCreateSourceFile(project, filePath);
+
+  sourceFile.replaceWithText(template);
+  formatSourceFileWithPrettier(sourceFile);
 }
