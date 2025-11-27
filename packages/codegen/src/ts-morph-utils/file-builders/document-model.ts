@@ -1,6 +1,6 @@
 import type { DocumentModelGlobalState } from "document-model";
 import path from "path";
-import { type Project } from "ts-morph";
+import { VariableDeclarationKind, type Project } from "ts-morph";
 import {
   documentModelModulesOutputFileName,
   documentModelModulesVariableName,
@@ -8,6 +8,7 @@ import {
   documentModelModuleTypeName,
 } from "../constants.js";
 import {
+  buildNodePrinter,
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
 } from "../file-utils.js";
@@ -19,6 +20,7 @@ import {
 import { getDocumentModelFilePaths } from "../name-builders/get-file-paths.js";
 import { getDocumentModelVariableNames } from "../name-builders/get-variable-names.js";
 import type { DocumentModelVariableNames } from "../name-builders/types.js";
+import { buildObjectLiteral } from "../syntax-builders.js";
 import { documentModelDocumentTypeTemplate } from "../templates/document-model/gen/document-type.js";
 import { documentModelSchemaIndexTemplate } from "../templates/document-model/gen/schema/index.js";
 import { documentModelGenTypesTemplate } from "../templates/document-model/gen/types.js";
@@ -66,6 +68,7 @@ export function tsMorphGenerateDocumentModel({
   makeDocumentModelSrcUtilsFile(fileMakerArgs);
   makeDocumentModelUtilsFile(fileMakerArgs);
   makeDocumentModelModuleFile(fileMakerArgs);
+  makeDocumentModelGenDocumentModelFile(fileMakerArgs);
   makeDocumentModelModulesFile(project, projectDir);
 
   project.saveSync();
@@ -281,5 +284,41 @@ export function makeDocumentModelGenTypesFile({
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
 
   sourceFile.replaceWithText(template);
+  formatSourceFileWithPrettier(sourceFile);
+}
+
+export function makeDocumentModelGenDocumentModelFile({
+  project,
+  ...variableNames
+}: DocumentModelFileMakerArgs) {
+  const { documentModelDirPath, documentModelState } = variableNames;
+  const filePath = buildDocumentModelGenDirFilePath(
+    documentModelDirPath,
+    "document-model.ts",
+  );
+
+  const { sourceFile } = getOrCreateSourceFile(project, filePath);
+  const printNode = buildNodePrinter(sourceFile);
+
+  sourceFile.addImportDeclaration({
+    namedImports: ["DocumentModelGlobalState"],
+    moduleSpecifier: "document-model",
+    isTypeOnly: true,
+  });
+
+  const objectLiteral = buildObjectLiteral(documentModelState);
+
+  sourceFile.addVariableStatement({
+    declarationKind: VariableDeclarationKind.Const,
+    isExported: true,
+    declarations: [
+      {
+        name: "documentModel",
+        type: "DocumentModelGlobalState",
+        initializer: printNode(objectLiteral),
+      },
+    ],
+  });
+
   formatSourceFileWithPrettier(sourceFile);
 }

@@ -108,6 +108,7 @@ export function getDocumentModelVariableNames({
   );
   const hasLocalSchema = latestSpec.state.local.schema !== "";
   return {
+    documentModelState,
     documentTypeId,
     paramCaseDocumentType,
     pascalCaseDocumentType,

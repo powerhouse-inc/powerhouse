@@ -8,8 +8,20 @@ export function buildTrue() {
   return ts.factory.createTrue();
 }
 
+export function buildBoolean(value: boolean) {
+  return value ? buildTrue() : buildFalse();
+}
+
 export function buildNull() {
   return ts.factory.createNull();
+}
+
+export function buildUndefined() {
+  return ts.factory.createIdentifier("undefined");
+}
+
+export function buildNumericLiteral(value: number) {
+  return ts.factory.createNumericLiteral(value);
 }
 
 export function buildReturn(returnValue: string | ts.Expression) {
@@ -347,4 +359,59 @@ export function buildJsxExpression(value: string | ts.Expression) {
   const expression =
     typeof value === "string" ? ts.factory.createIdentifier(value) : value;
   return ts.factory.createJsxExpression(undefined, expression);
+}
+
+function buildArrayLiteral(elements: ts.Expression[]) {
+  return ts.factory.createArrayLiteralExpression(elements, true);
+}
+
+function valueToExpression(value: unknown): ts.Expression {
+  if (value === null) return buildNull();
+  if (value === undefined) return buildUndefined();
+  if (typeof value === "boolean") return buildBoolean(value);
+  if (typeof value === "string") return buildStringLiteral(value);
+  if (typeof value === "number") return buildNumericLiteral(value);
+
+  if (Array.isArray(value)) {
+    const elements = value.map((item) => valueToExpression(item));
+    return buildArrayLiteral(elements);
+  }
+
+  if (typeof value === "object") {
+    return ts.factory.createObjectLiteralExpression(
+      Object.entries(value).map(([key, v]) => {
+        const name = ts.factory.createIdentifier(key);
+        return ts.factory.createPropertyAssignment(name, valueToExpression(v));
+      }),
+      true,
+    );
+  }
+
+  throw new Error("Invalid value passed: ", value);
+}
+
+export function buildPropertyAssignment(name: string, value: unknown) {
+  const nameIdentifier = ts.factory.createIdentifier(name);
+  const valueExpression = valueToExpression(value);
+
+  const propertyAssignment = ts.factory.createPropertyAssignment(
+    nameIdentifier,
+    valueExpression,
+  );
+
+  return propertyAssignment;
+}
+
+export function buildObjectLiteral(inputObject: object) {
+  const propertyAssignments: ts.PropertyAssignment[] = [];
+  for (const [key, value] of Object.entries(inputObject)) {
+    const propertyAssignment = buildPropertyAssignment(key, value);
+    propertyAssignments.push(propertyAssignment);
+  }
+  const objectLiteral = ts.factory.createObjectLiteralExpression(
+    propertyAssignments,
+    true,
+  );
+
+  return objectLiteral;
 }
