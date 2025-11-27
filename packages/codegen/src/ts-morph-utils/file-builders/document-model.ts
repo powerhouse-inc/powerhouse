@@ -21,6 +21,8 @@ import { getDocumentModelFilePaths } from "../name-builders/get-file-paths.js";
 import { getDocumentModelVariableNames } from "../name-builders/get-variable-names.js";
 import type { DocumentModelVariableNames } from "../name-builders/types.js";
 import { buildObjectLiteral } from "../syntax-builders.js";
+import { documentModelRootActionsFileTemplate } from "../templates/document-model/actions.js";
+import { documentModelGenCreatorsFileTemplate } from "../templates/document-model/gen/creators.js";
 import { documentModelDocumentSchemaFileTemplate } from "../templates/document-model/gen/document-schema.js";
 import { documentModelDocumentTypeTemplate } from "../templates/document-model/gen/document-type.js";
 import { documentModelGenIndexFileTemplate } from "../templates/document-model/gen/index.js";
@@ -69,6 +71,7 @@ export function tsMorphGenerateDocumentModel({
   makeDocumentModelIndexFile(fileMakerArgs);
   makeDocumentModelGenUtilsFile(fileMakerArgs);
   makeDocumentModelGenTypesFile(fileMakerArgs);
+  makeDocumentModelGenCreatorsFile(fileMakerArgs);
   makeDocumentModelGenDocumentSchemaFile(fileMakerArgs);
   makeDocumentModelDocumentTypeFile(fileMakerArgs);
   makeDocumentModelSrcUtilsFile(fileMakerArgs);
@@ -79,6 +82,7 @@ export function tsMorphGenerateDocumentModel({
   makeDocumentModelGenDocumentModelFile(fileMakerArgs);
   makeDocumentModelGenPhFactoriesFile(fileMakerArgs);
   makeDocumentModelHooksFile(fileMakerArgs);
+  makeDocumentModelRootActionsFile(fileMakerArgs);
   makeDocumentModelModulesFile(project, projectDir);
 
   project.saveSync();
@@ -376,6 +380,24 @@ export function makeDocumentModelGenDocumentSchemaFile({
   formatSourceFileWithPrettier(sourceFile);
 }
 
+export function makeDocumentModelGenCreatorsFile({
+  project,
+  ...variableNames
+}: DocumentModelFileMakerArgs) {
+  const template = documentModelGenCreatorsFileTemplate(variableNames);
+  const { documentModelDirPath } = variableNames;
+
+  const filePath = buildDocumentModelGenDirFilePath(
+    documentModelDirPath,
+    "creators.ts",
+  );
+
+  const { sourceFile } = getOrCreateSourceFile(project, filePath);
+
+  sourceFile.replaceWithText(template);
+  formatSourceFileWithPrettier(sourceFile);
+}
+
 export function makeDocumentModelGenPhFactoriesFile({
   project,
   ...variableNames
@@ -422,6 +444,24 @@ export function makeDocumentModelHooksFile({
   const filePath = buildDocumentModelRootDirFilePath(
     documentModelDirPath,
     "hooks.ts",
+  );
+
+  const { sourceFile } = getOrCreateSourceFile(project, filePath);
+
+  sourceFile.replaceWithText(template);
+  formatSourceFileWithPrettier(sourceFile);
+}
+
+export function makeDocumentModelRootActionsFile({
+  project,
+  ...variableNames
+}: DocumentModelFileMakerArgs) {
+  const template = documentModelRootActionsFileTemplate(variableNames);
+  const { documentModelDirPath } = variableNames;
+
+  const filePath = buildDocumentModelRootDirFilePath(
+    documentModelDirPath,
+    "actions.ts",
   );
 
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
