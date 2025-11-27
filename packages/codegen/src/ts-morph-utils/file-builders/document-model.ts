@@ -23,6 +23,7 @@ import type { DocumentModelVariableNames } from "../name-builders/types.js";
 import { buildObjectLiteral } from "../syntax-builders.js";
 import { documentModelDocumentSchemaFileTemplate } from "../templates/document-model/gen/document-schema.js";
 import { documentModelDocumentTypeTemplate } from "../templates/document-model/gen/document-type.js";
+import { documentModelGenIndexFileTemplate } from "../templates/document-model/gen/index.js";
 import { documentModelPhFactoriesFileTemplate } from "../templates/document-model/gen/ph-factories.js";
 import { documentModelSchemaIndexTemplate } from "../templates/document-model/gen/schema/index.js";
 import { documentModelGenTypesTemplate } from "../templates/document-model/gen/types.js";
@@ -74,6 +75,7 @@ export function tsMorphGenerateDocumentModel({
   makeDocumentModelTestFile(fileMakerArgs);
   makeDocumentModelUtilsFile(fileMakerArgs);
   makeDocumentModelModuleFile(fileMakerArgs);
+  makeDocumentModelGenIndexFile(fileMakerArgs);
   makeDocumentModelGenDocumentModelFile(fileMakerArgs);
   makeDocumentModelGenPhFactoriesFile(fileMakerArgs);
   makeDocumentModelHooksFile(fileMakerArgs);
@@ -384,6 +386,24 @@ export function makeDocumentModelGenPhFactoriesFile({
   const filePath = buildDocumentModelGenDirFilePath(
     documentModelDirPath,
     "ph-factories.ts",
+  );
+
+  const { sourceFile } = getOrCreateSourceFile(project, filePath);
+
+  sourceFile.replaceWithText(template);
+  formatSourceFileWithPrettier(sourceFile);
+}
+
+export function makeDocumentModelGenIndexFile({
+  project,
+  ...variableNames
+}: DocumentModelFileMakerArgs) {
+  const template = documentModelGenIndexFileTemplate(variableNames);
+  const { documentModelDirPath } = variableNames;
+
+  const filePath = buildDocumentModelGenDirFilePath(
+    documentModelDirPath,
+    "index.ts",
   );
 
   const { sourceFile } = getOrCreateSourceFile(project, filePath);

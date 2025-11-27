@@ -107,6 +107,7 @@ export function getDocumentModelVariableNames({
     latestSpec.state,
   );
   const hasLocalSchema = latestSpec.state.local.schema !== "";
+  const modules = latestSpec.modules;
   return {
     documentModelState,
     documentTypeId,
@@ -138,5 +139,6 @@ export function getDocumentModelVariableNames({
     initialGlobalState,
     initialLocalState,
     hasLocalSchema,
+    modules,
   };
 }
