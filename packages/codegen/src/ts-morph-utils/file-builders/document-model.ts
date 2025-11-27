@@ -23,12 +23,15 @@ import type { DocumentModelVariableNames } from "../name-builders/types.js";
 import { buildObjectLiteral } from "../syntax-builders.js";
 import { documentModelDocumentSchemaFileTemplate } from "../templates/document-model/gen/document-schema.js";
 import { documentModelDocumentTypeTemplate } from "../templates/document-model/gen/document-type.js";
+import { documentModelPhFactoriesFileTemplate } from "../templates/document-model/gen/ph-factories.js";
 import { documentModelSchemaIndexTemplate } from "../templates/document-model/gen/schema/index.js";
 import { documentModelGenTypesTemplate } from "../templates/document-model/gen/types.js";
 import { documentModelGenUtilsTemplate } from "../templates/document-model/gen/utils.js";
+import { documentModelHooksFileTemplate } from "../templates/document-model/hooks.js";
 import { documentModelIndexTemplate } from "../templates/document-model/index.js";
 import { documentModelModuleFileTemplate } from "../templates/document-model/module.js";
 import { documentModelSrcIndexFileTemplate } from "../templates/document-model/src/index.js";
+import { documentModelTestFileTemplate } from "../templates/document-model/src/tests/document-model.test.js";
 import { documentModelSrcUtilsTemplate } from "../templates/document-model/src/utils.js";
 import { documentModelUtilsTemplate } from "../templates/document-model/utils.js";
 import { buildTsMorphProject } from "../ts-morph-project.js";
@@ -68,9 +71,12 @@ export function tsMorphGenerateDocumentModel({
   makeDocumentModelGenDocumentSchemaFile(fileMakerArgs);
   makeDocumentModelDocumentTypeFile(fileMakerArgs);
   makeDocumentModelSrcUtilsFile(fileMakerArgs);
+  makeDocumentModelTestFile(fileMakerArgs);
   makeDocumentModelUtilsFile(fileMakerArgs);
   makeDocumentModelModuleFile(fileMakerArgs);
   makeDocumentModelGenDocumentModelFile(fileMakerArgs);
+  makeDocumentModelGenPhFactoriesFile(fileMakerArgs);
+  makeDocumentModelHooksFile(fileMakerArgs);
   makeDocumentModelModulesFile(project, projectDir);
 
   project.saveSync();
@@ -245,6 +251,31 @@ export function makeDocumentModelSrcIndexFile({
   formatSourceFileWithPrettier(sourceFile);
 }
 
+export function makeDocumentModelTestFile({
+  project,
+  ...variableNames
+}: DocumentModelFileMakerArgs) {
+  const template = documentModelTestFileTemplate(variableNames);
+  const { documentModelDirPath } = variableNames;
+  const testsDirPath = buildDocumentModelSrcDirFilePath(
+    documentModelDirPath,
+    "tests",
+  );
+
+  const testsDir = project.getDirectory(testsDirPath);
+
+  if (!testsDir) {
+    project.createDirectory(testsDirPath);
+  }
+
+  const filePath = path.join(testsDirPath, "document-model.test.ts");
+
+  const { sourceFile } = getOrCreateSourceFile(project, filePath);
+
+  sourceFile.replaceWithText(template);
+  formatSourceFileWithPrettier(sourceFile);
+}
+
 export function makeDocumentModelSchemaIndexFile({
   project,
   ...variableNames
@@ -335,6 +366,42 @@ export function makeDocumentModelGenDocumentSchemaFile({
   const filePath = buildDocumentModelGenDirFilePath(
     documentModelDirPath,
     "document-schema.ts",
+  );
+
+  const { sourceFile } = getOrCreateSourceFile(project, filePath);
+
+  sourceFile.replaceWithText(template);
+  formatSourceFileWithPrettier(sourceFile);
+}
+
+export function makeDocumentModelGenPhFactoriesFile({
+  project,
+  ...variableNames
+}: DocumentModelFileMakerArgs) {
+  const template = documentModelPhFactoriesFileTemplate(variableNames);
+  const { documentModelDirPath } = variableNames;
+
+  const filePath = buildDocumentModelGenDirFilePath(
+    documentModelDirPath,
+    "ph-factories.ts",
+  );
+
+  const { sourceFile } = getOrCreateSourceFile(project, filePath);
+
+  sourceFile.replaceWithText(template);
+  formatSourceFileWithPrettier(sourceFile);
+}
+
+export function makeDocumentModelHooksFile({
+  project,
+  ...variableNames
+}: DocumentModelFileMakerArgs) {
+  const template = documentModelHooksFileTemplate(variableNames);
+  const { documentModelDirPath } = variableNames;
+
+  const filePath = buildDocumentModelRootDirFilePath(
+    documentModelDirPath,
+    "hooks.ts",
   );
 
   const { sourceFile } = getOrCreateSourceFile(project, filePath);

@@ -1,9 +1,12 @@
----
-to: "<%= rootDir %>/<%= paramCaseDocumentType %>/gen/ph-factories.ts"
-force: true
----
+import { ts } from "@tmpl/core";
+import type { DocumentModelVariableNames } from "../../../name-builders/types.js";
+
+export const documentModelPhFactoriesFileTemplate = (
+  v: DocumentModelVariableNames,
+) =>
+  ts`
 /**
- * Factory methods for creating <%= phDocumentTypeName %> instances
+ * Factory methods for creating ${v.phDocumentTypeName} instances
  */
 import type {
   PHAuthState,
@@ -15,22 +18,22 @@ import {
   defaultBaseState,
 } from "document-model/core";
 import type {
-  <%= phDocumentTypeName %>,
-  <%= localStateName %>,
-  <%= globalStateName %>,
-  <%= phStateName %>,
+  ${v.phDocumentTypeName},
+  ${v.localStateName},
+  ${v.globalStateName},
+  ${v.phStateName},
 } from "./types.js";
 import { createDocument } from "./utils.js";
 
-export function defaultGlobalState(): <%= globalStateName %> {
-  return <%- initialGlobalState %>;
+export function defaultGlobalState(): ${v.globalStateName} {
+  return ${v.initialGlobalState};
 }
 
-export function defaultLocalState(): <%= localStateName %> {
-  return <%- initialLocalState %>;
+export function defaultLocalState(): ${v.localStateName} {
+  return ${v.initialLocalState};
 }
 
-export function defaultPHState(): <%= phStateName %> {
+export function defaultPHState(): ${v.phStateName} {
   return {
     ...defaultBaseState(),
     global: defaultGlobalState(),
@@ -39,28 +42,28 @@ export function defaultPHState(): <%= phStateName %> {
 }
 
 export function createGlobalState(
-  state?: Partial<<%= globalStateName %>>,
-): <%= globalStateName %> {
+  state?: Partial<${v.globalStateName}>,
+): ${v.globalStateName} {
   return {
     ...defaultGlobalState(),
     ...(state || {}),
-  } as <%= globalStateName %>;
+  } as ${v.globalStateName};
 }
 
 export function createLocalState(
-  state?: Partial<<%= localStateName %>>,
-): <%= localStateName %> {
+  state?: Partial<${v.localStateName}>,
+): ${v.localStateName} {
   return {
     ...defaultLocalState(),
     ...(state || {}),
-  } as <%= localStateName %>;
+  } as ${v.localStateName};
 }
 
 export function createState(
   baseState?: Partial<PHBaseState>,
-  globalState?: Partial<<%= globalStateName %>>,
-  localState?: Partial<<%= localStateName %>>,
-): <%= phStateName %> {
+  globalState?: Partial<${v.globalStateName}>,
+  localState?: Partial<${v.localStateName}>,
+): ${v.phStateName} {
   return {
     ...createBaseState(baseState?.auth, baseState?.document),
     global: createGlobalState(globalState),
@@ -69,18 +72,18 @@ export function createState(
 }
 
 /**
- * Creates a <%= phDocumentTypeName %> with custom global and local state
+ * Creates a ${v.phDocumentTypeName} with custom global and local state
  * This properly handles the PHBaseState requirements while allowing
  * document-specific state to be set.
  */
-export function create<%= phDocumentTypeName %>(
+export function create${v.phDocumentTypeName}(
   state?: Partial<{
     auth?: Partial<PHAuthState>;
     document?: Partial<PHDocumentState>;
-    global?: Partial<<%= globalStateName %>>;
-    local?: Partial<<%= localStateName %>>;
+    global?: Partial<${v.globalStateName}>;
+    local?: Partial<${v.localStateName}>;
   }>,
-): <%= phDocumentTypeName %> {
+): ${v.phDocumentTypeName} {
   const document = createDocument(
     state ? createState(
       createBaseState(state.auth, state.document),
@@ -91,3 +94,4 @@ export function create<%= phDocumentTypeName %>(
 
   return document;
 }
+`.raw;
