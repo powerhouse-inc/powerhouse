@@ -470,7 +470,9 @@ export function makeEditorModuleFile({
 
   objectLiteral.addPropertyAssignment({
     name: "documentTypes",
-    initializer: `${documentModelId ? `"${documentModelId}"` : JSON.stringify(legacyMultipleDocumentTypes)}`,
+    initializer: documentModelId
+      ? `["${documentModelId}"]`
+      : JSON.stringify(legacyMultipleDocumentTypes),
   });
 
   objectLiteral.addPropertyAssignment({
