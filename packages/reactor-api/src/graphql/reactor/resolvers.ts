@@ -1,14 +1,14 @@
-import type {
-  IReactorClient,
-  ISyncManager,
-  JobInfo,
-  PagedResults,
-  PagingOptions,
-  PropagationMode,
-  RemoteFilter,
-  SearchFilter,
+import {
   SyncOperation,
-  ViewFilter,
+  type IReactorClient,
+  type ISyncManager,
+  type JobInfo,
+  type PagedResults,
+  type PagingOptions,
+  type PropagationMode,
+  type RemoteFilter,
+  type SearchFilter,
+  type ViewFilter,
 } from "@powerhousedao/reactor";
 import type { DocumentModelModule, PHDocument } from "document-model";
 import { GraphQLError } from "graphql";
@@ -822,27 +822,29 @@ export function pushSyncEnvelope(
   }
 
   const firstOp = args.envelope.operations[0];
-  const syncOp = {
-    id: crypto.randomUUID(),
-    remoteName: remote.name,
-    documentId: firstOp.context.documentId,
-    scopes: [
-      ...new Set(args.envelope.operations.map((op) => op.context.scope)),
-    ],
-    branch: firstOp.context.branch,
-    operations: args.envelope.operations.map((op) => ({
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      operation: op.operation,
-      context: {
-        documentId: op.context.documentId,
-        documentType: op.context.documentType,
-        scope: op.context.scope,
-        branch: op.context.branch,
-      },
-    })),
-    status: 0,
-    error: undefined,
-  } as unknown as SyncOperation;
+  const syncOpId = `syncop-${args.envelope.channelMeta.id}-${Date.now()}-${crypto.randomUUID()}`;
+  const scopes = [
+    ...new Set(args.envelope.operations.map((op) => op.context.scope)),
+  ];
+  const operations = args.envelope.operations.map((op) => ({
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    operation: op.operation,
+    context: {
+      documentId: op.context.documentId,
+      documentType: op.context.documentType,
+      scope: op.context.scope,
+      branch: op.context.branch,
+    },
+  }));
+
+  const syncOp = new SyncOperation(
+    syncOpId,
+    remote.name,
+    firstOp.context.documentId,
+    scopes,
+    firstOp.context.branch,
+    operations,
+  );
 
   try {
     remote.channel.inbox.add(syncOp);

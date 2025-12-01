@@ -1,5 +1,5 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import type { IReactorClient } from "@powerhousedao/reactor";
+import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
 import type { GraphQLManager } from "@powerhousedao/reactor-api";
 import type {
   DocumentDriveGlobalState,
@@ -47,7 +47,7 @@ export type SubgraphArgs = {
   relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
   graphqlManager: GraphQLManager;
-  syncManager?: unknown;
+  syncManager?: ISyncManager;
   path?: string;
 };
 

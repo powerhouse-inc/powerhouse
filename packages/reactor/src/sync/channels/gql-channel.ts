@@ -23,6 +23,8 @@ export type GqlChannelConfig = {
   retryMaxDelayMs?: number;
   /** Maximum number of consecutive failures before marking as error (default: 5) */
   maxFailures?: number;
+  /** Custom fetch function for testing (default: global fetch) */
+  fetchFn?: typeof fetch;
 };
 
 /**
@@ -59,6 +61,7 @@ export class GqlChannel implements IChannel {
       retryBaseDelayMs: config.retryBaseDelayMs ?? 1000,
       retryMaxDelayMs: config.retryMaxDelayMs ?? 300000,
       maxFailures: config.maxFailures ?? 5,
+      fetchFn: config.fetchFn,
     };
     this.isShutdown = false;
     this.failureCount = 0;
@@ -307,9 +310,10 @@ export class GqlChannel implements IChannel {
       headers["Authorization"] = `Bearer ${this.config.authToken}`;
     }
 
+    const fetchFn = this.config.fetchFn ?? fetch;
     let response;
     try {
-      response = await fetch(this.config.url, {
+      response = await fetchFn(this.config.url, {
         method: "POST",
         headers,
         body: JSON.stringify({

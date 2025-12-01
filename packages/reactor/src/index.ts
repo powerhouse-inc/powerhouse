@@ -46,6 +46,7 @@ export { type IEventBus } from "./events/interfaces.js";
 export {
   EventBusAggregateError,
   OperationEventTypes,
+  type OperationsReadyEvent,
   type OperationWrittenEvent,
   type Unsubscribe,
 } from "./events/types.js";
@@ -150,6 +151,7 @@ export {
   ChannelError,
   InternalChannelError,
   InternalChannel,
+  GqlChannelFactory,
   SyncOperation,
   SyncOperationAggregateError,
   Mailbox,

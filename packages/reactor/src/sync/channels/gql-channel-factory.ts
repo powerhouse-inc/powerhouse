@@ -79,6 +79,13 @@ export class GqlChannelFactory implements IChannelFactory {
       gqlConfig.maxFailures = config.parameters.maxFailures;
     }
 
+    if (config.parameters.fetchFn !== undefined) {
+      if (typeof config.parameters.fetchFn !== "function") {
+        throw new Error('"fetchFn" parameter must be a function');
+      }
+      gqlConfig.fetchFn = config.parameters.fetchFn as typeof fetch;
+    }
+
     return new GqlChannel(remoteId, remoteName, cursorStorage, gqlConfig);
   }
 }
