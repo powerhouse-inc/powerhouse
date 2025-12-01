@@ -25,15 +25,6 @@ export type GqlChannelConfig = {
   maxFailures?: number;
 };
 
-type RequiredGqlChannelConfig = {
-  url: string;
-  authToken?: string;
-  pollIntervalMs: number;
-  retryBaseDelayMs: number;
-  retryMaxDelayMs: number;
-  maxFailures: number;
-};
-
 /**
  * GraphQL-based synchronization channel for network communication between reactors.
  */
@@ -45,7 +36,7 @@ export class GqlChannel implements IChannel {
   private readonly channelId: string;
   private readonly remoteName: string;
   private readonly cursorStorage: ISyncCursorStorage;
-  private readonly config: RequiredGqlChannelConfig;
+  private readonly config: GqlChannelConfig;
   private isShutdown: boolean;
   private pollTimer?: NodeJS.Timeout;
   private failureCount: number;
@@ -118,7 +109,7 @@ export class GqlChannel implements IChannel {
       return;
     }
 
-    if (this.failureCount >= this.config.maxFailures) {
+    if (this.failureCount >= this.config.maxFailures!) {
       return;
     }
 
@@ -167,7 +158,7 @@ export class GqlChannel implements IChannel {
       channelError,
     );
 
-    if (this.failureCount >= this.config.maxFailures) {
+    if (this.failureCount >= this.config.maxFailures!) {
       console.error(
         `GqlChannel ${this.channelId} exceeded failure threshold, stopping polls`,
       );
@@ -387,7 +378,7 @@ export class GqlChannel implements IChannel {
   } {
     return {
       state:
-        this.failureCount >= this.config.maxFailures
+        this.failureCount >= this.config.maxFailures!
           ? "error"
           : this.failureCount > 0
             ? "running"

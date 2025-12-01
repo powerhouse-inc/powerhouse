@@ -748,7 +748,7 @@ export async function createChannel(
   return true;
 }
 
-export async function pollSyncEnvelopes(
+export function pollSyncEnvelopes(
   syncManager: ISyncManager,
   args: {
     channelId: string;
@@ -759,7 +759,9 @@ export async function pollSyncEnvelopes(
   try {
     remote = syncManager.getById(args.channelId);
   } catch (error) {
-    throw new GraphQLError(`Channel not found: ${args.channelId}`);
+    throw new GraphQLError(
+      `Channel not found: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 
   const operations = remote.channel.outbox.items;
@@ -780,10 +782,10 @@ export async function pollSyncEnvelopes(
     },
   }));
 
-  return envelopes;
+  return Promise.resolve(envelopes);
 }
 
-export async function pushSyncEnvelope(
+export function pushSyncEnvelope(
   syncManager: ISyncManager,
   args: {
     envelope: {
@@ -811,12 +813,12 @@ export async function pushSyncEnvelope(
     remote = syncManager.getById(args.envelope.channelMeta.id);
   } catch (error) {
     throw new GraphQLError(
-      `Channel not found: ${args.envelope.channelMeta.id}`,
+      `Channel not found: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 
   if (!args.envelope.operations || args.envelope.operations.length === 0) {
-    return true;
+    return Promise.resolve(true);
   }
 
   const firstOp = args.envelope.operations[0];
@@ -850,5 +852,5 @@ export async function pushSyncEnvelope(
     );
   }
 
-  return true;
+  return Promise.resolve(true);
 }
