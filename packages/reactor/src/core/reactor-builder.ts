@@ -33,6 +33,7 @@ import type {
   IReactor,
   ReactorFeatures,
   ReactorModule,
+  SyncModule,
 } from "./types.js";
 
 import type { IJobExecutorManager } from "#executor/interfaces.js";
@@ -247,19 +248,21 @@ export class ReactorBuilder {
       operationStore,
     );
 
-    let syncManager: ReactorModule["syncManager"] = undefined;
+    let syncModule: SyncModule | undefined = undefined;
     if (this.syncBuilder) {
-      syncManager = this.syncBuilder.build(
+      syncModule = this.syncBuilder.buildModule(
         reactor,
         operationIndex,
         eventBus,
         database as unknown as Kysely<StorageDatabase>,
       );
-      reactor.setSync(syncManager);
-      await syncManager.startup();
+      reactor.setSync(syncModule.syncManager);
+      await syncModule.syncManager.startup();
     }
 
     return {
+      driveServer,
+      storage,
       eventBus,
       documentModelRegistry,
       queue,
@@ -271,9 +274,11 @@ export class ReactorBuilder {
       writeCache,
       operationIndex,
       documentView,
+      documentViewConsistencyTracker,
       documentIndexer,
+      documentIndexerConsistencyTracker,
       readModelCoordinator,
-      syncManager,
+      syncModule,
       reactor,
     };
   }

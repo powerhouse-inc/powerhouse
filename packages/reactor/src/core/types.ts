@@ -1,4 +1,9 @@
 import type {
+  BaseDocumentDriveServer,
+  IDocumentOperationStorage,
+  IDocumentStorage,
+} from "document-drive";
+import type {
   Action,
   DocumentModelModule,
   Operation,
@@ -15,6 +20,7 @@ import type { IQueue } from "../queue/interfaces.js";
 import type { IReadModelCoordinator } from "../read-models/interfaces.js";
 import type { DocumentViewDatabase } from "../read-models/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
+import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
 import type {
   ConsistencyToken,
   JobInfo,
@@ -29,12 +35,14 @@ import type {
   IDocumentView,
   IKeyframeStore,
   IOperationStore,
+  ISyncCursorStorage,
+  ISyncRemoteStorage,
 } from "../storage/interfaces.js";
 import type {
   DocumentIndexerDatabase,
   Database as StorageDatabase,
 } from "../storage/kysely/types.js";
-import type { ISyncManager } from "../sync/interfaces.js";
+import type { IChannelFactory, ISyncManager } from "../sync/interfaces.js";
 
 /**
  * A single mutation job within a batch request.
@@ -306,11 +314,23 @@ export type Database = StorageDatabase &
   DocumentIndexerDatabase;
 
 /**
+ * Container for all sync manager dependencies created during the build process.
+ */
+export interface SyncModule {
+  remoteStorage: ISyncRemoteStorage;
+  cursorStorage: ISyncCursorStorage;
+  channelFactory: IChannelFactory;
+  syncManager: ISyncManager;
+}
+
+/**
  * Container for all reactor dependencies created during the build process.
  * Provides direct access to internal components for advanced use cases,
  * testing, or integration scenarios.
  */
 export interface ReactorModule {
+  driveServer: BaseDocumentDriveServer;
+  storage: IDocumentStorage & IDocumentOperationStorage;
   eventBus: IEventBus;
   documentModelRegistry: IDocumentModelRegistry;
   queue: IQueue;
@@ -322,8 +342,10 @@ export interface ReactorModule {
   writeCache: IWriteCache;
   operationIndex: IOperationIndex;
   documentView: IDocumentView;
+  documentViewConsistencyTracker: IConsistencyTracker;
   documentIndexer: IDocumentIndexer;
+  documentIndexerConsistencyTracker: IConsistencyTracker;
   readModelCoordinator: IReadModelCoordinator;
-  syncManager: ISyncManager | undefined;
+  syncModule: SyncModule | undefined;
   reactor: IReactor;
 }

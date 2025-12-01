@@ -12,6 +12,7 @@ export {
   type IReactor,
   type ReactorFeatures,
   type ReactorModule,
+  type SyncModule,
 } from "./core/types.js";
 export { JobAwaiter, type IJobAwaiter } from "./shared/awaiter.js";
 export {

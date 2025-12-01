@@ -1,6 +1,6 @@
 import type { Kysely } from "kysely";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
-import type { IReactor } from "../core/types.js";
+import type { IReactor, SyncModule } from "../core/types.js";
 import type { IEventBus } from "../events/interfaces.js";
 import type {
   ISyncCursorStorage,
@@ -38,6 +38,16 @@ export class SyncBuilder {
     eventBus: IEventBus,
     db: Kysely<Database>,
   ): ISyncManager {
+    const module = this.buildModule(reactor, operationIndex, eventBus, db);
+    return module.syncManager;
+  }
+
+  buildModule(
+    reactor: IReactor,
+    operationIndex: IOperationIndex,
+    eventBus: IEventBus,
+    db: Kysely<Database>,
+  ): SyncModule {
     if (!this.channelFactory) {
       throw new Error("Channel factory is required");
     }
@@ -45,7 +55,7 @@ export class SyncBuilder {
     const remoteStorage = this.remoteStorage ?? new KyselySyncRemoteStorage(db);
     const cursorStorage = this.cursorStorage ?? new KyselySyncCursorStorage(db);
 
-    return new SyncManager(
+    const syncManager = new SyncManager(
       remoteStorage,
       cursorStorage,
       this.channelFactory,
@@ -53,5 +63,12 @@ export class SyncBuilder {
       reactor,
       eventBus,
     );
+
+    return {
+      remoteStorage,
+      cursorStorage,
+      channelFactory: this.channelFactory,
+      syncManager,
+    };
   }
 }
