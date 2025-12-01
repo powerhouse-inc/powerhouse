@@ -409,8 +409,9 @@ type MakeEditorModuleFileArgs = {
   project: Project;
   editorName: string;
   editorId: string;
-  documentModelId: string;
+  documentModelId?: string;
   editorModuleFilePath: string;
+  legacyMultipleDocumentTypes?: string[];
 };
 export function makeEditorModuleFile({
   project,
@@ -418,7 +419,13 @@ export function makeEditorModuleFile({
   editorName,
   documentModelId,
   editorId,
+  legacyMultipleDocumentTypes,
 }: MakeEditorModuleFileArgs) {
+  if (documentModelId && !!legacyMultipleDocumentTypes) {
+    throw new Error(
+      "Cannot specify both documentModelId and legacyMultipleDocumentTypes",
+    );
+  }
   const { sourceFile: editorModuleSourceFile } = getOrCreateSourceFile(
     project,
     editorModuleFilePath,
@@ -463,7 +470,7 @@ export function makeEditorModuleFile({
 
   objectLiteral.addPropertyAssignment({
     name: "documentTypes",
-    initializer: `["${documentModelId}"]`,
+    initializer: `${documentModelId ? `"${documentModelId}"` : JSON.stringify(legacyMultipleDocumentTypes)}`,
   });
 
   objectLiteral.addPropertyAssignment({

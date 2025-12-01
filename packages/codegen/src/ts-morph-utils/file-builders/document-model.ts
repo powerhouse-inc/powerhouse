@@ -1,4 +1,5 @@
 import type { Project } from "ts-morph";
+import { TSMorphCodeGenerator } from "../../ts-morph-generator/index.js";
 import {
   documentModelModulesOutputFileName,
   documentModelModulesVariableName,
@@ -12,10 +13,7 @@ import { buildTsMorphProject } from "../ts-morph-project.js";
 import { makeGenDirFiles } from "./document-model/gen-dir.js";
 import { makeRootDirFiles } from "./document-model/root-dir.js";
 import { makeSrcDirFiles } from "./document-model/src-dir.js";
-import type {
-  DocumentModelFileMakerArgs,
-  GenerateDocumentModelArgs,
-} from "./document-model/types.js";
+import type { GenerateDocumentModelArgs } from "./document-model/types.js";
 import { makeModulesFile } from "./module-files.js";
 
 function ensureDirectoriesExist(
@@ -50,7 +48,7 @@ function ensureDirectoriesExist(
     }
   }
 }
-export function tsMorphGenerateDocumentModel({
+export async function tsMorphGenerateDocumentModel({
   projectDir,
   packageName,
   documentModelState,
@@ -81,12 +79,27 @@ export function tsMorphGenerateDocumentModel({
   makeDocumentModelModulesFile(fileMakerArgs);
 
   project.saveSync();
+
+  const generator = new TSMorphCodeGenerator(
+    projectDir,
+    [documentModelState],
+    packageName,
+    {
+      directories: { documentModelDir: "document-models" },
+      forceUpdate: true,
+    },
+  );
+
+  await generator.generateReducers();
 }
 
-function makeDocumentModelModulesFile({
+export function makeDocumentModelModulesFile({
   project,
   projectDir,
-}: DocumentModelFileMakerArgs) {
+}: {
+  project: Project;
+  projectDir: string;
+}) {
   const { documentModelsDirPath, documentModelsSourceFilesPath } =
     getDocumentModelFilePaths(projectDir);
   makeModulesFile({

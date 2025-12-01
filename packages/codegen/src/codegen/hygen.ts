@@ -8,9 +8,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readPackage } from "read-pkg";
 import { TSMorphCodeGenerator } from "../ts-morph-generator/index.js";
-import { tsMorphGenerateEditor } from "../ts-morph-utils/file-builders/document-editor.js";
-import { tsMorphGenerateDocumentModel } from "../ts-morph-utils/file-builders/document-model.js";
+import { makeEditorModuleFile } from "../ts-morph-utils/file-builders/document-editor.js";
+import { makeDocumentModelModulesFile } from "../ts-morph-utils/file-builders/document-model.js";
 import { makeSubgraphsIndexFile } from "../ts-morph-utils/file-builders/subgraphs.js";
+import { buildTsMorphProject } from "../ts-morph-utils/ts-morph-project.js";
 import type { CodegenOptions, DocumentTypesMap } from "./types.js";
 import { loadDocumentModel } from "./utils.js";
 
@@ -148,11 +149,44 @@ export async function hygenGenerateDocumentModel(
   const projectDir = path.dirname(dir);
   const documentModelDir = path.basename(dir);
 
-  tsMorphGenerateDocumentModel({
-    projectDir,
-    packageName,
-    documentModelState,
-  });
+  // Generate the singular files for the document model logic
+  await run(
+    [
+      "powerhouse",
+      "generate-document-model",
+      "--document-model",
+      JSON.stringify(documentModelState),
+      "--root-dir",
+      dir,
+      "--package-name",
+      packageName,
+    ],
+    { watch, skipFormat, verbose },
+  );
+
+  const latestSpec =
+    documentModelState.specifications[
+      documentModelState.specifications.length - 1
+    ];
+
+  // Generate the module-specific files for the document model logic
+  for (const module of latestSpec.modules) {
+    await run(
+      [
+        "powerhouse",
+        "generate-document-model-module",
+        "--document-model",
+        JSON.stringify(documentModelState),
+        "--root-dir",
+        dir,
+        "--module",
+        module.name,
+        "--package-name",
+        packageName,
+      ],
+      { watch, skipFormat, verbose },
+    );
+  }
 
   if (generateReducers) {
     const generator = new TSMorphCodeGenerator(
@@ -164,6 +198,12 @@ export async function hygenGenerateDocumentModel(
 
     await generator.generateReducers();
   }
+
+  const project = buildTsMorphProject(projectDir);
+  makeDocumentModelModulesFile({
+    project,
+    projectDir,
+  });
 }
 
 type HygenGenerateEditorArgs = {
@@ -178,7 +218,7 @@ type HygenGenerateEditorArgs = {
   editorId?: string;
   editorDirName?: string;
 };
-export function hygenGenerateEditor(
+export async function hygenGenerateEditor(
   hygenGenerateEditorArgs: HygenGenerateEditorArgs,
 ) {
   const {
@@ -190,7 +230,7 @@ export function hygenGenerateEditor(
     packageName,
     skipFormat = false,
     verbose = true,
-    editorId = paramCase(name),
+    editorId,
     editorDirName,
   } = hygenGenerateEditorArgs;
   // Generate the singular files for the document model logic
@@ -219,22 +259,16 @@ export function hygenGenerateEditor(
     args.push("--editor-dir-name", editorDirName);
   }
 
+  await run(args, { skipFormat, verbose });
   const projectDir = path.dirname(dir);
+  const project = buildTsMorphProject(projectDir);
 
-  if (documentTypes.length > 1) {
-    throw new Error("Multiple document types are not supported yet");
-  }
-  const documentModelId = documentTypes[0];
-  const editorName = name;
-  const editorDir = editorDirName || paramCase(editorName);
-
-  tsMorphGenerateEditor({
-    packageName,
-    projectDir,
-    editorDir,
-    documentModelId,
-    editorName,
-    editorId,
+  makeEditorModuleFile({
+    project,
+    editorName: name,
+    editorModuleFilePath: editorDirName || paramCase(name),
+    editorId: editorId || paramCase(name),
+    legacyMultipleDocumentTypes: documentTypes,
   });
 }
 
@@ -396,4 +430,15 @@ export async function hygenGenerateDriveEditor(options: {
   }
 
   await run(args, { skipFormat });
+
+  const projectDir = path.dirname(dir);
+  const project = buildTsMorphProject(projectDir);
+
+  makeEditorModuleFile({
+    project,
+    editorName: name,
+    editorModuleFilePath: driveEditorDirName || paramCase(name),
+    editorId: appId || paramCase(name),
+    documentModelId: "powerhouse/document-drive",
+  });
 }

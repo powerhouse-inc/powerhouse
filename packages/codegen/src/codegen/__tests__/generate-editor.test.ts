@@ -10,6 +10,7 @@ import {
   type TestContext,
 } from "vitest";
 import { generateEditor } from "../index.js";
+import { USE_LEGACY } from "./config.js";
 import {
   EDITORS_TEST_PROJECT,
   EDITORS_TEST_PROJECT_WITH_EXISTING_EDITOR,
@@ -75,6 +76,7 @@ describe("generateEditor", () => {
         config: config,
         editorId: "test-document-model-editor",
         specifiedPackageName: TEST_PACKAGE_NAME,
+        legacy: USE_LEGACY,
       });
 
       const editorsDir = path.join(testOutDirPath, "editors");
@@ -131,6 +133,7 @@ describe("generateEditor", () => {
         config: config,
         editorId: "test-document-model-editor-two",
         specifiedPackageName: TEST_PACKAGE_NAME,
+        legacy: USE_LEGACY,
       });
       const editorsDir = path.join(testOutDirPath, "editors");
       const editorsFilePath = path.join(editorsDir, "editors.ts");
@@ -163,6 +166,7 @@ describe("generateEditor", () => {
         config: config,
         editorId: "test-doc-editor-2",
         specifiedPackageName: TEST_PACKAGE_NAME,
+        legacy: USE_LEGACY,
       });
       await compile(testOutDirPath);
       const editorsContent = fs.readFileSync(editorsFilePath, "utf-8");

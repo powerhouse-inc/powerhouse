@@ -9,18 +9,21 @@ import type { DocumentModelGlobalState } from "document-model";
 import fs from "node:fs";
 import path, { join } from "node:path";
 import { readPackage } from "read-pkg";
+import { TSMorphCodeGenerator } from "../ts-morph-generator/index.js";
 import { tsMorphGenerateEditor } from "../ts-morph-utils/file-builders/document-editor.js";
+import { tsMorphGenerateDocumentModel } from "../ts-morph-utils/file-builders/document-model.js";
 import { tsMorphGenerateDriveEditor } from "../ts-morph-utils/file-builders/drive-editor.js";
 import { generateSchema, generateSchemas } from "./graphql.js";
 import {
   generateAll,
-  hygenGenerateDocumentModel,
+  hygenGenerateDriveEditor,
+  hygenGenerateEditor,
   hygenGenerateImportScript,
   hygenGenerateProcessor,
   hygenGenerateSubgraph,
 } from "./hygen.js";
 import type { CodegenOptions } from "./types.js";
-import { loadDocumentModel } from "./utils.js";
+import { getDocumentTypesMap, loadDocumentModel } from "./utils.js";
 
 export async function generate(config: PowerhouseConfig) {
   const { skipFormat, watch } = config;
@@ -69,6 +72,7 @@ type GenerateEditorArgs = {
   editorId?: string;
   specifiedPackageName?: string;
   editorDirName?: string;
+  legacy?: boolean;
 };
 export async function generateEditor(args: GenerateEditorArgs) {
   const {
@@ -78,7 +82,39 @@ export async function generateEditor(args: GenerateEditorArgs) {
     editorId: editorIdArg,
     specifiedPackageName,
     editorDirName,
+    legacy = false,
   } = args;
+
+  if (legacy) {
+    const pathOrigin = "../../";
+
+    const { documentModelsDir, skipFormat } = config;
+    const documentTypesMap = getDocumentTypesMap(documentModelsDir, pathOrigin);
+
+    const invalidType = documentTypes.find(
+      (type) => !Object.keys(documentTypesMap).includes(type),
+    );
+    if (invalidType) {
+      throw new Error(
+        `Document model for ${invalidType} not found. Make sure the document model is available in the document-models directory (${documentModelsDir}) and has been properly generated.`,
+      );
+    }
+    const packageNameFromPackageJson = await readPackage().then(
+      (pkg) => pkg.name,
+    );
+    const packageName = specifiedPackageName || packageNameFromPackageJson;
+    return hygenGenerateEditor({
+      name,
+      documentTypes,
+      documentTypesMap,
+      dir: config.editorsDir,
+      documentModelsDir: config.documentModelsDir,
+      packageName,
+      skipFormat,
+      editorId: args.editorId,
+      editorDirName,
+    });
+  }
 
   const packageNameFromPackageJson = await readPackage().then(
     (pkg) => pkg.name,
@@ -114,6 +150,7 @@ export async function generateDriveEditor(options: {
   isDragAndDropEnabled?: boolean;
   driveEditorDirName?: string;
   specifiedPackageName?: string;
+  legacy?: boolean;
 }) {
   const {
     name,
@@ -123,9 +160,9 @@ export async function generateDriveEditor(options: {
     isDragAndDropEnabled,
     driveEditorDirName,
     specifiedPackageName,
+    legacy = false,
   } = options;
   const dir = config.editorsDir;
-  const skipFormat = config.skipFormat;
 
   const packageNameFromPackageJson = await readPackage().then(
     (pkg) => pkg.name,
@@ -133,6 +170,29 @@ export async function generateDriveEditor(options: {
   const packageName = specifiedPackageName || packageNameFromPackageJson;
 
   const projectDir = path.dirname(dir);
+
+  if (legacy) {
+    const {
+      name,
+      config,
+      appId,
+      allowedDocumentTypes,
+      isDragAndDropEnabled,
+      driveEditorDirName,
+    } = options;
+    const dir = config.editorsDir;
+    const skipFormat = config.skipFormat;
+
+    return hygenGenerateDriveEditor({
+      name,
+      dir,
+      appId: appId ?? paramCase(name),
+      allowedDocumentTypes: allowedDocumentTypes,
+      isDragAndDropEnabled: isDragAndDropEnabled ?? true,
+      skipFormat,
+      driveEditorDirName,
+    });
+  }
 
   tsMorphGenerateDriveEditor({
     projectDir,
@@ -361,15 +421,22 @@ async function generateFromDocumentModel(
     skipFormat: config.skipFormat,
     verbose,
   });
-  await hygenGenerateDocumentModel(
-    documentModel,
-    config.documentModelsDir,
+  const projectDir = path.dirname(config.documentModelsDir);
+  const documentModelDir = path.basename(config.documentModelsDir);
+
+  tsMorphGenerateDocumentModel({
+    projectDir,
     packageName,
-    {
-      skipFormat: config.skipFormat,
-      verbose,
-      force,
-    },
+    documentModelState: documentModel,
+  });
+
+  const generator = new TSMorphCodeGenerator(
+    projectDir,
+    [documentModel],
+    packageName,
+    { directories: { documentModelDir }, forceUpdate: force },
   );
+
+  await generator.generateReducers();
   await generateSubgraph(name, filePath || null, config, { verbose });
 }
