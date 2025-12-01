@@ -93,11 +93,15 @@ export function getDocumentModelVariableNames({
   const actionsTypeName = `${actionTypeName}s`;
   const actionsName = camelCase(actionsTypeName);
   const documentModelDir = `${packageName}/document-models/${paramCaseDocumentType}`;
+  const documentModelsDirPath = path.join(projectDir, "document-models");
   const documentModelDirPath = path.join(
-    projectDir,
-    "document-models",
+    documentModelsDirPath,
     paramCaseDocumentType,
   );
+  const srcDirPath = path.join(documentModelDirPath, "src");
+  const testsDirPath = path.join(srcDirPath, "tests");
+  const genDirPath = path.join(documentModelDirPath, "gen");
+  const schemaDirPath = path.join(genDirPath, "schema");
   const stateSchemaName = `${stateName}Schema`;
   const phDocumentSchemaName = `${phDocumentTypeName}Schema`;
   const isPhStateOfTypeFunctionName = `is${stateName}`;
@@ -114,6 +118,9 @@ export function getDocumentModelVariableNames({
   );
   const hasLocalSchema = latestSpec.state.local.schema !== "";
   const modules = latestSpec.modules;
+  const moduleDirPaths = modules.map((module) =>
+    path.join(genDirPath, paramCase(module.name)),
+  );
   return {
     documentModelState,
     documentTypeId,
@@ -130,7 +137,13 @@ export function getDocumentModelVariableNames({
     actionsTypeName,
     actionsName,
     documentModelDir,
+    documentModelsDirPath,
     documentModelDirPath,
+    srcDirPath,
+    genDirPath,
+    testsDirPath,
+    schemaDirPath,
+    moduleDirPaths,
     stateSchemaName,
     phDocumentSchemaName,
     isPhStateOfTypeFunctionName,
