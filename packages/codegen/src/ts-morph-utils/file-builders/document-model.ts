@@ -1,4 +1,8 @@
-import type { DocumentModelGlobalState } from "document-model";
+import { paramCase, pascalCase } from "change-case";
+import type {
+  DocumentModelGlobalState,
+  ModuleSpecification,
+} from "document-model";
 import path from "path";
 import { VariableDeclarationKind, type Project } from "ts-morph";
 import {
@@ -18,7 +22,10 @@ import {
   buildDocumentModelSrcDirFilePath,
 } from "../name-builders/document-model-files.js";
 import { getDocumentModelFilePaths } from "../name-builders/get-file-paths.js";
-import { getDocumentModelVariableNames } from "../name-builders/get-variable-names.js";
+import {
+  getDocumentModelOperationsModuleVariableNames,
+  getDocumentModelVariableNames,
+} from "../name-builders/get-variable-names.js";
 import type { DocumentModelVariableNames } from "../name-builders/types.js";
 import { buildObjectLiteral } from "../syntax-builders.js";
 import { documentModelRootActionsFileTemplate } from "../templates/document-model/actions.js";
@@ -27,6 +34,10 @@ import { documentModelGenCreatorsFileTemplate } from "../templates/document-mode
 import { documentModelDocumentSchemaFileTemplate } from "../templates/document-model/gen/document-schema.js";
 import { documentModelDocumentTypeTemplate } from "../templates/document-model/gen/document-type.js";
 import { documentModelGenIndexFileTemplate } from "../templates/document-model/gen/index.js";
+import { documentModelOperationModuleActionsFileTemplate } from "../templates/document-model/gen/modules/actions.js";
+import { documentModelOperationsModuleCreatorsFileTemplate } from "../templates/document-model/gen/modules/creators.js";
+import { documentModelOperationsModuleErrorFileTemplate } from "../templates/document-model/gen/modules/error.js";
+import { documentModelOperationsModuleOperationsFileTemplate } from "../templates/document-model/gen/modules/operations.js";
 import { documentModelPhFactoriesFileTemplate } from "../templates/document-model/gen/ph-factories.js";
 import { documentModelGenReducerFileTemplate } from "../templates/document-model/gen/reducer.js";
 import { documentModelSchemaIndexTemplate } from "../templates/document-model/gen/schema/index.js";
@@ -37,6 +48,7 @@ import { documentModelIndexTemplate } from "../templates/document-model/index.js
 import { documentModelModuleFileTemplate } from "../templates/document-model/module.js";
 import { documentModelSrcIndexFileTemplate } from "../templates/document-model/src/index.js";
 import { documentModelTestFileTemplate } from "../templates/document-model/src/tests/document-model.test.js";
+import { documentModelOperationsModuleTestFileTemplate } from "../templates/document-model/src/tests/module.test.js";
 import { documentModelSrcUtilsTemplate } from "../templates/document-model/src/utils.js";
 import { documentModelUtilsTemplate } from "../templates/document-model/utils.js";
 import { buildTsMorphProject } from "../ts-morph-project.js";
@@ -47,12 +59,18 @@ type GenerateDocumentModelArgs = {
   packageName: string;
   documentModelState: DocumentModelGlobalState;
 };
+
+type DocumentModelFileMakerArgs = DocumentModelVariableNames &
+  GenerateDocumentModelArgs & {
+    project: Project;
+  };
 export function tsMorphGenerateDocumentModel({
   projectDir,
   packageName,
   documentModelState,
 }: GenerateDocumentModelArgs) {
   const project = buildTsMorphProject(projectDir);
+
   const { documentModelsSourceFilesPath } =
     getDocumentModelFilePaths(projectDir);
   project.addSourceFilesAtPaths(documentModelsSourceFilesPath);
@@ -65,12 +83,43 @@ export function tsMorphGenerateDocumentModel({
 
   const fileMakerArgs = {
     project,
+    projectDir,
+    packageName,
     ...documentModelVariableNames,
   };
 
-  makeDocumentModelSchemaIndexFile(fileMakerArgs);
-  makeDocumentModelSrcIndexFile(fileMakerArgs);
+  makeRootDirFiles(fileMakerArgs);
+  makeGenDirFiles(fileMakerArgs);
+  makeSrcDirFiles(fileMakerArgs);
+  makeDocumentModelModulesFile(project, projectDir);
+
+  project.saveSync();
+}
+
+function makeRootDirFiles(fileMakerArgs: DocumentModelFileMakerArgs) {
+  const { documentModelDirPath, project } = fileMakerArgs;
+  const dir = project.getDirectory(documentModelDirPath);
+
+  if (!dir) {
+    project.createDirectory(documentModelDirPath);
+    project.saveSync();
+  }
+
   makeDocumentModelIndexFile(fileMakerArgs);
+  makeDocumentModelRootActionsFile(fileMakerArgs);
+  makeDocumentModelModuleFile(fileMakerArgs);
+  makeDocumentModelUtilsFile(fileMakerArgs);
+}
+
+function makeGenDirFiles(fileMakerArgs: DocumentModelFileMakerArgs) {
+  const { documentModelDirPath, project } = fileMakerArgs;
+  const genDirPath = path.join(documentModelDirPath, "gen");
+  const dir = project.getDirectory(genDirPath);
+  if (!dir) {
+    project.createDirectory(genDirPath);
+    project.saveSync();
+  }
+  makeDocumentModelSchemaIndexFile(fileMakerArgs);
   makeDocumentModelGenUtilsFile(fileMakerArgs);
   makeDocumentModelGenTypesFile(fileMakerArgs);
   makeDocumentModelGenCreatorsFile(fileMakerArgs);
@@ -78,23 +127,93 @@ export function tsMorphGenerateDocumentModel({
   makeDocumentModelGenDocumentSchemaFile(fileMakerArgs);
   makeDocumentModelGenReducerFile(fileMakerArgs);
   makeDocumentModelDocumentTypeFile(fileMakerArgs);
-  makeDocumentModelSrcUtilsFile(fileMakerArgs);
-  makeDocumentModelTestFile(fileMakerArgs);
-  makeDocumentModelUtilsFile(fileMakerArgs);
-  makeDocumentModelModuleFile(fileMakerArgs);
   makeDocumentModelGenIndexFile(fileMakerArgs);
   makeDocumentModelGenDocumentModelFile(fileMakerArgs);
   makeDocumentModelGenPhFactoriesFile(fileMakerArgs);
-  makeDocumentModelHooksFile(fileMakerArgs);
-  makeDocumentModelRootActionsFile(fileMakerArgs);
-  makeDocumentModelModulesFile(project, projectDir);
 
-  project.saveSync();
+  const modules = fileMakerArgs.modules;
+
+  for (const module of modules) {
+    const dirPath = path.join(genDirPath, paramCase(module.name));
+    const dir = project.getDirectory(dirPath);
+    if (!dir) {
+      console.log("Creating dir:", dirPath);
+      project.createDirectory(dirPath);
+      project.saveSync();
+    }
+    console.log("Making module files for:", module.name, "in", dirPath);
+    try {
+      makeGenDirOperationModuleFiles({ ...fileMakerArgs, module });
+    } catch (e) {
+      console.error(e);
+    }
+  }
 }
 
-type DocumentModelFileMakerArgs = DocumentModelVariableNames & {
-  project: Project;
-};
+function makeGenDirOperationModuleFiles(
+  fileMakerArgs: DocumentModelFileMakerArgs & { module: ModuleSpecification },
+) {
+  makeOperationModuleGenActionsFile(fileMakerArgs);
+  makeOperationModuleGenCreatorsFile(fileMakerArgs);
+  makeOperationModuleGenOperationsFile(fileMakerArgs);
+  makeOperationModuleGenErrorFile(fileMakerArgs);
+}
+
+function makeSrcDirFiles(fileMakerArgs: DocumentModelFileMakerArgs) {
+  const { documentModelDirPath, project } = fileMakerArgs;
+  const srcDirPath = path.join(documentModelDirPath, "src");
+  const dir = project.getDirectory(srcDirPath);
+  if (!dir) {
+    project.createDirectory(srcDirPath);
+    project.saveSync();
+  }
+  makeDocumentModelSrcIndexFile(fileMakerArgs);
+  makeDocumentModelSrcUtilsFile(fileMakerArgs);
+  makeDocumentModelHooksFile(fileMakerArgs);
+  makeSrcDirTestFiles(fileMakerArgs);
+}
+
+function makeSrcDirTestFiles(fileMakerArgs: DocumentModelFileMakerArgs) {
+  const { documentModelDirPath, project } = fileMakerArgs;
+  const testDirPath = path.join(documentModelDirPath, "src", "tests");
+  const dir = project.getDirectory(testDirPath);
+  if (!dir) {
+    project.createDirectory(testDirPath);
+    project.saveSync();
+  }
+  makeDocumentModelTestFile(fileMakerArgs);
+  const modules = fileMakerArgs.modules;
+
+  for (const module of modules) {
+    makeOperationModuleTestFile({ ...fileMakerArgs, module });
+  }
+}
+
+export function makeOperationModuleTestFile({
+  project,
+  module,
+  ...variableNames
+}: DocumentModelFileMakerArgs & { module: ModuleSpecification }) {
+  const moduleVariableNames =
+    getDocumentModelOperationsModuleVariableNames(module);
+  const paramCaseModuleName = paramCase(module.name);
+  const template = documentModelOperationsModuleTestFileTemplate({
+    ...variableNames,
+    ...moduleVariableNames,
+  });
+  const { documentModelDirPath } = variableNames;
+  const dirPath = buildDocumentModelSrcDirFilePath(
+    documentModelDirPath,
+    "tests",
+  );
+
+  const filePath = path.join(dirPath, `${paramCaseModuleName}.test.ts`);
+
+  const { sourceFile } = getOrCreateSourceFile(project, filePath);
+
+  sourceFile.replaceWithText(template);
+  formatSourceFileWithPrettier(sourceFile);
+}
 
 export function makeDocumentModelModulesFile(
   project: Project,
@@ -113,16 +232,13 @@ export function makeDocumentModelModulesFile(
   });
 }
 
-type MakeDocumentModelModuleFileArgs = DocumentModelVariableNames & {
-  project: Project;
-};
 export function makeDocumentModelModuleFile({
   project,
   phStateName,
   pascalCaseDocumentType,
   documentModelDir,
   documentModelDirPath,
-}: MakeDocumentModelModuleFileArgs) {
+}: DocumentModelFileMakerArgs) {
   const template = documentModelModuleFileTemplate({
     phStateName,
     documentModelDir,
@@ -503,6 +619,139 @@ export function makeDocumentModelRootActionsFile({
     documentModelDirPath,
     "actions.ts",
   );
+
+  const { sourceFile } = getOrCreateSourceFile(project, filePath);
+
+  sourceFile.replaceWithText(template);
+  formatSourceFileWithPrettier(sourceFile);
+}
+
+export function makeOperationModuleGenActionsFile({
+  project,
+  module,
+  ...variableNames
+}: DocumentModelFileMakerArgs & { module: ModuleSpecification }) {
+  const { actions } = getDocumentModelOperationsModuleVariableNames(module);
+  const pascalCaseModuleName = pascalCase(module.name);
+  const paramCaseModuleName = paramCase(module.name);
+  const template = documentModelOperationModuleActionsFileTemplate({
+    ...variableNames,
+    actions,
+    pascalCaseModuleName,
+  });
+  const { documentModelDirPath } = variableNames;
+
+  const dirPath = buildDocumentModelGenDirFilePath(
+    documentModelDirPath,
+    paramCaseModuleName,
+  );
+
+  const dir = project.getDirectory(dirPath);
+
+  if (!dir) {
+    project.createDirectory(dirPath);
+  }
+
+  const filePath = path.join(dirPath, "actions.ts");
+
+  const { sourceFile } = getOrCreateSourceFile(project, filePath);
+
+  sourceFile.replaceWithText(template);
+  formatSourceFileWithPrettier(sourceFile);
+}
+
+export function makeOperationModuleGenCreatorsFile({
+  project,
+  module,
+  ...variableNames
+}: DocumentModelFileMakerArgs & { module: ModuleSpecification }) {
+  const moduleVariableNames =
+    getDocumentModelOperationsModuleVariableNames(module);
+  const paramCaseModuleName = paramCase(module.name);
+  const template = documentModelOperationsModuleCreatorsFileTemplate({
+    ...variableNames,
+    ...moduleVariableNames,
+  });
+  const { documentModelDirPath } = variableNames;
+
+  const dirPath = buildDocumentModelGenDirFilePath(
+    documentModelDirPath,
+    paramCaseModuleName,
+  );
+
+  const dir = project.getDirectory(dirPath);
+
+  if (!dir) {
+    project.createDirectory(dirPath);
+  }
+
+  const filePath = path.join(dirPath, "creators.ts");
+
+  const { sourceFile } = getOrCreateSourceFile(project, filePath);
+
+  sourceFile.replaceWithText(template);
+  formatSourceFileWithPrettier(sourceFile);
+}
+
+export function makeOperationModuleGenOperationsFile({
+  project,
+  module,
+  ...variableNames
+}: DocumentModelFileMakerArgs & { module: ModuleSpecification }) {
+  const moduleVariableNames =
+    getDocumentModelOperationsModuleVariableNames(module);
+  const paramCaseModuleName = paramCase(module.name);
+  const template = documentModelOperationsModuleOperationsFileTemplate({
+    ...variableNames,
+    ...moduleVariableNames,
+  });
+  const { documentModelDirPath } = variableNames;
+
+  const dirPath = buildDocumentModelGenDirFilePath(
+    documentModelDirPath,
+    paramCaseModuleName,
+  );
+
+  const dir = project.getDirectory(dirPath);
+
+  if (!dir) {
+    project.createDirectory(dirPath);
+  }
+
+  const filePath = path.join(dirPath, "operations.ts");
+
+  const { sourceFile } = getOrCreateSourceFile(project, filePath);
+
+  sourceFile.replaceWithText(template);
+  formatSourceFileWithPrettier(sourceFile);
+}
+
+export function makeOperationModuleGenErrorFile({
+  project,
+  module,
+  ...variableNames
+}: DocumentModelFileMakerArgs & { module: ModuleSpecification }) {
+  const moduleVariableNames =
+    getDocumentModelOperationsModuleVariableNames(module);
+  const paramCaseModuleName = paramCase(module.name);
+  const template = documentModelOperationsModuleErrorFileTemplate({
+    ...variableNames,
+    ...moduleVariableNames,
+  });
+  const { documentModelDirPath } = variableNames;
+
+  const dirPath = buildDocumentModelGenDirFilePath(
+    documentModelDirPath,
+    paramCaseModuleName,
+  );
+
+  const dir = project.getDirectory(dirPath);
+
+  if (!dir) {
+    project.createDirectory(dirPath);
+  }
+
+  const filePath = path.join(dirPath, "error.ts");
 
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
 

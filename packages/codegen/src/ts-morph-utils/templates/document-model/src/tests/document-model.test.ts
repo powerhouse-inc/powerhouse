@@ -1,9 +1,8 @@
 import { ts } from "@tmpl/core";
 import type { DocumentModelVariableNames } from "../../../../name-builders/types.js";
 
-export const documentModelTestFileTemplate = (
-  v: DocumentModelVariableNames,
-) => ts`
+export const documentModelTestFileTemplate = (v: DocumentModelVariableNames) =>
+  ts`
 /**
  * This is a scaffold file meant for customization:
  * - change it by adding new tests or modifying the existing ones

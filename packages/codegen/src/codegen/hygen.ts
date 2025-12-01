@@ -148,44 +148,11 @@ export async function hygenGenerateDocumentModel(
   const projectDir = path.dirname(dir);
   const documentModelDir = path.basename(dir);
 
-  // Generate the singular files for the document model logic
-  await run(
-    [
-      "powerhouse",
-      "generate-document-model",
-      "--document-model",
-      JSON.stringify(documentModelState),
-      "--root-dir",
-      dir,
-      "--package-name",
-      packageName,
-    ],
-    { watch, skipFormat, verbose },
-  );
-
-  const latestSpec =
-    documentModelState.specifications[
-      documentModelState.specifications.length - 1
-    ];
-
-  // Generate the module-specific files for the document model logic
-  for (const module of latestSpec.modules) {
-    await run(
-      [
-        "powerhouse",
-        "generate-document-model-module",
-        "--document-model",
-        JSON.stringify(documentModelState),
-        "--root-dir",
-        dir,
-        "--module",
-        module.name,
-        "--package-name",
-        packageName,
-      ],
-      { watch, skipFormat, verbose },
-    );
-  }
+  tsMorphGenerateDocumentModel({
+    projectDir,
+    packageName,
+    documentModelState,
+  });
 
   if (generateReducers) {
     const generator = new TSMorphCodeGenerator(
@@ -197,12 +164,6 @@ export async function hygenGenerateDocumentModel(
 
     await generator.generateReducers();
   }
-
-  tsMorphGenerateDocumentModel({
-    projectDir,
-    packageName,
-    documentModelState,
-  });
 }
 
 type HygenGenerateEditorArgs = {

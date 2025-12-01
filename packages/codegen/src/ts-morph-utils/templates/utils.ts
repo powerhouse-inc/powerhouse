@@ -1,30 +1,19 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-export function getInitialStates(scopeState: { global: any; local: any }) {
-  const { global, local } = scopeState;
-  const scopes = { global, local };
+import { constantCase, pascalCase } from "change-case";
+import type { ActionFromOperation } from "../name-builders/types.js";
 
-  Object.entries(scopes).forEach(([scope, state]) => {
-    if (!isEmptyStateSchema(state.schema) && state.initialValue === "") {
-      throw new Error(
-        `${
-          scope.charAt(0).toLocaleUpperCase() + scope.slice(1)
-        } scope has a defined schema but is missing an initial value.`,
-      );
-    }
-  });
-
-  return {
-    initialGlobalState: handleEmptyState(global.initialValue),
-    initialLocalState: handleEmptyState(local.initialValue),
-  };
+export function getActionTypeName(action: ActionFromOperation) {
+  return `${pascalCase(action.name)}Action`;
 }
 
-function isEmptyStateSchema(schema: string | string[]) {
-  return schema === "" || !schema.includes("{");
+export function getActionInputName(action: ActionFromOperation) {
+  if (!action.hasInput) return;
+  return `${pascalCase(action.name)}Input`;
 }
 
-function handleEmptyState(state: string) {
-  return state === "" ? "{}" : state;
+export function getActionType(action: ActionFromOperation) {
+  return constantCase(action.name);
+}
+
+export function getActionInputTypeNames(actions: ActionFromOperation[]) {
+  return actions.map(getActionInputName).join(",\n");
 }

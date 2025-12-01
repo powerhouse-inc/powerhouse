@@ -1,11 +1,17 @@
 import { camelCase, paramCase, pascalCase } from "change-case";
-import type { DocumentModelGlobalState } from "document-model";
+import {
+  type DocumentModelGlobalState,
+  type ModuleSpecification,
+  type OperationErrorSpecification,
+  type OperationSpecification,
+} from "document-model";
 import path from "node:path";
-import { getInitialStates } from "../templates/utils.js";
+import { getInitialStates } from "../templates/unsafe-utils.js";
 import type {
   DocumentModelDocumentTypeMetadata,
   EditorVariableNames,
 } from "../types.js";
+import type { ActionFromOperation } from "./types.js";
 import {
   buildDispatchFunctionName,
   buildDocumentNameVariableName,
@@ -141,4 +147,72 @@ export function getDocumentModelVariableNames({
     hasLocalSchema,
     modules,
   };
+}
+
+export function getDocumentModelOperationsModuleVariableNames(
+  module: ModuleSpecification,
+) {
+  const actions = getActionsFromModule(module);
+  const errors = getErrorsFromActions(actions);
+  return { actions, errors, module };
+}
+
+function getActionFromOperation(
+  operation: OperationSpecification,
+): ActionFromOperation {
+  const { name, schema, scope = "global", errors } = operation;
+  if (!name) {
+    throw new Error("Operation name is required");
+  }
+  const hasInput = schema !== null;
+  const hasAttachment = hasInput && schema.includes(": Attachment");
+  const state = scope === "global" ? "" : scope;
+
+  return {
+    name,
+    hasInput,
+    hasAttachment,
+    scope,
+    state,
+    errors,
+  };
+}
+
+function makeNormalizedError(error: OperationErrorSpecification) {
+  if (!error.name) {
+    throw new Error("Error name is required");
+  }
+  const code = error.code || pascalCase(error.name);
+  return {
+    ...error,
+    code,
+  };
+}
+
+function getErrorsFromAction(action: ActionFromOperation) {
+  const errors = action.errors;
+  const errorCodeSet = new Set<string>();
+  const normalizedErrors: OperationErrorSpecification[] = [];
+
+  for (const error of errors) {
+    const normalizedError = makeNormalizedError(error);
+    if (!errorCodeSet.has(normalizedError.code)) {
+      errorCodeSet.add(normalizedError.code);
+      normalizedErrors.push(normalizedError);
+    } else {
+      console.warn(
+        `Warning: Duplicate error code "${error.code}" with different fields found`,
+      );
+    }
+  }
+
+  return normalizedErrors;
+}
+
+function getErrorsFromActions(actions: ActionFromOperation[]) {
+  return actions.flatMap(getErrorsFromAction);
+}
+
+function getActionsFromModule(module: ModuleSpecification) {
+  return module.operations.map(getActionFromOperation);
 }
