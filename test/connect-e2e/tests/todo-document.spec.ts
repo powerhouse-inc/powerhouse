@@ -4,18 +4,20 @@ import fs from "fs";
 import JSZip from "jszip";
 import path from "path";
 import { fileURLToPath } from "url";
-import type { DocumentBasicData } from "./helpers/index.js";
+import type { DocumentBasicData } from "@powerhousedao/e2e-utils/types";
 import {
   clickDocumentOperationHistory,
   closeDocumentFromToolbar,
   closeDocumentOperationHistory,
-  createDocument,
-  createDocumentAndFillBasicData,
   goToConnectDrive,
   normalizeCode,
   openDocumentByName,
   verifyDocumentInList,
-} from "./helpers/index.js";
+} from "@powerhousedao/e2e-utils";
+import {
+  createDocument,
+  createDocumentAndFillBasicData,
+} from "./helpers/document.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

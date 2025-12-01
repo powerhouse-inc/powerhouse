@@ -1,6 +1,6 @@
 {
   "name": "document-drive",
-  "version": "4.1.0-dev.123",
+  "version": "5.1.0-dev.1",
   "license": "AGPL-3.0-only",
   "type": "module",
   "types": "./dist/index.d.ts",
@@ -57,7 +57,7 @@
     "test:flaky": "vitest run --coverage test/flaky",
     "test:watch": "vitest --coverage --exclude \"test/flaky/**\"",
     "bench": "vitest bench",
-    "migrate": "prisma generate && prisma db push",
+    "migrate": "prisma generate && prisma db push --skip-generate",
     "copy-prisma": "copyfiles prisma/schema.prisma dist/ && copyfiles 'src/storage/prisma/client/**/*' dist/",
     "prisma-generate": "prisma generate --no-hints && npm run copy-prisma"
   },

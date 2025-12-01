@@ -296,7 +296,7 @@ if (-not (Get-Command pm2 -ErrorAction SilentlyContinue)) {
 }
 
 # Run database migrations
-pnpm prisma db push --schema node_modules/document-drive/dist/prisma/schema.prisma
+pnpm prisma db push --schema node_modules/document-drive/dist/prisma/schema.prisma --skip-generate
 
 # Start services with PM2
 Write-Host "Starting services with PM2..."

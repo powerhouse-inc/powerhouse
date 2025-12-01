@@ -6,7 +6,7 @@ import {
   getPackageManagerFromPath,
   PH_BIN_PATH,
   resolvePackageManagerOptions,
-  validateRemoteDrive,
+  setupRemoteDrive,
   withCustomHelp,
 } from "../utils/index.js";
 
@@ -79,7 +79,7 @@ export function initCommand(program: Command): Command {
     const options = thisCommand.opts<InitOptions>();
 
     if (options.remoteDrive) {
-      const isValid = await validateRemoteDrive(options.remoteDrive);
+      const isValid = await setupRemoteDrive(options.remoteDrive);
       if (!isValid) {
         process.exit(1); // Exit if validation fails
       }

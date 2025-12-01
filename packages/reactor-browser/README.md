@@ -1,692 +1,492 @@
-# Editor state management hooks
-
-This library provides hooks intended to be used by editors (including drive editors) which will be rendered inside of Powerhouse applications such as Connect and Vetra.
-
-## Key concepts
-
-### Reactor
-
-All of the data used by these hooks is ultimately derived from the `Reactor`, which manages the asynchronous eventually consistent state of drives and documents.
-
-### Selected drives, folders and documents
-
-In the application, there are certain items that can be set as "selected".
-
-- selected drive
-- selected folder
-- selected document
-
-We provide hooks for getting the selected item for each:
-
-`useSelectedDrive`
-`useSelectedFolder`
-`useSelectedDocument`
-
-Folders and documents are part of a given drive, so they will both be undefined if the selected drive is undefined.
-
-_Either_ a folder or a document can be selected but not both, so if one is defined then the other will be undefined.
-
-To set the selected drive, we provide a function `setSelectedDrive` which takes either a `DocumentDriveDocument` or a `DocumentDriveDocument['header']['slug']`.
-
-To set the selected document/folder, we provide a function `setSelectedNode` which returns a setter function which can be used for _both_ documents and folders. This function takes either a `Node` or a slug which can be the url slug or the node's id.
-
-## Hooks
-
-### Reactor
-
-```ts
-function useReactor(): Reactor | undefined;
-```
-
-Returns the reactor instance.
-
-##### Usage
-
-```jsx
-import { useReactor } from '@powerhousedao/state`
-
-function MyEditorComponent() {
-  const reactor = useReactor();
-}
-```
-
-### Drives
-
-#### useDrives
-
-```ts
-function useDrives(): DocumentDriveDocument[] | undefined;
-```
-
-Returns the drives for a reactor.
-
-##### Usage
-
-```jsx
-import { useDrives } from "@powerhousedao/state";
-
-function MyEditorComponent() {
-  const drives = useDrives();
-}
-```
-
-#### useDriveById
-
-```ts
-function useDriveById(
-  id: string | null | undefined,
-): DocumentDriveDocument | undefined;
-```
-
-Returns a drive by id.
-
-##### Usage
-
-```jsx
-import { useDriveById } from "@powerhousedao/state";
-
-function MyEditorComponent() {
-  const driveById = useDriveById();
-}
-```
-
-#### useSelectedDrive
-
-```ts
-function useSelectedDrive(): DocumentDriveDocument | undefined;
-```
-
-Returns the selected drive. You can se the selected drive with `setSelectedDrive`.
-
-##### Usage
-
-```jsx
-import { useSelectedDrive } from "@powerhousedao/state";
-
-function MyEditorComponent() {
-  const selectedDrive = useSelectedDrive();
-}
-```
-
-#### drive properties convenience hooks
-
-We provide hooks for accessing various properties on the drive object for your convenience. These use the above hooks to get a drive and then return properties in the object.
-
-```ts
-/** Returns the remote URL for a drive. */
-function useDriveRemoteUrl(
-  driveId: string | null | undefined,
-): string | undefined;
-
-/** Returns the pull responder trigger for a drive. */
-function useDrivePullResponderTrigger(
-  driveId: string | null | undefined,
-): Trigger | undefined;
-
-/** Returns the pull responder URL for a drive. */
-function useDrivePullResponderUrl(
-  driveId: string | null | undefined,
-): string | undefined;
-
-/** Returns whether a drive is remote. */
-function useDriveIsRemote(driveId: string | null | undefined): boolean;
-
-/** Returns the sharing type for a drive. */
-function useDriveSharingType(
-  driveId: string | null | undefined,
-): SharingType | undefined;
-
-/** Returns  whether a drive is available offline. */
-function useDriveAvailableOffline(driveId: string | null | undefined): boolean;
-```
-
-##### Usage
-
-```jsx
-import {
-  useDriveRemoteUrl,
-  useDrivePullResponderTrigger,
-  useDrivePullResponderUrl,
-  useDriveIsRemote,
-  useDriveSharingType,
-  useDriveAvailableOffline,
-} from "@powerhousedao/state";
-
-function MyEditorComponent() {
-  const myDriveId = "some-drive-id";
-  const driveRemoteUrl = useDriveRemoteUrl(myDriveId);
-  const drivePullResponderTrigger = useDrivePullResponderTrigger(myDriveId);
-  const drivePullResponderUrl = useDrivePullResponderUrl(myDriveId);
-  const driveIsRemote = useDriveIsRemote(myDriveId);
-  const driveSharingType = useDriveSharingType(myDriveId);
-  const driveAvailableOffline = useDriveAvailableOffline(myDriveId);
-
-  console.log({
-    driveRemoteUrl,
-    drivePullResponderTrigger,
-    drivePullResponderUrl,
-    driveIsRemote,
-    driveSharingType,
-    driveAvailableOffline,
-  });
-}
-```
-
-### Documents
-
-#### useDocumentById
-
-```ts
-function useDocumentById(id: string | null | undefined): PHDocument | undefined;
-```
-
-Returns a document and a dispatch function by id.
-
-##### Usage
-
-```jsx
-import { useDocumentById } from "@powerhousedao/state";
-
-function MyEditorComponent() {
-  const myDocumentId = "some-document-id";
-  const [document, dispatch] = useDocumentById(myDocumentId);
-}
-```
-
-#### useGetDocument
-
-```ts
-function useGetDocument(id: string | null | undefined): PHDocument | undefined;
-```
-
-Retrieves a document from the reactor and subscribes to changes using React Suspense. This hook will suspend rendering while the document is loading.
-
-##### Usage
-
-```jsx
-import { useGetDocument } from "@powerhousedao/state";
-
-function MyEditorComponent() {
-  const documentId = "some-document-id";
-  const document = useGetDocument(documentId);
-}
-```
-
-#### useGetDocuments
-
-```ts
-function useGetDocuments(
-  ids: string[] | null | undefined,
-): PHDocument[] | undefined;
-```
-
-Retrieves multiple documents from the reactor using React Suspense. This hook will suspend rendering while any of the documents are loading.
-
-##### Usage
-
-```jsx
-import { useGetDocuments } from "@powerhousedao/state";
-
-function MyEditorComponent() {
-  const documentIds = ["doc-id-1", "doc-id-2", "doc-id-3"];
-  const documents = useGetDocuments(documentIds);
-}
-```
-
-#### useGetDocumentAsync
-
-```ts
-function useGetDocumentAsync(id: string | null | undefined): {
-  status: "initial" | "pending" | "success" | "error";
-  data: PHDocument | undefined;
-  isPending: boolean;
-  error: unknown;
-  reload: (() => void) | undefined;
-};
-```
-
-Retrieves a document from the reactor without suspending rendering. Returns the current state of the document loading operation, including status, data, error, and a reload function.
-
-##### Usage
-
-```jsx
-import { useGetDocumentAsync } from "@powerhousedao/state";
-
-function MyEditorComponent() {
-  const documentId = "some-document-id";
-  const { status, data, isPending, error, reload } =
-    useGetDocumentAsync(documentId);
-
-  if (isPending) {
-    return <div>Loading...</div>;
-  }
-
-  if (error) {
-    return <div>Error: {error.message}</div>;
-  }
-
-  if (status === "success" && data) {
-    return <div>Document: {data.name}</div>;
-  }
-}
-```
-
-#### useDocumentsInSelectedDrive
-
-```ts
-function useDocumentsInSelectedDrive(): PHDocument[] | undefined;
-```
-
-Returns the documents in the reactor for the selected drive.
-
-##### Usage
-
-```jsx
-import { useDocumentsInSelectedDrive } from "@powerhousedao/state";
-
-function MyEditorComponent() {
-  const selectedDriveDocuments = useDocumentsInSelectedDrive();
-}
-```
-
-#### useSelectedDocument
-
-```ts
-function useSelectedDocument(): PHDocument | undefined;
-```
-
-Returns the selected document. You can set the selected document with `setSelectedNode`.
-
-##### Usage
-
-```jsx
-import { useSelectedDocument } from "@powerhousedao/state";
-
-function MyEditorComponent() {
-  const selectedDocument = useSelectedDocument();
-}
-```
-
-### Nodes
-
-"Nodes" refers to the items found in a given drive's `state.global.nodes` array. Nodes can represent both files (documents) and folders.
-
-A document in a drive will have a node in the drive's node list which has the same id as the document.
-
-Nodes have an optional `parentFolder` field, which is the id of a folder node in the drive when it is defined. If it is undefined, the node is a direct child of the drive.
-
-A given folder node's children are the nodes in the drive's node list which have their parent folder set to the folder node's id.
-
-```ts
-type FileNode = {
-  documentType: string;
-  id: string;
-  kind: string;
-  name: string;
-  parentFolder: string | null | undefined;
-};
-
-type FolderNode = {
-  id: string;
-  kind: string;
-  name: string;
-  parentFolder: string | null | undefined;
-};
-
-type Node = FileNode | FolderNode;
-```
-
-#### useNodes
-
-Ideally you should not need to handle the list of nodes directly, since we already provide documents and folders. But these hooks are provided just in case.
-
-```ts
-function useNodes(): Node[] | undefined;
-```
-
-Returns the nodes for a drive.
-
-##### Usage
-
-```jsx
-import { useNodes } from "@powerhousedao/state";
-
-function MyEditorComponent() {
-  const nodes = useNodes();
-}
-```
-
-#### useNodeById
-
-```ts
-function useNodeById(id: string | null | undefined): Node | undefined;
-```
-
-Returns a node in the selected drive by id.
-
-##### Usage
-
-```jsx
-import { useNodeById } from "@powerhousedao/state";
-
-function MyEditorComponent() {
-  const myFolderId = "some-folder-id";
-  const myDocumentId = "some-document-id";
-  const myFolderNode = useNodeById(myFolderId);
-  const myFileNode = useNodeById(myDocumentId);
-}
-```
-
-#### useSelectedFolder
-
-```ts
-function useSelectedFolder(): FolderNode | undefined;
-```
-
-Returns the selected folder. You can set the selected folder with `setSelectedNode`
-
-##### Usage
-
-```jsx
-import { useSelectedFolder } from "@powerhousedao/state";
-
-function MyEditorComponent() {
-  const selectedFolder = useSelectedFolder();
-}
-```
-
-#### useSelectedNodePath
-
-```ts
-function useSelectedNodePath(): Node[];
-```
-
-Returns the path to the selected node. Useful for navigational components like breadcrumbs.
-
-##### Usage
-
-```jsx
-import { useSelectedNodePath } from '@powerhousedao/state';
-
-function MyEditorComponent() {
-  const nodes = useSelectedNodePath();
-
-  return <Breadcrumbs nodes={nodes}>
-}
-```
-
-#### useChildNodes/useFolderChildNodes/useFileChildNodes
-
-```ts
-function useChildNodes(): Node[];
-```
+# Reactor Browser Hooks API Documentation
+
+This document contains all documentation comments for the hooks exported from `packages/reactor-browser/src/hooks/index.ts`.
+
+## Table of Contents
+
+- [Allowed Document Model Modules](#allowed-document-model-modules)
+- [Child Nodes](#child-nodes)
+- [Config: Editor](#config-editor)
+- [Config: Set Config by Object](#config-set-config-by-object)
+- [Config: Use Value by Key](#config-use-value-by-key)
+- [Document by ID](#document-by-id)
+- [Document Cache](#document-cache)
+- [Document of Type](#document-of-type)
+- [Document Types](#document-types)
+- [Drives](#drives)
+- [Items in Selected Drive](#items-in-selected-drive)
+- [Items in Selected Folder](#items-in-selected-folder)
+- [Modals](#modals)
+- [Node by ID](#node-by-id)
+- [Node Path](#node-path)
+- [Revision History](#revision-history)
+- [Selected Document](#selected-document)
+- [Selected Drive](#selected-drive)
+- [Selected Folder](#selected-folder)
+- [Selected Node](#selected-node)
+- [Selected Timeline Item](#selected-timeline-item)
+- [Supported Document Types](#supported-document-types)
+- [Timeline Revision](#timeline-revision)
+- [Use Get Switchboard Link](#use-get-switchboard-link)
+- [Vetra Packages](#vetra-packages)
+
+---
+
+## Allowed Document Model Modules
+
+### `useAllowedDocumentModelModules`
+
+No documentation available.
+
+---
+
+## Child Nodes
+
+### `useNodesInSelectedDriveOrFolder`
 
 Returns the child nodes for the selected drive or folder.
 
-```ts
-function useFolderChildNodes(): FolderNode[];
-```
+---
 
-Returns the folder child nodes for the selected drive or folder.
+## Document by ID
 
-```ts
-function useFileChildNodes(): FileNode[];
-```
+### `useDocumentById`
 
-Returns the file (document) child nodes for the selected drive or folder.
+Returns a document by id.
 
-##### Usage
+### `useDocumentsByIds`
 
-```jsx
-import { useChildNodes, useFolderChildNodes, useFileChildNodes } from '@powerhousedao/state';
+Returns documents by ids.
 
-function MyEditorComponent() {
-  const nodes = useChildNodes();
-  const fileNodes = useChildFileNodes();
-  const folderNodes = useChildFolderNodes();
+---
 
-  return (
-    <div>
-     <FilesAndFolders nodes={nodes}>
-     <Files fileNodes={fileNodes}>
-     <Folders folderNodes={folderNodes}>
-    </div>
- )
-}
-```
+## Document Cache
 
-#### useChildNodesForId/useFolderChildNodesForId/useFileChildNodesForId
+### `useDocumentCache`
 
-```ts
-function useChildNodesForId(id: string | null | undefined): Node[];
-```
+Returns all documents in the reactor.
 
-Returns the child nodes for a drive or folder by id.
+### `setDocumentCache`
 
-```ts
-function useFolderChildNodesForId(id: string | null | undefined): FolderNode[];
-```
+Sets all of the documents in the reactor.
 
-Returns the folder child nodes for a drive or folder by id.
+### `addDocumentCacheEventHandler`
 
-```ts
-function useFileChildNodesForId(id: string | null | undefined): FileNode[];
-```
+Adds an event handler for all of the documents in the reactor.
 
-Returns the file (document) child nodes for a drive or folder by id.
+### `useGetDocument`
 
-##### Usage
+Retrieves a document from the reactor and subscribes to changes using React Suspense.
+This hook will suspend rendering while the document is loading.
 
-```jsx
-import { useChildNodesForId, useFolderChildNodesForId, useFileChildNodesForId } from '@powerhousedao/state';
+**Parameters:**
+- `id` - The document ID to retrieve, or null/undefined to skip retrieval
 
-function MyEditorComponent() {
-  const driveOrFolderId = 'some-drive-or-folder-id';
-  const nodes = useChildNodesForId(driveOrFolderId);
-  const fileNodes = useFileChildNodesForId(driveOrFolderId);
-  const folderNodes = useFolderChildNodesForId(driveOrFolderId);
+**Returns:** The document if found, or undefined if id is null/undefined
 
-  return (
-    <div>
-     <FilesAndFolders nodes={nodes}>
-     <Files fileNodes={fileNodes}>
-     <Folders folderNodes={folderNodes}>
-    </div>
- )
-}
-```
+### `useGetDocuments`
 
-#### useNodeName/useNodeKind
+Retrieves multiple documents from the reactor using React Suspense.
+This hook will suspend rendering while any of the documents are loading.
 
-```ts
-function useNodeName(id: string | null | undefined): string | undefined;
-```
+**Parameters:**
+- `ids` - Array of document IDs to retrieve, or null/undefined to skip retrieval
 
-Returns the name of a node.
+**Returns:** An array of documents if found, or undefined if ids is null/undefined
 
-```ts
-function useNodeKind(id: string | null | undefined): NodeKind | undefined;
-```
+### `useGetDocumentAsync`
 
-Returns the kind of a node.
+Retrieves a document from the reactor without suspending rendering.
+Returns the current state of the document loading operation.
 
-##### Usage
+**Parameters:**
+- `id` - The document ID to retrieve, or null/undefined to skip retrieval
 
-```jsx
-import { useNodeName, useNodeKind } from "@powerhousedao/state";
+**Returns:** An object containing:
+- `status`: "initial" | "pending" | "success" | "error"
+- `data`: The document if successfully loaded
+- `isPending`: Boolean indicating if the document is currently loading
+- `error`: Any error that occurred during loading
+- `reload`: Function to force reload the document from cache
 
-function MyEditorComponent() {
-  const nodeId = "some-node-id";
-  const nodeName = useNodeName(nodeId);
-  const nodeKind = useNodeKind(nodeId);
+---
 
-  if (nodeKind === "file") {
-    return <File name={nodeName} />;
-  }
+## Document of Type
 
-  if (nodeKind === "folder") {
-    return <Folder name={nodeName} />;
-  }
-}
-```
+### `useDocumentOfType`
 
-### Vetra packages and modules
+Returns a document of a specific type, throws an error if the found document has a different type.
 
-Vetra packages hold code which can plug into your Connect application. This includes common default modules like the document model document model editor and document drive document model, as well as the modules from your local project and the various packages you have installed.
+---
 
-These modules can be for:
+## Document Types
 
-- document models
-- editors
-- subgraphs
-- import scripts
-- processors
+### `useDocumentTypes`
 
-Each Vetra package contains a `modules` field which optionally contains lists of these modules.
+Returns the document types a drive editor supports.
 
-#### useVetraPackages
+If present, uses the `allowedDocumentTypes` config value.
+Otherwise, uses the supported document types from the reactor.
 
-```ts
-function useVetraPackages(): VetraPackage[] | undefined;
-```
+---
 
-Returns all of the Vetra packages in your Connect app.
+## Drives
 
-##### Usage
+### `useDrives`
 
-```jsx
-import { useVetraPackages } from "@powerhousedao/state";
+Returns all of the drives in the reactor.
 
-function MyEditorComponent() {
-  const vetraPackages = useVetraPackages();
-}
-```
+### `setDrives`
 
-#### useDocumentModelModules
+Sets the drives in the reactor.
 
-```ts
-function useDocumentModelModules(): DocumentModelModule[] | undefined;
-```
+### `addDrivesEventHandler`
 
-Returns the document model modules from your Vetra packages.
+Adds an event handler for the drives.
 
-##### Usage
+---
 
-```jsx
-import { useDocumentModelModules } from "@powerhousedao/state";
+## Items in Selected Drive
 
-function MyEditorComponent() {
-  const documentModelModules = useDocumentModelModules();
-}
-```
+### `useNodesInSelectedDrive`
 
-#### useDocumentModelModuleById
+Returns the nodes in the selected drive.
 
-```ts
-function useDocumentModelModuleById(): DocumentModelModule[] | undefined;
-```
+### `useFileNodesInSelectedDrive`
 
-Returns the document model for a given id (document type).
-_NOTE_ What we call here an id is really the value in the "document type" field in the document model editor
-_NOTE_ Connect assumes that these document types (ids) are unique. It is your responsibility to enforce this.
+Returns the file nodes in the selected drive.
 
-##### Usage
+### `useFolderNodesInSelectedDrive`
 
-```jsx
-import { useDocumentModelModuleById } from "@powerhousedao/state";
+Returns the folder nodes in the selected drive.
 
-function MyEditorComponent() {
-  const documentType = "my-org/my-document";
-  const documentModelModuleById = useDocumentModelModuleById(documentType);
-}
-```
+### `useDocumentsInSelectedDrive`
 
-#### useEditorModules
+Returns the documents in the selected drive.
 
-```ts
-function useEditorModules(): EditorModule[] | undefined;
-```
+### `useDocumentTypesInSelectedDrive`
 
-Returns the editor modules from your Vetra packages.
+Returns the document types supported by the selected drive, as defined by the document model documents present in the drive.
 
-##### Usage
+---
 
-```jsx
-import { useEditorModules } from "@powerhousedao/state";
+## Items in Selected Folder
 
-function MyEditorComponent() {
-  const editorModules = useEditorModules();
-}
-```
+### `useNodesInSelectedFolder`
 
-#### useDriveEditorModules
+Returns the nodes in the selected folder.
 
-```ts
-function useDriveEditorModules(): DriveEditorModule[] | undefined;
-```
+### `useFileNodesInSelectedFolder`
 
-Returns the drive editor modules from your Vetra packages.
+Returns the file nodes in the selected folder.
 
-##### Usage
+### `useFolderNodesInSelectedFolder`
 
-```jsx
-import { useDriveEditorModules } from "@powerhousedao/state";
+Returns the folder nodes in the selected folder.
 
-function MyDriveEditorComponent() {
-  const driveEditorModules = useDriveEditorModules();
-}
-```
+### `useDocumentsInSelectedFolder`
 
-#### useProcessorModules
+Returns the documents in the selected folder.
 
-```ts
-function useProcessorModules(): ProcessorModule[] | undefined;
-```
+---
 
-Returns the processor modules from your Vetra packages.
+## Modals
 
-##### Usage
+### `usePHModal`
 
-```jsx
-import { useProcessorModules } from "@powerhousedao/state";
+Returns the current modal.
 
-function MyProcessorComponent() {
-  const processorModules = useProcessorModules();
-}
-```
+### `setPHModal`
 
-#### useSubgraphModules
+Sets the current modal.
 
-```ts
-function useSubgraphModules(): SubgraphModule[] | undefined;
-```
+### `addModalEventHandler`
 
-Returns the subgraph modules from your Vetra packages.
+Adds an event handler for the modal.
 
-##### Usage
+### `showPHModal`
 
-```jsx
-import { useSubgraphModules } from "@powerhousedao/state";
+Shows a modal.
 
-function MySubgraphComponent() {
-  const subgraphModules = useSubgraphModules();
-}
-```
+### `closePHModal`
 
-#### useImportScriptModules
+Closes the current modal.
 
-```ts
-function useImportScriptModules(): ImportScriptModule[] | undefined;
-```
+### `showCreateDocumentModal`
 
-Returns the import script modules from your Vetra packages.
+Shows the create document modal.
 
-##### Usage
+### `showDeleteNodeModal`
 
-```jsx
-import { useImportScriptModules } from "@powerhousedao/state";
+Shows the delete node modal.
 
-function MyImportScriptComponent() {
-  const importScriptModules = useImportScriptModules();
-}
-```
+---
+
+## Node by ID
+
+### `useNodeById`
+
+Returns a node in the selected drive by id.
+
+---
+
+## Node Path
+
+### `useNodePathById`
+
+Returns the path to a node in the selected drive.
+
+### `useSelectedNodePath`
+
+Returns the path to the currently selected node in the selected drive.
+
+---
+
+## Revision History
+
+### `useRevisionHistoryVisible`
+
+Returns whether revision history is visible.
+
+### `setRevisionHistoryVisible`
+
+Sets revision history visibility.
+
+### `addRevisionHistoryVisibleEventHandler`
+
+Adds event handler for revision history visibility.
+
+### `showRevisionHistory`
+
+Shows the revision history.
+
+### `hideRevisionHistory`
+
+Hides the revision history.
+
+---
+
+## Selected Document
+
+### `useSelectedDocumentId`
+
+Returns the selected document id.
+
+### `useSelectedDocument`
+
+Returns the selected document.
+
+### `useSelectedDocumentOfType`
+
+Returns the selected document of a specific type, throws an error if the found document has a different type.
+
+---
+
+## Selected Drive
+
+### `useSelectedDriveId`
+
+Returns the selected drive id.
+
+### `setSelectedDriveId`
+
+Sets the selected drive id.
+
+### `addSelectedDriveIdEventHandler`
+
+Adds an event handler for the selected drive id.
+
+### `useSelectedDrive`
+
+Returns the selected drive.
+
+### `useSelectedDriveSafe`
+
+Returns the selected drive, or undefined if no drive is selected.
+
+---
+
+## Selected Folder
+
+### `useSelectedFolder`
+
+Returns the selected folder.
+
+---
+
+## Selected Node
+
+### `useSelectedNode`
+
+Returns the selected node.
+
+### `setSelectedNode`
+
+Sets the selected node (file or folder).
+
+---
+
+## Selected Timeline Item
+
+### `useSelectedTimelineItem`
+
+Returns the selected timeline item.
+
+### `setSelectedTimelineItem`
+
+Sets the selected timeline item.
+
+### `addSelectedTimelineItemEventHandler`
+
+Adds event handler for selected timeline item.
+
+---
+
+## Supported Document Types
+
+### `useSupportedDocumentTypesInReactor`
+
+Returns the supported document types for the reactor (derived from the document model modules).
+
+---
+
+## Timeline Revision
+
+### `useSelectedTimelineRevision`
+
+Returns the selected timeline revision.
+
+### `setSelectedTimelineRevision`
+
+Sets the selected timeline revision.
+
+### `addSelectedTimelineRevisionEventHandler`
+
+Adds an event handler for the selected timeline revision.
+
+---
+
+## Use Get Switchboard Link
+
+### `useGetSwitchboardLink`
+
+Hook that returns a function to generate a document's switchboard URL.
+Only returns a function for documents in remote drives.
+Returns null for local drives or when the document/drive cannot be determined.
+
+The returned function generates a fresh bearer token and builds the switchboard URL
+with authentication when called.
+
+**Parameters:**
+- `document` - The document to create a switchboard URL generator for
+
+**Returns:** An async function that returns the switchboard URL, or null if not applicable
+
+---
+
+## Vetra Packages
+
+### `useVetraPackages`
+
+Returns all of the Vetra packages loaded by the Connect instance.
+
+### `addVetraPackagesEventHandler`
+
+Adds the Vetra packages event handler.
+
+### `setVetraPackages`
+
+Sets the Vetra packages for the Connect instance.
+
+---
+
+
+## Config: Editor
+
+### `setIsExternalControlsEnabled`
+
+Sets whether external controls are enabled for a given editor.
+
+### `useIsExternalControlsEnabled`
+
+Gets whether external controls are enabled for a given editor.
+
+### `addIsExternalControlsEnabledEventHandler`
+
+Adds an event handler for when the external controls enabled state changes.
+
+### `setIsDragAndDropEnabled`
+
+Sets whether drag and drop is enabled for a given drive editor.
+
+### `useIsDragAndDropEnabled`
+
+Gets whether drag and drop is enabled for a given drive editor.
+
+### `addIsDragAndDropEnabledEventHandler`
+
+Adds an event handler for when the drag and drop enabled state changes.
+
+### `setAllowedDocumentTypes`
+
+Sets the allowed document types for a given drive editor.
+
+### `useAllowedDocumentTypes`
+
+Defines the document types a drive supports.
+
+Defaults to all of the document types registered in the reactor.
+
+### `addAllowedDocumentTypesEventHandler`
+
+Adds an event handler for when the allowed document types for a given drive editor changes.
+
+---
+
+## Config: Set Config by Object
+
+### `setPHDriveEditorConfig`
+
+Sets the global drive config.
+
+Pass in a partial object of the global drive config to set.
+
+### `setPHDocumentEditorConfig`
+
+Sets the global document config.
+
+Pass in a partial object of the global document config to set.
+
+### `useSetPHDriveEditorConfig`
+
+Wrapper hook for setting the global drive editor config.
+
+Automatically sets the global drive editor config when the component mounts.
+
+Pass in a partial object of the global drive editor config to set.
+
+### `useSetPHDocumentEditorConfig`
+
+Wrapper hook for setting the global document editor config.
+
+Automatically sets the global document editor config when the component mounts.
+
+Pass in a partial object of the global document editor config to set.
+
+---
+
+## Config: Use Value by Key
+
+### `usePHDriveEditorConfigByKey`
+
+Gets the value of an item in the global drive config for a given key.
+
+Strongly typed, inferred from type definition for the key.
+
+### `usePHDocumentEditorConfigByKey`
+
+Gets the value of an item in the global document config for a given key.
+
+Strongly typed, inferred from type definition for the key.
+
+---

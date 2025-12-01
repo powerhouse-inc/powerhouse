@@ -1,0 +1,42 @@
+{
+  "name": "@powerhousedao/e2e-utils",
+  "version": "1.0.0",
+  "type": "module",
+  "files": [
+    "/dist"
+  ],
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    },
+    "./helpers": {
+      "development": "./src/helpers/index.ts",
+      "types": "./dist/src/helpers/index.d.ts",
+      "default": "./dist/src/helpers/index.js"
+    },
+    "./helpers/*": {
+      "development": "./src/helpers/*.ts",
+      "types": "./dist/src/helpers/*.d.ts",
+      "default": "./dist/src/helpers/*.js"
+    },
+    "./types": {
+      "development": "./src/types/index.ts",
+      "types": "./dist/src/types/index.d.ts",
+      "default": "./dist/src/types/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "tsc": "tsc",
+    "lint": "eslint"
+  },
+  "peerDependencies": {
+    "@playwright/test": "^1.41.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.41.2",
+    "@powerhousedao/config": "workspace:*"
+  }
+}
