@@ -818,24 +818,26 @@ export function createTestChannelFactory(
 
   return {
     instance(
+      remoteId: string,
+      remoteName: string,
       config: ChannelConfig,
       cursorStorage: ISyncCursorStorage,
     ): IChannel {
       const send = (envelope: SyncEnvelope): void => {
-        const peerChannel = channelRegistry.get(config.channelId);
+        const peerChannel = channelRegistry.get(remoteId);
         if (peerChannel) {
           peerChannel.receive(envelope);
         }
       };
 
       const channel = new InternalChannel(
-        config.channelId,
-        config.remoteName,
+        remoteId,
+        remoteName,
         cursorStorage,
         send,
       );
 
-      channelRegistry.set(config.channelId, channel);
+      channelRegistry.set(remoteId, channel);
 
       return channel;
     },

@@ -1,11 +1,14 @@
-import type {
-  IReactorClient,
-  JobInfo,
-  PagedResults,
-  PagingOptions,
-  PropagationMode,
-  SearchFilter,
-  ViewFilter,
+import {
+  SyncOperation,
+  type IReactorClient,
+  type ISyncManager,
+  type JobInfo,
+  type PagedResults,
+  type PagingOptions,
+  type PropagationMode,
+  type RemoteFilter,
+  type SearchFilter,
+  type ViewFilter,
 } from "@powerhousedao/reactor";
 import type { DocumentModelModule, PHDocument } from "document-model";
 import { GraphQLError } from "graphql";
@@ -692,4 +695,164 @@ export async function deleteDocuments(
       `Failed to delete documents: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
+}
+
+export async function createChannel(
+  syncManager: ISyncManager,
+  args: {
+    input: {
+      id: string;
+      name: string;
+      collectionId: string;
+      filter: {
+        documentId: readonly string[];
+        scope: readonly string[];
+        branch: string;
+      };
+    };
+  },
+): Promise<boolean> {
+  try {
+    const existing = syncManager.getById(args.input.id);
+    if (existing) {
+      return true;
+    }
+  } catch {
+    // Ignore errors when checking for existing sync connection
+  }
+
+  const filter: RemoteFilter = {
+    documentId: [...args.input.filter.documentId],
+    scope: [...args.input.filter.scope],
+    branch: args.input.filter.branch,
+  };
+
+  try {
+    await syncManager.add(
+      args.input.name,
+      args.input.collectionId,
+      {
+        type: "gql",
+        parameters: {},
+      },
+      filter,
+      {},
+      args.input.id,
+    );
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to create channel: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  return true;
+}
+
+export function pollSyncEnvelopes(
+  syncManager: ISyncManager,
+  args: {
+    channelId: string;
+    cursorOrdinal: number;
+  },
+): Promise<any[]> {
+  let remote;
+  try {
+    remote = syncManager.getById(args.channelId);
+  } catch (error) {
+    throw new GraphQLError(
+      `Channel not found: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  const operations = remote.channel.outbox.items;
+
+  const envelopes = operations.map((syncOp: SyncOperation) => ({
+    type: "OPERATIONS",
+    channelMeta: {
+      id: args.channelId,
+    },
+    operations: syncOp.operations.map((op) => ({
+      operation: op.operation,
+      context: op.context,
+    })),
+    cursor: {
+      remoteName: remote.name,
+      cursorOrdinal: args.cursorOrdinal + 1,
+      lastSyncedAtUtcMs: Date.now().toString(),
+    },
+  }));
+
+  return Promise.resolve(envelopes);
+}
+
+export function pushSyncEnvelope(
+  syncManager: ISyncManager,
+  args: {
+    envelope: {
+      type: string;
+      channelMeta: { id: string };
+      operations?: Array<{
+        operation: any;
+        context: {
+          documentId: string;
+          documentType: string;
+          scope: string;
+          branch: string;
+        };
+      }> | null;
+      cursor?: {
+        remoteName: string;
+        cursorOrdinal: number;
+        lastSyncedAtUtcMs?: string | null;
+      } | null;
+    };
+  },
+): Promise<boolean> {
+  let remote;
+  try {
+    remote = syncManager.getById(args.envelope.channelMeta.id);
+  } catch (error) {
+    throw new GraphQLError(
+      `Channel not found: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  if (!args.envelope.operations || args.envelope.operations.length === 0) {
+    return Promise.resolve(true);
+  }
+
+  const firstOp = args.envelope.operations[0];
+  const syncOpId = `syncop-${args.envelope.channelMeta.id}-${Date.now()}-${crypto.randomUUID()}`;
+  const scopes = [
+    ...new Set(args.envelope.operations.map((op) => op.context.scope)),
+  ];
+  const operations = args.envelope.operations.map((op) => ({
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    operation: op.operation,
+    context: {
+      documentId: op.context.documentId,
+      documentType: op.context.documentType,
+      scope: op.context.scope,
+      branch: op.context.branch,
+    },
+  }));
+
+  const syncOp = new SyncOperation(
+    syncOpId,
+    remote.name,
+    firstOp.context.documentId,
+    scopes,
+    firstOp.context.branch,
+    operations,
+  );
+
+  try {
+    remote.channel.inbox.add(syncOp);
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to push sync envelope: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  return Promise.resolve(true);
 }

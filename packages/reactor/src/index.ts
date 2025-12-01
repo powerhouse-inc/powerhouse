@@ -8,7 +8,12 @@ export {
 export { ReactorClientBuilder } from "./core/builder.js";
 export { ReactorBuilder } from "./core/reactor-builder.js";
 export { Reactor } from "./core/reactor.js";
-export { type IReactor, type ReactorFeatures } from "./core/types.js";
+export {
+  type IReactor,
+  type ReactorFeatures,
+  type ReactorModule,
+  type SyncModule,
+} from "./core/types.js";
 export { JobAwaiter, type IJobAwaiter } from "./shared/awaiter.js";
 export {
   ConsistencyTracker,
@@ -46,6 +51,7 @@ export { type IEventBus } from "./events/interfaces.js";
 export {
   EventBusAggregateError,
   OperationEventTypes,
+  type OperationsReadyEvent,
   type OperationWrittenEvent,
   type Unsubscribe,
 } from "./events/types.js";
@@ -150,6 +156,7 @@ export {
   ChannelError,
   InternalChannelError,
   InternalChannel,
+  GqlChannelFactory,
   SyncOperation,
   SyncOperationAggregateError,
   Mailbox,

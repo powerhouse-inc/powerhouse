@@ -17,15 +17,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  e2e-tests:
-    name: Run E2E Tests
+  connect-e2e-tests:
+    name: Run Connect E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -81,7 +81,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: playwright-report
+          name: connect-playwright-report
           path: test/connect-e2e/playwright-report/
           retention-days: 30
 
@@ -89,19 +89,84 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-results
+          name: connect-test-results
           path: test/connect-e2e/test-results/
           retention-days: 30
 
+  vetra-e2e-tests:
+    name: Run Vetra E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm install:ci
+
+      - name: Build typescript project
+        run: pnpm tsc:build
+
+      - name: Run misc build scripts
+        run: pnpm build:misc
+
+      - name: Run install again after generating binaries
+        run: pnpm install
+
+      - name: Run css build scripts
+        run: pnpm build:css
+
+      - name: Run vite build scripts
+        run: pnpm build:vite
+
+      - name: Install Playwright Browsers
+        run: pnpm exec playwright install --with-deps chromium
+        working-directory: ./test/vetra-e2e
+
+      - name: Run Playwright tests
+        run: pnpm test:e2e
+        working-directory: ./test/vetra-e2e
+
+      - name: Upload Playwright Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vetra-playwright-report
+          path: test/vetra-e2e/playwright-report/
+          retention-days: 30
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vetra-test-results
+          path: test/vetra-e2e/test-results/
+          retention-days: 30
+
   notify-discord:
-    if: failure() && github.event_name != 'pull_request'
+    if: always() && github.event_name != 'pull_request' && (needs.connect-e2e-tests.result == 'failure' || needs.vetra-e2e-tests.result == 'failure')
     runs-on: ubuntu-24.04
-    needs: [e2e-tests]
+    needs: [connect-e2e-tests, vetra-e2e-tests]
     steps:
       - name: Send Discord notification
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_FAILURES }}
           DISCORD_USER_MAPPING: ${{ secrets.DISCORD_USER_MAPPING }}
+          CONNECT_RESULT: ${{ needs.connect-e2e-tests.result }}
+          VETRA_RESULT: ${{ needs.vetra-e2e-tests.result }}
         run: |
           DISCORD_USER=$(echo "$DISCORD_USER_MAPPING" | jq -r --arg GH_USER "${{ github.actor }}" '.[$GH_USER] // ""')
           MENTION_STRING=""
@@ -109,10 +174,22 @@ jobs:
             MENTION_STRING="<@${DISCORD_USER}> "
           fi
 
+          FAILED_JOBS=""
+          if [ "$CONNECT_RESULT" == "failure" ]; then
+            FAILED_JOBS="Connect E2E"
+          fi
+          if [ "$VETRA_RESULT" == "failure" ]; then
+            if [ ! -z "$FAILED_JOBS" ]; then
+              FAILED_JOBS="$FAILED_JOBS, Vetra E2E"
+            else
+              FAILED_JOBS="Vetra E2E"
+            fi
+          fi
+
           curl -H "Content-Type: application/json" -X POST "$DISCORD_WEBHOOK" -d '{
             "embeds": [{
               "title": "⚠️ E2E Tests Failed",
-              "description": "**Author:** '"${MENTION_STRING}"'\n**Commit:** [`${{ github.event.head_commit.message }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) \n**Failed job:** [`e2e-tests`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
+              "description": "**Author:** '"${MENTION_STRING}"'\n**Commit:** [`${{ github.event.head_commit.message }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) \n**Failed jobs:** '"${FAILED_JOBS}"'\n**Workflow run:** [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
               "color": 16711680
             }]
           }'

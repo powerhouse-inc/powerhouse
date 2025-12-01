@@ -110,12 +110,11 @@ describe("SyncManager - Unit Tests", () => {
     it("should load remotes from storage and recreate channels", async () => {
       const remoteRecords: RemoteRecord[] = [
         {
+          id: "channel1",
           name: "remote1",
           collectionId: "collection1",
           channelConfig: {
             type: "internal",
-            channelId: "channel1",
-            remoteName: "remote1",
             parameters: {},
           },
           filter: { documentId: [], scope: [], branch: "main" },
@@ -133,6 +132,8 @@ describe("SyncManager - Unit Tests", () => {
 
       expect(mockRemoteStorage.list).toHaveBeenCalled();
       expect(mockChannelFactory.instance).toHaveBeenCalledWith(
+        remoteRecords[0].id,
+        remoteRecords[0].name,
         remoteRecords[0].channelConfig,
         mockCursorStorage,
       );
@@ -145,12 +146,11 @@ describe("SyncManager - Unit Tests", () => {
     it("should wire up channel callbacks for each remote", async () => {
       const remoteRecords: RemoteRecord[] = [
         {
+          id: "channel1",
           name: "remote1",
           collectionId: "collection1",
           channelConfig: {
             type: "internal",
-            channelId: "channel1",
-            remoteName: "remote1",
             parameters: {},
           },
           filter: { documentId: [], scope: [], branch: "main" },
@@ -183,12 +183,11 @@ describe("SyncManager - Unit Tests", () => {
     it("should shutdown all channels and clear remotes", async () => {
       const remoteRecords: RemoteRecord[] = [
         {
+          id: "channel1",
           name: "remote1",
           collectionId: "collection1",
           channelConfig: {
             type: "internal",
-            channelId: "channel1",
-            remoteName: "remote1",
             parameters: {},
           },
           filter: { documentId: [], scope: [], branch: "main" },
@@ -227,8 +226,6 @@ describe("SyncManager - Unit Tests", () => {
 
       const channelConfig: ChannelConfig = {
         type: "internal",
-        channelId: "channel1",
-        remoteName: "remote1",
         parameters: {},
       };
 
@@ -250,6 +247,8 @@ describe("SyncManager - Unit Tests", () => {
         }),
       );
       expect(mockChannelFactory.instance).toHaveBeenCalledWith(
+        expect.any(String),
+        "remote1",
         channelConfig,
         mockCursorStorage,
       );
@@ -260,8 +259,6 @@ describe("SyncManager - Unit Tests", () => {
 
       const channelConfig: ChannelConfig = {
         type: "internal",
-        channelId: "channel1",
-        remoteName: "remote1",
         parameters: {},
       };
 
@@ -279,8 +276,7 @@ describe("SyncManager - Unit Tests", () => {
       await expect(
         syncManager.add("remote1", "collection1", {
           type: "internal",
-          channelId: "channel1",
-          remoteName: "remote1",
+
           parameters: {},
         }),
       ).rejects.toThrow("SyncManager is shutdown and cannot add remotes");
@@ -291,8 +287,6 @@ describe("SyncManager - Unit Tests", () => {
 
       const channelConfig: ChannelConfig = {
         type: "internal",
-        channelId: "channel1",
-        remoteName: "remote1",
         parameters: {},
       };
 
@@ -313,8 +307,6 @@ describe("SyncManager - Unit Tests", () => {
 
       const channelConfig: ChannelConfig = {
         type: "internal",
-        channelId: "channel1",
-        remoteName: "remote1",
         parameters: {},
       };
 
@@ -342,14 +334,12 @@ describe("SyncManager - Unit Tests", () => {
 
       const channelConfig: ChannelConfig = {
         type: "internal",
-        channelId: "channel1",
-        remoteName: "remote1",
         parameters: {},
       };
 
       await syncManager.add("remote1", "collection1", channelConfig);
 
-      const remote = syncManager.get("remote1");
+      const remote = syncManager.getByName("remote1");
 
       expect(remote.name).toBe("remote1");
       expect(remote.collectionId).toBe("collection1");
@@ -358,7 +348,7 @@ describe("SyncManager - Unit Tests", () => {
     it("should throw error if remote does not exist", async () => {
       await syncManager.startup();
 
-      expect(() => syncManager.get("nonexistent")).toThrow(
+      expect(() => syncManager.getByName("nonexistent")).toThrow(
         "Remote with name 'nonexistent' does not exist",
       );
     });
@@ -370,15 +360,13 @@ describe("SyncManager - Unit Tests", () => {
 
       const config1: ChannelConfig = {
         type: "internal",
-        channelId: "channel1",
-        remoteName: "remote1",
+
         parameters: {},
       };
 
       const config2: ChannelConfig = {
         type: "internal",
-        channelId: "channel2",
-        remoteName: "remote2",
+
         parameters: {},
       };
 
@@ -407,8 +395,6 @@ describe("SyncManager - Unit Tests", () => {
 
       const channelConfig: ChannelConfig = {
         type: "internal",
-        channelId: "channel1",
-        remoteName: "remote1",
         parameters: {},
       };
 
@@ -452,8 +438,6 @@ describe("SyncManager - Unit Tests", () => {
 
       const channelConfig: ChannelConfig = {
         type: "internal",
-        channelId: "channel1",
-        remoteName: "remote1",
         parameters: {},
       };
 
@@ -495,8 +479,6 @@ describe("SyncManager - Unit Tests", () => {
 
       const channelConfig: ChannelConfig = {
         type: "internal",
-        channelId: "channel1",
-        remoteName: "remote1",
         parameters: {},
       };
 

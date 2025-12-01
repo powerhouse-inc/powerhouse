@@ -1,9 +1,17 @@
-import { type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { handleCookieConsent } from "./cookie-consent.js";
+
 /**
- * Helper function to navigate into a folder and verify it's visible
- * @param page Playwright Page object
- * @param folderName Name of the folder to navigate into
+ * Helper function to create a local drive.
+ * Navigates to root, handles cookie consent, and creates a new local drive.
+ *
+ * @param page - Playwright Page object
+ * @param driveName - Name for the new drive
+ *
+ * @example
+ * ```typescript
+ * await createLocalDrive(page, "My Test Drive");
+ * ```
  */
 export async function createLocalDrive(page: Page, driveName: string) {
   // Navigate to URL

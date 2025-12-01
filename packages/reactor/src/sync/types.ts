@@ -67,12 +67,11 @@ export type RemoteStatus = {
 
 export type ChannelConfig = {
   type: string;
-  channelId: string;
-  remoteName: string;
   parameters: Record<string, unknown>;
 };
 
 export type RemoteRecord = {
+  id: string;
   name: string;
   collectionId: string;
   channelConfig: ChannelConfig;

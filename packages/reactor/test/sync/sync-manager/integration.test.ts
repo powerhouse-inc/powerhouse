@@ -77,12 +77,11 @@ describe("SyncManager Integration", () => {
     it("should load existing remotes on startup", async () => {
       const channelConfig: ChannelConfig = {
         type: "internal",
-        channelId: "channel1",
-        remoteName: "remote1",
         parameters: {},
       };
 
       await syncRemoteStorage.upsert({
+        id: "channel1",
         name: "remote1",
         collectionId: "collection1",
         channelConfig,
@@ -117,8 +116,6 @@ describe("SyncManager Integration", () => {
 
       const channelConfig: ChannelConfig = {
         type: "internal",
-        channelId: "channel1",
-        remoteName: "remote1",
         parameters: {},
       };
 
@@ -143,8 +140,6 @@ describe("SyncManager Integration", () => {
 
       const channelConfig: ChannelConfig = {
         type: "internal",
-        channelId: "channel1",
-        remoteName: "remote1",
         parameters: {},
       };
 
@@ -162,14 +157,12 @@ describe("SyncManager Integration", () => {
 
       const channelConfig: ChannelConfig = {
         type: "internal",
-        channelId: "channel1",
-        remoteName: "remote1",
         parameters: {},
       };
 
       await syncManager.add("remote1", "collection1", channelConfig);
 
-      const remote = syncManager.get("remote1");
+      const remote = syncManager.getByName("remote1");
 
       expect(remote.name).toBe("remote1");
     });
@@ -179,15 +172,13 @@ describe("SyncManager Integration", () => {
 
       const config1: ChannelConfig = {
         type: "internal",
-        channelId: "channel1",
-        remoteName: "remote1",
+
         parameters: {},
       };
 
       const config2: ChannelConfig = {
         type: "internal",
-        channelId: "channel2",
-        remoteName: "remote2",
+
         parameters: {},
       };
 
@@ -206,8 +197,6 @@ describe("SyncManager Integration", () => {
 
       const channelConfig: ChannelConfig = {
         type: "internal",
-        channelId: "channel1",
-        remoteName: "remote1",
         parameters: {},
       };
 
@@ -246,7 +235,7 @@ describe("SyncManager Integration", () => {
         operations,
       });
 
-      const remote = syncManager.get("remote1");
+      const remote = syncManager.getByName("remote1");
       expect(remote.channel.outbox.items).toHaveLength(1);
     });
 
@@ -255,8 +244,6 @@ describe("SyncManager Integration", () => {
 
       const channelConfig: ChannelConfig = {
         type: "internal",
-        channelId: "channel1",
-        remoteName: "remote1",
         parameters: {},
       };
 
@@ -295,7 +282,7 @@ describe("SyncManager Integration", () => {
         operations,
       });
 
-      const remote = syncManager.get("remote1");
+      const remote = syncManager.getByName("remote1");
       expect(remote.channel.outbox.items).toHaveLength(0);
     });
 
@@ -304,15 +291,13 @@ describe("SyncManager Integration", () => {
 
       const config1: ChannelConfig = {
         type: "internal",
-        channelId: "channel1",
-        remoteName: "remote1",
+
         parameters: {},
       };
 
       const config2: ChannelConfig = {
         type: "internal",
-        channelId: "channel2",
-        remoteName: "remote2",
+
         parameters: {},
       };
 
@@ -357,8 +342,8 @@ describe("SyncManager Integration", () => {
         operations,
       });
 
-      const remote1 = syncManager.get("remote1");
-      const remote2 = syncManager.get("remote2");
+      const remote1 = syncManager.getByName("remote1");
+      const remote2 = syncManager.getByName("remote2");
 
       expect(remote1.channel.outbox.items).toHaveLength(1);
       expect(remote2.channel.outbox.items).toHaveLength(1);
@@ -371,12 +356,14 @@ describe("SyncManager Integration", () => {
 
       const channelConfig: ChannelConfig = {
         type: "internal",
-        channelId: "channel1",
-        remoteName: "remote1",
         parameters: {},
       };
 
-      await syncManager.add("remote1", "collection1", channelConfig);
+      const remote = await syncManager.add(
+        "remote1",
+        "collection1",
+        channelConfig,
+      );
 
       const operations: OperationWithContext[] = [
         {
@@ -403,12 +390,12 @@ describe("SyncManager Integration", () => {
         },
       ];
 
-      const channel = channelRegistry.get("channel1");
+      const channel = channelRegistry.get(remote.id);
       expect(channel).toBeDefined();
 
       channel!.receive({
         type: "operations",
-        channelMeta: { id: "channel1" },
+        channelMeta: { id: remote.id },
         operations,
       });
 
@@ -430,12 +417,14 @@ describe("SyncManager Integration", () => {
 
       const channelConfig: ChannelConfig = {
         type: "internal",
-        channelId: "channel1",
-        remoteName: "remote1",
         parameters: {},
       };
 
-      await syncManager.add("remote1", "collection1", channelConfig);
+      const remote = await syncManager.add(
+        "remote1",
+        "collection1",
+        channelConfig,
+      );
 
       const operations: OperationWithContext[] = [
         {
@@ -462,18 +451,18 @@ describe("SyncManager Integration", () => {
         },
       ];
 
-      const channel = channelRegistry.get("channel1");
+      const channel = channelRegistry.get(remote.id);
       channel!.receive({
         type: "operations",
-        channelMeta: { id: "channel1" },
+        channelMeta: { id: remote.id },
         operations,
       });
 
       await new Promise((resolve) => setTimeout(resolve, 50));
 
-      const remote = syncManager.get("remote1");
-      expect(remote.channel.deadLetter.items).toHaveLength(1);
-      expect(remote.channel.deadLetter.items[0].status).toBe(
+      const remoteRecord = syncManager.getByName("remote1");
+      expect(remoteRecord.channel.deadLetter.items).toHaveLength(1);
+      expect(remoteRecord.channel.deadLetter.items[0].status).toBe(
         SyncOperationStatus.Error,
       );
     });
@@ -485,8 +474,6 @@ describe("SyncManager Integration", () => {
 
       const channelConfig: ChannelConfig = {
         type: "internal",
-        channelId: "channel1",
-        remoteName: "remote1",
         parameters: {},
       };
 
@@ -521,7 +508,7 @@ describe("SyncManager Integration", () => {
         operations,
       });
 
-      const remote = syncManager.get("remote1");
+      const remote = syncManager.getByName("remote1");
       expect(remote.channel.outbox.items).toHaveLength(1);
 
       const job = remote.channel.outbox.items[0];

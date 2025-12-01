@@ -8,7 +8,7 @@ WORKDIR /app
 # Set up pnpm
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable && corepack install --global pnpm
+RUN corepack enable && corepack install --global pnpm@10.22.0
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 
 # Environment variables

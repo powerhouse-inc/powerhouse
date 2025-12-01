@@ -1,10 +1,26 @@
 import type {
+  BaseDocumentDriveServer,
+  IDocumentOperationStorage,
+  IDocumentStorage,
+} from "document-drive";
+import type {
   Action,
   DocumentModelModule,
   Operation,
   PHDocument,
 } from "document-model";
+import type { Kysely } from "kysely";
 
+import type { IOperationIndex } from "../cache/operation-index-types.js";
+import type { IWriteCache } from "../cache/write/interfaces.js";
+import type { IEventBus } from "../events/interfaces.js";
+import type { IJobExecutorManager } from "../executor/interfaces.js";
+import type { IJobTracker } from "../job-tracker/interfaces.js";
+import type { IQueue } from "../queue/interfaces.js";
+import type { IReadModelCoordinator } from "../read-models/interfaces.js";
+import type { DocumentViewDatabase } from "../read-models/types.js";
+import type { IDocumentModelRegistry } from "../registry/interfaces.js";
+import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
 import type {
   ConsistencyToken,
   JobInfo,
@@ -14,13 +30,19 @@ import type {
   ShutdownStatus,
   ViewFilter,
 } from "../shared/types.js";
-
-import type { DocumentViewDatabase } from "../read-models/types.js";
+import type {
+  IDocumentIndexer,
+  IDocumentView,
+  IKeyframeStore,
+  IOperationStore,
+  ISyncCursorStorage,
+  ISyncRemoteStorage,
+} from "../storage/interfaces.js";
 import type {
   DocumentIndexerDatabase,
   Database as StorageDatabase,
 } from "../storage/kysely/types.js";
-import type { ISyncManager } from "../sync/interfaces.js";
+import type { IChannelFactory, ISyncManager } from "../sync/interfaces.js";
 
 /**
  * A single mutation job within a batch request.
@@ -52,15 +74,8 @@ export type BatchMutationResult = {
  * The main Reactor interface that serves as a facade for document operations.
  * This interface provides a unified API for document management, including
  * creation, retrieval, mutation, and deletion operations.
- *
- * Phase 2 of the refactoring plan: IReactor Facade (Strangler Fig Pattern)
  */
 export interface IReactor {
-  /**
-   * Gets the sync manager if synchronization is enabled.
-   */
-  get syncManager(): ISyncManager | undefined;
-
   /**
    * Signals that the reactor should shutdown.
    */
@@ -290,3 +305,40 @@ export type ExecutorConfig = {
 export type Database = StorageDatabase &
   DocumentViewDatabase &
   DocumentIndexerDatabase;
+
+/**
+ * Container for all sync manager dependencies created during the build process.
+ */
+export interface SyncModule {
+  remoteStorage: ISyncRemoteStorage;
+  cursorStorage: ISyncCursorStorage;
+  channelFactory: IChannelFactory;
+  syncManager: ISyncManager;
+}
+
+/**
+ * Container for all reactor dependencies created during the build process.
+ * Provides direct access to internal components for advanced use cases,
+ * testing, or integration scenarios.
+ */
+export interface ReactorModule {
+  driveServer: BaseDocumentDriveServer;
+  storage: IDocumentStorage & IDocumentOperationStorage;
+  eventBus: IEventBus;
+  documentModelRegistry: IDocumentModelRegistry;
+  queue: IQueue;
+  jobTracker: IJobTracker;
+  executorManager: IJobExecutorManager;
+  database: Kysely<Database>;
+  operationStore: IOperationStore;
+  keyframeStore: IKeyframeStore;
+  writeCache: IWriteCache;
+  operationIndex: IOperationIndex;
+  documentView: IDocumentView;
+  documentViewConsistencyTracker: IConsistencyTracker;
+  documentIndexer: IDocumentIndexer;
+  documentIndexerConsistencyTracker: IConsistencyTracker;
+  readModelCoordinator: IReadModelCoordinator;
+  syncModule: SyncModule | undefined;
+  reactor: IReactor;
+}

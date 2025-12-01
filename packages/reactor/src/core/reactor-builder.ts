@@ -32,6 +32,8 @@ import type {
   ExecutorConfig,
   IReactor,
   ReactorFeatures,
+  ReactorModule,
+  SyncModule,
 } from "./types.js";
 
 import type { IJobExecutorManager } from "#executor/interfaces.js";
@@ -124,11 +126,16 @@ export class ReactorBuilder {
   }
 
   async build(): Promise<IReactor> {
+    const module = await this.buildModule();
+    return module.reactor;
+  }
+
+  async buildModule(): Promise<ReactorModule> {
     const storage = this.storage || new MemoryStorage();
 
-    const registry = new DocumentModelRegistry();
+    const documentModelRegistry = new DocumentModelRegistry();
     if (this.documentModels.length > 0) {
-      registry.registerModules(...this.documentModels);
+      documentModelRegistry.registerModules(...this.documentModels);
     }
 
     const builder = new DriveReactorBuilder(this.documentModels).withStorage(
@@ -138,22 +145,22 @@ export class ReactorBuilder {
     await driveServer.initialize();
 
     const kyselyPGlite = await KyselyPGlite.create();
-    const db = new Kysely<Database>({
+    const database = new Kysely<Database>({
       dialect: kyselyPGlite.dialect,
     });
 
     if (this.migrationStrategy === "auto") {
-      const result = await runMigrations(db);
+      const result = await runMigrations(database);
       if (!result.success && result.error) {
         throw new Error(`Database migration failed: ${result.error.message}`);
       }
     }
 
     const operationStore = new KyselyOperationStore(
-      db as unknown as Kysely<StorageDatabase>,
+      database as unknown as Kysely<StorageDatabase>,
     );
     const keyframeStore = new KyselyKeyframeStore(
-      db as unknown as Kysely<StorageDatabase>,
+      database as unknown as Kysely<StorageDatabase>,
     );
 
     const eventBus = this.eventBus || new EventBus();
@@ -169,20 +176,21 @@ export class ReactorBuilder {
     const writeCache = new KyselyWriteCache(
       keyframeStore,
       operationStore,
-      registry,
+      documentModelRegistry,
       cacheConfig,
     );
     await writeCache.startup();
 
     const operationIndex = new KyselyOperationIndex(
-      db as unknown as Kysely<StorageDatabase>,
+      database as unknown as Kysely<StorageDatabase>,
     );
 
-    if (!this.executorManager) {
-      this.executorManager = new SimpleJobExecutorManager(
+    let executorManager = this.executorManager;
+    if (!executorManager) {
+      executorManager = new SimpleJobExecutorManager(
         () =>
           new SimpleJobExecutor(
-            registry,
+            documentModelRegistry,
             storage,
             storage,
             operationStore,
@@ -197,7 +205,7 @@ export class ReactorBuilder {
       );
     }
 
-    await this.executorManager.start(this.executorConfig.count);
+    await executorManager.start(this.executorConfig.count);
 
     const readModelInstances: IReadModel[] = Array.from(
       new Set([...this.readModels]),
@@ -206,7 +214,7 @@ export class ReactorBuilder {
     const documentViewConsistencyTracker = new ConsistencyTracker();
     const documentView = new KyselyDocumentView(
       // @ts-expect-error - Database type is a superset that includes all required tables
-      db,
+      database,
       operationStore,
       documentViewConsistencyTracker,
     );
@@ -214,14 +222,15 @@ export class ReactorBuilder {
     readModelInstances.push(documentView);
 
     const documentIndexerConsistencyTracker = new ConsistencyTracker();
-    this.documentIndexer = new KyselyDocumentIndexer(
+    const documentIndexer = new KyselyDocumentIndexer(
       // @ts-expect-error - Database type is a superset that includes all required tables
-      db,
+      database,
       operationStore,
       documentIndexerConsistencyTracker,
     );
-    await this.documentIndexer.init();
-    readModelInstances.push(this.documentIndexer);
+    await documentIndexer.init();
+    readModelInstances.push(documentIndexer);
+    this.documentIndexer = documentIndexer;
 
     const readModelCoordinator = this.readModelCoordinatorFactory
       ? this.readModelCoordinatorFactory(eventBus, readModelInstances)
@@ -235,21 +244,41 @@ export class ReactorBuilder {
       readModelCoordinator,
       this.features,
       documentView,
-      this.documentIndexer,
+      documentIndexer,
       operationStore,
     );
 
+    let syncModule: SyncModule | undefined = undefined;
     if (this.syncBuilder) {
-      const syncManager = this.syncBuilder.build(
+      syncModule = this.syncBuilder.buildModule(
         reactor,
         operationIndex,
         eventBus,
-        db as unknown as Kysely<StorageDatabase>,
+        database as unknown as Kysely<StorageDatabase>,
       );
-      reactor.setSync(syncManager);
-      await syncManager.startup();
+      await syncModule.syncManager.startup();
     }
 
-    return reactor;
+    return {
+      driveServer,
+      storage,
+      eventBus,
+      documentModelRegistry,
+      queue,
+      jobTracker,
+      executorManager,
+      database,
+      operationStore,
+      keyframeStore,
+      writeCache,
+      operationIndex,
+      documentView,
+      documentViewConsistencyTracker,
+      documentIndexer,
+      documentIndexerConsistencyTracker,
+      readModelCoordinator,
+      syncModule,
+      reactor,
+    };
   }
 }

@@ -545,3 +545,258 @@ Example error response:
   }
 }
 ```
+
+## Synchronization Operations
+
+The Reactor GraphQL API includes operations for network-based synchronization between reactor instances via the GqlChannel implementation.
+
+### Schema Types
+
+#### SyncEnvelope Types
+
+```graphql
+# Synchronization types
+type Operation {
+  index: Int!
+  timestampUtcMs: String!
+  hash: String!
+  skip: Int!
+  error: String
+  id: String
+  action: Action!
+}
+
+type OperationContext {
+  documentId: String!
+  documentType: String!
+  scope: String!
+  branch: String!
+  # Note: resultingState is intentionally excluded from sync operations
+  # It is ephemeral and recalculated locally by each reactor
+}
+
+type OperationWithContext {
+  operation: Operation!
+  context: OperationContext!
+}
+
+type ChannelMeta {
+  id: String!
+}
+
+type RemoteCursor {
+  remoteName: String!
+  cursorOrdinal: Int!
+  lastSyncedAtUtcMs: String
+}
+
+enum SyncEnvelopeType {
+  OPERATIONS
+  ACK
+}
+
+type SyncEnvelope {
+  type: SyncEnvelopeType!
+  channelMeta: ChannelMeta!
+  operations: [OperationWithContext!]
+  cursor: RemoteCursor
+}
+```
+
+#### Input Types
+
+```graphql
+input OperationInput {
+  index: Int!
+  timestampUtcMs: String!
+  hash: String!
+  skip: Int!
+  error: String
+  id: String
+  action: JSONObject!
+}
+
+input OperationContextInput {
+  documentId: String!
+  documentType: String!
+  scope: String!
+  branch: String!
+  # Note: resultingState is intentionally excluded from sync operations
+  # It is ephemeral and recalculated locally by each reactor
+}
+
+input OperationWithContextInput {
+  operation: OperationInput!
+  context: OperationContextInput!
+}
+
+input ChannelMetaInput {
+  id: String!
+}
+
+input RemoteCursorInput {
+  remoteName: String!
+  cursorOrdinal: Int!
+  lastSyncedAtUtcMs: String
+}
+
+input SyncEnvelopeInput {
+  type: SyncEnvelopeType!
+  channelMeta: ChannelMetaInput!
+  operations: [OperationWithContextInput!]
+  cursor: RemoteCursorInput
+}
+```
+
+### Operations
+
+#### Query: pollSyncEnvelopes
+
+Polls for pending sync envelopes from a channel. Used by GqlChannel to retrieve operations from a remote reactor.
+
+```graphql
+query PollSyncEnvelopes($channelId: String!, $cursorOrdinal: Int!) {
+  pollSyncEnvelopes(channelId: $channelId, cursorOrdinal: $cursorOrdinal) {
+    type
+    channelMeta {
+      id
+    }
+    operations {
+      operation {
+        index
+        timestampUtcMs
+        hash
+        skip
+        error
+        id
+        action
+      }
+      context {
+        documentId
+        documentType
+        scope
+        branch
+      }
+    }
+    cursor {
+      remoteName
+      cursorOrdinal
+      lastSyncedAtUtcMs
+    }
+  }
+}
+```
+
+**Variables:**
+```json
+{
+  "channelId": "550e8400-e29b-41d4-a716-446655440000",
+  "cursorOrdinal": 42
+}
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "pollSyncEnvelopes": [
+      {
+        "type": "OPERATIONS",
+        "channelMeta": {
+          "id": "550e8400-e29b-41d4-a716-446655440000"
+        },
+        "operations": [
+          {
+            "operation": {
+              "index": 43,
+              "timestampUtcMs": "1699564800000",
+              "hash": "abc123...",
+              "skip": 0,
+              "error": null,
+              "id": "op-123",
+              "action": { /* action data */ }
+            },
+            "context": {
+              "documentId": "doc-456",
+              "documentType": "budget",
+              "scope": "global",
+              "branch": "main"
+            }
+          }
+        ],
+        "cursor": {
+          "remoteName": "production-reactor",
+          "cursorOrdinal": 43,
+          "lastSyncedAtUtcMs": "1699564800000"
+        }
+      }
+    ]
+  }
+}
+```
+
+#### Mutation: pushSyncEnvelope
+
+Pushes a sync envelope to the reactor. Used by GqlChannel to send operations to a remote reactor.
+
+```graphql
+mutation PushSyncEnvelope($envelope: SyncEnvelopeInput!) {
+  pushSyncEnvelope(envelope: $envelope)
+}
+```
+
+**Variables:**
+```json
+{
+  "envelope": {
+    "type": "OPERATIONS",
+    "channelMeta": {
+      "id": "550e8400-e29b-41d4-a716-446655440000"
+    },
+    "operations": [
+      {
+        "operation": {
+          "index": 44,
+          "timestampUtcMs": "1699565000000",
+          "hash": "def456...",
+          "skip": 0,
+          "id": "op-124",
+          "action": { /* action data */ }
+        },
+        "context": {
+          "documentId": "doc-456",
+          "documentType": "budget",
+          "scope": "global",
+          "branch": "main"
+        }
+      }
+    ]
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "pushSyncEnvelope": true
+  }
+}
+```
+
+### Usage with GqlChannel
+
+These operations are automatically used by `GqlChannel` for network synchronization. See [GqlChannel Documentation](../Synchronization/gql-channel.md) for implementation details.
+
+**Server-side:** Implement resolvers to serve operations from `IOperationStore`
+
+**Client-side:** `GqlChannel` automatically polls and pushes via these operations
+
+### Resolver Integration
+
+The resolver functions require integration with the reactor package's `IOperationStore` and `ISyncManager`. Current implementation in reactor-api includes stub resolvers that document the required integration points.
+
+For full implementation details, see:
+- [Synchronization Specification](../Synchronization/index.md)
+- [GqlChannel Implementation](../Synchronization/gql-channel.md)
+- [Resolver Source Code](../../../../reactor-api/src/graphql/reactor/resolvers.ts)

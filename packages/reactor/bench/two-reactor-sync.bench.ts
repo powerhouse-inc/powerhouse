@@ -1,7 +1,7 @@
 import { Bench } from "tinybench";
 import { driveDocumentModelModule } from "document-drive";
 import { ReactorBuilder } from "../src/core/reactor-builder.js";
-import type { IReactor } from "../src/core/types.js";
+import type { IReactor, ReactorModule } from "../src/core/types.js";
 import { EventBus } from "../src/events/event-bus.js";
 import type { IEventBus } from "../src/events/interfaces.js";
 import type { ISyncCursorStorage } from "../src/storage/interfaces.js";
@@ -13,6 +13,8 @@ import type { ChannelConfig, SyncEnvelope } from "../src/sync/types.js";
 type TwoReactorSetup = {
   reactorA: IReactor;
   reactorB: IReactor;
+  moduleA: ReactorModule;
+  moduleB: ReactorModule;
   channelRegistry: Map<string, InternalChannel>;
   eventBusA: IEventBus;
   eventBusB: IEventBus;
@@ -31,10 +33,11 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
   const createChannelFactory = (): IChannelFactory => {
     return {
       instance(
+        remoteId: string,
+        remoteName: string,
         config: ChannelConfig,
         cursorStorage: ISyncCursorStorage,
       ): InternalChannel {
-        const remoteName = config.remoteName;
         const peerName = peerMapping.get(remoteName);
 
         const send = (envelope: SyncEnvelope): void => {
@@ -50,8 +53,8 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
         };
 
         const channel = new InternalChannel(
-          config.channelId,
-          config.remoteName,
+          remoteId,
+          remoteName,
           cursorStorage,
           send,
         );
@@ -66,23 +69,24 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
   const eventBusA = new EventBus();
   const eventBusB = new EventBus();
 
-  const reactorA = await new ReactorBuilder()
+  const moduleA = await new ReactorBuilder()
     .withEventBus(eventBusA)
     .withSync(new SyncBuilder().withChannelFactory(createChannelFactory()))
-    .build();
+    .buildModule();
 
-  const reactorB = await new ReactorBuilder()
+  const moduleB = await new ReactorBuilder()
     .withEventBus(eventBusB)
     .withSync(new SyncBuilder().withChannelFactory(createChannelFactory()))
-    .build();
+    .buildModule();
 
-  await reactorA.syncManager!.add(
+  const reactorA = moduleA.reactor;
+  const reactorB = moduleB.reactor;
+
+  await moduleA.syncModule!.syncManager.add(
     "remoteB",
     "collection1",
     {
       type: "internal",
-      channelId: "channelB",
-      remoteName: "remoteB",
       parameters: {},
     },
     {
@@ -92,13 +96,11 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
     },
   );
 
-  await reactorB.syncManager!.add(
+  await moduleB.syncModule!.syncManager.add(
     "remoteA",
     "collection1",
     {
       type: "internal",
-      channelId: "channelA",
-      remoteName: "remoteA",
       parameters: {},
     },
     {
@@ -108,7 +110,15 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
     },
   );
 
-  return { reactorA, reactorB, channelRegistry, eventBusA, eventBusB };
+  return {
+    reactorA,
+    reactorB,
+    moduleA,
+    moduleB,
+    channelRegistry,
+    eventBusA,
+    eventBusB,
+  };
 }
 
 async function waitForSync(
