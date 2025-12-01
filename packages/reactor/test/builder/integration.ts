@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
-import type { IReactor } from "../../src/core/types.js";
+import type { IReactor, ReactorModule } from "../../src/core/types.js";
 import type { ISyncCursorStorage } from "../../src/storage/interfaces.js";
 import { InternalChannel } from "../../src/sync/channels/internal-channel.js";
 import type { IChannelFactory } from "../../src/sync/interfaces.js";
@@ -9,6 +9,7 @@ import type { ChannelConfig } from "../../src/sync/types.js";
 
 describe("Reactor with SyncBuilder Integration", () => {
   let reactor: IReactor;
+  let module: ReactorModule;
 
   afterEach(() => {
     reactor.kill();
@@ -36,12 +37,13 @@ describe("Reactor with SyncBuilder Integration", () => {
         },
       };
 
-      reactor = await new ReactorBuilder()
+      module = await new ReactorBuilder()
         .withSync(new SyncBuilder().withChannelFactory(channelFactory))
-        .build();
+        .buildModule();
+      reactor = module.reactor;
 
       expect(reactor).toBeDefined();
-      expect(reactor.syncManager).toBeDefined();
+      expect(module.syncModule).toBeDefined();
     });
 
     it("should allow adding remotes after reactor is built", async () => {
@@ -65,13 +67,14 @@ describe("Reactor with SyncBuilder Integration", () => {
         },
       };
 
-      reactor = await new ReactorBuilder()
+      module = await new ReactorBuilder()
         .withSync(new SyncBuilder().withChannelFactory(channelFactory))
-        .build();
+        .buildModule();
+      reactor = module.reactor;
 
-      expect(reactor.syncManager).toBeDefined();
+      expect(module.syncModule).toBeDefined();
 
-      const remote = await reactor.syncManager!.add(
+      const remote = await module.syncModule!.syncManager.add(
         "test-remote",
         "test-collection",
         {
@@ -89,12 +92,12 @@ describe("Reactor with SyncBuilder Integration", () => {
       expect(remote.name).toBe("test-remote");
       expect(remote.collectionId).toBe("test-collection");
 
-      const remotes = reactor.syncManager!.list();
+      const remotes = module.syncModule!.syncManager.list();
       expect(remotes).toHaveLength(1);
       expect(remotes[0].name).toBe("test-remote");
     });
 
-    it("should shutdown sync manager when reactor is killed", async () => {
+    it("should shutdown sync manager independently from reactor", async () => {
       const channelRegistry = new Map<string, InternalChannel>();
 
       const channelFactory: IChannelFactory = {
@@ -115,24 +118,32 @@ describe("Reactor with SyncBuilder Integration", () => {
         },
       };
 
-      reactor = await new ReactorBuilder()
+      module = await new ReactorBuilder()
         .withSync(new SyncBuilder().withChannelFactory(channelFactory))
-        .build();
+        .buildModule();
+      reactor = module.reactor;
 
-      await reactor.syncManager!.add("test-remote", "test-collection", {
-        type: "internal",
+      await module.syncModule!.syncManager.add(
+        "test-remote",
+        "test-collection",
+        {
+          type: "internal",
 
-        parameters: {},
-      });
+          parameters: {},
+        },
+      );
 
-      const remotesBefore = reactor.syncManager!.list();
+      const remotesBefore = module.syncModule!.syncManager.list();
       expect(remotesBefore).toHaveLength(1);
 
-      const status = reactor.kill();
-      expect(status.isShutdown).toBe(true);
+      const syncStatus = module.syncModule!.syncManager.shutdown();
+      expect(syncStatus.isShutdown).toBe(true);
 
-      const remotesAfter = reactor.syncManager!.list();
+      const remotesAfter = module.syncModule!.syncManager.list();
       expect(remotesAfter).toHaveLength(0);
+
+      const reactorStatus = reactor.kill();
+      expect(reactorStatus.isShutdown).toBe(true);
     });
 
     it("should reload remotes on startup from storage", async () => {
@@ -156,11 +167,12 @@ describe("Reactor with SyncBuilder Integration", () => {
         },
       };
 
-      reactor = await new ReactorBuilder()
+      module = await new ReactorBuilder()
         .withSync(new SyncBuilder().withChannelFactory(channelFactory))
-        .build();
+        .buildModule();
+      reactor = module.reactor;
 
-      await reactor.syncManager!.add(
+      await module.syncModule!.syncManager.add(
         "persistent-remote",
         "persistent-collection",
         {
@@ -170,7 +182,7 @@ describe("Reactor with SyncBuilder Integration", () => {
         },
       );
 
-      const remotesBefore = reactor.syncManager!.list();
+      const remotesBefore = module.syncModule!.syncManager.list();
       expect(remotesBefore).toHaveLength(1);
       expect(remotesBefore[0].name).toBe("persistent-remote");
     });
@@ -178,10 +190,11 @@ describe("Reactor with SyncBuilder Integration", () => {
 
   describe("ReactorBuilder without SyncBuilder", () => {
     it("should build a reactor without sync when SyncBuilder is not provided", async () => {
-      reactor = await new ReactorBuilder().build();
+      module = await new ReactorBuilder().buildModule();
+      reactor = module.reactor;
 
       expect(reactor).toBeDefined();
-      expect(reactor.syncManager).toBeUndefined();
+      expect(module.syncModule).toBeUndefined();
     });
   });
 
@@ -207,19 +220,24 @@ describe("Reactor with SyncBuilder Integration", () => {
         },
       };
 
-      reactor = await new ReactorBuilder()
+      module = await new ReactorBuilder()
         .withSync(new SyncBuilder().withChannelFactory(channelFactory))
-        .build();
+        .buildModule();
+      reactor = module.reactor;
 
-      expect(reactor.syncManager).toBeDefined();
+      expect(module.syncModule).toBeDefined();
 
-      await reactor.syncManager!.add("test-remote", "test-collection", {
-        type: "internal",
+      await module.syncModule!.syncManager.add(
+        "test-remote",
+        "test-collection",
+        {
+          type: "internal",
 
-        parameters: {},
-      });
+          parameters: {},
+        },
+      );
 
-      const remotes = reactor.syncManager!.list();
+      const remotes = module.syncModule!.syncManager.list();
       expect(remotes).toHaveLength(1);
     });
 

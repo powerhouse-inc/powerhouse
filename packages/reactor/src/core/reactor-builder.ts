@@ -256,7 +256,6 @@ export class ReactorBuilder {
         eventBus,
         database as unknown as Kysely<StorageDatabase>,
       );
-      reactor.setSync(syncModule.syncManager);
       await syncModule.syncManager.startup();
     }
 

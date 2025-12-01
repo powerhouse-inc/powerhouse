@@ -74,15 +74,8 @@ export type BatchMutationResult = {
  * The main Reactor interface that serves as a facade for document operations.
  * This interface provides a unified API for document management, including
  * creation, retrieval, mutation, and deletion operations.
- *
- * Phase 2 of the refactoring plan: IReactor Facade (Strangler Fig Pattern)
  */
 export interface IReactor {
-  /**
-   * Gets the sync manager if synchronization is enabled.
-   */
-  get syncManager(): ISyncManager | undefined;
-
   /**
    * Signals that the reactor should shutdown.
    */

@@ -1,7 +1,7 @@
 import { driveDocumentModelModule } from "document-drive";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
-import type { IReactor } from "../../src/core/types.js";
+import type { IReactor, ReactorModule } from "../../src/core/types.js";
 import { EventBus } from "../../src/events/event-bus.js";
 import type { IEventBus } from "../../src/events/interfaces.js";
 import {
@@ -18,6 +18,8 @@ import type { ChannelConfig, SyncEnvelope } from "../../src/sync/types.js";
 type TwoReactorSetup = {
   reactorA: IReactor;
   reactorB: IReactor;
+  moduleA: ReactorModule;
+  moduleB: ReactorModule;
   channelRegistry: Map<string, InternalChannel>;
   eventBusA: IEventBus;
   eventBusB: IEventBus;
@@ -156,17 +158,20 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
   const eventBusA = new EventBus();
   const eventBusB = new EventBus();
 
-  const reactorA = await new ReactorBuilder()
+  const moduleA = await new ReactorBuilder()
     .withEventBus(eventBusA)
     .withSync(new SyncBuilder().withChannelFactory(createChannelFactory()))
-    .build();
+    .buildModule();
 
-  const reactorB = await new ReactorBuilder()
+  const moduleB = await new ReactorBuilder()
     .withEventBus(eventBusB)
     .withSync(new SyncBuilder().withChannelFactory(createChannelFactory()))
-    .build();
+    .buildModule();
 
-  await reactorA.syncManager!.add(
+  const reactorA = moduleA.reactor;
+  const reactorB = moduleB.reactor;
+
+  await moduleA.syncModule!.syncManager.add(
     "remoteB",
     "collection1",
     {
@@ -180,7 +185,7 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
     },
   );
 
-  await reactorB.syncManager!.add(
+  await moduleB.syncModule!.syncManager.add(
     "remoteA",
     "collection1",
     {
@@ -194,7 +199,15 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
     },
   );
 
-  return { reactorA, reactorB, channelRegistry, eventBusA, eventBusB };
+  return {
+    reactorA,
+    reactorB,
+    moduleA,
+    moduleB,
+    channelRegistry,
+    eventBusA,
+    eventBusB,
+  };
 }
 
 describe("Two-Reactor Sync", () => {
