@@ -4,7 +4,17 @@ import type {
   Operation,
   PHDocument,
 } from "document-model";
+import type { Kysely } from "kysely";
 
+import type { IOperationIndex } from "../cache/operation-index-types.js";
+import type { IWriteCache } from "../cache/write/interfaces.js";
+import type { IEventBus } from "../events/interfaces.js";
+import type { IJobExecutorManager } from "../executor/interfaces.js";
+import type { IJobTracker } from "../job-tracker/interfaces.js";
+import type { IQueue } from "../queue/interfaces.js";
+import type { IReadModelCoordinator } from "../read-models/interfaces.js";
+import type { DocumentViewDatabase } from "../read-models/types.js";
+import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import type {
   ConsistencyToken,
   JobInfo,
@@ -14,8 +24,12 @@ import type {
   ShutdownStatus,
   ViewFilter,
 } from "../shared/types.js";
-
-import type { DocumentViewDatabase } from "../read-models/types.js";
+import type {
+  IDocumentIndexer,
+  IDocumentView,
+  IKeyframeStore,
+  IOperationStore,
+} from "../storage/interfaces.js";
 import type {
   DocumentIndexerDatabase,
   Database as StorageDatabase,
@@ -290,3 +304,26 @@ export type ExecutorConfig = {
 export type Database = StorageDatabase &
   DocumentViewDatabase &
   DocumentIndexerDatabase;
+
+/**
+ * Container for all reactor dependencies created during the build process.
+ * Provides direct access to internal components for advanced use cases,
+ * testing, or integration scenarios.
+ */
+export interface ReactorModule {
+  eventBus: IEventBus;
+  documentModelRegistry: IDocumentModelRegistry;
+  queue: IQueue;
+  jobTracker: IJobTracker;
+  executorManager: IJobExecutorManager;
+  database: Kysely<Database>;
+  operationStore: IOperationStore;
+  keyframeStore: IKeyframeStore;
+  writeCache: IWriteCache;
+  operationIndex: IOperationIndex;
+  documentView: IDocumentView;
+  documentIndexer: IDocumentIndexer;
+  readModelCoordinator: IReadModelCoordinator;
+  syncManager: ISyncManager | undefined;
+  reactor: IReactor;
+}

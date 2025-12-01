@@ -8,7 +8,11 @@ export {
 export { ReactorClientBuilder } from "./core/builder.js";
 export { ReactorBuilder } from "./core/reactor-builder.js";
 export { Reactor } from "./core/reactor.js";
-export { type IReactor, type ReactorFeatures } from "./core/types.js";
+export {
+  type IReactor,
+  type ReactorFeatures,
+  type ReactorModule,
+} from "./core/types.js";
 export { JobAwaiter, type IJobAwaiter } from "./shared/awaiter.js";
 export {
   ConsistencyTracker,
