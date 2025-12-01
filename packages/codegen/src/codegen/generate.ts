@@ -25,10 +25,10 @@ import {
 import type { CodegenOptions } from "./types.js";
 import { getDocumentTypesMap, loadDocumentModel } from "./utils.js";
 
-export async function generate(config: PowerhouseConfig) {
+export async function generate(config: PowerhouseConfig, legacy = true) {
   const { skipFormat, watch } = config;
   await generateSchemas(config.documentModelsDir, { skipFormat, watch });
-  await generateAll(config.documentModelsDir, { skipFormat, watch });
+  await generateAll(config.documentModelsDir, { skipFormat, watch, legacy });
 }
 
 export async function generateFromFile(

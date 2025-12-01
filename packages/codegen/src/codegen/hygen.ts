@@ -8,7 +8,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readPackage } from "read-pkg";
 import { TSMorphCodeGenerator } from "../ts-morph-generator/index.js";
-import { makeDocumentModelModulesFile } from "../ts-morph-utils/file-builders/document-model.js";
+import {
+  makeDocumentModelModulesFile,
+  tsMorphGenerateDocumentModel,
+} from "../ts-morph-utils/file-builders/document-model.js";
 import { makeEditorsModulesFile } from "../ts-morph-utils/file-builders/editor-common.js";
 import { makeSubgraphsIndexFile } from "../ts-morph-utils/file-builders/subgraphs.js";
 import { buildTsMorphProject } from "../ts-morph-utils/ts-morph-project.js";
@@ -83,10 +86,19 @@ export async function run(
 
 export async function generateAll(
   dir: string,
-  { watch = false, skipFormat = false, verbose = true, force = true } = {},
+  {
+    watch = false,
+    skipFormat = false,
+    verbose = true,
+    force = true,
+    legacy = true,
+  } = {},
 ) {
   const files = fs.readdirSync(dir, { withFileTypes: true });
   const documentModelStates: DocumentModelGlobalState[] = [];
+  const packageName = await readPackage().then((pkg) => pkg.name);
+  const projectDir = path.dirname(dir);
+  const documentModelDir = path.basename(dir);
 
   for (const directory of files.filter((f) => f.isDirectory())) {
     const documentModelPath = path.join(
@@ -98,28 +110,30 @@ export async function generateAll(
       continue;
     }
 
-    const packageName = await readPackage().then((pkg) => pkg.name);
-
     try {
       const documentModel = await loadDocumentModel(documentModelPath);
       documentModelStates.push(documentModel);
-      await hygenGenerateDocumentModel(documentModel, dir, packageName, {
-        watch,
-        skipFormat,
-        verbose,
-        generateReducers: false,
-        force,
-      });
+      if (legacy) {
+        await hygenGenerateDocumentModel(documentModel, dir, packageName, {
+          watch,
+          skipFormat,
+          verbose,
+          generateReducers: false,
+          force,
+        });
+      } else {
+        await tsMorphGenerateDocumentModel({
+          projectDir,
+          packageName,
+          documentModelState: documentModel,
+        });
+      }
     } catch (error) {
       if (verbose) {
         console.error(directory.name, error);
       }
     }
   }
-
-  const projectDir = path.dirname(dir);
-  const documentModelDir = path.basename(dir);
-  const packageName = await readPackage().then((pkg) => pkg.name);
 
   const generator = new TSMorphCodeGenerator(
     projectDir,
