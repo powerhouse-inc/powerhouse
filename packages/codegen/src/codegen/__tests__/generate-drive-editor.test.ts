@@ -120,7 +120,7 @@ describe("generateDriveEditor", () => {
       expect(editorContent).toContain(
         `export default function Editor(props: EditorProps)`,
       );
-      expect(editorContent).toContain(`<DriveExplorer {...props}/>`);
+      expect(editorContent).toContain(`<DriveExplorer {...props}`);
       expect(editorContent).toContain(
         `useSetPHDriveEditorConfig(editorConfig)`,
       );

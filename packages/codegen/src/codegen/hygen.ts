@@ -1,5 +1,5 @@
 import type { PowerhouseConfig } from "@powerhousedao/config";
-import { paramCase, pascalCase } from "change-case";
+import { pascalCase } from "change-case";
 import type { DocumentModelGlobalState } from "document-model";
 import { Logger, runner } from "hygen";
 import fs from "node:fs";
@@ -8,8 +8,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readPackage } from "read-pkg";
 import { TSMorphCodeGenerator } from "../ts-morph-generator/index.js";
-import { makeEditorModuleFile } from "../ts-morph-utils/file-builders/document-editor.js";
 import { makeDocumentModelModulesFile } from "../ts-morph-utils/file-builders/document-model.js";
+import { makeEditorsModulesFile } from "../ts-morph-utils/file-builders/editor-common.js";
 import { makeSubgraphsIndexFile } from "../ts-morph-utils/file-builders/subgraphs.js";
 import { buildTsMorphProject } from "../ts-morph-utils/ts-morph-project.js";
 import type { CodegenOptions, DocumentTypesMap } from "./types.js";
@@ -262,14 +262,8 @@ export async function hygenGenerateEditor(
   await run(args, { skipFormat, verbose });
   const projectDir = path.dirname(dir);
   const project = buildTsMorphProject(projectDir);
-
-  makeEditorModuleFile({
-    project,
-    editorName: name,
-    editorModuleFilePath: editorDirName || paramCase(name),
-    editorId: editorId || paramCase(name),
-    legacyMultipleDocumentTypes: documentTypes,
-  });
+  makeEditorsModulesFile(project, projectDir);
+  project.saveSync();
 }
 
 export async function hygenGenerateProcessor(
@@ -433,12 +427,6 @@ export async function hygenGenerateDriveEditor(options: {
 
   const projectDir = path.dirname(dir);
   const project = buildTsMorphProject(projectDir);
-
-  makeEditorModuleFile({
-    project,
-    editorName: name,
-    editorModuleFilePath: driveEditorDirName || paramCase(name),
-    editorId: appId || paramCase(name),
-    documentModelId: "powerhouse/document-drive",
-  });
+  makeEditorsModulesFile(project, projectDir);
+  project.saveSync();
 }

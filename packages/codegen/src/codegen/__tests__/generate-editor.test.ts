@@ -96,10 +96,10 @@ describe("generateEditor", () => {
       expect(fs.existsSync(editorPath)).toBe(true);
       const editorContent = fs.readFileSync(editorPath, "utf-8");
       expect(editorContent).toContain(
-        `import { EditTestDocDocumentName } from "./components/EditName.js";`,
+        `import { EditTestDocName } from "./components/EditName.js";`,
       );
       expect(editorContent).toContain(`export default function Editor()`);
-      expect(editorContent).toContain(`<EditTestDocDocumentName />`);
+      expect(editorContent).toContain(`<EditTestDocName />`);
 
       const modulePath = path.join(editorDir, "module.ts");
       expect(fs.existsSync(modulePath)).toBe(true);
