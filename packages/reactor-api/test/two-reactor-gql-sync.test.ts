@@ -1,6 +1,4 @@
-import { driveDocumentModelModule } from "document-drive";
 import {
-  EventBus,
   GqlChannelFactory,
   JobStatus,
   OperationEventTypes,
@@ -12,6 +10,7 @@ import {
   type OperationsReadyEvent,
   type OperationWithContext,
 } from "@powerhousedao/reactor";
+import { driveDocumentModelModule } from "document-drive";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createResolverBridge } from "./utils/gql-resolver-bridge.js";
 
@@ -115,24 +114,25 @@ async function setupTwoReactorsWithGqlChannel(): Promise<TwoReactorSetup> {
 
   const resolverBridge = createResolverBridge(syncManagerRegistry);
 
-  const eventBusA = new EventBus();
-  const eventBusB = new EventBus();
-
   const gqlChannelFactoryA = new GqlChannelFactory();
   const gqlChannelFactoryB = new GqlChannelFactory();
 
-  const reactorA = await new ReactorBuilder()
-    .withEventBus(eventBusA)
+  const reactorAModule = await new ReactorBuilder()
     .withSync(new SyncBuilder().withChannelFactory(gqlChannelFactoryA))
-    .build();
+    .buildModule();
+  const reactorA = reactorAModule.reactor;
+  const eventBusA = reactorAModule.eventBus;
+  const syncManagerA = reactorAModule.syncModule!.syncManager;
 
-  const reactorB = await new ReactorBuilder()
-    .withEventBus(eventBusB)
+  const reactorBModule = await new ReactorBuilder()
     .withSync(new SyncBuilder().withChannelFactory(gqlChannelFactoryB))
-    .build();
+    .buildModule();
+  const reactorB = reactorBModule.reactor;
+  const eventBusB = reactorBModule.eventBus;
+  const syncManagerB = reactorBModule.syncModule!.syncManager;
 
-  syncManagerRegistry.set("reactora", reactorA.syncManager!);
-  syncManagerRegistry.set("reactorb", reactorB.syncManager!);
+  syncManagerRegistry.set("reactora", syncManagerA);
+  syncManagerRegistry.set("reactorb", syncManagerB);
 
   const filter = {
     documentId: [],
@@ -156,14 +156,14 @@ async function setupTwoReactorsWithGqlChannel(): Promise<TwoReactorSetup> {
     fetchFn: resolverBridge,
   };
 
-  const remoteAtoB = await reactorA.syncManager!.add(
+  const remoteAtoB = await syncManagerA.add(
     "remoteB",
     "collection1",
     { type: "gql", parameters: gqlParamsToB },
     filter,
   );
 
-  await reactorB.syncManager!.add(
+  await syncManagerB.add(
     "incoming-from-A",
     "collection1",
     { type: "gql", parameters: gqlParamsToA },
@@ -172,14 +172,14 @@ async function setupTwoReactorsWithGqlChannel(): Promise<TwoReactorSetup> {
     remoteAtoB.id,
   );
 
-  const remoteBtoA = await reactorB.syncManager!.add(
+  const remoteBtoA = await syncManagerB.add(
     "remoteA",
     "collection1",
     { type: "gql", parameters: gqlParamsToA },
     filter,
   );
 
-  await reactorA.syncManager!.add(
+  await syncManagerA.add(
     "incoming-from-B",
     "collection1",
     { type: "gql", parameters: gqlParamsToB },
