@@ -13,8 +13,16 @@
     "access": "public"
   },
   "exports": {
-    ".": "./dist/src/index.js",
-    "./node": "./dist/src/node.js"
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js",
+      "default": "./dist/src/index.js"
+    },
+    "./node": {
+      "types": "./dist/src/node.d.ts",
+      "import": "./dist/src/node.js",
+      "default": "./dist/src/node.js"
+    }
   },
   "types": "./dist/src/index.d.ts",
   "sideEffects": false,
