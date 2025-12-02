@@ -22,9 +22,9 @@
     "publish:create-lib": "npm publish --cwd ./src/create-lib/",
     "start": "tsx src/cli.ts",
     "test": "npm run copy-hygen && vitest run",
-    "test:legacy": "npm run copy-hygen && vitest run",
+    "test:ts-morph": "USE_TS_MORPH=true npm run test",
     "test:keep": "KEEP_TEST_OUTPUT=true npm run test",
-    "test:keep:legacy": "USE_LEGACY=true KEEP_TEST_OUTPUT=true npm run test"
+    "test:keep:ts-morph": "USE_TS_MORPH=true KEEP_TEST_OUTPUT=true npm run test"
   },
   "dependencies": {
     "@acaldas/graphql-codegen-typescript-validation-schema": "^0.12.4",
