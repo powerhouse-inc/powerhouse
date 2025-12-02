@@ -20,11 +20,14 @@ import {
 import { tsConfigTemplate } from "./migrations/templates/tsConfig.js";
 
 /** Run all migrations */
-export async function migrate() {
+type MigrateOptions = {
+  tsMorph?: boolean;
+};
+export async function migrate({ tsMorph = false }: MigrateOptions) {
   await migratePackageJson();
   await migrateTsConfig();
-  await runGenerateOnAllDocumentModels();
-  await runGenerateOnAllEditors();
+  await runGenerateOnAllDocumentModels(tsMorph);
+  await runGenerateOnAllEditors(tsMorph);
   const project = new Project({
     tsConfigFilePath: path.resolve("tsconfig.json"),
     compilerOptions: {
@@ -190,12 +193,14 @@ function fixImports(project: Project) {
 }
 
 /** Run the generate command on all document models */
-async function runGenerateOnAllDocumentModels() {
-  await generate(undefined, {});
+async function runGenerateOnAllDocumentModels(tsMorph: boolean) {
+  await generate(undefined, {
+    tsMorph,
+  });
 }
 
 /** Run the generate command on all editors */
-async function runGenerateOnAllEditors() {
+async function runGenerateOnAllEditors(tsMorph: boolean) {
   const editorsPath = path.join(process.cwd(), "editors");
   const dirs = (await readdir(editorsPath, { withFileTypes: true }))
     .filter((entry) => entry.isDirectory())
@@ -228,6 +233,7 @@ async function runGenerateOnAllEditors() {
         driveEditor: name,
         driveEditorAppId: id,
         driveEditorDirName: dir,
+        tsMorph,
       };
       if (allowedDocumentTypes) {
         args.allowedDocumentTypes = allowedDocumentTypes.join(",");
@@ -239,6 +245,7 @@ async function runGenerateOnAllEditors() {
         editorId: id,
         editorDirName: dir,
         documentTypes: documentTypes?.join(","),
+        tsMorph,
       };
       await generate(undefined, args);
     }
