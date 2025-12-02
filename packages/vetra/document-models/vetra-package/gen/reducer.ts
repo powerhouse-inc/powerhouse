@@ -28,97 +28,126 @@ const stateReducer: StateReducer<VetraPackagePHState> = (
   if (isDocumentAction(action)) {
     return state;
   }
-
   switch (action.type) {
-    case "SET_PACKAGE_NAME":
+    case "SET_PACKAGE_NAME": {
       SetPackageNameInputSchema().parse(action.input);
+
       vetraPackageBaseOperationsOperations.setPackageNameOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
       );
-      break;
 
-    case "SET_PACKAGE_DESCRIPTION":
+      break;
+    }
+
+    case "SET_PACKAGE_DESCRIPTION": {
       SetPackageDescriptionInputSchema().parse(action.input);
+
       vetraPackageBaseOperationsOperations.setPackageDescriptionOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
       );
-      break;
 
-    case "SET_PACKAGE_CATEGORY":
+      break;
+    }
+
+    case "SET_PACKAGE_CATEGORY": {
       SetPackageCategoryInputSchema().parse(action.input);
+
       vetraPackageBaseOperationsOperations.setPackageCategoryOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
       );
-      break;
 
-    case "SET_PACKAGE_AUTHOR":
+      break;
+    }
+
+    case "SET_PACKAGE_AUTHOR": {
       SetPackageAuthorInputSchema().parse(action.input);
+
       vetraPackageBaseOperationsOperations.setPackageAuthorOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
       );
-      break;
 
-    case "SET_PACKAGE_AUTHOR_NAME":
+      break;
+    }
+
+    case "SET_PACKAGE_AUTHOR_NAME": {
       SetPackageAuthorNameInputSchema().parse(action.input);
+
       vetraPackageBaseOperationsOperations.setPackageAuthorNameOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
       );
-      break;
 
-    case "SET_PACKAGE_AUTHOR_WEBSITE":
+      break;
+    }
+
+    case "SET_PACKAGE_AUTHOR_WEBSITE": {
       SetPackageAuthorWebsiteInputSchema().parse(action.input);
+
       vetraPackageBaseOperationsOperations.setPackageAuthorWebsiteOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
       );
-      break;
 
-    case "ADD_PACKAGE_KEYWORD":
+      break;
+    }
+
+    case "ADD_PACKAGE_KEYWORD": {
       AddPackageKeywordInputSchema().parse(action.input);
+
       vetraPackageBaseOperationsOperations.addPackageKeywordOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
       );
-      break;
 
-    case "REMOVE_PACKAGE_KEYWORD":
+      break;
+    }
+
+    case "REMOVE_PACKAGE_KEYWORD": {
       RemovePackageKeywordInputSchema().parse(action.input);
+
       vetraPackageBaseOperationsOperations.removePackageKeywordOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
       );
-      break;
 
-    case "SET_PACKAGE_GITHUB_URL":
+      break;
+    }
+
+    case "SET_PACKAGE_GITHUB_URL": {
       SetPackageGithubUrlInputSchema().parse(action.input);
+
       vetraPackageBaseOperationsOperations.setPackageGithubUrlOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
       );
-      break;
 
-    case "SET_PACKAGE_NPM_URL":
+      break;
+    }
+
+    case "SET_PACKAGE_NPM_URL": {
       SetPackageNpmUrlInputSchema().parse(action.input);
+
       vetraPackageBaseOperationsOperations.setPackageNpmUrlOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
       );
+
       break;
+    }
 
     default:
       return state;

@@ -18,12 +18,12 @@ export const documentModel: DocumentModelGlobalState = {
           schema:
             "type DocumentEditorState {\n  name: String!\n  documentTypes: [DocumentTypeItem!]!\n  status: StatusType!\n}\n\ntype DocumentTypeItem {\n  id: OID!\n  documentType: String!\n}\n\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}",
           initialValue:
-            '"{\\n  \\"name\\": \\"\\",\\n  \\"documentTypes\\": [],\\n  \\"status\\": \\"DRAFT\\"\\n}"',
+            '{\n  "name": "",\n  "documentTypes": [],\n  "status": "DRAFT"\n}',
           examples: [],
         },
         local: {
           schema: "",
-          initialValue: '""',
+          initialValue: "",
           examples: [],
         },
       },

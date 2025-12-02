@@ -56,7 +56,7 @@ export function generateCommand(program: Command) {
       "--schema-file <path>",
       "Path to the output file. Defaults to './schema.ts'",
     )
-    .option("--legacy", "Use legacy hygen codegen templates");
+    .option("--ts-morph", "Use new ts-morph codegen");
 
   // Use the setCustomHelp utility to apply custom help formatting
   setCustomHelp(cmd, generateHelp);

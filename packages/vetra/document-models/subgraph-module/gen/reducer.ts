@@ -20,25 +20,30 @@ const stateReducer: StateReducer<SubgraphModulePHState> = (
   if (isDocumentAction(action)) {
     return state;
   }
-
   switch (action.type) {
-    case "SET_SUBGRAPH_NAME":
+    case "SET_SUBGRAPH_NAME": {
       SetSubgraphNameInputSchema().parse(action.input);
+
       subgraphModuleBaseOperationsOperations.setSubgraphNameOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
       );
-      break;
 
-    case "SET_SUBGRAPH_STATUS":
+      break;
+    }
+
+    case "SET_SUBGRAPH_STATUS": {
       SetSubgraphStatusInputSchema().parse(action.input);
+
       subgraphModuleBaseOperationsOperations.setSubgraphStatusOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
       );
+
       break;
+    }
 
     default:
       return state;

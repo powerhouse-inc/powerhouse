@@ -23,52 +23,66 @@ const stateReducer: StateReducer<ProcessorModulePHState> = (
   if (isDocumentAction(action)) {
     return state;
   }
-
   switch (action.type) {
-    case "SET_PROCESSOR_NAME":
+    case "SET_PROCESSOR_NAME": {
       SetProcessorNameInputSchema().parse(action.input);
+
       processorModuleBaseOperationsOperations.setProcessorNameOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
       );
-      break;
 
-    case "SET_PROCESSOR_TYPE":
+      break;
+    }
+
+    case "SET_PROCESSOR_TYPE": {
       SetProcessorTypeInputSchema().parse(action.input);
+
       processorModuleBaseOperationsOperations.setProcessorTypeOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
       );
-      break;
 
-    case "ADD_DOCUMENT_TYPE":
+      break;
+    }
+
+    case "ADD_DOCUMENT_TYPE": {
       AddDocumentTypeInputSchema().parse(action.input);
+
       processorModuleBaseOperationsOperations.addDocumentTypeOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
       );
-      break;
 
-    case "REMOVE_DOCUMENT_TYPE":
+      break;
+    }
+
+    case "REMOVE_DOCUMENT_TYPE": {
       RemoveDocumentTypeInputSchema().parse(action.input);
+
       processorModuleBaseOperationsOperations.removeDocumentTypeOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
       );
-      break;
 
-    case "SET_PROCESSOR_STATUS":
+      break;
+    }
+
+    case "SET_PROCESSOR_STATUS": {
       SetProcessorStatusInputSchema().parse(action.input);
+
       processorModuleBaseOperationsOperations.setProcessorStatusOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
       );
+
       break;
+    }
 
     default:
       return state;

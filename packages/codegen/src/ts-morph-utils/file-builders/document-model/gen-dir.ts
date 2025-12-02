@@ -120,6 +120,8 @@ function makeDocumentModelGenDocumentModelFile({
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
   const printNode = buildNodePrinter(sourceFile);
 
+  sourceFile.replaceWithText("");
+
   sourceFile.addImportDeclaration({
     namedImports: ["DocumentModelGlobalState"],
     moduleSpecifier: "document-model",

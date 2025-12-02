@@ -17,13 +17,12 @@ export const documentModel: DocumentModelGlobalState = {
         global: {
           schema:
             "type SubgraphModuleState {\n  name: String!\n  status: StatusType!\n}\n\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}",
-          initialValue:
-            '"{\\n  \\"name\\": \\"\\",\\n  \\"status\\": \\"DRAFT\\"\\n}"',
+          initialValue: '{\n  "name": "",\n  "status": "DRAFT"\n}',
           examples: [],
         },
         local: {
           schema: "",
-          initialValue: '""',
+          initialValue: "",
           examples: [],
         },
       },

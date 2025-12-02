@@ -6,6 +6,7 @@ import type { DocumentEditorState } from "../../../document-models/document-edit
 import type { ProcessorModuleState } from "../../../document-models/processor-module/index.js";
 import type { SubgraphModuleState } from "../../../document-models/subgraph-module/index.js";
 import type { VetraPackageState } from "../../../document-models/vetra-package/index.js";
+import { LEGACY } from "../document-handlers/generators/constants.js";
 import { CodegenProcessor } from "../index.js";
 
 // Mock ONLY the external codegen library boundary
@@ -112,6 +113,7 @@ describe("CodegenProcessor E2E Tests", () => {
         ],
         config: mockConfig.PH_CONFIG,
         editorId: "test-editor",
+        legacy: LEGACY,
       });
 
       expect(generateManifest).toHaveBeenCalledWith(
@@ -233,6 +235,7 @@ describe("CodegenProcessor E2E Tests", () => {
       expect(generateFromDocument).toHaveBeenCalledWith(
         validState,
         mockConfig.PH_CONFIG,
+        LEGACY,
         { verbose: false },
       );
 
@@ -454,6 +457,7 @@ describe("CodegenProcessor E2E Tests", () => {
         appId: "test-app",
         allowedDocumentTypes: "",
         isDragAndDropEnabled: false,
+        legacy: LEGACY,
       });
 
       expect(generateManifest).toHaveBeenCalledWith(
@@ -501,6 +505,7 @@ describe("CodegenProcessor E2E Tests", () => {
         allowedDocumentTypes:
           "powerhouse/document-model,powerhouse/budget-statement",
         isDragAndDropEnabled: true,
+        legacy: LEGACY,
       });
 
       expect(generateManifest).toHaveBeenCalled();
@@ -705,6 +710,7 @@ describe("CodegenProcessor E2E Tests", () => {
         documentTypes: ["powerhouse/document-model"],
         config: mockConfig.PH_CONFIG,
         editorId: "test-editor",
+        legacy: LEGACY,
       });
 
       expect(generateSubgraph).toHaveBeenCalledWith(
@@ -757,6 +763,7 @@ describe("CodegenProcessor E2E Tests", () => {
         documentTypes: ["powerhouse/document-model"],
         config: mockConfig.PH_CONFIG,
         editorId: "test-editor",
+        legacy: LEGACY,
       });
 
       // Invalid strand should NOT be processed

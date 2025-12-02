@@ -36,7 +36,7 @@ export type GenerateOptions = {
   driveEditorDirName?: string;
   migrationFile?: string;
   schemaFile?: string;
-  legacy?: boolean;
+  tsMorph?: boolean;
 };
 
 export async function startGenerate(
@@ -44,7 +44,7 @@ export async function startGenerate(
   options: GenerateOptions,
 ) {
   const baseConfig = getConfig();
-  const legacy = options.legacy ?? true;
+  const legacy = !options.tsMorph;
   const config = {
     ...baseConfig,
     ...{
@@ -56,7 +56,7 @@ export async function startGenerate(
       ...(options.skipFormat && { skipFormat: options.skipFormat }),
       ...(options.interactive && { interactive: options.interactive }),
       ...(options.watch && { watch: options.watch }),
-      ...{ legacy },
+      legacy,
     },
   };
 

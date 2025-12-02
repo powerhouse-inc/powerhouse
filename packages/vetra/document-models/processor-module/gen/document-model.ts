@@ -18,12 +18,12 @@ export const documentModel: DocumentModelGlobalState = {
           schema:
             "type ProcessorModuleState {\n  name: String!\n  type: String!\n  documentTypes: [DocumentTypeItem!]!\n  status: StatusType!\n}\n\ntype DocumentTypeItem {\n  id: OID!\n  documentType: String!\n}\n\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}",
           initialValue:
-            '"{\\n  \\"name\\": \\"\\",\\n  \\"type\\": \\"\\",\\n  \\"documentTypes\\": [],\\n  \\"status\\": \\"DRAFT\\"\\n}"',
+            '{\n  "name": "",\n  "type": "",\n  "documentTypes": [],\n  "status": "DRAFT"\n}',
           examples: [],
         },
         local: {
           schema: "",
-          initialValue: '""',
+          initialValue: "",
           examples: [],
         },
       },

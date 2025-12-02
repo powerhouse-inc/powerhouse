@@ -19,12 +19,12 @@ export const documentModel: DocumentModelGlobalState = {
           schema:
             "type VetraPackageState {\n  name: String\n  description: String\n  category: String\n  author: Author!\n  keywords: [Keyword!]!\n  githubUrl: URL\n  npmUrl: URL\n}\n\ntype Author {\n  name: String\n  website: URL\n}\n\ntype Keyword {\n  id: OID!\n  label: String!\n}",
           initialValue:
-            '"{\\n  \\"name\\": null,\\n  \\"description\\": null,\\n  \\"category\\": null,\\n  \\"author\\": {\\n    \\"name\\": null,\\n    \\"website\\": null\\n  },\\n  \\"keywords\\": [],\\n  \\"githubUrl\\": null,\\n  \\"npmUrl\\": null\\n}"',
+            '{\n  "name": null,\n  "description": null,\n  "category": null,\n  "author": {\n    "name": null,\n    "website": null\n  },\n  "keywords": [],\n  "githubUrl": null,\n  "npmUrl": null\n}',
           examples: [],
         },
         local: {
           schema: "",
-          initialValue: '""',
+          initialValue: "",
           examples: [],
         },
       },
