@@ -81,14 +81,14 @@ describe("Load Reshuffles", () => {
     );
     expect(bOperations.document.results).toHaveLength(2);
 
-    const mutateJobA = await reactorA.mutate(document.header.id, "main", [
+    const mutateJobA = await reactorA.execute(document.header.id, "main", [
       setName("A1"),
       setName("A2"),
       setName("A3"),
     ]);
     const tokenA = await waitForJobCompletion(reactorA, mutateJobA.id);
 
-    const mutateJobB = await reactorB.mutate(document.header.id, "main", [
+    const mutateJobB = await reactorB.execute(document.header.id, "main", [
       setName("B1"),
       setName("B2"),
     ]);

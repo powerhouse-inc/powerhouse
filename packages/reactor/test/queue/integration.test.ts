@@ -51,7 +51,7 @@ describe("Reactor <> Queue Integration", () => {
       // Spy on the queue's enqueue method
       const enqueueSpy = vi.spyOn(queue, "enqueue");
 
-      const result = await reactor.mutate(testDoc.header.id, "main", [action]);
+      const result = await reactor.execute(testDoc.header.id, "main", [action]);
 
       // Verify that the queue's enqueue method was called once (single job with one action)
       expect(enqueueSpy).toHaveBeenCalledTimes(1);
@@ -98,7 +98,7 @@ describe("Reactor <> Queue Integration", () => {
         return Promise.resolve();
       });
 
-      const result = await reactor.mutate(testDoc.header.id, "main", actions);
+      const result = await reactor.execute(testDoc.header.id, "main", actions);
 
       // Verify a single job was enqueued with multiple actions
       expect(enqueuedJobs).toHaveLength(1);
@@ -129,7 +129,7 @@ describe("Reactor <> Queue Integration", () => {
         input: { name: "Test Name" },
       });
 
-      await reactor.mutate(testDoc.header.id, "main", [action]);
+      await reactor.execute(testDoc.header.id, "main", [action]);
 
       // The executor's internal start should have been triggered
       // In the shim, start is called automatically on first mutate
@@ -150,7 +150,7 @@ describe("Reactor <> Queue Integration", () => {
         input: { name: "Test Name" },
       });
 
-      const result = await reactor.mutate(testDoc.header.id, "main", [action]);
+      const result = await reactor.execute(testDoc.header.id, "main", [action]);
 
       // Now that we use the queue, it should return PENDING
       expect(result).toBeDefined();
@@ -177,7 +177,7 @@ describe("Reactor <> Queue Integration", () => {
         return Promise.resolve();
       });
 
-      const result = await reactor.mutate(testDoc.header.id, "main", actions);
+      const result = await reactor.execute(testDoc.header.id, "main", actions);
 
       expect(result).toBeDefined();
       expect(result.id).toBeDefined();
@@ -239,8 +239,8 @@ describe("Reactor <> Queue Integration", () => {
 
         // Enqueue jobs for both documents
         // Doc1 gets one job with 2 actions, Doc2 gets one job with 1 action
-        await reactor.mutate(testDoc1.header.id, "main", [action1, action2]);
-        await reactor.mutate(testDoc2.header.id, "main", [action3]);
+        await reactor.execute(testDoc1.header.id, "main", [action1, action2]);
+        await reactor.execute(testDoc2.header.id, "main", [action3]);
 
         // First dequeue should get doc1's job (with 2 actions)
         const job1 = await queue.dequeueNext();
@@ -295,7 +295,7 @@ describe("Reactor <> Queue Integration", () => {
 
         // Enqueue one job per document
         for (let i = 0; i < docs.length; i++) {
-          await reactor.mutate(docs[i].header.id, "main", [actions[i]]);
+          await reactor.execute(docs[i].header.id, "main", [actions[i]]);
         }
 
         // Should be able to dequeue all three jobs since they're from different documents
@@ -340,7 +340,7 @@ describe("Reactor <> Queue Integration", () => {
         );
 
         // Enqueue all actions
-        await reactor.mutate(testDoc.header.id, "main", actions);
+        await reactor.execute(testDoc.header.id, "main", actions);
 
         // Dequeue the single job (which contains all 3 actions)
         const job1 = await queue.dequeueNext();
@@ -383,7 +383,7 @@ describe("Reactor <> Queue Integration", () => {
         );
 
         // Enqueue actions (creates a single job with 2 actions)
-        await reactor.mutate(testDoc.header.id, "main", actions);
+        await reactor.execute(testDoc.header.id, "main", actions);
 
         // Dequeue the job
         const job1 = await queue.dequeueNext();

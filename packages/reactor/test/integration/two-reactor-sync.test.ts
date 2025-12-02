@@ -313,7 +313,7 @@ describe("Two-Reactor Sync", () => {
     const waitForMutatesA = waitForMultipleOperationsReady(eventBusA, 2, 10000);
     const waitForMutatesB = waitForMultipleOperationsReady(eventBusB, 2, 10000);
 
-    void reactorA.mutate(docA.header.id, "main", [
+    void reactorA.execute(docA.header.id, "main", [
       driveDocumentModelModule.actions.setDriveName({ name: "Drive A1" }),
       driveDocumentModelModule.actions.addFolder({
         id: "folder-a1",
@@ -322,7 +322,7 @@ describe("Two-Reactor Sync", () => {
       }),
     ]);
 
-    void reactorB.mutate(docC.header.id, "main", [
+    void reactorB.execute(docC.header.id, "main", [
       driveDocumentModelModule.actions.setDriveName({ name: "Drive C1" }),
       driveDocumentModelModule.actions.addFolder({
         id: "folder-c1",
@@ -331,7 +331,7 @@ describe("Two-Reactor Sync", () => {
       }),
     ]);
 
-    void reactorA.mutate(docB.header.id, "main", [
+    void reactorA.execute(docB.header.id, "main", [
       driveDocumentModelModule.actions.setDriveIcon({ icon: "icon-b1" }),
       driveDocumentModelModule.actions.addFolder({
         id: "folder-b1",
@@ -340,7 +340,7 @@ describe("Two-Reactor Sync", () => {
       }),
     ]);
 
-    void reactorB.mutate(docD.header.id, "main", [
+    void reactorB.execute(docD.header.id, "main", [
       driveDocumentModelModule.actions.setDriveName({ name: "Drive D1" }),
       driveDocumentModelModule.actions.updateNode({
         id: docD.header.id,
@@ -348,7 +348,7 @@ describe("Two-Reactor Sync", () => {
       }),
     ]);
 
-    void reactorA.mutate(docA.header.id, "main", [
+    void reactorA.execute(docA.header.id, "main", [
       driveDocumentModelModule.actions.addFile({
         id: "file-a1",
         name: "File A1",
@@ -357,7 +357,7 @@ describe("Two-Reactor Sync", () => {
       }),
     ]);
 
-    void reactorB.mutate(docC.header.id, "main", [
+    void reactorB.execute(docC.header.id, "main", [
       driveDocumentModelModule.actions.addFile({
         id: "file-c1",
         name: "File C1",
@@ -366,25 +366,25 @@ describe("Two-Reactor Sync", () => {
       }),
     ]);
 
-    void reactorA.mutate(docB.header.id, "main", [
+    void reactorA.execute(docB.header.id, "main", [
       driveDocumentModelModule.actions.updateFile({
         id: "file-b1",
         name: "Updated File B1",
       }),
     ]);
 
-    void reactorB.mutate(docD.header.id, "main", [
+    void reactorB.execute(docD.header.id, "main", [
       driveDocumentModelModule.actions.setDriveIcon({ icon: "icon-d1" }),
     ]);
 
-    void reactorA.mutate(docA.header.id, "main", [
+    void reactorA.execute(docA.header.id, "main", [
       driveDocumentModelModule.actions.updateNode({
         id: "folder-a1",
         name: "Updated Folder A1",
       }),
     ]);
 
-    void reactorB.mutate(docC.header.id, "main", [
+    void reactorB.execute(docC.header.id, "main", [
       driveDocumentModelModule.actions.updateFile({
         id: "file-c1",
         name: "Updated File C1",
@@ -438,15 +438,15 @@ describe("Two-Reactor Sync", () => {
     const docOnB = await reactorB.get(doc.header.id, { branch: "main" });
     expect(docOnB.document).toBeDefined();
 
-    void reactorA.mutate(doc.header.id, "main", [
+    void reactorA.execute(doc.header.id, "main", [
       driveDocumentModelModule.actions.setDriveName({ name: "Name from A" }),
     ]);
 
-    void reactorB.mutate(doc.header.id, "main", [
+    void reactorB.execute(doc.header.id, "main", [
       driveDocumentModelModule.actions.setDriveName({ name: "Name from B" }),
     ]);
 
-    void reactorA.mutate(doc.header.id, "main", [
+    void reactorA.execute(doc.header.id, "main", [
       driveDocumentModelModule.actions.addFolder({
         id: "folder-a",
         name: "Folder from A",
@@ -454,7 +454,7 @@ describe("Two-Reactor Sync", () => {
       }),
     ]);
 
-    void reactorB.mutate(doc.header.id, "main", [
+    void reactorB.execute(doc.header.id, "main", [
       driveDocumentModelModule.actions.addFolder({
         id: "folder-b",
         name: "Folder from B",
@@ -462,7 +462,7 @@ describe("Two-Reactor Sync", () => {
       }),
     ]);
 
-    void reactorA.mutate(doc.header.id, "main", [
+    void reactorA.execute(doc.header.id, "main", [
       driveDocumentModelModule.actions.addFile({
         id: "file-a",
         name: "File from A",
@@ -471,7 +471,7 @@ describe("Two-Reactor Sync", () => {
       }),
     ]);
 
-    void reactorB.mutate(doc.header.id, "main", [
+    void reactorB.execute(doc.header.id, "main", [
       driveDocumentModelModule.actions.addFile({
         id: "file-b",
         name: "File from B",
@@ -480,25 +480,25 @@ describe("Two-Reactor Sync", () => {
       }),
     ]);
 
-    void reactorA.mutate(doc.header.id, "main", [
+    void reactorA.execute(doc.header.id, "main", [
       driveDocumentModelModule.actions.updateNode({
         id: "folder-a",
         name: "Updated Folder A",
       }),
     ]);
 
-    void reactorB.mutate(doc.header.id, "main", [
+    void reactorB.execute(doc.header.id, "main", [
       driveDocumentModelModule.actions.updateFile({
         id: "file-b",
         name: "Updated File B",
       }),
     ]);
 
-    void reactorA.mutate(doc.header.id, "main", [
+    void reactorA.execute(doc.header.id, "main", [
       driveDocumentModelModule.actions.setDriveIcon({ icon: "icon-a" }),
     ]);
 
-    void reactorB.mutate(doc.header.id, "main", [
+    void reactorB.execute(doc.header.id, "main", [
       driveDocumentModelModule.actions.setDriveIcon({ icon: "icon-b" }),
     ]);
 
@@ -567,7 +567,7 @@ describe("Two-Reactor Sync", () => {
         );
       }
 
-      const mutateJobInfo = await testReactor.mutate(
+      const mutateJobInfo = await testReactor.execute(
         document.header.id,
         "main",
         actions,

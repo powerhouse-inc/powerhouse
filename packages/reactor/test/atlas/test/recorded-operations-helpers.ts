@@ -170,13 +170,13 @@ export async function processReactorMutation(
     } else {
       const cleanedAction = removeSynchronizationUnits(driveAction) as Action;
 
-      await reactor.mutate(driveId, "main", [cleanedAction]);
+      await reactor.execute(driveId, "main", [cleanedAction]);
     }
   } else if (name === "addAction") {
     const { docId, action } = args;
     const cleanedAction = removeSynchronizationUnits(action) as Action;
 
-    await reactor.mutate(docId, "main", [cleanedAction]);
+    await reactor.execute(docId, "main", [cleanedAction]);
   }
 }
 

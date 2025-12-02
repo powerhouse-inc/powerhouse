@@ -45,7 +45,7 @@ describe("ReactorClient Unit Tests", () => {
         results: [],
         options: { cursor: "", limit: 10 },
       }),
-      mutate: vi.fn(),
+      execute: vi.fn(),
       addChildren: vi.fn(),
       removeChildren: vi.fn(),
       deleteDocument: vi.fn(),
@@ -237,17 +237,17 @@ describe("ReactorClient Unit Tests", () => {
         header: { id: documentId, documentType: "test" },
       } as PHDocument;
 
-      vi.mocked(mockReactor.mutate).mockResolvedValue(jobInfo);
+      vi.mocked(mockReactor.execute).mockResolvedValue(jobInfo);
       vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(completedJobInfo);
       vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({
         document: mockDoc,
         childIds: [],
       });
 
-      const result = await client.mutate(documentId, "main", actions);
+      const result = await client.execute(documentId, "main", actions);
 
       expect(mockSigner.sign).toHaveBeenCalledWith(actions[0], undefined);
-      expect(mockReactor.mutate).toHaveBeenCalledWith(
+      expect(mockReactor.execute).toHaveBeenCalledWith(
         documentId,
         "main",
         expect.arrayContaining([
@@ -298,13 +298,13 @@ describe("ReactorClient Unit Tests", () => {
         consistencyToken: createEmptyConsistencyToken(),
       };
 
-      vi.mocked(mockReactor.mutate).mockResolvedValue(jobInfo);
+      vi.mocked(mockReactor.execute).mockResolvedValue(jobInfo);
       vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({
         document: {} as PHDocument,
         childIds: [],
       });
 
-      await client.mutate(documentId, "main", actions, signal);
+      await client.execute(documentId, "main", actions, signal);
 
       expect(mockSigner.sign).toHaveBeenCalledWith(actions[0], signal);
     });
@@ -335,13 +335,13 @@ describe("ReactorClient Unit Tests", () => {
         consistencyToken: createEmptyConsistencyToken(),
       };
 
-      vi.mocked(mockReactor.mutate).mockResolvedValue(jobInfo);
+      vi.mocked(mockReactor.execute).mockResolvedValue(jobInfo);
       vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({
         document: {} as PHDocument,
         childIds: [],
       });
 
-      await client.mutate(documentId, "main", actions);
+      await client.execute(documentId, "main", actions);
 
       expect(mockSigner.sign).toHaveBeenCalledTimes(2);
       expect(mockSigner.sign).toHaveBeenCalledWith(actions[0], undefined);
@@ -361,13 +361,13 @@ describe("ReactorClient Unit Tests", () => {
         consistencyToken: createEmptyConsistencyToken(),
       };
 
-      vi.mocked(mockReactor.mutate).mockResolvedValue(jobInfo);
+      vi.mocked(mockReactor.execute).mockResolvedValue(jobInfo);
       vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({
         document: {} as PHDocument,
         childIds: [],
       });
 
-      await client.mutate(documentId, branch, actions, signal);
+      await client.execute(documentId, branch, actions, signal);
 
       expect(mockJobAwaiter.waitForJob).toHaveBeenCalledWith("job-1", signal);
       expect(mockReactor.getByIdOrSlug).toHaveBeenCalledWith(
@@ -399,12 +399,12 @@ describe("ReactorClient Unit Tests", () => {
         consistencyToken: createEmptyConsistencyToken(),
       };
 
-      vi.mocked(mockReactor.mutate).mockResolvedValue(jobInfo);
+      vi.mocked(mockReactor.execute).mockResolvedValue(jobInfo);
 
-      const result = await client.mutateAsync(documentId, "main", actions);
+      const result = await client.executeAsync(documentId, "main", actions);
 
       expect(mockSigner.sign).toHaveBeenCalledWith(actions[0], undefined);
-      expect(mockReactor.mutate).toHaveBeenCalledWith(
+      expect(mockReactor.execute).toHaveBeenCalledWith(
         documentId,
         "main",
         expect.arrayContaining([
@@ -438,14 +438,14 @@ describe("ReactorClient Unit Tests", () => {
       ];
       const signal = new AbortController().signal;
 
-      vi.mocked(mockReactor.mutate).mockResolvedValue({
+      vi.mocked(mockReactor.execute).mockResolvedValue({
         id: "job-1",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
       });
 
-      await client.mutateAsync(documentId, "main", actions, signal);
+      await client.executeAsync(documentId, "main", actions, signal);
 
       expect(mockSigner.sign).toHaveBeenCalledWith(actions[0], signal);
     });
@@ -755,7 +755,7 @@ describe("ReactorClient Unit Tests", () => {
     it("should propagate errors from jobAwaiter.waitForJob", async () => {
       const error = new Error("Job wait failed");
 
-      vi.mocked(mockReactor.mutate).mockResolvedValue({
+      vi.mocked(mockReactor.execute).mockResolvedValue({
         id: "job-1",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
@@ -763,7 +763,7 @@ describe("ReactorClient Unit Tests", () => {
       });
       vi.mocked(mockJobAwaiter.waitForJob).mockRejectedValue(error);
 
-      await expect(client.mutate("doc-1", "main", [])).rejects.toThrow(
+      await expect(client.execute("doc-1", "main", [])).rejects.toThrow(
         "Job wait failed",
       );
     });
@@ -773,7 +773,7 @@ describe("ReactorClient Unit Tests", () => {
       vi.mocked(mockSigner.sign).mockRejectedValue(error);
 
       await expect(
-        client.mutateAsync("doc-1", "main", [
+        client.executeAsync("doc-1", "main", [
           {
             id: "action-1",
             type: "TEST",

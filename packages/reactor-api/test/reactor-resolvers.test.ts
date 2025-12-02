@@ -29,8 +29,8 @@ describe("ReactorSubgraph Query Resolvers", () => {
       waitForJob: vi.fn(),
       create: vi.fn(),
       createEmpty: vi.fn(),
-      mutate: vi.fn(),
-      mutateAsync: vi.fn(),
+      execute: vi.fn(),
+      executeAsync: vi.fn(),
       rename: vi.fn(),
       addChildren: vi.fn(),
       removeChildren: vi.fn(),
@@ -661,8 +661,8 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
       waitForJob: vi.fn(),
       create: vi.fn(),
       createEmpty: vi.fn(),
-      mutate: vi.fn(),
-      mutateAsync: vi.fn(),
+      execute: vi.fn(),
+      executeAsync: vi.fn(),
       rename: vi.fn(),
       addChildren: vi.fn(),
       removeChildren: vi.fn(),
@@ -1088,7 +1088,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
         results: [mockModule as any],
         options: { cursor: "", limit: 10 },
       });
-      vi.mocked(mockReactorClient.mutate).mockResolvedValue(mockDocument);
+      vi.mocked(mockReactorClient.execute).mockResolvedValue(mockDocument);
 
       const result = await resolvers.mutateDocument(mockReactorClient, {
         documentIdentifier: "doc-1",
@@ -1096,7 +1096,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
         view: { branch: "main", scopes: null },
       });
 
-      expect(mockReactorClient.mutate).toHaveBeenCalledWith(
+      expect(mockReactorClient.execute).toHaveBeenCalledWith(
         "doc-1",
         "main",
         mockActions,
@@ -1144,7 +1144,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
         results: [mockModule as any],
         options: { cursor: "", limit: 10 },
       });
-      vi.mocked(mockReactorClient.mutate).mockResolvedValue(mockDocument);
+      vi.mocked(mockReactorClient.execute).mockResolvedValue(mockDocument);
 
       await resolvers.mutateDocument(mockReactorClient, {
         documentIdentifier: "doc-1",
@@ -1152,7 +1152,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
         view: null,
       });
 
-      expect(mockReactorClient.mutate).toHaveBeenCalledWith(
+      expect(mockReactorClient.execute).toHaveBeenCalledWith(
         "doc-1",
         "main",
         mockActions,
@@ -1209,7 +1209,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
         results: [mockModule as any],
         options: { cursor: "", limit: 10 },
       });
-      vi.mocked(mockReactorClient.mutate).mockRejectedValue(
+      vi.mocked(mockReactorClient.execute).mockRejectedValue(
         new Error("Mutation failed"),
       );
 
@@ -1275,7 +1275,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
         results: [mockModule as any],
         options: { cursor: "", limit: 10 },
       });
-      vi.mocked(mockReactorClient.mutateAsync).mockResolvedValue(mockJobInfo);
+      vi.mocked(mockReactorClient.executeAsync).mockResolvedValue(mockJobInfo);
 
       const result = await resolvers.mutateDocumentAsync(mockReactorClient, {
         documentIdentifier: "doc-1",
@@ -1283,7 +1283,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
         view: { branch: "develop", scopes: null },
       });
 
-      expect(mockReactorClient.mutateAsync).toHaveBeenCalledWith(
+      expect(mockReactorClient.executeAsync).toHaveBeenCalledWith(
         "doc-1",
         "develop",
         mockActions,
@@ -1331,7 +1331,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
         results: [mockModule as any],
         options: { cursor: "", limit: 10 },
       });
-      vi.mocked(mockReactorClient.mutateAsync).mockRejectedValue(
+      vi.mocked(mockReactorClient.executeAsync).mockRejectedValue(
         new Error("Queue full"),
       );
 

@@ -674,7 +674,7 @@ export class Reactor implements IReactor {
   /**
    * Applies a list of actions to a document
    */
-  async mutate(
+  async execute(
     docId: string,
     branch: string,
     actions: Action[],
@@ -903,7 +903,7 @@ export class Reactor implements IReactor {
       },
     }));
 
-    return await this.mutate(parentId, branch, actions, signal);
+    return await this.execute(parentId, branch, actions, signal);
   }
 
   /**
@@ -931,7 +931,7 @@ export class Reactor implements IReactor {
       },
     }));
 
-    return await this.mutate(parentId, branch, actions, signal);
+    return await this.execute(parentId, branch, actions, signal);
   }
 
   /**

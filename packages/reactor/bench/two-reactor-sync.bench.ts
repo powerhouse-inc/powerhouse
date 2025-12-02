@@ -1,5 +1,5 @@
-import { Bench } from "tinybench";
 import { driveDocumentModelModule } from "document-drive";
+import { Bench } from "tinybench";
 import { ReactorBuilder } from "../src/core/reactor-builder.js";
 import type { IReactor, ReactorModule } from "../src/core/types.js";
 import { EventBus } from "../src/events/event-bus.js";
@@ -183,7 +183,7 @@ bench
         const reactor = i < 5 ? reactorA : reactorB;
 
         for (let j = 0; j < 10; j++) {
-          void reactor.mutate(docId, "main", [
+          void reactor.execute(docId, "main", [
             driveDocumentModelModule.actions.setDriveName({
               name: `Doc ${i} Update ${j}`,
             }),
@@ -230,13 +230,13 @@ bench
         const docId = documentIds[i];
 
         for (let j = 0; j < 20; j++) {
-          void reactorA.mutate(docId, "main", [
+          void reactorA.execute(docId, "main", [
             driveDocumentModelModule.actions.setDriveName({
               name: `From A: Doc ${i} Update ${j}`,
             }),
           ]);
 
-          void reactorB.mutate(docId, "main", [
+          void reactorB.execute(docId, "main", [
             driveDocumentModelModule.actions.setDriveName({
               name: `From B: Doc ${i} Update ${j}`,
             }),
@@ -292,13 +292,13 @@ bench
           const operation = j % 3;
 
           if (operation === 0) {
-            void reactor.mutate(docId, "main", [
+            void reactor.execute(docId, "main", [
               driveDocumentModelModule.actions.setDriveName({
                 name: `Doc ${i} Update ${j}`,
               }),
             ]);
           } else if (operation === 1) {
-            void reactor.mutate(docId, "main", [
+            void reactor.execute(docId, "main", [
               driveDocumentModelModule.actions.addFolder({
                 id: deterministicId("folder", i * 100 + j),
                 name: `Folder ${j}`,
@@ -306,7 +306,7 @@ bench
               }),
             ]);
           } else {
-            void reactor.mutate(docId, "main", [
+            void reactor.execute(docId, "main", [
               driveDocumentModelModule.actions.setDriveIcon({
                 icon: `icon-${j}`,
               }),
@@ -357,7 +357,7 @@ bench
         for (let level = 0; level < 5; level++) {
           const folderId = deterministicId("folder", i * 100 + level);
 
-          void reactorA.mutate(docId, "main", [
+          void reactorA.execute(docId, "main", [
             driveDocumentModelModule.actions.addFolder({
               id: folderId,
               name: `Level ${level} Folder`,
@@ -365,7 +365,7 @@ bench
             }),
           ]);
 
-          void reactorB.mutate(docId, "main", [
+          void reactorB.execute(docId, "main", [
             driveDocumentModelModule.actions.addFile({
               id: deterministicId("file", i * 100 + level),
               name: `File at Level ${level}`,

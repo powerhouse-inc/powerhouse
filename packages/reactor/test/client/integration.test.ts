@@ -338,7 +338,7 @@ describe("ReactorClient Integration Tests", () => {
 
         const actionsToApply = [actions.setName("Updated Name")];
 
-        const result = await client.mutate(
+        const result = await client.execute(
           "mutate-test-1",
           "main",
           actionsToApply,
@@ -357,7 +357,7 @@ describe("ReactorClient Integration Tests", () => {
           actions.setName("Final Update"),
         ];
 
-        const result = await client.mutate(
+        const result = await client.execute(
           "mutate-test-2",
           "main",
           actionsToApply,
@@ -375,7 +375,7 @@ describe("ReactorClient Integration Tests", () => {
 
         const actionsToApply = [actions.setName("Async Update")];
 
-        const jobInfo = await client.mutateAsync(
+        const jobInfo = await client.executeAsync(
           "mutate-async-1",
           "main",
           actionsToApply,
@@ -672,7 +672,7 @@ describe("ReactorClient Integration Tests", () => {
         const doc = createDocModelDocument({ id: "job-status-test" });
         await client.create(doc);
 
-        const jobInfo = await client.mutateAsync("job-status-test", "main", [
+        const jobInfo = await client.executeAsync("job-status-test", "main", [
           {
             type: "SET_NAME",
             input: { name: "Test" },
@@ -690,7 +690,7 @@ describe("ReactorClient Integration Tests", () => {
         const doc = createDocModelDocument({ id: "job-signal-test" });
         await client.create(doc);
 
-        const jobInfo = await client.mutateAsync("job-signal-test", "main", [
+        const jobInfo = await client.executeAsync("job-signal-test", "main", [
           {
             type: "SET_NAME",
             input: { name: "Test" },
@@ -716,7 +716,7 @@ describe("ReactorClient Integration Tests", () => {
 
         const actionsToApply = [actions.setName("Waited")];
 
-        const jobInfo = await client.mutateAsync(
+        const jobInfo = await client.executeAsync(
           "wait-job-1",
           "main",
           actionsToApply,
@@ -733,7 +733,7 @@ describe("ReactorClient Integration Tests", () => {
 
         const actionsToApply = [actions.setName("Waited")];
 
-        const jobInfo = await client.mutateAsync(
+        const jobInfo = await client.executeAsync(
           "wait-job-2",
           "main",
           actionsToApply,

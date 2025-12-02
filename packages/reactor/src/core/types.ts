@@ -217,7 +217,7 @@ export interface IReactor {
    * @param signal - Optional abort signal to cancel the request
    * @returns The job id and status
    */
-  mutate(
+  execute(
     docId: string,
     branch: string,
     actions: Action[],

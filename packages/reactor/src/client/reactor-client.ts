@@ -240,7 +240,7 @@ export class ReactorClient implements IReactorClient {
   /**
    * Applies a list of actions to a document and waits for completion
    */
-  async mutate<TDocument extends PHDocument>(
+  async execute<TDocument extends PHDocument>(
     documentIdentifier: string,
     branch: string,
     actions: Action[],
@@ -248,7 +248,7 @@ export class ReactorClient implements IReactorClient {
   ): Promise<TDocument> {
     const signedActions = await this.signActions(actions, signal);
 
-    const jobInfo = await this.reactor.mutate(
+    const jobInfo = await this.reactor.execute(
       documentIdentifier,
       branch,
       signedActions,
@@ -270,7 +270,7 @@ export class ReactorClient implements IReactorClient {
   /**
    * Submits a list of actions to a document
    */
-  async mutateAsync(
+  async executeAsync(
     documentIdentifier: string,
     branch: string,
     actions: Action[],
@@ -278,7 +278,7 @@ export class ReactorClient implements IReactorClient {
   ): Promise<JobInfo> {
     const signedActions = await this.signActions(actions, signal);
 
-    return this.reactor.mutate(
+    return this.reactor.execute(
       documentIdentifier,
       branch,
       signedActions,
@@ -295,7 +295,7 @@ export class ReactorClient implements IReactorClient {
     branch: string = "main",
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    return this.mutate(
+    return this.execute(
       documentIdentifier,
       branch,
       [actions.setName(name)],

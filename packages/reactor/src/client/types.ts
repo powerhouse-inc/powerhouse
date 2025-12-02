@@ -160,7 +160,7 @@ export interface IReactorClient {
    * @param signal - Optional abort signal to cancel the request
    * @returns The updated document
    */
-  mutate<TDocument extends PHDocument>(
+  execute<TDocument extends PHDocument>(
     documentIdentifier: string,
     branch: string,
     actions: Action[],
@@ -176,7 +176,7 @@ export interface IReactorClient {
    * @param signal - Optional abort signal to cancel the request
    * @returns The job
    */
-  mutateAsync(
+  executeAsync(
     documentIdentifier: string,
     branch: string,
     actions: Action[],

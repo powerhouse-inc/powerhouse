@@ -409,7 +409,7 @@ export async function mutateDocument(
 
   let result: PHDocument;
   try {
-    result = await reactorClient.mutate(
+    result = await reactorClient.execute(
       args.documentIdentifier,
       branch,
       validatedActions,
@@ -462,7 +462,7 @@ export async function mutateDocumentAsync(
 
   let result: JobInfo;
   try {
-    result = await reactorClient.mutateAsync(
+    result = await reactorClient.executeAsync(
       args.documentIdentifier,
       branch,
       validatedActions,
