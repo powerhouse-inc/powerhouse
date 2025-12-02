@@ -10,6 +10,7 @@ import {
   type TestContext,
 } from "vitest";
 import { generateEditor } from "../index.js";
+import { USE_LEGACY } from "./config.js";
 import {
   EDITORS_TEST_PROJECT,
   EDITORS_TEST_PROJECT_WITH_EXISTING_EDITOR,
@@ -75,6 +76,7 @@ describe("generateEditor", () => {
         config: config,
         editorId: "test-document-model-editor",
         specifiedPackageName: TEST_PACKAGE_NAME,
+        legacy: USE_LEGACY,
       });
 
       const editorsDir = path.join(testOutDirPath, "editors");
@@ -94,10 +96,10 @@ describe("generateEditor", () => {
       expect(fs.existsSync(editorPath)).toBe(true);
       const editorContent = fs.readFileSync(editorPath, "utf-8");
       expect(editorContent).toContain(
-        `import { EditTestDocName } from "./components/EditName.js";`,
+        `import { EditName } from "./components/EditName.js";`,
       );
       expect(editorContent).toContain(`export default function Editor()`);
-      expect(editorContent).toContain(`<EditTestDocName />`);
+      expect(editorContent).toContain(`<EditName />`);
 
       const modulePath = path.join(editorDir, "module.ts");
       expect(fs.existsSync(modulePath)).toBe(true);
@@ -108,11 +110,6 @@ describe("generateEditor", () => {
       expect(moduleContent).toContain(`documentTypes: ["powerhouse/test-doc`);
       expect(moduleContent).toContain(`id: "test-document-model-editor"`);
       expect(moduleContent).toContain(`name: "TestDocEditor"`);
-
-      const componentsDir = path.join(editorDir, "components");
-
-      const editNamePath = path.join(componentsDir, "EditName.tsx");
-      expect(fs.existsSync(editNamePath)).toBe(true);
 
       await compile(testOutDirPath);
     },
@@ -136,6 +133,7 @@ describe("generateEditor", () => {
         config: config,
         editorId: "test-document-model-editor-two",
         specifiedPackageName: TEST_PACKAGE_NAME,
+        legacy: USE_LEGACY,
       });
       const editorsDir = path.join(testOutDirPath, "editors");
       const editorsFilePath = path.join(editorsDir, "editors.ts");
@@ -163,11 +161,12 @@ describe("generateEditor", () => {
       );
       rmSync(editorsFilePath, { force: true });
       await generateEditor({
-        name: "TestDocEditor",
+        name: "TestDocEditor2",
         documentTypes: ["powerhouse/test-doc"],
         config: config,
-        editorId: "test-document-model-editor",
+        editorId: "test-doc-editor-2",
         specifiedPackageName: TEST_PACKAGE_NAME,
+        legacy: USE_LEGACY,
       });
       await compile(testOutDirPath);
       const editorsContent = fs.readFileSync(editorsFilePath, "utf-8");

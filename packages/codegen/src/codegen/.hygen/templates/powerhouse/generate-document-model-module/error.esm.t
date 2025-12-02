@@ -5,7 +5,7 @@ force: true
 <% if (errors.length > 0) { _%>
 export type ErrorCode =
 <% errors.forEach((error, errorIndex) => { _%>
-    | '<%= h.changeCase.pascal(error.name) %>'<% if (errorIndex === errors.length - 1) { %>;<% } %>
+    | "<%= h.changeCase.pascal(error.name) %>"<% if (errorIndex === errors.length - 1) { %>;<% } %>
 <% }); _%>
 
 export interface ReducerError {
@@ -14,8 +14,8 @@ export interface ReducerError {
 
 <% errors.forEach(error => { _%>
 export class <%= h.changeCase.pascal(error.name) %> extends Error implements ReducerError {
-    errorCode = '<%= h.changeCase.pascal(error.name) %>' as ErrorCode;
-    constructor(message = '<%= h.changeCase.pascal(error.name) %>') {
+    errorCode = "<%= h.changeCase.pascal(error.name) %>" as ErrorCode;
+    constructor(message = "<%= h.changeCase.pascal(error.name) %>") {
         super(message);
     }
 }

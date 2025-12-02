@@ -36,6 +36,7 @@ export type GenerateOptions = {
   driveEditorDirName?: string;
   migrationFile?: string;
   schemaFile?: string;
+  tsMorph?: boolean;
 };
 
 export async function startGenerate(
@@ -43,7 +44,7 @@ export async function startGenerate(
   options: GenerateOptions,
 ) {
   const baseConfig = getConfig();
-
+  const legacy = !options.tsMorph;
   const config = {
     ...baseConfig,
     ...{
@@ -55,6 +56,7 @@ export async function startGenerate(
       ...(options.skipFormat && { skipFormat: options.skipFormat }),
       ...(options.interactive && { interactive: options.interactive }),
       ...(options.watch && { watch: options.watch }),
+      legacy,
     },
   };
 
@@ -80,6 +82,7 @@ export async function startGenerate(
     isDragAndDropEnabled: options.isDragAndDropEnabled,
     migrationFile: options.migrationFile,
     schemaFile: options.schemaFile,
+    legacy,
   };
 
   if (command.driveEditor) {
@@ -93,6 +96,7 @@ export async function startGenerate(
       allowedDocumentTypes: command.allowedDocumentTypes,
       isDragAndDropEnabled: command.isDragAndDropEnabled,
       driveEditorDirName: command.driveEditorDirName,
+      legacy,
     });
   } else if (command.editor) {
     if (!command.editorName) {
@@ -105,6 +109,7 @@ export async function startGenerate(
       editorId: command.editorId,
       specifiedPackageName: command.specifiedPackageName,
       editorDirName: command.editorDirName,
+      legacy,
     });
   } else if (command.processor && options.processor) {
     const processorType =
@@ -126,8 +131,10 @@ export async function startGenerate(
       schemaFile: schemaFile ? path.join(process.cwd(), schemaFile) : undefined,
     });
   } else if (filePath) {
-    await generateFromFile(filePath, config, { force: options.force });
+    await generateFromFile(filePath, config, legacy, {
+      force: options.force,
+    });
   } else {
-    await generateCode(config);
+    await generateCode(config, legacy);
   }
 }

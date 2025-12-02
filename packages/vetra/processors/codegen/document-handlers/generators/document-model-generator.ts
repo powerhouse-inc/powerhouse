@@ -8,6 +8,7 @@ import type { InternalTransmitterUpdate } from "document-drive";
 import type { DocumentModelGlobalState } from "document-model";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
+import { LEGACY } from "./constants.js";
 import { backupDocument } from "./utils.js";
 
 /**
@@ -50,13 +51,12 @@ export class DocumentModelGenerator extends BaseDocumentGen {
 
   async generate(strand: InternalTransmitterUpdate): Promise<void> {
     const state = strand.state as DocumentModelGlobalState;
-
     // Validation is already done in shouldProcess, so we can proceed directly
     logger.debug(
       `🔄 Starting code generation for document model: ${state.name}`,
     );
     try {
-      await generateFromDocument(state, this.config.PH_CONFIG, {
+      await generateFromDocument(state, this.config.PH_CONFIG, LEGACY, {
         verbose: false,
       });
       await generateSubgraphFromDocumentModel(

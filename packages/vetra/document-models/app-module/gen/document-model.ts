@@ -18,12 +18,12 @@ export const documentModel: DocumentModelGlobalState = {
           schema:
             "type AppModuleState {\n  name: String!\n  status: StatusType!\n  allowedDocumentTypes: [String!]\n  isDragAndDropEnabled: Boolean!\n}\n\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}",
           initialValue:
-            '"{\\n  \\"name\\": \\"\\",\\n  \\"status\\": \\"DRAFT\\",\\n  \\"allowedDocumentTypes\\": null,\\n  \\"isDragAndDropEnabled\\": true\\n}"',
+            '{\n  "name": "",\n  "status": "DRAFT",\n  "allowedDocumentTypes": null,\n  "isDragAndDropEnabled": true\n}',
           examples: [],
         },
         local: {
           schema: "",
-          initialValue: '""',
+          initialValue: "",
           examples: [],
         },
       },

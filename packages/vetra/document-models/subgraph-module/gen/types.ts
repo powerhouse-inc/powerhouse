@@ -3,6 +3,7 @@ import type { SubgraphModuleAction } from "./actions.js";
 import type { SubgraphModuleState as SubgraphModuleGlobalState } from "./schema/types.js";
 
 type SubgraphModuleLocalState = Record<PropertyKey, never>;
+
 type SubgraphModulePHState = PHBaseState & {
   global: SubgraphModuleGlobalState;
   local: SubgraphModuleLocalState;

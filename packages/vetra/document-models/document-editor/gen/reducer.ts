@@ -22,43 +22,54 @@ const stateReducer: StateReducer<DocumentEditorPHState> = (
   if (isDocumentAction(action)) {
     return state;
   }
-
   switch (action.type) {
-    case "SET_EDITOR_NAME":
+    case "SET_EDITOR_NAME": {
       SetEditorNameInputSchema().parse(action.input);
+
       documentEditorBaseOperationsOperations.setEditorNameOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
       );
-      break;
 
-    case "ADD_DOCUMENT_TYPE":
+      break;
+    }
+
+    case "ADD_DOCUMENT_TYPE": {
       AddDocumentTypeInputSchema().parse(action.input);
+
       documentEditorBaseOperationsOperations.addDocumentTypeOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
       );
-      break;
 
-    case "REMOVE_DOCUMENT_TYPE":
+      break;
+    }
+
+    case "REMOVE_DOCUMENT_TYPE": {
       RemoveDocumentTypeInputSchema().parse(action.input);
+
       documentEditorBaseOperationsOperations.removeDocumentTypeOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
       );
-      break;
 
-    case "SET_EDITOR_STATUS":
+      break;
+    }
+
+    case "SET_EDITOR_STATUS": {
       SetEditorStatusInputSchema().parse(action.input);
+
       documentEditorBaseOperationsOperations.setEditorStatusOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
       );
+
       break;
+    }
 
     default:
       return state;

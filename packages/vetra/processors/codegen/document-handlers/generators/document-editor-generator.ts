@@ -4,6 +4,7 @@ import type { InternalTransmitterUpdate } from "document-drive";
 import type { DocumentEditorState } from "../../../../document-models/document-editor/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
+import { LEGACY } from "./constants.js";
 import { backupDocument } from "./utils.js";
 
 /**
@@ -72,6 +73,7 @@ export class DocumentEditorGenerator extends BaseDocumentGen {
         documentTypes: documentTypes,
         config: this.config.PH_CONFIG,
         editorId: editorId,
+        legacy: LEGACY,
       });
 
       logger.info(

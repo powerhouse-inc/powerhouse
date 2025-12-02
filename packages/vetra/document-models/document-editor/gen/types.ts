@@ -3,6 +3,7 @@ import type { DocumentEditorAction } from "./actions.js";
 import type { DocumentEditorState as DocumentEditorGlobalState } from "./schema/types.js";
 
 type DocumentEditorLocalState = Record<PropertyKey, never>;
+
 type DocumentEditorPHState = PHBaseState & {
   global: DocumentEditorGlobalState;
   local: DocumentEditorLocalState;

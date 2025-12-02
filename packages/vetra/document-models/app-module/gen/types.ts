@@ -3,6 +3,7 @@ import type { AppModuleAction } from "./actions.js";
 import type { AppModuleState as AppModuleGlobalState } from "./schema/types.js";
 
 type AppModuleLocalState = Record<PropertyKey, never>;
+
 type AppModulePHState = PHBaseState & {
   global: AppModuleGlobalState;
   local: AppModuleLocalState;

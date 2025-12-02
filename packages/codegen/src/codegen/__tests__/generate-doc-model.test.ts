@@ -1,6 +1,6 @@
 import {
+  generateDocumentModel,
   generateSchemas,
-  hygenGenerateDocumentModel,
   hygenGenerateProcessor,
   loadDocumentModel,
 } from "@powerhousedao/codegen";
@@ -15,6 +15,7 @@ import {
   it,
   type TestContext,
 } from "vitest";
+import { USE_LEGACY } from "./config.js";
 import {
   DOCUMENT_MODELS_TEST_PROJECT,
   GENERATE_DOC_MODEL_TEST_OUTPUT_DIR,
@@ -78,23 +79,25 @@ describe("document model", () => {
       ),
     );
 
-    await hygenGenerateDocumentModel(
-      billingStatementDocumentModel,
-      documentModelsDirName,
-      TEST_PACKAGE_NAME,
-      { skipFormat: true },
-    );
+    await generateDocumentModel({
+      dir: documentModelsDirName,
+      specifiedPackageName: TEST_PACKAGE_NAME,
+      documentModelState: billingStatementDocumentModel,
+      legacy: USE_LEGACY,
+      skipFormat: true,
+    });
 
     const testDocDocumentModel = await loadDocumentModel(
       path.join(documentModelsSrcPath, "test-doc", "test-doc.json"),
     );
 
-    await hygenGenerateDocumentModel(
-      testDocDocumentModel,
-      documentModelsDirName,
-      TEST_PACKAGE_NAME,
-      { skipFormat: true },
-    );
+    await generateDocumentModel({
+      legacy: USE_LEGACY,
+      dir: documentModelsDirName,
+      specifiedPackageName: TEST_PACKAGE_NAME,
+      documentModelState: testDocDocumentModel,
+      skipFormat: true,
+    });
   };
 
   it(
@@ -338,12 +341,13 @@ describe("document model", () => {
         { force: true },
       );
 
-      await hygenGenerateDocumentModel(
-        testDocDocumentModelV2,
-        documentModelsDirName,
-        TEST_PACKAGE_NAME,
-        { skipFormat: true },
-      );
+      await generateDocumentModel({
+        legacy: USE_LEGACY,
+        dir: documentModelsDirName,
+        specifiedPackageName: TEST_PACKAGE_NAME,
+        documentModelState: testDocDocumentModelV2,
+        skipFormat: true,
+      });
 
       // expect .out/document-model/test-doc/src/reducers/base-operations.ts to contain setTestIdOperation, setTestNameOperation, setTestDescriptionOperation and setTestValueOperation
       const baseOperationsPath = path.join(
@@ -380,12 +384,12 @@ describe("document model", () => {
 
       // Check that InvalidStatusTransition error is generated
       expect(generalErrorContent).toContain("export type ErrorCode =");
-      expect(generalErrorContent).toContain("'InvalidStatusTransition'");
+      expect(generalErrorContent).toContain(`"InvalidStatusTransition"`);
       expect(generalErrorContent).toContain(
         "export class InvalidStatusTransition extends Error implements ReducerError",
       );
       expect(generalErrorContent).toContain(
-        "errorCode = 'InvalidStatusTransition' as ErrorCode",
+        `errorCode = "InvalidStatusTransition" as ErrorCode`,
       );
 
       // Check line_items module errors
@@ -400,8 +404,8 @@ describe("document model", () => {
 
       // Check that both DuplicateLineItem and InvalidStatusTransition errors are generated (but deduplicated)
       expect(lineItemsErrorContent).toContain("export type ErrorCode =");
-      expect(lineItemsErrorContent).toContain("'DuplicateLineItem'");
-      expect(lineItemsErrorContent).toContain("'InvalidStatusTransition'");
+      expect(lineItemsErrorContent).toContain(`"DuplicateLineItem"`);
+      expect(lineItemsErrorContent).toContain(`"InvalidStatusTransition"`);
       expect(lineItemsErrorContent).toContain(
         "export class DuplicateLineItem extends Error implements ReducerError",
       );
@@ -411,7 +415,7 @@ describe("document model", () => {
 
       // Verify that InvalidStatusTransition only appears once in the ErrorCode type (deduplication test)
       const errorCodeMatches = lineItemsErrorContent.match(
-        /'InvalidStatusTransition'/g,
+        /"InvalidStatusTransition"/g,
       );
       expect(errorCodeMatches?.length).toBe(3); // Once in type definition, once in each class
     },
@@ -482,12 +486,13 @@ describe("document model", () => {
         ),
       );
 
-      await hygenGenerateDocumentModel(
-        testEmptyCodesDocumentModel,
-        documentModelsDirName,
-        TEST_PACKAGE_NAME,
-        { skipFormat: true },
-      );
+      await generateDocumentModel({
+        legacy: USE_LEGACY,
+        dir: documentModelsDirName,
+        specifiedPackageName: TEST_PACKAGE_NAME,
+        documentModelState: testEmptyCodesDocumentModel,
+        skipFormat: true,
+      });
 
       // Check that error codes are generated from error names
       const testOperationsErrorPath = path.join(
@@ -504,8 +509,8 @@ describe("document model", () => {
 
       // Check that error codes are generated from names in PascalCase when empty
       expect(testOperationsErrorContent).toContain("export type ErrorCode =");
-      expect(testOperationsErrorContent).toContain("'InvalidValue'");
-      expect(testOperationsErrorContent).toContain("'EmptyValue'");
+      expect(testOperationsErrorContent).toContain(`"InvalidValue"`);
+      expect(testOperationsErrorContent).toContain(`"EmptyValue"`);
 
       // Check that error classes are generated
       expect(testOperationsErrorContent).toContain(
@@ -517,10 +522,10 @@ describe("document model", () => {
 
       // Verify error code constants are set properly in PascalCase
       expect(testOperationsErrorContent).toContain(
-        "errorCode = 'InvalidValue' as ErrorCode",
+        `errorCode = "InvalidValue" as ErrorCode`,
       );
       expect(testOperationsErrorContent).toContain(
-        "errorCode = 'EmptyValue' as ErrorCode",
+        `errorCode = "EmptyValue" as ErrorCode`,
       );
     },
   );

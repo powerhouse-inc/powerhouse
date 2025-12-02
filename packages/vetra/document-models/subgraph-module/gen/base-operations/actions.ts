@@ -1,4 +1,4 @@
-import { type Action } from "document-model";
+import type { Action } from "document-model";
 import type { SetSubgraphNameInput, SetSubgraphStatusInput } from "../types.js";
 
 export type SetSubgraphNameAction = Action & {

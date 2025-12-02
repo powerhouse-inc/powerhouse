@@ -1,10 +1,19 @@
 import type { Command } from "commander";
+import type { CommandActionType } from "../types.js";
 
-async function migrate() {
-  const { migrate } = await import("../services/migrate/migrate.js");
-  return await migrate();
-}
+export const migrate: CommandActionType<
+  [string | string[] | undefined, { tsMorph?: boolean }]
+> = async (_, options) => {
+  const { migrate: startMigrate } = await import(
+    "../services/migrate/migrate.js"
+  );
+  return await startMigrate(options);
+};
 
 export function migrateCommand(program: Command) {
-  program.command("migrate").description("Run migrations").action(migrate);
+  program
+    .command("migrate")
+    .description("Run migrations")
+    .option("--ts-morph", "Use new ts-morph codegen")
+    .action(migrate);
 }

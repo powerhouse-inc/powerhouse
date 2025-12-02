@@ -54,9 +54,7 @@ module.exports = {
     const useInSelectedFolderHookName = documentType
       ? `use${phDocumentTypeName}sInSelectedFolder`
       : "useDocumentsInSelectedFolder";
-    const editNameComponentName = documentType
-      ? `Edit${pascalCaseDocumentType}Name`
-      : "EditDocumentName";
+    const editNameComponentName = "EditName"
 
     return {
       rootDir,

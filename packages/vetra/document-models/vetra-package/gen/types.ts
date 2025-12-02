@@ -3,6 +3,7 @@ import type { VetraPackageAction } from "./actions.js";
 import type { VetraPackageState as VetraPackageGlobalState } from "./schema/types.js";
 
 type VetraPackageLocalState = Record<PropertyKey, never>;
+
 type VetraPackagePHState = PHBaseState & {
   global: VetraPackageGlobalState;
   local: VetraPackageLocalState;

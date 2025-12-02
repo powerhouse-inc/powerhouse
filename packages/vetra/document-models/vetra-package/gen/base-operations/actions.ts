@@ -1,4 +1,4 @@
-import { type Action } from "document-model";
+import type { Action } from "document-model";
 import type {
   SetPackageNameInput,
   SetPackageDescriptionInput,

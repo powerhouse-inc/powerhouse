@@ -25,61 +25,78 @@ const stateReducer: StateReducer<AppModulePHState> = (
   if (isDocumentAction(action)) {
     return state;
   }
-
   switch (action.type) {
-    case "SET_APP_NAME":
+    case "SET_APP_NAME": {
       SetAppNameInputSchema().parse(action.input);
+
       appModuleBaseOperationsOperations.setAppNameOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
       );
-      break;
 
-    case "SET_APP_STATUS":
+      break;
+    }
+
+    case "SET_APP_STATUS": {
       SetAppStatusInputSchema().parse(action.input);
+
       appModuleBaseOperationsOperations.setAppStatusOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
       );
-      break;
 
-    case "ADD_DOCUMENT_TYPE":
+      break;
+    }
+
+    case "ADD_DOCUMENT_TYPE": {
       AddDocumentTypeInputSchema().parse(action.input);
+
       appModuleBaseOperationsOperations.addDocumentTypeOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
       );
-      break;
 
-    case "REMOVE_DOCUMENT_TYPE":
+      break;
+    }
+
+    case "REMOVE_DOCUMENT_TYPE": {
       RemoveDocumentTypeInputSchema().parse(action.input);
+
       appModuleBaseOperationsOperations.removeDocumentTypeOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
       );
-      break;
 
-    case "SET_DOCUMENT_TYPES":
+      break;
+    }
+
+    case "SET_DOCUMENT_TYPES": {
       SetDocumentTypesInputSchema().parse(action.input);
+
       appModuleBaseOperationsOperations.setDocumentTypesOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
       );
-      break;
 
-    case "SET_DRAG_AND_DROP_ENABLED":
+      break;
+    }
+
+    case "SET_DRAG_AND_DROP_ENABLED": {
       SetDragAndDropEnabledInputSchema().parse(action.input);
+
       appModuleDndOperationsOperations.setDragAndDropEnabledOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,
       );
+
       break;
+    }
 
     default:
       return state;
