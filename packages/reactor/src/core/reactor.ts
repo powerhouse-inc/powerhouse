@@ -884,7 +884,7 @@ export class Reactor implements IReactor {
   async addChildren(
     parentId: string,
     documentIds: string[],
-    _view?: ViewFilter,
+    branch: string = "main",
     signal?: AbortSignal,
   ): Promise<JobInfo> {
     if (signal?.aborted) {
@@ -903,7 +903,6 @@ export class Reactor implements IReactor {
       },
     }));
 
-    const branch = _view?.branch || "main";
     return await this.mutate(parentId, branch, actions, signal);
   }
 
@@ -913,7 +912,7 @@ export class Reactor implements IReactor {
   async removeChildren(
     parentId: string,
     documentIds: string[],
-    _view?: ViewFilter,
+    branch: string = "main",
     signal?: AbortSignal,
   ): Promise<JobInfo> {
     if (signal?.aborted) {
@@ -932,7 +931,6 @@ export class Reactor implements IReactor {
       },
     }));
 
-    const branch = _view?.branch || "main";
     return await this.mutate(parentId, branch, actions, signal);
   }
 

@@ -251,14 +251,14 @@ export interface IReactor {
    *
    * @param parentId - Parent document id
    * @param documentIds - List of document ids to add as children
-   * @param view - Optional filter containing branch and scopes information
+   * @param branch - Branch to add children to, defaults to "main"
    * @param signal - Optional abort signal to cancel the request
    * @returns The job id and status
    */
   addChildren(
     parentId: string,
     documentIds: string[],
-    view?: ViewFilter,
+    branch?: string,
     signal?: AbortSignal,
   ): Promise<JobInfo>;
 
@@ -267,14 +267,14 @@ export interface IReactor {
    *
    * @param parentId - Parent document id
    * @param documentIds - List of document ids to remove as children
-   * @param view - Optional filter containing branch and scopes information
+   * @param branch - Branch to remove children from, defaults to "main"
    * @param signal - Optional abort signal to cancel the request
    * @returns The job id and status
    */
   removeChildren(
     parentId: string,
     documentIds: string[],
-    view?: ViewFilter,
+    branch?: string,
     signal?: AbortSignal,
   ): Promise<JobInfo>;
 

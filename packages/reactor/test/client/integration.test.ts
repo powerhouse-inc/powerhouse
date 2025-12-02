@@ -410,9 +410,11 @@ describe("ReactorClient Integration Tests", () => {
         const doc = createDocModelDocument({ id: "rename-test-2" });
         await client.create(doc);
 
-        const result = await client.rename("rename-test-2", "Named with View", {
-          branch: "main",
-        });
+        const result = await client.rename(
+          "rename-test-2",
+          "Named with View",
+          "main",
+        );
 
         expect(result.header.id).toBe("rename-test-2");
         expect(result.operations.global.length).toBeGreaterThan(0);

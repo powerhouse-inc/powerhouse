@@ -486,7 +486,7 @@ describe("ReactorClient Unit Tests", () => {
       expect(mockReactor.addChildren).toHaveBeenCalledWith(
         parentId,
         childIds,
-        undefined,
+        "main",
         undefined,
       );
       expect(mockJobAwaiter.waitForJob).toHaveBeenCalledWith(
@@ -495,7 +495,7 @@ describe("ReactorClient Unit Tests", () => {
       );
       expect(mockReactor.getByIdOrSlug).toHaveBeenCalledWith(
         parentId,
-        undefined,
+        { branch: "main" },
         completedJobInfo.consistencyToken,
         undefined,
       );
@@ -538,7 +538,7 @@ describe("ReactorClient Unit Tests", () => {
       expect(mockReactor.removeChildren).toHaveBeenCalledWith(
         parentId,
         childIds,
-        undefined,
+        "main",
         undefined,
       );
       expect(mockJobAwaiter.waitForJob).toHaveBeenCalledWith(
@@ -547,7 +547,7 @@ describe("ReactorClient Unit Tests", () => {
       );
       expect(mockReactor.getByIdOrSlug).toHaveBeenCalledWith(
         parentId,
-        undefined,
+        { branch: "main" },
         completedJobInfo.consistencyToken,
         undefined,
       );
