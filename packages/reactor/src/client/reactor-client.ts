@@ -1,6 +1,7 @@
 import type { Action, DocumentModelModule, PHDocument } from "document-model";
 import { actions } from "document-model";
 
+import { signActions } from "#core/utils.js";
 import type { IReactor } from "../core/types.js";
 import { type IJobAwaiter } from "../shared/awaiter.js";
 import {
@@ -186,7 +187,7 @@ export class ReactorClient implements IReactorClient {
     parentIdentifier?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    const jobInfo = await this.reactor.create(document, signal);
+    const jobInfo = await this.reactor.create(document, this.signer, signal);
 
     const completedJob = await this.waitForJob(jobInfo, signal);
 
@@ -246,7 +247,7 @@ export class ReactorClient implements IReactorClient {
     actions: Action[],
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    const signedActions = await this.signActions(actions, signal);
+    const signedActions = await signActions(actions, this.signer, signal);
 
     const jobInfo = await this.reactor.execute(
       documentIdentifier,
@@ -276,7 +277,7 @@ export class ReactorClient implements IReactorClient {
     actions: Action[],
     signal?: AbortSignal,
   ): Promise<JobInfo> {
-    const signedActions = await this.signActions(actions, signal);
+    const signedActions = await signActions(actions, this.signer, signal);
 
     return this.reactor.execute(
       documentIdentifier,
@@ -316,6 +317,7 @@ export class ReactorClient implements IReactorClient {
       parentIdentifier,
       documentIdentifiers,
       branch,
+      this.signer,
       signal,
     );
 
@@ -343,6 +345,7 @@ export class ReactorClient implements IReactorClient {
       parentIdentifier,
       documentIdentifiers,
       branch,
+      this.signer,
       signal,
     );
 
@@ -374,6 +377,7 @@ export class ReactorClient implements IReactorClient {
       sourceParentIdentifier,
       documentIdentifiers,
       branch,
+      this.signer,
       signal,
     );
 
@@ -383,6 +387,7 @@ export class ReactorClient implements IReactorClient {
       targetParentIdentifier,
       documentIdentifiers,
       branch,
+      this.signer,
       signal,
     );
 
@@ -452,12 +457,20 @@ export class ReactorClient implements IReactorClient {
       }
 
       for (const descendantId of descendants) {
-        const jobInfo = await this.reactor.deleteDocument(descendantId, signal);
+        const jobInfo = await this.reactor.deleteDocument(
+          descendantId,
+          this.signer,
+          signal,
+        );
         jobs.push(jobInfo);
       }
     }
 
-    const jobInfo = await this.reactor.deleteDocument(identifier, signal);
+    const jobInfo = await this.reactor.deleteDocument(
+      identifier,
+      this.signer,
+      signal,
+    );
     jobs.push(jobInfo);
 
     await Promise.all(jobs.map((job) => this.waitForJob(job, signal)));
@@ -574,37 +587,5 @@ export class ReactorClient implements IReactorClient {
       unsubscribeUpdated();
       unsubscribeRelationship();
     };
-  }
-
-  private async signActions(
-    actions: Action[],
-    signal?: AbortSignal,
-  ): Promise<Action[]> {
-    // Sign actions with the required signer
-    const signedActions = await Promise.all(
-      actions.map(async (action) => {
-        const signature = await this.signer.sign(action, signal);
-        return {
-          ...action,
-          context: {
-            ...action.context,
-            signer: {
-              user: {
-                address: signature[0],
-                networkId: "",
-                chainId: 0,
-              },
-              app: {
-                name: "",
-                key: "",
-              },
-              signatures: [signature],
-            },
-          },
-        };
-      }),
-    );
-
-    return signedActions;
   }
 }

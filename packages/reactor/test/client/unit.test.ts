@@ -452,7 +452,7 @@ describe("ReactorClient Unit Tests", () => {
   });
 
   describe("addChildren", () => {
-    it("should call reactor.addChildren, wait for job, and return parent document", async () => {
+    it("should pass signer to reactor.addChildren, wait for job, and return parent document", async () => {
       const parentId = "parent-1";
       const childIds = ["child-1", "child-2"];
 
@@ -487,6 +487,7 @@ describe("ReactorClient Unit Tests", () => {
         parentId,
         childIds,
         "main",
+        mockSigner,
         undefined,
       );
       expect(mockJobAwaiter.waitForJob).toHaveBeenCalledWith(
@@ -504,7 +505,7 @@ describe("ReactorClient Unit Tests", () => {
   });
 
   describe("removeChildren", () => {
-    it("should call reactor.removeChildren, wait for job, and return parent document", async () => {
+    it("should pass signer to reactor.removeChildren, wait for job, and return parent document", async () => {
       const parentId = "parent-1";
       const childIds = ["child-1"];
 
@@ -539,6 +540,7 @@ describe("ReactorClient Unit Tests", () => {
         parentId,
         childIds,
         "main",
+        mockSigner,
         undefined,
       );
       expect(mockJobAwaiter.waitForJob).toHaveBeenCalledWith(
@@ -556,7 +558,7 @@ describe("ReactorClient Unit Tests", () => {
   });
 
   describe("deleteDocument", () => {
-    it("should call reactor.deleteDocument and wait for job", async () => {
+    it("should pass signer to reactor.deleteDocument and wait for job", async () => {
       const documentId = "doc-1";
 
       const jobInfo: JobInfo = {
@@ -572,6 +574,7 @@ describe("ReactorClient Unit Tests", () => {
 
       expect(mockReactor.deleteDocument).toHaveBeenCalledWith(
         documentId,
+        mockSigner,
         undefined,
       );
       expect(mockJobAwaiter.waitForJob).toHaveBeenCalledWith(
@@ -580,7 +583,7 @@ describe("ReactorClient Unit Tests", () => {
       );
     });
 
-    it("should pass signal parameter", async () => {
+    it("should pass signer and signal parameters", async () => {
       const documentId = "doc-1";
       const signal = new AbortController().signal;
 
@@ -597,12 +600,13 @@ describe("ReactorClient Unit Tests", () => {
 
       expect(mockReactor.deleteDocument).toHaveBeenCalledWith(
         documentId,
+        mockSigner,
         signal,
       );
       expect(mockJobAwaiter.waitForJob).toHaveBeenCalledWith("job-1", signal);
     });
 
-    it("should cascade delete children when propagate is Cascade", async () => {
+    it("should pass signer and cascade delete children when propagate is Cascade", async () => {
       const parentId = "parent-1";
       const childId = "child-1";
       const signal = new AbortController().signal;
@@ -646,8 +650,16 @@ describe("ReactorClient Unit Tests", () => {
         signal,
       );
       expect(mockReactor.deleteDocument).toHaveBeenCalledTimes(2);
-      expect(mockReactor.deleteDocument).toHaveBeenCalledWith(childId, signal);
-      expect(mockReactor.deleteDocument).toHaveBeenCalledWith(parentId, signal);
+      expect(mockReactor.deleteDocument).toHaveBeenCalledWith(
+        childId,
+        mockSigner,
+        signal,
+      );
+      expect(mockReactor.deleteDocument).toHaveBeenCalledWith(
+        parentId,
+        mockSigner,
+        signal,
+      );
     });
   });
 

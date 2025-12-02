@@ -30,6 +30,7 @@ import type {
   ShutdownStatus,
   ViewFilter,
 } from "../shared/types.js";
+import type { ISigner } from "../signer/types.js";
 import type {
   IDocumentIndexer,
   IDocumentView,
@@ -194,19 +195,29 @@ export interface IReactor {
    * Creates a document
    *
    * @param document - Document with optional id, slug, parent, model type, and initial state
+   * @param signer - Optional signer to sign the actions
    * @param signal - Optional abort signal to cancel the request
    * @returns The job status
    */
-  create(document: PHDocument, signal?: AbortSignal): Promise<JobInfo>;
+  create(
+    document: PHDocument,
+    signer?: ISigner,
+    signal?: AbortSignal,
+  ): Promise<JobInfo>;
 
   /**
    * Deletes a document
    *
    * @param id - Document id
+   * @param signer - Optional signer to sign the actions
    * @param signal - Optional abort signal to cancel the request
    * @returns The job id and status
    */
-  deleteDocument(id: string, signal?: AbortSignal): Promise<JobInfo>;
+  deleteDocument(
+    id: string,
+    signer?: ISigner,
+    signal?: AbortSignal,
+  ): Promise<JobInfo>;
 
   /**
    * Applies a list of actions to a document.
@@ -252,6 +263,7 @@ export interface IReactor {
    * @param parentId - Parent document id
    * @param documentIds - List of document ids to add as children
    * @param branch - Branch to add children to, defaults to "main"
+   * @param signer - Optional signer to sign the actions
    * @param signal - Optional abort signal to cancel the request
    * @returns The job id and status
    */
@@ -259,6 +271,7 @@ export interface IReactor {
     parentId: string,
     documentIds: string[],
     branch?: string,
+    signer?: ISigner,
     signal?: AbortSignal,
   ): Promise<JobInfo>;
 
@@ -268,6 +281,7 @@ export interface IReactor {
    * @param parentId - Parent document id
    * @param documentIds - List of document ids to remove as children
    * @param branch - Branch to remove children from, defaults to "main"
+   * @param signer - Optional signer to sign the actions
    * @param signal - Optional abort signal to cancel the request
    * @returns The job id and status
    */
@@ -275,6 +289,7 @@ export interface IReactor {
     parentId: string,
     documentIds: string[],
     branch?: string,
+    signer?: ISigner,
     signal?: AbortSignal,
   ): Promise<JobInfo>;
 
