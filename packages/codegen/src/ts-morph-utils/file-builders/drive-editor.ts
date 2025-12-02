@@ -127,10 +127,20 @@ export function makeDriveEditorComponent({
   project,
   editorFilePath,
 }: MakeDriveEditorComponentArgs) {
-  const { sourceFile: driveEditorComponentSourceFile } = getOrCreateSourceFile(
-    project,
-    editorFilePath,
-  );
+  const { alreadyExists, sourceFile: driveEditorComponentSourceFile } =
+    getOrCreateSourceFile(project, editorFilePath);
+
+  if (alreadyExists) {
+    const editorFunction = driveEditorComponentSourceFile.getFunction("Editor");
+    if (editorFunction) {
+      if (!editorFunction.isDefaultExport()) {
+        editorFunction.setIsDefaultExport(true);
+      }
+      return;
+    }
+  }
+
+  driveEditorComponentSourceFile.replaceWithText("");
 
   const printNode = buildNodePrinter(driveEditorComponentSourceFile);
 
@@ -196,6 +206,8 @@ export function makeDriveEditorConfigFile({
     project,
     editorConfigFilePath,
   );
+
+  driveEditorConfigSourceFile.replaceWithText("");
 
   driveEditorConfigSourceFile.addImportDeclaration({
     moduleSpecifier: "@powerhousedao/reactor-browser",

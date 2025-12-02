@@ -39,9 +39,12 @@ export function makeModulesFile({
   // we only need the files in the directory we're creating the modules file from
   project.addSourceFilesAtPaths(modulesSourceFilesPath);
 
-  // get all the module.ts files in the directory we're creating the modules file from
-  const moduleFiles = project
-    .getSourceFiles()
+  let modulesDir = project.getDirectory(modulesDirPath);
+  if (!modulesDir) {
+    modulesDir = project.addDirectoryAtPath(modulesDirPath);
+  }
+  const moduleFiles = modulesDir
+    .getDescendantSourceFiles()
     .filter((file) => file.getFilePath().includes(`module.ts`));
 
   // get the variable declaration for the module object exported by each module.ts file by the given type name
@@ -49,10 +52,16 @@ export function makeModulesFile({
     getVariableDeclarationByTypeName(file, typeName),
   );
 
-  // get the variable names for each of the module objects, this is all we need for the codegen
-  const moduleDeclarationNames = moduleDeclarations
-    .map((declaration) => declaration?.getName())
-    .filter((name) => name !== undefined);
+  const modules = moduleDeclarations
+    .filter((module) => module !== undefined)
+    .map((module) => {
+      const name = module.getName();
+      const sourceFile = module.getSourceFile();
+      const parentDir = sourceFile.getDirectory();
+      const parentDirName = parentDir.getBaseName();
+      const moduleSpecifier = `./${parentDirName}/module.js`;
+      return { name, moduleSpecifier };
+    });
 
   const moduleExportsFilePath = buildModulesOutputFilePath(
     modulesDirPath,
@@ -67,7 +76,21 @@ export function makeModulesFile({
       moduleExportsFilePath,
       "",
     );
+  } else {
+    moduleExportsSourceFile.replaceWithText("");
   }
+
+  const typeImport = {
+    namedImports: [typeName],
+    moduleSpecifier: "document-model",
+    isTypeOnly: true,
+  };
+  const moduleImports = modules.map(({ name, moduleSpecifier }) => ({
+    namedImports: [name],
+    moduleSpecifier,
+  }));
+  const imports = [typeImport, ...moduleImports];
+  moduleExportsSourceFile.addImportDeclarations(imports);
 
   // create the variable statement for the modules file
   // start as an empty array
@@ -102,20 +125,17 @@ export function makeModulesFile({
     ?.getInitializerIfKind(SyntaxKind.ArrayLiteralExpression);
 
   // add the module declaration names to the array literal expression
-  arrayLiteral?.addElements(moduleDeclarationNames, { useNewLines: true });
-
-  // we don't need to handle the import statements for the file manually, since typescript already knows how to add them
-  moduleExportsSourceFile.fixMissingImports(undefined, {
-    importModuleSpecifierEnding: "js",
-  });
+  arrayLiteral?.addElements(
+    modules.map((module) => module.name),
+    { useNewLines: true },
+  );
 
   // we also need to export each module from the index.ts file for backwards compatibility
   if (shouldMakeLegacyIndexFile) {
     makeLegacyIndexFile({
       project,
       modulesDirPath,
-      moduleExportsSourceFile,
-      moduleDeclarationNames,
+      modules,
     });
   }
 

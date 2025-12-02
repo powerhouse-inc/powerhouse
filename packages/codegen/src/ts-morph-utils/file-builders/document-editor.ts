@@ -372,10 +372,12 @@ export function makeEditorComponent({
 
   if (alreadyExists) {
     const functionDeclaration = editorSourceFile.getFunction("Editor");
-    if (functionDeclaration && !functionDeclaration.isDefaultExport()) {
-      functionDeclaration.setIsDefaultExport(true);
+    if (functionDeclaration) {
+      if (!functionDeclaration.isDefaultExport()) {
+        functionDeclaration.setIsDefaultExport(true);
+      }
+      return;
     }
-    return;
   }
 
   const printNode = buildNodePrinter(editorSourceFile);
@@ -431,6 +433,8 @@ export function makeEditorModuleFile({
     editorModuleFilePath,
   );
 
+  editorModuleSourceFile.replaceWithText("");
+
   const pascalCaseEditorName = pascalCase(editorName);
 
   editorModuleSourceFile.addImportDeclarations([
@@ -446,6 +450,9 @@ export function makeEditorModuleFile({
   ]);
 
   const moduleVariableStatement = editorModuleSourceFile.addVariableStatement({
+    docs: [
+      `Document editor module for the "${documentModelId ?? legacyMultipleDocumentTypes?.join(",")}" document type`,
+    ],
     declarationKind: VariableDeclarationKind.Const,
     isExported: true,
     declarations: [
