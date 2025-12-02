@@ -894,3 +894,50 @@ export async function createSignedTestOperation(
     },
   };
 }
+
+/**
+ * Creates a signed test action using the SimpleSigner.
+ *
+ * @param signer - The SimpleSigner instance to sign with
+ * @param overrides - Optional action overrides
+ * @returns Promise resolving to a signed action
+ */
+export async function createSignedTestAction(
+  signer: any,
+  overrides: Partial<Action> = {},
+): Promise<Action> {
+  const action = createTestAction(overrides);
+  const publicKey = signer.getPublicKey();
+
+  const signerData: any = {
+    user: { address: "0x123", chainId: 1, networkId: "1" },
+    app: { name: "test", key: publicKey },
+    signatures: [],
+  };
+
+  const dataToSign = JSON.stringify({
+    action: action,
+    index: 0,
+    timestamp: action.timestampUtcMs,
+  });
+
+  const signatureHex = await signer.sign(new TextEncoder().encode(dataToSign));
+
+  const signature: any = [
+    action.timestampUtcMs,
+    publicKey,
+    action.id,
+    "",
+    `0x${signatureHex}`,
+  ];
+
+  signerData.signatures = [signature];
+
+  return {
+    ...action,
+    context: {
+      ...action.context,
+      signer: signerData,
+    },
+  };
+}

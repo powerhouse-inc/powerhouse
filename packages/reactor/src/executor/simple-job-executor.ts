@@ -149,6 +149,18 @@ export class SimpleJobExecutor implements IJobExecutor {
   }> {
     const generatedOperations: Operation[] = [];
     const operationsWithContext: OperationWithContext[] = [];
+
+    try {
+      await this.verifyActionSignatures(job, actions);
+    } catch (error) {
+      return {
+        success: false,
+        generatedOperations,
+        operationsWithContext,
+        error: error instanceof Error ? error : new Error(String(error)),
+      };
+    }
+
     let actionIndex = 0;
 
     for (const action of actions) {
@@ -1135,16 +1147,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
     }
 
-    try {
-      await this.verifyOperationSignatures(job, job.operations);
-    } catch (error) {
-      return this.buildErrorResult(
-        job,
-        error instanceof Error ? error : new Error(String(error)),
-        startTime,
-      );
-    }
-
     const scope = job.scope;
 
     let latestRevision = 0;
@@ -1355,9 +1357,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       if (signer.signatures.length === 0) {
         throw new InvalidSignatureError(
           job.documentId,
-          operation.index,
-          operation.id ?? "unknown",
-          "Operation has signer but no signatures",
+          `Operation ${operation.id ?? "unknown"} at index ${operation.index} has signer but no signatures`,
         );
       }
 
@@ -1371,18 +1371,67 @@ export class SimpleJobExecutor implements IJobExecutor {
           error instanceof Error ? error.message : String(error);
         throw new InvalidSignatureError(
           job.documentId,
-          operation.index,
-          operation.id ?? "unknown",
-          `Verification failed: ${errorMessage}`,
+          `Operation ${operation.id ?? "unknown"} at index ${operation.index} verification failed: ${errorMessage}`,
         );
       }
 
       if (!isValid) {
         throw new InvalidSignatureError(
           job.documentId,
-          operation.index,
-          operation.id ?? "unknown",
-          "Signature verification returned false",
+          `Operation ${operation.id ?? "unknown"} at index ${operation.index} signature verification returned false`,
+        );
+      }
+    }
+  }
+
+  private async verifyActionSignatures(
+    job: Job,
+    actions: Action[],
+  ): Promise<void> {
+    if (!this.signatureVerifier) {
+      return;
+    }
+
+    for (const action of actions) {
+      const signer = action.context?.signer;
+
+      if (!signer) {
+        continue;
+      }
+
+      if (signer.signatures.length === 0) {
+        throw new InvalidSignatureError(
+          job.documentId,
+          `Action ${action.id} has signer but no signatures`,
+        );
+      }
+
+      const publicKey = signer.app.key;
+      let isValid = false;
+
+      try {
+        const tempOperation: Operation = {
+          index: 0,
+          timestampUtcMs: action.timestampUtcMs || new Date().toISOString(),
+          hash: "",
+          skip: 0,
+          action: action,
+        };
+
+        isValid = await this.signatureVerifier(tempOperation, publicKey);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        throw new InvalidSignatureError(
+          job.documentId,
+          `Action ${action.id} verification failed: ${errorMessage}`,
+        );
+      }
+
+      if (!isValid) {
+        throw new InvalidSignatureError(
+          job.documentId,
+          `Action ${action.id} signature verification returned false`,
         );
       }
     }

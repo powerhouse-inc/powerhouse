@@ -43,23 +43,12 @@ export class CreateDocumentRequiredError extends Error {
  */
 export class InvalidSignatureError extends Error {
   public readonly documentId: string;
-  public readonly operationIndex: number;
-  public readonly operationId: string;
   public readonly reason: string;
 
-  constructor(
-    documentId: string,
-    operationIndex: number,
-    operationId: string,
-    reason: string,
-  ) {
-    const message = `Invalid signature for operation ${operationId} at index ${operationIndex} in document ${documentId}: ${reason}`;
-
-    super(message);
+  constructor(documentId: string, reason: string) {
+    super(`Invalid signature in document ${documentId}: ${reason}`);
     this.name = "InvalidSignatureError";
     this.documentId = documentId;
-    this.operationIndex = operationIndex;
-    this.operationId = operationId;
     this.reason = reason;
 
     Error.captureStackTrace(this, InvalidSignatureError);
