@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 import { Bench } from "tinybench";
 import { ReactorBuilder } from "../../../src/core/reactor-builder.js";
 import type {
-  BatchMutationRequest,
+  BatchExecutionRequest,
   IReactor,
 } from "../../../src/core/types.js";
 import { JobStatus } from "../../../src/shared/types.js";
@@ -66,7 +66,7 @@ async function main() {
   console.log("Building batch mutation request...");
 
   const documentModels = getDocumentModels();
-  const batchRequest: BatchMutationRequest = buildBatchMutationRequest(
+  const batchRequest: BatchExecutionRequest = buildBatchMutationRequest(
     documentModels,
     mutations,
   );
@@ -160,7 +160,7 @@ async function main() {
       "Reactor (Batch Submission) - Submit all mutations with queue hints",
       async () => {
         const batchResult =
-          await reactorBatchSubmission!.mutateBatch(batchRequest);
+          await reactorBatchSubmission!.executeBatch(batchRequest);
         const jobIds = Object.values(batchResult.jobs).map((job) => job.id);
 
         const timeout = 60000;

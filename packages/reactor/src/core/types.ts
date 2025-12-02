@@ -48,7 +48,7 @@ import type { IChannelFactory, ISyncManager } from "../sync/interfaces.js";
 /**
  * A single mutation job within a batch request.
  */
-export type MutationJobPlan = {
+export type ExecutionJobPlan = {
   key: string;
   documentId: string;
   scope: string;
@@ -60,14 +60,14 @@ export type MutationJobPlan = {
 /**
  * Request for batch mutation operation.
  */
-export type BatchMutationRequest = {
-  jobs: MutationJobPlan[];
+export type BatchExecutionRequest = {
+  jobs: ExecutionJobPlan[];
 };
 
 /**
  * Result from batch mutation operation.
  */
-export type BatchMutationResult = {
+export type BatchExecutionResult = {
   jobs: Record<string, JobInfo>;
 };
 
@@ -252,10 +252,10 @@ export interface IReactor {
    * @param signal - Optional abort signal to cancel the request
    * @returns Map of job keys to job information
    */
-  mutateBatch(
-    request: BatchMutationRequest,
+  executeBatch(
+    request: BatchExecutionRequest,
     signal?: AbortSignal,
-  ): Promise<BatchMutationResult>;
+  ): Promise<BatchExecutionResult>;
 
   /**
    * Adds multiple documents as children to another

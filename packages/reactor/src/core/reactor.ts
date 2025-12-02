@@ -34,8 +34,8 @@ import type {
   IOperationStore,
 } from "../storage/interfaces.js";
 import type {
-  BatchMutationRequest,
-  BatchMutationResult,
+  BatchExecutionRequest,
+  BatchExecutionResult,
   IReactor,
   ReactorFeatures,
 } from "./types.js";
@@ -817,10 +817,10 @@ export class Reactor implements IReactor {
   /**
    * Applies multiple mutations across documents with dependency management
    */
-  async mutateBatch(
-    request: BatchMutationRequest,
+  async executeBatch(
+    request: BatchExecutionRequest,
     signal?: AbortSignal,
-  ): Promise<BatchMutationResult> {
+  ): Promise<BatchExecutionResult> {
     if (signal?.aborted) {
       throw new AbortError();
     }
@@ -894,7 +894,7 @@ export class Reactor implements IReactor {
       }
       throw error;
     }
-    const result: BatchMutationResult = {
+    const result: BatchExecutionResult = {
       jobs: Object.fromEntries(jobInfos),
     };
     return result;

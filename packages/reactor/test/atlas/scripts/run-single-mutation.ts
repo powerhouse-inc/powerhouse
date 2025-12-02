@@ -4,7 +4,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { ReactorBuilder } from "../../../src/core/reactor-builder.js";
-import type { BatchMutationResult, IReactor } from "../../../src/core/types.js";
+import type {
+  BatchExecutionResult,
+  IReactor,
+} from "../../../src/core/types.js";
 import { JobStatus } from "../../../src/shared/types.js";
 import {
   type RecordedOperation,
@@ -68,7 +71,7 @@ async function runSequential(
 
 async function waitForBatchCompletion(
   reactor: IReactor,
-  batchResult: BatchMutationResult["jobs"],
+  batchResult: BatchExecutionResult["jobs"],
 ): Promise<void> {
   const jobIds = Object.values(batchResult).map((job) => job.id);
   const timeoutMs = 60000;
@@ -117,7 +120,7 @@ async function runBatch(
     documentModels.results,
     mutations,
   );
-  const result = await reactor.mutateBatch(batchRequest);
+  const result = await reactor.executeBatch(batchRequest);
   await waitForBatchCompletion(reactor, result.jobs);
 }
 

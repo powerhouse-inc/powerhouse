@@ -19,7 +19,7 @@ import type { Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
-import type { BatchMutationRequest, IReactor } from "../../src/core/types.js";
+import type { BatchExecutionRequest, IReactor } from "../../src/core/types.js";
 import type { DocumentViewDatabase } from "../../src/read-models/types.js";
 import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
 import { JobStatus } from "../../src/shared/types.js";
@@ -344,7 +344,7 @@ describe.each([
           },
         };
 
-        const request: BatchMutationRequest = {
+        const request: BatchExecutionRequest = {
           jobs: [
             {
               key: "addFile",
@@ -365,7 +365,7 @@ describe.each([
           ],
         };
 
-        const result = await reactor.mutateBatch(request);
+        const result = await reactor.executeBatch(request);
 
         await vi.waitUntil(
           async () => {
