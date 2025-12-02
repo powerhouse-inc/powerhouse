@@ -2,6 +2,7 @@
 title: The Challenge of Change
 description: Rapid Application Development with document models.
 slug: Rapid-Application-Development-with-document-models.
+date: 2024-12-02
 authors:
   - name: Call me T.
     title: Product Manager at Powerhouse

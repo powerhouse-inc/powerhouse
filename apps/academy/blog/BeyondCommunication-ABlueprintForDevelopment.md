@@ -1,7 +1,8 @@
 ---
 title: Beyond Communication - A Blueprint for Development
-description: GraphQL Schema’s as a common language for software design
+description: GraphQL Schema's as a common language for software design
 slug: Graphql-schema-as-a-common-language
+date: 2024-12-02
 authors:
   - name: Call me T.
     title: Product Manager at Powerhouse

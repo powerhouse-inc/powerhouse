@@ -76,8 +76,8 @@ const config: Config = {
       title: "",
       logo: {
         alt: "My Site Logo",
-        src: "img/Powerhouse-main.svg",
-        srcDark: "img/Powerhouse-main-light.svg",
+        src: "img/Vetra-logo-dark.svg",
+        srcDark: "img/vetra-logo-light.svg",
         href: "/",
       },
       items: [
