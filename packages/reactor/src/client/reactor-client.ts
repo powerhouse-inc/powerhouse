@@ -237,43 +237,10 @@ export class ReactorClient implements IReactorClient {
     ) as Promise<TDocument>;
   }
 
-  /**
-   * Applies a list of actions to a document and waits for completion
-   */
-  async mutate<TDocument extends PHDocument>(
-    documentIdentifier: string,
-    branch: string,
+  private async signActions(
     actions: Action[],
     signal?: AbortSignal,
-  ): Promise<TDocument> {
-    const jobInfo = await this.reactor.mutate(
-      documentIdentifier,
-      branch,
-      actions,
-      signal,
-    );
-
-    const completedJob = await this.waitForJob(jobInfo, signal);
-
-    const view: ViewFilter = { branch };
-    const result = await this.reactor.getByIdOrSlug<TDocument>(
-      documentIdentifier,
-      view,
-      completedJob.consistencyToken,
-      signal,
-    );
-    return result.document;
-  }
-
-  /**
-   * Submits a list of actions to a document
-   */
-  async mutateAsync(
-    documentIdentifier: string,
-    branch: string,
-    actions: Action[],
-    signal?: AbortSignal,
-  ): Promise<JobInfo> {
+  ): Promise<Action[]> {
     // Sign actions with the required signer
     const signedActions = await Promise.all(
       actions.map(async (action) => {
@@ -298,6 +265,50 @@ export class ReactorClient implements IReactorClient {
         };
       }),
     );
+
+    return signedActions;
+  }
+
+  /**
+   * Applies a list of actions to a document and waits for completion
+   */
+  async mutate<TDocument extends PHDocument>(
+    documentIdentifier: string,
+    branch: string,
+    actions: Action[],
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    const signedActions = await this.signActions(actions, signal);
+
+    const jobInfo = await this.reactor.mutate(
+      documentIdentifier,
+      branch,
+      signedActions,
+      signal,
+    );
+
+    const completedJob = await this.waitForJob(jobInfo, signal);
+
+    const view: ViewFilter = { branch };
+    const result = await this.reactor.getByIdOrSlug<TDocument>(
+      documentIdentifier,
+      view,
+      completedJob.consistencyToken,
+      signal,
+    );
+    return result.document;
+  }
+
+  /**
+   * Submits a list of actions to a document
+   */
+  async mutateAsync(
+    documentIdentifier: string,
+    branch: string,
+    actions: Action[],
+    signal?: AbortSignal,
+  ): Promise<JobInfo> {
+    const signedActions = await this.signActions(actions, signal);
 
     return this.reactor.mutate(
       documentIdentifier,
