@@ -1,3 +1,13 @@
+## 5.1.0-dev.3 (2025-12-02)
+
+### 🚀 Features
+
+- **renown:** login component ([#2117](https://github.com/powerhouse-inc/powerhouse/pull/2117))
+
+### ❤️ Thank You
+
+- Frank @froid1911
+
 ## 5.1.0-dev.2 (2025-12-02)
 
 This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
