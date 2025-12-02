@@ -63,6 +63,21 @@ export type AttachmentInput = {
   readonly mimeType: Scalars["String"]["output"];
 };
 
+export type ChannelMeta = {
+  readonly id: Scalars["String"]["output"];
+};
+
+export type ChannelMetaInput = {
+  readonly id: Scalars["String"]["input"];
+};
+
+export type CreateChannelInput = {
+  readonly collectionId: Scalars["String"]["input"];
+  readonly filter: RemoteFilterInput;
+  readonly id: Scalars["String"]["input"];
+  readonly name: Scalars["String"]["input"];
+};
+
 export type DocumentChangeContext = {
   readonly childId?: Maybe<Scalars["String"]["output"]>;
   readonly parentId?: Maybe<Scalars["String"]["output"]>;
@@ -128,6 +143,7 @@ export type MoveChildrenResult = {
 
 export type Mutation = {
   readonly addChildren: PhDocument;
+  readonly createChannel: Scalars["Boolean"]["output"];
   readonly createDocument: PhDocument;
   readonly createEmptyDocument: PhDocument;
   readonly deleteDocument: Scalars["Boolean"]["output"];
@@ -135,14 +151,19 @@ export type Mutation = {
   readonly moveChildren: MoveChildrenResult;
   readonly mutateDocument: PhDocument;
   readonly mutateDocumentAsync: Scalars["String"]["output"];
+  readonly pushSyncEnvelope: Scalars["Boolean"]["output"];
   readonly removeChildren: PhDocument;
   readonly renameDocument: PhDocument;
 };
 
 export type MutationAddChildrenArgs = {
+  branch?: InputMaybe<Scalars["String"]["input"]>;
   documentIdentifiers: ReadonlyArray<Scalars["String"]["input"]>;
   parentIdentifier: Scalars["String"]["input"];
-  view?: InputMaybe<ViewFilterInput>;
+};
+
+export type MutationCreateChannelArgs = {
+  input: CreateChannelInput;
 };
 
 export type MutationCreateDocumentArgs = {
@@ -166,10 +187,10 @@ export type MutationDeleteDocumentsArgs = {
 };
 
 export type MutationMoveChildrenArgs = {
+  branch?: InputMaybe<Scalars["String"]["input"]>;
   documentIdentifiers: ReadonlyArray<Scalars["String"]["input"]>;
   sourceParentIdentifier: Scalars["String"]["input"];
   targetParentIdentifier: Scalars["String"]["input"];
-  view?: InputMaybe<ViewFilterInput>;
 };
 
 export type MutationMutateDocumentArgs = {
@@ -184,16 +205,64 @@ export type MutationMutateDocumentAsyncArgs = {
   view?: InputMaybe<ViewFilterInput>;
 };
 
+export type MutationPushSyncEnvelopeArgs = {
+  envelope: SyncEnvelopeInput;
+};
+
 export type MutationRemoveChildrenArgs = {
+  branch?: InputMaybe<Scalars["String"]["input"]>;
   documentIdentifiers: ReadonlyArray<Scalars["String"]["input"]>;
   parentIdentifier: Scalars["String"]["input"];
-  view?: InputMaybe<ViewFilterInput>;
 };
 
 export type MutationRenameDocumentArgs = {
+  branch?: InputMaybe<Scalars["String"]["input"]>;
   documentIdentifier: Scalars["String"]["input"];
   name: Scalars["String"]["input"];
-  view?: InputMaybe<ViewFilterInput>;
+};
+
+export type Operation = {
+  readonly action: Action;
+  readonly error?: Maybe<Scalars["String"]["output"]>;
+  readonly hash: Scalars["String"]["output"];
+  readonly id?: Maybe<Scalars["String"]["output"]>;
+  readonly index: Scalars["Int"]["output"];
+  readonly skip: Scalars["Int"]["output"];
+  readonly timestampUtcMs: Scalars["String"]["output"];
+};
+
+export type OperationContext = {
+  readonly branch: Scalars["String"]["output"];
+  readonly documentId: Scalars["String"]["output"];
+  readonly documentType: Scalars["String"]["output"];
+  readonly scope: Scalars["String"]["output"];
+};
+
+export type OperationContextInput = {
+  readonly branch: Scalars["String"]["input"];
+  readonly documentId: Scalars["String"]["input"];
+  readonly documentType: Scalars["String"]["input"];
+  readonly scope: Scalars["String"]["input"];
+};
+
+export type OperationInput = {
+  readonly action: Scalars["JSONObject"]["input"];
+  readonly error?: InputMaybe<Scalars["String"]["input"]>;
+  readonly hash: Scalars["String"]["input"];
+  readonly id?: InputMaybe<Scalars["String"]["input"]>;
+  readonly index: Scalars["Int"]["input"];
+  readonly skip: Scalars["Int"]["input"];
+  readonly timestampUtcMs: Scalars["String"]["input"];
+};
+
+export type OperationWithContext = {
+  readonly context: OperationContext;
+  readonly operation: Operation;
+};
+
+export type OperationWithContextInput = {
+  readonly context: OperationContextInput;
+  readonly operation: OperationInput;
 };
 
 export type PhDocument = {
@@ -234,6 +303,7 @@ export type Query = {
   readonly documentParents: PhDocumentResultPage;
   readonly findDocuments: PhDocumentResultPage;
   readonly jobStatus?: Maybe<JobInfo>;
+  readonly pollSyncEnvelopes: ReadonlyArray<SyncEnvelope>;
 };
 
 export type QueryDocumentArgs = {
@@ -266,6 +336,29 @@ export type QueryFindDocumentsArgs = {
 
 export type QueryJobStatusArgs = {
   jobId: Scalars["String"]["input"];
+};
+
+export type QueryPollSyncEnvelopesArgs = {
+  channelId: Scalars["String"]["input"];
+  cursorOrdinal: Scalars["Int"]["input"];
+};
+
+export type RemoteCursor = {
+  readonly cursorOrdinal: Scalars["Int"]["output"];
+  readonly lastSyncedAtUtcMs?: Maybe<Scalars["String"]["output"]>;
+  readonly remoteName: Scalars["String"]["output"];
+};
+
+export type RemoteCursorInput = {
+  readonly cursorOrdinal: Scalars["Int"]["input"];
+  readonly lastSyncedAtUtcMs?: InputMaybe<Scalars["String"]["input"]>;
+  readonly remoteName: Scalars["String"]["input"];
+};
+
+export type RemoteFilterInput = {
+  readonly branch: Scalars["String"]["input"];
+  readonly documentId: ReadonlyArray<Scalars["String"]["input"]>;
+  readonly scope: ReadonlyArray<Scalars["String"]["input"]>;
 };
 
 export type Revision = {
@@ -309,6 +402,25 @@ export type SubscriptionDocumentChangesArgs = {
 export type SubscriptionJobChangesArgs = {
   jobId: Scalars["String"]["input"];
 };
+
+export type SyncEnvelope = {
+  readonly channelMeta: ChannelMeta;
+  readonly cursor?: Maybe<RemoteCursor>;
+  readonly operations?: Maybe<ReadonlyArray<OperationWithContext>>;
+  readonly type: SyncEnvelopeType;
+};
+
+export type SyncEnvelopeInput = {
+  readonly channelMeta: ChannelMetaInput;
+  readonly cursor?: InputMaybe<RemoteCursorInput>;
+  readonly operations?: InputMaybe<ReadonlyArray<OperationWithContextInput>>;
+  readonly type: SyncEnvelopeType;
+};
+
+export enum SyncEnvelopeType {
+  Ack = "ACK",
+  Operations = "OPERATIONS",
+}
 
 export type ViewFilterInput = {
   readonly branch?: InputMaybe<Scalars["String"]["input"]>;
@@ -564,7 +676,7 @@ export type MutateDocumentAsyncMutation = {
 export type RenameDocumentMutationVariables = Exact<{
   documentIdentifier: Scalars["String"]["input"];
   name: Scalars["String"]["input"];
-  view?: InputMaybe<ViewFilterInput>;
+  branch?: InputMaybe<Scalars["String"]["input"]>;
 }>;
 
 export type RenameDocumentMutation = {
@@ -587,7 +699,7 @@ export type RenameDocumentMutation = {
 export type AddChildrenMutationVariables = Exact<{
   parentIdentifier: Scalars["String"]["input"];
   documentIdentifiers: ReadonlyArray<Scalars["String"]["input"]>;
-  view?: InputMaybe<ViewFilterInput>;
+  branch?: InputMaybe<Scalars["String"]["input"]>;
 }>;
 
 export type AddChildrenMutation = {
@@ -610,7 +722,7 @@ export type AddChildrenMutation = {
 export type RemoveChildrenMutationVariables = Exact<{
   parentIdentifier: Scalars["String"]["input"];
   documentIdentifiers: ReadonlyArray<Scalars["String"]["input"]>;
-  view?: InputMaybe<ViewFilterInput>;
+  branch?: InputMaybe<Scalars["String"]["input"]>;
 }>;
 
 export type RemoveChildrenMutation = {
@@ -634,7 +746,7 @@ export type MoveChildrenMutationVariables = Exact<{
   sourceParentIdentifier: Scalars["String"]["input"];
   targetParentIdentifier: Scalars["String"]["input"];
   documentIdentifiers: ReadonlyArray<Scalars["String"]["input"]>;
-  view?: InputMaybe<ViewFilterInput>;
+  branch?: InputMaybe<Scalars["String"]["input"]>;
 }>;
 
 export type MoveChildrenMutation = {
@@ -843,6 +955,9 @@ export type ResolversTypes = ResolversObject<{
   ActionContext: ResolverTypeWrapper<ActionContext>;
   AttachmentInput: ResolverTypeWrapper<AttachmentInput>;
   Boolean: ResolverTypeWrapper<Scalars["Boolean"]["output"]>;
+  ChannelMeta: ResolverTypeWrapper<ChannelMeta>;
+  ChannelMetaInput: ChannelMetaInput;
+  CreateChannelInput: CreateChannelInput;
   DateTime: ResolverTypeWrapper<Scalars["DateTime"]["output"]>;
   DocumentChangeContext: ResolverTypeWrapper<DocumentChangeContext>;
   DocumentChangeEvent: ResolverTypeWrapper<DocumentChangeEvent>;
@@ -856,11 +971,20 @@ export type ResolversTypes = ResolversObject<{
   JobInfo: ResolverTypeWrapper<JobInfo>;
   MoveChildrenResult: ResolverTypeWrapper<MoveChildrenResult>;
   Mutation: ResolverTypeWrapper<{}>;
+  Operation: ResolverTypeWrapper<Operation>;
+  OperationContext: ResolverTypeWrapper<OperationContext>;
+  OperationContextInput: OperationContextInput;
+  OperationInput: OperationInput;
+  OperationWithContext: ResolverTypeWrapper<OperationWithContext>;
+  OperationWithContextInput: OperationWithContextInput;
   PHDocument: ResolverTypeWrapper<PhDocument>;
   PHDocumentResultPage: ResolverTypeWrapper<PhDocumentResultPage>;
   PagingInput: PagingInput;
   PropagationMode: PropagationMode;
   Query: ResolverTypeWrapper<{}>;
+  RemoteCursor: ResolverTypeWrapper<RemoteCursor>;
+  RemoteCursorInput: RemoteCursorInput;
+  RemoteFilterInput: RemoteFilterInput;
   Revision: ResolverTypeWrapper<Revision>;
   SearchFilterInput: SearchFilterInput;
   Signer: ResolverTypeWrapper<Signer>;
@@ -868,6 +992,9 @@ export type ResolversTypes = ResolversObject<{
   SignerUser: ResolverTypeWrapper<SignerUser>;
   String: ResolverTypeWrapper<Scalars["String"]["output"]>;
   Subscription: ResolverTypeWrapper<{}>;
+  SyncEnvelope: ResolverTypeWrapper<SyncEnvelope>;
+  SyncEnvelopeInput: SyncEnvelopeInput;
+  SyncEnvelopeType: SyncEnvelopeType;
   ViewFilterInput: ViewFilterInput;
 }>;
 
@@ -877,6 +1004,9 @@ export type ResolversParentTypes = ResolversObject<{
   ActionContext: ActionContext;
   AttachmentInput: AttachmentInput;
   Boolean: Scalars["Boolean"]["output"];
+  ChannelMeta: ChannelMeta;
+  ChannelMetaInput: ChannelMetaInput;
+  CreateChannelInput: CreateChannelInput;
   DateTime: Scalars["DateTime"]["output"];
   DocumentChangeContext: DocumentChangeContext;
   DocumentChangeEvent: DocumentChangeEvent;
@@ -889,10 +1019,19 @@ export type ResolversParentTypes = ResolversObject<{
   JobInfo: JobInfo;
   MoveChildrenResult: MoveChildrenResult;
   Mutation: {};
+  Operation: Operation;
+  OperationContext: OperationContext;
+  OperationContextInput: OperationContextInput;
+  OperationInput: OperationInput;
+  OperationWithContext: OperationWithContext;
+  OperationWithContextInput: OperationWithContextInput;
   PHDocument: PhDocument;
   PHDocumentResultPage: PhDocumentResultPage;
   PagingInput: PagingInput;
   Query: {};
+  RemoteCursor: RemoteCursor;
+  RemoteCursorInput: RemoteCursorInput;
+  RemoteFilterInput: RemoteFilterInput;
   Revision: Revision;
   SearchFilterInput: SearchFilterInput;
   Signer: Signer;
@@ -900,6 +1039,8 @@ export type ResolversParentTypes = ResolversObject<{
   SignerUser: SignerUser;
   String: Scalars["String"]["output"];
   Subscription: {};
+  SyncEnvelope: SyncEnvelope;
+  SyncEnvelopeInput: SyncEnvelopeInput;
   ViewFilterInput: ViewFilterInput;
 }>;
 
@@ -949,6 +1090,15 @@ export type AttachmentInputResolvers<
   fileName?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
   hash?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   mimeType?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type ChannelMetaResolvers<
+  ContextType = Context,
+  ParentType extends
+    ResolversParentTypes["ChannelMeta"] = ResolversParentTypes["ChannelMeta"],
+> = ResolversObject<{
+  id?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -1105,6 +1255,12 @@ export type MutationResolvers<
       "documentIdentifiers" | "parentIdentifier"
     >
   >;
+  createChannel?: Resolver<
+    ResolversTypes["Boolean"],
+    ParentType,
+    ContextType,
+    RequireFields<MutationCreateChannelArgs, "input">
+  >;
   createDocument?: Resolver<
     ResolversTypes["PHDocument"],
     ParentType,
@@ -1155,6 +1311,12 @@ export type MutationResolvers<
       "actions" | "documentIdentifier"
     >
   >;
+  pushSyncEnvelope?: Resolver<
+    ResolversTypes["Boolean"],
+    ParentType,
+    ContextType,
+    RequireFields<MutationPushSyncEnvelopeArgs, "envelope">
+  >;
   removeChildren?: Resolver<
     ResolversTypes["PHDocument"],
     ParentType,
@@ -1170,6 +1332,47 @@ export type MutationResolvers<
     ContextType,
     RequireFields<MutationRenameDocumentArgs, "documentIdentifier" | "name">
   >;
+}>;
+
+export type OperationResolvers<
+  ContextType = Context,
+  ParentType extends
+    ResolversParentTypes["Operation"] = ResolversParentTypes["Operation"],
+> = ResolversObject<{
+  action?: Resolver<ResolversTypes["Action"], ParentType, ContextType>;
+  error?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
+  hash?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  id?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
+  index?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
+  skip?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
+  timestampUtcMs?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type OperationContextResolvers<
+  ContextType = Context,
+  ParentType extends
+    ResolversParentTypes["OperationContext"] = ResolversParentTypes["OperationContext"],
+> = ResolversObject<{
+  branch?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  documentId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  documentType?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  scope?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type OperationWithContextResolvers<
+  ContextType = Context,
+  ParentType extends
+    ResolversParentTypes["OperationWithContext"] = ResolversParentTypes["OperationWithContext"],
+> = ResolversObject<{
+  context?: Resolver<
+    ResolversTypes["OperationContext"],
+    ParentType,
+    ContextType
+  >;
+  operation?: Resolver<ResolversTypes["Operation"], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type PhDocumentResolvers<
@@ -1263,6 +1466,27 @@ export type QueryResolvers<
     ContextType,
     RequireFields<QueryJobStatusArgs, "jobId">
   >;
+  pollSyncEnvelopes?: Resolver<
+    ReadonlyArray<ResolversTypes["SyncEnvelope"]>,
+    ParentType,
+    ContextType,
+    RequireFields<QueryPollSyncEnvelopesArgs, "channelId" | "cursorOrdinal">
+  >;
+}>;
+
+export type RemoteCursorResolvers<
+  ContextType = Context,
+  ParentType extends
+    ResolversParentTypes["RemoteCursor"] = ResolversParentTypes["RemoteCursor"],
+> = ResolversObject<{
+  cursorOrdinal?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
+  lastSyncedAtUtcMs?: Resolver<
+    Maybe<ResolversTypes["String"]>,
+    ParentType,
+    ContextType
+  >;
+  remoteName?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type RevisionResolvers<
@@ -1332,10 +1556,35 @@ export type SubscriptionResolvers<
   >;
 }>;
 
+export type SyncEnvelopeResolvers<
+  ContextType = Context,
+  ParentType extends
+    ResolversParentTypes["SyncEnvelope"] = ResolversParentTypes["SyncEnvelope"],
+> = ResolversObject<{
+  channelMeta?: Resolver<
+    ResolversTypes["ChannelMeta"],
+    ParentType,
+    ContextType
+  >;
+  cursor?: Resolver<
+    Maybe<ResolversTypes["RemoteCursor"]>,
+    ParentType,
+    ContextType
+  >;
+  operations?: Resolver<
+    Maybe<ReadonlyArray<ResolversTypes["OperationWithContext"]>>,
+    ParentType,
+    ContextType
+  >;
+  type?: Resolver<ResolversTypes["SyncEnvelopeType"], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
 export type Resolvers<ContextType = Context> = ResolversObject<{
   Action?: ActionResolvers<ContextType>;
   ActionContext?: ActionContextResolvers<ContextType>;
   AttachmentInput?: AttachmentInputResolvers<ContextType>;
+  ChannelMeta?: ChannelMetaResolvers<ContextType>;
   DateTime?: GraphQLScalarType;
   DocumentChangeContext?: DocumentChangeContextResolvers<ContextType>;
   DocumentChangeEvent?: DocumentChangeEventResolvers<ContextType>;
@@ -1347,14 +1596,19 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   JobInfo?: JobInfoResolvers<ContextType>;
   MoveChildrenResult?: MoveChildrenResultResolvers<ContextType>;
   Mutation?: MutationResolvers<ContextType>;
+  Operation?: OperationResolvers<ContextType>;
+  OperationContext?: OperationContextResolvers<ContextType>;
+  OperationWithContext?: OperationWithContextResolvers<ContextType>;
   PHDocument?: PhDocumentResolvers<ContextType>;
   PHDocumentResultPage?: PhDocumentResultPageResolvers<ContextType>;
   Query?: QueryResolvers<ContextType>;
+  RemoteCursor?: RemoteCursorResolvers<ContextType>;
   Revision?: RevisionResolvers<ContextType>;
   Signer?: SignerResolvers<ContextType>;
   SignerApp?: SignerAppResolvers<ContextType>;
   SignerUser?: SignerUserResolvers<ContextType>;
   Subscription?: SubscriptionResolvers<ContextType>;
+  SyncEnvelope?: SyncEnvelopeResolvers<ContextType>;
 }>;
 
 type Properties<T> = Required<{
@@ -1374,11 +1628,86 @@ export const DocumentChangeTypeSchema = z.nativeEnum(DocumentChangeType);
 
 export const PropagationModeSchema = z.nativeEnum(PropagationMode);
 
+export const SyncEnvelopeTypeSchema = z.nativeEnum(SyncEnvelopeType);
+
+export function ChannelMetaInputSchema(): z.ZodObject<
+  Properties<ChannelMetaInput>
+> {
+  return z.object({
+    id: z.string(),
+  });
+}
+
+export function CreateChannelInputSchema(): z.ZodObject<
+  Properties<CreateChannelInput>
+> {
+  return z.object({
+    collectionId: z.string(),
+    filter: z.lazy(() => RemoteFilterInputSchema()),
+    id: z.string(),
+    name: z.string(),
+  });
+}
+
+export function OperationContextInputSchema(): z.ZodObject<
+  Properties<OperationContextInput>
+> {
+  return z.object({
+    branch: z.string(),
+    documentId: z.string(),
+    documentType: z.string(),
+    scope: z.string(),
+  });
+}
+
+export function OperationInputSchema(): z.ZodObject<
+  Properties<OperationInput>
+> {
+  return z.object({
+    action: z.unknown(),
+    error: z.string().nullish(),
+    hash: z.string(),
+    id: z.string().nullish(),
+    index: z.number(),
+    skip: z.number(),
+    timestampUtcMs: z.string(),
+  });
+}
+
+export function OperationWithContextInputSchema(): z.ZodObject<
+  Properties<OperationWithContextInput>
+> {
+  return z.object({
+    context: z.lazy(() => OperationContextInputSchema()),
+    operation: z.lazy(() => OperationInputSchema()),
+  }) as z.ZodObject<Properties<OperationWithContextInput>>;
+}
+
 export function PagingInputSchema(): z.ZodObject<Properties<PagingInput>> {
   return z.object({
     cursor: z.string().nullish(),
     limit: z.number().nullish(),
     offset: z.number().nullish(),
+  });
+}
+
+export function RemoteCursorInputSchema(): z.ZodObject<
+  Properties<RemoteCursorInput>
+> {
+  return z.object({
+    cursorOrdinal: z.number(),
+    lastSyncedAtUtcMs: z.string().nullish(),
+    remoteName: z.string(),
+  });
+}
+
+export function RemoteFilterInputSchema(): z.ZodObject<
+  Properties<RemoteFilterInput>
+> {
+  return z.object({
+    branch: z.string(),
+    documentId: z.array(z.string()),
+    scope: z.array(z.string()),
   });
 }
 
@@ -1389,6 +1718,19 @@ export function SearchFilterInputSchema(): z.ZodObject<
     identifiers: z.array(z.string()).nullish(),
     parentId: z.string().nullish(),
     type: z.string().nullish(),
+  });
+}
+
+export function SyncEnvelopeInputSchema(): z.ZodObject<
+  Properties<SyncEnvelopeInput>
+> {
+  return z.object({
+    channelMeta: z.lazy(() => ChannelMetaInputSchema()),
+    cursor: z.lazy(() => RemoteCursorInputSchema().nullish()),
+    operations: z
+      .array(z.lazy(() => OperationWithContextInputSchema()))
+      .nullish(),
+    type: SyncEnvelopeTypeSchema,
   });
 }
 
@@ -1574,12 +1916,12 @@ export const RenameDocumentDocument = gql`
   mutation RenameDocument(
     $documentIdentifier: String!
     $name: String!
-    $view: ViewFilterInput
+    $branch: String
   ) {
     renameDocument(
       documentIdentifier: $documentIdentifier
       name: $name
-      view: $view
+      branch: $branch
     ) {
       ...PHDocumentFields
     }
@@ -1590,12 +1932,12 @@ export const AddChildrenDocument = gql`
   mutation AddChildren(
     $parentIdentifier: String!
     $documentIdentifiers: [String!]!
-    $view: ViewFilterInput
+    $branch: String
   ) {
     addChildren(
       parentIdentifier: $parentIdentifier
       documentIdentifiers: $documentIdentifiers
-      view: $view
+      branch: $branch
     ) {
       ...PHDocumentFields
     }
@@ -1606,12 +1948,12 @@ export const RemoveChildrenDocument = gql`
   mutation RemoveChildren(
     $parentIdentifier: String!
     $documentIdentifiers: [String!]!
-    $view: ViewFilterInput
+    $branch: String
   ) {
     removeChildren(
       parentIdentifier: $parentIdentifier
       documentIdentifiers: $documentIdentifiers
-      view: $view
+      branch: $branch
     ) {
       ...PHDocumentFields
     }
@@ -1623,13 +1965,13 @@ export const MoveChildrenDocument = gql`
     $sourceParentIdentifier: String!
     $targetParentIdentifier: String!
     $documentIdentifiers: [String!]!
-    $view: ViewFilterInput
+    $branch: String
   ) {
     moveChildren(
       sourceParentIdentifier: $sourceParentIdentifier
       targetParentIdentifier: $targetParentIdentifier
       documentIdentifiers: $documentIdentifiers
-      view: $view
+      branch: $branch
     ) {
       source {
         ...PHDocumentFields

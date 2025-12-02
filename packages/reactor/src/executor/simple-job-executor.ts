@@ -26,14 +26,21 @@ import {
 } from "../events/types.js";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
-import { DocumentDeletedError } from "../shared/errors.js";
+import {
+  DocumentDeletedError,
+  InvalidSignatureError,
+} from "../shared/errors.js";
 import type {
   IOperationStore,
   OperationWithContext,
 } from "../storage/interfaces.js";
 import { reshuffleByTimestampAndIndex } from "../utils/reshuffle.js";
 import type { IJobExecutor } from "./interfaces.js";
-import type { JobExecutorConfig, JobResult } from "./types.js";
+import type {
+  JobExecutorConfig,
+  JobResult,
+  SignatureVerificationHandler,
+} from "./types.js";
 import {
   applyDeleteDocumentAction,
   applyUpgradeDocumentAction,
@@ -62,6 +69,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     private writeCache: IWriteCache,
     private operationIndex: IOperationIndex,
     config: JobExecutorConfig,
+    private signatureVerifier?: SignatureVerificationHandler,
   ) {
     this.config = {
       maxConcurrency: config.maxConcurrency ?? 1,
@@ -1127,6 +1135,16 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
     }
 
+    try {
+      await this.verifyOperationSignatures(job, job.operations);
+    } catch (error) {
+      return this.buildErrorResult(
+        job,
+        error instanceof Error ? error : new Error(String(error)),
+        startTime,
+      );
+    }
+
     const scope = job.scope;
 
     let latestRevision = 0;
@@ -1316,6 +1334,58 @@ export class SimpleJobExecutor implements IJobExecutor {
       error: error,
       duration: Date.now() - startTime,
     };
+  }
+
+  private async verifyOperationSignatures(
+    job: Job,
+    operations: Operation[],
+  ): Promise<void> {
+    if (!this.signatureVerifier) {
+      return;
+    }
+
+    for (let i = 0; i < operations.length; i++) {
+      const operation = operations[i];
+      const signer = operation.action.context?.signer;
+
+      if (!signer) {
+        continue;
+      }
+
+      if (signer.signatures.length === 0) {
+        throw new InvalidSignatureError(
+          job.documentId,
+          operation.index,
+          operation.id ?? "unknown",
+          "Operation has signer but no signatures",
+        );
+      }
+
+      const publicKey = signer.app.key;
+      let isValid = false;
+
+      try {
+        isValid = await this.signatureVerifier(operation, publicKey);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        throw new InvalidSignatureError(
+          job.documentId,
+          operation.index,
+          operation.id ?? "unknown",
+          `Verification failed: ${errorMessage}`,
+        );
+      }
+
+      if (!isValid) {
+        throw new InvalidSignatureError(
+          job.documentId,
+          operation.index,
+          operation.id ?? "unknown",
+          "Signature verification returned false",
+        );
+      }
+    }
   }
 
   private accumulateResultOrReturnError(

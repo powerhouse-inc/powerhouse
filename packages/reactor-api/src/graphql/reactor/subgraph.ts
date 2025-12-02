@@ -248,35 +248,41 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
-      pushSyncEnvelope: async (
-        _parent: unknown,
-        args: {
-          envelope: {
-            type: string;
-            channelMeta: { id: string };
-            operations?: Array<{
-              operation: any;
-              context: {
-                documentId: string;
-                documentType: string;
-                scope: string;
-                branch: string;
-              };
-            }> | null;
-            cursor?: {
-              remoteName: string;
-              cursorOrdinal: number;
-              lastSyncedAtUtcMs?: string | null;
-            } | null;
-          };
-        },
-      ) => {
+      pushSyncEnvelope: async (_parent, args) => {
         this.logger.debug("pushSyncEnvelope", args);
         if (!this.syncManager) {
           throw new Error("SyncManager not available");
         }
         try {
-          return await resolvers.pushSyncEnvelope(this.syncManager, args);
+          // Convert readonly arrays to mutable arrays for the resolver
+          const mutableArgs = {
+            envelope: {
+              type: args.envelope.type,
+              channelMeta: { id: args.envelope.channelMeta.id },
+              operations: args.envelope.operations
+                ? args.envelope.operations.map((op) => ({
+                    operation: op.operation,
+                    context: {
+                      documentId: op.context.documentId,
+                      documentType: op.context.documentType,
+                      scope: op.context.scope,
+                      branch: op.context.branch,
+                    },
+                  }))
+                : null,
+              cursor: args.envelope.cursor
+                ? {
+                    remoteName: args.envelope.cursor.remoteName,
+                    cursorOrdinal: args.envelope.cursor.cursorOrdinal,
+                    lastSyncedAtUtcMs: args.envelope.cursor.lastSyncedAtUtcMs,
+                  }
+                : null,
+            },
+          };
+          return await resolvers.pushSyncEnvelope(
+            this.syncManager,
+            mutableArgs,
+          );
         } catch (error) {
           this.logger.error("Error in pushSyncEnvelope:", error);
           throw error;

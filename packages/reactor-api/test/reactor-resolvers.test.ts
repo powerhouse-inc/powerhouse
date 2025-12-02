@@ -809,13 +809,13 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
       const result = await resolvers.renameDocument(mockReactorClient, {
         documentIdentifier: "doc-1",
         name: "New Name",
-        view: { branch: "main", scopes: ["global"] },
+        branch: "main",
       });
 
       expect(mockReactorClient.rename).toHaveBeenCalledWith(
         "doc-1",
         "New Name",
-        { branch: "main", scopes: ["global"] },
+        "main",
       );
       expect(result.name).toBe("New Name");
     });
@@ -827,7 +827,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
       await resolvers.renameDocument(mockReactorClient, {
         documentIdentifier: "doc-1",
         name: "New Name",
-        view: null,
+        branch: null,
       });
 
       expect(mockReactorClient.rename).toHaveBeenCalledWith(
@@ -846,7 +846,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
         resolvers.renameDocument(mockReactorClient, {
           documentIdentifier: "doc-1",
           name: "New Name",
-          view: null,
+          branch: null,
         }),
       ).rejects.toThrow("Failed to rename document: Document not found");
     });
@@ -862,13 +862,13 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
       const result = await resolvers.addChildren(mockReactorClient, {
         parentIdentifier: "parent-1",
         documentIdentifiers: ["child-1", "child-2"],
-        view: { branch: "main", scopes: null },
+        branch: "main",
       });
 
       expect(mockReactorClient.addChildren).toHaveBeenCalledWith(
         "parent-1",
         ["child-1", "child-2"],
-        { branch: "main", scopes: undefined },
+        "main",
       );
       expect(result.id).toBe("doc-1");
     });
@@ -882,7 +882,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
         resolvers.addChildren(mockReactorClient, {
           parentIdentifier: "parent-1",
           documentIdentifiers: ["child-1"],
-          view: null,
+          branch: null,
         }),
       ).rejects.toThrow("Failed to add children: Child not found");
     });
@@ -898,7 +898,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
       const result = await resolvers.removeChildren(mockReactorClient, {
         parentIdentifier: "parent-1",
         documentIdentifiers: ["child-1", "child-2"],
-        view: null,
+        branch: null,
       });
 
       expect(mockReactorClient.removeChildren).toHaveBeenCalledWith(
@@ -918,7 +918,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
         resolvers.removeChildren(mockReactorClient, {
           parentIdentifier: "parent-1",
           documentIdentifiers: ["child-1"],
-          view: null,
+          branch: null,
         }),
       ).rejects.toThrow(
         "Failed to remove children: Child relationship not found",
@@ -943,14 +943,14 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
         sourceParentIdentifier: "source-1",
         targetParentIdentifier: "target-1",
         documentIdentifiers: ["child-1", "child-2"],
-        view: { branch: "main", scopes: ["global"] },
+        branch: "main",
       });
 
       expect(mockReactorClient.moveChildren).toHaveBeenCalledWith(
         "source-1",
         "target-1",
         ["child-1", "child-2"],
-        { branch: "main", scopes: ["global"] },
+        "main",
       );
       expect(result.source.id).toBe("source-1");
       expect(result.target.id).toBe("target-1");
@@ -966,7 +966,7 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
           sourceParentIdentifier: "source-1",
           targetParentIdentifier: "target-1",
           documentIdentifiers: ["child-1"],
-          view: null,
+          branch: null,
         }),
       ).rejects.toThrow("Failed to move children: Target parent not found");
     });

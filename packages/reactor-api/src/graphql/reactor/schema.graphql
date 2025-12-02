@@ -326,21 +326,21 @@ type Mutation {
   renameDocument(
     documentIdentifier: String!
     name: String!
-    view: ViewFilterInput
+    branch: String
   ): PHDocument!
 
   # Add children to a document
   addChildren(
     parentIdentifier: String!
     documentIdentifiers: [String!]!
-    view: ViewFilterInput
+    branch: String
   ): PHDocument!
 
   # Remove children from a document
   removeChildren(
     parentIdentifier: String!
     documentIdentifiers: [String!]!
-    view: ViewFilterInput
+    branch: String
   ): PHDocument!
 
   # Move children between documents
@@ -348,7 +348,7 @@ type Mutation {
     sourceParentIdentifier: String!
     targetParentIdentifier: String!
     documentIdentifiers: [String!]!
-    view: ViewFilterInput
+    branch: String
   ): MoveChildrenResult!
 
   # Delete a single document
