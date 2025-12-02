@@ -1,12 +1,100 @@
 # Create a new to-do list document
 
+:::tip Tutorial Repository
+📦 **Reference Code**: [step-1-initialize-with-ph-init](https://github.com/powerhouse-inc/todo-tutorial/tree/step-1-initialize-with-ph-init)
+
+This tutorial step has a corresponding branch in the repository. You can:
+- View the complete code for this step
+- Clone and checkout the branch to see the result
+- Compare your implementation using `git diff`
+:::
+
+<details>
+<summary>📖 How to use this tutorial</summary>
+
+This tutorial is designed for you to **build your own project from scratch** while having access to reference code at each step.
+
+### Setup: Create your project and connect to tutorial repo
+
+1. **Create your project** following the tutorial:
+   ```bash
+   mkdir ph-projects
+   cd ph-projects
+   ph init
+   # When prompted, enter project name: todo-tutorial
+   cd todo-tutorial
+   ```
+
+2. **Add the tutorial repository as a remote** to access reference branches:
+   ```bash
+   git remote add tutorial https://github.com/powerhouse-inc/todo-tutorial.git
+   git fetch tutorial --prune
+   ```
+
+3. **Create your own branch** to keep your work organized:
+   ```bash
+   git checkout -b my-todo-project
+   ```
+
+Now you have access to all tutorial step branches while working on your own code!
+
+### Compare your work with reference steps
+
+At any point, compare what you've built with a tutorial step:
+
+```bash
+# Compare your current work with step-1
+git diff tutorial/step-1-initialize-with-ph-init
+
+# See what changed between tutorial steps
+git diff tutorial/step-1-initialize-with-ph-init..tutorial/step-2-generate-todo-list-document-model
+
+# Compare specific files
+git diff tutorial/step-1-initialize-with-ph-init -- package.json
+```
+
+### Visual diff with GitHub Desktop
+
+For a more visual comparison, use GitHub Desktop:
+
+1. **First, make your initial commit** (GitHub Desktop won't show your branch until you have at least one commit):
+   ```bash
+   git add .
+   git commit -m "Initial project setup"
+   ```
+
+2. **Open GitHub Desktop** and open your repository
+
+3. **Compare branches visually**:
+   - Click on **Branch** menu in the top menu bar
+   - Select **"Compare to Branch..."**
+   - Choose the tutorial branch you want to compare with (e.g., `tutorial/step-1-initialize-with-ph-init`)
+   - GitHub Desktop will show you all file differences in a visual interface
+
+4. **Review the differences**:
+   - Click on any file to see side-by-side or unified diff view
+   - See exactly what's different between your code and the reference
+
+**Tip**: You can also use VS Code's Git Graph extension or the command palette → "Git: Compare with Branch"
+
+### If you get stuck
+
+Reset your code to match a tutorial step:
+
+```bash
+# Reset to step-2 (WARNING: loses your changes)
+git reset --hard tutorial/step-2-generate-todo-list-document-model
+```
+
+</details>
+
 ## Overview
 
 This tutorial guides you through creating a simplified version of a 'Powerhouse project' for a **To-do List**.  
 A Powerhouse project primarily consists of a document model and its editor. 
 As your projects use-case expands you can add data-integrations or a specific drive-app as seen in the demo package. 
 
-For todays purpose, you'll be using Connect, our user-centric collaboration tool and Vetra Studio, the builder tooling through which developers can access and manage specifications of their project. 
+For todays purpose, you'll be using Connect, our user-centric collaboration tool and Vetra Studio, the builder tooling through which developers can access and manage specifications of your project. 
 
 ## Prerequisites
 
@@ -41,19 +129,19 @@ ph init
    ````bash
     you@yourmachine:~/ph-projects % ph init
 
-    ? What is the project name? ‣ getting-started
+    ? What is the project name? ‣ todo-tutorial
     ```
 
 
 Once the project is created, you will see the following output:
     ```bash
-    Initialized empty Git repository in /Users/you/ph-projects/getting-started/.git/
+    Initialized empty Git repository in /Users/you/ph-projects/todo-tutorial/.git/
     The installation is done!
     ```
 
 Navigate to the newly created project directory:
     ```bash
-    cd getting-started
+    cd todo-tutorial
     ```
 
 ## Develop a single document model in Connect
@@ -73,20 +161,41 @@ The Connect application will start and you will see the following output:
       ➜  press h + enter to show help
     ```
 
-A new browser window will open and you will see the Connect application. If it doesn't open automatically, you can open it manually by navigating to `http://localhost:3000/` in your browser.
+A new browser window will open and you will see the Connect application. If it doesn't open automatically, you can open it manually by navigating to `http://localhost:3000/` in your browser. You will see your local drive and a button to create a new drive.
 
-You will see your local drive and a button to create a new drive.
+:::tip 
 If you local drive is not present navigate into Settings in the bottom left corner. Settings > Danger Zone > Clear Storage.
 Clear the storage of your localhost application as it might has an old session cached.
+:::
 
 4. Move into your local drive.  
-   Create a new document model by clicking the `DocumentModel` button, found in the 'New Document' section at the bottom of the page.
+   Create a new document model by clicking the `DocumentModel` button, found in the 'New Document' section at the bottom of the page. Name your document `TodoList` (PascalCase, no spaces or hyphens).
 
-If you've followed the steps correctly, you'll have an empty document where you can define the **'Document Specifications'**.
+If you've followed the steps correctly, you'll have an empty `TodoList` document where you can define the **'Document Specifications'**.
 
-## Develop a package in Vetra Studio
+## Verify your setup
 
+At this point, your project structure should match the `step-1-initialize-with-ph-init` branch. You should have:
 
+- Empty `document-models/`, `editors/`, `processors/`, and `subgraphs/` directories
+- Configuration files: `powerhouse.config.json`, `powerhouse.manifest.json`
+- Package management files: `package.json`, `pnpm-lock.yaml`
+- Build configuration: `tsconfig.json`, `vite.config.ts`, `vitest.config.ts`
+
+### Compare with reference implementation
+
+Verify your initial setup matches the tutorial:
+
+```bash
+# Compare your project structure with step-1
+git diff tutorial/step-1-initialize-with-ph-init
+
+# List files in the tutorial's step-1
+git ls-tree -r --name-only tutorial/step-1-initialize-with-ph-init
+
+# View a specific config file from step-1
+git show tutorial/step-1-initialize-with-ph-init:package.json
+```
 
 ## Up next
 

@@ -10,7 +10,7 @@ This command reads the **To-do List** document model definition from the `docume
 Notice the `--editor` flag which specifies the **To-do List** document model, and the `--document-types` flag defines the document type `powerhouse/todolist`.
 
 ```bash
-ph generate --editor ToDoList --document-types powerhouse/todolist
+pnpm generate --editor Todo-List-editor --document-types powerhouse/todolist
 ```
 
 Once complete, navigate to the `editors/to-do-list/editor.tsx` file and open it in your editor.

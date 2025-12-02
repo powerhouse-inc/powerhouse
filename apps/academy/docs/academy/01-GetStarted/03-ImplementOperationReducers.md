@@ -1,5 +1,69 @@
 # Implement the document model
 
+:::tip Tutorial Repository
+📦 **Reference Code**: 
+- **Reducer Implementation**: [step-3-implement-reducer-operation-handlers](https://github.com/powerhouse-inc/todo-tutorial/tree/step-3-implement-reducer-operation-handlers)
+- **Tests Implementation**: [step-4-implement-tests-for-todos-operations](https://github.com/powerhouse-inc/todo-tutorial/tree/step-4-implement-tests-for-todos-operations)
+
+This tutorial covers two steps:
+1. **Step 3**: Implementing the reducer logic for add, update, and delete operations
+2. **Step 4**: Writing comprehensive tests for the reducers
+
+You can view the exact code changes between steps using `git diff step-3-implement-reducer-operation-handlers step-4-implement-tests-for-todos-operations`
+:::
+
+<details>
+<summary>📖 How to use this tutorial</summary>
+
+This tutorial covers **two steps**: implementing reducers (step-3) and tests (step-4).
+
+### Compare your reducer implementation
+
+After implementing your reducers:
+
+```bash
+# Compare your reducers with step-3
+git diff tutorial/step-3-implement-reducer-operation-handlers -- document-models/todo-list/src/reducers/
+
+# View the reference reducer implementation
+git show tutorial/step-3-implement-reducer-operation-handlers:document-models/todo-list/src/reducers/todos.ts
+```
+
+### Compare your tests
+
+After writing tests:
+
+```bash
+# Compare your tests with step-4
+git diff tutorial/step-4-implement-tests-for-todos-operations -- document-models/todo-list/src/tests/
+
+# See what changed from step-3 to step-4
+git diff tutorial/step-3-implement-reducer-operation-handlers..tutorial/step-4-implement-tests-for-todos-operations
+```
+
+### Visual comparison with GitHub Desktop
+
+After committing your work, compare visually:
+1. **Branch** menu → **"Compare to Branch..."**
+2. Select `tutorial/step-3-implement-reducer-operation-handlers` or `tutorial/step-4-implement-tests-for-todos-operations`
+3. Review differences in the visual interface
+
+See step 1 for detailed GitHub Desktop instructions.
+
+### If you get stuck
+
+View or reset to a specific step:
+
+```bash
+# View the reducer code from step-3
+git show tutorial/step-3-implement-reducer-operation-handlers:document-models/todo-list/src/reducers/todos.ts
+
+# Reset to step-3 (WARNING: loses your changes)
+git reset --hard tutorial/step-3-implement-reducer-operation-handlers
+```
+
+</details>
+
 In this section, we will implement and test the operation reducers for the **To-do List** document model. For this, you have to export the document model specification from the Connect application and import it into your Powerhouse project directory.
 
 To export the document model specification, follow the steps in the [Define ToDoList Document Model](/academy/GetStarted/DefineToDoListDocumentModel) section.
@@ -31,71 +95,74 @@ To write the operation reducers of the **To-do List** document model, you need t
 To do this, run the following command in the terminal:
 
 ```bash
-ph generate ToDoList.phdm.zip
+ph generate TodoList.phd
 ```
 
-Now you can navigate to `/document-models/to-do-list/src/reducers/to-do-list.ts` and start writing the operation reducers.
+Now you can navigate to `/document-models/todo-list/src/reducers/todos.ts` and start writing the operation reducers.
 
-Open the `to-do-list.ts` file and you should see the code that needs to be filled for the three operations you have specified earlier. The image below shows the code that needs to be filled:
+Open the `todos.ts` file and you should see the scaffolding code that needs to be filled for the three operations you have specified earlier. The generated file will look like this:
 
-![to-do-list ts file](./images/reducers.png)
+```typescript
+import type { TodoListTodosOperations } from "todo-tutorial/document-models/todo-list";
+
+export const todoListTodosOperations: TodoListTodosOperations = {
+  addTodoItemOperation(state, action) {
+    // TODO: Implement "addTodoItemOperation" reducer
+    throw new Error('Reducer "addTodoItemOperation" not yet implemented');
+  },
+  updateTodoItemOperation(state, action) {
+    // TODO: Implement "updateTodoItemOperation" reducer
+    throw new Error('Reducer "updateTodoItemOperation" not yet implemented');
+  },
+  deleteTodoItemOperation(state, action) {
+    // TODO: Implement "deleteTodoItemOperation" reducer
+    throw new Error('Reducer "deleteTodoItemOperation" not yet implemented');
+  },
+};
+```
 
 ## Write the operation reducers
 
-1. Copy and paste the code below into the `to-do-list.ts` file in the `reducers` folder.
+1. Copy and paste the code below into the `todos.ts` file in the `reducers` folder.
 2. Save the file.
 
 <details>
 <summary>Operation Reducers</summary>
+
 ```typescript
-import { ToDoListToDoListOperations } from '../../gen/to-do-list/operations.js';
+import { generateId } from "document-model/core";
+import type { TodoListTodosOperations } from "todo-tutorial/document-models/todo-list";
 
-// REMARKS: This is our main reducer object that implements all operations defined in the schema.
-// The ToDoListToDoListOperations type is auto-generated from our SDL and ensures type safety.
-export const reducer: ToDoListToDoListOperations = {
-// REMARKS: The addTodoItemOperation adds a new item to our todolist.
-// - state: The current document state that we can modify
-// - action: Contains the operation type and input data from the client
-// - dispatch: Function to trigger additional operations (not used here)
-addTodoItemOperation(state, action, dispatch) {
-// REMARKS: While this looks like we're directly mutating state, Powerhouse
-// handles immutability behind the scenes, creating a new state object.
-state.items.push({
-id: action.input.id, // Using the client-provided ID
-text: action.input.text, // Setting the todo text from input
-checked: false, // New items always start unchecked
-});
-},
-
-// REMARKS: The updateTodoItemOperation modifies an existing todo item.
-// It handles partial updates, allowing only specific fields to be updated.
-updateTodoItemOperation(state, action, dispatch) {
-// REMARKS: First find the item we want to update by its ID
-const item = state.items.find(item => item.id === action.input.id);
-
-    // REMARKS: Proper error handling if item doesn't exist
-    if (!item) {
-      throw new Error(`Item with id ${action.input.id} not found`);
-    }
-
-    // REMARKS: We only update fields that were included in the input
-    // This allows for partial updates (only update what was provided)
-    if (action.input.text) {
-      item.text = action.input.text;
-    }
-    if (typeof action.input.checked === 'boolean') {
-      item.checked = action.input.checked;
-    }
-
-},
-
-// REMARKS: The deleteTodoItemOperation removes an item from the list.
-// This showcases functional programming with array filters for immutable updates.
-deleteTodoItemOperation(state, action, dispatch) {
-// REMARKS: Create a new array containing only items that don't match the ID
-// This is a common pattern for immutable array updates in JavaScript
-state.items = state.items.filter(item => item.id !== action.input.id);
-},
+// Export the operations object that implements all three todo operations
+export const todoListTodosOperations: TodoListTodosOperations = {
+  addTodoItemOperation(state, action) {
+    // Generate a unique ID for the new todo item
+    // Using generateId() from document-model/core ensures uniqueness
+    const id = generateId();
+    
+    // Add the new item to the state
+    // Powerhouse uses Immer.js, so this "mutation" is actually immutable
+    state.items.push({ ...action.input, id, checked: false });
+  },
+  
+  updateTodoItemOperation(state, action) {
+    // Find the item to update by its ID
+    const item = state.items.find((item) => item.id === action.input.id);
+    
+    // Return early if item not found (you could also throw an error)
+    if (!item) return;
+    
+    // Update only the fields that are provided (partial update)
+    // Using nullish coalescing (??) to keep existing values if undefined
+    item.text = action.input.text ?? item.text;
+    item.checked = action.input.checked ?? item.checked;
+  },
+  
+  deleteTodoItemOperation(state, action) {
+    // Filter out the item with the matching ID
+    // This creates a new array without the deleted item
+    state.items = state.items.filter((item) => item.id !== action.input.id);
+  },
 };
 
 ````
@@ -105,77 +172,135 @@ state.items = state.items.filter(item => item.id !== action.input.id);
 
 In order to make sure the operation reducers are working as expected, you need to write tests for them.
 
-Navigate to `/document-models/to-do-list/src/reducers/tests/to-do-list.test.ts` and copy and paste the code below into the file. Save the file.
+Navigate to `/document-models/todo-list/src/tests/todos.test.ts` and replace the scaffolding code with comprehensive tests.
 
-Here are the tests for the three operations implemented in the reducers file. This test file creates an empty ToDoList document model, then adds a todo item, updates it and deletes it.
+Here are the tests for the three operations implemented in the reducers file. The test file:
+- Uses Vitest for testing
+- Generates mock data using `@powerhousedao/codegen`
+- Creates an empty TodoList document model
+- Tests add, update, and delete operations
+- Verifies both the operation history and the resulting state
 
 <details>
 <summary>Operation Reducers Tests</summary>
+
 ```typescript
-import utils from '../../gen/utils.js';
-import { reducer } from '../../gen/reducer.js';
-import * as creators from '../../gen/creators.js';
-import { ToDoListDocument } from '../../gen/types.js';
+import { describe, it, expect } from "vitest";
+import { generateMock } from "@powerhousedao/codegen";
+import type {
+  AddTodoItemInput,
+  DeleteTodoItemInput,
+  UpdateTodoItemInput,
+} from "todo-tutorial/document-models/todo-list";
+import {
+  reducer,
+  utils,
+  isTodoListDocument,
+  addTodoItem,
+  AddTodoItemInputSchema,
+  updateTodoItem,
+  UpdateTodoItemInputSchema,
+  deleteTodoItem,
+  DeleteTodoItemInputSchema,
+  TodoItemSchema,
+} from "todo-tutorial/document-models/todo-list";
 
-// REMARKS:
-// These tests demonstrate the event sourcing principles of our document model.
-// Each operation is recorded in the document's operations list and affects the state.
+describe("Todos Operations", () => {
+  // Test adding a new todo item
+  it("should handle addTodoItem operation", () => {
+    const document = utils.createDocument();
+    const input: AddTodoItemInput = generateMock(AddTodoItemInputSchema());
 
-describe('Todolist Operations', () => {
-    let document: ToDoListDocument;
+    const updatedDocument = reducer(document, addTodoItem(input));
+    expect(isTodoListDocument(updatedDocument)).toBe(true);
 
-    beforeEach(() => {
-        // REMARKS: We start with a fresh, empty document for each test
-        document = utils.createDocument();
+    // Verify the operation was recorded
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe("ADD_TODO_ITEM");
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+
+  // Test updating a todo item's text
+  it("should handle updateTodoItem operation to update text", () => {
+    const mockItem = generateMock(TodoItemSchema());
+    const input: UpdateTodoItemInput = generateMock(UpdateTodoItemInputSchema());
+    input.id = mockItem.id;
+    const newText = "new text";
+    input.text = newText;
+    input.checked = undefined;
+    
+    const document = utils.createDocument({
+      global: {
+        items: [mockItem],
+      },
     });
 
-    it('should handle addTodoItem operation', () => {
-        // REMARKS: We create an input object matching our AddTodoItemInput schema
-        const input = { id: '1', text: 'Buy milk' };
+    const updatedDocument = reducer(document, updateTodoItem(input));
+    expect(isTodoListDocument(updatedDocument)).toBe(true);
 
-        // REMARKS: We apply the operation to get a new document state
-        // Note how we use the creators to generate the operation action
-        const updatedDocument = reducer(document, creators.addTodoItem(input));
+    // Verify the operation was recorded
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe("UPDATE_TODO_ITEM");
+    
+    // Verify the state was updated correctly
+    const updatedItem = updatedDocument.state.global.items.find(
+      (item) => item.id === input.id,
+    );
+    expect(updatedItem?.text).toBe(newText);
+    expect(updatedItem?.checked).toBe(mockItem.checked);
+  });
 
-        // REMARKS: We verify that:
-        // 1. The operation was recorded in the document's operation history
-        // 2. The state was updated according to our reducer implementation
-        expect(updatedDocument.operations.global).toHaveLength(1);
-        expect(updatedDocument.operations.global[0].type).toBe('ADD_TODO_ITEM');
-        expect(updatedDocument.state.global.items).toHaveLength(1);
-        expect(updatedDocument.state.global.items[0].text).toBe('Buy milk');
+  // Test updating a todo item's checked status
+  it("should handle updateTodoItem operation to update checked", () => {
+    const mockItem = generateMock(TodoItemSchema());
+    const input: UpdateTodoItemInput = generateMock(UpdateTodoItemInputSchema());
+    input.id = mockItem.id;
+    const newChecked = !mockItem.checked;
+    input.checked = newChecked;
+    input.text = undefined;
+    
+    const document = utils.createDocument({
+      global: {
+        items: [mockItem],
+      },
     });
 
-    it('should handle updateTodoItem operation', () => {
-        // REMARKS: For update, we first need to add an item, then update it
-        // This demonstrates the sequential application of operations
-        const addInput = { id: '1', text: 'Buy milk' };
-        const updateInput = { id: '1', text: 'Buy bread' };
+    const updatedDocument = reducer(document, updateTodoItem(input));
+    expect(isTodoListDocument(updatedDocument)).toBe(true);
 
-        // REMARKS: Operations are applied in sequence, building up document state
-        const createdDocument = reducer(document, creators.addTodoItem(addInput));
-        const updatedDocument = reducer(createdDocument, creators.updateTodoItem(updateInput));
+    const updatedItem = updatedDocument.state.global.items.find(
+      (item) => item.id === input.id,
+    );
+    expect(updatedItem?.text).toBe(mockItem.text);
+    expect(updatedItem?.checked).toBe(newChecked);
+  });
 
-        // REMARKS: Now we have 2 operations in history, and the state reflects both
-        expect(updatedDocument.operations.global).toHaveLength(2);
-        expect(updatedDocument.state.global.items[0].text).toBe('Buy bread');
+  // Test deleting a todo item
+  it("should handle deleteTodoItem operation", () => {
+    const mockItem = generateMock(TodoItemSchema());
+    const document = utils.createDocument({
+      global: {
+        items: [mockItem],
+      },
     });
+    
+    const input: DeleteTodoItemInput = generateMock(DeleteTodoItemInputSchema());
+    input.id = mockItem.id;
+    
+    const updatedDocument = reducer(document, deleteTodoItem(input));
+    expect(isTodoListDocument(updatedDocument)).toBe(true);
 
-    it('should handle deleteTodoItem operation', () => {
-        // REMARKS: Similar pattern - add an item, then delete it
-        const addInput = { id: '1', text: 'Buy milk' };
-        const deleteInput = { id: '1' };
-
-        const createdDocument = reducer(document, creators.addTodoItem(addInput));
-        const updatedDocument = reducer(createdDocument, creators.deleteTodoItem(deleteInput));
-
-        // REMARKS: After deletion, we still have 2 operations in history,
-        // but the items array is now empty again in the final state
-        expect(updatedDocument.operations.global).toHaveLength(2);
-        expect(updatedDocument.state.global.items).toHaveLength(0);
-    });
+    // Verify the operation was recorded
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe("DELETE_TODO_ITEM");
+    
+    // Verify the item was removed from state
+    const updatedItems = updatedDocument.state.global.items;
+    expect(updatedItems).toHaveLength(0);
+  });
 });
-````
+```
 
 </details>
 
@@ -188,13 +313,31 @@ pnpm run test
 Output should be as follows:
 
 ```bash
+ ✓ document-models/todo-list/src/tests/document-model.test.ts (3 tests) 1ms
+ ✓ document-models/todo-list/src/tests/todos.test.ts (4 tests) 8ms
+
  Test Files  2 passed (2)
-      Tests  5 passed (5)
-   Start at  12:04:57
-   Duration  417ms (transform 79ms, setup 0ms, collect 174ms, tests 12ms, environment 0ms, prepare 158ms)
+      Tests  7 passed (7)
+   Start at  19:37:33
+   Duration  1.84s (transform 75ms, setup 0ms, collect 2.03s, tests 9ms, environment 0ms, prepare 92ms)
 ```
 
 If you got the same output, you have successfully implemented the operation reducers and tests for the **To-do List** document model. Congratulations, you've successfully set up the backbone for a simple **To-do List** document.
+
+## Compare with reference branches
+
+Verify your implementation matches the tutorial steps:
+
+```bash
+# View step-3 reducer implementation
+git show tutorial/step-3-implement-reducer-operation-handlers:document-models/todo-list/src/reducers/todos.ts
+
+# View step-4 test implementation
+git show tutorial/step-4-implement-tests-for-todos-operations:document-models/todo-list/src/tests/todos.test.ts
+
+# See what changed between step-3 and step-4
+git diff tutorial/step-3-implement-reducer-operation-handlers..tutorial/step-4-implement-tests-for-todos-operations
+```
 
 ## Up next: To-do list editor
 
