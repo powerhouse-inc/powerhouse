@@ -1,3 +1,19 @@
+## 5.1.0-dev.3 (2025-12-02)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 5.1.0-dev.2 (2025-12-02)
+
+### 🚀 Features
+
+- added integration tests for gql sync ([554280dbc](https://github.com/powerhouse-inc/powerhouse/commit/554280dbc))
+- large refactor such that ids are only on remotes and not channels ([29a807e08](https://github.com/powerhouse-inc/powerhouse/commit/29a807e08))
+- building out fuller spec on gql sync ([084f9bbda](https://github.com/powerhouse-inc/powerhouse/commit/084f9bbda))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.1 (2025-11-26)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

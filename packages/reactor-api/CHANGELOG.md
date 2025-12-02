@@ -1,3 +1,29 @@
+## 5.1.0-dev.3 (2025-12-02)
+
+### 🚀 Features
+
+- **renown:** login component ([#2117](https://github.com/powerhouse-inc/powerhouse/pull/2117))
+
+### ❤️ Thank You
+
+- Frank @froid1911
+
+## 5.1.0-dev.2 (2025-12-02)
+
+### 🚀 Features
+
+- added integration tests for gql sync ([554280dbc](https://github.com/powerhouse-inc/powerhouse/commit/554280dbc))
+- push/pull channel integration in gqp api ([722f7e844](https://github.com/powerhouse-inc/powerhouse/commit/722f7e844))
+
+### 🩹 Fixes
+
+- build fix with reactor builder module change ([d07c4c7fa](https://github.com/powerhouse-inc/powerhouse/commit/d07c4c7fa))
+- linting fixes ([2d4993b86](https://github.com/powerhouse-inc/powerhouse/commit/2d4993b86))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.1 (2025-11-26)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.

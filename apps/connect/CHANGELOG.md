@@ -1,3 +1,17 @@
+## 5.1.0-dev.3 (2025-12-02)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 5.1.0-dev.2 (2025-12-02)
+
+### 🚀 Features
+
+- added integration tests for gql sync ([554280dbc](https://github.com/powerhouse-inc/powerhouse/commit/554280dbc))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.1 (2025-11-26)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

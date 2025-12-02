@@ -266,7 +266,7 @@ export class AuthService {
     chainId: number,
     connectId: string,
   ): Promise<boolean> {
-    const url = `https://auth.renown.id/api/auth/credential?address=${address}&chainId=${chainId}&connectId=${connectId}`;
+    const url = `https://www.renown.id/api/auth/credential?address=${address}&chainId=${chainId}&connectId=${connectId}`;
     try {
       const response = await fetch(url, {
         method: "GET",

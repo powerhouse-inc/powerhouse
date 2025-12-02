@@ -1,3 +1,5 @@
-export { RenownLoginAvatar } from "./RenownLoginAvatar.js";
-export type { RenownLoginAvatarProps } from "./RenownLoginAvatar.js";
-export type { RenownUser, LoginAvatarProps } from "./types.js";
+export { RenownAuthButton } from "./RenownAuthButton.js";
+export type {
+  RenownAuthButtonProps,
+  RenownAuthButtonRenderProps,
+} from "./RenownAuthButton.js";
