@@ -279,7 +279,10 @@ export class ReactorSubgraph extends BaseSubgraph {
                 : null,
             },
           };
-          return await resolvers.pushSyncEnvelope(this.syncManager, mutableArgs);
+          return await resolvers.pushSyncEnvelope(
+            this.syncManager,
+            mutableArgs,
+          );
         } catch (error) {
           this.logger.error("Error in pushSyncEnvelope:", error);
           throw error;
