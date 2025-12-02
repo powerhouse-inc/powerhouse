@@ -2,7 +2,7 @@ import {
   setLoginStatus,
   setUser,
 } from "@powerhousedao/reactor-browser/connect";
-import type { IConnectCrypto, IRenown } from "@renown/sdk";
+import type { IConnectCrypto, IRenown, User } from "@renown/sdk";
 import { logger, type IDocumentDriveServer } from "document-drive";
 import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID, RENOWN_URL } from "./constants.js";
 
@@ -22,7 +22,7 @@ export async function login(
   reactor: IDocumentDriveServer | undefined,
   renown: IRenown | undefined,
   connectCrypto: IConnectCrypto | undefined,
-) {
+): Promise<User | undefined> {
   if (!renown || !connectCrypto || !reactor) {
     return;
   }
