@@ -3,14 +3,18 @@ import type { CREDENTIAL_TYPES } from "./constants.js";
 import type { IEventEmitter } from "./event/types.js";
 import type { IStorage } from "./storage/common.js";
 
-export type User = EditorUser & {
+// Internal user type for Renown SDK (includes credential)
+export type InternalUser = EditorUser & {
   did: string;
   credential: PowerhouseVerifiableCredential | undefined;
 };
 
+// Export as User for backward compatibility within the package
+export type User = InternalUser;
+
 export type Unsubscribe = () => void;
 
-export type RenownStorageMap = { user: User | undefined };
+export type RenownStorageMap = { user: InternalUser | undefined };
 
 export type RenownStorage = IStorage<RenownStorageMap>;
 
