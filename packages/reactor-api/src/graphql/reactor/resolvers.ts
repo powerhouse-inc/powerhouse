@@ -481,26 +481,17 @@ export async function renameDocument(
   args: {
     documentIdentifier: string;
     name: string;
-    view?: {
-      branch?: string | null;
-      scopes?: readonly string[] | null;
-    } | null;
+    branch?: string | null;
   },
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
-  let view: ViewFilter | undefined;
-  if (args.view) {
-    view = {
-      branch: fromInputMaybe(args.view.branch),
-      scopes: toMutableArray(fromInputMaybe(args.view.scopes)),
-    };
-  }
+  const branch = fromInputMaybe(args.branch);
 
   let result: PHDocument;
   try {
     result = await reactorClient.rename(
       args.documentIdentifier,
       args.name,
-      view,
+      branch,
     );
   } catch (error) {
     throw new GraphQLError(
@@ -522,20 +513,10 @@ export async function addChildren(
   args: {
     parentIdentifier: string;
     documentIdentifiers: readonly string[];
-    view?: {
-      branch?: string | null;
-      scopes?: readonly string[] | null;
-    } | null;
+    branch?: string | null;
   },
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
-  let view: ViewFilter | undefined;
-  if (args.view) {
-    view = {
-      branch: fromInputMaybe(args.view.branch),
-      scopes: toMutableArray(fromInputMaybe(args.view.scopes)),
-    };
-  }
-
+  const branch = fromInputMaybe(args.branch);
   const documentIdentifiers = [...args.documentIdentifiers];
 
   let result: PHDocument;
@@ -543,7 +524,7 @@ export async function addChildren(
     result = await reactorClient.addChildren(
       args.parentIdentifier,
       documentIdentifiers,
-      view,
+      branch,
     );
   } catch (error) {
     throw new GraphQLError(
@@ -565,20 +546,10 @@ export async function removeChildren(
   args: {
     parentIdentifier: string;
     documentIdentifiers: readonly string[];
-    view?: {
-      branch?: string | null;
-      scopes?: readonly string[] | null;
-    } | null;
+    branch?: string | null;
   },
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
-  let view: ViewFilter | undefined;
-  if (args.view) {
-    view = {
-      branch: fromInputMaybe(args.view.branch),
-      scopes: toMutableArray(fromInputMaybe(args.view.scopes)),
-    };
-  }
-
+  const branch = fromInputMaybe(args.branch);
   const documentIdentifiers = [...args.documentIdentifiers];
 
   let result: PHDocument;
@@ -586,7 +557,7 @@ export async function removeChildren(
     result = await reactorClient.removeChildren(
       args.parentIdentifier,
       documentIdentifiers,
-      view,
+      branch,
     );
   } catch (error) {
     throw new GraphQLError(
@@ -609,23 +580,13 @@ export async function moveChildren(
     sourceParentIdentifier: string;
     targetParentIdentifier: string;
     documentIdentifiers: readonly string[];
-    view?: {
-      branch?: string | null;
-      scopes?: readonly string[] | null;
-    } | null;
+    branch?: string | null;
   },
 ): Promise<{
   source: ReturnType<typeof toGqlPhDocument>;
   target: ReturnType<typeof toGqlPhDocument>;
 }> {
-  let view: ViewFilter | undefined;
-  if (args.view) {
-    view = {
-      branch: fromInputMaybe(args.view.branch),
-      scopes: toMutableArray(fromInputMaybe(args.view.scopes)),
-    };
-  }
-
+  const branch = fromInputMaybe(args.branch);
   const documentIdentifiers = [...args.documentIdentifiers];
 
   let result: { source: PHDocument; target: PHDocument };
@@ -634,7 +595,7 @@ export async function moveChildren(
       args.sourceParentIdentifier,
       args.targetParentIdentifier,
       documentIdentifiers,
-      view,
+      branch,
     );
   } catch (error) {
     throw new GraphQLError(

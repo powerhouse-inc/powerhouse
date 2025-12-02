@@ -155,12 +155,12 @@ mutation MutateDocumentAsync(
 mutation RenameDocument(
   $documentIdentifier: String!
   $name: String!
-  $view: ViewFilterInput
+  $branch: String
 ) {
   renameDocument(
     documentIdentifier: $documentIdentifier
     name: $name
-    view: $view
+    branch: $branch
   ) {
     ...PHDocumentFields
   }
@@ -169,12 +169,12 @@ mutation RenameDocument(
 mutation AddChildren(
   $parentIdentifier: String!
   $documentIdentifiers: [String!]!
-  $view: ViewFilterInput
+  $branch: String
 ) {
   addChildren(
     parentIdentifier: $parentIdentifier
     documentIdentifiers: $documentIdentifiers
-    view: $view
+    branch: $branch
   ) {
     ...PHDocumentFields
   }
@@ -183,12 +183,12 @@ mutation AddChildren(
 mutation RemoveChildren(
   $parentIdentifier: String!
   $documentIdentifiers: [String!]!
-  $view: ViewFilterInput
+  $branch: String
 ) {
   removeChildren(
     parentIdentifier: $parentIdentifier
     documentIdentifiers: $documentIdentifiers
-    view: $view
+    branch: $branch
   ) {
     ...PHDocumentFields
   }
@@ -198,13 +198,13 @@ mutation MoveChildren(
   $sourceParentIdentifier: String!
   $targetParentIdentifier: String!
   $documentIdentifiers: [String!]!
-  $view: ViewFilterInput
+  $branch: String
 ) {
   moveChildren(
     sourceParentIdentifier: $sourceParentIdentifier
     targetParentIdentifier: $targetParentIdentifier
     documentIdentifiers: $documentIdentifiers
-    view: $view
+    branch: $branch
   ) {
     source {
       ...PHDocumentFields
