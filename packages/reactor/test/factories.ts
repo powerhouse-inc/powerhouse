@@ -512,6 +512,7 @@ export async function createTestReactorSetup(
     mockWriteCache,
     mockOperationIndex,
     executorConfig ?? { legacyStorageEnabled: true },
+    undefined,
   );
 
   // Create mock read model coordinator
@@ -840,6 +841,56 @@ export function createTestChannelFactory(
       channelRegistry.set(remoteId, channel);
 
       return channel;
+    },
+  };
+}
+
+/**
+ * Creates a signed test operation using the SimpleSigner.
+ *
+ * @param signer - The SimpleSigner instance to sign with
+ * @param overrides - Optional operation overrides
+ * @returns Promise resolving to a signed operation
+ */
+export async function createSignedTestOperation(
+  signer: any,
+  overrides: Partial<Operation> = {},
+): Promise<Operation> {
+  const operation = createTestOperation(overrides);
+  const publicKey = signer.getPublicKey();
+
+  const signerData: any = {
+    user: { address: "0x123", chainId: 1, networkId: "1" },
+    app: { name: "test", key: publicKey },
+    signatures: [],
+  };
+
+  const dataToSign = JSON.stringify({
+    action: operation.action,
+    index: operation.index,
+    timestamp: operation.timestampUtcMs,
+  });
+
+  const signatureHex = await signer.sign(new TextEncoder().encode(dataToSign));
+
+  const signature: any = [
+    operation.timestampUtcMs,
+    publicKey,
+    operation.action.id,
+    "",
+    `0x${signatureHex}`,
+  ];
+
+  signerData.signatures = [signature];
+
+  return {
+    ...operation,
+    action: {
+      ...operation.action,
+      context: {
+        ...operation.action.context,
+        signer: signerData,
+      },
     },
   };
 }

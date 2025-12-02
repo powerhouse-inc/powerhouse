@@ -37,3 +37,31 @@ export class CreateDocumentRequiredError extends Error {
     Error.captureStackTrace(this, CreateDocumentRequiredError);
   }
 }
+
+/**
+ * Error thrown when an operation has an invalid signature.
+ */
+export class InvalidSignatureError extends Error {
+  public readonly documentId: string;
+  public readonly operationIndex: number;
+  public readonly operationId: string;
+  public readonly reason: string;
+
+  constructor(
+    documentId: string,
+    operationIndex: number,
+    operationId: string,
+    reason: string,
+  ) {
+    const message = `Invalid signature for operation ${operationId} at index ${operationIndex} in document ${documentId}: ${reason}`;
+
+    super(message);
+    this.name = "InvalidSignatureError";
+    this.documentId = documentId;
+    this.operationIndex = operationIndex;
+    this.operationId = operationId;
+    this.reason = reason;
+
+    Error.captureStackTrace(this, InvalidSignatureError);
+  }
+}

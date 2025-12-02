@@ -111,3 +111,15 @@ export type ExecutorManagerStatus = {
   /** Total number of jobs processed since start */
   totalJobsProcessed: number;
 };
+
+/**
+ * Handler for verifying operation signatures.
+ *
+ * @param operation - The operation to verify
+ * @param publicKey - The public key to verify against (from signer.app.key)
+ * @returns Promise that resolves to true if signature is valid, false otherwise
+ */
+export type SignatureVerificationHandler = (
+  operation: Operation,
+  publicKey: string,
+) => Promise<boolean>;
