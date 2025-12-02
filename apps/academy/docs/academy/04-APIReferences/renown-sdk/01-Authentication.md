@@ -669,6 +669,4 @@ const handleLogin = useCallback(
 
 ## Next Steps
 
-- Read the [API Reference](./API_REFERENCE.md) for detailed documentation
-- See [Examples](../examples/) for complete implementations
-- Check [Migration Guide](./MIGRATION.md) if upgrading from older versions
+- Read the [API Reference](./02-APIReference.md) for detailed documentation

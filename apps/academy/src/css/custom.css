@@ -526,22 +526,3 @@ html[data-theme="dark"] .DocSearch-Hits > *:empty {
   font-style: italic;
 }
 
-/* Ethereum Argentina Hackathon sidebar icon */
-.menu__link[href*="EthereumArgentinaHackathon"] {
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-}
-
-.menu__link[href*="EthereumArgentinaHackathon"]::before {
-  content: "" !important;
-  display: inline-block !important;
-  width: 24px !important;
-  height: 24px !important;
-  min-width: 24px !important;
-  background-image: url("/img/ethereum-logo.jpeg") !important;
-  background-size: cover !important;
-  background-position: center !important;
-  border-radius: 50% !important;
-  flex-shrink: 0 !important;
-}

@@ -889,6 +889,4 @@ import type {
 
 ## Related Documentation
 
-- [Authentication Guide](./AUTHENTICATION.md) - Comprehensive auth implementation guide
-- [Migration Guide](./MIGRATION.md) - Upgrading from older versions
-- [Examples](../examples/) - Full implementation examples
+- [Authentication Guide](./01-Authentication.md) - Comprehensive auth implementation guide
