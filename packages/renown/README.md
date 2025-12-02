@@ -47,16 +47,16 @@ export default function RootLayout({ children }) {
 
 ### 2. Use Authentication in Components
 
-**Option A: Use the AuthButton component**
+**Option A: Use the RenownAuthButton component**
 
 ```typescript
-import { AuthButton } from '@renown/sdk'
+import { RenownAuthButton } from '@renown/sdk'
 
 export function Header() {
   return (
     <header>
       <h1>My App</h1>
-      <AuthButton showLogoutButton />
+      <RenownAuthButton showLogoutButton />
     </header>
   )
 }
@@ -79,14 +79,14 @@ export function CustomAuth() {
 
 The SDK includes a ready-to-use React component for authentication:
 
-### AuthButton
+### RenownAuthButton
 
 Smart button that adapts to auth state - shows login button when not authenticated, and user info when authenticated:
 
 ```typescript
-import { AuthButton } from '@renown/sdk'
+import { RenownAuthButton } from '@renown/sdk'
 
-<AuthButton showLogoutButton />
+<RenownAuthButton showLogoutButton />
 ```
 
 For detailed component documentation and examples, see [COMPONENTS.md](./COMPONENTS.md).
@@ -101,7 +101,7 @@ Central authentication provider that automatically initializes the SDK.
 
 **Props:**
 - `children`: React.ReactNode - **Required.** Your application components
-- `renownUrl?`: string - Renown service URL (default: 'https://renown-staging.vetra.io')
+- `renownUrl?`: string - Renown service URL (default: 'https://www.renown.id')
 - `networkId?`: string - Network ID (default: 'eip155')
 - `chainId?`: string - Chain ID (default: '1')
 - `loadingComponent?`: React.ReactNode - Custom loading UI
@@ -265,7 +265,7 @@ async function customLogin() {
   const renown = await initRenown(
     await connectCrypto.did(),
     'eip155',
-    'https://renown-staging.vetra.io'
+    'https://www.renown.id'
   )
 
   // Login
@@ -320,7 +320,7 @@ The UserProvider accepts optional configuration props:
 
 ```typescript
 <UserProvider
-  renownUrl="https://renown-staging.vetra.io"  // Custom Renown URL
+  renownUrl="https://www.renown.id"  // Custom Renown URL
   networkId="eip155"                            // Network ID (default)
   chainId="1"                                   // Chain ID (default)
 >
@@ -334,7 +334,7 @@ Use environment variables for dynamic configuration:
 
 ```typescript
 <UserProvider
-  renownUrl={process.env.NEXT_PUBLIC_RENOWN_URL || 'https://renown-staging.vetra.io'}
+  renownUrl={process.env.NEXT_PUBLIC_RENOWN_URL || 'https://www.renown.id'}
 >
   <App />
 </UserProvider>
@@ -342,7 +342,7 @@ Use environment variables for dynamic configuration:
 
 ```bash
 # .env
-NEXT_PUBLIC_RENOWN_URL=https://renown-staging.vetra.io
+NEXT_PUBLIC_RENOWN_URL=https://www.renown.id
 ```
 
 ## Examples
@@ -365,16 +365,16 @@ export default function RootLayout({ children }) {
   )
 }
 
-// components/Navbar.tsx - Using AuthButton
+// components/Navbar.tsx - Using RenownAuthButton
 'use client'
 
-import { AuthButton } from '@renown/sdk'
+import { RenownAuthButton } from '@renown/sdk'
 
 export function Navbar() {
   return (
     <nav>
       <h1>My App</h1>
-      <AuthButton showLogoutButton />
+      <RenownAuthButton showLogoutButton />
     </nav>
   )
 }
@@ -422,14 +422,14 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   </React.StrictMode>
 )
 
-// App.tsx - Using AuthButton
-import { AuthButton } from '@renown/sdk'
+// App.tsx - Using RenownAuthButton
+import { RenownAuthButton } from '@renown/sdk'
 
 function App() {
   return (
     <div>
       <h1>My App</h1>
-      <AuthButton showLogoutButton />
+      <RenownAuthButton showLogoutButton />
     </div>
   )
 }

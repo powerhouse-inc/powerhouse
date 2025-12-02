@@ -16,5 +16,5 @@ export {
   fetchProfileDataForUser,
   reauthenticateFromSession,
 } from "./lib/renown/utils.js";
-export type { LoginStatus, User as RenownUser } from "./lib/renown/utils.js";
+export type { LoginStatus, User as SimpleUser } from "./lib/renown/utils.js";
 export { SessionStorageManager } from "./lib/session-storage.js";

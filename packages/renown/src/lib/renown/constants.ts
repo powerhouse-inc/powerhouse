@@ -1,4 +1,4 @@
-export const RENOWN_URL = "https://renown-staging.vetra.io";
+export const RENOWN_URL = "https://www.renown.id";
 export const RENOWN_NETWORK_ID = "eip155";
 export const RENOWN_CHAIN_ID = "1";
 

@@ -4,27 +4,27 @@ import React from "react";
 import { useUser } from "../hooks/use-user.js";
 import type { User } from "../lib/renown/index.js";
 
-export interface AuthButtonRenderProps {
+export interface RenownAuthButtonRenderProps {
   user: User;
   logout: () => Promise<void>;
   openProfile: () => void;
 }
 
-export interface AuthButtonProps {
+export interface RenownAuthButtonProps {
   /**
    * Custom class name for the container
    */
   className?: string;
   /**
    * Base URL for the profile page
-   * @default "https://renown-staging.vetra.io/profile"
+   * @default "https://www.renown.id/profile"
    */
   profileBaseUrl?: string;
   /**
    * Custom render function when user is authenticated
    * Receives user data, logout function, and openProfile function
    */
-  renderAuthenticated?: (props: AuthButtonRenderProps) => React.ReactNode;
+  renderAuthenticated?: (props: RenownAuthButtonRenderProps) => React.ReactNode;
   /**
    * Custom render function when user is not authenticated
    * Receives openRenown function
@@ -61,17 +61,17 @@ export interface AuthButtonProps {
  * @example
  * Basic usage:
  * ```tsx
- * import { AuthButton } from '@renown/sdk'
+ * import { RenownAuthButton } from '@renown/sdk'
  *
  * function Header() {
- *   return <AuthButton />
+ *   return <RenownAuthButton />
  * }
  * ```
  *
  * @example
  * Custom rendering:
  * ```tsx
- * <AuthButton
+ * <RenownAuthButton
  *   renderAuthenticated={({ user, logout }) => (
  *     <div>
  *       <span>{user.name}</span>
@@ -87,23 +87,23 @@ export interface AuthButtonProps {
  * @example
  * With logout button:
  * ```tsx
- * <AuthButton
+ * <RenownAuthButton
  *   showLogoutButton
  *   logoutButtonText="Sign Out"
  *   profileBaseUrl="https://myapp.com/profile"
  * />
  * ```
  */
-export function AuthButton({
+export function RenownAuthButton({
   className = "",
-  profileBaseUrl = "https://renown-staging.vetra.io/profile",
+  profileBaseUrl = "https://www.renown.id/profile",
   renderAuthenticated,
   renderUnauthenticated,
   renderLoading,
   showUsername = true,
   showLogoutButton = false,
   logoutButtonText = "Logout",
-}: AuthButtonProps) {
+}: RenownAuthButtonProps) {
   const { user, loginStatus, isLoading, openRenown, logout } = useUser();
 
   const openProfile = () => {

@@ -386,9 +386,9 @@ const sentryConfigSchema = z.object({
 const renownConfigSchema = z.object({
   /**
    * Renown authentication service URL
-   * @default "https://auth.renown.id"
+   * @default "https://www.renown.id"
    */
-  PH_CONNECT_RENOWN_URL: z.string().default("https://auth.renown.id"),
+  PH_CONNECT_RENOWN_URL: z.string().default("https://www.renown.id"),
 
   /**
    * Renown network ID

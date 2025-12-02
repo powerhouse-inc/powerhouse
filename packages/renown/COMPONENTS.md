@@ -4,24 +4,24 @@ The Renown SDK provides a ready-to-use React component for authentication UI.
 
 ## Component
 
-### AuthButton
+### RenownAuthButton
 
 Smart button that adapts based on authentication state. Shows login button when not authenticated, and user info when authenticated.
 
 #### Basic Usage
 
 ```tsx
-import { AuthButton } from '@renown/sdk'
+import { RenownAuthButton } from '@renown/sdk'
 
 function Header() {
-  return <AuthButton />
+  return <RenownAuthButton />
 }
 ```
 
 #### With Logout Button
 
 ```tsx
-<AuthButton
+<RenownAuthButton
   showLogoutButton
   logoutButtonText="Sign Out"
   showUsername
@@ -31,7 +31,7 @@ function Header() {
 #### Custom Rendering
 
 ```tsx
-<AuthButton
+<RenownAuthButton
   renderAuthenticated={({ user, logout, openProfile }) => (
     <div className="flex items-center gap-2">
       <img
@@ -61,7 +61,7 @@ function Header() {
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `className` | `string` | `""` | Custom CSS class for container |
-| `profileBaseUrl` | `string` | `"https://renown-staging.vetra.io/profile"` | Base URL for profile |
+| `profileBaseUrl` | `string` | `"https://www.renown.id/profile"` | Base URL for profile |
 | `renderAuthenticated` | `function` | Default renderer | Custom authenticated state |
 | `renderUnauthenticated` | `function` | Default renderer | Custom unauthenticated state |
 | `renderLoading` | `function` | Default renderer | Custom loading state |
@@ -98,7 +98,7 @@ function Header() {
 // components/Navbar.tsx
 'use client'
 
-import { AuthButton } from '@renown/sdk'
+import { RenownAuthButton } from '@renown/sdk'
 import Link from 'next/link'
 
 export function Navbar() {
@@ -108,9 +108,9 @@ export function Navbar() {
         <h1>My App</h1>
       </Link>
 
-      <AuthButton
+      <RenownAuthButton
         className="navbar-auth"
-        profileBaseUrl="https://renown-staging.vetra.io/profile"
+        profileBaseUrl="https://www.renown.id/profile"
         showLogoutButton
         renderAuthenticated={({ user, logout, openProfile }) => (
           <div className="flex items-center gap-3">
@@ -158,7 +158,7 @@ export function Navbar() {
 // app/login/page.tsx
 'use client'
 
-import { AuthButton, useUser } from '@renown/sdk'
+import { RenownAuthButton, useUser } from '@renown/sdk'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
@@ -177,7 +177,7 @@ export default function LoginPage() {
       <div className="text-center space-y-6">
         <h1 className="text-4xl font-bold">Welcome</h1>
         <p className="text-gray-600">Sign in to continue</p>
-        <AuthButton
+        <RenownAuthButton
           renderUnauthenticated={({ openRenown }) => (
             <button
               onClick={openRenown}
@@ -206,14 +206,14 @@ export default function LoginPage() {
 // components/ProfileDropdown.tsx
 'use client'
 
-import { AuthButton } from '@renown/sdk'
+import { RenownAuthButton } from '@renown/sdk'
 import { useState } from 'react'
 
 export function ProfileDropdown() {
   const [isOpen, setIsOpen] = useState(false)
 
   return (
-    <AuthButton
+    <RenownAuthButton
       renderAuthenticated={({ user, logout, openProfile }) => (
         <div className="relative">
           <button
@@ -264,10 +264,10 @@ export function ProfileDropdown() {
 If you have existing UI components (like shadcn/ui), you can wrap them:
 
 ```tsx
-// components/AuthButtonWithShadcn.tsx
+// components/RenownAuthButtonWithShadcn.tsx
 'use client'
 
-import { AuthButton } from '@renown/sdk'
+import { RenownAuthButton } from '@renown/sdk'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -279,9 +279,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-export function AuthButtonWithShadcn() {
+export function RenownAuthButtonWithShadcn() {
   return (
-    <AuthButton
+    <RenownAuthButton
       renderAuthenticated={({ user, logout, openProfile }) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -329,10 +329,10 @@ All components accept `className` and `style` props for custom styling:
 
 ```tsx
 // Tailwind CSS
-<AuthButton className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg" />
+<RenownAuthButton className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg" />
 
 // Inline styles with custom renderer
-<AuthButton
+<RenownAuthButton
   renderUnauthenticated={({ openRenown }) => (
     <button
       onClick={openRenown}
@@ -351,7 +351,7 @@ All components accept `className` and `style` props for custom styling:
 />
 
 // CSS Modules
-<AuthButton className={styles.authButton} />
+<RenownAuthButton className={styles.authButton} />
 ```
 
 ## TypeScript Support
@@ -360,11 +360,11 @@ All components are fully typed:
 
 ```typescript
 import type {
-  AuthButtonProps,
-  AuthButtonRenderProps
+  RenownAuthButtonProps,
+  RenownAuthButtonRenderProps
 } from '@renown/sdk'
 
-const myProps: AuthButtonProps = {
+const myProps: RenownAuthButtonProps = {
   className: 'my-button',
   showLogoutButton: true
 }

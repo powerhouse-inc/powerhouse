@@ -38,7 +38,7 @@ interface UserProviderProps {
   children: React.ReactNode;
   /**
    * Renown service URL
-   * @default 'https://renown-staging.vetra.io'
+   * @default 'https://www.renown.id'
    */
   renownUrl?: string;
   /**
@@ -72,7 +72,7 @@ interface UserProviderProps {
  * Usage:
  * ```tsx
  * // Wrap your app
- * <UserProvider renownUrl="https://renown-staging.vetra.io">
+ * <UserProvider renownUrl="https://www.renown.id">
  *   <YourApp />
  * </UserProvider>
  *
@@ -82,7 +82,7 @@ interface UserProviderProps {
  */
 export function UserProvider({
   children,
-  renownUrl = "https://renown-staging.vetra.io",
+  renownUrl = "https://www.renown.id",
   networkId = "eip155",
   chainId = "1",
   loadingComponent,

@@ -1,2 +1,5 @@
-export { AuthButton } from "./AuthButton.js";
-export type { AuthButtonProps, AuthButtonRenderProps } from "./AuthButton.js";
+export { RenownAuthButton } from "./RenownAuthButton.js";
+export type {
+  RenownAuthButtonProps,
+  RenownAuthButtonRenderProps,
+} from "./RenownAuthButton.js";
