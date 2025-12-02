@@ -5,7 +5,7 @@ export function buildDocumentVariableName(documentTypeName: string) {
 }
 
 export function buildEditDocumentNameComponentName(documentTypeName: string) {
-  return `Edit${documentTypeName}Name`;
+  return `EditName`;
 }
 
 export function buildDocumentNameVariableName(documentTypeName: string) {

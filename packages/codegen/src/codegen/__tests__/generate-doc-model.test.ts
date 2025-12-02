@@ -1,6 +1,6 @@
 import {
+  generateDocumentModel,
   generateSchemas,
-  hygenGenerateDocumentModel,
   hygenGenerateProcessor,
   loadDocumentModel,
 } from "@powerhousedao/codegen";
@@ -15,7 +15,6 @@ import {
   it,
   type TestContext,
 } from "vitest";
-import { tsMorphGenerateDocumentModel } from "../../ts-morph-utils/file-builders/document-model.js";
 import { USE_LEGACY } from "./config.js";
 import {
   DOCUMENT_MODELS_TEST_PROJECT,
@@ -80,39 +79,25 @@ describe("document model", () => {
       ),
     );
 
-    if (USE_LEGACY) {
-      await hygenGenerateDocumentModel(
-        billingStatementDocumentModel,
-        documentModelsDirName,
-        TEST_PACKAGE_NAME,
-        { skipFormat: true },
-      );
-    } else {
-      await tsMorphGenerateDocumentModel({
-        projectDir: testOutDirPath,
-        packageName: TEST_PACKAGE_NAME,
-        documentModelState: billingStatementDocumentModel,
-      });
-    }
+    await generateDocumentModel({
+      dir: documentModelsDirName,
+      specifiedPackageName: TEST_PACKAGE_NAME,
+      documentModelState: billingStatementDocumentModel,
+      legacy: USE_LEGACY,
+      skipFormat: true,
+    });
 
     const testDocDocumentModel = await loadDocumentModel(
       path.join(documentModelsSrcPath, "test-doc", "test-doc.json"),
     );
 
-    if (USE_LEGACY) {
-      await hygenGenerateDocumentModel(
-        testDocDocumentModel,
-        documentModelsDirName,
-        TEST_PACKAGE_NAME,
-        { skipFormat: true },
-      );
-    } else {
-      await tsMorphGenerateDocumentModel({
-        projectDir: testOutDirPath,
-        packageName: TEST_PACKAGE_NAME,
-        documentModelState: testDocDocumentModel,
-      });
-    }
+    await generateDocumentModel({
+      legacy: USE_LEGACY,
+      dir: documentModelsDirName,
+      specifiedPackageName: TEST_PACKAGE_NAME,
+      documentModelState: testDocDocumentModel,
+      skipFormat: true,
+    });
   };
 
   it(
@@ -356,20 +341,13 @@ describe("document model", () => {
         { force: true },
       );
 
-      if (USE_LEGACY) {
-        await hygenGenerateDocumentModel(
-          testDocDocumentModelV2,
-          documentModelsDirName,
-          TEST_PACKAGE_NAME,
-          { skipFormat: true },
-        );
-      } else {
-        await tsMorphGenerateDocumentModel({
-          projectDir: testOutDirPath,
-          packageName: TEST_PACKAGE_NAME,
-          documentModelState: testDocDocumentModelV2,
-        });
-      }
+      await generateDocumentModel({
+        legacy: USE_LEGACY,
+        dir: documentModelsDirName,
+        specifiedPackageName: TEST_PACKAGE_NAME,
+        documentModelState: testDocDocumentModelV2,
+        skipFormat: true,
+      });
 
       // expect .out/document-model/test-doc/src/reducers/base-operations.ts to contain setTestIdOperation, setTestNameOperation, setTestDescriptionOperation and setTestValueOperation
       const baseOperationsPath = path.join(
@@ -508,20 +486,13 @@ describe("document model", () => {
         ),
       );
 
-      if (USE_LEGACY) {
-        await hygenGenerateDocumentModel(
-          testEmptyCodesDocumentModel,
-          documentModelsDirName,
-          TEST_PACKAGE_NAME,
-          { skipFormat: true },
-        );
-      } else {
-        await tsMorphGenerateDocumentModel({
-          projectDir: testOutDirPath,
-          packageName: TEST_PACKAGE_NAME,
-          documentModelState: testEmptyCodesDocumentModel,
-        });
-      }
+      await generateDocumentModel({
+        legacy: USE_LEGACY,
+        dir: documentModelsDirName,
+        specifiedPackageName: TEST_PACKAGE_NAME,
+        documentModelState: testEmptyCodesDocumentModel,
+        skipFormat: true,
+      });
 
       // Check that error codes are generated from error names
       const testOperationsErrorPath = path.join(
