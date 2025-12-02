@@ -1,19 +1,93 @@
 # Build a to-do list editor
 
+:::tip Tutorial Repository
+📦 **Reference Code**: 
+- **Editor Scaffolding**: [step-5-generate-todo-list-document-editor](https://github.com/powerhouse-inc/todo-tutorial/tree/step-5-generate-todo-list-document-editor)
+- **Complete Editor UI**: [step-6-add-basic-todo-editor-ui-components](https://github.com/powerhouse-inc/todo-tutorial/tree/step-6-add-basic-todo-editor-ui-components)
+
+This tutorial covers two steps:
+1. **Step 5**: Generating the editor template with `ph generate --editor`
+2. **Step 6**: Building a complete, interactive UI with components for adding, editing, and deleting todos
+
+Compare implementations: `git diff step-5-generate-todo-list-document-editor step-6-add-basic-todo-editor-ui-components`
+:::
+
+<details>
+<summary>📖 How to use this tutorial</summary>
+
+This tutorial shows building from **generated scaffolding** (step-5) to **complete UI** (step-6).
+
+### Compare your generated editor
+
+After running `ph generate --editor`:
+
+```bash
+# Compare generated scaffolding with step-5
+git diff tutorial/step-5-generate-todo-list-document-editor -- editors/
+
+# View the generated editor template
+git show tutorial/step-5-generate-todo-list-document-editor:editors/todo-list-editor/editor.tsx
+```
+
+### Compare your custom components
+
+After building your UI:
+
+```bash
+# Compare your complete editor with step-6
+git diff tutorial/step-6-add-basic-todo-editor-ui-components -- editors/
+
+# See what was added from scaffolding to complete UI
+git diff tutorial/step-5-generate-todo-list-document-editor..tutorial/step-6-add-basic-todo-editor-ui-components
+```
+
+### Browse the complete implementation
+
+Explore the production-ready component structure:
+
+```bash
+# List all components in step-6
+git ls-tree -r --name-only tutorial/step-6-add-basic-todo-editor-ui-components editors/todo-list-editor/components/
+
+# View a specific component
+git show tutorial/step-6-add-basic-todo-editor-ui-components:editors/todo-list-editor/components/TodoList.tsx
+```
+
+### Visual comparison with GitHub Desktop
+
+After committing your editor code:
+1. **Branch** menu → **"Compare to Branch..."**
+2. Select `tutorial/step-5-generate-todo-list-document-editor` or `tutorial/step-6-add-basic-todo-editor-ui-components`
+3. See all your custom components vs. the reference implementation
+
+See step 1 for detailed GitHub Desktop instructions.
+
+</details>
+
 In this chapter we will continue with the interface or editor implementation of the **To-do List** document model. This means you will create a simple user interface for the **To-do List** document model which will be used inside the Connect app to create, update and delete your ToDoList items.
 
 ## Generate the editor template
 
 Run the command below to generate the editor template for the **To-do List** document model.  
-This command reads the **To-do List** document model definition from the `document-models` folder and generates the editor template in the `editors/to-do-list` folder as `editor.tsx`.
-
-Notice the `--editor` flag which specifies the **To-do List** document model, and the `--document-types` flag defines the document type `powerhouse/todolist`.
+This command reads the **To-do List** document model definition from the `document-models` folder and generates the editor template in the `editors/todo-list-editor` folder.
 
 ```bash
-ph generate --editor ToDoList --document-types powerhouse/todolist
+pnpm generate --editor todo-list-editor --document-types powerhouse/todo-list
 ```
 
-Once complete, navigate to the `editors/to-do-list/editor.tsx` file and open it in your editor.
+Notice the `--editor` flag which specifies the editor name, and the `--document-types` flag defines the document type `powerhouse/todo-list`.
+
+Once complete, you'll have a new directory structure:
+
+```
+editors/todo-list-editor/
+├── components/
+│   └── EditName.tsx          # Auto-generated component for editing document name
+├── editor.tsx                # Main editor component (to be customized)
+└── module.ts                 # Editor module configuration
+```
+
+Navigate to the `editors/todo-list-editor/editor.tsx` file and open it in your editor. You'll see a basic template ready for customization.
 
 ### Editor implementation options
 
@@ -26,172 +100,362 @@ When building your editor component within the Powerhouse ecosystem, you have se
 Connect Studio provides a dynamic local environment, by running `ph connect` to visualize your components instantly as you build them, regardless of the styling method you choose.  
 Manual build steps are typically only needed when publishing packages.
 
-## To-do List editor
+## Build the editor with components
 
-Below is the complete code for the To-Do List editor. Paste this code in `editors/to-do-list/editor.tsx`.
+We'll build the editor using a component-based approach for better organization and reusability. We'll create separate components for different UI features, making the code more maintainable and easier to understand.
 
-<details>
-<summary>Complete ToDoList Editor Example (using Tailwind CSS)</summary>
+### Component-based architecture
+
+The editor structure we'll build includes:
+- `editor.tsx` - Main editor wrapper (imports TodoList)
+- `TodoList.tsx` - Main container component that orchestrates all other components
+- `AddTodo.tsx` - Form component for adding new todos
+- `Todo.tsx` - Individual todo item component with edit/delete functionality
+- `Todos.tsx` - List wrapper component for rendering all todos
+
+:::tip
+The tutorial repository (step-6) includes additional components like `TodoListName`, `CloseButton`, and `UndoRedoButtons`. We'll focus on the core components here, but you can explore the complete implementation using the git commands shown above.
+:::
+
+### Step 1: Update the main editor file
+
+First, simplify `editors/todo-list-editor/editor.tsx` to import and render the main `TodoList` component:
 
 ```typescript
-import { EditorProps } from 'document-model';
-import {
-    ToDoListState,
-    ToDoListAction,
-    ToDoListLocalState,
-    ToDoItem,
-    actions,
-    ToDoListDocument,
-} from '../../document-models/to-do-list/index.js';
-import { useState } from 'react';
+import { TodoList } from "./components/TodoList.js";
 
-// EditorProps is a generic type that provides the document and a dispatch function.
-// The dispatch function is used to send actions to the document's reducer to update the state.
-export type IProps = EditorProps<ToDoListDocument>;
-
-export default function Editor(props: IProps) {
-    // Destructure document and dispatch from props.
-    const { document, dispatch } = props;
-    // Get the global state from the document. This state is shared across all editors of this document.
-    const {
-        state: { global: state },
-    } = document;
-
-    // React's useState hook is used for local component state.
-    // This state is not shared with other components.
-    // `todoItem` stores the text of the new to-do item being added.
-    const [todoItem, setTodoItem] = useState('');
-    // `editingItemId` stores the ID of the item currently being edited.
-    const [editingItemId, setEditingItemId] = useState<string | null>(null);
-    // `editedText` stores the text of the item while it's being edited.
-    const [editedText, setEditedText] = useState('');
-
-    return (
-        <div className="p-4 font-sans max-w-lg mx-auto">
-            <h1 className="text-2xl font-bold mb-4 text-center">To-do List</h1>
-            <div className="w-96 mx-auto">
-                <div className="flex mb-4">
-                    <input
-                        className="border border-gray-300 p-2 rounded-l-md flex-grow"
-                        placeholder="Insert task here..."
-                        value={todoItem}
-                        onChange={e => setTodoItem(e.target.value)}
-                        onKeyDown={e => {
-                            if (e.key === 'Enter') {
-                                // Dispatch an action to add a new to-do item.
-                                // `actions.addTodoItem` is an action creator from our document model.
-                                dispatch(
-                                    actions.addTodoItem({
-                                        id: Math.random().toString(), // In a real app, use a more robust ID generation.
-                                        text: todoItem,
-                                    })
-                                );
-                                setTodoItem('');
-                            }
-                        }}
-                    />
-                    <button
-                        className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-r-md"
-                        onClick={() => {
-                            // Also add item on button click.
-                            dispatch(
-                                actions.addTodoItem({
-                                    id: Math.random().toString(),
-                                    text: todoItem,
-                                })
-                            );
-                            setTodoItem('');
-                        }}
-                    >
-                        Add
-                    </button>
-                </div>
-                <ul className="list-none p-0">
-                    {/* Map over the items in the global state to render each to-do item. */}
-                    {state.items.map((item: ToDoItem) => (
-                        <li
-                            key={item.id}
-                            className="flex items-center p-2 relative border-b border-gray-200"
-                        >
-                            <input
-                                type="checkbox"
-                                checked={item.checked}
-                                className="mr-3"
-                                onChange={() => {
-                                    // Dispatch an action to update the checked status of an item.
-                                    dispatch(
-                                        actions.updateTodoItem({
-                                            id: item.id,
-                                            checked: !item.checked,
-                                        })
-                                    );
-                                }}
-                            />
-                            {/* Conditional rendering: show an input field if the item is being edited, otherwise show the text. */}
-                            {editingItemId === item.id ? (
-                                <input
-                                    value={editedText}
-                                    onChange={e =>
-                                        setEditedText(e.target.value)
-                                    }
-                                    onKeyDown={e => {
-                                        if (e.key === 'Enter') {
-                                            // Dispatch an action to update the item's text.
-                                            dispatch(
-                                                actions.updateTodoItem({
-                                                    id: item.id,
-                                                    text: editedText,
-                                                })
-                                            );
-                                            // Exit editing mode.
-                                            setEditingItemId(null);
-                                        }
-                                    }}
-                                    className="flex-grow"
-                                    autoFocus // Automatically focus the input when it appears.
-                                />
-                            ) : (
-                                <div className="flex items-center flex-grow gap-1">
-                                    <span
-                                        onClick={() => {
-                                            // Enter editing mode when the text is clicked.
-                                            setEditingItemId(item.id);
-                                            setEditedText(item.text);
-                                        }}
-                                        className={`cursor-pointer ${
-                                            item.checked
-                                                ? 'line-through text-gray-500'
-                                                : ''
-                                        }`}
-                                    >
-                                        {item.text}
-                                    </span>
-                                    <span
-                                        onClick={() =>
-                                            dispatch(
-                                                actions.deleteTodoItem({
-                                                    id: item.id,
-                                                })
-                                            )
-                                        }
-                                        className="text-gray-400 cursor-pointer opacity-40 transition-all duration-200 text-base font-bold inline-flex items-center pl-1 hover:opacity-100 hover:text-red-500"
-                                    >
-                                        ×
-                                    </span>
-                                </div>
-                            )}
-                        </li>
-                    ))}
-                </ul>
-            </div>
-        </div>
-    );
+/** Editor component for the Todo List document type */
+export function Editor() {
+  return (
+    <div className="py-4 px-8">
+      <TodoList />
+    </div>
+  );
 }
 ```
 
-</details>
+### Step 2: Create the TodoList container component
 
-Now you can run the Connect app and see the **To-do List** editor in action.
+Create `editors/todo-list-editor/components/TodoList.tsx`. This is the main orchestrator that brings together all child components:
+
+```typescript
+import { useSelectedTodoListDocument } from "todo-tutorial/document-models/todo-list";
+import { TodoListName } from "./TodoListName.js";
+import { Todos } from "./Todos.js";
+import { AddTodo } from "./AddTodo.js";
+
+/** Displays the selected todo list */
+export function TodoList() {
+  const [selectedTodoList] = useSelectedTodoListDocument();
+
+  if (!selectedTodoList) return null;
+
+  const todos = selectedTodoList.state.global.items;
+
+  return (
+    <div>
+      <section className="mb-4">
+        <TodoListName />
+      </section>
+      <section className="mb-4">
+        <Todos todos={todos} />
+      </section>
+      <section>
+        <AddTodo />
+      </section>
+    </div>
+  );
+}
+```
+
+:::info Key Concept: useSelectedTodoListDocument hook
+The `useSelectedTodoListDocument` hook is generated by the Powerhouse CLI. It provides:
+1. The current document state (`selectedTodoList`)
+2. A dispatch function to send actions to the reducer
+
+This hook connects your React components to the document model's state and operations.
+:::
+
+### Step 3: Create the AddTodo form component
+
+Create `editors/todo-list-editor/components/AddTodo.tsx` to handle adding new todo items:
+
+```typescript
+import type { FormEventHandler } from "react";
+import { addTodoItem } from "todo-tutorial/document-models/todo-list";
+import { useSelectedTodoListDocument } from "todo-tutorial/document-models/todo-list";
+
+/** Component for adding a new todo item to the selected todo list */
+export function AddTodo() {
+  const [todoList, dispatch] = useSelectedTodoListDocument();
+
+  if (!todoList) return null;
+
+  const onSubmitAddTodo: FormEventHandler<HTMLFormElement> = (event) => {
+    event.preventDefault();
+
+    const form = event.currentTarget;
+    const addTodoInput = form.elements.namedItem("addTodo") as HTMLInputElement;
+    const text = addTodoInput.value;
+    if (!text) return;
+
+    dispatch(addTodoItem({ text }));
+
+    form.reset();
+  };
+
+  return (
+    <form onSubmit={onSubmitAddTodo} className="flex mx-auto min-w-fit gap-2">
+      <input
+        className="py-1 px-2 grow min-w-fit placeholder:text-gray-600 rounded border border-gray-600 text-gray-800"
+        type="text"
+        name="addTodo"
+        placeholder="What needs to be done?"
+        autoFocus
+      />
+      <button
+        type="submit"
+        className="text-gray-600 rounded border border-gray-600 px-3 py-1"
+      >
+        Add
+      </button>
+    </form>
+  );
+}
+```
+
+**What's happening here:**
+- We use a form with `onSubmit` handler for better UX (Enter key support)
+- We extract the text value from the input field
+- We dispatch the `addTodoItem` action (generated from our SDL)
+- We reset the form after submission
+
+### Step 4: Create the Todos list component
+
+Create `editors/todo-list-editor/components/Todos.tsx` to render the list of todos:
+
+```typescript
+import type { TodoItem } from "todo-tutorial/document-models/todo-list";
+import { Todo } from "./Todo.js";
+
+type Props = {
+  todos: TodoItem[];
+};
+
+/** Shows a list of the todo items in the selected todo list */
+export function Todos({ todos }: Props) {
+  const hasTodos = todos.length > 0;
+
+  if (!hasTodos) {
+    return <p>Start adding things to your todo list</p>;
+  }
+
+  return (
+    <ul>
+      {todos.map((todo) => (
+        <li key={todo.id}>
+          <Todo todo={todo} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+**What's happening here:**
+- We accept `todos` as a prop (passed from `TodoList` parent)
+- We show a helpful message if the list is empty
+- We map over todos and render a `Todo` component for each item
+
+### Step 5: Create the Todo item component
+
+Create `editors/todo-list-editor/components/Todo.tsx` for individual todo items with edit and delete functionality:
+
+```typescript
+import {
+  useState,
+  type ChangeEventHandler,
+  type FormEventHandler,
+  type MouseEventHandler,
+} from "react";
+import {
+  deleteTodoItem,
+  updateTodoItem,
+} from "todo-tutorial/document-models/todo-list";
+import type { TodoItem } from "todo-tutorial/document-models/todo-list";
+import { useSelectedTodoListDocument } from "todo-tutorial/document-models/todo-list";
+
+type Props = {
+  todo: TodoItem;
+};
+
+/** Displays a single todo item in the selected todo list
+ *
+ * Allows checking/unchecking the todo item.
+ * Allows editing the todo item text.
+ * Allows deleting the todo item.
+ */
+export function Todo({ todo }: Props) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [todoList, dispatch] = useSelectedTodoListDocument();
+
+  if (!todoList) return null;
+
+  const todoId = todo.id;
+  const todoText = todo.text;
+  const todoChecked = todo.checked;
+
+  const onSubmitUpdateTodoText: FormEventHandler<HTMLFormElement> = (event) => {
+    event.preventDefault();
+
+    const form = event.currentTarget;
+    const textInput = form.elements.namedItem("todoText") as HTMLInputElement;
+    const text = textInput.value;
+    if (!text) return;
+    dispatch(updateTodoItem({ id: todo.id, text }));
+    setIsEditing(false);
+  };
+
+  const onChangeTodoChecked: ChangeEventHandler<HTMLInputElement> = (event) => {
+    dispatch(
+      updateTodoItem({
+        id: todo.id,
+        checked: event.target.checked,
+      }),
+    );
+  };
+
+  const onClickDeleteTodo: MouseEventHandler<HTMLButtonElement> = () => {
+    dispatch(deleteTodoItem({ id: todoId }));
+  };
+
+  const onClickEditTodo: MouseEventHandler<HTMLButtonElement> = () => {
+    setIsEditing(true);
+  };
+
+  const onClickCancelEditTodo: MouseEventHandler<HTMLButtonElement> = () => {
+    setIsEditing(false);
+  };
+
+  if (isEditing)
+    return (
+      <form
+        className="flex gap-2 items-center justify-between"
+        onSubmit={onSubmitUpdateTodoText}
+      >
+        <input
+          className="p-1 grow"
+          type="text"
+          name="todoText"
+          defaultValue={todoText}
+          autoFocus
+        />
+        <div className="flex gap-2 grow-0">
+          <button type="submit" className="text-sm text-gray-600">
+            Save
+          </button>
+          <button
+            className="text-sm text-red-800"
+            onClick={onClickCancelEditTodo}
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    );
+
+  return (
+    <div className="flex justify-between items-center">
+      <div className="flex items-center gap-2 p-1">
+        <input
+          type="checkbox"
+          checked={todoChecked}
+          onChange={onChangeTodoChecked}
+        />
+        <span className={todoChecked ? "line-through" : ""}>{todoText}</span>
+      </div>
+      <span className="flex place-items-center gap-2 text-sm">
+        <button className="text-gray-600" onClick={onClickEditTodo}>
+          Edit
+        </button>
+        <button className="text-red-800" onClick={onClickDeleteTodo}>
+          Delete
+        </button>
+      </span>
+    </div>
+  );
+}
+```
+
+**What's happening here:**
+- We use local state (`isEditing`) to toggle between view and edit modes
+- We dispatch `updateTodoItem` for both checking and text editing
+- We dispatch `deleteTodoItem` to remove items
+- We use TypeScript event handlers for type safety
+
+### Step 6: Create the TodoListName component
+
+Finally, create `editors/todo-list-editor/components/TodoListName.tsx` for displaying and editing the document name:
+
+```typescript
+import { useState, type FormEventHandler } from "react";
+import { useSelectedTodoListDocument } from "todo-tutorial/document-models/todo-list";
+import { setName } from "document-model/document";
+
+/** Allows editing the name of the selected todo list */
+export function TodoListName() {
+  const [isEditing, setIsEditing] = useState(false);
+  const [selectedTodoList, dispatch] = useSelectedTodoListDocument();
+
+  if (!selectedTodoList) return null;
+
+  const documentName = selectedTodoList.name;
+
+  const onSubmitEditName: FormEventHandler<HTMLFormElement> = (event) => {
+    event.preventDefault();
+
+    const form = event.currentTarget;
+    const nameInput = form.elements.namedItem("name") as HTMLInputElement;
+    const name = nameInput.value;
+
+    if (name) {
+      dispatch(setName(name));
+      setIsEditing(false);
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <form onSubmit={onSubmitEditName}>
+        <input
+          name="name"
+          defaultValue={documentName}
+          className="text-xl font-bold"
+          autoFocus
+        />
+      </form>
+    );
+  }
+
+  return (
+    <h1
+      className="text-xl font-bold cursor-pointer"
+      onClick={() => setIsEditing(true)}
+    >
+      {documentName}
+    </h1>
+  );
+}
+```
+
+**What's happening here:**
+- We use the `setName` action from `document-model/document` (a built-in action)
+- We toggle between viewing and editing the name
+- Click the name to edit it
+
+## Test your editor
+
+Now you can run the Connect app and see the **To-do List** editor in action:
 
 ```bash
 ph connect
@@ -200,16 +464,59 @@ ph connect
 In Connect, in the bottom right corner you'll find a new Document Model that you can create: **To-do List**.  
 Click on it to create a new To-do List document.
 
-:::info
-The editor will update dynamically, so you can play around with your editor styling while seeing your results appear in Connect Studio.
+:::info Live Development
+The editor will update dynamically as you make changes, so you can experiment with styling and functionality while seeing your results appear in Connect Studio in real-time.
 :::
 
-Congratulations!
+**Try it out:**
+1. Add some todo items using the input form
+2. Click on the document name to edit it
+3. Check/uncheck items to mark them as complete
+4. Click "Edit" on any item to modify its text
+5. Click "Delete" to remove items
+
+Congratulations! 🎉  
 If you managed to follow this tutorial until this point, you have successfully implemented the **To-do List** document model with its reducer operations and editor.
+
+## Compare with the reference implementation
+
+The tutorial repository's step-6 branch includes additional enhancements you can explore:
+
+**Additional components in step-6:**
+```
+editors/todo-list-editor/components/
+├── CloseButton.tsx       # Editor close functionality
+├── UndoRedoButtons.tsx   # Operation history navigation
+└── Stats.tsx             # Display metadata (creation/modification times)
+```
+
+**View individual components from the reference:**
+
+```bash
+# See the enhanced TodoList component with all features
+git show tutorial/step-6-add-basic-todo-editor-ui-components:editors/todo-list-editor/components/TodoList.tsx
+
+# Explore the UndoRedoButtons component
+git show tutorial/step-6-add-basic-todo-editor-ui-components:editors/todo-list-editor/components/UndoRedoButtons.tsx
+
+# Compare your implementation with the reference
+git diff tutorial/step-6-add-basic-todo-editor-ui-components -- editors/todo-list-editor/
+```
+
+## Key concepts learned
+
+In this tutorial you've learned:
+
+✅ **Component-based architecture** - Breaking down complex UIs into reusable components  
+✅ **Document model hooks** - Using `useSelectedTodoListDocument` to connect React to your document state  
+✅ **Action dispatching** - How to dispatch operations (`addTodoItem`, `updateTodoItem`, `deleteTodoItem`) from your UI  
+✅ **Type-safe development** - Leveraging TypeScript with generated types from your SDL  
+✅ **Form handling** - Using React forms with proper event handlers  
+✅ **Local vs. document state** - When to use React `useState` vs. document model state  
 
 ### Up next: Mastery Track
 
-In the [Mastery Track chapther: Document Model Creation](/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel) we guide you through the theoretics of the previous steps while created a more advanced version of the To-do List.
+In the [Mastery Track chapter: Document Model Creation](/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel) we guide you through the theoretics of the previous steps while creating a more advanced version of the To-do List.
 
 You will learn:
 

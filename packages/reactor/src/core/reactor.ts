@@ -27,20 +27,23 @@ import type {
 } from "../shared/types.js";
 import { JobStatus } from "../shared/types.js";
 import { matchesScope } from "../shared/utils.js";
+import type { ISigner } from "../signer/types.js";
 import type {
   IDocumentIndexer,
   IDocumentView,
   IOperationStore,
 } from "../storage/interfaces.js";
 import type {
-  BatchMutationRequest,
-  BatchMutationResult,
+  BatchExecutionRequest,
+  BatchExecutionResult,
   IReactor,
   ReactorFeatures,
 } from "./types.js";
 import {
   filterByType,
   getSharedScope,
+  signAction,
+  signActions,
   toErrorInfo,
   topologicalSort,
   validateActionScopes,
@@ -530,7 +533,11 @@ export class Reactor implements IReactor {
   /**
    * Creates a document
    */
-  async create(document: PHDocument, signal?: AbortSignal): Promise<JobInfo> {
+  async create(
+    document: PHDocument,
+    signer?: ISigner,
+    signal?: AbortSignal,
+  ): Promise<JobInfo> {
     const createdAtUtcIso = new Date().toISOString();
 
     if (signal?.aborted) {
@@ -584,6 +591,12 @@ export class Reactor implements IReactor {
       input: upgradeInput,
     };
 
+    // Sign actions if signer is provided
+    let actions: Action[] = [createAction, upgradeAction];
+    if (signer) {
+      actions = await signActions(actions, signer, signal);
+    }
+
     // Create a single job with both CREATE_DOCUMENT and UPGRADE_DOCUMENT actions
     const job: Job = {
       id: uuidv4(),
@@ -591,7 +604,7 @@ export class Reactor implements IReactor {
       documentId: document.header.id,
       scope: "document",
       branch: "main",
-      actions: [createAction, upgradeAction],
+      actions,
       operations: [],
       createdAt: new Date().toISOString(),
       queueHint: [],
@@ -621,7 +634,11 @@ export class Reactor implements IReactor {
   /**
    * Deletes a document
    */
-  async deleteDocument(id: string, signal?: AbortSignal): Promise<JobInfo> {
+  async deleteDocument(
+    id: string,
+    signer?: ISigner,
+    signal?: AbortSignal,
+  ): Promise<JobInfo> {
     const createdAtUtcIso = new Date().toISOString();
 
     if (signal?.aborted) {
@@ -632,13 +649,18 @@ export class Reactor implements IReactor {
       documentId: id,
     };
 
-    const action: Action = {
+    let action: Action = {
       id: `${id}-delete`,
       type: "DELETE_DOCUMENT",
       scope: "document",
       timestampUtcMs: new Date().toISOString(),
       input: deleteInput,
     };
+
+    // Sign action if signer is provided
+    if (signer) {
+      action = await signAction(action, signer, signal);
+    }
 
     const job: Job = {
       id: uuidv4(),
@@ -674,7 +696,7 @@ export class Reactor implements IReactor {
   /**
    * Applies a list of actions to a document
    */
-  async mutate(
+  async execute(
     docId: string,
     branch: string,
     actions: Action[],
@@ -795,10 +817,10 @@ export class Reactor implements IReactor {
   /**
    * Applies multiple mutations across documents with dependency management
    */
-  async mutateBatch(
-    request: BatchMutationRequest,
+  async executeBatch(
+    request: BatchExecutionRequest,
     signal?: AbortSignal,
-  ): Promise<BatchMutationResult> {
+  ): Promise<BatchExecutionResult> {
     if (signal?.aborted) {
       throw new AbortError();
     }
@@ -872,7 +894,7 @@ export class Reactor implements IReactor {
       }
       throw error;
     }
-    const result: BatchMutationResult = {
+    const result: BatchExecutionResult = {
       jobs: Object.fromEntries(jobInfos),
     };
     return result;
@@ -884,14 +906,15 @@ export class Reactor implements IReactor {
   async addChildren(
     parentId: string,
     documentIds: string[],
-    _view?: ViewFilter,
+    branch: string = "main",
+    signer?: ISigner,
     signal?: AbortSignal,
   ): Promise<JobInfo> {
     if (signal?.aborted) {
       throw new AbortError();
     }
 
-    const actions: Action[] = documentIds.map((childId) => ({
+    let actions: Action[] = documentIds.map((childId) => ({
       id: uuidv4(),
       type: "ADD_RELATIONSHIP",
       scope: "document",
@@ -903,8 +926,12 @@ export class Reactor implements IReactor {
       },
     }));
 
-    const branch = _view?.branch || "main";
-    return await this.mutate(parentId, branch, actions, signal);
+    // Sign actions if signer is provided
+    if (signer) {
+      actions = await signActions(actions, signer, signal);
+    }
+
+    return await this.execute(parentId, branch, actions, signal);
   }
 
   /**
@@ -913,14 +940,15 @@ export class Reactor implements IReactor {
   async removeChildren(
     parentId: string,
     documentIds: string[],
-    _view?: ViewFilter,
+    branch: string = "main",
+    signer?: ISigner,
     signal?: AbortSignal,
   ): Promise<JobInfo> {
     if (signal?.aborted) {
       throw new AbortError();
     }
 
-    const actions: Action[] = documentIds.map((childId) => ({
+    let actions: Action[] = documentIds.map((childId) => ({
       id: uuidv4(),
       type: "REMOVE_RELATIONSHIP",
       scope: "document",
@@ -932,8 +960,12 @@ export class Reactor implements IReactor {
       },
     }));
 
-    const branch = _view?.branch || "main";
-    return await this.mutate(parentId, branch, actions, signal);
+    // Sign actions if signer is provided
+    if (signer) {
+      actions = await signActions(actions, signer, signal);
+    }
+
+    return await this.execute(parentId, branch, actions, signal);
   }
 
   /**

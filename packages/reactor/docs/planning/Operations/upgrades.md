@@ -113,25 +113,212 @@ type UpgradeDocumentAction = {
   3. Apply the changes to the `document` scope with the `toVersion`.
   4. Emit a single `UPGRADE_DOCUMENT` operation that captures the version transition and the state delta.
 
-#### Upgrade Reducer
+---
 
-Upgrade reducers are a special type of reducer that are used to upgrade a document from one version to another. They are called by subsequent upgrades. They are unique in that they require two versions of the document model.
+## Document Model Package Structure
 
-```tsx
-import { type MyDoc as DocV1 } from "my-doc/v1";
-import { type MyDoc as DocV2 } from "my-doc/v2";
+Each document model NPM package contains all the code necessary to move from version to version. This means that it must include multiple versions of the same model, along with upgrade reducers to transform state between versions.
 
-export type UpgradeReducer = (
-  document: DocV1,
-  action: Action,
-  dispatch?: SignalDispatch,
-  options?: ReducerOptions,
-) => DocV2;
+### Directory Structure
+
+```
+my-doc/
+├── package.json              # NPM package with subpath exports
+├── src/
+│   ├── index.ts              # Root exports (manifest, latest re-export)
+│   ├── versions.ts           # Version constants
+│   │
+│   ├── v1/                   # Version 1 implementation
+│   │   ├── index.ts          # Exports DocumentModelModule for v1
+│   │   ├── actions.ts        # Action creators
+│   │   ├── reducer.ts        # State reducer
+│   │   ├── types.ts          # TypeScript types for v1 state
+│   │   ├── state.ts          # State utilities
+│   │   ├── constants.ts      # Initial state, file extension
+│   │   └── module.ts         # DocumentModelModule assembly
+│   │
+│   ├── v2/                   # Version 2 implementation
+│   │   └── ...               # Same structure as v1
+│   │
+│   ├── reducers/             # Upgrade reducers
+│   │   ├── index.ts          # Exports upgrade manifest
+│   │   ├── v1-to-v2.ts       # Upgrade reducer v1 -> v2
+│   │   └── v2-to-v3.ts       # Upgrade reducer v2 -> v3
+│   │
+│   └── manifest.ts           # Package metadata
 ```
 
-### Document Model Package
+Each version directory (`v1/`, `v2/`, etc.) contains a complete, self-contained implementation of the document model at that version. This includes all types, actions, reducers, and utilities needed to work with documents at that version.
 
-Each document model NPM package contains all the code necessary to move from version to version. This means that it must include multiple versions of the same model.
+### package.json Exports
+
+Document model packages use subpath exports to allow consumers to import specific versions:
+
+```json
+{
+  "name": "my-doc",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/src/index.js",
+      "types": "./dist/src/index.d.ts"
+    },
+    "./v1": {
+      "import": "./dist/src/v1/index.js",
+      "types": "./dist/src/v1/index.d.ts"
+    },
+    "./v2": {
+      "import": "./dist/src/v2/index.js",
+      "types": "./dist/src/v2/index.d.ts"
+    },
+    "./latest": {
+      "import": "./dist/src/v2/index.js",
+      "types": "./dist/src/v2/index.d.ts"
+    },
+    "./reducers": {
+      "import": "./dist/src/reducers/index.js",
+      "types": "./dist/src/reducers/index.d.ts"
+    }
+  }
+}
+```
+
+**Import patterns:**
+- `import * from 'my-doc/v1'` - Import specific version
+- `import * from 'my-doc/v2'` - Import specific version
+- `import * from 'my-doc/latest'` - Alias to newest version
+- `import { upgradeManifest } from 'my-doc'` - Import upgrade manifest from root
+
+---
+
+## Upgrade Manifest
+
+The upgrade manifest declares all supported versions and upgrade paths for a document model. Package authors export this manifest to enable the reactor to resolve upgrade chains.
+
+### Types
+
+```typescript
+/** Document model version - simple integer (1, 2, 3, ...) */
+export type ModelVersion = number;
+
+/** Upgrade reducer transforms a document from one version to another */
+export type UpgradeReducer<TFrom, TTo> = (
+  document: PHDocument<TFrom>,
+  action: Action,
+) => PHDocument<TTo>;
+
+/** Metadata about a version transition */
+export type UpgradeTransition = {
+  fromVersion: ModelVersion;
+  toVersion: ModelVersion;
+  reducer: UpgradeReducer;
+  description?: string;
+};
+
+/** Manifest declaring all supported versions and upgrade paths */
+export type UpgradeManifest = {
+  documentType: string;
+  latestVersion: ModelVersion;
+  supportedVersions: ModelVersion[];  // e.g., [1, 2, 3]
+  upgrades: Map<string, UpgradeTransition>;  // key: "1->2", "2->3"
+};
+```
+
+### Manifest Builder
+
+Package authors use the `UpgradeManifestBuilder` to construct their manifest:
+
+```typescript
+// reducers/index.ts
+import { UpgradeManifestBuilder } from 'document-model';
+import { upgradeV1ToV2 } from './v1-to-v2.js';
+import { upgradeV2ToV3 } from './v2-to-v3.js';
+
+export const upgradeManifest = new UpgradeManifestBuilder('ph/todo')
+  .addUpgrade(1, 2, upgradeV1ToV2, 'Add priority field to items')
+  .addUpgrade(2, 3, upgradeV2ToV3, 'Add tags support')
+  .build();
+```
+
+---
+
+## Upgrade Reducers
+
+Upgrade reducers are special reducers that transform a document's state from one version to another. They are called sequentially when upgrading across multiple versions.
+
+### Convention
+
+Each upgrade reducer file (`reducers/v1-to-v2.ts`, `reducers/v2-to-v3.ts`, etc.) exports a single upgrade reducer function:
+
+```typescript
+// reducers/v1-to-v2.ts
+import type { UpgradeReducer } from 'document-model';
+import type { TodoPHState as V1State } from '../v1/types.js';
+import type { TodoPHState as V2State } from '../v2/types.js';
+
+export const upgradeV1ToV2: UpgradeReducer<V1State, V2State> = (document, action) => {
+  const v1State = document.state;
+
+  return {
+    ...document,
+    state: {
+      ...v1State,
+      global: {
+        title: v1State.global.title,
+        description: '',  // New field with default value
+        items: v1State.global.items.map(item => ({
+          ...item,
+          createdAt: new Date().toISOString(),
+          priority: 'medium',
+        })),
+      },
+    },
+  };
+};
+```
+
+### Key Principles
+
+1. **Pure functions**: Upgrade reducers must be pure functions with no side effects.
+2. **Version-specific types**: Import types from both source and target version directories.
+3. **Default values**: New fields must be initialized with sensible defaults.
+4. **Data preservation**: Existing data must be preserved or transformed, never lost.
+
+---
+
+## Reactor Integration
+
+### Registry Methods
+
+The reactor registry provides methods for version-aware module resolution:
+
+- `registerUpgradeManifest(manifest)` - Register a package's upgrade manifest
+- `getSupportedVersions(documentType)` - Get list of available versions (e.g., `[1, 2, 3]`)
+- `getLatestVersion(documentType)` - Get the newest version number
+- `computeUpgradePath(type, from, to)` - Compute the upgrade chain
+- `getUpgradeReducer(type, from, to)` - Get a specific upgrade reducer
+
+### Upgrade Execution Flow
+
+When `UPGRADE_DOCUMENT` is executed with `fromVersion !== 0`:
+
+1. **Compute upgrade path**: Use manifest to find sequence of transitions (e.g., `1->2->3`)
+2. **Apply reducers sequentially**: Execute each upgrade reducer in order
+3. **Emit single operation**: Record one `UPGRADE_DOCUMENT` operation with final state
+
+```
+Document at v1
+    |
+    v
+upgradeV1ToV2(doc, action) -> Document at v2
+    |
+    v
+upgradeV2ToV3(doc, action) -> Document at v3
+    |
+    v
+Single UPGRADE_DOCUMENT operation emitted
+```
 
 ### Supported Versions
 

@@ -3,7 +3,7 @@ import type { Action } from "document-model";
 import { v4 as uuidv4 } from "uuid";
 import { describe, expect, it } from "vitest";
 import { Reactor } from "../../src/core/reactor.js";
-import type { BatchMutationRequest } from "../../src/core/types.js";
+import type { BatchExecutionRequest } from "../../src/core/types.js";
 import { EventBus } from "../../src/events/event-bus.js";
 import { InMemoryJobTracker } from "../../src/job-tracker/in-memory-job-tracker.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
@@ -56,7 +56,7 @@ describe("mutateBatch validation", () => {
 
   it("should reject duplicate plan keys", async () => {
     const reactor = createReactor();
-    const request: BatchMutationRequest = {
+    const request: BatchExecutionRequest = {
       jobs: [
         {
           key: "job1",
@@ -77,14 +77,14 @@ describe("mutateBatch validation", () => {
       ],
     };
 
-    await expect(reactor.mutateBatch(request)).rejects.toThrow(
+    await expect(reactor.executeBatch(request)).rejects.toThrow(
       "Duplicate plan key: job1",
     );
   });
 
   it("should reject missing dependency reference", async () => {
     const reactor = createReactor();
-    const request: BatchMutationRequest = {
+    const request: BatchExecutionRequest = {
       jobs: [
         {
           key: "job1",
@@ -97,14 +97,14 @@ describe("mutateBatch validation", () => {
       ],
     };
 
-    await expect(reactor.mutateBatch(request)).rejects.toThrow(
+    await expect(reactor.executeBatch(request)).rejects.toThrow(
       "depends on non-existent key: nonexistent",
     );
   });
 
   it("should detect dependency cycles", async () => {
     const reactor = createReactor();
-    const request: BatchMutationRequest = {
+    const request: BatchExecutionRequest = {
       jobs: [
         {
           key: "job1",
@@ -125,14 +125,14 @@ describe("mutateBatch validation", () => {
       ],
     };
 
-    await expect(reactor.mutateBatch(request)).rejects.toThrow(
+    await expect(reactor.executeBatch(request)).rejects.toThrow(
       "Dependency cycle detected",
     );
   });
 
   it("should reject mismatched action scopes", async () => {
     const reactor = createReactor();
-    const request: BatchMutationRequest = {
+    const request: BatchExecutionRequest = {
       jobs: [
         {
           key: "job1",
@@ -145,14 +145,14 @@ describe("mutateBatch validation", () => {
       ],
     };
 
-    await expect(reactor.mutateBatch(request)).rejects.toThrow(
+    await expect(reactor.executeBatch(request)).rejects.toThrow(
       "declares scope 'global' but action has scope 'document'",
     );
   });
 
   it("should reject empty actions array", async () => {
     const reactor = createReactor();
-    const request: BatchMutationRequest = {
+    const request: BatchExecutionRequest = {
       jobs: [
         {
           key: "job1",
@@ -165,14 +165,14 @@ describe("mutateBatch validation", () => {
       ],
     };
 
-    await expect(reactor.mutateBatch(request)).rejects.toThrow(
+    await expect(reactor.executeBatch(request)).rejects.toThrow(
       "has empty actions array",
     );
   });
 
   it("should accept valid batch with no dependencies", async () => {
     const reactor = createReactor();
-    const request: BatchMutationRequest = {
+    const request: BatchExecutionRequest = {
       jobs: [
         {
           key: "job1",
@@ -193,7 +193,7 @@ describe("mutateBatch validation", () => {
       ],
     };
 
-    const result = await reactor.mutateBatch(request);
+    const result = await reactor.executeBatch(request);
     expect(result.jobs).toHaveProperty("job1");
     expect(result.jobs).toHaveProperty("job2");
     expect(result.jobs.job1.status).toBe("PENDING");
@@ -202,7 +202,7 @@ describe("mutateBatch validation", () => {
 
   it("should accept valid batch with dependencies", async () => {
     const reactor = createReactor();
-    const request: BatchMutationRequest = {
+    const request: BatchExecutionRequest = {
       jobs: [
         {
           key: "job1",
@@ -223,7 +223,7 @@ describe("mutateBatch validation", () => {
       ],
     };
 
-    const result = await reactor.mutateBatch(request);
+    const result = await reactor.executeBatch(request);
     expect(result.jobs).toHaveProperty("job1");
     expect(result.jobs).toHaveProperty("job2");
     expect(result.jobs.job1.status).toBe("PENDING");

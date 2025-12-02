@@ -1,4 +1,5 @@
-import type { Action, Operation, PHDocument } from "document-model";
+import type { ISigner } from "#signer/types.js";
+import type { Action, Operation, PHDocument, Signature } from "document-model";
 import type { ErrorInfo, PagedResults } from "../shared/types.js";
 
 /**
@@ -185,3 +186,45 @@ export function getSharedScope(operations: Operation[]): string {
 
   return baseScope;
 }
+
+/**
+ * Signs an action with the provided signer
+ */
+export const signAction = async (
+  action: Action,
+  signer: ISigner,
+  signal?: AbortSignal,
+): Promise<Action> => {
+  const signature: Signature = await signer.sign(action, signal);
+  return {
+    ...action,
+    context: {
+      ...action.context,
+      signer: {
+        user: {
+          address: signature[0],
+          networkId: "",
+          chainId: 0,
+        },
+        app: {
+          name: "",
+          key: "",
+        },
+        signatures: [signature],
+      },
+    },
+  };
+};
+
+/**
+ * Signs multiple actions with the provided signer
+ */
+export const signActions = async (
+  actions: Action[],
+  signer: ISigner,
+  signal?: AbortSignal,
+): Promise<Action[]> => {
+  return Promise.all(
+    actions.map((action) => signAction(action, signer, signal)),
+  );
+};

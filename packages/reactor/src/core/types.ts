@@ -30,6 +30,7 @@ import type {
   ShutdownStatus,
   ViewFilter,
 } from "../shared/types.js";
+import type { ISigner } from "../signer/types.js";
 import type {
   IDocumentIndexer,
   IDocumentView,
@@ -47,7 +48,7 @@ import type { IChannelFactory, ISyncManager } from "../sync/interfaces.js";
 /**
  * A single mutation job within a batch request.
  */
-export type MutationJobPlan = {
+export type ExecutionJobPlan = {
   key: string;
   documentId: string;
   scope: string;
@@ -59,14 +60,14 @@ export type MutationJobPlan = {
 /**
  * Request for batch mutation operation.
  */
-export type BatchMutationRequest = {
-  jobs: MutationJobPlan[];
+export type BatchExecutionRequest = {
+  jobs: ExecutionJobPlan[];
 };
 
 /**
  * Result from batch mutation operation.
  */
-export type BatchMutationResult = {
+export type BatchExecutionResult = {
   jobs: Record<string, JobInfo>;
 };
 
@@ -194,19 +195,29 @@ export interface IReactor {
    * Creates a document
    *
    * @param document - Document with optional id, slug, parent, model type, and initial state
+   * @param signer - Optional signer to sign the actions
    * @param signal - Optional abort signal to cancel the request
    * @returns The job status
    */
-  create(document: PHDocument, signal?: AbortSignal): Promise<JobInfo>;
+  create(
+    document: PHDocument,
+    signer?: ISigner,
+    signal?: AbortSignal,
+  ): Promise<JobInfo>;
 
   /**
    * Deletes a document
    *
    * @param id - Document id
+   * @param signer - Optional signer to sign the actions
    * @param signal - Optional abort signal to cancel the request
    * @returns The job id and status
    */
-  deleteDocument(id: string, signal?: AbortSignal): Promise<JobInfo>;
+  deleteDocument(
+    id: string,
+    signer?: ISigner,
+    signal?: AbortSignal,
+  ): Promise<JobInfo>;
 
   /**
    * Applies a list of actions to a document.
@@ -217,7 +228,7 @@ export interface IReactor {
    * @param signal - Optional abort signal to cancel the request
    * @returns The job id and status
    */
-  mutate(
+  execute(
     docId: string,
     branch: string,
     actions: Action[],
@@ -241,24 +252,26 @@ export interface IReactor {
    * @param signal - Optional abort signal to cancel the request
    * @returns Map of job keys to job information
    */
-  mutateBatch(
-    request: BatchMutationRequest,
+  executeBatch(
+    request: BatchExecutionRequest,
     signal?: AbortSignal,
-  ): Promise<BatchMutationResult>;
+  ): Promise<BatchExecutionResult>;
 
   /**
    * Adds multiple documents as children to another
    *
    * @param parentId - Parent document id
    * @param documentIds - List of document ids to add as children
-   * @param view - Optional filter containing branch and scopes information
+   * @param branch - Branch to add children to, defaults to "main"
+   * @param signer - Optional signer to sign the actions
    * @param signal - Optional abort signal to cancel the request
    * @returns The job id and status
    */
   addChildren(
     parentId: string,
     documentIds: string[],
-    view?: ViewFilter,
+    branch?: string,
+    signer?: ISigner,
     signal?: AbortSignal,
   ): Promise<JobInfo>;
 
@@ -267,14 +280,16 @@ export interface IReactor {
    *
    * @param parentId - Parent document id
    * @param documentIds - List of document ids to remove as children
-   * @param view - Optional filter containing branch and scopes information
+   * @param branch - Branch to remove children from, defaults to "main"
+   * @param signer - Optional signer to sign the actions
    * @param signal - Optional abort signal to cancel the request
    * @returns The job id and status
    */
   removeChildren(
     parentId: string,
     documentIds: string[],
-    view?: ViewFilter,
+    branch?: string,
+    signer?: ISigner,
     signal?: AbortSignal,
   ): Promise<JobInfo>;
 

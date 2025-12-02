@@ -160,7 +160,7 @@ export interface IReactorClient {
    * @param signal - Optional abort signal to cancel the request
    * @returns The updated document
    */
-  mutate<TDocument extends PHDocument>(
+  execute<TDocument extends PHDocument>(
     documentIdentifier: string,
     branch: string,
     actions: Action[],
@@ -176,7 +176,7 @@ export interface IReactorClient {
    * @param signal - Optional abort signal to cancel the request
    * @returns The job
    */
-  mutateAsync(
+  executeAsync(
     documentIdentifier: string,
     branch: string,
     actions: Action[],
@@ -188,14 +188,14 @@ export interface IReactorClient {
    *
    * @param documentIdentifier - Target document id or slug
    * @param name - The new name of the document
-   * @param view - Optional filter
+   * @param branch - Optional branch to rename the document, defaults to "main"
    * @param signal - Optional abort signal to cancel the request
    * @returns The updated document.
    */
   rename(
     documentIdentifier: string,
     name: string,
-    view?: ViewFilter,
+    branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument>;
 
@@ -204,14 +204,14 @@ export interface IReactorClient {
    *
    * @param parentIdentifier - Parent document id or slug
    * @param documentIdentifiers - List of document identifiers to add as children
-   * @param view - Optional filter containing branch and scopes information
+   * @param branch - Optional branch to add children to, defaults to "main"
    * @param signal - Optional abort signal to cancel the request
    * @returns The updated parent document
    */
   addChildren(
     parentIdentifier: string,
     documentIdentifiers: string[],
-    view?: ViewFilter,
+    branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument>;
 
@@ -220,14 +220,14 @@ export interface IReactorClient {
    *
    * @param parentIdentifier - Parent document identifiers
    * @param documentIdentifiers - List of document ids to remove as children
-   * @param view - Optional filter containing branch and scopes information
+   * @param branch - Optional branch to remove children from, defaults to "main"
    * @param signal - Optional abort signal to cancel the request
    * @returns The updated parent document
    */
   removeChildren(
     parentIdentifier: string,
     documentIdentifiers: string[],
-    view?: ViewFilter,
+    branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument>;
 
@@ -237,7 +237,7 @@ export interface IReactorClient {
    * @param sourceParentIdentifier - Source parent document id or slug
    * @param targetParentIdentifier - Target parent document id or slug
    * @param documentIdentifiers - List of document identifiers to move
-   * @param view - Optional filter containing branch and scopes information
+   * @param branch - Optional branch to move children to, defaults to "main"
    * @param signal - Optional abort signal to cancel the request
    * @returns The updated source and target documents
    */
@@ -245,7 +245,7 @@ export interface IReactorClient {
     sourceParentIdentifier: string,
     targetParentIdentifier: string,
     documentIdentifiers: string[],
-    view?: ViewFilter,
+    branch?: string,
     signal?: AbortSignal,
   ): Promise<{
     source: PHDocument;

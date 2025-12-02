@@ -11,7 +11,7 @@ import type {
 } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import type {
-  BatchMutationRequest,
+  BatchExecutionRequest,
   IReactor,
 } from "../../../src/core/types.js";
 import type { JobStatus } from "../../../src/shared/types.js";
@@ -145,7 +145,7 @@ export async function processReactorMutation(
         },
       };
 
-      const batchRequest: BatchMutationRequest = {
+      const batchRequest: BatchExecutionRequest = {
         jobs: [
           {
             key: "addFile",
@@ -166,24 +166,24 @@ export async function processReactorMutation(
         ],
       };
 
-      await reactor.mutateBatch(batchRequest);
+      await reactor.executeBatch(batchRequest);
     } else {
       const cleanedAction = removeSynchronizationUnits(driveAction) as Action;
 
-      await reactor.mutate(driveId, "main", [cleanedAction]);
+      await reactor.execute(driveId, "main", [cleanedAction]);
     }
   } else if (name === "addAction") {
     const { docId, action } = args;
     const cleanedAction = removeSynchronizationUnits(action) as Action;
 
-    await reactor.mutate(docId, "main", [cleanedAction]);
+    await reactor.execute(docId, "main", [cleanedAction]);
   }
 }
 
 export function buildBatchMutationRequest(
   modules: DocumentModelModule[],
   mutations: RecordedOperation[],
-): BatchMutationRequest {
+): BatchExecutionRequest {
   const jobs: Array<{
     key: string;
     documentId: string;
@@ -418,7 +418,7 @@ export function buildBatchMutationRequest(
     }
   }
 
-  const batchRequest: BatchMutationRequest = { jobs };
+  const batchRequest: BatchExecutionRequest = { jobs };
   return batchRequest;
 }
 
@@ -432,7 +432,7 @@ export async function submitAllMutationsWithQueueHints(
     mutations,
   );
 
-  return await reactor.mutateBatch(batchRequest);
+  return await reactor.executeBatch(batchRequest);
 }
 
 export async function processBaseServerMutation(
