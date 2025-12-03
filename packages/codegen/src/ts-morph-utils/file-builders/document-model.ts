@@ -1,3 +1,4 @@
+import path from "path";
 import type { Project } from "ts-morph";
 import { TSMorphCodeGenerator } from "../../ts-morph-generator/index.js";
 import {
@@ -7,38 +8,28 @@ import {
   documentModelModuleTypeName,
 } from "../constants.js";
 import { getDocumentModelFilePaths } from "../name-builders/get-file-paths.js";
-import { getDocumentModelVariableNames } from "../name-builders/get-variable-names.js";
-import type { DocumentModelVariableNames } from "../name-builders/types.js";
+import {
+  getDocumentModelDirName,
+  getDocumentModelVariableNames,
+} from "../name-builders/get-variable-names.js";
 import { buildTsMorphProject } from "../ts-morph-project.js";
 import { makeGenDirFiles } from "./document-model/gen-dir.js";
 import { makeRootDirFiles } from "./document-model/root-dir.js";
 import { makeSrcDirFiles } from "./document-model/src-dir.js";
 import type { GenerateDocumentModelArgs } from "./document-model/types.js";
+import { createOrUpdateVersionConstantsFile } from "./document-model/versions.js";
 import { makeModulesFile } from "./module-files.js";
 
-function ensureDirectoriesExist(
-  project: Project,
-  variables: DocumentModelVariableNames,
-) {
-  const {
-    documentModelsDirPath,
-    documentModelDirPath,
-    srcDirPath,
-    genDirPath,
-    testsDirPath,
-    schemaDirPath,
-    moduleDirPaths,
-  } = variables;
-
-  const pathsToEnsure = [
-    documentModelsDirPath,
-    documentModelDirPath,
-    srcDirPath,
-    genDirPath,
-    testsDirPath,
-    schemaDirPath,
-    ...moduleDirPaths,
-  ];
+function ensureDirectoriesExist(project: Project, ...pathsToEnsure: string[]) {
+  // const pathsToEnsure = [
+  //   documentModelsDirPath,
+  //   documentModelDirPath,
+  //   srcDirPath,
+  //   genDirPath,
+  //   testsDirPath,
+  //   schemaDirPath,
+  //   ...moduleDirPaths,
+  // ];
 
   for (const dirPath of pathsToEnsure) {
     const dir = project.getDirectory(dirPath);
@@ -54,24 +45,68 @@ export async function tsMorphGenerateDocumentModel({
   documentModelState,
 }: GenerateDocumentModelArgs) {
   const project = buildTsMorphProject(projectDir);
-
-  const documentModelVariableNames = getDocumentModelVariableNames({
-    packageName,
-    projectDir,
-    documentModelState,
-  });
-
-  ensureDirectoriesExist(project, documentModelVariableNames);
   const { documentModelsSourceFilesPath } =
     getDocumentModelFilePaths(projectDir);
   project.addSourceFilesAtPaths(documentModelsSourceFilesPath);
+  const documentModelsDirPath = path.join(projectDir, "document-models");
+  const documentModelDirName = getDocumentModelDirName(documentModelState);
+  const documentModelDirPath = path.join(
+    documentModelsDirPath,
+    documentModelDirName,
+  );
+  ensureDirectoriesExist(project, documentModelsDirPath, documentModelDirPath);
+
+  const latestVersion = createOrUpdateVersionConstantsFile({
+    project,
+    documentModelDirPath,
+  });
+
+  const latestVersionDirName = `v${latestVersion}`;
+
+  const versionedDocumentModelDirName = path.join(
+    documentModelDirName,
+    // latestVersionDirName,
+  );
+
+  const versionedDocumentModelDirPath = path.join(
+    documentModelDirPath,
+    // latestVersionDirName,
+  );
+
+  const documentModelVariableNames = getDocumentModelVariableNames({
+    packageName,
+    versionedDocumentModelDirPath,
+    documentModelDirName: versionedDocumentModelDirName,
+    documentModelState,
+  });
+
+  const {
+    srcDirPath,
+    genDirPath,
+    testsDirPath,
+    schemaDirPath,
+    moduleDirPaths,
+  } = documentModelVariableNames;
+
+  ensureDirectoriesExist(
+    project,
+    versionedDocumentModelDirPath,
+    srcDirPath,
+    genDirPath,
+    testsDirPath,
+    schemaDirPath,
+    ...moduleDirPaths,
+  );
 
   const fileMakerArgs = {
     project,
     projectDir,
     packageName,
+    documentModelDirPath: versionedDocumentModelDirPath,
     ...documentModelVariableNames,
   };
+
+  console.log(fileMakerArgs);
 
   makeRootDirFiles(fileMakerArgs);
   makeGenDirFiles(fileMakerArgs);

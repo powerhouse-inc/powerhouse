@@ -30,8 +30,8 @@
     "@acaldas/graphql-codegen-typescript-validation-schema": "^0.12.4",
     "@anatine/zod-mock": "^3.13.3",
     "@faker-js/faker": "^8.3.1",
-    "@graphql-codegen/cli": "^5.0.0",
-    "@graphql-codegen/typescript": "^4.0.1",
+    "@graphql-codegen/cli": "^6.1.0",
+    "@graphql-codegen/typescript": "^5.0.6",
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
@@ -60,10 +60,11 @@
     "copyfiles": "^2.4.1",
     "document-drive": "workspace:*",
     "esbuild-fix-imports-plugin": "^1.0.7",
+    "graphql-codegen-typescript-validation-schema": "^0.18.1",
     "husky": "^8.0.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "vitest": "^3.2.4",
-    "zod": "^3.24.3"
+    "zod": "^4.1.13"
   }
 }

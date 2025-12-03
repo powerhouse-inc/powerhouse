@@ -54,7 +54,7 @@ describe("document model", () => {
   }
 
   beforeEach(async (context) => {
-    // await setupTest(context);
+    await setupTest(context);
   });
 
   beforeAll(() => {
@@ -105,7 +105,8 @@ describe("document model", () => {
     {
       timeout: 100000,
     },
-    async () => {
+    async (context) => {
+      await setupTest(context);
       await generate();
       await compile(testOutDirPath);
       await runGeneratedTests(testOutDirPath);

@@ -11,4 +11,5 @@ export type GenerateDocumentModelArgs = {
 export type DocumentModelFileMakerArgs = DocumentModelVariableNames &
   GenerateDocumentModelArgs & {
     project: Project;
+    documentModelDirPath: string;
   };

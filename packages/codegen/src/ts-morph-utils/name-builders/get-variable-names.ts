@@ -64,14 +64,24 @@ export function getEditorVariableNames({
   };
 }
 
+export function getDocumentModelDirName(
+  documentModelState: DocumentModelGlobalState,
+  existingDirName?: string,
+) {
+  if (existingDirName) return existingDirName;
+  return paramCase(documentModelState.name);
+}
+
 type GetDocumentModelVariableNamesArgs = {
   packageName: string;
-  projectDir: string;
+  documentModelDirName: string;
+  versionedDocumentModelDirPath: string;
   documentModelState: DocumentModelGlobalState;
 };
 export function getDocumentModelVariableNames({
   packageName,
-  projectDir,
+  documentModelDirName,
+  versionedDocumentModelDirPath,
   documentModelState,
 }: GetDocumentModelVariableNamesArgs) {
   const documentType = documentModelState.name;
@@ -83,6 +93,11 @@ export function getDocumentModelVariableNames({
   const paramCaseDocumentType = paramCase(documentType);
   const pascalCaseDocumentType = pascalCase(documentType);
   const camelCaseDocumentType = camelCase(documentType);
+  const documentModelDir = path.join(
+    packageName,
+    "document-models",
+    documentModelDirName,
+  );
   const documentTypeVariableName = `${camelCaseDocumentType}DocumentType`;
   const stateName = `${pascalCaseDocumentType}State`;
   const globalStateName = `${pascalCaseDocumentType}GlobalState`;
@@ -92,15 +107,9 @@ export function getDocumentModelVariableNames({
   const actionTypeName = `${pascalCaseDocumentType}Action`;
   const actionsTypeName = `${actionTypeName}s`;
   const actionsName = camelCase(actionsTypeName);
-  const documentModelDir = `${packageName}/document-models/${paramCaseDocumentType}`;
-  const documentModelsDirPath = path.join(projectDir, "document-models");
-  const documentModelDirPath = path.join(
-    documentModelsDirPath,
-    paramCaseDocumentType,
-  );
-  const srcDirPath = path.join(documentModelDirPath, "src");
+  const srcDirPath = path.join(versionedDocumentModelDirPath, "src");
   const testsDirPath = path.join(srcDirPath, "tests");
-  const genDirPath = path.join(documentModelDirPath, "gen");
+  const genDirPath = path.join(versionedDocumentModelDirPath, "gen");
   const schemaDirPath = path.join(genDirPath, "schema");
   const stateSchemaName = `${stateName}Schema`;
   const phDocumentSchemaName = `${phDocumentTypeName}Schema`;
@@ -122,6 +131,7 @@ export function getDocumentModelVariableNames({
     path.join(genDirPath, paramCase(module.name)),
   );
   return {
+    documentModelDir,
     documentModelState,
     documentTypeId,
     paramCaseDocumentType,
@@ -136,9 +146,6 @@ export function getDocumentModelVariableNames({
     actionTypeName,
     actionsTypeName,
     actionsName,
-    documentModelDir,
-    documentModelsDirPath,
-    documentModelDirPath,
     srcDirPath,
     genDirPath,
     testsDirPath,

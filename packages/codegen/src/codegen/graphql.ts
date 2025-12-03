@@ -31,16 +31,10 @@ export const scalarsValidation = {
 };
 
 export const tsConfig: TypeScriptPluginConfig = {
-  strictScalars: true,
   scalars,
+  strictScalars: true,
   enumsAsTypes: true,
-  allowEnumStringTypes: true,
-  avoidOptionals: {
-    field: true,
-  },
   skipTypename: true,
-  // maybeValue: "T | null | undefined",
-  inputMaybeValue: "T | null | undefined",
 };
 
 export const zodConfig: Record<string, unknown> = {
@@ -76,7 +70,7 @@ export function schemaConfig(
     },
     [`${outDir}/${name}/gen/schema/zod.ts`]: {
       schema: `${inDir}/${name}/schema.graphql`,
-      plugins: ["@acaldas/graphql-codegen-typescript-validation-schema"],
+      plugins: ["graphql-codegen-typescript-validation-schema"],
       config: zodConfig,
     },
   };
