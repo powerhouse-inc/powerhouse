@@ -1,6 +1,6 @@
-# Powerhouse builder tooling
+# Vetra builder tooling
 
-This page provides an overview of all the builder tooling offered by the Powerhouse ecosystem.  
+This page provides an overview of all the builder tooling offered in the Vetra ecosystem by Powerhouse.  
 This list will be maintained and updated as our toolkit grows.
 
 ## Powerhouse command line interface

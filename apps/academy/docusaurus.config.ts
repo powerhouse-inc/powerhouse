@@ -19,7 +19,6 @@ const config: Config = {
   projectName: "", // Usually your repo name.
 
   onBrokenLinks: "warn",
-  onBrokenMarkdownLinks: "warn",
   deploymentBranch: "gh-pages",
   trailingSlash: false,
   onBrokenAnchors: "ignore",
@@ -30,6 +29,12 @@ const config: Config = {
   i18n: {
     defaultLocale: "en",
     locales: ["en"],
+  },
+
+  markdown: {
+    hooks: {
+      onBrokenMarkdownLinks: "warn",
+    },
   },
 
   presets: [

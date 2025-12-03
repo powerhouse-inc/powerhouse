@@ -1,8 +1,8 @@
 # Use the document model generator
 
-In the Powerhouse Document Model development workflow, after specifying your document model's state schema and operations within the Connect application and exporting it as a `.phdm.zip` file, the next crucial step is to translate this specification into a tangible codebase. This is where the Powerhouse Document Model Generator comes into play.
+In the Powerhouse Document Model development workflow, after specifying your document model's state schema and operations within the Connect application and exporting it as a `.phd` file, the next crucial step is to translate this specification into a tangible codebase. This is where the Powerhouse Document Model Generator comes into play.
 
-The Document Model Generator is a powerful command-line tool (`ph generate`) that processes your exported `.phdm.zip` file and scaffolds the necessary directory structure and foundational code for your document model. It automates the creation of boilerplate code, ensuring consistency, type safety, and adherence to Powerhouse conventions, thereby significantly accelerating the development process.
+The Document Model Generator is a powerful command-line tool (`ph generate`) that processes your exported `.phd` file and scaffolds the necessary directory structure and foundational code for your document model. It automates the creation of boilerplate code, ensuring consistency, type safety, and adherence to Powerhouse conventions, thereby significantly accelerating the development process.
 
 This document provides a deep dive into using the Document Model Generator, understanding its output, and appreciating its role in the broader context of document model creation.
 
@@ -11,20 +11,20 @@ This document provides a deep dive into using the Document Model Generator, unde
 Before you can use the Document Model Generator, ensure you have the following:
 
 1.  **Powerhouse CLI (`ph-cmd`) Installed:** The generator is part of the Powerhouse CLI. If you haven't installed it, refer to the [Builder Tools documentation](/academy/MasteryTrack/BuilderEnvironment/BuilderTools#installing-the-powerhouse-cli).
-2.  **Document Model Specification File (`.phdm.zip`):** You must have already defined your document model in Connect and exported it. This file (e.g., `YourModelName.phdm.zip`) contains the GraphQL schema for your document's state and operations. This process is typically covered in a preceding step, such as "Define [YourModelName] Document Model."
+2.  **Document Model Specification File (`.phd`):** You must have already defined your document model in Connect and exported it. This file (e.g., `TodoList.phd`) contains the GraphQL schema for your document's state and operations. This process is typically covered in a preceding step, such as "Define TodoList Document Model."
 
 ## The command
 
 The core command to invoke the Document Model Generator is:
 
 ```bash
-ph generate <YourModelName.phdm.zip>
+ph generate <YourModelName.phd>
 ```
 
-Replace `<YourModelName.phdm.zip>` with the actual filename of your exported document model specification. For instance, if your exported file is named `Invoice.phdm.zip`, the command would be:
+Replace `<YourModelName.phd>` with the actual filename of your exported document model specification. For instance, if your exported file is named `TodoList.phd`, the command would be:
 
 ```bash
-ph generate Invoice.phdm.zip
+ph generate TodoList.phd
 ```
 
 When executed, this command reads and parses the specification file and generates a set of files and directories within your Powerhouse project.
@@ -34,12 +34,12 @@ When executed, this command reads and parses the specification file and generate
 Running `ph generate` triggers a series of actions that lay the groundwork for your document model's implementation. Let's explore the typical output structure and the significance of each generated component.
 
 The generator creates a new directory specific to your document model, usually located at:
-`document-models/<YourModelName>/`
+`document-models/<your-model-name>/`
 
-For example, using `Invoice.phdm.zip` would result in a directory structure under `document-models/invoice/`. Inside this directory, you will find:
+For example, using `TodoList.phd` would result in a directory structure under `document-models/todo-list/`. Inside this directory, you will find:
 
-1.  **`spec.json` (or similar JSON representation):**
-    - **Purpose:** This file is a JSON representation of your document model specification, derived directly from the `.phdm.zip` file. It contains the parsed schema, operation definitions, document type, and other metadata.
+1.  **`todo-list.json` (or similar JSON representation):**
+    - **Purpose:** This file is a JSON representation of your document model specification, derived directly from the `.phd` file. It contains the parsed schema, operation definitions, document type, and other metadata.
     - **Significance:** It serves as the canonical, machine-readable definition of your model within the project, which other tools or processes might reference.
 
 2.  **`schema.graphql`:**
@@ -50,12 +50,12 @@ For example, using `Invoice.phdm.zip` would result in a directory structure unde
     This directory is pivotal as it houses all the code automatically generated by the tool. **You should generally avoid manually editing files within the `gen/` directory**, as they will be overwritten if you regenerate the model.
     Key files within `gen/` include:
     - **`types.ts`:**
-      - **Purpose:** Contains TypeScript interfaces and type definitions derived from your GraphQL schema. This includes types for your document's state (e.g., `InvoiceState`), any complex types used within the state (e.g., `LineItem`), and types for the inputs of each defined operation (e.g., `AddLineItemInput`).
+      - **Purpose:** Contains TypeScript interfaces and type definitions derived from your GraphQL schema. This includes types for your document's state (e.g., `TodoListState`), any complex types used within the state (e.g., `TodoItem`), and types for the inputs of each defined operation (e.g., `AddTodoItemInput`).
       - **Significance:** This is the cornerstone of type safety in your document model implementation. By using these generated types, you ensure that your reducer logic and any client-side interactions adhere to the defined data structures, catching errors at compile-time rather than runtime.
 
-    - **`operations.ts` (or `creators.ts`, `actions.ts`):**
+    - **`creators.ts` (or `actions.ts`):**
       - **Purpose:** This file exports "action creator" functions for each operation defined in your schema. These functions take the input parameters for an operation and return a correctly structured action object that can be processed by the reducer system.
-      - **Significance:** Action creators simplify the process of creating and dispatching operations, reduce the likelihood of errors in action formatting, and improve code readability. For example, instead of manually constructing an action object like `{ type: "ADD_LINE_ITEM", input: { ... } }`, you'd use a function like `creators.addLineItem({ ... })`.
+      - **Significance:** Action creators simplify the process of creating and dispatching operations, reduce the likelihood of errors in action formatting, and improve code readability. For example, instead of manually constructing an action object like `{ type: "ADD_TODO_ITEM", input: { ... } }`, you'd use a function like `addTodoItem({ text: 'Buy groceries' })`.
 
     - **`utils.ts`:**
       - **Purpose:** Often includes utility functions related to your document model. A common utility is a function to create an empty or initial instance of your document (e.g., `utils.createDocument()`). This is based on the default values and structure defined in your state schema.
@@ -68,14 +68,11 @@ For example, using `Invoice.phdm.zip` would result in a directory structure unde
 4.  **The `src/` Directory (Source Code for Your Implementation):**
     This directory is where you, the developer, will write the custom logic for your document model. Unlike the `gen/` directory, files here are meant to be manually edited.
     - **`reducers/`:**
-      - **`your-model-name.ts` (e.g., `invoice.ts`):** This is the most important file you'll work with after generation. It's where you implement the **reducer functions** for each operation. The generator usually creates a skeleton file with function stubs for each operation, which you then fill in with the actual state transition logic.
+      - **`todos.ts`:** This is the most important file you'll work with after generation. It's where you implement the **reducer functions** for each operation. The generator usually creates a skeleton file with function stubs for each operation, which you then fill in with the actual state transition logic.
       - **Significance:** This is the heart of your document model's behavior, defining how the state changes in response to each operation. The next step in the Mastery Track will typically focus on implementing these reducers.
-    - **`reducers/tests/`:**
-      - **`your-model-name.test.ts` (e.g., `invoice.test.ts`):** A placeholder or basic test file is often generated here, encouraging you to write unit tests for your reducer logic.
+    - **`tests/`:**
+      - **`todos.test.ts`:** A placeholder or basic test file is often generated here, encouraging you to write unit tests for your reducer logic.
       - **Significance:** Emphasizes the importance of testing your document model's core logic to ensure correctness and reliability.
-    - **`utils/` (optional):**
-      - **Purpose:** You can create this directory for any custom utility functions specific to your document model's implementation that don't fit directly into the reducers.
-      - **Significance:** Helps in organizing shared logic or complex computations that might be used across multiple reducers or other parts of your model's ecosystem.
 
 ## Benefits of using the document model generator
 
@@ -88,39 +85,39 @@ Leveraging the `ph generate` command offers numerous advantages:
 5.  **Alignment with Powerhouse Ecosystem:** The generated code is designed to integrate seamlessly with other parts of the Powerhouse ecosystem, such as the reducer execution engine and UI components.
 6.  **Single Source of Truth:** Ensures that your codebase (especially types and action creators) stays synchronized with the document model specification defined in Connect. If the specification changes, regenerating the model will update these components accordingly.
 
-## Practical implementation: Generating the `To-do List` model
+## Practical implementation: Generating the `TodoList` model
 
-Now that you understand what the Document Model Generator does, let's walk through the practical steps of using it with our `To-do List` example.
+Now that you understand what the Document Model Generator does, let's walk through the practical steps of using it with our `TodoList` example.
 
 <details>
-<summary>Tutorial: Generating the `To-do List` document model</summary>
+<summary>Tutorial: Generating the TodoList document model</summary>
 
-This tutorial assumes you have completed the previous steps in this Mastery Track, where you defined the state schema and operations for the `To-do List` model in Connect and exported it.
+This tutorial assumes you have completed the previous steps in this Mastery Track, where you defined the state schema and operations for the `TodoList` model in Connect and exported it.
 
 ### Prerequisites
 
-- **`ToDoList.phdm.zip` file**: You must have the document model specification file exported from Connect. If you do not have this file, please revisit the previous sections on specifying the state schema and operations.
+- **`TodoList.phd` file**: You must have the document model specification file exported from Connect. If you do not have this file, please revisit the previous sections on specifying the state schema and operations.
 
 ### Steps
 
 1.  **Place the Specification File in Your Project**:
     - Navigate to the root directory of your Powerhouse project.
-    - Move or copy your `ToDoList.phdm.zip` file into this directory.
+    - Move or copy your `TodoList.phd` file into this directory.
 
 2.  **Run the Generator Command**:
     - Open your terminal in the root directory of your Powerhouse project.
     - Execute the `ph generate` command, pointing to your specification file:
 
     ```bash
-    ph generate ToDoList.phdm.zip
+    ph generate TodoList.phd
     ```
 
 3.  **Explore the Generated Files**:
-    - After the command completes successfully, you will find a new directory: `document-models/to-do-list/`.
+    - After the command completes successfully, you will find a new directory: `document-models/todo-list/`.
     - Take a moment to explore its contents, which will match the structure described earlier in this document:
-      - `spec.json` and `schema.graphql`: The definition of your model.
-      - `gen/`: Type-safe, generated code including `types.ts`, `operations.ts`, etc.
-      - `src/`: The skeleton for your implementation, most importantly `src/reducers/to-do-list.ts`, which will contain empty functions for `addTodoItemOperation`, `updateTodoItemOperation`, and `deleteTodoItemOperation`, ready for you to implement.
+      - `todo-list.json` and `schema.graphql`: The definition of your model.
+      - `gen/`: Type-safe, generated code including `types.ts`, `creators.ts`, etc.
+      - `src/`: The skeleton for your implementation, most importantly `src/reducers/todos.ts`, which will contain empty functions for `addTodoItemOperation`, `updateTodoItemOperation`, and `deleteTodoItemOperation`, ready for you to implement.
 
 With these files generated, you have successfully scaffolded your document model. The project is now set up for you to implement the core business logic.
 
@@ -128,7 +125,7 @@ With these files generated, you have successfully scaffolded your document model
 
 ## Next steps
 
-Once the Document Model Generator has successfully scaffolded your project, the immediate next step is to implement the logic for each operation within the generated reducer files (e.g., `document-models/YourModelName/src/reducers/your-model-name.ts`). This involves taking the current state and the action input, and returning the new state of the document.
+Once the Document Model Generator has successfully scaffolded your project, the immediate next step is to implement the logic for each operation within the generated reducer files (e.g., `document-models/todo-list/src/reducers/todos.ts`). This involves taking the current state and the action input, and returning the new state of the document.
 
 Subsequently, you will write unit tests for these reducers to ensure they behave as expected under various conditions. This iterative process of defining, generating, implementing, and testing forms the core loop of document model development in Powerhouse.
 
