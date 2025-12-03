@@ -44,17 +44,17 @@ describe("document model", () => {
   const documentModelsSrcPath = path.join(testDir, "data", "document-models");
   let documentModelsDirName = path.join(testOutDirPath, "document-models");
   let processorsDirName = path.join(testOutDirPath, "processors");
-  async function setupTest(context: TestContext) {
+  async function setupTest(context: TestContext, dataDir = testDataDir) {
     testOutDirPath = getTestOutDirPath(context.task.name, outDirName);
 
-    await copyAllFiles(testDataDir, testOutDirPath);
+    await copyAllFiles(dataDir, testOutDirPath);
 
     documentModelsDirName = path.join(testOutDirPath, "document-models");
     processorsDirName = path.join(testOutDirPath, "processors");
   }
 
   beforeEach(async (context) => {
-    await setupTest(context);
+    // await setupTest(context);
   });
 
   beforeAll(() => {
@@ -106,6 +106,23 @@ describe("document model", () => {
       timeout: 100000,
     },
     async () => {
+      await generate();
+      await compile(testOutDirPath);
+      await runGeneratedTests(testOutDirPath);
+    },
+  );
+
+  it(
+    "should generate a document model when previous document models exist",
+    {
+      timeout: 100000,
+    },
+    async (context) => {
+      const dataDirOverride = getTestDataDir(
+        testDir,
+        "document-models-test-project-with-existing-document-models",
+      );
+      await setupTest(context, dataDirOverride);
       await generate();
       await compile(testOutDirPath);
       await runGeneratedTests(testOutDirPath);

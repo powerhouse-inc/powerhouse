@@ -1,4 +1,6 @@
+import { ts } from "@tmpl/core";
 import path from "path";
+import { VariableDeclarationKind } from "ts-morph";
 import {
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
@@ -16,6 +18,7 @@ export function makeRootDirFiles(fileMakerArgs: DocumentModelFileMakerArgs) {
   makeDocumentModelModuleFile(fileMakerArgs);
   makeDocumentModelUtilsFile(fileMakerArgs);
   makeDocumentModelHooksFile(fileMakerArgs);
+  makeVersionConstantsFile(fileMakerArgs);
 }
 
 function makeDocumentModelIndexFile({
@@ -95,6 +98,48 @@ function makeDocumentModelModuleFile({
   const { sourceFile } = getOrCreateSourceFile(project, moduleFilePath);
 
   sourceFile.replaceWithText(template);
+
+  formatSourceFileWithPrettier(sourceFile);
+}
+
+function makeVersionConstantsFile({
+  project,
+  documentModelDirPath,
+}: DocumentModelFileMakerArgs) {
+  const filePath = path.join(documentModelDirPath, "versions.ts");
+  const { alreadyExists, sourceFile } = getOrCreateSourceFile(
+    project,
+    filePath,
+  );
+
+  if (alreadyExists) {
+    return;
+  }
+
+  const version = 1;
+  const versionInitializer = ts`[${version}] as const;`.raw;
+  const latestInitializer = ts`versions[0]`.raw;
+
+  sourceFile.addVariableStatement({
+    declarationKind: VariableDeclarationKind.Const,
+    isExported: true,
+    declarations: [
+      {
+        name: "versions",
+        initializer: versionInitializer,
+      },
+    ],
+  });
+  sourceFile.addVariableStatement({
+    declarationKind: VariableDeclarationKind.Const,
+    isExported: true,
+    declarations: [
+      {
+        name: "latest",
+        initializer: latestInitializer,
+      },
+    ],
+  });
 
   formatSourceFileWithPrettier(sourceFile);
 }
