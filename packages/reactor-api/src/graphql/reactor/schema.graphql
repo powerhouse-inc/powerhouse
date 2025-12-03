@@ -36,6 +36,26 @@ enum DocumentChangeType {
   CHILD_REMOVED
 }
 
+# Drive visibility levels
+enum DriveVisibility {
+  # Anyone can read/sync the drive (default)
+  PUBLIC
+  # Only users with explicit permissions can access
+  PROTECTED
+  # Drive is not synced at all (local only)
+  PRIVATE
+}
+
+# Permission levels for protected drives
+enum DrivePermissionLevel {
+  # Can fetch strands and read documents
+  READ
+  # Can push updates and modify documents
+  WRITE
+  # Can manage drive permissions and settings
+  ADMIN
+}
+
 # Object types
 type DocumentModelGlobalState {
   id: String!
@@ -113,6 +133,29 @@ type JobChangeEvent {
   status: String!
   result: JSONObject!
   error: String
+}
+
+# Drive permission entry
+type DrivePermissionEntry {
+  driveId: String!
+  userAddress: String!
+  permission: DrivePermissionLevel!
+  grantedBy: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+# Drive visibility info
+type DriveVisibilityInfo {
+  driveId: String!
+  visibility: DriveVisibility!
+}
+
+# Combined drive access info
+type DriveAccessInfo {
+  driveId: String!
+  visibility: DriveVisibility!
+  permissions: [DrivePermissionEntry!]!
 }
 
 type SignerUser {
@@ -293,6 +336,12 @@ type Query {
     channelId: String!
     cursorOrdinal: Int!
   ): [SyncEnvelope!]!
+
+  # Get visibility and permissions for a drive
+  driveAccess(driveId: String!): DriveAccessInfo!
+
+  # Get all drives the current user has access to
+  userDrivePermissions: [DrivePermissionEntry!]!
 }
 
 type Mutation {
@@ -371,6 +420,25 @@ type Mutation {
   # Push sync envelope to a channel
   pushSyncEnvelope(
     envelope: SyncEnvelopeInput!
+  ): Boolean!
+
+  # Set the visibility level for a drive (requires ADMIN permission or global admin)
+  setDriveVisibility(
+    driveId: String!
+    visibility: DriveVisibility!
+  ): DriveVisibilityInfo!
+
+  # Grant a user permission on a drive (requires ADMIN permission or global admin)
+  grantDrivePermission(
+    driveId: String!
+    userAddress: String!
+    permission: DrivePermissionLevel!
+  ): DrivePermissionEntry!
+
+  # Revoke a user's permission on a drive (requires ADMIN permission or global admin)
+  revokeDrivePermission(
+    driveId: String!
+    userAddress: String!
   ): Boolean!
 }
 

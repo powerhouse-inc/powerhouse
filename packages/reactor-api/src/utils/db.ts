@@ -2,10 +2,52 @@ import { PGlite } from "@electric-sql/pglite";
 import type { Knex } from "knex";
 import knex from "knex";
 import ClientPgLite from "knex-pglite";
+import type { Generated } from "kysely";
 import { Kysely } from "kysely";
 import { KyselyKnexDialect, PGColdDialect } from "kysely-knex";
 import fs from "node:fs";
 import path from "node:path";
+
+/**
+ * Drive visibility levels:
+ * - PUBLIC: Anyone can read/sync the drive
+ * - PROTECTED: Only users with explicit permissions can access
+ * - PRIVATE: Drive is not synced at all (local only)
+ */
+export type DriveVisibility = "PUBLIC" | "PROTECTED" | "PRIVATE";
+
+/**
+ * Permission levels for protected drives:
+ * - READ: Can fetch strands and read documents
+ * - WRITE: Can push updates and modify documents
+ * - ADMIN: Can manage drive permissions and settings
+ */
+export type DrivePermissionLevel = "READ" | "WRITE" | "ADMIN";
+
+/**
+ * Database schema for drive permissions
+ */
+export interface DrivePermissionDatabase {
+  DriveVisibility: DriveVisibilityTable;
+  DrivePermission: DrivePermissionTable;
+}
+
+export interface DriveVisibilityTable {
+  driveId: string;
+  visibility: DriveVisibility;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface DrivePermissionTable {
+  id: Generated<number>;
+  driveId: string;
+  userAddress: string;
+  permission: DrivePermissionLevel;
+  grantedBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 type Db = Kysely<any>;
 
@@ -113,3 +155,4 @@ export const initAnalyticsStoreSql = [
   `create index if not exists analyticsseries_analyticsdimension_seriesid_index
       on "AnalyticsSeries_AnalyticsDimension" ("seriesId");`,
 ];
+
