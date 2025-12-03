@@ -4,6 +4,7 @@ import {
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
 } from "../../file-utils.js";
+import { getArrayNumberElements } from "../../syntax-getters.js";
 import { documentModelRootActionsFileTemplate } from "../../templates/document-model/actions.js";
 import { documentModelHooksFileTemplate } from "../../templates/document-model/hooks.js";
 import { documentModelIndexTemplate } from "../../templates/document-model/index.js";
@@ -113,22 +114,23 @@ function makeVersionConstantsFile({
     filePath,
   );
 
+  /* Find the latest version in the `versions` array and add a new entry for the next version */
   if (alreadyExists) {
     const versionsArray = sourceFile
       .getVariableDeclarationOrThrow(VERSIONS)
       .getInitializerIfKindOrThrow(SyntaxKind.AsExpression)
       .getExpressionIfKindOrThrow(SyntaxKind.ArrayLiteralExpression);
 
-    const versions = versionsArray
-      .getElements()
-      .map((el) =>
-        el.asKindOrThrow(SyntaxKind.NumericLiteral).getLiteralValue(),
-      );
-    const previousVersionCount = versions.length;
-    const nextVersion = previousVersionCount + 1;
-    versionsArray.addElement(nextVersion.toString());
+    const previousVersions = getArrayNumberElements(versionsArray);
+    const currentLatestVersion = Math.max(...previousVersions);
+    const nextVersion = currentLatestVersion + 1;
+    const newVersions = Array.from(
+      new Set([...previousVersions, nextVersion]),
+    ).toSorted();
+    versionsArray.replaceWithText(`[${newVersions.join(", ")}]`);
 
-    const nextVersionIndex = previousVersionCount;
+    const nextVersionIndex = newVersions.indexOf(nextVersion);
+
     const latestVariableIndex = sourceFile
       .getVariableDeclarationOrThrow(LATEST)
       .getInitializerIfKindOrThrow(SyntaxKind.ElementAccessExpression)
@@ -139,32 +141,35 @@ function makeVersionConstantsFile({
     return;
   }
 
+  /* Create the versions.ts file and initialize it with a single version of 1 
+  and set the value of `latest` to be the first item in the array
+  */
   const version = 1;
   const versionInitializer = `[${version}] as const;`;
-
-  sourceFile.addVariableStatement({
-    declarationKind: VariableDeclarationKind.Const,
-    isExported: true,
-    declarations: [
-      {
-        name: VERSIONS,
-        initializer: versionInitializer,
-      },
-    ],
-  });
-
   const latestInitializer = `versions[0];`;
 
-  sourceFile.addVariableStatement({
-    declarationKind: VariableDeclarationKind.Const,
-    isExported: true,
-    declarations: [
-      {
-        name: LATEST,
-        initializer: latestInitializer,
-      },
-    ],
-  });
+  sourceFile.addVariableStatements([
+    {
+      declarationKind: VariableDeclarationKind.Const,
+      isExported: true,
+      declarations: [
+        {
+          name: VERSIONS,
+          initializer: versionInitializer,
+        },
+      ],
+    },
+    {
+      declarationKind: VariableDeclarationKind.Const,
+      isExported: true,
+      declarations: [
+        {
+          name: LATEST,
+          initializer: latestInitializer,
+        },
+      ],
+    },
+  ]);
 
   formatSourceFileWithPrettier(sourceFile);
 }
