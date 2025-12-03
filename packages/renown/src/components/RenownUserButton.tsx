@@ -86,7 +86,8 @@ const styles: Record<string, CSSProperties> = {
     left: 0,
     backgroundColor: "white",
     borderRadius: "8px",
-    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+    boxShadow:
+      "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
     width: "208px", // w-52
     zIndex: 1000,
     color: "#111827", // text-gray-900
@@ -272,12 +273,24 @@ export function RenownUserButton({
                 onClick={copyToClipboard}
                 style={styles.addressButton}
               >
-                <div style={{ position: "relative", display: "flex", alignItems: "center", gap: "4px", width: "100%" }}>
-                  <div style={{ ...styles.addressText, opacity: isCopied ? 0 : 1 }}>
+                <div
+                  style={{
+                    position: "relative",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    width: "100%",
+                  }}
+                >
+                  <div
+                    style={{ ...styles.addressText, opacity: isCopied ? 0 : 1 }}
+                  >
                     <span>{truncateAddress(address)}</span>
                     <CopyIcon size={14} color="#9EA0A1" />
                   </div>
-                  <div style={{ ...styles.copiedText, opacity: isCopied ? 1 : 0 }}>
+                  <div
+                    style={{ ...styles.copiedText, opacity: isCopied ? 1 : 0 }}
+                  >
                     Copied to clipboard!
                   </div>
                 </div>
