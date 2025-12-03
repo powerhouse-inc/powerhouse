@@ -8,7 +8,7 @@ import { DefaultSubscriptionErrorHandler } from "../subs/default-error-handler.j
 import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
 import type { ReactorBuilder } from "./reactor-builder.js";
-import type { IReactor } from "./types.js";
+import type { IReactor, ReactorClientModule, ReactorModule } from "./types.js";
 
 /**
  * Builder class for constructing ReactorClient instances with proper configuration
@@ -70,59 +70,61 @@ export class ReactorClientBuilder {
   }
 
   public async build(): Promise<ReactorClient> {
+    const module = await this.buildModule();
+    return module.client;
+  }
+
+  public async buildModule(): Promise<ReactorClientModule> {
     let reactor: IReactor;
     let eventBus: IEventBus;
     let documentIndexer: IDocumentIndexer;
+    let reactorModule: ReactorModule | undefined;
 
     if (this.reactorBuilder) {
-      reactor = await this.reactorBuilder.build();
-      const builderEventBus = this.reactorBuilder.events;
-      const builderDocumentIndexer = this.reactorBuilder.documentIndexer;
-
-      if (!builderEventBus) {
-        throw new Error("Event bus is required in ReactorBuilder");
-      }
-
-      if (!builderDocumentIndexer) {
-        throw new Error(
-          "DocumentIndexer must be initialized by ReactorBuilder",
-        );
-      }
-
-      eventBus = builderEventBus;
-      documentIndexer = builderDocumentIndexer;
+      reactorModule = await this.reactorBuilder.buildModule();
+      reactor = reactorModule.reactor;
+      eventBus = reactorModule.eventBus;
+      documentIndexer = reactorModule.documentIndexer;
     } else if (this.reactor && this.eventBus && this.documentIndexer) {
       reactor = this.reactor;
       eventBus = this.eventBus;
       documentIndexer = this.documentIndexer;
+      reactorModule = undefined;
     } else {
       throw new Error(
         "Either ReactorBuilder or (Reactor + EventBus + DocumentIndexer) is required",
       );
     }
 
-    if (!this.signer) {
-      this.signer = new PassthroughSigner();
-    }
+    const signer = this.signer ?? new PassthroughSigner();
 
-    if (!this.subscriptionManager) {
-      this.subscriptionManager = new ReactorSubscriptionManager(
-        new DefaultSubscriptionErrorHandler(),
-      );
-    }
+    const subscriptionManager =
+      this.subscriptionManager ??
+      new ReactorSubscriptionManager(new DefaultSubscriptionErrorHandler());
 
-    if (!this.jobAwaiter) {
-      this.jobAwaiter = new JobAwaiter(eventBus, (jobId, signal) =>
+    const jobAwaiter =
+      this.jobAwaiter ??
+      new JobAwaiter(eventBus, (jobId, signal) =>
         reactor.getJobStatus(jobId, signal),
       );
-    }
 
-    return new ReactorClient(
+    const client = new ReactorClient(
       reactor,
-      this.signer,
-      this.subscriptionManager,
-      this.jobAwaiter,
+      signer,
+      subscriptionManager,
+      jobAwaiter,
       documentIndexer,
     );
+
+    return {
+      client,
+      reactor,
+      eventBus,
+      documentIndexer,
+      signer,
+      subscriptionManager,
+      jobAwaiter,
+      reactorModule,
+    };
   }
 }

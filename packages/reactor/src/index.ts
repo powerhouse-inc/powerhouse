@@ -10,6 +10,7 @@ export { ReactorBuilder } from "./core/reactor-builder.js";
 export { Reactor } from "./core/reactor.js";
 export {
   type IReactor,
+  type ReactorClientModule,
   type ReactorFeatures,
   type ReactorModule,
   type SyncModule,
