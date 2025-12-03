@@ -112,38 +112,86 @@ While Storybook aims for accuracy, there might occasionally be discrepancies or 
 
 ## Implementing a Component
 
-Let's walk through the typical workflow for using a component from the document-engineering system, using the `Checkbox` from the [To-do List editor](/academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors).
+Let's walk through the typical workflow for using a component from the document-engineering system, using `BooleanField` for a checkbox in the [TodoList editor](/academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors).
 
-1.  **Identify the Need:** While building your feature (e.g., the To-do List editor in `editor.tsx`), you determine the need for a standard UI element, like a checkbox.
+1.  **Identify the Need:** While building your feature (e.g., the TodoList editor), you determine the need for a standard UI element, like a checkbox to mark items as complete.
 2.  **Consult the Document Engineering Components in Storybook:**
     - Open the Powerhouse Storybook instance. [https://storybook.powerhouse.academy](https://storybook.powerhouse.academy)
-    - Navigate or search to find the `Checkbox` component.
+    - Navigate or search to find the `BooleanField` component (used for checkboxes).
     - Review the visual examples and interactive demo.
-    - Examine the "Usage" snippet and the **Props table** to understand the basic implementation and available configuration options (`label`, `value`, `onChange`, etc.).
-3.  **Import the Component:** In your code editor, open the relevant file (e.g., `editors/to-do-list/editor.tsx`). Add an import statement at the top to bring the component into your file's scope:
+    - Examine the "Usage" snippet and the **Props table** to understand the basic implementation and available configuration options (`name`, `value`, `onChange`, etc.).
+3.  **Import the Component:** In your code editor, open the relevant file (e.g., `editors/todo-list-editor/components/Checkbox.tsx`). Add an import statement at the top to bring the component into your file's scope:
     ```typescript
-    import { Checkbox } from "@powerhousedao/document-engineering/scalars";
-    // Or import other components as needed:
-    // import { Checkbox, InputField, Button } from '@powerhousedao/document-engineering/scalars';
+    import { Form, BooleanField } from "@powerhousedao/document-engineering/scalars";
     ```
-    This line instructs the build process to locate the `Checkbox` component within the installed `@powerhousedao/document-engineering/scalars` package and make it available for use.
-4.  **Use and Configure the Component:** Place the component tag in your JSX where needed. Use the information from Storybook (usage snippet and props table) as a guide, but adapt the props to your specific requirements within `editor.tsx`:
+    This line instructs the build process to locate the `Form` and `BooleanField` components within the installed `@powerhousedao/document-engineering/scalars` package and make them available for use.
+
+    :::info Form Wrapper Required
+    Scalar components like `BooleanField` must be wrapped in a `Form` component from the same package. This provides built-in validation and form state management.
+    :::
+
+4.  **Use and Configure the Component:** Place the component tag in your JSX where needed. Use the information from Storybook (usage snippet and props table) as a guide, but adapt the props to your specific requirements:
+
+    **Step 4a: Create a reusable Checkbox component**
     ```typescript
-    // Example from the To-do List Editor:
-    <Checkbox
-        // Bind the checked state to data within editor.tsx
-        value={item.checked}
-        // Provide a function from editor.tsx to handle changes
-        onChange={() => {
-            dispatch(actions.updateTodoItem({
-                id: item.id,
-                checked: !item.checked,
-            }));
-        }}
-        // Other props like 'label' might be omitted or added as needed.
-    />
+    // editors/todo-list-editor/components/Checkbox.tsx
+    import { Form, BooleanField } from "@powerhousedao/document-engineering/scalars";
+
+    interface CheckboxProps {
+      value: boolean;
+      onChange: (value: boolean) => void;
+    }
+
+    export const Checkbox = ({ value, onChange }: CheckboxProps) => {
+      return (
+        <Form onSubmit={() => {}}>
+          <BooleanField
+            name="checked"
+            description="Mark as complete"
+            value={value}
+            onChange={onChange}
+          />
+        </Form>
+      );
+    };
     ```
-    You configure the component's appearance and behavior by passing the appropriate values to its props.
+
+    **Step 4b: Use it in your Todo component with the document model hook**
+    ```typescript
+    // editors/todo-list-editor/components/Todo.tsx
+    import { useSelectedTodoListDocument, updateTodoItem } from "todo-tutorial/document-models/todo-list";
+    import type { TodoItem } from "todo-tutorial/document-models/todo-list";
+    import { Checkbox } from "./Checkbox.js";
+
+    type Props = { todo: TodoItem };
+
+    export function Todo({ todo }: Props) {
+      // Use the hook to get dispatch function
+      const [todoList, dispatch] = useSelectedTodoListDocument();
+
+      if (!todoList) return null;
+
+      return (
+        <div className="flex items-center gap-2">
+          <Checkbox
+            value={todo.checked}
+            onChange={() => {
+              dispatch(updateTodoItem({
+                id: todo.id,
+                checked: !todo.checked,
+              }));
+            }}
+          />
+          <span className={todo.checked ? "line-through" : ""}>
+            {todo.text}
+          </span>
+        </div>
+      );
+    }
+    ```
+
+    You configure the component's appearance and behavior by passing the appropriate values to its props. Note the use of the `useSelectedTodoListDocument` hook to access the dispatch function.
+
 5.  **Test and Refine:** Run your application (e.g., using `ph connect`) to see the component in context. Verify its appearance and functionality.
 
 ## Usage
