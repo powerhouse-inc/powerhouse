@@ -1,6 +1,5 @@
-import { ts } from "@tmpl/core";
 import path from "path";
-import { VariableDeclarationKind } from "ts-morph";
+import { SyntaxKind, VariableDeclarationKind } from "ts-morph";
 import {
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
@@ -106,6 +105,8 @@ function makeVersionConstantsFile({
   project,
   documentModelDirPath,
 }: DocumentModelFileMakerArgs) {
+  const VERSIONS = "versions";
+  const LATEST = "latest";
   const filePath = path.join(documentModelDirPath, "versions.ts");
   const { alreadyExists, sourceFile } = getOrCreateSourceFile(
     project,
@@ -113,29 +114,53 @@ function makeVersionConstantsFile({
   );
 
   if (alreadyExists) {
+    const versionsArray = sourceFile
+      .getVariableDeclarationOrThrow(VERSIONS)
+      .getInitializerIfKindOrThrow(SyntaxKind.AsExpression)
+      .getExpressionIfKindOrThrow(SyntaxKind.ArrayLiteralExpression);
+
+    const versions = versionsArray
+      .getElements()
+      .map((el) =>
+        el.asKindOrThrow(SyntaxKind.NumericLiteral).getLiteralValue(),
+      );
+    const previousVersionCount = versions.length;
+    const nextVersion = previousVersionCount + 1;
+    versionsArray.addElement(nextVersion.toString());
+
+    const nextVersionIndex = previousVersionCount;
+    const latestVariableIndex = sourceFile
+      .getVariableDeclarationOrThrow(LATEST)
+      .getInitializerIfKindOrThrow(SyntaxKind.ElementAccessExpression)
+      .getArgumentExpressionOrThrow();
+
+    latestVariableIndex.replaceWithText(nextVersionIndex.toString());
+
     return;
   }
 
   const version = 1;
-  const versionInitializer = ts`[${version}] as const;`.raw;
-  const latestInitializer = ts`versions[0]`.raw;
+  const versionInitializer = `[${version}] as const;`;
 
   sourceFile.addVariableStatement({
     declarationKind: VariableDeclarationKind.Const,
     isExported: true,
     declarations: [
       {
-        name: "versions",
+        name: VERSIONS,
         initializer: versionInitializer,
       },
     ],
   });
+
+  const latestInitializer = `versions[0];`;
+
   sourceFile.addVariableStatement({
     declarationKind: VariableDeclarationKind.Const,
     isExported: true,
     declarations: [
       {
-        name: "latest",
+        name: LATEST,
         initializer: latestInitializer,
       },
     ],
