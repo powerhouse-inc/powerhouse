@@ -47,8 +47,18 @@ To link a dependency into a project, add it to your package.json and point the d
     "@pgph/pkg-c": "workspace:*"
   }
 }
-
 ```
+
+Next, add a path reference to the `tsconfig.json` file.
+
+```json
+{
+  "references": [
+    {
+      "path": "../../packages/<package_name>"
+    }
+  ]
+}
 
 ## Adding a New Package or App <a id="add-new-package"></a>
 
