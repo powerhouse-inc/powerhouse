@@ -50,6 +50,7 @@ describe("ReactorClient Unit Tests", () => {
       removeChildren: vi.fn(),
       deleteDocument: vi.fn(),
       getJobStatus: vi.fn(),
+      create: vi.fn(),
     } as unknown as IReactor;
 
     mockSigner = createMockSigner();
@@ -206,8 +207,150 @@ describe("ReactorClient Unit Tests", () => {
     });
   });
 
-  describe("mutate", () => {
-    it("should sign actions and call reactor.mutate, wait for job, and return document", async () => {
+  describe("create", () => {
+    it("should pass signer to reactor.create, wait for job, and return document", async () => {
+      const document: PHDocument = {
+        header: { id: "doc-1", documentType: "test" },
+      } as PHDocument;
+
+      const jobInfo: JobInfo = {
+        id: "job-1",
+        status: JobStatus.PENDING,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
+      const completedJobInfo: JobInfo = {
+        id: "job-1",
+        status: JobStatus.READ_MODELS_READY,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
+      vi.mocked(mockReactor.create).mockResolvedValue(jobInfo);
+      vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(completedJobInfo);
+      vi.mocked(mockReactor.get).mockResolvedValue({
+        document,
+        childIds: [],
+      });
+
+      const result = await client.create(document);
+
+      expect(mockReactor.create).toHaveBeenCalledWith(
+        document,
+        mockSigner,
+        undefined,
+      );
+      expect(mockJobAwaiter.waitForJob).toHaveBeenCalledWith(
+        "job-1",
+        undefined,
+      );
+      expect(mockReactor.get).toHaveBeenCalledWith(
+        "doc-1",
+        undefined,
+        completedJobInfo.consistencyToken,
+        undefined,
+      );
+      expect(result).toEqual(document);
+    });
+
+    it("should pass signal to reactor.create", async () => {
+      const document: PHDocument = {
+        header: { id: "doc-1", documentType: "test" },
+      } as PHDocument;
+      const signal = new AbortController().signal;
+
+      const jobInfo: JobInfo = {
+        id: "job-1",
+        status: JobStatus.PENDING,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
+      vi.mocked(mockReactor.create).mockResolvedValue(jobInfo);
+      vi.mocked(mockReactor.get).mockResolvedValue({
+        document,
+        childIds: [],
+      });
+
+      await client.create(document, undefined, signal);
+
+      expect(mockReactor.create).toHaveBeenCalledWith(
+        document,
+        mockSigner,
+        signal,
+      );
+      expect(mockJobAwaiter.waitForJob).toHaveBeenCalledWith("job-1", signal);
+      expect(mockReactor.get).toHaveBeenCalledWith(
+        "doc-1",
+        undefined,
+        expect.any(Object),
+        signal,
+      );
+    });
+
+    it("should add children when parentIdentifier is provided", async () => {
+      const document: PHDocument = {
+        header: { id: "doc-1", documentType: "test" },
+      } as PHDocument;
+
+      const parentDocument: PHDocument = {
+        header: { id: "parent-1", documentType: "test" },
+      } as PHDocument;
+
+      const jobInfo: JobInfo = {
+        id: "job-1",
+        status: JobStatus.PENDING,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
+      const addChildrenJobInfo: JobInfo = {
+        id: "job-2",
+        status: JobStatus.PENDING,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
+      const completedJobInfo: JobInfo = {
+        id: "job-1",
+        status: JobStatus.READ_MODELS_READY,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
+      vi.mocked(mockReactor.create).mockResolvedValue(jobInfo);
+      vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(completedJobInfo);
+      vi.mocked(mockReactor.get).mockResolvedValue({
+        document,
+        childIds: [],
+      });
+      vi.mocked(mockReactor.addChildren).mockResolvedValue(addChildrenJobInfo);
+      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({
+        document: parentDocument,
+        childIds: ["doc-1"],
+      });
+
+      const result = await client.create(document, "parent-1");
+
+      expect(mockReactor.create).toHaveBeenCalledWith(
+        document,
+        mockSigner,
+        undefined,
+      );
+      expect(mockReactor.addChildren).toHaveBeenCalledWith(
+        "parent-1",
+        ["doc-1"],
+        "main",
+        mockSigner,
+        undefined,
+      );
+      expect(result).toEqual(document);
+    });
+  });
+
+  describe("execute", () => {
+    it("should sign actions and call reactor.execute, wait for job, and return document", async () => {
       const documentId = "doc-1";
       const actions: Action[] = [
         {
@@ -379,8 +522,8 @@ describe("ReactorClient Unit Tests", () => {
     });
   });
 
-  describe("mutateAsync", () => {
-    it("should sign actions and call reactor.mutate", async () => {
+  describe("executeAsync", () => {
+    it("should sign actions and call reactor.execute", async () => {
       const documentId = "doc-1";
       const actions: Action[] = [
         {

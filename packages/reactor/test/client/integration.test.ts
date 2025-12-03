@@ -14,6 +14,7 @@ import { KyselyDocumentIndexer } from "../../src/storage/kysely/document-indexer
 import type { Database } from "../../src/storage/kysely/types.js";
 import {
   createDocModelDocument,
+  createMockSigner,
   createTestOperationStore,
 } from "../factories.js";
 
@@ -302,6 +303,71 @@ describe("ReactorClient Integration Tests", () => {
         const retrieved = await client.get("create-wait-test");
         expect(retrieved.document.header.id).toBe("create-wait-test");
       });
+
+      it("should sign CREATE_DOCUMENT and UPGRADE_DOCUMENT actions", async () => {
+        const mockSigner = createMockSigner();
+        const setup = await createTestOperationStore();
+        const db = setup.db as unknown as Kysely<Database>;
+        const operationStore = setup.store;
+
+        const documentIndexerConsistencyTracker = new ConsistencyTracker();
+        const testDocumentIndexer = new KyselyDocumentIndexer(
+          db as any,
+          operationStore,
+          documentIndexerConsistencyTracker,
+        );
+        await testDocumentIndexer.init();
+
+        const eventBus = new EventBus();
+        const reactorBuilder = new ReactorBuilder()
+          .withDocumentModels([
+            driveDocumentModelModule as any,
+            documentModelDocumentModelModule,
+          ])
+          .withReadModel(testDocumentIndexer)
+          .withEventBus(eventBus)
+          .withFeatures({ legacyStorageEnabled: false });
+
+        const signingClient = await new ReactorClientBuilder()
+          .withReactorBuilder(reactorBuilder)
+          .withSigner(mockSigner)
+          .build();
+
+        const signingReactor = (signingClient as any).reactor as IReactor;
+
+        const doc = createDocModelDocument({ id: "signing-test-doc" });
+        await signingClient.create(doc);
+
+        const operations =
+          await signingReactor.getOperations("signing-test-doc");
+
+        expect(operations.document.results.length).toBeGreaterThanOrEqual(2);
+
+        const createDocOp = operations.document.results.find(
+          (op) => op.action.type === "CREATE_DOCUMENT",
+        );
+        const upgradeDocOp = operations.document.results.find(
+          (op) => op.action.type === "UPGRADE_DOCUMENT",
+        );
+
+        expect(createDocOp).toBeDefined();
+        expect(upgradeDocOp).toBeDefined();
+
+        expect(createDocOp?.action.context?.signer).toBeDefined();
+        expect(createDocOp?.action.context?.signer?.signatures).toHaveLength(1);
+        expect(createDocOp?.action.context?.signer?.signatures[0][0]).toBe(
+          "mock-signature",
+        );
+
+        expect(upgradeDocOp?.action.context?.signer).toBeDefined();
+        expect(upgradeDocOp?.action.context?.signer?.signatures).toHaveLength(
+          1,
+        );
+        expect(upgradeDocOp?.action.context?.signer?.signatures[0][0]).toBe(
+          "mock-signature",
+        );
+        signingReactor.kill();
+      });
     });
 
     describe("createEmpty", () => {
@@ -331,7 +397,7 @@ describe("ReactorClient Integration Tests", () => {
   });
 
   describe("Document Mutation", () => {
-    describe("mutate", () => {
+    describe("execute", () => {
       it("should apply actions to a document and wait for completion", async () => {
         const doc = createDocModelDocument({ id: "mutate-test-1" });
         await client.create(doc);
@@ -368,7 +434,7 @@ describe("ReactorClient Integration Tests", () => {
       });
     });
 
-    describe("mutateAsync", () => {
+    describe("executeAsync", () => {
       it("should return immediately with job info", async () => {
         const doc = createDocModelDocument({ id: "mutate-async-1" });
         await client.create(doc);
