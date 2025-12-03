@@ -19,5 +19,10 @@ export default defineConfig({
         "**/types.ts",
       ],
     },
+    poolOptions: {
+      forks: {
+        maxForks: 4,
+      },
+    },
   },
 });
