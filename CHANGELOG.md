@@ -1,3 +1,27 @@
+## 5.1.0-dev.4 (2025-12-03)
+
+### 🚀 Features
+
+- pulling in all the signing work ([6f1361ead](https://github.com/powerhouse-inc/powerhouse/commit/6f1361ead))
+- **academy:** add new todo list tutorial content ([b6dc16545](https://github.com/powerhouse-inc/powerhouse/commit/b6dc16545))
+- **academy:** Todo list tutorial oz updates ([#2118](https://github.com/powerhouse-inc/powerhouse/pull/2118))
+- **codegen,ph-cli:** add tsx code generator ([#2116](https://github.com/powerhouse-inc/powerhouse/pull/2116))
+
+### 🩹 Fixes
+
+- reactor-client signs mutations ([26e20b54e](https://github.com/powerhouse-inc/powerhouse/commit/26e20b54e))
+- updating client and reactor interfaces to use branch instead of view filter on writes ([9e1abf004](https://github.com/powerhouse-inc/powerhouse/commit/9e1abf004))
+- all actions can now be signed ([12717055b](https://github.com/powerhouse-inc/powerhouse/commit/12717055b))
+- updated reactor api ([3476e8367](https://github.com/powerhouse-inc/powerhouse/commit/3476e8367))
+- linting ([7985e91d5](https://github.com/powerhouse-inc/powerhouse/commit/7985e91d5))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- CallmeT-ty @CallmeT-ty
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
 ## 5.1.0-dev.3 (2025-12-02)
 
 ### 🚀 Features

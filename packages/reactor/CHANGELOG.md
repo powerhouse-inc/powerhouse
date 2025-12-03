@@ -1,3 +1,21 @@
+## 5.1.0-dev.4 (2025-12-03)
+
+### 🚀 Features
+
+- **codegen,ph-cli:** add tsx code generator ([#2116](https://github.com/powerhouse-inc/powerhouse/pull/2116))
+- pulling in all the signing work ([6f1361ead](https://github.com/powerhouse-inc/powerhouse/commit/6f1361ead))
+
+### 🩹 Fixes
+
+- all actions can now be signed ([12717055b](https://github.com/powerhouse-inc/powerhouse/commit/12717055b))
+- updating client and reactor interfaces to use branch instead of view filter on writes ([9e1abf004](https://github.com/powerhouse-inc/powerhouse/commit/9e1abf004))
+- reactor-client signs mutations ([26e20b54e](https://github.com/powerhouse-inc/powerhouse/commit/26e20b54e))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Ryan Wolhuter @ryanwolhuter
+
 ## 5.1.0-dev.3 (2025-12-02)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

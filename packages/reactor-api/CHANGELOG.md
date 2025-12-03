@@ -1,3 +1,19 @@
+## 5.1.0-dev.4 (2025-12-03)
+
+### 🚀 Features
+
+- **codegen,ph-cli:** add tsx code generator ([#2116](https://github.com/powerhouse-inc/powerhouse/pull/2116))
+
+### 🩹 Fixes
+
+- linting ([7985e91d5](https://github.com/powerhouse-inc/powerhouse/commit/7985e91d5))
+- updated reactor api ([3476e8367](https://github.com/powerhouse-inc/powerhouse/commit/3476e8367))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Ryan Wolhuter @ryanwolhuter
+
 ## 5.1.0-dev.3 (2025-12-02)
 
 ### 🚀 Features

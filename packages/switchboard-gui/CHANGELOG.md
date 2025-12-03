@@ -1,3 +1,13 @@
+## 5.1.0-dev.4 (2025-12-03)
+
+### 🚀 Features
+
+- **codegen,ph-cli:** add tsx code generator ([#2116](https://github.com/powerhouse-inc/powerhouse/pull/2116))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 5.1.0-dev.3 (2025-12-02)
 
 This was a version bump only for @powerhousedao/switchboard-gui to align it with other projects, there were no code changes.

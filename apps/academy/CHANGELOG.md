@@ -1,3 +1,15 @@
+## 5.1.0-dev.4 (2025-12-03)
+
+### 🚀 Features
+
+- **codegen,ph-cli:** add tsx code generator ([#2116](https://github.com/powerhouse-inc/powerhouse/pull/2116))
+- **academy:** add new todo list tutorial content ([b6dc16545](https://github.com/powerhouse-inc/powerhouse/commit/b6dc16545))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
 ## 5.1.0-dev.3 (2025-12-02)
 
 ### 🚀 Features
