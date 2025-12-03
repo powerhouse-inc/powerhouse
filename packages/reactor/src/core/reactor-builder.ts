@@ -43,6 +43,7 @@ import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import type { IEventBus } from "../events/interfaces.js";
 import type { IReadModelCoordinator } from "../read-models/interfaces.js";
+import type { SignatureVerificationHandler } from "../signer/types.js";
 import { runMigrations } from "../storage/migrations/migrator.js";
 import type { MigrationStrategy } from "../storage/migrations/types.js";
 
@@ -64,6 +65,7 @@ export class ReactorBuilder {
   private syncBuilder?: SyncBuilder;
   private eventBus?: IEventBus;
   public documentIndexer?: IDocumentIndexer;
+  private signatureVerifier?: SignatureVerificationHandler;
 
   withDocumentModels(models: DocumentModelModule[]): this {
     this.documentModels = models;
@@ -119,6 +121,11 @@ export class ReactorBuilder {
 
   withEventBus(eventBus: IEventBus): this {
     this.eventBus = eventBus;
+    return this;
+  }
+
+  withSignatureVerifier(verifier: SignatureVerificationHandler): this {
+    this.signatureVerifier = verifier;
     return this;
   }
 
@@ -198,6 +205,7 @@ export class ReactorBuilder {
             writeCache,
             operationIndex,
             { legacyStorageEnabled: this.features.legacyStorageEnabled },
+            this.signatureVerifier,
           ),
         eventBus,
         queue,

@@ -165,7 +165,11 @@ export async function createReactor() {
     },
   );
 
-  const reactor = await createBrowserReactor(documentModelModules, storage);
+  const reactor = await createBrowserReactor(
+    documentModelModules,
+    storage,
+    connectCrypto,
+  );
 
   // initialize the reactor
   await initLegacyReactor(legacyReactor, renown, connectCrypto);

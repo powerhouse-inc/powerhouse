@@ -4,7 +4,9 @@ import {
   ReactorClientBuilder,
   SyncBuilder,
   type ReactorClientModule,
+  type SignerConfig,
 } from "@powerhousedao/reactor";
+import type { IConnectCrypto } from "@renown/sdk";
 import type {
   DefaultRemoteDriveInput,
   DocumentDriveServerOptions,
@@ -22,6 +24,7 @@ import {
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { createRemoveOldRemoteDrivesConfig } from "./drive-preservation.js";
+import { ConnectCryptoSigner, createSignatureVerifier } from "./signer.js";
 
 const DEFAULT_DRIVES_URL =
   (import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL as string | undefined) ||
@@ -105,14 +108,21 @@ export function createBrowserDocumentDriveServer(
 export function createBrowserReactor(
   documentModelModules: DocumentModelModule[],
   legacyStorage: IDocumentStorage & IDocumentOperationStorage,
+  connectCrypto: IConnectCrypto,
 ): Promise<ReactorClientModule> {
-  const builder = new ReactorClientBuilder().withReactorBuilder(
-    new ReactorBuilder()
-      .withDocumentModels(documentModelModules)
-      .withLegacyStorage(legacyStorage)
-      .withSync(new SyncBuilder().withChannelFactory(new GqlChannelFactory()))
-      .withFeatures({ legacyStorageEnabled: true }),
-  );
+  const signerConfig: SignerConfig = {
+    signer: new ConnectCryptoSigner(connectCrypto),
+    verifier: createSignatureVerifier(),
+  };
+  const builder = new ReactorClientBuilder()
+    .withSigner(signerConfig)
+    .withReactorBuilder(
+      new ReactorBuilder()
+        .withDocumentModels(documentModelModules)
+        .withLegacyStorage(legacyStorage)
+        .withSync(new SyncBuilder().withChannelFactory(new GqlChannelFactory()))
+        .withFeatures({ legacyStorageEnabled: true }),
+    );
 
   return builder.buildModule();
 }

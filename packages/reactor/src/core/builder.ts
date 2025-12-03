@@ -2,7 +2,11 @@ import type { IEventBus } from "#events/interfaces.js";
 import { ReactorClient } from "../client/reactor-client.js";
 import { JobAwaiter, type IJobAwaiter } from "../shared/awaiter.js";
 import { PassthroughSigner } from "../signer/passthrough-signer.js";
-import type { ISigner } from "../signer/types.js";
+import type {
+  ISigner,
+  SignatureVerificationHandler,
+  SignerConfig,
+} from "../signer/types.js";
 import type { IDocumentIndexer } from "../storage/interfaces.js";
 import { DefaultSubscriptionErrorHandler } from "../subs/default-error-handler.js";
 import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
@@ -19,6 +23,7 @@ export class ReactorClientBuilder {
   private eventBus?: IEventBus;
   private documentIndexer?: IDocumentIndexer;
   private signer?: ISigner;
+  private signatureVerifier?: SignatureVerificationHandler;
   private subscriptionManager?: IReactorSubscriptionManager;
   private jobAwaiter?: IJobAwaiter;
 
@@ -52,8 +57,18 @@ export class ReactorClientBuilder {
     return this;
   }
 
-  public withSigner(signer: ISigner): this {
-    this.signer = signer;
+  /**
+   * Sets the signer configuration for signing and verifying actions.
+   *
+   * @param config - Either an ISigner for signing only, or a SignerConfig for both signing and verification
+   */
+  public withSigner(config: ISigner | SignerConfig): this {
+    if ("signer" in config) {
+      this.signer = config.signer;
+      this.signatureVerifier = config.verifier;
+    } else {
+      this.signer = config;
+    }
     return this;
   }
 
@@ -81,6 +96,9 @@ export class ReactorClientBuilder {
     let reactorModule: ReactorModule | undefined;
 
     if (this.reactorBuilder) {
+      if (this.signatureVerifier) {
+        this.reactorBuilder.withSignatureVerifier(this.signatureVerifier);
+      }
       reactorModule = await this.reactorBuilder.buildModule();
       reactor = reactorModule.reactor;
       eventBus = reactorModule.eventBus;

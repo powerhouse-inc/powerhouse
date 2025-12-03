@@ -111,7 +111,8 @@ const sidebars = {
           label: "Chatroom",
           link: {
             type: "generated-index",
-            description: "Get started with the Chatroom tutorial: Jump into creating a new Powerhouse project if you have NodeJs, VSCode, and Git installed. We are going to create a new document model that represents a chat. So you as a user can post messages into that chat room, react to the messages. This chatroom will be synchronized between different connect instances. Let's explore the potential of the tools available in the powerhouse toolkit",
+            description:
+              "Get started with the Chatroom tutorial: Jump into creating a new Powerhouse project if you have NodeJs, VSCode, and Git installed. We are going to create a new document model that represents a chat. So you as a user can post messages into that chat room, react to the messages. This chatroom will be synchronized between different connect instances. Let's explore the potential of the tools available in the powerhouse toolkit",
           },
           items: [
             "academy/ExampleUsecases/Chatroom/CreateNewPowerhouseProject",

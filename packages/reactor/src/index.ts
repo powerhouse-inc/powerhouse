@@ -36,6 +36,11 @@ export {
   type ShutdownStatus,
   type ViewFilter,
 } from "./shared/types.js";
+export {
+  type ISigner,
+  type SignatureVerificationHandler,
+  type SignerConfig,
+} from "./signer/types.js";
 
 // Subscription Manager
 export { DefaultSubscriptionErrorHandler } from "./subs/default-error-handler.js";
@@ -154,23 +159,28 @@ export { type IWriteCache } from "./cache/write/interfaces.js";
 
 // Synchronization
 export {
+  KyselySyncCursorStorage,
+  KyselySyncRemoteStorage,
+  type ISyncCursorStorage,
+  type ISyncRemoteStorage,
+} from "./storage/index.js";
+export {
   ChannelError,
-  InternalChannelError,
-  InternalChannel,
+  ChannelErrorSource,
   GqlChannelFactory,
-  SyncOperation,
-  SyncOperationAggregateError,
+  InternalChannel,
+  InternalChannelError,
   Mailbox,
   SyncBuilder,
+  SyncOperation,
+  SyncOperationAggregateError,
+  SyncOperationStatus,
   type ChannelConfig,
   type ChannelHealth,
   type ChannelMeta,
-  ChannelErrorSource,
   type IChannel,
   type IChannelFactory,
   type ISyncManager,
-  type SyncOperationErrorType,
-  SyncOperationStatus,
   type MailboxItem,
   type Remote,
   type RemoteCursor,
@@ -180,10 +190,5 @@ export {
   type RemoteStatus,
   type SyncEnvelope,
   type SyncEnvelopeType,
+  type SyncOperationErrorType,
 } from "./sync/index.js";
-export {
-  KyselySyncCursorStorage,
-  KyselySyncRemoteStorage,
-  type ISyncCursorStorage,
-  type ISyncRemoteStorage,
-} from "./storage/index.js";

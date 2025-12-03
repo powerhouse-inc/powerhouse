@@ -35,12 +35,9 @@ import type {
   OperationWithContext,
 } from "../storage/interfaces.js";
 import { reshuffleByTimestampAndIndex } from "../utils/reshuffle.js";
+import type { SignatureVerificationHandler } from "../signer/types.js";
 import type { IJobExecutor } from "./interfaces.js";
-import type {
-  JobExecutorConfig,
-  JobResult,
-  SignatureVerificationHandler,
-} from "./types.js";
+import type { JobExecutorConfig, JobResult } from "./types.js";
 import {
   applyDeleteDocumentAction,
   applyUpgradeDocumentAction,
