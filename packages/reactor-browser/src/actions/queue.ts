@@ -23,7 +23,7 @@ export async function queueActions(
     logger.error("No actions found");
     return;
   }
-  const reactor = window.ph?.reactor;
+  const reactor = window.ph?.legacyReactor;
   if (!reactor) {
     return;
   }
@@ -51,7 +51,7 @@ export async function queueOperations(
     ? operationOrOperations
     : [operationOrOperations];
 
-  const reactor = window.ph?.reactor;
+  const reactor = window.ph?.legacyReactor;
   if (!reactor) {
     return;
   }

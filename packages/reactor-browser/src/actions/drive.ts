@@ -21,7 +21,7 @@ import { getUserPermissions } from "../utils/user.js";
 import { queueActions } from "./queue.js";
 
 export async function addDrive(input: DriveInput, preferredEditor?: string) {
-  const reactor = window.ph?.reactor;
+  const reactor = window.ph?.legacyReactor;
   if (!reactor) {
     return;
   }
@@ -43,7 +43,7 @@ export async function addDrive(input: DriveInput, preferredEditor?: string) {
 }
 
 export async function addRemoteDrive(url: string, options: RemoteDriveOptions) {
-  const reactor = window.ph?.reactor;
+  const reactor = window.ph?.legacyReactor;
   if (!reactor) {
     return;
   }
@@ -53,7 +53,7 @@ export async function addRemoteDrive(url: string, options: RemoteDriveOptions) {
 }
 
 export async function deleteDrive(driveId: string) {
-  const reactor = window.ph?.reactor;
+  const reactor = window.ph?.legacyReactor;
   if (!reactor) {
     return;
   }
@@ -69,7 +69,7 @@ export async function renameDrive(
   driveId: string,
   name: string,
 ): Promise<PHDocument | undefined> {
-  const reactor = window.ph?.reactor;
+  const reactor = window.ph?.legacyReactor;
   if (!reactor) {
     return;
   }
@@ -87,7 +87,7 @@ export async function setDriveAvailableOffline(
   driveId: string,
   availableOffline: boolean,
 ): Promise<PHDocument | undefined> {
-  const reactor = window.ph?.reactor;
+  const reactor = window.ph?.legacyReactor;
   if (!reactor) {
     return;
   }
@@ -108,7 +108,7 @@ export async function setDriveSharingType(
   driveId: string,
   sharingType: SharingType,
 ): Promise<PHDocument | undefined> {
-  const reactor = window.ph?.reactor;
+  const reactor = window.ph?.legacyReactor;
   if (!reactor) {
     return;
   }
@@ -126,7 +126,7 @@ export async function setDriveSharingType(
 }
 
 export async function removeTrigger(driveId: string, triggerId: string) {
-  const reactor = window.ph?.reactor;
+  const reactor = window.ph?.legacyReactor;
   if (!reactor) {
     return;
   }
@@ -150,7 +150,7 @@ export async function registerNewPullResponderTrigger(
   url: string,
   options: Pick<RemoteDriveOptions, "pullFilter" | "pullInterval">,
 ): Promise<PullResponderTrigger | undefined> {
-  const reactor = window.ph?.reactor;
+  const reactor = window.ph?.legacyReactor;
   if (!reactor) {
     return;
   }
@@ -205,7 +205,7 @@ export async function registerNewPullResponderTrigger(
 }
 
 export async function addTrigger(driveId: string, trigger: Trigger) {
-  const reactor = window.ph?.reactor;
+  const reactor = window.ph?.legacyReactor;
   if (!reactor) {
     return;
   }

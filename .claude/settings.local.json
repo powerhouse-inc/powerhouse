@@ -16,7 +16,9 @@
       "Bash(git log:*)",
       "Bash(git diff:*)",
       "Bash(git status:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "WebSearch",
+      "WebFetch(domain:github.com)"
     ],
     "deny": [],
     "ask": []

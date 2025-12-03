@@ -12,7 +12,7 @@ import type { VetraPackage } from "./vetra.js";
 
 export type PHGlobal = PHGlobalConfig & {
   loading?: boolean;
-  reactor?: IDocumentDriveServer;
+  legacyReactor?: IDocumentDriveServer;
   connectCrypto?: IConnectCrypto;
   did?: DID;
   renown?: IRenown;

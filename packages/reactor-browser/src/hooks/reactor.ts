@@ -6,16 +6,16 @@ import type {
 import type { IDocumentDriveServer } from "document-drive";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
-const eventFunctions = makePHEventFunctions("reactor");
+const eventFunctions = makePHEventFunctions("legacyReactor");
 
-/** Returns the reactor */
-export const useReactor: UsePHGlobalValue<IDocumentDriveServer> =
+/** Returns the legacy reactor */
+export const useLegacyReactor: UsePHGlobalValue<IDocumentDriveServer> =
   eventFunctions.useValue;
 
-/** Sets the reactor */
-export const setReactor: SetPHGlobalValue<IDocumentDriveServer> =
+/** Sets the legacy reactor */
+export const setLegacyReactor: SetPHGlobalValue<IDocumentDriveServer> =
   eventFunctions.setValue;
 
 /** Adds an event handler for the reactor */
-export const addReactorEventHandler: AddPHGlobalEventHandler =
+export const addLegacyReactorEventHandler: AddPHGlobalEventHandler =
   eventFunctions.addEventHandler;

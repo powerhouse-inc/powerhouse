@@ -116,13 +116,13 @@ function createDebouncedRefreshReactorData(
 
 export const refreshReactorData = createDebouncedRefreshReactorData();
 
-export async function initReactor(
-  reactor: IDocumentDriveServer,
+export async function initLegacyReactor(
+  legacyReactor: IDocumentDriveServer,
   renown: IRenown | undefined,
   connectCrypto: IConnectCrypto | undefined,
 ) {
-  await initJwtHandler(reactor, renown, connectCrypto);
-  const errors = await reactor.initialize();
+  await initJwtHandler(legacyReactor, renown, connectCrypto);
+  const errors = await legacyReactor.initialize();
   const error = errors?.at(0);
   if (error) {
     throw error;
@@ -159,7 +159,7 @@ export async function handleCreateFirstLocalDrive(
 }
 
 async function initJwtHandler(
-  reactor: IDocumentDriveServer,
+  legacyReactor: IDocumentDriveServer,
   renown: IRenown | undefined,
   connectCrypto: IConnectCrypto | undefined,
 ) {
@@ -171,7 +171,7 @@ async function initJwtHandler(
     return;
   }
 
-  reactor.setGenerateJwtHandler(async (driveUrl) => {
+  legacyReactor.setGenerateJwtHandler(async (driveUrl) => {
     return connectCrypto.getBearerToken(driveUrl, user.address, true, {
       expiresIn: 10,
     });

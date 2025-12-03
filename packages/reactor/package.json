@@ -43,7 +43,7 @@
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "kysely": "^0.28.2",
-    "kysely-pglite": "^0.6.1",
+    "kysely-pglite-dialect": "^1.1.1",
     "uuid": "^11.0.5"
   },
   "devDependencies": {

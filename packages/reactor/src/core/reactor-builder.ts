@@ -38,8 +38,9 @@ import type {
 
 import type { IJobExecutorManager } from "#executor/interfaces.js";
 import type { IDocumentIndexer } from "#storage/interfaces.js";
+import { PGlite } from "@electric-sql/pglite";
 import { Kysely } from "kysely";
-import { KyselyPGlite } from "kysely-pglite";
+import { PGliteDialect } from "kysely-pglite-dialect";
 import type { IEventBus } from "../events/interfaces.js";
 import type { IReadModelCoordinator } from "../read-models/interfaces.js";
 import { runMigrations } from "../storage/migrations/migrator.js";
@@ -144,9 +145,8 @@ export class ReactorBuilder {
     const driveServer = builder.build() as unknown as BaseDocumentDriveServer;
     await driveServer.initialize();
 
-    const kyselyPGlite = await KyselyPGlite.create();
     const database = new Kysely<Database>({
-      dialect: kyselyPGlite.dialect,
+      dialect: new PGliteDialect(new PGlite()),
     });
 
     if (this.migrationStrategy === "auto") {

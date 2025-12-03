@@ -7,8 +7,9 @@ import {
   ReactorBuilder as DriveReactorBuilder,
   MemoryStorage,
 } from "document-drive";
+import { PGlite } from "@electric-sql/pglite";
 import { Kysely } from "kysely";
-import { KyselyPGlite } from "kysely-pglite";
+import { PGliteDialect } from "kysely-pglite-dialect";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, it } from "vitest";
@@ -67,9 +68,8 @@ async function createReactorSetup(
   const driveServer = builder.build() as unknown as BaseDocumentDriveServer;
   await driveServer.initialize();
 
-  const kyselyPGlite = await KyselyPGlite.create();
   const db = new Kysely<Database>({
-    dialect: kyselyPGlite.dialect,
+    dialect: new PGliteDialect(new PGlite()),
   });
 
   const migrationResult = await runMigrations(db);

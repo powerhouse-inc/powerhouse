@@ -64,6 +64,7 @@
     "@powerhousedao/analytics-engine-browser": "^0.6.0",
     "@powerhousedao/analytics-engine-core": "^0.5.0",
     "@powerhousedao/config": "workspace:*",
+    "@powerhousedao/reactor": "workspace:*",
     "@renown/sdk": "workspace:*",
     "@tanstack/react-query": "^5.49.2",
     "change-case": "^5.4.4",

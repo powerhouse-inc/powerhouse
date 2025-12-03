@@ -1,4 +1,10 @@
-import { createRemoveOldRemoteDrivesConfig } from "./drive-preservation.js";
+import {
+  GqlChannelFactory,
+  ReactorBuilder,
+  ReactorClientBuilder,
+  SyncBuilder,
+  type ReactorClientModule,
+} from "@powerhousedao/reactor";
 import type {
   DefaultRemoteDriveInput,
   DocumentDriveServerOptions,
@@ -12,9 +18,10 @@ import {
   BrowserStorage,
   EventQueueManager,
   InMemoryCache,
-  ReactorBuilder,
+  ReactorBuilder as LegacyReactorBuilder,
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
+import { createRemoveOldRemoteDrivesConfig } from "./drive-preservation.js";
 
 const DEFAULT_DRIVES_URL =
   (import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL as string | undefined) ||
@@ -80,7 +87,7 @@ export function createBrowserDocumentDriveServer(
   storage: IDriveOperationStorage,
   options: DocumentDriveServerOptions,
 ): IDocumentDriveServer {
-  return new ReactorBuilder(documentModels)
+  return new LegacyReactorBuilder(documentModels)
     .withStorage(storage)
     .withCache(new InMemoryCache())
     .withQueueManager(new EventQueueManager())
@@ -89,4 +96,23 @@ export function createBrowserDocumentDriveServer(
       ...getReactorDefaultDrivesConfig(),
     })
     .build();
+}
+
+/**
+ * Creates a Reactor that plugs into legacy storage but syncs through the new
+ * Reactor GQL API.
+ */
+export function createBrowserReactor(
+  documentModelModules: DocumentModelModule[],
+  legacyStorage: IDocumentStorage & IDocumentOperationStorage,
+): Promise<ReactorClientModule> {
+  const builder = new ReactorClientBuilder().withReactorBuilder(
+    new ReactorBuilder()
+      .withDocumentModels(documentModelModules)
+      .withLegacyStorage(legacyStorage)
+      .withSync(new SyncBuilder().withChannelFactory(new GqlChannelFactory()))
+      .withFeatures({ legacyStorageEnabled: true }),
+  );
+
+  return builder.buildModule();
 }

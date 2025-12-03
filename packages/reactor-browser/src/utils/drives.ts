@@ -124,7 +124,7 @@ export function getSyncStatus(
   sharingType: SharingType,
 ): Promise<SyncStatus | undefined> {
   if (sharingType === "LOCAL") return Promise.resolve(undefined);
-  const reactor = window.ph?.reactor;
+  const reactor = window.ph?.legacyReactor;
   if (!reactor) {
     return Promise.resolve(undefined);
   }
@@ -144,7 +144,7 @@ export function getSyncStatusSync(
   sharingType: SharingType,
 ): SyncStatus | undefined {
   if (sharingType === "LOCAL") return;
-  const reactor = window.ph?.reactor;
+  const reactor = window.ph?.legacyReactor;
   if (!reactor) {
     return;
   }

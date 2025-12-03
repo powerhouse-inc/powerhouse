@@ -66,7 +66,7 @@ export async function login(
 
 export async function logout() {
   const renown = window.ph?.renown;
-  const reactor = window.ph?.reactor;
+  const reactor = window.ph?.legacyReactor;
   setLoginStatus("initial");
   await renown?.logout();
   reactor?.removeJwtHandler();

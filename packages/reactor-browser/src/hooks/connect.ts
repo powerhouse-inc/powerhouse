@@ -104,6 +104,6 @@ export {
   setProcessorManager,
   useProcessorManager,
 } from "./processor-manager.js";
-export { setReactor, useReactor } from "./reactor.js";
+export { setLegacyReactor, useLegacyReactor } from "./reactor.js";
 export { setRenown, useRenown } from "./renown.js";
 export { setUser, useUser } from "./user.js";
