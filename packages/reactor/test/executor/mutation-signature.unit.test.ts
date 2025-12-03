@@ -1,3 +1,4 @@
+import type { SignatureVerificationHandler } from "#index.js";
 import type {
   IDocumentOperationStorage,
   IDocumentStorage,
@@ -5,7 +6,6 @@ import type {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IWriteCache } from "../../src/cache/write/interfaces.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
-import type { SignatureVerificationHandler } from "../../src/executor/types.js";
 import type { Job } from "../../src/queue/types.js";
 import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
 import { InvalidSignatureError } from "../../src/shared/errors.js";
