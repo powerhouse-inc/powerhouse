@@ -3,6 +3,7 @@ import fs from "fs";
 import { withFilter } from "graphql-subscriptions";
 import { gql } from "graphql-tag";
 import path from "path";
+import type { DrivePermissionService } from "../../services/drive-permission.service.js";
 import { BaseSubgraph } from "../base-subgraph.js";
 import type { SubgraphArgs } from "../types.js";
 import {
@@ -115,6 +116,51 @@ export class ReactorSubgraph extends BaseSubgraph {
           return await resolvers.pollSyncEnvelopes(this.syncManager, args);
         } catch (error) {
           this.logger.error("Error in pollSyncEnvelopes:", error);
+          throw error;
+        }
+      },
+
+      driveAccess: async (
+        _parent: unknown,
+        args: { driveId: string },
+        ctx: {
+          drivePermissionService?: DrivePermissionService;
+        },
+      ) => {
+        this.logger.debug("driveAccess", args);
+        if (!this.drivePermissionService) {
+          throw new Error("DrivePermissionService not available");
+        }
+        try {
+          return await resolvers.driveAccess(this.drivePermissionService, args);
+        } catch (error) {
+          this.logger.error("Error in driveAccess:", error);
+          throw error;
+        }
+      },
+
+      userDrivePermissions: async (
+        _parent: unknown,
+        _args: unknown,
+        ctx: {
+          user?: { address: string };
+          drivePermissionService?: DrivePermissionService;
+        },
+      ) => {
+        this.logger.debug("userDrivePermissions");
+        if (!this.drivePermissionService) {
+          throw new Error("DrivePermissionService not available");
+        }
+        if (!ctx.user?.address) {
+          return [];
+        }
+        try {
+          return await resolvers.userDrivePermissions(
+            this.drivePermissionService,
+            ctx.user.address,
+          );
+        } catch (error) {
+          this.logger.error("Error in userDrivePermissions:", error);
           throw error;
         }
       },
@@ -285,6 +331,91 @@ export class ReactorSubgraph extends BaseSubgraph {
           );
         } catch (error) {
           this.logger.error("Error in pushSyncEnvelope:", error);
+          throw error;
+        }
+      },
+
+      setDriveVisibility: async (
+        _parent: unknown,
+        args: { driveId: string; visibility: string },
+        ctx: {
+          user?: { address: string };
+          isAdmin?: (address: string) => boolean;
+        },
+      ) => {
+        this.logger.debug("setDriveVisibility", args);
+        if (!this.drivePermissionService) {
+          throw new Error("DrivePermissionService not available");
+        }
+        try {
+          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
+          return await resolvers.setDriveVisibility(
+            this.drivePermissionService,
+            args as {
+              driveId: string;
+              visibility: "PUBLIC" | "PROTECTED" | "PRIVATE";
+            },
+            ctx.user?.address,
+            isGlobalAdmin,
+          );
+        } catch (error) {
+          this.logger.error("Error in setDriveVisibility:", error);
+          throw error;
+        }
+      },
+
+      grantDrivePermission: async (
+        _parent: unknown,
+        args: { driveId: string; userAddress: string; permission: string },
+        ctx: {
+          user?: { address: string };
+          isAdmin?: (address: string) => boolean;
+        },
+      ) => {
+        this.logger.debug("grantDrivePermission", args);
+        if (!this.drivePermissionService) {
+          throw new Error("DrivePermissionService not available");
+        }
+        try {
+          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
+          return await resolvers.grantDrivePermission(
+            this.drivePermissionService,
+            args as {
+              driveId: string;
+              userAddress: string;
+              permission: "READ" | "WRITE" | "ADMIN";
+            },
+            ctx.user?.address,
+            isGlobalAdmin,
+          );
+        } catch (error) {
+          this.logger.error("Error in grantDrivePermission:", error);
+          throw error;
+        }
+      },
+
+      revokeDrivePermission: async (
+        _parent: unknown,
+        args: { driveId: string; userAddress: string },
+        ctx: {
+          user?: { address: string };
+          isAdmin?: (address: string) => boolean;
+        },
+      ) => {
+        this.logger.debug("revokeDrivePermission", args);
+        if (!this.drivePermissionService) {
+          throw new Error("DrivePermissionService not available");
+        }
+        try {
+          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
+          return await resolvers.revokeDrivePermission(
+            this.drivePermissionService,
+            args,
+            ctx.user?.address,
+            isGlobalAdmin,
+          );
+        } catch (error) {
+          this.logger.error("Error in revokeDrivePermission:", error);
           throw error;
         }
       },

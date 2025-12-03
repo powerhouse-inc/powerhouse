@@ -10,6 +10,7 @@ import type { PHDocument } from "document-model";
 import type { DocumentNode } from "graphql";
 import type { IncomingHttpHeaders } from "http";
 import type { BaseSubgraph } from "./base-subgraph.js";
+import type { DrivePermissionService } from "../services/drive-permission.service.js";
 
 export type SubgraphClass = typeof BaseSubgraph;
 
@@ -27,6 +28,7 @@ export type Context = {
     chainId: number;
     networkId: string;
   };
+  drivePermissionService?: DrivePermissionService;
 };
 
 export type ISubgraph = {
@@ -48,6 +50,7 @@ export type SubgraphArgs = {
   analyticsStore: IAnalyticsStore;
   graphqlManager: GraphQLManager;
   syncManager?: ISyncManager;
+  drivePermissionService?: DrivePermissionService;
   path?: string;
 };
 

@@ -7,6 +7,7 @@ import type {
 import type { IDocumentDriveServer, IRelationalDb } from "document-drive";
 import type { DocumentNode } from "graphql";
 import { gql } from "graphql-tag";
+import type { DrivePermissionService } from "../services/drive-permission.service.js";
 
 export class BaseSubgraph implements ISubgraph {
   name = "example";
@@ -26,6 +27,7 @@ export class BaseSubgraph implements ISubgraph {
   graphqlManager: GraphQLManager;
   relationalDb: IRelationalDb;
   syncManager?: ISyncManager;
+  drivePermissionService?: DrivePermissionService;
 
   constructor(args: SubgraphArgs) {
     this.reactor = args.reactor;
@@ -33,6 +35,7 @@ export class BaseSubgraph implements ISubgraph {
     this.graphqlManager = args.graphqlManager;
     this.relationalDb = args.relationalDb;
     this.syncManager = args.syncManager;
+    this.drivePermissionService = args.drivePermissionService;
     this.path = args.path ?? "";
   }
 

@@ -817,3 +817,144 @@ export function pushSyncEnvelope(
 
   return Promise.resolve(true);
 }
+
+// ============================================
+// Drive Permission Resolvers
+// ============================================
+
+import type { DrivePermissionService } from "../../services/drive-permission.service.js";
+import type { DrivePermissionLevel, DriveVisibility } from "../../utils/db.js";
+
+export type DriveAccessInfo = {
+  driveId: string;
+  visibility: DriveVisibility;
+  permissions: Array<{
+    driveId: string;
+    userAddress: string;
+    permission: DrivePermissionLevel;
+    grantedBy: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+};
+
+export async function driveAccess(
+  service: DrivePermissionService,
+  args: { driveId: string },
+): Promise<DriveAccessInfo> {
+  const visibility = await service.getDriveVisibility(args.driveId);
+  const permissions = await service.getDrivePermissions(args.driveId);
+
+  return {
+    driveId: args.driveId,
+    visibility,
+    permissions,
+  };
+}
+
+export async function userDrivePermissions(
+  service: DrivePermissionService,
+  userAddress: string,
+): Promise<
+  Array<{
+    driveId: string;
+    userAddress: string;
+    permission: DrivePermissionLevel;
+    grantedBy: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }>
+> {
+  return service.getUserDrives(userAddress);
+}
+
+export async function setDriveVisibility(
+  service: DrivePermissionService,
+  args: { driveId: string; visibility: DriveVisibility },
+  userAddress: string | undefined,
+  isGlobalAdmin: boolean,
+): Promise<{ driveId: string; visibility: DriveVisibility }> {
+  // Check authorization: must be global admin or drive admin
+  if (!isGlobalAdmin) {
+    if (!userAddress) {
+      throw new GraphQLError("Authentication required");
+    }
+
+    const canManage = await service.canManage(args.driveId, userAddress);
+    if (!canManage) {
+      throw new GraphQLError(
+        "Forbidden: You must be an admin of this drive to change its visibility",
+      );
+    }
+  }
+
+  await service.setDriveVisibility(args.driveId, args.visibility);
+
+  return {
+    driveId: args.driveId,
+    visibility: args.visibility,
+  };
+}
+
+export async function grantDrivePermission(
+  service: DrivePermissionService,
+  args: {
+    driveId: string;
+    userAddress: string;
+    permission: DrivePermissionLevel;
+  },
+  grantedByAddress: string | undefined,
+  isGlobalAdmin: boolean,
+): Promise<{
+  driveId: string;
+  userAddress: string;
+  permission: DrivePermissionLevel;
+  grantedBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}> {
+  // Check authorization: must be global admin or drive admin
+  if (!grantedByAddress) {
+    throw new GraphQLError("Authentication required");
+  }
+
+  if (!isGlobalAdmin) {
+    const canManage = await service.canManage(args.driveId, grantedByAddress);
+    if (!canManage) {
+      throw new GraphQLError(
+        "Forbidden: You must be an admin of this drive to grant permissions",
+      );
+    }
+  }
+
+  return service.grantPermission(
+    args.driveId,
+    args.userAddress,
+    args.permission,
+    grantedByAddress,
+  );
+}
+
+export async function revokeDrivePermission(
+  service: DrivePermissionService,
+  args: { driveId: string; userAddress: string },
+  revokedByAddress: string | undefined,
+  isGlobalAdmin: boolean,
+): Promise<boolean> {
+  // Check authorization: must be global admin or drive admin
+  if (!revokedByAddress) {
+    throw new GraphQLError("Authentication required");
+  }
+
+  if (!isGlobalAdmin) {
+    const canManage = await service.canManage(args.driveId, revokedByAddress);
+    if (!canManage) {
+      throw new GraphQLError(
+        "Forbidden: You must be an admin of this drive to revoke permissions",
+      );
+    }
+  }
+
+  await service.revokePermission(args.driveId, args.userAddress);
+  return true;
+}
