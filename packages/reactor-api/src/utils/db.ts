@@ -155,4 +155,3 @@ export const initAnalyticsStoreSql = [
   `create index if not exists analyticsseries_analyticsdimension_seriesid_index
       on "AnalyticsSeries_AnalyticsDimension" ("seriesId");`,
 ];
-

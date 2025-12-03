@@ -3,6 +3,7 @@ import fs from "fs";
 import { withFilter } from "graphql-subscriptions";
 import { gql } from "graphql-tag";
 import path from "path";
+import type { DrivePermissionService } from "../../services/drive-permission.service.js";
 import { BaseSubgraph } from "../base-subgraph.js";
 import type { SubgraphArgs } from "../types.js";
 import {
@@ -122,7 +123,9 @@ export class ReactorSubgraph extends BaseSubgraph {
       driveAccess: async (
         _parent: unknown,
         args: { driveId: string },
-        ctx: { drivePermissionService?: import("../../services/drive-permission.service.js").DrivePermissionService },
+        ctx: {
+          drivePermissionService?: DrivePermissionService;
+        },
       ) => {
         this.logger.debug("driveAccess", args);
         if (!this.drivePermissionService) {
@@ -141,7 +144,7 @@ export class ReactorSubgraph extends BaseSubgraph {
         _args: unknown,
         ctx: {
           user?: { address: string };
-          drivePermissionService?: import("../../services/drive-permission.service.js").DrivePermissionService;
+          drivePermissionService?: DrivePermissionService;
         },
       ) => {
         this.logger.debug("userDrivePermissions");
@@ -348,7 +351,10 @@ export class ReactorSubgraph extends BaseSubgraph {
           const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
           return await resolvers.setDriveVisibility(
             this.drivePermissionService,
-            args as { driveId: string; visibility: "PUBLIC" | "PROTECTED" | "PRIVATE" },
+            args as {
+              driveId: string;
+              visibility: "PUBLIC" | "PROTECTED" | "PRIVATE";
+            },
             ctx.user?.address,
             isGlobalAdmin,
           );
@@ -374,7 +380,11 @@ export class ReactorSubgraph extends BaseSubgraph {
           const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
           return await resolvers.grantDrivePermission(
             this.drivePermissionService,
-            args as { driveId: string; userAddress: string; permission: "READ" | "WRITE" | "ADMIN" },
+            args as {
+              driveId: string;
+              userAddress: string;
+              permission: "READ" | "WRITE" | "ADMIN";
+            },
             ctx.user?.address,
             isGlobalAdmin,
           );
