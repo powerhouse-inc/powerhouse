@@ -21,6 +21,8 @@ import type {
 } from "document-model";
 
 export type DocumentModelModule<TState extends PHBaseState = PHBaseState> = {
+  /** optional version field, should be made required */
+  version?: number;
   reducer: Reducer<TState>;
   actions: Record<string, (...args: any[]) => Action>;
   utils: DocumentModelUtils<TState>;
