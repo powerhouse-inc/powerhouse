@@ -262,7 +262,7 @@ export function DocumentSpecificationSchema(): z.ZodObject<
     changeLog: z.array(z.string()),
     modules: z.array(ModuleSchema()),
     state: ScopeStateSchema(),
-    version: z.number(),
+    version: z.number().int(),
   });
 }
 
