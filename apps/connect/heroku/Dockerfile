@@ -36,6 +36,9 @@ ENV PH_CONNECT_SENTRY_AUTH_TOKEN=$PH_CONNECT_SENTRY_AUTH_TOKEN
 ENV PH_CONNECT_SENTRY_ORG=$PH_CONNECT_SENTRY_ORG
 ENV PH_CONNECT_SENTRY_PROJECT=$PH_CONNECT_SENTRY_PROJECT
 
+# Configure JSR registry for @jsr scoped packages
+RUN pnpm config set @jsr:registry https://npm.jsr.io
+
 # Install ph-cmd
 RUN pnpm add -g ph-cmd@$TAG
 

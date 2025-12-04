@@ -45,6 +45,9 @@ ENV PH_PACKAGES=""
 ENV PH_CONNECT_BASE_PATH="/"
 WORKDIR /app
 
+# Configure JSR registry for @jsr scoped packages
+RUN pnpm config set @jsr:registry https://npm.jsr.io
+
 # Create and initialize the project
 RUN pnpm add -g ph-cmd@$TAG
 RUN if [[ "$TAG" == *"dev"* ]]; then \
