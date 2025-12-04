@@ -5,8 +5,8 @@ export {
   type DocumentChangeEvent,
   type IReactorClient,
 } from "./client/types.js";
-export { ReactorClientBuilder } from "./core/builder.js";
 export { ReactorBuilder } from "./core/reactor-builder.js";
+export { ReactorClientBuilder } from "./core/reactor-client-builder.js";
 export { Reactor } from "./core/reactor.js";
 export {
   type IReactor,

@@ -1,3 +1,4 @@
+import { PGlite } from "@electric-sql/pglite";
 import {
   GqlChannelFactory,
   ReactorBuilder,
@@ -121,7 +122,12 @@ export function createBrowserReactor(
         .withDocumentModels(documentModelModules)
         .withLegacyStorage(legacyStorage)
         .withSync(new SyncBuilder().withChannelFactory(new GqlChannelFactory()))
-        .withFeatures({ legacyStorageEnabled: true }),
+        .withFeatures({ legacyStorageEnabled: true })
+        .withPGlite(
+          new PGlite("idb://reactor", {
+            relaxedDurability: true,
+          }),
+        ),
     );
 
   return builder.buildModule();

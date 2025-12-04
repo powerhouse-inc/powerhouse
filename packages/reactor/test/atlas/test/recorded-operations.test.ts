@@ -1,3 +1,4 @@
+import { PGlite } from "@electric-sql/pglite";
 import type {
   BaseDocumentDriveServer,
   IDocumentOperationStorage,
@@ -7,7 +8,6 @@ import {
   ReactorBuilder as DriveReactorBuilder,
   MemoryStorage,
 } from "document-drive";
-import { PGlite } from "@electric-sql/pglite";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { readFileSync } from "node:fs";

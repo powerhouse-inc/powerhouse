@@ -66,6 +66,7 @@ export class ReactorBuilder {
   private eventBus?: IEventBus;
   public documentIndexer?: IDocumentIndexer;
   private signatureVerifier?: SignatureVerificationHandler;
+  private pglite?: PGlite;
 
   withDocumentModels(models: DocumentModelModule[]): this {
     this.documentModels = models;
@@ -109,7 +110,7 @@ export class ReactorBuilder {
     return this;
   }
 
-  setMigrationStrategy(strategy: MigrationStrategy): this {
+  withMigrationStrategy(strategy: MigrationStrategy): this {
     this.migrationStrategy = strategy;
     return this;
   }
@@ -129,8 +130,9 @@ export class ReactorBuilder {
     return this;
   }
 
-  get events(): IEventBus | undefined {
-    return this.eventBus;
+  withPGlite(pglite: PGlite): this {
+    this.pglite = pglite;
+    return this;
   }
 
   async build(): Promise<IReactor> {
@@ -153,7 +155,7 @@ export class ReactorBuilder {
     await driveServer.initialize();
 
     const database = new Kysely<Database>({
-      dialect: new PGliteDialect(new PGlite()),
+      dialect: new PGliteDialect(this.pglite ?? new PGlite()),
     });
 
     if (this.migrationStrategy === "auto") {
