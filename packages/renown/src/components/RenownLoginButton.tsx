@@ -2,8 +2,10 @@
 
 import type { CSSProperties, ReactNode } from "react";
 import { useState, useRef, useEffect } from "react";
-import renownShort from "../assets/renown-short.png";
-import renownShortHover from "../assets/renown-short-hover.png";
+import {
+  renownShortDataUrl,
+  renownShortHoverDataUrl,
+} from "./image-data.js";
 import { RenownLogo, SpinnerIcon } from "./icons.js";
 
 export interface RenownLoginButtonProps {
@@ -163,7 +165,7 @@ export function RenownLoginButton({
           <img
             width={42}
             height={42}
-            src={isHovered ? renownShortHover : renownShort}
+            src={isHovered ? renownShortHoverDataUrl : renownShortDataUrl}
             alt="Renown Login"
             style={{ display: "block" }}
           />
