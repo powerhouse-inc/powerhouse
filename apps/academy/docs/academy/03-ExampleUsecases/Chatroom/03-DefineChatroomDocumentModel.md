@@ -1,54 +1,100 @@
-# Define the chatroom document model
+# Write the document specification
 
-In this tutorial, you will learn how to design your document model and export it to be later used in your Powerhouse project.
-If you don't have a document model created yet, have a look at the previous steps of this tutorial to create a new document model.
+:::tip Tutorial Repository
+📦 **Reference Code**: [chatroom-demo](https://github.com/powerhouse-inc/chatroom-demo)
 
-Before you start, make sure you have the Connect application running.
-
-## Chatroom document model schema
-
-We use GraphQL Schema Definition Language (SDL) to define the document model schema. Below, you can see the SDL for the `ChatRoom` document model.
-
-:::info **The State Schema**
-This schema contains the data structure of the document model and the basic operations that can be performed on the document model. For more in depth information please visit [State Schema](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema)
+This tutorial step has a corresponding implementation in the repository. After completing this step, your project will have a document model specification with:
+- Document model specification files (`chat-room.json`, `schema.graphql`)
+- Auto-generated TypeScript types and action creators
+- Reducer scaffolding ready for implementation
 :::
 
-## State schema (See next steps)
+<details>
+<summary>📖 How to use this tutorial</summary>
+
+**Prerequisites**: Complete step 1 and set up the tutorial remote (see previous step).
+
+### Compare your generated code
+
+After running `ph generate ChatRoom.phd`, compare with the reference:
+
+```bash
+# Compare all generated files with the reference
+git diff tutorial/main -- document-models/chat-room/
+
+# View a specific file from the reference
+git show tutorial/main:document-models/chat-room/schema.graphql
+```
+
+### Visual comparison with GitHub Desktop
+
+After making a commit, use GitHub Desktop for visual diff:
+1. **Branch** menu → **"Compare to Branch..."**
+2. Select `tutorial/main`
+3. Review all file differences in the visual interface
+
+See step 1 for detailed GitHub Desktop instructions.
+
+</details>
+
+In this tutorial, you will learn how to define the specifications for a **ChatRoom** document model within the Connect application using its GraphQL schema, and then export the resulting document model specification document for your Powerhouse project.
+
+If you don't have a document specification file created yet, have a look at the previous step of this tutorial to create a new document specification.
+
+Before you start, make sure you have the Connect application running locally with the command:
+
+```bash
+ph connect
+```
+
+## ChatRoom document specification
+
+Make sure you have named your document model `ChatRoom` (PascalCase, no spaces or hyphens).  
+**Pay close attention to capitalization, as it influences code generation.**
+
+We use the **GraphQL Schema Definition Language** (SDL) to define the schema for the document model. Below, you can see the SDL for the `ChatRoom` document model.
+
+:::info
+This schema defines the **data structure** of the document model and the types involved in its operations. Documents in Powerhouse leverage **event sourcing principles**, where every state transition is represented by an operation. GraphQL input types describe operations, ensuring that user intents are captured effectively.
+:::
+
+<details>
+<summary>State schema of our ChatRoom</summary>
 
 ```graphql
-# Defines a GraphQL type for the state of the chatroom document
+# The state of our ChatRoom
 type ChatRoomState {
-  id: OID! # Unique identifier for the chat-room
-  name: String! # Name of the chat-room
-  description: String # Optional description of the chat-room
-  createdAt: DateTime! # Timestamp of when the chat-room was created
-  createdBy: ID! # Agent ID of the user who created the chat-room
+  id: OID!              # Unique identifier for the chat-room
+  name: String!         # Name of the chat-room
+  description: String   # Optional description of the chat-room
+  createdAt: DateTime!  # Timestamp of when the chat-room was created
+  createdBy: ID!        # Agent ID of the user who created the chat-room
   messages: [Message!]! # List of messages in the chat-room
 }
 
-# Defines a GraphQL type for the state of a message
+# A single message in the chat-room
 type Message {
-  id: OID! # Unique identifier for the message
-  sender: Sender! # Agent details of the message sender
-  content: String # Message content
-  sentAt: DateTime! # Timestamp of when the message was sent
+  id: OID!              # Unique identifier for the message
+  sender: Sender!       # Agent details of the message sender
+  content: String       # Message content
+  sentAt: DateTime!     # Timestamp of when the message was sent
   reactions: [Reaction!] # Reactions to the message
 }
 
-# Defines a GraphQL type for the state of a sender
+# The sender of a message
 type Sender {
-  id: ID! # Unique identifier for the sender
+  id: ID!               # Unique identifier for the sender
   name: String
-  avatarUrl: URL # Allows us to pull the ENS and/or nft of the persons profile
+  avatarUrl: URL        # Allows us to pull the ENS and/or NFT of the person's profile
 }
 
-# Defines a GraphQL type for the state of a reaction to a message
+# A reaction to a message
 type Reaction {
-  type: ReactionType! # Type of reaction (one of the predefined emoji)
-  reactedBy: [ID!]! # Agent ID of the user who reacted
+  type: ReactionType!   # Type of reaction (one of the predefined emoji)
+  reactedBy: [ID!]!     # Agent IDs of users who reacted
 }
 
-# Defines the various predefined emojis to react to a message
+# The predefined emoji reactions
 enum ReactionType {
   THUMBS_UP
   THUMBS_DOWN
@@ -58,94 +104,146 @@ enum ReactionType {
 }
 ```
 
-## Operations schema (See next steps)
+</details>
+
+<details>
+<summary>Operations schema of our ChatRoom</summary>
 
 ```graphql
-# add_message
-
+# Add a new message to the chat-room
 input AddMessageInput {
-  messageId: OID! # ID of the message that is being added
-  sender: SenderInput! # ID of the user sending the message
-  content: String! # Content of the message
-  sentAt: DateTime!
+  messageId: OID!       # ID of the message being added
+  sender: SenderInput!  # Sender information
+  content: String!      # Content of the message
+  sentAt: DateTime!     # Timestamp when the message was sent
 }
 
+# Sender information for a message
 input SenderInput {
-  id: ID! # Unique identifier for the sender
+  id: ID!               # Unique identifier for the sender
   name: String
-  avatarUrl: URL # Allows us to pull the ENS and/or nft of the persons profile
+  avatarUrl: URL        # Avatar URL for the sender
 }
 
+# Add an emoji reaction to a message
 input AddEmojiReactionInput {
-  messageId: OID! # ID of the message to which the reaction is being added
-  reactedBy: ID! # ID of the user adding the reaction
-  type: ReactionType! # Type of the reaction (emoji)
+  messageId: OID!       # ID of the message to react to
+  reactedBy: ID!        # ID of the user adding the reaction
+  type: ReactionType!   # Type of the reaction (emoji)
 }
 
+# Remove an emoji reaction from a message
 input RemoveEmojiReactionInput {
-  messageId: OID! # ID of the message to which the reaction is being removed
-  senderId: ID! # ID of the user that is removing the reaction
-  type: ReactionType! # Type of the reaction (emoji)
+  messageId: OID!       # ID of the message to remove reaction from
+  senderId: ID!         # ID of the user removing the reaction
+  type: ReactionType!   # Type of the reaction (emoji)
 }
 
+# Edit the chat-room name
 input EditChatNameInput {
   name: String
 }
 
+# Edit the chat-room description
 input EditChatDescriptionInput {
   description: String
 }
 ```
 
-## Define the document model
+</details>
 
-To be able to define the document model, you need to open the Chatroom document model editor in Connect.
+## Define the document model specification
 
-The steps below show you how to do this:
+To define the document model, you need to open the document model editor in Connect.
 
-1. In the Connect application, click on the `ChatRoom` document model you've created in the previous step, to open the document model editor.
-2. You'll be welcomed with a form to fill, this is metadata about the document model, fill in the details in the fields.
+### Steps to define your document model:
 
-   In the `Document Type` field, type `powerhouse/chat-room`. This defines the new type of document that will be created with this document model.
+1. In the Connect application, click on **'ChatRoom' Document** to open the document model specification editor.
+
+2. You'll be presented with a form to fill in metadata about the document model. Fill in the details in the respective fields.
+
+   In the **Document Type** field, type `powerhouse/chat-room` (lowercase with hyphen). This defines the new type of document that will be created with this document model specification.
 
    ![Chatroom Document Model Form Metadata](image-2.png)
 
-3. In the code editor, you can see the SDL for the document model. Replace the existing SDL with the SDL defined in the [State Schema](#state-schema) section above. Only copy and paste the types, leaving the inputs for the next step. You can however already press 'Sync with schema' button to set the initial state of your document model based on your Schema Definition Language. Verify that your Global State Initial Value looks like this.
+3. In the code editor, you can see the SDL for the document model. Replace the existing SDL template with the SDL defined in the **State Schema** section above. Only copy and paste the types, leaving the inputs for the next step. You can press the 'Sync with schema' button to set the initial state of your document model based on your Schema Definition Language.
 
-```json
-{
-  "id": "",
-  "name": "",
-  "description": null,
-  "createdAt": null,
-  "createdBy": null,
-  "messages": []
-}
-```
+4. Verify that your **Global State Initial Value** looks like this:
 
-4. Below the editor, there is an input field **'Add module'**. You need to create and name a module that the input operations will be added to. In this case, we will name the module **'general_operations'**. Press enter.
-5. Now there is a new field, called **'Add operation'**. Here you will have to add each input operation to the module, one by one.
-6. Inside the **'Add operation'** field, type **'ADD_MESSAGE'** and press enter. A small editor will appear under with an empty input type that you have to fill. Copy the first input type from the [Operations Schema](#operations-schema) section and paste it in the editor. The editor should look like this:
+   ```json
+    {
+      "name": "",
+      "description": null,
+      "createdBy": "placeholder-id",
+       "messages": []
+    }
+   ```
 
-```graphql
-input AddMessageInput {
-  messageId: OID!
-  sender: SenderInput!
-  content: String!
-  sentAt: DateTime!
-}
+5. Below the editor, find the input field `Add module`. Create and name a module for organizing your input operations. Name the module `general_operations`. Press enter.
 
-input SenderInput {
-  id: ID! # Unique identifier for the sender
-  name: String
-  avatarUrl: URL # Allows us to pull the ENS and/or nft of the persons profile
-}
-```
+6. Now there is a new field, called `Add operation`. Here you will add each input operation to the module, one by one.
 
-7. Repeat step 6 for the other input operations based on the [Operations Schema](#operations-schema). If you noticed, you only need to add the name `(ADD_EMOJI_REACTION, EDIT_CHAT_NAME, etc)` of the operation without the `input` suffix. Then it will be generated once you press enter.
-8. Let's just add a couple more reducer exceptions to the `ADD_MESSAGE` operation which we'll be using later to avoid empty messages or messages exceeding a maximum lenght. Add `MessageContentCannotBeEmpty` and `MessageContentExceedsTheMaximumLenght` to the reducer exceptions of `ADD_MESSAGE`
-9. Once you have added all the input operations, click on the `Export` button, at the top right of the editor, to save the document model on your local machine. Ideally you already save your file in the root of your powerhouse project on your machine.
+7. Inside the `Add operation` field, type `ADD_MESSAGE` and press enter. A small editor will appear underneath with an empty input type that you need to fill. Copy the `AddMessageInput` and `SenderInput` from the **Operations Schema** section and paste them in the editor:
+
+   ```graphql
+   input AddMessageInput {
+     messageId: OID!
+     sender: SenderInput!
+     content: String!
+     sentAt: DateTime!
+   }
+
+   input SenderInput {
+     id: ID!
+     name: String
+     avatarUrl: URL
+   }
+   ```
+
+8. Repeat step 7 for the other input operations: `ADD_EMOJI_REACTION`, `REMOVE_EMOJI_REACTION`, `EDIT_CHAT_NAME`, and `EDIT_CHAT_DESCRIPTION`. Note that you only need to add the operation name (e.g., `ADD_EMOJI_REACTION`) without the `Input` suffix—it will be generated automatically.
+
+9. Add reducer exceptions to the `ADD_MESSAGE` operation for validation: `MessageContentCannotBeEmpty` and `MessageContentExceedsTheMaximumLength`. These will be used later to validate messages.
+
+10. Once you have added all the input operations, click the `Export` button at the top right of the editor to save the document model specification to your local machine. Save the file in the root of your Powerhouse project.
 
 Check the screenshot below to verify the complete implementation:
 
 ![Chatroom Document Model](image-3.png)
+
+## Verify your document model generation
+
+After running `ph generate ChatRoom.phd`, your project should have the following structure in `document-models/chat-room/`:
+
+```
+document-models/chat-room/
+├── gen/                              # Auto-generated code (don't edit)
+│   ├── actions.ts
+│   ├── creators.ts                   # Action creator functions
+│   ├── types.ts                      # TypeScript type definitions
+│   ├── reducer.ts
+│   └── general-operations/
+│       └── operations.ts             # Operation type definitions
+├── src/                              # Your custom implementation
+│   ├── reducers/
+│   │   └── general-operations.ts     # Reducer functions (to implement next)
+│   └── tests/
+│       └── general-operations.test.ts # Test file scaffolding
+├── chat-room.json                    # Document model specification
+└── schema.graphql                    # GraphQL schema
+```
+
+### Compare with reference
+
+Verify your generated files match the expected structure:
+
+```bash
+# Compare your generated files with the reference
+git diff tutorial/main -- document-models/chat-room/
+
+# List what was generated in the reference
+git ls-tree -r --name-only tutorial/main document-models/chat-room/
+```
+
+## Up next: Reducers
+
+In the next step, you'll learn how to implement the runtime logic that will use the `ChatRoom` document model specification you've just created and exported.

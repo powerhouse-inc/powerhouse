@@ -1,15 +1,103 @@
 # Launch a local Reactor
 
-Now we'll create a local Reactor instance to simulate the behaviour of the chatroom synchronising messages between two nodes or users in the network.
+:::tip Tutorial Repository
+📦 **Reference Code**: [chatroom-demo](https://github.com/powerhouse-inc/chatroom-demo)
 
-Wind down connect and run the following command in your terminal.
+This final step demonstrates real-time collaboration by running a local Reactor instance.
+:::
 
-`ph reactor`
+In this final section, we'll create a local Reactor instance to test the real-time synchronization capabilities of your ChatRoom. This simulates how messages would sync between multiple users in a production environment.
 
-This spins up a reactor, which represents a node that is usally hosted as a remote server, but in our case we run it locally on our machine. The reactor you've created will become available as a public drive in your left hand side bar.
+## What is a Reactor?
 
-If you would now open up two different browser windows you will be able to login into two version of connect, with two different ethereum addresses to start validating the functionality of your chatroom.
+A Reactor is a node in the Powerhouse network that:
+- Hosts and synchronizes documents across multiple clients
+- Manages document state and operations
+- Enables real-time collaboration between users
 
-Please go ahead now and send a message to yourself, give yourself a thumbs up or try to make your ENS name appear as your profile when logging in. Also remind yourself that you are able to see the revision history of your document and all it's operation history in the top right corner.
+In production, Reactors are typically hosted as remote servers. For development and testing, we can run a local Reactor.
 
-Congratulations! You've now explored one of the many ways to use document models within the powerhouse ecosystem.
+## Start the local Reactor
+
+First, stop the Connect application if it's running. Then start the Reactor:
+
+```bash
+ph reactor
+```
+
+This spins up a Reactor that:
+- Runs locally on your machine
+- Creates a public drive accessible from your Connect sidebar
+- Enables synchronization between multiple browser sessions
+
+## Test real-time collaboration
+
+To validate the real-time functionality of your ChatRoom:
+
+1. **Open two browser windows** with the Connect application
+2. **Navigate to the Reactor drive** in the left sidebar (it will appear as a public drive)
+3. **Login with different Ethereum addresses** in each window
+4. **Create a ChatRoom document** in one window
+5. **Open the same document** in the other window
+
+Now you can:
+- Send messages from one window and see them appear in the other
+- React to messages with emojis and watch the reactions sync
+- Edit the chat name or description and see updates propagate
+
+:::info Real-time Sync
+The Reactor ensures that all operations are synchronized across connected clients. Each message and reaction is recorded as an operation, maintaining a complete history that can be replayed to reconstruct the document state.
+:::
+
+## Additional features to explore
+
+While testing your ChatRoom, try these features:
+
+1. **Operation History**: Click on the revision history in the top right corner to see all operations performed on the document
+
+2. **ENS Integration**: If you login with an Ethereum address that has an ENS name, your name and avatar will appear in your messages
+
+3. **Reaction Toggling**: Click on an existing reaction to toggle it on/off for your user
+
+## Running Connect alongside Reactor
+
+You can also run Connect and Reactor together. In separate terminal windows:
+
+```bash
+# Terminal 1: Start the Reactor
+ph reactor
+
+# Terminal 2: Start Connect (in a separate terminal)
+ph connect
+```
+
+This allows you to:
+- Use Connect's local drive for development
+- Access the Reactor's public drive for collaboration testing
+- Switch between local and synchronized documents
+
+## What you've accomplished
+
+Congratulations! 🎉 You've now completed the ChatRoom tutorial and learned how to:
+
+✅ **Create a Powerhouse project** - Initialize and configure a new project  
+✅ **Define a document model** - Design schemas using GraphQL SDL  
+✅ **Implement reducers** - Write the business logic for state transitions  
+✅ **Build an editor** - Create a React-based UI for your document  
+✅ **Test with a Reactor** - Validate real-time collaboration features
+
+## Next steps
+
+Now that you've completed this tutorial, you can:
+
+1. **Explore the Mastery Track** - Dive deeper into [Document Model Creation](/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel) for advanced concepts
+
+2. **Try Vetra Studio** - Use AI-assisted development with [Vetra Studio](/academy/GetStarted/VetraStudio) for faster iteration
+
+3. **Build your own project** - Apply what you've learned to create your own document models and editors
+
+4. **Join the community** - Connect with other Powerhouse builders and share your creations
+
+---
+
+*This tutorial demonstrated one of the many ways to use document models within the Powerhouse ecosystem. The patterns you've learned here apply to any collaborative application you want to build.*
