@@ -36,6 +36,26 @@ enum DocumentChangeType {
   CHILD_REMOVED
 }
 
+# Document visibility levels
+enum DocumentVisibility {
+  # Anyone can read/sync the document (default)
+  PUBLIC
+  # Only users with explicit permissions can access
+  PROTECTED
+  # Document is not synced at all (local only)
+  PRIVATE
+}
+
+# Permission levels for protected documents
+enum DocumentPermissionLevel {
+  # Can fetch and read the document
+  READ
+  # Can push updates and modify the document
+  WRITE
+  # Can manage document permissions and settings
+  ADMIN
+}
+
 # Object types
 type DocumentModelGlobalState {
   id: String!
@@ -113,6 +133,29 @@ type JobChangeEvent {
   status: String!
   result: JSONObject!
   error: String
+}
+
+# Document permission entry
+type DocumentPermissionEntry {
+  documentId: String!
+  userAddress: String!
+  permission: DocumentPermissionLevel!
+  grantedBy: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+# Document visibility info
+type DocumentVisibilityInfo {
+  documentId: String!
+  visibility: DocumentVisibility!
+}
+
+# Combined document access info
+type DocumentAccessInfo {
+  documentId: String!
+  visibility: DocumentVisibility!
+  permissions: [DocumentPermissionEntry!]!
 }
 
 type SignerUser {
@@ -293,6 +336,12 @@ type Query {
     channelId: String!
     cursorOrdinal: Int!
   ): [SyncEnvelope!]!
+
+  # Get visibility and permissions for a document
+  documentAccess(documentId: String!): DocumentAccessInfo!
+
+  # Get all documents the current user has explicit access to
+  userDocumentPermissions: [DocumentPermissionEntry!]!
 }
 
 type Mutation {
@@ -371,6 +420,25 @@ type Mutation {
   # Push sync envelope to a channel
   pushSyncEnvelope(
     envelope: SyncEnvelopeInput!
+  ): Boolean!
+
+  # Set the visibility level for a document (requires ADMIN permission or global admin)
+  setDocumentVisibility(
+    documentId: String!
+    visibility: DocumentVisibility!
+  ): DocumentVisibilityInfo!
+
+  # Grant a user permission on a document (requires ADMIN permission or global admin)
+  grantDocumentPermission(
+    documentId: String!
+    userAddress: String!
+    permission: DocumentPermissionLevel!
+  ): DocumentPermissionEntry!
+
+  # Revoke a user's permission on a document (requires ADMIN permission or global admin)
+  revokeDocumentPermission(
+    documentId: String!
+    userAddress: String!
   ): Boolean!
 }
 

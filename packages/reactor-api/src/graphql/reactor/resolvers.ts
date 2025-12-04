@@ -817,3 +817,176 @@ export function pushSyncEnvelope(
 
   return Promise.resolve(true);
 }
+
+// ============================================
+// Document Permission Resolvers
+// ============================================
+
+import type {
+  DocumentPermissionService,
+  GetParentIdsFn,
+} from "../../services/document-permission.service.js";
+import type {
+  DocumentPermissionLevel,
+  DocumentVisibility,
+} from "../../utils/db.js";
+
+export type DocumentAccessInfo = {
+  documentId: string;
+  visibility: DocumentVisibility;
+  permissions: Array<{
+    documentId: string;
+    userAddress: string;
+    permission: DocumentPermissionLevel;
+    grantedBy: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+};
+
+export async function documentAccess(
+  service: DocumentPermissionService,
+  args: { documentId: string },
+): Promise<DocumentAccessInfo> {
+  const visibility = await service.getDocumentVisibility(args.documentId);
+  const permissions = await service.getDocumentPermissions(args.documentId);
+
+  return {
+    documentId: args.documentId,
+    visibility,
+    permissions,
+  };
+}
+
+export async function userDocumentPermissions(
+  service: DocumentPermissionService,
+  userAddress: string,
+): Promise<
+  Array<{
+    documentId: string;
+    userAddress: string;
+    permission: DocumentPermissionLevel;
+    grantedBy: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }>
+> {
+  return service.getUserDocuments(userAddress);
+}
+
+export async function setDocumentVisibility(
+  service: DocumentPermissionService,
+  args: { documentId: string; visibility: DocumentVisibility },
+  userAddress: string | undefined,
+  isGlobalAdmin: boolean,
+): Promise<{ documentId: string; visibility: DocumentVisibility }> {
+  // Check authorization: must be global admin or document admin
+  if (!isGlobalAdmin) {
+    if (!userAddress) {
+      throw new GraphQLError("Authentication required");
+    }
+
+    const canManage = await service.canManageDocument(
+      args.documentId,
+      userAddress,
+    );
+    if (!canManage) {
+      throw new GraphQLError(
+        "Forbidden: You must be an admin of this document to change its visibility",
+      );
+    }
+  }
+
+  await service.setDocumentVisibility(args.documentId, args.visibility);
+
+  return {
+    documentId: args.documentId,
+    visibility: args.visibility,
+  };
+}
+
+export async function grantDocumentPermission(
+  service: DocumentPermissionService,
+  args: {
+    documentId: string;
+    userAddress: string;
+    permission: DocumentPermissionLevel;
+  },
+  grantedByAddress: string | undefined,
+  isGlobalAdmin: boolean,
+): Promise<{
+  documentId: string;
+  userAddress: string;
+  permission: DocumentPermissionLevel;
+  grantedBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}> {
+  // Check authorization: must be global admin or document admin
+  if (!grantedByAddress) {
+    throw new GraphQLError("Authentication required");
+  }
+
+  if (!isGlobalAdmin) {
+    const canManage = await service.canManageDocument(
+      args.documentId,
+      grantedByAddress,
+    );
+    if (!canManage) {
+      throw new GraphQLError(
+        "Forbidden: You must be an admin of this document to grant permissions",
+      );
+    }
+  }
+
+  return service.grantPermission(
+    args.documentId,
+    args.userAddress,
+    args.permission,
+    grantedByAddress,
+  );
+}
+
+export async function revokeDocumentPermission(
+  service: DocumentPermissionService,
+  args: { documentId: string; userAddress: string },
+  revokedByAddress: string | undefined,
+  isGlobalAdmin: boolean,
+): Promise<boolean> {
+  // Check authorization: must be global admin or document admin
+  if (!revokedByAddress) {
+    throw new GraphQLError("Authentication required");
+  }
+
+  if (!isGlobalAdmin) {
+    const canManage = await service.canManageDocument(
+      args.documentId,
+      revokedByAddress,
+    );
+    if (!canManage) {
+      throw new GraphQLError(
+        "Forbidden: You must be an admin of this document to revoke permissions",
+      );
+    }
+  }
+
+  await service.revokePermission(args.documentId, args.userAddress);
+  return true;
+}
+
+/**
+ * Create a getParentIds function using the reactor client
+ */
+export function createGetParentIdsFn(
+  reactorClient: IReactorClient,
+): GetParentIdsFn {
+  return async (documentId: string): Promise<string[]> => {
+    try {
+      const result = await reactorClient.getParents(documentId);
+      return result.results.map((doc) => doc.header.id);
+    } catch {
+      // If document has no parents or error, return empty array
+      return [];
+    }
+  };
+}

@@ -3,6 +3,7 @@ import fs from "fs";
 import { withFilter } from "graphql-subscriptions";
 import { gql } from "graphql-tag";
 import path from "path";
+import type { DocumentPermissionService } from "../../services/document-permission.service.js";
 import { BaseSubgraph } from "../base-subgraph.js";
 import type { SubgraphArgs } from "../types.js";
 import {
@@ -115,6 +116,54 @@ export class ReactorSubgraph extends BaseSubgraph {
           return await resolvers.pollSyncEnvelopes(this.syncManager, args);
         } catch (error) {
           this.logger.error("Error in pollSyncEnvelopes:", error);
+          throw error;
+        }
+      },
+
+      documentAccess: async (
+        _parent: unknown,
+        args: { documentId: string },
+        ctx: {
+          documentPermissionService?: DocumentPermissionService;
+        },
+      ) => {
+        this.logger.debug("documentAccess", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          return await resolvers.documentAccess(
+            this.documentPermissionService,
+            args,
+          );
+        } catch (error) {
+          this.logger.error("Error in documentAccess:", error);
+          throw error;
+        }
+      },
+
+      userDocumentPermissions: async (
+        _parent: unknown,
+        _args: unknown,
+        ctx: {
+          user?: { address: string };
+          documentPermissionService?: DocumentPermissionService;
+        },
+      ) => {
+        this.logger.debug("userDocumentPermissions");
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        if (!ctx.user?.address) {
+          return [];
+        }
+        try {
+          return await resolvers.userDocumentPermissions(
+            this.documentPermissionService,
+            ctx.user.address,
+          );
+        } catch (error) {
+          this.logger.error("Error in userDocumentPermissions:", error);
           throw error;
         }
       },
@@ -285,6 +334,91 @@ export class ReactorSubgraph extends BaseSubgraph {
           );
         } catch (error) {
           this.logger.error("Error in pushSyncEnvelope:", error);
+          throw error;
+        }
+      },
+
+      setDocumentVisibility: async (
+        _parent: unknown,
+        args: { documentId: string; visibility: string },
+        ctx: {
+          user?: { address: string };
+          isAdmin?: (address: string) => boolean;
+        },
+      ) => {
+        this.logger.debug("setDocumentVisibility", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
+          return await resolvers.setDocumentVisibility(
+            this.documentPermissionService,
+            args as {
+              documentId: string;
+              visibility: "PUBLIC" | "PROTECTED" | "PRIVATE";
+            },
+            ctx.user?.address,
+            isGlobalAdmin,
+          );
+        } catch (error) {
+          this.logger.error("Error in setDocumentVisibility:", error);
+          throw error;
+        }
+      },
+
+      grantDocumentPermission: async (
+        _parent: unknown,
+        args: { documentId: string; userAddress: string; permission: string },
+        ctx: {
+          user?: { address: string };
+          isAdmin?: (address: string) => boolean;
+        },
+      ) => {
+        this.logger.debug("grantDocumentPermission", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
+          return await resolvers.grantDocumentPermission(
+            this.documentPermissionService,
+            args as {
+              documentId: string;
+              userAddress: string;
+              permission: "READ" | "WRITE" | "ADMIN";
+            },
+            ctx.user?.address,
+            isGlobalAdmin,
+          );
+        } catch (error) {
+          this.logger.error("Error in grantDocumentPermission:", error);
+          throw error;
+        }
+      },
+
+      revokeDocumentPermission: async (
+        _parent: unknown,
+        args: { documentId: string; userAddress: string },
+        ctx: {
+          user?: { address: string };
+          isAdmin?: (address: string) => boolean;
+        },
+      ) => {
+        this.logger.debug("revokeDocumentPermission", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
+          return await resolvers.revokeDocumentPermission(
+            this.documentPermissionService,
+            args,
+            ctx.user?.address,
+            isGlobalAdmin,
+          );
+        } catch (error) {
+          this.logger.error("Error in revokeDocumentPermission:", error);
           throw error;
         }
       },

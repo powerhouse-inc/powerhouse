@@ -7,6 +7,47 @@ import { KyselyKnexDialect, PGColdDialect } from "kysely-knex";
 import fs from "node:fs";
 import path from "node:path";
 
+/**
+ * Document visibility levels:
+ * - PUBLIC: Anyone can read/sync the document
+ * - PROTECTED: Only users with explicit permissions can access
+ * - PRIVATE: Document is not synced at all (local only)
+ */
+export type DocumentVisibility = "PUBLIC" | "PROTECTED" | "PRIVATE";
+
+/**
+ * Permission levels for protected documents:
+ * - READ: Can fetch and read the document
+ * - WRITE: Can push updates and modify the document
+ * - ADMIN: Can manage document permissions and settings
+ */
+export type DocumentPermissionLevel = "READ" | "WRITE" | "ADMIN";
+
+/**
+ * Database schema for document permissions
+ */
+export interface DocumentPermissionDatabase {
+  DocumentVisibility: DocumentVisibilityTable;
+  DocumentPermission: DocumentPermissionTable;
+}
+
+export interface DocumentVisibilityTable {
+  documentId: string;
+  visibility: DocumentVisibility;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface DocumentPermissionTable {
+  id: Generated<number>;
+  documentId: string;
+  userAddress: string;
+  permission: DocumentPermissionLevel;
+  grantedBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 type Db = Kysely<any>;
 
 function isPG(connectionString: string) {

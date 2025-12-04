@@ -99,9 +99,7 @@ export class DocumentPermissionService {
    * Get the visibility level for a document.
    * Returns 'PUBLIC' if no explicit visibility is set.
    */
-  async getDocumentVisibility(
-    documentId: string,
-  ): Promise<DocumentVisibility> {
+  async getDocumentVisibility(documentId: string): Promise<DocumentVisibility> {
     const result = await this.db
       .selectFrom("DocumentVisibility")
       .select("visibility")
