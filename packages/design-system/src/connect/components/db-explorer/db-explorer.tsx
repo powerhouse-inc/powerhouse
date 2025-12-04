@@ -10,6 +10,10 @@ import {
   type SortOptions,
 } from "./components/table-view.js";
 
+// Re-export types
+export type { TableInfo } from "./components/schema-tree-sidebar.js";
+export type { ColumnInfo, SortOptions } from "./components/table-view.js";
+
 export type GetTableRowsOptions = {
   readonly schema?: string;
   readonly limit: number;
@@ -32,7 +36,7 @@ export interface DbClient {
 /** Props for the main DBExplorer component */
 export type DBExplorerProps = {
   readonly schema: string;
-  readonly tables: TableInfo[];
+  readonly getTables: () => Promise<TableInfo[]>;
   readonly getTableRows: (
     table: string,
     options: GetTableRowsOptions,
@@ -46,13 +50,15 @@ const DEFAULT_PAGE_SIZE = 50;
 
 export function DBExplorer({
   schema,
-  tables,
+  getTables,
   getTableRows,
   pageSize = DEFAULT_PAGE_SIZE,
   onImportDb,
   onExportDb,
 }: DBExplorerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [tables, setTables] = useState<TableInfo[]>([]);
+  const [tablesLoading, setTablesLoading] = useState(true);
   const [selectedTable, setSelectedTable] = useState<string | undefined>();
   const [tableData, setTableData] = useState<TablePage | null>(null);
   const [pagination, setPagination] = useState<PaginationState>({
@@ -86,6 +92,35 @@ export function DBExplorer({
     sort,
     getTableRows,
   ]);
+
+  const loadTables = useCallback(async () => {
+    setTablesLoading(true);
+    const data = await getTables();
+    setTables(data);
+    setTablesLoading(false);
+    return data;
+  }, [getTables]);
+
+  const handleRefresh = useCallback(async () => {
+    const newTables = await loadTables();
+
+    // Clear selection if selected table no longer exists
+    if (selectedTable && !newTables.some((t) => t.name === selectedTable)) {
+      setSelectedTable(undefined);
+      setTableData(null);
+      return;
+    }
+
+    // Reload current table data if a table is selected
+    if (selectedTable) {
+      await loadTableData();
+    }
+  }, [loadTables, selectedTable, loadTableData]);
+
+  // Load tables on mount
+  useEffect(() => {
+    void loadTables();
+  }, [loadTables]);
 
   useEffect(() => {
     if (selectedTable) {
@@ -147,6 +182,8 @@ export function DBExplorer({
             tables={tables}
             selectedTable={selectedTable}
             onSelectTable={handleSelectTable}
+            onRefresh={handleRefresh}
+            loading={tablesLoading || loading}
           />
         </div>
 

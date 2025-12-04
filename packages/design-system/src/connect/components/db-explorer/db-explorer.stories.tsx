@@ -142,7 +142,7 @@ const mockGetTableRows = async (
 export const Default: Story = {
   args: {
     schema: "public",
-    tables: mockTables,
+    getTables: () => Promise.resolve(mockTables),
     getTableRows: mockGetTableRows,
   },
 };
@@ -150,7 +150,7 @@ export const Default: Story = {
 export const EmptySchema: Story = {
   args: {
     schema: "public",
-    tables: [],
+    getTables: () => Promise.resolve([]),
     getTableRows: mockGetTableRows,
   },
 };
@@ -192,7 +192,7 @@ const mockGetSettingsRows = async (
 export const SingleTable: Story = {
   args: {
     schema: "config",
-    tables: singleTable,
+    getTables: () => Promise.resolve(singleTable),
     getTableRows: mockGetSettingsRows,
   },
 };
@@ -200,7 +200,7 @@ export const SingleTable: Story = {
 export const CustomPageSize: Story = {
   args: {
     schema: "public",
-    tables: mockTables,
+    getTables: () => Promise.resolve(mockTables),
     getTableRows: mockGetTableRows,
     pageSize: 10,
   },
@@ -209,7 +209,7 @@ export const CustomPageSize: Story = {
 export const WithImportExport: Story = {
   args: {
     schema: "public",
-    tables: mockTables,
+    getTables: () => Promise.resolve(mockTables),
     getTableRows: mockGetTableRows,
     onImportDb: (sqlContent: string) => {
       console.log("Import DB called with content:", sqlContent.slice(0, 100));

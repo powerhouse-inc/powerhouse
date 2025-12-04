@@ -68,6 +68,7 @@ export const Default: Story = {
     schema: "public",
     tables: mockTables,
     onSelectTable: fn(),
+    onRefresh: fn(),
   },
 };
 
@@ -130,5 +131,16 @@ export const Interactive: Story = {
     schema: "public",
     tables: mockTables,
     onSelectTable: fn(),
+    onRefresh: fn(),
+  },
+};
+
+export const Loading: Story = {
+  args: {
+    schema: "public",
+    tables: mockTables,
+    onSelectTable: fn(),
+    onRefresh: fn(),
+    loading: true,
   },
 };

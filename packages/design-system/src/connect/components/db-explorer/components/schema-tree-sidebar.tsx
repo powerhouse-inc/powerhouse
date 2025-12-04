@@ -15,10 +15,12 @@ export type SchemaTreeSidebarProps = {
   readonly tables: TableInfo[];
   readonly selectedTable?: string;
   readonly onSelectTable: (table: string) => void;
+  readonly onRefresh?: () => void | Promise<void>;
+  readonly loading?: boolean;
 };
 
 type TreeItemProps = {
-  readonly label: string;
+  readonly label: React.ReactNode;
   readonly depth: number;
   readonly expanded?: boolean;
   readonly selected?: boolean;
@@ -76,7 +78,7 @@ function TreeItem({
           <span className="w-4 shrink-0" />
         )}
         {icon && <span className="shrink-0 text-gray-500">{icon}</span>}
-        <span className="truncate text-gray-700">{label}</span>
+        <span className="min-w-0 flex-1 truncate text-gray-700">{label}</span>
         {selected && (
           <span className="ml-auto h-2 w-2 shrink-0 rounded-full bg-blue-500" />
         )}
@@ -115,6 +117,8 @@ export function SchemaTreeSidebar({
   tables,
   selectedTable,
   onSelectTable,
+  onRefresh,
+  loading,
 }: SchemaTreeSidebarProps) {
   const [expandedNodes, setExpandedNodes] = useState<TreeExpandedState>({
     [schema]: true,
@@ -137,8 +141,13 @@ export function SchemaTreeSidebar({
 
   const isSchemaExpanded = expandedNodes[schema] ?? false;
 
+  const handleRefreshClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    void onRefresh?.();
+  };
+
   return (
-    <div className="flex flex-col overflow-auto text-sm">
+    <div className="flex flex-col overflow-auto pt-4 text-sm">
       <TreeItem
         depth={0}
         expanded={isSchemaExpanded}
@@ -149,7 +158,25 @@ export function SchemaTreeSidebar({
             size={16}
           />
         }
-        label={schema}
+        label={
+          <div className="flex flex-1 items-center">
+            <span className="truncate">{schema}</span>
+            {onRefresh && (
+              <button
+                className="ml-auto p-0.5 text-gray-400 hover:text-gray-600"
+                onClick={handleRefreshClick}
+                type="button"
+                disabled={loading}
+              >
+                <Icon
+                  name="Reload"
+                  size={14}
+                  className={loading ? "animate-spin" : undefined}
+                />
+              </button>
+            )}
+          </div>
+        }
         onClick={() => toggleNode(schema)}
         onToggle={() => toggleNode(schema)}
       >
