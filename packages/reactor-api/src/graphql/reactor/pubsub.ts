@@ -35,7 +35,7 @@ export interface JobChangesPayload {
     createdAt: string;
     completedAt: string | null;
     error: string | null;
-    result: unknown;
+    result: NonNullable<unknown>;
   };
   jobId: string;
 }
@@ -102,7 +102,7 @@ export function ensureJobSubscription(
           createdAt: jobInfo.createdAtUtcIso,
           completedAt: jobInfo.completedAtUtcIso ?? null,
           error: jobInfo.error?.message ?? null,
-          result: jobInfo.result ?? null,
+          result: jobInfo.result ?? {},
         },
         jobId,
       };

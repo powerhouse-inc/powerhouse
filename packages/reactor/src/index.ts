@@ -157,6 +157,10 @@ export type {
 } from "./cache/write-cache-types.js";
 export { type IWriteCache } from "./cache/write/interfaces.js";
 
+// Logging
+export { ConsoleLogger } from "./logging/console.js";
+export { type ILogger } from "./logging/types.js";
+
 // Synchronization
 export {
   KyselySyncCursorStorage,

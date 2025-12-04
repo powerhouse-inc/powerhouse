@@ -8,11 +8,22 @@ import type { Context } from "@powerhousedao/reactor-api";
 import { pascalCase } from "change-case";
 import { childLogger, type IDocumentDriveServer } from "document-drive";
 import type { DocumentModelPHState } from "document-model";
-import type { DocumentNode } from "graphql";
+import { type DocumentNode, Kind, print } from "graphql";
 import { gql } from "graphql-tag";
 import { GraphQLJSONObject } from "graphql-type-json";
 
 const logger = childLogger(["reactor-api", "create-schema"]);
+
+/**
+ * Strip scalar definitions from a DocumentNode to avoid duplicates
+ * when combining with other schemas that define the same scalars.
+ */
+const stripScalarDefinitions = (doc: DocumentNode): string => {
+  const filteredDefinitions = doc.definitions.filter(
+    (def) => def.kind !== Kind.SCALAR_TYPE_DEFINITION,
+  );
+  return print({ kind: Kind.DOCUMENT, definitions: filteredDefinitions });
+};
 
 export const buildSubgraphSchemaModule = (
   documentDriveServer: IDocumentDriveServer,
@@ -215,7 +226,7 @@ export const getDocumentModelTypeDefs = (
       stateJSON: JSONObject
     }
 
-    ${typeDefs}
+    ${stripScalarDefinitions(typeDefs)}
   `;
 
   return schema;

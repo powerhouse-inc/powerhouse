@@ -23,7 +23,7 @@
   "sideEffects": false,
   "scripts": {
     "tsc": "tsc",
-    "build": "pnpm tsc --build",
+    "build": "pnpm tsc --build && copyfiles -u 0 \"src/**/*.graphql\" dist/",
     "lint": "eslint",
     "test": "vitest run",
     "bench": "vitest bench",
@@ -83,6 +83,7 @@
     "zod": "^3.24.3"
   },
   "devDependencies": {
+    "copyfiles": "^2.4.1",
     "@graphql-codegen/cli": "^5.0.0",
     "@graphql-codegen/client-preset": "^4.1.0",
     "@graphql-codegen/typed-document-node": "^5.0.1",

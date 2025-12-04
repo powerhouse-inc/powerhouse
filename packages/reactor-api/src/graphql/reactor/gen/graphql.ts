@@ -38,11 +38,11 @@ export type Scalars = {
   Int: { input: number; output: number };
   Float: { input: number; output: number };
   DateTime: { input: string | Date; output: string | Date };
-  JSONObject: { input: any; output: any };
+  JSONObject: { input: NonNullable<unknown>; output: NonNullable<unknown> };
 };
 
 export type Action = {
-  readonly attachments?: Maybe<ReadonlyArray<AttachmentInput>>;
+  readonly attachments?: Maybe<ReadonlyArray<Attachment>>;
   readonly context?: Maybe<ActionContext>;
   readonly id: Scalars["String"]["output"];
   readonly input: Scalars["JSONObject"]["output"];
@@ -52,15 +52,37 @@ export type Action = {
 };
 
 export type ActionContext = {
-  readonly signer?: Maybe<Signer>;
+  readonly signer?: Maybe<ReactorSigner>;
 };
 
-export type AttachmentInput = {
+export type ActionContextInput = {
+  readonly signer?: InputMaybe<ReactorSignerInput>;
+};
+
+export type ActionInput = {
+  readonly attachments?: InputMaybe<ReadonlyArray<AttachmentInput>>;
+  readonly context?: InputMaybe<ActionContextInput>;
+  readonly id: Scalars["String"]["input"];
+  readonly input: Scalars["JSONObject"]["input"];
+  readonly scope: Scalars["String"]["input"];
+  readonly timestampUtcMs: Scalars["String"]["input"];
+  readonly type: Scalars["String"]["input"];
+};
+
+export type Attachment = {
   readonly data: Scalars["String"]["output"];
   readonly extension?: Maybe<Scalars["String"]["output"]>;
   readonly fileName?: Maybe<Scalars["String"]["output"]>;
   readonly hash: Scalars["String"]["output"];
   readonly mimeType: Scalars["String"]["output"];
+};
+
+export type AttachmentInput = {
+  readonly data: Scalars["String"]["input"];
+  readonly extension?: InputMaybe<Scalars["String"]["input"]>;
+  readonly fileName?: InputMaybe<Scalars["String"]["input"]>;
+  readonly hash: Scalars["String"]["input"];
+  readonly mimeType: Scalars["String"]["input"];
 };
 
 export type ChannelMeta = {
@@ -221,16 +243,6 @@ export type MutationRenameDocumentArgs = {
   name: Scalars["String"]["input"];
 };
 
-export type Operation = {
-  readonly action: Action;
-  readonly error?: Maybe<Scalars["String"]["output"]>;
-  readonly hash: Scalars["String"]["output"];
-  readonly id?: Maybe<Scalars["String"]["output"]>;
-  readonly index: Scalars["Int"]["output"];
-  readonly skip: Scalars["Int"]["output"];
-  readonly timestampUtcMs: Scalars["String"]["output"];
-};
-
 export type OperationContext = {
   readonly branch: Scalars["String"]["output"];
   readonly documentId: Scalars["String"]["output"];
@@ -246,7 +258,7 @@ export type OperationContextInput = {
 };
 
 export type OperationInput = {
-  readonly action: Scalars["JSONObject"]["input"];
+  readonly action: ActionInput;
   readonly error?: InputMaybe<Scalars["String"]["input"]>;
   readonly hash: Scalars["String"]["input"];
   readonly id?: InputMaybe<Scalars["String"]["input"]>;
@@ -257,7 +269,7 @@ export type OperationInput = {
 
 export type OperationWithContext = {
   readonly context: OperationContext;
-  readonly operation: Operation;
+  readonly operation: ReactorOperation;
 };
 
 export type OperationWithContextInput = {
@@ -343,6 +355,50 @@ export type QueryPollSyncEnvelopesArgs = {
   cursorOrdinal: Scalars["Int"]["input"];
 };
 
+export type ReactorOperation = {
+  readonly action: Action;
+  readonly error?: Maybe<Scalars["String"]["output"]>;
+  readonly hash: Scalars["String"]["output"];
+  readonly id?: Maybe<Scalars["String"]["output"]>;
+  readonly index: Scalars["Int"]["output"];
+  readonly skip: Scalars["Int"]["output"];
+  readonly timestampUtcMs: Scalars["String"]["output"];
+};
+
+export type ReactorSigner = {
+  readonly app?: Maybe<ReactorSignerApp>;
+  readonly signatures: ReadonlyArray<Scalars["String"]["output"]>;
+  readonly user?: Maybe<ReactorSignerUser>;
+};
+
+export type ReactorSignerApp = {
+  readonly key: Scalars["String"]["output"];
+  readonly name: Scalars["String"]["output"];
+};
+
+export type ReactorSignerAppInput = {
+  readonly key: Scalars["String"]["input"];
+  readonly name: Scalars["String"]["input"];
+};
+
+export type ReactorSignerInput = {
+  readonly app?: InputMaybe<ReactorSignerAppInput>;
+  readonly signatures: ReadonlyArray<Scalars["String"]["input"]>;
+  readonly user?: InputMaybe<ReactorSignerUserInput>;
+};
+
+export type ReactorSignerUser = {
+  readonly address: Scalars["String"]["output"];
+  readonly chainId: Scalars["Int"]["output"];
+  readonly networkId: Scalars["String"]["output"];
+};
+
+export type ReactorSignerUserInput = {
+  readonly address: Scalars["String"]["input"];
+  readonly chainId: Scalars["Int"]["input"];
+  readonly networkId: Scalars["String"]["input"];
+};
+
 export type RemoteCursor = {
   readonly cursorOrdinal: Scalars["Int"]["output"];
   readonly lastSyncedAtUtcMs?: Maybe<Scalars["String"]["output"]>;
@@ -370,23 +426,6 @@ export type SearchFilterInput = {
   readonly identifiers?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
   readonly parentId?: InputMaybe<Scalars["String"]["input"]>;
   readonly type?: InputMaybe<Scalars["String"]["input"]>;
-};
-
-export type Signer = {
-  readonly app?: Maybe<SignerApp>;
-  readonly signatures: ReadonlyArray<Scalars["String"]["output"]>;
-  readonly user?: Maybe<SignerUser>;
-};
-
-export type SignerApp = {
-  readonly key: Scalars["String"]["output"];
-  readonly name: Scalars["String"]["output"];
-};
-
-export type SignerUser = {
-  readonly address: Scalars["String"]["output"];
-  readonly chainId: Scalars["Int"]["output"];
-  readonly networkId: Scalars["String"]["output"];
 };
 
 export type Subscription = {
@@ -432,7 +471,7 @@ export type PhDocumentFieldsFragment = {
   readonly slug?: string | null | undefined;
   readonly name: string;
   readonly documentType: string;
-  readonly state: any;
+  readonly state: NonNullable<unknown>;
   readonly createdAtUtcIso: string | Date;
   readonly lastModifiedAtUtcIso: string | Date;
   readonly parentId?: string | null | undefined;
@@ -458,7 +497,7 @@ export type GetDocumentModelsQuery = {
       readonly name: string;
       readonly namespace?: string | null | undefined;
       readonly version?: string | null | undefined;
-      readonly specification: any;
+      readonly specification: NonNullable<unknown>;
     }>;
   };
 };
@@ -477,7 +516,7 @@ export type GetDocumentQuery = {
           readonly slug?: string | null | undefined;
           readonly name: string;
           readonly documentType: string;
-          readonly state: any;
+          readonly state: NonNullable<unknown>;
           readonly createdAtUtcIso: string | Date;
           readonly lastModifiedAtUtcIso: string | Date;
           readonly parentId?: string | null | undefined;
@@ -508,7 +547,7 @@ export type GetDocumentChildrenQuery = {
       readonly slug?: string | null | undefined;
       readonly name: string;
       readonly documentType: string;
-      readonly state: any;
+      readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
       readonly parentId?: string | null | undefined;
@@ -537,7 +576,7 @@ export type GetDocumentParentsQuery = {
       readonly slug?: string | null | undefined;
       readonly name: string;
       readonly documentType: string;
-      readonly state: any;
+      readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
       readonly parentId?: string | null | undefined;
@@ -566,7 +605,7 @@ export type FindDocumentsQuery = {
       readonly slug?: string | null | undefined;
       readonly name: string;
       readonly documentType: string;
-      readonly state: any;
+      readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
       readonly parentId?: string | null | undefined;
@@ -587,7 +626,7 @@ export type GetJobStatusQuery = {
     | {
         readonly id: string;
         readonly status: string;
-        readonly result: any;
+        readonly result: NonNullable<unknown>;
         readonly error?: string | null | undefined;
         readonly createdAt: string | Date;
         readonly completedAt?: string | Date | null | undefined;
@@ -607,7 +646,7 @@ export type CreateDocumentMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
-    readonly state: any;
+    readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
     readonly parentId?: string | null | undefined;
@@ -629,7 +668,7 @@ export type CreateEmptyDocumentMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
-    readonly state: any;
+    readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
     readonly parentId?: string | null | undefined;
@@ -652,7 +691,7 @@ export type MutateDocumentMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
-    readonly state: any;
+    readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
     readonly parentId?: string | null | undefined;
@@ -685,7 +724,7 @@ export type RenameDocumentMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
-    readonly state: any;
+    readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
     readonly parentId?: string | null | undefined;
@@ -708,7 +747,7 @@ export type AddChildrenMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
-    readonly state: any;
+    readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
     readonly parentId?: string | null | undefined;
@@ -731,7 +770,7 @@ export type RemoveChildrenMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
-    readonly state: any;
+    readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
     readonly parentId?: string | null | undefined;
@@ -756,7 +795,7 @@ export type MoveChildrenMutation = {
       readonly slug?: string | null | undefined;
       readonly name: string;
       readonly documentType: string;
-      readonly state: any;
+      readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
       readonly parentId?: string | null | undefined;
@@ -770,7 +809,7 @@ export type MoveChildrenMutation = {
       readonly slug?: string | null | undefined;
       readonly name: string;
       readonly documentType: string;
-      readonly state: any;
+      readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
       readonly parentId?: string | null | undefined;
@@ -809,7 +848,7 @@ export type DocumentChangesSubscription = {
       readonly slug?: string | null | undefined;
       readonly name: string;
       readonly documentType: string;
-      readonly state: any;
+      readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
       readonly parentId?: string | null | undefined;
@@ -836,7 +875,7 @@ export type JobChangesSubscription = {
   readonly jobChanges: {
     readonly jobId: string;
     readonly status: string;
-    readonly result: any;
+    readonly result: NonNullable<unknown>;
     readonly error?: string | null | undefined;
   };
 };
@@ -953,7 +992,10 @@ export type DirectiveResolverFn<
 export type ResolversTypes = ResolversObject<{
   Action: ResolverTypeWrapper<Action>;
   ActionContext: ResolverTypeWrapper<ActionContext>;
-  AttachmentInput: ResolverTypeWrapper<AttachmentInput>;
+  ActionContextInput: ActionContextInput;
+  ActionInput: ActionInput;
+  Attachment: ResolverTypeWrapper<Attachment>;
+  AttachmentInput: AttachmentInput;
   Boolean: ResolverTypeWrapper<Scalars["Boolean"]["output"]>;
   ChannelMeta: ResolverTypeWrapper<ChannelMeta>;
   ChannelMetaInput: ChannelMetaInput;
@@ -971,7 +1013,6 @@ export type ResolversTypes = ResolversObject<{
   JobInfo: ResolverTypeWrapper<JobInfo>;
   MoveChildrenResult: ResolverTypeWrapper<MoveChildrenResult>;
   Mutation: ResolverTypeWrapper<{}>;
-  Operation: ResolverTypeWrapper<Operation>;
   OperationContext: ResolverTypeWrapper<OperationContext>;
   OperationContextInput: OperationContextInput;
   OperationInput: OperationInput;
@@ -982,14 +1023,18 @@ export type ResolversTypes = ResolversObject<{
   PagingInput: PagingInput;
   PropagationMode: PropagationMode;
   Query: ResolverTypeWrapper<{}>;
+  ReactorOperation: ResolverTypeWrapper<ReactorOperation>;
+  ReactorSigner: ResolverTypeWrapper<ReactorSigner>;
+  ReactorSignerApp: ResolverTypeWrapper<ReactorSignerApp>;
+  ReactorSignerAppInput: ReactorSignerAppInput;
+  ReactorSignerInput: ReactorSignerInput;
+  ReactorSignerUser: ResolverTypeWrapper<ReactorSignerUser>;
+  ReactorSignerUserInput: ReactorSignerUserInput;
   RemoteCursor: ResolverTypeWrapper<RemoteCursor>;
   RemoteCursorInput: RemoteCursorInput;
   RemoteFilterInput: RemoteFilterInput;
   Revision: ResolverTypeWrapper<Revision>;
   SearchFilterInput: SearchFilterInput;
-  Signer: ResolverTypeWrapper<Signer>;
-  SignerApp: ResolverTypeWrapper<SignerApp>;
-  SignerUser: ResolverTypeWrapper<SignerUser>;
   String: ResolverTypeWrapper<Scalars["String"]["output"]>;
   Subscription: ResolverTypeWrapper<{}>;
   SyncEnvelope: ResolverTypeWrapper<SyncEnvelope>;
@@ -1002,6 +1047,9 @@ export type ResolversTypes = ResolversObject<{
 export type ResolversParentTypes = ResolversObject<{
   Action: Action;
   ActionContext: ActionContext;
+  ActionContextInput: ActionContextInput;
+  ActionInput: ActionInput;
+  Attachment: Attachment;
   AttachmentInput: AttachmentInput;
   Boolean: Scalars["Boolean"]["output"];
   ChannelMeta: ChannelMeta;
@@ -1019,7 +1067,6 @@ export type ResolversParentTypes = ResolversObject<{
   JobInfo: JobInfo;
   MoveChildrenResult: MoveChildrenResult;
   Mutation: {};
-  Operation: Operation;
   OperationContext: OperationContext;
   OperationContextInput: OperationContextInput;
   OperationInput: OperationInput;
@@ -1029,14 +1076,18 @@ export type ResolversParentTypes = ResolversObject<{
   PHDocumentResultPage: PhDocumentResultPage;
   PagingInput: PagingInput;
   Query: {};
+  ReactorOperation: ReactorOperation;
+  ReactorSigner: ReactorSigner;
+  ReactorSignerApp: ReactorSignerApp;
+  ReactorSignerAppInput: ReactorSignerAppInput;
+  ReactorSignerInput: ReactorSignerInput;
+  ReactorSignerUser: ReactorSignerUser;
+  ReactorSignerUserInput: ReactorSignerUserInput;
   RemoteCursor: RemoteCursor;
   RemoteCursorInput: RemoteCursorInput;
   RemoteFilterInput: RemoteFilterInput;
   Revision: Revision;
   SearchFilterInput: SearchFilterInput;
-  Signer: Signer;
-  SignerApp: SignerApp;
-  SignerUser: SignerUser;
   String: Scalars["String"]["output"];
   Subscription: {};
   SyncEnvelope: SyncEnvelope;
@@ -1050,7 +1101,7 @@ export type ActionResolvers<
     ResolversParentTypes["Action"] = ResolversParentTypes["Action"],
 > = ResolversObject<{
   attachments?: Resolver<
-    Maybe<ReadonlyArray<ResolversTypes["AttachmentInput"]>>,
+    Maybe<ReadonlyArray<ResolversTypes["Attachment"]>>,
     ParentType,
     ContextType
   >;
@@ -1072,14 +1123,18 @@ export type ActionContextResolvers<
   ParentType extends
     ResolversParentTypes["ActionContext"] = ResolversParentTypes["ActionContext"],
 > = ResolversObject<{
-  signer?: Resolver<Maybe<ResolversTypes["Signer"]>, ParentType, ContextType>;
+  signer?: Resolver<
+    Maybe<ResolversTypes["ReactorSigner"]>,
+    ParentType,
+    ContextType
+  >;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
-export type AttachmentInputResolvers<
+export type AttachmentResolvers<
   ContextType = Context,
   ParentType extends
-    ResolversParentTypes["AttachmentInput"] = ResolversParentTypes["AttachmentInput"],
+    ResolversParentTypes["Attachment"] = ResolversParentTypes["Attachment"],
 > = ResolversObject<{
   data?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   extension?: Resolver<
@@ -1334,21 +1389,6 @@ export type MutationResolvers<
   >;
 }>;
 
-export type OperationResolvers<
-  ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["Operation"] = ResolversParentTypes["Operation"],
-> = ResolversObject<{
-  action?: Resolver<ResolversTypes["Action"], ParentType, ContextType>;
-  error?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
-  hash?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  id?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
-  index?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
-  skip?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
-  timestampUtcMs?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
-}>;
-
 export type OperationContextResolvers<
   ContextType = Context,
   ParentType extends
@@ -1371,7 +1411,11 @@ export type OperationWithContextResolvers<
     ParentType,
     ContextType
   >;
-  operation?: Resolver<ResolversTypes["Operation"], ParentType, ContextType>;
+  operation?: Resolver<
+    ResolversTypes["ReactorOperation"],
+    ParentType,
+    ContextType
+  >;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -1474,6 +1518,65 @@ export type QueryResolvers<
   >;
 }>;
 
+export type ReactorOperationResolvers<
+  ContextType = Context,
+  ParentType extends
+    ResolversParentTypes["ReactorOperation"] = ResolversParentTypes["ReactorOperation"],
+> = ResolversObject<{
+  action?: Resolver<ResolversTypes["Action"], ParentType, ContextType>;
+  error?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
+  hash?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  id?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
+  index?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
+  skip?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
+  timestampUtcMs?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type ReactorSignerResolvers<
+  ContextType = Context,
+  ParentType extends
+    ResolversParentTypes["ReactorSigner"] = ResolversParentTypes["ReactorSigner"],
+> = ResolversObject<{
+  app?: Resolver<
+    Maybe<ResolversTypes["ReactorSignerApp"]>,
+    ParentType,
+    ContextType
+  >;
+  signatures?: Resolver<
+    ReadonlyArray<ResolversTypes["String"]>,
+    ParentType,
+    ContextType
+  >;
+  user?: Resolver<
+    Maybe<ResolversTypes["ReactorSignerUser"]>,
+    ParentType,
+    ContextType
+  >;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type ReactorSignerAppResolvers<
+  ContextType = Context,
+  ParentType extends
+    ResolversParentTypes["ReactorSignerApp"] = ResolversParentTypes["ReactorSignerApp"],
+> = ResolversObject<{
+  key?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  name?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type ReactorSignerUserResolvers<
+  ContextType = Context,
+  ParentType extends
+    ResolversParentTypes["ReactorSignerUser"] = ResolversParentTypes["ReactorSignerUser"],
+> = ResolversObject<{
+  address?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  chainId?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
+  networkId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
 export type RemoteCursorResolvers<
   ContextType = Context,
   ParentType extends
@@ -1496,42 +1599,6 @@ export type RevisionResolvers<
 > = ResolversObject<{
   revision?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
   scope?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
-}>;
-
-export type SignerResolvers<
-  ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["Signer"] = ResolversParentTypes["Signer"],
-> = ResolversObject<{
-  app?: Resolver<Maybe<ResolversTypes["SignerApp"]>, ParentType, ContextType>;
-  signatures?: Resolver<
-    ReadonlyArray<ResolversTypes["String"]>,
-    ParentType,
-    ContextType
-  >;
-  user?: Resolver<Maybe<ResolversTypes["SignerUser"]>, ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
-}>;
-
-export type SignerAppResolvers<
-  ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["SignerApp"] = ResolversParentTypes["SignerApp"],
-> = ResolversObject<{
-  key?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  name?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
-}>;
-
-export type SignerUserResolvers<
-  ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["SignerUser"] = ResolversParentTypes["SignerUser"],
-> = ResolversObject<{
-  address?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  chainId?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
-  networkId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -1583,7 +1650,7 @@ export type SyncEnvelopeResolvers<
 export type Resolvers<ContextType = Context> = ResolversObject<{
   Action?: ActionResolvers<ContextType>;
   ActionContext?: ActionContextResolvers<ContextType>;
-  AttachmentInput?: AttachmentInputResolvers<ContextType>;
+  Attachment?: AttachmentResolvers<ContextType>;
   ChannelMeta?: ChannelMetaResolvers<ContextType>;
   DateTime?: GraphQLScalarType;
   DocumentChangeContext?: DocumentChangeContextResolvers<ContextType>;
@@ -1596,17 +1663,17 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   JobInfo?: JobInfoResolvers<ContextType>;
   MoveChildrenResult?: MoveChildrenResultResolvers<ContextType>;
   Mutation?: MutationResolvers<ContextType>;
-  Operation?: OperationResolvers<ContextType>;
   OperationContext?: OperationContextResolvers<ContextType>;
   OperationWithContext?: OperationWithContextResolvers<ContextType>;
   PHDocument?: PhDocumentResolvers<ContextType>;
   PHDocumentResultPage?: PhDocumentResultPageResolvers<ContextType>;
   Query?: QueryResolvers<ContextType>;
+  ReactorOperation?: ReactorOperationResolvers<ContextType>;
+  ReactorSigner?: ReactorSignerResolvers<ContextType>;
+  ReactorSignerApp?: ReactorSignerAppResolvers<ContextType>;
+  ReactorSignerUser?: ReactorSignerUserResolvers<ContextType>;
   RemoteCursor?: RemoteCursorResolvers<ContextType>;
   Revision?: RevisionResolvers<ContextType>;
-  Signer?: SignerResolvers<ContextType>;
-  SignerApp?: SignerAppResolvers<ContextType>;
-  SignerUser?: SignerUserResolvers<ContextType>;
   Subscription?: SubscriptionResolvers<ContextType>;
   SyncEnvelope?: SyncEnvelopeResolvers<ContextType>;
 }>;
@@ -1629,6 +1696,38 @@ export const DocumentChangeTypeSchema = z.nativeEnum(DocumentChangeType);
 export const PropagationModeSchema = z.nativeEnum(PropagationMode);
 
 export const SyncEnvelopeTypeSchema = z.nativeEnum(SyncEnvelopeType);
+
+export function ActionContextInputSchema(): z.ZodObject<
+  Properties<ActionContextInput>
+> {
+  return z.object({
+    signer: z.lazy(() => ReactorSignerInputSchema().nullish()),
+  });
+}
+
+export function ActionInputSchema(): z.ZodObject<Properties<ActionInput>> {
+  return z.object({
+    attachments: z.array(z.lazy(() => AttachmentInputSchema())).nullish(),
+    context: z.lazy(() => ActionContextInputSchema().nullish()),
+    id: z.string(),
+    input: z.custom<NonNullable<unknown>>((v) => v != null),
+    scope: z.string(),
+    timestampUtcMs: z.string(),
+    type: z.string(),
+  });
+}
+
+export function AttachmentInputSchema(): z.ZodObject<
+  Properties<AttachmentInput>
+> {
+  return z.object({
+    data: z.string(),
+    extension: z.string().nullish(),
+    fileName: z.string().nullish(),
+    hash: z.string(),
+    mimeType: z.string(),
+  });
+}
 
 export function ChannelMetaInputSchema(): z.ZodObject<
   Properties<ChannelMetaInput>
@@ -1664,7 +1763,7 @@ export function OperationInputSchema(): z.ZodObject<
   Properties<OperationInput>
 > {
   return z.object({
-    action: z.unknown(),
+    action: z.lazy(() => ActionInputSchema()),
     error: z.string().nullish(),
     hash: z.string(),
     id: z.string().nullish(),
@@ -1680,7 +1779,7 @@ export function OperationWithContextInputSchema(): z.ZodObject<
   return z.object({
     context: z.lazy(() => OperationContextInputSchema()),
     operation: z.lazy(() => OperationInputSchema()),
-  }) as z.ZodObject<Properties<OperationWithContextInput>>;
+  });
 }
 
 export function PagingInputSchema(): z.ZodObject<Properties<PagingInput>> {
@@ -1688,6 +1787,35 @@ export function PagingInputSchema(): z.ZodObject<Properties<PagingInput>> {
     cursor: z.string().nullish(),
     limit: z.number().nullish(),
     offset: z.number().nullish(),
+  });
+}
+
+export function ReactorSignerAppInputSchema(): z.ZodObject<
+  Properties<ReactorSignerAppInput>
+> {
+  return z.object({
+    key: z.string(),
+    name: z.string(),
+  });
+}
+
+export function ReactorSignerInputSchema(): z.ZodObject<
+  Properties<ReactorSignerInput>
+> {
+  return z.object({
+    app: z.lazy(() => ReactorSignerAppInputSchema().nullish()),
+    signatures: z.array(z.string()),
+    user: z.lazy(() => ReactorSignerUserInputSchema().nullish()),
+  });
+}
+
+export function ReactorSignerUserInputSchema(): z.ZodObject<
+  Properties<ReactorSignerUserInput>
+> {
+  return z.object({
+    address: z.string(),
+    chainId: z.number(),
+    networkId: z.string(),
   });
 }
 

@@ -53,7 +53,7 @@ function toGqlDocumentModelState(
 ): GqlDocumentModelGlobalState {
   const global = model.global;
   const specification =
-    global.specifications.length > 0 ? global.specifications[0] : null;
+    global.specifications.length > 0 ? global.specifications[0] : {};
   const namespace = getNamespace(model);
 
   return {
