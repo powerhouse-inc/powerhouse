@@ -2,10 +2,7 @@
 
 import type { CSSProperties, ReactNode } from "react";
 import { useState, useRef, useEffect } from "react";
-import {
-  renownShortDataUrl,
-  renownShortHoverDataUrl,
-} from "./image-data.js";
+import { renownShortDataUrl, renownShortHoverDataUrl } from "./image-data.js";
 import { RenownLogo, SpinnerIcon } from "./icons.js";
 
 export interface RenownLoginButtonProps {
@@ -24,7 +21,10 @@ export interface RenownLoginButtonProps {
   /**
    * Custom render function for the trigger button
    */
-  renderTrigger?: (props: { onClick: () => void; isLoading: boolean }) => ReactNode;
+  renderTrigger?: (props: {
+    onClick: () => void;
+    isLoading: boolean;
+  }) => ReactNode;
 }
 
 const styles: Record<string, CSSProperties> = {
@@ -43,7 +43,8 @@ const styles: Record<string, CSSProperties> = {
     left: 0,
     backgroundColor: "white",
     borderRadius: "8px",
-    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+    boxShadow:
+      "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
     width: "208px", // w-52
     zIndex: 1000,
   },

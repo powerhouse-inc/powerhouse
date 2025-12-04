@@ -83,11 +83,19 @@ function App() {
   return (
     <div style={styles.container}>
       <header style={styles.header}>
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            marginBottom: "16px",
+          }}
+        >
           <RenownLogo width={142} height={38} color="#374151" />
         </div>
         <h1 style={styles.title}>Renown SDK Components</h1>
-        <p style={styles.subtitle}>Visual test page for Renown authentication components</p>
+        <p style={styles.subtitle}>
+          Visual test page for Renown authentication components
+        </p>
       </header>
 
       {/* RenownLoginButton Section */}
@@ -96,8 +104,8 @@ function App() {
           <span style={styles.code}>RenownLoginButton</span>
         </h2>
         <p style={styles.description}>
-          A button that opens a popover with the Renown login option.
-          Click the button to see the popover with the "Connect" option.
+          A button that opens a popover with the Renown login option. Click the
+          button to see the popover with the "Connect" option.
         </p>
         <div style={styles.componentRow}>
           <span style={styles.label}>Default:</span>
@@ -108,7 +116,15 @@ function App() {
           <RenownLoginButton
             onLogin={() => console.log("Login clicked!")}
             renderTrigger={({ onClick }) => (
-              <button onClick={onClick} style={{ padding: "8px 16px", borderRadius: "8px", border: "1px solid #ccc", cursor: "pointer" }}>
+              <button
+                onClick={onClick}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: "8px",
+                  border: "1px solid #ccc",
+                  cursor: "pointer",
+                }}
+              >
                 Sign In
               </button>
             )}
@@ -122,8 +138,9 @@ function App() {
           <span style={styles.code}>RenownUserButton</span>
         </h2>
         <p style={styles.description}>
-          A user avatar button that shows account info in a popover with options to copy address,
-          view profile, and disconnect. Click the avatar to see the popover.
+          A user avatar button that shows account info in a popover with options
+          to copy address, view profile, and disconnect. Click the avatar to see
+          the popover.
         </p>
         <div style={styles.componentRow}>
           <span style={styles.label}>Without avatar:</span>
@@ -160,9 +177,10 @@ function App() {
           <span style={styles.code}>RenownAuthButton</span>
         </h2>
         <p style={styles.description}>
-          Smart authentication button that adapts based on auth state.
-          Shows RenownLoginButton when not authenticated, and RenownUserButton when authenticated.
-          This component requires the UserProvider to be initialized.
+          Smart authentication button that adapts based on auth state. Shows
+          RenownLoginButton when not authenticated, and RenownUserButton when
+          authenticated. This component requires the UserProvider to be
+          initialized.
         </p>
         <div style={styles.componentRow}>
           <span style={styles.label}>With UserProvider:</span>

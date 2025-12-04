@@ -21,7 +21,9 @@ test.describe("Renown SDK Components", () => {
 
     test("opens popover on click", async ({ page }) => {
       const section = page.locator('[data-testid="login-button-section"]');
-      const button = section.locator('button[aria-label="Open Renown Login"]').first();
+      const button = section
+        .locator('button[aria-label="Open Renown Login"]')
+        .first();
 
       // Click the button
       await button.click();
@@ -32,7 +34,9 @@ test.describe("Renown SDK Components", () => {
 
     test("closes popover when clicking outside", async ({ page }) => {
       const section = page.locator('[data-testid="login-button-section"]');
-      const button = section.locator('button[aria-label="Open Renown Login"]').first();
+      const button = section
+        .locator('button[aria-label="Open Renown Login"]')
+        .first();
 
       // Open popover
       await button.click();
@@ -42,7 +46,9 @@ test.describe("Renown SDK Components", () => {
       await page.locator("h1").click();
 
       // Popover should be hidden
-      await expect(page.getByRole("button", { name: "Connect" })).not.toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Connect" }),
+      ).not.toBeVisible();
     });
 
     test("renders with custom trigger", async ({ page }) => {
@@ -64,20 +70,28 @@ test.describe("Renown SDK Components", () => {
 
     test("opens popover with user info on click", async ({ page }) => {
       const section = page.locator('[data-testid="user-button-section"]');
-      const button = section.locator('button[aria-label="Open account menu"]').first();
+      const button = section
+        .locator('button[aria-label="Open account menu"]')
+        .first();
 
       // Click the button
       await button.click();
 
       // Check that the popover is visible with user info
       await expect(page.getByText("vitalik.eth")).toBeVisible();
-      await expect(page.getByRole("button", { name: "Disconnect" })).toBeVisible();
-      await expect(page.getByRole("link", { name: "View on Etherscan" })).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Disconnect" }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("link", { name: "View on Etherscan" }),
+      ).toBeVisible();
     });
 
     test("shows truncated address in popover", async ({ page }) => {
       const section = page.locator('[data-testid="user-button-section"]');
-      const button = section.locator('button[aria-label="Open account menu"]').first();
+      const button = section
+        .locator('button[aria-label="Open account menu"]')
+        .first();
 
       await button.click();
 
@@ -90,7 +104,9 @@ test.describe("Renown SDK Components", () => {
       await context.grantPermissions(["clipboard-read", "clipboard-write"]);
 
       const section = page.locator('[data-testid="user-button-section"]');
-      const button = section.locator('button[aria-label="Open account menu"]').first();
+      const button = section
+        .locator('button[aria-label="Open account menu"]')
+        .first();
 
       await button.click();
 
@@ -108,20 +124,28 @@ test.describe("Renown SDK Components", () => {
 
     test("closes popover when clicking outside", async ({ page }) => {
       const section = page.locator('[data-testid="user-button-section"]');
-      const button = section.locator('button[aria-label="Open account menu"]').first();
+      const button = section
+        .locator('button[aria-label="Open account menu"]')
+        .first();
 
       // Open popover
       await button.click();
-      await expect(page.getByRole("button", { name: "Disconnect" })).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Disconnect" }),
+      ).toBeVisible();
 
       // Click outside
       await page.locator("h1").click();
 
       // Popover should be hidden
-      await expect(page.getByRole("button", { name: "Disconnect" })).not.toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Disconnect" }),
+      ).not.toBeVisible();
     });
 
-    test("shows placeholder avatar when no avatarUrl provided", async ({ page }) => {
+    test("shows placeholder avatar when no avatarUrl provided", async ({
+      page,
+    }) => {
       const section = page.locator('[data-testid="user-button-section"]');
 
       // First button has no avatar - check for placeholder
@@ -151,7 +175,9 @@ test.describe("Renown SDK Components", () => {
       await page.waitForTimeout(2000);
 
       // Should show a login button since we're not authenticated
-      const loginButton = section.locator('button[aria-label="Open Renown Login"]');
+      const loginButton = section.locator(
+        'button[aria-label="Open Renown Login"]',
+      );
       await expect(loginButton).toBeVisible({ timeout: 10000 });
     });
   });

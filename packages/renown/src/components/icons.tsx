@@ -82,7 +82,10 @@ export function CopyIcon({ size = 14, color = "#9EA0A1" }: IconProps) {
   );
 }
 
-export function ExternalLinkIcon({ size = 14, color = "currentColor" }: IconProps) {
+export function ExternalLinkIcon({
+  size = 14,
+  color = "currentColor",
+}: IconProps) {
   return (
     <svg
       width={size}
@@ -161,12 +164,7 @@ export function SpinnerIcon({ size = 14, color = "currentColor" }: IconProps) {
       style={{ animation: "spin 1s linear infinite" }}
     >
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-      <path
-        d="M8 1V4"
-        stroke={color}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
+      <path d="M8 1V4" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
       <path
         d="M8 12V15"
         stroke={color}
