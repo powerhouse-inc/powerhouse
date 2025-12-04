@@ -4,6 +4,8 @@ import path from "path";
 import { describe, it, type TestContext } from "vitest";
 import { generateDocumentModel } from "../generate.js";
 import { loadDocumentModel } from "../utils.js";
+import { runGeneratedTests } from "./fixtures/run-generated-tests.js";
+import { compile } from "./fixtures/typecheck.js";
 import { copyAllFiles, purgeDirAfterTest, resetDirForTest } from "./utils.js";
 
 const parentOutDirName = "versioned-document-models";
@@ -31,39 +33,49 @@ function getDocumentModelsDirName(testOutDir: string) {
 }
 
 describe("versioned document models", () => {
-  it("should generate new document models as v1", async (context) => {
-    const testOutDir = getTestOutDir(context);
-    resetDirForTest(testOutDir);
-    const documentModelsDir = getDocumentModelsDirName(testOutDir);
-    const emptyProjectDir = getDirInTestDataDir("empty-project");
-    await copyAllFiles(emptyProjectDir, testOutDir);
+  it(
+    "should generate new document models as v1",
+    async (context) => {
+      const testOutDir = getTestOutDir(context);
+      resetDirForTest(testOutDir);
+      const documentModelsDir = getDocumentModelsDirName(testOutDir);
+      const emptyProjectDir = getDirInTestDataDir("empty-project");
+      await copyAllFiles(emptyProjectDir, testOutDir);
 
-    const specVersion1DocumentModelsDir = getDirInTestDataDir("spec-version-1");
-    const documentModelDirs = readdirSync(specVersion1DocumentModelsDir, {
-      withFileTypes: true,
-    })
-      .filter((value) => value.isDirectory())
-      .map((value) => value.name);
+      const specVersion1DocumentModelsDir =
+        getDirInTestDataDir("spec-version-1");
+      const documentModelDirs = readdirSync(specVersion1DocumentModelsDir, {
+        withFileTypes: true,
+      })
+        .filter((value) => value.isDirectory())
+        .map((value) => value.name);
 
-    const documentModelStates = await Promise.all(
-      documentModelDirs.map(
-        async (dirName) =>
-          await loadDocumentModel(
-            getDocumentModelJsonFilePath(
-              specVersion1DocumentModelsDir,
-              dirName,
+      const documentModelStates = await Promise.all(
+        documentModelDirs.map(
+          async (dirName) =>
+            await loadDocumentModel(
+              getDocumentModelJsonFilePath(
+                specVersion1DocumentModelsDir,
+                dirName,
+              ),
             ),
-          ),
-      ),
-    );
+        ),
+      );
 
-    for (const documentModelState of documentModelStates) {
-      await generateDocumentModel({
-        documentModelState,
-        dir: documentModelsDir,
-        legacy: false,
-      });
-    }
-    purgeDirAfterTest(testOutDir);
-  });
+      for (const documentModelState of documentModelStates) {
+        await generateDocumentModel({
+          documentModelState,
+          dir: documentModelsDir,
+          legacy: false,
+          specifiedPackageName: "test",
+        });
+      }
+      purgeDirAfterTest(testOutDir);
+      await compile(testOutDir);
+      await runGeneratedTests(testOutDir);
+    },
+    {
+      timeout: 10000000,
+    },
+  );
 });

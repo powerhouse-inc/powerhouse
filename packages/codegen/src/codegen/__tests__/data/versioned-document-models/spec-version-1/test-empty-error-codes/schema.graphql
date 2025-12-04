@@ -1,4 +1,4 @@
-type TestState {
+type TestEmptyCodesState {
   value: String!
 }
 

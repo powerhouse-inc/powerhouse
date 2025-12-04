@@ -40,6 +40,7 @@ export async function tsMorphGenerateDocumentModel({
   projectDir,
   packageName,
   documentModelState,
+  specVersion,
 }: GenerateDocumentModelArgs) {
   const project = buildTsMorphProject(projectDir);
   const { documentModelsSourceFilesPath } =
@@ -54,7 +55,9 @@ export async function tsMorphGenerateDocumentModel({
   ensureDirectoriesExist(project, documentModelsDirPath, documentModelDirPath);
 
   const specification = getLatestDocumentModelSpec(documentModelState);
-  const version = getLatestDocumentModelSpecVersionNumber(documentModelState);
+  const latestVersion =
+    getLatestDocumentModelSpecVersionNumber(documentModelState);
+  const version = specVersion ?? latestVersion;
 
   const versionDirName = `v${version}`;
 
@@ -114,6 +117,7 @@ export async function tsMorphGenerateDocumentModel({
     projectDir,
     packageName,
     version,
+    latestVersion,
     documentTypeId,
     documentModelState,
     initialGlobalState,

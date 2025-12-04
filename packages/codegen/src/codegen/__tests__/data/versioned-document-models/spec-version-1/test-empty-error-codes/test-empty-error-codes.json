@@ -13,7 +13,7 @@
       "changeLog": [],
       "state": {
         "global": {
-          "schema": "type TestState { value: String! }",
+          "schema": "type TestEmptyCodesState { value: String! }",
           "initialValue": "{ \"value\": \"\" }",
           "examples": []
         },

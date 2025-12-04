@@ -49,7 +49,7 @@ function makeReducerOperationHandlerForModule({
   reducersDirPath,
   pascalCaseDocumentType,
   camelCaseDocumentType,
-  documentModelVersionDirName,
+  versionedDocumentModelPackageImportPath,
 }: DocumentModelFileMakerArgs & { module: ModuleSpecification }) {
   const paramCaseModuleName = paramCase(module.name);
   const pascalCaseModuleName = pascalCase(module.name);
@@ -67,7 +67,7 @@ function makeReducerOperationHandlerForModule({
 
   const operationsInterfaceTypeImport = sourceFile.addImportDeclaration({
     namedImports: [operationsInterfaceTypeName],
-    moduleSpecifier: documentModelVersionDirName,
+    moduleSpecifier: versionedDocumentModelPackageImportPath,
     isTypeOnly: true,
   });
 

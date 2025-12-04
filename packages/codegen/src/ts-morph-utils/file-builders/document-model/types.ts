@@ -16,6 +16,7 @@ export type DocumentModelFileMakerArgs = DocumentModelVariableNames &
   GenerateDocumentModelArgs & {
     project: Project;
     version: number;
+    latestVersion: number;
     documentTypeId: string;
     modules: ModuleSpecification[];
     initialGlobalState: string;

@@ -1,3 +1,4 @@
+import { ts } from "@tmpl/core";
 import path from "path";
 import {
   formatSourceFileWithPrettier,
@@ -12,15 +13,16 @@ import type { DocumentModelFileMakerArgs } from "./types.js";
 
 export function makeRootDirFiles(fileMakerArgs: DocumentModelFileMakerArgs) {
   makeDocumentModelVersionIndexFile(fileMakerArgs);
+  makeDocumentModelIndexFile(fileMakerArgs);
   makeDocumentModelRootActionsFile(fileMakerArgs);
   makeDocumentModelModuleFile(fileMakerArgs);
   makeDocumentModelUtilsFile(fileMakerArgs);
   makeDocumentModelHooksFile(fileMakerArgs);
 }
 
-function makeDocumentModelVersionIndexFile(args: DocumentModelFileMakerArgs) {
-  const template = documentModelIndexTemplate;
-  const { project, documentModelDirPath } = args;
+function makeDocumentModelIndexFile(args: DocumentModelFileMakerArgs) {
+  const { project, documentModelDirPath, latestVersion } = args;
+  const template = ts`export * from "./v${latestVersion}/index.js";`.raw;
 
   const filePath = path.join(documentModelDirPath, "index.ts");
 
@@ -30,11 +32,23 @@ function makeDocumentModelVersionIndexFile(args: DocumentModelFileMakerArgs) {
   formatSourceFileWithPrettier(sourceFile);
 }
 
+function makeDocumentModelVersionIndexFile(args: DocumentModelFileMakerArgs) {
+  const template = documentModelIndexTemplate;
+  const { project, documentModelVersionDirPath } = args;
+
+  const filePath = path.join(documentModelVersionDirPath, "index.ts");
+
+  const { sourceFile } = getOrCreateSourceFile(project, filePath);
+
+  sourceFile.replaceWithText(template);
+  formatSourceFileWithPrettier(sourceFile);
+}
+
 function makeDocumentModelUtilsFile(args: DocumentModelFileMakerArgs) {
   const template = documentModelUtilsTemplate(args);
-  const { project, documentModelDirPath } = args;
+  const { project, documentModelVersionDirPath } = args;
 
-  const filePath = path.join(documentModelDirPath, "utils.ts");
+  const filePath = path.join(documentModelVersionDirPath, "utils.ts");
 
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
   sourceFile.replaceWithText(template);
@@ -43,9 +57,9 @@ function makeDocumentModelUtilsFile(args: DocumentModelFileMakerArgs) {
 
 function makeDocumentModelRootActionsFile(args: DocumentModelFileMakerArgs) {
   const template = documentModelRootActionsFileTemplate(args);
-  const { project, documentModelDirPath } = args;
+  const { project, documentModelVersionDirPath } = args;
 
-  const filePath = path.join(documentModelDirPath, "actions.ts");
+  const filePath = path.join(documentModelVersionDirPath, "actions.ts");
 
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
 
@@ -55,9 +69,9 @@ function makeDocumentModelRootActionsFile(args: DocumentModelFileMakerArgs) {
 
 function makeDocumentModelHooksFile(args: DocumentModelFileMakerArgs) {
   const template = documentModelHooksFileTemplate(args);
-  const { project, documentModelDirPath } = args;
+  const { project, documentModelVersionDirPath } = args;
 
-  const filePath = path.join(documentModelDirPath, "hooks.ts");
+  const filePath = path.join(documentModelVersionDirPath, "hooks.ts");
 
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
 
@@ -70,7 +84,7 @@ function makeDocumentModelModuleFile({
   phStateName,
   pascalCaseDocumentType,
   versionedDocumentModelPackageImportPath,
-  documentModelDirPath,
+  documentModelVersionDirPath,
 }: DocumentModelFileMakerArgs) {
   const template = documentModelModuleFileTemplate({
     phStateName,
@@ -78,7 +92,7 @@ function makeDocumentModelModuleFile({
     pascalCaseDocumentType,
   });
 
-  const moduleFilePath = path.join(documentModelDirPath, "module.ts");
+  const moduleFilePath = path.join(documentModelVersionDirPath, "module.ts");
 
   const { sourceFile } = getOrCreateSourceFile(project, moduleFilePath);
 
