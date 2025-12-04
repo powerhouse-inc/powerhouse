@@ -230,6 +230,8 @@ export const chatRoomMessagesOperations: ChatRoomMessagesOperations = {
 
 <details>
 <summary>Operation Reducers</summary>
+
+```typescript
 import type { ChatRoomSettingsOperations } from "chatroom-package/document-models/chat-room";
 
 export const chatRoomSettingsOperations: ChatRoomSettingsOperations = {
@@ -240,6 +242,8 @@ export const chatRoomSettingsOperations: ChatRoomSettingsOperations = {
     state.description = action.input.description || "";
   },
 };
+```
+
 </details>
 
 
