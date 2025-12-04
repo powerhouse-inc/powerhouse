@@ -1,3 +1,21 @@
+## 5.1.0-dev.5 (2025-12-04)
+
+### 🚀 Features
+
+- connect crypto signer and verifier ([918fb1fab](https://github.com/powerhouse-inc/powerhouse/commit/918fb1fab))
+- added tests for signing and verification ([f9b7c95a8](https://github.com/powerhouse-inc/powerhouse/commit/f9b7c95a8))
+
+### 🩹 Fixes
+
+- vitest was destroying my computer ([a43c93c4b](https://github.com/powerhouse-inc/powerhouse/commit/a43c93c4b))
+- adding testing for document creation signatures ([ae6e33c12](https://github.com/powerhouse-inc/powerhouse/commit/ae6e33c12))
+- adding ts reference ([491dd5c8f](https://github.com/powerhouse-inc/powerhouse/commit/491dd5c8f))
+- build issues ([4825c1c01](https://github.com/powerhouse-inc/powerhouse/commit/4825c1c01))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.4 (2025-12-03)
 
 ### 🚀 Features
