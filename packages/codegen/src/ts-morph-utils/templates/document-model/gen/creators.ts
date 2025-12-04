@@ -1,7 +1,7 @@
 import { ts } from "@tmpl/core";
 import { camelCase, paramCase } from "change-case";
 import type { ModuleSpecification } from "document-model";
-import type { DocumentModelVariableNames } from "../../../name-builders/types.js";
+import type { DocumentModelTemplateInputs } from "../../../name-builders/types.js";
 
 function buildModuleCreatorsExport(module: ModuleSpecification) {
   const paramCaseModuleName = paramCase(module.name);
@@ -15,7 +15,7 @@ function buildCreatorsExports(modules: ModuleSpecification[]) {
   return modules.flatMap(buildModuleCreatorsExport).join("\n");
 }
 export const documentModelGenCreatorsFileTemplate = (
-  v: DocumentModelVariableNames,
+  v: DocumentModelTemplateInputs,
 ) =>
   ts`
 ${buildCreatorsExports(v.modules)}

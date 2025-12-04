@@ -157,6 +157,23 @@ export async function generateDocumentModel(args: GenerateDocumentModelArgs) {
       packageName,
       hygenArgs,
     );
+    const generator = new TSMorphCodeGenerator(
+      projectDir,
+      [documentModelState],
+      packageName,
+      {
+        directories: { documentModelDir: "document-models" },
+        forceUpdate: true,
+      },
+    );
+
+    await generator.generateReducers();
+
+    const project = buildTsMorphProject(projectDir);
+    makeDocumentModelModulesFile({
+      project,
+      projectDir,
+    });
   } else {
     await tsMorphGenerateDocumentModel({
       projectDir,
@@ -164,24 +181,6 @@ export async function generateDocumentModel(args: GenerateDocumentModelArgs) {
       documentModelState,
     });
   }
-
-  const generator = new TSMorphCodeGenerator(
-    projectDir,
-    [documentModelState],
-    packageName,
-    {
-      directories: { documentModelDir: "document-models" },
-      forceUpdate: true,
-    },
-  );
-
-  await generator.generateReducers();
-
-  const project = buildTsMorphProject(projectDir);
-  makeDocumentModelModulesFile({
-    project,
-    projectDir,
-  });
 }
 
 type GenerateEditorArgs = {

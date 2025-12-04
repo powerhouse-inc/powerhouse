@@ -11,19 +11,16 @@ import { documentModelUtilsTemplate } from "../../templates/document-model/utils
 import type { DocumentModelFileMakerArgs } from "./types.js";
 
 export function makeRootDirFiles(fileMakerArgs: DocumentModelFileMakerArgs) {
-  makeDocumentModelIndexFile(fileMakerArgs);
+  makeDocumentModelVersionIndexFile(fileMakerArgs);
   makeDocumentModelRootActionsFile(fileMakerArgs);
   makeDocumentModelModuleFile(fileMakerArgs);
   makeDocumentModelUtilsFile(fileMakerArgs);
   makeDocumentModelHooksFile(fileMakerArgs);
 }
 
-function makeDocumentModelIndexFile({
-  project,
-  ...variableNames
-}: DocumentModelFileMakerArgs) {
+function makeDocumentModelVersionIndexFile(args: DocumentModelFileMakerArgs) {
   const template = documentModelIndexTemplate;
-  const { documentModelDirPath } = variableNames;
+  const { project, documentModelDirPath } = args;
 
   const filePath = path.join(documentModelDirPath, "index.ts");
 
@@ -33,12 +30,9 @@ function makeDocumentModelIndexFile({
   formatSourceFileWithPrettier(sourceFile);
 }
 
-function makeDocumentModelUtilsFile({
-  project,
-  ...variableNames
-}: DocumentModelFileMakerArgs) {
-  const template = documentModelUtilsTemplate(variableNames);
-  const { documentModelDirPath } = variableNames;
+function makeDocumentModelUtilsFile(args: DocumentModelFileMakerArgs) {
+  const template = documentModelUtilsTemplate(args);
+  const { project, documentModelDirPath } = args;
 
   const filePath = path.join(documentModelDirPath, "utils.ts");
 
@@ -47,12 +41,9 @@ function makeDocumentModelUtilsFile({
   formatSourceFileWithPrettier(sourceFile);
 }
 
-function makeDocumentModelRootActionsFile({
-  project,
-  ...variableNames
-}: DocumentModelFileMakerArgs) {
-  const template = documentModelRootActionsFileTemplate(variableNames);
-  const { documentModelDirPath } = variableNames;
+function makeDocumentModelRootActionsFile(args: DocumentModelFileMakerArgs) {
+  const template = documentModelRootActionsFileTemplate(args);
+  const { project, documentModelDirPath } = args;
 
   const filePath = path.join(documentModelDirPath, "actions.ts");
 
@@ -62,12 +53,9 @@ function makeDocumentModelRootActionsFile({
   formatSourceFileWithPrettier(sourceFile);
 }
 
-function makeDocumentModelHooksFile({
-  project,
-  ...variableNames
-}: DocumentModelFileMakerArgs) {
-  const template = documentModelHooksFileTemplate(variableNames);
-  const { documentModelDirPath } = variableNames;
+function makeDocumentModelHooksFile(args: DocumentModelFileMakerArgs) {
+  const template = documentModelHooksFileTemplate(args);
+  const { project, documentModelDirPath } = args;
 
   const filePath = path.join(documentModelDirPath, "hooks.ts");
 
@@ -81,12 +69,12 @@ function makeDocumentModelModuleFile({
   project,
   phStateName,
   pascalCaseDocumentType,
-  documentModelDir,
+  versionedDocumentModelPackageImportPath,
   documentModelDirPath,
 }: DocumentModelFileMakerArgs) {
   const template = documentModelModuleFileTemplate({
     phStateName,
-    documentModelDir,
+    versionedDocumentModelPackageImportPath,
     pascalCaseDocumentType,
   });
 

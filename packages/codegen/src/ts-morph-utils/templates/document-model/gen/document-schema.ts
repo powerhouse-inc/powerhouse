@@ -1,8 +1,8 @@
 import { ts } from "@tmpl/core";
-import type { DocumentModelVariableNames } from "../../../name-builders/types.js";
+import type { DocumentModelTemplateInputs } from "../../../name-builders/types.js";
 
 export const documentModelDocumentSchemaFileTemplate = (
-  v: DocumentModelVariableNames,
+  v: DocumentModelTemplateInputs,
 ) =>
   ts`
 import {

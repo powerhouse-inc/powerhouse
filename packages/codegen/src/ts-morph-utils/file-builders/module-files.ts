@@ -2,6 +2,7 @@ import type { Project } from "ts-morph";
 import { SyntaxKind, VariableDeclarationKind } from "ts-morph";
 import { buildModulesOutputFilePath } from "../name-builders/common-files.js";
 import { getVariableDeclarationByTypeName } from "../syntax-getters.js";
+import type { DocumentModelFileMakerArgs } from "./document-model/types.js";
 import { makeLegacyIndexFile } from "./index-files.js";
 
 type MakeModuleFileArgs = {
@@ -22,6 +23,10 @@ type MakeModuleFileArgs = {
   /** Whether to make a legacy index.ts file for the modules, to be removed in the future */
   shouldMakeLegacyIndexFile?: boolean;
 };
+
+export function makeDocumentModelsFile({
+  project,
+}: DocumentModelFileMakerArgs) {}
 
 /**
  * Makes a file which exports the modules from the module.ts files in the given directory as a variable declaration.
@@ -57,9 +62,10 @@ export function makeModulesFile({
     .map((module) => {
       const name = module.getName();
       const sourceFile = module.getSourceFile();
-      const parentDir = sourceFile.getDirectory();
-      const parentDirName = parentDir.getBaseName();
-      const moduleSpecifier = `./${parentDirName}/module.js`;
+      const moduleSpecifier =
+        modulesDir.getRelativePathAsModuleSpecifierTo(
+          sourceFile.getFilePath(),
+        ) + ".js";
       return { name, moduleSpecifier };
     });
 

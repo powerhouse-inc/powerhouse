@@ -1,7 +1,7 @@
+import { paramCase } from "change-case";
 import path from "path";
 import type { Project } from "ts-morph";
 import { generateDocumentModelZodSchemas } from "../../codegen/graphql.js";
-import { TSMorphCodeGenerator } from "../../ts-morph-generator/index.js";
 import {
   documentModelModulesOutputFileName,
   documentModelModulesVariableName,
@@ -15,25 +15,19 @@ import {
   getLatestDocumentModelSpec,
   getLatestDocumentModelSpecVersionNumber,
 } from "../name-builders/get-variable-names.js";
+import { getInitialStates } from "../templates/unsafe-utils.js";
 import { buildTsMorphProject } from "../ts-morph-project.js";
 import { makeGenDirFiles } from "./document-model/gen-dir.js";
 import { makeRootDirFiles } from "./document-model/root-dir.js";
 import { makeSrcDirFiles } from "./document-model/src-dir.js";
-import type { GenerateDocumentModelArgs } from "./document-model/types.js";
+import type {
+  DocumentModelFileMakerArgs,
+  GenerateDocumentModelArgs,
+} from "./document-model/types.js";
 import { createOrUpdateVersionConstantsFile } from "./document-model/versions.js";
 import { makeModulesFile } from "./module-files.js";
 
 function ensureDirectoriesExist(project: Project, ...pathsToEnsure: string[]) {
-  // const pathsToEnsure = [
-  //   documentModelsDirPath,
-  //   documentModelDirPath,
-  //   srcDirPath,
-  //   genDirPath,
-  //   testsDirPath,
-  //   schemaDirPath,
-  //   ...moduleDirPaths,
-  // ];
-
   for (const dirPath of pathsToEnsure) {
     const dir = project.getDirectory(dirPath);
     if (!dir) {
@@ -64,51 +58,86 @@ export async function tsMorphGenerateDocumentModel({
 
   const versionDirName = `v${version}`;
 
-  const versionedDocumentModelDirName = path.join(
+  const documentModelVersionDirName = path.join(
     documentModelDirName,
-    // latestVersionDirName,
+    versionDirName,
   );
 
-  const versionedDocumentModelDirPath = path.join(
+  const documentModelVersionDirPath = path.join(
     documentModelDirPath,
-    // latestVersionDirName,
+    versionDirName,
   );
 
-  const documentModelVariableNames = getDocumentModelVariableNames({
+  const documentModelPackageImportPath = path.join(
     packageName,
-    versionedDocumentModelDirPath,
-    documentModelDirName: versionedDocumentModelDirName,
-    documentModelState,
-  });
+    "document-models",
+    documentModelDirName,
+  );
 
-  const {
-    srcDirPath,
-    genDirPath,
-    testsDirPath,
-    schemaDirPath,
-    moduleDirPaths,
-  } = documentModelVariableNames;
+  const versionedDocumentModelPackageImportPath = path.join(
+    documentModelPackageImportPath,
+    versionDirName,
+  );
+
+  const fileExtension = documentModelState.extension;
+  const documentType = documentModelState.name;
+  const documentTypeId = documentModelState.id;
+  const documentModelVariableNames =
+    getDocumentModelVariableNames(documentType);
+  const srcDirPath = path.join(documentModelVersionDirPath, "src");
+  const reducersDirPath = path.join(srcDirPath, "reducers");
+  const testsDirPath = path.join(srcDirPath, "tests");
+  const genDirPath = path.join(documentModelVersionDirPath, "gen");
+  const schemaDirPath = path.join(genDirPath, "schema");
+  const { initialGlobalState, initialLocalState } = getInitialStates(
+    specification.state,
+  );
+  const hasLocalSchema = specification.state.local.schema !== "";
+  const modules = specification.modules;
+  const moduleDirPaths = modules.map((module) =>
+    path.join(genDirPath, paramCase(module.name)),
+  );
 
   ensureDirectoriesExist(
     project,
-    versionedDocumentModelDirPath,
+    documentModelVersionDirPath,
     srcDirPath,
+    reducersDirPath,
     genDirPath,
     testsDirPath,
     schemaDirPath,
     ...moduleDirPaths,
   );
 
-  const fileMakerArgs = {
+  const fileMakerArgs: DocumentModelFileMakerArgs = {
     project,
     projectDir,
     packageName,
-    documentModelDirPath: versionedDocumentModelDirPath,
+    version,
+    documentTypeId,
+    documentModelState,
+    initialGlobalState,
+    initialLocalState,
+    modules,
+    hasLocalSchema,
+    documentModelsDirPath,
+    documentModelDirPath,
+    documentModelDirName,
+    documentModelVersionDirName,
+    documentModelVersionDirPath,
+    documentModelPackageImportPath,
+    versionedDocumentModelPackageImportPath,
+    srcDirPath,
+    genDirPath,
+    testsDirPath,
+    schemaDirPath,
+    reducersDirPath,
+    fileExtension,
     ...documentModelVariableNames,
   };
 
   await generateDocumentModelZodSchemas(
-    versionedDocumentModelDirPath,
+    documentModelVersionDirPath,
     specification,
   );
 
@@ -124,18 +153,6 @@ export async function tsMorphGenerateDocumentModel({
   makeDocumentModelModulesFile(fileMakerArgs);
 
   project.saveSync();
-
-  const generator = new TSMorphCodeGenerator(
-    projectDir,
-    [documentModelState],
-    packageName,
-    {
-      directories: { documentModelDir: "document-models" },
-      forceUpdate: true,
-    },
-  );
-
-  await generator.generateReducers();
 }
 
 export function makeDocumentModelModulesFile({

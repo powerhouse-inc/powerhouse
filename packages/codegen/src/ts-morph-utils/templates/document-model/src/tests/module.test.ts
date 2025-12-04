@@ -3,7 +3,7 @@ import { camelCase, constantCase, pascalCase } from "change-case";
 import type { ModuleSpecification } from "document-model";
 import type {
   ActionFromOperation,
-  AllDocumentModelVariableNames,
+  DocumentModelTemplateInputsWithModule,
 } from "../../../../name-builders/types.js";
 
 function makeModuleOperationsTypeName(module: ModuleSpecification) {
@@ -62,7 +62,7 @@ function makeTestCasesForActions(
     .join("\n\n");
 }
 export const documentModelOperationsModuleTestFileTemplate = (
-  v: AllDocumentModelVariableNames,
+  v: DocumentModelTemplateInputsWithModule,
 ) =>
   ts`
 /**
@@ -78,7 +78,7 @@ import {
   ${v.isPhDocumentOfTypeFunctionName},
   ${makeCamelCaseActionNamesForImport(v.actions)},
   ${makeActionInputSchemasForImport(v.actions)},
-} from "${v.documentModelDir}";
+} from "${v.versionedDocumentModelPackageImportPath}";
 
 describe("${makeModuleOperationsTypeName(v.module)}", () => {
   ${makeTestCasesForActions(v.actions, v.isPhDocumentOfTypeFunctionName)}

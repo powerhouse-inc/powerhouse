@@ -1,0 +1,63 @@
+{
+  "id": "ph/test-empty-codes",
+  "name": "test-empty-codes",
+  "extension": ".tec",
+  "description": "Test document with empty error codes",
+  "author": {
+    "name": "Test",
+    "website": ""
+  },
+  "specifications": [
+    {
+      "version": 1,
+      "changeLog": [],
+      "state": {
+        "global": {
+          "schema": "type TestState { value: String! }",
+          "initialValue": "{ \"value\": \"\" }",
+          "examples": []
+        },
+        "local": {
+          "schema": "",
+          "initialValue": "",
+          "examples": []
+        }
+      },
+      "modules": [
+        {
+          "id": "test-module-1",
+          "name": "test_operations",
+          "description": "",
+          "operations": [
+            {
+              "id": "test-op-1",
+              "name": "SET_VALUE",
+              "description": "",
+              "schema": "input SetValueInput { value: String! }",
+              "template": "",
+              "reducer": "state.value = action.input.value;",
+              "errors": [
+                {
+                  "id": "empty-error-1",
+                  "name": "InvalidValue",
+                  "code": "",
+                  "description": "Value is invalid",
+                  "template": ""
+                },
+                {
+                  "id": "empty-error-2", 
+                  "name": "EmptyValue",
+                  "code": "",
+                  "description": "Value cannot be empty",
+                  "template": ""
+                }
+              ],
+              "examples": [],
+              "scope": "global"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

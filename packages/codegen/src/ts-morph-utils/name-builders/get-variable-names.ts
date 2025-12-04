@@ -5,8 +5,6 @@ import {
   type OperationErrorSpecification,
   type OperationSpecification,
 } from "document-model";
-import path from "node:path";
-import { getInitialStates } from "../templates/unsafe-utils.js";
 import type {
   DocumentModelDocumentTypeMetadata,
   EditorVariableNames,
@@ -108,32 +106,10 @@ export function getLatestDocumentModelSpecVersionNumber(
   return getLatestDocumentModelSpec(documentModelState).version;
 }
 
-type GetDocumentModelVariableNamesArgs = {
-  packageName: string;
-  documentModelDirName: string;
-  versionedDocumentModelDirPath: string;
-  documentModelState: DocumentModelGlobalState;
-};
-export function getDocumentModelVariableNames({
-  packageName,
-  documentModelDirName,
-  versionedDocumentModelDirPath,
-  documentModelState,
-}: GetDocumentModelVariableNamesArgs) {
-  const documentType = documentModelState.name;
-  const documentTypeId = documentModelState.id;
-  const latestSpec =
-    documentModelState.specifications[
-      documentModelState.specifications.length - 1
-    ];
+export function getDocumentModelVariableNames(documentType: string) {
   const paramCaseDocumentType = paramCase(documentType);
   const pascalCaseDocumentType = pascalCase(documentType);
   const camelCaseDocumentType = camelCase(documentType);
-  const documentModelDir = path.join(
-    packageName,
-    "document-models",
-    documentModelDirName,
-  );
   const documentTypeVariableName = `${camelCaseDocumentType}DocumentType`;
   const stateName = `${pascalCaseDocumentType}State`;
   const globalStateName = `${pascalCaseDocumentType}GlobalState`;
@@ -143,10 +119,7 @@ export function getDocumentModelVariableNames({
   const actionTypeName = `${pascalCaseDocumentType}Action`;
   const actionsTypeName = `${actionTypeName}s`;
   const actionsName = camelCase(actionsTypeName);
-  const srcDirPath = path.join(versionedDocumentModelDirPath, "src");
-  const testsDirPath = path.join(srcDirPath, "tests");
-  const genDirPath = path.join(versionedDocumentModelDirPath, "gen");
-  const schemaDirPath = path.join(genDirPath, "schema");
+
   const stateSchemaName = `${stateName}Schema`;
   const phDocumentSchemaName = `${phDocumentTypeName}Schema`;
   const isPhStateOfTypeFunctionName = `is${stateName}`;
@@ -157,19 +130,8 @@ export function getDocumentModelVariableNames({
   const useSelectedHookName = `useSelected${phDocumentTypeName}`;
   const useInSelectedDriveHookName = `use${phDocumentTypeName}sInSelectedDrive`;
   const useInSelectedFolderHookName = `use${phDocumentTypeName}sInSelectedFolder`;
-  const fileExtension = documentModelState.extension;
-  const { initialGlobalState, initialLocalState } = getInitialStates(
-    latestSpec.state,
-  );
-  const hasLocalSchema = latestSpec.state.local.schema !== "";
-  const modules = latestSpec.modules;
-  const moduleDirPaths = modules.map((module) =>
-    path.join(genDirPath, paramCase(module.name)),
-  );
+
   return {
-    documentModelDir,
-    documentModelState,
-    documentTypeId,
     paramCaseDocumentType,
     pascalCaseDocumentType,
     camelCaseDocumentType,
@@ -182,11 +144,6 @@ export function getDocumentModelVariableNames({
     actionTypeName,
     actionsTypeName,
     actionsName,
-    srcDirPath,
-    genDirPath,
-    testsDirPath,
-    schemaDirPath,
-    moduleDirPaths,
     stateSchemaName,
     phDocumentSchemaName,
     isPhStateOfTypeFunctionName,
@@ -197,11 +154,6 @@ export function getDocumentModelVariableNames({
     useSelectedHookName,
     useInSelectedDriveHookName,
     useInSelectedFolderHookName,
-    fileExtension,
-    initialGlobalState,
-    initialLocalState,
-    hasLocalSchema,
-    modules,
   };
 }
 
@@ -210,7 +162,7 @@ export function getDocumentModelOperationsModuleVariableNames(
 ) {
   const actions = getActionsFromModule(module);
   const errors = getErrorsFromActions(actions);
-  return { actions, errors, module };
+  return { actions, errors };
 }
 
 function getActionFromOperation(

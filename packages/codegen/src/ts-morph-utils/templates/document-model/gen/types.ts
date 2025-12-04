@@ -1,5 +1,5 @@
 import { ts } from "@tmpl/core";
-import type { DocumentModelVariableNames } from "../../../name-builders/types.js";
+import type { DocumentModelTemplateInputs } from "../../../name-builders/types.js";
 
 function buildEmptyLocalStateType(
   hasLocalSchema: boolean,
@@ -17,38 +17,30 @@ function buildLocalStateTypeImport(
   if (!hasLocalSchema) return "";
   return localStateName;
 }
-export const documentModelGenTypesTemplate = ({
-  actionTypeName,
-  stateName,
-  globalStateName,
-  hasLocalSchema,
-  localStateName,
-  phStateName,
-  phDocumentTypeName,
-}: DocumentModelVariableNames) =>
+export const documentModelGenTypesTemplate = (v: DocumentModelTemplateInputs) =>
   ts`
 import type { PHDocument, PHBaseState } from 'document-model';
-import type { ${actionTypeName} } from './actions.js';
+import type { ${v.actionTypeName} } from './actions.js';
 import type {
-  ${stateName} as ${globalStateName},
-  ${buildLocalStateTypeImport(hasLocalSchema, localStateName)}
+  ${v.stateName} as ${v.globalStateName},
+  ${buildLocalStateTypeImport(v.hasLocalSchema, v.localStateName)}
 } from './schema/types.js';
 
-${buildEmptyLocalStateType(hasLocalSchema, localStateName)}
+${buildEmptyLocalStateType(v.hasLocalSchema, v.localStateName)}
 
-type ${phStateName} = PHBaseState & {
-  global: ${globalStateName};
-  local: ${localStateName};
+type ${v.phStateName} = PHBaseState & {
+  global: ${v.globalStateName};
+  local: ${v.localStateName};
 };
-type ${phDocumentTypeName} = PHDocument<${phStateName}>;
+type ${v.phDocumentTypeName} = PHDocument<${v.phStateName}>;
 
 export * from './schema/types.js';
 
 export type { 
-  ${globalStateName}, 
-  ${localStateName},
-  ${phStateName}, 
-  ${actionTypeName},
-  ${phDocumentTypeName},
+  ${v.globalStateName}, 
+  ${v.localStateName},
+  ${v.phStateName}, 
+  ${v.actionTypeName},
+  ${v.phDocumentTypeName},
 };
 `.raw;

@@ -1,10 +1,9 @@
 import { ts } from "@tmpl/core";
-import type { DocumentModelVariableNames } from "../../../name-builders/types.js";
+import type { DocumentModelTemplateInputs } from "../../../name-builders/types.js";
 
-export const documentModelDocumentTypeTemplate = ({
-  documentTypeVariableName,
-  documentTypeId,
-}: DocumentModelVariableNames) =>
+export const documentModelDocumentTypeTemplate = (
+  v: DocumentModelTemplateInputs,
+) =>
   ts`
-export const ${documentTypeVariableName} = "${documentTypeId}";
+export const ${v.documentTypeVariableName} = "${v.documentTypeId}";
 `.raw;
