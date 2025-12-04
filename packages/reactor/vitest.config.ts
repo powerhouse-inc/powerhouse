@@ -21,6 +21,7 @@ export default defineConfig({
         "**/index.ts",
         "**/vitest.config.ts",
         "**/run-migrations.ts",
+        "**/logging/**",
       ],
     },
     poolOptions: {
