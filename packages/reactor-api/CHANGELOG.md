@@ -1,3 +1,7 @@
+## 5.1.0-dev.7 (2025-12-04)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
 ## 5.1.0-dev.6 (2025-12-04)
 
 ### 🩹 Fixes

@@ -1,3 +1,13 @@
+## 5.1.0-dev.7 (2025-12-04)
+
+### 🚀 Features
+
+- stubbing in a logging interface ([06799507d](https://github.com/powerhouse-inc/powerhouse/commit/06799507d))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.6 (2025-12-04)
 
 ### 🩹 Fixes

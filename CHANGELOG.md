@@ -1,3 +1,18 @@
+## 5.1.0-dev.7 (2025-12-04)
+
+### 🚀 Features
+
+- stubbing in a logging interface ([06799507d](https://github.com/powerhouse-inc/powerhouse/commit/06799507d))
+
+### 🩹 Fixes
+
+- set jsr as registry in dockerfiles ([291027b16](https://github.com/powerhouse-inc/powerhouse/commit/291027b16))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+
 ## 5.1.0-dev.6 (2025-12-04)
 
 ### 🚀 Features

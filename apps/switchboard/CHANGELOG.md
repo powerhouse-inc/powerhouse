@@ -1,3 +1,13 @@
+## 5.1.0-dev.7 (2025-12-04)
+
+### 🩹 Fixes
+
+- set jsr as registry in dockerfiles ([291027b16](https://github.com/powerhouse-inc/powerhouse/commit/291027b16))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.1.0-dev.6 (2025-12-04)
 
 ### 🩹 Fixes
