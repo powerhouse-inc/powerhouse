@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { PGlite } from "@electric-sql/pglite";
 import {
   type Database,
   EventBus,
@@ -28,6 +29,7 @@ import { documentModelDocumentModelModule } from "document-model";
 import dotenv from "dotenv";
 import express from "express";
 import { Kysely, PostgresDialect } from "kysely";
+import { PGliteDialect } from "kysely-pglite-dialect";
 import path from "path";
 import { Pool } from "pg";
 import type { RedisClientType } from "redis";
@@ -178,6 +180,13 @@ async function initServer(serverPort: number, options: StartServerOptions) {
       const pool = new Pool({ connectionString });
       const kysely = new Kysely<Database>({
         dialect: new PostgresDialect({ pool }),
+      });
+      builder.withKysely(kysely);
+    } else {
+      const pglitePath = dbPath || "./.ph/reactor-storage";
+      const pglite = new PGlite(pglitePath);
+      const kysely = new Kysely<Database>({
+        dialect: new PGliteDialect(pglite),
       });
       builder.withKysely(kysely);
     }
