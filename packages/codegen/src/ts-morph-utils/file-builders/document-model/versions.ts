@@ -10,8 +10,10 @@ import { getArrayNumberElements } from "../../syntax-getters.js";
 type MakeVersionConstantsFileArgs = {
   project: Project;
   documentModelDirPath: string;
+  version: number;
 };
 export function createOrUpdateVersionConstantsFile({
+  version,
   project,
   documentModelDirPath,
 }: MakeVersionConstantsFileArgs) {
@@ -31,29 +33,31 @@ export function createOrUpdateVersionConstantsFile({
       .getExpressionIfKindOrThrow(SyntaxKind.ArrayLiteralExpression);
 
     const previousVersions = getArrayNumberElements(versionsArray);
-    const currentLatestVersion = Math.max(...previousVersions);
-    const nextVersion = currentLatestVersion + 1;
+
+    if (previousVersions.includes(version)) return;
+
     const newVersions = Array.from(
-      new Set([...previousVersions, nextVersion]),
+      new Set([...previousVersions, version]),
     ).toSorted();
     versionsArray.replaceWithText(`[${newVersions.join(", ")}]`);
 
-    const nextVersionIndex = newVersions.indexOf(nextVersion);
+    const latestVersionIndex = newVersions[newVersions.length - 1].toString();
 
     const latestVariableIndex = sourceFile
       .getVariableDeclarationOrThrow(LATEST)
       .getInitializerIfKindOrThrow(SyntaxKind.ElementAccessExpression)
       .getArgumentExpressionOrThrow();
 
-    latestVariableIndex.replaceWithText(nextVersionIndex.toString());
+    if (latestVersionIndex === latestVariableIndex.getText()) return;
 
-    return nextVersion;
+    latestVariableIndex.replaceWithText(latestVersionIndex);
+
+    return;
   }
 
   /* Create the versions.ts file and initialize it with a single version of 1 
   and set the value of `latest` to be the first item in the array
   */
-  const version = 1;
   const versionInitializer = `[${version}] as const;`;
   const latestInitializer = `versions[0];`;
 

@@ -6,6 +6,7 @@ export type GenerateDocumentModelArgs = {
   projectDir: string;
   packageName: string;
   documentModelState: DocumentModelGlobalState;
+  specVersion?: number;
 };
 
 export type DocumentModelFileMakerArgs = DocumentModelVariableNames &

@@ -72,6 +72,42 @@ export function getDocumentModelDirName(
   return paramCase(documentModelState.name);
 }
 
+export function getLatestDocumentModelSpec({
+  specifications,
+}: DocumentModelGlobalState) {
+  return specifications[specifications.length - 1];
+}
+
+export function getDocumentModelSpecByVersionNumber(
+  { specifications }: DocumentModelGlobalState,
+  version: number,
+) {
+  const specificationByIndex = specifications[version];
+  const specificationByNumber = specifications.find(
+    (spec) => spec.version === version,
+  );
+  if (!specificationByNumber) {
+    console.error(
+      `Specification with version number ${version} does not exist in the document model specifications array`,
+    );
+    return specificationByIndex;
+  }
+  if (specificationByIndex.version !== specificationByNumber.version) {
+    console.error(
+      `Specification with version ${version} does not match specifications array at index ${version}`,
+    );
+    return specificationByIndex;
+  }
+
+  return specificationByNumber;
+}
+
+export function getLatestDocumentModelSpecVersionNumber(
+  documentModelState: DocumentModelGlobalState,
+) {
+  return getLatestDocumentModelSpec(documentModelState).version;
+}
+
 type GetDocumentModelVariableNamesArgs = {
   packageName: string;
   documentModelDirName: string;

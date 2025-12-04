@@ -1,5 +1,6 @@
 import path from "path";
 import type { Project } from "ts-morph";
+import { generateDocumentModelZodSchemas } from "../../codegen/graphql.js";
 import { TSMorphCodeGenerator } from "../../ts-morph-generator/index.js";
 import {
   documentModelModulesOutputFileName,
@@ -11,6 +12,8 @@ import { getDocumentModelFilePaths } from "../name-builders/get-file-paths.js";
 import {
   getDocumentModelDirName,
   getDocumentModelVariableNames,
+  getLatestDocumentModelSpec,
+  getLatestDocumentModelSpecVersionNumber,
 } from "../name-builders/get-variable-names.js";
 import { buildTsMorphProject } from "../ts-morph-project.js";
 import { makeGenDirFiles } from "./document-model/gen-dir.js";
@@ -56,12 +59,10 @@ export async function tsMorphGenerateDocumentModel({
   );
   ensureDirectoriesExist(project, documentModelsDirPath, documentModelDirPath);
 
-  const latestVersion = createOrUpdateVersionConstantsFile({
-    project,
-    documentModelDirPath,
-  });
+  const specification = getLatestDocumentModelSpec(documentModelState);
+  const version = getLatestDocumentModelSpecVersionNumber(documentModelState);
 
-  const latestVersionDirName = `v${latestVersion}`;
+  const versionDirName = `v${version}`;
 
   const versionedDocumentModelDirName = path.join(
     documentModelDirName,
@@ -106,7 +107,16 @@ export async function tsMorphGenerateDocumentModel({
     ...documentModelVariableNames,
   };
 
-  console.log(fileMakerArgs);
+  await generateDocumentModelZodSchemas(
+    versionedDocumentModelDirPath,
+    specification,
+  );
+
+  createOrUpdateVersionConstantsFile({
+    project,
+    version,
+    documentModelDirPath,
+  });
 
   makeRootDirFiles(fileMakerArgs);
   makeGenDirFiles(fileMakerArgs);

@@ -5,6 +5,7 @@ import {
   generatorTypeDefs,
   validationSchema,
 } from "@powerhousedao/document-engineering/graphql";
+import type { DocumentSpecification } from "document-model";
 import { readdirSync } from "node:fs";
 import { formatWithPrettierBeforeWrite } from "./utils.js";
 
@@ -128,6 +129,66 @@ export const generateSchema = async (
 
   return result;
 };
+
+function buildGraphqlDocumentStringForSpecification(
+  specification: DocumentSpecification,
+) {
+  const customScalarSchemas = Object.keys(scalars).map((k) => `scalar ${k}`);
+  const stateSchemas = Object.values(specification.state).map(
+    (state) => state.schema,
+  );
+  const moduleSchemas = specification.modules
+    .flatMap((module) => module.operations.map((operation) => operation.schema))
+    .filter((schema) => schema !== null);
+
+  return [...customScalarSchemas, ...stateSchemas, ...moduleSchemas];
+}
+
+export async function generateDocumentModelZodSchemas(
+  documentModelDirPath: string,
+  specification: DocumentSpecification,
+) {
+  const schema =
+    buildGraphqlDocumentStringForSpecification(specification).join("\n\n");
+
+  const config: CodegenConfig = {
+    overwrite: true,
+    generates: {
+      [`${documentModelDirPath}/gen/schema/types.ts`]: {
+        schema,
+        plugins: ["typescript"],
+        config: {
+          scalars,
+          strictScalars: true,
+          enumsAsTypes: true,
+          skipTypename: true,
+        },
+      },
+      [`${documentModelDirPath}/gen/schema/zod.ts`]: {
+        schema,
+        plugins: ["graphql-codegen-typescript-validation-schema"],
+        config: {
+          scalars,
+          strictScalars: true,
+          enumsAsTypes: true,
+          skipTypename: true,
+          importFrom: `./types.js`,
+          schema: "zod",
+          useTypeImports: true,
+          scalarSchemas: scalarsValidation,
+          directives: {
+            equals: {
+              value: ["regex", "/^$1$/"],
+            },
+          },
+          withObjectType: true,
+        },
+      },
+    },
+  };
+
+  await generate(config, true);
+}
 
 export const generateSchemas = (
   inDir: string,
