@@ -1,4 +1,4 @@
-# Tool: Vetra Studio 
+# Vetra Studio 
 
 :::tip Important
 
@@ -77,6 +77,28 @@ You could then add the specific remote Vetra drive to your powerhouse configurat
 
 An example of a builder team building on the Powerhouse Vetra Ecosystem and it's complementary Vetra Studio Drive specifications for the different packages be found [here](https://vetra.io/builders/bai)
 
+<details>
+<summary>📦 Vetra Remote Drive Commands</summary>
+
+Remote drives enable collaborative development by syncing specifications across team members.
+
+**Key Commands:**
+- `ph init --remote-drive <url>` - Create a NEW project connected to a remote drive
+- `ph checkout --remote-drive <url>` - Clone an EXISTING project from a remote drive  
+- `ph vetra --watch` - Start development with a preview drive for testing local changes
+
+**Workflows:**
+- **Project Owner**: `ph init --remote-drive` → Create GitHub repo → Push → `ph vetra` to configure
+- **Collaborator**: `ph checkout --remote-drive` → `ph vetra` to start developing
+
+**Preview Drive (`--watch` mode):**
+- Main "Vetra" drive syncs with remote and contains stable package configuration
+- "Vetra Preview" drive is created locally for testing document models before syncing
+
+→ [Full Vetra Remote Drive Reference](/academy/APIReferences/VetraRemoteDrive)
+
+</details>
+
 ## Vetra Studio Workflow
 
 ### 1. Launch Vetra Studio
@@ -146,16 +168,35 @@ Connected to MCP successfully! I can see there's a
   running and ready for document model operations.
 ```
 
--  To learn what is a [Reactor](apps/academy/docs/academy/Architecture/WorkingWithTheReactor) read the reactor article
--  To learn more about the [Reactor MCP](apps/academy/docs/academy/GetStarted/ReactorMCP) read the reactor MCP article
-
 ### Key Reactor MCP Features
 
 - It supports automatic document model creation from natural language descriptions
 - It implements a smart editor based on the underlying document models
 - It automatically triggers code generation when documents reach valid state
-- The MCP server enables the agent to work with both existing and newly created document models.
-- Vetra supports integration with custom remote drives, allowing users to create, share and manage documents within these drives.
+- The MCP server enables the agent to work with both existing and newly created document models
+- Vetra supports integration with custom remote drives, allowing users to create, share and manage documents within these drives
+
+<details>
+<summary>🤖 Reactor MCP Overview</summary>
+
+**Reactor-mcp** is a Model Context Protocol (MCP) server that bridges AI agents with Powerhouse document operations.
+
+**Document Operations:**
+- `createDocument` / `getDocument` / `deleteDocument` - Manage documents
+- `addActions` - Modify document state through operations
+
+**Drive Operations:**
+- `getDrives` / `addDrive` / `getDrive` - Manage document drives
+- `addRemoteDrive` - Connect to remote drives
+
+**Document Model Operations:**
+- `getDocumentModels` - List available document model types
+- `getDocumentModelSchema` - Get schema for specific models
+
+**Document Model Agent:**
+A specialized AI agent that guides users through document model creation with requirements gathering, design confirmation, and implementation including state schema definition, operation creation, and code generation.
+
+</details>
 
 
 ### 3. Vetra Studio Package Creation Workflow

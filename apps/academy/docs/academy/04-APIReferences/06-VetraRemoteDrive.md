@@ -1,4 +1,4 @@
-# Vetra Remote Drive Commands
+# Vetra Remote Drive
 
 These commands enable collaborative development using Vetra remote drives. Instead of working with local drives only, you can connect your Powerhouse project to a remote drive that syncs across team members.
 
