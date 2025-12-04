@@ -130,10 +130,11 @@ export { KyselyDocumentIndexer } from "./storage/kysely/document-indexer.js";
 export { KyselyKeyframeStore } from "./storage/kysely/keyframe-store.js";
 export { KyselyOperationStore } from "./storage/kysely/store.js";
 export type {
-  Database,
+  Database as StorageDatabase,
   DocumentIndexerDatabase,
   OperationTable,
 } from "./storage/kysely/types.js";
+export type { Database } from "./core/types.js";
 
 // Read Models
 export { ReadModelCoordinator } from "./read-models/coordinator.js";

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import {
+  type Database,
   EventBus,
   ReactorBuilder,
   ReactorClientBuilder,
@@ -26,7 +27,9 @@ import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import dotenv from "dotenv";
 import express from "express";
+import { Kysely, PostgresDialect } from "kysely";
 import path from "path";
+import { Pool } from "pg";
 import type { RedisClientType } from "redis";
 import { initRedis } from "./clients/redis.js";
 import { initFeatureFlags } from "./feature-flags.js";
@@ -166,6 +169,18 @@ async function initServer(serverPort: number, options: StartServerOptions) {
       .withFeatures({
         legacyStorageEnabled: true,
       });
+
+    if (dbPath && isPostgresUrl(dbPath)) {
+      const connectionString =
+        dbPath.includes("amazonaws") && !dbPath.includes("sslmode=no-verify")
+          ? dbPath + "?sslmode=no-verify"
+          : dbPath;
+      const pool = new Pool({ connectionString });
+      const kysely = new Kysely<Database>({
+        dialect: new PostgresDialect({ pool }),
+      });
+      builder.withKysely(kysely);
+    }
 
     const client = new ReactorClientBuilder()
       .withReactorBuilder(builder)

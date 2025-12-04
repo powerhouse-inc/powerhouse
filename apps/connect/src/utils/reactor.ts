@@ -1,5 +1,6 @@
 import { PGlite } from "@electric-sql/pglite";
 import {
+  type Database,
   GqlChannelFactory,
   ReactorBuilder,
   ReactorClientBuilder,
@@ -7,6 +8,8 @@ import {
   type ReactorClientModule,
   type SignerConfig,
 } from "@powerhousedao/reactor";
+import { Kysely } from "kysely";
+import { PGliteDialect } from "kysely-pglite-dialect";
 import type { IConnectCrypto } from "@renown/sdk";
 import type {
   DefaultRemoteDriveInput,
@@ -123,9 +126,13 @@ export function createBrowserReactor(
         .withLegacyStorage(legacyStorage)
         .withSync(new SyncBuilder().withChannelFactory(new GqlChannelFactory()))
         .withFeatures({ legacyStorageEnabled: true })
-        .withPGlite(
-          new PGlite("idb://reactor", {
-            relaxedDurability: true,
+        .withKysely(
+          new Kysely<Database>({
+            dialect: new PGliteDialect(
+              new PGlite("idb://reactor", {
+                relaxedDurability: true,
+              }),
+            ),
           }),
         ),
     );

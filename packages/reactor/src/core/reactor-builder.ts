@@ -66,7 +66,7 @@ export class ReactorBuilder {
   private eventBus?: IEventBus;
   public documentIndexer?: IDocumentIndexer;
   private signatureVerifier?: SignatureVerificationHandler;
-  private pglite?: PGlite;
+  private kyselyInstance?: Kysely<Database>;
 
   withDocumentModels(models: DocumentModelModule[]): this {
     this.documentModels = models;
@@ -130,8 +130,8 @@ export class ReactorBuilder {
     return this;
   }
 
-  withPGlite(pglite: PGlite): this {
-    this.pglite = pglite;
+  withKysely(kysely: Kysely<Database>): this {
+    this.kyselyInstance = kysely;
     return this;
   }
 
@@ -154,9 +154,11 @@ export class ReactorBuilder {
     const driveServer = builder.build() as unknown as BaseDocumentDriveServer;
     await driveServer.initialize();
 
-    const database = new Kysely<Database>({
-      dialect: new PGliteDialect(this.pglite ?? new PGlite()),
-    });
+    const database =
+      this.kyselyInstance ??
+      new Kysely<Database>({
+        dialect: new PGliteDialect(new PGlite()),
+      });
 
     if (this.migrationStrategy === "auto") {
       const result = await runMigrations(database);
