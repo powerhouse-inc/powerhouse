@@ -1,3 +1,18 @@
+## 5.1.0-dev.6 (2025-12-04)
+
+### 🚀 Features
+
+- adding reactor client and sync to connect store ([95db06a7d](https://github.com/powerhouse-inc/powerhouse/commit/95db06a7d))
+
+### 🩹 Fixes
+
+- **renown:** build issues ([1893c35a0](https://github.com/powerhouse-inc/powerhouse/commit/1893c35a0))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+
 ## 5.1.0-dev.5 (2025-12-04)
 
 ### 🚀 Features

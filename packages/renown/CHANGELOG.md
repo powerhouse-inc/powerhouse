@@ -1,3 +1,19 @@
+## 5.1.0-dev.6 (2025-12-04)
+
+### 🚀 Features
+
+- **renown:** improved login component and added playwright e2e tests ([337dd6000](https://github.com/powerhouse-inc/powerhouse/commit/337dd6000))
+- **renown:** improved login component and added playwright e2e tests ([aceada753](https://github.com/powerhouse-inc/powerhouse/commit/aceada753))
+
+### 🩹 Fixes
+
+- **renown:** build issues ([1893c35a0](https://github.com/powerhouse-inc/powerhouse/commit/1893c35a0))
+- **renown:** added type declartions for png and other image files ([fd6ee9b8d](https://github.com/powerhouse-inc/powerhouse/commit/fd6ee9b8d))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.1.0-dev.5 (2025-12-04)
 
 This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.

@@ -1,3 +1,23 @@
+## 5.1.0-dev.6 (2025-12-04)
+
+### 🚀 Features
+
+- adding reactor client and sync to connect store ([95db06a7d](https://github.com/powerhouse-inc/powerhouse/commit/95db06a7d))
+- **renown:** improved login component and added playwright e2e tests ([aceada753](https://github.com/powerhouse-inc/powerhouse/commit/aceada753))
+- **renown:** improved login component and added playwright e2e tests ([337dd6000](https://github.com/powerhouse-inc/powerhouse/commit/337dd6000))
+
+### 🩹 Fixes
+
+- forgot tslint link ([04024a7f0](https://github.com/powerhouse-inc/powerhouse/commit/04024a7f0))
+- **reactor:** pulling some files out of the code coverage analysis ([5dcb7431d](https://github.com/powerhouse-inc/powerhouse/commit/5dcb7431d))
+- **renown:** added type declartions for png and other image files ([fd6ee9b8d](https://github.com/powerhouse-inc/powerhouse/commit/fd6ee9b8d))
+- **renown:** build issues ([1893c35a0](https://github.com/powerhouse-inc/powerhouse/commit/1893c35a0))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+
 ## 5.1.0-dev.5 (2025-12-04)
 
 ### 🚀 Features

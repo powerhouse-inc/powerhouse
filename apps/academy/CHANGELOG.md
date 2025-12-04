@@ -1,3 +1,13 @@
+## 5.1.0-dev.6 (2025-12-04)
+
+### 🩹 Fixes
+
+- **renown:** build issues ([1893c35a0](https://github.com/powerhouse-inc/powerhouse/commit/1893c35a0))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.1.0-dev.5 (2025-12-04)
 
 ### 🚀 Features

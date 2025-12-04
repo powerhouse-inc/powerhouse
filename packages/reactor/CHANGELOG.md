@@ -1,3 +1,15 @@
+## 5.1.0-dev.6 (2025-12-04)
+
+### 🩹 Fixes
+
+- **renown:** build issues ([1893c35a0](https://github.com/powerhouse-inc/powerhouse/commit/1893c35a0))
+- **reactor:** pulling some files out of the code coverage analysis ([5dcb7431d](https://github.com/powerhouse-inc/powerhouse/commit/5dcb7431d))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+
 ## 5.1.0-dev.5 (2025-12-04)
 
 ### 🚀 Features
