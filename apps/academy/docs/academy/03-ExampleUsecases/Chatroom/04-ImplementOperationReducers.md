@@ -24,7 +24,7 @@ After implementing your reducers:
 git diff tutorial/main -- document-models/chat-room/src/reducers/
 
 # View the reference reducer implementation
-git show tutorial/main:document-models/chat-room/src/reducers/general-operations.ts
+git show tutorial/main:document-models/chat-room/src/reducers/messages.ts
 ```
 
 ### Compare your tests
@@ -36,7 +36,7 @@ After writing tests:
 git diff tutorial/main -- document-models/chat-room/src/tests/
 
 # View the reference test implementation
-git show tutorial/main:document-models/chat-room/src/tests/general-operations.test.ts
+git show tutorial/main:document-models/chat-room/src/tests/messages.test.ts
 ```
 
 ### Visual comparison with GitHub Desktop
@@ -54,7 +54,7 @@ View or reset to the reference:
 
 ```bash
 # View the reducer code from the reference
-git show tutorial/main:document-models/chat-room/src/reducers/general-operations.ts
+git show tutorial/main:document-models/chat-room/src/reducers/messages.ts
 
 # Reset to reference (WARNING: loses your changes)
 git reset --hard tutorial/main
@@ -100,59 +100,54 @@ You will see that this action created a range of files for you. Before diving in
 
 ![Chatroom-demo Schema](image.png)
 
-Now you can navigate to `/document-models/chat-room/src/reducers/general-operations.ts` and start writing the operation reducers.
+Now you can navigate to `/document-models/chat-room/src/reducers/messages.ts` and start writing the operation reducers.
 
-Open the `general-operations.ts` file and you should see the scaffolding code that needs to be filled for the five operations you have specified earlier. The generated file will look like this:
+Open the `messages.ts` file and you should see the scaffolding code that needs to be filled for the five operations you have specified earlier. The generated file will look like this:
 
 ```typescript
-import type { ChatRoomGeneralOperationsOperations } from "chatroom/document-models/chat-room";
+import type { ChatRoomMessagesOperations } from "chatroom/document-models/chat-room";
 
-export const chatRoomGeneralOperationsOperations: ChatRoomGeneralOperationsOperations = {
-  addMessageOperation(state, action) {
-    // TODO: Implement "addMessageOperation" reducer
-    throw new Error('Reducer "addMessageOperation" not yet implemented');
-  },
-  addEmojiReactionOperation(state, action) {
-    // TODO: Implement "addEmojiReactionOperation" reducer
-    throw new Error('Reducer "addEmojiReactionOperation" not yet implemented');
-  },
-  removeEmojiReactionOperation(state, action) {
-    // TODO: Implement "removeEmojiReactionOperation" reducer
-    throw new Error('Reducer "removeEmojiReactionOperation" not yet implemented');
-  },
-  editChatNameOperation(state, action) {
-    // TODO: Implement "editChatNameOperation" reducer
-    throw new Error('Reducer "editChatNameOperation" not yet implemented');
-  },
-  editChatDescriptionOperation(state, action) {
-    // TODO: Implement "editChatDescriptionOperation" reducer
-    throw new Error('Reducer "editChatDescriptionOperation" not yet implemented');
-  },
+export const chatRoomMessagesOperations: ChatRoomMessagesOperations = {
+    addMessageOperation(state, action) {
+        // TODO: Implement "addMessageOperation" reducer
+        throw new Error('Reducer "addMessageOperation" not yet implemented');
+    },
+    senderOperation(state, action) {
+        // TODO: Implement "senderOperation" reducer
+        throw new Error('Reducer "senderOperation" not yet implemented');
+    },
+    addEmojiReactionOperation(state, action) {
+        // TODO: Implement "addEmojiReactionOperation" reducer
+        throw new Error('Reducer "addEmojiReactionOperation" not yet implemented');
+    },
+    removeEmojiReactionOperation(state, action) {
+        // TODO: Implement "removeEmojiReactionOperation" reducer
+        throw new Error('Reducer "removeEmojiReactionOperation" not yet implemented');
+    }
 };
 ```
 
 ## Write the operation reducers
 
-1. Copy and paste the code below into the `general-operations.ts` file in the `reducers` folder.
+1. Copy and paste the code below into the `messages.ts` file in the `reducers` folder.
 2. Save the file.
 
 <details>
 <summary>Operation Reducers</summary>
 
 ```typescript
-import { MessageContentCannotBeEmpty } from "../../gen/general-operations/error.js";
-import type { ChatRoomGeneralOperationsOperations } from "chatroom/document-models/chat-room";
+import {
+  MessageNotFoundError,
+  MessageContentCannotBeEmptyError,
+} from "../../gen/messages/error.js";
+import type { ChatRoomMessagesOperations } from "chatroom-package/document-models/chat-room";
 
-// Export the operations object that implements all five ChatRoom operations
-export const chatRoomGeneralOperationsOperations: ChatRoomGeneralOperationsOperations = {
+export const chatRoomMessagesOperations: ChatRoomMessagesOperations = {
   addMessageOperation(state, action) {
-    // Validate that message content is not empty
     if (action.input.content === "") {
-      throw new MessageContentCannotBeEmpty();
+      throw new MessageContentCannotBeEmptyError();
     }
 
-    // Create new message with all required fields
-    // Powerhouse uses Immer.js, so this "mutation" is actually immutable
     const newMessage = {
       id: action.input.messageId,
       sender: {
@@ -167,57 +162,48 @@ export const chatRoomGeneralOperationsOperations: ChatRoomGeneralOperationsOpera
 
     state.messages.push(newMessage);
   },
-
   addEmojiReactionOperation(state, action) {
-    // Find the message to add reaction to
-    const message = state.messages.find(
-      (m) => m.id === action.input.messageId,
-    );
-    
-    // Return early if message not found
+    const message = state.messages.find((m) => m.id === action.input.messageId);
     if (!message) {
-      return state;
+      throw new MessageNotFoundError(
+        `Message with ID ${action.input.messageId} not found`,
+      );
     }
 
-    // Initialize reactions array if needed
     if (!message.reactions) {
       message.reactions = [];
     }
 
-    // Check if this reaction type already exists
     const existingReaction = message.reactions.find(
       (r) => r.type === action.input.type,
     );
 
     if (existingReaction) {
-      // Add user to existing reaction if not already present
       if (!existingReaction.reactedBy.includes(action.input.reactedBy)) {
         existingReaction.reactedBy.push(action.input.reactedBy);
       }
     } else {
-      // Create new reaction type
       message.reactions.push({
         type: action.input.type,
         reactedBy: [action.input.reactedBy],
       });
     }
   },
-
   removeEmojiReactionOperation(state, action) {
-    // Find the message
-    const message = state.messages.find(
-      (m) => m.id === action.input.messageId,
-    );
-    
-    if (!message || !message.reactions) {
+    const message = state.messages.find((m) => m.id === action.input.messageId);
+    if (!message) {
+      throw new MessageNotFoundError(
+        `Message with ID ${action.input.messageId} not found`,
+      );
+    }
+
+    if (!message.reactions) {
       return;
     }
 
-    // Find the reaction to remove
     const reactionIndex = message.reactions.findIndex(
       (r) => r.type === action.input.type,
     );
-    
     if (reactionIndex === -1) {
       return;
     }
@@ -226,33 +212,42 @@ export const chatRoomGeneralOperationsOperations: ChatRoomGeneralOperationsOpera
     const userIndex = reaction.reactedBy.indexOf(action.input.senderId);
 
     if (userIndex !== -1) {
-      // Remove user from reaction
       reaction.reactedBy.splice(userIndex, 1);
 
-      // Remove entire reaction if no users left
       if (reaction.reactedBy.length === 0) {
         message.reactions.splice(reactionIndex, 1);
       }
     }
   },
+};
+```
+</details>
 
+
+1. Do the same for the reducers of our "settings" operations. Copy and paste the code below into the `settings.ts` file in the `reducers` folder.
+2. Save the file.
+
+
+<details>
+<summary>Operation Reducers</summary>
+import type { ChatRoomSettingsOperations } from "chatroom-package/document-models/chat-room";
+
+export const chatRoomSettingsOperations: ChatRoomSettingsOperations = {
   editChatNameOperation(state, action) {
     state.name = action.input.name || "";
   },
-
   editChatDescriptionOperation(state, action) {
     state.description = action.input.description || "";
   },
 };
-```
-
 </details>
+
 
 ## Write the operation reducer tests
 
 In order to make sure the operation reducers are working as expected, you need to write tests for them.
 
-Navigate to `/document-models/chat-room/src/tests/general-operations.test.ts` and replace the scaffolding code with comprehensive tests.
+Navigate to `/document-models/chat-room/src/tests` and replace the scaffolding code with comprehensive tests.
 
 Here are the tests for the five operations implemented in the reducers file. The test file:
 - Uses Vitest for testing

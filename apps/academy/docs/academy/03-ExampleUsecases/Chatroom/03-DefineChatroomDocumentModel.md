@@ -102,12 +102,85 @@ enum ReactionType {
   HEART
   CRY
 }
+
+type ChatRoomState {
+  id: OID!
+  name: String!
+  description: String
+  createdAt: DateTime
+  createdBy: ID
+  messages: [Message!]!
+}
+
+type Message {
+  id: OID!
+  sender: Sender!
+  content: String
+  sentAt: DateTime!
+  reactions: [Reaction!]
+}
+
+type Sender {
+  id: ID!
+  name: String
+  avatarUrl: URL
+}
+
+type Reaction {
+  type: ReactionType!
+  reactedBy: [ID!]!
+}
+
+enum ReactionType {
+  THUMBS_UP
+  THUMBS_DOWN
+  LAUGH
+  HEART
+  CRY
+}
+
+# messages
+
+input AddMessageInput {
+  messageId: OID!
+  sender: SenderInput!
+  content: String!
+  sentAt: DateTime!
+}
+
+input SenderInput {
+  id: ID!
+  name: String
+  avatarUrl: URL
+}
+
+input AddEmojiReactionInput {
+  messageId: OID!
+  reactedBy: ID!
+  type: ReactionType!
+}
+
+input RemoveEmojiReactionInput {
+  messageId: OID!
+  senderId: ID!
+  type: ReactionType!
+}
+
+# settings
+
+input EditChatNameInput {
+  name: String
+}
+
+input EditChatDescriptionInput {
+  description: String
+}
 ```
 
 </details>
 
 <details>
-<summary>Operations schema of our ChatRoom</summary>
+<summary>Messages Module: Operations schema of our ChatRoom Messages</summary>
 
 ```graphql
 # Add a new message to the chat-room
@@ -138,6 +211,13 @@ input RemoveEmojiReactionInput {
   senderId: ID!         # ID of the user removing the reaction
   type: ReactionType!   # Type of the reaction (emoji)
 }
+
+
+</details>
+
+
+<details>
+<summary>Settings Module: Operations schema of our ChatRoom Settings</summary>
 
 # Edit the chat-room name
 input EditChatNameInput {
@@ -174,8 +254,9 @@ To define the document model, you need to open the document model editor in Conn
     {
       "name": "",
       "description": null,
-      "createdBy": "placeholder-id",
-       "messages": []
+      "createdAt": null,
+      "createdBy": null,
+      "messages": []
     }
    ```
 

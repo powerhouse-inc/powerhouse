@@ -63,6 +63,10 @@ You can also view the committer's address for each revision, supporting full tra
 
 ![Committer Address Popup](./images/committer-address-popup.png)
 
+
+:::warning Work in Progress
+This remainder of this documentation is still being written and may be incomplete.
+:::
 ## Replay, branch, and merge (under development)
 
 - **Replay:** When you load a document, the system replays all operations to build its state.

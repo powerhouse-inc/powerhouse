@@ -109,7 +109,9 @@ When you build an editor in Powerhouse, there are **two ways** to access and mod
 
 ### Understanding the two approaches
 
-:::info For Non-Technical Readers
+<details>
+<summary>ℹ️ For Non-Technical Readers</summary>
+
 Think of it like ordering food at a restaurant:
 
 **Hooks Approach** 🪝: Like having a direct line to the kitchen. Any component can call the kitchen directly to get the current menu (state) or place an order (dispatch an action). It's independent and self-sufficient.
@@ -121,7 +123,8 @@ Think of it like ordering food at a restaurant:
 - Easier to move components around
 - Less "prop drilling" (passing data through many layers)
 - Matches modern React best practices
-:::
+
+</details>
 
 ### Method 1: Using Hooks (Recommended) 🪝
 
