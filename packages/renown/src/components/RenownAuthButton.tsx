@@ -3,6 +3,8 @@
 import React from "react";
 import { useUser } from "../hooks/use-user.js";
 import type { User } from "../lib/renown/index.js";
+import { RenownLoginButton } from "./RenownLoginButton.js";
+import { RenownUserButton } from "./RenownUserButton.js";
 
 export interface RenownAuthButtonRenderProps {
   user: User;
@@ -37,26 +39,11 @@ export interface RenownAuthButtonProps {
    * Custom render function for loading state
    */
   renderLoading?: () => React.ReactNode;
-  /**
-   * Show username next to avatar
-   * @default true
-   */
-  showUsername?: boolean;
-  /**
-   * Show logout button
-   * @default false
-   */
-  showLogoutButton?: boolean;
-  /**
-   * Custom logout button text
-   * @default "Logout"
-   */
-  logoutButtonText?: string;
 }
 
 /**
- * Smart authentication button that adapts based on auth state
- * Shows login button when not authenticated, and user info when authenticated
+ * Smart authentication button that adapts based on auth state.
+ * Shows RenownLoginButton when not authenticated, and RenownUserButton when authenticated.
  *
  * @example
  * Basic usage:
@@ -83,16 +70,6 @@ export interface RenownAuthButtonProps {
  *   )}
  * />
  * ```
- *
- * @example
- * With logout button:
- * ```tsx
- * <RenownAuthButton
- *   showLogoutButton
- *   logoutButtonText="Sign Out"
- *   profileBaseUrl="https://myapp.com/profile"
- * />
- * ```
  */
 export function RenownAuthButton({
   className = "",
@@ -100,9 +77,6 @@ export function RenownAuthButton({
   renderAuthenticated,
   renderUnauthenticated,
   renderLoading,
-  showUsername = true,
-  showLogoutButton = false,
-  logoutButtonText = "Logout",
 }: RenownAuthButtonProps) {
   const { user, loginStatus, isLoading, openRenown, logout } = useUser();
 
@@ -121,21 +95,17 @@ export function RenownAuthButton({
     }
 
     return (
-      <div
-        className={className}
-        style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
-      >
+      <div className={className}>
         <div
           style={{
-            width: "1rem",
-            height: "1rem",
-            border: "2px solid #e5e7eb",
-            borderTopColor: "#6366f1",
+            width: "40px",
+            height: "40px",
             borderRadius: "50%",
-            animation: "spin 1s linear infinite",
+            backgroundColor: "#e5e7eb",
+            animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
           }}
         />
-        <span style={{ fontSize: "0.875rem" }}>Loading...</span>
+        <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }`}</style>
       </div>
     );
   }
@@ -150,73 +120,39 @@ export function RenownAuthButton({
       );
     }
 
-    // Default authenticated rendering
-    return (
-      <div
-        className={className}
-        style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}
-      >
-        <div
-          onClick={openProfile}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            cursor: "pointer",
-          }}
-        >
-          {user.avatar ? (
-            <img
-              src={user.avatar}
-              alt={user.name || "User"}
-              style={{
-                width: "2rem",
-                height: "2rem",
-                borderRadius: "50%",
-                objectFit: "cover",
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                width: "2rem",
-                height: "2rem",
-                borderRadius: "50%",
-                backgroundColor: "#6366f1",
-                color: "white",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontWeight: "bold",
-                fontSize: "0.75rem",
-              }}
-            >
-              {(user.name || user.did).substring(0, 2).toUpperCase()}
-            </div>
-          )}
-          {showUsername && (
-            <span style={{ fontSize: "0.875rem", fontWeight: "500" }}>
-              {user.name || user.did.slice(0, 15) + "..."}
-            </span>
-          )}
-        </div>
+    const address = (user.ethAddress || user.address) as string | undefined;
 
-        {showLogoutButton && (
+    if (!address) {
+      // Fallback if no address available
+      return (
+        <div className={className}>
           <button
             onClick={logout}
             style={{
-              padding: "0.25rem 0.75rem",
-              border: "1px solid #d1d5db",
-              borderRadius: "0.375rem",
-              backgroundColor: "white",
+              fontSize: "14px",
+              color: "#4b5563",
+              background: "none",
+              border: "none",
               cursor: "pointer",
-              fontSize: "0.75rem",
-              fontWeight: "500",
             }}
           >
-            {logoutButtonText}
+            {user.name || "Connected"} (Logout)
           </button>
-        )}
+        </div>
+      );
+    }
+
+    const profileUrl = `${profileBaseUrl}/${address}`;
+
+    return (
+      <div className={className}>
+        <RenownUserButton
+          address={address}
+          username={user.name}
+          profileUrl={profileUrl}
+          avatarUrl={user.avatar}
+          onDisconnect={logout}
+        />
       </div>
     );
   }
@@ -230,24 +166,9 @@ export function RenownAuthButton({
     );
   }
 
-  // Default unauthenticated rendering
   return (
-    <button
-      onClick={openRenown}
-      disabled={isLoading}
-      className={className}
-      style={{
-        padding: "0.5rem 1rem",
-        border: "1px solid #d1d5db",
-        borderRadius: "0.375rem",
-        backgroundColor: "white",
-        cursor: isLoading ? "not-allowed" : "pointer",
-        fontSize: "0.875rem",
-        fontWeight: "500",
-        opacity: isLoading ? 0.6 : 1,
-      }}
-    >
-      {isLoading ? "Loading..." : "Login with Renown"}
-    </button>
+    <div className={className}>
+      <RenownLoginButton onLogin={openRenown} />
+    </div>
   );
 }
