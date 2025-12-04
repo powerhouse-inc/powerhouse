@@ -32,7 +32,9 @@ import {
   setDrives,
   setLegacyReactor,
   setProcessorManager,
+  setReactorClient,
   setRenown,
+  setSync,
 } from "@powerhousedao/reactor-browser/connect";
 import { initRenown } from "@renown/sdk";
 import type {
@@ -165,7 +167,7 @@ export async function createReactor() {
     },
   );
 
-  const reactor = await createBrowserReactor(
+  const reactorClientModule = await createBrowserReactor(
     documentModelModules,
     storage,
     connectCrypto,
@@ -211,6 +213,8 @@ export async function createReactor() {
   // dispatch the events to set the values in the window object
   setDefaultPHGlobalConfig(phGlobalConfigFromEnv);
   setLegacyReactor(legacyReactor);
+  setReactorClient(reactorClientModule.client);
+  setSync(reactorClientModule.reactorModule?.syncModule?.syncManager);
   setDocumentCache(documentCache);
   setConnectCrypto(connectCrypto);
   setDid(did);

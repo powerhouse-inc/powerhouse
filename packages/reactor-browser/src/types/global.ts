@@ -1,3 +1,4 @@
+import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
 import type { DID, IConnectCrypto, IRenown, User } from "@renown/sdk";
 import type {
   DocumentDriveDocument,
@@ -13,6 +14,8 @@ import type { VetraPackage } from "./vetra.js";
 export type PHGlobal = PHGlobalConfig & {
   loading?: boolean;
   legacyReactor?: IDocumentDriveServer;
+  reactorClient?: IReactorClient;
+  sync?: ISyncManager;
   connectCrypto?: IConnectCrypto;
   did?: DID;
   renown?: IRenown;

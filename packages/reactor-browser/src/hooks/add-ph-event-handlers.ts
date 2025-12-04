@@ -61,7 +61,11 @@ import { addLoadingEventHandler } from "./loading.js";
 import { addLoginStatusEventHandler } from "./login-status.js";
 import { addModalEventHandler } from "./modals.js";
 import { addProcessorManagerEventHandler } from "./processor-manager.js";
-import { addLegacyReactorEventHandler } from "./reactor.js";
+import {
+  addLegacyReactorEventHandler,
+  addReactorClientEventHandler,
+  addSyncEventHandler,
+} from "./reactor.js";
 import { addRenownEventHandler } from "./renown.js";
 import { addRevisionHistoryVisibleEventHandler } from "./revision-history.js";
 import {
@@ -81,6 +85,8 @@ import { addVetraPackagesEventHandler } from "./vetra-packages.js";
 const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   loading: addLoadingEventHandler,
   legacyReactor: addLegacyReactorEventHandler,
+  reactorClient: addReactorClientEventHandler,
+  sync: addSyncEventHandler,
   modal: addModalEventHandler,
   connectCrypto: addConnectCryptoEventHandler,
   did: addDidEventHandler,
