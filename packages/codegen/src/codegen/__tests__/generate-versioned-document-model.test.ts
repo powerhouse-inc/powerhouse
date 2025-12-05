@@ -92,16 +92,22 @@ describe("versioned document models", () => {
       purgeDirAfterTest(testOutDir);
     },
   );
-  it.skip(
-    "should migrate unversioned document models to be versioned",
+  it(
+    "should persist existing reducer implementation logic when generating for the same spec version",
     {
       timeout: 10000000,
     },
     async (context) => {
       const testOutDir = getTestOutDir(context);
       resetDirForTest(testOutDir);
-      await loadBaseProjectFromDir("empty-project", testOutDir);
-      await loadDocumentModelsInDir("spec-version-2", testOutDir);
+      await loadBaseProjectFromDir(
+        "project-with-existing-document-models-at-spec-1",
+        testOutDir,
+      );
+      await loadDocumentModelsInDir(
+        "spec-version-1-with-more-operations",
+        testOutDir,
+      );
       await compile(testOutDir);
       await runGeneratedTests(testOutDir);
       purgeDirAfterTest(testOutDir);

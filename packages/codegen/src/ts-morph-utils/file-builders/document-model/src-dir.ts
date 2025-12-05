@@ -61,8 +61,17 @@ function makeReducerOperationHandlerForModule({
   const operationsInterfaceTypeName = `${pascalCaseDocumentType}${pascalCaseModuleName}Operations`;
   const operationsInterfaceVariableName = `${camelCaseDocumentType}${pascalCaseModuleName}Operations`;
 
-  if (alreadyExists) {
-    return;
+  const existingOperationsInterfaceTypeImport = sourceFile.getImportDeclaration(
+    (importDeclaration) =>
+      !!importDeclaration
+        .getNamedImports()
+        .find(
+          (importSpecifier) =>
+            importSpecifier.getName() === operationsInterfaceTypeName,
+        ),
+  );
+  if (existingOperationsInterfaceTypeImport) {
+    existingOperationsInterfaceTypeImport.remove();
   }
 
   const operationsInterfaceTypeImport = sourceFile.addImportDeclaration({
@@ -83,17 +92,23 @@ function makeReducerOperationHandlerForModule({
     throw new Error("Failed to create operation handler object");
   }
 
-  const operationsInterfaceVariableStatement = sourceFile.addVariableStatement({
-    declarationKind: VariableDeclarationKind.Const,
-    isExported: true,
-    declarations: [
-      {
-        name: operationsInterfaceVariableName,
-        initializer: "{}",
-        type: operationsInterfaceTypeName,
-      },
-    ],
-  });
+  let operationsInterfaceVariableStatement = sourceFile.getVariableStatement(
+    operationsInterfaceVariableName,
+  );
+
+  if (!operationsInterfaceVariableStatement) {
+    operationsInterfaceVariableStatement = sourceFile.addVariableStatement({
+      declarationKind: VariableDeclarationKind.Const,
+      isExported: true,
+      declarations: [
+        {
+          name: operationsInterfaceVariableName,
+          type: operationsInterfaceTypeName,
+          initializer: "{}",
+        },
+      ],
+    });
+  }
 
   const operationsInterfaceObject = getObjectLiteral(
     operationsInterfaceVariableStatement,
@@ -104,6 +119,8 @@ function makeReducerOperationHandlerForModule({
   }
 
   for (const name of operationsInterfaceTypeProperties) {
+    if (operationsInterfaceObject.getProperty(name)) continue;
+
     operationsInterfaceObject.addMethod({
       name,
       parameters: [{ name: "state" }, { name: "action" }],
