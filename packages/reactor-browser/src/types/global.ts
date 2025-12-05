@@ -31,6 +31,7 @@ export type PHGlobal = PHGlobalConfig & {
   selectedTimelineRevision?: string | number | null;
   revisionHistoryVisible?: boolean;
   selectedTimelineItem?: TimelineItem | null;
+  features?: Map<string, boolean>;
 };
 
 export type PHGlobalKey = keyof PHGlobal;

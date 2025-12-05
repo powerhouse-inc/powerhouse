@@ -44,6 +44,11 @@ export {
   useEditorModulesForDocumentType,
   useFallbackEditorModule,
 } from "./editor-modules.js";
+export {
+  addFeaturesEventHandler,
+  setFeatures,
+  useFeatures,
+} from "./features.js";
 export { useFolderById } from "./folder-by-id.js";
 export { useImportScriptModules } from "./import-script-modules.js";
 export {

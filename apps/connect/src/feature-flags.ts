@@ -146,7 +146,7 @@ export class QueryParamProvider implements Provider {
  */
 export async function initFeatureFlags(
   searchParams?: URLSearchParams,
-): Promise<void> {
+): Promise<Map<string, boolean>> {
   const params =
     searchParams ??
     (typeof window !== "undefined"
@@ -154,14 +154,62 @@ export async function initFeatureFlags(
       : new URLSearchParams());
   const provider = new QueryParamProvider(params);
   await OpenFeature.setProviderAndWait(provider);
+
+  const features = new Map<string, boolean>();
+  const client = OpenFeature.getClient();
+
+  features.set(
+    FEATURE_LEGACY_READ_ENABLED,
+    client.getBooleanValue(FEATURE_LEGACY_READ_ENABLED, false),
+  );
+  features.set(
+    FEATURE_LEGACY_WRITE_ENABLED,
+    client.getBooleanValue(FEATURE_LEGACY_WRITE_ENABLED, false),
+  );
+  features.set(
+    FEATURE_CHANNEL_SYNC_ENABLED,
+    client.getBooleanValue(FEATURE_CHANNEL_SYNC_ENABLED, false),
+  );
+
+  return features;
+}
+
+const FEATURE_LEGACY_READ_ENABLED = "FEATURE_LEGACY_READ_ENABLED";
+const FEATURE_LEGACY_WRITE_ENABLED = "FEATURE_LEGACY_WRITE_ENABLED";
+const FEATURE_CHANNEL_SYNC_ENABLED = "FEATURE_CHANNEL_SYNC_ENABLED";
+
+/**
+ * If true, reads go through legacy reactor.
+ *
+ * If false, reads go through the new reactor.
+ */
+export async function isLegacyReadEnabled(): Promise<boolean> {
+  const client = OpenFeature.getClient();
+  return Promise.resolve(
+    client.getBooleanValue(FEATURE_LEGACY_READ_ENABLED, false),
+  );
 }
 
 /**
- * Helper function to check if dual action create is enabled via query param.
+ * If true, writes go through legacy reactor.
+ *
+ * If false, writes go through the new reactor.
  */
-export async function isDualActionCreateEnabled(): Promise<boolean> {
+export async function isLegacyWriteEnabled(): Promise<boolean> {
   const client = OpenFeature.getClient();
   return Promise.resolve(
-    client.getBooleanValue("FEATURE_DUAL_ACTION_CREATE_ENABLED", false),
+    client.getBooleanValue(FEATURE_LEGACY_WRITE_ENABLED, false),
+  );
+}
+
+/**
+ * If true, sync through channels and disables sync through legacy reactor.
+ *
+ * If false, sync through legacy reactor and disables sync through channels.
+ */
+export async function isChannelSyncEnabled(): Promise<boolean> {
+  const client = OpenFeature.getClient();
+  return Promise.resolve(
+    client.getBooleanValue(FEATURE_CHANNEL_SYNC_ENABLED, false),
   );
 }

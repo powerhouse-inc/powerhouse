@@ -1,8 +1,5 @@
 import { phGlobalConfigFromEnv } from "@powerhousedao/connect/config";
-import {
-  initFeatureFlags,
-  isDualActionCreateEnabled,
-} from "@powerhousedao/connect/feature-flags.js";
+import { initFeatureFlags } from "@powerhousedao/connect/feature-flags.js";
 import {
   createBrowserDocumentDriveServer,
   createBrowserReactor,
@@ -18,6 +15,7 @@ import {
   initLegacyReactor,
   login,
   refreshReactorData,
+  setFeatures,
   setSelectedDrive,
   setSelectedNode,
   setVetraPackages,
@@ -126,7 +124,7 @@ export async function createReactor() {
   addPHEventHandlers();
 
   // initialize feature flags
-  await initFeatureFlags();
+  const features = await initFeatureFlags();
 
   // initialize connect crypto
   const connectCrypto = await initConnectCrypto();
@@ -154,7 +152,6 @@ export async function createReactor() {
     .filter((module) => module !== undefined);
 
   // create the legacy reactor
-  const dualActionCreateEnabled = await isDualActionCreateEnabled();
   const defaultConfig = getReactorDefaultDrivesConfig();
   const legacyReactor = createBrowserDocumentDriveServer(
     documentModelModules as unknown as DocumentModelModule[],
@@ -162,7 +159,7 @@ export async function createReactor() {
     {
       ...defaultConfig,
       featureFlags: {
-        enableDualActionCreate: dualActionCreateEnabled,
+        enableDualActionCreate: true,
       },
     },
   );
@@ -224,6 +221,7 @@ export async function createReactor() {
   setVetraPackages(vetraPackages);
   setSelectedDrive(driveSlug);
   setSelectedNode(nodeSlug);
+  setFeatures(features);
 
   // subscribe to reactor events
   legacyReactor.on("defaultRemoteDrive", (...args) => {

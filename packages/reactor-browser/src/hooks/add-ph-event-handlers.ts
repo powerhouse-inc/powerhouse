@@ -1,4 +1,7 @@
-import type { PHGlobalEventHandlerAdders } from "@powerhousedao/reactor-browser";
+import {
+  addFeaturesEventHandler,
+  type PHGlobalEventHandlerAdders,
+} from "@powerhousedao/reactor-browser";
 import {
   addAllowListEventHandler,
   addAnalyticsDatabaseNameEventHandler,
@@ -87,6 +90,7 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   legacyReactor: addLegacyReactorEventHandler,
   reactorClient: addReactorClientEventHandler,
   sync: addSyncEventHandler,
+  features: addFeaturesEventHandler,
   modal: addModalEventHandler,
   connectCrypto: addConnectCryptoEventHandler,
   did: addDidEventHandler,
