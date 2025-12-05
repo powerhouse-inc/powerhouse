@@ -107,11 +107,13 @@ export {
 export {
   setDatabase,
   setLegacyReactor,
+  setPGlite,
   setReactorClient,
   setReactorClientModule,
   setSync,
   useDatabase,
   useLegacyReactor,
+  usePGlite,
   useReactorClient,
   useReactorClientModule,
   useSync,
