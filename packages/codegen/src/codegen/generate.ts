@@ -130,8 +130,8 @@ export async function generateFromDocument(
 type GenerateDocumentModelArgs = {
   dir: string;
   documentModelState: DocumentModelGlobalState;
-  specifiedPackageName?: string;
   legacy: boolean;
+  specifiedPackageName?: string;
   watch?: boolean;
   skipFormat?: boolean;
   verbose?: boolean;

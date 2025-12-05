@@ -72,9 +72,24 @@ describe("versioned document models", () => {
       resetDirForTest(testOutDir);
       await loadBaseProjectFromDir("empty-project", testOutDir);
       await loadDocumentModelsInDir("spec-version-1", testOutDir);
-      purgeDirAfterTest(testOutDir);
       await compile(testOutDir);
       await runGeneratedTests(testOutDir);
+      purgeDirAfterTest(testOutDir);
+    },
+  );
+  it(
+    "should handle generating document models as v2",
+    {
+      timeout: 10000000,
+    },
+    async (context) => {
+      const testOutDir = getTestOutDir(context);
+      resetDirForTest(testOutDir);
+      await loadBaseProjectFromDir("empty-project", testOutDir);
+      await loadDocumentModelsInDir("spec-version-2", testOutDir);
+      await compile(testOutDir);
+      await runGeneratedTests(testOutDir);
+      purgeDirAfterTest(testOutDir);
     },
   );
 });

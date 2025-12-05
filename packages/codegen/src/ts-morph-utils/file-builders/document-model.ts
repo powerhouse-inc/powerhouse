@@ -1,4 +1,5 @@
 import { paramCase } from "change-case";
+import type { DocumentModelGlobalState } from "document-model";
 import path from "path";
 import type { Project } from "ts-morph";
 import { generateDocumentModelZodSchemas } from "../../codegen/graphql.js";
@@ -13,7 +14,6 @@ import {
   getDocumentModelDirName,
   getDocumentModelVariableNames,
   getLatestDocumentModelSpec,
-  getLatestDocumentModelSpecVersionNumber,
 } from "../name-builders/get-variable-names.js";
 import { getInitialStates } from "../templates/unsafe-utils.js";
 import { buildTsMorphProject } from "../ts-morph-project.js";
@@ -36,28 +36,30 @@ function ensureDirectoriesExist(project: Project, ...pathsToEnsure: string[]) {
     }
   }
 }
-export async function tsMorphGenerateDocumentModel({
+
+type GenerateDocumentModelFromSpecArgs = {
+  project: Project;
+  packageName: string;
+  documentModelState: DocumentModelGlobalState;
+  projectDir: string;
+  documentModelsDirPath: string;
+  documentModelDirName: string;
+  documentModelDirPath: string;
+  version: number;
+  latestVersion: number;
+};
+async function generateDocumentModelForSpec({
+  project,
   projectDir,
   packageName,
   documentModelState,
-  specVersion,
-}: GenerateDocumentModelArgs) {
-  const project = buildTsMorphProject(projectDir);
-  const { documentModelsSourceFilesPath } =
-    getDocumentModelFilePaths(projectDir);
-  project.addSourceFilesAtPaths(documentModelsSourceFilesPath);
-  const documentModelsDirPath = path.join(projectDir, "document-models");
-  const documentModelDirName = getDocumentModelDirName(documentModelState);
-  const documentModelDirPath = path.join(
-    documentModelsDirPath,
-    documentModelDirName,
-  );
-  ensureDirectoriesExist(project, documentModelsDirPath, documentModelDirPath);
-
+  documentModelsDirPath,
+  documentModelDirName,
+  documentModelDirPath,
+  version,
+  latestVersion,
+}: GenerateDocumentModelFromSpecArgs) {
   const specification = getLatestDocumentModelSpec(documentModelState);
-  const latestVersion =
-    getLatestDocumentModelSpecVersionNumber(documentModelState);
-  const version = specVersion ?? latestVersion;
 
   const versionDirName = `v${version}`;
 
@@ -145,16 +147,74 @@ export async function tsMorphGenerateDocumentModel({
     specification,
   );
 
-  createOrUpdateVersionConstantsFile({
-    project,
-    version,
-    documentModelDirPath,
-  });
-
   makeRootDirFiles(fileMakerArgs);
   makeGenDirFiles(fileMakerArgs);
   makeSrcDirFiles(fileMakerArgs);
   makeDocumentModelModulesFile(fileMakerArgs);
+}
+export async function tsMorphGenerateDocumentModel({
+  projectDir,
+  packageName,
+  documentModelState,
+}: GenerateDocumentModelArgs) {
+  const project = buildTsMorphProject(projectDir);
+  const { documentModelsSourceFilesPath } =
+    getDocumentModelFilePaths(projectDir);
+  project.addSourceFilesAtPaths(documentModelsSourceFilesPath);
+  const documentModelsDirPath = path.join(projectDir, "document-models");
+  const documentModelDirName = getDocumentModelDirName(documentModelState);
+  const documentModelDirPath = path.join(
+    documentModelsDirPath,
+    documentModelDirName,
+  );
+  ensureDirectoriesExist(project, documentModelsDirPath, documentModelDirPath);
+
+  const specVersions = [
+    ...new Set([
+      ...documentModelState.specifications.map((spec) => spec.version),
+    ]),
+  ].toSorted();
+
+  if (specVersions.length !== documentModelState.specifications.length) {
+    throw new Error(
+      "Document model specifications array is misconfigured. Length is not match with spec versions.",
+    );
+  }
+
+  const latestVersion = specVersions[specVersions.length - 1];
+  if (
+    documentModelState.specifications[
+      documentModelState.specifications.length - 1
+    ].version !== latestVersion
+  ) {
+    throw new Error(
+      "Document model has incorrect version at the latest version index",
+    );
+  }
+
+  await Promise.all(
+    specVersions.map(
+      async (version) =>
+        await generateDocumentModelForSpec({
+          project,
+          version,
+          latestVersion,
+          packageName,
+          documentModelState,
+          projectDir,
+          documentModelsDirPath,
+          documentModelDirName,
+          documentModelDirPath,
+        }),
+    ),
+  );
+
+  createOrUpdateVersionConstantsFile({
+    project,
+    specVersions,
+    latestVersion,
+    documentModelDirPath,
+  });
 
   project.saveSync();
 }

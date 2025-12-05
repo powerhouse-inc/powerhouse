@@ -1,0 +1,7 @@
+type TestEmptyCodesState {
+  value: String!
+}
+
+input SetValueInput {
+  value: String!
+}
