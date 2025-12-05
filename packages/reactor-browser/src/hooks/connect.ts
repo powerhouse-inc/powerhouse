@@ -107,10 +107,12 @@ export {
 export {
   setDatabase,
   setLegacyReactor,
+  setPGlite,
   setReactorClient,
   setSync,
   useDatabase,
   useLegacyReactor,
+  usePGlite,
   useReactorClient,
   useSync,
 } from "./reactor.js";

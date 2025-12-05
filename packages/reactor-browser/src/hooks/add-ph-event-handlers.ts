@@ -64,6 +64,7 @@ import { addProcessorManagerEventHandler } from "./processor-manager.js";
 import {
   addDatabaseEventHandler,
   addLegacyReactorEventHandler,
+  addPGliteEventHandler,
   addReactorClientEventHandler,
   addSyncEventHandler,
 } from "./reactor.js";
@@ -89,6 +90,7 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   reactorClient: addReactorClientEventHandler,
   sync: addSyncEventHandler,
   database: addDatabaseEventHandler,
+  pglite: addPGliteEventHandler,
   modal: addModalEventHandler,
   connectCrypto: addConnectCryptoEventHandler,
   did: addDidEventHandler,

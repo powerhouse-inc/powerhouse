@@ -1,3 +1,4 @@
+import type { PGlite } from "@electric-sql/pglite";
 import type {
   Database,
   IReactorClient,
@@ -22,6 +23,7 @@ export type PHGlobal = PHGlobalConfig & {
   reactorClient?: IReactorClient;
   sync?: ISyncManager;
   database?: Kysely<Database>;
+  pglite?: PGlite;
   connectCrypto?: IConnectCrypto;
   did?: DID;
   renown?: IRenown;
