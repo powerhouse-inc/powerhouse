@@ -151,6 +151,7 @@ export const connectConfig = {
     showSearchBar: env.PH_CONNECT_SEARCH_BAR_ENABLED,
     showDocumentModelSelectionSetting:
       !env.PH_CONNECT_HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS,
+    inspectorEnabled: env.PH_CONNECT_INSPECTOR_ENABLED,
   },
   drives: {
     addDriveEnabled: !env.PH_CONNECT_DISABLE_ADD_DRIVE,
