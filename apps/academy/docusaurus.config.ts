@@ -159,6 +159,26 @@ const config: Config = {
     prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
+      magicComments: [
+        // Default highlight
+        {
+          className: 'theme-code-block-highlighted-line',
+          line: 'highlight-next-line',
+          block: { start: 'highlight-start', end: 'highlight-end' },
+        },
+        // Green for additions
+        {
+          className: 'code-block-added-line',
+          line: 'added-line',
+          block: { start: 'added-start', end: 'added-end' },
+        },
+        // Red for deletions
+        {
+          className: 'code-block-removed-line',
+          line: 'removed-line',
+          block: { start: 'removed-start', end: 'removed-end' },
+        },
+      ],
     },
     tableOfContents: {
       minHeadingLevel: 2,

@@ -119,15 +119,21 @@ The tutorial repository (step-6) includes additional components like `TodoListNa
 
 ### Step 1: Update the main editor file
 
-First, simplify `editors/todo-list-editor/editor.tsx` to import and render the main `TodoList` component:
+First, update `editors/todo-list-editor/editor.tsx` to import and render the main `TodoList` component:
 
-```typescript
+```tsx
+// removed-line
+import { EditTodoListName } from "./components/EditName.js";
+// added-line
 import { TodoList } from "./components/TodoList.js";
 
 /** Editor component for the Todo List document type */
 export function Editor() {
   return (
     <div className="py-4 px-8">
+      // removed-line
+      <EditTodoListName />
+      // added-line
       <TodoList />
     </div>
   );
@@ -138,7 +144,7 @@ export function Editor() {
 
 Create `editors/todo-list-editor/components/TodoList.tsx`. This is the main orchestrator that brings together all child components:
 
-```typescript
+```tsx
 import { useSelectedTodoListDocument } from "todo-tutorial/document-models/todo-list";
 import { TodoListName } from "./TodoListName.js";
 import { Todos } from "./Todos.js";
@@ -180,7 +186,7 @@ This hook connects your React components to the document model's state and opera
 
 Create `editors/todo-list-editor/components/AddTodo.tsx` to handle adding new todo items:
 
-```typescript
+```tsx
 import type { FormEventHandler } from "react";
 import { addTodoItem } from "todo-tutorial/document-models/todo-list";
 import { useSelectedTodoListDocument } from "todo-tutorial/document-models/todo-list";
@@ -234,7 +240,7 @@ export function AddTodo() {
 
 Create `editors/todo-list-editor/components/Todos.tsx` to render the list of todos:
 
-```typescript
+```tsx
 import type { TodoItem } from "todo-tutorial/document-models/todo-list";
 import { Todo } from "./Todo.js";
 
@@ -271,7 +277,7 @@ export function Todos({ todos }: Props) {
 
 Create `editors/todo-list-editor/components/Todo.tsx` for individual todo items with edit and delete functionality:
 
-```typescript
+```tsx
 import {
   useState,
   type ChangeEventHandler,
@@ -397,7 +403,7 @@ export function Todo({ todo }: Props) {
 
 Finally, create `editors/todo-list-editor/components/TodoListName.tsx` for displaying and editing the document name:
 
-```typescript
+```tsx
 import { useState, type FormEventHandler } from "react";
 import { useSelectedTodoListDocument } from "todo-tutorial/document-models/todo-list";
 import { setName } from "document-model/document";
@@ -503,6 +509,34 @@ git show tutorial/step-6-add-basic-todo-editor-ui-components:editors/todo-list-e
 git diff tutorial/step-6-add-basic-todo-editor-ui-components -- editors/todo-list-editor/
 ```
 
+:::tip Check your work
+
+To make sure everything works as expected:
+
+```bash
+# Check types compile correctly
+pnpm tsc
+
+# Check linting passes
+pnpm lint
+
+# Run tests
+pnpm test
+
+# Test in Connect Studio
+ph connect
+
+# Compare with reference implementation
+git diff tutorial/step-6-add-basic-todo-editor-ui-components -- editors/todo-list-editor/
+```
+
+In Connect, you should be able to:
+- Create a new To-do List document
+- Add, edit, and delete todo items
+- Check/uncheck items to mark them complete
+
+:::
+
 ## Key concepts learned
 
 In this tutorial you've learned:
@@ -523,3 +557,4 @@ You will learn:
 - The in's & out's of a document model.
 - How to use UI & Scalar components from the Document Engineering system.
 - How to build Custom Drive Apps or Drive Explorers.
+

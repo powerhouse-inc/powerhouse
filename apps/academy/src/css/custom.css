@@ -526,3 +526,30 @@ html[data-theme="dark"] .DocSearch-Hits > *:empty {
   font-style: italic;
 }
 
+/* Code diff highlighting - Green for additions */
+.code-block-added-line {
+  background-color: rgba(46, 160, 67, 0.15);
+  display: block;
+  margin: 0 calc(var(--ifm-pre-padding) * -1);
+  padding: 0 var(--ifm-pre-padding);
+  border-left: 3px solid #2ea043;
+}
+
+/* Code diff highlighting - Red for deletions */
+.code-block-removed-line {
+  background-color: rgba(248, 81, 73, 0.15);
+  display: block;
+  margin: 0 calc(var(--ifm-pre-padding) * -1);
+  padding: 0 var(--ifm-pre-padding);
+  border-left: 3px solid #f85149;
+}
+
+/* Dark mode adjustments for diff highlighting */
+[data-theme="dark"] .code-block-added-line {
+  background-color: rgba(46, 160, 67, 0.25);
+}
+
+[data-theme="dark"] .code-block-removed-line {
+  background-color: rgba(248, 81, 73, 0.25);
+}
+

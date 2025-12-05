@@ -175,17 +175,22 @@ document-models/todo-list/
 └── schema.graphql               # GraphQL schema
 ```
 
-### Compare with reference
+:::tip Check your work
 
-Verify your generated files match the expected structure:
+To make sure everything works as expected:
 
 ```bash
+# Check types compile correctly
+pnpm tsc
+
+# Check linting passes
+pnpm lint
+
 # Compare your generated files with step-2
 git diff tutorial/step-2-generate-todo-list-document-model -- document-models/todo-list/
-
-# List what was generated in the reference
-git ls-tree -r --name-only tutorial/step-2-generate-todo-list-document-model document-models/todo-list/
 ```
+
+:::
 
 ### Up next: reducers
 
