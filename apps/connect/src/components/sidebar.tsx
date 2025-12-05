@@ -33,6 +33,10 @@ export function Sidebar() {
     showPHModal({ type: "addDrive" });
   };
 
+  const onInspectorClick = () => {
+    showPHModal({ type: "inspector" });
+  };
+
   const headerContent = (
     <div className="flex h-full items-center">
       <Icon
@@ -62,6 +66,7 @@ export function Sidebar() {
       id="sidebar"
       onClick={() => setSelectedDrive(undefined)}
       onClickSettings={onClickSettings}
+      onInspectorClick={onInspectorClick}
       headerContent={headerContent}
       address={user?.address}
       onLogin={openRenown}

@@ -32,6 +32,7 @@ import {
   setDocumentCache,
   setDrives,
   setLegacyReactor,
+  setPGlite,
   setProcessorManager,
   setReactorClient,
   setRenown,
@@ -168,7 +169,7 @@ export async function createReactor() {
     },
   );
 
-  const reactorClientModule = await createBrowserReactor(
+  const { module: reactorClientModule, pglite } = await createBrowserReactor(
     documentModelModules,
     storage,
     connectCrypto,
@@ -217,6 +218,7 @@ export async function createReactor() {
   setReactorClient(reactorClientModule.client);
   setSync(reactorClientModule.reactorModule?.syncModule?.syncManager);
   setDatabase(reactorClientModule.reactorModule?.database);
+  setPGlite(pglite);
   setDocumentCache(documentCache);
   setConnectCrypto(connectCrypto);
   setDid(did);
