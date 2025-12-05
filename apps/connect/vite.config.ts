@@ -17,6 +17,10 @@ export default defineConfig(({ mode }) => {
     resolve: {
       conditions: ["source", "browser", "module", "jsnext:main", "jsnext"],
     },
+    optimizeDeps: {
+      // Exclude pglite-tools to preserve WASM URL resolution
+      exclude: ["@electric-sql/pglite-tools"],
+    },
     build: {
       sourcemap: false,
       minify: true,
