@@ -105,10 +105,14 @@ export {
   useProcessorManager,
 } from "./processor-manager.js";
 export {
+  setDatabase,
   setLegacyReactor,
+  setPGlite,
   setReactorClient,
   setSync,
+  useDatabase,
   useLegacyReactor,
+  usePGlite,
   useReactorClient,
   useSync,
 } from "./reactor.js";

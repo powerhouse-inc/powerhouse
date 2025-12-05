@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ConnectConfirmationModal } from "../modal/confirmation-modal.js";
 import {
   SchemaTreeSidebar,
   type TableInfo,
@@ -68,6 +69,7 @@ export function DBExplorer({
   });
   const [sort, setSort] = useState<SortOptions | undefined>();
   const [loading, setLoading] = useState(false);
+  const [pendingImport, setPendingImport] = useState<string | null>(null);
 
   const columns = tables.find((t) => t.name === selectedTable)?.columns ?? [];
 
@@ -155,10 +157,26 @@ export function DBExplorer({
     if (!file) return;
 
     void file.text().then((content) => {
-      void onImportDb?.(content);
+      setPendingImport(content);
     });
 
     e.target.value = "";
+  };
+
+  const handleImportConfirm = async () => {
+    if (pendingImport) {
+      // Clear selection before import to prevent stale queries
+      setSelectedTable(undefined);
+      setTableData(null);
+
+      await onImportDb?.(pendingImport);
+      setPendingImport(null);
+      await loadTables();
+    }
+  };
+
+  const handleImportCancel = () => {
+    setPendingImport(null);
   };
 
   const handleExportClick = () => {
@@ -173,6 +191,20 @@ export function DBExplorer({
         accept=".sql,.txt,text/plain"
         className="hidden"
         onChange={handleFileChange}
+      />
+
+      <ConnectConfirmationModal
+        open={!!pendingImport}
+        onOpenChange={(open) => !open && setPendingImport(null)}
+        header="Replace Database?"
+        body="This will delete all existing data and replace it with the imported file. This action cannot be undone."
+        cancelLabel="Cancel"
+        continueLabel="Replace Data"
+        onCancel={handleImportCancel}
+        onContinue={() => void handleImportConfirm()}
+        continueButtonProps={{
+          className: "bg-red-900 text-white hover:bg-red-800",
+        }}
       />
 
       <div className="flex w-64 shrink-0 flex-col border-r border-gray-200">

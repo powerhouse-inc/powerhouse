@@ -1,4 +1,10 @@
-import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
+import type { PGlite } from "@electric-sql/pglite";
+import type {
+  Database,
+  IReactorClient,
+  ISyncManager,
+} from "@powerhousedao/reactor";
+import type { Kysely } from "kysely";
 import type { DID, IConnectCrypto, IRenown, User } from "@renown/sdk";
 import type {
   DocumentDriveDocument,
@@ -16,6 +22,8 @@ export type PHGlobal = PHGlobalConfig & {
   legacyReactor?: IDocumentDriveServer;
   reactorClient?: IReactorClient;
   sync?: ISyncManager;
+  database?: Kysely<Database>;
+  pglite?: PGlite;
   connectCrypto?: IConnectCrypto;
   did?: DID;
   renown?: IRenown;

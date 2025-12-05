@@ -105,15 +105,24 @@ export function createBrowserDocumentDriveServer(
     .build();
 }
 
+export type BrowserReactorResult = {
+  module: ReactorClientModule;
+  pglite: PGlite;
+};
+
 /**
  * Creates a Reactor that plugs into legacy storage but syncs through the new
  * Reactor GQL API.
  */
-export function createBrowserReactor(
+export async function createBrowserReactor(
   documentModelModules: DocumentModelModule[],
   legacyStorage: IDocumentStorage & IDocumentOperationStorage,
   connectCrypto: IConnectCrypto,
-): Promise<ReactorClientModule> {
+): Promise<BrowserReactorResult> {
+  const pglite = new PGlite("idb://reactor", {
+    relaxedDurability: true,
+  });
+
   const signerConfig: SignerConfig = {
     signer: new ConnectCryptoSigner(connectCrypto),
     verifier: createSignatureVerifier(),
@@ -128,14 +137,11 @@ export function createBrowserReactor(
         .withFeatures({ legacyStorageEnabled: true })
         .withKysely(
           new Kysely<Database>({
-            dialect: new PGliteDialect(
-              new PGlite("idb://reactor", {
-                relaxedDurability: true,
-              }),
-            ),
+            dialect: new PGliteDialect(pglite),
           }),
         ),
     );
 
-  return builder.buildModule();
+  const module = await builder.buildModule();
+  return { module, pglite };
 }

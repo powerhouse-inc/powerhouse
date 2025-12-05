@@ -166,6 +166,12 @@ const featureFlagsSchema = z.object({
   PH_CONNECT_SEARCH_BAR_ENABLED: booleanString.default(false),
 
   /**
+   * Show inspector button in the sidebar
+   * @default false
+   */
+  PH_CONNECT_INSPECTOR_ENABLED: booleanString.default(false),
+
+  /**
    * Hide document model selection in settings
    * @default true
    */
