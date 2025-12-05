@@ -1,3 +1,13 @@
+## 5.1.0-dev.9 (2025-12-05)
+
+### 🩹 Fixes
+
+- **renown:** small ui fixes and made connectcrypto and renown id available in hooks ([c06e17226](https://github.com/powerhouse-inc/powerhouse/commit/c06e17226))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.1.0-dev.8 (2025-12-05)
 
 ### 🩹 Fixes
