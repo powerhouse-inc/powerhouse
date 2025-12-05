@@ -1,4 +1,4 @@
-import { ts } from "@tmpl/core";
+import { writeFileSync } from "fs";
 import path from "path";
 import {
   formatSourceFileWithPrettier,
@@ -13,23 +13,10 @@ import type { DocumentModelFileMakerArgs } from "./types.js";
 
 export function makeRootDirFiles(fileMakerArgs: DocumentModelFileMakerArgs) {
   makeDocumentModelVersionIndexFile(fileMakerArgs);
-  makeDocumentModelIndexFile(fileMakerArgs);
   makeDocumentModelRootActionsFile(fileMakerArgs);
   makeDocumentModelModuleFile(fileMakerArgs);
   makeDocumentModelUtilsFile(fileMakerArgs);
   makeDocumentModelHooksFile(fileMakerArgs);
-}
-
-function makeDocumentModelIndexFile(args: DocumentModelFileMakerArgs) {
-  const { project, documentModelDirPath, latestVersion } = args;
-  const template = ts`export * from "./v${latestVersion}/index.js";`.raw;
-
-  const filePath = path.join(documentModelDirPath, "index.ts");
-
-  const { sourceFile } = getOrCreateSourceFile(project, filePath);
-
-  sourceFile.replaceWithText(template);
-  formatSourceFileWithPrettier(sourceFile);
 }
 
 function makeDocumentModelVersionIndexFile(args: DocumentModelFileMakerArgs) {

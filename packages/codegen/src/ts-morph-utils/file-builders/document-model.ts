@@ -1,7 +1,8 @@
 import { paramCase } from "change-case";
 import type { DocumentModelGlobalState } from "document-model";
+import { writeFileSync } from "fs";
 import path from "path";
-import type { Project } from "ts-morph";
+import { type Project } from "ts-morph";
 import { generateDocumentModelZodSchemas } from "../../codegen/graphql.js";
 import {
   documentModelModulesOutputFileName,
@@ -9,11 +10,14 @@ import {
   documentModelModulesVariableType,
   documentModelModuleTypeName,
 } from "../constants.js";
+import {
+  formatSourceFileWithPrettier,
+  getOrCreateSourceFile,
+} from "../file-utils.js";
 import { getDocumentModelFilePaths } from "../name-builders/get-file-paths.js";
 import {
   getDocumentModelDirName,
   getDocumentModelVariableNames,
-  getLatestDocumentModelSpec,
 } from "../name-builders/get-variable-names.js";
 import { getInitialStates } from "../templates/unsafe-utils.js";
 import { buildTsMorphProject } from "../ts-morph-project.js";
@@ -37,6 +41,39 @@ function ensureDirectoriesExist(project: Project, ...pathsToEnsure: string[]) {
   }
 }
 
+function makeDocumentModelIndexFile(args: {
+  project: Project;
+  documentModelDirPath: string;
+  latestVersion: number;
+}) {
+  const { project, documentModelDirPath, latestVersion } = args;
+  const template = `export * from "./v${latestVersion}/index.js";`;
+
+  const filePath = path.join(documentModelDirPath, "index.ts");
+
+  const { sourceFile } = getOrCreateSourceFile(project, filePath);
+
+  sourceFile.replaceWithText(template);
+  formatSourceFileWithPrettier(sourceFile);
+}
+
+function writeDocumentModelStateJsonFile({
+  documentModelState,
+  documentModelDirName,
+  documentModelDirPath,
+}: {
+  documentModelState: DocumentModelGlobalState;
+  documentModelDirPath: string;
+  documentModelDirName: string;
+}) {
+  const filePath = path.join(
+    documentModelDirPath,
+    `${documentModelDirName}.json`,
+  );
+  const documentModelStateJson = JSON.stringify(documentModelState, null, 2);
+  writeFileSync(filePath, documentModelStateJson);
+}
+
 type GenerateDocumentModelFromSpecArgs = {
   project: Project;
   packageName: string;
@@ -46,7 +83,6 @@ type GenerateDocumentModelFromSpecArgs = {
   documentModelDirName: string;
   documentModelDirPath: string;
   version: number;
-  latestVersion: number;
 };
 async function generateDocumentModelForSpec({
   project,
@@ -57,9 +93,16 @@ async function generateDocumentModelForSpec({
   documentModelDirName,
   documentModelDirPath,
   version,
-  latestVersion,
 }: GenerateDocumentModelFromSpecArgs) {
-  const specification = getLatestDocumentModelSpec(documentModelState);
+  const specification = documentModelState.specifications.find(
+    (spec) => spec.version === version,
+  );
+
+  if (!specification) {
+    throw new Error(
+      `Document model specifications array is misconfigured, no specification found for version: ${version}`,
+    );
+  }
 
   const versionDirName = `v${version}`;
 
@@ -119,7 +162,6 @@ async function generateDocumentModelForSpec({
     projectDir,
     packageName,
     version,
-    latestVersion,
     documentTypeId,
     documentModelState,
     initialGlobalState,
@@ -142,10 +184,10 @@ async function generateDocumentModelForSpec({
     ...documentModelVariableNames,
   };
 
-  await generateDocumentModelZodSchemas(
+  await generateDocumentModelZodSchemas({
     documentModelVersionDirPath,
     specification,
-  );
+  });
 
   makeRootDirFiles(fileMakerArgs);
   makeGenDirFiles(fileMakerArgs);
@@ -198,7 +240,6 @@ export async function tsMorphGenerateDocumentModel({
         await generateDocumentModelForSpec({
           project,
           version,
-          latestVersion,
           packageName,
           documentModelState,
           projectDir,
@@ -208,6 +249,18 @@ export async function tsMorphGenerateDocumentModel({
         }),
     ),
   );
+
+  writeDocumentModelStateJsonFile({
+    documentModelState,
+    documentModelDirName,
+    documentModelDirPath,
+  });
+
+  makeDocumentModelIndexFile({
+    project,
+    documentModelDirPath,
+    latestVersion,
+  });
 
   createOrUpdateVersionConstantsFile({
     project,

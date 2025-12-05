@@ -6,7 +6,8 @@ import {
   validationSchema,
 } from "@powerhousedao/document-engineering/graphql";
 import type { DocumentSpecification } from "document-model";
-import { readdirSync } from "node:fs";
+import { readdirSync, writeFileSync } from "node:fs";
+import path from "node:path";
 import { formatWithPrettierBeforeWrite } from "./utils.js";
 
 const getDirectories = (source: string) =>
@@ -133,7 +134,9 @@ export const generateSchema = async (
 function buildGraphqlDocumentStringForSpecification(
   specification: DocumentSpecification,
 ) {
-  const customScalarSchemas = Object.keys(scalars).map((k) => `scalar ${k}`);
+  const customScalarSchemas = Object.keys(scalars)
+    .map((k) => `scalar ${k}`)
+    .join("\n");
   const stateSchemas = Object.values(specification.state).map(
     (state) => state.schema,
   );
@@ -141,20 +144,22 @@ function buildGraphqlDocumentStringForSpecification(
     .flatMap((module) => module.operations.map((operation) => operation.schema))
     .filter((schema) => schema !== null);
 
-  return [...customScalarSchemas, ...stateSchemas, ...moduleSchemas];
+  return [customScalarSchemas, ...stateSchemas, ...moduleSchemas];
 }
 
-export async function generateDocumentModelZodSchemas(
-  documentModelDirPath: string,
-  specification: DocumentSpecification,
-) {
-  const schema =
-    buildGraphqlDocumentStringForSpecification(specification).join("\n\n");
+export async function generateDocumentModelZodSchemas(args: {
+  documentModelVersionDirPath: string;
+  specification: DocumentSpecification;
+}) {
+  const { documentModelVersionDirPath, specification } = args;
+  const schema = buildGraphqlDocumentStringForSpecification(specification)
+    .filter(Boolean)
+    .join("\n\n");
 
   const config: CodegenConfig = {
     overwrite: true,
     generates: {
-      [`${documentModelDirPath}/gen/schema/types.ts`]: {
+      [`${documentModelVersionDirPath}/gen/schema/types.ts`]: {
         schema,
         plugins: ["typescript"],
         config: {
@@ -164,7 +169,7 @@ export async function generateDocumentModelZodSchemas(
           skipTypename: true,
         },
       },
-      [`${documentModelDirPath}/gen/schema/zod.ts`]: {
+      [`${documentModelVersionDirPath}/gen/schema/zod.ts`]: {
         schema,
         plugins: ["graphql-codegen-typescript-validation-schema"],
         config: {
@@ -188,6 +193,10 @@ export async function generateDocumentModelZodSchemas(
   };
 
   await generate(config, true);
+  writeFileSync(
+    path.join(documentModelVersionDirPath, "schema.graphql"),
+    schema,
+  );
 }
 
 export const generateSchemas = (

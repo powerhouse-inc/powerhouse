@@ -92,4 +92,19 @@ describe("versioned document models", () => {
       purgeDirAfterTest(testOutDir);
     },
   );
+  it.skip(
+    "should migrate unversioned document models to be versioned",
+    {
+      timeout: 10000000,
+    },
+    async (context) => {
+      const testOutDir = getTestOutDir(context);
+      resetDirForTest(testOutDir);
+      await loadBaseProjectFromDir("empty-project", testOutDir);
+      await loadDocumentModelsInDir("spec-version-2", testOutDir);
+      await compile(testOutDir);
+      await runGeneratedTests(testOutDir);
+      purgeDirAfterTest(testOutDir);
+    },
+  );
 });
