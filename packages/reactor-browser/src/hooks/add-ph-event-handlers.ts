@@ -62,6 +62,7 @@ import { addLoginStatusEventHandler } from "./login-status.js";
 import { addModalEventHandler } from "./modals.js";
 import { addProcessorManagerEventHandler } from "./processor-manager.js";
 import {
+  addDatabaseEventHandler,
   addLegacyReactorEventHandler,
   addReactorClientEventHandler,
   addSyncEventHandler,
@@ -87,6 +88,7 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   legacyReactor: addLegacyReactorEventHandler,
   reactorClient: addReactorClientEventHandler,
   sync: addSyncEventHandler,
+  database: addDatabaseEventHandler,
   modal: addModalEventHandler,
   connectCrypto: addConnectCryptoEventHandler,
   did: addDidEventHandler,
