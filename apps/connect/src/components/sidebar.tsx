@@ -66,7 +66,9 @@ export function Sidebar() {
       id="sidebar"
       onClick={() => setSelectedDrive(undefined)}
       onClickSettings={onClickSettings}
-      onInspectorClick={onInspectorClick}
+      onInspectorClick={
+        connectConfig.content.inspectorEnabled ? onInspectorClick : undefined
+      }
       headerContent={headerContent}
       address={user?.address}
       onLogin={openRenown}
