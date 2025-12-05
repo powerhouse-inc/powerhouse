@@ -2,6 +2,7 @@ import { ts } from "@tmpl/core";
 import { paramCase, pascalCase } from "change-case";
 import type { ModuleSpecification } from "document-model";
 import path from "path";
+import type { Project } from "ts-morph";
 import { VariableDeclarationKind } from "ts-morph";
 import {
   formatSourceFileWithPrettier,
@@ -43,9 +44,40 @@ function makeReducerOperationHandlersForModules(
   }
 }
 
+function attemptToGetPreviousVersionReducerFile(args: {
+  project: Project;
+  alreadyExists: boolean;
+  version: number;
+  filePath: string;
+}) {
+  const { project, alreadyExists, version, filePath } = args;
+  if (alreadyExists) return;
+  const previousVersion = version - 1;
+  if (previousVersion < 1) return;
+  const currentVersionPathSegments = path.join(
+    `v${version}`,
+    "src",
+    "reducers",
+  );
+  const previousVersionPathSegments = path.join(
+    `v${previousVersion}`,
+    "src",
+    "reducers",
+  );
+  const previousVersionFilePath = filePath.replace(
+    currentVersionPathSegments,
+    previousVersionPathSegments,
+  );
+
+  const previousVersionFile = project.getSourceFile(previousVersionFilePath);
+
+  return previousVersionFile;
+}
+
 function makeReducerOperationHandlerForModule({
   project,
   module,
+  version,
   reducersDirPath,
   pascalCaseDocumentType,
   camelCaseDocumentType,
@@ -58,6 +90,7 @@ function makeReducerOperationHandlerForModule({
     project,
     filePath,
   );
+
   const operationsInterfaceTypeName = `${pascalCaseDocumentType}${pascalCaseModuleName}Operations`;
   const operationsInterfaceVariableName = `${camelCaseDocumentType}${pascalCaseModuleName}Operations`;
 
