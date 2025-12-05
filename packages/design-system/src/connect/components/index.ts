@@ -48,3 +48,5 @@ export * from "./toggle/toggle.js";
 export * from "./tooltip/tooltip.js";
 export * from "./upload-file-item/upload-file-item.js";
 export * from "./upload-file-list/upload-file-list.js";
+export * from "./db-explorer/index.js";
+export * from "./remotes-inspector/index.js";
