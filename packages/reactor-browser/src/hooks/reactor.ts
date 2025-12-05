@@ -1,4 +1,9 @@
-import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
+import type {
+  Database,
+  IReactorClient,
+  ISyncManager,
+} from "@powerhousedao/reactor";
+import type { Kysely } from "kysely";
 import type {
   AddPHGlobalEventHandler,
   BrowserReactorClientModule,
@@ -62,3 +67,17 @@ export const setSync: SetPHGlobalValue<ISyncManager> =
 /** Adds an event handler for the sync manager */
 export const addSyncEventHandler: AddPHGlobalEventHandler =
   syncEventFunctions.addEventHandler;
+
+const databaseEventFunctions = makePHEventFunctions("database");
+
+/** Returns the database */
+export const useDatabase: UsePHGlobalValue<Kysely<Database>> =
+  databaseEventFunctions.useValue;
+
+/** Sets the database */
+export const setDatabase: SetPHGlobalValue<Kysely<Database>> =
+  databaseEventFunctions.setValue;
+
+/** Adds an event handler for the database */
+export const addDatabaseEventHandler: AddPHGlobalEventHandler =
+  databaseEventFunctions.addEventHandler;

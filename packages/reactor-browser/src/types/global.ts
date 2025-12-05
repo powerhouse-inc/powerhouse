@@ -1,5 +1,6 @@
 import type { PGlite } from "@electric-sql/pglite";
 import type {
+  Database,
   IReactorClient,
   ISyncManager,
   ReactorClientModule,
@@ -10,6 +11,7 @@ import type {
   IDocumentDriveServer,
   ProcessorManager,
 } from "document-drive";
+import type { Kysely } from "kysely";
 import type { PHGlobalConfig } from "./config.js";
 import type { IDocumentCache } from "./documents.js";
 import type { PHModal } from "./modals.js";
@@ -26,6 +28,7 @@ export type PHGlobal = PHGlobalConfig & {
   reactorClientModule?: BrowserReactorClientModule;
   reactorClient?: IReactorClient;
   sync?: ISyncManager;
+  database?: Kysely<Database>;
   connectCrypto?: IConnectCrypto;
   did?: DID;
   renown?: IRenown;

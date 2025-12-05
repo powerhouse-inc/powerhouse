@@ -1,4 +1,3 @@
-import { addFeaturesEventHandler } from "./features.js";
 import type { PHGlobalEventHandlerAdders } from "../types/global.js";
 import {
   addAllowListEventHandler,
@@ -48,6 +47,7 @@ import {
   addVersionEventHandler,
   addWarnOutdatedAppEventHandler,
 } from "./config/connect.js";
+import { addFeaturesEventHandler } from "./features.js";
 
 import {
   addAllowedDocumentTypesEventHandler,
@@ -63,6 +63,7 @@ import { addLoginStatusEventHandler } from "./login-status.js";
 import { addModalEventHandler } from "./modals.js";
 import { addProcessorManagerEventHandler } from "./processor-manager.js";
 import {
+  addDatabaseEventHandler,
   addLegacyReactorEventHandler,
   addReactorClientEventHandler,
   addReactorClientModuleEventHandler,
@@ -91,6 +92,7 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   reactorClient: addReactorClientEventHandler,
   sync: addSyncEventHandler,
   features: addFeaturesEventHandler,
+  database: addDatabaseEventHandler,
   modal: addModalEventHandler,
   connectCrypto: addConnectCryptoEventHandler,
   did: addDidEventHandler,
