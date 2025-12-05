@@ -27,4 +27,5 @@ export type PHModal =
   | { type: "debugSettings" }
   | { type: "disclaimer" }
   | { type: "cookiesPolicy" }
-  | { type: "exportDocumentWithErrors"; documentId: string };
+  | { type: "exportDocumentWithErrors"; documentId: string }
+  | { type: "inspector" };
