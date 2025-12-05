@@ -160,11 +160,11 @@ export async function initFeatureFlags(
 
   features.set(
     FEATURE_LEGACY_READ_ENABLED,
-    client.getBooleanValue(FEATURE_LEGACY_READ_ENABLED, false),
+    client.getBooleanValue(FEATURE_LEGACY_READ_ENABLED, true),
   );
   features.set(
     FEATURE_LEGACY_WRITE_ENABLED,
-    client.getBooleanValue(FEATURE_LEGACY_WRITE_ENABLED, false),
+    client.getBooleanValue(FEATURE_LEGACY_WRITE_ENABLED, true),
   );
   features.set(
     FEATURE_CHANNEL_SYNC_ENABLED,
@@ -186,7 +186,7 @@ const FEATURE_CHANNEL_SYNC_ENABLED = "FEATURE_CHANNEL_SYNC_ENABLED";
 export async function isLegacyReadEnabled(): Promise<boolean> {
   const client = OpenFeature.getClient();
   return Promise.resolve(
-    client.getBooleanValue(FEATURE_LEGACY_READ_ENABLED, false),
+    client.getBooleanValue(FEATURE_LEGACY_READ_ENABLED, true),
   );
 }
 
@@ -198,7 +198,7 @@ export async function isLegacyReadEnabled(): Promise<boolean> {
 export async function isLegacyWriteEnabled(): Promise<boolean> {
   const client = OpenFeature.getClient();
   return Promise.resolve(
-    client.getBooleanValue(FEATURE_LEGACY_WRITE_ENABLED, false),
+    client.getBooleanValue(FEATURE_LEGACY_WRITE_ENABLED, true),
   );
 }
 

@@ -6,6 +6,7 @@ import {
   removeTrigger,
   renameDrive,
   setDriveSharingType,
+  useChannelSyncEnabled,
   useDrives,
 } from "@powerhousedao/reactor-browser";
 import type { PullResponderTrigger, Trigger } from "document-drive";
@@ -37,6 +38,7 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
     Map<string, PullResponderTrigger>
   >(new Map());
   const drives = useDrives();
+  const channelSyncEnabled = useChannelSyncEnabled();
 
   const pullResponderRegisterDelay = useRef<Map<string, number>>(new Map());
 
@@ -146,6 +148,12 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
   const strandsErrorHandler: ClientErrorHandler["strandsErrorHandler"] =
     useCallback(
       async (driveId, trigger, status, errorMessage) => {
+        // When channel sync is enabled, strands error handling is not needed
+        // as the channel sync system replaces the legacy trigger-based sync
+        if (channelSyncEnabled) {
+          return;
+        }
+
         switch (status) {
           case 400: {
             if (isListenerIdNotFound(errorMessage, trigger.data?.listenerId)) {
@@ -182,7 +190,12 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
           }
         }
       },
-      [handleDriveNotFound, handleStrands400, handlingInProgress],
+      [
+        channelSyncEnabled,
+        handleDriveNotFound,
+        handleStrands400,
+        handlingInProgress,
+      ],
     );
 
   return useMemo(() => ({ strandsErrorHandler }), [strandsErrorHandler]);

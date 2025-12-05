@@ -37,7 +37,9 @@ export interface RenownUserContextValue {
   renown: IRenown | null;
 }
 
-export const RenownUserContext = createContext<RenownUserContextValue | null>(null);
+export const RenownUserContext = createContext<RenownUserContextValue | null>(
+  null,
+);
 
 interface RenownUserProviderProps {
   children: React.ReactNode;
@@ -260,5 +262,9 @@ export function RenownUserProvider({
     renown,
   };
 
-  return <RenownUserContext.Provider value={value}>{children}</RenownUserContext.Provider>;
+  return (
+    <RenownUserContext.Provider value={value}>
+      {children}
+    </RenownUserContext.Provider>
+  );
 }
