@@ -63,7 +63,7 @@ const UpgradeDriveModal = lazy(() =>
   })),
 );
 const InspectorModal = lazy(() =>
-  import("./modals/InspectorModal.js").then((m) => ({
+  import("./modals/InspectorModal/index.js").then((m) => ({
     default: m.InspectorModal,
   })),
 );
