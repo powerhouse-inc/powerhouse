@@ -223,33 +223,56 @@ export async function createReactor() {
   setSelectedNode(nodeSlug);
   setFeatures(features);
 
-  // subscribe to reactor events
-  legacyReactor.on("defaultRemoteDrive", (...args) => {
-    logger.verbose("defaultRemoteDrive", ...args);
-    refreshReactorData(legacyReactor).catch(logger.error);
-  });
-  legacyReactor.on("clientStrandsError", (...args) => {
-    logger.verbose("clientStrandsError", ...args);
-    refreshReactorData(legacyReactor).catch(logger.error);
-  });
-  legacyReactor.on("driveAdded", (...args) => {
-    logger.verbose("driveAdded", ...args);
-    // register the drive with the processor manager
-    processorManager.registerDrive(args[0].header.id).catch(logger.error);
-    refreshReactorData(legacyReactor).catch(logger.error);
-  });
-  legacyReactor.on("driveDeleted", (...args) => {
-    logger.verbose("driveDeleted", ...args);
-    refreshReactorData(legacyReactor).catch(logger.error);
-  });
-  legacyReactor.on("documentModelModules", (...args) => {
-    logger.verbose("documentModelModules", ...args);
-    refreshReactorData(legacyReactor).catch(logger.error);
-  });
-  legacyReactor.on("driveOperationsAdded", (...args) => {
-    logger.verbose("driveOperationsAdded", ...args);
-    refreshReactorData(legacyReactor).catch(logger.error);
-  });
+  // subscribe to reactor events based on feature flags
+  const useLegacyRead = features.get("FEATURE_LEGACY_READ_ENABLED") ?? true;
+
+  if (useLegacyRead) {
+    // Subscribe to legacy reactor events
+    legacyReactor.on("defaultRemoteDrive", (...args) => {
+      logger.verbose("defaultRemoteDrive", ...args);
+      refreshReactorData(legacyReactor).catch(logger.error);
+    });
+    legacyReactor.on("clientStrandsError", (...args) => {
+      logger.verbose("clientStrandsError", ...args);
+      refreshReactorData(legacyReactor).catch(logger.error);
+    });
+    legacyReactor.on("driveAdded", (...args) => {
+      logger.verbose("driveAdded", ...args);
+      // register the drive with the processor manager
+      processorManager.registerDrive(args[0].header.id).catch(logger.error);
+      refreshReactorData(legacyReactor).catch(logger.error);
+    });
+    legacyReactor.on("driveDeleted", (...args) => {
+      logger.verbose("driveDeleted", ...args);
+      refreshReactorData(legacyReactor).catch(logger.error);
+    });
+    legacyReactor.on("documentModelModules", (...args) => {
+      logger.verbose("documentModelModules", ...args);
+      refreshReactorData(legacyReactor).catch(logger.error);
+    });
+    legacyReactor.on("driveOperationsAdded", (...args) => {
+      logger.verbose("driveOperationsAdded", ...args);
+      refreshReactorData(legacyReactor).catch(logger.error);
+    });
+  } else {
+    // Subscribe via ReactorClient interface
+    const reactorClient = reactorClientModule.client;
+    if (reactorClient) {
+      reactorClient.subscribe(
+        { type: "powerhouse/document-drive" },
+        (event) => {
+          logger.verbose("ReactorClient subscription event", event);
+          // Handle document changes - refresh drives data using ReactorClient
+          reactorClient
+            .find({ type: "powerhouse/document-drive" })
+            .then((result) => {
+              setDrives(result.results as DocumentDriveDocument[]);
+            })
+            .catch(logger.error);
+        },
+      );
+    }
+  }
 
   window.ph.loading = false;
 }
