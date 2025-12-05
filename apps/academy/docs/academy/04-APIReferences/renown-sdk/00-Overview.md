@@ -25,21 +25,21 @@ pnpm add @renown/sdk
 
 ## Quick Start
 
-### 1. Wrap Your App with UserProvider
+### 1. Wrap Your App with RenownUserProvider
 
-The UserProvider automatically initializes the SDK - no manual setup needed!
+The RenownUserProvider automatically initializes the SDK - no manual setup needed!
 
 ```typescript
 // app/layout.tsx or app.tsx
-import { UserProvider } from '@renown/sdk'
+import { RenownUserProvider } from '@renown/sdk'
 
 export default function RootLayout({ children }) {
   return (
     <html>
       <body>
-        <UserProvider>
+        <RenownUserProvider>
           {children}
-        </UserProvider>
+        </RenownUserProvider>
       </body>
     </html>
   )
@@ -49,7 +49,7 @@ export default function RootLayout({ children }) {
 Optional: Customize with loading/error components:
 
 ```typescript
-<UserProvider
+<RenownUserProvider
   loadingComponent={
     <div className="loading-screen">
       <Spinner />
@@ -65,7 +65,7 @@ Optional: Customize with loading/error components:
   )}
 >
   {children}
-</UserProvider>
+</RenownUserProvider>
 ```
 
 ### 2. Use Authentication in Components
@@ -113,13 +113,13 @@ export function CustomAuth() {
 
 ## Key Concepts
 
-### UserProvider
+### RenownUserProvider
 
-The `<UserProvider>` component is the central authentication provider that manages auth state across your application. It must wrap your application to provide authentication context.
+The `<RenownUserProvider>` component is the central authentication provider that manages auth state across your application. It must wrap your application to provide authentication context.
 
 ### useUser Hook
 
-The `useUser()` hook provides access to authentication state and methods throughout your application. It can only be used within an `<UserProvider>`.
+The `useUser()` hook provides access to authentication state and methods throughout your application. It can only be used within a `<RenownUserProvider>`. The hook returns `connectCrypto` and `renown` instances for advanced use cases.
 
 ### Session Management
 
@@ -142,15 +142,15 @@ This component is optional - you can build your own UI using the `useUser` hook.
 
 ```typescript
 // app/layout.tsx - Minimal setup
-import { UserProvider } from '@renown/sdk'
+import { RenownUserProvider } from '@renown/sdk'
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        <UserProvider>
+        <RenownUserProvider>
           {children}
-        </UserProvider>
+        </RenownUserProvider>
       </body>
     </html>
   )
@@ -203,14 +203,14 @@ export default function ProfilePage() {
 
 ```typescript
 // main.tsx
-import { UserProvider } from '@renown/sdk'
+import { RenownUserProvider } from '@renown/sdk'
 import App from './App'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <UserProvider>
+    <RenownUserProvider>
       <App />
-    </UserProvider>
+    </RenownUserProvider>
   </React.StrictMode>
 )
 
@@ -246,12 +246,12 @@ function CustomApp() {
 
 ## Configuration
 
-### UserProvider Props
+### RenownUserProvider Props
 
 Customize the Renown SDK initialization:
 
 ```typescript
-<UserProvider
+<RenownUserProvider
   renownUrl="https://www.renown.id"  // Custom Renown service URL
   networkId="eip155"                            // Network ID (default: 'eip155')
   chainId="1"                                   // Chain ID (default: '1')
@@ -259,21 +259,21 @@ Customize the Renown SDK initialization:
   errorComponent={(error, retry) => <YourError />}  // Custom error screen
 >
   <App />
-</UserProvider>
+</RenownUserProvider>
 ```
 
-All props are optional - UserProvider uses sensible defaults.
+All props are optional - RenownUserProvider uses sensible defaults.
 
 ### Environment Variables
 
 You can use environment variables for configuration:
 
 ```typescript
-<UserProvider
+<RenownUserProvider
   renownUrl={process.env.NEXT_PUBLIC_RENOWN_URL}
 >
   <App />
-</UserProvider>
+</RenownUserProvider>
 ```
 
 ```bash
@@ -285,14 +285,14 @@ NEXT_PUBLIC_RENOWN_URL=https://www.renown.id
 
 ### Context Error
 
-**Error:** `useUser must be used within an UserProvider`
+**Error:** `useUser must be used within a RenownUserProvider`
 
-**Solution:** Ensure your component is wrapped by `<UserProvider>`:
+**Solution:** Ensure your component is wrapped by `<RenownUserProvider>`:
 
 ```typescript
-<UserProvider>
+<RenownUserProvider>
   <YourComponent /> {/* ✅ Can use useUser */}
-</UserProvider>
+</RenownUserProvider>
 ```
 
 ### Custom Renown URL
@@ -300,9 +300,9 @@ NEXT_PUBLIC_RENOWN_URL=https://www.renown.id
 If you need to use a different Renown instance:
 
 ```typescript
-<UserProvider renownUrl="https://your-renown-instance.com">
+<RenownUserProvider renownUrl="https://your-renown-instance.com">
   <App />
-</UserProvider>
+</RenownUserProvider>
 ```
 
 ## Resources

@@ -27,6 +27,7 @@ export interface User {
   email?: string;
   avatar?: string;
   ethAddress?: string;
+  documentId?: string;
 }
 
 // Helper function to fetch user profile from renown API
@@ -98,6 +99,7 @@ export async function fetchProfileDataForUser(user: User): Promise<User> {
         name: profile.username || undefined,
         avatar: profile.userImage || undefined,
         ethAddress: profile.ethAddress || undefined,
+        documentId: profile.documentId,
       };
     }
 
@@ -126,7 +128,15 @@ declare global {
   }
 }
 
-export async function openRenown() {
+export async function openRenown(documentId?: string) {
+  // If documentId is provided, open the profile page directly
+  if (documentId) {
+    const profileUrl = `${RENOWN_URL}/profile/${documentId}`;
+    window.open(profileUrl, "_blank")?.focus();
+    return;
+  }
+
+  // Otherwise, open the auth flow
   const url = new URL(RENOWN_URL);
 
   // Get DID from connectCrypto if available

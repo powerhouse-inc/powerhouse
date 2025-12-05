@@ -3,6 +3,7 @@
 import React from "react";
 import { useUser } from "../hooks/use-user.js";
 import type { User } from "../lib/renown/index.js";
+import { openRenown as openRenownUtil } from "../lib/renown/utils.js";
 import { RenownLoginButton } from "./RenownLoginButton.js";
 import { RenownUserButton } from "./RenownUserButton.js";
 
@@ -17,11 +18,6 @@ export interface RenownAuthButtonProps {
    * Custom class name for the container
    */
   className?: string;
-  /**
-   * Base URL for the profile page
-   * @default "https://www.renown.id/profile"
-   */
-  profileBaseUrl?: string;
   /**
    * Custom render function when user is authenticated
    * Receives user data, logout function, and openProfile function
@@ -73,7 +69,6 @@ export interface RenownAuthButtonProps {
  */
 export function RenownAuthButton({
   className = "",
-  profileBaseUrl = "https://www.renown.id/profile",
   renderAuthenticated,
   renderUnauthenticated,
   renderLoading,
@@ -82,10 +77,7 @@ export function RenownAuthButton({
 
   const openProfile = () => {
     if (!user) return;
-    const identifier = user.ethAddress || user.address || user.name;
-    if (identifier) {
-      window.open(`${profileBaseUrl}/${identifier}`, "_blank");
-    }
+    openRenownUtil(user.documentId);
   };
 
   // Loading state
@@ -142,14 +134,12 @@ export function RenownAuthButton({
       );
     }
 
-    const profileUrl = `${profileBaseUrl}/${address}`;
-
     return (
       <div className={className}>
         <RenownUserButton
           address={address}
           username={user.name}
-          profileUrl={profileUrl}
+          userId={user.documentId}
           avatarUrl={user.avatar}
           onDisconnect={logout}
         />

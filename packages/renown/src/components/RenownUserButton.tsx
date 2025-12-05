@@ -2,12 +2,16 @@
 
 import type { CSSProperties, ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { openRenown } from "../lib/renown/utils.js";
 import {
   CopyIcon,
   DisconnectIcon,
   ExternalLinkIcon,
   UserIcon,
 } from "./icons.js";
+
+const POPOVER_GAP = 8;
+const POPOVER_HEIGHT = 150; // approximate height of popover
 
 export interface RenownUserButtonProps {
   /**
@@ -23,9 +27,9 @@ export interface RenownUserButtonProps {
    */
   avatarUrl?: string;
   /**
-   * URL to view the profile (e.g., on Renown or Etherscan)
+   * User ID to view the profile on Renown
    */
-  profileUrl?: string;
+  userId?: string;
   /**
    * Callback when disconnect is requested
    */
@@ -42,7 +46,8 @@ export interface RenownUserButtonProps {
    * Custom render function for the trigger button
    */
   renderTrigger?: (props: {
-    onClick: () => void;
+    onMouseEnter: () => void;
+    onMouseLeave: () => void;
     address: string;
     username?: string;
     avatarUrl?: string;
@@ -80,9 +85,8 @@ const styles: Record<string, CSSProperties> = {
     alignItems: "center",
     justifyContent: "center",
   },
-  popover: {
+  popoverBase: {
     position: "absolute",
-    bottom: "calc(100% + 8px)",
     left: 0,
     backgroundColor: "white",
     borderRadius: "8px",
@@ -185,7 +189,7 @@ function truncateAddress(address: string): string {
  *     <RenownUserButton
  *       address="0x1234...5678"
  *       username="vitalik.eth"
- *       profileUrl="https://renown.id/profile/0x1234..."
+ *       userId="abc123"
  *       onDisconnect={handleDisconnect}
  *     />
  *   )
@@ -196,7 +200,7 @@ export function RenownUserButton({
   address,
   username,
   avatarUrl,
-  profileUrl,
+  userId,
   onDisconnect,
   style,
   className,
@@ -204,28 +208,40 @@ export function RenownUserButton({
 }: RenownUserButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  const popoverRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [showAbove, setShowAbove] = useState(true);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const calculatePosition = useCallback(() => {
+    if (!wrapperRef.current) return;
+    const rect = wrapperRef.current.getBoundingClientRect();
+    const spaceAbove = rect.top;
+    const hasSpaceAbove = spaceAbove >= POPOVER_HEIGHT + POPOVER_GAP;
+    setShowAbove(hasSpaceAbove);
+  }, []);
+
+  const handleMouseEnter = useCallback(() => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+    calculatePosition();
+    setIsOpen(true);
+  }, [calculatePosition]);
+
+  const handleMouseLeave = useCallback(() => {
+    closeTimeoutRef.current = setTimeout(() => {
+      setIsOpen(false);
+    }, 150);
+  }, []);
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        popoverRef.current &&
-        !popoverRef.current.contains(event.target as Node) &&
-        triggerRef.current &&
-        !triggerRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    }
-
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      if (closeTimeoutRef.current) {
+        clearTimeout(closeTimeoutRef.current);
+      }
     };
-  }, [isOpen]);
+  }, []);
 
   const copyToClipboard = useCallback(async () => {
     try {
@@ -238,19 +254,24 @@ export function RenownUserButton({
   }, [address]);
 
   return (
-    <div style={styles.wrapper} className={className}>
+    <div
+      ref={wrapperRef}
+      style={styles.wrapper}
+      className={className}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       {renderTrigger ? (
         renderTrigger({
-          onClick: () => setIsOpen(!isOpen),
+          onMouseEnter: handleMouseEnter,
+          onMouseLeave: handleMouseLeave,
           address,
           username,
           avatarUrl,
         })
       ) : (
         <button
-          ref={triggerRef}
           type="button"
-          onClick={() => setIsOpen(!isOpen)}
           style={{ ...styles.trigger, ...style }}
           aria-label="Open account menu"
         >
@@ -264,7 +285,14 @@ export function RenownUserButton({
         </button>
       )}
       {isOpen && (
-        <div ref={popoverRef} style={styles.popover}>
+        <div
+          style={{
+            ...styles.popoverBase,
+            ...(showAbove
+              ? { bottom: `calc(100% + ${POPOVER_GAP}px)` }
+              : { top: `calc(100% + ${POPOVER_GAP}px)` }),
+          }}
+        >
           <div style={styles.section}>
             {username && <div style={styles.username}>{username}</div>}
             <div style={styles.addressRow}>
@@ -297,17 +325,16 @@ export function RenownUserButton({
               </button>
             </div>
           </div>
-          {profileUrl && (
+          {userId && (
             <div style={styles.section}>
-              <a
-                href={profileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
+                onClick={() => openRenown(userId)}
                 style={styles.menuItem}
               >
                 <ExternalLinkIcon size={14} />
-                View on Etherscan
-              </a>
+                View on Renown
+              </button>
             </div>
           )}
           <div style={styles.sectionLast}>

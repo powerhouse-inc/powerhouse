@@ -1,12 +1,12 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  RenownLoginButton,
-  RenownUserButton,
   RenownAuthButton,
+  RenownLoginButton,
   RenownLogo,
+  RenownUserButton,
 } from "../../src/components/index.js";
-import { UserProvider } from "../../src/providers/user-provider.js";
+import { RenownUserProvider } from "../../src/providers/renown-user-provider.js";
 
 const styles = {
   container: {
@@ -104,20 +104,30 @@ function App() {
           <span style={styles.code}>RenownLoginButton</span>
         </h2>
         <p style={styles.description}>
-          A button that opens a popover with the Renown login option. Click the
-          button to see the popover with the "Connect" option.
+          A login button with Renown branding. By default, clicking triggers
+          login directly. Use <code style={styles.code}>showPopover</code> to
+          show a hover popover instead.
         </p>
         <div style={styles.componentRow}>
-          <span style={styles.label}>Default:</span>
+          <span style={styles.label}>Default (direct login):</span>
           <RenownLoginButton onLogin={() => console.log("Login clicked!")} />
         </div>
-        <div style={styles.componentRow}>
-          <span style={styles.label}>With custom trigger:</span>
+        <div style={styles.componentRow} data-testid="popover-login">
+          <span style={styles.label}>With popover:</span>
           <RenownLoginButton
             onLogin={() => console.log("Login clicked!")}
-            renderTrigger={({ onClick }) => (
+            showPopover
+          />
+        </div>
+        <div style={styles.componentRow}>
+          <span style={styles.label}>Custom trigger (with popover):</span>
+          <RenownLoginButton
+            onLogin={() => console.log("Login clicked!")}
+            showPopover
+            renderTrigger={({ onMouseEnter, onMouseLeave }) => (
               <button
-                onClick={onClick}
+                onMouseEnter={onMouseEnter}
+                onMouseLeave={onMouseLeave}
                 style={{
                   padding: "8px 16px",
                   borderRadius: "8px",
@@ -128,6 +138,24 @@ function App() {
                 Sign In
               </button>
             )}
+          />
+        </div>
+        <div
+          style={{
+            ...styles.componentRow,
+            backgroundColor: "#111827",
+            padding: "16px",
+            borderRadius: "8px",
+          }}
+          data-testid="dark-mode-login"
+        >
+          <span style={{ ...styles.label, color: "#f9fafb" }}>
+            Dark mode (with popover):
+          </span>
+          <RenownLoginButton
+            onLogin={() => console.log("Login clicked!")}
+            darkMode
+            showPopover
           />
         </div>
       </section>
@@ -147,7 +175,7 @@ function App() {
           <RenownUserButton
             address={mockUser.address}
             username={mockUser.username}
-            profileUrl={`https://renown.id/profile/${mockUser.address}`}
+            userId="mock-document-id-1"
             onDisconnect={() => console.log("Disconnect clicked!")}
           />
         </div>
@@ -157,7 +185,7 @@ function App() {
             address={mockUser.address}
             username={mockUser.username}
             avatarUrl="https://unavatar.io/github/vitalik"
-            profileUrl={`https://renown.id/profile/${mockUser.address}`}
+            userId="mock-document-id-2"
             onDisconnect={() => console.log("Disconnect clicked!")}
           />
         </div>
@@ -165,7 +193,7 @@ function App() {
           <span style={styles.label}>No username:</span>
           <RenownUserButton
             address={mockUser.address}
-            profileUrl={`https://renown.id/profile/${mockUser.address}`}
+            userId="mock-document-id-3"
             onDisconnect={() => console.log("Disconnect clicked!")}
           />
         </div>
@@ -179,14 +207,14 @@ function App() {
         <p style={styles.description}>
           Smart authentication button that adapts based on auth state. Shows
           RenownLoginButton when not authenticated, and RenownUserButton when
-          authenticated. This component requires the UserProvider to be
+          authenticated. This component requires the RenownUserProvider to be
           initialized.
         </p>
         <div style={styles.componentRow}>
-          <span style={styles.label}>With UserProvider:</span>
-          <UserProvider renownUrl="https://www.renown.id">
+          <span style={styles.label}>With RenownUserProvider:</span>
+          <RenownUserProvider renownUrl="https://www.renown.id">
             <RenownAuthButton />
-          </UserProvider>
+          </RenownUserProvider>
         </div>
       </section>
     </div>

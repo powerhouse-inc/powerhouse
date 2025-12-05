@@ -10,36 +10,53 @@ test.describe("Renown SDK Components", () => {
   });
 
   test.describe("RenownLoginButton", () => {
-    test("renders login button", async ({ page }) => {
+    test("renders login button with direct login (default)", async ({
+      page,
+    }) => {
       const section = page.locator('[data-testid="login-button-section"]');
       await expect(section).toBeVisible();
 
-      // Check that buttons are visible (aria-label is "Open Renown Login")
-      const buttons = section.locator('button[aria-label="Open Renown Login"]');
-      await expect(buttons.first()).toBeVisible();
+      // Default button has "Login with Renown" aria-label (direct login mode)
+      const directLoginButton = section.locator(
+        'button[aria-label="Login with Renown"]',
+      );
+      await expect(directLoginButton.first()).toBeVisible();
     });
 
-    test("opens popover on click", async ({ page }) => {
-      const section = page.locator('[data-testid="login-button-section"]');
-      const button = section
-        .locator('button[aria-label="Open Renown Login"]')
-        .first();
+    test("renders login button with popover option", async ({ page }) => {
+      const popoverContainer = page.locator('[data-testid="popover-login"]');
+      await expect(popoverContainer).toBeVisible();
 
-      // Click the button
-      await button.click();
+      // Popover button has "Open Renown Login" aria-label
+      const popoverButton = popoverContainer.locator(
+        'button[aria-label="Open Renown Login"]',
+      );
+      await expect(popoverButton).toBeVisible();
+    });
+
+    test("opens popover on hover when showPopover is true", async ({
+      page,
+    }) => {
+      const popoverContainer = page.locator('[data-testid="popover-login"]');
+      const button = popoverContainer.locator(
+        'button[aria-label="Open Renown Login"]',
+      );
+
+      // Hover the button
+      await button.hover();
 
       // Check that the popover is visible with "Connect" text
       await expect(page.getByRole("button", { name: "Connect" })).toBeVisible();
     });
 
     test("closes popover when clicking outside", async ({ page }) => {
-      const section = page.locator('[data-testid="login-button-section"]');
-      const button = section
-        .locator('button[aria-label="Open Renown Login"]')
-        .first();
+      const popoverContainer = page.locator('[data-testid="popover-login"]');
+      const button = popoverContainer.locator(
+        'button[aria-label="Open Renown Login"]',
+      );
 
       // Open popover
-      await button.click();
+      await button.hover();
       await expect(page.getByRole("button", { name: "Connect" })).toBeVisible();
 
       // Click outside
@@ -55,6 +72,33 @@ test.describe("Renown SDK Components", () => {
       const section = page.locator('[data-testid="login-button-section"]');
       const signInButton = section.getByRole("button", { name: "Sign In" });
       await expect(signInButton).toBeVisible();
+    });
+
+    test("renders dark mode with inverted image and dark popover", async ({
+      page,
+    }) => {
+      const darkModeContainer = page.locator('[data-testid="dark-mode-login"]');
+      await expect(darkModeContainer).toBeVisible();
+
+      // Check that the trigger image has invert filter
+      const triggerImage = darkModeContainer.locator('img[alt="Renown Login"]');
+      await expect(triggerImage).toBeVisible();
+      await expect(triggerImage).toHaveCSS("filter", "invert(1)");
+
+      // Open the popover by hovering
+      const button = darkModeContainer.locator(
+        'button[aria-label="Open Renown Login"]',
+      );
+      await button.hover();
+
+      // Check that the popover has dark background
+      const connectButton = page
+        .getByRole("button", { name: "Connect" })
+        .last();
+      await expect(connectButton).toBeVisible();
+
+      // Check that the Connect button has light text color for dark mode
+      await expect(connectButton).toHaveCSS("color", "rgb(249, 250, 251)");
     });
   });
 
@@ -83,7 +127,7 @@ test.describe("Renown SDK Components", () => {
         page.getByRole("button", { name: "Disconnect" }),
       ).toBeVisible();
       await expect(
-        page.getByRole("link", { name: "View on Etherscan" }),
+        page.getByRole("button", { name: "View on Renown" }),
       ).toBeVisible();
     });
 
@@ -175,8 +219,9 @@ test.describe("Renown SDK Components", () => {
       await page.waitForTimeout(2000);
 
       // Should show a login button since we're not authenticated
+      // RenownAuthButton uses direct login mode (no popover) by default
       const loginButton = section.locator(
-        'button[aria-label="Open Renown Login"]',
+        'button[aria-label="Login with Renown"]',
       );
       await expect(loginButton).toBeVisible({ timeout: 10000 });
     });

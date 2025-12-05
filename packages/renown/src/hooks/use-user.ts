@@ -1,20 +1,20 @@
 "use client";
 
 import { useContext } from "react";
-import { UserContext } from "../providers/user-provider.js";
+import { RenownUserContext } from "../providers/renown-user-provider.js";
 
 /**
  * useUser Hook - Access user context
  *
  * Provides access to the current user and authentication methods.
- * Must be used within a UserProvider.
+ * Must be used within a RenownUserProvider.
  *
- * @throws Error if used outside of UserProvider
+ * @throws Error if used outside of RenownUserProvider
  *
  * @example
  * ```tsx
  * function MyComponent() {
- *   const { user, loginStatus, isLoading, login, logout, openRenown } = useUser()
+ *   const { user, loginStatus, isLoading, login, logout, openRenown, connectCrypto, renown } = useUser()
  *
  *   if (isLoading) return <div>Loading...</div>
  *   if (!user) return <button onClick={openRenown}>Login</button>
@@ -23,10 +23,10 @@ import { UserContext } from "../providers/user-provider.js";
  * ```
  */
 export function useUser() {
-  const context = useContext(UserContext);
+  const context = useContext(RenownUserContext);
 
   if (!context) {
-    throw new Error("useUser must be used within a UserProvider");
+    throw new Error("useUser must be used within a RenownUserProvider");
   }
 
   return context;

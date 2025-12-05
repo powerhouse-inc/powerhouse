@@ -24,21 +24,21 @@ pnpm add @renown/sdk
 
 ## Quick Start
 
-### 1. Wrap Your App with UserProvider
+### 1. Wrap Your App with RenownUserProvider
 
 The SDK automatically initializes - just wrap your app!
 
 ```typescript
 // app/layout.tsx or app.tsx
-import { UserProvider } from '@renown/sdk'
+import { RenownUserProvider } from '@renown/sdk'
 
 export default function RootLayout({ children }) {
   return (
     <html>
       <body>
-        <UserProvider>
+        <RenownUserProvider>
           {children}
-        </UserProvider>
+        </RenownUserProvider>
       </body>
     </html>
   )
@@ -95,7 +95,7 @@ For detailed component documentation and examples, see [COMPONENTS.md](./COMPONE
 
 ### Components
 
-#### `<UserProvider>`
+#### `<RenownUserProvider>`
 
 Central authentication provider that automatically initializes the SDK.
 
@@ -109,20 +109,20 @@ Central authentication provider that automatically initializes the SDK.
 
 **Example:**
 ```typescript
-<UserProvider>
+<RenownUserProvider>
   <App />
-</UserProvider>
+</RenownUserProvider>
 ```
 
 **Custom Configuration:**
 ```typescript
-<UserProvider
+<RenownUserProvider
   renownUrl={process.env.NEXT_PUBLIC_RENOWN_URL}
   loadingComponent={<Spinner />}
   errorComponent={(error, retry) => <ErrorScreen error={error} onRetry={retry} />}
 >
   <App />
-</UserProvider>
+</RenownUserProvider>
 ```
 
 ### Hooks
@@ -314,18 +314,18 @@ function AuthListener() {
 
 ## Configuration
 
-### UserProvider Configuration
+### RenownUserProvider Configuration
 
-The UserProvider accepts optional configuration props:
+The RenownUserProvider accepts optional configuration props:
 
 ```typescript
-<UserProvider
+<RenownUserProvider
   renownUrl="https://www.renown.id"  // Custom Renown URL
   networkId="eip155"                            // Network ID (default)
   chainId="1"                                   // Chain ID (default)
 >
   <App />
-</UserProvider>
+</RenownUserProvider>
 ```
 
 ### Environment Variables
@@ -333,11 +333,11 @@ The UserProvider accepts optional configuration props:
 Use environment variables for dynamic configuration:
 
 ```typescript
-<UserProvider
+<RenownUserProvider
   renownUrl={process.env.NEXT_PUBLIC_RENOWN_URL || 'https://www.renown.id'}
 >
   <App />
-</UserProvider>
+</RenownUserProvider>
 ```
 
 ```bash
@@ -351,15 +351,15 @@ NEXT_PUBLIC_RENOWN_URL=https://www.renown.id
 
 ```typescript
 // app/layout.tsx
-import { UserProvider } from '@renown/sdk'
+import { RenownUserProvider } from '@renown/sdk'
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        <UserProvider>
+        <RenownUserProvider>
           {children}
-        </UserProvider>
+        </RenownUserProvider>
       </body>
     </html>
   )
@@ -411,14 +411,14 @@ export default function ProfilePage() {
 
 ```typescript
 // main.tsx
-import { UserProvider } from '@renown/sdk'
+import { RenownUserProvider } from '@renown/sdk'
 import App from './App'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <UserProvider>
+    <RenownUserProvider>
       <App />
-    </UserProvider>
+    </RenownUserProvider>
   </React.StrictMode>
 )
 
@@ -437,16 +437,16 @@ function App() {
 
 ## Troubleshooting
 
-### UserProvider Context Error
+### RenownUserProvider Context Error
 
-**Error:** `useUser must be used within an UserProvider`
+**Error:** `useUser must be used within an RenownUserProvider`
 
-**Solution:** Ensure your component is wrapped by `<UserProvider>`:
+**Solution:** Ensure your component is wrapped by `<RenownUserProvider>`:
 
 ```typescript
-<UserProvider>
+<RenownUserProvider>
   <YourComponent /> {/* ✅ Can use useUser */}
-</UserProvider>
+</RenownUserProvider>
 ```
 
 ### Custom Renown URL
@@ -454,9 +454,9 @@ function App() {
 To use a different Renown instance:
 
 ```typescript
-<UserProvider renownUrl="https://your-renown-instance.com">
+<RenownUserProvider renownUrl="https://your-renown-instance.com">
   <App />
-</UserProvider>
+</RenownUserProvider>
 ```
 
 ### Session Not Persisting
