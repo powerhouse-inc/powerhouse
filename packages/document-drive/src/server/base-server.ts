@@ -1243,6 +1243,7 @@ export class BaseDocumentDriveServer
       // Create operations from actions with computed hashes
       operations = [
         {
+          id: `${header.id}-create`,
           index: 0,
           skip: 0,
           hash: createHash,
@@ -1250,6 +1251,7 @@ export class BaseDocumentDriveServer
           action: createDocumentAction,
         },
         {
+          id: `${header.id}-upgrade`,
           index: 1,
           skip: 0,
           hash: upgradeHash,
