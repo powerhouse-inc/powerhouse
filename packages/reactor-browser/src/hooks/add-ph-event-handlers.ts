@@ -1,7 +1,5 @@
-import {
-  addFeaturesEventHandler,
-  type PHGlobalEventHandlerAdders,
-} from "@powerhousedao/reactor-browser";
+import { addFeaturesEventHandler } from "./features.js";
+import type { PHGlobalEventHandlerAdders } from "../types/global.js";
 import {
   addAllowListEventHandler,
   addAnalyticsDatabaseNameEventHandler,
