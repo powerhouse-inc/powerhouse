@@ -256,8 +256,7 @@ export const Default: Story = {
       getTableRows: mockGetTableRows,
     },
     remotesInspectorProps: {
-      remotes: mockRemotes,
-      onRefresh: fn(),
+      getRemotes: () => Promise.resolve(mockRemotes),
     },
   },
 };
@@ -275,8 +274,7 @@ export const DatabaseTab: Story = {
       onExportDb: () => console.log("Export clicked"),
     },
     remotesInspectorProps: {
-      remotes: mockRemotes,
-      onRefresh: fn(),
+      getRemotes: () => Promise.resolve(mockRemotes),
     },
   },
 };
@@ -292,8 +290,7 @@ export const RemotesTab: Story = {
       getTableRows: mockGetTableRows,
     },
     remotesInspectorProps: {
-      remotes: mockRemotes,
-      onRefresh: fn(),
+      getRemotes: () => Promise.resolve(mockRemotes),
     },
   },
 };
@@ -309,8 +306,7 @@ export const EmptyData: Story = {
       getTableRows: mockGetTableRows,
     },
     remotesInspectorProps: {
-      remotes: [],
-      onRefresh: fn(),
+      getRemotes: () => Promise.resolve([]),
     },
   },
 };

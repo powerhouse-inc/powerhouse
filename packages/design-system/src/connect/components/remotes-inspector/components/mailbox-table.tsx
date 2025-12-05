@@ -1,5 +1,8 @@
 import { Icon } from "@powerhousedao/design-system";
-import { type SyncOperation, SyncOperationStatus } from "@powerhousedao/reactor";
+import {
+  type SyncOperation,
+  SyncOperationStatus,
+} from "@powerhousedao/reactor";
 import { twMerge } from "tailwind-merge";
 import { SortIcon } from "./sort-icon.js";
 import { type ColumnDef, type SortOptions, truncateId } from "../utils.js";
