@@ -1,3 +1,24 @@
+## 5.1.0-dev.10 (2025-12-06)
+
+### 🚀 Features
+
+- added db explorer component ([acbe5a0a5](https://github.com/powerhouse-inc/powerhouse/commit/acbe5a0a5))
+- added DBExplorer component ([#2121](https://github.com/powerhouse-inc/powerhouse/pull/2121))
+- **design-system:** add async getTables prop and refresh functionality to db-explorer component ([85a9af1c0](https://github.com/powerhouse-inc/powerhouse/commit/85a9af1c0))
+- **design-system:** added remotes inspector and channel inspector components ([093896ebf](https://github.com/powerhouse-inc/powerhouse/commit/093896ebf))
+
+### 🩹 Fixes
+
+- add ids to legacy create and update operations ([27c46fe1c](https://github.com/powerhouse-inc/powerhouse/commit/27c46fe1c))
+- updating test expectations with multi-op ([51eee2b4c](https://github.com/powerhouse-inc/powerhouse/commit/51eee2b4c))
+- circular imports ([bf1a8f219](https://github.com/powerhouse-inc/powerhouse/commit/bf1a8f219))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 5.1.0-dev.9 (2025-12-05)
 
 ### 🩹 Fixes

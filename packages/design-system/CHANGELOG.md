@@ -1,3 +1,15 @@
+## 5.1.0-dev.10 (2025-12-06)
+
+### 🚀 Features
+
+- **design-system:** added remotes inspector and channel inspector components ([093896ebf](https://github.com/powerhouse-inc/powerhouse/commit/093896ebf))
+- **design-system:** add async getTables prop and refresh functionality to db-explorer component ([85a9af1c0](https://github.com/powerhouse-inc/powerhouse/commit/85a9af1c0))
+- added db explorer component ([acbe5a0a5](https://github.com/powerhouse-inc/powerhouse/commit/acbe5a0a5))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 5.1.0-dev.9 (2025-12-05)
 
 ### 🩹 Fixes

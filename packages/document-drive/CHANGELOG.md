@@ -1,3 +1,18 @@
+## 5.1.0-dev.10 (2025-12-06)
+
+### 🚀 Features
+
+- **design-system:** added remotes inspector and channel inspector components ([093896ebf](https://github.com/powerhouse-inc/powerhouse/commit/093896ebf))
+
+### 🩹 Fixes
+
+- add ids to legacy create and update operations ([27c46fe1c](https://github.com/powerhouse-inc/powerhouse/commit/27c46fe1c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente @gpuente
+
 ## 5.1.0-dev.9 (2025-12-05)
 
 ### 🩹 Fixes

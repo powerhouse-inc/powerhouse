@@ -1,3 +1,18 @@
+## 5.1.0-dev.10 (2025-12-06)
+
+### 🚀 Features
+
+- **design-system:** added remotes inspector and channel inspector components ([093896ebf](https://github.com/powerhouse-inc/powerhouse/commit/093896ebf))
+
+### 🩹 Fixes
+
+- circular imports ([bf1a8f219](https://github.com/powerhouse-inc/powerhouse/commit/bf1a8f219))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente @gpuente
+
 ## 5.1.0-dev.9 (2025-12-05)
 
 ### 🩹 Fixes
