@@ -88,6 +88,17 @@
               "scope": "global"
             },
             {
+              "id": "c4b46f8b-0982-47f7-9bbc-87e996595c97",
+              "name": "SET_TEST_ID_BUT_DIFFERENT",
+              "description": "",
+              "schema": "input SetTestIdButDifferentInput {\n  id: String!\n}",
+              "template": "",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
               "id": "def9d61b-c6d1-4d3b-89bd-65b22fc36bc6",
               "name": "SET_TEST_NAME",
               "description": "",
