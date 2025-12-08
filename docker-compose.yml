@@ -5,7 +5,6 @@ services:
     image: ghcr.io/powerhouse-inc/powerhouse/connect:dev
     environment:
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
-      - REDIS_TLS_URL=redis://redis:6379
       - BASE_PATH=/
     ports:
       - "127.0.0.1:3000:4000"
@@ -15,13 +14,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
   switchboard:
     image: ghcr.io/powerhouse-inc/powerhouse/switchboard:dev
     environment:
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
-      - REDIS_TLS_URL=redis://redis:6379
     ports:
       - "127.0.0.1:4000:4001"
     hostname: switchboard.powerhouse
@@ -30,19 +26,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
-  redis:
-    image: redis:7.2.1
-    ports:
-      - "127.0.0.1:6380:6379"
-    networks:
-      - powerhouse_network
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 3
   postgres:
     image: postgres:16.1
     ports:
