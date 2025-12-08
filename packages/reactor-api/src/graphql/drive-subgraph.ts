@@ -368,17 +368,49 @@ export class DriveSubgraph extends BaseSubgraph {
           filter,
         );
 
-        const isAdmin = ctx.isAdmin?.(ctx.user?.address ?? "");
-        const isUser = ctx.isUser?.(ctx.user?.address ?? "");
-        const isGuest =
-          ctx.isGuest?.(ctx.user?.address ?? "") ||
-          process.env.FREE_ENTRY === "true";
-        if (!isAdmin && !isUser && !isGuest) {
-          throw new GraphQLError("Forbidden");
-        }
-
         if (!ctx.driveId) {
           throw new Error("Drive ID is required");
+        }
+        const reactorDriveId = await this.getDriveIdBySlugOrId(ctx.driveId);
+
+        // Check drive-level permissions if service is available
+        if (this.documentPermissionService) {
+          // Check if drive is syncable (not PRIVATE)
+          const isSyncable =
+            await this.documentPermissionService.isSyncable(reactorDriveId);
+          if (!isSyncable) {
+            this.logger.warn(
+              `registerPullResponderListener rejected: drive ${reactorDriveId} is PRIVATE and not syncable`,
+            );
+            throw new GraphQLError(
+              "Forbidden: drive is private and not syncable",
+            );
+          }
+
+          // Check if user can read from this drive
+          const canRead = await this.documentPermissionService.canReadDocument(
+            reactorDriveId,
+            ctx.user?.address,
+          );
+
+          if (!canRead) {
+            this.logger.warn(
+              `registerPullResponderListener rejected: user ${ctx.user?.address ?? "anonymous"} lacks read permission for drive ${reactorDriveId}`,
+            );
+            throw new GraphQLError(
+              "Forbidden: insufficient permissions to read from this drive",
+            );
+          }
+        } else {
+          // Fallback to global permissions only if service not available
+          const isAdmin = ctx.isAdmin?.(ctx.user?.address ?? "");
+          const isUser = ctx.isUser?.(ctx.user?.address ?? "");
+          const isGuest =
+            ctx.isGuest?.(ctx.user?.address ?? "") ||
+            process.env.FREE_ENTRY === "true";
+          if (!isAdmin && !isUser && !isGuest) {
+            throw new GraphQLError("Forbidden");
+          }
         }
         const driveId = await this.getDriveIdBySlugOrId(ctx.driveId);
 
@@ -437,10 +469,53 @@ export class DriveSubgraph extends BaseSubgraph {
           strandsGql,
         );
 
-        const isAdmin = ctx.isAdmin?.(ctx.user?.address ?? "");
-        const isUser = ctx.isUser?.(ctx.user?.address ?? "");
-        if (!isAdmin && !isUser) {
-          throw new GraphQLError("Forbidden");
+        // Check global permissions first
+        const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "");
+        const isGlobalUser = ctx.isUser?.(ctx.user?.address ?? "");
+
+        // Check drive-level permissions if service is available
+        if (this.documentPermissionService) {
+          // Check if drive is syncable (not PRIVATE)
+          const isSyncable =
+            await this.documentPermissionService.isSyncable(driveId);
+          if (!isSyncable) {
+            this.logger.warn(
+              `pushUpdates rejected: drive ${driveId} is PRIVATE and not syncable`,
+            );
+            // Return empty results for private drives
+            return strandsGql.map((strand) => ({
+              driveId: strand.driveId,
+              documentId: strand.documentId,
+              documentType: strand.documentType,
+              scope: strand.scope,
+              branch: strand.branch,
+              status: "ERROR" as const,
+              revision: 0,
+              error: "Drive is private and not syncable",
+            }));
+          }
+
+          // Check if user can write to this drive
+          const canWrite = await this.documentPermissionService.canWriteDocument(
+            driveId,
+            ctx.user?.address,
+          );
+
+          // For protected drives, require drive-level write permission
+          // For public drives, fall back to global permissions
+          if (!canWrite && !isGlobalAdmin && !isGlobalUser) {
+            this.logger.warn(
+              `pushUpdates rejected: user ${ctx.user?.address ?? "anonymous"} lacks write permission for drive ${driveId}`,
+            );
+            throw new GraphQLError(
+              "Forbidden: insufficient permissions to write to this drive",
+            );
+          }
+        } else {
+          // Fallback to global permissions only if service not available
+          if (!isGlobalAdmin && !isGlobalUser) {
+            throw new GraphQLError("Forbidden");
+          }
         }
 
         // translate data types
@@ -529,6 +604,32 @@ export class DriveSubgraph extends BaseSubgraph {
         this.logger.verbose(
           `strands(drive: ${ctx.driveId}/${driveId}, listenerId: ${listenerId}, since:${since})`,
         );
+
+        // Check drive-level permissions if service is available
+        if (this.documentPermissionService) {
+          // Check if drive is syncable (not PRIVATE)
+          const isSyncable =
+            await this.documentPermissionService.isSyncable(driveId);
+          if (!isSyncable) {
+            this.logger.warn(
+              `strands rejected: drive ${driveId} is PRIVATE and not syncable`,
+            );
+            return []; // Return empty for private drives
+          }
+
+          // Check if user can read from this drive
+          const canRead = await this.documentPermissionService.canReadDocument(
+            driveId,
+            ctx.user?.address,
+          );
+
+          if (!canRead) {
+            this.logger.warn(
+              `strands filtered: user ${ctx.user?.address ?? "anonymous"} lacks read permission for drive ${driveId}`,
+            );
+            return []; // Return empty for protected drives without permission
+          }
+        }
 
         // get the requested strand updates
         const strands = await processGetStrands(
