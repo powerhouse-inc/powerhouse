@@ -1,0 +1,39 @@
+scalar Unknown
+scalar DateTime
+scalar Attachment
+scalar Address
+scalar Amount_Tokens
+scalar EthereumAddress
+scalar EmailAddress
+scalar Amount_Percentage
+scalar Date
+scalar URL
+scalar Amount_Money
+scalar OLabel
+scalar Currency
+scalar PHID
+scalar OID
+scalar Amount_Fiat
+scalar Amount_Currency
+scalar Amount_Crypto
+scalar Amount
+scalar Upload
+
+type TestDocState {
+  id: Int!
+  name: String!
+  description: String
+  value: String!
+}
+
+input SetTestIdInput {
+  id: Int!
+}
+
+input SetTestIdButDifferentInput {
+  id: String!
+}
+
+input SetTestNameInput {
+  name: String!
+}

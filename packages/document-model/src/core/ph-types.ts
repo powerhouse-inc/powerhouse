@@ -338,13 +338,9 @@ export type UpgradeReducer<
 type ModelVersion = number;
 
 /** Metadata about a version transition */
-export type UpgradeTransition<
-  TFrom extends PHBaseState,
-  TTo extends PHBaseState,
-> = {
-  fromVersion: ModelVersion;
+export type UpgradeTransition = {
   toVersion: ModelVersion;
-  reducer: UpgradeReducer<TFrom, TTo>;
+  upgradeReducer: UpgradeReducer<any, any>;
   description?: string;
 };
 
@@ -360,6 +356,6 @@ export type UpgradeManifest<TVersions extends readonly number[]> = {
   supportedVersions: TVersions;
   // mapped over each version in the tuple
   upgrades: {
-    [V in TupleMember<TVersions>]: UpgradeTransition<any, any>;
+    [V in Exclude<TupleMember<TVersions>, 1>]: UpgradeTransition;
   };
 };
