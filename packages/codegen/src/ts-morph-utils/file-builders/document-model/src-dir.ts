@@ -311,22 +311,33 @@ function makeDocumentModelSrcIndexFile({
 
 function makeDocumentModelSrcUtilsFile({
   project,
-  ...variableNames
+  srcDirPath,
+  version,
 }: DocumentModelFileMakerArgs) {
   const template = documentModelSrcUtilsTemplate;
-  const { srcDirPath } = variableNames;
 
-  const utilsFilePath = path.join(srcDirPath, "utils.ts");
+  const filePath = path.join(srcDirPath, "utils.ts");
 
-  const { alreadyExists, sourceFile: utilsSourceFile } = getOrCreateSourceFile(
+  const { alreadyExists, sourceFile } = getOrCreateSourceFile(
     project,
-    utilsFilePath,
+    filePath,
   );
 
-  if (alreadyExists) return;
+  if (!alreadyExists) {
+    const previousVersionSourceFile = getPreviousVersionSourceFile({
+      project,
+      version,
+      filePath,
+    });
 
-  utilsSourceFile.replaceWithText(template);
-  formatSourceFileWithPrettier(utilsSourceFile);
+    if (previousVersionSourceFile) {
+      sourceFile.replaceWithText(previousVersionSourceFile.getText());
+    } else {
+      sourceFile.replaceWithText(template);
+    }
+  }
+
+  formatSourceFileWithPrettier(sourceFile);
 }
 
 function makeDocumentModelTestFile(args: DocumentModelFileMakerArgs) {
