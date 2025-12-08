@@ -1,3 +1,14 @@
+## 5.1.0-dev.13 (2025-12-08)
+
+### 🩹 Fixes
+
+- **ph-cmd:** setup global project with proper project name ([fdc8e7b6f](https://github.com/powerhouse-inc/powerhouse/commit/fdc8e7b6f))
+- **ph-cmd:** linting issues ([dd5acf8e9](https://github.com/powerhouse-inc/powerhouse/commit/dd5acf8e9))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.1.0-dev.12 (2025-12-08)
 
 ### 🩹 Fixes
