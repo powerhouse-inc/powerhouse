@@ -228,7 +228,9 @@ export const createGlobalProject = async (
     const packageJsonPath = path.join(POWERHOUSE_GLOBAL_DIR, "package.json");
     if (existsSync(packageJsonPath)) {
       try {
-        const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
+        const packageJson = JSON.parse(
+          readFileSync(packageJsonPath, "utf-8"),
+        ) as { name?: string };
         if (packageJson.name?.startsWith(".")) {
           console.log("📦 Fixing invalid package name in global project...");
           packageJson.name = PH_GLOBAL_PACKAGE_NAME;
@@ -258,7 +260,9 @@ export const createGlobalProject = async (
     // Fix the package.json name - ".ph" is invalid for npm/vite
     // The directory name can be ".ph" but the package name must be valid
     const packageJsonPath = path.join(POWERHOUSE_GLOBAL_DIR, "package.json");
-    const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8")) as {
+      name?: string;
+    };
     packageJson.name = PH_GLOBAL_PACKAGE_NAME;
     writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
 
