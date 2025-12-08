@@ -966,10 +966,7 @@ export class DocumentPermissionService {
       .execute();
 
     // Delete user-role assignments
-    await this.db
-      .deleteFrom("UserRole")
-      .where("roleId", "=", roleId)
-      .execute();
+    await this.db.deleteFrom("UserRole").where("roleId", "=", roleId).execute();
 
     // Delete the role
     await this.db.deleteFrom("Role").where("id", "=", roleId).execute();
@@ -1164,9 +1161,7 @@ export class DocumentPermissionService {
         roleId,
         createdAt: now,
       })
-      .onConflict((oc) =>
-        oc.columns(["restrictionId", "roleId"]).doNothing(),
-      )
+      .onConflict((oc) => oc.columns(["restrictionId", "roleId"]).doNothing())
       .execute();
   }
 
@@ -1200,9 +1195,7 @@ export class DocumentPermissionService {
         groupId,
         createdAt: now,
       })
-      .onConflict((oc) =>
-        oc.columns(["restrictionId", "groupId"]).doNothing(),
-      )
+      .onConflict((oc) => oc.columns(["restrictionId", "groupId"]).doNothing())
       .execute();
   }
 
