@@ -23,11 +23,11 @@ export const PH_CLI_COMMANDS = [
 ];
 export const POWERHOUSE_CONFIG_FILE = "powerhouse.config.json";
 export const HOME_DIR = homedir();
-export const PH_GLOBAL_PROJECT_NAME = ".ph";
-export const POWERHOUSE_GLOBAL_DIR = path.join(
-  HOME_DIR,
-  PH_GLOBAL_PROJECT_NAME,
-);
+export const PH_GLOBAL_DIR_NAME = ".ph";
+export const PH_GLOBAL_PACKAGE_NAME = "ph-global";
+// Keep PH_GLOBAL_PROJECT_NAME for backwards compatibility
+export const PH_GLOBAL_PROJECT_NAME = PH_GLOBAL_DIR_NAME;
+export const POWERHOUSE_GLOBAL_DIR = path.join(HOME_DIR, PH_GLOBAL_DIR_NAME);
 
 export const packageManagers = {
   bun: {
