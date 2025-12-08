@@ -1,4 +1,3 @@
-import { writeFileSync } from "fs";
 import path from "path";
 import {
   formatSourceFileWithPrettier,
@@ -66,18 +65,9 @@ function makeDocumentModelHooksFile(args: DocumentModelFileMakerArgs) {
   formatSourceFileWithPrettier(sourceFile);
 }
 
-function makeDocumentModelModuleFile({
-  project,
-  phStateName,
-  pascalCaseDocumentType,
-  versionedDocumentModelPackageImportPath,
-  documentModelVersionDirPath,
-}: DocumentModelFileMakerArgs) {
-  const template = documentModelModuleFileTemplate({
-    phStateName,
-    versionedDocumentModelPackageImportPath,
-    pascalCaseDocumentType,
-  });
+function makeDocumentModelModuleFile(args: DocumentModelFileMakerArgs) {
+  const { project, documentModelVersionDirPath } = args;
+  const template = documentModelModuleFileTemplate(args);
 
   const moduleFilePath = path.join(documentModelVersionDirPath, "module.ts");
 

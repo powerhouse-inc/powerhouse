@@ -8,6 +8,8 @@ import { runGeneratedTests } from "./fixtures/run-generated-tests.js";
 import { compile } from "./fixtures/typecheck.js";
 import { copyAllFiles, purgeDirAfterTest, resetDirForTest } from "./utils.js";
 
+let testCount = 1;
+
 const parentOutDirName = "versioned-document-models";
 const testsDir = import.meta.dirname;
 const testOutputParentDir = path.join(
@@ -21,7 +23,8 @@ function getDirInTestDataDir(dirName: string) {
 }
 
 function getTestOutDir(context: TestContext) {
-  return path.join(testOutputParentDir, paramCase(context.task.name));
+  const testDirName = `${testCount++}-${paramCase(context.task.name)}`;
+  return path.join(testOutputParentDir, testDirName);
 }
 
 function getDocumentModelJsonFilePath(basePath: string, dirName: string) {

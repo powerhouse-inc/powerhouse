@@ -44,7 +44,7 @@ function makeReducerOperationHandlersForModules(
   }
 }
 
-function attemptToGetPreviousVersionReducerFile(args: {
+function getPreviousVersionReducerFile(args: {
   project: Project;
   version: number;
   filePath: string;
@@ -84,16 +84,20 @@ function makeReducerOperationHandlerForModule({
   const paramCaseModuleName = paramCase(module.name);
   const pascalCaseModuleName = pascalCase(module.name);
   const filePath = path.join(reducersDirPath, `${paramCaseModuleName}.ts`);
-  const existingVersionSourceFile = project.getSourceFile(filePath);
-  const previousVersionSourceFile = attemptToGetPreviousVersionReducerFile({
+  const { alreadyExists, sourceFile } = getOrCreateSourceFile(
     project,
-    version,
     filePath,
-  });
-  const sourceFile = existingVersionSourceFile
-    ? existingVersionSourceFile
-    : project.createSourceFile(filePath, previousVersionSourceFile?.getText());
-
+  );
+  if (!alreadyExists) {
+    const previousVersionFile = getPreviousVersionReducerFile({
+      project,
+      version,
+      filePath,
+    });
+    if (previousVersionFile) {
+      sourceFile.replaceWithText(previousVersionFile.getText());
+    }
+  }
   const operationsInterfaceTypeName = `${pascalCaseDocumentType}${pascalCaseModuleName}Operations`;
   const operationsInterfaceVariableName = `${camelCaseDocumentType}${pascalCaseModuleName}Operations`;
 
