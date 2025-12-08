@@ -15,6 +15,7 @@ import {
   initLegacyReactor,
   login,
   refreshReactorData,
+  refreshReactorDataClient,
   setFeatures,
   setSelectedDrive,
   setSelectedNode,
@@ -125,6 +126,10 @@ export async function createReactor() {
 
   // initialize feature flags
   const features = await initFeatureFlags();
+
+  logger.info(
+    `Features: ${JSON.stringify(Object.fromEntries(features), null, 2)}`,
+  );
 
   // initialize connect crypto
   const connectCrypto = await initConnectCrypto();
@@ -255,23 +260,45 @@ export async function createReactor() {
       refreshReactorData(legacyReactor).catch(logger.error);
     });
   } else {
+    legacyReactor.on("defaultRemoteDrive", (...args) => {
+      logger.verbose("future:defaultRemoteDrive", ...args);
+
+      refreshReactorDataClient(reactorClientModule.client).catch(logger.error);
+    });
+    legacyReactor.on("clientStrandsError", (...args) => {
+      logger.verbose("future:clientStrandsError", ...args);
+
+      refreshReactorDataClient(reactorClientModule.client).catch(logger.error);
+    });
+    legacyReactor.on("driveAdded", (...args) => {
+      logger.verbose("future:driveAdded", ...args);
+      // register the drive with the processor manager
+      processorManager.registerDrive(args[0].header.id).catch(logger.error);
+
+      refreshReactorDataClient(reactorClientModule.client).catch(logger.error);
+    });
+    legacyReactor.on("driveDeleted", (...args) => {
+      logger.verbose("future:driveDeleted", ...args);
+
+      refreshReactorDataClient(reactorClientModule.client).catch(logger.error);
+    });
+    legacyReactor.on("documentModelModules", (...args) => {
+      logger.verbose("future:documentModelModules", ...args);
+
+      refreshReactorDataClient(reactorClientModule.client).catch(logger.error);
+    });
+    legacyReactor.on("driveOperationsAdded", (...args) => {
+      logger.verbose("future:driveOperationsAdded", ...args);
+
+      refreshReactorDataClient(reactorClientModule.client).catch(logger.error);
+    });
+
     // Subscribe via ReactorClient interface
     const reactorClient = reactorClientModule.client;
-    if (reactorClient) {
-      reactorClient.subscribe(
-        { type: "powerhouse/document-drive" },
-        (event) => {
-          logger.verbose("ReactorClient subscription event", event);
-          // Handle document changes - refresh drives data using ReactorClient
-          reactorClient
-            .find({ type: "powerhouse/document-drive" })
-            .then((result) => {
-              setDrives(result.results as DocumentDriveDocument[]);
-            })
-            .catch(logger.error);
-        },
-      );
-    }
+    reactorClient.subscribe({ type: "powerhouse/document-drive" }, (event) => {
+      logger.verbose("ReactorClient subscription event", event);
+      refreshReactorDataClient(reactorClientModule.client).catch(logger.error);
+    });
   }
 
   window.ph.loading = false;

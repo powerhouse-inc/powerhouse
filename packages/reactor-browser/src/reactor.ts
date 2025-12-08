@@ -1,7 +1,9 @@
+import type { IReactorClient } from "@powerhousedao/reactor";
 import type { IConnectCrypto, IRenown } from "@renown/sdk";
 import { BrowserKeyStorage, ConnectCrypto } from "@renown/sdk";
 import type {
   DefaultRemoteDriveInput,
+  DocumentDriveDocument,
   DocumentDriveServerOptions,
   IDocumentDriveServer,
 } from "document-drive";
@@ -82,6 +84,13 @@ async function _refreshReactorData(reactor: IDocumentDriveServer | undefined) {
   setDrives(drives);
 }
 
+async function _refreshReactorDataClient(reactor: IReactorClient | undefined) {
+  if (!reactor) return;
+
+  const result = await reactor.find({ type: "powerhouse/document-drive" });
+  setDrives(result.results as DocumentDriveDocument[]);
+}
+
 function createDebouncedRefreshReactorData(
   debounceDelayMs = DEFAULT_DEBOUNCE_DELAY_MS,
   immediateThresholdMs = DEFAULT_IMMEDIATE_THRESHOLD_MS,
@@ -114,7 +123,41 @@ function createDebouncedRefreshReactorData(
   };
 }
 
+function createDebouncedRefreshReactorDataClient(
+  debounceDelayMs = DEFAULT_DEBOUNCE_DELAY_MS,
+  immediateThresholdMs = DEFAULT_IMMEDIATE_THRESHOLD_MS,
+) {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  let lastRefreshTime = 0;
+
+  return (reactor: IReactorClient | undefined, immediate = false) => {
+    const now = Date.now();
+    const timeSinceLastRefresh = now - lastRefreshTime;
+
+    // Clear any pending timeout
+    if (timeout !== null) {
+      clearTimeout(timeout);
+    }
+
+    // If caller requests immediate execution or enough time has passed, execute immediately
+    if (immediate || timeSinceLastRefresh >= immediateThresholdMs) {
+      lastRefreshTime = now;
+      return _refreshReactorDataClient(reactor);
+    }
+
+    // Otherwise, debounce the call
+    return new Promise<void>((resolve) => {
+      timeout = setTimeout(() => {
+        lastRefreshTime = Date.now();
+        void _refreshReactorDataClient(reactor).then(resolve);
+      }, debounceDelayMs);
+    });
+  };
+}
+
 export const refreshReactorData = createDebouncedRefreshReactorData();
+export const refreshReactorDataClient =
+  createDebouncedRefreshReactorDataClient();
 
 export async function initLegacyReactor(
   legacyReactor: IDocumentDriveServer,

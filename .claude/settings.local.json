@@ -1,8 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "mcp__context7__resolve-library-id",
-      "mcp__context7__get-library-docs",
+      "mcp__context7",
       "Bash(pnpm:*)",
       "Bash(cat:*)",
       "Bash(find:*)",
@@ -16,9 +15,10 @@
       "Bash(git log:*)",
       "Bash(git diff:*)",
       "Bash(git status:*)",
-      "mcp__ide__getDiagnostics",
+      "mcp__ide",
       "WebSearch",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "mcp__chrome-devtools"
     ],
     "deny": [],
     "ask": []
