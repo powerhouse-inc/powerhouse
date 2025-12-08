@@ -1,3 +1,13 @@
+## 5.1.0-dev.12 (2025-12-08)
+
+### 🩹 Fixes
+
+- **ph-cli:** manage global project environment ([58e589122](https://github.com/powerhouse-inc/powerhouse/commit/58e589122))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.1.0-dev.11 (2025-12-08)
 
 ### 🩹 Fixes
