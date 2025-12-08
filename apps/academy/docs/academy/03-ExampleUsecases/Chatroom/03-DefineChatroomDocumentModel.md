@@ -62,47 +62,6 @@ This schema defines the **data structure** of the document model and the types i
 <summary>State schema of our ChatRoom</summary>
 
 ```graphql
-# The state of our ChatRoom
-type ChatRoomState {
-  id: OID!              # Unique identifier for the chat-room
-  name: String!         # Name of the chat-room
-  description: String   # Optional description of the chat-room
-  createdAt: DateTime!  # Timestamp of when the chat-room was created
-  createdBy: ID!        # Agent ID of the user who created the chat-room
-  messages: [Message!]! # List of messages in the chat-room
-}
-
-# A single message in the chat-room
-type Message {
-  id: OID!              # Unique identifier for the message
-  sender: Sender!       # Agent details of the message sender
-  content: String       # Message content
-  sentAt: DateTime!     # Timestamp of when the message was sent
-  reactions: [Reaction!] # Reactions to the message
-}
-
-# The sender of a message
-type Sender {
-  id: ID!               # Unique identifier for the sender
-  name: String
-  avatarUrl: URL        # Allows us to pull the ENS and/or NFT of the person's profile
-}
-
-# A reaction to a message
-type Reaction {
-  type: ReactionType!   # Type of reaction (one of the predefined emoji)
-  reactedBy: [ID!]!     # Agent IDs of users who reacted
-}
-
-# The predefined emoji reactions
-enum ReactionType {
-  THUMBS_UP
-  THUMBS_DOWN
-  LAUGH
-  HEART
-  CRY
-}
-
 type ChatRoomState {
   id: OID!
   name: String!
@@ -138,9 +97,15 @@ enum ReactionType {
   HEART
   CRY
 }
+```
 
-# messages
+</details>
 
+<details>
+<summary>Messages Module: Operations for ChatRoom Messages</summary>
+
+```graphql
+# Add a new message to the chat-room
 input AddMessageInput {
   messageId: OID!
   sender: SenderInput!
@@ -148,77 +113,34 @@ input AddMessageInput {
   sentAt: DateTime!
 }
 
+# Sender information for a message
 input SenderInput {
   id: ID!
   name: String
   avatarUrl: URL
 }
 
+# Add an emoji reaction to a message
 input AddEmojiReactionInput {
   messageId: OID!
   reactedBy: ID!
   type: ReactionType!
 }
 
+# Remove an emoji reaction from a message
 input RemoveEmojiReactionInput {
   messageId: OID!
   senderId: ID!
   type: ReactionType!
-}
-
-# settings
-
-input EditChatNameInput {
-  name: String
-}
-
-input EditChatDescriptionInput {
-  description: String
 }
 ```
 
 </details>
 
 <details>
-<summary>Messages Module: Operations schema of our ChatRoom Messages</summary>
+<summary>Settings Module: Operations for ChatRoom Settings</summary>
 
 ```graphql
-# Add a new message to the chat-room
-input AddMessageInput {
-  messageId: OID!       # ID of the message being added
-  sender: SenderInput!  # Sender information
-  content: String!      # Content of the message
-  sentAt: DateTime!     # Timestamp when the message was sent
-}
-
-# Sender information for a message
-input SenderInput {
-  id: ID!               # Unique identifier for the sender
-  name: String
-  avatarUrl: URL        # Avatar URL for the sender
-}
-
-# Add an emoji reaction to a message
-input AddEmojiReactionInput {
-  messageId: OID!       # ID of the message to react to
-  reactedBy: ID!        # ID of the user adding the reaction
-  type: ReactionType!   # Type of the reaction (emoji)
-}
-
-# Remove an emoji reaction from a message
-input RemoveEmojiReactionInput {
-  messageId: OID!       # ID of the message to remove reaction from
-  senderId: ID!         # ID of the user removing the reaction
-  type: ReactionType!   # Type of the reaction (emoji)
-}
-
-
-</details>
-
-
-<details>
-<summary>Settings Module: Operations schema of our ChatRoom Settings</summary>
-
 # Edit the chat-room name
 input EditChatNameInput {
   name: String
@@ -260,11 +182,11 @@ To define the document model, you need to open the document model editor in Conn
     }
    ```
 
-5. Below the editor, find the input field `Add module`. Create and name a module for organizing your input operations. Name the module `general_operations`. Press enter.
+5. Below the editor, find the input field `Add module`. Create the first module for message-related operations. Name the module `messages`. Press enter.
 
 6. Now there is a new field, called `Add operation`. Here you will add each input operation to the module, one by one.
 
-7. Inside the `Add operation` field, type `ADD_MESSAGE` and press enter. A small editor will appear underneath with an empty input type that you need to fill. Copy the `AddMessageInput` and `SenderInput` from the **Operations Schema** section and paste them in the editor:
+7. Inside the `Add operation` field, type `ADD_MESSAGE` and press enter. A small editor will appear underneath with an empty input type that you need to fill. Copy the `AddMessageInput` and `SenderInput` from the **Messages Module** section and paste them in the editor:
 
    ```graphql
    input AddMessageInput {
@@ -281,11 +203,15 @@ To define the document model, you need to open the document model editor in Conn
    }
    ```
 
-8. Repeat step 7 for the other input operations: `ADD_EMOJI_REACTION`, `REMOVE_EMOJI_REACTION`, `EDIT_CHAT_NAME`, and `EDIT_CHAT_DESCRIPTION`. Note that you only need to add the operation name (e.g., `ADD_EMOJI_REACTION`) without the `Input` suffix—it will be generated automatically.
+8. Add the remaining message operations to the `messages` module: `ADD_EMOJI_REACTION` and `REMOVE_EMOJI_REACTION`. Note that you only need to add the operation name (e.g., `ADD_EMOJI_REACTION`) without the `Input` suffix—it will be generated automatically.
 
-9. Add reducer exceptions to the `ADD_MESSAGE` operation for validation: `MessageContentCannotBeEmpty` and `MessageContentExceedsTheMaximumLength`. These will be used later to validate messages.
+9. Add reducer exceptions to the `ADD_MESSAGE` operation for validation: `MessageContentCannotBeEmpty` and `MessageNotFound`. These will be used later to validate messages.
 
-10. Once you have added all the input operations, click the `Export` button at the top right of the editor to save the document model specification to your local machine. Save the file in the root of your Powerhouse project.
+10. Create a second module called `settings` for the chat room configuration operations.
+
+11. Add the settings operations to the `settings` module: `EDIT_CHAT_NAME` and `EDIT_CHAT_DESCRIPTION`.
+
+12. Once you have added all the input operations, click the `Export` button at the top right of the editor to save the document model specification to your local machine. Save the file in the root of your Powerhouse project.
 
 Check the screenshot below to verify the complete implementation:
 
@@ -302,13 +228,24 @@ document-models/chat-room/
 │   ├── creators.ts                   # Action creator functions
 │   ├── types.ts                      # TypeScript type definitions
 │   ├── reducer.ts
-│   └── general-operations/
-│       └── operations.ts             # Operation type definitions
+│   ├── messages/                     # Messages module
+│   │   ├── actions.ts
+│   │   ├── creators.ts
+│   │   ├── error.ts                  # Error classes for validation
+│   │   └── operations.ts
+│   └── settings/                     # Settings module
+│       ├── actions.ts
+│       ├── creators.ts
+│       ├── error.ts
+│       └── operations.ts
 ├── src/                              # Your custom implementation
 │   ├── reducers/
-│   │   └── general-operations.ts     # Reducer functions (to implement next)
+│   │   ├── messages.ts               # Message operation reducers
+│   │   └── settings.ts               # Settings operation reducers
 │   └── tests/
-│       └── general-operations.test.ts # Test file scaffolding
+│       ├── document-model.test.ts    # Document model tests
+│       ├── messages.test.ts          # Messages operation tests
+│       └── settings.test.ts          # Settings operation tests
 ├── chat-room.json                    # Document model specification
 └── schema.graphql                    # GraphQL schema
 ```

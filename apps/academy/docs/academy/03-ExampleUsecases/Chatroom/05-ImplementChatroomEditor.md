@@ -36,7 +36,7 @@ Explore the production-ready component structure:
 git ls-tree -r --name-only tutorial/main editors/chat-room-editor/components/
 
 # View a specific component
-git show tutorial/main:editors/chat-room-editor/components/ChatRoom.tsx
+git show tutorial/main:editors/chat-room-editor/components/ChatRoom/ChatRoom.tsx
 ```
 
 ### Visual comparison with GitHub Desktop
@@ -91,32 +91,167 @@ We'll build the editor using a component-based approach for better organization 
 
 ### Component-based architecture
 
-The ChatRoom editor structure includes several components that you can either build yourself or copy from the reference repository:
+The ChatRoom editor uses a modular component structure. Each component has its own folder with an `index.ts` file for clean exports:
 
-- `editor.tsx` - Main editor wrapper (imports ChatRoom)
-- `ChatRoom.tsx` - Main container component that orchestrates all other components
-- `Message.tsx` - Individual message component with reactions
-- `EmojiReaction.tsx` - Emoji reaction UI component
-- `TextInput.tsx` - Input component for sending messages
-- `Avatar.tsx` - User avatar component
+```
+editors/chat-room-editor/
+├── components/
+│   ├── Avatar/              # User avatar display
+│   │   ├── Avatar.tsx
+│   │   └── index.ts
+│   ├── ChatRoom/            # Main chat container
+│   │   ├── ChatRoom.tsx
+│   │   └── index.ts
+│   ├── Header/              # Chat header with editable title/description
+│   │   ├── EditableLabel.tsx
+│   │   ├── Header.tsx
+│   │   └── index.ts
+│   ├── Message/             # Individual message bubble
+│   │   ├── Message.tsx
+│   │   └── index.ts
+│   ├── MessageItem/         # Message with avatar and reaction dropdown
+│   │   ├── MessageItem.tsx
+│   │   └── index.ts
+│   ├── Reaction/            # Emoji reaction display
+│   │   ├── Reaction.tsx
+│   │   └── index.ts
+│   ├── TextInput/           # Message input field
+│   │   ├── SendIcon.tsx
+│   │   ├── TextInput.tsx
+│   │   └── index.ts
+│   └── index.ts             # Central exports
+├── editor.tsx               # Main editor component
+├── utils.ts                 # Utility functions for data mapping
+└── module.ts                # Editor module configuration
+```
 
-### Option 1: Copy components from the reference
+### Copy components from the reference repository
 
-Download the repository of the chatroom-demo as a zip file from https://github.com/powerhouse-inc/chatroom-demo and navigate to `editors/chat-room-editor` to copy both the `components` folder and `utils.ts` file.
+Download the repository of the chatroom-demo as a zip file from https://github.com/powerhouse-inc/chatroom-demo and navigate to `editors/chat-room-editor/` to copy the following:
 
-In this folder you'll find:
-- An avatar component for chat room participants
-- The chatroom environment itself
-- A header for the chatroom
-- The UI for rendering messages, usernames, and reaction popups
-- The emoji reaction interface
-- A text input field component
+1. **The entire `components/` folder** - Contains all UI components
+2. **The `utils.ts` file** - Contains utility functions for emoji mapping
 
-The utils function will help you with mapping information from the document model to your chatroom components, such as mapping emoji values to the relevant emoji to be displayed.
+Here's what each component does:
 
-### Option 2: Build the main editor file
+| Component | Purpose |
+|-----------|---------|
+| `Avatar` | Displays a user avatar image or a deterministic emoji based on the username |
+| `ChatRoom` | Main container that orchestrates the header, messages list, and input field |
+| `Header` | Shows the chat title and description with inline editing capability |
+| `EditableLabel` | Reusable component for inline text editing with edit/cancel icons |
+| `Message` | Renders a single message bubble with styling based on the sender |
+| `MessageItem` | Wraps `Message` with `Avatar` and adds a reaction dropdown menu |
+| `Reaction` | Displays an emoji reaction with a count of users who reacted |
+| `TextInput` | Input field for composing and sending new messages |
 
-If you want to understand how everything connects, here's the main `editor.tsx` implementation:
+### The utils.ts file
+
+The `utils.ts` file contains helper functions for mapping between document model types and component props:
+
+```typescript
+import type {
+  MessageProps,
+  ReactionMap,
+} from "./components/Message/Message.js";
+import type {
+  Message,
+  ReactionType,
+} from "../../document-models/chat-room/gen/schema/types.js";
+
+const emojis = [
+  "😀", "😂", "🤣", "😍", "😎", "😊", "🙃", "😇", "🤔", "🥳",
+  "🤯", "🤗", "😱", "👻", "🎃", "🐱", "🐶", "🐹", "🦊", "🐻",
+  "🐼", "🐨", "🐯", "🦁", "🐸", "🐵", "🐔", "🐧", "🐦", "🐤",
+  "🐝", "🐞", "🐟", "🐬", "🐳", "🦋", "🌺", "🌸", "🌼", "🍀",
+];
+
+export function getEmojiFromString(input: string): string {
+  function hashString(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = (hash << 5) - hash + char;
+      hash |= 0;
+    }
+    return Math.abs(hash);
+  }
+
+  const hash = hashString(input);
+  return emojis[hash % emojis.length];
+}
+
+export const reactionTypeToEmoji = (reactionType: ReactionType): string => {
+  switch (reactionType) {
+    case "HEART":
+      return "❤️";
+    case "THUMBS_UP":
+      return "👍";
+    case "THUMBS_DOWN":
+      return "👎";
+    case "LAUGH":
+      return "😂";
+    case "CRY":
+      return "😢";
+    default:
+      return "❤️";
+  }
+};
+
+export const reactionTypeToReactionKey = (
+  reactionType: ReactionType,
+): keyof ReactionMap => {
+  switch (reactionType) {
+    case "HEART":
+      return "heart";
+    case "THUMBS_UP":
+      return "thumbsUp";
+    case "THUMBS_DOWN":
+      return "thumbsDown";
+    case "LAUGH":
+      return "laughing";
+    case "CRY":
+      return "cry";
+    default:
+      return "heart";
+  }
+};
+
+export const reactionKeyToReactionType = (
+  reactionKey: string,
+): ReactionType => {
+  switch (reactionKey) {
+    case "heart":
+      return "HEART";
+    case "thumbsUp":
+      return "THUMBS_UP";
+    case "thumbsDown":
+      return "THUMBS_DOWN";
+    case "laughing":
+      return "LAUGH";
+    case "cry":
+      return "CRY";
+    default:
+      return "HEART";
+  }
+};
+
+export const mapReactions = (
+  reactions: Message["reactions"],
+): MessageProps["reactions"] => {
+  return (reactions || [])
+    .map((reaction) => ({
+      emoji: reactionTypeToEmoji(reaction.type),
+      reactedBy: reaction.reactedBy,
+      type: reactionTypeToReactionKey(reaction.type),
+    }))
+    .filter((reaction) => reaction.reactedBy.length > 0);
+};
+```
+
+### The main editor.tsx file
+
+The main `editor.tsx` file connects your document model to the UI components. Replace the generated scaffolding with:
 
 ```typescript
 import { generateId } from "document-model/core";
@@ -146,7 +281,6 @@ export default function Editor() {
     return <div>Loading...</div>;
   }
 
-  // Map document messages to component props
   const messages: ChatRoomProps["messages"] =
     document.state.global.messages.map((message) => ({
       id: message.id,
@@ -158,9 +292,10 @@ export default function Editor() {
       reactions: mapReactions(message.reactions),
     }));
 
-  // Handler for sending messages
   const onSendMessage: ChatRoomProps["onSendMessage"] = (message) => {
-    if (!message) return;
+    if (!message) {
+      return;
+    }
 
     dispatch(
       addMessage({
@@ -176,7 +311,6 @@ export default function Editor() {
     );
   };
 
-  // Handler for adding reactions
   const addReaction = (
     messageId: string,
     userId: string,
@@ -191,7 +325,6 @@ export default function Editor() {
     );
   };
 
-  // Handler for removing reactions
   const removeReaction = (
     messageId: string,
     userId: string,
@@ -206,13 +339,14 @@ export default function Editor() {
     );
   };
 
-  // Handler for clicking on reactions (toggle behavior)
   const onClickReaction: MessageProps["onClickReaction"] = (reaction) => {
     const message = messages.find(
       (message) => message.id === reaction.messageId,
     );
 
-    if (!message) return;
+    if (!message) {
+      return;
+    }
 
     const messageId = reaction.messageId;
     const reactionType = reactionKeyToReactionType(reaction.type);
@@ -233,7 +367,6 @@ export default function Editor() {
     }
   };
 
-  // Handlers for editing chat metadata
   const onSubmitTitle: ChatRoomProps["onSubmitTitle"] = (title) => {
     dispatch(editChatName({ name: title }));
   };
@@ -245,7 +378,11 @@ export default function Editor() {
   };
 
   return (
-    <div style={{ height: "calc(100vh - 140px)" }}>
+    <div
+      style={{
+        height: "calc(100vh - 140px)",
+      }}
+    >
       <ChatRoom
         description={
           document.state.global.description || "This is a chat room demo"
@@ -279,6 +416,91 @@ The `useSelectedChatRoomDocument` hook is generated by the Powerhouse CLI. It pr
 This hook connects your React components to the document model's state and operations.
 :::
 
+## Key components explained
+
+### MessageItem component
+
+The `MessageItem` component wraps the `Message` component with an avatar and a reaction dropdown menu. It uses the `@powerhousedao/design-system` package for the dropdown:
+
+```typescript
+import { Message, type MessageProps } from "../Message/Message.js";
+import { Avatar, type AvatarProps } from "../Avatar/Avatar.js";
+import { useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuItem,
+} from "@powerhousedao/design-system";
+
+export type MessageItemProps = MessageProps & AvatarProps;
+
+export const reactionMap = {
+  cry: "😢",
+  laughing: "😂",
+  heart: "❤️",
+  thumbsDown: "👎",
+  thumbsUp: "👍",
+};
+
+export const MessageItem: React.FC<MessageItemProps> = (props) => {
+  const { imgUrl, userName, isCurrentUser, ...messageProps } = props;
+  const { disabled = false } = messageProps;
+
+  const [isHovered, setIsHovered] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  // ... hover and dropdown logic
+
+  return (
+    <div style={{ display: "flex", gap: "2px", alignItems: "flex-end" }}>
+      <Avatar imgUrl={imgUrl} userName={userName} />
+      <DropdownMenu>
+        <Message isCurrentUser={isCurrentUser} userName={userName} {...messageProps} />
+        <DropdownMenuTrigger>🫥</DropdownMenuTrigger>
+        <DropdownMenuContent>
+          {Object.entries(reactionMap).map(([key, emoji]) => (
+            <DropdownMenuItem key={key} onClick={() => /* handle reaction */}>
+              {emoji}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+};
+```
+
+### EditableLabel component
+
+The `EditableLabel` component enables inline editing of text fields (like the chat title and description):
+
+```typescript
+export const EditableLabel: React.FC<EditableLabelProps> = ({
+  label: initialLabel,
+  onSubmit,
+  style,
+}) => {
+  const [hover, setHover] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [label, setLabel] = useState(initialLabel);
+
+  // Toggle between read mode (displaying text) and write mode (input field)
+  // Press Enter to submit, Escape to cancel
+  
+  return (
+    <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+      {isEditing ? (
+        <input value={label} onChange={(e) => setLabel(e.target.value)} />
+      ) : (
+        <h1>{label}</h1>
+      )}
+      {(hover || isEditing) && <EditIcon onClick={() => setIsEditing(true)} />}
+    </div>
+  );
+};
+```
+
 ## Test your editor
 
 Now you can run the Connect app and see the **ChatRoom** editor in action:
@@ -309,29 +531,15 @@ If you managed to follow this tutorial until this point, you have successfully i
 
 The tutorial repository includes the complete ChatRoom editor with all components:
 
-```
-editors/chat-room-editor/
-├── components/
-│   ├── Avatar.tsx            # User avatar display
-│   ├── ChatRoom.tsx          # Main chat container
-│   ├── Header.tsx            # Chat header with title/description
-│   ├── Message.tsx           # Individual message display
-│   ├── EmojiReaction.tsx     # Reaction UI
-│   ├── TextInput.tsx         # Message input field
-│   └── index.ts              # Component exports
-├── editor.tsx                # Main editor component
-├── utils.ts                  # Utility functions for data mapping
-└── module.ts                 # Editor module configuration
-```
-
-**View individual components from the reference:**
-
 ```bash
 # See the ChatRoom component implementation
-git show tutorial/main:editors/chat-room-editor/components/ChatRoom.tsx
+git show tutorial/main:editors/chat-room-editor/components/ChatRoom/ChatRoom.tsx
 
-# Explore the Message component
-git show tutorial/main:editors/chat-room-editor/components/Message.tsx
+# Explore the MessageItem component
+git show tutorial/main:editors/chat-room-editor/components/MessageItem/MessageItem.tsx
+
+# View the EditableLabel component
+git show tutorial/main:editors/chat-room-editor/components/Header/EditableLabel.tsx
 
 # Compare your implementation with the reference
 git diff tutorial/main -- editors/chat-room-editor/

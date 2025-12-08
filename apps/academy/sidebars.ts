@@ -41,7 +41,6 @@ const sidebars = {
           items: [
             "academy/MasteryTrack/BuilderEnvironment/Prerequisites",
             "academy/MasteryTrack/BuilderEnvironment/StandardDocumentModelWorkflow",
-            "academy/MasteryTrack/BuilderEnvironment/BuilderTools",
             "academy/MasteryTrack/BuilderEnvironment/VetraStudio",
           ],
         },

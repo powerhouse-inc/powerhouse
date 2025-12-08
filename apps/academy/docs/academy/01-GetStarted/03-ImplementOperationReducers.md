@@ -42,9 +42,7 @@ git reset --hard tutorial/step-3-implement-reducer-operation-handlers
 
 </details>
 
-In this section, we will implement the operation reducers for the **To-do List** document model. For this, you need to export the document model specification from Connect and import it into your Powerhouse project directory.
-
-To export the document model specification, follow the steps in the [Define ToDoList Document Model](/academy/GetStarted/DefineToDoListDocumentModel) section.
+In this section, we will implement the operation reducers for the **To-do List** document model. In the previous step Vetra imported our document specification and scaffolded our directory through code generation. If not, you can revisit the [Define TodoList Document Model](/academy/GetStarted/DefineToDoListDocumentModel) section.
 
 ## Understanding reducers in document models
 
@@ -54,27 +52,6 @@ Reducers are a core concept in Powerhouse document models. They implement the st
 **Connection to schema definition language (SDL)**: The reducers directly implement the operations you defined in your SDL. Remember how we defined `AddTodoItemInput`, `UpdateTodoItemInput`, and `DeleteTodoItemInput` in our schema?  
 The reducers provide the actual implementation of what happens when those operations are performed.
 :::
-
-To import the document model specification into your Powerhouse project, you can either:
-
-- Copy and paste the file directly into the root of your Powerhouse project.
-- Or drag and drop the file into the Powerhouse project directory in the VSCode editor as seen in the image below:
-
-Either step will import the document model specification into your Powerhouse project.
-
-![vscode image](./images/vscode.png)
-
-## Generate the document model code
-
-The next steps will take place in the VSCode editor. Make sure to have it open and the terminal window inside VSCode open as well.
-
-To write the operation reducers of the **To-do List** document model, you need to generate the document model code from the document model specification file you have exported.
-
-Run the following command in the terminal:
-
-```bash
-ph generate TodoList.phd
-```
 
 ## Explore the generated reducer file
 

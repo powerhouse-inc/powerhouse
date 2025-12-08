@@ -53,20 +53,31 @@ import {
 
 describe("Todos Operations", () => {
   it("should handle addTodoItem operation", () => {
-    // the `createDocument` utility function creates a new empty document
+    // The `createDocument` utility function from your document model creates
+    // a new empty document, i.e. one with your default initial state
     const document = utils.createDocument();
 
-    // generateMock creates an object with random values for each field
+    // The generateMock function takes one of your generated input schemas
+    // and creates an object populated with random values for each field
     const input = generateMock(AddTodoItemInputSchema());
 
-    // call the reducer with the document and action
+    // We call your document model's reducer with the new document we just created
+    // and the action we want to test, `addTodoItem` in this case.
+    // The reducer returns a new object, which is the document with the action applied.
+    // If successful, there will be an operation which corresponds to this action
+    // in the updated document's operations list.
     const updatedDocument = reducer(document, addTodoItem(input));
 
-    // validate the document conforms to the schema
+    // When you generate a document model, we give you validation utilities like
+    // `isTodoListDocument` which confirms the document is of the correct form
+    // in a way that TypeScript recognizes
     expect(isTodoListDocument(updatedDocument)).toBe(true);
 
-    // check the operation was recorded
+    // At the start a document will have 0 operations, so after applying this action
+    // there should now be one operation
     expect(updatedDocument.operations.global).toHaveLength(1);
+    
+    // The operation added to the list should correspond to the correct action type
     expect(updatedDocument.operations.global[0].action.type).toBe("ADD_TODO_ITEM");
   });
   
@@ -124,36 +135,54 @@ it("should handle updateTodoItem operation", () => {
 
 ```typescript
 it("should handle updateTodoItem operation to update text", () => {
-  // Create an existing item to update
+  // We need there to already be a todo item in the document,
+  // since we want to test updating an existing item
   const mockItem = generateMock(TodoItemSchema());
+
+  // We also need to generate a mock input for the update operation we are testing
   const input: UpdateTodoItemInput = generateMock(UpdateTodoItemInputSchema());
   
-  // Set the input ID to match our existing item
+  // Since the mocks are generated with random values, we need to set the `id`
+  // on our mock input to match the `id` of the existing mock item
   input.id = mockItem.id;
+
+  // We want to easily check if the item's text was updated to our new value,
+  // so we assign a variable and use that for the mock input's text field
   const newText = "new text";
   input.text = newText;
-  input.checked = undefined; // Don't change checked state
+
+  // We are only testing updating the text here, so we want the checked field
+  // on the input to be undefined, i.e. it should not change anything on the existing item
+  input.checked = undefined;
   
-  // Create document with existing item
+  // We can pass a different initial state to the `createDocument` utility,
+  // so in this case we pass in an `items` array with our existing item already in it
   const document = utils.createDocument({
     global: {
       items: [mockItem],
     },
   });
 
+  // Create an updated document by applying the reducer with the action and input
   const updatedDocument = reducer(document, updateTodoItem(input));
+
+  // Use our validator to check that the document conforms to the document model schema
   expect(isTodoListDocument(updatedDocument)).toBe(true);
 
-  // Verify operation was recorded
+  // There should now be one operation in the operations list
   expect(updatedDocument.operations.global).toHaveLength(1);
   expect(updatedDocument.operations.global[0].action.type).toBe("UPDATE_TODO_ITEM");
   
-  // Verify state was updated correctly
+  // Find the updated item in the items list by its `id`
   const updatedItem = updatedDocument.state.global.items.find(
     (item) => item.id === input.id,
   );
+
+  // The item's text should now be updated to be our new text
   expect(updatedItem?.text).toBe(newText);
-  expect(updatedItem?.checked).toBe(mockItem.checked); // Unchanged
+
+  // The item's `checked` field should be unchanged
+  expect(updatedItem?.checked).toBe(mockItem.checked);
 });
 ```
 
@@ -161,27 +190,45 @@ it("should handle updateTodoItem operation to update text", () => {
 
 ```typescript
 it("should handle updateTodoItem operation to update checked", () => {
+  // Generate a mock existing item
   const mockItem = generateMock(TodoItemSchema());
+
+  // Generate a mock input
   const input: UpdateTodoItemInput = generateMock(UpdateTodoItemInputSchema());
   
+  // Set the mock input's `id` to the mock item's `id`
   input.id = mockItem.id;
-  const newChecked = !mockItem.checked; // Toggle the checked state
+
+  // We want the new `checked` field value to be the opposite of the
+  // randomly generated value from the mock
+  const newChecked = !mockItem.checked;
   input.checked = newChecked;
-  input.text = undefined; // Don't change text
+
+  // Leave the `text` field unchanged
+  input.text = undefined;
   
+  // Create a document with the existing item in it
   const document = utils.createDocument({
     global: {
       items: [mockItem],
     },
   });
 
+  // Apply the reducer with the action and the mock input
   const updatedDocument = reducer(document, updateTodoItem(input));
+
+  // Validate your document
   expect(isTodoListDocument(updatedDocument)).toBe(true);
 
+  // Get the updated item by its `id`
   const updatedItem = updatedDocument.state.global.items.find(
     (item) => item.id === input.id,
   );
-  expect(updatedItem?.text).toBe(mockItem.text); // Unchanged
+
+  // The item's `text` field should remain unchanged
+  expect(updatedItem?.text).toBe(mockItem.text);
+
+  // The item's `checked` field should be updated to our new checked value
   expect(updatedItem?.checked).toBe(newChecked);
 });
 ```
@@ -374,5 +421,5 @@ Expected test output:
 
 ## Up next: Building the editor
 
-In the next chapter, you'll learn how to implement a user interface (editor) for your document model so you can interact with it visually in Connect Studio.
+In the next chapter, you'll learn how to implement a user interface (editor) for your document model so you can interact with it visually. 
 

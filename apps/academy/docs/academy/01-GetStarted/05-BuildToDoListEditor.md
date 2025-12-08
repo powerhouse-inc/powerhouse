@@ -66,28 +66,11 @@ See step 1 for detailed GitHub Desktop instructions.
 
 In this chapter we will continue with the interface or editor implementation of the **To-do List** document model. This means you will create a simple user interface for the **To-do List** document model which will be used inside the Connect app to create, update and delete your ToDoList items.
 
-## Generate the editor template
+## Add a document editor specification in Vetra Studio. 
 
-Run the command below to generate the editor template for the **To-do List** document model.  
-This command reads the **To-do List** document model definition from the `document-models` folder and generates the editor template in the `editors/todo-list-editor` folder.
+Go back to Vetra Studio and click the 'Add new specification' button in the User Experiences column under 'Editors'. This will create an editor template for your document model. 
 
-```bash
-pnpm generate --editor todo-list-editor --document-types powerhouse/todo-list
-```
-
-Notice the `--editor` flag which specifies the editor name, and the `--document-types` flag defines the document type `powerhouse/todo-list`.
-
-Once complete, you'll have a new directory structure:
-
-```
-editors/todo-list-editor/
-├── components/
-│   └── EditName.tsx          # Auto-generated component for editing document name
-├── editor.tsx                # Main editor component (to be customized)
-└── module.ts                 # Editor module configuration
-```
-
-Navigate to the `editors/todo-list-editor/editor.tsx` file and open it in your editor. You'll see a basic template ready for customization.
+Give the editor the name `todo-list-editor` and select the correct document model. In our case that's the `powerhouse/todo-list`
 
 ### Editor implementation options
 
@@ -97,7 +80,7 @@ When building your editor component within the Powerhouse ecosystem, you have se
 2.  **Tailwind CSS:** Connect Studio comes with Tailwind CSS integrated. You can directly use Tailwind utility classes for rapid, consistent styling without writing separate CSS files.
 3.  **Custom CSS Files:** You can import traditional CSS files (`.css`) to apply custom styles or integrate existing style libraries.
 
-Connect Studio provides a dynamic local environment, by running `ph connect` to visualize your components instantly as you build them, regardless of the styling method you choose.  
+Vetra Studio Preview provides a dynamic local environment, by running `ph vetra --watch` you can visualize your components instantly as you build them, regardless of the styling method you choose.  
 Manual build steps are typically only needed when publishing packages.
 
 ## Build the editor with components
@@ -193,6 +176,11 @@ import { useSelectedTodoListDocument } from "todo-tutorial/document-models/todo-
 
 /** Component for adding a new todo item to the selected todo list */
 export function AddTodo() {
+  // The hooks for getting documents also return a dispatch function
+  // for dispatching actions to modify the document.
+  // This is the same pattern you will have seen in React's `useReducer` hook,
+  // except you don't need to pass the initial state.
+  // The document we are working with _is_ the initial state.
   const [todoList, dispatch] = useSelectedTodoListDocument();
 
   if (!todoList) return null;
@@ -205,6 +193,8 @@ export function AddTodo() {
     const text = addTodoInput.value;
     if (!text) return;
 
+    // Dispatch the addTodoItem action - this will call the reducer
+    // we implemented earlier and update the document state
     dispatch(addTodoItem({ text }));
 
     form.reset();
@@ -303,6 +293,10 @@ type Props = {
  */
 export function Todo({ todo }: Props) {
   const [isEditing, setIsEditing] = useState(false);
+  
+  // Even though this component is for a single todo item and not the whole list,
+  // we can use the exact same hook for dispatching updates to it.
+  // The dispatch function works for any action supported by a TodoList document.
   const [todoList, dispatch] = useSelectedTodoListDocument();
 
   if (!todoList) return null;
@@ -318,6 +312,9 @@ export function Todo({ todo }: Props) {
     const textInput = form.elements.namedItem("todoText") as HTMLInputElement;
     const text = textInput.value;
     if (!text) return;
+    
+    // We can use the dispatch function for any of the actions
+    // supported by a TodoList document
     dispatch(updateTodoItem({ id: todo.id, text }));
     setIsEditing(false);
   };
@@ -461,17 +458,17 @@ export function TodoListName() {
 
 ## Test your editor
 
-Now you can run the Connect app and see the **To-do List** editor in action:
+Now you can run the Vetra Studio Preview and see the **To-do List** editor in action:
 
 ```bash
-ph connect
+ph vetra --watch 
 ```
 
-In Connect, in the bottom right corner you'll find a new Document Model that you can create: **To-do List**.  
+In the bottom right corner you'll find a new Document Model that you can create: **To-do List**.  
 Click on it to create a new To-do List document.
 
 :::info Live Development
-The editor will update dynamically as you make changes, so you can experiment with styling and functionality while seeing your results appear in Connect Studio in real-time.
+The editor will update dynamically as you make changes, so you can experiment with styling and functionality while seeing your results appear in Vetra Studio in real-time.
 :::
 
 **Try it out:**

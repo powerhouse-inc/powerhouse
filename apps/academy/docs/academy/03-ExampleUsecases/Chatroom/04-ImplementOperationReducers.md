@@ -100,21 +100,19 @@ You will see that this action created a range of files for you. Before diving in
 
 ![Chatroom-demo Schema](image.png)
 
-Now you can navigate to `/document-models/chat-room/src/reducers/messages.ts` and start writing the operation reducers.
+## Implement the messages reducers
 
-Open the `messages.ts` file and you should see the scaffolding code that needs to be filled for the five operations you have specified earlier. The generated file will look like this:
+Navigate to `/document-models/chat-room/src/reducers/messages.ts` and start writing the operation reducers for the messages module.
+
+Open the `messages.ts` file and you should see the scaffolding code that needs to be filled for the three message operations. The generated file will look like this:
 
 ```typescript
-import type { ChatRoomMessagesOperations } from "chatroom/document-models/chat-room";
+import type { ChatRoomMessagesOperations } from "@powerhousedao/chatroom-package/document-models/chat-room";
 
 export const chatRoomMessagesOperations: ChatRoomMessagesOperations = {
     addMessageOperation(state, action) {
         // TODO: Implement "addMessageOperation" reducer
         throw new Error('Reducer "addMessageOperation" not yet implemented');
-    },
-    senderOperation(state, action) {
-        // TODO: Implement "senderOperation" reducer
-        throw new Error('Reducer "senderOperation" not yet implemented');
     },
     addEmojiReactionOperation(state, action) {
         // TODO: Implement "addEmojiReactionOperation" reducer
@@ -127,20 +125,19 @@ export const chatRoomMessagesOperations: ChatRoomMessagesOperations = {
 };
 ```
 
-## Write the operation reducers
+### Write the messages operation reducers
 
-1. Copy and paste the code below into the `messages.ts` file in the `reducers` folder.
-2. Save the file.
+Copy and paste the code below into the `messages.ts` file in the `reducers` folder, replacing the scaffolding code:
 
 <details>
-<summary>Operation Reducers</summary>
+<summary>Messages Operation Reducers</summary>
 
 ```typescript
 import {
   MessageNotFoundError,
   MessageContentCannotBeEmptyError,
 } from "../../gen/messages/error.js";
-import type { ChatRoomMessagesOperations } from "chatroom-package/document-models/chat-room";
+import type { ChatRoomMessagesOperations } from "@powerhousedao/chatroom-package/document-models/chat-room";
 
 export const chatRoomMessagesOperations: ChatRoomMessagesOperations = {
   addMessageOperation(state, action) {
@@ -221,18 +218,20 @@ export const chatRoomMessagesOperations: ChatRoomMessagesOperations = {
   },
 };
 ```
+
 </details>
 
+## Implement the settings reducers
 
-1. Do the same for the reducers of our "settings" operations. Copy and paste the code below into the `settings.ts` file in the `reducers` folder.
-2. Save the file.
+Navigate to `/document-models/chat-room/src/reducers/settings.ts` and implement the settings operation reducers.
 
+Copy and paste the code below into the `settings.ts` file in the `reducers` folder:
 
 <details>
-<summary>Operation Reducers</summary>
+<summary>Settings Operation Reducers</summary>
 
 ```typescript
-import type { ChatRoomSettingsOperations } from "chatroom-package/document-models/chat-room";
+import type { ChatRoomSettingsOperations } from "@powerhousedao/chatroom-package/document-models/chat-room";
 
 export const chatRoomSettingsOperations: ChatRoomSettingsOperations = {
   editChatNameOperation(state, action) {
@@ -246,211 +245,282 @@ export const chatRoomSettingsOperations: ChatRoomSettingsOperations = {
 
 </details>
 
-
 ## Write the operation reducer tests
 
 In order to make sure the operation reducers are working as expected, you need to write tests for them.
 
-Navigate to `/document-models/chat-room/src/tests` and replace the scaffolding code with comprehensive tests.
+Navigate to `/document-models/chat-room/src/tests` and you'll find test files for each module. Replace the scaffolding code with the tests below.
 
-Here are the tests for the five operations implemented in the reducers file. The test file:
-- Uses Vitest for testing
-- Creates an empty ChatRoom document model
-- Tests add message, add/remove reactions, and edit operations
-- Verifies both the operation history and the resulting state
+### Messages operation tests
+
+Replace the content of `messages.test.ts` with:
 
 <details>
-<summary>Operation Reducer Tests</summary>
+<summary>Messages Operation Tests</summary>
 
 ```typescript
-import { describe, it, expect, beforeEach } from "vitest";
-import { generateId } from "document-model/core";
+/**
+ * This is a scaffold file meant for customization:
+ * - change it by adding new tests or modifying the existing ones
+ */
+
+import { describe, it, expect } from "vitest";
+import { generateMock } from "@powerhousedao/codegen";
 import {
   reducer,
   utils,
+  isChatRoomDocument,
   addMessage,
+  AddMessageInputSchema,
   addEmojiReaction,
+  AddEmojiReactionInputSchema,
   removeEmojiReaction,
-  editChatName,
-  editChatDescription,
-} from "../../gen/index.js";
-import type {
-  ChatRoomDocument,
-  AddMessageInput,
-  AddEmojiReactionInput,
-  RemoveEmojiReactionInput,
-  EditChatNameInput,
-  EditChatDescriptionInput,
-} from "../../gen/types.js";
+  RemoveEmojiReactionInputSchema,
+} from "@powerhousedao/chatroom-package/document-models/chat-room";
 
-describe("GeneralOperations Operations", () => {
-  let document: ChatRoomDocument;
-
-  beforeEach(() => {
-    document = utils.createDocument();
-  });
-
-  // Helper function to add a message for testing
-  const addMessageHelper = (): [ChatRoomDocument, AddMessageInput] => {
-    const input: AddMessageInput = {
-      content: "Hello, World!",
-      messageId: generateId(),
-      sender: {
-        id: "anon-user",
-        name: null,
-        avatarUrl: null,
-      },
-      sentAt: new Date().toISOString(),
-    };
+describe("Messages Operations", () => {
+  it("should handle addMessage operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(AddMessageInputSchema());
 
     const updatedDocument = reducer(document, addMessage(input));
 
-    return [updatedDocument, input];
-  };
-
-  // Test adding a new message
-  it("should handle addMessage operation", () => {
-    const [updatedDocument, input] = addMessageHelper();
-
-    // Verify the operation was recorded
+    expect(isChatRoomDocument(updatedDocument)).toBe(true);
     expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe("ADD_MESSAGE");
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "ADD_MESSAGE",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
-
-    // Verify the message was added to state
-    expect(updatedDocument.state.global.messages).toHaveLength(1);
-    expect(updatedDocument.state.global.messages[0]).toMatchObject({
-      id: input.messageId,
-      content: input.content,
-      sender: input.sender,
-      sentAt: input.sentAt,
-      reactions: [],
-    });
   });
-
-  // Test adding an emoji reaction
   it("should handle addEmojiReaction operation", () => {
-    const [doc, addMessageInput] = addMessageHelper();
-
-    let updatedDocument = doc;
-
-    const addEmojiReactionInput: AddEmojiReactionInput = {
-      messageId: addMessageInput.messageId,
-      reactedBy: "anon-user",
-      type: "THUMBS_UP",
-    };
-
-    updatedDocument = reducer(
-      updatedDocument,
-      addEmojiReaction(addEmojiReactionInput),
-    );
-
-    // Verify the operation was recorded
-    expect(updatedDocument.operations.global).toHaveLength(2);
-    expect(updatedDocument.operations.global[1].action.type).toBe("ADD_EMOJI_REACTION");
-    expect(updatedDocument.operations.global[1].action.input).toStrictEqual(
-      addEmojiReactionInput,
-    );
-    expect(updatedDocument.operations.global[1].index).toEqual(1);
-
-    // Verify the reaction was added
-    expect(updatedDocument.state.global.messages[0].reactions).toHaveLength(1);
-    expect(updatedDocument.state.global.messages[0].reactions?.[0]).toMatchObject({
-      reactedBy: [addEmojiReactionInput.reactedBy],
-      type: addEmojiReactionInput.type,
-    });
-  });
-
-  // Test adding reaction to non-existing message
-  it("should handle addEmojiReaction operation to a non existing message", () => {
-    const input: AddEmojiReactionInput = {
-      messageId: "invalid-message-id",
-      reactedBy: "anon-user",
-      type: "THUMBS_UP",
-    };
+    const document = utils.createDocument();
+    const input = generateMock(AddEmojiReactionInputSchema());
 
     const updatedDocument = reducer(document, addEmojiReaction(input));
 
+    expect(isChatRoomDocument(updatedDocument)).toBe(true);
     expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe("ADD_EMOJI_REACTION");
-    expect(updatedDocument.state.global.messages).toHaveLength(0);
-  });
-
-  // Test removing an emoji reaction
-  it("should handle removeEmojiReaction operation", () => {
-    const [doc, addMessageInput] = addMessageHelper();
-
-    let updatedDocument = doc;
-
-    const addEmojiReactionInput: AddEmojiReactionInput = {
-      messageId: addMessageInput.messageId,
-      reactedBy: "anon-user",
-      type: "THUMBS_UP",
-    };
-
-    updatedDocument = reducer(
-      updatedDocument,
-      addEmojiReaction(addEmojiReactionInput),
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "ADD_EMOJI_REACTION",
     );
-
-    const input: RemoveEmojiReactionInput = {
-      messageId: addMessageInput.messageId,
-      senderId: "anon-user",
-      type: "THUMBS_UP",
-    };
-
-    updatedDocument = reducer(updatedDocument, removeEmojiReaction(input));
-
-    // Verify the operation was recorded
-    expect(updatedDocument.operations.global).toHaveLength(3);
-    expect(updatedDocument.operations.global[2].action.type).toBe("REMOVE_EMOJI_REACTION");
-    expect(updatedDocument.operations.global[2].action.input).toStrictEqual(input);
-    expect(updatedDocument.operations.global[2].index).toEqual(2);
-
-    // Verify the reaction was removed
-    expect(updatedDocument.state.global.messages[0].reactions).toHaveLength(0);
-  });
-
-  // Test editing chat name
-  it("should handle editChatName operation", () => {
-    const input: EditChatNameInput = {
-      name: "New Chat Name",
-    };
-
-    const updatedDocument = reducer(document, editChatName(input));
-
-    // Verify the operation was recorded
-    expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe("EDIT_CHAT_NAME");
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
-
-    // Verify the name was updated
-    expect(updatedDocument.state.global.name).toBe(input.name);
   });
+  it("should handle removeEmojiReaction operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(RemoveEmojiReactionInputSchema());
 
-  // Test editing chat description
-  it("should handle editChatDescription operation", () => {
-    const input: EditChatDescriptionInput = {
-      description: "New Chat Description",
-    };
+    const updatedDocument = reducer(document, removeEmojiReaction(input));
 
-    const updatedDocument = reducer(document, editChatDescription(input));
-
-    // Verify the operation was recorded
+    expect(isChatRoomDocument(updatedDocument)).toBe(true);
     expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe("EDIT_CHAT_DESCRIPTION");
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "REMOVE_EMOJI_REACTION",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
-
-    // Verify the description was updated
-    expect(updatedDocument.state.global.description).toBe(input.description);
   });
 });
 ```
 
 </details>
+
+### Settings operation tests
+
+Replace the content of `settings.test.ts` with:
+
+<details>
+<summary>Settings Operation Tests</summary>
+
+```typescript
+/**
+ * This is a scaffold file meant for customization:
+ * - change it by adding new tests or modifying the existing ones
+ */
+
+import { describe, it, expect } from "vitest";
+import { generateMock } from "@powerhousedao/codegen";
+import {
+  reducer,
+  utils,
+  isChatRoomDocument,
+  editChatName,
+  EditChatNameInputSchema,
+  editChatDescription,
+  EditChatDescriptionInputSchema,
+} from "@powerhousedao/chatroom-package/document-models/chat-room";
+
+describe("Settings Operations", () => {
+  it("should handle editChatName operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(EditChatNameInputSchema());
+
+    const updatedDocument = reducer(document, editChatName(input));
+
+    expect(isChatRoomDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "EDIT_CHAT_NAME",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+  it("should handle editChatDescription operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(EditChatDescriptionInputSchema());
+
+    const updatedDocument = reducer(document, editChatDescription(input));
+
+    expect(isChatRoomDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "EDIT_CHAT_DESCRIPTION",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+});
+```
+
+</details>
+
+### Document model tests
+
+The `document-model.test.ts` file contains tests to verify the document model structure. Replace its content with:
+
+<details>
+<summary>Document Model Tests</summary>
+
+```typescript
+/**
+ * This is a scaffold file meant for customization:
+ * - change it by adding new tests or modifying the existing ones
+ */
+
+import { describe, it, expect } from "vitest";
+import {
+  utils,
+  initialGlobalState,
+  initialLocalState,
+  chatRoomDocumentType,
+  isChatRoomDocument,
+  assertIsChatRoomDocument,
+  isChatRoomState,
+  assertIsChatRoomState,
+} from "@powerhousedao/chatroom-package/document-models/chat-room";
+import { ZodError } from "zod";
+
+describe("ChatRoom Document Model", () => {
+  it("should create a new ChatRoom document", () => {
+    const document = utils.createDocument();
+
+    expect(document).toBeDefined();
+    expect(document.header.documentType).toBe(chatRoomDocumentType);
+  });
+
+  it("should create a new ChatRoom document with a valid initial state", () => {
+    const document = utils.createDocument();
+    expect(document.state.global).toStrictEqual(initialGlobalState);
+    expect(document.state.local).toStrictEqual(initialLocalState);
+    expect(isChatRoomDocument(document)).toBe(true);
+    expect(isChatRoomState(document.state)).toBe(true);
+  });
+  it("should reject a document that is not a ChatRoom document", () => {
+    const wrongDocumentType = utils.createDocument();
+    wrongDocumentType.header.documentType = "the-wrong-thing-1234";
+    try {
+      expect(assertIsChatRoomDocument(wrongDocumentType)).toThrow();
+      expect(isChatRoomDocument(wrongDocumentType)).toBe(false);
+    } catch (error) {
+      expect(error).toBeInstanceOf(ZodError);
+    }
+  });
+  const wrongState = utils.createDocument();
+  // @ts-expect-error - we are testing the error case
+  wrongState.state.global = {
+    ...{ notWhat: "you want" },
+  };
+  try {
+    expect(isChatRoomState(wrongState.state)).toBe(false);
+    expect(assertIsChatRoomState(wrongState.state)).toThrow();
+    expect(isChatRoomDocument(wrongState)).toBe(false);
+    expect(assertIsChatRoomDocument(wrongState)).toThrow();
+  } catch (error) {
+    expect(error).toBeInstanceOf(ZodError);
+  }
+
+  const wrongInitialState = utils.createDocument();
+  // @ts-expect-error - we are testing the error case
+  wrongInitialState.initialState.global = {
+    ...{ notWhat: "you want" },
+  };
+  try {
+    expect(isChatRoomState(wrongInitialState.state)).toBe(false);
+    expect(assertIsChatRoomState(wrongInitialState.state)).toThrow();
+    expect(isChatRoomDocument(wrongInitialState)).toBe(false);
+    expect(assertIsChatRoomDocument(wrongInitialState)).toThrow();
+  } catch (error) {
+    expect(error).toBeInstanceOf(ZodError);
+  }
+
+  const missingIdInHeader = utils.createDocument();
+  // @ts-expect-error - we are testing the error case
+  delete missingIdInHeader.header.id;
+  try {
+    expect(isChatRoomDocument(missingIdInHeader)).toBe(false);
+    expect(assertIsChatRoomDocument(missingIdInHeader)).toThrow();
+  } catch (error) {
+    expect(error).toBeInstanceOf(ZodError);
+  }
+
+  const missingNameInHeader = utils.createDocument();
+  // @ts-expect-error - we are testing the error case
+  delete missingNameInHeader.header.name;
+  try {
+    expect(isChatRoomDocument(missingNameInHeader)).toBe(false);
+    expect(assertIsChatRoomDocument(missingNameInHeader)).toThrow();
+  } catch (error) {
+    expect(error).toBeInstanceOf(ZodError);
+  }
+
+  const missingCreatedAtUtcIsoInHeader = utils.createDocument();
+  // @ts-expect-error - we are testing the error case
+  delete missingCreatedAtUtcIsoInHeader.header.createdAtUtcIso;
+  try {
+    expect(isChatRoomDocument(missingCreatedAtUtcIsoInHeader)).toBe(false);
+    expect(assertIsChatRoomDocument(missingCreatedAtUtcIsoInHeader)).toThrow();
+  } catch (error) {
+    expect(error).toBeInstanceOf(ZodError);
+  }
+
+  const missingLastModifiedAtUtcIsoInHeader = utils.createDocument();
+  // @ts-expect-error - we are testing the error case
+  delete missingLastModifiedAtUtcIsoInHeader.header.lastModifiedAtUtcIso;
+  try {
+    expect(isChatRoomDocument(missingLastModifiedAtUtcIsoInHeader)).toBe(false);
+    expect(
+      assertIsChatRoomDocument(missingLastModifiedAtUtcIsoInHeader),
+    ).toThrow();
+  } catch (error) {
+    expect(error).toBeInstanceOf(ZodError);
+  }
+});
+```
+
+</details>
+
+## Run the tests
 
 Now you can run the tests to make sure the operation reducers are working as expected.
 
@@ -458,19 +528,20 @@ Now you can run the tests to make sure the operation reducers are working as exp
 pnpm run test
 ```
 
-Output should be as follows:
+Output should be similar to:
 
 ```bash
  ✓ document-models/chat-room/src/tests/document-model.test.ts (3 tests) 1ms
- ✓ document-models/chat-room/src/tests/general-operations.test.ts (6 tests) 8ms
+ ✓ document-models/chat-room/src/tests/messages.test.ts (3 tests) 8ms
+ ✓ document-models/chat-room/src/tests/settings.test.ts (2 tests) 2ms
 
- Test Files  2 passed (2)
-      Tests  9 passed (9)
+ Test Files  3 passed (3)
+      Tests  8 passed (8)
    Start at  15:19:52
    Duration  3.61s (transform 77ms, setup 0ms, collect 3.50s, tests 14ms, environment 0ms, prepare 474ms)
 ```
 
-If you got the same output, you have successfully implemented the operation reducers and tests for the **ChatRoom** document model.
+If you got a similar output, you have successfully implemented the operation reducers and tests for the **ChatRoom** document model.
 
 ## Compare with reference implementation
 
@@ -478,10 +549,12 @@ Verify your implementation matches the tutorial:
 
 ```bash
 # View reference reducer implementation
-git show tutorial/main:document-models/chat-room/src/reducers/general-operations.ts
+git show tutorial/main:document-models/chat-room/src/reducers/messages.ts
+git show tutorial/main:document-models/chat-room/src/reducers/settings.ts
 
 # View reference test implementation
-git show tutorial/main:document-models/chat-room/src/tests/general-operations.test.ts
+git show tutorial/main:document-models/chat-room/src/tests/messages.test.ts
+git show tutorial/main:document-models/chat-room/src/tests/settings.test.ts
 
 # Compare your entire implementation
 git diff tutorial/main -- document-models/chat-room/src/

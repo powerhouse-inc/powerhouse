@@ -49,16 +49,16 @@ See step 1 for detailed GitHub Desktop instructions.
 
 </details>
 
-In this tutorial, you will learn how to define the specifications for a **TodoList** document model within the Connect application using its GraphQL schema, and then export the resulting document model specification document for your Powerhouse project.
+In this tutorial, you will learn how to define the specifications for a **To-do List** document model within Vetra Studio using its GraphQL schema, and then export the resulting document model specification document for your Powerhouse project.
 If you don't have a document specification file created yet, have a look at the previous step of this tutorial to create a new document specification.
 
-Before you start, make sure you have the Connect application running locally with the command:
+Before you start, make sure you have Vetra Studio running locally with the command:
 
 ```bash
-ph connect
+ph vetra
 ```
 
-The Connect application will start and you will see the following output:
+Vetra Studio will start and you will see the following output:
 
 ```bash
   ➜  Local:   http://localhost:3000/
@@ -83,16 +83,16 @@ Documents in Powerhouse leverage **event sourcing principles**, where every stat
 <summary>State schema of our simplified TodoList</summary>
 
 ```graphql
-# The state of our TodoList
+# The state of our TodoList - contains an array of todo items
 type TodoListState {
   items: [TodoItem!]!
 }
 
-# A single to-do item
+# A single to-do item with its properties
 type TodoItem {
-  id: OID!
-  text: String!
-  checked: Boolean!
+  id: OID!        # Unique identifier for each to-do item
+  text: String!   # The text description of the to-do item
+  checked: Boolean!  # Status of the to-do item (checked/unchecked)
 }
 ```
 
@@ -100,24 +100,29 @@ type TodoItem {
 
 <details>
 <summary>Operations schema of our simplified TodoList</summary>
+
 ```graphql
 # Defines a GraphQL input type for adding a new to-do item
+# Only text is required - ID is generated automatically, checked defaults to false
 input AddTodoItemInput {
-  text: String!
+  text: String!  # The text for the new todo item
 }
 
 # Defines a GraphQL input type for updating a to-do item
+# ID is required to identify which item to update
+# text and checked are optional - only provided fields will be updated
 input UpdateTodoItemInput {
-  id: OID!
-  text: String
-  checked: Boolean
+  id: OID!       # Required: which item to update
+  text: String   # Optional: new text value
+  checked: Boolean  # Optional: new checked state
 }
 
 # Defines a GraphQL input type for deleting a to-do item
 input DeleteTodoItemInput {
-  id: OID!
+  id: OID!  # The ID of the item to delete
 }
 ```
+
 </details>
 
 ## Define the document model specification
@@ -126,7 +131,7 @@ To be able to define the document model, you need to open the document model edi
 
 ### The steps below show you how to do this:
 
-1. In the Connect application, click on **'document model'** to open the document model specification editor.
+1. In Vetra Studio, click on **'document model'** to open the document model specification editor.
 2. Name your document model `TodoList` (PascalCase, no spaces or hyphens) in the Connect application. **Pay close attention to capitalization, as it influences code generation.**
 3. You'll be presented with a form to fill in metadata about the document model. Fill in the details in the respective fields.
 
@@ -155,7 +160,7 @@ Check below screenshot for the complete implementation:
 
 ## Verify your document model generation
 
-After running `pnpm generate TodoList.phd`, your project should have the following structure in `document-models/todo-list/`:
+If you have been watching the terminal in your IDE you will see that Vetra has been tracking your changes and scaffolding your directory. Your project should have the following structure in `document-models/todo-list/`:
 
 ```
 document-models/todo-list/

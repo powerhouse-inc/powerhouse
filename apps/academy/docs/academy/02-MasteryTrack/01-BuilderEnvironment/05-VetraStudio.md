@@ -1,26 +1,13 @@
 # Vetra Studio 
 
-:::tip Important
-
-## Vision: Specification Driven AI
-
-In the **'Get Started'** chapter we've been making use of strict schema definition principles to communicate the intended use case of our reactive documents. 
-The **schema definition language**, is a not only a shared language that bridges the gap between developer, designer and analyst but also the gap between builder and AI-agent through **specification driven AI control**.
-
-- Communicate your solution and intent through a structured specification framework designed for AI collaboration.
-- Specifications enable precise, iterative edits, since all our specification documents are machine-readable and executable.
-:::
-
 ## Introducing Vetra Studio
 
-**Vetra Studio Drive**: Serves as a hub for developers to access, manage & share specification through a remote Vetra drive.   
-**Vetra Package Library**: Store, publish and fork git repositories of packages in the Vetra Package Library.    
-Visit the [Vetra Package Library here](https://vetra.io/packages)
-
-**Vetra Studio Drive** functions as the orchestration hub where you as a builder assemble all the necessary specifications for your intended use-case, software solution or package. For each of the different **modules** that together form a package a **specification document** can be created in Vetra Studio Drive. 
+- **Vetra Studio Drive**: Serves as a hub for developers to access, manage & share specification through a remote Vetra drive. It functions as the orchestration hub where you as a builder assemble all the necessary specifications for your intended use-case, software solution or package. For each of the different **modules** that together form a package a  
+- **Vetra Package Library**: Store, publish and fork git repositories of packages in the Vetra Package Library.    
+Visit the [Vetra Package Library here](https://vetra.io/packages) 
 
 As Vetra Studio matures each of these specification documents will offer an interface by which you as a builder get more control over the modules that make up your package. 
-For now they offer you a template for code generation. 
+For now the specification documents offer you a template for code generation. 
 
 <figure className="image-container">
   <img
@@ -142,6 +129,17 @@ In standard mode:
 
 Vetra Studio integrates deeply with Claude through MCP (Model Control Protocol). This is where AI comes into the mix and you get the chance to have greater control and direction over what your llm is coding for you. 
 
+<details>
+<summary>**Specification Driven AI**</summary>
+
+In the **'Get Started'** chapter we've been making use of strict schema definition principles to communicate the intended use case of our reactive documents. 
+The **schema definition language**, is a not only a shared language that bridges the gap between developer, designer and analyst but also the gap between builder and AI-agent through **specification driven AI control**.
+
+- Communicate your solution and intent through a structured specification framework designed for AI collaboration.
+- Specifications enable precise, iterative edits, since all our specification documents are machine-readable and executable.
+
+</details>
+
 #### 1. Start the Reactor MCP:
 
 Make sure you are in the same directory as your project. 
@@ -168,18 +166,18 @@ Connected to MCP successfully! I can see there's a
   running and ready for document model operations.
 ```
 
+<details>
+<summary>🤖 Reactor MCP Overview</summary>
+
 ### Key Reactor MCP Features
+
+**Reactor-mcp** is a Model Context Protocol (MCP) server that bridges AI agents with Powerhouse document operations.
 
 - It supports automatic document model creation from natural language descriptions
 - It implements a smart editor based on the underlying document models
 - It automatically triggers code generation when documents reach valid state
 - The MCP server enables the agent to work with both existing and newly created document models
 - Vetra supports integration with custom remote drives, allowing users to create, share and manage documents within these drives
-
-<details>
-<summary>🤖 Reactor MCP Overview</summary>
-
-**Reactor-mcp** is a Model Context Protocol (MCP) server that bridges AI agents with Powerhouse document operations.
 
 **Document Operations:**
 - `createDocument` / `getDocument` / `deleteDocument` - Manage documents
