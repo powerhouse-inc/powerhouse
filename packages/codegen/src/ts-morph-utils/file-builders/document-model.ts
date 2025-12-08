@@ -149,9 +149,7 @@ async function generateDocumentModelForSpec({
   ensureDirectoriesExist(
     project,
     documentModelVersionDirPath,
-    srcDirPath,
     reducersDirPath,
-    genDirPath,
     testsDirPath,
     schemaDirPath,
     ...moduleDirPaths,
@@ -193,7 +191,21 @@ async function generateDocumentModelForSpec({
   makeGenDirFiles(fileMakerArgs);
   makeSrcDirFiles(fileMakerArgs);
   makeDocumentModelModulesFile(fileMakerArgs);
+
+  const previousVersionDirPath = getPreviousVersionDirPath(
+    documentModelDirPath,
+    version,
+  );
+
+  if (!previousVersionDirPath) return;
+
+  persistCustomFilesFromPreviousVersion({
+    project,
+    currentVersionDirPath: documentModelVersionDirPath,
+    previousVersionDirPath,
+  });
 }
+
 export async function tsMorphGenerateDocumentModel({
   projectDir,
   packageName,
@@ -290,4 +302,82 @@ export function makeDocumentModelModulesFile({
     variableName: documentModelModulesVariableName,
     variableType: documentModelModulesVariableType,
   });
+}
+
+function getPreviousVersionDirPath(
+  documentModelDirPath: string,
+  version: number,
+) {
+  const previousVersion = version - 1;
+  if (previousVersion < 1) return;
+
+  const previousVersionDirName = `v${previousVersion}`;
+
+  return path.join(documentModelDirPath, previousVersionDirName);
+}
+
+type PersistCustomFilesFromPreviousVersionArgs = {
+  project: Project;
+  currentVersionDirPath: string;
+  previousVersionDirPath: string;
+};
+function persistCustomFilesFromPreviousVersion(
+  args: PersistCustomFilesFromPreviousVersionArgs,
+) {
+  const { project, currentVersionDirPath, previousVersionDirPath } = args;
+  const currentVersionDir = project.getDirectoryOrThrow(currentVersionDirPath);
+
+  const previousVersionDir = project.getDirectory(previousVersionDirPath);
+
+  if (!previousVersionDir) return;
+
+  const currentVersionSourceFiles =
+    currentVersionDir.getDescendantSourceFiles();
+  const previousVersionSourceFiles =
+    previousVersionDir.getDescendantSourceFiles();
+  const currentVersionDirs = currentVersionDir.getDescendantDirectories();
+  const previousVersionDirs = previousVersionDir.getDescendantDirectories();
+
+  const previousVersionRelativeDirPaths = previousVersionDirs.map((d) =>
+    previousVersionDir.getRelativePathTo(d),
+  );
+  const currentVersionRelativeDirPaths = currentVersionDirs.map((d) =>
+    currentVersionDir.getRelativePathTo(d),
+  );
+
+  const missingDirPaths = previousVersionRelativeDirPaths.filter(
+    (p) => !currentVersionRelativeDirPaths.includes(p),
+  );
+
+  const missingDirs = previousVersionDirs.filter((f) =>
+    missingDirPaths.includes(previousVersionDir.getRelativePathTo(f)),
+  );
+
+  for (const dir of missingDirs) {
+    const relativePath = previousVersionDir.getRelativePathTo(dir);
+    const newDir = currentVersionDir.createDirectory(relativePath);
+    newDir.saveSync();
+  }
+
+  const previousVersionRelativeFilePaths = previousVersionSourceFiles.map((f) =>
+    previousVersionDir.getRelativePathTo(f),
+  );
+  const currentVersionRelativeFilePaths = currentVersionSourceFiles.map((f) =>
+    currentVersionDir.getRelativePathTo(f),
+  );
+
+  const missingFilePaths = previousVersionRelativeFilePaths.filter(
+    (p) => !currentVersionRelativeFilePaths.includes(p),
+  );
+
+  const missingFiles = previousVersionSourceFiles.filter((f) =>
+    missingFilePaths.includes(previousVersionDir.getRelativePathTo(f)),
+  );
+
+  for (const file of missingFiles) {
+    const relativePath = previousVersionDir.getRelativePathTo(file);
+    const fileText = file.getText();
+    const newFile = currentVersionDir.createSourceFile(relativePath, fileText);
+    newFile.saveSync();
+  }
 }
