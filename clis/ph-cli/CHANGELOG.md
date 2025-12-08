@@ -1,3 +1,13 @@
+## 5.1.0-dev.11 (2025-12-08)
+
+### 🩹 Fixes
+
+- **ph-cli:** setup service with global project ([186b0e64a](https://github.com/powerhouse-inc/powerhouse/commit/186b0e64a))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.1.0-dev.10 (2025-12-06)
 
 ### 🚀 Features
