@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-browser",
-  "version": "5.1.0-dev.4",
+  "version": "5.1.0-dev.14",
   "license": "AGPL-3.0-only",
   "type": "module",
   "repository": {
@@ -47,6 +47,7 @@
     "@types/wicg-file-system-access": "^2020.9.8",
     "@vitejs/plugin-react": "^5.0.4",
     "@vitest/browser": "^3.2.4",
+    "vite": "^7.1.9",
     "playwright": "^1.51.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -64,6 +65,7 @@
     "@powerhousedao/analytics-engine-browser": "^0.6.0",
     "@powerhousedao/analytics-engine-core": "^0.5.0",
     "@powerhousedao/config": "workspace:*",
+    "@powerhousedao/reactor": "workspace:*",
     "@renown/sdk": "workspace:*",
     "@tanstack/react-query": "^5.49.2",
     "change-case": "^5.4.4",

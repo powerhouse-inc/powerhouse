@@ -1,3 +1,70 @@
+## 5.1.0-dev.14 (2025-12-08)
+
+### 🚀 Features
+
+- **connect, switchboard:** added healthcheck route ([9a0671113](https://github.com/powerhouse-inc/powerhouse/commit/9a0671113))
+- **academy:** added docker build and publish workflow ([b17562994](https://github.com/powerhouse-inc/powerhouse/commit/b17562994))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.1.0-dev.13 (2025-12-08)
+
+This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
+
+## 5.1.0-dev.12 (2025-12-08)
+
+This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
+
+## 5.1.0-dev.11 (2025-12-08)
+
+This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
+
+## 5.1.0-dev.10 (2025-12-06)
+
+### 🚀 Features
+
+- **design-system:** added remotes inspector and channel inspector components ([093896ebf](https://github.com/powerhouse-inc/powerhouse/commit/093896ebf))
+- **design-system:** add async getTables prop and refresh functionality to db-explorer component ([85a9af1c0](https://github.com/powerhouse-inc/powerhouse/commit/85a9af1c0))
+- added db explorer component ([acbe5a0a5](https://github.com/powerhouse-inc/powerhouse/commit/acbe5a0a5))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 5.1.0-dev.9 (2025-12-05)
+
+### 🩹 Fixes
+
+- **renown:** small ui fixes and made connectcrypto and renown id available in hooks ([c06e17226](https://github.com/powerhouse-inc/powerhouse/commit/c06e17226))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.1.0-dev.8 (2025-12-05)
+
+This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
+
+## 5.1.0-dev.7 (2025-12-04)
+
+This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
+
+## 5.1.0-dev.6 (2025-12-04)
+
+### 🩹 Fixes
+
+- **renown:** build issues ([1893c35a0](https://github.com/powerhouse-inc/powerhouse/commit/1893c35a0))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.1.0-dev.5 (2025-12-04)
+
+This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
+
 ## 5.1.0-dev.4 (2025-12-03)
 
 ### 🚀 Features

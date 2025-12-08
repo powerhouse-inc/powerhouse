@@ -1,3 +1,97 @@
+## 5.1.0-dev.14 (2025-12-08)
+
+### 🚀 Features
+
+- **connect, switchboard:** added healthcheck route ([9a0671113](https://github.com/powerhouse-inc/powerhouse/commit/9a0671113))
+- **academy:** added docker build and publish workflow ([b17562994](https://github.com/powerhouse-inc/powerhouse/commit/b17562994))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.1.0-dev.13 (2025-12-08)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 5.1.0-dev.12 (2025-12-08)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 5.1.0-dev.11 (2025-12-08)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 5.1.0-dev.10 (2025-12-06)
+
+### 🚀 Features
+
+- **design-system:** added remotes inspector and channel inspector components ([093896ebf](https://github.com/powerhouse-inc/powerhouse/commit/093896ebf))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 5.1.0-dev.9 (2025-12-05)
+
+### 🩹 Fixes
+
+- **renown:** small ui fixes and made connectcrypto and renown id available in hooks ([c06e17226](https://github.com/powerhouse-inc/powerhouse/commit/c06e17226))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.1.0-dev.8 (2025-12-05)
+
+### 🩹 Fixes
+
+- linter ([b28b4bf43](https://github.com/powerhouse-inc/powerhouse/commit/b28b4bf43))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 5.1.0-dev.7 (2025-12-04)
+
+### 🩹 Fixes
+
+- set jsr as registry in dockerfiles ([291027b16](https://github.com/powerhouse-inc/powerhouse/commit/291027b16))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.1.0-dev.6 (2025-12-04)
+
+### 🚀 Features
+
+- adding reactor client and sync to connect store ([95db06a7d](https://github.com/powerhouse-inc/powerhouse/commit/95db06a7d))
+
+### 🩹 Fixes
+
+- **renown:** build issues ([1893c35a0](https://github.com/powerhouse-inc/powerhouse/commit/1893c35a0))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+
+## 5.1.0-dev.5 (2025-12-04)
+
+### 🚀 Features
+
+- added tests for signing and verification ([f9b7c95a8](https://github.com/powerhouse-inc/powerhouse/commit/f9b7c95a8))
+- connect crypto signer and verifier ([918fb1fab](https://github.com/powerhouse-inc/powerhouse/commit/918fb1fab))
+
+### 🩹 Fixes
+
+- build issues ([4825c1c01](https://github.com/powerhouse-inc/powerhouse/commit/4825c1c01))
+- adding ts reference ([491dd5c8f](https://github.com/powerhouse-inc/powerhouse/commit/491dd5c8f))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.4 (2025-12-03)
 
 ### 🚀 Features

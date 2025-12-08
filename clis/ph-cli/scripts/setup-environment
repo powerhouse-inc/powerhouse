@@ -6,6 +6,13 @@
 TARGET_TAG=${1:-"latest"}
 PROJECT_NAME=${2:-"global"}
 
+# Nginx config file name - remove leading dot to avoid hidden file issues
+# (nginx's include directive with * glob doesn't match hidden files)
+NGINX_CONFIG_NAME="${PROJECT_NAME#.}"
+if [ "$NGINX_CONFIG_NAME" = "" ]; then
+    NGINX_CONFIG_NAME="default-ph"
+fi
+
 # Function to find an available port
 find_available_port() {
     local port=4001
@@ -50,7 +57,8 @@ else
     # Connect Build
     # =============================================================================
     ph connect build
-    cp -r .ph/connect-build/dist /var/www/html/$PROJECT_NAME
+    sudo mkdir -p /var/www/html/$PROJECT_NAME
+    sudo cp -r .ph/connect-build/dist/* /var/www/html/$PROJECT_NAME/
 
     # =============================================================================
     # Database Configuration
@@ -73,6 +81,7 @@ else
         DB_NAME="powerhouse_$(echo "${PROJECT_NAME}" | tr '[:upper:]' '[:lower:]' | sed 's/\./_/g' | sed 's/[^a-z0-9]/_/g' | sed 's/^[^a-z]/p_/' | cut -c1-63)"
         
         # Check if database already exists
+        SKIP_DB_CREATE=false
         if sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw $DB_NAME; then
             echo "Database $DB_NAME already exists"
             read -p "Do you want to recreate it? (y/n): " recreate_db
@@ -80,10 +89,11 @@ else
                 sudo -u postgres psql -c "DROP DATABASE $DB_NAME;"
             else
                 echo "Using existing database"
+                SKIP_DB_CREATE=true
             fi
         fi
-        
-        # Create database and user if they don't exist
+
+        # Create user if it doesn't exist
         sudo -u postgres psql << EOF
 DO
 \$do\$
@@ -93,10 +103,15 @@ BEGIN
    END IF;
 END
 \$do\$;
-
-CREATE DATABASE $DB_NAME OWNER $DB_USER;
-GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;
 EOF
+
+        # Create database if needed
+        if [ "$SKIP_DB_CREATE" = "false" ]; then
+            sudo -u postgres psql -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;"
+        fi
+
+        # Grant privileges
+        sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;"
         
         # Configure PostgreSQL
         sudo sed -i "s/#listen_addresses = 'localhost'/listen_addresses = 'localhost'/" /etc/postgresql/*/main/postgresql.conf
@@ -113,8 +128,12 @@ EOF
         read -p "DATABASE_URL: " DATABASE_URL
     fi
 
-    # Save DATABASE_URL to .env file
-    echo "DATABASE_URL=$DATABASE_URL" | sudo tee -a .env
+    # Save DATABASE_URL to .env file (update if exists, append if not)
+    if grep -q "^DATABASE_URL=" .env 2>/dev/null; then
+        sudo sed -i "s|^DATABASE_URL=.*|DATABASE_URL=$DATABASE_URL|" .env
+    else
+        echo "DATABASE_URL=$DATABASE_URL" | sudo tee -a .env
+    fi
 
     # =============================================================================
     # SSL Configuration
@@ -127,8 +146,12 @@ EOF
     SWITCHBOARD_PORT=$(find_available_port)
     echo "Using port $SWITCHBOARD_PORT for Switchboard"
 
-    # Save Switchboard port to configuration
-    echo "SWITCHBOARD_PORT=$SWITCHBOARD_PORT" | sudo tee -a .env
+    # Save Switchboard port to configuration (update if exists, append if not)
+    if grep -q "^SWITCHBOARD_PORT=" .env 2>/dev/null; then
+        sudo sed -i "s|^SWITCHBOARD_PORT=.*|SWITCHBOARD_PORT=$SWITCHBOARD_PORT|" .env
+    else
+        echo "SWITCHBOARD_PORT=$SWITCHBOARD_PORT" | sudo tee -a .env
+    fi
 
     # Add compression settings to nginx.conf if not exists
     if ! grep -q "brotli_comp_level" /etc/nginx/nginx.conf || ! grep -q "gzip_comp_level" /etc/nginx/nginx.conf; then
@@ -171,7 +194,7 @@ EOF
 
         # Create initial Nginx configuration for certbot
         echo "Creating initial Nginx configuration..."
-        sudo tee /etc/nginx/sites-available/$PROJECT_NAME > /dev/null << EOF
+        sudo tee /etc/nginx/sites-available/$NGINX_CONFIG_NAME > /dev/null << EOF
 server {
     listen 80;
     server_name $connect_domain $switchboard_domain;
@@ -188,7 +211,7 @@ server {
 EOF
 
         # Enable the site
-        sudo ln -sf /etc/nginx/sites-available/$PROJECT_NAME /etc/nginx/sites-enabled/
+        sudo ln -sf /etc/nginx/sites-available/$NGINX_CONFIG_NAME /etc/nginx/sites-enabled/
         sudo rm -f /etc/nginx/sites-enabled/default
 
         # Test Nginx configuration
@@ -214,7 +237,7 @@ EOF
 
         # Update Nginx configuration with proper SSL settings
         echo "Updating Nginx configuration with SSL settings..."
-        sudo tee /etc/nginx/sites-available/$PROJECT_NAME > /dev/null << EOF
+        sudo tee /etc/nginx/sites-available/$NGINX_CONFIG_NAME > /dev/null << EOF
 server {
     listen 80;
     server_name $connect_domain $switchboard_domain;
@@ -331,7 +354,7 @@ EOF
 
         # Create Nginx configuration for self-signed
         echo "Creating Nginx configuration..."
-        sudo tee /etc/nginx/sites-available/$PROJECT_NAME > /dev/null << EOF
+        sudo tee /etc/nginx/sites-available/$NGINX_CONFIG_NAME > /dev/null << EOF
 server {
     listen 80;
     server_name $hostname;
@@ -342,24 +365,32 @@ server {
     listen 443 ssl;
     http2 on;
     server_name $hostname;
-    
+
     ssl_certificate /etc/ssl/certs/$hostname.crt;
     ssl_certificate_key /etc/ssl/private/$hostname.key;
-    
-    location /connect {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_cache_bypass \$http_upgrade;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
+
+    # SSL configuration
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:SSL:50m;
+    ssl_session_tickets off;
+
+    # Security headers
+    add_header Strict-Transport-Security "max-age=63072000" always;
+    add_header X-Frame-Options DENY;
+    add_header X-Content-Type-Options nosniff;
+    add_header X-XSS-Protection "1; mode=block";
+
+    location / {
+        root /var/www/html/$PROJECT_NAME;
+        try_files \$uri \$uri/ /index.html;
+        add_header Cache-Control "no-cache";
     }
 
-    location /switchboard {
-        proxy_pass http://localhost:$SWITCHBOARD_PORT;
+    location /switchboard/ {
+        proxy_pass http://localhost:$SWITCHBOARD_PORT/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -373,11 +404,11 @@ server {
 EOF
 
         # Enable the site
-        sudo ln -sf /etc/nginx/sites-available/$PROJECT_NAME /etc/nginx/sites-enabled/
+        sudo ln -sf /etc/nginx/sites-available/$NGINX_CONFIG_NAME /etc/nginx/sites-enabled/
         sudo rm -f /etc/nginx/sites-enabled/default
 
-        # Test Nginx configuration
-        sudo nginx -t
+        # Test and reload Nginx configuration
+        sudo nginx -t && sudo systemctl reload nginx
     fi
 
     # =============================================================================

@@ -7,10 +7,7 @@ import {
 import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { generateId } from "document-model/core";
-import {
-  initFeatureFlags,
-  isDualActionCreateEnabled,
-} from "../feature-flags.js";
+import { initFeatureFlags } from "../feature-flags.js";
 import { logger } from "../logger.js";
 import { createServer } from "../server.js";
 import { VitePackageLoader } from "./loader.js";
@@ -67,10 +64,9 @@ export async function initStdioMcpServer(options?: IMcpOptions) {
   }
 
   // initializes reactor with loaded document models
-  const dualActionCreateEnabled = await isDualActionCreateEnabled();
   const reactor = await createReactor(documentModels, {
     featureFlags: {
-      enableDualActionCreate: dualActionCreateEnabled,
+      enableDualActionCreate: true,
     },
   });
 

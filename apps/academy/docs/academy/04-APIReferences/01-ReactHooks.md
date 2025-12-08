@@ -36,8 +36,8 @@ It's important to note that a function should only be named and treated as a hoo
 
 This library provides hooks intended to be used by editors (including drive editors) which will be rendered inside of Powerhouse host-applications such as Connect, Switchboard, Fusion or a Vetra Studio Drive.
 
-Learn more about the [Editors](/academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors)
-Learn more about the [Drive Editors](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer)
+- Learn more about the [Editors](/academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors)
+- Learn more about the [Drive Editors](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer)
 
 ## Key concepts
 

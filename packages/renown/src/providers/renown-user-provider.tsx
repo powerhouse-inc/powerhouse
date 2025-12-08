@@ -5,6 +5,7 @@ import type { IConnectCrypto } from "../crypto/index.js";
 import { BrowserKeyStorage, ConnectCrypto } from "../crypto/index.js";
 import { initRenown } from "../init.browser.js";
 import type { LoginStatus, User } from "../lib/renown/index.js";
+import type { IRenown } from "../types.js";
 import {
   fetchProfileDataForUser,
   handleRenownReturn,
@@ -14,8 +15,8 @@ import {
 } from "../lib/renown/index.js";
 import { SessionStorageManager } from "../lib/session-storage.js";
 
-// User Context
-export interface UserContextValue {
+// Renown User Context
+export interface RenownUserContextValue {
   /** Current authenticated user, null if not authenticated */
   user: User | null;
   /** Current login status */
@@ -30,11 +31,17 @@ export interface UserContextValue {
   logout: () => Promise<void>;
   /** Open Renown portal for authentication */
   openRenown: () => void;
+  /** ConnectCrypto instance for cryptographic operations */
+  connectCrypto: IConnectCrypto | null;
+  /** Renown SDK instance */
+  renown: IRenown | null;
 }
 
-export const UserContext = createContext<UserContextValue | null>(null);
+export const RenownUserContext = createContext<RenownUserContextValue | null>(
+  null,
+);
 
-interface UserProviderProps {
+interface RenownUserProviderProps {
   children: React.ReactNode;
   /**
    * Renown service URL
@@ -64,7 +71,7 @@ interface UserProviderProps {
 }
 
 /**
- * UserProvider - Central user provider for Renown
+ * RenownUserProvider - Central user provider for Renown
  *
  * Automatically initializes the Renown SDK and provides user state.
  * Handles initialization, login, logout, and session management.
@@ -72,27 +79,31 @@ interface UserProviderProps {
  * Usage:
  * ```tsx
  * // Wrap your app
- * <UserProvider renownUrl="https://www.renown.id">
+ * <RenownUserProvider renownUrl="https://www.renown.id">
  *   <YourApp />
- * </UserProvider>
+ * </RenownUserProvider>
  *
  * // In any component
  * const { user, login, logout } = useUser()
  * ```
  */
-export function UserProvider({
+export function RenownUserProvider({
   children,
   renownUrl = "https://www.renown.id",
   networkId = "eip155",
   chainId = "1",
   loadingComponent,
   errorComponent,
-}: UserProviderProps) {
+}: RenownUserProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loginStatus, setLoginStatus] = useState<LoginStatus>("initial");
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [initError, setInitError] = useState<Error | null>(null);
+  const [connectCrypto, setConnectCrypto] = useState<IConnectCrypto | null>(
+    null,
+  );
+  const [renown, setRenown] = useState<IRenown | null>(null);
 
   // Initialize auth system
   useEffect(() => {
@@ -106,18 +117,26 @@ export function UserProvider({
         // Initialize SDK if not already initialized
         if (!window.renown || !window.connectCrypto) {
           // Initialize ConnectCrypto with browser key storage
-          const connectCrypto = new ConnectCrypto(new BrowserKeyStorage());
+          const cryptoInstance = new ConnectCrypto(new BrowserKeyStorage());
 
           // Initialize Renown SDK
-          const renown = initRenown(
-            await connectCrypto.did(),
+          const renownInstance = initRenown(
+            await cryptoInstance.did(),
             networkId,
             renownUrl,
           );
 
           // Attach to window for global access
-          window.renown = renown;
-          window.connectCrypto = connectCrypto;
+          window.renown = renownInstance;
+          window.connectCrypto = cryptoInstance;
+
+          // Save to state
+          setConnectCrypto(cryptoInstance);
+          setRenown(renownInstance);
+        } else {
+          // Use existing instances from window
+          setConnectCrypto(window.connectCrypto as IConnectCrypto);
+          setRenown(window.renown);
         }
 
         // Check for stored session first
@@ -239,7 +258,13 @@ export function UserProvider({
     login,
     logout,
     openRenown,
+    connectCrypto,
+    renown,
   };
 
-  return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
+  return (
+    <RenownUserContext.Provider value={value}>
+      {children}
+    </RenownUserContext.Provider>
+  );
 }

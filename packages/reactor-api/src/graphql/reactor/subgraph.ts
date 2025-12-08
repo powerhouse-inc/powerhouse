@@ -1,8 +1,9 @@
-import { childLogger } from "document-drive";
+import { ConsoleLogger } from "@powerhousedao/reactor";
 import fs from "fs";
 import { withFilter } from "graphql-subscriptions";
 import { gql } from "graphql-tag";
 import path from "path";
+import { fileURLToPath } from "url";
 import { BaseSubgraph } from "../base-subgraph.js";
 import type { SubgraphArgs } from "../types.js";
 import {
@@ -21,11 +22,12 @@ import {
 } from "./pubsub.js";
 import * as resolvers from "./resolvers.js";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 export class ReactorSubgraph extends BaseSubgraph {
-  private logger = childLogger([
-    "ReactorSubgraph",
-    Math.floor(Math.random() * 999).toString(),
-  ]);
+  // temp
+  private logger = new ConsoleLogger(["ReactorSubgraph"]);
 
   constructor(args: SubgraphArgs) {
     super(args);

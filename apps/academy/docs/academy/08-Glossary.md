@@ -13,13 +13,17 @@
 
 ## Software Components
 
+- **Model Context Protocol (MCP)** – A standardized protocol that enables AI agents and external tools to interact with systems through structured operations. Powerhouse uses MCP to provide AI access to document management capabilities.
 - **Reactor** – A storage node for Powerhouse documents and files with multiple storage adapters (local, cloud, decentralized).
+- **Reactor-MCP** – A Model Context Protocol server for the Powerhouse ecosystem that provides AI agents and tools with structured access to document model operations, serving as a bridge between AI systems and Powerhouse document management infrastructure.
 - **Powerhouse Switchboard** – A scalable API service that aggregates and processes document data.
 - **Powerhouse Fusion** – A platform front-end that hosts the public marketplace for SNO interactions.
 - **Powerhouse Renown** – A decentralized authentication system managing contributor reputation.
 - **Powerhouse Academy** – A training platform for onboarding and upskilling SNO contributors.
 - **Connect** – The contributor's public or private workspace, serving as the entry point for individual contributors to install apps and packages for specific business solutions.
 - **Powergrid** – A decentralized network of reactors that sync with each other.
+- **Preview Drive** – A local drive created in `--watch` mode during `ph vetra` development, used for testing local document models and editors without affecting the main synced drive.
+- **Remote Drive** – A Powerhouse drive hosted on a remote server (e.g., Vetra) that syncs across team members, enabling collaborative development on shared documents and document models.
 - **Powerhouse CLI (ph)** – The command-line tool for Powerhouse project initialization, code generation, package management, and running local development environments (Connect Studio). It also manages services, ensuring the terminology aligns with the updated setup guide.
 - **Connect App (Connect Studio)** – The primary Powerhouse application for defining document models, building/testing editors (in Studio mode), and collaborating on documents.
 - **Document Tools** – Built-in features within Powerhouse applications (e.g., Connect) that assist with document management, inspection, and interaction, such as Operations History.
@@ -74,10 +78,13 @@
 - **State (Local State in Editor)** – Temporary, UI-specific data within an editor (e.g., form inputs), not persisted in the global document state.
 - **Storybook (for Powerhouse Design System)** – Interactive environment for browsing and testing Powerhouse Design System UI components.
 - **Tailwind CSS (in Connect Studio)** – Utility CSS framework integrated into Connect Studio for styling document editors.
+- **Vetra** – A Powerhouse platform for hosting remote drives, enabling collaborative development and document synchronization across team members.
+- **Watch Mode (`--watch`)** – A development mode flag for `ph vetra` that enables dynamic loading of local document models and editors, creating a separate Preview Drive for testing changes in real-time.
 
 ## AI & Automation
 
 - **AI Assistants** – AI-powered contributors paired with human contributors to automate tasks and improve productivity.
+- **Document Model Agent** – A specialized AI agent that guides users through creating document models, handling requirements gathering, design confirmation, and implementation using MCP tools for state schema definition, operation creation, and code generation.
 - **AI Contributor Modes** – Configurable states that determine the AI assistant's behavior, permissions, and task focus.
 - **Task Automation & Scaling** – The use of AI to streamline repetitive tasks, improve communications, and enhance decision-making.
 - **Decentralized Identifier (DID)** – A user-controlled, globally unique ID, used in Renown to link a user's blockchain key to actions pseudonymously.

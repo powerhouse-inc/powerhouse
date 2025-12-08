@@ -13,14 +13,14 @@ Complete API reference for the Renown SDK.
 
 ## Components
 
-### `UserProvider`
+### `RenownUserProvider`
 
 Central authentication provider that automatically initializes the Renown SDK.
 
 #### Props
 
 ```typescript
-interface UserProviderProps {
+interface RenownUserProviderProps {
   children: React.ReactNode
   renownUrl?: string
   networkId?: string
@@ -43,14 +43,14 @@ interface UserProviderProps {
 
 **Basic usage (auto-initializes with defaults):**
 ```typescript
-<UserProvider>
+<RenownUserProvider>
   <App />
-</UserProvider>
+</RenownUserProvider>
 ```
 
 **With custom configuration:**
 ```typescript
-<UserProvider
+<RenownUserProvider
   renownUrl={process.env.NEXT_PUBLIC_RENOWN_URL}
   networkId="eip155"
   chainId="1"
@@ -69,7 +69,7 @@ interface UserProviderProps {
   )}
 >
   <App />
-</UserProvider>
+</RenownUserProvider>
 ```
 
 #### Behavior
@@ -139,6 +139,63 @@ import { RenownAuthButton } from '@renown/sdk'
 
 ---
 
+### `RenownLoginButton`
+
+A login button with Renown branding. By default, clicking the button triggers login directly. Optionally shows a popover with connect option.
+
+#### Props
+
+```typescript
+interface RenownLoginButtonProps {
+  onLogin: (() => void) | undefined
+  darkMode?: boolean
+  style?: CSSProperties
+  className?: string
+  renderTrigger?: (props: {
+    onMouseEnter: () => void
+    onMouseLeave: () => void
+    isLoading: boolean
+  }) => ReactNode
+  showPopover?: boolean
+}
+```
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `onLogin` | `() => void \| undefined` | - | Callback when login is requested |
+| `darkMode` | `boolean` | `false` | Enable dark mode styling |
+| `style` | `CSSProperties` | - | Custom styles for the button |
+| `className` | `string` | - | Custom class name |
+| `renderTrigger` | `function` | - | Custom render function for the trigger button |
+| `showPopover` | `boolean` | `false` | Show a popover with connect option instead of triggering login directly |
+
+#### Example
+
+```typescript
+import { RenownLoginButton } from '@renown/sdk'
+
+// Direct login (default) - clicks trigger onLogin immediately
+<RenownLoginButton onLogin={handleLogin} />
+
+// With popover - shows hover popover with "Connect" button
+<RenownLoginButton onLogin={handleLogin} showPopover />
+
+// Dark mode
+<RenownLoginButton onLogin={handleLogin} darkMode />
+
+// Custom trigger
+<RenownLoginButton
+  onLogin={handleLogin}
+  renderTrigger={({ onMouseEnter, onMouseLeave, isLoading }) => (
+    <button onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
+      {isLoading ? 'Loading...' : 'Sign In'}
+    </button>
+  )}
+/>
+```
+
+---
+
 ## Hooks
 
 ### `useUser()`
@@ -148,7 +205,7 @@ Access authentication state and methods.
 #### Returns
 
 ```typescript
-interface UserContextValue {
+interface RenownUserContextValue {
   user: User | null
   loginStatus: LoginStatus
   isLoading: boolean
@@ -156,6 +213,8 @@ interface UserContextValue {
   login: (userDid?: string) => Promise<void>
   logout: () => Promise<void>
   openRenown: () => void
+  connectCrypto: IConnectCrypto | null
+  renown: IRenown | null
 }
 ```
 
@@ -168,6 +227,8 @@ interface UserContextValue {
 | `login` | `function` | Authenticate with optional DID |
 | `logout` | `function` | Log out current user |
 | `openRenown` | `function` | Open Renown authentication portal |
+| `connectCrypto` | `IConnectCrypto \| null` | ConnectCrypto instance for cryptographic operations |
+| `renown` | `IRenown \| null` | Renown SDK instance |
 
 #### Example
 
@@ -179,7 +240,9 @@ function MyComponent() {
     isLoading,
     login,
     logout,
-    openRenown
+    openRenown,
+    connectCrypto,
+    renown
   } = useUser()
 
   if (isLoading) return <div>Loading...</div>
@@ -190,10 +253,10 @@ function MyComponent() {
 
 #### Throws
 
-Throws an error if used outside of `<UserProvider>`:
+Throws an error if used outside of `<RenownUserProvider>`:
 
 ```
-Error: useUser must be used within an UserProvider
+Error: useUser must be used within a RenownUserProvider
 ```
 
 ---
@@ -527,12 +590,12 @@ type LoginStatus =
 
 ---
 
-### `UserContextValue`
+### `RenownUserContextValue`
 
 Type for the authentication context value.
 
 ```typescript
-interface UserContextValue {
+interface RenownUserContextValue {
   user: User | null
   loginStatus: LoginStatus
   isLoading: boolean
@@ -540,6 +603,8 @@ interface UserContextValue {
   login: (userDid?: string) => Promise<void>
   logout: () => Promise<void>
   openRenown: () => void
+  connectCrypto: IConnectCrypto | null
+  renown: IRenown | null
 }
 ```
 
@@ -810,16 +875,16 @@ if (window.connectCrypto) {
 
 ### Common Errors
 
-#### `useUser must be used within an UserProvider`
+#### `useUser must be used within a RenownUserProvider`
 
-**Cause:** Using `useUser()` outside of `<UserProvider>`
+**Cause:** Using `useUser()` outside of `<RenownUserProvider>`
 
-**Solution:** Wrap your component tree with `<UserProvider>`
+**Solution:** Wrap your component tree with `<RenownUserProvider>`
 
 ```typescript
-<UserProvider>
+<RenownUserProvider>
   <YourComponent /> {/* ✅ Can use useUser */}
-</UserProvider>
+</RenownUserProvider>
 ```
 
 #### `Invalid DID format`
@@ -840,15 +905,15 @@ if (window.connectCrypto) {
 
 **Cause:** SDK initialization failed
 
-**Solution:** The UserProvider automatically initializes the SDK. If you see this error:
+**Solution:** The RenownUserProvider automatically initializes the SDK. If you see this error:
 
-1. Check that `<UserProvider>` is mounted
+1. Check that `<RenownUserProvider>` is mounted
 2. Check browser console for initialization errors
 3. Verify network connectivity to Renown service
 4. Try providing an `errorComponent` prop to see detailed error messages
 
 ```typescript
-<UserProvider
+<RenownUserProvider
   errorComponent={(error, retry) => (
     <div>
       <p>Init failed: {error.message}</p>
@@ -857,7 +922,7 @@ if (window.connectCrypto) {
   )}
 >
   <App />
-</UserProvider>
+</RenownUserProvider>
 ```
 
 ---
@@ -870,7 +935,7 @@ The SDK is fully typed. Import types as needed:
 import type {
   User,
   LoginStatus,
-  UserContextValue,
+  RenownUserContextValue,
   IRenown,
   IConnectCrypto,
 } from '@renown/sdk'
@@ -889,6 +954,4 @@ import type {
 
 ## Related Documentation
 
-- [Authentication Guide](./AUTHENTICATION.md) - Comprehensive auth implementation guide
-- [Migration Guide](./MIGRATION.md) - Upgrading from older versions
-- [Examples](../examples/) - Full implementation examples
+- [Authentication Guide](./01-Authentication.md) - Comprehensive auth implementation guide

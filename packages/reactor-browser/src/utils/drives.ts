@@ -7,6 +7,7 @@ import type {
 } from "document-drive";
 import { SynchronizationUnitNotFoundError } from "document-drive";
 import type { PHDocument } from "document-model";
+import { isLegacyReadEnabledSync } from "../hooks/use-feature-flags.js";
 
 function handleSettledResults<T>(results: PromiseSettledResult<T>[]): T[] {
   return results.reduce((acc, result) => {
@@ -124,18 +125,27 @@ export function getSyncStatus(
   sharingType: SharingType,
 ): Promise<SyncStatus | undefined> {
   if (sharingType === "LOCAL") return Promise.resolve(undefined);
-  const reactor = window.ph?.reactor;
-  if (!reactor) {
+
+  const useLegacy = isLegacyReadEnabledSync();
+
+  if (useLegacy) {
+    const reactor = window.ph?.legacyReactor;
+    if (!reactor) {
+      return Promise.resolve(undefined);
+    }
+    try {
+      const syncStatus = reactor.getSyncStatus(documentId);
+      if (syncStatus instanceof SynchronizationUnitNotFoundError)
+        return Promise.resolve("INITIAL_SYNC");
+      return Promise.resolve(syncStatus);
+    } catch (error) {
+      console.error(error);
+      return Promise.resolve("ERROR");
+    }
+  } else {
+    // TODO: Implement sync status via ReactorClient/SyncManager
+    // For now, return undefined as sync status is managed differently
     return Promise.resolve(undefined);
-  }
-  try {
-    const syncStatus = reactor.getSyncStatus(documentId);
-    if (syncStatus instanceof SynchronizationUnitNotFoundError)
-      return Promise.resolve("INITIAL_SYNC");
-    return Promise.resolve(syncStatus);
-  } catch (error) {
-    console.error(error);
-    return Promise.resolve("ERROR");
   }
 }
 
@@ -144,18 +154,27 @@ export function getSyncStatusSync(
   sharingType: SharingType,
 ): SyncStatus | undefined {
   if (sharingType === "LOCAL") return;
-  const reactor = window.ph?.reactor;
-  if (!reactor) {
-    return;
-  }
-  try {
-    const syncStatus = reactor.getSyncStatus(documentId);
-    if (syncStatus instanceof SynchronizationUnitNotFoundError)
-      return "INITIAL_SYNC";
-    return syncStatus;
-  } catch (error) {
-    console.error(error);
-    return "ERROR";
+
+  const useLegacy = isLegacyReadEnabledSync();
+
+  if (useLegacy) {
+    const reactor = window.ph?.legacyReactor;
+    if (!reactor) {
+      return;
+    }
+    try {
+      const syncStatus = reactor.getSyncStatus(documentId);
+      if (syncStatus instanceof SynchronizationUnitNotFoundError)
+        return "INITIAL_SYNC";
+      return syncStatus;
+    } catch (error) {
+      console.error(error);
+      return "ERROR";
+    }
+  } else {
+    // TODO: Implement sync status via ReactorClient/SyncManager
+    // For now, return undefined as sync status is managed differently
+    return undefined;
   }
 }
 

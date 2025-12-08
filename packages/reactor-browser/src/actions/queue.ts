@@ -6,61 +6,89 @@ import type {
   Operation,
   PHDocument,
 } from "document-model";
+import { isLegacyWriteEnabledSync } from "../hooks/use-feature-flags.js";
 
 export async function queueActions(
   document: PHDocument | undefined,
   actionOrActions: Action[] | Action | undefined,
 ) {
+  if (!document) {
+    throw new Error("No document provided");
+  }
   if (!actionOrActions) {
-    logger.error("No actions found");
-    return;
+    throw new Error("No actions provided");
   }
   const actions = Array.isArray(actionOrActions)
     ? actionOrActions
     : [actionOrActions];
 
   if (actions.length === 0) {
-    logger.error("No actions found");
-    return;
-  }
-  const reactor = window.ph?.reactor;
-  if (!reactor) {
-    return;
-  }
-  if (!document) {
-    logger.error("No document found");
-    return;
+    throw new Error("No actions provided");
   }
 
-  const result = await reactor.queueActions(document.header.id, actions);
-  if (result.status !== "SUCCESS") {
-    logger.error(result.error);
+  const useLegacy = isLegacyWriteEnabledSync();
+
+  if (useLegacy) {
+    const reactor = window.ph?.legacyReactor;
+    if (!reactor) {
+      throw new Error("Legacy reactor not initialized");
+    }
+
+    const result = await reactor.queueActions(document.header.id, actions);
+    if (result.status !== "SUCCESS") {
+      logger.error(result.error);
+    }
+    return result.document;
+  } else {
+    const reactorClient = window.ph?.reactorClient;
+    if (!reactorClient) {
+      throw new Error("ReactorClient not initialized");
+    }
+
+    return await reactorClient.execute(document.header.id, "main", actions);
   }
-  return result.document;
 }
 
 export async function queueOperations(
   documentId: string,
   operationOrOperations: Operation[] | Operation | undefined,
 ) {
+  if (!documentId) {
+    throw new Error("No documentId provided");
+  }
   if (!operationOrOperations) {
-    logger.error("No operations found");
-    return;
+    throw new Error("No operations provided");
   }
   const operations = Array.isArray(operationOrOperations)
     ? operationOrOperations
     : [operationOrOperations];
 
-  const reactor = window.ph?.reactor;
-  if (!reactor) {
-    return;
+  if (operations.length === 0) {
+    throw new Error("No operations provided");
   }
 
-  const result = await reactor.queueOperations(documentId, operations);
-  if (result.status !== "SUCCESS") {
-    logger.error(result.error);
+  const useLegacy = isLegacyWriteEnabledSync();
+
+  if (useLegacy) {
+    const reactor = window.ph?.legacyReactor;
+    if (!reactor) {
+      throw new Error("Legacy reactor not initialized");
+    }
+
+    const result = await reactor.queueOperations(documentId, operations);
+    if (result.status !== "SUCCESS") {
+      logger.error(result.error);
+    }
+    return result.document;
+  } else {
+    const reactorClient = window.ph?.reactorClient;
+    if (!reactorClient) {
+      throw new Error("ReactorClient not initialized");
+    }
+
+    const actions = operations.map((op) => op.action);
+    return await reactorClient.execute(documentId, "main", actions);
   }
-  return result.document;
 }
 
 export function deduplicateOperations(

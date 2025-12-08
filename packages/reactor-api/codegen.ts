@@ -15,11 +15,11 @@ const config: CodegenConfig = {
       config: {
         contextType: "../../types.js#Context",
         scalars: {
-          JSONObject: "any",
+          JSONObject: "NonNullable<unknown>",
           DateTime: "string | Date",
         },
         scalarSchemas: {
-          JSONObject: "z.unknown()",
+          JSONObject: "z.custom<NonNullable<unknown>>((v) => v != null)",
           DateTime: "z.union([z.string(), z.date()])",
         },
         useIndexSignature: true,

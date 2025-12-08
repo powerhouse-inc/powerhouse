@@ -5,11 +5,12 @@ export {
   type DocumentChangeEvent,
   type IReactorClient,
 } from "./client/types.js";
-export { ReactorClientBuilder } from "./core/builder.js";
 export { ReactorBuilder } from "./core/reactor-builder.js";
+export { ReactorClientBuilder } from "./core/reactor-client-builder.js";
 export { Reactor } from "./core/reactor.js";
 export {
   type IReactor,
+  type ReactorClientModule,
   type ReactorFeatures,
   type ReactorModule,
   type SyncModule,
@@ -35,6 +36,11 @@ export {
   type ShutdownStatus,
   type ViewFilter,
 } from "./shared/types.js";
+export {
+  type ISigner,
+  type SignatureVerificationHandler,
+  type SignerConfig,
+} from "./signer/types.js";
 
 // Subscription Manager
 export { DefaultSubscriptionErrorHandler } from "./subs/default-error-handler.js";
@@ -124,10 +130,11 @@ export { KyselyDocumentIndexer } from "./storage/kysely/document-indexer.js";
 export { KyselyKeyframeStore } from "./storage/kysely/keyframe-store.js";
 export { KyselyOperationStore } from "./storage/kysely/store.js";
 export type {
-  Database,
+  Database as StorageDatabase,
   DocumentIndexerDatabase,
   OperationTable,
 } from "./storage/kysely/types.js";
+export type { Database } from "./core/types.js";
 
 // Read Models
 export { ReadModelCoordinator } from "./read-models/coordinator.js";
@@ -151,25 +158,34 @@ export type {
 } from "./cache/write-cache-types.js";
 export { type IWriteCache } from "./cache/write/interfaces.js";
 
+// Logging
+export { ConsoleLogger } from "./logging/console.js";
+export { type ILogger } from "./logging/types.js";
+
 // Synchronization
 export {
+  KyselySyncCursorStorage,
+  KyselySyncRemoteStorage,
+  type ISyncCursorStorage,
+  type ISyncRemoteStorage,
+} from "./storage/index.js";
+export {
   ChannelError,
-  InternalChannelError,
-  InternalChannel,
+  ChannelErrorSource,
   GqlChannelFactory,
-  SyncOperation,
-  SyncOperationAggregateError,
+  InternalChannel,
+  InternalChannelError,
   Mailbox,
   SyncBuilder,
+  SyncOperation,
+  SyncOperationAggregateError,
+  SyncOperationStatus,
   type ChannelConfig,
   type ChannelHealth,
   type ChannelMeta,
-  ChannelErrorSource,
   type IChannel,
   type IChannelFactory,
   type ISyncManager,
-  type SyncOperationErrorType,
-  SyncOperationStatus,
   type MailboxItem,
   type Remote,
   type RemoteCursor,
@@ -179,10 +195,5 @@ export {
   type RemoteStatus,
   type SyncEnvelope,
   type SyncEnvelopeType,
+  type SyncOperationErrorType,
 } from "./sync/index.js";
-export {
-  KyselySyncCursorStorage,
-  KyselySyncRemoteStorage,
-  type ISyncCursorStorage,
-  type ISyncRemoteStorage,
-} from "./storage/index.js";

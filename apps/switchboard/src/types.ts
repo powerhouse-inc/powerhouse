@@ -30,9 +30,6 @@ export type StartServerOptions = {
   mcp?: boolean;
   processorConfig?: Map<string, unknown>;
   disableLocalPackages?: boolean;
-  subgraphs?: {
-    isReactorv2Enabled?: boolean;
-  };
   reactorOptions?: {
     enableDualActionCreate?: boolean;
   };

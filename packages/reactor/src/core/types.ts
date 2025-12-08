@@ -30,6 +30,7 @@ import type {
   ShutdownStatus,
   ViewFilter,
 } from "../shared/types.js";
+import type { IJobAwaiter } from "../shared/awaiter.js";
 import type { ISigner } from "../signer/types.js";
 import type {
   IDocumentIndexer,
@@ -43,7 +44,9 @@ import type {
   DocumentIndexerDatabase,
   Database as StorageDatabase,
 } from "../storage/kysely/types.js";
+import type { IReactorSubscriptionManager } from "../subs/types.js";
 import type { IChannelFactory, ISyncManager } from "../sync/interfaces.js";
+import type { ReactorClient } from "../client/reactor-client.js";
 
 /**
  * A single mutation job within a batch request.
@@ -356,4 +359,20 @@ export interface ReactorModule {
   readModelCoordinator: IReadModelCoordinator;
   syncModule: SyncModule | undefined;
   reactor: IReactor;
+}
+
+/**
+ * Container for all reactor client dependencies created during the build process.
+ * Provides direct access to internal components for advanced use cases,
+ * testing, or integration scenarios.
+ */
+export interface ReactorClientModule {
+  client: ReactorClient;
+  reactor: IReactor;
+  eventBus: IEventBus;
+  documentIndexer: IDocumentIndexer;
+  signer: ISigner;
+  subscriptionManager: IReactorSubscriptionManager;
+  jobAwaiter: IJobAwaiter;
+  reactorModule: ReactorModule | undefined;
 }

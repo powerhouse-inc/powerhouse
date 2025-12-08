@@ -1,10 +1,10 @@
-import { PubSub } from "graphql-subscriptions";
 import type {
   DocumentChangeEvent,
   IReactorClient,
   SearchFilter,
   ViewFilter,
 } from "@powerhousedao/reactor";
+import { PubSub } from "graphql-subscriptions";
 
 const pubSub = new PubSub();
 
@@ -35,7 +35,7 @@ export interface JobChangesPayload {
     createdAt: string;
     completedAt: string | null;
     error: string | null;
-    result: unknown;
+    result: NonNullable<unknown>;
   };
   jobId: string;
 }
@@ -102,7 +102,8 @@ export function ensureJobSubscription(
           createdAt: jobInfo.createdAtUtcIso,
           completedAt: jobInfo.completedAtUtcIso ?? null,
           error: jobInfo.error?.message ?? null,
-          result: jobInfo.result ?? null,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          result: jobInfo.result ?? {},
         },
         jobId,
       };

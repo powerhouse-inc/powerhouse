@@ -1,4 +1,16 @@
-import { createRemoveOldRemoteDrivesConfig } from "./drive-preservation.js";
+import { PGlite } from "@electric-sql/pglite";
+import {
+  type Database,
+  GqlChannelFactory,
+  ReactorBuilder,
+  ReactorClientBuilder,
+  SyncBuilder,
+  type ReactorClientModule,
+  type SignerConfig,
+} from "@powerhousedao/reactor";
+import { Kysely } from "kysely";
+import { PGliteDialect } from "kysely-pglite-dialect";
+import type { IConnectCrypto } from "@renown/sdk";
 import type {
   DefaultRemoteDriveInput,
   DocumentDriveServerOptions,
@@ -12,9 +24,11 @@ import {
   BrowserStorage,
   EventQueueManager,
   InMemoryCache,
-  ReactorBuilder,
+  ReactorBuilder as LegacyReactorBuilder,
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
+import { createRemoveOldRemoteDrivesConfig } from "./drive-preservation.js";
+import { ConnectCryptoSigner, createSignatureVerifier } from "./signer.js";
 
 const DEFAULT_DRIVES_URL =
   (import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL as string | undefined) ||
@@ -80,7 +94,7 @@ export function createBrowserDocumentDriveServer(
   storage: IDriveOperationStorage,
   options: DocumentDriveServerOptions,
 ): IDocumentDriveServer {
-  return new ReactorBuilder(documentModels)
+  return new LegacyReactorBuilder(documentModels)
     .withStorage(storage)
     .withCache(new InMemoryCache())
     .withQueueManager(new EventQueueManager())
@@ -89,4 +103,39 @@ export function createBrowserDocumentDriveServer(
       ...getReactorDefaultDrivesConfig(),
     })
     .build();
+}
+
+/**
+ * Creates a Reactor that plugs into legacy storage but syncs through the new
+ * Reactor GQL API.
+ */
+export function createBrowserReactor(
+  documentModelModules: DocumentModelModule[],
+  legacyStorage: IDocumentStorage & IDocumentOperationStorage,
+  connectCrypto: IConnectCrypto,
+): Promise<ReactorClientModule> {
+  const signerConfig: SignerConfig = {
+    signer: new ConnectCryptoSigner(connectCrypto),
+    verifier: createSignatureVerifier(),
+  };
+  const builder = new ReactorClientBuilder()
+    .withSigner(signerConfig)
+    .withReactorBuilder(
+      new ReactorBuilder()
+        .withDocumentModels(documentModelModules)
+        .withLegacyStorage(legacyStorage)
+        .withSync(new SyncBuilder().withChannelFactory(new GqlChannelFactory()))
+        .withFeatures({ legacyStorageEnabled: true })
+        .withKysely(
+          new Kysely<Database>({
+            dialect: new PGliteDialect(
+              new PGlite("idb://reactor", {
+                relaxedDurability: true,
+              }),
+            ),
+          }),
+        ),
+    );
+
+  return builder.buildModule();
 }

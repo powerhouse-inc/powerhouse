@@ -1,7 +1,8 @@
 import { addFile, addFolder, setDriveName } from "document-drive";
 import { generateId } from "document-model/core";
+import { PGlite } from "@electric-sql/pglite";
 import { Kysely } from "kysely";
-import { KyselyPGlite } from "kysely-pglite";
+import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
 import type { DocumentViewDatabase } from "../../../src/read-models/types.js";
@@ -23,8 +24,7 @@ describe("KyselyDocumentView", () => {
 
   beforeEach(async () => {
     // Create in-memory PGLite database for testing
-    const kyselyPGlite = await KyselyPGlite.create();
-    dialect = kyselyPGlite.dialect;
+    dialect = new PGliteDialect(new PGlite());
     db = new Kysely<Database>({
       dialect,
     });

@@ -1,2 +1,5 @@
-export { UserProvider, UserContext } from "./user-provider.js";
-export type { UserContextValue } from "./user-provider.js";
+export {
+  RenownUserProvider,
+  RenownUserContext,
+} from "./renown-user-provider.js";
+export type { RenownUserContextValue } from "./renown-user-provider.js";

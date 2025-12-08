@@ -1,4 +1,5 @@
-import type { PHGlobalEventHandlerAdders } from "@powerhousedao/reactor-browser";
+import { addFeaturesEventHandler } from "./features.js";
+import type { PHGlobalEventHandlerAdders } from "../types/global.js";
 import {
   addAllowListEventHandler,
   addAnalyticsDatabaseNameEventHandler,
@@ -61,7 +62,11 @@ import { addLoadingEventHandler } from "./loading.js";
 import { addLoginStatusEventHandler } from "./login-status.js";
 import { addModalEventHandler } from "./modals.js";
 import { addProcessorManagerEventHandler } from "./processor-manager.js";
-import { addReactorEventHandler } from "./reactor.js";
+import {
+  addLegacyReactorEventHandler,
+  addReactorClientEventHandler,
+  addSyncEventHandler,
+} from "./reactor.js";
 import { addRenownEventHandler } from "./renown.js";
 import { addRevisionHistoryVisibleEventHandler } from "./revision-history.js";
 import {
@@ -80,7 +85,10 @@ import { addVetraPackagesEventHandler } from "./vetra-packages.js";
 
 const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   loading: addLoadingEventHandler,
-  reactor: addReactorEventHandler,
+  legacyReactor: addLegacyReactorEventHandler,
+  reactorClient: addReactorClientEventHandler,
+  sync: addSyncEventHandler,
+  features: addFeaturesEventHandler,
   modal: addModalEventHandler,
   connectCrypto: addConnectCryptoEventHandler,
   did: addDidEventHandler,

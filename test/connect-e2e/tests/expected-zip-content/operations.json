@@ -1,4 +1,66 @@
 {
+  "document": [
+    {
+      "index": 0,
+      "skip": 0,
+      "action": {
+        "type": "CREATE_DOCUMENT",
+        "scope": "document",
+        "input": {
+          "model": "powerhouse/document-model",
+          "version": "0.0.0"
+        }
+      }
+    },
+    {
+      "index": 1,
+      "skip": 0,
+      "action": {
+        "type": "UPGRADE_DOCUMENT",
+        "scope": "document",
+        "input": {
+          "model": "powerhouse/document-model",
+          "fromVersion": "0.0.0",
+          "toVersion": "0.1.0",
+          "initialState": {
+            "document": {
+              "version": "1.0.0"
+            },
+            "global": {
+              "name": "",
+              "extension": "",
+              "description": "",
+              "author": {
+                "name": "",
+                "website": ""
+              },
+              "specifications": [
+                {
+                  "version": 1,
+                  "changeLog": [],
+                  "modules": [],
+                  "state": {
+                    "global": {
+                      "schema": "",
+                      "initialValue": "",
+                      "examples": []
+                    },
+                    "local": {
+                      "schema": "",
+                      "initialValue": "",
+                      "examples": []
+                    }
+                  }
+                }
+              ]
+            },
+            "local": {},
+            "auth": {}
+          }
+        }
+      }
+    }
+  ],
   "global": [
     {
       "id": "1db13ae1-4f1d-4f19-aef7-a12f7442f05a",
@@ -553,5 +615,6 @@
       "skip": 0
     }
   ],
+  "header": [],
   "local": []
 }

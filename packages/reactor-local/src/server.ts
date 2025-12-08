@@ -21,10 +21,6 @@ import {
 } from "document-drive";
 import dotenv from "dotenv";
 import path from "node:path";
-import {
-  isDualActionCreateEnabled,
-  isReactorv2Enabled,
-} from "./feature-flags.js";
 import type {
   LocalReactor,
   RemoteDriveInputSimple,
@@ -114,9 +110,6 @@ const startServer = async (
     packages.push(basePath);
   }
 
-  const dualActionCreateEnabled = await isDualActionCreateEnabled();
-  const reactorV2Enabled = await isReactorv2Enabled();
-
   // create document drive server with all available document models & storage
   const cache = new InMemoryCache();
   const storageImpl = createStorage(storage, cache);
@@ -125,7 +118,7 @@ const startServer = async (
     .withStorage(storageImpl)
     .withOptions({
       featureFlags: {
-        enableDualActionCreate: dualActionCreateEnabled,
+        enableDualActionCreate: true,
       },
     });
 
@@ -163,9 +156,6 @@ const startServer = async (
     configFile,
     packages,
     mcp,
-    subgraphs: {
-      isReactorv2Enabled: reactorV2Enabled,
-    },
     // processors: {
     //   "ph/common/drive-analytics": [DriveAnalyticsProcessorFactory],
     // },

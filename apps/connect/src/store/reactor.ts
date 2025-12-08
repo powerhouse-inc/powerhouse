@@ -1,10 +1,8 @@
 import { phGlobalConfigFromEnv } from "@powerhousedao/connect/config";
-import {
-  initFeatureFlags,
-  isDualActionCreateEnabled,
-} from "@powerhousedao/connect/feature-flags.js";
+import { initFeatureFlags } from "@powerhousedao/connect/feature-flags.js";
 import {
   createBrowserDocumentDriveServer,
+  createBrowserReactor,
   createBrowserStorage,
 } from "@powerhousedao/connect/utils";
 import {
@@ -14,9 +12,11 @@ import {
   getReactorDefaultDrivesConfig,
   initConnectCrypto,
   initDocumentCache,
-  initReactor,
+  initLegacyReactor,
   login,
   refreshReactorData,
+  refreshReactorDataClient,
+  setFeatures,
   setSelectedDrive,
   setSelectedNode,
   setVetraPackages,
@@ -29,9 +29,11 @@ import {
   setDid,
   setDocumentCache,
   setDrives,
+  setLegacyReactor,
   setProcessorManager,
-  setReactor,
+  setReactorClient,
   setRenown,
+  setSync,
 } from "@powerhousedao/reactor-browser/connect";
 import { initRenown } from "@renown/sdk";
 import type {
@@ -115,7 +117,7 @@ export async function createReactor() {
   if (!window.ph) {
     window.ph = {};
   }
-  if (window.ph.reactor || window.ph.loading) return;
+  if (window.ph.legacyReactor || window.ph.loading) return;
 
   window.ph.loading = true;
 
@@ -123,7 +125,11 @@ export async function createReactor() {
   addPHEventHandlers();
 
   // initialize feature flags
-  await initFeatureFlags();
+  const features = await initFeatureFlags();
+
+  logger.info(
+    `Features: ${JSON.stringify(Object.fromEntries(features), null, 2)}`,
+  );
 
   // initialize connect crypto
   const connectCrypto = await initConnectCrypto();
@@ -150,40 +156,49 @@ export async function createReactor() {
     .flatMap((pkg) => pkg.modules.documentModelModules)
     .filter((module) => module !== undefined);
 
-  // create the reactor
-  const dualActionCreateEnabled = await isDualActionCreateEnabled();
+  // create the legacy reactor
   const defaultConfig = getReactorDefaultDrivesConfig();
-  const reactor = createBrowserDocumentDriveServer(
+  const legacyReactor = createBrowserDocumentDriveServer(
     documentModelModules as unknown as DocumentModelModule[],
     storage,
     {
       ...defaultConfig,
       featureFlags: {
-        enableDualActionCreate: dualActionCreateEnabled,
+        enableDualActionCreate: true,
       },
     },
   );
+
+  const reactorClientModule = await createBrowserReactor(
+    documentModelModules,
+    storage,
+    connectCrypto,
+  );
+
   // initialize the reactor
-  await initReactor(reactor, renown, connectCrypto);
+  await initLegacyReactor(legacyReactor, renown, connectCrypto);
 
   // initialize the document cache
-  const documentCache = initDocumentCache(reactor);
+  const documentCache = initDocumentCache(legacyReactor);
 
   // create the processor manager
-  const processorManager = new ProcessorManager(reactor.listeners, reactor);
+  const processorManager = new ProcessorManager(
+    legacyReactor.listeners,
+    legacyReactor,
+  );
 
   // get the drives from the reactor
-  let drives = await getDrives(reactor);
+  let drives = await getDrives(legacyReactor);
 
   // if remoteUrl is set and drive not already existing add remote drive and open it
   const remoteUrl = getDriveUrl();
   const remoteDrive = remoteUrl
-    ? await loadDriveFromRemoteUrl(remoteUrl, reactor, drives)
+    ? await loadDriveFromRemoteUrl(remoteUrl, legacyReactor, drives)
     : undefined;
 
   // if a remote drive was added then refetches the drives
   if (remoteDrive) {
-    drives = await getDrives(reactor);
+    drives = await getDrives(legacyReactor);
   }
 
   // get the documents from the reactor
@@ -195,11 +210,13 @@ export async function createReactor() {
 
   // initialize user
   const didFromUrl = getDidFromUrl();
-  await login(didFromUrl, reactor, renown, connectCrypto);
+  await login(didFromUrl, legacyReactor, renown, connectCrypto);
 
   // dispatch the events to set the values in the window object
   setDefaultPHGlobalConfig(phGlobalConfigFromEnv);
-  setReactor(reactor);
+  setLegacyReactor(legacyReactor);
+  setReactorClient(reactorClientModule.client);
+  setSync(reactorClientModule.reactorModule?.syncModule?.syncManager);
   setDocumentCache(documentCache);
   setConnectCrypto(connectCrypto);
   setDid(did);
@@ -209,34 +226,80 @@ export async function createReactor() {
   setVetraPackages(vetraPackages);
   setSelectedDrive(driveSlug);
   setSelectedNode(nodeSlug);
+  setFeatures(features);
 
-  // subscribe to reactor events
-  reactor.on("defaultRemoteDrive", (...args) => {
-    logger.verbose("defaultRemoteDrive", ...args);
-    refreshReactorData(reactor).catch(logger.error);
-  });
-  reactor.on("clientStrandsError", (...args) => {
-    logger.verbose("clientStrandsError", ...args);
-    refreshReactorData(reactor).catch(logger.error);
-  });
-  reactor.on("driveAdded", (...args) => {
-    logger.verbose("driveAdded", ...args);
-    // register the drive with the processor manager
-    processorManager.registerDrive(args[0].header.id).catch(logger.error);
-    refreshReactorData(reactor).catch(logger.error);
-  });
-  reactor.on("driveDeleted", (...args) => {
-    logger.verbose("driveDeleted", ...args);
-    refreshReactorData(reactor).catch(logger.error);
-  });
-  reactor.on("documentModelModules", (...args) => {
-    logger.verbose("documentModelModules", ...args);
-    refreshReactorData(reactor).catch(logger.error);
-  });
-  reactor.on("driveOperationsAdded", (...args) => {
-    logger.verbose("driveOperationsAdded", ...args);
-    refreshReactorData(reactor).catch(logger.error);
-  });
+  // subscribe to reactor events based on feature flags
+  const useLegacyRead = features.get("FEATURE_LEGACY_READ_ENABLED") ?? true;
+
+  if (useLegacyRead) {
+    // Subscribe to legacy reactor events
+    legacyReactor.on("defaultRemoteDrive", (...args) => {
+      logger.verbose("defaultRemoteDrive", ...args);
+      refreshReactorData(legacyReactor).catch(logger.error);
+    });
+    legacyReactor.on("clientStrandsError", (...args) => {
+      logger.verbose("clientStrandsError", ...args);
+      refreshReactorData(legacyReactor).catch(logger.error);
+    });
+    legacyReactor.on("driveAdded", (...args) => {
+      logger.verbose("driveAdded", ...args);
+      // register the drive with the processor manager
+      processorManager.registerDrive(args[0].header.id).catch(logger.error);
+      refreshReactorData(legacyReactor).catch(logger.error);
+    });
+    legacyReactor.on("driveDeleted", (...args) => {
+      logger.verbose("driveDeleted", ...args);
+      refreshReactorData(legacyReactor).catch(logger.error);
+    });
+    legacyReactor.on("documentModelModules", (...args) => {
+      logger.verbose("documentModelModules", ...args);
+      refreshReactorData(legacyReactor).catch(logger.error);
+    });
+    legacyReactor.on("driveOperationsAdded", (...args) => {
+      logger.verbose("driveOperationsAdded", ...args);
+      refreshReactorData(legacyReactor).catch(logger.error);
+    });
+  } else {
+    legacyReactor.on("defaultRemoteDrive", (...args) => {
+      logger.verbose("future:defaultRemoteDrive", ...args);
+
+      refreshReactorDataClient(reactorClientModule.client).catch(logger.error);
+    });
+    legacyReactor.on("clientStrandsError", (...args) => {
+      logger.verbose("future:clientStrandsError", ...args);
+
+      refreshReactorDataClient(reactorClientModule.client).catch(logger.error);
+    });
+    legacyReactor.on("driveAdded", (...args) => {
+      logger.verbose("future:driveAdded", ...args);
+      // register the drive with the processor manager
+      processorManager.registerDrive(args[0].header.id).catch(logger.error);
+
+      refreshReactorDataClient(reactorClientModule.client).catch(logger.error);
+    });
+    legacyReactor.on("driveDeleted", (...args) => {
+      logger.verbose("future:driveDeleted", ...args);
+
+      refreshReactorDataClient(reactorClientModule.client).catch(logger.error);
+    });
+    legacyReactor.on("documentModelModules", (...args) => {
+      logger.verbose("future:documentModelModules", ...args);
+
+      refreshReactorDataClient(reactorClientModule.client).catch(logger.error);
+    });
+    legacyReactor.on("driveOperationsAdded", (...args) => {
+      logger.verbose("future:driveOperationsAdded", ...args);
+
+      refreshReactorDataClient(reactorClientModule.client).catch(logger.error);
+    });
+
+    // Subscribe via ReactorClient interface
+    const reactorClient = reactorClientModule.client;
+    reactorClient.subscribe({ type: "powerhouse/document-drive" }, (event) => {
+      logger.verbose("ReactorClient subscription event", event);
+      refreshReactorDataClient(reactorClientModule.client).catch(logger.error);
+    });
+  }
 
   window.ph.loading = false;
 }

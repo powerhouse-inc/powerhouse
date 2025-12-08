@@ -21,3 +21,5 @@ CLAUDE.md
 coverage/
 coverage-reports/
 .env
+playwright-report/
+test-results/

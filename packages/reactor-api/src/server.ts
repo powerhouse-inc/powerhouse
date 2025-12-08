@@ -70,9 +70,6 @@ type Options = {
   processors?: Record<string, Processor>;
   mcp?: boolean;
   processorConfig?: Map<string, unknown>;
-  subgraphs?: {
-    isReactorv2Enabled?: boolean;
-  };
 };
 
 const DEFAULT_PORT = 4000;
@@ -331,6 +328,11 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     freeEntry,
   });
 
+  // Health check endpoint (before auth middleware)
+  app.get("/health", (_req, res) => {
+    res.status(200).send("OK");
+  });
+
   // add auth middleware if auth is enabled
   if (authEnabled) {
     logger.info("Setting up Auth middleware");
@@ -465,9 +467,8 @@ async function _setupAPI(
 
   // set up subgraph manager
   const coreSubgraphs: SubgraphClass[] = DefaultCoreSubgraphs.slice();
-  if (options.subgraphs?.isReactorv2Enabled) {
-    coreSubgraphs.push(ReactorSubgraph);
-  }
+  coreSubgraphs.push(ReactorSubgraph);
+
   const graphqlManager = await setupGraphQLManager(
     app,
     httpServer,

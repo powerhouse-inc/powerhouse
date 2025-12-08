@@ -38,10 +38,12 @@ import type {
 
 import type { IJobExecutorManager } from "#executor/interfaces.js";
 import type { IDocumentIndexer } from "#storage/interfaces.js";
+import { PGlite } from "@electric-sql/pglite";
 import { Kysely } from "kysely";
-import { KyselyPGlite } from "kysely-pglite";
+import { PGliteDialect } from "kysely-pglite-dialect";
 import type { IEventBus } from "../events/interfaces.js";
 import type { IReadModelCoordinator } from "../read-models/interfaces.js";
+import type { SignatureVerificationHandler } from "../signer/types.js";
 import { runMigrations } from "../storage/migrations/migrator.js";
 import type { MigrationStrategy } from "../storage/migrations/types.js";
 
@@ -63,6 +65,8 @@ export class ReactorBuilder {
   private syncBuilder?: SyncBuilder;
   private eventBus?: IEventBus;
   public documentIndexer?: IDocumentIndexer;
+  private signatureVerifier?: SignatureVerificationHandler;
+  private kyselyInstance?: Kysely<Database>;
 
   withDocumentModels(models: DocumentModelModule[]): this {
     this.documentModels = models;
@@ -106,7 +110,7 @@ export class ReactorBuilder {
     return this;
   }
 
-  setMigrationStrategy(strategy: MigrationStrategy): this {
+  withMigrationStrategy(strategy: MigrationStrategy): this {
     this.migrationStrategy = strategy;
     return this;
   }
@@ -121,8 +125,14 @@ export class ReactorBuilder {
     return this;
   }
 
-  get events(): IEventBus | undefined {
-    return this.eventBus;
+  withSignatureVerifier(verifier: SignatureVerificationHandler): this {
+    this.signatureVerifier = verifier;
+    return this;
+  }
+
+  withKysely(kysely: Kysely<Database>): this {
+    this.kyselyInstance = kysely;
+    return this;
   }
 
   async build(): Promise<IReactor> {
@@ -144,10 +154,11 @@ export class ReactorBuilder {
     const driveServer = builder.build() as unknown as BaseDocumentDriveServer;
     await driveServer.initialize();
 
-    const kyselyPGlite = await KyselyPGlite.create();
-    const database = new Kysely<Database>({
-      dialect: kyselyPGlite.dialect,
-    });
+    const database =
+      this.kyselyInstance ??
+      new Kysely<Database>({
+        dialect: new PGliteDialect(new PGlite()),
+      });
 
     if (this.migrationStrategy === "auto") {
       const result = await runMigrations(database);
@@ -198,6 +209,7 @@ export class ReactorBuilder {
             writeCache,
             operationIndex,
             { legacyStorageEnabled: this.features.legacyStorageEnabled },
+            this.signatureVerifier,
           ),
         eventBus,
         queue,

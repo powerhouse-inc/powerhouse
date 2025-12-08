@@ -1,4 +1,4 @@
-# Scalar types
+# Scalar types (for codegen - also defined in create-schema.ts)
 scalar JSONObject
 scalar DateTime
 
@@ -115,25 +115,25 @@ type JobChangeEvent {
   error: String
 }
 
-type SignerUser {
+type ReactorSignerUser {
   address: String!
   networkId: String!
   chainId: Int!
 }
 
-type SignerApp {
+type ReactorSignerApp {
   name: String!
   key: String!
 }
 
-type Signer {
-  user: SignerUser
-  app: SignerApp
+type ReactorSigner {
+  user: ReactorSignerUser
+  app: ReactorSignerApp
   signatures: [String!]!
 }
 
 type ActionContext {
-  signer: Signer
+  signer: ReactorSigner
 }
 
 type Action {
@@ -142,11 +142,51 @@ type Action {
   timestampUtcMs: String!
   input: JSONObject!
   scope: String!
-  attachments: [AttachmentInput!]
+  attachments: [Attachment!]
   context: ActionContext
 }
 
-type AttachmentInput {
+type Attachment {
+  data: String!
+  mimeType: String!
+  hash: String!
+  extension: String
+  fileName: String
+}
+
+# Input types for sync operations
+input ActionContextInput {
+  signer: ReactorSignerInput
+}
+
+input ReactorSignerInput {
+  user: ReactorSignerUserInput
+  app: ReactorSignerAppInput
+  signatures: [String!]!
+}
+
+input ReactorSignerUserInput {
+  address: String!
+  networkId: String!
+  chainId: Int!
+}
+
+input ReactorSignerAppInput {
+  name: String!
+  key: String!
+}
+
+input ActionInput {
+  id: String!
+  type: String!
+  timestampUtcMs: String!
+  input: JSONObject!
+  scope: String!
+  attachments: [AttachmentInput!]
+  context: ActionContextInput
+}
+
+input AttachmentInput {
   data: String!
   mimeType: String!
   hash: String!
@@ -155,7 +195,7 @@ type AttachmentInput {
 }
 
 # Synchronization types
-type Operation {
+type ReactorOperation {
   index: Int!
   timestampUtcMs: String!
   hash: String!
@@ -172,7 +212,7 @@ input OperationInput {
   skip: Int!
   error: String
   id: String
-  action: JSONObject!
+  action: ActionInput!
 }
 
 type OperationContext {
@@ -190,7 +230,7 @@ input OperationContextInput {
 }
 
 type OperationWithContext {
-  operation: Operation!
+  operation: ReactorOperation!
   context: OperationContext!
 }
 

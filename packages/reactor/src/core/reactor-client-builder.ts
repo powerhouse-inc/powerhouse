@@ -2,13 +2,17 @@ import type { IEventBus } from "#events/interfaces.js";
 import { ReactorClient } from "../client/reactor-client.js";
 import { JobAwaiter, type IJobAwaiter } from "../shared/awaiter.js";
 import { PassthroughSigner } from "../signer/passthrough-signer.js";
-import type { ISigner } from "../signer/types.js";
+import type {
+  ISigner,
+  SignatureVerificationHandler,
+  SignerConfig,
+} from "../signer/types.js";
 import type { IDocumentIndexer } from "../storage/interfaces.js";
 import { DefaultSubscriptionErrorHandler } from "../subs/default-error-handler.js";
 import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
 import type { ReactorBuilder } from "./reactor-builder.js";
-import type { IReactor } from "./types.js";
+import type { IReactor, ReactorClientModule, ReactorModule } from "./types.js";
 
 /**
  * Builder class for constructing ReactorClient instances with proper configuration
@@ -19,6 +23,7 @@ export class ReactorClientBuilder {
   private eventBus?: IEventBus;
   private documentIndexer?: IDocumentIndexer;
   private signer?: ISigner;
+  private signatureVerifier?: SignatureVerificationHandler;
   private subscriptionManager?: IReactorSubscriptionManager;
   private jobAwaiter?: IJobAwaiter;
 
@@ -52,8 +57,18 @@ export class ReactorClientBuilder {
     return this;
   }
 
-  public withSigner(signer: ISigner): this {
-    this.signer = signer;
+  /**
+   * Sets the signer configuration for signing and verifying actions.
+   *
+   * @param config - Either an ISigner for signing only, or a SignerConfig for both signing and verification
+   */
+  public withSigner(config: ISigner | SignerConfig): this {
+    if ("signer" in config) {
+      this.signer = config.signer;
+      this.signatureVerifier = config.verifier;
+    } else {
+      this.signer = config;
+    }
     return this;
   }
 
@@ -70,59 +85,64 @@ export class ReactorClientBuilder {
   }
 
   public async build(): Promise<ReactorClient> {
+    const module = await this.buildModule();
+    return module.client;
+  }
+
+  public async buildModule(): Promise<ReactorClientModule> {
     let reactor: IReactor;
     let eventBus: IEventBus;
     let documentIndexer: IDocumentIndexer;
+    let reactorModule: ReactorModule | undefined;
 
     if (this.reactorBuilder) {
-      reactor = await this.reactorBuilder.build();
-      const builderEventBus = this.reactorBuilder.events;
-      const builderDocumentIndexer = this.reactorBuilder.documentIndexer;
-
-      if (!builderEventBus) {
-        throw new Error("Event bus is required in ReactorBuilder");
+      if (this.signatureVerifier) {
+        this.reactorBuilder.withSignatureVerifier(this.signatureVerifier);
       }
-
-      if (!builderDocumentIndexer) {
-        throw new Error(
-          "DocumentIndexer must be initialized by ReactorBuilder",
-        );
-      }
-
-      eventBus = builderEventBus;
-      documentIndexer = builderDocumentIndexer;
+      reactorModule = await this.reactorBuilder.buildModule();
+      reactor = reactorModule.reactor;
+      eventBus = reactorModule.eventBus;
+      documentIndexer = reactorModule.documentIndexer;
     } else if (this.reactor && this.eventBus && this.documentIndexer) {
       reactor = this.reactor;
       eventBus = this.eventBus;
       documentIndexer = this.documentIndexer;
+      reactorModule = undefined;
     } else {
       throw new Error(
         "Either ReactorBuilder or (Reactor + EventBus + DocumentIndexer) is required",
       );
     }
 
-    if (!this.signer) {
-      this.signer = new PassthroughSigner();
-    }
+    const signer = this.signer ?? new PassthroughSigner();
 
-    if (!this.subscriptionManager) {
-      this.subscriptionManager = new ReactorSubscriptionManager(
-        new DefaultSubscriptionErrorHandler(),
-      );
-    }
+    const subscriptionManager =
+      this.subscriptionManager ??
+      new ReactorSubscriptionManager(new DefaultSubscriptionErrorHandler());
 
-    if (!this.jobAwaiter) {
-      this.jobAwaiter = new JobAwaiter(eventBus, (jobId, signal) =>
+    const jobAwaiter =
+      this.jobAwaiter ??
+      new JobAwaiter(eventBus, (jobId, signal) =>
         reactor.getJobStatus(jobId, signal),
       );
-    }
 
-    return new ReactorClient(
+    const client = new ReactorClient(
       reactor,
-      this.signer,
-      this.subscriptionManager,
-      this.jobAwaiter,
+      signer,
+      subscriptionManager,
+      jobAwaiter,
       documentIndexer,
     );
+
+    return {
+      client,
+      reactor,
+      eventBus,
+      documentIndexer,
+      signer,
+      subscriptionManager,
+      jobAwaiter,
+      reactorModule,
+    };
   }
 }

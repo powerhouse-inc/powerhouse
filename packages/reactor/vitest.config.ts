@@ -16,8 +16,18 @@ export default defineConfig({
         "dist/**",
         "**/*.test.ts",
         "**/*.bench.ts",
-        "**/types.ts",
+        "**/*types.ts",
+        "**/interfaces.ts",
+        "**/index.ts",
+        "**/vitest.config.ts",
+        "**/run-migrations.ts",
+        "**/logging/**",
       ],
+    },
+    poolOptions: {
+      forks: {
+        maxForks: 4,
+      },
     },
   },
 });

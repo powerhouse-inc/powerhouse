@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/connect",
   "productName": "Powerhouse-Connect",
-  "version": "5.1.0-dev.4",
+  "version": "5.1.0-dev.9",
   "description": "Powerhouse Connect",
   "main": "dist/index.html",
   "type": "module",
@@ -112,6 +112,7 @@
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
+    "test": "vitest run",
     "postinstall": "cp ./package.json ./package.copy.json",
     "dev": "vite dev",
     "build:vite": "vite build",
@@ -129,6 +130,7 @@
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
+    "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@renown/sdk": "workspace:*",
     "@sentry/browser": "^10.17.0",
@@ -146,6 +148,8 @@
     "graphql": "^16.11.0",
     "graphql-request": "^7.2.0",
     "i18next": "^25.5.3",
+    "kysely": "^0.28.2",
+    "kysely-pglite-dialect": "^1.1.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-error-boundary": "^4.0.11",

@@ -1,3 +1,4 @@
+import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
 import type { DID, IConnectCrypto, IRenown, User } from "@renown/sdk";
 import type {
   DocumentDriveDocument,
@@ -12,7 +13,9 @@ import type { VetraPackage } from "./vetra.js";
 
 export type PHGlobal = PHGlobalConfig & {
   loading?: boolean;
-  reactor?: IDocumentDriveServer;
+  legacyReactor?: IDocumentDriveServer;
+  reactorClient?: IReactorClient;
+  sync?: ISyncManager;
   connectCrypto?: IConnectCrypto;
   did?: DID;
   renown?: IRenown;
@@ -28,6 +31,7 @@ export type PHGlobal = PHGlobalConfig & {
   selectedTimelineRevision?: string | number | null;
   revisionHistoryVisible?: boolean;
   selectedTimelineItem?: TimelineItem | null;
+  features?: Map<string, boolean>;
 };
 
 export type PHGlobalKey = keyof PHGlobal;

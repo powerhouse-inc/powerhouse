@@ -3,8 +3,9 @@ import type {
   Operation,
   RemoveRelationshipAction,
 } from "document-model";
+import { PGlite } from "@electric-sql/pglite";
 import { Kysely } from "kysely";
-import { KyselyPGlite } from "kysely-pglite";
+import { PGliteDialect } from "kysely-pglite-dialect";
 import { v4 as uuidv4 } from "uuid";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
@@ -27,9 +28,8 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
   let mockConsistencyTracker: IConsistencyTracker;
 
   beforeEach(async () => {
-    const kyselyPGlite = await KyselyPGlite.create();
     db = new Kysely<Database & DocumentIndexerDatabase>({
-      dialect: kyselyPGlite.dialect,
+      dialect: new PGliteDialect(new PGlite()),
     });
 
     // Run migrations to create all tables

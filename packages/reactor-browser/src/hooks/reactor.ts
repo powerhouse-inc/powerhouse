@@ -1,3 +1,4 @@
+import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
 import type {
   AddPHGlobalEventHandler,
   SetPHGlobalValue,
@@ -6,16 +7,42 @@ import type {
 import type { IDocumentDriveServer } from "document-drive";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
-const eventFunctions = makePHEventFunctions("reactor");
+const legacyEventFunctions = makePHEventFunctions("legacyReactor");
+const reactorClientEventFunctions = makePHEventFunctions("reactorClient");
+const syncEventFunctions = makePHEventFunctions("sync");
 
-/** Returns the reactor */
-export const useReactor: UsePHGlobalValue<IDocumentDriveServer> =
-  eventFunctions.useValue;
+/** Returns the legacy reactor */
+export const useLegacyReactor: UsePHGlobalValue<IDocumentDriveServer> =
+  legacyEventFunctions.useValue;
 
-/** Sets the reactor */
-export const setReactor: SetPHGlobalValue<IDocumentDriveServer> =
-  eventFunctions.setValue;
+/** Sets the legacy reactor */
+export const setLegacyReactor: SetPHGlobalValue<IDocumentDriveServer> =
+  legacyEventFunctions.setValue;
 
 /** Adds an event handler for the reactor */
-export const addReactorEventHandler: AddPHGlobalEventHandler =
-  eventFunctions.addEventHandler;
+export const addLegacyReactorEventHandler: AddPHGlobalEventHandler =
+  legacyEventFunctions.addEventHandler;
+
+/** Returns the reactor client */
+export const useReactorClient: UsePHGlobalValue<IReactorClient> =
+  reactorClientEventFunctions.useValue;
+
+/** Sets the reactor client */
+export const setReactorClient: SetPHGlobalValue<IReactorClient> =
+  reactorClientEventFunctions.setValue;
+
+/** Adds an event handler for the reactor client */
+export const addReactorClientEventHandler: AddPHGlobalEventHandler =
+  reactorClientEventFunctions.addEventHandler;
+
+/** Returns the sync manager */
+export const useSync: UsePHGlobalValue<ISyncManager> =
+  syncEventFunctions.useValue;
+
+/** Sets the sync manager */
+export const setSync: SetPHGlobalValue<ISyncManager> =
+  syncEventFunctions.setValue;
+
+/** Adds an event handler for the sync manager */
+export const addSyncEventHandler: AddPHGlobalEventHandler =
+  syncEventFunctions.addEventHandler;

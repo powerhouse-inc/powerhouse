@@ -526,22 +526,30 @@ html[data-theme="dark"] .DocSearch-Hits > *:empty {
   font-style: italic;
 }
 
-/* Ethereum Argentina Hackathon sidebar icon */
-.menu__link[href*="EthereumArgentinaHackathon"] {
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
+/* Code diff highlighting - Green for additions */
+.code-block-added-line {
+  background-color: rgba(46, 160, 67, 0.15);
+  display: block;
+  margin: 0 calc(var(--ifm-pre-padding) * -1);
+  padding: 0 var(--ifm-pre-padding);
+  border-left: 3px solid #2ea043;
 }
 
-.menu__link[href*="EthereumArgentinaHackathon"]::before {
-  content: "" !important;
-  display: inline-block !important;
-  width: 24px !important;
-  height: 24px !important;
-  min-width: 24px !important;
-  background-image: url("/img/ethereum-logo.jpeg") !important;
-  background-size: cover !important;
-  background-position: center !important;
-  border-radius: 50% !important;
-  flex-shrink: 0 !important;
+/* Code diff highlighting - Red for deletions */
+.code-block-removed-line {
+  background-color: rgba(248, 81, 73, 0.15);
+  display: block;
+  margin: 0 calc(var(--ifm-pre-padding) * -1);
+  padding: 0 var(--ifm-pre-padding);
+  border-left: 3px solid #f85149;
 }
+
+/* Dark mode adjustments for diff highlighting */
+[data-theme="dark"] .code-block-added-line {
+  background-color: rgba(46, 160, 67, 0.25);
+}
+
+[data-theme="dark"] .code-block-removed-line {
+  background-color: rgba(248, 81, 73, 0.25);
+}
+

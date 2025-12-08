@@ -45,6 +45,9 @@ ENV PH_PACKAGES=""
 ENV PH_CONNECT_BASE_PATH="/"
 WORKDIR /app
 
+# Configure JSR registry for @jsr scoped packages
+RUN pnpm config set @jsr:registry https://npm.jsr.io
+
 # Create and initialize the project
 RUN pnpm add -g ph-cmd@$TAG
 RUN if [[ "$TAG" == *"dev"* ]]; then \
@@ -62,5 +65,8 @@ COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE $PORT
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:${PORT}/health || exit 1
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

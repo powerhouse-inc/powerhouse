@@ -28,7 +28,7 @@ The Renown SDK provides a complete authentication system that:
 ```
 User visits app
     ↓
-UserProvider initializes
+RenownUserProvider initializes
     ↓
 Check sessionStorage for existing session
     ↓
@@ -65,7 +65,7 @@ Update auth state → Authorized
 ```
 User refreshes page
     ↓
-UserProvider checks sessionStorage
+RenownUserProvider checks sessionStorage
     ↓
 Valid session found
     ↓
@@ -76,13 +76,13 @@ Restore auth state → Authorized
 
 ## Setup
 
-### Step 1: Wrap Your App with UserProvider
+### Step 1: Wrap Your App with RenownUserProvider
 
-The UserProvider automatically initializes the Renown SDK - no manual setup required!
+The RenownUserProvider automatically initializes the Renown SDK - no manual setup required!
 
 ```typescript
 // app/layout.tsx (Next.js App Router)
-import { UserProvider } from '@renown/sdk'
+import { RenownUserProvider } from '@renown/sdk'
 
 export default function RootLayout({
   children,
@@ -92,9 +92,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <UserProvider>
+        <RenownUserProvider>
           {children}
-        </UserProvider>
+        </RenownUserProvider>
       </body>
     </html>
   )
@@ -108,13 +108,13 @@ That's it! The SDK is now initialized and ready to use.
 You can customize the Renown URL, network, and chain:
 
 ```typescript
-<UserProvider
+<RenownUserProvider
   renownUrl={process.env.NEXT_PUBLIC_RENOWN_URL || 'https://www.renown.id'}
   networkId="eip155"
   chainId="1"
 >
   {children}
-</UserProvider>
+</RenownUserProvider>
 ```
 
 ### Optional: Add Loading/Error Screens
@@ -122,7 +122,7 @@ You can customize the Renown URL, network, and chain:
 Provide custom UI for initialization states:
 
 ```typescript
-<UserProvider
+<RenownUserProvider
   loadingComponent={
     <div className="loading-screen">
       <Spinner />
@@ -138,7 +138,7 @@ Provide custom UI for initialization states:
   )}
 >
   {children}
-</UserProvider>
+</RenownUserProvider>
 ```
 
 ## Implementation
@@ -615,9 +615,9 @@ Wrap auth components in error boundaries:
 
 ```typescript
 <ErrorBoundary fallback={<AuthError />}>
-  <UserProvider>
+  <RenownUserProvider>
     <App />
-  </UserProvider>
+  </RenownUserProvider>
 </ErrorBoundary>
 ```
 
@@ -669,6 +669,4 @@ const handleLogin = useCallback(
 
 ## Next Steps
 
-- Read the [API Reference](./API_REFERENCE.md) for detailed documentation
-- See [Examples](../examples/) for complete implementations
-- Check [Migration Guide](./MIGRATION.md) if upgrading from older versions
+- Read the [API Reference](./02-APIReference.md) for detailed documentation

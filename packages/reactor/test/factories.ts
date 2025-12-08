@@ -15,8 +15,9 @@ import type {
   PHDocument,
 } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
+import { PGlite } from "@electric-sql/pglite";
 import { Kysely } from "kysely";
-import { KyselyPGlite } from "kysely-pglite";
+import { PGliteDialect } from "kysely-pglite-dialect";
 import { v4 as uuidv4 } from "uuid";
 import { vi } from "vitest";
 import type { IWriteCache } from "../src/cache/write/interfaces.js";
@@ -67,9 +68,8 @@ export async function createTestOperationStore(): Promise<{
   store: KyselyOperationStore;
   keyframeStore: KyselyKeyframeStore;
 }> {
-  const kyselyPGlite = await KyselyPGlite.create();
   const db = new Kysely<DatabaseSchema>({
-    dialect: kyselyPGlite.dialect,
+    dialect: new PGliteDialect(new PGlite()),
   });
 
   const result = await runMigrations(db);
@@ -745,9 +745,8 @@ export async function createTestSyncStorage(): Promise<{
   syncRemoteStorage: KyselySyncRemoteStorage;
   syncCursorStorage: KyselySyncCursorStorage;
 }> {
-  const kyselyPGlite = await KyselyPGlite.create();
   const db = new Kysely<DatabaseSchema>({
-    dialect: kyselyPGlite.dialect,
+    dialect: new PGliteDialect(new PGlite()),
   });
 
   const result = await runMigrations(db);

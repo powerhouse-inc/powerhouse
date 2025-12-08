@@ -1,3 +1,139 @@
+## 5.1.0-dev.14 (2025-12-08)
+
+### 🚀 Features
+
+- **academy:** added docker build and publish workflow ([b17562994](https://github.com/powerhouse-inc/powerhouse/commit/b17562994))
+- **connect, switchboard:** added healthcheck route ([9a0671113](https://github.com/powerhouse-inc/powerhouse/commit/9a0671113))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.1.0-dev.13 (2025-12-08)
+
+### 🩹 Fixes
+
+- **ph-cmd:** setup global project with proper project name ([fdc8e7b6f](https://github.com/powerhouse-inc/powerhouse/commit/fdc8e7b6f))
+- **ph-cmd:** linting issues ([dd5acf8e9](https://github.com/powerhouse-inc/powerhouse/commit/dd5acf8e9))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.1.0-dev.12 (2025-12-08)
+
+### 🩹 Fixes
+
+- **ph-cli:** manage global project environment ([58e589122](https://github.com/powerhouse-inc/powerhouse/commit/58e589122))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.1.0-dev.11 (2025-12-08)
+
+### 🩹 Fixes
+
+- **ph-cli:** setup service with global project ([186b0e64a](https://github.com/powerhouse-inc/powerhouse/commit/186b0e64a))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.1.0-dev.10 (2025-12-06)
+
+### 🚀 Features
+
+- added db explorer component ([acbe5a0a5](https://github.com/powerhouse-inc/powerhouse/commit/acbe5a0a5))
+- added DBExplorer component ([#2121](https://github.com/powerhouse-inc/powerhouse/pull/2121))
+- **design-system:** add async getTables prop and refresh functionality to db-explorer component ([85a9af1c0](https://github.com/powerhouse-inc/powerhouse/commit/85a9af1c0))
+- **design-system:** added remotes inspector and channel inspector components ([093896ebf](https://github.com/powerhouse-inc/powerhouse/commit/093896ebf))
+
+### 🩹 Fixes
+
+- add ids to legacy create and update operations ([27c46fe1c](https://github.com/powerhouse-inc/powerhouse/commit/27c46fe1c))
+- updating test expectations with multi-op ([51eee2b4c](https://github.com/powerhouse-inc/powerhouse/commit/51eee2b4c))
+- circular imports ([bf1a8f219](https://github.com/powerhouse-inc/powerhouse/commit/bf1a8f219))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
+## 5.1.0-dev.9 (2025-12-05)
+
+### 🩹 Fixes
+
+- **renown:** small ui fixes and made connectcrypto and renown id available in hooks ([c06e17226](https://github.com/powerhouse-inc/powerhouse/commit/c06e17226))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.1.0-dev.8 (2025-12-05)
+
+### 🩹 Fixes
+
+- linter ([b28b4bf43](https://github.com/powerhouse-inc/powerhouse/commit/b28b4bf43))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 5.1.0-dev.7 (2025-12-04)
+
+### 🚀 Features
+
+- stubbing in a logging interface ([06799507d](https://github.com/powerhouse-inc/powerhouse/commit/06799507d))
+
+### 🩹 Fixes
+
+- set jsr as registry in dockerfiles ([291027b16](https://github.com/powerhouse-inc/powerhouse/commit/291027b16))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+
+## 5.1.0-dev.6 (2025-12-04)
+
+### 🚀 Features
+
+- adding reactor client and sync to connect store ([95db06a7d](https://github.com/powerhouse-inc/powerhouse/commit/95db06a7d))
+- **renown:** improved login component and added playwright e2e tests ([aceada753](https://github.com/powerhouse-inc/powerhouse/commit/aceada753))
+- **renown:** improved login component and added playwright e2e tests ([337dd6000](https://github.com/powerhouse-inc/powerhouse/commit/337dd6000))
+
+### 🩹 Fixes
+
+- forgot tslint link ([04024a7f0](https://github.com/powerhouse-inc/powerhouse/commit/04024a7f0))
+- **reactor:** pulling some files out of the code coverage analysis ([5dcb7431d](https://github.com/powerhouse-inc/powerhouse/commit/5dcb7431d))
+- **renown:** added type declartions for png and other image files ([fd6ee9b8d](https://github.com/powerhouse-inc/powerhouse/commit/fd6ee9b8d))
+- **renown:** build issues ([1893c35a0](https://github.com/powerhouse-inc/powerhouse/commit/1893c35a0))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+
+## 5.1.0-dev.5 (2025-12-04)
+
+### 🚀 Features
+
+- connect crypto signer and verifier ([918fb1fab](https://github.com/powerhouse-inc/powerhouse/commit/918fb1fab))
+- added tests for signing and verification ([f9b7c95a8](https://github.com/powerhouse-inc/powerhouse/commit/f9b7c95a8))
+
+### 🩹 Fixes
+
+- vitest was destroying my computer ([a43c93c4b](https://github.com/powerhouse-inc/powerhouse/commit/a43c93c4b))
+- adding testing for document creation signatures ([ae6e33c12](https://github.com/powerhouse-inc/powerhouse/commit/ae6e33c12))
+- adding ts reference ([491dd5c8f](https://github.com/powerhouse-inc/powerhouse/commit/491dd5c8f))
+- build issues ([4825c1c01](https://github.com/powerhouse-inc/powerhouse/commit/4825c1c01))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.4 (2025-12-03)
 
 ### 🚀 Features

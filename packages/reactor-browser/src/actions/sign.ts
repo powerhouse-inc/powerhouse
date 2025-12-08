@@ -3,7 +3,7 @@ import type { Action, ActionSigner, PHDocument } from "document-model";
 import { buildSignedAction } from "document-model/core";
 
 export async function signAction(action: Action, document: PHDocument) {
-  const reactor = window.ph?.reactor;
+  const reactor = window.ph?.legacyReactor;
   if (!reactor) return action;
 
   const documentModelModules = reactor.getDocumentModelModules();

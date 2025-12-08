@@ -17,7 +17,7 @@ export function setVetraPackages(vetraPackages: VetraPackage[] | undefined) {
   const documentModelModules = vetraPackages
     ?.flatMap((pkg) => pkg.modules.documentModelModules)
     .filter((module) => module !== undefined);
-  window.ph?.reactor?.setDocumentModelModules(
+  window.ph?.legacyReactor?.setDocumentModelModules(
     documentModelModules as unknown as DocumentModelModule[],
   );
 }

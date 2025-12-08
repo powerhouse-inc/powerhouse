@@ -29,7 +29,7 @@ import type {
   DocumentIndexerDatabase,
   Database as StorageDatabase,
 } from "../../src/storage/kysely/types.js";
-import { createTestOperationStore } from "../factories.js";
+import { createMockSigner, createTestOperationStore } from "../factories.js";
 
 type Database = StorageDatabase &
   DocumentViewDatabase &
@@ -158,6 +158,44 @@ describe.each([
           document.header.documentType,
         );
         expect(retrievedDocument.state.global.nodes).toHaveLength(0);
+      });
+
+      it("should sign actions when signer is provided to reactor.create", async () => {
+        const mockSigner = createMockSigner();
+        const document = driveDocumentModelModule.utils.createDocument();
+
+        const createJobInfo = await reactor.create(document, mockSigner);
+        expect(createJobInfo.status).toBe(JobStatus.PENDING);
+
+        await waitForJobAndDocumentUpdate(createJobInfo.id, document.header.id);
+
+        const operations = await reactor.getOperations(document.header.id);
+
+        expect(operations.document.results.length).toBeGreaterThanOrEqual(2);
+
+        const createDocOp = operations.document.results.find(
+          (op) => op.action.type === "CREATE_DOCUMENT",
+        );
+        const upgradeDocOp = operations.document.results.find(
+          (op) => op.action.type === "UPGRADE_DOCUMENT",
+        );
+
+        expect(createDocOp).toBeDefined();
+        expect(upgradeDocOp).toBeDefined();
+
+        expect(createDocOp?.action.context?.signer).toBeDefined();
+        expect(createDocOp?.action.context?.signer?.signatures).toHaveLength(1);
+        expect(createDocOp?.action.context?.signer?.signatures[0][0]).toBe(
+          "mock-signature",
+        );
+
+        expect(upgradeDocOp?.action.context?.signer).toBeDefined();
+        expect(upgradeDocOp?.action.context?.signer?.signatures).toHaveLength(
+          1,
+        );
+        expect(upgradeDocOp?.action.context?.signer?.signatures[0][0]).toBe(
+          "mock-signature",
+        );
       });
     });
 

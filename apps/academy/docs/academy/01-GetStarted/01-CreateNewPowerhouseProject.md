@@ -9,6 +9,23 @@ This tutorial step has a corresponding branch in the repository. You can:
 - Compare your implementation using `git diff`
 :::
 
+## Overview
+
+This tutorial guides you through creating a simplified version of a 'Powerhouse project' for a **To-do List**.  
+A Powerhouse project primarily consists of a document model and its editor. 
+As your projects use-case expands you can add data-integrations or a specific drive-app as seen in the demo package. 
+
+For todays purpose, you'll be using Connect, our user-centric collaboration tool and Vetra Studio, the builder tooling through which developers can access and manage specifications of your project. 
+
+## Prerequisites
+
+- Powerhouse CLI installed: `pnpm install -g ph-cmd` or `npm install -g ph-cmd --legacy-peer-deps`
+- node.js 22 and a package manager (pnpm or npm) installed
+- Visual Studio Code (or your preferred IDE)
+- Terminal/Command Prompt access
+
+If you need help with installing the prerequisites you can visit our page [prerequisites](/academy/MasteryTrack/BuilderEnvironment/Prerequisites)
+
 <details>
 <summary>📖 How to use this tutorial</summary>
 
@@ -88,23 +105,6 @@ git reset --hard tutorial/step-2-generate-todo-list-document-model
 
 </details>
 
-## Overview
-
-This tutorial guides you through creating a simplified version of a 'Powerhouse project' for a **To-do List**.  
-A Powerhouse project primarily consists of a document model and its editor. 
-As your projects use-case expands you can add data-integrations or a specific drive-app as seen in the demo package. 
-
-For todays purpose, you'll be using Connect, our user-centric collaboration tool and Vetra Studio, the builder tooling through which developers can access and manage specifications of your project. 
-
-## Prerequisites
-
-- Powerhouse CLI installed: `pnpm install -g ph-cmd` or `npm install -g ph-cmd --legacy-peer-deps`
-- node.js 22 and a package manager (pnpm or npm) installed
-- Visual Studio Code (or your preferred IDE)
-- Terminal/Command Prompt access
-
-If you need help with installing the prerequisites you can visit our page [prerequisites](/academy/MasteryTrack/BuilderEnvironment/Prerequisites)
-
 ## Quick start
 
 Create a new Powerhouse project with a single command:
@@ -144,7 +144,41 @@ Navigate to the newly created project directory:
     cd todo-tutorial
     ```
 
-## Develop a single document model in Connect
+## Develop a single document model in Vetra Studio
+
+**Vetra Studio** is the builder's orchestration hub for assembling all specifications needed for your package. It provides a **Vetra Studio Drive** to access, manage, and share document model specifications, editors, and data integrations—all through a visual interface. For deeper coverage, see the [Vetra Studio documentation](/academy/MasteryTrack/BuilderEnvironment/VetraStudio).
+
+Once in the project directory, run the `ph vetra` command to start a Vetra Studio Drive where you'll be defining your specifications. 
+
+
+    ```bash
+    ph vetra
+    ```
+
+The host application for Vetra Studio will start and you will see the following output:
+
+    ```bash
+      ➜  Local:   http://localhost:3000/
+      ➜  Network: http://192.168.5.110:3000/
+      ➜  press h + enter to show help
+    ```
+
+A new browser window will open and you will see the Vetra Studio. If it doesn't open automatically, you can open it manually by navigating to `http://localhost:3000/` in your browser.
+
+
+<figure className="image-container">
+  <img
+    src={require("./images/VetraStudioDrive.png").default}
+    alt="Vetra Studio Drive"
+  />
+  <figcaption>The Vetra Studio Drive, a builder app that collects all of the specification of a package.</figcaption>
+</figure>
+
+
+Create a new document model by clicking the Document Modesl 'Add new specification' button. Name your document TodoList (PascalCase, no spaces or hyphens). If you've followed the steps correctly, you'll have an empty TodoList document where you can define the 'Document Specifications' in the next step.
+
+<details>
+<summary>Alternatively: Develop a single document model in Connect</summary>
 
 Once in the project directory, run the `ph connect` command to start a local instance of the Connect application. This allows you to start your document model specification document.
 Run the following command to start the Connect application:
@@ -172,6 +206,8 @@ Clear the storage of your localhost application as it might has an old session c
    Create a new document model by clicking the `DocumentModel` button, found in the 'New Document' section at the bottom of the page. Name your document `TodoList` (PascalCase, no spaces or hyphens).
 
 If you've followed the steps correctly, you'll have an empty `TodoList` document where you can define the **'Document Specifications'**.
+
+</details>
 
 ## Verify your setup
 
