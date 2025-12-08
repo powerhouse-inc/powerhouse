@@ -12,14 +12,14 @@ function makeModuleOperationsTypeName(module: ModuleSpecification) {
 }
 
 function makeCamelCaseActionNamesForImport(actions: ActionFromOperation[]) {
-  return actions.map((a) => camelCase(a.name)).join(",\n");
+  return actions.map((a) => camelCase(a.name));
 }
 
 function makeActionInputSchemasForImport(actions: ActionFromOperation[]) {
-  return actions.map((a) => `${pascalCase(a.name)}InputSchema`).join(",\n");
+  return actions.map((a) => `${pascalCase(a.name)}InputSchema`);
 }
 
-function makeTestCaseForAction(
+export function makeTestCaseForAction(
   action: ActionFromOperation,
   isPhDocumentOfTypeFunctionName: string,
 ) {
@@ -48,6 +48,30 @@ function makeTestCaseForAction(
         expect(updatedDocument.operations.${scope}[0].action.input).toStrictEqual(input);
         expect(updatedDocument.operations.${scope}[0].index).toEqual(0);
     });
+  `.raw;
+}
+
+export function makeActionImportNames(
+  v: DocumentModelTemplateInputsWithModule,
+) {
+  const actionNames = makeCamelCaseActionNamesForImport(v.actions);
+  const inputSchemaNames = makeActionInputSchemasForImport(v.actions);
+  const importNames = [
+    "reducer",
+    "utils",
+    v.isPhDocumentOfTypeFunctionName,
+    ...actionNames,
+    ...inputSchemaNames,
+  ];
+  return importNames;
+}
+
+export function makeActionsImports(v: DocumentModelTemplateInputsWithModule) {
+  const importNames = makeActionImportNames(v).join("\n");
+  return ts`
+  import {
+    ${importNames}
+  } from "${v.versionedDocumentModelPackageImportPath}";
   `.raw;
 }
 

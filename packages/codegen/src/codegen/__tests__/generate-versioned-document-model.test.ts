@@ -96,7 +96,7 @@ describe("versioned document models", () => {
     },
   );
   it(
-    "should persist existing reducer implementation logic when generating for the same spec version",
+    "should persist existing reducers, tests and utils when generating for the same spec version",
     {
       timeout: 10000000,
     },
@@ -117,7 +117,7 @@ describe("versioned document models", () => {
     },
   );
   it(
-    "should persist existing reducer implementation logic when generating a new spec version",
+    "should persist existing reducers, tests and utils when generating a new spec version",
     {
       timeout: 10000000,
     },

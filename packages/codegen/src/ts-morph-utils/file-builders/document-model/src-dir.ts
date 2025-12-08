@@ -1,9 +1,9 @@
 import { ts } from "@tmpl/core";
-import { paramCase, pascalCase } from "change-case";
+import { camelCase, paramCase, pascalCase } from "change-case";
 import type { ModuleSpecification } from "document-model";
 import path from "path";
 import type { Project } from "ts-morph";
-import { VariableDeclarationKind } from "ts-morph";
+import { SyntaxKind, VariableDeclarationKind } from "ts-morph";
 import {
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
@@ -12,7 +12,10 @@ import { getDocumentModelOperationsModuleVariableNames } from "../../name-builde
 import { getObjectLiteral } from "../../syntax-getters.js";
 import { documentModelSrcIndexFileTemplate } from "../../templates/document-model/src/index.js";
 import { documentModelTestFileTemplate } from "../../templates/document-model/src/tests/document-model.test.js";
-import { documentModelOperationsModuleTestFileTemplate } from "../../templates/document-model/src/tests/module.test.js";
+import {
+  makeActionImportNames,
+  makeTestCaseForAction,
+} from "../../templates/document-model/src/tests/module.test.js";
 import { documentModelSrcUtilsTemplate } from "../../templates/document-model/src/utils.js";
 import type { DocumentModelFileMakerArgs } from "./types.js";
 
@@ -44,7 +47,7 @@ function makeReducerOperationHandlersForModules(
   }
 }
 
-function getPreviousVersionReducerFile(args: {
+function getPreviousVersionSourceFile(args: {
   project: Project;
   version: number;
   filePath: string;
@@ -52,19 +55,9 @@ function getPreviousVersionReducerFile(args: {
   const { project, version, filePath } = args;
   const previousVersion = version - 1;
   if (previousVersion < 1) return;
-  const currentVersionPathSegments = path.join(
-    `v${version}`,
-    "src",
-    "reducers",
-  );
-  const previousVersionPathSegments = path.join(
-    `v${previousVersion}`,
-    "src",
-    "reducers",
-  );
   const previousVersionFilePath = filePath.replace(
-    currentVersionPathSegments,
-    previousVersionPathSegments,
+    `/v${version}/`,
+    `/v${previousVersion}/`,
   );
 
   const previousVersionFile = project.getSourceFile(previousVersionFilePath);
@@ -89,7 +82,7 @@ function makeReducerOperationHandlerForModule({
     filePath,
   );
   if (!alreadyExists) {
-    const previousVersionFile = getPreviousVersionReducerFile({
+    const previousVersionFile = getPreviousVersionSourceFile({
       project,
       version,
       filePath,
@@ -177,15 +170,21 @@ function makeReducerOperationHandlerForModule({
 function makeOperationModuleTestFile(
   args: DocumentModelFileMakerArgs & { module: ModuleSpecification },
 ) {
-  const { project, module, ...variableNames } = args;
+  const {
+    project,
+    module,
+    version,
+    testsDirPath,
+    documentModelPackageImportPath,
+    versionedDocumentModelPackageImportPath,
+    isPhDocumentOfTypeFunctionName,
+  } = args;
   const moduleVariableNames =
     getDocumentModelOperationsModuleVariableNames(module);
+  const { actions } = moduleVariableNames;
   const paramCaseModuleName = paramCase(module.name);
-  const template = documentModelOperationsModuleTestFileTemplate({
-    ...args,
-    ...moduleVariableNames,
-  });
-  const { testsDirPath } = variableNames;
+  const pascalCaseModuleName = pascalCase(module.name);
+  const moduleOperationsTypeName = `${pascalCaseModuleName}Operations`;
   const filePath = path.join(testsDirPath, `${paramCaseModuleName}.test.ts`);
 
   const { alreadyExists, sourceFile } = getOrCreateSourceFile(
@@ -193,9 +192,105 @@ function makeOperationModuleTestFile(
     filePath,
   );
 
-  if (alreadyExists) return;
+  if (!alreadyExists) {
+    const previousVersionSourceFile = getPreviousVersionSourceFile({
+      project,
+      version,
+      filePath,
+    });
 
-  sourceFile.replaceWithText(template);
+    if (previousVersionSourceFile) {
+      sourceFile.replaceWithText(previousVersionSourceFile.getText());
+    } else {
+      sourceFile.replaceWithText(
+        ts`
+        import { generateMock } from "@powerhousedao/codegen";
+        import { describe, expect, it } from "vitest";
+
+        describe("${moduleOperationsTypeName}", () => {
+
+        });
+        `.raw,
+      );
+    }
+  }
+
+  const importNames = makeActionImportNames({
+    ...args,
+    ...moduleVariableNames,
+  });
+
+  const namedImports = importNames.map((name) => ({ name }));
+
+  let actionsImportDeclaration = sourceFile.getImportDeclaration(
+    (importDeclaration) =>
+      importDeclaration
+        .getModuleSpecifier()
+        .getText()
+        .includes(documentModelPackageImportPath),
+  );
+
+  if (!actionsImportDeclaration) {
+    actionsImportDeclaration = sourceFile.addImportDeclaration({
+      namedImports,
+      moduleSpecifier: versionedDocumentModelPackageImportPath,
+    });
+  } else {
+    actionsImportDeclaration.setModuleSpecifier(
+      versionedDocumentModelPackageImportPath,
+    );
+    const existingNamedImports = actionsImportDeclaration
+      .getNamedImports()
+      .map((value) => value.getName());
+
+    for (const name of importNames) {
+      if (!existingNamedImports.includes(name)) {
+        actionsImportDeclaration.addNamedImport(name);
+      }
+    }
+  }
+
+  const describeCall = sourceFile
+    .getDescendantsOfKind(SyntaxKind.CallExpression)
+    .find((call) => {
+      const expressionText = call.getExpression().getText();
+      const args = call.getArguments();
+      const firstArg = args[0];
+      return (
+        expressionText === "describe" &&
+        firstArg.getText().includes(moduleOperationsTypeName)
+      );
+    });
+
+  if (!describeCall) {
+    throw new Error(
+      `Test file has no describe block for ${moduleOperationsTypeName}`,
+    );
+  }
+
+  const describeCallBody = describeCall
+    .getArguments()[1]
+    .asKindOrThrow(SyntaxKind.ArrowFunction);
+
+  const testCaseNames = describeCall
+    .getDescendantsOfKind(SyntaxKind.CallExpression)
+    .filter((call) => {
+      const expressionText = call.getExpression().getText();
+      return expressionText === "it" || expressionText === "test";
+    })
+    .map((c) => c.getArguments()[0].getText());
+
+  const actionsWithoutExistingTestCases = actions.filter((action) => {
+    const camelCaseActionName = camelCase(action.name);
+    return !testCaseNames.some((c) => c.includes(camelCaseActionName));
+  });
+
+  const testCasesToAdd = actionsWithoutExistingTestCases.map((action) =>
+    makeTestCaseForAction(action, isPhDocumentOfTypeFunctionName),
+  );
+
+  describeCallBody.addStatements(testCasesToAdd);
+
   formatSourceFileWithPrettier(sourceFile);
 }
 
