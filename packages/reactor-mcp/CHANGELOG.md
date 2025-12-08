@@ -1,3 +1,14 @@
+## 5.1.0-dev.14 (2025-12-08)
+
+### 🚀 Features
+
+- **connect, switchboard:** added healthcheck route ([9a0671113](https://github.com/powerhouse-inc/powerhouse/commit/9a0671113))
+- **academy:** added docker build and publish workflow ([b17562994](https://github.com/powerhouse-inc/powerhouse/commit/b17562994))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.1.0-dev.13 (2025-12-08)
 
 This was a version bump only for @powerhousedao/reactor-mcp to align it with other projects, there were no code changes.

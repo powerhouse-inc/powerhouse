@@ -1,3 +1,14 @@
+## 5.1.0-dev.14 (2025-12-08)
+
+### 🚀 Features
+
+- **academy:** added docker build and publish workflow ([b17562994](https://github.com/powerhouse-inc/powerhouse/commit/b17562994))
+- **connect, switchboard:** added healthcheck route ([9a0671113](https://github.com/powerhouse-inc/powerhouse/commit/9a0671113))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.1.0-dev.13 (2025-12-08)
 
 ### 🩹 Fixes
