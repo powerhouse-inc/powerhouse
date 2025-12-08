@@ -66,4 +66,7 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE $PORT
 
+HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:${PORT}/health || exit 1
+
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

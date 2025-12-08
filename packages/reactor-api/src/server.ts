@@ -328,6 +328,11 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     freeEntry,
   });
 
+  // Health check endpoint (before auth middleware)
+  app.get("/health", (_req, res) => {
+    res.status(200).send("OK");
+  });
+
   // add auth middleware if auth is enabled
   if (authEnabled) {
     logger.info("Setting up Auth middleware");

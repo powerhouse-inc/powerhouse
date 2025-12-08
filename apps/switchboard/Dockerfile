@@ -48,7 +48,12 @@ RUN case "$TAG" in \
 
 WORKDIR /app/project
 
-# Copy and set up entrypoint script
+# Install curl for health checks
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
+EXPOSE $PORT
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:${PORT}/health || exit 1
 
 ENTRYPOINT ["/app/entrypoint.sh"]
