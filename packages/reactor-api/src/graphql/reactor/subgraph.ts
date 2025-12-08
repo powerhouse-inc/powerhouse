@@ -4,6 +4,7 @@ import { withFilter } from "graphql-subscriptions";
 import { gql } from "graphql-tag";
 import path from "path";
 import { fileURLToPath } from "url";
+import type { DocumentPermissionService } from "../../services/document-permission.service.js";
 import { BaseSubgraph } from "../base-subgraph.js";
 import type { SubgraphArgs } from "../types.js";
 import {
@@ -117,6 +118,165 @@ export class ReactorSubgraph extends BaseSubgraph {
           return await resolvers.pollSyncEnvelopes(this.syncManager, args);
         } catch (error) {
           this.logger.error("Error in pollSyncEnvelopes:", error);
+          throw error;
+        }
+      },
+
+      documentAccess: async (
+        _parent: unknown,
+        args: { documentId: string },
+        ctx: {
+          documentPermissionService?: DocumentPermissionService;
+        },
+      ) => {
+        this.logger.debug("documentAccess", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          return await resolvers.documentAccess(
+            this.documentPermissionService,
+            args,
+          );
+        } catch (error) {
+          this.logger.error("Error in documentAccess:", error);
+          throw error;
+        }
+      },
+
+      userDocumentPermissions: async (
+        _parent: unknown,
+        _args: unknown,
+        ctx: {
+          user?: { address: string };
+          documentPermissionService?: DocumentPermissionService;
+        },
+      ) => {
+        this.logger.debug("userDocumentPermissions");
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        if (!ctx.user?.address) {
+          return [];
+        }
+        try {
+          return await resolvers.userDocumentPermissions(
+            this.documentPermissionService,
+            ctx.user.address,
+          );
+        } catch (error) {
+          this.logger.error("Error in userDocumentPermissions:", error);
+          throw error;
+        }
+      },
+
+      groups: async () => {
+        this.logger.debug("groups");
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          return await resolvers.groups(this.documentPermissionService);
+        } catch (error) {
+          this.logger.error("Error in groups:", error);
+          throw error;
+        }
+      },
+
+      group: async (_parent: unknown, args: { id: number }) => {
+        this.logger.debug("group", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          return await resolvers.group(this.documentPermissionService, args);
+        } catch (error) {
+          this.logger.error("Error in group:", error);
+          throw error;
+        }
+      },
+
+      roles: async () => {
+        this.logger.debug("roles");
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          return await resolvers.roles(this.documentPermissionService);
+        } catch (error) {
+          this.logger.error("Error in roles:", error);
+          throw error;
+        }
+      },
+
+      role: async (_parent: unknown, args: { id: number }) => {
+        this.logger.debug("role", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          return await resolvers.role(this.documentPermissionService, args);
+        } catch (error) {
+          this.logger.error("Error in role:", error);
+          throw error;
+        }
+      },
+
+      userGroups: async (
+        _parent: unknown,
+        args: { userAddress: string },
+      ) => {
+        this.logger.debug("userGroups", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          return await resolvers.userGroups(
+            this.documentPermissionService,
+            args,
+          );
+        } catch (error) {
+          this.logger.error("Error in userGroups:", error);
+          throw error;
+        }
+      },
+
+      userRoles: async (
+        _parent: unknown,
+        args: { userAddress: string },
+      ) => {
+        this.logger.debug("userRoles", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          return await resolvers.userRoles(
+            this.documentPermissionService,
+            args,
+          );
+        } catch (error) {
+          this.logger.error("Error in userRoles:", error);
+          throw error;
+        }
+      },
+
+      canExecuteOperation: async (
+        _parent: unknown,
+        args: { documentId: string; operationType: string },
+        ctx: { user?: { address: string } },
+      ) => {
+        this.logger.debug("canExecuteOperation", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          return await resolvers.canExecuteOperation(
+            this.documentPermissionService,
+            args,
+            ctx.user?.address,
+          );
+        } catch (error) {
+          this.logger.error("Error in canExecuteOperation:", error);
           throw error;
         }
       },
@@ -289,6 +449,502 @@ export class ReactorSubgraph extends BaseSubgraph {
           this.logger.error("Error in pushSyncEnvelope:", error);
           throw error;
         }
+      },
+
+      setDocumentVisibility: async (
+        _parent: unknown,
+        args: { documentId: string; visibility: string },
+        ctx: {
+          user?: { address: string };
+          isAdmin?: (address: string) => boolean;
+        },
+      ) => {
+        this.logger.debug("setDocumentVisibility", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
+          return await resolvers.setDocumentVisibility(
+            this.documentPermissionService,
+            args as {
+              documentId: string;
+              visibility: "PUBLIC" | "PROTECTED" | "PRIVATE";
+            },
+            ctx.user?.address,
+            isGlobalAdmin,
+          );
+        } catch (error) {
+          this.logger.error("Error in setDocumentVisibility:", error);
+          throw error;
+        }
+      },
+
+      grantDocumentPermission: async (
+        _parent: unknown,
+        args: { documentId: string; userAddress: string; permission: string },
+        ctx: {
+          user?: { address: string };
+          isAdmin?: (address: string) => boolean;
+        },
+      ) => {
+        this.logger.debug("grantDocumentPermission", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
+          return await resolvers.grantDocumentPermission(
+            this.documentPermissionService,
+            args as {
+              documentId: string;
+              userAddress: string;
+              permission: "READ" | "WRITE" | "ADMIN";
+            },
+            ctx.user?.address,
+            isGlobalAdmin,
+          );
+        } catch (error) {
+          this.logger.error("Error in grantDocumentPermission:", error);
+          throw error;
+        }
+      },
+
+      revokeDocumentPermission: async (
+        _parent: unknown,
+        args: { documentId: string; userAddress: string },
+        ctx: {
+          user?: { address: string };
+          isAdmin?: (address: string) => boolean;
+        },
+      ) => {
+        this.logger.debug("revokeDocumentPermission", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
+          return await resolvers.revokeDocumentPermission(
+            this.documentPermissionService,
+            args,
+            ctx.user?.address,
+            isGlobalAdmin,
+          );
+        } catch (error) {
+          this.logger.error("Error in revokeDocumentPermission:", error);
+          throw error;
+        }
+      },
+
+      // Group Management Mutations
+      createGroup: async (
+        _parent: unknown,
+        args: { name: string; description?: string | null },
+      ) => {
+        this.logger.debug("createGroup", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          return await resolvers.createGroup(
+            this.documentPermissionService,
+            args,
+          );
+        } catch (error) {
+          this.logger.error("Error in createGroup:", error);
+          throw error;
+        }
+      },
+
+      deleteGroup: async (_parent: unknown, args: { id: number }) => {
+        this.logger.debug("deleteGroup", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          return await resolvers.deleteGroup(
+            this.documentPermissionService,
+            args,
+          );
+        } catch (error) {
+          this.logger.error("Error in deleteGroup:", error);
+          throw error;
+        }
+      },
+
+      addUserToGroup: async (
+        _parent: unknown,
+        args: { userAddress: string; groupId: number },
+      ) => {
+        this.logger.debug("addUserToGroup", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          return await resolvers.addUserToGroup(
+            this.documentPermissionService,
+            args,
+          );
+        } catch (error) {
+          this.logger.error("Error in addUserToGroup:", error);
+          throw error;
+        }
+      },
+
+      removeUserFromGroup: async (
+        _parent: unknown,
+        args: { userAddress: string; groupId: number },
+      ) => {
+        this.logger.debug("removeUserFromGroup", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          return await resolvers.removeUserFromGroup(
+            this.documentPermissionService,
+            args,
+          );
+        } catch (error) {
+          this.logger.error("Error in removeUserFromGroup:", error);
+          throw error;
+        }
+      },
+
+      // Group Document Permission Mutations
+      grantGroupPermission: async (
+        _parent: unknown,
+        args: { documentId: string; groupId: number; permission: string },
+        ctx: {
+          user?: { address: string };
+          isAdmin?: (address: string) => boolean;
+        },
+      ) => {
+        this.logger.debug("grantGroupPermission", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
+          return await resolvers.grantGroupPermission(
+            this.documentPermissionService,
+            args as {
+              documentId: string;
+              groupId: number;
+              permission: "READ" | "WRITE" | "ADMIN";
+            },
+            ctx.user?.address,
+            isGlobalAdmin,
+          );
+        } catch (error) {
+          this.logger.error("Error in grantGroupPermission:", error);
+          throw error;
+        }
+      },
+
+      revokeGroupPermission: async (
+        _parent: unknown,
+        args: { documentId: string; groupId: number },
+        ctx: {
+          user?: { address: string };
+          isAdmin?: (address: string) => boolean;
+        },
+      ) => {
+        this.logger.debug("revokeGroupPermission", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
+          return await resolvers.revokeGroupPermission(
+            this.documentPermissionService,
+            args,
+            ctx.user?.address,
+            isGlobalAdmin,
+          );
+        } catch (error) {
+          this.logger.error("Error in revokeGroupPermission:", error);
+          throw error;
+        }
+      },
+
+      // Role Management Mutations
+      createRole: async (
+        _parent: unknown,
+        args: { name: string; description?: string | null },
+      ) => {
+        this.logger.debug("createRole", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          return await resolvers.createRole(
+            this.documentPermissionService,
+            args,
+          );
+        } catch (error) {
+          this.logger.error("Error in createRole:", error);
+          throw error;
+        }
+      },
+
+      deleteRole: async (_parent: unknown, args: { id: number }) => {
+        this.logger.debug("deleteRole", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          return await resolvers.deleteRole(
+            this.documentPermissionService,
+            args,
+          );
+        } catch (error) {
+          this.logger.error("Error in deleteRole:", error);
+          throw error;
+        }
+      },
+
+      assignRoleToUser: async (
+        _parent: unknown,
+        args: { userAddress: string; roleId: number },
+      ) => {
+        this.logger.debug("assignRoleToUser", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          return await resolvers.assignRoleToUser(
+            this.documentPermissionService,
+            args,
+          );
+        } catch (error) {
+          this.logger.error("Error in assignRoleToUser:", error);
+          throw error;
+        }
+      },
+
+      removeRoleFromUser: async (
+        _parent: unknown,
+        args: { userAddress: string; roleId: number },
+      ) => {
+        this.logger.debug("removeRoleFromUser", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          return await resolvers.removeRoleFromUser(
+            this.documentPermissionService,
+            args,
+          );
+        } catch (error) {
+          this.logger.error("Error in removeRoleFromUser:", error);
+          throw error;
+        }
+      },
+
+      // Operation Restriction Mutations
+      restrictOperation: async (
+        _parent: unknown,
+        args: { documentId: string; operationType: string },
+        ctx: {
+          user?: { address: string };
+          isAdmin?: (address: string) => boolean;
+        },
+      ) => {
+        this.logger.debug("restrictOperation", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
+          return await resolvers.restrictOperation(
+            this.documentPermissionService,
+            args,
+            ctx.user?.address,
+            isGlobalAdmin,
+          );
+        } catch (error) {
+          this.logger.error("Error in restrictOperation:", error);
+          throw error;
+        }
+      },
+
+      unrestrictOperation: async (
+        _parent: unknown,
+        args: { documentId: string; operationType: string },
+        ctx: {
+          user?: { address: string };
+          isAdmin?: (address: string) => boolean;
+        },
+      ) => {
+        this.logger.debug("unrestrictOperation", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
+          return await resolvers.unrestrictOperation(
+            this.documentPermissionService,
+            args,
+            ctx.user?.address,
+            isGlobalAdmin,
+          );
+        } catch (error) {
+          this.logger.error("Error in unrestrictOperation:", error);
+          throw error;
+        }
+      },
+
+      allowRoleForOperation: async (
+        _parent: unknown,
+        args: { documentId: string; operationType: string; roleId: number },
+        ctx: {
+          user?: { address: string };
+          isAdmin?: (address: string) => boolean;
+        },
+      ) => {
+        this.logger.debug("allowRoleForOperation", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
+          return await resolvers.allowRoleForOperation(
+            this.documentPermissionService,
+            args,
+            ctx.user?.address,
+            isGlobalAdmin,
+          );
+        } catch (error) {
+          this.logger.error("Error in allowRoleForOperation:", error);
+          throw error;
+        }
+      },
+
+      disallowRoleForOperation: async (
+        _parent: unknown,
+        args: { documentId: string; operationType: string; roleId: number },
+        ctx: {
+          user?: { address: string };
+          isAdmin?: (address: string) => boolean;
+        },
+      ) => {
+        this.logger.debug("disallowRoleForOperation", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
+          return await resolvers.disallowRoleForOperation(
+            this.documentPermissionService,
+            args,
+            ctx.user?.address,
+            isGlobalAdmin,
+          );
+        } catch (error) {
+          this.logger.error("Error in disallowRoleForOperation:", error);
+          throw error;
+        }
+      },
+
+      allowGroupForOperation: async (
+        _parent: unknown,
+        args: { documentId: string; operationType: string; groupId: number },
+        ctx: {
+          user?: { address: string };
+          isAdmin?: (address: string) => boolean;
+        },
+      ) => {
+        this.logger.debug("allowGroupForOperation", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
+          return await resolvers.allowGroupForOperation(
+            this.documentPermissionService,
+            args,
+            ctx.user?.address,
+            isGlobalAdmin,
+          );
+        } catch (error) {
+          this.logger.error("Error in allowGroupForOperation:", error);
+          throw error;
+        }
+      },
+
+      disallowGroupForOperation: async (
+        _parent: unknown,
+        args: { documentId: string; operationType: string; groupId: number },
+        ctx: {
+          user?: { address: string };
+          isAdmin?: (address: string) => boolean;
+        },
+      ) => {
+        this.logger.debug("disallowGroupForOperation", args);
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        try {
+          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
+          return await resolvers.disallowGroupForOperation(
+            this.documentPermissionService,
+            args,
+            ctx.user?.address,
+            isGlobalAdmin,
+          );
+        } catch (error) {
+          this.logger.error("Error in disallowGroupForOperation:", error);
+          throw error;
+        }
+      },
+    },
+
+    // Field Resolvers for nested types
+    Group: {
+      members: async (parent: { id: number }) => {
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        return resolvers.getGroupMembers(
+          this.documentPermissionService,
+          parent.id,
+        );
+      },
+    },
+
+    DocumentGroupPermission: {
+      group: async (parent: { groupId: number }) => {
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        const grp = await resolvers.group(this.documentPermissionService, {
+          id: parent.groupId,
+        });
+        if (!grp) {
+          throw new Error(`Group not found: ${parent.groupId}`);
+        }
+        return grp;
+      },
+    },
+
+    OperationRestriction: {
+      allowedRoles: async (parent: { id: number }) => {
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        return resolvers.getAllowedRolesForOperation(
+          this.documentPermissionService,
+          parent.id,
+        );
+      },
+      allowedGroups: async (parent: { id: number }) => {
+        if (!this.documentPermissionService) {
+          throw new Error("DocumentPermissionService not available");
+        }
+        return resolvers.getAllowedGroupsForOperation(
+          this.documentPermissionService,
+          parent.id,
+        );
       },
     },
 

@@ -2,10 +2,122 @@ import { PGlite } from "@electric-sql/pglite";
 import type { Knex } from "knex";
 import knex from "knex";
 import ClientPgLite from "knex-pglite";
-import { Kysely } from "kysely";
+import { type Generated, Kysely } from "kysely";
 import { KyselyKnexDialect, PGColdDialect } from "kysely-knex";
 import fs from "node:fs";
 import path from "node:path";
+
+/**
+ * Document visibility levels:
+ * - PUBLIC: Anyone can read/sync the document
+ * - PROTECTED: Only users with explicit permissions can access
+ * - PRIVATE: Document is not synced at all (local only)
+ */
+export type DocumentVisibility = "PUBLIC" | "PROTECTED" | "PRIVATE";
+
+/**
+ * Permission levels for protected documents:
+ * - READ: Can fetch and read the document
+ * - WRITE: Can push updates and modify the document
+ * - ADMIN: Can manage document permissions and settings
+ */
+export type DocumentPermissionLevel = "READ" | "WRITE" | "ADMIN";
+
+/**
+ * Database schema for document permissions
+ */
+export interface DocumentPermissionDatabase {
+  DocumentVisibility: DocumentVisibilityTable;
+  DocumentPermission: DocumentPermissionTable;
+  Group: GroupTable;
+  UserGroup: UserGroupTable;
+  DocumentGroupPermission: DocumentGroupPermissionTable;
+  Role: RoleTable;
+  UserRole: UserRoleTable;
+  DocumentOperationRestriction: DocumentOperationRestrictionTable;
+  OperationRolePermission: OperationRolePermissionTable;
+  OperationGroupPermission: OperationGroupPermissionTable;
+}
+
+export interface DocumentVisibilityTable {
+  documentId: string;
+  visibility: DocumentVisibility;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface DocumentPermissionTable {
+  id: Generated<number>;
+  documentId: string;
+  userAddress: string;
+  permission: DocumentPermissionLevel;
+  grantedBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Group management tables
+export interface GroupTable {
+  id: Generated<number>;
+  name: string;
+  description: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface UserGroupTable {
+  userAddress: string;
+  groupId: number;
+  createdAt: Date;
+}
+
+export interface DocumentGroupPermissionTable {
+  id: Generated<number>;
+  documentId: string;
+  groupId: number;
+  permission: DocumentPermissionLevel;
+  grantedBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Role management tables
+export interface RoleTable {
+  id: Generated<number>;
+  name: string;
+  description: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface UserRoleTable {
+  userAddress: string;
+  roleId: number;
+  createdAt: Date;
+}
+
+// Operation restriction tables
+export interface DocumentOperationRestrictionTable {
+  id: Generated<number>;
+  documentId: string;
+  operationType: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface OperationRolePermissionTable {
+  id: Generated<number>;
+  restrictionId: number;
+  roleId: number;
+  createdAt: Date;
+}
+
+export interface OperationGroupPermissionTable {
+  id: Generated<number>;
+  restrictionId: number;
+  groupId: number;
+  createdAt: Date;
+}
 
 type Db = Kysely<any>;
 

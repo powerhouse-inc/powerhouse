@@ -36,6 +36,26 @@ enum DocumentChangeType {
   CHILD_REMOVED
 }
 
+# Document visibility levels
+enum DocumentVisibility {
+  # Anyone can read/sync the document (default)
+  PUBLIC
+  # Only users with explicit permissions can access
+  PROTECTED
+  # Document is not synced at all (local only)
+  PRIVATE
+}
+
+# Permission levels for protected documents
+enum DocumentPermissionLevel {
+  # Can fetch and read the document
+  READ
+  # Can push updates and modify the document
+  WRITE
+  # Can manage document permissions and settings
+  ADMIN
+}
+
 # Object types
 type DocumentModelGlobalState {
   id: String!
@@ -113,6 +133,71 @@ type JobChangeEvent {
   status: String!
   result: JSONObject!
   error: String
+}
+# Document permission entry
+type DocumentPermissionEntry {
+  documentId: String!
+  userAddress: String!
+  permission: DocumentPermissionLevel!
+  grantedBy: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+# Document visibility info
+type DocumentVisibilityInfo {
+  documentId: String!
+  visibility: DocumentVisibility!
+}
+
+# Group type
+type Group {
+  id: Int!
+  name: String!
+  description: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  members: [String!]!
+}
+
+# Role type
+type Role {
+  id: Int!
+  name: String!
+  description: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+# Document group permission entry
+type DocumentGroupPermission {
+  documentId: String!
+  groupId: Int!
+  group: Group!
+  permission: DocumentPermissionLevel!
+  grantedBy: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+# Operation restriction for a document
+type OperationRestriction {
+  id: Int!
+  documentId: String!
+  operationType: String!
+  allowedRoles: [Role!]!
+  allowedGroups: [Group!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+# Combined document access info
+type DocumentAccessInfo {
+  documentId: String!
+  visibility: DocumentVisibility!
+  permissions: [DocumentPermissionEntry!]!
+  groupPermissions: [DocumentGroupPermission!]!
+  operationRestrictions: [OperationRestriction!]!
 }
 
 type ReactorSignerUser {
@@ -333,6 +418,33 @@ type Query {
     channelId: String!
     cursorOrdinal: Int!
   ): [SyncEnvelope!]!
+
+  # Get visibility and permissions for a document
+  documentAccess(documentId: String!): DocumentAccessInfo!
+
+  # Get all documents the current user has explicit access to
+  userDocumentPermissions: [DocumentPermissionEntry!]!
+
+  # Get all groups
+  groups: [Group!]!
+
+  # Get a specific group by ID
+  group(id: Int!): Group
+
+  # Get all roles
+  roles: [Role!]!
+
+  # Get a specific role by ID
+  role(id: Int!): Role
+
+  # Get all groups a user belongs to
+  userGroups(userAddress: String!): [Group!]!
+
+  # Get all roles assigned to a user
+  userRoles(userAddress: String!): [Role!]!
+
+  # Check if the current user can execute a specific operation on a document
+  canExecuteOperation(documentId: String!, operationType: String!): Boolean!
 }
 
 type Mutation {
@@ -412,6 +524,85 @@ type Mutation {
   pushSyncEnvelope(
     envelope: SyncEnvelopeInput!
   ): Boolean!
+
+  # Set the visibility level for a document (requires ADMIN permission or global admin)
+  setDocumentVisibility(
+    documentId: String!
+    visibility: DocumentVisibility!
+  ): DocumentVisibilityInfo!
+
+  # Grant a user permission on a document (requires ADMIN permission or global admin)
+  grantDocumentPermission(
+    documentId: String!
+    userAddress: String!
+    permission: DocumentPermissionLevel!
+  ): DocumentPermissionEntry!
+
+  # Revoke a user's permission on a document (requires ADMIN permission or global admin)
+  revokeDocumentPermission(
+    documentId: String!
+    userAddress: String!
+  ): Boolean!
+
+  # --- Group Management ---
+
+  # Create a new group
+  createGroup(name: String!, description: String): Group!
+
+  # Delete a group and all its associations
+  deleteGroup(id: Int!): Boolean!
+
+  # Add a user to a group
+  addUserToGroup(userAddress: String!, groupId: Int!): Boolean!
+
+  # Remove a user from a group
+  removeUserFromGroup(userAddress: String!, groupId: Int!): Boolean!
+
+  # --- Group Document Permissions ---
+
+  # Grant a group permission on a document
+  grantGroupPermission(
+    documentId: String!
+    groupId: Int!
+    permission: DocumentPermissionLevel!
+  ): DocumentGroupPermission!
+
+  # Revoke a group's permission on a document
+  revokeGroupPermission(documentId: String!, groupId: Int!): Boolean!
+
+  # --- Role Management ---
+
+  # Create a new role
+  createRole(name: String!, description: String): Role!
+
+  # Delete a role and all its associations
+  deleteRole(id: Int!): Boolean!
+
+  # Assign a role to a user
+  assignRoleToUser(userAddress: String!, roleId: Int!): Boolean!
+
+  # Remove a role from a user
+  removeRoleFromUser(userAddress: String!, roleId: Int!): Boolean!
+
+  # --- Operation Restrictions ---
+
+  # Restrict an operation on a document (only allowed roles/groups can execute)
+  restrictOperation(documentId: String!, operationType: String!): OperationRestriction!
+
+  # Remove operation restriction (allows anyone with write access)
+  unrestrictOperation(documentId: String!, operationType: String!): Boolean!
+
+  # Allow a role to execute a restricted operation
+  allowRoleForOperation(documentId: String!, operationType: String!, roleId: Int!): Boolean!
+
+  # Disallow a role from executing a restricted operation
+  disallowRoleForOperation(documentId: String!, operationType: String!, roleId: Int!): Boolean!
+
+  # Allow a group to execute a restricted operation
+  allowGroupForOperation(documentId: String!, operationType: String!, groupId: Int!): Boolean!
+
+  # Disallow a group from executing a restricted operation
+  disallowGroupForOperation(documentId: String!, operationType: String!, groupId: Int!): Boolean!
 }
 
 type Subscription {
