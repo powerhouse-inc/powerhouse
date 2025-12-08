@@ -40,6 +40,8 @@ import type { IDocumentModelRegistry } from "../src/registry/interfaces.js";
 import type { IJobAwaiter } from "../src/shared/awaiter.js";
 import { JobStatus } from "../src/shared/types.js";
 import type { ISigner } from "../src/signer/types.js";
+import { ConsistencyTracker } from "../src/shared/consistency-tracker.js";
+import { ConsistencyAwareLegacyStorage } from "../src/storage/consistency-aware-legacy-storage.js";
 import type {
   IDocumentIndexer,
   IDocumentView,
@@ -523,10 +525,18 @@ export async function createTestReactorSetup(
   const documentView = createMockDocumentView();
   const documentIndexer = createMockDocumentIndexer();
 
+  // Wrap storage with consistency-aware storage
+  const legacyStorageConsistencyTracker = new ConsistencyTracker();
+  const consistencyAwareStorage = new ConsistencyAwareLegacyStorage(
+    storage,
+    legacyStorageConsistencyTracker,
+    eventBus,
+  );
+
   // Create reactor
   const reactor = new Reactor(
     driveServer,
-    storage,
+    consistencyAwareStorage,
     queue,
     jobTracker,
     readModelCoordinator,

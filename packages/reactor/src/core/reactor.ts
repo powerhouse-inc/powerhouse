@@ -1,4 +1,4 @@
-import type { BaseDocumentDriveServer, IDocumentStorage } from "document-drive";
+import type { BaseDocumentDriveServer } from "document-drive";
 import { AbortError } from "document-drive";
 import type {
   Action,
@@ -29,6 +29,7 @@ import { JobStatus } from "../shared/types.js";
 import { matchesScope } from "../shared/utils.js";
 import type { ISigner } from "../signer/types.js";
 import type {
+  IConsistencyAwareStorage,
   IDocumentIndexer,
   IDocumentView,
   IOperationStore,
@@ -56,7 +57,7 @@ import {
  */
 export class Reactor implements IReactor {
   private driveServer: BaseDocumentDriveServer;
-  private documentStorage: IDocumentStorage;
+  private documentStorage: IConsistencyAwareStorage;
   private shutdownStatus: ShutdownStatus;
   private setShutdown: (value: boolean) => void;
   private queue: IQueue;
@@ -69,7 +70,7 @@ export class Reactor implements IReactor {
 
   constructor(
     driveServer: BaseDocumentDriveServer,
-    documentStorage: IDocumentStorage,
+    documentStorage: IConsistencyAwareStorage,
     queue: IQueue,
     jobTracker: IJobTracker,
     readModelCoordinator: IReadModelCoordinator,
@@ -170,13 +171,21 @@ export class Reactor implements IReactor {
     childIds: string[];
   }> {
     if (this.features.legacyStorageEnabled) {
-      const document = await this.documentStorage.get<TDocument>(id);
+      const document = await this.documentStorage.get<TDocument>(
+        id,
+        consistencyToken,
+        signal,
+      );
 
       if (signal?.aborted) {
         throw new AbortError();
       }
 
-      const childIds = await this.documentStorage.getChildren(id);
+      const childIds = await this.documentStorage.getChildren(
+        id,
+        consistencyToken,
+        signal,
+      );
 
       if (signal?.aborted) {
         throw new AbortError();
@@ -239,7 +248,11 @@ export class Reactor implements IReactor {
     if (this.features.legacyStorageEnabled) {
       let ids: string[];
       try {
-        ids = await this.documentStorage.resolveIds([slug], signal);
+        ids = await this.documentStorage.resolveIds(
+          [slug],
+          consistencyToken,
+          signal,
+        );
       } catch (error) {
         if (error instanceof Error && error.message.includes("not found")) {
           throw new Error(`Document not found with slug: ${slug}`);
@@ -298,6 +311,7 @@ export class Reactor implements IReactor {
         try {
           const ids = await this.documentStorage.resolveIds(
             [identifier],
+            consistencyToken,
             signal,
           );
 
@@ -359,7 +373,11 @@ export class Reactor implements IReactor {
   ): Promise<Record<string, PagedResults<Operation>>> {
     if (this.features.legacyStorageEnabled) {
       // Use storage directly to get the document
-      const document = await this.documentStorage.get(documentId);
+      const document = await this.documentStorage.get(
+        documentId,
+        consistencyToken,
+        signal,
+      );
 
       if (signal?.aborted) {
         throw new AbortError();
@@ -1026,7 +1044,11 @@ export class Reactor implements IReactor {
 
         let document: PHDocument;
         try {
-          document = await this.documentStorage.get<PHDocument>(id);
+          document = await this.documentStorage.get<PHDocument>(
+            id,
+            consistencyToken,
+            signal,
+          );
         } catch {
           // Skip documents that don't exist or can't be accessed
           // This matches the behavior expected from a search operation
@@ -1067,7 +1089,7 @@ export class Reactor implements IReactor {
                 ids,
                 view,
                 { cursor: nextCursor!, limit },
-                undefined,
+                consistencyToken,
                 signal,
               )
           : undefined,
@@ -1118,7 +1140,7 @@ export class Reactor implements IReactor {
                 ids,
                 view,
                 { cursor: nextCursor!, limit },
-                undefined,
+                consistencyToken,
                 signal,
               )
           : undefined,
@@ -1149,7 +1171,11 @@ export class Reactor implements IReactor {
       // Use storage to resolve slugs to IDs
       let ids: string[];
       try {
-        ids = await this.documentStorage.resolveIds(slugs, signal);
+        ids = await this.documentStorage.resolveIds(
+          slugs,
+          consistencyToken,
+          signal,
+        );
       } catch {
         // If slug resolution fails, return empty results
         // This matches the behavior expected from a search operation
@@ -1164,7 +1190,11 @@ export class Reactor implements IReactor {
 
         let document: PHDocument;
         try {
-          document = await this.documentStorage.get<PHDocument>(id);
+          document = await this.documentStorage.get<PHDocument>(
+            id,
+            consistencyToken,
+            signal,
+          );
         } catch {
           // Skip documents that don't exist or can't be accessed
           continue;
@@ -1205,7 +1235,7 @@ export class Reactor implements IReactor {
                 slugs,
                 view,
                 { cursor: nextCursor!, limit },
-                undefined,
+                consistencyToken,
                 signal,
               )
           : undefined,
@@ -1275,7 +1305,7 @@ export class Reactor implements IReactor {
                 slugs,
                 view,
                 { cursor: nextCursor!, limit },
-                undefined,
+                consistencyToken,
                 signal,
               )
           : undefined,
@@ -1395,7 +1425,13 @@ export class Reactor implements IReactor {
 
       // Get document IDs of the specified type
       const { documents: documentIds, nextCursor } =
-        await this.documentStorage.findByType(type, limit, cursor);
+        await this.documentStorage.findByType(
+          type,
+          limit,
+          cursor,
+          consistencyToken,
+          signal,
+        );
 
       if (signal?.aborted) {
         throw new AbortError();
@@ -1409,7 +1445,11 @@ export class Reactor implements IReactor {
 
         let document: PHDocument;
         try {
-          document = await this.documentStorage.get<PHDocument>(documentId);
+          document = await this.documentStorage.get<PHDocument>(
+            documentId,
+            consistencyToken,
+            signal,
+          );
         } catch {
           // Skip documents that can't be retrieved
           continue;
@@ -1440,7 +1480,7 @@ export class Reactor implements IReactor {
                 type,
                 view,
                 { cursor: nextCursor, limit },
-                undefined,
+                consistencyToken,
                 signal,
               )
           : undefined,
@@ -1450,7 +1490,7 @@ export class Reactor implements IReactor {
         type,
         view,
         paging,
-        undefined,
+        consistencyToken,
         signal,
       );
 
@@ -1471,7 +1511,7 @@ export class Reactor implements IReactor {
                 type,
                 view,
                 { cursor: result.nextCursor!, limit },
-                undefined,
+                consistencyToken,
                 signal,
               )
           : undefined,

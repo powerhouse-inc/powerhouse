@@ -118,6 +118,7 @@ export {
   type DocumentRelationship,
   type DocumentRevisions,
   type DocumentSnapshot,
+  type IConsistencyAwareStorage,
   type IDocumentGraph,
   type IDocumentIndexer,
   type IDocumentView,
@@ -126,6 +127,7 @@ export {
   type OperationContext,
   type OperationWithContext,
 } from "./storage/interfaces.js";
+export { ConsistencyAwareLegacyStorage } from "./storage/consistency-aware-legacy-storage.js";
 export { KyselyDocumentIndexer } from "./storage/kysely/document-indexer.js";
 export { KyselyKeyframeStore } from "./storage/kysely/keyframe-store.js";
 export { KyselyOperationStore } from "./storage/kysely/store.js";

@@ -28,6 +28,7 @@ import type { DocumentViewDatabase } from "../../../src/read-models/types.js";
 import { DocumentModelRegistry } from "../../../src/registry/implementation.js";
 import { ConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
 import { JobStatus } from "../../../src/shared/types.js";
+import { ConsistencyAwareLegacyStorage } from "../../../src/storage/consistency-aware-legacy-storage.js";
 import { KyselyDocumentIndexer } from "../../../src/storage/kysely/document-indexer.js";
 import { KyselyKeyframeStore } from "../../../src/storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../../../src/storage/kysely/store.js";
@@ -152,9 +153,16 @@ async function createReactorSetup(
 
   const readModelCoordinator = new ReadModelCoordinator(eventBus, readModels);
 
+  const legacyStorageConsistencyTracker = new ConsistencyTracker();
+  const consistencyAwareStorage = new ConsistencyAwareLegacyStorage(
+    storage,
+    legacyStorageConsistencyTracker,
+    eventBus,
+  );
+
   const reactor = new Reactor(
     driveServer,
-    storage,
+    consistencyAwareStorage,
     queue,
     jobTracker,
     readModelCoordinator,

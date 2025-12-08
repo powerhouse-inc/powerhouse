@@ -8,6 +8,8 @@ import { EventBus } from "../../src/events/event-bus.js";
 import { InMemoryJobTracker } from "../../src/job-tracker/in-memory-job-tracker.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
 import { ReadModelCoordinator } from "../../src/read-models/coordinator.js";
+import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
+import { ConsistencyAwareLegacyStorage } from "../../src/storage/consistency-aware-legacy-storage.js";
 import {
   createMockDocumentIndexer,
   createMockDocumentView,
@@ -33,9 +35,15 @@ describe("mutateBatch validation", () => {
     const queue = new InMemoryQueue(eventBus);
     const jobTracker = new InMemoryJobTracker(eventBus);
     const readModelCoordinator = new ReadModelCoordinator(eventBus, []);
+    const consistencyTracker = new ConsistencyTracker();
+    const consistencyAwareStorage = new ConsistencyAwareLegacyStorage(
+      storage,
+      consistencyTracker,
+      eventBus,
+    );
     return new Reactor(
       driveServer,
-      storage,
+      consistencyAwareStorage,
       queue,
       jobTracker,
       readModelCoordinator,

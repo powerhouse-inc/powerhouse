@@ -20,6 +20,7 @@ import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
 import type { DocumentViewDatabase } from "../../../src/read-models/types.js";
 import { DocumentModelRegistry } from "../../../src/registry/implementation.js";
 import { ConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
+import { ConsistencyAwareLegacyStorage } from "../../../src/storage/consistency-aware-legacy-storage.js";
 import type {
   IKeyframeStore,
   IOperationStore,
@@ -112,9 +113,15 @@ describe("Legacy Write -> Read", () => {
 
     // Create reactor facade with all required dependencies
     const jobTracker = createTestJobTracker();
+    const legacyStorageConsistencyTracker = new ConsistencyTracker();
+    const consistencyAwareStorage = new ConsistencyAwareLegacyStorage(
+      storage,
+      legacyStorageConsistencyTracker,
+      eventBus,
+    );
     reactor = new Reactor(
       driveServer,
-      storage,
+      consistencyAwareStorage,
       queue,
       jobTracker,
       readModelCoordinator,

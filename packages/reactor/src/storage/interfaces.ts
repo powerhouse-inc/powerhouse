@@ -1,3 +1,4 @@
+import type { IDocumentStorage } from "document-drive";
 import type { Operation, PHDocument } from "document-model";
 import type { ConsistencyToken } from "../shared/types.js";
 import type { RemoteCursor, RemoteRecord } from "../sync/types.js";
@@ -436,6 +437,125 @@ export interface IDocumentIndexer {
    * @param signal - Optional abort signal to cancel the request
    */
   getRelationshipTypes(
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<string[]>;
+}
+
+/**
+ * A consistency-aware storage interface used by the Reactor when legacy storage
+ * mode is enabled. This interface provides read-after-write consistency by
+ * accepting an optional consistency token on read operations.
+ *
+ * This is a standalone interface (not extending IDocumentStorage) because the
+ * method signatures differ - consistency token is added as an optional parameter
+ * to read operations.
+ */
+export interface IConsistencyAwareStorage {
+  /**
+   * Returns the document with the given id.
+   *
+   * @param id - The id of the document to get
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
+   */
+  get<TDocument extends PHDocument>(
+    id: string,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<TDocument>;
+
+  /**
+   * Returns the document with the given slug.
+   *
+   * @param slug - The slug of the document to get
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
+   */
+  getBySlug<TDocument extends PHDocument>(
+    slug: string,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<TDocument>;
+
+  /**
+   * Returns true if the document exists.
+   *
+   * @param id - The id of the document to check
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
+   */
+  exists(
+    id: string,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<boolean>;
+
+  /**
+   * Finds documents by their document type.
+   *
+   * @param type - The document type to search for
+   * @param limit - Optional limit on the number of results
+   * @param cursor - Optional cursor for pagination
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
+   */
+  findByType(
+    type: string,
+    limit?: number,
+    cursor?: string,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<{ documents: string[]; nextCursor: string | undefined }>;
+
+  /**
+   * Returns the children of a document.
+   *
+   * @param id - The id of the parent document
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
+   */
+  getChildren(
+    id: string,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<string[]>;
+
+  /**
+   * Resolves slugs to document IDs.
+   *
+   * @param slugs - The slugs to resolve
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
+   */
+  resolveIds(
+    slugs: string[],
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<string[]>;
+
+  /**
+   * Resolves document IDs to slugs.
+   *
+   * @param ids - The document IDs to resolve
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
+   */
+  resolveSlugs(
+    ids: string[],
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<string[]>;
+
+  /**
+   * Returns all parent documents of the child document with the given id.
+   *
+   * @param childId - The id of the child document
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
+   */
+  getParents(
+    childId: string,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<string[]>;

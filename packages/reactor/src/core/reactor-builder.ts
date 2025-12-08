@@ -38,6 +38,7 @@ import type {
 
 import type { IJobExecutorManager } from "#executor/interfaces.js";
 import type { IDocumentIndexer } from "#storage/interfaces.js";
+import { ConsistencyAwareLegacyStorage } from "../storage/consistency-aware-legacy-storage.js";
 import { PGlite } from "@electric-sql/pglite";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
@@ -178,6 +179,13 @@ export class ReactorBuilder {
     const queue = new InMemoryQueue(eventBus);
     const jobTracker = new InMemoryJobTracker(eventBus);
 
+    const legacyStorageConsistencyTracker = new ConsistencyTracker();
+    const consistencyAwareStorage = new ConsistencyAwareLegacyStorage(
+      storage,
+      legacyStorageConsistencyTracker,
+      eventBus,
+    );
+
     const cacheConfig: WriteCacheConfig = {
       maxDocuments: this.writeCacheConfig?.maxDocuments ?? 100,
       ringBufferSize: this.writeCacheConfig?.ringBufferSize ?? 10,
@@ -250,7 +258,7 @@ export class ReactorBuilder {
 
     const reactor = new Reactor(
       driveServer,
-      storage,
+      consistencyAwareStorage,
       queue,
       jobTracker,
       readModelCoordinator,

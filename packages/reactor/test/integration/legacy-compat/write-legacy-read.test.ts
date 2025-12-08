@@ -37,6 +37,7 @@ import type { DocumentViewDatabase } from "../../../src/read-models/types.js";
 import { DocumentModelRegistry } from "../../../src/registry/implementation.js";
 import { ConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
 import { JobStatus } from "../../../src/shared/types.js";
+import { ConsistencyAwareLegacyStorage } from "../../../src/storage/consistency-aware-legacy-storage.js";
 import type {
   IDocumentView,
   IOperationStore,
@@ -185,10 +186,18 @@ describe.each(storageLayers)(
       // Create real read model coordinator with document view
       readModelCoordinator = new ReadModelCoordinator(eventBus, [documentView]);
 
+      // Wrap storage with consistency-aware storage
+      const legacyStorageConsistencyTracker = new ConsistencyTracker();
+      const consistencyAwareStorage = new ConsistencyAwareLegacyStorage(
+        legacyStorage as IDocumentStorage,
+        legacyStorageConsistencyTracker,
+        eventBus,
+      );
+
       // Create reactor
       reactor = new Reactor(
         driveServer,
-        legacyStorage as IDocumentStorage,
+        consistencyAwareStorage,
         queue,
         jobTracker,
         readModelCoordinator,
