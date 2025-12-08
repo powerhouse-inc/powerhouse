@@ -6,6 +6,13 @@
 PROJECT_NAME=${1:-"global"}
 ACTION=${2:-"status"}
 
+# Nginx config file name - remove leading dot to avoid hidden file issues
+# (nginx's include directive with * glob doesn't match hidden files)
+NGINX_CONFIG_NAME="${PROJECT_NAME#.}"
+if [ "$NGINX_CONFIG_NAME" = "" ]; then
+    NGINX_CONFIG_NAME="default-ph"
+fi
+
 # Get Switchboard port from .env or use default
 if [ -f ".env" ]; then
     SWITCHBOARD_PORT=$(grep "SWITCHBOARD_PORT=" .env | cut -d'=' -f2)
@@ -42,8 +49,8 @@ else
         fi
 
         # Check if Nginx configuration exists
-        if [ ! -f "/etc/nginx/sites-available/$project_name" ]; then
-            echo "Error: Nginx configuration not found"
+        if [ ! -f "/etc/nginx/sites-available/$NGINX_CONFIG_NAME" ]; then
+            echo "Error: Nginx configuration not found at /etc/nginx/sites-available/$NGINX_CONFIG_NAME"
             error=1
         fi
 
@@ -62,11 +69,11 @@ else
     # Function to enable/disable Nginx site
     manage_nginx_site() {
         local action=$1
-        local site_path="/etc/nginx/sites-available/$PROJECT_NAME"
-        local enabled_path="/etc/nginx/sites-enabled/$PROJECT_NAME"
-        
+        local site_path="/etc/nginx/sites-available/$NGINX_CONFIG_NAME"
+        local enabled_path="/etc/nginx/sites-enabled/$NGINX_CONFIG_NAME"
+
         if [ ! -f "$site_path" ]; then
-            echo "Error: Nginx site configuration for $PROJECT_NAME not found"
+            echo "Error: Nginx site configuration for $NGINX_CONFIG_NAME not found"
             return 1
         fi
         
@@ -94,7 +101,8 @@ else
         echo "Building Connect..."
         ph connect build
         sudo rm -rf /var/www/html/${PROJECT_NAME}
-        sudo cp -r .ph/connect-build/dist /var/www/html/${PROJECT_NAME}
+        sudo mkdir -p /var/www/html/${PROJECT_NAME}
+        sudo cp -r .ph/connect-build/dist/* /var/www/html/${PROJECT_NAME}/
         
         # Enable Nginx site
         manage_nginx_site "enable"
@@ -152,7 +160,7 @@ else
             connect_health="❌"
             connect_memory="N/A"
             connect_uptime="N/A"
-            if [ -L "/etc/nginx/sites-enabled/$PROJECT_NAME" ]; then
+            if [ -L "/etc/nginx/sites-enabled/$NGINX_CONFIG_NAME" ]; then
                 connect_status="Enabled"
                 # Check if Connect is reachable
                 if curl -s -f "http://localhost/$PROJECT_NAME" > /dev/null; then
