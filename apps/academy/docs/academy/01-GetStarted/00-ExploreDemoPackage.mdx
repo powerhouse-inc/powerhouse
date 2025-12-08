@@ -3,7 +3,7 @@
 ## Let's get started
 
 To give you a quick idea of how the Powerhouse Vetra builder platform operates on document models and packages, why don't you try installing a package?
-We will show you how to install the Powerhouse command-line tool `ph-cmd` and then use it to install a pre-built demo package containing a document model, an editor, and a drive app.
+We will show you how to install the Powerhouse command-line tool `ph-cmd` and then use it to install a pre-built demo package containing a document model, an editor, and a drive-app.
 
 ## Step 1: Install the Powerhouse CLI
 
@@ -80,23 +80,23 @@ This command downloads and sets up the `@powerhousedao/todo-demo`, making its fe
 
 You have now successfully installed `ph-cmd`, initalized a product project and added your first package!
 
-## Step 4: Run the connect app in studio mode
+## Step 4: Run the connect host application.
 
-To run the package locally in Connect Studio (our collaboration and contributor app), run:
+To run the package locally in Connect (our collaboration and contributor app), run:
 
 ```bash
 ph connect
 ```
 
-Click the returned localhost URL and you should see Connect Studio appear in your browser.
+Click the returned localhost URL and you should see Connect appear in your browser.
 
 <figure className="image-container">
   <img src={require("./images/Connect.png").default} alt="Connect Home" />
-  <figcaption>The Powerhouse Connect Studio interface.</figcaption>
+  <figcaption>The Powerhouse Connect interface.</figcaption>
 </figure>
 
 When you click the settings wheel in the bottom right corner, you'll get access to the **Package Manager**.
-Here, you'll see that you've installed the `@powerhousedao/todo-demo`, which contains not only a **Document Model** and its accompanying editor but also a **Drive App** specific to the to-do document model.
+Here, you'll see that you've installed the `@powerhousedao/todo-demo`, which contains not only a **Document Model** and its accompanying editor but also a **drive-app** specific to the to-do document model.
 
 <figure className="image-container">
   <img
@@ -111,7 +111,7 @@ Here, you'll see that you've installed the `@powerhousedao/todo-demo`, which con
 ## Step 5: Create a todo list document
 
 :::tip What is a 'drive' at Powerhouse?
-A **drive** is a folder to store and organize your documents in. Powerhouse offers the ability to build customized 'Drive Apps' for your documents. Think of a Drive App as a specialized lens—it offers **different ways to visualize, organize, and interact with** the data stored within a drive, making it more intuitive and efficient for specific use cases. To learn more, visit [Building A Drive App](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer)
+A **drive** is a folder to store and organize your documents in. Powerhouse offers the ability to build customized 'drive-apps' for your documents. Think of a drive-app as a specialized lens—it offers **different ways to visualize, organize, and interact with** the data stored within a drive, making it more intuitive and efficient for specific use cases. To learn more, visit [Building A drive-app](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer)
 :::
 
 ### 5.1 Create a local todolist app drive
@@ -119,7 +119,7 @@ A **drive** is a folder to store and organize your documents in. Powerhouse offe
 First, let's create a dedicated drive for your to-do lists:
 
 - Click the new drive icon in the interface
-- In the **Drive App** field, select 'To-do Drive App'
+- In the **drive-app** field, select 'To-do drive-app'
 - This creates a specialized drive that's optimized for to-do list documents
 
 ### 5.2 Create a todolist document
@@ -133,11 +133,11 @@ Now move into the drive you've just created:
 
 - Add a few to-dos that are on your mind
 - You'll see a statistics widget that counts the open to-dos
-- After closing the document, look at the To-do Drive App interface—you'll see that it tracks your tasks and displays a progress bar
+- After closing the document, look at the To-do drive-app interface—you'll see that it tracks your tasks and displays a progress bar
 
-This is an example of the **usefulness and impact of Drive Apps**.   
+This is an example of the **usefulness and impact of drive-apps**.   
 They offer a customized interface that works well with the different documents inside your drive.    
-Read more about drive apps in the Mastery Track: [Drive Apps and Drive Explorers](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer).
+Read more about drive-apps in the Mastery Track: [drive-apps and Drive Explorers](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer).
 
 A key feature of Connect is the **Operations History**. Every change to a document is stored as an individual operation, creating an immutable and replayable history. This provides complete auditability and transparency, as you can inspect each revision, its details, and any associated signatures. For example, you can see a chronological list of all modifications, along with who made them and when.
 

@@ -6,7 +6,7 @@
 - **Complete Editor UI**: [step-6-add-basic-todo-editor-ui-components](https://github.com/powerhouse-inc/todo-tutorial/tree/step-6-add-basic-todo-editor-ui-components)
 
 This tutorial covers two steps:
-1. **Step 5**: Generating the editor template with `ph generate --editor`
+1. **Step 5**: Generating the editor template with Vetra Studio
 2. **Step 6**: Building a complete, interactive UI with components for adding, editing, and deleting todos
 
 Compare implementations: `git diff step-5-generate-todo-list-document-editor step-6-add-basic-todo-editor-ui-components`
@@ -520,8 +520,8 @@ pnpm lint
 # Run tests
 pnpm test
 
-# Test in Connect Studio
-ph connect
+# Test in Vetra Studio 
+ph vetra --watch
 
 # Compare with reference implementation
 git diff tutorial/step-6-add-basic-todo-editor-ui-components -- editors/todo-list-editor/
@@ -553,5 +553,5 @@ You will learn:
 
 - The in's & out's of a document model.
 - How to use UI & Scalar components from the Document Engineering system.
-- How to build Custom Drive Apps or Drive Explorers.
+- How to build Custom drive-apps or Drive Explorers.
 

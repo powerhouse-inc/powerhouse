@@ -10,7 +10,7 @@ Let's start with some **key concepts** that will help you understand the process
 
 - **Powerhouse Project**: The construction site of your package: A project is built with document models and editors which you will publish to NPM as a package with modules.
 - **Powerhouse Modules**: The modules that are part of your project, such as the document models, editors, processors or scripts.
-- **Powerhouse Drive Apps**: Customized drive interfaces that function as a drive add and enhance or augment the functionality of your documents and workflows within the drive.
+- **Powerhouse drive-apps**: Customized drive interfaces that function as a drive add and enhance or augment the functionality of your documents and workflows within the drive.
 - **Powerhouse Package**: A package is a collection of modules that are published to NPM and can be installed on a server instance or locally on your machine with help of the host apps such as Connect, Switchboard & Fusion. Organizations build packages for specific purposes or workflows.
 
 ![Key Concepts](images/keyconcepts.png)

@@ -52,24 +52,7 @@ See step 1 for detailed GitHub Desktop instructions.
 In this tutorial, you will learn how to define the specifications for a **To-do List** document model within Vetra Studio using its GraphQL schema, and then export the resulting document model specification document for your Powerhouse project.
 If you don't have a document specification file created yet, have a look at the previous step of this tutorial to create a new document specification.
 
-Before you start, make sure you have Vetra Studio running locally with the command:
-
-```bash
-ph vetra
-```
-
-Vetra Studio will start and you will see the following output:
-
-```bash
-  ➜  Local:   http://localhost:3000/
-  ➜  Network: http://192.168.5.110:3000/
-  ➜  press h + enter to show help
-```
-
 ## TodoList document specification
-
-Make sure you have named your document model `TodoList` (PascalCase, no spaces or hyphens).  
-**Pay close attention to capitalization, as it influences our code generation.**
 
 We'll continue with this project to teach you how to create a document model specification and later an editor for your document model. We use the **GraphQL Schema Definition Language** (SDL) to define the schema for the document model.  
 Below, you can see the SDL for the `TodoList` document model.
@@ -127,8 +110,6 @@ input DeleteTodoItemInput {
 
 ## Define the document model specification
 
-To be able to define the document model, you need to open the document model editor in Connect.
-
 ### The steps below show you how to do this:
 
 1. In Vetra Studio, click on **'document model'** to open the document model specification editor.
@@ -152,7 +133,8 @@ To be able to define the document model, you need to open the document model edi
 
 8. Repeat the process from step 7 for the other input operations: `UPDATE_TODO_ITEM` and `DELETE_TODO_ITEM`. You may have noticed that you only need to add the name of the operation (e.g., `UPDATE_TODO_ITEM`, `DELETE_TODO_ITEM`) without the `Input` suffix. It will then be generated once you press enter.
 
-9. Once you have added all the input operations, click the `Export` button at the top right of the editor to save the document model specification document to your local machine. Ideally, you should save your file in the root of your Powerhouse project on your machine.
+9. In the meantime Vetra has been keeping an eye on your inputs and started code generation in your directory.
+In your terminal you will also find any validation errors that help you to identify missing specifications. 
 
 Check below screenshot for the complete implementation:
 

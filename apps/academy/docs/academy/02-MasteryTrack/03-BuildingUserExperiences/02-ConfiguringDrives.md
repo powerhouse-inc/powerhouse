@@ -34,11 +34,11 @@ A reactor allows you to store multiple documents and host **drives** and Drive E
 
 A drive uses a reactor and its underlying storage layer. A reactor is the low-level component that enables the synchronization of documents and drives.
 
-### Drive apps
+### drive-apps
 
-**Drive Explorers** (also known as Drive Apps) are specialized interfaces that enhance how users interact with documents within a drive. As mentioned, a drive is technically just another document containing a list of other documents. This means you can create a custom editor for your drive document.
+**Drive Explorers** (also known as drive-apps) are specialized interfaces that enhance how users interact with documents within a drive. As mentioned, a drive is technically just another document containing a list of other documents. This means you can create a custom editor for your drive document.
 
-These customized editors are called Drive Explorers or Drive Apps. They provide custom views, organization tools, and interactive features tailored to specific use cases. For example, a Drive Explorer might present data as a Kanban board, provide aggregated insights, or offer specialized widgets for data processing.
+These customized editors are called Drive Explorers or drive-apps. They provide custom views, organization tools, and interactive features tailored to specific use cases. For example, a Drive Explorer might present data as a Kanban board, provide aggregated insights, or offer specialized widgets for data processing.
 
 To learn more about building and customizing Drive Explorers, check out our [Building a Drive Explorer](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer) guide.
 
@@ -53,7 +53,7 @@ To create a new drive in Powerhouse, follow these steps:
 
 1. Click the "**Create New Drive**" button in the Connect interface or the **+** icon in the Connect sidebar.
 2. In the modal that appears, enter a name for your drive in the "**Drive Name**" field.
-3. Select the desired Drive App (such as the Generic Drive Explorer, or any other Drive App you've installed).
+3. Select the desired drive-app (such as the Generic Drive Explorer, or any other drive-app you've installed).
 4. Choose the location for your drive: **Local** (only available to you), **Cloud** (available to people in this drive), or **Public** (available to everyone).
 5. (Optional) Enable the "Make available offline" toggle if you want to keep a local backup of your drive.
 6. Once all options are set, click the "Create new drive" button to finalize and create your drive.

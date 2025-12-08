@@ -68,7 +68,7 @@
 - **Development Environment (Powerhouse)** – A local setup for developing Powerhouse applications, typically initiated with the `ph dev` command. It runs essential backend services like the Powerhouse Switchboard to enable real-time document model processing, code generation, and live updates, separate from the front-end Connect Studio.
 - **Document Model Editors** – An interface or UI to a document model that allows users to create and modify the data captured by the document models.
 - **Drive** – A logical container in Powerhouse for storing, organizing, and managing collections of documents.
-- **Drive App (Custom Drive Explorer)** – A UI application, often custom, providing tailored views and interactions with documents in a Drive.
+- **drive-app (Custom Drive Explorer)** – A UI application, often custom, providing tailored views and interactions with documents in a Drive.
 - **Environments (Powerhouse Environments)** – Pre-defined configurations for a project's Powerhouse dependencies, such as `dev` (development), `prod` (production/latest), and `local`. The Powerhouse CLI (`ph use` command) allows developers to easily switch between these environments to use different versions of packages (e.g., bleeding-edge, stable, or from a local monorepo).
 - **Host Applications** – Applications that use the Powerhouse framework to create and manage documents and data.
 - **Modules (in Document Model Editor)** – An organizational feature in Connect Studio's model editor for grouping related operations.

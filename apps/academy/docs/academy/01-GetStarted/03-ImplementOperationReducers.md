@@ -42,13 +42,12 @@ git reset --hard tutorial/step-3-implement-reducer-operation-handlers
 
 </details>
 
-In this section, we will implement the operation reducers for the **To-do List** document model. In the previous step Vetra imported our document specification and scaffolded our directory through code generation. If not, you can revisit the [Define TodoList Document Model](/academy/GetStarted/DefineToDoListDocumentModel) section.
+In this section, we will implement the operation reducers for the **To-do List** document model. In the previous step Vetra imported our document specification and scaffolded our code and directory through live code generation.
 
-## Understanding reducers in document models
+:::info
 
 Reducers are a core concept in Powerhouse document models. They implement the state transition logic for each operation defined in your schema.
 
-:::info
 **Connection to schema definition language (SDL)**: The reducers directly implement the operations you defined in your SDL. Remember how we defined `AddTodoItemInput`, `UpdateTodoItemInput`, and `DeleteTodoItemInput` in our schema?  
 The reducers provide the actual implementation of what happens when those operations are performed.
 :::

@@ -158,12 +158,29 @@ Once in the project directory, run the `ph vetra` command to start a Vetra Studi
 The host application for Vetra Studio will start and you will see the following output:
 
     ```bash
-      ➜  Local:   http://localhost:3000/
-      ➜  Network: http://192.168.5.110:3000/
-      ➜  press h + enter to show help
+ℹ [reactor-api] [package-manager] Loading packages: @powerhousedao/vetra                                                                                                        14:44:19
+ℹ [reactor-api] [server] WebSocket server attached at /graphql/subscriptions                                                                                                    14:44:22
+ℹ [reactor-api] [graphql-manager] Registered /graphql/system subgraph.                                                                                                          14:44:22
+ℹ [reactor-api] [graphql-manager] Registered /graphql/analytics subgraph.                                                                                                       14:44:22
+ℹ [reactor-api] [graphql-manager] Registered /d/:drive subgraph.                                                                                                                14:44:22
+ℹ [reactor-api] [graphql-manager] Registered /graphql supergraph                                                                                                                14:44:23
+ℹ [reactor-api] [graphql-manager] Registered /graphql/document-editor subgraph.                                                                                                 14:44:23
+ℹ [reactor-api] [graphql-manager] Registered /graphql/vetra-package subgraph.                                                                                                   14:44:23
+ℹ [reactor-api] [graphql-manager] Registered /graphql/subgraph-module subgraph.                                                                                                 14:44:23
+ℹ [reactor-api] [graphql-manager] Registered /graphql/processor-module subgraph.                                                                                                14:44:23
+ℹ [reactor-api] [graphql-manager] Registered /graphql/app-module subgraph.                                                                                                      14:44:23
+ℹ [reactor-api] [graphql-manager] Registered /graphql/vetra-read-model subgraph.                                                                                                14:44:23
+ℹ [reactor-api] [server] MCP server available at http://localhost:4001/mcp                                                                                                      14:44:24
+Switchboard initialized                                                                                                                                                         14:44:24
+   ➜ Drive URL: http://localhost:4001/d/vetra-bac239dd                                                                                                                          14:44:24
+2:44:24 PM [vite] (client) Re-optimizing dependencies because vite config has changed                                                                                           14:44:24
+Port 3000 is in use, trying another one...                                                                                                                                      14:44:24
+  ➜  Local:   http://localhost:3000/                                                                                                                                            14:44:24
+  ➜  Network: use --host to expose                                                                                                                                              14:44:24
+  ➜  press h + enter to show help               
     ```
 
-A new browser window will open and you will see the Vetra Studio. If it doesn't open automatically, you can open it manually by navigating to `http://localhost:3000/` in your browser.
+A new browser window will open when visiting localhost and you will see the Vetra Studio Drive
 
 
 <figure className="image-container">
@@ -175,7 +192,7 @@ A new browser window will open and you will see the Vetra Studio. If it doesn't 
 </figure>
 
 
-Create a new document model by clicking the Document Modesl 'Add new specification' button. Name your document TodoList (PascalCase, no spaces or hyphens). If you've followed the steps correctly, you'll have an empty TodoList document where you can define the 'Document Specifications' in the next step.
+Create a new document model by clicking the Document Models 'Add new specification' button. Name your document TodoList (PascalCase, no spaces or hyphens). If you've followed the steps correctly, you'll have an empty TodoList document where you can define the 'Document Specifications' in the next step.
 
 <details>
 <summary>Alternatively: Develop a single document model in Connect</summary>
