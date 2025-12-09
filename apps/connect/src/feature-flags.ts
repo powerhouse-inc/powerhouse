@@ -5,6 +5,7 @@ import {
   type Provider,
   type ResolutionDetails,
 } from "@openfeature/web-sdk";
+import { connectConfig } from "./connect.config.js";
 
 /**
  * QueryParamProvider reads feature flags from URL query parameters.
@@ -171,12 +172,20 @@ export async function initFeatureFlags(
     client.getBooleanValue(FEATURE_CHANNEL_SYNC_ENABLED, false),
   );
 
+  // Query param overrides env var for inspector
+  const inspectorFromParam = params.has(FEATURE_INSPECTOR_ENABLED);
+  const inspectorEnabled = inspectorFromParam
+    ? client.getBooleanValue(FEATURE_INSPECTOR_ENABLED, false)
+    : connectConfig.content.inspectorEnabled;
+  features.set(FEATURE_INSPECTOR_ENABLED, inspectorEnabled);
+
   return features;
 }
 
 const FEATURE_LEGACY_READ_ENABLED = "FEATURE_LEGACY_READ_ENABLED";
 const FEATURE_LEGACY_WRITE_ENABLED = "FEATURE_LEGACY_WRITE_ENABLED";
 const FEATURE_CHANNEL_SYNC_ENABLED = "FEATURE_CHANNEL_SYNC_ENABLED";
+const FEATURE_INSPECTOR_ENABLED = "FEATURE_INSPECTOR_ENABLED";
 
 /**
  * If true, reads go through legacy reactor.
@@ -211,5 +220,16 @@ export async function isChannelSyncEnabled(): Promise<boolean> {
   const client = OpenFeature.getClient();
   return Promise.resolve(
     client.getBooleanValue(FEATURE_CHANNEL_SYNC_ENABLED, false),
+  );
+}
+
+/**
+ * If true, shows the inspector button in the sidebar.
+ * Defaults to false (hidden).
+ */
+export async function isInspectorEnabled(): Promise<boolean> {
+  const client = OpenFeature.getClient();
+  return Promise.resolve(
+    client.getBooleanValue(FEATURE_INSPECTOR_ENABLED, false),
   );
 }
