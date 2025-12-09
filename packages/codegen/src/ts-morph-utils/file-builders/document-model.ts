@@ -309,7 +309,6 @@ export async function tsMorphGenerateDocumentModel({
 
   createOrUpdateUpgradeManifestFile({
     project,
-    documentModelDirPath,
     specVersions,
     latestVersion,
     upgradesDirPath,

@@ -11,7 +11,7 @@ function upgradeReducer(
   };
 }
 
-export const upgradeToV2: UpgradeTransition = {
+export const v2: UpgradeTransition = {
   toVersion: 2,
   upgradeReducer,
   description: "",

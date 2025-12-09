@@ -47,7 +47,6 @@ export function makeUpgradeFile(args: MakeUpgradeFileArgs) {
 
 export function createOrUpdateUpgradeManifestFile(args: {
   project: Project;
-  documentModelDirPath: string;
   specVersions: number[];
   latestVersion: number;
   upgradesDirPath: string;
@@ -56,7 +55,6 @@ export function createOrUpdateUpgradeManifestFile(args: {
 }) {
   const {
     project,
-    documentModelDirPath,
     specVersions,
     upgradesDirPath,
     documentTypeVariableName,
@@ -68,13 +66,13 @@ export function createOrUpdateUpgradeManifestFile(args: {
 
   const template = ts`
   import type { UpgradeManifest } from "document-model";
-  import { latest, versions } from "../versions.js";
+  import { latestVersion, supportedVersions } from "../versions.js";
   import { ${documentTypeVariableName} } from "${packageImportPath}";
 
-  export const upgradeManifest: UpgradeManifest<typeof versions> = {
+  export const upgradeManifest: UpgradeManifest<typeof supportedVersions> = {
     documentType: ${documentTypeVariableName},
-    latestVersion: latest,
-    supportedVersions: versions,
+    latestVersion,
+    supportedVersions,
     upgrades: {},
   };
   `.raw;
@@ -99,7 +97,7 @@ function buildUpgrades(specVersions: number[]) {
 
   for (const version of specVersions) {
     if (version < 2) continue;
-    upgradeStrings.push(`${version}: upgradeToV${version}`);
+    upgradeStrings.push(`v${version}`);
   }
 
   return `upgrades: { ${upgradeStrings.join(",\n")} }`;
@@ -113,7 +111,7 @@ function buildUpgradeTransitionImports(specVersions: number[]) {
 
   for (const version of specVersions) {
     if (version < 2) continue;
-    const namedImports = [`upgradeToV${version}`];
+    const namedImports = [`v${version}`];
     const moduleSpecifier = `./v${version}.js`;
     imports.push({
       namedImports,

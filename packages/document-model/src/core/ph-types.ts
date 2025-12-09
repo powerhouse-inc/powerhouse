@@ -356,6 +356,7 @@ export type UpgradeManifest<TVersions extends readonly number[]> = {
   supportedVersions: TVersions;
   // mapped over each version in the tuple
   upgrades: {
-    [V in Exclude<TupleMember<TVersions>, 1>]: UpgradeTransition;
+    // keys: "v2" | "v3" | ... (no "v1")
+    [V in Exclude<TupleMember<TVersions>, 1> as `v${V}`]: UpgradeTransition;
   };
 };

@@ -18,22 +18,22 @@ export function createOrUpdateVersionConstantsFile({
   project,
   documentModelDirPath,
 }: MakeVersionConstantsFileArgs) {
-  const VERSIONS = "versions";
-  const LATEST = "latest";
+  const SUPPORTED_VERSIONS = "supportedVersions";
+  const LATEST_VERSION = "latestVersion";
   const filePath = path.join(documentModelDirPath, "versions.ts");
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
   sourceFile.replaceWithText("");
 
   const latestVersionIndex = specVersions.indexOf(latestVersion);
   const versionInitializer = `[${specVersions.join(", ")}] as const;`;
-  const latestInitializer = `versions[${latestVersionIndex}];`;
+  const latestInitializer = `${SUPPORTED_VERSIONS}[${latestVersionIndex}];`;
 
   sourceFile.addVariableStatement({
     declarationKind: VariableDeclarationKind.Const,
     isExported: true,
     declarations: [
       {
-        name: VERSIONS,
+        name: SUPPORTED_VERSIONS,
         initializer: versionInitializer,
       },
     ],
@@ -44,7 +44,7 @@ export function createOrUpdateVersionConstantsFile({
     isExported: true,
     declarations: [
       {
-        name: LATEST,
+        name: LATEST_VERSION,
         initializer: latestInitializer,
       },
     ],

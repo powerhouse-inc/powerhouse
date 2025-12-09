@@ -20,7 +20,7 @@ function upgradeReducer(
   };
 }
 
-export const upgradeToV2: UpgradeTransition = {
+export const v${v.version}: UpgradeTransition = {
   toVersion: ${v.version},
   upgradeReducer,
   description: "",
