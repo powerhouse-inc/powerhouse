@@ -75,14 +75,6 @@ A Powerhouse project primarily consists of a document model and its editor. The 
 
 If you need help with installing the prerequisites you can visit our page [prerequisites](/academy/MasteryTrack/BuilderEnvironment/Prerequisites)
 
-## Quick start
-
-Create a new Powerhouse project with a single command:
-
-```bash
-ph init
-```
-
 ## Before you begin
 
 1. Open your terminal (either your system terminal or IDE's integrated terminal)
@@ -115,7 +107,41 @@ Navigate to the newly created project directory:
 cd ChatRoom
 ```
 
-## Develop your document model in Connect
+## Develop your document model in Vetra Studio
+
+**Vetra Studio** is the builder's orchestration hub for assembling all specifications needed for your package. It provides a **Vetra Studio Drive** to access, manage, and share document model specifications, editors, and data integrations—all through a visual interface. For deeper coverage, see the [Vetra Studio documentation](/academy/MasteryTrack/BuilderEnvironment/VetraStudio).
+
+Once in the project directory, run the `ph vetra` command to start a Vetra Studio Drive where you'll be defining your specifications.
+
+```bash
+ph vetra
+```
+
+The host application for Vetra Studio will start and you will see the following output:
+
+```bash
+ℹ [reactor-api] [package-manager] Loading packages: @powerhousedao/vetra
+ℹ [reactor-api] [server] WebSocket server attached at /graphql/subscriptions
+ℹ [reactor-api] [graphql-manager] Registered /graphql/system subgraph.
+ℹ [reactor-api] [graphql-manager] Registered /graphql supergraph
+ℹ [reactor-api] [server] MCP server available at http://localhost:4001/mcp
+Switchboard initialized
+   ➜ Drive URL: http://localhost:4001/d/vetra-bac239dd
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: use --host to expose
+  ➜  press h + enter to show help
+```
+
+A new browser window will open when visiting localhost and you will see the Vetra Studio Drive. If it doesn't open automatically, you can open it manually by navigating to `http://localhost:3000/` in your browser.
+
+Create a new document model by clicking the Document Models **'Add new specification'** button. Name your document `ChatRoom` (PascalCase, no spaces or hyphens).
+
+**Pay close attention to capitalization, as it influences code generation.**
+
+If you've followed the steps correctly, you'll have an empty `ChatRoom` document where you can define the **'Document Specifications'**.
+
+<details>
+<summary>Alternatively: Develop a single document model in Connect</summary>
 
 Once in the project directory, run the `ph connect` command to start a local instance of the Connect application. This allows you to start your document model specification document.
 
@@ -138,14 +164,10 @@ If your local drive is not present, navigate to Settings in the bottom left corn
 Clear the storage of your localhost application as it might have an old session cached.
 :::
 
-4. Move into your local drive.  
-   Create a new document model by clicking the `DocumentModel` button, found in the 'New Document' section at the bottom of the page. Name your document `ChatRoom` (PascalCase, no spaces or hyphens).
+Move into your local drive.  
+Create a new document model by clicking the `DocumentModel` button, found in the 'New Document' section at the bottom of the page. Name your document `ChatRoom` (PascalCase, no spaces or hyphens).
 
-   **Pay close attention to capitalization, as it influences code generation.**
-
-![Create New Document Model](./images/ChatRoomConnectApp.gif)
-
-If you've followed the steps correctly, you'll have an empty `ChatRoom` document where you can define the **'Document Specifications'**.
+</details>
 
 ## Verify your setup
 

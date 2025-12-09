@@ -16,7 +16,7 @@ This tutorial step has a corresponding implementation in the repository. After c
 
 ### Compare your generated code
 
-After running `ph generate ChatRoom.phd`, compare with the reference:
+As Vetra generates code automatically, compare with the reference:
 
 ```bash
 # Compare all generated files with the reference
@@ -37,14 +37,14 @@ See step 1 for detailed GitHub Desktop instructions.
 
 </details>
 
-In this tutorial, you will learn how to define the specifications for a **ChatRoom** document model within the Connect application using its GraphQL schema, and then export the resulting document model specification document for your Powerhouse project.
+In this tutorial, you will learn how to define the specifications for a **ChatRoom** document model within Vetra Studio using its GraphQL schema, and then export the resulting document model specification document for your Powerhouse project.
 
 If you don't have a document specification file created yet, have a look at the previous step of this tutorial to create a new document specification.
 
-Before you start, make sure you have the Connect application running locally with the command:
+Before you start, make sure you have Vetra Studio running locally with the command:
 
 ```bash
-ph connect
+ph vetra
 ```
 
 ## ChatRoom document specification
@@ -156,11 +156,11 @@ input EditChatDescriptionInput {
 
 ## Define the document model specification
 
-To define the document model, you need to open the document model editor in Connect.
+To define the document model, you need to open the document model editor in Vetra Studio.
 
 ### Steps to define your document model:
 
-1. In the Connect application, click on **'ChatRoom' Document** to open the document model specification editor.
+1. In Vetra Studio, click on **'ChatRoom' Document** to open the document model specification editor.
 
 2. You'll be presented with a form to fill in metadata about the document model. Fill in the details in the respective fields.
 
@@ -174,6 +174,7 @@ To define the document model, you need to open the document model editor in Conn
 
    ```json
     {
+      "ID": "",
       "name": "",
       "description": null,
       "createdAt": null,
@@ -205,21 +206,17 @@ To define the document model, you need to open the document model editor in Conn
 
 8. Add the remaining message operations to the `messages` module: `ADD_EMOJI_REACTION` and `REMOVE_EMOJI_REACTION`. Note that you only need to add the operation name (e.g., `ADD_EMOJI_REACTION`) without the `Input` suffix—it will be generated automatically.
 
-9. Add reducer exceptions to the `ADD_MESSAGE` operation for validation: `MessageContentCannotBeEmpty` and `MessageNotFound`. These will be used later to validate messages.
+9. Add **reducer exceptions** to the `ADD_MESSAGE` operation for validation: `MessageContentCannotBeEmptyError` and `MessageNotFoundError`. These will be used later to validate messages.
 
 10. Create a second module called `settings` for the chat room configuration operations.
 
 11. Add the settings operations to the `settings` module: `EDIT_CHAT_NAME` and `EDIT_CHAT_DESCRIPTION`.
 
-12. Once you have added all the input operations, click the `Export` button at the top right of the editor to save the document model specification to your local machine. Save the file in the root of your Powerhouse project.
-
-Check the screenshot below to verify the complete implementation:
-
-![Chatroom Document Model](image-3.png)
+12. In the meantime, Vetra has been keeping an eye on your inputs and started code generation in your directory. In your terminal you will also find any validation errors that help you to identify missing specifications.
 
 ## Verify your document model generation
 
-After running `ph generate ChatRoom.phd`, your project should have the following structure in `document-models/chat-room/`:
+If you have been watching the terminal in your IDE you will see that Vetra has been tracking your changes and scaffolding your directory. Your project should have the following structure in `document-models/chat-room/`:
 
 ```
 document-models/chat-room/
@@ -264,4 +261,4 @@ git ls-tree -r --name-only tutorial/main document-models/chat-room/
 
 ## Up next: Reducers
 
-In the next step, you'll learn how to implement the runtime logic that will use the `ChatRoom` document model specification you've just created and exported.
+In the next step, you'll learn how to implement the runtime logic that will use the `ChatRoom` document model specification you've just created.

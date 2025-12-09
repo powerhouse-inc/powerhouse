@@ -81,6 +81,7 @@ Remote drives enable collaborative development by syncing specifications across 
 **Preview Drive (`--watch` mode):**
 - Main "Vetra" drive syncs with remote and contains stable package configuration
 - "Vetra Preview" drive is created locally for testing document models before syncing
+- When restarting Vetra always use `vetra --watch` so it loads local documents & editors. 
 
 → [Full Vetra Remote Drive Reference](/academy/APIReferences/VetraRemoteDrive)
 

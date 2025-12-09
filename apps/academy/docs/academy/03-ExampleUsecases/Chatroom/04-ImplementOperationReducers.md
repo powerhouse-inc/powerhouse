@@ -1,4 +1,4 @@
-# Implement the document model
+# Implement the document model reducers
 
 :::tip Tutorial Repository
 📦 **Reference Code**: [chatroom-demo](https://github.com/powerhouse-inc/chatroom-demo)
@@ -62,9 +62,9 @@ git reset --hard tutorial/main
 
 </details>
 
-In this section, we will implement and test the operation reducers for the **ChatRoom** document model. For this, you have to export the document model specification from the Connect application and import it into your Powerhouse project directory.
+In this section, we will implement and test the operation reducers for the **ChatRoom** document model. Vetra Studio has been automatically generating your document model code as you defined the specification.
 
-To export the document model specification, follow the steps in the [Define ChatRoom Document Model](/academy/ExampleUsecases/Chatroom/DefineChatroomDocumentModel) section.
+If you need to review the document model specification steps, see [Define ChatRoom Document Model](/academy/ExampleUsecases/Chatroom/DefineChatroomDocumentModel).
 
 ## Understanding reducers in document models
 
@@ -135,14 +135,14 @@ Copy and paste the code below into the `messages.ts` file in the `reducers` fold
 ```typescript
 import {
   MessageNotFoundError,
-  MessageContentCannotBeEmptyError,
+  MessageContentCannotBeEmpty,
 } from "../../gen/messages/error.js";
-import type { ChatRoomMessagesOperations } from "@powerhousedao/chatroom-package/document-models/chat-room";
+import type { ChatRoomMessagesOperations } from "chatroom/document-models/chat-room";
 
 export const chatRoomMessagesOperations: ChatRoomMessagesOperations = {
   addMessageOperation(state, action) {
     if (action.input.content === "") {
-      throw new MessageContentCannotBeEmptyError();
+      throw new MessageContentCannotBeEmpty();
     }
 
     const newMessage = {
@@ -216,30 +216,10 @@ export const chatRoomMessagesOperations: ChatRoomMessagesOperations = {
       }
     }
   },
-};
-```
-
-</details>
-
-## Implement the settings reducers
-
-Navigate to `/document-models/chat-room/src/reducers/settings.ts` and implement the settings operation reducers.
-
-Copy and paste the code below into the `settings.ts` file in the `reducers` folder:
-
-<details>
-<summary>Settings Operation Reducers</summary>
-
-```typescript
-import type { ChatRoomSettingsOperations } from "@powerhousedao/chatroom-package/document-models/chat-room";
-
-export const chatRoomSettingsOperations: ChatRoomSettingsOperations = {
-  editChatNameOperation(state, action) {
-    state.name = action.input.name || "";
-  },
-  editChatDescriptionOperation(state, action) {
-    state.description = action.input.description || "";
-  },
+    senderOperation(state, action) {
+        // TODO: Implement "senderOperation" reducer
+        throw new Error('Reducer "senderOperation" not yet implemented');
+    }
 };
 ```
 
@@ -276,7 +256,7 @@ import {
   AddEmojiReactionInputSchema,
   removeEmojiReaction,
   RemoveEmojiReactionInputSchema,
-} from "@powerhousedao/chatroom-package/document-models/chat-room";
+} from "chatroom/document-models/chat-room";
 
 describe("Messages Operations", () => {
   it("should handle addMessage operation", () => {
@@ -332,69 +312,6 @@ describe("Messages Operations", () => {
 
 </details>
 
-### Settings operation tests
-
-Replace the content of `settings.test.ts` with:
-
-<details>
-<summary>Settings Operation Tests</summary>
-
-```typescript
-/**
- * This is a scaffold file meant for customization:
- * - change it by adding new tests or modifying the existing ones
- */
-
-import { describe, it, expect } from "vitest";
-import { generateMock } from "@powerhousedao/codegen";
-import {
-  reducer,
-  utils,
-  isChatRoomDocument,
-  editChatName,
-  EditChatNameInputSchema,
-  editChatDescription,
-  EditChatDescriptionInputSchema,
-} from "@powerhousedao/chatroom-package/document-models/chat-room";
-
-describe("Settings Operations", () => {
-  it("should handle editChatName operation", () => {
-    const document = utils.createDocument();
-    const input = generateMock(EditChatNameInputSchema());
-
-    const updatedDocument = reducer(document, editChatName(input));
-
-    expect(isChatRoomDocument(updatedDocument)).toBe(true);
-    expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe(
-      "EDIT_CHAT_NAME",
-    );
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-      input,
-    );
-    expect(updatedDocument.operations.global[0].index).toEqual(0);
-  });
-  it("should handle editChatDescription operation", () => {
-    const document = utils.createDocument();
-    const input = generateMock(EditChatDescriptionInputSchema());
-
-    const updatedDocument = reducer(document, editChatDescription(input));
-
-    expect(isChatRoomDocument(updatedDocument)).toBe(true);
-    expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe(
-      "EDIT_CHAT_DESCRIPTION",
-    );
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-      input,
-    );
-    expect(updatedDocument.operations.global[0].index).toEqual(0);
-  });
-});
-```
-
-</details>
-
 ### Document model tests
 
 The `document-model.test.ts` file contains tests to verify the document model structure. Replace its content with:
@@ -418,7 +335,7 @@ import {
   assertIsChatRoomDocument,
   isChatRoomState,
   assertIsChatRoomState,
-} from "@powerhousedao/chatroom-package/document-models/chat-room";
+} from "chatroom/document-models/chat-room";
 import { ZodError } from "zod";
 
 describe("ChatRoom Document Model", () => {

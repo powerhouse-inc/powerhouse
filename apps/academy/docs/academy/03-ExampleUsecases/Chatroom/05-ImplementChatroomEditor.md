@@ -17,8 +17,6 @@ This tutorial shows building from **generated scaffolding** to a **complete chat
 
 ### Compare your generated editor
 
-After running `pnpm generate --editor`:
-
 ```bash
 # Compare generated scaffolding with the reference
 git diff tutorial/main -- editors/chat-room-editor/
@@ -50,18 +48,24 @@ See step 1 for detailed GitHub Desktop instructions.
 
 </details>
 
-In this chapter we will continue with the interface or editor implementation of the **ChatRoom** document model. This means you will create a user interface for the **ChatRoom** document model which will be used inside the Connect app to visualize your chatroom, send messages, and react with emojis.
+In this chapter we will continue with the interface or editor implementation of the **ChatRoom** document model. This means you will create a user interface for the **ChatRoom** document model which will be used to visualize your chatroom, send messages, and react with emojis.
 
-## Generate the editor template
+## Add a document editor specification in Vetra Studio
 
-Run the command below to generate the editor template for the **ChatRoom** document model.  
-This command reads the **ChatRoom** document model definition from the `document-models` folder and generates the editor template in the `editors/chat-room-editor` folder.
+Go back to Vetra Studio, if you need to relaunch Vetra, launch it with `Vetra --watch` so it loads all existing local documents. Click the **'Add new specification'** button in the User Experiences column under **'Editors'**. This will create an editor template for your document model.
 
-```bash
-pnpm generate --editor chat-room-editor --document-types powerhouse/chat-room
+Give the editor the name `chat-room-editor` and select the correct document model. In our case that's the `powerhouse/chat-room`. 
+
+You'll see that the terminal in which you are running Vetra mentions 
 ```
-
-Notice the `--editor` flag which specifies the editor name, and the `--document-types` flag defines the document type `powerhouse/chat-room`.
+ℹ [Vetra] 🔄 Starting editor generation for: chat-room-editor                                        15:18:16
+                                                                                                     15:18:16
+Loaded templates: node_modules/.pnpm/@powerhousedao+codegen@5.0.12_kx2q3zvshbbgwl7sikydpz6mre/node_modules/@powerhousedao/codegen/dist/src/codegen/.hygen/templates
+       added: editors/chat-room-editor/components/EditName.tsx                                       15:18:16
+       added: editors/chat-room-editor/editor.tsx                                                    15:18:16
+       FORCED: editors/chat-room-editor/module.ts                                                    15:18:16
+ℹ [Vetra] ✅ Editor generation completed successfully for: chat-room-editor    
+````
 
 Once complete, you'll have a new directory structure:
 
@@ -80,10 +84,10 @@ Navigate to the `editors/chat-room-editor/editor.tsx` file and open it in your e
 When building your editor component within the Powerhouse ecosystem, you have several options for styling:
 
 1. **Default HTML Styling:** Standard HTML tags will render with default styles offered through the boilerplate.
-2. **Tailwind CSS:** Connect Studio comes with Tailwind CSS integrated. You can directly use Tailwind utility classes.
+2. **Tailwind CSS:** Vetra Studio comes with Tailwind CSS integrated. You can directly use Tailwind utility classes.
 3. **Custom CSS Files:** You can import traditional CSS files to apply custom styles.
 
-Connect Studio provides a dynamic local environment. By running `ph connect`, you can visualize your components instantly as you build them.
+Vetra Studio Preview provides a dynamic local environment. By running `ph vetra --watch`, you can visualize your components instantly as you build them.
 
 ## Build the editor with components
 
@@ -148,6 +152,9 @@ Here's what each component does:
 ### The utils.ts file
 
 The `utils.ts` file contains helper functions for mapping between document model types and component props:
+
+<details>
+<summary>View utils.ts code</summary>
 
 ```typescript
 import type {
@@ -249,9 +256,14 @@ export const mapReactions = (
 };
 ```
 
+</details>
+
 ### The main editor.tsx file
 
-The main `editor.tsx` file connects your document model to the UI components. Replace the generated scaffolding with:
+The main `editor.tsx` file connects your document model to the UI components. Replace the generated scaffolding with the code underneath:
+
+<details>
+<summary>View editor.tsx code</summary>
 
 ```typescript
 import { generateId } from "document-model/core";
@@ -400,6 +412,8 @@ export default function Editor() {
 }
 ```
 
+</details>
+
 **What's happening here:**
 
 - We use `useSelectedChatRoomDocument` hook to get the document state and dispatch function
@@ -503,13 +517,13 @@ export const EditableLabel: React.FC<EditableLabelProps> = ({
 
 ## Test your editor
 
-Now you can run the Connect app and see the **ChatRoom** editor in action:
+Now you can run Vetra Studio Preview and see the **ChatRoom** editor in action:
 
 ```bash
-ph connect
+ph vetra --watch
 ```
 
-In Connect, in the bottom right corner you'll find a new Document Model that you can create: **ChatRoom**. Click on it to create a new ChatRoom document.
+In Vetra Studio, in the bottom right corner you'll find a new Document Model that you can create: **ChatRoom**. Click on it to create a new ChatRoom document.
 
 :::warning Authentication Required
 A warning will prompt you to login before you can send messages. Login with an Ethereum address via Renown to start sending messages.

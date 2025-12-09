@@ -19,7 +19,7 @@ In production, Reactors are typically hosted as remote servers. For development 
 
 ## Start the local Reactor
 
-First, stop the Connect application if it's running. Then start the Reactor:
+First, stop Vetra Studio if it's running. Then start the Reactor:
 
 ```bash
 ph reactor
@@ -27,14 +27,14 @@ ph reactor
 
 This spins up a Reactor that:
 - Runs locally on your machine
-- Creates a public drive accessible from your Connect sidebar
+- Creates a public drive accessible from your sidebar
 - Enables synchronization between multiple browser sessions
 
 ## Test real-time collaboration
 
 To validate the real-time functionality of your ChatRoom:
 
-1. **Open two browser windows** with the Connect application
+1. **Open two browser windows** with the application
 2. **Navigate to the Reactor drive** in the left sidebar (it will appear as a public drive)
 3. **Login with different Ethereum addresses** in each window
 4. **Create a ChatRoom document** in one window
@@ -59,20 +59,20 @@ While testing your ChatRoom, try these features:
 
 3. **Reaction Toggling**: Click on an existing reaction to toggle it on/off for your user
 
-## Running Connect alongside Reactor
+## Running Vetra Studio alongside Reactor
 
-You can also run Connect and Reactor together. In separate terminal windows:
+You can also run Vetra Studio and Reactor together. In separate terminal windows:
 
 ```bash
 # Terminal 1: Start the Reactor
 ph reactor
 
-# Terminal 2: Start Connect (in a separate terminal)
-ph connect
+# Terminal 2: Start Vetra Studio (in a separate terminal)
+ph vetra --watch
 ```
 
 This allows you to:
-- Use Connect's local drive for development
+- Use Vetra Studio's local drive for development
 - Access the Reactor's public drive for collaboration testing
 - Switch between local and synchronized documents
 
