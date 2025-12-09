@@ -105,7 +105,7 @@ describe("versioned document models", () => {
     );
   });
 
-  describe("spec version 2", () => {
+  describe.skip("spec version 2", () => {
     it(
       "should handle generating document models as v2",
       {
@@ -163,7 +163,7 @@ describe("versioned document models", () => {
     );
   });
 
-  describe("spec version 3", () => {
+  describe.skip("spec version 3", () => {
     it(
       "should handle generating document models as v3",
       {

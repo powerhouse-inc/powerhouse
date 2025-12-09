@@ -33,6 +33,7 @@ import {
   createOrUpdateUpgradeManifestFile,
   createOrUpdateVersionConstantsFile,
   makeUpgradeFile,
+  makeUpgradesIndexFile,
 } from "./document-model/upgrades-dir.js";
 import { makeModulesFile } from "./module-files.js";
 
@@ -52,13 +53,17 @@ function makeDocumentModelIndexFile(args: {
   latestVersion: number;
 }) {
   const { project, documentModelDirPath, latestVersion } = args;
-  const template = `export * from "./v${latestVersion}/index.js";`;
 
   const filePath = path.join(documentModelDirPath, "index.ts");
 
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
 
-  sourceFile.replaceWithText(template);
+  sourceFile.replaceWithText("");
+  sourceFile.addExportDeclarations([
+    { moduleSpecifier: `./v${latestVersion}/index.js` },
+    { moduleSpecifier: `./upgrades/index.js` },
+  ]);
+
   formatSourceFileWithPrettier(sourceFile);
 }
 
@@ -312,9 +317,11 @@ export async function tsMorphGenerateDocumentModel({
     specVersions,
     latestVersion,
     upgradesDirPath,
-    packageImportPath: documentModelPackageImportPath,
+    documentModelId: documentModelState.id,
     ...documentModelVariableNames,
   });
+
+  makeUpgradesIndexFile({ project, upgradesDirPath, specVersions });
 
   project.saveSync();
 }

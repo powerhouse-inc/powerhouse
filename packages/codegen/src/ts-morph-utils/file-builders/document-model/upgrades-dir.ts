@@ -50,16 +50,9 @@ export function createOrUpdateUpgradeManifestFile(args: {
   specVersions: number[];
   latestVersion: number;
   upgradesDirPath: string;
-  documentTypeVariableName: string;
-  packageImportPath: string;
+  documentModelId: string;
 }) {
-  const {
-    project,
-    specVersions,
-    upgradesDirPath,
-    documentTypeVariableName,
-    packageImportPath,
-  } = args;
+  const { project, specVersions, upgradesDirPath, documentModelId } = args;
   const filePath = path.join(upgradesDirPath, "upgrade-manifest.ts");
 
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
@@ -67,10 +60,9 @@ export function createOrUpdateUpgradeManifestFile(args: {
   const template = ts`
   import type { UpgradeManifest } from "document-model";
   import { latestVersion, supportedVersions } from "./versions.js";
-  import { ${documentTypeVariableName} } from "${packageImportPath}";
 
   export const upgradeManifest: UpgradeManifest<typeof supportedVersions> = {
-    documentType: ${documentTypeVariableName},
+    documentType: "${documentModelId}",
     latestVersion,
     supportedVersions,
     upgrades: {},
@@ -167,4 +159,53 @@ export function createOrUpdateVersionConstantsFile({
   });
 
   formatSourceFileWithPrettier(sourceFile);
+}
+
+type MakeUpgradesIndexFileArgs = {
+  project: Project;
+  upgradesDirPath: string;
+  specVersions: number[];
+};
+export function makeUpgradesIndexFile({
+  project,
+  upgradesDirPath,
+  specVersions,
+}: MakeUpgradesIndexFileArgs) {
+  const filePath = path.join(upgradesDirPath, "index.ts");
+  const { sourceFile } = getOrCreateSourceFile(project, filePath);
+  sourceFile.replaceWithText("");
+
+  const upgradeReducerExports = makeUpgradeReducerExports(specVersions);
+
+  sourceFile.addExportDeclarations([
+    {
+      namedExports: ["upgradeManifest"],
+      moduleSpecifier: "./upgrade-manifest.js",
+    },
+    {
+      namedExports: ["supportedVersions", "latestVersion"],
+      moduleSpecifier: "./versions.js",
+    },
+    ...upgradeReducerExports,
+  ]);
+  formatSourceFileWithPrettier(sourceFile);
+}
+
+function makeUpgradeReducerExports(specVersions: number[]) {
+  const exports: {
+    namedExports: string[];
+    moduleSpecifier: string;
+  }[] = [];
+
+  for (const version of specVersions) {
+    if (version < 2) continue;
+    const namedExports = [`v${version}`];
+    const moduleSpecifier = `./v${version}.js`;
+    exports.push({
+      namedExports,
+      moduleSpecifier,
+    });
+  }
+
+  return exports;
 }
