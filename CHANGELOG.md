@@ -1,3 +1,18 @@
+## 5.1.0-dev.15 (2025-12-09)
+
+### 🚀 Features
+
+- first pass using feature flags across hooks ([ac7083067](https://github.com/powerhouse-inc/powerhouse/commit/ac7083067))
+
+### 🩹 Fixes
+
+- adding powerhouse drive to default options for switchboard when running with pnpm start ([4347307dc](https://github.com/powerhouse-inc/powerhouse/commit/4347307dc))
+- fixed legacy read off subscriptions ([7ed98a27c](https://github.com/powerhouse-inc/powerhouse/commit/7ed98a27c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.14 (2025-12-08)
 
 ### 🚀 Features

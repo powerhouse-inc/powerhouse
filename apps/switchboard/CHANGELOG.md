@@ -1,3 +1,13 @@
+## 5.1.0-dev.15 (2025-12-09)
+
+### 🩹 Fixes
+
+- adding powerhouse drive to default options for switchboard when running with pnpm start ([4347307dc](https://github.com/powerhouse-inc/powerhouse/commit/4347307dc))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.14 (2025-12-08)
 
 ### 🚀 Features
