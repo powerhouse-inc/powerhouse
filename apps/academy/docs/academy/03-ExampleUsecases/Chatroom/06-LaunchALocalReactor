@@ -1,5 +1,10 @@
 # Launch a local Reactor
 
+## Up next: Local Reactor
+
+In the next section, you'll learn how to run a local Reactor to test real-time synchronization between multiple users.
+
+
 :::tip Tutorial Repository
 📦 **Reference Code**: [chatroom-demo](https://github.com/powerhouse-inc/chatroom-demo)
 

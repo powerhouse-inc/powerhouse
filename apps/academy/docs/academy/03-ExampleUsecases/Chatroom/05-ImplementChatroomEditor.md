@@ -569,7 +569,3 @@ In this tutorial you've learned:
 ✅ **Action dispatching** - How to dispatch operations from your UI  
 ✅ **Type-safe development** - Leveraging TypeScript with generated types from your SDL  
 ✅ **Real-time collaboration** - Building features that work across multiple users
-
-## Up next: Local Reactor
-
-In the next section, you'll learn how to run a local Reactor to test real-time synchronization between multiple users.

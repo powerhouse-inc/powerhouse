@@ -122,12 +122,8 @@ const config: Config = {
               to: "academy/Architecture/PowerhouseArchitecture",
             },
             {
-              label: "FAQ",
-              to: "academy/Architecture/PowerhouseArchitecture",
-            },
-            {
-              label: "Blog",
-              to: "/blog",
+              label: "Cookbook",
+              to: "academy/Cookbook",
             },
           ],
         },

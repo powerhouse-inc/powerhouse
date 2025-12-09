@@ -1,3 +1,9 @@
+---
+toc_max_heading_level: 2
+
+
+---
+
 # Relational Database
 
 This page covers the relational database tools available in Powerhouse applications, providing type-safe database operations with real-time updates through PGlite integration.

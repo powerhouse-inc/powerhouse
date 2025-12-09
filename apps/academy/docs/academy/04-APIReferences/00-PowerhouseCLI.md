@@ -16,7 +16,9 @@ pnpm install -g ph-cmd
 
 :::
 
-<!-- AUTO-GENERATED-CLI-COMMANDS-START -->\n<!-- This content is automatically generated. Do not edit directly. -->\n
+<!-- AUTO-GENERATED-CLI-COMMANDS-START -->
+<!-- This content is automatically generated. Do not edit directly. -->
+
 
 ### ph-cmd Commands
 
@@ -247,7 +249,11 @@ Examples:
 
 ---
 
-*This document was automatically generated from the help text in the codebase.*\n\n### ph-cli Commands\n\n- [Connect Build](#connect-build)
+*This document was automatically generated from the help text in the codebase.*
+
+### ph-cli Commands
+
+- [Connect Build](#connect-build)
 - [Connect Preview](#connect-preview)
 - [Connect Studio](#connect-studio)
 - [Dev](#dev)
@@ -867,4 +873,6 @@ Examples:
 
 ---
 
-*This document was automatically generated from the help text in the codebase.*\n<!-- AUTO-GENERATED-CLI-COMMANDS-END -->
+*This document was automatically generated from the help text in the codebase.*
+
+<!-- AUTO-GENERATED-CLI-COMMANDS-END -->

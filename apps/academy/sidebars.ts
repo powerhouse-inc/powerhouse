@@ -40,8 +40,8 @@ const sidebars = {
           },
           items: [
             "academy/MasteryTrack/BuilderEnvironment/Prerequisites",
-            "academy/MasteryTrack/BuilderEnvironment/StandardDocumentModelWorkflow",
             "academy/MasteryTrack/BuilderEnvironment/VetraStudio",
+            "academy/MasteryTrack/BuilderEnvironment/CreateAPackageWithVetra",
           ],
         },
         {
@@ -118,18 +118,9 @@ const sidebars = {
             "academy/ExampleUsecases/Chatroom/DefineChatroomDocumentModel",
             "academy/ExampleUsecases/Chatroom/ImplementOperationReducers",
             "academy/ExampleUsecases/Chatroom/ImplementChatroomEditor",
-            "academy/ExampleUsecases/Chatroom/LaunchALocalReactor",
           ],
         },
-        {
-          type: "category",
-          label: "Vetra Package Library",
-          link: {
-            type: "doc",
-            id: "academy/ExampleUsecases/VetraPackageLibrary/VetraPackageLibrary",
-          },
-          items: [],
-        },
+
         {
           type: "category",
           label: "Todo List Tutorial",
@@ -148,6 +139,15 @@ const sidebars = {
             "academy/ExampleUsecases/TodoList/GenerateTodoDriveExplorer",
             "academy/ExampleUsecases/TodoList/AddSharedComponentForShowingTodoListStats",
           ],
+        },
+        {
+          type: "category",
+          label: "Vetra Package Library",
+          link: {
+            type: "doc",
+            id: "academy/ExampleUsecases/VetraPackageLibrary/VetraPackageLibrary",
+          },
+          items: [],
         },
       ],
     },

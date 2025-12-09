@@ -1,3 +1,7 @@
+---
+toc_max_heading_level: 2
+---
+
 # Cookbook
 
 ## Powerhouse CLI recipes
@@ -7,21 +11,21 @@ This section covers recipes related to the `ph-cmd`, the command-line tool for P
 <details id="installing-ph-cmd">
 <summary>Installing 'ph-cmd'</summary>
 
-## How to install Powerhouse CLI
+### How to install Powerhouse CLI
 
 ---
 
-## Problem statement
+### Problem statement
 
 You need to install the Powerhouse CLI (`ph-cmd`) to create and manage Powerhouse projects.
 
-## Prerequisites
+### Prerequisites
 
 - node.js 22 installed
 - pnpm package manager 10 installed
 - Terminal or command prompt access
 
-## Solution
+### Solution
 
 ### Step 1: Install the CLI globally
 
@@ -45,25 +49,25 @@ pnpm install -g ph-cmd@staging
 pnpm install -g ph-cmd@<version>
 ```
 
-## Expected outcome
+### Expected outcome
 
 - Powerhouse CLI (`ph-cmd`) installed globally on your system
 - Access to all Powerhouse CLI commands for project creation and management
 
-## Common issues and solutions
+### Common issues and solutions
 
 - Issue: Permission errors during installation
   - Solution: Use `sudo` on Unix-based systems or run as administrator on Windows
 - Issue: Version conflicts
   - Solution: Clean your system using the uninstallation recipe before installing a new version
 
-## Related recipes
+### Related recipes
 
 - [Installing 'ph-cmd'](#installing-ph-cmd)
 - [Uninstalling 'ph-cmd'](#uninstalling-ph-cmd)
 - [Setting up or Resetting the Global Powerhouse Configuration](#setting-up-or-resetting-the-global-powerhouse-configuration)
 
-## Further reading
+### Further reading
 
 - [Powerhouse Builder Tools](/academy/MasteryTrack/BuilderEnvironment/BuilderTools)
 </details>
@@ -71,20 +75,20 @@ pnpm install -g ph-cmd@<version>
 <details id="uninstalling-ph-cmd">
 <summary>Uninstalling 'ph-cmd'</summary>
 
-## How to uninstall Powerhouse CLI
+### How to uninstall Powerhouse CLI
 
 ---
 
-## Problem statement
+### Problem statement
 
 You want to perform a clean installation of the Powerhouse CLI.
 
-## Prerequisites
+### Prerequisites
 
 - Powerhouse CLI (`ph-cmd`) installed
 - A terminal or IDE
 
-## Solution
+### Solution
 
 ### Step 1: Uninstall `ph-cmd`
 
@@ -98,22 +102,22 @@ pnpm uninstall -g ph-cmd
 rm -rf ~/.ph
 ```
 
-## Expected outcome
+### Expected outcome
 
 - Your system should now be clean from the Powerhouse CLI
 
-## Common issues and solutions
+### Common issues and solutions
 
 - Issue: Outdated version
   - Solution: Uninstall and reinstall the Powerhouse CLI
 
-## Related recipes
+### Related recipes
 
 - [Installing 'ph-cmd'](#installing-ph-cmd)
 - [Uninstalling 'ph-cmd'](#uninstalling-ph-cmd)
 - [Setting up or Resetting the Global Powerhouse Configuration](#setting-up-or-resetting-the-global-powerhouse-configuration)
 
-## Further reading
+### Further reading
 
 - [Powerhouse Builder Tools](/academy/MasteryTrack/BuilderEnvironment/BuilderTools)
 - [Create A New Powerhouse Project](/academy/GetStarted/CreateNewPowerhouseProject)
@@ -122,20 +126,20 @@ rm -rf ~/.ph
 <details id="setting-up-or-resetting-the-global-powerhouse-configuration">
 <summary>Setting up or Resetting the Global Powerhouse Configuration</summary>
 
-## How to set up or reset the global Powerhouse configuration
+### How to set up or reset the global Powerhouse configuration
 
 ---
 
-## Problem statement
+### Problem statement
 
 You need to initialize the global Powerhouse configuration for the first time, or reset it to resolve issues or start fresh. This might also involve switching to a specific dependency environment like staging.
 
-## Prerequisites
+### Prerequisites
 
 - Powerhouse CLI (`ph-cmd`) installed
 - Terminal or command prompt access
 
-## Solution
+### Solution
 
 ### Step 1: (Optional) Remove existing configuration
 
@@ -166,26 +170,26 @@ ph use staging
 # ph use latest
 ```
 
-## Expected outcome
+### Expected outcome
 
 - A `~/.ph` directory is created or reset.
 - The global project is configured, potentially using the specified environment (e.g., staging).
 - You are ready to initialize or work with Powerhouse projects using the defined global settings.
 
-## Common issues and solutions
+### Common issues and solutions
 
 - Issue: Commands fail after removing `~/.ph`.
   - Solution: Ensure you run `ph setup-globals` afterwards.
 - Issue: Need to use specific local dependencies globally.
   - Solution: Use `ph use local /path/to/local/packages`.
 
-## Related recipes
+### Related recipes
 
 - [Installing 'ph-cmd'](#installing-ph-cmd)
 - [Uninstalling 'ph-cmd'](#uninstalling-ph-cmd)
 - [Using Different Branches in Powerhouse](#using-different-branches-in-powerhouse)
 
-## Further reading
+### Further reading
 
 - [Powerhouse Builder Tools](/academy/MasteryTrack/BuilderEnvironment/BuilderTools)
 - [GraphQL Schema Best Practices](/academy/MasteryTrack/WorkWithData/GraphQLAtPowerhouse)
@@ -194,21 +198,21 @@ ph use staging
 <details id="using-different-branches-in-powerhouse">
 <summary>Using Different Branches in Powerhouse</summary>
 
-## How to use different branches in Powerhouse
+### How to use different branches in Powerhouse
 
 ---
 
-## Problem statement
+### Problem statement
 
 You need to access experimental features, bugfixes, or development versions of Powerhouse components that aren't yet available in the stable release.
 
-## Prerequisites
+### Prerequisites
 
 - Terminal or command prompt access
 - pnpm package manager 10 installed
 - Node.js 22 installed
 
-## Solution
+### Solution
 
 ### Step 1: Install CLI with specific branch
 
@@ -255,26 +259,26 @@ ph use dev
 ph use prod
 ```
 
-## Expected outcome
+### Expected outcome
 
 - Access to the specified version of Powerhouse components
 - Ability to test experimental features or bugfixes
 - Project configured with the chosen branch's dependencies
 
-## Common issues and solutions
+### Common issues and solutions
 
 - Issue: Experimental features not working as expected
   - Solution: This is normal as these versions may contain untested features. Consider switching back to stable versions if issues persist.
 - Issue: Version conflicts between components
   - Solution: Ensure all components are using the same branch version. Use `ph use` commands to synchronize versions.
 
-## Related recipes
+### Related recipes
 
 - [Installing 'ph-cmd'](#installing-ph-cmd)
 - Updating Your Powerhouse Project Dependencies
 - [Setting up or Resetting the Global Powerhouse Configuration](#setting-up-or-resetting-the-global-powerhouse-configuration)
 
-## Further reading
+### Further reading
 
 - [Powerhouse Builder Tools](/academy/MasteryTrack/BuilderEnvironment/BuilderTools)
 </details>
@@ -282,21 +286,21 @@ ph use prod
 <details id="using-different-package-managers-with-powerhouse">
 <summary>Using Different Package Managers with Powerhouse</summary>
 
-## How to use different package managers with Powerhouse
+### How to use different package managers with Powerhouse
 
 ---
 
-## Problem statement
+### Problem statement
 
 You want to use a different package manager (npm, yarn, or bun) instead of pnpm for managing Powerhouse projects and dependencies.
 
-## Prerequisites
+### Prerequisites
 
 - Node.js 22 installed
 - Your preferred package manager installed (npm, yarn, or bun)
 - Terminal or command prompt access
 
-## Solution
+### Solution
 
 ### Step 1: Install the CLI with Your Preferred Package Manager
 
@@ -366,13 +370,13 @@ ph init --package-manager bun
 ph init --package-manager pnpm
 ```
 
-## Expected outcome
+### Expected outcome
 
 - Powerhouse CLI installed and accessible through your preferred package manager
 - Ability to manage Powerhouse projects using your chosen package manager
 - Proper PATH configuration for global binaries
 
-## Common issues and solutions
+### Common issues and solutions
 
 - Issue: Command not found after installation
   - Solution: Ensure the global binary directory is in your PATH (especially for yarn and bun)
@@ -382,17 +386,466 @@ ph init --package-manager pnpm
 - Issue: Package manager conflicts
   - Solution: Stick to one package manager per project to avoid lockfile conflicts
 
-## Related recipes
+### Related recipes
 
 - [Installing 'ph-cmd'](#installing-ph-cmd)
 - [Uninstalling 'ph-cmd'](#uninstalling-ph-cmd)
 - [Setting up or Resetting the Global Powerhouse Configuration](#setting-up-or-resetting-the-global-powerhouse-configuration)
 
-## Further reading
+### Further reading
 
 - [Powerhouse Builder Tools](/academy/MasteryTrack/BuilderEnvironment/BuilderTools)
 - [Yarn Global Installation Guide](https://classic.yarnpkg.com/lang/en/docs/cli/global/)
 - [Bun Installation Guide](https://bun.sh/docs/installation#how-to-add-your-path)
+</details>
+
+## Vetra Studio recipes
+
+This section covers recipes for using Vetra Studio, the AI-powered development environment for building Powerhouse packages with specification-driven workflows.
+
+<details id="launching-vetra-studio">
+<summary>Launching Vetra Studio</summary>
+
+### How to Launch Vetra Studio
+
+---
+
+### Problem statement
+
+You want to start Vetra Studio to develop document models, editors, and other package components using the specification-driven workflow.
+
+### Prerequisites
+
+- Powerhouse CLI (`ph-cmd`) installed
+- A Powerhouse project initialized (`ph init`)
+- Terminal or command prompt access
+
+### Solution
+
+### Step 1: Navigate to Your Project Directory
+
+```bash
+cd <yourprojectname>
+```
+
+### Step 2: Choose Your Launch Mode
+
+Vetra Studio offers three modes depending on your workflow:
+
+#### Interactive Mode (Recommended for Development)
+
+```bash
+ph vetra --interactive
+```
+
+In interactive mode:
+- You receive confirmation prompts before any code generation
+- Changes require explicit confirmation before being processed
+- Provides better control and visibility over document changes
+
+#### Watch Mode with Interactive
+
+```bash
+ph vetra --interactive --watch
+```
+
+In watch mode:
+- Enables dynamic loading for document-models and editors
+- The system watches for changes and reloads them dynamically
+- Best for active development with frequent changes
+
+#### Standard Mode
+
+```bash
+ph vetra
+```
+
+In standard mode:
+- Changes are processed automatically with 1-second debounce
+- Multiple changes are batched and processed together
+- Uses the latest document state for processing
+
+### Expected outcome
+
+- Vetra Studio launches in your browser
+- You can access the Vetra Studio Drive to manage specifications
+- Document models and editors are available for development
+
+### Common issues and solutions
+
+- **Issue**: Vetra Studio environment breaks during document model development
+  - **Solution**: This can happen when code changes break the environment. Restart Vetra Studio and check your document model for errors.
+- **Issue**: Changes not reflecting in the studio
+  - **Solution**: If not using `--watch` mode, restart Vetra Studio to pick up changes.
+
+### Related recipes
+
+- [Connecting to a Remote Vetra Drive](#connecting-to-a-remote-vetra-drive)
+- [Connecting Claude with Reactor MCP](#connecting-claude-with-reactor-mcp)
+
+### Further reading
+
+- [Vetra Studio Documentation](/academy/MasteryTrack/BuilderEnvironment/VetraStudio)
+- [Powerhouse CLI Reference](/academy/APIReferences/PowerhouseCLI#vetra)
+</details>
+
+<details id="connecting-to-a-remote-vetra-drive">
+<summary>Connecting to a Remote Vetra Drive</summary>
+
+### How to Connect to a Remote Vetra Drive
+
+---
+
+### Problem statement
+
+You want to collaborate with team members by connecting to a shared remote Vetra drive instead of using a local one, enabling synchronized specifications across your team.
+
+### Prerequisites
+
+- Powerhouse CLI (`ph-cmd`) installed
+- A Powerhouse project initialized or ready to create
+- The URL of the remote Vetra drive you want to connect to
+- Terminal or command prompt access
+
+### Solution
+
+#### Option A: Create a New Project with Remote Drive
+
+### Step 1: Initialize with Remote Drive
+
+```bash
+ph init --remote-drive <url>
+```
+
+Example:
+```bash
+ph init --remote-drive https://switchboard.staging.vetra.io/d/my-team-drive
+```
+
+### Step 2: Start Vetra with Watch Mode
+
+```bash
+ph vetra --watch
+```
+
+#### Option B: Clone an Existing Project from Remote Drive
+
+### Step 1: Checkout the Remote Drive
+
+```bash
+ph checkout --remote-drive <url>
+```
+
+### Step 2: Start Vetra
+
+```bash
+ph vetra --watch
+```
+
+#### Option C: Configure Remote Drive in Existing Project
+
+### Step 1: Edit powerhouse.config.json
+
+Add the Vetra configuration to your `powerhouse.config.json` file:
+
+```json
+{
+  "vetra": {
+    "driveId": "your-drive-id",
+    "driveUrl": "https://switchboard.staging.vetra.io/d/your-drive-id"
+  }
+}
+```
+
+### Step 2: Start Vetra
+
+```bash
+ph vetra --watch
+```
+
+### Expected outcome
+
+- Your project is connected to the remote Vetra drive
+- Specifications sync across team members
+- A "Vetra Preview" drive is created locally for testing changes before syncing
+- The main "Vetra" drive syncs with the remote and contains stable package configuration
+
+### Common issues and solutions
+
+- **Issue**: Cannot connect to remote drive
+  - **Solution**: Verify the drive URL is correct and accessible. Check your network connection and any firewall settings.
+- **Issue**: Local changes not syncing
+  - **Solution**: The "Vetra Preview" drive is for local testing. Changes need to be explicitly synced to the main drive.
+- **Issue**: Conflicts with team member changes
+  - **Solution**: Always use `ph vetra --watch` when restarting to ensure local documents and editors are loaded properly.
+
+### Related recipes
+
+- [Launching Vetra Studio](#launching-vetra-studio)
+- [Connecting Claude with Reactor MCP](#connecting-claude-with-reactor-mcp)
+
+### Further reading
+
+- [Vetra Remote Drive Reference](/academy/APIReferences/VetraRemoteDrive)
+- [Vetra Studio Documentation](/academy/MasteryTrack/BuilderEnvironment/VetraStudio)
+</details>
+
+<details id="connecting-claude-with-reactor-mcp">
+<summary>Connecting Claude with Reactor MCP</summary>
+
+### How to Connect Claude with Reactor MCP
+
+---
+
+### Problem statement
+
+You want to use AI-assisted development in Vetra Studio by connecting Claude to the Reactor MCP (Model Context Protocol), enabling natural language document model creation and editing.
+
+### Prerequisites
+
+- Powerhouse CLI (`ph-cmd`) installed
+- A Powerhouse project initialized (`ph init`)
+- Vetra Studio running (`ph vetra`)
+- Claude CLI installed and configured
+- Terminal or command prompt access
+
+### Solution
+
+### Step 1: Start Vetra Studio
+
+First, ensure Vetra Studio is running in your project directory:
+
+```bash
+ph vetra --interactive --watch
+```
+
+### Step 2: Open a New Terminal and Navigate to Your Project
+
+```bash
+cd <yourprojectname>
+```
+
+### Step 3: Start Claude CLI
+
+```bash
+claude
+```
+
+### Step 4: Connect to Reactor MCP
+
+In the Claude CLI, request connection to the reactor:
+
+```
+connect to the reactor mcp
+```
+
+### Step 5: Verify the Connection
+
+You should see a confirmation message like:
+
+```
+Connected to MCP successfully! I can see there's a
+"vetra-4de7fa45" drive available. The reactor-mcp server is
+running and ready for document model operations.
+```
+
+### Expected outcome
+
+- Claude is connected to Reactor MCP
+- Vetra Studio shows "Connected to Reactor MCP"
+- You can now use natural language to create and modify document models
+- Claude has access to document operations, drive operations, and document model operations
+
+### Common issues and solutions
+
+- **Issue**: MCP connection fails
+  - **Solution**: Ensure Vetra Studio is running before attempting to connect Claude. Restart both Vetra and Claude if needed.
+- **Issue**: Claude doesn't recognize reactor commands
+  - **Solution**: Make sure you're in the correct project directory when starting Claude.
+- **Issue**: Drive not visible in Claude
+  - **Solution**: Verify Vetra Studio is running with the `--watch` flag and the drive is properly initialized.
+
+### Related recipes
+
+- [Launching Vetra Studio](#launching-vetra-studio)
+- [Creating a Document Model with AI Assistance](#creating-a-document-model-with-ai-assistance)
+- [Creating an Editor with AI Assistance](#creating-an-editor-with-ai-assistance)
+
+### Further reading
+
+- [Vetra Studio Documentation](/academy/MasteryTrack/BuilderEnvironment/VetraStudio)
+</details>
+
+<details id="creating-a-document-model-with-ai-assistance">
+<summary>Creating a Document Model with AI Assistance</summary>
+
+### How to Create a Document Model with AI Assistance
+
+---
+
+### Problem statement
+
+You want to create a new document model using natural language descriptions through Claude and the Reactor MCP, rather than manually defining schemas and operations.
+
+### Prerequisites
+
+- Vetra Studio running (`ph vetra --interactive --watch`)
+- Claude connected to Reactor MCP (see [Connecting Claude with Reactor MCP](#connecting-claude-with-reactor-mcp))
+
+### Solution
+
+### Step 1: Describe Your Document Model to Claude
+
+Provide a detailed description of your document needs. Be specific about:
+- The purpose of the document
+- The data fields and their types
+- The operations users should be able to perform
+- Any relationships or constraints
+
+Example prompt:
+
+```
+Create a document model for a task tracker with the following requirements:
+- Each task has a title (string), description (string), status (enum: todo, in-progress, done), 
+  priority (enum: low, medium, high), and due date (optional date)
+- Users should be able to create tasks, update task details, change status, and delete tasks
+- Tasks should track when they were created and last modified
+```
+
+### Step 2: Review the Generated Schema
+
+Claude will generate:
+- An appropriate GraphQL schema
+- The necessary operations
+- Implementation for the required reducers
+
+Review the proposed schema before confirming.
+
+### Step 3: Confirm Generation in Interactive Mode
+
+If running in interactive mode, you'll be prompted to confirm:
+- Schema changes
+- Operation definitions
+- Code generation
+
+### Step 4: Verify in Vetra Studio
+
+Check Vetra Studio to see your new document model in the drive. The document should appear with the defined schema and operations.
+
+### Expected outcome
+
+- A new document model is created based on your natural language description
+- The schema, operations, and reducers are generated automatically
+- The document model is placed in the Vetra drive
+- Code scaffolding is generated in your project
+
+### Common issues and solutions
+
+- **Issue**: Generated schema doesn't match expectations
+  - **Solution**: Provide more specific requirements. Ask Claude clarifying questions before generation.
+- **Issue**: Operations missing functionality
+  - **Solution**: Be explicit about all the actions users should be able to perform on the document.
+- **Issue**: Code generation fails
+  - **Solution**: Check if the document model is in a valid state. Review any error messages in Vetra Studio.
+
+### Related recipes
+
+- [Connecting Claude with Reactor MCP](#connecting-claude-with-reactor-mcp)
+- [Creating an Editor with AI Assistance](#creating-an-editor-with-ai-assistance)
+- [Initializing a New Project & Document Model](#initializing-a-new-project-and-document-model)
+
+### Further reading
+
+- [Vetra Studio Documentation](/academy/MasteryTrack/BuilderEnvironment/VetraStudio)
+- [Document Model Creation](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema)
+</details>
+
+<details id="creating-an-editor-with-ai-assistance">
+<summary>Creating an Editor with AI Assistance</summary>
+
+### How to Create an Editor with AI Assistance
+
+---
+
+### Problem statement
+
+You have a document model and want to create a user interface (editor) for it using AI assistance through Claude and the Reactor MCP.
+
+### Prerequisites
+
+- Vetra Studio running (`ph vetra --interactive --watch`)
+- Claude connected to Reactor MCP
+- An existing document model in your Vetra drive
+
+### Solution
+
+### Step 1: Describe Your Editor Requirements to Claude
+
+Provide a detailed description including:
+- The document model the editor is for
+- UI layout and components needed
+- User interactions and workflows
+- Any specific styling or design requirements
+- Reference to operations from the document model
+
+Example prompt:
+
+```
+Create an editor for my task tracker document model with:
+- A form to create new tasks with fields for title, description, priority, and due date
+- A list view showing all tasks grouped by status (todo, in-progress, done)
+- Each task card should show title, priority badge, and due date
+- Clicking a task opens a detail panel for editing
+- Status can be changed via drag-and-drop between columns or a dropdown
+- Use the createTask, updateTask, changeStatus, and deleteTask operations
+```
+
+### Step 2: Review Generated Components
+
+Claude will generate:
+- Editor components
+- Necessary hooks for document operations
+- Required UI elements
+- Integration with the document model operations
+
+### Step 3: Confirm Generation
+
+In interactive mode, confirm the proposed changes before they are applied.
+
+### Step 4: Verify in Your Project
+
+Check the `editors/` directory in your project for the generated editor files. The editor should be registered in your `powerhouse.manifest.json`.
+
+### Step 5: Test the Editor
+
+Run Vetra Studio and open your document to test the new editor interface.
+
+### Expected outcome
+
+- Editor components are generated in the `editors/` directory
+- The editor is registered in `powerhouse.manifest.json`
+- The editor integrates with your document model operations
+- You can interact with documents through the new UI
+
+### Common issues and solutions
+
+- **Issue**: Editor doesn't appear in Vetra Studio
+  - **Solution**: Verify the editor is registered in `powerhouse.manifest.json`. Restart Vetra Studio with `--watch`.
+- **Issue**: Operations not working in the editor
+  - **Solution**: Ensure the editor references the correct operation names from your document model.
+- **Issue**: Styling doesn't match expectations
+  - **Solution**: Provide more detailed design requirements or manually adjust the generated CSS/styles.
+
+### Related recipes
+
+- [Creating a Document Model with AI Assistance](#creating-a-document-model-with-ai-assistance)
+- [Generating a Document Editor](#generating-a-document-editor)
+- [Connecting Claude with Reactor MCP](#connecting-claude-with-reactor-mcp)
+
+### Further reading
+
+- [Vetra Studio Documentation](/academy/MasteryTrack/BuilderEnvironment/VetraStudio)
+- [Build a Todo-list Editor](/academy/GetStarted/BuildToDoListEditor)
 </details>
 
 ## Powerhouse Environment recipes
@@ -402,21 +855,21 @@ This section covers recipes for setting up and managing Powerhouse environments,
 <details id="setting-up-a-production-environment">
 <summary>Setting up a Production Environment</summary>
 
-## How to set up a Production Powerhouse Environment
+### How to set up a Production Powerhouse Environment
 
 ---
 
-## Problem statement
+### Problem statement
 
 You need to set up a new production-ready server to host and run your Powerhouse services (Connect and Switchboard).
 
-## Prerequisites
+### Prerequisites
 
 - A Linux-based server (Ubuntu or Debian recommended) with `sudo` privileges.
 - A registered domain name.
 - DNS `A` records for your `connect` and `switchboard` subdomains pointing to your server's public IP address.
 
-## Solution
+### Solution
 
 ### Step 1: Install Powerhouse Services
 
@@ -457,14 +910,14 @@ During the setup, you will be prompted for:
 - **Database:** Choose between a local PostgreSQL setup or connecting to a remote database.
 - **SSL Certificate:** Select Let's Encrypt for a production setup. You will need to provide your domain and subdomains.
 
-## Expected outcome
+### Expected outcome
 
 - Powerhouse Connect and Switchboard services are installed, configured, and running on your server.
 - Nginx is set up as a reverse proxy with SSL certificates from Let's Encrypt.
 - Services are managed by PM2 and will restart automatically on boot or if they crash.
 - You can access your services securely at `https://connect.yourdomain.com` and `https://switchboard.yourdomain.com`.
 
-## Common issues and solutions
+### Common issues and solutions
 
 - **Issue:** `ph: command not found`
   - **Solution:** Ensure you have reloaded your shell with `source ~/.bashrc` or have restarted your terminal session.
@@ -473,11 +926,11 @@ During the setup, you will be prompted for:
 - **Issue:** Services fail to start.
   - **Solution:** Check the service logs for errors using `ph service logs` or `pm2 logs`.
 
-## Related recipes
+### Related recipes
 
 - [Installing a Custom Powerhouse Package](#installing-a-custom-powerhouse-package)
 
-## Further reading
+### Further reading
 
 - [Full Setup Guide](/academy/MasteryTrack/Launch/SetupEnvironment)
 </details>
@@ -489,22 +942,22 @@ This section focuses on creating, configuring, and managing Powerhouse projects,
 <details id="initializing-a-new-project-and-document-model">
 <summary>Initializing a New Project & Document Model</summary>
 
-## How to initialize a new project and document model
+### How to initialize a new project and document model
 
 ---
 
-## Problem statement
+### Problem statement
 
 You need to create a new, empty document model within a Powerhouse project using the local Connect application (Studio mode) to represent a workflow of a business process.
 
-## Prerequisites
+### Prerequisites
 
 - Powerhouse CLI (`ph-cmd`) installed
 - A Powerhouse project initialized (see [Initializing a Powerhouse Project Recipe](#powerhouse-cli-recipes)) or follow Step 1 & 2 below.
 - Access to a terminal or command prompt
 - A web browser
 
-## Solution
+### Solution
 
 ### Step 1: Initialize a Powerhouse Project (if needed)
 
@@ -545,12 +998,12 @@ Click on your local drive displayed on the Connect interface.
 
 In the "New Document" section at the bottom of the page, click the `DocumentModel` button.
 
-## Expected outcome
+### Expected outcome
 
 - An empty document model is created and opened in the Document Model Editor within the Connect application.
 - You are ready to start defining the schema and logic for your new model.
 
-## Common issues and solutions
+### Common issues and solutions
 
 - Issue: `ph connect` command fails.
   - Solution: Ensure `ph-cmd` is installed correctly (`ph-cmd --version`). Check for port conflicts if `3000` is already in use. Make sure you are inside the project directory created by `ph init`.
@@ -559,13 +1012,13 @@ In the "New Document" section at the bottom of the page, click the `DocumentMode
 - Issue: Cannot find the `DocumentModel` button.
   - Solution: Ensure you have navigated into your local drive within the Connect application first.
 
-## Related recipes
+### Related recipes
 
 - [Initializing a Powerhouse Project](#powerhouse-cli-recipes)
 - Designing a Document Model Schema (WIP)
 - Implementing Document Model Reducers (Details to be added)
 
-## Further reading
+### Further reading
 
 - [GraphQL Schema Best Practices](/academy/MasteryTrack/WorkWithData/GraphQLAtPowerhouse)
 </details>
@@ -573,21 +1026,21 @@ In the "New Document" section at the bottom of the page, click the `DocumentMode
 <details id="generating-reducers-from-a-document-model-file">
 <summary>Generating Reducers from a Document Model File</summary>
 
-## How to Generate Reducers from a Document Model File
+### How to Generate Reducers from a Document Model File
 
 ---
 
-## Problem statement
+### Problem statement
 
 You have a Powerhouse Document Model defined in a `.phdm` or `.phdm.zip` file and need to generate the corresponding reducer functions for your project.
 
-## Prerequisites
+### Prerequisites
 
 - Powerhouse CLI (`ph-cmd`) installed
 - A Powerhouse project initialized (`ph init`)
 - A `.phdm` or `.phdm.zip` file containing your document model definition, placed in your project (e.g., at the root).
 
-## Solution
+### Solution
 
 ### Step 1: Navigate to Project Directory
 
@@ -610,14 +1063,14 @@ ph generate todo.phdm.zip
 
 The command will output the generated reducer scaffolding code in the designated folders.
 
-## Expected outcome
+### Expected outcome
 
 - Reducer functions corresponding to the operations defined in your document model are generated.
 - The generated code is ready to be integrated into your project's state management logic.
 
-## Common issues and solutions
+### Common issues and solutions
 
-## Related recipes
+### Related recipes
 
 - [Initializing a New Project & Document Model](#initializing-a-new-project-and-document-model)
 - Generating a Document Editor
@@ -627,11 +1080,11 @@ The command will output the generated reducer scaffolding code in the designated
 <details id="updating-your-powerhouse-project-dependencies">
 <summary>Updating Your Powerhouse Project Dependencies</summary>
 
-## How to Update Your Powerhouse Project Dependencies
+### How to Update Your Powerhouse Project Dependencies
 
 ---
 
-## Problem statement
+### Problem statement
 
 The update command allows you to update your Powerhouse dependencies to their latest versions based on the version ranges specified in your package.json.
 
@@ -670,21 +1123,21 @@ ph update --package-manager pnpm
 <details id="running-connect-with-https-and-a-custom-port">
 <summary>Running Connect with HTTPS and a Custom Port</summary>
 
-## How to Run Connect with HTTPS and a Custom Port
+### How to Run Connect with HTTPS and a Custom Port
 
 ---
 
-## Problem statement
+### Problem statement
 
 You need to run the local Powerhouse Connect application using HTTPS, possibly on a different port than the default, for scenarios like testing on a remote server (e.g., EC2) or complying with specific network requirements.
 
-## Prerequisites
+### Prerequisites
 
 - Powerhouse CLI (`ph-cmd`) installed
 - A Powerhouse project initialized (`ph init`)
 - Potentially, valid SSL/TLS certificates if running in a non-localhost environment that requires trusted HTTPS. (The `--https` flag may use self-signed certificates for local development).
 
-## Solution
+### Solution
 
 ### Step 1: Navigate to Project Directory
 
@@ -715,12 +1168,12 @@ https://<your-hostname-or-ip>:<port>
 
 You might encounter a browser warning about the self-signed certificate; you may need to accept the risk to proceed for local/development testing.
 
-## Expected outcome
+### Expected outcome
 
 - The Powerhouse Connect application starts and serves traffic over HTTPS on the specified port.
 - You can access the Connect interface securely using the `https` protocol.
 
-## Common issues and solutions
+### Common issues and solutions
 
 - Issue: Browser shows security warnings (e.g., "Your connection is not private").
   - Solution: This is expected when using the default self-signed certificate generated by `--https`. For development or internal testing, you can usually proceed by accepting the risk. For production or public-facing scenarios, configure Connect with properly signed certificates (consult Powerhouse documentation for advanced configuration).
@@ -729,11 +1182,11 @@ You might encounter a browser warning about the self-signed certificate; you may
 - Issue: Cannot access Connect from a remote machine.
   - Solution: Ensure the port is open in any firewalls (on the server and potentially network firewalls). Verify you are using the correct public IP address or hostname of the machine running Connect.
 
-## Related recipes
+### Related recipes
 
 - [Initializing a New Project & Document Model](#initializing-a-new-project-and-document-model)
 
-## Further reading
+### Further reading
 
 - [Powerhouse Builder Tools](/academy/MasteryTrack/BuilderEnvironment/BuilderTools)
 - [GraphQL Schema Best Practices](/academy/MasteryTrack/WorkWithData/GraphQLAtPowerhouse)
@@ -746,21 +1199,21 @@ This section provides guidance on generating and customizing editors for Documen
 <details id="generating-a-document-editor">
 <summary>Generating a Document Editor</summary>
 
-## How to Generate a Document Editor
+### How to Generate a Document Editor
 
 ---
 
-## Problem statement
+### Problem statement
 
 You have a Powerhouse document model and need to create a user interface (editor) for it to be used within the Connect application.
 
-## Prerequisites
+### Prerequisites
 
 - Powerhouse CLI (`ph-cmd`) installed
 - A Powerhouse project initialized (`ph init`)
 - A document model generated or defined within the project (e.g., in the `document-models` directory).
 
-## Solution
+### Solution
 
 ### Step 1: Navigate to Project Directory
 
@@ -780,18 +1233,18 @@ Run the `generate` command, specifying the editor name (usually matching the doc
 ph generate --editor <ModelName> --document-types <docType>
 ```
 
-## Expected outcome
+### Expected outcome
 
 - A new directory is created under `editors/` (e.g., `editors/<model-name>/`).
 - An `editor.tsx` file is generated within that directory, containing a basic template for your document editor.
 - You can now customize `editor.tsx` to build your desired UI using HTML, Tailwind CSS, or custom CSS.
 
-## Related recipes
+### Related recipes
 
 - [Initializing a New Project & Document Model](#initializing-a-new-project-and-document-model)
 - [Generating a Custom Drive Explorer](#generating-a-custom-drive-explorer)
 
-## Further reading
+### Further reading
 
 - [Build a Todo-list Editor](/academy/GetStarted/BuildToDoListEditor)
 </details>
@@ -799,20 +1252,20 @@ ph generate --editor <ModelName> --document-types <docType>
 <details id="generating-a-custom-drive-explorer">
 <summary>Generating a Custom Drive Explorer</summary>
 
-## How to Generate a Custom Drive Explorer
+### How to Generate a Custom Drive Explorer
 
 ---
 
-## Problem statement
+### Problem statement
 
 You need a custom, application-like interface to browse, organize, or interact with specific types of documents stored within a Powerhouse drive, going beyond the standard file listing.
 
-## Prerequisites
+### Prerequisites
 
 - Powerhouse CLI (`ph-cmd`) installed
 - A Powerhouse project initialized (`ph init`)
 
-## Solution
+### Solution
 
 ### Step 1: Navigate to Project Directory
 
@@ -831,18 +1284,18 @@ Run the `generate` command, specifying the `--drive-editor` flag and a name for 
 ph generate --drive-editor <drive-app-name>
 ```
 
-## Expected outcome
+### Expected outcome
 
 - A new directory is created under `editors/` (e.g., `editors/<drive-app-name>/`).
 - Template files (`EditorContainer.tsx`, components, hooks, etc.) are generated within that directory, providing a basic structure for a drive explorer.
 - You can now customize these files to create your specific drive interface, potentially removing default components and adding custom views relevant to your document models.
 - Remember to update your `powerhouse.manifest.json` to register the new app.
 
-## Related recipes
+### Related recipes
 
 - [Generating a Document Editor](#generating-a-document-editor)
 
-## Further reading
+### Further reading
 
 - [Build a Drive-Explorer](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer)
 </details>
@@ -850,21 +1303,21 @@ ph generate --drive-editor <drive-app-name>
 <details id="adding-a-new-drive-via-graphql-mutation">
 <summary>Adding a New Drive via GraphQL Mutation</summary>
 
-## How to Add a New Remote Drive via GraphQL Mutation
+### How to Add a New Remote Drive via GraphQL Mutation
 
 ---
 
-## Problem statement
+### Problem statement
 
 You want to programmatically add a new remote drive to your Powerhouse Connect environment using a GraphQL mutation. This is useful for automation, scripting, or integrating with external systems.
 
-## Prerequisites
+### Prerequisites
 
 - Access to the Switchboard or remote reactor (server node) of your Connect instance.
 - The GraphQL endpoint for your instance (e.g., `https://staging.switchboard.phd/graphql/system`).
 - Appropriate permissions to perform mutations.
 
-## Solution
+### Solution
 
 ### Step 1: Access the GraphQL Playground or Client
 
@@ -931,17 +1384,17 @@ Once you have the `id` or `slug`, you can construct the drive URL for Connect:
 
 Use the constructed URL to add or access the drive in your Connect environment.
 
-## Expected outcome
+### Expected outcome
 
 - A new drive is created and accessible in your Connect environment.
 - The drive can be managed or accessed using the generated URL.
 
-## Related recipes
+### Related recipes
 
 - [Configuring Drives](/academy/MasteryTrack/BuildingUserExperiences/ConfiguringDrives)
 - [Initializing a New Project & Document Model](#initializing-a-new-project-and-document-model)
 
-## Further reading
+### Further reading
 
 - [GraphQL Playground](https://www.apollographql.com/docs/apollo-server/testing/graphql-playground/)
 - [Powerhouse Builder Tools](/academy/MasteryTrack/BuilderEnvironment/BuilderTools)
@@ -955,21 +1408,21 @@ Learn how to manage the Powerhouse Reactor, the local service for processing doc
 <details id="starting-the-reactor">
 <summary>Starting the Reactor</summary>
 
-## How to Start the Powerhouse Reactor
+### How to Start the Powerhouse Reactor
 
 ---
 
-## Problem statement
+### Problem statement
 
 You need to start the Powerhouse Reactor, the local service responsible for processing document model operations and managing state, typically for testing or development purposes.
 
-## Prerequisites
+### Prerequisites
 
 - Powerhouse CLI (`ph-cmd`) installed
 - A Powerhouse project initialized (`ph init`)
 - You are in the root directory of your Powerhouse project.
 
-## Solution
+### Solution
 
 ### Step 1: Navigate to Project Directory (if needed)
 
@@ -987,20 +1440,20 @@ Execute the `ph reactor` command.
 ph reactor
 ```
 
-## Expected outcome
+### Expected outcome
 
 - The Reactor service starts, typically listening on `localhost:4001`.
 - You will see log output indicating the reactor is running and ready to process operations.
 - A GraphQL endpoint is usually available at `http://localhost:4001/graphql` for direct interaction and testing.
 
-## Common issues and solutions
+### Common issues and solutions
 
 - Issue: Reactor fails to start, mentioning port conflicts.
   - Solution: Ensure port `4001` (or the configured reactor port) is not already in use by another application. Stop the conflicting application or configure the reactor to use a different port (if possible, check documentation).
 - Issue: Errors related to storage or configuration.
   - Solution: Check the `powerhouse.manifest.json` and any reactor-specific configuration files for errors. Ensure storage providers (like local disk) are accessible and configured correctly.
 
-## Related recipes
+### Related recipes
 
 - [Initializing a New Project & Document Model](#initializing-a-new-project-and-document-model)
 - Testing with GraphQL (Details to be added)
@@ -1014,21 +1467,21 @@ These recipes guide you through creating, installing, and managing Powerhouse Pa
 <details id="installing-a-custom-powerhouse-package">
 <summary>Installing a Custom Powerhouse Package</summary>
 
-## How to Install a Custom Powerhouse Package
+### How to Install a Custom Powerhouse Package
 
 ---
 
-## Problem statement
+### Problem statement
 
 You have developed and published a Powerhouse package (containing document models, editors, etc.) to npm, or you have a local package, and you need to install it into another Powerhouse project.
 
-## Prerequisites
+### Prerequisites
 
 - Powerhouse CLI (`ph-cmd`) installed
 - A Powerhouse project initialized (`ph init`) where you want to install the package.
 - The custom package is either published to npm or available locally.
 
-## Solution
+### Solution
 
 ### Step 1: Navigate to the Target Project Directory
 
@@ -1063,13 +1516,13 @@ ph install /Users/you/dev/my-local-package
 
 Check your project's `package.json` and `powerhouse.manifest.json` to ensure the package dependency has been added correctly. Run `ph connect` to see if the components from the installed package are available.
 
-## Expected outcome
+### Expected outcome
 
 - The custom Powerhouse package is downloaded and installed into your project's dependencies.
 - The `powerhouse.manifest.json` is updated (if necessary) to reflect the installed package.
 - Document models, editors, drive explorers, or other components from the package become available within the target project.
 
-## Common issues and solutions
+### Common issues and solutions
 
 - Issue: Package not found (npm).
   - Solution: Double-check the package name for typos. Ensure the package is published and accessible on npm.
@@ -1078,7 +1531,7 @@ Check your project's `package.json` and `powerhouse.manifest.json` to ensure the
 - Issue: Conflicts with existing project components or dependencies.
   - Solution: Resolve version conflicts or naming collisions as needed. Review the installed package's structure and dependencies.
 
-## Related recipes
+### Related recipes
 
 - [Publishing a Powerhouse Package](#publishing-a-powerhouse-package)
 - [Initializing a Powerhouse Project](#initializing-a-new-project-and-document-model)
@@ -1088,13 +1541,13 @@ Check your project's `package.json` and `powerhouse.manifest.json` to ensure the
 <details id="managing-powerhouse-dependencies-and-versions">
 <summary>Managing Powerhouse Dependencies and Versions</summary>
 
-## How to Manage Powerhouse Dependencies and Versions
+### How to Manage Powerhouse Dependencies and Versions
 
 ---
 
 > **Note:** This is a temporary solution until version control is fully implemented in Powerhouse. Future updates may change how dependencies are managed.
 
-## Problem statement
+### Problem statement
 
 You need to understand and manage different types of dependencies in your Powerhouse project, including:
 
@@ -1102,15 +1555,15 @@ You need to understand and manage different types of dependencies in your Powerh
 - Project-specific dependencies (from published npm packages)
 - Boilerplate dependencies
 
-## Prerequisites
+### Prerequisites
 
 - Powerhouse CLI (`ph-cmd`) installed
 - A Powerhouse project initialized (`ph init`)
 - npm account (if you need to publish packages)
 
-## Solution
+### Solution
 
-### Understanding Different Types of Dependencies
+#### Understanding Different Types of Dependencies
 
 1. **Monorepo Dependencies**
    - The Powerhouse monorepo has three main branches:
@@ -1148,7 +1601,7 @@ You need to understand and manage different types of dependencies in your Powerh
      2. Publish the updated package to npm
      3. Other projects will then get the new version when they run `ph install`
 
-### Important Notes
+#### Important Notes
 
 1. **Breaking Changes**
    - Currently, updating Connect versions might break older packages
@@ -1160,13 +1613,13 @@ You need to understand and manage different types of dependencies in your Powerh
    - Other projects will still download the latest published version from npm
    - For testing, you can publish to your own npm account
 
-## Expected outcome
+### Expected outcome
 
 - Clear understanding of different dependency types
 - Ability to manage and update dependencies appropriately
 - Knowledge of when to publish updated packages
 
-## Common issues and solutions
+### Common issues and solutions
 
 - Issue: Dependencies not updating as expected
   - Solution: Ensure you're using the correct `ph use` command for your needs
@@ -1175,13 +1628,13 @@ You need to understand and manage different types of dependencies in your Powerh
 - Issue: Confusion about which version is being used
   - Solution: Check your package.json and powerhouse.manifest.json for current versions
 
-## Related recipes
+### Related recipes
 
 - [Installing 'ph-cmd'](#installing-ph-cmd)
 - [Using Different Branches in Powerhouse](#using-different-branches-in-powerhouse)
 - [Setting up or Resetting the Global Powerhouse Configuration](#setting-up-or-resetting-the-global-powerhouse-configuration)
 
-## Further reading
+### Further reading
 
 - [Powerhouse Builder Tools](/academy/MasteryTrack/BuilderEnvironment/BuilderTools)
 - [GraphQL Schema Best Practices](/academy/MasteryTrack/WorkWithData/GraphQLAtPowerhouse)
@@ -1191,22 +1644,22 @@ You need to understand and manage different types of dependencies in your Powerh
 <details id="packaging-and-publishing-a-powerhouse-project">
 <summary>Packaging and Publishing a Powerhouse Project</summary>
 
-## How to Package and Publish a Powerhouse Project
+### How to Package and Publish a Powerhouse Project
 
 ---
 
-## Problem statement
+### Problem statement
 
 You have created a collection of document models, editors, or other components and want to share it as a reusable package on a public or private npm registry. Publishing a package allows other projects to install and use your creations easily.
 
-## Prerequisites
+### Prerequisites
 
 - A completed Powerhouse project that you are ready to share.
 - An account on [npmjs.com](https://www.npmjs.com/) (or a private registry).
 - Your project's `package.json` should have a unique name and correct version.
 - You must be logged into your npm account via the command line.
 
-## Solution
+### Solution
 
 ### Step 1: Build the Project
 
@@ -1255,18 +1708,18 @@ git push
 git push --tags
 ```
 
-## Expected outcome
+### Expected outcome
 
 - Your Powerhouse project is successfully published to the npm registry.
 - Other developers can now install your package into their projects using `ph install @your-org/your-package-name`.
 - Your Git repository is updated with the new version information.
 
-## Common issues and solutions
+### Common issues and solutions
 
 - **Issue**: "403 Forbidden" or "You do not have permission" error on publish.
   - **Solution**: Ensure your package name is unique and not already taken on npm. If it's a scoped package (`@scope/name`), make sure the organization exists and you have permission to publish to it. For public scoped packages, you must include `--access public`.
 
-## Related recipes
+### Related recipes
 
 - [Installing a Custom Powerhouse Package](#installing-a-custom-powerhouse-package)
 - [Managing Powerhouse Dependencies and Versions](#managing-powerhouse-dependencies-and-versions)
@@ -1280,15 +1733,15 @@ This section helps troubleshoot and understand data synchronization within the P
 <details id="troubleshooting-document-syncing">
 <summary>Troubleshooting Document Syncing: Supergraph vs. Drive Endpoints</summary>
 
-## Troubleshooting Document Syncing: Supergraph vs. Drive Endpoints
+### Troubleshooting Document Syncing: Supergraph vs. Drive Endpoints
 
 ---
 
-## Problem statement
+### Problem statement
 
 You've created or modified documents within a specific drive using Powerhouse Connect, but when you query the main GraphQL endpoint (`http://localhost:4001/graphql`), you don't see the changes or the documents you expected. This can lead to confusion about whether data is being synced correctly.
 
-## Prerequisites
+### Prerequisites
 
 - Powerhouse CLI (`ph-cmd`) installed.
 - A Powerhouse project initialized (`ph init`).
@@ -1296,7 +1749,7 @@ You've created or modified documents within a specific drive using Powerhouse Co
 - Powerhouse Connect is running (`ph connect`).
 - You have attempted to create or modify documents in a drive (e.g., a "finances" drive).
 
-## Solution
+### Solution
 
 Understanding the different GraphQL endpoints in Powerhouse is crucial for effective troubleshooting:
 
@@ -1329,14 +1782,14 @@ Understanding the different GraphQL endpoints in Powerhouse is crucial for effec
       - Try deleting the `.ph` folder in your user's home directory (`~/.ph`). This folder stores global Powerhouse configurations and cached dependencies.
       - Clear browser storage (localStorage, IndexedDB) for the Connect application.
 
-## Expected outcome
+### Expected outcome
 
 - You can correctly identify which GraphQL endpoint to use for different types of queries and operations.
 - You understand that document-specific operations (like creating or updating documents in a drive) are typically handled by drive-specific endpoints.
 - You can use browser developer tools to inspect network requests and confirm which endpoints Powerhouse Connect is using.
 - Documents sync as expected, and you can retrieve their state by querying the appropriate endpoint.
 
-## Common issues and solutions
+### Common issues and solutions
 
 - **Issue:** Documents created in Connect don't appear when querying `http://localhost:4001/graphql`.
   - **Solution:** You are likely querying the general supergraph. For document-specific data, ensure you are targeting the drive's endpoint (e.g., `http://localhost:4001/d/<driveId>`) or using queries designed to fetch data from specific drives. Inspect Connect's network activity to see the endpoint it uses for `pushUpdates`.
@@ -1348,20 +1801,20 @@ Understanding the different GraphQL endpoints in Powerhouse is crucial for effec
 <details id="resetting-your-localhost-environment">
 <summary>Resetting Your Localhost Environment</summary>
 
-## How to Reset Your Localhost Environment
+### How to Reset Your Localhost Environment
 
 ---
 
-## Problem statement
+### Problem statement
 
 You are running Powerhouse Connect locally (via `ph connect`), but you can't find your local drive in the interface. Alternatively, you can see the drive or have recreated it, but the `DocumentModel` button is missing, preventing you from creating new document model schemas.
 
-## Prerequisites
+### Prerequisites
 
 - Powerhouse Connect is running locally.
 - The Powerhouse Connect interface is open in your browser.
 
-## Solution
+### Solution
 
 This issue is often caused by corrupted or inconsistent data stored in your browser's local storage for the Connect application. Clearing this storage forces a re-initialization of your local environment.
 
@@ -1381,18 +1834,18 @@ Click the "Clear storage" button. A confirmation prompt may appear. Confirming t
 
 The application should automatically refresh and re-initialize its state. If it doesn't, manually reload the page. Your local drive should now be present with the `DocumentModel` button restored.
 
-## Expected outcome
+### Expected outcome
 
 - Your local drive is visible again in the Powerhouse Connect UI.
 - The `DocumentModel` button is available inside the local drive.
 - You can proceed to create and edit document models in your local environment.
 
-## Common issues and solutions
+### Common issues and solutions
 
 - **Issue**: The problem persists after clearing storage.
   - **Solution**: Try clearing your browser's cache and cookies for the localhost domain. As a last resort, follow the recipe for [Clearing Package Manager Caches](#clearing-package-manager-caches) and reinstalling dependencies.
 
-## Related recipes
+### Related recipes
 
 - [Troubleshooting Document Syncing](#troubleshooting-document-syncing)
 - [Initializing a New Project & Document Model](#initializing-a-new-project-and-document-model)
@@ -1402,20 +1855,20 @@ The application should automatically refresh and re-initialize its state. If it 
 <details id="clearing-package-manager-caches">
 <summary>Clearing Package Manager Caches</summary>
 
-## How to Clear Package Manager Caches
+### How to Clear Package Manager Caches
 
 ---
 
-## Problem statement
+### Problem statement
 
 You are encountering unexpected issues with dependencies, `ph-cmd` installation, or package resolution. Corrupted or outdated caches for your package manager (pnpm, npm, yarn) can often be the cause. Clearing the cache forces the package manager to refetch packages, which can resolve these problems.
 
-## Prerequisites
+### Prerequisites
 
 - Terminal or command prompt access
 - A package manager (pnpm, npm, or yarn) installed
 
-## Solution
+### Solution
 
 Choose the commands corresponding to the package manager you are using.
 
@@ -1455,18 +1908,18 @@ yarn cache list
 yarn cache clean --force
 ```
 
-## Expected outcome
+### Expected outcome
 
 - The package manager's cache is cleared or verified.
 - Subsequent installations will fetch fresh versions of packages, potentially resolving dependency-related errors.
 - Your system is in a cleaner state for managing Powerhouse project dependencies.
 
-## Common issues and solutions
+### Common issues and solutions
 
 - **Issue**: Problems persist after clearing the cache.
   - **Solution**: The issue might not be cache-related. Consider completely removing `node_modules` and lockfiles (`pnpm-lock.yaml`, `package-lock.json`, `yarn.lock`) and running `pnpm install` (or equivalent) again.
 
-## Related recipes
+### Related recipes
 
 - [Installing 'ph-cmd'](#installing-ph-cmd)
 - [Uninstalling 'ph-cmd'](#uninstalling-ph-cmd)

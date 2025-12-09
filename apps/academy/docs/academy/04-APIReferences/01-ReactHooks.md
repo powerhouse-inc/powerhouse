@@ -1,3 +1,10 @@
+---
+toc_max_heading_level: 2
+
+
+---
+
+
 # React Hooks
 
 On this page we're providing an overview of the available hooks you can make use of as a builder.
