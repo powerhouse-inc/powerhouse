@@ -1,3 +1,13 @@
+## 5.1.0-dev.15 (2025-12-09)
+
+### 🚀 Features
+
+- first pass using feature flags across hooks ([ac7083067](https://github.com/powerhouse-inc/powerhouse/commit/ac7083067))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.14 (2025-12-08)
 
 ### 🚀 Features
