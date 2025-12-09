@@ -826,14 +826,10 @@ import type {
   DocumentPermissionService,
   GetParentIdsFn,
 } from "../../services/document-permission.service.js";
-import type {
-  DocumentPermissionLevel,
-  DocumentVisibility,
-} from "../../utils/db.js";
+import type { DocumentPermissionLevel } from "../../utils/db.js";
 
 export type DocumentAccessInfo = {
   documentId: string;
-  visibility: DocumentVisibility;
   permissions: Array<{
     documentId: string;
     userAddress: string;
@@ -850,34 +846,21 @@ export type DocumentAccessInfo = {
     createdAt: Date;
     updatedAt: Date;
   }>;
-  operationRestrictions: Array<{
-    id: number;
-    documentId: string;
-    operationType: string;
-    createdAt: Date;
-    updatedAt: Date;
-  }>;
 };
 
 export async function documentAccess(
   service: DocumentPermissionService,
   args: { documentId: string },
 ): Promise<DocumentAccessInfo> {
-  const visibility = await service.getDocumentVisibility(args.documentId);
   const permissions = await service.getDocumentPermissions(args.documentId);
   const groupPermissions = await service.getDocumentGroupPermissions(
-    args.documentId,
-  );
-  const operationRestrictions = await service.getDocumentRestrictions(
     args.documentId,
   );
 
   return {
     documentId: args.documentId,
-    visibility,
     permissions,
     groupPermissions,
-    operationRestrictions,
   };
 }
 
@@ -895,37 +878,6 @@ export async function userDocumentPermissions(
   }>
 > {
   return service.getUserDocuments(userAddress);
-}
-
-export async function setDocumentVisibility(
-  service: DocumentPermissionService,
-  args: { documentId: string; visibility: DocumentVisibility },
-  userAddress: string | undefined,
-  isGlobalAdmin: boolean,
-): Promise<{ documentId: string; visibility: DocumentVisibility }> {
-  // Check authorization: must be global admin or document admin
-  if (!isGlobalAdmin) {
-    if (!userAddress) {
-      throw new GraphQLError("Authentication required");
-    }
-
-    const canManage = await service.canManageDocument(
-      args.documentId,
-      userAddress,
-    );
-    if (!canManage) {
-      throw new GraphQLError(
-        "Forbidden: You must be an admin of this document to change its visibility",
-      );
-    }
-  }
-
-  await service.setDocumentVisibility(args.documentId, args.visibility);
-
-  return {
-    documentId: args.documentId,
-    visibility: args.visibility,
-  };
 }
 
 export async function grantDocumentPermission(
@@ -1160,79 +1112,52 @@ export async function revokeGroupPermission(
 }
 
 // ============================================
-// Role Resolvers
+// Operation Permission Resolvers
 // ============================================
 
-export type Role = {
-  id: number;
-  name: string;
-  description: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-export async function roles(
-  service: DocumentPermissionService,
-): Promise<Role[]> {
-  return service.listRoles();
-}
-
-export async function role(
-  service: DocumentPermissionService,
-  args: { id: number },
-): Promise<Role | null> {
-  return service.getRole(args.id);
-}
-
-export async function userRoles(
-  service: DocumentPermissionService,
-  args: { userAddress: string },
-): Promise<Role[]> {
-  return service.getUserRoles(args.userAddress);
-}
-
-export async function createRole(
-  service: DocumentPermissionService,
-  args: { name: string; description?: string | null },
-): Promise<Role> {
-  return service.createRole(args.name, args.description ?? undefined);
-}
-
-export async function deleteRole(
-  service: DocumentPermissionService,
-  args: { id: number },
-): Promise<boolean> {
-  await service.deleteRole(args.id);
-  return true;
-}
-
-export async function assignRoleToUser(
-  service: DocumentPermissionService,
-  args: { userAddress: string; roleId: number },
-): Promise<boolean> {
-  await service.assignRoleToUser(args.userAddress, args.roleId);
-  return true;
-}
-
-export async function removeRoleFromUser(
-  service: DocumentPermissionService,
-  args: { userAddress: string; roleId: number },
-): Promise<boolean> {
-  await service.removeRoleFromUser(args.userAddress, args.roleId);
-  return true;
-}
-
-// ============================================
-// Operation Restriction Resolvers
-// ============================================
-
-export type OperationRestriction = {
-  id: number;
+export type OperationUserPermission = {
   documentId: string;
   operationType: string;
+  userAddress: string;
+  grantedBy: string;
   createdAt: Date;
-  updatedAt: Date;
 };
+
+export type OperationGroupPermission = {
+  documentId: string;
+  operationType: string;
+  groupId: number;
+  grantedBy: string;
+  createdAt: Date;
+};
+
+export type OperationPermissionsInfo = {
+  documentId: string;
+  operationType: string;
+  userPermissions: OperationUserPermission[];
+  groupPermissions: OperationGroupPermission[];
+};
+
+export async function operationPermissions(
+  service: DocumentPermissionService,
+  args: { documentId: string; operationType: string },
+): Promise<OperationPermissionsInfo> {
+  const userPermissions = await service.getOperationUserPermissions(
+    args.documentId,
+    args.operationType,
+  );
+  const groupPermissions = await service.getOperationGroupPermissions(
+    args.documentId,
+    args.operationType,
+  );
+
+  return {
+    documentId: args.documentId,
+    operationType: args.operationType,
+    userPermissions,
+    groupPermissions,
+  };
+}
 
 export async function canExecuteOperation(
   service: DocumentPermissionService,
@@ -1246,195 +1171,122 @@ export async function canExecuteOperation(
   );
 }
 
-export async function restrictOperation(
+export async function grantOperationPermission(
   service: DocumentPermissionService,
-  args: { documentId: string; operationType: string },
-  userAddress: string | undefined,
+  args: { documentId: string; operationType: string; userAddress: string },
+  grantedByAddress: string | undefined,
   isGlobalAdmin: boolean,
-): Promise<OperationRestriction> {
-  // Check authorization: must be global admin or document admin
-  if (!userAddress) {
+): Promise<OperationUserPermission> {
+  if (!grantedByAddress) {
     throw new GraphQLError("Authentication required");
   }
 
   if (!isGlobalAdmin) {
-    const canManage = await service.canManageDocument(args.documentId, userAddress);
-    if (!canManage) {
-      throw new GraphQLError(
-        "Forbidden: You must be an admin of this document to restrict operations",
-      );
-    }
-  }
-
-  return service.restrictOperation(args.documentId, args.operationType);
-}
-
-export async function unrestrictOperation(
-  service: DocumentPermissionService,
-  args: { documentId: string; operationType: string },
-  userAddress: string | undefined,
-  isGlobalAdmin: boolean,
-): Promise<boolean> {
-  // Check authorization: must be global admin or document admin
-  if (!userAddress) {
-    throw new GraphQLError("Authentication required");
-  }
-
-  if (!isGlobalAdmin) {
-    const canManage = await service.canManageDocument(args.documentId, userAddress);
-    if (!canManage) {
-      throw new GraphQLError(
-        "Forbidden: You must be an admin of this document to unrestrict operations",
-      );
-    }
-  }
-
-  await service.unrestrictOperation(args.documentId, args.operationType);
-  return true;
-}
-
-export async function allowRoleForOperation(
-  service: DocumentPermissionService,
-  args: { documentId: string; operationType: string; roleId: number },
-  userAddress: string | undefined,
-  isGlobalAdmin: boolean,
-): Promise<boolean> {
-  // Check authorization: must be global admin or document admin
-  if (!userAddress) {
-    throw new GraphQLError("Authentication required");
-  }
-
-  if (!isGlobalAdmin) {
-    const canManage = await service.canManageDocument(args.documentId, userAddress);
-    if (!canManage) {
-      throw new GraphQLError(
-        "Forbidden: You must be an admin of this document to manage operation permissions",
-      );
-    }
-  }
-
-  const restriction = await service.getOperationRestriction(
-    args.documentId,
-    args.operationType,
-  );
-  if (!restriction) {
-    throw new GraphQLError(
-      "Operation not restricted: You must first restrict the operation before allowing roles",
+    const canManage = await service.canManageDocument(
+      args.documentId,
+      grantedByAddress,
     );
-  }
-
-  await service.allowRoleForOperation(restriction.id, args.roleId);
-  return true;
-}
-
-export async function disallowRoleForOperation(
-  service: DocumentPermissionService,
-  args: { documentId: string; operationType: string; roleId: number },
-  userAddress: string | undefined,
-  isGlobalAdmin: boolean,
-): Promise<boolean> {
-  // Check authorization: must be global admin or document admin
-  if (!userAddress) {
-    throw new GraphQLError("Authentication required");
-  }
-
-  if (!isGlobalAdmin) {
-    const canManage = await service.canManageDocument(args.documentId, userAddress);
     if (!canManage) {
       throw new GraphQLError(
-        "Forbidden: You must be an admin of this document to manage operation permissions",
+        "Forbidden: You must be an admin of this document to grant operation permissions",
       );
     }
   }
 
-  const restriction = await service.getOperationRestriction(
+  return service.grantOperationPermission(
     args.documentId,
     args.operationType,
+    args.userAddress,
+    grantedByAddress,
   );
-  if (!restriction) {
-    throw new GraphQLError("Operation not restricted");
+}
+
+export async function revokeOperationPermission(
+  service: DocumentPermissionService,
+  args: { documentId: string; operationType: string; userAddress: string },
+  revokedByAddress: string | undefined,
+  isGlobalAdmin: boolean,
+): Promise<boolean> {
+  if (!revokedByAddress) {
+    throw new GraphQLError("Authentication required");
   }
 
-  await service.disallowRoleForOperation(restriction.id, args.roleId);
+  if (!isGlobalAdmin) {
+    const canManage = await service.canManageDocument(
+      args.documentId,
+      revokedByAddress,
+    );
+    if (!canManage) {
+      throw new GraphQLError(
+        "Forbidden: You must be an admin of this document to revoke operation permissions",
+      );
+    }
+  }
+
+  await service.revokeOperationPermission(
+    args.documentId,
+    args.operationType,
+    args.userAddress,
+  );
   return true;
 }
 
-export async function allowGroupForOperation(
+export async function grantGroupOperationPermission(
   service: DocumentPermissionService,
   args: { documentId: string; operationType: string; groupId: number },
-  userAddress: string | undefined,
+  grantedByAddress: string | undefined,
   isGlobalAdmin: boolean,
-): Promise<boolean> {
-  // Check authorization: must be global admin or document admin
-  if (!userAddress) {
+): Promise<OperationGroupPermission> {
+  if (!grantedByAddress) {
     throw new GraphQLError("Authentication required");
   }
 
   if (!isGlobalAdmin) {
-    const canManage = await service.canManageDocument(args.documentId, userAddress);
+    const canManage = await service.canManageDocument(
+      args.documentId,
+      grantedByAddress,
+    );
     if (!canManage) {
       throw new GraphQLError(
-        "Forbidden: You must be an admin of this document to manage operation permissions",
+        "Forbidden: You must be an admin of this document to grant operation permissions",
       );
     }
   }
 
-  const restriction = await service.getOperationRestriction(
+  return service.grantGroupOperationPermission(
     args.documentId,
     args.operationType,
+    args.groupId,
+    grantedByAddress,
   );
-  if (!restriction) {
-    throw new GraphQLError(
-      "Operation not restricted: You must first restrict the operation before allowing groups",
-    );
-  }
-
-  await service.allowGroupForOperation(restriction.id, args.groupId);
-  return true;
 }
 
-export async function disallowGroupForOperation(
+export async function revokeGroupOperationPermission(
   service: DocumentPermissionService,
   args: { documentId: string; operationType: string; groupId: number },
-  userAddress: string | undefined,
+  revokedByAddress: string | undefined,
   isGlobalAdmin: boolean,
 ): Promise<boolean> {
-  // Check authorization: must be global admin or document admin
-  if (!userAddress) {
+  if (!revokedByAddress) {
     throw new GraphQLError("Authentication required");
   }
 
   if (!isGlobalAdmin) {
-    const canManage = await service.canManageDocument(args.documentId, userAddress);
+    const canManage = await service.canManageDocument(
+      args.documentId,
+      revokedByAddress,
+    );
     if (!canManage) {
       throw new GraphQLError(
-        "Forbidden: You must be an admin of this document to manage operation permissions",
+        "Forbidden: You must be an admin of this document to revoke operation permissions",
       );
     }
   }
 
-  const restriction = await service.getOperationRestriction(
+  await service.revokeGroupOperationPermission(
     args.documentId,
     args.operationType,
+    args.groupId,
   );
-  if (!restriction) {
-    throw new GraphQLError("Operation not restricted");
-  }
-
-  await service.disallowGroupForOperation(restriction.id, args.groupId);
   return true;
-}
-
-export async function getAllowedRolesForOperation(
-  service: DocumentPermissionService,
-  restrictionId: number,
-): Promise<Role[]> {
-  return service.getAllowedRolesForOperation(restrictionId);
-}
-
-export async function getAllowedGroupsForOperation(
-  service: DocumentPermissionService,
-  restrictionId: number,
-): Promise<Group[]> {
-  return service.getAllowedGroupsForOperation(restrictionId);
 }

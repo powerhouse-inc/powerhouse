@@ -3,7 +3,6 @@ import { sql } from "kysely";
 import type {
   DocumentPermissionDatabase,
   DocumentPermissionLevel,
-  DocumentVisibility,
 } from "../utils/db.js";
 
 export interface DocumentPermissionEntry {
@@ -15,14 +14,6 @@ export interface DocumentPermissionEntry {
   updatedAt: Date;
 }
 
-export interface DocumentVisibilityEntry {
-  documentId: string;
-  visibility: DocumentVisibility;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// Group types
 export interface Group {
   id: number;
   name: string;
@@ -40,22 +31,20 @@ export interface DocumentGroupPermissionEntry {
   updatedAt: Date;
 }
 
-// Role types
-export interface Role {
-  id: number;
-  name: string;
-  description: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// Operation restriction types
-export interface OperationRestriction {
-  id: number;
+export interface OperationUserPermissionEntry {
   documentId: string;
   operationType: string;
+  userAddress: string;
+  grantedBy: string;
   createdAt: Date;
-  updatedAt: Date;
+}
+
+export interface OperationGroupPermissionEntry {
+  documentId: string;
+  operationType: string;
+  groupId: number;
+  grantedBy: string;
+  createdAt: Date;
 }
 
 /**
@@ -67,19 +56,19 @@ export type GetParentIdsFn = (documentId: string) => Promise<string[]>;
 /**
  * Service for managing document-level permissions.
  *
- * Document visibility levels:
- * - PUBLIC: Anyone can read/sync the document (default)
- * - PROTECTED: Only users with explicit permissions can access
- * - PRIVATE: Document is not synced at all (local only)
- *
- * Permission levels for protected documents:
+ * Permission levels for documents:
  * - READ: Can fetch and read the document
  * - WRITE: Can push updates and modify the document
  * - ADMIN: Can manage document permissions and settings
  *
- * Parent permission inheritance:
- * - If a parent document denies access, children are also inaccessible
- * - Permission checks walk up the document tree
+ * Operation permissions:
+ * - Users and groups can be granted permission to execute specific operations
+ *
+ * Global roles (via environment variables):
+ * - AUTH_ENABLED: Enables authorization checks
+ * - ADMINS: Comma-separated list of admin addresses (full access)
+ * - USERS: Comma-separated list of user addresses (read/write access)
+ * - GUESTS: Comma-separated list of guest addresses (read access)
  */
 export class DocumentPermissionService {
   private initialized = false;
@@ -91,16 +80,6 @@ export class DocumentPermissionService {
    */
   async initialize(): Promise<void> {
     if (this.initialized) return;
-
-    // Create DocumentVisibility table
-    await sql`
-      CREATE TABLE IF NOT EXISTS "DocumentVisibility" (
-        "documentId" VARCHAR(255) PRIMARY KEY,
-        "visibility" VARCHAR(20) NOT NULL DEFAULT 'PUBLIC' CHECK ("visibility" IN ('PUBLIC', 'PROTECTED', 'PRIVATE')),
-        "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-      )
-    `.execute(this.db);
 
     // Create DocumentPermission table
     await sql`
@@ -170,59 +149,23 @@ export class DocumentPermissionService {
       this.db,
     );
 
-    // Create Role table
+    // Create OperationUserPermission table
     await sql`
-      CREATE TABLE IF NOT EXISTS "Role" (
-        "id" SERIAL PRIMARY KEY,
-        "name" VARCHAR(255) NOT NULL UNIQUE,
-        "description" TEXT,
-        "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-      )
-    `.execute(this.db);
-
-    // Create UserRole table (user-role assignment)
-    await sql`
-      CREATE TABLE IF NOT EXISTS "UserRole" (
-        "userAddress" VARCHAR(255) NOT NULL,
-        "roleId" INTEGER NOT NULL,
-        "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY ("userAddress", "roleId")
-      )
-    `.execute(this.db);
-
-    await sql`CREATE INDEX IF NOT EXISTS "userrole_roleid_index" ON "UserRole" ("roleId")`.execute(
-      this.db,
-    );
-
-    // Create DocumentOperationRestriction table
-    await sql`
-      CREATE TABLE IF NOT EXISTS "DocumentOperationRestriction" (
+      CREATE TABLE IF NOT EXISTS "OperationUserPermission" (
         "id" SERIAL PRIMARY KEY,
         "documentId" VARCHAR(255) NOT NULL,
         "operationType" VARCHAR(255) NOT NULL,
+        "userAddress" VARCHAR(255) NOT NULL,
+        "grantedBy" VARCHAR(255) NOT NULL,
         "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE ("documentId", "operationType")
+        UNIQUE ("documentId", "operationType", "userAddress")
       )
     `.execute(this.db);
 
-    await sql`CREATE INDEX IF NOT EXISTS "documentoperationrestriction_documentid_index" ON "DocumentOperationRestriction" ("documentId")`.execute(
+    await sql`CREATE INDEX IF NOT EXISTS "operationuserpermission_documentid_index" ON "OperationUserPermission" ("documentId")`.execute(
       this.db,
     );
-
-    // Create OperationRolePermission table
-    await sql`
-      CREATE TABLE IF NOT EXISTS "OperationRolePermission" (
-        "id" SERIAL PRIMARY KEY,
-        "restrictionId" INTEGER NOT NULL,
-        "roleId" INTEGER NOT NULL,
-        "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE ("restrictionId", "roleId")
-      )
-    `.execute(this.db);
-
-    await sql`CREATE INDEX IF NOT EXISTS "operationrolepermission_restrictionid_index" ON "OperationRolePermission" ("restrictionId")`.execute(
+    await sql`CREATE INDEX IF NOT EXISTS "operationuserpermission_useraddress_index" ON "OperationUserPermission" ("userAddress")`.execute(
       this.db,
     );
 
@@ -230,73 +173,23 @@ export class DocumentPermissionService {
     await sql`
       CREATE TABLE IF NOT EXISTS "OperationGroupPermission" (
         "id" SERIAL PRIMARY KEY,
-        "restrictionId" INTEGER NOT NULL,
+        "documentId" VARCHAR(255) NOT NULL,
+        "operationType" VARCHAR(255) NOT NULL,
         "groupId" INTEGER NOT NULL,
+        "grantedBy" VARCHAR(255) NOT NULL,
         "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE ("restrictionId", "groupId")
+        UNIQUE ("documentId", "operationType", "groupId")
       )
     `.execute(this.db);
 
-    await sql`CREATE INDEX IF NOT EXISTS "operationgrouppermission_restrictionid_index" ON "OperationGroupPermission" ("restrictionId")`.execute(
+    await sql`CREATE INDEX IF NOT EXISTS "operationgrouppermission_documentid_index" ON "OperationGroupPermission" ("documentId")`.execute(
+      this.db,
+    );
+    await sql`CREATE INDEX IF NOT EXISTS "operationgrouppermission_groupid_index" ON "OperationGroupPermission" ("groupId")`.execute(
       this.db,
     );
 
     this.initialized = true;
-  }
-
-  // ============================================
-  // Document Visibility Operations
-  // ============================================
-
-  /**
-   * Get the visibility level for a document.
-   * Returns 'PUBLIC' if no explicit visibility is set.
-   */
-  async getDocumentVisibility(documentId: string): Promise<DocumentVisibility> {
-    const result = await this.db
-      .selectFrom("DocumentVisibility")
-      .select("visibility")
-      .where("documentId", "=", documentId)
-      .executeTakeFirst();
-
-    return result?.visibility ?? "PUBLIC";
-  }
-
-  /**
-   * Set the visibility level for a document.
-   * Creates a new entry or updates existing one.
-   */
-  async setDocumentVisibility(
-    documentId: string,
-    visibility: DocumentVisibility,
-  ): Promise<void> {
-    const now = new Date();
-
-    await this.db
-      .insertInto("DocumentVisibility")
-      .values({
-        documentId,
-        visibility,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .onConflict((oc) =>
-        oc.column("documentId").doUpdateSet({
-          visibility,
-          updatedAt: now,
-        }),
-      )
-      .execute();
-  }
-
-  /**
-   * Delete visibility entry for a document (resets to default PUBLIC)
-   */
-  async deleteDocumentVisibility(documentId: string): Promise<void> {
-    await this.db
-      .deleteFrom("DocumentVisibility")
-      .where("documentId", "=", documentId)
-      .execute();
   }
 
   // ============================================
@@ -367,7 +260,6 @@ export class DocumentPermissionService {
 
   /**
    * Grant or update a user's permission on a document.
-   * Only users with ADMIN permission (or global admins) can grant permissions.
    */
   async grantPermission(
     documentId: string,
@@ -436,33 +328,35 @@ export class DocumentPermissionService {
       .deleteFrom("DocumentPermission")
       .where("documentId", "=", documentId)
       .execute();
+
+    await this.db
+      .deleteFrom("DocumentGroupPermission")
+      .where("documentId", "=", documentId)
+      .execute();
+
+    await this.db
+      .deleteFrom("OperationUserPermission")
+      .where("documentId", "=", documentId)
+      .execute();
+
+    await this.db
+      .deleteFrom("OperationGroupPermission")
+      .where("documentId", "=", documentId)
+      .execute();
   }
 
   // ============================================
-  // Access Control Checks (Single Document)
+  // Access Control Checks
   // ============================================
 
   /**
-   * Check if a user can read a single document (without parent checks).
-   * Returns true if:
-   * - Document is PUBLIC
-   * - Document is PROTECTED and user has READ, WRITE, or ADMIN permission (direct or via group)
+   * Check if a user can read a document.
+   * Returns true if user has READ, WRITE, or ADMIN permission (direct or via group)
    */
   async canReadDocument(
     documentId: string,
     userAddress: string | undefined,
   ): Promise<boolean> {
-    const visibility = await this.getDocumentVisibility(documentId);
-
-    if (visibility === "PUBLIC") {
-      return true;
-    }
-
-    if (visibility === "PRIVATE") {
-      return false;
-    }
-
-    // PROTECTED: check user permission (direct or via group)
     if (!userAddress) {
       return false;
     }
@@ -485,26 +379,13 @@ export class DocumentPermissionService {
   }
 
   /**
-   * Check if a user can write to a single document (without parent checks).
-   * Returns true if:
-   * - Document is PUBLIC (global permissions should gate this)
-   * - Document is PROTECTED and user has WRITE or ADMIN permission (direct or via group)
+   * Check if a user can write to a document.
+   * Returns true if user has WRITE or ADMIN permission (direct or via group)
    */
   async canWriteDocument(
     documentId: string,
     userAddress: string | undefined,
   ): Promise<boolean> {
-    const visibility = await this.getDocumentVisibility(documentId);
-
-    if (visibility === "PUBLIC") {
-      return true; // Global permissions will gate this
-    }
-
-    if (visibility === "PRIVATE") {
-      return false;
-    }
-
-    // PROTECTED: check user permission (direct or via group)
     if (!userAddress) {
       return false;
     }
@@ -528,20 +409,13 @@ export class DocumentPermissionService {
 
   /**
    * Check if a user can manage a document (change permissions, settings).
-   * Returns true if:
-   * - Document is PROTECTED and user has ADMIN permission (direct or via group)
+   * Returns true if user has ADMIN permission (direct or via group)
    */
   async canManageDocument(
     documentId: string,
     userAddress: string | undefined,
   ): Promise<boolean> {
     if (!userAddress) {
-      return false;
-    }
-
-    const visibility = await this.getDocumentVisibility(documentId);
-
-    if (visibility === "PRIVATE") {
       return false;
     }
 
@@ -562,39 +436,26 @@ export class DocumentPermissionService {
     return groupPermission === "ADMIN";
   }
 
-  /**
-   * Check if a document is syncable (not PRIVATE)
-   */
-  async isSyncable(documentId: string): Promise<boolean> {
-    const visibility = await this.getDocumentVisibility(documentId);
-    return visibility !== "PRIVATE";
-  }
-
   // ============================================
   // Access Control Checks (With Parent Hierarchy)
   // ============================================
 
   /**
-   * Check if a user can read a document, including parent permission checks.
-   * If any parent denies access, the document is inaccessible.
-   *
-   * @param documentId - The document to check
-   * @param userAddress - The user's address (undefined for anonymous)
-   * @param getParentIds - Function to get parent IDs for a document
-   * @returns true if user can read the document and all its parents
+   * Check if a user can read a document, including parent permission inheritance.
+   * Returns true if user has permission on the document OR any parent in the hierarchy.
    */
   async canRead(
     documentId: string,
     userAddress: string | undefined,
     getParentIds: GetParentIdsFn,
   ): Promise<boolean> {
-    // Check the document itself
+    // Check if user has direct permission on this document
     const canReadThis = await this.canReadDocument(documentId, userAddress);
-    if (!canReadThis) {
-      return false;
+    if (canReadThis) {
+      return true;
     }
 
-    // Check all parents recursively
+    // Check if user has permission on any parent (inheritance)
     const parentIds = await getParentIds(documentId);
     for (const parentId of parentIds) {
       const canReadParent = await this.canRead(
@@ -602,57 +463,47 @@ export class DocumentPermissionService {
         userAddress,
         getParentIds,
       );
-      if (!canReadParent) {
-        return false;
+      if (canReadParent) {
+        return true;
       }
     }
 
-    return true;
+    return false;
   }
 
   /**
-   * Check if a user can write to a document, including parent permission checks.
-   * If any parent denies write access, the document is not writable.
-   *
-   * @param documentId - The document to check
-   * @param userAddress - The user's address (undefined for anonymous)
-   * @param getParentIds - Function to get parent IDs for a document
-   * @returns true if user can write to the document and all its parents allow it
+   * Check if a user can write to a document, including parent permission inheritance.
+   * Returns true if user has write permission on the document OR any parent in the hierarchy.
    */
   async canWrite(
     documentId: string,
     userAddress: string | undefined,
     getParentIds: GetParentIdsFn,
   ): Promise<boolean> {
-    // Check the document itself
+    // Check if user has direct write permission on this document
     const canWriteThis = await this.canWriteDocument(documentId, userAddress);
-    if (!canWriteThis) {
-      return false;
+    if (canWriteThis) {
+      return true;
     }
 
-    // Check all parents recursively (need at least read access to parents)
+    // Check if user has write permission on any parent (inheritance)
     const parentIds = await getParentIds(documentId);
     for (const parentId of parentIds) {
-      const canReadParent = await this.canRead(
+      const canWriteParent = await this.canWrite(
         parentId,
         userAddress,
         getParentIds,
       );
-      if (!canReadParent) {
-        return false;
+      if (canWriteParent) {
+        return true;
       }
     }
 
-    return true;
+    return false;
   }
 
   /**
    * Filter a list of document IDs to only include those the user can read.
-   *
-   * @param documentIds - List of document IDs to filter
-   * @param userAddress - The user's address (undefined for anonymous)
-   * @param getParentIds - Function to get parent IDs for a document
-   * @returns Filtered list of document IDs the user can access
    */
   async filterReadableDocuments(
     documentIds: string[],
@@ -927,397 +778,238 @@ export class DocumentPermissionService {
   }
 
   // ============================================
-  // Role Management
+  // Operation Permissions
   // ============================================
 
   /**
-   * Create a new role
+   * Grant a user permission to execute an operation on a document
    */
-  async createRole(name: string, description?: string): Promise<Role> {
-    const now = new Date();
-
-    await this.db
-      .insertInto("Role")
-      .values({
-        name,
-        description: description ?? null,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .execute();
-
-    const result = await this.db
-      .selectFrom("Role")
-      .select(["id", "name", "description", "createdAt", "updatedAt"])
-      .where("name", "=", name)
-      .executeTakeFirstOrThrow();
-
-    return result;
-  }
-
-  /**
-   * Delete a role and all its associations
-   */
-  async deleteRole(roleId: number): Promise<void> {
-    // Delete role permissions on operations
-    await this.db
-      .deleteFrom("OperationRolePermission")
-      .where("roleId", "=", roleId)
-      .execute();
-
-    // Delete user-role assignments
-    await this.db.deleteFrom("UserRole").where("roleId", "=", roleId).execute();
-
-    // Delete the role
-    await this.db.deleteFrom("Role").where("id", "=", roleId).execute();
-  }
-
-  /**
-   * Get a role by ID
-   */
-  async getRole(roleId: number): Promise<Role | null> {
-    const result = await this.db
-      .selectFrom("Role")
-      .select(["id", "name", "description", "createdAt", "updatedAt"])
-      .where("id", "=", roleId)
-      .executeTakeFirst();
-
-    return result ?? null;
-  }
-
-  /**
-   * List all roles
-   */
-  async listRoles(): Promise<Role[]> {
-    return this.db
-      .selectFrom("Role")
-      .select(["id", "name", "description", "createdAt", "updatedAt"])
-      .execute();
-  }
-
-  /**
-   * Assign a role to a user
-   */
-  async assignRoleToUser(userAddress: string, roleId: number): Promise<void> {
+  async grantOperationPermission(
+    documentId: string,
+    operationType: string,
+    userAddress: string,
+    grantedBy: string,
+  ): Promise<OperationUserPermissionEntry> {
     const now = new Date();
     const normalizedAddress = userAddress.toLowerCase();
 
     await this.db
-      .insertInto("UserRole")
-      .values({
-        userAddress: normalizedAddress,
-        roleId,
-        createdAt: now,
-      })
-      .onConflict((oc) => oc.columns(["userAddress", "roleId"]).doNothing())
-      .execute();
-  }
-
-  /**
-   * Remove a role from a user
-   */
-  async removeRoleFromUser(userAddress: string, roleId: number): Promise<void> {
-    await this.db
-      .deleteFrom("UserRole")
-      .where("userAddress", "=", userAddress.toLowerCase())
-      .where("roleId", "=", roleId)
-      .execute();
-  }
-
-  /**
-   * Get all roles assigned to a user
-   */
-  async getUserRoles(userAddress: string): Promise<Role[]> {
-    return this.db
-      .selectFrom("UserRole")
-      .innerJoin("Role", "Role.id", "UserRole.roleId")
-      .select([
-        "Role.id",
-        "Role.name",
-        "Role.description",
-        "Role.createdAt",
-        "Role.updatedAt",
-      ])
-      .where("UserRole.userAddress", "=", userAddress.toLowerCase())
-      .execute();
-  }
-
-  // ============================================
-  // Operation Restrictions
-  // ============================================
-
-  /**
-   * Restrict an operation on a document (only allowed roles/groups can execute)
-   */
-  async restrictOperation(
-    documentId: string,
-    operationType: string,
-  ): Promise<OperationRestriction> {
-    const now = new Date();
-
-    await this.db
-      .insertInto("DocumentOperationRestriction")
+      .insertInto("OperationUserPermission")
       .values({
         documentId,
         operationType,
+        userAddress: normalizedAddress,
+        grantedBy: grantedBy.toLowerCase(),
         createdAt: now,
-        updatedAt: now,
       })
       .onConflict((oc) =>
-        oc.columns(["documentId", "operationType"]).doUpdateSet({
-          updatedAt: now,
-        }),
+        oc.columns(["documentId", "operationType", "userAddress"]).doNothing(),
       )
       .execute();
 
     const result = await this.db
-      .selectFrom("DocumentOperationRestriction")
-      .select(["id", "documentId", "operationType", "createdAt", "updatedAt"])
+      .selectFrom("OperationUserPermission")
+      .select([
+        "documentId",
+        "operationType",
+        "userAddress",
+        "grantedBy",
+        "createdAt",
+      ])
       .where("documentId", "=", documentId)
       .where("operationType", "=", operationType)
+      .where("userAddress", "=", normalizedAddress)
       .executeTakeFirstOrThrow();
 
     return result;
   }
 
   /**
-   * Remove operation restriction (allows anyone with write access)
+   * Revoke a user's permission to execute an operation
    */
-  async unrestrictOperation(
+  async revokeOperationPermission(
     documentId: string,
     operationType: string,
+    userAddress: string,
   ): Promise<void> {
-    // First get the restriction ID
-    const restriction = await this.db
-      .selectFrom("DocumentOperationRestriction")
-      .select("id")
+    await this.db
+      .deleteFrom("OperationUserPermission")
       .where("documentId", "=", documentId)
       .where("operationType", "=", operationType)
-      .executeTakeFirst();
-
-    if (restriction) {
-      // Delete associated role and group permissions
-      await this.db
-        .deleteFrom("OperationRolePermission")
-        .where("restrictionId", "=", restriction.id)
-        .execute();
-
-      await this.db
-        .deleteFrom("OperationGroupPermission")
-        .where("restrictionId", "=", restriction.id)
-        .execute();
-
-      // Delete the restriction
-      await this.db
-        .deleteFrom("DocumentOperationRestriction")
-        .where("id", "=", restriction.id)
-        .execute();
-    }
-  }
-
-  /**
-   * Get all operation restrictions for a document
-   */
-  async getDocumentRestrictions(
-    documentId: string,
-  ): Promise<OperationRestriction[]> {
-    return this.db
-      .selectFrom("DocumentOperationRestriction")
-      .select(["id", "documentId", "operationType", "createdAt", "updatedAt"])
-      .where("documentId", "=", documentId)
+      .where("userAddress", "=", userAddress.toLowerCase())
       .execute();
   }
 
   /**
-   * Get a specific operation restriction
+   * Grant a group permission to execute an operation on a document
    */
-  async getOperationRestriction(
+  async grantGroupOperationPermission(
     documentId: string,
     operationType: string,
-  ): Promise<OperationRestriction | null> {
-    const result = await this.db
-      .selectFrom("DocumentOperationRestriction")
-      .select(["id", "documentId", "operationType", "createdAt", "updatedAt"])
-      .where("documentId", "=", documentId)
-      .where("operationType", "=", operationType)
-      .executeTakeFirst();
-
-    return result ?? null;
-  }
-
-  /**
-   * Allow a role to execute a restricted operation
-   */
-  async allowRoleForOperation(
-    restrictionId: number,
-    roleId: number,
-  ): Promise<void> {
-    const now = new Date();
-
-    await this.db
-      .insertInto("OperationRolePermission")
-      .values({
-        restrictionId,
-        roleId,
-        createdAt: now,
-      })
-      .onConflict((oc) => oc.columns(["restrictionId", "roleId"]).doNothing())
-      .execute();
-  }
-
-  /**
-   * Disallow a role from executing a restricted operation
-   */
-  async disallowRoleForOperation(
-    restrictionId: number,
-    roleId: number,
-  ): Promise<void> {
-    await this.db
-      .deleteFrom("OperationRolePermission")
-      .where("restrictionId", "=", restrictionId)
-      .where("roleId", "=", roleId)
-      .execute();
-  }
-
-  /**
-   * Allow a group to execute a restricted operation
-   */
-  async allowGroupForOperation(
-    restrictionId: number,
     groupId: number,
-  ): Promise<void> {
+    grantedBy: string,
+  ): Promise<OperationGroupPermissionEntry> {
     const now = new Date();
 
     await this.db
       .insertInto("OperationGroupPermission")
       .values({
-        restrictionId,
+        documentId,
+        operationType,
         groupId,
+        grantedBy: grantedBy.toLowerCase(),
         createdAt: now,
       })
-      .onConflict((oc) => oc.columns(["restrictionId", "groupId"]).doNothing())
+      .onConflict((oc) =>
+        oc.columns(["documentId", "operationType", "groupId"]).doNothing(),
+      )
       .execute();
+
+    const result = await this.db
+      .selectFrom("OperationGroupPermission")
+      .select([
+        "documentId",
+        "operationType",
+        "groupId",
+        "grantedBy",
+        "createdAt",
+      ])
+      .where("documentId", "=", documentId)
+      .where("operationType", "=", operationType)
+      .where("groupId", "=", groupId)
+      .executeTakeFirstOrThrow();
+
+    return result;
   }
 
   /**
-   * Disallow a group from executing a restricted operation
+   * Revoke a group's permission to execute an operation
    */
-  async disallowGroupForOperation(
-    restrictionId: number,
+  async revokeGroupOperationPermission(
+    documentId: string,
+    operationType: string,
     groupId: number,
   ): Promise<void> {
     await this.db
       .deleteFrom("OperationGroupPermission")
-      .where("restrictionId", "=", restrictionId)
+      .where("documentId", "=", documentId)
+      .where("operationType", "=", operationType)
       .where("groupId", "=", groupId)
       .execute();
   }
 
   /**
-   * Get roles allowed for an operation restriction
+   * Get all users with permission to execute an operation
    */
-  async getAllowedRolesForOperation(restrictionId: number): Promise<Role[]> {
+  async getOperationUserPermissions(
+    documentId: string,
+    operationType: string,
+  ): Promise<OperationUserPermissionEntry[]> {
     return this.db
-      .selectFrom("OperationRolePermission")
-      .innerJoin("Role", "Role.id", "OperationRolePermission.roleId")
+      .selectFrom("OperationUserPermission")
       .select([
-        "Role.id",
-        "Role.name",
-        "Role.description",
-        "Role.createdAt",
-        "Role.updatedAt",
+        "documentId",
+        "operationType",
+        "userAddress",
+        "grantedBy",
+        "createdAt",
       ])
-      .where("OperationRolePermission.restrictionId", "=", restrictionId)
+      .where("documentId", "=", documentId)
+      .where("operationType", "=", operationType)
       .execute();
   }
 
   /**
-   * Get groups allowed for an operation restriction
+   * Get all groups with permission to execute an operation
    */
-  async getAllowedGroupsForOperation(restrictionId: number): Promise<Group[]> {
+  async getOperationGroupPermissions(
+    documentId: string,
+    operationType: string,
+  ): Promise<OperationGroupPermissionEntry[]> {
     return this.db
       .selectFrom("OperationGroupPermission")
-      .innerJoin("Group", "Group.id", "OperationGroupPermission.groupId")
       .select([
-        "Group.id",
-        "Group.name",
-        "Group.description",
-        "Group.createdAt",
-        "Group.updatedAt",
+        "documentId",
+        "operationType",
+        "groupId",
+        "grantedBy",
+        "createdAt",
       ])
-      .where("OperationGroupPermission.restrictionId", "=", restrictionId)
+      .where("documentId", "=", documentId)
+      .where("operationType", "=", operationType)
       .execute();
   }
-
-  // ============================================
-  // Operation Access Control
-  // ============================================
 
   /**
    * Check if a user can execute a specific operation on a document.
-   *
-   * Restrictive model:
-   * - If the operation is NOT restricted → return true (allowed by default)
-   * - If the operation IS restricted → check if user has an allowed role or is in an allowed group
-   *
-   * @param documentId - The document ID
-   * @param operationType - The operation type (e.g., "CONFIRM_TRANSACTION")
-   * @param userAddress - The user's address
-   * @returns true if user can execute the operation
+   * Returns true if user has direct permission or is in a group with permission.
    */
   async canExecuteOperation(
     documentId: string,
     operationType: string,
     userAddress: string | undefined,
   ): Promise<boolean> {
-    // Get the restriction for this operation
-    const restriction = await this.getOperationRestriction(
-      documentId,
-      operationType,
-    );
-
-    // If operation is not restricted, it's allowed by default
-    if (!restriction) {
-      return true;
-    }
-
-    // If user is not authenticated, they can't execute restricted operations
     if (!userAddress) {
       return false;
     }
 
     const normalizedAddress = userAddress.toLowerCase();
 
-    // Check if user has any of the allowed roles
-    const userRoleMatch = await this.db
-      .selectFrom("UserRole")
-      .innerJoin(
-        "OperationRolePermission",
-        "OperationRolePermission.roleId",
-        "UserRole.roleId",
-      )
-      .select("UserRole.roleId")
-      .where("UserRole.userAddress", "=", normalizedAddress)
-      .where("OperationRolePermission.restrictionId", "=", restriction.id)
+    // Check direct user permission
+    const userPermission = await this.db
+      .selectFrom("OperationUserPermission")
+      .select("userAddress")
+      .where("documentId", "=", documentId)
+      .where("operationType", "=", operationType)
+      .where("userAddress", "=", normalizedAddress)
       .executeTakeFirst();
 
-    if (userRoleMatch) {
+    if (userPermission) {
       return true;
     }
 
-    // Check if user is in any of the allowed groups
-    const userGroupMatch = await this.db
-      .selectFrom("UserGroup")
+    // Check group permission
+    const groupPermission = await this.db
+      .selectFrom("OperationGroupPermission")
       .innerJoin(
-        "OperationGroupPermission",
-        "OperationGroupPermission.groupId",
+        "UserGroup",
         "UserGroup.groupId",
+        "OperationGroupPermission.groupId",
       )
-      .select("UserGroup.groupId")
+      .select("OperationGroupPermission.groupId")
+      .where("OperationGroupPermission.documentId", "=", documentId)
+      .where("OperationGroupPermission.operationType", "=", operationType)
       .where("UserGroup.userAddress", "=", normalizedAddress)
-      .where("OperationGroupPermission.restrictionId", "=", restriction.id)
       .executeTakeFirst();
 
-    return !!userGroupMatch;
+    return !!groupPermission;
+  }
+
+  /**
+   * Check if an operation has any permissions set (is restricted)
+   */
+  async isOperationRestricted(
+    documentId: string,
+    operationType: string,
+  ): Promise<boolean> {
+    const userPermCount = await this.db
+      .selectFrom("OperationUserPermission")
+      .select(sql<number>`count(*)`.as("count"))
+      .where("documentId", "=", documentId)
+      .where("operationType", "=", operationType)
+      .executeTakeFirst();
+
+    if (userPermCount && Number(userPermCount.count) > 0) {
+      return true;
+    }
+
+    const groupPermCount = await this.db
+      .selectFrom("OperationGroupPermission")
+      .select(sql<number>`count(*)`.as("count"))
+      .where("documentId", "=", documentId)
+      .where("operationType", "=", operationType)
+      .executeTakeFirst();
+
+    return groupPermCount !== undefined && Number(groupPermCount.count) > 0;
   }
 }

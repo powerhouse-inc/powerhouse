@@ -8,15 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 /**
- * Document visibility levels:
- * - PUBLIC: Anyone can read/sync the document
- * - PROTECTED: Only users with explicit permissions can access
- * - PRIVATE: Document is not synced at all (local only)
- */
-export type DocumentVisibility = "PUBLIC" | "PROTECTED" | "PRIVATE";
-
-/**
- * Permission levels for protected documents:
+ * Permission levels for documents:
  * - READ: Can fetch and read the document
  * - WRITE: Can push updates and modify the document
  * - ADMIN: Can manage document permissions and settings
@@ -27,23 +19,12 @@ export type DocumentPermissionLevel = "READ" | "WRITE" | "ADMIN";
  * Database schema for document permissions
  */
 export interface DocumentPermissionDatabase {
-  DocumentVisibility: DocumentVisibilityTable;
   DocumentPermission: DocumentPermissionTable;
   Group: GroupTable;
   UserGroup: UserGroupTable;
   DocumentGroupPermission: DocumentGroupPermissionTable;
-  Role: RoleTable;
-  UserRole: UserRoleTable;
-  DocumentOperationRestriction: DocumentOperationRestrictionTable;
-  OperationRolePermission: OperationRolePermissionTable;
+  OperationUserPermission: OperationUserPermissionTable;
   OperationGroupPermission: OperationGroupPermissionTable;
-}
-
-export interface DocumentVisibilityTable {
-  documentId: string;
-  visibility: DocumentVisibility;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 export interface DocumentPermissionTable {
@@ -81,41 +62,22 @@ export interface DocumentGroupPermissionTable {
   updatedAt: Date;
 }
 
-// Role management tables
-export interface RoleTable {
-  id: Generated<number>;
-  name: string;
-  description: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface UserRoleTable {
-  userAddress: string;
-  roleId: number;
-  createdAt: Date;
-}
-
-// Operation restriction tables
-export interface DocumentOperationRestrictionTable {
+// Operation permission tables
+export interface OperationUserPermissionTable {
   id: Generated<number>;
   documentId: string;
   operationType: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface OperationRolePermissionTable {
-  id: Generated<number>;
-  restrictionId: number;
-  roleId: number;
+  userAddress: string;
+  grantedBy: string;
   createdAt: Date;
 }
 
 export interface OperationGroupPermissionTable {
   id: Generated<number>;
-  restrictionId: number;
+  documentId: string;
+  operationType: string;
   groupId: number;
+  grantedBy: string;
   createdAt: Date;
 }
 

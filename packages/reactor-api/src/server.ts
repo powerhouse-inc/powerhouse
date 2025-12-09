@@ -33,6 +33,7 @@ import { GraphQLManager } from "./graphql/graphql-manager.js";
 import { renderGraphqlPlayground } from "./graphql/playground.js";
 import { ReactorSubgraph } from "./graphql/reactor/subgraph.js";
 import type { SubgraphClass } from "./graphql/types.js";
+import { DocumentPermissionService } from "./services/document-permission.service.js";
 import { ImportPackageLoader } from "./packages/import-loader.js";
 import {
   getUniqueDocumentModels,
@@ -98,7 +99,11 @@ function setupGraphQlExplorer(router: express.Router): void {
  */
 async function initializeDatabaseAndAnalytics(
   dbPath: string | undefined,
-): Promise<{ relationalDb: IRelationalDb; analyticsStore: IAnalyticsStore }> {
+): Promise<{
+  relationalDb: IRelationalDb;
+  analyticsStore: IAnalyticsStore;
+  documentPermissionService: DocumentPermissionService;
+}> {
   const { db, knex } = getDbClient(dbPath);
   const relationalDb = createRelationalDb<unknown>(db);
   const analyticsStore = new PostgresAnalyticsStore({
@@ -109,7 +114,11 @@ async function initializeDatabaseAndAnalytics(
     await knex.raw(sql);
   }
 
-  return { relationalDb, analyticsStore };
+  // Initialize document permission service
+  const documentPermissionService = new DocumentPermissionService(db);
+  await documentPermissionService.initialize();
+
+  return { relationalDb, analyticsStore, documentPermissionService };
 }
 
 /**
@@ -134,6 +143,7 @@ async function setupGraphQLManager(
     admins: string[];
     freeEntry: boolean;
   },
+  documentPermissionService?: DocumentPermissionService,
 ): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager(
     config.basePath,
@@ -151,6 +161,7 @@ async function setupGraphQLManager(
       admins: auth?.admins ?? [],
       freeEntry: auth?.freeEntry ?? false,
     },
+    documentPermissionService,
   );
 
   await graphqlManager.init(subgraphs.core);
@@ -279,6 +290,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   };
   relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
+  documentPermissionService: DocumentPermissionService;
   packages: PackageManager;
 }> {
   const port = options.port ?? DEFAULT_PORT;
@@ -348,9 +360,8 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   app.use(config.basePath, defaultRouter);
 
   // Initialize database and analytics store
-  const { relationalDb, analyticsStore } = await initializeDatabaseAndAnalytics(
-    options.dbPath,
-  );
+  const { relationalDb, analyticsStore, documentPermissionService } =
+    await initializeDatabaseAndAnalytics(options.dbPath);
 
   // Initialize package manager
   const packageLoader = options.packageLoader ?? new ImportPackageLoader();
@@ -373,6 +384,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     },
     relationalDb,
     analyticsStore,
+    documentPermissionService,
     packages,
   };
 }
@@ -388,6 +400,7 @@ async function _setupAPI(
   packages: PackageManager,
   relationalDb: IRelationalDb,
   analyticsStore: IAnalyticsStore,
+  documentPermissionService: DocumentPermissionService,
   processors: Map<
     string,
     ((module: IProcessorHostModule) => ProcessorFactory)[]
@@ -482,6 +495,7 @@ async function _setupAPI(
       core: coreSubgraphs,
     },
     auth,
+    documentPermissionService,
   );
 
   // Set up event listeners
@@ -520,8 +534,15 @@ export async function startAPI(
   client: IReactorClient,
   options: Options,
 ): Promise<API> {
-  const { port, app, auth, relationalDb, analyticsStore, packages } =
-    await _setupCommonInfrastructure(options);
+  const {
+    port,
+    app,
+    auth,
+    relationalDb,
+    analyticsStore,
+    documentPermissionService,
+    packages,
+  } = await _setupCommonInfrastructure(options);
 
   const { documentModels, processors, subgraphs } = await packages.init();
   driveServer.setDocumentModelModules(
@@ -539,6 +560,7 @@ export async function startAPI(
     packages,
     relationalDb,
     analyticsStore,
+    documentPermissionService,
     processors,
     subgraphs,
     options,
@@ -569,8 +591,15 @@ export async function initializeAndStartAPI(
 ): Promise<
   API & { driveServer: IDocumentDriveServer; client: IReactorClient }
 > {
-  const { port, app, auth, relationalDb, analyticsStore, packages } =
-    await _setupCommonInfrastructure(options);
+  const {
+    port,
+    app,
+    auth,
+    relationalDb,
+    analyticsStore,
+    documentPermissionService,
+    packages,
+  } = await _setupCommonInfrastructure(options);
 
   const { documentModels, processors, subgraphs } = await packages.init();
   const reactor = await driveServerInitializer(documentModels);
@@ -584,6 +613,7 @@ export async function initializeAndStartAPI(
     packages,
     relationalDb,
     analyticsStore,
+    documentPermissionService,
     processors,
     subgraphs,
     options,

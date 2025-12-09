@@ -1,12 +1,13 @@
 import { ConsoleLogger } from "@powerhousedao/reactor";
 import fs from "fs";
+import { GraphQLError } from "graphql";
 import { withFilter } from "graphql-subscriptions";
 import { gql } from "graphql-tag";
 import path from "path";
 import { fileURLToPath } from "url";
 import type { DocumentPermissionService } from "../../services/document-permission.service.js";
 import { BaseSubgraph } from "../base-subgraph.js";
-import type { SubgraphArgs } from "../types.js";
+import type { Context, SubgraphArgs } from "../types.js";
 import {
   matchesJobFilter,
   matchesSearchFilter,
@@ -38,6 +39,109 @@ export class ReactorSubgraph extends BaseSubgraph {
   name = "r/:reactor";
   hasSubscriptions = true;
 
+  /**
+   * Check if user has global read access (admin, user, or guest)
+   */
+  private hasGlobalReadAccess(ctx: Context): boolean {
+    const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "");
+    const isGlobalUser = ctx.isUser?.(ctx.user?.address ?? "");
+    const isGlobalGuest =
+      ctx.isGuest?.(ctx.user?.address ?? "") ||
+      process.env.FREE_ENTRY === "true";
+    return !!(isGlobalAdmin || isGlobalUser || isGlobalGuest);
+  }
+
+  /**
+   * Check if user has global write access (admin or user, not guest)
+   */
+  private hasGlobalWriteAccess(ctx: Context): boolean {
+    const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "");
+    const isGlobalUser = ctx.isUser?.(ctx.user?.address ?? "");
+    return !!(isGlobalAdmin || isGlobalUser);
+  }
+
+  /**
+   * Get the parent IDs function for hierarchical permission checks
+   */
+  private getParentIdsFn() {
+    return resolvers.createGetParentIdsFn(this.reactorClient);
+  }
+
+  /**
+   * Check if user can read a document (with hierarchy)
+   */
+  private async canReadDocument(
+    documentId: string,
+    ctx: Context,
+  ): Promise<boolean> {
+    // Global access allows reading
+    if (this.hasGlobalReadAccess(ctx)) {
+      return true;
+    }
+
+    // Check document-level permissions with hierarchy
+    if (this.documentPermissionService) {
+      return this.documentPermissionService.canRead(
+        documentId,
+        ctx.user?.address,
+        this.getParentIdsFn(),
+      );
+    }
+
+    return false;
+  }
+
+  /**
+   * Check if user can write to a document (with hierarchy)
+   */
+  private async canWriteDocument(
+    documentId: string,
+    ctx: Context,
+  ): Promise<boolean> {
+    // Global write access allows writing
+    if (this.hasGlobalWriteAccess(ctx)) {
+      return true;
+    }
+
+    // Check document-level permissions with hierarchy
+    if (this.documentPermissionService) {
+      return this.documentPermissionService.canWrite(
+        documentId,
+        ctx.user?.address,
+        this.getParentIdsFn(),
+      );
+    }
+
+    return false;
+  }
+
+  /**
+   * Throw an error if user cannot read the document
+   */
+  private async assertCanRead(documentId: string, ctx: Context): Promise<void> {
+    const canRead = await this.canReadDocument(documentId, ctx);
+    if (!canRead) {
+      throw new GraphQLError(
+        "Forbidden: insufficient permissions to read this document",
+      );
+    }
+  }
+
+  /**
+   * Throw an error if user cannot write to the document
+   */
+  private async assertCanWrite(
+    documentId: string,
+    ctx: Context,
+  ): Promise<void> {
+    const canWrite = await this.canWriteDocument(documentId, ctx);
+    if (!canWrite) {
+      throw new GraphQLError(
+        "Forbidden: insufficient permissions to write to this document",
+      );
+    }
+  }
+
   // Load schema from file
   typeDefs = gql(
     fs.readFileSync(path.join(__dirname, "schema.graphql"), "utf-8"),
@@ -55,19 +159,32 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
-      document: async (_parent, args) => {
+      document: async (_parent, args, ctx: Context) => {
         this.logger.debug("document", args);
         try {
-          return await resolvers.document(this.reactorClient, args);
+          // Resolve the document ID first
+          const doc = await resolvers.document(this.reactorClient, args);
+          if (doc) {
+            await this.assertCanRead(doc.document.id, ctx);
+          }
+          return doc;
         } catch (error) {
           this.logger.error("Error in document:", error);
           throw error;
         }
       },
 
-      documentChildren: async (_parent, args) => {
+      documentChildren: async (_parent, args, ctx: Context) => {
         this.logger.debug("documentChildren", args);
         try {
+          // First resolve the parent to get its ID and check permission
+          const parent = await resolvers.document(this.reactorClient, {
+            identifier: args.parentIdentifier,
+            view: args.view,
+          });
+          if (parent) {
+            await this.assertCanRead(parent.document.id, ctx);
+          }
           return await resolvers.documentChildren(this.reactorClient, args);
         } catch (error) {
           this.logger.error("Error in documentChildren:", error);
@@ -75,9 +192,17 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
-      documentParents: async (_parent, args) => {
+      documentParents: async (_parent, args, ctx: Context) => {
         this.logger.debug("documentParents", args);
         try {
+          // First resolve the child to get its ID and check permission
+          const child = await resolvers.document(this.reactorClient, {
+            identifier: args.childIdentifier,
+            view: args.view,
+          });
+          if (child) {
+            await this.assertCanRead(child.document.id, ctx);
+          }
           return await resolvers.documentParents(this.reactorClient, args);
         } catch (error) {
           this.logger.error("Error in documentParents:", error);
@@ -85,10 +210,28 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
-      findDocuments: async (_parent, args) => {
+      findDocuments: async (_parent, args, ctx: Context) => {
         this.logger.debug("findDocuments", args);
         try {
-          return await resolvers.findDocuments(this.reactorClient, args);
+          const result = await resolvers.findDocuments(this.reactorClient, args);
+
+          // Filter results to only include documents the user can read
+          if (!this.hasGlobalReadAccess(ctx) && this.documentPermissionService) {
+            const filteredItems = [];
+            for (const item of result.items) {
+              const canRead = await this.canReadDocument(item.id, ctx);
+              if (canRead) {
+                filteredItems.push(item);
+              }
+            }
+            return {
+              ...result,
+              items: filteredItems,
+              totalCount: filteredItems.length,
+            };
+          }
+
+          return result;
         } catch (error) {
           this.logger.error("Error in findDocuments:", error);
           throw error;
@@ -122,14 +265,17 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
+      // Auth scope - returns empty object, actual queries resolved by Auth type
+      auth: () => ({}),
+    },
+
+    // Auth type resolver for nested auth queries
+    Auth: {
       documentAccess: async (
         _parent: unknown,
         args: { documentId: string },
-        ctx: {
-          documentPermissionService?: DocumentPermissionService;
-        },
       ) => {
-        this.logger.debug("documentAccess", args);
+        this.logger.debug("auth.documentAccess", args);
         if (!this.documentPermissionService) {
           throw new Error("DocumentPermissionService not available");
         }
@@ -139,7 +285,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             args,
           );
         } catch (error) {
-          this.logger.error("Error in documentAccess:", error);
+          this.logger.error("Error in auth.documentAccess:", error);
           throw error;
         }
       },
@@ -149,10 +295,9 @@ export class ReactorSubgraph extends BaseSubgraph {
         _args: unknown,
         ctx: {
           user?: { address: string };
-          documentPermissionService?: DocumentPermissionService;
         },
       ) => {
-        this.logger.debug("userDocumentPermissions");
+        this.logger.debug("auth.userDocumentPermissions");
         if (!this.documentPermissionService) {
           throw new Error("DocumentPermissionService not available");
         }
@@ -165,59 +310,33 @@ export class ReactorSubgraph extends BaseSubgraph {
             ctx.user.address,
           );
         } catch (error) {
-          this.logger.error("Error in userDocumentPermissions:", error);
+          this.logger.error("Error in auth.userDocumentPermissions:", error);
           throw error;
         }
       },
 
       groups: async () => {
-        this.logger.debug("groups");
+        this.logger.debug("auth.groups");
         if (!this.documentPermissionService) {
           throw new Error("DocumentPermissionService not available");
         }
         try {
           return await resolvers.groups(this.documentPermissionService);
         } catch (error) {
-          this.logger.error("Error in groups:", error);
+          this.logger.error("Error in auth.groups:", error);
           throw error;
         }
       },
 
       group: async (_parent: unknown, args: { id: number }) => {
-        this.logger.debug("group", args);
+        this.logger.debug("auth.group", args);
         if (!this.documentPermissionService) {
           throw new Error("DocumentPermissionService not available");
         }
         try {
           return await resolvers.group(this.documentPermissionService, args);
         } catch (error) {
-          this.logger.error("Error in group:", error);
-          throw error;
-        }
-      },
-
-      roles: async () => {
-        this.logger.debug("roles");
-        if (!this.documentPermissionService) {
-          throw new Error("DocumentPermissionService not available");
-        }
-        try {
-          return await resolvers.roles(this.documentPermissionService);
-        } catch (error) {
-          this.logger.error("Error in roles:", error);
-          throw error;
-        }
-      },
-
-      role: async (_parent: unknown, args: { id: number }) => {
-        this.logger.debug("role", args);
-        if (!this.documentPermissionService) {
-          throw new Error("DocumentPermissionService not available");
-        }
-        try {
-          return await resolvers.role(this.documentPermissionService, args);
-        } catch (error) {
-          this.logger.error("Error in role:", error);
+          this.logger.error("Error in auth.group:", error);
           throw error;
         }
       },
@@ -226,7 +345,7 @@ export class ReactorSubgraph extends BaseSubgraph {
         _parent: unknown,
         args: { userAddress: string },
       ) => {
-        this.logger.debug("userGroups", args);
+        this.logger.debug("auth.userGroups", args);
         if (!this.documentPermissionService) {
           throw new Error("DocumentPermissionService not available");
         }
@@ -236,26 +355,26 @@ export class ReactorSubgraph extends BaseSubgraph {
             args,
           );
         } catch (error) {
-          this.logger.error("Error in userGroups:", error);
+          this.logger.error("Error in auth.userGroups:", error);
           throw error;
         }
       },
 
-      userRoles: async (
+      operationPermissions: async (
         _parent: unknown,
-        args: { userAddress: string },
+        args: { documentId: string; operationType: string },
       ) => {
-        this.logger.debug("userRoles", args);
+        this.logger.debug("auth.operationPermissions", args);
         if (!this.documentPermissionService) {
           throw new Error("DocumentPermissionService not available");
         }
         try {
-          return await resolvers.userRoles(
+          return await resolvers.operationPermissions(
             this.documentPermissionService,
             args,
           );
         } catch (error) {
-          this.logger.error("Error in userRoles:", error);
+          this.logger.error("Error in auth.operationPermissions:", error);
           throw error;
         }
       },
@@ -265,7 +384,7 @@ export class ReactorSubgraph extends BaseSubgraph {
         args: { documentId: string; operationType: string },
         ctx: { user?: { address: string } },
       ) => {
-        this.logger.debug("canExecuteOperation", args);
+        this.logger.debug("auth.canExecuteOperation", args);
         if (!this.documentPermissionService) {
           throw new Error("DocumentPermissionService not available");
         }
@@ -276,16 +395,29 @@ export class ReactorSubgraph extends BaseSubgraph {
             ctx.user?.address,
           );
         } catch (error) {
-          this.logger.error("Error in canExecuteOperation:", error);
+          this.logger.error("Error in auth.canExecuteOperation:", error);
           throw error;
         }
       },
     },
 
     Mutation: {
-      createDocument: async (_parent, args) => {
+      createDocument: async (_parent, args, ctx: Context) => {
         this.logger.debug("createDocument", args);
         try {
+          // If creating under a parent, check write permission on parent
+          if (args.parentIdentifier) {
+            const parent = await resolvers.document(this.reactorClient, {
+              identifier: args.parentIdentifier,
+            });
+            if (parent) {
+              await this.assertCanWrite(parent.document.id, ctx);
+            }
+          } else if (!this.hasGlobalWriteAccess(ctx)) {
+            throw new GraphQLError(
+              "Forbidden: insufficient permissions to create documents",
+            );
+          }
           return await resolvers.createDocument(this.reactorClient, args);
         } catch (error) {
           this.logger.error("Error in createDocument:", error);
@@ -293,9 +425,22 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
-      createEmptyDocument: async (_parent, args) => {
+      createEmptyDocument: async (_parent, args, ctx: Context) => {
         this.logger.debug("createEmptyDocument", args);
         try {
+          // If creating under a parent, check write permission on parent
+          if (args.parentIdentifier) {
+            const parent = await resolvers.document(this.reactorClient, {
+              identifier: args.parentIdentifier,
+            });
+            if (parent) {
+              await this.assertCanWrite(parent.document.id, ctx);
+            }
+          } else if (!this.hasGlobalWriteAccess(ctx)) {
+            throw new GraphQLError(
+              "Forbidden: insufficient permissions to create documents",
+            );
+          }
           return await resolvers.createEmptyDocument(this.reactorClient, args);
         } catch (error) {
           this.logger.error("Error in createEmptyDocument:", error);
@@ -303,9 +448,17 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
-      mutateDocument: async (_parent, args) => {
+      mutateDocument: async (_parent, args, ctx: Context) => {
         this.logger.debug("mutateDocument", args);
         try {
+          // Resolve document and check write permission
+          const doc = await resolvers.document(this.reactorClient, {
+            identifier: args.documentIdentifier,
+            view: args.view,
+          });
+          if (doc) {
+            await this.assertCanWrite(doc.document.id, ctx);
+          }
           return await resolvers.mutateDocument(this.reactorClient, args);
         } catch (error) {
           this.logger.error("Error in mutateDocument:", error);
@@ -313,9 +466,17 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
-      mutateDocumentAsync: async (_parent, args) => {
+      mutateDocumentAsync: async (_parent, args, ctx: Context) => {
         this.logger.debug("mutateDocumentAsync", args);
         try {
+          // Resolve document and check write permission
+          const doc = await resolvers.document(this.reactorClient, {
+            identifier: args.documentIdentifier,
+            view: args.view,
+          });
+          if (doc) {
+            await this.assertCanWrite(doc.document.id, ctx);
+          }
           return await resolvers.mutateDocumentAsync(this.reactorClient, args);
         } catch (error) {
           this.logger.error("Error in mutateDocumentAsync:", error);
@@ -323,9 +484,16 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
-      renameDocument: async (_parent, args) => {
+      renameDocument: async (_parent, args, ctx: Context) => {
         this.logger.debug("renameDocument", args);
         try {
+          // Resolve document and check write permission
+          const doc = await resolvers.document(this.reactorClient, {
+            identifier: args.documentIdentifier,
+          });
+          if (doc) {
+            await this.assertCanWrite(doc.document.id, ctx);
+          }
           return await resolvers.renameDocument(this.reactorClient, args);
         } catch (error) {
           this.logger.error("Error in renameDocument:", error);
@@ -333,9 +501,16 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
-      addChildren: async (_parent, args) => {
+      addChildren: async (_parent, args, ctx: Context) => {
         this.logger.debug("addChildren", args);
         try {
+          // Check write permission on parent
+          const parent = await resolvers.document(this.reactorClient, {
+            identifier: args.parentIdentifier,
+          });
+          if (parent) {
+            await this.assertCanWrite(parent.document.id, ctx);
+          }
           return await resolvers.addChildren(this.reactorClient, args);
         } catch (error) {
           this.logger.error("Error in addChildren:", error);
@@ -343,9 +518,16 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
-      removeChildren: async (_parent, args) => {
+      removeChildren: async (_parent, args, ctx: Context) => {
         this.logger.debug("removeChildren", args);
         try {
+          // Check write permission on parent
+          const parent = await resolvers.document(this.reactorClient, {
+            identifier: args.parentIdentifier,
+          });
+          if (parent) {
+            await this.assertCanWrite(parent.document.id, ctx);
+          }
           return await resolvers.removeChildren(this.reactorClient, args);
         } catch (error) {
           this.logger.error("Error in removeChildren:", error);
@@ -353,9 +535,23 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
-      moveChildren: async (_parent, args) => {
+      moveChildren: async (_parent, args, ctx: Context) => {
         this.logger.debug("moveChildren", args);
         try {
+          // Check write permission on both source and target parents
+          const sourceParent = await resolvers.document(this.reactorClient, {
+            identifier: args.sourceParentIdentifier,
+          });
+          if (sourceParent) {
+            await this.assertCanWrite(sourceParent.document.id, ctx);
+          }
+
+          const targetParent = await resolvers.document(this.reactorClient, {
+            identifier: args.targetParentIdentifier,
+          });
+          if (targetParent) {
+            await this.assertCanWrite(targetParent.document.id, ctx);
+          }
           return await resolvers.moveChildren(this.reactorClient, args);
         } catch (error) {
           this.logger.error("Error in moveChildren:", error);
@@ -363,9 +559,16 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
-      deleteDocument: async (_parent, args) => {
+      deleteDocument: async (_parent, args, ctx: Context) => {
         this.logger.debug("deleteDocument", args);
         try {
+          // Check write permission on document
+          const doc = await resolvers.document(this.reactorClient, {
+            identifier: args.identifier,
+          });
+          if (doc) {
+            await this.assertCanWrite(doc.document.id, ctx);
+          }
           return await resolvers.deleteDocument(this.reactorClient, args);
         } catch (error) {
           this.logger.error("Error in deleteDocument:", error);
@@ -373,9 +576,18 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
-      deleteDocuments: async (_parent, args) => {
+      deleteDocuments: async (_parent, args, ctx: Context) => {
         this.logger.debug("deleteDocuments", args);
         try {
+          // Check write permission on each document
+          for (const identifier of args.identifiers) {
+            const doc = await resolvers.document(this.reactorClient, {
+              identifier,
+            });
+            if (doc) {
+              await this.assertCanWrite(doc.document.id, ctx);
+            }
+          }
           return await resolvers.deleteDocuments(this.reactorClient, args);
         } catch (error) {
           this.logger.error("Error in deleteDocuments:", error);
@@ -451,36 +663,7 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
-      setDocumentVisibility: async (
-        _parent: unknown,
-        args: { documentId: string; visibility: string },
-        ctx: {
-          user?: { address: string };
-          isAdmin?: (address: string) => boolean;
-        },
-      ) => {
-        this.logger.debug("setDocumentVisibility", args);
-        if (!this.documentPermissionService) {
-          throw new Error("DocumentPermissionService not available");
-        }
-        try {
-          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
-          return await resolvers.setDocumentVisibility(
-            this.documentPermissionService,
-            args as {
-              documentId: string;
-              visibility: "PUBLIC" | "PROTECTED" | "PRIVATE";
-            },
-            ctx.user?.address,
-            isGlobalAdmin,
-          );
-        } catch (error) {
-          this.logger.error("Error in setDocumentVisibility:", error);
-          throw error;
-        }
-      },
-
-      grantDocumentPermission: async (
+      Auth_GrantDocumentPermission: async (
         _parent: unknown,
         args: { documentId: string; userAddress: string; permission: string },
         ctx: {
@@ -488,7 +671,7 @@ export class ReactorSubgraph extends BaseSubgraph {
           isAdmin?: (address: string) => boolean;
         },
       ) => {
-        this.logger.debug("grantDocumentPermission", args);
+        this.logger.debug("Auth_GrantDocumentPermission", args);
         if (!this.documentPermissionService) {
           throw new Error("DocumentPermissionService not available");
         }
@@ -505,12 +688,12 @@ export class ReactorSubgraph extends BaseSubgraph {
             isGlobalAdmin,
           );
         } catch (error) {
-          this.logger.error("Error in grantDocumentPermission:", error);
+          this.logger.error("Error in Auth_GrantDocumentPermission:", error);
           throw error;
         }
       },
 
-      revokeDocumentPermission: async (
+      Auth_RevokeDocumentPermission: async (
         _parent: unknown,
         args: { documentId: string; userAddress: string },
         ctx: {
@@ -518,7 +701,7 @@ export class ReactorSubgraph extends BaseSubgraph {
           isAdmin?: (address: string) => boolean;
         },
       ) => {
-        this.logger.debug("revokeDocumentPermission", args);
+        this.logger.debug("Auth_RevokeDocumentPermission", args);
         if (!this.documentPermissionService) {
           throw new Error("DocumentPermissionService not available");
         }
@@ -531,17 +714,17 @@ export class ReactorSubgraph extends BaseSubgraph {
             isGlobalAdmin,
           );
         } catch (error) {
-          this.logger.error("Error in revokeDocumentPermission:", error);
+          this.logger.error("Error in Auth_RevokeDocumentPermission:", error);
           throw error;
         }
       },
 
       // Group Management Mutations
-      createGroup: async (
+      Auth_CreateGroup: async (
         _parent: unknown,
         args: { name: string; description?: string | null },
       ) => {
-        this.logger.debug("createGroup", args);
+        this.logger.debug("Auth_CreateGroup", args);
         if (!this.documentPermissionService) {
           throw new Error("DocumentPermissionService not available");
         }
@@ -551,13 +734,13 @@ export class ReactorSubgraph extends BaseSubgraph {
             args,
           );
         } catch (error) {
-          this.logger.error("Error in createGroup:", error);
+          this.logger.error("Error in Auth_CreateGroup:", error);
           throw error;
         }
       },
 
-      deleteGroup: async (_parent: unknown, args: { id: number }) => {
-        this.logger.debug("deleteGroup", args);
+      Auth_DeleteGroup: async (_parent: unknown, args: { id: number }) => {
+        this.logger.debug("Auth_DeleteGroup", args);
         if (!this.documentPermissionService) {
           throw new Error("DocumentPermissionService not available");
         }
@@ -567,16 +750,16 @@ export class ReactorSubgraph extends BaseSubgraph {
             args,
           );
         } catch (error) {
-          this.logger.error("Error in deleteGroup:", error);
+          this.logger.error("Error in Auth_DeleteGroup:", error);
           throw error;
         }
       },
 
-      addUserToGroup: async (
+      Auth_AddUserToGroup: async (
         _parent: unknown,
         args: { userAddress: string; groupId: number },
       ) => {
-        this.logger.debug("addUserToGroup", args);
+        this.logger.debug("Auth_AddUserToGroup", args);
         if (!this.documentPermissionService) {
           throw new Error("DocumentPermissionService not available");
         }
@@ -586,16 +769,16 @@ export class ReactorSubgraph extends BaseSubgraph {
             args,
           );
         } catch (error) {
-          this.logger.error("Error in addUserToGroup:", error);
+          this.logger.error("Error in Auth_AddUserToGroup:", error);
           throw error;
         }
       },
 
-      removeUserFromGroup: async (
+      Auth_RemoveUserFromGroup: async (
         _parent: unknown,
         args: { userAddress: string; groupId: number },
       ) => {
-        this.logger.debug("removeUserFromGroup", args);
+        this.logger.debug("Auth_RemoveUserFromGroup", args);
         if (!this.documentPermissionService) {
           throw new Error("DocumentPermissionService not available");
         }
@@ -605,13 +788,13 @@ export class ReactorSubgraph extends BaseSubgraph {
             args,
           );
         } catch (error) {
-          this.logger.error("Error in removeUserFromGroup:", error);
+          this.logger.error("Error in Auth_RemoveUserFromGroup:", error);
           throw error;
         }
       },
 
       // Group Document Permission Mutations
-      grantGroupPermission: async (
+      Auth_GrantGroupPermission: async (
         _parent: unknown,
         args: { documentId: string; groupId: number; permission: string },
         ctx: {
@@ -619,7 +802,7 @@ export class ReactorSubgraph extends BaseSubgraph {
           isAdmin?: (address: string) => boolean;
         },
       ) => {
-        this.logger.debug("grantGroupPermission", args);
+        this.logger.debug("Auth_GrantGroupPermission", args);
         if (!this.documentPermissionService) {
           throw new Error("DocumentPermissionService not available");
         }
@@ -636,12 +819,12 @@ export class ReactorSubgraph extends BaseSubgraph {
             isGlobalAdmin,
           );
         } catch (error) {
-          this.logger.error("Error in grantGroupPermission:", error);
+          this.logger.error("Error in Auth_GrantGroupPermission:", error);
           throw error;
         }
       },
 
-      revokeGroupPermission: async (
+      Auth_RevokeGroupPermission: async (
         _parent: unknown,
         args: { documentId: string; groupId: number },
         ctx: {
@@ -649,7 +832,7 @@ export class ReactorSubgraph extends BaseSubgraph {
           isAdmin?: (address: string) => boolean;
         },
       ) => {
-        this.logger.debug("revokeGroupPermission", args);
+        this.logger.debug("Auth_RevokeGroupPermission", args);
         if (!this.documentPermissionService) {
           throw new Error("DocumentPermissionService not available");
         }
@@ -662,191 +845,65 @@ export class ReactorSubgraph extends BaseSubgraph {
             isGlobalAdmin,
           );
         } catch (error) {
-          this.logger.error("Error in revokeGroupPermission:", error);
+          this.logger.error("Error in Auth_RevokeGroupPermission:", error);
           throw error;
         }
       },
 
-      // Role Management Mutations
-      createRole: async (
+      // Operation Permission Mutations
+      Auth_GrantOperationPermission: async (
         _parent: unknown,
-        args: { name: string; description?: string | null },
-      ) => {
-        this.logger.debug("createRole", args);
-        if (!this.documentPermissionService) {
-          throw new Error("DocumentPermissionService not available");
-        }
-        try {
-          return await resolvers.createRole(
-            this.documentPermissionService,
-            args,
-          );
-        } catch (error) {
-          this.logger.error("Error in createRole:", error);
-          throw error;
-        }
-      },
-
-      deleteRole: async (_parent: unknown, args: { id: number }) => {
-        this.logger.debug("deleteRole", args);
-        if (!this.documentPermissionService) {
-          throw new Error("DocumentPermissionService not available");
-        }
-        try {
-          return await resolvers.deleteRole(
-            this.documentPermissionService,
-            args,
-          );
-        } catch (error) {
-          this.logger.error("Error in deleteRole:", error);
-          throw error;
-        }
-      },
-
-      assignRoleToUser: async (
-        _parent: unknown,
-        args: { userAddress: string; roleId: number },
-      ) => {
-        this.logger.debug("assignRoleToUser", args);
-        if (!this.documentPermissionService) {
-          throw new Error("DocumentPermissionService not available");
-        }
-        try {
-          return await resolvers.assignRoleToUser(
-            this.documentPermissionService,
-            args,
-          );
-        } catch (error) {
-          this.logger.error("Error in assignRoleToUser:", error);
-          throw error;
-        }
-      },
-
-      removeRoleFromUser: async (
-        _parent: unknown,
-        args: { userAddress: string; roleId: number },
-      ) => {
-        this.logger.debug("removeRoleFromUser", args);
-        if (!this.documentPermissionService) {
-          throw new Error("DocumentPermissionService not available");
-        }
-        try {
-          return await resolvers.removeRoleFromUser(
-            this.documentPermissionService,
-            args,
-          );
-        } catch (error) {
-          this.logger.error("Error in removeRoleFromUser:", error);
-          throw error;
-        }
-      },
-
-      // Operation Restriction Mutations
-      restrictOperation: async (
-        _parent: unknown,
-        args: { documentId: string; operationType: string },
+        args: { documentId: string; operationType: string; userAddress: string },
         ctx: {
           user?: { address: string };
           isAdmin?: (address: string) => boolean;
         },
       ) => {
-        this.logger.debug("restrictOperation", args);
+        this.logger.debug("Auth_GrantOperationPermission", args);
         if (!this.documentPermissionService) {
           throw new Error("DocumentPermissionService not available");
         }
         try {
           const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
-          return await resolvers.restrictOperation(
+          return await resolvers.grantOperationPermission(
             this.documentPermissionService,
             args,
             ctx.user?.address,
             isGlobalAdmin,
           );
         } catch (error) {
-          this.logger.error("Error in restrictOperation:", error);
+          this.logger.error("Error in Auth_GrantOperationPermission:", error);
           throw error;
         }
       },
 
-      unrestrictOperation: async (
+      Auth_RevokeOperationPermission: async (
         _parent: unknown,
-        args: { documentId: string; operationType: string },
+        args: { documentId: string; operationType: string; userAddress: string },
         ctx: {
           user?: { address: string };
           isAdmin?: (address: string) => boolean;
         },
       ) => {
-        this.logger.debug("unrestrictOperation", args);
+        this.logger.debug("Auth_RevokeOperationPermission", args);
         if (!this.documentPermissionService) {
           throw new Error("DocumentPermissionService not available");
         }
         try {
           const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
-          return await resolvers.unrestrictOperation(
+          return await resolvers.revokeOperationPermission(
             this.documentPermissionService,
             args,
             ctx.user?.address,
             isGlobalAdmin,
           );
         } catch (error) {
-          this.logger.error("Error in unrestrictOperation:", error);
+          this.logger.error("Error in Auth_RevokeOperationPermission:", error);
           throw error;
         }
       },
 
-      allowRoleForOperation: async (
-        _parent: unknown,
-        args: { documentId: string; operationType: string; roleId: number },
-        ctx: {
-          user?: { address: string };
-          isAdmin?: (address: string) => boolean;
-        },
-      ) => {
-        this.logger.debug("allowRoleForOperation", args);
-        if (!this.documentPermissionService) {
-          throw new Error("DocumentPermissionService not available");
-        }
-        try {
-          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
-          return await resolvers.allowRoleForOperation(
-            this.documentPermissionService,
-            args,
-            ctx.user?.address,
-            isGlobalAdmin,
-          );
-        } catch (error) {
-          this.logger.error("Error in allowRoleForOperation:", error);
-          throw error;
-        }
-      },
-
-      disallowRoleForOperation: async (
-        _parent: unknown,
-        args: { documentId: string; operationType: string; roleId: number },
-        ctx: {
-          user?: { address: string };
-          isAdmin?: (address: string) => boolean;
-        },
-      ) => {
-        this.logger.debug("disallowRoleForOperation", args);
-        if (!this.documentPermissionService) {
-          throw new Error("DocumentPermissionService not available");
-        }
-        try {
-          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
-          return await resolvers.disallowRoleForOperation(
-            this.documentPermissionService,
-            args,
-            ctx.user?.address,
-            isGlobalAdmin,
-          );
-        } catch (error) {
-          this.logger.error("Error in disallowRoleForOperation:", error);
-          throw error;
-        }
-      },
-
-      allowGroupForOperation: async (
+      Auth_GrantGroupOperationPermission: async (
         _parent: unknown,
         args: { documentId: string; operationType: string; groupId: number },
         ctx: {
@@ -854,25 +911,25 @@ export class ReactorSubgraph extends BaseSubgraph {
           isAdmin?: (address: string) => boolean;
         },
       ) => {
-        this.logger.debug("allowGroupForOperation", args);
+        this.logger.debug("Auth_GrantGroupOperationPermission", args);
         if (!this.documentPermissionService) {
           throw new Error("DocumentPermissionService not available");
         }
         try {
           const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
-          return await resolvers.allowGroupForOperation(
+          return await resolvers.grantGroupOperationPermission(
             this.documentPermissionService,
             args,
             ctx.user?.address,
             isGlobalAdmin,
           );
         } catch (error) {
-          this.logger.error("Error in allowGroupForOperation:", error);
+          this.logger.error("Error in Auth_GrantGroupOperationPermission:", error);
           throw error;
         }
       },
 
-      disallowGroupForOperation: async (
+      Auth_RevokeGroupOperationPermission: async (
         _parent: unknown,
         args: { documentId: string; operationType: string; groupId: number },
         ctx: {
@@ -880,20 +937,20 @@ export class ReactorSubgraph extends BaseSubgraph {
           isAdmin?: (address: string) => boolean;
         },
       ) => {
-        this.logger.debug("disallowGroupForOperation", args);
+        this.logger.debug("Auth_RevokeGroupOperationPermission", args);
         if (!this.documentPermissionService) {
           throw new Error("DocumentPermissionService not available");
         }
         try {
           const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
-          return await resolvers.disallowGroupForOperation(
+          return await resolvers.revokeGroupOperationPermission(
             this.documentPermissionService,
             args,
             ctx.user?.address,
             isGlobalAdmin,
           );
         } catch (error) {
-          this.logger.error("Error in disallowGroupForOperation:", error);
+          this.logger.error("Error in Auth_RevokeGroupOperationPermission:", error);
           throw error;
         }
       },
@@ -927,24 +984,18 @@ export class ReactorSubgraph extends BaseSubgraph {
       },
     },
 
-    OperationRestriction: {
-      allowedRoles: async (parent: { id: number }) => {
+    OperationGroupPermission: {
+      group: async (parent: { groupId: number }) => {
         if (!this.documentPermissionService) {
           throw new Error("DocumentPermissionService not available");
         }
-        return resolvers.getAllowedRolesForOperation(
-          this.documentPermissionService,
-          parent.id,
-        );
-      },
-      allowedGroups: async (parent: { id: number }) => {
-        if (!this.documentPermissionService) {
-          throw new Error("DocumentPermissionService not available");
+        const grp = await resolvers.group(this.documentPermissionService, {
+          id: parent.groupId,
+        });
+        if (!grp) {
+          throw new Error(`Group not found: ${parent.groupId}`);
         }
-        return resolvers.getAllowedGroupsForOperation(
-          this.documentPermissionService,
-          parent.id,
-        );
+        return grp;
       },
     },
 

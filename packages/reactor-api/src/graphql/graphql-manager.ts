@@ -33,6 +33,7 @@ import { setTimeout } from "node:timers/promises";
 import type { WebSocketServer } from "ws";
 import type { AuthConfig } from "../services/auth.service.js";
 import { AuthService } from "../services/auth.service.js";
+import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import {
   buildSubgraphSchemaModule,
   createSchema,
@@ -60,6 +61,7 @@ export class GraphQLManager {
   private contextFields: Record<string, any> = {};
   private readonly subgraphs = new Map<string, ISubgraph[]>();
   private authService: AuthService | null = null;
+  private documentPermissionService?: DocumentPermissionService;
 
   private readonly logger = childLogger(["reactor-api", "graphql-manager"]);
 
@@ -79,7 +81,9 @@ export class GraphQLManager {
     private readonly relationalDb: IRelationalDb,
     private readonly analyticsStore: IAnalyticsStore,
     authConfig?: AuthConfig,
+    documentPermissionService?: DocumentPermissionService,
   ) {
+    this.documentPermissionService = documentPermissionService;
     if (authConfig) {
       this.authService = new AuthService(authConfig);
       this.setAdditionalContextFields(
@@ -197,6 +201,7 @@ export class GraphQLManager {
       reactorClient: this.reactorClient,
       graphqlManager: this,
       path: this.path,
+      documentPermissionService: this.documentPermissionService,
     });
 
     await subgraphInstance.onSetup();
