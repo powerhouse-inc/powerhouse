@@ -238,7 +238,13 @@ export class ReactorBuilder {
       operationStore,
       documentViewConsistencyTracker,
     );
-    await documentView.init();
+
+    try {
+      await documentView.init();
+    } catch (error) {
+      console.error("Error initializing document view", error);
+    }
+
     readModelInstances.push(documentView);
 
     const documentIndexerConsistencyTracker = new ConsistencyTracker();
@@ -248,7 +254,13 @@ export class ReactorBuilder {
       operationStore,
       documentIndexerConsistencyTracker,
     );
-    await documentIndexer.init();
+
+    try {
+      await documentIndexer.init();
+    } catch (error) {
+      console.error("Error initializing document indexer", error);
+    }
+
     readModelInstances.push(documentIndexer);
     this.documentIndexer = documentIndexer;
 

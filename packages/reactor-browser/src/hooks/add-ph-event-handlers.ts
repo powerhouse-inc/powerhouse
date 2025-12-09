@@ -65,6 +65,7 @@ import { addProcessorManagerEventHandler } from "./processor-manager.js";
 import {
   addLegacyReactorEventHandler,
   addReactorClientEventHandler,
+  addReactorClientModuleEventHandler,
   addSyncEventHandler,
 } from "./reactor.js";
 import { addRenownEventHandler } from "./renown.js";
@@ -86,6 +87,7 @@ import { addVetraPackagesEventHandler } from "./vetra-packages.js";
 const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   loading: addLoadingEventHandler,
   legacyReactor: addLegacyReactorEventHandler,
+  reactorClientModule: addReactorClientModuleEventHandler,
   reactorClient: addReactorClientEventHandler,
   sync: addSyncEventHandler,
   features: addFeaturesEventHandler,

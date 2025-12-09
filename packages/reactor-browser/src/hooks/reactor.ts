@@ -1,10 +1,7 @@
-import type {
-  IReactorClient,
-  ISyncManager,
-  ReactorClientModule,
-} from "@powerhousedao/reactor";
+import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
 import type {
   AddPHGlobalEventHandler,
+  BrowserReactorClientModule,
   SetPHGlobalValue,
   UsePHGlobalValue,
 } from "@powerhousedao/reactor-browser";
@@ -31,11 +28,11 @@ export const addLegacyReactorEventHandler: AddPHGlobalEventHandler =
   legacyEventFunctions.addEventHandler;
 
 /** Returns the reactor client module */
-export const useReactorClientModule: UsePHGlobalValue<ReactorClientModule> =
+export const useReactorClientModule: UsePHGlobalValue<BrowserReactorClientModule> =
   reactorClientModuleEventFunctions.useValue;
 
 /** Sets the reactor client module */
-export const setReactorClientModule: SetPHGlobalValue<ReactorClientModule> =
+export const setReactorClientModule: SetPHGlobalValue<BrowserReactorClientModule> =
   reactorClientModuleEventFunctions.setValue;
 
 /** Adds an event handler for the reactor client module */

@@ -1,3 +1,4 @@
+import type { PGlite } from "@electric-sql/pglite";
 import type {
   IReactorClient,
   ISyncManager,
@@ -15,10 +16,14 @@ import type { PHModal } from "./modals.js";
 import type { TimelineItem } from "./timeline.js";
 import type { VetraPackage } from "./vetra.js";
 
+export type BrowserReactorClientModule = ReactorClientModule & {
+  pg: PGlite;
+};
+
 export type PHGlobal = PHGlobalConfig & {
   loading?: boolean;
   legacyReactor?: IDocumentDriveServer;
-  reactorClientModule?: ReactorClientModule;
+  reactorClientModule?: BrowserReactorClientModule;
   reactorClient?: IReactorClient;
   sync?: ISyncManager;
   connectCrypto?: IConnectCrypto;

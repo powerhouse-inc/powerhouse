@@ -1,15 +1,13 @@
 import { PGlite } from "@electric-sql/pglite";
 import {
-  type Database,
   GqlChannelFactory,
   ReactorBuilder,
   ReactorClientBuilder,
   SyncBuilder,
-  type ReactorClientModule,
+  type Database,
   type SignerConfig,
 } from "@powerhousedao/reactor";
-import { Kysely } from "kysely";
-import { PGliteDialect } from "kysely-pglite-dialect";
+import type { BrowserReactorClientModule } from "@powerhousedao/reactor-browser";
 import type { IConnectCrypto } from "@renown/sdk";
 import type {
   DefaultRemoteDriveInput,
@@ -27,6 +25,8 @@ import {
   ReactorBuilder as LegacyReactorBuilder,
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
+import { Kysely } from "kysely";
+import { PGliteDialect } from "kysely-pglite-dialect";
 import { createRemoveOldRemoteDrivesConfig } from "./drive-preservation.js";
 import { ConnectCryptoSigner, createSignatureVerifier } from "./signer.js";
 
@@ -109,15 +109,19 @@ export function createBrowserDocumentDriveServer(
  * Creates a Reactor that plugs into legacy storage but syncs through the new
  * Reactor GQL API.
  */
-export function createBrowserReactor(
+export async function createBrowserReactor(
   documentModelModules: DocumentModelModule[],
   legacyStorage: IDocumentStorage & IDocumentOperationStorage,
   connectCrypto: IConnectCrypto,
-): Promise<ReactorClientModule> {
+): Promise<BrowserReactorClientModule> {
   const signerConfig: SignerConfig = {
     signer: new ConnectCryptoSigner(connectCrypto),
     verifier: createSignatureVerifier(),
   };
+
+  const pg = new PGlite("idb://reactor", {
+    relaxedDurability: true,
+  });
   const builder = new ReactorClientBuilder()
     .withSigner(signerConfig)
     .withReactorBuilder(
@@ -128,14 +132,14 @@ export function createBrowserReactor(
         .withFeatures({ legacyStorageEnabled: true })
         .withKysely(
           new Kysely<Database>({
-            dialect: new PGliteDialect(
-              new PGlite("idb://reactor", {
-                relaxedDurability: true,
-              }),
-            ),
+            dialect: new PGliteDialect(pg),
           }),
         ),
     );
 
-  return builder.buildModule();
+  const module = await builder.buildModule();
+  return {
+    ...module,
+    pg,
+  } as BrowserReactorClientModule;
 }

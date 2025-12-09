@@ -6,6 +6,7 @@ import {
   createBrowserStorage,
 } from "@powerhousedao/connect/utils";
 import {
+  truncateAllTables as dropAllTables,
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
   getDrives,
@@ -62,7 +63,10 @@ export async function clearReactorStorage() {
   await reactorLegacyStorage?.clear();
 
   // clear all the reactor dependencies
-  window.ph?.reactorClientModule;
+  const pg = window.ph?.reactorClientModule?.pg;
+  if (pg) {
+    await dropAllTables(pg);
+  }
 
   return !!reactorLegacyStorage;
 }
