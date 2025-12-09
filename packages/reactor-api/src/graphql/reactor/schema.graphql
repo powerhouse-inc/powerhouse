@@ -36,16 +36,6 @@ enum DocumentChangeType {
   CHILD_REMOVED
 }
 
-# Permission levels for documents
-enum DocumentPermissionLevel {
-  # Can fetch and read the document
-  READ
-  # Can push updates and modify the document
-  WRITE
-  # Can manage document permissions and settings
-  ADMIN
-}
-
 # Object types
 type DocumentModelGlobalState {
   id: String!
@@ -123,94 +113,6 @@ type JobChangeEvent {
   status: String!
   result: JSONObject!
   error: String
-}
-# Document permission entry
-type DocumentPermissionEntry {
-  documentId: String!
-  userAddress: String!
-  permission: DocumentPermissionLevel!
-  grantedBy: String!
-  createdAt: DateTime!
-  updatedAt: DateTime!
-}
-
-# Group type
-type Group {
-  id: Int!
-  name: String!
-  description: String
-  createdAt: DateTime!
-  updatedAt: DateTime!
-  members: [String!]!
-}
-
-# Document group permission entry
-type DocumentGroupPermission {
-  documentId: String!
-  groupId: Int!
-  group: Group!
-  permission: DocumentPermissionLevel!
-  grantedBy: String!
-  createdAt: DateTime!
-  updatedAt: DateTime!
-}
-
-# Operation user permission entry
-type OperationUserPermission {
-  documentId: String!
-  operationType: String!
-  userAddress: String!
-  grantedBy: String!
-  createdAt: DateTime!
-}
-
-# Operation group permission entry
-type OperationGroupPermission {
-  documentId: String!
-  operationType: String!
-  groupId: Int!
-  group: Group!
-  grantedBy: String!
-  createdAt: DateTime!
-}
-
-# Combined document access info
-type DocumentAccessInfo {
-  documentId: String!
-  permissions: [DocumentPermissionEntry!]!
-  groupPermissions: [DocumentGroupPermission!]!
-}
-
-# Operation permissions info
-type OperationPermissionsInfo {
-  documentId: String!
-  operationType: String!
-  userPermissions: [OperationUserPermission!]!
-  groupPermissions: [OperationGroupPermission!]!
-}
-
-# Auth scope for authorization-related queries
-type Auth {
-  # Get permissions for a document
-  documentAccess(documentId: String!): DocumentAccessInfo!
-
-  # Get all documents the current user has explicit access to
-  userDocumentPermissions: [DocumentPermissionEntry!]!
-
-  # Get all groups
-  groups: [Group!]!
-
-  # Get a specific group by ID
-  group(id: Int!): Group
-
-  # Get all groups a user belongs to
-  userGroups(userAddress: String!): [Group!]!
-
-  # Get operation permissions for a document and operation type
-  operationPermissions(documentId: String!, operationType: String!): OperationPermissionsInfo!
-
-  # Check if the current user can execute a specific operation on a document
-  canExecuteOperation(documentId: String!, operationType: String!): Boolean!
 }
 
 type ReactorSignerUser {
@@ -431,9 +333,6 @@ type Query {
     channelId: String!
     cursorOrdinal: Int!
   ): [SyncEnvelope!]!
-
-  # Authorization scope - contains all permission-related queries
-  auth: Auth!
 }
 
 type Mutation {
@@ -512,77 +411,6 @@ type Mutation {
   # Push sync envelope to a channel
   pushSyncEnvelope(
     envelope: SyncEnvelopeInput!
-  ): Boolean!
-
-  # --- Authorization Mutations ---
-
-  # Grant a user permission on a document (requires ADMIN permission or global admin)
-  Auth_GrantDocumentPermission(
-    documentId: String!
-    userAddress: String!
-    permission: DocumentPermissionLevel!
-  ): DocumentPermissionEntry!
-
-  # Revoke a user's permission on a document (requires ADMIN permission or global admin)
-  Auth_RevokeDocumentPermission(
-    documentId: String!
-    userAddress: String!
-  ): Boolean!
-
-  # --- Group Management ---
-
-  # Create a new group
-  Auth_CreateGroup(name: String!, description: String): Group!
-
-  # Delete a group and all its associations
-  Auth_DeleteGroup(id: Int!): Boolean!
-
-  # Add a user to a group
-  Auth_AddUserToGroup(userAddress: String!, groupId: Int!): Boolean!
-
-  # Remove a user from a group
-  Auth_RemoveUserFromGroup(userAddress: String!, groupId: Int!): Boolean!
-
-  # --- Group Document Permissions ---
-
-  # Grant a group permission on a document
-  Auth_GrantGroupPermission(
-    documentId: String!
-    groupId: Int!
-    permission: DocumentPermissionLevel!
-  ): DocumentGroupPermission!
-
-  # Revoke a group's permission on a document
-  Auth_RevokeGroupPermission(documentId: String!, groupId: Int!): Boolean!
-
-  # --- Operation Permissions ---
-
-  # Grant a user permission to execute an operation on a document
-  Auth_GrantOperationPermission(
-    documentId: String!
-    operationType: String!
-    userAddress: String!
-  ): OperationUserPermission!
-
-  # Revoke a user's permission to execute an operation
-  Auth_RevokeOperationPermission(
-    documentId: String!
-    operationType: String!
-    userAddress: String!
-  ): Boolean!
-
-  # Grant a group permission to execute an operation on a document
-  Auth_GrantGroupOperationPermission(
-    documentId: String!
-    operationType: String!
-    groupId: Int!
-  ): OperationGroupPermission!
-
-  # Revoke a group's permission to execute an operation
-  Auth_RevokeGroupOperationPermission(
-    documentId: String!
-    operationType: String!
-    groupId: Int!
   ): Boolean!
 }
 

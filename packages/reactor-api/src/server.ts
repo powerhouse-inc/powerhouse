@@ -29,11 +29,11 @@ import type { TlsOptions } from "node:tls";
 import type { Pool } from "pg";
 import { WebSocketServer } from "ws";
 import { config, DefaultCoreSubgraphs } from "./config.js";
+import { AuthSubgraph } from "./graphql/auth/subgraph.js";
 import { GraphQLManager } from "./graphql/graphql-manager.js";
 import { renderGraphqlPlayground } from "./graphql/playground.js";
 import { ReactorSubgraph } from "./graphql/reactor/subgraph.js";
 import type { SubgraphClass } from "./graphql/types.js";
-import { DocumentPermissionService } from "./services/document-permission.service.js";
 import { ImportPackageLoader } from "./packages/import-loader.js";
 import {
   getUniqueDocumentModels,
@@ -41,6 +41,7 @@ import {
 } from "./packages/package-manager.js";
 import type { AuthenticatedRequest } from "./services/auth.service.js";
 import { AuthService } from "./services/auth.service.js";
+import { DocumentPermissionService } from "./services/document-permission.service.js";
 import type { API, IPackageLoader, Processor } from "./types.js";
 import { getDbClient, initAnalyticsStoreSql } from "./utils/db.js";
 
@@ -71,6 +72,14 @@ type Options = {
   processors?: Record<string, Processor>;
   mcp?: boolean;
   processorConfig?: Map<string, unknown>;
+  /**
+   * Document permission service instance.
+   * When provided, the Auth subgraph is registered and document permission
+   * checks are enforced on document operations.
+   * If not provided, can be auto-created by setting DOCUMENT_PERMISSIONS_ENABLED=true
+   * environment variable.
+   */
+  documentPermissionService?: DocumentPermissionService;
 };
 
 const DEFAULT_PORT = 4000;
@@ -102,7 +111,6 @@ async function initializeDatabaseAndAnalytics(
 ): Promise<{
   relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
-  documentPermissionService: DocumentPermissionService;
 }> {
   const { db, knex } = getDbClient(dbPath);
   const relationalDb = createRelationalDb<unknown>(db);
@@ -114,11 +122,7 @@ async function initializeDatabaseAndAnalytics(
     await knex.raw(sql);
   }
 
-  // Initialize document permission service
-  const documentPermissionService = new DocumentPermissionService(db);
-  await documentPermissionService.initialize();
-
-  return { relationalDb, analyticsStore, documentPermissionService };
+  return { relationalDb, analyticsStore };
 }
 
 /**
@@ -290,7 +294,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   };
   relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
-  documentPermissionService: DocumentPermissionService;
+  documentPermissionService: DocumentPermissionService | undefined;
   packages: PackageManager;
 }> {
   const port = options.port ?? DEFAULT_PORT;
@@ -316,7 +320,14 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     authEnabled = options.auth?.enabled ?? false;
     freeEntry = options.auth?.freeEntry ?? false;
   }
-  const { AUTH_ENABLED, GUESTS, USERS, ADMINS, FREE_ENTRY } = process.env;
+  const {
+    AUTH_ENABLED,
+    GUESTS,
+    USERS,
+    ADMINS,
+    FREE_ENTRY,
+    DOCUMENT_PERMISSIONS_ENABLED,
+  } = process.env;
   if (AUTH_ENABLED !== undefined) {
     authEnabled = AUTH_ENABLED === "true";
   }
@@ -332,6 +343,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   if (FREE_ENTRY !== undefined) {
     freeEntry = FREE_ENTRY === "true";
   }
+
   const authService = new AuthService({
     enabled: authEnabled,
     guests,
@@ -360,8 +372,17 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   app.use(config.basePath, defaultRouter);
 
   // Initialize database and analytics store
-  const { relationalDb, analyticsStore, documentPermissionService } =
+  const { relationalDb, analyticsStore } =
     await initializeDatabaseAndAnalytics(options.dbPath);
+
+  // Use provided document permission service, or create one if env var is set
+  let documentPermissionService = options.documentPermissionService;
+  if (!documentPermissionService && DOCUMENT_PERMISSIONS_ENABLED === "true") {
+    const { db } = getDbClient(options.dbPath);
+    documentPermissionService = new DocumentPermissionService(db);
+    await documentPermissionService.initialize();
+    logger.info("Document permission service initialized");
+  }
 
   // Initialize package manager
   const packageLoader = options.packageLoader ?? new ImportPackageLoader();
@@ -400,7 +421,7 @@ async function _setupAPI(
   packages: PackageManager,
   relationalDb: IRelationalDb,
   analyticsStore: IAnalyticsStore,
-  documentPermissionService: DocumentPermissionService,
+  documentPermissionService: DocumentPermissionService | undefined,
   processors: Map<
     string,
     ((module: IProcessorHostModule) => ProcessorFactory)[]
@@ -481,6 +502,12 @@ async function _setupAPI(
   // set up subgraph manager
   const coreSubgraphs: SubgraphClass[] = DefaultCoreSubgraphs.slice();
   coreSubgraphs.push(ReactorSubgraph);
+
+  // Register Auth subgraph when document permission service is available
+  if (documentPermissionService) {
+    coreSubgraphs.push(AuthSubgraph);
+    logger.info("Auth subgraph registered (document permissions enabled)");
+  }
 
   const graphqlManager = await setupGraphQLManager(
     app,
