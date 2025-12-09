@@ -43,7 +43,12 @@ import type { AuthenticatedRequest } from "./services/auth.service.js";
 import { AuthService } from "./services/auth.service.js";
 import { DocumentPermissionService } from "./services/document-permission.service.js";
 import type { API, IPackageLoader, Processor } from "./types.js";
-import { getDbClient, initAnalyticsStoreSql } from "./utils/db.js";
+import {
+  getDbClient,
+  initAnalyticsStoreSql,
+  type DocumentPermissionDatabase,
+} from "./utils/db.js";
+import type { Kysely } from "kysely";
 
 const logger = childLogger(["reactor-api", "server"]);
 
@@ -221,7 +226,9 @@ function setupEventListeners(
 
       await processorManager.registerFactory(packageName, async (driveHeader) =>
         (
-          await Promise.all(factories.map((factory) => factory(driveHeader)))
+          await Promise.all(
+            factories.map((factory) => Promise.resolve(factory(driveHeader))),
+          )
         ).flat(),
       );
     }
@@ -367,14 +374,17 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   app.use(config.basePath, defaultRouter);
 
   // Initialize database and analytics store
-  const { relationalDb, analyticsStore } =
-    await initializeDatabaseAndAnalytics(options.dbPath);
+  const { relationalDb, analyticsStore } = await initializeDatabaseAndAnalytics(
+    options.dbPath,
+  );
 
   // Use provided document permission service, or create one if env var is set
   let documentPermissionService = options.documentPermissionService;
   if (!documentPermissionService && DOCUMENT_PERMISSIONS_ENABLED === "true") {
     const { db } = getDbClient(options.dbPath);
-    documentPermissionService = new DocumentPermissionService(db);
+    documentPermissionService = new DocumentPermissionService(
+      db as Kysely<DocumentPermissionDatabase>,
+    );
     await documentPermissionService.initialize();
     logger.info("Document permission service initialized");
   }
