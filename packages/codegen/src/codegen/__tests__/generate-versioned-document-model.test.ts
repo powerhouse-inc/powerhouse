@@ -1,7 +1,7 @@
 import { paramCase } from "change-case";
 import { readdirSync } from "fs";
 import path from "path";
-import { describe, it, type TestContext } from "vitest";
+import { describe, expect, it, type TestContext } from "vitest";
 import { generateDocumentModel } from "../generate.js";
 import { loadDocumentModel } from "../utils.js";
 import { runGeneratedTests } from "./fixtures/run-generated-tests.js";
@@ -65,73 +65,159 @@ async function loadBaseProjectFromDir(dirName: string, testOutDir: string) {
 }
 
 describe("versioned document models", () => {
-  it(
-    "should generate new document models as v1",
-    {
-      timeout: 10000000,
-    },
-    async (context) => {
-      const testOutDir = getTestOutDir(context);
-      resetDirForTest(testOutDir);
-      await loadBaseProjectFromDir("empty-project", testOutDir);
-      await loadDocumentModelsInDir("spec-version-1", testOutDir);
-      await compile(testOutDir);
-      await runGeneratedTests(testOutDir);
-      purgeDirAfterTest(testOutDir);
-    },
-  );
-  it(
-    "should handle generating document models as v2",
-    {
-      timeout: 10000000,
-    },
-    async (context) => {
-      const testOutDir = getTestOutDir(context);
-      resetDirForTest(testOutDir);
-      await loadBaseProjectFromDir("empty-project", testOutDir);
-      await loadDocumentModelsInDir("spec-version-2", testOutDir);
-      await compile(testOutDir);
-      await runGeneratedTests(testOutDir);
-      purgeDirAfterTest(testOutDir);
-    },
-  );
-  it(
-    "should persist existing reducers, tests, utils, and custom files when generating for the same spec version",
-    {
-      timeout: 10000000,
-    },
-    async (context) => {
-      const testOutDir = getTestOutDir(context);
-      resetDirForTest(testOutDir);
-      await loadBaseProjectFromDir(
-        "project-with-existing-document-models-at-spec-1",
-        testOutDir,
-      );
-      await loadDocumentModelsInDir(
-        "spec-version-1-with-more-operations",
-        testOutDir,
-      );
-      await compile(testOutDir);
-      await runGeneratedTests(testOutDir);
-      purgeDirAfterTest(testOutDir);
-    },
-  );
-  it(
-    "should persist existing reducers, tests, utils, and custom files when generating a new spec version",
-    {
-      timeout: 10000000,
-    },
-    async (context) => {
-      const testOutDir = getTestOutDir(context);
-      resetDirForTest(testOutDir);
-      await loadBaseProjectFromDir(
-        "project-with-existing-document-models-at-spec-1",
-        testOutDir,
-      );
-      await loadDocumentModelsInDir("spec-version-2", testOutDir);
-      await compile(testOutDir);
-      await runGeneratedTests(testOutDir);
-      purgeDirAfterTest(testOutDir);
-    },
-  );
+  describe("spec version 1", () => {
+    it(
+      "should generate new document models as v1",
+      {
+        timeout: 10000000,
+      },
+      async (context) => {
+        const testOutDir = getTestOutDir(context);
+        resetDirForTest(testOutDir);
+        await loadBaseProjectFromDir("empty-project", testOutDir);
+        await loadDocumentModelsInDir("spec-version-1", testOutDir);
+        await compile(testOutDir);
+        await runGeneratedTests(testOutDir);
+        purgeDirAfterTest(testOutDir);
+      },
+    );
+
+    it(
+      "should persist existing reducers, tests, utils, and custom files when generating for the same spec version",
+      {
+        timeout: 10000000,
+      },
+      async (context) => {
+        const testOutDir = getTestOutDir(context);
+        resetDirForTest(testOutDir);
+        await loadBaseProjectFromDir(
+          "project-with-existing-document-models-at-spec-1",
+          testOutDir,
+        );
+        await loadDocumentModelsInDir(
+          "spec-version-1-with-more-operations",
+          testOutDir,
+        );
+        await compile(testOutDir);
+        await runGeneratedTests(testOutDir);
+        purgeDirAfterTest(testOutDir);
+      },
+    );
+  });
+
+  describe("spec version 2", () => {
+    it(
+      "should handle generating document models as v2",
+      {
+        timeout: 10000000,
+      },
+      async (context) => {
+        const testOutDir = getTestOutDir(context);
+        resetDirForTest(testOutDir);
+        await loadBaseProjectFromDir("empty-project", testOutDir);
+        await loadDocumentModelsInDir("spec-version-2", testOutDir);
+        await compile(testOutDir);
+        await runGeneratedTests(testOutDir);
+        purgeDirAfterTest(testOutDir);
+      },
+    );
+
+    it(
+      "should persist existing reducers, tests, utils, and custom files when generating a new spec version",
+      {
+        timeout: 10000000,
+      },
+      async (context) => {
+        const testOutDir = getTestOutDir(context);
+        resetDirForTest(testOutDir);
+        await loadBaseProjectFromDir(
+          "project-with-existing-document-models-at-spec-1",
+          testOutDir,
+        );
+        await loadDocumentModelsInDir("spec-version-2", testOutDir);
+        await compile(testOutDir);
+        await runGeneratedTests(testOutDir);
+        purgeDirAfterTest(testOutDir);
+      },
+    );
+
+    it(
+      "should throw a typescript error in upgrades when new state does not match old state",
+      {
+        timeout: 10000000,
+      },
+      async (context) => {
+        const testOutDir = getTestOutDir(context);
+        resetDirForTest(testOutDir);
+        await loadBaseProjectFromDir(
+          "project-with-existing-document-models-at-spec-1",
+          testOutDir,
+        );
+        await loadDocumentModelsInDir(
+          "spec-version-2-with-state-changes",
+          testOutDir,
+        );
+        await expect(() => compile(testOutDir)).rejects.toThrow();
+        purgeDirAfterTest(testOutDir);
+      },
+    );
+  });
+
+  describe("spec version 3", () => {
+    it(
+      "should handle generating document models as v3",
+      {
+        timeout: 10000000,
+      },
+      async (context) => {
+        const testOutDir = getTestOutDir(context);
+        resetDirForTest(testOutDir);
+        await loadBaseProjectFromDir("empty-project", testOutDir);
+        await loadDocumentModelsInDir("spec-version-3", testOutDir);
+        await compile(testOutDir);
+        await runGeneratedTests(testOutDir);
+        purgeDirAfterTest(testOutDir);
+      },
+    );
+
+    it(
+      "should persist existing reducers, tests, utils, and custom files when generating a new spec version",
+      {
+        timeout: 10000000,
+      },
+      async (context) => {
+        const testOutDir = getTestOutDir(context);
+        resetDirForTest(testOutDir);
+        await loadBaseProjectFromDir(
+          "project-with-existing-document-models-at-spec-2",
+          testOutDir,
+        );
+        await loadDocumentModelsInDir("spec-version-3", testOutDir);
+        await compile(testOutDir);
+        await runGeneratedTests(testOutDir);
+        purgeDirAfterTest(testOutDir);
+      },
+    );
+
+    it(
+      "should throw a typescript error in upgrades when new state does not match old state",
+      {
+        timeout: 10000000,
+      },
+      async (context) => {
+        const testOutDir = getTestOutDir(context);
+        resetDirForTest(testOutDir);
+        await loadBaseProjectFromDir(
+          "project-with-existing-document-models-at-spec-2",
+          testOutDir,
+        );
+        await loadDocumentModelsInDir(
+          "spec-version-3-with-state-changes",
+          testOutDir,
+        );
+        await expect(() => compile(testOutDir)).rejects.toThrow();
+        purgeDirAfterTest(testOutDir);
+      },
+    );
+  });
 });

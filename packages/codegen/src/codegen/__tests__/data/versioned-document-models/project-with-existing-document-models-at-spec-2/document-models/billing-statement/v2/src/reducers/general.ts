@@ -1,21 +1,28 @@
+import {
+  InvalidStatusTransition,
+  StatusAlreadySet,
+} from "../../gen/general/error.js";
 import type { BillingStatementGeneralOperations } from "test/document-models/billing-statement/v2";
 
 export const billingStatementGeneralOperations: BillingStatementGeneralOperations =
   {
     editBillingStatementOperation(state, action) {
-      // TODO: implement editBillingStatementOperation reducer
+      // TODO: Implement "editBillingStatementOperation" reducer
       throw new Error(
-        "Reducer for 'editBillingStatementOperation' not implemented.",
+        'Reducer "editBillingStatementOperation" not yet implemented',
       );
     },
     editContributorOperation(state, action) {
-      // TODO: implement editContributorOperation reducer
-      throw new Error(
-        "Reducer for 'editContributorOperation' not implemented.",
-      );
+      // TODO: Implement "editContributorOperation" reducer
+      throw new Error('Reducer "editContributorOperation" not yet implemented');
     },
     editStatusOperation(state, action) {
-      // TODO: implement editStatusOperation reducer
-      throw new Error("Reducer for 'editStatusOperation' not implemented.");
+      if (state.status === "PAID") {
+        throw new InvalidStatusTransition("Cannot change status from PAID");
+      }
+      if (state.status === action.input.status) {
+        throw new StatusAlreadySet("Status already set");
+      }
+      state.status = action.input.status;
     },
   };

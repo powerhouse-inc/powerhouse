@@ -3,11 +3,9 @@ import type { TestDocBaseOperationsOperations } from "test/document-models/test-
 export const testDocBaseOperationsOperations: TestDocBaseOperationsOperations =
   {
     setTestIdOperation(state, action) {
-      // TODO: implement setTestIdOperation reducer
-      throw new Error("Reducer for 'setTestIdOperation' not implemented.");
+      state.id = action.input.id;
     },
     setTestNameOperation(state, action) {
-      // TODO: implement setTestNameOperation reducer
-      throw new Error("Reducer for 'setTestNameOperation' not implemented.");
+      state.name = action.input.name;
     },
   };

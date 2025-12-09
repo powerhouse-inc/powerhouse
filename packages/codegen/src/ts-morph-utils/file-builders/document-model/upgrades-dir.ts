@@ -1,6 +1,6 @@
 import { ts } from "@tmpl/core";
 import path from "path";
-import type { Project } from "ts-morph";
+import { VariableDeclarationKind, type Project } from "ts-morph";
 import {
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
@@ -66,7 +66,7 @@ export function createOrUpdateUpgradeManifestFile(args: {
 
   const template = ts`
   import type { UpgradeManifest } from "document-model";
-  import { latestVersion, supportedVersions } from "../versions.js";
+  import { latestVersion, supportedVersions } from "./versions.js";
   import { ${documentTypeVariableName} } from "${packageImportPath}";
 
   export const upgradeManifest: UpgradeManifest<typeof supportedVersions> = {
@@ -120,4 +120,51 @@ function buildUpgradeTransitionImports(specVersions: number[]) {
   }
 
   return imports;
+}
+
+type MakeVersionConstantsFileArgs = {
+  project: Project;
+  upgradesDirPath: string;
+  specVersions: number[];
+  latestVersion: number;
+};
+export function createOrUpdateVersionConstantsFile({
+  specVersions,
+  latestVersion,
+  project,
+  upgradesDirPath,
+}: MakeVersionConstantsFileArgs) {
+  const SUPPORTED_VERSIONS = "supportedVersions";
+  const LATEST_VERSION = "latestVersion";
+  const filePath = path.join(upgradesDirPath, "versions.ts");
+  const { sourceFile } = getOrCreateSourceFile(project, filePath);
+  sourceFile.replaceWithText("");
+
+  const latestVersionIndex = specVersions.indexOf(latestVersion);
+  const versionInitializer = `[${specVersions.join(", ")}] as const;`;
+  const latestInitializer = `${SUPPORTED_VERSIONS}[${latestVersionIndex}];`;
+
+  sourceFile.addVariableStatement({
+    declarationKind: VariableDeclarationKind.Const,
+    isExported: true,
+    declarations: [
+      {
+        name: SUPPORTED_VERSIONS,
+        initializer: versionInitializer,
+      },
+    ],
+  });
+
+  sourceFile.addVariableStatement({
+    declarationKind: VariableDeclarationKind.Const,
+    isExported: true,
+    declarations: [
+      {
+        name: LATEST_VERSION,
+        initializer: latestInitializer,
+      },
+    ],
+  });
+
+  formatSourceFileWithPrettier(sourceFile);
 }

@@ -31,9 +31,9 @@ import type {
 } from "./document-model/types.js";
 import {
   createOrUpdateUpgradeManifestFile,
+  createOrUpdateVersionConstantsFile,
   makeUpgradeFile,
-} from "./document-model/upgrades.js";
-import { createOrUpdateVersionConstantsFile } from "./document-model/versions.js";
+} from "./document-model/upgrades-dir.js";
 import { makeModulesFile } from "./module-files.js";
 
 function ensureDirectoriesExist(project: Project, ...pathsToEnsure: string[]) {
@@ -304,7 +304,7 @@ export async function tsMorphGenerateDocumentModel({
     project,
     specVersions,
     latestVersion,
-    documentModelDirPath,
+    upgradesDirPath,
   });
 
   createOrUpdateUpgradeManifestFile({

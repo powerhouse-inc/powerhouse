@@ -1,16 +1,16 @@
 import { generateMock } from "@powerhousedao/codegen";
-import { describe, expect, it } from "vitest";
 import {
-  reducer,
-  utils,
   isTestDocDocument,
+  reducer,
   setTestId,
-  setTestName,
   SetTestIdInputSchema,
+  setTestName,
   SetTestNameInputSchema,
+  utils,
   setTestIdButDifferent,
   SetTestIdButDifferentInputSchema,
 } from "test/document-models/test-doc/v2";
+import { describe, expect, it } from "vitest";
 
 describe("BaseOperationsOperations", () => {
   it("should handle setTestId operation", () => {
@@ -18,6 +18,8 @@ describe("BaseOperationsOperations", () => {
     const input = generateMock(SetTestIdInputSchema());
 
     const updatedDocument = reducer(document, setTestId(input));
+
+    expect(true).toBe(true);
 
     expect(isTestDocDocument(updatedDocument)).toBe(true);
     expect(updatedDocument.operations.global).toHaveLength(1);

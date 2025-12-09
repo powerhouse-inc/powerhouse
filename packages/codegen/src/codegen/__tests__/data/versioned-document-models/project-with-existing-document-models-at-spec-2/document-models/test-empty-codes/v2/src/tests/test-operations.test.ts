@@ -1,5 +1,5 @@
+import { describe, it, expect } from "vitest";
 import { generateMock } from "@powerhousedao/codegen";
-import { describe, expect, it } from "vitest";
 import {
   reducer,
   utils,

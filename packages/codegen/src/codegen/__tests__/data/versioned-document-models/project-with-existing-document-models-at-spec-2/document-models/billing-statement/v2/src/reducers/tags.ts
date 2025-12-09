@@ -2,7 +2,7 @@ import type { BillingStatementTagsOperations } from "test/document-models/billin
 
 export const billingStatementTagsOperations: BillingStatementTagsOperations = {
   editLineItemTagOperation(state, action) {
-    // TODO: implement editLineItemTagOperation reducer
-    throw new Error("Reducer for 'editLineItemTagOperation' not implemented.");
+    // TODO: Implement "editLineItemTagOperation" reducer
+    throw new Error('Reducer "editLineItemTagOperation" not yet implemented');
   },
 };
