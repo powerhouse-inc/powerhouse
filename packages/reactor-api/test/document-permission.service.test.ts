@@ -1,5 +1,6 @@
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { runMigrations } from "../src/migrations/index.js";
 import { DocumentPermissionService } from "../src/services/document-permission.service.js";
 import type { DocumentPermissionDatabase } from "../src/utils/db.js";
 import { getDbClient } from "../src/utils/db.js";
@@ -12,8 +13,8 @@ describe("DocumentPermissionService", () => {
     // Create in-memory PGlite database for testing
     const { db: dbClient } = getDbClient();
     db = dbClient as Kysely<DocumentPermissionDatabase>;
+    await runMigrations(db as Kysely<unknown>);
     service = new DocumentPermissionService(db);
-    await service.initialize();
   });
 
   afterEach(async () => {
@@ -964,14 +965,6 @@ describe("DocumentPermissionService", () => {
   });
 
   describe("Edge Cases", () => {
-    it("should handle multiple initializations", async () => {
-      await service.initialize();
-      await service.initialize();
-      // Should not throw
-      const groups = await service.listGroups();
-      expect(Array.isArray(groups)).toBe(true);
-    });
-
     it("should handle empty user address for canExecuteOperation", async () => {
       const result = await service.canExecuteOperation("doc", "op", undefined);
       expect(result).toBe(false);

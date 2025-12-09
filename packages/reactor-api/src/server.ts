@@ -49,6 +49,7 @@ import {
   type DocumentPermissionDatabase,
 } from "./utils/db.js";
 import type { Kysely } from "kysely";
+import { runMigrations } from "./migrations/index.js";
 
 const logger = childLogger(["reactor-api", "server"]);
 
@@ -387,10 +388,12 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   let documentPermissionService = options.documentPermissionService;
   if (!documentPermissionService && DOCUMENT_PERMISSIONS_ENABLED === "true") {
     const { db } = getDbClient(options.dbPath);
+    // Run document permission migrations
+    await runMigrations(db as Kysely<unknown>);
+    logger.info("Document permission migrations completed");
     documentPermissionService = new DocumentPermissionService(
       db as Kysely<DocumentPermissionDatabase>,
     );
-    await documentPermissionService.initialize();
     logger.info("Document permission service initialized");
   }
 
