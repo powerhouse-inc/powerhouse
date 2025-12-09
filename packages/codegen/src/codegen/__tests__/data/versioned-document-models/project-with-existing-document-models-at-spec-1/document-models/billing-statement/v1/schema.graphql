@@ -88,6 +88,10 @@ input EditBillingStatementInput {
   notes: String
 }
 
+input EditBillingStatementTestInput {
+  test: String! 
+}
+
 input EditContributorInput {
   contributor: PHID!
 }

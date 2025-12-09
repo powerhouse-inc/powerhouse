@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { AddLineItemInput, BillingStatementLineItem, BillingStatementState, BillingStatementStatus, BillingStatementStatusInput, BillingStatementTag, BillingStatementUnit, BillingStatementUnitInput, EditBillingStatementInput, EditContributorInput, EditLineItemInput, EditLineItemTagInput, EditStatusInput } from './types.js'
+import type { AddLineItemInput, BillingStatementLineItem, BillingStatementState, BillingStatementStatus, BillingStatementStatusInput, BillingStatementTag, BillingStatementUnit, BillingStatementUnitInput, EditBillingStatementInput, EditBillingStatementTestInput, EditContributorInput, EditLineItemInput, EditLineItemTagInput, EditStatusInput } from './types.js'
 
 type Properties<T> = Required<{
   [K in keyof T]: z.ZodType<T[K], any, T[K]>;
@@ -77,6 +77,12 @@ export function EditBillingStatementInputSchema(): z.ZodObject<Properties<EditBi
     dateDue: z.string().datetime().nullish(),
     dateIssued: z.string().datetime().nullish(),
     notes: z.string().nullish()
+  })
+}
+
+export function EditBillingStatementTestInputSchema(): z.ZodObject<Properties<EditBillingStatementTestInput>> {
+  return z.object({
+    test: z.string()
   })
 }
 

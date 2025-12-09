@@ -1,10 +1,9 @@
 import type { UpgradeManifest } from "document-model";
 import { latestVersion, supportedVersions } from "./versions.js";
-import { testDocDocumentType } from "test/document-models/test-doc";
 import { v2 } from "./v2.js";
 
 export const upgradeManifest: UpgradeManifest<typeof supportedVersions> = {
-  documentType: testDocDocumentType,
+  documentType: "powerhouse/test-doc",
   latestVersion,
   supportedVersions,
   upgrades: { v2 },

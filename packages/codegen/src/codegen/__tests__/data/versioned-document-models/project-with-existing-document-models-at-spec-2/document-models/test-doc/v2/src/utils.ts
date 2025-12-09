@@ -1,3 +1,1 @@
-export function doNothingUseful() {
-  return;
-}
+export {};
