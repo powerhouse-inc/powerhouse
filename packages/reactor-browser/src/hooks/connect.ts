@@ -107,9 +107,11 @@ export {
 export {
   setLegacyReactor,
   setReactorClient,
+  setReactorClientModule,
   setSync,
   useLegacyReactor,
   useReactorClient,
+  useReactorClientModule,
   useSync,
 } from "./reactor.js";
 export { setRenown, useRenown } from "./renown.js";

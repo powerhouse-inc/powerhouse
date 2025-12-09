@@ -775,7 +775,15 @@ export async function createTestSyncStorage(): Promise<{
  */
 export function createMockSigner(overrides: Partial<ISigner> = {}): ISigner {
   return {
-    sign: vi.fn().mockResolvedValue(["mock-signature", "", "", "", ""]),
+    sign: vi
+      .fn()
+      .mockResolvedValue([
+        "mock-signature",
+        "mock-public-key",
+        "mock-hash",
+        "mock-prev-state-hash",
+        "mock-signature-hex",
+      ]),
     ...overrides,
   };
 }

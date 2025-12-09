@@ -38,13 +38,13 @@ import type {
 
 import type { IJobExecutorManager } from "#executor/interfaces.js";
 import type { IDocumentIndexer } from "#storage/interfaces.js";
-import { ConsistencyAwareLegacyStorage } from "../storage/consistency-aware-legacy-storage.js";
 import { PGlite } from "@electric-sql/pglite";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import type { IEventBus } from "../events/interfaces.js";
 import type { IReadModelCoordinator } from "../read-models/interfaces.js";
 import type { SignatureVerificationHandler } from "../signer/types.js";
+import { ConsistencyAwareLegacyStorage } from "../storage/consistency-aware-legacy-storage.js";
 import { runMigrations } from "../storage/migrations/migrator.js";
 import type { MigrationStrategy } from "../storage/migrations/types.js";
 

@@ -1,3 +1,4 @@
+import { driveCollectionId } from "@powerhousedao/reactor";
 import type {
   DocumentDriveDocument,
   DriveInput,
@@ -79,10 +80,23 @@ export async function addRemoteDrive(url: string, options: RemoteDriveOptions) {
       throw new Error("ReactorClient not initialized");
     }
 
-    // TODO: Implement remote drive addition via ReactorClient
-    // For now, this requires additional sync configuration
-    throw new Error("addRemoteDrive not yet implemented for ReactorClient");
+    const sync = window.ph?.sync;
+    if (!sync) {
+      throw new Error("Sync not initialized");
+    }
+
+    const driveId = driveIdFromUrl(url);
+    await sync.add(driveId, driveCollectionId("main", driveId), {
+      type: "gql",
+      parameters: {
+        url,
+      },
+    });
   }
+}
+
+function driveIdFromUrl(url: string): string {
+  return url.split("/").pop() ?? "";
 }
 
 export async function deleteDrive(driveId: string) {

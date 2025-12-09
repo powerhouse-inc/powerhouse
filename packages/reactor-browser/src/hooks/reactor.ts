@@ -1,4 +1,8 @@
-import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
+import type {
+  IReactorClient,
+  ISyncManager,
+  ReactorClientModule,
+} from "@powerhousedao/reactor";
 import type {
   AddPHGlobalEventHandler,
   SetPHGlobalValue,
@@ -8,6 +12,9 @@ import type { IDocumentDriveServer } from "document-drive";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
 const legacyEventFunctions = makePHEventFunctions("legacyReactor");
+const reactorClientModuleEventFunctions = makePHEventFunctions(
+  "reactorClientModule",
+);
 const reactorClientEventFunctions = makePHEventFunctions("reactorClient");
 const syncEventFunctions = makePHEventFunctions("sync");
 
@@ -22,6 +29,18 @@ export const setLegacyReactor: SetPHGlobalValue<IDocumentDriveServer> =
 /** Adds an event handler for the reactor */
 export const addLegacyReactorEventHandler: AddPHGlobalEventHandler =
   legacyEventFunctions.addEventHandler;
+
+/** Returns the reactor client module */
+export const useReactorClientModule: UsePHGlobalValue<ReactorClientModule> =
+  reactorClientModuleEventFunctions.useValue;
+
+/** Sets the reactor client module */
+export const setReactorClientModule: SetPHGlobalValue<ReactorClientModule> =
+  reactorClientModuleEventFunctions.setValue;
+
+/** Adds an event handler for the reactor client module */
+export const addReactorClientModuleEventHandler: AddPHGlobalEventHandler =
+  reactorClientModuleEventFunctions.addEventHandler;
 
 /** Returns the reactor client */
 export const useReactorClient: UsePHGlobalValue<IReactorClient> =

@@ -109,6 +109,8 @@ export {
 } from "./registry/index.js";
 
 // Storage
+export type { Database } from "./core/types.js";
+export { ConsistencyAwareLegacyStorage } from "./storage/consistency-aware-legacy-storage.js";
 export {
   DuplicateOperationError,
   OptimisticLockError,
@@ -127,16 +129,14 @@ export {
   type OperationContext,
   type OperationWithContext,
 } from "./storage/interfaces.js";
-export { ConsistencyAwareLegacyStorage } from "./storage/consistency-aware-legacy-storage.js";
 export { KyselyDocumentIndexer } from "./storage/kysely/document-indexer.js";
 export { KyselyKeyframeStore } from "./storage/kysely/keyframe-store.js";
 export { KyselyOperationStore } from "./storage/kysely/store.js";
 export type {
-  Database as StorageDatabase,
   DocumentIndexerDatabase,
   OperationTable,
+  Database as StorageDatabase,
 } from "./storage/kysely/types.js";
-export type { Database } from "./core/types.js";
 
 // Read Models
 export { ReadModelCoordinator } from "./read-models/coordinator.js";
@@ -152,6 +152,7 @@ export type {
 
 // Cache
 export { KyselyWriteCache } from "./cache/kysely-write-cache.js";
+export { driveCollectionId } from "./cache/operation-index-types.js";
 export type {
   CachedSnapshot,
   DocumentStreamKey,

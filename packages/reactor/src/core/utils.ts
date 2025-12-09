@@ -208,7 +208,7 @@ export const signAction = async (
         },
         app: {
           name: "",
-          key: "",
+          key: signature[1],
         },
         signatures: [signature],
       },

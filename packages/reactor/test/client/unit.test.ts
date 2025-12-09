@@ -401,7 +401,15 @@ describe("ReactorClient Unit Tests", () => {
               signer: expect.objectContaining({
                 user: expect.any(Object),
                 app: expect.any(Object),
-                signatures: [["mock-signature", "", "", "", ""]],
+                signatures: [
+                  [
+                    "mock-signature",
+                    "mock-public-key",
+                    "mock-hash",
+                    "mock-prev-state-hash",
+                    "mock-signature-hex",
+                  ],
+                ],
               }),
             }),
           }),
@@ -558,7 +566,15 @@ describe("ReactorClient Unit Tests", () => {
               signer: expect.objectContaining({
                 user: expect.any(Object),
                 app: expect.any(Object),
-                signatures: [["mock-signature", "", "", "", ""]],
+                signatures: [
+                  [
+                    "mock-signature",
+                    "mock-public-key",
+                    "mock-hash",
+                    "mock-prev-state-hash",
+                    "mock-signature-hex",
+                  ],
+                ],
               }),
             }),
           }),

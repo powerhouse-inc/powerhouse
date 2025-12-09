@@ -32,6 +32,7 @@ import {
   setLegacyReactor,
   setProcessorManager,
   setReactorClient,
+  setReactorClientModule,
   setRenown,
   setSync,
 } from "@powerhousedao/reactor-browser/connect";
@@ -50,15 +51,20 @@ import {
   subscribeExternalPackages,
 } from "./external-packages.js";
 
-let reactorStorage: IDocumentAdminStorage | undefined;
+let reactorLegacyStorage: IDocumentAdminStorage | undefined;
 
-function setReactorStorage(storage: IDocumentAdminStorage) {
-  reactorStorage = storage;
+function setLegacyReactorStorage(storage: IDocumentAdminStorage) {
+  reactorLegacyStorage = storage;
 }
 
 export async function clearReactorStorage() {
-  await reactorStorage?.clear();
-  return !!reactorStorage;
+  // clear legacy storage
+  await reactorLegacyStorage?.clear();
+
+  // clear all the reactor dependencies
+  window.ph?.reactorClientModule;
+
+  return !!reactorLegacyStorage;
 }
 
 async function updateVetraPackages(externalPackages: VetraPackage[]) {
@@ -144,7 +150,7 @@ export async function createReactor() {
   const storage = createBrowserStorage(phGlobalConfigFromEnv.routerBasename!);
 
   // store storage for admin access
-  setReactorStorage(storage);
+  setLegacyReactorStorage(storage);
 
   // load vetra packages
   const externalPackages = await loadExternalPackages();
@@ -215,6 +221,7 @@ export async function createReactor() {
   // dispatch the events to set the values in the window object
   setDefaultPHGlobalConfig(phGlobalConfigFromEnv);
   setLegacyReactor(legacyReactor);
+  setReactorClientModule(reactorClientModule);
   setReactorClient(reactorClientModule.client);
   setSync(reactorClientModule.reactorModule?.syncModule?.syncManager);
   setDocumentCache(documentCache);
