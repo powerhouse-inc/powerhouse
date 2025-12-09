@@ -4,7 +4,6 @@ import type {
   DocumentPermissionDatabase,
   DocumentPermissionLevel,
 } from "../utils/db.js";
-import { runMigrations } from "../migrations/index.js";
 
 export interface DocumentPermissionEntry {
   documentId: string;
@@ -72,20 +71,7 @@ export type GetParentIdsFn = (documentId: string) => Promise<string[]>;
  * - GUESTS: Comma-separated list of guest addresses (read access)
  */
 export class DocumentPermissionService {
-  private initialized = false;
-
   constructor(private readonly db: Kysely<DocumentPermissionDatabase>) {}
-
-  /**
-   * Initialize the database tables for document permissions by running migrations
-   */
-  async initialize(): Promise<void> {
-    if (this.initialized) return;
-
-    await runMigrations(this.db as Kysely<unknown>);
-
-    this.initialized = true;
-  }
 
   // ============================================
   // User Permission Operations
