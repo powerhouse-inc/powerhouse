@@ -355,7 +355,6 @@ export class GraphQLManager {
           await this.#waitForServer(server);
 
           if (subgraph.hasSubscriptions) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-call
             useServer(
               {
                 schema,

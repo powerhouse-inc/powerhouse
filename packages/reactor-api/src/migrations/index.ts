@@ -40,7 +40,9 @@ export async function runMigrations(db: Kysely<unknown>): Promise<void> {
 
   if (error) {
     console.error("Failed to run migrations:", error);
-    throw error;
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    throw new Error(`Migration failed: ${errorMessage}`);
   }
 }
 
@@ -67,6 +69,8 @@ export async function rollbackMigration(db: Kysely<unknown>): Promise<void> {
 
   if (error) {
     console.error("Failed to rollback migration:", error);
-    throw error;
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    throw new Error(`Rollback failed: ${errorMessage}`);
   }
 }

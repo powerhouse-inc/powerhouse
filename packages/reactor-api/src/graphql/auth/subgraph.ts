@@ -357,7 +357,11 @@ export class AuthSubgraph extends BaseSubgraph {
       // Operation Permission Mutations
       grantOperationPermission: async (
         _parent: unknown,
-        args: { documentId: string; operationType: string; userAddress: string },
+        args: {
+          documentId: string;
+          operationType: string;
+          userAddress: string;
+        },
         ctx: {
           user?: { address: string };
           isAdmin?: (address: string) => boolean;
@@ -383,7 +387,11 @@ export class AuthSubgraph extends BaseSubgraph {
 
       revokeOperationPermission: async (
         _parent: unknown,
-        args: { documentId: string; operationType: string; userAddress: string },
+        args: {
+          documentId: string;
+          operationType: string;
+          userAddress: string;
+        },
         ctx: {
           user?: { address: string };
           isAdmin?: (address: string) => boolean;

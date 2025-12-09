@@ -467,10 +467,11 @@ export class DriveSubgraph extends BaseSubgraph {
 
         // If no global write access, check document-level permissions
         if (!hasGlobalWriteAccess && this.documentPermissionService) {
-          const canWrite = await this.documentPermissionService.canWriteDocument(
-            driveId,
-            ctx.user?.address,
-          );
+          const canWrite =
+            await this.documentPermissionService.canWriteDocument(
+              driveId,
+              ctx.user?.address,
+            );
 
           if (!canWrite) {
             this.logger.warn(
