@@ -5,7 +5,6 @@ import { withFilter } from "graphql-subscriptions";
 import { gql } from "graphql-tag";
 import path from "path";
 import { fileURLToPath } from "url";
-import type { DocumentPermissionService } from "../../services/document-permission.service.js";
 import { BaseSubgraph } from "../base-subgraph.js";
 import type { Context, SubgraphArgs } from "../types.js";
 import {
@@ -213,10 +212,16 @@ export class ReactorSubgraph extends BaseSubgraph {
       findDocuments: async (_parent, args, ctx: Context) => {
         this.logger.debug("findDocuments", args);
         try {
-          const result = await resolvers.findDocuments(this.reactorClient, args);
+          const result = await resolvers.findDocuments(
+            this.reactorClient,
+            args,
+          );
 
           // Filter results to only include documents the user can read
-          if (!this.hasGlobalReadAccess(ctx) && this.documentPermissionService) {
+          if (
+            !this.hasGlobalReadAccess(ctx) &&
+            this.documentPermissionService
+          ) {
             const filteredItems = [];
             for (const item of result.items) {
               const canRead = await this.canReadDocument(item.id, ctx);
@@ -264,7 +269,6 @@ export class ReactorSubgraph extends BaseSubgraph {
           throw error;
         }
       },
-
     },
 
     Mutation: {
@@ -528,7 +532,6 @@ export class ReactorSubgraph extends BaseSubgraph {
           throw error;
         }
       },
-
     },
 
     Subscription: {

@@ -4,6 +4,7 @@ import type {
   DocumentPermissionDatabase,
   DocumentPermissionLevel,
 } from "../utils/db.js";
+import { runMigrations } from "../migrations/index.js";
 
 export interface DocumentPermissionEntry {
   documentId: string;
@@ -76,118 +77,12 @@ export class DocumentPermissionService {
   constructor(private readonly db: Kysely<DocumentPermissionDatabase>) {}
 
   /**
-   * Initialize the database tables for document permissions
+   * Initialize the database tables for document permissions by running migrations
    */
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    // Create DocumentPermission table
-    await sql`
-      CREATE TABLE IF NOT EXISTS "DocumentPermission" (
-        "id" SERIAL PRIMARY KEY,
-        "documentId" VARCHAR(255) NOT NULL,
-        "userAddress" VARCHAR(255) NOT NULL,
-        "permission" VARCHAR(20) NOT NULL CHECK ("permission" IN ('READ', 'WRITE', 'ADMIN')),
-        "grantedBy" VARCHAR(255) NOT NULL,
-        "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE ("documentId", "userAddress")
-      )
-    `.execute(this.db);
-
-    // Create indexes for DocumentPermission
-    await sql`CREATE INDEX IF NOT EXISTS "documentpermission_documentid_index" ON "DocumentPermission" ("documentId")`.execute(
-      this.db,
-    );
-    await sql`CREATE INDEX IF NOT EXISTS "documentpermission_useraddress_index" ON "DocumentPermission" ("userAddress")`.execute(
-      this.db,
-    );
-
-    // Create Group table
-    await sql`
-      CREATE TABLE IF NOT EXISTS "Group" (
-        "id" SERIAL PRIMARY KEY,
-        "name" VARCHAR(255) NOT NULL UNIQUE,
-        "description" TEXT,
-        "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-      )
-    `.execute(this.db);
-
-    // Create UserGroup table (user-group membership)
-    await sql`
-      CREATE TABLE IF NOT EXISTS "UserGroup" (
-        "userAddress" VARCHAR(255) NOT NULL,
-        "groupId" INTEGER NOT NULL,
-        "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY ("userAddress", "groupId")
-      )
-    `.execute(this.db);
-
-    await sql`CREATE INDEX IF NOT EXISTS "usergroup_groupid_index" ON "UserGroup" ("groupId")`.execute(
-      this.db,
-    );
-
-    // Create DocumentGroupPermission table
-    await sql`
-      CREATE TABLE IF NOT EXISTS "DocumentGroupPermission" (
-        "id" SERIAL PRIMARY KEY,
-        "documentId" VARCHAR(255) NOT NULL,
-        "groupId" INTEGER NOT NULL,
-        "permission" VARCHAR(20) NOT NULL CHECK ("permission" IN ('READ', 'WRITE', 'ADMIN')),
-        "grantedBy" VARCHAR(255) NOT NULL,
-        "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE ("documentId", "groupId")
-      )
-    `.execute(this.db);
-
-    await sql`CREATE INDEX IF NOT EXISTS "documentgrouppermission_documentid_index" ON "DocumentGroupPermission" ("documentId")`.execute(
-      this.db,
-    );
-    await sql`CREATE INDEX IF NOT EXISTS "documentgrouppermission_groupid_index" ON "DocumentGroupPermission" ("groupId")`.execute(
-      this.db,
-    );
-
-    // Create OperationUserPermission table
-    await sql`
-      CREATE TABLE IF NOT EXISTS "OperationUserPermission" (
-        "id" SERIAL PRIMARY KEY,
-        "documentId" VARCHAR(255) NOT NULL,
-        "operationType" VARCHAR(255) NOT NULL,
-        "userAddress" VARCHAR(255) NOT NULL,
-        "grantedBy" VARCHAR(255) NOT NULL,
-        "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE ("documentId", "operationType", "userAddress")
-      )
-    `.execute(this.db);
-
-    await sql`CREATE INDEX IF NOT EXISTS "operationuserpermission_documentid_index" ON "OperationUserPermission" ("documentId")`.execute(
-      this.db,
-    );
-    await sql`CREATE INDEX IF NOT EXISTS "operationuserpermission_useraddress_index" ON "OperationUserPermission" ("userAddress")`.execute(
-      this.db,
-    );
-
-    // Create OperationGroupPermission table
-    await sql`
-      CREATE TABLE IF NOT EXISTS "OperationGroupPermission" (
-        "id" SERIAL PRIMARY KEY,
-        "documentId" VARCHAR(255) NOT NULL,
-        "operationType" VARCHAR(255) NOT NULL,
-        "groupId" INTEGER NOT NULL,
-        "grantedBy" VARCHAR(255) NOT NULL,
-        "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE ("documentId", "operationType", "groupId")
-      )
-    `.execute(this.db);
-
-    await sql`CREATE INDEX IF NOT EXISTS "operationgrouppermission_documentid_index" ON "OperationGroupPermission" ("documentId")`.execute(
-      this.db,
-    );
-    await sql`CREATE INDEX IF NOT EXISTS "operationgrouppermission_groupid_index" ON "OperationGroupPermission" ("groupId")`.execute(
-      this.db,
-    );
+    await runMigrations(this.db as Kysely<unknown>);
 
     this.initialized = true;
   }
