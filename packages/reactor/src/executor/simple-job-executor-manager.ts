@@ -126,6 +126,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
       const errorInfo = this.toErrorInfo(
         error instanceof Error ? error : String(error),
       );
+
       console.error(`Error executing job ${handle.job.id}:`, errorInfo.message);
 
       handle.fail(errorInfo);
@@ -188,6 +189,11 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
           handle.job.errorHistory,
           currentErrorInfo,
           retryCount + 1,
+        );
+
+        console.error(
+          `Job ${handle.job.id} failed after ${retryCount + 1} attempts:`,
+          fullErrorInfo.message,
         );
 
         this.jobTracker.markFailed(handle.job.id, fullErrorInfo);

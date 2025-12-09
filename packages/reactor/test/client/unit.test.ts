@@ -940,4 +940,259 @@ describe("ReactorClient Unit Tests", () => {
       ).rejects.toThrow("Signing failed");
     });
   });
+
+  describe("Job Failure Handling", () => {
+    it("should throw error when create job fails", async () => {
+      const document: PHDocument = {
+        header: { id: "doc-1", documentType: "test" },
+      } as PHDocument;
+
+      const jobInfo: JobInfo = {
+        id: "job-1",
+        status: JobStatus.PENDING,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
+      const failedJobInfo: JobInfo = {
+        id: "job-1",
+        status: JobStatus.FAILED,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+        error: { message: "Create document failed", stack: "" },
+      };
+
+      vi.mocked(mockReactor.create).mockResolvedValue(jobInfo);
+      vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(failedJobInfo);
+
+      await expect(client.create(document)).rejects.toThrow(
+        "Create document failed",
+      );
+      expect(mockReactor.get).not.toHaveBeenCalled();
+    });
+
+    it("should throw error when execute job fails", async () => {
+      const jobInfo: JobInfo = {
+        id: "job-1",
+        status: JobStatus.PENDING,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
+      const failedJobInfo: JobInfo = {
+        id: "job-1",
+        status: JobStatus.FAILED,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+        error: { message: "Execute action failed", stack: "" },
+      };
+
+      vi.mocked(mockReactor.execute).mockResolvedValue(jobInfo);
+      vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(failedJobInfo);
+
+      await expect(client.execute("doc-1", "main", [])).rejects.toThrow(
+        "Execute action failed",
+      );
+      expect(mockReactor.getByIdOrSlug).not.toHaveBeenCalled();
+    });
+
+    it("should throw error when addChildren job fails", async () => {
+      const jobInfo: JobInfo = {
+        id: "job-1",
+        status: JobStatus.PENDING,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
+      const failedJobInfo: JobInfo = {
+        id: "job-1",
+        status: JobStatus.FAILED,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+        error: { message: "Add children failed", stack: "" },
+      };
+
+      vi.mocked(mockReactor.addChildren).mockResolvedValue(jobInfo);
+      vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(failedJobInfo);
+
+      await expect(client.addChildren("parent-1", ["child-1"])).rejects.toThrow(
+        "Add children failed",
+      );
+      expect(mockReactor.getByIdOrSlug).not.toHaveBeenCalled();
+    });
+
+    it("should throw error when removeChildren job fails", async () => {
+      const jobInfo: JobInfo = {
+        id: "job-1",
+        status: JobStatus.PENDING,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
+      const failedJobInfo: JobInfo = {
+        id: "job-1",
+        status: JobStatus.FAILED,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+        error: { message: "Remove children failed", stack: "" },
+      };
+
+      vi.mocked(mockReactor.removeChildren).mockResolvedValue(jobInfo);
+      vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(failedJobInfo);
+
+      await expect(
+        client.removeChildren("parent-1", ["child-1"]),
+      ).rejects.toThrow("Remove children failed");
+      expect(mockReactor.getByIdOrSlug).not.toHaveBeenCalled();
+    });
+
+    it("should throw error when moveChildren remove job fails", async () => {
+      const removeJobInfo: JobInfo = {
+        id: "job-remove",
+        status: JobStatus.PENDING,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
+      const failedRemoveJobInfo: JobInfo = {
+        id: "job-remove",
+        status: JobStatus.FAILED,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+        error: { message: "Remove from source failed", stack: "" },
+      };
+
+      vi.mocked(mockReactor.removeChildren).mockResolvedValue(removeJobInfo);
+      vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(
+        failedRemoveJobInfo,
+      );
+
+      await expect(
+        client.moveChildren("source-1", "target-1", ["child-1"]),
+      ).rejects.toThrow("Remove from source failed");
+      expect(mockReactor.addChildren).not.toHaveBeenCalled();
+    });
+
+    it("should throw error when moveChildren add job fails", async () => {
+      const removeJobInfo: JobInfo = {
+        id: "job-remove",
+        status: JobStatus.PENDING,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
+      const completedRemoveJobInfo: JobInfo = {
+        id: "job-remove",
+        status: JobStatus.READ_MODELS_READY,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
+      const addJobInfo: JobInfo = {
+        id: "job-add",
+        status: JobStatus.PENDING,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
+      const failedAddJobInfo: JobInfo = {
+        id: "job-add",
+        status: JobStatus.FAILED,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+        error: { message: "Add to target failed", stack: "" },
+      };
+
+      vi.mocked(mockReactor.removeChildren).mockResolvedValue(removeJobInfo);
+      vi.mocked(mockReactor.addChildren).mockResolvedValue(addJobInfo);
+      vi.mocked(mockJobAwaiter.waitForJob)
+        .mockResolvedValueOnce(completedRemoveJobInfo)
+        .mockResolvedValueOnce(failedAddJobInfo);
+
+      await expect(
+        client.moveChildren("source-1", "target-1", ["child-1"]),
+      ).rejects.toThrow("Add to target failed");
+      expect(mockReactor.getByIdOrSlug).not.toHaveBeenCalled();
+    });
+
+    it("should throw error when deleteDocument job fails", async () => {
+      const jobInfo: JobInfo = {
+        id: "job-1",
+        status: JobStatus.PENDING,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
+      const failedJobInfo: JobInfo = {
+        id: "job-1",
+        status: JobStatus.FAILED,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+        error: { message: "Delete document failed", stack: "" },
+      };
+
+      vi.mocked(mockReactor.deleteDocument).mockResolvedValue(jobInfo);
+      vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(failedJobInfo);
+
+      await expect(client.deleteDocument("doc-1")).rejects.toThrow(
+        "Delete document failed",
+      );
+    });
+
+    it("should throw error when any cascade delete job fails", async () => {
+      const parentId = "parent-1";
+      const childId = "child-1";
+
+      const childJobInfo: JobInfo = {
+        id: "job-child",
+        status: JobStatus.PENDING,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
+      const parentJobInfo: JobInfo = {
+        id: "job-parent",
+        status: JobStatus.PENDING,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
+      const failedChildJobInfo: JobInfo = {
+        id: "job-child",
+        status: JobStatus.FAILED,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+        error: { message: "Delete child failed", stack: "" },
+      };
+
+      const completedParentJobInfo: JobInfo = {
+        id: "job-parent",
+        status: JobStatus.READ_MODELS_READY,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
+      vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue([
+        {
+          sourceId: parentId,
+          targetId: childId,
+          relationshipType: "child",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ]);
+
+      vi.mocked(mockReactor.deleteDocument)
+        .mockResolvedValueOnce(childJobInfo)
+        .mockResolvedValueOnce(parentJobInfo);
+
+      vi.mocked(mockJobAwaiter.waitForJob)
+        .mockResolvedValueOnce(failedChildJobInfo)
+        .mockResolvedValueOnce(completedParentJobInfo);
+
+      await expect(
+        client.deleteDocument(parentId, PropagationMode.Cascade),
+      ).rejects.toThrow("Delete child failed");
+    });
+  });
 });

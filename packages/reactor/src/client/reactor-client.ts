@@ -5,6 +5,7 @@ import { signActions } from "#core/utils.js";
 import type { IReactor } from "../core/types.js";
 import { type IJobAwaiter } from "../shared/awaiter.js";
 import {
+  JobStatus,
   PropagationMode,
   RelationshipChangeType,
   type JobInfo,
@@ -191,6 +192,10 @@ export class ReactorClient implements IReactorClient {
 
     const completedJob = await this.waitForJob(jobInfo, signal);
 
+    if (completedJob.status === JobStatus.FAILED) {
+      throw new Error(completedJob.error?.message);
+    }
+
     const documentId = document.header.id;
 
     const result = await this.reactor.get<PHDocument>(
@@ -258,6 +263,10 @@ export class ReactorClient implements IReactorClient {
 
     const completedJob = await this.waitForJob(jobInfo, signal);
 
+    if (completedJob.status === JobStatus.FAILED) {
+      throw new Error(completedJob.error?.message);
+    }
+
     const view: ViewFilter = { branch };
     const result = await this.reactor.getByIdOrSlug<TDocument>(
       documentIdentifier,
@@ -323,6 +332,10 @@ export class ReactorClient implements IReactorClient {
 
     const completedJob = await this.waitForJob(jobInfo, signal);
 
+    if (completedJob.status === JobStatus.FAILED) {
+      throw new Error(completedJob.error?.message);
+    }
+
     const result = await this.reactor.getByIdOrSlug<PHDocument>(
       parentIdentifier,
       { branch },
@@ -350,6 +363,10 @@ export class ReactorClient implements IReactorClient {
     );
 
     const completedJob = await this.waitForJob(jobInfo, signal);
+
+    if (completedJob.status === JobStatus.FAILED) {
+      throw new Error(completedJob.error?.message);
+    }
 
     const result = await this.reactor.getByIdOrSlug<PHDocument>(
       parentIdentifier,
@@ -383,6 +400,10 @@ export class ReactorClient implements IReactorClient {
 
     const removeCompletedJob = await this.waitForJob(removeJobInfo, signal);
 
+    if (removeCompletedJob.status === JobStatus.FAILED) {
+      throw new Error(removeCompletedJob.error?.message);
+    }
+
     const addJobInfo = await this.reactor.addChildren(
       targetParentIdentifier,
       documentIdentifiers,
@@ -392,6 +413,10 @@ export class ReactorClient implements IReactorClient {
     );
 
     const addCompletedJob = await this.waitForJob(addJobInfo, signal);
+
+    if (addCompletedJob.status === JobStatus.FAILED) {
+      throw new Error(addCompletedJob.error?.message);
+    }
 
     const sourceResult = await this.reactor.getByIdOrSlug<PHDocument>(
       sourceParentIdentifier,
@@ -473,7 +498,15 @@ export class ReactorClient implements IReactorClient {
     );
     jobs.push(jobInfo);
 
-    await Promise.all(jobs.map((job) => this.waitForJob(job, signal)));
+    const completedJobs = await Promise.all(
+      jobs.map((job) => this.waitForJob(job, signal)),
+    );
+
+    for (const completedJob of completedJobs) {
+      if (completedJob.status === JobStatus.FAILED) {
+        throw new Error(completedJob.error?.message);
+      }
+    }
   }
 
   /**
