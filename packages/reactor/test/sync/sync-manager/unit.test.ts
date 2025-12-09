@@ -51,6 +51,7 @@ describe("SyncManager - Unit Tests", () => {
         onAdded: vi.fn(),
         onRemoved: vi.fn(),
       },
+      init: vi.fn().mockResolvedValue(undefined),
       shutdown: vi.fn(),
     } as any;
 
@@ -136,6 +137,8 @@ describe("SyncManager - Unit Tests", () => {
         remoteRecords[0].name,
         remoteRecords[0].channelConfig,
         mockCursorStorage,
+        remoteRecords[0].collectionId,
+        remoteRecords[0].filter,
       );
       expect(mockEventBus.subscribe).toHaveBeenCalledWith(
         OperationEventTypes.OPERATION_WRITTEN,
@@ -251,6 +254,8 @@ describe("SyncManager - Unit Tests", () => {
         "remote1",
         channelConfig,
         mockCursorStorage,
+        "collection1",
+        { documentId: [], scope: [], branch: "main" },
       );
     });
 

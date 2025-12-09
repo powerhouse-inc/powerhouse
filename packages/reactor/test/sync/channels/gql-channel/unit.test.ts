@@ -3,12 +3,31 @@ import type {
   ISyncCursorStorage,
   OperationContext,
 } from "../../../../src/storage/interfaces.js";
-import { GqlChannel } from "../../../../src/sync/channels/gql-channel.js";
+import {
+  GqlChannel,
+  type GqlChannelConfig,
+} from "../../../../src/sync/channels/gql-channel.js";
 import { SyncOperation } from "../../../../src/sync/sync-operation.js";
 import {
   SyncOperationStatus,
+  type RemoteFilter,
   type SyncEnvelope,
 } from "../../../../src/sync/types.js";
+
+const TEST_FILTER: RemoteFilter = {
+  documentId: [],
+  scope: [],
+  branch: "main",
+};
+
+const createTestConfig = (
+  overrides: Partial<GqlChannelConfig> = {},
+): GqlChannelConfig => ({
+  url: "https://example.com/graphql",
+  collectionId: "test-collection",
+  filter: TEST_FILTER,
+  ...overrides,
+});
 
 const createMockCursorStorage = (
   remoteName = "remote-1",
@@ -85,10 +104,14 @@ describe("GqlChannel", () => {
       const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel("channel-1", "remote-1", cursorStorage, {
-        url: "https://example.com/graphql",
-        authToken: "test-token",
-      });
+      const channel = new GqlChannel(
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig({
+          authToken: "test-token",
+        }),
+      );
 
       expect(channel.inbox.items).toHaveLength(0);
       expect(channel.outbox.items).toHaveLength(0);
@@ -100,9 +123,12 @@ describe("GqlChannel", () => {
       const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel("channel-1", "remote-1", cursorStorage, {
-        url: "https://example.com/graphql",
-      });
+      const channel = new GqlChannel(
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+      );
 
       expect(channel.inbox.items).toEqual([]);
       expect(channel.outbox.items).toEqual([]);
@@ -114,61 +140,100 @@ describe("GqlChannel", () => {
       const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel("channel-1", "remote-1", cursorStorage, {
-        url: "https://example.com/graphql",
-      });
+      const channel = new GqlChannel(
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+      );
 
       const health = channel.getHealth();
       expect(health.state).toBe("idle");
       expect(health.failureCount).toBe(0);
     });
 
-    it("should start polling on construction", async () => {
+    it("should start polling after init is called", async () => {
       const cursorStorage = createMockCursorStorage();
-      const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
+      const mockFetch = createMockFetch({
+        pollSyncEnvelopes: [],
+        touchChannel: true,
+      });
       global.fetch = mockFetch;
 
-      new GqlChannel("channel-1", "remote-1", cursorStorage, {
-        url: "https://example.com/graphql",
-        pollIntervalMs: 5000,
-      });
+      const channel = new GqlChannel(
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig({
+          pollIntervalMs: 5000,
+        }),
+      );
+
+      // Before init, no polling should happen
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(mockFetch).not.toHaveBeenCalled();
+
+      // After init, polling should start
+      await channel.init();
+      // init() calls touchChannel
+      expect(mockFetch).toHaveBeenCalledTimes(1);
 
       // Fast-forward time to trigger poll
       await vi.advanceTimersByTimeAsync(5000);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
 
-      expect(mockFetch).toHaveBeenCalled();
+      channel.shutdown();
     });
   });
 
   describe("polling", () => {
     it("should poll remote for operations at configured interval", async () => {
       const cursorStorage = createMockCursorStorage();
-      const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
+      const mockFetch = createMockFetch({
+        pollSyncEnvelopes: [],
+        touchChannel: true,
+      });
       global.fetch = mockFetch;
 
-      new GqlChannel("channel-1", "remote-1", cursorStorage, {
-        url: "https://example.com/graphql",
-        pollIntervalMs: 3000,
-      });
+      const channel = new GqlChannel(
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig({
+          pollIntervalMs: 3000,
+        }),
+      );
+      await channel.init();
 
-      await vi.advanceTimersByTimeAsync(3000);
+      // init() calls touchChannel once
       expect(mockFetch).toHaveBeenCalledTimes(1);
 
+      // After first poll interval
       await vi.advanceTimersByTimeAsync(3000);
       expect(mockFetch).toHaveBeenCalledTimes(2);
 
+      // After second poll interval
       await vi.advanceTimersByTimeAsync(3000);
       expect(mockFetch).toHaveBeenCalledTimes(3);
+
+      channel.shutdown();
     });
 
     it("should query with correct GraphQL syntax", async () => {
       const cursorStorage = createMockCursorStorage();
-      const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
+      const mockFetch = createMockFetch({
+        pollSyncEnvelopes: [],
+        touchChannel: true,
+      });
       global.fetch = mockFetch;
 
-      new GqlChannel("channel-1", "remote-1", cursorStorage, {
-        url: "https://example.com/graphql",
-      });
+      const channel = new GqlChannel(
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+      );
+      await channel.init();
 
       await vi.advanceTimersByTimeAsync(5000);
 
@@ -182,17 +247,26 @@ describe("GqlChannel", () => {
           body: expect.stringContaining("pollSyncEnvelopes"),
         }),
       );
+      channel.shutdown();
     });
 
     it("should include auth token in headers when provided", async () => {
       const cursorStorage = createMockCursorStorage();
-      const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
+      const mockFetch = createMockFetch({
+        pollSyncEnvelopes: [],
+        touchChannel: true,
+      });
       global.fetch = mockFetch;
 
-      new GqlChannel("channel-1", "remote-1", cursorStorage, {
-        url: "https://example.com/graphql",
-        authToken: "secret-token",
-      });
+      const channel = new GqlChannel(
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig({
+          authToken: "secret-token",
+        }),
+      );
+      await channel.init();
 
       await vi.advanceTimersByTimeAsync(5000);
 
@@ -214,17 +288,26 @@ describe("GqlChannel", () => {
         lastSyncedAtUtcMs: Date.now(),
       });
 
-      const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
+      const mockFetch = createMockFetch({
+        pollSyncEnvelopes: [],
+        touchChannel: true,
+      });
       global.fetch = mockFetch;
 
-      new GqlChannel("channel-1", "remote-1", cursorStorage, {
-        url: "https://example.com/graphql",
-      });
+      const channel = new GqlChannel(
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+      );
+      await channel.init();
 
       await vi.advanceTimersByTimeAsync(5000);
 
-      const callBody = JSON.parse(mockFetch.mock.calls[0][1]?.body as string);
+      // Second call is the poll (first is touchChannel)
+      const callBody = JSON.parse(mockFetch.mock.calls[1][1]?.body as string);
       expect(callBody.variables.cursorOrdinal).toBe(42);
+      channel.shutdown();
     });
 
     it("should use cursor 0 when cursor is at beginning", async () => {
@@ -234,17 +317,26 @@ describe("GqlChannel", () => {
         cursorOrdinal: 0,
       });
 
-      const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
+      const mockFetch = createMockFetch({
+        pollSyncEnvelopes: [],
+        touchChannel: true,
+      });
       global.fetch = mockFetch;
 
-      new GqlChannel("channel-1", "remote-1", cursorStorage, {
-        url: "https://example.com/graphql",
-      });
+      const channel = new GqlChannel(
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+      );
+      await channel.init();
 
       await vi.advanceTimersByTimeAsync(5000);
 
-      const callBody = JSON.parse(mockFetch.mock.calls[0][1]?.body as string);
+      // Second call is the poll (first is touchChannel)
+      const callBody = JSON.parse(mockFetch.mock.calls[1][1]?.body as string);
       expect(callBody.variables.cursorOrdinal).toBe(0);
+      channel.shutdown();
     });
 
     it("should add received operations to inbox", async () => {
@@ -275,12 +367,17 @@ describe("GqlChannel", () => {
 
       const mockFetch = createMockFetch({
         pollSyncEnvelopes: [mockEnvelope],
+        touchChannel: true,
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel("channel-1", "remote-1", cursorStorage, {
-        url: "https://example.com/graphql",
-      });
+      const channel = new GqlChannel(
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+      );
+      await channel.init();
 
       await vi.advanceTimersByTimeAsync(5000);
 
@@ -288,6 +385,7 @@ describe("GqlChannel", () => {
       expect(channel.inbox.items[0].status).toBe(
         SyncOperationStatus.ExecutionPending,
       );
+      channel.shutdown();
     });
   });
 
@@ -300,9 +398,12 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel("channel-1", "remote-1", cursorStorage, {
-        url: "https://example.com/graphql",
-      });
+      const channel = new GqlChannel(
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+      );
 
       const job = createMockSyncOperation("job-1", "remote-1");
       channel.outbox.add(job);
@@ -326,9 +427,12 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel("channel-1", "remote-1", cursorStorage, {
-        url: "https://example.com/graphql",
-      });
+      const channel = new GqlChannel(
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+      );
 
       const job = createMockSyncOperation("job-1", "remote-1");
       const statusCallback = vi.fn();
@@ -351,9 +455,12 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel("channel-1", "remote-1", cursorStorage, {
-        url: "https://example.com/graphql",
-      });
+      const channel = new GqlChannel(
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+      );
 
       const job = createMockSyncOperation("job-1", "remote-1");
       channel.outbox.add(job);
@@ -374,9 +481,12 @@ describe("GqlChannel", () => {
       const mockFetch = vi.fn().mockRejectedValue(new Error("Network error"));
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel("channel-1", "remote-1", cursorStorage, {
-        url: "https://example.com/graphql",
-      });
+      const channel = new GqlChannel(
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+      );
 
       const job = createMockSyncOperation("job-1", "remote-1");
       channel.outbox.add(job);
@@ -391,31 +501,56 @@ describe("GqlChannel", () => {
   describe("error handling", () => {
     it("should handle network errors during poll", async () => {
       const cursorStorage = createMockCursorStorage();
-      const mockFetch = vi.fn().mockRejectedValue(new Error("Network error"));
+      // First call (touchChannel) succeeds, subsequent calls (poll) fail
+      const mockFetch = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ data: { touchChannel: true } }),
+        })
+        .mockRejectedValue(new Error("Network error"));
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel("channel-1", "remote-1", cursorStorage, {
-        url: "https://example.com/graphql",
-        maxFailures: 3,
-      });
+      const channel = new GqlChannel(
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig({
+          maxFailures: 3,
+        }),
+      );
+      await channel.init();
 
       await vi.advanceTimersByTimeAsync(5000);
 
       const health = channel.getHealth();
       expect(health.failureCount).toBe(1);
       expect(health.state).toBe("running");
+      channel.shutdown();
     });
 
     it("should stop polling after max failures", async () => {
       const cursorStorage = createMockCursorStorage();
-      const mockFetch = vi.fn().mockRejectedValue(new Error("Network error"));
+      // First call (touchChannel) succeeds, subsequent calls (poll) fail
+      const mockFetch = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ data: { touchChannel: true } }),
+        })
+        .mockRejectedValue(new Error("Network error"));
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel("channel-1", "remote-1", cursorStorage, {
-        url: "https://example.com/graphql",
-        maxFailures: 3,
-        pollIntervalMs: 1000,
-      });
+      const channel = new GqlChannel(
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig({
+          maxFailures: 3,
+          pollIntervalMs: 1000,
+        }),
+      );
+      await channel.init();
 
       // Trigger 3 failures
       await vi.advanceTimersByTimeAsync(1000);
@@ -437,7 +572,15 @@ describe("GqlChannel", () => {
       let callCount = 0;
       const mockFetch = vi.fn().mockImplementation(() => {
         callCount++;
-        if (callCount <= 2) {
+        // First call is touchChannel (init), then polling starts
+        if (callCount === 1) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ data: { touchChannel: true } }),
+          });
+        }
+        // Calls 2 and 3 fail (first two polls), call 4 succeeds
+        if (callCount <= 3) {
           throw new Error("Network error");
         }
         return Promise.resolve({
@@ -447,10 +590,15 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel("channel-1", "remote-1", cursorStorage, {
-        url: "https://example.com/graphql",
-        pollIntervalMs: 1000,
-      });
+      const channel = new GqlChannel(
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig({
+          pollIntervalMs: 1000,
+        }),
+      );
+      await channel.init();
 
       await vi.advanceTimersByTimeAsync(1000);
       expect(channel.getHealth().failureCount).toBe(1);
@@ -461,46 +609,71 @@ describe("GqlChannel", () => {
       await vi.advanceTimersByTimeAsync(1000);
       expect(channel.getHealth().failureCount).toBe(0);
       expect(channel.getHealth().state).toBe("idle");
+      channel.shutdown();
     });
 
     it("should handle GraphQL errors", async () => {
       const cursorStorage = createMockCursorStorage();
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            errors: [{ message: "GraphQL error" }],
-          }),
-      });
+      // First call (touchChannel) succeeds, subsequent calls return GraphQL errors
+      const mockFetch = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ data: { touchChannel: true } }),
+        })
+        .mockResolvedValue({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              errors: [{ message: "GraphQL error" }],
+            }),
+        });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel("channel-1", "remote-1", cursorStorage, {
-        url: "https://example.com/graphql",
-      });
+      const channel = new GqlChannel(
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+      );
+      await channel.init();
 
       await vi.advanceTimersByTimeAsync(5000);
 
       const health = channel.getHealth();
       expect(health.failureCount).toBe(1);
+      channel.shutdown();
     });
 
     it("should handle HTTP errors", async () => {
       const cursorStorage = createMockCursorStorage();
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 500,
-        statusText: "Internal Server Error",
-      });
+      // First call (touchChannel) succeeds, subsequent calls (poll) fail with HTTP 500
+      const mockFetch = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ data: { touchChannel: true } }),
+        })
+        .mockResolvedValue({
+          ok: false,
+          status: 500,
+          statusText: "Internal Server Error",
+        });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel("channel-1", "remote-1", cursorStorage, {
-        url: "https://example.com/graphql",
-      });
+      const channel = new GqlChannel(
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+      );
+      await channel.init();
 
       await vi.advanceTimersByTimeAsync(5000);
 
       const health = channel.getHealth();
       expect(health.failureCount).toBe(1);
+      channel.shutdown();
     });
   });
 
@@ -510,9 +683,12 @@ describe("GqlChannel", () => {
       const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel("channel-1", "remote-1", cursorStorage, {
-        url: "https://example.com/graphql",
-      });
+      const channel = new GqlChannel(
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+      );
 
       await channel.updateCursor(42);
 
@@ -528,16 +704,25 @@ describe("GqlChannel", () => {
   describe("shutdown", () => {
     it("should stop polling after shutdown", async () => {
       const cursorStorage = createMockCursorStorage();
-      const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
+      const mockFetch = createMockFetch({
+        pollSyncEnvelopes: [],
+        touchChannel: true,
+      });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel("channel-1", "remote-1", cursorStorage, {
-        url: "https://example.com/graphql",
-        pollIntervalMs: 1000,
-      });
+      const channel = new GqlChannel(
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig({
+          pollIntervalMs: 1000,
+        }),
+      );
+      await channel.init();
 
       await vi.advanceTimersByTimeAsync(1000);
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+      // init() + 1 poll = 2 calls
+      expect(mockFetch).toHaveBeenCalledTimes(2);
 
       channel.shutdown();
       mockFetch.mockClear();
@@ -551,9 +736,12 @@ describe("GqlChannel", () => {
       const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel("channel-1", "remote-1", cursorStorage, {
-        url: "https://example.com/graphql",
-      });
+      const channel = new GqlChannel(
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+      );
 
       expect(() => channel.shutdown()).not.toThrow();
     });
@@ -566,9 +754,12 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel("channel-1", "remote-1", cursorStorage, {
-        url: "https://example.com/graphql",
-      });
+      const channel = new GqlChannel(
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+      );
 
       const job = createMockSyncOperation("job-1", "remote-1");
       channel.outbox.add(job);
@@ -588,34 +779,54 @@ describe("GqlChannel", () => {
   describe("health monitoring", () => {
     it("should track last success timestamp", async () => {
       const cursorStorage = createMockCursorStorage();
-      const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
+      const mockFetch = createMockFetch({
+        pollSyncEnvelopes: [],
+        touchChannel: true,
+      });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel("channel-1", "remote-1", cursorStorage, {
-        url: "https://example.com/graphql",
-      });
+      const channel = new GqlChannel(
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+      );
+      await channel.init();
 
       const beforePoll = Date.now();
       await vi.advanceTimersByTimeAsync(5000);
 
       const health = channel.getHealth();
       expect(health.lastSuccessUtcMs).toBeGreaterThanOrEqual(beforePoll);
+      channel.shutdown();
     });
 
     it("should track last failure timestamp", async () => {
       const cursorStorage = createMockCursorStorage();
-      const mockFetch = vi.fn().mockRejectedValue(new Error("Network error"));
+      // First call (touchChannel) succeeds, subsequent calls (poll) fail
+      const mockFetch = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ data: { touchChannel: true } }),
+        })
+        .mockRejectedValue(new Error("Network error"));
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel("channel-1", "remote-1", cursorStorage, {
-        url: "https://example.com/graphql",
-      });
+      const channel = new GqlChannel(
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+      );
+      await channel.init();
 
       const beforePoll = Date.now();
       await vi.advanceTimersByTimeAsync(5000);
 
       const health = channel.getHealth();
       expect(health.lastFailureUtcMs).toBeGreaterThanOrEqual(beforePoll);
+      channel.shutdown();
     });
 
     it("should return correct health state transitions", async () => {
@@ -627,17 +838,25 @@ describe("GqlChannel", () => {
         }
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ data: { pollSyncEnvelopes: [] } }),
+          json: () =>
+            Promise.resolve({
+              data: { pollSyncEnvelopes: [], touchChannel: true },
+            }),
         });
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel("channel-1", "remote-1", cursorStorage, {
-        url: "https://example.com/graphql",
-        pollIntervalMs: 1000,
-      });
+      const channel = new GqlChannel(
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig({
+          pollIntervalMs: 1000,
+        }),
+      );
+      await channel.init();
 
-      // Initial state: idle
+      // Initial state after init: idle
       expect(channel.getHealth().state).toBe("idle");
 
       // After success: idle

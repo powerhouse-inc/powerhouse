@@ -77,7 +77,19 @@ export class SyncManager implements ISyncManager {
         record.name,
         record.channelConfig,
         this.cursorStorage,
+        record.collectionId,
+        record.filter,
       );
+
+      try {
+        await channel.init();
+      } catch (error) {
+        console.error(
+          `Error initializing channel for remote ${record.name}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        continue;
+      }
+
       const remote: Remote = {
         id: record.id,
         name: record.name,
@@ -181,7 +193,12 @@ export class SyncManager implements ISyncManager {
       name,
       channelConfig,
       this.cursorStorage,
+      collectionId,
+      filter,
     );
+
+    await channel.init();
+
     const remote: Remote = {
       id: remoteId,
       name,

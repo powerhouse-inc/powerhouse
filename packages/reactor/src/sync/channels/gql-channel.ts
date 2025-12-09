@@ -3,7 +3,7 @@ import { ChannelError } from "../errors.js";
 import type { IChannel } from "../interfaces.js";
 import { Mailbox } from "../mailbox.js";
 import type { SyncOperation } from "../sync-operation.js";
-import type { RemoteCursor, SyncEnvelope } from "../types.js";
+import type { RemoteCursor, RemoteFilter, SyncEnvelope } from "../types.js";
 import { ChannelErrorSource } from "../types.js";
 import { envelopeToSyncOperation } from "./utils.js";
 
@@ -25,6 +25,10 @@ export type GqlChannelConfig = {
   maxFailures?: number;
   /** Custom fetch function for testing (default: global fetch) */
   fetchFn?: typeof fetch;
+  /** Collection ID to synchronize */
+  collectionId: string;
+  /** Filter to apply to operations */
+  filter: RemoteFilter;
 };
 
 /**
@@ -62,6 +66,8 @@ export class GqlChannel implements IChannel {
       retryMaxDelayMs: config.retryMaxDelayMs ?? 300000,
       maxFailures: config.maxFailures ?? 5,
       fetchFn: config.fetchFn,
+      collectionId: config.collectionId,
+      filter: config.filter,
     };
     this.isShutdown = false;
     this.failureCount = 0;
@@ -73,9 +79,6 @@ export class GqlChannel implements IChannel {
     this.outbox.onAdded((syncOp) => {
       this.handleOutboxAdded(syncOp);
     });
-
-    // Start polling
-    this.startPolling();
   }
 
   /**
@@ -87,6 +90,14 @@ export class GqlChannel implements IChannel {
       clearTimeout(this.pollTimer);
       this.pollTimer = undefined;
     }
+  }
+
+  /**
+   * Initializes the channel by registering it on the remote server and starting polling.
+   */
+  async init(): Promise<void> {
+    await this.touchRemoteChannel();
+    this.startPolling();
   }
 
   /**
@@ -219,6 +230,32 @@ export class GqlChannel implements IChannel {
     }>(query, variables);
 
     return response.pollSyncEnvelopes;
+  }
+
+  /**
+   * Registers or updates this channel on the remote server via GraphQL mutation.
+   */
+  private async touchRemoteChannel(): Promise<void> {
+    const mutation = `
+      mutation TouchChannel($input: TouchChannelInput!) {
+        touchChannel(input: $input)
+      }
+    `;
+
+    const variables = {
+      input: {
+        id: this.channelId,
+        name: this.remoteName,
+        collectionId: this.config.collectionId,
+        filter: {
+          documentId: this.config.filter.documentId,
+          scope: this.config.filter.scope,
+          branch: this.config.filter.branch,
+        },
+      },
+    };
+
+    await this.executeGraphQL<{ touchChannel: boolean }>(mutation, variables);
   }
 
   /**

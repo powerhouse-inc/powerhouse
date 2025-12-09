@@ -658,7 +658,7 @@ export async function deleteDocuments(
   }
 }
 
-export async function createChannel(
+export async function touchChannel(
   syncManager: ISyncManager,
   args: {
     input: {

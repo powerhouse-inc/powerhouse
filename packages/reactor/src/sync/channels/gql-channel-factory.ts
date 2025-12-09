@@ -1,6 +1,6 @@
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import type { IChannel, IChannelFactory } from "../interfaces.js";
-import type { ChannelConfig } from "../types.js";
+import type { ChannelConfig, RemoteFilter } from "../types.js";
 import { GqlChannel, type GqlChannelConfig } from "./gql-channel.js";
 
 /**
@@ -24,6 +24,8 @@ export class GqlChannelFactory implements IChannelFactory {
     remoteName: string,
     config: ChannelConfig,
     cursorStorage: ISyncCursorStorage,
+    collectionId: string,
+    filter: RemoteFilter,
   ): IChannel {
     if (config.type !== "gql") {
       throw new Error(
@@ -42,6 +44,8 @@ export class GqlChannelFactory implements IChannelFactory {
     // Extract optional parameters with validation
     const gqlConfig: GqlChannelConfig = {
       url,
+      collectionId,
+      filter,
     };
 
     if (config.parameters.authToken !== undefined) {

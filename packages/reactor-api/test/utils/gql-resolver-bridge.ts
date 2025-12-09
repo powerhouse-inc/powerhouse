@@ -1,6 +1,6 @@
 import type { ISyncManager } from "@powerhousedao/reactor";
 import {
-  createChannel,
+  touchChannel,
   pollSyncEnvelopes,
   pushSyncEnvelope,
 } from "../../src/graphql/reactor/resolvers.js";
@@ -103,7 +103,7 @@ export function createResolverBridge(
       return createMockResponse({ pushSyncEnvelope: result });
     }
 
-    if (body.query.includes("createChannel")) {
+    if (body.query.includes("touchChannel")) {
       const variables = body.variables as {
         input: {
           id: string;
@@ -117,9 +117,9 @@ export function createResolverBridge(
         };
       };
 
-      const result = await createChannel(syncManager, variables);
+      const result = await touchChannel(syncManager, variables);
 
-      return createMockResponse({ createChannel: result });
+      return createMockResponse({ touchChannel: result });
     }
 
     throw new Error(`Unknown GraphQL operation in query: ${body.query}`);
