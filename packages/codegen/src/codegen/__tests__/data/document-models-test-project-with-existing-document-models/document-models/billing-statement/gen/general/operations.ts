@@ -1,10 +1,10 @@
 import { type SignalDispatch } from "document-model";
-import type {
-  EditBillingStatementAction,
-  EditContributorAction,
-  EditStatusAction,
+import {
+  type EditBillingStatementAction,
+  type EditContributorAction,
+  type EditStatusAction,
 } from "./actions.js";
-import type { BillingStatementState } from "../types.js";
+import { type BillingStatementState } from "../types.js";
 
 export interface BillingStatementGeneralOperations {
   editBillingStatementOperation: (

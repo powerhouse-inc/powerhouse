@@ -10,12 +10,12 @@ import {
   utils,
   isBillingStatementDocument,
   addLineItem,
-  editLineItem,
   AddLineItemInputSchema,
+  editLineItem,
   EditLineItemInputSchema,
 } from "test/document-models/billing-statement";
 
-describe("LineItemsOperations", () => {
+describe("LineItems Operations", () => {
   it("should handle addLineItem operation", () => {
     const document = utils.createDocument();
     const input = generateMock(AddLineItemInputSchema());
@@ -32,7 +32,6 @@ describe("LineItemsOperations", () => {
     );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
-
   it("should handle editLineItem operation", () => {
     const document = utils.createDocument();
     const input = generateMock(EditLineItemInputSchema());

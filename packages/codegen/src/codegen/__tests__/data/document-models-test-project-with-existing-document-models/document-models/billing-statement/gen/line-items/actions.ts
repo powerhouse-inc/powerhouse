@@ -1,4 +1,4 @@
-import type { Action } from "document-model";
+import { type Action } from "document-model";
 import type { AddLineItemInput, EditLineItemInput } from "../types.js";
 
 export type AddLineItemAction = Action & {

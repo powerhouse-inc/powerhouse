@@ -5,16 +5,18 @@ import {
   generatorTypeDefs,
   validationSchema,
 } from "@powerhousedao/document-engineering/graphql";
-import type { DocumentSpecification } from "document-model";
+import type {
+  DocumentModelGlobalState,
+  DocumentSpecification,
+} from "document-model";
 import type { ValidationSchemaPluginConfig } from "graphql-codegen-typescript-validation-schema";
-import { readdirSync, writeFileSync } from "node:fs";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { formatWithPrettierBeforeWrite } from "./utils.js";
 
 const getDirectories = (source: string) =>
   readdirSync(source, { withFileTypes: true })
     .filter((dirent) => dirent.isDirectory())
-    .map((dirent) => dirent.name);
+    .map((dirent) => dirent);
 
 export const scalars = {
   Unknown: "unknown",
@@ -33,17 +35,20 @@ export const scalarsValidation = {
   ...(validationSchema as Record<string, string>),
 };
 
-export const tsConfig: TypeScriptPluginConfig = {
+const typescriptConfig: TypeScriptPluginConfig = {
   scalars,
   strictScalars: true,
   enumsAsTypes: true,
   skipTypename: true,
 };
 
-export const zodConfig: Record<string, unknown> = {
-  ...tsConfig,
+const validationSchemaConfig: ValidationSchemaPluginConfig = {
+  scalars,
+  strictScalars: true,
+  enumsAsTypes: true,
+  skipTypename: true,
   importFrom: `./types.js`,
-  schema: "zod",
+  schema: "zodv4",
   useTypeImports: true,
   scalarSchemas: scalarsValidation,
   directives: {
@@ -52,84 +57,6 @@ export const zodConfig: Record<string, unknown> = {
     },
   },
   withObjectType: true,
-} as const;
-
-export function schemaConfig(
-  name: string,
-  inDir: string,
-  outDir: string,
-): CodegenConfig["generates"] {
-  return {
-    [`${outDir}/${name}/gen/schema/types.ts`]: {
-      schema: [
-        {
-          [`${inDir}/${name}/schema.graphql`]: {
-            skipGraphQLImport: false,
-          },
-        },
-      ],
-      plugins: ["typescript"],
-      config: tsConfig,
-    },
-    [`${outDir}/${name}/gen/schema/zod.ts`]: {
-      schema: `${inDir}/${name}/schema.graphql`,
-      plugins: ["graphql-codegen-typescript-validation-schema"],
-      config: zodConfig,
-    },
-  };
-}
-
-export const generateSchema = async (
-  model: string,
-  inDir: string,
-  { watch = false, skipFormat = false, outDir = inDir, verbose = true } = {},
-) => {
-  const documentModelConfig = schemaConfig(model, inDir, outDir);
-
-  const config: CodegenConfig = {
-    overwrite: true,
-    generates: documentModelConfig,
-    watch,
-    silent: !verbose,
-  };
-
-  // GraphQL Codegen hooks are not working reliably - write files manually
-  const fs = await import("node:fs");
-  const path = await import("node:path");
-
-  const result = (await generate(config, !verbose)) as Array<{
-    filename: string;
-    content: string;
-    hooks: Record<string, unknown>;
-  }>;
-
-  for (const fileResult of result) {
-    const { filename, content } = fileResult;
-    const fullPath = path.resolve(filename);
-    const dir = path.dirname(fullPath);
-
-    // Ensure directory exists
-    fs.mkdirSync(dir, { recursive: true });
-
-    // Write content (content is already typed as string)
-    let finalContent: string = content;
-
-    // Format if not skipped
-    if (!skipFormat) {
-      try {
-        const { format } = await import("prettier");
-        finalContent = await format(content, { parser: "typescript" });
-      } catch (error) {
-        if (verbose) {
-          console.warn(`Failed to format ${filename}:`, error);
-        }
-      }
-    }
-
-    fs.writeFileSync(fullPath, finalContent);
-  }
-
-  return result;
 };
 
 function buildGraphqlDocumentStringForSpecification(
@@ -153,29 +80,6 @@ export async function generateTypesAndZodSchemasFromGraphql(
   dirName: string,
   writeFile = true,
 ) {
-  const typescriptConfig: TypeScriptPluginConfig = {
-    scalars,
-    strictScalars: true,
-    enumsAsTypes: true,
-    skipTypename: true,
-  };
-
-  const validationSchemaConfig: ValidationSchemaPluginConfig = {
-    scalars,
-    strictScalars: true,
-    enumsAsTypes: true,
-    skipTypename: true,
-    importFrom: `./types.js`,
-    schema: "zodv4",
-    useTypeImports: true,
-    scalarSchemas: scalarsValidation,
-    directives: {
-      equals: {
-        value: ["regex", "/^$1$/"],
-      },
-    },
-    withObjectType: true,
-  };
   const config: CodegenConfig = {
     overwrite: true,
     generates: {
@@ -190,7 +94,7 @@ export async function generateTypesAndZodSchemasFromGraphql(
       },
       [`${dirName}/gen/schema/zod.ts`]: {
         schema,
-        config: zodConfig,
+        config: validationSchemaConfig,
         plugins: [
           {
             "graphql-codegen-typescript-validation-schema":
@@ -224,27 +128,35 @@ export async function generateDocumentModelZodSchemas(args: {
   );
 }
 
-export const generateSchemas = (
+export const generateSchemas = async (
   inDir: string,
   { watch = false, skipFormat = false, outDir = inDir } = {},
 ) => {
-  const documentModels = getDirectories(inDir);
-  const documentModelConfigs = documentModels.reduce(
-    (obj, model) => ({
-      ...obj,
-      ...schemaConfig(model, inDir, outDir),
+  const dirs = getDirectories(inDir);
+  const inputs = dirs.map((dir) => {
+    const documentModelJsonFile = readFileSync(
+      path.join(dir.parentPath, dir.name, `${dir.name}.json`),
+      "utf-8",
+    );
+    const parsedJson = JSON.parse(
+      documentModelJsonFile,
+    ) as DocumentModelGlobalState;
+
+    const latestSpecification =
+      parsedJson.specifications[parsedJson.specifications.length - 1];
+
+    const schema = buildGraphqlDocumentStringForSpecification(
+      latestSpecification,
+    )
+      .filter(Boolean)
+      .join("\n\n");
+
+    return { dirName: path.join(outDir, dir.name), schema };
+  });
+
+  await Promise.all(
+    inputs.map(async ({ schema, dirName }) => {
+      await generateTypesAndZodSchemasFromGraphql(schema, dirName);
     }),
-    {},
   );
-
-  const config: CodegenConfig = {
-    overwrite: true,
-    generates: documentModelConfigs,
-    watch,
-    hooks: {
-      beforeOneFileWrite: skipFormat ? [] : [formatWithPrettierBeforeWrite],
-    },
-  };
-
-  return generate(config, true);
 };

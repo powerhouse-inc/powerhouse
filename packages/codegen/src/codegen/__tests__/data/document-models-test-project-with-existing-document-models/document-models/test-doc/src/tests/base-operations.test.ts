@@ -10,12 +10,12 @@ import {
   utils,
   isTestDocDocument,
   setTestId,
-  setTestName,
   SetTestIdInputSchema,
+  setTestName,
   SetTestNameInputSchema,
 } from "test/document-models/test-doc";
 
-describe("BaseOperationsOperations", () => {
+describe("BaseOperations Operations", () => {
   it("should handle setTestId operation", () => {
     const document = utils.createDocument();
     const input = generateMock(SetTestIdInputSchema());
@@ -32,7 +32,6 @@ describe("BaseOperationsOperations", () => {
     );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
-
   it("should handle setTestName operation", () => {
     const document = utils.createDocument();
     const input = generateMock(SetTestNameInputSchema());

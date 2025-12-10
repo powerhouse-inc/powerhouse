@@ -13,7 +13,7 @@ import {
   EditLineItemTagInputSchema,
 } from "test/document-models/billing-statement";
 
-describe("TagsOperations", () => {
+describe("Tags Operations", () => {
   it("should handle editLineItemTag operation", () => {
     const document = utils.createDocument();
     const input = generateMock(EditLineItemTagInputSchema());

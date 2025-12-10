@@ -15,7 +15,6 @@ import {
   it,
   type TestContext,
 } from "vitest";
-import { USE_LEGACY } from "./config.js";
 import {
   DOCUMENT_MODELS_TEST_PROJECT,
   GENERATE_DOC_MODEL_TEST_OUTPUT_DIR,
@@ -66,12 +65,10 @@ describe("document model", () => {
   });
 
   const generate = async () => {
-    if (USE_LEGACY) {
-      await generateSchemas(documentModelsSrcPath, {
-        skipFormat: true,
-        outDir: documentModelsDirName,
-      });
-    }
+    await generateSchemas(documentModelsSrcPath, {
+      skipFormat: true,
+      outDir: documentModelsDirName,
+    });
 
     const billingStatementDocumentModel = await loadDocumentModel(
       path.join(
@@ -85,7 +82,7 @@ describe("document model", () => {
       dir: documentModelsDirName,
       specifiedPackageName: TEST_PACKAGE_NAME,
       documentModelState: billingStatementDocumentModel,
-      legacy: USE_LEGACY,
+      legacy: true,
       skipFormat: true,
     });
 
@@ -94,7 +91,7 @@ describe("document model", () => {
     );
 
     await generateDocumentModel({
-      legacy: USE_LEGACY,
+      legacy: true,
       dir: documentModelsDirName,
       specifiedPackageName: TEST_PACKAGE_NAME,
       documentModelState: testDocDocumentModel,
@@ -234,7 +231,7 @@ describe("document model", () => {
       );
 
       await generateDocumentModel({
-        legacy: USE_LEGACY,
+        legacy: true,
         dir: documentModelsDirName,
         specifiedPackageName: TEST_PACKAGE_NAME,
         documentModelState: testDocDocumentModelV2,
@@ -507,7 +504,7 @@ describe("document model", () => {
       );
 
       await generateDocumentModel({
-        legacy: USE_LEGACY,
+        legacy: true,
         dir: documentModelsDirName,
         specifiedPackageName: TEST_PACKAGE_NAME,
         documentModelState: testEmptyCodesDocumentModel,

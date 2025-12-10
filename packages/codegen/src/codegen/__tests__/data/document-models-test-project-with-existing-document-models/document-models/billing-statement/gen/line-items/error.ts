@@ -19,5 +19,8 @@ export class InvalidStatusTransition extends Error implements ReducerError {
 }
 
 export const errors = {
-  AddLineItem: { DuplicateLineItem, InvalidStatusTransition },
+  AddLineItem: {
+    DuplicateLineItem,
+    InvalidStatusTransition,
+  },
 };

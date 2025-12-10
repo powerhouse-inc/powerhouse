@@ -10,14 +10,14 @@ import {
   utils,
   isBillingStatementDocument,
   editBillingStatement,
-  editContributor,
-  editStatus,
   EditBillingStatementInputSchema,
+  editContributor,
   EditContributorInputSchema,
+  editStatus,
   EditStatusInputSchema,
 } from "test/document-models/billing-statement";
 
-describe("GeneralOperations", () => {
+describe("General Operations", () => {
   it("should handle editBillingStatement operation", () => {
     const document = utils.createDocument();
     const input = generateMock(EditBillingStatementInputSchema());
@@ -34,7 +34,6 @@ describe("GeneralOperations", () => {
     );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
-
   it("should handle editContributor operation", () => {
     const document = utils.createDocument();
     const input = generateMock(EditContributorInputSchema());
@@ -51,7 +50,6 @@ describe("GeneralOperations", () => {
     );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
-
   it("should handle editStatus operation", () => {
     const document = utils.createDocument();
     const input = generateMock(EditStatusInputSchema());

@@ -5,7 +5,7 @@ export const documentModel: DocumentModelGlobalState = {
   name: "Billing Statement",
   extension: ".phdm",
   description:
-    "The Billing Statement Document Model captures a contributor\u2019s issued charges, with itemized line entries and auto-calculated totals in cash and POWT's.",
+    "The Billing Statement Document Model captures a contributor’s issued charges, with itemized line entries and auto-calculated totals in cash and POWT's.",
   author: {
     name: "Powerhouse",
     website: "https://powerhouse.inc",
@@ -19,12 +19,12 @@ export const documentModel: DocumentModelGlobalState = {
           schema:
             "type BillingStatementState {\n  contributor: PHID  # Change to AID when available\n  dateIssued: DateTime!\n  dateDue: DateTime\n  lineItems: [BillingStatementLineItem!]!\n  status: BillingStatementStatus!\n  currency: String!\n  totalCash: Float!\n  totalPowt: Float!\n  notes: String\n}\n\ntype BillingStatementLineItem {\n  id: OID!\n  description: String!\n  quantity: Float!\n  unit: BillingStatementUnit!\n  unitPricePwt: Float!\n  unitPriceCash: Float!\n  totalPricePwt: Float!\n  totalPriceCash: Float!\n  lineItemTag: [BillingStatementTag!]!\n}\n\ntype BillingStatementTag {\n  dimension: String!\n  value: String!\n  label: String\n}\n\nenum BillingStatementStatus {\n  DRAFT\n  ISSUED\n  ACCEPTED\n  REJECTED\n  PAID\n}\n\nenum BillingStatementStatusInput {\n  DRAFT\n  ISSUED\n  ACCEPTED\n  REJECTED\n  PAID\n}\n\nenum BillingStatementUnit {\n  MINUTE\n  HOUR\n  DAY\n  UNIT\n}\n\nenum BillingStatementUnitInput {\n  MINUTE\n  HOUR\n  DAY\n  UNIT\n}\n\n",
           initialValue:
-            '{\n  "contributor": "",\n  "dateIssued": "2025-06-10T15:42:17.873Z",\n  "dateDue": "2025-06-10T15:42:17.873Z",\n  "lineItems": [],\n  "status": "DRAFT",\n  "currency": "",\n  "totalCash": 0,\n  "totalPowt": 0,\n  "notes": ""\n}',
+            '"{\\n  \\"contributor\\": \\"\\",\\n  \\"dateIssued\\": \\"2025-06-10T15:42:17.873Z\\",\\n  \\"dateDue\\": \\"2025-06-10T15:42:17.873Z\\",\\n  \\"lineItems\\": [],\\n  \\"status\\": \\"DRAFT\\",\\n  \\"currency\\": \\"\\",\\n  \\"totalCash\\": 0,\\n  \\"totalPowt\\": 0,\\n  \\"notes\\": \\"\\"\\n}"',
           examples: [],
         },
         local: {
           schema: "",
-          initialValue: "",
+          initialValue: '""',
           examples: [],
         },
       },

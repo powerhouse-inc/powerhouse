@@ -1,6 +1,6 @@
 import { type SignalDispatch } from "document-model";
-import type { AddLineItemAction, EditLineItemAction } from "./actions.js";
-import type { BillingStatementState } from "../types.js";
+import { type AddLineItemAction, type EditLineItemAction } from "./actions.js";
+import { type BillingStatementState } from "../types.js";
 
 export interface BillingStatementLineItemsOperations {
   addLineItemOperation: (

@@ -19,5 +19,8 @@ export class StatusAlreadySet extends Error implements ReducerError {
 }
 
 export const errors = {
-  EditStatus: { InvalidStatusTransition, StatusAlreadySet },
+  EditStatus: {
+    InvalidStatusTransition,
+    StatusAlreadySet,
+  },
 };
