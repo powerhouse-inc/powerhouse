@@ -84,11 +84,27 @@
   font-weight: 500;
   text-align: center;
   transition: background 0.2s ease-in-out;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  outline: none;
+  box-shadow: none;
 }
 
 :global(.path-button:hover) {
   background: #ffffff;
   border-color: #d1d5db;
+  color: #111827;
+  text-decoration: none;
+}
+
+:global(.path-button:visited),
+:global(.path-button:active),
+:global(.path-button:focus) {
+  color: #111827;
+  text-decoration: none;
+  outline: none;
+  box-shadow: none;
 }
 
 .masteryTrackTitle {
@@ -111,13 +127,21 @@
   border: 1px solid var(--ifm-color-emphasis-200);
 }
 
-:global([data-theme="dark"]) :global(.path-button) {
-  background: var(--ifm-color-emphasis-100);
-  border-color: var(--ifm-color-emphasis-200);
-  color: var(--ifm-font-color-primary);
+:global([data-theme="dark"]) :global(.path-button),
+:global([data-theme="dark"]) :global(.path-button:visited),
+:global([data-theme="dark"]) :global(.path-button:active),
+:global([data-theme="dark"]) :global(.path-button:focus) {
+  background: #374151;
+  border: none !important;
+  color: #ffffff !important;
+  outline: none !important;
+  box-shadow: none !important;
+  text-decoration: none !important;
 }
 
 :global([data-theme="dark"]) :global(.path-button:hover) {
-  background: var(--ifm-color-emphasis-200);
-  border-color: var(--ifm-color-emphasis-300);
+  background: #4b5563;
+  color: #ffffff !important;
+  border: none !important;
+  text-decoration: none !important;
 }

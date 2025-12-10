@@ -303,41 +303,18 @@ article > a,
 
 /* Dark mode adjustments */
 [data-theme="dark"] .path-button {
-  background-color: #1f1f20;
-  border: none; /* Remove default border */
-  position: relative; /* For pseudo-element positioning */
-  isolation: isolate; /* Ensures proper layering */
-}
-
-/* Gradient border effect - dark mode only */
-[data-theme="dark"] .path-button::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  border-radius: 8px;
-  padding: 1px; /* Border width */
-  background: linear-gradient(90deg, #4633eb, #7a5cff);
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
+  background-color: #374151;
+  border: none !important;
+  color: #ffffff !important;
+  text-decoration: none !important;
 }
 
 /* Hover effects - dark mode */
 [data-theme="dark"] .path-button:hover {
+  background-color: #4b5563;
   transform: translateY(-2px);
-}
-
-[data-theme="dark"] .path-button:hover::before {
-  box-shadow: 0 0 15px rgba(74, 51, 235, 0.3); /* Subtle blue glow */
+  color: #ffffff !important;
+  text-decoration: none !important;
 }
 
 .path-card {
