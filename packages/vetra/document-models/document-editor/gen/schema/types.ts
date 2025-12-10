@@ -1,4 +1,4 @@
-export type Maybe<T> = T | null;
+export type Maybe<T> = T | null | undefined;
 export type InputMaybe<T> = T | null | undefined;
 export type Exact<T extends { [key: string]: unknown }> = {
   [K in keyof T]: T[K];
@@ -25,6 +25,7 @@ export type Scalars = {
   Boolean: { input: boolean; output: boolean };
   Int: { input: number; output: number };
   Float: { input: number; output: number };
+  Address: { input: `${string}:0x${string}`; output: `${string}:0x${string}` };
   Amount: {
     input: { unit?: string; value?: number };
     output: { unit?: string; value?: number };
@@ -44,6 +45,7 @@ export type Scalars = {
   Amount_Money: { input: number; output: number };
   Amount_Percentage: { input: number; output: number };
   Amount_Tokens: { input: number; output: number };
+  Attachment: { input: string; output: string };
   Currency: { input: string; output: string };
   Date: { input: string; output: string };
   DateTime: { input: string; output: string };
@@ -53,6 +55,7 @@ export type Scalars = {
   OLabel: { input: string; output: string };
   PHID: { input: string; output: string };
   URL: { input: string; output: string };
+  Unknown: { input: unknown; output: unknown };
   Upload: { input: File; output: File };
 };
 
@@ -64,7 +67,7 @@ export type AddDocumentTypeInput = {
 export type DocumentEditorState = {
   documentTypes: Array<DocumentTypeItem>;
   name: Scalars["String"]["output"];
-  status: StatusType | `${StatusType}`;
+  status: StatusType;
 };
 
 export type DocumentTypeItem = {
@@ -81,7 +84,7 @@ export type SetEditorNameInput = {
 };
 
 export type SetEditorStatusInput = {
-  status: StatusType | `${StatusType}`;
+  status: StatusType;
 };
 
 export type StatusType = "CONFIRMED" | "DRAFT";

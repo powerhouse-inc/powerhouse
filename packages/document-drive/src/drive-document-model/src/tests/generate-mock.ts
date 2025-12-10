@@ -1,6 +1,8 @@
-import { generateMock as zodGenerateMock } from "@anatine/zod-mock";
-type generateMockTypeFn = typeof zodGenerateMock;
+import type { z } from "zod";
+import { zocker } from "zocker";
 
-export const generateMock: generateMockTypeFn = (zodRef, options) => {
-  return zodGenerateMock(zodRef, options) as generateMockTypeFn;
-};
+export function generateMock<TSchema extends z.ZodType>(
+  schema: TSchema,
+): z.infer<TSchema> {
+  return zocker(schema).generate() as z.infer<TSchema>;
+}

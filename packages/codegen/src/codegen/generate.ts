@@ -17,7 +17,7 @@ import {
 } from "../ts-morph-utils/file-builders/document-model.js";
 import { tsMorphGenerateDriveEditor } from "../ts-morph-utils/file-builders/drive-editor.js";
 import { buildTsMorphProject } from "../ts-morph-utils/ts-morph-project.js";
-import { generateSchema, generateSchemas } from "./graphql.js";
+import { generateSchemas } from "./graphql.js";
 import {
   hygenGenerateDocumentModel,
   hygenGenerateDriveEditor,
@@ -130,8 +130,8 @@ export async function generateFromDocument(
 type GenerateDocumentModelArgs = {
   dir: string;
   documentModelState: DocumentModelGlobalState;
-  specifiedPackageName?: string;
   legacy: boolean;
+  specifiedPackageName?: string;
   watch?: boolean;
   skipFormat?: boolean;
   verbose?: boolean;
@@ -157,6 +157,23 @@ export async function generateDocumentModel(args: GenerateDocumentModelArgs) {
       packageName,
       hygenArgs,
     );
+    const generator = new TSMorphCodeGenerator(
+      projectDir,
+      [documentModelState],
+      packageName,
+      {
+        directories: { documentModelDir: "document-models" },
+        forceUpdate: true,
+      },
+    );
+
+    await generator.generateReducers();
+
+    const project = buildTsMorphProject(projectDir);
+    makeDocumentModelModulesFile({
+      project,
+      projectDir,
+    });
   } else {
     await tsMorphGenerateDocumentModel({
       projectDir,
@@ -164,24 +181,6 @@ export async function generateDocumentModel(args: GenerateDocumentModelArgs) {
       documentModelState,
     });
   }
-
-  const generator = new TSMorphCodeGenerator(
-    projectDir,
-    [documentModelState],
-    packageName,
-    {
-      directories: { documentModelDir: "document-models" },
-      forceUpdate: true,
-    },
-  );
-
-  await generator.generateReducers();
-
-  const project = buildTsMorphProject(projectDir);
-  makeDocumentModelModulesFile({
-    project,
-    projectDir,
-  });
 }
 
 type GenerateEditorArgs = {
@@ -515,11 +514,11 @@ async function generateFromDocumentModel(
     force = false,
   } = options;
   const name = paramCase(documentModel.name);
-
+  const documentModelDir = join(config.documentModelsDir, name);
   // create document model folder and spec as json
-  fs.mkdirSync(join(config.documentModelsDir, name), { recursive: true });
+  fs.mkdirSync(documentModelDir, { recursive: true });
   fs.writeFileSync(
-    join(config.documentModelsDir, name, `${name}.json`),
+    join(documentModelDir, `${name}.json`),
     JSON.stringify(documentModel, null, 4),
   );
 
@@ -536,9 +535,8 @@ async function generateFromDocumentModel(
     );
   }
 
-  await generateSchema(name, config.documentModelsDir, {
+  await generateSchemas(documentModelDir, {
     skipFormat: config.skipFormat,
-    verbose,
   });
 
   await generateDocumentModel({

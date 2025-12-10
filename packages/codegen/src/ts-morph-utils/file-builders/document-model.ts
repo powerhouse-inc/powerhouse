@@ -1,4 +1,5 @@
 import type { Project } from "ts-morph";
+import { generateDocumentModelZodSchemas } from "../../codegen/graphql.js";
 import { TSMorphCodeGenerator } from "../../ts-morph-generator/index.js";
 import {
   documentModelModulesOutputFileName,
@@ -59,6 +60,17 @@ export async function tsMorphGenerateDocumentModel({
     packageName,
     projectDir,
     documentModelState,
+  });
+
+  const { documentModelDirPath } = documentModelVariableNames;
+  const specification =
+    documentModelState.specifications[
+      documentModelState.specifications.length - 1
+    ];
+
+  await generateDocumentModelZodSchemas({
+    documentModelDirPath,
+    specification,
   });
 
   ensureDirectoriesExist(project, documentModelVariableNames);

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import * as z from "zod";
 import type {
   AddPackageKeywordInput,
   Author,
@@ -16,7 +16,7 @@ import type {
 } from "./types.js";
 
 type Properties<T> = Required<{
-  [K in keyof T]: z.ZodType<T[K], any, T[K]>;
+  [K in keyof T]: z.ZodType<T[K]>;
 }>;
 
 type definedNonNullAny = {};
@@ -40,8 +40,8 @@ export function AddPackageKeywordInputSchema(): z.ZodObject<
 export function AuthorSchema(): z.ZodObject<Properties<Author>> {
   return z.object({
     __typename: z.literal("Author").optional(),
-    name: z.string().nullable(),
-    website: z.string().url().nullable(),
+    name: z.string().nullish(),
+    website: z.string().url().nullish(),
   });
 }
 
@@ -131,12 +131,12 @@ export function VetraPackageStateSchema(): z.ZodObject<
 > {
   return z.object({
     __typename: z.literal("VetraPackageState").optional(),
-    author: AuthorSchema(),
-    category: z.string().nullable(),
-    description: z.string().nullable(),
-    githubUrl: z.string().url().nullable(),
-    keywords: z.array(KeywordSchema()),
-    name: z.string().nullable(),
-    npmUrl: z.string().url().nullable(),
+    author: z.lazy(() => AuthorSchema()),
+    category: z.string().nullish(),
+    description: z.string().nullish(),
+    githubUrl: z.string().url().nullish(),
+    keywords: z.array(z.lazy(() => KeywordSchema())),
+    name: z.string().nullish(),
+    npmUrl: z.string().url().nullish(),
   });
 }

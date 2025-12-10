@@ -5,13 +5,20 @@ import {
   generatorTypeDefs,
   validationSchema,
 } from "@powerhousedao/document-engineering/graphql";
-import { readdirSync } from "node:fs";
-import { formatWithPrettierBeforeWrite } from "./utils.js";
+import type {
+  DocumentModelGlobalState,
+  DocumentSpecification,
+  ModuleSpecification,
+} from "document-model";
+import type { ValidationSchemaPluginConfig } from "graphql-codegen-typescript-validation-schema";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import { format } from "prettier";
 
 const getDirectories = (source: string) =>
   readdirSync(source, { withFileTypes: true })
     .filter((dirent) => dirent.isDirectory())
-    .map((dirent) => dirent.name);
+    .map((dirent) => dirent);
 
 export const scalars = {
   Unknown: "unknown",
@@ -30,23 +37,28 @@ export const scalarsValidation = {
   ...(validationSchema as Record<string, string>),
 };
 
-export const tsConfig: TypeScriptPluginConfig = {
-  strictScalars: true,
+const avoidOptionals: TypeScriptPluginConfig["avoidOptionals"] = {
+  field: true,
+  inputValue: false,
+};
+const maybeValue = "T | null | undefined";
+const typescriptConfig: TypeScriptPluginConfig = {
+  avoidOptionals,
   scalars,
+  strictScalars: true,
   enumsAsTypes: true,
-  allowEnumStringTypes: true,
-  avoidOptionals: {
-    field: true,
-  },
   skipTypename: true,
-  // maybeValue: "T | null | undefined",
-  inputMaybeValue: "T | null | undefined",
+  maybeValue,
 };
 
-export const zodConfig: Record<string, unknown> = {
-  ...tsConfig,
+const validationSchemaConfig: ValidationSchemaPluginConfig = {
+  avoidOptionals,
+  scalars,
+  strictScalars: true,
+  enumsAsTypes: true,
+  skipTypename: true,
   importFrom: `./types.js`,
-  schema: "zod",
+  schema: "zodv4",
   useTypeImports: true,
   scalarSchemas: scalarsValidation,
   directives: {
@@ -55,107 +67,151 @@ export const zodConfig: Record<string, unknown> = {
     },
   },
   withObjectType: true,
-} as const;
-
-export function schemaConfig(
-  name: string,
-  inDir: string,
-  outDir: string,
-): CodegenConfig["generates"] {
-  return {
-    [`${outDir}/${name}/gen/schema/types.ts`]: {
-      schema: [
-        {
-          [`${inDir}/${name}/schema.graphql`]: {
-            skipGraphQLImport: false,
-          },
-        },
-      ],
-      plugins: ["typescript"],
-      config: tsConfig,
-    },
-    [`${outDir}/${name}/gen/schema/zod.ts`]: {
-      schema: `${inDir}/${name}/schema.graphql`,
-      plugins: ["@acaldas/graphql-codegen-typescript-validation-schema"],
-      config: zodConfig,
-    },
-  };
-}
-
-export const generateSchema = async (
-  model: string,
-  inDir: string,
-  { watch = false, skipFormat = false, outDir = inDir, verbose = true } = {},
-) => {
-  const documentModelConfig = schemaConfig(model, inDir, outDir);
-
-  const config: CodegenConfig = {
-    overwrite: true,
-    generates: documentModelConfig,
-    watch,
-    silent: !verbose,
-  };
-
-  // GraphQL Codegen hooks are not working reliably - write files manually
-  const fs = await import("node:fs");
-  const path = await import("node:path");
-
-  const result = (await generate(config, !verbose)) as Array<{
-    filename: string;
-    content: string;
-    hooks: Record<string, unknown>;
-  }>;
-
-  for (const fileResult of result) {
-    const { filename, content } = fileResult;
-    const fullPath = path.resolve(filename);
-    const dir = path.dirname(fullPath);
-
-    // Ensure directory exists
-    fs.mkdirSync(dir, { recursive: true });
-
-    // Write content (content is already typed as string)
-    let finalContent: string = content;
-
-    // Format if not skipped
-    if (!skipFormat) {
-      try {
-        const { format } = await import("prettier");
-        finalContent = await format(content, { parser: "typescript" });
-      } catch (error) {
-        if (verbose) {
-          console.warn(`Failed to format ${filename}:`, error);
-        }
-      }
-    }
-
-    fs.writeFileSync(fullPath, finalContent);
-  }
-
-  return result;
+  maybeValue,
 };
 
-export const generateSchemas = (
-  inDir: string,
-  { watch = false, skipFormat = false, outDir = inDir } = {},
-) => {
-  const documentModels = getDirectories(inDir);
-  const documentModelConfigs = documentModels.reduce(
-    (obj, model) => ({
-      ...obj,
-      ...schemaConfig(model, inDir, outDir),
-    }),
-    {},
+function buildSchemasForModules(modules: ModuleSpecification[]) {
+  const schemaStrings: string[] = [];
+  for (const module of modules) {
+    schemaStrings.push(`# ${module.name}`);
+    const operationsSchemas = module.operations
+      .map((operation) => operation.schema)
+      .filter((schema) => schema !== null);
+    schemaStrings.push(...operationsSchemas);
+  }
+  return schemaStrings;
+}
+
+function buildGraphqlDocumentStringForSpecification(
+  specification: DocumentSpecification,
+) {
+  const customScalarSchemas = Object.keys(scalars)
+    .map((k) => `scalar ${k}`)
+    .join("\n");
+  const stateSchemas = Object.values(specification.state).map(
+    (state) => state.schema,
   );
+  const moduleSchemas = buildSchemasForModules(specification.modules);
+
+  return [customScalarSchemas, ...stateSchemas, ...moduleSchemas];
+}
+
+async function formatContentWithPrettier(path: string, content: string) {
+  const formattedContent = await format(content, {
+    parser: "typescript",
+  });
+  return formattedContent;
+}
+
+type GenerateTypesAndZodSchemasFromGraphqlArgs = {
+  dirName: string;
+  schema: string;
+  skipFormat?: boolean;
+  writeFile?: boolean;
+  watch?: boolean;
+};
+export async function generateTypesAndZodSchemasFromGraphql(
+  args: GenerateTypesAndZodSchemasFromGraphqlArgs,
+) {
+  const { dirName, schema, skipFormat, writeFile, watch } = args;
+  const beforeOneFileWrite = skipFormat ? undefined : formatContentWithPrettier;
 
   const config: CodegenConfig = {
     overwrite: true,
-    generates: documentModelConfigs,
     watch,
     hooks: {
-      beforeOneFileWrite: skipFormat ? [] : [formatWithPrettierBeforeWrite],
+      beforeOneFileWrite,
+    },
+    generates: {
+      [`${dirName}/gen/schema/types.ts`]: {
+        schema,
+        config: typescriptConfig,
+        plugins: [
+          {
+            typescript: typescriptConfig,
+          },
+        ],
+      },
+      [`${dirName}/gen/schema/zod.ts`]: {
+        schema,
+        config: validationSchemaConfig,
+        plugins: [
+          {
+            "graphql-codegen-typescript-validation-schema":
+              validationSchemaConfig,
+          },
+        ],
+      },
     },
   };
 
-  return generate(config, true);
+  await generate(config, writeFile);
+}
+
+export async function generateDocumentModelZodSchemas(args: {
+  documentModelDirPath: string;
+  specification: DocumentSpecification;
+  writeFile?: boolean;
+  skipFormat?: boolean;
+  watch?: boolean;
+}) {
+  const {
+    documentModelDirPath,
+    specification,
+    writeFile = true,
+    skipFormat = false,
+    watch = false,
+  } = args;
+  const schema = buildGraphqlDocumentStringForSpecification(specification)
+    .filter(Boolean)
+    .join("\n\n");
+
+  await generateTypesAndZodSchemasFromGraphql({
+    dirName: documentModelDirPath,
+    schema,
+    writeFile,
+    skipFormat,
+    watch,
+  });
+
+  writeFileSync(path.join(documentModelDirPath, "schema.graphql"), schema);
+}
+
+export const generateSchemas = async (
+  inDir: string,
+  { watch = false, skipFormat = false, writeFile = true, outDir = inDir } = {},
+) => {
+  const dirs = getDirectories(inDir);
+  const inputs = dirs.map((dir) => {
+    const documentModelJsonFile = readFileSync(
+      path.join(dir.parentPath, dir.name, `${dir.name}.json`),
+      "utf-8",
+    );
+    const parsedJson = JSON.parse(
+      documentModelJsonFile,
+    ) as DocumentModelGlobalState;
+
+    const latestSpecification =
+      parsedJson.specifications[parsedJson.specifications.length - 1];
+
+    const schema = buildGraphqlDocumentStringForSpecification(
+      latestSpecification,
+    )
+      .filter(Boolean)
+      .join("\n\n");
+
+    return { dirName: path.join(outDir, dir.name), schema };
+  });
+
+  await Promise.all(
+    inputs.map(async ({ schema, dirName }) => {
+      await generateTypesAndZodSchemasFromGraphql({
+        schema,
+        dirName,
+        writeFile,
+        skipFormat,
+        watch,
+      });
+    }),
+  );
 };

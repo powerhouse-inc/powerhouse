@@ -1,4 +1,4 @@
-import { z } from "zod";
+import * as z from "zod";
 import type {
   SetTestIdInput,
   SetTestNameInput,
@@ -6,7 +6,7 @@ import type {
 } from "./types.js";
 
 type Properties<T> = Required<{
-  [K in keyof T]: z.ZodType<T[K], any, T[K]>;
+  [K in keyof T]: z.ZodType<T[K]>;
 }>;
 
 type definedNonNullAny = {};
@@ -37,7 +37,7 @@ export function SetTestNameInputSchema(): z.ZodObject<
 export function TestDocStateSchema(): z.ZodObject<Properties<TestDocState>> {
   return z.object({
     __typename: z.literal("TestDocState").optional(),
-    description: z.string().nullable(),
+    description: z.string().nullish(),
     id: z.number(),
     name: z.string(),
     value: z.string(),

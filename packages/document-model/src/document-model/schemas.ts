@@ -55,7 +55,7 @@ import { OperationScopeSchema } from "document-model/core";
 import { z } from "zod";
 
 type Properties<T> = Required<{
-  [K in keyof T]: z.ZodType<T[K], any, T[K]>;
+  [K in keyof T]: z.ZodType<T[K], T[K]>;
 }>;
 
 export function AddChangeLogItemInputSchema(): z.ZodObject<
@@ -262,7 +262,7 @@ export function DocumentSpecificationSchema(): z.ZodObject<
     changeLog: z.array(z.string()),
     modules: z.array(ModuleSchema()),
     state: ScopeStateSchema(),
-    version: z.number(),
+    version: z.number().int(),
   });
 }
 

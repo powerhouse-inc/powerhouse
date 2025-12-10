@@ -83,7 +83,7 @@
     "graphql-tag": "^2.12.6",
     "kysely": "^0.28.7",
     "uuid": "^11.1.0",
-    "zod": "^3.24.3"
+    "zod": "^4.1.13"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.2.17",

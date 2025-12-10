@@ -1,9 +1,12 @@
+scalar Unknown
+scalar DateTime
+scalar Attachment
+scalar Address
 scalar Amount_Tokens
 scalar EthereumAddress
-scalar Amount_Percentage
 scalar EmailAddress
+scalar Amount_Percentage
 scalar Date
-scalar DateTime
 scalar URL
 scalar Amount_Money
 scalar OLabel
@@ -15,6 +18,7 @@ scalar Amount_Currency
 scalar Amount_Crypto
 scalar Amount
 scalar Upload
+
 type DocumentEditorState {
   name: String!
   documentTypes: [DocumentTypeItem!]!

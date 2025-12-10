@@ -274,7 +274,7 @@ export const getDocumentModelSchemaTool = {
   outputSchema: {
     schema: DocumentModelGlobalStateSchema().describe(
       "Schema of the document model",
-    ) as z.ZodObject<Properties<DocumentModelGlobalState>>,
+    ) as unknown as z.ZodObject<Properties<DocumentModelGlobalState>>,
   },
 } as const satisfies ToolSchema;
 
