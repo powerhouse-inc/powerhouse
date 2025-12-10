@@ -86,6 +86,8 @@ function writeDocumentModelStateJsonFile({
 
 type GenerateDocumentModelFromSpecArgs = {
   project: Project;
+  version: number;
+  useVersioning: boolean;
   packageName: string;
   documentModelState: DocumentModelGlobalState;
   projectDir: string;
@@ -93,7 +95,6 @@ type GenerateDocumentModelFromSpecArgs = {
   documentModelsDirPath: string;
   documentModelDirName: string;
   documentModelDirPath: string;
-  version: number;
 } & DocumentModelVariableNames;
 async function generateDocumentModelForSpec({
   project,
@@ -104,6 +105,7 @@ async function generateDocumentModelForSpec({
   documentModelsDirPath,
   documentModelDirName,
   documentModelDirPath,
+  useVersioning,
   version,
   ...documentModelVariableNames
 }: GenerateDocumentModelFromSpecArgs) {
@@ -117,7 +119,7 @@ async function generateDocumentModelForSpec({
     );
   }
 
-  const versionDirName = `v${version}`;
+  const versionDirName = useVersioning ? `v${version}` : "";
 
   const documentModelVersionDirName = path.join(
     documentModelDirName,
@@ -164,6 +166,7 @@ async function generateDocumentModelForSpec({
     projectDir,
     packageName,
     version,
+    useVersioning,
     documentTypeId,
     documentModelState,
     initialGlobalState,
@@ -196,6 +199,8 @@ async function generateDocumentModelForSpec({
   makeSrcDirFiles(fileMakerArgs);
   makeDocumentModelModulesFile(fileMakerArgs);
 
+  if (!useVersioning) return;
+
   const previousVersionDirPath = getPreviousVersionDirPath(
     documentModelDirPath,
     version,
@@ -214,6 +219,7 @@ export async function tsMorphGenerateDocumentModel({
   projectDir,
   packageName,
   documentModelState,
+  useVersioning,
 }: GenerateDocumentModelArgs) {
   const project = buildTsMorphProject(projectDir);
   const { documentModelsSourceFilesPath } =
@@ -225,16 +231,16 @@ export async function tsMorphGenerateDocumentModel({
     documentModelsDirPath,
     documentModelDirName,
   );
-  const upgradesDirPath = path.join(documentModelDirPath, "upgrades");
   const documentModelVariableNames = getDocumentModelVariableNames(
     documentModelState.name,
   );
-  ensureDirectoriesExist(
-    project,
-    documentModelsDirPath,
-    documentModelDirPath,
-    upgradesDirPath,
-  );
+  ensureDirectoriesExist(project, documentModelsDirPath, documentModelDirPath);
+
+  const upgradesDirPath = path.join(documentModelDirPath, "upgrades");
+
+  if (useVersioning) {
+    ensureDirectoriesExist(project, upgradesDirPath);
+  }
 
   const documentModelPackageImportPath = path.join(
     packageName,
@@ -265,63 +271,80 @@ export async function tsMorphGenerateDocumentModel({
     );
   }
 
-  await Promise.all(
-    specVersions.map(
-      async (version) =>
-        await generateDocumentModelForSpec({
-          project,
-          version,
-          packageName,
-          documentModelState,
-          projectDir,
-          documentModelsDirPath,
-          documentModelDirName,
-          documentModelDirPath,
-          documentModelPackageImportPath,
-          ...documentModelVariableNames,
-        }),
-    ),
-  );
-
-  for (const version of specVersions) {
-    makeUpgradeFile({
-      version,
-      upgradesDirPath,
-      project,
-      documentModelPackageImportPath,
-      ...documentModelVariableNames,
-    });
-  }
-
   writeDocumentModelStateJsonFile({
     documentModelState,
     documentModelDirName,
     documentModelDirPath,
   });
 
-  makeDocumentModelIndexFile({
-    project,
-    documentModelDirPath,
-    latestVersion,
-  });
+  if (useVersioning) {
+    await Promise.all(
+      specVersions.map(
+        async (version) =>
+          await generateDocumentModelForSpec({
+            project,
+            version,
+            useVersioning: true,
+            packageName,
+            documentModelState,
+            projectDir,
+            documentModelsDirPath,
+            documentModelDirName,
+            documentModelDirPath,
+            documentModelPackageImportPath,
+            ...documentModelVariableNames,
+          }),
+      ),
+    );
 
-  createOrUpdateVersionConstantsFile({
-    project,
-    specVersions,
-    latestVersion,
-    upgradesDirPath,
-  });
+    for (const version of specVersions) {
+      makeUpgradeFile({
+        version,
+        upgradesDirPath,
+        project,
+        documentModelPackageImportPath,
+        ...documentModelVariableNames,
+      });
+    }
 
-  createOrUpdateUpgradeManifestFile({
-    project,
-    specVersions,
-    latestVersion,
-    upgradesDirPath,
-    documentModelId: documentModelState.id,
-    ...documentModelVariableNames,
-  });
+    makeDocumentModelIndexFile({
+      project,
+      documentModelDirPath,
+      latestVersion,
+    });
 
-  makeUpgradesIndexFile({ project, upgradesDirPath, specVersions });
+    createOrUpdateVersionConstantsFile({
+      project,
+      specVersions,
+      latestVersion,
+      upgradesDirPath,
+    });
+
+    createOrUpdateUpgradeManifestFile({
+      project,
+      specVersions,
+      latestVersion,
+      upgradesDirPath,
+      documentModelId: documentModelState.id,
+      ...documentModelVariableNames,
+    });
+
+    makeUpgradesIndexFile({ project, upgradesDirPath, specVersions });
+  } else {
+    await generateDocumentModelForSpec({
+      project,
+      useVersioning: false,
+      version: latestVersion,
+      packageName,
+      documentModelState,
+      projectDir,
+      documentModelsDirPath,
+      documentModelDirName,
+      documentModelDirPath,
+      documentModelPackageImportPath,
+      ...documentModelVariableNames,
+    });
+  }
 
   project.saveSync();
 }

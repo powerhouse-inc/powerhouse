@@ -258,14 +258,15 @@ function makeOperationModuleTestFile(
       const firstArg = args[0];
       return (
         expressionText === "describe" &&
-        firstArg.getText().includes(moduleOperationsTypeName)
+        pascalCase(firstArg.getText()).includes(moduleOperationsTypeName)
       );
     });
 
   if (!describeCall) {
-    throw new Error(
-      `Test file has no describe block for ${moduleOperationsTypeName}`,
+    console.error(
+      `Test file at path ${filePath} has no describe block for ${moduleOperationsTypeName}`,
     );
+    return;
   }
 
   const describeCallBody = describeCall

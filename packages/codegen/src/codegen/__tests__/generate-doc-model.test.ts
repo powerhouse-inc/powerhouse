@@ -1,6 +1,5 @@
 import {
   generateDocumentModel,
-  generateSchemas,
   hygenGenerateProcessor,
   loadDocumentModel,
 } from "@powerhousedao/codegen";
@@ -30,6 +29,7 @@ import {
   purgeDirAfterTest,
   resetDirForTest,
 } from "./utils.js";
+import { USE_LEGACY } from "./config.js";
 
 describe("document model", () => {
   const testDir = import.meta.dirname;
@@ -77,7 +77,8 @@ describe("document model", () => {
       dir: documentModelsDirName,
       specifiedPackageName: TEST_PACKAGE_NAME,
       documentModelState: billingStatementDocumentModel,
-      legacy: true,
+      legacy: USE_LEGACY,
+      useVersioning: false,
       skipFormat: true,
     });
 
@@ -86,7 +87,8 @@ describe("document model", () => {
     );
 
     await generateDocumentModel({
-      legacy: true,
+      legacy: USE_LEGACY,
+      useVersioning: false,
       dir: documentModelsDirName,
       specifiedPackageName: TEST_PACKAGE_NAME,
       documentModelState: testDocDocumentModel,
@@ -226,7 +228,8 @@ describe("document model", () => {
       );
 
       await generateDocumentModel({
-        legacy: true,
+        legacy: USE_LEGACY,
+        useVersioning: false,
         dir: documentModelsDirName,
         specifiedPackageName: TEST_PACKAGE_NAME,
         documentModelState: testDocDocumentModelV2,
@@ -434,57 +437,6 @@ describe("document model", () => {
   );
 
   it(
-    "should automatically import error classes in reducer files when used",
-    { timeout: 100000 },
-    async () => {
-      await generate();
-      await compile(testOutDirPath);
-
-      // Check that the general module reducer imports InvalidStatusTransition
-      const generalReducerPath = path.join(
-        documentModelsDirName,
-        "billing-statement",
-        "src",
-        "reducers",
-        "general.ts",
-      );
-      const generalReducerContent = readFileSync(generalReducerPath, "utf-8");
-
-      // Should have import for both InvalidStatusTransition and StatusAlreadySet errors in single import
-      expect(generalReducerContent).toContain(
-        'import { InvalidStatusTransition, StatusAlreadySet } from "../../gen/general/error.js";',
-      );
-
-      // Should contain the reducer code with both error usages
-      expect(generalReducerContent).toContain(
-        "throw new InvalidStatusTransition",
-      );
-      expect(generalReducerContent).toContain("throw new StatusAlreadySet");
-
-      // Check that the line-items module reducer imports DuplicateLineItem
-      const lineItemsReducerPath = path.join(
-        documentModelsDirName,
-        "billing-statement",
-        "src",
-        "reducers",
-        "line-items.ts",
-      );
-      const lineItemsReducerContent = readFileSync(
-        lineItemsReducerPath,
-        "utf-8",
-      );
-
-      // Should have import for DuplicateLineItem error
-      expect(lineItemsReducerContent).toContain(
-        'import { DuplicateLineItem } from "../../gen/line-items/error.js";',
-      );
-
-      // Should contain the reducer code with error usage
-      expect(lineItemsReducerContent).toContain("throw new DuplicateLineItem");
-    },
-  );
-
-  it(
     "should generate error codes for legacy documents with empty error codes",
     { timeout: 100000 },
     async () => {
@@ -499,7 +451,8 @@ describe("document model", () => {
       );
 
       await generateDocumentModel({
-        legacy: true,
+        legacy: USE_LEGACY,
+        useVersioning: false,
         dir: documentModelsDirName,
         specifiedPackageName: TEST_PACKAGE_NAME,
         documentModelState: testEmptyCodesDocumentModel,

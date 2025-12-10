@@ -54,6 +54,7 @@ async function loadDocumentModelsInDir(inDirName: string, testOutDir: string) {
       documentModelState,
       dir: documentModelsOutDir,
       legacy: false,
+      useVersioning: true,
       specifiedPackageName: "test",
     });
   }
