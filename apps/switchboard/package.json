@@ -41,6 +41,7 @@
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
+    "@renown/sdk": "workspace:*",
     "@pyroscope/nodejs": "^0.4.5",
     "@sentry/node": "^9.6.1",
     "body-parser": "^1.20.3",
