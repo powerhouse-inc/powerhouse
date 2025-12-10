@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 import { PGlite } from "@electric-sql/pglite";
 import {
+  CompositeChannelFactory,
   type Database,
   EventBus,
   ReactorBuilder,
   ReactorClientBuilder,
+  SyncBuilder,
 } from "@powerhousedao/reactor";
 import {
   VitePackageLoader,
@@ -168,6 +170,9 @@ async function initServer(serverPort: number, options: StartServerOptions) {
         ] as unknown as DocumentModelModule[]),
       )
       .withLegacyStorage(storage)
+      .withSync(
+        new SyncBuilder().withChannelFactory(new CompositeChannelFactory()),
+      )
       .withFeatures({
         legacyStorageEnabled: true,
       });
@@ -191,11 +196,16 @@ async function initServer(serverPort: number, options: StartServerOptions) {
       builder.withKysely(kysely);
     }
 
-    const client = new ReactorClientBuilder()
+    const module = await new ReactorClientBuilder()
       .withReactorBuilder(builder)
-      .build();
+      .buildModule();
 
-    return client;
+    const syncManager = module.reactorModule?.syncModule?.syncManager;
+    if (!syncManager) {
+      throw new Error("SyncManager not available from ReactorClientBuilder");
+    }
+
+    return { client: module.client, syncManager };
   };
 
   let defaultDriveUrl: undefined | string = undefined;
@@ -232,15 +242,11 @@ async function initServer(serverPort: number, options: StartServerOptions) {
     },
   );
 
-  const { driveServer } = api;
+  const { client, driveServer } = api;
 
   // Create default drive if provided
   if (options.drive) {
-    defaultDriveUrl = await addDefaultDrive(
-      driveServer,
-      options.drive,
-      serverPort,
-    );
+    defaultDriveUrl = await addDefaultDrive(client, options.drive, serverPort);
   }
 
   // add vite middleware after express app is initialized if applicable

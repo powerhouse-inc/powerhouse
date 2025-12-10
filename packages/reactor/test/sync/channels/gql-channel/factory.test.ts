@@ -2,7 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
 import { GqlChannelFactory } from "../../../../src/sync/channels/gql-channel-factory.js";
 import { GqlChannel } from "../../../../src/sync/channels/gql-channel.js";
-import type { ChannelConfig } from "../../../../src/sync/types.js";
+import type {
+  ChannelConfig,
+  RemoteFilter,
+} from "../../../../src/sync/types.js";
+
+const TEST_COLLECTION_ID = "test-collection";
+const TEST_FILTER: RemoteFilter = {
+  documentId: [],
+  scope: [],
+  branch: "main",
+};
 
 const createMockCursorStorage = (): ISyncCursorStorage => ({
   list: vi.fn(),
@@ -51,6 +61,8 @@ describe("GqlChannelFactory", () => {
         "test-remote",
         config,
         cursorStorage,
+        TEST_COLLECTION_ID,
+        TEST_FILTER,
       );
 
       expect(channel).toBeInstanceOf(GqlChannel);
@@ -84,6 +96,8 @@ describe("GqlChannelFactory", () => {
         "test-remote",
         config,
         cursorStorage,
+        TEST_COLLECTION_ID,
+        TEST_FILTER,
       );
 
       expect(channel).toBeInstanceOf(GqlChannel);
@@ -108,6 +122,8 @@ describe("GqlChannelFactory", () => {
         "test-remote",
         config,
         cursorStorage,
+        TEST_COLLECTION_ID,
+        TEST_FILTER,
       );
 
       expect(channel).toBeInstanceOf(GqlChannel);
@@ -128,7 +144,14 @@ describe("GqlChannelFactory", () => {
       };
 
       expect(() =>
-        factory.instance("test-id", "test-remote", config, cursorStorage),
+        factory.instance(
+          "test-id",
+          "test-remote",
+          config,
+          cursorStorage,
+          TEST_COLLECTION_ID,
+          TEST_FILTER,
+        ),
       ).toThrow(
         'GqlChannelFactory can only create channels of type "gql", got "internal"',
       );
@@ -144,7 +167,14 @@ describe("GqlChannelFactory", () => {
       };
 
       expect(() =>
-        factory.instance("test-id", "test-remote", config, cursorStorage),
+        factory.instance(
+          "test-id",
+          "test-remote",
+          config,
+          cursorStorage,
+          TEST_COLLECTION_ID,
+          TEST_FILTER,
+        ),
       ).toThrow(
         'GqlChannelFactory requires "url" parameter in config.parameters',
       );
@@ -162,7 +192,14 @@ describe("GqlChannelFactory", () => {
       };
 
       expect(() =>
-        factory.instance("test-id", "test-remote", config, cursorStorage),
+        factory.instance(
+          "test-id",
+          "test-remote",
+          config,
+          cursorStorage,
+          TEST_COLLECTION_ID,
+          TEST_FILTER,
+        ),
       ).toThrow(
         'GqlChannelFactory requires "url" parameter in config.parameters',
       );
@@ -180,7 +217,14 @@ describe("GqlChannelFactory", () => {
       };
 
       expect(() =>
-        factory.instance("test-id", "test-remote", config, cursorStorage),
+        factory.instance(
+          "test-id",
+          "test-remote",
+          config,
+          cursorStorage,
+          TEST_COLLECTION_ID,
+          TEST_FILTER,
+        ),
       ).toThrow(
         'GqlChannelFactory requires "url" parameter in config.parameters',
       );
@@ -199,7 +243,14 @@ describe("GqlChannelFactory", () => {
       };
 
       expect(() =>
-        factory.instance("test-id", "test-remote", config, cursorStorage),
+        factory.instance(
+          "test-id",
+          "test-remote",
+          config,
+          cursorStorage,
+          TEST_COLLECTION_ID,
+          TEST_FILTER,
+        ),
       ).toThrow('"authToken" parameter must be a string');
     });
 
@@ -216,7 +267,14 @@ describe("GqlChannelFactory", () => {
       };
 
       expect(() =>
-        factory.instance("test-id", "test-remote", config, cursorStorage),
+        factory.instance(
+          "test-id",
+          "test-remote",
+          config,
+          cursorStorage,
+          TEST_COLLECTION_ID,
+          TEST_FILTER,
+        ),
       ).toThrow('"pollIntervalMs" parameter must be a number');
     });
 
@@ -233,7 +291,14 @@ describe("GqlChannelFactory", () => {
       };
 
       expect(() =>
-        factory.instance("test-id", "test-remote", config, cursorStorage),
+        factory.instance(
+          "test-id",
+          "test-remote",
+          config,
+          cursorStorage,
+          TEST_COLLECTION_ID,
+          TEST_FILTER,
+        ),
       ).toThrow('"retryBaseDelayMs" parameter must be a number');
     });
 
@@ -250,7 +315,14 @@ describe("GqlChannelFactory", () => {
       };
 
       expect(() =>
-        factory.instance("test-id", "test-remote", config, cursorStorage),
+        factory.instance(
+          "test-id",
+          "test-remote",
+          config,
+          cursorStorage,
+          TEST_COLLECTION_ID,
+          TEST_FILTER,
+        ),
       ).toThrow('"retryMaxDelayMs" parameter must be a number');
     });
 
@@ -267,7 +339,14 @@ describe("GqlChannelFactory", () => {
       };
 
       expect(() =>
-        factory.instance("test-id", "test-remote", config, cursorStorage),
+        factory.instance(
+          "test-id",
+          "test-remote",
+          config,
+          cursorStorage,
+          TEST_COLLECTION_ID,
+          TEST_FILTER,
+        ),
       ).toThrow('"maxFailures" parameter must be a number');
     });
   });
@@ -300,12 +379,16 @@ describe("GqlChannelFactory", () => {
         "remote-1",
         config1,
         cursorStorage1,
+        TEST_COLLECTION_ID,
+        TEST_FILTER,
       );
       const channel2 = factory.instance(
         "id-2",
         "remote-2",
         config2,
         cursorStorage2,
+        TEST_COLLECTION_ID,
+        TEST_FILTER,
       );
 
       expect(channel1).toBeInstanceOf(GqlChannel);
@@ -338,6 +421,8 @@ describe("GqlChannelFactory", () => {
         "test-remote",
         config,
         cursorStorage,
+        TEST_COLLECTION_ID,
+        TEST_FILTER,
       );
 
       expect(channel).toBeInstanceOf(GqlChannel);
@@ -364,6 +449,8 @@ describe("GqlChannelFactory", () => {
         "test-remote",
         config,
         cursorStorage,
+        TEST_COLLECTION_ID,
+        TEST_FILTER,
       );
 
       expect(channel).toBeInstanceOf(GqlChannel);

@@ -180,6 +180,74 @@ export async function requestPublicDrive(
   return drive;
 }
 
+export async function requestPublicDriveFromReactor(
+  url: string,
+  headers?: Record<string, string>,
+): Promise<DriveInfo> {
+  // Extract driveId from URL (e.g., "http://localhost:4001/d/abc123" -> "abc123")
+  const driveId = url.split("/").pop() ?? "";
+
+  // Construct the new reactor subgraph URL from the base URL
+  // e.g., "http://localhost:4001/d/abc123" -> "http://localhost:4001/graphql/r"
+  const parsedUrl = new URL(url);
+  const reactorGraphqlUrl = `${parsedUrl.protocol}//${parsedUrl.host}/graphql/r`;
+
+  let drive: DriveInfo;
+  try {
+    const result = await requestGraphql<{
+      document: {
+        document: {
+          id: string;
+          name: string;
+          slug: string | null;
+          state: Record<string, unknown>;
+        };
+      } | null;
+    }>(
+      reactorGraphqlUrl,
+      gql`
+        query getDocument($identifier: String!) {
+          document(identifier: $identifier) {
+            document {
+              id
+              name
+              slug
+              state
+            }
+          }
+        }
+      `,
+      { identifier: driveId },
+      headers,
+    );
+
+    if (result.errors?.length || !result.document?.document) {
+      throw result.errors?.at(0) ?? new Error("Drive not found");
+    }
+
+    const doc = result.document.document;
+    const globalState = (
+      doc.state as {
+        global?: { icon?: string; meta?: { preferredEditor?: string } };
+      }
+    ).global;
+
+    // Transform PHDocument to DriveInfo shape
+    drive = {
+      id: doc.id,
+      name: doc.name,
+      slug: doc.slug ?? "",
+      icon: globalState?.icon,
+      meta: globalState?.meta,
+    };
+  } catch (e) {
+    logger.error(e);
+    throw new Error("Couldn't find drive info");
+  }
+
+  return drive;
+}
+
 export async function fetchDocument<TState extends PHBaseState = PHBaseState>(
   url: string,
   documentId: string,

@@ -1,5 +1,5 @@
 import {
-  GqlChannelFactory,
+  CompositeChannelFactory,
   JobStatus,
   OperationEventTypes,
   ReactorBuilder,
@@ -114,18 +114,18 @@ async function setupTwoReactorsWithGqlChannel(): Promise<TwoReactorSetup> {
 
   const resolverBridge = createResolverBridge(syncManagerRegistry);
 
-  const gqlChannelFactoryA = new GqlChannelFactory();
-  const gqlChannelFactoryB = new GqlChannelFactory();
+  const channelFactoryA = new CompositeChannelFactory();
+  const channelFactoryB = new CompositeChannelFactory();
 
   const reactorAModule = await new ReactorBuilder()
-    .withSync(new SyncBuilder().withChannelFactory(gqlChannelFactoryA))
+    .withSync(new SyncBuilder().withChannelFactory(channelFactoryA))
     .buildModule();
   const reactorA = reactorAModule.reactor;
   const eventBusA = reactorAModule.eventBus;
   const syncManagerA = reactorAModule.syncModule!.syncManager;
 
   const reactorBModule = await new ReactorBuilder()
-    .withSync(new SyncBuilder().withChannelFactory(gqlChannelFactoryB))
+    .withSync(new SyncBuilder().withChannelFactory(channelFactoryB))
     .buildModule();
   const reactorB = reactorBModule.reactor;
   const eventBusB = reactorBModule.eventBus;
@@ -156,36 +156,22 @@ async function setupTwoReactorsWithGqlChannel(): Promise<TwoReactorSetup> {
     fetchFn: resolverBridge,
   };
 
-  const remoteAtoB = await syncManagerA.add(
+  // ReactorA adds remote pointing to B
+  // touchChannel automatically creates receiving channel on B
+  await syncManagerA.add(
     "remoteB",
     "collection1",
     { type: "gql", parameters: gqlParamsToB },
     filter,
   );
 
+  // ReactorB adds remote pointing to A
+  // touchChannel automatically creates receiving channel on A
   await syncManagerB.add(
-    "incoming-from-A",
-    "collection1",
-    { type: "gql", parameters: gqlParamsToA },
-    filter,
-    {},
-    remoteAtoB.id,
-  );
-
-  const remoteBtoA = await syncManagerB.add(
     "remoteA",
     "collection1",
     { type: "gql", parameters: gqlParamsToA },
     filter,
-  );
-
-  await syncManagerA.add(
-    "incoming-from-B",
-    "collection1",
-    { type: "gql", parameters: gqlParamsToB },
-    filter,
-    {},
-    remoteBtoA.id,
   );
 
   return { reactorA, reactorB, eventBusA, eventBusB };

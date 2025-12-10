@@ -658,7 +658,7 @@ export async function deleteDocuments(
   }
 }
 
-export async function createChannel(
+export async function touchChannel(
   syncManager: ISyncManager,
   args: {
     input: {
@@ -693,7 +693,7 @@ export async function createChannel(
       args.input.name,
       args.input.collectionId,
       {
-        type: "gql",
+        type: "internal",
         parameters: {},
       },
       filter,

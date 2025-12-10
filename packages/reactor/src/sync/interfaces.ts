@@ -38,6 +38,13 @@ export interface IChannel {
   deadLetter: Mailbox<SyncOperation>;
 
   /**
+   * Initializes the channel asynchronously.
+   * For remote channels, this typically involves registering the channel on the remote server.
+   * Must be called after construction before the channel is used.
+   */
+  init(): Promise<void>;
+
+  /**
    * Shuts down the channel and prevents further operations.
    */
   shutdown(): void;
@@ -57,6 +64,8 @@ export interface IChannelFactory {
    * @param remoteName - Name of the remote
    * @param config - Channel configuration including type and parameters
    * @param cursorStorage - Storage for persisting synchronization cursors
+   * @param collectionId - Collection ID to synchronize
+   * @param filter - Filter to apply to operations
    * @returns A new channel instance
    */
   instance(
@@ -64,6 +73,8 @@ export interface IChannelFactory {
     remoteName: string,
     config: ChannelConfig,
     cursorStorage: ISyncCursorStorage,
+    collectionId: string,
+    filter: RemoteFilter,
   ): IChannel;
 }
 

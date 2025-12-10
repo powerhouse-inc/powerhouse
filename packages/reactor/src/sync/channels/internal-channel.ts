@@ -54,6 +54,14 @@ export class InternalChannel implements IChannel {
   }
 
   /**
+   * Initializes the channel. For InternalChannel, this is a no-op since
+   * in-memory channels don't need remote registration.
+   */
+  async init(): Promise<void> {
+    // No-op for internal channels
+  }
+
+  /**
    * Receives a sync envelope from a peer channel.
    *
    * This method is called by the peer's send function to deliver an envelope

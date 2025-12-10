@@ -465,7 +465,7 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
-      createChannel: async (
+      touchChannel: async (
         _parent: unknown,
         args: {
           input: {
@@ -480,14 +480,14 @@ export class ReactorSubgraph extends BaseSubgraph {
           };
         },
       ) => {
-        this.logger.debug("createChannel", args);
+        this.logger.debug("touchChannel", args);
         if (!this.syncManager) {
           throw new Error("SyncManager not available");
         }
         try {
-          return await resolvers.createChannel(this.syncManager, args);
+          return await resolvers.touchChannel(this.syncManager, args);
         } catch (error) {
-          this.logger.error("Error in createChannel:", error);
+          this.logger.error("Error in touchChannel:", error);
           throw error;
         }
       },

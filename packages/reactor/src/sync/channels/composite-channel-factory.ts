@@ -2,22 +2,27 @@ import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import type { IChannel, IChannelFactory } from "../interfaces.js";
 import type { ChannelConfig, RemoteFilter } from "../types.js";
 import { GqlChannel, type GqlChannelConfig } from "./gql-channel.js";
+import { InternalChannel } from "./internal-channel.js";
+import type { SyncEnvelope } from "../types.js";
 
 /**
- * Factory for creating GqlChannel instances.
+ * Factory for creating channel instances of multiple types.
  *
- * Extracts GraphQL-specific configuration from ChannelConfig.parameters and
- * instantiates GqlChannel instances for network-based synchronization.
+ * Supports both "gql" channels for network-based synchronization and
+ * "internal" channels for in-process communication.
  */
-export class GqlChannelFactory implements IChannelFactory {
+export class CompositeChannelFactory implements IChannelFactory {
   /**
-   * Creates a new GqlChannel instance with the given configuration.
-   * See GqlChannelConfig for the expected parameters.
+   * Creates a new channel instance based on the configuration type.
    *
+   * @param remoteId - Unique identifier for the remote
+   * @param remoteName - Human-readable name for the remote
    * @param config - Channel configuration including type and parameters
    * @param cursorStorage - Storage for persisting synchronization cursors
-   * @returns A new GqlChannel instance
-   * @throws Error if config.type is not "gql" or required parameters are missing
+   * @param collectionId - Collection ID for filtering
+   * @param filter - Remote filter configuration
+   * @returns A new channel instance
+   * @throws Error if config.type is not supported or required parameters are missing
    */
   instance(
     remoteId: string,
@@ -27,21 +32,41 @@ export class GqlChannelFactory implements IChannelFactory {
     collectionId: string,
     filter: RemoteFilter,
   ): IChannel {
-    if (config.type !== "gql") {
-      throw new Error(
-        `GqlChannelFactory can only create channels of type "gql", got "${config.type}"`,
+    if (config.type === "gql") {
+      return this.createGqlChannel(
+        remoteId,
+        remoteName,
+        config,
+        cursorStorage,
+        collectionId,
+        filter,
       );
     }
 
-    // Extract and validate required parameters
+    if (config.type === "internal") {
+      return this.createInternalChannel(remoteId, remoteName, cursorStorage);
+    }
+
+    throw new Error(
+      `CompositeChannelFactory does not support channel type "${config.type}"`,
+    );
+  }
+
+  private createGqlChannel(
+    remoteId: string,
+    remoteName: string,
+    config: ChannelConfig,
+    cursorStorage: ISyncCursorStorage,
+    collectionId: string,
+    filter: RemoteFilter,
+  ): GqlChannel {
     const url = config.parameters.url;
     if (typeof url !== "string" || !url) {
       throw new Error(
-        'GqlChannelFactory requires "url" parameter in config.parameters',
+        'CompositeChannelFactory requires "url" parameter for gql channels',
       );
     }
 
-    // Extract optional parameters with validation
     const gqlConfig: GqlChannelConfig = {
       url,
       collectionId,
@@ -91,5 +116,17 @@ export class GqlChannelFactory implements IChannelFactory {
     }
 
     return new GqlChannel(remoteId, remoteName, cursorStorage, gqlConfig);
+  }
+
+  private createInternalChannel(
+    remoteId: string,
+    remoteName: string,
+    cursorStorage: ISyncCursorStorage,
+  ): InternalChannel {
+    const noopSend = (_envelope: SyncEnvelope): void => {
+      // Internal channels created via touchChannel are receive-only
+    };
+
+    return new InternalChannel(remoteId, remoteName, cursorStorage, noopSend);
   }
 }

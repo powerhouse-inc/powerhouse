@@ -2,7 +2,7 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
 import { getConfig } from "@powerhousedao/config/node";
-import type { IReactorClient } from "@powerhousedao/reactor";
+import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
 import { setupMcpServer } from "@powerhousedao/reactor-mcp";
 import devcert from "devcert";
 import type {
@@ -142,6 +142,7 @@ async function setupGraphQLManager(
   client: IReactorClient,
   relationalDb: IRelationalDb,
   analyticsStore: IAnalyticsStore,
+  syncManager: ISyncManager,
   subgraphs: {
     extended: Map<string, SubgraphClass[]>;
     core: SubgraphClass[];
@@ -164,6 +165,7 @@ async function setupGraphQLManager(
     client,
     relationalDb,
     analyticsStore,
+    syncManager,
     {
       enabled: auth?.enabled ?? false,
       guests: auth?.guests ?? [],
@@ -429,6 +431,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
 async function _setupAPI(
   reactor: IDocumentDriveServer,
   reactorClient: IReactorClient,
+  syncManager: ISyncManager,
   app: Express,
   port: number,
   packages: PackageManager,
@@ -530,6 +533,7 @@ async function _setupAPI(
     reactorClient,
     relationalDb,
     analyticsStore,
+    syncManager,
     {
       extended: subgraphs,
       core: coreSubgraphs,
@@ -572,6 +576,7 @@ async function _setupAPI(
 export async function startAPI(
   driveServer: IDocumentDriveServer,
   client: IReactorClient,
+  syncManager: ISyncManager,
   options: Options,
 ): Promise<API> {
   const {
@@ -595,6 +600,7 @@ export async function startAPI(
   return _setupAPI(
     driveServer,
     client,
+    syncManager,
     app,
     port,
     packages,
@@ -614,7 +620,7 @@ export async function startAPI(
  * to create the drive server and client instances with the appropriate dependencies.
  *
  * @param driveServerInitializer - Initializer function that creates the document drive server with document models.
- * @param clientInitializer - Initializer function that creates the reactor client with the drive server.
+ * @param clientInitializer - Initializer function that creates the reactor client and sync manager with the drive server.
  * @param options - Additional options for server configuration.
  *
  * @returns The API server components along with the created drive server and client instances.
@@ -626,7 +632,7 @@ export async function initializeAndStartAPI(
   clientInitializer: (
     driveServer: IDocumentDriveServer,
     documentModels: DocumentModelModule[],
-  ) => Promise<IReactorClient>,
+  ) => Promise<{ client: IReactorClient; syncManager: ISyncManager }>,
   options: Options,
 ): Promise<
   API & { driveServer: IDocumentDriveServer; client: IReactorClient }
@@ -643,11 +649,15 @@ export async function initializeAndStartAPI(
 
   const { documentModels, processors, subgraphs } = await packages.init();
   const reactor = await driveServerInitializer(documentModels);
-  const reactorClient = await clientInitializer(reactor, documentModels);
+  const { client: reactorClient, syncManager } = await clientInitializer(
+    reactor,
+    documentModels,
+  );
 
   const api = await _setupAPI(
     reactor,
     reactorClient,
+    syncManager,
     app,
     port,
     packages,

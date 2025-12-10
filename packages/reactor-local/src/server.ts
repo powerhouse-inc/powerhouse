@@ -134,9 +134,15 @@ const startServer = async (
       legacyStorageEnabled: true,
     });
 
-  const client = await new ReactorClientBuilder()
+  const clientModule = await new ReactorClientBuilder()
     .withReactorBuilder(builder)
-    .build();
+    .buildModule();
+
+  const client = clientModule.client;
+  const syncManager = clientModule.reactorModule?.syncModule?.syncManager;
+  if (!syncManager) {
+    throw new Error("SyncManager not available from ReactorClientBuilder");
+  }
 
   // init drive server + conditionally add a default drive
   await driveServer.initialize();
@@ -148,7 +154,7 @@ const startServer = async (
   const packageLoader = vite ? VitePackageLoader.build(vite) : undefined;
 
   // start api
-  const api = await startAPI(driveServer, client, {
+  const api = await startAPI(driveServer, client, syncManager, {
     port: serverPort,
     dbPath,
     https: options?.https,
