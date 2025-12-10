@@ -26,7 +26,7 @@ export class BaseSubgraph implements ISubgraph {
   reactorClient: IReactorClient;
   graphqlManager: GraphQLManager;
   relationalDb: IRelationalDb;
-  syncManager?: ISyncManager;
+  syncManager: ISyncManager;
   documentPermissionService?: DocumentPermissionService;
 
   constructor(args: SubgraphArgs) {

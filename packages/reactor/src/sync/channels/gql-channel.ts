@@ -199,16 +199,41 @@ export class GqlChannel implements IChannel {
               hash
               skip
               error
-              resultingState
               id
-              action
+              action {
+                id
+                type
+                timestampUtcMs
+                input
+                scope
+                attachments {
+                  data
+                  mimeType
+                  hash
+                  extension
+                  fileName
+                }
+                context {
+                  signer {
+                    user {
+                      address
+                      networkId
+                      chainId
+                    }
+                    app {
+                      name
+                      key
+                    }
+                    signatures
+                  }
+                }
+              }
             }
             context {
               documentId
               documentType
               scope
               branch
-              resultingState
             }
           }
           cursor {
@@ -322,7 +347,6 @@ export class GqlChannel implements IChannel {
           hash: opWithContext.operation.hash,
           skip: opWithContext.operation.skip,
           error: opWithContext.operation.error,
-          resultingState: opWithContext.operation.resultingState,
           id: opWithContext.operation.id,
           action: opWithContext.operation.action,
         },

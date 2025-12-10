@@ -13,7 +13,7 @@ import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHt
 import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin/landingPage/default";
 import { expressMiddleware } from "@as-integrations/express4";
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import type { IReactorClient } from "@powerhousedao/reactor";
+import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
 import type {
   Context,
   ISubgraph,
@@ -80,6 +80,7 @@ export class GraphQLManager {
     private readonly reactorClient: IReactorClient,
     private readonly relationalDb: IRelationalDb,
     private readonly analyticsStore: IAnalyticsStore,
+    private readonly syncManager: ISyncManager,
     authConfig?: AuthConfig,
     documentPermissionService?: DocumentPermissionService,
   ) {
@@ -200,6 +201,7 @@ export class GraphQLManager {
       reactor: this.reactor,
       reactorClient: this.reactorClient,
       graphqlManager: this,
+      syncManager: this.syncManager,
       path: this.path,
       documentPermissionService: this.documentPermissionService,
     });
