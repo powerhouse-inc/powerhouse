@@ -81,3 +81,11 @@ export function extractDriveIdFromPath(path: string) {
   const driveId = extractDriveIdFromSlug(driveSlug);
   return driveId;
 }
+
+/**
+ * Creates a URL string with the given pathname while preserving existing query parameters.
+ */
+export function createUrlWithPreservedParams(pathname: string): string {
+  const search = window.location.search;
+  return search ? `${pathname}${search}` : pathname;
+}
