@@ -22,6 +22,9 @@
       "path": "../../packages/builder-tools"
     },
     {
+      "path": "../../packages/renown"
+    },
+    {
       "path": "../../apps/switchboard"
     }
   ]

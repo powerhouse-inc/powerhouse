@@ -46,6 +46,7 @@
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/switchboard": "workspace:*",
+    "@renown/sdk": "workspace:*",
     "colorette": "^2.0.20",
     "commander": "^12.1.0",
     "read-pkg": "^9.0.1",

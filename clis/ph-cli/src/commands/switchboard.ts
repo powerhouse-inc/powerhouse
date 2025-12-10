@@ -14,7 +14,16 @@ async function startLocalSwitchboard(options: LocalSwitchboardOptions) {
   const { startSwitchboard } = Switchboard;
 
   // Extract only the props that switchboard expects
-  const { port: rawPort, configFile, dev, dbPath, packages } = options;
+  const {
+    port: rawPort,
+    configFile,
+    dev,
+    dbPath,
+    packages,
+    useIdentity,
+    keypairPath,
+    requireIdentity,
+  } = options;
 
   const port = typeof rawPort === "string" ? parseInt(rawPort) : rawPort;
 
@@ -24,6 +33,9 @@ async function startLocalSwitchboard(options: LocalSwitchboardOptions) {
     dev,
     dbPath,
     packages,
+    useIdentity,
+    keypairPath,
+    requireIdentity,
   });
 }
 
@@ -59,9 +71,26 @@ export function switchboardCommand(program: Command) {
       "base path for the API endpoints (sets the BASE_PATH environment variable)",
     )
     .option("--mcp", "enable Mcp route at /mcp. Default: true")
+    .option(
+      "--use-identity",
+      "enable identity using keypair from ph login (uses ~/.ph/keypair.json)",
+    )
+    .option(
+      "--keypair-path <path>",
+      "path to custom keypair file for identity",
+    )
+    .option(
+      "--require-identity",
+      "require existing keypair, fail if not found (implies --use-identity)",
+    )
     .action(async (...args: [LocalSwitchboardOptions]) => {
-      const { defaultDriveUrl } = await runStartLocalSwitchboard(...args);
+      const { defaultDriveUrl, connectCrypto } =
+        await runStartLocalSwitchboard(...args);
       console.log("   ➜  Switchboard:", defaultDriveUrl);
+      if (connectCrypto) {
+        const did = await connectCrypto.did();
+        console.log("   ➜  Identity:", did);
+      }
     });
 
   setCustomHelp(command, switchboardHelp);

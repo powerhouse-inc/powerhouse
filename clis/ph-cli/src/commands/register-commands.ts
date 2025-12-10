@@ -5,6 +5,7 @@ import { helpCommand } from "./help.js";
 import { inspectCommand } from "./inspect.js";
 import { installCommand } from "./install.js";
 import { listCommand } from "./list.js";
+import { loginCommand } from "./login.js";
 import { migrateCommand } from "./migrate.js";
 import { serviceCommand } from "./service.js";
 import { switchboardCommand } from "./switchboard.js";
@@ -20,6 +21,7 @@ export const commands = [
   serviceCommand,
   listCommand,
   inspectCommand,
+  loginCommand,
   switchboardCommand,
   vetraCommand,
   migrateCommand,

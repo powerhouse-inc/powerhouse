@@ -20,6 +20,7 @@ export const PH_CLI_COMMANDS = [
   "list",
   "inspect",
   "version",
+  "login",
 ];
 export const POWERHOUSE_CONFIG_FILE = "powerhouse.config.json";
 export const HOME_DIR = homedir();
