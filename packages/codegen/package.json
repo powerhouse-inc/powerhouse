@@ -51,6 +51,7 @@
     "kysely-pglite": "^0.6.1",
     "prettier": "^3.6.2",
     "read-pkg": "^9.0.1",
+    "semver": "^7.7.3",
     "ts-morph": "^26.0.0",
     "zocker": "^3.0.0"
   },

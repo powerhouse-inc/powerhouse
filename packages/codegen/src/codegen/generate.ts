@@ -8,7 +8,8 @@ import { paramCase } from "change-case";
 import type { DocumentModelGlobalState } from "document-model";
 import fs from "node:fs";
 import path, { join } from "node:path";
-import { readPackage } from "read-pkg";
+import { readPackage, type NormalizedPackageJson } from "read-pkg";
+import semver from "semver";
 import { TSMorphCodeGenerator } from "../ts-morph-generator/index.js";
 import { tsMorphGenerateEditor } from "../ts-morph-utils/file-builders/document-editor.js";
 import {
@@ -145,10 +146,12 @@ export async function generateDocumentModel(args: GenerateDocumentModelArgs) {
     legacy,
     ...hygenArgs
   } = args;
-  const packageNameFromPackageJson = await readPackage().then(
-    (pkg) => pkg.name,
-  );
+  const packageJson = await readPackage();
+  const packageNameFromPackageJson = packageJson.name;
   const packageName = specifiedPackageName || packageNameFromPackageJson;
+  const zodSemverString = findZodDependencyInPackageJson(packageJson);
+  ensureZodVersionIsSufficient(zodSemverString);
+
   const projectDir = path.dirname(dir);
   if (legacy) {
     await hygenGenerateDocumentModel(
@@ -180,6 +183,27 @@ export async function generateDocumentModel(args: GenerateDocumentModelArgs) {
       packageName,
       documentModelState,
     });
+  }
+}
+
+function findZodDependencyInPackageJson(
+  packageJson: NormalizedPackageJson,
+): string | undefined {
+  const dependencies = {
+    ...packageJson.dependencies,
+    ...packageJson.devDependencies,
+  };
+  const zodDependency = dependencies["zod"];
+  return zodDependency;
+}
+
+function ensureZodVersionIsSufficient(zodSemverString: string | undefined) {
+  if (!zodSemverString) return;
+  const isSufficient = semver.satisfies("4.1.13", zodSemverString);
+  if (!isSufficient) {
+    throw new Error(
+      `Your version of zod "${zodSemverString}" is out of date. Please install zod version 4.x to continue.`,
+    );
   }
 }
 

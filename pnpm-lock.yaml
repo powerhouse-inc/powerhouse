@@ -811,6 +811,9 @@ importers:
       read-pkg:
         specifier: ^9.0.1
         version: 9.0.1
+      semver:
+        specifier: ^7.7.3
+        version: 7.7.3
       ts-morph:
         specifier: ^26.0.0
         version: 26.0.0
