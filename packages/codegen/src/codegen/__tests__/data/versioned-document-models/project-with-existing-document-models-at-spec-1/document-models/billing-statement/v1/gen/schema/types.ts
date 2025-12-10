@@ -125,10 +125,6 @@ export type EditBillingStatementInput = {
   notes?: InputMaybe<Scalars["String"]["input"]>;
 };
 
-export type EditBillingStatementTestInput = {
-  test: Scalars["String"]["input"];
-};
-
 export type EditContributorInput = {
   contributor: Scalars["PHID"]["input"];
 };

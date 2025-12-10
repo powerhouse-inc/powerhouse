@@ -47,18 +47,6 @@ export const documentModel: DocumentModelGlobalState = {
               scope: "global",
             },
             {
-              id: "obKvjYTcH1TDFjSO5DGtmC9HS8w=",
-              name: "EDIT_BILLING_STATEMENT_TEST",
-              description: "",
-              schema:
-                "input EditBillingStatementTestInput {\n  test: String! \n}",
-              template: "",
-              reducer: "",
-              errors: [],
-              examples: [],
-              scope: "global",
-            },
-            {
               id: "pkU1fg9dl0SDxHb+294KsqUDMN4=",
               name: "EDIT_CONTRIBUTOR",
               description: "",

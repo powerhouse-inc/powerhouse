@@ -81,6 +81,10 @@ enum BillingStatementUnitInput {
 
 
 
+input EditBillingStatementTestInput {
+  test: String! 
+}
+
 input EditBillingStatementInput {
   dateIssued: DateTime
   dateDue: DateTime

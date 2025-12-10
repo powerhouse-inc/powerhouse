@@ -4,7 +4,7 @@ import type {
   ModuleSpecification,
   OperationSpecification,
 } from "document-model";
-import type { DocumentModelVariableNames } from "../../../name-builders/types.js";
+import type { DocumentModelTemplateInputs } from "../../../name-builders/types.js";
 
 function makePascalCaseOperationName(operation: OperationSpecification) {
   if (!operation.name) {
@@ -127,7 +127,7 @@ function makeModuleOperationsCaseStatements(
 }
 
 export const documentModelGenReducerFileTemplate = (
-  v: DocumentModelVariableNames,
+  v: DocumentModelTemplateInputs,
 ) =>
   ts`
 // TODO: remove eslint-disable rules once refactor is done
@@ -135,7 +135,7 @@ export const documentModelGenReducerFileTemplate = (
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import type { StateReducer } from "document-model";
 import { isDocumentAction, createReducer } from "document-model/core";
-import type { ${v.phStateName} } from "${v.documentModelDir}";
+import type { ${v.phStateName} } from "${v.versionedDocumentModelPackageImportPath}";
 
 ${makeModulesOperationsImports(v.modules, v.camelCaseDocumentType)}
 

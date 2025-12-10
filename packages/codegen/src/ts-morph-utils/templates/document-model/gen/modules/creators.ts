@@ -2,8 +2,7 @@ import { ts } from "@tmpl/core";
 import { camelCase, constantCase, pascalCase } from "change-case";
 import type {
   ActionFromOperation,
-  DocumentModelOperationsModuleVariableNames,
-  DocumentModelVariableNames,
+  DocumentModelTemplateInputsWithModule,
 } from "../../../../name-builders/types.js";
 
 function makeDocumentModelTypeImports(actions: ActionFromOperation[]) {
@@ -91,7 +90,7 @@ function makeActionCreatorsWithoutInput(actions: ActionFromOperation[]) {
 }
 
 export const documentModelOperationsModuleCreatorsFileTemplate = (
-  v: DocumentModelVariableNames & DocumentModelOperationsModuleVariableNames,
+  v: DocumentModelTemplateInputsWithModule,
 ) =>
   ts`
 

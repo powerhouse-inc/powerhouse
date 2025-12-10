@@ -7,7 +7,8 @@ type MakeLegacyIndexFileArgs = {
   /** The directory containing the module.ts files to generate from */
   modulesDirPath: string;
   modules: {
-    name: string;
+    unversionedName: string;
+    versionedName: string | undefined;
     moduleSpecifier: string;
   }[];
 };
@@ -35,8 +36,12 @@ export function makeLegacyIndexFile({
   }
 
   indexSourceFile.addExportDeclarations(
-    modules.map(({ name, moduleSpecifier }) => ({
-      namedExports: [name],
+    modules.map(({ versionedName, unversionedName, moduleSpecifier }) => ({
+      namedExports: [
+        versionedName
+          ? `${unversionedName} as ${versionedName}`
+          : unversionedName,
+      ],
       moduleSpecifier,
     })),
   );

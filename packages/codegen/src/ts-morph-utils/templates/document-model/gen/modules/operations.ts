@@ -3,7 +3,7 @@ import { camelCase, pascalCase } from "change-case";
 import type { ModuleSpecification } from "document-model";
 import type {
   ActionFromOperation,
-  AllDocumentModelVariableNames,
+  DocumentModelTemplateInputsWithModule,
 } from "../../../../name-builders/types.js";
 import { getActionTypeName } from "../../../utils.js";
 
@@ -89,7 +89,7 @@ function getOperationsInterfaceFields(
 }
 
 export const documentModelOperationsModuleOperationsFileTemplate = (
-  v: AllDocumentModelVariableNames,
+  v: DocumentModelTemplateInputsWithModule,
 ) =>
   ts`
 import { type SignalDispatch } from 'document-model';

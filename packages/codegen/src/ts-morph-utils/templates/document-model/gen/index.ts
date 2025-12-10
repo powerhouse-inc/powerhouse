@@ -1,7 +1,7 @@
 import { ts } from "@tmpl/core";
 import { paramCase } from "change-case";
 import type { ModuleSpecification } from "document-model";
-import type { DocumentModelVariableNames } from "../../../name-builders/types.js";
+import type { DocumentModelTemplateInputs } from "../../../name-builders/types.js";
 
 function buildModuleOperationsExports(module: ModuleSpecification) {
   const moduleDirName = paramCase(module.name);
@@ -13,7 +13,7 @@ function buildModulesOperationsExports(modules: ModuleSpecification[]) {
 }
 
 export const documentModelGenIndexFileTemplate = (
-  v: DocumentModelVariableNames,
+  v: DocumentModelTemplateInputs,
 ) =>
   ts`
 export * from './actions.js';

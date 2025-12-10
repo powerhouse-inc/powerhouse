@@ -1,4 +1,8 @@
-import type { OperationErrorSpecification } from "document-model";
+import type {
+  ModuleSpecification,
+  OperationErrorSpecification,
+} from "document-model";
+import type { DocumentModelFileMakerArgs } from "../file-builders/document-model/types.js";
 import type {
   getDocumentModelOperationsModuleVariableNames,
   getDocumentModelVariableNames,
@@ -12,7 +16,12 @@ export type DocumentModelOperationsModuleVariableNames = ReturnType<
   typeof getDocumentModelOperationsModuleVariableNames
 >;
 
-export type AllDocumentModelVariableNames = DocumentModelVariableNames &
+export type DocumentModelTemplateInputs = DocumentModelFileMakerArgs &
+  DocumentModelVariableNames;
+
+export type DocumentModelTemplateInputsWithModule = {
+  module: ModuleSpecification;
+} & DocumentModelTemplateInputs &
   DocumentModelOperationsModuleVariableNames;
 
 export type ActionFromOperation = {

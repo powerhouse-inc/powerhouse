@@ -1,6 +1,5 @@
 // TODO: remove eslint-disable rules once refactor is done
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
+
 import type { StateReducer } from "document-model";
 import { isDocumentAction, createReducer } from "document-model/core";
 import type { BillingStatementPHState } from "test/document-models/billing-statement/v1";
@@ -11,7 +10,6 @@ import { billingStatementTagsOperations } from "../src/reducers/tags.js";
 
 import {
   EditBillingStatementInputSchema,
-  EditBillingStatementTestInputSchema,
   EditContributorInputSchema,
   EditStatusInputSchema,
   AddLineItemInputSchema,
@@ -32,18 +30,6 @@ const stateReducer: StateReducer<BillingStatementPHState> = (
       EditBillingStatementInputSchema().parse(action.input);
 
       billingStatementGeneralOperations.editBillingStatementOperation(
-        (state as any)[action.scope],
-        action as any,
-        dispatch,
-      );
-
-      break;
-    }
-
-    case "EDIT_BILLING_STATEMENT_TEST": {
-      EditBillingStatementTestInputSchema().parse(action.input);
-
-      billingStatementGeneralOperations.editBillingStatementTestOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,

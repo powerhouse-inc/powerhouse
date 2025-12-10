@@ -183,6 +183,18 @@ export const documentModel: DocumentModelGlobalState = {
           description: "",
           operations: [
             {
+              id: "obKvjYTcH1TDFjSO5DGtmC9HS8w=",
+              name: "EDIT_BILLING_STATEMENT_TEST",
+              description: "",
+              schema:
+                "input EditBillingStatementTestInput {\n  test: String! \n}",
+              template: "",
+              reducer: "",
+              errors: [],
+              examples: [],
+              scope: "global",
+            },
+            {
               id: "obKvjYTcH1TKFjSO5DGtmC9HS7w=",
               name: "EDIT_BILLING_STATEMENT",
               description: "",

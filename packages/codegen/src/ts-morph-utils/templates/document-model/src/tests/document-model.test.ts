@@ -1,7 +1,7 @@
 import { ts } from "@tmpl/core";
-import type { DocumentModelVariableNames } from "../../../../name-builders/types.js";
+import type { DocumentModelTemplateInputs } from "../../../../name-builders/types.js";
 
-export const documentModelTestFileTemplate = (v: DocumentModelVariableNames) =>
+export const documentModelTestFileTemplate = (v: DocumentModelTemplateInputs) =>
   ts`
 /**
  * This is a scaffold file meant for customization:
@@ -22,7 +22,7 @@ import {
   ${v.assertIsPhDocumentOfTypeFunctionName},
   ${v.isPhStateOfTypeFunctionName},
   ${v.assertIsPhStateOfTypeFunctionName},
-} from "${v.documentModelDir}";
+} from "${v.versionedDocumentModelPackageImportPath}";
 import { ZodError } from "zod";
 
 describe("${v.pascalCaseDocumentType} Document Model", () => {
