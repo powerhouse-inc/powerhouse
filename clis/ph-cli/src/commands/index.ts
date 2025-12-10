@@ -4,6 +4,7 @@ export * from "./help.js";
 export * from "./inspect.js";
 export * from "./install.js";
 export * from "./list.js";
+export * from "./login.js";
 export * from "./register-commands.js";
 export * from "./service.js";
 export * from "./switchboard.js";

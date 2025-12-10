@@ -1,5 +1,8 @@
 import { getConfig } from "@powerhousedao/config/node";
-import type { StartServerOptions } from "@powerhousedao/switchboard/server";
+import type {
+  IdentityOptions,
+  StartServerOptions,
+} from "@powerhousedao/switchboard/server";
 import { startSwitchboard as startSwitchboardServer } from "@powerhousedao/switchboard/server";
 import path from "node:path";
 
@@ -12,6 +15,12 @@ export type LocalSwitchboardOptions = StartServerOptions & {
   disableDefaultDrive?: boolean;
   remoteDrives?: string;
   remoteDrivesConfig?: string;
+  /** Enable identity/authentication using keypair from ph login */
+  useIdentity?: boolean;
+  /** Path to custom keypair file */
+  keypairPath?: string;
+  /** Require existing keypair (fail if not found) */
+  requireIdentity?: boolean;
 };
 
 export const defaultSwitchboardOptions = {
@@ -62,6 +71,12 @@ type SwitchboardOptions = StartServerOptions & {
   remoteDrives?: string[];
   useVetraDrive?: boolean;
   vetraDriveId?: string;
+  /** Enable identity/authentication using keypair from ph login */
+  useIdentity?: boolean;
+  /** Path to custom keypair file */
+  keypairPath?: string;
+  /** Require existing keypair (fail if not found) */
+  requireIdentity?: boolean;
 };
 
 export async function startSwitchboard(options: SwitchboardOptions) {
@@ -71,6 +86,9 @@ export async function startSwitchboard(options: SwitchboardOptions) {
     remoteDrives = [],
     useVetraDrive = false,
     vetraDriveId = "vetra",
+    useIdentity,
+    keypairPath,
+    requireIdentity,
     ...serverOptions
   } = options;
 
@@ -78,6 +96,15 @@ export async function startSwitchboard(options: SwitchboardOptions) {
   const defaultOptions = useVetraDrive
     ? getDefaultVetraSwitchboardOptions(vetraDriveId)
     : defaultSwitchboardOptions;
+
+  // Build identity options if enabled
+  const identity: IdentityOptions | undefined =
+    useIdentity || keypairPath || requireIdentity
+      ? {
+          keypairPath,
+          requireExisting: requireIdentity,
+        }
+      : undefined;
 
   // Only include the default drive if no remote drives are provided
   const finalOptions =
@@ -88,12 +115,14 @@ export async function startSwitchboard(options: SwitchboardOptions) {
           ...serverOptions,
           https,
           remoteDrives,
+          identity,
         }
       : {
           ...defaultOptions,
           ...serverOptions,
           https,
           remoteDrives,
+          identity,
         };
 
   const reactor = await startSwitchboardServer(finalOptions);
