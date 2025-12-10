@@ -10,8 +10,6 @@ import {
   EditBillingStatementInputSchema,
   EditContributorInputSchema,
   EditStatusInputSchema,
-  editBillingStatementTest,
-  EditBillingStatementTestInputSchema,
 } from "test/document-models/billing-statement/v1";
 
 describe("GeneralOperations", () => {
@@ -59,23 +57,6 @@ describe("GeneralOperations", () => {
     expect(updatedDocument.operations.global).toHaveLength(1);
     expect(updatedDocument.operations.global[0].action.type).toBe(
       "EDIT_STATUS",
-    );
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-      input,
-    );
-    expect(updatedDocument.operations.global[0].index).toEqual(0);
-  });
-
-  it("should handle editBillingStatementTest operation", () => {
-    const document = utils.createDocument();
-    const input = generateMock(EditBillingStatementTestInputSchema());
-
-    const updatedDocument = reducer(document, editBillingStatementTest(input));
-
-    expect(isBillingStatementDocument(updatedDocument)).toBe(true);
-    expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe(
-      "EDIT_BILLING_STATEMENT_TEST",
     );
     expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
       input,

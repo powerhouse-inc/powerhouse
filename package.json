@@ -65,9 +65,6 @@
   "engines": {
     "node": ">=22"
   },
-  "resolutions": {
-    "zod": "^3.24.3"
-  },
   "pnpm": {
     "overrides": {
       "document-model": "link:./packages/document-model",

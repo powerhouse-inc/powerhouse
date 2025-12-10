@@ -27,7 +27,7 @@ import type {
 import { z } from "zod";
 
 type Properties<T> = Required<{
-  [K in keyof T]: z.ZodType<T[K], any, T[K]>;
+  [K in keyof T]: z.ZodType<T[K], T[K]>;
 }>;
 
 type definedNonNullAny = {};

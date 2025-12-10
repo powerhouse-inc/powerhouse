@@ -10,6 +10,7 @@ import { billingStatementLineItemsOperations } from "../src/reducers/line-items.
 import { billingStatementTagsOperations } from "../src/reducers/tags.js";
 
 import {
+  EditBillingStatementTestInputSchema,
   EditBillingStatementInputSchema,
   EditContributorInputSchema,
   EditStatusInputSchema,
@@ -27,6 +28,18 @@ const stateReducer: StateReducer<BillingStatementPHState> = (
     return state;
   }
   switch (action.type) {
+    case "EDIT_BILLING_STATEMENT_TEST": {
+      EditBillingStatementTestInputSchema().parse(action.input);
+
+      billingStatementGeneralOperations.editBillingStatementTestOperation(
+        (state as any)[action.scope],
+        action as any,
+        dispatch,
+      );
+
+      break;
+    }
+
     case "EDIT_BILLING_STATEMENT": {
       EditBillingStatementInputSchema().parse(action.input);
 

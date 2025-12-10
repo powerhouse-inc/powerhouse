@@ -7,11 +7,10 @@ import type {
   SetProcessorNameInput,
   SetProcessorStatusInput,
   SetProcessorTypeInput,
-  StatusType,
 } from "./types.js";
 
 type Properties<T> = Required<{
-  [K in keyof T]: z.ZodType<T[K], any, T[K]>;
+  [K in keyof T]: z.ZodType<T[K], T[K]>;
 }>;
 
 type definedNonNullAny = {};

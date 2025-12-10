@@ -244,7 +244,7 @@ exports[`graphql codegen > should generate correct zod code for drive schema 1`]
 import type { FolderNode, SynchronizationUnit, FileNode, DocumentDriveState, ListenerFilter, TransmitterType, ListenerCallInfo, Listener, TriggerType, PullResponderTriggerData, Trigger, DocumentDriveLocalState, AddFileInput, AddFolderInput, DeleteNodeInput, UpdateFileInput, UpdateNodeInput, CopyNodeInput, MoveNodeInput, SetDriveNameInput, SetSharingTypeInput, SetDriveIconInput, SetAvailableOfflineInput, AddListenerInput, RemoveListenerInput, AddTriggerInput, RemoveTriggerInput } from './types.js'
 
 type Properties<T> = Required<{
-  [K in keyof T]: z.ZodType<T[K], any, T[K]>;
+  [K in keyof T]: z.ZodType<T[K], T[K]>;
 }>;
 
 type definedNonNullAny = {};
@@ -479,7 +479,7 @@ exports[`graphql codegen > should generate correct zod code for schema 1`] = `
 import type { User } from './types.js'
 
 type Properties<T> = Required<{
-  [K in keyof T]: z.ZodType<T[K], any, T[K]>;
+  [K in keyof T]: z.ZodType<T[K], T[K]>;
 }>;
 
 type definedNonNullAny = {};

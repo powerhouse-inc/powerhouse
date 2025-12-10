@@ -11,7 +11,6 @@ import { billingStatementTagsOperations } from "../src/reducers/tags.js";
 
 import {
   EditBillingStatementInputSchema,
-  EditBillingStatementTestInputSchema,
   EditContributorInputSchema,
   EditStatusInputSchema,
   AddLineItemInputSchema,
@@ -32,18 +31,6 @@ const stateReducer: StateReducer<BillingStatementPHState> = (
       EditBillingStatementInputSchema().parse(action.input);
 
       billingStatementGeneralOperations.editBillingStatementOperation(
-        (state as any)[action.scope],
-        action as any,
-        dispatch,
-      );
-
-      break;
-    }
-
-    case "EDIT_BILLING_STATEMENT_TEST": {
-      EditBillingStatementTestInputSchema().parse(action.input);
-
-      billingStatementGeneralOperations.editBillingStatementTestOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,

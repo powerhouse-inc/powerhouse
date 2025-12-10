@@ -6,6 +6,7 @@ import {
   validationSchema,
 } from "@powerhousedao/document-engineering/graphql";
 import type { DocumentSpecification } from "document-model";
+import type { ValidationSchemaPluginConfig } from "graphql-codegen-typescript-validation-schema";
 import { readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { formatWithPrettierBeforeWrite } from "./utils.js";
@@ -147,6 +148,62 @@ function buildGraphqlDocumentStringForSpecification(
   return [customScalarSchemas, ...stateSchemas, ...moduleSchemas];
 }
 
+export async function generateTypesAndZodSchemasFromGraphql(
+  schema: string,
+  dirName: string,
+  writeFile = true,
+) {
+  const typescriptConfig: TypeScriptPluginConfig = {
+    scalars,
+    strictScalars: true,
+    enumsAsTypes: true,
+    skipTypename: true,
+  };
+
+  const validationSchemaConfig: ValidationSchemaPluginConfig = {
+    scalars,
+    strictScalars: true,
+    enumsAsTypes: true,
+    skipTypename: true,
+    importFrom: `./types.js`,
+    schema: "zodv4",
+    useTypeImports: true,
+    scalarSchemas: scalarsValidation,
+    directives: {
+      equals: {
+        value: ["regex", "/^$1$/"],
+      },
+    },
+    withObjectType: true,
+  };
+  const config: CodegenConfig = {
+    overwrite: true,
+    generates: {
+      [`${dirName}/gen/schema/types.ts`]: {
+        schema,
+        config: typescriptConfig,
+        plugins: [
+          {
+            typescript: typescriptConfig,
+          },
+        ],
+      },
+      [`${dirName}/gen/schema/zod.ts`]: {
+        schema,
+        config: zodConfig,
+        plugins: [
+          {
+            "graphql-codegen-typescript-validation-schema":
+              validationSchemaConfig,
+          },
+        ],
+      },
+    },
+  };
+
+  await generate(config, writeFile);
+}
+
 export async function generateDocumentModelZodSchemas(args: {
   documentModelVersionDirPath: string;
   specification: DocumentSpecification;
@@ -156,43 +213,11 @@ export async function generateDocumentModelZodSchemas(args: {
     .filter(Boolean)
     .join("\n\n");
 
-  const config: CodegenConfig = {
-    overwrite: true,
-    generates: {
-      [`${documentModelVersionDirPath}/gen/schema/types.ts`]: {
-        schema,
-        plugins: ["typescript"],
-        config: {
-          scalars,
-          strictScalars: true,
-          enumsAsTypes: true,
-          skipTypename: true,
-        },
-      },
-      [`${documentModelVersionDirPath}/gen/schema/zod.ts`]: {
-        schema,
-        plugins: ["graphql-codegen-typescript-validation-schema"],
-        config: {
-          scalars,
-          strictScalars: true,
-          enumsAsTypes: true,
-          skipTypename: true,
-          importFrom: `./types.js`,
-          schema: "zod",
-          useTypeImports: true,
-          scalarSchemas: scalarsValidation,
-          directives: {
-            equals: {
-              value: ["regex", "/^$1$/"],
-            },
-          },
-          withObjectType: true,
-        },
-      },
-    },
-  };
+  await generateTypesAndZodSchemasFromGraphql(
+    schema,
+    documentModelVersionDirPath,
+  );
 
-  await generate(config, true);
   writeFileSync(
     path.join(documentModelVersionDirPath, "schema.graphql"),
     schema,

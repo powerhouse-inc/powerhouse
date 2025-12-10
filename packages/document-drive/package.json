@@ -90,7 +90,7 @@
     "sequelize": "^6.37.2",
     "sqlite3": "^5.1.7",
     "uuid": "^11.0.5",
-    "zod": "^3.24.3"
+    "zod": "^4.1.13"
   },
   "devDependencies": {
     "@anatine/zod-mock": "^3.14.0",
