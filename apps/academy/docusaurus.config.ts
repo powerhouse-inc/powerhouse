@@ -87,12 +87,6 @@ const config: Config = {
       },
       items: [
         {
-          type: "docSidebar",
-          sidebarId: "academySidebar",
-          position: "left",
-          label: "Academy",
-        },
-        {
           href: "https://github.com/powerhouse-inc/powerhouse-docs",
           label: "GitHub",
           position: "right",
@@ -106,19 +100,7 @@ const config: Config = {
           title: "Docs",
           items: [
             {
-              label: "Connect",
-              to: "academy/Architecture/PowerhouseArchitecture",
-            },
-            {
-              label: "Reactor",
-              to: "academy/Architecture/PowerhouseArchitecture",
-            },
-            {
-              label: "Switchboard",
-              to: "academy/Architecture/PowerhouseArchitecture",
-            },
-            {
-              label: "Renown",
+              label: "Powerhouse Architecture",
               to: "academy/Architecture/PowerhouseArchitecture",
             },
             {
@@ -132,7 +114,7 @@ const config: Config = {
           items: [
             {
               label: "Discord",
-              href: "https://discord.gg/h7GKvqDyDP",
+              href: "https://discord.gg/pwQJwgaQKd",
             },
             {
               label: "X",

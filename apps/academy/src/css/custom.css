@@ -530,3 +530,24 @@ html[data-theme="dark"] .DocSearch-Hits > *:empty {
   background-color: rgba(248, 81, 73, 0.25);
 }
 
+/* Sidebar item count badge */
+.sidebar-item-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+  padding: 0 6px;
+  min-width: 20px;
+  height: 18px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ifm-color-emphasis-700);
+  background-color: var(--ifm-color-emphasis-200);
+  border-radius: 10px;
+}
+
+[data-theme="dark"] .sidebar-item-count {
+  color: var(--ifm-color-emphasis-300);
+  background-color: var(--ifm-color-emphasis-700);
+}
+
