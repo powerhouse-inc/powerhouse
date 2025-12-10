@@ -14,6 +14,7 @@ import {
   initializeAndStartAPI,
   startViteServer,
 } from "@powerhousedao/reactor-api";
+import type { IConnectCrypto } from "@renown/sdk";
 import * as Sentry from "@sentry/node";
 import type { ICache, IDocumentDriveServer } from "document-drive";
 import {
@@ -36,6 +37,7 @@ import path from "path";
 import { Pool } from "pg";
 import type { RedisClientType } from "redis";
 import { initRedis } from "./clients/redis.js";
+import { initConnectCrypto } from "./connect-crypto.js";
 import { initFeatureFlags } from "./feature-flags.js";
 import { initProfilerFromEnv } from "./profiler.js";
 import type { StartServerOptions, SwitchboardReactor } from "./types.js";
@@ -106,7 +108,11 @@ async function initReactorStorage(
   };
 }
 
-async function initServer(serverPort: number, options: StartServerOptions) {
+async function initServer(
+  serverPort: number,
+  options: StartServerOptions,
+  connectCrypto: IConnectCrypto | null,
+) {
   const { dev, packages = [], remoteDrives = [] } = options;
 
   const dbPath = options.dbPath ?? process.env.DATABASE_URL;
@@ -287,6 +293,7 @@ async function initServer(serverPort: number, options: StartServerOptions) {
     defaultDriveUrl,
     api,
     reactor: driveServer,
+    connectCrypto,
   };
 }
 
@@ -311,8 +318,21 @@ export const startSwitchboard = async (
     }
   }
 
+  // Initialize ConnectCrypto if identity options are provided or keypair exists
+  let connectCrypto: IConnectCrypto | null = null;
   try {
-    return await initServer(serverPort, options);
+    connectCrypto = await initConnectCrypto(options.identity);
+  } catch (e) {
+    logger.warn("Failed to initialize ConnectCrypto:", e);
+    if (options.identity?.requireExisting) {
+      throw new Error(
+        'Identity required but failed to initialize. Run "ph login" first.',
+      );
+    }
+  }
+
+  try {
+    return await initServer(serverPort, options, connectCrypto);
   } catch (e) {
     Sentry.captureException(e);
     logger.error("App crashed", e);
@@ -321,3 +341,8 @@ export const startSwitchboard = async (
 };
 
 export * from "./types.js";
+export {
+  getConnectCrypto,
+  getConnectDid,
+  getBearerToken,
+} from "./connect-crypto.js";
