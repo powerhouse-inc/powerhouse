@@ -53,3 +53,20 @@ export function useChannelSyncEnabled(): boolean {
   const features = useFeatures();
   return features?.get("FEATURE_CHANNEL_SYNC_ENABLED") ?? false;
 }
+
+/**
+ * Synchronous helper to check if inspector is enabled.
+ * Defaults to false if features not loaded.
+ */
+export function isInspectorEnabledSync(): boolean {
+  return window.ph?.features?.get("FEATURE_INSPECTOR_ENABLED") ?? false;
+}
+
+/**
+ * React hook to check if inspector is enabled.
+ * Defaults to false if features not loaded.
+ */
+export function useInspectorEnabled(): boolean {
+  const features = useFeatures();
+  return features?.get("FEATURE_INSPECTOR_ENABLED") ?? false;
+}

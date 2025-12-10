@@ -1,6 +1,6 @@
 import { Icon } from "@powerhousedao/design-system";
 import { type Remote } from "@powerhousedao/reactor";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { ChannelInspector } from "./components/channel-inspector.js";
 import { SortIcon } from "./components/sort-icon.js";
@@ -12,8 +12,7 @@ import {
 } from "./utils.js";
 
 export type RemotesInspectorProps = {
-  readonly remotes: Remote[];
-  readonly onRefresh?: () => void;
+  readonly getRemotes: () => Promise<Remote[]>;
 };
 
 const COLUMNS: ColumnDef[] = [
@@ -78,12 +77,30 @@ function sortRemotes(
   });
 }
 
-export function RemotesInspector({
-  remotes,
-  onRefresh,
-}: RemotesInspectorProps) {
+export function RemotesInspector({ getRemotes }: RemotesInspectorProps) {
+  const [remotes, setRemotes] = useState<Remote[]>([]);
+  const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState<SortOptions | undefined>();
   const [selectedRemote, setSelectedRemote] = useState<Remote | undefined>();
+
+  const loadRemotes = useCallback(async () => {
+    setLoading(true);
+    const data = await getRemotes();
+    setRemotes(data);
+    setLoading(false);
+  }, [getRemotes]);
+
+  useEffect(() => {
+    void loadRemotes();
+  }, [loadRemotes]);
+
+  const handleRefresh = useCallback(async () => {
+    await loadRemotes();
+    if (selectedRemote) {
+      const updated = remotes.find((r) => r.id === selectedRemote.id);
+      setSelectedRemote(updated);
+    }
+  }, [loadRemotes, selectedRemote, remotes]);
 
   const handleSort = (columnKey: string) => {
     if (columnKey === "channel") return;
@@ -107,7 +124,7 @@ export function RemotesInspector({
       <ChannelInspector
         channel={selectedRemote.channel}
         onBack={handleBack}
-        onRefresh={onRefresh}
+        onRefresh={() => void handleRefresh()}
         remoteName={selectedRemote.name}
       />
     );
@@ -121,16 +138,15 @@ export function RemotesInspector({
         <h2 className="text-lg font-semibold text-gray-900">
           Remotes Inspector
         </h2>
-        {onRefresh && (
-          <button
-            className="flex items-center gap-1 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
-            onClick={onRefresh}
-            type="button"
-          >
-            <Icon name="Reload" size={14} />
-            Refresh
-          </button>
-        )}
+        <button
+          className="flex items-center gap-1 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+          disabled={loading}
+          onClick={() => void handleRefresh()}
+          type="button"
+        >
+          <Icon name="Reload" size={14} />
+          Refresh
+        </button>
       </div>
 
       <div className="max-h-full overflow-auto rounded-lg border border-gray-300">
@@ -166,7 +182,16 @@ export function RemotesInspector({
             </tr>
           </thead>
           <tbody>
-            {sortedRemotes.length === 0 ? (
+            {loading && sortedRemotes.length === 0 ? (
+              <tr>
+                <td
+                  className="px-3 py-8 text-center text-sm text-gray-500"
+                  colSpan={COLUMNS.length}
+                >
+                  Loading...
+                </td>
+              </tr>
+            ) : sortedRemotes.length === 0 ? (
               <tr>
                 <td
                   className="px-3 py-8 text-center text-sm text-gray-500"

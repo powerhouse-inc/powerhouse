@@ -62,6 +62,11 @@ const UpgradeDriveModal = lazy(() =>
     default: m.UpgradeDriveModal,
   })),
 );
+const InspectorModal = lazy(() =>
+  import("./modals/InspectorModal/index.js").then((m) => ({
+    default: m.InspectorModal,
+  })),
+);
 
 const modalComponents = {
   addDrive: AddDriveModal,
@@ -74,6 +79,7 @@ const modalComponents = {
   disclaimer: DisclaimerModal,
   driveSettings: DriveSettingsModal,
   exportDocumentWithErrors: ExportDocumentWithErrorsModal,
+  inspector: InspectorModal,
   settings: SettingsModal,
   upgradeDrive: UpgradeDriveModal,
 } as const;

@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { fn } from "@storybook/test";
 import {
   type IChannel,
   type Remote,
@@ -171,28 +170,19 @@ const mockRemotes: Remote[] = [
 
 export const Default: Story = {
   args: {
-    remotes: mockRemotes,
-    onRefresh: fn(),
+    getRemotes: () => Promise.resolve(mockRemotes),
   },
 };
 
 export const EmptyRemotes: Story = {
   args: {
-    remotes: [],
-    onRefresh: fn(),
+    getRemotes: () => Promise.resolve([]),
   },
 };
 
 export const SingleRemote: Story = {
   args: {
-    remotes: [mockRemotes[0]],
-    onRefresh: fn(),
-  },
-};
-
-export const WithoutRefresh: Story = {
-  args: {
-    remotes: mockRemotes,
+    getRemotes: () => Promise.resolve([mockRemotes[0]]),
   },
 };
 
@@ -242,7 +232,6 @@ const manyRemotes: Remote[] = Array.from({ length: 20 }, (_, i) => ({
 
 export const ManyRemotes: Story = {
   args: {
-    remotes: manyRemotes,
-    onRefresh: fn(),
+    getRemotes: () => Promise.resolve(manyRemotes),
   },
 };

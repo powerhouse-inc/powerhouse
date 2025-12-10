@@ -26,11 +26,13 @@ import {
 import {
   addPHEventHandlers,
   setConnectCrypto,
+  setDatabase,
   setDefaultPHGlobalConfig,
   setDid,
   setDocumentCache,
   setDrives,
   setLegacyReactor,
+  setPGlite,
   setProcessorManager,
   setReactorClient,
   setReactorClientModule,
@@ -228,6 +230,8 @@ export async function createReactor() {
   setReactorClientModule(reactorClientModule);
   setReactorClient(reactorClientModule.client);
   setSync(reactorClientModule.reactorModule?.syncModule?.syncManager);
+  setDatabase(reactorClientModule.reactorModule?.database);
+  setPGlite(reactorClientModule.pg);
   setDocumentCache(documentCache);
   setConnectCrypto(connectCrypto);
   setDid(did);

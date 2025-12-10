@@ -51,9 +51,11 @@ export {
 } from "./features.js";
 export {
   isChannelSyncEnabledSync,
+  isInspectorEnabledSync,
   isLegacyReadEnabledSync,
   isLegacyWriteEnabledSync,
   useChannelSyncEnabled,
+  useInspectorEnabled,
   useLegacyReadEnabled,
   useLegacyWriteEnabled,
 } from "./use-feature-flags.js";

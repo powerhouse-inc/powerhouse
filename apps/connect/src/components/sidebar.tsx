@@ -13,6 +13,7 @@ import {
   setSelectedDrive,
   showPHModal,
   useDrives,
+  useInspectorEnabled,
   useSelectedDriveSafe,
 } from "@powerhousedao/reactor-browser";
 import { useUser } from "@powerhousedao/reactor-browser/connect";
@@ -23,6 +24,7 @@ export function Sidebar() {
   const user = useUser();
   const drives = useDrives();
   const [selectedDrive] = useSelectedDriveSafe();
+  const inspectorEnabled = useInspectorEnabled();
   const connectDebug = localStorage.getItem("CONNECT_DEBUG") === "true";
 
   const onClickSettings = () => {
@@ -31,6 +33,10 @@ export function Sidebar() {
 
   const onAddDriveClick = () => {
     showPHModal({ type: "addDrive" });
+  };
+
+  const onInspectorClick = () => {
+    showPHModal({ type: "inspector" });
   };
 
   const headerContent = (
@@ -62,6 +68,7 @@ export function Sidebar() {
       id="sidebar"
       onClick={() => setSelectedDrive(undefined)}
       onClickSettings={onClickSettings}
+      onInspectorClick={inspectorEnabled ? onInspectorClick : undefined}
       headerContent={headerContent}
       address={user?.address}
       onLogin={openRenown}
