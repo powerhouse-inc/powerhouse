@@ -1,13 +1,11 @@
-import type {
-  DocumentDriveDocument,
-  DriveInput,
-  IDocumentDriveServer,
-} from "document-drive";
-import { DocumentAlreadyExistsError } from "document-drive";
+import type { IReactorClient } from "@powerhousedao/reactor";
+import type { DocumentDriveDocument, DriveInput } from "document-drive";
+import { driveCreateDocument, driveCreateState } from "document-drive";
+import type { IDocumentDriveServer } from "document-drive";
 import { generateId } from "document-model/core";
 
 export async function addDefaultDrive(
-  driveServer: IDocumentDriveServer,
+  client: IReactorClient,
   drive: DriveInput,
   serverPort: number,
 ) {
@@ -20,11 +18,39 @@ export async function addDefaultDrive(
     throw new Error("Invalid Drive Id");
   }
 
+  const { global } = driveCreateState();
+  const document = driveCreateDocument({
+    global: {
+      ...global,
+      name: drive.global.name,
+      icon: drive.global.icon ?? global.icon,
+    },
+    local: {
+      availableOffline: drive.local?.availableOffline ?? false,
+      sharingType: drive.local?.sharingType ?? "public",
+      listeners: drive.local?.listeners ?? [],
+      triggers: drive.local?.triggers ?? [],
+    },
+  });
+
+  if (drive.id && drive.id.length > 0) {
+    document.header.id = drive.id;
+  }
+  if (drive.slug && drive.slug.length > 0) {
+    document.header.slug = drive.slug;
+  }
+  if (drive.global.name) {
+    document.header.name = drive.global.name;
+  }
+  if (drive.preferredEditor) {
+    document.header.meta = { preferredEditor: drive.preferredEditor };
+  }
+
   try {
-    // add default drive
-    await driveServer.addDrive(drive);
+    await client.create(document);
   } catch (e) {
-    if (!(e instanceof DocumentAlreadyExistsError)) {
+    const errorMessage = e instanceof Error ? e.message : String(e);
+    if (!errorMessage.includes("already exists")) {
       throw e;
     }
   }

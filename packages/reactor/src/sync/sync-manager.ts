@@ -211,7 +211,59 @@ export class SyncManager implements ISyncManager {
     this.remotes.set(name, remote);
     this.wireChannelCallbacks(remote);
 
+    await this.backfillOutbox(remote, collectionId, filter);
+
     return remote;
+  }
+
+  private async backfillOutbox(
+    remote: Remote,
+    collectionId: string,
+    filter: RemoteFilter,
+  ): Promise<void> {
+    let historicalOps;
+    try {
+      historicalOps = await this._operationIndex.find(collectionId);
+    } catch {
+      return;
+    }
+
+    if (historicalOps.items.length === 0) {
+      return;
+    }
+
+    const opsWithContext = historicalOps.items.map((entry) => ({
+      operation: {
+        id: entry.id,
+        index: entry.index,
+        skip: entry.skip,
+        hash: entry.hash,
+        timestampUtcMs: entry.timestampUtcMs,
+        action: entry.action,
+      } as Operation,
+      context: {
+        documentId: entry.documentId,
+        documentType: entry.documentType,
+        scope: entry.scope,
+        branch: entry.branch,
+      },
+    }));
+
+    const filteredOps = filterOperations(opsWithContext, filter);
+    if (filteredOps.length === 0) {
+      return;
+    }
+
+    const syncOp = new SyncOperation(
+      crypto.randomUUID(),
+      remote.name,
+      filteredOps[0].context.documentId,
+      [...new Set(filteredOps.map((op) => op.context.scope))],
+      filteredOps[0].context.branch,
+      filteredOps,
+    );
+
+    remote.channel.outbox.add(syncOp);
   }
 
   async remove(name: string): Promise<void> {

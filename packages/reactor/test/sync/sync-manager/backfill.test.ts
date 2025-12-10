@@ -1,0 +1,216 @@
+import type { Operation } from "document-model";
+import type { Kysely } from "kysely";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
+import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
+import { driveCollectionId } from "../../../src/cache/operation-index-types.js";
+import type { IReactor } from "../../../src/core/types.js";
+import { EventBus } from "../../../src/events/event-bus.js";
+import type { IEventBus } from "../../../src/events/interfaces.js";
+import type {
+  ISyncCursorStorage,
+  ISyncRemoteStorage,
+} from "../../../src/storage/interfaces.js";
+import type { Database } from "../../../src/storage/kysely/types.js";
+import type { IChannelFactory } from "../../../src/sync/interfaces.js";
+import { SyncManager } from "../../../src/sync/sync-manager.js";
+import type { ChannelConfig } from "../../../src/sync/types.js";
+import {
+  createTestChannelFactory,
+  createTestSyncStorage,
+} from "../../factories.js";
+
+describe("SyncManager Backfill", () => {
+  let db: Kysely<Database>;
+  let syncRemoteStorage: ISyncRemoteStorage;
+  let syncCursorStorage: ISyncCursorStorage;
+  let eventBus: IEventBus;
+  let operationIndex: IOperationIndex;
+  let mockReactor: IReactor;
+  let channelFactory: IChannelFactory;
+  let syncManager: SyncManager;
+
+  beforeEach(async () => {
+    const storage = await createTestSyncStorage();
+    db = storage.db;
+    syncRemoteStorage = storage.syncRemoteStorage;
+    syncCursorStorage = storage.syncCursorStorage;
+
+    eventBus = new EventBus();
+
+    operationIndex = new KyselyOperationIndex(db);
+
+    mockReactor = {
+      load: vi.fn().mockResolvedValue({ status: "ok" }),
+    } as any;
+
+    channelFactory = createTestChannelFactory(new Map());
+
+    syncManager = new SyncManager(
+      syncRemoteStorage,
+      syncCursorStorage,
+      channelFactory,
+      operationIndex,
+      mockReactor,
+      eventBus,
+    );
+  });
+
+  afterEach(async () => {
+    syncManager.shutdown();
+    await db.destroy();
+  });
+
+  describe("historical operation backfill", () => {
+    it("should backfill outbox with historical operations when adding a remote", async () => {
+      await syncManager.startup();
+
+      const driveId = "test-drive-1";
+      const collectionId = driveCollectionId("main", driveId);
+
+      const historicalOperation: Operation = {
+        id: "op1",
+        index: 0,
+        skip: 0,
+        hash: "hash1",
+        timestampUtcMs: "2023-01-01T00:00:00.000Z",
+        action: {
+          type: "CREATE_DOCUMENT",
+          scope: "global",
+          id: "action1",
+          timestampUtcMs: "2023-01-01T00:00:00.000Z",
+          input: {},
+        },
+      };
+
+      const txn = operationIndex.start();
+      txn.write([
+        {
+          ...historicalOperation,
+          documentId: driveId,
+          documentType: "powerhouse/document-drive",
+          branch: "main",
+          scope: "global",
+        },
+      ]);
+      txn.createCollection(collectionId);
+      txn.addToCollection(collectionId, driveId);
+      await operationIndex.commit(txn);
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      const remote = await syncManager.add(
+        "remote1",
+        collectionId,
+        channelConfig,
+      );
+
+      expect(remote.channel.outbox.items).toHaveLength(1);
+      expect(remote.channel.outbox.items[0].operations).toHaveLength(1);
+      expect(remote.channel.outbox.items[0].operations[0].operation.id).toBe(
+        "op1",
+      );
+    });
+
+    it("should not backfill when collection has no operations", async () => {
+      await syncManager.startup();
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      const remote = await syncManager.add(
+        "remote1",
+        "empty-collection",
+        channelConfig,
+      );
+
+      expect(remote.channel.outbox.items).toHaveLength(0);
+    });
+
+    it("should filter backfilled operations by remote filter", async () => {
+      await syncManager.startup();
+
+      const driveId = "test-drive-2";
+      const collectionId = driveCollectionId("main", driveId);
+
+      const op1: Operation = {
+        id: "op1",
+        index: 0,
+        skip: 0,
+        hash: "hash1",
+        timestampUtcMs: "2023-01-01T00:00:00.000Z",
+        action: {
+          type: "CREATE_DOCUMENT",
+          scope: "global",
+          id: "action1",
+          timestampUtcMs: "2023-01-01T00:00:00.000Z",
+          input: {},
+        },
+      };
+
+      const op2: Operation = {
+        id: "op2",
+        index: 1,
+        skip: 0,
+        hash: "hash2",
+        timestampUtcMs: "2023-01-01T00:00:01.000Z",
+        action: {
+          type: "UPDATE",
+          scope: "local",
+          id: "action2",
+          timestampUtcMs: "2023-01-01T00:00:01.000Z",
+          input: {},
+        },
+      };
+
+      const txn = operationIndex.start();
+      txn.write([
+        {
+          ...op1,
+          documentId: driveId,
+          documentType: "powerhouse/document-drive",
+          branch: "main",
+          scope: "global",
+        },
+      ]);
+      txn.createCollection(collectionId);
+      txn.addToCollection(collectionId, driveId);
+      await operationIndex.commit(txn);
+
+      const txn2 = operationIndex.start();
+      txn2.write([
+        {
+          ...op2,
+          documentId: driveId,
+          documentType: "powerhouse/document-drive",
+          branch: "main",
+          scope: "local",
+        },
+      ]);
+      await operationIndex.commit(txn2);
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      const remote = await syncManager.add(
+        "remote1",
+        collectionId,
+        channelConfig,
+        { documentId: [driveId], scope: ["global"], branch: "main" },
+      );
+
+      expect(remote.channel.outbox.items).toHaveLength(1);
+      expect(remote.channel.outbox.items[0].operations).toHaveLength(1);
+      expect(remote.channel.outbox.items[0].operations[0].operation.id).toBe(
+        "op1",
+      );
+    });
+  });
+});
