@@ -66,8 +66,8 @@ describe("document model", () => {
 
   const generate = async () => {
     await generateSchemas(documentModelsSrcPath, {
-      skipFormat: true,
       outDir: documentModelsDirName,
+      skipFormat: true,
     });
 
     const billingStatementDocumentModel = await loadDocumentModel(
