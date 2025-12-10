@@ -98,7 +98,10 @@ export async function addRemoteDrive(
     const parsedUrl = new URL(url);
     const reactorGraphqlUrl = `${parsedUrl.protocol}//${parsedUrl.host}/graphql/r`;
 
-    await sync.add(driveId, driveCollectionId("main", driveId), {
+    // Use a unique name for the remote to allow multiple subscribers to the same drive
+    const remoteName = crypto.randomUUID();
+
+    await sync.add(remoteName, driveCollectionId("main", driveId), {
       type: "gql",
       parameters: {
         url: reactorGraphqlUrl,

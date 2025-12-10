@@ -270,7 +270,7 @@ export class GqlChannel implements IChannel {
     const variables = {
       input: {
         id: this.channelId,
-        name: this.remoteName,
+        name: this.channelId,
         collectionId: this.config.collectionId,
         filter: {
           documentId: this.config.filter.documentId,
