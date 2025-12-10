@@ -86,10 +86,12 @@ export const addDatabaseEventHandler: AddPHGlobalEventHandler =
 const pgliteEventFunctions = makePHEventFunctions("pglite");
 
 /** Returns the PGlite instance */
-export const usePGlite: UsePHGlobalValue<PGlite> = pgliteEventFunctions.useValue;
+export const usePGlite: UsePHGlobalValue<PGlite> =
+  pgliteEventFunctions.useValue;
 
 /** Sets the PGlite instance */
-export const setPGlite: SetPHGlobalValue<PGlite> = pgliteEventFunctions.setValue;
+export const setPGlite: SetPHGlobalValue<PGlite> =
+  pgliteEventFunctions.setValue;
 
 /** Adds an event handler for the PGlite instance */
 export const addPGliteEventHandler: AddPHGlobalEventHandler =

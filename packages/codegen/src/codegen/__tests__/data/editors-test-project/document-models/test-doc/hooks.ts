@@ -9,7 +9,7 @@ import type {
   TestDocDocument,
   TestDocAction,
 } from "test/document-models/test-doc";
-import { isTestDocDocument } from "test/document-models/test-doc";
+import { isTestDocDocument } from "./gen/document-schema.js";
 
 /** Hook to get a TestDoc document by its id */
 export function useTestDocDocumentById(

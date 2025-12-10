@@ -1,5 +1,5 @@
-import { z } from 'zod'
-import type { SetValueInput, TestEmptyCodesState } from './types.js'
+import { z } from "zod";
+import type { SetValueInput, TestEmptyCodesState } from "./types.js";
 
 type Properties<T> = Required<{
   [K in keyof T]: z.ZodType<T[K], any, T[K]>;
@@ -7,19 +7,24 @@ type Properties<T> = Required<{
 
 type definedNonNullAny = {};
 
-export const isDefinedNonNullAny = (v: any): v is definedNonNullAny => v !== undefined && v !== null;
+export const isDefinedNonNullAny = (v: any): v is definedNonNullAny =>
+  v !== undefined && v !== null;
 
-export const definedNonNullAnySchema = z.any().refine((v) => isDefinedNonNullAny(v));
+export const definedNonNullAnySchema = z
+  .any()
+  .refine((v) => isDefinedNonNullAny(v));
 
 export function SetValueInputSchema(): z.ZodObject<Properties<SetValueInput>> {
   return z.object({
-    value: z.string()
-  })
+    value: z.string(),
+  });
 }
 
-export function TestEmptyCodesStateSchema(): z.ZodObject<Properties<TestEmptyCodesState>> {
+export function TestEmptyCodesStateSchema(): z.ZodObject<
+  Properties<TestEmptyCodesState>
+> {
   return z.object({
-    __typename: z.literal('TestEmptyCodesState').optional(),
-    value: z.string()
-  })
+    __typename: z.literal("TestEmptyCodesState").optional(),
+    value: z.string(),
+  });
 }

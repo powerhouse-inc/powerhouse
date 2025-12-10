@@ -15,7 +15,6 @@ import {
   it,
   type TestContext,
 } from "vitest";
-import { USE_LEGACY } from "./config.js";
 import {
   DOCUMENT_MODELS_TEST_PROJECT,
   GENERATE_DOC_MODEL_TEST_OUTPUT_DIR,
@@ -44,10 +43,10 @@ describe("document model", () => {
   const documentModelsSrcPath = path.join(testDir, "data", "document-models");
   let documentModelsDirName = path.join(testOutDirPath, "document-models");
   let processorsDirName = path.join(testOutDirPath, "processors");
-  async function setupTest(context: TestContext) {
+  async function setupTest(context: TestContext, dataDir = testDataDir) {
     testOutDirPath = getTestOutDirPath(context.task.name, outDirName);
 
-    await copyAllFiles(testDataDir, testOutDirPath);
+    await copyAllFiles(dataDir, testOutDirPath);
 
     documentModelsDirName = path.join(testOutDirPath, "document-models");
     processorsDirName = path.join(testOutDirPath, "processors");
@@ -66,11 +65,6 @@ describe("document model", () => {
   });
 
   const generate = async () => {
-    await generateSchemas(documentModelsSrcPath, {
-      skipFormat: true,
-      outDir: documentModelsDirName,
-    });
-
     const billingStatementDocumentModel = await loadDocumentModel(
       path.join(
         documentModelsSrcPath,
@@ -83,7 +77,7 @@ describe("document model", () => {
       dir: documentModelsDirName,
       specifiedPackageName: TEST_PACKAGE_NAME,
       documentModelState: billingStatementDocumentModel,
-      legacy: USE_LEGACY,
+      legacy: true,
       skipFormat: true,
     });
 
@@ -92,7 +86,7 @@ describe("document model", () => {
     );
 
     await generateDocumentModel({
-      legacy: USE_LEGACY,
+      legacy: true,
       dir: documentModelsDirName,
       specifiedPackageName: TEST_PACKAGE_NAME,
       documentModelState: testDocDocumentModel,
@@ -105,10 +99,153 @@ describe("document model", () => {
     {
       timeout: 100000,
     },
-    async () => {
+    async (context) => {
+      await setupTest(context);
       await generate();
       await compile(testOutDirPath);
       await runGeneratedTests(testOutDirPath);
+    },
+  );
+
+  it(
+    "should generate a document model when previous document models exist",
+    {
+      timeout: 100000,
+    },
+    async (context) => {
+      const dataDirOverride = getTestDataDir(
+        testDir,
+        "document-models-test-project-with-existing-document-models",
+      );
+      await setupTest(context, dataDirOverride);
+      await generate();
+      await compile(testOutDirPath);
+      await runGeneratedTests(testOutDirPath);
+    },
+  );
+
+  it(
+    "should create the document-models.ts file if it does not exist",
+    {
+      timeout: 100000,
+    },
+    async () => {
+      const documentModelsFilePath = path.join(
+        documentModelsDirName,
+        "document-models.ts",
+      );
+
+      rmSync(documentModelsFilePath, { force: true });
+
+      await generate();
+      await compile(testOutDirPath);
+
+      const documentModelsContent = readFileSync(
+        documentModelsFilePath,
+        "utf-8",
+      );
+
+      // Check that both models are exported
+      expect(documentModelsContent).toContain(
+        `import { BillingStatement } from "./billing-statement/module.js";`,
+      );
+      expect(documentModelsContent).toContain(
+        `import { TestDoc } from "./test-doc/module.js";`,
+      );
+      expect(documentModelsContent).toContain(
+        "export const documentModels: DocumentModelModule<any>[] = [",
+      );
+      expect(documentModelsContent).toContain("BillingStatement");
+      expect(documentModelsContent).toContain("TestDoc");
+      expect(documentModelsContent).toContain("]");
+    },
+  );
+
+  it(
+    "should generate multiple document models and export both in document-models.ts",
+    {
+      timeout: 100000,
+    },
+    async () => {
+      await generate();
+      await compile(testOutDirPath);
+
+      const documentModelsFilePath = path.join(
+        documentModelsDirName,
+        "document-models.ts",
+      );
+      const documentModelsContent = readFileSync(
+        documentModelsFilePath,
+        "utf-8",
+      );
+
+      // Check that both models are exported
+      expect(documentModelsContent).toContain(
+        `import { BillingStatement } from "./billing-statement/module.js";`,
+      );
+      expect(documentModelsContent).toContain(
+        `import { TestDoc } from "./test-doc/module.js";`,
+      );
+      expect(documentModelsContent).toContain(
+        "export const documentModels: DocumentModelModule<any>[] = [",
+      );
+      expect(documentModelsContent).toContain("BillingStatement");
+      expect(documentModelsContent).toContain("TestDoc");
+      expect(documentModelsContent).toContain("]");
+    },
+  );
+
+  it(
+    "should generate an updated version of test-doc",
+    { timeout: 100000 },
+    async () => {
+      await generate();
+      await compile(testOutDirPath);
+
+      const testDocDocumentModelV2 = await loadDocumentModel(
+        path.join(
+          documentModelsSrcPath,
+          "..",
+          "test-doc-versions",
+          "test-doc-v2",
+          "test-doc.json",
+        ),
+      );
+
+      // TODO: this is a hack to get the test to pass, we should be able to update the reducer file once is generated
+      // remove .out/document-model/test-doc/src/reducers/base-operations.ts file
+      rmSync(
+        path.join(
+          documentModelsDirName,
+          "test-doc",
+          "src",
+          "reducers",
+          "base-operations.ts",
+        ),
+        { force: true },
+      );
+
+      await generateDocumentModel({
+        legacy: true,
+        dir: documentModelsDirName,
+        specifiedPackageName: TEST_PACKAGE_NAME,
+        documentModelState: testDocDocumentModelV2,
+        skipFormat: true,
+      });
+
+      // expect .out/document-model/test-doc/src/reducers/base-operations.ts to contain setTestIdOperation, setTestNameOperation, setTestDescriptionOperation and setTestValueOperation
+      const baseOperationsPath = path.join(
+        documentModelsDirName,
+        "test-doc",
+        "src",
+        "reducers",
+        "base-operations.ts",
+      );
+      const baseOperationsContent = readFileSync(baseOperationsPath, "utf-8");
+      expect(baseOperationsContent).toContain("setTestIdOperation");
+      expect(baseOperationsContent).toContain("setTestNameOperation");
+      expect(baseOperationsContent).toContain("setTestDescriptionOperation");
+      expect(baseOperationsContent).toContain("setTestValueOperation");
     },
   );
 
@@ -241,131 +378,6 @@ describe("document model", () => {
   );
 
   it(
-    "should create the document-models.ts file if it does not exist",
-    {
-      timeout: 100000,
-    },
-    async () => {
-      const documentModelsFilePath = path.join(
-        documentModelsDirName,
-        "document-models.ts",
-      );
-
-      rmSync(documentModelsFilePath, { force: true });
-
-      await generate();
-      await compile(testOutDirPath);
-
-      const documentModelsContent = readFileSync(
-        documentModelsFilePath,
-        "utf-8",
-      );
-
-      // Check that both models are exported
-      expect(documentModelsContent).toContain(
-        `import { BillingStatement } from "./billing-statement/module.js";`,
-      );
-      expect(documentModelsContent).toContain(
-        `import { TestDoc } from "./test-doc/module.js";`,
-      );
-      expect(documentModelsContent).toContain(
-        "export const documentModels: DocumentModelModule<any>[] = [",
-      );
-      expect(documentModelsContent).toContain("BillingStatement");
-      expect(documentModelsContent).toContain("TestDoc");
-      expect(documentModelsContent).toContain("]");
-    },
-  );
-
-  it(
-    "should generate multiple document models and export both in document-models.ts",
-    {
-      timeout: 100000,
-    },
-    async () => {
-      await generate();
-      await compile(testOutDirPath);
-
-      const documentModelsFilePath = path.join(
-        documentModelsDirName,
-        "document-models.ts",
-      );
-      const documentModelsContent = readFileSync(
-        documentModelsFilePath,
-        "utf-8",
-      );
-
-      // Check that both models are exported
-      expect(documentModelsContent).toContain(
-        `import { BillingStatement } from "./billing-statement/module.js";`,
-      );
-      expect(documentModelsContent).toContain(
-        `import { TestDoc } from "./test-doc/module.js";`,
-      );
-      expect(documentModelsContent).toContain(
-        "export const documentModels: DocumentModelModule<any>[] = [",
-      );
-      expect(documentModelsContent).toContain("BillingStatement");
-      expect(documentModelsContent).toContain("TestDoc");
-      expect(documentModelsContent).toContain("]");
-    },
-  );
-
-  it(
-    "should generate an updated version of test-doc",
-    { timeout: 100000 },
-    async () => {
-      await generate();
-      await compile(testOutDirPath);
-
-      const testDocDocumentModelV2 = await loadDocumentModel(
-        path.join(
-          documentModelsSrcPath,
-          "..",
-          "test-doc-versions",
-          "test-doc-v2",
-          "test-doc.json",
-        ),
-      );
-
-      // TODO: this is a hack to get the test to pass, we should be able to update the reducer file once is generated
-      // remove .out/document-model/test-doc/src/reducers/base-operations.ts file
-      rmSync(
-        path.join(
-          documentModelsDirName,
-          "test-doc",
-          "src",
-          "reducers",
-          "base-operations.ts",
-        ),
-        { force: true },
-      );
-
-      await generateDocumentModel({
-        legacy: USE_LEGACY,
-        dir: documentModelsDirName,
-        specifiedPackageName: TEST_PACKAGE_NAME,
-        documentModelState: testDocDocumentModelV2,
-        skipFormat: true,
-      });
-
-      // expect .out/document-model/test-doc/src/reducers/base-operations.ts to contain setTestIdOperation, setTestNameOperation, setTestDescriptionOperation and setTestValueOperation
-      const baseOperationsPath = path.join(
-        documentModelsDirName,
-        "test-doc",
-        "src",
-        "reducers",
-        "base-operations.ts",
-      );
-      const baseOperationsContent = readFileSync(baseOperationsPath, "utf-8");
-      expect(baseOperationsContent).toContain("setTestIdOperation");
-      expect(baseOperationsContent).toContain("setTestNameOperation");
-      expect(baseOperationsContent).toContain("setTestDescriptionOperation");
-      expect(baseOperationsContent).toContain("setTestValueOperation");
-    },
-  );
-
-  it(
     "should generate error classes and types from billing statement errors",
     { timeout: 100000 },
     async () => {
@@ -487,7 +499,7 @@ describe("document model", () => {
       );
 
       await generateDocumentModel({
-        legacy: USE_LEGACY,
+        legacy: true,
         dir: documentModelsDirName,
         specifiedPackageName: TEST_PACKAGE_NAME,
         documentModelState: testEmptyCodesDocumentModel,

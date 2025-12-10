@@ -1,4 +1,4 @@
-import { z } from "zod";
+import * as z from "zod";
 import type {
   AddDocumentTypeInput,
   DocumentTypeItem,
@@ -11,7 +11,7 @@ import type {
 } from "./types.js";
 
 type Properties<T> = Required<{
-  [K in keyof T]: z.ZodType<T[K], any, T[K]>;
+  [K in keyof T]: z.ZodType<T[K]>;
 }>;
 
 type definedNonNullAny = {};
@@ -49,7 +49,7 @@ export function ProcessorModuleStateSchema(): z.ZodObject<
 > {
   return z.object({
     __typename: z.literal("ProcessorModuleState").optional(),
-    documentTypes: z.array(DocumentTypeItemSchema()),
+    documentTypes: z.array(z.lazy(() => DocumentTypeItemSchema())),
     name: z.string(),
     status: StatusTypeSchema,
     type: z.string(),

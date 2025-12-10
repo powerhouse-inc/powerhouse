@@ -1,8 +1,8 @@
-import React from 'react';
-import Category from '@theme-original/DocSidebarItem/Category';
-import type CategoryType from '@theme/DocSidebarItem/Category';
-import type { WrapperProps } from '@docusaurus/types';
-import type { PropSidebarItem } from '@docusaurus/plugin-content-docs';
+import type { PropSidebarItem } from "@docusaurus/plugin-content-docs";
+import type { WrapperProps } from "@docusaurus/types";
+import Category from "@theme-original/DocSidebarItem/Category";
+import type CategoryType from "@theme/DocSidebarItem/Category";
+import React from "react";
 
 type Props = WrapperProps<typeof CategoryType>;
 
@@ -10,7 +10,12 @@ type Props = WrapperProps<typeof CategoryType>;
 function countItems(items: PropSidebarItem[]): number {
   let count = 0;
   for (const item of items) {
-    if (item.type === 'doc' || item.type === 'link' || item.type === 'category') {
+    if (
+      // @ts-expect-error TODO: check this type
+      item.type === "doc" ||
+      item.type === "link" ||
+      item.type === "category"
+    ) {
       count += 1;
     }
   }
@@ -19,7 +24,7 @@ function countItems(items: PropSidebarItem[]): number {
 
 export default function CategoryWrapper(props: Props): React.JSX.Element {
   const { item, level } = props;
-  
+
   // Only show count on top-level categories (level 1)
   if (level !== 1) {
     return <Category {...props} />;
@@ -40,4 +45,3 @@ export default function CategoryWrapper(props: Props): React.JSX.Element {
 
   return <Category {...props} item={modifiedItem} />;
 }
-

@@ -8,7 +8,8 @@ import { paramCase } from "change-case";
 import type { DocumentModelGlobalState } from "document-model";
 import fs from "node:fs";
 import path, { join } from "node:path";
-import { readPackage } from "read-pkg";
+import { readPackage, type NormalizedPackageJson } from "read-pkg";
+import semver from "semver";
 import { TSMorphCodeGenerator } from "../ts-morph-generator/index.js";
 import { tsMorphGenerateEditor } from "../ts-morph-utils/file-builders/document-editor.js";
 import {
@@ -17,7 +18,7 @@ import {
 } from "../ts-morph-utils/file-builders/document-model.js";
 import { tsMorphGenerateDriveEditor } from "../ts-morph-utils/file-builders/drive-editor.js";
 import { buildTsMorphProject } from "../ts-morph-utils/ts-morph-project.js";
-import { generateSchema, generateSchemas } from "./graphql.js";
+import { generateDocumentModelZodSchemas, generateSchemas } from "./graphql.js";
 import {
   hygenGenerateDocumentModel,
   hygenGenerateDriveEditor,
@@ -130,8 +131,8 @@ export async function generateFromDocument(
 type GenerateDocumentModelArgs = {
   dir: string;
   documentModelState: DocumentModelGlobalState;
-  specifiedPackageName?: string;
   legacy: boolean;
+  specifiedPackageName?: string;
   watch?: boolean;
   skipFormat?: boolean;
   verbose?: boolean;
@@ -145,10 +146,12 @@ export async function generateDocumentModel(args: GenerateDocumentModelArgs) {
     legacy,
     ...hygenArgs
   } = args;
-  const packageNameFromPackageJson = await readPackage().then(
-    (pkg) => pkg.name,
-  );
+  const packageJson = await readPackage();
+  const packageNameFromPackageJson = packageJson.name;
   const packageName = specifiedPackageName || packageNameFromPackageJson;
+  const zodSemverString = findZodDependencyInPackageJson(packageJson);
+  ensureZodVersionIsSufficient(zodSemverString);
+
   const projectDir = path.dirname(dir);
   if (legacy) {
     await hygenGenerateDocumentModel(
@@ -157,6 +160,39 @@ export async function generateDocumentModel(args: GenerateDocumentModelArgs) {
       packageName,
       hygenArgs,
     );
+    const specification =
+      documentModelState.specifications[
+        documentModelState.specifications.length - 1
+      ];
+
+    const documentModelsDirPath = path.join(projectDir, "document-models");
+    const documentModelDirPath = path.join(
+      documentModelsDirPath,
+      paramCase(documentModelState.name),
+    );
+
+    await generateDocumentModelZodSchemas({
+      documentModelDirPath,
+      specification,
+    });
+
+    const generator = new TSMorphCodeGenerator(
+      projectDir,
+      [documentModelState],
+      packageName,
+      {
+        directories: { documentModelDir: "document-models" },
+        forceUpdate: true,
+      },
+    );
+
+    await generator.generateReducers();
+
+    const project = buildTsMorphProject(projectDir);
+    makeDocumentModelModulesFile({
+      project,
+      projectDir,
+    });
   } else {
     await tsMorphGenerateDocumentModel({
       projectDir,
@@ -164,24 +200,27 @@ export async function generateDocumentModel(args: GenerateDocumentModelArgs) {
       documentModelState,
     });
   }
+}
 
-  const generator = new TSMorphCodeGenerator(
-    projectDir,
-    [documentModelState],
-    packageName,
-    {
-      directories: { documentModelDir: "document-models" },
-      forceUpdate: true,
-    },
-  );
+function findZodDependencyInPackageJson(
+  packageJson: NormalizedPackageJson,
+): string | undefined {
+  const dependencies = {
+    ...packageJson.dependencies,
+    ...packageJson.devDependencies,
+  };
+  const zodDependency = dependencies["zod"];
+  return zodDependency;
+}
 
-  await generator.generateReducers();
-
-  const project = buildTsMorphProject(projectDir);
-  makeDocumentModelModulesFile({
-    project,
-    projectDir,
-  });
+function ensureZodVersionIsSufficient(zodSemverString: string | undefined) {
+  if (!zodSemverString) return;
+  const isSufficient = semver.satisfies("4.1.13", zodSemverString);
+  if (!isSufficient) {
+    throw new Error(
+      `Your version of zod "${zodSemverString}" is out of date. Please install zod version 4.x to continue.`,
+    );
+  }
 }
 
 type GenerateEditorArgs = {
@@ -515,31 +554,13 @@ async function generateFromDocumentModel(
     force = false,
   } = options;
   const name = paramCase(documentModel.name);
-
+  const documentModelDir = join(config.documentModelsDir, name);
   // create document model folder and spec as json
-  fs.mkdirSync(join(config.documentModelsDir, name), { recursive: true });
+  fs.mkdirSync(documentModelDir, { recursive: true });
   fs.writeFileSync(
-    join(config.documentModelsDir, name, `${name}.json`),
-    JSON.stringify(documentModel, null, 4),
+    join(documentModelDir, `${name}.json`),
+    JSON.stringify(documentModel, null, 2),
   );
-
-  // bundle graphql schemas together
-  const schemaStr = [
-    typeDefs.join("\n"), // inject ph scalars
-    generateGraphqlSchema(documentModel),
-  ].join("\n");
-
-  if (schemaStr) {
-    fs.writeFileSync(
-      join(config.documentModelsDir, name, `schema.graphql`),
-      schemaStr,
-    );
-  }
-
-  await generateSchema(name, config.documentModelsDir, {
-    skipFormat: config.skipFormat,
-    verbose,
-  });
 
   await generateDocumentModel({
     dir: config.documentModelsDir,

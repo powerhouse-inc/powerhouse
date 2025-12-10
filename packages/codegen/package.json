@@ -27,11 +27,11 @@
     "test:keep:ts-morph": "USE_TS_MORPH=true KEEP_TEST_OUTPUT=true npm run test"
   },
   "dependencies": {
-    "@acaldas/graphql-codegen-typescript-validation-schema": "^0.12.4",
     "@anatine/zod-mock": "^3.13.3",
     "@faker-js/faker": "^8.3.1",
-    "@graphql-codegen/cli": "^5.0.0",
-    "@graphql-codegen/typescript": "^4.0.1",
+    "@graphql-codegen/cli": "^6.1.0",
+    "@graphql-codegen/core": "^5.0.0",
+    "@graphql-codegen/typescript": "^5.0.6",
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
@@ -45,15 +45,17 @@
     "enquirer": "^2.4.1",
     "execa": "^8.0.1",
     "graphql": "^16.11.0",
+    "graphql-codegen-typescript-validation-schema": "^0.18.1",
     "hygen": "^6.2.11",
     "kysely": "^0.28.2",
     "kysely-pglite": "^0.6.1",
     "prettier": "^3.6.2",
     "read-pkg": "^9.0.1",
-    "ts-morph": "^26.0.0"
+    "semver": "^7.7.3",
+    "ts-morph": "^26.0.0",
+    "zocker": "^3.0.0"
   },
   "devDependencies": {
-    "@graphql-codegen/core": "^4.0.2",
     "@powerhousedao/analytics-engine-core": "^0.5.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
@@ -64,6 +66,6 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "vitest": "^3.2.4",
-    "zod": "^3.24.3"
+    "zod": "^4.1.13"
   }
 }
