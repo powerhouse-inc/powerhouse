@@ -31,7 +31,11 @@ export { Mailbox, type MailboxItem } from "./mailbox.js";
 
 export { ChannelError, InternalChannelError } from "./errors.js";
 
-export { InternalChannel, GqlChannelFactory } from "./channels/index.js";
+export {
+  InternalChannel,
+  GqlChannelFactory,
+  CompositeChannelFactory,
+} from "./channels/index.js";
 
 export { SyncManager } from "./sync-manager.js";
 export { SyncBuilder } from "./sync-builder.js";

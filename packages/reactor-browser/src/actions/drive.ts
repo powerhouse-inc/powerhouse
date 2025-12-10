@@ -63,7 +63,10 @@ export async function addDrive(input: DriveInput, preferredEditor?: string) {
   }
 }
 
-export async function addRemoteDrive(url: string, options: RemoteDriveOptions) {
+export async function addRemoteDrive(
+  url: string,
+  options: RemoteDriveOptions | Record<string, never>,
+) {
   const useLegacy = isLegacyWriteEnabledSync();
 
   if (useLegacy) {
@@ -72,7 +75,10 @@ export async function addRemoteDrive(url: string, options: RemoteDriveOptions) {
       throw new Error("Legacy reactor not initialized");
     }
 
-    const newDrive = await reactor.addRemoteDrive(url, options);
+    const newDrive = await reactor.addRemoteDrive(
+      url,
+      options as RemoteDriveOptions,
+    );
     return newDrive;
   } else {
     const reactorClient = window.ph?.reactorClient;
@@ -86,10 +92,16 @@ export async function addRemoteDrive(url: string, options: RemoteDriveOptions) {
     }
 
     const driveId = driveIdFromUrl(url);
+
+    // Construct the reactor subgraph URL from the base URL
+    // e.g., "http://localhost:4001/d/abc123" -> "http://localhost:4001/graphql/r"
+    const parsedUrl = new URL(url);
+    const reactorGraphqlUrl = `${parsedUrl.protocol}//${parsedUrl.host}/graphql/r`;
+
     await sync.add(driveId, driveCollectionId("main", driveId), {
       type: "gql",
       parameters: {
-        url,
+        url: reactorGraphqlUrl,
       },
     });
   }

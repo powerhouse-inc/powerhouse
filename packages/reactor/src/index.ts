@@ -175,6 +175,7 @@ export {
 export {
   ChannelError,
   ChannelErrorSource,
+  CompositeChannelFactory,
   GqlChannelFactory,
   InternalChannel,
   InternalChannelError,

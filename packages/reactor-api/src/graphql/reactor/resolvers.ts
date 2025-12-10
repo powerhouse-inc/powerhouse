@@ -693,7 +693,7 @@ export async function touchChannel(
       args.input.name,
       args.input.collectionId,
       {
-        type: "gql",
+        type: "internal",
         parameters: {},
       },
       filter,
