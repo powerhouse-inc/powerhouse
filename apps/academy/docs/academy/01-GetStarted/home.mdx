@@ -20,11 +20,8 @@ import BrowserOnly from "@docusaurus/BrowserOnly";
     <div className={styles.cardContent}>
       <div style={{ maxWidth: '960px', margin: '0 auto', textAlign: 'center' }}>
         <div style={{ marginBottom: '1.5rem' }}>
-          <p style={{ fontSize: '1.1rem', marginBottom: '1rem' }}><strong>Welcome to the Vetra Builder Platform.</strong></p>
           <p style={{ lineHeight: '1.6' }}>
             Vetra is part of the Powerhouse Ecosystem and acts as the builder platform for creating an independent, open-source and decentralized back-end for any SaaS, ERP, CMS or CRM needs.<br />
-            Vetra helps you build any type of web application on a Reactive Document Architecture.<br />
-            Define workflows once, deploy them globally, and co-own the software you create.<br />
             For a deeper dive into the architecture, see the <a href="/academy/Architecture/PowerhouseArchitecture">Powerhouse Architecture</a> page.
           </p>
         </div>
@@ -71,7 +68,7 @@ import BrowserOnly from "@docusaurus/BrowserOnly";
 
 <div></div> {/* Placeholder for the deleted "Document Model Theory" card */}
 
-{/* Row 2: Build User Experiences, Builder Track Image, Work with Data */}
+{/* Row 2: Build User Experiences, Launch, Work with Data */}
 
 <div className={styles.pathCard}>
   <div className={styles.cardHeader}>
@@ -88,7 +85,7 @@ import BrowserOnly from "@docusaurus/BrowserOnly";
     <a href="/academy/GetStarted/BuildToDoListEditor" className="path-button">Build a todo-list editor</a>
     <a href="/academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors" className="path-button">Build document editors</a>
     <a href="/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer" className="path-button">Build custom drive explorers</a>
-    <a href="/academy/ComponentLibrary/DocumentEngineering" className="path-button">Component library</a>
+    <a href="/academy/MasteryTrack/BuilderEnvironment/CreateAPackageWithVetra" className="path-button">Create a package with Vetra</a>
   </div>
 </div>
 
@@ -96,15 +93,34 @@ import BrowserOnly from "@docusaurus/BrowserOnly";
   className={styles.middleColumn}
   style={{
     display: "flex",
-    justifyContent: "center",
-    alignItems: "flex-start",
-    paddingTop: "-20px",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    alignItems: "center",
     position: "relative",
+    height: "100%",
   }}
 >
-  <img src="/img/Union.svg" alt="Powerhouse Union" width="250" />
-  <div className={styles.masteryTrackTitle}>
-    <h3 className="card-title" style={{ margin: 0 }}>Mastery track</h3>
+  <div style={{ position: "relative", display: "flex", justifyContent: "center", alignItems: "flex-start", paddingTop: "1rem" }}>
+    <img src="/img/Union.svg" alt="Powerhouse Union" width="200" />
+    <div className={styles.masteryTrackTitle}>
+      <h3 className="card-title" style={{ margin: 0 }}>Mastery track</h3>
+    </div>
+  </div>
+  <div className={styles.pathCard} style={{ width: "100%", padding: "1rem", marginTop: "auto" }}>
+    <div className={styles.cardHeader} style={{ marginBottom: "0.5rem" }}>
+      <h3 className="card-title">
+        <img
+          src="/img/academy/icons/Launch.svg"
+          alt=""
+          className={styles.titleIcon}
+        />
+        Launch
+      </h3>
+    </div>
+    <div className={styles.cardContent}>
+      <a href="/academy/MasteryTrack/Launch/PublishYourProject" className="path-button" style={{ padding: "0.75rem", margin: "0.25rem 0" }}>Publish your project</a>
+      <a href="/academy/MasteryTrack/Launch/SetupEnvironment" className="path-button" style={{ padding: "0.75rem", margin: "0.25rem 0" }}>Set-up a cloud environment</a>
+    </div>
   </div>
 </div>
 
@@ -121,32 +137,11 @@ import BrowserOnly from "@docusaurus/BrowserOnly";
   </div>
   <div className={styles.cardContent}>
     <a href="/academy/MasteryTrack/WorkWithData/UsingTheAPI" className="path-button">Read & write through the API</a>
-    <a href="/academy/MasteryTrack/WorkWithData/WorkingWithSubgraphs" className="path-button">Create your own subgraph</a>
+    <a href="/academy/MasteryTrack/WorkWithData/UsingSubgraphs" className="path-button">Create your own subgraph</a>
     <a href="/academy/MasteryTrack/WorkWithData/Analytics-Engine/intro" className="path-button">Use the analytics engine</a>
   </div>
 </div>
 
-{/* Launch Card - Full Width with 3 column buttons - RE-INSERTED */}
-
-<div className={`${styles.pathCard} ${styles.fullWidth}`}>
-  <div className={styles.cardHeader}>
-    <h3 className="card-title">
-      <img
-        src="/img/academy/icons/Launch.svg"
-        alt=""
-        className={styles.titleIcon}
-      />
-      Launch
-    </h3>
-  </div>
-  <div className={styles.cardContent}>
-    <div className={styles.buttonContainer}>
-      <a href="/academy/MasteryTrack/Launch/IntroductionToPackages" className="path-button">Intro to packages</a>
-      <a href="/academy/MasteryTrack/Launch/PublishYourProject" className="path-button">Publish your project</a>
-      <a href="/academy/MasteryTrack/Launch/SetupEnvironment" className="path-button">Set-up a cloud environment</a>
-    </div>
-  </div>
-</div>
 
 {/* Row 3: Cookbook, Use-cases, Advanced Topics */}
 
@@ -182,7 +177,7 @@ import BrowserOnly from "@docusaurus/BrowserOnly";
     </h3>
   </div>
   <div className={styles.cardContent}>
-    <a href="/academy/ExampleUsecases/Chatroom/SetupBuilderEnvironment" className="path-button">Explore use-cases</a>
+    <a href="/academy/ExampleUsecases/Overview" className="path-button">Explore use-cases</a>
   </div>
 </div>
 

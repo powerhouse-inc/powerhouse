@@ -1,4 +1,4 @@
-# Environment setup guide
+# Setup your environment
 
 ## Introduction
 
