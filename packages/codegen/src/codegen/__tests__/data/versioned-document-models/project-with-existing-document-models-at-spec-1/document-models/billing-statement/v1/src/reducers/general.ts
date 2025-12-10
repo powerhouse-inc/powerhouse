@@ -18,10 +18,4 @@ export const billingStatementGeneralOperations: BillingStatementGeneralOperation
       // TODO: implement editStatusOperation reducer
       throw new Error("Reducer for 'editStatusOperation' not implemented.");
     },
-    editBillingStatementTestOperation(state, action) {
-      // TODO: implement editBillingStatementTestOperation reducer
-      throw new Error(
-        "Reducer for 'editBillingStatementTestOperation' not implemented.",
-      );
-    },
   };

@@ -1,19 +1,16 @@
 import { createAction } from "document-model/core";
 import {
   EditBillingStatementInputSchema,
-  EditBillingStatementTestInputSchema,
   EditContributorInputSchema,
   EditStatusInputSchema,
 } from "../schema/zod.js";
 import type {
   EditBillingStatementInput,
-  EditBillingStatementTestInput,
   EditContributorInput,
   EditStatusInput,
 } from "../types.js";
 import type {
   EditBillingStatementAction,
-  EditBillingStatementTestAction,
   EditContributorAction,
   EditStatusAction,
 } from "./actions.js";
@@ -24,17 +21,6 @@ export const editBillingStatement = (input: EditBillingStatementInput) =>
     { ...input },
     undefined,
     EditBillingStatementInputSchema,
-    "global",
-  );
-
-export const editBillingStatementTest = (
-  input: EditBillingStatementTestInput,
-) =>
-  createAction<EditBillingStatementTestAction>(
-    "EDIT_BILLING_STATEMENT_TEST",
-    { ...input },
-    undefined,
-    EditBillingStatementTestInputSchema,
     "global",
   );
 

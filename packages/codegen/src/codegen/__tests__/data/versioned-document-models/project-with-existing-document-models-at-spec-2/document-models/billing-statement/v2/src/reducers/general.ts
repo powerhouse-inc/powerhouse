@@ -2,6 +2,12 @@ import type { BillingStatementGeneralOperations } from "test/document-models/bil
 
 export const billingStatementGeneralOperations: BillingStatementGeneralOperations =
   {
+    editBillingStatementTestOperation(state, action) {
+      // TODO: implement editBillingStatementTestOperation reducer
+      throw new Error(
+        "Reducer for 'editBillingStatementTestOperation' not implemented.",
+      );
+    },
     editBillingStatementOperation(state, action) {
       // TODO: implement editBillingStatementOperation reducer
       throw new Error(

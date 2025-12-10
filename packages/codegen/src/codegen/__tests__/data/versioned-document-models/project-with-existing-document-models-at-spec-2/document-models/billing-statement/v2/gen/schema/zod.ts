@@ -1,4 +1,4 @@
-import { z } from "zod";
+import * as z from "zod";
 import type {
   AddLineItemInput,
   BillingStatementLineItem,
@@ -9,6 +9,7 @@ import type {
   BillingStatementUnit,
   BillingStatementUnitInput,
   EditBillingStatementInput,
+  EditBillingStatementTestInput,
   EditContributorInput,
   EditLineItemInput,
   EditLineItemTagInput,
@@ -16,7 +17,7 @@ import type {
 } from "./types.js";
 
 type Properties<T> = Required<{
-  [K in keyof T]: z.ZodType<T[K], any, T[K]>;
+  [K in keyof T]: z.ZodType<T[K]>;
 }>;
 
 type definedNonNullAny = {};
@@ -126,6 +127,14 @@ export function EditBillingStatementInputSchema(): z.ZodObject<
     dateDue: z.string().datetime().nullish(),
     dateIssued: z.string().datetime().nullish(),
     notes: z.string().nullish(),
+  });
+}
+
+export function EditBillingStatementTestInputSchema(): z.ZodObject<
+  Properties<EditBillingStatementTestInput>
+> {
+  return z.object({
+    test: z.string(),
   });
 }
 

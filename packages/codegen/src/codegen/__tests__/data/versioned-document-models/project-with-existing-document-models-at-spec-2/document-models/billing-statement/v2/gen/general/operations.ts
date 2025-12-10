@@ -1,5 +1,6 @@
 import { type SignalDispatch } from "document-model";
 import type {
+  EditBillingStatementTestAction,
   EditBillingStatementAction,
   EditContributorAction,
   EditStatusAction,
@@ -7,6 +8,11 @@ import type {
 import type { BillingStatementState } from "../types.js";
 
 export interface BillingStatementGeneralOperations {
+  editBillingStatementTestOperation: (
+    state: BillingStatementState,
+    action: EditBillingStatementTestAction,
+    dispatch?: SignalDispatch,
+  ) => void;
   editBillingStatementOperation: (
     state: BillingStatementState,
     action: EditBillingStatementAction,
