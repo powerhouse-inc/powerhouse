@@ -65,11 +65,6 @@ describe("document model", () => {
   });
 
   const generate = async () => {
-    await generateSchemas(documentModelsSrcPath, {
-      outDir: documentModelsDirName,
-      skipFormat: true,
-    });
-
     const billingStatementDocumentModel = await loadDocumentModel(
       path.join(
         documentModelsSrcPath,

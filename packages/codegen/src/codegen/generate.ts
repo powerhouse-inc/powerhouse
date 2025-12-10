@@ -18,7 +18,7 @@ import {
 } from "../ts-morph-utils/file-builders/document-model.js";
 import { tsMorphGenerateDriveEditor } from "../ts-morph-utils/file-builders/drive-editor.js";
 import { buildTsMorphProject } from "../ts-morph-utils/ts-morph-project.js";
-import { generateSchemas } from "./graphql.js";
+import { generateDocumentModelZodSchemas, generateSchemas } from "./graphql.js";
 import {
   hygenGenerateDocumentModel,
   hygenGenerateDriveEditor,
@@ -160,6 +160,22 @@ export async function generateDocumentModel(args: GenerateDocumentModelArgs) {
       packageName,
       hygenArgs,
     );
+    const specification =
+      documentModelState.specifications[
+        documentModelState.specifications.length - 1
+      ];
+
+    const documentModelsDirPath = path.join(projectDir, "document-models");
+    const documentModelDirPath = path.join(
+      documentModelsDirPath,
+      paramCase(documentModelState.name),
+    );
+
+    await generateDocumentModelZodSchemas({
+      documentModelDirPath,
+      specification,
+    });
+
     const generator = new TSMorphCodeGenerator(
       projectDir,
       [documentModelState],
@@ -543,25 +559,8 @@ async function generateFromDocumentModel(
   fs.mkdirSync(documentModelDir, { recursive: true });
   fs.writeFileSync(
     join(documentModelDir, `${name}.json`),
-    JSON.stringify(documentModel, null, 4),
+    JSON.stringify(documentModel, null, 2),
   );
-
-  // bundle graphql schemas together
-  const schemaStr = [
-    typeDefs.join("\n"), // inject ph scalars
-    generateGraphqlSchema(documentModel),
-  ].join("\n");
-
-  if (schemaStr) {
-    fs.writeFileSync(
-      join(config.documentModelsDir, name, `schema.graphql`),
-      schemaStr,
-    );
-  }
-
-  await generateSchemas(documentModelDir, {
-    skipFormat: config.skipFormat,
-  });
 
   await generateDocumentModel({
     dir: config.documentModelsDir,
