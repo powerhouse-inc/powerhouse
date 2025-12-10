@@ -1,4 +1,4 @@
-# Docker Deployment Guide
+# Docker deployment guide
 
 ## Introduction
 
