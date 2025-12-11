@@ -939,6 +939,8 @@ During the setup, you will be prompted for:
 
 This section focuses on creating, configuring, and managing Powerhouse projects, which are collections of document models, editors, and other resources.
 
+> **Tip:** For the best development experience, use **Vetra Studio** with `ph vetra --watch`. Vetra provides automatic code generation and live preview of your documents and editors. See the [Vetra Studio recipes](#vetra-studio-recipes) section for detailed guidance.
+
 <details id="initializing-a-new-project-and-document-model">
 <summary>Initializing a New Project & Document Model</summary>
 
@@ -948,7 +950,7 @@ This section focuses on creating, configuring, and managing Powerhouse projects,
 
 ### Problem statement
 
-You need to create a new, empty document model within a Powerhouse project using the local Connect application (Studio mode) to represent a workflow of a business process.
+You need to create a new, empty document model within a Powerhouse project to represent a workflow of a business process.
 
 ### Prerequisites
 
@@ -958,6 +960,8 @@ You need to create a new, empty document model within a Powerhouse project using
 - A web browser
 
 ### Solution
+
+> **Recommended:** Use **Vetra Studio** for document model development. Vetra provides automatic code generation and a live preview with `ph vetra --watch`. See [Launching Vetra Studio](#launching-vetra-studio) for the preferred workflow.
 
 ### Step 1: Initialize a Powerhouse Project (if needed)
 
@@ -976,9 +980,26 @@ Change your current directory to the newly created project folder:
 cd <yourprojectname>
 ```
 
-### Step 3: Start the Local Connect Application
+### Step 3: Start Vetra Studio (Recommended)
 
-Run the `connect` command to start the local development environment:
+Run Vetra with watch mode for automatic code generation and live preview:
+
+```bash
+ph vetra --watch
+```
+
+This will:
+- Launch Vetra Studio in your browser
+- Automatically generate code when you make changes to document models
+- Provide live preview of your documents and editors
+
+### Step 4: Create the Document Model
+
+In Vetra Studio, navigate to your drive and click the `DocumentModel` button to create a new document model.
+
+### Alternative: Using Connect (Legacy)
+
+If you need to use the Connect application instead:
 
 ```bash
 ph connect
@@ -986,40 +1007,30 @@ ph connect
 
 Wait for the output indicating the server is running (e.g., `Local: http://localhost:3000/`).
 
-### Step 4: Open Connect in Browser
-
-A browser window should open automatically to `http://localhost:3000/`. If not, navigate there manually.
-
-### Step 5: Access Your Local Drive
-
-Click on your local drive displayed on the Connect interface.
-
-### Step 6: Create the Document Model
-
-In the "New Document" section at the bottom of the page, click the `DocumentModel` button.
-
 ### Expected outcome
 
-- An empty document model is created and opened in the Document Model Editor within the Connect application.
+- An empty document model is created and opened in the Document Model Editor.
 - You are ready to start defining the schema and logic for your new model.
+- With Vetra, code is automatically generated as you make changes.
 
 ### Common issues and solutions
 
-- Issue: `ph connect` command fails.
-  - Solution: Ensure `ph-cmd` is installed correctly (`ph-cmd --version`). Check for port conflicts if `3000` is already in use. Make sure you are inside the project directory created by `ph init`.
+- Issue: `ph vetra` command fails.
+  - Solution: Ensure `ph-cmd` is installed correctly (`ph-cmd --version`). Check for port conflicts. Make sure you are inside the project directory created by `ph init`.
 - Issue: Browser window doesn't open automatically.
-  - Solution: Manually open `http://localhost:3000/` in your browser.
+  - Solution: Manually open the URL shown in the terminal output.
 - Issue: Cannot find the `DocumentModel` button.
-  - Solution: Ensure you have navigated into your local drive within the Connect application first.
+  - Solution: Ensure you have navigated into your drive within the application first.
 
 ### Related recipes
 
+- [Launching Vetra Studio](#launching-vetra-studio)
+- [Creating a Document Model with AI Assistance](#creating-a-document-model-with-ai-assistance)
 - [Initializing a Powerhouse Project](#powerhouse-cli-recipes)
-- Designing a Document Model Schema (WIP)
-- Implementing Document Model Reducers (Details to be added)
 
 ### Further reading
 
+- [Vetra Studio Documentation](/academy/MasteryTrack/BuilderEnvironment/VetraStudio)
 - [GraphQL Schema Best Practices](/academy/MasteryTrack/WorkWithData/UsingTheAPI)
 </details>
 
@@ -1041,6 +1052,22 @@ You have a Powerhouse Document Model defined in a `.phdm` or `.phdm.zip` file an
 - A `.phdm` or `.phdm.zip` file containing your document model definition, placed in your project (e.g., at the root).
 
 ### Solution
+
+> **Recommended:** Use **Vetra Studio** with `ph vetra --watch` for automatic code generation. Vetra watches for changes to your document models and automatically generates reducers and other code. See [Launching Vetra Studio](#launching-vetra-studio).
+
+### Using Vetra (Recommended)
+
+With Vetra running in watch mode, code generation happens automatically:
+
+```bash
+ph vetra --watch
+```
+
+When you make changes to document models in Vetra Studio, reducers and other code are generated automatically.
+
+### Manual Generation (Alternative)
+
+If you need to manually generate code from a `.phdm` file:
 
 ### Step 1: Navigate to Project Directory
 
@@ -1067,13 +1094,13 @@ The command will output the generated reducer scaffolding code in the designated
 
 - Reducer functions corresponding to the operations defined in your document model are generated.
 - The generated code is ready to be integrated into your project's state management logic.
-
-### Common issues and solutions
+- With Vetra, this happens automatically when you save changes.
 
 ### Related recipes
 
+- [Launching Vetra Studio](#launching-vetra-studio)
 - [Initializing a New Project & Document Model](#initializing-a-new-project-and-document-model)
-- Generating a Document Editor
+- [Generating a Document Editor](#generating-a-document-editor)
 
 </details>
 
@@ -1129,7 +1156,7 @@ ph update --package-manager pnpm
 
 ### Problem statement
 
-You need to run the local Powerhouse Connect application using HTTPS, possibly on a different port than the default, for scenarios like testing on a remote server (e.g., EC2) or complying with specific network requirements.
+You need to run the local Powerhouse application using HTTPS, possibly on a different port than the default, for scenarios like testing on a remote server (e.g., EC2) or complying with specific network requirements.
 
 ### Prerequisites
 
@@ -1139,6 +1166,8 @@ You need to run the local Powerhouse Connect application using HTTPS, possibly o
 
 ### Solution
 
+> **Note:** For local development, **Vetra Studio** (`ph vetra --watch`) is the recommended workflow as it provides automatic code generation and live preview. Use the options below when you specifically need HTTPS or custom port configurations.
+
 ### Step 1: Navigate to Project Directory
 
 Ensure your terminal is in the root directory of your Powerhouse project.
@@ -1147,7 +1176,16 @@ Ensure your terminal is in the root directory of your Powerhouse project.
 cd <yourprojectname>
 ```
 
-### Step 2: Run Connect with Flags
+### Step 2: Run with Flags
+
+#### Using Vetra (Recommended for Development)
+
+```bash
+# Vetra with watch mode for automatic code generation
+ph vetra --watch
+```
+
+#### Using Connect (for HTTPS/Custom Port)
 
 Execute the `ph connect` command, adding the `--https` flag to enable HTTPS and the `--port` flag followed by the desired port number.
 
@@ -1156,7 +1194,7 @@ Execute the `ph connect` command, adding the `--https` flag to enable HTTPS and 
 ph connect --port 8442 --https
 ```
 
-### Step 3: Access Connect
+### Step 3: Access the Application
 
 Open your web browser and navigate to the specified address. Remember to use `https` and include the custom port.
 
@@ -1170,31 +1208,34 @@ You might encounter a browser warning about the self-signed certificate; you may
 
 ### Expected outcome
 
-- The Powerhouse Connect application starts and serves traffic over HTTPS on the specified port.
-- You can access the Connect interface securely using the `https` protocol.
+- The Powerhouse application starts and serves traffic over HTTPS on the specified port.
+- You can access the interface securely using the `https` protocol.
 
 ### Common issues and solutions
 
 - Issue: Browser shows security warnings (e.g., "Your connection is not private").
-  - Solution: This is expected when using the default self-signed certificate generated by `--https`. For development or internal testing, you can usually proceed by accepting the risk. For production or public-facing scenarios, configure Connect with properly signed certificates (consult Powerhouse documentation for advanced configuration).
+  - Solution: This is expected when using the default self-signed certificate generated by `--https`. For development or internal testing, you can usually proceed by accepting the risk. For production or public-facing scenarios, configure with properly signed certificates (consult Powerhouse documentation for advanced configuration).
 - Issue: Port conflict (e.g., `"Port <port> is already in use"`).
   - Solution: Choose a different port number that is not currently occupied by another application.
-- Issue: Cannot access Connect from a remote machine.
-  - Solution: Ensure the port is open in any firewalls (on the server and potentially network firewalls). Verify you are using the correct public IP address or hostname of the machine running Connect.
+- Issue: Cannot access from a remote machine.
+  - Solution: Ensure the port is open in any firewalls (on the server and potentially network firewalls). Verify you are using the correct public IP address or hostname of the machine.
 
 ### Related recipes
 
+- [Launching Vetra Studio](#launching-vetra-studio)
 - [Initializing a New Project & Document Model](#initializing-a-new-project-and-document-model)
 
 ### Further reading
 
+- [Vetra Studio Documentation](/academy/MasteryTrack/BuilderEnvironment/VetraStudio)
 - [Powerhouse Builder Tools](/academy/MasteryTrack/BuilderEnvironment/BuilderTools)
-- [GraphQL Schema Best Practices](/academy/MasteryTrack/WorkWithData/UsingTheAPI)
 </details>
 
 ## Document & Drive Editor recipes
 
 This section provides guidance on generating and customizing editors for Document Models and custom interfaces for Drives.
+
+> **Tip:** For editor development, use **Vetra Studio** with `ph vetra --watch`. Vetra provides automatic code generation and live preview as you develop your editors. See [Creating an Editor with AI Assistance](#creating-an-editor-with-ai-assistance) for AI-powered editor creation.
 
 <details id="generating-a-document-editor">
 <summary>Generating a Document Editor</summary>
@@ -1205,7 +1246,7 @@ This section provides guidance on generating and customizing editors for Documen
 
 ### Problem statement
 
-You have a Powerhouse document model and need to create a user interface (editor) for it to be used within the Connect application.
+You have a Powerhouse document model and need to create a user interface (editor) for it.
 
 ### Prerequisites
 
@@ -1214,6 +1255,25 @@ You have a Powerhouse document model and need to create a user interface (editor
 - A document model generated or defined within the project (e.g., in the `document-models` directory).
 
 ### Solution
+
+> **Recommended:** Use **Vetra Studio** with `ph vetra --watch` for editor development. Vetra automatically generates editor scaffolding and provides live preview as you develop. See [Launching Vetra Studio](#launching-vetra-studio) and [Creating an Editor with AI Assistance](#creating-an-editor-with-ai-assistance).
+
+### Using Vetra (Recommended)
+
+Start Vetra with watch mode for automatic code generation and live preview:
+
+```bash
+ph vetra --watch
+```
+
+In Vetra Studio, you can:
+- Create editors visually or with AI assistance
+- See live preview of your editor as you make changes
+- Automatically generate editor scaffolding
+
+### Manual Generation (Alternative)
+
+If you need to manually generate an editor template:
 
 ### Step 1: Navigate to Project Directory
 
@@ -1238,14 +1298,18 @@ ph generate --editor <ModelName> --document-types <docType>
 - A new directory is created under `editors/` (e.g., `editors/<model-name>/`).
 - An `editor.tsx` file is generated within that directory, containing a basic template for your document editor.
 - You can now customize `editor.tsx` to build your desired UI using HTML, Tailwind CSS, or custom CSS.
+- With Vetra, you get live preview with `ph vetra --watch` as you develop.
 
 ### Related recipes
 
+- [Launching Vetra Studio](#launching-vetra-studio)
+- [Creating an Editor with AI Assistance](#creating-an-editor-with-ai-assistance)
 - [Initializing a New Project & Document Model](#initializing-a-new-project-and-document-model)
 - [Generating a Custom Drive Explorer](#generating-a-custom-drive-explorer)
 
 ### Further reading
 
+- [Vetra Studio Documentation](/academy/MasteryTrack/BuilderEnvironment/VetraStudio)
 - [Build a Todo-list Editor](/academy/GetStarted/BuildToDoListEditor)
 </details>
 
@@ -1266,6 +1330,22 @@ You need a custom, application-like interface to browse, organize, or interact w
 - A Powerhouse project initialized (`ph init`)
 
 ### Solution
+
+> **Recommended:** Use **Vetra Studio** with `ph vetra --watch` for drive explorer development. Vetra provides automatic code generation and live preview as you build your custom drive interface. See [Launching Vetra Studio](#launching-vetra-studio).
+
+### Using Vetra (Recommended)
+
+Start Vetra with watch mode for automatic code generation and live preview:
+
+```bash
+ph vetra --watch
+```
+
+Vetra Studio allows you to develop and preview your drive explorer in real-time.
+
+### Manual Generation (Alternative)
+
+If you need to manually generate a drive explorer template:
 
 ### Step 1: Navigate to Project Directory
 
@@ -1290,13 +1370,16 @@ ph generate --drive-editor <drive-app-name>
 - Template files (`EditorContainer.tsx`, components, hooks, etc.) are generated within that directory, providing a basic structure for a drive explorer.
 - You can now customize these files to create your specific drive interface, potentially removing default components and adding custom views relevant to your document models.
 - Remember to update your `powerhouse.manifest.json` to register the new app.
+- With Vetra, you get live preview with `ph vetra --watch` as you develop.
 
 ### Related recipes
 
+- [Launching Vetra Studio](#launching-vetra-studio)
 - [Generating a Document Editor](#generating-a-document-editor)
 
 ### Further reading
 
+- [Vetra Studio Documentation](/academy/MasteryTrack/BuilderEnvironment/VetraStudio)
 - [Build a Drive-Explorer](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer)
 </details>
 
@@ -1405,6 +1488,8 @@ Use the constructed URL to add or access the drive in your Connect environment.
 
 Learn how to manage the Powerhouse Reactor, the local service for processing document model operations and state.
 
+> **Tip:** For development workflows, **Vetra Studio** (`ph vetra --watch`) is recommended as it includes reactor functionality along with automatic code generation and live preview.
+
 <details id="starting-the-reactor">
 <summary>Starting the Reactor</summary>
 
@@ -1423,6 +1508,21 @@ You need to start the Powerhouse Reactor, the local service responsible for proc
 - You are in the root directory of your Powerhouse project.
 
 ### Solution
+
+> **Note:** For development, **Vetra Studio** (`ph vetra --watch`) is the recommended workflow as it includes the reactor functionality along with automatic code generation and live preview. Use `ph reactor` directly when you need to run the reactor service independently.
+
+### Using Vetra (Recommended for Development)
+
+```bash
+ph vetra --watch
+```
+
+Vetra includes reactor functionality and provides:
+- Automatic code generation when document models change
+- Live preview of documents and editors
+- Integrated development environment
+
+### Using Reactor Directly
 
 ### Step 1: Navigate to Project Directory (if needed)
 
@@ -1455,8 +1555,8 @@ ph reactor
 
 ### Related recipes
 
+- [Launching Vetra Studio](#launching-vetra-studio)
 - [Initializing a New Project & Document Model](#initializing-a-new-project-and-document-model)
-- Testing with GraphQL (Details to be added)
 
 </details>
 
@@ -1514,7 +1614,7 @@ ph install /Users/you/dev/my-local-package
 
 ### Step 3: Verify Installation
 
-Check your project's `package.json` and `powerhouse.manifest.json` to ensure the package dependency has been added correctly. Run `ph connect` to see if the components from the installed package are available.
+Check your project's `package.json` and `powerhouse.manifest.json` to ensure the package dependency has been added correctly. Run `ph vetra --watch` (or `ph connect`) to see if the components from the installed package are available.
 
 ### Expected outcome
 
@@ -1745,8 +1845,7 @@ You've created or modified documents within a specific drive using Powerhouse Co
 
 - Powerhouse CLI (`ph-cmd`) installed.
 - A Powerhouse project initialized (`ph init`).
-- The Powerhouse Reactor is running (`ph reactor`).
-- Powerhouse Connect is running (`ph connect`).
+- Vetra Studio is running (`ph vetra --watch`) or the Powerhouse Reactor is running (`ph reactor`).
 - You have attempted to create or modify documents in a drive (e.g., a "finances" drive).
 
 ### Solution
@@ -1807,7 +1906,7 @@ Understanding the different GraphQL endpoints in Powerhouse is crucial for effec
 
 ### Problem statement
 
-You are running Powerhouse Connect locally (via `ph connect`), but you can't find your local drive in the interface. Alternatively, you can see the drive or have recreated it, but the `DocumentModel` button is missing, preventing you from creating new document model schemas.
+You are running Powerhouse locally (via `ph vetra --watch` or `ph connect`), but you can't find your local drive in the interface. Alternatively, you can see the drive or have recreated it, but the `DocumentModel` button is missing, preventing you from creating new document model schemas.
 
 ### Prerequisites
 

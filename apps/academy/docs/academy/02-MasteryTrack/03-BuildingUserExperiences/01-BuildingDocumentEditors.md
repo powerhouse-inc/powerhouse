@@ -6,20 +6,27 @@ At Powerhouse, frontend development for document editors follows a simple and fa
 
 ### Development environment
 
-Connect Studio is your primary tool for development.  
-When you run `ph connect`, it provides a dynamic, local environment where you can define and preview your document models and their editors live. This replaces the need for tools like Storybook for editor development, though Storybook remains invaluable for exploring the [Powerhouse Component Library](#powerhouse-component-library).
+**Vetra Studio** is your primary tool for builder workflows and editor development.  
+When you run `ph vetra`, it provides a dynamic, local environment where you can define and preview your document models and their editors live. This replaces the need for tools like Storybook for editor development, though Storybook remains invaluable for exploring the [Powerhouse Component Library](#powerhouse-component-library).
 
 Key aspects of the Powerhouse development environment:
 
 - **React Foundation**: Build your editor UIs using React components, just as you would in any standard React project.
-- **Automatic Build Processes**: Tailwind CSS is installed by default and fully managed by Connect Studio. There's no need to manually configure or run Tailwind or other build processes during development. Connect Studio handles CSS generation and other necessary build steps automatically, especially when you publish a package.
+- **Automatic Build Processes**: Tailwind CSS is installed by default and fully managed by Vetra Studio. There's no need to manually configure or run Tailwind or other build processes during development. Vetra Studio handles CSS generation and other necessary build steps automatically, especially when you publish a package.
 - **Styling Flexibility**: You are not limited to Tailwind. Regular CSS (`.css` files), inline styles, and any React-compatible styling method work exactly as you would expect.
 
 Powerhouse aims to keep your developer experience clean, familiar, and focused:
 
 - Build React components as you normally would.
 - Use styling approaches you're comfortable with.
-- Trust Connect Studio to handle the setup and build processes for you.
+- Trust Vetra Studio to handle the setup and build processes for you.
+
+<details>
+<summary>Alternatively: Use Connect for development</summary>
+
+You can also use **Connect** as your development environment by running `ph connect`. Connect provides a similar dynamic local environment where you can preview your document models and their editors live. The development experience is essentially the same, with Connect also handling Tailwind CSS and build processes automatically.
+
+</details>
 
 ### Generating your editor template
 
@@ -80,7 +87,7 @@ You have several options for styling your editor components:
     }
     ```
 
-Choose the method or combination of methods that best suits your project needs and team preferences. Connect Studio (`ph connect`) will allow you to see your styles applied in real-time.
+Choose the method or combination of methods that best suits your project needs and team preferences. Vetra Studio (`ph vetra`) or Connect (`ph connect`) will allow you to see your styles applied in real-time.
 
 :::warning **Best practices for consistent reliable styles**
 
@@ -129,6 +136,10 @@ Think of it like ordering food at a restaurant:
 ### Method 1: Using Hooks (Recommended) 🪝
 
 The **hook-based approach** uses `useSelectedTodoListDocument` — a React hook that Powerhouse generates for your document model. Any component can call this hook to get the current document state and a function to dispatch changes.
+
+:::tip Full React Hooks Reference
+Powerhouse provides many more hooks beyond the document-specific ones. See the complete [React Hooks API Reference](/academy/APIReferences/ReactHooks) for all available hooks.
+:::
 
   ```typescript
 import { useSelectedTodoListDocument } from "todo-tutorial/document-models/todo-list";
@@ -196,6 +207,54 @@ export default function Editor(props: IProps) {
 | Need to test components in isolation | **Props** 📦 |
 
 **Bottom line**: Use hooks for most Powerhouse editor development. It's simpler, cleaner, and matches the patterns used in the [todo-demo repository](https://github.com/powerhouse-inc/todo-demo).
+
+### Additional hooks for editors
+
+Beyond the document-specific hooks (like `useSelectedTodoListDocument`), Powerhouse provides a comprehensive set of hooks from the reactor-browser package that you can use in your editors:
+
+| Hook | Description |
+|------|-------------|
+| `useSelectedDocument` | Returns the currently selected document |
+| `useSelectedDocumentId` | Returns just the ID of the selected document |
+| `useDocumentById` | Returns a document by its ID |
+| `useSelectedDrive` | Returns the currently selected drive |
+| `useRevisionHistoryVisible` | Check and control revision history visibility |
+| `usePHModal` | Manage modals in your editor |
+
+**Example: Using `useDocumentById` to reference another document**
+
+```typescript
+import { useDocumentById } from "@powerhousedao/reactor-browser";
+
+export function RelatedDocument({ documentId }: { documentId: string }) {
+  const relatedDoc = useDocumentById(documentId);
+  
+  if (!relatedDoc) return <span>Loading...</span>;
+  
+  return (
+    <div>
+      <h3>Related: {relatedDoc.name}</h3>
+      {/* Display related document info */}
+    </div>
+  );
+}
+```
+
+**Example: Showing a modal from your editor**
+
+```typescript
+import { showCreateDocumentModal } from "@powerhousedao/reactor-browser";
+
+export function CreateNewButton() {
+  return (
+    <button onClick={() => showCreateDocumentModal()}>
+      Create New Document
+    </button>
+  );
+}
+```
+
+For a complete list of all available hooks, see the [React Hooks API Reference](/academy/APIReferences/ReactHooks).
 
 ## Local vs. Global State
 
@@ -299,10 +358,10 @@ Once complete, navigate to the `editors/todo-list-editor/editor.tsx` file and op
 When building your editor component within the Powerhouse ecosystem, you have several options for styling, allowing you to leverage your preferred methods:
 
 1.  **Default HTML Styling:** Standard HTML tags (`<h1>`, `<p>`, `<button>`, etc.) will render with default styles offered through the boilerplate.
-2.  **Tailwind CSS:** Connect Studio comes with Tailwind CSS integrated. You can directly use Tailwind utility classes for rapid, consistent styling without writing separate CSS files.
+2.  **Tailwind CSS:** Vetra Studio comes with Tailwind CSS integrated. You can directly use Tailwind utility classes for rapid, consistent styling without writing separate CSS files.
 3.  **Custom CSS Files:** You can import traditional CSS files (`.css`) to apply custom styles or integrate existing style libraries.
 
-Connect Studio provides a dynamic local environment (`ph connect`) to visualize your components instantly as you build them, regardless of the styling method you choose. Manual build steps are typically only needed when publishing packages.
+Vetra Studio provides a dynamic local environment (`ph vetra`) to visualize your components instantly as you build them, regardless of the styling method you choose. Manual build steps are typically only needed when publishing packages.
 
 ---
 
@@ -515,7 +574,22 @@ export function TodoList() {
 
 ## Test your editor
 
-Now you can run the Connect app and see the **TodoList** editor in action:
+Now you can run Vetra Studio and see the **TodoList** editor in action:
+
+```bash
+ph vetra
+```
+
+In Vetra Studio, you'll be able to create and test your **TodoList** documents. Click on the Document Models section and create a new TodoList document.
+
+:::tip Vetra Studio as your dynamic development environment
+The editor will update dynamically, so you can play around with your editor styling while seeing your results appear in Vetra Studio.
+:::
+
+<details>
+<summary>Alternatively: Test with Connect</summary>
+
+You can also run the Connect app to see the **TodoList** editor in action:
 
 ```bash
 ph connect
@@ -523,9 +597,9 @@ ph connect
 
 In Connect, in the bottom right corner you'll find a new Document Model that you can create: **TodoList**. Click on it to create a new TodoList document.
 
-:::tip Connect as your dynamic development environment
-The editor will update dynamically, so you can play around with your editor styling while seeing your results appear in Connect Studio.
-:::
+The editor will update dynamically, so you can play around with your editor styling while seeing your results appear in Connect.
+
+</details>
 
 </details>
 
@@ -536,3 +610,8 @@ If you managed to follow this tutorial until this point, you have successfully i
 
 Now you can move on to creating a [custom drive explorer](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer) for your TodoList document.  
 Imagine you have many TodoLists sitting in a drive. A custom drive explorer will allow you to organize and track them at a glance, opening up a new world of possibilities to increase the functionality of your documents!
+
+### Further Reading
+
+- [React Hooks API Reference](/academy/APIReferences/ReactHooks) — Complete reference for all available Powerhouse hooks
+- [Component Library](/academy/ComponentLibrary/DocumentEngineering) — Pre-built UI components for your editors

@@ -125,7 +125,7 @@ type TodoListStats {
 
 By carefully defining your state schema, you lay a solid foundation for your Powerhouse document model, making it robust, maintainable, and easy to work with. The schema dictates not only how data is stored but also how it can be queried and mutated through operations, which will be covered in the next section.
 
-## Practical implementation: defining the state schema in Connect
+## Practical implementation: defining the state schema in Vetra Studio
 
 Now that you understand the concepts behind the state schema, let's put it into practice. This section will guide you through creating a document model specification for the TodoList example discussed above.
 
@@ -135,12 +135,66 @@ Now that you understand the concepts behind the state schema, let's put it into 
 ### Prerequisites
 
 - You have a Powerhouse project set up. If not, please follow the [Create a new Powerhouse Project](../../GetStarted/CreateNewPowerhouseProject) tutorial.
-- Connect Studio is running. If not, navigate to your project directory in the terminal and run `ph connect`.
+- Vetra Studio is running. If not, navigate to your project directory in the terminal and run `ph vetra`.
 
 ### Steps
 
 1.  **Create a New Document Model**:
-    - With Connect Studio open in your browser, navigate into your local drive.
+    - With Vetra Studio open in your browser, you'll see the Vetra Studio Drive.
+    - Click the **Document Models 'Add new specification'** button to create a new document model specification.
+
+2.  **Define Document Metadata**:
+    - **Name**: Give your document model a descriptive name: `TodoList`. **Pay close attention to capitalization, as it influences our code generation.**
+    - **Document Type**: In the 'Document Type' field, enter a unique identifier for this document type: `powerhouse/todo-list`.
+
+3.  **Specify the State Schema**:
+    - In the code editor provided, you'll see a template for a GraphQL schema.
+    - Replace the entire content of the editor with the advanced `TodoList` schema we've designed in this chapter:
+
+    ```graphql
+    # The state of our TodoList (advanced version with stats)
+    type TodoListState {
+      items: [TodoItem!]!
+      stats: TodoListStats!
+    }
+
+    # A single to-do item
+    type TodoItem {
+      id: OID!
+      text: String!
+      checked: Boolean!
+    }
+    
+    # The statistics on our to-do's (advanced feature)
+    type TodoListStats {
+      total: Int!
+      checked: Int!
+      unchecked: Int!
+    }
+    ```
+
+4.  **Sync Schema and View Initial State**:
+    - After pasting the schema, click the **'Sync with schema'** button.
+    - This action processes your schema and generates an initial JSON state for your document model based on the `TodoListState` type. You can view this initial state, which helps you verify that your schema is structured correctly.
+
+    For now, you can ignore the "Modules & Operations" section. We will define and implement the operations that modify this state in the upcoming sections of this Mastery Track.
+
+By completing these steps, you have successfully specified the data structure for the advanced TodoList document model. The next step is to define the operations that will allow users to interact with and change this state.
+
+</details>
+
+<details>
+<summary>Alternatively: Define the state schema in Connect</summary>
+
+### Prerequisites
+
+- You have a Powerhouse project set up. If not, please follow the [Create a new Powerhouse Project](../../GetStarted/CreateNewPowerhouseProject) tutorial.
+- Connect is running. If not, navigate to your project directory in the terminal and run `ph connect`.
+
+### Steps
+
+1.  **Create a New Document Model**:
+    - With Connect open in your browser, navigate into your local drive.
     - At the bottom of the page in the 'New Document' section, click the `DocumentModel` button to create a new document model specification.
 
 2.  **Define Document Metadata**:

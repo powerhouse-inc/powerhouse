@@ -47,7 +47,7 @@ These `input` types are not just abstract definitions; they are the **specificat
 Notice that `AddTodoItemInput` only requires `text` — not an `id`. This is because the ID is generated automatically in the reducer using `generateId()` from `document-model/core`. This ensures unique, consistent IDs and follows the pattern used in the [todo-demo repository](https://github.com/powerhouse-inc/todo-demo).
 :::
 
-The Powerhouse Connect application uses these GraphQL input types when you define operations within a module (e.g., the `todos` module with operations `ADD_TODO_ITEM`, `UPDATE_TODO_ITEM`, `DELETE_TODO_ITEM`).
+Vetra Studio uses these GraphQL input types when you define operations within a module (e.g., the `todos` module with operations `ADD_TODO_ITEM`, `UPDATE_TODO_ITEM`, `DELETE_TODO_ITEM`).
 
 ## Designing effective document operations
 
@@ -68,7 +68,7 @@ Clear and consistent naming makes your operations understandable. A common conve
 - Examples: `ADD_ITEM`, `UPDATE_USER_PROFILE`, `ASSIGN_TASK_TO_USER`.
 - In our case: `ADD_TODO_ITEM`, `UPDATE_TODO_ITEM`, `DELETE_TODO_ITEM`.
 
-The name you provide in the Connect UI (e.g., `ADD_TODO_ITEM`) directly corresponds to the operation type that will be recorded and that your reducers will handle.
+The name you provide in Vetra Studio (or Connect) (e.g., `ADD_TODO_ITEM`) directly corresponds to the operation type that will be recorded and that your reducers will handle.
 
 ### 3. Input types (payloads)
 
@@ -117,14 +117,70 @@ export const todoListTodosOperations: TodoListTodosOperations = {
 };
 ```
 
-## Practical implementation: Defining operations in Connect
+## Practical implementation: Defining operations in Vetra Studio
 
-Now that you understand the theory, let's walk through the practical steps of defining these operations for our `TodoList` document model within the Powerhouse Connect application.
+Now that you understand the theory, let's walk through the practical steps of defining these operations for our `TodoList` document model within Vetra Studio.
 
 <details>
 <summary>Tutorial: Specifying TodoList operations</summary>
 
 Assuming you have already defined the state schema for the `TodoList` as covered in the previous section, follow these steps to add the operations:
+
+1.  **Create a Module for Operations:**
+    Below the schema editor in Vetra Studio, find the input field labeled `Add module`. Modules help organize your operations.
+    - Type `todos` into the field and press Enter.
+
+2.  **Add the `ADD_TODO_ITEM` Operation:**
+    A new field, `Add operation`, will appear under your new module.
+    - Type `ADD_TODO_ITEM` into this field and press Enter.
+    - An editor will appear for the operation's input type. You need to define the data required for this operation. Paste the following GraphQL `input` definition into the editor:
+
+    ```graphql
+    # Defines a GraphQL input type for adding a new to-do item
+    input AddTodoItemInput {
+      text: String!
+    }
+    ```
+
+    :::info
+    Notice we don't include `id` in the input — the reducer will generate it automatically using `generateId()` from `document-model/core`.
+    :::
+
+3.  **Add the `UPDATE_TODO_ITEM` Operation:**
+    - In the `Add operation` field again, type `UPDATE_TODO_ITEM` and press Enter.
+    - Paste the corresponding `input` definition into its editor:
+
+    ```graphql
+    # Defines a GraphQL input type for updating a to-do item
+    input UpdateTodoItemInput {
+      id: OID!
+      text: String
+      checked: Boolean
+    }
+    ```
+
+4.  **Add the `DELETE_TODO_ITEM` Operation:**
+    - Finally, type `DELETE_TODO_ITEM` in the `Add operation` field and press Enter.
+    - Paste its `input` definition:
+
+    ```graphql
+    # Defines a GraphQL input type for deleting a to-do item
+    input DeleteTodoItemInput {
+      id: OID!
+    }
+    ```
+
+5.  **Review:**
+    After adding all three operations, your document model specification in Vetra Studio is complete for now. You can see how each operation (`ADD_TODO_ITEM`, etc.) is now explicitly linked to an input type that defines its payload.
+
+    Vetra Studio automatically tracks your document model specifications. In the next chapter, we will see how the generator is used to create code for our reducers.
+
+</details>
+
+<details>
+<summary>Alternatively: Define operations in Connect</summary>
+
+Assuming you have already defined the state schema for the `TodoList` as covered in the previous section, follow these steps to add the operations in Connect:
 
 1.  **Create a Module for Operations:**
     Below the schema editor in Connect, find the input field labeled `Add module`. Modules help organize your operations.

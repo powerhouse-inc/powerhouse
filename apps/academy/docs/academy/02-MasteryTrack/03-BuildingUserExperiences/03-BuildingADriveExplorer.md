@@ -73,15 +73,10 @@ If not, you can follow the shortened guide below to prepare your project for thi
 
 - Initialize a new project with `ph init` and give it a project name.
 
-- Start by running Connect locally with `ph connect`
+- Start by running Vetra Studio locally with `ph vetra`
 
 - Download the `todolist.phdm.zip` file from the [todo-demo-package GitHub repository](https://github.com/powerhouse-inc/todo-demo-package/blob/production/todolist.phdm.zip).
-- Place the downloaded file in the root of your project directory.
-- Generate the document model:
-
-  ```bash
-  ph generate todolist.phdm.zip
-  ```
+- Drop the downloaded file in the Vetra Studio drive. You'll find it under document models. Vetra should now automatically generate the necessary code for your project
 
 ### 2. Add the reducer code:
 
@@ -98,6 +93,14 @@ ph generate --editor ToDoList --document-types powerhouse/todolist
 
 - Copy the code from [`editor.tsx`](https://github.com/powerhouse-inc/todo-demo-package/blob/production/editors/to-do-list/editor.tsx)
 - Paste it into `editors/to-do-list/editor.tsx`
+
+<details>
+<summary>Alternatively: Use Connect instead of Vetra Studio</summary>
+
+You can also start by running Connect locally with `ph connect` instead of Vetra Studio. The workflow is the same, with Connect providing a similar development environment.
+
+</details>
+
 </details>
 :::
 
@@ -558,11 +561,9 @@ return showRevisionHistory ? (
 
 - With the code for our drive-app in place, it's time to see it in action. Run Connect in Studio mode:
 
-  ```bash
-  ph connect
-  ```
-
-  ![Todo drive explorer Demo](https://raw.githubusercontent.com/powerhouse-inc/todo-drive-explorer/9a87871e61460e73ddf8635fd756a0cd991306d6/demo.gif)
+```bash
+ph connect
+```
 
 ### Now it's your turn!
 

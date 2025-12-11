@@ -31,7 +31,17 @@ The package includes:
 - Editor Code
 - Drive Explorer Code
 
-You can clone the repository and run Connect Studio to see all the code in action:
+You can clone the repository and run Vetra Studio to see all the code in action:
+
+```bash
+git clone https://github.com/powerhouse-inc/todo-demo
+cd todo-demo
+pnpm install
+ph vetra
+```
+
+<details>
+<summary>Alternatively: Run with Connect</summary>
 
 ```bash
 git clone https://github.com/powerhouse-inc/todo-demo
@@ -39,6 +49,8 @@ cd todo-demo
 pnpm install
 ph connect
 ```
+
+</details>
 
 ### Option 3: Install the todo demo package in a (local) host app
 

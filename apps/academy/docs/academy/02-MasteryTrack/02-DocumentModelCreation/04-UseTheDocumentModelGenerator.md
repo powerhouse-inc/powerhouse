@@ -1,6 +1,6 @@
 # Use the document model generator
 
-In the Powerhouse Document Model development workflow, after specifying your document model's state schema and operations within the Connect application and exporting it as a `.phd` file, the next crucial step is to translate this specification into a tangible codebase. This is where the Powerhouse Document Model Generator comes into play.
+In the Powerhouse Document Model development workflow, after specifying your document model's state schema and operations within Vetra Studio (or Connect), the next crucial step is to translate this specification into a tangible codebase. This is where the Powerhouse Document Model Generator comes into play.
 
 The Document Model Generator is a powerful command-line tool (`ph generate`) that processes your exported `.phd` file and scaffolds the necessary directory structure and foundational code for your document model. It automates the creation of boilerplate code, ensuring consistency, type safety, and adherence to Powerhouse conventions, thereby significantly accelerating the development process.
 
@@ -11,7 +11,7 @@ This document provides a deep dive into using the Document Model Generator, unde
 Before you can use the Document Model Generator, ensure you have the following:
 
 1.  **Powerhouse CLI (`ph-cmd`) Installed:** The generator is part of the Powerhouse CLI. If you haven't installed it, refer to the [Builder Tools documentation](/academy/MasteryTrack/BuilderEnvironment/BuilderTools#installing-the-powerhouse-cli).
-2.  **Document Model Specification File (`.phd`):** You must have already defined your document model in Connect and exported it. This file (e.g., `TodoList.phd`) contains the GraphQL schema for your document's state and operations. This process is typically covered in a preceding step, such as "Define TodoList Document Model."
+2.  **Document Model Specification:** You must have already defined your document model in Vetra Studio (or Connect). When using Vetra Studio, the specification is managed within the Vetra Studio Drive. When using Connect, you export the specification as a `.phd` file (e.g., `TodoList.phd`) containing the GraphQL schema for your document's state and operations.
 
 ## The command
 
@@ -83,14 +83,50 @@ Leveraging the `ph generate` command offers numerous advantages:
 3.  **Type Safety:** The generation of TypeScript types from your GraphQL schema is a massive boon for catching errors early in the development cycle and improving code quality.
 4.  **Accelerated Development:** By providing a ready-to-use scaffold, developers can immediately focus on implementing the core business logic in the reducers, rather than setting up the foundational plumbing.
 5.  **Alignment with Powerhouse Ecosystem:** The generated code is designed to integrate seamlessly with other parts of the Powerhouse ecosystem, such as the reducer execution engine and UI components.
-6.  **Single Source of Truth:** Ensures that your codebase (especially types and action creators) stays synchronized with the document model specification defined in Connect. If the specification changes, regenerating the model will update these components accordingly.
+6.  **Single Source of Truth:** Ensures that your codebase (especially types and action creators) stays synchronized with the document model specification defined in Vetra Studio (or Connect). If the specification changes, regenerating the model will update these components accordingly.
 
 ## Practical implementation: Generating the `TodoList` model
 
 Now that you understand what the Document Model Generator does, let's walk through the practical steps of using it with our `TodoList` example.
 
 <details>
-<summary>Tutorial: Generating the TodoList document model</summary>
+<summary>Tutorial: Generating the TodoList document model (Vetra Studio)</summary>
+
+This tutorial assumes you have completed the previous steps in this Mastery Track, where you defined the state schema and operations for the `TodoList` model in Vetra Studio.
+
+### Prerequisites
+
+- **Document model defined in Vetra Studio**: Your `TodoList` document model specification should be created in the Vetra Studio Drive. If you have not done this, please revisit the previous sections on specifying the state schema and operations.
+
+### Steps
+
+1.  **Run the Generator Command**:
+    - With Vetra Studio running (`ph vetra`), open a new terminal in the root directory of your Powerhouse project.
+    - Execute the `ph generate` command to generate code for all document models in your Vetra Studio Drive:
+
+    ```bash
+    ph generate
+    ```
+
+    Alternatively, you can specify the document model by name:
+
+    ```bash
+    ph generate TodoList
+    ```
+
+2.  **Explore the Generated Files**:
+    - After the command completes successfully, you will find a new directory: `document-models/todo-list/`.
+    - Take a moment to explore its contents, which will match the structure described earlier in this document:
+      - `todo-list.json` and `schema.graphql`: The definition of your model.
+      - `gen/`: Type-safe, generated code including `types.ts`, `creators.ts`, etc.
+      - `src/`: The skeleton for your implementation, most importantly `src/reducers/todos.ts`, which will contain empty functions for `addTodoItemOperation`, `updateTodoItemOperation`, and `deleteTodoItemOperation`, ready for you to implement.
+
+With these files generated, you have successfully scaffolded your document model. The project is now set up for you to implement the core business logic.
+
+</details>
+
+<details>
+<summary>Alternatively: Generate the TodoList document model (Connect)</summary>
 
 This tutorial assumes you have completed the previous steps in this Mastery Track, where you defined the state schema and operations for the `TodoList` model in Connect and exported it.
 
