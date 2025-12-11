@@ -429,6 +429,21 @@ export async function generateImportScript(
   });
 }
 
+const defaultManifest: PowerhouseManifest = {
+  name: "",
+  description: "",
+  category: "",
+  publisher: {
+    name: "",
+    url: "",
+  },
+  documentModels: [],
+  editors: [],
+  apps: [],
+  subgraphs: [],
+  importScripts: [],
+};
+
 export function generateManifest(
   manifestData: PartialPowerhouseManifest,
   projectRoot?: string,
@@ -437,20 +452,6 @@ export function generateManifest(
   const manifestPath = join(rootDir, "powerhouse.manifest.json");
 
   // Create default manifest structure
-  const defaultManifest: PowerhouseManifest = {
-    name: "",
-    description: "",
-    category: "",
-    publisher: {
-      name: "",
-      url: "",
-    },
-    documentModels: [],
-    editors: [],
-    apps: [],
-    subgraphs: [],
-    importScripts: [],
-  };
 
   // Read existing manifest if it exists
   let existingManifest: PowerhouseManifest = defaultManifest;

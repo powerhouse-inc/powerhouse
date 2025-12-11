@@ -243,7 +243,7 @@ describe("generateManifest", () => {
     const content = fs.readFileSync(manifestPath, "utf-8");
 
     // Verify it's properly formatted JSON
-    expect(() => JSON.parse(content)).not.toThrow();
+    expect(() => JSON.parse(content) as PowerhouseManifest).not.toThrow();
 
     // Verify structure
     const manifest = JSON.parse(content) as PowerhouseManifest;
