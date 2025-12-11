@@ -18,6 +18,32 @@ Before we begin building our Document Model, we need to install some software on
 
 Follow the steps below based on your computer's operating system.
 
+### Windows Users: Consider Using WSL
+
+If you're on Windows, we recommend using **Windows Subsystem for Linux (WSL)** for the best development experience. WSL lets you run a full Linux environment directly on Windows without the overhead of a virtual machine. This gives you access to Linux command-line tools and utilities, which are often preferred for modern web development workflows.
+
+**To install WSL:**
+
+1. Open PowerShell as Administrator (right-click and select "Run as administrator")
+2. Run the following command:
+
+```powershell
+wsl --install
+```
+
+3. Restart your computer when prompted
+4. After restart, a terminal will open asking you to create a Linux username and password
+
+Once WSL is set up, you can follow the **Linux (Ubuntu/Debian)** instructions below for installing Node.js, Git, and other tools. Your Linux environment will be accessible through the Windows Terminal or by typing `wsl` in PowerShell.
+
+:::tip
+Using WSL provides a consistent development experience that matches most production environments and online tutorials. You can still use VS Code on Windows — it integrates seamlessly with WSL through the [Remote - WSL extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-wsl).
+:::
+
+For more details, see the official [WSL installation guide](https://learn.microsoft.com/en-us/windows/wsl/install).
+
+---
+
 ### Installing node.js 22
 
 node.js 22 is a tool that lets us run our application. Let's install it step by step.
