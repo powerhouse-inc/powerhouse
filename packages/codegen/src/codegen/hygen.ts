@@ -275,8 +275,6 @@ export async function hygenGenerateSubgraph(
       { skipFormat, verbose },
     );
   }
-
-  makeSubgraphsIndexFile({ projectDir: path.dirname(dir) });
 }
 
 export async function hygenGenerateImportScript(

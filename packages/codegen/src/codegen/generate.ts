@@ -16,6 +16,7 @@ import {
   tsMorphGenerateDocumentModel,
 } from "../ts-morph-utils/file-builders/document-model.js";
 import { tsMorphGenerateDriveEditor } from "../ts-morph-utils/file-builders/drive-editor.js";
+import { makeSubgraphsIndexFile } from "../ts-morph-utils/file-builders/subgraphs.js";
 import { buildTsMorphProject } from "../ts-morph-utils/ts-morph-project.js";
 import { generateDocumentModelZodSchemas, generateSchemas } from "./graphql.js";
 import {
@@ -387,7 +388,8 @@ export async function generateSubgraphFromDocumentModel(
   config: PowerhouseConfig,
   options: CodegenOptions = {},
 ) {
-  return hygenGenerateSubgraph(name, documentModel, { ...config, ...options });
+  await hygenGenerateSubgraph(name, documentModel, { ...config, ...options });
+  makeSubgraphsIndexFile({ projectDir: path.dirname(config.subgraphsDir) });
 }
 
 export async function generateSubgraph(
@@ -396,11 +398,13 @@ export async function generateSubgraph(
   config: PowerhouseConfig,
   options: CodegenOptions = {},
 ) {
-  return hygenGenerateSubgraph(
-    name,
-    file !== null ? await loadDocumentModel(file) : null,
-    { ...config, ...options },
-  );
+  const documentModelState =
+    file !== null ? await loadDocumentModel(file) : null;
+  await hygenGenerateSubgraph(name, documentModelState, {
+    ...config,
+    ...options,
+  });
+  makeSubgraphsIndexFile({ projectDir: path.dirname(config.subgraphsDir) });
 }
 
 export async function generateProcessor(
@@ -516,32 +520,6 @@ export function generateManifest(
   fs.writeFileSync(manifestPath, JSON.stringify(updatedManifest, null, 4));
 
   return manifestPath;
-}
-
-function generateGraphqlSchema(documentModel: DocumentModelGlobalState) {
-  const spec =
-    documentModel.specifications[documentModel.specifications.length - 1];
-
-  if (!spec) {
-    throw new Error(`No spec found for ${documentModel.id}`);
-  }
-
-  const {
-    modules,
-    state: { global, local },
-  } = spec;
-  const schemas = [
-    global.schema,
-    local.schema,
-    ...modules
-      .map((module) => [
-        `# ${module.name}`,
-        ...module.operations.map((op) => op.schema),
-      ])
-      .flat()
-      .filter((schema) => schema && schema.length > 0),
-  ];
-  return schemas.join("\n\n");
 }
 
 /**
