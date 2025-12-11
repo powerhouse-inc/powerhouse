@@ -16,13 +16,7 @@ pnpm install -g ph-cmd
 
 :::
 
-<!-- AUTO-GENERATED-CLI-COMMANDS-START -->
-<!-- This content is automatically generated. Do not edit directly. -->
-
-
-### ph-cmd Commands
-
-- [Checkout](#checkout)
+<!-- AUTO-GENERATED-CLI-COMMANDS-START -->\n<!-- This content is automatically generated. Do not edit directly. -->\n### ph-cmd Commands\n\n- [Checkout](#checkout)
 - [Init](#init)
 - [Setup Globals](#setup-globals)
 - [Update](#update)
@@ -249,10 +243,7 @@ Examples:
 
 ---
 
-*This document was automatically generated from the help text in the codebase.*
-
-### ph-cli Commands
-
+*This document was automatically generated from the help text in the codebase.*\n\n### ph-cli Commands\n\n- [Access Token](#access-token)
 - [Connect Build](#connect-build)
 - [Connect Preview](#connect-preview)
 - [Connect Studio](#connect-studio)
@@ -261,12 +252,83 @@ Examples:
 - [Inspect](#inspect)
 - [Install](#install)
 - [List](#list)
+- [Login](#login)
 - [Reactor](#reactor)
 - [Service](#service)
 - [Switchboard](#switchboard)
 - [Uninstall](#uninstall)
 - [Version](#version)
 - [Vetra](#vetra)
+
+## Access Token
+
+```
+Command Overview:
+  The access-token command generates a bearer token for API authentication. This token
+  can be used to authenticate requests to Powerhouse APIs like reactor-api (Switchboard).
+
+  This command:
+  1. Uses your CLI's cryptographic identity (DID) to sign a verifiable credential
+  2. Creates a JWT bearer token with configurable expiration
+  3. Outputs the token to stdout (info to stderr) for easy piping
+
+Prerequisites:
+  You must have a cryptographic identity. Run 'ph login' first to:
+  - Generate a keypair (stored in .keypair.json)
+  - Optionally link your Ethereum address (stored in .auth.json)
+
+Options:
+  --expiry <duration>     Set the token expiration time. Supports multiple formats:
+                          - Days: "7d" (default), "30d", "1d"
+                          - Hours: "24h", "12h", "1h"
+                          - Seconds: "3600", "3600s", "86400s"
+                          Default is 7 days.
+
+  --audience <url>        Optional. Set the intended audience (aud claim) for the token.
+                          This can be used to restrict the token to specific services.
+
+Token Details:
+  The generated token is a JWT (JSON Web Token) containing:
+  - Issuer (iss): Your CLI's DID (did:key:...)
+  - Subject (sub): Your CLI's DID
+  - Credential Subject: Chain ID, network ID, and address (if authenticated)
+  - Expiration (exp): Based on --expiry option
+  - Audience (aud): If --audience is specified
+
+Output:
+  - Token information (DID, address, expiry) is printed to stderr
+  - The token itself is printed to stdout for easy piping/copying
+
+  This allows you to use the command in scripts:
+    TOKEN=$(ph access-token)
+    curl -H "Authorization: Bearer $TOKEN" http://localhost:4001/graphql
+
+Examples:
+  $ ph access-token                          # Generate token valid for 7 days
+  $ ph access-token --expiry 30d             # Generate token valid for 30 days
+  $ ph access-token --expiry 24h             # Generate token valid for 24 hours
+  $ ph access-token --expiry 3600            # Generate token valid for 1 hour (3600 seconds)
+  $ ph access-token --audience http://localhost:4001  # Set audience claim
+  $ ph access-token | pbcopy                 # Copy token to clipboard (macOS)
+  $ ph access-token | xclip -selection c     # Copy token to clipboard (Linux)
+
+Usage with APIs:
+  # Generate token and use with curl
+  TOKEN=$(ph access-token --expiry 1d)
+  curl -X POST http://localhost:4001/graphql \\
+    -H "Content-Type: application/json" \\
+    -H "Authorization: Bearer $TOKEN" \\
+    -d '{"query": "{ drives { id name } }"}'
+
+  # Export as environment variable
+  export PH_ACCESS_TOKEN=$(ph access-token)
+
+Notes:
+  - Tokens are self-signed using your CLI's private key
+  - No network request is made; tokens are generated locally
+  - The recipient API must trust your CLI's DID to accept the token
+  - For reactor-api, ensure AUTH_ENABLED=true to require authentication
+```
 
 ## Connect Build
 
@@ -610,6 +672,76 @@ Notes:
   - Each package is displayed by its package name
 ```
 
+## Login
+
+```
+Command Overview:
+  The login command authenticates you with Renown using your Ethereum wallet. This enables
+  the CLI to act on behalf of your Ethereum identity for authenticated operations.
+
+  This command:
+  1. Generates or loads a cryptographic identity (DID) for the CLI
+  2. Opens your browser to the Renown authentication page
+  3. You authorize the CLI's DID to act on behalf of your Ethereum address
+  4. Stores the credentials locally in ~/.ph/auth.json
+
+Options:
+  --renown-url <url>    Specify a custom Renown server URL. Defaults to
+                        https://www.renown.id
+
+  --timeout <seconds>   Set the authentication timeout in seconds. The command will
+                        wait this long for you to complete authentication in the browser.
+                        Defaults to 300 seconds (5 minutes).
+
+  --logout              Sign out and clear your stored credentials. Use this when you
+                        want to switch accounts or revoke local authentication.
+
+  --status              Show your current authentication status without logging in.
+                        Displays your CLI DID, ETH address, and when you authenticated.
+
+  --show-did            Show only the CLI's DID and exit. Useful for scripts.
+
+Authentication Flow:
+  1. Run 'ph login' - the CLI generates/loads its cryptographic identity (DID)
+  2. A browser window opens to Renown with the CLI's DID
+  3. Connect your Ethereum wallet (MetaMask, etc.)
+  4. Authorize the CLI's DID to act on behalf of your ETH address
+  5. Return to your terminal - authentication is complete!
+
+Credentials Storage:
+  All identity files are stored per-project in the current working directory:
+
+  .keypair.json   The CLI's cryptographic keypair (ECDSA P-256)
+  .auth.json      Your authentication credentials including:
+                  - Your Ethereum address (the account you authorized)
+                  - Your User DID (did:pkh:eip155:chainId:address)
+                  - CLI DID (did:key:... - the CLI's cryptographic identity)
+                  - Credential ID for session validation
+
+  This allows each project to have its own identity and credentials.
+  For CI/CD, provide the keypair via PH_RENOWN_PRIVATE_KEY env variable.
+
+Environment Variables:
+  PH_RENOWN_PRIVATE_KEY   JSON-encoded JWK keypair for the CLI's identity.
+                          If set, the CLI will use this instead of generating
+                          or loading from file. Useful for CI/CD environments.
+
+Examples:
+  $ ph login                              # Authenticate with default settings
+  $ ph login --status                     # Check authentication status and CLI DID
+  $ ph login --show-did                   # Print only the CLI's DID
+  $ ph login --logout                     # Sign out and clear credentials
+  $ ph login --timeout 600                # Wait up to 10 minutes for authentication
+  $ ph login --renown-url http://localhost:3000   # Use local Renown server
+
+Notes:
+  - You only need to authenticate once; credentials persist until you log out
+  - The CLI's DID remains stable unless you delete .keypair.json from your project
+  - If already authenticated, the command will show your current status
+  - The browser must remain open until authentication completes
+  - Your wallet signature authorizes the CLI's DID to act on your behalf
+```
+
 ## Reactor
 
 ```
@@ -707,28 +839,41 @@ Command Overview:
   2. Loads document models and processors
   3. Provides an API for document operations
   4. Enables real-time document processing
+  5. Can authenticate with remote services using your identity from 'ph login'
 
 Options:
   --port <PORT>           Port to host the API. Default is 4001.
-                        
-  --config-file <path>    Path to the powerhouse.config.js file. Default is 
+
+  --config-file <path>    Path to the powerhouse.config.js file. Default is
                         './powerhouse.config.json'. This configures the switchboard behavior.
-                        
+
   --dev                   Enable development mode to load local packages from the current directory.
                         This allows the switchboard to discover and load document models, processors,
                         and subgraphs from your local development environment.
-                        
+
   --db-path <DB_PATH>     Path to the database for storing document data.
-                        
+
   --https-key-file <path> Path to the SSL key file if using HTTPS for secure connections.
-                        
+
   --https-cert-file <path> Path to the SSL certificate file if using HTTPS.
-                        
+
   --packages <pkg...>     List of packages to be loaded. If defined, packages specified
                         in the config file are ignored.
-                        
-  --base-path <path>      Base path for the API endpoints. Sets the BASE_PATH environment 
+
+  --base-path <path>      Base path for the API endpoints. Sets the BASE_PATH environment
                         variable used by the server to prefix all routes.
+
+Identity Options:
+  --use-identity          Enable identity using the keypair from 'ph login'. This allows the
+                        switchboard to authenticate with remote drives and services using
+                        your authorized Ethereum identity.
+
+  --keypair-path <path>   Path to a custom keypair file. Overrides the default .keypair.json
+                        in the current directory.
+
+  --require-identity      Require an existing keypair; fail if not found. Use this when you
+                        want to ensure the switchboard runs with a valid identity. If no
+                        keypair exists, run 'ph login' first to create one.
 
 Examples:
   $ ph switchboard                           # Start switchboard with default settings
@@ -737,6 +882,8 @@ Examples:
   $ ph switchboard --config-file custom.json # Use custom configuration file
   $ ph switchboard --packages pkg1 pkg2      # Load specific packages
   $ ph switchboard --base-path /switchboard  # Set API base path to /switchboard
+  $ ph switchboard --use-identity            # Start with identity from ph login
+  $ ph switchboard --require-identity        # Require identity, fail if not logged in
 ```
 
 ## Uninstall
@@ -873,6 +1020,4 @@ Examples:
 
 ---
 
-*This document was automatically generated from the help text in the codebase.*
-
-<!-- AUTO-GENERATED-CLI-COMMANDS-END -->
+*This document was automatically generated from the help text in the codebase.*\n<!-- AUTO-GENERATED-CLI-COMMANDS-END -->

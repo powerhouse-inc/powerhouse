@@ -1,3 +1,34 @@
+## 5.1.0-dev.17 (2025-12-11)
+
+### 🩹 Fixes
+
+- **ph-cli:** auth with access-token ([df48be6e9](https://github.com/powerhouse-inc/powerhouse/commit/df48be6e9))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.1.0-dev.16 (2025-12-11)
+
+### 🚀 Features
+
+- **ph-cli:** added access-token command ([e48181df6](https://github.com/powerhouse-inc/powerhouse/commit/e48181df6))
+- **switchboard:** use identity ([1be03ddb7](https://github.com/powerhouse-inc/powerhouse/commit/1be03ddb7))
+- **codegen:** update zod schema generation library ([#2129](https://github.com/powerhouse-inc/powerhouse/pull/2129))
+- integrate visibility tools for remotes and pglite instance ([#2122](https://github.com/powerhouse-inc/powerhouse/pull/2122))
+
+### 🩹 Fixes
+
+- backfill tests + create default via new reactor to get create/update ([889d890a3](https://github.com/powerhouse-inc/powerhouse/commit/889d890a3))
+- syncenvelope shape was incorrect ([cc6226be9](https://github.com/powerhouse-inc/powerhouse/commit/cc6226be9))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 5.1.0-dev.15 (2025-12-09)
 
 ### 🩹 Fixes

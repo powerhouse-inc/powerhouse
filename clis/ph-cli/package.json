@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/ph-cli",
-  "version": "5.1.0-dev.15",
+  "version": "5.1.0-dev.17",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -46,6 +46,7 @@
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/switchboard": "workspace:*",
+    "@renown/sdk": "workspace:*",
     "colorette": "^2.0.20",
     "commander": "^12.1.0",
     "read-pkg": "^9.0.1",

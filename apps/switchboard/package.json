@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard",
   "type": "module",
-  "version": "5.1.0-dev.15",
+  "version": "5.1.0-dev.17",
   "main": "dist/src/index.js",
   "exports": {
     ".": {
@@ -41,6 +41,7 @@
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
+    "@renown/sdk": "workspace:*",
     "@pyroscope/nodejs": "^0.4.5",
     "@sentry/node": "^9.6.1",
     "body-parser": "^1.20.3",

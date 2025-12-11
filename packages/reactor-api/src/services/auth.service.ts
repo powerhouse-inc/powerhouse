@@ -267,6 +267,7 @@ export class AuthService {
     connectId: string,
   ): Promise<boolean> {
     const url = `https://www.renown.id/api/auth/credential?address=${address}&chainId=${chainId}&connectId=${connectId}`;
+    console.log("url", url);
     try {
       const response = await fetch(url, {
         method: "GET",
@@ -275,19 +276,26 @@ export class AuthService {
       const credential = (
         body as {
           credential: {
-            credentialSubject: { id: { id: string } };
+            credentialSubject: { id: string };
             issuer: { id: string };
           };
         }
       ).credential;
 
-      const connectIdVerfied = credential.credentialSubject.id.id;
+      const connectIdVerfied = credential.credentialSubject.id;
       const addressVerfied = credential.issuer.id.split(":")[4];
       const chainIdVerfied = credential.issuer.id.split(":")[3];
 
       if (response.status !== 200) {
         return false;
       }
+
+      console.log("connectIdVerfied", connectIdVerfied);
+      console.log("connectId", connectId);
+      console.log("addressVerfied", addressVerfied);
+      console.log("address", address);
+      console.log("chainIdVerfied", chainIdVerfied);
+      console.log("chainId", chainId);
 
       return (
         connectIdVerfied === connectId &&
