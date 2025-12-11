@@ -1,5 +1,6 @@
 import type { Node } from "document-drive";
 import {
+  createUrlWithPreservedParams,
   extractDriveSlugFromPath,
   extractNodeIdFromSlug,
   extractNodeSlugFromPath,
@@ -39,14 +40,14 @@ export function setSelectedNode(nodeOrNodeSlug: Node | string | undefined) {
     if (pathname === window.location.pathname) {
       return;
     }
-    window.history.pushState(null, "", pathname);
+    window.history.pushState(null, "", createUrlWithPreservedParams(pathname));
     return;
   }
   const pathname = resolveUrlPathname(`/d/${driveSlugFromPath}/${nodeSlug}`);
   if (pathname === window.location.pathname) {
     return;
   }
-  window.history.pushState(null, "", pathname);
+  window.history.pushState(null, "", createUrlWithPreservedParams(pathname));
 }
 
 export function addResetSelectedNodeEventHandler() {
