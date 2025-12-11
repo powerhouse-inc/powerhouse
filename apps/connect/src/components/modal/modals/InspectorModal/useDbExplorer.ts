@@ -143,10 +143,13 @@ export function useDbExplorer() {
     async (sqlContent: string) => {
       if (!pglite) return;
 
-      await pglite.exec(`DROP SCHEMA public CASCADE`);
-      await pglite.exec(`CREATE SCHEMA public`);
-      await pglite.exec(sqlContent);
-      await pglite.exec(`SET search_path TO public`);
+      // Use explicit transaction to ensure writable transaction context
+      await pglite.transaction(async (tx) => {
+        await tx.exec(`DROP SCHEMA public CASCADE`);
+        await tx.exec(`CREATE SCHEMA public`);
+        await tx.exec(sqlContent);
+        await tx.exec(`SET search_path TO public`);
+      });
     },
     [pglite],
   );
