@@ -1,3 +1,28 @@
+## 5.1.0-dev.16 (2025-12-11)
+
+### 🚀 Features
+
+- **ph-cli:** added access-token command ([e48181df6](https://github.com/powerhouse-inc/powerhouse/commit/e48181df6))
+- **codegen:** update zod schema generation library ([#2129](https://github.com/powerhouse-inc/powerhouse/pull/2129))
+- integrate visibility tools for remotes and pglite instance ([#2122](https://github.com/powerhouse-inc/powerhouse/pull/2122))
+- **reactor-api:** added migration scripts ([b45782a31](https://github.com/powerhouse-inc/powerhouse/commit/b45782a31))
+- **reactor-api:** added feature flag for document permission service ([89770d177](https://github.com/powerhouse-inc/powerhouse/commit/89770d177))
+- **reactor-api:** added document group permissions ([769a04532](https://github.com/powerhouse-inc/powerhouse/commit/769a04532))
+- **reactor-api:** added operation permissions ([8b1730456](https://github.com/powerhouse-inc/powerhouse/commit/8b1730456))
+- **reactor-api:** document permission service ([e95ae2618](https://github.com/powerhouse-inc/powerhouse/commit/e95ae2618))
+
+### 🩹 Fixes
+
+- syncenvelope shape was incorrect ([cc6226be9](https://github.com/powerhouse-inc/powerhouse/commit/cc6226be9))
+- gql fixes, like making channels :) ([ee71e2229](https://github.com/powerhouse-inc/powerhouse/commit/ee71e2229))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 5.1.0-dev.15 (2025-12-09)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.

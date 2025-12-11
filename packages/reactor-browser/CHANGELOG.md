@@ -1,3 +1,24 @@
+## 5.1.0-dev.16 (2025-12-11)
+
+### 🚀 Features
+
+- **ph-cli:** added access-token command ([e48181df6](https://github.com/powerhouse-inc/powerhouse/commit/e48181df6))
+- **codegen:** update zod schema generation library ([#2129](https://github.com/powerhouse-inc/powerhouse/pull/2129))
+- integrate visibility tools for remotes and pglite instance ([#2122](https://github.com/powerhouse-inc/powerhouse/pull/2122))
+- adding new storage to delete ([d478af153](https://github.com/powerhouse-inc/powerhouse/commit/d478af153))
+
+### 🩹 Fixes
+
+- use a unique id for remote name ([37a700848](https://github.com/powerhouse-inc/powerhouse/commit/37a700848))
+- some signature fixes and progress on integrating the reactor client on writes ([a3129a1b9](https://github.com/powerhouse-inc/powerhouse/commit/a3129a1b9))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 5.1.0-dev.15 (2025-12-09)
 
 ### 🚀 Features

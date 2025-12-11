@@ -1,3 +1,40 @@
+## 5.1.0-dev.16 (2025-12-11)
+
+### 🚀 Features
+
+- adding new storage to delete ([d478af153](https://github.com/powerhouse-inc/powerhouse/commit/d478af153))
+- integrate visibility tools for remotes and pglite instance ([#2122](https://github.com/powerhouse-inc/powerhouse/pull/2122))
+- **codegen:** add test data files for versioned document model codegen ([6a20c8b19](https://github.com/powerhouse-inc/powerhouse/commit/6a20c8b19))
+- **codegen:** update zod schema generation library ([#2129](https://github.com/powerhouse-inc/powerhouse/pull/2129))
+- **codegen:** update test data files ([143cb403f](https://github.com/powerhouse-inc/powerhouse/commit/143cb403f))
+- **document-model:** add upgrade types ([b64985674](https://github.com/powerhouse-inc/powerhouse/commit/b64985674))
+- **ph-cli:** added login command ([3dbccd06a](https://github.com/powerhouse-inc/powerhouse/commit/3dbccd06a))
+- **ph-cli:** added access-token command ([e48181df6](https://github.com/powerhouse-inc/powerhouse/commit/e48181df6))
+- **reactor-api:** document permission service ([e95ae2618](https://github.com/powerhouse-inc/powerhouse/commit/e95ae2618))
+- **reactor-api:** added operation permissions ([8b1730456](https://github.com/powerhouse-inc/powerhouse/commit/8b1730456))
+- **reactor-api:** added document group permissions ([769a04532](https://github.com/powerhouse-inc/powerhouse/commit/769a04532))
+- **reactor-api:** added feature flag for document permission service ([89770d177](https://github.com/powerhouse-inc/powerhouse/commit/89770d177))
+- **reactor-api:** added migration scripts ([b45782a31](https://github.com/powerhouse-inc/powerhouse/commit/b45782a31))
+- **switchboard:** use identity ([1be03ddb7](https://github.com/powerhouse-inc/powerhouse/commit/1be03ddb7))
+
+### 🩹 Fixes
+
+- consistency was not guaranteed when using legacy storage -- introduced a wrapper with consistency token ([8e46dcec8](https://github.com/powerhouse-inc/powerhouse/commit/8e46dcec8))
+- properly check job info in reactor-client ([0bad3762d](https://github.com/powerhouse-inc/powerhouse/commit/0bad3762d))
+- some signature fixes and progress on integrating the reactor client on writes ([a3129a1b9](https://github.com/powerhouse-inc/powerhouse/commit/a3129a1b9))
+- gql fixes, like making channels :) ([ee71e2229](https://github.com/powerhouse-inc/powerhouse/commit/ee71e2229))
+- syncenvelope shape was incorrect ([cc6226be9](https://github.com/powerhouse-inc/powerhouse/commit/cc6226be9))
+- use a unique id for remote name ([37a700848](https://github.com/powerhouse-inc/powerhouse/commit/37a700848))
+- backfill tests + create default via new reactor to get create/update ([889d890a3](https://github.com/powerhouse-inc/powerhouse/commit/889d890a3))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
 ## 5.1.0-dev.15 (2025-12-09)
 
 ### 🚀 Features

@@ -1,3 +1,20 @@
+## 5.1.0-dev.16 (2025-12-11)
+
+### 🚀 Features
+
+- **ph-cli:** added access-token command ([e48181df6](https://github.com/powerhouse-inc/powerhouse/commit/e48181df6))
+- **codegen:** update test data files ([143cb403f](https://github.com/powerhouse-inc/powerhouse/commit/143cb403f))
+- **codegen:** update zod schema generation library ([#2129](https://github.com/powerhouse-inc/powerhouse/pull/2129))
+- integrate visibility tools for remotes and pglite instance ([#2122](https://github.com/powerhouse-inc/powerhouse/pull/2122))
+- **codegen:** add test data files for versioned document model codegen ([6a20c8b19](https://github.com/powerhouse-inc/powerhouse/commit/6a20c8b19))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
 ## 5.1.0-dev.15 (2025-12-09)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.

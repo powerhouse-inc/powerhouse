@@ -1,3 +1,17 @@
+## 5.1.0-dev.16 (2025-12-11)
+
+### 🚀 Features
+
+- **ph-cli:** added access-token command ([e48181df6](https://github.com/powerhouse-inc/powerhouse/commit/e48181df6))
+- **codegen:** update zod schema generation library ([#2129](https://github.com/powerhouse-inc/powerhouse/pull/2129))
+- integrate visibility tools for remotes and pglite instance ([#2122](https://github.com/powerhouse-inc/powerhouse/pull/2122))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 5.1.0-dev.15 (2025-12-09)
 
 This was a version bump only for @powerhousedao/reactor-mcp to align it with other projects, there were no code changes.
