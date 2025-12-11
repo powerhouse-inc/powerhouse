@@ -135,7 +135,7 @@ Now that you understand the concepts behind the state schema, let's put it into 
 ### Prerequisites
 
 - You have a Powerhouse project set up. If not, please follow the [Create a new Powerhouse Project](../../GetStarted/CreateNewPowerhouseProject) tutorial.
-- Vetra Studio is running. If not, navigate to your project directory in the terminal and run `ph vetra`.
+- Vetra Studio is running. If not, navigate to your project directory in the terminal and run `ph vetra --watch`.
 
 ### Steps
 

@@ -111,10 +111,10 @@ cd ChatRoom
 
 **Vetra Studio** is the builder's orchestration hub for assembling all specifications needed for your package. It provides a **Vetra Studio Drive** to access, manage, and share document model specifications, editors, and data integrations—all through a visual interface. For deeper coverage, see the [Vetra Studio documentation](/academy/MasteryTrack/BuilderEnvironment/VetraStudio).
 
-Once in the project directory, run the `ph vetra` command to start a Vetra Studio Drive where you'll be defining your specifications.
+Once in the project directory, run the `ph vetra --watch` command to start a Vetra Studio Drive where you'll be defining your specifications.
 
 ```bash
-ph vetra
+ph vetra --watch
 ```
 
 The host application for Vetra Studio will start and you will see the following output:

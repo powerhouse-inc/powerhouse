@@ -94,8 +94,8 @@ Remote drives enable collaborative development by syncing specifications across 
 - `ph vetra --watch` - Start development with a preview drive for testing local changes
 
 **Workflows:**
-- **Project Owner**: `ph init --remote-drive` → Create GitHub repo → Push → `ph vetra` to configure
-- **Collaborator**: `ph checkout --remote-drive` → `ph vetra` to start developing
+- **Project Owner**: `ph init --remote-drive` → Create GitHub repo → Push → `ph vetra --watch` to configure
+- **Collaborator**: `ph checkout --remote-drive` → `ph vetra --watch` to start developing
 
 **Preview Drive (`--watch` mode):**
 

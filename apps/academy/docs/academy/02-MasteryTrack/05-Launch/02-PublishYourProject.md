@@ -39,7 +39,7 @@ pnpm install -g ph-cmd
 
 Key commands include:
 
-- `ph vetra` for launching Vetra Studio
+- `ph vetra --watch` for launching Vetra Studio
 - `ph connect` for running Connect locally (alternative)
 - `ph switchboard` or `ph reactor` for starting the API service
 - `ph init` to start a new project

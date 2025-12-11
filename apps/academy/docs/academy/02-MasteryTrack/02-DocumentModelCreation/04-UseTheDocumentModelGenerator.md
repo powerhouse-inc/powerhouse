@@ -1,19 +1,26 @@
-# Use the document model generator
+# Use the Document Model Generator
 
-In the Powerhouse Document Model development workflow, after specifying your document model's state schema and operations within Vetra Studio (or Connect), the next crucial step is to translate this specification into a tangible codebase. This is where the Powerhouse Document Model Generator comes into play.
+When building document models with **Vetra Studio**, code generation happens automatically. As you add and update specification documents in your Vetra Studio Drive, Vetra monitors your changes and generates the necessary scaffolding in real-time. You'll receive updates directly in your terminal as Vetra processes your specifications.
 
-The Document Model Generator is a powerful command-line tool (`ph generate`) that processes your exported `.phd` file and scaffolds the necessary directory structure and foundational code for your document model. It automates the creation of boilerplate code, ensuring consistency, type safety, and adherence to Powerhouse conventions, thereby significantly accelerating the development process.
+This article covers the **manual code generation method** using the `ph generate` command—an alternative approach that remains available when working with **Connect** and exported `.phd` specification files. While Vetra Studio is the recommended workflow for most developers, understanding the generator command provides useful context for how the scaffolding works under the hood.
 
-This document provides a deep dive into using the Document Model Generator, understanding its output, and appreciating its role in the broader context of document model creation.
+## When to Use Manual Generation
 
-## Prerequisites
+| Workflow | Code Generation |
+|----------|-----------------|
+| **Vetra Studio** | Automatic—Vetra watches your specifications and generates code as you work |
+| **Connect** | Manual—Export a `.phd` file and run `ph generate` |
 
-Before you can use the Document Model Generator, ensure you have the following:
+If you're using Vetra Studio with `ph vetra --interactive`, you don't need to run any generation commands. Vetra handles everything for you, prompting for confirmation before processing changes.
 
-1.  **Powerhouse CLI (`ph-cmd`) Installed:** The generator is part of the Powerhouse CLI. If you haven't installed it, refer to the [Builder Tools documentation](/academy/MasteryTrack/BuilderEnvironment/BuilderTools#installing-the-powerhouse-cli).
-2.  **Document Model Specification:** You must have already defined your document model in Vetra Studio (or Connect). When using Vetra Studio, the specification is managed within the Vetra Studio Drive. When using Connect, you export the specification as a `.phd` file (e.g., `TodoList.phd`) containing the GraphQL schema for your document's state and operations.
+## Prerequisites (Connect Workflow Only)
 
-## The command
+If you're using the Connect workflow and need to manually generate code:
+
+1. **Powerhouse CLI (`ph-cmd`) Installed:** The generator is part of the Powerhouse CLI. If you haven't installed it, refer to the [Builder Tools documentation](/academy/MasteryTrack/BuilderEnvironment/BuilderTools#installing-the-powerhouse-cli).
+2. **Exported `.phd` File:** You must have exported your document model specification from Connect as a `.phd` file (e.g., `TodoList.phd`).
+
+## The Generate Command
 
 The core command to invoke the Document Model Generator is:
 
@@ -29,140 +36,106 @@ ph generate TodoList.phd
 
 When executed, this command reads and parses the specification file and generates a set of files and directories within your Powerhouse project.
 
-## What happens under the hood? A deep dive into the generated artifacts
+## Understanding the Generated Artifacts
 
-Running `ph generate` triggers a series of actions that lay the groundwork for your document model's implementation. Let's explore the typical output structure and the significance of each generated component.
+Whether generated automatically by Vetra or manually via `ph generate`, the output structure is the same. Understanding these artifacts helps you work effectively with your document model.
 
-The generator creates a new directory specific to your document model, usually located at:
+The generator creates a new directory specific to your document model, located at:
 `document-models/<your-model-name>/`
 
 For example, using `TodoList.phd` would result in a directory structure under `document-models/todo-list/`. Inside this directory, you will find:
 
-1.  **`todo-list.json` (or similar JSON representation):**
-    - **Purpose:** This file is a JSON representation of your document model specification, derived directly from the `.phd` file. It contains the parsed schema, operation definitions, document type, and other metadata.
-    - **Significance:** It serves as the canonical, machine-readable definition of your model within the project, which other tools or processes might reference.
+### 1. Specification Files
 
-2.  **`schema.graphql`:**
-    - **Purpose:** This file contains the raw GraphQL Schema Definition Language (SDL) for both the state and operations of your document model, exactly as you defined it in Connect.
-    - **Significance:** Provides a human-readable reference of the schema and can be useful for quick checks or for tools that might directly consume GraphQL SDL.
+- **`todo-list.json`**: A JSON representation of your document model specification containing the parsed schema, operation definitions, document type, and metadata.
+- **`schema.graphql`**: The raw GraphQL Schema Definition Language (SDL) for both the state and operations—a human-readable reference of your schema.
 
-3.  **The `gen/` Directory (Generated Code):**
-    This directory is pivotal as it houses all the code automatically generated by the tool. **You should generally avoid manually editing files within the `gen/` directory**, as they will be overwritten if you regenerate the model.
-    Key files within `gen/` include:
-    - **`types.ts`:**
-      - **Purpose:** Contains TypeScript interfaces and type definitions derived from your GraphQL schema. This includes types for your document's state (e.g., `TodoListState`), any complex types used within the state (e.g., `TodoItem`), and types for the inputs of each defined operation (e.g., `AddTodoItemInput`).
-      - **Significance:** This is the cornerstone of type safety in your document model implementation. By using these generated types, you ensure that your reducer logic and any client-side interactions adhere to the defined data structures, catching errors at compile-time rather than runtime.
+### 2. The `gen/` Directory (Auto-Generated Code)
 
-    - **`creators.ts` (or `actions.ts`):**
-      - **Purpose:** This file exports "action creator" functions for each operation defined in your schema. These functions take the input parameters for an operation and return a correctly structured action object that can be processed by the reducer system.
-      - **Significance:** Action creators simplify the process of creating and dispatching operations, reduce the likelihood of errors in action formatting, and improve code readability. For example, instead of manually constructing an action object like `{ type: "ADD_TODO_ITEM", input: { ... } }`, you'd use a function like `addTodoItem({ text: 'Buy groceries' })`.
+This directory houses all code automatically generated from your specification. **Do not manually edit files within the `gen/` directory**—they will be overwritten when the model is regenerated.
 
-    - **`utils.ts`:**
-      - **Purpose:** Often includes utility functions related to your document model. A common utility is a function to create an empty or initial instance of your document (e.g., `utils.createDocument()`). This is based on the default values and structure defined in your state schema.
-      - **Significance:** Provides convenient helpers for common tasks, particularly for initializing new documents in tests or application code.
+Key files include:
 
-    - **`reducer.ts` (or similar, defining the reducer interface/skeleton):**
-      - **Purpose:** This file might contain a TypeScript interface or a skeleton object that your actual reducer implementation (in the `src/` directory) will need to conform to. It outlines the expected shape of the reducer map, ensuring that you provide an implementation for every defined operation.
-      - **Significance:** Guides the implementation of your reducers and helps maintain consistency, ensuring that all defined operations are accounted for.
+- **`types.ts`**: TypeScript interfaces derived from your GraphQL schema, including types for your document's state (e.g., `TodoListState`), complex types (e.g., `TodoItem`), and operation inputs (e.g., `AddTodoItemInput`).
 
-4.  **The `src/` Directory (Source Code for Your Implementation):**
-    This directory is where you, the developer, will write the custom logic for your document model. Unlike the `gen/` directory, files here are meant to be manually edited.
-    - **`reducers/`:**
-      - **`todos.ts`:** This is the most important file you'll work with after generation. It's where you implement the **reducer functions** for each operation. The generator usually creates a skeleton file with function stubs for each operation, which you then fill in with the actual state transition logic.
-      - **Significance:** This is the heart of your document model's behavior, defining how the state changes in response to each operation. The next step in the Mastery Track will typically focus on implementing these reducers.
-    - **`tests/`:**
-      - **`todos.test.ts`:** A placeholder or basic test file is often generated here, encouraging you to write unit tests for your reducer logic.
-      - **Significance:** Emphasizes the importance of testing your document model's core logic to ensure correctness and reliability.
+- **`creators.ts`**: Action creator functions for each operation. Instead of manually constructing action objects, you use functions like `addTodoItem({ text: 'Buy groceries' })`.
 
-## Benefits of using the document model generator
+- **`utils.ts`**: Utility functions including helpers to create initial document instances (e.g., `utils.createDocument()`).
 
-Leveraging the `ph generate` command offers numerous advantages:
+- **`reducer.ts`**: A TypeScript interface defining the expected shape of your reducer implementation.
 
-1.  **Reduced Boilerplate:** Automates the creation of repetitive code (type definitions, action creators), saving significant development time and effort.
-2.  **Consistency:** Enforces a standardized project structure and coding patterns across different document models, making projects easier to understand and maintain.
-3.  **Type Safety:** The generation of TypeScript types from your GraphQL schema is a massive boon for catching errors early in the development cycle and improving code quality.
-4.  **Accelerated Development:** By providing a ready-to-use scaffold, developers can immediately focus on implementing the core business logic in the reducers, rather than setting up the foundational plumbing.
-5.  **Alignment with Powerhouse Ecosystem:** The generated code is designed to integrate seamlessly with other parts of the Powerhouse ecosystem, such as the reducer execution engine and UI components.
-6.  **Single Source of Truth:** Ensures that your codebase (especially types and action creators) stays synchronized with the document model specification defined in Vetra Studio (or Connect). If the specification changes, regenerating the model will update these components accordingly.
+### 3. The `src/` Directory (Your Implementation)
 
-## Practical implementation: Generating the `TodoList` model
+This is where you write custom logic. Unlike `gen/`, these files are meant for manual editing.
 
-Now that you understand what the Document Model Generator does, let's walk through the practical steps of using it with our `TodoList` example.
+- **`reducers/`**: Contains skeleton reducer files (e.g., `todos.ts`) with function stubs for each operation that you implement with state transition logic.
+- **`tests/`**: Test files for your reducer logic.
+
+## Benefits of Generated Scaffolding
+
+The generation process—whether automatic via Vetra or manual via `ph generate`—provides:
+
+1. **Reduced Boilerplate:** Automates creation of type definitions, action creators, and utilities.
+2. **Type Safety:** TypeScript types from your GraphQL schema catch errors at compile-time.
+3. **Consistency:** Standardized project structure across document models.
+4. **Accelerated Development:** Focus on business logic instead of foundational plumbing.
+5. **Ecosystem Alignment:** Generated code integrates seamlessly with the Powerhouse ecosystem.
+6. **Single Source of Truth:** Code stays synchronized with your specification.
+
+## Practical Examples
+
+### Using Vetra Studio (Recommended)
+
+When using Vetra Studio, code generation is automatic:
+
+1. **Start Vetra in Interactive Mode:**
+   ```bash
+   ph vetra --interactive
+   ```
+
+2. **Create Your Document Model:**
+   Define your `TodoList` document model in the Vetra Studio Drive—either manually or with AI assistance through Claude and the Reactor MCP.
+
+3. **Watch the Terminal:**
+   As you add specifications, Vetra automatically detects changes and generates scaffolding. In interactive mode, you'll be prompted to confirm before generation proceeds.
+
+4. **Explore Generated Files:**
+   Once complete, find your generated files at `document-models/todo-list/`:
+   - `todo-list.json` and `schema.graphql`: Your model definition
+   - `gen/`: Type-safe generated code
+   - `src/reducers/todos.ts`: Skeleton reducer functions ready for implementation
+
+### Using Connect (Alternative Method)
 
 <details>
-<summary>Tutorial: Generating the TodoList document model (Vetra Studio)</summary>
+<summary>Tutorial: Manual Generation with Connect</summary>
 
-This tutorial assumes you have completed the previous steps in this Mastery Track, where you defined the state schema and operations for the `TodoList` model in Vetra Studio.
+This approach is useful when working with Connect's Document Model Editor or when you need explicit control over the generation process.
 
-### Prerequisites
+#### Prerequisites
 
-- **Document model defined in Vetra Studio**: Your `TodoList` document model specification should be created in the Vetra Studio Drive. If you have not done this, please revisit the previous sections on specifying the state schema and operations.
+- **`TodoList.phd` file**: Your document model specification exported from Connect.
 
-### Steps
+#### Steps
 
-1.  **Run the Generator Command**:
-    - With Vetra Studio running (`ph vetra`), open a new terminal in the root directory of your Powerhouse project.
-    - Execute the `ph generate` command to generate code for all document models in your Vetra Studio Drive:
+1. **Place the Specification File in Your Project:**
+   Navigate to your Powerhouse project root and copy your `TodoList.phd` file there.
 
-    ```bash
-    ph generate
-    ```
+2. **Run the Generator Command:**
+   ```bash
+   ph generate TodoList.phd
+   ```
 
-    Alternatively, you can specify the document model by name:
-
-    ```bash
-    ph generate TodoList
-    ```
-
-2.  **Explore the Generated Files**:
-    - After the command completes successfully, you will find a new directory: `document-models/todo-list/`.
-    - Take a moment to explore its contents, which will match the structure described earlier in this document:
-      - `todo-list.json` and `schema.graphql`: The definition of your model.
-      - `gen/`: Type-safe, generated code including `types.ts`, `creators.ts`, etc.
-      - `src/`: The skeleton for your implementation, most importantly `src/reducers/todos.ts`, which will contain empty functions for `addTodoItemOperation`, `updateTodoItemOperation`, and `deleteTodoItemOperation`, ready for you to implement.
-
-With these files generated, you have successfully scaffolded your document model. The project is now set up for you to implement the core business logic.
+3. **Explore the Generated Files:**
+   After the command completes, find the new directory at `document-models/todo-list/`:
+   - `todo-list.json` and `schema.graphql`: The definition of your model
+   - `gen/`: Type-safe generated code including `types.ts`, `creators.ts`, etc.
+   - `src/`: Implementation skeleton, including `src/reducers/todos.ts` with empty functions for `addTodoItemOperation`, `updateTodoItemOperation`, and `deleteTodoItemOperation`
 
 </details>
 
-<details>
-<summary>Alternatively: Generate the TodoList document model (Connect)</summary>
+## Next Steps
 
-This tutorial assumes you have completed the previous steps in this Mastery Track, where you defined the state schema and operations for the `TodoList` model in Connect and exported it.
+With your document model scaffolded, the next step is implementing the reducer logic in `document-models/todo-list/src/reducers/todos.ts`. Each reducer function takes the current state and action input, returning the new document state.
 
-### Prerequisites
-
-- **`TodoList.phd` file**: You must have the document model specification file exported from Connect. If you do not have this file, please revisit the previous sections on specifying the state schema and operations.
-
-### Steps
-
-1.  **Place the Specification File in Your Project**:
-    - Navigate to the root directory of your Powerhouse project.
-    - Move or copy your `TodoList.phd` file into this directory.
-
-2.  **Run the Generator Command**:
-    - Open your terminal in the root directory of your Powerhouse project.
-    - Execute the `ph generate` command, pointing to your specification file:
-
-    ```bash
-    ph generate TodoList.phd
-    ```
-
-3.  **Explore the Generated Files**:
-    - After the command completes successfully, you will find a new directory: `document-models/todo-list/`.
-    - Take a moment to explore its contents, which will match the structure described earlier in this document:
-      - `todo-list.json` and `schema.graphql`: The definition of your model.
-      - `gen/`: Type-safe, generated code including `types.ts`, `creators.ts`, etc.
-      - `src/`: The skeleton for your implementation, most importantly `src/reducers/todos.ts`, which will contain empty functions for `addTodoItemOperation`, `updateTodoItemOperation`, and `deleteTodoItemOperation`, ready for you to implement.
-
-With these files generated, you have successfully scaffolded your document model. The project is now set up for you to implement the core business logic.
-
-</details>
-
-## Next steps
-
-Once the Document Model Generator has successfully scaffolded your project, the immediate next step is to implement the logic for each operation within the generated reducer files (e.g., `document-models/todo-list/src/reducers/todos.ts`). This involves taking the current state and the action input, and returning the new state of the document.
-
-Subsequently, you will write unit tests for these reducers to ensure they behave as expected under various conditions. This iterative process of defining, generating, implementing, and testing forms the core loop of document model development in Powerhouse.
-
-By understanding the role and output of the Document Model Generator, you are well-equipped to efficiently build robust and maintainable document models within the Powerhouse framework.
+Subsequently, write unit tests for your reducers to ensure they behave correctly. This cycle of defining, generating, implementing, and testing forms the core loop of document model development in Powerhouse.

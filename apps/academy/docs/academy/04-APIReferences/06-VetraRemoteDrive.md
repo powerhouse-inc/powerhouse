@@ -134,8 +134,8 @@ ph checkout --remote-drive https://vetra.example.com/d/abc123
 # 2. Navigate to project
 cd project-name
 
-# 3. Start Vetra environment
-ph vetra
+# 3. Start Vetra environment with watch mode
+ph vetra --watch
 
 # You're now synced with the remote drive
 ```
@@ -151,7 +151,7 @@ ph vetra
 **When to use each command:**
 - Use `ph init --remote-drive` when starting a NEW project (no GitHub URL configured in drive yet)
 - Use `ph checkout --remote-drive` when joining an EXISTING project (GitHub URL already configured)
-- Use `ph vetra` to start development after either init or checkout
+- Use `ph vetra --watch` to start development after either init or checkout
 
 **Preview Drive (`--watch` mode):**
 - Main "Vetra" drive: syncs with remote, contains stable package configuration

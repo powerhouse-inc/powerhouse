@@ -605,7 +605,7 @@ You want to use AI-assisted development in Vetra Studio by connecting Claude to 
 
 - Powerhouse CLI (`ph-cmd`) installed
 - A Powerhouse project initialized (`ph init`)
-- Vetra Studio running (`ph vetra`)
+- Vetra Studio running (`ph vetra --watch`)
 - Claude CLI installed and configured
 - Terminal or command prompt access
 

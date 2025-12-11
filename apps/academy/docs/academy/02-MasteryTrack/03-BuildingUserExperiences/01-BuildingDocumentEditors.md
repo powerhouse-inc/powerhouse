@@ -7,7 +7,7 @@ At Powerhouse, frontend development for document editors follows a simple and fa
 ### Development environment
 
 **Vetra Studio** is your primary tool for builder workflows and editor development.  
-When you run `ph vetra`, it provides a dynamic, local environment where you can define and preview your document models and their editors live. This replaces the need for tools like Storybook for editor development, though Storybook remains invaluable for exploring the [Powerhouse Component Library](#powerhouse-component-library).
+When you run `ph vetra --watch`, it provides a dynamic, local environment where you can define and preview your document models and their editors live. This replaces the need for tools like Storybook for editor development, though Storybook remains invaluable for exploring the [Powerhouse Component Library](#powerhouse-component-library).
 
 Key aspects of the Powerhouse development environment:
 
@@ -87,7 +87,7 @@ You have several options for styling your editor components:
     }
     ```
 
-Choose the method or combination of methods that best suits your project needs and team preferences. Vetra Studio (`ph vetra`) or Connect (`ph connect`) will allow you to see your styles applied in real-time.
+Choose the method or combination of methods that best suits your project needs and team preferences. Vetra Studio (`ph vetra --watch`) or Connect (`ph connect`) will allow you to see your styles applied in real-time.
 
 :::warning **Best practices for consistent reliable styles**
 
@@ -361,7 +361,7 @@ When building your editor component within the Powerhouse ecosystem, you have se
 2.  **Tailwind CSS:** Vetra Studio comes with Tailwind CSS integrated. You can directly use Tailwind utility classes for rapid, consistent styling without writing separate CSS files.
 3.  **Custom CSS Files:** You can import traditional CSS files (`.css`) to apply custom styles or integrate existing style libraries.
 
-Vetra Studio provides a dynamic local environment (`ph vetra`) to visualize your components instantly as you build them, regardless of the styling method you choose. Manual build steps are typically only needed when publishing packages.
+Vetra Studio provides a dynamic local environment (`ph vetra --watch`) to visualize your components instantly as you build them, regardless of the styling method you choose. Manual build steps are typically only needed when publishing packages.
 
 ---
 
@@ -577,7 +577,7 @@ export function TodoList() {
 Now you can run Vetra Studio and see the **TodoList** editor in action:
 
 ```bash
-ph vetra
+ph vetra --watch
 ```
 
 In Vetra Studio, you'll be able to create and test your **TodoList** documents. Click on the Document Models section and create a new TodoList document.

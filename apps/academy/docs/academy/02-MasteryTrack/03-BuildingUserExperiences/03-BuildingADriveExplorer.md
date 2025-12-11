@@ -73,7 +73,7 @@ If not, you can follow the shortened guide below to prepare your project for thi
 
 - Initialize a new project with `ph init` and give it a project name.
 
-- Start by running Vetra Studio locally with `ph vetra`
+- Start by running Vetra Studio locally with `ph vetra --watch`
 
 - Download the `todolist.phdm.zip` file from the [todo-demo-package GitHub repository](https://github.com/powerhouse-inc/todo-demo-package/blob/production/todolist.phdm.zip).
 - Drop the downloaded file in the Vetra Studio drive. You'll find it under document models. Vetra should now automatically generate the necessary code for your project
