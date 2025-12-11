@@ -1,3 +1,19 @@
+## 5.1.0 (2025-12-11)
+
+### 🩹 Fixes
+
+- **reactor-api:** missing ws types ([fb5e0d964](https://github.com/powerhouse-inc/powerhouse/commit/fb5e0d964))
+- free entry for register pull responder listener ([5a58acd6f](https://github.com/powerhouse-inc/powerhouse/commit/5a58acd6f))
+- **reactor-api:** fix free entry for register pull responder ([1c7830cb1](https://github.com/powerhouse-inc/powerhouse/commit/1c7830cb1))
+- **reactor-api:** free entry ([138ac6e91](https://github.com/powerhouse-inc/powerhouse/commit/138ac6e91))
+- added missing dependencies ([ffda3cfcc](https://github.com/powerhouse-inc/powerhouse/commit/ffda3cfcc))
+- updated lockfile ([73f7c8503](https://github.com/powerhouse-inc/powerhouse/commit/73f7c8503))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
 ## 5.0.12 (2025-11-24)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.

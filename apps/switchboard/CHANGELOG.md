@@ -1,3 +1,21 @@
+## 5.1.0 (2025-12-11)
+
+### 🩹 Fixes
+
+- **switchboard:** use prisma 5.17 on schema push ([17412eb12](https://github.com/powerhouse-inc/powerhouse/commit/17412eb12))
+- **switchboard:** trigger release ([5249be006](https://github.com/powerhouse-inc/powerhouse/commit/5249be006))
+- **reactor-api:** missing ws types ([fb5e0d964](https://github.com/powerhouse-inc/powerhouse/commit/fb5e0d964))
+- **reactor-api:** downgraded prisma ([8032bb96c](https://github.com/powerhouse-inc/powerhouse/commit/8032bb96c))
+- added missing dependencies ([ffda3cfcc](https://github.com/powerhouse-inc/powerhouse/commit/ffda3cfcc))
+- updated lockfile ([73f7c8503](https://github.com/powerhouse-inc/powerhouse/commit/73f7c8503))
+- **switchboard:** use POSIX-compliant syntax ([21262f7ce](https://github.com/powerhouse-inc/powerhouse/commit/21262f7ce))
+- prisma openssl not found ([6ee25731c](https://github.com/powerhouse-inc/powerhouse/commit/6ee25731c))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
 ## 5.0.12 (2025-11-24)
 
 This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.

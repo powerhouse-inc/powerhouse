@@ -1,3 +1,41 @@
+## 5.1.0 (2025-12-11)
+
+### 🚀 Features
+
+- merge main into staging 5.0.1 ([#2095](https://github.com/powerhouse-inc/powerhouse/pull/2095))
+- merge main into staging ([66209462d](https://github.com/powerhouse-inc/powerhouse/commit/66209462d))
+- merge main into stg ([#2098](https://github.com/powerhouse-inc/powerhouse/pull/2098))
+
+### 🩹 Fixes
+
+- prisma openssl not found ([6ee25731c](https://github.com/powerhouse-inc/powerhouse/commit/6ee25731c))
+- read data is missing vetra packages ([8caa1f441](https://github.com/powerhouse-inc/powerhouse/commit/8caa1f441))
+- updated lockfile ([73f7c8503](https://github.com/powerhouse-inc/powerhouse/commit/73f7c8503))
+- added missing dependencies ([ffda3cfcc](https://github.com/powerhouse-inc/powerhouse/commit/ffda3cfcc))
+- free entry for register pull responder listener ([5a58acd6f](https://github.com/powerhouse-inc/powerhouse/commit/5a58acd6f))
+- **builder-tools:** fix hmr on connect ([c43059a4a](https://github.com/powerhouse-inc/powerhouse/commit/c43059a4a))
+- **builder-tools:** improved hmr for connect ([6a861266f](https://github.com/powerhouse-inc/powerhouse/commit/6a861266f))
+- **codegen:** deleted legacy hygen templates ([6701baae5](https://github.com/powerhouse-inc/powerhouse/commit/6701baae5))
+- **codegen:** removed legacy hygen check ([b6dbede19](https://github.com/powerhouse-inc/powerhouse/commit/b6dbede19))
+- **connect:** add background to root elements ([b673e2d43](https://github.com/powerhouse-inc/powerhouse/commit/b673e2d43))
+- **design-system:** remove testing export from components index ([07236f2a8](https://github.com/powerhouse-inc/powerhouse/commit/07236f2a8))
+- **design-system:** add background color to home screen ([d08c4aa75](https://github.com/powerhouse-inc/powerhouse/commit/d08c4aa75))
+- **reactor-api:** free entry ([138ac6e91](https://github.com/powerhouse-inc/powerhouse/commit/138ac6e91))
+- **reactor-api:** fix free entry for register pull responder ([1c7830cb1](https://github.com/powerhouse-inc/powerhouse/commit/1c7830cb1))
+- **reactor-api:** downgraded prisma ([8032bb96c](https://github.com/powerhouse-inc/powerhouse/commit/8032bb96c))
+- **reactor-api:** missing ws types ([fb5e0d964](https://github.com/powerhouse-inc/powerhouse/commit/fb5e0d964))
+- **reactor-mcp:** update output schema of tools ([422b19f72](https://github.com/powerhouse-inc/powerhouse/commit/422b19f72))
+- **switchboard:** use POSIX-compliant syntax ([21262f7ce](https://github.com/powerhouse-inc/powerhouse/commit/21262f7ce))
+- **switchboard:** trigger release ([5249be006](https://github.com/powerhouse-inc/powerhouse/commit/5249be006))
+- **switchboard:** use prisma 5.17 on schema push ([17412eb12](https://github.com/powerhouse-inc/powerhouse/commit/17412eb12))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 5.0.12 (2025-11-24)
 
 ### 🩹 Fixes

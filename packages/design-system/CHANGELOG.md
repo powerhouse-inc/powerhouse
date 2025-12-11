@@ -1,3 +1,18 @@
+## 5.1.0 (2025-12-11)
+
+### 🩹 Fixes
+
+- **design-system:** add background color to home screen ([d08c4aa75](https://github.com/powerhouse-inc/powerhouse/commit/d08c4aa75))
+- **reactor-api:** missing ws types ([fb5e0d964](https://github.com/powerhouse-inc/powerhouse/commit/fb5e0d964))
+- added missing dependencies ([ffda3cfcc](https://github.com/powerhouse-inc/powerhouse/commit/ffda3cfcc))
+- updated lockfile ([73f7c8503](https://github.com/powerhouse-inc/powerhouse/commit/73f7c8503))
+- **design-system:** remove testing export from components index ([07236f2a8](https://github.com/powerhouse-inc/powerhouse/commit/07236f2a8))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+
 ## 5.0.12 (2025-11-24)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.

@@ -1,3 +1,17 @@
+## 5.1.0 (2025-12-11)
+
+### 🩹 Fixes
+
+- **codegen:** removed legacy hygen check ([b6dbede19](https://github.com/powerhouse-inc/powerhouse/commit/b6dbede19))
+- **codegen:** deleted legacy hygen templates ([6701baae5](https://github.com/powerhouse-inc/powerhouse/commit/6701baae5))
+- **reactor-api:** missing ws types ([fb5e0d964](https://github.com/powerhouse-inc/powerhouse/commit/fb5e0d964))
+- added missing dependencies ([ffda3cfcc](https://github.com/powerhouse-inc/powerhouse/commit/ffda3cfcc))
+- updated lockfile ([73f7c8503](https://github.com/powerhouse-inc/powerhouse/commit/73f7c8503))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.0.12 (2025-11-24)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
