@@ -23,3 +23,7 @@ coverage-reports/
 .env
 playwright-report/
 test-results/
+
+# Identity/auth credential files
+.auth.json
+.keypair.json

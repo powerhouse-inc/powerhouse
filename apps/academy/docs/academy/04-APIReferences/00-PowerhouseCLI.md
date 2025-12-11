@@ -18,7 +18,6 @@ pnpm install -g ph-cmd
 
 <!-- AUTO-GENERATED-CLI-COMMANDS-START -->\n<!-- This content is automatically generated. Do not edit directly. -->\n### ph-cmd Commands\n\n- [Checkout](#checkout)
 - [Init](#init)
-- [Login](#login)
 - [Setup Globals](#setup-globals)
 - [Update](#update)
 - [Use](#use)
@@ -103,73 +102,6 @@ Examples:
   $ ph init -v beta                                           # Use specific version
   $ ph init --package-manager yarn                            # Use yarn as package manager
   $ ph init my-awesome-project --dev --package-manager pnpm   # Create a project with Powerhouse dev packages and pnpm as package manager
-```
-
-## Login
-
-```
-Command Overview:
-  The login command authenticates you with Renown using your Ethereum wallet. This enables
-  the CLI to act on behalf of your Ethereum identity for authenticated operations.
-
-  This command:
-  1. Generates or loads a cryptographic identity (DID) for the CLI
-  2. Opens your browser to the Renown authentication page
-  3. You authorize the CLI's DID to act on behalf of your Ethereum address
-  4. Stores the credentials locally in ~/.ph/auth.json
-
-Options:
-  --renown-url <url>    Specify a custom Renown server URL. Defaults to
-                        https://renown.powerhouse.io
-
-  --timeout <seconds>   Set the authentication timeout in seconds. The command will
-                        wait this long for you to complete authentication in the browser.
-                        Defaults to 300 seconds (5 minutes).
-
-  --logout              Sign out and clear your stored credentials. Use this when you
-                        want to switch accounts or revoke local authentication.
-
-  --status              Show your current authentication status without logging in.
-                        Displays your CLI DID, ETH address, and when you authenticated.
-
-  --show-did            Show only the CLI's DID and exit. Useful for scripts.
-
-Authentication Flow:
-  1. Run 'ph login' - the CLI generates/loads its cryptographic identity (DID)
-  2. A browser window opens to Renown with the CLI's DID
-  3. Connect your Ethereum wallet (MetaMask, etc.)
-  4. Authorize the CLI's DID to act on behalf of your ETH address
-  5. Return to your terminal - authentication is complete!
-
-Credentials Storage:
-  Your credentials are stored locally at ~/.ph/auth.json and include:
-  - Your Ethereum address (the account you authorized)
-  - Your User DID (did:pkh:eip155:chainId:address)
-  - CLI DID (did:key:... - the CLI's cryptographic identity)
-  - Credential ID for session validation
-
-  The CLI's keypair is stored separately at ~/.ph/keypair.json (or can be
-  provided via the PH_RENOWN_PRIVATE_KEY environment variable as JSON).
-
-Environment Variables:
-  PH_RENOWN_PRIVATE_KEY   JSON-encoded JWK keypair for the CLI's identity.
-                          If set, the CLI will use this instead of generating
-                          or loading from file. Useful for CI/CD environments.
-
-Examples:
-  $ ph login                              # Authenticate with default settings
-  $ ph login --status                     # Check authentication status and CLI DID
-  $ ph login --show-did                   # Print only the CLI's DID
-  $ ph login --logout                     # Sign out and clear credentials
-  $ ph login --timeout 600                # Wait up to 10 minutes for authentication
-  $ ph login --renown-url http://localhost:3000   # Use local Renown server
-
-Notes:
-  - You only need to authenticate once; credentials persist until you log out
-  - The CLI's DID remains stable unless you delete ~/.ph/keypair.json
-  - If already authenticated, the command will show your current status
-  - The browser must remain open until authentication completes
-  - Your wallet signature authorizes the CLI's DID to act on your behalf
 ```
 
 ## Setup Globals
@@ -311,7 +243,8 @@ Examples:
 
 ---
 
-*This document was automatically generated from the help text in the codebase.*\n\n### ph-cli Commands\n\n- [Connect Build](#connect-build)
+*This document was automatically generated from the help text in the codebase.*\n\n### ph-cli Commands\n\n- [Access Token](#access-token)
+- [Connect Build](#connect-build)
 - [Connect Preview](#connect-preview)
 - [Connect Studio](#connect-studio)
 - [Dev](#dev)
@@ -326,6 +259,76 @@ Examples:
 - [Uninstall](#uninstall)
 - [Version](#version)
 - [Vetra](#vetra)
+
+## Access Token
+
+```
+Command Overview:
+  The access-token command generates a bearer token for API authentication. This token
+  can be used to authenticate requests to Powerhouse APIs like reactor-api (Switchboard).
+
+  This command:
+  1. Uses your CLI's cryptographic identity (DID) to sign a verifiable credential
+  2. Creates a JWT bearer token with configurable expiration
+  3. Outputs the token to stdout (info to stderr) for easy piping
+
+Prerequisites:
+  You must have a cryptographic identity. Run 'ph login' first to:
+  - Generate a keypair (stored in .keypair.json)
+  - Optionally link your Ethereum address (stored in .auth.json)
+
+Options:
+  --expiry <duration>     Set the token expiration time. Supports multiple formats:
+                          - Days: "7d" (default), "30d", "1d"
+                          - Hours: "24h", "12h", "1h"
+                          - Seconds: "3600", "3600s", "86400s"
+                          Default is 7 days.
+
+  --audience <url>        Optional. Set the intended audience (aud claim) for the token.
+                          This can be used to restrict the token to specific services.
+
+Token Details:
+  The generated token is a JWT (JSON Web Token) containing:
+  - Issuer (iss): Your CLI's DID (did:key:...)
+  - Subject (sub): Your CLI's DID
+  - Credential Subject: Chain ID, network ID, and address (if authenticated)
+  - Expiration (exp): Based on --expiry option
+  - Audience (aud): If --audience is specified
+
+Output:
+  - Token information (DID, address, expiry) is printed to stderr
+  - The token itself is printed to stdout for easy piping/copying
+
+  This allows you to use the command in scripts:
+    TOKEN=$(ph access-token)
+    curl -H "Authorization: Bearer $TOKEN" http://localhost:4001/graphql
+
+Examples:
+  $ ph access-token                          # Generate token valid for 7 days
+  $ ph access-token --expiry 30d             # Generate token valid for 30 days
+  $ ph access-token --expiry 24h             # Generate token valid for 24 hours
+  $ ph access-token --expiry 3600            # Generate token valid for 1 hour (3600 seconds)
+  $ ph access-token --audience http://localhost:4001  # Set audience claim
+  $ ph access-token | pbcopy                 # Copy token to clipboard (macOS)
+  $ ph access-token | xclip -selection c     # Copy token to clipboard (Linux)
+
+Usage with APIs:
+  # Generate token and use with curl
+  TOKEN=$(ph access-token --expiry 1d)
+  curl -X POST http://localhost:4001/graphql \\
+    -H "Content-Type: application/json" \\
+    -H "Authorization: Bearer $TOKEN" \\
+    -d '{"query": "{ drives { id name } }"}'
+
+  # Export as environment variable
+  export PH_ACCESS_TOKEN=$(ph access-token)
+
+Notes:
+  - Tokens are self-signed using your CLI's private key
+  - No network request is made; tokens are generated locally
+  - The recipient API must trust your CLI's DID to accept the token
+  - For reactor-api, ensure AUTH_ENABLED=true to require authentication
+```
 
 ## Connect Build
 

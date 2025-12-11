@@ -1,4 +1,5 @@
 import type { Command } from "commander";
+import { accessTokenCommand } from "./access-token.js";
 import { connectCommand } from "./connect.js";
 import { generateCommand } from "./generate.js";
 import { helpCommand } from "./help.js";
@@ -13,6 +14,7 @@ import { uninstallCommand } from "./uninstall.js";
 import { vetraCommand } from "./vetra.js";
 
 export const commands = [
+  accessTokenCommand,
   connectCommand,
   generateCommand,
   helpCommand,

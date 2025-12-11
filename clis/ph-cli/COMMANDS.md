@@ -4,6 +4,7 @@ This document provides detailed information about the available commands in the 
 
 ## Table of Contents
 
+- [Access Token](#access-token)
 - [Connect Build](#connect-build)
 - [Connect Preview](#connect-preview)
 - [Connect Studio](#connect-studio)
@@ -19,6 +20,76 @@ This document provides detailed information about the available commands in the 
 - [Uninstall](#uninstall)
 - [Version](#version)
 - [Vetra](#vetra)
+
+## Access Token
+
+```
+Command Overview:
+  The access-token command generates a bearer token for API authentication. This token
+  can be used to authenticate requests to Powerhouse APIs like reactor-api (Switchboard).
+
+  This command:
+  1. Uses your CLI's cryptographic identity (DID) to sign a verifiable credential
+  2. Creates a JWT bearer token with configurable expiration
+  3. Outputs the token to stdout (info to stderr) for easy piping
+
+Prerequisites:
+  You must have a cryptographic identity. Run 'ph login' first to:
+  - Generate a keypair (stored in .keypair.json)
+  - Optionally link your Ethereum address (stored in .auth.json)
+
+Options:
+  --expiry <duration>     Set the token expiration time. Supports multiple formats:
+                          - Days: "7d" (default), "30d", "1d"
+                          - Hours: "24h", "12h", "1h"
+                          - Seconds: "3600", "3600s", "86400s"
+                          Default is 7 days.
+
+  --audience <url>        Optional. Set the intended audience (aud claim) for the token.
+                          This can be used to restrict the token to specific services.
+
+Token Details:
+  The generated token is a JWT (JSON Web Token) containing:
+  - Issuer (iss): Your CLI's DID (did:key:...)
+  - Subject (sub): Your CLI's DID
+  - Credential Subject: Chain ID, network ID, and address (if authenticated)
+  - Expiration (exp): Based on --expiry option
+  - Audience (aud): If --audience is specified
+
+Output:
+  - Token information (DID, address, expiry) is printed to stderr
+  - The token itself is printed to stdout for easy piping/copying
+
+  This allows you to use the command in scripts:
+    TOKEN=$(ph access-token)
+    curl -H "Authorization: Bearer $TOKEN" http://localhost:4001/graphql
+
+Examples:
+  $ ph access-token                          # Generate token valid for 7 days
+  $ ph access-token --expiry 30d             # Generate token valid for 30 days
+  $ ph access-token --expiry 24h             # Generate token valid for 24 hours
+  $ ph access-token --expiry 3600            # Generate token valid for 1 hour (3600 seconds)
+  $ ph access-token --audience http://localhost:4001  # Set audience claim
+  $ ph access-token | pbcopy                 # Copy token to clipboard (macOS)
+  $ ph access-token | xclip -selection c     # Copy token to clipboard (Linux)
+
+Usage with APIs:
+  # Generate token and use with curl
+  TOKEN=$(ph access-token --expiry 1d)
+  curl -X POST http://localhost:4001/graphql \\
+    -H "Content-Type: application/json" \\
+    -H "Authorization: Bearer $TOKEN" \\
+    -d '{"query": "{ drives { id name } }"}'
+
+  # Export as environment variable
+  export PH_ACCESS_TOKEN=$(ph access-token)
+
+Notes:
+  - Tokens are self-signed using your CLI's private key
+  - No network request is made; tokens are generated locally
+  - The recipient API must trust your CLI's DID to accept the token
+  - For reactor-api, ensure AUTH_ENABLED=true to require authentication
+```
 
 ## Connect Build
 

@@ -1,3 +1,4 @@
+export * from "./access-token.js";
 export * from "./connect.js";
 export * from "./generate.js";
 export * from "./help.js";
