@@ -1,3 +1,18 @@
+## 5.1.0-dev.18 (2025-12-11)
+
+### 🚀 Features
+
+- **codegen:** add versioned document model generation ([#2130](https://github.com/powerhouse-inc/powerhouse/pull/2130))
+
+### 🩹 Fixes
+
+- **connect:** implement explicit transaction for schema drop operation ([#2131](https://github.com/powerhouse-inc/powerhouse/pull/2131))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 5.1.0-dev.17 (2025-12-11)
 
 ### 🩹 Fixes
