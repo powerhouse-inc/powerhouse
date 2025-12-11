@@ -7,6 +7,8 @@ More specifically, GraphQL is used as:
 - The **schema definition language (SDL)** for defining our document models and thereby self-documenting the API to the data model. It allows developers to define the structure and relationships of data in a strongly-typed format.
 - As the **query language in subgraphs**, which allow different services to expose and query structured data dynamically.
 
+GraphQL SDL is the backbone of **Specification Driven Design & Development** at Powerhouse. By defining your document models in SDL, you create machine-readable specifications that serve as a shared language—bridging the gap between developers, designers, and AI agents for precise, iterative collaboration.
+
 ### Why GraphQL?
 
 - **Precision**: Instead of over-fetching or under-fetching data, GraphQL enables you to specify the precise data requirements in your query.

@@ -16,7 +16,7 @@ Vetra Studio is the builder environment where you create, manage, and collaborat
 Visit the [Vetra Package Library here](https://vetra.io/packages) 
 
 :::info What is a Specification Document?
-A **specification document** is a configuration file that defines how a specific module in your package should behave. Think of it as a blueprint — it describes the structure, rules, and relationships that Powerhouse uses to generate the actual code for that module. These specification document unlock specification driven AI control. 
+A **specification document** is a configuration file that defines how a specific module in your package should behave. Think of it as a blueprint — it describes the structure, rules, and relationships that Powerhouse uses to generate the actual code for that module. These specification documents unlock **Specification Driven Design & Development**—enabling you to communicate your solution and intent through a structured framework designed for AI collaboration. Specs serve as a shared language that enables precise, iterative edits—turning messy intent into clean execution, and turning business needs into maintainable functionality.
 :::
 
 As Vetra Studio matures, each of these specification documents will offer an interface by which you as a builder get more control over the modules that make up your package. 

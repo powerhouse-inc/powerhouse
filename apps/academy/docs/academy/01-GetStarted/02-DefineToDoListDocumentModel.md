@@ -60,6 +60,8 @@ Below, you can see the SDL for the `TodoList` document model.
 :::info
 This schema defines the **data structure** of the document model and the types involved in its operations, which are detailed further as input types.
 Documents in Powerhouse leverage **event sourcing principles**, where every state transition is represented by an operation. GraphQL input types describe operations, ensuring that user intents are captured effectively. These operations detail the parameters needed for state transitions. The use of GraphQL aligns these transitions with explicit, validated, and reproducible commands.
+
+This is the essence of **Specification Driven Design & Development**: your schema serves as a machine-readable specification that both humans and AI agents can understand and execute—turning your intent into precise, maintainable functionality.
 :::
 
 <details>

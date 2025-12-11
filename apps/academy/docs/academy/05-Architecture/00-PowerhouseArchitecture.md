@@ -16,6 +16,12 @@ The Powerhouse framework is built around structured document models and declarat
 - **Stateful**: Documents with well-defined operations as state transitions become mini-APIs.
 - **Scalable**: CQRS and EDA-inspired architecture with read models for data aggregation.
 
+### Specification Driven Design & Development
+
+Complementing the Reactive Document Architecture, Powerhouse embraces **Specification Driven Design & Development**. This approach enables you to communicate your solution and intent through structured specification documents designed for AI collaboration. Specifications serve as a shared language—enabling precise, iterative edits that turn messy intent into clean execution. Our documents are machine-readable and executable, laying the groundwork for a "Git for Intent" for your AI agents.
+
+Therefore, Vetra is the stack for sovereign infrastructure and AI-run, AI-mediated, AI-executed business, organizations, and networks.
+
 ## Target Audiences
 
 Vetra supports a variety of organizations with a headless open-source back-end:

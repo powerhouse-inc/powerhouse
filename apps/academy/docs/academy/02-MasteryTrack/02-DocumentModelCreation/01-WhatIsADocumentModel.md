@@ -14,6 +14,8 @@ A Document Model is a programmable document structure that defines how data is s
 For instance, an invoice document model might define fields like _issuer_, _lineItems_, and _status_, with operations such as _AddLineItem_ and _MarkAsPaid_.
 :::
 
+Document models are central to **Specification Driven Design & Development**—an approach where you communicate your solution and intent through structured specification documents. These specs are machine-readable and executable, serving as a shared language between developers, designers, and AI agents. This enables precise, iterative development and lays the groundwork for AI-assisted workflows.
+
 A Document Model can be understood as:
 
 - A structured software framework that represents and **manages business logic** within a digital environment.
