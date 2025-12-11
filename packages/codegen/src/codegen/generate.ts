@@ -3,7 +3,6 @@ import type {
   PowerhouseConfig,
   PowerhouseManifest,
 } from "@powerhousedao/config";
-import { typeDefs } from "@powerhousedao/document-engineering/graphql";
 import { paramCase } from "change-case";
 import type { DocumentModelGlobalState } from "document-model";
 import fs from "node:fs";
@@ -17,6 +16,7 @@ import {
   tsMorphGenerateDocumentModel,
 } from "../ts-morph-utils/file-builders/document-model.js";
 import { tsMorphGenerateDriveEditor } from "../ts-morph-utils/file-builders/drive-editor.js";
+import { makeSubgraphsIndexFile } from "../ts-morph-utils/file-builders/subgraphs.js";
 import { buildTsMorphProject } from "../ts-morph-utils/ts-morph-project.js";
 import { generateDocumentModelZodSchemas, generateSchemas } from "./graphql.js";
 import {
@@ -30,17 +30,19 @@ import {
 import type { CodegenOptions } from "./types.js";
 import { getDocumentTypesMap, loadDocumentModel } from "./utils.js";
 
-export async function generateAll(
-  dir: string,
-  legacy: boolean,
-  args: {
-    watch?: boolean;
-    skipFormat?: boolean;
-    verbose?: boolean;
-    force?: boolean;
-  } = {},
-) {
+export async function generateAll(args: {
+  dir: string;
+  legacy: boolean;
+  useVersioning: boolean;
+  watch?: boolean;
+  skipFormat?: boolean;
+  verbose?: boolean;
+  force?: boolean;
+}) {
   const {
+    dir,
+    legacy,
+    useVersioning,
     watch = false,
     skipFormat = false,
     verbose = true,
@@ -60,17 +62,18 @@ export async function generateAll(
     }
 
     try {
-      const documentModel = await loadDocumentModel(documentModelPath);
-      documentModelStates.push(documentModel);
+      const documentModelState = await loadDocumentModel(documentModelPath);
+      documentModelStates.push(documentModelState);
 
       await generateDocumentModel({
         dir,
-        documentModelState: documentModel,
+        documentModelState,
         watch,
         skipFormat,
         verbose,
         force,
         legacy,
+        useVersioning,
       });
     } catch (error) {
       if (verbose) {
@@ -80,23 +83,41 @@ export async function generateAll(
   }
 }
 
-export async function generate(config: PowerhouseConfig, legacy: boolean) {
-  const { skipFormat, watch } = config;
-  await generateSchemas(config.documentModelsDir, { skipFormat, watch });
-  await generateAll(config.documentModelsDir, legacy, { skipFormat, watch });
-}
-
-export async function generateFromFile(
-  path: string,
+export async function generate(
   config: PowerhouseConfig,
   legacy: boolean,
-  options: CodegenOptions = {},
+  useVersioning: boolean,
 ) {
+  const { skipFormat, watch } = config;
+  await generateSchemas(config.documentModelsDir, { skipFormat, watch });
+  await generateAll({
+    dir: config.documentModelsDir,
+    legacy,
+    useVersioning,
+    skipFormat,
+    watch,
+  });
+}
+
+export async function generateFromFile(args: {
+  path: string;
+  config: PowerhouseConfig;
+  legacy: boolean;
+  useVersioning: boolean;
+  options?: CodegenOptions;
+}) {
+  const { path, config, legacy, useVersioning, options } = args;
   // load document model spec from file
-  const documentModel = await loadDocumentModel(path);
+  const documentModelState = await loadDocumentModel(path);
 
   // delegate to shared generation function
-  await generateFromDocumentModel(documentModel, config, legacy, path, options);
+  await generateFromDocumentModel({
+    documentModelState,
+    config,
+    legacy,
+    useVersioning,
+    options,
+  });
 }
 
 /**
@@ -112,26 +133,22 @@ export async function generateFromFile(
  * @param options - Optional configuration for generation behavior (verbose logging, etc.)
  * @returns A promise that resolves when code generation is complete
  */
-export async function generateFromDocument(
-  documentModelState: DocumentModelGlobalState,
-  config: PowerhouseConfig,
-  legacy: boolean,
-  options: CodegenOptions = {},
-) {
+export async function generateFromDocument(args: {
+  documentModelState: DocumentModelGlobalState;
+  config: PowerhouseConfig;
+  legacy: boolean;
+  useVersioning: boolean;
+  options?: CodegenOptions;
+}) {
   // delegate to shared generation function
-  await generateFromDocumentModel(
-    documentModelState,
-    config,
-    legacy,
-    null,
-    options,
-  );
+  await generateFromDocumentModel({ ...args, filePath: null });
 }
 
 type GenerateDocumentModelArgs = {
   dir: string;
   documentModelState: DocumentModelGlobalState;
   legacy: boolean;
+  useVersioning: boolean;
   specifiedPackageName?: string;
   watch?: boolean;
   skipFormat?: boolean;
@@ -144,6 +161,7 @@ export async function generateDocumentModel(args: GenerateDocumentModelArgs) {
     documentModelState,
     specifiedPackageName,
     legacy,
+    useVersioning,
     ...hygenArgs
   } = args;
   const packageJson = await readPackage();
@@ -198,6 +216,7 @@ export async function generateDocumentModel(args: GenerateDocumentModelArgs) {
       projectDir,
       packageName,
       documentModelState,
+      useVersioning,
     });
   }
 }
@@ -369,7 +388,8 @@ export async function generateSubgraphFromDocumentModel(
   config: PowerhouseConfig,
   options: CodegenOptions = {},
 ) {
-  return hygenGenerateSubgraph(name, documentModel, { ...config, ...options });
+  await hygenGenerateSubgraph(name, documentModel, { ...config, ...options });
+  makeSubgraphsIndexFile({ projectDir: path.dirname(config.subgraphsDir) });
 }
 
 export async function generateSubgraph(
@@ -378,11 +398,13 @@ export async function generateSubgraph(
   config: PowerhouseConfig,
   options: CodegenOptions = {},
 ) {
-  return hygenGenerateSubgraph(
-    name,
-    file !== null ? await loadDocumentModel(file) : null,
-    { ...config, ...options },
-  );
+  const documentModelState =
+    file !== null ? await loadDocumentModel(file) : null;
+  await hygenGenerateSubgraph(name, documentModelState, {
+    ...config,
+    ...options,
+  });
+  makeSubgraphsIndexFile({ projectDir: path.dirname(config.subgraphsDir) });
 }
 
 export async function generateProcessor(
@@ -411,6 +433,21 @@ export async function generateImportScript(
   });
 }
 
+const defaultManifest: PowerhouseManifest = {
+  name: "",
+  description: "",
+  category: "",
+  publisher: {
+    name: "",
+    url: "",
+  },
+  documentModels: [],
+  editors: [],
+  apps: [],
+  subgraphs: [],
+  importScripts: [],
+};
+
 export function generateManifest(
   manifestData: PartialPowerhouseManifest,
   projectRoot?: string,
@@ -419,20 +456,6 @@ export function generateManifest(
   const manifestPath = join(rootDir, "powerhouse.manifest.json");
 
   // Create default manifest structure
-  const defaultManifest: PowerhouseManifest = {
-    name: "",
-    description: "",
-    category: "",
-    publisher: {
-      name: "",
-      url: "",
-    },
-    documentModels: [],
-    editors: [],
-    apps: [],
-    subgraphs: [],
-    importScripts: [],
-  };
 
   // Read existing manifest if it exists
   let existingManifest: PowerhouseManifest = defaultManifest;
@@ -499,32 +522,6 @@ export function generateManifest(
   return manifestPath;
 }
 
-function generateGraphqlSchema(documentModel: DocumentModelGlobalState) {
-  const spec =
-    documentModel.specifications[documentModel.specifications.length - 1];
-
-  if (!spec) {
-    throw new Error(`No spec found for ${documentModel.id}`);
-  }
-
-  const {
-    modules,
-    state: { global, local },
-  } = spec;
-  const schemas = [
-    global.schema,
-    local.schema,
-    ...modules
-      .map((module) => [
-        `# ${module.name}`,
-        ...module.operations.map((op) => op.schema),
-      ])
-      .flat()
-      .filter((schema) => schema && schema.length > 0),
-  ];
-  return schemas.join("\n\n");
-}
-
 /**
  * Generates code from a DocumentModelGlobalState.
  *
@@ -538,13 +535,22 @@ function generateGraphqlSchema(documentModel: DocumentModelGlobalState) {
  * @param options - Optional configuration for generation behavior
  * @returns A promise that resolves when code generation is complete
  */
-async function generateFromDocumentModel(
-  documentModel: DocumentModelGlobalState,
-  config: PowerhouseConfig,
-  legacy: boolean,
-  filePath?: string | null,
-  options: CodegenOptions = {},
-) {
+async function generateFromDocumentModel(args: {
+  documentModelState: DocumentModelGlobalState;
+  config: PowerhouseConfig;
+  legacy: boolean;
+  useVersioning: boolean;
+  filePath?: string | null;
+  options?: CodegenOptions;
+}) {
+  const {
+    documentModelState,
+    config,
+    legacy,
+    useVersioning,
+    filePath,
+    options = {},
+  } = args;
   // Derive verbose from config.logLevel if not explicitly provided
   // Show hygen logs for verbose, debug, and info levels (default behavior before ts-morph)
   const {
@@ -553,23 +559,24 @@ async function generateFromDocumentModel(
       config.logLevel === "info",
     force = false,
   } = options;
-  const name = paramCase(documentModel.name);
+  const name = paramCase(documentModelState.name);
   const documentModelDir = join(config.documentModelsDir, name);
   // create document model folder and spec as json
   fs.mkdirSync(documentModelDir, { recursive: true });
   fs.writeFileSync(
     join(documentModelDir, `${name}.json`),
-    JSON.stringify(documentModel, null, 2),
+    JSON.stringify(documentModelState, null, 2),
   );
 
   await generateDocumentModel({
     dir: config.documentModelsDir,
-    documentModelState: documentModel,
+    documentModelState,
     watch: config.watch,
     skipFormat: config.skipFormat,
     verbose,
     force,
     legacy,
+    useVersioning,
   });
 
   await generateSubgraph(name, filePath || null, config, { verbose });

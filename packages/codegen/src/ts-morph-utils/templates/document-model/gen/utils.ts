@@ -1,19 +1,7 @@
 import { ts } from "@tmpl/core";
-import type { DocumentModelVariableNames } from "../../../name-builders/types.js";
+import type { DocumentModelTemplateInputs } from "../../../name-builders/types.js";
 
-export const documentModelGenUtilsTemplate = ({
-  globalStateName,
-  localStateName,
-  phStateName,
-  documentTypeVariableName,
-  isPhDocumentOfTypeFunctionName,
-  assertIsPhDocumentOfTypeFunctionName,
-  isPhStateOfTypeFunctionName,
-  assertIsPhStateOfTypeFunctionName,
-  fileExtension,
-  initialGlobalState,
-  initialLocalState,
-}: DocumentModelVariableNames) =>
+export const documentModelGenUtilsTemplate = (v: DocumentModelTemplateInputs) =>
   ts`
 import type {
     DocumentModelUtils,
@@ -26,24 +14,24 @@ import {
     generateId,
  } from 'document-model/core';
 import type { 
-  ${globalStateName},
-  ${localStateName}
+  ${v.globalStateName},
+  ${v.localStateName}
 } from './types.js';
-import type { ${phStateName} } from './types.js';
+import type { ${v.phStateName} } from './types.js';
 import { reducer } from './reducer.js';
-import { ${documentTypeVariableName} } from "./document-type.js";
+import { ${v.documentTypeVariableName} } from "./document-type.js";
 import {
-  ${isPhDocumentOfTypeFunctionName},
-  ${assertIsPhDocumentOfTypeFunctionName},
-  ${isPhStateOfTypeFunctionName},
-  ${assertIsPhStateOfTypeFunctionName},
+  ${v.isPhDocumentOfTypeFunctionName},
+  ${v.assertIsPhDocumentOfTypeFunctionName},
+  ${v.isPhStateOfTypeFunctionName},
+  ${v.assertIsPhStateOfTypeFunctionName},
 } from "./document-schema.js";
 
-export const initialGlobalState: ${globalStateName} = ${initialGlobalState};
-export const initialLocalState: ${localStateName} = ${initialLocalState};
+export const initialGlobalState: ${v.globalStateName} = ${v.initialGlobalState};
+export const initialLocalState: ${v.localStateName} = ${v.initialLocalState};
 
-export const utils: DocumentModelUtils<${phStateName}> = {
-    fileExtension: "${fileExtension}",
+export const utils: DocumentModelUtils<${v.phStateName}> = {
+    fileExtension: "${v.fileExtension}",
     createState(state) {
         return { ...defaultBaseState(), global: { ...initialGlobalState, ...state?.global }, local: { ...initialLocalState, ...state?.local } };
     },
@@ -53,7 +41,7 @@ export const utils: DocumentModelUtils<${phStateName}> = {
             state
         );
 
-        document.header.documentType = ${documentTypeVariableName};
+        document.header.documentType = ${v.documentTypeVariableName};
 
         // for backwards compatibility, but this is NOT a valid signed document id
         document.header.id = generateId();
@@ -67,16 +55,16 @@ export const utils: DocumentModelUtils<${phStateName}> = {
         return baseLoadFromInput(input, reducer);
     },
     isStateOfType(state) {
-        return ${isPhStateOfTypeFunctionName}(state);
+        return ${v.isPhStateOfTypeFunctionName}(state);
     },
     assertIsStateOfType(state) {
-        return ${assertIsPhStateOfTypeFunctionName}(state);
+        return ${v.assertIsPhStateOfTypeFunctionName}(state);
     },
     isDocumentOfType(document) {
-        return ${isPhDocumentOfTypeFunctionName}(document);
+        return ${v.isPhDocumentOfTypeFunctionName}(document);
     },
     assertIsDocumentOfType(document) {
-        return ${assertIsPhDocumentOfTypeFunctionName}(document);
+        return ${v.assertIsPhDocumentOfTypeFunctionName}(document);
     },
 };
 

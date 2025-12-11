@@ -1,3 +1,11 @@
+import { describe, expect, it } from "vitest";
+
+describe("nothing", () => {
+  it("does nothing", () => {
+    expect(true).toBe(true);
+  });
+});
+
 // /**
 //  * Integration tests for identity-based authentication and signed actions.
 //  *

@@ -1,7 +1,9 @@
 import { ts } from "@tmpl/core";
-import type { DocumentModelVariableNames } from "../../name-builders/types.js";
+import type { DocumentModelTemplateInputs } from "../../name-builders/types.js";
 
-export const documentModelHooksFileTemplate = (v: DocumentModelVariableNames) =>
+export const documentModelHooksFileTemplate = (
+  v: DocumentModelTemplateInputs,
+) =>
   ts`
 
 import type { DocumentDispatch } from "@powerhousedao/reactor-browser";
@@ -14,7 +16,7 @@ import {
 import type {
   ${v.phDocumentTypeName},
   ${v.actionTypeName},
-} from "${v.documentModelDir}";
+} from "${v.versionedDocumentModelPackageImportPath}";
 import { ${v.isPhDocumentOfTypeFunctionName} } from "./gen/document-schema.js";
 
 /** Hook to get a ${v.pascalCaseDocumentType} document by its id */

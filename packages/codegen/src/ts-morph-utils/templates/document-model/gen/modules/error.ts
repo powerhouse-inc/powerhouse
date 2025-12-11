@@ -3,7 +3,7 @@ import { pascalCase } from "change-case";
 import type { OperationErrorSpecification } from "document-model";
 import type {
   ActionFromOperation,
-  AllDocumentModelVariableNames,
+  DocumentModelTemplateInputsWithModule,
 } from "../../../../name-builders/types.js";
 
 function getErrorName(error: OperationErrorSpecification) {
@@ -80,7 +80,7 @@ function getErrorsExport(actions: ActionFromOperation[]) {
 }
 
 export const documentModelOperationsModuleErrorFileTemplate = (
-  v: AllDocumentModelVariableNames,
+  v: DocumentModelTemplateInputsWithModule,
 ) =>
   ts`
   ${getErrorsImplementations(v.errors)}

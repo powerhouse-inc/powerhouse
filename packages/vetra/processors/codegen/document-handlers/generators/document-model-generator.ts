@@ -8,7 +8,7 @@ import type { InternalTransmitterUpdate } from "document-drive";
 import type { DocumentModelGlobalState } from "document-model";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
-import { LEGACY } from "./constants.js";
+import { LEGACY, USE_VERSIONING } from "./constants.js";
 import { backupDocument } from "./utils.js";
 
 /**
@@ -58,8 +58,11 @@ export class DocumentModelGenerator extends BaseDocumentGen {
       `🔄 Starting code generation for document model: ${state.name}`,
     );
     try {
-      await generateFromDocument(state, this.config.PH_CONFIG, LEGACY, {
-        verbose: false,
+      await generateFromDocument({
+        documentModelState: state,
+        config: this.config.PH_CONFIG,
+        legacy: LEGACY,
+        useVersioning: USE_VERSIONING,
       });
       await generateSubgraphFromDocumentModel(
         state.name,

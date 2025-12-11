@@ -1,7 +1,7 @@
 import { ts } from "@tmpl/core";
 import { camelCase } from "change-case";
 import type { ModuleSpecification } from "document-model";
-import type { DocumentModelVariableNames } from "../../name-builders/types.js";
+import type { DocumentModelTemplateInputs } from "../../name-builders/types.js";
 
 function buildModuleActionsName(module: ModuleSpecification) {
   const camelCaseModuleName = camelCase(module.name);
@@ -25,7 +25,7 @@ function buildModuleActionsSpreadExport(modules: ModuleSpecification[]) {
 export const actions = { ...baseActions, ${spreadActionNames} }`;
 }
 export const documentModelRootActionsFileTemplate = (
-  v: DocumentModelVariableNames,
+  v: DocumentModelTemplateInputs,
 ) =>
   ts`
 import { baseActions } from "document-model";

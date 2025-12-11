@@ -74,3 +74,11 @@ export function getObjectLiteral(statement: VariableStatement | undefined) {
     .at(0)
     ?.getInitializerIfKind(SyntaxKind.ObjectLiteralExpression);
 }
+
+export function getArrayNumberElements(array: ArrayLiteralExpression) {
+  const elements = array
+    .getElements()
+    .map((el) => el.asKindOrThrow(SyntaxKind.NumericLiteral).getLiteralValue());
+
+  return elements;
+}

@@ -1,3 +1,4 @@
+import { pascalCase } from "change-case";
 import type { Project } from "ts-morph";
 import { SyntaxKind, VariableDeclarationKind } from "ts-morph";
 import { buildModulesOutputFilePath } from "../name-builders/common-files.js";
@@ -22,7 +23,6 @@ type MakeModuleFileArgs = {
   /** Whether to make a legacy index.ts file for the modules, to be removed in the future */
   shouldMakeLegacyIndexFile?: boolean;
 };
-
 /**
  * Makes a file which exports the modules from the module.ts files in the given directory as a variable declaration.
  */
@@ -55,12 +55,17 @@ export function makeModulesFile({
   const modules = moduleDeclarations
     .filter((module) => module !== undefined)
     .map((module) => {
-      const name = module.getName();
       const sourceFile = module.getSourceFile();
-      const parentDir = sourceFile.getDirectory();
-      const parentDirName = parentDir.getBaseName();
-      const moduleSpecifier = `./${parentDirName}/module.js`;
-      return { name, moduleSpecifier };
+      const moduleSpecifier =
+        modulesDir.getRelativePathAsModuleSpecifierTo(
+          sourceFile.getFilePath(),
+        ) + ".js";
+      const versionDir = getVersionDirFromModuleSpecifier(moduleSpecifier);
+      const unversionedName = module.getName();
+      const versionedName = versionDir
+        ? `${unversionedName}${pascalCase(versionDir)}`
+        : undefined;
+      return { versionedName, unversionedName, moduleSpecifier };
     });
 
   const moduleExportsFilePath = buildModulesOutputFilePath(
@@ -85,10 +90,16 @@ export function makeModulesFile({
     moduleSpecifier: "document-model",
     isTypeOnly: true,
   };
-  const moduleImports = modules.map(({ name, moduleSpecifier }) => ({
-    namedImports: [name],
-    moduleSpecifier,
-  }));
+  const moduleImports = modules.map(
+    ({ versionedName, unversionedName, moduleSpecifier }) => ({
+      namedImports: [
+        versionedName
+          ? `${unversionedName} as ${versionedName}`
+          : unversionedName,
+      ],
+      moduleSpecifier,
+    }),
+  );
   const imports = [typeImport, ...moduleImports];
   moduleExportsSourceFile.addImportDeclarations(imports);
 
@@ -126,7 +137,7 @@ export function makeModulesFile({
 
   // add the module declaration names to the array literal expression
   arrayLiteral?.addElements(
-    modules.map((module) => module.name),
+    modules.map((module) => module.versionedName ?? module.unversionedName),
     { useNewLines: true },
   );
 
@@ -140,4 +151,10 @@ export function makeModulesFile({
   }
 
   project.saveSync();
+}
+
+function getVersionDirFromModuleSpecifier(moduleSpecifier: string) {
+  const match = moduleSpecifier.match(/\/(v\d+)(?=\/)/);
+  const version = match?.[1];
+  return version;
 }

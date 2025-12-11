@@ -2,25 +2,25 @@ import { ts } from "@tmpl/core";
 
 type DocumentModelModuleFileTemplateArgs = {
   phStateName: string;
-  documentModelDir: string;
+  versionedDocumentModelPackageImportPath: string;
   pascalCaseDocumentType: string;
 };
 export function documentModelModuleFileTemplate({
   phStateName,
-  documentModelDir,
+  versionedDocumentModelPackageImportPath,
   pascalCaseDocumentType,
 }: DocumentModelModuleFileTemplateArgs) {
   const template = ts`
   import type { DocumentModelModule } from "document-model";
   import { createState } from "document-model";
   import { defaultBaseState } from "document-model/core";
-  import type { ${phStateName} } from "${documentModelDir}";
+  import type { ${phStateName} } from "${versionedDocumentModelPackageImportPath}";
   import {
     actions,
     documentModel,
     reducer,
     utils,
-  } from "${documentModelDir}";
+  } from "${versionedDocumentModelPackageImportPath}";
 
   /** Document model module for the Todo List document type */
   export const ${pascalCaseDocumentType}: DocumentModelModule<${phStateName}> = {

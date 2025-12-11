@@ -1,7 +1,7 @@
 import { ts } from "@tmpl/core";
 import { paramCase, pascalCase } from "change-case";
 import type { ModuleSpecification } from "document-model";
-import type { DocumentModelVariableNames } from "../../../name-builders/types.js";
+import type { DocumentModelTemplateInputs } from "../../../name-builders/types.js";
 
 function makeModuleActionsTypeImport(
   module: ModuleSpecification,
@@ -59,7 +59,7 @@ function makeDocumentActionType(
   return `export type ${pascalCaseDocumentType}Action = ${actionTypeUnion};`;
 }
 export const documentModelGenActionsFileTemplate = (
-  v: DocumentModelVariableNames,
+  v: DocumentModelTemplateInputs,
 ) =>
   ts`
 ${makeModuleActionsTypeImports(v.modules, v.pascalCaseDocumentType)}

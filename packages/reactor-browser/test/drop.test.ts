@@ -2,10 +2,14 @@ import { PGlite } from "@electric-sql/pglite";
 import {
   ReactorBuilder,
   ReactorClientBuilder,
+  type Database,
   type ReactorClientModule,
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "document-drive";
-import { documentModelDocumentModelModule } from "document-model";
+import {
+  documentModelDocumentModelModule,
+  type DocumentModelModule,
+} from "document-model";
 import { Kysely, sql } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -31,10 +35,10 @@ describe("dropAllTables", () => {
   it("should drop all tables after ReactorClient creates them", async () => {
     const reactorBuilder = new ReactorBuilder()
       .withDocumentModels([
-        driveDocumentModelModule as any,
-        documentModelDocumentModelModule as any,
-      ])
-      .withKysely(db)
+        driveDocumentModelModule,
+        documentModelDocumentModelModule,
+      ] as unknown as DocumentModelModule[])
+      .withKysely(db as Kysely<Database>)
       .withFeatures({ legacyStorageEnabled: false });
 
     module = await new ReactorClientBuilder()
@@ -59,8 +63,10 @@ describe("dropAllTables", () => {
 
   it("should handle empty database without errors", async () => {
     const reactorBuilder = new ReactorBuilder()
-      .withDocumentModels([documentModelDocumentModelModule as any])
-      .withKysely(db)
+      .withDocumentModels([
+        documentModelDocumentModelModule,
+      ] as unknown as DocumentModelModule[])
+      .withKysely(db as Kysely<Database>)
       .withFeatures({ legacyStorageEnabled: false });
 
     module = await new ReactorClientBuilder()
@@ -73,10 +79,10 @@ describe("dropAllTables", () => {
   it("should drop multiple tables with data", async () => {
     const reactorBuilder = new ReactorBuilder()
       .withDocumentModels([
-        driveDocumentModelModule as any,
-        documentModelDocumentModelModule as any,
-      ])
-      .withKysely(db)
+        driveDocumentModelModule,
+        documentModelDocumentModelModule,
+      ] as unknown as DocumentModelModule[])
+      .withKysely(db as Kysely<Database>)
       .withFeatures({ legacyStorageEnabled: false });
 
     module = await new ReactorClientBuilder()

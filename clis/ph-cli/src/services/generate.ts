@@ -37,6 +37,7 @@ export type GenerateOptions = {
   migrationFile?: string;
   schemaFile?: string;
   tsMorph?: boolean;
+  useVersioning?: boolean;
 };
 
 export async function startGenerate(
@@ -44,7 +45,8 @@ export async function startGenerate(
   options: GenerateOptions,
 ) {
   const baseConfig = getConfig();
-  const legacy = !options.tsMorph;
+  const useVersioning = !!options.useVersioning;
+  const legacy = useVersioning || !options.tsMorph;
   const config = {
     ...baseConfig,
     ...{
@@ -57,6 +59,7 @@ export async function startGenerate(
       ...(options.interactive && { interactive: options.interactive }),
       ...(options.watch && { watch: options.watch }),
       legacy,
+      useVersioning,
     },
   };
 
@@ -83,6 +86,7 @@ export async function startGenerate(
     migrationFile: options.migrationFile,
     schemaFile: options.schemaFile,
     legacy,
+    useVersioning,
   };
 
   if (command.driveEditor) {
@@ -131,10 +135,14 @@ export async function startGenerate(
       schemaFile: schemaFile ? path.join(process.cwd(), schemaFile) : undefined,
     });
   } else if (filePath) {
-    await generateFromFile(filePath, config, legacy, {
-      force: options.force,
+    await generateFromFile({
+      path: filePath,
+      config,
+      legacy,
+      options,
+      useVersioning,
     });
   } else {
-    await generateCode(config, legacy);
+    await generateCode(config, legacy, useVersioning);
   }
 }
