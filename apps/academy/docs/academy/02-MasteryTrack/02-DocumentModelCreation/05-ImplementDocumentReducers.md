@@ -16,7 +16,9 @@ Before diving into the specifics of writing reducers, let's recall the preceding
 
 This generated reducer file is our starting point. It will contain function stubs or an object structure expecting your reducer implementations, all typed according to your schema.
 
-## What is a reducer? The core principles
+## What is a reducer? 
+
+### The core principles
 
 In the context of Powerhouse and inspired by patterns like Redux, a reducer is a **pure function** with the following signature (conceptually):
 

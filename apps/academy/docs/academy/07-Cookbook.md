@@ -192,7 +192,7 @@ ph use staging
 ### Further reading
 
 - [Powerhouse Builder Tools](/academy/MasteryTrack/BuilderEnvironment/BuilderTools)
-- [GraphQL Schema Best Practices](/academy/MasteryTrack/WorkWithData/GraphQLAtPowerhouse)
+- [GraphQL Schema Best Practices](/academy/MasteryTrack/WorkWithData/UsingTheAPI)
 </details>
 
 <details id="using-different-branches-in-powerhouse">
@@ -1020,7 +1020,7 @@ In the "New Document" section at the bottom of the page, click the `DocumentMode
 
 ### Further reading
 
-- [GraphQL Schema Best Practices](/academy/MasteryTrack/WorkWithData/GraphQLAtPowerhouse)
+- [GraphQL Schema Best Practices](/academy/MasteryTrack/WorkWithData/UsingTheAPI)
 </details>
 
 <details id="generating-reducers-from-a-document-model-file">
@@ -1189,7 +1189,7 @@ You might encounter a browser warning about the self-signed certificate; you may
 ### Further reading
 
 - [Powerhouse Builder Tools](/academy/MasteryTrack/BuilderEnvironment/BuilderTools)
-- [GraphQL Schema Best Practices](/academy/MasteryTrack/WorkWithData/GraphQLAtPowerhouse)
+- [GraphQL Schema Best Practices](/academy/MasteryTrack/WorkWithData/UsingTheAPI)
 </details>
 
 ## Document & Drive Editor recipes
@@ -1391,7 +1391,7 @@ Use the constructed URL to add or access the drive in your Connect environment.
 
 ### Related recipes
 
-- [Configuring Drives](/academy/MasteryTrack/BuildingUserExperiences/ConfiguringDrives)
+- [Configuring Drives](/academy/MasteryTrack/WorkWithData/ConfiguringDrives)
 - [Initializing a New Project & Document Model](#initializing-a-new-project-and-document-model)
 
 ### Further reading
@@ -1637,7 +1637,7 @@ You need to understand and manage different types of dependencies in your Powerh
 ### Further reading
 
 - [Powerhouse Builder Tools](/academy/MasteryTrack/BuilderEnvironment/BuilderTools)
-- [GraphQL Schema Best Practices](/academy/MasteryTrack/WorkWithData/GraphQLAtPowerhouse)
+- [GraphQL Schema Best Practices](/academy/MasteryTrack/WorkWithData/UsingTheAPI)
 
 </details>
 
