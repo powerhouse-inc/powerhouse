@@ -1,3 +1,13 @@
+## 5.1.0-dev.17 (2025-12-11)
+
+### 🩹 Fixes
+
+- **ph-cli:** auth with access-token ([df48be6e9](https://github.com/powerhouse-inc/powerhouse/commit/df48be6e9))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.1.0-dev.16 (2025-12-11)
 
 ### 🚀 Features
