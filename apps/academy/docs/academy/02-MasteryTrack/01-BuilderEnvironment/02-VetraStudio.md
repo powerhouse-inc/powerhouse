@@ -9,12 +9,18 @@ toc_max_heading_level: 3
 
 ## Introducing Vetra Studio
 
-- **Vetra Studio Drive**: Serves as a hub for developers to access, manage & share specification through a remote Vetra drive. It functions as the orchestration hub where you as a builder assemble all the necessary specifications for your intended use-case, software solution or package. For each of the different **modules** that together form a package a  
-- **Vetra Package Library**: Store, publish and fork git repositories of packages in the Vetra Package Library.    
+Vetra Studio is the builder environment where you create, manage, and collaborate on Powerhouse packages. It consists of two main components:
+
+- **Vetra Studio Drive**: Serves as a hub for developers to access, manage & share specifications through a remote Vetra drive. It functions as the orchestration hub where you as a builder assemble all the necessary specifications for your intended use-case, software solution, or package. Each specification document corresponds to a **module** — a distinct building block of your package (such as a document model, editor, or data integration).
+- **Vetra Package Library**: Store, publish, and fork git repositories of packages in the Vetra Package Library.    
 Visit the [Vetra Package Library here](https://vetra.io/packages) 
 
-As Vetra Studio matures each of these specification documents will offer an interface by which you as a builder get more control over the modules that make up your package. 
-For now the specification documents offer you a template for code generation. 
+:::info What is a Specification Document?
+A **specification document** is a configuration file that defines how a specific module in your package should behave. Think of it as a blueprint — it describes the structure, rules, and relationships that Powerhouse uses to generate the actual code for that module. These specification document unlock specification driven AI control. 
+:::
+
+As Vetra Studio matures, each of these specification documents will offer an interface by which you as a builder get more control over the modules that make up your package. 
+For now, the specification documents offer you a template for code generation. 
 
 <figure className="image-container">
   <img
@@ -27,14 +33,17 @@ For now the specification documents offer you a template for code generation.
 ### Module Categories
 
 ### 1. Document Models 
-- **Document model specification**: Defines the structure and operations of a document model using GraphQL SDL, ensuring consistent data management and processing.
+
+A **document model** is a structured data type that defines what information your application can store and how it can be modified. Unlike traditional databases, document models use **operations** (actions like "add item" or "update title") rather than direct data manipulation, making them ideal for collaborative and auditable applications.
+
+- **Document model specification**: Defines the structure and operations of a document model using [GraphQL SDL](https://graphql.org/learn/schema/) (Schema Definition Language), ensuring consistent data management and processing.
 
 ### 2. User Experiences
 - **Editor specification**: Outlines the interface and functionalities of a document model editor, allowing users to interact with and modify document data.
 - **Drive-app specification**: Specifies the UI and interactions for managing documents within a Drive, providing tailored views and functionalities.
 
-### 3. Data integrations
-- **Subgraph specification**: Details the connections and relationships within a subgraph, facilitating efficient data querying and manipulation.
+### 3. Data Integrations
+- **Subgraph specification**: Details the connections and relationships within a subgraph (a subset of your data exposed via a GraphQL API), facilitating efficient data querying and manipulation.
 - **Codegen Processor Specification**: Describes the process for automatically generating code from document model specifications, ensuring alignment with intended architecture.
 - **RelationalDb Processor Specification**: Defines how relational databases are structured and queried, supporting efficient data management and retrieval.
 
@@ -43,33 +52,36 @@ For now the specification documents offer you a template for code generation.
     src={require("./images/VetraStudioDrive.png").default}
     alt="Vetra Studio Drive"
   />
-  <figcaption>The Vetra Studio Drive, a builder app that collects all of the specification of a package.</figcaption>
+  <figcaption>The Vetra Studio Drive, a builder app that collects all of the specifications of a package.</figcaption>
 </figure>
 
-### Configure a Vetra drive in your project
+### Configure a Vetra Drive in Your Project
 
-You can connect to a remote vetra drive instead of using the local one auto-generated when you run `ph vetra`
-If you run Vetra without the `--remote-drive` option: Vetra will create a Vetra drive for you that is local and lives in your local environment / local browser storage. 
-If you provide the remote drive with `--remote-drive` argument: Vetra will use this drive instead of creating a local one. the remote drive can be hosted whatever you want.
-The powerhouse config includes a Vetra URL for consistent project configuration across different environments.
+You can connect to a remote Vetra drive instead of using the local one auto-generated when you run `ph vetra` (where `ph` is short for "powerhouse", the CLI tool and the Organization behind Vetra).
 
-```vetra: {
+- **Without** the `--remote-drive` option: Vetra will create a local drive for you that lives in your browser's local storage. This is useful for solo development or experimentation.
+- **With** the `--remote-drive` argument: Vetra will connect to a remote drive instead of creating a local one. The remote drive can be hosted wherever you want (e.g., on your own server or a shared team environment).
+
+The Powerhouse config includes a Vetra URL for consistent project configuration across different environments.
+
+```typescript
+vetra: {
     driveId: string;
     driveUrl: string;
 };
 ```
 
-Imagine you are a builder and want to work on, or continue with a set of specifications from your team mates. 
-You could then add the specific remote Vetra drive to your powerhouse configuration in the `powerhouse.config.json`file to get going. 
+Imagine you are a builder and want to work on, or continue with a set of specifications from your teammates. 
+You could then add the specific remote Vetra drive to your Powerhouse configuration in the `powerhouse.config.json` file to get going:
 
-```
+```json
 "vetra": {
     "driveId": "bai-specifications",
     "driveUrl": "https://switchboard.staging.vetra.io/d/bai-specifications"
   }
 ```
 
-An example of a builder team building on the Powerhouse Vetra Ecosystem and it's complementary Vetra Studio Drive specifications for the different packages be found [here](https://vetra.io/builders/bai)
+An example of a builder team building on the Powerhouse Vetra Ecosystem and its complementary Vetra Studio Drive specifications for the different packages can be found [here](https://vetra.io/builders/bai).
 
 <details>
 <summary>📦 Vetra Remote Drive Commands</summary>
@@ -86,9 +98,12 @@ Remote drives enable collaborative development by syncing specifications across 
 - **Collaborator**: `ph checkout --remote-drive` → `ph vetra` to start developing
 
 **Preview Drive (`--watch` mode):**
-- Main "Vetra" drive syncs with remote and contains stable package configuration
-- "Vetra Preview" drive is created locally for testing document models before syncing
-- When restarting Vetra always use `vetra --watch` so it loads local documents & editors. 
+
+The preview drive allows you to safely test changes before they affect the shared remote drive.
+
+- The main **"Vetra" drive** syncs with the remote and contains the stable package configuration.
+- The **"Vetra Preview" drive** is created locally for testing document models and editors before syncing your changes to the team.
+- When restarting Vetra, always use `ph vetra --watch` so it loads your local documents and editors.
 
 → [Full Vetra Remote Drive Reference](/academy/APIReferences/VetraRemoteDrive)
 

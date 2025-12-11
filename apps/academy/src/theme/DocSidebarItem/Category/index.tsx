@@ -6,7 +6,8 @@ import React from "react";
 
 type Props = WrapperProps<typeof CategoryType>;
 
-// Count only immediate children (docs, links, and categories)
+// Count only immediate children (links and categories)
+// Note: doc items are converted to 'link' type in the rendered sidebar
 function countItems(items: PropSidebarItem[]): number {
   let count = 0;
   for (const item of items) {
