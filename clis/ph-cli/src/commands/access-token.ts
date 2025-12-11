@@ -29,7 +29,9 @@ function parseExpiry(expiry: string): number {
   if (trimmed.endsWith("d")) {
     const days = parseInt(trimmed.slice(0, -1), 10);
     if (isNaN(days) || days <= 0) {
-      throw new Error(`Invalid expiry format: ${expiry}. Days must be a positive number.`);
+      throw new Error(
+        `Invalid expiry format: ${expiry}. Days must be a positive number.`,
+      );
     }
     return days * SECONDS_IN_DAY;
   }
@@ -38,37 +40,58 @@ function parseExpiry(expiry: string): number {
   if (trimmed.endsWith("h")) {
     const hours = parseInt(trimmed.slice(0, -1), 10);
     if (isNaN(hours) || hours <= 0) {
-      throw new Error(`Invalid expiry format: ${expiry}. Hours must be a positive number.`);
+      throw new Error(
+        `Invalid expiry format: ${expiry}. Hours must be a positive number.`,
+      );
     }
     return hours * 60 * 60;
   }
 
   // Check for seconds format (e.g., "3600s" or just "3600")
-  const numericValue = trimmed.endsWith("s")
-    ? trimmed.slice(0, -1)
-    : trimmed;
+  const numericValue = trimmed.endsWith("s") ? trimmed.slice(0, -1) : trimmed;
 
   const seconds = parseInt(numericValue, 10);
   if (isNaN(seconds) || seconds <= 0) {
-    throw new Error(`Invalid expiry format: ${expiry}. Expected a positive number or format like "7d", "24h", "3600s".`);
+    throw new Error(
+      `Invalid expiry format: ${expiry}. Expected a positive number or format like "7d", "24h", "3600s".`,
+    );
   }
 
   return seconds;
 }
 
-export const accessToken: CommandActionType<[AccessTokenOptions]> = async (options) => {
-  // Check if keypair exists (DID is available)
+export const accessToken: CommandActionType<[AccessTokenOptions]> = async (
+  options,
+) => {
+  // Require Renown authentication - user must have done 'ph login'
+  if (!isAuthenticated()) {
+    console.error(
+      "Not authenticated. Run 'ph login' first to authenticate with Renown.",
+    );
+    console.error(
+      "A Renown credential is required to generate valid bearer tokens.",
+    );
+    process.exit(1);
+  }
+
+  const creds = loadCredentials();
+  if (!creds) {
+    console.error("Failed to load credentials.");
+    process.exit(1);
+  }
+
+  // Get the CLI's DID
   let did: string;
   try {
     did = await getConnectDid();
   } catch (e) {
-    console.error("No identity found. Run 'ph login' first to create a cryptographic identity.");
+    console.error(
+      "Failed to get CLI identity. Run 'ph login' to reinitialize.",
+    );
     process.exit(1);
   }
 
-  // Check if authenticated (optional, but provides better UX)
-  const creds = loadCredentials();
-  const address = creds?.address;
+  const address = creds.address;
 
   // Parse expiry
   let expiresIn = DEFAULT_EXPIRY_SECONDS;
@@ -98,9 +121,10 @@ export const accessToken: CommandActionType<[AccessTokenOptions]> = async (optio
   const expiryHours = Math.floor((expiresIn % SECONDS_IN_DAY) / 3600);
   let expiryStr: string;
   if (expiryDays > 0) {
-    expiryStr = expiryHours > 0
-      ? `${expiryDays} day${expiryDays > 1 ? "s" : ""} and ${expiryHours} hour${expiryHours > 1 ? "s" : ""}`
-      : `${expiryDays} day${expiryDays > 1 ? "s" : ""}`;
+    expiryStr =
+      expiryHours > 0
+        ? `${expiryDays} day${expiryDays > 1 ? "s" : ""} and ${expiryHours} hour${expiryHours > 1 ? "s" : ""}`
+        : `${expiryDays} day${expiryDays > 1 ? "s" : ""}`;
   } else if (expiryHours > 0) {
     expiryStr = `${expiryHours} hour${expiryHours > 1 ? "s" : ""}`;
   } else {
@@ -109,9 +133,7 @@ export const accessToken: CommandActionType<[AccessTokenOptions]> = async (optio
 
   // Output token info to stderr, token itself to stdout for piping
   console.error(`CLI DID: ${did}`);
-  if (address) {
-    console.error(`ETH Address: ${address}`);
-  }
+  console.error(`ETH Address: ${address}`);
   console.error(`Token expires in: ${expiryStr}`);
   console.error("");
 
@@ -127,10 +149,7 @@ export function accessTokenCommand(program: Command): Command {
       "--expiry <duration>",
       `Token expiry duration. Supports: "7d" (days), "24h" (hours), "3600" or "3600s" (seconds). Default: ${DEFAULT_EXPIRY_DAYS}d`,
     )
-    .option(
-      "--audience <url>",
-      "Target audience URL for the token (optional)",
-    )
+    .option("--audience <url>", "Target audience URL for the token (optional)")
     .action(accessToken);
 
   return setCustomHelp(cmd, accessTokenHelp);

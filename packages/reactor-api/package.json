@@ -83,7 +83,6 @@
     "zod": "^3.24.3"
   },
   "devDependencies": {
-    "copyfiles": "^2.4.1",
     "@graphql-codegen/cli": "^5.0.0",
     "@graphql-codegen/client-preset": "^4.1.0",
     "@graphql-codegen/typed-document-node": "^5.0.1",
@@ -102,9 +101,11 @@
     "@types/node": "^24.6.1",
     "@types/pg": "^8.11.10",
     "@types/ws": "^8.18.1",
+    "copyfiles": "^2.4.1",
     "esbuild": "^0.24.0",
     "graphql-codegen-typescript-validation-schema": "^0.12.0",
     "graphql-tag": "^2.12.6",
+    "kysely-pglite-dialect": "^1.2.0",
     "msw": "^2.7.3",
     "tinybench": "^3.1.1",
     "vite": "^7.1.9",

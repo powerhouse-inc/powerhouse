@@ -687,7 +687,7 @@ Command Overview:
 
 Options:
   --renown-url <url>    Specify a custom Renown server URL. Defaults to
-                        https://renown.powerhouse.io
+                        https://www.renown.id
 
   --timeout <seconds>   Set the authentication timeout in seconds. The command will
                         wait this long for you to complete authentication in the browser.

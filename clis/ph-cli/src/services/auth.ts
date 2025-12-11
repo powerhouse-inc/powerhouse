@@ -162,7 +162,7 @@ export function generateSessionId(): string {
 /**
  * Default Renown URL
  */
-export const DEFAULT_RENOWN_URL = "https://renown.powerhouse.io";
+export const DEFAULT_RENOWN_URL = "https://www.renown.id";
 
 /**
  * Get or create the ConnectCrypto instance
