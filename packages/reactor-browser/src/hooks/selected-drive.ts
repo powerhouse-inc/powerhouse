@@ -3,7 +3,11 @@ import type {
   DocumentDriveAction,
   DocumentDriveDocument,
 } from "document-drive";
-import { extractDriveIdFromPath, resolveUrlPathname } from "../utils/url.js";
+import {
+  createUrlWithPreservedParams,
+  extractDriveIdFromPath,
+  resolveUrlPathname,
+} from "../utils/url.js";
 import { useDispatch } from "./dispatch.js";
 import { useDrives } from "./drives.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
@@ -69,14 +73,14 @@ export function setSelectedDrive(
     if (pathname === window.location.pathname) {
       return;
     }
-    window.history.pushState(null, "", pathname);
+    window.history.pushState(null, "", createUrlWithPreservedParams(pathname));
     return;
   }
   const pathname = resolveUrlPathname(`/d/${driveSlug}`);
   if (pathname === window.location.pathname) {
     return;
   }
-  window.history.pushState(null, "", pathname);
+  window.history.pushState(null, "", createUrlWithPreservedParams(pathname));
 }
 
 export function addSetSelectedDriveOnPopStateEventHandler() {
