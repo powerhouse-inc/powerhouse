@@ -93,3 +93,71 @@ function createJobVariant({
     errorHistory: [],
   };
 }
+
+describe("Queue Profiling Extensions", () => {
+  bench("rapid-fire enqueue across documents (disparate payloads)", async () => {
+    // Stress enqueue throughput with many docs and varied payload sizes/branches.
+    await resetQueueState();
+    const documents = 12;
+    const jobsPerDocument = 40;
+
+    for (let d = 0; d < documents; d++) {
+      const documentId = `doc-${d}`;
+      const payloadOptions = [8, 64, 512, 4096];
+      for (let i = 0; i < jobsPerDocument; i++) {
+        const payloadSize =
+          payloadOptions[Math.floor(Math.random() * payloadOptions.length)];
+        await queue.enqueue(
+          createJobVariant({ documentId, payloadSize, branch: d % 2 ? "dev" : "main" }),
+        );
+      }
+    }
+  });
+
+  bench("conflicting operations on same document", async () => {
+    // Serializes competing ops on a single doc to gauge contention/ordering.
+    await resetQueueState();
+    const documentId = "shared-doc";
+    const ops = ["UPDATE", "DELETE", "CREATE"];
+
+    for (let i = 0; i < 180; i++) {
+      await queue.enqueue(
+        createJobVariant({
+          documentId,
+          actionType: ops[i % ops.length],
+          payloadSize: (i % 16 + 1) * 10,
+        }),
+      );
+    }
+
+    let handle: Awaited<ReturnType<typeof queue.dequeue>> | null;
+    do {
+      handle = await queue.dequeue(documentId, "default", "main");
+      handle?.start();
+      handle?.complete();
+    } while (handle);
+  });
+  
+  bench("mixed payload sizes with dequeueNext", async () => {
+    // Mix sizes/branches and drain via dequeueNext to exercise fairness paths.
+    await resetQueueState();
+    const payloads = [8, 64, 256, 1024];
+
+    for (let i = 0; i < 220; i++) {
+      await queue.enqueue(
+        createJobVariant({
+          documentId: `doc-${i % 6}`,
+          branch: i % 2 === 0 ? "main" : "preview",
+          payloadSize: payloads[i % payloads.length],
+        }),
+      );
+    }
+
+    while (await queue.hasJobs()) {
+      const handle = await queue.dequeueNext();
+      if (!handle) break;
+      handle.start();
+      handle.complete();
+    }
+  });
+});
