@@ -1,3 +1,13 @@
+## 5.1.0-dev.19 (2025-12-12)
+
+### 🩹 Fixes
+
+- **reactor-api:** removed isUserAllowedCheck and added flag to skip renown verification ([e59814cfd](https://github.com/powerhouse-inc/powerhouse/commit/e59814cfd))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.1.0-dev.18 (2025-12-11)
 
 ### 🚀 Features

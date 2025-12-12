@@ -1,3 +1,7 @@
+## 5.1.0-dev.19 (2025-12-12)
+
+This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
+
 ## 5.1.0-dev.18 (2025-12-11)
 
 ### 🚀 Features

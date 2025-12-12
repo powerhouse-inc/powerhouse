@@ -1,3 +1,13 @@
+## 5.1.0-dev.19 (2025-12-12)
+
+### 🩹 Fixes
+
+- **ph-cli:** lazy load auth methods ([0840cca7a](https://github.com/powerhouse-inc/powerhouse/commit/0840cca7a))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.1.0-dev.18 (2025-12-11)
 
 ### 🚀 Features
