@@ -80,15 +80,19 @@ This command downloads and sets up the `@powerhousedao/todo-demo`, making its fe
 
 You have now successfully installed `ph-cmd`, initalized a product project and added your first package!
 
-## Step 4: Run the connect host application.
+## Step 4: Run the Connect host application
 
-To run the package locally in Connect (our collaboration and contributor app), run:
+To run the package locally in Connect, run:
 
 ```bash
 ph connect
 ```
 
 Click the returned localhost URL and you should see Connect appear in your browser.
+
+:::info What is Connect?
+**Connect** is the Powerhouse host application—a container that runs all your apps, editors, and drives. Think of it as the browser for your Powerhouse ecosystem. **Vetra Studio** (which you'll use for building) runs inside Connect, just like how a web app runs inside a browser.
+:::
 
 <figure className="image-container">
   <img src={require("./images/Connect.png").default} alt="Connect Home" />
@@ -114,7 +118,11 @@ Here, you'll see that you've installed the `@powerhousedao/todo-demo`, which con
 A **drive** is a folder to store and organize your documents in. Powerhouse offers the ability to build customized Drive-apps for your documents. Think of a Drive-app as a specialized lens—it offers **different ways to visualize, organize, and interact with** the data stored within a drive, making it more intuitive and efficient for specific use cases. To learn more, visit [Building a Drive-app](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer)
 :::
 
-### 5.1 Create a local todolist app drive
+:::tip Editor vs Drive-app
+An **editor** is a UI component for viewing and modifying a single document. A **Drive-app** is a custom interface for managing multiple documents within a drive—providing aggregated views, progress tracking, and specialized workflows across your document collection.
+:::
+
+### 5.1 Create a local todo-list app drive
 
 First, let's create a dedicated drive for your to-do lists:
 
@@ -122,7 +130,7 @@ First, let's create a dedicated drive for your to-do lists:
 - In the **Drive-app** field, select 'todo-list Drive-app'
 - This creates a specialized drive that's optimized for to-do list documents
 
-### 5.2 Create a todolist document
+### 5.2 Create a todo-list document
 
 Now move into the drive you've just created:
 

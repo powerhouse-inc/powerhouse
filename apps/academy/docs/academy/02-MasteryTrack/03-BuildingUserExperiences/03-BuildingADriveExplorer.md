@@ -22,19 +22,31 @@ Drive-apps **bridge the gap between raw data and usability**, unlocking the full
 ## Build a Drive-app
 
 Drive-apps provide custom interfaces for interacting with the contents of a drive.
-Let's start with a **quick overview** of the three steps for building a Drive-app. We will then apply these steps to create our **todo-list Drive-app**.
+Let's start with a **quick overview** of the steps for building a Drive-app. We will then apply these steps to create our **todo-list Drive-app**.
 
 ### Step 1. Generate the scaffolding code
 
-Use the `generate drive editor` command to create the basic template structure for your Drive-app:
+When using **Vetra Studio**, Drive-app generation is automatic. Simply create a **Drive-app specification document** in your Vetra Studio Drive:
+
+1. Open Vetra Studio (`ph vetra --watch`)
+2. In your Vetra Studio Drive, click **"Add new specification"** in the Apps section
+3. Name your Drive-app (e.g., `todo-drive-explorer`)
+4. Vetra automatically generates the Drive-app template code
+
+<details>
+<summary>Alternatively: Manual generation with ph generate</summary>
+
+If you're not using Vetra Studio, use the `generate drive editor` command to create the basic template structure:
 
 ```bash
 ph generate --drive-editor <drive-app>
 ```
 
+</details>
+
 ### Step 2. Update the manifest file
 
-After creating your Drive-app, you need to update its `manifest.json` file.
+After creating your Drive-app, you need to update its `powerhouse.manifest.json` file.
 This file identifies your project and its components within the Powerhouse ecosystem.
 
 ### Step 3. Customize the Drive-app
@@ -85,9 +97,20 @@ If not, you can follow the shortened guide below to prepare your project for thi
 
 ### 3. Generate a document editor:
 
+In Vetra Studio, create an Editor specification:
+1. Click **"Add new specification"** in the Editors section
+2. Select the **TodoList** document model
+3. Name your editor `TodoList`
+4. Vetra automatically generates the editor template
+
+<details>
+<summary>Alternatively: Manual generation</summary>
+
 ```bash
 ph generate --editor TodoList --document-types powerhouse/todo-list
 ```
+
+</details>
 
 ### 4. Add the editor code:
 
@@ -108,9 +131,20 @@ You can also start by running Connect locally with `ph connect` instead of Vetra
 
 ### 1. Generate a Drive-app:
 
+With Vetra Studio running (`ph vetra --watch`), create a Drive-app specification:
+
+1. In your Vetra Studio Drive, click **"Add new specification"** in the Apps section
+2. Name your Drive-app `todo-drive-explorer`
+3. Vetra automatically generates the Drive-app template in `editors/todo-drive-explorer/`
+
+<details>
+<summary>Alternatively: Manual generation with ph generate</summary>
+
 ```bash
 ph generate --drive-editor todo-drive-explorer
 ```
+
+</details>
 
 ### 2. Update the `powerhouse.manifest.json` file:
 
@@ -559,7 +593,7 @@ return showRevisionHistory ? (
 
 ### 3. Run the application:
 
-- With the code for our Drive-app in place, it's time to see it in action. Run Connect in Studio mode:
+- With the code for our Drive-app in place, it's time to see it in action. If you've been running Vetra Studio with `ph vetra --watch`, your Drive-app is already available. Otherwise, run Connect:
 
 ```bash
 ph connect

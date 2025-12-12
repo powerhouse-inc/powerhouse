@@ -49,7 +49,7 @@ See step 1 for detailed GitHub Desktop instructions.
 
 </details>
 
-In this tutorial, you will learn how to define the specifications for a **To-do List** document model within Vetra Studio using its GraphQL schema, and then export the resulting document model specification document for your Powerhouse project.
+In this tutorial, you will learn how to define the specifications for a **todo-list** document model within Vetra Studio using its GraphQL schema, and then export the resulting document model specification document for your Powerhouse project.
 If you don't have a document specification file created yet, have a look at the previous step of this tutorial to create a new document specification.
 
 ## TodoList document specification

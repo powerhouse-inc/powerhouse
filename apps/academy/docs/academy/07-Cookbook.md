@@ -1313,7 +1313,7 @@ ph generate --editor <ModelName> --document-types <docType>
 - [Build a Todo-list Editor](/academy/GetStarted/BuildToDoListEditor)
 </details>
 
-<details id="generating-a-custom-drive-explorer">
+<details id="generating-a-custom-drive-app">
 <summary>Generating a Custom Drive-app</summary>
 
 ### How to Generate a Custom Drive-app
