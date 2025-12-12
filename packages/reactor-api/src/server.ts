@@ -21,6 +21,7 @@ import {
 import type { DocumentModelModule } from "document-model";
 import type { Express } from "express";
 import express from "express";
+import type { Kysely } from "kysely";
 import fs from "node:fs";
 import type http from "node:http";
 import https from "node:https";
@@ -34,6 +35,7 @@ import { GraphQLManager } from "./graphql/graphql-manager.js";
 import { renderGraphqlPlayground } from "./graphql/playground.js";
 import { ReactorSubgraph } from "./graphql/reactor/subgraph.js";
 import type { SubgraphClass } from "./graphql/types.js";
+import { runMigrations } from "./migrations/index.js";
 import { ImportPackageLoader } from "./packages/import-loader.js";
 import {
   getUniqueDocumentModels,
@@ -48,8 +50,6 @@ import {
   initAnalyticsStoreSql,
   type DocumentPermissionDatabase,
 } from "./utils/db.js";
-import type { Kysely } from "kysely";
-import { runMigrations } from "./migrations/index.js";
 
 const logger = childLogger(["reactor-api", "server"]);
 
@@ -86,6 +86,7 @@ type Options = {
    * environment variable.
    */
   documentPermissionService?: DocumentPermissionService;
+  enableDocumentModelSubgraphs?: boolean;
 };
 
 const DEFAULT_PORT = 4000;
@@ -155,6 +156,7 @@ async function setupGraphQLManager(
     freeEntry: boolean;
   },
   documentPermissionService?: DocumentPermissionService,
+  enableDocumentModelSubgraphs?: boolean,
 ): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager(
     config.basePath,
@@ -174,6 +176,9 @@ async function setupGraphQLManager(
       freeEntry: auth?.freeEntry ?? false,
     },
     documentPermissionService,
+    {
+      enableDocumentModelSubgraphs,
+    },
   );
 
   await graphqlManager.init(subgraphs.core);
@@ -283,7 +288,7 @@ async function startServer(
     path: "/graphql/subscriptions",
   });
 
-  logger.info("WebSocket server attached at /graphql/subscriptions");
+  logger.info("WebSocket server available at /graphql/subscriptions");
 
   return { httpServer, wsServer };
 }
@@ -547,6 +552,7 @@ async function _setupAPI(
     },
     auth,
     documentPermissionService,
+    options.enableDocumentModelSubgraphs,
   );
 
   // Set up event listeners

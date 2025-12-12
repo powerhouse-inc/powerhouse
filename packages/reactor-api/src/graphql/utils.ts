@@ -116,7 +116,7 @@ export const IDocumentGraphql = {
           (module) => module.documentModel.global.id === obj.documentType,
         );
         if (!module) return "GqlDocument";
-        return getDocumentModelSchemaName(module.documentModel);
+        return getDocumentModelSchemaName(module.documentModel.global);
       },
       operations: (
         obj: unknown,

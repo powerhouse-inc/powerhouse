@@ -3,27 +3,7 @@ import type { DocumentNode } from "graphql";
 
 export const schema: DocumentNode = gql`
   """
-  Subgraph definition for ProcessorModule (powerhouse/processor)
-  """
-  type ProcessorModuleState {
-    name: String!
-    type: String!
-    documentTypes: [DocumentTypeItem!]!
-    status: StatusType!
-  }
-
-  type DocumentTypeItem {
-    id: OID!
-    documentType: String!
-  }
-
-  enum StatusType {
-    DRAFT
-    CONFIRMED
-  }
-
-  """
-  Queries: ProcessorModule
+  Queries: ProcessorModule Document
   """
   type ProcessorModuleQueries {
     getDocument(docId: PHID!, driveId: PHID): ProcessorModule
@@ -84,6 +64,6 @@ export const schema: DocumentNode = gql`
     id: OID!
   }
   input ProcessorModule_SetProcessorStatusInput {
-    status: StatusType!
+    status: ProcessorModule_StatusType!
   }
 `;

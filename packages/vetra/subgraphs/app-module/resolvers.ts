@@ -1,16 +1,20 @@
 import type { BaseSubgraph } from "@powerhousedao/reactor-api";
 import { addFile } from "document-drive";
+import { setName } from "document-model";
 import {
   actions,
-  type SetAppNameInput,
-  type SetAppStatusInput,
-  type AddDocumentTypeInput,
-  type RemoveDocumentTypeInput,
-  type SetDocumentTypesInput,
-  type SetDragAndDropEnabledInput,
-  type AppModuleDocument,
-} from "../../document-models/app-module/index.js";
-import { setName } from "document-model";
+  appModuleDocumentType,
+} from "@powerhousedao/vetra/document-models/app-module";
+
+import type {
+  AppModuleDocument,
+  SetAppNameInput,
+  SetAppStatusInput,
+  AddDocumentTypeInput,
+  RemoveDocumentTypeInput,
+  SetDocumentTypesInput,
+  SetDragAndDropEnabledInput,
+} from "@powerhousedao/vetra/document-models/app-module";
 
 export const getResolvers = (
   subgraph: BaseSubgraph,
@@ -69,7 +73,7 @@ export const getResolvers = (
             );
 
             return docs.filter(
-              (doc) => doc.header.documentType === "powerhouse/app",
+              (doc) => doc.header.documentType === appModuleDocumentType,
             );
           },
         };
@@ -81,7 +85,7 @@ export const getResolvers = (
         args: { name: string; driveId?: string },
       ) => {
         const { driveId, name } = args;
-        const document = await reactor.addDocument("powerhouse/app");
+        const document = await reactor.addDocument(appModuleDocumentType);
 
         if (driveId) {
           await reactor.addAction(
@@ -89,7 +93,7 @@ export const getResolvers = (
             addFile({
               name,
               id: document.header.id,
-              documentType: "powerhouse/app",
+              documentType: appModuleDocumentType,
             }),
           );
         }

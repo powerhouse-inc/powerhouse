@@ -1,240 +1,351 @@
 import type { BaseSubgraph } from "@powerhousedao/reactor-api";
-import { addFile, childLogger } from "document-drive";
-import { createVetraPackageDocument } from "../../document-models/vetra-package/gen/ph-factories.js";
-import { actions } from "../../document-models/vetra-package/index.js";
+import { addFile } from "document-drive";
+import { setName } from "document-model";
+import {
+  actions,
+  vetraPackageDocumentType,
+} from "@powerhousedao/vetra/document-models/vetra-package";
 
-const DEFAULT_DRIVE_ID = "powerhouse";
+import type {
+  VetraPackageDocument,
+  SetPackageNameInput,
+  SetPackageDescriptionInput,
+  SetPackageCategoryInput,
+  SetPackageAuthorInput,
+  SetPackageAuthorNameInput,
+  SetPackageAuthorWebsiteInput,
+  AddPackageKeywordInput,
+  RemovePackageKeywordInput,
+  SetPackageGithubUrlInput,
+  SetPackageNpmUrlInput,
+} from "@powerhousedao/vetra/document-models/vetra-package";
 
-const logger = childLogger(["VetraPackageResolvers"]);
-
-export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
+export const getResolvers = (
+  subgraph: BaseSubgraph,
+): Record<string, unknown> => {
   const reactor = subgraph.reactor;
 
   return {
     Query: {
-      VetraPackage: async (_: any, args: any, ctx: any) => {
+      VetraPackage: async () => {
         return {
-          getDocument: async (args: any) => {
-            const driveId: string = args.driveId || DEFAULT_DRIVE_ID;
-            const docId: string = args.docId || "";
-            const doc = await reactor.getDocument(driveId, docId);
+          getDocument: async (args: { docId: string; driveId: string }) => {
+            const { docId, driveId } = args;
 
+            if (!docId) {
+              throw new Error("Document id is required");
+            }
+
+            if (driveId) {
+              const docIds = await reactor.getDocuments(driveId);
+              if (!docIds.includes(docId)) {
+                throw new Error(
+                  `Document with id ${docId} is not part of ${driveId}`,
+                );
+              }
+            }
+
+            const doc = await reactor.getDocument<VetraPackageDocument>(docId);
             return {
               driveId: driveId,
               ...doc,
               ...doc.header,
-              // these will be ripped out in the future, but for now all doc models have global state
-              // TODO (thegoldenmule): once the gql interface is updated for arbitrary state, we can remove this
-              state: (doc.state as any).global ?? {},
-              stateJSON: (doc.state as any).global ?? "{}",
-              revision: doc.header.revision.global ?? 0,
+              created: doc.header.createdAtUtcIso,
+              lastModified: doc.header.lastModifiedAtUtcIso,
+              state: doc.state.global,
+              stateJSON: doc.state.global,
+              revision: doc.header?.revision?.global ?? 0,
             };
           },
-          getDocuments: async (args: any) => {
-            const driveId: string = args.driveId || DEFAULT_DRIVE_ID;
+          getDocuments: async (args: { driveId: string }) => {
+            const { driveId } = args;
             const docsIds = await reactor.getDocuments(driveId);
             const docs = await Promise.all(
               docsIds.map(async (docId) => {
-                const doc = await reactor.getDocument(driveId, docId);
+                const doc =
+                  await reactor.getDocument<VetraPackageDocument>(docId);
                 return {
                   driveId: driveId,
                   ...doc,
                   ...doc.header,
-                  // these will be ripped out in the future, but for now all doc models have global state
-                  // TODO (thegoldenmule): once the gql interface is updated for arbitrary state, we can remove this
-                  state: (doc.state as any).global ?? {},
-                  stateJSON: (doc.state as any).global ?? "{}",
-                  revision: doc.header.revision.global ?? 0,
+                  created: doc.header.createdAtUtcIso,
+                  lastModified: doc.header.lastModifiedAtUtcIso,
+                  state: doc.state.global,
+                  stateJSON: doc.state.global,
+                  revision: doc.header?.revision?.global ?? 0,
                 };
               }),
             );
 
             return docs.filter(
-              (doc) => doc.header.documentType === "powerhouse/package",
+              (doc) => doc.header.documentType === vetraPackageDocumentType,
             );
           },
         };
       },
     },
     Mutation: {
-      VetraPackage_createDocument: async (_: any, args: any) => {
-        const driveId: string = args.driveId || DEFAULT_DRIVE_ID;
-        const document = createVetraPackageDocument();
-        const documentId = document.header.id;
+      VetraPackage_createDocument: async (
+        _: unknown,
+        args: { name: string; driveId?: string },
+      ) => {
+        const { driveId, name } = args;
+        const document = await reactor.addDocument(vetraPackageDocumentType);
 
-        await reactor.addDocument(document);
-
-        let revert = false;
-        try {
-          await reactor.addDriveAction(
+        if (driveId) {
+          await reactor.addAction(
             driveId,
             addFile({
-              id: documentId,
-              name: args.name,
-              documentType: document.header.documentType,
+              name,
+              id: document.header.id,
+              documentType: vetraPackageDocumentType,
             }),
           );
-        } catch (error) {
-          logger.error(
-            `Created document but failed to add file to drive. Reverting: ${(error as Error).message}`,
-          );
-
-          revert = true;
         }
 
-        if (revert) {
-          try {
-            await reactor.deleteDocument(documentId);
-          } catch (error) {
-            logger.error(
-              `Failed to revert document creation! This means there was a document created but not added to a drive. DocumentId: ${documentId}, Error: ${(error as Error).message}`,
-            );
-
-            throw error;
-          }
+        if (name) {
+          await reactor.addAction(document.header.id, setName(name));
         }
 
         return document.header.id;
       },
 
-      VetraPackage_setPackageName: async (_: any, args: any) => {
-        const driveId: string = args.driveId || DEFAULT_DRIVE_ID;
-        const docId: string = args.docId || "";
-        const doc = await reactor.getDocument(driveId, docId);
+      VetraPackage_setPackageName: async (
+        _: unknown,
+        args: { docId: string; input: SetPackageNameInput },
+      ) => {
+        const { docId, input } = args;
+        const doc = await reactor.getDocument<VetraPackageDocument>(docId);
+        if (!doc) {
+          throw new Error("Document not found");
+        }
 
-        await reactor.addAction(
-          driveId,
+        const result = await reactor.addAction(
           docId,
-          actions.setPackageName({ ...args.input }),
+          actions.setPackageName(input),
         );
 
-        return (doc.header.revision.global ?? 0) + 1;
+        if (result.status !== "SUCCESS") {
+          throw new Error(result.error?.message ?? "Failed to setPackageName");
+        }
+
+        return true;
       },
 
-      VetraPackage_setPackageDescription: async (_: any, args: any) => {
-        const driveId: string = args.driveId || DEFAULT_DRIVE_ID;
-        const docId: string = args.docId || "";
-        const doc = await reactor.getDocument(driveId, docId);
+      VetraPackage_setPackageDescription: async (
+        _: unknown,
+        args: { docId: string; input: SetPackageDescriptionInput },
+      ) => {
+        const { docId, input } = args;
+        const doc = await reactor.getDocument<VetraPackageDocument>(docId);
+        if (!doc) {
+          throw new Error("Document not found");
+        }
 
-        await reactor.addAction(
-          driveId,
+        const result = await reactor.addAction(
           docId,
-          actions.setPackageDescription({ ...args.input }),
+          actions.setPackageDescription(input),
         );
 
-        return (doc.header.revision.global ?? 0) + 1;
+        if (result.status !== "SUCCESS") {
+          throw new Error(
+            result.error?.message ?? "Failed to setPackageDescription",
+          );
+        }
+
+        return true;
       },
 
-      VetraPackage_setPackageCategory: async (_: any, args: any) => {
-        const driveId: string = args.driveId || DEFAULT_DRIVE_ID;
-        const docId: string = args.docId || "";
-        const doc = await reactor.getDocument(driveId, docId);
+      VetraPackage_setPackageCategory: async (
+        _: unknown,
+        args: { docId: string; input: SetPackageCategoryInput },
+      ) => {
+        const { docId, input } = args;
+        const doc = await reactor.getDocument<VetraPackageDocument>(docId);
+        if (!doc) {
+          throw new Error("Document not found");
+        }
 
-        await reactor.addAction(
-          driveId,
+        const result = await reactor.addAction(
           docId,
-          actions.setPackageCategory({ ...args.input }),
+          actions.setPackageCategory(input),
         );
 
-        return (doc.header.revision.global ?? 0) + 1;
+        if (result.status !== "SUCCESS") {
+          throw new Error(
+            result.error?.message ?? "Failed to setPackageCategory",
+          );
+        }
+
+        return true;
       },
 
-      VetraPackage_setPackageAuthor: async (_: any, args: any) => {
-        const driveId: string = args.driveId || DEFAULT_DRIVE_ID;
-        const docId: string = args.docId || "";
-        const doc = await reactor.getDocument(driveId, docId);
+      VetraPackage_setPackageAuthor: async (
+        _: unknown,
+        args: { docId: string; input: SetPackageAuthorInput },
+      ) => {
+        const { docId, input } = args;
+        const doc = await reactor.getDocument<VetraPackageDocument>(docId);
+        if (!doc) {
+          throw new Error("Document not found");
+        }
 
-        await reactor.addAction(
-          driveId,
+        const result = await reactor.addAction(
           docId,
-          actions.setPackageAuthor({ ...args.input }),
+          actions.setPackageAuthor(input),
         );
 
-        return (doc.header.revision.global ?? 0) + 1;
+        if (result.status !== "SUCCESS") {
+          throw new Error(
+            result.error?.message ?? "Failed to setPackageAuthor",
+          );
+        }
+
+        return true;
       },
 
-      VetraPackage_setPackageAuthorName: async (_: any, args: any) => {
-        const driveId: string = args.driveId || DEFAULT_DRIVE_ID;
-        const docId: string = args.docId || "";
-        const doc = await reactor.getDocument(driveId, docId);
+      VetraPackage_setPackageAuthorName: async (
+        _: unknown,
+        args: { docId: string; input: SetPackageAuthorNameInput },
+      ) => {
+        const { docId, input } = args;
+        const doc = await reactor.getDocument<VetraPackageDocument>(docId);
+        if (!doc) {
+          throw new Error("Document not found");
+        }
 
-        await reactor.addAction(
-          driveId,
+        const result = await reactor.addAction(
           docId,
-          actions.setPackageAuthorName({ ...args.input }),
+          actions.setPackageAuthorName(input),
         );
 
-        return (doc.header.revision.global ?? 0) + 1;
+        if (result.status !== "SUCCESS") {
+          throw new Error(
+            result.error?.message ?? "Failed to setPackageAuthorName",
+          );
+        }
+
+        return true;
       },
 
-      VetraPackage_setPackageAuthorWebsite: async (_: any, args: any) => {
-        const driveId: string = args.driveId || DEFAULT_DRIVE_ID;
-        const docId: string = args.docId || "";
-        const doc = await reactor.getDocument(driveId, docId);
+      VetraPackage_setPackageAuthorWebsite: async (
+        _: unknown,
+        args: { docId: string; input: SetPackageAuthorWebsiteInput },
+      ) => {
+        const { docId, input } = args;
+        const doc = await reactor.getDocument<VetraPackageDocument>(docId);
+        if (!doc) {
+          throw new Error("Document not found");
+        }
 
-        await reactor.addAction(
-          driveId,
+        const result = await reactor.addAction(
           docId,
-          actions.setPackageAuthorWebsite({ ...args.input }),
+          actions.setPackageAuthorWebsite(input),
         );
 
-        return (doc.header.revision.global ?? 0) + 1;
+        if (result.status !== "SUCCESS") {
+          throw new Error(
+            result.error?.message ?? "Failed to setPackageAuthorWebsite",
+          );
+        }
+
+        return true;
       },
 
-      VetraPackage_addPackageKeyword: async (_: any, args: any) => {
-        const driveId: string = args.driveId || DEFAULT_DRIVE_ID;
-        const docId: string = args.docId || "";
-        const doc = await reactor.getDocument(driveId, docId);
+      VetraPackage_addPackageKeyword: async (
+        _: unknown,
+        args: { docId: string; input: AddPackageKeywordInput },
+      ) => {
+        const { docId, input } = args;
+        const doc = await reactor.getDocument<VetraPackageDocument>(docId);
+        if (!doc) {
+          throw new Error("Document not found");
+        }
 
-        await reactor.addAction(
-          driveId,
+        const result = await reactor.addAction(
           docId,
-          actions.addPackageKeyword({ ...args.input }),
+          actions.addPackageKeyword(input),
         );
 
-        return (doc.header.revision.global ?? 0) + 1;
+        if (result.status !== "SUCCESS") {
+          throw new Error(
+            result.error?.message ?? "Failed to addPackageKeyword",
+          );
+        }
+
+        return true;
       },
 
-      VetraPackage_removePackageKeyword: async (_: any, args: any) => {
-        const driveId: string = args.driveId || DEFAULT_DRIVE_ID;
-        const docId: string = args.docId || "";
-        const doc = await reactor.getDocument(driveId, docId);
+      VetraPackage_removePackageKeyword: async (
+        _: unknown,
+        args: { docId: string; input: RemovePackageKeywordInput },
+      ) => {
+        const { docId, input } = args;
+        const doc = await reactor.getDocument<VetraPackageDocument>(docId);
+        if (!doc) {
+          throw new Error("Document not found");
+        }
 
-        await reactor.addAction(
-          driveId,
+        const result = await reactor.addAction(
           docId,
-          actions.removePackageKeyword({ ...args.input }),
+          actions.removePackageKeyword(input),
         );
 
-        return (doc.header.revision.global ?? 0) + 1;
+        if (result.status !== "SUCCESS") {
+          throw new Error(
+            result.error?.message ?? "Failed to removePackageKeyword",
+          );
+        }
+
+        return true;
       },
 
-      VetraPackage_setPackageGithubUrl: async (_: any, args: any) => {
-        const driveId: string = args.driveId || DEFAULT_DRIVE_ID;
-        const docId: string = args.docId || "";
-        const doc = await reactor.getDocument(driveId, docId);
+      VetraPackage_setPackageGithubUrl: async (
+        _: unknown,
+        args: { docId: string; input: SetPackageGithubUrlInput },
+      ) => {
+        const { docId, input } = args;
+        const doc = await reactor.getDocument<VetraPackageDocument>(docId);
+        if (!doc) {
+          throw new Error("Document not found");
+        }
 
-        await reactor.addAction(
-          driveId,
+        const result = await reactor.addAction(
           docId,
-          actions.setPackageGithubUrl({ ...args.input }),
+          actions.setPackageGithubUrl(input),
         );
 
-        return (doc.header.revision.global ?? 0) + 1;
+        if (result.status !== "SUCCESS") {
+          throw new Error(
+            result.error?.message ?? "Failed to setPackageGithubUrl",
+          );
+        }
+
+        return true;
       },
 
-      VetraPackage_setPackageNpmUrl: async (_: any, args: any) => {
-        const driveId: string = args.driveId || DEFAULT_DRIVE_ID;
-        const docId: string = args.docId || "";
-        const doc = await reactor.getDocument(driveId, docId);
+      VetraPackage_setPackageNpmUrl: async (
+        _: unknown,
+        args: { docId: string; input: SetPackageNpmUrlInput },
+      ) => {
+        const { docId, input } = args;
+        const doc = await reactor.getDocument<VetraPackageDocument>(docId);
+        if (!doc) {
+          throw new Error("Document not found");
+        }
 
-        await reactor.addAction(
-          driveId,
+        const result = await reactor.addAction(
           docId,
-          actions.setPackageNpmUrl({ ...args.input }),
+          actions.setPackageNpmUrl(input),
         );
 
-        return (doc.header.revision.global ?? 0) + 1;
+        if (result.status !== "SUCCESS") {
+          throw new Error(
+            result.error?.message ?? "Failed to setPackageNpmUrl",
+          );
+        }
+
+        return true;
       },
     },
   };
