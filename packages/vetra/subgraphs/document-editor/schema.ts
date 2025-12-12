@@ -3,26 +3,7 @@ import type { DocumentNode } from "graphql";
 
 export const schema: DocumentNode = gql`
   """
-  Subgraph definition for DocumentEditor (powerhouse/document-editor)
-  """
-  type DocumentEditorState {
-    name: String!
-    documentTypes: [DocumentTypeItem!]!
-    status: StatusType!
-  }
-
-  type DocumentTypeItem {
-    id: OID!
-    documentType: String!
-  }
-
-  enum StatusType {
-    DRAFT
-    CONFIRMED
-  }
-
-  """
-  Queries: DocumentEditor
+  Queries: DocumentEditor Document
   """
   type DocumentEditorQueries {
     getDocument(docId: PHID!, driveId: PHID): DocumentEditor
@@ -75,6 +56,6 @@ export const schema: DocumentNode = gql`
     id: OID!
   }
   input DocumentEditor_SetEditorStatusInput {
-    status: StatusType!
+    status: DocumentEditor_StatusType!
   }
 `;

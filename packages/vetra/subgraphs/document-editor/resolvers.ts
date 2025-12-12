@@ -1,15 +1,22 @@
 import type { BaseSubgraph } from "@powerhousedao/reactor-api";
 import { addFile } from "document-drive";
 import { setName } from "document-model";
+import {
+  actions,
+  documentEditorDocumentType,
+} from "@powerhousedao/vetra/document-models/document-editor";
+
 import type {
+  DocumentEditorDocument,
+  SetEditorNameInput,
   AddDocumentTypeInput,
   RemoveDocumentTypeInput,
-  SetEditorNameInput,
   SetEditorStatusInput,
-} from "../../document-models/document-editor/index.js";
-import { actions } from "../../document-models/document-editor/index.js";
+} from "@powerhousedao/vetra/document-models/document-editor";
 
-export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
+export const getResolvers = (
+  subgraph: BaseSubgraph,
+): Record<string, unknown> => {
   const reactor = subgraph.reactor;
 
   return {
@@ -32,17 +39,16 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
               }
             }
 
-            const doc = await reactor.getDocument(docId);
+            const doc =
+              await reactor.getDocument<DocumentEditorDocument>(docId);
             return {
               driveId: driveId,
               ...doc,
               ...doc.header,
-              // these will be ripped out in the future, but for now all doc models have global state
-              // TODO (thegoldenmule): once the gql interface is updated for arbitrary state, we can remove this
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-              state: (doc.state as any).global ?? {},
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-              stateJSON: (doc.state as any).global ?? "{}",
+              created: doc.header.createdAtUtcIso,
+              lastModified: doc.header.lastModifiedAtUtcIso,
+              state: doc.state.global,
+              stateJSON: doc.state.global,
               revision: doc.header?.revision?.global ?? 0,
             };
           },
@@ -51,24 +57,23 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
             const docsIds = await reactor.getDocuments(driveId);
             const docs = await Promise.all(
               docsIds.map(async (docId) => {
-                const doc = await reactor.getDocument(docId);
+                const doc =
+                  await reactor.getDocument<DocumentEditorDocument>(docId);
                 return {
                   driveId: driveId,
                   ...doc,
                   ...doc.header,
-                  // these will be ripped out in the future, but for now all doc models have global state
-                  // TODO (thegoldenmule): once the gql interface is updated for arbitrary state, we can remove this
-                  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-                  state: (doc.state as any).global ?? {},
-                  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-                  stateJSON: (doc.state as any).global ?? "{}",
+                  created: doc.header.createdAtUtcIso,
+                  lastModified: doc.header.lastModifiedAtUtcIso,
+                  state: doc.state.global,
+                  stateJSON: doc.state.global,
                   revision: doc.header?.revision?.global ?? 0,
                 };
               }),
             );
 
             return docs.filter(
-              (doc) => doc.header.documentType === "powerhouse/document-editor",
+              (doc) => doc.header.documentType === documentEditorDocumentType,
             );
           },
         };
@@ -80,9 +85,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
         args: { name: string; driveId?: string },
       ) => {
         const { driveId, name } = args;
-        const document = await reactor.addDocument(
-          "powerhouse/document-editor",
-        );
+        const document = await reactor.addDocument(documentEditorDocumentType);
 
         if (driveId) {
           await reactor.addAction(
@@ -90,7 +93,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
             addFile({
               name,
               id: document.header.id,
-              documentType: "powerhouse/document-editor",
+              documentType: documentEditorDocumentType,
             }),
           );
         }
@@ -107,7 +110,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
         args: { docId: string; input: SetEditorNameInput },
       ) => {
         const { docId, input } = args;
-        const doc = await reactor.getDocument(docId);
+        const doc = await reactor.getDocument<DocumentEditorDocument>(docId);
         if (!doc) {
           throw new Error("Document not found");
         }
@@ -129,7 +132,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
         args: { docId: string; input: AddDocumentTypeInput },
       ) => {
         const { docId, input } = args;
-        const doc = await reactor.getDocument(docId);
+        const doc = await reactor.getDocument<DocumentEditorDocument>(docId);
         if (!doc) {
           throw new Error("Document not found");
         }
@@ -151,7 +154,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
         args: { docId: string; input: RemoveDocumentTypeInput },
       ) => {
         const { docId, input } = args;
-        const doc = await reactor.getDocument(docId);
+        const doc = await reactor.getDocument<DocumentEditorDocument>(docId);
         if (!doc) {
           throw new Error("Document not found");
         }
@@ -175,7 +178,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
         args: { docId: string; input: SetEditorStatusInput },
       ) => {
         const { docId, input } = args;
-        const doc = await reactor.getDocument(docId);
+        const doc = await reactor.getDocument<DocumentEditorDocument>(docId);
         if (!doc) {
           throw new Error("Document not found");
         }

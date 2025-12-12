@@ -1,13 +1,20 @@
 import type { BaseSubgraph } from "@powerhousedao/reactor-api";
 import { addFile } from "document-drive";
 import { setName } from "document-model";
+import {
+  actions,
+  subgraphModuleDocumentType,
+} from "@powerhousedao/vetra/document-models/subgraph-module";
+
 import type {
+  SubgraphModuleDocument,
   SetSubgraphNameInput,
   SetSubgraphStatusInput,
-} from "../../document-models/subgraph-module/index.js";
-import { actions } from "../../document-models/subgraph-module/index.js";
+} from "@powerhousedao/vetra/document-models/subgraph-module";
 
-export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
+export const getResolvers = (
+  subgraph: BaseSubgraph,
+): Record<string, unknown> => {
   const reactor = subgraph.reactor;
 
   return {
@@ -30,17 +37,16 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
               }
             }
 
-            const doc = await reactor.getDocument(docId);
+            const doc =
+              await reactor.getDocument<SubgraphModuleDocument>(docId);
             return {
               driveId: driveId,
               ...doc,
               ...doc.header,
-              // these will be ripped out in the future, but for now all doc models have global state
-              // TODO (thegoldenmule): once the gql interface is updated for arbitrary state, we can remove this
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-              state: (doc.state as any).global ?? {},
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-              stateJSON: (doc.state as any).global ?? "{}",
+              created: doc.header.createdAtUtcIso,
+              lastModified: doc.header.lastModifiedAtUtcIso,
+              state: doc.state.global,
+              stateJSON: doc.state.global,
               revision: doc.header?.revision?.global ?? 0,
             };
           },
@@ -49,24 +55,23 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
             const docsIds = await reactor.getDocuments(driveId);
             const docs = await Promise.all(
               docsIds.map(async (docId) => {
-                const doc = await reactor.getDocument(docId);
+                const doc =
+                  await reactor.getDocument<SubgraphModuleDocument>(docId);
                 return {
                   driveId: driveId,
                   ...doc,
                   ...doc.header,
-                  // these will be ripped out in the future, but for now all doc models have global state
-                  // TODO (thegoldenmule): once the gql interface is updated for arbitrary state, we can remove this
-                  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-                  state: (doc.state as any).global ?? {},
-                  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-                  stateJSON: (doc.state as any).global ?? "{}",
+                  created: doc.header.createdAtUtcIso,
+                  lastModified: doc.header.lastModifiedAtUtcIso,
+                  state: doc.state.global,
+                  stateJSON: doc.state.global,
                   revision: doc.header?.revision?.global ?? 0,
                 };
               }),
             );
 
             return docs.filter(
-              (doc) => doc.header.documentType === "powerhouse/subgraph",
+              (doc) => doc.header.documentType === subgraphModuleDocumentType,
             );
           },
         };
@@ -78,7 +83,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
         args: { name: string; driveId?: string },
       ) => {
         const { driveId, name } = args;
-        const document = await reactor.addDocument("powerhouse/subgraph");
+        const document = await reactor.addDocument(subgraphModuleDocumentType);
 
         if (driveId) {
           await reactor.addAction(
@@ -86,7 +91,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
             addFile({
               name,
               id: document.header.id,
-              documentType: "powerhouse/subgraph",
+              documentType: subgraphModuleDocumentType,
             }),
           );
         }
@@ -103,7 +108,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
         args: { docId: string; input: SetSubgraphNameInput },
       ) => {
         const { docId, input } = args;
-        const doc = await reactor.getDocument(docId);
+        const doc = await reactor.getDocument<SubgraphModuleDocument>(docId);
         if (!doc) {
           throw new Error("Document not found");
         }
@@ -125,7 +130,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
         args: { docId: string; input: SetSubgraphStatusInput },
       ) => {
         const { docId, input } = args;
-        const doc = await reactor.getDocument(docId);
+        const doc = await reactor.getDocument<SubgraphModuleDocument>(docId);
         if (!doc) {
           throw new Error("Document not found");
         }

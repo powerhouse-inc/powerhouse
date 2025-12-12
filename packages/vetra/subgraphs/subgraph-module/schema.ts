@@ -3,20 +3,7 @@ import type { DocumentNode } from "graphql";
 
 export const schema: DocumentNode = gql`
   """
-  Subgraph definition for SubgraphModule (powerhouse/subgraph)
-  """
-  type SubgraphModuleState {
-    name: String!
-    status: StatusType!
-  }
-
-  enum StatusType {
-    DRAFT
-    CONFIRMED
-  }
-
-  """
-  Queries: SubgraphModule
+  Queries: SubgraphModule Document
   """
   type SubgraphModuleQueries {
     getDocument(docId: PHID!, driveId: PHID): SubgraphModule
@@ -52,6 +39,6 @@ export const schema: DocumentNode = gql`
     name: String!
   }
   input SubgraphModule_SetSubgraphStatusInput {
-    status: StatusType!
+    status: SubgraphModule_StatusType!
   }
 `;

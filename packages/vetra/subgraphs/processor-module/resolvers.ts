@@ -1,16 +1,23 @@
 import type { BaseSubgraph } from "@powerhousedao/reactor-api";
 import { addFile } from "document-drive";
 import { setName } from "document-model";
+import {
+  actions,
+  processorModuleDocumentType,
+} from "@powerhousedao/vetra/document-models/processor-module";
+
 import type {
+  ProcessorModuleDocument,
+  SetProcessorNameInput,
+  SetProcessorTypeInput,
   AddDocumentTypeInput,
   RemoveDocumentTypeInput,
-  SetProcessorNameInput,
   SetProcessorStatusInput,
-  SetProcessorTypeInput,
-} from "../../document-models/processor-module/index.js";
-import { actions } from "../../document-models/processor-module/index.js";
+} from "@powerhousedao/vetra/document-models/processor-module";
 
-export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
+export const getResolvers = (
+  subgraph: BaseSubgraph,
+): Record<string, unknown> => {
   const reactor = subgraph.reactor;
 
   return {
@@ -33,17 +40,16 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
               }
             }
 
-            const doc = await reactor.getDocument(docId);
+            const doc =
+              await reactor.getDocument<ProcessorModuleDocument>(docId);
             return {
               driveId: driveId,
               ...doc,
               ...doc.header,
-              // these will be ripped out in the future, but for now all doc models have global state
-              // TODO (thegoldenmule): once the gql interface is updated for arbitrary state, we can remove this
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-              state: (doc.state as any).global ?? {},
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-              stateJSON: (doc.state as any).global ?? "{}",
+              created: doc.header.createdAtUtcIso,
+              lastModified: doc.header.lastModifiedAtUtcIso,
+              state: doc.state.global,
+              stateJSON: doc.state.global,
               revision: doc.header?.revision?.global ?? 0,
             };
           },
@@ -52,24 +58,23 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
             const docsIds = await reactor.getDocuments(driveId);
             const docs = await Promise.all(
               docsIds.map(async (docId) => {
-                const doc = await reactor.getDocument(docId);
+                const doc =
+                  await reactor.getDocument<ProcessorModuleDocument>(docId);
                 return {
                   driveId: driveId,
                   ...doc,
                   ...doc.header,
-                  // these will be ripped out in the future, but for now all doc models have global state
-                  // TODO (thegoldenmule): once the gql interface is updated for arbitrary state, we can remove this
-                  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-                  state: (doc.state as any).global ?? {},
-                  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-                  stateJSON: (doc.state as any).global ?? "{}",
+                  created: doc.header.createdAtUtcIso,
+                  lastModified: doc.header.lastModifiedAtUtcIso,
+                  state: doc.state.global,
+                  stateJSON: doc.state.global,
                   revision: doc.header?.revision?.global ?? 0,
                 };
               }),
             );
 
             return docs.filter(
-              (doc) => doc.header.documentType === "powerhouse/processor",
+              (doc) => doc.header.documentType === processorModuleDocumentType,
             );
           },
         };
@@ -81,7 +86,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
         args: { name: string; driveId?: string },
       ) => {
         const { driveId, name } = args;
-        const document = await reactor.addDocument("powerhouse/processor");
+        const document = await reactor.addDocument(processorModuleDocumentType);
 
         if (driveId) {
           await reactor.addAction(
@@ -89,7 +94,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
             addFile({
               name,
               id: document.header.id,
-              documentType: "powerhouse/processor",
+              documentType: processorModuleDocumentType,
             }),
           );
         }
@@ -106,7 +111,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
         args: { docId: string; input: SetProcessorNameInput },
       ) => {
         const { docId, input } = args;
-        const doc = await reactor.getDocument(docId);
+        const doc = await reactor.getDocument<ProcessorModuleDocument>(docId);
         if (!doc) {
           throw new Error("Document not found");
         }
@@ -130,7 +135,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
         args: { docId: string; input: SetProcessorTypeInput },
       ) => {
         const { docId, input } = args;
-        const doc = await reactor.getDocument(docId);
+        const doc = await reactor.getDocument<ProcessorModuleDocument>(docId);
         if (!doc) {
           throw new Error("Document not found");
         }
@@ -154,7 +159,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
         args: { docId: string; input: AddDocumentTypeInput },
       ) => {
         const { docId, input } = args;
-        const doc = await reactor.getDocument(docId);
+        const doc = await reactor.getDocument<ProcessorModuleDocument>(docId);
         if (!doc) {
           throw new Error("Document not found");
         }
@@ -176,7 +181,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
         args: { docId: string; input: RemoveDocumentTypeInput },
       ) => {
         const { docId, input } = args;
-        const doc = await reactor.getDocument(docId);
+        const doc = await reactor.getDocument<ProcessorModuleDocument>(docId);
         if (!doc) {
           throw new Error("Document not found");
         }
@@ -200,7 +205,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, any> => {
         args: { docId: string; input: SetProcessorStatusInput },
       ) => {
         const { docId, input } = args;
-        const doc = await reactor.getDocument(docId);
+        const doc = await reactor.getDocument<ProcessorModuleDocument>(docId);
         if (!doc) {
           throw new Error("Document not found");
         }
