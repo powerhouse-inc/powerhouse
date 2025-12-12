@@ -7,6 +7,7 @@ export type DocumentDispatch<TAction extends Action> = (
     | DocumentAction
     | DocumentAction[]
     | undefined,
+  onErrors?: (errors: Error[]) => void,
 ) => void;
 
 export type PromiseWithState<T> = Promise<T> & {

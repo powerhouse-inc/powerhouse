@@ -14,18 +14,47 @@ async function getDocument(
   }
 }
 
+function getActionErrors(result: PHDocument, actions: Action[]) {
+  return actions.reduce((errors, a) => {
+    const op = result.operations[a.scope].findLast(
+      (op) => op.action.id === a.id,
+    );
+
+    if (op?.error) {
+      errors.push(new Error(op.error));
+    }
+    return errors;
+  }, new Array<Error>());
+}
+
+/**
+ * Dispatches actions to a document.
+ * @param actionOrActions - The action or actions to dispatch.
+ * @param document - The document to dispatch actions to.
+ * @param onErrors - Callback invoked with any errors that occurred during action execution.
+ * @returns The updated document, or undefined if the dispatch failed.
+ */
 export async function dispatchActions<TDocument = PHDocument, TAction = Action>(
   actionOrActions: TAction[] | TAction | undefined,
   document: TDocument | undefined,
+  onErrors?: (errors: Error[]) => void,
 ): Promise<PHDocument | undefined>;
+/**
+ * Dispatches actions to a document.
+ * @param actionOrActions - The action or actions to dispatch.
+ * @param documentId - The ID of the document to dispatch actions to.
+ * @param onErrors - Callback invoked with any errors that occurred during action execution.
+ * @returns The updated document, or undefined if the dispatch failed.
+ */
 export async function dispatchActions(
   actionOrActions: Action[] | Action | undefined,
-
   documentId: string,
+  onErrors?: (errors: Error[]) => void,
 ): Promise<PHDocument | undefined>;
 export async function dispatchActions(
   actionOrActions: Action[] | Action | undefined,
   documentOrDocumentId: PHDocument | string | undefined,
+  onErrors?: (errors: Error[]) => void,
 ): Promise<PHDocument | undefined> {
   const document =
     typeof documentOrDocumentId === "string"
@@ -48,5 +77,13 @@ export async function dispatchActions(
     return;
   }
   const result = await queueActions(document, signedActionsWithContext);
+
+  if (onErrors && result) {
+    const errors = getActionErrors(result, signedActionsWithContext);
+    if (errors.length) {
+      onErrors(errors);
+    }
+  }
+
   return result;
 }

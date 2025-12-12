@@ -294,6 +294,36 @@ export function AddTodo() {
 }
 ```
 
+## Handling dispatch errors
+
+When dispatching actions to a document, you may want to handle errors that occur during action execution. The `dispatch` function accepts an optional `onErrors` callback as its second parameter, which is invoked with any errors thrown by the reducers when processing the actions.
+
+```typescript
+import { useSelectedTodoListDocument, addTodoItem } from "todo-tutorial/document-models/todo-list";
+
+export function AddTodo() {
+  const [todoList, dispatch] = useSelectedTodoListDocument();
+
+  const handleAdd = (text: string) => {
+    dispatch(
+      addTodoItem({ text }),
+      (errors) => {
+        // Handle errors - e.g., show a toast notification
+        console.error("Failed to add todo:", errors);
+        alert(`Error: ${errors[0]?.message}`);
+      }
+    );
+  };
+
+  // ... rest of component
+}
+```
+
+This pattern is useful when you need to:
+- Display error messages to users
+- Log errors for debugging
+- Trigger recovery actions when an operation fails
+
 ## Powerhouse component library
 
 Powerhouse provides a rich set of reusable UI components through the **`@powerhousedao/document-engineering/scalars`** package. These components are designed for consistency, efficiency, and seamless integration with the Powerhouse ecosystem, with many based on GraphQL scalar types. For more information read our chapter on the [Component Library](/academy/ComponentLibrary/DocumentEngineering)

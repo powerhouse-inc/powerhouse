@@ -1,5 +1,25 @@
 # Release Changelog
 
+## **v5.1.1**
+
+### **Error Handling for dispatched actions**
+
+Added support for error handling when dispatching actions to documents. The `dispatch` function now accepts an optional `onErrors` callback that is invoked with any errors thrown by the reducers when processing the actions.
+
+**Usage:**
+
+```typescript
+const [document, dispatch] = useDocumentById(documentId);
+
+// Dispatch actions with error handling
+dispatch(myAction, (errors) => {
+  console.error("Action errors:", errors);
+  // Handle errors (e.g., show toast notification)
+});
+```
+
+## **v5.1.0**
+
 ## 🚀 **v5.0.0**
 
 ✨ **Highlights**

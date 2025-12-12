@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/connect",
   "productName": "Powerhouse-Connect",
-  "version": "5.1.0-dev.15",
+  "version": "5.1.0-dev.18",
   "description": "Powerhouse Connect",
   "main": "dist/index.html",
   "type": "module",
@@ -168,6 +168,6 @@
     "vite-plugin-html": "^3.2.2",
     "vite-plugin-node-polyfills": "^0.24.0",
     "vite-plugin-svgr": "^4.5.0",
-    "zod": "^3.24.3"
+    "zod": "^4.1.13"
   }
 }
