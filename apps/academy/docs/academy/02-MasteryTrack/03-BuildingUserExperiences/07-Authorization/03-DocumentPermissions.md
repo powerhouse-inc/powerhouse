@@ -1,5 +1,10 @@
 # Document Permission System
 
+:::warning Work in Progress
+This documentation is still being written and may be incomplete.
+The feature is not yet available on production. 
+:::
+
 The Reactor API includes a fine-grained document permission system that allows you to control access to individual documents, folders, and drives. This system works alongside the global role-based authorization to provide granular access control.
 
 ## Overview
