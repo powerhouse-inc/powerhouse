@@ -121,7 +121,7 @@ The host application for Vetra Studio will start and you will see the following 
 
 ```bash
 ℹ [reactor-api] [package-manager] Loading packages: @powerhousedao/vetra
-ℹ [reactor-api] [server] WebSocket server attached at /graphql/subscriptions
+ℹ [reactor-api] [server] WebSocket server available at /graphql/subscriptions
 ℹ [reactor-api] [graphql-manager] Registered /graphql/system subgraph.
 ℹ [reactor-api] [graphql-manager] Registered /graphql supergraph
 ℹ [reactor-api] [server] MCP server available at http://localhost:4001/mcp

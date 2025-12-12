@@ -163,7 +163,7 @@ The host application for Vetra Studio will start and you will see the following 
 
     ```bash
 ℹ [reactor-api] [package-manager] Loading packages: @powerhousedao/vetra                                                                                                        14:44:19
-ℹ [reactor-api] [server] WebSocket server attached at /graphql/subscriptions                                                                                                    14:44:22
+ℹ [reactor-api] [server] WebSocket server available at /graphql/subscriptions                                                                                                    14:44:22
 ℹ [reactor-api] [graphql-manager] Registered /graphql/system subgraph.                                                                                                          14:44:22
 ℹ [reactor-api] [graphql-manager] Registered /graphql/analytics subgraph.                                                                                                       14:44:22
 ℹ [reactor-api] [graphql-manager] Registered /d/:drive subgraph.                                                                                                                14:44:22

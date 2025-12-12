@@ -141,7 +141,7 @@ export async function generateFromDocument(args: {
   options?: CodegenOptions;
 }) {
   // delegate to shared generation function
-  await generateFromDocumentModel({ ...args, filePath: null });
+  await generateFromDocumentModel(args);
 }
 
 type GenerateDocumentModelArgs = {
@@ -395,11 +395,13 @@ export async function generateSubgraphFromDocumentModel(
 export async function generateSubgraph(
   name: string,
   file: string | null,
+
   config: PowerhouseConfig,
   options: CodegenOptions = {},
 ) {
   const documentModelState =
     file !== null ? await loadDocumentModel(file) : null;
+
   await hygenGenerateSubgraph(name, documentModelState, {
     ...config,
     ...options,
@@ -531,7 +533,6 @@ export function generateManifest(
  *
  * @param documentModel - The DocumentModelGlobalState containing the document model specification
  * @param config - The PowerhouseConfig configuration object
- * @param filePath - Optional file path for generateSubgraph (null if not from file)
  * @param options - Optional configuration for generation behavior
  * @returns A promise that resolves when code generation is complete
  */
@@ -540,7 +541,6 @@ async function generateFromDocumentModel(args: {
   config: PowerhouseConfig;
   useTsMorph: boolean;
   useVersioning: boolean;
-  filePath?: string | null;
   options?: CodegenOptions;
 }) {
   const {
@@ -548,7 +548,6 @@ async function generateFromDocumentModel(args: {
     config,
     useTsMorph,
     useVersioning,
-    filePath,
     options = {},
   } = args;
   // Derive verbose from config.logLevel if not explicitly provided
@@ -579,5 +578,7 @@ async function generateFromDocumentModel(args: {
     useVersioning,
   });
 
-  await generateSubgraph(name, filePath || null, config, { verbose });
+  await generateSubgraphFromDocumentModel(name, documentModelState, config, {
+    verbose,
+  });
 }
