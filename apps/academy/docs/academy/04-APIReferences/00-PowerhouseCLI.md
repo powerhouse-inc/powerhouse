@@ -533,7 +533,7 @@ Options:
   --document-models <path> Path to the document models directory.
                         
   --document-types <types> Document types supported by the editor, in the format
-                        'namespace/type' (e.g., 'powerhouse/todo').
+                        'namespace/type' (e.g., 'powerhouse/todo-list').
                         
   -is, --import-script <name> Name of the import script to generate.
                         
@@ -552,7 +552,7 @@ Examples:
   $ ph generate                                                     # Generate code using defaults
   $ ph generate my-document-model.zip                               # Generate from a specific model zip file
   $ ph generate -i                                                  # Run in interactive mode
-  $ ph generate --editor ToDoList --document-types powerhouse/todo  # Generate a ToDoList editor for todo documents
+  $ ph generate --editor TodoList --document-types powerhouse/todo-list  # Generate a TodoList editor for todo-list documents
   $ ph generate -p MyProcessor --processor-type relationalDb        # Generate a specific processor
   $ ph generate --watch                                             # Generate and watch for changes
   $ ph generate --drive-editor custom-drive-explorer                # Generate a custom drive editor

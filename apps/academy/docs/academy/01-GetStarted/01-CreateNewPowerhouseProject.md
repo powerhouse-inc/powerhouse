@@ -13,14 +13,14 @@ This tutorial step has a corresponding branch in the repository. You can:
 
 This tutorial guides you through creating a simplified version of a 'Powerhouse project' for a **To-do List**.  
 A Powerhouse project primarily consists of a document model and its editor. 
-As your projects use-case expands you can add data-integrations or a specific drive-app as seen in the demo package. 
+As your projects use-case expands you can add data-integrations or a specific Drive-app as seen in the demo package. 
 
 For todays purpose, you'll be using Connect, our user-centric collaboration tool and Vetra Studio, the builder tooling through which developers can access and manage specifications of your project. 
 
 ## Prerequisites
 
 - Powerhouse CLI installed: `pnpm install -g ph-cmd` or `npm install -g ph-cmd --legacy-peer-deps`
-- node.js 22 and a package manager (pnpm or npm) installed
+- Node.js 22 and a package manager (pnpm or npm) installed
 - Visual Studio Code (or your preferred IDE)
 - Terminal/Command Prompt access
 

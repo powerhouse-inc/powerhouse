@@ -127,7 +127,7 @@ Importance of Correct Configuration - **Accuracy of Results**: Setting the corre
 
 6. **Currency (`currency`)**: The currency format for the financial data (e.g., DAI, MKR).
 
-The filter object can be created by using the UI menu from the graphql apollo studio explorer:
+The filter object can be created by using the UI menu from the GraphQL Apollo Studio explorer:
 
 ![untitled](../filter.png)
 _Select the filter_

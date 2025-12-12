@@ -15,7 +15,7 @@ We can also create our own custom drive explorer and restrict it to only working
 To generate our `TodoDriveExplorer`, run the following command:
 
 ```bash
-pnpm generate --drive-editor TodoDriveExplorer --allowed-document-types powerhouse/todo-list
+ph generate --drive-editor TodoDriveApp --allowed-document-types powerhouse/todo-list
 ```
 
 This will generate the following file structure:

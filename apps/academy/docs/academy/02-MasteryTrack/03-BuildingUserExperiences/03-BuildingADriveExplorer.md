@@ -1,32 +1,32 @@
-# Build a drive-app
+# Build a Drive-app
 
-**Drive explorers or drive-apps** enhance how contributors and organizations interact with document models.
+**Drive-apps** enhance how contributors and organizations interact with document models.
 They create an 'app-like' experience by providing a **custom interface** for exploring and interacting with the contents of a drive.
-:::tip What is a drive explorer or drive-app?
-A drive explorer or drive-app offers a tailored application designed around its document models.
-Think of a drive explorer as a specialized lens—it offers **different ways to visualize, organize, and interact with** the data stored within a drive, making it more intuitive and efficient for specific use cases.
+:::tip What is a Drive-app?
+A Drive-app offers a tailored application designed around its document models.
+Think of a Drive-app as a specialized lens—it offers **different ways to visualize, organize, and interact with** the data stored within a drive, making it more intuitive and efficient for specific use cases.
 :::
 
 ### Drive-apps are purpose-built
 
-Organizations typically build drive explorers for specific use cases, often packaging them with a corresponding document model. This allows for customized user experiences, streamlined workflows, and maximized efficiency for contributors.
+Organizations typically build Drive-apps for specific use cases, often packaging them with a corresponding document model. This allows for customized user experiences, streamlined workflows, and maximized efficiency for contributors.
 
-drive explorers or drive-apps **bridge the gap between raw data and usability**, unlocking the full potential of document models within the Powerhouse framework.
+Drive-apps **bridge the gap between raw data and usability**, unlocking the full potential of document models within the Powerhouse framework.
 
-### Key features of drive-apps
+### Key features of Drive-apps
 
-- **Custom Views & Organization** – drive-apps can present data in formats like Kanban boards, list views, or other structured layouts to suit different workflows.
+- **Custom Views & Organization** – Drive-apps can present data in formats like Kanban boards, list views, or other structured layouts to suit different workflows.
 - **Aggregated Insights** – They can provide high-level summaries of important details across document models, enabling quick decision-making.
-- **Enhanced Interactivity** – drive-apps can include widgets, data processors, or read models to process and display document data dynamically.
+- **Enhanced Interactivity** – Drive-apps can include widgets, data processors, or read models to process and display document data dynamically.
 
-## Build a drive-app
+## Build a Drive-app
 
-drive-apps provide custom interfaces for interacting with the contents of a drive.
-Let's start with a **quick overview** of the three steps for building a drive-app. We will then apply these steps to create our **To-do List drive-app**.
+Drive-apps provide custom interfaces for interacting with the contents of a drive.
+Let's start with a **quick overview** of the three steps for building a Drive-app. We will then apply these steps to create our **todo-list Drive-app**.
 
 ### Step 1. Generate the scaffolding code
 
-Use the `generate drive editor` command to create the basic template structure for your drive-app:
+Use the `generate drive editor` command to create the basic template structure for your Drive-app:
 
 ```bash
 ph generate --drive-editor <drive-app>
@@ -34,10 +34,10 @@ ph generate --drive-editor <drive-app>
 
 ### Step 2. Update the manifest file
 
-After creating your drive-app, you need to update its `manifest.json` file.
+After creating your Drive-app, you need to update its `manifest.json` file.
 This file identifies your project and its components within the Powerhouse ecosystem.
 
-### Step 3. Customize the drive-app
+### Step 3. Customize the Drive-app
 
 Review the generated template and modify it to better suit your document model:
 
@@ -45,7 +45,7 @@ Review the generated template and modify it to better suit your document model:
 2. Add custom views specific to your data model
 3. Implement specialized interactions for your use case
 
-### About the drive-app template
+### About the Drive-app template
 
 The default template provides a solid foundation. It contains:
 
@@ -56,9 +56,9 @@ The default template provides a solid foundation. It contains:
 But the real power comes from tailoring the interface to your specific document models.
 Now, let's implement a specific example for the to-do list we've been working on throughout this guide.
 
-## Implementation example: To-do drive-app
+## Implementation example: todo-list Drive-app
 
-This example demonstrates how to create a To-do drive-app application using the Powerhouse platform.
+This example demonstrates how to create a todo-list Drive-app application using the Powerhouse platform.
 The application allows users to create and manage to-do lists with a visual progress indicator.
 
 :::warning Heads-up!
@@ -86,7 +86,7 @@ If not, you can follow the shortened guide below to prepare your project for thi
 ### 3. Generate a document editor:
 
 ```bash
-ph generate --editor ToDoList --document-types powerhouse/todolist
+ph generate --editor TodoList --document-types powerhouse/todo-list
 ```
 
 ### 4. Add the editor code:
@@ -104,9 +104,9 @@ You can also start by running Connect locally with `ph connect` instead of Vetra
 </details>
 :::
 
-## Generate the drive-app
+## Generate the Drive-app
 
-### 1. Generate a drive-app:
+### 1. Generate a Drive-app:
 
 ```bash
 ph generate --drive-editor todo-drive-explorer
@@ -114,12 +114,12 @@ ph generate --drive-editor todo-drive-explorer
 
 ### 2. Update the `powerhouse.manifest.json` file:
 
-- The manifest file contains metadata for your package that is displayed when other users install it. Update the manifest to register your new drive-app:
+- The manifest file contains metadata for your package that is displayed when other users install it. Update the manifest to register your new Drive-app:
 
 ```json
 {
   "name": "To-do List Package",
-  "description": "A simple todo list with a dedicated drive-app",
+  "description": "A simple todo-list with a dedicated Drive-app",
   "category": "Productivity",
   "publisher": {
     "name": "Powerhouse",
@@ -161,14 +161,14 @@ rm -rf editors/todo-drive-explorer/components/FolderItemsGrid.tsx
 rm -rf editors/todo-drive-explorer/components/FolderTree.tsx
 ```
 
-### 4. Create custom components for your drive-app:
+### 4. Create custom components for your Drive-app:
 
-- Next, create the following files. These will define the data types for our to-do items and provide the custom React components for our drive-app.
+- Next, create the following files. These will define the data types for our todo-list items and provide the custom React components for our Drive-app.
 
 <details>
 <summary>Create `editors/todo-drive-explorer/types/todo.ts`</summary>
 
-     This file defines the TypeScript type `ToDoState`. It specifies the shape of to-do document data within the drive-app, combining the document's revision information with its global state. This ensures that our components work with a predictable and strongly-typed data structure.
+     This file defines the TypeScript type `ToDoState`. It specifies the shape of todo-list document data within the Drive-app, combining the document's revision information with its global state. This ensures that our components work with a predictable and strongly-typed data structure.
 
      ```typescript
      import { type ToDoListDocument} from "../../../document-models/to-do-list/index.js"
@@ -229,7 +229,7 @@ rm -rf editors/todo-drive-explorer/components/FolderTree.tsx
    <details>
    <summary>Update `editors/todo-drive-explorer/components/DriveExplorer.tsx`</summary>
 
-This is the main component of our drive-app. It fetches all `powerhouse/todo` documents from the drive, displays them in a table with their progress, and allows a user to click on a document to open it in the `EditorContainer`. It also includes a button to create new documents.
+This is the main component of our Drive-app. It fetches all `powerhouse/todo-list` documents from the drive, displays them in a table with their progress, and allows a user to click on a document to open it in the `EditorContainer`. It also includes a button to create new documents.
 
 ```typescript
 import { useCallback, useState, useRef, useEffect, useMemo } from "react";
@@ -559,7 +559,7 @@ return showRevisionHistory ? (
 
 ### 3. Run the application:
 
-- With the code for our drive-app in place, it's time to see it in action. Run Connect in Studio mode:
+- With the code for our Drive-app in place, it's time to see it in action. Run Connect in Studio mode:
 
 ```bash
 ph connect
@@ -567,7 +567,7 @@ ph connect
 
 ### Now it's your turn!
 
-Start building your own drive-apps, explorers or experiences.
+Start building your own Drive-apps or experiences.
 Congratulations on completing this tutorial!
 You've successfully built a custom drive explorer, enhancing the way users interact with document models.
 

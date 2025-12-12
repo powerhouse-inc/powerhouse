@@ -22,7 +22,7 @@ const document = {
   created: "2023-01-01T00:00:00.000Z",
   lastModified: "2023-01-01T12:00:00.000Z",
   revision: 5,
-  documentType: "powerhouse/todolist",
+  documentType: "powerhouse/todo-list",
   name: "My Todo List",
   slug: "my-todo-list",
   // ... other properties
@@ -38,7 +38,7 @@ const document = {
     createdAtUtcIso: "2023-01-01T00:00:00.000Z",
     lastModifiedAtUtcIso: "2023-01-01T12:00:00.000Z",
     revision: { global: 5, local: 0 },
-    documentType: "powerhouse/todolist",
+    documentType: "powerhouse/todo-list",
     name: "My Todo List",
     slug: "my-todo-list",
     branch: "main",

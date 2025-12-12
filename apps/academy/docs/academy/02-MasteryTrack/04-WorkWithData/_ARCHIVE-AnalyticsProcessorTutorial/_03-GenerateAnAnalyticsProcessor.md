@@ -159,7 +159,7 @@ Connect offers you with a few ways to inspect the document data and history. Cli
 
 Here you'll see that the logic and intelligence of the document model has created a group transaction for the asset, which is the sum of all the sub transactions for the T-bill asset. When you hover over the 'CREATE_GROUP_TRANSACTION' operation you'll see the exact logic that was used to create the group transaction. It's this data that will be used by the analytics processor to calculate the value of the asset over time.
 
-Additionally, Connect has a seamless integration with Switchboard, which offer a graphql interface to the document model.
+Additionally, Connect has a seamless integration with Switchboard, which offer a GraphQL interface to the document model.
 This allows you to inspect the document data and history in a structured way. Currently we're making use of the Apollo GraphQL sandbox to inspect the document data as it's the easiest way to get started.
 
 To inspect the document data, click on the 'Switchboard' icon in the top right corner of your document model in Connect.

@@ -7,10 +7,10 @@ In this chapter we will continue with the interface or editor implementation of 
 Run the command below to generate the editor template for the **To-do List** document model.   
 This command reads the **To-do List** document model definition from the `document-models` folder and generates the editor template in the `editors/to-do-list` folder as `editor.tsx`.
 
-Notice the `--editor` flag which specifies the **To-do List** document model, and the `--document-types` flag defines the document type `powerhouse/todolist`.
+Notice the `--editor` flag which specifies the **todo-list** document model, and the `--document-types` flag defines the document type `powerhouse/todo-list`.
 
 ```bash
-pnpm generate --editor Todo-List-editor --document-types powerhouse/todolist
+ph generate --editor todo-list-editor --document-types powerhouse/todo-list
 ```
 
 Once complete, navigate to the `editors/to-do-list/editor.tsx` file and open it in your editor.
@@ -353,8 +353,8 @@ The editor will update dynamically, so you can play around with your editor styl
 Congratulations!
 If you managed to follow this tutorial until this point, you have successfully implemented the **to-do list** document model with its reducer operations and editor. 
 
-Now you can move on to creating a [custom drive explorer](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer) for your to-do list document.    
-Imagine you have many to-do Lists sitting in a drive. A custom drive explorer will allow you to organize and track them at a glance, opening up a new world of possibilities to increase the functionality of your documents!
+Now you can move on to creating a [custom Drive-app](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer) for your todo-list document.    
+Imagine you have many todo-lists sitting in a drive. A custom Drive-app will allow you to organize and track them at a glance, opening up a new world of possibilities to increase the functionality of your documents!
 
 
 

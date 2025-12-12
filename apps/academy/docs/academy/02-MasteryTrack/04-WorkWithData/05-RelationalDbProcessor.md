@@ -21,9 +21,9 @@ ph generate --processor todo-indexer --processor-type relationalDb --document-ty
 
 - `--processor todo-indexer`: Creates a processor with the name "todo-indexer"
 - `--processor-type relationalDb`: Specifies we want a relational database processor (vs other types like analytics or webhook processors)
-- `--document-types powerhouse/todolist`: Tells the processor to only listen for changes to documents of type "powerhouse/todolist"
+- `--document-types powerhouse/todo-list`: Tells the processor to only listen for changes to documents of type "powerhouse/todo-list"
 
-This command creates a processor named `todo-indexer` of type `relational database` that listens for changes from documents of type `powerhouse/todolist`.
+This command creates a processor named `todo-indexer` of type `relational database` that listens for changes from documents of type `powerhouse/todo-list`.
 
 **What gets generated:**
 
@@ -146,7 +146,7 @@ export const todoIndexerProcessorFactory =
     const filter: RelationalDbProcessorFilter = {
       branch: ["main"], // Only process changes from the "main" branch
       documentId: ["*"], // Process changes from any document ID (* = wildcard)
-      documentType: ["powerhouse/todolist"], // Only process todolist documents
+      documentType: ["powerhouse/todo-list"], // Only process todo-list documents
       scope: ["global"], // Process global changes (not user-specific)
     };
 

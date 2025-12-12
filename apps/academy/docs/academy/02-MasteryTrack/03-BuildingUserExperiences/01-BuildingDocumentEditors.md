@@ -638,8 +638,8 @@ If you managed to follow this tutorial until this point, you have successfully i
 
 ## Up Next
 
-Now you can move on to creating a [custom drive explorer](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer) for your TodoList document.  
-Imagine you have many TodoLists sitting in a drive. A custom drive explorer will allow you to organize and track them at a glance, opening up a new world of possibilities to increase the functionality of your documents!
+Now you can move on to creating a [custom Drive-app](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer) for your TodoList document.  
+Imagine you have many TodoLists sitting in a drive. A custom Drive-app will allow you to organize and track them at a glance, opening up a new world of possibilities to increase the functionality of your documents!
 
 ### Further Reading
 

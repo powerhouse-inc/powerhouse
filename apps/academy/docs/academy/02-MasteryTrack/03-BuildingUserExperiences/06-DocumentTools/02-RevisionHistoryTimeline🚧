@@ -12,7 +12,7 @@ export const module: EditorModule<ToDoDocument> = {
   Component: Editor as unknown as FC<
     EditorProps<ToDoDocument> & Record<string, unknown>
   >,
-  documentTypes: ["powerhouse/todo"],
+  documentTypes: ["powerhouse/todo-list"],
 };
 ```
 
@@ -31,17 +31,17 @@ Click the button to see the timeline expand and see the first history 'candle' a
 
 ## How to implement the timeline feature
 
-### Default drive explorer
+### Default Drive-app
 
-When using the default drive explorer with `ph connect`, the timeline functionality is handled automatically:
+When using the default Drive-app with `ph connect`, the timeline functionality is handled automatically:
 
 - Document analytics are collected and passed to the document toolbar
 - The timeline button appears in the toolbar when enabled
 - Users can click on timeline items to view document revisions
 
-### Custom drive explorer
+### Custom Drive-app
 
-For custom drive explorers, you need to handle timeline items fetching and user interaction manually. Here's how:
+For custom Drive-apps, you need to handle timeline items fetching and user interaction manually. Here's how:
 
 1. First, import the necessary utilities from the Powerhouse common package:
 

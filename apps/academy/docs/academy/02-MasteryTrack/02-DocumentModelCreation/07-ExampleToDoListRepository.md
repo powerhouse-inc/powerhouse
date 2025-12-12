@@ -29,7 +29,7 @@ The package includes:
 - Reducer Code
 - Reducer Tests
 - Editor Code
-- Drive Explorer Code
+- Drive-app Code
 
 You can clone the repository and run Vetra Studio to see all the code in action:
 

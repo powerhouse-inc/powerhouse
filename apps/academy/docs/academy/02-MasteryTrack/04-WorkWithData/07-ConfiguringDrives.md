@@ -29,18 +29,18 @@ Remote drives in Powerhouse allow you to connect to and work with data stored in
 **Powerhouse Reactors** are the nodes in the network that store and synchronize documents and drives, resolve conflicts, and rerun operations to verify document event histories.
 Reactors can be configured for local storage, centralized cloud storage, or a decentralized storage network.
 
-A reactor allows you to store multiple documents and host **drives** and Drive Explorers with different organizational purposes, users, access rights, and more.
+A reactor allows you to store multiple documents and host **drives** and Drive-apps with different organizational purposes, users, access rights, and more.
 :::
 
 A drive uses a reactor and its underlying storage layer. A reactor is the low-level component that enables the synchronization of documents and drives.
 
-### drive-apps
+### Drive-apps
 
-**Drive Explorers** (also known as drive-apps) are specialized interfaces that enhance how users interact with documents within a drive. As mentioned, a drive is technically just another document containing a list of other documents. This means you can create a custom editor for your drive document.
+**Drive-apps** are specialized interfaces that enhance how users interact with documents within a drive. As mentioned, a drive is technically just another document containing a list of other documents. This means you can create a custom editor for your drive document.
 
-These customized editors are called Drive Explorers or drive-apps. They provide custom views, organization tools, and interactive features tailored to specific use cases. For example, a Drive Explorer might present data as a Kanban board, provide aggregated insights, or offer specialized widgets for data processing.
+These customized editors are called Drive-apps. They provide custom views, organization tools, and interactive features tailored to specific use cases. For example, a Drive-app might present data as a Kanban board, provide aggregated insights, or offer specialized widgets for data processing.
 
-To learn more about building and customizing Drive Explorers, check out our [Building a Drive Explorer](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer) guide.
+To learn more about building and customizing Drive-apps, check out our [Building a Drive-app](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer) guide.
 
 ## Creating a new drive
 
@@ -53,7 +53,7 @@ To create a new drive in Powerhouse, follow these steps:
 
 1. Click the "**Create New Drive**" button in the Connect interface or the **+** icon in the Connect sidebar.
 2. In the modal that appears, enter a name for your drive in the "**Drive Name**" field.
-3. Select the desired drive-app (such as the Generic Drive Explorer, or any other drive-app you've installed).
+3. Select the desired Drive-app (such as the Generic Drive-app, or any other Drive-app you've installed).
 4. Choose the location for your drive: **Local** (only available to you), **Cloud** (available to people in this drive), or **Public** (available to everyone).
 5. (Optional) Enable the "Make available offline" toggle if you want to keep a local backup of your drive.
 6. Once all options are set, click the "Create new drive" button to finalize and create your drive.
@@ -157,7 +157,7 @@ This approach allows you to automate drive creation and integration with other s
 You've now experienced the use of GraphQL to modify or read data captured in Powerhouse for the first time.
 You can now either continue with:
 
-- User interfaces and [build a custom drive experiences](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer)
+- User interfaces and [build custom Drive-apps](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer)
 - Keep playing with data and the [Switchboard API](/academy/MasteryTrack/WorkWithData/UsingTheAPI)
 
 Enjoy!

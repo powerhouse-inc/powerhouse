@@ -44,9 +44,9 @@ For more details, see the official [WSL installation guide](https://learn.micros
 
 ---
 
-### Installing node.js 22
+### Installing Node.js 22
 
-node.js 22 is a tool that lets us run our application. Let's install it step by step.
+Node.js 22 is a tool that lets us run our application. Let's install it step by step.
 
 #### For Windows:
 
@@ -63,8 +63,8 @@ node.js 22 is a tool that lets us run our application. Let's install it step by 
    - Type 'A' when prompted to confirm
    - You can now close this window and open PowerShell normally for the remaining steps
 
-2. **Install node.js 22:**
-   - Visit the [node.js 22 official website](https://nodejs.org/)
+2. **Install Node.js 22:**
+   - Visit the [Node.js official website](https://nodejs.org/)
    - Click the big green button that says "LTS" (this means Long Term Support - it's the most stable version)
    - Once the installer downloads, double-click it to start installation
    - Click "Next" through the installation wizard, leaving all settings at their defaults
@@ -91,7 +91,7 @@ node.js 22 is a tool that lets us run our application. Let's install it step by 
 
    - You should see version numbers appear after each command (e.g., v22.x.x for Node.js). If you do, congratulations - Node.js and your package manager are installed!
 
-> **Note**: If node.js 22 commands don't work in VS Code, restart VS Code to refresh environment variables.
+> **Note**: If Node.js commands don't work in VS Code, restart VS Code to refresh environment variables.
 
 #### For macOS:
 
@@ -105,7 +105,7 @@ node.js 22 is a tool that lets us run our application. Let's install it step by 
 
    - Follow any additional instructions that appear
 
-2. **Install node.js 22:**
+2. **Install Node.js 22:**
    - In the same Terminal window, type this command and press Enter:
 
    ```bash
@@ -141,7 +141,7 @@ node.js 22 is a tool that lets us run our application. Let's install it step by 
    sudo apt update
    ```
 
-3. **Install node.js 22 and optionally pnpm:**
+3. **Install Node.js 22 and optionally pnpm:**
 
    ```bash
    sudo apt install nodejs

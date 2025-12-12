@@ -69,7 +69,7 @@ A Powerhouse project primarily consists of a document model and its editor. The 
 ## Prerequisites
 
 - Powerhouse CLI installed: `pnpm install -g ph-cmd` or `npm install -g ph-cmd`
-- node.js 22 and a package manager (pnpm or npm) installed
+- Node.js 22 and a package manager (pnpm or npm) installed
 - Visual Studio Code (or your preferred IDE)
 - Terminal/Command Prompt access
 

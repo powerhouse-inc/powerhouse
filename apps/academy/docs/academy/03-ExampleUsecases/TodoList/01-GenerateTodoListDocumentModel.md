@@ -58,7 +58,7 @@ Documents in Powerhouse leverage **event sourcing principles**, where every stat
 
 ## The document model state schema
 
-First, let's add a graphql type that represents an individual item in a todo list document. A todo item has an ID, text, and can be either checked or unchecked.
+First, let's add a GraphQL type that represents an individual item in a todo-list document. A todo item has an ID, text, and can be either checked or unchecked.
 
 Add this underneath the boilerplate `TodoListState` type you see in the Global State Schema text editor.
 
@@ -128,9 +128,9 @@ type `add todo item` in the "Add new operation" input and press enter.
 
 You will see your new operation with the name `ADD_TODO_ITEM` (we automatically handle changing the casing to the required CONSTANT_CASE).
 
-You will also see a boilerplate placeholder graphql input.
+You will also see a boilerplate placeholder GraphQL input.
 
-Update the graphql input like so:
+Update the GraphQL input like so:
 
 ```graphql
 input AddTodoItemInput {
