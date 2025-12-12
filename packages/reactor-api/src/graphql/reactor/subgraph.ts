@@ -141,6 +141,63 @@ export class ReactorSubgraph extends BaseSubgraph {
     }
   }
 
+  /**
+   * Check if user can execute specific operations on a document.
+   * Only checks operations that have restrictions set.
+   * Throws an error if any operation is restricted and user lacks permission.
+   */
+  private async assertCanExecuteOperations(
+    documentId: string,
+    actions: readonly unknown[],
+    ctx: Context,
+  ): Promise<void> {
+    // Skip if no permission service
+    if (!this.documentPermissionService) {
+      return;
+    }
+
+    // Global admins bypass operation-level restrictions
+    if (ctx.isAdmin?.(ctx.user?.address ?? "")) {
+      return;
+    }
+
+    for (const action of actions) {
+      if (!action || typeof action !== "object") {
+        continue;
+      }
+
+      const actionObj = action as Record<string, unknown>;
+      const operationType = actionObj.type;
+
+      if (typeof operationType !== "string") {
+        continue;
+      }
+
+      // Check if this operation has any restrictions set
+      const isRestricted =
+        await this.documentPermissionService.isOperationRestricted(
+          documentId,
+          operationType,
+        );
+
+      if (isRestricted) {
+        // Operation is restricted, check if user has permission
+        const canExecute =
+          await this.documentPermissionService.canExecuteOperation(
+            documentId,
+            operationType,
+            ctx.user?.address,
+          );
+
+        if (!canExecute) {
+          throw new GraphQLError(
+            `Forbidden: insufficient permissions to execute operation "${operationType}" on this document`,
+          );
+        }
+      }
+    }
+  }
+
   // Load schema from file
   typeDefs = gql(
     fs.readFileSync(path.join(__dirname, "schema.graphql"), "utf-8"),
@@ -328,6 +385,12 @@ export class ReactorSubgraph extends BaseSubgraph {
           });
           if (doc) {
             await this.assertCanWrite(doc.document.id, ctx);
+            // Check operation-level permissions for each action
+            await this.assertCanExecuteOperations(
+              doc.document.id,
+              args.actions,
+              ctx,
+            );
           }
           return await resolvers.mutateDocument(this.reactorClient, args);
         } catch (error) {
@@ -346,6 +409,12 @@ export class ReactorSubgraph extends BaseSubgraph {
           });
           if (doc) {
             await this.assertCanWrite(doc.document.id, ctx);
+            // Check operation-level permissions for each action
+            await this.assertCanExecuteOperations(
+              doc.document.id,
+              args.actions,
+              ctx,
+            );
           }
           return await resolvers.mutateDocumentAsync(this.reactorClient, args);
         } catch (error) {
