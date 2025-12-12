@@ -12,8 +12,12 @@ import {
   setSubgraphName,
   setSubgraphStatus,
   utils,
+  isSubgraphModuleDocument,
+  SetSubgraphNameInputSchema,
+  SetSubgraphStatusInputSchema,
 } from "@powerhousedao/vetra/document-models/subgraph-module";
 import { beforeEach, describe, expect, it } from "vitest";
+import { generateMock } from "@powerhousedao/codegen";
 
 describe("BaseOperations Operations", () => {
   let document: SubgraphModuleDocument;
@@ -77,5 +81,39 @@ describe("BaseOperations Operations", () => {
 
       expect(updatedDocument.state.global.status).toBe("DRAFT");
     });
+  });
+
+  it("should handle setSubgraphName operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(SetSubgraphNameInputSchema());
+
+    const updatedDocument = reducer(document, setSubgraphName(input));
+
+    expect(isSubgraphModuleDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "SET_SUBGRAPH_NAME",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+
+  it("should handle setSubgraphStatus operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(SetSubgraphStatusInputSchema());
+
+    const updatedDocument = reducer(document, setSubgraphStatus(input));
+
+    expect(isSubgraphModuleDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "SET_SUBGRAPH_STATUS",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
 });

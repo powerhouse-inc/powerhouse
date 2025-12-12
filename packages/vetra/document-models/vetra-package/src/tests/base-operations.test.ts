@@ -3,9 +3,7 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
-import { beforeEach, describe, expect, it } from "vitest";
-import * as creators from "../../gen/base-operations/creators.js";
-import { reducer } from "../../gen/reducer.js";
+import { generateMock } from "@powerhousedao/codegen";
 import type {
   AddPackageKeywordInput,
   SetPackageAuthorInput,
@@ -16,9 +14,34 @@ import type {
   SetPackageGithubUrlInput,
   SetPackageNameInput,
   SetPackageNpmUrlInput,
-} from "../../gen/schema/index.js";
-import type { VetraPackageDocument } from "../../gen/types.js";
-import { utils } from "@powerhousedao/vetra/document-models/vetra-package";
+  VetraPackageDocument,
+} from "@powerhousedao/vetra/document-models/vetra-package";
+import {
+  addPackageKeyword,
+  AddPackageKeywordInputSchema,
+  isVetraPackageDocument,
+  reducer,
+  removePackageKeyword,
+  RemovePackageKeywordInputSchema,
+  setPackageAuthor,
+  SetPackageAuthorInputSchema,
+  setPackageAuthorName,
+  SetPackageAuthorNameInputSchema,
+  setPackageAuthorWebsite,
+  SetPackageAuthorWebsiteInputSchema,
+  setPackageCategory,
+  SetPackageCategoryInputSchema,
+  setPackageDescription,
+  SetPackageDescriptionInputSchema,
+  setPackageGithubUrl,
+  SetPackageGithubUrlInputSchema,
+  setPackageName,
+  SetPackageNameInputSchema,
+  setPackageNpmUrl,
+  SetPackageNpmUrlInputSchema,
+  utils,
+} from "@powerhousedao/vetra/document-models/vetra-package";
+import { beforeEach, describe, expect, it } from "vitest";
 
 describe("BaseOperations Operations", () => {
   let document: VetraPackageDocument;
@@ -31,7 +54,7 @@ describe("BaseOperations Operations", () => {
     it("should mutate state with new name", () => {
       const input: SetPackageNameInput = { name: "my-package" };
 
-      const updatedDocument = reducer(document, creators.setPackageName(input));
+      const updatedDocument = reducer(document, setPackageName(input));
 
       expect(updatedDocument.state.global.name).toBe("my-package");
     });
@@ -43,10 +66,7 @@ describe("BaseOperations Operations", () => {
         description: "A test package",
       };
 
-      const updatedDocument = reducer(
-        document,
-        creators.setPackageDescription(input),
-      );
+      const updatedDocument = reducer(document, setPackageDescription(input));
 
       expect(updatedDocument.state.global.description).toBe("A test package");
     });
@@ -56,10 +76,7 @@ describe("BaseOperations Operations", () => {
     it("should mutate state with new category", () => {
       const input: SetPackageCategoryInput = { category: "utility" };
 
-      const updatedDocument = reducer(
-        document,
-        creators.setPackageCategory(input),
-      );
+      const updatedDocument = reducer(document, setPackageCategory(input));
 
       expect(updatedDocument.state.global.category).toBe("utility");
     });
@@ -72,10 +89,7 @@ describe("BaseOperations Operations", () => {
         website: "https://johndoe.com",
       };
 
-      const updatedDocument = reducer(
-        document,
-        creators.setPackageAuthor(input),
-      );
+      const updatedDocument = reducer(document, setPackageAuthor(input));
 
       expect(updatedDocument.state.global.author.name).toBe("John Doe");
       expect(updatedDocument.state.global.author.website).toBe(
@@ -87,7 +101,7 @@ describe("BaseOperations Operations", () => {
       // Name only
       let updatedDoc = reducer(
         document,
-        creators.setPackageAuthor({ name: "Jane Doe" }),
+        setPackageAuthor({ name: "Jane Doe" }),
       );
       expect(updatedDoc.state.global.author.name).toBe("Jane Doe");
       expect(updatedDoc.state.global.author.website).toBeNull();
@@ -95,7 +109,7 @@ describe("BaseOperations Operations", () => {
       // Website only
       updatedDoc = reducer(
         updatedDoc,
-        creators.setPackageAuthor({ website: "https://janedoe.com" }),
+        setPackageAuthor({ website: "https://janedoe.com" }),
       );
       expect(updatedDoc.state.global.author.name).toBeNull();
       expect(updatedDoc.state.global.author.website).toBe(
@@ -108,10 +122,7 @@ describe("BaseOperations Operations", () => {
     it("should mutate state with new author name", () => {
       const input: SetPackageAuthorNameInput = { name: "Alice" };
 
-      const updatedDocument = reducer(
-        document,
-        creators.setPackageAuthorName(input),
-      );
+      const updatedDocument = reducer(document, setPackageAuthorName(input));
 
       expect(updatedDocument.state.global.author.name).toBe("Alice");
     });
@@ -123,10 +134,7 @@ describe("BaseOperations Operations", () => {
         website: "https://example.com",
       };
 
-      const updatedDocument = reducer(
-        document,
-        creators.setPackageAuthorWebsite(input),
-      );
+      const updatedDocument = reducer(document, setPackageAuthorWebsite(input));
 
       expect(updatedDocument.state.global.author.website).toBe(
         "https://example.com",
@@ -141,10 +149,7 @@ describe("BaseOperations Operations", () => {
         label: "react",
       };
 
-      const updatedDocument = reducer(
-        document,
-        creators.addPackageKeyword(input),
-      );
+      const updatedDocument = reducer(document, addPackageKeyword(input));
 
       expect(updatedDocument.state.global.keywords).toContainEqual({
         id: "kw-1",
@@ -160,10 +165,7 @@ describe("BaseOperations Operations", () => {
         label: "typescript",
       };
 
-      const updatedDocument = reducer(
-        document,
-        creators.addPackageKeyword(input),
-      );
+      const updatedDocument = reducer(document, addPackageKeyword(input));
 
       expect(updatedDocument.state.global.keywords).toEqual([
         { id: "first-kw", label: "typescript" },
@@ -173,15 +175,15 @@ describe("BaseOperations Operations", () => {
     it("should add multiple keywords sequentially", () => {
       let updatedDoc = reducer(
         document,
-        creators.addPackageKeyword({ id: "kw-1", label: "react" }),
+        addPackageKeyword({ id: "kw-1", label: "react" }),
       );
       updatedDoc = reducer(
         updatedDoc,
-        creators.addPackageKeyword({ id: "kw-2", label: "vue" }),
+        addPackageKeyword({ id: "kw-2", label: "vue" }),
       );
       updatedDoc = reducer(
         updatedDoc,
-        creators.addPackageKeyword({ id: "kw-3", label: "angular" }),
+        addPackageKeyword({ id: "kw-3", label: "angular" }),
       );
 
       expect(updatedDoc.state.global.keywords).toHaveLength(3);
@@ -205,13 +207,13 @@ describe("BaseOperations Operations", () => {
         label: "first",
       };
 
-      let updatedDoc = reducer(document, creators.addPackageKeyword(input));
+      let updatedDoc = reducer(document, addPackageKeyword(input));
       expect(updatedDoc.state.global.keywords).toHaveLength(1);
       expect(updatedDoc.operations.global[0].error).toBeUndefined();
 
       updatedDoc = reducer(
         updatedDoc,
-        creators.addPackageKeyword({
+        addPackageKeyword({
           id: "duplicate",
           label: "second",
         }),
@@ -229,7 +231,7 @@ describe("BaseOperations Operations", () => {
     it("should mutate state by removing keyword from array", () => {
       let updatedDoc = reducer(
         document,
-        creators.addPackageKeyword({
+        addPackageKeyword({
           id: "to-remove",
           label: "test",
         }),
@@ -237,7 +239,7 @@ describe("BaseOperations Operations", () => {
 
       updatedDoc = reducer(
         updatedDoc,
-        creators.removePackageKeyword({ id: "to-remove" }),
+        removePackageKeyword({ id: "to-remove" }),
       );
 
       expect(updatedDoc.state.global.keywords).not.toContainEqual({
@@ -249,7 +251,7 @@ describe("BaseOperations Operations", () => {
     it("should remove existing ID", () => {
       let updatedDoc = reducer(
         document,
-        creators.addPackageKeyword({
+        addPackageKeyword({
           id: "existing",
           label: "test",
         }),
@@ -259,7 +261,7 @@ describe("BaseOperations Operations", () => {
 
       updatedDoc = reducer(
         updatedDoc,
-        creators.removePackageKeyword({ id: "existing" }),
+        removePackageKeyword({ id: "existing" }),
       );
 
       expect(updatedDoc.state.global.keywords.length).toBe(lengthBefore - 1);
@@ -273,7 +275,7 @@ describe("BaseOperations Operations", () => {
 
       const updatedDocument = reducer(
         document,
-        creators.removePackageKeyword({ id: "non-existent-id" }),
+        removePackageKeyword({ id: "non-existent-id" }),
       );
 
       expect(updatedDocument.state.global.keywords).toEqual(initialState);
@@ -284,7 +286,7 @@ describe("BaseOperations Operations", () => {
 
       const updatedDocument = reducer(
         document,
-        creators.removePackageKeyword({ id: "any-id" }),
+        removePackageKeyword({ id: "any-id" }),
       );
 
       expect(updatedDocument.state.global.keywords).toEqual([]);
@@ -293,16 +295,13 @@ describe("BaseOperations Operations", () => {
     it("should add then immediately remove item", () => {
       let updatedDoc = reducer(
         document,
-        creators.addPackageKeyword({
+        addPackageKeyword({
           id: "temp-kw",
           label: "temp",
         }),
       );
 
-      updatedDoc = reducer(
-        updatedDoc,
-        creators.removePackageKeyword({ id: "temp-kw" }),
-      );
+      updatedDoc = reducer(updatedDoc, removePackageKeyword({ id: "temp-kw" }));
 
       expect(
         updatedDoc.state.global.keywords.find((kw) => kw.id === "temp-kw"),
@@ -317,10 +316,7 @@ describe("BaseOperations Operations", () => {
         url: "https://github.com/user/repo",
       };
 
-      const updatedDocument = reducer(
-        document,
-        creators.setPackageGithubUrl(input),
-      );
+      const updatedDocument = reducer(document, setPackageGithubUrl(input));
 
       expect(updatedDocument.state.global.githubUrl).toBe(
         "https://github.com/user/repo",
@@ -334,14 +330,181 @@ describe("BaseOperations Operations", () => {
         url: "https://npmjs.com/package/my-package",
       };
 
-      const updatedDocument = reducer(
-        document,
-        creators.setPackageNpmUrl(input),
-      );
+      const updatedDocument = reducer(document, setPackageNpmUrl(input));
 
       expect(updatedDocument.state.global.npmUrl).toBe(
         "https://npmjs.com/package/my-package",
       );
     });
+  });
+
+  it("should handle setPackageName operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(SetPackageNameInputSchema());
+
+    const updatedDocument = reducer(document, setPackageName(input));
+
+    expect(isVetraPackageDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "SET_PACKAGE_NAME",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+
+  it("should handle setPackageDescription operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(SetPackageDescriptionInputSchema());
+
+    const updatedDocument = reducer(document, setPackageDescription(input));
+
+    expect(isVetraPackageDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "SET_PACKAGE_DESCRIPTION",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+
+  it("should handle setPackageCategory operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(SetPackageCategoryInputSchema());
+
+    const updatedDocument = reducer(document, setPackageCategory(input));
+
+    expect(isVetraPackageDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "SET_PACKAGE_CATEGORY",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+
+  it("should handle setPackageAuthor operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(SetPackageAuthorInputSchema());
+
+    const updatedDocument = reducer(document, setPackageAuthor(input));
+
+    expect(isVetraPackageDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "SET_PACKAGE_AUTHOR",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+
+  it("should handle setPackageAuthorName operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(SetPackageAuthorNameInputSchema());
+
+    const updatedDocument = reducer(document, setPackageAuthorName(input));
+
+    expect(isVetraPackageDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "SET_PACKAGE_AUTHOR_NAME",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+
+  it("should handle setPackageAuthorWebsite operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(SetPackageAuthorWebsiteInputSchema());
+
+    const updatedDocument = reducer(document, setPackageAuthorWebsite(input));
+
+    expect(isVetraPackageDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "SET_PACKAGE_AUTHOR_WEBSITE",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+
+  it("should handle addPackageKeyword operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(AddPackageKeywordInputSchema());
+
+    const updatedDocument = reducer(document, addPackageKeyword(input));
+
+    expect(isVetraPackageDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "ADD_PACKAGE_KEYWORD",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+
+  it("should handle removePackageKeyword operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(RemovePackageKeywordInputSchema());
+
+    const updatedDocument = reducer(document, removePackageKeyword(input));
+
+    expect(isVetraPackageDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "REMOVE_PACKAGE_KEYWORD",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+
+  it("should handle setPackageGithubUrl operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(SetPackageGithubUrlInputSchema());
+
+    const updatedDocument = reducer(document, setPackageGithubUrl(input));
+
+    expect(isVetraPackageDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "SET_PACKAGE_GITHUB_URL",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+
+  it("should handle setPackageNpmUrl operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(SetPackageNpmUrlInputSchema());
+
+    const updatedDocument = reducer(document, setPackageNpmUrl(input));
+
+    expect(isVetraPackageDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "SET_PACKAGE_NPM_URL",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
 });

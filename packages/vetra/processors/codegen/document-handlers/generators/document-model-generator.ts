@@ -8,7 +8,7 @@ import type { InternalTransmitterUpdate } from "document-drive";
 import type { DocumentModelGlobalState } from "document-model";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
-import { LEGACY, USE_VERSIONING } from "./constants.js";
+import { USE_TS_MORPH, USE_VERSIONING } from "./constants.js";
 import { backupDocument } from "./utils.js";
 
 /**
@@ -61,7 +61,7 @@ export class DocumentModelGenerator extends BaseDocumentGen {
       await generateFromDocument({
         documentModelState: state,
         config: this.config.PH_CONFIG,
-        legacy: LEGACY,
+        useTsMorph: USE_TS_MORPH,
         useVersioning: USE_VERSIONING,
       });
       await generateSubgraphFromDocumentModel(

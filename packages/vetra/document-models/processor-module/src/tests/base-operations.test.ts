@@ -17,8 +17,15 @@ import {
   setProcessorStatus,
   setProcessorType,
   utils,
+  isProcessorModuleDocument,
+  SetProcessorNameInputSchema,
+  SetProcessorTypeInputSchema,
+  AddDocumentTypeInputSchema,
+  RemoveDocumentTypeInputSchema,
+  SetProcessorStatusInputSchema,
 } from "@powerhousedao/vetra/document-models/processor-module";
 import { beforeEach, describe, expect, it } from "vitest";
+import { generateMock } from "@powerhousedao/codegen";
 
 describe("BaseOperations Operations", () => {
   let document: ProcessorModuleDocument;
@@ -281,5 +288,90 @@ describe("BaseOperations Operations", () => {
       ).toBeUndefined();
       expect(updatedDoc.operations.global).toHaveLength(2);
     });
+  });
+
+  it("should handle setProcessorName operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(SetProcessorNameInputSchema());
+
+    const updatedDocument = reducer(document, setProcessorName(input));
+
+    expect(isProcessorModuleDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "SET_PROCESSOR_NAME",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+
+  it("should handle setProcessorType operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(SetProcessorTypeInputSchema());
+
+    const updatedDocument = reducer(document, setProcessorType(input));
+
+    expect(isProcessorModuleDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "SET_PROCESSOR_TYPE",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+
+  it("should handle addDocumentType operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(AddDocumentTypeInputSchema());
+
+    const updatedDocument = reducer(document, addDocumentType(input));
+
+    expect(isProcessorModuleDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "ADD_DOCUMENT_TYPE",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+
+  it("should handle removeDocumentType operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(RemoveDocumentTypeInputSchema());
+
+    const updatedDocument = reducer(document, removeDocumentType(input));
+
+    expect(isProcessorModuleDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "REMOVE_DOCUMENT_TYPE",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+
+  it("should handle setProcessorStatus operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(SetProcessorStatusInputSchema());
+
+    const updatedDocument = reducer(document, setProcessorStatus(input));
+
+    expect(isProcessorModuleDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "SET_PROCESSOR_STATUS",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
 });

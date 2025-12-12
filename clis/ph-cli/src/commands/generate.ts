@@ -56,7 +56,7 @@ export function generateCommand(program: Command) {
       "--schema-file <path>",
       "Path to the output file. Defaults to './schema.ts'",
     )
-    .option("--ts-morph", "Use new ts-morph codegen")
+    .option("--use-hygen", "Use legacy hygen codegen")
     .option(
       "--use-versioning",
       "Allow upgrading document models with versioning",

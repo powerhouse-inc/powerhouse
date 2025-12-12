@@ -222,13 +222,15 @@ function makeOperationModuleTestFile(
 
   const namedImports = importNames.map((name) => ({ name }));
 
-  let actionsImportDeclaration = sourceFile.getImportDeclaration(
-    (importDeclaration) =>
+  let actionsImportDeclaration = sourceFile
+    .getImportDeclarations()
+    .filter((i) => !i.isTypeOnly())
+    .find((importDeclaration) =>
       importDeclaration
         .getModuleSpecifier()
         .getText()
         .includes(documentModelPackageImportPath),
-  );
+    );
 
   if (!actionsImportDeclaration) {
     actionsImportDeclaration = sourceFile.addImportDeclaration({
@@ -292,6 +294,25 @@ function makeOperationModuleTestFile(
 
   describeCallBody.addStatements(testCasesToAdd);
 
+  const GENERATE_MOCK_NAME = "generateMock";
+  const GENERATE_MOCK_MODULE_SPECIFIER = "@powerhousedao/codegen";
+
+  const generateMockImport = sourceFile.getImportDeclaration((i) =>
+    i.getNamedImports().some((v) => v.getText().includes(GENERATE_MOCK_NAME)),
+  );
+
+  const hasGenerateMockInSourceFile = sourceFile
+    .getText()
+    .includes(GENERATE_MOCK_NAME);
+
+  if (hasGenerateMockInSourceFile && !generateMockImport) {
+    sourceFile.addImportDeclaration({
+      namedImports: [GENERATE_MOCK_NAME],
+      moduleSpecifier: GENERATE_MOCK_MODULE_SPECIFIER,
+    });
+  }
+
+  sourceFile.fixUnusedIdentifiers();
   formatSourceFileWithPrettier(sourceFile);
 }
 

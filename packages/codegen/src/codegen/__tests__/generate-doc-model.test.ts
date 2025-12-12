@@ -14,6 +14,7 @@ import {
   it,
   type TestContext,
 } from "vitest";
+import { USE_TS_MORPH } from "./config.js";
 import {
   DOCUMENT_MODELS_TEST_PROJECT,
   GENERATE_DOC_MODEL_TEST_OUTPUT_DIR,
@@ -29,7 +30,6 @@ import {
   purgeDirAfterTest,
   resetDirForTest,
 } from "./utils.js";
-import { USE_LEGACY } from "./config.js";
 
 describe("document model", () => {
   const testDir = import.meta.dirname;
@@ -77,7 +77,7 @@ describe("document model", () => {
       dir: documentModelsDirName,
       specifiedPackageName: TEST_PACKAGE_NAME,
       documentModelState: billingStatementDocumentModel,
-      legacy: USE_LEGACY,
+      useTsMorph: USE_TS_MORPH,
       useVersioning: false,
       skipFormat: true,
     });
@@ -87,7 +87,7 @@ describe("document model", () => {
     );
 
     await generateDocumentModel({
-      legacy: USE_LEGACY,
+      useTsMorph: USE_TS_MORPH,
       useVersioning: false,
       dir: documentModelsDirName,
       specifiedPackageName: TEST_PACKAGE_NAME,
@@ -131,7 +131,8 @@ describe("document model", () => {
     {
       timeout: 100000,
     },
-    async () => {
+    async (context) => {
+      await setupTest(context);
       const documentModelsFilePath = path.join(
         documentModelsDirName,
         "document-models.ts",
@@ -168,7 +169,8 @@ describe("document model", () => {
     {
       timeout: 100000,
     },
-    async () => {
+    async (context) => {
+      await setupTest(context);
       await generate();
       await compile(testOutDirPath);
 
@@ -200,7 +202,8 @@ describe("document model", () => {
   it(
     "should generate an updated version of test-doc",
     { timeout: 100000 },
-    async () => {
+    async (context) => {
+      await setupTest(context);
       await generate();
       await compile(testOutDirPath);
 
@@ -228,7 +231,7 @@ describe("document model", () => {
       );
 
       await generateDocumentModel({
-        legacy: USE_LEGACY,
+        useTsMorph: USE_TS_MORPH,
         useVersioning: false,
         dir: documentModelsDirName,
         specifiedPackageName: TEST_PACKAGE_NAME,
@@ -257,7 +260,8 @@ describe("document model", () => {
     {
       timeout: 100000,
     },
-    async () => {
+    async (context) => {
+      await setupTest(context);
       await generate();
 
       await hygenGenerateProcessor(
@@ -279,7 +283,8 @@ describe("document model", () => {
     {
       timeout: 100000,
     },
-    async () => {
+    async (context) => {
+      await setupTest(context);
       await generate();
 
       await hygenGenerateProcessor(
@@ -321,7 +326,8 @@ describe("document model", () => {
     {
       timeout: 100000,
     },
-    async () => {
+    async (context) => {
+      await setupTest(context);
       await generate();
 
       await hygenGenerateProcessor(
@@ -343,7 +349,8 @@ describe("document model", () => {
     {
       timeout: 100000,
     },
-    async () => {
+    async (context) => {
+      await setupTest(context);
       await generate();
 
       await hygenGenerateProcessor(
@@ -383,7 +390,8 @@ describe("document model", () => {
   it(
     "should generate error classes and types from billing statement errors",
     { timeout: 100000 },
-    async () => {
+    async (context) => {
+      await setupTest(context);
       await generate();
       await compile(testOutDirPath);
 
@@ -439,7 +447,8 @@ describe("document model", () => {
   it(
     "should generate error codes for legacy documents with empty error codes",
     { timeout: 100000 },
-    async () => {
+    async (context) => {
+      await setupTest(context);
       await generate();
 
       const testEmptyCodesDocumentModel = await loadDocumentModel(
@@ -451,7 +460,7 @@ describe("document model", () => {
       );
 
       await generateDocumentModel({
-        legacy: USE_LEGACY,
+        useTsMorph: USE_TS_MORPH,
         useVersioning: false,
         dir: documentModelsDirName,
         specifiedPackageName: TEST_PACKAGE_NAME,

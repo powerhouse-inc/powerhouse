@@ -2,7 +2,7 @@ import type { Command } from "commander";
 import type { CommandActionType } from "../types.js";
 
 export const migrate: CommandActionType<
-  [string | string[] | undefined, { tsMorph?: boolean }]
+  [string | string[] | undefined, { useHygen?: boolean }]
 > = async (_, options) => {
   const { migrate: startMigrate } = await import(
     "../services/migrate/migrate.js"
