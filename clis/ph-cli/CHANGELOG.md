@@ -1,3 +1,13 @@
+## 5.1.0-dev.20 (2025-12-12)
+
+### 🚀 Features
+
+- **reactor-browsers:** added onErrors callback to dispatch method ([4824a0a10](https://github.com/powerhouse-inc/powerhouse/commit/4824a0a10))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.1.0-dev.19 (2025-12-12)
 
 ### 🩹 Fixes
