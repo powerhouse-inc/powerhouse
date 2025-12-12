@@ -8,6 +8,15 @@ const eventBus = new EventBus();
 const queue = new InMemoryQueue(eventBus);
 
 let jobCounter = 0;
+const rootSeed = 1337;
+function makeRng(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    state = (1664525 * state + 1013904223) >>> 0;
+    return state / 0xffffffff;
+  };
+}
+const rand = makeRng(rootSeed);
 
 function createMinimalJob(): Job {
   return {
@@ -105,8 +114,7 @@ describe("Queue Profiling Extensions", () => {
       const documentId = `doc-${d}`;
       const payloadOptions = [8, 64, 512, 4096];
       for (let i = 0; i < jobsPerDocument; i++) {
-        const payloadSize =
-          payloadOptions[Math.floor(Math.random() * payloadOptions.length)];
+        const payloadSize = payloadOptions[Math.floor(rand() * payloadOptions.length)];
         await queue.enqueue(
           createJobVariant({ documentId, payloadSize, branch: d % 2 ? "dev" : "main" }),
         );
@@ -189,7 +197,7 @@ describe("Queue Hint DAG Resolution", () => {
   bench("queue hint complex DAG resolution", async () => {
     // Stress dependency resolution with a multi-branch DAG enqueued out of order.
     await resetQueueState();
-    const dagId = `doc-dag-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const dagId = `doc-dag-`;
     const rootDoc = `${dagId}-rootA`;
     const previewRootDoc = `${dagId}-rootB`;
     const rootA = createJobVariant({ documentId: rootDoc, payloadSize: 16 });
@@ -276,7 +284,7 @@ describe("Queue Hint DAG Resolution", () => {
     const breadth = 8;
     const maxJobs = 800;
     let jobCount = 0;
-    const dagPrefix = `doc-dyn-dag-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const dagPrefix = `doc-dyn-dag-`;
 
     function buildNested(
       prefix: string,
