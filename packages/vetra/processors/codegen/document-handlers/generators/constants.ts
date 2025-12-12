@@ -1,2 +1,2 @@
-export const LEGACY = true;
+export const USE_TS_MORPH = true;
 export const USE_VERSIONING = false;

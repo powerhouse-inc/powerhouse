@@ -12,7 +12,7 @@ import type { ProcessorModuleState } from "../../../document-models/processor-mo
 import type { SubgraphModuleState } from "../../../document-models/subgraph-module/index.js";
 import type { VetraPackageState } from "../../../document-models/vetra-package/index.js";
 import {
-  LEGACY,
+  USE_TS_MORPH,
   USE_VERSIONING,
 } from "../document-handlers/generators/constants.js";
 import { CodegenProcessor } from "../index.js";
@@ -141,18 +141,21 @@ describe("CodegenProcessor E2E Tests", () => {
       // Advance timers to trigger debounced generation
       await vi.runAllTimersAsync();
 
-      expect(generateEditor).toHaveBeenCalledWith({
-        name: "Test Editor",
-        documentTypes: [
-          "powerhouse/document-model",
-          "powerhouse/budget-statement",
-        ],
-        config: mockConfig.PH_CONFIG,
-        editorId: "test-editor",
-        legacy: LEGACY,
-      });
+      const generateEditorArgs: Parameters<typeof generateEditor> = [
+        {
+          name: "Test Editor",
+          documentTypes: [
+            "powerhouse/document-model",
+            "powerhouse/budget-statement",
+          ],
+          config: mockConfig.PH_CONFIG,
+          editorId: "test-editor",
+          useTsMorph: USE_TS_MORPH,
+        },
+      ];
+      expect(generateEditor).toHaveBeenCalledWith(...generateEditorArgs);
 
-      expect(generateManifest).toHaveBeenCalledWith(
+      const generateManifestArgs: Parameters<typeof generateManifest> = [
         {
           editors: [
             {
@@ -166,7 +169,9 @@ describe("CodegenProcessor E2E Tests", () => {
           ],
         },
         mockConfig.CURRENT_WORKING_DIR,
-      );
+      ];
+
+      expect(generateManifest).toHaveBeenCalledWith(...generateManifestArgs);
     });
 
     it("should not call codegen functions for invalid document-editor strand (missing name)", async () => {
@@ -267,17 +272,18 @@ describe("CodegenProcessor E2E Tests", () => {
 
       await processor.onStrands([strand]);
       await vi.runAllTimersAsync();
-      const generateFromDocumentArgs: Parameters<
-        typeof generateFromDocument
-      >[0] = {
-        legacy: LEGACY,
-        useVersioning: USE_VERSIONING,
-        documentModelState: validState,
-        config: mockConfig.PH_CONFIG,
-      };
+      const generateFromDocumentArgs: Parameters<typeof generateFromDocument> =
+        [
+          {
+            useTsMorph: USE_TS_MORPH,
+            useVersioning: USE_VERSIONING,
+            documentModelState: validState,
+            config: mockConfig.PH_CONFIG,
+          },
+        ];
 
       expect(generateFromDocument).toHaveBeenCalledWith(
-        generateFromDocumentArgs,
+        ...generateFromDocumentArgs,
       );
 
       expect(generateSubgraphFromDocumentModel).toHaveBeenCalledWith(
@@ -499,14 +505,20 @@ describe("CodegenProcessor E2E Tests", () => {
       await processor.onStrands([strand]);
       await vi.runAllTimersAsync();
 
-      expect(generateDriveEditor).toHaveBeenCalledWith({
-        name: "Test App",
-        config: mockConfig.PH_CONFIG,
-        appId: "test-app",
-        allowedDocumentTypes: "",
-        isDragAndDropEnabled: false,
-        legacy: LEGACY,
-      });
+      const generateDriveEditorArgs: Parameters<typeof generateDriveEditor> = [
+        {
+          name: "Test App",
+          config: mockConfig.PH_CONFIG,
+          appId: "test-app",
+          allowedDocumentTypes: "",
+          isDragAndDropEnabled: false,
+          useTsMorph: USE_TS_MORPH,
+        },
+      ];
+
+      expect(generateDriveEditor).toHaveBeenCalledWith(
+        ...generateDriveEditorArgs,
+      );
 
       expect(generateManifest).toHaveBeenCalledWith(
         {
@@ -553,7 +565,7 @@ describe("CodegenProcessor E2E Tests", () => {
         allowedDocumentTypes:
           "powerhouse/document-model,powerhouse/budget-statement",
         isDragAndDropEnabled: true,
-        legacy: LEGACY,
+        useTsMorph: USE_TS_MORPH,
       });
 
       expect(generateManifest).toHaveBeenCalled();
@@ -758,7 +770,7 @@ describe("CodegenProcessor E2E Tests", () => {
         documentTypes: ["powerhouse/document-model"],
         config: mockConfig.PH_CONFIG,
         editorId: "test-editor",
-        legacy: LEGACY,
+        useTsMorph: USE_TS_MORPH,
       });
 
       expect(generateSubgraph).toHaveBeenCalledWith(
@@ -811,7 +823,7 @@ describe("CodegenProcessor E2E Tests", () => {
         documentTypes: ["powerhouse/document-model"],
         config: mockConfig.PH_CONFIG,
         editorId: "test-editor",
-        legacy: LEGACY,
+        useTsMorph: USE_TS_MORPH,
       });
 
       // Invalid strand should NOT be processed

@@ -32,7 +32,7 @@ import { getDocumentTypesMap, loadDocumentModel } from "./utils.js";
 
 export async function generateAll(args: {
   dir: string;
-  legacy: boolean;
+  useTsMorph: boolean;
   useVersioning: boolean;
   watch?: boolean;
   skipFormat?: boolean;
@@ -41,7 +41,7 @@ export async function generateAll(args: {
 }) {
   const {
     dir,
-    legacy,
+    useTsMorph,
     useVersioning,
     watch = false,
     skipFormat = false,
@@ -72,7 +72,7 @@ export async function generateAll(args: {
         skipFormat,
         verbose,
         force,
-        legacy,
+        useTsMorph,
         useVersioning,
       });
     } catch (error) {
@@ -85,14 +85,14 @@ export async function generateAll(args: {
 
 export async function generate(
   config: PowerhouseConfig,
-  legacy: boolean,
+  useTsMorph: boolean,
   useVersioning: boolean,
 ) {
   const { skipFormat, watch } = config;
   await generateSchemas(config.documentModelsDir, { skipFormat, watch });
   await generateAll({
     dir: config.documentModelsDir,
-    legacy,
+    useTsMorph,
     useVersioning,
     skipFormat,
     watch,
@@ -102,11 +102,11 @@ export async function generate(
 export async function generateFromFile(args: {
   path: string;
   config: PowerhouseConfig;
-  legacy: boolean;
+  useTsMorph: boolean;
   useVersioning: boolean;
   options?: CodegenOptions;
 }) {
-  const { path, config, legacy, useVersioning, options } = args;
+  const { path, config, useTsMorph, useVersioning, options } = args;
   // load document model spec from file
   const documentModelState = await loadDocumentModel(path);
 
@@ -114,7 +114,7 @@ export async function generateFromFile(args: {
   await generateFromDocumentModel({
     documentModelState,
     config,
-    legacy,
+    useTsMorph,
     useVersioning,
     options,
   });
@@ -136,7 +136,7 @@ export async function generateFromFile(args: {
 export async function generateFromDocument(args: {
   documentModelState: DocumentModelGlobalState;
   config: PowerhouseConfig;
-  legacy: boolean;
+  useTsMorph: boolean;
   useVersioning: boolean;
   options?: CodegenOptions;
 }) {
@@ -147,7 +147,7 @@ export async function generateFromDocument(args: {
 type GenerateDocumentModelArgs = {
   dir: string;
   documentModelState: DocumentModelGlobalState;
-  legacy: boolean;
+  useTsMorph: boolean;
   useVersioning: boolean;
   specifiedPackageName?: string;
   watch?: boolean;
@@ -160,7 +160,7 @@ export async function generateDocumentModel(args: GenerateDocumentModelArgs) {
     dir,
     documentModelState,
     specifiedPackageName,
-    legacy,
+    useTsMorph,
     useVersioning,
     ...hygenArgs
   } = args;
@@ -171,7 +171,7 @@ export async function generateDocumentModel(args: GenerateDocumentModelArgs) {
   ensureZodVersionIsSufficient(zodSemverString);
 
   const projectDir = path.dirname(dir);
-  if (legacy) {
+  if (!useTsMorph) {
     await hygenGenerateDocumentModel(
       documentModelState,
       dir,
@@ -246,7 +246,7 @@ type GenerateEditorArgs = {
   name: string;
   documentTypes: string[];
   config: PowerhouseConfig;
-  legacy: boolean;
+  useTsMorph: boolean;
   editorId?: string;
   specifiedPackageName?: string;
   editorDirName?: string;
@@ -256,13 +256,13 @@ export async function generateEditor(args: GenerateEditorArgs) {
     name,
     documentTypes,
     config,
-    legacy,
+    useTsMorph,
     editorId: editorIdArg,
     specifiedPackageName,
     editorDirName,
   } = args;
 
-  if (legacy) {
+  if (!useTsMorph) {
     const pathOrigin = "../../";
 
     const { documentModelsDir, skipFormat } = config;
@@ -322,7 +322,7 @@ export async function generateEditor(args: GenerateEditorArgs) {
 export async function generateDriveEditor(options: {
   name: string;
   config: PowerhouseConfig;
-  legacy: boolean;
+  useTsMorph: boolean;
   appId?: string;
   allowedDocumentTypes?: string;
   isDragAndDropEnabled?: boolean;
@@ -337,7 +337,7 @@ export async function generateDriveEditor(options: {
     isDragAndDropEnabled,
     driveEditorDirName,
     specifiedPackageName,
-    legacy,
+    useTsMorph,
   } = options;
   const dir = config.editorsDir;
 
@@ -348,7 +348,7 @@ export async function generateDriveEditor(options: {
 
   const projectDir = path.dirname(dir);
 
-  if (legacy) {
+  if (!useTsMorph) {
     const {
       name,
       config,
@@ -538,7 +538,7 @@ export function generateManifest(
 async function generateFromDocumentModel(args: {
   documentModelState: DocumentModelGlobalState;
   config: PowerhouseConfig;
-  legacy: boolean;
+  useTsMorph: boolean;
   useVersioning: boolean;
   filePath?: string | null;
   options?: CodegenOptions;
@@ -546,7 +546,7 @@ async function generateFromDocumentModel(args: {
   const {
     documentModelState,
     config,
-    legacy,
+    useTsMorph,
     useVersioning,
     filePath,
     options = {},
@@ -575,7 +575,7 @@ async function generateFromDocumentModel(args: {
     skipFormat: config.skipFormat,
     verbose,
     force,
-    legacy,
+    useTsMorph,
     useVersioning,
   });
 

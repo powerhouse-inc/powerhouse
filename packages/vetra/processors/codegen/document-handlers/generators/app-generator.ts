@@ -4,7 +4,7 @@ import { kebabCase } from "change-case";
 import type { InternalTransmitterUpdate } from "document-drive";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
-import { LEGACY } from "./constants.js";
+import { USE_TS_MORPH } from "./constants.js";
 import { backupDocument } from "./utils.js";
 
 /**
@@ -60,7 +60,7 @@ export class AppGenerator extends BaseDocumentGen {
           appId: appId,
           allowedDocumentTypes: state.allowedDocumentTypes?.join(","),
           isDragAndDropEnabled: state.isDragAndDropEnabled,
-          legacy: LEGACY,
+          useTsMorph: USE_TS_MORPH,
         });
 
         logger.info(

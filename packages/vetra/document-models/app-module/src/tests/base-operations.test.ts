@@ -16,8 +16,16 @@ import {
   setAppName,
   setAppStatus,
   utils,
+  isAppModuleDocument,
+  setDocumentTypes,
+  SetAppNameInputSchema,
+  SetAppStatusInputSchema,
+  AddDocumentTypeInputSchema,
+  RemoveDocumentTypeInputSchema,
+  SetDocumentTypesInputSchema,
 } from "@powerhousedao/vetra/document-models/app-module";
 import { beforeEach, describe, expect, it } from "vitest";
+import { generateMock } from "@powerhousedao/codegen";
 
 describe("BaseOperations Operations", () => {
   let document: AppModuleDocument;
@@ -352,5 +360,90 @@ describe("BaseOperations Operations", () => {
         "powerhouse/b",
       );
     });
+  });
+
+  it("should handle setAppName operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(SetAppNameInputSchema());
+
+    const updatedDocument = reducer(document, setAppName(input));
+
+    expect(isAppModuleDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "SET_APP_NAME",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+
+  it("should handle setAppStatus operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(SetAppStatusInputSchema());
+
+    const updatedDocument = reducer(document, setAppStatus(input));
+
+    expect(isAppModuleDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "SET_APP_STATUS",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+
+  it("should handle addDocumentType operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(AddDocumentTypeInputSchema());
+
+    const updatedDocument = reducer(document, addDocumentType(input));
+
+    expect(isAppModuleDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "ADD_DOCUMENT_TYPE",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+
+  it("should handle removeDocumentType operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(RemoveDocumentTypeInputSchema());
+
+    const updatedDocument = reducer(document, removeDocumentType(input));
+
+    expect(isAppModuleDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "REMOVE_DOCUMENT_TYPE",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+
+  it("should handle setDocumentTypes operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(SetDocumentTypesInputSchema());
+
+    const updatedDocument = reducer(document, setDocumentTypes(input));
+
+    expect(isAppModuleDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "SET_DOCUMENT_TYPES",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
 });

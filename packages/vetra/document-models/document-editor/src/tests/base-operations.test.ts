@@ -16,8 +16,14 @@ import {
   setEditorName,
   setEditorStatus,
   utils,
+  isDocumentEditorDocument,
+  SetEditorNameInputSchema,
+  AddDocumentTypeInputSchema,
+  RemoveDocumentTypeInputSchema,
+  SetEditorStatusInputSchema,
 } from "@powerhousedao/vetra/document-models/document-editor";
 import { beforeEach, describe, expect, it } from "vitest";
+import { generateMock } from "@powerhousedao/codegen";
 
 describe("BaseOperations Operations", () => {
   let document: DocumentEditorDocument;
@@ -258,5 +264,73 @@ describe("BaseOperations Operations", () => {
       ).toBeUndefined();
       expect(updatedDoc.operations.global).toHaveLength(2);
     });
+  });
+
+  it("should handle setEditorName operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(SetEditorNameInputSchema());
+
+    const updatedDocument = reducer(document, setEditorName(input));
+
+    expect(isDocumentEditorDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "SET_EDITOR_NAME",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+
+  it("should handle addDocumentType operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(AddDocumentTypeInputSchema());
+
+    const updatedDocument = reducer(document, addDocumentType(input));
+
+    expect(isDocumentEditorDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "ADD_DOCUMENT_TYPE",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+
+  it("should handle removeDocumentType operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(RemoveDocumentTypeInputSchema());
+
+    const updatedDocument = reducer(document, removeDocumentType(input));
+
+    expect(isDocumentEditorDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "REMOVE_DOCUMENT_TYPE",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+
+  it("should handle setEditorStatus operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(SetEditorStatusInputSchema());
+
+    const updatedDocument = reducer(document, setEditorStatus(input));
+
+    expect(isDocumentEditorDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "SET_EDITOR_STATUS",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
 });

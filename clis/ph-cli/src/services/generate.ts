@@ -36,7 +36,7 @@ export type GenerateOptions = {
   driveEditorDirName?: string;
   migrationFile?: string;
   schemaFile?: string;
-  tsMorph?: boolean;
+  useHygen?: boolean;
   useVersioning?: boolean;
 };
 
@@ -46,7 +46,7 @@ export async function startGenerate(
 ) {
   const baseConfig = getConfig();
   const useVersioning = !!options.useVersioning;
-  const legacy = useVersioning || !options.tsMorph;
+  const useTsMorph = useVersioning || !options.useHygen;
   const config = {
     ...baseConfig,
     ...{
@@ -58,7 +58,7 @@ export async function startGenerate(
       ...(options.skipFormat && { skipFormat: options.skipFormat }),
       ...(options.interactive && { interactive: options.interactive }),
       ...(options.watch && { watch: options.watch }),
-      legacy,
+      useTsMorph,
       useVersioning,
     },
   };
@@ -85,7 +85,7 @@ export async function startGenerate(
     isDragAndDropEnabled: options.isDragAndDropEnabled,
     migrationFile: options.migrationFile,
     schemaFile: options.schemaFile,
-    legacy,
+    useTsMorph,
     useVersioning,
   };
 
@@ -100,7 +100,7 @@ export async function startGenerate(
       allowedDocumentTypes: command.allowedDocumentTypes,
       isDragAndDropEnabled: command.isDragAndDropEnabled,
       driveEditorDirName: command.driveEditorDirName,
-      legacy,
+      useTsMorph,
     });
   } else if (command.editor) {
     if (!command.editorName) {
@@ -113,7 +113,7 @@ export async function startGenerate(
       editorId: command.editorId,
       specifiedPackageName: command.specifiedPackageName,
       editorDirName: command.editorDirName,
-      legacy,
+      useTsMorph,
     });
   } else if (command.processor && options.processor) {
     const processorType =
@@ -138,11 +138,11 @@ export async function startGenerate(
     await generateFromFile({
       path: filePath,
       config,
-      legacy,
+      useTsMorph,
       options,
       useVersioning,
     });
   } else {
-    await generateCode(config, legacy, useVersioning);
+    await generateCode(config, useTsMorph, useVersioning);
   }
 }

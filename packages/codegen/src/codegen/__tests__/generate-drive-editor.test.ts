@@ -10,7 +10,7 @@ import {
   it,
   type TestContext,
 } from "vitest";
-import { USE_LEGACY } from "./config.js";
+import { USE_TS_MORPH } from "./config.js";
 import {
   EDITORS_TEST_PROJECT,
   EDITORS_TEST_PROJECT_WITH_EXISTING_EDITOR,
@@ -77,7 +77,7 @@ describe("generateDriveEditor", () => {
         config,
         appId: "AtlasDriveExplorer",
         allowedDocumentTypes: "powerhouse/test-doc",
-        legacy: USE_LEGACY,
+        useTsMorph: USE_TS_MORPH,
       });
 
       const editorsDir = path.join(testOutDirPath, "editors");
@@ -196,7 +196,7 @@ describe("generateDriveEditor", () => {
         getTestDataDir(testDir, EDITORS_TEST_PROJECT_WITH_EXISTING_EDITOR),
       );
       const name = "TestApp";
-      await generateDriveEditor({ name, config, legacy: USE_LEGACY }); // No appId provided
+      await generateDriveEditor({ name, config, useTsMorph: USE_TS_MORPH }); // No appId provided
 
       const editorsDir = path.join(testOutDirPath, "editors");
       const editorDir = path.join(editorsDir, "test-app");
@@ -225,7 +225,7 @@ describe("generateDriveEditor", () => {
         config,
         appId: "AtlasDriveExplorer",
         allowedDocumentTypes: "powerhouse/test-doc",
-        legacy: USE_LEGACY,
+        useTsMorph: USE_TS_MORPH,
       });
 
       const editorsDir = path.join(testOutDirPath, "editors");
@@ -247,7 +247,7 @@ describe("generateDriveEditor", () => {
       const editorsDir = path.join(testOutDirPath, "editors");
       const editorsFilePath = path.join(editorsDir, "editors.ts");
       rmSync(editorsFilePath, { force: true });
-      await generateDriveEditor({ name, config, legacy: USE_LEGACY });
+      await generateDriveEditor({ name, config, useTsMorph: USE_TS_MORPH });
       await compile(testOutDirPath);
       const editorsContent = fs.readFileSync(editorsFilePath, "utf-8");
       expect(editorsContent).toContain(`export const editors: EditorModule[]`);
