@@ -1,3 +1,7 @@
+import {
+  formatSourceFileWithPrettier,
+  getOrCreateSourceFile,
+} from "@powerhousedao/codegen/ts-morph";
 import { paramCase } from "change-case";
 import type { DocumentModelGlobalState } from "document-model";
 import { writeFileSync } from "fs";
@@ -10,10 +14,6 @@ import {
   documentModelModulesVariableType,
   documentModelModuleTypeName,
 } from "../constants.js";
-import {
-  formatSourceFileWithPrettier,
-  getOrCreateSourceFile,
-} from "../file-utils.js";
 import { getDocumentModelFilePaths } from "../name-builders/get-file-paths.js";
 import {
   getDocumentModelDirName,

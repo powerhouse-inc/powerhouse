@@ -8,10 +8,3 @@ export function buildDocumentModelsSourceFilesPath(projectDir: string) {
   const documentModelsDirPath = buildDocumentModelsDirPath(projectDir);
   return path.join(documentModelsDirPath, "/**/*");
 }
-
-export function buildDocumentModelImportPath(
-  packageName: string,
-  documentModelDirName: string,
-) {
-  return path.join(packageName, "document-models", documentModelDirName);
-}

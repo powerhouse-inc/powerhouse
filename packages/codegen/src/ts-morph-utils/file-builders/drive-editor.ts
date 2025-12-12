@@ -1,32 +1,30 @@
-import { tsx } from "@tmpl/core";
-import path from "path";
-import { VariableDeclarationKind, type Project } from "ts-morph";
-import {
-  buildNodePrinter,
-  formatSourceFileWithPrettier,
-  getOrCreateSourceFile,
-} from "../file-utils.js";
-import {
-  getDocumentModelFilePaths,
-  getEditorFilePaths,
-} from "../name-builders/get-file-paths.js";
 import {
   buildArrayLiteralWithStringElements,
   buildClassNameAttribute,
   buildFunctionCall,
   buildJsxElement,
   buildJsxSpreadAttribute,
+  buildNodePrinter,
   buildReturn,
   buildSelfClosingJsxElement,
-} from "../syntax-builders.js";
-import { getObjectLiteral } from "../syntax-getters.js";
+  buildTsMorphProject,
+  formatSourceFileWithPrettier,
+  getObjectLiteral,
+  getOrCreateSourceFile,
+} from "@powerhousedao/codegen/ts-morph";
+import { tsx } from "@tmpl/core";
+import path from "path";
+import { VariableDeclarationKind, type Project } from "ts-morph";
+import {
+  getDocumentModelFilePaths,
+  getEditorFilePaths,
+} from "../name-builders/get-file-paths.js";
 import {
   createDocumentFileTemplate,
   driveExplorerFileTemplate,
   emptyStateFileTemplate,
   folderTreeFileTemplate,
 } from "../templates/drive-editor.js";
-import { buildTsMorphProject } from "../ts-morph-project.js";
 import { makeEditorModuleFile } from "./document-editor.js";
 import { makeEditorsModulesFile } from "./editor-common.js";
 import type { CommonGenerateEditorArgs } from "./types.js";

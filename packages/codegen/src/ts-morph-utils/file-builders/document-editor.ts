@@ -1,17 +1,3 @@
-import { pascalCase } from "change-case";
-import type { Project } from "ts-morph";
-import { SyntaxKind, VariableDeclarationKind } from "ts-morph";
-import {
-  buildNodePrinter,
-  formatSourceFileWithPrettier,
-  getDocumentTypeMetadata,
-  getOrCreateSourceFile,
-} from "../file-utils.js";
-import {
-  getDocumentModelFilePaths,
-  getEditorFilePaths,
-} from "../name-builders/get-file-paths.js";
-import { getEditorVariableNames } from "../name-builders/get-variable-names.js";
 import {
   buildArrowFunction,
   buildClassNameAttribute,
@@ -26,6 +12,7 @@ import {
   buildJsxStringValueAttribute,
   buildJsxText,
   buildMethodInvocation,
+  buildNodePrinter,
   buildNull,
   buildObjectPropertyAccess,
   buildReturn,
@@ -35,8 +22,20 @@ import {
   buildStringLiteral,
   buildTrue,
   buildType,
-} from "../syntax-builders.js";
-import { getObjectLiteral, getObjectProperty } from "../syntax-getters.js";
+  formatSourceFileWithPrettier,
+  getDocumentTypeMetadata,
+  getObjectLiteral,
+  getObjectProperty,
+  getOrCreateSourceFile,
+} from "@powerhousedao/codegen/ts-morph";
+import { pascalCase } from "change-case";
+import type { Project } from "ts-morph";
+import { SyntaxKind, VariableDeclarationKind } from "ts-morph";
+import {
+  getDocumentModelFilePaths,
+  getEditorFilePaths,
+} from "../name-builders/get-file-paths.js";
+import { getEditorVariableNames } from "../name-builders/get-variable-names.js";
 import { buildTsMorphProject } from "../ts-morph-project.js";
 import type { EditorFilePaths, EditorVariableNames } from "../types.js";
 import { makeEditorsModulesFile } from "./editor-common.js";

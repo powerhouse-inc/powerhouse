@@ -1,8 +1,8 @@
-import path from "path";
 import {
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
-} from "../../file-utils.js";
+} from "@powerhousedao/codegen/ts-morph";
+import path from "path";
 import { documentModelRootActionsFileTemplate } from "../../templates/document-model/actions.js";
 import { documentModelHooksFileTemplate } from "../../templates/document-model/hooks.js";
 import { documentModelIndexTemplate } from "../../templates/document-model/index.js";

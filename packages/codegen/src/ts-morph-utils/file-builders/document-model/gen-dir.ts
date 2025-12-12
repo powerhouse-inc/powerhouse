@@ -1,11 +1,11 @@
-import { paramCase, pascalCase } from "change-case";
-import path from "path";
-import { VariableDeclarationKind } from "ts-morph";
 import {
   buildNodePrinter,
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
-} from "../../file-utils.js";
+} from "@powerhousedao/codegen/ts-morph";
+import { paramCase, pascalCase } from "change-case";
+import path from "path";
+import { VariableDeclarationKind } from "ts-morph";
 import { getDocumentModelOperationsModuleVariableNames } from "../../name-builders/get-variable-names.js";
 import type { DocumentModelTemplateInputsWithModule } from "../../name-builders/types.js";
 import { buildObjectLiteral } from "../../syntax-builders.js";

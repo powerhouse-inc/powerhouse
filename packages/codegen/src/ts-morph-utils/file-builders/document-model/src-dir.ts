@@ -1,15 +1,15 @@
+import {
+  formatSourceFileWithPrettier,
+  getObjectLiteral,
+  getOrCreateSourceFile,
+} from "@powerhousedao/codegen/ts-morph";
 import { ts } from "@tmpl/core";
 import { camelCase, paramCase, pascalCase } from "change-case";
 import type { ModuleSpecification } from "document-model";
 import path from "path";
 import type { Project } from "ts-morph";
 import { SyntaxKind, VariableDeclarationKind } from "ts-morph";
-import {
-  formatSourceFileWithPrettier,
-  getOrCreateSourceFile,
-} from "../../file-utils.js";
 import { getDocumentModelOperationsModuleVariableNames } from "../../name-builders/get-variable-names.js";
-import { getObjectLiteral } from "../../syntax-getters.js";
 import { documentModelSrcIndexFileTemplate } from "../../templates/document-model/src/index.js";
 import { documentModelTestFileTemplate } from "../../templates/document-model/src/tests/document-model.test.js";
 import {

@@ -2,7 +2,6 @@ import { pascalCase } from "change-case";
 import type { Project } from "ts-morph";
 import { SyntaxKind, VariableDeclarationKind } from "ts-morph";
 import { buildModulesOutputFilePath } from "../name-builders/common-files.js";
-import { getVariableDeclarationByTypeName } from "../syntax-getters.js";
 import { makeLegacyIndexFile } from "./index-files.js";
 
 type MakeModuleFileArgs = {
@@ -48,25 +47,26 @@ export function makeModulesFile({
     .filter((file) => file.getFilePath().includes(`module.ts`));
 
   // get the variable declaration for the module object exported by each module.ts file by the given type name
-  const moduleDeclarations = moduleFiles.map((file) =>
-    getVariableDeclarationByTypeName(file, typeName),
-  );
+  const moduleDeclarations = moduleFiles
+    .map((file) =>
+      file.getVariableDeclaration((declaration) =>
+        declaration.getType().getText().includes(typeName),
+      ),
+    )
+    .filter((v) => v !== undefined);
 
-  const modules = moduleDeclarations
-    .filter((module) => module !== undefined)
-    .map((module) => {
-      const sourceFile = module.getSourceFile();
-      const moduleSpecifier =
-        modulesDir.getRelativePathAsModuleSpecifierTo(
-          sourceFile.getFilePath(),
-        ) + ".js";
-      const versionDir = getVersionDirFromModuleSpecifier(moduleSpecifier);
-      const unversionedName = module.getName();
-      const versionedName = versionDir
-        ? `${unversionedName}${pascalCase(versionDir)}`
-        : undefined;
-      return { versionedName, unversionedName, moduleSpecifier };
-    });
+  const modules = moduleDeclarations.map((module) => {
+    const sourceFile = module.getSourceFile();
+    const moduleSpecifier =
+      modulesDir.getRelativePathAsModuleSpecifierTo(sourceFile.getFilePath()) +
+      ".js";
+    const versionDir = getVersionDirFromModuleSpecifier(moduleSpecifier);
+    const unversionedName = module.getName();
+    const versionedName = versionDir
+      ? `${unversionedName}${pascalCase(versionDir)}`
+      : undefined;
+    return { versionedName, unversionedName, moduleSpecifier };
+  });
 
   const moduleExportsFilePath = buildModulesOutputFilePath(
     modulesDirPath,

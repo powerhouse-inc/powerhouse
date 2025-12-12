@@ -18,7 +18,3 @@ export function buildModulesOutputFilePath(
 ) {
   return path.join(modulesDirPath, outputFileName);
 }
-
-export function buildTsConfigFilePath(projectDir: string) {
-  return path.join(projectDir, "tsconfig.json");
-}
