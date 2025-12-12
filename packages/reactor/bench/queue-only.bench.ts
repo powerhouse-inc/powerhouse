@@ -49,3 +49,47 @@ describe("Queue Only Operations", () => {
     await queue.totalSize();
   });
 });
+
+async function resetQueueState() {
+  await queue.clearAll();
+  jobCounter = 0;
+}
+
+function createJobVariant({
+  documentId = "doc1",
+  scope = "default",
+  branch = "main",
+  actionType = "CREATE",
+  payloadSize = 8,
+  queueHint = [],
+}: {
+  documentId?: string;
+  scope?: string;
+  branch?: string;
+  actionType?: string;
+  payloadSize?: number;
+  queueHint?: string[];
+}): Job {
+  const jobId = `job-${++jobCounter}`;
+  return {
+    id: jobId,
+    kind: "mutation",
+    documentId,
+    scope,
+    branch,
+    actions: [
+      {
+        id: `action-${jobCounter}`,
+        type: actionType,
+        timestampUtcMs: "2023-01-01T00:00:00.000Z",
+        input: { data: "x".repeat(payloadSize) },
+        scope,
+      },
+    ],
+    operations: [],
+    maxRetries: 0,
+    createdAt: "2023-01-01T00:00:00.000Z",
+    queueHint,
+    errorHistory: [],
+  };
+}
