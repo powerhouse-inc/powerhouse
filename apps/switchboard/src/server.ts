@@ -245,6 +245,7 @@ async function initServer(
         options.configFile ??
         path.join(process.cwd(), "powerhouse.config.json"),
       mcp: options.mcp ?? true,
+      enableDocumentModelSubgraphs: options.enableDocumentModelSubgraphs,
     },
   );
 
@@ -303,8 +304,19 @@ export const startSwitchboard = async (
   const serverPort = options.port ?? DEFAULT_PORT;
 
   // Initialize feature flags
-  await initFeatureFlags();
+  const featureFlags = await initFeatureFlags();
 
+  const enableDocumentModelSubgraphs = await featureFlags.getBooleanValue(
+    "ENABLE_DOCUMENT_MODEL_SUBGRAPHS",
+    options.enableDocumentModelSubgraphs ?? false,
+  );
+
+  console.log(
+    "Feature flag ENABLE_DOCUMENT_MODEL_SUBGRAPHS:",
+    process.env.enableDocumentModelSubgraphs,
+  );
+  options.enableDocumentModelSubgraphs = enableDocumentModelSubgraphs;
+  console.log("enableDocumentModelSubgraphs:", enableDocumentModelSubgraphs);
   options.reactorOptions = {
     enableDualActionCreate: true,
   };
@@ -340,9 +352,9 @@ export const startSwitchboard = async (
   }
 };
 
-export * from "./types.js";
 export {
+  getBearerToken,
   getConnectCrypto,
   getConnectDid,
-  getBearerToken,
 } from "./connect-crypto.js";
+export * from "./types.js";
