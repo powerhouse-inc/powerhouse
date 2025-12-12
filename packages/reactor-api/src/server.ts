@@ -337,6 +337,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     ADMINS,
     FREE_ENTRY,
     DOCUMENT_PERMISSIONS_ENABLED,
+    SKIP_CREDENTIAL_VERIFICATION,
   } = process.env;
   if (AUTH_ENABLED !== undefined) {
     authEnabled = AUTH_ENABLED === "true";
@@ -354,12 +355,18 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     freeEntry = FREE_ENTRY === "true";
   }
 
+  let skipCredentialVerification = false;
+  if (SKIP_CREDENTIAL_VERIFICATION !== undefined) {
+    skipCredentialVerification = SKIP_CREDENTIAL_VERIFICATION === "true";
+  }
+
   const authService = new AuthService({
     enabled: authEnabled,
     guests,
     users,
     admins,
     freeEntry,
+    skipCredentialVerification,
   });
 
   // Health check endpoint (before auth middleware)

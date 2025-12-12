@@ -8,6 +8,7 @@ export interface AuthConfig {
   admins: string[];
   freeEntry: boolean;
   cacheTtl?: number; // Cache TTL in milliseconds, defaults to 10 seconds
+  skipCredentialVerification?: boolean; // Skip Renown API credential verification (useful for testing)
 }
 
 export interface User {
@@ -89,23 +90,27 @@ export class AuthService {
       }
 
       // Verify that the credentials still exist on the Renown API
-      const credentialExists = await this.verifyCredentialExists(
-        user.address,
-        user.chainId,
-        verified.issuer,
-      );
-      if (!credentialExists) {
-        res.status(401).json({ error: "Credentials no longer valid" });
-        return;
+      // This can be skipped via config (useful for testing or when Renown API is unavailable)
+      if (!this.config.skipCredentialVerification) {
+        const credentialExists = await this.verifyCredentialExists(
+          user.address,
+          user.chainId,
+          verified.issuer,
+        );
+        if (!credentialExists) {
+          res.status(401).json({ error: "Credentials no longer valid" });
+          return;
+        }
       }
 
       req.user = user;
 
-      // Check if user is in allowed lists
-      if (!this.isUserAllowed(user.address)) {
-        res.status(403).json({ error: "Forbidden" });
-        return;
-      }
+      // Note: We no longer block users here based on global allowed lists.
+      // The resolver layer handles authorization based on:
+      // 1. Global roles (admin/user/guest) for unrestricted access
+      // 2. Document-level permissions (direct or via groups) for specific documents
+      // This allows users who have document-specific permissions (e.g., via groups)
+      // to access those documents even if they're not in the global allowed lists.
 
       next();
     } catch {
@@ -150,18 +155,21 @@ export class AuthService {
       throw new Error("Invalid credentials");
     }
 
-    const credentialExists = await this.verifyCredentialExists(
-      user.address,
-      user.chainId,
-      verified.issuer,
-    );
-    if (!credentialExists) {
-      throw new Error("Credentials no longer valid");
+    // Verify that the credentials still exist on the Renown API
+    // This can be skipped via config (useful for testing or when Renown API is unavailable)
+    if (!this.config.skipCredentialVerification) {
+      const credentialExists = await this.verifyCredentialExists(
+        user.address,
+        user.chainId,
+        verified.issuer,
+      );
+      if (!credentialExists) {
+        throw new Error("Credentials no longer valid");
+      }
     }
 
-    if (!this.isUserAllowed(user.address)) {
-      throw new Error("User not authorized");
-    }
+    // Note: We no longer block based on global allowed lists.
+    // Authorization is handled at the resolver level based on document permissions.
 
     return user;
   }
