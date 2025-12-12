@@ -18,6 +18,10 @@ dispatch(myAction, (errors) => {
 });
 ```
 
+### **Document Model Subgraphs**
+
+Document model subgraphs are now available automatically on Switchboard. You should delete the generated subgraphs from your project to avoid conflicts.
+
 ## **v5.1.0**
 
 ## 🚀 **v5.0.0**

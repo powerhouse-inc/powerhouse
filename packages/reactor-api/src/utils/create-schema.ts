@@ -5,9 +5,9 @@ import type {
 } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
 import { typeDefs as scalarsTypeDefs } from "@powerhousedao/document-engineering/graphql";
 import type { Context } from "@powerhousedao/reactor-api";
-import { pascalCase } from "change-case";
+import { camelCase, pascalCase } from "change-case";
 import { childLogger, type IDocumentDriveServer } from "document-drive";
-import type { DocumentModelPHState } from "document-model";
+import type { DocumentModelGlobalState } from "document-model";
 import { type DocumentNode, Kind, print } from "graphql";
 import { gql } from "graphql-tag";
 import { GraphQLJSONObject } from "graphql-type-json";
@@ -51,13 +51,13 @@ export const createSchema = (
 };
 
 export function getDocumentModelSchemaName(
-  documentModel: DocumentModelPHState,
+  documentModel: DocumentModelGlobalState,
 ) {
-  return pascalCase(documentModel.global.name.replaceAll("/", " "));
+  return pascalCase(documentModel.name.replaceAll("/", " "));
 }
 
 export const getDocumentModelTypeDefs = (
-  documentDriveServer: IDocumentDriveServer,
+  documentDriveServer: Pick<IDocumentDriveServer, "getDocumentModelModules">,
   typeDefs: DocumentNode,
 ) => {
   const documentModels = documentDriveServer.getDocumentModelModules();
@@ -65,7 +65,7 @@ export const getDocumentModelTypeDefs = (
 
   const addedDocumentModels = new Set<string>();
   documentModels.forEach(({ documentModel }) => {
-    const dmSchemaName = getDocumentModelSchemaName(documentModel);
+    const dmSchemaName = getDocumentModelSchemaName(documentModel.global);
     if (addedDocumentModels.has(dmSchemaName)) {
       logger.debug(
         `Skipping document model with duplicate name: ${dmSchemaName}`,
@@ -231,3 +231,144 @@ export const getDocumentModelTypeDefs = (
 
   return schema;
 };
+
+/**
+ * Extract type names from a GraphQL schema.
+ * @param {string} schema - GraphQL schema string
+ * @returns {string[]} Array of type names
+ */
+function extractTypeNames(schema: string) {
+  const found = schema.match(/(type|enum|union|interface|input)\s+(\w+)\s/g);
+  if (!found) return [];
+  return found.map((f) =>
+    f
+      .replaceAll("type ", "")
+      .replaceAll("enum ", "")
+      .replaceAll("union ", "")
+      .replaceAll("interface ", "")
+      .replaceAll("input ", "")
+      .trim(),
+  );
+}
+
+/**
+ * Apply type prefixes to GraphQL schema to namespace types and avoid collisions.
+ * Inlined from @powerhousedao/common/utils to avoid ES module import issues.
+ * @param {string} schema - GraphQL schema string
+ * @param {string} prefix - Prefix to apply to type names
+ * @param {string[]} externalTypeNames - Type names from other schemas to also prefix
+ * @returns {string} Schema with prefixed types
+ */
+function applyGraphQLTypePrefixes(
+  schema: string,
+  prefix: string,
+  externalTypeNames: string[] = [],
+): string {
+  if (!schema || !schema.trim()) {
+    return schema;
+  }
+
+  let processedSchema = schema;
+
+  // Find types defined in this schema
+  const localTypeNames = extractTypeNames(schema);
+
+  // Combine with external type names (remove duplicates)
+  const allTypeNames = [...new Set([...localTypeNames, ...externalTypeNames])];
+
+  if (allTypeNames.length === 0) {
+    return schema;
+  }
+
+  allTypeNames.forEach((typeName) => {
+    const typeRegex = new RegExp(
+      // Match type references in various GraphQL contexts
+      `(?<![_A-Za-z0-9])(${typeName})(?![_A-Za-z0-9])|` +
+        `\\[(${typeName})\\]|` +
+        `\\[(${typeName})!\\]|` +
+        `\\[(${typeName})\\]!|` +
+        `\\[(${typeName})!\\]!`,
+      "g",
+    );
+
+    processedSchema = processedSchema.replace(
+      typeRegex,
+      (match, p1, p2, p3, p4, p5) => {
+        if (match.startsWith("[")) {
+          return match.replace(
+            (p2 || p3 || p4 || p5) as string,
+            `${prefix}_${p2 || p3 || p4 || p5}`,
+          );
+        }
+        // Basic type reference
+        return `${prefix}_${p1}`;
+      },
+    );
+  });
+
+  return processedSchema;
+}
+
+export function generateDocumentModelSchemaLegacy(
+  documentModel: DocumentModelGlobalState,
+): DocumentNode {
+  const specification = documentModel.specifications.at(-1);
+  const documentName = getDocumentModelSchemaName(documentModel);
+  const stateSchema = specification?.state.global.schema;
+  const stateTypeNames = extractTypeNames(stateSchema ?? "");
+
+  return gql`
+    """
+    Queries: ${documentName} Document
+    """
+
+    type ${documentName}Queries {
+        getDocument(docId: PHID!, driveId: PHID): ${documentName}
+        getDocuments(driveId: String!): [${documentName}!]
+    }
+
+    type Query {
+        ${documentName}: ${documentName}Queries
+    }
+
+    """
+    Mutations: ${documentName}
+    """
+    type Mutation {
+        ${documentName}_createDocument(name:String!, driveId:String): String
+
+        ${
+          specification?.modules
+            .flatMap((module) =>
+              module.operations
+                .filter((op) => op.name)
+                .map(
+                  (op) =>
+                    `${documentName}_${camelCase(op.name!)}(
+            driveId: String, docId: PHID, input: ${documentName}_${pascalCase(op.name!)}Input): Int`,
+                ),
+            )
+            .join("\n        ") ?? ""
+        }
+    }
+ 
+    ${
+      specification?.modules
+        .map(
+          (module) =>
+            `"""
+       Module: ${pascalCase(module.name)}
+       """
+       ${module.operations
+         .map((op) =>
+           applyGraphQLTypePrefixes(
+             op.schema ?? "",
+             documentName,
+             stateTypeNames,
+           ),
+         )
+         .join("\n  ")}`,
+        )
+        .join("\n") ?? ""
+    }`;
+}
