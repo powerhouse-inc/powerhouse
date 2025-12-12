@@ -105,7 +105,13 @@ Returns the child nodes for the selected drive or folder.
 
 ### `useDocumentById`
 
-Returns a document by id.
+Returns a document by id along with a dispatch function.
+
+**Returns:** A tuple `[document, dispatch]` where:
+- `document`: The document if found, or undefined
+- `dispatch(action, onErrors?)`: A function to dispatch actions to the document
+  - `action`: The action or actions to dispatch
+  - `onErrors`: Optional callback invoked with any errors that occurred during action execution
 
 ### `useDocumentsByIds`
 
@@ -327,11 +333,23 @@ Returns the selected document id.
 
 ### `useSelectedDocument`
 
-Returns the selected document.
+Returns the selected document along with a dispatch function.
+
+**Returns:** A tuple `[document, dispatch]` where:
+- `document`: The selected document
+- `dispatch(action, onErrors?)`: A function to dispatch actions to the document
+  - `action`: The action or actions to dispatch
+  - `onErrors`: Optional callback invoked with any errors that occurred during action execution
 
 ### `useSelectedDocumentOfType`
 
-Returns the selected document of a specific type, throws an error if the found document has a different type.
+Returns the selected document of a specific type along with a dispatch function. Throws an error if the found document has a different type.
+
+**Returns:** A tuple `[document, dispatch]` where:
+- `document`: The selected document of the specified type
+- `dispatch(action, onErrors?)`: A function to dispatch actions to the document
+  - `action`: The action or actions to dispatch
+  - `onErrors`: Optional callback invoked with any errors that occurred during action execution
 
 ---
 
