@@ -1,11 +1,5 @@
 import type { Command } from "commander";
 import { accessTokenHelp } from "../help.js";
-import {
-  getConnectCrypto,
-  getConnectDid,
-  isAuthenticated,
-  loadCredentials,
-} from "../services/auth.js";
 import type { CommandActionType } from "../types.js";
 import { setCustomHelp } from "../utils.js";
 
@@ -63,6 +57,9 @@ function parseExpiry(expiry: string): number {
 export const accessToken: CommandActionType<[AccessTokenOptions]> = async (
   options,
 ) => {
+  const { getConnectCrypto, getConnectDid, isAuthenticated, loadCredentials } =
+    await import("../services/auth.js");
+
   // Require Renown authentication - user must have done 'ph login'
   if (!isAuthenticated()) {
     console.error(
