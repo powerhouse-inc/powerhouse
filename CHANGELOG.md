@@ -1,3 +1,13 @@
+## 5.1.0-dev.21 (2025-12-13)
+
+### 🚀 Features
+
+- **codegen,vetra:** use ts morph codegen by default ([#2135](https://github.com/powerhouse-inc/powerhouse/pull/2135))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 5.1.0-dev.20 (2025-12-12)
 
 ### 🚀 Features

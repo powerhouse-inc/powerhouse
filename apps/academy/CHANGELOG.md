@@ -1,3 +1,7 @@
+## 5.1.0-dev.21 (2025-12-13)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
 ## 5.1.0-dev.20 (2025-12-12)
 
 ### 🚀 Features
