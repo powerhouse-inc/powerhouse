@@ -577,8 +577,4 @@ async function generateFromDocumentModel(args: {
     useTsMorph,
     useVersioning,
   });
-
-  await generateSubgraphFromDocumentModel(name, documentModelState, config, {
-    verbose,
-  });
 }
