@@ -10,6 +10,7 @@ import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../../../src/cache/write-cache-types.js";
+import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
 import { Reactor } from "../../../src/core/reactor.js";
 import { EventBus } from "../../../src/events/event-bus.js";
 import type { IEventBus } from "../../../src/events/interfaces.js";
@@ -113,10 +114,19 @@ describe("Legacy Write -> Read", () => {
         hasMore: false,
       }),
     };
+    const mockWriteCache: IWriteCache = {
+      getState: vi.fn().mockResolvedValue({}),
+      putState: vi.fn(),
+      invalidate: vi.fn().mockReturnValue(0),
+      clear: vi.fn(),
+      startup: vi.fn().mockResolvedValue(undefined),
+      shutdown: vi.fn().mockResolvedValue(undefined),
+    };
     const documentView = new KyselyDocumentView(
       db,
       operationStore,
       mockOperationIndex,
+      mockWriteCache,
       consistencyTracker,
     );
     await documentView.init();

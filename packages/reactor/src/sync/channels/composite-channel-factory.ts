@@ -3,7 +3,6 @@ import type { IChannel, IChannelFactory } from "../interfaces.js";
 import type { ChannelConfig, RemoteFilter } from "../types.js";
 import { GqlChannel, type GqlChannelConfig } from "./gql-channel.js";
 import { InternalChannel } from "./internal-channel.js";
-import type { SyncEnvelope } from "../types.js";
 
 /**
  * Factory for creating channel instances of multiple types.
@@ -123,7 +122,7 @@ export class CompositeChannelFactory implements IChannelFactory {
     remoteName: string,
     cursorStorage: ISyncCursorStorage,
   ): InternalChannel {
-    const noopSend = (_envelope: SyncEnvelope): void => {
+    const noopSend = (): void => {
       // Internal channels created via touchChannel are receive-only
     };
 

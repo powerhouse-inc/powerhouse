@@ -12,10 +12,11 @@ import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { describe, it } from "vitest";
+import { describe, it, vi } from "vitest";
 import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
 import { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../../../src/cache/write-cache-types.js";
+import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
 import { Reactor } from "../../../src/core/reactor.js";
 import { EventBus } from "../../../src/events/event-bus.js";
 import { SimpleJobExecutorManager } from "../../../src/executor/simple-job-executor-manager.js";
@@ -133,11 +134,21 @@ async function createReactorSetup(
   let documentView: KyselyDocumentView | undefined;
   let documentIndexer: KyselyDocumentIndexer | undefined;
 
+  const mockWriteCache: IWriteCache = {
+    getState: vi.fn().mockResolvedValue({}),
+    putState: vi.fn(),
+    invalidate: vi.fn().mockReturnValue(0),
+    clear: vi.fn(),
+    startup: vi.fn().mockResolvedValue(undefined),
+    shutdown: vi.fn().mockResolvedValue(undefined),
+  };
+
   const documentViewConsistencyTracker = new ConsistencyTracker();
   documentView = new KyselyDocumentView(
     db as any,
     operationStore,
     operationIndex,
+    mockWriteCache,
     documentViewConsistencyTracker,
   );
   await documentView.init();

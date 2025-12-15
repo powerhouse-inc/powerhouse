@@ -2,6 +2,7 @@ import type { Operation, PHDocument, PHDocumentHeader } from "document-model";
 import type { Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
+import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
 import type {
   ConsistencyCoordinate,
@@ -30,6 +31,7 @@ export class KyselyDocumentView implements IDocumentView {
     private db: Kysely<Database>,
     private operationStore: IOperationStore,
     private operationIndex: IOperationIndex,
+    private writeCache: IWriteCache,
     private consistencyTracker: IConsistencyTracker,
   ) {}
 
@@ -47,7 +49,10 @@ export class KyselyDocumentView implements IDocumentView {
       );
 
       if (missedOperations.items.length > 0) {
-        await this.indexOperations(missedOperations.items);
+        const opsWithState = await this.rebuildStateForOperations(
+          missedOperations.items,
+        );
+        await this.indexOperations(opsWithState);
       }
     } else {
       await this.db
@@ -59,7 +64,10 @@ export class KyselyDocumentView implements IDocumentView {
 
       const allOperations = await this.operationIndex.getSinceOrdinal(0);
       if (allOperations.items.length > 0) {
-        await this.indexOperations(allOperations.items);
+        const opsWithState = await this.rebuildStateForOperations(
+          allOperations.items,
+        );
+        await this.indexOperations(opsWithState);
       }
     }
   }
@@ -602,5 +610,33 @@ export class KyselyDocumentView implements IDocumentView {
     }
 
     return mapping.documentId;
+  }
+
+  private async rebuildStateForOperations(
+    operations: OperationWithContext[],
+  ): Promise<OperationWithContext[]> {
+    const result: OperationWithContext[] = [];
+
+    for (const op of operations) {
+      const { documentId, scope, branch } = op.context;
+      const targetRevision = op.operation.index;
+
+      const document = await this.writeCache.getState(
+        documentId,
+        scope,
+        branch,
+        targetRevision,
+      );
+
+      result.push({
+        operation: op.operation,
+        context: {
+          ...op.context,
+          resultingState: JSON.stringify(document),
+        },
+      });
+    }
+
+    return result;
   }
 }
