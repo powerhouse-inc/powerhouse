@@ -139,6 +139,7 @@ export type {
 } from "./storage/kysely/types.js";
 
 // Read Models
+export { BaseReadModel } from "./read-models/base-read-model.js";
 export { ReadModelCoordinator } from "./read-models/coordinator.js";
 export { KyselyDocumentView } from "./read-models/document-view.js";
 export {
