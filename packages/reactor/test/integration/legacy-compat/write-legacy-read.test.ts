@@ -130,9 +130,20 @@ describe.each(storageLayers)(
 
       // Create document view and initialize
       const consistencyTracker = new ConsistencyTracker();
+      const mockViewOperationIndex: any = {
+        start: vi.fn(),
+        commit: vi.fn().mockResolvedValue([]),
+        find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+        getSinceOrdinal: vi.fn().mockResolvedValue({
+          items: [],
+          nextCursor: undefined,
+          hasMore: false,
+        }),
+      };
       documentView = new KyselyDocumentView(
         db,
         operationStore,
+        mockViewOperationIndex,
         consistencyTracker,
       );
       await documentView.init();
@@ -154,14 +165,27 @@ describe.each(storageLayers)(
         shutdown: vi.fn(),
       };
 
+      let ordinalCounter = 0;
+      let pendingWrites: unknown[] = [];
       const mockOperationIndex: any = {
-        start: vi.fn().mockReturnValue({
+        start: vi.fn().mockImplementation(() => ({
           createCollection: vi.fn(),
           addToCollection: vi.fn(),
-          write: vi.fn(),
+          write: vi.fn().mockImplementation((ops: unknown[]) => {
+            pendingWrites.push(...ops);
+          }),
+        })),
+        commit: vi.fn().mockImplementation(() => {
+          const ordinals = pendingWrites.map(() => ordinalCounter++);
+          pendingWrites = [];
+          return Promise.resolve(ordinals);
         }),
-        commit: vi.fn().mockResolvedValue(undefined),
         find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+        getSinceOrdinal: vi.fn().mockResolvedValue({
+          items: [],
+          nextCursor: undefined,
+          hasMore: false,
+        }),
       };
 
       const executor = new SimpleJobExecutor(

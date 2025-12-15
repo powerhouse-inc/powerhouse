@@ -111,7 +111,7 @@ describe("SimpleJobExecutor signature verification", () => {
         addToCollection: vi.fn(),
         write: vi.fn(),
       }),
-      commit: vi.fn().mockResolvedValue(undefined),
+      commit: vi.fn().mockResolvedValue([]),
       find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
     } as never;
 

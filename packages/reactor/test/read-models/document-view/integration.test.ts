@@ -4,6 +4,8 @@ import { PGlite } from "@electric-sql/pglite";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
+import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
 import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
 import type { DocumentViewDatabase } from "../../../src/read-models/types.js";
 import { ConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
@@ -20,6 +22,7 @@ describe("KyselyDocumentView", () => {
   let db: Kysely<Database>;
   let view: KyselyDocumentView;
   let operationStore: IOperationStore;
+  let operationIndex: IOperationIndex;
   let dialect: any;
 
   beforeEach(async () => {
@@ -39,8 +42,16 @@ describe("KyselyDocumentView", () => {
     operationStore = new KyselyOperationStore(
       db as unknown as Kysely<StorageDatabase>,
     );
+    operationIndex = new KyselyOperationIndex(
+      db as unknown as Kysely<StorageDatabase>,
+    );
     const consistencyTracker = new ConsistencyTracker();
-    view = new KyselyDocumentView(db, operationStore, consistencyTracker);
+    view = new KyselyDocumentView(
+      db,
+      operationStore,
+      operationIndex,
+      consistencyTracker,
+    );
   });
 
   afterEach(async () => {
@@ -59,7 +70,7 @@ describe("KyselyDocumentView", () => {
         .executeTakeFirst();
 
       expect(viewState).toBeDefined();
-      expect(viewState?.lastOperationId).toBe(0);
+      expect(viewState?.lastOrdinal).toBe(0);
     });
 
     it("should catch up with missed operations on init", async () => {
@@ -110,12 +121,13 @@ describe("KyselyDocumentView", () => {
             scope,
             branch,
             resultingState: JSON.stringify({ global: {} }),
+            ordinal: i + 1,
           },
         });
       }
 
-      // Mock getSinceId to return operations with resultingState
-      vi.spyOn(operationStore, "getSinceId").mockResolvedValue({
+      // Mock getSinceOrdinal to return operations with resultingState
+      vi.spyOn(operationIndex, "getSinceOrdinal").mockResolvedValue({
         items: operations,
         nextCursor: undefined,
         hasMore: false,
@@ -168,6 +180,7 @@ describe("KyselyDocumentView", () => {
             scope,
             branch,
             resultingState: JSON.stringify({ global: {} }), // Ephemeral state
+            ordinal: 1,
           },
         },
       ];
@@ -212,6 +225,7 @@ describe("KyselyDocumentView", () => {
           scope,
           branch,
           resultingState: JSON.stringify({ global: {} }),
+          ordinal: 1,
         },
       };
 
@@ -242,6 +256,7 @@ describe("KyselyDocumentView", () => {
           scope,
           branch,
           resultingState: JSON.stringify({ global: {} }),
+          ordinal: 1,
         },
       };
 
@@ -293,6 +308,7 @@ describe("KyselyDocumentView", () => {
           scope,
           branch,
           resultingState: JSON.stringify({ global: {} }),
+          ordinal: 1,
         },
       };
 
@@ -340,6 +356,7 @@ describe("KyselyDocumentView", () => {
           scope,
           branch,
           resultingState: JSON.stringify({ global: {} }),
+          ordinal: 1,
         },
       };
 
@@ -456,6 +473,7 @@ describe("KyselyDocumentView", () => {
                 },
               },
             }),
+            ordinal: 1,
           },
         },
       ]);
@@ -568,6 +586,7 @@ describe("KyselyDocumentView", () => {
                 },
               },
             }),
+            ordinal: 1,
           },
         },
       ]);
@@ -688,6 +707,7 @@ describe("KyselyDocumentView", () => {
                 // ... rest of global state
               },
             }),
+            ordinal: 2,
           },
         },
       ]);
@@ -782,6 +802,7 @@ describe("KyselyDocumentView", () => {
                 },
               },
             }),
+            ordinal: 1,
           },
         },
       ]);
@@ -891,6 +912,7 @@ describe("KyselyDocumentView", () => {
                 isDeleted: false,
               },
             }),
+            ordinal: 2,
           },
         },
       ]);
@@ -987,6 +1009,7 @@ describe("KyselyDocumentView", () => {
               header: { id: documentId, documentType },
               document: {},
             }),
+            ordinal: 1,
           },
         },
       ]);
@@ -1048,6 +1071,7 @@ describe("KyselyDocumentView", () => {
               header: { id: documentId, documentType },
               document: {},
             }),
+            ordinal: 1,
           },
         },
       ]);
@@ -1130,6 +1154,7 @@ describe("KyselyDocumentView", () => {
                 header: { id: documentId, documentType },
                 document: {},
               }),
+              ordinal: i + 1,
             },
           },
         ]);
@@ -1202,6 +1227,7 @@ describe("KyselyDocumentView", () => {
                 header: { id: documentId, documentType },
                 document: {},
               }),
+              ordinal: 1,
             },
           },
         ]);
@@ -1267,6 +1293,7 @@ describe("KyselyDocumentView", () => {
               header: { id: documentId, documentType },
               document: {},
             }),
+            ordinal: 1,
           },
         },
       ]);
@@ -1393,6 +1420,7 @@ describe("KyselyDocumentView", () => {
             resultingState: JSON.stringify({
               header: { id: documentId, documentType },
             }),
+            ordinal: 1,
           },
         },
       ]);
@@ -1534,6 +1562,7 @@ describe("KyselyDocumentView", () => {
               scope: "header",
               branch,
               resultingState,
+              ordinal: 1,
             },
           },
         ]);
@@ -1576,6 +1605,7 @@ describe("KyselyDocumentView", () => {
               scope: "header",
               branch,
               resultingState,
+              ordinal: 1,
             },
           },
         ]);
@@ -1623,6 +1653,7 @@ describe("KyselyDocumentView", () => {
               scope: "header",
               branch,
               resultingState,
+              ordinal: 1,
             },
           },
         ]);
@@ -1670,6 +1701,7 @@ describe("KyselyDocumentView", () => {
                 header: headerState1,
                 document: {},
               }),
+              ordinal: 1,
             },
           },
           {
@@ -1690,6 +1722,7 @@ describe("KyselyDocumentView", () => {
                 header: headerState2,
                 document: {},
               }),
+              ordinal: 2,
             },
           },
         ]);

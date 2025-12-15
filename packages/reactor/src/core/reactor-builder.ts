@@ -236,6 +236,7 @@ export class ReactorBuilder {
       // @ts-expect-error - Database type is a superset that includes all required tables
       database,
       operationStore,
+      operationIndex,
       documentViewConsistencyTracker,
     );
 

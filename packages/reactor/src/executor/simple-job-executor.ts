@@ -87,8 +87,22 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     if (job.kind === "load") {
       const result = await this.executeLoadJob(job, startTime, indexTxn);
-      if (result.success) {
-        await this.operationIndex.commit(indexTxn);
+      if (result.success && result.operationsWithContext) {
+        const ordinals = await this.operationIndex.commit(indexTxn);
+        for (let i = 0; i < result.operationsWithContext.length; i++) {
+          result.operationsWithContext[i].context.ordinal = ordinals[i];
+        }
+        if (result.operationsWithContext.length > 0) {
+          const event: OperationWrittenEvent = {
+            jobId: job.id,
+            operations: result.operationsWithContext,
+          };
+          this.eventBus
+            .emit(OperationEventTypes.OPERATION_WRITTEN, event)
+            .catch(() => {
+              // TODO: Log error
+            });
+        }
       }
       return result;
     }
@@ -109,9 +123,12 @@ export class SimpleJobExecutor implements IJobExecutor {
       };
     }
 
-    await this.operationIndex.commit(indexTxn);
+    const ordinals = await this.operationIndex.commit(indexTxn);
 
     if (result.operationsWithContext.length > 0) {
+      for (let i = 0; i < result.operationsWithContext.length; i++) {
+        result.operationsWithContext[i].context.ordinal = ordinals[i];
+      }
       const event: OperationWrittenEvent = {
         jobId: job.id,
         operations: result.operationsWithContext,
@@ -412,6 +429,16 @@ export class SimpleJobExecutor implements IJobExecutor {
         updatedDocument,
       );
 
+      indexTxn.write([
+        {
+          ...newOperation,
+          documentId: job.documentId,
+          documentType: document.header.documentType,
+          branch: job.branch,
+          scope,
+        },
+      ]);
+
       operationsWithContext.push({
         operation: newOperation,
         context: {
@@ -420,6 +447,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           branch: job.branch,
           documentType: document.header.documentType,
           resultingState,
+          ordinal: 0,
         },
       });
 
@@ -1211,18 +1239,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       };
     }
 
-    if (result.operationsWithContext.length > 0) {
-      const event: OperationWrittenEvent = {
-        jobId: job.id,
-        operations: result.operationsWithContext,
-      };
-      this.eventBus
-        .emit(OperationEventTypes.OPERATION_WRITTEN, event)
-        .catch(() => {
-          // TODO: log error channel once logging is wired
-        });
-    }
-
     this.writeCache.invalidate(job.documentId, scope, job.branch);
 
     return {
@@ -1315,6 +1331,7 @@ export class SimpleJobExecutor implements IJobExecutor {
             branch: job.branch,
             documentType: documentType,
             resultingState,
+            ordinal: 0,
           },
         },
       ],

@@ -50,6 +50,7 @@ const createMockOperationContext = (): OperationContext => ({
   documentType: "test/document",
   scope: "public",
   branch: "main",
+  ordinal: 1,
 });
 
 const createMockSyncOperation = (

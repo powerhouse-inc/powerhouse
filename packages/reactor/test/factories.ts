@@ -58,6 +58,19 @@ import { runMigrations } from "../src/storage/migrations/migrator.js";
 import { InternalChannel } from "../src/sync/channels/internal-channel.js";
 import type { IChannel, IChannelFactory } from "../src/sync/interfaces.js";
 import type { ChannelConfig, SyncEnvelope } from "../src/sync/types.js";
+import type { OperationContext } from "../src/storage/interfaces.js";
+
+/**
+ * Creates an operation context with default ordinal for testing.
+ */
+export function createTestContext(
+  params: Omit<OperationContext, "ordinal"> & { ordinal?: number },
+): OperationContext {
+  return {
+    ...params,
+    ordinal: params.ordinal ?? 1,
+  };
+}
 
 /**
  * Creates a real PGLite-backed KyselyOperationStore for testing.
@@ -500,7 +513,7 @@ export async function createTestReactorSetup(
       addToCollection: vi.fn(),
       write: vi.fn(),
     }),
-    commit: vi.fn().mockResolvedValue(undefined),
+    commit: vi.fn().mockResolvedValue([]),
     find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
   };
 

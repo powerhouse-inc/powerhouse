@@ -1,6 +1,7 @@
 import type { Operation, PHDocument, PHDocumentHeader } from "document-model";
 import type { Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
+import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
 import type {
   ConsistencyCoordinate,
@@ -23,11 +24,12 @@ import type {
 type Database = StorageDatabase & DocumentViewDatabase;
 
 export class KyselyDocumentView implements IDocumentView {
-  private lastOperationId: number = 0;
+  private lastOrdinal: number = 0;
 
   constructor(
     private db: Kysely<Database>,
     private operationStore: IOperationStore,
+    private operationIndex: IOperationIndex,
     private consistencyTracker: IConsistencyTracker,
   ) {}
 
@@ -38,10 +40,10 @@ export class KyselyDocumentView implements IDocumentView {
       .executeTakeFirst();
 
     if (viewState) {
-      this.lastOperationId = viewState.lastOperationId;
+      this.lastOrdinal = viewState.lastOrdinal;
 
-      const missedOperations = await this.operationStore.getSinceId(
-        this.lastOperationId,
+      const missedOperations = await this.operationIndex.getSinceOrdinal(
+        this.lastOrdinal,
       );
 
       if (missedOperations.items.length > 0) {
@@ -51,11 +53,11 @@ export class KyselyDocumentView implements IDocumentView {
       await this.db
         .insertInto("ViewState")
         .values({
-          lastOperationId: 0,
+          lastOrdinal: 0,
         })
         .execute();
 
-      const allOperations = await this.operationStore.getSinceId(0);
+      const allOperations = await this.operationIndex.getSinceOrdinal(0);
       if (allOperations.items.length > 0) {
         await this.indexOperations(allOperations.items);
       }
@@ -223,6 +225,16 @@ export class KyselyDocumentView implements IDocumentView {
           }
         }
       }
+
+      const maxOrdinal = Math.max(...items.map((item) => item.context.ordinal));
+      this.lastOrdinal = maxOrdinal;
+      await trx
+        .updateTable("ViewState")
+        .set({
+          lastOrdinal: maxOrdinal,
+          lastOperationTimestamp: new Date(),
+        })
+        .execute();
     });
 
     const coordinates: ConsistencyCoordinate[] = [];

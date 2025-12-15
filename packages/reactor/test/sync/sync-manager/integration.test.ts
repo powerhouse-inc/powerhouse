@@ -227,6 +227,7 @@ describe("SyncManager Integration", () => {
             documentType: "test",
             scope: "global",
             branch: "main",
+            ordinal: 1,
           },
         },
       ];
@@ -274,6 +275,7 @@ describe("SyncManager Integration", () => {
             documentType: "test",
             scope: "global",
             branch: "main",
+            ordinal: 1,
           },
         },
       ];
@@ -334,6 +336,7 @@ describe("SyncManager Integration", () => {
             documentType: "test",
             scope: "global",
             branch: "main",
+            ordinal: 1,
           },
         },
       ];
@@ -386,6 +389,7 @@ describe("SyncManager Integration", () => {
             documentType: "test",
             scope: "global",
             branch: "main",
+            ordinal: 1,
           },
         },
       ];
@@ -447,6 +451,7 @@ describe("SyncManager Integration", () => {
             documentType: "test",
             scope: "global",
             branch: "main",
+            ordinal: 1,
           },
         },
       ];
@@ -500,6 +505,7 @@ describe("SyncManager Integration", () => {
             documentType: "test",
             scope: "global",
             branch: "main",
+            ordinal: 1,
           },
         },
       ];
