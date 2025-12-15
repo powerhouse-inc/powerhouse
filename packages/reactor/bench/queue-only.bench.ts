@@ -1,4 +1,4 @@
-import { bench, describe } from "vitest";
+import { bench, describe, expect } from "vitest";
 import { EventBus } from "../src/events/event-bus.js";
 import { InMemoryQueue } from "../src/queue/queue.js";
 import type { Job } from "../src/queue/types.js";
@@ -13,7 +13,7 @@ function makeRng(seed: number): () => number {
   let state = seed >>> 0;
   return () => {
     state = (1664525 * state + 1013904223) >>> 0;
-    return state / 0xffffffff;
+    return state * (1 / 2 ** 32);
   };
 }
 const rand = makeRng(rootSeed);
@@ -109,6 +109,7 @@ describe("Queue Profiling Extensions", () => {
     await resetQueueState();
     const documents = 12;
     const jobsPerDocument = 40;
+    const t0 = performance.now();
 
     for (let d = 0; d < documents; d++) {
       const documentId = `doc-${d}`;
@@ -119,6 +120,12 @@ describe("Queue Profiling Extensions", () => {
           createJobVariant({ documentId, payloadSize, branch: d % 2 ? "dev" : "main" }),
         );
       }
+    }
+
+    const t1 = performance.now();
+
+    if (process.env.PH_BENCH_VERBOSE) {
+      console.log(JSON.stringify({ bench: "rapid-fire enqueue across documents", ms: t1 - t0 }));
     }
   });
 
@@ -139,17 +146,28 @@ describe("Queue Profiling Extensions", () => {
     }
 
     let handle: Awaited<ReturnType<typeof queue.dequeue>> | null;
+    const t0 = performance.now();
     do {
       handle = await queue.dequeue(documentId, "default", "main");
       handle?.start();
       handle?.complete();
     } while (handle);
+    const t1 = performance.now();
+
+    expect(await queue.hasJobs()).toBe(false);
+
+    if (process.env.PH_BENCH_VERBOSE) {
+      console.log(
+        JSON.stringify({ bench: "conflicting operations on same document", ms: t1 - t0 }),
+      );
+    }
   });
 
   bench("mixed payload sizes with dequeueNext", async () => {
     // Mix sizes/branches and drain via dequeueNext to exercise fairness paths.
     await resetQueueState();
     const payloads = [8, 64, 256, 1024];
+    const seen: string[] = [];
 
     for (let i = 0; i < 220; i++) {
       await queue.enqueue(
@@ -161,11 +179,31 @@ describe("Queue Profiling Extensions", () => {
       );
     }
 
+    const t0 = performance.now();
     while (await queue.hasJobs()) {
       const handle = await queue.dequeueNext();
       if (!handle) break;
+      seen.push(handle.job.documentId);
       handle.start();
       handle.complete();
+    }
+    const t1 = performance.now();
+
+    const perDocDequeue: Record<string, number> = {};
+    for (const id of seen) {
+      perDocDequeue[id] = (perDocDequeue[id] || 0) + 1;
+    }
+    const counts = Object.values(perDocDequeue);
+    if (counts.length) {
+      const max = Math.max(...counts);
+      const min = Math.min(...counts);
+      const mean = counts.reduce((a, b) => a + b, 0) / counts.length;
+      const allowed = Math.max(10, Math.ceil(mean * 0.25));
+      expect(max - min).toBeLessThanOrEqual(allowed);
+    }
+    expect(await queue.hasJobs()).toBe(false);
+    if (process.env.PH_BENCH_VERBOSE) {
+      console.log(JSON.stringify({ bench: "mixed payload sizes with dequeueNext", ms: t1 - t0 }));
     }
   });
 });
@@ -185,19 +223,33 @@ describe("Queue Hint DAG Resolution", () => {
     await queue.enqueue(dependent);
     await queue.enqueue(root);
 
+    const ordered: Array<{ id: string; deps: string[] }> = [];
     const first = await queue.dequeueNext();
-    first?.start();
-    first?.complete();
+    if (first) {
+      ordered.push({ id: first.job.id, deps: first.job.queueHint ?? [] });
+      first.start();
+      first.complete();
+    }
 
     const second = await queue.dequeueNext();
-    second?.start();
-    second?.complete();
+    if (second) {
+      ordered.push({ id: second.job.id, deps: second.job.queueHint ?? [] });
+      second.start();
+      second.complete();
+    }
+
+    const done = new Set<string>();
+    for (const { id, deps } of ordered) {
+      expect(deps.every((dep) => done.has(dep))).toBe(true);
+      done.add(id);
+    }
+    expect(await queue.hasJobs()).toBe(false);
   });
 
   bench("queue hint complex DAG resolution", async () => {
     // Stress dependency resolution with a multi-branch DAG enqueued out of order.
     await resetQueueState();
-    const dagId = `doc-dag-`;
+    const dagId = `doc-dag-${Math.floor(rand() * 1e6).toString(16)}`;
     const rootDoc = `${dagId}-rootA`;
     const previewRootDoc = `${dagId}-rootB`;
     const rootA = createJobVariant({ documentId: rootDoc, payloadSize: 16 });
@@ -269,12 +321,21 @@ describe("Queue Hint DAG Resolution", () => {
     await queue.enqueue(rootB);
     await queue.enqueue(rootA);
 
+    const toCheck: Array<{ id: string; deps: string[] }> = [];
     while (await queue.hasJobs()) {
       const handle = await queue.dequeueNext();
       if (!handle) break;
+      toCheck.push({ id: handle.job.id, deps: handle.job.queueHint ?? [] });
       handle.start();
       handle.complete();
     }
+
+    const done = new Set<string>();
+    for (const { id, deps } of toCheck) {
+      expect(deps.every((dep) => done.has(dep))).toBe(true);
+      done.add(id);
+    }
+    expect(await queue.hasJobs()).toBe(false);
   });
 
   bench("queue hint dynamic nested DAG resolution", async () => {
@@ -284,7 +345,7 @@ describe("Queue Hint DAG Resolution", () => {
     const breadth = 8;
     const maxJobs = 800;
     let jobCount = 0;
-    const dagPrefix = `doc-dyn-dag-`;
+    const dagPrefix = `doc-dyn-dag-${Math.floor(rand() * 1e6).toString(16)}`;
 
     function buildNested(
       prefix: string,
@@ -338,11 +399,20 @@ describe("Queue Hint DAG Resolution", () => {
       await queue.enqueue(job);
     }
 
+    const toCheck: Array<{ id: string; deps: string[] }> = [];
     while (await queue.hasJobs()) {
       const handle = await queue.dequeueNext();
       if (!handle) break;
+      toCheck.push({ id: handle.job.id, deps: handle.job.queueHint ?? [] });
       handle.start();
       handle.complete();
     }
+
+    const done = new Set<string>();
+    for (const { id, deps } of toCheck) {
+      expect(deps.every((dep) => done.has(dep))).toBe(true);
+      done.add(id);
+    }
+    expect(await queue.hasJobs()).toBe(false);
   });
 });
