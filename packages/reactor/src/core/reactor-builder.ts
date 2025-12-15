@@ -237,6 +237,7 @@ export class ReactorBuilder {
       database,
       operationStore,
       operationIndex,
+      writeCache,
       documentViewConsistencyTracker,
     );
 

@@ -140,10 +140,20 @@ describe.each(storageLayers)(
           hasMore: false,
         }),
       };
+      // Create mock write cache for document view
+      const mockViewWriteCache: IWriteCache = {
+        getState: vi.fn().mockResolvedValue({}),
+        putState: vi.fn(),
+        invalidate: vi.fn().mockReturnValue(0),
+        clear: vi.fn(),
+        startup: vi.fn().mockResolvedValue(undefined),
+        shutdown: vi.fn().mockResolvedValue(undefined),
+      };
       documentView = new KyselyDocumentView(
         db,
         operationStore,
         mockViewOperationIndex,
+        mockViewWriteCache,
         consistencyTracker,
       );
       await documentView.init();
@@ -153,7 +163,7 @@ describe.each(storageLayers)(
       const queue = new InMemoryQueue(eventBus);
       const jobTracker = new InMemoryJobTracker(eventBus);
 
-      // Create mock write cache
+      // Create mock write cache for executor
       const mockWriteCache: IWriteCache = {
         getState: vi.fn().mockImplementation(async (docId) => {
           return await legacyStorage.get(docId);

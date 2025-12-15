@@ -1,4 +1,3 @@
-import type { IDocumentStorage } from "document-drive";
 import type { Operation, PHDocument } from "document-model";
 import type { ConsistencyToken } from "../shared/types.js";
 import type { RemoteCursor, RemoteRecord } from "../sync/types.js";

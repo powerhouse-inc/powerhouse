@@ -6,6 +6,7 @@ import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
 import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
+import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
 import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
 import type { DocumentViewDatabase } from "../../../src/read-models/types.js";
 import { ConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
@@ -23,6 +24,7 @@ describe("KyselyDocumentView", () => {
   let view: KyselyDocumentView;
   let operationStore: IOperationStore;
   let operationIndex: IOperationIndex;
+  let mockWriteCache: IWriteCache;
   let dialect: any;
 
   beforeEach(async () => {
@@ -45,11 +47,23 @@ describe("KyselyDocumentView", () => {
     operationIndex = new KyselyOperationIndex(
       db as unknown as Kysely<StorageDatabase>,
     );
+
+    // Create mock write cache for integration tests
+    mockWriteCache = {
+      getState: vi.fn().mockResolvedValue({}),
+      putState: vi.fn(),
+      invalidate: vi.fn().mockReturnValue(0),
+      clear: vi.fn(),
+      startup: vi.fn().mockResolvedValue(undefined),
+      shutdown: vi.fn().mockResolvedValue(undefined),
+    };
+
     const consistencyTracker = new ConsistencyTracker();
     view = new KyselyDocumentView(
       db,
       operationStore,
       operationIndex,
+      mockWriteCache,
       consistencyTracker,
     );
   });

@@ -1,6 +1,7 @@
 import type { Kysely } from "kysely";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
+import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
 import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
 import type { IConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
 import type { IOperationStore } from "../../../src/storage/interfaces.js";
@@ -10,6 +11,7 @@ describe("KyselyDocumentView Unit Tests", () => {
   let mockDb: any;
   let mockOperationStore: IOperationStore;
   let mockOperationIndex: IOperationIndex;
+  let mockWriteCache: IWriteCache;
   let mockConsistencyTracker: IConsistencyTracker;
 
   beforeEach(() => {
@@ -33,6 +35,15 @@ describe("KyselyDocumentView Unit Tests", () => {
       }),
     };
 
+    mockWriteCache = {
+      getState: vi.fn().mockResolvedValue({}),
+      putState: vi.fn(),
+      invalidate: vi.fn().mockReturnValue(0),
+      clear: vi.fn(),
+      startup: vi.fn().mockResolvedValue(undefined),
+      shutdown: vi.fn().mockResolvedValue(undefined),
+    };
+
     mockConsistencyTracker = {
       update: vi.fn(),
       getLatest: vi.fn(),
@@ -45,6 +56,7 @@ describe("KyselyDocumentView Unit Tests", () => {
       mockDb,
       mockOperationStore,
       mockOperationIndex,
+      mockWriteCache,
       mockConsistencyTracker,
     );
   });
