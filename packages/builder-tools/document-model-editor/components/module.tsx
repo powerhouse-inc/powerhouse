@@ -27,6 +27,7 @@ type Props = {
     errorId: string,
     name: string,
   ) => void;
+  toggleNoInputRequired: (id: string, noInputRequired: boolean) => void;
 };
 export function Module(props: Props) {
   const {
@@ -45,6 +46,7 @@ export function Module(props: Props) {
     addOperationError,
     deleteOperationError,
     setOperationErrorName,
+    toggleNoInputRequired,
   } = props;
   return (
     <div className="relative rounded-3xl bg-gray-100 p-6">
@@ -87,6 +89,7 @@ export function Module(props: Props) {
           addOperationError={addOperationError}
           deleteOperationError={deleteOperationError}
           setOperationErrorName={setOperationErrorName}
+          toggleNoInputRequired={toggleNoInputRequired}
         />
       )}
     </div>

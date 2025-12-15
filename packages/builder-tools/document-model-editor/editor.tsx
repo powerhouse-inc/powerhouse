@@ -32,6 +32,7 @@ import type { Scope } from "./types/documents.js";
 import {
   compareStringsWithoutWhitespace,
   initializeModelSchema,
+  makeEmptyOperationSchema,
   makeOperationInitialDoc,
 } from "./utils/helpers.js";
 import ModelMetadata from "./components/model-metadata-form.js";
@@ -217,6 +218,24 @@ export default function Editor() {
     dispatch(setOperationSchema({ id, schema: newSchema }));
   };
 
+  const handleToggleNoInputRequired = (
+    id: string,
+    noInputRequired: boolean,
+  ) => {
+    const operation = operations.find((op) => op.id === id);
+    if (!operation?.name) return;
+
+    if (noInputRequired) {
+      dispatch(
+        setOperationSchema({ id, schema: makeEmptyOperationSchema(operation.name) }),
+      );
+    } else {
+      dispatch(
+        setOperationSchema({ id, schema: makeOperationInitialDoc(operation.name) }),
+      );
+    }
+  };
+
   const handleSetOperationDescription = (
     id: string,
     newDescription: string,
@@ -365,6 +384,7 @@ export default function Editor() {
               deleteOperationError={handleDeleteOperationError}
               setOperationErrorName={handleSetOperationErrorName}
               addOperationAndInitialSchema={addOperationAndInitialSchema}
+              toggleNoInputRequired={handleToggleNoInputRequired}
             />
           </div>
         </div>

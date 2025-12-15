@@ -173,12 +173,17 @@ function getActionFromOperation(
     throw new Error("Operation name is required");
   }
   const hasInput = schema !== null;
+  const isEmptyInput =
+    hasInput &&
+    schema.includes("_empty") &&
+    !schema.replace(/_empty:\s*Boolean/, "").match(/\w+:\s*\w+/);
   const hasAttachment = hasInput && schema.includes(": Attachment");
   const state = scope === "global" ? "" : scope;
 
   return {
     name,
     hasInput,
+    isEmptyInput,
     hasAttachment,
     scope,
     state,

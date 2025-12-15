@@ -50,7 +50,10 @@ function makeActionCreatorWithInput(actionWithInput: ActionFromOperation) {
   const actionTypeName = makeActionTypeName(actionWithInput);
   const inputSchemaName = makeActionInputSchemaName(actionWithInput)!;
   const inputTypeName = makeActionInputTypeName(actionWithInput)!;
-  const argsArray = [`input: ${inputTypeName}`];
+  const inputArg = actionWithInput.isEmptyInput
+    ? `input: ${inputTypeName} = {}`
+    : `input: ${inputTypeName}`;
+  const argsArray = [inputArg];
   if (actionWithInput.hasAttachment) {
     argsArray.push(`attachments: AttachmentInput[]`);
   }

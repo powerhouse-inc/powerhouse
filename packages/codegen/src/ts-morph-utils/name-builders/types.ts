@@ -27,6 +27,7 @@ export type DocumentModelTemplateInputsWithModule = {
 export type ActionFromOperation = {
   name: string;
   hasInput: boolean;
+  isEmptyInput: boolean;
   hasAttachment: boolean;
   scope: string;
   state: string;
