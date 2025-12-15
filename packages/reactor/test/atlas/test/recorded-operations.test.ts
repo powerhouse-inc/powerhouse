@@ -137,6 +137,7 @@ async function createReactorSetup(
   documentView = new KyselyDocumentView(
     db as any,
     operationStore,
+    operationIndex,
     documentViewConsistencyTracker,
   );
   await documentView.init();

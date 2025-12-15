@@ -246,6 +246,7 @@ export class SyncManager implements ISyncManager {
         documentType: entry.documentType,
         scope: entry.scope,
         branch: entry.branch,
+        ordinal: entry.ordinal ?? 0,
       },
     }));
 

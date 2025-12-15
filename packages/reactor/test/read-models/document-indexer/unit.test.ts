@@ -109,6 +109,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
         documentType: "test",
         scope: "document",
         branch: "main",
+        ordinal: 1,
       };
       const operations: OperationWithContext[] = [
         {
@@ -159,6 +160,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
         documentType: "test",
         scope: "document",
         branch: "main",
+        ordinal: 1,
       };
       const operations: OperationWithContext[] = [
         {
@@ -201,6 +203,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
         documentType: "test",
         scope: "document",
         branch: "main",
+        ordinal: 1,
       };
       const addOperations: OperationWithContext[] = [
         {
@@ -269,6 +272,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
             documentType: "test",
             scope: "global",
             branch: "main",
+            ordinal: 1,
           },
         },
       ];
@@ -303,6 +307,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
         documentType: "test",
         scope: "document",
         branch: "main",
+        ordinal: 1,
       };
       const operations: OperationWithContext[] = [
         {
@@ -342,6 +347,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
         documentType: "test",
         scope: "document",
         branch: "main",
+        ordinal: 1,
       };
       const operations: OperationWithContext[] = [
         {
@@ -422,6 +428,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
         documentType: "test",
         scope: "document",
         branch: "main",
+        ordinal: 1,
       };
       const operations: OperationWithContext[] = [
         {
@@ -495,6 +502,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
         documentType: "test",
         scope: "document",
         branch: "main",
+        ordinal: 1,
       };
       const action2: AddRelationshipAction = {
         id: uuidv4(),
@@ -520,6 +528,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
         documentType: "test",
         scope: "document",
         branch: "main",
+        ordinal: 1,
       };
       const operations: OperationWithContext[] = [
         {
@@ -569,6 +578,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
         documentType: "test",
         scope: "document",
         branch: "main",
+        ordinal: 1,
       };
       const operations: OperationWithContext[] = [
         {
@@ -619,6 +629,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
         documentType: "test",
         scope: "document",
         branch: "main",
+        ordinal: 1,
       };
       const operations: OperationWithContext[] = [
         {
@@ -693,6 +704,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
         documentType: "test",
         scope: "document",
         branch: "main",
+        ordinal: 1,
       };
       const operations: OperationWithContext[] = [
         {
@@ -765,6 +777,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
         documentType: "test",
         scope: "document",
         branch: "main",
+        ordinal: 1,
       };
       const action2: AddRelationshipAction = {
         id: uuidv4(),
@@ -790,6 +803,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
         documentType: "test",
         scope: "document",
         branch: "main",
+        ordinal: 1,
       };
       const operations: OperationWithContext[] = [
         {
@@ -862,6 +876,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
         documentType: "test",
         scope: "document",
         branch: "main",
+        ordinal: 1,
       };
       const action2: AddRelationshipAction = {
         id: uuidv4(),
@@ -887,6 +902,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
         documentType: "test",
         scope: "document",
         branch: "main",
+        ordinal: 1,
       };
       const operations: OperationWithContext[] = [
         {
@@ -957,6 +973,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
         documentType: "test",
         scope: "document",
         branch: "main",
+        ordinal: 1,
       };
       const action2: AddRelationshipAction = {
         id: uuidv4(),

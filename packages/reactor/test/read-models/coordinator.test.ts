@@ -32,6 +32,7 @@ describe("ReadModelCoordinator", () => {
           documentType: "test",
           scope: "global",
           branch: "main",
+          ordinal: 1,
         },
       },
     ];

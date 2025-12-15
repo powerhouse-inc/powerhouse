@@ -7,7 +7,7 @@ import {
 import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import type { Kysely } from "kysely";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../../../src/cache/write-cache-types.js";
 import { Reactor } from "../../../src/core/reactor.js";
@@ -103,9 +103,20 @@ describe("Legacy Write -> Read", () => {
 
     // Create real document view and read model coordinator
     const consistencyTracker = new ConsistencyTracker();
+    const mockOperationIndex: any = {
+      start: vi.fn(),
+      commit: vi.fn().mockResolvedValue([]),
+      find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+      getSinceOrdinal: vi.fn().mockResolvedValue({
+        items: [],
+        nextCursor: undefined,
+        hasMore: false,
+      }),
+    };
     const documentView = new KyselyDocumentView(
       db,
       operationStore,
+      mockOperationIndex,
       consistencyTracker,
     );
     await documentView.init();

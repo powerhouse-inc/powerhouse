@@ -1,6 +1,7 @@
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import type {
+  OperationWithContext,
   PagedResults,
   PagingOptions,
   ViewFilter,
@@ -90,7 +91,10 @@ export class KyselyOperationIndex implements IOperationIndex {
     return new KyselyOperationIndexTxn();
   }
 
-  async commit(txn: IOperationIndexTxn, signal?: AbortSignal): Promise<void> {
+  async commit(
+    txn: IOperationIndexTxn,
+    signal?: AbortSignal,
+  ): Promise<number[]> {
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
@@ -100,6 +104,8 @@ export class KyselyOperationIndex implements IOperationIndex {
     const memberships = kyselyTxn.getCollectionMemberships();
     const removals = kyselyTxn.getCollectionRemovals();
     const operations = kyselyTxn.getOperations();
+
+    let resultOrdinals: number[] = [];
 
     await this.db.transaction().execute(async (trx) => {
       if (collections.length > 0) {
@@ -151,6 +157,7 @@ export class KyselyOperationIndex implements IOperationIndex {
           .execute();
 
         operationOrdinals = insertedOps.map((row) => row.ordinal);
+        resultOrdinals = operationOrdinals;
       }
 
       if (memberships.length > 0) {
@@ -193,6 +200,8 @@ export class KyselyOperationIndex implements IOperationIndex {
         }
       }
     });
+
+    return resultOrdinals;
   }
 
   async find(
@@ -258,6 +267,74 @@ export class KyselyOperationIndex implements IOperationIndex {
       items: items.map((row) => this.rowToOperationIndexEntry(row)),
       nextCursor,
       hasMore,
+    };
+  }
+
+  async getSinceOrdinal(
+    ordinal: number,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<OperationWithContext>> {
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    let query = this.db
+      .selectFrom("operation_index_operations")
+      .selectAll()
+      .where("ordinal", ">", ordinal)
+      .orderBy("ordinal", "asc");
+
+    if (paging?.cursor) {
+      const cursorOrdinal = Number.parseInt(paging.cursor, 10);
+      query = query.where("ordinal", ">", cursorOrdinal);
+    }
+
+    if (paging?.limit) {
+      query = query.limit(paging.limit + 1);
+    }
+
+    const rows = await query.execute();
+
+    let hasMore = false;
+    let items = rows;
+
+    if (paging?.limit && rows.length > paging.limit) {
+      hasMore = true;
+      items = rows.slice(0, paging.limit);
+    }
+
+    const nextCursor =
+      hasMore && items.length > 0
+        ? items[items.length - 1].ordinal.toString()
+        : undefined;
+
+    return {
+      items: items.map((row) => this.rowToOperationWithContext(row)),
+      nextCursor,
+      hasMore,
+    };
+  }
+
+  private rowToOperationWithContext(
+    row: OperationIndexOperationRow,
+  ): OperationWithContext {
+    return {
+      operation: {
+        index: row.index,
+        timestampUtcMs: row.timestampUtcMs.toString(),
+        hash: row.hash,
+        skip: row.skip,
+        action: row.action as OperationWithContext["operation"]["action"],
+        id: row.opId,
+      },
+      context: {
+        documentId: row.documentId,
+        documentType: row.documentType,
+        scope: row.scope,
+        branch: row.branch,
+        ordinal: row.ordinal,
+      },
     };
   }
 

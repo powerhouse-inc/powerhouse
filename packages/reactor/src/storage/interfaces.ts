@@ -9,6 +9,7 @@ export type OperationContext = {
   scope: string;
   branch: string;
   resultingState?: string;
+  ordinal: number;
 };
 
 export type OperationWithContext = {
