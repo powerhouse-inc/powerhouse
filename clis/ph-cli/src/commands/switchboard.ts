@@ -27,6 +27,13 @@ async function startLocalSwitchboard(options: LocalSwitchboardOptions) {
 
   const port = typeof rawPort === "string" ? parseInt(rawPort) : rawPort;
 
+  console.log("LOG", process.env.LOG_LEVEL, process.env.NODE_DEBUG);
+  console.debug("DEBUG");
+  console.error("ERROR");
+  console.info("INFO");
+  console.warn("WARN");
+
+  return {} as SwitchboardReactor;
   return startSwitchboard({
     port,
     configFile,
