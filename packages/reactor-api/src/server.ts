@@ -2,7 +2,11 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
 import { getConfig } from "@powerhousedao/config/node";
-import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
+import type {
+  IDocumentModelRegistry,
+  IReactorClient,
+  ISyncManager,
+} from "@powerhousedao/reactor";
 import { setupMcpServer } from "@powerhousedao/reactor-mcp";
 import devcert from "devcert";
 import type {
@@ -589,6 +593,7 @@ async function _setupAPI(
 export async function startAPI(
   driveServer: IDocumentDriveServer,
   client: IReactorClient,
+  registry: IDocumentModelRegistry,
   syncManager: ISyncManager,
   options: Options,
 ): Promise<API> {
@@ -603,12 +608,17 @@ export async function startAPI(
   } = await _setupCommonInfrastructure(options);
 
   const { documentModels, processors, subgraphs } = await packages.init();
+
+  // pass to legacy reactor
   driveServer.setDocumentModelModules(
     getUniqueDocumentModels([
       ...driveServer.getDocumentModelModules(),
       ...documentModels,
     ]),
   );
+
+  // pass to registry
+  registry.registerModules(...documentModels);
 
   return _setupAPI(
     driveServer,

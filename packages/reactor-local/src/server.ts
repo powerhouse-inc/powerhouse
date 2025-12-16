@@ -144,6 +144,13 @@ const startServer = async (
     throw new Error("SyncManager not available from ReactorClientBuilder");
   }
 
+  const registry = clientModule.reactorModule?.documentModelRegistry;
+  if (!registry) {
+    throw new Error(
+      "DocumentModelRegistry not available from ReactorClientBuilder",
+    );
+  }
+
   // init drive server + conditionally add a default drive
   await driveServer.initialize();
   const driveUrl = options?.disableDefaultDrive
@@ -154,7 +161,7 @@ const startServer = async (
   const packageLoader = vite ? VitePackageLoader.build(vite) : undefined;
 
   // start api
-  const api = await startAPI(driveServer, client, syncManager, {
+  const api = await startAPI(driveServer, client, registry, syncManager, {
     port: serverPort,
     dbPath,
     https: options?.https,
