@@ -1,3 +1,13 @@
+## 5.1.0-dev.22 (2025-12-16)
+
+### 🚀 Features
+
+- added support for runtime document model subgraphs ([dc8248ec6](https://github.com/powerhouse-inc/powerhouse/commit/dc8248ec6))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.1.0-dev.21 (2025-12-13)
 
 This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.

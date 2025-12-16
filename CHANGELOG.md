@@ -1,3 +1,20 @@
+## 5.1.0-dev.22 (2025-12-16)
+
+### 🚀 Features
+
+- added support for runtime document model subgraphs ([dc8248ec6](https://github.com/powerhouse-inc/powerhouse/commit/dc8248ec6))
+- **codegen:** do not generate document model subgraph ([ebdd72668](https://github.com/powerhouse-inc/powerhouse/commit/ebdd72668))
+
+### 🩹 Fixes
+
+- linter ([fcbd30919](https://github.com/powerhouse-inc/powerhouse/commit/fcbd30919))
+- **vetra:** regenerated subgraphs ([09f2f212f](https://github.com/powerhouse-inc/powerhouse/commit/09f2f212f))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.21 (2025-12-13)
 
 ### 🚀 Features
