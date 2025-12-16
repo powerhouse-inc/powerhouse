@@ -75,17 +75,15 @@ export function switchboardCommand(program: Command) {
       "--use-identity",
       "enable identity using keypair from ph login (uses ~/.ph/keypair.json)",
     )
-    .option(
-      "--keypair-path <path>",
-      "path to custom keypair file for identity",
-    )
+    .option("--keypair-path <path>", "path to custom keypair file for identity")
     .option(
       "--require-identity",
       "require existing keypair, fail if not found (implies --use-identity)",
     )
     .action(async (...args: [LocalSwitchboardOptions]) => {
-      const { defaultDriveUrl, connectCrypto } =
-        await runStartLocalSwitchboard(...args);
+      const { defaultDriveUrl, connectCrypto } = await runStartLocalSwitchboard(
+        ...args,
+      );
       console.log("   ➜  Switchboard:", defaultDriveUrl);
       if (connectCrypto) {
         const did = await connectCrypto.did();

@@ -795,6 +795,7 @@ export function pushSyncEnvelope(
       documentType: op.context.documentType,
       scope: op.context.scope,
       branch: op.context.branch,
+      ordinal: 0,
     },
   }));
 
