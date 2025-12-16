@@ -30,7 +30,7 @@ export class DocumentMetaCache implements IDocumentMetaCache {
   private cache: Map<string, CachedDocumentMeta>;
   private lruTracker: LRUTracker<string>;
   private operationStore: IOperationStore;
-  private config: Required<DocumentMetaCacheConfig>;
+  private config: DocumentMetaCacheConfig;
 
   constructor(
     operationStore: IOperationStore,
@@ -200,6 +200,8 @@ export class DocumentMetaCache implements IDocumentMetaCache {
           op.action as DeleteDocumentAction,
         );
       }
+
+      // for now, we are skipping relationship operations
     }
 
     return {
