@@ -204,7 +204,7 @@ export class SynchronizationManager implements ISynchronizationManager {
       input: operation.action.input as object,
       skip: operation.skip,
       context: operation.action.context,
-      id: operation.id,
+      id: operation.id ?? "",
     }));
   }
 
