@@ -13,6 +13,7 @@ import type {
   RemoveRelationshipActionInput,
   UpgradeDocumentActionInput,
 } from "document-model";
+import type { IDocumentMetaCache } from "../cache/document-meta-cache-types.js";
 import type {
   IOperationIndex,
   IOperationIndexTxn,
@@ -65,6 +66,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     private eventBus: IEventBus,
     private writeCache: IWriteCache,
     private operationIndex: IOperationIndex,
+    private documentMetaCache: IDocumentMetaCache,
     config: JobExecutorConfig,
     private signatureVerifier?: SignatureVerificationHandler,
   ) {

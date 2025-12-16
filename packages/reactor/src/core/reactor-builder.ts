@@ -8,6 +8,7 @@ import {
   MemoryStorage,
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
+import { DocumentMetaCache } from "../cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../cache/kysely-operation-index.js";
 import { KyselyWriteCache } from "../cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../cache/write-cache-types.js";
@@ -204,6 +205,11 @@ export class ReactorBuilder {
       database as unknown as Kysely<StorageDatabase>,
     );
 
+    const documentMetaCache = new DocumentMetaCache(operationStore, {
+      maxDocuments: 1000,
+    });
+    await documentMetaCache.startup();
+
     let executorManager = this.executorManager;
     if (!executorManager) {
       executorManager = new SimpleJobExecutorManager(
@@ -216,6 +222,7 @@ export class ReactorBuilder {
             eventBus,
             writeCache,
             operationIndex,
+            documentMetaCache,
             { legacyStorageEnabled: this.features.legacyStorageEnabled },
             this.signatureVerifier,
           ),

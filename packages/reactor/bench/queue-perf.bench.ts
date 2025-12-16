@@ -74,7 +74,9 @@ describe("InMemoryQueue hot-path performance", () => {
     if (process.env.PH_BENCH_VERBOSE) {
       const heap = process.memoryUsage().heapUsed;
       const ms = Number(t1 - t0) / 1e6;
-      console.log(JSON.stringify({ bench: "bulk enqueue throughput", ms, heap }));
+      console.log(
+        JSON.stringify({ bench: "bulk enqueue throughput", ms, heap }),
+      );
     }
   });
 
@@ -128,7 +130,11 @@ describe("InMemoryQueue hot-path performance", () => {
       const heap = process.memoryUsage().heapUsed;
       const ms = Number(t1 - t0) / 1e6;
       console.log(
-        JSON.stringify({ bench: "dequeueNext fairness under contention", ms, heap }),
+        JSON.stringify({
+          bench: "dequeueNext fairness under contention",
+          ms,
+          heap,
+        }),
       );
     }
   });
@@ -148,9 +154,7 @@ describe("InMemoryQueue hot-path performance", () => {
         payloadSize: 12,
       });
       parentJobId = job.id;
-      await queue.enqueue(
-        job,
-      );
+      await queue.enqueue(job);
     }
 
     const t0 = process.hrtime.bigint();
@@ -176,7 +180,9 @@ describe("InMemoryQueue hot-path performance", () => {
     if (process.env.PH_BENCH_VERBOSE) {
       const heap = process.memoryUsage().heapUsed;
       const ms = Number(t1 - t0) / 1e6;
-      console.log(JSON.stringify({ bench: "dependency scan with long chains", ms, heap }));
+      console.log(
+        JSON.stringify({ bench: "dependency scan with long chains", ms, heap }),
+      );
     }
   });
 
@@ -187,7 +193,10 @@ describe("InMemoryQueue hot-path performance", () => {
     const totalJobs = 1200;
 
     for (let i = 0; i < totalJobs; i++) {
-      const job = createJob({ documentId: `retry-doc-${i % 12}`, payloadSize: 16 });
+      const job = createJob({
+        documentId: `retry-doc-${i % 12}`,
+        payloadSize: 16,
+      });
       await queue.enqueue(job);
     }
 

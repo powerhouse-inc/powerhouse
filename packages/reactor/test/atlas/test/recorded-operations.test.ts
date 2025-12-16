@@ -13,6 +13,7 @@ import { PGliteDialect } from "kysely-pglite-dialect";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, it, vi } from "vitest";
+import { DocumentMetaCache } from "../../../src/cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
 import { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../../../src/cache/write-cache-types.js";
@@ -110,6 +111,11 @@ async function createReactorSetup(
     db as unknown as Kysely<StorageDatabase>,
   );
 
+  const documentMetaCache = new DocumentMetaCache(operationStore, {
+    maxDocuments: 1000,
+  });
+  await documentMetaCache.startup();
+
   const executor = new SimpleJobExecutor(
     registry,
     storage,
@@ -118,6 +124,7 @@ async function createReactorSetup(
     eventBus,
     writeCache,
     operationIndex,
+    documentMetaCache,
     { legacyStorageEnabled },
   );
 

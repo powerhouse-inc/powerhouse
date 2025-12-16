@@ -45,6 +45,7 @@ import type {
 import type { Database as StorageDatabase } from "../../../src/storage/kysely/types.js";
 import {
   createMockDocumentIndexer,
+  createMockDocumentMetaCache,
   createMockReactorFeatures,
   createTestOperationStore,
 } from "../../factories.js";
@@ -198,6 +199,7 @@ describe.each(storageLayers)(
         }),
       };
 
+      const mockDocumentMetaCache = createMockDocumentMetaCache();
       const executor = new SimpleJobExecutor(
         registry,
         legacyStorage as IDocumentStorage,
@@ -206,6 +208,7 @@ describe.each(storageLayers)(
         eventBus,
         mockWriteCache,
         mockOperationIndex,
+        mockDocumentMetaCache,
         { legacyStorageEnabled: true },
       );
       executorManager = new SimpleJobExecutorManager(

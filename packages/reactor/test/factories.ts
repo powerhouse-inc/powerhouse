@@ -20,6 +20,10 @@ import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { v4 as uuidv4 } from "uuid";
 import { vi } from "vitest";
+import type {
+  IDocumentMetaCache,
+  CachedDocumentMeta,
+} from "../src/cache/document-meta-cache-types.js";
 import type { IWriteCache } from "../src/cache/write/interfaces.js";
 import { Reactor } from "../src/core/reactor.js";
 import type { ReactorFeatures } from "../src/core/types.js";
@@ -455,6 +459,33 @@ export function createMockOperationStore(
 }
 
 /**
+ * Factory for creating mock IDocumentMetaCache
+ */
+export function createMockDocumentMetaCache(
+  overrides: Partial<IDocumentMetaCache> = {},
+): IDocumentMetaCache {
+  const defaultMeta: CachedDocumentMeta = {
+    state: {
+      version: "1.0.0",
+      hash: { algorithm: "sha256", encoding: "base64" },
+    },
+    documentType: "powerhouse/document-model",
+    documentScopeRevision: 1,
+  };
+
+  return {
+    getDocumentMeta: vi.fn().mockResolvedValue(defaultMeta),
+    rebuildAtRevision: vi.fn().mockResolvedValue(defaultMeta),
+    putDocumentMeta: vi.fn(),
+    invalidate: vi.fn().mockReturnValue(0),
+    clear: vi.fn(),
+    startup: vi.fn().mockResolvedValue(undefined),
+    shutdown: vi.fn().mockResolvedValue(undefined),
+    ...overrides,
+  };
+}
+
+/**
  * Factory for creating mock IReadModelCoordinator
  */
 export function createMockReadModelCoordinator(
@@ -517,6 +548,9 @@ export async function createTestReactorSetup(
     find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
   };
 
+  // Create mock document meta cache
+  const mockDocumentMetaCache = createMockDocumentMetaCache();
+
   // Create job executor with event bus
   const jobExecutor = new SimpleJobExecutor(
     registry,
@@ -526,6 +560,7 @@ export async function createTestReactorSetup(
     eventBus,
     mockWriteCache,
     mockOperationIndex,
+    mockDocumentMetaCache,
     executorConfig ?? { legacyStorageEnabled: true },
     undefined,
   );

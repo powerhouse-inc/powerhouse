@@ -104,30 +104,43 @@ function createJobVariant({
 }
 
 describe("Queue Profiling Extensions", () => {
-  bench("rapid-fire enqueue across documents (disparate payloads)", async () => {
-    // Stress enqueue throughput with many docs and varied payload sizes/branches.
-    await resetQueueState();
-    const documents = 12;
-    const jobsPerDocument = 40;
-    const t0 = performance.now();
+  bench(
+    "rapid-fire enqueue across documents (disparate payloads)",
+    async () => {
+      // Stress enqueue throughput with many docs and varied payload sizes/branches.
+      await resetQueueState();
+      const documents = 12;
+      const jobsPerDocument = 40;
+      const t0 = performance.now();
 
-    for (let d = 0; d < documents; d++) {
-      const documentId = `doc-${d}`;
-      const payloadOptions = [8, 64, 512, 4096];
-      for (let i = 0; i < jobsPerDocument; i++) {
-        const payloadSize = payloadOptions[Math.floor(rand() * payloadOptions.length)];
-        await queue.enqueue(
-          createJobVariant({ documentId, payloadSize, branch: d % 2 ? "dev" : "main" }),
+      for (let d = 0; d < documents; d++) {
+        const documentId = `doc-${d}`;
+        const payloadOptions = [8, 64, 512, 4096];
+        for (let i = 0; i < jobsPerDocument; i++) {
+          const payloadSize =
+            payloadOptions[Math.floor(rand() * payloadOptions.length)];
+          await queue.enqueue(
+            createJobVariant({
+              documentId,
+              payloadSize,
+              branch: d % 2 ? "dev" : "main",
+            }),
+          );
+        }
+      }
+
+      const t1 = performance.now();
+
+      if (process.env.PH_BENCH_VERBOSE) {
+        console.log(
+          JSON.stringify({
+            bench: "rapid-fire enqueue across documents",
+            ms: t1 - t0,
+          }),
         );
       }
-    }
-
-    const t1 = performance.now();
-
-    if (process.env.PH_BENCH_VERBOSE) {
-      console.log(JSON.stringify({ bench: "rapid-fire enqueue across documents", ms: t1 - t0 }));
-    }
-  });
+    },
+  );
 
   bench("conflicting operations on same document", async () => {
     // Serializes competing ops on a single doc to gauge contention/ordering.
@@ -140,7 +153,7 @@ describe("Queue Profiling Extensions", () => {
         createJobVariant({
           documentId,
           actionType: ops[i % ops.length],
-          payloadSize: (i % 16 + 1) * 10,
+          payloadSize: ((i % 16) + 1) * 10,
         }),
       );
     }
@@ -158,7 +171,10 @@ describe("Queue Profiling Extensions", () => {
 
     if (process.env.PH_BENCH_VERBOSE) {
       console.log(
-        JSON.stringify({ bench: "conflicting operations on same document", ms: t1 - t0 }),
+        JSON.stringify({
+          bench: "conflicting operations on same document",
+          ms: t1 - t0,
+        }),
       );
     }
   });
@@ -203,7 +219,12 @@ describe("Queue Profiling Extensions", () => {
     }
     expect(await queue.hasJobs()).toBe(false);
     if (process.env.PH_BENCH_VERBOSE) {
-      console.log(JSON.stringify({ bench: "mixed payload sizes with dequeueNext", ms: t1 - t0 }));
+      console.log(
+        JSON.stringify({
+          bench: "mixed payload sizes with dequeueNext",
+          ms: t1 - t0,
+        }),
+      );
     }
   });
 });

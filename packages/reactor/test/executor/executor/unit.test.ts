@@ -10,6 +10,7 @@ import type { Job } from "../../../src/queue/types.js";
 import type { IDocumentModelRegistry } from "../../../src/registry/interfaces.js";
 import type { IOperationStore } from "../../../src/storage/interfaces.js";
 import {
+  createMockDocumentMetaCache,
   createMockDocumentStorage,
   createMockOperationStorage,
   createMockOperationStore,
@@ -99,6 +100,7 @@ describe("SimpleJobExecutor", () => {
     };
 
     const eventBus = createTestEventBus();
+    const mockDocumentMetaCache = createMockDocumentMetaCache();
     executor = new SimpleJobExecutor(
       registry,
       mockDocStorage,
@@ -107,6 +109,7 @@ describe("SimpleJobExecutor", () => {
       eventBus,
       mockWriteCache,
       mockOperationIndex,
+      mockDocumentMetaCache,
       { legacyStorageEnabled: true },
     );
   });

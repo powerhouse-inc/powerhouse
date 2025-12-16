@@ -15,6 +15,8 @@ import type {
   IOperationStore,
 } from "../../src/storage/interfaces.js";
 import type { Database as DatabaseSchema } from "../../src/storage/kysely/types.js";
+import { DocumentMetaCache } from "../../src/cache/document-meta-cache.js";
+import type { IDocumentMetaCache } from "../../src/cache/document-meta-cache-types.js";
 import { createTestEventBus, createTestOperationStore } from "../factories.js";
 
 describe("SimpleJobExecutor Integration (Modern Storage)", () => {
@@ -25,6 +27,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
   let keyframeStore: IKeyframeStore;
   let writeCache: KyselyWriteCache;
   let operationIndex: IOperationIndex;
+  let documentMetaCache: IDocumentMetaCache;
 
   async function createDocumentWithCreateOperation(
     documentId: string,
@@ -139,6 +142,11 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
 
     operationIndex = new KyselyOperationIndex(db);
 
+    documentMetaCache = new DocumentMetaCache(operationStore, {
+      maxDocuments: 100,
+    });
+    await documentMetaCache.startup();
+
     const eventBus = createTestEventBus();
     executor = new SimpleJobExecutor(
       registry,
@@ -148,12 +156,14 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
       eventBus,
       writeCache,
       operationIndex,
+      documentMetaCache,
       { legacyStorageEnabled: false },
     );
   });
 
   afterEach(async () => {
     await writeCache.shutdown();
+    await documentMetaCache.shutdown();
     try {
       await db.destroy();
     } catch {
