@@ -1,7 +1,3 @@
-import {
-  buildGraphQlDocument,
-  type SubgraphArgs,
-} from "@powerhousedao/reactor-api";
 import { camelCase, kebabCase } from "change-case";
 import { addFile, type IDocumentDriveServer } from "document-drive";
 import { setName, type DocumentModelModule } from "document-model";
@@ -10,6 +6,8 @@ import {
   getDocumentModelSchemaName,
 } from "../utils/create-schema.js";
 import { BaseSubgraph } from "./base-subgraph.js";
+import type { SubgraphArgs } from "./types.js";
+import { buildGraphQlDocument } from "./utils.js";
 
 export function generateDocumentModelResolversLegacy(
   documentModel: DocumentModelModule,
