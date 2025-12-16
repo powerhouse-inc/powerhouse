@@ -390,12 +390,14 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
       expect(metaAtRev2.state.version).toBe("2.0.0");
 
       // Get state at revision 0 (after CREATE_DOCUMENT, before any UPGRADE)
+      // Note: defaultDocumentState() returns version "1.0.0", so the initial
+      // document state has version "1.0.0" (before any UPGRADE_DOCUMENT)
       const metaAtRev0 = await documentMetaCache.rebuildAtRevision(
         docId,
         "main",
         0,
       );
-      expect(metaAtRev0.state.version).toBe("0.0.0");
+      expect(metaAtRev0.state.version).toBe("1.0.0");
     });
   });
 });

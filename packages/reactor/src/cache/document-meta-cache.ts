@@ -1,9 +1,13 @@
 import type {
   CreateDocumentAction,
   DeleteDocumentAction,
-  PHDocumentState,
   UpgradeDocumentAction,
 } from "document-model";
+import {
+  applyDeleteDocumentAction,
+  applyUpgradeDocumentAction,
+  createDocumentFromAction,
+} from "../executor/util.js";
 import type { IOperationStore } from "../storage/interfaces.js";
 import type {
   CachedDocumentMeta,
@@ -175,10 +179,7 @@ export class DocumentMetaCache implements IDocumentMetaCache {
     const createAction = createOp.action as CreateDocumentAction;
     const documentType = createAction.input.model;
 
-    let state: PHDocumentState = {
-      version: "0.0.0",
-      hash: { algorithm: "sha256", encoding: "base64" },
-    };
+    let document = createDocumentFromAction(createAction);
     let documentScopeRevision = 0;
 
     for (const op of docScopeOps.items) {
@@ -189,31 +190,20 @@ export class DocumentMetaCache implements IDocumentMetaCache {
       documentScopeRevision = op.index;
 
       if (op.action.type === "UPGRADE_DOCUMENT") {
-        const upgradeAction = op.action as UpgradeDocumentAction;
-        const input = upgradeAction.input as {
-          initialState?: { document?: PHDocumentState };
-          state?: { document?: PHDocumentState };
-        };
-        const newDocState =
-          input.initialState?.document || input.state?.document;
-        if (newDocState) {
-          state = {
-            ...state,
-            ...newDocState,
-          };
-        }
+        document = applyUpgradeDocumentAction(
+          document,
+          op.action as UpgradeDocumentAction,
+        );
       } else if (op.action.type === "DELETE_DOCUMENT") {
-        const deleteAction = op.action as DeleteDocumentAction;
-        state = {
-          ...state,
-          isDeleted: true,
-          deletedAtUtcIso: deleteAction.timestampUtcMs,
-        };
+        document = applyDeleteDocumentAction(
+          document,
+          op.action as DeleteDocumentAction,
+        );
       }
     }
 
     return {
-      state,
+      state: document.state.document,
       documentType,
       documentScopeRevision: documentScopeRevision + 1,
     };
