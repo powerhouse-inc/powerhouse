@@ -115,7 +115,7 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
         },
       );
 
-      // Step 2: Apply UPGRADE_DOCUMENT (sets version to "1.0.0")
+      // Step 2: Apply UPGRADE_DOCUMENT (sets version to 1)
       await operationStore.apply(
         docId,
         docType,
@@ -126,7 +126,7 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
           txn.addOperations(
             createUpgradeDocumentOperation(docId, 1, {
               document: {
-                version: "1.0.0",
+                version: 1,
                 hash: { algorithm: "sha256", encoding: "base64" },
               },
               global: {},
@@ -157,10 +157,10 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
       const docAtRev10 = await cache.getState(docId, "global", "main", 10);
       cache.putState(docId, "global", "main", 10, docAtRev10);
 
-      // Verify the document has version "1.0.0" at this point
-      expect(docAtRev10.state.document.version).toBe("1.0.0");
+      // Verify the document has version 1 at this point
+      expect(docAtRev10.state.document.version).toBe(1);
 
-      // Step 5: Apply another UPGRADE_DOCUMENT (sets version to "2.0.0")
+      // Step 5: Apply another UPGRADE_DOCUMENT (sets version to 2)
       await operationStore.apply(
         docId,
         docType,
@@ -171,7 +171,7 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
           txn.addOperations(
             createUpgradeDocumentOperation(docId, 2, {
               document: {
-                version: "2.0.0",
+                version: 2,
                 hash: { algorithm: "sha256", encoding: "base64" },
               },
               global: {},
@@ -187,8 +187,8 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
       // Step 7: Call getState(docId, "global", branch) - will load from keyframe
       const docFromKeyframe = await cache.getState(docId, "global", "main", 10);
 
-      // DEMONSTRATES THE BUG: getState returns stale version "1.0.0" from keyframe
-      expect(docFromKeyframe.state.document.version).toBe("1.0.0");
+      // DEMONSTRATES THE BUG: getState returns stale version 1 from keyframe
+      expect(docFromKeyframe.state.document.version).toBe(1);
 
       // Step 8: THE SOLUTION - Use DocumentMetaCache to get correct metadata
       const correctMeta = await documentMetaCache.getDocumentMeta(
@@ -196,8 +196,8 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
         "main",
       );
 
-      // DocumentMetaCache returns the correct, current version "2.0.0"
-      expect(correctMeta.state.version).toBe("2.0.0");
+      // DocumentMetaCache returns the correct, current version 2
+      expect(correctMeta.state.version).toBe(2);
     });
   });
 
@@ -228,7 +228,7 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
           txn.addOperations(
             createUpgradeDocumentOperation(docId, 1, {
               document: {
-                version: "1.0.0",
+                version: 1,
                 hash: { algorithm: "sha256", encoding: "base64" },
               },
               global: {},
@@ -291,7 +291,7 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
       const docId = "staleness-test-doc-3";
       const docType = "powerhouse/document-model";
 
-      // Step 1: Create document + UPGRADE_DOCUMENT (version "1.0.0")
+      // Step 1: Create document + UPGRADE_DOCUMENT (version 1)
       await operationStore.apply(
         docId,
         docType,
@@ -313,7 +313,7 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
           txn.addOperations(
             createUpgradeDocumentOperation(docId, 1, {
               document: {
-                version: "1.0.0",
+                version: 1,
                 hash: { algorithm: "sha256", encoding: "base64" },
               },
               global: {},
@@ -323,7 +323,7 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
         },
       );
 
-      // Step 2: Apply another UPGRADE_DOCUMENT (version "2.0.0")
+      // Step 2: Apply another UPGRADE_DOCUMENT (version 2)
       await operationStore.apply(
         docId,
         docType,
@@ -334,7 +334,7 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
           txn.addOperations(
             createUpgradeDocumentOperation(docId, 2, {
               document: {
-                version: "2.0.0",
+                version: 2,
                 hash: { algorithm: "sha256", encoding: "base64" },
               },
               global: {},
@@ -344,7 +344,7 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
         },
       );
 
-      // Step 3: Apply another UPGRADE_DOCUMENT (version "3.0.0")
+      // Step 3: Apply another UPGRADE_DOCUMENT (version 3)
       await operationStore.apply(
         docId,
         docType,
@@ -355,7 +355,7 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
           txn.addOperations(
             createUpgradeDocumentOperation(docId, 3, {
               document: {
-                version: "3.0.0",
+                version: 3,
                 hash: { algorithm: "sha256", encoding: "base64" },
               },
               global: {},
@@ -367,7 +367,7 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
 
       // getDocumentMeta returns the latest version
       const latestMeta = await documentMetaCache.getDocumentMeta(docId, "main");
-      expect(latestMeta.state.version).toBe("3.0.0");
+      expect(latestMeta.state.version).toBe(3);
 
       // THE SOLUTION: rebuildAtRevision returns historical state
       // This is needed during reshuffling when operations must be applied
@@ -379,7 +379,7 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
         "main",
         1,
       );
-      expect(metaAtRev1.state.version).toBe("1.0.0");
+      expect(metaAtRev1.state.version).toBe(1);
 
       // Get state at revision 2 (after second UPGRADE_DOCUMENT)
       const metaAtRev2 = await documentMetaCache.rebuildAtRevision(
@@ -387,7 +387,7 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
         "main",
         2,
       );
-      expect(metaAtRev2.state.version).toBe("2.0.0");
+      expect(metaAtRev2.state.version).toBe(2);
 
       // Get state at revision 0 (after CREATE_DOCUMENT, before any UPGRADE)
       const metaAtRev0 = await documentMetaCache.rebuildAtRevision(
@@ -395,7 +395,7 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
         "main",
         0,
       );
-      expect(metaAtRev0.state.version).toBe("0");
+      expect(metaAtRev0.state.version).toBe(0);
     });
   });
 });

@@ -122,7 +122,7 @@ export type HashConfig = {
  */
 export type PHDocumentState = {
   /** The current version of the document. */
-  version: string;
+  version: number;
 
   /** Hash configuration for operation state verification */
   hash: HashConfig;

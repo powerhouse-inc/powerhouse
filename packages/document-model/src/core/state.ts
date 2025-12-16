@@ -13,7 +13,7 @@ export function defaultAuthState(): PHAuthState {
  */
 export function defaultDocumentState(): PHDocumentState {
   return {
-    version: "0",
+    version: 0,
     hash: {
       algorithm: HASH_ALGORITHM_SHA1,
       encoding: HASH_ENCODING_BASE64,

@@ -466,7 +466,7 @@ export function createMockDocumentMetaCache(
 ): IDocumentMetaCache {
   const defaultMeta: CachedDocumentMeta = {
     state: {
-      version: "1.0.0",
+      version: 1,
       hash: { algorithm: "sha256", encoding: "base64" },
     },
     documentType: "powerhouse/document-model",

@@ -44,7 +44,7 @@ function createCreateDocumentOperation(
 function createUpgradeDocumentOperation(
   documentId: string,
   index: number,
-  version: string,
+  version: number,
 ): Operation {
   return {
     id: `${documentId}-upgrade-${index}`,
@@ -120,7 +120,7 @@ describe("DocumentMetaCache", () => {
 
       cache.putDocumentMeta(docId, branch, {
         state: {
-          version: "1.0.0",
+          version: 1,
           hash: { algorithm: "sha256", encoding: "base64" },
         },
         documentType: "powerhouse/test",
@@ -129,7 +129,7 @@ describe("DocumentMetaCache", () => {
 
       const result = await cache.getDocumentMeta(docId, branch);
 
-      expect(result.state.version).toBe("1.0.0");
+      expect(result.state.version).toBe(1);
       expect(result.documentType).toBe("powerhouse/test");
       expect(operationStore.getSince).not.toHaveBeenCalled();
     });
@@ -141,7 +141,7 @@ describe("DocumentMetaCache", () => {
 
       const operations: Operation[] = [
         createCreateDocumentOperation(docId, docType),
-        createUpgradeDocumentOperation(docId, 1, "1.0.0"),
+        createUpgradeDocumentOperation(docId, 1, 1),
       ];
 
       vi.mocked(operationStore.getSince).mockResolvedValue({
@@ -152,7 +152,7 @@ describe("DocumentMetaCache", () => {
 
       const result = await cache.getDocumentMeta(docId, branch);
 
-      expect(result.state.version).toBe("1.0.0");
+      expect(result.state.version).toBe(1);
       expect(result.documentType).toBe(docType);
       expect(result.documentScopeRevision).toBe(2);
       expect(operationStore.getSince).toHaveBeenCalledWith(
@@ -185,7 +185,7 @@ describe("DocumentMetaCache", () => {
       const branch = "main";
 
       vi.mocked(operationStore.getSince).mockResolvedValue({
-        items: [createUpgradeDocumentOperation(docId, 0, "1.0.0")],
+        items: [createUpgradeDocumentOperation(docId, 0, 1)],
         nextCursor: undefined,
         hasMore: false,
       } as PagedResults<Operation>);
@@ -202,7 +202,7 @@ describe("DocumentMetaCache", () => {
 
       const operations: Operation[] = [
         createCreateDocumentOperation(docId, docType),
-        createUpgradeDocumentOperation(docId, 1, "1.0.0"),
+        createUpgradeDocumentOperation(docId, 1, 1),
         createDeleteDocumentOperation(docId, 2),
       ];
 
@@ -237,9 +237,9 @@ describe("DocumentMetaCache", () => {
 
       const operations: Operation[] = [
         createCreateDocumentOperation(docId, docType),
-        createUpgradeDocumentOperation(docId, 1, "1.0.0"),
-        createUpgradeDocumentOperation(docId, 2, "2.0.0"),
-        createUpgradeDocumentOperation(docId, 3, "3.0.0"),
+        createUpgradeDocumentOperation(docId, 1, 1),
+        createUpgradeDocumentOperation(docId, 2, 2),
+        createUpgradeDocumentOperation(docId, 3, 3),
       ];
 
       vi.mocked(operationStore.getSince).mockResolvedValue({
@@ -249,11 +249,11 @@ describe("DocumentMetaCache", () => {
       } as PagedResults<Operation>);
 
       const resultAtRev1 = await cache.rebuildAtRevision(docId, branch, 1);
-      expect(resultAtRev1.state.version).toBe("1.0.0");
+      expect(resultAtRev1.state.version).toBe(1);
       expect(resultAtRev1.documentScopeRevision).toBe(2);
 
       const resultAtRev2 = await cache.rebuildAtRevision(docId, branch, 2);
-      expect(resultAtRev2.state.version).toBe("2.0.0");
+      expect(resultAtRev2.state.version).toBe(2);
       expect(resultAtRev2.documentScopeRevision).toBe(3);
     });
 
@@ -264,7 +264,7 @@ describe("DocumentMetaCache", () => {
 
       const operations: Operation[] = [
         createCreateDocumentOperation(docId, docType),
-        createUpgradeDocumentOperation(docId, 1, "1.0.0"),
+        createUpgradeDocumentOperation(docId, 1, 1),
       ];
 
       vi.mocked(operationStore.getSince).mockResolvedValue({
@@ -296,7 +296,7 @@ describe("DocumentMetaCache", () => {
 
       cache.putDocumentMeta(docId, branch, {
         state: {
-          version: "1.5.0",
+          version: 2,
           hash: { algorithm: "sha256", encoding: "base64" },
         },
         documentType: "powerhouse/test",
@@ -304,7 +304,7 @@ describe("DocumentMetaCache", () => {
       });
 
       const result = await cache.getDocumentMeta(docId, branch);
-      expect(result.state.version).toBe("1.5.0");
+      expect(result.state.version).toBe(2);
       expect(result.documentScopeRevision).toBe(5);
     });
 
@@ -314,7 +314,7 @@ describe("DocumentMetaCache", () => {
 
       const meta = {
         state: {
-          version: "1.0.0",
+          version: 1,
           hash: { algorithm: "sha256", encoding: "base64" },
         },
         documentType: "powerhouse/test",
@@ -322,10 +322,10 @@ describe("DocumentMetaCache", () => {
       };
 
       cache.putDocumentMeta(docId, branch, meta);
-      meta.state.version = "modified";
+      meta.state.version = 999;
 
       const result = await cache.getDocumentMeta(docId, branch);
-      expect(result.state.version).toBe("1.0.0");
+      expect(result.state.version).toBe(1);
     });
   });
 
@@ -333,7 +333,7 @@ describe("DocumentMetaCache", () => {
     it("should evict LRU entry when at capacity", () => {
       const meta = {
         state: {
-          version: "1.0.0",
+          version: 1,
           hash: { algorithm: "sha256", encoding: "base64" },
         },
         documentType: "powerhouse/test",
@@ -356,7 +356,7 @@ describe("DocumentMetaCache", () => {
     it("should update LRU on access", async () => {
       const meta = {
         state: {
-          version: "1.0.0",
+          version: 1,
           hash: { algorithm: "sha256", encoding: "base64" },
         },
         documentType: "powerhouse/test",
@@ -383,7 +383,7 @@ describe("DocumentMetaCache", () => {
     it("should invalidate specific document+branch", () => {
       const meta = {
         state: {
-          version: "1.0.0",
+          version: 1,
           hash: { algorithm: "sha256", encoding: "base64" },
         },
         documentType: "powerhouse/test",
@@ -407,7 +407,7 @@ describe("DocumentMetaCache", () => {
 
       const meta = {
         state: {
-          version: "1.0.0",
+          version: 1,
           hash: { algorithm: "sha256", encoding: "base64" },
         },
         documentType: "powerhouse/test",
@@ -434,7 +434,7 @@ describe("DocumentMetaCache", () => {
       vi.mocked(operationStore.getSince).mockResolvedValue({
         items: [
           createCreateDocumentOperation("doc1", docType),
-          createUpgradeDocumentOperation("doc1", 1, "1.0.0"),
+          createUpgradeDocumentOperation("doc1", 1, 1),
         ],
         nextCursor: undefined,
         hasMore: false,
@@ -442,7 +442,7 @@ describe("DocumentMetaCache", () => {
 
       cache.putDocumentMeta("doc1", "main", {
         state: {
-          version: "1.0.0",
+          version: 1,
           hash: { algorithm: "sha256", encoding: "base64" },
         },
         documentType: docType,

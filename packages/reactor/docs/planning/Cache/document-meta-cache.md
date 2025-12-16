@@ -19,10 +19,10 @@ The write cache and keyframes are scope-specific (`{documentId}:{scope}:{branch}
 ### Example Scenarios
 
 **Scenario 1: Stale cache after document scope modification**
-1. CREATE_DOCUMENT + UPGRADE_DOCUMENT (version "1.0.0") executed in document scope
+1. CREATE_DOCUMENT + UPGRADE_DOCUMENT (version 1) executed in document scope
 2. Some global scope operations executed, keyframe stored for global scope
-3. Another UPGRADE_DOCUMENT (version "2.0.0") executed in document scope
-4. `getState(docId, "global", branch)` called - loads from global keyframe with version "1.0.0"
+3. Another UPGRADE_DOCUMENT (version 2) executed in document scope
+4. `getState(docId, "global", branch)` called - loads from global keyframe with version 1
 5. Job executor checks version and gets wrong value
 
 **Scenario 2: Stale isDeleted flag**
@@ -33,11 +33,11 @@ The write cache and keyframes are scope-specific (`{documentId}:{scope}:{branch}
 5. Job executor doesn't know document was deleted
 
 **Scenario 3: Reshuffling with UPGRADE_DOCUMENT**
-1. UPGRADE_DOCUMENT executed (sets version to "2.0.0") at revision N
+1. UPGRADE_DOCUMENT executed (sets version to 2) at revision N
 2. New operation A arrives with **earlier timestamp** than UPGRADE_DOCUMENT
 3. Operation A needs to be applied at revision N-1 (before UPGRADE_DOCUMENT), then UPGRADE_DOCUMENT reapplied
-4. To apply A correctly, we need document scope state **as of revision N-1** (version "1.0.0")
-5. Caching only "latest" (version "2.0.0") is insufficient - must reconstruct at target revision
+4. To apply A correctly, we need document scope state **as of revision N-1** (version 1)
+5. Caching only "latest" (version 2) is insufficient - must reconstruct at target revision
 
 ## Solution: DocumentMetaCache
 
@@ -123,7 +123,7 @@ The `PHDocumentState` type contains the document scope metadata:
 ```typescript
 // From document-model package
 export type PHDocumentState = {
-  version: string;        // Document version (starts at "0")
+  version: number;        // Document version (starts at 0)
   hash: {
     algorithm: string;    // Hash algorithm (e.g., "sha1")
     encoding: string;     // Hash encoding (e.g., "base64")
@@ -133,7 +133,7 @@ export type PHDocumentState = {
 };
 ```
 
-Note: Document versions start at `"0"` (not semver). The version is updated via UPGRADE_DOCUMENT operations.
+Note: Document versions start at `0`. The version is updated via UPGRADE_DOCUMENT operations.
 
 ### Integration Points
 
