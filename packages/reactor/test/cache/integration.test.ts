@@ -502,10 +502,16 @@ describe("KyselyWriteCache Integration Tests", () => {
         nextIndex,
         (txn) => {
           txn.addOperations(
-            createUpgradeDocumentOperation(docId, nextIndex, {
-              global: { test: "state" },
-              local: {},
-            }),
+            createUpgradeDocumentOperation(
+              docId,
+              0,
+              1,
+              {
+                global: { test: "state" },
+                local: {},
+              },
+              { index: nextIndex },
+            ),
           );
         },
       );

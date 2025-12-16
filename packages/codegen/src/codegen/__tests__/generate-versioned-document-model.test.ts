@@ -1,5 +1,5 @@
 import { paramCase } from "change-case";
-import { readdirSync } from "fs";
+import { readdirSync, readFileSync } from "fs";
 import path from "path";
 import { describe, expect, it, type TestContext } from "vitest";
 import { generateDocumentModel } from "../generate.js";
@@ -159,6 +159,45 @@ describe("versioned document models", () => {
           testOutDir,
         );
         await expect(() => compile(testOutDir)).rejects.toThrow();
+        purgeDirAfterTest(testOutDir);
+      },
+    );
+
+    it(
+      "should set version field on generated DocumentModelModule",
+      {
+        timeout: 10000000,
+      },
+      async (context) => {
+        const testOutDir = getTestOutDir(context);
+        resetDirForTest(testOutDir);
+        await loadBaseProjectFromDir("empty-project", testOutDir);
+        await loadDocumentModelsInDir("spec-version-2", testOutDir);
+
+        const v1ModulePath = path.join(
+          testOutDir,
+          "document-models",
+          "test-doc",
+          "v1",
+          "module.ts",
+        );
+        const v2ModulePath = path.join(
+          testOutDir,
+          "document-models",
+          "test-doc",
+          "v2",
+          "module.ts",
+        );
+
+        const v1ModuleContent = readFileSync(v1ModulePath, "utf-8");
+        const v2ModuleContent = readFileSync(v2ModulePath, "utf-8");
+
+        expect(v1ModuleContent).toContain("version: 1,");
+        expect(v2ModuleContent).toContain("version: 2,");
+
+        await compile(testOutDir);
+        await runGeneratedTests(testOutDir);
+
         purgeDirAfterTest(testOutDir);
       },
     );

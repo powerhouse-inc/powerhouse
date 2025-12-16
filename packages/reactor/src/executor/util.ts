@@ -4,13 +4,60 @@ import type {
   DeleteDocumentAction,
   PHDocument,
   UpgradeDocumentAction,
+  UpgradeTransition,
 } from "document-model";
 import { createPresignedHeader, defaultBaseState } from "document-model/core";
+import { DowngradeNotSupportedError } from "../shared/errors.js";
 import type {
   ConsistencyCoordinate,
   ConsistencyToken,
 } from "../shared/types.js";
 import type { OperationWithContext } from "../storage/interfaces.js";
+
+/**
+ * Parses a version string to extract the major version number.
+ * Handles formats like "0", "1", "2", "1.0.0", "2.0", etc.
+ * Returns 0 for empty/invalid strings or "0"/"0.0.0".
+ *
+ * @param versionString - The version string to parse
+ * @returns The extracted major version number
+ */
+export function parseVersionNumber(versionString: string): number {
+  if (!versionString) return 0;
+
+  const parsed = parseInt(versionString, 10);
+  if (!isNaN(parsed)) return parsed;
+
+  const parts = versionString.split(".");
+  if (parts.length > 0) {
+    const major = parseInt(parts[0], 10);
+    if (!isNaN(major)) return major;
+  }
+
+  return 0;
+}
+
+/**
+ * Extracts the target version from an UPGRADE_DOCUMENT action.
+ * First tries action.input.toVersion, then falls back to
+ * initialState.document.version for legacy operations.
+ *
+ * @param action - The UPGRADE_DOCUMENT action
+ * @returns The target version number
+ */
+export function getUpgradeTargetVersion(action: UpgradeDocumentAction): number {
+  let toVersion = action.input.toVersion;
+  if (toVersion === 0) {
+    const initialState = action.input.initialState as
+      | { document?: { version?: number } }
+      | undefined;
+    const stateVersion = initialState?.document?.version;
+    if (typeof stateVersion === "number") {
+      toVersion = stateVersion;
+    }
+  }
+  return toVersion;
+}
 
 /**
  * Creates a PHDocument from a CREATE_DOCUMENT action input.
@@ -72,17 +119,61 @@ export function createDocumentFromAction(
 
 /**
  * Applies an UPGRADE_DOCUMENT action to a document.
- * Merges the initialState from the action with the existing document state,
- * preserving auth and document scopes while adding model-specific scopes.
+ * Handles all upgrade scenarios including initial upgrades, no-ops, and multi-step upgrades.
+ *
+ * Behavior based on fromVersion/toVersion:
+ * - fromVersion === toVersion (and fromVersion > 0): No-op - return null
+ * - fromVersion > toVersion: Throw DowngradeNotSupportedError
+ * - All other cases: Apply upgradePath transitions (if provided), then apply initialState, set version
+ *
+ * The initialState from the action is always applied (if provided) to maintain backward
+ * compatibility with the original implementation.
  *
  * @param document - The document to upgrade
  * @param action - The UPGRADE_DOCUMENT action
- * @returns The upgraded document (mutates in place and returns for convenience)
+ * @param upgradePath - Optional pre-computed upgrade path for multi-step upgrades
+ * @returns The upgraded document, or null if no-op (same version)
+ * @throws DowngradeNotSupportedError if attempting to downgrade
  */
 export function applyUpgradeDocumentAction(
   document: PHDocument,
   action: UpgradeDocumentAction,
-): PHDocument {
+  upgradePath?: UpgradeTransition[],
+): PHDocument | null {
+  const fromVersion = action.input.fromVersion;
+  const toVersion = getUpgradeTargetVersion(action);
+
+  if (fromVersion === toVersion && fromVersion > 0) {
+    return null;
+  }
+
+  if (fromVersion > toVersion) {
+    throw new DowngradeNotSupportedError(
+      document.header.documentType,
+      fromVersion,
+      toVersion,
+    );
+  }
+
+  if (upgradePath) {
+    for (const transition of upgradePath) {
+      document = transition.upgradeReducer(document, action);
+    }
+  }
+
+  applyInitialState(document, action);
+
+  document.state.document = {
+    ...document.state.document,
+    version: toVersion,
+  };
+  return document;
+}
+
+function applyInitialState(
+  document: PHDocument,
+  action: UpgradeDocumentAction,
+): void {
   const input = action.input as {
     initialState?: PHDocument["state"];
     state?: PHDocument["state"];
@@ -90,14 +181,9 @@ export function applyUpgradeDocumentAction(
 
   const newState = input.initialState || input.state;
   if (newState) {
-    document.state = {
-      ...document.state,
-      ...newState,
-    };
+    document.state = { ...document.state, ...newState };
     document.initialState = document.state;
   }
-
-  return document;
 }
 
 /**

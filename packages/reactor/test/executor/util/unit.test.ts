@@ -203,7 +203,7 @@ describe("createDocumentFromAction", () => {
 });
 
 describe("applyUpgradeDocumentAction", () => {
-  it("should merge initialState with existing document state", () => {
+  it("should merge initialState with existing document state (initial upgrade)", () => {
     const document = createDocumentFromAction({
       id: "action-1",
       type: "CREATE_DOCUMENT",
@@ -221,6 +221,10 @@ describe("applyUpgradeDocumentAction", () => {
       scope: "document",
       timestampUtcMs: "2024-01-01T00:00:01.000Z",
       input: {
+        documentId: "doc-123",
+        model: "powerhouse/document-model",
+        fromVersion: 0,
+        toVersion: 1,
         initialState: {
           global: { nodes: [] },
           local: { selectedNode: null },
@@ -228,13 +232,15 @@ describe("applyUpgradeDocumentAction", () => {
       },
     };
 
-    applyUpgradeDocumentAction(document, upgradeAction as never);
+    const result = applyUpgradeDocumentAction(document, upgradeAction as never);
 
-    const documentModelState = document.state as DocumentModelPHState;
+    expect(result).not.toBeNull();
+    const documentModelState = result!.state as DocumentModelPHState;
 
     expect(documentModelState.global).toEqual({ nodes: [] });
     expect(documentModelState.local).toEqual({ selectedNode: null });
-    expect(document.initialState).toEqual(document.state);
+    expect(result!.initialState).toEqual(result!.state);
+    expect(result!.state.document.version).toBe(1);
   });
 
   it("should handle state field instead of initialState", () => {
@@ -255,15 +261,23 @@ describe("applyUpgradeDocumentAction", () => {
       scope: "document",
       timestampUtcMs: "2024-01-01T00:00:01.000Z",
       input: {
+        documentId: "doc-123",
+        model: "powerhouse/document-model",
+        fromVersion: 0,
+        toVersion: 1,
         state: {
           global: { items: [] },
         },
       },
     };
 
-    applyUpgradeDocumentAction(document, upgradeAction as never);
+    const result = applyUpgradeDocumentAction(document, upgradeAction as never);
 
-    expect((document.state as any).global).toEqual({ items: [] });
+    expect(result).not.toBeNull();
+    expect((result!.state as DocumentModelPHState).global).toEqual({
+      items: [],
+    });
+    expect(result!.state.document.version).toBe(1);
   });
 
   it("should preserve existing state when no initialState or state provided", () => {
@@ -285,12 +299,88 @@ describe("applyUpgradeDocumentAction", () => {
       type: "UPGRADE_DOCUMENT",
       scope: "document",
       timestampUtcMs: "2024-01-01T00:00:01.000Z",
-      input: {},
+      input: {
+        documentId: "doc-123",
+        model: "powerhouse/document-model",
+        fromVersion: 0,
+        toVersion: 1,
+      },
     };
 
-    applyUpgradeDocumentAction(document, upgradeAction as never);
+    const result = applyUpgradeDocumentAction(document, upgradeAction as never);
 
-    expect(document.state).toEqual(originalState);
+    expect(result).not.toBeNull();
+    expect(result!.state.document.version).toBe(1);
+
+    const expectedState = {
+      ...originalState,
+      document: { ...originalState.document, version: 1 },
+    };
+    expect(result!.state).toEqual(expectedState);
+  });
+
+  it("should return null for same version (no-op)", () => {
+    const document = createDocumentFromAction({
+      id: "action-1",
+      type: "CREATE_DOCUMENT",
+      scope: "document",
+      timestampUtcMs: "2024-01-01T00:00:00.000Z",
+      input: {
+        documentId: "doc-123",
+        model: "powerhouse/document-model",
+      },
+    } as CreateDocumentAction);
+
+    document.state.document.version = 1;
+
+    const upgradeAction = {
+      id: "upgrade-1",
+      type: "UPGRADE_DOCUMENT",
+      scope: "document",
+      timestampUtcMs: "2024-01-01T00:00:01.000Z",
+      input: {
+        documentId: "doc-123",
+        model: "powerhouse/document-model",
+        fromVersion: 1,
+        toVersion: 1,
+      },
+    };
+
+    const result = applyUpgradeDocumentAction(document, upgradeAction as never);
+
+    expect(result).toBeNull();
+  });
+
+  it("should throw DowngradeNotSupportedError for downgrade attempt", () => {
+    const document = createDocumentFromAction({
+      id: "action-1",
+      type: "CREATE_DOCUMENT",
+      scope: "document",
+      timestampUtcMs: "2024-01-01T00:00:00.000Z",
+      input: {
+        documentId: "doc-123",
+        model: "powerhouse/document-model",
+      },
+    } as CreateDocumentAction);
+
+    document.state.document.version = 2;
+
+    const upgradeAction = {
+      id: "upgrade-1",
+      type: "UPGRADE_DOCUMENT",
+      scope: "document",
+      timestampUtcMs: "2024-01-01T00:00:01.000Z",
+      input: {
+        documentId: "doc-123",
+        model: "powerhouse/document-model",
+        fromVersion: 2,
+        toVersion: 1,
+      },
+    };
+
+    expect(() =>
+      applyUpgradeDocumentAction(document, upgradeAction as never),
+    ).toThrow("Downgrade not supported");
   });
 });
 

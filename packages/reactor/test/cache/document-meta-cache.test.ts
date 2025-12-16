@@ -59,6 +59,8 @@ function createUpgradeDocumentOperation(
       timestampUtcMs: `2024-01-01T00:0${index}:00.000Z`,
       input: {
         documentId,
+        fromVersion: version > 0 ? version - 1 : 0,
+        toVersion: version,
         initialState: {
           document: {
             version,

@@ -11,7 +11,9 @@ import type {
   Operation,
   PHDocument,
   RemoveRelationshipActionInput,
+  UpgradeDocumentAction,
   UpgradeDocumentActionInput,
+  UpgradeTransition,
 } from "document-model";
 import type { IDocumentMetaCache } from "../cache/document-meta-cache-types.js";
 import type {
@@ -571,7 +573,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
   /**
    * Execute an UPGRADE_DOCUMENT system action.
-   * This sets the document's initial state from the upgrade action.
+   * Handles initial upgrades (version 0 to N), same-version no-ops, and multi-step upgrade chains.
    * The operation index is determined from the document's current operation count.
    */
   private async executeUpgradeDocumentAction(
@@ -605,6 +607,9 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     const documentId = input.documentId;
 
+    const fromVersion = input.fromVersion;
+    const toVersion = input.toVersion;
+
     let document: PHDocument;
     try {
       document = await this.writeCache.getState(
@@ -633,7 +638,49 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     const nextIndex = getNextIndexForScope(document, job.scope);
 
-    applyUpgradeDocumentAction(document, action as never);
+    let upgradePath: UpgradeTransition[] | undefined;
+    if (fromVersion > 0 && fromVersion < toVersion) {
+      try {
+        upgradePath = this.registry.computeUpgradePath(
+          document.header.documentType,
+          fromVersion,
+          toVersion,
+        );
+      } catch (error) {
+        return this.buildErrorResult(
+          job,
+          error instanceof Error ? error : new Error(String(error)),
+          startTime,
+        );
+      }
+    }
+
+    let upgradedDocument: PHDocument | null;
+    try {
+      upgradedDocument = applyUpgradeDocumentAction(
+        document,
+        action as UpgradeDocumentAction,
+        upgradePath,
+      );
+    } catch (error) {
+      return this.buildErrorResult(
+        job,
+        error instanceof Error ? error : new Error(String(error)),
+        startTime,
+      );
+    }
+
+    if (upgradedDocument === null) {
+      return {
+        job,
+        success: true,
+        operations: [],
+        operationsWithContext: [],
+        duration: Date.now() - startTime,
+      };
+    }
+
+    document = upgradedDocument;
 
     const operation = this.createOperation(action, nextIndex, skip);
 
@@ -1063,7 +1110,14 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     let module: DocumentModelModule;
     try {
-      module = this.registry.getModule(document.header.documentType);
+      // Use document version to get the correct module
+      // Version 0 means not yet upgraded - use latest version
+      const moduleVersion =
+        docMeta.state.version === 0 ? undefined : docMeta.state.version;
+      module = this.registry.getModule(
+        document.header.documentType,
+        moduleVersion,
+      );
     } catch (error) {
       return this.buildErrorResult(
         job,

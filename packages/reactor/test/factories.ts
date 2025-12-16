@@ -204,10 +204,12 @@ export function createCreateDocumentOperation(
 
 export function createUpgradeDocumentOperation(
   documentId: string,
-  index: number,
-  initialState: Record<string, any> = {},
+  fromVersion: number,
+  toVersion: number,
+  initialState: Record<string, unknown> = {},
   overrides: Partial<Operation> = {},
 ): Operation {
+  const index = overrides.index ?? 1;
   return {
     id: overrides.id || `${documentId}-upgrade-${index}`,
     index,
@@ -221,12 +223,14 @@ export function createUpgradeDocumentOperation(
       timestampUtcMs: overrides.timestampUtcMs || new Date().toISOString(),
       input: {
         documentId,
+        fromVersion,
+        toVersion,
         initialState,
       },
     } as Action,
     resultingState:
       overrides.resultingState ||
-      JSON.stringify({ document: { id: documentId, index } }),
+      JSON.stringify({ document: { id: documentId, version: toVersion } }),
     ...overrides,
   };
 }

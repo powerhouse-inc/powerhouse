@@ -2,8 +2,8 @@ import type { Action, Operation } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { DocumentMetaCache } from "../../../src/cache/document-meta-cache.js";
 import type { IDocumentMetaCache } from "../../../src/cache/document-meta-cache-types.js";
+import { DocumentMetaCache } from "../../../src/cache/document-meta-cache.js";
 import { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../../../src/cache/write-cache-types.js";
 import { DocumentModelRegistry } from "../../../src/registry/implementation.js";
@@ -124,7 +124,7 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
         1,
         (txn) => {
           txn.addOperations(
-            createUpgradeDocumentOperation(docId, 1, {
+            createUpgradeDocumentOperation(docId, 0, 1, {
               document: {
                 version: 1,
                 hash: { algorithm: "sha256", encoding: "base64" },
@@ -169,14 +169,20 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
         2,
         (txn) => {
           txn.addOperations(
-            createUpgradeDocumentOperation(docId, 2, {
-              document: {
-                version: 2,
-                hash: { algorithm: "sha256", encoding: "base64" },
+            createUpgradeDocumentOperation(
+              docId,
+              1,
+              2,
+              {
+                document: {
+                  version: 2,
+                  hash: { algorithm: "sha256", encoding: "base64" },
+                },
+                global: {},
+                local: {},
               },
-              global: {},
-              local: {},
-            }),
+              { index: 2 },
+            ),
           );
         },
       );
@@ -226,7 +232,7 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
         1,
         (txn) => {
           txn.addOperations(
-            createUpgradeDocumentOperation(docId, 1, {
+            createUpgradeDocumentOperation(docId, 0, 1, {
               document: {
                 version: 1,
                 hash: { algorithm: "sha256", encoding: "base64" },
@@ -311,7 +317,7 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
         1,
         (txn) => {
           txn.addOperations(
-            createUpgradeDocumentOperation(docId, 1, {
+            createUpgradeDocumentOperation(docId, 0, 1, {
               document: {
                 version: 1,
                 hash: { algorithm: "sha256", encoding: "base64" },
@@ -332,14 +338,20 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
         2,
         (txn) => {
           txn.addOperations(
-            createUpgradeDocumentOperation(docId, 2, {
-              document: {
-                version: 2,
-                hash: { algorithm: "sha256", encoding: "base64" },
+            createUpgradeDocumentOperation(
+              docId,
+              1,
+              2,
+              {
+                document: {
+                  version: 2,
+                  hash: { algorithm: "sha256", encoding: "base64" },
+                },
+                global: {},
+                local: {},
               },
-              global: {},
-              local: {},
-            }),
+              { index: 2 },
+            ),
           );
         },
       );
@@ -353,14 +365,20 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
         3,
         (txn) => {
           txn.addOperations(
-            createUpgradeDocumentOperation(docId, 3, {
-              document: {
-                version: 3,
-                hash: { algorithm: "sha256", encoding: "base64" },
+            createUpgradeDocumentOperation(
+              docId,
+              2,
+              3,
+              {
+                document: {
+                  version: 3,
+                  hash: { algorithm: "sha256", encoding: "base64" },
+                },
+                global: {},
+                local: {},
               },
-              global: {},
-              local: {},
-            }),
+              { index: 3 },
+            ),
           );
         },
       );

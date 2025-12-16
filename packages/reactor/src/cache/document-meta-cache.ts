@@ -190,10 +190,11 @@ export class DocumentMetaCache implements IDocumentMetaCache {
       documentScopeRevision = op.index;
 
       if (op.action.type === "UPGRADE_DOCUMENT") {
-        document = applyUpgradeDocumentAction(
-          document,
-          op.action as UpgradeDocumentAction,
-        );
+        const upgradeAction = op.action as UpgradeDocumentAction;
+        const result = applyUpgradeDocumentAction(document, upgradeAction);
+        if (result !== null) {
+          document = result;
+        }
       } else if (op.action.type === "DELETE_DOCUMENT") {
         document = applyDeleteDocumentAction(
           document,
