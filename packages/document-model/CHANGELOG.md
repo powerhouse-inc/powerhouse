@@ -1,3 +1,13 @@
+## 5.1.0-dev.23 (2025-12-17)
+
+### 🩹 Fixes
+
+- default state should be 0 ([a19a2ebec](https://github.com/powerhouse-inc/powerhouse/commit/a19a2ebec))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.22 (2025-12-16)
 
 ### 🚀 Features

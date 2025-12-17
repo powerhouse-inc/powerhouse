@@ -1,3 +1,15 @@
+## 5.1.0-dev.23 (2025-12-17)
+
+### 🩹 Fixes
+
+- **reactor-api, reactor-local:** pass dynamically loaded modules to the new reactor ([c038e058c](https://github.com/powerhouse-inc/powerhouse/commit/c038e058c))
+- **reactor-api:** remove circular import ([9076b5257](https://github.com/powerhouse-inc/powerhouse/commit/9076b5257))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.22 (2025-12-16)
 
 ### 🚀 Features

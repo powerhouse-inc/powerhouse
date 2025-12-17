@@ -1,3 +1,13 @@
+## 5.1.0-dev.23 (2025-12-17)
+
+### 🩹 Fixes
+
+- gql api needs id for operations ([7146bffea](https://github.com/powerhouse-inc/powerhouse/commit/7146bffea))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.22 (2025-12-16)
 
 ### 🚀 Features

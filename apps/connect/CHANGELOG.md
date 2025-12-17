@@ -1,3 +1,13 @@
+## 5.1.0-dev.23 (2025-12-17)
+
+### 🩹 Fixes
+
+- **reactor:** integrated the document meta cache ([29565fa5f](https://github.com/powerhouse-inc/powerhouse/commit/29565fa5f))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.22 (2025-12-16)
 
 ### 🚀 Features
