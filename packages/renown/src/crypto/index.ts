@@ -238,3 +238,5 @@ export class ConnectCrypto implements IConnectCrypto {
     };
   }
 }
+
+export { ConnectCryptoSigner, createSignatureVerifier } from "./signer.js";

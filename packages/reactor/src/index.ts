@@ -37,7 +37,6 @@ export {
   type ViewFilter,
 } from "./shared/types.js";
 export {
-  type ISigner,
   type SignatureVerificationHandler,
   type SignerConfig,
 } from "./signer/types.js";

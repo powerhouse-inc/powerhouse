@@ -1293,6 +1293,8 @@ export class BaseDocumentDriveServer
       state: initialState,
     };
 
+    console.log(`[LEGACY] Creating default drive`, documentToStore);
+
     await this.documentStorage.create(documentToStore);
 
     // Force rebuild to ensure operations are properly merged

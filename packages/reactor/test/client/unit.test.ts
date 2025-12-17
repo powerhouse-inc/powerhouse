@@ -1,4 +1,9 @@
-import type { Action, DocumentModelModule, PHDocument } from "document-model";
+import type {
+  Action,
+  DocumentModelModule,
+  ISigner,
+  PHDocument,
+} from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ReactorClient } from "../../src/client/reactor-client.js";
 import type { IReactorClient } from "../../src/client/types.js";
@@ -10,7 +15,6 @@ import {
   type JobInfo,
   type PagedResults,
 } from "../../src/shared/types.js";
-import type { ISigner } from "../../src/signer/types.js";
 import type { IDocumentIndexer } from "../../src/storage/interfaces.js";
 import type { IReactorSubscriptionManager } from "../../src/subs/types.js";
 import {
@@ -389,7 +393,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const result = await client.execute(documentId, "main", actions);
 
-      expect(mockSigner.sign).toHaveBeenCalledWith(actions[0], undefined);
+      expect(mockSigner.signAction).toHaveBeenCalledWith(actions[0], undefined);
       expect(mockReactor.execute).toHaveBeenCalledWith(
         documentId,
         "main",
@@ -457,7 +461,7 @@ describe("ReactorClient Unit Tests", () => {
 
       await client.execute(documentId, "main", actions, signal);
 
-      expect(mockSigner.sign).toHaveBeenCalledWith(actions[0], signal);
+      expect(mockSigner.signAction).toHaveBeenCalledWith(actions[0], signal);
     });
 
     it("should sign multiple actions", async () => {
@@ -494,9 +498,9 @@ describe("ReactorClient Unit Tests", () => {
 
       await client.execute(documentId, "main", actions);
 
-      expect(mockSigner.sign).toHaveBeenCalledTimes(2);
-      expect(mockSigner.sign).toHaveBeenCalledWith(actions[0], undefined);
-      expect(mockSigner.sign).toHaveBeenCalledWith(actions[1], undefined);
+      expect(mockSigner.signAction).toHaveBeenCalledTimes(2);
+      expect(mockSigner.signAction).toHaveBeenCalledWith(actions[0], undefined);
+      expect(mockSigner.signAction).toHaveBeenCalledWith(actions[1], undefined);
     });
 
     it("should pass view and signal parameters", async () => {
@@ -554,7 +558,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const result = await client.executeAsync(documentId, "main", actions);
 
-      expect(mockSigner.sign).toHaveBeenCalledWith(actions[0], undefined);
+      expect(mockSigner.signAction).toHaveBeenCalledWith(actions[0], undefined);
       expect(mockReactor.execute).toHaveBeenCalledWith(
         documentId,
         "main",
@@ -606,7 +610,7 @@ describe("ReactorClient Unit Tests", () => {
 
       await client.executeAsync(documentId, "main", actions, signal);
 
-      expect(mockSigner.sign).toHaveBeenCalledWith(actions[0], signal);
+      expect(mockSigner.signAction).toHaveBeenCalledWith(actions[0], signal);
     });
   });
 
@@ -939,9 +943,9 @@ describe("ReactorClient Unit Tests", () => {
       );
     });
 
-    it("should propagate errors from signer.sign", async () => {
+    it("should propagate errors from signer.signAction", async () => {
       const error = new Error("Signing failed");
-      vi.mocked(mockSigner.sign).mockRejectedValue(error);
+      vi.mocked(mockSigner.signAction).mockRejectedValue(error);
 
       await expect(
         client.executeAsync("doc-1", "main", [

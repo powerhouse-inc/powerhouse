@@ -10,7 +10,11 @@ import {
   type SearchFilter,
   type ViewFilter,
 } from "@powerhousedao/reactor";
-import type { DocumentModelModule, Operation, PHDocument } from "document-model";
+import type {
+  DocumentModelModule,
+  Operation,
+  PHDocument,
+} from "document-model";
 import { GraphQLError } from "graphql";
 import {
   fromInputMaybe,

@@ -5,6 +5,7 @@ import type {
   CreateDocumentActionInput,
   DeleteDocumentActionInput,
   DocumentModelModule,
+  ISigner,
   Operation,
   PHBaseState,
   PHDocument,
@@ -27,7 +28,6 @@ import type {
 } from "../shared/types.js";
 import { JobStatus } from "../shared/types.js";
 import { matchesScope } from "../shared/utils.js";
-import type { ISigner } from "../signer/types.js";
 import type {
   IConsistencyAwareStorage,
   IDocumentIndexer,

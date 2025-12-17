@@ -6,6 +6,7 @@ import type {
 import type {
   Action,
   DocumentModelModule,
+  ISigner,
   Operation,
   PHDocument,
 } from "document-model";
@@ -31,7 +32,6 @@ import type {
   ViewFilter,
 } from "../shared/types.js";
 import type { IJobAwaiter } from "../shared/awaiter.js";
-import type { ISigner } from "../signer/types.js";
 import type {
   IDocumentIndexer,
   IDocumentView,

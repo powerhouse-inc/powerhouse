@@ -12,6 +12,7 @@ import {
 import type {
   Action,
   DocumentModelModule,
+  ISigner,
   Operation,
   PHDocument,
 } from "document-model";
@@ -44,7 +45,6 @@ import type { IDocumentModelRegistry } from "../src/registry/interfaces.js";
 import type { IJobAwaiter } from "../src/shared/awaiter.js";
 import { ConsistencyTracker } from "../src/shared/consistency-tracker.js";
 import { JobStatus } from "../src/shared/types.js";
-import type { ISigner } from "../src/signer/types.js";
 import { ConsistencyAwareLegacyStorage } from "../src/storage/consistency-aware-legacy-storage.js";
 import type {
   IDocumentIndexer,
@@ -823,7 +823,10 @@ export async function createTestSyncStorage(): Promise<{
  */
 export function createMockSigner(overrides: Partial<ISigner> = {}): ISigner {
   return {
-    sign: vi
+    publicKey: vi.fn().mockResolvedValue({}),
+    sign: vi.fn().mockResolvedValue(new Uint8Array(0)),
+    verify: vi.fn().mockResolvedValue(undefined),
+    signAction: vi
       .fn()
       .mockResolvedValue([
         "mock-signature",

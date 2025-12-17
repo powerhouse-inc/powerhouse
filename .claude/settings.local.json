@@ -18,7 +18,8 @@
       "mcp__ide",
       "WebSearch",
       "WebFetch(domain:github.com)",
-      "mcp__chrome-devtools"
+      "mcp__chrome-devtools",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

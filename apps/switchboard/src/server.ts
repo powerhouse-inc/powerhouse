@@ -14,7 +14,7 @@ import {
   initializeAndStartAPI,
   startViteServer,
 } from "@powerhousedao/reactor-api";
-import type { IConnectCrypto } from "@renown/sdk";
+import { ConnectCryptoSigner, type IConnectCrypto } from "@renown/sdk";
 import * as Sentry from "@sentry/node";
 import type { ICache, IDocumentDriveServer } from "document-drive";
 import {
@@ -252,7 +252,18 @@ async function initServer(
 
   // Create default drive if provided
   if (options.drive) {
-    defaultDriveUrl = await addDefaultDrive(client, options.drive, serverPort);
+    if (!connectCrypto) {
+      throw new Error(
+        "Cannot create default drive without ConnectCrypto identity",
+      );
+    }
+    const signer = new ConnectCryptoSigner(connectCrypto);
+    defaultDriveUrl = await addDefaultDrive(
+      client,
+      signer,
+      options.drive,
+      serverPort,
+    );
   }
 
   // add vite middleware after express app is initialized if applicable
