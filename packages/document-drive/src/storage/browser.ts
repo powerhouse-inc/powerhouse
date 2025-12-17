@@ -10,7 +10,6 @@ import type {
 import {
   DocumentAlreadyExistsError,
   DocumentAlreadyExistsReason,
-  DocumentIdValidationError,
   DocumentNotFoundError,
   DocumentSlugValidationError,
 } from "document-drive/server/error";
@@ -24,7 +23,6 @@ import {
 import type { Operation, PHDocument } from "document-model";
 import LocalForage from "localforage";
 import {
-  isValidDocumentId,
   isValidSlug,
   resolveStorageUnitsFilter,
   setIntersection,
@@ -235,9 +233,6 @@ export class BrowserStorage
 
   async create(document: PHDocument): Promise<void> {
     const documentId = document.header.id;
-    if (!isValidDocumentId(documentId)) {
-      throw new DocumentIdValidationError(documentId);
-    }
 
     const db = await this.db;
 

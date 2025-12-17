@@ -9,7 +9,6 @@ import type {
 import {
   DocumentAlreadyExistsError,
   DocumentAlreadyExistsReason,
-  DocumentIdValidationError,
   DocumentNotFoundError,
   DocumentSlugValidationError,
 } from "document-drive/server/error";
@@ -25,7 +24,6 @@ import fs from "fs/promises";
 import stringify from "json-stringify-deterministic";
 import path from "path";
 import {
-  isValidDocumentId,
   isValidSlug,
   resolveStorageUnitsFilter,
   setIntersection,
@@ -210,9 +208,6 @@ export class FilesystemStorage
 
   async create(document: PHDocument) {
     const documentId = document.header.id;
-    if (!isValidDocumentId(documentId)) {
-      throw new DocumentIdValidationError(documentId);
-    }
 
     if (await this.exists(documentId)) {
       throw new DocumentAlreadyExistsError(documentId);

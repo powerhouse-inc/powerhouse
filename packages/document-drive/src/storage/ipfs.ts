@@ -9,10 +9,8 @@ import type {
 import {
   DocumentAlreadyExistsError,
   DocumentAlreadyExistsReason,
-  DocumentIdValidationError,
   DocumentNotFoundError,
   DocumentSlugValidationError,
-  isValidDocumentId,
   isValidSlug,
   mergeOperations,
   type DocumentDriveAction,
@@ -110,9 +108,6 @@ export class IPFSStorage
 
   async create(document: PHDocument): Promise<void> {
     const documentId = document.id;
-    if (!isValidDocumentId(documentId)) {
-      throw new DocumentIdValidationError(documentId);
-    }
 
     if (await this.exists(documentId)) {
       throw new DocumentAlreadyExistsError(documentId);
