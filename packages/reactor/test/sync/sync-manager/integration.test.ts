@@ -16,7 +16,7 @@ import type { Database } from "../../../src/storage/kysely/types.js";
 import type { InternalChannel } from "../../../src/sync/channels/internal-channel.js";
 import type { IChannelFactory } from "../../../src/sync/interfaces.js";
 import { SyncManager } from "../../../src/sync/sync-manager.js";
-import type { ChannelConfig } from "../../../src/sync/types.js";
+import type { ChannelConfig, SyncEnvelope } from "../../../src/sync/types.js";
 import { SyncOperationStatus } from "../../../src/sync/types.js";
 import {
   createTestChannelFactory,
@@ -31,6 +31,7 @@ describe("SyncManager Integration", () => {
   let operationIndex: IOperationIndex;
   let mockReactor: IReactor;
   let channelRegistry: Map<string, InternalChannel>;
+  let sentEnvelopes: SyncEnvelope[];
   let channelFactory: IChannelFactory;
   let syncManager: SyncManager;
 
@@ -49,7 +50,8 @@ describe("SyncManager Integration", () => {
     } as any;
 
     channelRegistry = new Map();
-    channelFactory = createTestChannelFactory(channelRegistry);
+    sentEnvelopes = [];
+    channelFactory = createTestChannelFactory(channelRegistry, sentEnvelopes);
 
     syncManager = new SyncManager(
       syncRemoteStorage,
@@ -236,8 +238,11 @@ describe("SyncManager Integration", () => {
         operations,
       });
 
+      expect(sentEnvelopes).toHaveLength(1);
+      expect(sentEnvelopes[0].operations).toHaveLength(1);
+      expect(sentEnvelopes[0].operations![0].operation.id).toBe("op1");
       const remote = syncManager.getByName("remote1");
-      expect(remote.channel.outbox.items).toHaveLength(1);
+      expect(remote.channel.outbox.items).toHaveLength(0);
     });
 
     it("should not route operations that do not match filter", async () => {
@@ -345,11 +350,11 @@ describe("SyncManager Integration", () => {
         operations,
       });
 
+      expect(sentEnvelopes).toHaveLength(2);
       const remote1 = syncManager.getByName("remote1");
       const remote2 = syncManager.getByName("remote2");
-
-      expect(remote1.channel.outbox.items).toHaveLength(1);
-      expect(remote2.channel.outbox.items).toHaveLength(1);
+      expect(remote1.channel.outbox.items).toHaveLength(0);
+      expect(remote2.channel.outbox.items).toHaveLength(0);
     });
   });
 
@@ -474,7 +479,7 @@ describe("SyncManager Integration", () => {
   });
 
   describe("outbox processing", () => {
-    it("should remove completed jobs from outbox", async () => {
+    it("should automatically remove jobs from outbox after successful send", async () => {
       await syncManager.startup();
 
       const channelConfig: ChannelConfig = {
@@ -514,14 +519,10 @@ describe("SyncManager Integration", () => {
         operations,
       });
 
+      expect(sentEnvelopes).toHaveLength(1);
+      expect(sentEnvelopes[0].operations![0].operation.id).toBe("op1");
+
       const remote = syncManager.getByName("remote1");
-      expect(remote.channel.outbox.items).toHaveLength(1);
-
-      const job = remote.channel.outbox.items[0];
-      job.executed();
-
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
       expect(remote.channel.outbox.items).toHaveLength(0);
     });
   });

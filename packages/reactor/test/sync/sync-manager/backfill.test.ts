@@ -14,7 +14,7 @@ import type {
 import type { Database } from "../../../src/storage/kysely/types.js";
 import type { IChannelFactory } from "../../../src/sync/interfaces.js";
 import { SyncManager } from "../../../src/sync/sync-manager.js";
-import type { ChannelConfig } from "../../../src/sync/types.js";
+import type { ChannelConfig, SyncEnvelope } from "../../../src/sync/types.js";
 import {
   createTestChannelFactory,
   createTestSyncStorage,
@@ -27,6 +27,7 @@ describe("SyncManager Backfill", () => {
   let eventBus: IEventBus;
   let operationIndex: IOperationIndex;
   let mockReactor: IReactor;
+  let sentEnvelopes: SyncEnvelope[];
   let channelFactory: IChannelFactory;
   let syncManager: SyncManager;
 
@@ -44,7 +45,8 @@ describe("SyncManager Backfill", () => {
       load: vi.fn().mockResolvedValue({ status: "ok" }),
     } as any;
 
-    channelFactory = createTestChannelFactory(new Map());
+    sentEnvelopes = [];
+    channelFactory = createTestChannelFactory(new Map(), sentEnvelopes);
 
     syncManager = new SyncManager(
       syncRemoteStorage,
@@ -108,11 +110,10 @@ describe("SyncManager Backfill", () => {
         channelConfig,
       );
 
-      expect(remote.channel.outbox.items).toHaveLength(1);
-      expect(remote.channel.outbox.items[0].operations).toHaveLength(1);
-      expect(remote.channel.outbox.items[0].operations[0].operation.id).toBe(
-        "op1",
-      );
+      expect(sentEnvelopes).toHaveLength(1);
+      expect(sentEnvelopes[0].operations).toHaveLength(1);
+      expect(sentEnvelopes[0].operations![0].operation.id).toBe("op1");
+      expect(remote.channel.outbox.items).toHaveLength(0);
     });
 
     it("should not backfill when collection has no operations", async () => {
@@ -206,11 +207,10 @@ describe("SyncManager Backfill", () => {
         { documentId: [driveId], scope: ["global"], branch: "main" },
       );
 
-      expect(remote.channel.outbox.items).toHaveLength(1);
-      expect(remote.channel.outbox.items[0].operations).toHaveLength(1);
-      expect(remote.channel.outbox.items[0].operations[0].operation.id).toBe(
-        "op1",
-      );
+      expect(sentEnvelopes).toHaveLength(1);
+      expect(sentEnvelopes[0].operations).toHaveLength(1);
+      expect(sentEnvelopes[0].operations![0].operation.id).toBe("op1");
+      expect(remote.channel.outbox.items).toHaveLength(0);
     });
   });
 });

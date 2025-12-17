@@ -261,7 +261,7 @@ describe("InternalChannel Integration", () => {
       expect(cursor.cursorOrdinal).toBe(3);
     });
 
-    it("should support ACK protocol clearing outbox", async () => {
+    it("should automatically clear outbox after successful send", async () => {
       await createTestRemote("remote-a");
       await createTestRemote("remote-b");
 
@@ -285,16 +285,14 @@ describe("InternalChannel Integration", () => {
 
       channelA.outbox.add(job);
 
-      expect(channelA.outbox.items).toHaveLength(1);
+      expect(channelA.outbox.items).toHaveLength(0);
+      expect(job.status).toBe(SyncOperationStatus.Applied);
       expect(channelB.inbox.items).toHaveLength(1);
 
       const receivedJob = channelB.inbox.items[0];
       receivedJob.executed();
       channelB.inbox.remove(receivedJob);
 
-      channelA.outbox.remove(job);
-
-      expect(channelA.outbox.items).toHaveLength(0);
       expect(channelB.inbox.items).toHaveLength(0);
     });
   });

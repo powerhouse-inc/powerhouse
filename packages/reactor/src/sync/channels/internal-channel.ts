@@ -126,6 +126,9 @@ export class InternalChannel implements IChannel {
       };
 
       this.send(envelope);
+
+      syncOp.executed();
+      this.outbox.remove(syncOp);
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
       const channelError = new ChannelError(ChannelErrorSource.Outbox, err);

@@ -213,6 +213,8 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
 describe("Two-Reactor Sync", () => {
   let reactorA: IReactor;
   let reactorB: IReactor;
+  let moduleA: ReactorModule;
+  let moduleB: ReactorModule;
   let eventBusA: IEventBus;
   let eventBusB: IEventBus;
 
@@ -220,6 +222,8 @@ describe("Two-Reactor Sync", () => {
     const setup = await setupTwoReactors();
     reactorA = setup.reactorA;
     reactorB = setup.reactorB;
+    moduleA = setup.moduleA;
+    moduleB = setup.moduleB;
     eventBusA = setup.eventBusA;
     eventBusB = setup.eventBusB;
   });
@@ -605,4 +609,38 @@ describe("Two-Reactor Sync", () => {
       testReactor.kill();
     }
   }, 15000);
+
+  it("should not echo operations back to sender", async () => {
+    const document = driveDocumentModelModule.utils.createDocument();
+    const readyPromise = waitForOperationsReady(eventBusB, document.header.id);
+    const jobInfo = await reactorA.create(document);
+
+    await waitForJobCompletion(reactorA, jobInfo.id);
+
+    await readyPromise;
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    const remoteA = moduleB.syncModule!.syncManager.getByName("remoteA");
+
+    const outboxOps = remoteA.channel.outbox.items;
+    expect(outboxOps.length).toBe(0);
+  });
+
+  it("should clean up outbox after successful send", async () => {
+    const document = driveDocumentModelModule.utils.createDocument();
+    const readyPromise = waitForOperationsReady(eventBusB, document.header.id);
+    const jobInfo = await reactorA.create(document);
+
+    await waitForJobCompletion(reactorA, jobInfo.id);
+
+    await readyPromise;
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    const remoteB = moduleA.syncModule!.syncManager.getByName("remoteB");
+
+    const outboxOps = remoteB.channel.outbox.items;
+    expect(outboxOps.length).toBe(0);
+  });
 });

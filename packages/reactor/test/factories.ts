@@ -878,10 +878,12 @@ export function createMockJobAwaiter(
  * passing a send function that delivers envelopes to the peer's receive method.
  *
  * @param channels - Optional map to store created channels for cross-wiring
+ * @param sentEnvelopes - Optional array to track sent envelopes for assertions
  * @returns IChannelFactory implementation for testing
  */
 export function createTestChannelFactory(
   channels?: Map<string, InternalChannel>,
+  sentEnvelopes?: SyncEnvelope[],
 ): IChannelFactory {
   const channelRegistry = channels || new Map<string, InternalChannel>();
 
@@ -893,6 +895,9 @@ export function createTestChannelFactory(
       cursorStorage: ISyncCursorStorage,
     ): IChannel {
       const send = (envelope: SyncEnvelope): void => {
+        if (sentEnvelopes) {
+          sentEnvelopes.push(envelope);
+        }
         const peerChannel = channelRegistry.get(remoteId);
         if (peerChannel) {
           peerChannel.receive(envelope);

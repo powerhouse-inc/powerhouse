@@ -106,7 +106,7 @@ describe("InternalChannel", () => {
       expect(envelope.operations).toBe(job.operations);
     });
 
-    it("should transition job status during transport", () => {
+    it("should transition job status during transport and remove on success", () => {
       const cursorStorage = createMockCursorStorage();
       const sendFn = createMockSendFunction();
       const channel = new InternalChannel(
@@ -124,13 +124,21 @@ describe("InternalChannel", () => {
 
       channel.outbox.add(job);
 
-      expect(job.status).toBe(SyncOperationStatus.TransportPending);
-      expect(statusCallback).toHaveBeenCalledTimes(1);
-      expect(statusCallback).toHaveBeenCalledWith(
+      expect(job.status).toBe(SyncOperationStatus.Applied);
+      expect(statusCallback).toHaveBeenCalledTimes(2);
+      expect(statusCallback).toHaveBeenNthCalledWith(
+        1,
         job,
         SyncOperationStatus.Unknown,
         SyncOperationStatus.TransportPending,
       );
+      expect(statusCallback).toHaveBeenNthCalledWith(
+        2,
+        job,
+        SyncOperationStatus.TransportPending,
+        SyncOperationStatus.Applied,
+      );
+      expect(channel.outbox.items).toHaveLength(0);
     });
 
     it("should send multiple jobs independently", () => {
@@ -643,7 +651,7 @@ describe("InternalChannel", () => {
       expect(sendFn).not.toHaveBeenCalled();
     });
 
-    it("should preserve existing jobs in mailboxes after shutdown", () => {
+    it("should preserve jobs added after shutdown in mailboxes", () => {
       const cursorStorage = createMockCursorStorage();
       const sendFn = createMockSendFunction();
       const channel = new InternalChannel(
@@ -653,13 +661,14 @@ describe("InternalChannel", () => {
         sendFn,
       );
 
+      channel.shutdown();
+
       const job = createMockSyncOperation("job-1", "remote-1");
       channel.outbox.add(job);
 
-      channel.shutdown();
-
       expect(channel.outbox.items).toHaveLength(1);
       expect(channel.outbox.items[0]).toBe(job);
+      expect(sendFn).not.toHaveBeenCalled();
     });
   });
 });
