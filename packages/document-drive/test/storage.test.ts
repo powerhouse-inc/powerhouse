@@ -84,17 +84,6 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
     expect(result).toBe(true);
   });
 
-  it("should disallow creating a document with an invalid id", async ({
-    expect,
-  }) => {
-    const storage = await buildStorage();
-
-    const document = documentModelCreateDocument();
-    document.header.id = "test!\\";
-
-    await expect(async () => await storage.create(document)).rejects.toThrow();
-  });
-
   it("should not change the state of a document to match id", async ({
     expect,
   }) => {
@@ -362,72 +351,6 @@ describe.each(storageImplementations)("%s", async (_, buildStorage) => {
 
     const result = await storage.getBySlug<DocumentDriveDocument>(id);
     expect(result).toBeTruthy();
-  });
-
-  it("should reject invalid slugs", async ({ expect }) => {
-    const storage = await buildStorage();
-    const invalidSlugs = [
-      "test/slug",
-      "test\\slug",
-      "test.slug",
-      "test slug",
-      "test!slug",
-      "test@slug",
-      "test#slug",
-      "test$slug",
-      "test%slug",
-      "test^slug",
-      "test&slug",
-      "test*slug",
-      "test(slug",
-      "test)slug",
-      "test+slug",
-      "test=slug",
-      "test{slug",
-      "test}slug",
-      "test[slug",
-      "test]slug",
-      "test:slug",
-      "test;slug",
-      "test'slug",
-      'test"slug',
-      "test<slug",
-      "test>slug",
-      "test,slug",
-      "test?slug",
-      "test|slug",
-      "test~slug",
-      "test`slug",
-    ];
-
-    for (const invalidSlug of invalidSlugs) {
-      const document = driveCreateDocument();
-      document.header.slug = invalidSlug;
-      await expect(
-        async () => await storage.create(document),
-      ).rejects.toThrow();
-    }
-
-    const validSlugs = [
-      "test-slug",
-      "test_slug",
-      "test123",
-      "123test",
-      "testSlug",
-      "test-slug-123",
-      "test_slug_123",
-      "test-slug_123",
-    ];
-
-    for (const validSlug of validSlugs) {
-      const validDocument = driveCreateDocument();
-      validDocument.header.slug = validSlug;
-      await storage.create(validDocument);
-
-      const result = await storage.getBySlug<DocumentDriveDocument>(validSlug);
-      expect(result).toBeTruthy();
-      await storage.delete(validSlug);
-    }
   });
 
   it("should allow removing a document and then adding a new document with the same id and slug", async ({

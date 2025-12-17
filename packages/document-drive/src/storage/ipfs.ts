@@ -10,8 +10,6 @@ import {
   DocumentAlreadyExistsError,
   DocumentAlreadyExistsReason,
   DocumentNotFoundError,
-  DocumentSlugValidationError,
-  isValidSlug,
   mergeOperations,
   type DocumentDriveAction,
   type DocumentDriveDocument,
@@ -115,9 +113,6 @@ export class IPFSStorage
 
     const slug =
       document.header.slug?.length > 0 ? document.header.slug : documentId;
-    if (!isValidSlug(slug)) {
-      throw new DocumentSlugValidationError(slug);
-    }
 
     const slugManifest = await this.getSlugManifest();
     if (slugManifest.slugToId[slug]) {

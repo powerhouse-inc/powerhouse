@@ -11,7 +11,6 @@ import {
   DocumentAlreadyExistsError,
   DocumentAlreadyExistsReason,
   DocumentNotFoundError,
-  DocumentSlugValidationError,
 } from "document-drive/server/error";
 import { AbortError } from "document-drive/utils/errors";
 import { childLogger } from "document-drive/utils/logger";
@@ -21,7 +20,6 @@ import {
 } from "document-drive/utils/misc";
 import type { Operation, PHDocument } from "document-model";
 import {
-  isValidSlug,
   resolveStorageUnitsFilter,
   setIntersection,
   setUnion,
@@ -102,9 +100,6 @@ export class MemoryStorage
 
     const slug =
       document.header.slug?.length > 0 ? document.header.slug : documentId;
-    if (!isValidSlug(slug)) {
-      throw new DocumentSlugValidationError(slug);
-    }
 
     // check if the document already exists by slug
     if (slug && this.slugToDocumentId[slug]) {

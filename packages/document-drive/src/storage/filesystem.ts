@@ -10,7 +10,6 @@ import {
   DocumentAlreadyExistsError,
   DocumentAlreadyExistsReason,
   DocumentNotFoundError,
-  DocumentSlugValidationError,
 } from "document-drive/server/error";
 import { AbortError } from "document-drive/utils/errors";
 import { childLogger } from "document-drive/utils/logger";
@@ -24,7 +23,6 @@ import fs from "fs/promises";
 import stringify from "json-stringify-deterministic";
 import path from "path";
 import {
-  isValidSlug,
   resolveStorageUnitsFilter,
   setIntersection,
   setUnion,
@@ -215,9 +213,6 @@ export class FilesystemStorage
 
     const slug =
       document.header.slug?.length > 0 ? document.header.slug : documentId;
-    if (!isValidSlug(slug)) {
-      throw new DocumentSlugValidationError(slug);
-    }
 
     const slugManifest = await this.getSlugManifest();
     if (slugManifest.slugToId[slug]) {
