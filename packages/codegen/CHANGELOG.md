@@ -1,3 +1,7 @@
+## 5.2.0-staging.4 (2025-12-17)
+
+This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
+
 ## 5.2.0-staging.3 (2025-12-17)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
