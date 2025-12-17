@@ -64,8 +64,6 @@ export async function addDefaultDrive(
     document.header.meta = { preferredEditor: drive.preferredEditor };
   }
 
-  console.log(`Creating default drive`, document);
-
   try {
     await client.create(document);
   } catch (e) {

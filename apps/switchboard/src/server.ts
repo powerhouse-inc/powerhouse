@@ -201,9 +201,15 @@ async function initServer(
     builder.withKysely(kysely);
     // }
 
-    const module = await new ReactorClientBuilder()
-      .withReactorBuilder(builder)
-      .buildModule();
+    const clientBuilder = new ReactorClientBuilder().withReactorBuilder(
+      builder,
+    );
+
+    if (connectCrypto) {
+      clientBuilder.withSigner(new ConnectCryptoSigner(connectCrypto));
+    }
+
+    const module = await clientBuilder.buildModule();
 
     const syncManager = module.reactorModule?.syncModule?.syncManager;
     if (!syncManager) {

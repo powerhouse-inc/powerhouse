@@ -201,6 +201,7 @@ export const signAction = async (
   signal?: AbortSignal,
 ): Promise<Action> => {
   const signature: Signature = await signer.signAction(action, signal);
+
   return {
     ...action,
     context: {

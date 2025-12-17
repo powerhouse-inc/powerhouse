@@ -758,7 +758,6 @@ export function pollSyncEnvelopes(
   }
 
   const operations = remote.channel.outbox.items;
-
   const envelopes = operations.map((syncOp: SyncOperation) => ({
     type: "OPERATIONS",
     channelMeta: {
