@@ -12,7 +12,7 @@ if [ ! -z "$PH_PACKAGES" ]; then
 fi
 
 # Check if DATABASE_URL starts with postgres and run Prisma db push
-if [ ! -z "$DATABASE_URL" ] && echo "$DATABASE_URL" | grep -q "^postgres"; then
+if [ ! -z "$DATABASE_URL" ] && echo "$DATABASE_URL" | grep -q "^postgres" && [ "$SKIP_DB_MIGRATIONS" != "true" ]; then
   echo "[entrypoint] DATABASE_URL starts with postgres, running Prisma db push..."
   prisma db push --schema node_modules/document-drive/dist/prisma/schema.prisma --skip-generate
 fi
