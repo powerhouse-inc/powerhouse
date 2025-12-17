@@ -193,7 +193,7 @@ async function initServer(
     //   });
     //   builder.withKysely(kysely);
     // } else {
-    const pglitePath = dbPath || "./.ph/reactor-storage";
+    const pglitePath = "./.ph/reactor-storage";
     const pglite = new PGlite(pglitePath);
     const kysely = new Kysely<Database>({
       dialect: new PGliteDialect(pglite),
