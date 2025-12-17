@@ -1,3 +1,13 @@
+## 5.2.0-staging.3 (2025-12-17)
+
+### 🩹 Fixes
+
+- **switchboard:** use pglite for new reactor ([8fc54e7c1](https://github.com/powerhouse-inc/powerhouse/commit/8fc54e7c1))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.2.0-staging.2 (2025-12-17)
 
 ### 🩹 Fixes
