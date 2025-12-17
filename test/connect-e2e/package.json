@@ -55,7 +55,9 @@
     "reactor": "ph-cli reactor",
     "generate": "ph-cli generate",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:todo": "playwright test tests/todo-document.spec.ts; playwright show-report",
+    "test:e2e:todo:profile": "mkdir -p profiles && node --cpu-prof --cpu-prof-dir=./profiles --cpu-prof-name=todo-tests.cpuprofile node_modules/@playwright/test/cli.js test tests/todo-document.spec.ts; playwright show-report"
   },
   "keywords": [],
   "author": "",
