@@ -283,7 +283,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     envPrefix: ["PH_CONNECT_"],
     envDir: false,
     optimizeDeps: {
-      exclude: ["@electric-sql/pglite"],
+      exclude: ["@electric-sql/pglite", "node_modules/.vite"],
     },
     plugins,
     resolve: {
