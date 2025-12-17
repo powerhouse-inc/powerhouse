@@ -1,3 +1,13 @@
+## 5.2.0-staging.2 (2025-12-17)
+
+### 🩹 Fixes
+
+- **switchboard:** added skip db migrations flag ([cfd6a0479](https://github.com/powerhouse-inc/powerhouse/commit/cfd6a0479))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.2.0-staging.1 (2025-12-17)
 
 This was a version bump only, there were no code changes.
