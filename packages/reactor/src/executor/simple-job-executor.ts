@@ -302,6 +302,33 @@ export class SimpleJobExecutor implements IJobExecutor {
         continue;
       }
 
+      let docMeta;
+      try {
+        docMeta = await this.documentMetaCache.getDocumentMeta(
+          job.documentId,
+          job.branch,
+        );
+      } catch (error) {
+        return {
+          success: false,
+          generatedOperations,
+          operationsWithContext,
+          error: error instanceof Error ? error : new Error(String(error)),
+        };
+      }
+
+      if (docMeta.state.isDeleted) {
+        return {
+          success: false,
+          generatedOperations,
+          operationsWithContext,
+          error: new DocumentDeletedError(
+            job.documentId,
+            docMeta.state.deletedAtUtcIso,
+          ),
+        };
+      }
+
       let document: PHDocument;
       try {
         document = await this.writeCache.getState(
@@ -315,19 +342,6 @@ export class SimpleJobExecutor implements IJobExecutor {
           generatedOperations,
           operationsWithContext,
           error: error instanceof Error ? error : new Error(String(error)),
-        };
-      }
-
-      const documentState = document.state.document;
-      if (documentState.isDeleted) {
-        return {
-          success: false,
-          generatedOperations,
-          operationsWithContext,
-          error: new DocumentDeletedError(
-            job.documentId,
-            documentState.deletedAtUtcIso,
-          ),
         };
       }
 
@@ -586,6 +600,12 @@ export class SimpleJobExecutor implements IJobExecutor {
       indexTxn.addToCollection(collectionId, document.header.id);
     }
 
+    this.documentMetaCache.putDocumentMeta(document.header.id, job.branch, {
+      state: document.state.document,
+      documentType: document.header.documentType,
+      documentScopeRevision: 1,
+    });
+
     return this.buildSuccessResult(
       job,
       operation,
@@ -709,6 +729,12 @@ export class SimpleJobExecutor implements IJobExecutor {
         scope: job.scope,
       },
     ]);
+
+    this.documentMetaCache.putDocumentMeta(documentId, job.branch, {
+      state: document.state.document,
+      documentType: document.header.documentType,
+      documentScopeRevision: operation.index + 1,
+    });
 
     return this.buildSuccessResult(
       job,
@@ -846,6 +872,12 @@ export class SimpleJobExecutor implements IJobExecutor {
         scope: job.scope,
       },
     ]);
+
+    this.documentMetaCache.putDocumentMeta(documentId, job.branch, {
+      state: document.state.document,
+      documentType: document.header.documentType,
+      documentScopeRevision: operation.index + 1,
+    });
 
     return this.buildSuccessResult(
       job,
@@ -1242,6 +1274,10 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     this.writeCache.invalidate(job.documentId, scope, job.branch);
+
+    if (scope === "document") {
+      this.documentMetaCache.invalidate(job.documentId, job.branch);
+    }
 
     return {
       job,

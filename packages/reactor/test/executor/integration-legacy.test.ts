@@ -517,7 +517,7 @@ describe("SimpleJobExecutor Integration", () => {
       // Verify failure
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
-      expect(result.error?.message).toContain("no CREATE_DOCUMENT operation");
+      expect(result.error?.message).toContain("not found");
     });
   });
 
