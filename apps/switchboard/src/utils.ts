@@ -1,7 +1,10 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
-import type { DocumentDriveDocument, DriveInput } from "document-drive";
+import type {
+  DocumentDriveDocument,
+  DriveInput,
+  IDocumentDriveServer,
+} from "document-drive";
 import { driveCreateDocument, driveCreateState } from "document-drive";
-import type { IDocumentDriveServer } from "document-drive";
 import { generateId } from "document-model/core";
 
 export async function addDefaultDrive(
@@ -16,6 +19,19 @@ export async function addDefaultDrive(
 
   if (!driveId || driveId.length === 0) {
     throw new Error("Invalid Drive Id");
+  }
+
+  // check if the drive already exists
+  let existingDrive;
+  try {
+    existingDrive = await client.get(driveId);
+  } catch {
+    //
+  }
+
+  // already exists, return the existing drive url
+  if (existingDrive) {
+    return `http://localhost:${serverPort}/d/${driveId}`;
   }
 
   const { global } = driveCreateState();
