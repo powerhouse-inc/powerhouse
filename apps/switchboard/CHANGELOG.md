@@ -1,3 +1,13 @@
+## 5.2.0-staging.5 (2025-12-17)
+
+### 🩹 Fixes
+
+- **switchboard:** pglite path ([9bb7d74a1](https://github.com/powerhouse-inc/powerhouse/commit/9bb7d74a1))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.2.0-staging.4 (2025-12-17)
 
 This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
