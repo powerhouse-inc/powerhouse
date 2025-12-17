@@ -102,7 +102,7 @@ describe("Dual Action Create", () => {
       expect(createOp.action.type).toBe("CREATE_DOCUMENT");
       expect(createOp.action.input).toMatchObject({
         model: documentModelDocumentModelModule.documentModel.global.id,
-        version: "0.0.0",
+        version: 0,
         documentId,
       });
       expect((createOp.action.input as any).signing).toBeUndefined();
@@ -113,8 +113,8 @@ describe("Dual Action Create", () => {
       expect(upgradeOp.action.type).toBe("UPGRADE_DOCUMENT");
       expect(upgradeOp.action.input).toMatchObject({
         model: documentModelDocumentModelModule.documentModel.global.id,
-        fromVersion: "0.0.0",
-        toVersion: "0.1.0", // hardcoded for now
+        fromVersion: 0,
+        toVersion: 1, // hardcoded for now
         documentId,
       });
       expect((upgradeOp.action.input as any).initialState).toBeDefined();

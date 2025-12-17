@@ -1,3 +1,4 @@
+import { PGlite } from "@electric-sql/pglite";
 import type {
   BaseDocumentDriveServer,
   IDocumentOperationStorage,
@@ -15,14 +16,13 @@ import type {
   PHDocument,
 } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
-import { PGlite } from "@electric-sql/pglite";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { v4 as uuidv4 } from "uuid";
 import { vi } from "vitest";
 import type {
-  IDocumentMetaCache,
   CachedDocumentMeta,
+  IDocumentMetaCache,
 } from "../src/cache/document-meta-cache-types.js";
 import type { IWriteCache } from "../src/cache/write/interfaces.js";
 import { Reactor } from "../src/core/reactor.js";
@@ -42,27 +42,27 @@ import type { IReadModelCoordinator } from "../src/read-models/interfaces.js";
 import { DocumentModelRegistry } from "../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../src/registry/interfaces.js";
 import type { IJobAwaiter } from "../src/shared/awaiter.js";
+import { ConsistencyTracker } from "../src/shared/consistency-tracker.js";
 import { JobStatus } from "../src/shared/types.js";
 import type { ISigner } from "../src/signer/types.js";
-import { ConsistencyTracker } from "../src/shared/consistency-tracker.js";
 import { ConsistencyAwareLegacyStorage } from "../src/storage/consistency-aware-legacy-storage.js";
 import type {
   IDocumentIndexer,
   IDocumentView,
   IOperationStore,
   ISyncCursorStorage,
+  OperationContext,
 } from "../src/storage/interfaces.js";
-import type { IReactorSubscriptionManager } from "../src/subs/types.js";
 import { KyselyKeyframeStore } from "../src/storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../src/storage/kysely/store.js";
 import { KyselySyncCursorStorage } from "../src/storage/kysely/sync-cursor-storage.js";
 import { KyselySyncRemoteStorage } from "../src/storage/kysely/sync-remote-storage.js";
 import type { Database as DatabaseSchema } from "../src/storage/kysely/types.js";
 import { runMigrations } from "../src/storage/migrations/migrator.js";
+import type { IReactorSubscriptionManager } from "../src/subs/types.js";
 import { InternalChannel } from "../src/sync/channels/internal-channel.js";
 import type { IChannel, IChannelFactory } from "../src/sync/interfaces.js";
 import type { ChannelConfig, SyncEnvelope } from "../src/sync/types.js";
-import type { OperationContext } from "../src/storage/interfaces.js";
 
 /**
  * Creates an operation context with default ordinal for testing.
@@ -192,7 +192,7 @@ export function createCreateDocumentOperation(
       input: {
         documentId,
         model: documentType,
-        version: "0.0.0",
+        version: 0,
       },
     } as Action,
     resultingState:

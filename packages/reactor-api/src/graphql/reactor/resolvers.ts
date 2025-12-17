@@ -10,7 +10,7 @@ import {
   type SearchFilter,
   type ViewFilter,
 } from "@powerhousedao/reactor";
-import type { DocumentModelModule, PHDocument } from "document-model";
+import type { DocumentModelModule, Operation, PHDocument } from "document-model";
 import { GraphQLError } from "graphql";
 import {
   fromInputMaybe,
@@ -709,6 +709,34 @@ export async function touchChannel(
   return true;
 }
 
+/**
+ * Transforms an operation to serialize signatures from tuples to strings
+ * for GraphQL compatibility.
+ *
+ * The Signature type is a tuple [string, string, string, string, string],
+ * but GraphQL expects [String!]! (flat array of strings).
+ */
+function serializeOperationForGraphQL(operation: Operation) {
+  const signer = operation.action.context?.signer;
+  if (!signer?.signatures) {
+    return operation;
+  }
+
+  return {
+    ...operation,
+    action: {
+      ...operation.action,
+      context: {
+        ...operation.action.context,
+        signer: {
+          ...signer,
+          signatures: signer.signatures.map((sig) => sig.join(", ")),
+        },
+      },
+    },
+  };
+}
+
 export function pollSyncEnvelopes(
   syncManager: ISyncManager,
   args: {
@@ -733,7 +761,7 @@ export function pollSyncEnvelopes(
       id: args.channelId,
     },
     operations: syncOp.operations.map((op) => ({
-      operation: op.operation,
+      operation: serializeOperationForGraphQL(op.operation),
       context: op.context,
     })),
     cursor: {

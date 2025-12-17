@@ -565,7 +565,7 @@ export class Reactor implements IReactor {
     // Create a CREATE_DOCUMENT action with proper CreateDocumentActionInput
     const input: CreateDocumentActionInput = {
       model: document.header.documentType,
-      version: "0.0.0",
+      version: 0,
       documentId: document.header.id,
     };
 
@@ -595,8 +595,8 @@ export class Reactor implements IReactor {
     // Create an UPGRADE_DOCUMENT action to set the initial state
     const upgradeInput: UpgradeDocumentActionInput = {
       model: document.header.documentType,
-      fromVersion: "0.0.0",
-      toVersion: "0.0.0", // Same version since we're just setting initial state
+      fromVersion: 0,
+      toVersion: 1,
       documentId: document.header.id,
       initialState: document.state,
     };

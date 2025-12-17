@@ -1,7 +1,7 @@
 import type { Action, Operation } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DocumentMetaCache } from "../../src/cache/document-meta-cache.js";
 import type { DocumentMetaCacheConfig } from "../../src/cache/document-meta-cache-types.js";
+import { DocumentMetaCache } from "../../src/cache/document-meta-cache.js";
 import type {
   IOperationStore,
   PagedResults,
@@ -34,7 +34,7 @@ function createCreateDocumentOperation(
       input: {
         documentId,
         model: documentType,
-        version: "0.0.0",
+        version: 0,
       },
     } as Action,
     resultingState: JSON.stringify({ document: { id: documentId } }),

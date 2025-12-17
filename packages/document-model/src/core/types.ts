@@ -209,7 +209,7 @@ export type NOOPAction = Action & {
 
 export type CreateDocumentActionInput = {
   model: string; // e.g., 'ph/todo'
-  version: "0.0.0";
+  version: 0;
   documentId: string; // equals signature when signed; UUID when unsigned
   signing?: {
     signature: string;
@@ -227,8 +227,8 @@ export type CreateDocumentActionInput = {
 
 export type UpgradeDocumentActionInput = {
   model: string;
-  fromVersion: string; // '0.0.0' for first upgrade
-  toVersion: string; // current model version
+  fromVersion: number; // 0 for first upgrade
+  toVersion: number; // current model version
   documentId: string;
   initialState?: object; // optional; defaults to model.defaultState()
 };

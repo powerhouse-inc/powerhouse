@@ -146,7 +146,7 @@ export class GqlChannel implements IChannel {
     }
 
     for (const envelope of envelopes) {
-      if (envelope.type === "operations" && envelope.operations) {
+      if (envelope.type.toLowerCase() === "operations" && envelope.operations) {
         const syncOp = envelopeToSyncOperation(envelope, this.remoteName);
         syncOp.transported();
         this.inbox.add(syncOp);

@@ -1,6 +1,6 @@
+import { PGlite } from "@electric-sql/pglite";
 import { addFile, addFolder, setDriveName } from "document-drive";
 import { generateId } from "document-model/core";
-import { PGlite } from "@electric-sql/pglite";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -427,7 +427,7 @@ describe("KyselyDocumentView", () => {
         timestampUtcMs: createdAt,
         input: {
           model: "powerhouse/document-drive",
-          version: "0.0.0" as const,
+          version: 0,
           documentId,
           signing: {
             signature: documentId,
@@ -540,7 +540,7 @@ describe("KyselyDocumentView", () => {
         timestampUtcMs: createdAt,
         input: {
           model: "powerhouse/document-drive",
-          version: "0.0.0" as const,
+          version: 0,
           documentId,
           signing: {
             signature: documentId,
@@ -756,7 +756,7 @@ describe("KyselyDocumentView", () => {
         timestampUtcMs: createdAt,
         input: {
           model: "powerhouse/document-drive",
-          version: "0.0.0" as const,
+          version: 0,
           documentId,
           signing: {
             signature: documentId,
@@ -847,8 +847,8 @@ describe("KyselyDocumentView", () => {
         timestampUtcMs: createdAt,
         input: {
           model: "powerhouse/document-drive",
-          fromVersion: "0.0.0",
-          toVersion: "1.0.0",
+          fromVersion: 0,
+          toVersion: 1,
         },
       };
 

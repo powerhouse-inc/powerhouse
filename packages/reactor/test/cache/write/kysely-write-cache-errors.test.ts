@@ -80,7 +80,7 @@ describe("KyselyWriteCache - Error Handling", () => {
           input: {
             documentId: "doc1",
             model: "test/unknown",
-            version: "0.0.0",
+            version: 0,
           },
         },
       };
@@ -178,7 +178,7 @@ describe("KyselyWriteCache - Error Handling", () => {
           input: {
             documentId: "doc1",
             model: documentType,
-            version: "0.0.0",
+            version: 0,
           },
         },
       };
@@ -231,7 +231,7 @@ describe("KyselyWriteCache - Error Handling", () => {
           input: {
             documentId: "doc1",
             model: "powerhouse/document-model",
-            version: "0.0.0",
+            version: 0,
           },
         },
       };
@@ -372,7 +372,7 @@ describe("KyselyWriteCache - Error Handling", () => {
           input: {
             documentId: "doc1",
             model: "powerhouse/document-model",
-            version: "0.0.0",
+            version: 0,
           },
         },
       };
@@ -499,7 +499,7 @@ describe("KyselyWriteCache - Error Handling", () => {
           input: {
             documentId: "doc1",
             model: "powerhouse/document-model",
-            version: "0.0.0",
+            version: 0,
           },
         },
       };
@@ -1045,7 +1045,7 @@ describe("KyselyWriteCache - Error Handling", () => {
           input: {
             documentId: "doc1",
             model: "powerhouse/document-model",
-            version: "0.0.0",
+            version: 0,
           },
         },
       };
@@ -1113,7 +1113,7 @@ describe("KyselyWriteCache - Error Handling", () => {
           input: {
             documentId: "doc1",
             model: "powerhouse/document-model",
-            version: "0.0.0",
+            version: 0,
           },
         },
       };
@@ -1325,7 +1325,7 @@ describe("KyselyWriteCache - Error Handling (Integration)", () => {
           input: {
             documentId: docId,
             model: docType,
-            version: "0.0.0",
+            version: 0,
           },
         },
       });

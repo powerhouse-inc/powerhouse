@@ -338,7 +338,7 @@ describe("Dual Action Migration Tests", () => {
           timestampUtcMs: new Date().toISOString(),
           input: {
             model: documentModelDocumentModelModule.documentModel.global.id,
-            version: "0.0.0" as const,
+            version: 0,
             documentId,
           },
           scope: "global",
