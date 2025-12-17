@@ -108,11 +108,11 @@ export class GqlChannel implements IChannel {
       return;
     }
 
-    this.pollTimer = setTimeout(() => {
-      void this.poll().then(() => {
+    void this.poll().then(() => {
+      this.pollTimer = setTimeout(() => {
         this.startPolling(); // Schedule next poll
-      });
-    }, this.config.pollIntervalMs);
+      }, this.config.pollIntervalMs);
+    });
   }
 
   /**
