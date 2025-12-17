@@ -1,3 +1,13 @@
+## 5.2.0-staging.6 (2025-12-17)
+
+### 🩹 Fixes
+
+- **switchboard:** use pglite inmemory ([315f15fcc](https://github.com/powerhouse-inc/powerhouse/commit/315f15fcc))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.2.0-staging.5 (2025-12-17)
 
 ### 🩹 Fixes
