@@ -1,12 +1,12 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
-import type { ISigner } from "document-model";
 import type {
   DocumentDriveDocument,
   DriveInput,
   IDocumentDriveServer,
 } from "document-drive";
 import { driveCreateDocument, driveCreateState } from "document-drive";
-import { createSignedHeader, generateId } from "document-model/core";
+import type { ISigner } from "document-model";
+import { generateId } from "document-model/core";
 
 export async function addDefaultDrive(
   client: IReactorClient,
@@ -63,13 +63,6 @@ export async function addDefaultDrive(
   if (drive.preferredEditor) {
     document.header.meta = { preferredEditor: drive.preferredEditor };
   }
-
-  // sign the header
-  document.header = await createSignedHeader(
-    document.header,
-    document.header.documentType,
-    signer,
-  );
 
   console.log(`Creating default drive`, document);
 

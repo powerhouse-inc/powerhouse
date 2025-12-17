@@ -214,14 +214,12 @@ export const createSignedHeader = async (
     createdAtUtcIso: unsignedHeader.createdAtUtcIso,
 
     // mutable fields
-    slug: "",
-    name: "",
-    branch: "",
-    revision: {
-      document: 0,
-    },
+    slug: unsignedHeader.slug,
+    name: unsignedHeader.name,
+    branch: unsignedHeader.branch,
+    revision: unsignedHeader.revision,
     lastModifiedAtUtcIso: unsignedHeader.lastModifiedAtUtcIso,
-    meta: {},
+    meta: unsignedHeader.meta,
   };
 };
 
