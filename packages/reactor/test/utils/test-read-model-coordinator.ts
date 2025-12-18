@@ -16,10 +16,9 @@ export class TestReadModelCoordinator implements IReadModelCoordinator {
   private isPaused = false;
   private operationQueue: OperationWrittenEvent[] = [];
 
-  constructor(
-    private eventBus: IEventBus,
-    private readModels: IReadModel[],
-  ) {}
+  public readModels: IReadModel[] = [];
+
+  constructor(private eventBus: IEventBus) {}
 
   start(): void {
     if (this.isRunning) {

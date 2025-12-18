@@ -32,6 +32,7 @@ import type {
   ViewFilter,
 } from "../shared/types.js";
 import type { IJobAwaiter } from "../shared/awaiter.js";
+import type { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
 import type {
   IDocumentIndexer,
   IDocumentView,
@@ -373,6 +374,7 @@ export interface ReactorModule {
   documentIndexer: IDocumentIndexer;
   documentIndexerConsistencyTracker: IConsistencyTracker;
   readModelCoordinator: IReadModelCoordinator;
+  subscriptionManager: ReactorSubscriptionManager;
   syncModule: SyncModule | undefined;
   reactor: IReactor;
 }

@@ -27,6 +27,8 @@ import type {
   IOperationStore,
 } from "../../../src/storage/interfaces.js";
 import type { Database as StorageDatabase } from "../../../src/storage/kysely/types.js";
+import { DefaultSubscriptionErrorHandler } from "../../../src/subs/default-error-handler.js";
+import { ReactorSubscriptionManager } from "../../../src/subs/react-subscription-manager.js";
 import {
   createDocModelDocument,
   createMockDocumentIndexer,
@@ -130,7 +132,14 @@ describe("Legacy Write -> Read", () => {
       consistencyTracker,
     );
     await documentView.init();
-    readModelCoordinator = new ReadModelCoordinator(eventBus, [documentView]);
+    const subscriptionManager = new ReactorSubscriptionManager(
+      new DefaultSubscriptionErrorHandler(),
+    );
+    readModelCoordinator = new ReadModelCoordinator(
+      eventBus,
+      [documentView],
+      subscriptionManager,
+    );
 
     // Create reactor facade with all required dependencies
     const jobTracker = createTestJobTracker();

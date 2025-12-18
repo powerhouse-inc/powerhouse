@@ -118,6 +118,7 @@ export class ReactorClientBuilder {
 
     const subscriptionManager =
       this.subscriptionManager ??
+      reactorModule?.subscriptionManager ??
       new ReactorSubscriptionManager(new DefaultSubscriptionErrorHandler());
 
     const jobAwaiter =

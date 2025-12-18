@@ -19,7 +19,10 @@ import { InMemoryJobTracker } from "../job-tracker/in-memory-job-tracker.js";
 import { InMemoryQueue } from "../queue/queue.js";
 import { ReadModelCoordinator } from "../read-models/coordinator.js";
 import { KyselyDocumentView } from "../read-models/document-view.js";
-import type { IReadModel } from "../read-models/interfaces.js";
+import type {
+  IReadModel,
+  IReadModelCoordinator,
+} from "../read-models/interfaces.js";
 import { DocumentModelRegistry } from "../registry/implementation.js";
 import { ConsistencyTracker } from "../shared/consistency-tracker.js";
 import { KyselyDocumentIndexer } from "../storage/kysely/document-indexer.js";
@@ -43,16 +46,12 @@ import { PGlite } from "@electric-sql/pglite";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import type { IEventBus } from "../events/interfaces.js";
-import type { IReadModelCoordinator } from "../read-models/interfaces.js";
 import type { SignatureVerificationHandler } from "../signer/types.js";
 import { ConsistencyAwareLegacyStorage } from "../storage/consistency-aware-legacy-storage.js";
 import { runMigrations } from "../storage/migrations/migrator.js";
 import type { MigrationStrategy } from "../storage/migrations/types.js";
-
-export type IReadModelCoordinatorFactory = (
-  eventBus: IEventBus,
-  readModels: IReadModel[],
-) => IReadModelCoordinator;
+import { DefaultSubscriptionErrorHandler } from "../subs/default-error-handler.js";
+import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
 
 export class ReactorBuilder {
   private documentModels: DocumentModelModule[] = [];
@@ -62,11 +61,11 @@ export class ReactorBuilder {
   private executorManager: IJobExecutorManager | undefined;
   private executorConfig: ExecutorConfig = { count: 1 };
   private writeCacheConfig?: Partial<WriteCacheConfig>;
-  private readModelCoordinatorFactory?: IReadModelCoordinatorFactory;
   private migrationStrategy: MigrationStrategy = "auto";
   private syncBuilder?: SyncBuilder;
   private eventBus?: IEventBus;
-  public documentIndexer?: IDocumentIndexer;
+  private documentIndexer?: IDocumentIndexer;
+  private readModelCoordinator?: IReadModelCoordinator;
   private signatureVerifier?: SignatureVerificationHandler;
   private kyselyInstance?: Kysely<Database>;
 
@@ -92,8 +91,8 @@ export class ReactorBuilder {
     return this;
   }
 
-  withReadModelCoordinatorFactory(factory: IReadModelCoordinatorFactory): this {
-    this.readModelCoordinatorFactory = factory;
+  withReadModelCoordinator(readModelCoordinator: IReadModelCoordinator): this {
+    this.readModelCoordinator = readModelCoordinator;
     return this;
   }
 
@@ -273,9 +272,17 @@ export class ReactorBuilder {
     readModelInstances.push(documentIndexer);
     this.documentIndexer = documentIndexer;
 
-    const readModelCoordinator = this.readModelCoordinatorFactory
-      ? this.readModelCoordinatorFactory(eventBus, readModelInstances)
-      : new ReadModelCoordinator(eventBus, readModelInstances);
+    const subscriptionManager = new ReactorSubscriptionManager(
+      new DefaultSubscriptionErrorHandler(),
+    );
+
+    const readModelCoordinator = this.readModelCoordinator
+      ? this.readModelCoordinator
+      : new ReadModelCoordinator(
+          eventBus,
+          readModelInstances,
+          subscriptionManager,
+        );
 
     const reactor = new Reactor(
       driveServer,
@@ -318,6 +325,7 @@ export class ReactorBuilder {
       documentIndexer,
       documentIndexerConsistencyTracker,
       readModelCoordinator,
+      subscriptionManager,
       syncModule,
       reactor,
     };
