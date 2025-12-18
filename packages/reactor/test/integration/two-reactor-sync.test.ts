@@ -10,7 +10,7 @@ import {
 } from "../../src/events/types.js";
 import { JobStatus } from "../../src/shared/types.js";
 import type { ISyncCursorStorage } from "../../src/storage/interfaces.js";
-import { InternalChannel } from "../../src/sync/channels/internal-channel.js";
+import { TestChannel } from "../sync/channels/test-channel.js";
 import type { IChannelFactory } from "../../src/sync/interfaces.js";
 import { SyncBuilder } from "../../src/sync/sync-builder.js";
 import type { ChannelConfig, SyncEnvelope } from "../../src/sync/types.js";
@@ -20,7 +20,7 @@ type TwoReactorSetup = {
   reactorB: IReactor;
   moduleA: ReactorModule;
   moduleB: ReactorModule;
-  channelRegistry: Map<string, InternalChannel>;
+  channelRegistry: Map<string, TestChannel>;
   eventBusA: IEventBus;
   eventBusB: IEventBus;
 };
@@ -114,7 +114,7 @@ async function waitForMultipleOperationsReady(
 }
 
 async function setupTwoReactors(): Promise<TwoReactorSetup> {
-  const channelRegistry = new Map<string, InternalChannel>();
+  const channelRegistry = new Map<string, TestChannel>();
   const peerMapping = new Map<string, string>();
   peerMapping.set("remoteA", "remoteB");
   peerMapping.set("remoteB", "remoteA");
@@ -126,7 +126,7 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
         remoteName: string,
         config: ChannelConfig,
         cursorStorage: ISyncCursorStorage,
-      ): InternalChannel {
+      ): TestChannel {
         const peerName = peerMapping.get(remoteName);
 
         const send = (envelope: SyncEnvelope): void => {
@@ -141,7 +141,7 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
           peerChannel.receive(envelope);
         };
 
-        const channel = new InternalChannel(
+        const channel = new TestChannel(
           remoteId,
           remoteName,
           cursorStorage,

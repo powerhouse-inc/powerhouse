@@ -29,10 +29,10 @@ export {
 } from "./sync-operation.js";
 export { Mailbox, type MailboxItem } from "./mailbox.js";
 
-export { ChannelError, InternalChannelError } from "./errors.js";
+export { ChannelError, PollingChannelError } from "./errors.js";
 
 export {
-  InternalChannel,
+  PollingChannel,
   GqlChannelFactory,
   CompositeChannelFactory,
 } from "./channels/index.js";

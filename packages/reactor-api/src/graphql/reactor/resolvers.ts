@@ -697,7 +697,7 @@ export async function touchChannel(
       args.input.name,
       args.input.collectionId,
       {
-        type: "internal",
+        type: "polling",
         parameters: {},
       },
       filter,
@@ -741,7 +741,7 @@ function serializeOperationForGraphQL(operation: Operation) {
   };
 }
 
-export function pollSyncEnvelopes(
+export async function pollSyncEnvelopes(
   syncManager: ISyncManager,
   args: {
     channelId: string;
@@ -755,6 +755,10 @@ export function pollSyncEnvelopes(
     throw new GraphQLError(
       `Channel not found: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
+  }
+
+  if (args.cursorOrdinal > 0) {
+    await remote.channel.updateCursor(args.cursorOrdinal);
   }
 
   const operations = remote.channel.outbox.items;
@@ -774,7 +778,7 @@ export function pollSyncEnvelopes(
     },
   }));
 
-  return Promise.resolve(envelopes);
+  return envelopes;
 }
 
 export function pushSyncEnvelope(

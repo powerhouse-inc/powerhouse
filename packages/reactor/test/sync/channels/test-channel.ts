@@ -1,20 +1,23 @@
-import type { ISyncCursorStorage } from "../../storage/interfaces.js";
-import { ChannelError, InternalChannelError } from "../errors.js";
-import type { IChannel } from "../interfaces.js";
-import type { SyncOperation } from "../sync-operation.js";
-import { Mailbox } from "../mailbox.js";
-import type { RemoteCursor, SyncEnvelope } from "../types.js";
-import { ChannelErrorSource } from "../types.js";
-import { envelopeToSyncOperation } from "./utils.js";
+import type { ISyncCursorStorage } from "../../../src/storage/interfaces.js";
+import { ChannelError } from "../../../src/sync/errors.js";
+import type { IChannel } from "../../../src/sync/interfaces.js";
+import type { SyncOperation } from "../../../src/sync/sync-operation.js";
+import { Mailbox } from "../../../src/sync/mailbox.js";
+import type { RemoteCursor, SyncEnvelope } from "../../../src/sync/types.js";
+import { ChannelErrorSource } from "../../../src/sync/types.js";
+import { envelopeToSyncOperation } from "../../../src/sync/channels/utils.js";
 
 /**
- * In-memory synchronization channel for testing purposes only.
+ * Test channel for bidirectional communication in tests.
  *
- * InternalChannel enables direct bidirectional communication between two reactor
+ * TestChannel enables direct bidirectional communication between two reactor
  * instances without network transport. Channels are wired together by passing
  * a send function that delivers envelopes to the peer's inbox.
+ *
+ * Unlike PollingChannel, TestChannel auto-sends on outbox add, making it
+ * suitable for testing synchronization flows.
  */
-export class InternalChannel implements IChannel {
+export class TestChannel implements IChannel {
   readonly inbox: Mailbox<SyncOperation>;
   readonly outbox: Mailbox<SyncOperation>;
   readonly deadLetter: Mailbox<SyncOperation>;
@@ -46,33 +49,15 @@ export class InternalChannel implements IChannel {
     });
   }
 
-  /**
-   * Shuts down the channel and prevents further operations.
-   */
   shutdown(): void {
     this.isShutdown = true;
   }
 
-  /**
-   * Initializes the channel. For InternalChannel, this is a no-op since
-   * in-memory channels don't need remote registration.
-   */
-  async init(): Promise<void> {
-    // No-op for internal channels
-  }
+  async init(): Promise<void> {}
 
-  /**
-   * Receives a sync envelope from a peer channel.
-   *
-   * This method is called by the peer's send function to deliver an envelope
-   * to this channel's inbox.
-   *
-   * @param envelope - The sync envelope to receive
-   * @throws {InternalChannelError} If channel is shutdown
-   */
   receive(envelope: SyncEnvelope): void {
     if (this.isShutdown) {
-      throw new InternalChannelError(
+      throw new Error(
         `Channel ${this.channelId} is shutdown and cannot receive envelopes`,
       );
     }
@@ -84,15 +69,6 @@ export class InternalChannel implements IChannel {
     }
   }
 
-  /**
-   * Updates the synchronization cursor for this channel's remote.
-   *
-   * Cursors track progress through the operation stream and enable resuming
-   * synchronization after restarts. The cursor is exclusive - the next sync
-   * will start at cursorOrdinal + 1.
-   *
-   * @param cursorOrdinal - The last processed ordinal (exclusive)
-   */
   async updateCursor(cursorOrdinal: number): Promise<void> {
     const cursor: RemoteCursor = {
       remoteName: this.remoteName,
@@ -103,14 +79,6 @@ export class InternalChannel implements IChannel {
     await this.cursorStorage.upsert(cursor);
   }
 
-  /**
-   * Handles sync operations added to the outbox by sending them to the peer.
-   *
-   * This method is called automatically via the outbox.onAdded callback.
-   * It converts the sync operation to a SyncEnvelope and sends it via the send function.
-   *
-   * @param syncOp - The sync operation to transport
-   */
   private handleOutboxAdded(syncOp: SyncOperation): void {
     if (this.isShutdown) {
       return;

@@ -60,7 +60,7 @@ import { KyselySyncRemoteStorage } from "../src/storage/kysely/sync-remote-stora
 import type { Database as DatabaseSchema } from "../src/storage/kysely/types.js";
 import { runMigrations } from "../src/storage/migrations/migrator.js";
 import type { IReactorSubscriptionManager } from "../src/subs/types.js";
-import { InternalChannel } from "../src/sync/channels/internal-channel.js";
+import { TestChannel } from "./sync/channels/test-channel.js";
 import type { IChannel, IChannelFactory } from "../src/sync/interfaces.js";
 import type { ChannelConfig, SyncEnvelope } from "../src/sync/types.js";
 
@@ -873,8 +873,8 @@ export function createMockJobAwaiter(
 }
 
 /**
- * Creates an IChannelFactory for testing that creates InternalChannel instances.
- * InternalChannels are wired together by storing them in a shared registry and
+ * Creates an IChannelFactory for testing that creates TestChannel instances.
+ * TestChannels are wired together by storing them in a shared registry and
  * passing a send function that delivers envelopes to the peer's receive method.
  *
  * @param channels - Optional map to store created channels for cross-wiring
@@ -882,10 +882,10 @@ export function createMockJobAwaiter(
  * @returns IChannelFactory implementation for testing
  */
 export function createTestChannelFactory(
-  channels?: Map<string, InternalChannel>,
+  channels?: Map<string, TestChannel>,
   sentEnvelopes?: SyncEnvelope[],
 ): IChannelFactory {
-  const channelRegistry = channels || new Map<string, InternalChannel>();
+  const channelRegistry = channels || new Map<string, TestChannel>();
 
   return {
     instance(
@@ -904,7 +904,7 @@ export function createTestChannelFactory(
         }
       };
 
-      const channel = new InternalChannel(
+      const channel = new TestChannel(
         remoteId,
         remoteName,
         cursorStorage,

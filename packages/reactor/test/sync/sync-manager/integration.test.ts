@@ -13,7 +13,7 @@ import type {
   OperationWithContext,
 } from "../../../src/storage/interfaces.js";
 import type { Database } from "../../../src/storage/kysely/types.js";
-import type { InternalChannel } from "../../../src/sync/channels/internal-channel.js";
+import type { TestChannel } from "../channels/test-channel.js";
 import type { IChannelFactory } from "../../../src/sync/interfaces.js";
 import { SyncManager } from "../../../src/sync/sync-manager.js";
 import type { ChannelConfig, SyncEnvelope } from "../../../src/sync/types.js";
@@ -30,7 +30,7 @@ describe("SyncManager Integration", () => {
   let eventBus: IEventBus;
   let operationIndex: IOperationIndex;
   let mockReactor: IReactor;
-  let channelRegistry: Map<string, InternalChannel>;
+  let channelRegistry: Map<string, TestChannel>;
   let sentEnvelopes: SyncEnvelope[];
   let channelFactory: IChannelFactory;
   let syncManager: SyncManager;
