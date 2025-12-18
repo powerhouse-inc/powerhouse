@@ -1,3 +1,7 @@
+## 5.1.0-dev.24 (2025-12-18)
+
+This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
+
 ## 5.1.0-dev.23 (2025-12-17)
 
 This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.

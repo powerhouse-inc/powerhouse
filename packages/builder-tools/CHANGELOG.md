@@ -1,3 +1,13 @@
+## 5.1.0-dev.24 (2025-12-18)
+
+### 🩹 Fixes
+
+- **builder-tools:** exclude node_modules/.vite from optimisation ([5778f222e](https://github.com/powerhouse-inc/powerhouse/commit/5778f222e))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.1.0-dev.23 (2025-12-17)
 
 This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
