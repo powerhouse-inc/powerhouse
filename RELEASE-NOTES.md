@@ -1,5 +1,73 @@
 # Release Changelog
 
+## 🚀 **v5.2.0**
+
+
+### ✨ Highlights
+
+1. **Authentication & Permissions** - CLI authentication and document-level permission system
+2. **TS Morph Code Generation (Now Default)** - Faster, more reliable code generation
+3. **Runtime Document Model Subgraphs** - No more generated subgraph code to manage
+4. **Versioned Document Models** - Initial support for document model versioning (WIP 🚧)
+
+### NEW FEATURES
+
+#### 🔐 CLI Authentication
+
+New CLI commands for authentication workflows:
+
+**`ph login`** - Authenticate with your Powerhouse identity
+
+```bash
+ph login
+```
+
+**`ph access-token`** - Generate access tokens for API authentication
+
+```bash
+ph access-token
+```
+
+#### 🛡️ Document Permission Service
+
+A new permission system that provides fine-grained access control at the document level for the Reactor-API (Not yet in Connect)
+
+**Key Features:**
+
+- **Operation Permissions** - Control who can perform specific operations on documents
+- **Document Group Permissions** - Organize documents into groups with shared access rules
+- **Feature Flag** - Enable/disable via configuration
+
+The permission service can be enabled via environment variable or configuration. When enabled, all document operations are validated against the permission rules.
+
+#### Runtime Document Model Subgraphs
+
+Document model subgraphs are now automatically available on Switchboard at runtime.
+**Action required:** Delete generated subgraphs from your project to avoid conflicts.
+
+### IMPROVEMENTS
+
+- **TS Morph is now the default code generator** for better performance
+- **Document meta cache** improves reactor performance
+- **Queue performance** optimizations
+
+### BUG FIXES
+- Fixed query params preservation when navigating in Connect
+- Fixed schema drop transaction handling
+
+### DOCUMENTATION (Now also live on https://academy.vetra.io)
+
+**Authorization & Permissions:**
+- [Reactor API Authorization](https://staging.powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization) - Role-based access control configuration
+- [Document Permission System](https://staging.powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/Authorization/DocumentPermissions) - Fine-grained document-level permissions
+
+**Connect Tools:**
+- [Inspector Modal](https://staging.powerhouse.academy/academy/MasteryTrack/ConnectTools/InspectorModal) - Database & reactor explorer
+
+**Other Updates:**
+- Updated hooks documentation
+- Vetra Studio usage guides
+
 ## **v5.1.1**
 
 ### **Error Handling for dispatched actions**
@@ -22,7 +90,75 @@ dispatch(myAction, (errors) => {
 
 Document model subgraphs are now available automatically on Switchboard. You should delete the generated subgraphs from your project to avoid conflicts.
 
-## **v5.1.0**
+## 🚀 **v5.1.0**
+
+### ✨ Highlights
+
+1. **Inspector Tools** - New debugging tools for database and sync operations
+2. **Renown Login Component** - Improved authentication UI
+3. **Sync Architecture** - New reactor client with GraphQL sync channels (WIP 🚧)
+4. **Cryptographic Signing (Preview)** - Document and operation signing capabilities (WIP 🚧)
+
+### NEW FEATURES
+
+#### 🔍 Inspector Tools
+
+New debugging components inside Connect to help developers understand what's happening under the hood of the reactor:
+
+- **DB Explorer** - Browse and inspect tables in the local PGlite database
+- **Remotes Inspector** - View configured sync remotes and their status
+- **Channel Inspector** - Debug sync channels of the reactor (inbox, outbox, dead letter queues)
+
+These tools can be enabled via feature flags. See the [Inspector Modal documentation](https://staging.powerhouse.academy/academy/MasteryTrack/ConnectTools/InspectorModal) for details.
+
+#### 🔐 Renown Login Component
+
+Improved authentication UI component with:
+
+- Better user experience for wallet-based authentication
+- Playwright end-to-end tests for reliability
+- ConnectCrypto and Renown ID now available in hooks
+
+#### 🔄 Sync Architecture Improvements
+
+Major improvements to the synchronization system. We are staging big changes ahead of migrating to the new reactor architecture. 
+
+- **Reactor Client** - New client for Connect-to-Switchboard sync
+- **GraphQL Channels** - Push/pull channels for bidirectional sync
+- **WebSocket Subscriptions** - Real-time updates via GraphQL subscriptions
+- **Conflict Resolution** - Improved handling of concurrent modifications
+
+#### ✍️ Cryptographic Signing (Preview)
+
+Initial support for document and operation signing:
+
+- Connect crypto signer and verifier
+- Document creation signatures
+- All actions can now be signed
+
+> **Note:** This feature is in preview and the API may change in future releases.
+
+### IMPROVEMENTS
+
+- **Healthcheck Routes** - Added `/health` endpoint for Connect and Switchboard for deployment monitoring
+- **Feature Flags System** - Global context for managing feature flags across hooks
+- **Logging Interface** - Improved debugging output
+- **Docker Workflow** - Added docker build and publish workflow for Academy
+
+### BUG FIXES
+
+- Fixed Safari drag-and-drop with empty dataTransfer.items
+- Fixed circular imports across multiple packages
+- Improved HMR (Hot Module Replacement) for external packages
+- Fixed document storage with better id/slug resolution
+
+### DOCUMENTATION
+
+- Updated Todo List tutorial with diff-based approach
+- New Vetra commands documentation
+- Reactor MCP documentation updates
+
+---
 
 ## 🚀 **v5.0.0**
 
