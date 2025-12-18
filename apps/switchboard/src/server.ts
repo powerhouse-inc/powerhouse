@@ -263,10 +263,10 @@ async function initServer(
         "Cannot create default drive without ConnectCrypto identity",
       );
     }
-    const signer = new ConnectCryptoSigner(connectCrypto);
+
     defaultDriveUrl = await addDefaultDrive(
+      driveServer,
       client,
-      signer,
       options.drive,
       serverPort,
     );

@@ -1,16 +1,16 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
 import type {
+  BaseDocumentDriveServer,
   DocumentDriveDocument,
   DriveInput,
   IDocumentDriveServer,
 } from "document-drive";
 import { driveCreateDocument, driveCreateState } from "document-drive";
-import type { ISigner } from "document-model";
 import { generateId } from "document-model/core";
 
 export async function addDefaultDrive(
+  driveServer: IDocumentDriveServer,
   client: IReactorClient,
-  signer: ISigner,
   drive: DriveInput,
   serverPort: number,
 ) {
@@ -72,6 +72,13 @@ export async function addDefaultDrive(
       throw e;
     }
   }
+
+  // YIKES: this is a backward compatibility hack to emit a drive added event
+  // This should be removed once we are not supporting legacy write operations.
+  (driveServer as unknown as BaseDocumentDriveServer).eventEmitter.emit(
+    "driveAdded",
+    document as DocumentDriveDocument,
+  );
 
   return `http://localhost:${serverPort}/d/${driveId}`;
 }
