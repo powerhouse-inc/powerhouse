@@ -56,7 +56,6 @@ import type {
   SetModuleDescriptionInput,
   SetModuleNameAction,
   SetModuleNameInput,
-  SetNameAction,
   SetOperationDescriptionAction,
   SetOperationDescriptionInput,
   SetOperationErrorCodeAction,
@@ -92,7 +91,7 @@ import {
   noop,
   prune,
   redo,
-  SetNameActionInputSchema,
+  setName,
   undo,
 } from "document-model/core";
 import {
@@ -139,20 +138,16 @@ import {
   UpdateOperationExampleInputSchema,
   UpdateStateExampleInputSchema,
 } from "./schemas.js";
-/**
- * Changes the name of the document.
- *
- * @param name - The name to be set in the document.
- * @category Actions
- */
-export const setName = (name: string) =>
-  createAction<SetNameAction>(
-    "SET_NAME",
-    name,
-    undefined,
-    SetNameActionInputSchema,
-    "global",
-  );
+
+export {
+  loadState,
+  noop,
+  prune,
+  redo,
+  setName,
+  undo,
+} from "document-model/core";
+
 export const setModelName = (input: SetModelNameInput) =>
   createAction<SetModelNameAction>(
     "SET_MODEL_NAME",
