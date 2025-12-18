@@ -16,6 +16,10 @@ export const REACTOR_URL = "http://127.0.0.1:4001";
  */
 export default defineConfig({
   testDir: "./tests",
+  testMatch: [
+    /.*\.(spec|test)\.(ts|js|mjs)/,
+    /.*\.spec\.profiled\.ts/,
+  ],
   outputDir: "test-results",
   /* Global setup and teardown for codegen */
   globalSetup: "./global-setup.ts",
