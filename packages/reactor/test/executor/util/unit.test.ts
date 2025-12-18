@@ -319,7 +319,7 @@ describe("applyUpgradeDocumentAction", () => {
     expect(result!.state).toEqual(expectedState);
   });
 
-  it("should return null for same version (no-op)", () => {
+  it("should return unchanged document for same version (no-op)", () => {
     const document = createDocumentFromAction({
       id: "action-1",
       type: "CREATE_DOCUMENT",
@@ -348,7 +348,8 @@ describe("applyUpgradeDocumentAction", () => {
 
     const result = applyUpgradeDocumentAction(document, upgradeAction as never);
 
-    expect(result).toBeNull();
+    expect(result).toBe(document);
+    expect(result.state.document.version).toBe(1);
   });
 
   it("should throw DowngradeNotSupportedError for downgrade attempt", () => {

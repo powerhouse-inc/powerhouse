@@ -83,11 +83,10 @@ export interface IDocumentModelRegistry {
    * Get the upgrade manifest for a document type.
    *
    * @param documentType The document type identifier
-   * @returns The upgrade manifest, or undefined if not found
+   * @returns The upgrade manifest
+   * @throws ManifestNotFoundError if no manifest is registered for the document type
    */
-  getUpgradeManifest(
-    documentType: string,
-  ): UpgradeManifest<readonly number[]> | undefined;
+  getUpgradeManifest(documentType: string): UpgradeManifest<readonly number[]>;
 
   /**
    * Compute the upgrade path from one version to another.

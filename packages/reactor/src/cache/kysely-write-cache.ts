@@ -395,10 +395,7 @@ export class KyselyWriteCache implements IWriteCache {
 
         if (operation.action.type === "UPGRADE_DOCUMENT") {
           const upgradeAction = operation.action as UpgradeDocumentAction;
-          const result = applyUpgradeDocumentAction(document, upgradeAction);
-          if (result !== null) {
-            document = result;
-          }
+          document = applyUpgradeDocumentAction(document, upgradeAction);
         } else if (operation.action.type === "DELETE_DOCUMENT") {
           applyDeleteDocumentAction(document, operation.action as never);
         } else {

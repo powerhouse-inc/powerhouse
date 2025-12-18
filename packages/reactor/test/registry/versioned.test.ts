@@ -142,8 +142,10 @@ describe("DocumentModelRegistry - Versioning", () => {
       );
     });
 
-    it("should return undefined for unknown document type", () => {
-      expect(registry.getUpgradeManifest("unknown/type")).toBeUndefined();
+    it("should throw ManifestNotFoundError for unknown document type", () => {
+      expect(() => registry.getUpgradeManifest("unknown/type")).toThrow(
+        "Upgrade manifest not found for type: unknown/type",
+      );
     });
   });
 
@@ -243,7 +245,9 @@ describe("DocumentModelRegistry - Versioning", () => {
       registry.clear();
 
       expect(registry.getAllModules()).toHaveLength(0);
-      expect(registry.getUpgradeManifest(VERSIONED_DOC_TYPE)).toBeUndefined();
+      expect(() => registry.getUpgradeManifest(VERSIONED_DOC_TYPE)).toThrow(
+        `Upgrade manifest not found for type: ${VERSIONED_DOC_TYPE}`,
+      );
     });
   });
 

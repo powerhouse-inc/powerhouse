@@ -655,9 +655,18 @@ export class SimpleJobExecutor implements IJobExecutor {
       }
     }
 
-    let upgradedDocument: PHDocument | null;
+    if (fromVersion === toVersion && fromVersion > 0) {
+      return {
+        job,
+        success: true,
+        operations: [],
+        operationsWithContext: [],
+        duration: Date.now() - startTime,
+      };
+    }
+
     try {
-      upgradedDocument = applyUpgradeDocumentAction(
+      document = applyUpgradeDocumentAction(
         document,
         action as UpgradeDocumentAction,
         upgradePath,
@@ -669,18 +678,6 @@ export class SimpleJobExecutor implements IJobExecutor {
         startTime,
       );
     }
-
-    if (upgradedDocument === null) {
-      return {
-        job,
-        success: true,
-        operations: [],
-        operationsWithContext: [],
-        duration: Date.now() - startTime,
-      };
-    }
-
-    document = upgradedDocument;
 
     const operation = this.createOperation(action, nextIndex, skip);
 

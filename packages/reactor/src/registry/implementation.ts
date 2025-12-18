@@ -232,15 +232,13 @@ export class DocumentModelRegistry implements IDocumentModelRegistry {
     }
   }
 
-  getUpgradeManifest(
-    documentType: string,
-  ): UpgradeManifest<readonly number[]> | undefined {
+  getUpgradeManifest(documentType: string): UpgradeManifest<readonly number[]> {
     for (let i = 0; i < this.manifests.length; i++) {
       if (this.manifests[i].documentType === documentType) {
         return this.manifests[i];
       }
     }
-    return undefined;
+    throw new ManifestNotFoundError(documentType);
   }
 
   computeUpgradePath(
@@ -261,9 +259,6 @@ export class DocumentModelRegistry implements IDocumentModelRegistry {
     }
 
     const manifest = this.getUpgradeManifest(documentType);
-    if (manifest === undefined) {
-      throw new ManifestNotFoundError(documentType);
-    }
 
     const path: UpgradeTransition[] = [];
     for (let v = fromVersion + 1; v <= toVersion; v++) {
@@ -291,9 +286,6 @@ export class DocumentModelRegistry implements IDocumentModelRegistry {
     }
 
     const manifest = this.getUpgradeManifest(documentType);
-    if (manifest === undefined) {
-      throw new ManifestNotFoundError(documentType);
-    }
 
     const key = `v${toVersion}`;
 
