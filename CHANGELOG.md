@@ -1,3 +1,27 @@
+## 5.2.0-staging.7 (2025-12-18)
+
+### 🚀 Features
+
+- the gql channel should start poll before waiting ([f569b462b](https://github.com/powerhouse-inc/powerhouse/commit/f569b462b))
+
+### 🩹 Fixes
+
+- addDefaultDrive should not add if the drive already exists ([79352a5f8](https://github.com/powerhouse-inc/powerhouse/commit/79352a5f8))
+- don't sign default drive header as that changes the id, and pass along the unsigned header to the signed ([d8cd47c9d](https://github.com/powerhouse-inc/powerhouse/commit/d8cd47c9d))
+- switchboard's new reactor signs everything ([b7fafb7fa](https://github.com/powerhouse-inc/powerhouse/commit/b7fafb7fa))
+- **builder-tools:** exclude node_modules/.vite from optimisation ([5778f222e](https://github.com/powerhouse-inc/powerhouse/commit/5778f222e))
+- **reactor:** document model core types need to be numerical versions, also fixed a gql bug ([6495a88e2](https://github.com/powerhouse-inc/powerhouse/commit/6495a88e2))
+- **switchboard:** added skip db migrations flag ([f1597c838](https://github.com/powerhouse-inc/powerhouse/commit/f1597c838))
+- **switchboard:** use pglite for new reactor ([b5dece44e](https://github.com/powerhouse-inc/powerhouse/commit/b5dece44e))
+- **switchboard:** pglite path ([140422ab6](https://github.com/powerhouse-inc/powerhouse/commit/140422ab6))
+- **switchboard:** use pglite inmemory ([f7c926fa9](https://github.com/powerhouse-inc/powerhouse/commit/f7c926fa9))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+
 ## 5.2.0-staging.6 (2025-12-17)
 
 ### 🩹 Fixes

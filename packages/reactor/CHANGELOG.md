@@ -1,3 +1,18 @@
+## 5.2.0-staging.7 (2025-12-18)
+
+### 🚀 Features
+
+- the gql channel should start poll before waiting ([f569b462b](https://github.com/powerhouse-inc/powerhouse/commit/f569b462b))
+
+### 🩹 Fixes
+
+- switchboard's new reactor signs everything ([b7fafb7fa](https://github.com/powerhouse-inc/powerhouse/commit/b7fafb7fa))
+- **reactor:** document model core types need to be numerical versions, also fixed a gql bug ([6495a88e2](https://github.com/powerhouse-inc/powerhouse/commit/6495a88e2))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.2.0-staging.6 (2025-12-17)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

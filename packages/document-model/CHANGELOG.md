@@ -1,3 +1,14 @@
+## 5.2.0-staging.7 (2025-12-18)
+
+### 🩹 Fixes
+
+- don't sign default drive header as that changes the id, and pass along the unsigned header to the signed ([d8cd47c9d](https://github.com/powerhouse-inc/powerhouse/commit/d8cd47c9d))
+- **reactor:** document model core types need to be numerical versions, also fixed a gql bug ([6495a88e2](https://github.com/powerhouse-inc/powerhouse/commit/6495a88e2))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.2.0-staging.6 (2025-12-17)
 
 This was a version bump only for document-model to align it with other projects, there were no code changes.

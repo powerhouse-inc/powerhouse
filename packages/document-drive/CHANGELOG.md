@@ -1,3 +1,13 @@
+## 5.2.0-staging.7 (2025-12-18)
+
+### 🩹 Fixes
+
+- **reactor:** document model core types need to be numerical versions, also fixed a gql bug ([6495a88e2](https://github.com/powerhouse-inc/powerhouse/commit/6495a88e2))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.2.0-staging.6 (2025-12-17)
 
 This was a version bump only for document-drive to align it with other projects, there were no code changes.
