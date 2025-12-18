@@ -1666,11 +1666,12 @@ You need to understand and manage different types of dependencies in your Powerh
 #### Understanding Different Types of Dependencies
 
 1. **Monorepo Dependencies**
-   - The Powerhouse monorepo has three main branches:
-     - `main` (stable)
-     - `dev` (development)
-     - `staging` (pre-release)
-   - You can use these branches by:
+   - The Powerhouse monorepo has the following branching strategy:
+     - Ongoing development happens on the main branch with tag `dev`   
+     - A pre-release is branched off on Release/staging/v.x.x with tag `staging`
+     - Production is the latest release Release/production/v.x.x accessed with tag `latest`or `prod` 
+     
+   - You can use these branches or dependencies by:
 
      ```bash
      # Install dev version of CLI
