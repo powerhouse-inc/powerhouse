@@ -1,7 +1,10 @@
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { camelCase } from "change-case";
 import type { Action, DocumentModelModule, Operation } from "document-model";
-import type { z } from "zod";
+import { baseActions } from "document-model";
+import { isDocumentAction } from "document-model/core";
+import { ZodError, type z } from "zod";
+import { prettifyError } from "zod/v4";
 import type { ResolveZodSchema, ToolSchema } from "./types.js";
 
 export class InvalidToolOutputError extends Error {
@@ -62,6 +65,12 @@ export function toolWithCallback<T extends ToolSchema>(
   };
 }
 
+export function isZodError(err: unknown): err is ZodError {
+  return Boolean(
+    err && (err instanceof ZodError || (err as ZodError).name === "ZodError"),
+  );
+}
+
 export function validateDocumentModelAction(
   documentModelModule: DocumentModelModule,
   action: Action,
@@ -92,7 +101,9 @@ export function validateDocumentModelAction(
     }
   }
 
-  if (!operation) {
+  const isBaseAction = isDocumentAction(action);
+
+  if (!isBaseAction && !operation) {
     errors.push(
       `Operation "${action.type}" is not defined in any module of the document model`,
     );
@@ -103,29 +114,39 @@ export function validateDocumentModelAction(
   const camelCaseActionType = camelCase(action.type);
 
   // Check if action creator exists in documentModelModule.actions
-  const actionCreator = documentModelModule.actions[camelCaseActionType];
+  const actionCreator = isBaseAction
+    ? (baseActions as Record<string, (...args: any[]) => Action>)[
+        camelCaseActionType
+      ]
+    : documentModelModule.actions[camelCaseActionType];
 
   if (!actionCreator) {
     errors.push(
-      `Action creator "${camelCaseActionType}" for action type "${action.type}" is not defined in documentModelDocumentModelModule.actions`,
+      `Action creator "${camelCaseActionType}" for action type "${action.type}" not found`,
     );
     return { isValid: false, errors };
   }
 
   // Validate the operation using the action creator. TODO: Use document model exported validators directly
-  let inputError: Error | null = null;
+  let inputError: string | null = null;
   try {
     actionCreator(action.input);
   } catch (e) {
-    inputError = e instanceof Error ? e : new Error(JSON.stringify(e));
+    inputError = isZodError(e)
+      ? prettifyError(e)
+      : e instanceof Error
+        ? e.message
+        : typeof e === "string"
+          ? e
+          : JSON.stringify(e);
   }
 
   if (inputError) {
-    errors.push(`Input validation error: ${inputError.message}`);
+    errors.push(`Input validation error: ${inputError}`);
   }
 
   // Validate scope if operation defines one
-  if (operation.scope && action.scope !== operation.scope) {
+  if (operation && operation.scope && action.scope !== operation.scope) {
     errors.push(
       `Action scope "${action.scope}" does not match operation scope "${operation.scope}"`,
     );

@@ -24,6 +24,7 @@ import {
   LoadStateActionInputSchema,
   PruneActionInputSchema,
   RedoActionInputSchema,
+  SetNameActionInputSchema,
   UndoActionInputSchema,
 } from "./schemas.js";
 import type {
@@ -35,9 +36,25 @@ import type {
   RedoAction,
   Reducer,
   SchemaPruneAction,
+  SetNameAction,
   UndoAction,
 } from "./types.js";
 import { generateId } from "./utils.js";
+
+/**
+ * Changes the name of the document.
+ *
+ * @param name - The name to be set in the document.
+ * @category Actions
+ */
+export const setName = (name: string) =>
+  createAction<SetNameAction>(
+    "SET_NAME",
+    name,
+    undefined,
+    SetNameActionInputSchema,
+    "global",
+  );
 
 /**
  * Cancels the last `count` operations.
