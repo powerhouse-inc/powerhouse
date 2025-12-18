@@ -555,6 +555,7 @@ export class Reactor implements IReactor {
     document: PHDocument,
     signer?: ISigner,
     signal?: AbortSignal,
+    meta?: Record<string, unknown>,
   ): Promise<JobInfo> {
     const createdAtUtcIso = new Date().toISOString();
 
@@ -628,6 +629,7 @@ export class Reactor implements IReactor {
       queueHint: [],
       maxRetries: 3,
       errorHistory: [],
+      meta,
     };
 
     // Create job info and register with tracker
@@ -640,6 +642,7 @@ export class Reactor implements IReactor {
         createdAtUtcIso,
         coordinates: [],
       },
+      meta,
     };
     this.jobTracker.registerJob(jobInfo);
 
@@ -656,6 +659,7 @@ export class Reactor implements IReactor {
     id: string,
     signer?: ISigner,
     signal?: AbortSignal,
+    meta?: Record<string, unknown>,
   ): Promise<JobInfo> {
     const createdAtUtcIso = new Date().toISOString();
 
@@ -692,6 +696,7 @@ export class Reactor implements IReactor {
       queueHint: [],
       maxRetries: 3,
       errorHistory: [],
+      meta,
     };
 
     const jobInfo: JobInfo = {
@@ -703,6 +708,7 @@ export class Reactor implements IReactor {
         createdAtUtcIso,
         coordinates: [],
       },
+      meta,
     };
     this.jobTracker.registerJob(jobInfo);
 
@@ -719,6 +725,7 @@ export class Reactor implements IReactor {
     branch: string,
     actions: Action[],
     signal?: AbortSignal,
+    meta?: Record<string, unknown>,
   ): Promise<JobInfo> {
     if (signal?.aborted) {
       throw new AbortError();
@@ -742,6 +749,7 @@ export class Reactor implements IReactor {
       queueHint: [],
       maxRetries: 3,
       errorHistory: [],
+      meta,
     };
 
     // Create job info and register with tracker
@@ -754,6 +762,7 @@ export class Reactor implements IReactor {
         createdAtUtcIso,
         coordinates: [],
       },
+      meta,
     };
     this.jobTracker.registerJob(jobInfo);
 
@@ -777,6 +786,7 @@ export class Reactor implements IReactor {
     branch: string,
     operations: Operation[],
     signal?: AbortSignal,
+    meta?: Record<string, unknown>,
   ): Promise<JobInfo> {
     if (signal?.aborted) {
       throw new AbortError();
@@ -809,6 +819,7 @@ export class Reactor implements IReactor {
       queueHint: [],
       maxRetries: 3,
       errorHistory: [],
+      meta,
     };
 
     const jobInfo: JobInfo = {
@@ -820,6 +831,7 @@ export class Reactor implements IReactor {
         createdAtUtcIso,
         coordinates: [],
       },
+      meta,
     };
     this.jobTracker.registerJob(jobInfo);
 
@@ -838,6 +850,7 @@ export class Reactor implements IReactor {
   async executeBatch(
     request: BatchExecutionRequest,
     signal?: AbortSignal,
+    meta?: Record<string, unknown>,
   ): Promise<BatchExecutionResult> {
     if (signal?.aborted) {
       throw new AbortError();
@@ -863,6 +876,7 @@ export class Reactor implements IReactor {
           createdAtUtcIso,
           coordinates: [],
         },
+        meta,
       };
       this.jobTracker.registerJob(jobInfo);
       jobInfos.set(jobPlan.key, jobInfo);
@@ -891,6 +905,7 @@ export class Reactor implements IReactor {
           queueHint,
           maxRetries: 3,
           errorHistory: [],
+          meta,
         };
         await this.queue.enqueue(job);
         enqueuedKeys.push(key);

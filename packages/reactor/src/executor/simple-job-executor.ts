@@ -113,6 +113,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           const event: OperationWrittenEvent = {
             jobId: job.id,
             operations: result.operationsWithContext,
+            jobMeta: job.meta,
           };
           this.eventBus
             .emit(OperationEventTypes.OPERATION_WRITTEN, event)
@@ -149,6 +150,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       const event: OperationWrittenEvent = {
         jobId: job.id,
         operations: result.operationsWithContext,
+        jobMeta: job.meta,
       };
       this.eventBus
         .emit(OperationEventTypes.OPERATION_WRITTEN, event)

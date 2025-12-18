@@ -29,11 +29,7 @@ export async function runMigrations(db: Kysely<unknown>): Promise<void> {
   const { error, results } = await migrator.migrateToLatest();
 
   results?.forEach((result) => {
-    if (result.status === "Success") {
-      console.log(
-        `Migration "${result.migrationName}" was executed successfully`,
-      );
-    } else if (result.status === "Error") {
+    if (result.status === "Error") {
       console.error(`Failed to execute migration "${result.migrationName}"`);
     }
   });

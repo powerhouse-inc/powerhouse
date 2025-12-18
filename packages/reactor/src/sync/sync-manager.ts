@@ -42,7 +42,6 @@ export class SyncManager implements ISyncManager {
   private eventUnsubscribe?: () => void;
 
   public loadJobs: Map<string, JobInfo> = new Map();
-  private loadJobSources: Map<string, string> = new Map();
 
   constructor(
     remoteStorage: ISyncRemoteStorage,
@@ -299,11 +298,7 @@ export class SyncManager implements ISyncManager {
       return;
     }
 
-    const sourceRemote = this.loadJobSources.get(event.jobId);
-
-    if (sourceRemote) {
-      this.loadJobSources.delete(event.jobId);
-    }
+    const sourceRemote = event.jobMeta?.sourceRemote as string | undefined;
 
     for (const remote of this.remotes.values()) {
       if (sourceRemote && remote.name === sourceRemote) {
@@ -358,8 +353,9 @@ export class SyncManager implements ISyncManager {
         syncOp.documentId,
         syncOp.branch,
         operations,
+        undefined,
+        { sourceRemote: remote.name },
       );
-      this.loadJobSources.set(jobInfo.id, remote.name);
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
       const channelError = new ChannelError(ChannelErrorSource.Inbox, err);

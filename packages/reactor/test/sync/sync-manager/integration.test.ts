@@ -410,9 +410,13 @@ describe("SyncManager Integration", () => {
 
       await new Promise((resolve) => setTimeout(resolve, 50));
 
-      expect(mockReactor.load).toHaveBeenCalledWith("doc1", "main", [
-        operations[0].operation,
-      ]);
+      expect(mockReactor.load).toHaveBeenCalledWith(
+        "doc1",
+        "main",
+        [operations[0].operation],
+        undefined,
+        { sourceRemote: "remote1" },
+      );
     });
 
     it("should handle reactor errors and move to dead letter", async () => {
