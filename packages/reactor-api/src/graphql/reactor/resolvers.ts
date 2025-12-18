@@ -734,7 +734,9 @@ function serializeOperationForGraphQL(operation: Operation) {
         ...operation.action.context,
         signer: {
           ...signer,
-          signatures: signer.signatures.map((sig) => sig.join(", ")),
+          signatures: signer.signatures.map((sig) =>
+            Array.isArray(sig) ? sig.join(", ") : sig,
+          ),
         },
       },
     },

@@ -52,7 +52,9 @@ export function buildGraphqlOperation(operation: Operation): GqlOperation {
         ? {
             user: signer.user,
             app: signer.app,
-            signatures: signer.signatures.map((s) => s.join(", ")),
+            signatures: signer.signatures.map((sig) =>
+              Array.isArray(sig) ? sig.join(", ") : sig,
+            ),
           }
         : undefined,
     },
