@@ -10,7 +10,7 @@ import {
   type SearchFilter,
   type ViewFilter,
 } from "@powerhousedao/reactor";
-import type { DocumentModelModule, PHDocument } from "document-model";
+import type { DocumentModelModule, Operation, PHDocument } from "document-model";
 import { GraphQLError } from "graphql";
 import {
   fromInputMaybe,
@@ -693,7 +693,7 @@ export async function touchChannel(
       args.input.name,
       args.input.collectionId,
       {
-        type: "internal",
+        type: "polling",
         parameters: {},
       },
       filter,
@@ -709,7 +709,35 @@ export async function touchChannel(
   return true;
 }
 
-export function pollSyncEnvelopes(
+/**
+ * Transforms an operation to serialize signatures from tuples to strings
+ * for GraphQL compatibility.
+ *
+ * The Signature type is a tuple [string, string, string, string, string],
+ * but GraphQL expects [String!]! (flat array of strings).
+ */
+function serializeOperationForGraphQL(operation: Operation) {
+  const signer = operation.action.context?.signer;
+  if (!signer?.signatures) {
+    return operation;
+  }
+
+  return {
+    ...operation,
+    action: {
+      ...operation.action,
+      context: {
+        ...operation.action.context,
+        signer: {
+          ...signer,
+          signatures: signer.signatures.map((sig) => sig.join(", ")),
+        },
+      },
+    },
+  };
+}
+
+export async function pollSyncEnvelopes(
   syncManager: ISyncManager,
   args: {
     channelId: string;
@@ -723,6 +751,10 @@ export function pollSyncEnvelopes(
     throw new GraphQLError(
       `Channel not found: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
+  }
+
+  if (args.cursorOrdinal > 0) {
+    await remote.channel.updateCursor(args.cursorOrdinal);
   }
 
   const operations = remote.channel.outbox.items;
@@ -743,7 +775,7 @@ export function pollSyncEnvelopes(
     },
   }));
 
-  return Promise.resolve(envelopes);
+  return envelopes;
 }
 
 export function pushSyncEnvelope(

@@ -59,7 +59,7 @@ import { KyselySyncCursorStorage } from "../src/storage/kysely/sync-cursor-stora
 import { KyselySyncRemoteStorage } from "../src/storage/kysely/sync-remote-storage.js";
 import type { Database as DatabaseSchema } from "../src/storage/kysely/types.js";
 import { runMigrations } from "../src/storage/migrations/migrator.js";
-import { InternalChannel } from "../src/sync/channels/internal-channel.js";
+import { TestChannel } from "./sync/channels/test-channel.js";
 import type { IChannel, IChannelFactory } from "../src/sync/interfaces.js";
 import type { ChannelConfig, SyncEnvelope } from "../src/sync/types.js";
 import type { OperationContext } from "../src/storage/interfaces.js";
@@ -870,17 +870,19 @@ export function createMockJobAwaiter(
 }
 
 /**
- * Creates an IChannelFactory for testing that creates InternalChannel instances.
- * InternalChannels are wired together by storing them in a shared registry and
+ * Creates an IChannelFactory for testing that creates TestChannel instances.
+ * TestChannels are wired together by storing them in a shared registry and
  * passing a send function that delivers envelopes to the peer's receive method.
  *
  * @param channels - Optional map to store created channels for cross-wiring
+ * @param sentEnvelopes - Optional array to track sent envelopes for assertions
  * @returns IChannelFactory implementation for testing
  */
 export function createTestChannelFactory(
-  channels?: Map<string, InternalChannel>,
+  channels?: Map<string, TestChannel>,
+  sentEnvelopes?: SyncEnvelope[],
 ): IChannelFactory {
-  const channelRegistry = channels || new Map<string, InternalChannel>();
+  const channelRegistry = channels || new Map<string, TestChannel>();
 
   return {
     instance(
@@ -890,13 +892,16 @@ export function createTestChannelFactory(
       cursorStorage: ISyncCursorStorage,
     ): IChannel {
       const send = (envelope: SyncEnvelope): void => {
+        if (sentEnvelopes) {
+          sentEnvelopes.push(envelope);
+        }
         const peerChannel = channelRegistry.get(remoteId);
         if (peerChannel) {
           peerChannel.receive(envelope);
         }
       };
 
-      const channel = new InternalChannel(
+      const channel = new TestChannel(
         remoteId,
         remoteName,
         cursorStorage,

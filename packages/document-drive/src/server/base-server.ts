@@ -114,7 +114,7 @@ export class BaseDocumentDriveServer
   private documentStorage: IDocumentStorage;
   private cache: ICache;
   private queueManager: IQueueManager;
-  private eventEmitter: IEventEmitter;
+  public eventEmitter: IEventEmitter;
   protected options: Required<DocumentDriveServerOptions>;
   private listenerManager: IListenerManager;
   private synchronizationManager: ISynchronizationManager;

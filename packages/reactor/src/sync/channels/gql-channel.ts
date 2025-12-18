@@ -145,11 +145,26 @@ export class GqlChannel implements IChannel {
       return;
     }
 
+    let maxCursorOrdinal = cursorOrdinal;
+
     for (const envelope of envelopes) {
       if (envelope.type === "operations" && envelope.operations) {
         const syncOp = envelopeToSyncOperation(envelope, this.remoteName);
         syncOp.transported();
         this.inbox.add(syncOp);
+      }
+
+      if (envelope.cursor && envelope.cursor.cursorOrdinal > maxCursorOrdinal) {
+        maxCursorOrdinal = envelope.cursor.cursorOrdinal;
+      }
+    }
+
+    if (maxCursorOrdinal > cursorOrdinal) {
+      try {
+        await this.updateCursor(maxCursorOrdinal);
+      } catch (error) {
+        this.handlePollError(error);
+        return;
       }
     }
 

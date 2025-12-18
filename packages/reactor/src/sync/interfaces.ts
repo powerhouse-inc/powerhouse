@@ -48,6 +48,14 @@ export interface IChannel {
    * Shuts down the channel and prevents further operations.
    */
   shutdown(): void;
+
+  /**
+   * Updates the synchronization cursor for this channel.
+   * For polling channels, this also removes acknowledged operations from the outbox.
+   *
+   * @param cursorOrdinal - The last processed ordinal
+   */
+  updateCursor(cursorOrdinal: number): Promise<void>;
 }
 
 /**

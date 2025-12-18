@@ -252,7 +252,12 @@ async function initServer(
 
   // Create default drive if provided
   if (options.drive) {
-    defaultDriveUrl = await addDefaultDrive(client, options.drive, serverPort);
+    defaultDriveUrl = await addDefaultDrive(
+      driveServer,
+      client,
+      options.drive,
+      serverPort,
+    );
   }
 
   // add vite middleware after express app is initialized if applicable

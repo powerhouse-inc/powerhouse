@@ -10,7 +10,7 @@ import {
 } from "../../src/events/types.js";
 import { JobStatus } from "../../src/shared/types.js";
 import type { ISyncCursorStorage } from "../../src/storage/interfaces.js";
-import { InternalChannel } from "../../src/sync/channels/internal-channel.js";
+import { TestChannel } from "../sync/channels/test-channel.js";
 import type { IChannelFactory } from "../../src/sync/interfaces.js";
 import { SyncBuilder } from "../../src/sync/sync-builder.js";
 import type { ChannelConfig, SyncEnvelope } from "../../src/sync/types.js";
@@ -20,7 +20,7 @@ type TwoReactorSetup = {
   reactorB: IReactor;
   moduleA: ReactorModule;
   moduleB: ReactorModule;
-  channelRegistry: Map<string, InternalChannel>;
+  channelRegistry: Map<string, TestChannel>;
   eventBusA: IEventBus;
   eventBusB: IEventBus;
 };
@@ -114,7 +114,7 @@ async function waitForMultipleOperationsReady(
 }
 
 async function setupTwoReactors(): Promise<TwoReactorSetup> {
-  const channelRegistry = new Map<string, InternalChannel>();
+  const channelRegistry = new Map<string, TestChannel>();
   const peerMapping = new Map<string, string>();
   peerMapping.set("remoteA", "remoteB");
   peerMapping.set("remoteB", "remoteA");
@@ -126,7 +126,7 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
         remoteName: string,
         config: ChannelConfig,
         cursorStorage: ISyncCursorStorage,
-      ): InternalChannel {
+      ): TestChannel {
         const peerName = peerMapping.get(remoteName);
 
         const send = (envelope: SyncEnvelope): void => {
@@ -141,7 +141,7 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
           peerChannel.receive(envelope);
         };
 
-        const channel = new InternalChannel(
+        const channel = new TestChannel(
           remoteId,
           remoteName,
           cursorStorage,
@@ -213,6 +213,8 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
 describe("Two-Reactor Sync", () => {
   let reactorA: IReactor;
   let reactorB: IReactor;
+  let moduleA: ReactorModule;
+  let moduleB: ReactorModule;
   let eventBusA: IEventBus;
   let eventBusB: IEventBus;
 
@@ -220,6 +222,8 @@ describe("Two-Reactor Sync", () => {
     const setup = await setupTwoReactors();
     reactorA = setup.reactorA;
     reactorB = setup.reactorB;
+    moduleA = setup.moduleA;
+    moduleB = setup.moduleB;
     eventBusA = setup.eventBusA;
     eventBusB = setup.eventBusB;
   });
@@ -605,4 +609,38 @@ describe("Two-Reactor Sync", () => {
       testReactor.kill();
     }
   }, 15000);
+
+  it("should not echo operations back to sender", async () => {
+    const document = driveDocumentModelModule.utils.createDocument();
+    const readyPromise = waitForOperationsReady(eventBusB, document.header.id);
+    const jobInfo = await reactorA.create(document);
+
+    await waitForJobCompletion(reactorA, jobInfo.id);
+
+    await readyPromise;
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    const remoteA = moduleB.syncModule!.syncManager.getByName("remoteA");
+
+    const outboxOps = remoteA.channel.outbox.items;
+    expect(outboxOps.length).toBe(0);
+  });
+
+  it("should clean up outbox after successful send", async () => {
+    const document = driveDocumentModelModule.utils.createDocument();
+    const readyPromise = waitForOperationsReady(eventBusB, document.header.id);
+    const jobInfo = await reactorA.create(document);
+
+    await waitForJobCompletion(reactorA, jobInfo.id);
+
+    await readyPromise;
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    const remoteB = moduleA.syncModule!.syncManager.getByName("remoteB");
+
+    const outboxOps = remoteB.channel.outbox.items;
+    expect(outboxOps.length).toBe(0);
+  });
 });

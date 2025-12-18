@@ -1,9 +1,9 @@
 import type { ChannelErrorSource } from "./types.js";
 
-export class InternalChannelError extends Error {
+export class PollingChannelError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "InternalChannelError";
+    this.name = "PollingChannelError";
   }
 }
 

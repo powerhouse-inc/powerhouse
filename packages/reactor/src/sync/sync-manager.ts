@@ -6,12 +6,12 @@ import {
   OperationEventTypes,
   type OperationWrittenEvent,
 } from "../events/types.js";
+import { JobAwaiter } from "../shared/awaiter.js";
 import {
   JobStatus,
   type JobInfo,
   type ShutdownStatus,
 } from "../shared/types.js";
-import { JobAwaiter } from "../shared/awaiter.js";
 import type {
   ISyncCursorStorage,
   ISyncRemoteStorage,
@@ -42,6 +42,7 @@ export class SyncManager implements ISyncManager {
   private eventUnsubscribe?: () => void;
 
   public loadJobs: Map<string, JobInfo> = new Map();
+  private loadJobSources: Map<string, string> = new Map();
 
   constructor(
     remoteStorage: ISyncRemoteStorage,
@@ -298,7 +299,17 @@ export class SyncManager implements ISyncManager {
       return;
     }
 
+    const sourceRemote = this.loadJobSources.get(event.jobId);
+
+    if (sourceRemote) {
+      this.loadJobSources.delete(event.jobId);
+    }
+
     for (const remote of this.remotes.values()) {
+      if (sourceRemote && remote.name === sourceRemote) {
+        continue;
+      }
+
       const filteredOps = filterOperations(event.operations, remote.filter);
       if (filteredOps.length === 0) {
         continue;
@@ -348,6 +359,7 @@ export class SyncManager implements ISyncManager {
         syncOp.branch,
         operations,
       );
+      this.loadJobSources.set(jobInfo.id, remote.name);
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
       const channelError = new ChannelError(ChannelErrorSource.Inbox, err);

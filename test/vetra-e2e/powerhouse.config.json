@@ -1,4 +1,5 @@
 {
+  "logLevel": "debug",
   "documentModelsDir": "./document-models",
   "editorsDir": "./editors",
   "processorsDir": "./processors",
