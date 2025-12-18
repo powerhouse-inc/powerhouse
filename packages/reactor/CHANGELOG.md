@@ -1,3 +1,13 @@
+## 5.2.0-staging.8 (2025-12-18)
+
+### 🩹 Fixes
+
+- **reactor:** we were echoing back sync envelopes ([0fc679d21](https://github.com/powerhouse-inc/powerhouse/commit/0fc679d21))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.2.0-staging.7 (2025-12-18)
 
 ### 🚀 Features

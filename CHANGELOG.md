@@ -1,3 +1,19 @@
+## 5.2.0-staging.8 (2025-12-18)
+
+### 🚀 Features
+
+- merge main fixes into staging ([725931e8b](https://github.com/powerhouse-inc/powerhouse/commit/725931e8b))
+
+### 🩹 Fixes
+
+- **reactor:** we were echoing back sync envelopes ([0fc679d21](https://github.com/powerhouse-inc/powerhouse/commit/0fc679d21))
+- **switchboard, vetra:** fix issue with processors not being added on initial boot ([25432a663](https://github.com/powerhouse-inc/powerhouse/commit/25432a663))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente @gpuente
+
 ## 5.2.0-staging.7 (2025-12-18)
 
 ### 🚀 Features
