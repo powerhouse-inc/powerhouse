@@ -15,6 +15,9 @@ module.exports = {
         ? filteredModules[0].operations.map((a) => ({
             name: a.name,
             hasInput: a.schema !== null,
+            isEmptyInput:
+              a.schema?.includes("_empty") &&
+              !a.schema.replace(/_empty:\s*Boolean/, "").match(/\w+:\s*\w+/),
             hasAttachment: a.schema?.includes(": Attachment"),
             scope: a.scope || "global",
             state: a.scope === "global" ? "" : a.scope, // the state this action affects

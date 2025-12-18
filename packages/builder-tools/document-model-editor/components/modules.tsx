@@ -26,6 +26,7 @@ type Props = {
     errorId: string,
     name: string,
   ) => void;
+  toggleNoInputRequired: (id: string, noInputRequired: boolean) => void;
 };
 export default function Modules({
   modules,
@@ -41,6 +42,7 @@ export default function Modules({
   addOperationError,
   deleteOperationError,
   setOperationErrorName,
+  toggleNoInputRequired,
 }: Props) {
   const [lastCreatedModuleId, setLastCreatedModuleId] = useState<string | null>(
     null,
@@ -79,6 +81,7 @@ export default function Modules({
           addOperationError={addOperationError}
           deleteOperationError={deleteOperationError}
           setOperationErrorName={setOperationErrorName}
+          toggleNoInputRequired={toggleNoInputRequired}
         />
       ))}
       <Module
@@ -97,6 +100,7 @@ export default function Modules({
         addOperationError={addOperationError}
         deleteOperationError={deleteOperationError}
         setOperationErrorName={setOperationErrorName}
+        toggleNoInputRequired={toggleNoInputRequired}
       />
       {/* Focus trap to prevent tabbing out of the editor */}
       <div
