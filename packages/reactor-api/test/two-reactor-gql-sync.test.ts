@@ -109,6 +109,31 @@ async function waitForMultipleOperationsReady(
   });
 }
 
+function logPerformanceMarks(testName: string): void {
+  const marks = performance.getEntriesByType("mark");
+  const measures = performance.getEntriesByType("measure");
+  
+  console.log(`\n[PERF] ${testName}:`);
+  
+  if (marks.length > 0) {
+    console.log(`  Marks (${marks.length}):`);
+    for (const mark of marks) {
+      console.log(`    ${mark.name}: ${mark.startTime.toFixed(2)}ms`);
+    }
+  }
+  
+  if (measures.length > 0) {
+    console.log(`  Measures (${measures.length}):`);
+    for (const measure of measures) {
+      console.log(`    ${measure.name}: ${measure.duration.toFixed(2)}ms`);
+    }
+  }
+  
+  // Clear marks and measures for next test
+  performance.clearMarks();
+  performance.clearMeasures();
+}
+
 async function setupTwoReactorsWithGqlChannel(): Promise<TwoReactorSetup> {
   const syncManagerRegistry = new Map<string, ISyncManager>();
 
@@ -197,6 +222,8 @@ describe("Two-Reactor Sync with GqlChannel", () => {
   });
 
   it("should sync operation from ReactorA to ReactorB via GqlChannel", async () => {
+    performance.mark("sync-a-to-b-start");
+    
     const document = driveDocumentModelModule.utils.createDocument();
     const readyPromise = waitForOperationsReady(eventBusB, document.header.id);
     const jobInfo = await reactorA.create(document);
@@ -215,6 +242,11 @@ describe("Two-Reactor Sync with GqlChannel", () => {
     });
     const opsB = Object.values(resultB).flatMap((scope) => scope.results);
 
+    performance.mark("sync-a-to-b-end");
+    performance.measure("sync-a-to-b", "sync-a-to-b-start", "sync-a-to-b-end");
+    
+    logPerformanceMarks("sync-a-to-b");
+
     expect(opsA.length).toBeGreaterThan(0);
     expect(opsB.length).toBe(opsA.length);
 
@@ -229,6 +261,8 @@ describe("Two-Reactor Sync with GqlChannel", () => {
   });
 
   it("should sync operation from ReactorB to ReactorA via GqlChannel", async () => {
+    performance.mark("sync-b-to-a-start");
+    
     const document = driveDocumentModelModule.utils.createDocument();
     const readyPromise = waitForOperationsReady(eventBusA, document.header.id);
     const jobInfo = await reactorB.create(document);
@@ -247,6 +281,11 @@ describe("Two-Reactor Sync with GqlChannel", () => {
     });
     const opsA = Object.values(resultA).flatMap((scope) => scope.results);
 
+    performance.mark("sync-b-to-a-end");
+    performance.measure("sync-b-to-a", "sync-b-to-a-start", "sync-b-to-a-end");
+    
+    logPerformanceMarks("sync-b-to-a");
+
     expect(opsB.length).toBeGreaterThan(0);
     expect(opsA.length).toBe(opsB.length);
 
@@ -261,6 +300,8 @@ describe("Two-Reactor Sync with GqlChannel", () => {
   });
 
   it("should sync multiple documents with concurrent operations from both reactors", async () => {
+    performance.mark("sync-multiple-docs-start");
+    
     const docA = driveDocumentModelModule.utils.createDocument();
     const docB = driveDocumentModelModule.utils.createDocument();
     const docC = driveDocumentModelModule.utils.createDocument();
@@ -318,6 +359,11 @@ describe("Two-Reactor Sync with GqlChannel", () => {
     await waitForMutatesA;
     await waitForMutatesB;
 
+    performance.mark("sync-multiple-docs-end");
+    performance.measure("sync-multiple-docs", "sync-multiple-docs-start", "sync-multiple-docs-end");
+    
+    logPerformanceMarks("sync-multiple-docs");
+
     const documents = [
       { id: docA.header.id, name: "docA" },
       { id: docB.header.id, name: "docB" },
@@ -361,6 +407,8 @@ describe("Two-Reactor Sync with GqlChannel", () => {
 
     const docOnB = await reactorB.get(doc.header.id, { branch: "main" });
     expect(docOnB.document).toBeDefined();
+
+    performance.mark("concurrent-modifications-start");
 
     void reactorA.execute(doc.header.id, "main", [
       driveDocumentModelModule.actions.setDriveName({ name: "Name from A" }),
@@ -408,6 +456,11 @@ describe("Two-Reactor Sync with GqlChannel", () => {
 
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
+
+    performance.mark("concurrent-modifications-end");
+    performance.measure("concurrent-modifications", "concurrent-modifications-start", "concurrent-modifications-end");
+    
+    logPerformanceMarks("concurrent-modifications");
 
     expect(synced).toBe(true);
 
