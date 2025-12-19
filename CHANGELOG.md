@@ -1,3 +1,13 @@
+## 5.2.0-staging.9 (2025-12-19)
+
+### 🚀 Features
+
+- **codegen:** restore editor template ([06a825c22](https://github.com/powerhouse-inc/powerhouse/commit/06a825c22))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 5.2.0-staging.8 (2025-12-18)
 
 ### 🚀 Features
