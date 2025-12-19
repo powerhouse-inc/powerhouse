@@ -21,6 +21,7 @@ import {
   createEmptyConsistencyToken,
   createMockDocumentIndexer,
   createMockJobAwaiter,
+  createMockLogger,
   createMockSigner,
   createMockSubscriptionManager,
 } from "../factories.js";
@@ -64,6 +65,7 @@ describe("ReactorClient Unit Tests", () => {
     mockJobAwaiter = createMockJobAwaiter();
 
     client = new ReactorClient(
+      createMockLogger(),
       mockReactor,
       mockSigner,
       mockSubscriptionManager,

@@ -48,6 +48,7 @@ import {
   processReactorMutation,
   submitAllMutationsWithQueueHints,
 } from "./recorded-operations-helpers.js";
+import { createMockLogger } from "../../factories.js";
 
 type Database = StorageDatabase &
   DocumentViewDatabase &
@@ -189,6 +190,7 @@ async function createReactorSetup(
   );
 
   const reactor = new Reactor(
+    createMockLogger(),
     driveServer,
     consistencyAwareStorage,
     queue,

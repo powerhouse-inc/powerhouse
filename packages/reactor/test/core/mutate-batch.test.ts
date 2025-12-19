@@ -15,6 +15,7 @@ import { ReactorSubscriptionManager } from "../../src/subs/react-subscription-ma
 import {
   createMockDocumentIndexer,
   createMockDocumentView,
+  createMockLogger,
   createMockOperationStore,
   createMockReactorFeatures,
 } from "../factories.js";
@@ -51,6 +52,7 @@ describe("mutateBatch validation", () => {
       eventBus,
     );
     return new Reactor(
+      createMockLogger(),
       driveServer,
       consistencyAwareStorage,
       queue,

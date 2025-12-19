@@ -32,6 +32,7 @@ import { ReactorSubscriptionManager } from "../../../src/subs/react-subscription
 import {
   createDocModelDocument,
   createMockDocumentIndexer,
+  createMockLogger,
   createMockReactorFeatures,
   createTestDocuments,
   createTestJobTracker,
@@ -150,6 +151,7 @@ describe("Legacy Write -> Read", () => {
       eventBus,
     );
     reactor = new Reactor(
+      createMockLogger(),
       driveServer,
       consistencyAwareStorage,
       queue,

@@ -475,6 +475,7 @@ describe("Reactor Adapters", () => {
         waitForJob: vi.fn(),
         create: vi.fn(),
         createEmpty: vi.fn(),
+        createDocumentInDrive: vi.fn(),
         execute: vi.fn(),
         executeAsync: vi.fn(),
         rename: vi.fn(),

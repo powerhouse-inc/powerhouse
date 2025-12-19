@@ -1,5 +1,7 @@
-import type { ISigner } from "document-model";
 import type { IEventBus } from "#events/interfaces.js";
+import { ConsoleLogger } from "#logging/console.js";
+import type { ILogger } from "#logging/types.js";
+import type { ISigner } from "document-model";
 import { ReactorClient } from "../client/reactor-client.js";
 import { JobAwaiter, type IJobAwaiter } from "../shared/awaiter.js";
 import { PassthroughSigner } from "../signer/passthrough-signer.js";
@@ -18,6 +20,7 @@ import type { IReactor, ReactorClientModule, ReactorModule } from "./types.js";
  * Builder class for constructing ReactorClient instances with proper configuration
  */
 export class ReactorClientBuilder {
+  private logger?: ILogger;
   private reactorBuilder?: ReactorBuilder;
   private reactor?: IReactor;
   private eventBus?: IEventBus;
@@ -26,6 +29,16 @@ export class ReactorClientBuilder {
   private signatureVerifier?: SignatureVerificationHandler;
   private subscriptionManager?: IReactorSubscriptionManager;
   private jobAwaiter?: IJobAwaiter;
+
+  /**
+   * Sets the logger for the ReactorClient.
+   * @param logger - The logger to use.
+   * @returns The ReactorClientBuilder instance.
+   */
+  public withLogger(logger: ILogger): this {
+    this.logger = logger;
+    return this;
+  }
 
   /**
    * Either this or withReactor must be set.
@@ -90,6 +103,10 @@ export class ReactorClientBuilder {
   }
 
   public async buildModule(): Promise<ReactorClientModule> {
+    if (!this.logger) {
+      this.logger = new ConsoleLogger(["reactor-client"]);
+    }
+
     let reactor: IReactor;
     let eventBus: IEventBus;
     let documentIndexer: IDocumentIndexer;
@@ -128,6 +145,7 @@ export class ReactorClientBuilder {
       );
 
     const client = new ReactorClient(
+      this.logger,
       reactor,
       signer,
       subscriptionManager,

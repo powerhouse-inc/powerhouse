@@ -63,6 +63,24 @@ import type { IReactorSubscriptionManager } from "../src/subs/types.js";
 import { TestChannel } from "./sync/channels/test-channel.js";
 import type { IChannel, IChannelFactory } from "../src/sync/interfaces.js";
 import type { ChannelConfig, SyncEnvelope } from "../src/sync/types.js";
+import type { ILogger } from "../src/logging/types.js";
+
+/**
+ * Creates a mock logger for testing that no-ops all log methods.
+ */
+export function createMockLogger(): ILogger {
+  const logger: ILogger = {
+    level: "error",
+    verbose: () => {},
+    debug: () => {},
+    info: () => {},
+    warn: () => {},
+    error: () => {},
+    errorHandler: () => {},
+    child: () => logger,
+  };
+  return logger;
+}
 
 /**
  * Creates an operation context with default ordinal for testing.
@@ -587,6 +605,7 @@ export async function createTestReactorSetup(
 
   // Create reactor
   const reactor = new Reactor(
+    createMockLogger(),
     driveServer,
     consistencyAwareStorage,
     queue,

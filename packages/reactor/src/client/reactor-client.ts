@@ -1,12 +1,20 @@
+import { addFile } from "document-drive";
 import type {
   Action,
+  CreateDocumentActionInput,
   DocumentModelModule,
   ISigner,
   PHDocument,
 } from "document-model";
 import { actions } from "document-model";
 
+import {
+  addRelationshipAction,
+  createDocumentAction,
+  upgradeDocumentAction,
+} from "#actions/index.js";
 import { signActions } from "#core/utils.js";
+import type { ILogger } from "#logging/types.js";
 import type { IReactor } from "../core/types.js";
 import { type IJobAwaiter } from "../shared/awaiter.js";
 import {
@@ -38,6 +46,7 @@ import {
  * - Wraps subscription interface with ViewFilters
  */
 export class ReactorClient implements IReactorClient {
+  private logger: ILogger;
   private reactor: IReactor;
   private signer: ISigner;
   private subscriptionManager: IReactorSubscriptionManager;
@@ -45,17 +54,20 @@ export class ReactorClient implements IReactorClient {
   private documentIndexer: IDocumentIndexer;
 
   constructor(
+    logger: ILogger,
     reactor: IReactor,
     signer: ISigner,
     subscriptionManager: IReactorSubscriptionManager,
     jobAwaiter: IJobAwaiter,
     documentIndexer: IDocumentIndexer,
   ) {
+    this.logger = logger;
     this.reactor = reactor;
     this.signer = signer;
     this.subscriptionManager = subscriptionManager;
     this.jobAwaiter = jobAwaiter;
     this.documentIndexer = documentIndexer;
+    this.logger.verbose("ReactorClient initialized");
   }
 
   /**
@@ -66,6 +78,11 @@ export class ReactorClient implements IReactorClient {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<DocumentModelModule>> {
+    this.logger.verbose(
+      "getDocumentModels(@namespace, @paging)",
+      namespace,
+      paging,
+    );
     return this.reactor.getDocumentModels(namespace, paging, signal);
   }
 
@@ -80,6 +97,7 @@ export class ReactorClient implements IReactorClient {
     document: TDocument;
     childIds: string[];
   }> {
+    this.logger.verbose("get(@identifier, @view)", identifier, view);
     return await this.reactor.getByIdOrSlug<TDocument>(
       identifier,
       view,
@@ -97,6 +115,12 @@ export class ReactorClient implements IReactorClient {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
+    this.logger.verbose(
+      "getChildren(@parentIdentifier, @view, @paging)",
+      parentIdentifier,
+      view,
+      paging,
+    );
     const parentDoc = await this.reactor.getByIdOrSlug(
       parentIdentifier,
       view,
@@ -139,6 +163,12 @@ export class ReactorClient implements IReactorClient {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
+    this.logger.verbose(
+      "getParents(@childIdentifier, @view, @paging)",
+      childIdentifier,
+      view,
+      paging,
+    );
     const childDoc = await this.reactor.getByIdOrSlug(
       childIdentifier,
       view,
@@ -181,6 +211,7 @@ export class ReactorClient implements IReactorClient {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
+    this.logger.verbose("find(@search, @view, @paging)", search, view, paging);
     return this.reactor.find(search, view, paging, undefined, signal);
   }
 
@@ -192,6 +223,11 @@ export class ReactorClient implements IReactorClient {
     parentIdentifier?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
+    this.logger.verbose(
+      "create(@id, @parentIdentifier)",
+      document.header.id,
+      parentIdentifier,
+    );
     const jobInfo = await this.reactor.create(document, this.signer, signal);
 
     const completedJob = await this.waitForJob(jobInfo, signal);
@@ -202,16 +238,16 @@ export class ReactorClient implements IReactorClient {
 
     const documentId = document.header.id;
 
+    if (parentIdentifier) {
+      await this.addChildren(parentIdentifier, [documentId], undefined, signal);
+    }
+
     const result = await this.reactor.get<PHDocument>(
       documentId,
       undefined,
       completedJob.consistencyToken,
       signal,
     );
-
-    if (parentIdentifier) {
-      await this.addChildren(parentIdentifier, [documentId], undefined, signal);
-    }
 
     return result.document;
   }
@@ -224,6 +260,11 @@ export class ReactorClient implements IReactorClient {
     parentIdentifier?: string,
     signal?: AbortSignal,
   ): Promise<TDocument> {
+    this.logger.verbose(
+      "createEmpty(@documentType, @parentIdentifier)",
+      documentType,
+      parentIdentifier,
+    );
     const modulesResult = await this.reactor.getDocumentModels(
       undefined,
       undefined,
@@ -248,6 +289,152 @@ export class ReactorClient implements IReactorClient {
   }
 
   /**
+   * Creates an empty document in a drive as a single batched operation.
+   */
+  async createDocumentInDrive<TDocument extends PHDocument>(
+    driveId: string,
+    documentType: string,
+    name: string,
+    parentFolder?: string,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    this.logger.verbose(
+      "createDocumentInDrive(@driveId, @documentType, @name, @parentFolder)",
+      driveId,
+      documentType,
+      name,
+      parentFolder,
+    );
+
+    const modulesResult = await this.reactor.getDocumentModels(
+      undefined,
+      undefined,
+      signal,
+    );
+
+    const module = modulesResult.results.find(
+      (m) => m.documentModel.global.id === documentType,
+    );
+
+    if (!module) {
+      throw new Error(`Document model not found for type: ${documentType}`);
+    }
+
+    const document = module.utils.createDocument();
+    const documentId = document.header.id;
+
+    const createInput: CreateDocumentActionInput = {
+      model: document.header.documentType,
+      version: 0,
+      documentId: document.header.id,
+      signing: {
+        signature: document.header.id,
+        publicKey: document.header.sig.publicKey,
+        nonce: document.header.sig.nonce,
+        createdAtUtcIso: document.header.createdAtUtcIso,
+        documentType: document.header.documentType,
+      },
+      slug: document.header.slug,
+      name: name,
+      branch: document.header.branch,
+      meta: document.header.meta,
+    };
+
+    const createActions: Action[] = [
+      createDocumentAction(createInput),
+      upgradeDocumentAction({
+        documentId: document.header.id,
+        documentType: document.header.documentType,
+        initialState: document.state,
+      }),
+      actions.setName(name),
+    ];
+
+    const relationshipActions: Action[] = [
+      addRelationshipAction(driveId, documentId, "child"),
+    ];
+
+    const addFileActions: Action[] = [
+      addFile({
+        id: documentId,
+        name: name,
+        documentType: documentType,
+        parentFolder: parentFolder,
+      }),
+    ];
+
+    const signedCreateActions = await signActions(
+      createActions,
+      this.signer,
+      signal,
+    );
+    const signedRelationshipActions = await signActions(
+      relationshipActions,
+      this.signer,
+      signal,
+    );
+    const signedAddFileActions = await signActions(
+      addFileActions,
+      this.signer,
+      signal,
+    );
+
+    const batchResult = await this.reactor.executeBatch(
+      {
+        jobs: [
+          {
+            key: "createDocument",
+            documentId: documentId,
+            scope: "document",
+            branch: "main",
+            actions: signedCreateActions,
+            dependsOn: [],
+          },
+          {
+            key: "addRelationship",
+            documentId: driveId,
+            scope: "document",
+            branch: "main",
+            actions: signedRelationshipActions,
+            dependsOn: ["createDocument"],
+          },
+          {
+            key: "addFile",
+            documentId: driveId,
+            scope: "global",
+            branch: "main",
+            actions: signedAddFileActions,
+            dependsOn: ["addRelationship"],
+          },
+        ],
+      },
+      signal,
+    );
+
+    const completedJobs = await Promise.all(
+      Object.values(batchResult.jobs).map((job) =>
+        this.waitForJob(job, signal),
+      ),
+    );
+
+    for (const completedJob of completedJobs) {
+      if (completedJob.status === JobStatus.FAILED) {
+        throw new Error(completedJob.error?.message);
+      }
+    }
+
+    const lastJob = completedJobs[completedJobs.length - 1];
+    const result = await this.reactor.get<TDocument>(
+      documentId,
+      undefined,
+      lastJob.consistencyToken,
+      signal,
+    );
+
+    return result.document;
+  }
+
+  /**
    * Applies a list of actions to a document and waits for completion
    */
   async execute<TDocument extends PHDocument>(
@@ -256,6 +443,12 @@ export class ReactorClient implements IReactorClient {
     actions: Action[],
     signal?: AbortSignal,
   ): Promise<TDocument> {
+    this.logger.verbose(
+      "execute(@documentIdentifier, @branch, @count actions)",
+      documentIdentifier,
+      branch,
+      actions.length,
+    );
     const signedActions = await signActions(actions, this.signer, signal);
 
     const jobInfo = await this.reactor.execute(
@@ -290,6 +483,12 @@ export class ReactorClient implements IReactorClient {
     actions: Action[],
     signal?: AbortSignal,
   ): Promise<JobInfo> {
+    this.logger.verbose(
+      "executeAsync(@documentIdentifier, @branch, @count actions)",
+      documentIdentifier,
+      branch,
+      actions.length,
+    );
     const signedActions = await signActions(actions, this.signer, signal);
 
     return this.reactor.execute(
@@ -309,6 +508,12 @@ export class ReactorClient implements IReactorClient {
     branch: string = "main",
     signal?: AbortSignal,
   ): Promise<PHDocument> {
+    this.logger.verbose(
+      "rename(@documentIdentifier, @name, @branch)",
+      documentIdentifier,
+      name,
+      branch,
+    );
     return this.execute(
       documentIdentifier,
       branch,
@@ -326,6 +531,12 @@ export class ReactorClient implements IReactorClient {
     branch: string = "main",
     signal?: AbortSignal,
   ): Promise<PHDocument> {
+    this.logger.verbose(
+      "addChildren(@parentIdentifier, @count children, @branch)",
+      parentIdentifier,
+      documentIdentifiers.length,
+      branch,
+    );
     const jobInfo = await this.reactor.addChildren(
       parentIdentifier,
       documentIdentifiers,
@@ -358,6 +569,12 @@ export class ReactorClient implements IReactorClient {
     branch: string = "main",
     signal?: AbortSignal,
   ): Promise<PHDocument> {
+    this.logger.verbose(
+      "removeChildren(@parentIdentifier, @count children, @branch)",
+      parentIdentifier,
+      documentIdentifiers.length,
+      branch,
+    );
     const jobInfo = await this.reactor.removeChildren(
       parentIdentifier,
       documentIdentifiers,
@@ -394,6 +611,13 @@ export class ReactorClient implements IReactorClient {
     source: PHDocument;
     target: PHDocument;
   }> {
+    this.logger.verbose(
+      "moveChildren(@sourceParentIdentifier, @targetParentIdentifier, @count children, @branch)",
+      sourceParentIdentifier,
+      targetParentIdentifier,
+      documentIdentifiers.length,
+      branch,
+    );
     const removeJobInfo = await this.reactor.removeChildren(
       sourceParentIdentifier,
       documentIdentifiers,
@@ -450,6 +674,11 @@ export class ReactorClient implements IReactorClient {
     propagate?: PropagationMode,
     signal?: AbortSignal,
   ): Promise<void> {
+    this.logger.verbose(
+      "deleteDocument(@identifier, @propagate)",
+      identifier,
+      propagate,
+    );
     const jobs: JobInfo[] = [];
 
     if (propagate === PropagationMode.Cascade) {
@@ -521,6 +750,11 @@ export class ReactorClient implements IReactorClient {
     propagate?: PropagationMode,
     signal?: AbortSignal,
   ): Promise<void> {
+    this.logger.verbose(
+      "deleteDocuments(@count identifiers, @propagate)",
+      identifiers.length,
+      propagate,
+    );
     const deletePromises = identifiers.map((identifier) =>
       this.deleteDocument(identifier, propagate, signal),
     );
@@ -532,6 +766,7 @@ export class ReactorClient implements IReactorClient {
    * Retrieves the status of a job
    */
   async getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobInfo> {
+    this.logger.verbose("getJobStatus(@jobId)", jobId);
     return this.reactor.getJobStatus(jobId, signal);
   }
 
@@ -543,6 +778,7 @@ export class ReactorClient implements IReactorClient {
     signal?: AbortSignal,
   ): Promise<JobInfo> {
     const id = typeof jobId === "string" ? jobId : jobId.id;
+    this.logger.verbose("waitForJob(@id)", id);
     return this.jobAwaiter.waitForJob(id, signal);
   }
 
@@ -554,6 +790,7 @@ export class ReactorClient implements IReactorClient {
     callback: (event: DocumentChangeEvent) => void,
     view?: ViewFilter,
   ): () => void {
+    this.logger.verbose("subscribe(@search, @view)", search, view);
     const unsubscribeCreated = this.subscriptionManager.onDocumentCreated(
       (result) => {
         void (async () => {

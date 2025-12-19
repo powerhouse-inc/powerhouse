@@ -4,7 +4,7 @@ const tokenSub = /@([a-zA-Z0-9_]+)/g;
 const dtf = new Intl.DateTimeFormat();
 
 const formatMessage = (
-  tags: string[],
+  tagString: string,
   message: string,
   ...replacements: any[]
 ): [string, Record<string, any>] => {
@@ -45,8 +45,8 @@ const formatMessage = (
     message = message.replaceAll(`@${key}`, stringValue);
   }
 
-  if (tags.length > 0) {
-    message = `${tags.map((tag) => `[${tag}]`).join("")} ${message}`;
+  if (tagString.length > 0) {
+    message = `${tagString} ${message}`;
   }
 
   // timestamp
@@ -57,58 +57,104 @@ const formatMessage = (
   return [message, meta];
 };
 
+const LOG_LEVELS = {
+  verbose: 0,
+  debug: 1,
+  info: 2,
+  warn: 3,
+  error: 4,
+} as const;
+
 export class ConsoleLogger implements ILogger {
   #tags: string[];
+  #tagString: string;
+  #level: number = LOG_LEVELS.info;
 
   errorHandler: LoggerErrorHandler;
-  level: "verbose" | "debug" | "info" | "warn" | "error" = "info";
 
   constructor(tags?: string[], handler?: LoggerErrorHandler) {
-    this.#tags = (tags || []).map((tag) => `[${tag}]`);
+    this.#tags = tags || [];
+    this.#tagString = this.#tags.map((tag) => `[${tag}]`).join("");
+
     this.errorHandler = handler ?? (() => {});
   }
 
+  get level(): keyof typeof LOG_LEVELS {
+    return Object.keys(LOG_LEVELS).find(
+      (key) => LOG_LEVELS[key as keyof typeof LOG_LEVELS] === this.#level,
+    ) as keyof typeof LOG_LEVELS;
+  }
+
+  set level(value: keyof typeof LOG_LEVELS) {
+    this.#level = LOG_LEVELS[value];
+  }
+
+  child(tags: string[]): ILogger {
+    const logger = new ConsoleLogger(
+      [...this.#tags, ...tags],
+      this.errorHandler,
+    );
+    logger.level = this.level;
+    return logger;
+  }
+
   verbose(message: string, ...replacements: any[]): void {
-    this.debug(message, replacements);
+    if (this.#level <= LOG_LEVELS.verbose) {
+      const [formattedMessage, meta] = formatMessage(
+        this.#tagString,
+        message,
+        replacements,
+      );
+
+      console.debug(`[${meta["timestamp"]}] ${formattedMessage}`, meta);
+    }
   }
 
   debug(message: string, ...replacements: any[]): void {
-    const [formattedMessage, meta] = formatMessage(
-      this.#tags,
-      message,
-      replacements,
-    );
+    if (this.#level <= LOG_LEVELS.debug) {
+      const [formattedMessage, meta] = formatMessage(
+        this.#tagString,
+        message,
+        replacements,
+      );
 
-    console.debug(`[${meta["timestamp"]}] ${formattedMessage}`, meta);
+      console.debug(`[${meta["timestamp"]}] ${formattedMessage}`, meta);
+    }
   }
 
   info(message: string, ...replacements: any[]): void {
-    const [formattedMessage, meta] = formatMessage(
-      this.#tags,
-      message,
-      replacements,
-    );
+    if (this.#level <= LOG_LEVELS.info) {
+      const [formattedMessage, meta] = formatMessage(
+        this.#tagString,
+        message,
+        replacements,
+      );
 
-    console.info(`[${meta["timestamp"]}] ${formattedMessage}`, meta);
+      console.info(`[${meta["timestamp"]}] ${formattedMessage}`, meta);
+    }
   }
 
   warn(message: string, ...replacements: any[]): void {
-    const [formattedMessage, meta] = formatMessage(
-      this.#tags,
-      message,
-      replacements,
-    );
+    if (this.#level <= LOG_LEVELS.warn) {
+      const [formattedMessage, meta] = formatMessage(
+        this.#tagString,
+        message,
+        replacements,
+      );
 
-    console.warn(`[${meta["timestamp"]}] ${formattedMessage}`, meta);
+      console.warn(`[${meta["timestamp"]}] ${formattedMessage}`, meta);
+    }
   }
 
   error(message: string, ...replacements: any[]): void {
-    const [formattedMessage, meta] = formatMessage(
-      this.#tags,
-      message,
-      replacements,
-    );
+    if (this.#level <= LOG_LEVELS.error) {
+      const [formattedMessage, meta] = formatMessage(
+        this.#tagString,
+        message,
+        replacements,
+      );
 
-    console.error(`[${meta["timestamp"]}] ${formattedMessage}`, meta);
+      console.error(`[${meta["timestamp"]}] ${formattedMessage}`, meta);
+    }
   }
 }

@@ -48,6 +48,7 @@ import { ReactorSubscriptionManager } from "../../../src/subs/react-subscription
 import {
   createMockDocumentIndexer,
   createMockDocumentMetaCache,
+  createMockLogger,
   createMockReactorFeatures,
   createTestOperationStore,
 } from "../../factories.js";
@@ -242,6 +243,7 @@ describe.each(storageLayers)(
 
       // Create reactor
       reactor = new Reactor(
+        createMockLogger(),
         driveServer,
         consistencyAwareStorage,
         queue,

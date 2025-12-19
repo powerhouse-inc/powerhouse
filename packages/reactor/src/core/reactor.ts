@@ -1,15 +1,21 @@
+import type { ILogger } from "#logging/types.js";
+import {
+  addRelationshipAction,
+  createDocumentAction,
+  deleteDocumentAction,
+  removeRelationshipAction,
+  upgradeDocumentAction,
+} from "#actions/index.js";
 import type { BaseDocumentDriveServer } from "document-drive";
 import { AbortError } from "document-drive";
 import type {
   Action,
   CreateDocumentActionInput,
-  DeleteDocumentActionInput,
   DocumentModelModule,
   ISigner,
   Operation,
   PHBaseState,
   PHDocument,
-  UpgradeDocumentActionInput,
 } from "document-model";
 import { v4 as uuidv4 } from "uuid";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
@@ -56,6 +62,7 @@ import {
  * for the new Reactor architecture.
  */
 export class Reactor implements IReactor {
+  private logger: ILogger;
   private driveServer: BaseDocumentDriveServer;
   private documentStorage: IConsistencyAwareStorage;
   private shutdownStatus: ShutdownStatus;
@@ -69,6 +76,7 @@ export class Reactor implements IReactor {
   private operationStore: IOperationStore;
 
   constructor(
+    logger: ILogger,
     driveServer: BaseDocumentDriveServer,
     documentStorage: IConsistencyAwareStorage,
     queue: IQueue,
@@ -80,6 +88,7 @@ export class Reactor implements IReactor {
     operationStore: IOperationStore,
   ) {
     // Store required dependencies
+    this.logger = logger;
     this.driveServer = driveServer;
     this.documentStorage = documentStorage;
     this.queue = queue;
@@ -95,6 +104,11 @@ export class Reactor implements IReactor {
     this.shutdownStatus = status;
     this.setShutdown = setter;
 
+    this.logger.verbose(
+      "Reactor({ legacyStorage: @legacy })",
+      features.legacyStorageEnabled,
+    );
+
     this.readModelCoordinator.start();
   }
 
@@ -102,6 +116,8 @@ export class Reactor implements IReactor {
    * Signals that the reactor should shutdown.
    */
   kill(): ShutdownStatus {
+    this.logger.verbose("kill()");
+
     // Mark the reactor as shutdown
     this.setShutdown(true);
 
@@ -122,8 +138,15 @@ export class Reactor implements IReactor {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<DocumentModelModule>> {
+    this.logger.verbose(
+      "getDocumentModels(@namespace, @paging)",
+      namespace,
+      paging,
+    );
+
     // Get document model modules from the drive server + filter
     const modules = this.driveServer.getDocumentModelModules();
+
     const filteredModels = modules.filter(
       (module) =>
         !namespace || module.documentModel.global.id.startsWith(namespace),
@@ -170,6 +193,8 @@ export class Reactor implements IReactor {
     document: TDocument;
     childIds: string[];
   }> {
+    this.logger.verbose("get(@id, @view)", id, view);
+
     if (this.features.legacyStorageEnabled) {
       const document = await this.documentStorage.get<TDocument>(
         id,
@@ -245,6 +270,8 @@ export class Reactor implements IReactor {
     document: TDocument;
     childIds: string[];
   }> {
+    this.logger.verbose("getBySlug(@slug, @view)", slug, view);
+
     if (this.features.legacyStorageEnabled) {
       let ids: string[];
       try {
@@ -299,6 +326,8 @@ export class Reactor implements IReactor {
     document: TDocument;
     childIds: string[];
   }> {
+    this.logger.verbose("getByIdOrSlug(@identifier, @view)", identifier, view);
+
     if (this.features.legacyStorageEnabled) {
       try {
         return await this.get<TDocument>(
@@ -371,6 +400,13 @@ export class Reactor implements IReactor {
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<Record<string, PagedResults<Operation>>> {
+    this.logger.verbose(
+      "getOperations(@documentId, @view, @paging)",
+      documentId,
+      view,
+      paging,
+    );
+
     if (this.features.legacyStorageEnabled) {
       // Use storage directly to get the document
       const document = await this.documentStorage.get(
@@ -489,6 +525,8 @@ export class Reactor implements IReactor {
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
+    this.logger.verbose("find(@search, @view, @paging)", search, view, paging);
+
     let results: PagedResults<PHDocument>;
     if (search.ids) {
       if (search.slugs && search.slugs.length > 0) {
@@ -557,58 +595,41 @@ export class Reactor implements IReactor {
     signal?: AbortSignal,
     meta?: Record<string, unknown>,
   ): Promise<JobInfo> {
+    this.logger.verbose(
+      "create(@id, @type, @slug)",
+      document.header.id,
+      document.header.documentType,
+      document.header.slug,
+    );
     const createdAtUtcIso = new Date().toISOString();
 
     if (signal?.aborted) {
       throw new AbortError();
     }
 
-    // Create a CREATE_DOCUMENT action with proper CreateDocumentActionInput
-    const input: CreateDocumentActionInput = {
+    const createInput: CreateDocumentActionInput = {
       model: document.header.documentType,
       version: 0,
       documentId: document.header.id,
+      signing: {
+        signature: document.header.id,
+        publicKey: document.header.sig.publicKey,
+        nonce: document.header.sig.nonce,
+        createdAtUtcIso: document.header.createdAtUtcIso,
+        documentType: document.header.documentType,
+      },
+      slug: document.header.slug,
+      name: document.header.name,
+      branch: document.header.branch,
+      meta: document.header.meta,
     };
 
-    // Add signing info
-    input.signing = {
-      signature: document.header.id,
-      publicKey: document.header.sig.publicKey,
-      nonce: document.header.sig.nonce,
-      createdAtUtcIso: document.header.createdAtUtcIso,
-      documentType: document.header.documentType,
-    };
-
-    // Add optional mutable header fields (always include even if empty/undefined)
-    input.slug = document.header.slug;
-    input.name = document.header.name;
-    input.branch = document.header.branch;
-    input.meta = document.header.meta;
-
-    const createAction: Action = {
-      id: `${document.header.id}-create`,
-      type: "CREATE_DOCUMENT",
-      scope: "document",
-      timestampUtcMs: new Date().toISOString(),
-      input,
-    };
-
-    // Create an UPGRADE_DOCUMENT action to set the initial state
-    const upgradeInput: UpgradeDocumentActionInput = {
-      model: document.header.documentType,
-      fromVersion: 0,
-      toVersion: 1,
+    const createAction = createDocumentAction(createInput);
+    const upgradeAction = upgradeDocumentAction({
       documentId: document.header.id,
+      documentType: document.header.documentType,
       initialState: document.state,
-    };
-
-    const upgradeAction: Action = {
-      id: `${document.header.id}-upgrade`,
-      type: "UPGRADE_DOCUMENT",
-      scope: "document",
-      timestampUtcMs: new Date().toISOString(),
-      input: upgradeInput,
-    };
+    });
 
     // Sign actions if signer is provided
     let actions: Action[] = [createAction, upgradeAction];
@@ -661,23 +682,14 @@ export class Reactor implements IReactor {
     signal?: AbortSignal,
     meta?: Record<string, unknown>,
   ): Promise<JobInfo> {
+    this.logger.verbose("deleteDocument(@id)", id);
     const createdAtUtcIso = new Date().toISOString();
 
     if (signal?.aborted) {
       throw new AbortError();
     }
 
-    const deleteInput: DeleteDocumentActionInput = {
-      documentId: id,
-    };
-
-    let action: Action = {
-      id: `${id}-delete`,
-      type: "DELETE_DOCUMENT",
-      scope: "document",
-      timestampUtcMs: new Date().toISOString(),
-      input: deleteInput,
-    };
+    let action = deleteDocumentAction(id);
 
     // Sign action if signer is provided
     if (signer) {
@@ -727,6 +739,13 @@ export class Reactor implements IReactor {
     signal?: AbortSignal,
     meta?: Record<string, unknown>,
   ): Promise<JobInfo> {
+    this.logger.verbose(
+      "execute(@docId, @branch, @count actions)",
+      docId,
+      branch,
+      actions.length,
+    );
+
     if (signal?.aborted) {
       throw new AbortError();
     }
@@ -788,6 +807,13 @@ export class Reactor implements IReactor {
     signal?: AbortSignal,
     meta?: Record<string, unknown>,
   ): Promise<JobInfo> {
+    this.logger.verbose(
+      "load(@docId, @branch, @count operations)",
+      docId,
+      branch,
+      operations.length,
+    );
+
     if (signal?.aborted) {
       throw new AbortError();
     }
@@ -852,6 +878,8 @@ export class Reactor implements IReactor {
     signal?: AbortSignal,
     meta?: Record<string, unknown>,
   ): Promise<BatchExecutionResult> {
+    this.logger.verbose("executeBatch(@count jobs)", request.jobs.length);
+
     if (signal?.aborted) {
       throw new AbortError();
     }
@@ -943,21 +971,20 @@ export class Reactor implements IReactor {
     signer?: ISigner,
     signal?: AbortSignal,
   ): Promise<JobInfo> {
+    this.logger.verbose(
+      "addChildren(@parentId, @count children, @branch)",
+      parentId,
+      documentIds.length,
+      branch,
+    );
+
     if (signal?.aborted) {
       throw new AbortError();
     }
 
-    let actions: Action[] = documentIds.map((childId) => ({
-      id: uuidv4(),
-      type: "ADD_RELATIONSHIP",
-      scope: "document",
-      timestampUtcMs: new Date().toISOString(),
-      input: {
-        sourceId: parentId,
-        targetId: childId,
-        relationshipType: "child",
-      },
-    }));
+    let actions: Action[] = documentIds.map((childId) =>
+      addRelationshipAction(parentId, childId, "child"),
+    );
 
     // Sign actions if signer is provided
     if (signer) {
@@ -977,21 +1004,20 @@ export class Reactor implements IReactor {
     signer?: ISigner,
     signal?: AbortSignal,
   ): Promise<JobInfo> {
+    this.logger.verbose(
+      "removeChildren(@parentId, @count children, @branch)",
+      parentId,
+      documentIds.length,
+      branch,
+    );
+
     if (signal?.aborted) {
       throw new AbortError();
     }
 
-    let actions: Action[] = documentIds.map((childId) => ({
-      id: uuidv4(),
-      type: "REMOVE_RELATIONSHIP",
-      scope: "document",
-      timestampUtcMs: new Date().toISOString(),
-      input: {
-        sourceId: parentId,
-        targetId: childId,
-        relationshipType: "child",
-      },
-    }));
+    let actions: Action[] = documentIds.map((childId) =>
+      removeRelationshipAction(parentId, childId, "child"),
+    );
 
     // Sign actions if signer is provided
     if (signer) {
@@ -1005,6 +1031,8 @@ export class Reactor implements IReactor {
    * Retrieves the status of a job
    */
   getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobInfo> {
+    this.logger.verbose("getJobStatus(@jobId)", jobId);
+
     if (signal?.aborted) {
       throw new AbortError();
     }
@@ -1041,6 +1069,8 @@ export class Reactor implements IReactor {
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
+    this.logger.verbose("findByIds(@count ids)", ids.length);
+
     if (consistencyToken) {
       await this.documentView.waitForConsistency(
         consistencyToken,
@@ -1173,6 +1203,8 @@ export class Reactor implements IReactor {
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
+    this.logger.verbose("findBySlugs(@count slugs)", slugs.length);
+
     if (consistencyToken) {
       await this.documentView.waitForConsistency(
         consistencyToken,
@@ -1337,6 +1369,8 @@ export class Reactor implements IReactor {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
+    this.logger.verbose("findByParentId(@parentId)", parentId);
+
     // Get child relationships from indexer
     const relationships = await this._documentIndexer.getOutgoing(
       parentId,
@@ -1424,6 +1458,8 @@ export class Reactor implements IReactor {
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
+    this.logger.verbose("findByType(@type)", type);
+
     if (consistencyToken) {
       await this.documentView.waitForConsistency(
         consistencyToken,

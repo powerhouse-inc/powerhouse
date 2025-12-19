@@ -41,6 +41,8 @@ import type {
 } from "./types.js";
 
 import type { IJobExecutorManager } from "#executor/interfaces.js";
+import { ConsoleLogger } from "#logging/console.js";
+import type { ILogger } from "#logging/types.js";
 import type { IDocumentIndexer } from "#storage/interfaces.js";
 import { PGlite } from "@electric-sql/pglite";
 import { Kysely } from "kysely";
@@ -54,6 +56,7 @@ import { DefaultSubscriptionErrorHandler } from "../subs/default-error-handler.j
 import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
 
 export class ReactorBuilder {
+  private logger?: ILogger;
   private documentModels: DocumentModelModule[] = [];
   private upgradeManifests: UpgradeManifest<readonly number[]>[] = [];
   private storage?: IDocumentStorage & IDocumentOperationStorage;
@@ -69,6 +72,11 @@ export class ReactorBuilder {
   private readModelCoordinator?: IReadModelCoordinator;
   private signatureVerifier?: SignatureVerificationHandler;
   private kyselyInstance?: Kysely<Database>;
+
+  withLogger(logger: ILogger): this {
+    this.logger = logger;
+    return this;
+  }
 
   withDocumentModels(models: DocumentModelModule[]): this {
     this.documentModels = models;
@@ -148,6 +156,10 @@ export class ReactorBuilder {
   }
 
   async buildModule(): Promise<ReactorModule> {
+    if (!this.logger) {
+      this.logger = new ConsoleLogger(["reactor"]);
+    }
+
     const storage = this.storage || new MemoryStorage();
 
     const documentModelRegistry = new DocumentModelRegistry();
@@ -294,6 +306,7 @@ export class ReactorBuilder {
         );
 
     const reactor = new Reactor(
+      this.logger,
       driveServer,
       consistencyAwareStorage,
       queue,

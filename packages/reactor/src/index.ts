@@ -1,3 +1,14 @@
+// Action Creators
+export {
+  addRelationshipAction,
+  createDocumentAction,
+  deleteDocumentAction,
+  documentActions,
+  removeRelationshipAction,
+  upgradeDocumentAction,
+  type UpgradeDocumentActionParams,
+} from "./actions/index.js";
+
 // Reactor Interface and Implementation
 export { ReactorClient } from "./client/reactor-client.js";
 export {

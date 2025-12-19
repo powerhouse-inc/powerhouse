@@ -152,6 +152,26 @@ export interface IReactorClient {
   ): Promise<TDocument>;
 
   /**
+   * Creates an empty document in a drive as a single batched operation.
+   * This is more efficient than createEmpty + addFile as it batches all
+   * actions into dependent jobs and waits for them to complete together.
+   *
+   * @param driveId - The drive document id or slug
+   * @param documentType - Type of document to create
+   * @param name - Name for the document
+   * @param parentFolder - Optional parent folder id within the drive
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The created document
+   */
+  createDocumentInDrive<TDocument extends PHDocument>(
+    driveId: string,
+    documentType: string,
+    name: string,
+    parentFolder?: string,
+    signal?: AbortSignal,
+  ): Promise<TDocument>;
+
+  /**
    * Applies a list of actions to a document and waits for completion
    *
    * @param documentIdentifier - Target document id or slug
