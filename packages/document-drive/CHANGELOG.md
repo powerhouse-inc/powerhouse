@@ -1,3 +1,13 @@
+## 5.1.0-dev.25 (2025-12-19)
+
+### 🩹 Fixes
+
+- **switchboard, vetra:** fix issue with processors not being added on initial boot ([25432a663](https://github.com/powerhouse-inc/powerhouse/commit/25432a663))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.24 (2025-12-18)
 
 ### 🩹 Fixes

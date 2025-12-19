@@ -1,3 +1,13 @@
+## 5.1.0-dev.25 (2025-12-19)
+
+### 🚀 Features
+
+- add support for operations with no inputs ([#2138](https://github.com/powerhouse-inc/powerhouse/pull/2138))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 5.1.0-dev.24 (2025-12-18)
 
 ### 🩹 Fixes
