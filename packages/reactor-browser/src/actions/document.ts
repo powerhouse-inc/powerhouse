@@ -352,20 +352,11 @@ export async function addDocument(
     }
 
     // Create document using ReactorClient
-    const newDoc = await reactorClient.createEmpty(documentType, driveId);
-
-    // Rename if name provided
-    if (name) {
-      await reactorClient.rename(newDoc.header.id, name);
-    }
-
-    // If parentFolder specified, we need to move the document into that folder
-    // The document is already a child of driveId, but needs to be in parentFolder
-    if (parentFolder) {
-      await reactorClient.moveChildren(driveId, parentFolder, [
-        newDoc.header.id,
-      ]);
-    }
+    const newDoc = await reactorClient.createDocumentInDrive(
+      driveId,
+      documentType,
+      name,
+    );
 
     // Return a file node structure for compatibility
     return {
