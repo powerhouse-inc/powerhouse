@@ -1166,7 +1166,10 @@ export class SimpleJobExecutor implements IJobExecutor {
       }
     }
 
-    const resultingState = JSON.stringify(updatedDocument.state);
+    const resultingState = JSON.stringify({
+      ...updatedDocument.state,
+      header: updatedDocument.header,
+    });
 
     try {
       await this.operationStore.apply(

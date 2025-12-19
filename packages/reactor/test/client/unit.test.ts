@@ -85,7 +85,7 @@ describe("ReactorClient Unit Tests", () => {
 
       vi.mocked(mockReactor.getDocumentModels).mockResolvedValue(mockResult);
 
-      const result = await client.getDocumentModels();
+      const result = await client.getDocumentModelModules();
 
       expect(mockReactor.getDocumentModels).toHaveBeenCalledWith(
         undefined,
@@ -100,7 +100,7 @@ describe("ReactorClient Unit Tests", () => {
       const paging = { cursor: "10", limit: 20 };
       const signal = new AbortController().signal;
 
-      await client.getDocumentModels(namespace, paging, signal);
+      await client.getDocumentModelModules(namespace, paging, signal);
 
       expect(mockReactor.getDocumentModels).toHaveBeenCalledWith(
         namespace,

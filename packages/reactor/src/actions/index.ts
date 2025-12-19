@@ -3,7 +3,6 @@ import type {
   AddRelationshipActionInput,
   CreateDocumentActionInput,
   DeleteDocumentActionInput,
-  PHBaseState,
   RemoveRelationshipActionInput,
   UpgradeDocumentActionInput,
 } from "document-model";
@@ -26,30 +25,13 @@ export function createDocumentAction(input: CreateDocumentActionInput): Action {
 }
 
 /**
- * Input for upgradeDocumentAction function.
- */
-export type UpgradeDocumentActionParams = {
-  documentId: string;
-  documentType: string;
-  initialState: PHBaseState;
-};
-
-/**
  * Creates an UPGRADE_DOCUMENT action to set initial document state.
  */
 export function upgradeDocumentAction(
-  params: UpgradeDocumentActionParams,
+  input: UpgradeDocumentActionInput,
 ): Action {
-  const input: UpgradeDocumentActionInput = {
-    model: params.documentType,
-    fromVersion: 0,
-    toVersion: 1,
-    documentId: params.documentId,
-    initialState: params.initialState,
-  };
-
   return {
-    id: `${params.documentId}-upgrade`,
+    id: `${input.documentId}-upgrade`,
     type: "UPGRADE_DOCUMENT",
     scope: "document",
     timestampUtcMs: new Date().toISOString(),

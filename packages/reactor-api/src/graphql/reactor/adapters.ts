@@ -1,7 +1,7 @@
 import type {
+  JobInfo as ClientJobInfo,
   DocumentChangeEvent,
   IReactorClient,
-  JobInfo as ClientJobInfo,
   PagedResults,
 } from "@powerhousedao/reactor";
 import { camelCase } from "change-case";
@@ -14,8 +14,8 @@ import type {
 } from "document-model";
 import { GraphQLError } from "graphql";
 import type {
-  DocumentChangeEvent as GqlDocumentChangeEvent,
   DocumentModelResultPage,
+  DocumentChangeEvent as GqlDocumentChangeEvent,
   DocumentModelGlobalState as GqlDocumentModelGlobalState,
   JobInfo as GqlJobInfo,
   PhDocument,
@@ -287,9 +287,9 @@ export async function validateActions(
   // Get the document model module
   let documentModelModule: DocumentModelModule;
   try {
-    const modelsResult = await reactorClient.getDocumentModels();
+    const modelsResult = await reactorClient.getDocumentModelModules();
     const module = modelsResult.results.find(
-      (m) => m.documentModel.global.name === document.header.documentType,
+      (m) => m.documentModel.global.id === document.header.documentType,
     );
 
     if (!module) {

@@ -58,7 +58,7 @@ export async function documentModels(
 
   let result: PagedResults<DocumentModelModule>;
   try {
-    result = await reactorClient.getDocumentModels(namespace, paging);
+    result = await reactorClient.getDocumentModelModules(namespace, paging);
   } catch (error) {
     throw new GraphQLError(
       `Failed to fetch document models: ${error instanceof Error ? error.message : "Unknown error"}`,

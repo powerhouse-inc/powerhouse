@@ -73,7 +73,7 @@ export class ReactorClient implements IReactorClient {
   /**
    * Retrieves a list of document model modules.
    */
-  async getDocumentModels(
+  async getDocumentModelModules(
     namespace?: string,
     paging?: PagingOptions,
     signal?: AbortSignal,
@@ -84,6 +84,29 @@ export class ReactorClient implements IReactorClient {
       paging,
     );
     return this.reactor.getDocumentModels(namespace, paging, signal);
+  }
+
+  /**
+   * Retrieves a specific document model module by document type.
+   *
+   * @param documentType - The document type identifier
+   * @returns The document model module
+   */
+  async getDocumentModelModule(
+    documentType: string,
+  ): Promise<DocumentModelModule<any>> {
+    const modules = await this.reactor.getDocumentModels();
+    const module = modules.results.find(
+      (m) => m.documentModel.global.id === documentType,
+    );
+
+    if (!module) {
+      throw new Error(
+        `Document model module not found for type: ${documentType}`,
+      );
+    }
+
+    return module as DocumentModelModule<any>;
   }
 
   /**
@@ -293,34 +316,17 @@ export class ReactorClient implements IReactorClient {
    */
   async createDocumentInDrive<TDocument extends PHDocument>(
     driveId: string,
-    documentType: string,
-    name: string,
+    document: PHDocument,
     parentFolder?: string,
     signal?: AbortSignal,
   ): Promise<TDocument> {
     this.logger.verbose(
-      "createDocumentInDrive(@driveId, @documentType, @name, @parentFolder)",
+      "createDocumentInDrive(@driveId, @document, @parentFolder)",
       driveId,
-      documentType,
-      name,
+      document,
       parentFolder,
     );
 
-    const modulesResult = await this.reactor.getDocumentModels(
-      undefined,
-      undefined,
-      signal,
-    );
-
-    const module = modulesResult.results.find(
-      (m) => m.documentModel.global.id === documentType,
-    );
-
-    if (!module) {
-      throw new Error(`Document model not found for type: ${documentType}`);
-    }
-
-    const document = module.utils.createDocument();
     const documentId = document.header.id;
 
     const createInput: CreateDocumentActionInput = {
@@ -335,103 +341,74 @@ export class ReactorClient implements IReactorClient {
         documentType: document.header.documentType,
       },
       slug: document.header.slug,
-      name: name,
+      name: document.header.name,
       branch: document.header.branch,
       meta: document.header.meta,
     };
 
-    const createActions: Action[] = [
-      createDocumentAction(createInput),
-      upgradeDocumentAction({
-        documentId: document.header.id,
-        documentType: document.header.documentType,
-        initialState: document.state,
-      }),
-      actions.setName(name),
-    ];
-
-    const relationshipActions: Action[] = [
-      addRelationshipAction(driveId, documentId, "child"),
-    ];
-
-    const addFileActions: Action[] = [
-      addFile({
-        id: documentId,
-        name: name,
-        documentType: documentType,
-        parentFolder: parentFolder,
-      }),
-    ];
-
-    const signedCreateActions = await signActions(
-      createActions,
-      this.signer,
-      signal,
-    );
-    const signedRelationshipActions = await signActions(
-      relationshipActions,
-      this.signer,
-      signal,
-    );
-    const signedAddFileActions = await signActions(
-      addFileActions,
+    const documentActions: Action[] = await signActions(
+      [
+        createDocumentAction(createInput),
+        upgradeDocumentAction({
+          documentId: document.header.id,
+          model: document.header.documentType,
+          fromVersion: 0,
+          toVersion: 1,
+          initialState: document.state,
+        }),
+        addRelationshipAction(driveId, documentId, "child"),
+      ],
       this.signer,
       signal,
     );
 
-    const batchResult = await this.reactor.executeBatch(
-      {
-        jobs: [
-          {
-            key: "createDocument",
-            documentId: documentId,
-            scope: "document",
-            branch: "main",
-            actions: signedCreateActions,
-            dependsOn: [],
-          },
-          {
-            key: "addRelationship",
-            documentId: driveId,
-            scope: "document",
-            branch: "main",
-            actions: signedRelationshipActions,
-            dependsOn: ["createDocument"],
-          },
-          {
-            key: "addFile",
-            documentId: driveId,
-            scope: "global",
-            branch: "main",
-            actions: signedAddFileActions,
-            dependsOn: ["addRelationship"],
-          },
-        ],
-      },
+    const driveActions: Action[] = await signActions(
+      [
+        addFile({
+          id: documentId,
+          name: document.header.name,
+          documentType: document.header.documentType,
+          parentFolder,
+        }),
+      ],
+      this.signer,
       signal,
     );
 
-    const completedJobs = await Promise.all(
-      Object.values(batchResult.jobs).map((job) =>
-        this.waitForJob(job, signal),
-      ),
+    const documentJob = await this.reactor.execute(
+      documentId,
+      "main",
+      documentActions,
+      signal,
     );
-
-    for (const completedJob of completedJobs) {
-      if (completedJob.status === JobStatus.FAILED) {
-        throw new Error(completedJob.error?.message);
-      }
+    const completedDocumentJob = await this.waitForJob(documentJob, signal);
+    if (completedDocumentJob.status === JobStatus.FAILED) {
+      throw new Error(completedDocumentJob.error?.message);
     }
 
-    const lastJob = completedJobs[completedJobs.length - 1];
-    const result = await this.reactor.get<TDocument>(
-      documentId,
-      undefined,
-      lastJob.consistencyToken,
+    const driveJob = await this.reactor.execute(
+      driveId,
+      "main",
+      driveActions,
       signal,
     );
+    const completedDriveJob = await this.waitForJob(driveJob, signal);
+    if (completedDriveJob.status === JobStatus.FAILED) {
+      this.logger.error(
+        "Document was created but the drive operation failed for (@driveId, @documentId) with @error",
+        driveId,
+        documentId,
+        completedDriveJob.error?.message,
+      );
 
-    return result.document;
+      // TODO: rollback?
+
+      throw new Error(completedDriveJob.error?.message);
+    }
+
+    // since we waited for the job to complete we don't need the consistency token
+    const resultingDocument = await this.reactor.get<TDocument>(documentId);
+    return resultingDocument.document;
   }
 
   /**

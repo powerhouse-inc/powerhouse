@@ -6,7 +6,6 @@ export {
   documentActions,
   removeRelationshipAction,
   upgradeDocumentAction,
-  type UpgradeDocumentActionParams,
 } from "./actions/index.js";
 
 // Reactor Interface and Implementation
@@ -176,6 +175,9 @@ export { type IWriteCache } from "./cache/write/interfaces.js";
 export { ConsoleLogger } from "./logging/console.js";
 export { type ILogger } from "./logging/types.js";
 
+// Migrations
+export { runMigrations } from "./storage/migrations/migrator.js";
+
 // Synchronization
 export {
   KyselySyncCursorStorage,
@@ -188,9 +190,9 @@ export {
   ChannelErrorSource,
   CompositeChannelFactory,
   GqlChannelFactory,
+  Mailbox,
   PollingChannel,
   PollingChannelError,
-  Mailbox,
   SyncBuilder,
   SyncOperation,
   SyncOperationAggregateError,

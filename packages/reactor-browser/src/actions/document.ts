@@ -269,7 +269,7 @@ export async function loadFile(path: string | File) {
       throw new Error("ReactorClient not initialized");
     }
     const { results: documentModelModules } =
-      await reactorClient.getDocumentModels();
+      await reactorClient.getDocumentModelModules();
     const documentModelModule = documentModelModules.find(
       (module) =>
         module.documentModel.global.id === baseDocument.header.documentType,
@@ -351,17 +351,31 @@ export async function addDocument(
       throw new Error("ReactorClient not initialized");
     }
 
+    // get the module
+    const documentModelModule =
+      await reactorClient.getDocumentModelModule(documentType);
+
+    // create
+    const document = documentModelModule.utils.createDocument();
+    document.header.name = name;
+
     // Create document using ReactorClient
-    const newDoc = await reactorClient.createDocumentInDrive(
-      driveId,
-      documentType,
-      name,
-    );
+    let newDoc: PHDocument;
+    try {
+      newDoc = await reactorClient.createDocumentInDrive(
+        driveId,
+        document,
+        parentFolder,
+      );
+    } catch (e) {
+      logger.error("Error adding document", e);
+      throw new Error("There was an error adding document");
+    }
 
     // Return a file node structure for compatibility
     return {
       id: newDoc.header.id,
-      name: name || newDoc.header.name,
+      name: newDoc.header.name,
       documentType,
       parentFolder: parentFolder ?? null,
       kind: "file" as const,
@@ -387,9 +401,6 @@ export async function addFile(
   const useLegacy = isLegacyWriteEnabledSync();
 
   const document = await loadFile(file);
-  if (!document) {
-    throw new Error("No document loaded");
-  }
 
   let duplicateId = false;
 
@@ -423,18 +434,6 @@ export async function addFile(
       throw new Error("ReactorClient not initialized");
     }
 
-    const { results: documentModelModules } =
-      await reactorClient.getDocumentModels();
-    const documentModule = documentModelModules.find(
-      (module) =>
-        module.documentModel.global.id === document.header.documentType,
-    );
-    if (!documentModule) {
-      throw new Error(
-        `Document model module for type ${document.header.documentType} not found`,
-      );
-    }
-
     try {
       await reactorClient.get(document.header.id);
       duplicateId = true;
@@ -463,7 +462,7 @@ export async function addFile(
     }, {} as DocumentOperations),
   };
 
-  const fileNode = await addDocument(
+  await addDocument(
     driveId,
     name || document.header.name,
     document.header.documentType,
@@ -472,10 +471,6 @@ export async function addFile(
     documentId,
     document.header.meta?.preferredEditor,
   );
-
-  if (!fileNode) {
-    throw new Error("There was an error adding file");
-  }
 
   // then add all the operations in chunks
   uploadOperations(documentId, document.operations, queueOperations).catch(

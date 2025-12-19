@@ -1,7 +1,16 @@
 import type { IReactorClient, PagedResults } from "@powerhousedao/reactor";
-import type { Action, DocumentModelModule, PHDocument } from "document-model";
+import {
+  documentModelDocumentModelModule,
+  type Action,
+  type DocumentModelModule,
+  type PHDocument,
+} from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as adapters from "../src/graphql/reactor/adapters.js";
+
+const createTestDocument = (): PHDocument => {
+  return documentModelDocumentModelModule.utils.createDocument();
+};
 
 describe("Reactor Adapters", () => {
   describe("fromInputMaybe", () => {
@@ -149,62 +158,17 @@ describe("Reactor Adapters", () => {
 
   describe("validateDocumentModelAction", () => {
     it("should validate action against document model successfully", () => {
-      const mockModule: DocumentModelModule = {
-        documentModel: {
-          global: {
-            id: "test-model",
-            name: "test/model",
-            author: { name: "Test", website: null },
-            description: "Test",
-            extension: "test",
-            specifications: [
-              {
-                version: "1.0.0",
-                changeLog: [],
-                modules: [
-                  {
-                    name: "test",
-                    operations: [
-                      {
-                        name: "SET_NAME",
-                        scope: "global",
-                      } as any,
-                    ],
-                  } as any,
-                ],
-              } as any,
-            ],
-          },
-          local: {},
-        } as any,
-        actions: {
-          setName: vi.fn((input: any) => ({
-            type: "SET_NAME",
-            scope: "global",
-            input,
-            id: "1",
-            timestampUtcMs: "2024-01-01T00:00:00Z",
-          })),
-        },
-        reducer: vi.fn(),
-        utils: {} as any,
-      } as any;
+      const action = documentModelDocumentModelModule.actions.setModelName({
+        name: "Test",
+      });
 
-      const action: Action = {
-        type: "SET_NAME",
-        scope: "global",
-        input: { name: "Test" },
-        id: "action-1",
-        timestampUtcMs: "2024-01-01T00:00:00Z",
-      };
-
-      const result = adapters.validateDocumentModelAction(mockModule, action);
+      const result = adapters.validateDocumentModelAction(
+        documentModelDocumentModelModule as unknown as DocumentModelModule,
+        action,
+      );
 
       expect(result.isValid).toBe(true);
       expect(result.errors).toHaveLength(0);
-      expect(mockModule.actions.setName).toHaveBeenCalledWith({
-        name: "Test",
-      });
     });
 
     it("should reject action when model has no specifications", () => {
@@ -466,7 +430,8 @@ describe("Reactor Adapters", () => {
       vi.clearAllMocks();
 
       mockReactorClient = {
-        getDocumentModels: vi.fn(),
+        getDocumentModelModules: vi.fn(),
+        getDocumentModelModule: vi.fn(),
         get: vi.fn(),
         getChildren: vi.fn(),
         getParents: vi.fn(),
@@ -489,105 +454,34 @@ describe("Reactor Adapters", () => {
     });
 
     it("should validate multiple actions successfully", async () => {
-      const mockDocument: PHDocument = {
-        header: {
-          id: "doc-1",
-          name: "Test Document",
-          documentType: "test/model",
-          slug: "test-doc",
-          createdAtUtcIso: "2024-01-01T00:00:00Z",
-          lastModifiedAtUtcIso: "2024-01-02T00:00:00Z",
-          branch: "main",
-          sig: {
-            publicKey: {} as JsonWebKey,
-            nonce: "test-nonce",
-          },
-          revision: { global: 1 },
-        },
-        state: {},
-        history: {},
-        initialState: {},
-        operations: {},
-        clipboard: [],
-      } as any;
-
-      const mockModule: DocumentModelModule = {
-        documentModel: {
-          global: {
-            id: "test-model",
-            name: "test/model",
-            author: { name: "Test", website: null },
-            description: "Test",
-            extension: "test",
-            specifications: [
-              {
-                version: "1.0.0",
-                changeLog: [],
-                modules: [
-                  {
-                    name: "test",
-                    operations: [
-                      {
-                        name: "SET_NAME",
-                        scope: "global",
-                      } as any,
-                    ],
-                  } as any,
-                ],
-              } as any,
-            ],
-          },
-          local: {},
-        } as any,
-        actions: {
-          setName: vi.fn((input: any) => ({
-            type: "SET_NAME",
-            scope: "global",
-            input,
-            id: "1",
-            timestampUtcMs: "2024-01-01T00:00:00Z",
-          })),
-        },
-        reducer: vi.fn(),
-        utils: {} as any,
-      } as any;
+      const testDocument = createTestDocument();
 
       const actions = [
-        {
-          type: "SET_NAME",
-          scope: "global",
-          input: { name: "Name 1" },
-          id: "action-1",
-          timestampUtcMs: "2024-01-01T00:00:00Z",
-        },
-        {
-          type: "SET_NAME",
-          scope: "global",
-          input: { name: "Name 2" },
-          id: "action-2",
-          timestampUtcMs: "2024-01-01T00:01:00Z",
-        },
+        documentModelDocumentModelModule.actions.setModelName({ name: "Name 1" }),
+        documentModelDocumentModelModule.actions.setModelName({ name: "Name 2" }),
       ];
 
       vi.mocked(mockReactorClient.get).mockResolvedValue({
-        document: mockDocument,
+        document: testDocument,
         childIds: [],
       });
 
-      vi.mocked(mockReactorClient.getDocumentModels).mockResolvedValue({
-        results: [mockModule],
+      vi.mocked(mockReactorClient.getDocumentModelModules).mockResolvedValue({
+        results: [
+          documentModelDocumentModelModule as unknown as DocumentModelModule,
+        ],
         options: { cursor: "", limit: 10 },
       } as PagedResults<DocumentModelModule>);
 
       const result = await adapters.validateActions(
         mockReactorClient,
-        "doc-1",
+        testDocument.header.id,
         actions,
       );
 
       expect(result).toHaveLength(2);
-      expect(result[0].type).toBe("SET_NAME");
-      expect(result[1].type).toBe("SET_NAME");
+      expect(result[0].type).toBe("SET_MODEL_NAME");
+      expect(result[1].type).toBe("SET_MODEL_NAME");
     });
 
     it("should reject when action structure is invalid", async () => {
@@ -656,7 +550,7 @@ describe("Reactor Adapters", () => {
         childIds: [],
       });
 
-      vi.mocked(mockReactorClient.getDocumentModels).mockResolvedValue({
+      vi.mocked(mockReactorClient.getDocumentModelModules).mockResolvedValue({
         results: [],
         options: { cursor: "", limit: 10 },
       } as PagedResults<DocumentModelModule>);
@@ -692,8 +586,8 @@ describe("Reactor Adapters", () => {
       const mockModule: DocumentModelModule = {
         documentModel: {
           global: {
-            id: "test-model",
-            name: "test/model",
+            id: "test/model",
+            name: "Test Model",
             author: { name: "Test", website: null },
             description: "Test",
             extension: "test",
@@ -741,7 +635,7 @@ describe("Reactor Adapters", () => {
         childIds: [],
       });
 
-      vi.mocked(mockReactorClient.getDocumentModels).mockResolvedValue({
+      vi.mocked(mockReactorClient.getDocumentModelModules).mockResolvedValue({
         results: [mockModule],
         options: { cursor: "", limit: 10 },
       } as PagedResults<DocumentModelModule>);

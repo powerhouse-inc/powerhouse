@@ -1,4 +1,3 @@
-import type { ILogger } from "#logging/types.js";
 import {
   addRelationshipAction,
   createDocumentAction,
@@ -6,6 +5,7 @@ import {
   removeRelationshipAction,
   upgradeDocumentAction,
 } from "#actions/index.js";
+import type { ILogger } from "#logging/types.js";
 import type { BaseDocumentDriveServer } from "document-drive";
 import { AbortError } from "document-drive";
 import type {
@@ -627,7 +627,9 @@ export class Reactor implements IReactor {
     const createAction = createDocumentAction(createInput);
     const upgradeAction = upgradeDocumentAction({
       documentId: document.header.id,
-      documentType: document.header.documentType,
+      model: document.header.documentType,
+      fromVersion: 0,
+      toVersion: 1,
       initialState: document.state,
     });
 
