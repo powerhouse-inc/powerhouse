@@ -38,6 +38,12 @@ function createMockRegistry(): IDocumentModelRegistry {
     getModule: vi.fn(),
     getAllModules: vi.fn(),
     clear: vi.fn(),
+    getSupportedVersions: vi.fn(),
+    getLatestVersion: vi.fn(),
+    registerUpgradeManifests: vi.fn(),
+    getUpgradeManifest: vi.fn(),
+    computeUpgradePath: vi.fn(),
+    getUpgradeReducer: vi.fn(),
   };
 }
 
@@ -429,6 +435,12 @@ describe("KyselyWriteCache (Partial Integration) - Cold Miss Rebuild", () => {
       }),
       getAllModules: vi.fn(),
       clear: vi.fn(),
+      getSupportedVersions: vi.fn(),
+      getLatestVersion: vi.fn(),
+      registerUpgradeManifests: vi.fn(),
+      getUpgradeManifest: vi.fn(),
+      computeUpgradePath: vi.fn(),
+      getUpgradeReducer: vi.fn(),
     };
 
     registry = mockRegistry;
@@ -658,6 +670,12 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
       }),
       getAllModules: vi.fn(),
       clear: vi.fn(),
+      getSupportedVersions: vi.fn(),
+      getLatestVersion: vi.fn(),
+      registerUpgradeManifests: vi.fn(),
+      getUpgradeManifest: vi.fn(),
+      computeUpgradePath: vi.fn(),
+      getUpgradeReducer: vi.fn(),
     };
 
     registry = mockRegistry;

@@ -7,7 +7,7 @@ import {
   ReactorBuilder as DriveReactorBuilder,
   MemoryStorage,
 } from "document-drive";
-import type { DocumentModelModule } from "document-model";
+import type { DocumentModelModule, UpgradeManifest } from "document-model";
 import { DocumentMetaCache } from "../cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../cache/kysely-operation-index.js";
 import { KyselyWriteCache } from "../cache/kysely-write-cache.js";
@@ -55,6 +55,7 @@ import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.j
 
 export class ReactorBuilder {
   private documentModels: DocumentModelModule[] = [];
+  private upgradeManifests: UpgradeManifest<readonly number[]>[] = [];
   private storage?: IDocumentStorage & IDocumentOperationStorage;
   private features: ReactorFeatures = { legacyStorageEnabled: true };
   private readModels: IReadModel[] = [];
@@ -71,6 +72,11 @@ export class ReactorBuilder {
 
   withDocumentModels(models: DocumentModelModule[]): this {
     this.documentModels = models;
+    return this;
+  }
+
+  withUpgradeManifests(manifests: UpgradeManifest<readonly number[]>[]): this {
+    this.upgradeManifests = manifests;
     return this;
   }
 
@@ -145,6 +151,9 @@ export class ReactorBuilder {
     const storage = this.storage || new MemoryStorage();
 
     const documentModelRegistry = new DocumentModelRegistry();
+    if (this.upgradeManifests.length > 0) {
+      documentModelRegistry.registerUpgradeManifests(...this.upgradeManifests);
+    }
     if (this.documentModels.length > 0) {
       documentModelRegistry.registerModules(...this.documentModels);
     }

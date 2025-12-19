@@ -41,6 +41,12 @@ function createMockRegistry(): IDocumentModelRegistry {
     getModule: vi.fn(),
     getAllModules: vi.fn(),
     clear: vi.fn(),
+    getSupportedVersions: vi.fn(),
+    getLatestVersion: vi.fn(),
+    registerUpgradeManifests: vi.fn(),
+    getUpgradeManifest: vi.fn(),
+    computeUpgradePath: vi.fn(),
+    getUpgradeReducer: vi.fn(),
   };
 }
 
@@ -1270,6 +1276,12 @@ describe("KyselyWriteCache - Error Handling (Integration)", () => {
       }),
       getAllModules: vi.fn(),
       clear: vi.fn(),
+      getSupportedVersions: vi.fn(),
+      getLatestVersion: vi.fn(),
+      registerUpgradeManifests: vi.fn(),
+      getUpgradeManifest: vi.fn(),
+      computeUpgradePath: vi.fn(),
+      getUpgradeReducer: vi.fn(),
     };
 
     registry = mockRegistry;

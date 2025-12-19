@@ -4,8 +4,10 @@ import type {
   DeleteDocumentAction,
   PHDocument,
   UpgradeDocumentAction,
+  UpgradeTransition,
 } from "document-model";
 import { createPresignedHeader, defaultBaseState } from "document-model/core";
+import { DowngradeNotSupportedError } from "../shared/errors.js";
 import type {
   ConsistencyCoordinate,
   ConsistencyToken,
@@ -72,17 +74,61 @@ export function createDocumentFromAction(
 
 /**
  * Applies an UPGRADE_DOCUMENT action to a document.
- * Merges the initialState from the action with the existing document state,
- * preserving auth and document scopes while adding model-specific scopes.
+ * Handles all upgrade scenarios including initial upgrades, no-ops, and multi-step upgrades.
+ *
+ * Behavior based on fromVersion/toVersion:
+ * - fromVersion === toVersion (and fromVersion > 0): No-op - return unchanged document
+ * - fromVersion > toVersion: Throw DowngradeNotSupportedError
+ * - All other cases: Apply upgradePath transitions (if provided), then apply initialState, set version
+ *
+ * The initialState from the action is always applied (if provided) to maintain backward
+ * compatibility with the original implementation.
  *
  * @param document - The document to upgrade
  * @param action - The UPGRADE_DOCUMENT action
- * @returns The upgraded document (mutates in place and returns for convenience)
+ * @param upgradePath - Optional pre-computed upgrade path for multi-step upgrades
+ * @returns The upgraded document (unchanged if no-op)
+ * @throws DowngradeNotSupportedError if attempting to downgrade
  */
 export function applyUpgradeDocumentAction(
   document: PHDocument,
   action: UpgradeDocumentAction,
+  upgradePath?: UpgradeTransition[],
 ): PHDocument {
+  const fromVersion = action.input.fromVersion;
+  const toVersion = action.input.toVersion;
+
+  if (fromVersion === toVersion && fromVersion > 0) {
+    return document;
+  }
+
+  if (fromVersion > toVersion) {
+    throw new DowngradeNotSupportedError(
+      document.header.documentType,
+      fromVersion,
+      toVersion,
+    );
+  }
+
+  if (upgradePath) {
+    for (const transition of upgradePath) {
+      document = transition.upgradeReducer(document, action);
+    }
+  }
+
+  applyInitialState(document, action);
+
+  document.state.document = {
+    ...document.state.document,
+    version: toVersion,
+  };
+  return document;
+}
+
+function applyInitialState(
+  document: PHDocument,
+  action: UpgradeDocumentAction,
+): void {
   const input = action.input as {
     initialState?: PHDocument["state"];
     state?: PHDocument["state"];
@@ -90,14 +136,9 @@ export function applyUpgradeDocumentAction(
 
   const newState = input.initialState || input.state;
   if (newState) {
-    document.state = {
-      ...document.state,
-      ...newState,
-    };
+    document.state = { ...document.state, ...newState };
     document.initialState = document.state;
   }
-
-  return document;
 }
 
 /**

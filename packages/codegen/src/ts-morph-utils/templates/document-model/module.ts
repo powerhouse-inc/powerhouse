@@ -4,11 +4,13 @@ type DocumentModelModuleFileTemplateArgs = {
   phStateName: string;
   versionedDocumentModelPackageImportPath: string;
   pascalCaseDocumentType: string;
+  version: number;
 };
 export function documentModelModuleFileTemplate({
   phStateName,
   versionedDocumentModelPackageImportPath,
   pascalCaseDocumentType,
+  version,
 }: DocumentModelModuleFileTemplateArgs) {
   const template = ts`
   import type { DocumentModelModule } from "document-model";
@@ -24,6 +26,7 @@ export function documentModelModuleFileTemplate({
 
   /** Document model module for the Todo List document type */
   export const ${pascalCaseDocumentType}: DocumentModelModule<${phStateName}> = {
+    version: ${version},
     reducer,
     actions,
     utils,
