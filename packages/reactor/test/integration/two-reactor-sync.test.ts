@@ -305,19 +305,22 @@ describe("Two-Reactor Sync", () => {
     const docC = driveDocumentModelModule.utils.createDocument();
     const docD = driveDocumentModelModule.utils.createDocument();
 
-    const waitForCreatesA = waitForMultipleOperationsReady(eventBusA, 2, 10000);
-    const waitForCreatesB = waitForMultipleOperationsReady(eventBusB, 2, 10000);
+    const documents = [
+      { id: docA.header.id, name: "docA" },
+      { id: docB.header.id, name: "docB" },
+      { id: docC.header.id, name: "docC" },
+      { id: docD.header.id, name: "docD" },
+    ];
 
-    void reactorA.create(docA);
-    void reactorB.create(docC);
-    void reactorA.create(docB);
-    void reactorB.create(docD);
+    const jobA1 = await reactorA.create(docA);
+    const jobB1 = await reactorB.create(docC);
+    const jobA2 = await reactorA.create(docB);
+    const jobB2 = await reactorB.create(docD);
 
-    await waitForCreatesA;
-    await waitForCreatesB;
-
-    const waitForMutatesA = waitForMultipleOperationsReady(eventBusA, 2, 10000);
-    const waitForMutatesB = waitForMultipleOperationsReady(eventBusB, 2, 10000);
+    await waitForJobCompletion(reactorA, jobA1.id);
+    await waitForJobCompletion(reactorA, jobA2.id);
+    await waitForJobCompletion(reactorB, jobB1.id);
+    await waitForJobCompletion(reactorB, jobB2.id);
 
     void reactorA.execute(docA.header.id, "main", [
       driveDocumentModelModule.actions.setDriveName({ name: "Drive A1" }),
@@ -397,15 +400,33 @@ describe("Two-Reactor Sync", () => {
       }),
     ]);
 
-    await waitForMutatesA;
-    await waitForMutatesB;
+    const startTime = Date.now();
+    const timeout = 10000;
 
-    const documents = [
-      { id: docA.header.id, name: "docA" },
-      { id: docB.header.id, name: "docB" },
-      { id: docC.header.id, name: "docC" },
-      { id: docD.header.id, name: "docD" },
-    ];
+    for (const doc of documents) {
+      let synced = false;
+
+      while (Date.now() - startTime < timeout) {
+        const resultA = await reactorA.getOperations(doc.id, {
+          branch: "main",
+        });
+        const opsA = Object.values(resultA).flatMap((scope) => scope.results);
+
+        const resultB = await reactorB.getOperations(doc.id, {
+          branch: "main",
+        });
+        const opsB = Object.values(resultB).flatMap((scope) => scope.results);
+
+        if (opsA.length > 0 && opsB.length > 0 && opsA.length === opsB.length) {
+          synced = true;
+          break;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+
+      expect(synced).toBe(true);
+    }
 
     for (const doc of documents) {
       const resultA = await reactorA.getOperations(doc.id, {
