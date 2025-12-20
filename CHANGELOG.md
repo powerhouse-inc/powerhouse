@@ -1,3 +1,14 @@
+## 5.1.0-dev.26 (2025-12-20)
+
+### 🚀 Features
+
+- integrate doc model versioning in reactor ([#2145](https://github.com/powerhouse-inc/powerhouse/pull/2145))
+- **codegen:** restore editor template ([542727e00](https://github.com/powerhouse-inc/powerhouse/commit/542727e00))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 5.1.0-dev.25 (2025-12-19)
 
 ### 🚀 Features
