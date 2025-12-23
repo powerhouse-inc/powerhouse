@@ -25,6 +25,6 @@ export type PromiseState<T> =
 
 export interface IDocumentCache {
   get(id: string, refetch?: boolean): Promise<PHDocument>;
-  getBatch(ids: string[]): Promise<PHDocument[]>;
+  getBatch(ids: string[], refetch?: boolean): Promise<PHDocument[]>;
   subscribe(id: string | string[], callback: () => void): () => void;
 }
