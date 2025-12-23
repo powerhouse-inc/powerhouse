@@ -257,11 +257,32 @@ export class DocumentCache implements IDocumentCache {
     string,
     { promises: Promise<PHDocument>[]; promise: Promise<PHDocument[]> }
   >();
+  private listeners = new Map<string, (() => void)[]>();
 
   constructor(private reactor: IDocumentDriveServer) {
     reactor.on("documentDeleted", (documentId) => {
+      const listeners = this.listeners.get(documentId);
       this.documents.delete(documentId);
+      if (listeners) {
+        listeners.forEach((listener) => listener());
+      }
+      this.listeners.delete(documentId);
     });
+    reactor.on("operationsAdded", (documentId) => {
+      if (this.documents.has(documentId)) {
+        this.#updateDocument(documentId).catch(console.warn);
+      }
+    });
+  }
+
+  async #updateDocument(documentId: string) {
+    // Only updates listeners when document refetch is completed.
+    // Listeners use stale data while refetch is in progress.
+    await this.get(documentId, true);
+    const listeners = this.listeners.get(documentId);
+    if (listeners) {
+      listeners.forEach((listener) => listener());
+    }
   }
 
   get(id: string, refetch?: boolean): Promise<PHDocument> {
@@ -271,8 +292,9 @@ export class DocumentCache implements IDocumentCache {
       if (readPromiseState(currentData).status === "pending") {
         return currentData;
       }
-      // If not refetch then return current data
-      if (!refetch) return currentData;
+      if (!refetch) {
+        return currentData;
+      }
     }
 
     const documentPromise = this.reactor.getDocument(id);
@@ -308,14 +330,18 @@ export class DocumentCache implements IDocumentCache {
 
   subscribe(id: string | string[], callback: () => void): () => void {
     const ids = Array.isArray(id) ? id : [id];
-    return this.reactor.on("operationsAdded", (documentId) => {
-      if (ids.includes(documentId)) {
-        this.get(documentId, true)
-          .then(() => callback())
-          .catch(() => {
-            console.warn("Failed to refetch document", documentId);
-          });
+    for (const id of ids) {
+      const listeners = this.listeners.get("id") ?? [];
+      this.listeners.set(id, [...listeners, callback]);
+    }
+    return () => {
+      for (const id of ids) {
+        const listeners = this.listeners.get("id") ?? [];
+        this.listeners.set(
+          id,
+          listeners.filter((listener) => listener !== callback),
+        );
       }
-    });
+    };
   }
 }
