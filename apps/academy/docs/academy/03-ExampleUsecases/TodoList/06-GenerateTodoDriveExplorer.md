@@ -15,7 +15,7 @@ We can also create our own custom drive explorer and restrict it to only working
 To generate our `TodoDriveExplorer`, run the following command:
 
 ```bash
-ph generate --drive-editor TodoDriveApp --allowed-document-types powerhouse/todo-list
+pnpm generate --drive-editor TodoDriveApp --allowed-document-types powerhouse/todo-list
 ```
 
 This will generate the following file structure:
@@ -51,7 +51,7 @@ run: `pnpm lint`
 run: `pnpm test`
 
 - test in connect
-run: `pnpm connect` — you should now be able to create a new drive with the type "TodoDriveExplorer" and use it the same as you would the "Generic Drive Explorer", except it should only allow you to create `TodoList` type documents.
+run: `pnpm connect` — you should now be able to create a new drive with the type "TodoDriveApp" and use it the same as you would the "Generic Drive Explorer", except it should only allow you to create `TodoList` type documents.
 
 - make sure your code matches the code in the completed step branch
 run: `git diff your-branch-name step-6-complete-generated-todo-drive-explorer`
