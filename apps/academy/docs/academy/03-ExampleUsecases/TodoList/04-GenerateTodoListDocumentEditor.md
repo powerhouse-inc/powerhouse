@@ -6,7 +6,7 @@ Run the command below to generate the editor template for the `TodoList` documen
 This command reads the `TodoList` document model definition from the `document-models` folder and generates the editor template in the `editors/todo-list-editor` folder.
 
 ```bash
-ph generate --editor TodoListEditor --document-types powerhouse/todo-list
+pnpm generate --editor TodoListEditor --document-types powerhouse/todo-list
 ```
 
 Notice the `--editor` flag which specifies the editor name, and the `--document-types` flag defines the document type `powerhouse/todo-list`.
