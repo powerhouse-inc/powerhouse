@@ -5,7 +5,10 @@
  * for better observability in Datadog APM.
  */
 
-import type { ApolloServerPlugin, GraphQLRequestListener } from "@apollo/server";
+import type {
+  ApolloServerPlugin,
+  GraphQLRequestListener,
+} from "@apollo/server";
 import type { Context } from "./types.js";
 import { getTracer, isTracingEnabled } from "../tracing.js";
 
@@ -19,10 +22,10 @@ export function datadogTracingPlugin(): ApolloServerPlugin<Context> {
   }
 
   return {
-    async requestDidStart(requestContext): Promise<GraphQLRequestListener<Context>> {
+    requestDidStart(requestContext): Promise<GraphQLRequestListener<Context>> {
       const tracer = getTracer();
       if (!tracer) {
-        return {};
+        return Promise.resolve({});
       }
 
       const span = tracer.scope().active();
@@ -35,19 +38,20 @@ export function datadogTracingPlugin(): ApolloServerPlugin<Context> {
         }
 
         // Add user context if available
-        const user = requestContext.contextValue?.user;
+        const user = requestContext.contextValue.user;
         if (user?.address) {
           span.setTag("user.address", user.address);
         }
 
         // Add drive context if available
-        const driveId = requestContext.contextValue?.driveId;
+        const driveId = requestContext.contextValue.driveId;
         if (driveId) {
           span.setTag("graphql.drive_id", driveId);
         }
       }
 
-      return {
+      return Promise.resolve({
+        // eslint-disable-next-line @typescript-eslint/require-await
         async didResolveOperation(context) {
           if (span && context.operation) {
             span.setTag("graphql.operation.type", context.operation.operation);
@@ -58,7 +62,7 @@ export function datadogTracingPlugin(): ApolloServerPlugin<Context> {
         },
 
         async executionDidStart() {
-          return {
+          return Promise.resolve({
             willResolveField({ info }) {
               // Only trace root fields to avoid excessive spans
               if (info.path.prev) {
@@ -82,25 +86,31 @@ export function datadogTracingPlugin(): ApolloServerPlugin<Context> {
                 fieldSpan.finish();
               };
             },
-          };
+          });
         },
 
+        // eslint-disable-next-line @typescript-eslint/require-await
         async didEncounterErrors(context) {
-          if (span && context.errors?.length) {
+          if (span && context.errors.length > 0) {
             span.setTag("error", true);
             span.setTag("graphql.errors.count", context.errors.length);
 
             // Log the first error message
             const firstError = context.errors[0];
-            if (firstError) {
-              span.setTag("error.message", firstError.message);
-              if (firstError.extensions?.code) {
-                span.setTag("error.code", String(firstError.extensions.code));
-              }
+            span.setTag("error.message", firstError.message);
+            const errorCode = firstError.extensions.code;
+            if (errorCode != null) {
+              span.setTag(
+                "error.code",
+                typeof errorCode === "string"
+                  ? errorCode
+                  : JSON.stringify(errorCode),
+              );
             }
           }
         },
 
+        // eslint-disable-next-line @typescript-eslint/require-await
         async willSendResponse(context) {
           if (span) {
             // Add response metadata
@@ -108,7 +118,7 @@ export function datadogTracingPlugin(): ApolloServerPlugin<Context> {
             span.setTag("graphql.response.size", responseSize);
           }
         },
-      };
+      });
     },
   };
 }

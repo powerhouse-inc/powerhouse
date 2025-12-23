@@ -18,7 +18,7 @@
  * - DD_RUNTIME_METRICS_ENABLED: Enable runtime metrics (default: "true")
  */
 
-import type { Tracer, Span, SpanOptions } from "dd-trace";
+import type { Span, SpanOptions, Tracer } from "dd-trace";
 
 let tracer: Tracer | null = null;
 let isInitialized = false;
@@ -57,7 +57,7 @@ export async function initTracing(): Promise<Tracer | null> {
     try {
       const { readPackage } = await import("read-pkg");
       const pkg = await readPackage();
-      version = pkg.version ?? "1.0.0";
+      version = pkg.version || "1.0.0";
     } catch {
       version = "1.0.0";
     }
@@ -94,9 +94,11 @@ export async function initTracing(): Promise<Tracer | null> {
   // Enable profiling if not explicitly disabled
   if (process.env.DD_PROFILING_ENABLED !== "false") {
     try {
+      /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
       // @ts-expect-error - dd-trace/profiling doesn't have type declarations
       const { profiler } = await import("dd-trace/profiling");
       profiler.start();
+      /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
     } catch (err) {
       console.warn("[tracing] Failed to start profiler:", err);
     }
@@ -309,7 +311,11 @@ export const structuredLogger = {
     }
   },
 
-  error(message: string, error?: Error | unknown, data?: Record<string, unknown>): void {
+  error(
+    message: string,
+    error?: unknown,
+    data?: Record<string, unknown>,
+  ): void {
     const errorData: Record<string, unknown> = { ...data };
 
     if (error instanceof Error) {
@@ -323,7 +329,9 @@ export const structuredLogger = {
     }
 
     if (isTracingEnabled()) {
-      console.log(JSON.stringify(createStructuredLog("error", message, errorData)));
+      console.log(
+        JSON.stringify(createStructuredLog("error", message, errorData)),
+      );
     } else {
       console.error(message, error ?? "", data ?? "");
     }
@@ -331,4 +339,4 @@ export const structuredLogger = {
 };
 
 // Re-export types for convenience
-export type { Tracer, Span, SpanOptions } from "dd-trace";
+export type { Span, SpanOptions, Tracer } from "dd-trace";
