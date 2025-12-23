@@ -8,6 +8,20 @@ function upgradeReducer(
 ): PHDocument<StateV2> {
   return {
     ...document,
+    state: {
+      ...document.state,
+      global: {
+        ...document.state.global,
+        title: "",
+      },
+    },
+    initialState: {
+      ...document.initialState,
+      global: {
+        ...document.initialState.global,
+        title: "",
+      },
+    },
   };
 }
 

@@ -2,15 +2,24 @@ import type { TodoTodoOperationsOperations } from "versioned-documents/document-
 
 export const todoTodoOperationsOperations: TodoTodoOperationsOperations = {
   addTodoOperation(state, action) {
-    // TODO: implement addTodoOperation reducer
-    throw new Error("Reducer for 'addTodoOperation' not implemented.");
+    state.todos.push({
+      id: action.input.id,
+      title: action.input.title,
+      completed: action.input.completed,
+    });
   },
   removeTodoOperation(state, action) {
-    // TODO: implement removeTodoOperation reducer
-    throw new Error("Reducer for 'removeTodoOperation' not implemented.");
+    const index = state.todos.findIndex((t) => t.id === action.input.id);
+    if (index !== -1) {
+      state.todos.splice(index, 1);
+    }
   },
   updateTodoOperation(state, action) {
-    // TODO: implement updateTodoOperation reducer
-    throw new Error("Reducer for 'updateTodoOperation' not implemented.");
+    const todo = state.todos.find((t) => t.id === action.input.id);
+    if (todo) {
+      if (action.input.title != null) todo.title = action.input.title;
+      if (action.input.completed != null)
+        todo.completed = action.input.completed;
+    }
   },
 };
