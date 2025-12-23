@@ -36,12 +36,15 @@ export class HashMismatchError extends Error {
     this._scope = scope;
     this._operation = operation;
 
-    this.message = JSON.stringify({
-      error: `Hash mismatch on document ${document.header.id}, scope ${scope}, index ${operation.index}`,
-      document,
-      scope,
-      operation,
-    });
+    this.message = JSON.stringify(
+      {
+        error: `Hash mismatch on document ${document.header.id}, scope ${scope}, index ${operation.index}`,
+        document,
+        operation,
+      },
+      null,
+      1,
+    );
   }
 
   get document() {
