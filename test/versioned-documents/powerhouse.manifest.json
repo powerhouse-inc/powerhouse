@@ -1,0 +1,25 @@
+{
+  "name": "versioned-documents",
+  "description": "versioned-documents",
+  "category": "",
+  "publisher": {
+    "name": "@powerhousedao",
+    "url": ""
+  },
+  "documentModels": [
+    {
+      "id": "powerhouse/package",
+      "name": "Vetra Package"
+    }
+  ],
+  "editors": [
+    {
+      "id": "vetra-package-editor",
+      "name": "Vetra Package Editor",
+      "documentTypes": ["powerhouse/package"]
+    }
+  ],
+  "apps": [],
+  "subgraphs": [],
+  "importScripts": []
+}
