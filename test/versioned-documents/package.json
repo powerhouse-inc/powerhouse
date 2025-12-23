@@ -54,7 +54,7 @@
   },
   "sideEffects": false,
   "scripts": {
-    "create:todo": "tsx scripts/create-versioned-todo.ts",
+    "create:todo": "tsx scripts/create-versioned-todo.ts && ph-cli generate ./scripts/versioned-todo.zip --use-versioning",
     "tsc": "tsc",
     "lint": "eslint",
     "build:css": "npx @tailwindcss/cli -i ./style.css -o ./dist/style.css",

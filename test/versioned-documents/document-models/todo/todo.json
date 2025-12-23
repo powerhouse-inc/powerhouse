@@ -1,0 +1,139 @@
+{
+  "id": "test/todo",
+  "name": "Todo",
+  "extension": "todo",
+  "description": "A versioned todo document model for testing codegen",
+  "author": {
+    "name": "Powerhouse",
+    "website": "https://powerhouse.inc"
+  },
+  "specifications": [
+    {
+      "version": 1,
+      "changeLog": [],
+      "state": {
+        "global": {
+          "schema": "type TodoState {\n  todos: [Todo!]!\n}\n\ntype Todo {\n  id: String!\n  title: String!\n  completed: Boolean!\n}",
+          "initialValue": "{\"todos\":[]}",
+          "examples": []
+        },
+        "local": {
+          "schema": "",
+          "initialValue": "",
+          "examples": []
+        }
+      },
+      "modules": [
+        {
+          "id": "42454fe7-a04b-4e25-8d2b-428df928dcd6",
+          "name": "todo_operations",
+          "description": "",
+          "operations": [
+            {
+              "id": "c0285a3b-6641-4899-8d40-73327a4fd4c5",
+              "name": "ADD_TODO",
+              "description": "",
+              "schema": "input AddTodoInput {\n  id: String!\n  title: String!\n  completed: Boolean!\n}",
+              "template": "",
+              "reducer": "state.todos.push({\n  id: action.input.id,\n  title: action.input.title,\n  completed: action.input.completed,\n});",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "890bddb3-aaff-49be-b981-57a5c79302e1",
+              "name": "REMOVE_TODO",
+              "description": "",
+              "schema": "input RemoveTodoInput {\n  id: String!\n}",
+              "template": "",
+              "reducer": "const index = state.todos.findIndex(t => t.id === action.input.id);\nif (index !== -1) {\n  state.todos.splice(index, 1);\n}",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "22b59393-17c6-4afa-8f4d-0138e34f2832",
+              "name": "UPDATE_TODO",
+              "description": "",
+              "schema": "input UpdateTodoInput {\n  id: String!\n  title: String\n  completed: Boolean\n}",
+              "template": "",
+              "reducer": "const todo = state.todos.find(t => t.id === action.input.id);\nif (todo) {\n  if (action.input.title !== undefined) todo.title = action.input.title;\n  if (action.input.completed !== undefined) todo.completed = action.input.completed;\n}",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "version": 2,
+      "changeLog": [],
+      "state": {
+        "global": {
+          "schema": "type TodoState {\n  title: String\n  todos: [Todo!]!\n}\n\ntype Todo {\n  id: String!\n  title: String!\n  completed: Boolean!\n}",
+          "initialValue": "{\"todos\":[],\"title\":\"\"}",
+          "examples": []
+        },
+        "local": {
+          "schema": "",
+          "initialValue": "",
+          "examples": []
+        }
+      },
+      "modules": [
+        {
+          "id": "42454fe7-a04b-4e25-8d2b-428df928dcd6",
+          "name": "todo_operations",
+          "description": "",
+          "operations": [
+            {
+              "id": "c0285a3b-6641-4899-8d40-73327a4fd4c5",
+              "name": "ADD_TODO",
+              "description": "",
+              "schema": "input AddTodoInput {\n  id: String!\n  title: String!\n  completed: Boolean!\n}",
+              "template": "",
+              "reducer": "state.todos.push({\n  id: action.input.id,\n  title: action.input.title,\n  completed: action.input.completed,\n});",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "890bddb3-aaff-49be-b981-57a5c79302e1",
+              "name": "REMOVE_TODO",
+              "description": "",
+              "schema": "input RemoveTodoInput {\n  id: String!\n}",
+              "template": "",
+              "reducer": "const index = state.todos.findIndex(t => t.id === action.input.id);\nif (index !== -1) {\n  state.todos.splice(index, 1);\n}",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "22b59393-17c6-4afa-8f4d-0138e34f2832",
+              "name": "UPDATE_TODO",
+              "description": "",
+              "schema": "input UpdateTodoInput {\n  id: String!\n  title: String\n  completed: Boolean\n}",
+              "template": "",
+              "reducer": "const todo = state.todos.find(t => t.id === action.input.id);\nif (todo) {\n  if (action.input.title !== undefined) todo.title = action.input.title;\n  if (action.input.completed !== undefined) todo.completed = action.input.completed;\n}",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "896ca10b-6598-4d03-a73c-22fa706ca4fe",
+              "name": "EDIT_TITLE",
+              "description": "",
+              "schema": "input EditTitleInput {\n  title: String\n}",
+              "template": "",
+              "reducer": "state.title = action.input.title || null;",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
