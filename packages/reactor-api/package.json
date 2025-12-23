@@ -55,6 +55,7 @@
     "body-parser": "^1.20.3",
     "change-case": "^5.4.4",
     "cors": "^2.8.5",
+    "dd-trace": "^5.81.0",
     "devcert": "^1.2.2",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",

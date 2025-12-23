@@ -33,6 +33,7 @@ import path from "node:path";
 import type { TlsOptions } from "node:tls";
 import type { Pool } from "pg";
 import { WebSocketServer } from "ws";
+import { initTracing, isTracingEnabled, trace } from "./tracing.js";
 import { config, DefaultCoreSubgraphs } from "./config.js";
 import { AuthSubgraph } from "./graphql/auth/subgraph.js";
 import { GraphQLManager } from "./graphql/graphql-manager.js";
@@ -316,6 +317,11 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   documentPermissionService: DocumentPermissionService | undefined;
   packages: PackageManager;
 }> {
+  // Initialize Datadog tracing if DD_ENV is set
+  if (isTracingEnabled()) {
+    await initTracing();
+  }
+
   const port = options.port ?? DEFAULT_PORT;
   const app = options.express ?? express();
 
@@ -398,8 +404,10 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   app.use(config.basePath, defaultRouter);
 
   // Initialize database and analytics store
-  const { relationalDb, analyticsStore } = await initializeDatabaseAndAnalytics(
-    options.dbPath,
+  const { relationalDb, analyticsStore } = await trace(
+    "reactor-api.init.database",
+    { tags: { "resource.name": "database" } },
+    () => initializeDatabaseAndAnalytics(options.dbPath),
   );
 
   // Use provided document permission service, or create one if env var is set
@@ -605,9 +613,17 @@ export async function startAPI(
     analyticsStore,
     documentPermissionService,
     packages,
-  } = await _setupCommonInfrastructure(options);
+  } = await trace(
+    "reactor-api.setup.infrastructure",
+    { tags: { "resource.name": "infrastructure" } },
+    () => _setupCommonInfrastructure(options),
+  );
 
-  const { documentModels, processors, subgraphs } = await packages.init();
+  const { documentModels, processors, subgraphs } = await trace(
+    "reactor-api.packages.init",
+    { tags: { "resource.name": "packages" } },
+    () => packages.init(),
+  );
 
   // pass to legacy reactor
   driveServer.setDocumentModelModules(
@@ -668,13 +684,28 @@ export async function initializeAndStartAPI(
     analyticsStore,
     documentPermissionService,
     packages,
-  } = await _setupCommonInfrastructure(options);
+  } = await trace(
+    "reactor-api.setup.infrastructure",
+    { tags: { "resource.name": "infrastructure" } },
+    () => _setupCommonInfrastructure(options),
+  );
 
-  const { documentModels, processors, subgraphs } = await packages.init();
-  const reactor = await driveServerInitializer(documentModels);
-  const { client: reactorClient, syncManager } = await clientInitializer(
-    reactor,
-    documentModels,
+  const { documentModels, processors, subgraphs } = await trace(
+    "reactor-api.packages.init",
+    { tags: { "resource.name": "packages" } },
+    () => packages.init(),
+  );
+
+  const reactor = await trace(
+    "reactor-api.drive-server.init",
+    { tags: { "resource.name": "drive-server" } },
+    () => driveServerInitializer(documentModels),
+  );
+
+  const { client: reactorClient, syncManager } = await trace(
+    "reactor-api.reactor-client.init",
+    { tags: { "resource.name": "reactor-client" } },
+    () => clientInitializer(reactor, documentModels),
   );
 
   const api = await _setupAPI(

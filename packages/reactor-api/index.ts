@@ -8,5 +8,6 @@ export * from "./src/services/auth.service.js";
 export * from "./src/services/document-permission.service.js";
 export * from "./src/sync/types.js";
 export * from "./src/sync/utils.js";
+export * from "./src/tracing.js";
 export * from "./src/types.js";
 export * from "./src/utils/index.js";
