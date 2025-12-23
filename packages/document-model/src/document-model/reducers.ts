@@ -615,9 +615,36 @@ export const documentModelVersioningReducer: DocumentModelVersioningOperations =
     },
 
     releaseNewVersionOperation(state, action) {
-      throw new Error(
-        'Reducer "releaseNewVersionOperation" not yet implemented',
-      );
+      const latestSpec = state.specifications[state.specifications.length - 1];
+
+      const copiedModules = latestSpec.modules.map((module) => ({
+        ...module,
+        operations: module.operations.map((op) => ({
+          ...op,
+          errors: op.errors.map((err) => ({ ...err })),
+          examples: op.examples.map((ex) => ({ ...ex })),
+        })),
+      }));
+
+      const copiedState = {
+        global: {
+          ...latestSpec.state.global,
+          examples: latestSpec.state.global.examples.map((ex) => ({ ...ex })),
+        },
+        local: {
+          ...latestSpec.state.local,
+          examples: latestSpec.state.local.examples.map((ex) => ({ ...ex })),
+        },
+      };
+
+      const newSpec = {
+        version: latestSpec.version + 1,
+        changeLog: [],
+        state: copiedState,
+        modules: copiedModules,
+      };
+
+      state.specifications.push(newSpec);
     },
   };
 
