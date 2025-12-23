@@ -2,7 +2,6 @@
 
 ## 🚀 **v5.2.0**
 
-
 ### ✨ Highlights
 
 1. **Authentication & Permissions** - CLI authentication and document-level permission system
@@ -50,21 +49,59 @@ Document model subgraphs are now automatically available on Switchboard at runti
 - **TS Morph is now the default code generator** for better performance
 - **Document meta cache** improves reactor performance
 - **Queue performance** optimizations
+- **New document hooks** - Added `useDocument` and `useDocuments` suspense-based hooks, and `useGetDocument`/`useGetDocuments` now return getter functions
+
+#### Document Cache Hooks Changes
+
+The document cache hooks have been reorganized for better flexibility:
+
+| Hook                      | Description                                                                                  |
+| ------------------------- | -------------------------------------------------------------------------------------------- |
+| `useDocument(id)`         | Suspense-based hook that returns a document by ID (renamed from `useGetDocument`)            |
+| `useDocuments(ids)`       | Suspense-based hook that returns multiple documents (renamed from `useGetDocuments`)         |
+| `useGetDocument()`        | Returns a function `(id) => Promise<PHDocument>` to fetch documents imperatively             |
+| `useGetDocuments()`       | Returns a function `(ids) => Promise<PHDocument[]>` to fetch multiple documents imperatively |
+| `useGetDocumentAsync(id)` | Non-suspense hook that returns loading state (unchanged)                                     |
+
+**Migration:**
+
+```typescript
+// Before (v5.1.x)
+const document = useGetDocument(id);
+const documents = useGetDocuments(ids);
+
+// After (v5.2.0)
+const document = useDocument(id);
+const documents = useDocuments(ids);
+
+// New: Get a function to fetch documents on-demand (lazy loading)
+const getDocument = useGetDocument();
+
+const handleClick = async (id: string) => {
+  // Document is only fetched when the callback is invoked
+  const document = await getDocument(id);
+};
+```
 
 ### BUG FIXES
+
 - Fixed query params preservation when navigating in Connect
 - Fixed schema drop transaction handling
+- Fixed bug where hooks that return multiple documents were not updating when one of the returned documents was changed.
 
 ### DOCUMENTATION (Now also live on https://academy.vetra.io)
 
 **Authorization & Permissions:**
+
 - [Reactor API Authorization](https://staging.powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization) - Role-based access control configuration
 - [Document Permission System](https://staging.powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/Authorization/DocumentPermissions) - Fine-grained document-level permissions
 
 **Connect Tools:**
+
 - [Inspector Modal](https://staging.powerhouse.academy/academy/MasteryTrack/ConnectTools/InspectorModal) - Database & reactor explorer
 
 **Other Updates:**
+
 - Updated hooks documentation
 - Vetra Studio usage guides
 
@@ -121,7 +158,7 @@ Improved authentication UI component with:
 
 #### 🔄 Sync Architecture Improvements
 
-Major improvements to the synchronization system. We are staging big changes ahead of migrating to the new reactor architecture. 
+Major improvements to the synchronization system. We are staging big changes ahead of migrating to the new reactor architecture.
 
 - **Reactor Client** - New client for Connect-to-Switchboard sync
 - **GraphQL Channels** - Push/pull channels for bidirectional sync

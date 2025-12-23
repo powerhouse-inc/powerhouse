@@ -68,7 +68,7 @@ function dispatch(
 |----------|-------|
 | **Selected Document** | `useSelectedDocument`, `useSelectedDocumentId`, `useSelectedDocumentOfType` |
 | **Document by ID** | `useDocumentById`, `useDocumentsByIds`, `useDocumentOfType` |
-| **Document Cache** | `useDocumentCache`, `useGetDocument`, `useGetDocuments`, `useGetDocumentAsync` |
+| **Document Cache** | `useDocumentCache`, `useDocument`, `useDocuments`, `useGetDocument`, `useGetDocuments`, `useGetDocumentAsync` |
 | **Drives** | `useDrives`, `useSelectedDrive`, `useSelectedDriveSafe`, `useSelectedDriveId` |
 | **Nodes & Folders** | `useSelectedNode`, `useSelectedFolder`, `useNodeById`, `useNodePathById` |
 | **Items in Drive** | `useNodesInSelectedDrive`, `useFileNodesInSelectedDrive`, `useFolderNodesInSelectedDrive`, `useDocumentsInSelectedDrive` |
@@ -266,12 +266,12 @@ function useDocumentCache(): IDocumentCache | undefined
 
 ---
 
-### `useGetDocument`
+### `useDocument`
 
 Retrieves a document from the reactor and subscribes to changes using React Suspense. This hook will suspend rendering while the document is loading.
 
 ```typescript
-function useGetDocument(id: string | null | undefined): PHDocument | undefined
+function useDocument(id: string | null | undefined): PHDocument | undefined
 ```
 
 **Parameters:**
@@ -281,18 +281,59 @@ function useGetDocument(id: string | null | undefined): PHDocument | undefined
 
 ---
 
-### `useGetDocuments`
+### `useDocuments`
 
 Retrieves multiple documents from the reactor using React Suspense. This hook will suspend rendering while any of the documents are loading.
 
 ```typescript
-function useGetDocuments(ids: string[] | null | undefined): PHDocument[]
+function useDocuments(ids: string[] | null | undefined): PHDocument[]
 ```
 
 **Parameters:**
 - `ids` — Array of document IDs to retrieve, or `null`/`undefined` to skip retrieval
 
 **Returns:** An array of documents. Returns an empty array if `ids` is `null`/`undefined`.
+
+---
+
+### `useGetDocument`
+
+Returns a function to retrieve a document from the cache. The returned function fetches and returns a document by ID.
+
+```typescript
+function useGetDocument(): (id: string) => Promise<PHDocument>
+```
+
+**Returns:** A function that takes a document ID and returns a Promise of the document.
+
+**Example:**
+
+```tsx
+import { useGetDocument } from '@powerhousedao/reactor-browser';
+
+function DocumentFetcher() {
+  const getDocument = useGetDocument();
+
+  const handleFetch = async (id: string) => {
+    const document = await getDocument(id);
+    console.log('Fetched document:', document.name);
+  };
+
+  return <button onClick={() => handleFetch('doc-123')}>Fetch Document</button>;
+}
+```
+
+---
+
+### `useGetDocuments`
+
+Returns a function to retrieve multiple documents from the cache. The returned function fetches and returns documents by their IDs.
+
+```typescript
+function useGetDocuments(): (ids: string[]) => Promise<PHDocument[]>
+```
+
+**Returns:** A function that takes an array of document IDs and returns a Promise of the documents.
 
 ---
 

@@ -1,5 +1,5 @@
 import type { PHDocument } from "document-model";
-import { use, useSyncExternalStore } from "react";
+import { use, useCallback, useSyncExternalStore } from "react";
 import { readPromiseState } from "../reactor.js";
 import type { IDocumentCache } from "../types/documents.js";
 import type { SetPHGlobalValue, UsePHGlobalValue } from "../types/global.js";
@@ -57,7 +57,7 @@ function getDocumentQueryState(promise: Promise<PHDocument>) {
  * @param id - The document ID to retrieve, or null/undefined to skip retrieval
  * @returns The document if found, or undefined if id is null/undefined
  */
-export function useGetDocument(id: string | null | undefined) {
+export function useDocument(id: string | null | undefined) {
   const documentCache = useDocumentCache();
   const document = useSyncExternalStore(
     (cb) => (id && documentCache ? documentCache.subscribe(id, cb) : () => {}),
@@ -76,7 +76,7 @@ export function useGetDocument(id: string | null | undefined) {
  * @param ids - Array of document IDs to retrieve, or null/undefined to skip retrieval
  * @returns An array of documents if found, or empty array if ids is null/undefined
  */
-export function useGetDocuments(ids: string[] | null | undefined) {
+export function useDocuments(ids: string[] | null | undefined) {
   const documentCache = useDocumentCache();
 
   const documents = useSyncExternalStore(
@@ -89,6 +89,44 @@ export function useGetDocuments(ids: string[] | null | undefined) {
   );
 
   return documents ? use(documents) : [];
+}
+
+/**
+ * Returns a function to retrieve a document from the cache.
+ * The returned function fetches and returns a document by ID.
+ * @returns A function that takes a document ID and returns a Promise of the document
+ */
+export function useGetDocument() {
+  const documentCache = useDocumentCache();
+
+  return useCallback(
+    (id: string) => {
+      if (!documentCache) {
+        return Promise.reject(new Error("Document cache not initialized"));
+      }
+      return documentCache.get(id);
+    },
+    [documentCache],
+  );
+}
+
+/**
+ * Returns a function to retrieve multiple documents from the cache.
+ * The returned function fetches and returns documents by their IDs.
+ * @returns A function that takes an array of document IDs and returns a Promise of the documents
+ */
+export function useGetDocuments() {
+  const documentCache = useDocumentCache();
+
+  return useCallback(
+    (ids: string[]) => {
+      if (!documentCache) {
+        return Promise.reject(new Error("Document cache not initialized"));
+      }
+      return documentCache.getBatch(ids);
+    },
+    [documentCache],
+  );
 }
 
 /**
