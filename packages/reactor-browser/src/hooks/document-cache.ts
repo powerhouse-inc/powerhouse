@@ -69,20 +69,26 @@ export function useGetDocument(id: string | null | undefined) {
 /**
  * Retrieves multiple documents from the reactor using React Suspense.
  * This hook will suspend rendering while any of the documents are loading.
+ *
+ * Uses getBatch from the document cache which handles promise caching internally,
+ * ensuring stable references for useSyncExternalStore.
+ *
  * @param ids - Array of document IDs to retrieve, or null/undefined to skip retrieval
- * @returns An array of documents if found, or undefined if ids is null/undefined
+ * @returns An array of documents if found, or empty array if ids is null/undefined
  */
 export function useGetDocuments(ids: string[] | null | undefined) {
   const documentCache = useDocumentCache();
-  if (!ids || !documentCache) {
-    return [];
-  }
-  const documents: PHDocument[] = [];
-  for (const id of ids) {
-    const doc = use(documentCache.get(id));
-    documents.push(doc);
-  }
-  return documents;
+
+  const documents = useSyncExternalStore(
+    (cb) =>
+      ids?.length && documentCache
+        ? documentCache.subscribe(ids, cb)
+        : () => {},
+    () =>
+      ids?.length && documentCache ? documentCache.getBatch(ids) : undefined,
+  );
+
+  return documents ? use(documents) : [];
 }
 
 /**

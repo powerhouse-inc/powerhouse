@@ -251,42 +251,71 @@ export function readPromiseState<T>(
   }
 }
 
-export function initDocumentCache(
-  reactor: IDocumentDriveServer,
-): IDocumentCache {
-  const documents = new Map<string, Promise<PHDocument>>();
+export class DocumentCache implements IDocumentCache {
+  private documents = new Map<string, Promise<PHDocument>>();
+  private batchPromises = new Map<
+    string,
+    { promises: Promise<PHDocument>[]; promise: Promise<PHDocument[]> }
+  >();
 
-  reactor.on("documentDeleted", (documentId) => {
-    documents.delete(documentId);
-  });
+  constructor(private reactor: IDocumentDriveServer) {
+    reactor.on("documentDeleted", (documentId) => {
+      this.documents.delete(documentId);
+    });
+  }
 
-  return {
-    get(id: string, refetch?: boolean) {
-      const currentData = documents.get(id);
-      if (currentData) {
-        // If pending then deduplicate requests
-        if (readPromiseState(currentData).status === "pending") {
-          return currentData;
-        }
-        // If not refetch then return current data
-        if (!refetch) return currentData;
+  get(id: string, refetch?: boolean): Promise<PHDocument> {
+    const currentData = this.documents.get(id);
+    if (currentData) {
+      // If pending then deduplicate requests
+      if (readPromiseState(currentData).status === "pending") {
+        return currentData;
       }
+      // If not refetch then return current data
+      if (!refetch) return currentData;
+    }
 
-      const documentPromise = reactor.getDocument(id);
-      documents.set(id, documentPromise);
-      return documentPromise;
-    },
-    subscribe(id: string | string[], callback: () => void) {
-      const ids = Array.isArray(id) ? id : [id];
-      return reactor.on("operationsAdded", (documentId) => {
-        if (ids.includes(documentId)) {
-          this.get(documentId, true)
-            .then(() => callback())
-            .catch(() => {
-              console.warn("Failed to refetch document", documentId);
-            });
-        }
-      });
-    },
-  };
+    const documentPromise = this.reactor.getDocument(id);
+    this.documents.set(id, documentPromise);
+    return documentPromise;
+  }
+
+  getBatch(ids: string[]): Promise<PHDocument[]> {
+    const key = ids.join(",");
+    const cached = this.batchPromises.get(key);
+
+    // Get current individual promises
+    const currentPromises = ids.map((id) => this.get(id));
+
+    // Check if we have a valid cached batch (same underlying promises)
+    if (cached) {
+      const samePromises = currentPromises.every(
+        (p, i) => p === cached.promises[i],
+      );
+      if (samePromises) {
+        return cached.promise;
+      }
+    }
+
+    // Create new batch promise
+    const batchPromise = Promise.all(currentPromises);
+    this.batchPromises.set(key, {
+      promises: currentPromises,
+      promise: batchPromise,
+    });
+    return batchPromise;
+  }
+
+  subscribe(id: string | string[], callback: () => void): () => void {
+    const ids = Array.isArray(id) ? id : [id];
+    return this.reactor.on("operationsAdded", (documentId) => {
+      if (ids.includes(documentId)) {
+        this.get(documentId, true)
+          .then(() => callback())
+          .catch(() => {
+            console.warn("Failed to refetch document", documentId);
+          });
+      }
+    });
+  }
 }

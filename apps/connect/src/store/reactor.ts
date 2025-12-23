@@ -12,7 +12,7 @@ import {
   getDrives,
   getReactorDefaultDrivesConfig,
   initConnectCrypto,
-  initDocumentCache,
+  DocumentCache,
   initLegacyReactor,
   login,
   refreshReactorData,
@@ -191,7 +191,7 @@ export async function createReactor() {
   await initLegacyReactor(legacyReactor, renown, connectCrypto);
 
   // initialize the document cache
-  const documentCache = initDocumentCache(legacyReactor);
+  const documentCache = new DocumentCache(legacyReactor);
 
   // create the processor manager
   const processorManager = new ProcessorManager(
