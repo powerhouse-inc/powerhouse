@@ -10,6 +10,7 @@ import type {
   PHDocumentHeader,
   Reducer,
   SubgraphModule,
+  UpgradeManifest,
 } from "document-model";
 
 export type Processors = (module: {
@@ -65,7 +66,9 @@ export type VetraModules = {
   processorModules?: VetraProcessorModule[];
 };
 
-export type VetraPackage = BaseVetraPackage<VetraModules>;
+export type VetraPackage = BaseVetraPackage<VetraModules> & {
+  upgradeManifests?: UpgradeManifest<readonly number[]>[];
+};
 
 export type VetraPackageManifest = VetraPackageMeta & {
   modules: {
