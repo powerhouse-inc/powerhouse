@@ -20,3 +20,8 @@ export const documentModelModuleTypeName = "DocumentModelModule";
 export const documentModelModulesVariableName = "documentModels";
 export const documentModelModulesVariableType = "DocumentModelModule<any>[]";
 export const documentModelModulesOutputFileName = "document-models.ts";
+
+export const upgradeManifestTypeName = "UpgradeManifest";
+export const upgradeManifestsVariableName = "upgradeManifests";
+export const upgradeManifestsVariableType =
+  "UpgradeManifest<readonly number[]>[]";
