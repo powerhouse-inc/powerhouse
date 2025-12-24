@@ -1,3 +1,15 @@
+## 5.1.0-dev.27 (2025-12-24)
+
+### 🚀 Features
+
+- **reactor-api:** datadog integration ([3c433c686](https://github.com/powerhouse-inc/powerhouse/commit/3c433c686))
+- **reactor-browser:** improved document retrieval hooks ([4fed49391](https://github.com/powerhouse-inc/powerhouse/commit/4fed49391))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
 ## 5.1.0-dev.26 (2025-12-20)
 
 This was a version bump only for ph-cmd to align it with other projects, there were no code changes.
