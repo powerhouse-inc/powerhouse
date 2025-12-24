@@ -40,6 +40,7 @@ export function convertLegacyLibToVetraPackage(
         ),
       ),
     },
+    upgradeManifests: legacyLib.upgradeManifests,
   };
   return vetraPackage;
 }
