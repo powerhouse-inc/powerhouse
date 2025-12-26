@@ -1,6 +1,6 @@
 import type { PHDocument } from "document-model";
 import { use, useCallback, useSyncExternalStore } from "react";
-import { readPromiseState } from "../reactor.js";
+import { readPromiseState } from "../document-cache.js";
 import type { IDocumentCache } from "../types/documents.js";
 import type { SetPHGlobalValue, UsePHGlobalValue } from "../types/global.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";

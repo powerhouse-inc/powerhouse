@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import type {
   AddDocumentTypeInput,
   DocumentTypeItem,
@@ -17,6 +17,73 @@ export interface DocumentEditorFormProps {
   onConfirm?: () => void;
 }
 
+function DocumentTypeSelectUI(
+  props: React.SelectHTMLAttributes<HTMLSelectElement>,
+) {
+  return (
+    <select
+      id="supported-document-types"
+      className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+      {...props}
+    >
+      <option value="">Select a document type</option>
+      {props.children}
+    </select>
+  );
+}
+
+function DocumentTypeSelect({
+  documentTypes,
+  setDocumentTypes,
+  onAddDocumentType,
+  onRemoveDocumentType,
+}: {
+  setDocumentTypes: (documentTypes: DocumentTypeItem[]) => void;
+} & Pick<
+  DocumentEditorFormProps,
+  "documentTypes" | "onAddDocumentType" | "onRemoveDocumentType"
+>) {
+  // Get available document types from the hook (vetra drive only for document editor)
+  const availableDocumentTypes = useAvailableDocumentTypes(true);
+  const [selectedDocumentType, setSelectedDocumentType] = useState("");
+
+  return (
+    <DocumentTypeSelectUI
+      value={selectedDocumentType}
+      onChange={(e) => {
+        const selectedValue = e.target.value;
+        if (selectedValue) {
+          // Remove existing document type if any
+
+          const existingType = documentTypes?.at(0);
+          if (existingType) {
+            onRemoveDocumentType?.({ id: existingType.id });
+          }
+
+          // Add the new document type
+          const newTypeInput: AddDocumentTypeInput = {
+            id: Date.now().toString(), // Generate a unique ID
+            documentType: selectedValue,
+          };
+          const newType: DocumentTypeItem = {
+            id: newTypeInput.id,
+            documentType: newTypeInput.documentType,
+          };
+          setDocumentTypes([newType]); // Replace with single item array
+          onAddDocumentType?.(newTypeInput);
+        }
+        setSelectedDocumentType("");
+      }}
+    >
+      {availableDocumentTypes.map((docType) => (
+        <option key={docType} value={docType}>
+          {docType}
+        </option>
+      ))}
+    </DocumentTypeSelectUI>
+  );
+}
+
 export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
   editorName: initialEditorName = "",
   documentTypes: initialDocumentTypes = [],
@@ -29,11 +96,7 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
   const [editorName, setEditorName] = useState(initialEditorName);
   const [documentTypes, setDocumentTypes] =
     useState<DocumentTypeItem[]>(initialDocumentTypes);
-  const [selectedDocumentType, setSelectedDocumentType] = useState("");
   const [isConfirmed, setIsConfirmed] = useState(false);
-
-  // Get available document types from the hook (vetra drive only for document editor)
-  const availableDocumentTypes = useAvailableDocumentTypes(true);
 
   // Use the debounce hook for name changes
   useDebounce(editorName, onEditorNameChange, 300);
@@ -105,43 +168,15 @@ export const DocumentEditorForm: React.FC<DocumentEditorFormProps> = ({
           Supported Document Types
         </label>
         <div className="space-y-2">
-          {!isReadOnly && availableDocumentTypes.length > 0 && (
-            <select
-              id="supported-document-types"
-              value={selectedDocumentType}
-              onChange={(e) => {
-                const selectedValue = e.target.value;
-                if (selectedValue) {
-                  // Remove existing document type if any
-
-                  const existingType = documentTypes.at(0);
-                  if (existingType) {
-                    onRemoveDocumentType?.({ id: existingType.id });
-                  }
-
-                  // Add the new document type
-                  const newTypeInput: AddDocumentTypeInput = {
-                    id: Date.now().toString(), // Generate a unique ID
-                    documentType: selectedValue,
-                  };
-                  const newType: DocumentTypeItem = {
-                    id: newTypeInput.id,
-                    documentType: newTypeInput.documentType,
-                  };
-                  setDocumentTypes([newType]); // Replace with single item array
-                  onAddDocumentType?.(newTypeInput);
-                }
-                setSelectedDocumentType("");
-              }}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Select a document type</option>
-              {availableDocumentTypes.map((docType) => (
-                <option key={docType} value={docType}>
-                  {docType}
-                </option>
-              ))}
-            </select>
+          {!isReadOnly && (
+            <Suspense fallback={<DocumentTypeSelectUI />}>
+              <DocumentTypeSelect
+                documentTypes={documentTypes}
+                setDocumentTypes={setDocumentTypes}
+                onAddDocumentType={onAddDocumentType}
+                onRemoveDocumentType={onRemoveDocumentType}
+              />
+            </Suspense>
           )}
           <div className="space-y-1">
             {documentTypes.map((type) => (

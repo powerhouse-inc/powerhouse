@@ -7,14 +7,8 @@ import type {
   DocumentDriveServerOptions,
   IDocumentDriveServer,
 } from "document-drive";
-import type { PHDocument } from "document-model";
 import { generateId } from "document-model/core";
 import { setDrives } from "./hooks/drives.js";
-import type {
-  IDocumentCache,
-  PromiseState,
-  PromiseWithState,
-} from "./types/documents.js";
 import { getDrives } from "./utils/drives.js";
 
 export type ReactorDefaultDrivesConfig = {
@@ -225,97 +219,4 @@ export async function initConnectCrypto() {
   const connectCrypto = new ConnectCrypto(new BrowserKeyStorage());
   await connectCrypto.did();
   return connectCrypto;
-}
-
-export function readPromiseState<T>(
-  promise: PromiseWithState<T>,
-): PromiseState<T> {
-  switch (promise.status) {
-    case "pending":
-      return { status: "pending" };
-    case "fulfilled":
-      return { status: "fulfilled", value: promise.value as T };
-    case "rejected":
-      return { status: "rejected", reason: promise.reason };
-    default:
-      promise.status = "pending";
-      void promise.then((value) => {
-        promise.status = "fulfilled";
-        promise.value = value;
-      });
-      promise.catch((reason) => {
-        promise.status = "rejected";
-        promise.reason = reason;
-      });
-      return readPromiseState(promise);
-  }
-}
-
-export class DocumentCache implements IDocumentCache {
-  private documents = new Map<string, Promise<PHDocument>>();
-  private batchPromises = new Map<
-    string,
-    { promises: Promise<PHDocument>[]; promise: Promise<PHDocument[]> }
-  >();
-
-  constructor(private reactor: IDocumentDriveServer) {
-    reactor.on("documentDeleted", (documentId) => {
-      this.documents.delete(documentId);
-    });
-  }
-
-  get(id: string, refetch?: boolean): Promise<PHDocument> {
-    const currentData = this.documents.get(id);
-    if (currentData) {
-      // If pending then deduplicate requests
-      if (readPromiseState(currentData).status === "pending") {
-        return currentData;
-      }
-      // If not refetch then return current data
-      if (!refetch) return currentData;
-    }
-
-    const documentPromise = this.reactor.getDocument(id);
-    this.documents.set(id, documentPromise);
-    return documentPromise;
-  }
-
-  getBatch(ids: string[]): Promise<PHDocument[]> {
-    const key = ids.join(",");
-    const cached = this.batchPromises.get(key);
-
-    // Get current individual promises
-    const currentPromises = ids.map((id) => this.get(id));
-
-    // Check if we have a valid cached batch (same underlying promises)
-    if (cached) {
-      const samePromises = currentPromises.every(
-        (p, i) => p === cached.promises[i],
-      );
-      if (samePromises) {
-        return cached.promise;
-      }
-    }
-
-    // Create new batch promise
-    const batchPromise = Promise.all(currentPromises);
-    this.batchPromises.set(key, {
-      promises: currentPromises,
-      promise: batchPromise,
-    });
-    return batchPromise;
-  }
-
-  subscribe(id: string | string[], callback: () => void): () => void {
-    const ids = Array.isArray(id) ? id : [id];
-    return this.reactor.on("operationsAdded", (documentId) => {
-      if (ids.includes(documentId)) {
-        this.get(documentId, true)
-          .then(() => callback())
-          .catch(() => {
-            console.warn("Failed to refetch document", documentId);
-          });
-      }
-    });
-  }
 }
