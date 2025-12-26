@@ -7,14 +7,8 @@ import type {
   DocumentDriveServerOptions,
   IDocumentDriveServer,
 } from "document-drive";
-import type { PHDocument } from "document-model";
 import { generateId } from "document-model/core";
 import { setDrives } from "./hooks/drives.js";
-import type {
-  IDocumentCache,
-  PromiseState,
-  PromiseWithState,
-} from "./types/documents.js";
 import { getDrives } from "./utils/drives.js";
 
 export type ReactorDefaultDrivesConfig = {
@@ -225,123 +219,4 @@ export async function initConnectCrypto() {
   const connectCrypto = new ConnectCrypto(new BrowserKeyStorage());
   await connectCrypto.did();
   return connectCrypto;
-}
-
-export function readPromiseState<T>(
-  promise: PromiseWithState<T>,
-): PromiseState<T> {
-  switch (promise.status) {
-    case "pending":
-      return { status: "pending" };
-    case "fulfilled":
-      return { status: "fulfilled", value: promise.value as T };
-    case "rejected":
-      return { status: "rejected", reason: promise.reason };
-    default:
-      promise.status = "pending";
-      void promise.then((value) => {
-        promise.status = "fulfilled";
-        promise.value = value;
-      });
-      promise.catch((reason) => {
-        promise.status = "rejected";
-        promise.reason = reason;
-      });
-      return readPromiseState(promise);
-  }
-}
-
-export class DocumentCache implements IDocumentCache {
-  private documents = new Map<string, Promise<PHDocument>>();
-  private batchPromises = new Map<
-    string,
-    { promises: Promise<PHDocument>[]; promise: Promise<PHDocument[]> }
-  >();
-  private listeners = new Map<string, (() => void)[]>();
-
-  constructor(private reactor: IDocumentDriveServer) {
-    reactor.on("documentDeleted", (documentId) => {
-      const listeners = this.listeners.get(documentId);
-      this.documents.delete(documentId);
-      if (listeners) {
-        listeners.forEach((listener) => listener());
-      }
-      this.listeners.delete(documentId);
-    });
-    reactor.on("operationsAdded", (documentId) => {
-      if (this.documents.has(documentId)) {
-        this.#updateDocument(documentId).catch(console.warn);
-      }
-    });
-  }
-
-  async #updateDocument(documentId: string) {
-    // Only updates listeners when document refetch is completed.
-    // Listeners use stale data while refetch is in progress.
-    await this.get(documentId, true);
-    const listeners = this.listeners.get(documentId);
-    if (listeners) {
-      listeners.forEach((listener) => listener());
-    }
-  }
-
-  get(id: string, refetch?: boolean): Promise<PHDocument> {
-    const currentData = this.documents.get(id);
-    if (currentData) {
-      // If pending then deduplicate requests
-      if (readPromiseState(currentData).status === "pending") {
-        return currentData;
-      }
-      if (!refetch) {
-        return currentData;
-      }
-    }
-
-    const documentPromise = this.reactor.getDocument(id);
-    this.documents.set(id, documentPromise);
-    return documentPromise;
-  }
-
-  getBatch(ids: string[]): Promise<PHDocument[]> {
-    const key = ids.join(",");
-    const cached = this.batchPromises.get(key);
-
-    // Get current individual promises
-    const currentPromises = ids.map((id) => this.get(id));
-
-    // Check if we have a valid cached batch (same underlying promises)
-    if (cached) {
-      const samePromises = currentPromises.every(
-        (p, i) => p === cached.promises[i],
-      );
-      if (samePromises) {
-        return cached.promise;
-      }
-    }
-
-    // Create new batch promise
-    const batchPromise = Promise.all(currentPromises);
-    this.batchPromises.set(key, {
-      promises: currentPromises,
-      promise: batchPromise,
-    });
-    return batchPromise;
-  }
-
-  subscribe(id: string | string[], callback: () => void): () => void {
-    const ids = Array.isArray(id) ? id : [id];
-    for (const id of ids) {
-      const listeners = this.listeners.get("id") ?? [];
-      this.listeners.set(id, [...listeners, callback]);
-    }
-    return () => {
-      for (const id of ids) {
-        const listeners = this.listeners.get("id") ?? [];
-        this.listeners.set(
-          id,
-          listeners.filter((listener) => listener !== callback),
-        );
-      }
-    };
-  }
 }
