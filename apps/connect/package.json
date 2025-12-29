@@ -84,7 +84,7 @@
       "types": "./lib/src/i18n/index.d.ts"
     },
     "./custom.d.ts": "./lib/custom.d.ts",
-    "./style.css": "./src/index.css",
+    "./style.css": "./lib/style.css",
     "./assets/*.mp4": "./assets/*.mp4",
     "./assets/*.png": "./assets/*.png",
     "./assets/*.svg": "./assets/*.svg",
@@ -115,6 +115,7 @@
     "test": "vitest run",
     "postinstall": "cp ./package.json ./package.copy.json",
     "dev": "vite dev",
+    "build:css": "npx @tailwindcss/cli -i ./src/index.css -o ./lib/style.css",
     "build:vite": "vite build",
     "build:debug": "PH_DEBUG_BUILD=true vite build",
     "preview": "vite preview",
@@ -162,12 +163,15 @@
     "react-i18next": "^16.0.0",
     "react-router-dom": "^6.11.2",
     "tailwind-merge": "^3.0.2",
-    "tailwindcss": "^4.1.14",
     "vite": "^7.1.9",
     "vite-bundle-analyzer": "^1.2.3",
     "vite-plugin-html": "^3.2.2",
     "vite-plugin-node-polyfills": "^0.24.0",
     "vite-plugin-svgr": "^4.5.0",
     "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.16",
+    "tailwindcss": "^4.1.16"
   }
 }
