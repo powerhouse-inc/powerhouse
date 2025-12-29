@@ -308,13 +308,14 @@ export class ReactorClient implements IReactorClient {
         );
       }
     } else {
-      module = matchingModules.reduce(
+      module = matchingModules.reduce<DocumentModelModule | undefined>(
         (latest, current) => {
+          if (latest === undefined) return current;
           const currentVersion = current.version ?? 0;
-          const latestVersion = latest?.version ?? 0;
+          const latestVersion = latest.version ?? 0;
           return currentVersion > latestVersion ? current : latest;
         },
-        undefined as DocumentModelModule | undefined,
+        undefined,
       );
       if (!module) {
         throw new Error(`Document model not found for type: ${documentType}`);
