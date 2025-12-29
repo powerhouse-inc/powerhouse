@@ -48,6 +48,7 @@ export type VetraDocumentModelModule = VetraMeta & {
   actions: Record<string, (input: any) => Action>;
   utils: DocumentModelUtils<any>;
   documentModel: DocumentModelPHState;
+  version?: number;
 };
 export type VetraEditorModule = VetraMeta & {
   documentTypes: string[];

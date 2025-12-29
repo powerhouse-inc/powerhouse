@@ -28,7 +28,7 @@ import {
   InMemoryCache,
   ReactorBuilder as LegacyReactorBuilder,
 } from "document-drive";
-import type { DocumentModelModule } from "document-model";
+import type { DocumentModelModule, UpgradeManifest } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { createRemoveOldRemoteDrivesConfig } from "./drive-preservation.js";
@@ -114,6 +114,7 @@ export function createBrowserDocumentDriveServer(
  */
 export async function createBrowserReactor(
   documentModelModules: DocumentModelModule[],
+  upgradeManifests: UpgradeManifest<readonly number[]>[],
   legacyStorage: IDocumentStorage & IDocumentOperationStorage,
   connectCrypto: IConnectCrypto,
 ): Promise<BrowserReactorClientModule> {
@@ -130,6 +131,7 @@ export async function createBrowserReactor(
     .withReactorBuilder(
       new ReactorBuilder()
         .withDocumentModels(documentModelModules)
+        .withUpgradeManifests(upgradeManifests)
         .withLegacyStorage(legacyStorage)
         .withSync(new SyncBuilder().withChannelFactory(new GqlChannelFactory()))
         .withFeatures({ legacyStorageEnabled: true })

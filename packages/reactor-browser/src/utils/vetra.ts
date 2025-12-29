@@ -67,6 +67,7 @@ export function convertLegacyDocumentModelModuleToVetraDocumentModelModule(
     reducer,
     actions,
     utils,
+    version: legacyDocumentModelModule.version,
   };
   return vetraDocumentModelModule;
 }
