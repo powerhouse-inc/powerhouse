@@ -131,8 +131,21 @@ export const ENV_MAP = {
 // create type with the keys of ENV_MAP
 export type Environment = keyof typeof ENV_MAP;
 
+/**
+ * Checks if a string is a valid semver version
+ * Supports formats like: 1.0.0, 1.0.0-beta.1, 1.0.0-dev.123, v1.0.0
+ */
+export function isVersionString(str: string): boolean {
+  // Remove leading 'v' if present
+  const version = str.startsWith("v") ? str.slice(1) : str;
+  // Semver regex pattern
+  const semverPattern =
+    /^\d+\.\d+\.\d+(-[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?(\+[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?$/;
+  return semverPattern.test(version);
+}
+
 export const updatePackageJson = async (
-  env: Environment,
+  envOrVersion: Environment | string,
   localPath?: string,
   packageManager?: PackageManager,
   debug?: boolean,
@@ -167,9 +180,14 @@ export const updatePackageJson = async (
       dependencies.push(fullPath);
     });
   } else {
+    // Determine the version tag to use
+    const versionTag = isVersionString(envOrVersion)
+      ? envOrVersion
+      : ENV_MAP[envOrVersion as Environment];
+
     // For remote dependencies, add version tags
     powerhousePackages.forEach((packageName) => {
-      dependencies.push(`${packageName}@${ENV_MAP[env]}`);
+      dependencies.push(`${packageName}@${versionTag}`);
     });
   }
 
@@ -214,14 +232,16 @@ export type UseOptions = {
 export const use: CommandActionType<
   [string | undefined, string | undefined, UseOptions]
 > = async (environment, localPath, options) => {
+  const isVersion = environment ? isVersionString(environment) : false;
   if (
     !environment ||
     (!options.force &&
       environment !== "local" &&
+      !isVersion &&
       !Object.keys(ENV_MAP).includes(environment))
   ) {
     throw new Error(
-      `❌ Invalid environment, use --force or use one of the following: ${Object.keys(ENV_MAP).join(", ")}`,
+      `❌ Invalid environment, use --force or use one of the following: ${Object.keys(ENV_MAP).join(", ")}, or a specific version (e.g., 5.1.0)`,
     );
   }
 
@@ -233,7 +253,8 @@ export const use: CommandActionType<
 
   const { debug } = options;
 
-  const env = environment as Environment;
+  // environment can be an Environment key or a version string
+  const envOrVersion = environment as Environment | string;
 
   if (debug) {
     console.log(">>> options", options);
@@ -245,7 +266,7 @@ export const use: CommandActionType<
     getPackageManagerFromLockfile(projectInfo.path);
 
   await updatePackageJson(
-    env,
+    envOrVersion,
     localPath,
     packageManager as PackageManager,
     debug,
@@ -257,11 +278,11 @@ export function useCommand(program: Command): Command {
   const useCmd = program
     .command("use")
     .description(
-      "Allows you to change your environment (latest, development, production, local)",
+      "Allows you to change your environment (latest, dev, staging, prod, local) or use a specific version (e.g., 5.1.0)",
     )
     .argument(
       "[environment]",
-      "The environment to use (latest, dev, prod, local)",
+      "The environment to use (latest, dev, staging, prod, local) or a specific version (e.g., 5.1.0)",
     )
     .argument(
       "[localPath]",
