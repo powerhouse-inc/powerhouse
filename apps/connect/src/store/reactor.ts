@@ -6,13 +6,13 @@ import {
   createBrowserStorage,
 } from "@powerhousedao/connect/utils";
 import {
+  DocumentCache,
   truncateAllTables as dropAllTables,
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
   getDrives,
   getReactorDefaultDrivesConfig,
   initConnectCrypto,
-  DocumentCache,
   initLegacyReactor,
   login,
   refreshReactorData,
@@ -46,7 +46,7 @@ import type {
   IDocumentDriveServer,
 } from "document-drive";
 import { ProcessorManager, logger } from "document-drive";
-import type { DocumentModelModule } from "document-model";
+import type { DocumentModelLib, DocumentModelModule } from "document-model";
 import { generateId } from "document-model/core";
 import { loadCommonPackage } from "./document-model.js";
 import {
@@ -125,14 +125,17 @@ async function loadDriveFromRemoteUrl(
   }
 }
 
-export async function createReactor() {
-  if (!window.ph) {
-    window.ph = {};
-  }
-  if (window.ph.legacyReactor || window.ph.loading) return;
-
-  window.ph.loading = true;
-
+export async function _init({
+  localPackage,
+  packages,
+  onLocalPackageUpdate,
+}: {
+  localPackage?: DocumentModelLib;
+  packages: string[];
+  onLocalPackageUpdate?: (
+    callback: (localPackage: DocumentModelLib) => void,
+  ) => void;
+}) {
   // add window event handlers for updates
   addPHEventHandlers();
 
@@ -159,9 +162,16 @@ export async function createReactor() {
   setLegacyReactorStorage(storage);
 
   // load vetra packages
-  const externalPackages = await loadExternalPackages();
+  const externalPackages = await loadExternalPackages({
+    localPackage,
+    packages,
+  });
   const vetraPackages = await updateVetraPackages(externalPackages);
   subscribeExternalPackages(updateVetraPackages);
+
+  onLocalPackageUpdate?.((updatedLocalPackage) => {
+    console.log("Local package updated:", updatedLocalPackage);
+  });
 
   // get document models to set in the reactor
   const documentModelModules = vetraPackages
@@ -315,8 +325,31 @@ export async function createReactor() {
       refreshReactorDataClient(reactorClientModule.client).catch(logger.error);
     });
   }
+}
 
-  window.ph.loading = false;
+export function createReactor({
+  localPackage,
+  packages,
+  onLocalPackageUpdate,
+}: {
+  localPackage?: DocumentModelLib;
+  packages: string[];
+  onLocalPackageUpdate?: (
+    callback: (localPackage: DocumentModelLib) => void,
+  ) => void;
+}) {
+  if (!window.ph) {
+    window.ph = {};
+  }
+  if (window.ph.loading) return window.ph.loading;
+
+  window.ph.loading = _init({
+    localPackage,
+    packages,
+    onLocalPackageUpdate,
+  }).then(() => true);
+
+  return window.ph.loading;
 }
 
 function getDidFromUrl() {

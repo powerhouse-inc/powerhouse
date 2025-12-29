@@ -37,13 +37,59 @@ export function subscribeExternalPackages(
   callbacks.push(callback);
 }
 
-export async function loadExternalPackages() {
+export async function loadExternalPackages({
+  localPackage,
+  packages,
+}: {
+  localPackage?: DocumentModelLib;
+  packages: string[];
+}) {
   try {
     if (!externalPackagesEnabled) return [];
-    const module = await import("virtual:ph:external-packages");
+    const module = {
+      loadExternalPackages: () =>
+        _loadExternalPackages2({ localPackage, packages }),
+    };
     return convertExternalPackages(module);
   } catch (error) {
     console.error(error);
     return [];
   }
+}
+async function _loadExternalPackages2({
+  localPackage,
+  packages,
+}: {
+  localPackage?: DocumentModelLib;
+  packages: string[];
+}) {
+  const packageImports = packages.map((pkg) => ({
+    name: pkg,
+    js: pkg,
+    css: pkg + "/style.css",
+  }));
+
+  const modules: (DocumentModelLib & { id: string })[] = [];
+
+  if (localPackage) {
+    modules.push({
+      id: `local-package`,
+      ...localPackage,
+    });
+  }
+  console.log(packageImports);
+
+  // packageImports.forEach(async (pkg, index) => {
+  //   try {
+  //     const module = (await import(pkg.js)) as DocumentModelLib;
+  //     await import(pkg.css);
+  //     modules.push({
+  //       id: `module${index}`,
+  //       ...module,
+  //     });
+  //   } catch (error) {
+  //     console.error("Error loading package: '${pkg.name}'", error);
+  //   }
+  // });
+  return modules;
 }

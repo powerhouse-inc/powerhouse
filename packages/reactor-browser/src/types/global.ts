@@ -23,7 +23,7 @@ export type BrowserReactorClientModule = ReactorClientModule & {
 };
 
 export type PHGlobal = PHGlobalConfig & {
-  loading?: boolean;
+  loading?: Promise<boolean>;
   legacyReactor?: IDocumentDriveServer;
   reactorClientModule?: BrowserReactorClientModule;
   reactorClient?: IReactorClient;
