@@ -181,8 +181,9 @@ export const updatePackageJson = async (
     });
   } else {
     // Determine the version tag to use
+    // For specific versions, add ^ prefix to allow semver range updates
     const versionTag = isVersionString(envOrVersion)
-      ? envOrVersion
+      ? `^${envOrVersion.replace(/^v/, "")}` // Remove leading 'v' if present and add ^
       : ENV_MAP[envOrVersion as Environment];
 
     // For remote dependencies, add version tags
