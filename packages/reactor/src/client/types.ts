@@ -153,11 +153,13 @@ export interface IReactorClient {
    *
    * @param documentType - Type of document to create.
    * @param parentIdentifier - Optional "id" or "slug" of parent document
+   * @param version - Optional version of the document model to use (defaults to latest)
    * @param signal - Optional abort signal to cancel the request
    */
   createEmpty<TDocument extends PHDocument>(
     documentType: string,
     parentIdentifier?: string,
+    version?: number,
     signal?: AbortSignal,
   ): Promise<TDocument>;
 
