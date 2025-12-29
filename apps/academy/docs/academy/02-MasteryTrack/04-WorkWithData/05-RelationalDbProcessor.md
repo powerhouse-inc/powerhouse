@@ -14,7 +14,7 @@ A relational database processor is a specialized component that listens to docum
 To generate a relational database processor, run the following command:
 
 ```bash
-ph generate --processor todo-indexer --processor-type relationalDb --document-types powerhouse/todolist
+ph generate --processor todo-indexer --processor-type relationalDb --document-types powerhouse/todo-list
 ```
 
 **Breaking down this command:**
@@ -124,8 +124,8 @@ import {
   type ProcessorRecord,
   type IProcessorHostModule,
 } from "document-drive/processors/types";
-import { type RelationalDbProcessorFilter } from "document-drive/processors/relational";
-import { TodoIndexerProcessor } from "./index.js";
+import { type RelationalDbProcessorFilter } from "document-drive";
+import { TodoIndexerProcessor } from "./todo-indexer/index.js";
 
 export const todoIndexerProcessorFactory =
   (module: IProcessorHostModule) =>
@@ -190,14 +190,14 @@ Strands represent a batch of operations that happened to documents. Each strand 
 ```ts
 import { type IRelationalDb } from "document-drive/processors/types";
 import { RelationalDbProcessor } from "document-drive/processors/relational";
-import { type InternalTransmitterUpdate } from "document-drive/server/listener/transmitter/internal";
-import type { ToDoListDocument } from "../document-models/to-do-list/index.js";
+import { type InternalTransmitterUpdate } from "document-drive";
+import type { TodoListDocument } from "../../document-models/todo-list/index.js";
 
-import { up } from "./todo-indexer/migrations.js";
-import { type DB } from "./todo-indexer/schema.js";
+import { up } from "./migrations.js";
+import { type DB } from "./schema.js";
 
 // Define the document type this processor handles
-type DocumentType = ToDoListDocument;
+type DocumentType = TodoListDocument;
 
 export class TodoIndexerProcessor extends RelationalDbProcessor<DB> {
   // Generate a unique namespace for this processor based on the drive ID
@@ -216,7 +216,7 @@ export class TodoIndexerProcessor extends RelationalDbProcessor<DB> {
   // Main processing logic - handles incoming document changes
   // This method is called whenever there are new document operations
   override async onStrands(
-    strands: InternalTransmitterUpdate<DocumentType>[],
+    strands: InternalTransmitterUpdate[],
   ): Promise<void> {
     // Early return if no changes to process
     if (strands.length === 0) {
@@ -238,7 +238,7 @@ export class TodoIndexerProcessor extends RelationalDbProcessor<DB> {
           .insertInto("todo")
           .values({
             // Create a unique task identifier combining document ID, operation index, and type
-            task: `${strand.documentId}-${operation.index}: ${operation.type}`,
+            task: `${strand.documentId}-${operation.index}: ${operation.action.type}`,
             status: true, // Default to completed status
           })
           // Handle conflicts by doing nothing if the task already exists
@@ -287,14 +287,14 @@ import type { DocumentNode } from "graphql";
 
 export const schema: DocumentNode = gql`
   # Define the structure of a todo item as returned by GraphQL
-  type ToDoListEntry {
+  type TodoListEntry {
     task: String! # The task description (! means required/non-null)
     status: Boolean! # The completion status (true = done, false = pending)
   }
 
   # Define available queries
   type Query {
-    todos(driveId: ID!): [ToDoListEntry] # Get array of todos for a specific drive
+    todos(driveId: ID!): [TodoListEntry] # Get array of todos for a specific drive
   }
 `;
 ```
@@ -303,11 +303,11 @@ Open `./subgraphs/todo/resolvers.ts` and configure the resolvers:
 
 ```ts
 // subgraphs/search-todos/resolvers.ts
-import { type Subgraph } from "@powerhousedao/reactor-api";
-import { type ToDoListDocument } from "document-models/to-do-list/index.js";
+import { type ISubgraph } from "@powerhousedao/reactor-api";
+import { type TodoListDocument } from "../../document-models/todo-list/index.js";
 import { TodoIndexerProcessor } from "../../processors/todo-indexer/index.js";
 
-export const getResolvers = (subgraph: Subgraph) => {
+export const getResolvers = (subgraph: ISubgraph) => {
   const reactor = subgraph.reactor;
   const relationalDb = subgraph.relationalDb;
 
@@ -373,7 +373,7 @@ The Powerhouse supergraph for any given remote drive or reactor can be found und
 
 **Understanding the Complete Data Pipeline**
 
-This comprehensive example demonstrates the **entire data flow** in a Powerhouse application:
+This example demonstrates the **entire data flow** in a Powerhouse application:
 
 1. **Storage Layer**: Create a drive (document storage container)
 2. **Document Layer**: Create a todo document and add operations
@@ -390,6 +390,8 @@ This comprehensive example demonstrates the **entire data flow** in a Powerhouse
 ```graphql
 mutation DriveCreation($name: String!) {
   addDrive(name: $name) {
+    id
+    slug
     name
   }
 }
@@ -399,7 +401,6 @@ Variables:
 
 ```json
 {
-  "driveId": "powerhouse",
   "name": "tutorial"
 }
 ```
@@ -413,8 +414,8 @@ Variables:
 **What's Happening**: Now we're creating an actual todo list document inside our drive. This uses the document model we built in previous chapters.
 
 ```graphql
-mutation Mutation($driveId: String, $name: String) {
-  ToDoList_createDocument(driveId: $driveId, name: $name)
+mutation TodoDocument($driveId: String, $name: String!) {
+  TodoList_createDocument(driveId: $driveId, name: $name)
 }
 ```
 
@@ -422,7 +423,7 @@ Variables:
 
 ```json
 {
-  "driveId": "powerhouse",
+  "driveId": "fc29ec1b-9934-410b-8682-4731b810d441",
   "name": "tutorial"
 }
 ```
@@ -432,7 +433,7 @@ Result:
 ```json
 {
   "data": {
-    "ToDoList_createDocument": "72b73d31-4874-4b71-8cc3-289ed4cfbe2b"
+    "TodoList_createDocument": "72b73d31-4874-4b71-8cc3-289ed4cfbe2b"
   }
 }
 ```
@@ -446,12 +447,12 @@ Result:
 **What's Happening**: Each time we add a todo item, we're creating a new **operation** in the document's history. Our relational database processor is listening for these operations in real-time.
 
 ```graphql
-mutation Mutation(
+mutation AddTodo(
   $driveId: String
   $docId: PHID
-  $input: ToDoList_AddTodoItemInput
+  $input: TodoList_AddTodoItemInput
 ) {
-  ToDoList_addTodoItem(driveId: $driveId, docId: $docId, input: $input)
+  TodoList_addTodoItem(driveId: $driveId, docId: $docId, input: $input)
 }
 ```
 
@@ -459,11 +460,9 @@ Variables:
 
 ```json
 {
-  "driveId": "powerhouse",
-  "name": "tutorial",
+  "driveId": "fc29ec1b-9934-410b-8682-4731b810d441",
   "docId": "72b73d31-4874-4b71-8cc3-289ed4cfbe2b",
   "input": {
-    "id": "1",
     "text": "complete mutation"
   }
 }
@@ -474,7 +473,7 @@ Result:
 ```json
 {
   "data": {
-    "ToDoList_addTodoItem": 1
+    "TodoList_addTodoItem": 1
   }
 }
 ```
@@ -486,7 +485,7 @@ Result:
 3. **Our Processor**: Automatically receives the operation and creates a database record
 4. **Database**: Now contains: `"72b73d31-4874-4b71-8cc3-289ed4cfbe2b-0: ADD_TODO_ITEM"`
 
-🔄 **Repeat this step 2-3 times** with different todo items to see multiple operations get processed. Each operation will have an incrementing index (0, 1, 2...).
+🔄 **Repeat this step 2-3 times** with different todo items to see multiple operations get processed. Each operation will have an incrementing revision number or index
 
 ---
 
@@ -495,16 +494,17 @@ Result:
 **The Power of Dual Data Access**: Now we can query BOTH the original document state AND our processed relational data in a single GraphQL request. This demonstrates the flexibility of the Powerhouse architecture.
 
 ```graphql
-query Query($driveId: ID!) {
-  todos(driveId: $driveId) {
-    task
-    status
-  }
-  ToDoList {
-    getDocuments {
+query GetTodoList($docId: PHID!, $driveId: PHID) {
+  TodoList {
+    getDocument(docId: $docId, driveId: $driveId) {
+      id
+      name
+      revision
       state {
         items {
+          id
           text
+          checked
         }
       }
     }
@@ -516,7 +516,8 @@ Variables:
 
 ```json
 {
-  "driveId": "powerhouse"
+  "driveId": "fc29ec1b-9934-410b-8682-4731b810d441",
+  "docId": "72b73d31-4874-4b71-8cc3-289ed4cfbe2b",
 }
 ```
 
