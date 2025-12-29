@@ -145,7 +145,7 @@ export function isVersionString(str: string): boolean {
 }
 
 export const updatePackageJson = async (
-  envOrVersion: Environment | string,
+  envOrVersion: (typeof ENV_MAP)[keyof typeof ENV_MAP],
   localPath?: string,
   packageManager?: PackageManager,
   debug?: boolean,
@@ -254,7 +254,7 @@ export const use: CommandActionType<
   const { debug } = options;
 
   // environment can be an Environment key or a version string
-  const envOrVersion = environment as Environment | string;
+  const envOrVersion = environment as (typeof ENV_MAP)[keyof typeof ENV_MAP];
 
   if (debug) {
     console.log(">>> options", options);

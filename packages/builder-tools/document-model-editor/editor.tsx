@@ -227,11 +227,17 @@ export default function Editor() {
 
     if (noInputRequired) {
       dispatch(
-        setOperationSchema({ id, schema: makeEmptyOperationSchema(operation.name) }),
+        setOperationSchema({
+          id,
+          schema: makeEmptyOperationSchema(operation.name),
+        }),
       );
     } else {
       dispatch(
-        setOperationSchema({ id, schema: makeOperationInitialDoc(operation.name) }),
+        setOperationSchema({
+          id,
+          schema: makeOperationInitialDoc(operation.name),
+        }),
       );
     }
   };
