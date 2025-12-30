@@ -1,3 +1,13 @@
+## 5.1.0-dev.29 (2025-12-30)
+
+### 🩹 Fixes
+
+- **connect,builder-tools,vetra:** avoid page reload on vite HMR ([1c3f5d1dd](https://github.com/powerhouse-inc/powerhouse/commit/1c3f5d1dd))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.1.0-dev.28 (2025-12-30)
 
 This was a version bump only for @powerhousedao/reactor-mcp to align it with other projects, there were no code changes.
