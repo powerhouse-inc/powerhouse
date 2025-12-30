@@ -1,3 +1,13 @@
+## 5.1.0-dev.28 (2025-12-30)
+
+### 🩹 Fixes
+
+- **reactor-api:** name is null ([190f3b60e](https://github.com/powerhouse-inc/powerhouse/commit/190f3b60e))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.1.0-dev.27 (2025-12-24)
 
 ### 🚀 Features

@@ -1,3 +1,13 @@
+## 5.1.0-dev.28 (2025-12-30)
+
+### 🩹 Fixes
+
+- **ph-cmd,codegen:** ph init with fixed version ([0d439c381](https://github.com/powerhouse-inc/powerhouse/commit/0d439c381))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.1.0-dev.27 (2025-12-24)
 
 ### 🚀 Features

@@ -1,3 +1,7 @@
+## 5.1.0-dev.28 (2025-12-30)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
 ## 5.1.0-dev.27 (2025-12-24)
 
 ### 🚀 Features

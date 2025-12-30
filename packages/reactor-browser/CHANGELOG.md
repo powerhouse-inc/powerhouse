@@ -1,3 +1,17 @@
+## 5.1.0-dev.28 (2025-12-30)
+
+### 🚀 Features
+
+- **reactor-browser:** added stale-while-revalidate behavior on document retrieval hooks ([82f170b4f](https://github.com/powerhouse-inc/powerhouse/commit/82f170b4f))
+
+### 🩹 Fixes
+
+- **reactor-browser:** improvements on document cache reactivity and tests ([07991c703](https://github.com/powerhouse-inc/powerhouse/commit/07991c703))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.1.0-dev.27 (2025-12-24)
 
 ### 🚀 Features
