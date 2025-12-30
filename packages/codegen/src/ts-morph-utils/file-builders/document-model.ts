@@ -9,6 +9,9 @@ import {
   documentModelModulesVariableName,
   documentModelModulesVariableType,
   documentModelModuleTypeName,
+  upgradeManifestsVariableName,
+  upgradeManifestsVariableType,
+  upgradeManifestTypeName,
 } from "../constants.js";
 import {
   formatSourceFileWithPrettier,
@@ -35,7 +38,7 @@ import {
   makeUpgradeFile,
   makeUpgradesIndexFile,
 } from "./document-model/upgrades-dir.js";
-import { makeModulesFile } from "./module-files.js";
+import { makeModulesFile, makeUpgradeManifestsExport } from "./module-files.js";
 
 function ensureDirectoriesExist(project: Project, ...pathsToEnsure: string[]) {
   for (const dirPath of pathsToEnsure) {
@@ -330,6 +333,14 @@ export async function tsMorphGenerateDocumentModel({
     });
 
     makeUpgradesIndexFile({ project, upgradesDirPath, specVersions });
+
+    // Generate document-models.ts with upgradeManifests export
+    // This needs to run after upgrade-manifest.ts files are created
+    makeDocumentModelModulesFile({
+      project,
+      projectDir,
+      useVersioning: true,
+    });
   } else {
     await generateDocumentModelForSpec({
       project,
@@ -352,9 +363,11 @@ export async function tsMorphGenerateDocumentModel({
 export function makeDocumentModelModulesFile({
   project,
   projectDir,
+  useVersioning = false,
 }: {
   project: Project;
   projectDir: string;
+  useVersioning?: boolean;
 }) {
   const { documentModelsDirPath, documentModelsSourceFilesPath } =
     getDocumentModelFilePaths(projectDir);
@@ -367,6 +380,21 @@ export function makeDocumentModelModulesFile({
     variableName: documentModelModulesVariableName,
     variableType: documentModelModulesVariableType,
   });
+
+  if (useVersioning) {
+    const outputFilePath = path.join(
+      documentModelsDirPath,
+      documentModelModulesOutputFileName,
+    );
+    makeUpgradeManifestsExport({
+      project,
+      modulesDirPath: documentModelsDirPath,
+      outputFilePath,
+      variableName: upgradeManifestsVariableName,
+      variableType: upgradeManifestsVariableType,
+      typeName: upgradeManifestTypeName,
+    });
+  }
 }
 
 function getPreviousVersionDirPath(

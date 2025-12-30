@@ -222,6 +222,7 @@ export class ReactorClient implements IReactorClient {
   async createEmpty<TDocument extends PHDocument>(
     documentType: string,
     parentIdentifier?: string,
+    version?: number,
     signal?: AbortSignal,
   ): Promise<TDocument> {
     const modulesResult = await this.reactor.getDocumentModels(
@@ -230,12 +231,31 @@ export class ReactorClient implements IReactorClient {
       signal,
     );
 
-    const module = modulesResult.results.find(
+    const matchingModules = modulesResult.results.filter(
       (m) => m.documentModel.global.id === documentType,
     );
 
-    if (!module) {
-      throw new Error(`Document model not found for type: ${documentType}`);
+    let module: DocumentModelModule | undefined;
+    if (version !== undefined) {
+      module = matchingModules.find((m) => m.version === version);
+      if (!module) {
+        throw new Error(
+          `Document model not found for type: ${documentType} with version: ${version}`,
+        );
+      }
+    } else {
+      module = matchingModules.reduce<DocumentModelModule | undefined>(
+        (latest, current) => {
+          if (latest === undefined) return current;
+          const currentVersion = current.version ?? 0;
+          const latestVersion = latest.version ?? 0;
+          return currentVersion > latestVersion ? current : latest;
+        },
+        undefined,
+      );
+      if (!module) {
+        throw new Error(`Document model not found for type: ${documentType}`);
+      }
     }
 
     const document = module.utils.createDocument();

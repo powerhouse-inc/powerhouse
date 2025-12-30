@@ -80,6 +80,31 @@ async function updateVetraPackages(externalPackages: VetraPackage[]) {
   return packages;
 }
 
+/**
+ * Filters document model modules to only include the latest version of each document type.
+ * This is needed for legacy reactor v1 which doesn't support multiple versions.
+ */
+function filterToLatestVersions(
+  modules: DocumentModelModule[],
+): DocumentModelModule[] {
+  const latestByType = new Map<string, DocumentModelModule>();
+
+  for (const module of modules) {
+    const documentType = module.documentModel.global.id;
+    const version =
+      module.documentModel.global.specifications?.[0]?.version ?? 1;
+    const existing = latestByType.get(documentType);
+    const existingVersion =
+      existing?.documentModel.global.specifications?.[0]?.version ?? 1;
+
+    if (!existing || version > existingVersion) {
+      latestByType.set(documentType, module);
+    }
+  }
+
+  return Array.from(latestByType.values());
+}
+
 async function loadDriveFromRemoteUrl(
   remoteUrl: string,
   reactor: IDocumentDriveServer,
@@ -163,15 +188,25 @@ export async function createReactor() {
   const vetraPackages = await updateVetraPackages(externalPackages);
   subscribeExternalPackages(updateVetraPackages);
 
-  // get document models to set in the reactor
+  // get document models to set in the reactor (all versions)
   const documentModelModules = vetraPackages
     .flatMap((pkg) => pkg.modules.documentModelModules)
     .filter((module) => module !== undefined);
 
-  // create the legacy reactor
+  // get upgrade manifests from packages
+  const upgradeManifests = vetraPackages
+    .flatMap((pkg) => pkg.upgradeManifests ?? [])
+    .filter((manifest) => manifest !== undefined);
+
+  // filter to latest versions for legacy reactor (doesn't support versioning)
+  const latestModules = filterToLatestVersions(
+    documentModelModules as unknown as DocumentModelModule[],
+  );
+
+  // create the legacy reactor with only latest versions
   const defaultConfig = getReactorDefaultDrivesConfig();
   const legacyReactor = createBrowserDocumentDriveServer(
-    documentModelModules as unknown as DocumentModelModule[],
+    latestModules,
     storage,
     {
       ...defaultConfig,
@@ -181,8 +216,10 @@ export async function createReactor() {
     },
   );
 
+  // create reactor v2 with all versions and upgrade manifests
   const reactorClientModule = await createBrowserReactor(
-    documentModelModules,
+    documentModelModules as unknown as DocumentModelModule[],
+    upgradeManifests,
     storage,
     connectCrypto,
   );

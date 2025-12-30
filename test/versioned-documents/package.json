@@ -1,0 +1,126 @@
+{
+  "name": "versioned-documents",
+  "version": "5.1.0-dev.26",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./document-models": {
+      "import": "./dist/document-models/index.js",
+      "types": "./dist/document-models/index.d.ts"
+    },
+    "./document-models/*": {
+      "types": "./dist/document-models/*/index.d.ts",
+      "default": "./dist/document-models/*/index.js"
+    },
+    "./editors/*": {
+      "types": "./dist/editors/*/index.d.ts",
+      "default": "./dist/editors/*/index.js"
+    },
+    "./editors": {
+      "import": "./dist/editors/index.js",
+      "types": "./dist/editors/index.d.ts"
+    },
+    "./subgraphs": {
+      "import": "./dist/subgraphs/index.js",
+      "types": "./dist/subgraphs/index.d.ts"
+    },
+    "./processors": {
+      "import": "./dist/processors/index.js",
+      "types": "./dist/processors/index.d.ts"
+    },
+    "./manifest": {
+      "import": "./dist/manifest.js",
+      "types": "./dist/manifest.d.ts"
+    },
+    "./vetra-drive-app": {
+      "import": "./dist/editors/vetra-drive-app/index.js",
+      "types": "./dist/editors/vetra-drive-app/index.d.ts"
+    },
+    "./style.css": "./dist/style.css"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "create:todo": "tsx scripts/create-versioned-todo.ts && ph-cli generate ./scripts/versioned-todo.zip --use-versioning",
+    "tsc": "tsc",
+    "lint": "eslint",
+    "build:css": "npx @tailwindcss/cli -i ./style.css -o ./dist/style.css",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:document-models": "vitest run document-models",
+    "test:editors": "vitest run editors",
+    "test:processors": "vitest run processors",
+    "generate": "ph-cli generate",
+    "connect": "vite",
+    "reactor": "ph-cli reactor",
+    "service": "ph-cli service",
+    "migrate": "ph-cli migrate",
+    "service-startup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh",
+    "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh"
+  },
+  "dependencies": {
+    "@powerhousedao/builder-tools": "workspace:*",
+    "@powerhousedao/common": "workspace:*",
+    "@powerhousedao/config": "workspace:*",
+    "@powerhousedao/connect": "workspace:*",
+    "@powerhousedao/design-system": "workspace:*",
+    "change-case": "^5.4.4",
+    "colorette": "^2.0.20",
+    "document-model": "workspace:*",
+    "graphql": "^16.11.0",
+    "graphql-tag": "^2.12.6",
+    "kysely": "^0.28.7",
+    "uuid": "^11.1.0",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.2.17",
+    "@powerhousedao/analytics-engine-core": "^0.5.0",
+    "@powerhousedao/codegen": "workspace:*",
+    "@powerhousedao/document-engineering": "^1.27.0",
+    "@powerhousedao/ph-cli": "workspace:*",
+    "@powerhousedao/reactor-api": "workspace:*",
+    "@powerhousedao/reactor-browser": "workspace:*",
+    "@powerhousedao/reactor-local": "workspace:*",
+    "@powerhousedao/switchboard": "workspace:*",
+    "@tailwindcss/cli": "^4.1.14",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^24.6.1",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.4",
+    "document-drive": "workspace:*",
+    "eslint": "^9.22.0",
+    "eslint-plugin-react": "^7.37.4",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^16.0.0",
+    "package-manager-detector": "^0.2.8",
+    "pm2": "^5.4.3",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tailwindcss": "^4.1.14",
+    "vite": "^7.1.9",
+    "vite-plugin-node-polyfills": "^0.24.0",
+    "vitest": "^3.2.4"
+  },
+  "peerDependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "description": ""
+}

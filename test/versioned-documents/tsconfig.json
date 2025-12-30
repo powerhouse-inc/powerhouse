@@ -1,0 +1,52 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "types": ["node", "vitest/globals"],
+    "lib": ["ESNext", "dom", "dom.iterable"],
+    "sourceMap": false
+  },
+  "include": ["**/*", "./powerhouse.manifest.json"],
+  "exclude": ["dist", "node_modules", ".ph"],
+  "references": [
+    {
+      "path": "../../packages/document-model"
+    },
+    {
+      "path": "../../packages/common"
+    },
+    {
+      "path": "../../packages/design-system"
+    },
+    {
+      "path": "../../packages/builder-tools"
+    },
+    {
+      "path": "../../packages/codegen"
+    },
+    {
+      "path": "../../clis/ph-cli"
+    },
+    {
+      "path": "../../packages/config"
+    },
+    {
+      "path": "../../packages/reactor-api"
+    },
+    {
+      "path": "../../packages/reactor-browser"
+    },
+    {
+      "path": "../../packages/reactor-local"
+    },
+    {
+      "path": "../../packages/document-drive"
+    },
+    {
+      "path": "../../apps/connect"
+    },
+    {
+      "path": "../../apps/switchboard"
+    }
+  ]
+}
