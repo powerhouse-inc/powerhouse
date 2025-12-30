@@ -18,9 +18,11 @@ import {
   refreshReactorData,
   refreshReactorDataClient,
   setFeatures,
+  setPHToast,
   setSelectedDrive,
   setSelectedNode,
   setVetraPackages,
+  type PHToastFn,
   type VetraPackage,
 } from "@powerhousedao/reactor-browser";
 import {
@@ -39,6 +41,7 @@ import {
   setRenown,
   setSync,
 } from "@powerhousedao/reactor-browser/connect";
+import { toast } from "@powerhousedao/connect/services";
 import { initRenown } from "@renown/sdk";
 import type {
   DocumentDriveDocument,
@@ -135,6 +138,9 @@ export async function createReactor() {
 
   // add window event handlers for updates
   addPHEventHandlers();
+
+  // register toast function for use in editor components
+  setPHToast(toast as PHToastFn);
 
   // initialize feature flags
   const features = await initFeatureFlags();
