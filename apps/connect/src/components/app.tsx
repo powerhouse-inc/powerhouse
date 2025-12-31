@@ -14,6 +14,20 @@ import {
 } from "@powerhousedao/design-system/connect";
 import { useEffect } from "react";
 export const App = () => {
+  // refresh page on vite preload error due to outdated chunks
+  useEffect(() => {
+    const handlePreloadError = () => {
+      console.log("Outdated chunks detected, reloading page...");
+      window.location.reload();
+    };
+
+    window.addEventListener("vite:preloadError", handlePreloadError);
+
+    return () => {
+      window.removeEventListener("vite:preloadError", handlePreloadError);
+    };
+  }, []);
+
   useEffect(() => {
     if (import.meta.env.MODE === "development") {
       window.documentEditorDebugTools = new DocumentEditorDebugTools();
