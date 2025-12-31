@@ -1,6 +1,6 @@
 import { cn } from "@powerhousedao/design-system";
 import { Kind } from "graphql";
-import { lazy, useCallback, useState } from "react";
+import { lazy, useCallback, useMemo, useState } from "react";
 import { typeDefsDoc } from "../constants/documents.js";
 import { safeParseSdl, useSchemaContext } from "../context/schema-context.js";
 import type { Scope } from "../types/documents.js";
@@ -49,6 +49,11 @@ function StateEditor({
   const customLinter = useCallback(
     (doc: string) => ensureValidStateSchemaName(doc, modelName, scope),
     [modelName, scope],
+  );
+
+  const schemaErrors = useMemo(
+    () => ensureValidStateSchemaName(stateSchema, modelName, scope),
+    [stateSchema, modelName, scope],
   );
 
   const handleToggleStandardLib = useCallback(() => {
@@ -123,6 +128,9 @@ function StateEditor({
           updateDocumentInModel={handleSchemaUpdate}
           customLinter={customLinter}
         />
+        {schemaErrors.length > 0 && (
+          <p className="mt-2 text-sm text-red-600">{schemaErrors[0].message}</p>
+        )}
       </div>
       <div>
         <div className="flex flex-col items-end">
