@@ -21,10 +21,10 @@ import {
   DocumentAlreadyExistsError,
   InMemoryCache,
   ReactorBuilder as LegacyReactorBuilder,
-  RedisCache,
   childLogger,
   driveDocumentModelModule,
 } from "document-drive";
+import { RedisCache } from "document-drive/cache/redis";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import { PrismaStorageFactory } from "document-drive/storage/prisma";
 import type { DocumentModelModule } from "document-model";
