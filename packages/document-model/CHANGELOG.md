@@ -1,3 +1,13 @@
+## 5.1.0-dev.30 (2026-01-01)
+
+### 🚀 Features
+
+- **document-model:** validate operation names ([5b09b1951](https://github.com/powerhouse-inc/powerhouse/commit/5b09b1951))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 5.1.0-dev.29 (2025-12-30)
 
 ### 🩹 Fixes

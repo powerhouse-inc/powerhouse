@@ -1,3 +1,13 @@
+## 5.1.0-dev.30 (2026-01-01)
+
+### 🩹 Fixes
+
+- **document-drive:** do not export redis cache from index ([38b647cf9](https://github.com/powerhouse-inc/powerhouse/commit/38b647cf9))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.1.0-dev.29 (2025-12-30)
 
 ### 🩹 Fixes

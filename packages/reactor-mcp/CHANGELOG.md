@@ -1,3 +1,7 @@
+## 5.1.0-dev.30 (2026-01-01)
+
+This was a version bump only for @powerhousedao/reactor-mcp to align it with other projects, there were no code changes.
+
 ## 5.1.0-dev.29 (2025-12-30)
 
 ### 🩹 Fixes

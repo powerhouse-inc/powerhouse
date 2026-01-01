@@ -1,3 +1,18 @@
+## 5.1.0-dev.30 (2026-01-01)
+
+### 🚀 Features
+
+- **connect:** register toast function ([55d0d9b83](https://github.com/powerhouse-inc/powerhouse/commit/55d0d9b83))
+
+### 🩹 Fixes
+
+- **connect:** created ErrorBoundary component and reload page when outdated chunk is imported ([147570dc4](https://github.com/powerhouse-inc/powerhouse/commit/147570dc4))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+
 ## 5.1.0-dev.29 (2025-12-30)
 
 ### 🩹 Fixes

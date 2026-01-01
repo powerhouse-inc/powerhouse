@@ -1,3 +1,13 @@
+## 5.1.0-dev.30 (2026-01-01)
+
+### 🚀 Features
+
+- **reactor-browser:** add toast event handling functionality ([e37c6fd88](https://github.com/powerhouse-inc/powerhouse/commit/e37c6fd88))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 5.1.0-dev.29 (2025-12-30)
 
 ### 🩹 Fixes

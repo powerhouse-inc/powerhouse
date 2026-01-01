@@ -1,3 +1,13 @@
+## 5.1.0-dev.30 (2026-01-01)
+
+### 🚀 Features
+
+- **builder-tools:** integrate toast notifications for invalid operation names ([c86084d49](https://github.com/powerhouse-inc/powerhouse/commit/c86084d49))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 5.1.0-dev.29 (2025-12-30)
 
 ### 🩹 Fixes
