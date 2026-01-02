@@ -10,6 +10,7 @@ import {
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,
 } from "@opentelemetry/semantic-conventions";
+import type { IncomingMessage } from "http";
 
 // Get configuration from environment
 const TEMPO_ENDPOINT =
@@ -63,7 +64,10 @@ if (TRACING_ENABLED) {
           // Add http.target to spans for better observability
           requestHook: (span, request) => {
             // Add custom attributes for service graph
-            span.setAttribute("http.route", request.url || "");
+            span.setAttribute(
+              "http.route",
+              (request as IncomingMessage).url || "",
+            );
           },
           responseHook: (span, response) => {
             // Add response attributes
