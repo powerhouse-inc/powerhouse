@@ -1,7 +1,4 @@
 #!/usr/bin/env node
-// Initialize OpenTelemetry tracing first (before any other imports)
-import "./tracing.js";
-
 import { config } from "./config.js";
 import { startSwitchboard } from "./server.js";
 

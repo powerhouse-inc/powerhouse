@@ -1,342 +1,144 @@
-/**
- * Datadog APM Tracing Module
- *
- * This module provides Datadog tracing, profiling, and logging integration.
- * Tracing is enabled when DD_TRACE_ENABLED=true or DD_ENV is set.
- *
- * Environment Variables (aligned with vetra-cloud ECS configuration):
- * - DD_TRACE_ENABLED: Enable tracing (default: "false"). Set to "true" to enable.
- * - DD_ENV: Environment name (e.g., "production", "staging"). Also enables tracing if set.
- * - DD_SERVICE: Service name (default: "reactor-api")
- * - DD_VERSION: Service version (default: "1.0.0" or reads from package.json)
- * - DD_AGENT_HOST: Datadog agent host (default: "localhost")
- * - DD_TRACE_AGENT_PORT: Datadog trace agent port (default: 8126)
- * - DD_DOGSTATSD_PORT: DogStatsD port for metrics (default: 8125)
- * - DD_SITE: Datadog site (default: "datadoghq.com")
- * - DD_PROFILING_ENABLED: Enable continuous profiling (default: "true" when tracing enabled)
- * - DD_LOGS_INJECTION: Enable log correlation (default: "true" when tracing enabled)
- * - DD_RUNTIME_METRICS_ENABLED: Enable runtime metrics (default: "true")
- */
+// OpenTelemetry Tracing Configuration for Reactor API
+// This file must be loaded before the application starts
 
-import type { Span, SpanOptions, Tracer } from "dd-trace";
+import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
+import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
+import { Resource } from "@opentelemetry/resources";
+import { NodeSDK } from "@opentelemetry/sdk-node";
+import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-base";
+import {
+  ATTR_SERVICE_NAME,
+  ATTR_SERVICE_VERSION,
+} from "@opentelemetry/semantic-conventions";
 
-let tracer: Tracer | null = null;
-let isInitialized = false;
+// Get configuration from environment
+const TEMPO_ENDPOINT =
+  process.env.TEMPO_ENDPOINT ||
+  "http://tempo.monitoring.svc.cluster.local:4318/v1/traces";
+const SERVICE_NAME = process.env.OTEL_SERVICE_NAME || "reactor-api";
+const SERVICE_VERSION = process.env.npm_package_version || "unknown";
+const TENANT_ID = process.env.TENANT_ID || "default";
 
-/**
- * Check if Datadog tracing should be enabled based on environment variables.
- * Tracing is enabled when DD_TRACE_ENABLED=true or DD_ENV is set.
- */
-export function isTracingEnabled(): boolean {
-  return process.env.DD_TRACE_ENABLED === "true" || !!process.env.DD_ENV;
-}
+// Only enable tracing if explicitly enabled or in production
+const TRACING_ENABLED =
+  process.env.ENABLE_TRACING === "true" ||
+  process.env.NODE_ENV === "production";
 
-/**
- * Initialize Datadog tracing.
- * This should be called as early as possible in the application lifecycle,
- * ideally before any other imports.
- *
- * @returns The initialized tracer instance, or null if tracing is disabled.
- */
-export async function initTracing(): Promise<Tracer | null> {
-  if (isInitialized) {
-    return tracer;
-  }
+if (TRACING_ENABLED) {
+  console.log(`Initializing OpenTelemetry tracing for ${SERVICE_NAME}...`);
+  console.log(`  Tempo endpoint: ${TEMPO_ENDPOINT}`);
+  console.log(`  Service: ${SERVICE_NAME}`);
+  console.log(`  Tenant: ${TENANT_ID}`);
 
-  isInitialized = true;
-
-  if (!isTracingEnabled()) {
-    return null;
-  }
-
-  const ddTrace = await import("dd-trace");
-
-  // Get version - default to "1.0.0" per vetra-cloud config, or read from package.json
-  let version = process.env.DD_VERSION;
-  if (!version) {
-    try {
-      const { readPackage } = await import("read-pkg");
-      const pkg = await readPackage();
-      version = pkg.version || "1.0.0";
-    } catch {
-      version = "1.0.0";
-    }
-  }
-
-  const serviceName = process.env.DD_SERVICE ?? "reactor-api";
-  const env = process.env.DD_ENV ?? "development";
-  const hostname = process.env.DD_AGENT_HOST ?? "localhost";
-  const port = parseInt(process.env.DD_TRACE_AGENT_PORT ?? "8126", 10);
-  const dogstatsdPort = parseInt(process.env.DD_DOGSTATSD_PORT ?? "8125", 10);
-
-  // Initialize the tracer with vetra-cloud aligned configuration
-  tracer = ddTrace.default.init({
-    service: serviceName,
-    env,
-    version,
-    hostname,
-    port,
-    dogstatsd: {
-      hostname,
-      port: dogstatsdPort,
-    },
-    logInjection: process.env.DD_LOGS_INJECTION !== "false",
-    runtimeMetrics: process.env.DD_RUNTIME_METRICS_ENABLED !== "false",
-    profiling: process.env.DD_PROFILING_ENABLED !== "false",
-    // Enable common integrations
-    plugins: true,
-    // Tags for better categorization
-    tags: {
-      "dd.source": "nodejs",
-    },
+  // Create OTLP trace exporter
+  const traceExporter = new OTLPTraceExporter({
+    url: TEMPO_ENDPOINT,
+    headers: {},
   });
 
-  // Enable profiling if not explicitly disabled
-  if (process.env.DD_PROFILING_ENABLED !== "false") {
-    try {
-      /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
-      // @ts-expect-error - dd-trace/profiling doesn't have type declarations
-      const { profiler } = await import("dd-trace/profiling");
-      profiler.start();
-      /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
-    } catch (err) {
-      console.warn("[tracing] Failed to start profiler:", err);
-    }
-  }
+  // Configure resource with service information
+  const resource = new Resource({
+    [ATTR_SERVICE_NAME]: SERVICE_NAME,
+    [ATTR_SERVICE_VERSION]: SERVICE_VERSION,
+    "tenant.id": TENANT_ID,
+    "deployment.environment": process.env.NODE_ENV || "development",
+  });
 
-  console.info(
-    `[tracing] Datadog tracing initialized: service=${serviceName}, env=${env}, version=${version}, agent=${hostname}:${port}`,
+  // Initialize OpenTelemetry SDK
+  const sdk = new NodeSDK({
+    resource,
+    spanProcessors: [new BatchSpanProcessor(traceExporter)],
+    instrumentations: [
+      getNodeAutoInstrumentations({
+        // Automatically instrument common libraries
+        "@opentelemetry/instrumentation-http": {
+          enabled: true,
+          ignoreIncomingRequestHook: (req) => {
+            // Don't trace health check endpoints
+            return req.url === "/health" || req.url === "/ready";
+          },
+          // Enable peer service name detection for service graphs
+          requireParentforIncomingSpans: false,
+          requireParentforOutgoingSpans: false,
+          // Add http.target to spans for better observability
+          requestHook: (span, request) => {
+            // Add custom attributes for service graph
+            span.setAttribute("http.route", request.url || "");
+          },
+          responseHook: (span, response) => {
+            // Add response attributes
+            if (response.statusCode) {
+              span.setAttribute("http.status_code", response.statusCode);
+            }
+          },
+        },
+        "@opentelemetry/instrumentation-express": {
+          enabled: true,
+          // Add route information to spans
+          requestHook: (span, info) => {
+            if (info.route) {
+              span.setAttribute("http.route", info.route);
+            }
+          },
+        },
+        "@opentelemetry/instrumentation-graphql": {
+          enabled: true,
+          // Add GraphQL operation details for service graphs
+          mergeItems: true,
+          allowValues: true,
+        },
+        "@opentelemetry/instrumentation-pg": {
+          enabled: true,
+          // Add database peer service for service graphs
+          enhancedDatabaseReporting: true,
+        },
+        "@opentelemetry/instrumentation-redis-4": {
+          enabled: true,
+          // Add Redis peer service for service graphs
+          dbStatementSerializer: (cmdName, cmdArgs) => {
+            return cmdName;
+          },
+        },
+      }),
+    ],
+  });
+
+  // Start the SDK
+  sdk.start();
+
+  console.log("✓ OpenTelemetry tracing initialized");
+
+  // Gracefully shutdown on exit
+  process.on("SIGTERM", () => {
+    sdk
+      .shutdown()
+      .then(() => console.log("Tracing terminated"))
+      .catch((error) => console.log("Error terminating tracing", error))
+      .finally(() => process.exit(0));
+  });
+} else {
+  console.log(
+    "OpenTelemetry tracing disabled (set ENABLE_TRACING=true to enable)",
   );
-
-  return tracer;
 }
 
-/**
- * Get the current tracer instance.
- * Returns null if tracing is not initialized or disabled.
- */
-export function getTracer(): Tracer | null {
-  return tracer;
+// Stub exports for backwards compatibility during migration
+// With OpenTelemetry auto-instrumentation, these are no longer needed
+export async function initTracing() {
+  // Tracing is initialized automatically when this module is imported
+  return;
 }
 
-/**
- * Create a new span for tracing a specific operation.
- * If tracing is disabled, this returns a no-op wrapper.
- *
- * @param name - The name of the operation
- * @param options - Optional span options
- * @param fn - The function to trace
- * @returns The result of the function
- */
+export function isTracingEnabled(): boolean {
+  return TRACING_ENABLED;
+}
+
+// Simplified trace function - OpenTelemetry auto-instruments everything
+// This is just a pass-through for backwards compatibility
 export async function trace<T>(
-  name: string,
-  options: SpanOptions,
-  fn: (span?: Span) => Promise<T>,
+  _name: string,
+  _options: any,
+  fn: () => Promise<T>,
 ): Promise<T> {
-  if (!tracer) {
-    return fn(undefined);
-  }
-
-  return tracer.trace(name, options, fn);
+  return fn();
 }
-
-/**
- * Synchronous version of trace.
- */
-export function traceSync<T>(
-  name: string,
-  options: SpanOptions,
-  fn: (span?: Span) => T,
-): T {
-  if (!tracer) {
-    return fn(undefined);
-  }
-
-  return tracer.trace(name, options, fn);
-}
-
-/**
- * Add tags to the current active span.
- */
-export function addTags(tags: Record<string, string | number | boolean>): void {
-  if (!tracer) {
-    return;
-  }
-
-  const span = tracer.scope().active();
-  if (span) {
-    span.addTags(tags);
-  }
-}
-
-/**
- * Set an error on the current active span.
- */
-export function setError(error: Error): void {
-  if (!tracer) {
-    return;
-  }
-
-  const span = tracer.scope().active();
-  if (span) {
-    span.setTag("error", true);
-    span.setTag("error.message", error.message);
-    span.setTag("error.stack", error.stack ?? "");
-  }
-}
-
-/**
- * Get trace context for log correlation.
- * Returns trace_id and span_id for the current active span.
- */
-export function getTraceContext(): {
-  trace_id?: string;
-  span_id?: string;
-  service?: string;
-  env?: string;
-} {
-  if (!tracer) {
-    return {};
-  }
-
-  const span = tracer.scope().active();
-  if (!span) {
-    return {
-      service: process.env.DD_SERVICE ?? "reactor-api",
-      env: process.env.DD_ENV,
-    };
-  }
-
-  const context = span.context();
-  return {
-    trace_id: context.toTraceId(),
-    span_id: context.toSpanId(),
-    service: process.env.DD_SERVICE ?? "reactor-api",
-    env: process.env.DD_ENV,
-  };
-}
-
-/**
- * Log levels for structured logging
- */
-export type LogLevel = "debug" | "info" | "warn" | "error";
-
-/**
- * Structured log entry with Datadog trace correlation.
- * Format aligned with Datadog log ingestion via FireLens/Fluent Bit.
- */
-export interface StructuredLog {
-  timestamp: string;
-  level: LogLevel;
-  message: string;
-  // Datadog standard fields (prefixed with dd)
-  ddsource: string;
-  ddtags: string;
-  service: string;
-  env?: string;
-  version?: string;
-  // Trace correlation
-  dd?: {
-    trace_id?: string;
-    span_id?: string;
-  };
-  [key: string]: unknown;
-}
-
-/**
- * Create a structured log entry with trace correlation.
- * This format is compatible with Datadog log ingestion via FireLens.
- */
-export function createStructuredLog(
-  level: LogLevel,
-  message: string,
-  data?: Record<string, unknown>,
-): StructuredLog {
-  const traceContext = getTraceContext();
-  const service = process.env.DD_SERVICE ?? "reactor-api";
-  const env = process.env.DD_ENV ?? "development";
-  const version = process.env.DD_VERSION ?? "1.0.0";
-  const projectName = process.env.PH_PROJECT_NAME ?? "powerhouse";
-
-  const log: StructuredLog = {
-    timestamp: new Date().toISOString(),
-    level,
-    message,
-    // Datadog standard fields for log processing
-    ddsource: "nodejs",
-    ddtags: `env:${env},project:${projectName},version:${version}`,
-    service,
-    env,
-    version,
-    ...data,
-  };
-
-  // Add trace correlation if available
-  if (traceContext.trace_id || traceContext.span_id) {
-    log.dd = {
-      trace_id: traceContext.trace_id,
-      span_id: traceContext.span_id,
-    };
-  }
-
-  return log;
-}
-
-/**
- * Logger that outputs structured JSON logs compatible with Datadog.
- * When tracing is disabled, falls back to simple console logging.
- */
-export const structuredLogger = {
-  debug(message: string, data?: Record<string, unknown>): void {
-    if (isTracingEnabled()) {
-      console.log(JSON.stringify(createStructuredLog("debug", message, data)));
-    } else {
-      console.debug(message, data ?? "");
-    }
-  },
-
-  info(message: string, data?: Record<string, unknown>): void {
-    if (isTracingEnabled()) {
-      console.log(JSON.stringify(createStructuredLog("info", message, data)));
-    } else {
-      console.info(message, data ?? "");
-    }
-  },
-
-  warn(message: string, data?: Record<string, unknown>): void {
-    if (isTracingEnabled()) {
-      console.log(JSON.stringify(createStructuredLog("warn", message, data)));
-    } else {
-      console.warn(message, data ?? "");
-    }
-  },
-
-  error(
-    message: string,
-    error?: unknown,
-    data?: Record<string, unknown>,
-  ): void {
-    const errorData: Record<string, unknown> = { ...data };
-
-    if (error instanceof Error) {
-      errorData.error = {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      };
-    } else if (error !== undefined) {
-      errorData.error = error;
-    }
-
-    if (isTracingEnabled()) {
-      console.log(
-        JSON.stringify(createStructuredLog("error", message, errorData)),
-      );
-    } else {
-      console.error(message, error ?? "", data ?? "");
-    }
-  },
-};
-
-// Re-export types for convenience
-export type { Span, SpanOptions, Tracer } from "dd-trace";

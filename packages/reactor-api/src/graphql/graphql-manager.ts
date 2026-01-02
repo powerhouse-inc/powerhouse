@@ -39,7 +39,6 @@ import {
   buildSubgraphSchemaModule,
   createSchema,
 } from "../utils/create-schema.js";
-import { datadogTracingPlugin } from "./datadog-plugin.js";
 import { DocumentModelSubgraphLegacy } from "./document-model-subgraph.js";
 import { DriveSubgraph } from "./drive-subgraph.js";
 import { useServer } from "./websocket.js";
@@ -396,7 +395,6 @@ export class GraphQLManager {
       plugins: [
         ApolloServerPluginInlineTraceDisabled(),
         ApolloServerPluginLandingPageLocalDefault(),
-        datadogTracingPlugin(),
       ],
     });
   }
@@ -527,7 +525,6 @@ export class GraphQLManager {
           }),
           ApolloServerPluginInlineTraceDisabled(),
           ApolloServerPluginLandingPageLocalDefault(),
-          datadogTracingPlugin(),
         ],
       });
 
