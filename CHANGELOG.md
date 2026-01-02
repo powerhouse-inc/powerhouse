@@ -1,3 +1,17 @@
+## 5.1.0-dev.32 (2026-01-02)
+
+### 🚀 Features
+
+- **tracing:** migrate from Datadog to OpenTelemetry with Tempo service graphs ([6b4eb9c82](https://github.com/powerhouse-inc/powerhouse/commit/6b4eb9c82))
+
+### 🩹 Fixes
+
+- **tracing:** add IncomingMessage import and improve type cast ([83c85ff2c](https://github.com/powerhouse-inc/powerhouse/commit/83c85ff2c))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.1.0-dev.31 (2026-01-02)
 
 ### 🚀 Features
