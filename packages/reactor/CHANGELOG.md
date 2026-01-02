@@ -1,3 +1,13 @@
+## 5.1.0-dev.31 (2026-01-02)
+
+### 🚀 Features
+
+- **switchboard:** added tracing ([c978736b7](https://github.com/powerhouse-inc/powerhouse/commit/c978736b7))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.1.0-dev.30 (2026-01-01)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
