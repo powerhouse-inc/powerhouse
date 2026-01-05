@@ -1,5 +1,3 @@
-import type { getEditorFilePaths } from "./name-builders/get-file-paths.js";
-
 export type DocumentModelDocumentTypeMetadata = {
   documentModelId: string;
   documentModelDocumentTypeName: string;
@@ -11,8 +9,6 @@ export type DocumentModelFilePaths = {
   documentModelsSourceFilesPath: string;
   documentModelsDirPath: string;
 };
-
-export type EditorFilePaths = ReturnType<typeof getEditorFilePaths>;
 
 export type EditorVariableNames = {
   documentVariableName: string;

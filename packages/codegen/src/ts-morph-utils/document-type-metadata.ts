@@ -1,12 +1,6 @@
 import path from "path";
-import type { Project } from "ts-morph";
+import type { Project, SourceFile } from "ts-morph";
 import { SyntaxKind } from "ts-morph";
-import {
-  documentModelDocumentTypeMetadata,
-  documentModelGlobalStateTypeName,
-  documentTypePropertyName,
-  phDocumentTypeName,
-} from "./constants.js";
 import { getObjectLiteral, getObjectProperty } from "./syntax-getters.js";
 import type { DocumentModelDocumentTypeMetadata } from "./types.js";
 
@@ -16,67 +10,117 @@ type GetDocumentTypeMetadataArgs = {
   documentModelId: string;
   documentModelsDirPath: string;
 };
+
 export function getDocumentTypeMetadata({
   project,
   packageName,
   documentModelId,
   documentModelsDirPath,
 }: GetDocumentTypeMetadataArgs) {
-  const sourceFiles = project.getSourceFiles();
-  const documentTypeMetadataList: DocumentModelDocumentTypeMetadata[] = [
-    documentModelDocumentTypeMetadata,
-  ];
-  for (const sourceFile of sourceFiles) {
-    const variableStatement = sourceFile.getVariableStatement((statement) =>
-      statement.getType().getText().includes(documentModelGlobalStateTypeName),
-    );
-    const documentModelGlobalState = getObjectLiteral(variableStatement);
-    const documentType = getObjectProperty(
-      documentModelGlobalState,
-      documentTypePropertyName,
-      SyntaxKind.StringLiteral,
-    );
-    const documentModelId = documentType?.getLiteralValue();
-    if (!documentModelId) continue;
-    const directory = sourceFile.getDirectory();
-    const directorySourceFiles = directory.getSourceFiles();
-    for (const file of directorySourceFiles) {
-      const typeDeclaration = file.getTypeAlias(phDocumentTypeName);
-      const documentModelDocumentTypeName = typeDeclaration?.getName();
-      if (!documentModelDocumentTypeName) continue;
-      const documentModelsDir = project.getDirectory(documentModelsDirPath);
-      if (!documentModelsDir) continue;
-      const documentModelDir = project
-        .getDirectories()
-        .filter((dir) => dir.getPath().includes("document-models"))
-        .find((dir) => {
-          return (
-            dir.isAncestorOf(sourceFile) && documentModelsDir.isAncestorOf(dir)
-          );
-        });
-      if (!documentModelDir) continue;
-      const documentModelDirName = documentModelDir.getBaseName();
-      const documentModelImportPath = path.join(
-        packageName,
-        "document-models",
-        documentModelDirName,
-      );
-      documentTypeMetadataList.push({
-        documentModelId,
-        documentModelDocumentTypeName,
-        documentModelDirName,
-        documentModelImportPath,
-      });
-    }
-  }
-  const documentTypeMetadata = documentTypeMetadataList.find(
-    (metadata) => metadata.documentModelId === documentModelId,
+  const sourceFiles = project.getSourceFiles().filter((file) => {
+    return file.getBaseName() === "document-model.ts";
+  });
+
+  const sourceFile = sourceFiles.find((file) =>
+    getDocumentModelFileByDocumentId(file, documentModelId),
   );
-  if (!documentTypeMetadata) {
-    throw new Error(
-      `Document type metadata not found for document type: ${documentModelId}`,
-    );
+
+  if (!sourceFile) {
+    throw new Error(`No document-model.ts file exists for ${documentModelId}`);
   }
 
+  const documentModelsDir = project.getDirectory(documentModelsDirPath);
+
+  if (!documentModelsDir) {
+    throw new Error(`No document-models dir exists for ${documentModelId}`);
+  }
+
+  const documentModelDir = project
+    .getDirectories()
+    .find(
+      (dir) =>
+        sourceFile.getDirectory().isDescendantOf(dir) &&
+        dir.isDescendantOf(documentModelsDir),
+    );
+
+  if (!documentModelDir) {
+    throw new Error(`No document model dir exists for ${documentModelId}`);
+  }
+
+  const documentModelDirPath = documentModelDir.getPath();
+  const documentModelDirName = documentModelDir.getBaseName();
+
+  const documentModelImportPath = path.join(
+    packageName,
+    "document-models",
+    documentModelDirName,
+  );
+
+  const documentModelGenTypesFilePath = path.join(
+    documentModelDirPath,
+    "gen",
+    "types.ts",
+  );
+
+  const documentModelGenTypesFile = project.getSourceFile(
+    documentModelGenTypesFilePath,
+  );
+
+  if (!documentModelGenTypesFile) {
+    throw new Error(`No generated types file exists for ${documentModelId}`);
+  }
+
+  const documentModelDocumentTypeName = getPHDocumentTypeNameFromSourceFile(
+    documentModelGenTypesFile,
+  );
+
+  if (!documentModelDocumentTypeName) {
+    throw new Error(
+      `Generated type file is missing PHDocument type declaration for ${documentModelId}`,
+    );
+  }
+  const documentTypeMetadata: DocumentModelDocumentTypeMetadata = {
+    documentModelDirName,
+    documentModelDocumentTypeName,
+    documentModelId,
+    documentModelImportPath,
+  };
+
   return documentTypeMetadata;
+}
+
+function getDocumentModelFileByDocumentId(
+  sourceFile: SourceFile,
+  documentModelId: string,
+) {
+  const documentModelStatement =
+    sourceFile.getVariableStatement("documentModel");
+
+  if (!documentModelStatement) {
+    return false;
+  }
+
+  const documentModelObject = getObjectLiteral(documentModelStatement);
+
+  if (!documentModelObject) {
+    return false;
+  }
+
+  const documentModelIdProperty = getObjectProperty(
+    documentModelObject,
+    "id",
+    SyntaxKind.StringLiteral,
+  );
+
+  return documentModelIdProperty?.getLiteralValue() === documentModelId;
+}
+
+export function getPHDocumentTypeNameFromSourceFile(sourceFile: SourceFile) {
+  return sourceFile
+    .getTypeAliases()
+    .find((alias) => {
+      const typeNodeText = alias.getTypeNode()?.getText();
+      return typeNodeText?.includes("PHDocument");
+    })
+    ?.getName();
 }

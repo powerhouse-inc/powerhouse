@@ -106,6 +106,7 @@ export function tsMorphGenerateDriveEditor({
     project,
     editorName,
     editorId,
+    editorDirPath,
     documentModelId: "powerhouse/document-drive",
   });
 
