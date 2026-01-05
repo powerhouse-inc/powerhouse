@@ -912,6 +912,12 @@ export class SimpleJobExecutor implements IJobExecutor {
       indexTxn.addToCollection(collectionId, input.targetId);
     }
 
+    this.documentMetaCache.putDocumentMeta(input.sourceId, job.branch, {
+      state: sourceDoc.state.document,
+      documentType: sourceDoc.header.documentType,
+      documentScopeRevision: operation.index + 1,
+    });
+
     return this.buildSuccessResult(
       job,
       operation,
@@ -1037,6 +1043,12 @@ export class SimpleJobExecutor implements IJobExecutor {
       const collectionId = driveCollectionId(job.branch, input.sourceId);
       indexTxn.removeFromCollection(collectionId, input.targetId);
     }
+
+    this.documentMetaCache.putDocumentMeta(input.sourceId, job.branch, {
+      state: sourceDoc.state.document,
+      documentType: sourceDoc.header.documentType,
+      documentScopeRevision: operation.index + 1,
+    });
 
     return this.buildSuccessResult(
       job,
@@ -1183,6 +1195,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         },
       );
     } catch (error) {
+      this.writeCache.invalidate(job.documentId, scope, job.branch);
       return this.buildErrorResult(
         job,
         new Error(
@@ -1405,6 +1418,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
       return null;
     } catch (error) {
+      this.writeCache.invalidate(documentId, scope, branch);
       return {
         job,
         success: false,
