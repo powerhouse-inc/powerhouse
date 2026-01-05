@@ -3,10 +3,10 @@ import {
   getObjectLiteral,
   getOrCreateSourceFile,
 } from "@powerhousedao/codegen/ts-morph";
+import { upgradeTransitionTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/upgrades/upgrade-transition.js";
 import { ts } from "@tmpl/core";
 import path from "path";
 import { VariableDeclarationKind, type Project } from "ts-morph";
-import { upgradeTransitionTemplate } from "../../templates/document-model/upgrades/upgrade-transition.js";
 
 type MakeUpgradeFileArgs = {
   project: Project;

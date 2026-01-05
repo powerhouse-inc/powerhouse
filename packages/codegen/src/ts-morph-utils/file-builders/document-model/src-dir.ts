@@ -4,20 +4,20 @@ import {
   getObjectLiteral,
   getOrCreateSourceFile,
 } from "@powerhousedao/codegen/ts-morph";
+import { getDocumentModelOperationsModuleVariableNames } from "@powerhousedao/codegen/ts-morph/name-builders";
+import { documentModelSrcIndexFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/src/index.js";
+import { documentModelTestFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/src/tests/document-model.test.js";
+import {
+  makeActionImportNames,
+  makeTestCaseForAction,
+} from "@powerhousedao/codegen/ts-morph/templates/document-model/src/tests/module.test.js";
+import { documentModelSrcUtilsTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/src/utils.js";
 import { ts } from "@tmpl/core";
 import { camelCase, paramCase, pascalCase } from "change-case";
 import type { ModuleSpecification } from "document-model";
 import path from "path";
 import type { Project } from "ts-morph";
 import { SyntaxKind, VariableDeclarationKind } from "ts-morph";
-import { getDocumentModelOperationsModuleVariableNames } from "../../name-builders/get-variable-names.js";
-import { documentModelSrcIndexFileTemplate } from "../../templates/document-model/src/index.js";
-import { documentModelTestFileTemplate } from "../../templates/document-model/src/tests/document-model.test.js";
-import {
-  makeActionImportNames,
-  makeTestCaseForAction,
-} from "../../templates/document-model/src/tests/module.test.js";
-import { documentModelSrcUtilsTemplate } from "../../templates/document-model/src/utils.js";
 
 export function makeSrcDirFiles(fileMakerArgs: DocumentModelFileMakerArgs) {
   makeDocumentModelSrcIndexFile(fileMakerArgs);

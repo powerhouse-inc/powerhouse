@@ -4,11 +4,11 @@ import type {
   EditorVariableNames,
 } from "@powerhousedao/codegen/ts-morph";
 import { camelCase, paramCase, pascalCase } from "change-case";
-import {
-  type DocumentModelGlobalState,
-  type ModuleSpecification,
-  type OperationErrorSpecification,
-  type OperationSpecification,
+import type {
+  DocumentModelGlobalState,
+  ModuleSpecification,
+  OperationErrorSpecification,
+  OperationSpecification,
 } from "document-model";
 
 export function getEditorVariableNames({

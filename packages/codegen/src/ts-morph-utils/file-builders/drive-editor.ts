@@ -13,15 +13,15 @@ import {
   getObjectLiteral,
   getOrCreateSourceFile,
 } from "@powerhousedao/codegen/ts-morph";
-import { tsx } from "@tmpl/core";
-import path from "path";
-import { VariableDeclarationKind, type Project } from "ts-morph";
 import {
   createDocumentFileTemplate,
   driveExplorerFileTemplate,
   emptyStateFileTemplate,
   folderTreeFileTemplate,
-} from "../templates/drive-editor.js";
+} from "@powerhousedao/codegen/ts-morph/templates/drive-editor.js";
+import { tsx } from "@tmpl/core";
+import path from "path";
+import { VariableDeclarationKind, type Project } from "ts-morph";
 import { makeEditorModuleFile } from "./document-editor.js";
 import { makeEditorsModulesFile } from "./editor-common.js";
 
