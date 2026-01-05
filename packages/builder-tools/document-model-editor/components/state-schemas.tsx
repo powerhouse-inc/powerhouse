@@ -1,6 +1,6 @@
 import { cn } from "@powerhousedao/design-system";
 import { Kind } from "graphql";
-import { lazy, useCallback, useState } from "react";
+import { lazy, Suspense, useCallback, useState } from "react";
 import { typeDefsDoc } from "../constants/documents.js";
 import { safeParseSdl, useSchemaContext } from "../context/schema-context.js";
 import type { Scope } from "../types/documents.js";
@@ -117,12 +117,14 @@ function StateEditor({
             />
           </svg>
         </Button>
-        {showStandardLib && <GraphqlEditor doc={typeDefsDoc} readonly />}
-        <GraphqlEditor
-          doc={stateSchema}
-          updateDocumentInModel={handleSchemaUpdate}
-          customLinter={customLinter}
-        />
+        <Suspense>
+          {showStandardLib && <GraphqlEditor doc={typeDefsDoc} readonly />}
+          <GraphqlEditor
+            doc={stateSchema}
+            updateDocumentInModel={handleSchemaUpdate}
+            customLinter={customLinter}
+          />
+        </Suspense>
       </div>
       <div>
         <div className="flex flex-col items-end">
@@ -149,10 +151,12 @@ function StateEditor({
             </svg>
           </Button>
         </div>
-        <JSONEditor
-          doc={initialValue}
-          updateDocumentInModel={handleInitialStateUpdate}
-        />
+        <Suspense>
+          <JSONEditor
+            doc={initialValue}
+            updateDocumentInModel={handleInitialStateUpdate}
+          />
+        </Suspense>
       </div>
     </div>
   );

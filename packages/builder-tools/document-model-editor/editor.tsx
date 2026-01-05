@@ -26,8 +26,10 @@ import {
   setStateSchema,
 } from "document-model";
 import { generateId } from "document-model/core";
-import { lazy, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Divider } from "./components/divider.js";
+import ModelMetadata from "./components/model-metadata-form.js";
+import Modules from "./components/modules.js";
 import { editorConfig } from "./config.js";
 import { SchemaContextProvider } from "./context/schema-context.js";
 import { useSelectedDocumentModelDocument } from "./hooks/useDocumentModelDocument.js";
@@ -38,8 +40,6 @@ import {
   makeEmptyOperationSchema,
   makeOperationInitialDoc,
 } from "./utils/helpers.js";
-import ModelMetadata from "./components/model-metadata-form.js";
-import Modules from "./components/modules.js";
 const StateSchemas = lazy(() => import("./components/state-schemas.js"));
 
 export default function Editor() {
@@ -343,17 +343,19 @@ export default function Editor() {
           />
           <Divider />
           <div>
-            <StateSchemas
-              modelName={modelName}
-              globalStateSchema={globalStateSchema}
-              globalStateInitialValue={globalStateInitialValue}
-              localStateSchema={localStateSchema}
-              localStateInitialValue={localStateInitialValue}
-              setStateSchema={handleSetStateSchema}
-              setInitialState={handleSetInitialState}
-              currentScope={scope}
-              onScopeChange={setScope}
-            />
+            <Suspense>
+              <StateSchemas
+                modelName={modelName}
+                globalStateSchema={globalStateSchema}
+                globalStateInitialValue={globalStateInitialValue}
+                localStateSchema={localStateSchema}
+                localStateInitialValue={localStateInitialValue}
+                setStateSchema={handleSetStateSchema}
+                setInitialState={handleSetInitialState}
+                currentScope={scope}
+                onScopeChange={setScope}
+              />
+            </Suspense>
             <Divider />
             <h3 className="mb-6 text-lg capitalize">{scope} Operations</h3>
             <Modules

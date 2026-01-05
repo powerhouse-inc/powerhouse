@@ -1,5 +1,5 @@
 import type { ModuleSpecification } from "document-model";
-import { lazy, useCallback } from "react";
+import { lazy, Suspense, useCallback } from "react";
 import type { DocumentActionHandlers } from "../types/documents.js";
 import { isEmptyOperationSchema } from "../utils/helpers.js";
 import { ensureValidOperationSchemaInputName } from "../utils/linting.js";
@@ -115,11 +115,13 @@ export function Operation(props: Props) {
           </span>
         </label>
         {!noInputRequired && (
-          <GraphqlEditor
-            doc={operation.schema ?? ""}
-            updateDocumentInModel={handleUpdateDocument}
-            customLinter={customLinter}
-          />
+          <Suspense>
+            <GraphqlEditor
+              doc={operation.schema ?? ""}
+              updateDocumentInModel={handleUpdateDocument}
+              customLinter={customLinter}
+            />
+          </Suspense>
         )}
       </div>
 
