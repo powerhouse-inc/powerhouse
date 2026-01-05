@@ -1,4 +1,9 @@
 import {
+  buildTsMorphProject,
+  documentModelModulesOutputFileName,
+  documentModelModulesVariableName,
+  documentModelModulesVariableType,
+  documentModelModuleTypeName,
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
 } from "@powerhousedao/codegen/ts-morph";
@@ -9,19 +14,11 @@ import path from "path";
 import { type Project } from "ts-morph";
 import { generateDocumentModelZodSchemas } from "../../codegen/graphql.js";
 import {
-  documentModelModulesOutputFileName,
-  documentModelModulesVariableName,
-  documentModelModulesVariableType,
-  documentModelModuleTypeName,
-} from "../constants.js";
-import { getDocumentModelFilePaths } from "../name-builders/get-file-paths.js";
-import {
   getDocumentModelDirName,
   getDocumentModelVariableNames,
 } from "../name-builders/get-variable-names.js";
 import type { DocumentModelVariableNames } from "../name-builders/types.js";
 import { getInitialStates } from "../templates/unsafe-utils.js";
-import { buildTsMorphProject } from "../ts-morph-project.js";
 import { makeGenDirFiles } from "./document-model/gen-dir.js";
 import { makeRootDirFiles } from "./document-model/root-dir.js";
 import { makeSrcDirFiles } from "./document-model/src-dir.js";
@@ -222,8 +219,10 @@ export async function tsMorphGenerateDocumentModel({
   useVersioning,
 }: GenerateDocumentModelArgs) {
   const project = buildTsMorphProject(projectDir);
-  const { documentModelsSourceFilesPath } =
-    getDocumentModelFilePaths(projectDir);
+  const documentModelsSourceFilesPath = path.join(
+    projectDir,
+    "document-models/**/*",
+  );
   project.addSourceFilesAtPaths(documentModelsSourceFilesPath);
   const documentModelsDirPath = path.join(projectDir, "document-models");
   const documentModelDirName = getDocumentModelDirName(documentModelState);
@@ -356,8 +355,11 @@ export function makeDocumentModelModulesFile({
   project: Project;
   projectDir: string;
 }) {
-  const { documentModelsDirPath, documentModelsSourceFilesPath } =
-    getDocumentModelFilePaths(projectDir);
+  const documentModelsDirPath = path.join(projectDir, "document-models");
+  const documentModelsSourceFilesPath = path.join(
+    documentModelsDirPath,
+    "/**/*",
+  );
   makeModulesFile({
     project,
     modulesDirPath: documentModelsDirPath,

@@ -29,15 +29,12 @@ import {
   getOrCreateSourceFile,
 } from "@powerhousedao/codegen/ts-morph";
 import { pascalCase } from "change-case";
+import path from "path";
 import type { Project } from "ts-morph";
 import { SyntaxKind, VariableDeclarationKind } from "ts-morph";
-import {
-  getDocumentModelFilePaths,
-  getEditorFilePaths,
-} from "../name-builders/get-file-paths.js";
 import { getEditorVariableNames } from "../name-builders/get-variable-names.js";
 import { buildTsMorphProject } from "../ts-morph-project.js";
-import type { EditorFilePaths, EditorVariableNames } from "../types.js";
+import type { EditorVariableNames } from "../types.js";
 import { makeEditorsModulesFile } from "./editor-common.js";
 import type {
   CommonGenerateEditorArgs,
@@ -55,10 +52,15 @@ export function tsMorphGenerateEditor({
   editorId,
   documentModelId,
 }: GenerateEditorArgs) {
-  const documentModelFilePaths = getDocumentModelFilePaths(projectDir);
-  const { documentModelsSourceFilesPath } = documentModelFilePaths;
-  const editorFilePaths = getEditorFilePaths(projectDir, editorDir);
-  const { editorSourceFilesPath } = editorFilePaths;
+  const documentModelsDirPath = path.join(projectDir, "document-models");
+  const editorsDirPath = path.join(projectDir, "editors");
+  const editorDirPath = path.join(editorsDirPath, editorDir);
+  const editorComponentsDirPath = path.join(editorDirPath, "components");
+  const editorSourceFilesPath = path.join(editorsDirPath, "/**/*");
+  const documentModelsSourceFilesPath = path.join(
+    documentModelsDirPath,
+    "/**/*",
+  );
 
   const project = buildTsMorphProject(projectDir);
   project.addSourceFilesAtPaths(documentModelsSourceFilesPath);
@@ -68,21 +70,22 @@ export function tsMorphGenerateEditor({
     project,
     packageName,
     documentModelId,
-    ...documentModelFilePaths,
+    documentModelsDirPath,
   });
 
   const editorVariableNames = getEditorVariableNames(documentTypeMetadata);
 
   makeEditDocumentNameComponent({
     project,
+    editorComponentsDirPath,
     ...documentTypeMetadata,
     ...editorVariableNames,
-    ...editorFilePaths,
   });
 
   makeEditorComponent({
     project,
-    ...editorFilePaths,
+    editorDirPath,
+    editorComponentsDirPath,
     ...editorVariableNames,
   });
 
@@ -91,7 +94,8 @@ export function tsMorphGenerateEditor({
     editorName,
     editorId,
     documentModelId,
-    ...editorFilePaths,
+    editorDirPath,
+    ...editorVariableNames,
   });
 
   makeEditorsModulesFile(project, projectDir);
@@ -99,12 +103,12 @@ export function tsMorphGenerateEditor({
   project.saveSync();
 }
 
-type MakeEditDocumentNameComponentArgs = EditorVariableNames &
-  EditorFilePaths & {
-    project: Project;
-    documentModelDocumentTypeName: string;
-    documentModelImportPath: string;
-  };
+type MakeEditDocumentNameComponentArgs = EditorVariableNames & {
+  project: Project;
+  editorComponentsDirPath: string;
+  documentModelDocumentTypeName: string;
+  documentModelImportPath: string;
+};
 export function makeEditDocumentNameComponent({
   project,
   documentModelDocumentTypeName,
@@ -120,10 +124,11 @@ export function makeEditDocumentNameComponent({
   onSubmitSetNameFunctionName,
   documentNameVariableName,
   editDocumentNameComponentName,
-  editDocumentNameComponentFilePath,
+  editorComponentsDirPath,
 }: MakeEditDocumentNameComponentArgs) {
+  const filePath = path.join(editorComponentsDirPath, "EditName.tsx");
   const { alreadyExists, sourceFile: editDocumentNameComponentSourceFile } =
-    getOrCreateSourceFile(project, editDocumentNameComponentFilePath);
+    getOrCreateSourceFile(project, filePath);
 
   if (alreadyExists) return;
 
@@ -361,12 +366,13 @@ type MakeEditorComponentArgs = CommonMakeEditorComponentArgs & {
 };
 export function makeEditorComponent({
   project,
-  editorFilePath,
+  editorDirPath,
   editDocumentNameComponentName,
 }: MakeEditorComponentArgs) {
+  const filePath = path.join(editorDirPath, "editor.tsx");
   const { alreadyExists, sourceFile: editorSourceFile } = getOrCreateSourceFile(
     project,
-    editorFilePath,
+    filePath,
   );
 
   if (alreadyExists) {
@@ -411,12 +417,12 @@ type MakeEditorModuleFileArgs = {
   editorName: string;
   editorId: string;
   documentModelId?: string;
-  editorModuleFilePath: string;
+  editorDirPath: string;
   legacyMultipleDocumentTypes?: string[];
 };
 export function makeEditorModuleFile({
   project,
-  editorModuleFilePath,
+  editorDirPath,
   editorName,
   documentModelId,
   editorId,
@@ -427,9 +433,10 @@ export function makeEditorModuleFile({
       "Cannot specify both documentModelId and legacyMultipleDocumentTypes",
     );
   }
+  const filePath = path.join(editorDirPath, "module.ts");
   const { sourceFile: editorModuleSourceFile } = getOrCreateSourceFile(
     project,
-    editorModuleFilePath,
+    filePath,
   );
 
   editorModuleSourceFile.replaceWithText("");

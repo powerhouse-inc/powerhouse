@@ -19,6 +19,10 @@
     "./ts-morph": {
       "types": "./dist/src/ts-morph-utils/index.d.ts",
       "default": "./dist/src/ts-morph-utils/index.js"
+    },
+    "./ts-morph/*": {
+      "types": "./dist/src/ts-morph-utils/index.d.ts",
+      "default": "./dist/src/ts-morph-utils/index.js"
     }
   },
   "scripts": {

@@ -16,10 +16,6 @@ import { tsx } from "@tmpl/core";
 import path from "path";
 import { VariableDeclarationKind, type Project } from "ts-morph";
 import {
-  getDocumentModelFilePaths,
-  getEditorFilePaths,
-} from "../name-builders/get-file-paths.js";
-import {
   createDocumentFileTemplate,
   driveExplorerFileTemplate,
   emptyStateFileTemplate,
@@ -41,12 +37,14 @@ export function tsMorphGenerateDriveEditor({
   allowedDocumentModelIds,
   isDragAndDropEnabled,
 }: GenerateDriveEditorArgs) {
-  const { documentModelsSourceFilesPath } =
-    getDocumentModelFilePaths(projectDir);
-  const { editorSourceFilesPath, ...editorFilePaths } = getEditorFilePaths(
+  const documentModelsSourceFilesPath = path.join(
     projectDir,
-    editorDir,
+    "document-models/**/*",
   );
+  const editorsDirPath = path.join(projectDir, "editors");
+  const editorSourceFilesPath = path.join(editorsDirPath, "/**/*");
+  const editorDirPath = path.join(editorsDirPath, editorDir);
+  const editorComponentsDirPath = path.join(editorDirPath, "components");
 
   const project = buildTsMorphProject(projectDir);
   project.addSourceFilesAtPaths(documentModelsSourceFilesPath);
@@ -54,54 +52,54 @@ export function tsMorphGenerateDriveEditor({
 
   makeNavigationBreadcrumbsFile({
     project,
-    ...editorFilePaths,
+    editorComponentsDirPath,
   });
 
   makeCreateDocumentFile({
     project,
-    ...editorFilePaths,
+    editorComponentsDirPath,
   });
 
   makeEmptyStateFile({
     project,
-    ...editorFilePaths,
+    editorComponentsDirPath,
   });
 
   makeFoldersFile({
     project,
-    ...editorFilePaths,
+    editorComponentsDirPath,
   });
 
   makeFolderTreeFile({
     project,
-    ...editorFilePaths,
+    editorComponentsDirPath,
   });
 
   makeFilesFile({
     project,
-    ...editorFilePaths,
+    editorComponentsDirPath,
   });
 
   makeDriveExplorerFile({
     project,
-    ...editorFilePaths,
+    editorComponentsDirPath,
   });
 
   makeDriveContentsFile({
     project,
-    ...editorFilePaths,
+    editorComponentsDirPath,
   });
 
   makeDriveEditorComponent({
     project,
-    ...editorFilePaths,
+    editorDirPath,
   });
 
   makeDriveEditorConfigFile({
     project,
     allowedDocumentModelIds,
     isDragAndDropEnabled,
-    ...editorFilePaths,
+    editorDirPath,
   });
 
   makeEditorModuleFile({
@@ -109,7 +107,6 @@ export function tsMorphGenerateDriveEditor({
     editorName,
     editorId,
     documentModelId: "powerhouse/document-drive",
-    ...editorFilePaths,
   });
 
   makeEditorsModulesFile(project, projectDir);
@@ -119,14 +116,15 @@ export function tsMorphGenerateDriveEditor({
 
 type MakeDriveEditorComponentArgs = {
   project: Project;
-  editorFilePath: string;
+  editorDirPath: string;
 };
 export function makeDriveEditorComponent({
   project,
-  editorFilePath,
+  editorDirPath,
 }: MakeDriveEditorComponentArgs) {
+  const filePath = path.join(editorDirPath, "editor.tsx");
   const { alreadyExists, sourceFile: driveEditorComponentSourceFile } =
-    getOrCreateSourceFile(project, editorFilePath);
+    getOrCreateSourceFile(project, filePath);
 
   if (alreadyExists) {
     const editorFunction = driveEditorComponentSourceFile.getFunction("Editor");
@@ -190,19 +188,20 @@ export function makeDriveEditorComponent({
 
 type MakeDriveEditorConfigFileArgs = {
   project: Project;
-  editorConfigFilePath: string;
+  editorDirPath: string;
   allowedDocumentModelIds: string[];
   isDragAndDropEnabled: boolean;
 };
 export function makeDriveEditorConfigFile({
   project,
-  editorConfigFilePath,
+  editorDirPath,
   allowedDocumentModelIds,
   isDragAndDropEnabled,
 }: MakeDriveEditorConfigFileArgs) {
+  const filePath = path.join(editorDirPath, "config.ts");
   const { sourceFile: driveEditorConfigSourceFile } = getOrCreateSourceFile(
     project,
-    editorConfigFilePath,
+    filePath,
   );
 
   driveEditorConfigSourceFile.replaceWithText("");
@@ -250,14 +249,15 @@ export function makeDriveEditorConfigFile({
 
 type MakeDriveContentsFileArgs = {
   project: Project;
-  driveContentsFilePath: string;
+  editorComponentsDirPath: string;
 };
 export function makeDriveContentsFile({
   project,
-  driveContentsFilePath,
+  editorComponentsDirPath,
 }: MakeDriveContentsFileArgs) {
+  const filePath = path.join(editorComponentsDirPath, "DriveContents.tsx");
   const { alreadyExists, sourceFile: driveContentsSourceFile } =
-    getOrCreateSourceFile(project, driveContentsFilePath);
+    getOrCreateSourceFile(project, filePath);
 
   if (alreadyExists) return;
 

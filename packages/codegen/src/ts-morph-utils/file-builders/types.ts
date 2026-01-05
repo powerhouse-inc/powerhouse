@@ -2,7 +2,8 @@ import type { Project } from "ts-morph";
 
 export type CommonMakeEditorComponentArgs = {
   project: Project;
-  editorFilePath: string;
+  editorDirPath: string;
+  editorComponentsDirPath: string;
 };
 
 export type CommonGenerateEditorArgs = {

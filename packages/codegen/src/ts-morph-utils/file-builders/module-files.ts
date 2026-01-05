@@ -1,7 +1,7 @@
 import { pascalCase } from "change-case";
+import path from "node:path";
 import type { Project } from "ts-morph";
 import { SyntaxKind, VariableDeclarationKind } from "ts-morph";
-import { buildModulesOutputFilePath } from "../name-builders/common-files.js";
 import { makeLegacyIndexFile } from "./index-files.js";
 
 type MakeModuleFileArgs = {
@@ -68,10 +68,7 @@ export function makeModulesFile({
     return { versionedName, unversionedName, moduleSpecifier };
   });
 
-  const moduleExportsFilePath = buildModulesOutputFilePath(
-    modulesDirPath,
-    outputFileName,
-  );
+  const moduleExportsFilePath = path.join(modulesDirPath, outputFileName);
 
   // get the source file for the modules file if it exists
   let moduleExportsSourceFile = project.getSourceFile(moduleExportsFilePath);

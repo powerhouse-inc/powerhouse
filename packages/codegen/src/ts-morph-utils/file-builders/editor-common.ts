@@ -1,3 +1,4 @@
+import path from "path";
 import type { Project } from "ts-morph";
 import {
   editorModuleOutputFileName,
@@ -5,17 +6,15 @@ import {
   editorModuleVariableName,
   editorModuleVariableType,
 } from "../constants.js";
-import {
-  buildEditorsDirPath,
-  buildEditorSourceFilesPath,
-} from "../name-builders/editor-files.js";
 import { makeModulesFile } from "./module-files.js";
 
 export function makeEditorsModulesFile(project: Project, projectDir: string) {
+  const modulesDirPath = path.join(projectDir, "editors");
+  const modulesSourceFilesPath = path.join(modulesDirPath, "/**/*");
   makeModulesFile({
     project,
-    modulesDirPath: buildEditorsDirPath(projectDir),
-    modulesSourceFilesPath: buildEditorSourceFilesPath(projectDir),
+    modulesDirPath,
+    modulesSourceFilesPath,
     outputFileName: editorModuleOutputFileName,
     typeName: editorModuleTypeName,
     variableName: editorModuleVariableName,
