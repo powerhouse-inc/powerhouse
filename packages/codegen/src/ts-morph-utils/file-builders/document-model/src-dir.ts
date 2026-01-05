@@ -1,3 +1,4 @@
+import type { DocumentModelFileMakerArgs } from "@powerhousedao/codegen/ts-morph";
 import {
   formatSourceFileWithPrettier,
   getObjectLiteral,
@@ -17,7 +18,6 @@ import {
   makeTestCaseForAction,
 } from "../../templates/document-model/src/tests/module.test.js";
 import { documentModelSrcUtilsTemplate } from "../../templates/document-model/src/utils.js";
-import type { DocumentModelFileMakerArgs } from "./types.js";
 
 export function makeSrcDirFiles(fileMakerArgs: DocumentModelFileMakerArgs) {
   makeDocumentModelSrcIndexFile(fileMakerArgs);

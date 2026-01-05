@@ -1,3 +1,8 @@
+import type {
+  DocumentModelFileMakerArgs,
+  DocumentModelVariableNames,
+  GenerateDocumentModelArgs,
+} from "@powerhousedao/codegen/ts-morph";
 import {
   buildTsMorphProject,
   formatSourceFileWithPrettier,
@@ -13,15 +18,10 @@ import {
   getDocumentModelDirName,
   getDocumentModelVariableNames,
 } from "../name-builders/get-variable-names.js";
-import type { DocumentModelVariableNames } from "../name-builders/types.js";
 import { getInitialStates } from "../templates/unsafe-utils.js";
 import { makeGenDirFiles } from "./document-model/gen-dir.js";
 import { makeRootDirFiles } from "./document-model/root-dir.js";
 import { makeSrcDirFiles } from "./document-model/src-dir.js";
-import type {
-  DocumentModelFileMakerArgs,
-  GenerateDocumentModelArgs,
-} from "./document-model/types.js";
 import {
   createOrUpdateUpgradeManifestFile,
   createOrUpdateVersionConstantsFile,

@@ -1,5 +1,5 @@
+import type { DocumentModelVariableNames } from "@powerhousedao/codegen/ts-morph";
 import { ts } from "@tmpl/core";
-import type { DocumentModelVariableNames } from "../../name-builders/types.js";
 
 export const documentModelUtilsTemplate = ({
   phStateName,
@@ -7,7 +7,7 @@ export const documentModelUtilsTemplate = ({
 }: DocumentModelVariableNames) =>
   ts`
 import type { DocumentModelUtils } from "document-model";
-import type { ${phStateName} } from "./gen/types.js";
+import type { ${phStateName} } from "@powerhousedao/codegen/ts-morph";
 import { utils as genUtils } from "./gen/utils.js";
 import * as customUtils from "./src/utils.js";
 

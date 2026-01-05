@@ -1,5 +1,5 @@
+import type { DocumentModelTemplateInputs } from "@powerhousedao/codegen/ts-morph";
 import { ts } from "@tmpl/core";
-import type { DocumentModelTemplateInputs } from "../../../name-builders/types.js";
 
 export const documentModelDocumentSchemaFileTemplate = (
   v: DocumentModelTemplateInputs,
@@ -12,7 +12,7 @@ import {
 import { z } from "zod";
 import { ${v.documentTypeVariableName} } from "./document-type.js";
 import { ${v.stateSchemaName} } from "./schema/zod.js";
-import type { ${v.phDocumentTypeName}, ${v.phStateName} } from "./types.js";
+import type { ${v.phDocumentTypeName}, ${v.phStateName} } from "@powerhousedao/codegen/ts-morph";
 
 /** Schema for validating the header object of a ${v.pascalCaseDocumentType} document */
 export const ${v.phDocumentTypeName}HeaderSchema = BaseDocumentHeaderSchema.extend({

@@ -1,9 +1,9 @@
-import { ts } from "@tmpl/core";
-import { camelCase, constantCase, pascalCase } from "change-case";
 import type {
   ActionFromOperation,
   DocumentModelTemplateInputsWithModule,
-} from "../../../../name-builders/types.js";
+} from "@powerhousedao/codegen/ts-morph";
+import { ts } from "@tmpl/core";
+import { camelCase, constantCase, pascalCase } from "change-case";
 
 function makeDocumentModelTypeImports(actions: ActionFromOperation[]) {
   const actionTypeImports = ["createAction"];
@@ -103,7 +103,7 @@ ${makeActionInputSchemaImports(v.actions)}
 } from '../schema/zod.js';
 import type {
 ${makeActionInputTypeImports(v.actions)}
-} from '../types.js';
+} from "@powerhousedao/codegen/ts-morph";
 import type {
 ${makeActionTypeImports(v.actions)}
 } from './actions.js';

@@ -1,7 +1,7 @@
+import type { DocumentModelTemplateInputs } from "@powerhousedao/codegen/ts-morph";
 import { ts } from "@tmpl/core";
 import { camelCase } from "change-case";
 import type { ModuleSpecification } from "document-model";
-import type { DocumentModelTemplateInputs } from "../../name-builders/types.js";
 
 function buildModuleActionsName(module: ModuleSpecification) {
   const camelCaseModuleName = camelCase(module.name);

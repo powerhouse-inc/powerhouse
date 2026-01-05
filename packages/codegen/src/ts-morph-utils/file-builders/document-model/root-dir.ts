@@ -1,3 +1,4 @@
+import type { DocumentModelFileMakerArgs } from "@powerhousedao/codegen/ts-morph";
 import {
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
@@ -8,7 +9,6 @@ import { documentModelHooksFileTemplate } from "../../templates/document-model/h
 import { documentModelIndexTemplate } from "../../templates/document-model/index.js";
 import { documentModelModuleFileTemplate } from "../../templates/document-model/module.js";
 import { documentModelUtilsTemplate } from "../../templates/document-model/utils.js";
-import type { DocumentModelFileMakerArgs } from "./types.js";
 
 export function makeRootDirFiles(fileMakerArgs: DocumentModelFileMakerArgs) {
   makeDocumentModelVersionIndexFile(fileMakerArgs);

@@ -1,3 +1,7 @@
+import type {
+  DocumentModelFileMakerArgs,
+  DocumentModelTemplateInputsWithModule,
+} from "@powerhousedao/codegen/ts-morph";
 import {
   buildNodePrinter,
   formatSourceFileWithPrettier,
@@ -7,7 +11,6 @@ import { paramCase, pascalCase } from "change-case";
 import path from "path";
 import { VariableDeclarationKind } from "ts-morph";
 import { getDocumentModelOperationsModuleVariableNames } from "../../name-builders/get-variable-names.js";
-import type { DocumentModelTemplateInputsWithModule } from "../../name-builders/types.js";
 import { buildObjectLiteral } from "../../syntax-builders.js";
 import { documentModelGenActionsFileTemplate } from "../../templates/document-model/gen/actions.js";
 import { documentModelGenCreatorsFileTemplate } from "../../templates/document-model/gen/creators.js";
@@ -23,7 +26,6 @@ import { documentModelGenReducerFileTemplate } from "../../templates/document-mo
 import { documentModelSchemaIndexTemplate } from "../../templates/document-model/gen/schema/index.js";
 import { documentModelGenTypesTemplate } from "../../templates/document-model/gen/types.js";
 import { documentModelGenUtilsTemplate } from "../../templates/document-model/gen/utils.js";
-import type { DocumentModelFileMakerArgs } from "./types.js";
 
 export function makeGenDirFiles(fileMakerArgs: DocumentModelFileMakerArgs) {
   makeDocumentModelSchemaIndexFile(fileMakerArgs);

@@ -1,5 +1,5 @@
+import type { DocumentModelTemplateInputs } from "@powerhousedao/codegen/ts-morph";
 import { ts } from "@tmpl/core";
-import type { DocumentModelTemplateInputs } from "../../../name-builders/types.js";
 
 export const documentModelGenUtilsTemplate = (v: DocumentModelTemplateInputs) =>
   ts`
@@ -16,8 +16,8 @@ import {
 import type { 
   ${v.globalStateName},
   ${v.localStateName}
-} from './types.js';
-import type { ${v.phStateName} } from './types.js';
+} from "@powerhousedao/codegen/ts-morph";
+import type { ${v.phStateName} } from "@powerhousedao/codegen/ts-morph";
 import { reducer } from './reducer.js';
 import { ${v.documentTypeVariableName} } from "./document-type.js";
 import {

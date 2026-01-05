@@ -1,10 +1,10 @@
-import { ts } from "@tmpl/core";
-import { pascalCase } from "change-case";
-import type { OperationErrorSpecification } from "document-model";
 import type {
   ActionFromOperation,
   DocumentModelTemplateInputsWithModule,
-} from "../../../../name-builders/types.js";
+} from "@powerhousedao/codegen/ts-morph";
+import { ts } from "@tmpl/core";
+import { pascalCase } from "change-case";
+import type { OperationErrorSpecification } from "document-model";
 
 function getErrorName(error: OperationErrorSpecification) {
   if (!error.name) return;

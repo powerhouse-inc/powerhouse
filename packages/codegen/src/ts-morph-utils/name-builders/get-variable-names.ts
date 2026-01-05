@@ -1,3 +1,8 @@
+import type {
+  ActionFromOperation,
+  DocumentModelDocumentTypeMetadata,
+  EditorVariableNames,
+} from "@powerhousedao/codegen/ts-morph";
 import { camelCase, paramCase, pascalCase } from "change-case";
 import {
   type DocumentModelGlobalState,
@@ -5,60 +10,21 @@ import {
   type OperationErrorSpecification,
   type OperationSpecification,
 } from "document-model";
-import type {
-  DocumentModelDocumentTypeMetadata,
-  EditorVariableNames,
-} from "../types.js";
-import type { ActionFromOperation } from "./types.js";
-import {
-  buildDispatchFunctionName,
-  buildDocumentNameVariableName,
-  buildDocumentVariableName,
-  buildEditDocumentNameComponentName,
-  buildIsEditingVariableName,
-  buildOnCancelEditHandlerName,
-  buildOnClickHandlerName,
-  buildOnSubmitSetNameFunctionName,
-  buildSetIsEditingFunctionName,
-  buildSetNameActionName,
-  buildUseSelectedDocumentHookName,
-} from "./variables.js";
 
 export function getEditorVariableNames({
   documentModelDocumentTypeName,
 }: DocumentModelDocumentTypeMetadata): EditorVariableNames {
   return {
-    documentVariableName: buildDocumentVariableName(
-      documentModelDocumentTypeName,
-    ),
-    editDocumentNameComponentName: buildEditDocumentNameComponentName(
-      documentModelDocumentTypeName,
-    ),
-    useSelectedDocumentHookName: buildUseSelectedDocumentHookName(
-      documentModelDocumentTypeName,
-    ),
-    documentNameVariableName: buildDocumentNameVariableName(
-      documentModelDocumentTypeName,
-    ),
-    dispatchFunctionName: buildDispatchFunctionName(
-      documentModelDocumentTypeName,
-    ),
-    onClickEditHandlerName: buildOnClickHandlerName(
-      documentModelDocumentTypeName,
-    ),
-    onCancelEditHandlerName: buildOnCancelEditHandlerName(
-      documentModelDocumentTypeName,
-    ),
-    setNameActionName: buildSetNameActionName(documentModelDocumentTypeName),
-    isEditingVariableName: buildIsEditingVariableName(
-      documentModelDocumentTypeName,
-    ),
-    setIsEditingFunctionName: buildSetIsEditingFunctionName(
-      documentModelDocumentTypeName,
-    ),
-    onSubmitSetNameFunctionName: buildOnSubmitSetNameFunctionName(
-      documentModelDocumentTypeName,
-    ),
+    documentVariableName: camelCase(documentModelDocumentTypeName),
+    useSelectedDocumentHookName: `useSelected${documentModelDocumentTypeName}`,
+    documentNameVariableName: `${documentModelDocumentTypeName}Name`,
+    dispatchFunctionName: "dispatch",
+    onClickEditHandlerName: `onClickEdit${documentModelDocumentTypeName}Name`,
+    onCancelEditHandlerName: `onClickCancelEdit${documentModelDocumentTypeName}Name`,
+    setNameActionName: "setName",
+    isEditingVariableName: "isEditing",
+    setIsEditingFunctionName: "setIsEditing",
+    onSubmitSetNameFunctionName: `onSubmitSet${documentModelDocumentTypeName}Name`,
   };
 }
 

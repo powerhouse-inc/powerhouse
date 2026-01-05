@@ -1,5 +1,5 @@
+import type { ActionFromOperation } from "@powerhousedao/codegen/ts-morph";
 import { ts } from "@tmpl/core";
-import type { ActionFromOperation } from "../../../../name-builders/types.js";
 import {
   getActionInputName,
   getActionInputTypeNames,
@@ -50,7 +50,7 @@ export const documentModelOperationModuleActionsFileTemplate = (v: {
 import type { ${getDocumentModelActionTypeImportNames(v.actions)} } from 'document-model';
 import type {
   ${getActionInputTypeNames(v.actions)}
-} from '../types.js';
+} from "@powerhousedao/codegen/ts-morph";
 
 ${getActionTypeExports(v.actions)}
 

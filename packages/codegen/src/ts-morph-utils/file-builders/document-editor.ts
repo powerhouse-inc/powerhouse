@@ -1,3 +1,7 @@
+import type {
+  CommonGenerateEditorArgs,
+  EditorVariableNames,
+} from "@powerhousedao/codegen/ts-morph";
 import { pascalCase } from "change-case";
 import path from "path";
 import type { Project } from "ts-morph";
@@ -33,9 +37,7 @@ import {
   buildTsMorphProject,
   getOrCreateSourceFile,
 } from "../ts-morph-project.js";
-import type { EditorVariableNames } from "../types.js";
 import { makeEditorsModulesFile } from "./editor-common.js";
-import type { CommonGenerateEditorArgs } from "./types.js";
 
 type GenerateEditorArgs = CommonGenerateEditorArgs & {
   documentModelId: string;

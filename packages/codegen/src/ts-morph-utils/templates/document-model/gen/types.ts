@@ -1,5 +1,5 @@
+import type { DocumentModelTemplateInputs } from "@powerhousedao/codegen/ts-morph";
 import { ts } from "@tmpl/core";
-import type { DocumentModelTemplateInputs } from "../../../name-builders/types.js";
 
 function buildEmptyLocalStateType(
   hasLocalSchema: boolean,
@@ -24,7 +24,7 @@ import type { ${v.actionTypeName} } from './actions.js';
 import type {
   ${v.stateName} as ${v.globalStateName},
   ${buildLocalStateTypeImport(v.hasLocalSchema, v.localStateName)}
-} from './schema/types.js';
+} from "@powerhousedao/codegen/ts-morph";
 
 ${buildEmptyLocalStateType(v.hasLocalSchema, v.localStateName)}
 
@@ -34,7 +34,7 @@ type ${v.phStateName} = PHBaseState & {
 };
 type ${v.phDocumentTypeName} = PHDocument<${v.phStateName}>;
 
-export * from './schema/types.js';
+export * from "@powerhousedao/codegen/ts-morph";
 
 export type { 
   ${v.globalStateName}, 

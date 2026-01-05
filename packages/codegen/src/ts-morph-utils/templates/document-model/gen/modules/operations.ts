@@ -1,10 +1,10 @@
-import { ts } from "@tmpl/core";
-import { camelCase, pascalCase } from "change-case";
-import type { ModuleSpecification } from "document-model";
 import type {
   ActionFromOperation,
   DocumentModelTemplateInputsWithModule,
-} from "../../../../name-builders/types.js";
+} from "@powerhousedao/codegen/ts-morph";
+import { ts } from "@tmpl/core";
+import { camelCase, pascalCase } from "change-case";
+import type { ModuleSpecification } from "document-model";
 import { getActionTypeName } from "../../../utils.js";
 
 function getActionTypeNames(actions: ActionFromOperation[]) {
@@ -98,7 +98,7 @@ import type {
 } from './actions.js';
 import type {
   ${getActionOperationStateTypeImports(v.actions, v.pascalCaseDocumentType)}
-} from "../types.js";
+} from "@powerhousedao/codegen/ts-morph";
 
 export interface ${getOperationsInterfaceName(
     v.pascalCaseDocumentType,

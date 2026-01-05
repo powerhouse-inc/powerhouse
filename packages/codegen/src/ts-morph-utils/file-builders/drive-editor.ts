@@ -1,3 +1,4 @@
+import type { CommonGenerateEditorArgs } from "@powerhousedao/codegen/ts-morph";
 import {
   buildArrayLiteralWithStringElements,
   buildClassNameAttribute,
@@ -23,7 +24,6 @@ import {
 } from "../templates/drive-editor.js";
 import { makeEditorModuleFile } from "./document-editor.js";
 import { makeEditorsModulesFile } from "./editor-common.js";
-import type { CommonGenerateEditorArgs } from "./types.js";
 
 type GenerateDriveEditorArgs = CommonGenerateEditorArgs & {
   allowedDocumentModelIds: string[];

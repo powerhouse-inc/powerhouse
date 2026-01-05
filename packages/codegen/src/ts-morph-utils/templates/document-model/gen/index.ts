@@ -1,7 +1,7 @@
 import { ts } from "@tmpl/core";
 import { paramCase } from "change-case";
 import type { ModuleSpecification } from "document-model";
-import type { DocumentModelTemplateInputs } from "../../../name-builders/types.js";
+import type { DocumentModelTemplateInputs } from "@powerhousedao/codegen/ts-morph";
 
 function buildModuleOperationsExports(module: ModuleSpecification) {
   const moduleDirName = paramCase(module.name);

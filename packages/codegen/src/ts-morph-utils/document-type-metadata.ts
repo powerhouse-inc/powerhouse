@@ -1,8 +1,8 @@
+import type { DocumentModelDocumentTypeMetadata } from "@powerhousedao/codegen/ts-morph";
 import path from "path";
 import type { Project, SourceFile } from "ts-morph";
 import { SyntaxKind } from "ts-morph";
 import { getObjectLiteral, getObjectProperty } from "./syntax-getters.js";
-import type { DocumentModelDocumentTypeMetadata } from "./types.js";
 
 type GetDocumentTypeMetadataArgs = {
   project: Project;

@@ -1,5 +1,5 @@
+import type { DocumentModelTemplateInputs } from "@powerhousedao/codegen/ts-morph";
 import { ts } from "@tmpl/core";
-import type { DocumentModelTemplateInputs } from "../../../name-builders/types.js";
 
 export const documentModelPhFactoriesFileTemplate = (
   v: DocumentModelTemplateInputs,
@@ -22,7 +22,7 @@ import type {
   ${v.localStateName},
   ${v.globalStateName},
   ${v.phStateName},
-} from "./types.js";
+} from "@powerhousedao/codegen/ts-morph";
 import { createDocument } from "./utils.js";
 
 export function defaultGlobalState(): ${v.globalStateName} {
