@@ -27,7 +27,11 @@ import type {
   RemoteStatus,
 } from "./types.js";
 import { ChannelErrorSource, SyncOperationStatus } from "./types.js";
-import { createIdleHealth, filterOperations } from "./utils.js";
+import {
+  batchOperationsByDocument,
+  createIdleHealth,
+  filterOperations,
+} from "./utils.js";
 
 export class SyncManager implements ISyncManager {
   private readonly remoteStorage: ISyncRemoteStorage;
@@ -255,16 +259,19 @@ export class SyncManager implements ISyncManager {
       return;
     }
 
-    const syncOp = new SyncOperation(
-      crypto.randomUUID(),
-      remote.name,
-      filteredOps[0].context.documentId,
-      [...new Set(filteredOps.map((op) => op.context.scope))],
-      filteredOps[0].context.branch,
-      filteredOps,
-    );
+    const batches = batchOperationsByDocument(filteredOps);
 
-    remote.channel.outbox.add(syncOp);
+    for (const batch of batches) {
+      const syncOp = new SyncOperation(
+        crypto.randomUUID(),
+        remote.name,
+        batch.documentId,
+        batch.scopes,
+        batch.branch,
+        batch.operations,
+      );
+      remote.channel.outbox.add(syncOp);
+    }
   }
 
   async remove(name: string): Promise<void> {
@@ -310,16 +317,19 @@ export class SyncManager implements ISyncManager {
         continue;
       }
 
-      const syncOp = new SyncOperation(
-        crypto.randomUUID(),
-        remote.name,
-        filteredOps[0].context.documentId,
-        [...new Set(filteredOps.map((op) => op.context.scope))],
-        filteredOps[0].context.branch,
-        filteredOps,
-      );
+      const batches = batchOperationsByDocument(filteredOps);
 
-      remote.channel.outbox.add(syncOp);
+      for (const batch of batches) {
+        const syncOp = new SyncOperation(
+          crypto.randomUUID(),
+          remote.name,
+          batch.documentId,
+          batch.scopes,
+          batch.branch,
+          batch.operations,
+        );
+        remote.channel.outbox.add(syncOp);
+      }
     }
   }
 

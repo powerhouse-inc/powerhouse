@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { OperationWithContext } from "../../src/storage/interfaces.js";
 import type { RemoteFilter } from "../../src/sync/types.js";
-import { createIdleHealth, filterOperations } from "../../src/sync/utils.js";
+import {
+  batchOperationsByDocument,
+  createIdleHealth,
+  filterOperations,
+} from "../../src/sync/utils.js";
 
 describe("filterOperations", () => {
   const createOperation = (
@@ -264,5 +268,116 @@ describe("createIdleHealth", () => {
 
     expect(health1).not.toBe(health2);
     expect(health1).toEqual(health2);
+  });
+});
+
+describe("batchOperationsByDocument", () => {
+  const createOpWithContext = (
+    documentId: string,
+    scope: string,
+    branch: string,
+  ): OperationWithContext => ({
+    operation: {
+      id: `op-${documentId}-${scope}-${Math.random().toString(36).slice(2, 8)}`,
+      index: 0,
+      skip: 0,
+      hash: "hash",
+      timestampUtcMs: "2023-01-01T00:00:00.000Z",
+      action: {
+        type: "TEST",
+        scope,
+        id: "action-1",
+        timestampUtcMs: "2023-01-01T00:00:00.000Z",
+        input: {},
+      },
+    } as OperationWithContext["operation"],
+    context: {
+      documentId,
+      documentType: "test",
+      scope,
+      branch,
+      ordinal: 1,
+    },
+  });
+
+  it("should return empty array for empty input", () => {
+    const result = batchOperationsByDocument([]);
+    expect(result).toEqual([]);
+  });
+
+  it("should batch consecutive operations for same document", () => {
+    const ops = [
+      createOpWithContext("doc-a", "global", "main"),
+      createOpWithContext("doc-a", "global", "main"),
+      createOpWithContext("doc-a", "document", "main"),
+    ];
+    const result = batchOperationsByDocument(ops);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].documentId).toBe("doc-a");
+    expect(result[0].operations).toHaveLength(3);
+    expect(result[0].branch).toBe("main");
+    expect(result[0].scopes).toContain("global");
+    expect(result[0].scopes).toContain("document");
+  });
+
+  it("should create separate batches when documentId changes", () => {
+    const ops = [
+      createOpWithContext("doc-a", "global", "main"),
+      createOpWithContext("doc-a", "global", "main"),
+      createOpWithContext("doc-b", "global", "main"),
+      createOpWithContext("doc-b", "global", "main"),
+    ];
+    const result = batchOperationsByDocument(ops);
+
+    expect(result).toHaveLength(2);
+    expect(result[0].documentId).toBe("doc-a");
+    expect(result[0].operations).toHaveLength(2);
+    expect(result[1].documentId).toBe("doc-b");
+    expect(result[1].operations).toHaveLength(2);
+  });
+
+  it("should preserve order and create new batch when returning to previous documentId", () => {
+    const ops = [
+      createOpWithContext("doc-a", "global", "main"),
+      createOpWithContext("doc-a", "global", "main"),
+      createOpWithContext("doc-a", "global", "main"),
+      createOpWithContext("doc-b", "global", "main"),
+      createOpWithContext("doc-b", "global", "main"),
+      createOpWithContext("doc-a", "global", "main"),
+    ];
+    const result = batchOperationsByDocument(ops);
+
+    expect(result).toHaveLength(3);
+    expect(result[0].documentId).toBe("doc-a");
+    expect(result[0].operations).toHaveLength(3);
+    expect(result[1].documentId).toBe("doc-b");
+    expect(result[1].operations).toHaveLength(2);
+    expect(result[2].documentId).toBe("doc-a");
+    expect(result[2].operations).toHaveLength(1);
+  });
+
+  it("should handle single operation", () => {
+    const ops = [createOpWithContext("doc-a", "global", "main")];
+    const result = batchOperationsByDocument(ops);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].documentId).toBe("doc-a");
+    expect(result[0].operations).toHaveLength(1);
+  });
+
+  it("should deduplicate scopes within a batch", () => {
+    const ops = [
+      createOpWithContext("doc-a", "global", "main"),
+      createOpWithContext("doc-a", "global", "main"),
+      createOpWithContext("doc-a", "document", "main"),
+      createOpWithContext("doc-a", "global", "main"),
+    ];
+    const result = batchOperationsByDocument(ops);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].scopes).toHaveLength(2);
+    expect(result[0].scopes).toContain("global");
+    expect(result[0].scopes).toContain("document");
   });
 });

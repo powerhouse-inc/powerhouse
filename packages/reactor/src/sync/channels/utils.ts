@@ -1,7 +1,8 @@
 import type { Operation, Signature } from "document-model";
-import { SyncOperation } from "../sync-operation.js";
 import type { OperationWithContext } from "../../storage/interfaces.js";
+import { SyncOperation } from "../sync-operation.js";
 import type { SyncEnvelope } from "../types.js";
+import { batchOperationsByDocument } from "../utils.js";
 
 let syncOpCounter = 0;
 
@@ -97,4 +98,42 @@ export function envelopeToSyncOperation(
     branch,
     deserializedOperations,
   );
+}
+
+/**
+ * Converts a SyncEnvelope containing operations into multiple SyncOperations.
+ *
+ * This function batches operations by documentId, preserving cross-document ordering.
+ * For operations [a1, a2, a3, b1, b2, a4], it returns:
+ * - SyncOperation 1: [a1, a2, a3] for doc-a
+ * - SyncOperation 2: [b1, b2] for doc-b
+ * - SyncOperation 3: [a4] for doc-a
+ *
+ * This ensures operations are grouped for efficient processing while maintaining
+ * causality across documents.
+ */
+export function envelopesToSyncOperations(
+  envelope: SyncEnvelope,
+  remoteName: string,
+): SyncOperation[] {
+  if (!envelope.operations || envelope.operations.length === 0) {
+    return [];
+  }
+
+  const deserializedOps = envelope.operations.map(
+    deserializeOperationSignatures,
+  );
+  const batches = batchOperationsByDocument(deserializedOps);
+
+  return batches.map((batch) => {
+    const syncOpId = `syncop-${envelope.channelMeta.id}-${Date.now()}-${syncOpCounter++}`;
+    return new SyncOperation(
+      syncOpId,
+      remoteName,
+      batch.documentId,
+      batch.scopes,
+      batch.branch,
+      batch.operations,
+    );
+  });
 }

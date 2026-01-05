@@ -6,7 +6,7 @@ import { Mailbox } from "../mailbox.js";
 import type { SyncOperation } from "../sync-operation.js";
 import type { RemoteCursor, RemoteFilter, SyncEnvelope } from "../types.js";
 import { ChannelErrorSource } from "../types.js";
-import { envelopeToSyncOperation } from "./utils.js";
+import { envelopesToSyncOperations } from "./utils.js";
 
 /**
  * Configuration parameters for GqlChannel
@@ -150,9 +150,11 @@ export class GqlChannel implements IChannel {
 
     for (const envelope of envelopes) {
       if (envelope.type.toLowerCase() === "operations" && envelope.operations) {
-        const syncOp = envelopeToSyncOperation(envelope, this.remoteName);
-        syncOp.transported();
-        this.inbox.add(syncOp);
+        const syncOps = envelopesToSyncOperations(envelope, this.remoteName);
+        for (const syncOp of syncOps) {
+          syncOp.transported();
+          this.inbox.add(syncOp);
+        }
       }
 
       if (envelope.cursor && envelope.cursor.cursorOrdinal > maxCursorOrdinal) {
