@@ -7,7 +7,7 @@ export const documentModelUtilsTemplate = ({
 }: DocumentModelVariableNames) =>
   ts`
 import type { DocumentModelUtils } from "document-model";
-import type { ${phStateName} } from "@powerhousedao/codegen/ts-morph";
+import type { ${phStateName} } from "./gen/types.js";
 import { utils as genUtils } from "./gen/utils.js";
 import * as customUtils from "./src/utils.js";
 
