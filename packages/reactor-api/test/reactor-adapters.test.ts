@@ -457,8 +457,12 @@ describe("Reactor Adapters", () => {
       const testDocument = createTestDocument();
 
       const actions = [
-        documentModelDocumentModelModule.actions.setModelName({ name: "Name 1" }),
-        documentModelDocumentModelModule.actions.setModelName({ name: "Name 2" }),
+        documentModelDocumentModelModule.actions.setModelName({
+          name: "Name 1",
+        }),
+        documentModelDocumentModelModule.actions.setModelName({
+          name: "Name 2",
+        }),
       ];
 
       vi.mocked(mockReactorClient.get).mockResolvedValue({

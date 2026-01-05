@@ -37,7 +37,6 @@ function EditorError({ message }: { message: React.ReactNode }) {
   );
 }
 
-
 export const DocumentEditor: React.FC<Props> = (props) => {
   const {
     document: initialDocument,
