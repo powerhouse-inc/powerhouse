@@ -7,6 +7,7 @@ import { driveCollectionId } from "../../../src/cache/operation-index-types.js";
 import type { IReactor } from "../../../src/core/types.js";
 import { EventBus } from "../../../src/events/event-bus.js";
 import type { IEventBus } from "../../../src/events/interfaces.js";
+import { ConsoleLogger } from "../../../src/logging/console.js";
 import type {
   ISyncCursorStorage,
   ISyncRemoteStorage,
@@ -49,6 +50,7 @@ describe("SyncManager Backfill", () => {
     channelFactory = createTestChannelFactory(new Map(), sentEnvelopes);
 
     syncManager = new SyncManager(
+      new ConsoleLogger(["SyncManager"]),
       syncRemoteStorage,
       syncCursorStorage,
       channelFactory,

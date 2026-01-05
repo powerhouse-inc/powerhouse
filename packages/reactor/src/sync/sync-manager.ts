@@ -6,6 +6,7 @@ import {
   OperationEventTypes,
   type OperationWrittenEvent,
 } from "../events/types.js";
+import type { ILogger } from "../logging/types.js";
 import { JobAwaiter } from "../shared/awaiter.js";
 import {
   JobStatus,
@@ -34,6 +35,7 @@ import {
 } from "./utils.js";
 
 export class SyncManager implements ISyncManager {
+  private readonly logger: ILogger;
   private readonly remoteStorage: ISyncRemoteStorage;
   private readonly cursorStorage: ISyncCursorStorage;
   private readonly channelFactory: IChannelFactory;
@@ -48,6 +50,7 @@ export class SyncManager implements ISyncManager {
   public loadJobs: Map<string, JobInfo> = new Map();
 
   constructor(
+    logger: ILogger,
     remoteStorage: ISyncRemoteStorage,
     cursorStorage: ISyncCursorStorage,
     channelFactory: IChannelFactory,
@@ -55,6 +58,7 @@ export class SyncManager implements ISyncManager {
     reactor: IReactor,
     eventBus: IEventBus,
   ) {
+    this.logger = logger;
     this.remoteStorage = remoteStorage;
     this.cursorStorage = cursorStorage;
     this.channelFactory = channelFactory;
@@ -172,6 +176,16 @@ export class SyncManager implements ISyncManager {
     if (this.remotes.has(name)) {
       throw new Error(`Remote with name '${name}' already exists`);
     }
+
+    this.logger.debug(
+      "Adding remote (@name, @collectionId, @channelConfig, @filter, @options, @id)",
+      name,
+      collectionId,
+      channelConfig,
+      filter,
+      options,
+      id,
+    );
 
     const remoteId = id ?? crypto.randomUUID();
 

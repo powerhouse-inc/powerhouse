@@ -4,7 +4,7 @@ import type { ChannelHealth, RemoteFilter } from "./types.js";
 export type OperationBatch = {
   documentId: string;
   branch: string;
-  scopes: string[];
+  scope: string;
   operations: OperationWithContext[];
 };
 

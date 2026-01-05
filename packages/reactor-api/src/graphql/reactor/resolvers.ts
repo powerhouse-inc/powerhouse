@@ -678,12 +678,11 @@ export async function touchChannel(
   },
 ): Promise<boolean> {
   try {
-    const existing = syncManager.getById(args.input.id);
-    if (existing) {
-      return true;
-    }
+    syncManager.getById(args.input.id);
+
+    return true;
   } catch {
-    // Ignore errors when checking for existing sync connection
+    // getById will throw if the remote does not exist
   }
 
   const filter: RemoteFilter = {

@@ -6,7 +6,7 @@ const dtf = new Intl.DateTimeFormat();
 const formatMessage = (
   tagString: string,
   message: string,
-  ...replacements: any[]
+  replacements: any[],
 ): [string, Record<string, any>] => {
   const meta: Record<string, any> = {};
   const uniqueTokens: string[] = [];

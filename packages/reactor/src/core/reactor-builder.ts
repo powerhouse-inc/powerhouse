@@ -322,6 +322,7 @@ export class ReactorBuilder {
     if (this.syncBuilder) {
       syncModule = this.syncBuilder.buildModule(
         reactor,
+        this.logger,
         operationIndex,
         eventBus,
         database as unknown as Kysely<StorageDatabase>,
