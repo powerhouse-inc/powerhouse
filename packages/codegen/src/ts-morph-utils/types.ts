@@ -1,6 +1,7 @@
 import type {
   getDocumentModelOperationsModuleVariableNames,
   getDocumentModelVariableNames,
+  getEditorVariableNames,
 } from "@powerhousedao/codegen/ts-morph/name-builders";
 import type {
   DocumentModelGlobalState,
@@ -30,18 +31,7 @@ export type DocumentModelDocumentTypeMetadata = {
   documentModelImportPath: string;
 };
 
-export type EditorVariableNames = {
-  documentVariableName: string;
-  useSelectedDocumentHookName: string;
-  documentNameVariableName: string;
-  dispatchFunctionName: string;
-  onClickEditHandlerName: string;
-  onCancelEditHandlerName: string;
-  setNameActionName: string;
-  isEditingVariableName: string;
-  setIsEditingFunctionName: string;
-  onSubmitSetNameFunctionName: string;
-};
+export type EditorVariableNames = ReturnType<typeof getEditorVariableNames>;
 
 export type DocumentModelVariableNames = ReturnType<
   typeof getDocumentModelVariableNames

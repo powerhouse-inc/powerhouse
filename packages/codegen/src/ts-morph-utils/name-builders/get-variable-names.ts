@@ -1,7 +1,6 @@
 import type {
   ActionFromOperation,
   DocumentModelDocumentTypeMetadata,
-  EditorVariableNames,
 } from "@powerhousedao/codegen/ts-morph";
 import { camelCase, paramCase, pascalCase } from "change-case";
 import type {
@@ -13,8 +12,9 @@ import type {
 
 export function getEditorVariableNames({
   documentModelDocumentTypeName,
-}: DocumentModelDocumentTypeMetadata): EditorVariableNames {
+}: DocumentModelDocumentTypeMetadata) {
   return {
+    documentModelDocumentTypeName,
     documentVariableName: camelCase(documentModelDocumentTypeName),
     useSelectedDocumentHookName: `useSelected${documentModelDocumentTypeName}`,
     documentNameVariableName: `${documentModelDocumentTypeName}Name`,
