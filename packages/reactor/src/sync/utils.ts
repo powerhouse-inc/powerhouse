@@ -52,15 +52,16 @@ export function createIdleHealth(): ChannelHealth {
 }
 
 /**
- * Batches consecutive operations by documentId, preserving cross-document ordering.
+ * Batches consecutive operations by documentId and scope, preserving ordering.
  *
- * For operations [a1, a2, a3, b1, b2, a4], this returns:
- * - Batch 1: [a1, a2, a3] for doc-a
- * - Batch 2: [b1, b2] for doc-b
- * - Batch 3: [a4] for doc-a
+ * For operations [a1_doc, a1_global, a2_doc, b1_global], this returns:
+ * - Batch 1: [a1_doc] for doc-a, document scope
+ * - Batch 2: [a1_global] for doc-a, global scope
+ * - Batch 3: [a2_doc] for doc-a, document scope
+ * - Batch 4: [b1_global] for doc-b, global scope
  *
  * This ensures operations are grouped for efficient processing while maintaining
- * causality across documents.
+ * causality across documents and scopes.
  */
 export function batchOperationsByDocument(
   operations: OperationWithContext[],
@@ -68,15 +69,22 @@ export function batchOperationsByDocument(
   const batches: OperationBatch[] = [];
 
   let currentDocId: string | null = null;
+  let currentScope: string | null = null;
   let currentBatch: OperationWithContext[] = [];
 
   const flushBatch = () => {
-    if (currentBatch.length === 0 || currentDocId === null) return;
+    if (
+      currentBatch.length === 0 ||
+      currentDocId === null ||
+      currentScope === null
+    ) {
+      return;
+    }
 
     batches.push({
       documentId: currentDocId,
       branch: currentBatch[0].context.branch,
-      scopes: [...new Set(currentBatch.map((op) => op.context.scope))],
+      scope: currentScope,
       operations: currentBatch,
     });
     currentBatch = [];
@@ -84,9 +92,11 @@ export function batchOperationsByDocument(
 
   for (const op of operations) {
     const docId = op.context.documentId;
-    if (docId !== currentDocId) {
+    const scope = op.context.scope;
+    if (docId !== currentDocId || scope !== currentScope) {
       flushBatch();
       currentDocId = docId;
+      currentScope = scope;
     }
     currentBatch.push(op);
   }

@@ -131,7 +131,7 @@ export function envelopesToSyncOperations(
       syncOpId,
       remoteName,
       batch.documentId,
-      batch.scopes,
+      [batch.scope],
       batch.branch,
       batch.operations,
     );

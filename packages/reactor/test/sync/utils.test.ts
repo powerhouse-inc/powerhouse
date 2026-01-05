@@ -305,20 +305,35 @@ describe("batchOperationsByDocument", () => {
     expect(result).toEqual([]);
   });
 
-  it("should batch consecutive operations for same document", () => {
+  it("should batch consecutive operations with same document and scope", () => {
     const ops = [
       createOpWithContext("doc-a", "global", "main"),
       createOpWithContext("doc-a", "global", "main"),
-      createOpWithContext("doc-a", "document", "main"),
+      createOpWithContext("doc-a", "global", "main"),
     ];
     const result = batchOperationsByDocument(ops);
 
     expect(result).toHaveLength(1);
     expect(result[0].documentId).toBe("doc-a");
+    expect(result[0].scope).toBe("global");
     expect(result[0].operations).toHaveLength(3);
     expect(result[0].branch).toBe("main");
-    expect(result[0].scopes).toContain("global");
-    expect(result[0].scopes).toContain("document");
+  });
+
+  it("should create separate batches when scope changes for same document", () => {
+    const ops = [
+      createOpWithContext("doc-a", "document", "main"),
+      createOpWithContext("doc-a", "global", "main"),
+    ];
+    const result = batchOperationsByDocument(ops);
+
+    expect(result).toHaveLength(2);
+    expect(result[0].documentId).toBe("doc-a");
+    expect(result[0].scope).toBe("document");
+    expect(result[0].operations).toHaveLength(1);
+    expect(result[1].documentId).toBe("doc-a");
+    expect(result[1].scope).toBe("global");
+    expect(result[1].operations).toHaveLength(1);
   });
 
   it("should create separate batches when documentId changes", () => {
@@ -332,8 +347,10 @@ describe("batchOperationsByDocument", () => {
 
     expect(result).toHaveLength(2);
     expect(result[0].documentId).toBe("doc-a");
+    expect(result[0].scope).toBe("global");
     expect(result[0].operations).toHaveLength(2);
     expect(result[1].documentId).toBe("doc-b");
+    expect(result[1].scope).toBe("global");
     expect(result[1].operations).toHaveLength(2);
   });
 
@@ -363,21 +380,70 @@ describe("batchOperationsByDocument", () => {
 
     expect(result).toHaveLength(1);
     expect(result[0].documentId).toBe("doc-a");
+    expect(result[0].scope).toBe("global");
     expect(result[0].operations).toHaveLength(1);
   });
 
-  it("should deduplicate scopes within a batch", () => {
+  it("should batch by documentId AND scope together", () => {
     const ops = [
-      createOpWithContext("doc-a", "global", "main"),
+      createOpWithContext("doc-a", "document", "main"),
       createOpWithContext("doc-a", "global", "main"),
       createOpWithContext("doc-a", "document", "main"),
       createOpWithContext("doc-a", "global", "main"),
     ];
     const result = batchOperationsByDocument(ops);
 
-    expect(result).toHaveLength(1);
-    expect(result[0].scopes).toHaveLength(2);
-    expect(result[0].scopes).toContain("global");
-    expect(result[0].scopes).toContain("document");
+    expect(result).toHaveLength(4);
+    expect(result[0].documentId).toBe("doc-a");
+    expect(result[0].scope).toBe("document");
+    expect(result[0].operations).toHaveLength(1);
+    expect(result[1].documentId).toBe("doc-a");
+    expect(result[1].scope).toBe("global");
+    expect(result[1].operations).toHaveLength(1);
+    expect(result[2].documentId).toBe("doc-a");
+    expect(result[2].scope).toBe("document");
+    expect(result[2].operations).toHaveLength(1);
+    expect(result[3].documentId).toBe("doc-a");
+    expect(result[3].scope).toBe("global");
+    expect(result[3].operations).toHaveLength(1);
+  });
+
+  it("should handle interleaved documents and scopes", () => {
+    const ops = [
+      createOpWithContext("doc-a", "document", "main"),
+      createOpWithContext("doc-a", "document", "main"),
+      createOpWithContext("doc-a", "global", "main"),
+      createOpWithContext("doc-b", "global", "main"),
+      createOpWithContext("doc-b", "document", "main"),
+      createOpWithContext("doc-a", "document", "main"),
+    ];
+    const result = batchOperationsByDocument(ops);
+
+    expect(result).toHaveLength(5);
+    expect(result[0]).toMatchObject({
+      documentId: "doc-a",
+      scope: "document",
+    });
+    expect(result[0].operations).toHaveLength(2);
+    expect(result[1]).toMatchObject({
+      documentId: "doc-a",
+      scope: "global",
+    });
+    expect(result[1].operations).toHaveLength(1);
+    expect(result[2]).toMatchObject({
+      documentId: "doc-b",
+      scope: "global",
+    });
+    expect(result[2].operations).toHaveLength(1);
+    expect(result[3]).toMatchObject({
+      documentId: "doc-b",
+      scope: "document",
+    });
+    expect(result[3].operations).toHaveLength(1);
+    expect(result[4]).toMatchObject({
+      documentId: "doc-a",
+      scope: "document",
+    });
+    expect(result[4].operations).toHaveLength(1);
   });
 });

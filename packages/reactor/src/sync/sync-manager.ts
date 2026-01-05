@@ -280,7 +280,7 @@ export class SyncManager implements ISyncManager {
         crypto.randomUUID(),
         remote.name,
         batch.documentId,
-        batch.scopes,
+        [batch.scope],
         batch.branch,
         batch.operations,
       );
@@ -338,7 +338,7 @@ export class SyncManager implements ISyncManager {
           crypto.randomUUID(),
           remote.name,
           batch.documentId,
-          batch.scopes,
+          [batch.scope],
           batch.branch,
           batch.operations,
         );
