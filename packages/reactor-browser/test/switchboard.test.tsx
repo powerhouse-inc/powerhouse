@@ -20,7 +20,9 @@ describe("Switchboard hooks", () => {
       `query getDocument($documentId: String!) {
   document(id: $documentId) {
       id
-      lastModified
+      documentType
+      createdAtUtcIso
+      lastModifiedAtUtcIso
       name
       revision
       stateJSON
@@ -35,7 +37,7 @@ describe("Switchboard hooks", () => {
       "test-document",
     );
     expect(url).toBe(
-      "https://example.com/d/123?explorerURLState=N4IgJg9gxgrgtgUwHYBcQC4QEcYIE4CeABAOYIoAi08yKAFACSSyKoCSY6RAyingJZISAQgCURYAB0kRIsxqo6-TkSbVWKDuKkzZe5dL16ANgEMAzigCyEMPwBm-BGENGiSU4ldG8CAG785vwQSN56lqYoCABS3ADyAHJhAL6uySAANCB+pgKmAEbGCOYYIDqykuDqtByVXJVRlgC08hqVGa6VYAJ+CLUYRJUAjABMAMyV0unJQA",
+      "https://example.com/d/123?explorerURLState=N4IgJg9gxgrgtgUwHYBcQC4QEcYIE4CeABAOYIoAi08yKAFACSSyKoCSY6RAyingJZISAQgCURYAB0kRIsxqo6-TkSbVWKDuKkzZe5dL175GgCoEADgkNGiUPAgCGKBGACCKAKooobAM4QNkYANo5+KACyEGD8AGb8rh7evgFBekiOiGmyDgBu-H78EEjZROHOCABS3ADyAHJpAL42jSAANCC5jgKOAEbBCH4YIDqykuDqtBzjXOMu4QC0JrTjbTbjYAK5CNMYROMAjABMAMzj0q2NQA",
     );
   });
 });

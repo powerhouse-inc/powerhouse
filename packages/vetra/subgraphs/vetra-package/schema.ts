@@ -1,35 +1,12 @@
-import type { DocumentNode } from "graphql";
 import { gql } from "graphql-tag";
+import type { DocumentNode } from "graphql";
 
 export const schema: DocumentNode = gql`
   """
-  Subgraph definition for VetraPackage (powerhouse/package)
-  """
-  type VetraPackageState {
-    name: String
-    description: String
-    category: String
-    author: Author!
-    keywords: [Keyword!]!
-    githubUrl: URL
-    npmUrl: URL
-  }
-
-  type Author {
-    name: String
-    website: URL
-  }
-
-  type Keyword {
-    id: OID!
-    label: String!
-  }
-
-  """
-  Queries: VetraPackage
+  Queries: VetraPackage Document
   """
   type VetraPackageQueries {
-    getDocument(driveId: String, docId: PHID): VetraPackage
+    getDocument(docId: PHID!, driveId: PHID): VetraPackage
     getDocuments(driveId: String!): [VetraPackage!]
   }
 
@@ -41,7 +18,7 @@ export const schema: DocumentNode = gql`
   Mutations: VetraPackage
   """
   type Mutation {
-    VetraPackage_createDocument(driveId: String, name: String): String
+    VetraPackage_createDocument(name: String!, driveId: String): String
 
     VetraPackage_setPackageName(
       driveId: String

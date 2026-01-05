@@ -2,8 +2,7 @@ import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import type { IChannel, IChannelFactory } from "../interfaces.js";
 import type { ChannelConfig, RemoteFilter } from "../types.js";
 import { GqlChannel, type GqlChannelConfig } from "./gql-channel.js";
-import { InternalChannel } from "./internal-channel.js";
-import type { SyncEnvelope } from "../types.js";
+import { PollingChannel } from "./polling-channel.js";
 
 /**
  * Factory for creating channel instances of multiple types.
@@ -43,8 +42,8 @@ export class CompositeChannelFactory implements IChannelFactory {
       );
     }
 
-    if (config.type === "internal") {
-      return this.createInternalChannel(remoteId, remoteName, cursorStorage);
+    if (config.type === "polling") {
+      return this.createPollingChannel(remoteId, remoteName, cursorStorage);
     }
 
     throw new Error(
@@ -118,15 +117,11 @@ export class CompositeChannelFactory implements IChannelFactory {
     return new GqlChannel(remoteId, remoteName, cursorStorage, gqlConfig);
   }
 
-  private createInternalChannel(
+  private createPollingChannel(
     remoteId: string,
     remoteName: string,
     cursorStorage: ISyncCursorStorage,
-  ): InternalChannel {
-    const noopSend = (_envelope: SyncEnvelope): void => {
-      // Internal channels created via touchChannel are receive-only
-    };
-
-    return new InternalChannel(remoteId, remoteName, cursorStorage, noopSend);
+  ): PollingChannel {
+    return new PollingChannel(remoteId, remoteName, cursorStorage);
   }
 }

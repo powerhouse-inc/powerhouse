@@ -31,7 +31,7 @@ export class CodegenProcessor implements IProcessor {
   }
 
   async onStrands(strands: InternalTransmitterUpdate[]): Promise<void> {
-    logger.debug(">>> onStrands", strands);
+    logger.info(">>> onStrands()");
 
     // Filter strands to only include those that should be processed
     const validStrands = strands.filter((strand) => {

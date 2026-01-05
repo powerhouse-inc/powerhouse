@@ -35,8 +35,6 @@ export class DocumentModelGenerator extends BaseDocumentGen {
       return false;
     }
 
-    console.log(">>>> state", JSON.stringify(state, null, 2));
-
     const validationResult = validateDocumentModelState(state);
     if (!validationResult.isValid) {
       const errorList = validationResult.errors
@@ -47,6 +45,10 @@ export class DocumentModelGenerator extends BaseDocumentGen {
       );
       return false;
     }
+
+    logger.info(
+      `Document model ${state.name} is valid, proceeding with code generation`,
+    );
 
     return true;
   }

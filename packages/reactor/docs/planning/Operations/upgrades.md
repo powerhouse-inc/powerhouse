@@ -50,7 +50,7 @@ If a `CREATE_DOCUMENT` action is submitted in a job without an immediate `UPGRAD
 
 ### CREATE_DOCUMENT Action
 
-The `CREATE_DOCUMENT` action is responsible for creating the base record for a new document. It does not materialize any model-specific state. Instead, it persists the minimal base state and metadata necessary for a document to exist, and then delegates all model-state initialization to a subsequent `UPGRADE_DOCUMENT` action (included in the same `Job`). The `version` field is set to `0.0.0` to indicate that the document is in the initial state.
+The `CREATE_DOCUMENT` action is responsible for creating the base record for a new document. It does not materialize any model-specific state. Instead, it persists the minimal base state and metadata necessary for a document to exist, and then delegates all model-state initialization to a subsequent `UPGRADE_DOCUMENT` action (included in the same `Job`). The `version` field is set to `"0"` to indicate that the document is in the initial state (not yet upgraded).
 
 Input schema:
 
@@ -58,7 +58,7 @@ Input schema:
 type CreateDocumentAction = {
   type: 'CREATE_DOCUMENT';
   model: string;           // e.g., 'ph/todo'
-  version: string;         // '0.0.0'
+  version: string;         // '0' (initial state, not yet upgraded)
   signing: SignedHeaderParameters;
 };
 ```
@@ -104,10 +104,10 @@ type UpgradeDocumentAction = {
 ```
 
 **Execution (by `IReactor`)**:
-  1. Resolve supported versions for the `model` via `getDocumentModels()` and ensure `toVersion` and `fromVersion` are supported (in the case of version `0.0.0`, the document has just been created and has only `PHBaseState`).
+  1. Resolve supported versions for the `model` via `getDocumentModels()` and ensure `toVersion` and `fromVersion` are supported (in the case of version `"0"`, the document has just been created and has only `PHBaseState`).
   2. Compute an upgrade plan:
      - If `fromVersion == toVersion`: no-op, return success without emitting state changes.
-     - If `fromVersion` is `0.0.0` (first upgrade): initialize model-specific state using the `initialState` field.
+     - If `fromVersion` is `"0"` (first upgrade): initialize model-specific state using the `initialState` field.
      - If `toVersion` is greater than `fromVersion`: apply a sequence of `UpgradeReducer`s for each version between `fromVersion` and `toVersion`.
      - If `toVersion` is less than `fromVersion`: capture an operation error.
   3. Apply the changes to the `document` scope with the `toVersion`.
@@ -301,7 +301,7 @@ The reactor registry provides methods for version-aware module resolution:
 
 ### Upgrade Execution Flow
 
-When `UPGRADE_DOCUMENT` is executed with `fromVersion !== 0`:
+When `UPGRADE_DOCUMENT` is executed with `fromVersion !== "0"`:
 
 1. **Compute upgrade path**: Use manifest to find sequence of transitions (e.g., `1->2->3`)
 2. **Apply reducers sequentially**: Execute each upgrade reducer in order

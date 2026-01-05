@@ -672,7 +672,7 @@ export class ReactorSubgraph extends BaseSubgraph {
   };
 
   onSetup(): Promise<void> {
-    this.logger.info("Setting up ReactorSubgraph");
+    this.logger.debug("Setting up ReactorSubgraph");
 
     return Promise.resolve();
   }

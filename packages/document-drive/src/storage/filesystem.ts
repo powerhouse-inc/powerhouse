@@ -9,9 +9,7 @@ import type {
 import {
   DocumentAlreadyExistsError,
   DocumentAlreadyExistsReason,
-  DocumentIdValidationError,
   DocumentNotFoundError,
-  DocumentSlugValidationError,
 } from "document-drive/server/error";
 import { AbortError } from "document-drive/utils/errors";
 import { childLogger } from "document-drive/utils/logger";
@@ -25,8 +23,10 @@ import fs from "fs/promises";
 import stringify from "json-stringify-deterministic";
 import path from "path";
 import {
-  isValidDocumentId,
-  isValidSlug,
+  decodeDocumentIdFromPath,
+  encodeDocumentIdForPath,
+} from "./path-encoding.js";
+import {
   resolveStorageUnitsFilter,
   setIntersection,
   setUnion,
@@ -84,7 +84,11 @@ export class FilesystemStorage
         (file) =>
           file.name.startsWith("document-") && file.name.endsWith(".json"),
       )
-      .map((file) => file.name.replace("document-", "").replace(".json", ""));
+      .map((file) =>
+        decodeDocumentIdFromPath(
+          file.name.replace("document-", "").replace(".json", ""),
+        ),
+      );
 
     let documents: Set<string>;
 
@@ -210,9 +214,6 @@ export class FilesystemStorage
 
   async create(document: PHDocument) {
     const documentId = document.header.id;
-    if (!isValidDocumentId(documentId)) {
-      throw new DocumentIdValidationError(documentId);
-    }
 
     if (await this.exists(documentId)) {
       throw new DocumentAlreadyExistsError(documentId);
@@ -220,9 +221,6 @@ export class FilesystemStorage
 
     const slug =
       document.header.slug?.length > 0 ? document.header.slug : documentId;
-    if (!isValidSlug(slug)) {
-      throw new DocumentSlugValidationError(slug);
-    }
 
     const slugManifest = await this.getSlugManifest();
     if (slugManifest.slugToId[slug]) {
@@ -295,9 +293,9 @@ export class FilesystemStorage
     // Load documents with matching type and collect their metadata
     const documentsAndIds: Array<{ id: string; document: PHDocument }> = [];
     for (const file of documentFiles) {
-      const documentId = file.name
-        .replace("document-", "")
-        .replace(".json", "");
+      const documentId = decodeDocumentIdFromPath(
+        file.name.replace("document-", "").replace(".json", ""),
+      );
 
       try {
         // Read and parse the document
@@ -449,7 +447,9 @@ export class FilesystemStorage
     // Check each manifest file to see if it contains the childId
     for (const file of manifestFiles) {
       // Extract the driveId from the manifest filename
-      const driveId = file.name.replace("manifest-", "").replace(".json", "");
+      const driveId = decodeDocumentIdFromPath(
+        file.name.replace("manifest-", "").replace(".json", ""),
+      );
 
       const manifest = await this.getManifest(driveId);
       if (manifest.documentIds.includes(childId)) {
@@ -625,11 +625,13 @@ export class FilesystemStorage
   ////////////////////////////////
 
   private _buildDocumentPath(documentId: string) {
-    return `${this.basePath}/document-${documentId}.json`;
+    const safeId = encodeDocumentIdForPath(documentId);
+    return `${this.basePath}/document-${safeId}.json`;
   }
 
   private _buildManifestPath(driveId: string) {
-    return `${this.basePath}/manifest-${driveId}.json`;
+    const safeId = encodeDocumentIdForPath(driveId);
+    return `${this.basePath}/manifest-${safeId}.json`;
   }
 
   private _buildSlugManifestPath() {

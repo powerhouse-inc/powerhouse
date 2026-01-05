@@ -28,6 +28,7 @@ describe("filterOperations", () => {
       documentType: "test",
       scope,
       branch,
+      ordinal: 1,
     },
   });
 

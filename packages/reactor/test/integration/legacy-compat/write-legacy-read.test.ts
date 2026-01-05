@@ -43,8 +43,11 @@ import type {
   IOperationStore,
 } from "../../../src/storage/interfaces.js";
 import type { Database as StorageDatabase } from "../../../src/storage/kysely/types.js";
+import { DefaultSubscriptionErrorHandler } from "../../../src/subs/default-error-handler.js";
+import { ReactorSubscriptionManager } from "../../../src/subs/react-subscription-manager.js";
 import {
   createMockDocumentIndexer,
+  createMockDocumentMetaCache,
   createMockReactorFeatures,
   createTestOperationStore,
 } from "../../factories.js";
@@ -130,9 +133,30 @@ describe.each(storageLayers)(
 
       // Create document view and initialize
       const consistencyTracker = new ConsistencyTracker();
+      const mockViewOperationIndex: any = {
+        start: vi.fn(),
+        commit: vi.fn().mockResolvedValue([]),
+        find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+        getSinceOrdinal: vi.fn().mockResolvedValue({
+          items: [],
+          nextCursor: undefined,
+          hasMore: false,
+        }),
+      };
+      // Create mock write cache for document view
+      const mockViewWriteCache: IWriteCache = {
+        getState: vi.fn().mockResolvedValue({}),
+        putState: vi.fn(),
+        invalidate: vi.fn().mockReturnValue(0),
+        clear: vi.fn(),
+        startup: vi.fn().mockResolvedValue(undefined),
+        shutdown: vi.fn().mockResolvedValue(undefined),
+      };
       documentView = new KyselyDocumentView(
         db,
         operationStore,
+        mockViewOperationIndex,
+        mockViewWriteCache,
         consistencyTracker,
       );
       await documentView.init();
@@ -142,7 +166,7 @@ describe.each(storageLayers)(
       const queue = new InMemoryQueue(eventBus);
       const jobTracker = new InMemoryJobTracker(eventBus);
 
-      // Create mock write cache
+      // Create mock write cache for executor
       const mockWriteCache: IWriteCache = {
         getState: vi.fn().mockImplementation(async (docId) => {
           return await legacyStorage.get(docId);
@@ -154,16 +178,30 @@ describe.each(storageLayers)(
         shutdown: vi.fn(),
       };
 
+      let ordinalCounter = 0;
+      let pendingWrites: unknown[] = [];
       const mockOperationIndex: any = {
-        start: vi.fn().mockReturnValue({
+        start: vi.fn().mockImplementation(() => ({
           createCollection: vi.fn(),
           addToCollection: vi.fn(),
-          write: vi.fn(),
+          write: vi.fn().mockImplementation((ops: unknown[]) => {
+            pendingWrites.push(...ops);
+          }),
+        })),
+        commit: vi.fn().mockImplementation(() => {
+          const ordinals = pendingWrites.map(() => ordinalCounter++);
+          pendingWrites = [];
+          return Promise.resolve(ordinals);
         }),
-        commit: vi.fn().mockResolvedValue(undefined),
         find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+        getSinceOrdinal: vi.fn().mockResolvedValue({
+          items: [],
+          nextCursor: undefined,
+          hasMore: false,
+        }),
       };
 
+      const mockDocumentMetaCache = createMockDocumentMetaCache();
       const executor = new SimpleJobExecutor(
         registry,
         legacyStorage as IDocumentStorage,
@@ -172,6 +210,7 @@ describe.each(storageLayers)(
         eventBus,
         mockWriteCache,
         mockOperationIndex,
+        mockDocumentMetaCache,
         { legacyStorageEnabled: true },
       );
       executorManager = new SimpleJobExecutorManager(
@@ -184,7 +223,14 @@ describe.each(storageLayers)(
       await executorManager.start(1);
 
       // Create real read model coordinator with document view
-      readModelCoordinator = new ReadModelCoordinator(eventBus, [documentView]);
+      const subscriptionManager = new ReactorSubscriptionManager(
+        new DefaultSubscriptionErrorHandler(),
+      );
+      readModelCoordinator = new ReadModelCoordinator(
+        eventBus,
+        [documentView],
+        subscriptionManager,
+      );
 
       // Wrap storage with consistency-aware storage
       const legacyStorageConsistencyTracker = new ConsistencyTracker();

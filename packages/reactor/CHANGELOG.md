@@ -1,3 +1,128 @@
+## 5.1.0-dev.32 (2026-01-02)
+
+### 🚀 Features
+
+- **tracing:** migrate from Datadog to OpenTelemetry with Tempo service graphs ([6b4eb9c82](https://github.com/powerhouse-inc/powerhouse/commit/6b4eb9c82))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.1.0-dev.31 (2026-01-02)
+
+### 🚀 Features
+
+- **switchboard:** added tracing ([c978736b7](https://github.com/powerhouse-inc/powerhouse/commit/c978736b7))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.1.0-dev.30 (2026-01-01)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 5.1.0-dev.29 (2025-12-30)
+
+### 🩹 Fixes
+
+- **connect,builder-tools,vetra:** avoid page reload on vite HMR ([1c3f5d1dd](https://github.com/powerhouse-inc/powerhouse/commit/1c3f5d1dd))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 5.1.0-dev.28 (2025-12-30)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 5.1.0-dev.27 (2025-12-24)
+
+### 🚀 Features
+
+- **reactor-api:** datadog integration ([3c433c686](https://github.com/powerhouse-inc/powerhouse/commit/3c433c686))
+- **reactor-browser:** improved document retrieval hooks ([4fed49391](https://github.com/powerhouse-inc/powerhouse/commit/4fed49391))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
+## 5.1.0-dev.26 (2025-12-20)
+
+### 🚀 Features
+
+- integrate doc model versioning in reactor ([#2145](https://github.com/powerhouse-inc/powerhouse/pull/2145))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
+## 5.1.0-dev.25 (2025-12-19)
+
+### 🚀 Features
+
+- added subscriptions as a read model ([39490cc20](https://github.com/powerhouse-inc/powerhouse/commit/39490cc20))
+
+### 🩹 Fixes
+
+- passing meta through job system to avoid race conditions ([8b65bb42d](https://github.com/powerhouse-inc/powerhouse/commit/8b65bb42d))
+- **reactor:** we were echoing back sync envelopes ([0fc679d21](https://github.com/powerhouse-inc/powerhouse/commit/0fc679d21))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 5.1.0-dev.24 (2025-12-18)
+
+### 🚀 Features
+
+- the gql channel should start poll before waiting ([f569b462b](https://github.com/powerhouse-inc/powerhouse/commit/f569b462b))
+
+### 🩹 Fixes
+
+- switchboard's new reactor signs everything ([b7fafb7fa](https://github.com/powerhouse-inc/powerhouse/commit/b7fafb7fa))
+- **reactor:** document model core types need to be numerical versions, also fixed a gql bug ([6495a88e2](https://github.com/powerhouse-inc/powerhouse/commit/6495a88e2))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 5.1.0-dev.23 (2025-12-17)
+
+### 🩹 Fixes
+
+- **reactor:** integrated the document meta cache ([29565fa5f](https://github.com/powerhouse-inc/powerhouse/commit/29565fa5f))
+- default state should be 0 ([a19a2ebec](https://github.com/powerhouse-inc/powerhouse/commit/a19a2ebec))
+
+### 🔥 Performance
+
+- **queue:** make Reactor queue perf benches reproducible, timed, and invariant-safe ([20c5c4376](https://github.com/powerhouse-inc/powerhouse/commit/20c5c4376))
+- **queue:** removed any random calls to make benches deterministic ([886874cde](https://github.com/powerhouse-inc/powerhouse/commit/886874cde))
+- **queue:** added in-memory queue performance benchmarks ([e7184d495](https://github.com/powerhouse-inc/powerhouse/commit/e7184d495))
+- **queue:** added progressively taxing queue hint DAG resolution benchmarks ([3dd42d08b](https://github.com/powerhouse-inc/powerhouse/commit/3dd42d08b))
+- **queue:** added focused queue performance benches ([caa975f99](https://github.com/powerhouse-inc/powerhouse/commit/caa975f99))
+- **queue:** added some helper funcs for additional benches ([4810e1e91](https://github.com/powerhouse-inc/powerhouse/commit/4810e1e91))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Samuel Hawksby-Robinson @Samyoul
+
+## 5.1.0-dev.22 (2025-12-16)
+
+### 🚀 Features
+
+- added support for runtime document model subgraphs ([dc8248ec6](https://github.com/powerhouse-inc/powerhouse/commit/dc8248ec6))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 5.1.0-dev.21 (2025-12-13)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
 ## 5.1.0-dev.20 (2025-12-12)
 
 ### 🚀 Features

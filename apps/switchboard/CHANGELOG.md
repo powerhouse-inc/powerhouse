@@ -1,3 +1,108 @@
+## 5.1.0-dev.32 (2026-01-02)
+
+### 🚀 Features
+
+- **tracing:** migrate from Datadog to OpenTelemetry with Tempo service graphs ([6b4eb9c82](https://github.com/powerhouse-inc/powerhouse/commit/6b4eb9c82))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.1.0-dev.31 (2026-01-02)
+
+### 🚀 Features
+
+- **switchboard:** added tracing ([c978736b7](https://github.com/powerhouse-inc/powerhouse/commit/c978736b7))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.1.0-dev.30 (2026-01-01)
+
+### 🩹 Fixes
+
+- **document-drive:** do not export redis cache from index ([38b647cf9](https://github.com/powerhouse-inc/powerhouse/commit/38b647cf9))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 5.1.0-dev.29 (2025-12-30)
+
+### 🩹 Fixes
+
+- **connect,builder-tools,vetra:** avoid page reload on vite HMR ([1c3f5d1dd](https://github.com/powerhouse-inc/powerhouse/commit/1c3f5d1dd))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 5.1.0-dev.28 (2025-12-30)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 5.1.0-dev.27 (2025-12-24)
+
+### 🚀 Features
+
+- **reactor-api:** datadog integration ([3c433c686](https://github.com/powerhouse-inc/powerhouse/commit/3c433c686))
+- **reactor-browser:** improved document retrieval hooks ([4fed49391](https://github.com/powerhouse-inc/powerhouse/commit/4fed49391))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
+## 5.1.0-dev.26 (2025-12-20)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 5.1.0-dev.25 (2025-12-19)
+
+### 🩹 Fixes
+
+- **switchboard, vetra:** fix issue with processors not being added on initial boot ([25432a663](https://github.com/powerhouse-inc/powerhouse/commit/25432a663))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 5.1.0-dev.24 (2025-12-18)
+
+### 🩹 Fixes
+
+- switchboard's new reactor signs everything ([b7fafb7fa](https://github.com/powerhouse-inc/powerhouse/commit/b7fafb7fa))
+- don't sign default drive header as that changes the id, and pass along the unsigned header to the signed ([d8cd47c9d](https://github.com/powerhouse-inc/powerhouse/commit/d8cd47c9d))
+- addDefaultDrive should not add if the drive already exists ([79352a5f8](https://github.com/powerhouse-inc/powerhouse/commit/79352a5f8))
+- **switchboard:** use pglite inmemory ([f7c926fa9](https://github.com/powerhouse-inc/powerhouse/commit/f7c926fa9))
+- **switchboard:** pglite path ([140422ab6](https://github.com/powerhouse-inc/powerhouse/commit/140422ab6))
+- **switchboard:** use pglite for new reactor ([b5dece44e](https://github.com/powerhouse-inc/powerhouse/commit/b5dece44e))
+- **switchboard:** added skip db migrations flag ([f1597c838](https://github.com/powerhouse-inc/powerhouse/commit/f1597c838))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+
+## 5.1.0-dev.23 (2025-12-17)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 5.1.0-dev.22 (2025-12-16)
+
+### 🚀 Features
+
+- added support for runtime document model subgraphs ([dc8248ec6](https://github.com/powerhouse-inc/powerhouse/commit/dc8248ec6))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 5.1.0-dev.21 (2025-12-13)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
 ## 5.1.0-dev.20 (2025-12-12)
 
 ### 🚀 Features

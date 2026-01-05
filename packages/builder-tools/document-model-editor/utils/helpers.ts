@@ -55,6 +55,22 @@ export function makeOperationInitialDoc(name: string) {
   return inputSdl;
 }
 
+export function makeEmptyOperationSchema(operationName: string): string {
+  const pascalName = pascalCase(operationName);
+  return `input ${pascalName}Input {\n  _empty: Boolean\n}`;
+}
+
+export function isEmptyOperationSchema(
+  schema: string | null | undefined,
+): boolean {
+  if (!schema) return false;
+  // Check if schema only contains _empty: Boolean field
+  return (
+    /_empty:\s*Boolean/.test(schema) &&
+    !schema.replace(/_empty:\s*Boolean/, "").match(/\w+:\s*\w+/)
+  );
+}
+
 export function safeParseJsonRecord(json: string) {
   try {
     return JSON.parse(json) as Record<string, Serializable>;

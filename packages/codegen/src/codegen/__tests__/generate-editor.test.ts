@@ -96,10 +96,12 @@ describe("generateEditor", () => {
       expect(fs.existsSync(editorPath)).toBe(true);
       const editorContent = fs.readFileSync(editorPath, "utf-8");
       expect(editorContent).toContain(
-        `import { EditName } from "./components/EditName.js";`,
+        `import { DocumentToolbar } from "@powerhousedao/design-system/connect";`,
       );
+      expect(editorContent).toContain(`import { useSelectedTestDocDocument }`);
       expect(editorContent).toContain(`export default function Editor()`);
-      expect(editorContent).toContain(`<EditName />`);
+      expect(editorContent).toContain(`<DocumentToolbar />`);
+      expect(editorContent).toContain(`handleSubmit`);
 
       const modulePath = path.join(editorDir, "module.ts");
       expect(fs.existsSync(modulePath)).toBe(true);

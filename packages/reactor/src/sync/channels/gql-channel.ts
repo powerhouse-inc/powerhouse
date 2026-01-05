@@ -1,3 +1,4 @@
+import type { Action, Signature } from "document-model";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import { ChannelError } from "../errors.js";
 import type { IChannel } from "../interfaces.js";
@@ -108,11 +109,11 @@ export class GqlChannel implements IChannel {
       return;
     }
 
-    this.pollTimer = setTimeout(() => {
-      void this.poll().then(() => {
+    void this.poll().then(() => {
+      this.pollTimer = setTimeout(() => {
         this.startPolling(); // Schedule next poll
-      });
-    }, this.config.pollIntervalMs);
+      }, this.config.pollIntervalMs);
+    });
   }
 
   /**
@@ -145,11 +146,26 @@ export class GqlChannel implements IChannel {
       return;
     }
 
+    let maxCursorOrdinal = cursorOrdinal;
+
     for (const envelope of envelopes) {
-      if (envelope.type === "operations" && envelope.operations) {
+      if (envelope.type.toLowerCase() === "operations" && envelope.operations) {
         const syncOp = envelopeToSyncOperation(envelope, this.remoteName);
         syncOp.transported();
         this.inbox.add(syncOp);
+      }
+
+      if (envelope.cursor && envelope.cursor.cursorOrdinal > maxCursorOrdinal) {
+        maxCursorOrdinal = envelope.cursor.cursorOrdinal;
+      }
+    }
+
+    if (maxCursorOrdinal > cursorOrdinal) {
+      try {
+        await this.updateCursor(maxCursorOrdinal);
+      } catch (error) {
+        this.handlePollError(error);
+        return;
       }
     }
 
@@ -335,6 +351,10 @@ export class GqlChannel implements IChannel {
 
   /**
    * Serializes a SyncEnvelope for GraphQL transport.
+   *
+   * Signatures are serialized as comma-separated strings since GraphQL schema
+   * defines them as [String!]!. Extra context fields (resultingState, ordinal)
+   * are stripped since they are not defined in OperationContextInput.
    */
   private serializeEnvelope(envelope: SyncEnvelope): unknown {
     return {
@@ -348,11 +368,39 @@ export class GqlChannel implements IChannel {
           skip: opWithContext.operation.skip,
           error: opWithContext.operation.error,
           id: opWithContext.operation.id,
-          action: opWithContext.operation.action,
+          action: this.serializeAction(opWithContext.operation.action),
         },
-        context: opWithContext.context,
+        context: {
+          documentId: opWithContext.context.documentId,
+          documentType: opWithContext.context.documentType,
+          scope: opWithContext.context.scope,
+          branch: opWithContext.context.branch,
+        },
       })),
       cursor: envelope.cursor,
+    };
+  }
+
+  /**
+   * Serializes an action for GraphQL transport, converting signature tuples to strings.
+   */
+  private serializeAction(action: Action): unknown {
+    const signer = action.context?.signer;
+    if (!signer?.signatures) {
+      return action;
+    }
+
+    return {
+      ...action,
+      context: {
+        ...action.context,
+        signer: {
+          ...signer,
+          signatures: signer.signatures.map((sig: Signature | string) =>
+            Array.isArray(sig) ? sig.join(", ") : sig,
+          ),
+        },
+      },
     };
   }
 

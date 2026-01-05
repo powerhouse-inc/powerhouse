@@ -278,25 +278,34 @@ export function buildType(typeName: string, typeArguments?: string[]) {
 type BuildParameterArgs = {
   name: string;
   typeName?: string;
+  typeArguments?: string[];
   initializer?: ts.Expression;
   isOptional?: boolean;
 };
 export function buildParameters(parameters: BuildParameterArgs[] | undefined) {
   if (!parameters) return [];
-  return parameters.map((parameter) =>
-    ts.factory.createParameterDeclaration(
+  return parameters.map((parameter) => {
+    let typeNode: ts.TypeNode | undefined;
+    if (parameter.typeName) {
+      const typeArgs = parameter.typeArguments?.map((arg) =>
+        ts.factory.createTypeReferenceNode(arg),
+      );
+      typeNode = ts.factory.createTypeReferenceNode(
+        parameter.typeName,
+        typeArgs,
+      );
+    }
+    return ts.factory.createParameterDeclaration(
       undefined,
       undefined,
       parameter.name,
       parameter.isOptional
         ? ts.factory.createToken(SyntaxKind.QuestionToken)
         : undefined,
-      parameter.typeName
-        ? ts.factory.createTypeReferenceNode(parameter.typeName)
-        : undefined,
+      typeNode,
       parameter.initializer,
-    ),
-  );
+    );
+  });
 }
 type BuildArrowFunctionArgs = {
   bodyStatements: ts.Statement[];
@@ -414,4 +423,30 @@ export function buildObjectLiteral(inputObject: object) {
   );
 
   return objectLiteral;
+}
+
+export function buildTernary(
+  condition: string | ts.Expression,
+  whenTrue: ts.Expression,
+  whenFalse: ts.Expression,
+) {
+  const conditionExpr =
+    typeof condition === "string"
+      ? ts.factory.createIdentifier(condition)
+      : condition;
+
+  return ts.factory.createConditionalExpression(
+    conditionExpr,
+    ts.factory.createToken(SyntaxKind.QuestionToken),
+    whenTrue,
+    ts.factory.createToken(SyntaxKind.ColonToken),
+    whenFalse,
+  );
+}
+
+export function buildJsxAttributeWithoutValue(name: string) {
+  return ts.factory.createJsxAttribute(
+    ts.factory.createIdentifier(name),
+    undefined,
+  );
 }

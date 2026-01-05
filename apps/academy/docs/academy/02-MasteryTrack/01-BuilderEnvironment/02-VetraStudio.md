@@ -40,7 +40,7 @@ A **document model** is a structured data type that defines what information you
 
 ### 2. User Experiences
 - **Editor specification**: Outlines the interface and functionalities of a document model editor, allowing users to interact with and modify document data.
-- **Drive-app specification**: Specifies the UI and interactions for managing documents within a Drive, providing tailored views and functionalities.
+- **Drive-app specification**: Specifies the UI and interactions for managing documents within a drive, providing tailored views and functionalities.
 
 ### 3. Data Integrations
 - **Subgraph specification**: Details the connections and relationships within a subgraph (a subset of your data exposed via a GraphQL API), facilitating efficient data querying and manipulation.

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { IReactor, ReactorModule } from "../../src/core/types.js";
 import type { ISyncCursorStorage } from "../../src/storage/interfaces.js";
-import { InternalChannel } from "../../src/sync/channels/internal-channel.js";
+import { TestChannel } from "../sync/channels/test-channel.js";
 import type { IChannelFactory } from "../../src/sync/interfaces.js";
 import { SyncBuilder } from "../../src/sync/sync-builder.js";
 import type { ChannelConfig } from "../../src/sync/types.js";
@@ -17,7 +17,7 @@ describe("Reactor with SyncBuilder Integration", () => {
 
   describe("ReactorBuilder with SyncBuilder", () => {
     it("should build a reactor with sync enabled using SyncBuilder", async () => {
-      const channelRegistry = new Map<string, InternalChannel>();
+      const channelRegistry = new Map<string, TestChannel>();
 
       const channelFactory: IChannelFactory = {
         instance: (
@@ -26,7 +26,7 @@ describe("Reactor with SyncBuilder Integration", () => {
           config: ChannelConfig,
           cursorStorage: ISyncCursorStorage,
         ) => {
-          const channel = new InternalChannel(
+          const channel = new TestChannel(
             remoteId,
             remoteName,
             cursorStorage,
@@ -47,7 +47,7 @@ describe("Reactor with SyncBuilder Integration", () => {
     });
 
     it("should allow adding remotes after reactor is built", async () => {
-      const channelRegistry = new Map<string, InternalChannel>();
+      const channelRegistry = new Map<string, TestChannel>();
 
       const channelFactory: IChannelFactory = {
         instance: (
@@ -56,7 +56,7 @@ describe("Reactor with SyncBuilder Integration", () => {
           config: ChannelConfig,
           cursorStorage: ISyncCursorStorage,
         ) => {
-          const channel = new InternalChannel(
+          const channel = new TestChannel(
             remoteId,
             remoteName,
             cursorStorage,
@@ -98,7 +98,7 @@ describe("Reactor with SyncBuilder Integration", () => {
     });
 
     it("should shutdown sync manager independently from reactor", async () => {
-      const channelRegistry = new Map<string, InternalChannel>();
+      const channelRegistry = new Map<string, TestChannel>();
 
       const channelFactory: IChannelFactory = {
         instance: (
@@ -107,7 +107,7 @@ describe("Reactor with SyncBuilder Integration", () => {
           config: ChannelConfig,
           cursorStorage: ISyncCursorStorage,
         ) => {
-          const channel = new InternalChannel(
+          const channel = new TestChannel(
             remoteId,
             remoteName,
             cursorStorage,
@@ -147,7 +147,7 @@ describe("Reactor with SyncBuilder Integration", () => {
     });
 
     it("should reload remotes on startup from storage", async () => {
-      const channelRegistry = new Map<string, InternalChannel>();
+      const channelRegistry = new Map<string, TestChannel>();
 
       const channelFactory: IChannelFactory = {
         instance: (
@@ -156,7 +156,7 @@ describe("Reactor with SyncBuilder Integration", () => {
           config: ChannelConfig,
           cursorStorage: ISyncCursorStorage,
         ) => {
-          const channel = new InternalChannel(
+          const channel = new TestChannel(
             remoteId,
             remoteName,
             cursorStorage,
@@ -200,7 +200,7 @@ describe("Reactor with SyncBuilder Integration", () => {
 
   describe("SyncBuilder configuration options", () => {
     it("should use default storage implementations when not provided", async () => {
-      const channelRegistry = new Map<string, InternalChannel>();
+      const channelRegistry = new Map<string, TestChannel>();
 
       const channelFactory: IChannelFactory = {
         instance: (
@@ -209,7 +209,7 @@ describe("Reactor with SyncBuilder Integration", () => {
           config: ChannelConfig,
           cursorStorage: ISyncCursorStorage,
         ) => {
-          const channel = new InternalChannel(
+          const channel = new TestChannel(
             remoteId,
             remoteName,
             cursorStorage,

@@ -1,11 +1,10 @@
 import type { Operation, PHDocument, PHDocumentHeader } from "document-model";
-import type { Kysely } from "kysely";
+import type { Kysely, Transaction } from "kysely";
 import { v4 as uuidv4 } from "uuid";
+import type { IOperationIndex } from "../cache/operation-index-types.js";
+import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
-import type {
-  ConsistencyCoordinate,
-  ConsistencyToken,
-} from "../shared/types.js";
+import type { ConsistencyToken } from "../shared/types.js";
 import type {
   IDocumentView,
   IOperationStore,
@@ -15,6 +14,7 @@ import type {
   ViewFilter,
 } from "../storage/interfaces.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
+import { BaseReadModel } from "./base-read-model.js";
 import type {
   DocumentViewDatabase,
   InsertableDocumentSnapshot,
@@ -22,57 +22,36 @@ import type {
 
 type Database = StorageDatabase & DocumentViewDatabase;
 
-export class KyselyDocumentView implements IDocumentView {
-  private lastOperationId: number = 0;
+export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
+  private _db: Kysely<Database>;
 
   constructor(
-    private db: Kysely<Database>,
+    db: Kysely<Database>,
     private operationStore: IOperationStore,
-    private consistencyTracker: IConsistencyTracker,
-  ) {}
-
-  async init(): Promise<void> {
-    const viewState = await this.db
-      .selectFrom("ViewState")
-      .selectAll()
-      .executeTakeFirst();
-
-    if (viewState) {
-      this.lastOperationId = viewState.lastOperationId;
-
-      const missedOperations = await this.operationStore.getSinceId(
-        this.lastOperationId,
-      );
-
-      if (missedOperations.items.length > 0) {
-        await this.indexOperations(missedOperations.items);
-      }
-    } else {
-      await this.db
-        .insertInto("ViewState")
-        .values({
-          lastOperationId: 0,
-        })
-        .execute();
-
-      const allOperations = await this.operationStore.getSinceId(0);
-      if (allOperations.items.length > 0) {
-        await this.indexOperations(allOperations.items);
-      }
-    }
+    operationIndex: IOperationIndex,
+    writeCache: IWriteCache,
+    consistencyTracker: IConsistencyTracker,
+  ) {
+    super(
+      db as unknown as Kysely<DocumentViewDatabase>,
+      operationIndex,
+      writeCache,
+      consistencyTracker,
+      "document-view",
+    );
+    this._db = db;
   }
 
-  async indexOperations(items: OperationWithContext[]): Promise<void> {
+  override async indexOperations(items: OperationWithContext[]): Promise<void> {
     if (items.length === 0) return;
 
-    await this.db.transaction().execute(async (trx) => {
+    await this._db.transaction().execute(async (trx) => {
       for (const item of items) {
         const { operation, context } = item;
         const { documentId, scope, branch, documentType, resultingState } =
           context;
         const { index, hash } = operation;
 
-        // We never rebuild here
         if (!resultingState) {
           throw new Error(
             `Missing resultingState in context for operation ${operation.id || "unknown"}. ` +
@@ -223,30 +202,14 @@ export class KyselyDocumentView implements IDocumentView {
           }
         }
       }
+
+      await this.saveState(
+        trx as unknown as Transaction<DocumentViewDatabase>,
+        items,
+      );
     });
 
-    const coordinates: ConsistencyCoordinate[] = [];
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i]!;
-      coordinates.push({
-        documentId: item.context.documentId,
-        scope: item.context.scope,
-        branch: item.context.branch,
-        operationIndex: item.operation.index,
-      });
-    }
-    this.consistencyTracker.update(coordinates);
-  }
-
-  async waitForConsistency(
-    token: ConsistencyToken,
-    timeoutMs?: number,
-    signal?: AbortSignal,
-  ): Promise<void> {
-    if (token.coordinates.length === 0) {
-      return;
-    }
-    await this.consistencyTracker.waitFor(token.coordinates, timeoutMs, signal);
+    this.updateConsistencyTracker(items);
   }
 
   async exists(
@@ -266,7 +229,7 @@ export class KyselyDocumentView implements IDocumentView {
       return [];
     }
 
-    const snapshots = await this.db
+    const snapshots = await this._db
       .selectFrom("DocumentSnapshot")
       .select(["documentId"])
       .where("documentId", "in", documentIds)
@@ -295,31 +258,24 @@ export class KyselyDocumentView implements IDocumentView {
 
     const branch = view?.branch || "main";
 
-    // Determine which scopes to retrieve
     let scopesToQuery: string[];
     if (view?.scopes && view.scopes.length > 0) {
-      // If scopes has values, always include header + document + specified scopes
-      // (header and document are the minimum scopes that must be returned)
       scopesToQuery = [...new Set(["header", "document", ...view.scopes])];
     } else {
-      // If scopes is undefined, null, or empty array [], get all scopes (no filter)
       scopesToQuery = [];
     }
 
-    // Build query to get snapshots
-    let query = this.db
+    let query = this._db
       .selectFrom("DocumentSnapshot")
       .selectAll()
       .where("documentId", "=", documentId)
       .where("branch", "=", branch)
       .where("isDeleted", "=", false);
 
-    // Apply scope filter if we have specific scopes to query
     if (scopesToQuery.length > 0) {
       query = query.where("scope", "in", scopesToQuery);
     }
 
-    // Execute the query
     const snapshots = await query.execute();
 
     if (snapshots.length === 0) {
@@ -330,17 +286,13 @@ export class KyselyDocumentView implements IDocumentView {
       throw new Error("Operation aborted");
     }
 
-    // Find the header snapshot
     const headerSnapshot = snapshots.find((s) => s.scope === "header");
     if (!headerSnapshot) {
       throw new Error(`Document header not found: ${documentId}`);
     }
 
-    // Get the header from JSONB content (already parsed)
     const header = headerSnapshot.content as PHDocumentHeader;
 
-    // Reconstruct cross-scope header metadata (revision, lastModifiedAtUtcIso)
-    // by aggregating information from all scopes
     const revisions = await this.operationStore.getRevisions(
       documentId,
       branch,
@@ -349,44 +301,33 @@ export class KyselyDocumentView implements IDocumentView {
     header.revision = revisions.revision;
     header.lastModifiedAtUtcIso = revisions.latestTimestamp;
 
-    // Reconstruct the document state from all snapshots
-    // Note: exclude "header" scope from state since it's already in the header field
     const state: Record<string, unknown> = {};
     for (const snapshot of snapshots) {
-      // Skip header scope - it's stored separately in the header field
       if (snapshot.scope === "header") {
         continue;
       }
 
-      // Content is already an object from JSONB
       state[snapshot.scope] = snapshot.content;
     }
 
-    // Retrieve operations from the operation store to match legacy storage format
     const operations: Record<string, Operation[]> = {};
 
-    // Get all operations for this document across all scopes
     const allOps = await this.operationStore.getSinceId(0, undefined, signal);
     const docOps = allOps.items.filter(
       (op) =>
         op.context.documentId === documentId && op.context.branch === branch,
     );
 
-    // Group operations by scope and normalize to match legacy storage structure
     for (const { operation, context } of docOps) {
       operations[context.scope] ??= [];
 
-      // Normalize operation to match legacy storage format
-      // Legacy storage includes redundant top-level fields that duplicate action fields
       const normalizedOp: Operation = {
         action: operation.action,
         index: operation.index,
         timestampUtcMs: operation.timestampUtcMs,
         hash: operation.hash,
         skip: operation.skip,
-        // Add top-level fields that mirror action fields (legacy format)
         ...(operation.action as Record<string, unknown>),
-        // Legacy storage includes these optional fields
         error: operation.error,
         resultingState: operation.resultingState,
       };
@@ -394,7 +335,6 @@ export class KyselyDocumentView implements IDocumentView {
       operations[context.scope].push(normalizedOp);
     }
 
-    // Construct the PHDocument
     const document: PHDocument = {
       header,
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -424,7 +364,7 @@ export class KyselyDocumentView implements IDocumentView {
 
     const branch = view?.branch || "main";
 
-    const idCheckPromise = this.db
+    const idCheckPromise = this._db
       .selectFrom("DocumentSnapshot")
       .select("documentId")
       .where("documentId", "=", identifier)
@@ -432,7 +372,7 @@ export class KyselyDocumentView implements IDocumentView {
       .where("isDeleted", "=", false)
       .executeTakeFirst();
 
-    const slugCheckPromise = this.db
+    const slugCheckPromise = this._db
       .selectFrom("SlugMapping")
       .select("documentId")
       .where("slug", "=", identifier)
@@ -491,7 +431,7 @@ export class KyselyDocumentView implements IDocumentView {
     const processedDocumentIds = new Set<string>();
     const allDocumentIds: string[] = [];
 
-    const snapshots = await this.db
+    const snapshots = await this._db
       .selectFrom("DocumentSnapshot")
       .selectAll()
       .where("documentType", "=", type)
@@ -559,7 +499,7 @@ export class KyselyDocumentView implements IDocumentView {
 
     const branch = view?.branch || "main";
 
-    const mapping = await this.db
+    const mapping = await this._db
       .selectFrom("SlugMapping")
       .select("documentId")
       .where("slug", "=", slug)
@@ -575,7 +515,7 @@ export class KyselyDocumentView implements IDocumentView {
     }
 
     if (view?.scopes && view.scopes.length > 0) {
-      const scopeCheck = await this.db
+      const scopeCheck = await this._db
         .selectFrom("DocumentSnapshot")
         .select("scope")
         .where("documentId", "=", mapping.documentId)

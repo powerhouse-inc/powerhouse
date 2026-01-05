@@ -48,7 +48,7 @@ async function createDocumentInStore(
           input: {
             documentId,
             model: DOCUMENT_TYPE,
-            version: "0.0.0",
+            version: 0,
           },
         },
       });
@@ -67,8 +67,8 @@ async function createDocumentInStore(
           input: {
             documentId,
             model: DOCUMENT_TYPE,
-            fromVersion: "0.0.0",
-            toVersion: "1.0.0",
+            fromVersion: 0,
+            toVersion: 1,
             initialState,
           },
         },

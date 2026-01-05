@@ -67,3 +67,4 @@ src/external-packages.js
 # Sentry Config File
 .env.sentry-build-plugin
 ts-dist/
+package.copy.json

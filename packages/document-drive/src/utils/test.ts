@@ -237,7 +237,7 @@ export function createBaseState<TGlobal, TLocal>(
   return {
     auth: {},
     document: {
-      version: "0",
+      version: 0,
       hash: {
         algorithm: "sha1",
         encoding: "base64",

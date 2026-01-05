@@ -5,8 +5,6 @@
  */
 
 import type { DocumentDriveNodeOperations, FileNode } from "document-drive";
-import { DocumentIdValidationError } from "document-drive/server/error";
-import { isValidDocumentId } from "document-drive/storage/utils";
 import {
   getDescendants,
   handleTargetNameCollisions,
@@ -19,10 +17,6 @@ export const nodeReducer: DocumentDriveNodeOperations = {
   addFileOperation(state, action, dispatch) {
     if (state.nodes.find((node) => node.id === action.input.id)) {
       throw new Error(`Node with id ${action.input.id} already exists!`);
-    }
-
-    if (!isValidDocumentId(action.input.id)) {
-      throw new DocumentIdValidationError(action.input.id);
     }
 
     if (!isValidName(action.input.name)) {
@@ -154,10 +148,6 @@ export const nodeReducer: DocumentDriveNodeOperations = {
 
     if (!node) {
       throw new Error(`Node with id ${action.input.srcId} not found`);
-    }
-
-    if (!isValidDocumentId(action.input.targetId)) {
-      throw new DocumentIdValidationError(action.input.targetId);
     }
 
     const duplicatedNode = state.nodes.find(

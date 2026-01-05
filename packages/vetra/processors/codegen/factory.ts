@@ -3,6 +3,7 @@ import { VETRA_PROCESSOR_CONFIG_KEY } from "@powerhousedao/config";
 import type { IProcessorHostModule, ProcessorRecord } from "document-drive";
 import type { PHDocumentHeader } from "document-model";
 import { CodegenProcessor } from "./index.js";
+import { logger } from "./logger.js";
 
 /**
  * Determines if a drive header matches the Vetra drive criteria.
@@ -43,8 +44,15 @@ export const codegenProcessorFactory =
 
     // Check if this drive should use the Vetra processor
     if (!isDriveVetra(driveHeader, vetraConfig?.driveId)) {
+      logger.info(
+        `Drive ${driveHeader.slug} is not a Vetra drive, skipping codegen processor`,
+      );
       return [];
     }
+
+    logger.info(
+      `Drive ${driveHeader.slug} is a Vetra drive, using codegen processor`,
+    );
 
     const processor = new CodegenProcessor(vetraConfig?.interactive);
     return [

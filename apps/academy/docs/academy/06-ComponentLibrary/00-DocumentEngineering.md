@@ -4,7 +4,7 @@ The reusable components in the Document-Engineering system are a set of of front
 Powerhouse also has a set of custom scalars that are not part of the graphQL standard but are specific to the web3 ecosystem.
 These components are offered through the **Powerhouse Document-Engineering system** with the help of storybook & the Academy documentation.
 
-It provides a collection of pre-built, reusable UI components designed for consistency and efficiency across Powerhouse applications and editors. Think of it as a toolkit of standard UI elements like buttons, inputs, and checkboxes with many of these components based on graphql scalars.
+It provides a collection of pre-built, reusable UI components designed for consistency and efficiency across Powerhouse applications and editors. Think of it as a toolkit of standard UI elements like buttons, inputs, and checkboxes with many of these components based on GraphQL scalars.
 
 :::info
 A GraphQL scalar is essentially a primitive, indivisible value in the GraphQL type system.

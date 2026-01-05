@@ -10,7 +10,7 @@ import {
 } from "../../src/events/types.js";
 import { JobStatus } from "../../src/shared/types.js";
 import type { ISyncCursorStorage } from "../../src/storage/interfaces.js";
-import { InternalChannel } from "../../src/sync/channels/internal-channel.js";
+import { TestChannel } from "../sync/channels/test-channel.js";
 import type { IChannelFactory } from "../../src/sync/interfaces.js";
 import { SyncBuilder } from "../../src/sync/sync-builder.js";
 import type { ChannelConfig, SyncEnvelope } from "../../src/sync/types.js";
@@ -20,7 +20,7 @@ type TwoReactorSetup = {
   reactorB: IReactor;
   moduleA: ReactorModule;
   moduleB: ReactorModule;
-  channelRegistry: Map<string, InternalChannel>;
+  channelRegistry: Map<string, TestChannel>;
   eventBusA: IEventBus;
   eventBusB: IEventBus;
 };
@@ -114,7 +114,7 @@ async function waitForMultipleOperationsReady(
 }
 
 async function setupTwoReactors(): Promise<TwoReactorSetup> {
-  const channelRegistry = new Map<string, InternalChannel>();
+  const channelRegistry = new Map<string, TestChannel>();
   const peerMapping = new Map<string, string>();
   peerMapping.set("remoteA", "remoteB");
   peerMapping.set("remoteB", "remoteA");
@@ -126,7 +126,7 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
         remoteName: string,
         config: ChannelConfig,
         cursorStorage: ISyncCursorStorage,
-      ): InternalChannel {
+      ): TestChannel {
         const peerName = peerMapping.get(remoteName);
 
         const send = (envelope: SyncEnvelope): void => {
@@ -141,7 +141,7 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
           peerChannel.receive(envelope);
         };
 
-        const channel = new InternalChannel(
+        const channel = new TestChannel(
           remoteId,
           remoteName,
           cursorStorage,
@@ -160,11 +160,13 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
 
   const moduleA = await new ReactorBuilder()
     .withEventBus(eventBusA)
+    .withDocumentModels([driveDocumentModelModule as any])
     .withSync(new SyncBuilder().withChannelFactory(createChannelFactory()))
     .buildModule();
 
   const moduleB = await new ReactorBuilder()
     .withEventBus(eventBusB)
+    .withDocumentModels([driveDocumentModelModule as any])
     .withSync(new SyncBuilder().withChannelFactory(createChannelFactory()))
     .buildModule();
 
@@ -213,6 +215,8 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
 describe("Two-Reactor Sync", () => {
   let reactorA: IReactor;
   let reactorB: IReactor;
+  let moduleA: ReactorModule;
+  let moduleB: ReactorModule;
   let eventBusA: IEventBus;
   let eventBusB: IEventBus;
 
@@ -220,6 +224,8 @@ describe("Two-Reactor Sync", () => {
     const setup = await setupTwoReactors();
     reactorA = setup.reactorA;
     reactorB = setup.reactorB;
+    moduleA = setup.moduleA;
+    moduleB = setup.moduleB;
     eventBusA = setup.eventBusA;
     eventBusB = setup.eventBusB;
   });
@@ -605,4 +611,113 @@ describe("Two-Reactor Sync", () => {
       testReactor.kill();
     }
   }, 15000);
+
+  it("should not echo operations back to sender", async () => {
+    const document = driveDocumentModelModule.utils.createDocument();
+    const readyPromise = waitForOperationsReady(eventBusB, document.header.id);
+    const jobInfo = await reactorA.create(document);
+
+    await waitForJobCompletion(reactorA, jobInfo.id);
+
+    await readyPromise;
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    const remoteA = moduleB.syncModule!.syncManager.getByName("remoteA");
+
+    const outboxOps = remoteA.channel.outbox.items;
+    expect(outboxOps.length).toBe(0);
+  });
+
+  it("should clean up outbox after successful send", async () => {
+    const document = driveDocumentModelModule.utils.createDocument();
+    const readyPromise = waitForOperationsReady(eventBusB, document.header.id);
+    const jobInfo = await reactorA.create(document);
+
+    await waitForJobCompletion(reactorA, jobInfo.id);
+
+    await readyPromise;
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    const remoteB = moduleA.syncModule!.syncManager.getByName("remoteB");
+
+    const outboxOps = remoteB.channel.outbox.items;
+    expect(outboxOps.length).toBe(0);
+  });
+
+  it("minimal: concurrent operations after sync should reshuffle", async () => {
+    // 1. ReactorA creates document
+    const doc = driveDocumentModelModule.utils.createDocument();
+    const readyOnB = waitForOperationsReady(eventBusB, doc.header.id);
+    const createJob = await reactorA.create(doc);
+    await waitForJobCompletion(reactorA, createJob.id);
+
+    // 2. Wait for document to sync to ReactorB
+    await readyOnB;
+
+    // 3. Both reactors perform an operation on the document
+    // We need to wait for 2 OPERATIONS_READY events per reactor:
+    // - One for the local mutation
+    // - One for receiving and applying the synced mutation from the other reactor
+    const readyOnA = waitForMultipleOperationsReady(eventBusA, 2);
+    const readyOnB2 = waitForMultipleOperationsReady(eventBusB, 2);
+
+    // Fire both mutations - don't await, let them race
+    void reactorA.execute(doc.header.id, "main", [
+      driveDocumentModelModule.actions.setDriveName({ name: "Name from A" }),
+    ]);
+
+    void reactorB.execute(doc.header.id, "main", [
+      driveDocumentModelModule.actions.setDriveName({ name: "Name from B" }),
+    ]);
+
+    // 4. Wait for syncs to complete (both local and synced operations)
+    await Promise.all([readyOnA, readyOnB2]);
+
+    // 5. Verify operations on both reactors
+    const resultA = await reactorA.getOperations(doc.header.id, {
+      branch: "main",
+    });
+    const opsA = Object.values(resultA).flatMap((scope) => scope.results);
+
+    const resultB = await reactorB.getOperations(doc.header.id, {
+      branch: "main",
+    });
+    const opsB = Object.values(resultB).flatMap((scope) => scope.results);
+
+    // Both should have: create + upgrade + 2 global mutations = 4 ops
+    expect(opsA.length).toBeGreaterThanOrEqual(4);
+    expect(opsB.length).toBe(opsA.length);
+
+    // Get global scope operations
+    const globalOpsA = resultA["global"].results;
+    const globalOpsB = resultB["global"].results;
+
+    // Both reactors should have both SET_DRIVE_NAME operations (no echo, no missing)
+    expect(globalOpsA.length).toBe(2);
+    expect(globalOpsB.length).toBe(2);
+
+    // Extract the names from each reactor's operations
+    const namesA = globalOpsA.map(
+      (op) => (op.action.input as { name: string }).name,
+    );
+    const namesB = globalOpsB.map(
+      (op) => (op.action.input as { name: string }).name,
+    );
+
+    // Both should have both names (eventual consistency)
+    expect(namesA.sort()).toEqual(["Name from A", "Name from B"]);
+    expect(namesB.sort()).toEqual(["Name from A", "Name from B"]);
+
+    // The synced operation should have skip > 0 (indicates reshuffle occurred)
+    // Each reactor has its local op at index 0 (skip=0) and synced op at index 1 (skip=1)
+    const syncedOpA = globalOpsA.find((op) => op.skip > 0);
+    const syncedOpB = globalOpsB.find((op) => op.skip > 0);
+
+    expect(syncedOpA).toBeDefined();
+    expect(syncedOpB).toBeDefined();
+    expect(syncedOpA!.skip).toBe(1);
+    expect(syncedOpB!.skip).toBe(1);
+  });
 });

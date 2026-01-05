@@ -10,9 +10,7 @@ import type {
 import {
   DocumentAlreadyExistsError,
   DocumentAlreadyExistsReason,
-  DocumentIdValidationError,
   DocumentNotFoundError,
-  DocumentSlugValidationError,
 } from "document-drive/server/error";
 import { AbortError } from "document-drive/utils/errors";
 import { childLogger } from "document-drive/utils/logger";
@@ -24,8 +22,6 @@ import {
 import type { Operation, PHDocument } from "document-model";
 import LocalForage from "localforage";
 import {
-  isValidDocumentId,
-  isValidSlug,
   resolveStorageUnitsFilter,
   setIntersection,
   setUnion,
@@ -235,9 +231,6 @@ export class BrowserStorage
 
   async create(document: PHDocument): Promise<void> {
     const documentId = document.header.id;
-    if (!isValidDocumentId(documentId)) {
-      throw new DocumentIdValidationError(documentId);
-    }
 
     const db = await this.db;
 
@@ -249,9 +242,6 @@ export class BrowserStorage
       document.header.slug && document.header.slug.length > 0
         ? document.header.slug
         : documentId;
-    if (!isValidSlug(slug)) {
-      throw new DocumentSlugValidationError(slug);
-    }
 
     // check if the slug is already taken
     const slugManifest = await this.getSlugManifest();

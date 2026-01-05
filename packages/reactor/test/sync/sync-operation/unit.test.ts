@@ -34,6 +34,7 @@ describe("SyncOperation", () => {
           documentType: "test",
           scope: "global",
           branch: "main",
+          ordinal: 1,
         },
       },
     ];

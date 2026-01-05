@@ -2,7 +2,11 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
 import { getConfig } from "@powerhousedao/config/node";
-import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
+import type {
+  IDocumentModelRegistry,
+  IReactorClient,
+  ISyncManager,
+} from "@powerhousedao/reactor";
 import { setupMcpServer } from "@powerhousedao/reactor-mcp";
 import devcert from "devcert";
 import type {
@@ -21,6 +25,7 @@ import {
 import type { DocumentModelModule } from "document-model";
 import type { Express } from "express";
 import express from "express";
+import type { Kysely } from "kysely";
 import fs from "node:fs";
 import type http from "node:http";
 import https from "node:https";
@@ -28,12 +33,15 @@ import path from "node:path";
 import type { TlsOptions } from "node:tls";
 import type { Pool } from "pg";
 import { WebSocketServer } from "ws";
+// Import tracing - initializes OpenTelemetry and provides stub functions for backwards compatibility
+import { initTracing, isTracingEnabled, trace } from "./tracing.js";
 import { config, DefaultCoreSubgraphs } from "./config.js";
 import { AuthSubgraph } from "./graphql/auth/subgraph.js";
 import { GraphQLManager } from "./graphql/graphql-manager.js";
 import { renderGraphqlPlayground } from "./graphql/playground.js";
 import { ReactorSubgraph } from "./graphql/reactor/subgraph.js";
 import type { SubgraphClass } from "./graphql/types.js";
+import { runMigrations } from "./migrations/index.js";
 import { ImportPackageLoader } from "./packages/import-loader.js";
 import {
   getUniqueDocumentModels,
@@ -48,8 +56,6 @@ import {
   initAnalyticsStoreSql,
   type DocumentPermissionDatabase,
 } from "./utils/db.js";
-import type { Kysely } from "kysely";
-import { runMigrations } from "./migrations/index.js";
 
 const logger = childLogger(["reactor-api", "server"]);
 
@@ -86,6 +92,7 @@ type Options = {
    * environment variable.
    */
   documentPermissionService?: DocumentPermissionService;
+  enableDocumentModelSubgraphs?: boolean;
 };
 
 const DEFAULT_PORT = 4000;
@@ -155,6 +162,7 @@ async function setupGraphQLManager(
     freeEntry: boolean;
   },
   documentPermissionService?: DocumentPermissionService,
+  enableDocumentModelSubgraphs?: boolean,
 ): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager(
     config.basePath,
@@ -174,6 +182,9 @@ async function setupGraphQLManager(
       freeEntry: auth?.freeEntry ?? false,
     },
     documentPermissionService,
+    {
+      enableDocumentModelSubgraphs,
+    },
   );
 
   await graphqlManager.init(subgraphs.core);
@@ -283,7 +294,7 @@ async function startServer(
     path: "/graphql/subscriptions",
   });
 
-  logger.info("WebSocket server attached at /graphql/subscriptions");
+  logger.info("WebSocket server available at /graphql/subscriptions");
 
   return { httpServer, wsServer };
 }
@@ -307,6 +318,11 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   documentPermissionService: DocumentPermissionService | undefined;
   packages: PackageManager;
 }> {
+  // Initialize OpenTelemetry tracing
+  if (isTracingEnabled()) {
+    await initTracing();
+  }
+
   const port = options.port ?? DEFAULT_PORT;
   const app = options.express ?? express();
 
@@ -389,8 +405,10 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   app.use(config.basePath, defaultRouter);
 
   // Initialize database and analytics store
-  const { relationalDb, analyticsStore } = await initializeDatabaseAndAnalytics(
-    options.dbPath,
+  const { relationalDb, analyticsStore } = await trace(
+    "reactor-api.init.database",
+    { tags: { "resource.name": "database" } },
+    () => initializeDatabaseAndAnalytics(options.dbPath),
   );
 
   // Use provided document permission service, or create one if env var is set
@@ -547,6 +565,7 @@ async function _setupAPI(
     },
     auth,
     documentPermissionService,
+    options.enableDocumentModelSubgraphs,
   );
 
   // Set up event listeners
@@ -583,6 +602,7 @@ async function _setupAPI(
 export async function startAPI(
   driveServer: IDocumentDriveServer,
   client: IReactorClient,
+  registry: IDocumentModelRegistry,
   syncManager: ISyncManager,
   options: Options,
 ): Promise<API> {
@@ -594,15 +614,28 @@ export async function startAPI(
     analyticsStore,
     documentPermissionService,
     packages,
-  } = await _setupCommonInfrastructure(options);
+  } = await trace(
+    "reactor-api.setup.infrastructure",
+    { tags: { "resource.name": "infrastructure" } },
+    () => _setupCommonInfrastructure(options),
+  );
 
-  const { documentModels, processors, subgraphs } = await packages.init();
+  const { documentModels, processors, subgraphs } = await trace(
+    "reactor-api.packages.init",
+    { tags: { "resource.name": "packages" } },
+    () => packages.init(),
+  );
+
+  // pass to legacy reactor
   driveServer.setDocumentModelModules(
     getUniqueDocumentModels([
       ...driveServer.getDocumentModelModules(),
       ...documentModels,
     ]),
   );
+
+  // pass to registry
+  registry.registerModules(...documentModels);
 
   return _setupAPI(
     driveServer,
@@ -652,13 +685,28 @@ export async function initializeAndStartAPI(
     analyticsStore,
     documentPermissionService,
     packages,
-  } = await _setupCommonInfrastructure(options);
+  } = await trace(
+    "reactor-api.setup.infrastructure",
+    { tags: { "resource.name": "infrastructure" } },
+    () => _setupCommonInfrastructure(options),
+  );
 
-  const { documentModels, processors, subgraphs } = await packages.init();
-  const reactor = await driveServerInitializer(documentModels);
-  const { client: reactorClient, syncManager } = await clientInitializer(
-    reactor,
-    documentModels,
+  const { documentModels, processors, subgraphs } = await trace(
+    "reactor-api.packages.init",
+    { tags: { "resource.name": "packages" } },
+    () => packages.init(),
+  );
+
+  const reactor = await trace(
+    "reactor-api.drive-server.init",
+    { tags: { "resource.name": "drive-server" } },
+    () => driveServerInitializer(documentModels),
+  );
+
+  const { client: reactorClient, syncManager } = await trace(
+    "reactor-api.reactor-client.init",
+    { tags: { "resource.name": "reactor-client" } },
+    () => clientInitializer(reactor, documentModels),
   );
 
   const api = await _setupAPI(

@@ -14,27 +14,26 @@ import {
   initializeAndStartAPI,
   startViteServer,
 } from "@powerhousedao/reactor-api";
-import type { IConnectCrypto } from "@renown/sdk";
+import { ConnectCryptoSigner, type IConnectCrypto } from "@renown/sdk";
 import * as Sentry from "@sentry/node";
 import type { ICache, IDocumentDriveServer } from "document-drive";
 import {
   DocumentAlreadyExistsError,
   InMemoryCache,
   ReactorBuilder as LegacyReactorBuilder,
-  RedisCache,
   childLogger,
   driveDocumentModelModule,
 } from "document-drive";
+import { RedisCache } from "document-drive/cache/redis";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import { PrismaStorageFactory } from "document-drive/storage/prisma";
 import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import dotenv from "dotenv";
 import express from "express";
-import { Kysely, PostgresDialect } from "kysely";
+import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import path from "path";
-import { Pool } from "pg";
 import type { RedisClientType } from "redis";
 import { initRedis } from "./clients/redis.js";
 import { initConnectCrypto } from "./connect-crypto.js";
@@ -183,28 +182,34 @@ async function initServer(
         legacyStorageEnabled: true,
       });
 
-    if (dbPath && isPostgresUrl(dbPath)) {
-      const connectionString =
-        dbPath.includes("amazonaws") && !dbPath.includes("sslmode=no-verify")
-          ? dbPath + "?sslmode=no-verify"
-          : dbPath;
-      const pool = new Pool({ connectionString });
-      const kysely = new Kysely<Database>({
-        dialect: new PostgresDialect({ pool }),
-      });
-      builder.withKysely(kysely);
-    } else {
-      const pglitePath = dbPath || "./.ph/reactor-storage";
-      const pglite = new PGlite(pglitePath);
-      const kysely = new Kysely<Database>({
-        dialect: new PGliteDialect(pglite),
-      });
-      builder.withKysely(kysely);
+    // if (dbPath && isPostgresUrl(dbPath)) {
+    //   const connectionString =
+    //     dbPath.includes("amazonaws") && !dbPath.includes("sslmode=no-verify")
+    //       ? dbPath + "?sslmode=no-verify"
+    //       : dbPath;
+    //   const pool = new Pool({ connectionString });
+    //   const kysely = new Kysely<Database>({
+    //     dialect: new PostgresDialect({ pool }),
+    //   });
+    //   builder.withKysely(kysely);
+    // } else {
+    // const pglitePath = "./.ph/reactor-storage";
+    const pglite = new PGlite();
+    const kysely = new Kysely<Database>({
+      dialect: new PGliteDialect(pglite),
+    });
+    builder.withKysely(kysely);
+    // }
+
+    const clientBuilder = new ReactorClientBuilder().withReactorBuilder(
+      builder,
+    );
+
+    if (connectCrypto) {
+      clientBuilder.withSigner(new ConnectCryptoSigner(connectCrypto));
     }
 
-    const module = await new ReactorClientBuilder()
-      .withReactorBuilder(builder)
-      .buildModule();
+    const module = await clientBuilder.buildModule();
 
     const syncManager = module.reactorModule?.syncModule?.syncManager;
     if (!syncManager) {
@@ -245,6 +250,7 @@ async function initServer(
         options.configFile ??
         path.join(process.cwd(), "powerhouse.config.json"),
       mcp: options.mcp ?? true,
+      enableDocumentModelSubgraphs: options.enableDocumentModelSubgraphs,
     },
   );
 
@@ -252,7 +258,18 @@ async function initServer(
 
   // Create default drive if provided
   if (options.drive) {
-    defaultDriveUrl = await addDefaultDrive(client, options.drive, serverPort);
+    if (!connectCrypto) {
+      throw new Error(
+        "Cannot create default drive without ConnectCrypto identity",
+      );
+    }
+
+    defaultDriveUrl = await addDefaultDrive(
+      driveServer,
+      client,
+      options.drive,
+      serverPort,
+    );
   }
 
   // add vite middleware after express app is initialized if applicable
@@ -303,7 +320,14 @@ export const startSwitchboard = async (
   const serverPort = options.port ?? DEFAULT_PORT;
 
   // Initialize feature flags
-  await initFeatureFlags();
+  const featureFlags = await initFeatureFlags();
+
+  const enableDocumentModelSubgraphs = await featureFlags.getBooleanValue(
+    "DOCUMENT_MODEL_SUBGRAPHS_ENABLED",
+    options.enableDocumentModelSubgraphs ?? true,
+  );
+
+  options.enableDocumentModelSubgraphs = enableDocumentModelSubgraphs;
 
   options.reactorOptions = {
     enableDualActionCreate: true,
@@ -340,9 +364,9 @@ export const startSwitchboard = async (
   }
 };
 
-export * from "./types.js";
 export {
+  getBearerToken,
   getConnectCrypto,
   getConnectDid,
-  getBearerToken,
 } from "./connect-crypto.js";
+export * from "./types.js";

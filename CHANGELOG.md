@@ -1,3 +1,197 @@
+## 5.1.0-dev.32 (2026-01-02)
+
+### 🚀 Features
+
+- **tracing:** migrate from Datadog to OpenTelemetry with Tempo service graphs ([6b4eb9c82](https://github.com/powerhouse-inc/powerhouse/commit/6b4eb9c82))
+
+### 🩹 Fixes
+
+- **tracing:** add IncomingMessage import and improve type cast ([83c85ff2c](https://github.com/powerhouse-inc/powerhouse/commit/83c85ff2c))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.1.0-dev.31 (2026-01-02)
+
+### 🚀 Features
+
+- **switchboard:** added tracing ([c978736b7](https://github.com/powerhouse-inc/powerhouse/commit/c978736b7))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.1.0-dev.30 (2026-01-01)
+
+### 🚀 Features
+
+- **builder-tools:** integrate toast notifications for invalid operation names ([c86084d49](https://github.com/powerhouse-inc/powerhouse/commit/c86084d49))
+- **connect:** register toast function ([55d0d9b83](https://github.com/powerhouse-inc/powerhouse/commit/55d0d9b83))
+- **document-model:** validate operation names ([5b09b1951](https://github.com/powerhouse-inc/powerhouse/commit/5b09b1951))
+- **reactor-browser:** add toast event handling functionality ([e37c6fd88](https://github.com/powerhouse-inc/powerhouse/commit/e37c6fd88))
+
+### 🩹 Fixes
+
+- **connect:** created ErrorBoundary component and reload page when outdated chunk is imported ([147570dc4](https://github.com/powerhouse-inc/powerhouse/commit/147570dc4))
+- **document-drive:** do not export redis cache from index ([38b647cf9](https://github.com/powerhouse-inc/powerhouse/commit/38b647cf9))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+
+## 5.1.0-dev.29 (2025-12-30)
+
+### 🩹 Fixes
+
+- **connect,builder-tools,vetra:** avoid page reload on vite HMR ([1c3f5d1dd](https://github.com/powerhouse-inc/powerhouse/commit/1c3f5d1dd))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 5.1.0-dev.28 (2025-12-30)
+
+### 🚀 Features
+
+- **reactor-browser:** added stale-while-revalidate behavior on document retrieval hooks ([82f170b4f](https://github.com/powerhouse-inc/powerhouse/commit/82f170b4f))
+
+### 🩹 Fixes
+
+- **ph-cmd,codegen:** ph init with fixed version ([0d439c381](https://github.com/powerhouse-inc/powerhouse/commit/0d439c381))
+- **reactor-api:** name is null ([190f3b60e](https://github.com/powerhouse-inc/powerhouse/commit/190f3b60e))
+- **reactor-browser:** improvements on document cache reactivity and tests ([07991c703](https://github.com/powerhouse-inc/powerhouse/commit/07991c703))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
+## 5.1.0-dev.27 (2025-12-24)
+
+### 🚀 Features
+
+- **reactor-api:** datadog integration ([3c433c686](https://github.com/powerhouse-inc/powerhouse/commit/3c433c686))
+- **reactor-browser:** improved document retrieval hooks ([4fed49391](https://github.com/powerhouse-inc/powerhouse/commit/4fed49391))
+
+### 🩹 Fixes
+
+- **reactor-api:** linting issues ([9c674a847](https://github.com/powerhouse-inc/powerhouse/commit/9c674a847))
+- **reactor-browser:** update returned documents when they change ([117237e5a](https://github.com/powerhouse-inc/powerhouse/commit/117237e5a))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
+## 5.1.0-dev.26 (2025-12-20)
+
+### 🚀 Features
+
+- integrate doc model versioning in reactor ([#2145](https://github.com/powerhouse-inc/powerhouse/pull/2145))
+- **codegen:** restore editor template ([542727e00](https://github.com/powerhouse-inc/powerhouse/commit/542727e00))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
+## 5.1.0-dev.25 (2025-12-19)
+
+### 🚀 Features
+
+- added subscriptions as a read model ([39490cc20](https://github.com/powerhouse-inc/powerhouse/commit/39490cc20))
+- add support for operations with no inputs ([#2138](https://github.com/powerhouse-inc/powerhouse/pull/2138))
+
+### 🩹 Fixes
+
+- passing meta through job system to avoid race conditions ([8b65bb42d](https://github.com/powerhouse-inc/powerhouse/commit/8b65bb42d))
+- signature resolvers ([4513d9dda](https://github.com/powerhouse-inc/powerhouse/commit/4513d9dda))
+- **reactor:** we were echoing back sync envelopes ([0fc679d21](https://github.com/powerhouse-inc/powerhouse/commit/0fc679d21))
+- **reactor-api:** fix gql tests ([15294d00a](https://github.com/powerhouse-inc/powerhouse/commit/15294d00a))
+- **switchboard, vetra:** fix issue with processors not being added on initial boot ([25432a663](https://github.com/powerhouse-inc/powerhouse/commit/25432a663))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente Sandoval @gpuente
+
+## 5.1.0-dev.24 (2025-12-18)
+
+### 🚀 Features
+
+- the gql channel should start poll before waiting ([f569b462b](https://github.com/powerhouse-inc/powerhouse/commit/f569b462b))
+
+### 🩹 Fixes
+
+- addDefaultDrive should not add if the drive already exists ([79352a5f8](https://github.com/powerhouse-inc/powerhouse/commit/79352a5f8))
+- don't sign default drive header as that changes the id, and pass along the unsigned header to the signed ([d8cd47c9d](https://github.com/powerhouse-inc/powerhouse/commit/d8cd47c9d))
+- switchboard's new reactor signs everything ([b7fafb7fa](https://github.com/powerhouse-inc/powerhouse/commit/b7fafb7fa))
+- **builder-tools:** exclude node_modules/.vite from optimisation ([5778f222e](https://github.com/powerhouse-inc/powerhouse/commit/5778f222e))
+- **reactor:** document model core types need to be numerical versions, also fixed a gql bug ([6495a88e2](https://github.com/powerhouse-inc/powerhouse/commit/6495a88e2))
+- **switchboard:** added skip db migrations flag ([f1597c838](https://github.com/powerhouse-inc/powerhouse/commit/f1597c838))
+- **switchboard:** use pglite for new reactor ([b5dece44e](https://github.com/powerhouse-inc/powerhouse/commit/b5dece44e))
+- **switchboard:** pglite path ([140422ab6](https://github.com/powerhouse-inc/powerhouse/commit/140422ab6))
+- **switchboard:** use pglite inmemory ([f7c926fa9](https://github.com/powerhouse-inc/powerhouse/commit/f7c926fa9))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+
+## 5.1.0-dev.23 (2025-12-17)
+
+### 🩹 Fixes
+
+- default state should be 0 ([a19a2ebec](https://github.com/powerhouse-inc/powerhouse/commit/a19a2ebec))
+- gql api needs id for operations ([7146bffea](https://github.com/powerhouse-inc/powerhouse/commit/7146bffea))
+- **reactor:** integrated the document meta cache ([29565fa5f](https://github.com/powerhouse-inc/powerhouse/commit/29565fa5f))
+- **reactor-api:** remove circular import ([9076b5257](https://github.com/powerhouse-inc/powerhouse/commit/9076b5257))
+- **reactor-api, reactor-local:** pass dynamically loaded modules to the new reactor ([c038e058c](https://github.com/powerhouse-inc/powerhouse/commit/c038e058c))
+
+### 🔥 Performance
+
+- **queue:** added some helper funcs for additional benches ([4810e1e91](https://github.com/powerhouse-inc/powerhouse/commit/4810e1e91))
+- **queue:** added focused queue performance benches ([caa975f99](https://github.com/powerhouse-inc/powerhouse/commit/caa975f99))
+- **queue:** added progressively taxing queue hint DAG resolution benchmarks ([3dd42d08b](https://github.com/powerhouse-inc/powerhouse/commit/3dd42d08b))
+- **queue:** added in-memory queue performance benchmarks ([e7184d495](https://github.com/powerhouse-inc/powerhouse/commit/e7184d495))
+- **queue:** removed any random calls to make benches deterministic ([886874cde](https://github.com/powerhouse-inc/powerhouse/commit/886874cde))
+- **queue:** make Reactor queue perf benches reproducible, timed, and invariant-safe ([20c5c4376](https://github.com/powerhouse-inc/powerhouse/commit/20c5c4376))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Samuel Hawksby-Robinson @Samyoul
+
+## 5.1.0-dev.22 (2025-12-16)
+
+### 🚀 Features
+
+- added support for runtime document model subgraphs ([dc8248ec6](https://github.com/powerhouse-inc/powerhouse/commit/dc8248ec6))
+- **codegen:** do not generate document model subgraph ([ebdd72668](https://github.com/powerhouse-inc/powerhouse/commit/ebdd72668))
+
+### 🩹 Fixes
+
+- linter ([fcbd30919](https://github.com/powerhouse-inc/powerhouse/commit/fcbd30919))
+- **vetra:** regenerated subgraphs ([09f2f212f](https://github.com/powerhouse-inc/powerhouse/commit/09f2f212f))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
+## 5.1.0-dev.21 (2025-12-13)
+
+### 🚀 Features
+
+- **codegen,vetra:** use ts morph codegen by default ([#2135](https://github.com/powerhouse-inc/powerhouse/pull/2135))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 5.1.0-dev.20 (2025-12-12)
 
 ### 🚀 Features

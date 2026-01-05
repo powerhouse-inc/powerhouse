@@ -56,6 +56,7 @@ export const OperationEventTypes = {
 export type OperationWrittenEvent = {
   jobId: string;
   operations: OperationWithContext[];
+  jobMeta?: Record<string, unknown>;
 };
 
 /**

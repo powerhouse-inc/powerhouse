@@ -41,6 +41,12 @@ function createMockRegistry(): IDocumentModelRegistry {
     getModule: vi.fn(),
     getAllModules: vi.fn(),
     clear: vi.fn(),
+    getSupportedVersions: vi.fn(),
+    getLatestVersion: vi.fn(),
+    registerUpgradeManifests: vi.fn(),
+    getUpgradeManifest: vi.fn(),
+    computeUpgradePath: vi.fn(),
+    getUpgradeReducer: vi.fn(),
   };
 }
 
@@ -80,7 +86,7 @@ describe("KyselyWriteCache - Error Handling", () => {
           input: {
             documentId: "doc1",
             model: "test/unknown",
-            version: "0.0.0",
+            version: 0,
           },
         },
       };
@@ -178,7 +184,7 @@ describe("KyselyWriteCache - Error Handling", () => {
           input: {
             documentId: "doc1",
             model: documentType,
-            version: "0.0.0",
+            version: 0,
           },
         },
       };
@@ -231,7 +237,7 @@ describe("KyselyWriteCache - Error Handling", () => {
           input: {
             documentId: "doc1",
             model: "powerhouse/document-model",
-            version: "0.0.0",
+            version: 0,
           },
         },
       };
@@ -372,7 +378,7 @@ describe("KyselyWriteCache - Error Handling", () => {
           input: {
             documentId: "doc1",
             model: "powerhouse/document-model",
-            version: "0.0.0",
+            version: 0,
           },
         },
       };
@@ -499,7 +505,7 @@ describe("KyselyWriteCache - Error Handling", () => {
           input: {
             documentId: "doc1",
             model: "powerhouse/document-model",
-            version: "0.0.0",
+            version: 0,
           },
         },
       };
@@ -1045,7 +1051,7 @@ describe("KyselyWriteCache - Error Handling", () => {
           input: {
             documentId: "doc1",
             model: "powerhouse/document-model",
-            version: "0.0.0",
+            version: 0,
           },
         },
       };
@@ -1113,7 +1119,7 @@ describe("KyselyWriteCache - Error Handling", () => {
           input: {
             documentId: "doc1",
             model: "powerhouse/document-model",
-            version: "0.0.0",
+            version: 0,
           },
         },
       };
@@ -1270,6 +1276,12 @@ describe("KyselyWriteCache - Error Handling (Integration)", () => {
       }),
       getAllModules: vi.fn(),
       clear: vi.fn(),
+      getSupportedVersions: vi.fn(),
+      getLatestVersion: vi.fn(),
+      registerUpgradeManifests: vi.fn(),
+      getUpgradeManifest: vi.fn(),
+      computeUpgradePath: vi.fn(),
+      getUpgradeReducer: vi.fn(),
     };
 
     registry = mockRegistry;
@@ -1325,7 +1337,7 @@ describe("KyselyWriteCache - Error Handling (Integration)", () => {
           input: {
             documentId: docId,
             model: docType,
-            version: "0.0.0",
+            version: 0,
           },
         },
       });

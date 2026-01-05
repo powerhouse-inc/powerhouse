@@ -37,7 +37,6 @@ export {
   type ViewFilter,
 } from "./shared/types.js";
 export {
-  type ISigner,
   type SignatureVerificationHandler,
   type SignerConfig,
 } from "./signer/types.js";
@@ -139,6 +138,7 @@ export type {
 } from "./storage/kysely/types.js";
 
 // Read Models
+export { BaseReadModel } from "./read-models/base-read-model.js";
 export { ReadModelCoordinator } from "./read-models/coordinator.js";
 export { KyselyDocumentView } from "./read-models/document-view.js";
 export {
@@ -177,8 +177,8 @@ export {
   ChannelErrorSource,
   CompositeChannelFactory,
   GqlChannelFactory,
-  InternalChannel,
-  InternalChannelError,
+  PollingChannel,
+  PollingChannelError,
   Mailbox,
   SyncBuilder,
   SyncOperation,

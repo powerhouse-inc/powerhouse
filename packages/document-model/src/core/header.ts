@@ -1,4 +1,4 @@
-import type { PHDocumentHeader } from "./ph-types.js";
+import type { Action, PHDocumentHeader, Signature } from "./ph-types.js";
 import type { ISigner, SigningParameters } from "./types.js";
 import { generateId } from "./utils.js";
 
@@ -9,77 +9,69 @@ const generateStablePayload = (parameters: SigningParameters): string =>
   `${parameters.documentType}:${parameters.createdAtUtcIso}:${parameters.nonce}`;
 
 /**
- * A signer that uses a public key to verify data.
+ * Creates a verification-only signer from a public key.
+ * This signer can only verify signatures, not sign data.
+ *
+ * @param pubKey - The public key to use for verification.
+ * @returns An ISigner that can only verify signatures.
  */
-export class PublicKeySigner implements ISigner {
-  readonly #publicKey: JsonWebKey;
+export function createVerificationSigner(pubKey: JsonWebKey): ISigner {
+  let cachedCryptoKey: CryptoKey | undefined;
 
-  protected readonly subtleCrypto: Promise<SubtleCrypto>;
-  protected publicCryptoKey: CryptoKey | undefined;
+  return {
+    async publicKey(): Promise<JsonWebKey> {
+      return pubKey;
+    },
 
-  constructor(publicKey: JsonWebKey) {
-    this.#publicKey = publicKey;
-    this.subtleCrypto = this.#initCrypto();
-  }
+    async sign(_data: Uint8Array): Promise<Uint8Array> {
+      throw new Error("verification-only signer cannot sign data");
+    },
 
-  #initCrypto() {
-    return new Promise<SubtleCrypto>((resolve, reject) => {
-      resolve(crypto.subtle);
-    });
-  }
+    async signAction(
+      _action: Action,
+      _abortSignal?: AbortSignal,
+    ): Promise<Signature> {
+      throw new Error("verification-only signer cannot sign actions");
+    },
 
-  async publicKey(): Promise<JsonWebKey> {
-    return this.#publicKey;
-  }
+    async verify(data: Uint8Array, signature: Uint8Array): Promise<void> {
+      if (!cachedCryptoKey) {
+        cachedCryptoKey = await crypto.subtle.importKey(
+          "jwk",
+          pubKey,
+          { name: "ECDSA", namedCurve: "P-256" },
+          true,
+          ["verify"],
+        );
+      }
 
-  async sign(data: Uint8Array): Promise<Uint8Array> {
-    throw new Error("PublicKeySigner only supports verification");
-  }
+      let isValid: boolean;
+      try {
+        isValid = await crypto.subtle.verify(
+          { name: "ECDSA", hash: "SHA-256" },
+          cachedCryptoKey,
+          new Uint8Array(signature),
+          new Uint8Array(data),
+        );
+      } catch {
+        throw new Error("invalid signature");
+      }
 
-  async verify(data: Uint8Array, signature: Uint8Array): Promise<void> {
-    const subtleCrypto = await this.subtleCrypto;
-    if (!this.publicCryptoKey) {
-      this.publicCryptoKey = await subtleCrypto.importKey(
-        "jwk",
-        this.#publicKey,
-        {
-          name: "Ed25519",
-          namedCurve: "Ed25519",
-        },
-        true,
-        ["verify"],
-      );
-    }
-
-    let isValid;
-    try {
-      isValid = await subtleCrypto.verify(
-        "Ed25519",
-        this.publicCryptoKey,
-        new Uint8Array(signature),
-        new Uint8Array(data),
-      );
-    } catch (error) {
-      throw new Error("invalid signature");
-    }
-
-    if (!isValid) {
-      throw new Error("invalid signature");
-    }
-  }
+      if (!isValid) {
+        throw new Error("invalid signature");
+      }
+    },
+  };
 }
 
 /**
- * Creates a signer from a header.
+ * Creates a verification-only signer from a header.
  *
  * @param header - The header to create a signer from.
- *
- * @returns A signer for the header.
+ * @returns A signer that can verify the header's signature.
  */
-const createSignerFromHeader = async (
-  header: PHDocumentHeader,
-): Promise<ISigner> => {
-  return new PublicKeySigner(header.sig.publicKey);
+const createSignerFromHeader = (header: PHDocumentHeader): ISigner => {
+  return createVerificationSigner(header.sig.publicKey);
 };
 
 /**
@@ -145,9 +137,9 @@ export const verify = async (
 export const validateHeader = async (
   header: PHDocumentHeader,
 ): Promise<void> => {
-  const signer = await createSignerFromHeader(header);
+  const signer = createSignerFromHeader(header);
 
-  return await verify(
+  return verify(
     {
       documentType: header.documentType,
       createdAtUtcIso: header.createdAtUtcIso,
@@ -222,20 +214,18 @@ export const createSignedHeader = async (
     createdAtUtcIso: unsignedHeader.createdAtUtcIso,
 
     // mutable fields
-    slug: "",
-    name: "",
-    branch: "",
-    revision: {
-      document: 0,
-    },
+    slug: unsignedHeader.slug,
+    name: unsignedHeader.name,
+    branch: unsignedHeader.branch,
+    revision: unsignedHeader.revision,
     lastModifiedAtUtcIso: unsignedHeader.lastModifiedAtUtcIso,
-    meta: {},
+    meta: unsignedHeader.meta,
   };
 };
 
 /**
  * Creates a signed header for a document. The document header requires a signer
- * as the document id is a Ed25519 signature.
+ * as the document id is a cryptographic signature.
  *
  * @param documentType - The type of the document.
  * @param signer - The signer of the document.

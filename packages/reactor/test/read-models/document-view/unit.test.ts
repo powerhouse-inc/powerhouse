@@ -1,5 +1,7 @@
 import type { Kysely } from "kysely";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
+import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
 import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
 import type { IConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
 import type { IOperationStore } from "../../../src/storage/interfaces.js";
@@ -8,6 +10,8 @@ describe("KyselyDocumentView Unit Tests", () => {
   let view: KyselyDocumentView;
   let mockDb: any;
   let mockOperationStore: IOperationStore;
+  let mockOperationIndex: IOperationIndex;
+  let mockWriteCache: IWriteCache;
   let mockConsistencyTracker: IConsistencyTracker;
 
   beforeEach(() => {
@@ -18,6 +22,26 @@ describe("KyselyDocumentView Unit Tests", () => {
       getSince: vi.fn(),
       getSinceId: vi.fn(),
       getRevisions: vi.fn(),
+    };
+
+    mockOperationIndex = {
+      start: vi.fn(),
+      commit: vi.fn().mockResolvedValue([]),
+      find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+      getSinceOrdinal: vi.fn().mockResolvedValue({
+        items: [],
+        nextCursor: undefined,
+        hasMore: false,
+      }),
+    };
+
+    mockWriteCache = {
+      getState: vi.fn().mockResolvedValue({}),
+      putState: vi.fn(),
+      invalidate: vi.fn().mockReturnValue(0),
+      clear: vi.fn(),
+      startup: vi.fn().mockResolvedValue(undefined),
+      shutdown: vi.fn().mockResolvedValue(undefined),
     };
 
     mockConsistencyTracker = {
@@ -31,6 +55,8 @@ describe("KyselyDocumentView Unit Tests", () => {
     view = new KyselyDocumentView(
       mockDb,
       mockOperationStore,
+      mockOperationIndex,
+      mockWriteCache,
       mockConsistencyTracker,
     );
   });
@@ -303,6 +329,7 @@ describe("KyselyDocumentView Unit Tests", () => {
             documentId: "doc-1",
             scope: "global",
             branch: "main",
+            ordinal: 1,
             operationIndex: 0,
           },
         ],
@@ -316,6 +343,7 @@ describe("KyselyDocumentView Unit Tests", () => {
             documentId: "doc-1",
             scope: "global",
             branch: "main",
+            ordinal: 1,
             operationIndex: 0,
           },
         ],
@@ -365,6 +393,7 @@ describe("KyselyDocumentView Unit Tests", () => {
           scope: "header",
           content: { id: "doc-1", documentType: "test-type" },
           branch: "main",
+          ordinal: 1,
           isDeleted: false,
           documentType: "test-type",
           lastUpdatedAt: new Date(),
@@ -374,6 +403,7 @@ describe("KyselyDocumentView Unit Tests", () => {
           scope: "document",
           content: {},
           branch: "main",
+          ordinal: 1,
           isDeleted: false,
           documentType: "test-type",
           lastUpdatedAt: new Date(),
@@ -383,6 +413,7 @@ describe("KyselyDocumentView Unit Tests", () => {
           scope: "header",
           content: { id: "doc-2", documentType: "test-type" },
           branch: "main",
+          ordinal: 1,
           isDeleted: false,
           documentType: "test-type",
           lastUpdatedAt: new Date(),
@@ -410,6 +441,7 @@ describe("KyselyDocumentView Unit Tests", () => {
           scope: "header",
           content: { id: "doc-1", documentType: "test-type" },
           branch: "main",
+          ordinal: 1,
           isDeleted: false,
           documentType: "test-type",
           lastUpdatedAt: new Date(),
@@ -495,6 +527,7 @@ describe("KyselyDocumentView Unit Tests", () => {
             documentId: "doc-1",
             scope: "global",
             branch: "main",
+            ordinal: 1,
             operationIndex: 0,
           },
         ],
@@ -509,6 +542,7 @@ describe("KyselyDocumentView Unit Tests", () => {
             documentId: "doc-1",
             scope: "global",
             branch: "main",
+            ordinal: 1,
             operationIndex: 0,
           },
         ],

@@ -7,9 +7,10 @@ import {
 import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import type { Kysely } from "kysely";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../../../src/cache/write-cache-types.js";
+import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
 import { Reactor } from "../../../src/core/reactor.js";
 import { EventBus } from "../../../src/events/event-bus.js";
 import type { IEventBus } from "../../../src/events/interfaces.js";
@@ -26,6 +27,8 @@ import type {
   IOperationStore,
 } from "../../../src/storage/interfaces.js";
 import type { Database as StorageDatabase } from "../../../src/storage/kysely/types.js";
+import { DefaultSubscriptionErrorHandler } from "../../../src/subs/default-error-handler.js";
+import { ReactorSubscriptionManager } from "../../../src/subs/react-subscription-manager.js";
 import {
   createDocModelDocument,
   createMockDocumentIndexer,
@@ -103,13 +106,40 @@ describe("Legacy Write -> Read", () => {
 
     // Create real document view and read model coordinator
     const consistencyTracker = new ConsistencyTracker();
+    const mockOperationIndex: any = {
+      start: vi.fn(),
+      commit: vi.fn().mockResolvedValue([]),
+      find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+      getSinceOrdinal: vi.fn().mockResolvedValue({
+        items: [],
+        nextCursor: undefined,
+        hasMore: false,
+      }),
+    };
+    const mockWriteCache: IWriteCache = {
+      getState: vi.fn().mockResolvedValue({}),
+      putState: vi.fn(),
+      invalidate: vi.fn().mockReturnValue(0),
+      clear: vi.fn(),
+      startup: vi.fn().mockResolvedValue(undefined),
+      shutdown: vi.fn().mockResolvedValue(undefined),
+    };
     const documentView = new KyselyDocumentView(
       db,
       operationStore,
+      mockOperationIndex,
+      mockWriteCache,
       consistencyTracker,
     );
     await documentView.init();
-    readModelCoordinator = new ReadModelCoordinator(eventBus, [documentView]);
+    const subscriptionManager = new ReactorSubscriptionManager(
+      new DefaultSubscriptionErrorHandler(),
+    );
+    readModelCoordinator = new ReadModelCoordinator(
+      eventBus,
+      [documentView],
+      subscriptionManager,
+    );
 
     // Create reactor facade with all required dependencies
     const jobTracker = createTestJobTracker();

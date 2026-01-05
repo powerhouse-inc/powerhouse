@@ -502,10 +502,16 @@ describe("KyselyWriteCache Integration Tests", () => {
         nextIndex,
         (txn) => {
           txn.addOperations(
-            createUpgradeDocumentOperation(docId, nextIndex, {
-              global: { test: "state" },
-              local: {},
-            }),
+            createUpgradeDocumentOperation(
+              docId,
+              0,
+              1,
+              {
+                global: { test: "state" },
+                local: {},
+              },
+              { index: nextIndex },
+            ),
           );
         },
       );
@@ -628,7 +634,7 @@ describe("KyselyWriteCache Integration Tests", () => {
               input: {
                 documentId: docId,
                 model: docType,
-                version: "0.0.0",
+                version: 0,
               },
             },
           });
@@ -647,8 +653,8 @@ describe("KyselyWriteCache Integration Tests", () => {
               input: {
                 documentId: docId,
                 model: docType,
-                fromVersion: "0.0.0",
-                toVersion: "1.0.0",
+                fromVersion: 0,
+                toVersion: 1,
                 initialState,
               },
             },
@@ -852,7 +858,7 @@ describe("KyselyWriteCache Integration Tests", () => {
               input: {
                 documentId: docId,
                 model: docType,
-                version: "0.0.0",
+                version: 0,
               },
             },
           });
@@ -871,8 +877,8 @@ describe("KyselyWriteCache Integration Tests", () => {
               input: {
                 documentId: docId,
                 model: docType,
-                fromVersion: "0.0.0",
-                toVersion: "1.0.0",
+                fromVersion: 0,
+                toVersion: 1,
                 initialState,
               },
             },
@@ -960,7 +966,7 @@ describe("KyselyWriteCache Integration Tests", () => {
               input: {
                 documentId: docId,
                 model: docType,
-                version: "0.0.0",
+                version: 0,
               },
             },
           });
@@ -979,8 +985,8 @@ describe("KyselyWriteCache Integration Tests", () => {
               input: {
                 documentId: docId,
                 model: docType,
-                fromVersion: "0.0.0",
-                toVersion: "1.0.0",
+                fromVersion: 0,
+                toVersion: 1,
                 initialState,
               },
             },
@@ -1177,7 +1183,7 @@ describe("KyselyWriteCache Integration Tests", () => {
               input: {
                 documentId: docId,
                 model: docType,
-                version: "0.0.0",
+                version: 0,
               },
             },
           });
@@ -1196,8 +1202,8 @@ describe("KyselyWriteCache Integration Tests", () => {
               input: {
                 documentId: docId,
                 model: docType,
-                fromVersion: "0.0.0",
-                toVersion: "1.0.0",
+                fromVersion: 0,
+                toVersion: 1,
                 initialState,
               },
             },

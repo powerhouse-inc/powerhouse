@@ -5,7 +5,7 @@ import type { IReactor, ReactorModule } from "../src/core/types.js";
 import { EventBus } from "../src/events/event-bus.js";
 import type { IEventBus } from "../src/events/interfaces.js";
 import type { ISyncCursorStorage } from "../src/storage/interfaces.js";
-import { InternalChannel } from "../src/sync/channels/internal-channel.js";
+import { TestChannel } from "../test/sync/channels/test-channel.js";
 import type { IChannelFactory } from "../src/sync/interfaces.js";
 import { SyncBuilder } from "../src/sync/sync-builder.js";
 import type { ChannelConfig, SyncEnvelope } from "../src/sync/types.js";
@@ -15,7 +15,7 @@ type TwoReactorSetup = {
   reactorB: IReactor;
   moduleA: ReactorModule;
   moduleB: ReactorModule;
-  channelRegistry: Map<string, InternalChannel>;
+  channelRegistry: Map<string, TestChannel>;
   eventBusA: IEventBus;
   eventBusB: IEventBus;
 };
@@ -25,7 +25,7 @@ function deterministicId(prefix: string, counter: number): string {
 }
 
 async function setupTwoReactors(): Promise<TwoReactorSetup> {
-  const channelRegistry = new Map<string, InternalChannel>();
+  const channelRegistry = new Map<string, TestChannel>();
   const peerMapping = new Map<string, string>();
   peerMapping.set("remoteA", "remoteB");
   peerMapping.set("remoteB", "remoteA");
@@ -37,7 +37,7 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
         remoteName: string,
         config: ChannelConfig,
         cursorStorage: ISyncCursorStorage,
-      ): InternalChannel {
+      ): TestChannel {
         const peerName = peerMapping.get(remoteName);
 
         const send = (envelope: SyncEnvelope): void => {
@@ -52,7 +52,7 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
           peerChannel.receive(envelope);
         };
 
-        const channel = new InternalChannel(
+        const channel = new TestChannel(
           remoteId,
           remoteName,
           cursorStorage,

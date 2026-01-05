@@ -13,6 +13,7 @@ import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
 import { JobStatus } from "../../src/shared/types.js";
 import type { IOperationStore } from "../../src/storage/interfaces.js";
 import {
+  createMockDocumentMetaCache,
   createMockDocumentStorage,
   createMockOperationStorage,
   createMockOperationStore,
@@ -92,10 +93,11 @@ describe("SimpleJobExecutor load jobs", () => {
         addToCollection: vi.fn(),
         write: vi.fn(),
       }),
-      commit: vi.fn().mockResolvedValue(undefined),
+      commit: vi.fn().mockResolvedValue([]),
       find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
     };
 
+    const mockDocumentMetaCache = createMockDocumentMetaCache();
     executor = new SimpleJobExecutor(
       registry,
       mockDocStorage,
@@ -107,6 +109,7 @@ describe("SimpleJobExecutor load jobs", () => {
       } as any,
       mockWriteCache,
       mockOperationIndex,
+      mockDocumentMetaCache,
       { legacyStorageEnabled: true },
       undefined,
     );

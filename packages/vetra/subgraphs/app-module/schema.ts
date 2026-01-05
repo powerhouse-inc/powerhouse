@@ -3,22 +3,7 @@ import type { DocumentNode } from "graphql";
 
 export const schema: DocumentNode = gql`
   """
-  Subgraph definition for AppModule (powerhouse/app)
-  """
-  type AppModuleState {
-    name: String!
-    status: StatusType!
-    allowedDocumentTypes: [String!]
-    isDragAndDropEnabled: Boolean!
-  }
-
-  enum StatusType {
-    DRAFT
-    CONFIRMED
-  }
-
-  """
-  Queries: AppModule
+  Queries: AppModule Document
   """
   type AppModuleQueries {
     getDocument(docId: PHID!, driveId: PHID): AppModule
@@ -74,7 +59,7 @@ export const schema: DocumentNode = gql`
     name: String!
   }
   input AppModule_SetAppStatusInput {
-    status: StatusType!
+    status: AppModule_StatusType!
   }
   input AppModule_AddDocumentTypeInput {
     documentType: String!

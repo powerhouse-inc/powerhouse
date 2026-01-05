@@ -60,6 +60,11 @@ export type JobInfo = {
    * A token for coordinating reads, only valid once a job reaches COMPLETED.
    */
   consistencyToken: ConsistencyToken;
+
+  /**
+   * Optional metadata that flows through the job lifecycle.
+   */
+  meta?: Record<string, unknown>;
 };
 
 /**

@@ -218,7 +218,9 @@ export const login: CommandActionType<[LoginOptions]> = async (options) => {
   console.log("Waiting for authentication in browser");
   console.log(`(timeout in ${timeoutMs / 1000} seconds)`);
   console.log();
-  console.log("Please connect your wallet and authorize this CLI to act on your behalf.");
+  console.log(
+    "Please connect your wallet and authorize this CLI to act on your behalf.",
+  );
   console.log();
   process.stdout.write("Waiting");
 

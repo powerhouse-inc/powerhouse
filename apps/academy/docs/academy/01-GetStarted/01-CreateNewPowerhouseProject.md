@@ -11,16 +11,16 @@ This tutorial step has a corresponding branch in the repository. You can:
 
 ## Overview
 
-This tutorial guides you through creating a simplified version of a 'Powerhouse project' for a **To-do List**.  
+This tutorial guides you through creating a simplified version of a 'Powerhouse project' for a **todo-list**.  
 A Powerhouse project primarily consists of a document model and its editor. 
-As your projects use-case expands you can add data-integrations or a specific drive-app as seen in the demo package. 
+As your projects use-case expands you can add data-integrations or a specific Drive-app as seen in the demo package. 
 
-For todays purpose, you'll be using Connect, our user-centric collaboration tool and Vetra Studio, the builder tooling through which developers can access and manage specifications of your project. 
+For today's purpose, you'll be using **Vetra Studio**, the builder platform through which developers can access and manage specifications of your project. Vetra Studio runs inside **Connect**, the Powerhouse host application that serves as a container for all Powerhouse apps and drives. 
 
 ## Prerequisites
 
 - Powerhouse CLI installed: `pnpm install -g ph-cmd` or `npm install -g ph-cmd --legacy-peer-deps`
-- node.js 22 and a package manager (pnpm or npm) installed
+- Node.js 22 and a package manager (pnpm or npm) installed
 - Visual Studio Code (or your preferred IDE)
 - Terminal/Command Prompt access
 
@@ -148,7 +148,11 @@ Navigate to the newly created project directory:
 
 **Vetra Studio** is the builder's orchestration hub for assembling all specifications needed for your package. It provides a **Vetra Studio Drive** to access, manage, and share document model specifications, editors, and data integrations—all through a visual interface. For deeper coverage, see the [Vetra Studio documentation](/academy/MasteryTrack/BuilderEnvironment/VetraStudio).
 
-Once in the project directory, run the `ph vetra --watch` command to start a Vetra Studio Drive where you'll be defining your specifications. 
+Once in the project directory, run the `ph vetra --watch` command to start a Vetra Studio Drive where you'll be defining your specifications. This is the preferred way to launch your development environment.
+
+:::info What is a Reactor?
+You'll notice "reactor-api" in the terminal output. A **Reactor** is the Powerhouse back-end service that hosts your drives, handles document synchronization, and provides the GraphQL API. When you run `ph vetra --watch`, a local Reactor starts automatically to power your development environment.
+::: 
 
 
     ```bash
@@ -159,7 +163,7 @@ The host application for Vetra Studio will start and you will see the following 
 
     ```bash
 ℹ [reactor-api] [package-manager] Loading packages: @powerhousedao/vetra                                                                                                        14:44:19
-ℹ [reactor-api] [server] WebSocket server attached at /graphql/subscriptions                                                                                                    14:44:22
+ℹ [reactor-api] [server] WebSocket server available at /graphql/subscriptions                                                                                                    14:44:22
 ℹ [reactor-api] [graphql-manager] Registered /graphql/system subgraph.                                                                                                          14:44:22
 ℹ [reactor-api] [graphql-manager] Registered /graphql/analytics subgraph.                                                                                                       14:44:22
 ℹ [reactor-api] [graphql-manager] Registered /d/:drive subgraph.                                                                                                                14:44:22
@@ -195,7 +199,11 @@ A new browser window will open when visiting localhost and you will see the Vetr
 Create a new document model by clicking the Document Models 'Add new specification' button. Name your document TodoList (PascalCase, no spaces or hyphens). If you've followed the steps correctly, you'll have an empty TodoList document where you can define the 'Document Specifications' in the next step.
 
 <details>
-<summary>Alternatively: Develop a single document model in Connect</summary>
+<summary>Alternatively: Develop a single document model in Connect (legacy)</summary>
+
+:::note
+The `ph connect` command is a legacy feature. We recommend using `ph vetra --watch` for all new development, as it provides better tooling and automatic code generation.
+:::
 
 Once in the project directory, run the `ph connect` command to start a local instance of the Connect application. This allows you to start your document model specification document.
 Run the following command to start the Connect application:

@@ -1,4 +1,9 @@
-import type { Action, DocumentModelModule, PHDocument } from "document-model";
+import type {
+  Action,
+  DocumentModelModule,
+  ISigner,
+  PHDocument,
+} from "document-model";
 import { actions } from "document-model";
 
 import { signActions } from "#core/utils.js";
@@ -14,7 +19,6 @@ import {
   type SearchFilter,
   type ViewFilter,
 } from "../shared/types.js";
-import type { ISigner } from "../signer/types.js";
 import type { IDocumentIndexer } from "../storage/interfaces.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
 import {

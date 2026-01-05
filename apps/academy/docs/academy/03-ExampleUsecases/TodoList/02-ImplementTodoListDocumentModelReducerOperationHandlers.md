@@ -35,7 +35,7 @@ export const todoListTodosOperations: TodoListTodosOperations = {
 
 Let's add the handler logic for each operation in the same order we defined them in the previous step.
 
-To handle the `addTodoItemOperation`, all we need to do is create an `id` for our new operation, and then push an object with that `id` and the rest of the action input into the `items` array in our state.
+To handle the `addTodoItemOperation`, all we need to do is push a new todo item into the `state.items` array (which we defined in Step 1). When an action is dispatched (we will see this later), all the inputs are available in the `action.input` object.
 
 Update your `addTodoItemOperation` like so:
 
@@ -51,8 +51,11 @@ export const todoListTodosOperations: TodoListTodosOperations = {
   // removed-end
   // added-start
   addTodoItemOperation(state, action) {
-    const id = generateId();
-    state.items.push({ ...action.input, id, checked: false });
+    state.items.push({
+      id: action.input.id,
+      text: action.input.text,
+      checked: false,
+    });
   },
   // added-end
   updateTodoItemOperation(state, action) {
@@ -75,8 +78,11 @@ Update your `updateTodoOperation` to be like so:
 ```typescript
 export const todoListTodosOperations: TodoListTodosOperations = {
     addTodoItemOperation(state, action) {
-      const id = generateId();
-      state.items.push({ ...action.input, id, checked: false });
+      state.items.push({
+        id: action.input.id,
+        text: action.input.text,
+        checked: false,
+      });
     },
     // removed-start
     updateTodoItemOperation(state, action) {
@@ -87,7 +93,7 @@ export const todoListTodosOperations: TodoListTodosOperations = {
     // added-start
     updateTodoItemOperation(state, action) {
       const item = state.items.find((item) => item.id === action.input.id);
-      if (!item) return;
+      if (!item) return state;
       item.text = action.input.text ?? item.text;
       item.checked = action.input.checked ?? item.checked;
     },
@@ -104,12 +110,15 @@ The delete operation is the simplest of the three. All we need to do is filter t
 ```typescript
 export const todoListTodosOperations: TodoListTodosOperations = {
   addTodoItemOperation(state, action) {
-    const id = generateId();
-    state.items.push({ ...action.input, id, checked: false });
+    state.items.push({
+      id: action.input.id,
+      text: action.input.text,
+      checked: false,
+    });
   },
   updateTodoItemOperation(state, action) {
     const item = state.items.find((item) => item.id === action.input.id);
-    if (!item) return;
+    if (!item) return state;
     item.text = action.input.text ?? item.text;
     item.checked = action.input.checked ?? item.checked;
   },
@@ -130,17 +139,19 @@ export const todoListTodosOperations: TodoListTodosOperations = {
 With that all done, your final result should look like this:
 
 ```ts
-import { generateId } from "document-model/core";
 import type { TodoListTodosOperations } from "todo-tutorial/document-models/todo-list";
 
 export const todoListTodosOperations: TodoListTodosOperations = {
   addTodoItemOperation(state, action) {
-    const id = generateId();
-    state.items.push({ ...action.input, id, checked: false });
+    state.items.push({
+      id: action.input.id,
+      text: action.input.text,
+      checked: false,
+    });
   },
   updateTodoItemOperation(state, action) {
     const item = state.items.find((item) => item.id === action.input.id);
-    if (!item) return;
+    if (!item) return state;
     item.text = action.input.text ?? item.text;
     item.checked = action.input.checked ?? item.checked;
   },
@@ -148,6 +159,7 @@ export const todoListTodosOperations: TodoListTodosOperations = {
     state.items = state.items.filter((item) => item.id !== action.input.id);
   },
 };
+
 ```
 
 ## Check your work

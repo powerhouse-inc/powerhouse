@@ -5,6 +5,8 @@ import {
   type OperationWrittenEvent,
   type Unsubscribe,
 } from "../events/types.js";
+import type { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
+import { SubscriptionNotificationReadModel } from "../subs/subscription-notification-read-model.js";
 import type { IReadModel, IReadModelCoordinator } from "./interfaces.js";
 
 /**
@@ -23,11 +25,16 @@ import type { IReadModel, IReadModelCoordinator } from "./interfaces.js";
 export class ReadModelCoordinator implements IReadModelCoordinator {
   private unsubscribe?: Unsubscribe;
   private isRunning = false;
+  private subscriptionNotificationReadModel: SubscriptionNotificationReadModel;
 
   constructor(
     private eventBus: IEventBus,
     private readModels: IReadModel[],
-  ) {}
+    subscriptionManager: ReactorSubscriptionManager,
+  ) {
+    this.subscriptionNotificationReadModel =
+      new SubscriptionNotificationReadModel(subscriptionManager);
+  }
 
   /**
    * Start listening for operation events and updating read models.
@@ -82,15 +89,15 @@ export class ReadModelCoordinator implements IReadModelCoordinator {
     );
 
     // Emit OPERATIONS_READY event after all read models have completed
-    // Use fire-and-forget pattern to avoid blocking
     const readyEvent: OperationsReadyEvent = {
       jobId: event.jobId,
       operations: event.operations,
     };
-    this.eventBus
-      .emit(OperationEventTypes.OPERATIONS_READY, readyEvent)
-      .catch(() => {
-        // No-op: Event emission is fire-and-forget
-      });
+    await this.eventBus.emit(OperationEventTypes.OPERATIONS_READY, readyEvent);
+
+    // Notify subscriptions AFTER OPERATIONS_READY so reactor.get() returns fresh data
+    await this.subscriptionNotificationReadModel.indexOperations(
+      event.operations,
+    );
   }
 }

@@ -120,7 +120,7 @@ export const getResolvers = (subgraph: Subgraph) => {
         const todoItems: string[] = [];
         for (const docId of documents) {
           const doc: ToDoListDocument = await reactor.getDocument(docId);
-          if (doc.header.documentType !== "powerhouse/todolist") {
+          if (doc.header.documentType !== "powerhouse/todo-list") {
             continue;
           }
 

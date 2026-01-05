@@ -21,7 +21,7 @@ You need to install the Powerhouse CLI (`ph-cmd`) to create and manage Powerhous
 
 ### Prerequisites
 
-- node.js 22 installed
+- Node.js 22 installed
 - pnpm package manager 10 installed
 - Terminal or command prompt access
 
@@ -1289,7 +1289,7 @@ Run the `generate` command, specifying the editor name (usually matching the doc
 
 ```bash
 # Replace <ModelName> with the name of your document model (e.g., To-do List)
-# Replace <docType> with the identifier for your document (e.g., powerhouse/todolist)
+# Replace <docType> with the identifier for your document (e.g., powerhouse/todo-list)
 ph generate --editor <ModelName> --document-types <docType>
 ```
 
@@ -1305,7 +1305,7 @@ ph generate --editor <ModelName> --document-types <docType>
 - [Launching Vetra Studio](#launching-vetra-studio)
 - [Creating an Editor with AI Assistance](#creating-an-editor-with-ai-assistance)
 - [Initializing a New Project & Document Model](#initializing-a-new-project-and-document-model)
-- [Generating a Custom Drive Explorer](#generating-a-custom-drive-explorer)
+- [Generating a Custom Drive-app](#generating-a-custom-drive-app)
 
 ### Further reading
 
@@ -1313,10 +1313,10 @@ ph generate --editor <ModelName> --document-types <docType>
 - [Build a Todo-list Editor](/academy/GetStarted/BuildToDoListEditor)
 </details>
 
-<details id="generating-a-custom-drive-explorer">
-<summary>Generating a Custom Drive Explorer</summary>
+<details id="generating-a-custom-drive-app">
+<summary>Generating a Custom Drive-app</summary>
 
-### How to Generate a Custom Drive Explorer
+### How to Generate a Custom Drive-app
 
 ---
 
@@ -1341,11 +1341,11 @@ Start Vetra with watch mode for automatic code generation and live preview:
 ph vetra --watch
 ```
 
-Vetra Studio allows you to develop and preview your drive explorer in real-time.
+Vetra Studio allows you to develop and preview your Drive-app in real-time.
 
 ### Manual Generation (Alternative)
 
-If you need to manually generate a drive explorer template:
+If you need to manually generate a Drive-app template:
 
 ### Step 1: Navigate to Project Directory
 
@@ -1355,19 +1355,19 @@ Ensure your terminal is in the root directory of your Powerhouse project.
 cd <yourprojectname>
 ```
 
-### Step 2: Generate the Drive Explorer Template
+### Step 2: Generate the Drive-app Template
 
-Run the `generate` command, specifying the `--drive-editor` flag and a name for your drive explorer application.
+Run the `generate` command, specifying the `--drive-editor` flag and a name for your Drive-app.
 
 ```bash
-# Replace <drive-app-name> with a suitable name for your drive explorer (e.g., todo-drive-explorer)
+# Replace <drive-app-name> with a suitable name for your Drive-app (e.g., todo-drive-app)
 ph generate --drive-editor <drive-app-name>
 ```
 
 ### Expected outcome
 
 - A new directory is created under `editors/` (e.g., `editors/<drive-app-name>/`).
-- Template files (`EditorContainer.tsx`, components, hooks, etc.) are generated within that directory, providing a basic structure for a drive explorer.
+- Template files (`EditorContainer.tsx`, components, hooks, etc.) are generated within that directory, providing a basic structure for a Drive-app.
 - You can now customize these files to create your specific drive interface, potentially removing default components and adding custom views relevant to your document models.
 - Remember to update your `powerhouse.manifest.json` to register the new app.
 - With Vetra, you get live preview with `ph vetra --watch` as you develop.
@@ -1380,7 +1380,7 @@ ph generate --drive-editor <drive-app-name>
 ### Further reading
 
 - [Vetra Studio Documentation](/academy/MasteryTrack/BuilderEnvironment/VetraStudio)
-- [Build a Drive-Explorer](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer)
+- [Build a Drive-app](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer)
 </details>
 
 <details id="adding-a-new-drive-via-graphql-mutation">
@@ -1620,7 +1620,7 @@ Check your project's `package.json` and `powerhouse.manifest.json` to ensure the
 
 - The custom Powerhouse package is downloaded and installed into your project's dependencies.
 - The `powerhouse.manifest.json` is updated (if necessary) to reflect the installed package.
-- Document models, editors, drive explorers, or other components from the package become available within the target project.
+- Document models, editors, Drive-apps, or other components from the package become available within the target project.
 
 ### Common issues and solutions
 
@@ -1666,11 +1666,12 @@ You need to understand and manage different types of dependencies in your Powerh
 #### Understanding Different Types of Dependencies
 
 1. **Monorepo Dependencies**
-   - The Powerhouse monorepo has three main branches:
-     - `main` (stable)
-     - `dev` (development)
-     - `staging` (pre-release)
-   - You can use these branches by:
+   - The Powerhouse monorepo has the following branching strategy:
+     - Ongoing development happens on the main branch with tag `dev`   
+     - A pre-release is branched off on Release/staging/v.x.x with tag `staging`
+     - Production is the latest release Release/production/v.x.x accessed with tag `latest`or `prod` 
+     
+   - You can use these branches or dependencies by:
 
      ```bash
      # Install dev version of CLI

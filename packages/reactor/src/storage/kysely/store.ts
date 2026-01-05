@@ -268,6 +268,7 @@ export class KyselyOperationStore implements IOperationStore {
         documentType: row.documentType,
         scope: row.scope,
         branch: row.branch,
+        ordinal: row.id,
       },
     };
   }

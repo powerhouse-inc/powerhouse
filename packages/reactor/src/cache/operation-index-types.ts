@@ -1,6 +1,7 @@
 import type { Operation } from "document-model";
 import type { Generated, Insertable, Selectable, Updateable } from "kysely";
 import type {
+  OperationWithContext,
   PagedResults,
   PagingOptions,
   ViewFilter,
@@ -23,7 +24,7 @@ export interface IOperationIndexTxn {
 
 export interface IOperationIndex {
   start(): IOperationIndexTxn;
-  commit(txn: IOperationIndexTxn, signal?: AbortSignal): Promise<void>;
+  commit(txn: IOperationIndexTxn, signal?: AbortSignal): Promise<number[]>;
   find(
     collectionId: string,
     cursor?: number,
@@ -31,6 +32,11 @@ export interface IOperationIndex {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<OperationIndexEntry>>;
+  getSinceOrdinal(
+    ordinal: number,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<OperationWithContext>>;
 }
 
 export interface DocumentCollectionTable {

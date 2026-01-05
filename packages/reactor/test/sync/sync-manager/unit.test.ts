@@ -75,8 +75,13 @@ describe("SyncManager - Unit Tests", () => {
 
     mockOperationIndex = {
       start: vi.fn(),
-      commit: vi.fn(),
+      commit: vi.fn().mockResolvedValue([]),
       find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+      getSinceOrdinal: vi.fn().mockResolvedValue({
+        items: [],
+        nextCursor: undefined,
+        hasMore: false,
+      }),
     };
 
     mockReactor = {
@@ -424,6 +429,7 @@ describe("SyncManager - Unit Tests", () => {
             documentType: "test",
             scope: "global",
             branch: "main",
+            ordinal: 1,
           },
         },
       ];
@@ -467,6 +473,7 @@ describe("SyncManager - Unit Tests", () => {
             documentType: "test",
             scope: "global",
             branch: "main",
+            ordinal: 1,
           },
         },
       ];
@@ -506,6 +513,7 @@ describe("SyncManager - Unit Tests", () => {
             documentType: "test",
             scope: "global",
             branch: "main",
+            ordinal: 1,
           },
         },
       ];

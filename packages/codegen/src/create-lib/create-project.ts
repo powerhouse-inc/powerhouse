@@ -6,6 +6,111 @@ import { featureFlags } from "./feature-flags.js";
 import { envPackageManager, runCmd } from "./utils.js";
 import { parseArgs, promptDirectories } from "../utils/cli.js";
 
+const POWERHOUSE_ORG = "@powerhousedao";
+
+// Special packages that don't use the @powerhousedao organization
+const SPECIAL_PACKAGES = ["document-model", "document-drive", "@renown/sdk"];
+
+// Packages to exclude from version resolution (external dependencies)
+const EXCLUDED_PACKAGES = [
+  "@powerhousedao/document-engineering",
+  "@powerhousedao/scalars",
+  "@powerhousedao/diff-analyzer",
+  "@powerhousedao/analytics-engine-core",
+  "@powerhousedao/analytics-engine-graphql",
+  "@powerhousedao/analytics-engine-pg",
+  "@powerhousedao/analytics-engine-browser",
+  "@powerhousedao/analytics-engine-knex",
+];
+
+// Version tags that should be resolved to actual versions
+const VERSION_TAGS = ["dev", "staging", "latest"];
+
+/**
+ * Checks if a version string is a tag that should be resolved
+ */
+function isVersionTag(version: string): boolean {
+  return VERSION_TAGS.includes(version);
+}
+
+/**
+ * Gets the installed version of a package from node_modules
+ */
+function getInstalledVersion(
+  appPath: string,
+  packageName: string,
+): string | null {
+  try {
+    const packageJsonPath = path.join(
+      appPath,
+      "node_modules",
+      packageName,
+      "package.json",
+    );
+    if (fs.existsSync(packageJsonPath)) {
+      const pkg = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8")) as {
+        version?: string;
+      };
+      return pkg.version ?? null;
+    }
+  } catch {
+    // Ignore errors reading package.json
+  }
+  return null;
+}
+
+/**
+ * Resolves version tags (dev, staging, latest) to actual installed versions in package.json
+ */
+function resolveVersionTags(appPath: string) {
+  const packageJsonPath = path.join(appPath, "package.json");
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8")) as {
+    dependencies?: Record<string, string>;
+    devDependencies?: Record<string, string>;
+  };
+
+  let hasChanges = false;
+
+  const processSection = (deps: Record<string, string> | undefined) => {
+    if (!deps) return;
+
+    for (const [pkg, version] of Object.entries(deps)) {
+      // Check if this is a Powerhouse package
+      const isPowerhouseOrg = pkg.startsWith(POWERHOUSE_ORG + "/");
+      const isSpecialPackage = SPECIAL_PACKAGES.includes(pkg);
+      const isExcluded = EXCLUDED_PACKAGES.includes(pkg);
+
+      if ((isPowerhouseOrg || isSpecialPackage) && !isExcluded) {
+        // Check if the version is a tag that should be resolved
+        if (isVersionTag(version)) {
+          const installedVersion = getInstalledVersion(appPath, pkg);
+          if (installedVersion) {
+            // Add ^ prefix to allow semver range updates with ph update
+            deps[pkg] = `^${installedVersion}`;
+            hasChanges = true;
+            console.log(`  ${pkg}: ${version} → ^${installedVersion}`);
+          }
+        }
+      }
+    }
+  };
+
+  console.log("\x1b[34m", "Resolving version tags...", "\x1b[0m");
+  processSection(packageJson.dependencies);
+  processSection(packageJson.devDependencies);
+
+  if (hasChanges) {
+    fs.writeFileSync(
+      packageJsonPath,
+      JSON.stringify(packageJson, null, 2),
+      "utf8",
+    );
+    console.log("\x1b[32m", "Version tags resolved successfully!", "\x1b[0m");
+  } else {
+    console.log("  No version tags to resolve");
+  }
+}
+
 const BOILERPLATE_REPO =
   "https://github.com/powerhouse-inc/document-model-boilerplate.git";
 
@@ -226,6 +331,9 @@ function handleCreateProject(
       "\x1b[0m",
     );
     runCmd(`${packageManager} install --loglevel error`);
+
+    // Resolve version tags (dev, staging, latest) to actual installed versions
+    resolveVersionTags(appPath);
 
     fs.rmSync(path.join(appPath, "./.git"), { recursive: true });
     runCmd(`git init -b ${tag}`);

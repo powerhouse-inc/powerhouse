@@ -15,6 +15,8 @@ import type {
   IOperationStore,
 } from "../../src/storage/interfaces.js";
 import type { Database as DatabaseSchema } from "../../src/storage/kysely/types.js";
+import { DocumentMetaCache } from "../../src/cache/document-meta-cache.js";
+import type { IDocumentMetaCache } from "../../src/cache/document-meta-cache-types.js";
 import { createTestEventBus, createTestOperationStore } from "../factories.js";
 
 describe("SimpleJobExecutor Integration (Modern Storage)", () => {
@@ -25,6 +27,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
   let keyframeStore: IKeyframeStore;
   let writeCache: KyselyWriteCache;
   let operationIndex: IOperationIndex;
+  let documentMetaCache: IDocumentMetaCache;
 
   async function createDocumentWithCreateOperation(
     documentId: string,
@@ -139,6 +142,11 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
 
     operationIndex = new KyselyOperationIndex(db);
 
+    documentMetaCache = new DocumentMetaCache(operationStore, {
+      maxDocuments: 100,
+    });
+    await documentMetaCache.startup();
+
     const eventBus = createTestEventBus();
     executor = new SimpleJobExecutor(
       registry,
@@ -148,12 +156,14 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
       eventBus,
       writeCache,
       operationIndex,
+      documentMetaCache,
       { legacyStorageEnabled: false },
     );
   });
 
   afterEach(async () => {
     await writeCache.shutdown();
+    await documentMetaCache.shutdown();
     try {
       await db.destroy();
     } catch {
@@ -468,11 +478,121 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
-      expect(result.error?.message).toContain("no CREATE_DOCUMENT operation");
+      expect(result.error?.message).toContain("not found");
     });
   });
 
   describe("Deletion State Checking", () => {
+    it("should reject operations on deleted documents when deletion happens after global scope cache (cross-scope staleness bug)", async () => {
+      const document = driveDocumentModelModule.utils.createDocument();
+      await createDocumentWithCreateOperation(
+        document.header.id,
+        document.header.documentType,
+        document.state,
+      );
+
+      // Step 1: Execute a global scope operation (caches global scope state)
+      const globalJob1: Job = {
+        id: "global-job-1",
+        kind: "mutation",
+        documentId: document.header.id,
+        scope: "global",
+        branch: "main",
+        actions: [
+          {
+            id: "global-action-1",
+            type: "ADD_FOLDER",
+            scope: "global",
+            timestampUtcMs: Date.now().toString(),
+            input: {
+              id: "folder-1",
+              name: "Folder 1",
+              parentFolder: null,
+            },
+          },
+        ],
+        operations: [],
+        createdAt: Date.now().toString(),
+        queueHint: [],
+        errorHistory: [],
+      };
+
+      const result1 = await executor.executeJob(globalJob1);
+      expect(result1.success).toBe(true);
+
+      // Step 2: Bring in DELETE_DOCUMENT via load job (simulates sync from another node)
+      // This is a realistic scenario where delete operation arrives through sync
+      const deleteTimestamp = new Date().toISOString();
+      const loadJob: Job = {
+        id: "load-delete-job",
+        kind: "load",
+        documentId: document.header.id,
+        scope: "document",
+        branch: "main",
+        actions: [],
+        operations: [
+          {
+            id: "delete-op-sync",
+            index: 2,
+            timestampUtcMs: deleteTimestamp,
+            hash: "",
+            skip: 0,
+            action: {
+              id: "delete-action-sync",
+              type: "DELETE_DOCUMENT",
+              scope: "document",
+              timestampUtcMs: deleteTimestamp,
+              input: { documentId: document.header.id },
+            },
+          },
+        ],
+        createdAt: deleteTimestamp,
+        queueHint: [],
+        errorHistory: [],
+      };
+
+      const loadResult = await executor.executeJob(loadJob);
+      expect(loadResult.success).toBe(true);
+
+      // Step 3: Try another global scope operation
+      // BUG: This should fail with DocumentDeletedError because document was deleted
+      // But the executor checks document.state.document.isDeleted from the cached
+      // global scope state, which is stale (doesn't know about the deletion)
+      const postDeleteJob: Job = {
+        id: "post-delete-job",
+        kind: "mutation",
+        documentId: document.header.id,
+        scope: "global",
+        branch: "main",
+        actions: [
+          {
+            id: "post-delete-action",
+            type: "ADD_FOLDER",
+            scope: "global",
+            timestampUtcMs: (Date.now() + 100).toString(),
+            input: {
+              id: "folder-after-delete",
+              name: "Should Not Be Created",
+              parentFolder: null,
+            },
+          },
+        ],
+        operations: [],
+        createdAt: (Date.now() + 100).toString(),
+        queueHint: [],
+        errorHistory: [],
+      };
+
+      const result = await executor.executeJob(postDeleteJob);
+
+      // This assertion demonstrates the expected behavior after the fix
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
+      expect(result.error?.name).toBe("DocumentDeletedError");
+      expect(result.error?.message).toContain(document.header.id);
+      expect(result.error?.message).toContain("deleted");
+    });
+
     it("should reject operations on deleted documents", async () => {
       const document = driveDocumentModelModule.utils.createDocument();
       await createDocumentWithCreateOperation(

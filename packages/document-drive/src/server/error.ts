@@ -45,18 +45,6 @@ export class MissingOperationError extends OperationError {
   }
 }
 
-export class DocumentIdValidationError extends Error {
-  constructor(documentId: string) {
-    super(`Invalid document id: ${documentId}`);
-  }
-}
-
-export class DocumentSlugValidationError extends Error {
-  constructor(slug: string) {
-    super(`Invalid slug: ${slug}`);
-  }
-}
-
 export enum DocumentAlreadyExistsReason {
   ID = "id",
   SLUG = "slug",

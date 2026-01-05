@@ -7,7 +7,8 @@ import {
   ReactorBuilder as DriveReactorBuilder,
   MemoryStorage,
 } from "document-drive";
-import type { DocumentModelModule } from "document-model";
+import type { DocumentModelModule, UpgradeManifest } from "document-model";
+import { DocumentMetaCache } from "../cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../cache/kysely-operation-index.js";
 import { KyselyWriteCache } from "../cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../cache/write-cache-types.js";
@@ -18,7 +19,10 @@ import { InMemoryJobTracker } from "../job-tracker/in-memory-job-tracker.js";
 import { InMemoryQueue } from "../queue/queue.js";
 import { ReadModelCoordinator } from "../read-models/coordinator.js";
 import { KyselyDocumentView } from "../read-models/document-view.js";
-import type { IReadModel } from "../read-models/interfaces.js";
+import type {
+  IReadModel,
+  IReadModelCoordinator,
+} from "../read-models/interfaces.js";
 import { DocumentModelRegistry } from "../registry/implementation.js";
 import { ConsistencyTracker } from "../shared/consistency-tracker.js";
 import { KyselyDocumentIndexer } from "../storage/kysely/document-indexer.js";
@@ -42,35 +46,37 @@ import { PGlite } from "@electric-sql/pglite";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import type { IEventBus } from "../events/interfaces.js";
-import type { IReadModelCoordinator } from "../read-models/interfaces.js";
 import type { SignatureVerificationHandler } from "../signer/types.js";
 import { ConsistencyAwareLegacyStorage } from "../storage/consistency-aware-legacy-storage.js";
 import { runMigrations } from "../storage/migrations/migrator.js";
 import type { MigrationStrategy } from "../storage/migrations/types.js";
-
-export type IReadModelCoordinatorFactory = (
-  eventBus: IEventBus,
-  readModels: IReadModel[],
-) => IReadModelCoordinator;
+import { DefaultSubscriptionErrorHandler } from "../subs/default-error-handler.js";
+import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
 
 export class ReactorBuilder {
   private documentModels: DocumentModelModule[] = [];
+  private upgradeManifests: UpgradeManifest<readonly number[]>[] = [];
   private storage?: IDocumentStorage & IDocumentOperationStorage;
   private features: ReactorFeatures = { legacyStorageEnabled: true };
   private readModels: IReadModel[] = [];
   private executorManager: IJobExecutorManager | undefined;
   private executorConfig: ExecutorConfig = { count: 1 };
   private writeCacheConfig?: Partial<WriteCacheConfig>;
-  private readModelCoordinatorFactory?: IReadModelCoordinatorFactory;
   private migrationStrategy: MigrationStrategy = "auto";
   private syncBuilder?: SyncBuilder;
   private eventBus?: IEventBus;
-  public documentIndexer?: IDocumentIndexer;
+  private documentIndexer?: IDocumentIndexer;
+  private readModelCoordinator?: IReadModelCoordinator;
   private signatureVerifier?: SignatureVerificationHandler;
   private kyselyInstance?: Kysely<Database>;
 
   withDocumentModels(models: DocumentModelModule[]): this {
     this.documentModels = models;
+    return this;
+  }
+
+  withUpgradeManifests(manifests: UpgradeManifest<readonly number[]>[]): this {
+    this.upgradeManifests = manifests;
     return this;
   }
 
@@ -91,8 +97,8 @@ export class ReactorBuilder {
     return this;
   }
 
-  withReadModelCoordinatorFactory(factory: IReadModelCoordinatorFactory): this {
-    this.readModelCoordinatorFactory = factory;
+  withReadModelCoordinator(readModelCoordinator: IReadModelCoordinator): this {
+    this.readModelCoordinator = readModelCoordinator;
     return this;
   }
 
@@ -145,6 +151,9 @@ export class ReactorBuilder {
     const storage = this.storage || new MemoryStorage();
 
     const documentModelRegistry = new DocumentModelRegistry();
+    if (this.upgradeManifests.length > 0) {
+      documentModelRegistry.registerUpgradeManifests(...this.upgradeManifests);
+    }
     if (this.documentModels.length > 0) {
       documentModelRegistry.registerModules(...this.documentModels);
     }
@@ -204,6 +213,11 @@ export class ReactorBuilder {
       database as unknown as Kysely<StorageDatabase>,
     );
 
+    const documentMetaCache = new DocumentMetaCache(operationStore, {
+      maxDocuments: 1000,
+    });
+    await documentMetaCache.startup();
+
     let executorManager = this.executorManager;
     if (!executorManager) {
       executorManager = new SimpleJobExecutorManager(
@@ -216,6 +230,7 @@ export class ReactorBuilder {
             eventBus,
             writeCache,
             operationIndex,
+            documentMetaCache,
             { legacyStorageEnabled: this.features.legacyStorageEnabled },
             this.signatureVerifier,
           ),
@@ -236,6 +251,8 @@ export class ReactorBuilder {
       // @ts-expect-error - Database type is a superset that includes all required tables
       database,
       operationStore,
+      operationIndex,
+      writeCache,
       documentViewConsistencyTracker,
     );
 
@@ -264,9 +281,17 @@ export class ReactorBuilder {
     readModelInstances.push(documentIndexer);
     this.documentIndexer = documentIndexer;
 
-    const readModelCoordinator = this.readModelCoordinatorFactory
-      ? this.readModelCoordinatorFactory(eventBus, readModelInstances)
-      : new ReadModelCoordinator(eventBus, readModelInstances);
+    const subscriptionManager = new ReactorSubscriptionManager(
+      new DefaultSubscriptionErrorHandler(),
+    );
+
+    const readModelCoordinator = this.readModelCoordinator
+      ? this.readModelCoordinator
+      : new ReadModelCoordinator(
+          eventBus,
+          readModelInstances,
+          subscriptionManager,
+        );
 
     const reactor = new Reactor(
       driveServer,
@@ -309,6 +334,7 @@ export class ReactorBuilder {
       documentIndexer,
       documentIndexerConsistencyTracker,
       readModelCoordinator,
+      subscriptionManager,
       syncModule,
       reactor,
     };

@@ -114,7 +114,7 @@ export class BaseDocumentDriveServer
   private documentStorage: IDocumentStorage;
   private cache: ICache;
   private queueManager: IQueueManager;
-  private eventEmitter: IEventEmitter;
+  public eventEmitter: IEventEmitter;
   protected options: Required<DocumentDriveServerOptions>;
   private listenerManager: IListenerManager;
   private synchronizationManager: ISynchronizationManager;
@@ -1163,7 +1163,7 @@ export class BaseDocumentDriveServer
       header.meta = { ...header.meta, ...meta };
     }
 
-    const currentVersion = "0.1.0";
+    const currentVersion = 1;
 
     // Get initial state from input or model's defaultState
     const initialState = state ?? document.state;
@@ -1193,7 +1193,7 @@ export class BaseDocumentDriveServer
       // Create actions for CREATE_DOCUMENT and UPGRADE_DOCUMENT
       const createDocumentInput: CreateDocumentActionInput = {
         model: documentType,
-        version: "0.0.0",
+        version: 0,
         documentId: header.id,
         signing,
       };
@@ -1208,7 +1208,7 @@ export class BaseDocumentDriveServer
 
       const upgradeDocumentInput: UpgradeDocumentActionInput = {
         model: documentType,
-        fromVersion: "0.0.0",
+        fromVersion: 0,
         toVersion: currentVersion,
         documentId: header.id,
         initialState,

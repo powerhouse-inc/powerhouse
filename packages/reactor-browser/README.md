@@ -74,7 +74,7 @@ Sets all of the documents in the reactor.
 
 Adds an event handler for all of the documents in the reactor.
 
-### `useGetDocument`
+### `useDocument`
 
 Retrieves a document from the reactor and subscribes to changes using React Suspense.
 This hook will suspend rendering while the document is loading.
@@ -84,7 +84,7 @@ This hook will suspend rendering while the document is loading.
 
 **Returns:** The document if found, or undefined if id is null/undefined
 
-### `useGetDocuments`
+### `useDocuments`
 
 Retrieves multiple documents from the reactor using React Suspense.
 This hook will suspend rendering while any of the documents are loading.
@@ -92,7 +92,21 @@ This hook will suspend rendering while any of the documents are loading.
 **Parameters:**
 - `ids` - Array of document IDs to retrieve, or null/undefined to skip retrieval
 
-**Returns:** An array of documents if found, or undefined if ids is null/undefined
+**Returns:** An array of documents if found, or empty array if ids is null/undefined
+
+### `useGetDocument`
+
+Returns a function to retrieve a document from the cache.
+The returned function fetches and returns a document by ID.
+
+**Returns:** A function that takes a document ID and returns a Promise of the document
+
+### `useGetDocuments`
+
+Returns a function to retrieve multiple documents from the cache.
+The returned function fetches and returns documents by their IDs.
+
+**Returns:** A function that takes an array of document IDs and returns a Promise of the documents
 
 ### `useGetDocumentAsync`
 

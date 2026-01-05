@@ -23,6 +23,7 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import type { IDocumentDriveServer, IRelationalDb } from "document-drive";
 import { childLogger, debounce } from "document-drive";
+import type { DocumentModelModule } from "document-model";
 import type express from "express";
 import type { IRouter } from "express";
 import { Router } from "express";
@@ -38,6 +39,7 @@ import {
   buildSubgraphSchemaModule,
   createSchema,
 } from "../utils/create-schema.js";
+import { DocumentModelSubgraphLegacy } from "./document-model-subgraph.js";
 import { DriveSubgraph } from "./drive-subgraph.js";
 import { useServer } from "./websocket.js";
 
@@ -53,6 +55,19 @@ class AuthenticatedDataSource extends RemoteGraphQLDataSource {
   }
 }
 
+const DOCUMENT_MODELS_TO_EXCLUDE = [
+  "powerhouse/document-model",
+  "powerhouse/document-drive",
+];
+
+const DefaultFeatureFlags = {
+  enableDocumentModelSubgraphs: true,
+};
+
+export type GraphqlManagerFeatureFlags = {
+  enableDocumentModelSubgraphs?: boolean;
+};
+
 export class GraphQLManager {
   private initialized = false;
   private coreRouter: IRouter = Router();
@@ -61,7 +76,6 @@ export class GraphQLManager {
   private contextFields: Record<string, any> = {};
   private readonly subgraphs = new Map<string, ISubgraph[]>();
   private authService: AuthService | null = null;
-  private documentPermissionService?: DocumentPermissionService;
 
   private readonly logger = childLogger(["reactor-api", "graphql-manager"]);
 
@@ -81,12 +95,12 @@ export class GraphQLManager {
     private readonly relationalDb: IRelationalDb,
     private readonly analyticsStore: IAnalyticsStore,
     private readonly syncManager: ISyncManager,
-    authConfig?: AuthConfig,
-    documentPermissionService?: DocumentPermissionService,
+    private readonly authConfig?: AuthConfig,
+    private readonly documentPermissionService?: DocumentPermissionService,
+    private readonly featureFlags: GraphqlManagerFeatureFlags = DefaultFeatureFlags,
   ) {
-    this.documentPermissionService = documentPermissionService;
-    if (authConfig) {
-      this.authService = new AuthService(authConfig);
+    if (this.authConfig) {
+      this.authService = new AuthService(this.authConfig);
       this.setAdditionalContextFields(
         this.authService.getAdditionalContextFields(),
       );
@@ -162,8 +176,21 @@ export class GraphQLManager {
 
     await this.#setupCoreSubgraphs("graphql", coreSubgraphs);
 
-    this.reactor.on("documentModelModules", () => {
-      this.updateRouter().catch((error: unknown) => this.logger.error(error));
+    if (this.featureFlags.enableDocumentModelSubgraphs) {
+      await this.#setupDocumentModelSubgraphs(
+        "graphql",
+        this.reactor.getDocumentModelModules(),
+      );
+    }
+
+    this.reactor.on("documentModelModules", (documentModels) => {
+      if (this.featureFlags.enableDocumentModelSubgraphs) {
+        this.#setupDocumentModelSubgraphs("graphql", documentModels)
+          .then(() => this.updateRouter())
+          .catch((error: unknown) => this.logger.error(error));
+      } else {
+        this.updateRouter().catch((error: unknown) => this.logger.error(error));
+      }
     });
 
     return this.updateRouter();
@@ -190,23 +217,54 @@ export class GraphQLManager {
     return this.#setupSubgraphs(this.coreSubgraphsMap, this.coreRouter);
   }
 
-  async registerSubgraph(
-    subgraph: SubgraphClass,
+  async #setupDocumentModelSubgraphs(
+    supergraph: string,
+    documentModels: DocumentModelModule[],
+  ) {
+    for (const documentModel of documentModels) {
+      if (
+        DOCUMENT_MODELS_TO_EXCLUDE.includes(
+          documentModel.documentModel.global.id,
+        )
+      ) {
+        continue; // Skip the legacy document model
+      }
+      try {
+        const subgraphInstance = new DocumentModelSubgraphLegacy(
+          documentModel,
+          {
+            relationalDb: this.relationalDb,
+            analyticsStore: this.analyticsStore,
+            reactor: this.reactor,
+            reactorClient: this.reactorClient,
+            graphqlManager: this,
+            syncManager: this.syncManager,
+            path: this.path,
+            documentPermissionService: this.documentPermissionService,
+          },
+        );
+
+        await this.#addSubgraphInstance(subgraphInstance, supergraph, false);
+      } catch (error) {
+        this.logger.error(
+          `Failed to setup document model subgraph for ${documentModel.documentModel.global.id}`,
+          error,
+        );
+      }
+    }
+
+    // special case for drive
+    await this.registerSubgraph(DriveSubgraph, undefined, true);
+
+    return this.#setupSubgraphs(this.coreSubgraphsMap, this.coreRouter);
+  }
+
+  async #addSubgraphInstance(
+    subgraphInstance: ISubgraph,
     supergraph = "",
     core = false,
   ) {
-    const subgraphInstance = new subgraph({
-      relationalDb: this.relationalDb,
-      analyticsStore: this.analyticsStore,
-      reactor: this.reactor,
-      reactorClient: this.reactorClient,
-      graphqlManager: this,
-      syncManager: this.syncManager,
-      path: this.path,
-      documentPermissionService: this.documentPermissionService,
-    });
-
-    await subgraphInstance.onSetup();
+    await subgraphInstance.onSetup?.();
 
     const subgraphsMap = core ? this.coreSubgraphsMap : this.subgraphs;
 
@@ -232,6 +290,25 @@ export class GraphQLManager {
       this.logger.debug(logMessage);
     }
     return subgraphInstance;
+  }
+
+  async registerSubgraph(
+    subgraph: SubgraphClass,
+    supergraph = "",
+    core = false,
+  ) {
+    const subgraphInstance = new subgraph({
+      relationalDb: this.relationalDb,
+      analyticsStore: this.analyticsStore,
+      reactor: this.reactor,
+      reactorClient: this.reactorClient,
+      graphqlManager: this,
+      syncManager: this.syncManager,
+      path: this.path,
+      documentPermissionService: this.documentPermissionService,
+    });
+
+    return this.#addSubgraphInstance(subgraphInstance, supergraph, core);
   }
 
   updateRouter = debounce(this._updateRouter.bind(this), 1000);

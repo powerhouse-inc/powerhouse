@@ -1,3 +1,4 @@
+import { PGlite } from "@electric-sql/pglite";
 import type {
   BaseDocumentDriveServer,
   IDocumentOperationStorage,
@@ -11,15 +12,19 @@ import {
 import type {
   Action,
   DocumentModelModule,
+  ISigner,
   Operation,
   PHDocument,
 } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
-import { PGlite } from "@electric-sql/pglite";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { v4 as uuidv4 } from "uuid";
 import { vi } from "vitest";
+import type {
+  CachedDocumentMeta,
+  IDocumentMetaCache,
+} from "../src/cache/document-meta-cache-types.js";
 import type { IWriteCache } from "../src/cache/write/interfaces.js";
 import { Reactor } from "../src/core/reactor.js";
 import type { ReactorFeatures } from "../src/core/types.js";
@@ -38,26 +43,38 @@ import type { IReadModelCoordinator } from "../src/read-models/interfaces.js";
 import { DocumentModelRegistry } from "../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../src/registry/interfaces.js";
 import type { IJobAwaiter } from "../src/shared/awaiter.js";
-import { JobStatus } from "../src/shared/types.js";
-import type { ISigner } from "../src/signer/types.js";
 import { ConsistencyTracker } from "../src/shared/consistency-tracker.js";
+import { JobStatus } from "../src/shared/types.js";
 import { ConsistencyAwareLegacyStorage } from "../src/storage/consistency-aware-legacy-storage.js";
 import type {
   IDocumentIndexer,
   IDocumentView,
   IOperationStore,
   ISyncCursorStorage,
+  OperationContext,
 } from "../src/storage/interfaces.js";
-import type { IReactorSubscriptionManager } from "../src/subs/types.js";
 import { KyselyKeyframeStore } from "../src/storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../src/storage/kysely/store.js";
 import { KyselySyncCursorStorage } from "../src/storage/kysely/sync-cursor-storage.js";
 import { KyselySyncRemoteStorage } from "../src/storage/kysely/sync-remote-storage.js";
 import type { Database as DatabaseSchema } from "../src/storage/kysely/types.js";
 import { runMigrations } from "../src/storage/migrations/migrator.js";
-import { InternalChannel } from "../src/sync/channels/internal-channel.js";
+import type { IReactorSubscriptionManager } from "../src/subs/types.js";
+import { TestChannel } from "./sync/channels/test-channel.js";
 import type { IChannel, IChannelFactory } from "../src/sync/interfaces.js";
 import type { ChannelConfig, SyncEnvelope } from "../src/sync/types.js";
+
+/**
+ * Creates an operation context with default ordinal for testing.
+ */
+export function createTestContext(
+  params: Omit<OperationContext, "ordinal"> & { ordinal?: number },
+): OperationContext {
+  return {
+    ...params,
+    ordinal: params.ordinal ?? 1,
+  };
+}
 
 /**
  * Creates a real PGLite-backed KyselyOperationStore for testing.
@@ -175,7 +192,7 @@ export function createCreateDocumentOperation(
       input: {
         documentId,
         model: documentType,
-        version: "0.0.0",
+        version: 0,
       },
     } as Action,
     resultingState:
@@ -187,10 +204,12 @@ export function createCreateDocumentOperation(
 
 export function createUpgradeDocumentOperation(
   documentId: string,
-  index: number,
-  initialState: Record<string, any> = {},
+  fromVersion: number,
+  toVersion: number,
+  initialState: Record<string, unknown> = {},
   overrides: Partial<Operation> = {},
 ): Operation {
+  const index = overrides.index ?? 1;
   return {
     id: overrides.id || `${documentId}-upgrade-${index}`,
     index,
@@ -204,12 +223,14 @@ export function createUpgradeDocumentOperation(
       timestampUtcMs: overrides.timestampUtcMs || new Date().toISOString(),
       input: {
         documentId,
+        fromVersion,
+        toVersion,
         initialState,
       },
     } as Action,
     resultingState:
       overrides.resultingState ||
-      JSON.stringify({ document: { id: documentId, index } }),
+      JSON.stringify({ document: { id: documentId, version: toVersion } }),
     ...overrides,
   };
 }
@@ -442,6 +463,33 @@ export function createMockOperationStore(
 }
 
 /**
+ * Factory for creating mock IDocumentMetaCache
+ */
+export function createMockDocumentMetaCache(
+  overrides: Partial<IDocumentMetaCache> = {},
+): IDocumentMetaCache {
+  const defaultMeta: CachedDocumentMeta = {
+    state: {
+      version: 1,
+      hash: { algorithm: "sha256", encoding: "base64" },
+    },
+    documentType: "powerhouse/document-model",
+    documentScopeRevision: 1,
+  };
+
+  return {
+    getDocumentMeta: vi.fn().mockResolvedValue(defaultMeta),
+    rebuildAtRevision: vi.fn().mockResolvedValue(defaultMeta),
+    putDocumentMeta: vi.fn(),
+    invalidate: vi.fn().mockReturnValue(0),
+    clear: vi.fn(),
+    startup: vi.fn().mockResolvedValue(undefined),
+    shutdown: vi.fn().mockResolvedValue(undefined),
+    ...overrides,
+  };
+}
+
+/**
  * Factory for creating mock IReadModelCoordinator
  */
 export function createMockReadModelCoordinator(
@@ -500,9 +548,12 @@ export async function createTestReactorSetup(
       addToCollection: vi.fn(),
       write: vi.fn(),
     }),
-    commit: vi.fn().mockResolvedValue(undefined),
+    commit: vi.fn().mockResolvedValue([]),
     find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
   };
+
+  // Create mock document meta cache
+  const mockDocumentMetaCache = createMockDocumentMetaCache();
 
   // Create job executor with event bus
   const jobExecutor = new SimpleJobExecutor(
@@ -513,6 +564,7 @@ export async function createTestReactorSetup(
     eventBus,
     mockWriteCache,
     mockOperationIndex,
+    mockDocumentMetaCache,
     executorConfig ?? { legacyStorageEnabled: true },
     undefined,
   );
@@ -775,7 +827,10 @@ export async function createTestSyncStorage(): Promise<{
  */
 export function createMockSigner(overrides: Partial<ISigner> = {}): ISigner {
   return {
-    sign: vi
+    publicKey: vi.fn().mockResolvedValue({}),
+    sign: vi.fn().mockResolvedValue(new Uint8Array(0)),
+    verify: vi.fn().mockResolvedValue(undefined),
+    signAction: vi
       .fn()
       .mockResolvedValue([
         "mock-signature",
@@ -822,17 +877,19 @@ export function createMockJobAwaiter(
 }
 
 /**
- * Creates an IChannelFactory for testing that creates InternalChannel instances.
- * InternalChannels are wired together by storing them in a shared registry and
+ * Creates an IChannelFactory for testing that creates TestChannel instances.
+ * TestChannels are wired together by storing them in a shared registry and
  * passing a send function that delivers envelopes to the peer's receive method.
  *
  * @param channels - Optional map to store created channels for cross-wiring
+ * @param sentEnvelopes - Optional array to track sent envelopes for assertions
  * @returns IChannelFactory implementation for testing
  */
 export function createTestChannelFactory(
-  channels?: Map<string, InternalChannel>,
+  channels?: Map<string, TestChannel>,
+  sentEnvelopes?: SyncEnvelope[],
 ): IChannelFactory {
-  const channelRegistry = channels || new Map<string, InternalChannel>();
+  const channelRegistry = channels || new Map<string, TestChannel>();
 
   return {
     instance(
@@ -842,13 +899,16 @@ export function createTestChannelFactory(
       cursorStorage: ISyncCursorStorage,
     ): IChannel {
       const send = (envelope: SyncEnvelope): void => {
+        if (sentEnvelopes) {
+          sentEnvelopes.push(envelope);
+        }
         const peerChannel = channelRegistry.get(remoteId);
         if (peerChannel) {
           peerChannel.receive(envelope);
         }
       };
 
-      const channel = new InternalChannel(
+      const channel = new TestChannel(
         remoteId,
         remoteName,
         cursorStorage,

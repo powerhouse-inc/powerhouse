@@ -12,9 +12,7 @@ import {
   ConflictOperationError,
   DocumentAlreadyExistsError,
   DocumentAlreadyExistsReason,
-  DocumentIdValidationError,
   DocumentNotFoundError,
-  DocumentSlugValidationError,
 } from "document-drive/server/error";
 import { AbortError } from "document-drive/utils/errors";
 import { childLogger, logger } from "document-drive/utils/logger";
@@ -30,12 +28,7 @@ import type {
 } from "document-model";
 import { actionContext } from "document-model/core";
 import { backOff, type IBackOffOptions } from "exponential-backoff";
-import {
-  isValidDocumentId,
-  isValidSlug,
-  resolveStorageUnitsFilter,
-  setIntersection,
-} from "../utils.js";
+import { resolveStorageUnitsFilter, setIntersection } from "../utils.js";
 import type { Prisma, PrismaClient } from "./client/index.js";
 
 type Transaction =
@@ -312,15 +305,9 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
 
   async create(document: PHDocument) {
     const documentId = document.header.id;
-    if (!isValidDocumentId(documentId)) {
-      throw new DocumentIdValidationError(documentId);
-    }
 
     const slug =
       document.header.slug?.length > 0 ? document.header.slug : documentId;
-    if (!isValidSlug(slug)) {
-      throw new DocumentSlugValidationError(slug);
-    }
 
     document.header.slug = slug;
 

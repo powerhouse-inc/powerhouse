@@ -2,7 +2,7 @@
 
 ### Summary
 
-Cache implementations for Reactor performance optimization. This directory contains specifications for two distinct caching systems that serve different purposes in the Reactor architecture.
+Cache implementations for Reactor performance optimization. This directory contains specifications for three distinct caching systems that serve different purposes in the Reactor architecture.
 
 ### Caching Systems
 
@@ -32,6 +32,19 @@ The write cache is an in-memory LRU cache with persistent keyframe storage that 
 - Optimizes the write path for job execution
 - Fast cold-start recovery using database-backed keyframes
 
+#### IDocumentMetaCache
+
+The document metadata cache provides an explicit cross-scope contract for accessing document scope metadata (`PHDocumentState`). This solves the problem where `IWriteCache` guarantees are scope-specific, but job executors need access to document scope metadata (version, isDeleted, hash) when executing jobs in other scopes.
+
+**Key characteristics:**
+
+- In-memory LRU cache per (documentId, branch) key
+- Caches `PHDocumentState` (version, hash, isDeleted, deletedAtUtcIso)
+- Eagerly updated after document scope operations (CREATE, UPGRADE, DELETE)
+- Supports historical state reconstruction via `rebuildAtRevision()` for reshuffling
+- Provides explicit cross-scope contract for document metadata access
+- Used by job executors for version checks and isDeleted validation
+
 ### Dependencies
 
 - [IOperationStore](../Storage/IOperationStore.md) - Source of operations for both caches
@@ -49,16 +62,22 @@ The write cache is an in-memory LRU cache with persistent keyframe storage that 
 * [Interface](write-cache-interface.md) - TypeScript interface for the write cache
 * [Overview](write-cache.md) - Detailed architectural overview
 
+#### IDocumentMetaCache
+* [Interface](document-meta-cache-interface.md) - TypeScript interface for the document metadata cache
+* [Overview](document-meta-cache.md) - Detailed architectural overview
+
 ### Integration in Reactor Flow
 
 ```mermaid
 flowchart LR
   subgraph Write Path
     Actions --> Queue --> JobExecutor
-    JobExecutor --> WriteCache["IWriteCache<br/>(check before reducer)"]
+    JobExecutor --> WriteCache["IWriteCache<br/>(scope-specific snapshots)"]
+    JobExecutor --> MetaCache["IDocumentMetaCache<br/>(document scope metadata)"]
     JobExecutor --> OpStore["IOperationStore"]
     JobExecutor --> OpIndex["IOperationIndex"]
     WriteCache -.->|cache miss| OpStore
+    MetaCache -.->|cache miss| OpStore
   end
 
   subgraph Read Path
@@ -70,14 +89,16 @@ flowchart LR
 
 **Write path optimization:**
 
-1. Job executor calls `IWriteCache.getState()` with documentId, documentType, scope, branch, and revision
+1. Job executor calls `IWriteCache.getState()` with documentId, scope, branch, and revision
 2. Write cache handles retrieval internally:
    - On cache hit: returns cached PHDocument, updates LRU (fast)
    - On cache miss: checks `IKeyframeStore` for nearest keyframe snapshot, loads incremental operations from `IOperationStore`, gets reducer from `IDocumentModelRegistry`, replays operations, stores PHDocument in ring buffer, updates LRU, returns document
 3. Executor receives complete PHDocument at requested revision
-4. Executor executes reducers with new actions to produce updated PHDocument
-5. Executor calls `IWriteCache.putState()` to store resulting PHDocument in cache (and persists keyframe to `IKeyframeStore` if at keyframe interval)
-6. Executor writes operations to `IOperationStore` and `IOperationIndex`
+4. **For cross-scope metadata:** Executor calls `IDocumentMetaCache.getDocumentMeta()` to get current document scope state (version, isDeleted, hash)
+5. Executor executes reducers with new actions to produce updated PHDocument
+6. Executor calls `IWriteCache.putState()` to store resulting PHDocument in cache (and persists keyframe to `IKeyframeStore` if at keyframe interval)
+7. **After document scope operations:** Executor calls `IDocumentMetaCache.putDocumentMeta()` to eagerly update metadata cache
+8. Executor writes operations to `IOperationStore` and `IOperationIndex`
 
 **Read path optimization:**
 

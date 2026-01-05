@@ -149,8 +149,8 @@ Now that we've implemented the analytics processor, we can make it receive the c
 
 You should now be able to see in the terminal output of the reactor that the processor has received the operations and their details and they are available in the subgraphs. In case you would register a new listener for the analytics processor with a new ID, it would display all the operations from operation 0
 
-Now let's move over to the graphql playground to see the data that has been added to the analytics store.
-You'll need to use this specific endpoint to access the graphql playground `http://localhost:4001/analytics`
+Now let's move over to the GraphQL playground to see the data that has been added to the analytics store.
+You'll need to use this specific endpoint to access the GraphQL playground `http://localhost:4001/analytics`
 
 Then, use this query to get the data from the analytics store, but don't forget to also add the variables below.
 

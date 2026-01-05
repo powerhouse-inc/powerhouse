@@ -5,6 +5,12 @@
 # Powerhouse Monorepo
 
 This repository uses pnpm workspaces and Nx to manage a monorepo with multiple projects and packages.
+The latest documentation for developers on Powerhouse Vetra can be found on https://academy.vetra.io
+
+The Powerhouse monorepo has the following branching strategy:
+     - Ongoing development happens on the main branch with tag `dev`   
+     - A pre-release is branched off on Release/staging/v.x.x with tag `staging`
+     - Production is the latest release Release/production/v.x.x accessed with tag `latest`or `prod` 
 
 ## Table of Contents
 

@@ -7,6 +7,7 @@ import type {
   Operation,
   PHBaseState,
   PHDocument,
+  Signature,
 } from "./ph-types.js";
 
 export type Maybe<T> = T | null;
@@ -209,7 +210,7 @@ export type NOOPAction = Action & {
 
 export type CreateDocumentActionInput = {
   model: string; // e.g., 'ph/todo'
-  version: "0.0.0";
+  version: 0;
   documentId: string; // equals signature when signed; UUID when unsigned
   signing?: {
     signature: string;
@@ -227,8 +228,8 @@ export type CreateDocumentActionInput = {
 
 export type UpgradeDocumentActionInput = {
   model: string;
-  fromVersion: string; // '0.0.0' for first upgrade
-  toVersion: string; // current model version
+  fromVersion: number; // 0 for first upgrade
+  toVersion: number; // current model version
   documentId: string;
   initialState?: object; // optional; defaults to model.defaultState()
 };
@@ -512,6 +513,18 @@ export type ActionVerificationHandler = (
   data: Uint8Array,
 ) => Promise<boolean>;
 
+/**
+ * Handler for verifying operation signatures.
+ *
+ * @param operation - The operation to verify
+ * @param publicKey - The public key to verify against (from signer.app.key)
+ * @returns Promise that resolves to true if signature is valid, false otherwise
+ */
+export type SignatureVerificationHandler = (
+  operation: Operation,
+  publicKey: string,
+) => Promise<boolean>;
+
 export type ENSInfo = {
   name?: string;
   avatarUrl?: string;
@@ -646,17 +659,16 @@ export type SigningParameters = {
 };
 
 /**
- * Describes a signer. This may only have a public key for verification.
+ * Describes a signer that can sign both document headers and actions.
  */
 export interface ISigner {
   /** The corresponding public key */
   publicKey(): Promise<JsonWebKey>;
 
   /**
-   * Signs data.
+   * Signs raw data (used for document header signing).
    *
    * @param data - The data to sign.
-   *
    * @returns The signature of the data.
    */
   sign: (data: Uint8Array) => Promise<Uint8Array>;
@@ -668,4 +680,13 @@ export interface ISigner {
    * @param signature - The signature to verify.
    */
   verify: (data: Uint8Array, signature: Uint8Array) => Promise<void>;
+
+  /**
+   * Signs an action (used for operation signing).
+   *
+   * @param action - The action to sign.
+   * @param abortSignal - Optional abort signal to cancel the signing.
+   * @returns The signature tuple.
+   */
+  signAction: (action: Action, abortSignal?: AbortSignal) => Promise<Signature>;
 }

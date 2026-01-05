@@ -1,7 +1,8 @@
 import type { Generated, Insertable, Selectable, Updateable } from "kysely";
 
 export interface ViewStateTable {
-  lastOperationId: number;
+  readModelId: string;
+  lastOrdinal: number;
   lastOperationTimestamp: Generated<Date>;
 }
 

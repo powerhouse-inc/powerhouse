@@ -54,3 +54,39 @@ export class InvalidSignatureError extends Error {
     Error.captureStackTrace(this, InvalidSignatureError);
   }
 }
+
+/**
+ * Error thrown when attempting to downgrade a document version.
+ */
+export class DowngradeNotSupportedError extends Error {
+  public readonly documentType: string;
+  public readonly fromVersion: number;
+  public readonly toVersion: number;
+
+  constructor(documentType: string, fromVersion: number, toVersion: number) {
+    super(
+      `Downgrade not supported for ${documentType}: cannot upgrade from version ${fromVersion} to ${toVersion}`,
+    );
+    this.name = "DowngradeNotSupportedError";
+    this.documentType = documentType;
+    this.fromVersion = fromVersion;
+    this.toVersion = toVersion;
+
+    Error.captureStackTrace(this, DowngradeNotSupportedError);
+  }
+}
+
+/**
+ * Error thrown when an upgrade manifest is required but not registered.
+ */
+export class UpgradeManifestNotFoundError extends Error {
+  public readonly documentType: string;
+
+  constructor(documentType: string) {
+    super(`No upgrade manifest registered for document type: ${documentType}`);
+    this.name = "UpgradeManifestNotFoundError";
+    this.documentType = documentType;
+
+    Error.captureStackTrace(this, UpgradeManifestNotFoundError);
+  }
+}

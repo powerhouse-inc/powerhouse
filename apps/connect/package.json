@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/connect",
   "productName": "Powerhouse-Connect",
-  "version": "5.1.0-dev.20",
+  "version": "5.1.0-dev.32",
   "description": "Powerhouse Connect",
   "main": "dist/index.html",
   "type": "module",
@@ -84,7 +84,7 @@
       "types": "./lib/src/i18n/index.d.ts"
     },
     "./custom.d.ts": "./lib/custom.d.ts",
-    "./style.css": "./src/index.css",
+    "./style.css": "./lib/style.css",
     "./assets/*.mp4": "./assets/*.mp4",
     "./assets/*.png": "./assets/*.png",
     "./assets/*.svg": "./assets/*.svg",
@@ -115,6 +115,7 @@
     "test": "vitest run",
     "postinstall": "cp ./package.json ./package.copy.json",
     "dev": "vite dev",
+    "build:css": "npx @tailwindcss/cli -i ./src/index.css -o ./lib/style.css",
     "build:vite": "vite build",
     "build:debug": "PH_DEBUG_BUILD=true vite build",
     "preview": "vite preview",
@@ -169,5 +170,8 @@
     "vite-plugin-node-polyfills": "^0.24.0",
     "vite-plugin-svgr": "^4.5.0",
     "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.16"
   }
 }

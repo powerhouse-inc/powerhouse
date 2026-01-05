@@ -30,16 +30,32 @@ You can also use **Connect** as your development environment by running `ph conn
 
 ### Generating your editor template
 
-To kickstart your editor development, Powerhouse provides a command to generate a basic editor template. This command reads your document model specifications and creates the initial `editor.tsx` file.
-If you want a refresher on how to define your document model specification please read the chapter on [specifying the State Schema](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema)
+When using **Vetra Studio**, editor generation is automatic and integrated into your workflow. Simply create an **Editor specification document** in your Vetra Studio Drive, and Vetra will automatically generate the editor template code for you.
 
-For example, to generate an editor for a TodoList document model with a document type `powerhouse/todo-list`:
+#### With Vetra Studio (Recommended)
+
+1. Open Vetra Studio (`ph vetra --watch`)
+2. In your Vetra Studio Drive, click **"Add new specification"** in the Editors section
+3. Select your document model (e.g., `TodoList`) to link the editor to
+4. Name your editor (e.g., `todo-list-editor`)
+5. Vetra automatically generates the `editors/todo-list-editor/editor.tsx` template
+
+That's it! No manual commands needed. Vetra watches your specifications and generates code as you work.
+
+<details>
+<summary>Alternatively: Manual generation with ph generate</summary>
+
+If you're using Connect or prefer manual control, you can use the `ph generate` command to create an editor template:
 
 ```bash
 ph generate --editor todo-list-editor --document-types powerhouse/todo-list
 ```
 
 This will create the template in the `editors/todo-list-editor/editor.tsx` folder.
+
+If you want a refresher on how to define your document model specification please read the chapter on [specifying the State Schema](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema)
+
+</details>
 
 ### Styling your editor
 
@@ -372,16 +388,31 @@ In this final part of our tutorial we will continue with the interface or editor
 
 ## Generate the editor template
 
-Run the command below to generate the editor template for the **TodoList** document model.  
-This command reads the **TodoList** document model definition from the `document-models` folder and generates the editor template in the `editors/todo-list-editor` folder as `editor.tsx`.
+### Using Vetra Studio (Recommended)
 
-Notice the `--editor` flag which specifies the editor name, and the `--document-types` flag defines the document type `powerhouse/todo-list`.
+With Vetra Studio running (`ph vetra --watch`), simply create an Editor specification:
+
+1. In your Vetra Studio Drive, click **"Add new specification"** in the Editors section
+2. Select the **TodoList** document model to link the editor to
+3. Name your editor `todo-list-editor`
+4. Vetra automatically generates `editors/todo-list-editor/editor.tsx`
+
+Once complete, navigate to the `editors/todo-list-editor/editor.tsx` file and open it in your IDE.
+
+<details>
+<summary>Alternatively: Manual generation with ph generate</summary>
+
+If you're not using Vetra Studio, run the command below to generate the editor template:
 
 ```bash
 ph generate --editor todo-list-editor --document-types powerhouse/todo-list
 ```
 
-Once complete, navigate to the `editors/todo-list-editor/editor.tsx` file and open it in your editor.
+This command reads the **TodoList** document model definition from the `document-models` folder and generates the editor template in the `editors/todo-list-editor` folder as `editor.tsx`.
+
+Notice the `--editor` flag which specifies the editor name, and the `--document-types` flag defines the document type `powerhouse/todo-list`.
+
+</details>
 
 ### Editor implementation options
 
@@ -638,8 +669,8 @@ If you managed to follow this tutorial until this point, you have successfully i
 
 ## Up Next
 
-Now you can move on to creating a [custom drive explorer](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer) for your TodoList document.  
-Imagine you have many TodoLists sitting in a drive. A custom drive explorer will allow you to organize and track them at a glance, opening up a new world of possibilities to increase the functionality of your documents!
+Now you can move on to creating a [custom Drive-app](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer) for your TodoList document.  
+Imagine you have many TodoLists sitting in a drive. A custom Drive-app will allow you to organize and track them at a glance, opening up a new world of possibilities to increase the functionality of your documents!
 
 ### Further Reading
 

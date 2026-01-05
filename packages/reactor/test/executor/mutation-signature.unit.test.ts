@@ -11,6 +11,7 @@ import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
 import { InvalidSignatureError } from "../../src/shared/errors.js";
 import type { IOperationStore } from "../../src/storage/interfaces.js";
 import {
+  createMockDocumentMetaCache,
   createMockDocumentStorage,
   createMockOperationStorage,
   createMockOperationStore,
@@ -110,7 +111,7 @@ describe("SimpleJobExecutor mutation signature verification", () => {
         addToCollection: vi.fn(),
         write: vi.fn(),
       }),
-      commit: vi.fn().mockResolvedValue(undefined),
+      commit: vi.fn().mockResolvedValue([]),
       find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
     } as never;
 
@@ -147,6 +148,7 @@ describe("SimpleJobExecutor mutation signature verification", () => {
       return signer.verify(new TextEncoder().encode(dataToSign), signatureHex);
     };
 
+    const mockDocumentMetaCache = createMockDocumentMetaCache();
     executor = new SimpleJobExecutor(
       registry,
       mockDocStorage,
@@ -158,6 +160,7 @@ describe("SimpleJobExecutor mutation signature verification", () => {
       } as never,
       mockWriteCache,
       mockOperationIndex,
+      mockDocumentMetaCache,
       { legacyStorageEnabled: true },
       verificationHandler,
     );

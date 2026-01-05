@@ -6,7 +6,7 @@ import {
   buildFalse,
   buildFunctionCall,
   buildJsxAttribute,
-  buildJsxBooleanAttribute,
+  buildJsxAttributeWithoutValue,
   buildJsxElement,
   buildJsxExpression,
   buildJsxStringValueAttribute,
@@ -17,29 +17,15 @@ import {
   buildObjectPropertyAccess,
   buildReturn,
   buildReturnIfVariableIsFalsy,
-  buildReturnIfVariableIsTruthy,
   buildSelfClosingJsxElement,
   buildStringLiteral,
-  buildTrue,
-  buildType,
-  formatSourceFileWithPrettier,
-  getDocumentTypeMetadata,
-  getObjectLiteral,
-  getObjectProperty,
-  getOrCreateSourceFile,
-} from "@powerhousedao/codegen/ts-morph";
-import { pascalCase } from "change-case";
-import path from "path";
-import type { Project } from "ts-morph";
-import { SyntaxKind, VariableDeclarationKind } from "ts-morph";
-import { getEditorVariableNames } from "../name-builders/get-variable-names.js";
+  buildTernary,
+} from "../syntax-builders.js";
+import { getObjectLiteral, getObjectProperty } from "../syntax-getters.js";
 import { buildTsMorphProject } from "../ts-morph-project.js";
 import type { EditorVariableNames } from "../types.js";
 import { makeEditorsModulesFile } from "./editor-common.js";
-import type {
-  CommonGenerateEditorArgs,
-  CommonMakeEditorComponentArgs,
-} from "./types.js";
+import type { CommonGenerateEditorArgs } from "./types.js";
 
 type GenerateEditorArgs = CommonGenerateEditorArgs & {
   documentModelId: string;
@@ -75,17 +61,12 @@ export function tsMorphGenerateEditor({
 
   const editorVariableNames = getEditorVariableNames(documentTypeMetadata);
 
-  makeEditDocumentNameComponent({
-    project,
-    editorComponentsDirPath,
-    ...documentTypeMetadata,
-    ...editorVariableNames,
-  });
-
   makeEditorComponent({
     project,
-    editorDirPath,
-    editorComponentsDirPath,
+    documentModelDocumentTypeName:
+      documentTypeMetadata.documentModelDocumentTypeName,
+    documentModelImportPath: documentTypeMetadata.documentModelImportPath,
+    ...editorFilePaths,
     ...editorVariableNames,
   });
 
@@ -103,276 +84,22 @@ export function tsMorphGenerateEditor({
   project.saveSync();
 }
 
-type MakeEditDocumentNameComponentArgs = EditorVariableNames & {
-  project: Project;
-  editorComponentsDirPath: string;
-  documentModelDocumentTypeName: string;
-  documentModelImportPath: string;
-};
-export function makeEditDocumentNameComponent({
-  project,
-  documentModelDocumentTypeName,
-  documentVariableName,
-  onClickEditHandlerName,
-  onCancelEditHandlerName,
-  documentModelImportPath,
-  setNameActionName,
-  useSelectedDocumentHookName,
-  dispatchFunctionName,
-  isEditingVariableName,
-  setIsEditingFunctionName,
-  onSubmitSetNameFunctionName,
-  documentNameVariableName,
-  editDocumentNameComponentName,
-  editorComponentsDirPath,
-}: MakeEditDocumentNameComponentArgs) {
-  const filePath = path.join(editorComponentsDirPath, "EditName.tsx");
-  const { alreadyExists, sourceFile: editDocumentNameComponentSourceFile } =
-    getOrCreateSourceFile(project, filePath);
-
-  if (alreadyExists) return;
-
-  const printNode = buildNodePrinter(editDocumentNameComponentSourceFile);
-
-  const importSetName = {
-    namedImports: [setNameActionName],
-    moduleSpecifier: "document-model",
+type MakeEditorComponentArgs = EditorVariableNames &
+  EditorFilePaths & {
+    project: Project;
+    documentModelDocumentTypeName: string;
+    documentModelImportPath: string;
   };
-  const importUseSelectedDocument = {
-    namedImports: [useSelectedDocumentHookName],
-    moduleSpecifier: documentModelImportPath,
-  };
-  const importUseState = {
-    namedImports: ["useState"],
-    moduleSpecifier: "react",
-  };
-
-  const importFormEventHandlerTypes = {
-    namedImports: ["FormEventHandler", "MouseEventHandler"],
-    moduleSpecifier: "react",
-    isTypeOnly: true,
-  };
-
-  const importDeclarations = [
-    importSetName,
-    importUseSelectedDocument,
-    importUseState,
-    importFormEventHandlerTypes,
-  ];
-
-  editDocumentNameComponentSourceFile.addImportDeclarations(importDeclarations);
-
-  const useSelectedDocumentHook = buildDestructuredArrayHookCallAssignment({
-    hookName: useSelectedDocumentHookName,
-    destructuredElements: [documentVariableName, dispatchFunctionName],
-  });
-  const isEditingUseStateHook = buildDestructuredArrayHookCallAssignment({
-    hookName: "useState",
-    hookArguments: [buildFalse()],
-    destructuredElements: [isEditingVariableName, setIsEditingFunctionName],
-  });
-  const returnIfDocumentIsFalsy = buildReturnIfVariableIsFalsy(
-    documentVariableName,
-    buildNull(),
-  );
-  const assignDocumentNameVariable = buildConstAssignment({
-    name: documentNameVariableName,
-    assignmentExpression: buildObjectPropertyAccess(
-      documentVariableName,
-      "header.name",
-    ),
-  });
-
-  const onClickEditNameHandler = buildConstAssignment({
-    name: onClickEditHandlerName,
-    type: buildType("MouseEventHandler", ["HTMLButtonElement"]),
-    assignmentExpression: buildArrowFunction({
-      bodyStatements: [
-        buildFunctionCall({
-          functionName: setIsEditingFunctionName,
-          argumentsArray: [buildTrue()],
-        }),
-      ],
-    }),
-  });
-
-  const onCancelEditNameHandler = buildConstAssignment({
-    name: onCancelEditHandlerName,
-    type: buildType("MouseEventHandler", ["HTMLButtonElement"]),
-    assignmentExpression: buildArrowFunction({
-      bodyStatements: [
-        buildFunctionCall({
-          functionName: setIsEditingFunctionName,
-          argumentsArray: [buildFalse()],
-        }),
-      ],
-    }),
-  });
-
-  const onSubmitSetNameHandler = buildConstAssignment({
-    name: onSubmitSetNameFunctionName,
-    type: buildType("FormEventHandler", ["HTMLFormElement"]),
-    assignmentExpression: buildArrowFunction({
-      parameters: [
-        {
-          name: "event",
-        },
-      ],
-      bodyStatements: [
-        buildMethodInvocation({
-          objectName: "event",
-          methodName: "preventDefault",
-          argumentsArray: [],
-        }),
-        buildConstAssignment({
-          name: "form",
-          assignmentExpression: buildObjectPropertyAccess(
-            "event",
-            "currentTarget",
-          ),
-          castAsType: "HTMLFormElement",
-        }),
-        buildConstAssignment({
-          name: "nameInput",
-          assignmentExpression: buildMethodInvocation({
-            objectName: "form",
-            methodName: "elements.namedItem",
-            argumentsArray: [buildStringLiteral("name")],
-          }).expression,
-          castAsType: "HTMLInputElement",
-        }),
-        buildConstAssignment({
-          name: "name",
-          assignmentExpression: buildObjectPropertyAccess("nameInput", "value"),
-        }),
-        buildReturnIfVariableIsFalsy("name"),
-        buildFunctionCall({
-          functionName: dispatchFunctionName,
-          argumentsArray: [
-            buildFunctionCall({
-              functionName: setNameActionName,
-              argumentsArray: ["name"],
-            }).expression,
-          ],
-        }),
-        buildFunctionCall({
-          functionName: setIsEditingFunctionName,
-          argumentsArray: [buildFalse()],
-        }),
-      ],
-    }),
-  });
-
-  const editNameInput = buildSelfClosingJsxElement("input", [
-    buildClassNameAttribute("text-lg font-semibold text-gray-900 p-1"),
-    buildJsxStringValueAttribute("type", "text"),
-    buildJsxStringValueAttribute("name", "name"),
-    buildJsxStringValueAttribute("defaultValue", documentNameVariableName),
-    buildJsxBooleanAttribute("autoFocus", true),
-  ]);
-
-  const saveButton = buildJsxElement(
-    "button",
-    [buildJsxText("Save")],
-    [
-      buildClassNameAttribute("text-sm text-gray-600"),
-      buildJsxStringValueAttribute("type", "submit"),
-    ],
-  );
-
-  const cancelButton = buildJsxElement(
-    "button",
-    [buildJsxText("Cancel")],
-    [
-      buildClassNameAttribute("text-sm text-red-800"),
-      buildJsxAttribute("onClick", onCancelEditHandlerName),
-    ],
-  );
-
-  const saveAndCancelButtonsWrapperDiv = buildJsxElement(
-    "div",
-    [saveButton, cancelButton],
-    [buildClassNameAttribute("flex gap-2")],
-  );
-
-  const editNameForm = buildJsxElement(
-    "form",
-    [editNameInput, saveAndCancelButtonsWrapperDiv],
-    [
-      buildClassNameAttribute("flex gap-2 items-center justify-between"),
-      buildJsxAttribute("onSubmit", onSubmitSetNameFunctionName),
-    ],
-  );
-
-  const returnIfIsEditing = buildReturnIfVariableIsTruthy(
-    isEditingVariableName,
-    editNameForm,
-  );
-
-  const documentNameJsxExpression = buildJsxExpression(
-    documentNameVariableName,
-  );
-
-  const notEditingHeader = buildJsxElement(
-    "h2",
-    [documentNameJsxExpression],
-    [buildClassNameAttribute("text-lg font-semibold text-gray-900")],
-  );
-
-  const onClickEditButton = buildJsxElement(
-    "button",
-    [buildJsxText("Edit Name")],
-    [
-      buildClassNameAttribute("text-sm text-gray-600"),
-      buildJsxAttribute("onClick", onClickEditHandlerName),
-    ],
-  );
-
-  const notEditingWrapperDiv = buildJsxElement(
-    "div",
-    [notEditingHeader, onClickEditButton],
-    [buildClassNameAttribute("flex justify-between items-center")],
-  );
-
-  const returnIfNotEditing = buildReturn(notEditingWrapperDiv);
-
-  const statements = [
-    useSelectedDocumentHook,
-    isEditingUseStateHook,
-    returnIfDocumentIsFalsy,
-    assignDocumentNameVariable,
-    onClickEditNameHandler,
-    onCancelEditNameHandler,
-    onSubmitSetNameHandler,
-    returnIfIsEditing,
-    returnIfNotEditing,
-  ].map(printNode);
-
-  editDocumentNameComponentSourceFile.addFunction({
-    name: editDocumentNameComponentName,
-    isExported: true,
-    parameters: [],
-    statements,
-    docs: [
-      `Displays the name of the selected ${documentModelDocumentTypeName} document and allows editing it`,
-    ],
-  });
-
-  formatSourceFileWithPrettier(editDocumentNameComponentSourceFile);
-}
-
-type MakeEditorComponentArgs = CommonMakeEditorComponentArgs & {
-  editDocumentNameComponentName: string;
-};
 export function makeEditorComponent({
   project,
-  editorDirPath,
-  editDocumentNameComponentName,
+  editorFilePath,
+  documentModelDocumentTypeName,
+  documentModelImportPath,
+  useSelectedDocumentHookName,
 }: MakeEditorComponentArgs) {
-  const filePath = path.join(editorDirPath, "editor.tsx");
   const { alreadyExists, sourceFile: editorSourceFile } = getOrCreateSourceFile(
     project,
-    filePath,
+    editorFilePath,
   );
 
   if (alreadyExists) {
@@ -387,29 +114,247 @@ export function makeEditorComponent({
 
   const printNode = buildNodePrinter(editorSourceFile);
 
-  editorSourceFile.addImportDeclaration({
-    moduleSpecifier: "./components/EditName.js",
-    namedImports: [editDocumentNameComponentName],
+  // Add imports
+  editorSourceFile.addImportDeclarations([
+    {
+      namedImports: ["DocumentToolbar"],
+      moduleSpecifier: "@powerhousedao/design-system/connect",
+    },
+    {
+      namedImports: ["setName"],
+      moduleSpecifier: "document-model",
+    },
+    {
+      namedImports: ["useState"],
+      moduleSpecifier: "react",
+    },
+    {
+      namedImports: ["FormEvent"],
+      moduleSpecifier: "react",
+      isTypeOnly: true,
+    },
+    {
+      namedImports: [useSelectedDocumentHookName],
+      moduleSpecifier: documentModelImportPath,
+    },
+  ]);
+
+  // Build hooks
+  const useSelectedDocumentHook = buildDestructuredArrayHookCallAssignment({
+    hookName: useSelectedDocumentHookName,
+    destructuredElements: ["document", "dispatch"],
   });
 
-  const editNameComponent = buildSelfClosingJsxElement(
-    editDocumentNameComponentName,
+  const isEditingUseStateHook = buildDestructuredArrayHookCallAssignment({
+    hookName: "useState",
+    hookArguments: [buildFalse()],
+    destructuredElements: ["isEditing", "setIsEditing"],
+  });
+
+  const returnIfDocumentIsFalsy = buildReturnIfVariableIsFalsy(
+    "document",
+    buildNull(),
   );
 
-  const editorWrapperDiv = buildJsxElement(
-    "div",
-    [editNameComponent],
-    [buildClassNameAttribute("py-4 px-8")],
+  // Build handleSubmit function
+  const handleSubmitFunction = buildConstAssignment({
+    name: "handleSubmit",
+    assignmentExpression: buildArrowFunction({
+      parameters: [
+        {
+          name: "event",
+          typeName: "FormEvent",
+          typeArguments: ["HTMLFormElement"],
+        },
+      ],
+      bodyStatements: [
+        buildMethodInvocation({
+          objectName: "event",
+          methodName: "preventDefault",
+          argumentsArray: [],
+        }),
+        buildConstAssignment({
+          name: "form",
+          assignmentExpression: buildObjectPropertyAccess(
+            "event",
+            "currentTarget",
+          ),
+        }),
+        buildConstAssignment({
+          name: "nameInput",
+          assignmentExpression: buildMethodInvocation({
+            objectName: "form",
+            methodName: "elements.namedItem",
+            argumentsArray: [buildStringLiteral("name")],
+          }).expression,
+          castAsType: "HTMLInputElement",
+        }),
+        buildConstAssignment({
+          name: "name",
+          assignmentExpression: buildMethodInvocation({
+            objectName: "nameInput",
+            methodName: "value.trim",
+            argumentsArray: [],
+          }).expression,
+        }),
+        buildReturnIfVariableIsFalsy("name"),
+        buildFunctionCall({
+          functionName: "dispatch",
+          argumentsArray: [
+            buildFunctionCall({
+              functionName: "setName",
+              argumentsArray: ["name"],
+            }).expression,
+          ],
+        }),
+        buildFunctionCall({
+          functionName: "setIsEditing",
+          argumentsArray: [buildFalse()],
+        }),
+      ],
+    }),
+  });
+
+  // Build editing form JSX
+  const editNameInput = buildSelfClosingJsxElement("input", [
+    buildJsxStringValueAttribute("type", "text"),
+    buildJsxStringValueAttribute("name", "name"),
+    buildJsxAttribute("defaultValue", "document.header.name"),
+    buildJsxAttributeWithoutValue("autoFocus"),
+    buildClassNameAttribute(
+      "w-full rounded-lg border border-gray-200 px-4 py-3 text-lg font-semibold text-gray-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-100",
+    ),
+    buildJsxStringValueAttribute("placeholder", "Enter name..."),
+  ]);
+
+  const saveButton = buildJsxElement(
+    "button",
+    [buildJsxText("Save")],
+    [
+      buildJsxStringValueAttribute("type", "submit"),
+      buildClassNameAttribute(
+        "flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700",
+      ),
+    ],
   );
-  const returnStatement = buildReturn(editorWrapperDiv);
+
+  const cancelButton = buildJsxElement(
+    "button",
+    [buildJsxText("Cancel")],
+    [
+      buildJsxStringValueAttribute("type", "button"),
+      buildJsxAttribute("onClick", "() => setIsEditing(false)"),
+      buildClassNameAttribute(
+        "flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50",
+      ),
+    ],
+  );
+
+  const buttonsWrapper = buildJsxElement(
+    "div",
+    [saveButton, cancelButton],
+    [buildClassNameAttribute("flex gap-2")],
+  );
+
+  const editForm = buildJsxElement(
+    "form",
+    [editNameInput, buttonsWrapper],
+    [
+      buildJsxAttribute("onSubmit", "handleSubmit"),
+      buildClassNameAttribute("space-y-4"),
+    ],
+  );
+
+  // Build display mode JSX
+  const documentNameExpression = buildJsxExpression(
+    'document.header.name || "Untitled"',
+  );
+
+  const displayHeader = buildJsxElement(
+    "h2",
+    [documentNameExpression],
+    [buildClassNameAttribute("truncate text-xl font-semibold text-gray-900")],
+  );
+
+  const editButton = buildJsxElement(
+    "button",
+    [buildJsxText("Edit")],
+    [
+      buildJsxAttribute("onClick", "() => setIsEditing(true)"),
+      buildClassNameAttribute(
+        "shrink-0 rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200",
+      ),
+    ],
+  );
+
+  const displayWrapper = buildJsxElement(
+    "div",
+    [displayHeader, editButton],
+    [buildClassNameAttribute("flex items-center justify-between gap-4")],
+  );
+
+  // Build ternary for edit/display mode wrapped in JSX expression
+  const editDisplayTernary = buildJsxExpression(
+    buildTernary("isEditing", editForm, displayWrapper),
+  );
+
+  // Build document type label
+  const documentTypeLabel = buildJsxElement(
+    "div",
+    [buildJsxText(documentModelDocumentTypeName)],
+    [
+      buildClassNameAttribute(
+        "mb-4 text-xs font-medium uppercase tracking-wide text-gray-400",
+      ),
+    ],
+  );
+
+  // Build card wrapper
+  const cardWrapper = buildJsxElement(
+    "div",
+    [documentTypeLabel, editDisplayTernary],
+    [
+      buildClassNameAttribute(
+        "w-full max-w-md rounded-xl bg-white p-6 shadow-sm",
+      ),
+    ],
+  );
+
+  // Build center wrapper
+  const centerWrapper = buildJsxElement(
+    "div",
+    [cardWrapper],
+    [buildClassNameAttribute("flex justify-center px-4 py-8")],
+  );
+
+  // Build DocumentToolbar
+  const documentToolbar = buildSelfClosingJsxElement("DocumentToolbar");
+
+  // Build outer wrapper
+  const outerWrapper = buildJsxElement(
+    "div",
+    [documentToolbar, centerWrapper],
+    [buildClassNameAttribute("min-h-screen bg-gray-50")],
+  );
+
+  const returnStatement = buildReturn(outerWrapper);
+
+  const statements = [
+    useSelectedDocumentHook,
+    isEditingUseStateHook,
+    returnIfDocumentIsFalsy,
+    handleSubmitFunction,
+    returnStatement,
+  ].map(printNode);
 
   editorSourceFile.addFunction({
     name: "Editor",
     isDefaultExport: true,
     parameters: [],
-    statements: [printNode(returnStatement)],
-    docs: ["Implement your editor behavior here"],
+    statements,
   });
+
+  formatSourceFileWithPrettier(editorSourceFile);
 }
 
 type MakeEditorModuleFileArgs = {

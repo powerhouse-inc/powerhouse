@@ -38,6 +38,12 @@ function createMockRegistry(): IDocumentModelRegistry {
     getModule: vi.fn(),
     getAllModules: vi.fn(),
     clear: vi.fn(),
+    getSupportedVersions: vi.fn(),
+    getLatestVersion: vi.fn(),
+    registerUpgradeManifests: vi.fn(),
+    getUpgradeManifest: vi.fn(),
+    computeUpgradePath: vi.fn(),
+    getUpgradeReducer: vi.fn(),
   };
 }
 
@@ -87,10 +93,10 @@ describe("KyselyWriteCache", () => {
 
       cache.putState("doc1", "global", "main", 1, doc);
 
-      doc.state.document.version = "100";
+      doc.state.document.version = 100;
 
-      expect(doc.state.document.version).toBe("100");
-      expect(originalDoc.state.document.version).not.toBe("100");
+      expect(doc.state.document.version).toBe(100);
+      expect(originalDoc.state.document.version).not.toBe(100);
     });
 
     it("should evict LRU stream when at capacity", () => {
@@ -429,6 +435,12 @@ describe("KyselyWriteCache (Partial Integration) - Cold Miss Rebuild", () => {
       }),
       getAllModules: vi.fn(),
       clear: vi.fn(),
+      getSupportedVersions: vi.fn(),
+      getLatestVersion: vi.fn(),
+      registerUpgradeManifests: vi.fn(),
+      getUpgradeManifest: vi.fn(),
+      computeUpgradePath: vi.fn(),
+      getUpgradeReducer: vi.fn(),
     };
 
     registry = mockRegistry;
@@ -658,6 +670,12 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
       }),
       getAllModules: vi.fn(),
       clear: vi.fn(),
+      getSupportedVersions: vi.fn(),
+      getLatestVersion: vi.fn(),
+      registerUpgradeManifests: vi.fn(),
+      getUpgradeManifest: vi.fn(),
+      computeUpgradePath: vi.fn(),
+      getUpgradeReducer: vi.fn(),
     };
 
     registry = mockRegistry;

@@ -9,11 +9,7 @@ import type {
 import {
   DocumentAlreadyExistsError,
   DocumentAlreadyExistsReason,
-  DocumentIdValidationError,
   DocumentNotFoundError,
-  DocumentSlugValidationError,
-  isValidDocumentId,
-  isValidSlug,
   mergeOperations,
   type DocumentDriveAction,
   type DocumentDriveDocument,
@@ -110,9 +106,6 @@ export class IPFSStorage
 
   async create(document: PHDocument): Promise<void> {
     const documentId = document.id;
-    if (!isValidDocumentId(documentId)) {
-      throw new DocumentIdValidationError(documentId);
-    }
 
     if (await this.exists(documentId)) {
       throw new DocumentAlreadyExistsError(documentId);
@@ -120,9 +113,6 @@ export class IPFSStorage
 
     const slug =
       document.header.slug?.length > 0 ? document.header.slug : documentId;
-    if (!isValidSlug(slug)) {
-      throw new DocumentSlugValidationError(slug);
-    }
 
     const slugManifest = await this.getSlugManifest();
     if (slugManifest.slugToId[slug]) {

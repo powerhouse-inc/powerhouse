@@ -1,3 +1,105 @@
+## 5.1.0-dev.32 (2026-01-02)
+
+### 🚀 Features
+
+- **tracing:** migrate from Datadog to OpenTelemetry with Tempo service graphs ([6b4eb9c82](https://github.com/powerhouse-inc/powerhouse/commit/6b4eb9c82))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.1.0-dev.31 (2026-01-02)
+
+### 🚀 Features
+
+- **switchboard:** added tracing ([c978736b7](https://github.com/powerhouse-inc/powerhouse/commit/c978736b7))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.1.0-dev.30 (2026-01-01)
+
+This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
+
+## 5.1.0-dev.29 (2025-12-30)
+
+### 🩹 Fixes
+
+- **connect,builder-tools,vetra:** avoid page reload on vite HMR ([1c3f5d1dd](https://github.com/powerhouse-inc/powerhouse/commit/1c3f5d1dd))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 5.1.0-dev.28 (2025-12-30)
+
+### 🩹 Fixes
+
+- **reactor-browser:** improvements on document cache reactivity and tests ([07991c703](https://github.com/powerhouse-inc/powerhouse/commit/07991c703))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 5.1.0-dev.27 (2025-12-24)
+
+### 🚀 Features
+
+- **reactor-api:** datadog integration ([3c433c686](https://github.com/powerhouse-inc/powerhouse/commit/3c433c686))
+- **reactor-browser:** improved document retrieval hooks ([4fed49391](https://github.com/powerhouse-inc/powerhouse/commit/4fed49391))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
+## 5.1.0-dev.26 (2025-12-20)
+
+This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
+
+## 5.1.0-dev.25 (2025-12-19)
+
+### 🩹 Fixes
+
+- **switchboard, vetra:** fix issue with processors not being added on initial boot ([25432a663](https://github.com/powerhouse-inc/powerhouse/commit/25432a663))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 5.1.0-dev.24 (2025-12-18)
+
+This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
+
+## 5.1.0-dev.23 (2025-12-17)
+
+This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
+
+## 5.1.0-dev.22 (2025-12-16)
+
+### 🚀 Features
+
+- added support for runtime document model subgraphs ([dc8248ec6](https://github.com/powerhouse-inc/powerhouse/commit/dc8248ec6))
+
+### 🩹 Fixes
+
+- **vetra:** regenerated subgraphs ([09f2f212f](https://github.com/powerhouse-inc/powerhouse/commit/09f2f212f))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 5.1.0-dev.21 (2025-12-13)
+
+### 🚀 Features
+
+- **codegen,vetra:** use ts morph codegen by default ([#2135](https://github.com/powerhouse-inc/powerhouse/pull/2135))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 5.1.0-dev.20 (2025-12-12)
 
 ### 🚀 Features

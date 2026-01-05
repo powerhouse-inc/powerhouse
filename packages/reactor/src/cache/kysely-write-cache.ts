@@ -1,4 +1,8 @@
-import type { CreateDocumentAction, PHDocument } from "document-model";
+import type {
+  CreateDocumentAction,
+  PHDocument,
+  UpgradeDocumentAction,
+} from "document-model";
 import {
   applyDeleteDocumentAction,
   applyUpgradeDocumentAction,
@@ -390,7 +394,8 @@ export class KyselyWriteCache implements IWriteCache {
         }
 
         if (operation.action.type === "UPGRADE_DOCUMENT") {
-          applyUpgradeDocumentAction(document, operation.action as never);
+          const upgradeAction = operation.action as UpgradeDocumentAction;
+          document = applyUpgradeDocumentAction(document, upgradeAction);
         } else if (operation.action.type === "DELETE_DOCUMENT") {
           applyDeleteDocumentAction(document, operation.action as never);
         } else {

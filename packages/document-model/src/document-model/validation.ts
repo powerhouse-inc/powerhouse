@@ -4,6 +4,83 @@ import type {
   OperationSpecification,
   ValidationError,
 } from "document-model";
+import type { DocumentModelGlobalState } from "./types.js";
+
+/**
+ * Reserved operation names from base reducer (core/actions.ts).
+ * These names cannot be used for custom operations.
+ */
+export const RESERVED_OPERATION_NAMES = [
+  "UNDO",
+  "REDO",
+  "PRUNE",
+  "LOAD_STATE",
+  "SET_NAME",
+  "NOOP",
+] as const;
+
+export type ReservedOperationName = (typeof RESERVED_OPERATION_NAMES)[number];
+
+/**
+ * Check if name conflicts with base reducer actions (case-insensitive).
+ */
+export function isReservedOperationName(name: string): boolean {
+  return RESERVED_OPERATION_NAMES.includes(
+    name.toUpperCase() as ReservedOperationName,
+  );
+}
+
+/**
+ * Get all operation names from all modules in the latest specification.
+ * Returns names in uppercase for case-insensitive comparison.
+ */
+export function getAllOperationNames(
+  state: DocumentModelGlobalState,
+  excludeOperationId?: string,
+): string[] {
+  const latestSpec = state.specifications[state.specifications.length - 1];
+  if (!latestSpec) return [];
+
+  const names: string[] = [];
+  for (const module of latestSpec.modules) {
+    for (const operation of module.operations) {
+      if (excludeOperationId && operation.id === excludeOperationId) continue;
+      if (operation.name) names.push(operation.name.toUpperCase());
+    }
+  }
+  return names;
+}
+
+/**
+ * Validate operation name is not reserved or duplicate. Throws on failure.
+ *
+ * @param name - The operation name to validate
+ * @param state - The document model global state
+ * @param excludeOperationId - Optional operation ID to exclude (for rename validation)
+ * @throws Error if the name is reserved or a duplicate
+ */
+export function validateOperationName(
+  name: string,
+  state: DocumentModelGlobalState,
+  excludeOperationId?: string,
+): void {
+  if (!name) return; // Empty names handled by existing validation
+
+  const upperName = name.toUpperCase();
+
+  if (isReservedOperationName(name)) {
+    throw new Error(
+      `Operation name "${name}" is reserved. Please use a different name.`,
+    );
+  }
+
+  const existingNames = getAllOperationNames(state, excludeOperationId);
+  if (existingNames.includes(upperName)) {
+    throw new Error(
+      `Operation name "${name}" is already used by another operation. Operation names must be unique across all modules.`,
+    );
+  }
+}
 
 export function validateInitialState(
   initialState: string,

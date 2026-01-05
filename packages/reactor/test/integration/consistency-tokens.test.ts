@@ -1,3 +1,4 @@
+import { EventBus } from "#index.js";
 import { MemoryStorage, driveDocumentModelModule } from "document-drive";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -42,19 +43,24 @@ describe("Consistency Tokens with Document View", () => {
   beforeEach(async () => {
     storage = new MemoryStorage();
 
+    const eventBus = new EventBus();
+    testCoordinator = new TestReadModelCoordinator(eventBus);
+
     const builder = new ReactorBuilder()
       .withDocumentModels([
         documentModelDocumentModelModule as any,
         driveDocumentModelModule as any,
       ])
+      .withEventBus(eventBus)
       .withLegacyStorage(storage)
       .withFeatures({ legacyStorageEnabled: false })
-      .withReadModelCoordinatorFactory((eventBus, readModels) => {
-        testCoordinator = new TestReadModelCoordinator(eventBus, readModels);
-        return testCoordinator;
-      });
+      .withReadModelCoordinator(testCoordinator);
 
-    reactor = await builder.build();
+    const module = await builder.buildModule();
+    testCoordinator.readModels.push(module.documentIndexer);
+    testCoordinator.readModels.push(module.documentView);
+
+    reactor = module.reactor;
   });
 
   afterEach(() => {

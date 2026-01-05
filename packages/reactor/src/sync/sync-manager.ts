@@ -6,12 +6,12 @@ import {
   OperationEventTypes,
   type OperationWrittenEvent,
 } from "../events/types.js";
+import { JobAwaiter } from "../shared/awaiter.js";
 import {
   JobStatus,
   type JobInfo,
   type ShutdownStatus,
 } from "../shared/types.js";
-import { JobAwaiter } from "../shared/awaiter.js";
 import type {
   ISyncCursorStorage,
   ISyncRemoteStorage,
@@ -246,6 +246,7 @@ export class SyncManager implements ISyncManager {
         documentType: entry.documentType,
         scope: entry.scope,
         branch: entry.branch,
+        ordinal: entry.ordinal ?? 0,
       },
     }));
 
@@ -297,7 +298,13 @@ export class SyncManager implements ISyncManager {
       return;
     }
 
+    const sourceRemote = event.jobMeta?.sourceRemote as string | undefined;
+
     for (const remote of this.remotes.values()) {
+      if (sourceRemote && remote.name === sourceRemote) {
+        continue;
+      }
+
       const filteredOps = filterOperations(event.operations, remote.filter);
       if (filteredOps.length === 0) {
         continue;
@@ -346,6 +353,8 @@ export class SyncManager implements ISyncManager {
         syncOp.documentId,
         syncOp.branch,
         operations,
+        undefined,
+        { sourceRemote: remote.name },
       );
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));

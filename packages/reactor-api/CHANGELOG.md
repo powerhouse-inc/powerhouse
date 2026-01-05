@@ -1,3 +1,119 @@
+## 5.1.0-dev.32 (2026-01-02)
+
+### 🚀 Features
+
+- **tracing:** migrate from Datadog to OpenTelemetry with Tempo service graphs ([6b4eb9c82](https://github.com/powerhouse-inc/powerhouse/commit/6b4eb9c82))
+
+### 🩹 Fixes
+
+- **tracing:** add IncomingMessage import and improve type cast ([83c85ff2c](https://github.com/powerhouse-inc/powerhouse/commit/83c85ff2c))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.1.0-dev.31 (2026-01-02)
+
+### 🚀 Features
+
+- **switchboard:** added tracing ([c978736b7](https://github.com/powerhouse-inc/powerhouse/commit/c978736b7))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.1.0-dev.30 (2026-01-01)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 5.1.0-dev.29 (2025-12-30)
+
+### 🩹 Fixes
+
+- **connect,builder-tools,vetra:** avoid page reload on vite HMR ([1c3f5d1dd](https://github.com/powerhouse-inc/powerhouse/commit/1c3f5d1dd))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 5.1.0-dev.28 (2025-12-30)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 5.1.0-dev.27 (2025-12-24)
+
+### 🚀 Features
+
+- **reactor-api:** datadog integration ([3c433c686](https://github.com/powerhouse-inc/powerhouse/commit/3c433c686))
+- **reactor-browser:** improved document retrieval hooks ([4fed49391](https://github.com/powerhouse-inc/powerhouse/commit/4fed49391))
+
+### 🩹 Fixes
+
+- **reactor-api:** linting issues ([9c674a847](https://github.com/powerhouse-inc/powerhouse/commit/9c674a847))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
+## 5.1.0-dev.26 (2025-12-20)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 5.1.0-dev.25 (2025-12-19)
+
+### 🩹 Fixes
+
+- signature resolvers ([4513d9dda](https://github.com/powerhouse-inc/powerhouse/commit/4513d9dda))
+- passing meta through job system to avoid race conditions ([8b65bb42d](https://github.com/powerhouse-inc/powerhouse/commit/8b65bb42d))
+- **reactor-api:** fix gql tests ([15294d00a](https://github.com/powerhouse-inc/powerhouse/commit/15294d00a))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 5.1.0-dev.24 (2025-12-18)
+
+### 🩹 Fixes
+
+- switchboard's new reactor signs everything ([b7fafb7fa](https://github.com/powerhouse-inc/powerhouse/commit/b7fafb7fa))
+- **reactor:** document model core types need to be numerical versions, also fixed a gql bug ([6495a88e2](https://github.com/powerhouse-inc/powerhouse/commit/6495a88e2))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 5.1.0-dev.23 (2025-12-17)
+
+### 🩹 Fixes
+
+- **reactor-api, reactor-local:** pass dynamically loaded modules to the new reactor ([c038e058c](https://github.com/powerhouse-inc/powerhouse/commit/c038e058c))
+- **reactor-api:** remove circular import ([9076b5257](https://github.com/powerhouse-inc/powerhouse/commit/9076b5257))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
+## 5.1.0-dev.22 (2025-12-16)
+
+### 🚀 Features
+
+- added support for runtime document model subgraphs ([dc8248ec6](https://github.com/powerhouse-inc/powerhouse/commit/dc8248ec6))
+
+### 🩹 Fixes
+
+- linter ([fcbd30919](https://github.com/powerhouse-inc/powerhouse/commit/fcbd30919))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
+## 5.1.0-dev.21 (2025-12-13)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
 ## 5.1.0-dev.20 (2025-12-12)
 
 ### 🚀 Features

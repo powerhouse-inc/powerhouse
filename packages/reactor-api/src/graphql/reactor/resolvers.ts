@@ -10,7 +10,11 @@ import {
   type SearchFilter,
   type ViewFilter,
 } from "@powerhousedao/reactor";
-import type { DocumentModelModule, PHDocument } from "document-model";
+import type {
+  DocumentModelModule,
+  Operation,
+  PHDocument,
+} from "document-model";
 import { GraphQLError } from "graphql";
 import {
   fromInputMaybe,
@@ -693,7 +697,7 @@ export async function touchChannel(
       args.input.name,
       args.input.collectionId,
       {
-        type: "internal",
+        type: "polling",
         parameters: {},
       },
       filter,
@@ -709,7 +713,37 @@ export async function touchChannel(
   return true;
 }
 
-export function pollSyncEnvelopes(
+/**
+ * Transforms an operation to serialize signatures from tuples to strings
+ * for GraphQL compatibility.
+ *
+ * The Signature type is a tuple [string, string, string, string, string],
+ * but GraphQL expects [String!]! (flat array of strings).
+ */
+function serializeOperationForGraphQL(operation: Operation) {
+  const signer = operation.action.context?.signer;
+  if (!signer?.signatures) {
+    return operation;
+  }
+
+  return {
+    ...operation,
+    action: {
+      ...operation.action,
+      context: {
+        ...operation.action.context,
+        signer: {
+          ...signer,
+          signatures: signer.signatures.map((sig) =>
+            Array.isArray(sig) ? sig.join(", ") : sig,
+          ),
+        },
+      },
+    },
+  };
+}
+
+export async function pollSyncEnvelopes(
   syncManager: ISyncManager,
   args: {
     channelId: string;
@@ -725,15 +759,18 @@ export function pollSyncEnvelopes(
     );
   }
 
-  const operations = remote.channel.outbox.items;
+  if (args.cursorOrdinal > 0) {
+    await remote.channel.updateCursor(args.cursorOrdinal);
+  }
 
+  const operations = remote.channel.outbox.items;
   const envelopes = operations.map((syncOp: SyncOperation) => ({
     type: "OPERATIONS",
     channelMeta: {
       id: args.channelId,
     },
     operations: syncOp.operations.map((op) => ({
-      operation: op.operation,
+      operation: serializeOperationForGraphQL(op.operation),
       context: op.context,
     })),
     cursor: {
@@ -743,7 +780,7 @@ export function pollSyncEnvelopes(
     },
   }));
 
-  return Promise.resolve(envelopes);
+  return envelopes;
 }
 
 export function pushSyncEnvelope(
@@ -795,6 +832,7 @@ export function pushSyncEnvelope(
       documentType: op.context.documentType,
       scope: op.context.scope,
       branch: op.context.branch,
+      ordinal: 0,
     },
   }));
 

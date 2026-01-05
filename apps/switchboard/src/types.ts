@@ -50,6 +50,7 @@ export type StartServerOptions = {
   reactorOptions?: {
     enableDualActionCreate?: boolean;
   };
+  enableDocumentModelSubgraphs?: boolean;
 };
 
 export type SwitchboardReactor = {

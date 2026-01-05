@@ -12,10 +12,12 @@ import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { describe, it } from "vitest";
+import { describe, it, vi } from "vitest";
+import { DocumentMetaCache } from "../../../src/cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
 import { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../../../src/cache/write-cache-types.js";
+import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
 import { Reactor } from "../../../src/core/reactor.js";
 import { EventBus } from "../../../src/events/event-bus.js";
 import { SimpleJobExecutorManager } from "../../../src/executor/simple-job-executor-manager.js";
@@ -37,6 +39,8 @@ import type {
   Database as StorageDatabase,
 } from "../../../src/storage/kysely/types.js";
 import { runMigrations } from "../../../src/storage/migrations/migrator.js";
+import { DefaultSubscriptionErrorHandler } from "../../../src/subs/default-error-handler.js";
+import { ReactorSubscriptionManager } from "../../../src/subs/react-subscription-manager.js";
 import {
   type RecordedOperation,
   getDocumentModels,
@@ -109,6 +113,11 @@ async function createReactorSetup(
     db as unknown as Kysely<StorageDatabase>,
   );
 
+  const documentMetaCache = new DocumentMetaCache(operationStore, {
+    maxDocuments: 1000,
+  });
+  await documentMetaCache.startup();
+
   const executor = new SimpleJobExecutor(
     registry,
     storage,
@@ -117,6 +126,7 @@ async function createReactorSetup(
     eventBus,
     writeCache,
     operationIndex,
+    documentMetaCache,
     { legacyStorageEnabled },
   );
 
@@ -133,10 +143,21 @@ async function createReactorSetup(
   let documentView: KyselyDocumentView | undefined;
   let documentIndexer: KyselyDocumentIndexer | undefined;
 
+  const mockWriteCache: IWriteCache = {
+    getState: vi.fn().mockResolvedValue({}),
+    putState: vi.fn(),
+    invalidate: vi.fn().mockReturnValue(0),
+    clear: vi.fn(),
+    startup: vi.fn().mockResolvedValue(undefined),
+    shutdown: vi.fn().mockResolvedValue(undefined),
+  };
+
   const documentViewConsistencyTracker = new ConsistencyTracker();
   documentView = new KyselyDocumentView(
     db as any,
     operationStore,
+    operationIndex,
+    mockWriteCache,
     documentViewConsistencyTracker,
   );
   await documentView.init();
@@ -151,7 +172,14 @@ async function createReactorSetup(
   await documentIndexer.init();
   readModels.push(documentIndexer);
 
-  const readModelCoordinator = new ReadModelCoordinator(eventBus, readModels);
+  const subscriptionManager = new ReactorSubscriptionManager(
+    new DefaultSubscriptionErrorHandler(),
+  );
+  const readModelCoordinator = new ReadModelCoordinator(
+    eventBus,
+    readModels,
+    subscriptionManager,
+  );
 
   const legacyStorageConsistencyTracker = new ConsistencyTracker();
   const consistencyAwareStorage = new ConsistencyAwareLegacyStorage(

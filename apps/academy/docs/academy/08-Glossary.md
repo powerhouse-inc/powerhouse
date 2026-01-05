@@ -42,7 +42,7 @@
 - **Document Model Specification** – The formal definition of a document model (state, operations), created in Connect Studio (using GraphQL SDL) and exported (e.g., `.phdm.zip`) for code generation.
 - **Document Models** – Structured data models that define how Powerhouse documents store and process information.
 - **Document State** – The current data held by a document instance, structured according to its Document Model.
-- **Document Type** – A unique string identifier (e.g., `powerhouse/todolist`) for a Document Model, used by host apps to select the correct editor/logic.
+- **Document Type** – A unique string identifier (e.g., `powerhouse/todo-list`) for a Document Model, used by host apps to select the correct editor/logic.
 - **Event History (Append-Only Log)** – An immutable, append-only log where every operation applied to a Powerhouse document is stored as an event. It provides a transparent audit trail and enables features like time travel debugging and state reconstruction.
 - **GraphQL Scalars** – Data types used in Powerhouse document modeling (e.g., `String`, `Int`, `Currency`, `OID` for unique object IDs).
 - **GraphQL Schema Definition Language (SDL) (for Document Models)** – Language used in Connect Studio to define a Document Model's data structure (state) and operations.
@@ -68,7 +68,7 @@
 - **Development Environment (Powerhouse)** – A local setup for developing Powerhouse applications, typically initiated with the `ph dev` command. It runs essential backend services like the Powerhouse Switchboard to enable real-time document model processing, code generation, and live updates, separate from the front-end Connect Studio.
 - **Document Model Editors** – An interface or UI to a document model that allows users to create and modify the data captured by the document models.
 - **Drive** – A logical container in Powerhouse for storing, organizing, and managing collections of documents.
-- **drive-app (Custom Drive Explorer)** – A UI application, often custom, providing tailored views and interactions with documents in a Drive.
+- **Drive-app** – A UI application, often custom, providing tailored views and interactions with documents in a drive.
 - **Environments (Powerhouse Environments)** – Pre-defined configurations for a project's Powerhouse dependencies, such as `dev` (development), `prod` (production/latest), and `local`. The Powerhouse CLI (`ph use` command) allows developers to easily switch between these environments to use different versions of packages (e.g., bleeding-edge, stable, or from a local monorepo).
 - **Host Applications** – Applications that use the Powerhouse framework to create and manage documents and data.
 - **Modules (in Document Model Editor)** – An organizational feature in Connect Studio's model editor for grouping related operations.

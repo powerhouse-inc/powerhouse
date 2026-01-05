@@ -224,7 +224,7 @@ export function buildBatchMutationRequest(
 
       const createInput: CreateDocumentActionInput = {
         model: driveDoc.header.documentType,
-        version: "0.0.0",
+        version: 0,
         documentId: driveDoc.header.id,
         signing: {
           signature: driveDoc.header.id,
@@ -249,8 +249,8 @@ export function buildBatchMutationRequest(
 
       const upgradeInput: UpgradeDocumentActionInput = {
         model: driveDoc.header.documentType,
-        fromVersion: "0.0.0",
-        toVersion: "0.0.0",
+        fromVersion: 0,
+        toVersion: 1,
         documentId: driveDoc.header.id,
         initialState: driveDoc.state,
       };
@@ -293,7 +293,7 @@ export function buildBatchMutationRequest(
 
         const createFileInput: CreateDocumentActionInput = {
           model: fileDoc.header.documentType,
-          version: "0.0.0",
+          version: 0,
           documentId: fileDoc.header.id,
           signing: {
             signature: fileDoc.header.id,
@@ -318,8 +318,8 @@ export function buildBatchMutationRequest(
 
         const upgradeFileInput: UpgradeDocumentActionInput = {
           model: fileDoc.header.documentType,
-          fromVersion: "0.0.0",
-          toVersion: "0.0.0",
+          fromVersion: 0,
+          toVersion: 1,
           documentId: fileDoc.header.id,
           initialState: fileDoc.state,
         };

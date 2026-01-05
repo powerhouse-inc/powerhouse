@@ -50,6 +50,7 @@ const createMockOperationContext = (): OperationContext => ({
   documentType: "test/document",
   scope: "public",
   branch: "main",
+  ordinal: 1,
 });
 
 const createMockSyncOperation = (
@@ -173,14 +174,14 @@ describe("GqlChannel", () => {
       await vi.advanceTimersByTimeAsync(5000);
       expect(mockFetch).not.toHaveBeenCalled();
 
-      // After init, polling should start
+      // After init, polling should start immediately
       await channel.init();
-      // init() calls touchChannel
-      expect(mockFetch).toHaveBeenCalledTimes(1);
-
-      // Fast-forward time to trigger poll
-      await vi.advanceTimersByTimeAsync(5000);
+      // init() calls touchChannel + immediate poll
       expect(mockFetch).toHaveBeenCalledTimes(2);
+
+      // Fast-forward time to trigger next poll
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(mockFetch).toHaveBeenCalledTimes(3);
 
       channel.shutdown();
     });
@@ -205,16 +206,16 @@ describe("GqlChannel", () => {
       );
       await channel.init();
 
-      // init() calls touchChannel once
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+      // init() calls touchChannel + immediate poll
+      expect(mockFetch).toHaveBeenCalledTimes(2);
 
       // After first poll interval
       await vi.advanceTimersByTimeAsync(3000);
-      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch).toHaveBeenCalledTimes(3);
 
       // After second poll interval
       await vi.advanceTimersByTimeAsync(3000);
-      expect(mockFetch).toHaveBeenCalledTimes(3);
+      expect(mockFetch).toHaveBeenCalledTimes(4);
 
       channel.shutdown();
     });
@@ -379,12 +380,18 @@ describe("GqlChannel", () => {
       );
       await channel.init();
 
-      await vi.advanceTimersByTimeAsync(5000);
-
-      expect(channel.inbox.items).toHaveLength(1);
+      // Wait for immediate poll to complete and add item to inbox
+      await vi.waitFor(() => {
+        expect(channel.inbox.items).toHaveLength(1);
+      });
       expect(channel.inbox.items[0].status).toBe(
         SyncOperationStatus.ExecutionPending,
       );
+
+      // After 5 seconds, another poll adds another item
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(channel.inbox.items).toHaveLength(2);
+
       channel.shutdown();
     });
   });
@@ -521,10 +528,16 @@ describe("GqlChannel", () => {
       );
       await channel.init();
 
+      // Wait for the immediate poll to complete and fail
+      await vi.waitFor(() => {
+        expect(channel.getHealth().failureCount).toBe(1);
+      });
+
       await vi.advanceTimersByTimeAsync(5000);
 
       const health = channel.getHealth();
-      expect(health.failureCount).toBe(1);
+      // After another poll failure, failureCount is 2
+      expect(health.failureCount).toBe(2);
       expect(health.state).toBe("running");
       channel.shutdown();
     });
@@ -552,8 +565,12 @@ describe("GqlChannel", () => {
       );
       await channel.init();
 
-      // Trigger 3 failures
-      await vi.advanceTimersByTimeAsync(1000);
+      // Wait for the immediate poll to complete (1 failure)
+      await vi.waitFor(() => {
+        expect(channel.getHealth().failureCount).toBe(1);
+      });
+
+      // Trigger 2 more failures to reach maxFailures=3
       await vi.advanceTimersByTimeAsync(1000);
       await vi.advanceTimersByTimeAsync(1000);
 
@@ -572,14 +589,14 @@ describe("GqlChannel", () => {
       let callCount = 0;
       const mockFetch = vi.fn().mockImplementation(() => {
         callCount++;
-        // First call is touchChannel (init), then polling starts
+        // First call is touchChannel (init), then polling starts immediately
         if (callCount === 1) {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve({ data: { touchChannel: true } }),
           });
         }
-        // Calls 2 and 3 fail (first two polls), call 4 succeeds
+        // Call 2 (immediate poll) and call 3 fail, call 4 succeeds
         if (callCount <= 3) {
           throw new Error("Network error");
         }
@@ -600,12 +617,16 @@ describe("GqlChannel", () => {
       );
       await channel.init();
 
-      await vi.advanceTimersByTimeAsync(1000);
-      expect(channel.getHealth().failureCount).toBe(1);
+      // Wait for immediate poll which fails (call 2)
+      await vi.waitFor(() => {
+        expect(channel.getHealth().failureCount).toBe(1);
+      });
 
+      // After 1000ms, call 3 fails
       await vi.advanceTimersByTimeAsync(1000);
       expect(channel.getHealth().failureCount).toBe(2);
 
+      // After 1000ms, call 4 succeeds - failureCount resets
       await vi.advanceTimersByTimeAsync(1000);
       expect(channel.getHealth().failureCount).toBe(0);
       expect(channel.getHealth().state).toBe("idle");
@@ -638,10 +659,14 @@ describe("GqlChannel", () => {
       );
       await channel.init();
 
-      await vi.advanceTimersByTimeAsync(5000);
+      // Wait for the immediate poll to complete
+      await vi.waitFor(() => {
+        expect(channel.getHealth().failureCount).toBe(1);
+      });
 
-      const health = channel.getHealth();
-      expect(health.failureCount).toBe(1);
+      // After 5000ms, another poll failure
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(channel.getHealth().failureCount).toBe(2);
       channel.shutdown();
     });
 
@@ -669,10 +694,14 @@ describe("GqlChannel", () => {
       );
       await channel.init();
 
-      await vi.advanceTimersByTimeAsync(5000);
+      // Wait for the immediate poll to complete
+      await vi.waitFor(() => {
+        expect(channel.getHealth().failureCount).toBe(1);
+      });
 
-      const health = channel.getHealth();
-      expect(health.failureCount).toBe(1);
+      // After 5000ms, another poll failure
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(channel.getHealth().failureCount).toBe(2);
       channel.shutdown();
     });
   });
@@ -720,9 +749,12 @@ describe("GqlChannel", () => {
       );
       await channel.init();
 
-      await vi.advanceTimersByTimeAsync(1000);
-      // init() + 1 poll = 2 calls
+      // init() calls touchChannel + immediate poll = 2 calls
       expect(mockFetch).toHaveBeenCalledTimes(2);
+
+      await vi.advanceTimersByTimeAsync(1000);
+      // After 1000ms, another poll = 3 calls
+      expect(mockFetch).toHaveBeenCalledTimes(3);
 
       channel.shutdown();
       mockFetch.mockClear();

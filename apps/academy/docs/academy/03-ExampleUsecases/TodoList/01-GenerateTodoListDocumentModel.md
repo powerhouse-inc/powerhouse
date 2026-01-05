@@ -32,10 +32,12 @@ If you local drive is not present navigate into Settings in the bottom left corn
 Clear the storage of your localhost application as it might has an old session cached.
 :::
 
-4. Move into your local drive.  
+1. To create a new local drive, click the "Create New Drive" icon. In the "Drive Name" field, enter a name for your drive (we will use "local" as the name). For "Drive App", select "Generic drive explorer" and for "Location", choose "Local". Then click the "Create new drive" button at the bottom of the modal.
+
+2. Move into your local drive, by clicking the the name of the drive (local).  
    Create a new document model by clicking the `DocumentModel` button, found in the 'New Document' section at the bottom of the page. Name your document `Todo List`.
 
-If you've followed the steps correctly, you'll have an empty `TodoList` document where you can define the **'Document Specifications'**.
+If you've followed the steps correctly, you'll have an empty `Todo List` document where you can define the **'Document Specifications'**.
 
 ## TodoList document specification
 
@@ -58,7 +60,7 @@ Documents in Powerhouse leverage **event sourcing principles**, where every stat
 
 ## The document model state schema
 
-First, let's add a graphql type that represents an individual item in a todo list document. A todo item has an ID, text, and can be either checked or unchecked.
+First, let's add a GraphQL type that represents an individual item in a todo-list document. A todo item has an ID, text, and can be either checked or unchecked.
 
 Add this underneath the boilerplate `TodoListState` type you see in the Global State Schema text editor.
 
@@ -128,12 +130,13 @@ type `add todo item` in the "Add new operation" input and press enter.
 
 You will see your new operation with the name `ADD_TODO_ITEM` (we automatically handle changing the casing to the required CONSTANT_CASE).
 
-You will also see a boilerplate placeholder graphql input.
+You will also see a boilerplate placeholder GraphQL input.
 
-Update the graphql input like so:
+Update the GraphQL input like so:
 
 ```graphql
 input AddTodoItemInput {
+  id: OID!
   text: String!
 }
 ```
@@ -185,7 +188,7 @@ pnpm generate ./todo-list.phd
 To use our reference example, run:
 
 ```bash
-pnpm generate ./todo-list.phdm.phd
+pnpm generate ./todo-list.phd
 ```
 
 This will overwrite your generated code with code that is identical to the branches in this repository.
