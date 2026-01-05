@@ -201,6 +201,66 @@ export class KyselyOperationStore implements IOperationStore {
     };
   }
 
+  async getConflicting(
+    documentId: string,
+    scope: string,
+    branch: string,
+    minIndex: number,
+    minTimestamp: string,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<Operation>> {
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    let query = this.db
+      .selectFrom("Operation")
+      .selectAll()
+      .where("documentId", "=", documentId)
+      .where("scope", "=", scope)
+      .where("branch", "=", branch)
+      .where((eb) =>
+        eb.or([
+          eb("index", ">=", minIndex),
+          eb("timestampUtcMs", ">=", new Date(minTimestamp)),
+        ]),
+      )
+      .orderBy("index", "asc");
+
+    if (paging) {
+      if (paging.cursor) {
+        const lastIndex = Number.parseInt(paging.cursor, 10);
+        query = query.where("index", ">", lastIndex);
+      }
+
+      if (paging.limit) {
+        query = query.limit(paging.limit + 1);
+      }
+    }
+
+    const rows = await query.execute();
+
+    let hasMore = false;
+    let items = rows;
+
+    if (paging?.limit && rows.length > paging.limit) {
+      hasMore = true;
+      items = rows.slice(0, paging.limit);
+    }
+
+    const nextCursor =
+      hasMore && items.length > 0
+        ? items[items.length - 1].index.toString()
+        : undefined;
+
+    return {
+      items: items.map((row) => this.rowToOperation(row)),
+      nextCursor,
+      hasMore,
+    };
+  }
+
   async getRevisions(
     documentId: string,
     branch: string,

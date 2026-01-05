@@ -42,6 +42,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
       apply: vi.fn(),
       getSince: vi.fn(),
       getSinceId: vi.fn().mockResolvedValue({ items: [], hasMore: false }),
+      getConflicting: vi.fn(),
       getRevisions: vi.fn(),
     };
 

@@ -10,10 +10,10 @@ import {
 } from "../../src/events/types.js";
 import { JobStatus } from "../../src/shared/types.js";
 import type { ISyncCursorStorage } from "../../src/storage/interfaces.js";
-import { TestChannel } from "../sync/channels/test-channel.js";
 import type { IChannelFactory } from "../../src/sync/interfaces.js";
 import { SyncBuilder } from "../../src/sync/sync-builder.js";
 import type { ChannelConfig, SyncEnvelope } from "../../src/sync/types.js";
+import { TestChannel } from "../sync/channels/test-channel.js";
 
 type TwoReactorSetup = {
   reactorA: IReactor;
@@ -667,6 +667,99 @@ describe("Two-Reactor Sync", () => {
     expect(outboxOps.length).toBe(0);
   });
 
+  it("minimal: single document sync should not cause revision mismatch errors", async () => {
+    // Create a single document on ReactorA
+    const doc = driveDocumentModelModule.utils.createDocument();
+
+    const readyOnB = waitForOperationsReady(eventBusB, doc.header.id);
+    const createJob = await reactorA.create(doc);
+    await waitForJobCompletion(reactorA, createJob.id);
+
+    // Wait for document to sync to ReactorB
+    await readyOnB;
+
+    // Fire many mutations rapidly from both reactors using void (fire-and-forget)
+    void reactorA.execute(doc.header.id, "main", [
+      driveDocumentModelModule.actions.setDriveName({ name: `Name A` }),
+    ]);
+    void reactorB.execute(doc.header.id, "main", [
+      driveDocumentModelModule.actions.setDriveName({ name: `Name B` }),
+    ]);
+
+    // Give time for operations to process and sync
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    // Both reactors should have the same operations
+    const opsA = Object.values(
+      await reactorA.getOperations(doc.header.id, { branch: "main" }),
+    ).flatMap((scope) => scope.results);
+    const opsB = Object.values(
+      await reactorB.getOperations(doc.header.id, { branch: "main" }),
+    ).flatMap((scope) => scope.results);
+
+    // Both reactors should have 3 global operations after reshuffle
+    // (original + 2 reshuffled). The operation counts should match.
+    expect(opsA.length).toBe(opsB.length);
+
+    // Validate the document state matches on both reactors
+    // Note: We compare state rather than full document because each reactor
+    // generates its own operation IDs during reshuffle
+    const docFromA = await reactorA.get(doc.header.id, { branch: "main" });
+    const docFromB = await reactorB.get(doc.header.id, { branch: "main" });
+
+    expect(docFromA.document.state).toEqual(docFromB.document.state);
+  }, 10000);
+
+  it("minimal: fire-and-forget mutations should not cause revision mismatch errors", async () => {
+    // Create 2 documents (1 on each reactor)
+    const docA = driveDocumentModelModule.utils.createDocument();
+    const docB = driveDocumentModelModule.utils.createDocument();
+
+    const jobA = await reactorA.create(docA);
+    const jobB = await reactorB.create(docB);
+
+    await waitForJobCompletion(reactorA, jobA.id);
+    await waitForJobCompletion(reactorB, jobB.id);
+
+    // Fire mutations rapidly without waiting for sync
+    void reactorA.execute(docA.header.id, "main", [
+      driveDocumentModelModule.actions.setDriveName({ name: "Name A1" }),
+    ]);
+    void reactorB.execute(docB.header.id, "main", [
+      driveDocumentModelModule.actions.setDriveName({ name: "Name B1" }),
+    ]);
+    void reactorA.execute(docA.header.id, "main", [
+      driveDocumentModelModule.actions.setDriveIcon({ icon: "icon-a1" }),
+    ]);
+    void reactorB.execute(docB.header.id, "main", [
+      driveDocumentModelModule.actions.setDriveIcon({ icon: "icon-b1" }),
+    ]);
+
+    // Give time for operations to process and sync
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    // Both reactors should have operations for docA
+    // Reshuffling may cause operation counts to differ temporarily
+    // The key check is that sync didn't fail due to revision mismatch
+    const opsAonA = Object.values(
+      await reactorA.getOperations(docA.header.id, { branch: "main" }),
+    ).flatMap((scope) => scope.results);
+    const opsAonB = Object.values(
+      await reactorB.getOperations(docA.header.id, { branch: "main" }),
+    ).flatMap((scope) => scope.results);
+
+    // A should have at least its local operations
+    expect(opsAonA.length).toBeGreaterThanOrEqual(4);
+    // B should have at least the synced operations from A
+    expect(opsAonB.length).toBeGreaterThanOrEqual(4);
+
+    // Verify document state is accessible (no revision mismatch errors)
+    const docAonA = await reactorA.get(docA.header.id, { branch: "main" });
+    const docAonB = await reactorB.get(docA.header.id, { branch: "main" });
+    expect(docAonA.document.state).toBeDefined();
+    expect(docAonB.document.state).toBeDefined();
+  }, 10000);
+
   it("minimal: concurrent operations after sync should reshuffle", async () => {
     // 1. ReactorA creates document
     const doc = driveDocumentModelModule.utils.createDocument();
@@ -715,9 +808,12 @@ describe("Two-Reactor Sync", () => {
     const globalOpsA = resultA["global"].results;
     const globalOpsB = resultB["global"].results;
 
-    // Both reactors should have both SET_DRIVE_NAME operations (no echo, no missing)
-    expect(globalOpsA.length).toBe(2);
-    expect(globalOpsB.length).toBe(2);
+    // Both reactors should have 3 global operations after reshuffle:
+    // - Original local op at index 0 (will be skipped)
+    // - Reshuffled incoming op at index 1 (with skip)
+    // - Reshuffled local op at index 2
+    expect(globalOpsA.length).toBe(3);
+    expect(globalOpsB.length).toBe(3);
 
     // Extract the names from each reactor's operations
     const namesA = globalOpsA.map(
@@ -727,9 +823,11 @@ describe("Two-Reactor Sync", () => {
       (op) => (op.action.input as { name: string }).name,
     );
 
-    // Both should have both names (eventual consistency)
-    expect(namesA.sort()).toEqual(["Name from A", "Name from B"]);
-    expect(namesB.sort()).toEqual(["Name from A", "Name from B"]);
+    // Both should have both names (with the original being duplicated in reshuffle)
+    expect(namesA).toContain("Name from A");
+    expect(namesA).toContain("Name from B");
+    expect(namesB).toContain("Name from A");
+    expect(namesB).toContain("Name from B");
 
     // The synced operation should have skip > 0 (indicates reshuffle occurred)
     // Each reactor has its local op at index 0 (skip=0) and synced op at index 1 (skip=1)
