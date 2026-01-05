@@ -16,8 +16,8 @@ import {
 import type { 
   ${v.globalStateName},
   ${v.localStateName}
-} from "@powerhousedao/codegen/ts-morph";
-import type { ${v.phStateName} } from "@powerhousedao/codegen/ts-morph";
+} from './types.js';
+import type { ${v.phStateName} } from './types.js';
 import { reducer } from './reducer.js';
 import { ${v.documentTypeVariableName} } from "./document-type.js";
 import {

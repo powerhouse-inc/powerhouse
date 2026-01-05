@@ -22,7 +22,7 @@ import type {
   ${v.localStateName},
   ${v.globalStateName},
   ${v.phStateName},
-} from "@powerhousedao/codegen/ts-morph";
+} from "./types.js";
 import { createDocument } from "./utils.js";
 
 export function defaultGlobalState(): ${v.globalStateName} {

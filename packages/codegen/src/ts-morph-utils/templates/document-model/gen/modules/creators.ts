@@ -103,7 +103,7 @@ ${makeActionInputSchemaImports(v.actions)}
 } from '../schema/zod.js';
 import type {
 ${makeActionInputTypeImports(v.actions)}
-} from "@powerhousedao/codegen/ts-morph";
+} from '../types.js';
 import type {
 ${makeActionTypeImports(v.actions)}
 } from './actions.js';

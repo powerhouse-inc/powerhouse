@@ -50,7 +50,7 @@ export const documentModelOperationModuleActionsFileTemplate = (v: {
 import type { ${getDocumentModelActionTypeImportNames(v.actions)} } from 'document-model';
 import type {
   ${getActionInputTypeNames(v.actions)}
-} from "@powerhousedao/codegen/ts-morph";
+} from '../types.js';
 
 ${getActionTypeExports(v.actions)}
 

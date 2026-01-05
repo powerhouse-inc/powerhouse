@@ -12,7 +12,7 @@ import {
 import { z } from "zod";
 import { ${v.documentTypeVariableName} } from "./document-type.js";
 import { ${v.stateSchemaName} } from "./schema/zod.js";
-import type { ${v.phDocumentTypeName}, ${v.phStateName} } from "@powerhousedao/codegen/ts-morph";
+import type { ${v.phDocumentTypeName}, ${v.phStateName} } from "./types.js";
 
 /** Schema for validating the header object of a ${v.pascalCaseDocumentType} document */
 export const ${v.phDocumentTypeName}HeaderSchema = BaseDocumentHeaderSchema.extend({

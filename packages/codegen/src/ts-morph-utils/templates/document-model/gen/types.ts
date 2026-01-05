@@ -24,7 +24,7 @@ import type { ${v.actionTypeName} } from './actions.js';
 import type {
   ${v.stateName} as ${v.globalStateName},
   ${buildLocalStateTypeImport(v.hasLocalSchema, v.localStateName)}
-} from "@powerhousedao/codegen/ts-morph";
+} from './schema/types.js';
 
 ${buildEmptyLocalStateType(v.hasLocalSchema, v.localStateName)}
 
@@ -34,7 +34,7 @@ type ${v.phStateName} = PHBaseState & {
 };
 type ${v.phDocumentTypeName} = PHDocument<${v.phStateName}>;
 
-export * from "@powerhousedao/codegen/ts-morph";
+export * from './schema/types.js';
 
 export type { 
   ${v.globalStateName}, 

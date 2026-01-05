@@ -98,7 +98,7 @@ import type {
 } from './actions.js';
 import type {
   ${getActionOperationStateTypeImports(v.actions, v.pascalCaseDocumentType)}
-} from "@powerhousedao/codegen/ts-morph";
+} from "../types.js";
 
 export interface ${getOperationsInterfaceName(
     v.pascalCaseDocumentType,
