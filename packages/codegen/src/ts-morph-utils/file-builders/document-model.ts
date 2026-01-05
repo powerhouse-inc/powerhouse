@@ -5,6 +5,7 @@ import type {
 } from "@powerhousedao/codegen/ts-morph";
 import {
   buildTsMorphProject,
+  ensureDirectoriesExist,
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
 } from "@powerhousedao/codegen/ts-morph";
@@ -28,186 +29,13 @@ import {
   makeUpgradeFile,
   makeUpgradesIndexFile,
 } from "./document-model/upgrades-dir.js";
-import { makeModulesFile } from "./module-files.js";
+import { makeDocumentModelModulesFile } from "./module-files.js";
 
-function ensureDirectoriesExist(project: Project, ...pathsToEnsure: string[]) {
-  for (const dirPath of pathsToEnsure) {
-    const dir = project.getDirectory(dirPath);
-    if (!dir) {
-      project.createDirectory(dirPath);
-      project.saveSync();
-    }
-  }
-}
-
-function makeDocumentModelIndexFile(args: {
-  project: Project;
-  documentModelDirPath: string;
-  latestVersion: number;
-}) {
-  const { project, documentModelDirPath, latestVersion } = args;
-
-  const filePath = path.join(documentModelDirPath, "index.ts");
-
-  const { sourceFile } = getOrCreateSourceFile(project, filePath);
-
-  sourceFile.replaceWithText("");
-  sourceFile.addExportDeclarations([
-    { moduleSpecifier: `./v${latestVersion}/index.js` },
-    { moduleSpecifier: `./upgrades/index.js` },
-  ]);
-
-  formatSourceFileWithPrettier(sourceFile);
-}
-
-function writeDocumentModelStateJsonFile({
-  documentModelState,
-  documentModelDirName,
-  documentModelDirPath,
-}: {
-  documentModelState: DocumentModelGlobalState;
-  documentModelDirPath: string;
-  documentModelDirName: string;
-}) {
-  const filePath = path.join(
-    documentModelDirPath,
-    `${documentModelDirName}.json`,
-  );
-  const documentModelStateJson = JSON.stringify(documentModelState, null, 2);
-  writeFileSync(filePath, documentModelStateJson);
-}
-
-type GenerateDocumentModelFromSpecArgs = {
-  project: Project;
-  version: number;
-  useVersioning: boolean;
-  packageName: string;
-  documentModelState: DocumentModelGlobalState;
-  projectDir: string;
-  documentModelPackageImportPath: string;
-  documentModelsDirPath: string;
-  documentModelDirName: string;
-  documentModelDirPath: string;
-} & DocumentModelVariableNames;
-async function generateDocumentModelForSpec({
-  project,
-  projectDir,
-  packageName,
-  documentModelState,
-  documentModelPackageImportPath,
-  documentModelsDirPath,
-  documentModelDirName,
-  documentModelDirPath,
-  useVersioning,
-  version,
-  ...documentModelVariableNames
-}: GenerateDocumentModelFromSpecArgs) {
-  const specification = documentModelState.specifications.find(
-    (spec) => spec.version === version,
-  );
-
-  if (!specification) {
-    throw new Error(
-      `Document model specifications array is misconfigured, no specification found for version: ${version}`,
-    );
-  }
-
-  const versionDirName = useVersioning ? `v${version}` : "";
-
-  const documentModelVersionDirName = path.join(
-    documentModelDirName,
-    versionDirName,
-  );
-
-  const documentModelVersionDirPath = path.join(
-    documentModelDirPath,
-    versionDirName,
-  );
-
-  const versionedDocumentModelPackageImportPath = path.join(
-    documentModelPackageImportPath,
-    versionDirName,
-  );
-
-  const fileExtension = documentModelState.extension;
-  const documentTypeId = documentModelState.id;
-  const srcDirPath = path.join(documentModelVersionDirPath, "src");
-  const reducersDirPath = path.join(srcDirPath, "reducers");
-  const testsDirPath = path.join(srcDirPath, "tests");
-  const genDirPath = path.join(documentModelVersionDirPath, "gen");
-  const schemaDirPath = path.join(genDirPath, "schema");
-  const { initialGlobalState, initialLocalState } = getInitialStates(
-    specification.state,
-  );
-  const hasLocalSchema = specification.state.local.schema !== "";
-  const modules = specification.modules;
-  const moduleDirPaths = modules.map((module) =>
-    path.join(genDirPath, paramCase(module.name)),
-  );
-
-  ensureDirectoriesExist(
-    project,
-    documentModelVersionDirPath,
-    reducersDirPath,
-    testsDirPath,
-    schemaDirPath,
-    ...moduleDirPaths,
-  );
-
-  const fileMakerArgs: DocumentModelFileMakerArgs = {
-    project,
-    projectDir,
-    packageName,
-    version,
-    useVersioning,
-    documentTypeId,
-    documentModelState,
-    initialGlobalState,
-    initialLocalState,
-    modules,
-    hasLocalSchema,
-    documentModelsDirPath,
-    documentModelDirPath,
-    documentModelDirName,
-    documentModelVersionDirName,
-    documentModelVersionDirPath,
-    documentModelPackageImportPath,
-    versionedDocumentModelPackageImportPath,
-    srcDirPath,
-    genDirPath,
-    testsDirPath,
-    schemaDirPath,
-    reducersDirPath,
-    fileExtension,
-    ...documentModelVariableNames,
-  };
-
-  await generateDocumentModelZodSchemas({
-    documentModelDirPath: documentModelVersionDirPath,
-    specification,
-  });
-
-  makeRootDirFiles(fileMakerArgs);
-  makeGenDirFiles(fileMakerArgs);
-  makeSrcDirFiles(fileMakerArgs);
-  makeDocumentModelModulesFile(fileMakerArgs);
-
-  if (!useVersioning) return;
-
-  const previousVersionDirPath = getPreviousVersionDirPath(
-    documentModelDirPath,
-    version,
-  );
-
-  if (!previousVersionDirPath) return;
-
-  persistCustomFilesFromPreviousVersion({
-    project,
-    currentVersionDirPath: documentModelVersionDirPath,
-    previousVersionDirPath,
-  });
-}
-
+/** Generates a document model from the given `documentModelState`
+ *
+ * If `useVersioning` is set to true, it will generate versioned document model code
+ * for each `specification` in the `documentModelState`
+ */
 export async function tsMorphGenerateDocumentModel({
   projectDir,
   packageName,
@@ -344,27 +172,154 @@ export async function tsMorphGenerateDocumentModel({
   project.saveSync();
 }
 
-export function makeDocumentModelModulesFile({
+type GenerateDocumentModelFromSpecArgs = {
+  project: Project;
+  version: number;
+  useVersioning: boolean;
+  packageName: string;
+  documentModelState: DocumentModelGlobalState;
+  projectDir: string;
+  documentModelPackageImportPath: string;
+  documentModelsDirPath: string;
+  documentModelDirName: string;
+  documentModelDirPath: string;
+} & DocumentModelVariableNames;
+/** Generates document model code for a given `specification` from a `documentModelState` object */
+async function generateDocumentModelForSpec({
   project,
   projectDir,
-}: {
-  project: Project;
-  projectDir: string;
-}) {
-  const documentModelsDirPath = path.join(projectDir, "document-models");
-  const documentModelsSourceFilesPath = path.join(
-    documentModelsDirPath,
-    "/**/*",
+  packageName,
+  documentModelState,
+  documentModelPackageImportPath,
+  documentModelsDirPath,
+  documentModelDirName,
+  documentModelDirPath,
+  useVersioning,
+  version,
+  ...documentModelVariableNames
+}: GenerateDocumentModelFromSpecArgs) {
+  const specification = documentModelState.specifications.find(
+    (spec) => spec.version === version,
   );
-  makeModulesFile({
+
+  if (!specification) {
+    throw new Error(
+      `Document model specifications array is misconfigured, no specification found for version: ${version}`,
+    );
+  }
+
+  const versionDirName = useVersioning ? `v${version}` : "";
+
+  const documentModelVersionDirName = path.join(
+    documentModelDirName,
+    versionDirName,
+  );
+
+  const documentModelVersionDirPath = path.join(
+    documentModelDirPath,
+    versionDirName,
+  );
+
+  const versionedDocumentModelPackageImportPath = path.join(
+    documentModelPackageImportPath,
+    versionDirName,
+  );
+
+  const fileExtension = documentModelState.extension;
+  const documentTypeId = documentModelState.id;
+  const srcDirPath = path.join(documentModelVersionDirPath, "src");
+  const reducersDirPath = path.join(srcDirPath, "reducers");
+  const testsDirPath = path.join(srcDirPath, "tests");
+  const genDirPath = path.join(documentModelVersionDirPath, "gen");
+  const schemaDirPath = path.join(genDirPath, "schema");
+  const { initialGlobalState, initialLocalState } = getInitialStates(
+    specification.state,
+  );
+  const hasLocalSchema = specification.state.local.schema !== "";
+  const modules = specification.modules;
+  const moduleDirPaths = modules.map((module) =>
+    path.join(genDirPath, paramCase(module.name)),
+  );
+
+  ensureDirectoriesExist(
     project,
-    modulesDirPath: documentModelsDirPath,
-    modulesSourceFilesPath: documentModelsSourceFilesPath,
-    outputFileName: "document-models.ts",
-    typeName: "DocumentModelModule",
-    variableName: "documentModels",
-    variableType: "DocumentModelModule<any>[]",
+    documentModelVersionDirPath,
+    reducersDirPath,
+    testsDirPath,
+    schemaDirPath,
+    ...moduleDirPaths,
+  );
+
+  const fileMakerArgs: DocumentModelFileMakerArgs = {
+    project,
+    projectDir,
+    packageName,
+    version,
+    useVersioning,
+    documentTypeId,
+    documentModelState,
+    initialGlobalState,
+    initialLocalState,
+    modules,
+    hasLocalSchema,
+    documentModelsDirPath,
+    documentModelDirPath,
+    documentModelDirName,
+    documentModelVersionDirName,
+    documentModelVersionDirPath,
+    documentModelPackageImportPath,
+    versionedDocumentModelPackageImportPath,
+    srcDirPath,
+    genDirPath,
+    testsDirPath,
+    schemaDirPath,
+    reducersDirPath,
+    fileExtension,
+    ...documentModelVariableNames,
+  };
+
+  await generateDocumentModelZodSchemas({
+    documentModelDirPath: documentModelVersionDirPath,
+    specification,
   });
+
+  makeRootDirFiles(fileMakerArgs);
+  makeGenDirFiles(fileMakerArgs);
+  makeSrcDirFiles(fileMakerArgs);
+  makeDocumentModelModulesFile(fileMakerArgs);
+
+  if (!useVersioning) return;
+
+  const previousVersionDirPath = getPreviousVersionDirPath(
+    documentModelDirPath,
+    version,
+  );
+
+  if (!previousVersionDirPath) return;
+
+  persistCustomFilesFromPreviousVersion({
+    project,
+    currentVersionDirPath: documentModelVersionDirPath,
+    previousVersionDirPath,
+  });
+}
+
+/** Writes a json file derived from a `documentModelState` */
+function writeDocumentModelStateJsonFile({
+  documentModelState,
+  documentModelDirName,
+  documentModelDirPath,
+}: {
+  documentModelState: DocumentModelGlobalState;
+  documentModelDirPath: string;
+  documentModelDirName: string;
+}) {
+  const filePath = path.join(
+    documentModelDirPath,
+    `${documentModelDirName}.json`,
+  );
+  const documentModelStateJson = JSON.stringify(documentModelState, null, 2);
+  writeFileSync(filePath, documentModelStateJson);
 }
 
 function getPreviousVersionDirPath(
@@ -377,6 +332,26 @@ function getPreviousVersionDirPath(
   const previousVersionDirName = `v${previousVersion}`;
 
   return path.join(documentModelDirPath, previousVersionDirName);
+}
+
+function makeDocumentModelIndexFile(args: {
+  project: Project;
+  documentModelDirPath: string;
+  latestVersion: number;
+}) {
+  const { project, documentModelDirPath, latestVersion } = args;
+
+  const filePath = path.join(documentModelDirPath, "index.ts");
+
+  const { sourceFile } = getOrCreateSourceFile(project, filePath);
+
+  sourceFile.replaceWithText("");
+  sourceFile.addExportDeclarations([
+    { moduleSpecifier: `./v${latestVersion}/index.js` },
+    { moduleSpecifier: `./upgrades/index.js` },
+  ]);
+
+  formatSourceFileWithPrettier(sourceFile);
 }
 
 type PersistCustomFilesFromPreviousVersionArgs = {

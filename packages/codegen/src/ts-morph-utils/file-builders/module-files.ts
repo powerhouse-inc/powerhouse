@@ -150,6 +150,45 @@ export function makeModulesFile({
   project.saveSync();
 }
 
+/** Generates the `document-models.ts` file which exports the document models defined in each document model dir's `module.ts` file */
+export function makeDocumentModelModulesFile({
+  project,
+  projectDir,
+}: {
+  project: Project;
+  projectDir: string;
+}) {
+  const documentModelsDirPath = path.join(projectDir, "document-models");
+  const documentModelsSourceFilesPath = path.join(
+    documentModelsDirPath,
+    "/**/*",
+  );
+  makeModulesFile({
+    project,
+    modulesDirPath: documentModelsDirPath,
+    modulesSourceFilesPath: documentModelsSourceFilesPath,
+    outputFileName: "document-models.ts",
+    typeName: "DocumentModelModule",
+    variableName: "documentModels",
+    variableType: "DocumentModelModule<any>[]",
+  });
+}
+
+/** Generates the `editors.ts` file which exports the editors defined in each editor dir's `module.ts` file */
+export function makeEditorsModulesFile(project: Project, projectDir: string) {
+  const modulesDirPath = path.join(projectDir, "editors");
+  const modulesSourceFilesPath = path.join(modulesDirPath, "/**/*");
+  makeModulesFile({
+    project,
+    modulesDirPath,
+    modulesSourceFilesPath,
+    outputFileName: "editors.ts",
+    typeName: "EditorModule",
+    variableName: "editors",
+    variableType: "EditorModule[]",
+  });
+}
+
 function getVersionDirFromModuleSpecifier(moduleSpecifier: string) {
   const match = moduleSpecifier.match(/\/(v\d+)(?=\/)/);
   const version = match?.[1];

@@ -10,15 +10,16 @@ import {
 } from "@powerhousedao/codegen/ts-morph";
 import { getEditorVariableNames } from "@powerhousedao/codegen/ts-morph/name-builders";
 import { documentEditorEditorFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-editor/editor.js";
-import { documentEditorModuleFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-editor/module.js";
-import { pascalCase } from "change-case";
 import path from "path";
 import type { Project } from "ts-morph";
-import { makeEditorsModulesFile } from "./editor-common.js";
+import { makeEditorModuleFile } from "./editor-common.js";
+import { makeEditorsModulesFile } from "./module-files.js";
+
 type GenerateEditorArgs = CommonGenerateEditorArgs & {
   documentModelId: string;
 };
-export function tsMorphGenerateEditor({
+/** Generates a document editor for the given `documentModelId` (also called `documentType`) */
+export function tsMorphGenerateDocumentEditor({
   packageName,
   projectDir,
   editorDir,
@@ -74,7 +75,7 @@ type MakeEditorComponentArgs = EditorVariableNames & {
   documentModelDocumentTypeName: string;
   documentModelImportPath: string;
 };
-export function makeEditorComponent(args: MakeEditorComponentArgs) {
+function makeEditorComponent(args: MakeEditorComponentArgs) {
   const { project, editorDirPath } = args;
   const filePath = path.join(editorDirPath, "editor.tsx");
   const { alreadyExists, sourceFile } = getOrCreateSourceFile(
@@ -95,45 +96,4 @@ export function makeEditorComponent(args: MakeEditorComponentArgs) {
   const template = documentEditorEditorFileTemplate(args);
   sourceFile.replaceWithText(template);
   formatSourceFileWithPrettier(sourceFile);
-}
-
-type MakeEditorModuleFileArgs = {
-  project: Project;
-  editorName: string;
-  editorId: string;
-  documentModelId?: string;
-  editorDirPath: string;
-  legacyMultipleDocumentTypes?: string[];
-};
-export function makeEditorModuleFile({
-  project,
-  editorDirPath,
-  editorName,
-  documentModelId,
-  editorId,
-  legacyMultipleDocumentTypes,
-}: MakeEditorModuleFileArgs) {
-  if (documentModelId && !!legacyMultipleDocumentTypes) {
-    throw new Error(
-      "Cannot specify both documentModelId and legacyMultipleDocumentTypes",
-    );
-  }
-  const filePath = path.join(editorDirPath, "module.ts");
-  const { sourceFile } = getOrCreateSourceFile(project, filePath);
-
-  sourceFile.replaceWithText("");
-
-  const pascalCaseEditorName = pascalCase(editorName);
-  const documentTypes = documentModelId
-    ? `["${documentModelId}"]`
-    : JSON.stringify(legacyMultipleDocumentTypes);
-
-  const template = documentEditorModuleFileTemplate({
-    editorName,
-    editorId,
-    pascalCaseEditorName,
-    documentTypes,
-  });
-  sourceFile.replaceWithText(template);
-  project.saveSync();
 }

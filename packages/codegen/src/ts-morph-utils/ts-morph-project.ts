@@ -1,7 +1,7 @@
 import path from "path";
-import type { SourceFile } from "ts-morph";
-import { IndentationText, Project, ts } from "ts-morph";
+import { IndentationText, Project } from "ts-morph";
 
+/** Returns the minimal typescript config for use in ts-morph file generation */
 export function getDefaultProjectOptions(tsConfigFilePath: string) {
   const DEFAULT_PROJECT_OPTIONS = {
     // don't add files from the tsconfig.json file, only use the ones we need
@@ -21,12 +21,16 @@ export function getDefaultProjectOptions(tsConfigFilePath: string) {
   };
 }
 
+/** Instantiates a ts-morph Project using the default typescript config and nearest tsconfig.json file */
 export function buildTsMorphProject(projectDir: string) {
   const tsConfigFilePath = path.join(projectDir, "tsconfig.json");
   const project = new Project(getDefaultProjectOptions(tsConfigFilePath));
   return project;
 }
 
+/** Gets a SourceFile by name in a ts-morph Project, or creates a new one
+ * if none with that path exists.
+ */
 export function getOrCreateSourceFile(project: Project, filePath: string) {
   const sourceFile = project.getSourceFile(filePath);
   if (!sourceFile) {
@@ -42,8 +46,18 @@ export function getOrCreateSourceFile(project: Project, filePath: string) {
   };
 }
 
-export function buildNodePrinter(sourceFile: SourceFile) {
-  const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
-  return (node: ts.Node) =>
-    printer.printNode(ts.EmitHint.Unspecified, node, sourceFile.compilerNode);
+/** Ensures that the directories at the given paths exist within the
+ * ts-morph Project
+ */
+export function ensureDirectoriesExist(
+  project: Project,
+  ...pathsToEnsure: string[]
+) {
+  for (const dirPath of pathsToEnsure) {
+    const dir = project.getDirectory(dirPath);
+    if (!dir) {
+      project.createDirectory(dirPath);
+      project.saveSync();
+    }
+  }
 }

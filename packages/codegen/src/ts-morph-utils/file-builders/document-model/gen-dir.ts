@@ -3,7 +3,6 @@ import type {
   DocumentModelTemplateInputsWithModule,
 } from "@powerhousedao/codegen/ts-morph";
 import {
-  buildNodePrinter,
   buildObjectLiteral,
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
@@ -112,7 +111,6 @@ function makeDocumentModelGenDocumentModelFile(
   const filePath = path.join(genDirPath, "document-model.ts");
 
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
-  const printNode = buildNodePrinter(sourceFile);
 
   sourceFile.replaceWithText("");
 
@@ -122,7 +120,10 @@ function makeDocumentModelGenDocumentModelFile(
     isTypeOnly: true,
   });
 
-  const objectLiteral = buildObjectLiteral(documentModelState);
+  const documentModelStateString = buildObjectLiteral(
+    documentModelState,
+    sourceFile,
+  );
 
   sourceFile.addVariableStatement({
     declarationKind: VariableDeclarationKind.Const,
@@ -131,7 +132,7 @@ function makeDocumentModelGenDocumentModelFile(
       {
         name: "documentModel",
         type: "DocumentModelGlobalState",
-        initializer: printNode(objectLiteral),
+        initializer: documentModelStateString,
       },
     ],
   });

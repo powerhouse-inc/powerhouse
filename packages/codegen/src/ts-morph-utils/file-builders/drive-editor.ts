@@ -17,13 +17,14 @@ import { driveEditorConfigFileTemplate } from "@powerhousedao/codegen/ts-morph/t
 import { driveEditorEditorFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/drive-editor/editor.js";
 import path from "path";
 import { type Project } from "ts-morph";
-import { makeEditorModuleFile } from "./document-editor.js";
-import { makeEditorsModulesFile } from "./editor-common.js";
+import { makeEditorModuleFile } from "./editor-common.js";
+import { makeEditorsModulesFile } from "./module-files.js";
 
 type GenerateDriveEditorArgs = CommonGenerateEditorArgs & {
   allowedDocumentModelIds: string[];
   isDragAndDropEnabled: boolean;
 };
+/** Generates a drive editor with the configs for `allowedDocumentModelIds` and `isDragAndDropEnabled` */
 export function tsMorphGenerateDriveEditor({
   projectDir,
   editorDir,
@@ -114,7 +115,7 @@ type MakeDriveEditorComponentArgs = {
   project: Project;
   editorDirPath: string;
 };
-export function makeDriveEditorComponent({
+function makeDriveEditorComponent({
   project,
   editorDirPath,
 }: MakeDriveEditorComponentArgs) {
@@ -144,7 +145,7 @@ type MakeDriveEditorConfigFileArgs = {
   allowedDocumentModelIds: string[];
   isDragAndDropEnabled: boolean;
 };
-export function makeDriveEditorConfigFile({
+function makeDriveEditorConfigFile({
   project,
   editorDirPath,
   allowedDocumentModelIds,
@@ -167,7 +168,7 @@ type MakeDriveContentsFileArgs = {
   project: Project;
   editorComponentsDirPath: string;
 };
-export function makeDriveContentsFile({
+function makeDriveContentsFile({
   project,
   editorComponentsDirPath,
 }: MakeDriveContentsFileArgs) {
@@ -189,7 +190,7 @@ type MakeNavigationBreadcrumbsFileArgs = {
   editorComponentsDirPath: string;
 };
 
-export function makeNavigationBreadcrumbsFile({
+function makeNavigationBreadcrumbsFile({
   project,
   editorComponentsDirPath,
 }: MakeNavigationBreadcrumbsFileArgs) {
@@ -212,7 +213,7 @@ type MakeFoldersFileArgs = {
   project: Project;
   editorComponentsDirPath: string;
 };
-export function makeFoldersFile({
+function makeFoldersFile({
   project,
   editorComponentsDirPath,
 }: MakeFoldersFileArgs) {
@@ -233,7 +234,7 @@ type MakeFilesFileArgs = {
   project: Project;
   editorComponentsDirPath: string;
 };
-export function makeFilesFile({
+function makeFilesFile({
   project,
   editorComponentsDirPath,
 }: MakeFilesFileArgs) {
@@ -274,7 +275,7 @@ type MakeFolderTreeFileArgs = {
   project: Project;
   editorComponentsDirPath: string;
 };
-export function makeFolderTreeFile({
+function makeFolderTreeFile({
   project,
   editorComponentsDirPath,
 }: MakeFolderTreeFileArgs) {
@@ -294,7 +295,7 @@ type MakeEmptyStateFileArgs = {
   project: Project;
   editorComponentsDirPath: string;
 };
-export function makeEmptyStateFile({
+function makeEmptyStateFile({
   project,
   editorComponentsDirPath,
 }: MakeEmptyStateFileArgs) {
@@ -314,7 +315,7 @@ type MakeCreateDocumentFileArgs = {
   project: Project;
   editorComponentsDirPath: string;
 };
-export function makeCreateDocumentFile({
+function makeCreateDocumentFile({
   project,
   editorComponentsDirPath,
 }: MakeCreateDocumentFileArgs) {

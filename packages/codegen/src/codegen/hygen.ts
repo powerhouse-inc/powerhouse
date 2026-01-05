@@ -6,10 +6,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readPackage } from "read-pkg";
-import { TSMorphCodeGenerator } from "../ts-morph-generator/index.js";
-import { makeDocumentModelModulesFile } from "../ts-morph-utils/file-builders/document-model.js";
-import { makeEditorsModulesFile } from "../ts-morph-utils/file-builders/editor-common.js";
-import { makeSubgraphsIndexFile } from "../ts-morph-utils/file-builders/subgraphs.js";
+import { makeEditorsModulesFile } from "../ts-morph-utils/file-builders/module-files.js";
 import { buildTsMorphProject } from "../ts-morph-utils/ts-morph-project.js";
 import type { CodegenOptions, DocumentTypesMap } from "./types.js";
 
