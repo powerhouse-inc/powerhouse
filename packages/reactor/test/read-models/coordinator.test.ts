@@ -49,10 +49,11 @@ describe("ReadModelCoordinator", () => {
       const eventBus = new EventBus();
       const readModel1 = createMockReadModel();
       const readModel2 = createMockReadModel();
-      const coordinator = new ReadModelCoordinator(eventBus, [
-        readModel1,
-        readModel2,
-      ]);
+      const coordinator = new ReadModelCoordinator(
+        eventBus,
+        [readModel1, readModel2],
+        [],
+      );
 
       const readyEvents: OperationsReadyEvent[] = [];
       eventBus.subscribe(
@@ -78,7 +79,7 @@ describe("ReadModelCoordinator", () => {
     it("should emit OPERATIONS_READY with correct payload", async () => {
       const eventBus = new EventBus();
       const readModel = createMockReadModel();
-      const coordinator = new ReadModelCoordinator(eventBus, [readModel]);
+      const coordinator = new ReadModelCoordinator(eventBus, [readModel], []);
 
       let readyEvent: OperationsReadyEvent | null = null;
       eventBus.subscribe(
@@ -112,7 +113,7 @@ describe("ReadModelCoordinator", () => {
         indexingComplete = true;
       });
 
-      const coordinator = new ReadModelCoordinator(eventBus, [readModel]);
+      const coordinator = new ReadModelCoordinator(eventBus, [readModel], []);
 
       let readyFired = false;
       eventBus.subscribe(OperationEventTypes.OPERATIONS_READY, () => {
@@ -151,11 +152,11 @@ describe("ReadModelCoordinator", () => {
         completionOrder.push(3);
       });
 
-      const coordinator = new ReadModelCoordinator(eventBus, [
-        readModel1,
-        readModel2,
-        readModel3,
-      ]);
+      const coordinator = new ReadModelCoordinator(
+        eventBus,
+        [readModel1, readModel2, readModel3],
+        [],
+      );
 
       let allComplete = false;
       eventBus.subscribe(OperationEventTypes.OPERATIONS_READY, () => {
@@ -176,7 +177,7 @@ describe("ReadModelCoordinator", () => {
     it("should handle multiple operation batches", async () => {
       const eventBus = new EventBus();
       const readModel = createMockReadModel();
-      const coordinator = new ReadModelCoordinator(eventBus, [readModel]);
+      const coordinator = new ReadModelCoordinator(eventBus, [readModel], []);
 
       const readyEvents: OperationsReadyEvent[] = [];
       eventBus.subscribe(
@@ -206,7 +207,7 @@ describe("ReadModelCoordinator", () => {
     it("should not emit OPERATIONS_READY if coordinator is stopped", async () => {
       const eventBus = new EventBus();
       const readModel = createMockReadModel();
-      const coordinator = new ReadModelCoordinator(eventBus, [readModel]);
+      const coordinator = new ReadModelCoordinator(eventBus, [readModel], []);
 
       const readyEvents: OperationsReadyEvent[] = [];
       eventBus.subscribe(

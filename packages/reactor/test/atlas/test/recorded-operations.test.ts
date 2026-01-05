@@ -171,7 +171,11 @@ async function createReactorSetup(
   await documentIndexer.init();
   readModels.push(documentIndexer);
 
-  const readModelCoordinator = new ReadModelCoordinator(eventBus, readModels);
+  const readModelCoordinator = new ReadModelCoordinator(
+    eventBus,
+    readModels,
+    [],
+  );
 
   const legacyStorageConsistencyTracker = new ConsistencyTracker();
   const consistencyAwareStorage = new ConsistencyAwareLegacyStorage(

@@ -303,11 +303,9 @@ export class ReactorBuilder {
 
     const readModelCoordinator = this.readModelCoordinator
       ? this.readModelCoordinator
-      : new ReadModelCoordinator(
-          eventBus,
-          readModelInstances,
+      : new ReadModelCoordinator(eventBus, readModelInstances, [
           subscriptionNotificationReadModel,
-        );
+        ]);
 
     const reactor = new Reactor(
       this.logger,

@@ -222,7 +222,11 @@ describe.each(storageLayers)(
       await executorManager.start(1);
 
       // Create real read model coordinator with document view
-      readModelCoordinator = new ReadModelCoordinator(eventBus, [documentView]);
+      readModelCoordinator = new ReadModelCoordinator(
+        eventBus,
+        [documentView],
+        [],
+      );
 
       // Wrap storage with consistency-aware storage
       const legacyStorageConsistencyTracker = new ConsistencyTracker();

@@ -5,8 +5,6 @@ import {
   type OperationWrittenEvent,
   type Unsubscribe,
 } from "../events/types.js";
-import type { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
-import { SubscriptionNotificationReadModel } from "../subs/subscription-notification-read-model.js";
 import type { IReadModel, IReadModelCoordinator } from "./interfaces.js";
 
 /**
@@ -25,15 +23,13 @@ import type { IReadModel, IReadModelCoordinator } from "./interfaces.js";
 export class ReadModelCoordinator implements IReadModelCoordinator {
   private unsubscribe?: Unsubscribe;
   private isRunning = false;
-  private subscriptionNotificationReadModel: SubscriptionNotificationReadModel;
 
   constructor(
     private eventBus: IEventBus,
-    private readModels: IReadModel[],
-    subscriptionManager: ReactorSubscriptionManager,
+    private preReady: IReadModel[],
+    private postReady: IReadModel[],
   ) {
-    this.subscriptionNotificationReadModel =
-      new SubscriptionNotificationReadModel(subscriptionManager);
+    //
   }
 
   /**
@@ -80,24 +76,25 @@ export class ReadModelCoordinator implements IReadModelCoordinator {
   private async handleOperationWritten(
     event: OperationWrittenEvent,
   ): Promise<void> {
-    // Index into all read models in parallel
-    // If any read model fails, the error will be collected by the event bus
+    // Index into pre-ready read models in parallel
     await Promise.all(
-      this.readModels.map((readModel) =>
+      this.preReady.map((readModel) =>
         readModel.indexOperations(event.operations),
       ),
     );
 
-    // Emit OPERATIONS_READY event after all read models have completed
+    // Emit OPERATIONS_READY event after all pre-ready read models have completed
     const readyEvent: OperationsReadyEvent = {
       jobId: event.jobId,
       operations: event.operations,
     };
     await this.eventBus.emit(OperationEventTypes.OPERATIONS_READY, readyEvent);
 
-    // Notify subscriptions AFTER OPERATIONS_READY so reactor.get() returns fresh data
-    await this.subscriptionNotificationReadModel.indexOperations(
-      event.operations,
+    // Process post-ready read models (e.g., subscription notifications)
+    await Promise.all(
+      this.postReady.map((readModel) =>
+        readModel.indexOperations(event.operations),
+      ),
     );
   }
 }
