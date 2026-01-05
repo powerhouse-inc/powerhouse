@@ -334,13 +334,20 @@ export function makeEditorComponent({
     [buildClassNameAttribute("flex justify-center px-4 py-8")],
   );
 
+  // Build ph-default-styles wrapper
+  const phDefaultStylesWrapper = buildJsxElement(
+    "div",
+    [centerWrapper],
+    [buildClassNameAttribute("ph-default-styles")],
+  );
+
   // Build DocumentToolbar
   const documentToolbar = buildSelfClosingJsxElement("DocumentToolbar");
 
   // Build outer wrapper
   const outerWrapper = buildJsxElement(
     "div",
-    [documentToolbar, centerWrapper],
+    [documentToolbar, phDefaultStylesWrapper],
     [buildClassNameAttribute("min-h-screen bg-gray-50")],
   );
 

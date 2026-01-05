@@ -26,7 +26,8 @@ export default function Editor() {
   return (
     <div className="min-h-screen bg-gray-50">
       <DocumentToolbar />
-      <div className="flex justify-center px-4 py-8">
+      <div className="ph-default-styles">
+        <div className="flex justify-center px-4 py-8">
         <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-sm">
           <div className="mb-4 text-xs font-medium uppercase tracking-wide text-gray-400">
             <%= pascalCaseDocumentType %>
@@ -71,6 +72,7 @@ export default function Editor() {
               </button>
             </div>
           )}
+        </div>
         </div>
       </div>
     </div>
