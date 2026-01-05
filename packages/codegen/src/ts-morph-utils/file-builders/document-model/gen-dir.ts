@@ -1,29 +1,30 @@
+import type {
+  DocumentModelFileMakerArgs,
+  DocumentModelTemplateInputsWithModule,
+} from "@powerhousedao/codegen/ts-morph";
+import {
+  buildObjectLiteral,
+  formatSourceFileWithPrettier,
+  getOrCreateSourceFile,
+} from "@powerhousedao/codegen/ts-morph";
+import { getDocumentModelOperationsModuleVariableNames } from "@powerhousedao/codegen/ts-morph/name-builders";
+import { documentModelGenActionsFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/gen/actions.js";
+import { documentModelGenCreatorsFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/gen/creators.js";
+import { documentModelDocumentSchemaFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/gen/document-schema.js";
+import { documentModelDocumentTypeTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/gen/document-type.js";
+import { documentModelGenIndexFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/gen/index.js";
+import { documentModelOperationModuleActionsFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/gen/modules/actions.js";
+import { documentModelOperationsModuleCreatorsFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/gen/modules/creators.js";
+import { documentModelOperationsModuleErrorFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/gen/modules/error.js";
+import { documentModelOperationsModuleOperationsFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/gen/modules/operations.js";
+import { documentModelPhFactoriesFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/gen/ph-factories.js";
+import { documentModelGenReducerFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/gen/reducer.js";
+import { documentModelSchemaIndexTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/gen/schema/index.js";
+import { documentModelGenTypesTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/gen/types.js";
+import { documentModelGenUtilsTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/gen/utils.js";
 import { paramCase, pascalCase } from "change-case";
 import path from "path";
 import { VariableDeclarationKind } from "ts-morph";
-import {
-  buildNodePrinter,
-  formatSourceFileWithPrettier,
-  getOrCreateSourceFile,
-} from "../../file-utils.js";
-import { getDocumentModelOperationsModuleVariableNames } from "../../name-builders/get-variable-names.js";
-import type { DocumentModelTemplateInputsWithModule } from "../../name-builders/types.js";
-import { buildObjectLiteral } from "../../syntax-builders.js";
-import { documentModelGenActionsFileTemplate } from "../../templates/document-model/gen/actions.js";
-import { documentModelGenCreatorsFileTemplate } from "../../templates/document-model/gen/creators.js";
-import { documentModelDocumentSchemaFileTemplate } from "../../templates/document-model/gen/document-schema.js";
-import { documentModelDocumentTypeTemplate } from "../../templates/document-model/gen/document-type.js";
-import { documentModelGenIndexFileTemplate } from "../../templates/document-model/gen/index.js";
-import { documentModelOperationModuleActionsFileTemplate } from "../../templates/document-model/gen/modules/actions.js";
-import { documentModelOperationsModuleCreatorsFileTemplate } from "../../templates/document-model/gen/modules/creators.js";
-import { documentModelOperationsModuleErrorFileTemplate } from "../../templates/document-model/gen/modules/error.js";
-import { documentModelOperationsModuleOperationsFileTemplate } from "../../templates/document-model/gen/modules/operations.js";
-import { documentModelPhFactoriesFileTemplate } from "../../templates/document-model/gen/ph-factories.js";
-import { documentModelGenReducerFileTemplate } from "../../templates/document-model/gen/reducer.js";
-import { documentModelSchemaIndexTemplate } from "../../templates/document-model/gen/schema/index.js";
-import { documentModelGenTypesTemplate } from "../../templates/document-model/gen/types.js";
-import { documentModelGenUtilsTemplate } from "../../templates/document-model/gen/utils.js";
-import type { DocumentModelFileMakerArgs } from "./types.js";
 
 export function makeGenDirFiles(fileMakerArgs: DocumentModelFileMakerArgs) {
   makeDocumentModelSchemaIndexFile(fileMakerArgs);
@@ -110,7 +111,6 @@ function makeDocumentModelGenDocumentModelFile(
   const filePath = path.join(genDirPath, "document-model.ts");
 
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
-  const printNode = buildNodePrinter(sourceFile);
 
   sourceFile.replaceWithText("");
 
@@ -120,7 +120,10 @@ function makeDocumentModelGenDocumentModelFile(
     isTypeOnly: true,
   });
 
-  const objectLiteral = buildObjectLiteral(documentModelState);
+  const documentModelStateString = buildObjectLiteral(
+    documentModelState,
+    sourceFile,
+  );
 
   sourceFile.addVariableStatement({
     declarationKind: VariableDeclarationKind.Const,
@@ -129,7 +132,7 @@ function makeDocumentModelGenDocumentModelFile(
       {
         name: "documentModel",
         type: "DocumentModelGlobalState",
-        initializer: printNode(objectLiteral),
+        initializer: documentModelStateString,
       },
     ],
   });

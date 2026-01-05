@@ -1,5 +1,5 @@
+import type { ActionFromOperation } from "@powerhousedao/codegen/ts-morph";
 import { constantCase, pascalCase } from "change-case";
-import type { ActionFromOperation } from "../name-builders/types.js";
 
 export function getActionTypeName(action: ActionFromOperation) {
   return `${pascalCase(action.name)}Action`;

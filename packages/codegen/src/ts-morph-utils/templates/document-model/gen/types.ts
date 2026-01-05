@@ -1,5 +1,5 @@
+import type { DocumentModelTemplateInputs } from "@powerhousedao/codegen/ts-morph";
 import { ts } from "@tmpl/core";
-import type { DocumentModelTemplateInputs } from "../../../name-builders/types.js";
 
 function buildEmptyLocalStateType(
   hasLocalSchema: boolean,

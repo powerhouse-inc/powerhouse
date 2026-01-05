@@ -11,8 +11,24 @@
     "type": "git",
     "url": "https://github.com/powerhouse-inc/powerhouse"
   },
-  "exports": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./ts-morph": {
+      "types": "./dist/src/ts-morph-utils/index.d.ts",
+      "default": "./dist/src/ts-morph-utils/index.js"
+    },
+    "./ts-morph/*": {
+      "types": "./dist/src/ts-morph-utils/*/index.d.ts",
+      "default": "./dist/src/ts-morph-utils/*/index.js"
+    },
+    "./ts-morph/templates/*.js": {
+      "types": "./dist/src/ts-morph-utils/templates/*.d.ts",
+      "default": "./dist/src/ts-morph-utils/templates/*.js"
+    }
+  },
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",

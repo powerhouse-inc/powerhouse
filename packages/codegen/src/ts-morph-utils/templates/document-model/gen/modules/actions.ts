@@ -1,5 +1,5 @@
+import type { ActionFromOperation } from "@powerhousedao/codegen/ts-morph";
 import { ts } from "@tmpl/core";
-import type { ActionFromOperation } from "../../../../name-builders/types.js";
 import {
   getActionInputName,
   getActionInputTypeNames,

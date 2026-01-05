@@ -1,10 +1,10 @@
+import type { DocumentModelTemplateInputs } from "@powerhousedao/codegen/ts-morph";
 import { ts } from "@tmpl/core";
 import { camelCase, constantCase, paramCase, pascalCase } from "change-case";
 import type {
   ModuleSpecification,
   OperationSpecification,
 } from "document-model";
-import type { DocumentModelTemplateInputs } from "../../../name-builders/types.js";
 
 function makePascalCaseOperationName(operation: OperationSpecification) {
   if (!operation.name) {
