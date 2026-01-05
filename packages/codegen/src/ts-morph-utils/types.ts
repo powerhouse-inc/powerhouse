@@ -5,11 +5,6 @@ export type DocumentModelDocumentTypeMetadata = {
   documentModelImportPath: string;
 };
 
-export type DocumentModelFilePaths = {
-  documentModelsSourceFilesPath: string;
-  documentModelsDirPath: string;
-};
-
 export type EditorVariableNames = {
   documentVariableName: string;
   editDocumentNameComponentName: string;

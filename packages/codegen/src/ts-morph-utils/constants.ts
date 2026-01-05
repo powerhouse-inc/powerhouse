@@ -4,19 +4,3 @@ export const documentModelDocumentTypeMetadata = {
   documentModelDirName: "document-model",
   documentModelImportPath: "document-model",
 } as const;
-
-export const documentModelGlobalStateTypeName = "DocumentModelGlobalState";
-
-export const documentTypePropertyName = "id";
-
-export const phDocumentTypeName = "PHDocument";
-
-export const editorModuleTypeName = "EditorModule";
-export const editorModuleVariableName = "editors";
-export const editorModuleVariableType = "EditorModule[]";
-export const editorModuleOutputFileName = "editors.ts";
-
-export const documentModelModuleTypeName = "DocumentModelModule";
-export const documentModelModulesVariableName = "documentModels";
-export const documentModelModulesVariableType = "DocumentModelModule<any>[]";
-export const documentModelModulesOutputFileName = "document-models.ts";

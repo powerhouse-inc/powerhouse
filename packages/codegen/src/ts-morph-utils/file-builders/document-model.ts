@@ -1,9 +1,5 @@
 import {
   buildTsMorphProject,
-  documentModelModulesOutputFileName,
-  documentModelModulesVariableName,
-  documentModelModulesVariableType,
-  documentModelModuleTypeName,
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
 } from "@powerhousedao/codegen/ts-morph";
@@ -364,10 +360,10 @@ export function makeDocumentModelModulesFile({
     project,
     modulesDirPath: documentModelsDirPath,
     modulesSourceFilesPath: documentModelsSourceFilesPath,
-    outputFileName: documentModelModulesOutputFileName,
-    typeName: documentModelModuleTypeName,
-    variableName: documentModelModulesVariableName,
-    variableType: documentModelModulesVariableType,
+    outputFileName: "document-models.ts",
+    typeName: "DocumentModelModule",
+    variableName: "documentModels",
+    variableType: "DocumentModelModule<any>[]",
   });
 }
 
