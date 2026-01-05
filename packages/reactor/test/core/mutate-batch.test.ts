@@ -10,8 +10,6 @@ import { InMemoryQueue } from "../../src/queue/queue.js";
 import { ReadModelCoordinator } from "../../src/read-models/coordinator.js";
 import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
 import { ConsistencyAwareLegacyStorage } from "../../src/storage/consistency-aware-legacy-storage.js";
-import { DefaultSubscriptionErrorHandler } from "../../src/subs/default-error-handler.js";
-import { ReactorSubscriptionManager } from "../../src/subs/react-subscription-manager.js";
 import {
   createMockDocumentIndexer,
   createMockDocumentView,
@@ -37,14 +35,7 @@ describe("mutateBatch validation", () => {
     const eventBus = new EventBus();
     const queue = new InMemoryQueue(eventBus);
     const jobTracker = new InMemoryJobTracker(eventBus);
-    const subscriptionManager = new ReactorSubscriptionManager(
-      new DefaultSubscriptionErrorHandler(),
-    );
-    const readModelCoordinator = new ReadModelCoordinator(
-      eventBus,
-      [],
-      subscriptionManager,
-    );
+    const readModelCoordinator = new ReadModelCoordinator(eventBus, []);
     const consistencyTracker = new ConsistencyTracker();
     const consistencyAwareStorage = new ConsistencyAwareLegacyStorage(
       storage,

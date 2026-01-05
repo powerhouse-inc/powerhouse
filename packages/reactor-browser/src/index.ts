@@ -2,6 +2,7 @@ export * from "./actions/index.js";
 export * from "./constants.js";
 export * from "./context/index.js";
 export * from "./document-cache.js";
+export * from "./reactor-client-document-cache.js";
 export * from "./document-model.js";
 export * from "./global/index.js";
 export * from "./hooks/index.js";

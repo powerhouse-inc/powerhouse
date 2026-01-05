@@ -54,6 +54,7 @@ import { runMigrations } from "../storage/migrations/migrator.js";
 import type { MigrationStrategy } from "../storage/migrations/types.js";
 import { DefaultSubscriptionErrorHandler } from "../subs/default-error-handler.js";
 import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
+import { SubscriptionNotificationReadModel } from "../subs/subscription-notification-read-model.js";
 
 export class ReactorBuilder {
   private logger?: ILogger;
@@ -297,12 +298,15 @@ export class ReactorBuilder {
       new DefaultSubscriptionErrorHandler(),
     );
 
+    const subscriptionNotificationReadModel =
+      new SubscriptionNotificationReadModel(subscriptionManager, documentView);
+
     const readModelCoordinator = this.readModelCoordinator
       ? this.readModelCoordinator
       : new ReadModelCoordinator(
           eventBus,
           readModelInstances,
-          subscriptionManager,
+          subscriptionNotificationReadModel,
         );
 
     const reactor = new Reactor(

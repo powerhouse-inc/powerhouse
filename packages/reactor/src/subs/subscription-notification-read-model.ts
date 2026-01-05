@@ -1,6 +1,9 @@
 import type { IReadModel } from "../read-models/interfaces.js";
 import { RelationshipChangeType } from "../shared/types.js";
-import type { OperationWithContext } from "../storage/interfaces.js";
+import type {
+  IDocumentView,
+  OperationWithContext,
+} from "../storage/interfaces.js";
 import type { ReactorSubscriptionManager } from "./react-subscription-manager.js";
 
 /**
@@ -11,13 +14,17 @@ import type { ReactorSubscriptionManager } from "./react-subscription-manager.js
  * is emitted, so that reactor.get() returns fresh data when callbacks fire.
  */
 export class SubscriptionNotificationReadModel implements IReadModel {
-  constructor(private subscriptionManager: ReactorSubscriptionManager) {}
+  constructor(
+    private subscriptionManager: ReactorSubscriptionManager,
+    private documentView?: IDocumentView,
+  ) {}
 
-  indexOperations(operations: OperationWithContext[]): Promise<void> {
-    if (operations.length === 0) return Promise.resolve();
+  async indexOperations(operations: OperationWithContext[]): Promise<void> {
+    if (operations.length === 0) return;
 
     const created: string[] = [];
     const deleted: string[] = [];
+    const updatedIds = new Set<string>();
     const documentTypes = new Map<string, string>();
     const parentIds = new Map<string, string | null>();
 
@@ -57,6 +64,10 @@ export class SubscriptionNotificationReadModel implements IReadModel {
           RelationshipChangeType.Removed,
           input.childType,
         );
+      } else {
+        if (!created.includes(context.documentId)) {
+          updatedIds.add(context.documentId);
+        }
       }
     }
 
@@ -76,6 +87,11 @@ export class SubscriptionNotificationReadModel implements IReadModel {
       );
     }
 
-    return Promise.resolve();
+    if (updatedIds.size > 0 && this.documentView) {
+      const documents = await Promise.all(
+        Array.from(updatedIds).map((id) => this.documentView!.get(id)),
+      );
+      this.subscriptionManager.notifyDocumentsUpdated(documents);
+    }
   }
 }

@@ -43,8 +43,6 @@ import type {
   IOperationStore,
 } from "../../../src/storage/interfaces.js";
 import type { Database as StorageDatabase } from "../../../src/storage/kysely/types.js";
-import { DefaultSubscriptionErrorHandler } from "../../../src/subs/default-error-handler.js";
-import { ReactorSubscriptionManager } from "../../../src/subs/react-subscription-manager.js";
 import {
   createMockDocumentIndexer,
   createMockDocumentMetaCache,
@@ -224,14 +222,7 @@ describe.each(storageLayers)(
       await executorManager.start(1);
 
       // Create real read model coordinator with document view
-      const subscriptionManager = new ReactorSubscriptionManager(
-        new DefaultSubscriptionErrorHandler(),
-      );
-      readModelCoordinator = new ReadModelCoordinator(
-        eventBus,
-        [documentView],
-        subscriptionManager,
-      );
+      readModelCoordinator = new ReadModelCoordinator(eventBus, [documentView]);
 
       // Wrap storage with consistency-aware storage
       const legacyStorageConsistencyTracker = new ConsistencyTracker();
