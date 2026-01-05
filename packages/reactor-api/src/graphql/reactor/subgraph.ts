@@ -315,9 +315,7 @@ export class ReactorSubgraph extends BaseSubgraph {
         args: { channelId: string; cursorOrdinal: number },
       ) => {
         this.logger.debug("pollSyncEnvelopes", args);
-        if (!this.syncManager) {
-          throw new Error("SyncManager not available");
-        }
+
         try {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-return
           return await resolvers.pollSyncEnvelopes(this.syncManager, args);
@@ -550,9 +548,7 @@ export class ReactorSubgraph extends BaseSubgraph {
         },
       ) => {
         this.logger.debug("touchChannel", args);
-        if (!this.syncManager) {
-          throw new Error("SyncManager not available");
-        }
+
         try {
           return await resolvers.touchChannel(this.syncManager, args);
         } catch (error) {
@@ -563,9 +559,6 @@ export class ReactorSubgraph extends BaseSubgraph {
 
       pushSyncEnvelope: async (_parent, args) => {
         this.logger.debug("pushSyncEnvelope", args);
-        if (!this.syncManager) {
-          throw new Error("SyncManager not available");
-        }
         try {
           // Convert readonly arrays to mutable arrays for the resolver
           const mutableArgs = {

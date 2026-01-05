@@ -742,10 +742,10 @@ export class Reactor implements IReactor {
     meta?: Record<string, unknown>,
   ): Promise<JobInfo> {
     this.logger.verbose(
-      "execute(@docId, @branch, @count actions)",
+      "execute(@docId, @branch, @actions)",
       docId,
       branch,
-      actions.length,
+      actions,
     );
 
     if (signal?.aborted) {
