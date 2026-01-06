@@ -48,7 +48,7 @@ import {
   getNextIndexForScope,
 } from "./util.js";
 
-const MAX_SKIP_THRESHOLD = 1000;
+const MAX_SKIP_THRESHOLD = 100;
 
 type ProcessActionsResult = {
   success: boolean;
