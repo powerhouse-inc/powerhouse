@@ -1,0 +1,25 @@
+{
+  "id": "academy/ExampleUsecases/Chatroom/ImplementChatroomEditor",
+  "title": "Build the ChatRoom editor",
+  "description": "📦 Reference Code: chatroom-demo",
+  "source": "@site/docs/academy/03-ExampleUsecases/Chatroom/05-ImplementChatroomEditor.md",
+  "sourceDirName": "academy/03-ExampleUsecases/Chatroom",
+  "slug": "/academy/ExampleUsecases/Chatroom/ImplementChatroomEditor",
+  "permalink": "/academy/ExampleUsecases/Chatroom/ImplementChatroomEditor",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/03-ExampleUsecases/Chatroom/05-ImplementChatroomEditor.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 5,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Implement the document model reducers",
+    "permalink": "/academy/ExampleUsecases/Chatroom/ImplementOperationReducers"
+  },
+  "next": {
+    "title": "Todo List Tutorial",
+    "permalink": "/category/todo-list-tutorial"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "academy/MasteryTrack/BuildingUserExperiences/Authorization/DocumentPermissions",
+  "title": "Document Permission System",
+  "description": "This documentation is still being written and may be incomplete.",
+  "source": "@site/docs/academy/02-MasteryTrack/03-BuildingUserExperiences/07-Authorization/03-DocumentPermissions.md",
+  "sourceDirName": "academy/02-MasteryTrack/03-BuildingUserExperiences/07-Authorization",
+  "slug": "/academy/MasteryTrack/BuildingUserExperiences/Authorization/DocumentPermissions",
+  "permalink": "/academy/MasteryTrack/BuildingUserExperiences/Authorization/DocumentPermissions",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/03-BuildingUserExperiences/07-Authorization/03-DocumentPermissions.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Reactor API Authorization",
+    "permalink": "/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization"
+  },
+  "next": {
+    "title": "Work with data",
+    "permalink": "/category/work-with-data"
+  }
+}

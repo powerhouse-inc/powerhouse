@@ -1,0 +1,25 @@
+{
+  "id": "academy/MasteryTrack/DocumentModelCreation/ImplementDocumentModelTests",
+  "title": "Implement document model tests",
+  "description": "Ensuring robustness and reliability",
+  "source": "@site/docs/academy/02-MasteryTrack/02-DocumentModelCreation/06-ImplementDocumentModelTests.md",
+  "sourceDirName": "academy/02-MasteryTrack/02-DocumentModelCreation",
+  "slug": "/academy/MasteryTrack/DocumentModelCreation/ImplementDocumentModelTests",
+  "permalink": "/academy/MasteryTrack/DocumentModelCreation/ImplementDocumentModelTests",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/02-DocumentModelCreation/06-ImplementDocumentModelTests.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 6,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Implement document reducers",
+    "permalink": "/academy/MasteryTrack/DocumentModelCreation/ImplementDocumentReducers"
+  },
+  "next": {
+    "title": "Example: Todo-demo-package",
+    "permalink": "/academy/MasteryTrack/DocumentModelCreation/ExampleToDoListRepository"
+  }
+}

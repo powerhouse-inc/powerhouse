@@ -1,0 +1,25 @@
+{
+  "id": "academy/GetStarted/ReactorMCP",
+  "title": "Tool: Reactor MCP",
+  "description": "Reactor-mcp is a Model Context Protocol (MCP) server for the Powerhouse ecosystem that provides AI agents and tools with structured access to document model operations.",
+  "source": "@site/docs/academy/01-GetStarted/06-ReactorMCP.md",
+  "sourceDirName": "academy/01-GetStarted",
+  "slug": "/academy/GetStarted/ReactorMCP",
+  "permalink": "/academy/GetStarted/ReactorMCP",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/01-GetStarted/06-ReactorMCP.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 6,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Tool: Vetra Studio",
+    "permalink": "/academy/GetStarted/VetraStudio"
+  },
+  "next": {
+    "title": "Prerequisites",
+    "permalink": "/academy/MasteryTrack/BuilderEnvironment/Prerequisites"
+  }
+}

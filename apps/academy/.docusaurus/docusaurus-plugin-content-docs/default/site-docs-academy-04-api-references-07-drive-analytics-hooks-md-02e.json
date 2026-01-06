@@ -1,0 +1,25 @@
+{
+  "id": "academy/APIReferences/DriveAnalyticsHooks",
+  "title": "Drive analytics",
+  "description": "Drive Analytics provides automated monitoring and insights into document drive operations within Powerhouse applications. This system tracks user interactions, document modifications, and drive activity to help developers understand usage patterns and system performance.",
+  "source": "@site/docs/academy/04-APIReferences/07-DriveAnalyticsHooks.md",
+  "sourceDirName": "academy/04-APIReferences",
+  "slug": "/academy/APIReferences/DriveAnalyticsHooks",
+  "permalink": "/academy/APIReferences/DriveAnalyticsHooks",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/04-APIReferences/07-DriveAnalyticsHooks.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 7,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "React Hooks",
+    "permalink": "/academy/APIReferences/ReactHooks"
+  },
+  "next": {
+    "title": "Relational Database",
+    "permalink": "/academy/APIReferences/RelationalDatabase"
+  }
+}

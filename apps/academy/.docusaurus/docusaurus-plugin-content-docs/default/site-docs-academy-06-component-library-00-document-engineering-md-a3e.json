@@ -1,0 +1,25 @@
+{
+  "id": "academy/ComponentLibrary/DocumentEngineering",
+  "title": "Document-Engineering",
+  "description": "The reusable components in the Document-Engineering system are a set of of front-end components based on graphQL scalars.",
+  "source": "@site/docs/academy/06-ComponentLibrary/00-DocumentEngineering.md",
+  "sourceDirName": "academy/06-ComponentLibrary",
+  "slug": "/academy/ComponentLibrary/DocumentEngineering",
+  "permalink": "/academy/ComponentLibrary/DocumentEngineering",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/06-ComponentLibrary/00-DocumentEngineering.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 0,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "PHDocument Migration Guide",
+    "permalink": "/academy/APIReferences/PHDocumentMigrationGuide"
+  },
+  "next": {
+    "title": "Step 1: Create Custom Scalars",
+    "permalink": "/academy/ComponentLibrary/CreateCustomScalars"
+  }
+}

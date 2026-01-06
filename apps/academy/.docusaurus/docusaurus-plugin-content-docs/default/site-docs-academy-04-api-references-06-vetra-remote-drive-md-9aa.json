@@ -1,0 +1,25 @@
+{
+  "id": "academy/APIReferences/VetraRemoteDrive",
+  "title": "Vetra Remote Drive",
+  "description": "These commands enable collaborative development using Vetra remote drives. Instead of working with local drives only, you can connect your Powerhouse project to a remote drive that syncs across team members.",
+  "source": "@site/docs/academy/04-APIReferences/06-VetraRemoteDrive.md",
+  "sourceDirName": "academy/04-APIReferences",
+  "slug": "/academy/APIReferences/VetraRemoteDrive",
+  "permalink": "/academy/APIReferences/VetraRemoteDrive",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/04-APIReferences/06-VetraRemoteDrive.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 6,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Powerhouse CLI",
+    "permalink": "/academy/APIReferences/PowerhouseCLI"
+  },
+  "next": {
+    "title": "React Hooks",
+    "permalink": "/academy/APIReferences/ReactHooks"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "academy/ExampleUsecases/TodoList/AddSharedComponentForShowingTodoListStats",
+  "title": "Step 7 - Add shared component for showing TodoList stats",
+  "description": "So far we've been creating components that live in the same directories as the editors that use them. But sometimes we want to use the same component across multiple editors.",
+  "source": "@site/docs/academy/03-ExampleUsecases/TodoList/07-AddSharedComponentForShowingTodoListStats.md",
+  "sourceDirName": "academy/03-ExampleUsecases/TodoList",
+  "slug": "/academy/ExampleUsecases/TodoList/AddSharedComponentForShowingTodoListStats",
+  "permalink": "/academy/ExampleUsecases/TodoList/AddSharedComponentForShowingTodoListStats",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/03-ExampleUsecases/TodoList/07-AddSharedComponentForShowingTodoListStats.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 7,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Step 6 - Generate the custom drive editor for managing our TodoList documents",
+    "permalink": "/academy/ExampleUsecases/TodoList/GenerateTodoDriveExplorer"
+  },
+  "next": {
+    "title": "Vetra Package Library",
+    "permalink": "/academy/ExampleUsecases/VetraPackageLibrary/"
+  }
+}

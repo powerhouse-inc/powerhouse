@@ -1,0 +1,25 @@
+{
+  "id": "academy/MasteryTrack/WorkWithData/ConfiguringDrives",
+  "title": "Configure a drive",
+  "description": "A drive in Powerhouse is a container for documents and data. It's a place where you can organize and store your documents and share them with others. This guide walks you through configuring and managing drives in your Powerhouse environment.",
+  "source": "@site/docs/academy/02-MasteryTrack/04-WorkWithData/01-ConfiguringDrives.md",
+  "sourceDirName": "academy/02-MasteryTrack/04-WorkWithData",
+  "slug": "/academy/MasteryTrack/WorkWithData/ConfiguringDrives",
+  "permalink": "/academy/MasteryTrack/WorkWithData/ConfiguringDrives",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/04-WorkWithData/01-ConfiguringDrives.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Work with data",
+    "permalink": "/category/work-with-data"
+  },
+  "next": {
+    "title": "Using the API",
+    "permalink": "/academy/MasteryTrack/WorkWithData/UsingTheAPI"
+  }
+}

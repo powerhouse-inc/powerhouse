@@ -1,0 +1,25 @@
+{
+  "id": "academy/GetStarted/DefineToDoListDocumentModel",
+  "title": "Write the document specification",
+  "description": "📦 Reference Code: step-2-generate-todo-list-document-model",
+  "source": "@site/docs/academy/01-GetStarted/02-DefineToDoListDocumentModel.md",
+  "sourceDirName": "academy/01-GetStarted",
+  "slug": "/academy/GetStarted/DefineToDoListDocumentModel",
+  "permalink": "/academy/GetStarted/DefineToDoListDocumentModel",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/01-GetStarted/02-DefineToDoListDocumentModel.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Create a new to-do list document",
+    "permalink": "/academy/GetStarted/CreateNewPowerhouseProject"
+  },
+  "next": {
+    "title": "Implement the document model reducers",
+    "permalink": "/academy/GetStarted/ImplementOperationReducers"
+  }
+}

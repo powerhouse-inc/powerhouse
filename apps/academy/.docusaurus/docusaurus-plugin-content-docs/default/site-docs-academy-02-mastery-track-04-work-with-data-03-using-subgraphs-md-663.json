@@ -1,0 +1,25 @@
+{
+  "id": "academy/MasteryTrack/WorkWithData/UsingSubgraphs",
+  "title": "Using subgraphs",
+  "description": "This tutorial will demonstrate how to create and customize a subgraph using our to-do list project as an example.",
+  "source": "@site/docs/academy/02-MasteryTrack/04-WorkWithData/03-UsingSubgraphs.md",
+  "sourceDirName": "academy/02-MasteryTrack/04-WorkWithData",
+  "slug": "/academy/MasteryTrack/WorkWithData/UsingSubgraphs",
+  "permalink": "/academy/MasteryTrack/WorkWithData/UsingSubgraphs",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/04-WorkWithData/03-UsingSubgraphs.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Using the API",
+    "permalink": "/academy/MasteryTrack/WorkWithData/UsingTheAPI"
+  },
+  "next": {
+    "title": "Analytics processors",
+    "permalink": "/academy/MasteryTrack/WorkWithData/analytics-processor"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "id": "academy/MasteryTrack/WorkWithData/Analytics Engine/best-practices",
+  "title": "Best practices",
+  "description": "GraphQL",
+  "source": "@site/docs/academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/best-practices.md",
+  "sourceDirName": "academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine",
+  "slug": "/academy/MasteryTrack/WorkWithData/Analytics Engine/best-practices",
+  "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/best-practices",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/best-practices.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1000,
+  "frontMatter": {
+    "sidebar_position": 1000
+  },
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Processors",
+    "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/use-cases/processors"
+  },
+  "next": {
+    "title": "Querying a document with GraphQL",
+    "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/GraphQL References/QueryingADocumentWithGraphQL"
+  }
+}

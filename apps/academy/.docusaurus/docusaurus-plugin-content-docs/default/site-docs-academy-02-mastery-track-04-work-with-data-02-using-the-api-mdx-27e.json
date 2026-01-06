@@ -1,0 +1,25 @@
+{
+  "id": "academy/MasteryTrack/WorkWithData/UsingTheAPI",
+  "title": "Using the API",
+  "description": "Introduction to Switchboard",
+  "source": "@site/docs/academy/02-MasteryTrack/04-WorkWithData/02-UsingTheAPI.mdx",
+  "sourceDirName": "academy/02-MasteryTrack/04-WorkWithData",
+  "slug": "/academy/MasteryTrack/WorkWithData/UsingTheAPI",
+  "permalink": "/academy/MasteryTrack/WorkWithData/UsingTheAPI",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/04-WorkWithData/02-UsingTheAPI.mdx",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Work with data",
+    "permalink": "/category/work-with-data"
+  },
+  "next": {
+    "title": "Using subgraphs",
+    "permalink": "/academy/MasteryTrack/WorkWithData/UsingSubgraphs"
+  }
+}

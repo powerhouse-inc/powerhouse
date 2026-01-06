@@ -1,0 +1,25 @@
+{
+  "id": "academy/APIReferences/PowerhouseCLI",
+  "title": "Powerhouse CLI",
+  "description": "Installing the Powerhouse CLI",
+  "source": "@site/docs/academy/04-APIReferences/00-PowerhouseCLI.md",
+  "sourceDirName": "academy/04-APIReferences",
+  "slug": "/academy/APIReferences/PowerhouseCLI",
+  "permalink": "/academy/APIReferences/PowerhouseCLI",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/04-APIReferences/00-PowerhouseCLI.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 0,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Vetra Package Library",
+    "permalink": "/academy/ExampleUsecases/VetraPackageLibrary/"
+  },
+  "next": {
+    "title": "Vetra Remote Drive",
+    "permalink": "/academy/APIReferences/VetraRemoteDrive"
+  }
+}

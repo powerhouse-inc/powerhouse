@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunk_powerhousedao_academy=self.webpackChunk_powerhousedao_academy||[]).push([[1968],{9587:(e,a,s)=>{s.r(a)}}]);

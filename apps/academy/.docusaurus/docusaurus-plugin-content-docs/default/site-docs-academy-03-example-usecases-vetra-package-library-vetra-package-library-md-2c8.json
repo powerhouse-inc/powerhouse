@@ -1,0 +1,26 @@
+{
+  "id": "academy/ExampleUsecases/VetraPackageLibrary/VetraPackageLibrary",
+  "title": "Vetra Package Library",
+  "description": "Packages of documents are a core structuring mechanism in the Vetra framework, allowing developers to group and manage related document efficiently. These packages serve as modular collections of document specifications and modules, ensuring consistency, scalability, and reusability across different applications.",
+  "source": "@site/docs/academy/03-ExampleUsecases/VetraPackageLibrary/VetraPackageLibrary.md",
+  "sourceDirName": "academy/03-ExampleUsecases/VetraPackageLibrary",
+  "slug": "/academy/ExampleUsecases/VetraPackageLibrary/",
+  "permalink": "/academy/ExampleUsecases/VetraPackageLibrary/",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/03-ExampleUsecases/VetraPackageLibrary/VetraPackageLibrary.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Vetra Package Library"
+  },
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Step 7 - Add shared component for showing TodoList stats",
+    "permalink": "/academy/ExampleUsecases/TodoList/AddSharedComponentForShowingTodoListStats"
+  },
+  "next": {
+    "title": "Powerhouse CLI",
+    "permalink": "/academy/APIReferences/PowerhouseCLI"
+  }
+}

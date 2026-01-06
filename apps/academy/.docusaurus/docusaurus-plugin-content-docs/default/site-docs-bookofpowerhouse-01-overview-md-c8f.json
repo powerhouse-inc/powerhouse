@@ -1,0 +1,16 @@
+{
+  "id": "bookofpowerhouse/Overview",
+  "title": "Overview",
+  "description": "Powerhouse is an initiative at the intersection of software development, legal innovation, and new business models for open-source projects. These elements form a common vision for reimagining how software is created, funded, and sustained. While each component has its own purpose, they are deeply interconnected and designed to support one another.",
+  "source": "@site/docs/bookofpowerhouse/01-Overview.md",
+  "sourceDirName": "bookofpowerhouse",
+  "slug": "/bookofpowerhouse/Overview",
+  "permalink": "/bookofpowerhouse/Overview",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/bookofpowerhouse/01-Overview.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {}
+}

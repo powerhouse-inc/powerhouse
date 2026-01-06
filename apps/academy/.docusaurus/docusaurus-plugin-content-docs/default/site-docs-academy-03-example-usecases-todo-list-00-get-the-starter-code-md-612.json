@@ -1,0 +1,25 @@
+{
+  "id": "academy/ExampleUsecases/TodoList/GetTheStarterCode",
+  "title": "Step 0 - get the starter code",
+  "description": "Normally you would initialize a new powerhouse project by running ph init with your project name. But since this is a tutorial, we want to provide branches with the final code for each step.",
+  "source": "@site/docs/academy/03-ExampleUsecases/TodoList/00-GetTheStarterCode.md",
+  "sourceDirName": "academy/03-ExampleUsecases/TodoList",
+  "slug": "/academy/ExampleUsecases/TodoList/GetTheStarterCode",
+  "permalink": "/academy/ExampleUsecases/TodoList/GetTheStarterCode",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/03-ExampleUsecases/TodoList/00-GetTheStarterCode.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 0,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Todo List Tutorial",
+    "permalink": "/category/todo-list-tutorial"
+  },
+  "next": {
+    "title": "Step 1 - Generate the TodoList document model",
+    "permalink": "/academy/ExampleUsecases/TodoList/GenerateTodoListDocumentModel"
+  }
+}

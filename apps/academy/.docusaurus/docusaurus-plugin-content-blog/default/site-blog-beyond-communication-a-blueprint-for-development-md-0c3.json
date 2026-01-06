@@ -1,0 +1,80 @@
+{
+  "permalink": "/blog/Graphql-schema-as-a-common-language",
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/blog/BeyondCommunication-ABlueprintForDevelopment.md",
+  "source": "@site/blog/BeyondCommunication-ABlueprintForDevelopment.md",
+  "title": "Beyond Communication - A Blueprint for Development",
+  "description": "GraphQL Schema's as a common language for software design",
+  "date": "2024-12-02T00:00:00.000Z",
+  "tags": [
+    {
+      "inline": true,
+      "label": "Design thinking",
+      "permalink": "/blog/tags/design-thinking"
+    },
+    {
+      "inline": true,
+      "label": "Tooling",
+      "permalink": "/blog/tags/tooling"
+    },
+    {
+      "inline": true,
+      "label": "Product",
+      "permalink": "/blog/tags/product"
+    },
+    {
+      "inline": true,
+      "label": "GraphQL",
+      "permalink": "/blog/tags/graph-ql"
+    },
+    {
+      "inline": true,
+      "label": "Schema's",
+      "permalink": "/blog/tags/schemas"
+    }
+  ],
+  "hasTruncateMarker": true,
+  "authors": [
+    {
+      "name": "Call me T.",
+      "title": "Product Manager at Powerhouse",
+      "image_url": "https://avatars.githubusercontent.com/u/148560082?v=4",
+      "socials": {
+        "x": "https://x.com/0xCallme_t"
+      },
+      "imageURL": "https://avatars.githubusercontent.com/u/148560082?v=4",
+      "key": null,
+      "page": null
+    }
+  ],
+  "frontMatter": {
+    "title": "Beyond Communication - A Blueprint for Development",
+    "description": "GraphQL Schema's as a common language for software design",
+    "slug": "Graphql-schema-as-a-common-language",
+    "date": "2024-12-02T00:00:00.000Z",
+    "authors": [
+      {
+        "name": "Call me T.",
+        "title": "Product Manager at Powerhouse",
+        "image_url": "https://avatars.githubusercontent.com/u/148560082?v=4",
+        "socials": {
+          "x": "https://x.com/0xCallme_t"
+        },
+        "imageURL": "https://avatars.githubusercontent.com/u/148560082?v=4"
+      }
+    ],
+    "tags": [
+      "Design thinking",
+      "Tooling",
+      "Product",
+      "GraphQL",
+      "Schema's"
+    ],
+    "image": "https://i.imgur.com/mErPwqL.png",
+    "hide_table_of_contents": false
+  },
+  "unlisted": false,
+  "nextItem": {
+    "title": "The Challenge of Change",
+    "permalink": "/blog/Rapid-Application-Development-with-document-models."
+  }
+}

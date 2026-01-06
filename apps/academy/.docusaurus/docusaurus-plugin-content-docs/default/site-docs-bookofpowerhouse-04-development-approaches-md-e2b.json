@@ -1,0 +1,16 @@
+{
+  "id": "bookofpowerhouse/DevelopmentApproaches",
+  "title": "Part 3: Development Approaches",
+  "description": "Powerhouse’s development approaches are designed to enable efficient, scalable, and innovative solutions for decentralized organizations. By drawing from blockchain principles, adopting Model-Driven Development (MDD), leveraging dynamic document models, and employing a Rapid Application Development (RAD) process, Powerhouse provides a comprehensive framework to address the unique challenges of decentralized systems.",
+  "source": "@site/docs/bookofpowerhouse/04-DevelopmentApproaches.md",
+  "sourceDirName": "bookofpowerhouse",
+  "slug": "/bookofpowerhouse/DevelopmentApproaches",
+  "permalink": "/bookofpowerhouse/DevelopmentApproaches",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/bookofpowerhouse/04-DevelopmentApproaches.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 4,
+  "frontMatter": {}
+}

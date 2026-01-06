@@ -1,0 +1,27 @@
+{
+  "id": "academy/MasteryTrack/WorkWithData/Analytics Engine/graphql/index",
+  "title": "GraphQL API",
+  "description": "A basic understanding of GraphQL is helpful to understand this document, as we use concepts and vocabulary from the broader ecosystem. For a good primer on the subject, see the Introduction to GraphQL.",
+  "source": "@site/docs/academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/graphql/index.md",
+  "sourceDirName": "academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/graphql",
+  "slug": "/academy/MasteryTrack/WorkWithData/Analytics Engine/graphql/",
+  "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/graphql/",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/graphql/index.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {
+    "sidebar_position": 3
+  },
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Database schema",
+    "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/schema"
+  },
+  "next": {
+    "title": "Integration",
+    "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/graphql/integration"
+  }
+}

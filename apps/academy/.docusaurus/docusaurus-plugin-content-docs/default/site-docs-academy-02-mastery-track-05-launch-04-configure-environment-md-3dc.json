@@ -1,0 +1,25 @@
+{
+  "id": "academy/MasteryTrack/Launch/ConfigureEnvironment",
+  "title": "Configure your environment",
+  "description": "After successfully setting up your server and installing the Powerhouse services using the ph service setup command as described in the Setup Environment guide, the next crucial step is to configure your environment. Proper configuration ensures that your Powerhouse Connect and Switchboard instances behave exactly as you need them to for your specific application.",
+  "source": "@site/docs/academy/02-MasteryTrack/05-Launch/04-ConfigureEnvironment.md",
+  "sourceDirName": "academy/02-MasteryTrack/05-Launch",
+  "slug": "/academy/MasteryTrack/Launch/ConfigureEnvironment",
+  "permalink": "/academy/MasteryTrack/Launch/ConfigureEnvironment",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/05-Launch/04-ConfigureEnvironment.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 4,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Setup your environment",
+    "permalink": "/academy/MasteryTrack/Launch/SetupEnvironment"
+  },
+  "next": {
+    "title": "Docker deployment guide",
+    "permalink": "/academy/MasteryTrack/Launch/DockerDeployment"
+  }
+}

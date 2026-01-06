@@ -1,0 +1,25 @@
+{
+  "id": "academy/MasteryTrack/BuildingUserExperiences/DocumentTools/OperationHistory",
+  "title": "Operations history",
+  "description": "What is a document model?",
+  "source": "@site/docs/academy/02-MasteryTrack/03-BuildingUserExperiences/06-DocumentTools/01-OperationHistory.md",
+  "sourceDirName": "academy/02-MasteryTrack/03-BuildingUserExperiences/06-DocumentTools",
+  "slug": "/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/OperationHistory",
+  "permalink": "/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/OperationHistory",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/03-BuildingUserExperiences/06-DocumentTools/01-OperationHistory.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Document Toolbar",
+    "permalink": "/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/DocumentToolbar"
+  },
+  "next": {
+    "title": "Authorization",
+    "permalink": "/category/authorization"
+  }
+}

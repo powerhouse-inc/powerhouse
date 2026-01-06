@@ -1,0 +1,25 @@
+{
+  "id": "academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel",
+  "title": "What is a document model?",
+  "description": "This chapter on Document Model Creation will help you with an in-depth practical understanding while building an advanced to-do list document model.",
+  "source": "@site/docs/academy/02-MasteryTrack/02-DocumentModelCreation/01-WhatIsADocumentModel.md",
+  "sourceDirName": "academy/02-MasteryTrack/02-DocumentModelCreation",
+  "slug": "/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel",
+  "permalink": "/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/02-DocumentModelCreation/01-WhatIsADocumentModel.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Document model creation",
+    "permalink": "/category/document-model-creation"
+  },
+  "next": {
+    "title": "Specify the state schema",
+    "permalink": "/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "id": "academy/GetStarted/home",
+  "title": "Get started",
+  "description": "{/ Get Started Card - Full Width /}",
+  "source": "@site/docs/academy/01-GetStarted/home.mdx",
+  "sourceDirName": "academy/01-GetStarted",
+  "slug": "/",
+  "permalink": "/",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/01-GetStarted/home.mdx",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Get started",
+    "slug": "/",
+    "sidebar_class_name": "category-index-page"
+  },
+  "sidebar": "academySidebar",
+  "next": {
+    "title": "Explore the demo package",
+    "permalink": "/academy/GetStarted/ExploreDemoPackage"
+  }
+}

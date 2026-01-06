@@ -1,0 +1,25 @@
+{
+  "id": "academy/ComponentLibrary/IntegrateIntoAReactComponent",
+  "title": "Step 2: Integrate Your Scalar into a React Component",
+  "description": "This guide explains how to use a custom scalar (created as described in the previous step) within a React component. You'll learn how to leverage the scalar's validation schema for form input, display errors, and ensure a seamless user experience.",
+  "source": "@site/docs/academy/06-ComponentLibrary/03-IntegrateIntoAReactComponent.md",
+  "sourceDirName": "academy/06-ComponentLibrary",
+  "slug": "/academy/ComponentLibrary/IntegrateIntoAReactComponent",
+  "permalink": "/academy/ComponentLibrary/IntegrateIntoAReactComponent",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/06-ComponentLibrary/03-IntegrateIntoAReactComponent.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Step 1: Create Custom Scalars",
+    "permalink": "/academy/ComponentLibrary/CreateCustomScalars"
+  },
+  "next": {
+    "title": "Powerhouse Architecture",
+    "permalink": "/academy/Architecture/PowerhouseArchitecture"
+  }
+}

@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunk_powerhousedao_academy=self.webpackChunk_powerhousedao_academy||[]).push([[1903],{1912:e=>{e.exports=JSON.parse('{"blogBasePath":"/blog","blogTitle":"Blog","authorsListPath":"/blog/authors"}')}}]);

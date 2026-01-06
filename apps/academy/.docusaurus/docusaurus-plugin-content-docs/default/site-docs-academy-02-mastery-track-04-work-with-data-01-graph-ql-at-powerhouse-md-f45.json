@@ -1,0 +1,25 @@
+{
+  "id": "academy/MasteryTrack/WorkWithData/GraphQLAtPowerhouse",
+  "title": "GraphQL at Powerhouse",
+  "description": "In this section, we will cover the core concepts of GraphQL with examples applied to the Powerhouse ecosystem. GraphQL plays a fundamental role in defining document model data schemas, handling data access patterns, and enabling event-driven workflows within the Powerhouse ecosystem.",
+  "source": "@site/docs/academy/02-MasteryTrack/04-WorkWithData/01-GraphQLAtPowerhouse.md",
+  "sourceDirName": "academy/02-MasteryTrack/04-WorkWithData",
+  "slug": "/academy/MasteryTrack/WorkWithData/GraphQLAtPowerhouse",
+  "permalink": "/academy/MasteryTrack/WorkWithData/GraphQLAtPowerhouse",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/04-WorkWithData/01-GraphQLAtPowerhouse.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Work with data",
+    "permalink": "/category/work-with-data"
+  },
+  "next": {
+    "title": "Using the API",
+    "permalink": "/academy/MasteryTrack/WorkWithData/UsingTheAPI"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "academy/MasteryTrack/Launch/IntroductionToPackages",
+  "title": "Introduction to packages",
+  "description": "Packages of document models are a core structuring mechanism in the Powerhouse framework, allowing developers to group and manage related document models efficiently. These packages serve as modular collections of document definitions, ensuring consistency, scalability, and reusability across different applications.",
+  "source": "@site/docs/academy/02-MasteryTrack/05-Launch/01-IntroductionToPackages.md",
+  "sourceDirName": "academy/02-MasteryTrack/05-Launch",
+  "slug": "/academy/MasteryTrack/Launch/IntroductionToPackages",
+  "permalink": "/academy/MasteryTrack/Launch/IntroductionToPackages",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/05-Launch/01-IntroductionToPackages.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Launch",
+    "permalink": "/category/launch"
+  },
+  "next": {
+    "title": "Publish your package",
+    "permalink": "/academy/MasteryTrack/Launch/PublishYourProject"
+  }
+}

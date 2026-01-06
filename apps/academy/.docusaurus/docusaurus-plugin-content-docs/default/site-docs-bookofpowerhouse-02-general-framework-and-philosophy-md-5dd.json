@@ -1,0 +1,16 @@
+{
+  "id": "bookofpowerhouse/GeneralFrameworkAndPhilosophy",
+  "title": "**Part 1: Powerhouse General Framework and Open-Source Capitalism**",
+  "description": "Powerhouse emerged in the wake of Ethereum’s DAO movement, which began gaining momentum after the collapse of The DAO in 2016. This turning point spurred the creation of blockchain-enabled organizations capable of operating without centralized corporate structures. Over the years, governance systems and decentralized operational tools have advanced, paving the way for the next generation of organizations across chains like Solana, Ethereum Layer 2 solutions, and beyond. Powerhouse aims to advance these principles and build large, global organizations around networks.",
+  "source": "@site/docs/bookofpowerhouse/02-GeneralFrameworkAndPhilosophy.md",
+  "sourceDirName": "bookofpowerhouse",
+  "slug": "/bookofpowerhouse/GeneralFrameworkAndPhilosophy",
+  "permalink": "/bookofpowerhouse/GeneralFrameworkAndPhilosophy",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/bookofpowerhouse/02-GeneralFrameworkAndPhilosophy.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {}
+}

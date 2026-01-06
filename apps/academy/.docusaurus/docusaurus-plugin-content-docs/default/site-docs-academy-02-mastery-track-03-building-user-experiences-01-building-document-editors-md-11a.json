@@ -1,0 +1,25 @@
+{
+  "id": "academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors",
+  "title": "Build document editors",
+  "description": "Build with React on Powerhouse",
+  "source": "@site/docs/academy/02-MasteryTrack/03-BuildingUserExperiences/01-BuildingDocumentEditors.md",
+  "sourceDirName": "academy/02-MasteryTrack/03-BuildingUserExperiences",
+  "slug": "/academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors",
+  "permalink": "/academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/03-BuildingUserExperiences/01-BuildingDocumentEditors.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Building user experiences",
+    "permalink": "/category/building-user-experiences"
+  },
+  "next": {
+    "title": "Build a Drive-app",
+    "permalink": "/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer"
+  }
+}

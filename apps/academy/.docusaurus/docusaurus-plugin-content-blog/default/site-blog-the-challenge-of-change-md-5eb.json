@@ -1,0 +1,62 @@
+{
+  "permalink": "/blog/Rapid-Application-Development-with-document-models.",
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/blog/TheChallengeOfChange.md",
+  "source": "@site/blog/TheChallengeOfChange.md",
+  "title": "The Challenge of Change",
+  "description": "Rapid Application Development with document models.",
+  "date": "2024-12-02T00:00:00.000Z",
+  "tags": [
+    {
+      "inline": true,
+      "label": "Dao",
+      "permalink": "/blog/tags/dao"
+    },
+    {
+      "inline": true,
+      "label": "Tooling",
+      "permalink": "/blog/tags/tooling"
+    }
+  ],
+  "hasTruncateMarker": true,
+  "authors": [
+    {
+      "name": "Call me T.",
+      "title": "Product Manager at Powerhouse",
+      "image_url": "https://avatars.githubusercontent.com/u/148560082?v=4",
+      "socials": {
+        "x": "https://x.com/0xCallme_t"
+      },
+      "imageURL": "https://avatars.githubusercontent.com/u/148560082?v=4",
+      "key": null,
+      "page": null
+    }
+  ],
+  "frontMatter": {
+    "title": "The Challenge of Change",
+    "description": "Rapid Application Development with document models.",
+    "slug": "Rapid-Application-Development-with-document-models.",
+    "date": "2024-12-02T00:00:00.000Z",
+    "authors": [
+      {
+        "name": "Call me T.",
+        "title": "Product Manager at Powerhouse",
+        "image_url": "https://avatars.githubusercontent.com/u/148560082?v=4",
+        "socials": {
+          "x": "https://x.com/0xCallme_t"
+        },
+        "imageURL": "https://avatars.githubusercontent.com/u/148560082?v=4"
+      }
+    ],
+    "tags": [
+      "Dao",
+      "Tooling"
+    ],
+    "image": "https://i.imgur.com/mErPwqL.png",
+    "hide_table_of_contents": false
+  },
+  "unlisted": false,
+  "prevItem": {
+    "title": "Beyond Communication - A Blueprint for Development",
+    "permalink": "/blog/Graphql-schema-as-a-common-language"
+  }
+}

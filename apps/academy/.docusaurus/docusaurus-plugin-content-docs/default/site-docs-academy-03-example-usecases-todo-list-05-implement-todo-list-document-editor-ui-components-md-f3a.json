@@ -1,0 +1,25 @@
+{
+  "id": "academy/ExampleUsecases/TodoList/ImplementTodoListDocumentEditorUIComponents",
+  "title": "Step 5 — Implement TodoList document editor UI components",
+  "description": "Out of the box, we have a component for updating our TodoList documents' names, but we would like to create, read, update, and delete all of the data in our documents.",
+  "source": "@site/docs/academy/03-ExampleUsecases/TodoList/05-ImplementTodoListDocumentEditorUIComponents.md",
+  "sourceDirName": "academy/03-ExampleUsecases/TodoList",
+  "slug": "/academy/ExampleUsecases/TodoList/ImplementTodoListDocumentEditorUIComponents",
+  "permalink": "/academy/ExampleUsecases/TodoList/ImplementTodoListDocumentEditorUIComponents",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/03-ExampleUsecases/TodoList/05-ImplementTodoListDocumentEditorUIComponents.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 5,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Step 4 — Generating a document model editor for TodoList documents",
+    "permalink": "/academy/ExampleUsecases/TodoList/GenerateTodoListDocumentEditor"
+  },
+  "next": {
+    "title": "Step 6 - Generate the custom drive editor for managing our TodoList documents",
+    "permalink": "/academy/ExampleUsecases/TodoList/GenerateTodoDriveExplorer"
+  }
+}

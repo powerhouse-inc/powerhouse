@@ -1,0 +1,25 @@
+{
+  "id": "academy/MasteryTrack/BuilderEnvironment/Prerequisites",
+  "title": "Prerequisites",
+  "description": "Let's set up your machine to start building your first Document Model. Don't worry if this is your first time setting up a development environment - we'll guide you through each step!",
+  "source": "@site/docs/academy/02-MasteryTrack/01-BuilderEnvironment/01-Prerequisites.md",
+  "sourceDirName": "academy/02-MasteryTrack/01-BuilderEnvironment",
+  "slug": "/academy/MasteryTrack/BuilderEnvironment/Prerequisites",
+  "permalink": "/academy/MasteryTrack/BuilderEnvironment/Prerequisites",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/01-BuilderEnvironment/01-Prerequisites.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Build a to-do list editor",
+    "permalink": "/academy/GetStarted/BuildToDoListEditor"
+  },
+  "next": {
+    "title": "Prerequisites",
+    "permalink": "/academy/MasteryTrack/BuilderEnvironment/Prerequisites"
+  }
+}

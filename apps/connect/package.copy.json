@@ -1,0 +1,177 @@
+{
+  "name": "@powerhousedao/connect",
+  "productName": "Powerhouse-Connect",
+  "version": "5.1.0-dev.33",
+  "description": "Powerhouse Connect",
+  "main": "dist/index.html",
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "files": [
+    "dist",
+    "lib",
+    "nginx.conf",
+    "nginx.sh",
+    "scripts",
+    "assets",
+    "public",
+    "heroku",
+    ".env",
+    "./src/index.css",
+    "./package.copy.json"
+  ],
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "import": "./lib/src/index.js",
+      "types": "./lib/src/index.d.ts"
+    },
+    "./package.json": "./package.copy.json",
+    "./main.js": {
+      "source": "./src/main.tsx",
+      "import": "./lib/src/main.js",
+      "types": "./lib/src/main.d.ts"
+    },
+    "./*.js": {
+      "source": "./src/*.ts",
+      "import": "./lib/src/*.js",
+      "types": "./lib/src/*.d.ts"
+    },
+    "./components": {
+      "source": "./src/components/index.ts",
+      "import": "./lib/src/components/index.js",
+      "types": "./lib/src/components/index.d.ts"
+    },
+    "./pages": {
+      "source": "./src/pages/index.ts",
+      "import": "./lib/src/pages/index.js",
+      "types": "./lib/src/pages/index.d.ts"
+    },
+    "./services": {
+      "source": "./src/services/index.ts",
+      "import": "./lib/src/services/index.js",
+      "types": "./lib/src/services/index.d.ts"
+    },
+    "./context": {
+      "source": "./src/context/index.ts",
+      "import": "./lib/src/context/index.js",
+      "types": "./lib/src/context/index.d.ts"
+    },
+    "./hooks": {
+      "source": "./src/hooks/index.ts",
+      "import": "./lib/src/hooks/index.js",
+      "types": "./lib/src/hooks/index.d.ts"
+    },
+    "./store": {
+      "source": "./src/store/index.ts",
+      "import": "./lib/src/store/index.js",
+      "types": "./lib/src/store/index.d.ts"
+    },
+    "./utils": {
+      "source": "./src/utils/index.ts",
+      "import": "./lib/src/utils/index.js",
+      "types": "./lib/src/utils/index.d.ts"
+    },
+    "./config": {
+      "source": "./src/connect.config.ts",
+      "import": "./lib/src/connect.config.js",
+      "types": "./lib/src/connect.config.d.ts"
+    },
+    "./i18n": {
+      "source": "./src/i18n/index.ts",
+      "import": "./lib/src/i18n/index.js",
+      "types": "./lib/src/i18n/index.d.ts"
+    },
+    "./custom.d.ts": "./lib/custom.d.ts",
+    "./style.css": "./lib/style.css",
+    "./assets/*.mp4": "./assets/*.mp4",
+    "./assets/*.png": "./assets/*.png",
+    "./assets/*.svg": "./assets/*.svg",
+    "./assets/*.jpg": "./assets/*.jpg",
+    "./assets/*.jpeg": "./assets/*.jpeg",
+    "./assets/*.gif": "./assets/*.gif",
+    "./assets/*.webp": "./assets/*.webp",
+    "./assets/*.avif": "./assets/*.avif",
+    "./public/icon.ico": "./public/icon.ico"
+  },
+  "sideEffects": [
+    "lib/src/main.js",
+    "src/main.tsx"
+  ],
+  "license": "AGPL-3.0-only",
+  "author": "powerhouse.inc",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse"
+  },
+  "bugs": {
+    "url": "https://github.com/powerhouse-inc/powerhouse/issues"
+  },
+  "homepage": "https://github.com/powerhouse-inc/powerhouse#readme",
+  "scripts": {
+    "tsc": "tsc",
+    "lint": "eslint",
+    "test": "vitest run",
+    "postinstall": "cp ./package.json ./package.copy.json",
+    "dev": "vite dev",
+    "build:css": "npx @tailwindcss/cli -i ./src/index.css -o ./lib/style.css",
+    "build:vite": "vite build",
+    "build:debug": "PH_DEBUG_BUILD=true vite build",
+    "preview": "vite preview",
+    "cy:open": "cypress open",
+    "docker:build": "docker build -f ./Dockerfile --tag connect-test-dev --build-arg TAG=dev .",
+    "docker:run": "docker run -it -p 4000:4000 -v $(realpath ../../../monorepo):/monorepo -v $(pwd)/nginx.conf:/etc/nginx/nginx.conf.template -e PH_USE_LOCAL=true -e PH_CONNECT_BASE_PATH=/develop/powerhouse/connect -e PORT=4000 connect-test-dev"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "0.2.17",
+    "@electric-sql/pglite-tools": "0.2.4",
+    "@openfeature/core": "^1.9.1",
+    "@openfeature/web-sdk": "^1.6.2",
+    "@powerhousedao/analytics-engine-core": "^0.5.0",
+    "@powerhousedao/builder-tools": "workspace:*",
+    "@powerhousedao/common": "workspace:*",
+    "@powerhousedao/config": "workspace:*",
+    "@powerhousedao/design-system": "workspace:*",
+    "@powerhousedao/document-engineering": "^1.39.0",
+    "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/reactor-browser": "workspace:*",
+    "@renown/sdk": "workspace:*",
+    "@sentry/browser": "^10.17.0",
+    "@sentry/react": "^10.17.0",
+    "@sentry/vite-plugin": "^4.3.0",
+    "@tailwindcss/vite": "^4.1.14",
+    "@types/cypress": "^1.1.6",
+    "@types/node": "^24.7.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@types/wicg-file-system-access": "^2023.10.7",
+    "@vitejs/plugin-react": "^5.0.4",
+    "cypress": "^14.5.4",
+    "document-drive": "workspace:*",
+    "document-model": "workspace:*",
+    "fast-deep-equal": "^3.1.3",
+    "graphql": "^16.11.0",
+    "graphql-request": "^7.2.0",
+    "i18next": "^25.5.3",
+    "kysely": "^0.28.2",
+    "kysely-pglite-dialect": "^1.1.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-error-boundary": "^4.0.11",
+    "react-hotkeys-hook": "^4.5.0",
+    "react-i18next": "^16.0.0",
+    "react-router-dom": "^6.11.2",
+    "tailwind-merge": "^3.0.2",
+    "tailwindcss": "^4.1.14",
+    "vite": "^7.1.9",
+    "vite-bundle-analyzer": "^1.2.3",
+    "vite-plugin-html": "^3.2.2",
+    "vite-plugin-node-polyfills": "^0.24.0",
+    "vite-plugin-svgr": "^4.5.0",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.16"
+  }
+}

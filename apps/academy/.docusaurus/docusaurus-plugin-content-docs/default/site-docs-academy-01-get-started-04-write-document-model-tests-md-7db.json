@@ -1,0 +1,25 @@
+{
+  "id": "academy/GetStarted/WriteDocumentModelTests",
+  "title": "Write document model tests",
+  "description": "📦 Reference Code: step-4-implement-tests-for-todos-operations",
+  "source": "@site/docs/academy/01-GetStarted/04-WriteDocumentModelTests.md",
+  "sourceDirName": "academy/01-GetStarted",
+  "slug": "/academy/GetStarted/WriteDocumentModelTests",
+  "permalink": "/academy/GetStarted/WriteDocumentModelTests",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/01-GetStarted/04-WriteDocumentModelTests.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 4,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Implement the document model reducers",
+    "permalink": "/academy/GetStarted/ImplementOperationReducers"
+  },
+  "next": {
+    "title": "Build a to-do list editor",
+    "permalink": "/academy/GetStarted/BuildToDoListEditor"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "academy/Architecture/WorkingWithTheReactor",
+  "title": "Working with the Reactor",
+  "description": "Document models are the common design pattern that is used for all documents and files.",
+  "source": "@site/docs/academy/05-Architecture/01-WorkingWithTheReactor.md",
+  "sourceDirName": "academy/05-Architecture",
+  "slug": "/academy/Architecture/WorkingWithTheReactor",
+  "permalink": "/academy/Architecture/WorkingWithTheReactor",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/05-Architecture/01-WorkingWithTheReactor.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Powerhouse Architecture",
+    "permalink": "/academy/Architecture/PowerhouseArchitecture"
+  },
+  "next": {
+    "title": "Cookbook",
+    "permalink": "/academy/Cookbook"
+  }
+}

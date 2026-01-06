@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunk_powerhousedao_academy=self.webpackChunk_powerhousedao_academy||[]).push([[1235],{8552:e=>{e.exports=JSON.parse('{"name":"docusaurus-plugin-content-pages","id":"default"}')}}]);

@@ -1,0 +1,21 @@
+{
+  "id": "academy/Glossary",
+  "title": "Glossary",
+  "description": "General Terms",
+  "source": "@site/docs/academy/08-Glossary.md",
+  "sourceDirName": "academy",
+  "slug": "/academy/Glossary",
+  "permalink": "/academy/Glossary",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/08-Glossary.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 8,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Cookbook",
+    "permalink": "/academy/Cookbook"
+  }
+}

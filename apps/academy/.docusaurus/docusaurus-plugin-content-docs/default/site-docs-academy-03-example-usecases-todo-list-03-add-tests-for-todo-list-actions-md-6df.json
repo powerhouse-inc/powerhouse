@@ -1,0 +1,25 @@
+{
+  "id": "academy/ExampleUsecases/TodoList/AddTestsForTodoListActions",
+  "title": "Step 3 — Adding our own tests for the document model actions",
+  "description": "Similarly to the operation handler logic, when you add a new module to your document model, we generate some boilerplate tests for your code.",
+  "source": "@site/docs/academy/03-ExampleUsecases/TodoList/03-AddTestsForTodoListActions.md",
+  "sourceDirName": "academy/03-ExampleUsecases/TodoList",
+  "slug": "/academy/ExampleUsecases/TodoList/AddTestsForTodoListActions",
+  "permalink": "/academy/ExampleUsecases/TodoList/AddTestsForTodoListActions",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/03-ExampleUsecases/TodoList/03-AddTestsForTodoListActions.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Step 2 — Implement the TodoList document model reducer operation handlers",
+    "permalink": "/academy/ExampleUsecases/TodoList/ImplementTodoListDocumentModelReducerOperationHandlers"
+  },
+  "next": {
+    "title": "Step 4 — Generating a document model editor for TodoList documents",
+    "permalink": "/academy/ExampleUsecases/TodoList/GenerateTodoListDocumentEditor"
+  }
+}

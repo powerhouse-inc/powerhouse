@@ -1,0 +1,25 @@
+{
+  "id": "academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization",
+  "title": "Reactor API Authorization",
+  "description": "This tutorial explains how to configure authorization for the Powerhouse Reactor API using the new role-based authentication system.",
+  "source": "@site/docs/academy/02-MasteryTrack/03-BuildingUserExperiences/07-Authorization/02-Authorization.md",
+  "sourceDirName": "academy/02-MasteryTrack/03-BuildingUserExperiences/07-Authorization",
+  "slug": "/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization",
+  "permalink": "/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/03-BuildingUserExperiences/07-Authorization/02-Authorization.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Renown authentication flow",
+    "permalink": "/academy/MasteryTrack/BuildingUserExperiences/Authorization/RenownAuthenticationFlow"
+  },
+  "next": {
+    "title": "Document Permission System",
+    "permalink": "/academy/MasteryTrack/BuildingUserExperiences/Authorization/DocumentPermissions"
+  }
+}

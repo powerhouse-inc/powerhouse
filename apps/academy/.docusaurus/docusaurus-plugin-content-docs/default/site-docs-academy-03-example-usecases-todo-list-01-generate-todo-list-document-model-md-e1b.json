@@ -1,0 +1,25 @@
+{
+  "id": "academy/ExampleUsecases/TodoList/GenerateTodoListDocumentModel",
+  "title": "Step 1 - Generate the TodoList document model",
+  "description": "Overview",
+  "source": "@site/docs/academy/03-ExampleUsecases/TodoList/01-GenerateTodoListDocumentModel.md",
+  "sourceDirName": "academy/03-ExampleUsecases/TodoList",
+  "slug": "/academy/ExampleUsecases/TodoList/GenerateTodoListDocumentModel",
+  "permalink": "/academy/ExampleUsecases/TodoList/GenerateTodoListDocumentModel",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/03-ExampleUsecases/TodoList/01-GenerateTodoListDocumentModel.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Step 0 - get the starter code",
+    "permalink": "/academy/ExampleUsecases/TodoList/GetTheStarterCode"
+  },
+  "next": {
+    "title": "Step 2 — Implement the TodoList document model reducer operation handlers",
+    "permalink": "/academy/ExampleUsecases/TodoList/ImplementTodoListDocumentModelReducerOperationHandlers"
+  }
+}

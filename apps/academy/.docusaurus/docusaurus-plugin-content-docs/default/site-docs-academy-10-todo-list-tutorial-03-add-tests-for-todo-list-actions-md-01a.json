@@ -1,0 +1,16 @@
+{
+  "id": "academy/TodoListTutorial/AddTestsForTodoListActions",
+  "title": "Step 3 — Adding our own tests for the document model actions",
+  "description": "Similarly to the operation handler logic, when you add a new module to your document model, we generate some boilerplate tests for your code.",
+  "source": "@site/docs/academy/10-TodoListTutorial/03-AddTestsForTodoListActions.md",
+  "sourceDirName": "academy/10-TodoListTutorial",
+  "slug": "/academy/TodoListTutorial/AddTestsForTodoListActions",
+  "permalink": "/academy/TodoListTutorial/AddTestsForTodoListActions",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/10-TodoListTutorial/03-AddTestsForTodoListActions.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {}
+}

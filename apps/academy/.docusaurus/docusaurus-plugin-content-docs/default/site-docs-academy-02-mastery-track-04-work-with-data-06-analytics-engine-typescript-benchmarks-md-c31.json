@@ -1,0 +1,27 @@
+{
+  "id": "academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/benchmarks",
+  "title": "Benchmarks",
+  "description": "Due to the performance-sensitive nature of metrics collection, we include a suite of benchmarks that compare the various analytics store implementations. These are run every publish and stored in the associated GitHub action history.",
+  "source": "@site/docs/academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/typescript/benchmarks.md",
+  "sourceDirName": "academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/typescript",
+  "slug": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/benchmarks",
+  "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/benchmarks",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/typescript/benchmarks.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 102,
+  "frontMatter": {
+    "sidebar_position": 102
+  },
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Compatibility",
+    "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/compatibility"
+  },
+  "next": {
+    "title": "Database schema",
+    "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/schema"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "academy/MasteryTrack/DocumentModelCreation/UseTheDocumentModelGenerator",
+  "title": "Use the Document Model Generator",
+  "description": "When building document models with Vetra Studio, code generation happens automatically. As you add and update specification documents in your Vetra Studio Drive, Vetra monitors your changes and generates the necessary scaffolding in real-time. You'll receive updates directly in your terminal as Vetra processes your specifications.",
+  "source": "@site/docs/academy/02-MasteryTrack/02-DocumentModelCreation/04-UseTheDocumentModelGenerator.md",
+  "sourceDirName": "academy/02-MasteryTrack/02-DocumentModelCreation",
+  "slug": "/academy/MasteryTrack/DocumentModelCreation/UseTheDocumentModelGenerator",
+  "permalink": "/academy/MasteryTrack/DocumentModelCreation/UseTheDocumentModelGenerator",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/02-DocumentModelCreation/04-UseTheDocumentModelGenerator.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 4,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Specify document operations",
+    "permalink": "/academy/MasteryTrack/DocumentModelCreation/SpecifyDocumentOperations"
+  },
+  "next": {
+    "title": "Implement document reducers",
+    "permalink": "/academy/MasteryTrack/DocumentModelCreation/ImplementDocumentReducers"
+  }
+}

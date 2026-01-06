@@ -1,0 +1,25 @@
+{
+  "id": "academy/MasteryTrack/BuildingUserExperiences/Authorization/RenownAuthenticationFlow",
+  "title": "Renown authentication flow",
+  "description": "The Renown login flow leverages decentralized identity (DID) creation and the Ceramic network for credential storage and verification, ensuring secure and verifiable actions within decentralized organizations. Below is a detailed breakdown of the process, aimed at developers integrating the Renown, Connect, and Switchboard components.",
+  "source": "@site/docs/academy/02-MasteryTrack/03-BuildingUserExperiences/07-Authorization/01-RenownAuthenticationFlow.md",
+  "sourceDirName": "academy/02-MasteryTrack/03-BuildingUserExperiences/07-Authorization",
+  "slug": "/academy/MasteryTrack/BuildingUserExperiences/Authorization/RenownAuthenticationFlow",
+  "permalink": "/academy/MasteryTrack/BuildingUserExperiences/Authorization/RenownAuthenticationFlow",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/03-BuildingUserExperiences/07-Authorization/01-RenownAuthenticationFlow.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Authorization",
+    "permalink": "/category/authorization"
+  },
+  "next": {
+    "title": "Reactor API Authorization",
+    "permalink": "/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization"
+  }
+}

@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunk_powerhousedao_academy=self.webpackChunk_powerhousedao_academy||[]).push([[9647],{5644:(e,a,s)=>{s.r(a),s.d(a,{default:()=>n});s(2155);var r=s(851),u=s(6936),c=s(7411),o=s(8782),d=s(9346),h=s(5723);function n(e){return(0,h.jsx)(u.e3,{className:(0,r.A)(c.G.wrapper.docsPages),children:(0,h.jsx)(d.A,{children:(0,o.v)(e.route.routes)})})}}}]);

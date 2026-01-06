@@ -1,0 +1,27 @@
+{
+  "id": "academy/APIReferences/ReactHooks",
+  "title": "React Hooks",
+  "description": "This page provides a reference for the hooks available in @powerhousedao/reactor-browser. These hooks are intended to be used by editors (including drive editors) which will be rendered inside Powerhouse host-applications such as Connect, Switchboard, Fusion or a Vetra Studio Drive.",
+  "source": "@site/docs/academy/04-APIReferences/01-ReactHooks.md",
+  "sourceDirName": "academy/04-APIReferences",
+  "slug": "/academy/APIReferences/ReactHooks",
+  "permalink": "/academy/APIReferences/ReactHooks",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/04-APIReferences/01-ReactHooks.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {
+    "toc_max_heading_level": 2
+  },
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Vetra Remote Drive",
+    "permalink": "/academy/APIReferences/VetraRemoteDrive"
+  },
+  "next": {
+    "title": "Drive analytics",
+    "permalink": "/academy/APIReferences/DriveAnalyticsHooks"
+  }
+}

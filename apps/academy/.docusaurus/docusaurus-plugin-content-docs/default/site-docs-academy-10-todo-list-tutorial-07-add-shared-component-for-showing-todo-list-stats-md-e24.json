@@ -1,0 +1,16 @@
+{
+  "id": "academy/TodoListTutorial/AddSharedComponentForShowingTodoListStats",
+  "title": "Step 7 - Add shared component for showing TodoList stats",
+  "description": "So far we've been creating components that live in the same directories as the editors that use them. But sometimes we want to use the same component across multiple editors.",
+  "source": "@site/docs/academy/10-TodoListTutorial/07-AddSharedComponentForShowingTodoListStats.md",
+  "sourceDirName": "academy/10-TodoListTutorial",
+  "slug": "/academy/TodoListTutorial/AddSharedComponentForShowingTodoListStats",
+  "permalink": "/academy/TodoListTutorial/AddSharedComponentForShowingTodoListStats",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/10-TodoListTutorial/07-AddSharedComponentForShowingTodoListStats.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 7,
+  "frontMatter": {}
+}

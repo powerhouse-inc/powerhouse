@@ -1,0 +1,25 @@
+{
+  "id": "academy/MasteryTrack/DocumentModelCreation/ExampleToDoListRepository",
+  "title": "Example: Todo-demo-package",
+  "description": "The Todo-demo is maintained by the Powerhouse Team and serves as a reference for testing and introducing new features. It will be continuously updated alongside the accompanying documentation.",
+  "source": "@site/docs/academy/02-MasteryTrack/02-DocumentModelCreation/07-ExampleToDoListRepository.md",
+  "sourceDirName": "academy/02-MasteryTrack/02-DocumentModelCreation",
+  "slug": "/academy/MasteryTrack/DocumentModelCreation/ExampleToDoListRepository",
+  "permalink": "/academy/MasteryTrack/DocumentModelCreation/ExampleToDoListRepository",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/02-DocumentModelCreation/07-ExampleToDoListRepository.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 7,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Implement document model tests",
+    "permalink": "/academy/MasteryTrack/DocumentModelCreation/ImplementDocumentModelTests"
+  },
+  "next": {
+    "title": "Building user experiences",
+    "permalink": "/category/building-user-experiences"
+  }
+}

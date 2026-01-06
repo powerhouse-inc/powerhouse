@@ -1,0 +1,25 @@
+{
+  "id": "academy/MasteryTrack/ConnectTools/InspectorModal",
+  "title": "Inspector Modal",
+  "description": "The Inspector Modal is a development and debugging tool in Connect that provides visibility into the internal state of your application. It allows you to inspect the local database and monitor sync operations with remote servers.",
+  "source": "@site/docs/academy/02-MasteryTrack/06-ConnectTools/01-InspectorModal.md",
+  "sourceDirName": "academy/02-MasteryTrack/06-ConnectTools",
+  "slug": "/academy/MasteryTrack/ConnectTools/InspectorModal",
+  "permalink": "/academy/MasteryTrack/ConnectTools/InspectorModal",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/06-ConnectTools/01-InspectorModal.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Connect Tools",
+    "permalink": "/category/connect-tools"
+  },
+  "next": {
+    "title": "Chatroom",
+    "permalink": "/category/chatroom"
+  }
+}

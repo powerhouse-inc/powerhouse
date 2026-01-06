@@ -1,0 +1,25 @@
+{
+  "id": "academy/MasteryTrack/BuilderEnvironment/CreateAPackageWithVetra",
+  "title": "Create a package with Vetra",
+  "description": "This tutorial is a summary for builders that are already familiar with building document models.",
+  "source": "@site/docs/academy/02-MasteryTrack/01-BuilderEnvironment/03-CreateAPackageWithVetra.md",
+  "sourceDirName": "academy/02-MasteryTrack/01-BuilderEnvironment",
+  "slug": "/academy/MasteryTrack/BuilderEnvironment/CreateAPackageWithVetra",
+  "permalink": "/academy/MasteryTrack/BuilderEnvironment/CreateAPackageWithVetra",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/01-BuilderEnvironment/03-CreateAPackageWithVetra.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Vetra Studio",
+    "permalink": "/academy/MasteryTrack/BuilderEnvironment/VetraStudio"
+  },
+  "next": {
+    "title": "Document model creation",
+    "permalink": "/category/document-model-creation"
+  }
+}

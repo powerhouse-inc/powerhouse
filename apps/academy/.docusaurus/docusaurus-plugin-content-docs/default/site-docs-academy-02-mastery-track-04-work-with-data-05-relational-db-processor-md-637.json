@@ -1,0 +1,25 @@
+{
+  "id": "academy/MasteryTrack/WorkWithData/RelationalDbProcessor",
+  "title": "Relational database processor",
+  "description": "In this chapter, we will implement a Todo-List relational database processor. This processor receives processed operations from the reactor and can use the prevState, resultingState, or data from the operations themselves to populate a database.",
+  "source": "@site/docs/academy/02-MasteryTrack/04-WorkWithData/05-RelationalDbProcessor.md",
+  "sourceDirName": "academy/02-MasteryTrack/04-WorkWithData",
+  "slug": "/academy/MasteryTrack/WorkWithData/RelationalDbProcessor",
+  "permalink": "/academy/MasteryTrack/WorkWithData/RelationalDbProcessor",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/04-WorkWithData/05-RelationalDbProcessor.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 5,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Analytics processors",
+    "permalink": "/academy/MasteryTrack/WorkWithData/analytics-processor"
+  },
+  "next": {
+    "title": "Getting started",
+    "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/intro"
+  }
+}

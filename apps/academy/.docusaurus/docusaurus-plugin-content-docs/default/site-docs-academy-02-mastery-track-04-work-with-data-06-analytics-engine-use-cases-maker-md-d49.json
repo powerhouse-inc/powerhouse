@@ -1,0 +1,24 @@
+{
+  "id": "academy/MasteryTrack/WorkWithData/Analytics Engine/use-cases/maker",
+  "title": "Sky dashboard",
+  "description": "All consumable data for the Sky ecosystem is available through GraphQL API, which allows you to only fetch the data you require.",
+  "source": "@site/docs/academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/use-cases/maker.md",
+  "sourceDirName": "academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/use-cases",
+  "slug": "/academy/MasteryTrack/WorkWithData/Analytics Engine/use-cases/maker",
+  "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/use-cases/maker",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/use-cases/maker.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Use cases",
+    "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/use-cases/"
+  },
+  "next": {
+    "title": "Processors",
+    "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/use-cases/processors"
+  }
+}

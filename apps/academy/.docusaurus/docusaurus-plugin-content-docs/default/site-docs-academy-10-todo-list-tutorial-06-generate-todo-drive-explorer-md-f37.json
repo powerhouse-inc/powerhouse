@@ -1,0 +1,25 @@
+{
+  "id": "academy/TodoListTutorial/GenerateTodoDriveExplorer",
+  "title": "Step 6 - Generate the custom drive editor for managing our TodoList documents",
+  "description": "in Connect, a \"drive\" is just a document with the type \"powerhouse/drive\", which is specifically created for containing and managing other documents.",
+  "source": "@site/docs/academy/10-TodoListTutorial/06-GenerateTodoDriveExplorer.md",
+  "sourceDirName": "academy/10-TodoListTutorial",
+  "slug": "/academy/TodoListTutorial/GenerateTodoDriveExplorer",
+  "permalink": "/academy/TodoListTutorial/GenerateTodoDriveExplorer",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/10-TodoListTutorial/06-GenerateTodoDriveExplorer.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 6,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Step 5 — Implement TodoList document editor UI components",
+    "permalink": "/academy/TodoListTutorial/ImplementTodoListDocumentEditorUIComponents"
+  },
+  "next": {
+    "title": "Step 7 - Add shared component for showing TodoList stats",
+    "permalink": "/academy/TodoListTutorial/AddSharedComponentForShowingTodoListStats"
+  }
+}

@@ -1,0 +1,513 @@
+{
+  "docusaurus-plugin-content-docs": {
+    "default": {
+      "path": "/",
+      "versions": [
+        {
+          "name": "current",
+          "label": "Next",
+          "isLast": true,
+          "path": "/",
+          "mainDocId": "academy/GetStarted/home",
+          "docs": [
+            {
+              "id": "academy/APIReferences/DriveAnalyticsHooks",
+              "path": "/academy/APIReferences/DriveAnalyticsHooks",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/APIReferences/PHDocumentMigrationGuide",
+              "path": "/academy/APIReferences/PHDocumentMigrationGuide",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/APIReferences/PowerhouseCLI",
+              "path": "/academy/APIReferences/PowerhouseCLI",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/APIReferences/ReactHooks",
+              "path": "/academy/APIReferences/ReactHooks",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/APIReferences/RelationalDatabase",
+              "path": "/academy/APIReferences/RelationalDatabase",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/APIReferences/renown-sdk/APIReference",
+              "path": "/academy/APIReferences/renown-sdk/APIReference"
+            },
+            {
+              "id": "academy/APIReferences/renown-sdk/Authentication",
+              "path": "/academy/APIReferences/renown-sdk/Authentication"
+            },
+            {
+              "id": "academy/APIReferences/renown-sdk/CLIIdentity",
+              "path": "/academy/APIReferences/renown-sdk/CLIIdentity"
+            },
+            {
+              "id": "academy/APIReferences/renown-sdk/Overview",
+              "path": "/academy/APIReferences/renown-sdk/Overview"
+            },
+            {
+              "id": "academy/APIReferences/VetraRemoteDrive",
+              "path": "/academy/APIReferences/VetraRemoteDrive",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/Architecture/PowerhouseArchitecture",
+              "path": "/academy/Architecture/PowerhouseArchitecture",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/Architecture/WorkingWithTheReactor",
+              "path": "/academy/Architecture/WorkingWithTheReactor",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/ComponentLibrary/CreateCustomScalars",
+              "path": "/academy/ComponentLibrary/CreateCustomScalars",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/ComponentLibrary/DocumentEngineering",
+              "path": "/academy/ComponentLibrary/DocumentEngineering",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/ComponentLibrary/IntegrateIntoAReactComponent",
+              "path": "/academy/ComponentLibrary/IntegrateIntoAReactComponent",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/Cookbook",
+              "path": "/academy/Cookbook",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/ExampleUsecases/Chatroom/CreateNewPowerhouseProject",
+              "path": "/academy/ExampleUsecases/Chatroom/CreateNewPowerhouseProject",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/ExampleUsecases/Chatroom/DefineChatroomDocumentModel",
+              "path": "/academy/ExampleUsecases/Chatroom/DefineChatroomDocumentModel",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/ExampleUsecases/Chatroom/ImplementChatroomEditor",
+              "path": "/academy/ExampleUsecases/Chatroom/ImplementChatroomEditor",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/ExampleUsecases/Chatroom/ImplementOperationReducers",
+              "path": "/academy/ExampleUsecases/Chatroom/ImplementOperationReducers",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/ExampleUsecases/Overview",
+              "path": "/academy/ExampleUsecases/Overview"
+            },
+            {
+              "id": "academy/ExampleUsecases/TodoList/AddSharedComponentForShowingTodoListStats",
+              "path": "/academy/ExampleUsecases/TodoList/AddSharedComponentForShowingTodoListStats",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/ExampleUsecases/TodoList/AddTestsForTodoListActions",
+              "path": "/academy/ExampleUsecases/TodoList/AddTestsForTodoListActions",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/ExampleUsecases/TodoList/GenerateTodoDriveExplorer",
+              "path": "/academy/ExampleUsecases/TodoList/GenerateTodoDriveExplorer",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/ExampleUsecases/TodoList/GenerateTodoListDocumentEditor",
+              "path": "/academy/ExampleUsecases/TodoList/GenerateTodoListDocumentEditor",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/ExampleUsecases/TodoList/GenerateTodoListDocumentModel",
+              "path": "/academy/ExampleUsecases/TodoList/GenerateTodoListDocumentModel",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/ExampleUsecases/TodoList/GetTheStarterCode",
+              "path": "/academy/ExampleUsecases/TodoList/GetTheStarterCode",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/ExampleUsecases/TodoList/ImplementTodoListDocumentEditorUIComponents",
+              "path": "/academy/ExampleUsecases/TodoList/ImplementTodoListDocumentEditorUIComponents",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/ExampleUsecases/TodoList/ImplementTodoListDocumentModelReducerOperationHandlers",
+              "path": "/academy/ExampleUsecases/TodoList/ImplementTodoListDocumentModelReducerOperationHandlers",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/ExampleUsecases/VetraPackageLibrary/VetraPackageLibrary",
+              "path": "/academy/ExampleUsecases/VetraPackageLibrary/",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/GetStarted/BuildToDoListEditor",
+              "path": "/academy/GetStarted/BuildToDoListEditor",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/GetStarted/CreateNewPowerhouseProject",
+              "path": "/academy/GetStarted/CreateNewPowerhouseProject",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/GetStarted/DefineToDoListDocumentModel",
+              "path": "/academy/GetStarted/DefineToDoListDocumentModel",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/GetStarted/ExploreDemoPackage",
+              "path": "/academy/GetStarted/ExploreDemoPackage",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/GetStarted/home",
+              "path": "/",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/GetStarted/ImplementOperationReducers",
+              "path": "/academy/GetStarted/ImplementOperationReducers",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/GetStarted/WriteDocumentModelTests",
+              "path": "/academy/GetStarted/WriteDocumentModelTests",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/Glossary",
+              "path": "/academy/Glossary",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/BuilderEnvironment/CreateAPackageWithVetra",
+              "path": "/academy/MasteryTrack/BuilderEnvironment/CreateAPackageWithVetra",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/BuilderEnvironment/Prerequisites",
+              "path": "/academy/MasteryTrack/BuilderEnvironment/Prerequisites",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/BuilderEnvironment/VetraStudio",
+              "path": "/academy/MasteryTrack/BuilderEnvironment/VetraStudio",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization",
+              "path": "/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/BuildingUserExperiences/Authorization/DocumentPermissions",
+              "path": "/academy/MasteryTrack/BuildingUserExperiences/Authorization/DocumentPermissions",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/BuildingUserExperiences/Authorization/RenownAuthenticationFlow",
+              "path": "/academy/MasteryTrack/BuildingUserExperiences/Authorization/RenownAuthenticationFlow",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer",
+              "path": "/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors",
+              "path": "/academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/BuildingUserExperiences/DocumentTools/DocumentToolbar",
+              "path": "/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/DocumentToolbar",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/BuildingUserExperiences/DocumentTools/OperationHistory",
+              "path": "/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/OperationHistory",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/ConnectTools/InspectorModal",
+              "path": "/academy/MasteryTrack/ConnectTools/InspectorModal",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/DocumentModelCreation/ExampleToDoListRepository",
+              "path": "/academy/MasteryTrack/DocumentModelCreation/ExampleToDoListRepository",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/DocumentModelCreation/ImplementDocumentModelTests",
+              "path": "/academy/MasteryTrack/DocumentModelCreation/ImplementDocumentModelTests",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/DocumentModelCreation/ImplementDocumentReducers",
+              "path": "/academy/MasteryTrack/DocumentModelCreation/ImplementDocumentReducers",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/DocumentModelCreation/SpecifyDocumentOperations",
+              "path": "/academy/MasteryTrack/DocumentModelCreation/SpecifyDocumentOperations",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema",
+              "path": "/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/DocumentModelCreation/UseTheDocumentModelGenerator",
+              "path": "/academy/MasteryTrack/DocumentModelCreation/UseTheDocumentModelGenerator",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel",
+              "path": "/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/Launch/ConfigureEnvironment",
+              "path": "/academy/MasteryTrack/Launch/ConfigureEnvironment",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/Launch/DockerDeployment",
+              "path": "/academy/MasteryTrack/Launch/DockerDeployment",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/Launch/PublishYourProject",
+              "path": "/academy/MasteryTrack/Launch/PublishYourProject",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/Launch/SetupEnvironment",
+              "path": "/academy/MasteryTrack/Launch/SetupEnvironment",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/WorkWithData/Analytics Engine/best-practices",
+              "path": "/academy/MasteryTrack/WorkWithData/Analytics Engine/best-practices",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/WorkWithData/Analytics Engine/GraphQL References/QueryingADocumentWithGraphQL",
+              "path": "/academy/MasteryTrack/WorkWithData/Analytics Engine/GraphQL References/QueryingADocumentWithGraphQL",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/WorkWithData/Analytics Engine/graphql/index",
+              "path": "/academy/MasteryTrack/WorkWithData/Analytics Engine/graphql/",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/WorkWithData/Analytics Engine/graphql/integration",
+              "path": "/academy/MasteryTrack/WorkWithData/Analytics Engine/graphql/integration",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/WorkWithData/Analytics Engine/intro",
+              "path": "/academy/MasteryTrack/WorkWithData/Analytics Engine/intro",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/benchmarks",
+              "path": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/benchmarks",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/browser",
+              "path": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/browser",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/compatibility",
+              "path": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/compatibility",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/index",
+              "path": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/memory",
+              "path": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/memory",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/pg",
+              "path": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/pg",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/schema",
+              "path": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/schema",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/utilities",
+              "path": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/utilities",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/WorkWithData/Analytics Engine/use-cases/index",
+              "path": "/academy/MasteryTrack/WorkWithData/Analytics Engine/use-cases/",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/WorkWithData/Analytics Engine/use-cases/maker",
+              "path": "/academy/MasteryTrack/WorkWithData/Analytics Engine/use-cases/maker",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/WorkWithData/Analytics Engine/use-cases/processors",
+              "path": "/academy/MasteryTrack/WorkWithData/Analytics Engine/use-cases/processors",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/WorkWithData/analytics-processor",
+              "path": "/academy/MasteryTrack/WorkWithData/analytics-processor",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/WorkWithData/ConfiguringDrives",
+              "path": "/academy/MasteryTrack/WorkWithData/ConfiguringDrives",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/WorkWithData/RelationalDbProcessor",
+              "path": "/academy/MasteryTrack/WorkWithData/RelationalDbProcessor",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/WorkWithData/UsingSubgraphs",
+              "path": "/academy/MasteryTrack/WorkWithData/UsingSubgraphs",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/MasteryTrack/WorkWithData/UsingTheAPI",
+              "path": "/academy/MasteryTrack/WorkWithData/UsingTheAPI",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "academy/TodoListTutorial/AddSharedComponentForShowingTodoListStats",
+              "path": "/academy/TodoListTutorial/AddSharedComponentForShowingTodoListStats"
+            },
+            {
+              "id": "academy/TodoListTutorial/AddTestsForTodoListActions",
+              "path": "/academy/TodoListTutorial/AddTestsForTodoListActions"
+            },
+            {
+              "id": "academy/TodoListTutorial/ImplementTodoListDocumentEditorUIComponents",
+              "path": "/academy/TodoListTutorial/ImplementTodoListDocumentEditorUIComponents"
+            },
+            {
+              "id": "academy/TodoListTutorial/ImplementTodoListDocumentModelReducerOperationHandlers",
+              "path": "/academy/TodoListTutorial/ImplementTodoListDocumentModelReducerOperationHandlers"
+            },
+            {
+              "id": "bookofpowerhouse/DevelopmentApproaches",
+              "path": "/bookofpowerhouse/DevelopmentApproaches"
+            },
+            {
+              "id": "bookofpowerhouse/GeneralFrameworkAndPhilosophy",
+              "path": "/bookofpowerhouse/GeneralFrameworkAndPhilosophy"
+            },
+            {
+              "id": "bookofpowerhouse/Overview",
+              "path": "/bookofpowerhouse/Overview"
+            },
+            {
+              "id": "bookofpowerhouse/PowerhouseSoftwareArchitecture",
+              "path": "/bookofpowerhouse/PowerhouseSoftwareArchitecture"
+            },
+            {
+              "id": "bookofpowerhouse/SNOsandANewModelForOSSandPublicGoods",
+              "path": "/bookofpowerhouse/SNOsandANewModelForOSSandPublicGoods"
+            },
+            {
+              "id": "bookofpowerhouse/SNOsInActionAndPlatformEconomies",
+              "path": "/bookofpowerhouse/SNOsInActionAndPlatformEconomies"
+            },
+            {
+              "id": "/category/document-model-creation",
+              "path": "/category/document-model-creation",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "/category/building-user-experiences",
+              "path": "/category/building-user-experiences",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "/category/document-tools",
+              "path": "/category/document-tools",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "/category/authorization",
+              "path": "/category/authorization",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "/category/work-with-data",
+              "path": "/category/work-with-data",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "/category/launch",
+              "path": "/category/launch",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "/category/connect-tools",
+              "path": "/category/connect-tools",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "/category/chatroom",
+              "path": "/category/chatroom",
+              "sidebar": "academySidebar"
+            },
+            {
+              "id": "/category/todo-list-tutorial",
+              "path": "/category/todo-list-tutorial",
+              "sidebar": "academySidebar"
+            }
+          ],
+          "draftIds": [],
+          "sidebars": {
+            "academySidebar": {
+              "link": {
+                "path": "/",
+                "label": "Get started"
+              }
+            }
+          }
+        }
+      ],
+      "breadcrumbs": true
+    }
+  }
+}

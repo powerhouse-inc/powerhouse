@@ -1,0 +1,16 @@
+{
+  "id": "academy/MasteryTrack/BuilderEnvironment/BuilderTools",
+  "title": "Vetra builder tooling",
+  "description": "This page provides an overview of all the builder tooling offered in the Vetra ecosystem by Powerhouse.",
+  "source": "@site/docs/academy/02-MasteryTrack/01-BuilderEnvironment/03-BuilderTools.md",
+  "sourceDirName": "academy/02-MasteryTrack/01-BuilderEnvironment",
+  "slug": "/academy/MasteryTrack/BuilderEnvironment/BuilderTools",
+  "permalink": "/academy/MasteryTrack/BuilderEnvironment/BuilderTools",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/01-BuilderEnvironment/03-BuilderTools.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {}
+}

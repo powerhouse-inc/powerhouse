@@ -1,0 +1,27 @@
+{
+  "id": "academy/APIReferences/RelationalDatabase",
+  "title": "Relational Database",
+  "description": "This page covers the relational database tools available in Powerhouse applications, providing type-safe database operations with real-time updates through PGlite integration.",
+  "source": "@site/docs/academy/04-APIReferences/04-RelationalDatabase.md",
+  "sourceDirName": "academy/04-APIReferences",
+  "slug": "/academy/APIReferences/RelationalDatabase",
+  "permalink": "/academy/APIReferences/RelationalDatabase",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/04-APIReferences/04-RelationalDatabase.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 4,
+  "frontMatter": {
+    "toc_max_heading_level": 2
+  },
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Drive analytics",
+    "permalink": "/academy/APIReferences/DriveAnalyticsHooks"
+  },
+  "next": {
+    "title": "PHDocument Migration Guide",
+    "permalink": "/academy/APIReferences/PHDocumentMigrationGuide"
+  }
+}

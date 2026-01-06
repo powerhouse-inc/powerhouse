@@ -1,0 +1,25 @@
+{
+  "id": "academy/ExampleUsecases/Chatroom/CreateNewPowerhouseProject",
+  "title": "Create a new chatroom project",
+  "description": "📦 Reference Code: chatroom-demo",
+  "source": "@site/docs/academy/03-ExampleUsecases/Chatroom/02-CreateNewPowerhouseProject.md",
+  "sourceDirName": "academy/03-ExampleUsecases/Chatroom",
+  "slug": "/academy/ExampleUsecases/Chatroom/CreateNewPowerhouseProject",
+  "permalink": "/academy/ExampleUsecases/Chatroom/CreateNewPowerhouseProject",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/03-ExampleUsecases/Chatroom/02-CreateNewPowerhouseProject.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Chatroom",
+    "permalink": "/category/chatroom"
+  },
+  "next": {
+    "title": "Write the document specification",
+    "permalink": "/academy/ExampleUsecases/Chatroom/DefineChatroomDocumentModel"
+  }
+}

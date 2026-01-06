@@ -1,0 +1,16 @@
+{
+  "id": "academy/TodoListTutorial/ImplementTodoListDocumentModelReducerOperationHandlers",
+  "title": "Step 2 — Implement the TodoList document model reducer operation handlers",
+  "description": "Adding the logic for handling operations with reducers",
+  "source": "@site/docs/academy/10-TodoListTutorial/02-ImplementTodoListDocumentModelReducerOperationHandlers.md",
+  "sourceDirName": "academy/10-TodoListTutorial",
+  "slug": "/academy/TodoListTutorial/ImplementTodoListDocumentModelReducerOperationHandlers",
+  "permalink": "/academy/TodoListTutorial/ImplementTodoListDocumentModelReducerOperationHandlers",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/10-TodoListTutorial/02-ImplementTodoListDocumentModelReducerOperationHandlers.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {}
+}

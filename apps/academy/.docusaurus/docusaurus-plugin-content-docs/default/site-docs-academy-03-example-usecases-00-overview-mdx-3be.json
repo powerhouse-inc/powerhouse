@@ -1,0 +1,19 @@
+{
+  "id": "academy/ExampleUsecases/Overview",
+  "title": "Example use-cases",
+  "description": "Explore real-world examples of applications built with the Powerhouse ecosystem. Each use-case provides a complete walkthrough from project setup to a fully functional application.",
+  "source": "@site/docs/academy/03-ExampleUsecases/00-Overview.mdx",
+  "sourceDirName": "academy/03-ExampleUsecases",
+  "slug": "/academy/ExampleUsecases/Overview",
+  "permalink": "/academy/ExampleUsecases/Overview",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/03-ExampleUsecases/00-Overview.mdx",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 0,
+  "frontMatter": {
+    "title": "Example use-cases",
+    "sidebar_class_name": "category-index-page"
+  }
+}

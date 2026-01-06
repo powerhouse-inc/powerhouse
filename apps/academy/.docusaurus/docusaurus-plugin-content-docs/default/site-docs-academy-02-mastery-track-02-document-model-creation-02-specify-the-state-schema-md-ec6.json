@@ -1,0 +1,25 @@
+{
+  "id": "academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema",
+  "title": "Specify the state schema",
+  "description": "The state schema is the backbone of your document model. It defines the structure, data types, and relationships of the information your document will hold. In Powerhouse, we use the GraphQL Schema Definition Language (SDL) to define this schema. A well-defined state schema is crucial for ensuring data integrity, consistency, and for enabling powerful querying and manipulation capabilities.",
+  "source": "@site/docs/academy/02-MasteryTrack/02-DocumentModelCreation/02-SpecifyTheStateSchema.md",
+  "sourceDirName": "academy/02-MasteryTrack/02-DocumentModelCreation",
+  "slug": "/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema",
+  "permalink": "/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/02-DocumentModelCreation/02-SpecifyTheStateSchema.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "What is a document model?",
+    "permalink": "/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel"
+  },
+  "next": {
+    "title": "Specify document operations",
+    "permalink": "/academy/MasteryTrack/DocumentModelCreation/SpecifyDocumentOperations"
+  }
+}

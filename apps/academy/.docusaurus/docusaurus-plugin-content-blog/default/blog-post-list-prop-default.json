@@ -1,0 +1,17 @@
+{
+  "title": "Recent posts",
+  "items": [
+    {
+      "title": "Beyond Communication - A Blueprint for Development",
+      "permalink": "/blog/Graphql-schema-as-a-common-language",
+      "unlisted": false,
+      "date": "2024-12-02T00:00:00.000Z"
+    },
+    {
+      "title": "The Challenge of Change",
+      "permalink": "/blog/Rapid-Application-Development-with-document-models.",
+      "unlisted": false,
+      "date": "2024-12-02T00:00:00.000Z"
+    }
+  ]
+}

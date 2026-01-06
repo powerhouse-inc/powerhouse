@@ -1,0 +1,25 @@
+{
+  "id": "academy/APIReferences/PHDocumentMigrationGuide",
+  "title": "PHDocument Migration Guide",
+  "description": "This guide covers the breaking changes introduced in Powerhouse v4.0.0 related to PHDocument structure changes. If you're upgrading from v3.2.0 or earlier, this migration is required and document models must be regenerated.",
+  "source": "@site/docs/academy/04-APIReferences/05-PHDocumentMigrationGuide.md",
+  "sourceDirName": "academy/04-APIReferences",
+  "slug": "/academy/APIReferences/PHDocumentMigrationGuide",
+  "permalink": "/academy/APIReferences/PHDocumentMigrationGuide",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/04-APIReferences/05-PHDocumentMigrationGuide.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 5,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Relational Database",
+    "permalink": "/academy/APIReferences/RelationalDatabase"
+  },
+  "next": {
+    "title": "Document-Engineering",
+    "permalink": "/academy/ComponentLibrary/DocumentEngineering"
+  }
+}

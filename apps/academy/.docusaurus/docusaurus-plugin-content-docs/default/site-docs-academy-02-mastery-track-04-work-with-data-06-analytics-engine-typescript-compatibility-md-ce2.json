@@ -1,0 +1,27 @@
+{
+  "id": "academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/compatibility",
+  "title": "Compatibility",
+  "description": "This guide is intended for making high level decisions about which storage systems to use in which contexts. These stores have not been tested across thousands of browser or serverside runtime versions.",
+  "source": "@site/docs/academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/typescript/compatibility.md",
+  "sourceDirName": "academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/typescript",
+  "slug": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/compatibility",
+  "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/compatibility",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/typescript/compatibility.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 101,
+  "frontMatter": {
+    "sidebar_position": 101
+  },
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Utilities",
+    "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/utilities"
+  },
+  "next": {
+    "title": "Benchmarks",
+    "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/benchmarks"
+  }
+}

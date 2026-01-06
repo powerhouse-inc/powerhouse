@@ -1,0 +1,16 @@
+{
+  "id": "bookofpowerhouse/SNOsandANewModelForOSSandPublicGoods",
+  "title": "Part 4: Scalable Network Organizations (SNOs)",
+  "description": "Decentralized Autonomous Organizations (DAOs) once promised to revolutionize global collaboration by enabling decentralized governance, transparent decision-making, and equitable ownership. However, the reality has often fallen short. DAOs have struggled with legal ambiguity, resource allocation inefficiencies, and broken incentive structures. These challenges have stifled their ability to scale and compete with centralized organizations.",
+  "source": "@site/docs/bookofpowerhouse/05-SNOsandANewModelForOSSandPublicGoods.md",
+  "sourceDirName": "bookofpowerhouse",
+  "slug": "/bookofpowerhouse/SNOsandANewModelForOSSandPublicGoods",
+  "permalink": "/bookofpowerhouse/SNOsandANewModelForOSSandPublicGoods",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/bookofpowerhouse/05-SNOsandANewModelForOSSandPublicGoods.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 5,
+  "frontMatter": {}
+}

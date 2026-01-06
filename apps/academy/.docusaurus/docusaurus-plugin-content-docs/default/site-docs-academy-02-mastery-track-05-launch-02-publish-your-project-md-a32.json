@@ -1,0 +1,25 @@
+{
+  "id": "academy/MasteryTrack/Launch/PublishYourProject",
+  "title": "Publish your package",
+  "description": "This guide assumes familiarity with building document models in Vetra Studio.",
+  "source": "@site/docs/academy/02-MasteryTrack/05-Launch/02-PublishYourProject.md",
+  "sourceDirName": "academy/02-MasteryTrack/05-Launch",
+  "slug": "/academy/MasteryTrack/Launch/PublishYourProject",
+  "permalink": "/academy/MasteryTrack/Launch/PublishYourProject",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/05-Launch/02-PublishYourProject.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Launch",
+    "permalink": "/category/launch"
+  },
+  "next": {
+    "title": "Setup your environment",
+    "permalink": "/academy/MasteryTrack/Launch/SetupEnvironment"
+  }
+}

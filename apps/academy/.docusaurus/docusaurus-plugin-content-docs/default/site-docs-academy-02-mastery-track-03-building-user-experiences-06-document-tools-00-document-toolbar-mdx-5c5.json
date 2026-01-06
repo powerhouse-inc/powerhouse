@@ -1,0 +1,25 @@
+{
+  "id": "academy/MasteryTrack/BuildingUserExperiences/DocumentTools/DocumentToolbar",
+  "title": "Document Toolbar",
+  "description": "This documentation is still being written and may be incomplete.",
+  "source": "@site/docs/academy/02-MasteryTrack/03-BuildingUserExperiences/06-DocumentTools/00-DocumentToolbar.mdx",
+  "sourceDirName": "academy/02-MasteryTrack/03-BuildingUserExperiences/06-DocumentTools",
+  "slug": "/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/DocumentToolbar",
+  "permalink": "/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/DocumentToolbar",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/03-BuildingUserExperiences/06-DocumentTools/00-DocumentToolbar.mdx",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 0,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Document Tools",
+    "permalink": "/category/document-tools"
+  },
+  "next": {
+    "title": "Operations history",
+    "permalink": "/academy/MasteryTrack/BuildingUserExperiences/DocumentTools/OperationHistory"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "id": "academy/APIReferences/renown-sdk/APIReference",
+  "title": "API Reference",
+  "description": "Complete API reference for the Renown SDK.",
+  "source": "@site/docs/academy/04-APIReferences/renown-sdk/02-APIReference.md",
+  "sourceDirName": "academy/04-APIReferences/renown-sdk",
+  "slug": "/academy/APIReferences/renown-sdk/APIReference",
+  "permalink": "/academy/APIReferences/renown-sdk/APIReference",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/04-APIReferences/renown-sdk/02-APIReference.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {}
+}

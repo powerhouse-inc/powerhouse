@@ -1,0 +1,25 @@
+{
+  "id": "academy/ExampleUsecases/Chatroom/LaunchALocalReactor",
+  "title": "Launch a local Reactor",
+  "description": "📦 Reference Code: chatroom-demo",
+  "source": "@site/docs/academy/03-ExampleUsecases/Chatroom/06-LaunchALocalReactor.md",
+  "sourceDirName": "academy/03-ExampleUsecases/Chatroom",
+  "slug": "/academy/ExampleUsecases/Chatroom/LaunchALocalReactor",
+  "permalink": "/academy/ExampleUsecases/Chatroom/LaunchALocalReactor",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/03-ExampleUsecases/Chatroom/06-LaunchALocalReactor.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 6,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Build the ChatRoom editor",
+    "permalink": "/academy/ExampleUsecases/Chatroom/ImplementChatroomEditor"
+  },
+  "next": {
+    "title": "Vetra Package Library",
+    "permalink": "/academy/ExampleUsecases/VetraPackageLibrary/"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "id": "academy/MasteryTrack/WorkWithData/Analytics Engine/intro",
+  "title": "Getting started",
+  "description": "Introduction",
+  "source": "@site/docs/academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/intro.md",
+  "sourceDirName": "academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine",
+  "slug": "/academy/MasteryTrack/WorkWithData/Analytics Engine/intro",
+  "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/intro",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/intro.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 0,
+  "frontMatter": {
+    "sidebar_position": 0
+  },
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Relational database processor",
+    "permalink": "/academy/MasteryTrack/WorkWithData/RelationalDbProcessor"
+  },
+  "next": {
+    "title": "Typescript API",
+    "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/"
+  }
+}

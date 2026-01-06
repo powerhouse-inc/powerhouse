@@ -1,0 +1,25 @@
+{
+  "id": "academy/MasteryTrack/Launch/SetupEnvironment",
+  "title": "Setup your environment",
+  "description": "Introduction",
+  "source": "@site/docs/academy/02-MasteryTrack/05-Launch/03-SetupEnvironment.md",
+  "sourceDirName": "academy/02-MasteryTrack/05-Launch",
+  "slug": "/academy/MasteryTrack/Launch/SetupEnvironment",
+  "permalink": "/academy/MasteryTrack/Launch/SetupEnvironment",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/05-Launch/03-SetupEnvironment.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Publish your package",
+    "permalink": "/academy/MasteryTrack/Launch/PublishYourProject"
+  },
+  "next": {
+    "title": "Configure your environment",
+    "permalink": "/academy/MasteryTrack/Launch/ConfigureEnvironment"
+  }
+}

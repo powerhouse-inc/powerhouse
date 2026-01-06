@@ -1,0 +1,24 @@
+{
+  "id": "academy/MasteryTrack/WorkWithData/04B-analytics-processor",
+  "title": "Todo-List Analytics Processor",
+  "description": "In this chapter, we will implement a Todo-List analytics processor. This processor tracks productivity metrics from todo operations, enabling dashboards and reports that show task creation patterns, completion rates, and overall productivity trends.",
+  "source": "@site/docs/academy/02-MasteryTrack/04-WorkWithData/04B-analytics-processor.md",
+  "sourceDirName": "academy/02-MasteryTrack/04-WorkWithData",
+  "slug": "/academy/MasteryTrack/WorkWithData/04B-analytics-processor",
+  "permalink": "/academy/MasteryTrack/WorkWithData/04B-analytics-processor",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/04-WorkWithData/04B-analytics-processor.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Querying a document with GraphQL",
+    "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/GraphQL References/QueryingADocumentWithGraphQL"
+  },
+  "next": {
+    "title": "Launch",
+    "permalink": "/category/launch"
+  }
+}

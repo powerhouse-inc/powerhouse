@@ -1,0 +1,16 @@
+{
+  "id": "bookofpowerhouse/PowerhouseSoftwareArchitecture",
+  "title": "Part 2: Powerhouse Software Architecture",
+  "description": "Powerhouse’s software architecture is designed to empower scalable, decentralized organizations with a modular, layered approach. It uses document models as the core unit that used across three layers:",
+  "source": "@site/docs/bookofpowerhouse/03-PowerhouseSoftwareArchitecture.md",
+  "sourceDirName": "bookofpowerhouse",
+  "slug": "/bookofpowerhouse/PowerhouseSoftwareArchitecture",
+  "permalink": "/bookofpowerhouse/PowerhouseSoftwareArchitecture",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/bookofpowerhouse/03-PowerhouseSoftwareArchitecture.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {}
+}

@@ -1,0 +1,16 @@
+{
+  "id": "academy/TodoListTutorial/ImplementTodoListDocumentEditorUIComponents",
+  "title": "Step 5 — Implement TodoList document editor UI components",
+  "description": "Out of the box, we have a component for updating our TodoList documents' names, but we would like to create, read, update, and delete all of the data in our documents.",
+  "source": "@site/docs/academy/10-TodoListTutorial/05-ImplementTodoListDocumentEditorUIComponents.md",
+  "sourceDirName": "academy/10-TodoListTutorial",
+  "slug": "/academy/TodoListTutorial/ImplementTodoListDocumentEditorUIComponents",
+  "permalink": "/academy/TodoListTutorial/ImplementTodoListDocumentEditorUIComponents",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/10-TodoListTutorial/05-ImplementTodoListDocumentEditorUIComponents.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 5,
+  "frontMatter": {}
+}

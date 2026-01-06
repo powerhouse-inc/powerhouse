@@ -1,0 +1,16 @@
+{
+  "id": "academy/APIReferences/renown-sdk/CLIIdentity",
+  "title": "CLI Identity & Authentication",
+  "description": "This guide covers how to authenticate the Powerhouse CLI with your Ethereum identity and use that identity in the Switchboard for authenticated operations with remote services.",
+  "source": "@site/docs/academy/04-APIReferences/renown-sdk/03-CLIIdentity.md",
+  "sourceDirName": "academy/04-APIReferences/renown-sdk",
+  "slug": "/academy/APIReferences/renown-sdk/CLIIdentity",
+  "permalink": "/academy/APIReferences/renown-sdk/CLIIdentity",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/04-APIReferences/renown-sdk/03-CLIIdentity.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {}
+}

@@ -1,0 +1,24 @@
+{
+  "id": "academy/ExampleUsecases/PackageLibrary/VetraPackageLibrary",
+  "title": "VetraPackageLibrary",
+  "description": "The Package Library is your best source to explore packages built by different builder teams on the Vetra platform.",
+  "source": "@site/docs/academy/03-ExampleUsecases/PackageLibrary/VetraPackageLibrary.md",
+  "sourceDirName": "academy/03-ExampleUsecases/PackageLibrary",
+  "slug": "/academy/ExampleUsecases/PackageLibrary/VetraPackageLibrary",
+  "permalink": "/academy/ExampleUsecases/PackageLibrary/VetraPackageLibrary",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/03-ExampleUsecases/PackageLibrary/VetraPackageLibrary.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Launch a local Reactor",
+    "permalink": "/academy/ExampleUsecases/Chatroom/LaunchALocalReactor"
+  },
+  "next": {
+    "title": "Powerhouse CLI",
+    "permalink": "/academy/APIReferences/PowerhouseCLI"
+  }
+}

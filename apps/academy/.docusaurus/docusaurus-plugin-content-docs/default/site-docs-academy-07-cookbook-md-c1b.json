@@ -1,0 +1,27 @@
+{
+  "id": "academy/Cookbook",
+  "title": "Cookbook",
+  "description": "Powerhouse CLI recipes",
+  "source": "@site/docs/academy/07-Cookbook.md",
+  "sourceDirName": "academy",
+  "slug": "/academy/Cookbook",
+  "permalink": "/academy/Cookbook",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/07-Cookbook.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 7,
+  "frontMatter": {
+    "toc_max_heading_level": 2
+  },
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Working with the Reactor",
+    "permalink": "/academy/Architecture/WorkingWithTheReactor"
+  },
+  "next": {
+    "title": "Glossary",
+    "permalink": "/academy/Glossary"
+  }
+}

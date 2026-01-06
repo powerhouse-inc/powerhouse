@@ -1,0 +1,25 @@
+{
+  "id": "academy/MasteryTrack/DocumentModelCreation/ImplementDocumentReducers",
+  "title": "Implement document reducers",
+  "description": "The heart of document logic",
+  "source": "@site/docs/academy/02-MasteryTrack/02-DocumentModelCreation/05-ImplementDocumentReducers.md",
+  "sourceDirName": "academy/02-MasteryTrack/02-DocumentModelCreation",
+  "slug": "/academy/MasteryTrack/DocumentModelCreation/ImplementDocumentReducers",
+  "permalink": "/academy/MasteryTrack/DocumentModelCreation/ImplementDocumentReducers",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/02-DocumentModelCreation/05-ImplementDocumentReducers.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 5,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Use the Document Model Generator",
+    "permalink": "/academy/MasteryTrack/DocumentModelCreation/UseTheDocumentModelGenerator"
+  },
+  "next": {
+    "title": "Implement document model tests",
+    "permalink": "/academy/MasteryTrack/DocumentModelCreation/ImplementDocumentModelTests"
+  }
+}

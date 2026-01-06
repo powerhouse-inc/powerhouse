@@ -1,0 +1,25 @@
+{
+  "id": "academy/GetStarted/BuildToDoListEditor",
+  "title": "Build a to-do list editor",
+  "description": "📦 Reference Code:",
+  "source": "@site/docs/academy/01-GetStarted/05-BuildToDoListEditor.md",
+  "sourceDirName": "academy/01-GetStarted",
+  "slug": "/academy/GetStarted/BuildToDoListEditor",
+  "permalink": "/academy/GetStarted/BuildToDoListEditor",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/01-GetStarted/05-BuildToDoListEditor.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 5,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Write document model tests",
+    "permalink": "/academy/GetStarted/WriteDocumentModelTests"
+  },
+  "next": {
+    "title": "Prerequisites",
+    "permalink": "/academy/MasteryTrack/BuilderEnvironment/Prerequisites"
+  }
+}

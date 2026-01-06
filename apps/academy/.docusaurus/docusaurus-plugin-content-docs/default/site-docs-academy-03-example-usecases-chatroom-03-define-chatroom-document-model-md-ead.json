@@ -1,0 +1,25 @@
+{
+  "id": "academy/ExampleUsecases/Chatroom/DefineChatroomDocumentModel",
+  "title": "Write the document specification",
+  "description": "📦 Reference Code: chatroom-demo",
+  "source": "@site/docs/academy/03-ExampleUsecases/Chatroom/03-DefineChatroomDocumentModel.md",
+  "sourceDirName": "academy/03-ExampleUsecases/Chatroom",
+  "slug": "/academy/ExampleUsecases/Chatroom/DefineChatroomDocumentModel",
+  "permalink": "/academy/ExampleUsecases/Chatroom/DefineChatroomDocumentModel",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/03-ExampleUsecases/Chatroom/03-DefineChatroomDocumentModel.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Create a new chatroom project",
+    "permalink": "/academy/ExampleUsecases/Chatroom/CreateNewPowerhouseProject"
+  },
+  "next": {
+    "title": "Implement the document model reducers",
+    "permalink": "/academy/ExampleUsecases/Chatroom/ImplementOperationReducers"
+  }
+}

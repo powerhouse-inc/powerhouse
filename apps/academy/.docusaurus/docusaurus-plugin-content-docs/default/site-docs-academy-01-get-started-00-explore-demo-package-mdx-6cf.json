@@ -1,0 +1,25 @@
+{
+  "id": "academy/GetStarted/ExploreDemoPackage",
+  "title": "Explore the demo package",
+  "description": "Let's get started",
+  "source": "@site/docs/academy/01-GetStarted/00-ExploreDemoPackage.mdx",
+  "sourceDirName": "academy/01-GetStarted",
+  "slug": "/academy/GetStarted/ExploreDemoPackage",
+  "permalink": "/academy/GetStarted/ExploreDemoPackage",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/01-GetStarted/00-ExploreDemoPackage.mdx",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 0,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Get started",
+    "permalink": "/"
+  },
+  "next": {
+    "title": "Create a new to-do list document",
+    "permalink": "/academy/GetStarted/CreateNewPowerhouseProject"
+  }
+}

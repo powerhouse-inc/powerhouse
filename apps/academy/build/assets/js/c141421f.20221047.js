@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunk_powerhousedao_academy=self.webpackChunk_powerhousedao_academy||[]).push([[957],{936:e=>{e.exports=JSON.parse('{"name":"docusaurus-theme-search-algolia","id":"default"}')}}]);

@@ -1,0 +1,16 @@
+{
+  "id": "academy/APIReferences/renown-sdk/Overview",
+  "title": "Renown SDK",
+  "description": "A comprehensive SDK for integrating Renown authentication and user profile management into your React applications.",
+  "source": "@site/docs/academy/04-APIReferences/renown-sdk/00-Overview.md",
+  "sourceDirName": "academy/04-APIReferences/renown-sdk",
+  "slug": "/academy/APIReferences/renown-sdk/Overview",
+  "permalink": "/academy/APIReferences/renown-sdk/Overview",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/04-APIReferences/renown-sdk/00-Overview.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 0,
+  "frontMatter": {}
+}

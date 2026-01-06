@@ -1,0 +1,27 @@
+{
+  "id": "academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/utilities",
+  "title": "Utilities",
+  "description": "This section describes various utility objects.",
+  "source": "@site/docs/academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/typescript/utilities.md",
+  "sourceDirName": "academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/typescript",
+  "slug": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/utilities",
+  "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/utilities",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/typescript/utilities.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 100,
+  "frontMatter": {
+    "sidebar_position": 100
+  },
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Postgres store",
+    "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/pg"
+  },
+  "next": {
+    "title": "Compatibility",
+    "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/compatibility"
+  }
+}

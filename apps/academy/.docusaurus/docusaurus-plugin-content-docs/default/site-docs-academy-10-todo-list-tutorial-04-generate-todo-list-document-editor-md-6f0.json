@@ -1,0 +1,25 @@
+{
+  "id": "academy/TodoListTutorial/GenerateTodoListDocumentEditor",
+  "title": "Step 4 — Generating a document model editor for TodoList documents",
+  "description": "Generate the editor template",
+  "source": "@site/docs/academy/10-TodoListTutorial/04-GenerateTodoListDocumentEditor.md",
+  "sourceDirName": "academy/10-TodoListTutorial",
+  "slug": "/academy/TodoListTutorial/GenerateTodoListDocumentEditor",
+  "permalink": "/academy/TodoListTutorial/GenerateTodoListDocumentEditor",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/10-TodoListTutorial/04-GenerateTodoListDocumentEditor.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 4,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Step 3 — Adding our own tests for the document model actions",
+    "permalink": "/academy/TodoListTutorial/AddTestsForTodoListActions"
+  },
+  "next": {
+    "title": "Step 5 — Implement TodoList document editor UI components",
+    "permalink": "/academy/TodoListTutorial/ImplementTodoListDocumentEditorUIComponents"
+  }
+}

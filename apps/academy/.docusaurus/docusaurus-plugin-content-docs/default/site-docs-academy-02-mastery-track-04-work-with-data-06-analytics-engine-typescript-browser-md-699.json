@@ -1,0 +1,27 @@
+{
+  "id": "academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/browser",
+  "title": "Browser store",
+  "description": "The BrowserAnalyticsStore is an IAnalyticsStore implementation that sits on top of MemoryAnalyticsStore but adds an IndexedDB plugin for persistence.",
+  "source": "@site/docs/academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/typescript/browser.md",
+  "sourceDirName": "academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/typescript",
+  "slug": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/browser",
+  "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/browser",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/typescript/browser.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {
+    "sidebar_position": 2
+  },
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Memory store",
+    "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/memory"
+  },
+  "next": {
+    "title": "Postgres store",
+    "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/pg"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "academy/MasteryTrack/WorkWithData/drive-analytics",
+  "title": "Drive analytics",
+  "description": "Drive Analytics provides automated monitoring and insights into document drive operations within Powerhouse applications. This system tracks user interactions, document modifications, and drive activity to help developers understand usage patterns and system performance.",
+  "source": "@site/docs/academy/02-MasteryTrack/04-WorkWithData/08-drive-analytics.md",
+  "sourceDirName": "academy/02-MasteryTrack/04-WorkWithData",
+  "slug": "/academy/MasteryTrack/WorkWithData/drive-analytics",
+  "permalink": "/academy/MasteryTrack/WorkWithData/drive-analytics",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/04-WorkWithData/08-drive-analytics.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 8,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Configure a drive",
+    "permalink": "/academy/MasteryTrack/WorkWithData/ConfiguringDrives"
+  },
+  "next": {
+    "title": "Launch",
+    "permalink": "/category/launch"
+  }
+}

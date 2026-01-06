@@ -1,0 +1,16 @@
+{
+  "id": "academy/APIReferences/renown-sdk/Authentication",
+  "title": "Authentication Guide",
+  "description": "Comprehensive guide to implementing authentication with the Renown SDK.",
+  "source": "@site/docs/academy/04-APIReferences/renown-sdk/01-Authentication.md",
+  "sourceDirName": "academy/04-APIReferences/renown-sdk",
+  "slug": "/academy/APIReferences/renown-sdk/Authentication",
+  "permalink": "/academy/APIReferences/renown-sdk/Authentication",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/04-APIReferences/renown-sdk/01-Authentication.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {}
+}

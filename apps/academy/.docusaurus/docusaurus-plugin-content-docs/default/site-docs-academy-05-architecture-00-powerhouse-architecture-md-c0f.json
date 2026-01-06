@@ -1,0 +1,25 @@
+{
+  "id": "academy/Architecture/PowerhouseArchitecture",
+  "title": "Powerhouse Architecture",
+  "description": "Vetra is part of the Powerhouse Ecosystem and acts as the builder platform for creating an independent, open-source and decentralized back-end for any SaaS, ERP, CMS or CRM needs.",
+  "source": "@site/docs/academy/05-Architecture/00-PowerhouseArchitecture.md",
+  "sourceDirName": "academy/05-Architecture",
+  "slug": "/academy/Architecture/PowerhouseArchitecture",
+  "permalink": "/academy/Architecture/PowerhouseArchitecture",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/05-Architecture/00-PowerhouseArchitecture.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 0,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Step 2: Integrate Your Scalar into a React Component",
+    "permalink": "/academy/ComponentLibrary/IntegrateIntoAReactComponent"
+  },
+  "next": {
+    "title": "Working with the Reactor",
+    "permalink": "/academy/Architecture/WorkingWithTheReactor"
+  }
+}

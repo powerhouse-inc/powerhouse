@@ -1,0 +1,25 @@
+{
+  "id": "academy/MasteryTrack/Launch/DockerDeployment",
+  "title": "Docker deployment guide",
+  "description": "Introduction",
+  "source": "@site/docs/academy/02-MasteryTrack/05-Launch/05-DockerDeployment.md",
+  "sourceDirName": "academy/02-MasteryTrack/05-Launch",
+  "slug": "/academy/MasteryTrack/Launch/DockerDeployment",
+  "permalink": "/academy/MasteryTrack/Launch/DockerDeployment",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/05-Launch/05-DockerDeployment.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 5,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Configure your environment",
+    "permalink": "/academy/MasteryTrack/Launch/ConfigureEnvironment"
+  },
+  "next": {
+    "title": "Connect Tools",
+    "permalink": "/category/connect-tools"
+  }
+}

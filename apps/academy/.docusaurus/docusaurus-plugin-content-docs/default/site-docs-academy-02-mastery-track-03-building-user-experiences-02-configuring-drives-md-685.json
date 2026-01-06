@@ -1,0 +1,25 @@
+{
+  "id": "academy/MasteryTrack/BuildingUserExperiences/ConfiguringDrives",
+  "title": "Configure a drive",
+  "description": "A drive in Powerhouse is a container for documents and data. It's a place where you can organize and store your documents and share them with others. This guide walks you through configuring and managing drives in your Powerhouse environment.",
+  "source": "@site/docs/academy/02-MasteryTrack/03-BuildingUserExperiences/02-ConfiguringDrives.md",
+  "sourceDirName": "academy/02-MasteryTrack/03-BuildingUserExperiences",
+  "slug": "/academy/MasteryTrack/BuildingUserExperiences/ConfiguringDrives",
+  "permalink": "/academy/MasteryTrack/BuildingUserExperiences/ConfiguringDrives",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/03-BuildingUserExperiences/02-ConfiguringDrives.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Build document editors",
+    "permalink": "/academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors"
+  },
+  "next": {
+    "title": "Build a drive-app",
+    "permalink": "/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer"
+  }
+}

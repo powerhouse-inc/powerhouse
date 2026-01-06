@@ -1,0 +1,27 @@
+{
+  "id": "academy/MasteryTrack/WorkWithData/Analytics Engine/graphql/integration",
+  "title": "Integration",
+  "description": "The analytics-engine-graphql module provides types and resolvers needed for a fully-functional GraphQL Server API. This library has no dependencies on any particular server but has been tested using Apollo Server 3 and 4.",
+  "source": "@site/docs/academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/graphql/integration.md",
+  "sourceDirName": "academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/graphql",
+  "slug": "/academy/MasteryTrack/WorkWithData/Analytics Engine/graphql/integration",
+  "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/graphql/integration",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/graphql/integration.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {
+    "sidebar_position": 1
+  },
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "GraphQL API",
+    "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/graphql/"
+  },
+  "next": {
+    "title": "Use cases",
+    "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/use-cases/"
+  }
+}

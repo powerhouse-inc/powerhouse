@@ -1,0 +1,24 @@
+{
+  "id": "academy/MasteryTrack/WorkWithData/Analytics Engine/GraphQL References/QueryingADocumentWithGraphQL",
+  "title": "Querying a document with GraphQL",
+  "description": "Overview",
+  "source": "@site/docs/academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/GraphQL References/QueryingADocumentWithGraphQL.md",
+  "sourceDirName": "academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/GraphQL References",
+  "slug": "/academy/MasteryTrack/WorkWithData/Analytics Engine/GraphQL References/QueryingADocumentWithGraphQL",
+  "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/GraphQL References/QueryingADocumentWithGraphQL",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/GraphQL References/QueryingADocumentWithGraphQL.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Best practices",
+    "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/best-practices"
+  },
+  "next": {
+    "title": "Configure a drive",
+    "permalink": "/academy/MasteryTrack/WorkWithData/ConfiguringDrives"
+  }
+}

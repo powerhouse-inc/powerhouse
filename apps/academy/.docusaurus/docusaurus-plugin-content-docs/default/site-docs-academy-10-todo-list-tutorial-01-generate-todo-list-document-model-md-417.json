@@ -1,0 +1,25 @@
+{
+  "id": "academy/TodoListTutorial/GenerateTodoListDocumentModel",
+  "title": "Step 1 - Generate the TodoList document model",
+  "description": "Overview",
+  "source": "@site/docs/academy/10-TodoListTutorial/01-GenerateTodoListDocumentModel.md",
+  "sourceDirName": "academy/10-TodoListTutorial",
+  "slug": "/academy/TodoListTutorial/GenerateTodoListDocumentModel",
+  "permalink": "/academy/TodoListTutorial/GenerateTodoListDocumentModel",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/10-TodoListTutorial/01-GenerateTodoListDocumentModel.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Step 0 - get the starter code",
+    "permalink": "/academy/TodoListTutorial/GetTheStarterCode"
+  },
+  "next": {
+    "title": "Step 2 — Implement the TodoList document model reducer operation handlers",
+    "permalink": "/academy/TodoListTutorial/ImplementTodoListDocumentModelReducerOperationHandlers"
+  }
+}

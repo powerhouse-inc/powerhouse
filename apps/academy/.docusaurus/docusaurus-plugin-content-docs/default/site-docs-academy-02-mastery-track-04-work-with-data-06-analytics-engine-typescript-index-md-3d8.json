@@ -1,0 +1,27 @@
+{
+  "id": "academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/index",
+  "title": "Typescript API",
+  "description": "Overview",
+  "source": "@site/docs/academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/typescript/index.md",
+  "sourceDirName": "academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/typescript",
+  "slug": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/",
+  "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/04-WorkWithData/06-Analytics Engine/typescript/index.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {
+    "sidebar_position": 2
+  },
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Getting started",
+    "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/intro"
+  },
+  "next": {
+    "title": "Memory store",
+    "permalink": "/academy/MasteryTrack/WorkWithData/Analytics Engine/typescript/memory"
+  }
+}

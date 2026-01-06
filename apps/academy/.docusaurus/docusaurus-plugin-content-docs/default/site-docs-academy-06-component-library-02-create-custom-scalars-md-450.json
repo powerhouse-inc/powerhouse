@@ -1,0 +1,25 @@
+{
+  "id": "academy/ComponentLibrary/CreateCustomScalars",
+  "title": "Step 1: Create Custom Scalars",
+  "description": "This tutorial provides step-by-step instructions for creating custom scalars & components, and to contributing to the document-engineering project.",
+  "source": "@site/docs/academy/06-ComponentLibrary/02-CreateCustomScalars.md",
+  "sourceDirName": "academy/06-ComponentLibrary",
+  "slug": "/academy/ComponentLibrary/CreateCustomScalars",
+  "permalink": "/academy/ComponentLibrary/CreateCustomScalars",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/06-ComponentLibrary/02-CreateCustomScalars.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Document-Engineering",
+    "permalink": "/academy/ComponentLibrary/DocumentEngineering"
+  },
+  "next": {
+    "title": "Step 2: Integrate Your Scalar into a React Component",
+    "permalink": "/academy/ComponentLibrary/IntegrateIntoAReactComponent"
+  }
+}

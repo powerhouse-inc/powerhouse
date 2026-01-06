@@ -1,0 +1,25 @@
+{
+  "id": "academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer",
+  "title": "Build a Drive-app",
+  "description": "Drive-apps enhance how contributors and organizations interact with document models.",
+  "source": "@site/docs/academy/02-MasteryTrack/03-BuildingUserExperiences/03-BuildingADriveExplorer.md",
+  "sourceDirName": "academy/02-MasteryTrack/03-BuildingUserExperiences",
+  "slug": "/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer",
+  "permalink": "/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/powerhouse-inc/powerhouse-docs/tree/dev/docs/academy/02-MasteryTrack/03-BuildingUserExperiences/03-BuildingADriveExplorer.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {},
+  "sidebar": "academySidebar",
+  "previous": {
+    "title": "Build document editors",
+    "permalink": "/academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors"
+  },
+  "next": {
+    "title": "Document Tools",
+    "permalink": "/category/document-tools"
+  }
+}
