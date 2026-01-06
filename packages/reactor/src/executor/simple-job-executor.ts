@@ -177,7 +177,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     startTime: number,
     indexTxn: IOperationIndexTxn,
     skipValues?: number[],
-    sourceOperations?: Operation[],
+    sourceOperations?: (Operation | undefined)[],
   ): Promise<ProcessActionsResult> {
     const generatedOperations: Operation[] = [];
     const operationsWithContext: OperationWithContext[] = [];
@@ -1145,14 +1145,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
     }
 
-    const scopeOpsBeforeReducer = document.operations[job.scope] ?? [];
-    const latestIndexBefore = scopeOpsBeforeReducer.length > 0
-      ? Math.max(...scopeOpsBeforeReducer.map((op) => op.index))
-      : -1;
-    console.log(
-      `>>> [DEBUG executeRegularAction BEFORE reducer] doc=${job.documentId}, scope=${job.scope}, opsCount=${scopeOpsBeforeReducer.length}, latestIndex=${latestIndexBefore}, revision=${JSON.stringify(document.header.revision)}`,
-    );
-
     let updatedDocument: PHDocument;
     try {
       const reducerOptions = sourceOperation
@@ -1185,10 +1177,6 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     const newOperation = operations[operations.length - 1];
     newOperation.skip = skip;
-
-    console.log(
-      `>>> [DEBUG executeRegularAction AFTER reducer] doc=${job.documentId}, scope=${scope}, newOpIndex=${newOperation.index}, opsCountAfter=${operations.length}, action=${action.type}`,
-    );
 
     if (this.config.legacyStorageEnabled) {
       try {
@@ -1393,17 +1381,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       (op) => !incomingOpIds.has(op.id),
     );
 
-    const supersededCount = conflictingOps.length - nonSupersededOps.length;
-    console.log(
-      `>>> [DEBUG executeLoadJob] doc=${job.documentId}, scope=${scope}, latestRevision=${latestRevision}, minIncomingIndex=${minIncomingIndex}, minIncomingTimestamp=${minIncomingTimestamp}`,
-    );
-    console.log(
-      `>>> [DEBUG executeLoadJob] conflictingOps=${conflictingOps.length}, supersededFiltered=${supersededCount}, nonSuperseded=${nonSupersededOps.length}, existingToReshuffle=${existingOpsToReshuffle.length}`,
-    );
-    console.log(
-      `>>> [DEBUG executeLoadJob] incomingOps=${JSON.stringify(job.operations.map((op) => ({ index: op.index, id: op.id, ts: op.timestampUtcMs })))}`,
-    );
-
     const reshuffledOperations = reshuffleByTimestampAndIndex(
       {
         index: latestRevision,
@@ -1419,11 +1396,10 @@ export class SimpleJobExecutor implements IJobExecutor {
     const actions = reshuffledOperations.map((operation) => operation.action);
     const skipValues = reshuffledOperations.map((operation) => operation.skip);
 
-    console.log(
-      `>>> [DEBUG executeLoadJob] reshuffledOperations=${JSON.stringify(reshuffledOperations.map((op) => ({ index: op.index, id: op.id, ts: op.timestampUtcMs, actionType: op.action?.type })))}`,
-    );
-    console.log(
-      `>>> [DEBUG executeLoadJob] processing ${actions.length} actions, skipValues=${JSON.stringify(skipValues)}`,
+    // Only preserve opId for incoming operations, not for existing operations being reshuffled.
+    // Existing operations get new opIds when rewritten at new indices.
+    const sourceOperations = reshuffledOperations.map((op) =>
+      incomingOpIds.has(op.id) ? op : undefined,
     );
 
     const result = await this.processActions(
@@ -1432,7 +1408,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       startTime,
       indexTxn,
       skipValues,
-      reshuffledOperations,
+      sourceOperations,
     );
 
     if (!result.success) {

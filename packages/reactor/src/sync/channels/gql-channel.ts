@@ -153,15 +153,6 @@ export class GqlChannel implements IChannel {
         const syncOps = envelopesToSyncOperations(envelope, this.remoteName);
         for (const syncOp of syncOps) {
           syncOp.transported();
-
-          console.log(
-            `>>> [PULL][${cursorOrdinal}]: `,
-            syncOp.operations.map(
-              (op) =>
-                `(${op.context.documentId}, ${op.context.branch}, ${op.context.scope}, ${op.operation.index})`,
-            ),
-          );
-
           this.inbox.add(syncOp);
         }
       }

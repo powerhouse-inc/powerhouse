@@ -325,10 +325,6 @@ export class KyselyWriteCache implements IWriteCache {
     targetRevision: number | undefined,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    console.log(
-      `>>> [DEBUG coldMissRebuild START] doc=${documentId}, scope=${scope}, branch=${branch}, targetRevision=${targetRevision}`,
-    );
-
     const effectiveTargetRevision = targetRevision || Number.MAX_SAFE_INTEGER;
 
     const keyframe = await this.findNearestKeyframe(
@@ -407,9 +403,6 @@ export class KyselyWriteCache implements IWriteCache {
         }
       }
 
-      console.log(
-        `>>> [DEBUG coldMissRebuild AFTER doc scope] doc=${documentId}, docScopeOpsApplied=${docScopeOps.items.length}, documentOps=${JSON.stringify(Object.keys(document!.operations).map((s) => `${s}:${document!.operations[s]?.length ?? 0}`))}`,
-      );
     }
 
     const module = this.registry.getModule(documentType);
@@ -432,10 +425,6 @@ export class KyselyWriteCache implements IWriteCache {
           startRevision,
           paging,
           signal,
-        );
-
-        console.log(
-          `>>> [DEBUG coldMissRebuild FETCHED ops] doc=${documentId}, scope=${scope}, startRevision=${startRevision}, fetchedCount=${result.items.length}, indices=${result.items.map((op) => op.index).join(",")}`,
         );
 
         for (const operation of result.items) {
@@ -474,15 +463,6 @@ export class KyselyWriteCache implements IWriteCache {
     );
     document.header.revision = revisions.revision;
     document.header.lastModifiedAtUtcIso = revisions.latestTimestamp;
-
-    const finalOpsState = Object.keys(document.operations).map((s) => {
-      const ops = document.operations[s] ?? [];
-      const maxIdx = ops.length > 0 ? Math.max(...ops.map((op) => op.index)) : -1;
-      return `${s}:count=${ops.length},maxIdx=${maxIdx}`;
-    });
-    console.log(
-      `>>> [DEBUG coldMissRebuild END] doc=${documentId}, scope=${scope}, finalOps=${JSON.stringify(finalOpsState)}, revision=${JSON.stringify(revisions.revision)}`,
-    );
 
     return document;
   }
