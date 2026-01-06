@@ -8,6 +8,7 @@ export type DocumentDispatch<TAction extends Action> = (
     | DocumentAction[]
     | undefined,
   onErrors?: (errors: Error[]) => void,
+  onSuccess?: (result: PHDocument) => void,
 ) => void;
 
 export type PromiseWithState<T> = Promise<T> & PromiseState<T>;

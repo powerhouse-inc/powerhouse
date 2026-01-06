@@ -19,8 +19,11 @@ export function useDispatch<TDocument = PHDocument, TAction = Action>(
   function dispatch(
     actionOrActions: TAction[] | TAction | undefined,
     onErrors?: (errors: Error[]) => void,
+    onSuccess?: (result: PHDocument) => void,
   ) {
-    dispatchActions(actionOrActions, document, onErrors).catch(logger.error);
+    dispatchActions(actionOrActions, document, onErrors, onSuccess).catch(
+      logger.error,
+    );
   }
   return [document, dispatch] as const;
 }
