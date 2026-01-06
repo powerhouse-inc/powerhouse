@@ -5,5 +5,6 @@
  * The todo subgraph is generated during global-setup.
  */
 
-export { };
+export {};
 
+export * as TodoSubgraph from "./todo/index.js";
