@@ -73,10 +73,12 @@ export default defineConfig({
   ],
 
   // Start reactor before running tests
+  // NOTE: You can also start the reactor manually with `ph reactor` in the workspace root
+  //       and the tests will reuse that server (reuseExistingServer: true)
   webServer: {
-    command: "ph reactor",
+    command: "pnpm reactor",
     url: GRAPHQL_URL,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: true, // Always reuse if reactor is already running
     timeout: 120000, // 2 minutes to start
     stdout: "pipe",
     stderr: "pipe",

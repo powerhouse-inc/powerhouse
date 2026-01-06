@@ -67,7 +67,7 @@ async function globalSetup() {
 
     if (fileExists("todo.phdm.zip")) {
       // If we have a .phdm.zip file, generate from that
-      run("npx ph generate todo.phdm.zip", "Generating from todo.phdm.zip");
+      run("pnpm generate todo.phdm.zip", "Generating from todo.phdm.zip");
     } else {
       // Otherwise, check if document-models already has content
       // (might be pre-configured or copied from another project)
@@ -86,7 +86,7 @@ async function globalSetup() {
           connectE2ETodo,
           path.join(PROJECT_ROOT, "todo.phdm.zip"),
         );
-        run("npx ph generate todo.phdm.zip", "Generating from copied zip");
+        run("pnpm generate todo.phdm.zip", "Generating from copied zip");
       } else {
         console.log(
           "   ⚠️  Skipping document model generation - no source found",
@@ -104,14 +104,14 @@ async function globalSetup() {
       process.env.FORCE_GENERATE
     ) {
       run(
-        "npx ph generate --processor todo-indexer --processor-type relationalDb --document-types powerhouse/todo-list",
+        "pnpm generate --processor todo-indexer --processor-type relationalDb --document-types powerhouse/todo-list",
         "Generating processor scaffolding",
       );
 
       // Generate types from migration if migration exists
       if (fileExists("processors/todo-indexer/migrations.ts")) {
         run(
-          "npx ph generate --migration-file processors/todo-indexer/migrations.ts",
+          "pnpm generate --migration-file processors/todo-indexer/migrations.ts",
           "Generating database types",
         );
       }
@@ -126,7 +126,7 @@ async function globalSetup() {
     console.log("\n📋 Step 3: Todo Subgraph");
 
     if (!fileExists("subgraphs/todo/index.ts") || process.env.FORCE_GENERATE) {
-      run("npx ph generate --subgraph todo", "Generating subgraph");
+      run("pnpm generate --subgraph todo", "Generating subgraph");
     } else {
       console.log("   ℹ️  Subgraph already exists, skipping generation");
     }

@@ -9,14 +9,19 @@
     "test:ui": "playwright test --ui",
     "test:debug": "playwright test --debug",
     "test:headed": "playwright test --headed",
-    "report": "playwright show-report"
+    "report": "playwright show-report",
+    "reactor": "ph-cli reactor",
+    "connect": "ph-cli connect",
+    "generate": "ph-cli generate",
+    "build": "tsc"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",
-    "@types/node": "^20.0.0"
-  },
-  "dependencies": {
-    "@powerhousedao/e2e-utils": "workspace:*"
+    "@powerhousedao/e2e-utils": "workspace:*",
+    "@powerhousedao/ph-cli": "workspace:*",
+    "@powerhousedao/codegen": "workspace:*",
+    "@types/node": "^20.0.0",
+    "document-model": "workspace:*",
+    "typescript": "^5.0.0"
   }
 }
-
