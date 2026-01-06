@@ -83,7 +83,7 @@ export class PollingChannel implements IChannel {
 
     for (const op of this.outbox.items) {
       const maxOrdinal = Math.max(
-        ...op.operations.map((o) => o.operation.index),
+        ...op.operations.map((o) => o.context.ordinal),
       );
       if (maxOrdinal <= cursorOrdinal) {
         op.executed();

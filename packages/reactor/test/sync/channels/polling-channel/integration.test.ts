@@ -15,12 +15,12 @@ describe("PollingChannel Integration", () => {
   let cursorStorage: ISyncCursorStorage;
   let remoteStorage: KyselySyncRemoteStorage;
 
-  const createMockOperationContext = (): OperationContext => ({
+  const createMockOperationContext = (ordinal: number = 0): OperationContext => ({
     documentId: "doc-1",
     documentType: "test/document",
     scope: "public",
     branch: "main",
-    ordinal: 1,
+    ordinal,
   });
 
   const createMockSyncOperation = (
@@ -31,7 +31,7 @@ describe("PollingChannel Integration", () => {
     return new SyncOperation(id, remoteName, "doc-1", ["public"], "main", [
       {
         operation: {
-          index: ordinal,
+          index: 0,
           skip: 0,
           id: `op-${ordinal}`,
           timestampUtcMs: new Date().toISOString(),
@@ -44,7 +44,7 @@ describe("PollingChannel Integration", () => {
             input: {},
           },
         },
-        context: createMockOperationContext(),
+        context: createMockOperationContext(ordinal),
       },
     ]);
   };

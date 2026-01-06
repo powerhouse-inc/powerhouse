@@ -558,7 +558,8 @@ export class ReactorSubgraph extends BaseSubgraph {
       },
 
       pushSyncEnvelope: async (_parent, args) => {
-        this.logger.debug("pushSyncEnvelope", args);
+        this.logger.debug("pushSyncEnvelope(@args)", args);
+
         try {
           // Convert readonly arrays to mutable arrays for the resolver
           const mutableArgs = {
@@ -585,6 +586,7 @@ export class ReactorSubgraph extends BaseSubgraph {
                 : null,
             },
           };
+
           return await resolvers.pushSyncEnvelope(
             this.syncManager,
             mutableArgs,
