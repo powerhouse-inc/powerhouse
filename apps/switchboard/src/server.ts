@@ -179,7 +179,7 @@ async function initServer(
         new SyncBuilder().withChannelFactory(new CompositeChannelFactory()),
       )
       .withFeatures({
-        legacyStorageEnabled: true,
+        legacyStorageEnabled: !options.reactorOptions?.storageV2,
       });
 
     // if (dbPath && isPostgresUrl(dbPath)) {
@@ -329,9 +329,26 @@ export const startSwitchboard = async (
 
   options.enableDocumentModelSubgraphs = enableDocumentModelSubgraphs;
 
+  const storageV2 = await featureFlags.getBooleanValue(
+    "REACTOR_STORAGE_V2",
+    options.reactorOptions?.storageV2 ?? false,
+  );
+
+  const enableDualActionCreate = await featureFlags.getBooleanValue(
+    "ENABLE_DUAL_ACTION_CREATE",
+    options.reactorOptions?.enableDualActionCreate ?? true,
+  );
+
   options.reactorOptions = {
-    enableDualActionCreate: true,
+    enableDualActionCreate,
+    storageV2,
   };
+
+  logger.info("Feature flags:", {
+    DOCUMENT_MODEL_SUBGRAPHS_ENABLED: enableDocumentModelSubgraphs,
+    REACTOR_STORAGE_V2: storageV2,
+    ENABLE_DUAL_ACTION_CREATE: enableDualActionCreate,
+  });
 
   if (process.env.PYROSCOPE_SERVER_ADDRESS) {
     try {

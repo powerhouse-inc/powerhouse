@@ -48,7 +48,17 @@ export type StartServerOptions = {
   processorConfig?: Map<string, unknown>;
   disableLocalPackages?: boolean;
   reactorOptions?: {
+    /**
+     * When true, both legacy and new reactors will use CREATE/UPDATE operation
+     * flow for new documents.
+     */
     enableDualActionCreate?: boolean;
+
+    /**
+     * When true, the new Reactor uses only the new Kysely-based storage
+     * instead of the legacy document-drive storage.
+     */
+    storageV2?: boolean;
   };
   enableDocumentModelSubgraphs?: boolean;
 };
