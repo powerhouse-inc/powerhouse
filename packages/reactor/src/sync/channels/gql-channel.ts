@@ -62,7 +62,7 @@ export class GqlChannel implements IChannel {
     this.config = {
       url: config.url,
       authToken: config.authToken,
-      pollIntervalMs: config.pollIntervalMs ?? 5000,
+      pollIntervalMs: config.pollIntervalMs ?? 10000,
       retryBaseDelayMs: config.retryBaseDelayMs ?? 1000,
       retryMaxDelayMs: config.retryMaxDelayMs ?? 300000,
       maxFailures: config.maxFailures ?? 5,
@@ -153,6 +153,15 @@ export class GqlChannel implements IChannel {
         const syncOps = envelopesToSyncOperations(envelope, this.remoteName);
         for (const syncOp of syncOps) {
           syncOp.transported();
+
+          console.log(
+            `>>> [PULL][${cursorOrdinal}]: `,
+            syncOp.operations.map(
+              (op) =>
+                `(${op.context.documentId}, ${op.context.branch}, ${op.context.scope}, ${op.operation.index})`,
+            ),
+          );
+
           this.inbox.add(syncOp);
         }
       }
@@ -324,6 +333,14 @@ export class GqlChannel implements IChannel {
    */
   private async pushSyncOperation(syncOp: SyncOperation): Promise<void> {
     syncOp.started();
+
+    console.log(
+      ">>> [PUSH]: ",
+      syncOp.operations.map(
+        (op) =>
+          `(${op.context.documentId}, ${op.context.branch}, ${op.context.scope}, ${op.operation.index})`,
+      ),
+    );
 
     const envelope: SyncEnvelope = {
       type: "operations",

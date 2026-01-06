@@ -177,6 +177,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     startTime: number,
     indexTxn: IOperationIndexTxn,
     skipValues?: number[],
+    sourceOperations?: Operation[],
   ): Promise<ProcessActionsResult> {
     const generatedOperations: Operation[] = [];
     const operationsWithContext: OperationWithContext[] = [];
@@ -195,6 +196,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     for (let actionIndex = 0; actionIndex < actions.length; actionIndex++) {
       const action = actions[actionIndex];
       const skip = skipValues?.[actionIndex] ?? 0;
+      const sourceOperation = sourceOperations?.[actionIndex];
 
       const isDocumentAction = documentScopeActions.includes(action.type);
       const result = isDocumentAction
@@ -204,6 +206,7 @@ export class SimpleJobExecutor implements IJobExecutor {
             startTime,
             indexTxn,
             skip,
+            sourceOperation,
           )
         : await this.executeRegularAction(
             job,
@@ -211,6 +214,7 @@ export class SimpleJobExecutor implements IJobExecutor {
             startTime,
             indexTxn,
             skip,
+            sourceOperation,
           );
 
       const error = this.accumulateResultOrReturnError(
@@ -245,6 +249,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     startTime: number,
     indexTxn: IOperationIndexTxn,
     skip: number = 0,
+    _sourceOperation?: Operation,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -1063,6 +1068,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
   /**
    * Execute a regular document action by applying it through the document model reducer.
+   * If sourceOperation is provided (for load jobs), its id and timestamp are preserved.
    */
   private async executeRegularAction(
     job: Job,
@@ -1070,6 +1076,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     startTime: number,
     indexTxn: IOperationIndexTxn,
     skip: number = 0,
+    sourceOperation?: Operation,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -1138,9 +1145,25 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
     }
 
+    const scopeOpsBeforeReducer = document.operations[job.scope] ?? [];
+    const latestIndexBefore = scopeOpsBeforeReducer.length > 0
+      ? Math.max(...scopeOpsBeforeReducer.map((op) => op.index))
+      : -1;
+    console.log(
+      `>>> [DEBUG executeRegularAction BEFORE reducer] doc=${job.documentId}, scope=${job.scope}, opsCount=${scopeOpsBeforeReducer.length}, latestIndex=${latestIndexBefore}, revision=${JSON.stringify(document.header.revision)}`,
+    );
+
     let updatedDocument: PHDocument;
     try {
-      updatedDocument = module.reducer(document as PHDocument, action);
+      const reducerOptions = sourceOperation
+        ? { skip, replayOptions: { operation: sourceOperation } }
+        : { skip };
+      updatedDocument = module.reducer(
+        document as PHDocument,
+        action,
+        undefined,
+        reducerOptions,
+      );
     } catch (error) {
       const contextMessage = `Failed to apply action to document:\n  Action type: ${action.type}\n  Document ID: ${job.documentId}\n  Document type: ${document.header.documentType}\n  Scope: ${job.scope}\n  Original error: ${error instanceof Error ? error.message : String(error)}`;
       const enhancedError = new Error(contextMessage);
@@ -1162,6 +1185,10 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     const newOperation = operations[operations.length - 1];
     newOperation.skip = skip;
+
+    console.log(
+      `>>> [DEBUG executeRegularAction AFTER reducer] doc=${job.documentId}, scope=${scope}, newOpIndex=${newOperation.index}, opsCountAfter=${operations.length}, action=${action.type}`,
+    );
 
     if (this.config.legacyStorageEnabled) {
       try {
@@ -1346,8 +1373,35 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     const incomingOpIds = new Set(job.operations.map((op) => op.id));
-    const existingOpsToReshuffle = conflictingOps.filter(
+
+    // Filter out operations that have been superseded by later operations with skip values.
+    // An operation at index N is superseded if there exists an operation at index M > N
+    // where (M - skip_M) <= N, meaning the later operation's logical index covers N.
+    const nonSupersededOps = conflictingOps.filter((op) => {
+      for (const laterOp of conflictingOps) {
+        if (laterOp.index > op.index && laterOp.skip > 0) {
+          const logicalIndex = laterOp.index - laterOp.skip;
+          if (logicalIndex <= op.index) {
+            return false;
+          }
+        }
+      }
+      return true;
+    });
+
+    const existingOpsToReshuffle = nonSupersededOps.filter(
       (op) => !incomingOpIds.has(op.id),
+    );
+
+    const supersededCount = conflictingOps.length - nonSupersededOps.length;
+    console.log(
+      `>>> [DEBUG executeLoadJob] doc=${job.documentId}, scope=${scope}, latestRevision=${latestRevision}, minIncomingIndex=${minIncomingIndex}, minIncomingTimestamp=${minIncomingTimestamp}`,
+    );
+    console.log(
+      `>>> [DEBUG executeLoadJob] conflictingOps=${conflictingOps.length}, supersededFiltered=${supersededCount}, nonSuperseded=${nonSupersededOps.length}, existingToReshuffle=${existingOpsToReshuffle.length}`,
+    );
+    console.log(
+      `>>> [DEBUG executeLoadJob] incomingOps=${JSON.stringify(job.operations.map((op) => ({ index: op.index, id: op.id, ts: op.timestampUtcMs })))}`,
     );
 
     const reshuffledOperations = reshuffleByTimestampAndIndex(
@@ -1365,12 +1419,20 @@ export class SimpleJobExecutor implements IJobExecutor {
     const actions = reshuffledOperations.map((operation) => operation.action);
     const skipValues = reshuffledOperations.map((operation) => operation.skip);
 
+    console.log(
+      `>>> [DEBUG executeLoadJob] reshuffledOperations=${JSON.stringify(reshuffledOperations.map((op) => ({ index: op.index, id: op.id, ts: op.timestampUtcMs, actionType: op.action?.type })))}`,
+    );
+    console.log(
+      `>>> [DEBUG executeLoadJob] processing ${actions.length} actions, skipValues=${JSON.stringify(skipValues)}`,
+    );
+
     const result = await this.processActions(
       job,
       actions,
       startTime,
       indexTxn,
       skipValues,
+      reshuffledOperations,
     );
 
     if (!result.success) {
