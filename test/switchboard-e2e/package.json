@@ -2,23 +2,19 @@
   "name": "@powerhousedao/switchboard-e2e",
   "version": "0.0.1",
   "private": true,
-  "description": "E2E tests for Powerhouse Switchboard features (subgraphs, processors)",
+  "description": "E2E tests for Powerhouse Switchboard features",
   "type": "module",
   "scripts": {
     "test": "playwright test",
     "test:ui": "playwright test --ui",
-    "test:debug": "playwright test --debug",
     "test:headed": "playwright test --headed",
     "report": "playwright show-report",
     "reactor": "ph-cli reactor",
-    "connect": "ph-cli connect",
-    "generate": "ph-cli generate",
-    "build": "tsc"
+    "build": "tsc --noEmit"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",
     "@powerhousedao/ph-cli": "workspace:*",
-    "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
     "@types/node": "^20.0.0",
     "document-model": "workspace:*",
@@ -26,3 +22,4 @@
     "typescript": "^5.0.0"
   }
 }
+

@@ -3,15 +3,14 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "esModuleInterop": true,
     "strict": true,
+    "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "declaration": false,
-    "outDir": "./dist",
-    "rootDir": "."
+    "declaration": true,
+    "outDir": "./dist"
   },
   "include": ["**/*.ts"],
-  "exclude": ["node_modules", "dist", "test-results"]
+  "exclude": ["node_modules", "dist"]
 }
 
