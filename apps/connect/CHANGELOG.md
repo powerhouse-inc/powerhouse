@@ -1,3 +1,20 @@
+## 5.1.0-dev.33 (2026-01-06)
+
+### 🚀 Features
+
+- implemented a temp doc cache in reactor-browser for the new reactor ([afda2c2c0](https://github.com/powerhouse-inc/powerhouse/commit/afda2c2c0))
+
+### 🩹 Fixes
+
+- linting ([f79a19aa0](https://github.com/powerhouse-inc/powerhouse/commit/f79a19aa0))
+- added configuration to debug switchboard, and cleaned up some of the subgraph code ([9ce04c899](https://github.com/powerhouse-inc/powerhouse/commit/9ce04c899))
+- **builder-tools:** added suspense container to lazy loaded components ([2bdbefbb1](https://github.com/powerhouse-inc/powerhouse/commit/2bdbefbb1))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.32 (2026-01-02)
 
 ### 🚀 Features

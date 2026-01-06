@@ -1,3 +1,16 @@
+## 5.1.0-dev.33 (2026-01-06)
+
+### 🩹 Fixes
+
+- added configuration to debug switchboard, and cleaned up some of the subgraph code ([9ce04c899](https://github.com/powerhouse-inc/powerhouse/commit/9ce04c899))
+- **builder-tools:** added suspense container to lazy loaded components ([2bdbefbb1](https://github.com/powerhouse-inc/powerhouse/commit/2bdbefbb1))
+- **builder-tools:** ignore hmr for files that are only imported by tailwind ([b9d672a6a](https://github.com/powerhouse-inc/powerhouse/commit/b9d672a6a))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.32 (2026-01-02)
 
 ### 🚀 Features

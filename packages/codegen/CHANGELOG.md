@@ -1,3 +1,18 @@
+## 5.1.0-dev.33 (2026-01-06)
+
+### 🚀 Features
+
+- **codegen:** add ts morph codegen docs ([#2179](https://github.com/powerhouse-inc/powerhouse/pull/2179))
+
+### 🩹 Fixes
+
+- added configuration to debug switchboard, and cleaned up some of the subgraph code ([9ce04c899](https://github.com/powerhouse-inc/powerhouse/commit/9ce04c899))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Ryan Wolhuter @ryanwolhuter
+
 ## 5.1.0-dev.32 (2026-01-02)
 
 ### 🚀 Features

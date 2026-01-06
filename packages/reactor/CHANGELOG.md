@@ -1,3 +1,25 @@
+## 5.1.0-dev.33 (2026-01-06)
+
+### 🚀 Features
+
+- implemented a temp doc cache in reactor-browser for the new reactor ([afda2c2c0](https://github.com/powerhouse-inc/powerhouse/commit/afda2c2c0))
+- passing logger through to sync-manager ([91af0bbfe](https://github.com/powerhouse-inc/powerhouse/commit/91af0bbfe))
+- adding an explicit createdocumentindrive function ([7ed396977](https://github.com/powerhouse-inc/powerhouse/commit/7ed396977))
+
+### 🩹 Fixes
+
+- fixing an off by one issue and fixing cache invalidation ([fe7ab6ebd](https://github.com/powerhouse-inc/powerhouse/commit/fe7ab6ebd))
+- added configuration to debug switchboard, and cleaned up some of the subgraph code ([9ce04c899](https://github.com/powerhouse-inc/powerhouse/commit/9ce04c899))
+- operation batching must also consider scopes ([591937fa2](https://github.com/powerhouse-inc/powerhouse/commit/591937fa2))
+- correctly batch sync ops in sync envelopes ([f7485b5ab](https://github.com/powerhouse-inc/powerhouse/commit/f7485b5ab))
+- collections should not limit by joined ordinal ([5504007a1](https://github.com/powerhouse-inc/powerhouse/commit/5504007a1))
+- reshuffling in load operations was not pulling all operations ([cc77bc8ee](https://github.com/powerhouse-inc/powerhouse/commit/cc77bc8ee))
+- integration test was waiting wrong ([d993f2759](https://github.com/powerhouse-inc/powerhouse/commit/d993f2759))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.32 (2026-01-02)
 
 ### 🚀 Features
