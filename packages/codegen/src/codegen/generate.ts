@@ -232,7 +232,9 @@ function findZodDependencyInPackageJson(
 
 function ensureZodVersionIsSufficient(zodSemverString: string | undefined) {
   if (!zodSemverString) return;
-  const isSufficient = semver.satisfies("4.1.13", zodSemverString);
+  const cleaned = semver.clean(zodSemverString);
+  if (!cleaned) return;
+  const isSufficient = semver.gte(cleaned, "4.x");
   if (!isSufficient) {
     throw new Error(
       `Your version of zod "${zodSemverString}" is out of date. Please install zod version 4.x to continue.`,
