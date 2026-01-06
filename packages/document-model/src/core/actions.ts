@@ -37,7 +37,16 @@ import type {
   SchemaPruneAction,
   UndoAction,
 } from "./types.js";
-import { generateId } from "./utils.js";
+import { deriveOperationId, generateId } from "./utils.js";
+
+/**
+ * Context required to derive a deterministic operation ID.
+ */
+export type OperationContext = {
+  documentId: string;
+  scope: string;
+  branch: string;
+};
 
 /**
  * Cancels the last `count` operations.
@@ -188,11 +197,20 @@ export const operationFromAction = (
   action: Action,
   index: number,
   skip: number,
+  context: OperationContext,
 ): Operation => {
   return {
     ...action,
     action,
-    id: generateId(),
+    id: deriveOperationId(
+      context.documentId,
+      context.scope,
+      context.branch,
+      action.type,
+      action.id,
+      index,
+      skip,
+    ),
     timestampUtcMs: new Date().toISOString(),
     hash: "",
     error: undefined,
@@ -204,12 +222,24 @@ export const operationFromAction = (
 
 export const operationFromOperation = (
   operation: Operation,
+  index: number,
   skip: number,
+  context: OperationContext,
 ): Operation => {
   return {
     ...operation,
+    id: deriveOperationId(
+      context.documentId,
+      context.scope,
+      context.branch,
+      operation.action.type,
+      operation.action.id,
+      index,
+      skip,
+    ),
     hash: "",
     error: undefined,
+    index,
     skip,
   };
 };

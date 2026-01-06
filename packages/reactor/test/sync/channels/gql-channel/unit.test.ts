@@ -376,7 +376,7 @@ describe("GqlChannel", () => {
         "channel-1",
         "remote-1",
         cursorStorage,
-        createTestConfig(),
+        createTestConfig({ pollIntervalMs: 5000 }),
       );
       await channel.init();
 
@@ -524,6 +524,7 @@ describe("GqlChannel", () => {
         cursorStorage,
         createTestConfig({
           maxFailures: 3,
+          pollIntervalMs: 5000,
         }),
       );
       await channel.init();
@@ -655,7 +656,7 @@ describe("GqlChannel", () => {
         "channel-1",
         "remote-1",
         cursorStorage,
-        createTestConfig(),
+        createTestConfig({ pollIntervalMs: 5000 }),
       );
       await channel.init();
 
@@ -690,7 +691,7 @@ describe("GqlChannel", () => {
         "channel-1",
         "remote-1",
         cursorStorage,
-        createTestConfig(),
+        createTestConfig({ pollIntervalMs: 5000 }),
       );
       await channel.init();
 

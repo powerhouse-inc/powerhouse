@@ -1396,19 +1396,13 @@ export class SimpleJobExecutor implements IJobExecutor {
     const actions = reshuffledOperations.map((operation) => operation.action);
     const skipValues = reshuffledOperations.map((operation) => operation.skip);
 
-    // Only preserve opId for incoming operations, not for existing operations being reshuffled.
-    // Existing operations get new opIds when rewritten at new indices.
-    const sourceOperations = reshuffledOperations.map((op) =>
-      incomingOpIds.has(op.id) ? op : undefined,
-    );
-
     const result = await this.processActions(
       job,
       actions,
       startTime,
       indexTxn,
       skipValues,
-      sourceOperations,
+      reshuffledOperations,
     );
 
     if (!result.success) {

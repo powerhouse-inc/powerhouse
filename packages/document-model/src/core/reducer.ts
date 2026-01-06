@@ -4,6 +4,7 @@ import {
   loadState,
   operationFromAction,
   operationFromOperation,
+  type OperationContext,
 } from "./actions.js";
 import {
   diffOperations,
@@ -78,13 +79,15 @@ export function replayOperations<TState extends PHBaseState = PHBaseState>(
  * @param index The index of the operation to update.
  * @param skip The number of operations to skip before applying the action.
  * @param reuseLastOperationIndex Whether to reuse the last operation index (used when a an UNDO operation is performed after an existing one).
+ * @param context The operation context for deterministic ID generation.
  * @returns The updated document state.
  */
 function updateOperationsForAction<TDocument extends PHDocument>(
   document: TDocument,
   action: Action,
-  reuseLastOperationIndex = false,
-  skip = 0,
+  reuseLastOperationIndex: boolean,
+  skip: number,
+  context: OperationContext,
 ): TDocument {
   // UNDO, REDO and PRUNE are meta operations
   // that alter the operations history themselves
@@ -106,7 +109,7 @@ function updateOperationsForAction<TDocument extends PHDocument>(
     ? lastOperationIndex
     : lastOperationIndex + 1;
 
-  const newOperation = operationFromAction(action, index, skip);
+  const newOperation = operationFromAction(action, index, skip, context);
   operations.push(newOperation);
 
   // adds the action to the operations history with
@@ -120,8 +123,9 @@ function updateOperationsForAction<TDocument extends PHDocument>(
 function updateOperationsForOperation<TDocument extends PHDocument>(
   document: TDocument,
   operation: Operation,
-  reuseLastOperationIndex = false,
-  skip = 0,
+  reuseLastOperationIndex: boolean,
+  skip: number,
+  context: OperationContext,
 ): TDocument {
   const scope = operation.action.scope;
   const scopeOperations = document.operations[scope];
@@ -142,7 +146,12 @@ function updateOperationsForOperation<TDocument extends PHDocument>(
     );
   }
 
-  const newOperation = operationFromOperation(operation, skip);
+  const newOperation = operationFromOperation(
+    operation,
+    operation.index,
+    skip,
+    context,
+  );
   operations.push(newOperation);
 
   // adds the action to the operations history with
@@ -160,13 +169,15 @@ function updateOperationsForOperation<TDocument extends PHDocument>(
  * @param action The action being applied to the document.
  * @param skip The number of operations to skip before applying the action.
  * @param reuseLastOperationIndex Whether to reuse the last operation index (used when a an UNDO operation is performed after an existing one).
+ * @param context The operation context for deterministic ID generation.
  * @returns The updated document state.
  */
 export function updateDocument<TDocument extends PHDocument>(
   document: TDocument,
   action: Action,
-  reuseLastOperationIndex = false,
-  skip = 0,
+  reuseLastOperationIndex: boolean,
+  skip: number,
+  context: OperationContext,
   operation?: Operation,
 ): TDocument {
   let newDocument: TDocument;
@@ -177,6 +188,7 @@ export function updateDocument<TDocument extends PHDocument>(
       operation,
       reuseLastOperationIndex,
       skip,
+      context,
     ) as TDocument;
   } else {
     // action
@@ -185,6 +197,7 @@ export function updateDocument<TDocument extends PHDocument>(
       action,
       reuseLastOperationIndex,
       skip,
+      context,
     ) as TDocument;
   }
 
@@ -388,6 +401,7 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
     reuseOperationResultingState = false,
     operationResultingStateParser,
     pruneOnSkip = true,
+    branch = "main",
   } = options;
 
   let _action: Action = actionFromAction(action);
@@ -427,11 +441,17 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
 
   // updates the document revision number, last modified date
   // and operation history
+  const operationContext: OperationContext = {
+    documentId: document.header.id,
+    scope: _action.scope,
+    branch,
+  };
   newDocument = updateDocument(
     newDocument,
     _action,
     reuseLastOperationIndex,
     skipValue,
+    operationContext,
     options.replayOptions?.operation,
   );
 
