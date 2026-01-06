@@ -1,6 +1,5 @@
-import type { DocumentDriveDocument } from "document-drive";
 import { driveDocumentModelModule, MemoryStorage } from "document-drive";
-import type { DocumentModelModule } from "document-model";
+import type { DocumentModelModule, PHDocument } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DocumentChangeEvent } from "../../src/client/types.js";
 import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";
@@ -162,13 +161,13 @@ describe("ReactorClient Subscription Integration Tests", () => {
 
   describe("Consistency Guarantees", () => {
     it("should have fresh data when callback fires (reactor.get works)", async () => {
-      let documentFromCallback: DocumentDriveDocument | undefined;
+      let documentFromCallback: PHDocument | undefined;
 
       const unsubscribe = module.client.subscribe(
         { type: "powerhouse/document-drive" },
         (event) => {
           if (event.documents.length > 0) {
-            documentFromCallback = event.documents[0] as DocumentDriveDocument;
+            documentFromCallback = event.documents[0];
           }
         },
       );
@@ -187,6 +186,75 @@ describe("ReactorClient Subscription Integration Tests", () => {
       expect(documentFromCallback?.header.documentType).toBe(
         "powerhouse/document-drive",
       );
+
+      unsubscribe();
+    });
+  });
+
+  describe("Document Update Subscriptions", () => {
+    it("should notify subscriber when document is updated (not just created)", async () => {
+      const eventReceived = vi.fn();
+
+      const unsubscribe = module.client.subscribe(
+        { type: "powerhouse/document-drive" },
+        eventReceived,
+      );
+
+      // Create document first
+      const document = driveDocumentModelModule.utils.createDocument();
+      const createJob = await module.reactor.create(document);
+      await waitForJobCompletion(createJob.id);
+
+      const createCallCount = eventReceived.mock.calls.length;
+      expect(createCallCount).toBeGreaterThan(0);
+
+      // Update document (rename it)
+      await module.client.rename(document.header.id, "New Name");
+
+      // Wait a bit for the update notification
+      await vi.waitUntil(
+        () => eventReceived.mock.calls.length > createCallCount,
+        { timeout: 5000 },
+      );
+
+      // Should have been called again for the update
+      expect(eventReceived.mock.calls.length).toBeGreaterThan(createCallCount);
+
+      unsubscribe();
+    });
+
+    it("should include updated document data in the event", async () => {
+      let updatedDocument: PHDocument | undefined;
+
+      const unsubscribe = module.client.subscribe(
+        { type: "powerhouse/document-drive" },
+        (event) => {
+          if (event.documents.length > 0) {
+            updatedDocument = event.documents[0];
+          }
+        },
+      );
+
+      // Create document first
+      const document = driveDocumentModelModule.utils.createDocument();
+      const createJob = await module.reactor.create(document);
+      await waitForJobCompletion(createJob.id);
+
+      // Clear to track update
+      updatedDocument = undefined;
+
+      // Update document (rename it)
+      const newName = "Updated Document Name";
+      await module.client.rename(document.header.id, newName);
+
+      // Wait for the update notification
+      await vi.waitUntil(() => updatedDocument !== undefined, {
+        timeout: 5000,
+      });
+
+      expect(updatedDocument).toBeDefined();
+      const doc = updatedDocument as unknown as PHDocument;
+      expect(doc.header.name).toBe(newName);
 
       unsubscribe();
     });

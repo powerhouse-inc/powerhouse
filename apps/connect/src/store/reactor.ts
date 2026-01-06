@@ -1,18 +1,20 @@
 import { phGlobalConfigFromEnv } from "@powerhousedao/connect/config";
 import { initFeatureFlags } from "@powerhousedao/connect/feature-flags.js";
+import { toast } from "@powerhousedao/connect/services";
 import {
   createBrowserDocumentDriveServer,
   createBrowserReactor,
   createBrowserStorage,
 } from "@powerhousedao/connect/utils";
 import {
+  DocumentCache,
+  ReactorClientDocumentCache,
   truncateAllTables as dropAllTables,
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
   getDrives,
   getReactorDefaultDrivesConfig,
   initConnectCrypto,
-  DocumentCache,
   initLegacyReactor,
   login,
   refreshReactorData,
@@ -41,7 +43,6 @@ import {
   setRenown,
   setSync,
 } from "@powerhousedao/reactor-browser/connect";
-import { toast } from "@powerhousedao/connect/services";
 import { initRenown } from "@renown/sdk";
 import type {
   DocumentDriveDocument,
@@ -196,9 +197,6 @@ export async function createReactor() {
   // initialize the reactor
   await initLegacyReactor(legacyReactor, renown, connectCrypto);
 
-  // initialize the document cache
-  const documentCache = new DocumentCache(legacyReactor);
-
   // create the processor manager
   const processorManager = new ProcessorManager(
     legacyReactor.listeners,
@@ -230,6 +228,12 @@ export async function createReactor() {
   const didFromUrl = getDidFromUrl();
   await login(didFromUrl, legacyReactor, renown, connectCrypto);
 
+  // initialize the document cache based on feature flags
+  const useLegacyRead = features.get("FEATURE_LEGACY_READ_ENABLED") ?? true;
+  const documentCache = useLegacyRead
+    ? new DocumentCache(legacyReactor)
+    : new ReactorClientDocumentCache(reactorClientModule.client);
+
   // dispatch the events to set the values in the window object
   setDefaultPHGlobalConfig(phGlobalConfigFromEnv);
   setLegacyReactor(legacyReactor);
@@ -250,8 +254,6 @@ export async function createReactor() {
   setFeatures(features);
 
   // subscribe to reactor events based on feature flags
-  const useLegacyRead = features.get("FEATURE_LEGACY_READ_ENABLED") ?? true;
-
   if (useLegacyRead) {
     // Subscribe to legacy reactor events
     legacyReactor.on("defaultRemoteDrive", (...args) => {

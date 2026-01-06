@@ -39,7 +39,6 @@ import {
   buildSubgraphSchemaModule,
   createSchema,
 } from "../utils/create-schema.js";
-import { datadogTracingPlugin } from "./datadog-plugin.js";
 import { DocumentModelSubgraphLegacy } from "./document-model-subgraph.js";
 import { DriveSubgraph } from "./drive-subgraph.js";
 import { useServer } from "./websocket.js";
@@ -249,8 +248,9 @@ export class GraphQLManager {
       } catch (error) {
         this.logger.error(
           `Failed to setup document model subgraph for ${documentModel.documentModel.global.id}`,
-          error,
+          error instanceof Error ? error.message : error,
         );
+        this.logger.debug(error);
       }
     }
 
@@ -396,7 +396,6 @@ export class GraphQLManager {
       plugins: [
         ApolloServerPluginInlineTraceDisabled(),
         ApolloServerPluginLandingPageLocalDefault(),
-        datadogTracingPlugin(),
       ],
     });
   }
@@ -527,7 +526,6 @@ export class GraphQLManager {
           }),
           ApolloServerPluginInlineTraceDisabled(),
           ApolloServerPluginLandingPageLocalDefault(),
-          datadogTracingPlugin(),
         ],
       });
 

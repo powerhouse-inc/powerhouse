@@ -1,16 +1,17 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { PHDocument } from "document-model";
-import { ReactorSubscriptionManager } from "../../src/subs/react-subscription-manager.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   RelationshipChangeType,
   type PagedResults,
   type SearchFilter,
 } from "../../src/shared/types.js";
+import { DefaultSubscriptionErrorHandler } from "../../src/subs/default-error-handler.js";
+import { ReactorSubscriptionManager } from "../../src/subs/react-subscription-manager.js";
+import { SubscriptionNotificationReadModel } from "../../src/subs/subscription-notification-read-model.js";
 import type {
   ISubscriptionErrorHandler,
   SubscriptionErrorContext,
 } from "../../src/subs/types.js";
-import { DefaultSubscriptionErrorHandler } from "../../src/subs/default-error-handler.js";
 
 describe("ReactorSubscriptionManager", () => {
   let manager: ReactorSubscriptionManager;
@@ -1004,5 +1005,271 @@ describe("ReactorSubscriptionManager", () => {
         expect(context2.subscriptionId).toContain("created-");
       });
     });
+  });
+});
+
+describe("SubscriptionNotificationReadModel", () => {
+  it("should call notifyDocumentsUpdated for update operations", async () => {
+    const mockSubscriptionManager = {
+      notifyDocumentsUpdated: vi.fn(),
+      notifyDocumentsCreated: vi.fn(),
+      notifyDocumentsDeleted: vi.fn(),
+      notifyRelationshipChanged: vi.fn(),
+    } as unknown as ReactorSubscriptionManager;
+
+    const mockDocumentView = {
+      get: vi.fn().mockResolvedValue({
+        header: { id: "doc1", documentType: "MyDocument" },
+        state: { updated: true },
+      }),
+    };
+
+    const readModel = new SubscriptionNotificationReadModel(
+      mockSubscriptionManager,
+      mockDocumentView as never,
+    );
+
+    const operations = [
+      {
+        operation: {
+          index: 1,
+          skip: 0,
+          hash: "hash1",
+          timestampUtcMs: "2024-01-01T00:00:00.000Z",
+          action: {
+            id: "action1",
+            type: "SET_NAME",
+            scope: "global",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
+            input: { name: "updated" },
+          },
+          id: "op1",
+          resultingState: JSON.stringify({ state: "updated" }),
+        },
+        context: {
+          documentId: "doc1",
+          documentType: "MyDocument",
+          scope: "global",
+          branch: "main",
+          ordinal: 2,
+        },
+      },
+    ];
+
+    await readModel.indexOperations(operations);
+
+    expect(mockSubscriptionManager.notifyDocumentsUpdated).toHaveBeenCalled();
+  });
+
+  it("should not call notifyDocumentsUpdated for CREATE_DOCUMENT operations", async () => {
+    const mockSubscriptionManager = {
+      notifyDocumentsUpdated: vi.fn(),
+      notifyDocumentsCreated: vi.fn(),
+      notifyDocumentsDeleted: vi.fn(),
+      notifyRelationshipChanged: vi.fn(),
+    } as unknown as ReactorSubscriptionManager;
+
+    const mockDocumentView = {
+      get: vi.fn().mockResolvedValue({
+        header: { id: "doc1", documentType: "MyDocument" },
+        state: { initial: true },
+      }),
+    };
+
+    const readModel = new SubscriptionNotificationReadModel(
+      mockSubscriptionManager,
+      mockDocumentView as never,
+    );
+
+    const operations = [
+      {
+        operation: {
+          index: 0,
+          skip: 0,
+          hash: "hash1",
+          timestampUtcMs: "2024-01-01T00:00:00.000Z",
+          action: {
+            id: "action1",
+            type: "CREATE_DOCUMENT",
+            scope: "global",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
+            input: {},
+          },
+          id: "op1",
+          resultingState: JSON.stringify({ state: "initial" }),
+        },
+        context: {
+          documentId: "doc1",
+          documentType: "MyDocument",
+          scope: "global",
+          branch: "main",
+          ordinal: 1,
+        },
+      },
+    ];
+
+    await readModel.indexOperations(operations);
+
+    expect(mockSubscriptionManager.notifyDocumentsCreated).toHaveBeenCalled();
+    expect(
+      mockSubscriptionManager.notifyDocumentsUpdated,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("should not call notifyDocumentsUpdated for documents created in the same batch", async () => {
+    const mockSubscriptionManager = {
+      notifyDocumentsUpdated: vi.fn(),
+      notifyDocumentsCreated: vi.fn(),
+      notifyDocumentsDeleted: vi.fn(),
+      notifyRelationshipChanged: vi.fn(),
+    } as unknown as ReactorSubscriptionManager;
+
+    const mockDocumentView = {
+      get: vi.fn().mockResolvedValue({
+        header: { id: "doc1", documentType: "MyDocument" },
+        state: { updated: true },
+      }),
+    };
+
+    const readModel = new SubscriptionNotificationReadModel(
+      mockSubscriptionManager,
+      mockDocumentView as never,
+    );
+
+    const operations = [
+      {
+        operation: {
+          index: 0,
+          skip: 0,
+          hash: "hash1",
+          timestampUtcMs: "2024-01-01T00:00:00.000Z",
+          action: {
+            id: "action1",
+            type: "CREATE_DOCUMENT",
+            scope: "global",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
+            input: {},
+          },
+          id: "op1",
+          resultingState: JSON.stringify({ state: "initial" }),
+        },
+        context: {
+          documentId: "doc1",
+          documentType: "MyDocument",
+          scope: "global",
+          branch: "main",
+          ordinal: 1,
+        },
+      },
+      {
+        operation: {
+          index: 1,
+          skip: 0,
+          hash: "hash2",
+          timestampUtcMs: "2024-01-01T00:00:01.000Z",
+          action: {
+            id: "action2",
+            type: "SET_NAME",
+            scope: "global",
+            timestampUtcMs: "2024-01-01T00:00:01.000Z",
+            input: { name: "updated" },
+          },
+          id: "op2",
+          resultingState: JSON.stringify({ state: "updated" }),
+        },
+        context: {
+          documentId: "doc1",
+          documentType: "MyDocument",
+          scope: "global",
+          branch: "main",
+          ordinal: 2,
+        },
+      },
+    ];
+
+    await readModel.indexOperations(operations);
+
+    expect(mockSubscriptionManager.notifyDocumentsCreated).toHaveBeenCalled();
+    expect(
+      mockSubscriptionManager.notifyDocumentsUpdated,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("should deduplicate multiple updates to the same document", async () => {
+    const mockSubscriptionManager = {
+      notifyDocumentsUpdated: vi.fn(),
+      notifyDocumentsCreated: vi.fn(),
+      notifyDocumentsDeleted: vi.fn(),
+      notifyRelationshipChanged: vi.fn(),
+    } as unknown as ReactorSubscriptionManager;
+
+    const mockDocumentView = {
+      get: vi.fn().mockResolvedValue({
+        header: { id: "doc1", documentType: "MyDocument" },
+        state: { state2: true },
+      }),
+    };
+
+    const readModel = new SubscriptionNotificationReadModel(
+      mockSubscriptionManager,
+      mockDocumentView as never,
+    );
+
+    const operations = [
+      {
+        operation: {
+          index: 1,
+          skip: 0,
+          hash: "hash1",
+          timestampUtcMs: "2024-01-01T00:00:00.000Z",
+          action: {
+            id: "action1",
+            type: "SET_NAME",
+            scope: "global",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
+            input: { name: "name1" },
+          },
+          id: "op1",
+          resultingState: JSON.stringify({ state: "state1" }),
+        },
+        context: {
+          documentId: "doc1",
+          documentType: "MyDocument",
+          scope: "global",
+          branch: "main",
+          ordinal: 2,
+        },
+      },
+      {
+        operation: {
+          index: 2,
+          skip: 0,
+          hash: "hash2",
+          timestampUtcMs: "2024-01-01T00:00:01.000Z",
+          action: {
+            id: "action2",
+            type: "SET_NAME",
+            scope: "global",
+            timestampUtcMs: "2024-01-01T00:00:01.000Z",
+            input: { name: "name2" },
+          },
+          id: "op2",
+          resultingState: JSON.stringify({ state: "state2" }),
+        },
+        context: {
+          documentId: "doc1",
+          documentType: "MyDocument",
+          scope: "global",
+          branch: "main",
+          ordinal: 3,
+        },
+      },
+    ];
+
+    await readModel.indexOperations(operations);
+
+    expect(
+      mockSubscriptionManager.notifyDocumentsUpdated,
+    ).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,6 +1,6 @@
 import { usePHModal } from "@powerhousedao/reactor-browser";
 import { lazy, Suspense } from "react";
-import { ModalErrorBoundary } from "./modals-error-boundary.js";
+import { ErrorBoundary } from "../error-boundary.js";
 
 const AddDriveModal = lazy(() =>
   import("./modals/AddDriveModal.js").then((m) => ({
@@ -92,10 +92,10 @@ export function ModalsContainer() {
   const ModalComponent = modalComponents[phModal.type];
 
   return ModalComponent ? (
-    <ModalErrorBoundary>
+    <ErrorBoundary variant="silent" loggerContext={["Connect", "Modals"]}>
       <Suspense fallback={null}>
         <ModalComponent />
       </Suspense>
-    </ModalErrorBoundary>
+    </ErrorBoundary>
   ) : null;
 }

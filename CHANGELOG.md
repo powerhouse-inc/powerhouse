@@ -1,3 +1,75 @@
+## 5.1.0-dev.33 (2026-01-06)
+
+### 🚀 Features
+
+- adding an explicit createdocumentindrive function ([7ed396977](https://github.com/powerhouse-inc/powerhouse/commit/7ed396977))
+- passing logger through to sync-manager ([91af0bbfe](https://github.com/powerhouse-inc/powerhouse/commit/91af0bbfe))
+- implemented a temp doc cache in reactor-browser for the new reactor ([afda2c2c0](https://github.com/powerhouse-inc/powerhouse/commit/afda2c2c0))
+- **codegen:** add ts morph codegen docs ([#2179](https://github.com/powerhouse-inc/powerhouse/pull/2179))
+
+### 🩹 Fixes
+
+- integration test was waiting wrong ([d993f2759](https://github.com/powerhouse-inc/powerhouse/commit/d993f2759))
+- reshuffling in load operations was not pulling all operations ([cc77bc8ee](https://github.com/powerhouse-inc/powerhouse/commit/cc77bc8ee))
+- collections should not limit by joined ordinal ([5504007a1](https://github.com/powerhouse-inc/powerhouse/commit/5504007a1))
+- correctly batch sync ops in sync envelopes ([f7485b5ab](https://github.com/powerhouse-inc/powerhouse/commit/f7485b5ab))
+- operation batching must also consider scopes ([591937fa2](https://github.com/powerhouse-inc/powerhouse/commit/591937fa2))
+- added configuration to debug switchboard, and cleaned up some of the subgraph code ([9ce04c899](https://github.com/powerhouse-inc/powerhouse/commit/9ce04c899))
+- fixing an off by one issue and fixing cache invalidation ([fe7ab6ebd](https://github.com/powerhouse-inc/powerhouse/commit/fe7ab6ebd))
+- linting ([f79a19aa0](https://github.com/powerhouse-inc/powerhouse/commit/f79a19aa0))
+- **builder-tools:** ignore hmr for files that are only imported by tailwind ([b9d672a6a](https://github.com/powerhouse-inc/powerhouse/commit/b9d672a6a))
+- **builder-tools:** added suspense container to lazy loaded components ([2bdbefbb1](https://github.com/powerhouse-inc/powerhouse/commit/2bdbefbb1))
+- **vetra:** do not generate document model subgrapgh ([d705e0c5f](https://github.com/powerhouse-inc/powerhouse/commit/d705e0c5f))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Ryan Wolhuter @ryanwolhuter
+
+## 5.1.0-dev.32 (2026-01-02)
+
+### 🚀 Features
+
+- **tracing:** migrate from Datadog to OpenTelemetry with Tempo service graphs ([6b4eb9c82](https://github.com/powerhouse-inc/powerhouse/commit/6b4eb9c82))
+
+### 🩹 Fixes
+
+- **tracing:** add IncomingMessage import and improve type cast ([83c85ff2c](https://github.com/powerhouse-inc/powerhouse/commit/83c85ff2c))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.1.0-dev.31 (2026-01-02)
+
+### 🚀 Features
+
+- **switchboard:** added tracing ([c978736b7](https://github.com/powerhouse-inc/powerhouse/commit/c978736b7))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.1.0-dev.30 (2026-01-01)
+
+### 🚀 Features
+
+- **builder-tools:** integrate toast notifications for invalid operation names ([c86084d49](https://github.com/powerhouse-inc/powerhouse/commit/c86084d49))
+- **connect:** register toast function ([55d0d9b83](https://github.com/powerhouse-inc/powerhouse/commit/55d0d9b83))
+- **document-model:** validate operation names ([5b09b1951](https://github.com/powerhouse-inc/powerhouse/commit/5b09b1951))
+- **reactor-browser:** add toast event handling functionality ([e37c6fd88](https://github.com/powerhouse-inc/powerhouse/commit/e37c6fd88))
+
+### 🩹 Fixes
+
+- **connect:** created ErrorBoundary component and reload page when outdated chunk is imported ([147570dc4](https://github.com/powerhouse-inc/powerhouse/commit/147570dc4))
+- **document-drive:** do not export redis cache from index ([38b647cf9](https://github.com/powerhouse-inc/powerhouse/commit/38b647cf9))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+
 ## 5.1.0-dev.29 (2025-12-30)
 
 ### 🩹 Fixes

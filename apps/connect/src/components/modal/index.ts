@@ -1,5 +1,4 @@
 export * from "./modals-container.js";
-export * from "./modals-error-boundary.js";
 export * from "./modals/AddDriveModal.js";
 export * from "./modals/ClearStorageModal.js";
 export * from "./modals/CookiesPolicyModal.js";

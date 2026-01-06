@@ -1,8 +1,7 @@
 import { pascalCase } from "change-case";
+import path from "node:path";
 import type { Project } from "ts-morph";
 import { SyntaxKind, VariableDeclarationKind } from "ts-morph";
-import { buildModulesOutputFilePath } from "../name-builders/common-files.js";
-import { getVariableDeclarationByTypeName } from "../syntax-getters.js";
 import { makeLegacyIndexFile } from "./index-files.js";
 
 type MakeModuleFileArgs = {
@@ -48,30 +47,28 @@ export function makeModulesFile({
     .filter((file) => file.getFilePath().includes(`module.ts`));
 
   // get the variable declaration for the module object exported by each module.ts file by the given type name
-  const moduleDeclarations = moduleFiles.map((file) =>
-    getVariableDeclarationByTypeName(file, typeName),
-  );
+  const moduleDeclarations = moduleFiles
+    .map((file) =>
+      file.getVariableDeclaration((declaration) =>
+        declaration.getType().getText().includes(typeName),
+      ),
+    )
+    .filter((v) => v !== undefined);
 
-  const modules = moduleDeclarations
-    .filter((module) => module !== undefined)
-    .map((module) => {
-      const sourceFile = module.getSourceFile();
-      const moduleSpecifier =
-        modulesDir.getRelativePathAsModuleSpecifierTo(
-          sourceFile.getFilePath(),
-        ) + ".js";
-      const versionDir = getVersionDirFromModuleSpecifier(moduleSpecifier);
-      const unversionedName = module.getName();
-      const versionedName = versionDir
-        ? `${unversionedName}${pascalCase(versionDir)}`
-        : undefined;
-      return { versionedName, unversionedName, moduleSpecifier };
-    });
+  const modules = moduleDeclarations.map((module) => {
+    const sourceFile = module.getSourceFile();
+    const moduleSpecifier =
+      modulesDir.getRelativePathAsModuleSpecifierTo(sourceFile.getFilePath()) +
+      ".js";
+    const versionDir = getVersionDirFromModuleSpecifier(moduleSpecifier);
+    const unversionedName = module.getName();
+    const versionedName = versionDir
+      ? `${unversionedName}${pascalCase(versionDir)}`
+      : undefined;
+    return { versionedName, unversionedName, moduleSpecifier };
+  });
 
-  const moduleExportsFilePath = buildModulesOutputFilePath(
-    modulesDirPath,
-    outputFileName,
-  );
+  const moduleExportsFilePath = path.join(modulesDirPath, outputFileName);
 
   // get the source file for the modules file if it exists
   let moduleExportsSourceFile = project.getSourceFile(moduleExportsFilePath);
@@ -151,6 +148,45 @@ export function makeModulesFile({
   }
 
   project.saveSync();
+}
+
+/** Generates the `document-models.ts` file which exports the document models defined in each document model dir's `module.ts` file */
+export function makeDocumentModelModulesFile({
+  project,
+  projectDir,
+}: {
+  project: Project;
+  projectDir: string;
+}) {
+  const documentModelsDirPath = path.join(projectDir, "document-models");
+  const documentModelsSourceFilesPath = path.join(
+    documentModelsDirPath,
+    "/**/*",
+  );
+  makeModulesFile({
+    project,
+    modulesDirPath: documentModelsDirPath,
+    modulesSourceFilesPath: documentModelsSourceFilesPath,
+    outputFileName: "document-models.ts",
+    typeName: "DocumentModelModule",
+    variableName: "documentModels",
+    variableType: "DocumentModelModule<any>[]",
+  });
+}
+
+/** Generates the `editors.ts` file which exports the editors defined in each editor dir's `module.ts` file */
+export function makeEditorsModulesFile(project: Project, projectDir: string) {
+  const modulesDirPath = path.join(projectDir, "editors");
+  const modulesSourceFilesPath = path.join(modulesDirPath, "/**/*");
+  makeModulesFile({
+    project,
+    modulesDirPath,
+    modulesSourceFilesPath,
+    outputFileName: "editors.ts",
+    typeName: "EditorModule",
+    variableName: "editors",
+    variableType: "EditorModule[]",
+  });
 }
 
 function getVersionDirFromModuleSpecifier(moduleSpecifier: string) {

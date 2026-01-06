@@ -1,3 +1,47 @@
+## 5.1.0-dev.33 (2026-01-06)
+
+### 🚀 Features
+
+- passing logger through to sync-manager ([91af0bbfe](https://github.com/powerhouse-inc/powerhouse/commit/91af0bbfe))
+- adding an explicit createdocumentindrive function ([7ed396977](https://github.com/powerhouse-inc/powerhouse/commit/7ed396977))
+
+### 🩹 Fixes
+
+- linting ([f79a19aa0](https://github.com/powerhouse-inc/powerhouse/commit/f79a19aa0))
+- added configuration to debug switchboard, and cleaned up some of the subgraph code ([9ce04c899](https://github.com/powerhouse-inc/powerhouse/commit/9ce04c899))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 5.1.0-dev.32 (2026-01-02)
+
+### 🚀 Features
+
+- **tracing:** migrate from Datadog to OpenTelemetry with Tempo service graphs ([6b4eb9c82](https://github.com/powerhouse-inc/powerhouse/commit/6b4eb9c82))
+
+### 🩹 Fixes
+
+- **tracing:** add IncomingMessage import and improve type cast ([83c85ff2c](https://github.com/powerhouse-inc/powerhouse/commit/83c85ff2c))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.1.0-dev.31 (2026-01-02)
+
+### 🚀 Features
+
+- **switchboard:** added tracing ([c978736b7](https://github.com/powerhouse-inc/powerhouse/commit/c978736b7))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.1.0-dev.30 (2026-01-01)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
 ## 5.1.0-dev.29 (2025-12-30)
 
 ### 🩹 Fixes

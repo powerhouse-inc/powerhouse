@@ -97,7 +97,7 @@ describe("ReactorSubgraph Permission Checks", () => {
       }),
       deleteDocument: vi.fn().mockResolvedValue(true),
       deleteDocuments: vi.fn().mockResolvedValue(true),
-      getDocumentModels: vi
+      getDocumentModelModules: vi
         .fn()
         .mockResolvedValue({ results: [], options: {} }),
       getJobStatus: vi.fn(),

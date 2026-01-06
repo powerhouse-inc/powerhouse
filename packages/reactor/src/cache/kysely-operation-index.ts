@@ -221,7 +221,6 @@ export class KyselyOperationIndex implements IOperationIndex {
       .selectAll("oi")
       .select(["dc.documentId", "dc.collectionId"])
       .where("dc.collectionId", "=", collectionId)
-      .whereRef("oi.ordinal", ">=", "dc.joinedOrdinal")
       .where(
         sql<boolean>`dc."leftOrdinal" IS NULL OR oi.ordinal < dc."leftOrdinal"`,
       )

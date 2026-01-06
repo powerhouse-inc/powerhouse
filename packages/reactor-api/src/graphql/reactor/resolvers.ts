@@ -58,7 +58,7 @@ export async function documentModels(
 
   let result: PagedResults<DocumentModelModule>;
   try {
-    result = await reactorClient.getDocumentModels(namespace, paging);
+    result = await reactorClient.getDocumentModelModules(namespace, paging);
   } catch (error) {
     throw new GraphQLError(
       `Failed to fetch document models: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -678,12 +678,11 @@ export async function touchChannel(
   },
 ): Promise<boolean> {
   try {
-    const existing = syncManager.getById(args.input.id);
-    if (existing) {
-      return true;
-    }
+    syncManager.getById(args.input.id);
+
+    return true;
   } catch {
-    // Ignore errors when checking for existing sync connection
+    // getById will throw if the remote does not exist
   }
 
   const filter: RemoteFilter = {

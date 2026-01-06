@@ -16,8 +16,11 @@ import {
 import type { PHDocument } from "document-model";
 import { redo, undo } from "document-model/core";
 import { Suspense, useEffect, useState } from "react";
-import type { FallbackProps } from "react-error-boundary";
-import { ErrorBoundary } from "react-error-boundary";
+import {
+  CenteredErrorMessage,
+  ErrorBoundary,
+  type FallbackProps,
+} from "./error-boundary.js";
 
 type Props<TDocument extends PHDocument = PHDocument> = {
   document: TDocument;
@@ -32,14 +35,6 @@ function EditorError({ message }: { message: React.ReactNode }) {
       <h3 className="text-lg font-semibold">{message}</h3>
     </div>
   );
-}
-
-function FallbackEditorError(props: FallbackProps) {
-  const message =
-    props.error instanceof Error
-      ? props.error.message
-      : (props.error as string);
-  return <EditorError message={message} />;
 }
 
 export const DocumentEditor: React.FC<Props> = (props) => {
@@ -195,9 +190,10 @@ export const DocumentEditor: React.FC<Props> = (props) => {
           name="EditorLoader"
         >
           <ErrorBoundary
-            fallbackRender={FallbackEditorError}
-            key={documentId}
+            fallbackRender={CenteredErrorMessage}
+            resetKeys={[documentId]}
             onError={handleEditorError}
+            loggerContext={["Connect", "DocumentEditor"]}
           >
             {!editorError?.error && (
               <EditorComponent

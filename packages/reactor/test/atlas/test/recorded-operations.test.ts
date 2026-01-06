@@ -39,8 +39,6 @@ import type {
   Database as StorageDatabase,
 } from "../../../src/storage/kysely/types.js";
 import { runMigrations } from "../../../src/storage/migrations/migrator.js";
-import { DefaultSubscriptionErrorHandler } from "../../../src/subs/default-error-handler.js";
-import { ReactorSubscriptionManager } from "../../../src/subs/react-subscription-manager.js";
 import {
   type RecordedOperation,
   getDocumentModels,
@@ -48,6 +46,7 @@ import {
   processReactorMutation,
   submitAllMutationsWithQueueHints,
 } from "./recorded-operations-helpers.js";
+import { createMockLogger } from "../../factories.js";
 
 type Database = StorageDatabase &
   DocumentViewDatabase &
@@ -172,13 +171,10 @@ async function createReactorSetup(
   await documentIndexer.init();
   readModels.push(documentIndexer);
 
-  const subscriptionManager = new ReactorSubscriptionManager(
-    new DefaultSubscriptionErrorHandler(),
-  );
   const readModelCoordinator = new ReadModelCoordinator(
     eventBus,
     readModels,
-    subscriptionManager,
+    [],
   );
 
   const legacyStorageConsistencyTracker = new ConsistencyTracker();
@@ -189,6 +185,7 @@ async function createReactorSetup(
   );
 
   const reactor = new Reactor(
+    createMockLogger(),
     driveServer,
     consistencyAwareStorage,
     queue,

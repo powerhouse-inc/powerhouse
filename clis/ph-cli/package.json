@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/ph-cli",
-  "version": "5.1.0-dev.29",
+  "version": "5.1.0-dev.33",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -51,6 +51,7 @@
     "commander": "^12.1.0",
     "read-pkg": "^9.0.1",
     "ts-morph": "^26.0.0",
-    "write-pkg": "^7.0.0"
+    "write-pkg": "^7.0.0",
+    "@tmpl/core": "npm:@jsr/tmpl__core@^0.6.3"
   }
 }

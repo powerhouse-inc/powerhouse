@@ -912,6 +912,12 @@ export class SimpleJobExecutor implements IJobExecutor {
       indexTxn.addToCollection(collectionId, input.targetId);
     }
 
+    this.documentMetaCache.putDocumentMeta(input.sourceId, job.branch, {
+      state: sourceDoc.state.document,
+      documentType: sourceDoc.header.documentType,
+      documentScopeRevision: operation.index + 1,
+    });
+
     return this.buildSuccessResult(
       job,
       operation,
@@ -1037,6 +1043,12 @@ export class SimpleJobExecutor implements IJobExecutor {
       const collectionId = driveCollectionId(job.branch, input.sourceId);
       indexTxn.removeFromCollection(collectionId, input.targetId);
     }
+
+    this.documentMetaCache.putDocumentMeta(input.sourceId, job.branch, {
+      state: sourceDoc.state.document,
+      documentType: sourceDoc.header.documentType,
+      documentScopeRevision: operation.index + 1,
+    });
 
     return this.buildSuccessResult(
       job,
@@ -1166,7 +1178,10 @@ export class SimpleJobExecutor implements IJobExecutor {
       }
     }
 
-    const resultingState = JSON.stringify(updatedDocument.state);
+    const resultingState = JSON.stringify({
+      ...updatedDocument.state,
+      header: updatedDocument.header,
+    });
 
     try {
       await this.operationStore.apply(
@@ -1180,6 +1195,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         },
       );
     } catch (error) {
+      this.writeCache.invalidate(job.documentId, scope, job.branch);
       return this.buildErrorResult(
         job,
         new Error(
@@ -1273,10 +1289,15 @@ export class SimpleJobExecutor implements IJobExecutor {
       latestRevision = 0;
     }
 
-    const minIncomingIndex = job.operations.reduce(
-      (min, operation) => Math.min(min, operation.index),
-      Number.POSITIVE_INFINITY,
-    );
+    let minIncomingIndex = Number.POSITIVE_INFINITY;
+    let minIncomingTimestamp = job.operations[0]?.timestampUtcMs || "";
+    for (const operation of job.operations) {
+      minIncomingIndex = Math.min(minIncomingIndex, operation.index);
+      const ts = operation.timestampUtcMs || "";
+      if (ts < minIncomingTimestamp) {
+        minIncomingTimestamp = ts;
+      }
+    }
 
     const skipCount =
       minIncomingIndex === Number.POSITIVE_INFINITY
@@ -1295,12 +1316,45 @@ export class SimpleJobExecutor implements IJobExecutor {
       };
     }
 
+    let conflictingOps: Operation[] = [];
+    try {
+      const conflictingResult = await this.operationStore.getConflicting(
+        job.documentId,
+        scope,
+        job.branch,
+        minIncomingIndex,
+        minIncomingTimestamp,
+        { limit: MAX_SKIP_THRESHOLD + 1 },
+      );
+
+      if (conflictingResult.hasMore) {
+        return {
+          job,
+          success: false,
+          error: new Error(
+            `Excessive reshuffle detected: more than ${MAX_SKIP_THRESHOLD} conflicting operations found. ` +
+              `This indicates a significant divergence between local and incoming operations.`,
+          ),
+          duration: Date.now() - startTime,
+        };
+      }
+
+      conflictingOps = conflictingResult.items;
+    } catch {
+      conflictingOps = [];
+    }
+
+    const incomingOpIds = new Set(job.operations.map((op) => op.id));
+    const existingOpsToReshuffle = conflictingOps.filter(
+      (op) => !incomingOpIds.has(op.id),
+    );
+
     const reshuffledOperations = reshuffleByTimestampAndIndex(
       {
         index: latestRevision,
         skip: skipCount,
       },
-      [],
+      existingOpsToReshuffle,
       job.operations.map((operation) => ({
         ...operation,
         id: operation.id,
@@ -1364,6 +1418,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
       return null;
     } catch (error) {
+      this.writeCache.invalidate(documentId, scope, branch);
       return {
         job,
         success: false,

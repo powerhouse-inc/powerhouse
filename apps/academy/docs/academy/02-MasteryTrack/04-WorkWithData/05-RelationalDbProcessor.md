@@ -540,8 +540,8 @@ Response:
         "status": true
       }
     ],
-    "ToDoList": {
-      "getDocuments": [
+    "TodoList": {
+      "getDocument": [
         {
           "state": {
             "items": [

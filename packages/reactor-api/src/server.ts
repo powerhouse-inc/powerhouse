@@ -33,6 +33,7 @@ import path from "node:path";
 import type { TlsOptions } from "node:tls";
 import type { Pool } from "pg";
 import { WebSocketServer } from "ws";
+// Import tracing - initializes OpenTelemetry and provides stub functions for backwards compatibility
 import { initTracing, isTracingEnabled, trace } from "./tracing.js";
 import { config, DefaultCoreSubgraphs } from "./config.js";
 import { AuthSubgraph } from "./graphql/auth/subgraph.js";
@@ -317,7 +318,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   documentPermissionService: DocumentPermissionService | undefined;
   packages: PackageManager;
 }> {
-  // Initialize Datadog tracing if DD_ENV is set
+  // Initialize OpenTelemetry tracing
   if (isTracingEnabled()) {
     await initTracing();
   }

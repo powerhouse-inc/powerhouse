@@ -345,7 +345,7 @@ export class KyselyWriteCache implements IWriteCache {
       documentType = keyframe.document.header.documentType;
     } else {
       document = undefined;
-      startRevision = 0;
+      startRevision = -1;
       const createOpResult = await this.operationStore.getSince(
         documentId,
         "document",

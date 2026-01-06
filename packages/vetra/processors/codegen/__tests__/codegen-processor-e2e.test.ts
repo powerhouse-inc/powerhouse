@@ -252,12 +252,10 @@ describe("CodegenProcessor E2E Tests", () => {
   });
 
   describe("Document Model E2E", () => {
-    it("should process valid document-model strand and call all three codegen functions", async () => {
-      const {
-        generateFromDocument,
-        generateSubgraphFromDocumentModel,
-        generateManifest,
-      } = await import("@powerhousedao/codegen");
+    it("should process valid document-model strand and call model and manifest codegen functions", async () => {
+      const { generateFromDocument, generateManifest } = await import(
+        "@powerhousedao/codegen"
+      );
 
       const validState = {
         id: "test-model-id",
@@ -284,13 +282,6 @@ describe("CodegenProcessor E2E Tests", () => {
 
       expect(generateFromDocument).toHaveBeenCalledWith(
         ...generateFromDocumentArgs,
-      );
-
-      expect(generateSubgraphFromDocumentModel).toHaveBeenCalledWith(
-        "Test Model",
-        validState,
-        mockConfig.PH_CONFIG,
-        { verbose: false },
       );
 
       expect(generateManifest).toHaveBeenCalledWith(

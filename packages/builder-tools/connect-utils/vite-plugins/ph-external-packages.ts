@@ -90,6 +90,18 @@ export function phExternalPackagesPlugin(
         return makeImportScriptFromPackages(phPackages, localPackage);
       }
     },
+    handleHotUpdate(ctx) {
+      // Skip HMR for modules that are only imported by style.css
+      return ctx.modules.filter((mod) => {
+        if (mod.importers.size === 1) {
+          const importer = mod.importers.values().next().value;
+          if (importer?.url === "/style.css") {
+            return false;
+          }
+        }
+        return true;
+      });
+    },
   };
 
   return plugin;

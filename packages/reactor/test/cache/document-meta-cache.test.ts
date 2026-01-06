@@ -12,6 +12,7 @@ function createMockOperationStore(): IOperationStore {
     apply: vi.fn(),
     getSince: vi.fn(),
     getSinceId: vi.fn(),
+    getConflicting: vi.fn(),
     getRevisions: vi.fn(),
   };
 }

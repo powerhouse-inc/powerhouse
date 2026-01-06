@@ -10,12 +10,10 @@ import path, { join } from "node:path";
 import { readPackage, type NormalizedPackageJson } from "read-pkg";
 import semver from "semver";
 import { TSMorphCodeGenerator } from "../ts-morph-generator/index.js";
-import { tsMorphGenerateEditor } from "../ts-morph-utils/file-builders/document-editor.js";
-import {
-  makeDocumentModelModulesFile,
-  tsMorphGenerateDocumentModel,
-} from "../ts-morph-utils/file-builders/document-model.js";
+import { tsMorphGenerateDocumentEditor } from "../ts-morph-utils/file-builders/document-editor.js";
+import { tsMorphGenerateDocumentModel } from "../ts-morph-utils/file-builders/document-model.js";
 import { tsMorphGenerateDriveEditor } from "../ts-morph-utils/file-builders/drive-editor.js";
+import { makeDocumentModelModulesFile } from "../ts-morph-utils/file-builders/module-files.js";
 import { makeSubgraphsIndexFile } from "../ts-morph-utils/file-builders/subgraphs.js";
 import { buildTsMorphProject } from "../ts-morph-utils/ts-morph-project.js";
 import { generateDocumentModelZodSchemas, generateSchemas } from "./graphql.js";
@@ -234,7 +232,9 @@ function findZodDependencyInPackageJson(
 
 function ensureZodVersionIsSufficient(zodSemverString: string | undefined) {
   if (!zodSemverString) return;
-  const isSufficient = semver.satisfies("4.1.13", zodSemverString);
+  const cleaned = semver.clean(zodSemverString);
+  if (!cleaned) return;
+  const isSufficient = semver.gte(cleaned, "4.x");
   if (!isSufficient) {
     throw new Error(
       `Your version of zod "${zodSemverString}" is out of date. Please install zod version 4.x to continue.`,
@@ -309,7 +309,7 @@ export async function generateEditor(args: GenerateEditorArgs) {
   const editorId = editorIdArg || paramCase(editorName);
   const editorDir = editorDirName || paramCase(editorName);
 
-  tsMorphGenerateEditor({
+  tsMorphGenerateDocumentEditor({
     packageName,
     projectDir,
     editorDir,

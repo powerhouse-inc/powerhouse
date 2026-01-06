@@ -41,6 +41,8 @@ import type {
 } from "./types.js";
 
 import type { IJobExecutorManager } from "#executor/interfaces.js";
+import { ConsoleLogger } from "#logging/console.js";
+import type { ILogger } from "#logging/types.js";
 import type { IDocumentIndexer } from "#storage/interfaces.js";
 import { PGlite } from "@electric-sql/pglite";
 import { Kysely } from "kysely";
@@ -52,8 +54,10 @@ import { runMigrations } from "../storage/migrations/migrator.js";
 import type { MigrationStrategy } from "../storage/migrations/types.js";
 import { DefaultSubscriptionErrorHandler } from "../subs/default-error-handler.js";
 import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
+import { SubscriptionNotificationReadModel } from "../subs/subscription-notification-read-model.js";
 
 export class ReactorBuilder {
+  private logger?: ILogger;
   private documentModels: DocumentModelModule[] = [];
   private upgradeManifests: UpgradeManifest<readonly number[]>[] = [];
   private storage?: IDocumentStorage & IDocumentOperationStorage;
@@ -69,6 +73,11 @@ export class ReactorBuilder {
   private readModelCoordinator?: IReadModelCoordinator;
   private signatureVerifier?: SignatureVerificationHandler;
   private kyselyInstance?: Kysely<Database>;
+
+  withLogger(logger: ILogger): this {
+    this.logger = logger;
+    return this;
+  }
 
   withDocumentModels(models: DocumentModelModule[]): this {
     this.documentModels = models;
@@ -148,6 +157,10 @@ export class ReactorBuilder {
   }
 
   async buildModule(): Promise<ReactorModule> {
+    if (!this.logger) {
+      this.logger = new ConsoleLogger(["reactor"]);
+    }
+
     const storage = this.storage || new MemoryStorage();
 
     const documentModelRegistry = new DocumentModelRegistry();
@@ -285,15 +298,17 @@ export class ReactorBuilder {
       new DefaultSubscriptionErrorHandler(),
     );
 
+    const subscriptionNotificationReadModel =
+      new SubscriptionNotificationReadModel(subscriptionManager, documentView);
+
     const readModelCoordinator = this.readModelCoordinator
       ? this.readModelCoordinator
-      : new ReadModelCoordinator(
-          eventBus,
-          readModelInstances,
-          subscriptionManager,
-        );
+      : new ReadModelCoordinator(eventBus, readModelInstances, [
+          subscriptionNotificationReadModel,
+        ]);
 
     const reactor = new Reactor(
+      this.logger,
       driveServer,
       consistencyAwareStorage,
       queue,
@@ -309,6 +324,7 @@ export class ReactorBuilder {
     if (this.syncBuilder) {
       syncModule = this.syncBuilder.buildModule(
         reactor,
+        this.logger,
         operationIndex,
         eventBus,
         database as unknown as Kysely<StorageDatabase>,

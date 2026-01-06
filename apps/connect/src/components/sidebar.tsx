@@ -17,8 +17,7 @@ import {
   useSelectedDriveSafe,
 } from "@powerhousedao/reactor-browser";
 import { useUser } from "@powerhousedao/reactor-browser/connect";
-import { logger } from "document-drive";
-import { ErrorBoundary } from "react-error-boundary";
+import { ErrorBoundary } from "./error-boundary.js";
 
 export function Sidebar() {
   const user = useUser();
@@ -76,10 +75,9 @@ export function Sidebar() {
       etherscanUrl={etherscanUrl}
     >
       <ErrorBoundary
-        fallback={
-          <div className="text-center">There was an error loading drives</div>
-        }
-        onError={logger.error}
+        variant="text"
+        fallbackMessage="There was an error loading drives"
+        loggerContext={["Connect", "Sidebar"]}
       >
         {drives?.map((drive, index) => (
           <SidebarItem

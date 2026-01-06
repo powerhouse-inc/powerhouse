@@ -62,14 +62,14 @@ describe("ReactorClient Integration Tests", () => {
   describe("Document Retrieval", () => {
     describe("getDocumentModels", () => {
       it("should retrieve all document models", async () => {
-        const result = await client.getDocumentModels();
+        const result = await client.getDocumentModelModules();
 
         expect(result.results.length).toBeGreaterThan(0);
         expect(result.results[0]).toHaveProperty("documentModel");
       });
 
       it("should filter by namespace", async () => {
-        const result = await client.getDocumentModels("powerhouse");
+        const result = await client.getDocumentModelModules("powerhouse");
 
         expect(result.results.length).toBeGreaterThan(0);
         result.results.forEach((model) => {
@@ -78,7 +78,7 @@ describe("ReactorClient Integration Tests", () => {
       });
 
       it("should support pagination", async () => {
-        const firstPage = await client.getDocumentModels(undefined, {
+        const firstPage = await client.getDocumentModelModules(undefined, {
           cursor: "",
           limit: 1,
         });
@@ -856,6 +856,31 @@ describe("ReactorClient Integration Tests", () => {
       await expect(
         client.create(doc, undefined, controller.signal),
       ).rejects.toThrow();
+    });
+  });
+
+  describe("createDocumentInDrive", () => {
+    it("should create a document in a drive with proper scoping", async () => {
+      const drive = driveDocumentModelModule.utils.createDocument();
+      await client.create(drive);
+
+      const doc = documentModelDocumentModelModule.utils.createDocument();
+      doc.header.name = "My New Document";
+      const createdDoc = await client.createDocumentInDrive(
+        drive.header.id,
+        doc,
+      );
+
+      expect(createdDoc).toBeDefined();
+      expect(createdDoc.header.name).toBe("My New Document");
+      expect(createdDoc.header.documentType).toBe("powerhouse/document-model");
+
+      const driveResult = await client.get(drive.header.id);
+      const driveState = driveResult.document.state as any;
+      const files = driveState.global.nodes || [];
+      const addedFile = files.find((n: any) => n.id === createdDoc.header.id);
+      expect(addedFile).toBeDefined();
+      expect(addedFile.name).toBe("My New Document");
     });
   });
 });

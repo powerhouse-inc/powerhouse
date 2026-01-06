@@ -1,12 +1,12 @@
+import { upgradeTransitionTemplate } from "@powerhousedao/codegen/templates";
+import {
+  formatSourceFileWithPrettier,
+  getObjectLiteral,
+  getOrCreateSourceFile,
+} from "@powerhousedao/codegen/ts-morph";
 import { ts } from "@tmpl/core";
 import path from "path";
 import { VariableDeclarationKind, type Project } from "ts-morph";
-import {
-  formatSourceFileWithPrettier,
-  getOrCreateSourceFile,
-} from "../../file-utils.js";
-import { getObjectLiteral } from "../../syntax-getters.js";
-import { upgradeTransitionTemplate } from "../../templates/document-model/upgrades/upgrade-transition.js";
 
 type MakeUpgradeFileArgs = {
   project: Project;

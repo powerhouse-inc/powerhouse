@@ -1,3 +1,43 @@
+## 5.1.0-dev.33 (2026-01-06)
+
+### 🩹 Fixes
+
+- added configuration to debug switchboard, and cleaned up some of the subgraph code ([9ce04c899](https://github.com/powerhouse-inc/powerhouse/commit/9ce04c899))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 5.1.0-dev.32 (2026-01-02)
+
+### 🚀 Features
+
+- **tracing:** migrate from Datadog to OpenTelemetry with Tempo service graphs ([6b4eb9c82](https://github.com/powerhouse-inc/powerhouse/commit/6b4eb9c82))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.1.0-dev.31 (2026-01-02)
+
+### 🚀 Features
+
+- **switchboard:** added tracing ([c978736b7](https://github.com/powerhouse-inc/powerhouse/commit/c978736b7))
+
+### ❤️ Thank You
+
+- Frank
+
+## 5.1.0-dev.30 (2026-01-01)
+
+### 🚀 Features
+
+- **document-model:** validate operation names ([5b09b1951](https://github.com/powerhouse-inc/powerhouse/commit/5b09b1951))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 5.1.0-dev.29 (2025-12-30)
 
 ### 🩹 Fixes

@@ -1,24 +1,47 @@
+import { documentEditorModuleFileTemplate } from "@powerhousedao/codegen/templates";
+import { pascalCase } from "change-case";
+import path from "path";
 import type { Project } from "ts-morph";
-import {
-  editorModuleOutputFileName,
-  editorModuleTypeName,
-  editorModuleVariableName,
-  editorModuleVariableType,
-} from "../constants.js";
-import {
-  buildEditorsDirPath,
-  buildEditorSourceFilesPath,
-} from "../name-builders/editor-files.js";
-import { makeModulesFile } from "./module-files.js";
+import { getOrCreateSourceFile } from "../ts-morph-project.js";
 
-export function makeEditorsModulesFile(project: Project, projectDir: string) {
-  makeModulesFile({
-    project,
-    modulesDirPath: buildEditorsDirPath(projectDir),
-    modulesSourceFilesPath: buildEditorSourceFilesPath(projectDir),
-    outputFileName: editorModuleOutputFileName,
-    typeName: editorModuleTypeName,
-    variableName: editorModuleVariableName,
-    variableType: editorModuleVariableType,
+type MakeEditorModuleFileArgs = {
+  project: Project;
+  editorName: string;
+  editorId: string;
+  documentModelId?: string;
+  editorDirPath: string;
+  legacyMultipleDocumentTypes?: string[];
+};
+/** Generates the `module.ts` file for a document editor or drive editor */
+export function makeEditorModuleFile({
+  project,
+  editorDirPath,
+  editorName,
+  documentModelId,
+  editorId,
+  legacyMultipleDocumentTypes,
+}: MakeEditorModuleFileArgs) {
+  if (documentModelId && !!legacyMultipleDocumentTypes) {
+    throw new Error(
+      "Cannot specify both documentModelId and legacyMultipleDocumentTypes",
+    );
+  }
+  const filePath = path.join(editorDirPath, "module.ts");
+  const { sourceFile } = getOrCreateSourceFile(project, filePath);
+
+  sourceFile.replaceWithText("");
+
+  const pascalCaseEditorName = pascalCase(editorName);
+  const documentTypes = documentModelId
+    ? `["${documentModelId}"]`
+    : JSON.stringify(legacyMultipleDocumentTypes);
+
+  const template = documentEditorModuleFileTemplate({
+    editorName,
+    editorId,
+    pascalCaseEditorName,
+    documentTypes,
   });
+  sourceFile.replaceWithText(template);
+  project.saveSync();
 }

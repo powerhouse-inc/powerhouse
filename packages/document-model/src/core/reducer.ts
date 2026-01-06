@@ -209,6 +209,7 @@ function _baseReducer<TState extends PHBaseState = PHBaseState>(
   const parsedAction = DocumentActionSchema().parse(action);
 
   switch (parsedAction.type) {
+    // TODO: This needs to be changed to a HEADER scope action if it's changing the header.
     case "SET_NAME":
       return setNameOperation(document, parsedAction.input);
     case "PRUNE":

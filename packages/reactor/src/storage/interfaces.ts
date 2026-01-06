@@ -76,6 +76,31 @@ export interface IOperationStore {
   ): Promise<PagedResults<OperationWithContext>>;
 
   /**
+   * Gets operations that may conflict with incoming operations during a load.
+   * Returns operations where index >= minIndex OR timestamp >= minTimestamp.
+   * This is used during reshuffling to find all operations that need to be
+   * merged and reordered with incoming operations.
+   *
+   * @param documentId - The document id
+   * @param scope - The scope to query
+   * @param branch - The branch name
+   * @param minIndex - Minimum operation index (inclusive)
+   * @param minTimestamp - Minimum timestamp (inclusive) as ISO string
+   * @param paging - Optional paging options for cursor-based pagination
+   * @param signal - Optional abort signal to cancel the request
+   * @returns Paged results of operations that may conflict
+   */
+  getConflicting(
+    documentId: string,
+    scope: string,
+    branch: string,
+    minIndex: number,
+    minTimestamp: string,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<Operation>>;
+
+  /**
    * Gets the latest operation index for each scope of a document, along with
    * the latest timestamp across all scopes. This is used to efficiently reconstruct
    * the revision map and lastModified timestamp for document headers.

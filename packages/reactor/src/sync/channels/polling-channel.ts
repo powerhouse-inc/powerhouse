@@ -4,7 +4,7 @@ import type { IChannel } from "../interfaces.js";
 import type { SyncOperation } from "../sync-operation.js";
 import { Mailbox } from "../mailbox.js";
 import type { RemoteCursor, SyncEnvelope } from "../types.js";
-import { envelopeToSyncOperation } from "./utils.js";
+import { envelopesToSyncOperations } from "./utils.js";
 
 /**
  * Channel for cursor-based polling by external clients.
@@ -58,9 +58,11 @@ export class PollingChannel implements IChannel {
     }
 
     if (envelope.type === "operations" && envelope.operations) {
-      const syncOp = envelopeToSyncOperation(envelope, this.remoteName);
-      syncOp.transported();
-      this.inbox.add(syncOp);
+      const syncOps = envelopesToSyncOperations(envelope, this.remoteName);
+      for (const syncOp of syncOps) {
+        syncOp.transported();
+        this.inbox.add(syncOp);
+      }
     }
   }
 

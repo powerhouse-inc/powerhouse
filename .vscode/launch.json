@@ -39,6 +39,19 @@
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
       "cwd": "${workspaceRoot}"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Switchboard",
+      "autoAttachChildProcesses": true,
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"],
+      "runtimeExecutable": "${workspaceRoot}/node_modules/.bin/tsx",
+      "program": "${workspaceRoot}/apps/switchboard/src/index.ts",
+      "smartStep": true,
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "cwd": "${workspaceRoot}/apps/switchboard"
     }
   ]
 }
