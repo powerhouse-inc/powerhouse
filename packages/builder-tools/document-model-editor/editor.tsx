@@ -172,16 +172,20 @@ export default function Editor() {
   ): Promise<string | undefined> => {
     return new Promise((resolve) => {
       const id = generateId();
-      dispatch(addOperation({ id, moduleId, name, scope }), (errors) => {
-        if (errors.length > 0) {
-          if (toast) {
-            toast(errors[0].message, { type: "connect-warning" });
+      dispatch(
+        addOperation({ id, moduleId, name, scope }),
+        (errors) => {
+          if (errors.length > 0) {
+            if (toast) {
+              toast(errors[0].message, { type: "connect-warning" });
+            }
+            resolve(undefined);
+          } else {
+            resolve(id);
           }
-          resolve(undefined);
-        } else {
-          resolve(id);
-        }
-      });
+        },
+        () => resolve(id),
+      );
     });
   };
 
