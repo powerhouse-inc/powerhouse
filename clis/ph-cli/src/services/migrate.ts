@@ -1,3 +1,10 @@
+import {
+  indexHtmlTemplate,
+  indexTsTemplate,
+  packageJsonExportsTemplate,
+  packageJsonScriptsTemplate,
+  tsConfigTemplate,
+} from "@powerhousedao/codegen/templates";
 import { existsSync, readdirSync } from "node:fs";
 import { readdir, writeFile } from "node:fs/promises";
 import path from "path";
@@ -10,15 +17,8 @@ import type {
 } from "ts-morph";
 import { Project, SyntaxKind } from "ts-morph";
 import { writePackage } from "write-pkg";
-import { generate } from "../../commands/generate.js";
-import type { GenerateOptions } from "../generate.js";
-import { indexHtmlTemplate } from "./migrations/templates/index.html.js";
-import { indexTsTemplate } from "./migrations/templates/index.js";
-import {
-  packageJsonExportsTemplate,
-  packageJsonScriptsTemplate,
-} from "./migrations/templates/package.json.js";
-import { tsConfigTemplate } from "./migrations/templates/tsconfig.json.js";
+import type { GenerateOptions } from "./generate.js";
+import { generate } from "../commands/generate.js";
 
 /** Run all migrations */
 type MigrateOptions = {
