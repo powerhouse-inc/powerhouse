@@ -84,6 +84,12 @@ After defining your database schema, generate TypeScript types for type-safe que
 ph generate --migration-file processors/todo-indexer/migrations.ts
 ```
 
+After generating the types, rebuild the project for the changes to take effect:
+
+```bash
+pnpm build
+```
+
 **Why Generate Types?**
 
 TypeScript types provide several benefits:
