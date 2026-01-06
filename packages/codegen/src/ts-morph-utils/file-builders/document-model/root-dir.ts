@@ -1,13 +1,15 @@
+import {
+  documentModelHooksFileTemplate,
+  documentModelIndexTemplate,
+  documentModelModuleFileTemplate,
+  documentModelRootActionsFileTemplate,
+  documentModelUtilsTemplate,
+} from "@powerhousedao/codegen/templates";
 import type { DocumentModelFileMakerArgs } from "@powerhousedao/codegen/ts-morph";
 import {
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
 } from "@powerhousedao/codegen/ts-morph";
-import { documentModelRootActionsFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/actions.js";
-import { documentModelHooksFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/hooks.js";
-import { documentModelIndexTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/index.js";
-import { documentModelModuleFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/module.js";
-import { documentModelUtilsTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/utils.js";
 import path from "path";
 
 export function makeRootDirFiles(fileMakerArgs: DocumentModelFileMakerArgs) {

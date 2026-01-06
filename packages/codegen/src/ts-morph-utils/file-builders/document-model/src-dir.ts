@@ -1,3 +1,10 @@
+import {
+  documentModelSrcIndexFileTemplate,
+  documentModelSrcUtilsTemplate,
+  documentModelTestFileTemplate,
+  makeActionImportNames,
+  makeTestCaseForAction,
+} from "@powerhousedao/codegen/templates";
 import type { DocumentModelFileMakerArgs } from "@powerhousedao/codegen/ts-morph";
 import {
   formatSourceFileWithPrettier,
@@ -5,13 +12,6 @@ import {
   getOrCreateSourceFile,
 } from "@powerhousedao/codegen/ts-morph";
 import { getDocumentModelOperationsModuleVariableNames } from "@powerhousedao/codegen/ts-morph/name-builders";
-import { documentModelSrcIndexFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/src/index.js";
-import { documentModelTestFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/src/tests/document-model.test.js";
-import {
-  makeActionImportNames,
-  makeTestCaseForAction,
-} from "@powerhousedao/codegen/ts-morph/templates/document-model/src/tests/module.test.js";
-import { documentModelSrcUtilsTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/src/utils.js";
 import { ts } from "@tmpl/core";
 import { camelCase, paramCase, pascalCase } from "change-case";
 import type { ModuleSpecification } from "document-model";

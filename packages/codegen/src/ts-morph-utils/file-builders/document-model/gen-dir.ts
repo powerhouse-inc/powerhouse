@@ -1,3 +1,19 @@
+import {
+  documentModelDocumentSchemaFileTemplate,
+  documentModelDocumentTypeTemplate,
+  documentModelGenActionsFileTemplate,
+  documentModelGenCreatorsFileTemplate,
+  documentModelGenIndexFileTemplate,
+  documentModelGenReducerFileTemplate,
+  documentModelGenTypesTemplate,
+  documentModelGenUtilsTemplate,
+  documentModelOperationModuleActionsFileTemplate,
+  documentModelOperationsModuleCreatorsFileTemplate,
+  documentModelOperationsModuleErrorFileTemplate,
+  documentModelOperationsModuleOperationsFileTemplate,
+  documentModelPhFactoriesFileTemplate,
+  documentModelSchemaIndexTemplate,
+} from "@powerhousedao/codegen/templates";
 import type {
   DocumentModelFileMakerArgs,
   DocumentModelTemplateInputsWithModule,
@@ -8,20 +24,6 @@ import {
   getOrCreateSourceFile,
 } from "@powerhousedao/codegen/ts-morph";
 import { getDocumentModelOperationsModuleVariableNames } from "@powerhousedao/codegen/ts-morph/name-builders";
-import { documentModelGenActionsFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/gen/actions.js";
-import { documentModelGenCreatorsFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/gen/creators.js";
-import { documentModelDocumentSchemaFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/gen/document-schema.js";
-import { documentModelDocumentTypeTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/gen/document-type.js";
-import { documentModelGenIndexFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/gen/index.js";
-import { documentModelOperationModuleActionsFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/gen/modules/actions.js";
-import { documentModelOperationsModuleCreatorsFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/gen/modules/creators.js";
-import { documentModelOperationsModuleErrorFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/gen/modules/error.js";
-import { documentModelOperationsModuleOperationsFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/gen/modules/operations.js";
-import { documentModelPhFactoriesFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/gen/ph-factories.js";
-import { documentModelGenReducerFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/gen/reducer.js";
-import { documentModelSchemaIndexTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/gen/schema/index.js";
-import { documentModelGenTypesTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/gen/types.js";
-import { documentModelGenUtilsTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/gen/utils.js";
 import { paramCase, pascalCase } from "change-case";
 import path from "path";
 import { VariableDeclarationKind } from "ts-morph";

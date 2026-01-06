@@ -1,20 +1,21 @@
+import {
+  createDocumentFileTemplate,
+  driveEditorConfigFileTemplate,
+  driveEditorDriveContentsFileTemplate,
+  driveEditorEditorFileTemplate,
+  driveEditorFilesFileTemplate,
+  driveEditorFoldersFileTemplate,
+  driveExplorerFileTemplate,
+  driveExplorerNavigationBreadcrumbsFileTemplate,
+  emptyStateFileTemplate,
+  folderTreeFileTemplate,
+} from "@powerhousedao/codegen/templates";
 import type { CommonGenerateEditorArgs } from "@powerhousedao/codegen/ts-morph";
 import {
   buildTsMorphProject,
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
 } from "@powerhousedao/codegen/ts-morph";
-
-import { createDocumentFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/drive-editor/components/CreateDocument.js";
-import { driveEditorDriveContentsFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/drive-editor/components/DriveContents.js";
-import { driveExplorerFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/drive-editor/components/DriveExplorer.js";
-import { emptyStateFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/drive-editor/components/EmptyState.js";
-import { driveEditorFilesFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/drive-editor/components/Files.js";
-import { driveEditorFoldersFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/drive-editor/components/Folders.js";
-import { folderTreeFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/drive-editor/components/FolderTree.js";
-import { driveExplorerNavigationBreadcrumbsFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/drive-editor/components/NavigationBreadcrumbs.js";
-import { driveEditorConfigFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/drive-editor/config.js";
-import { driveEditorEditorFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/drive-editor/editor.js";
 import path from "path";
 import { type Project } from "ts-morph";
 import { makeEditorModuleFile } from "./editor-common.js";

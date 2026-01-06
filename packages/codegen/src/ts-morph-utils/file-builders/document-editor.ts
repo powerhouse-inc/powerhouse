@@ -1,3 +1,4 @@
+import { documentEditorEditorFileTemplate } from "@powerhousedao/codegen/templates";
 import type {
   CommonGenerateEditorArgs,
   EditorVariableNames,
@@ -9,7 +10,6 @@ import {
   getOrCreateSourceFile,
 } from "@powerhousedao/codegen/ts-morph";
 import { getEditorVariableNames } from "@powerhousedao/codegen/ts-morph/name-builders";
-import { documentEditorEditorFileTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-editor/editor.js";
 import path from "path";
 import type { Project } from "ts-morph";
 import { makeEditorModuleFile } from "./editor-common.js";
