@@ -48,7 +48,7 @@ import {
   getNextIndexForScope,
 } from "./util.js";
 
-const MAX_SKIP_THRESHOLD = 100;
+const MAX_SKIP_THRESHOLD = 1000;
 
 type ProcessActionsResult = {
   success: boolean;
@@ -88,6 +88,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     private signatureVerifier?: SignatureVerificationHandler,
   ) {
     this.config = {
+      maxSkipThreshold: config.maxSkipThreshold ?? MAX_SKIP_THRESHOLD,
       maxConcurrency: config.maxConcurrency ?? 1,
       jobTimeoutMs: config.jobTimeoutMs ?? 30000,
       retryBaseDelayMs: config.retryBaseDelayMs ?? 100,
@@ -1304,12 +1305,12 @@ export class SimpleJobExecutor implements IJobExecutor {
         ? 0
         : Math.max(0, latestRevision - minIncomingIndex);
 
-    if (skipCount > MAX_SKIP_THRESHOLD) {
+    if (skipCount > this.config.maxSkipThreshold) {
       return {
         job,
         success: false,
         error: new Error(
-          `Excessive reshuffle detected: skip count of ${skipCount} exceeds threshold of ${MAX_SKIP_THRESHOLD}. ` +
+          `Excessive reshuffle detected: skip count of ${skipCount} exceeds threshold of ${this.config.maxSkipThreshold}. ` +
             `This indicates an attempt to insert an operation at index ${minIncomingIndex} when the latest revision is ${latestRevision}.`,
         ),
         duration: Date.now() - startTime,
@@ -1324,7 +1325,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         job.branch,
         minIncomingIndex,
         minIncomingTimestamp,
-        { limit: MAX_SKIP_THRESHOLD + 1 },
+        { limit: this.config.maxSkipThreshold + 1 },
       );
 
       if (conflictingResult.hasMore) {
@@ -1332,7 +1333,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           job,
           success: false,
           error: new Error(
-            `Excessive reshuffle detected: more than ${MAX_SKIP_THRESHOLD} conflicting operations found. ` +
+            `Excessive reshuffle detected: more than ${this.config.maxSkipThreshold} conflicting operations found. ` +
               `This indicates a significant divergence between local and incoming operations.`,
           ),
           duration: Date.now() - startTime,

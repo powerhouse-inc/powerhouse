@@ -38,6 +38,9 @@ export type JobResult = {
  * Configuration options for the job executor
  */
 export type JobExecutorConfig = {
+  /** Maximum number of conflicting operations to skip when reshuffling. */
+  maxSkipThreshold?: number;
+
   /** Maximum number of concurrent jobs to execute */
   maxConcurrency?: number;
 
