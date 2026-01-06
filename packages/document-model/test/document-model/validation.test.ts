@@ -225,6 +225,62 @@ describe("DocumentModel Validation Error", () => {
 
       expect(errors.length).toBe(3);
     });
+
+    it("should return error when schema has superset type name (e.g., TodoState2 instead of TodoState)", () => {
+      const newDoc = documentModelReducer(
+        doc,
+        setStateSchema({
+          scope: "global",
+          schema: "type TestDocumentState2 { id: ID! }",
+        }),
+      );
+
+      const errors = validateStateSchemaName(
+        newDoc.state.global.specifications[0].state.global.schema,
+        documentName,
+      );
+
+      expect(errors.length).toBe(1);
+      expect(errors[0].message).toContain("Expected type TestDocumentState");
+    });
+
+    it("should pass when schema has correct type plus additional types", () => {
+      const newDoc = documentModelReducer(
+        doc,
+        setStateSchema({
+          scope: "global",
+          schema: `
+            type TestDocumentState {
+              id: ID!
+              items: [Item!]!
+            }
+
+            type Item {
+              name: String!
+            }
+          `,
+        }),
+      );
+
+      const errors = validateStateSchemaName(
+        newDoc.state.global.specifications[0].state.global.schema,
+        documentName,
+      );
+
+      expect(errors.length).toBe(0);
+    });
+
+    it("should not report type name error when correct type exists even with invalid GraphQL syntax", () => {
+      // This function only validates the type name, not GraphQL syntax
+      // Syntax validation is handled elsewhere
+      const errors = validateStateSchemaName(
+        "type TestDocumentState { invalid syntax",
+        documentName,
+      );
+
+      // No type name error since the correct type name is present
+      expect(errors.length).toBe(0);
+    });
   });
 
   describe("module", () => {

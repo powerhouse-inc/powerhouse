@@ -134,11 +134,18 @@ export function validateStateSchemaName(
 
   if (allowEmptySchema && !schema) return errors;
 
-  const expectedTypeName = `type ${pascalCase(documentName)}${pascalCase(scope)}State`;
+  const expectedTypeName = `${pascalCase(documentName)}${pascalCase(scope)}State`;
 
-  if (!schema.includes(expectedTypeName)) {
+  // Use regex to match exact type name definition
+  // Pattern matches: type TypeName followed by whitespace, {, @, or end of string
+  // This ensures we match "type TodoState" but NOT "type TodoState2"
+  const typePattern = new RegExp(
+    `\\btype\\s+${expectedTypeName}(?:\\s|\\{|@|$)`,
+  );
+
+  if (!typePattern.test(schema)) {
     errors.push({
-      message: `Invalid state schema name. Expected ${expectedTypeName}`,
+      message: `Invalid state schema name. Expected type ${expectedTypeName}`,
       details: {
         schema,
       },
