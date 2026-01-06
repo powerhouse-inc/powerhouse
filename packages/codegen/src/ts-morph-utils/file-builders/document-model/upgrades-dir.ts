@@ -1,9 +1,9 @@
+import { upgradeTransitionTemplate } from "@powerhousedao/codegen/templates";
 import {
   formatSourceFileWithPrettier,
   getObjectLiteral,
   getOrCreateSourceFile,
 } from "@powerhousedao/codegen/ts-morph";
-import { upgradeTransitionTemplate } from "@powerhousedao/codegen/ts-morph/templates/document-model/upgrades/upgrade-transition.js";
 import { ts } from "@tmpl/core";
 import path from "path";
 import { VariableDeclarationKind, type Project } from "ts-morph";

@@ -24,9 +24,9 @@
       "types": "./dist/src/ts-morph-utils/*/index.d.ts",
       "default": "./dist/src/ts-morph-utils/*/index.js"
     },
-    "./ts-morph/templates/*.js": {
-      "types": "./dist/src/ts-morph-utils/templates/*.d.ts",
-      "default": "./dist/src/ts-morph-utils/templates/*.js"
+    "./templates": {
+      "types": "./dist/src/templates/index.d.ts",
+      "default": "./dist/src/templates/index.js"
     }
   },
   "scripts": {
