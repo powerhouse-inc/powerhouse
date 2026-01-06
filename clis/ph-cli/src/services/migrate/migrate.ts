@@ -12,12 +12,13 @@ import { Project, SyntaxKind } from "ts-morph";
 import { writePackage } from "write-pkg";
 import { generate } from "../../commands/generate.js";
 import type { GenerateOptions } from "../generate.js";
+import { indexHtmlTemplate } from "./migrations/templates/index.html.js";
 import { indexTsTemplate } from "./migrations/templates/index.js";
 import {
   packageJsonExportsTemplate,
   packageJsonScriptsTemplate,
-} from "./migrations/templates/packageJson.js";
-import { tsConfigTemplate } from "./migrations/templates/tsConfig.js";
+} from "./migrations/templates/package.json.js";
+import { tsConfigTemplate } from "./migrations/templates/tsconfig.json.js";
 
 /** Run all migrations */
 type MigrateOptions = {
@@ -26,6 +27,7 @@ type MigrateOptions = {
 export async function migrate({ useHygen = false }: MigrateOptions) {
   await migratePackageJson();
   await migrateTsConfig();
+  await migrateIndexHtml();
   await runGenerateOnAllDocumentModels(useHygen);
   await runGenerateOnAllEditors(useHygen);
   const project = new Project({
@@ -64,6 +66,12 @@ async function migratePackageJson() {
   packageJson.scripts = newScripts;
   packageJson.exports = newExports;
   await writePackage(packageJson);
+}
+
+/** Ensure that the project index.html matches the boilerplate index.html. */
+async function migrateIndexHtml() {
+  const indexHtmlPath = path.join(process.cwd(), "index.html");
+  await writeFile(indexHtmlPath, indexHtmlTemplate);
 }
 
 /** Ensure that the project tsconfig.json matches the boilerplate tsconfig.json. */

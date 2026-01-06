@@ -1,4 +1,6 @@
-export const tsConfigTemplate = `
+import { json } from "@tmpl/core";
+
+export const tsConfigTemplate = json`
 {
   // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
@@ -41,4 +43,4 @@ export const tsConfigTemplate = `
   "include": ["**/*", "./powerhouse.manifest.json"],
   "exclude": ["dist", "node_modules", ".ph"]
 }
-`;
+`.raw;
