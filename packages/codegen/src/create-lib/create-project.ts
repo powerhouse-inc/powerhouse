@@ -2,9 +2,36 @@ import type arg from "arg";
 import enquirer from "enquirer";
 import fs from "node:fs";
 import path from "path";
+import { runPrettier } from "../file-builders/boilerplate/utils.js";
 import { buildBoilerplatePackageJson } from "../file-builders/index.js";
+import { agentsTemplate } from "../templates/boilerplate/AGENTS.md.js";
+import { claudeTemplate } from "../templates/boilerplate/CLAUDE.md.js";
+import { claudeSettingsLocalTemplate } from "../templates/boilerplate/claude/settings.local.json.js";
+import { cursorMcpTemplate } from "../templates/boilerplate/cursor/mcp.json.js";
+import { documentModelsIndexTemplate } from "../templates/boilerplate/document-models/index.js";
+import { editorsIndexTemplate } from "../templates/boilerplate/editors/index.js";
+import { eslintConfigTemplate } from "../templates/boilerplate/eslint.config.js.js";
+import { geminiSettingsTemplate } from "../templates/boilerplate/gemini/settings.json.js";
+import { gitIgnoreTemplate } from "../templates/boilerplate/gitignore.js";
+import { licenseTemplate } from "../templates/boilerplate/LICENSE.js";
+import { mcpTemplate } from "../templates/boilerplate/mcp.json.js";
+import { buildPowerhouseConfigTemplate } from "../templates/boilerplate/powerhouse.config.json.js";
+import { powerhouseManifestTemplate } from "../templates/boilerplate/powerhouse.manifest.json.js";
+import { processorsIndexTemplate } from "../templates/boilerplate/processors/index.js";
+import { readmeTemplate } from "../templates/boilerplate/README.md.js";
+import { styleTemplate } from "../templates/boilerplate/style.css.js";
+import { subgraphsIndexTemplate } from "../templates/boilerplate/subgraphs/index.js";
+import { viteConfigTemplate } from "../templates/boilerplate/vite.config.ts.js";
+import { vitestConfigTemplate } from "../templates/boilerplate/vitest.config.ts.js";
+import {
+  documentModelsTemplate,
+  editorsTemplate,
+  indexTsTemplate,
+  legacyIndexHtmlTemplate,
+  tsConfigTemplate,
+} from "../templates/index.js";
 import { parseArgs } from "../utils/cli.js";
-import { envPackageManager, runCmd } from "./utils.js";
+import { envPackageManager, runCmd, writeFileEnsuringDir } from "./utils.js";
 
 const POWERHOUSE_ORG = "@powerhousedao";
 
@@ -143,35 +170,6 @@ export interface ICreateProjectOptions {
 
 const { prompt } = enquirer;
 
-function buildPowerhouseConfig(
-  appPath: string,
-  documentModelsDir: string,
-  editorsDir: string,
-  vetraDriveUrl?: string,
-) {
-  const filePath = path.join(appPath, "powerhouse.config.json");
-  const packageJson = JSON.parse(fs.readFileSync(filePath, "utf-8")) as Record<
-    string,
-    any
-  >;
-  const newPackage: Record<string, any> = {
-    ...packageJson,
-    documentModelsDir,
-    editorsDir,
-  };
-
-  // Add vetra configuration if vetraDriveUrl is provided
-  if (vetraDriveUrl) {
-    const driveId = vetraDriveUrl.split("/").pop();
-    newPackage.vetra = {
-      driveId: driveId ?? "",
-      driveUrl: vetraDriveUrl,
-    };
-  }
-
-  fs.writeFileSync(filePath, JSON.stringify(newPackage, null, 2), "utf8");
-}
-
 export function parseTag(args: {
   tag?: string;
   dev?: boolean;
@@ -185,7 +183,7 @@ export function parseTag(args: {
   } else if (args.staging) {
     return "staging";
   } else {
-    return "main";
+    return "";
   }
 }
 
@@ -221,7 +219,7 @@ export async function createProject(options: ICreateProjectOptions) {
       },
     ]);
     if (!result.projectName) {
-      console.log("\x1b[31m", "You have to provide name to your app.");
+      console.log("\x1b[31mYou must provide a name for your project.\x1b[0m");
       process.exit(1);
     }
     projectName = result.projectName;
@@ -234,9 +232,7 @@ export async function createProject(options: ICreateProjectOptions) {
   } catch (err) {
     if ((err as { code: string }).code === "EEXIST") {
       console.log(
-        "\x1b[31m",
-        `The folder ${projectName} already exists in the current directory, please give it another name.`,
-        "\x1b[0m",
+        `\x1b[31mThe folder "${projectName}" already exists in the current directory, please give it another name.\x1b[0m`,
       );
     } else {
       console.log(err);
@@ -268,42 +264,101 @@ async function handleCreateProject(
   packageManager = packageManager ?? envPackageManager;
 
   try {
-    console.log("\x1b[33m", "Downloading the project structure...", "\x1b[0m");
-    runCmd(
-      `git clone --depth 1 -b ${branch} ${BOILERPLATE_REPO} ${projectName}`,
+    // Create a new directory for the project
+    console.log(
+      `\n\x1b[34mCreating directory for project "${projectName}"...\x1b[0m\n`,
     );
-
     const appPath = path.join(process.cwd(), projectName);
     process.chdir(appPath);
+    console.log(`\x1b[32mProject directory created\x1b[0m\n`);
 
-    fs.rmSync(path.join(appPath, "./.git"), { recursive: true });
-    runCmd(`git init -b ${branch}`);
-
-    fs.rmSync("package.json");
-    const packageJson = await buildBoilerplatePackageJson({
-      projectName,
-      tag,
-    });
-
-    fs.writeFileSync("package.json", packageJson, { encoding: "utf-8" });
-
+    // Create a .gitignore file, then initialize the git repository
     console.log(
-      "\x1b[34m",
-      `Installing dependencies with ${packageManager}...`,
-      "\x1b[0m",
+      `\x1b[34mInitializing git repository with branch "${branch}"...\x1b[0m\n`,
     );
-    runCmd(`${packageManager} install --loglevel error`);
+    await writeFileEnsuringDir(".gitignore", gitIgnoreTemplate);
+    runCmd(`git init -b ${branch}`);
+    console.log(`\n\x1b[32mGit repository initialized\x1b[0m\n`);
 
-    buildPowerhouseConfig(
-      appPath,
-      documentModelsDir,
-      editorsDir,
-      vetraDriveUrl,
+    // Write the boilerplate files for the project
+    console.log(`\x1b[34mCreating project boilerplate files...\x1b[0m\n`);
+    await writeProjectRootFiles(projectName, tag, vetraDriveUrl);
+    await writeModuleFiles();
+    await writeAiConfigFiles();
+    console.log(`\x1b[32mProject boilerplate files created\x1b[0m\n`);
+
+    // Install the project dependencies with the specified package manager
+    console.log(
+      `\x1b[34mInstalling project dependencies with ${packageManager}...\x1b[0m\n`,
     );
+    runCmd(`${packageManager} install`);
+    console.log(`\n\x1b[32mProject dependencies installed\x1b[0m\n`);
 
-    console.log("\x1b[32m", "The installation is done!", "\x1b[0m");
-    console.log();
+    // Use the installed version of `prettier` to format the generated code
+    console.log(`\x1b[34mFormatting boilerplate project files...\x1b[0m\n`);
+    await runPrettier();
+    console.log(`\x1b[32mBoilerplate files formatted\x1b[0m\n`);
+
+    // Project creation complete
+    console.log(
+      `\x1b[32m🎉 Successfully created project "${projectName}" 🎉\x1b[0m\n`,
+    );
   } catch (error) {
     console.log(error);
   }
+}
+
+async function writeProjectRootFiles(
+  projectName: string,
+  tag: string | undefined,
+  vetraDriveUrl: string | undefined,
+) {
+  await writeFileEnsuringDir("LICENSE", licenseTemplate);
+  await writeFileEnsuringDir("README.md", readmeTemplate);
+  const packageJson = await buildBoilerplatePackageJson({
+    projectName,
+    tag,
+  });
+  const powerhouseManifest = powerhouseManifestTemplate(projectName);
+  await writeFileEnsuringDir("powerhouse.manifest.json", powerhouseManifest);
+  const powerhouseConfig = await buildPowerhouseConfigTemplate(
+    tag,
+    vetraDriveUrl,
+  );
+  await writeFileEnsuringDir("powerhouse.config.json", powerhouseConfig);
+  await writeFileEnsuringDir("package.json", packageJson);
+  await writeFileEnsuringDir("tsconfig.json", tsConfigTemplate);
+  await writeFileEnsuringDir("index.html", legacyIndexHtmlTemplate);
+  await writeFileEnsuringDir("eslint.config.js", eslintConfigTemplate);
+  await writeFileEnsuringDir("index.ts", indexTsTemplate);
+  await writeFileEnsuringDir("style.css", styleTemplate);
+  await writeFileEnsuringDir("vite.config.ts", viteConfigTemplate);
+  await writeFileEnsuringDir("vitest.config.ts", vitestConfigTemplate);
+}
+
+async function writeModuleFiles() {
+  await writeFileEnsuringDir(
+    "document-models/document-models.ts",
+    documentModelsTemplate,
+  );
+  await writeFileEnsuringDir(
+    "document-models/index.ts",
+    documentModelsIndexTemplate,
+  );
+  await writeFileEnsuringDir("editors/editors.ts", editorsTemplate);
+  await writeFileEnsuringDir("editors/index.ts", editorsIndexTemplate);
+  await writeFileEnsuringDir("processors/index.ts", processorsIndexTemplate);
+  await writeFileEnsuringDir("subgraphs/index.ts", subgraphsIndexTemplate);
+}
+
+async function writeAiConfigFiles() {
+  await writeFileEnsuringDir("CLAUDE.md", claudeTemplate);
+  await writeFileEnsuringDir("AGENTS.md", agentsTemplate);
+  await writeFileEnsuringDir(".mcp.json", mcpTemplate);
+  await writeFileEnsuringDir(".gemini/settings.json", geminiSettingsTemplate);
+  await writeFileEnsuringDir(".cursor/mcp.json", cursorMcpTemplate);
+  await writeFileEnsuringDir(
+    ".claude/settings.local.json",
+    claudeSettingsLocalTemplate,
+  );
 }

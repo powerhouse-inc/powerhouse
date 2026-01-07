@@ -34,7 +34,6 @@ export const init: CommandActionType<
   try {
     await createProject({
       name: options.project ?? projectName,
-      interactive: options.interactive ?? false,
       tag: parseTag({
         tag: options.tag,
         dev: options.dev,

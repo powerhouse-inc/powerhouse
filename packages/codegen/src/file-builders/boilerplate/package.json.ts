@@ -1,4 +1,3 @@
-import { format } from "prettier";
 import { packageJsonTemplate } from "../../templates/boilerplate/package.json.js";
 import {
   VERSIONED_DEPENDENCIES,
@@ -26,9 +25,5 @@ export async function buildBoilerplatePackageJson(
     versionedDevDependencies,
   );
 
-  const formattedTemplate = await format(template, {
-    parser: "json",
-  });
-
-  return formattedTemplate;
+  return template;
 }

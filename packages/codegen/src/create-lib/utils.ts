@@ -1,4 +1,6 @@
 import { execSync } from "child_process";
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
 
 const packageManagers = ["npm", "yarn", "pnpm", "bun"] as const;
 const defaultPackageManager = "npm";
@@ -32,4 +34,12 @@ export function runCmd(command: string) {
     console.log("\x1b[31m", error, "\x1b[0m");
     throw error;
   }
+}
+
+export async function writeFileEnsuringDir(
+  filePath: string,
+  contents: string | Buffer,
+) {
+  await mkdir(dirname(filePath), { recursive: true });
+  await writeFile(filePath, contents, { encoding: "utf-8" });
 }

@@ -250,7 +250,6 @@ export const createGlobalProject = async (
   try {
     await createProject({
       name: PH_GLOBAL_DIR_NAME,
-      interactive: false,
       tag: parseTag(options),
       packageManager:
         resolvePackageManagerOptions(options) ??

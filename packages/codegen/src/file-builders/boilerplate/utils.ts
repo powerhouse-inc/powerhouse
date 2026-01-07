@@ -119,3 +119,7 @@ async function makeVersionedDependency(
   const version = await getPackageVersion(packageName, schemes);
   return `"${packageName}": "${version}"`;
 }
+
+export async function runPrettier() {
+  await spawnAsync("prettier", ["--write", "."]);
+}
