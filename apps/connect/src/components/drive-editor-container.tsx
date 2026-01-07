@@ -3,7 +3,7 @@ import { DropZoneWrapper } from "@powerhousedao/design-system/connect";
 import {
   useDefaultDriveEditorModule,
   useDriveEditorModuleById,
-  useSelectedDocument,
+  useSelectedDocumentId,
   useSelectedDrive,
 } from "@powerhousedao/reactor-browser";
 import { Suspense } from "react";
@@ -13,10 +13,10 @@ import { ErrorBoundary } from "./error-boundary.js";
 
 export function DriveEditorContainer() {
   const [selectedDrive] = useSelectedDrive();
-  const [selectedDocument] = useSelectedDocument();
+  const selectedDocumentId = useSelectedDocumentId();
 
   const driveEditor = useDriveEditorModuleById(
-    selectedDrive?.header.meta?.preferredEditor,
+    selectedDrive.header.meta?.preferredEditor,
   );
   const defaultDriveEditor = useDefaultDriveEditorModule();
 
@@ -37,7 +37,7 @@ export function DriveEditorContainer() {
       <Suspense fallback={<EditorLoader />}>
         <DropZoneWrapper className="flex h-full flex-col overflow-auto">
           <DriveEditorComponent>
-            {selectedDocument ? <DocumentEditorContainer /> : null}
+            {selectedDocumentId ? <DocumentEditorContainer /> : null}
           </DriveEditorComponent>
         </DropZoneWrapper>
       </Suspense>

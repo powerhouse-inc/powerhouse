@@ -1,15 +1,18 @@
 import type { DocumentDispatch } from "@powerhousedao/reactor-browser";
 import {
+  useDocumentById,
   useDocumentsInSelectedDrive,
   useDocumentsInSelectedFolder,
-  useDocumentById,
   useSelectedDocument,
 } from "@powerhousedao/reactor-browser";
 import type {
-  VetraPackageDocument,
   VetraPackageAction,
+  VetraPackageDocument,
 } from "@powerhousedao/vetra/document-models/vetra-package";
-import { isVetraPackageDocument } from "./gen/document-schema.js";
+import {
+  assertIsVetraPackageDocument,
+  isVetraPackageDocument,
+} from "./gen/document-schema.js";
 
 /** Hook to get a VetraPackage document by its id */
 export function useVetraPackageDocumentById(
@@ -23,12 +26,13 @@ export function useVetraPackageDocumentById(
 }
 
 /** Hook to get the selected VetraPackage document */
-export function useSelectedVetraPackageDocument():
-  | [VetraPackageDocument, DocumentDispatch<VetraPackageAction>]
-  | [undefined, undefined] {
+export function useSelectedVetraPackageDocument(): [
+  VetraPackageDocument,
+  DocumentDispatch<VetraPackageAction>,
+] {
   const [document, dispatch] = useSelectedDocument();
-  if (!isVetraPackageDocument(document)) return [undefined, undefined];
-  return [document, dispatch];
+  assertIsVetraPackageDocument(document);
+  return [document, dispatch] as const;
 }
 
 /** Hook to get all VetraPackage documents in the selected drive */
