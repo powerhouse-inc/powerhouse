@@ -66,7 +66,7 @@ function dispatch(
 
 | Category | Hooks |
 |----------|-------|
-| **Selected Document** | `useSelectedDocument`, `useSelectedDocumentId`, `useSelectedDocumentOfType` |
+| **Selected Document** | `useSelectedDocument`, `useSelectedDocumentSafe`, `useSelectedDocumentId`, `useSelectedDocumentOfType` |
 | **Document by ID** | `useDocumentById`, `useDocumentsByIds`, `useDocumentOfType` |
 | **Document Cache** | `useDocumentCache`, `useDocument`, `useDocuments`, `useGetDocument`, `useGetDocuments`, `useGetDocumentAsync` |
 | **Drives** | `useDrives`, `useSelectedDrive`, `useSelectedDriveSafe`, `useSelectedDriveId` |
@@ -97,10 +97,50 @@ function useSelectedDocumentId(): string | undefined
 
 ### `useSelectedDocument`
 
-Returns the selected document along with a dispatch function.
+Returns the selected document along with a dispatch function. Throws error if no document selected.
 
 ```typescript
 function useSelectedDocument(): readonly [
+  PHDocument,
+  (actionOrActions: Action | Action[] | undefined, onErrors?: (errors: Error[]) => void) => void
+]
+```
+
+**Returns:** A tuple `[document, dispatch]` where:
+- `document` — The selected document
+- `dispatch` — A function to dispatch actions to the document
+
+**Example:**
+
+```tsx
+import { useSelectedDocument } from '@powerhousedao/reactor-browser';
+
+function DocumentViewer() {
+  const [document, dispatch] = useSelectedDocument();
+
+  if (!document) {
+    return <p>No document selected</p>;
+  }
+
+  return (
+    <div>
+      <h1>{document.name}</h1>
+      <p>Type: {document.header.documentType}</p>
+    </div>
+  );
+}
+```
+
+**See also:** [`useSelectedDocumentSafe`](#useselecteddocumentsafe), [`useSelectedDocumentOfType`](#useselecteddocumentoftype), [`useDocumentById`](#usedocumentbyid)
+
+------
+
+### `useSelectedDocumentSafe`
+
+Returns the selected document along with a dispatch function or undefined is no document is selected.
+
+```typescript
+function useSelectedDocumentSafe(): readonly [
   PHDocument | undefined,
   (actionOrActions: Action | Action[] | undefined, onErrors?: (errors: Error[]) => void) => void
 ]
@@ -109,6 +149,9 @@ function useSelectedDocument(): readonly [
 **Returns:** A tuple `[document, dispatch]` where:
 - `document` — The selected document, or `undefined` if none selected
 - `dispatch` — A function to dispatch actions to the document
+
+**Throws:**
+- `NoSelectedDocumentError` — When no document is selected
 
 **Example:**
 
@@ -154,6 +197,7 @@ function useSelectedDocumentOfType(documentType: null | undefined): never[]
 
 **Throws:**
 - `NoSelectedDocumentError` — When no document is selected
+- `DocumentTypeMismatchError` - When selected document has different document type than the one provided
 
 **Example:**
 

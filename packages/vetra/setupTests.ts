@@ -4,6 +4,7 @@ import { vi } from "vitest";
 vi.mock("@powerhousedao/reactor-browser", () => ({
   // Mock hooks
   useSelectedDocument: vi.fn(() => [null, vi.fn()]),
+  useSelectedDocumentSafe: vi.fn(() => [null, vi.fn()]),
   useSetPHDocumentEditorConfig: vi.fn(),
   useSetPHDriveEditorConfig: vi.fn(),
   useDocumentById: vi.fn(() => [null, vi.fn()]),

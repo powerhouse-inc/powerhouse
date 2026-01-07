@@ -6,7 +6,7 @@ import {
   showRevisionHistory,
   useGetSwitchboardLink,
   useNodeParentFolderById,
-  useSelectedDocument,
+  useSelectedDocumentSafe,
 } from "@powerhousedao/reactor-browser";
 import type { PHDocument } from "document-model";
 import { useEffect, useState, type ComponentPropsWithoutRef } from "react";
@@ -108,7 +108,7 @@ export const DocumentToolbar: React.FC<DocumentToolbarProps> = (props) => {
     ...containerProps
   } = props;
 
-  const [selectedDocument] = useSelectedDocument();
+  const [selectedDocument] = useSelectedDocumentSafe();
   const document = _document ?? selectedDocument;
 
   const documentName = document?.header.name || undefined;

@@ -3,10 +3,10 @@ import {
   useSupportedDocumentTypesInReactor,
 } from "@powerhousedao/reactor-browser";
 import { useCallback, useEffect, useState } from "react";
+import { useSelectedAppModuleDocument } from "../../../document-models/app-module/hooks.js";
 import { actions } from "../../../document-models/app-module/index.js";
 import { StatusPill } from "../../components/index.js";
 import { useDebounce } from "../../hooks/index.js";
-import { useSelectedAppModuleDocument } from "../../hooks/useVetraDocument.js";
 
 const ALL_IN_DRIVE = "all-in-drive";
 const ALL_IN_REACTOR = "all-in-reactor";

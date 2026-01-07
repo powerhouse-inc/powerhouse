@@ -51,16 +51,6 @@ export {
   setFeatures,
   useFeatures,
 } from "./features.js";
-export {
-  isChannelSyncEnabledSync,
-  isInspectorEnabledSync,
-  isLegacyReadEnabledSync,
-  isLegacyWriteEnabledSync,
-  useChannelSyncEnabled,
-  useInspectorEnabled,
-  useLegacyReadEnabled,
-  useLegacyWriteEnabled,
-} from "./use-feature-flags.js";
 export { useFolderById } from "./folder-by-id.js";
 export { useImportScriptModules } from "./import-script-modules.js";
 export {
@@ -102,6 +92,7 @@ export {
   useSelectedDocument,
   useSelectedDocumentId,
   useSelectedDocumentOfType,
+  useSelectedDocumentSafe,
 } from "./selected-document.js";
 export {
   setSelectedDrive,
@@ -122,6 +113,16 @@ export {
   useSelectedTimelineRevision,
 } from "./timeline-revision.js";
 export { setPHToast, usePHToast } from "./toast.js";
+export {
+  isChannelSyncEnabledSync,
+  isInspectorEnabledSync,
+  isLegacyReadEnabledSync,
+  isLegacyWriteEnabledSync,
+  useChannelSyncEnabled,
+  useInspectorEnabled,
+  useLegacyReadEnabled,
+  useLegacyWriteEnabled,
+} from "./use-feature-flags.js";
 export { useGetSwitchboardLink } from "./use-get-switchboard-link.js";
 export { useOnDropFile } from "./use-on-drop-file.js";
 export { useUserPermissions } from "./user-permissions.js";

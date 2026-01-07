@@ -1,4 +1,5 @@
 import { DocumentEditor } from "@powerhousedao/connect/components";
+import { toast } from "@powerhousedao/connect/services";
 import { openUrl } from "@powerhousedao/connect/utils";
 import {
   buildDocumentSubgraphUrl,
@@ -16,42 +17,42 @@ import {
   useConnectCrypto,
   useUser,
 } from "@powerhousedao/reactor-browser/connect";
-import type { PHDocument } from "document-model";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 
 export function DocumentEditorContainer() {
   const [selectedDrive] = useSelectedDrive();
   const [selectedDocument] = useSelectedDocument();
-  const parentFolder = useNodeParentFolderById(selectedDocument?.header.id);
+  const parentFolder = useNodeParentFolderById(selectedDocument.header.id);
   const isRemoteDrive = getDriveIsRemote(selectedDrive);
   const remoteUrl = getDriveRemoteUrl(selectedDrive);
   const connectCrypto = useConnectCrypto();
   const user = useUser();
 
-  const exportDocument = (document: PHDocument) => {
-    const validationErrors = validateDocument(document);
+  const onExport = useCallback(() => {
+    const validationErrors = validateDocument(selectedDocument);
 
     if (validationErrors.length) {
       showPHModal({
         type: "exportDocumentWithErrors",
-        documentId: document.header.id,
+        documentId: selectedDocument.header.id,
       });
     } else {
-      return exportFile(document);
+      exportFile(selectedDocument).catch((error: any) => {
+        console.error(error);
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : JSON.stringify(error, null, 1);
+        toast(`Failed to export document: ${errorMessage}`);
+      });
     }
-  };
-
-  const onExport = () => {
-    if (selectedDocument) {
-      return exportDocument(selectedDocument);
-    }
-  };
+  }, [selectedDocument]);
 
   // TODO: fix this mess
   const onOpenSwitchboardLink = useMemo(() => {
     return isRemoteDrive
       ? async () => {
-          if (!selectedDocument?.header.id) {
+          if (!selectedDocument.header.id) {
             console.error("No selected document");
             return;
           }
@@ -85,7 +86,9 @@ export function DocumentEditorContainer() {
       : undefined;
   }, [isRemoteDrive, remoteUrl, selectedDocument]);
 
-  if (!selectedDocument) return null;
+  const onClose = useCallback(() => {
+    setSelectedNode(parentFolder);
+  }, [parentFolder, setSelectedNode]);
 
   return (
     <div
@@ -94,7 +97,7 @@ export function DocumentEditorContainer() {
     >
       <DocumentEditor
         document={selectedDocument}
-        onClose={() => setSelectedNode(parentFolder)}
+        onClose={onClose}
         onExport={onExport}
         onOpenSwitchboardLink={onOpenSwitchboardLink}
       />
