@@ -1,7 +1,4 @@
-import {
-  setLoginStatus,
-  setUser,
-} from "@powerhousedao/reactor-browser/connect";
+import { setLoginStatus, setUser } from "../connect.js";
 import type { IConnectCrypto, IRenown, User } from "@renown/sdk";
 import { logger, type IDocumentDriveServer } from "document-drive";
 import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID, RENOWN_URL } from "./constants.js";
