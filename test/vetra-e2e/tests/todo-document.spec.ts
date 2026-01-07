@@ -95,18 +95,9 @@ async function setupDocument(
     'export { ToDoDocument } from "./to-do-document/module.js"',
   );
 
-  // Verify subgraph folder was created
-  const subgraphsDir = path.join(process.cwd(), "subgraphs");
-  const todoSubgraphDir = path.join(subgraphsDir, "to-do-document");
-  const subgraphsIndex = path.join(subgraphsDir, "index.ts");
-
-  expect(fs.existsSync(todoSubgraphDir)).toBe(true);
-
-  // Verify export was added to subgraphs/index.ts
-  const subgraphsIndexContent = fs.readFileSync(subgraphsIndex, "utf-8");
-  expect(subgraphsIndexContent).toContain(
-    'export * as ToDoDocumentSubgraph from "./to-do-document/index.js"',
-  );
+  // Note: Automatic subgraph generation for document models was disabled
+  // in commit d705e0c5f. Subgraphs are now generated separately via
+  // the powerhouse/subgraph document type.
 
   await closeDocumentFromToolbar(page);
 }
