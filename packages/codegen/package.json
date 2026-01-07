@@ -27,6 +27,10 @@
     "./templates": {
       "types": "./dist/src/templates/index.d.ts",
       "default": "./dist/src/templates/index.js"
+    },
+    "./file-builders": {
+      "types": "./dist/src/file-builders/index.d.ts",
+      "default": "./dist/src/file-builders/index.js"
     }
   },
   "scripts": {
