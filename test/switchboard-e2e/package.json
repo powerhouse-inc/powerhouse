@@ -17,6 +17,7 @@
     "@powerhousedao/ph-cli": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
     "@types/node": "^20.0.0",
+    "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "graphql-tag": "^2.12.6",
     "typescript": "^5.0.0"

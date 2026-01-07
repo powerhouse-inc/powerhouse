@@ -1,5 +1,5 @@
-import { generateId } from "document-model/core";
-import type { TodoListTodosOperations } from "@powerhousedao/todo-demo/document-models/todo-list";
+import { generateId } from "document-model";
+import type { TodoListTodosOperations } from "../../gen/types.js";
 
 export const todoListTodosOperations: TodoListTodosOperations = {
   addTodoItemOperation(state, action) {

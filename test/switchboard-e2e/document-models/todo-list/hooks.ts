@@ -8,7 +8,7 @@ import {
 import type {
   TodoListDocument,
   TodoListAction,
-} from "@powerhousedao/todo-demo/document-models/todo-list";
+} from "./gen/types.js";
 import { isTodoListDocument } from "./gen/document-schema.js";
 
 /** Hook to get a TodoList document by its id */

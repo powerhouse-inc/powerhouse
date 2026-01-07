@@ -17,7 +17,7 @@ import {
   assertIsTodoListDocument,
   isTodoListState,
   assertIsTodoListState,
-} from "@powerhousedao/todo-demo/document-models/todo-list";
+} from "../../index.js";
 import { ZodError } from "zod";
 
 describe("TodoList Document Model", () => {

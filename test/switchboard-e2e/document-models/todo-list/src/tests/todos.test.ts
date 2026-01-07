@@ -9,7 +9,7 @@ import type {
   AddTodoItemInput,
   DeleteTodoItemInput,
   UpdateTodoItemInput,
-} from "@powerhousedao/todo-demo/document-models/todo-list";
+} from "../../gen/types.js";
 import {
   reducer,
   utils,
@@ -21,7 +21,7 @@ import {
   deleteTodoItem,
   DeleteTodoItemInputSchema,
   TodoItemSchema,
-} from "@powerhousedao/todo-demo/document-models/todo-list";
+} from "../../index.js";
 
 describe("Todos Operations", () => {
   it("should handle addTodoItem operation", () => {

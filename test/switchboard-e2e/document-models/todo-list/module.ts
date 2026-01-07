@@ -1,18 +1,17 @@
 import type { DocumentModelModule } from "document-model";
-import { createState } from "document-model";
-import { defaultBaseState } from "document-model/core";
-import type { TodoListPHState } from "@powerhousedao/todo-demo/document-models/todo-list";
+import type { TodoListPHState } from "./gen/types.js";
 import {
   actions,
   documentModel,
   reducer,
   utils,
-} from "@powerhousedao/todo-demo/document-models/todo-list";
+  createTodoListDocument,
+} from "./index.js";
 
 /** Document model module for the Todo List document type */
 export const TodoList: DocumentModelModule<TodoListPHState> = {
   reducer,
   actions,
   utils,
-  documentModel: createState(defaultBaseState(), documentModel),
+  documentModel: createTodoListDocument(),
 };

@@ -4,14 +4,14 @@ import { setName } from "document-model";
 import {
   actions,
   todoListDocumentType,
-} from "@powerhousedao/todo-demo/document-models/todo-list";
+} from "../../document-models/todo-list/index.js";
 
 import type {
   TodoListDocument,
   AddTodoItemInput,
   UpdateTodoItemInput,
   DeleteTodoItemInput,
-} from "@powerhousedao/todo-demo/document-models/todo-list";
+} from "../../document-models/todo-list/gen/types.js";
 
 export const getResolvers = (
   subgraph: BaseSubgraph,

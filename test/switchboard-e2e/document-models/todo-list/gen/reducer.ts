@@ -2,8 +2,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import type { StateReducer } from "document-model";
-import { isDocumentAction, createReducer } from "document-model/core";
-import type { TodoListPHState } from "@powerhousedao/todo-demo/document-models/todo-list";
+import { isDocumentAction, createReducer } from "document-model";
+import type { TodoListPHState } from "./types.js";
 
 import { todoListTodosOperations } from "../src/reducers/todos.js";
 
