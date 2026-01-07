@@ -18,7 +18,7 @@ import {
   setSelectedDrive,
   useDriveEditorModuleById,
   useDrives,
-  useSelectedDocument,
+  useSelectedDocumentId,
   useSelectedDriveSafe,
   useSelectedFolder,
 } from "@powerhousedao/reactor-browser";
@@ -28,13 +28,13 @@ import { useEffect } from "react";
 export function Content() {
   const [selectedDrive] = useSelectedDriveSafe();
   const selectedFolder = useSelectedFolder();
-  const [selectedDocument] = useSelectedDocument();
+  const selectedDocumentId = useSelectedDocumentId();
 
   useEffect(() => {
-    if (!selectedDocument) {
+    if (!selectedDocumentId) {
       setPHDocumentEditorConfig(defaultPHDocumentEditorConfig);
     }
-  }, [selectedDocument]);
+  }, [selectedDocumentId]);
 
   useEffect(() => {
     if (!selectedDrive) {
@@ -42,7 +42,8 @@ export function Content() {
     }
   }, [selectedDrive]);
 
-  const showHomeScreen = !selectedDocument && !selectedDrive && !selectedFolder;
+  const showHomeScreen =
+    !selectedDocumentId && !selectedDrive && !selectedFolder;
   return (
     <ContentContainer>
       {showHomeScreen ? <HomeScreenContainer /> : <DriveEditorContainer />}

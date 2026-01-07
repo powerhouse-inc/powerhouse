@@ -28,7 +28,7 @@ export class DocumentTypeMismatchError extends Error {
 export class NoSelectedDocumentError extends Error {
   constructor() {
     super(
-      "There is no selected document. Call 'setSelectedNode' to select a document.",
+      "There is no selected document. Did you mean to call 'useSelectedDocumentSafe' instead?",
     );
   }
 }

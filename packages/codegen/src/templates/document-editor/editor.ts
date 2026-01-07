@@ -16,8 +16,6 @@ export default function Editor() {
   const [document, dispatch] = ${v.useSelectedDocumentHookName}();
   const [isEditing, setIsEditing] = useState(false);
 
-  if (!document) return null;
-
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = event.currentTarget;
