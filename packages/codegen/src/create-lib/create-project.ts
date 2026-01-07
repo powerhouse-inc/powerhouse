@@ -1,150 +1,40 @@
+import {
+  buildBoilerplatePackageJson,
+  runPrettier,
+} from "@powerhousedao/codegen/file-builders";
+import {
+  agentsTemplate,
+  buildPowerhouseConfigTemplate,
+  claudeSettingsLocalTemplate,
+  claudeTemplate,
+  cursorMcpTemplate,
+  documentModelsIndexTemplate,
+  documentModelsTemplate,
+  editorsIndexTemplate,
+  editorsTemplate,
+  eslintConfigTemplate,
+  geminiSettingsTemplate,
+  gitIgnoreTemplate,
+  indexTsTemplate,
+  legacyIndexHtmlTemplate,
+  licenseTemplate,
+  mcpTemplate,
+  powerhouseManifestTemplate,
+  processorsIndexTemplate,
+  readmeTemplate,
+  styleTemplate,
+  subgraphsIndexTemplate,
+  tsConfigTemplate,
+  viteConfigTemplate,
+  vitestConfigTemplate,
+} from "@powerhousedao/codegen/templates";
 import type arg from "arg";
+import { paramCase } from "change-case";
 import enquirer from "enquirer";
 import fs from "node:fs";
 import path from "path";
-import { runPrettier } from "../file-builders/boilerplate/utils.js";
-import { buildBoilerplatePackageJson } from "../file-builders/index.js";
-import { agentsTemplate } from "../templates/boilerplate/AGENTS.md.js";
-import { claudeTemplate } from "../templates/boilerplate/CLAUDE.md.js";
-import { claudeSettingsLocalTemplate } from "../templates/boilerplate/claude/settings.local.json.js";
-import { cursorMcpTemplate } from "../templates/boilerplate/cursor/mcp.json.js";
-import { documentModelsIndexTemplate } from "../templates/boilerplate/document-models/index.js";
-import { editorsIndexTemplate } from "../templates/boilerplate/editors/index.js";
-import { eslintConfigTemplate } from "../templates/boilerplate/eslint.config.js.js";
-import { geminiSettingsTemplate } from "../templates/boilerplate/gemini/settings.json.js";
-import { gitIgnoreTemplate } from "../templates/boilerplate/gitignore.js";
-import { licenseTemplate } from "../templates/boilerplate/LICENSE.js";
-import { mcpTemplate } from "../templates/boilerplate/mcp.json.js";
-import { buildPowerhouseConfigTemplate } from "../templates/boilerplate/powerhouse.config.json.js";
-import { powerhouseManifestTemplate } from "../templates/boilerplate/powerhouse.manifest.json.js";
-import { processorsIndexTemplate } from "../templates/boilerplate/processors/index.js";
-import { readmeTemplate } from "../templates/boilerplate/README.md.js";
-import { styleTemplate } from "../templates/boilerplate/style.css.js";
-import { subgraphsIndexTemplate } from "../templates/boilerplate/subgraphs/index.js";
-import { viteConfigTemplate } from "../templates/boilerplate/vite.config.ts.js";
-import { vitestConfigTemplate } from "../templates/boilerplate/vitest.config.ts.js";
-import {
-  documentModelsTemplate,
-  editorsTemplate,
-  indexTsTemplate,
-  legacyIndexHtmlTemplate,
-  tsConfigTemplate,
-} from "../templates/index.js";
 import { parseArgs } from "../utils/cli.js";
 import { envPackageManager, runCmd, writeFileEnsuringDir } from "./utils.js";
-
-const POWERHOUSE_ORG = "@powerhousedao";
-
-// Special packages that don't use the @powerhousedao organization
-const SPECIAL_PACKAGES = ["document-model", "document-drive", "@renown/sdk"];
-
-// Packages to exclude from version resolution (external dependencies)
-const EXCLUDED_PACKAGES = [
-  "@powerhousedao/document-engineering",
-  "@powerhousedao/scalars",
-  "@powerhousedao/diff-analyzer",
-  "@powerhousedao/analytics-engine-core",
-  "@powerhousedao/analytics-engine-graphql",
-  "@powerhousedao/analytics-engine-pg",
-  "@powerhousedao/analytics-engine-browser",
-  "@powerhousedao/analytics-engine-knex",
-];
-
-// Version tags that should be resolved to actual versions
-const VERSION_TAGS = ["dev", "staging", "latest"];
-
-/**
- * Checks if a version string is a tag that should be resolved
- */
-function isVersionTag(version: string): boolean {
-  return VERSION_TAGS.includes(version);
-}
-
-/**
- * Gets the installed version of a package from node_modules
- */
-function getInstalledVersion(
-  appPath: string,
-  packageName: string,
-): string | null {
-  try {
-    const packageJsonPath = path.join(
-      appPath,
-      "node_modules",
-      packageName,
-      "package.json",
-    );
-    if (fs.existsSync(packageJsonPath)) {
-      const pkg = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8")) as {
-        version?: string;
-      };
-      return pkg.version ?? null;
-    }
-  } catch {
-    // Ignore errors reading package.json
-  }
-  return null;
-}
-
-/**
- * Resolves version tags (dev, staging, latest) to actual installed versions in package.json
- */
-function resolveVersionTags(appPath: string) {
-  const packageJsonPath = path.join(appPath, "package.json");
-  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8")) as {
-    dependencies?: Record<string, string>;
-    devDependencies?: Record<string, string>;
-  };
-
-  let hasChanges = false;
-
-  const processSection = (deps: Record<string, string> | undefined) => {
-    if (!deps) return;
-
-    for (const [pkg, version] of Object.entries(deps)) {
-      // Check if this is a Powerhouse package
-      const isPowerhouseOrg = pkg.startsWith(POWERHOUSE_ORG + "/");
-      const isSpecialPackage = SPECIAL_PACKAGES.includes(pkg);
-      const isExcluded = EXCLUDED_PACKAGES.includes(pkg);
-
-      if ((isPowerhouseOrg || isSpecialPackage) && !isExcluded) {
-        // Check if the version is a tag that should be resolved
-        if (isVersionTag(version)) {
-          const installedVersion = getInstalledVersion(appPath, pkg);
-          if (installedVersion) {
-            // Add ^ prefix to allow semver range updates with ph update
-            deps[pkg] = `^${installedVersion}`;
-            hasChanges = true;
-            console.log(`  ${pkg}: ${version} → ^${installedVersion}`);
-          }
-        }
-      }
-    }
-  };
-
-  console.log("\x1b[34m", "Resolving version tags...", "\x1b[0m");
-  processSection(packageJson.dependencies);
-  processSection(packageJson.devDependencies);
-
-  if (hasChanges) {
-    fs.writeFileSync(
-      packageJsonPath,
-      JSON.stringify(packageJson, null, 2),
-      "utf8",
-    );
-    console.log("\x1b[32m", "Version tags resolved successfully!", "\x1b[0m");
-  } else {
-    console.log("  No version tags to resolve");
-  }
-}
-
-const BOILERPLATE_REPO =
-  "https://github.com/powerhouse-inc/document-model-boilerplate.git";
-
-const defaultDirectories = {
-  documentModelsDir: "./document-models",
-  editorsDir: "./editors",
-};
 
 export const createCommandSpec = {
   "--name": String,
@@ -215,7 +105,7 @@ export async function createProject(options: ICreateProjectOptions) {
         name: "projectName",
         message: "What is the project name?",
         required: true,
-        result: (value) => value.toLowerCase().trim().replace(/\s+/g, "-"),
+        result: (value) => paramCase(value),
       },
     ]);
     if (!result.projectName) {
@@ -242,8 +132,6 @@ export async function createProject(options: ICreateProjectOptions) {
 
   await handleCreateProject(
     projectName,
-    "document-models",
-    "editors",
     options.tag,
     options.branch,
     options.packageManager,
@@ -253,8 +141,6 @@ export async function createProject(options: ICreateProjectOptions) {
 
 async function handleCreateProject(
   projectName: string,
-  documentModelsDir: string,
-  editorsDir: string,
   tag?: string,
   branch?: string,
   packageManager?: string,

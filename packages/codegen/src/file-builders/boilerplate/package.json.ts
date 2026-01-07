@@ -1,10 +1,10 @@
-import { packageJsonTemplate } from "../../templates/boilerplate/package.json.js";
+import { packageJsonTemplate } from "@powerhousedao/codegen/templates";
+import { makeVersionedDependencies } from "../utils.js";
 import {
   VERSIONED_DEPENDENCIES,
   VERSIONED_DEV_DEPENDENCIES,
 } from "./constants.js";
-import type { BuildBoilerplatePackageJsonArgs } from "./types.js";
-import { makeVersionedDependencies } from "./utils.js";
+import type { BuildBoilerplatePackageJsonArgs } from "../types.js";
 
 export async function buildBoilerplatePackageJson(
   args: BuildBoilerplatePackageJsonArgs,

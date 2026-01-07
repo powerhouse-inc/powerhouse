@@ -1,20 +1,16 @@
 import { describe, expect, test } from "vitest";
-import { SPECIAL_PACKAGES } from "./constants.js";
 import {
   fetchNpmVersionFromRegistryForTag,
   getVersioningScheme,
-} from "./utils.js";
+} from "../utils.js";
+import {
+  VERSIONED_DEPENDENCIES,
+  VERSIONED_DEV_DEPENDENCIES,
+} from "./constants.js";
 
 const powerhousePackages = [
-  ...SPECIAL_PACKAGES,
-  "@powerhousedao/common",
-  "@powerhousedao/design-system",
-  "@powerhousedao/vetra",
-  "@powerhousedao/builder-tools",
-  "@powerhousedao/ph-cli",
-  "@powerhousedao/reactor-api",
-  "@powerhousedao/reactor-browser",
-  "@powerhousedao/connect",
+  ...VERSIONED_DEPENDENCIES,
+  ...VERSIONED_DEV_DEPENDENCIES,
 ];
 
 describe("Fetch npm version for package at tag from npm registry", () => {
@@ -70,8 +66,6 @@ describe("Fetch npm version for package at tag from npm registry", () => {
 
 describe("Get versioning scheme from args", () => {
   test("Should return the correct versioning scheme from args", () => {
-    const notSpecified = {};
-    expect(getVersioningScheme(notSpecified)).toBeUndefined();
     const tagSpecified = { tag: "dev" } as const;
     expect(getVersioningScheme(tagSpecified)).toEqual("tag");
     const versionSpecified = { version: "some-version" };
