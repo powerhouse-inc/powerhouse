@@ -15,6 +15,7 @@ import type {
   UpgradeDocumentActionInput,
   UpgradeTransition,
 } from "document-model";
+import { deriveOperationId } from "document-model/core";
 import type { IDocumentMetaCache } from "../cache/document-meta-cache-types.js";
 import type {
   IOperationIndex,
@@ -1199,26 +1200,18 @@ export class SimpleJobExecutor implements IJobExecutor {
       header: updatedDocument.header,
     });
 
-    try {
-      await this.operationStore.apply(
-        job.documentId,
-        document.header.documentType,
-        scope,
-        job.branch,
-        newOperation.index,
-        (txn) => {
-          txn.addOperations(newOperation);
-        },
-      );
-    } catch (error) {
-      this.writeCache.invalidate(job.documentId, scope, job.branch);
-      return this.buildErrorResult(
-        job,
-        new Error(
-          `Failed to write operation to IOperationStore: ${error instanceof Error ? error.message : String(error)}`,
-        ),
-        startTime,
-      );
+    const writeFailResult = await this.writeOperationToStore(
+      job.documentId,
+      document.header.documentType,
+      scope,
+      job.branch,
+      newOperation,
+      job,
+      startTime,
+    );
+
+    if (writeFailResult !== null) {
+      return writeFailResult;
     }
 
     updatedDocument.header.revision = {
@@ -1360,7 +1353,10 @@ export class SimpleJobExecutor implements IJobExecutor {
       conflictingOps = [];
     }
 
-    const incomingOpIds = new Set(job.operations.map((op) => op.id));
+    // Use action IDs for duplicate detection. Action ID identifies the logical
+    // action, while operation ID is derived from position. When the same action
+    // is loaded again (e.g., during re-sync), we compare by action ID.
+    const incomingActionIds = new Set(job.operations.map((op) => op.action.id));
 
     // Filter out operations that have been superseded by later operations with skip values.
     // An operation at index N is superseded if there exists an operation at index M > N
@@ -1377,8 +1373,17 @@ export class SimpleJobExecutor implements IJobExecutor {
       return true;
     });
 
+    // Existing operations that need to be reshuffled (those not being replaced by incoming)
     const existingOpsToReshuffle = nonSupersededOps.filter(
-      (op) => !incomingOpIds.has(op.id),
+      (op) => !incomingActionIds.has(op.action.id),
+    );
+
+    // Filter out incoming operations that are duplicates (action already exists)
+    const existingActionIds = new Set(
+      nonSupersededOps.map((op) => op.action.id),
+    );
+    const incomingOpsToApply = job.operations.filter(
+      (op) => !existingActionIds.has(op.action.id),
     );
 
     const reshuffledOperations = reshuffleByTimestampAndIndex(
@@ -1387,14 +1392,36 @@ export class SimpleJobExecutor implements IJobExecutor {
         skip: skipCount,
       },
       existingOpsToReshuffle,
-      job.operations.map((operation) => ({
+      incomingOpsToApply.map((operation) => ({
         ...operation,
         id: operation.id,
       })),
     );
 
-    const actions = reshuffledOperations.map((operation) => operation.action);
-    const skipValues = reshuffledOperations.map((operation) => operation.skip);
+    // Derive new IDs for reshuffled operations based on their new positions.
+    // Operations are immutable - the ID is derived from (documentId, scope,
+    // branch, actionType, actionId, index, skip). When an operation's position
+    // changes during reshuffle, it becomes a new operation with a new ID.
+    // If the position didn't change, the derived ID equals the original ID.
+    const reshuffledOpsWithDerivedIds = reshuffledOperations.map((op) => ({
+      ...op,
+      id: deriveOperationId(
+        job.documentId,
+        job.scope,
+        job.branch,
+        op.action.type,
+        op.action.id,
+        op.index,
+        op.skip,
+      ),
+    }));
+
+    const actions = reshuffledOpsWithDerivedIds.map(
+      (operation) => operation.action,
+    );
+    const skipValues = reshuffledOpsWithDerivedIds.map(
+      (operation) => operation.skip,
+    );
 
     const result = await this.processActions(
       job,
@@ -1402,7 +1429,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       startTime,
       indexTxn,
       skipValues,
-      reshuffledOperations,
+      reshuffledOpsWithDerivedIds,
     );
 
     if (!result.success) {
@@ -1452,6 +1479,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       return null;
     } catch (error) {
       this.writeCache.invalidate(documentId, scope, branch);
+
       return {
         job,
         success: false,
