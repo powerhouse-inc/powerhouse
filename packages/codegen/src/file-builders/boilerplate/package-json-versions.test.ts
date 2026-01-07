@@ -1,8 +1,8 @@
 import { describe, expect, test } from "vitest";
 import { SPECIAL_PACKAGES } from "./constants.js";
 import {
-  fetchNpmVersionFromRegistry,
-  getVersioningSchemeFromArgs,
+  fetchNpmVersionFromRegistryForTag,
+  getVersioningScheme,
 } from "./utils.js";
 
 const powerhousePackages = [
@@ -21,7 +21,7 @@ describe("Fetch npm version for package at tag from npm registry", () => {
   test("Fetch versions without specified tag", { timeout: 15000 }, async () => {
     const powerhousePackageVersionsWithoutSpecifiedTag = await Promise.all(
       powerhousePackages.map((packageName) =>
-        fetchNpmVersionFromRegistry(packageName, ""),
+        fetchNpmVersionFromRegistryForTag(packageName, ""),
       ),
     );
     console.log({ powerhousePackageVersionsWithoutSpecifiedTag });
@@ -33,7 +33,7 @@ describe("Fetch npm version for package at tag from npm registry", () => {
   test("Fetch versions @latest", { timeout: 15000 }, async () => {
     const powerhousePackageVersionsAtLatest = await Promise.all(
       powerhousePackages.map((packageName) =>
-        fetchNpmVersionFromRegistry(packageName, "latest"),
+        fetchNpmVersionFromRegistryForTag(packageName, "latest"),
       ),
     );
     console.log({ powerhousePackageVersionsAtLatest });
@@ -45,7 +45,7 @@ describe("Fetch npm version for package at tag from npm registry", () => {
   test("Fetch versions @dev", { timeout: 15000 }, async () => {
     const powerhousePackageVersionsAtDev = await Promise.all(
       powerhousePackages.map((packageName) =>
-        fetchNpmVersionFromRegistry(packageName, "dev"),
+        fetchNpmVersionFromRegistryForTag(packageName, "dev"),
       ),
     );
     console.log({ powerhousePackageVersionsAtDev });
@@ -57,7 +57,7 @@ describe("Fetch npm version for package at tag from npm registry", () => {
   test("Fetch versions @staging", { timeout: 15000 }, async () => {
     const powerhousePackageVersionsAtStaging = await Promise.all(
       powerhousePackages.map((packageName) =>
-        fetchNpmVersionFromRegistry(packageName, "staging"),
+        fetchNpmVersionFromRegistryForTag(packageName, "staging"),
       ),
     );
     console.log({ powerhousePackageVersionsAtStaging });
@@ -71,13 +71,13 @@ describe("Fetch npm version for package at tag from npm registry", () => {
 describe("Get versioning scheme from args", () => {
   test("Should return the correct versioning scheme from args", () => {
     const notSpecified = {};
-    expect(getVersioningSchemeFromArgs(notSpecified)).toBeUndefined();
+    expect(getVersioningScheme(notSpecified)).toBeUndefined();
     const tagSpecified = { tag: "some-tag" };
-    expect(getVersioningSchemeFromArgs(tagSpecified)).toEqual("tag");
+    expect(getVersioningScheme(tagSpecified)).toEqual("tag");
     const versionSpecified = { version: "some-version" };
-    expect(getVersioningSchemeFromArgs(versionSpecified)).toEqual("version");
+    expect(getVersioningScheme(versionSpecified)).toEqual("version");
     const branchSpecified = { branch: "some-branch" };
-    expect(getVersioningSchemeFromArgs(branchSpecified)).toEqual("branch");
+    expect(getVersioningScheme(branchSpecified)).toEqual("branch");
   });
   test("Should not allow multiple versioning schemes to be specified", () => {
     const twoSchemesSpecified = {
@@ -89,10 +89,8 @@ describe("Get versioning scheme from args", () => {
       version: "some-version",
     };
     try {
-      expect(getVersioningSchemeFromArgs(twoSchemesSpecified)).toThrowError();
-      expect(
-        getVersioningSchemeFromArgs(threeVersionsSpecified),
-      ).toThrowError();
+      expect(getVersioningScheme(twoSchemesSpecified)).toThrowError();
+      expect(getVersioningScheme(threeVersionsSpecified)).toThrowError();
     } catch (e) {
       // ignore error, we are testing the error case
     }

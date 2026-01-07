@@ -1,13 +1,8 @@
-import { getVersioningSchemeFromArgs } from "./utils.js";
+import type { BuildBoilerplatePackageJsonArgs } from "./types.js";
+import { getVersioningScheme } from "./utils.js";
 
-type BuildBoilerplatePackageJsonArgs = {
-  projectName: string;
-  tag?: "dev" | "staging" | "latest";
-  version?: string;
-  branch?: string;
-};
 export function buildBoilerplatePackageJson(
   args: BuildBoilerplatePackageJsonArgs,
 ) {
-  const versioningScheme = getVersioningSchemeFromArgs(args);
+  const versioningScheme = getVersioningScheme(args);
 }

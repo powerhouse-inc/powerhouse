@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
-import { clean } from "semver";
+import { clean, valid } from "semver";
+import type { Tag, VersioningSchemes } from "./types.js";
 
 export function spawnAsync(
   command: string,
@@ -44,9 +45,9 @@ export function spawnAsync(
   });
 }
 
-export async function fetchNpmVersionFromRegistry(
+export async function fetchNpmVersionFromRegistryForTag(
   packageName: string,
-  tag: "dev" | "staging" | "latest" | "",
+  tag: Tag,
 ) {
   tag = tag || "latest";
   // npm will assume tag is `"latest"` unless otherwise specified
@@ -66,20 +67,30 @@ export async function fetchNpmVersionFromRegistry(
   return `^${cleanedVersion}`;
 }
 
-export function getVersioningSchemeFromArgs(schemes: {
-  tag?: string;
-  version?: string;
-  branch?: string;
-}): "tag" | "version" | "branch" | undefined {
-  const definedSchemes = Object.keys(schemes) as (
-    | "tag"
-    | "version"
-    | "branch"
-  )[];
+export function getVersioningScheme(
+  schemes: VersioningSchemes,
+): keyof VersioningSchemes | undefined {
+  const definedSchemes = Object.keys(schemes) as (keyof VersioningSchemes)[];
   if (definedSchemes.length > 1) {
     throw new Error(
       `Cannot use more than one versioning scheme. You specified: ${definedSchemes.join(" and ")}`,
     );
   }
   return definedSchemes[0];
+}
+
+export async function getPackageVersion(
+  packageName: string,
+  schemes: VersioningSchemes,
+) {
+  const scheme = getVersioningScheme(schemes) ?? "tag";
+  if (scheme === "version") {
+    const semverVersion = schemes["version"];
+    if (!semverVersion || !valid(clean(semverVersion))) {
+      throw new Error(`Invalid version specified: ${semverVersion}`);
+    }
+    return semverVersion;
+  }
+  const specifiedTag = schemes["tag"] ?? "";
+  return await fetchNpmVersionFromRegistryForTag(packageName, specifiedTag);
 }
