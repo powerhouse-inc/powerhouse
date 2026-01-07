@@ -8,7 +8,7 @@
         "scope": "document",
         "input": {
           "model": "powerhouse/document-model",
-          "version": "0.0.0"
+          "version": 0
         }
       }
     },
@@ -20,11 +20,11 @@
         "scope": "document",
         "input": {
           "model": "powerhouse/document-model",
-          "fromVersion": "0.0.0",
-          "toVersion": "0.1.0",
+          "fromVersion": 0,
+          "toVersion": 1,
           "initialState": {
             "document": {
-              "version": "1.0.0"
+              "version": 0
             },
             "global": {
               "name": "",
