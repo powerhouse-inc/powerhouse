@@ -3,6 +3,7 @@ import { accessTokenCommand } from "./access-token.js";
 import { connectCommand } from "./connect.js";
 import { generateCommand } from "./generate.js";
 import { helpCommand } from "./help.js";
+import { initProfilingCommand } from "./init-profiling.js";
 import { inspectCommand } from "./inspect.js";
 import { installCommand } from "./install.js";
 import { listCommand } from "./list.js";
@@ -18,6 +19,7 @@ export const commands = [
   connectCommand,
   generateCommand,
   helpCommand,
+  initProfilingCommand,
   installCommand,
   uninstallCommand,
   serviceCommand,
