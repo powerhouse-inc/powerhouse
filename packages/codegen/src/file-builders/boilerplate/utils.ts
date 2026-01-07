@@ -65,3 +65,21 @@ export async function fetchNpmVersionFromRegistry(
   // Add ^ prefix to allow semver range updates with ph update
   return `^${cleanedVersion}`;
 }
+
+export function getVersioningSchemeFromArgs(schemes: {
+  tag?: string;
+  version?: string;
+  branch?: string;
+}): "tag" | "version" | "branch" | undefined {
+  const definedSchemes = Object.keys(schemes) as (
+    | "tag"
+    | "version"
+    | "branch"
+  )[];
+  if (definedSchemes.length > 1) {
+    throw new Error(
+      `Cannot use more than one versioning scheme. You specified: ${definedSchemes.join(" and ")}`,
+    );
+  }
+  return definedSchemes[0];
+}

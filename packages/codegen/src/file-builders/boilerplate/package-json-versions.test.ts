@@ -1,6 +1,9 @@
 import { describe, expect, test } from "vitest";
 import { SPECIAL_PACKAGES } from "./constants.js";
-import { fetchNpmVersionFromRegistry } from "./utils.js";
+import {
+  fetchNpmVersionFromRegistry,
+  getVersioningSchemeFromArgs,
+} from "./utils.js";
 
 const powerhousePackages = [
   ...SPECIAL_PACKAGES,
@@ -62,5 +65,36 @@ describe("Fetch npm version for package at tag from npm registry", () => {
       powerhousePackages.length,
     );
     expect(new Set(powerhousePackageVersionsAtStaging).size).toBe(1);
+  });
+});
+
+describe("Get versioning scheme from args", () => {
+  test("Should return the correct versioning scheme from args", () => {
+    const notSpecified = {};
+    expect(getVersioningSchemeFromArgs(notSpecified)).toBeUndefined();
+    const tagSpecified = { tag: "some-tag" };
+    expect(getVersioningSchemeFromArgs(tagSpecified)).toEqual("tag");
+    const versionSpecified = { version: "some-version" };
+    expect(getVersioningSchemeFromArgs(versionSpecified)).toEqual("version");
+    const branchSpecified = { branch: "some-branch" };
+    expect(getVersioningSchemeFromArgs(branchSpecified)).toEqual("branch");
+  });
+  test("Should not allow multiple versioning schemes to be specified", () => {
+    const twoSchemesSpecified = {
+      tag: "some-tag",
+      branch: "some-branch",
+    };
+    const threeVersionsSpecified = {
+      ...twoSchemesSpecified,
+      version: "some-version",
+    };
+    try {
+      expect(getVersioningSchemeFromArgs(twoSchemesSpecified)).toThrowError();
+      expect(
+        getVersioningSchemeFromArgs(threeVersionsSpecified),
+      ).toThrowError();
+    } catch (e) {
+      // ignore error, we are testing the error case
+    }
   });
 });
