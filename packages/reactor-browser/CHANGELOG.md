@@ -1,3 +1,15 @@
+## 5.1.0-dev.34 (2026-01-07)
+
+### 🚀 Features
+
+- **reactor-browser:** added onSuccess callback to dispatch ([929dd4c69](https://github.com/powerhouse-inc/powerhouse/commit/929dd4c69))
+- **ph-cli:** add index.html migration to migrate command ([#2186](https://github.com/powerhouse-inc/powerhouse/pull/2186))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Ryan Wolhuter @ryanwolhuter
+
 ## 5.1.0-dev.33 (2026-01-06)
 
 ### 🚀 Features

@@ -1,3 +1,20 @@
+## 5.1.0-dev.34 (2026-01-07)
+
+### 🚀 Features
+
+- **ph-cli:** add index.html migration to migrate command ([#2186](https://github.com/powerhouse-inc/powerhouse/pull/2186))
+- **document-model:** improve state schema validation ([a517525c6](https://github.com/powerhouse-inc/powerhouse/commit/a517525c6))
+
+### 🩹 Fixes
+
+- **builder-tools:** prefill default operation schema ([ab486a217](https://github.com/powerhouse-inc/powerhouse/commit/ab486a217))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 5.1.0-dev.33 (2026-01-06)
 
 ### 🩹 Fixes

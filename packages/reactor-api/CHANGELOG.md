@@ -1,3 +1,18 @@
+## 5.1.0-dev.34 (2026-01-07)
+
+### 🚀 Features
+
+- **ph-cli:** add index.html migration to migrate command ([#2186](https://github.com/powerhouse-inc/powerhouse/pull/2186))
+
+### 🩹 Fixes
+
+- **reactor-api:** return operation index on addAction mutation ([cb10efcfd](https://github.com/powerhouse-inc/powerhouse/commit/cb10efcfd))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Ryan Wolhuter @ryanwolhuter
+
 ## 5.1.0-dev.33 (2026-01-06)
 
 ### 🚀 Features

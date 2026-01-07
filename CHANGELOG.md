@@ -1,3 +1,28 @@
+## 5.1.0-dev.34 (2026-01-07)
+
+### 🚀 Features
+
+- adding feature flag support for v2 storage ([2f34fff4b](https://github.com/powerhouse-inc/powerhouse/commit/2f34fff4b))
+- **codegen,ph-cli:** move templates to top level of codegen ([#2187](https://github.com/powerhouse-inc/powerhouse/pull/2187))
+- **document-model:** improve state schema validation ([a517525c6](https://github.com/powerhouse-inc/powerhouse/commit/a517525c6))
+- **document-model:** improve state schema validation ([#2174](https://github.com/powerhouse-inc/powerhouse/pull/2174))
+- **ph-cli:** add index.html migration to migrate command ([#2186](https://github.com/powerhouse-inc/powerhouse/pull/2186))
+- **reactor-browser:** added onSuccess callback to dispatch ([929dd4c69](https://github.com/powerhouse-inc/powerhouse/commit/929dd4c69))
+
+### 🩹 Fixes
+
+- **builder-tools:** prefill default operation schema ([ab486a217](https://github.com/powerhouse-inc/powerhouse/commit/ab486a217))
+- **codegen:** use cleaned semver string ([bf4e20795](https://github.com/powerhouse-inc/powerhouse/commit/bf4e20795))
+- **reactor-api:** return operation index on addAction mutation ([cb10efcfd](https://github.com/powerhouse-inc/powerhouse/commit/cb10efcfd))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente @gpuente
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
 ## 5.1.0-dev.33 (2026-01-06)
 
 ### 🚀 Features
