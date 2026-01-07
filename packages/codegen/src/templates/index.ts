@@ -2,7 +2,7 @@ export * from "./boilerplate/document-models.js";
 export * from "./boilerplate/editors.js";
 export * from "./boilerplate/index.html.js";
 export * from "./boilerplate/index.js";
-export * from "./boilerplate/package.json.js";
+export * from "./boilerplate/package.json.legacy.js";
 export * from "./boilerplate/tsconfig.json.js";
 export * from "./document-editor/editor.js";
 export * from "./document-editor/module.js";
