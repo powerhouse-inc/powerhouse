@@ -50,8 +50,8 @@ export function replayOperations<TState extends PHBaseState = PHBaseState>(
   initialState: TState,
   clearedOperations: DocumentOperations,
   stateReducer: StateReducer<TState>,
+  header: PHDocumentHeader,
   dispatch?: SignalDispatch,
-  header?: PHDocumentHeader,
   documentReducer = baseReducer,
   skipHeaderOperations: SkipHeaderOperations = {},
   options?: ReplayDocumentOptions,
@@ -64,8 +64,8 @@ export function replayOperations<TState extends PHBaseState = PHBaseState>(
     initialState,
     clearedOperations,
     wrappedReducer,
-    dispatch,
     header,
+    dispatch,
     skipHeaderOperations,
     options,
   );
@@ -300,7 +300,7 @@ function processSkipOperation<TState extends PHBaseState = PHBaseState>(
       document.initialState,
       documentOperations,
       customReducer,
-      undefined,
+      document.header,
       undefined,
       undefined,
       undefined,
@@ -359,7 +359,7 @@ function processUndoOperation<TState extends PHBaseState = PHBaseState>(
     document.initialState,
     documentOperations,
     customReducer,
-    undefined,
+    document.header,
     undefined,
     undefined,
     undefined,
@@ -643,6 +643,7 @@ export function pruneOperation<TState extends PHBaseState = PHBaseState>(
       global: actionsToKeepStart.concat(actionsToPrune),
     },
     wrappedReducer,
+    document.header,
   );
 
   const newState = newDocument.state;
@@ -685,5 +686,6 @@ export function pruneOperation<TState extends PHBaseState = PHBaseState>(
       ],
     },
     wrappedReducer,
+    document.header,
   );
 }

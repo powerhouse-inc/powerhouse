@@ -226,22 +226,38 @@ export const operationFromOperation = (
   skip: number,
   context: OperationContext,
 ): Operation => {
-  return {
+  const derivedId = deriveOperationId(
+    context.documentId,
+    context.scope,
+    context.branch,
+    operation.action.type,
+    operation.action.id,
+    index,
+    skip,
+  );
+
+  // Validate existing ID matches derived ID (detect corruption)
+  // If operation has an ID, it must match the derived ID
+  if (operation.id && operation.id !== derivedId) {
+    throw new Error(
+      `Operation ID mismatch: expected ${derivedId}, got ${operation.id}. ` +
+        `Context: docId=${context.documentId}, scope=${context.scope}, branch=${context.branch}, ` +
+        `actionType=${operation.action.type}, actionId=${operation.action.id}, index=${index}, skip=${skip}`,
+    );
+  }
+
+  // Preserve the existing ID state:
+  // - If operation has an ID, it was validated above and we preserve it
+  // - If operation has no ID (undefined), we don't add one
+  const result: Operation = {
     ...operation,
-    id: deriveOperationId(
-      context.documentId,
-      context.scope,
-      context.branch,
-      operation.action.type,
-      operation.action.id,
-      index,
-      skip,
-    ),
     hash: "",
     error: undefined,
     index,
     skip,
   };
+
+  return result;
 };
 
 export const operationWithContext = (

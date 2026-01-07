@@ -179,6 +179,7 @@ describe("Base utils", () => {
       document.initialState,
       newDocument.operations,
       countReducer,
+      newDocument.header,
     );
 
     expect(newDocument.state).toStrictEqual(replayedDocument.state);

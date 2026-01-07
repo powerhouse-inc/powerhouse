@@ -422,7 +422,7 @@ describe("UNDO/REDO", () => {
       };
 
       const baseOperation: Operation = {
-        id: "noop-2",
+        id: undefined as unknown as string,
         skip: 0,
         index: 5,
         hash: "Ki38EB6gkUcnU3ceRsc88njPo3U=",

@@ -88,7 +88,7 @@ describe("Document Operation ID", () => {
       operations: {
         ...document.operations,
         global: document.operations.global!.map((op) => {
-          const { id, ...operation } = op;
+          const { id: _id, ...operation } = op;
           return operation;
         }),
       },
@@ -119,6 +119,7 @@ describe("Document Operation ID", () => {
       initialState,
       clearedOperations,
       baseCountReducer,
+      document.header,
     );
 
     expect(replayedDoc.operations.global!).toHaveLength(3);
@@ -157,6 +158,7 @@ describe("Document Operation ID", () => {
       initialState,
       clearedOperations,
       baseCountReducer,
+      document.header,
     );
 
     expect(replayedDoc.operations.global!).toHaveLength(4);
@@ -185,7 +187,7 @@ describe("Document Operation ID", () => {
       operations: {
         ...document.operations,
         global: document.operations.global!.map((op) => {
-          const { id, ...operation } = op;
+          const { id: _id, ...operation } = op;
           return operation;
         }),
       },
@@ -201,6 +203,7 @@ describe("Document Operation ID", () => {
       initialState,
       clearedOperations,
       baseCountReducer,
+      document.header,
     );
 
     expect(replayedDoc.operations.global!).toHaveLength(4);
