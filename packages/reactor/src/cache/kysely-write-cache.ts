@@ -402,7 +402,6 @@ export class KyselyWriteCache implements IWriteCache {
           document = docModule.reducer(document, operation.action);
         }
       }
-
     }
 
     const module = this.registry.getModule(documentType);

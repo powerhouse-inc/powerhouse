@@ -1546,9 +1546,9 @@ export class BaseDocumentDriveServer
       documentStorage.initialState,
       operationsToReplay,
       documentModelModule.reducer,
-      undefined,
       documentStorage.header,
       undefined,
+      {},
       {
         ...options,
         checkHashes: options?.checkHashes ?? true,

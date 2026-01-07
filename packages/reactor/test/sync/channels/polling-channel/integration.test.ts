@@ -15,7 +15,9 @@ describe("PollingChannel Integration", () => {
   let cursorStorage: ISyncCursorStorage;
   let remoteStorage: KyselySyncRemoteStorage;
 
-  const createMockOperationContext = (ordinal: number = 0): OperationContext => ({
+  const createMockOperationContext = (
+    ordinal: number = 0,
+  ): OperationContext => ({
     documentId: "doc-1",
     documentType: "test/document",
     scope: "public",

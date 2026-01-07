@@ -93,7 +93,9 @@ async function loadFromZip<TState extends PHBaseState>(
   if (!headerZip) {
     throw new Error("Document header not found - file format may be outdated");
   }
-  const header = JSON.parse(await headerZip.async("string")) as PHDocumentHeader;
+  const header = JSON.parse(
+    await headerZip.async("string"),
+  ) as PHDocumentHeader;
 
   const operationsZip = zip.file("operations.json");
   if (!operationsZip) {
