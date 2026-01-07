@@ -2,9 +2,9 @@ import type arg from "arg";
 import enquirer from "enquirer";
 import fs from "node:fs";
 import path from "path";
-import { featureFlags } from "./feature-flags.js";
+import { buildBoilerplatePackageJson } from "../file-builders/index.js";
+import { parseArgs } from "../utils/cli.js";
 import { envPackageManager, runCmd } from "./utils.js";
-import { parseArgs, promptDirectories } from "../utils/cli.js";
 
 const POWERHOUSE_ORG = "@powerhousedao";
 
@@ -135,32 +135,13 @@ export const createCommandSpec = {
 
 export interface ICreateProjectOptions {
   name: string | undefined;
-  tag: string;
-  interactive: boolean;
+  tag?: string;
   branch?: string;
   packageManager?: string;
   vetraDriveUrl?: string;
 }
 
 const { prompt } = enquirer;
-
-function buildPackageJson(appPath: string, projectName: string) {
-  const packageJson = JSON.parse(
-    fs.readFileSync(path.join(appPath, "package.json"), "utf-8"),
-  ) as Record<string, any>;
-  const newPackage = {
-    ...packageJson,
-    name: projectName,
-    version: "1.0.0",
-    description: "",
-  };
-
-  fs.writeFileSync(
-    path.join(appPath, "package.json"),
-    JSON.stringify(newPackage, null, 2),
-    "utf8",
-  );
-}
 
 function buildPowerhouseConfig(
   appPath: string,
@@ -189,26 +170,6 @@ function buildPowerhouseConfig(
   }
 
   fs.writeFileSync(filePath, JSON.stringify(newPackage, null, 2), "utf8");
-}
-
-function buildIndex(
-  appPath: string,
-  documentModelsDir: string,
-  editorsDir: string,
-) {
-  fs.writeFileSync(
-    path.join(appPath, "index.ts"),
-    `import type { Manifest } from "document-model";
-import manifestJson from "./powerhouse.manifest.json" with { type: "json" };
-import * as documentModelsExports from '${documentModelsDir}/index.js';
-import * as editorsExports from '${editorsDir}/index.js';
-
-export const manifest: Manifest = manifestJson;
-export const documentModels = Object.values(documentModelsExports);
-export const editors = Object.values(editorsExports);
-`,
-    "utf8",
-  );
 }
 
 export function parseTag(args: {
@@ -240,7 +201,6 @@ export function initCli() {
   const args = parseArgs(process.argv.slice(2), createCommandSpec);
   const options: ICreateProjectOptions = {
     name: args["--name"] ?? args._.shift(),
-    interactive: args["--interactive"] ?? false,
     tag: parseTagArgs(args),
     branch: args["--branch"],
   };
@@ -267,15 +227,6 @@ export async function createProject(options: ICreateProjectOptions) {
     projectName = result.projectName;
   }
 
-  let documentModelsDir = defaultDirectories.documentModelsDir;
-  let editorsDir = defaultDirectories.editorsDir;
-
-  if (featureFlags.allowCustomDirectories && options.interactive) {
-    const result = await promptDirectories(defaultDirectories);
-    documentModelsDir = result.documentModelsDir;
-    editorsDir = result.editorsDir;
-  }
-
   const appPath = path.join(process.cwd(), projectName);
 
   try {
@@ -293,10 +244,10 @@ export async function createProject(options: ICreateProjectOptions) {
     process.exit(1);
   }
 
-  handleCreateProject(
+  await handleCreateProject(
     projectName,
-    documentModelsDir,
-    editorsDir,
+    "document-models",
+    "editors",
     options.tag,
     options.branch,
     options.packageManager,
@@ -304,16 +255,16 @@ export async function createProject(options: ICreateProjectOptions) {
   );
 }
 
-function handleCreateProject(
+async function handleCreateProject(
   projectName: string,
   documentModelsDir: string,
   editorsDir: string,
-  tag = "main",
+  tag?: string,
   branch?: string,
   packageManager?: string,
   vetraDriveUrl?: string,
 ) {
-  branch = branch ?? tag;
+  branch = branch ?? "main";
   packageManager = packageManager ?? envPackageManager;
 
   try {
@@ -325,6 +276,17 @@ function handleCreateProject(
     const appPath = path.join(process.cwd(), projectName);
     process.chdir(appPath);
 
+    fs.rmSync(path.join(appPath, "./.git"), { recursive: true });
+    runCmd(`git init -b ${branch}`);
+
+    fs.rmSync("package.json");
+    const packageJson = await buildBoilerplatePackageJson({
+      projectName,
+      tag,
+    });
+
+    fs.writeFileSync("package.json", packageJson, { encoding: "utf-8" });
+
     console.log(
       "\x1b[34m",
       `Installing dependencies with ${packageManager}...`,
@@ -332,30 +294,12 @@ function handleCreateProject(
     );
     runCmd(`${packageManager} install --loglevel error`);
 
-    // Resolve version tags (dev, staging, latest) to actual installed versions
-    resolveVersionTags(appPath);
-
-    fs.rmSync(path.join(appPath, "./.git"), { recursive: true });
-    runCmd(`git init -b ${tag}`);
-
-    try {
-      fs.mkdirSync(path.join(appPath, documentModelsDir));
-      fs.writeFileSync(path.join(appPath, documentModelsDir, "index.ts"), "");
-      fs.mkdirSync(path.join(appPath, editorsDir));
-      fs.writeFileSync(path.join(appPath, editorsDir, "index.ts"), "");
-    } catch (error) {
-      if (!(error as Error).message.includes("EEXIST")) {
-        throw error;
-      }
-    }
-    buildPackageJson(appPath, projectName);
     buildPowerhouseConfig(
       appPath,
       documentModelsDir,
       editorsDir,
       vetraDriveUrl,
     );
-    buildIndex(appPath, documentModelsDir, editorsDir);
 
     console.log("\x1b[32m", "The installation is done!", "\x1b[0m");
     console.log();

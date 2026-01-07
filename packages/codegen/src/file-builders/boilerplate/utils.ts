@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { clean, valid } from "semver";
-import type { Tag, VersioningSchemes } from "./types.js";
+import type { VersioningSchemes } from "./types.js";
 
 export function spawnAsync(
   command: string,
@@ -47,7 +47,7 @@ export function spawnAsync(
 
 export async function fetchNpmVersionFromRegistryForTag(
   packageName: string,
-  tag: Tag,
+  tag: string,
 ) {
   tag = tag || "latest";
   // npm will assume tag is `"latest"` unless otherwise specified
@@ -64,26 +64,28 @@ export async function fetchNpmVersionFromRegistryForTag(
   }
 
   // Add ^ prefix to allow semver range updates with ph update
-  return `^${cleanedVersion}`;
+  return cleanedVersion;
 }
 
 export function getVersioningScheme(
   schemes: VersioningSchemes,
-): keyof VersioningSchemes | undefined {
-  const definedSchemes = Object.keys(schemes) as (keyof VersioningSchemes)[];
-  if (definedSchemes.length > 1) {
+): keyof VersioningSchemes {
+  const tag = schemes["tag"];
+  const version = schemes["version"];
+  if (tag !== undefined && version !== undefined) {
     throw new Error(
-      `Cannot use more than one versioning scheme. You specified: ${definedSchemes.join(" and ")}`,
+      `Cannot use more than one versioning scheme. Use either --tag or --version`,
     );
   }
-  return definedSchemes[0];
+  if (version !== undefined) return "version";
+  return "tag";
 }
 
 export async function getPackageVersion(
   packageName: string,
   schemes: VersioningSchemes,
 ) {
-  const scheme = getVersioningScheme(schemes) ?? "tag";
+  const scheme = getVersioningScheme(schemes);
   if (scheme === "version") {
     const semverVersion = schemes["version"];
     if (!semverVersion || !valid(clean(semverVersion))) {
@@ -92,5 +94,28 @@ export async function getPackageVersion(
     return semverVersion;
   }
   const specifiedTag = schemes["tag"] ?? "";
-  return await fetchNpmVersionFromRegistryForTag(packageName, specifiedTag);
+  const versionForTag = await fetchNpmVersionFromRegistryForTag(
+    packageName,
+    specifiedTag,
+  );
+  return versionForTag;
+}
+
+export async function makeVersionedDependencies(
+  packageNames: string[],
+  schemes: VersioningSchemes,
+) {
+  return await Promise.all(
+    packageNames.map((packageName) =>
+      makeVersionedDependency(packageName, schemes),
+    ),
+  );
+}
+
+async function makeVersionedDependency(
+  packageName: string,
+  schemes: VersioningSchemes,
+) {
+  const version = await getPackageVersion(packageName, schemes);
+  return `"${packageName}": "${version}"`;
 }

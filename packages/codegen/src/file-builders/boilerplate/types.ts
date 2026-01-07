@@ -1,7 +1,5 @@
-export type Tag = "dev" | "staging" | "latest" | "";
-
 export type VersioningSchemes = {
-  tag?: Tag;
+  tag?: string;
   version?: string;
 };
 

@@ -72,25 +72,18 @@ describe("Get versioning scheme from args", () => {
   test("Should return the correct versioning scheme from args", () => {
     const notSpecified = {};
     expect(getVersioningScheme(notSpecified)).toBeUndefined();
-    const tagSpecified = { tag: "some-tag" };
+    const tagSpecified = { tag: "dev" } as const;
     expect(getVersioningScheme(tagSpecified)).toEqual("tag");
     const versionSpecified = { version: "some-version" };
     expect(getVersioningScheme(versionSpecified)).toEqual("version");
-    const branchSpecified = { branch: "some-branch" };
-    expect(getVersioningScheme(branchSpecified)).toEqual("branch");
   });
   test("Should not allow multiple versioning schemes to be specified", () => {
     const twoSchemesSpecified = {
-      tag: "some-tag",
-      branch: "some-branch",
-    };
-    const threeVersionsSpecified = {
-      ...twoSchemesSpecified,
-      version: "some-version",
-    };
+      tag: "dev",
+      version: "1.2.3",
+    } as const;
     try {
       expect(getVersioningScheme(twoSchemesSpecified)).toThrowError();
-      expect(getVersioningScheme(threeVersionsSpecified)).toThrowError();
     } catch (e) {
       // ignore error, we are testing the error case
     }
