@@ -13,6 +13,7 @@ import {
   type RemoteFilter,
   type SyncEnvelope,
 } from "../../../../src/sync/types.js";
+import { createMockLogger } from "../../../factories.js";
 
 const TEST_FILTER: RemoteFilter = {
   documentId: [],
@@ -106,6 +107,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const channel = new GqlChannel(
+        createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -125,6 +127,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const channel = new GqlChannel(
+        createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -142,6 +145,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const channel = new GqlChannel(
+        createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -162,6 +166,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const channel = new GqlChannel(
+        createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -197,6 +202,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const channel = new GqlChannel(
+        createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -229,6 +235,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const channel = new GqlChannel(
+        createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -260,6 +267,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const channel = new GqlChannel(
+        createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -296,6 +304,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const channel = new GqlChannel(
+        createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -325,6 +334,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const channel = new GqlChannel(
+        createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -373,6 +383,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const channel = new GqlChannel(
+        createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -406,6 +417,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const channel = new GqlChannel(
+        createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -435,6 +447,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const channel = new GqlChannel(
+        createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -463,6 +476,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const channel = new GqlChannel(
+        createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -489,6 +503,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const channel = new GqlChannel(
+        createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -519,6 +534,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const channel = new GqlChannel(
+        createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -556,6 +572,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const channel = new GqlChannel(
+        createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -609,6 +626,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const channel = new GqlChannel(
+        createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -653,6 +671,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const channel = new GqlChannel(
+        createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -688,6 +707,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const channel = new GqlChannel(
+        createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -741,6 +761,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const channel = new GqlChannel(
+        createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -775,6 +796,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const channel = new GqlChannel(
+        createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -802,6 +824,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const channel = new GqlChannel(
+        createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -831,6 +854,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const channel = new GqlChannel(
+        createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -849,6 +873,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const channel = new GqlChannel(
+        createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -880,6 +905,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const channel = new GqlChannel(
+        createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -908,6 +934,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const channel = new GqlChannel(
+        createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -941,6 +968,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const channel = new GqlChannel(
+        createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,

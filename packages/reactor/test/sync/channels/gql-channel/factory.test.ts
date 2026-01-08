@@ -6,6 +6,7 @@ import type {
   ChannelConfig,
   RemoteFilter,
 } from "../../../../src/sync/types.js";
+import { createMockLogger } from "../../../factories.js";
 
 const TEST_COLLECTION_ID = "test-collection";
 const TEST_FILTER: RemoteFilter = {
@@ -30,10 +31,13 @@ const createMockFetch = () => {
 
 describe("GqlChannelFactory", () => {
   let originalFetch: typeof global.fetch;
+  let factory: GqlChannelFactory;
 
   beforeEach(() => {
     originalFetch = global.fetch;
     vi.useFakeTimers();
+
+    factory = new GqlChannelFactory(createMockLogger());
   });
 
   afterEach(() => {
@@ -44,7 +48,6 @@ describe("GqlChannelFactory", () => {
 
   describe("instance creation", () => {
     it("should create GqlChannel with valid config", () => {
-      const factory = new GqlChannelFactory();
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch();
       global.fetch = mockFetch;
@@ -74,7 +77,6 @@ describe("GqlChannelFactory", () => {
     });
 
     it("should pass all optional parameters to GqlChannel", () => {
-      const factory = new GqlChannelFactory();
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch();
       global.fetch = mockFetch;
@@ -105,7 +107,6 @@ describe("GqlChannelFactory", () => {
     });
 
     it("should work with minimal config (url only)", () => {
-      const factory = new GqlChannelFactory();
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch();
       global.fetch = mockFetch;
@@ -133,7 +134,6 @@ describe("GqlChannelFactory", () => {
 
   describe("validation", () => {
     it("should throw error if type is not gql", () => {
-      const factory = new GqlChannelFactory();
       const cursorStorage = createMockCursorStorage();
 
       const config: ChannelConfig = {
@@ -158,7 +158,6 @@ describe("GqlChannelFactory", () => {
     });
 
     it("should throw error if url is missing", () => {
-      const factory = new GqlChannelFactory();
       const cursorStorage = createMockCursorStorage();
 
       const config: ChannelConfig = {
@@ -181,7 +180,6 @@ describe("GqlChannelFactory", () => {
     });
 
     it("should throw error if url is empty string", () => {
-      const factory = new GqlChannelFactory();
       const cursorStorage = createMockCursorStorage();
 
       const config: ChannelConfig = {
@@ -206,7 +204,6 @@ describe("GqlChannelFactory", () => {
     });
 
     it("should throw error if url is not a string", () => {
-      const factory = new GqlChannelFactory();
       const cursorStorage = createMockCursorStorage();
 
       const config: ChannelConfig = {
@@ -231,7 +228,6 @@ describe("GqlChannelFactory", () => {
     });
 
     it("should throw error if authToken is not a string", () => {
-      const factory = new GqlChannelFactory();
       const cursorStorage = createMockCursorStorage();
 
       const config: ChannelConfig = {
@@ -255,7 +251,6 @@ describe("GqlChannelFactory", () => {
     });
 
     it("should throw error if pollIntervalMs is not a number", () => {
-      const factory = new GqlChannelFactory();
       const cursorStorage = createMockCursorStorage();
 
       const config: ChannelConfig = {
@@ -279,7 +274,6 @@ describe("GqlChannelFactory", () => {
     });
 
     it("should throw error if retryBaseDelayMs is not a number", () => {
-      const factory = new GqlChannelFactory();
       const cursorStorage = createMockCursorStorage();
 
       const config: ChannelConfig = {
@@ -303,7 +297,6 @@ describe("GqlChannelFactory", () => {
     });
 
     it("should throw error if retryMaxDelayMs is not a number", () => {
-      const factory = new GqlChannelFactory();
       const cursorStorage = createMockCursorStorage();
 
       const config: ChannelConfig = {
@@ -327,7 +320,6 @@ describe("GqlChannelFactory", () => {
     });
 
     it("should throw error if maxFailures is not a number", () => {
-      const factory = new GqlChannelFactory();
       const cursorStorage = createMockCursorStorage();
 
       const config: ChannelConfig = {
@@ -353,7 +345,6 @@ describe("GqlChannelFactory", () => {
 
   describe("multiple instances", () => {
     it("should create multiple independent channels", () => {
-      const factory = new GqlChannelFactory();
       const cursorStorage1 = createMockCursorStorage();
       const cursorStorage2 = createMockCursorStorage();
       const mockFetch = createMockFetch();
@@ -402,7 +393,6 @@ describe("GqlChannelFactory", () => {
 
   describe("parameter extraction", () => {
     it("should handle undefined optional parameters", () => {
-      const factory = new GqlChannelFactory();
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch();
       global.fetch = mockFetch;
@@ -430,7 +420,6 @@ describe("GqlChannelFactory", () => {
     });
 
     it("should accept extra unrecognized parameters without error", () => {
-      const factory = new GqlChannelFactory();
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch();
       global.fetch = mockFetch;
