@@ -1,3 +1,13 @@
+## 5.2.0-staging.12 (2026-01-08)
+
+### 🩹 Fixes
+
+- **connect, switchboard:** create .npmrc with hoisted node-linker before ph init ([69fd14527](https://github.com/powerhouse-inc/powerhouse/commit/69fd14527))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.2.0-staging.11 (2026-01-08)
 
 ### 🩹 Fixes
