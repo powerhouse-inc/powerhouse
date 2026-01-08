@@ -1,0 +1,115 @@
+name: Generate Release Notes Prompt
+
+on:
+  workflow_dispatch:
+    inputs:
+      from_version:
+        type: string
+        description: "Start version (exclusive) - leave empty for automatic detection"
+        required: false
+      to_version:
+        type: string
+        description: "End version (inclusive) - leave empty for latest"
+        required: false
+      include_prs:
+        type: boolean
+        description: "Fetch PR descriptions for additional context"
+        default: true
+
+env:
+  NX_ISOLATE_PLUGINS: false
+
+jobs:
+  generate-prompt:
+    name: Generate Release Notes Prompt
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - uses: pnpm/action-setup@v4
+        name: Setup pnpm
+        with:
+          version: latest
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm install --filter .
+
+      - name: Determine version range
+        id: versions
+        run: |
+          if [[ -n "${{ inputs.to_version }}" ]]; then
+            echo "to=${{ inputs.to_version }}" >> $GITHUB_OUTPUT
+          else
+            # Get latest version from CHANGELOG.md
+            LATEST=$(head -n 1 CHANGELOG.md | grep -oP '\d+\.\d+\.\d+(-[a-zA-Z]+\.\d+)?' || echo "")
+            echo "to=$LATEST" >> $GITHUB_OUTPUT
+          fi
+
+          if [[ -n "${{ inputs.from_version }}" ]]; then
+            echo "from=${{ inputs.from_version }}" >> $GITHUB_OUTPUT
+          else
+            # Get the previous version
+            PREV=$(grep -oP '## \K\d+\.\d+\.\d+(-[a-zA-Z]+\.\d+)?' CHANGELOG.md | sed -n '2p' || echo "")
+            echo "from=$PREV" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate release notes prompt
+        id: generate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ARGS="--prompt-only"
+          
+          if [[ -n "${{ steps.versions.outputs.from }}" ]]; then
+            ARGS="$ARGS --from ${{ steps.versions.outputs.from }}"
+          fi
+          
+          if [[ -n "${{ steps.versions.outputs.to }}" ]]; then
+            ARGS="$ARGS --to ${{ steps.versions.outputs.to }}"
+          fi
+          
+          if [[ "${{ inputs.include_prs }}" == "true" ]]; then
+            ARGS="$ARGS --include-prs"
+          fi
+          
+          echo "Running: npx tsx tools/scripts/generate-release-notes.ts $ARGS"
+          
+          # Generate prompt and save to file
+          npx tsx tools/scripts/generate-release-notes.ts $ARGS > release-notes-prompt.md
+          
+          echo "prompt_file=release-notes-prompt.md" >> $GITHUB_OUTPUT
+
+      - name: Create Issue with Prompt
+        uses: peter-evans/create-issue-from-file@v5
+        with:
+          title: "📝 Release Notes Prompt: ${{ steps.versions.outputs.from }} → ${{ steps.versions.outputs.to }}"
+          content-filepath: release-notes-prompt.md
+          labels: documentation,release-notes
+
+      - name: Summary
+        run: |
+          echo "## 📋 Release Notes Prompt Generated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version range:** ${{ steps.versions.outputs.from }} → ${{ steps.versions.outputs.to }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Check the created issue for the full prompt" >> $GITHUB_STEP_SUMMARY
+          echo "2. Copy the prompt and paste it into Claude (Cursor, Claude.ai, etc.)" >> $GITHUB_STEP_SUMMARY
+          echo "3. Review and edit the generated release notes" >> $GITHUB_STEP_SUMMARY
+          echo "4. Add to RELEASE-NOTES.md via PR" >> $GITHUB_STEP_SUMMARY
+
