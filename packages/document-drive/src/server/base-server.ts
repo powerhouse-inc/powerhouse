@@ -1542,11 +1542,38 @@ export class BaseDocumentDriveServer
       }
     }
 
+    // If revisions filter is specified, compute header revision from filtered operations
+    // This ensures the returned document's header.revision reflects the requested revision,
+    // not the current storage state
+    let headerForReplay = documentStorage.header;
+    if (options?.revisions) {
+      const newRevision: Record<string, number | undefined> = {
+        ...documentStorage.header.revision,
+      };
+
+      // For each scope in the revision filter, compute actual revision from filtered ops
+      for (const scope of Object.keys(options.revisions)) {
+        const scopeOps = operations[scope] ?? [];
+        if (scopeOps.length === 0) {
+          // No ops means revision should not exist for this scope
+          delete newRevision[scope];
+        } else {
+          const lastOp = scopeOps.at(-1);
+          newRevision[scope] = lastOp ? lastOp.index + 1 : 0;
+        }
+      }
+
+      headerForReplay = {
+        ...documentStorage.header,
+        revision: newRevision as typeof documentStorage.header.revision,
+      };
+    }
+
     const replayed = replayDocument(
       documentStorage.initialState,
       operationsToReplay,
       documentModelModule.reducer,
-      documentStorage.header,
+      headerForReplay,
       undefined,
       {},
       {
