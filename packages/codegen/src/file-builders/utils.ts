@@ -1,6 +1,5 @@
 import { spawn } from "node:child_process";
 import { clean, valid } from "semver";
-import type { VersioningSchemes } from "./types.js";
 
 export function spawnAsync(
   command: string,
@@ -49,7 +48,6 @@ export async function fetchNpmVersionFromRegistryForTag(
   packageName: string,
   tag: string,
 ) {
-  tag = tag || "latest";
   // npm will assume tag is `"latest"` unless otherwise specified
   const packageAtTag = `${packageName}@${tag}`;
 
@@ -67,57 +65,47 @@ export async function fetchNpmVersionFromRegistryForTag(
   return cleanedVersion;
 }
 
-export function getVersioningScheme(
-  schemes: VersioningSchemes,
-): keyof VersioningSchemes {
-  const tag = schemes["tag"];
-  const version = schemes["version"];
-  if (tag !== undefined && version !== undefined) {
-    throw new Error(
-      `Cannot use more than one versioning scheme. Use either --tag or --version`,
-    );
-  }
-  if (version !== undefined) return "version";
-  return "tag";
-}
-
-export async function getPackageVersion(
-  packageName: string,
-  schemes: VersioningSchemes,
-) {
-  const scheme = getVersioningScheme(schemes);
-  if (scheme === "version") {
-    const semverVersion = schemes["version"];
-    if (!semverVersion || !valid(clean(semverVersion))) {
-      throw new Error(`Invalid version specified: ${semverVersion}`);
+export async function getPackageVersion(args: {
+  name: string;
+  version?: string;
+  tag?: string;
+}) {
+  if (args.version) {
+    if (!valid(clean(args.version))) {
+      throw new Error(`Invalid version specified: ${args.version}`);
     }
-    return semverVersion;
+    return args.version;
   }
-  const specifiedTag = schemes["tag"] ?? "";
+
   const versionForTag = await fetchNpmVersionFromRegistryForTag(
-    packageName,
-    specifiedTag,
+    args.name,
+    args.tag ?? "latest",
   );
   return versionForTag;
 }
 
-export async function makeVersionedDependencies(
-  packageNames: string[],
-  schemes: VersioningSchemes,
-) {
+export async function makeVersionedDependencies(args: {
+  names: string[];
+  version?: string;
+  tag?: string;
+}) {
   return await Promise.all(
-    packageNames.map((packageName) =>
-      makeVersionedDependency(packageName, schemes),
+    args.names.map((name) =>
+      makeVersionedDependency({
+        name,
+        ...args,
+      }),
     ),
   );
 }
 
-async function makeVersionedDependency(
-  packageName: string,
-  schemes: VersioningSchemes,
-) {
-  const version = await getPackageVersion(packageName, schemes);
-  return `"${packageName}": "${version}"`;
+async function makeVersionedDependency(args: {
+  name: string;
+  version?: string;
+  tag?: string;
+}) {
+  const version = await getPackageVersion(args);
+  return `"${args.name}": "${version}"`;
 }
 
 export async function runPrettier() {

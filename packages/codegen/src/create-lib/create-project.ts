@@ -106,22 +106,24 @@ export async function createProject({
 }
 
 async function writeProjectRootFiles(
-  projectName: string,
-  tag: string | undefined,
-  remoteDrive: string | undefined,
+  name: string,
+  tag?: string,
+  version?: string,
+  remoteDrive?: string,
 ) {
   await writeFileEnsuringDir("LICENSE", licenseTemplate);
   await writeFileEnsuringDir("README.md", readmeTemplate);
   const packageJson = await buildBoilerplatePackageJson({
-    projectName,
+    name,
     tag,
   });
-  const powerhouseManifest = powerhouseManifestTemplate(projectName);
+  const powerhouseManifest = powerhouseManifestTemplate(name);
   await writeFileEnsuringDir("powerhouse.manifest.json", powerhouseManifest);
-  const powerhouseConfig = await buildPowerhouseConfigTemplate(
+  const powerhouseConfig = await buildPowerhouseConfigTemplate({
     tag,
+    version,
     remoteDrive,
-  );
+  });
   await writeFileEnsuringDir("powerhouse.config.json", powerhouseConfig);
   await writeFileEnsuringDir("package.json", packageJson);
   await writeFileEnsuringDir("tsconfig.json", tsConfigTemplate);

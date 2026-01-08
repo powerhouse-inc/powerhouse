@@ -22,14 +22,16 @@ function makeVetraConfigField(vetraDriveUrl: string | undefined) {
 `.raw;
 }
 
-export async function buildPowerhouseConfigTemplate(
-  tag: string | undefined,
-  vetraDriveUrl: string | undefined,
-) {
-  const vetraPackageVersion = await getPackageVersion("@powerhousedao/vetra", {
-    tag,
+export async function buildPowerhouseConfigTemplate(args: {
+  tag?: string;
+  version?: string;
+  remoteDrive?: string;
+}) {
+  const vetraPackageVersion = await getPackageVersion({
+    name: "@powerhousedao/vetra",
+    ...args,
   });
-  const vetraConfigField = makeVetraConfigField(vetraDriveUrl);
+  const vetraConfigField = makeVetraConfigField(args.remoteDrive);
   return json`
   {
   "documentModelsDir": "./document-models",

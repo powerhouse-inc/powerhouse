@@ -13,6 +13,7 @@ import {
 } from "cmd-ts";
 import type { Command } from "commander";
 import enquirer from "enquirer";
+import { clean, valid } from "semver";
 import { parsePackageManager, parseTag } from "../utils/parsing.js";
 import { setupRemoteDrive } from "../utils/validate-remote-drive.js";
 
@@ -141,6 +142,10 @@ const commandParser = command({
     }
     if (!name) {
       throw new Error("You must provide a name for your project.");
+    }
+
+    if (version !== undefined && !valid(clean(version))) {
+      throw new Error(`Invalid version: ${version}`);
     }
 
     handleMutuallyExclusiveOptions(

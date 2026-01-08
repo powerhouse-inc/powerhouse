@@ -4,23 +4,26 @@ import {
   VERSIONED_DEPENDENCIES,
   VERSIONED_DEV_DEPENDENCIES,
 } from "./constants.js";
-import type { BuildBoilerplatePackageJsonArgs } from "../types.js";
 
-export async function buildBoilerplatePackageJson(
-  args: BuildBoilerplatePackageJsonArgs,
-) {
-  const { projectName } = args;
-  const versionedDependencies = await makeVersionedDependencies(
-    VERSIONED_DEPENDENCIES,
-    args,
-  );
-  const versionedDevDependencies = await makeVersionedDependencies(
-    VERSIONED_DEV_DEPENDENCIES,
-    args,
-  );
+export async function buildBoilerplatePackageJson(args: {
+  name: string;
+  tag?: string;
+  version?: string;
+}) {
+  const { name, tag, version } = args;
+  const versionedDependencies = await makeVersionedDependencies({
+    names: VERSIONED_DEPENDENCIES,
+    tag,
+    version,
+  });
+  const versionedDevDependencies = await makeVersionedDependencies({
+    names: VERSIONED_DEV_DEPENDENCIES,
+    tag,
+    version,
+  });
 
   const template = packageJsonTemplate(
-    projectName,
+    name,
     versionedDependencies,
     versionedDevDependencies,
   );

@@ -1,8 +1,5 @@
 import { describe, expect, test } from "vitest";
-import {
-  fetchNpmVersionFromRegistryForTag,
-  getVersioningScheme,
-} from "../utils.js";
+import { fetchNpmVersionFromRegistryForTag } from "../utils.js";
 import {
   VERSIONED_DEPENDENCIES,
   VERSIONED_DEV_DEPENDENCIES,
@@ -61,25 +58,5 @@ describe("Fetch npm version for package at tag from npm registry", () => {
       powerhousePackages.length,
     );
     expect(new Set(powerhousePackageVersionsAtStaging).size).toBe(1);
-  });
-});
-
-describe("Get versioning scheme from args", () => {
-  test("Should return the correct versioning scheme from args", () => {
-    const tagSpecified = { tag: "dev" } as const;
-    expect(getVersioningScheme(tagSpecified)).toEqual("tag");
-    const versionSpecified = { version: "some-version" };
-    expect(getVersioningScheme(versionSpecified)).toEqual("version");
-  });
-  test("Should not allow multiple versioning schemes to be specified", () => {
-    const twoSchemesSpecified = {
-      tag: "dev",
-      version: "1.2.3",
-    } as const;
-    try {
-      expect(getVersioningScheme(twoSchemesSpecified)).toThrowError();
-    } catch (e) {
-      // ignore error, we are testing the error case
-    }
   });
 });
