@@ -1,3 +1,30 @@
+## 5.1.0-dev.35 (2026-01-08)
+
+### 🚀 Features
+
+- added reshuffle behavior proof ([e521b74ce](https://github.com/powerhouse-inc/powerhouse/commit/e521b74ce))
+- side-by-side reshuffle test ([cd4f879f9](https://github.com/powerhouse-inc/powerhouse/commit/cd4f879f9))
+
+### 🩹 Fixes
+
+- revert to 100 skips ([8409a98a8](https://github.com/powerhouse-inc/powerhouse/commit/8409a98a8))
+- ordinal issue ([bcc284ce1](https://github.com/powerhouse-inc/powerhouse/commit/bcc284ce1))
+- timestamps and indices were being overwritten -- also lots of logging that is in progress ([b4153193a](https://github.com/powerhouse-inc/powerhouse/commit/b4153193a))
+- removing a bunch of logging and making a half fix where we only overwrite _some_ timestamps ([31ce11c55](https://github.com/powerhouse-inc/powerhouse/commit/31ce11c55))
+- operation id should be deterministic, not a uuid ([41f50b7f8](https://github.com/powerhouse-inc/powerhouse/commit/41f50b7f8))
+- fix the internal-listener tests with new operation ids ([fe7cbbf41](https://github.com/powerhouse-inc/powerhouse/commit/fe7cbbf41))
+- document-model replays were incorrectly using a generated header instead of requiring a header ([69f19af8d](https://github.com/powerhouse-inc/powerhouse/commit/69f19af8d))
+- reactor was mutating operation indices ([47440d882](https://github.com/powerhouse-inc/powerhouse/commit/47440d882))
+- linting and build fixes, plus a three-reactor setup test ([87cdde785](https://github.com/powerhouse-inc/powerhouse/commit/87cdde785))
+- update e2e test fixtures for document version type changes ([8f020dadc](https://github.com/powerhouse-inc/powerhouse/commit/8f020dadc))
+- update e2e test fixtures for document version type changes ([#2192](https://github.com/powerhouse-inc/powerhouse/pull/2192))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Benjamin Jordan (@thegoldenmule)
+- CallmeT-ty @CallmeT-ty
+
 ## 5.1.0-dev.34 (2026-01-07)
 
 ### 🚀 Features

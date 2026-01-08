@@ -1,3 +1,13 @@
+## 5.1.0-dev.35 (2026-01-08)
+
+### 🩹 Fixes
+
+- update e2e test fixtures for document version type changes ([8f020dadc](https://github.com/powerhouse-inc/powerhouse/commit/8f020dadc))
+
+### ❤️ Thank You
+
+- CallmeT-ty @CallmeT-ty
+
 ## 5.1.0-dev.34 (2026-01-07)
 
 ### 🚀 Features
