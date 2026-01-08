@@ -18,14 +18,14 @@ export async function up(db: Kysely<any>): Promise<void> {
       col.notNull().defaultTo("main"),
     )
     .addColumn("push_state", "text", (col) => col.notNull().defaultTo("idle"))
-    .addColumn("push_last_success_utc_ms", "bigint")
-    .addColumn("push_last_failure_utc_ms", "bigint")
+    .addColumn("push_last_success_utc_ms", "text")
+    .addColumn("push_last_failure_utc_ms", "text")
     .addColumn("push_failure_count", "integer", (col) =>
       col.notNull().defaultTo(0),
     )
     .addColumn("pull_state", "text", (col) => col.notNull().defaultTo("idle"))
-    .addColumn("pull_last_success_utc_ms", "bigint")
-    .addColumn("pull_last_failure_utc_ms", "bigint")
+    .addColumn("pull_last_success_utc_ms", "text")
+    .addColumn("pull_last_failure_utc_ms", "text")
     .addColumn("pull_failure_count", "integer", (col) =>
       col.notNull().defaultTo(0),
     )
@@ -49,7 +49,7 @@ export async function up(db: Kysely<any>): Promise<void> {
       col.primaryKey().references("sync_remotes.name").onDelete("cascade"),
     )
     .addColumn("cursor_ordinal", "bigint", (col) => col.notNull().defaultTo(0))
-    .addColumn("last_synced_at_utc_ms", "bigint")
+    .addColumn("last_synced_at_utc_ms", "text")
     .addColumn("updated_at", "timestamptz", (col) =>
       col.notNull().defaultTo(sql`NOW()`),
     )

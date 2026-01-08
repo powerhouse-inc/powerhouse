@@ -43,7 +43,7 @@ export interface OperationIndexOperationTable {
   documentType: string;
   scope: string;
   branch: string;
-  timestampUtcMs: bigint;
+  timestampUtcMs: string;
   writeTimestampUtcMs: Generated<Date>;
   index: number;
   skip: number;
@@ -62,12 +62,12 @@ export interface SyncRemoteTable {
   filter_scopes: unknown;
   filter_branch: string;
   push_state: string;
-  push_last_success_utc_ms: bigint | null;
-  push_last_failure_utc_ms: bigint | null;
+  push_last_success_utc_ms: string | null;
+  push_last_failure_utc_ms: string | null;
   push_failure_count: number;
   pull_state: string;
-  pull_last_success_utc_ms: bigint | null;
-  pull_last_failure_utc_ms: bigint | null;
+  pull_last_success_utc_ms: string | null;
+  pull_last_failure_utc_ms: string | null;
   pull_failure_count: number;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
@@ -76,7 +76,7 @@ export interface SyncRemoteTable {
 export interface SyncCursorTable {
   remote_name: string;
   cursor_ordinal: bigint;
-  last_synced_at_utc_ms: bigint | null;
+  last_synced_at_utc_ms: string | null;
   updated_at: Generated<Date>;
 }
 

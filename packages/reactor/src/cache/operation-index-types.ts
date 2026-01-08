@@ -53,7 +53,7 @@ export interface OperationIndexOperationTable {
   documentType: string;
   scope: string;
   branch: string;
-  timestampUtcMs: bigint;
+  timestampUtcMs: string;
   writeTimestampUtcMs: Generated<Date>;
   index: number;
   skip: number;
