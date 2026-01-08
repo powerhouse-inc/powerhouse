@@ -5,6 +5,7 @@ import type {
   IDocumentStorage,
 } from "document-drive";
 import { MemoryStorage, driveDocumentModelModule } from "document-drive";
+import { deriveOperationId } from "document-model/core";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IDocumentMetaCache } from "../../src/cache/document-meta-cache-types.js";
@@ -42,13 +43,20 @@ describe("SimpleJobExecutor Integration", () => {
   async function createDocumentWithCreateOperation(
     document: DocumentDriveDocument,
   ): Promise<void> {
+    const createActionId = `${document.header.id}-create`;
     const createOperation = {
+      id: deriveOperationId(
+        document.header.id,
+        "document",
+        "main",
+        createActionId,
+      ),
       index: 0,
       timestampUtcMs: new Date().toISOString(),
       hash: "",
       skip: 0,
       action: {
-        id: `${document.header.id}-create`,
+        id: createActionId,
         type: "CREATE_DOCUMENT",
         scope: "document",
         timestampUtcMs: new Date().toISOString(),
@@ -59,13 +67,20 @@ describe("SimpleJobExecutor Integration", () => {
       },
     };
 
+    const upgradeActionId = `${document.header.id}-upgrade`;
     const upgradeOperation = {
+      id: deriveOperationId(
+        document.header.id,
+        "document",
+        "main",
+        upgradeActionId,
+      ),
       index: 1,
       timestampUtcMs: new Date().toISOString(),
       hash: "",
       skip: 0,
       action: {
-        id: `${document.header.id}-upgrade`,
+        id: upgradeActionId,
         type: "UPGRADE_DOCUMENT",
         scope: "document",
         timestampUtcMs: new Date().toISOString(),

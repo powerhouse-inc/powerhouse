@@ -8,11 +8,12 @@ import { createDocModelDocument } from "../factories.js";
 /**
  * This suite verifies that operation IDs are preserved during load operations.
  *
- * Key invariant: An operation's ID is derived from (documentId, scope, branch, actionType, actionId, index, skip).
- * Once an operation is created with a specific ID, loading that same operation should preserve the ID.
+ * Key invariant: An operation's ID is derived from stable properties only
+ * (documentId, scope, branch, actionId). Index and skip are excluded because
+ * they are relative to each reactor and can change during reshuffle.
  *
- * Related test: document-model/test/document/operation-id.test.ts
- * "should not change operations id when replay document"
+ * Once an operation is created with a specific ID, that ID should be the same
+ * on all reactors regardless of the operation's position in the history.
  */
 describe("Load Operation ID Preservation", () => {
   let reactorA: IReactor;
@@ -197,7 +198,7 @@ describe("Load Operation ID Preservation", () => {
     expect(loadedOp.action.id).toBe(aGlobalOps.global.results[0].action.id);
   });
 
-  it("derives new IDs for reshuffled operations when local has advanced", async () => {
+  it("preserves operation IDs for reshuffled operations when local has advanced", async () => {
     vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
 
     // Create document on both reactors
@@ -253,7 +254,7 @@ describe("Load Operation ID Preservation", () => {
 
     // B now has revision 1 in global scope
     // Now load A's operation (which has index 0, but B's latestRevision is 1)
-    // This triggers reshuffle - the operation gets a new index, making it a new operation
+    // This triggers reshuffle - the operation gets a new index
     const loadJobB = await reactorB.load(
       document.header.id,
       "main",
@@ -275,12 +276,12 @@ describe("Load Operation ID Preservation", () => {
 
     expect(opFromAInB).toBeDefined();
 
-    // Operations are immutable. When an operation's index changes during reshuffle,
-    // it becomes a new operation with a new ID derived from the new position.
-    // The operation ID should be DIFFERENT from the original since the index changed.
-    expect(opFromAInB!.id).not.toBe(originalOpFromA.id);
+    // Operation IDs are derived from stable properties only (documentId, scope, branch, actionId).
+    // The ID should be the SAME regardless of the operation's position in the history.
+    // This allows operations to be shared between reactors with consistent IDs.
+    expect(opFromAInB!.id).toBe(originalOpFromA.id);
 
-    // But the action ID (logical identity) should be preserved
+    // The action ID (logical identity) should also be preserved
     expect(opFromAInB!.action.id).toBe(originalOpFromA.action.id);
   });
 });
