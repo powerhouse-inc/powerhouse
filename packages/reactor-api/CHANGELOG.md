@@ -1,3 +1,7 @@
+## 5.2.0-staging.11 (2026-01-08)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
 ## 5.2.0-staging.10 (2026-01-08)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.

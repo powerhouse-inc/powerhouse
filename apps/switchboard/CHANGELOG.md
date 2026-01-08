@@ -1,3 +1,13 @@
+## 5.2.0-staging.11 (2026-01-08)
+
+### 🩹 Fixes
+
+- **connect, switchboard:** scope node-linker hoisted to project only ([6ab35b4d6](https://github.com/powerhouse-inc/powerhouse/commit/6ab35b4d6))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.2.0-staging.10 (2026-01-08)
 
 ### 🩹 Fixes
