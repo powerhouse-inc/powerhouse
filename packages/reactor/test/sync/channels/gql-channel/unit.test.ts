@@ -705,6 +705,67 @@ describe("GqlChannel", () => {
       expect(channel.getHealth().failureCount).toBe(2);
       channel.shutdown();
     });
+
+    it("should re-register channel when 'Channel not found' error occurs", async () => {
+      const cursorStorage = createMockCursorStorage();
+      let pollCount = 0;
+      const mockFetch = vi.fn().mockImplementation((_url, options) => {
+        const body = JSON.parse(options?.body as string);
+
+        // touchChannel mutation - always succeeds
+        if (body.query.includes("touchChannel")) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ data: { touchChannel: true } }),
+          });
+        }
+
+        // pollSyncEnvelopes query
+        pollCount++;
+        if (pollCount === 1) {
+          // First poll returns "Channel not found" error
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                errors: [{ message: "Channel not found" }],
+              }),
+          });
+        }
+        // Subsequent polls succeed
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ data: { pollSyncEnvelopes: [] } }),
+        });
+      });
+      global.fetch = mockFetch;
+
+      const channel = new GqlChannel(
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig({ pollIntervalMs: 1000 }),
+      );
+      await channel.init();
+
+      // After init: 1 touchChannel + 1 poll (which fails with "Channel not found")
+      // Should trigger re-registration: another touchChannel
+      await vi.waitFor(() => {
+        const touchChannelCalls = mockFetch.mock.calls.filter((call) =>
+          (call[1]?.body as string).includes("touchChannel"),
+        );
+        expect(touchChannelCalls.length).toBe(2); // Initial + recovery
+      });
+
+      // Polling should resume after recovery
+      await vi.advanceTimersByTimeAsync(1000);
+
+      // Failure count should be reset after successful recovery
+      expect(channel.getHealth().failureCount).toBe(0);
+      expect(channel.getHealth().state).toBe("idle");
+
+      channel.shutdown();
+    });
   });
 
   describe("cursor updates", () => {

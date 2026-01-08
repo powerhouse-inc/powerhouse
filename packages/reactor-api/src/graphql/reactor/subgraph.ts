@@ -320,7 +320,7 @@ export class ReactorSubgraph extends BaseSubgraph {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-return
           return await resolvers.pollSyncEnvelopes(this.syncManager, args);
         } catch (error) {
-          this.logger.error("Error in pollSyncEnvelopes:", error);
+          this.logger.error("Error in pollSyncEnvelopes: @Error", error);
           throw error;
         }
       },

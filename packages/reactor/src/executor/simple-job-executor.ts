@@ -844,34 +844,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
     }
 
-    let targetDoc: PHDocument;
-    try {
-      targetDoc = await this.writeCache.getState(
-        input.targetId,
-        "document",
-        job.branch,
-      );
-    } catch (error) {
-      return this.buildErrorResult(
-        job,
-        new Error(
-          `ADD_RELATIONSHIP: target document ${input.targetId} not found: ${error instanceof Error ? error.message : String(error)}`,
-        ),
-        startTime,
-      );
-    }
-
-    const targetDocState = targetDoc.state.document;
-    if (targetDocState.isDeleted) {
-      return this.buildErrorResult(
-        job,
-        new Error(
-          `ADD_RELATIONSHIP: target document ${input.targetId} is deleted`,
-        ),
-        startTime,
-      );
-    }
-
     const nextIndex = getNextIndexForScope(sourceDoc, job.scope);
 
     const operation = this.createOperation(action, nextIndex, 0, {

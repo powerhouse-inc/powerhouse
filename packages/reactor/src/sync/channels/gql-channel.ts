@@ -62,7 +62,7 @@ export class GqlChannel implements IChannel {
     this.config = {
       url: config.url,
       authToken: config.authToken,
-      pollIntervalMs: config.pollIntervalMs ?? 1000,
+      pollIntervalMs: config.pollIntervalMs ?? 10000,
       retryBaseDelayMs: config.retryBaseDelayMs ?? 1000,
       retryMaxDelayMs: config.retryMaxDelayMs ?? 300000,
       maxFailures: config.maxFailures ?? 5,
@@ -179,10 +179,16 @@ export class GqlChannel implements IChannel {
    * Handles polling errors with exponential backoff.
    */
   private handlePollError(error: unknown): void {
+    const err = error instanceof Error ? error : new Error(String(error));
+
+    if (err.message.includes("Channel not found")) {
+      this.recoverFromChannelNotFound();
+      return;
+    }
+
     this.failureCount++;
     this.lastFailureUtcMs = Date.now();
 
-    const err = error instanceof Error ? error : new Error(String(error));
     const channelError = new ChannelError(ChannelErrorSource.Inbox, err);
 
     console.error(
@@ -195,6 +201,38 @@ export class GqlChannel implements IChannel {
         `GqlChannel ${this.channelId} exceeded failure threshold, stopping polls`,
       );
     }
+  }
+
+  /**
+   * Recovers from a "Channel not found" error by re-registering and restarting polling.
+   */
+  private recoverFromChannelNotFound(): void {
+    console.log(
+      `GqlChannel ${this.channelId} not found on remote, re-registering...`,
+    );
+
+    if (this.pollTimer) {
+      clearTimeout(this.pollTimer);
+      this.pollTimer = undefined;
+    }
+
+    void this.touchRemoteChannel()
+      .then(() => {
+        console.log(`GqlChannel ${this.channelId} re-registered successfully`);
+        this.failureCount = 0;
+        this.startPolling();
+      })
+      .catch((recoveryError) => {
+        console.error(
+          `GqlChannel ${this.channelId} failed to re-register:`,
+          recoveryError,
+        );
+        this.failureCount++;
+        this.lastFailureUtcMs = Date.now();
+        this.pollTimer = setTimeout(() => {
+          this.startPolling();
+        }, this.config.pollIntervalMs);
+      });
   }
 
   /**
