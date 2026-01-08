@@ -62,7 +62,7 @@ export class GqlChannel implements IChannel {
     this.config = {
       url: config.url,
       authToken: config.authToken,
-      pollIntervalMs: config.pollIntervalMs ?? 10000,
+      pollIntervalMs: config.pollIntervalMs ?? 1000,
       retryBaseDelayMs: config.retryBaseDelayMs ?? 1000,
       retryMaxDelayMs: config.retryMaxDelayMs ?? 300000,
       maxFailures: config.maxFailures ?? 5,
