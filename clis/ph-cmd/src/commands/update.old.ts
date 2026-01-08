@@ -13,8 +13,12 @@ import {
   withCustomHelp,
 } from "../utils/index.js";
 import { parsePackageManager } from "../utils/parsing.js";
-import type { Environment } from "./use.js";
-import { detectPowerhousePackages, ENV_MAP, updatePackageJson } from "./use.js";
+import type { Environment } from "./use.old.js";
+import {
+  detectPowerhousePackages,
+  ENV_MAP,
+  updatePackageJson,
+} from "./use.old.js";
 
 type PackageJson = {
   dependencies?: Record<string, string>;

@@ -3,9 +3,10 @@ import { Command } from "commander";
 import { forwardCommand } from "./commands/forward.js";
 import registerCommands from "./commands/index.js";
 import { init } from "./commands/init.js";
+import { update } from "./commands/update.js";
+import { use } from "./commands/use.js";
 import type { CommandActionType } from "./types.js";
 import { generateMergedHelp } from "./utils/index.js";
-import { update } from "./commands/update.js";
 
 function ensureNodeVersion(minVersion = "22") {
   const version = process.versions.node;
@@ -42,17 +43,24 @@ const defaultCommand: CommandActionType<[{ verbose?: boolean }]> = async (
 ) => {
   const allArgs = process.argv.slice(2);
   const args = allArgs.join(" ");
+  const firstPositionalArg = allArgs[0];
 
-  const isInit = allArgs.includes("init");
+  const isInit = firstPositionalArg === "init";
   if (isInit) {
     // forward from 3 to skip initial `ph`
     await init(process.argv.slice(3));
     process.exit(0);
   }
-  const isUpdate = allArgs.includes("update");
+  const isUpdate = firstPositionalArg === "update";
   if (isUpdate) {
     // forward from 3 to skip initial `ph`
     await update(process.argv.slice(3));
+    process.exit(0);
+  }
+  const isUse = firstPositionalArg === "use";
+  if (isUse) {
+    // forward from 3 to skip initial `ph`
+    await use(process.argv.slice(3));
     process.exit(0);
   }
   const isHelpCommand = args.startsWith("--help") || args.startsWith("-h");

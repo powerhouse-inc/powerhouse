@@ -1,319 +1,141 @@
-import type { Command } from "commander";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import path from "node:path";
-import { useHelp } from "../help.js";
-import type { CommandActionType } from "../types.js";
-import type { PackageManager } from "../utils/index.js";
+import { getPackageVersion } from "@powerhousedao/codegen/file-builders";
 import {
-  getPackageManagerFromLockfile,
-  getProjectInfo,
-  installDependency,
-  updateDependencyVersionString,
-  withCustomHelp,
-} from "../utils/index.js";
-import { parsePackageManager } from "../utils/parsing.js";
+  command,
+  oneOf,
+  option,
+  optional,
+  positional,
+  run,
+  string,
+} from "cmd-ts";
+import console from "console";
+import { detect } from "detect-package-manager";
+import { readPackage } from "read-pkg";
+import { clean, valid } from "semver";
+import { writePackage } from "write-package";
+import { ALL_POWERHOUSE_DEPENDENCIES } from "../utils/constants.js";
+import {
+  handleMutuallyExclusiveOptions,
+  logVersionUpdate,
+} from "../utils/parsing.js";
+import { runCmd } from "../utils/run-cmd.js";
 
-export const ORG = "@powerhousedao";
+const commandParser = command({
+  name: "ph use",
+  description:
+    "Specify the release version of Powerhouse dependencies to use.\nTo use a release tag, specify `staging`, `dev`, or `latest` as the first argument to this command or with the --tag option.\n You can also use a specific version with the --version option.",
+  args: {
+    tagPositional: positional({
+      type: optional(oneOf(["latest", "staging", "dev"])),
+      description: `Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev".`,
+    }),
+    tagOption: option({
+      type: optional(oneOf(["latest", "staging", "dev"])),
+      long: "tag",
+      short: "t",
+      description: `Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev".`,
+    }),
+    version: option({
+      type: optional(string),
+      long: "version",
+      short: "v",
+      description:
+        "Specify the exact semver release version to use for your project.",
+    }),
+  },
+  handler: async ({ tagPositional, tagOption, version }) => {
+    const tag = tagPositional ?? tagOption;
+    handleMutuallyExclusiveOptions({ tag, version }, "versioning strategy");
 
-// Special packages that don't use the @powerhousedao organization
-export const SPECIAL_PACKAGES = [
-  "document-model",
-  "document-drive",
-  "@renown/sdk",
-];
-
-// Packages to exclude from dynamic detection (external dependencies)
-export const EXCLUDED_PACKAGES = [
-  "@powerhousedao/document-engineering",
-  "@powerhousedao/scalars",
-  "@powerhousedao/diff-analyzer",
-  "@powerhousedao/analytics-engine-core",
-  "@powerhousedao/analytics-engine-graphql",
-  "@powerhousedao/analytics-engine-pg",
-  "@powerhousedao/analytics-engine-browser",
-  "@powerhousedao/analytics-engine-knex",
-];
-
-/**
- * Detects all Powerhouse packages from package.json dependencies
- * @param packageJson - The parsed package.json object
- * @returns Array of package names to process
- */
-export function detectPowerhousePackages(packageJson: {
-  dependencies?: Record<string, string>;
-  devDependencies?: Record<string, string>;
-}): string[] {
-  const allDependencies = {
-    ...(packageJson.dependencies || {}),
-    ...(packageJson.devDependencies || {}),
-  };
-
-  const powerhousePackages: string[] = [];
-
-  // Find all @powerhousedao packages (excluding document-engineering)
-  Object.keys(allDependencies).forEach((dep) => {
-    if (dep.startsWith(ORG + "/") && !EXCLUDED_PACKAGES.includes(dep)) {
-      powerhousePackages.push(dep);
+    if (!tag && !version) {
+      throw new Error(
+        "Please specify either a release tag or a version to use.",
+      );
     }
-  });
 
-  // Add special packages if they exist
-  SPECIAL_PACKAGES.forEach((pkg) => {
-    if (allDependencies[pkg]) {
-      powerhousePackages.push(pkg);
+    if (version && !valid(clean(version))) {
+      throw new Error(`Invalid version: ${version}`);
     }
-  });
 
-  return powerhousePackages;
-}
+    console.log(`Updating project to use ${version ?? tag}`);
 
-/**
- * Maps a package name to its monorepo directory path by reading package.json files
- * @param packageName - The package name (e.g., '@powerhousedao/common' or 'document-model')
- * @param localPath - The base path to the monorepo
- * @returns The full path to the package directory
- */
-export function mapPackageToMonorepoPath(
-  packageName: string,
-  localPath: string,
-): string {
-  // Search in all possible locations
-  const searchDirs = [
-    path.join(localPath, "packages"),
-    path.join(localPath, "apps"),
-    path.join(localPath, "clis"),
-  ];
+    const packageJson = await readPackage();
 
-  for (const searchDir of searchDirs) {
-    if (!existsSync(searchDir)) continue;
-
-    try {
-      // Read all subdirectories
-      const subdirs = readdirSync(searchDir, { withFileTypes: true })
-        .filter((dirent) => dirent.isDirectory())
-        .map((dirent) => dirent.name);
-
-      // Check each subdirectory's package.json
-      for (const subdir of subdirs) {
-        const packageJsonPath = path.join(searchDir, subdir, "package.json");
-        if (existsSync(packageJsonPath)) {
-          try {
-            const content = readFileSync(packageJsonPath, "utf-8");
-            const pkg = JSON.parse(content) as { name?: string };
-            if (pkg.name === packageName) {
-              return path.join(searchDir, subdir);
-            }
-          } catch {
-            // Ignore invalid package.json files
-          }
+    if (packageJson.dependencies) {
+      for (const [name, existingVersion] of Object.entries(
+        packageJson.dependencies,
+      )) {
+        if (existingVersion && ALL_POWERHOUSE_DEPENDENCIES.includes(name)) {
+          const newVersion = await getPackageVersion({ name, tag, version });
+          packageJson.dependencies[name] = newVersion;
+          logVersionUpdate({
+            name,
+            version: existingVersion,
+            newVersion,
+          });
         }
       }
-    } catch {
-      // Ignore errors reading directory
-      continue;
     }
-  }
 
-  // Fallback to old behavior if not found
-  const baseName = packageName.startsWith(ORG + "/")
-    ? packageName.substring(ORG.length + 1)
-    : packageName;
-  return path.join(localPath, "packages", baseName);
-}
-
-export const ENV_MAP = {
-  dev: "dev",
-  staging: "staging",
-  prod: "latest",
-  latest: "latest",
-};
-
-// create type with the keys of ENV_MAP
-export type Environment = keyof typeof ENV_MAP;
-
-/**
- * Checks if a string is a valid semver version
- * Supports formats like: 1.0.0, 1.0.0-beta.1, 1.0.0-dev.123, v1.0.0
- */
-export function isVersionString(str: string): boolean {
-  // Remove leading 'v' if present
-  const version = str.startsWith("v") ? str.slice(1) : str;
-  // Semver regex pattern
-  const semverPattern =
-    /^\d+\.\d+\.\d+(-[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?(\+[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?$/;
-  return semverPattern.test(version);
-}
-
-export const updatePackageJson = async (
-  envOrVersion: (typeof ENV_MAP)[keyof typeof ENV_MAP],
-  localPath?: string,
-  packageManager?: PackageManager,
-  debug?: boolean,
-  useResolved?: boolean,
-) => {
-  const projectInfo = await getProjectInfo();
-  const pkgManager =
-    packageManager || getPackageManagerFromLockfile(projectInfo.path);
-
-  if (debug) {
-    console.log(">>> projectInfo", projectInfo);
-    console.log(">>> pkgManager", pkgManager);
-  }
-
-  // Read the project's package.json
-  const packageJsonPath = path.join(projectInfo.path, "package.json");
-  const packageJsonContent = readFileSync(packageJsonPath, "utf-8");
-  const packageJson = JSON.parse(packageJsonContent) as {
-    dependencies?: Record<string, string>;
-    devDependencies?: Record<string, string>;
-  };
-
-  // Detect all Powerhouse packages from the current package.json
-  const powerhousePackages = detectPowerhousePackages(packageJson);
-
-  const dependencies: string[] = [];
-
-  if (localPath) {
-    // For local path, map each detected package to its monorepo path
-    powerhousePackages.forEach((packageName) => {
-      const fullPath = mapPackageToMonorepoPath(packageName, localPath);
-      dependencies.push(fullPath);
-    });
-  } else {
-    // Determine the version tag to use
-    // For specific versions, add ^ prefix to allow semver range updates
-    const versionTag = isVersionString(envOrVersion)
-      ? `^${envOrVersion.replace(/^v/, "")}` // Remove leading 'v' if present and add ^
-      : ENV_MAP[envOrVersion as Environment];
-
-    // For remote dependencies, add version tags
-    powerhousePackages.forEach((packageName) => {
-      dependencies.push(`${packageName}@${versionTag}`);
-    });
-  }
-
-  if (debug) {
-    console.log(">>> dependencies to update", dependencies);
-  }
-
-  if (dependencies.length === 0) {
-    console.log("ℹ️ No Powerhouse dependencies found to update");
-    return;
-  }
-
-  try {
-    console.log("⚙️ Updating dependencies...");
-    if (localPath || useResolved) {
-      installDependency(pkgManager, dependencies, projectInfo.path);
-    } else {
-      updateDependencyVersionString(pkgManager, dependencies, projectInfo.path);
-    }
-    console.log("✅ Dependencies updated successfully");
-  } catch (error) {
-    console.error("❌ Failed to update dependencies");
-    throw error;
-  }
-};
-
-// Extract the type parameters for reuse
-export type UseOptions = {
-  dev?: boolean;
-  prod?: boolean;
-  local?: string;
-  debug?: boolean;
-  latest?: boolean;
-  force?: boolean;
-  packageManager?: string;
-  pnpm?: boolean;
-  yarn?: boolean;
-  bun?: boolean;
-  useResolved?: boolean;
-};
-
-export const use: CommandActionType<
-  [string | undefined, string | undefined, UseOptions]
-> = async (environment, localPath, options) => {
-  const isVersion = environment ? isVersionString(environment) : false;
-  if (
-    !environment ||
-    (!options.force &&
-      environment !== "local" &&
-      !isVersion &&
-      !Object.keys(ENV_MAP).includes(environment))
-  ) {
-    throw new Error(
-      `❌ Invalid environment, use --force or use one of the following: ${Object.keys(ENV_MAP).join(", ")}, or a specific version (e.g., 5.1.0)`,
-    );
-  }
-
-  if (environment === "local" && !localPath) {
-    throw new Error(
-      "❌ Local environment requires a local path, please specify the path to the local environment",
-    );
-  }
-
-  const { debug } = options;
-
-  // environment can be an Environment key or a version string
-  const envOrVersion = environment as (typeof ENV_MAP)[keyof typeof ENV_MAP];
-
-  if (debug) {
-    console.log(">>> options", options);
-  }
-
-  const projectInfo = await getProjectInfo();
-  const packageManager =
-    parsePackageManager(options) ??
-    getPackageManagerFromLockfile(projectInfo.path);
-
-  await updatePackageJson(
-    envOrVersion,
-    localPath,
-    packageManager as PackageManager,
-    debug,
-    options.useResolved,
-  );
-};
-
-export function useCommand(program: Command): Command {
-  const useCmd = program
-    .command("use")
-    .description(
-      "Allows you to change your environment (latest, dev, staging, prod, local) or use a specific version (e.g., 5.1.0)",
-    )
-    .argument(
-      "[environment]",
-      "The environment to use (latest, dev, staging, prod, local) or a specific version (e.g., 5.1.0)",
-    )
-    .argument(
-      "[localPath]",
-      "The path to the local environment (you have to specify the path to the local environment)",
-    )
-    .option("--force", "force environment to use")
-    .option("--use-resolved", "Use resolved dependency versions")
-    .option("--package-manager <packageManager>", "package manager to be used")
-    .option("--pnpm", "Use 'pnpm' as package manager")
-    .option("--yarn", "Use 'yarn' as package manager")
-    .option("--bun", "Use 'bun' as package manager")
-    .option("--debug", "Show additional logs");
-
-  // Use withCustomHelp instead of withHelpAction and addHelpText
-  return withCustomHelp<[string | undefined, string | undefined, UseOptions]>(
-    useCmd,
-    use,
-    useHelp,
-    // Pre-check function to validate environment before running the action
-    (environment) => {
-      if (
-        !environment &&
-        !process.argv.includes("--help") &&
-        !process.argv.includes("-h")
-      ) {
-        console.error('Error: Missing required argument "environment"');
-        process.exit(1);
-        return false;
+    if (packageJson.devDependencies) {
+      for (const [name, existingVersion] of Object.entries(
+        packageJson.devDependencies,
+      )) {
+        if (existingVersion && ALL_POWERHOUSE_DEPENDENCIES.includes(name)) {
+          const newVersion = await getPackageVersion({ name, tag, version });
+          packageJson.devDependencies[name] = newVersion;
+          logVersionUpdate({
+            name,
+            version: existingVersion,
+            newVersion,
+          });
+        }
       }
-      return true;
-    },
-  );
+    }
+
+    if (packageJson.optionalDependencies) {
+      for (const [name, existingVersion] of Object.entries(
+        packageJson.optionalDependencies,
+      )) {
+        if (existingVersion && ALL_POWERHOUSE_DEPENDENCIES.includes(name)) {
+          const newVersion = await getPackageVersion({ name, tag, version });
+          packageJson.optionalDependencies[name] = newVersion;
+          logVersionUpdate({
+            name,
+            version: existingVersion,
+            newVersion,
+          });
+        }
+      }
+    }
+
+    if (packageJson.peerDependencies) {
+      for (const [name, existingVersion] of Object.entries(
+        packageJson.peerDependencies,
+      )) {
+        if (existingVersion && ALL_POWERHOUSE_DEPENDENCIES.includes(name)) {
+          const newVersion = await getPackageVersion({ name, tag, version });
+          packageJson.peerDependencies[name] = newVersion;
+          logVersionUpdate({
+            name,
+            version: existingVersion,
+            newVersion,
+          });
+        }
+      }
+    }
+
+    await writePackage(packageJson);
+
+    await writePackage(packageJson);
+
+    const packageManager = await detect();
+
+    console.log(`Installing updated dependencies with \`${packageManager}\``);
+    runCmd(`${packageManager} install`);
+  },
+});
+
+export async function use(args: string[]) {
+  await run(commandParser, args);
 }

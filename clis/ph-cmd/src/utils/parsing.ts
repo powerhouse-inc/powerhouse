@@ -29,3 +29,36 @@ export function parsePackageManager(args: {
   if (userAgentPackageManager) return userAgentPackageManager;
   return undefined;
 }
+
+export function handleMutuallyExclusiveOptions(
+  options: Record<string, string | boolean | number | undefined>,
+  optionsName: string,
+) {
+  const mutuallyExclusiveOptions = Object.entries(options)
+    .map(([k, v]) => {
+      if (v !== undefined) return k;
+      return undefined;
+    })
+    .filter((v) => v !== undefined);
+
+  if (mutuallyExclusiveOptions.length > 1) {
+    throw new Error(
+      `Cannot specify multiple ${optionsName} options. You provided: ${mutuallyExclusiveOptions.join(", ")}`,
+    );
+  }
+}
+
+export function getTagFromVersion(version: string) {
+  if (version.includes("dev")) return "dev";
+  if (version.includes("staging")) return "staging";
+  return "latest";
+}
+
+export function logVersionUpdate(args: {
+  name: string;
+  version: string;
+  newVersion: string;
+}) {
+  const { name, version, newVersion } = args;
+  console.log(`Updating ${name}: ${version} -> ${newVersion}`);
+}

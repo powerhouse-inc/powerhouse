@@ -3,43 +3,9 @@ import { command, run } from "cmd-ts";
 import { detect } from "detect-package-manager";
 import { readPackage } from "read-pkg";
 import { writePackage } from "write-package";
+import { ALL_POWERHOUSE_DEPENDENCIES } from "../utils/constants.js";
+import { getTagFromVersion, logVersionUpdate } from "../utils/parsing.js";
 import { runCmd } from "../utils/run-cmd.js";
-
-const ALL_POWERHOUSE_DEPENDENCIES = [
-  "@powerhousedao/connect",
-  "@powerhousedao/switchboard",
-  "@powerhousedao/ph-cli",
-  "ph-cmd",
-  "@powerhousedao/builder-tools",
-  "@powerhousedao/codegen",
-  "@powerhousedao/common",
-  "@powerhousedao/config",
-  "@powerhousedao/design-system",
-  "document-drive",
-  "document-model",
-  "@powerhousedao/reactor",
-  "@powerhousedao/reactor-api",
-  "@powerhousedao/reactor-browser",
-  "@powerhousedao/reactor-local",
-  "@powerhousedao/reactor-mcp",
-  "@powerhousedao/switchboard-gui",
-  "@powerhousedao/vetra",
-];
-
-function getTagFromVersion(version: string) {
-  if (version.includes("dev")) return "dev";
-  if (version.includes("staging")) return "staging";
-  return "latest";
-}
-
-function logVersionUpdate(args: {
-  name: string;
-  version: string;
-  newVersion: string;
-}) {
-  const { name, version, newVersion } = args;
-  console.log(`Updating ${name}: ${version} -> ${newVersion}`);
-}
 
 const commandParser = command({
   name: "ph update",

@@ -13,26 +13,12 @@ import {
 } from "cmd-ts";
 import enquirer from "enquirer";
 import { clean, valid } from "semver";
-import { parsePackageManager, parseTag } from "../utils/parsing.js";
+import {
+  handleMutuallyExclusiveOptions,
+  parsePackageManager,
+  parseTag,
+} from "../utils/parsing.js";
 import { setupRemoteDrive } from "../utils/validate-remote-drive.js";
-
-function handleMutuallyExclusiveOptions(
-  options: Record<string, string | boolean | number | undefined>,
-  optionsName: string,
-) {
-  const mutuallyExclusiveOptions = Object.entries(options)
-    .map(([k, v]) => {
-      if (v !== undefined) return k;
-      return undefined;
-    })
-    .filter((v) => v !== undefined);
-
-  if (mutuallyExclusiveOptions.length > 1) {
-    throw new Error(
-      `Cannot specify multiple ${optionsName} options. You provided: ${mutuallyExclusiveOptions.join(", ")}`,
-    );
-  }
-}
 
 const commandParser = command({
   name: "ph init",
