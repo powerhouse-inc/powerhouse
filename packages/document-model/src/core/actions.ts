@@ -236,25 +236,18 @@ export const operationFromOperation = (
     skip,
   );
 
-  // Validate existing ID matches derived ID (detect corruption)
-  // If operation has an ID, it must match the derived ID
-  if (operation.id && operation.id !== derivedId) {
-    throw new Error(
-      `Operation ID mismatch: expected ${derivedId}, got ${operation.id}. ` +
-        `Context: docId=${context.documentId}, scope=${context.scope}, branch=${context.branch}, ` +
-        `actionType=${operation.action.type}, actionId=${operation.action.id}, index=${index}, skip=${skip}`,
-    );
-  }
-
-  // Preserve the existing ID state:
-  // - If operation has an ID, it was validated above and we preserve it
-  // - If operation has no ID (undefined), we don't add one
+  // Handle operation ID:
+  // - If operation has no ID, leave it undefined
+  // - If operation has an ID that matches derived ID, preserve it
+  // - If operation has an ID that doesn't match (e.g., after reshuffle), clear it
+  const idMatches = !operation.id || operation.id === derivedId;
   const result: Operation = {
     ...operation,
     hash: "",
     error: undefined,
     index,
     skip,
+    id: idMatches ? operation.id : undefined,
   };
 
   return result;
