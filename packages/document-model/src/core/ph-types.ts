@@ -268,8 +268,8 @@ export type Action = {
  * @typeParam A - The type of the action.
  */
 export type Operation = {
-  /** Unique operation id. This is distinct from the action id and can be undefined and assigned later. */
-  id?: string;
+  /** Unique operation id. */
+  id: string;
 
   /** Position of the operation in the history. This is relative to a specific reactor -- they may not all agree on this value. */
   index: number;

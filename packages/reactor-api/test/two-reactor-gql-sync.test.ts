@@ -1,5 +1,6 @@
 import {
   CompositeChannelFactory,
+  ConsoleLogger,
   JobStatus,
   OperationEventTypes,
   ReactorBuilder,
@@ -118,8 +119,9 @@ async function setupTwoReactorsWithGqlChannel(): Promise<TwoReactorSetup> {
 
   const resolverBridge = createResolverBridge(syncManagerRegistry);
 
-  const channelFactoryA = new CompositeChannelFactory();
-  const channelFactoryB = new CompositeChannelFactory();
+  const logger = new ConsoleLogger(["test"]);
+  const channelFactoryA = new CompositeChannelFactory(logger);
+  const channelFactoryB = new CompositeChannelFactory(logger);
 
   const models = [
     driveDocumentModelModule,

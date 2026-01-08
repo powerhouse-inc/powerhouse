@@ -1258,16 +1258,14 @@ export class SimpleJobExecutor implements IJobExecutor {
     action: Action,
     index: number,
     skip: number = 0,
-    context?: { documentId: string; scope: string; branch: string },
+    context: { documentId: string; scope: string; branch: string },
   ): Operation {
-    const id = context
-      ? deriveOperationId(
-          context.documentId,
-          context.scope,
-          context.branch,
-          action.id,
-        )
-      : undefined;
+    const id = deriveOperationId(
+      context.documentId,
+      context.scope,
+      context.branch,
+      action.id,
+    );
 
     return {
       id,
@@ -1400,18 +1398,8 @@ export class SimpleJobExecutor implements IJobExecutor {
       })),
     );
 
-    // Ensure all operations have IDs. The ID is derived from stable properties
-    // (documentId, scope, branch, actionId) and does not change when position
-    // changes during reshuffle.
-    const reshuffledOpsWithIds = reshuffledOperations.map((op) => ({
-      ...op,
-      id:
-        op.id ??
-        deriveOperationId(job.documentId, job.scope, job.branch, op.action.id),
-    }));
-
-    const actions = reshuffledOpsWithIds.map((operation) => operation.action);
-    const skipValues = reshuffledOpsWithIds.map((operation) => operation.skip);
+    const actions = reshuffledOperations.map((operation) => operation.action);
+    const skipValues = reshuffledOperations.map((operation) => operation.skip);
 
     const result = await this.processActions(
       job,
@@ -1419,7 +1407,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       startTime,
       indexTxn,
       skipValues,
-      reshuffledOpsWithIds,
+      reshuffledOperations,
     );
 
     if (!result.success) {
@@ -1575,7 +1563,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       if (signer.signatures.length === 0) {
         throw new InvalidSignatureError(
           job.documentId,
-          `Operation ${operation.id ?? "unknown"} at index ${operation.index} has signer but no signatures`,
+          `Operation ${operation.id} at index ${operation.index} has signer but no signatures`,
         );
       }
 
@@ -1589,14 +1577,14 @@ export class SimpleJobExecutor implements IJobExecutor {
           error instanceof Error ? error.message : String(error);
         throw new InvalidSignatureError(
           job.documentId,
-          `Operation ${operation.id ?? "unknown"} at index ${operation.index} verification failed: ${errorMessage}`,
+          `Operation ${operation.id} at index ${operation.index} verification failed: ${errorMessage}`,
         );
       }
 
       if (!isValid) {
         throw new InvalidSignatureError(
           job.documentId,
-          `Operation ${operation.id ?? "unknown"} at index ${operation.index} signature verification returned false`,
+          `Operation ${operation.id} at index ${operation.index} signature verification returned false`,
         );
       }
     }
@@ -1629,6 +1617,12 @@ export class SimpleJobExecutor implements IJobExecutor {
 
       try {
         const tempOperation: Operation = {
+          id: deriveOperationId(
+            job.documentId,
+            action.scope,
+            job.branch,
+            action.id,
+          ),
           index: 0,
           timestampUtcMs: action.timestampUtcMs || new Date().toISOString(),
           hash: "",

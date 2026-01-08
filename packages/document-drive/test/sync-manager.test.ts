@@ -14,7 +14,7 @@ import {
   documentModelDocumentModelModule as DocumentModel,
   documentModelCreateDocument,
 } from "document-model";
-import { generateId } from "document-model/core";
+import { deriveOperationId, generateId } from "document-model/core";
 import { createNanoEvents } from "nanoevents";
 import { describe, it } from "vitest";
 
@@ -217,35 +217,37 @@ describe("Synchronization Manager with memory adapters", () => {
     await storage.create(document);
 
     // Add document state operations using the document model's action creators
+    const action1 = fakeAction({
+      scope: "global",
+      type: "SET_STATE",
+      input: { state: { value: 1 } },
+    });
+    const action2 = fakeAction({
+      scope: "global",
+      type: "SET_STATE",
+      input: { state: { value: 2 } },
+    });
     const docOperations = [
       {
-        action: fakeAction({
-          scope: "global",
-          type: "SET_STATE",
-          input: { state: { value: 1 } },
-        }),
+        action: action1,
         type: "SET_STATE",
         input: { state: { value: 1 } },
         hash: "hash1",
         index: 0,
         timestampUtcMs: new Date("2025-01-01").toISOString(),
-        id: undefined,
+        id: deriveOperationId(document.header.id, "global", document.header.branch, action1.id),
         skip: 0,
         scope: "global",
         context: undefined,
       },
       {
-        action: fakeAction({
-          scope: "global",
-          type: "SET_STATE",
-          input: { state: { value: 2 } },
-        }),
+        action: action2,
         type: "SET_STATE",
         input: { state: { value: 2 } },
         hash: "hash2",
         index: 1,
         timestampUtcMs: new Date("2025-01-02").toISOString(),
-        id: undefined,
+        id: deriveOperationId(document.header.id, "global", document.header.branch, action2.id),
         skip: 0,
         scope: "global",
         context: undefined,
@@ -319,51 +321,54 @@ describe("Synchronization Manager with memory adapters", () => {
     await storage.create(document);
 
     // Add document state operations with different timestamps
+    const action3 = fakeAction({
+      scope: "global",
+      type: "SET_STATE",
+      input: { state: { value: 1 } },
+    });
+    const action4 = fakeAction({
+      scope: "global",
+      type: "SET_STATE",
+      input: { state: { value: 2 } },
+    });
+    const action5 = fakeAction({
+      scope: "global",
+      type: "SET_STATE",
+      input: { state: { value: 3 } },
+    });
     const docOperations = [
       {
-        action: fakeAction({
-          scope: "global",
-          type: "SET_STATE",
-          input: { state: { value: 1 } },
-        }),
+        action: action3,
         type: "SET_STATE",
         input: { state: { value: 1 } },
         hash: "hash1",
         index: 0,
         timestampUtcMs: new Date("2025-01-01T10:00:00.000Z").toISOString(),
-        id: undefined,
+        id: deriveOperationId(document.header.id, "global", document.header.branch, action3.id),
         skip: 0,
         scope: "global",
         context: undefined,
       },
       {
-        action: fakeAction({
-          scope: "global",
-          type: "SET_STATE",
-          input: { state: { value: 2 } },
-        }),
+        action: action4,
         type: "SET_STATE",
         input: { state: { value: 2 } },
         hash: "hash2",
         index: 1,
         timestampUtcMs: new Date("2025-01-02T10:00:00.000Z").toISOString(),
-        id: undefined,
+        id: deriveOperationId(document.header.id, "global", document.header.branch, action4.id),
         skip: 0,
         scope: "global",
         context: undefined,
       },
       {
-        action: fakeAction({
-          scope: "global",
-          type: "SET_STATE",
-          input: { state: { value: 3 } },
-        }),
+        action: action5,
         type: "SET_STATE",
         input: { state: { value: 3 } },
         hash: "hash3",
         index: 2,
         timestampUtcMs: new Date("2025-01-03T10:00:00.000Z").toISOString(),
-        id: undefined,
+        id: deriveOperationId(document.header.id, "global", document.header.branch, action5.id),
         skip: 0,
         scope: "global",
         context: undefined,

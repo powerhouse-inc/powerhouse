@@ -1,6 +1,7 @@
 import {
   baseCreateDocument,
   createReducer,
+  deriveOperationId,
   generateId,
   hashBrowser,
   replayDocument,
@@ -63,6 +64,8 @@ describe("Base utils", () => {
   });
 
   it("should find invalid index oprations", () => {
+    const TEST_DOC_ID = "test-doc-id";
+    const TEST_BRANCH = "main";
     const a1 = fakeAction({
       type: "TEST_ACTION",
       input: { id: "test" },
@@ -81,6 +84,7 @@ describe("Base utils", () => {
     const errors = validateOperations({
       global: [
         {
+          id: deriveOperationId(TEST_DOC_ID, "global", TEST_BRANCH, a1.id),
           hash: "",
           index: 0,
           skip: 0,
@@ -88,6 +92,7 @@ describe("Base utils", () => {
           action: a1,
         },
         {
+          id: deriveOperationId(TEST_DOC_ID, "global", TEST_BRANCH, a2.id),
           hash: "",
           index: 0,
           skip: 0,
@@ -97,6 +102,7 @@ describe("Base utils", () => {
       ],
       local: [
         {
+          id: deriveOperationId(TEST_DOC_ID, "local", TEST_BRANCH, a3.id),
           hash: "",
           index: 0,
           skip: 0,
@@ -113,53 +119,63 @@ describe("Base utils", () => {
   });
 
   it("should work with garbage collected operations", () => {
+    const TEST_DOC_ID = "test-doc-id";
+    const TEST_BRANCH = "main";
+    const g1 = fakeAction({
+      type: "TEST_ACTION",
+      input: { id: "test" },
+      scope: "global",
+    });
+    const g2 = fakeAction({
+      type: "TEST_ACTION",
+      input: { id: "test" },
+      scope: "global",
+    });
+    const g3 = fakeAction({
+      type: "TEST_ACTION",
+      input: { id: "test" },
+      scope: "global",
+    });
+    const l1 = fakeAction({
+      type: "TEST_ACTION",
+      input: { id: "test" },
+      scope: "local",
+    });
     const errors = validateOperations({
       global: [
         {
+          id: deriveOperationId(TEST_DOC_ID, "global", TEST_BRANCH, g1.id),
           hash: "",
           index: 0,
           skip: 0,
           timestampUtcMs: "",
-          action: fakeAction({
-            type: "TEST_ACTION",
-            input: { id: "test" },
-            scope: "global",
-          }),
+          action: g1,
         },
         {
+          id: deriveOperationId(TEST_DOC_ID, "global", TEST_BRANCH, g2.id),
           hash: "",
           index: 1,
           skip: 0,
           timestampUtcMs: "",
-          action: fakeAction({
-            type: "TEST_ACTION",
-            input: { id: "test" },
-            scope: "global",
-          }),
+          action: g2,
         },
         {
+          id: deriveOperationId(TEST_DOC_ID, "global", TEST_BRANCH, g3.id),
           hash: "",
           index: 3,
           skip: 1,
           timestampUtcMs: "",
-          action: fakeAction({
-            type: "TEST_ACTION",
-            input: { id: "test" },
-            scope: "global",
-          }),
+          action: g3,
         },
       ],
       local: [
         {
+          id: deriveOperationId(TEST_DOC_ID, "local", TEST_BRANCH, l1.id),
           hash: "",
           index: 0,
           skip: 0,
           timestampUtcMs: "",
-          action: fakeAction({
-            type: "TEST_ACTION",
-            input: { id: "test" },
-            scope: "local",
-          }),
+          action: l1,
         },
       ],
     });

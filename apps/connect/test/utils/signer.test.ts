@@ -6,7 +6,12 @@ import {
   type JwkKeyPair,
 } from "@renown/sdk";
 import type { Action, Operation, Signature } from "document-model";
+import { deriveOperationId } from "document-model/core";
 import { beforeEach, describe, expect, it } from "vitest";
+
+const TEST_DOC_ID = "test-doc-id";
+const TEST_BRANCH = "main";
+const TEST_SCOPE = "global";
 
 class InMemoryKeyStorage implements JsonWebKeyPairStorage {
   private keyPair: JwkKeyPair | undefined;
@@ -82,6 +87,7 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
     };
 
     const operation: Operation = {
+      id: deriveOperationId(TEST_DOC_ID, TEST_SCOPE, TEST_BRANCH, signedAction.id),
       index: 0,
       timestampUtcMs: action.timestampUtcMs,
       hash: "",
@@ -126,6 +132,7 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
     };
 
     const operation: Operation = {
+      id: deriveOperationId(TEST_DOC_ID, TEST_SCOPE, TEST_BRANCH, signedAction.id),
       index: 0,
       timestampUtcMs: action.timestampUtcMs,
       hash: "",
@@ -162,6 +169,7 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
     };
 
     const operation: Operation = {
+      id: deriveOperationId(TEST_DOC_ID, TEST_SCOPE, TEST_BRANCH, signedAction.id),
       index: 0,
       timestampUtcMs: action.timestampUtcMs,
       hash: "",
@@ -185,6 +193,7 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
     };
 
     const operation: Operation = {
+      id: deriveOperationId(TEST_DOC_ID, TEST_SCOPE, TEST_BRANCH, action.id),
       index: 0,
       timestampUtcMs: action.timestampUtcMs,
       hash: "",
@@ -215,6 +224,7 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
     };
 
     const operation: Operation = {
+      id: deriveOperationId(TEST_DOC_ID, TEST_SCOPE, TEST_BRANCH, action.id),
       index: 0,
       timestampUtcMs: action.timestampUtcMs,
       hash: "",
@@ -255,6 +265,7 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
     };
 
     const operation: Operation = {
+      id: deriveOperationId(TEST_DOC_ID, TEST_SCOPE, TEST_BRANCH, signedAction.id),
       index: 0,
       timestampUtcMs: action.timestampUtcMs,
       hash: "",
@@ -303,6 +314,7 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
     };
 
     const operation: Operation = {
+      id: deriveOperationId(TEST_DOC_ID, "document", TEST_BRANCH, signedAction.id),
       index: 0,
       timestampUtcMs: action.timestampUtcMs,
       hash: "",
@@ -369,6 +381,7 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
     };
 
     const operation: Operation = {
+      id: deriveOperationId(TEST_DOC_ID, TEST_SCOPE, TEST_BRANCH, signedAction.id),
       index: 0,
       timestampUtcMs: action.timestampUtcMs,
       hash: "",

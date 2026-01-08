@@ -1,6 +1,6 @@
 import { addFile, addFolder, deleteNode, setDriveName } from "document-drive";
 import type { Operation } from "document-model";
-import { generateId } from "document-model/core";
+import { deriveOperationId, generateId } from "document-model/core";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
@@ -79,6 +79,7 @@ describe("KyselyOperationStore", () => {
       await expect(
         store.apply(documentId, documentType, scope, branch, 5, (txn) => {
           txn.addOperations({
+            id: deriveOperationId(documentId, scope, branch, action.id),
             index: 5,
             timestampUtcMs: new Date().toISOString(),
             hash: "hash-1",

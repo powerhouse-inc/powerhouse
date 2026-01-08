@@ -62,7 +62,7 @@ describe("Document Operation ID", () => {
         global: document.operations.global!.map((op) => ({
           ...op,
           id: undefined,
-        })),
+        })) as unknown as typeof document.operations.global,
       },
     };
 
@@ -116,7 +116,7 @@ describe("Document Operation ID", () => {
         global: document.operations.global!.map((op) => ({
           ...op,
           id: undefined,
-        })),
+        })) as unknown as typeof document.operations.global,
       },
     };
 
@@ -153,7 +153,7 @@ describe("Document Operation ID", () => {
         global: document.operations.global!.map((op) => {
           const { id: _id, ...operation } = op;
           return operation;
-        }),
+        }) as unknown as typeof document.operations.global,
       },
     };
 

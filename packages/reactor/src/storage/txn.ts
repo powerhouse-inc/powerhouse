@@ -21,7 +21,7 @@ export class AtomicTransaction implements IAtomicTxn {
       this.operations.push({
         // WRONG -- we should be using the jobId
         jobId: uuidv4(),
-        opId: op.id!,
+        opId: op.id,
         prevOpId: "", // Will be set during apply
         documentId: this.documentId,
         documentType: this.documentType,

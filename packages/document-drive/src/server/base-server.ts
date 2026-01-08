@@ -66,6 +66,7 @@ import {
   attachBranch,
   createPresignedHeader,
   defaultBaseState,
+  deriveOperationId,
   diffOperations,
   garbageCollect,
   garbageCollectDocumentOperations,
@@ -3051,6 +3052,14 @@ export class BaseDocumentDriveServer
     const operations: Operation[] = strand.operations.map(
       (op: OperationUpdate) => ({
         ...op,
+        id:
+          op.id ??
+          deriveOperationId(
+            strand.documentId,
+            strand.scope,
+            strand.branch,
+            op.actionId,
+          ),
         action: {
           id: op.actionId,
           timestampUtcMs: op.timestampUtcMs,

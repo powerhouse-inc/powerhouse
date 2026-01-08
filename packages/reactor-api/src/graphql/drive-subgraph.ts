@@ -277,8 +277,7 @@ export class DriveSubgraph extends BaseSubgraph {
     Operation: {
       type: (operation: Operation | GqlOperation) =>
         "type" in operation ? operation.type : operation.action.type,
-      id: (operation: Operation | GqlOperation) =>
-        "id" in operation ? operation.id : operation.action.id,
+      id: (operation: Operation | GqlOperation) => operation.id,
     },
     DriveDocument: {
       operations: IDocumentGraphql.resolvers.IDocument.operations,
