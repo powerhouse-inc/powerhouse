@@ -33,9 +33,6 @@ ENV TAG=$TAG
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
-# Use hoisted node-linker for containerd/k8s overlay filesystem compatibility
-RUN pnpm config set node-linker hoisted
-
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/nginx.conf.template
 
@@ -62,6 +59,10 @@ RUN if [[ "$TAG" == *"dev"* ]]; then \
     fi
 
 WORKDIR /app/project
+
+# Use hoisted node-linker for containerd/k8s overlay filesystem compatibility
+# This must be set AFTER ph init and in the project directory
+RUN pnpm config set node-linker hoisted --location project
 
 # Copy and set up entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/
