@@ -11,7 +11,6 @@ import {
   run,
   string,
 } from "cmd-ts";
-import type { Command } from "commander";
 import enquirer from "enquirer";
 import { clean, valid } from "semver";
 import { parsePackageManager, parseTag } from "../utils/parsing.js";
@@ -194,9 +193,9 @@ const commandParser = command({
   },
 });
 
-async function init(argv: string[]) {
+export async function init(args: string[]) {
   try {
-    const parsedArgs = await run(commandParser, argv);
+    const parsedArgs = await run(commandParser, args);
 
     const { name, remoteDrive } = parsedArgs;
 
@@ -224,16 +223,4 @@ async function init(argv: string[]) {
     console.error(error);
     process.exit(1);
   }
-}
-
-export function initCommand(program: Command): Command {
-  const initCmd = program
-    .command("init")
-    .allowUnknownOption(true) // let cmd-ts be the authority
-    .action(async (..._args) => {
-      const cmd = _args[_args.length - 1] as Command;
-      await init(cmd.args);
-    });
-
-  return initCmd;
 }

@@ -78,7 +78,7 @@ export async function createProject({
 
     // Write the boilerplate files for the project
     console.log(`\x1b[34mCreating project boilerplate files...\x1b[0m\n`);
-    await writeProjectRootFiles(name, tag, remoteDrive);
+    await writeProjectRootFiles({ name, tag, version, remoteDrive });
     await writeModuleFiles();
     await writeAiConfigFiles();
     console.log(`\x1b[32mProject boilerplate files created\x1b[0m\n`);
@@ -105,17 +105,19 @@ export async function createProject({
   }
 }
 
-async function writeProjectRootFiles(
-  name: string,
-  tag?: string,
-  version?: string,
-  remoteDrive?: string,
-) {
+async function writeProjectRootFiles(args: {
+  name: string;
+  tag?: string;
+  version?: string;
+  remoteDrive?: string;
+}) {
+  const { name, tag, version, remoteDrive } = args;
   await writeFileEnsuringDir("LICENSE", licenseTemplate);
   await writeFileEnsuringDir("README.md", readmeTemplate);
   const packageJson = await buildBoilerplatePackageJson({
     name,
     tag,
+    version,
   });
   const powerhouseManifest = powerhouseManifestTemplate(name);
   await writeFileEnsuringDir("powerhouse.manifest.json", powerhouseManifest);

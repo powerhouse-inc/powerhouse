@@ -495,9 +495,18 @@ importers:
       commander:
         specifier: ^12.1.0
         version: 12.1.0
+      detect-package-manager:
+        specifier: ^3.0.2
+        version: 3.0.2
       enquirer:
         specifier: ^2.4.1
         version: 2.4.1
+      read-pkg:
+        specifier: ^9.0.1
+        version: 9.0.1
+      write-package:
+        specifier: ^7.2.0
+        version: 7.2.0
     devDependencies:
       vitest:
         specifier: ^3.2.4
@@ -2007,7 +2016,7 @@ importers:
     dependencies:
       '@sky-ph/atlas':
         specifier: 2.0.0-canary.1
-        version: 2.0.0-canary.1(083ea29aea4c26060cd8782fe4d44780)
+        version: 2.0.0-canary.1(88a9297ddba2b8ddb8a15ffd09e84f0b)
       document-drive:
         specifier: link:../../../document-drive
         version: link:../../../document-drive
@@ -13029,6 +13038,10 @@ packages:
   detect-node@2.1.0:
     resolution: {integrity: sha512-T0NIuQpnTvFDATNuHN5roPwSBG83rFsuO+MXXH9/3N1eFbn4wcPjttvjMLEPWJ0RGUYgQE7cGgS3tNxbqCGM7g==}
 
+  detect-package-manager@3.0.2:
+    resolution: {integrity: sha512-8JFjJHutStYrfWwzfretQoyNGoZVW1Fsrp4JO9spa7h/fBfwgTMEIy4/LBzRDGsxwVPHU0q+T9YvwLDJoOApLQ==}
+    engines: {node: '>=12'}
+
   detect-port@1.6.1:
     resolution: {integrity: sha512-CmnVc+Hek2egPx1PeTFVta2W78xy2K/9Rkf6cC4T59S50tVnzKj+tnx5mmx5lwvCkujZ4uRrpRSuV+IVs3f90Q==}
     engines: {node: '>= 4.0.0'}
@@ -21835,6 +21848,14 @@ packages:
     resolution: {integrity: sha512-ddSsCLa4aQ3kI21BthINo4q905/wfhvQ3JL3774AcRjBaiQmfn5v4rw77jQ7T6CmAit9VOQO+FsLyPkwxoB1fw==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
+  write-json-file@6.0.0:
+    resolution: {integrity: sha512-MNHcU3f9WxnNyR6MxsYSj64Jz0+dwIpisWKWq9gqLj/GwmA9INg3BZ3vt70/HB3GEwrnDQWr4RPrywnhNzmUFA==}
+    engines: {node: '>=18'}
+
+  write-package@7.2.0:
+    resolution: {integrity: sha512-uMQTubF/vcu+Wd0b5BGtDmiXePd/+44hUWQz2nZPbs92/BnxRo74tqs+hqDo12RLiEd+CXFKUwxvvIZvtt34Jw==}
+    engines: {node: '>=18'}
+
   write-pkg@7.0.0:
     resolution: {integrity: sha512-wXBOrcEUstxZxfqy2hQO0O+c7wcwuVkZCCmBfaFtFssa5kcFqf7SQGYL6YtxKXt/O41z6reAPFJcumUyyiYnTQ==}
     engines: {node: '>=16'}
@@ -30411,7 +30432,7 @@ snapshots:
       - supports-color
       - tedious
 
-  '@powerhousedao/builder-tools@5.1.0-dev.35(32ac8b2c686f6754e8e24a00dca69a00)':
+  '@powerhousedao/builder-tools@5.1.0-dev.35(9c42cf8b7a0d05c37eaf3f831bce7a5f)':
     dependencies:
       '@codemirror/autocomplete': 6.18.6
       '@codemirror/commands': 6.8.1
@@ -30427,7 +30448,7 @@ snapshots:
       '@graphql-tools/utils': 10.11.0(graphql@16.12.0)
       '@hookform/resolvers': 5.2.2(react-hook-form@7.66.0(react@19.2.0))
       '@powerhousedao/config': 5.1.0-dev.35(@types/node@24.10.0)
-      '@powerhousedao/design-system': 5.1.0-dev.35(@types/express@4.17.25)(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
+      '@powerhousedao/design-system': 5.1.0-dev.35(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@powerhousedao/document-engineering': 1.39.0(@types/express@4.17.25)(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@powerhousedao/reactor-browser': 5.1.0-dev.35(@powerhousedao/analytics-engine-knex@0.6.0(@powerhousedao/analytics-engine-core@0.5.0))(@types/node@24.10.0)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)
       '@prettier/sync': 0.5.5(prettier@3.6.2)
@@ -30537,11 +30558,11 @@ snapshots:
       - vite
       - ws
 
-  '@powerhousedao/common@5.1.0-dev.35(aa754caf4fdf247cf8766b3afbe86c5b)':
+  '@powerhousedao/common@5.1.0-dev.35(a22d9a946becb31e6abae3fa92ca6bc7)':
     dependencies:
       '@powerhousedao/analytics-engine-core': 0.5.0
-      '@powerhousedao/builder-tools': 5.1.0-dev.35(32ac8b2c686f6754e8e24a00dca69a00)
-      '@powerhousedao/design-system': 5.1.0-dev.35(@types/express@4.17.25)(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
+      '@powerhousedao/builder-tools': 5.1.0-dev.35(9c42cf8b7a0d05c37eaf3f831bce7a5f)
+      '@powerhousedao/design-system': 5.1.0-dev.35(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@tanstack/react-virtual': 3.13.12(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@types/luxon': 3.7.1
       document-drive: link:packages/document-drive
@@ -30701,7 +30722,7 @@ snapshots:
       - utf-8-validate
       - ws
 
-  '@powerhousedao/design-system@5.1.0-dev.35(@types/express@4.17.25)(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)':
+  '@powerhousedao/design-system@5.1.0-dev.35(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)':
     dependencies:
       '@internationalized/date': 3.10.0
       '@powerhousedao/document-engineering': 1.39.0(@types/express@4.17.25)(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
@@ -32375,11 +32396,11 @@ snapshots:
     dependencies:
       '@sinonjs/commons': 3.0.1
 
-  '@sky-ph/atlas@2.0.0-canary.1(083ea29aea4c26060cd8782fe4d44780)':
+  '@sky-ph/atlas@2.0.0-canary.1(88a9297ddba2b8ddb8a15ffd09e84f0b)':
     dependencies:
       '@hookform/resolvers': 3.10.0(react-hook-form@7.66.0(react@19.2.0))
-      '@powerhousedao/common': 5.1.0-dev.35(aa754caf4fdf247cf8766b3afbe86c5b)
-      '@powerhousedao/design-system': 5.1.0-dev.35(@types/express@4.17.25)(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
+      '@powerhousedao/common': 5.1.0-dev.35(a22d9a946becb31e6abae3fa92ca6bc7)
+      '@powerhousedao/design-system': 5.1.0-dev.35(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@powerhousedao/document-engineering': 1.22.0(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@powerhousedao/reactor-browser': 5.1.0-dev.35(@powerhousedao/analytics-engine-knex@0.6.0(@powerhousedao/analytics-engine-core@0.5.0))(@types/node@24.10.0)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)
       '@radix-ui/react-dialog': 1.1.15(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -37900,6 +37921,10 @@ snapshots:
   detect-node-es@1.1.0: {}
 
   detect-node@2.1.0: {}
+
+  detect-package-manager@3.0.2:
+    dependencies:
+      execa: 5.1.1
 
   detect-port@1.6.1:
     dependencies:
@@ -49333,6 +49358,21 @@ snapshots:
       is-plain-obj: 4.1.0
       sort-keys: 5.1.0
       write-file-atomic: 3.0.3
+
+  write-json-file@6.0.0:
+    dependencies:
+      detect-indent: 7.0.2
+      is-plain-obj: 4.1.0
+      sort-keys: 5.1.0
+      write-file-atomic: 5.0.1
+
+  write-package@7.2.0:
+    dependencies:
+      deepmerge-ts: 7.1.5
+      read-pkg: 9.0.1
+      sort-keys: 5.1.0
+      type-fest: 4.41.0
+      write-json-file: 6.0.0
 
   write-pkg@7.0.0:
     dependencies:

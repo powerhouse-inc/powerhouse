@@ -2,8 +2,10 @@
 import { Command } from "commander";
 import { forwardCommand } from "./commands/forward.js";
 import registerCommands from "./commands/index.js";
+import { init } from "./commands/init.js";
 import type { CommandActionType } from "./types.js";
 import { generateMergedHelp } from "./utils/index.js";
+import { update } from "./commands/update.js";
 
 function ensureNodeVersion(minVersion = "22") {
   const version = process.versions.node;
@@ -35,12 +37,24 @@ async function customHelpHandler() {
   process.exit(0);
 }
 
-const defaultCommand: CommandActionType<[{ verbose?: boolean }]> = (
+const defaultCommand: CommandActionType<[{ verbose?: boolean }]> = async (
   options,
 ) => {
   const allArgs = process.argv.slice(2);
   const args = allArgs.join(" ");
 
+  const isInit = allArgs.includes("init");
+  if (isInit) {
+    // forward from 3 to skip initial `ph`
+    await init(process.argv.slice(3));
+    process.exit(0);
+  }
+  const isUpdate = allArgs.includes("update");
+  if (isUpdate) {
+    // forward from 3 to skip initial `ph`
+    await update(process.argv.slice(3));
+    process.exit(0);
+  }
   const isHelpCommand = args.startsWith("--help") || args.startsWith("-h");
   const isVersionCommand =
     args.startsWith("--version") ||

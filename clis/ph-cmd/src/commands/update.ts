@@ -1,180 +1,130 @@
-import type { Command } from "commander";
-import { execSync } from "node:child_process";
-import fs from "node:fs";
-import path from "node:path";
-import { updateHelp } from "../help.js";
-import type { CommandActionType } from "../types.js";
-import type { PackageManager } from "../utils/index.js";
-import {
-  findContainerDirectory,
-  getPackageManagerFromLockfile,
-  getProjectInfo,
-  packageManagers,
-  withCustomHelp,
-} from "../utils/index.js";
-import { parsePackageManager } from "../utils/parsing.js";
-import type { Environment } from "./use.js";
-import { detectPowerhousePackages, ENV_MAP, updatePackageJson } from "./use.js";
+import { getPackageVersion } from "@powerhousedao/codegen/file-builders";
+import { command, run } from "cmd-ts";
+import { detect } from "detect-package-manager";
+import { readPackage } from "read-pkg";
+import { writePackage } from "write-package";
+import { runCmd } from "../utils/run-cmd.js";
 
-type PackageJson = {
-  dependencies?: Record<string, string>;
-  devDependencies?: Record<string, string>;
-};
+const ALL_POWERHOUSE_DEPENDENCIES = [
+  "@powerhousedao/connect",
+  "@powerhousedao/switchboard",
+  "@powerhousedao/ph-cli",
+  "ph-cmd",
+  "@powerhousedao/builder-tools",
+  "@powerhousedao/codegen",
+  "@powerhousedao/common",
+  "@powerhousedao/config",
+  "@powerhousedao/design-system",
+  "document-drive",
+  "document-model",
+  "@powerhousedao/reactor",
+  "@powerhousedao/reactor-api",
+  "@powerhousedao/reactor-browser",
+  "@powerhousedao/reactor-local",
+  "@powerhousedao/reactor-mcp",
+  "@powerhousedao/switchboard-gui",
+  "@powerhousedao/vetra",
+];
 
-const FILE_PROTOCOL = "file:";
-const LINK_PROTOCOL = "link:";
-const MONOREPO_FILE = "pnpm-workspace.yaml";
+function getTagFromVersion(version: string) {
+  if (version.includes("dev")) return "dev";
+  if (version.includes("staging")) return "staging";
+  return "latest";
+}
 
-const buildLocalDependencies = (
-  localDependencyPath: string,
-  pkgManagerName: PackageManager,
-) => {
-  const monorepoPath = findContainerDirectory(
-    localDependencyPath,
-    MONOREPO_FILE,
-  );
+function logVersionUpdate(args: {
+  name: string;
+  version: string;
+  newVersion: string;
+}) {
+  const { name, version, newVersion } = args;
+  console.log(`Updating ${name}: ${version} -> ${newVersion}`);
+}
 
-  if (!monorepoPath) {
-    throw new Error("Monorepo root directory not found");
-  }
+const commandParser = command({
+  name: "ph update",
+  description:
+    "Update your powerhouse dependencies to their latest tagged version",
+  args: {},
+  handler: async () => {
+    console.log(`Updating Powerhouse dependencies...`);
+    const packageJson = await readPackage();
 
-  const pkgManager = packageManagers[pkgManagerName];
-
-  console.log("⚙️ Building local dependencies...");
-  execSync(pkgManager.buildAffected, {
-    stdio: "inherit",
-    cwd: monorepoPath,
-  });
-};
-
-const getLocalDependencyPath = (projectPath: string) => {
-  // read package json from projectInfo.path
-  const packageJson = JSON.parse(
-    fs.readFileSync(path.join(projectPath, "package.json"), "utf-8"),
-  ) as PackageJson;
-
-  // Get all Powerhouse packages from package.json
-  const powerhousePackages = detectPowerhousePackages(packageJson);
-
-  // filter dependencies
-  const filteredDependencies = Object.entries({
-    ...(packageJson.dependencies || {}),
-    ...(packageJson.devDependencies || {}),
-  }).filter(([name]) => powerhousePackages.includes(name));
-
-  const [_, localDependencyPath] = filteredDependencies.find(
-    ([_, version]) =>
-      version.startsWith(FILE_PROTOCOL) || version.startsWith(LINK_PROTOCOL),
-  ) || [null, null];
-
-  if (!localDependencyPath) return null;
-  return localDependencyPath
-    .replace(FILE_PROTOCOL, "")
-    .replace(LINK_PROTOCOL, "");
-};
-
-const getInstalledDependencies = (projectPath: string) => {
-  // read package json from projectInfo.path
-  const packageJson = JSON.parse(
-    fs.readFileSync(path.join(projectPath, "package.json"), "utf-8"),
-  ) as PackageJson;
-
-  // Get all installed Powerhouse dependencies using dynamic detection
-  const powerhousePackages = detectPowerhousePackages(packageJson);
-  const installedDeps = powerhousePackages.sort(); // Sort dependencies alphabetically
-
-  return installedDeps;
-};
-
-// Extract the type parameters for reuse
-export type UpdateOptions = {
-  force?: string;
-  debug?: boolean;
-  packageManager?: string;
-  pnpm?: boolean;
-  yarn?: boolean;
-  bun?: boolean;
-};
-
-export const update: CommandActionType<[UpdateOptions]> = async (options) => {
-  const { force, debug } = options;
-
-  if (debug) {
-    console.log(">>> options", options);
-  }
-
-  const projectInfo = await getProjectInfo();
-  const pkgManagerName = (parsePackageManager(options) ||
-    getPackageManagerFromLockfile(projectInfo.path)) as PackageManager;
-
-  const localDependencyPath = getLocalDependencyPath(projectInfo.path);
-
-  if (debug) {
-    console.log(">>> projectInfo", projectInfo);
-    console.log(">>> pkgManagerName", pkgManagerName);
-    console.log(">>> localDependencyPath", localDependencyPath);
-  }
-
-  if (localDependencyPath) {
-    buildLocalDependencies(localDependencyPath, pkgManagerName);
-  }
-
-  if (force) {
-    const supportedEnvs = Object.keys(ENV_MAP);
-    if (!supportedEnvs.includes(force)) {
-      throw new Error(
-        `Invalid environment: ${force}, supported envs: ${supportedEnvs.join(", ")}`,
-      );
+    if (packageJson.dependencies) {
+      for (const [name, version] of Object.entries(packageJson.dependencies)) {
+        if (version && ALL_POWERHOUSE_DEPENDENCIES.includes(name)) {
+          const tag = getTagFromVersion(version);
+          const newVersion = await getPackageVersion({ name, tag });
+          packageJson.dependencies[name] = newVersion;
+          logVersionUpdate({
+            name,
+            version,
+            newVersion,
+          });
+        }
+      }
     }
 
-    const env = force as Environment;
-    await updatePackageJson(env, undefined, pkgManagerName, debug);
-    return;
-  }
+    if (packageJson.devDependencies) {
+      for (const [name, version] of Object.entries(
+        packageJson.devDependencies,
+      )) {
+        if (version && ALL_POWERHOUSE_DEPENDENCIES.includes(name)) {
+          const tag = getTagFromVersion(version);
+          const newVersion = await getPackageVersion({ name, tag });
+          packageJson.devDependencies[name] = newVersion;
+          logVersionUpdate({
+            name,
+            version,
+            newVersion,
+          });
+        }
+      }
+    }
 
-  const installedDeps = getInstalledDependencies(projectInfo.path);
+    if (packageJson.optionalDependencies) {
+      for (const [name, version] of Object.entries(
+        packageJson.optionalDependencies,
+      )) {
+        if (version && ALL_POWERHOUSE_DEPENDENCIES.includes(name)) {
+          const tag = getTagFromVersion(version);
+          const newVersion = await getPackageVersion({ name, tag });
+          packageJson.optionalDependencies[name] = newVersion;
+          logVersionUpdate({
+            name,
+            version,
+            newVersion,
+          });
+        }
+      }
+    }
 
-  if (installedDeps.length === 0) {
-    console.log("ℹ️ No Powerhouse dependencies found to update");
-    return;
-  }
+    if (packageJson.peerDependencies) {
+      for (const [name, version] of Object.entries(
+        packageJson.peerDependencies,
+      )) {
+        if (version && ALL_POWERHOUSE_DEPENDENCIES.includes(name)) {
+          const tag = getTagFromVersion(version);
+          const newVersion = await getPackageVersion({ name, tag });
+          packageJson.peerDependencies[name] = newVersion;
+          logVersionUpdate({
+            name,
+            version,
+            newVersion,
+          });
+        }
+      }
+    }
 
-  const pkgManager = packageManagers[pkgManagerName];
-  const deps = installedDeps.join(" ");
-  const updateCommand = pkgManager.updateCommand.replace(
-    "{{dependency}}",
-    deps,
-  );
+    await writePackage(packageJson);
 
-  if (options.debug) {
-    console.log(">>> dependencies to update", installedDeps);
-  }
+    const packageManager = await detect();
 
-  const commandOptions = { cwd: projectInfo.path };
+    console.log(`Installing updated dependencies with \`${packageManager}\``);
+    runCmd(`${packageManager} install`);
+  },
+});
 
-  execSync(updateCommand, {
-    stdio: "inherit",
-    ...commandOptions,
-  });
-};
-
-export function updateCommand(program: Command): Command {
-  const updateCmd = program
-    .command("update")
-    .alias("up")
-    .description(
-      "Allows you to update your dependencies to the latest version based on the specified range in package.json. If you want to update to the latest available version, use the --force flag.",
-    )
-    .option(
-      "--force <env>",
-      "Force update to latest available version for the environment specified (dev, prod, latest)",
-    )
-    .option("--package-manager <packageManager>", "package manager to be used")
-    .option("--pnpm", "Use 'pnpm' as package manager")
-    .option("--yarn", "Use 'yarn' as package manager")
-    .option("--bun", "Use 'bun' as package manager")
-    .option("--debug", "Show additional logs");
-
-  // Use withCustomHelp instead of withHelpAction and addHelpText
-  return withCustomHelp<[UpdateOptions]>(updateCmd, update, updateHelp);
+export async function update(args: string[]) {
+  await run(commandParser, args);
 }
