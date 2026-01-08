@@ -7,6 +7,9 @@ ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable && corepack install --global pnpm@9.8.0
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 
+# Use hoisted node-linker for containerd/k8s overlay filesystem compatibility
+RUN pnpm config set node-linker hoisted
+
 ENV HUSKY=false
 
 # Packages

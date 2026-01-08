@@ -33,6 +33,9 @@ ENV TAG=$TAG
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
+# Use hoisted node-linker for containerd/k8s overlay filesystem compatibility
+RUN pnpm config set node-linker hoisted
+
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/nginx.conf.template
 
