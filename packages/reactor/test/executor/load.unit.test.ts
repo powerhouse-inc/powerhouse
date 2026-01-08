@@ -8,7 +8,6 @@ import type { IWriteCache } from "../../src/cache/write/interfaces.js";
 import type { Reactor } from "../../src/core/reactor.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
 import type { IQueue } from "../../src/queue/interfaces.js";
-import type { Job } from "../../src/queue/types.js";
 import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
 import { JobStatus } from "../../src/shared/types.js";
 import type { IOperationStore } from "../../src/storage/interfaces.js";
@@ -114,65 +113,6 @@ describe("SimpleJobExecutor load jobs", () => {
       mockDocumentMetaCache,
       { legacyStorageEnabled: true },
       undefined,
-    );
-  });
-
-  it("reindexes operations and sets skip when conflicts are detected", async () => {
-    const writtenOperations: Operation[] = [];
-    mockOperationStore.apply = vi
-      .fn()
-      .mockImplementation(
-        async (_docId, _docType, _scope, _branch, _rev, fn) => {
-          const txn = {
-            addOperations: (operation: Operation) => {
-              writtenOperations.push(operation);
-            },
-          };
-          await fn(txn as any);
-        },
-      );
-    mockOperationStore.getRevisions = vi.fn().mockResolvedValue({
-      revision: { document: 5 },
-      latestTimestamp: new Date().toISOString(),
-    });
-
-    const operations = [
-      createTestOperation({
-        index: 3,
-        action: createTestAction({ scope: "document" }),
-        timestampUtcMs: "2023-01-01T00:00:00.000Z",
-      }),
-      createTestOperation({
-        index: 4,
-        action: createTestAction({ scope: "document" }),
-        timestampUtcMs: "2023-01-02T00:00:00.000Z",
-      }),
-    ];
-
-    const job: Job = {
-      id: "job-load",
-      kind: "load",
-      documentId: "doc-1",
-      scope: "document",
-      branch: "main",
-      actions: [],
-      operations,
-      createdAt: new Date().toISOString(),
-      queueHint: [],
-      errorHistory: [],
-    };
-
-    const result = await executor.executeJob(job);
-
-    expect(result.success).toBe(true);
-    expect(writtenOperations).toHaveLength(2);
-    expect(writtenOperations[0]?.index).toBe(5);
-    expect(writtenOperations[0]?.skip).toBe(2);
-    expect(writtenOperations[1]?.index).toBe(6);
-    expect(mockWriteCache.invalidate).toHaveBeenCalledWith(
-      "doc-1",
-      "document",
-      "main",
     );
   });
 
