@@ -7,6 +7,8 @@ import type {
 import { MemoryStorage, driveDocumentModelModule } from "document-drive";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { IDocumentMetaCache } from "../../src/cache/document-meta-cache-types.js";
+import { DocumentMetaCache } from "../../src/cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../../src/cache/kysely-operation-index.js";
 import { KyselyWriteCache } from "../../src/cache/kysely-write-cache.js";
 import type { IOperationIndex } from "../../src/cache/operation-index-types.js";
@@ -20,9 +22,11 @@ import type {
   IOperationStore,
 } from "../../src/storage/interfaces.js";
 import type { Database as DatabaseSchema } from "../../src/storage/kysely/types.js";
-import { DocumentMetaCache } from "../../src/cache/document-meta-cache.js";
-import type { IDocumentMetaCache } from "../../src/cache/document-meta-cache-types.js";
-import { createTestEventBus, createTestOperationStore } from "../factories.js";
+import {
+  createMockLogger,
+  createTestEventBus,
+  createTestOperationStore,
+} from "../factories.js";
 
 describe("SimpleJobExecutor Integration", () => {
   let executor: SimpleJobExecutor;
@@ -140,6 +144,7 @@ describe("SimpleJobExecutor Integration", () => {
     // Create executor with real storage, real operation store, and real write cache
     const eventBus = createTestEventBus();
     executor = new SimpleJobExecutor(
+      createMockLogger(),
       registry,
       storage as IDocumentStorage,
       storage as IDocumentOperationStorage,
@@ -425,6 +430,7 @@ describe("SimpleJobExecutor Integration", () => {
 
       const eventBus = createTestEventBus();
       const executorWithFailingStorage = new SimpleJobExecutor(
+        createMockLogger(),
         registry,
         storage as IDocumentStorage,
         storage as IDocumentOperationStorage,

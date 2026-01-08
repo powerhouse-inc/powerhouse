@@ -234,6 +234,7 @@ export class ReactorBuilder {
       executorManager = new SimpleJobExecutorManager(
         () =>
           new SimpleJobExecutor(
+            this.logger!,
             documentModelRegistry,
             storage,
             storage,
@@ -248,6 +249,7 @@ export class ReactorBuilder {
         eventBus,
         queue,
         jobTracker,
+        this.logger,
       );
     }
 

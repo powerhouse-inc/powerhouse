@@ -39,6 +39,7 @@ import type {
   Database as StorageDatabase,
 } from "../../../src/storage/kysely/types.js";
 import { runMigrations } from "../../../src/storage/migrations/migrator.js";
+import { createMockLogger } from "../../factories.js";
 import {
   type RecordedOperation,
   getDocumentModels,
@@ -46,7 +47,6 @@ import {
   processReactorMutation,
   submitAllMutationsWithQueueHints,
 } from "./recorded-operations-helpers.js";
-import { createMockLogger } from "../../factories.js";
 
 type Database = StorageDatabase &
   DocumentViewDatabase &
@@ -118,6 +118,7 @@ async function createReactorSetup(
   await documentMetaCache.startup();
 
   const executor = new SimpleJobExecutor(
+    createMockLogger(),
     registry,
     storage,
     storage,
@@ -134,6 +135,7 @@ async function createReactorSetup(
     eventBus,
     queue,
     jobTracker,
+    createMockLogger(),
   );
 
   await executorManager.start(1);

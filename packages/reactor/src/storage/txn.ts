@@ -18,11 +18,12 @@ export class AtomicTransaction implements IAtomicTxn {
 
   addOperations(...operations: Operation[]): void {
     for (const op of operations) {
+      console.log(">>>>>> TS: ", op.timestampUtcMs);
+
       this.operations.push({
-        // WRONG
+        // WRONG -- we should be using the jobId
         jobId: uuidv4(),
-        // WRONG
-        opId: op.id || uuidv4(),
+        opId: op.id!,
         prevOpId: "", // Will be set during apply
         documentId: this.documentId,
         documentType: this.documentType,

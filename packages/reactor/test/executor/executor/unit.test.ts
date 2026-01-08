@@ -12,6 +12,7 @@ import type { IOperationStore } from "../../../src/storage/interfaces.js";
 import {
   createMockDocumentMetaCache,
   createMockDocumentStorage,
+  createMockLogger,
   createMockOperationStorage,
   createMockOperationStore,
   createTestEventBus,
@@ -102,6 +103,7 @@ describe("SimpleJobExecutor", () => {
     const eventBus = createTestEventBus();
     const mockDocumentMetaCache = createMockDocumentMetaCache();
     executor = new SimpleJobExecutor(
+      createMockLogger(),
       registry,
       mockDocStorage,
       mockOperationStorage,

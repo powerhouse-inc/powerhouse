@@ -202,6 +202,7 @@ describe.each(storageLayers)(
 
       const mockDocumentMetaCache = createMockDocumentMetaCache();
       const executor = new SimpleJobExecutor(
+        createMockLogger(),
         registry,
         legacyStorage as IDocumentStorage,
         legacyStorage,
@@ -217,6 +218,7 @@ describe.each(storageLayers)(
         eventBus,
         queue,
         jobTracker,
+        createMockLogger(),
       );
 
       await executorManager.start(1);

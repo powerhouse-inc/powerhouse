@@ -1,6 +1,8 @@
 import { driveDocumentModelModule } from "document-drive";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { IDocumentMetaCache } from "../../src/cache/document-meta-cache-types.js";
+import { DocumentMetaCache } from "../../src/cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../../src/cache/kysely-operation-index.js";
 import { KyselyWriteCache } from "../../src/cache/kysely-write-cache.js";
 import type { IOperationIndex } from "../../src/cache/operation-index-types.js";
@@ -15,9 +17,11 @@ import type {
   IOperationStore,
 } from "../../src/storage/interfaces.js";
 import type { Database as DatabaseSchema } from "../../src/storage/kysely/types.js";
-import { DocumentMetaCache } from "../../src/cache/document-meta-cache.js";
-import type { IDocumentMetaCache } from "../../src/cache/document-meta-cache-types.js";
-import { createTestEventBus, createTestOperationStore } from "../factories.js";
+import {
+  createMockLogger,
+  createTestEventBus,
+  createTestOperationStore,
+} from "../factories.js";
 
 describe("SimpleJobExecutor Integration (Modern Storage)", () => {
   let executor: SimpleJobExecutor;
@@ -149,6 +153,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
 
     const eventBus = createTestEventBus();
     executor = new SimpleJobExecutor(
+      createMockLogger(),
       registry,
       null as any,
       null as any,

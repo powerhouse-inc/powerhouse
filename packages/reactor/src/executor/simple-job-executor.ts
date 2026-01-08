@@ -28,6 +28,7 @@ import {
   OperationEventTypes,
   type OperationWrittenEvent,
 } from "../events/types.js";
+import type { ILogger } from "../logging/types.js";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import {
@@ -77,6 +78,7 @@ export class SimpleJobExecutor implements IJobExecutor {
   private config: Required<JobExecutorConfig>;
 
   constructor(
+    private logger: ILogger,
     private registry: IDocumentModelRegistry,
     private documentStorage: IDocumentStorage,
     private operationStorage: IDocumentOperationStorage,
@@ -1476,6 +1478,12 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
       return null;
     } catch (error) {
+      this.logger.error(
+        "Error writing @Operation to IOperationStore: @Error",
+        operation,
+        error,
+      );
+
       this.writeCache.invalidate(documentId, scope, branch);
 
       return {

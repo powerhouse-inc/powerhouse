@@ -15,6 +15,7 @@ import type { IOperationStore } from "../../src/storage/interfaces.js";
 import {
   createMockDocumentMetaCache,
   createMockDocumentStorage,
+  createMockLogger,
   createMockOperationStorage,
   createMockOperationStore,
   createTestAction,
@@ -99,6 +100,7 @@ describe("SimpleJobExecutor load jobs", () => {
 
     const mockDocumentMetaCache = createMockDocumentMetaCache();
     executor = new SimpleJobExecutor(
+      createMockLogger(),
       registry,
       mockDocStorage,
       mockOperationStorage,
