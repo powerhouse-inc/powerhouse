@@ -1,3 +1,7 @@
+## 5.2.0-staging.13 (2026-01-08)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
 ## 5.2.0-staging.12 (2026-01-08)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

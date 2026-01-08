@@ -1,3 +1,13 @@
+## 5.2.0-staging.13 (2026-01-08)
+
+### 🩹 Fixes
+
+- **connect, switchboard:** create .npmrc after ph init and reinstall ([03865870b](https://github.com/powerhouse-inc/powerhouse/commit/03865870b))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.2.0-staging.12 (2026-01-08)
 
 ### 🩹 Fixes
