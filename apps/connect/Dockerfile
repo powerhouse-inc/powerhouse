@@ -51,10 +51,6 @@ RUN pnpm config set @jsr:registry https://npm.jsr.io
 # Create and initialize the project
 RUN pnpm add -g ph-cmd@$TAG
 
-# Create .npmrc with hoisted node-linker BEFORE ph init runs pnpm install
-# This fixes symlink issues on containerd's overlay filesystem
-RUN mkdir -p /app/project && echo "node-linker=hoisted" > /app/project/.npmrc
-
 RUN if [[ "$TAG" == *"dev"* ]]; then \
         ph init project --dev --package-manager pnpm; \
     elif [[ "$TAG" == *"staging"* ]]; then \
@@ -64,6 +60,10 @@ RUN if [[ "$TAG" == *"dev"* ]]; then \
     fi
 
 WORKDIR /app/project
+
+# Create .npmrc with hoisted node-linker and reinstall to apply
+# This fixes symlink issues on containerd's overlay filesystem
+RUN echo "node-linker=hoisted" > .npmrc && pnpm install
 
 # Copy and set up entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/
