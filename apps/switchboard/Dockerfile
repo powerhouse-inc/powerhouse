@@ -40,6 +40,11 @@ ENV TAG=$TAG
 # Configure JSR registry for @jsr scoped packages
 RUN pnpm config set @jsr:registry https://npm.jsr.io
 RUN pnpm add -g ph-cmd@$TAG prisma@5.17.0
+
+# Create .npmrc with hoisted node-linker BEFORE ph init runs pnpm install
+# This fixes symlink issues on containerd's overlay filesystem
+RUN mkdir -p /app/project && echo "node-linker=hoisted" > /app/project/.npmrc
+
 RUN case "$TAG" in \
         *dev*) ph init project --dev --package-manager pnpm ;; \
         *staging*) ph init project --staging --package-manager pnpm ;; \
@@ -47,10 +52,6 @@ RUN case "$TAG" in \
     esac
 
 WORKDIR /app/project
-
-# Use hoisted node-linker for containerd/k8s overlay filesystem compatibility
-# This must be set AFTER ph init and in the project directory
-RUN pnpm config set node-linker hoisted --location project
 
 # Install curl for health checks
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
