@@ -10,9 +10,9 @@ import {
   getPackageManagerFromLockfile,
   getProjectInfo,
   packageManagers,
-  resolvePackageManagerOptions,
   withCustomHelp,
 } from "../utils/index.js";
+import { parsePackageManager } from "../utils/parsing.js";
 import type { Environment } from "./use.js";
 import { detectPowerhousePackages, ENV_MAP, updatePackageJson } from "./use.js";
 
@@ -104,7 +104,7 @@ export const update: CommandActionType<[UpdateOptions]> = async (options) => {
   }
 
   const projectInfo = await getProjectInfo();
-  const pkgManagerName = (resolvePackageManagerOptions(options) ||
+  const pkgManagerName = (parsePackageManager(options) ||
     getPackageManagerFromLockfile(projectInfo.path)) as PackageManager;
 
   const localDependencyPath = getLocalDependencyPath(projectInfo.path);

@@ -8,10 +8,10 @@ import {
   getPackageManagerFromLockfile,
   getProjectInfo,
   installDependency,
-  resolvePackageManagerOptions,
   updateDependencyVersionString,
   withCustomHelp,
 } from "../utils/index.js";
+import { parsePackageManager } from "../utils/parsing.js";
 
 export const ORG = "@powerhousedao";
 
@@ -263,7 +263,7 @@ export const use: CommandActionType<
 
   const projectInfo = await getProjectInfo();
   const packageManager =
-    resolvePackageManagerOptions(options) ??
+    parsePackageManager(options) ??
     getPackageManagerFromLockfile(projectInfo.path);
 
   await updatePackageJson(

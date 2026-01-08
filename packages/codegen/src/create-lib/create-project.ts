@@ -28,147 +28,57 @@ import {
   viteConfigTemplate,
   vitestConfigTemplate,
 } from "@powerhousedao/codegen/templates";
-import type arg from "arg";
-import { paramCase } from "change-case";
-import enquirer from "enquirer";
 import fs from "node:fs";
 import path from "path";
-import { parseArgs } from "../utils/cli.js";
-import { envPackageManager, runCmd, writeFileEnsuringDir } from "./utils.js";
+import { runCmd, writeFileEnsuringDir } from "./utils.js";
 
-export const createCommandSpec = {
-  "--name": String,
-  "--project-name": "--name",
-  "--branch": String,
-  "--tag": String,
-  "--interactive": Boolean,
-  "--dev": Boolean,
-  "--staging": Boolean,
-  "-p": "--name",
-  "-b": "--branch",
-  "-t": "--tag",
-  "--package-manager": String,
-} as const;
-
-export interface ICreateProjectOptions {
-  name: string | undefined;
+type CreateProjectArgs = {
+  name: string;
+  packageManager: string;
   tag?: string;
-  branch?: string;
-  packageManager?: string;
-  vetraDriveUrl?: string;
-}
-
-const { prompt } = enquirer;
-
-export function parseTag(args: {
-  tag?: string;
-  dev?: boolean;
-  staging?: boolean;
-}) {
-  if (args.tag) {
-    return args.tag;
-  }
-  if (args.dev) {
-    return "dev";
-  } else if (args.staging) {
-    return "staging";
-  } else {
-    return "";
-  }
-}
-
-function parseTagArgs(args: arg.Result<typeof createCommandSpec>) {
-  return parseTag({
-    tag: args["--tag"],
-    dev: args["--dev"],
-    staging: args["--staging"],
-  });
-}
-
-export function initCli() {
-  const args = parseArgs(process.argv.slice(2), createCommandSpec);
-  const options: ICreateProjectOptions = {
-    name: args["--name"] ?? args._.shift(),
-    tag: parseTagArgs(args),
-    branch: args["--branch"],
-  };
-  return createProject(options);
-}
-
-export async function createProject(options: ICreateProjectOptions) {
-  // checks if a project name was provided
-  let projectName = options.name;
-  if (!projectName) {
-    const result = await prompt<{ projectName: string }>([
-      {
-        type: "input",
-        name: "projectName",
-        message: "What is the project name?",
-        required: true,
-        result: (value) => paramCase(value),
-      },
-    ]);
-    if (!result.projectName) {
-      console.log("\x1b[31mYou must provide a name for your project.\x1b[0m");
-      process.exit(1);
-    }
-    projectName = result.projectName;
-  }
-
-  const appPath = path.join(process.cwd(), projectName);
+  version?: string;
+  remoteDrive?: string;
+};
+export async function createProject({
+  name,
+  packageManager,
+  tag,
+  version,
+  remoteDrive,
+}: CreateProjectArgs) {
+  const appPath = path.join(process.cwd(), name);
 
   try {
     fs.mkdirSync(appPath);
   } catch (err) {
     if ((err as { code: string }).code === "EEXIST") {
       console.log(
-        `\x1b[31mThe folder "${projectName}" already exists in the current directory, please give it another name.\x1b[0m`,
+        `\x1b[31mThe folder "${name}" already exists in the current directory, please give it another name.\x1b[0m`,
       );
     } else {
-      console.log(err);
+      console.error(err);
     }
     process.exit(1);
   }
 
-  await handleCreateProject(
-    projectName,
-    options.tag,
-    options.branch,
-    options.packageManager,
-    options.vetraDriveUrl,
-  );
-}
-
-async function handleCreateProject(
-  projectName: string,
-  tag?: string,
-  branch?: string,
-  packageManager?: string,
-  vetraDriveUrl?: string,
-) {
-  branch = branch ?? "main";
-  packageManager = packageManager ?? envPackageManager;
-
   try {
     // Create a new directory for the project
     console.log(
-      `\n\x1b[34mCreating directory for project "${projectName}"...\x1b[0m\n`,
+      `\n\x1b[34mCreating directory for project "${name}"...\x1b[0m\n`,
     );
-    const appPath = path.join(process.cwd(), projectName);
+    const appPath = path.join(process.cwd(), name);
     process.chdir(appPath);
     console.log(`\x1b[32mProject directory created\x1b[0m\n`);
 
     // Create a .gitignore file, then initialize the git repository
-    console.log(
-      `\x1b[34mInitializing git repository with branch "${branch}"...\x1b[0m\n`,
-    );
+    console.log(`\x1b[34mInitializing git repository...\x1b[0m\n`);
     await writeFileEnsuringDir(".gitignore", gitIgnoreTemplate);
-    runCmd(`git init -b ${branch}`);
+    runCmd(`git init`);
     console.log(`\n\x1b[32mGit repository initialized\x1b[0m\n`);
 
     // Write the boilerplate files for the project
     console.log(`\x1b[34mCreating project boilerplate files...\x1b[0m\n`);
-    await writeProjectRootFiles(projectName, tag, vetraDriveUrl);
+    await writeProjectRootFiles(name, tag, remoteDrive);
     await writeModuleFiles();
     await writeAiConfigFiles();
     console.log(`\x1b[32mProject boilerplate files created\x1b[0m\n`);
@@ -187,17 +97,18 @@ async function handleCreateProject(
 
     // Project creation complete
     console.log(
-      `\x1b[32m🎉 Successfully created project "${projectName}" 🎉\x1b[0m\n`,
+      `\x1b[32m🎉 Successfully created project "${name}" 🎉\x1b[0m\n`,
     );
   } catch (error) {
-    console.log(error);
+    console.error(error);
+    process.exit(1);
   }
 }
 
 async function writeProjectRootFiles(
   projectName: string,
   tag: string | undefined,
-  vetraDriveUrl: string | undefined,
+  remoteDrive: string | undefined,
 ) {
   await writeFileEnsuringDir("LICENSE", licenseTemplate);
   await writeFileEnsuringDir("README.md", readmeTemplate);
@@ -209,7 +120,7 @@ async function writeProjectRootFiles(
   await writeFileEnsuringDir("powerhouse.manifest.json", powerhouseManifest);
   const powerhouseConfig = await buildPowerhouseConfigTemplate(
     tag,
-    vetraDriveUrl,
+    remoteDrive,
   );
   await writeFileEnsuringDir("powerhouse.config.json", powerhouseConfig);
   await writeFileEnsuringDir("package.json", packageJson);
