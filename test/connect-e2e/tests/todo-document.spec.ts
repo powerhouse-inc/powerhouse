@@ -132,7 +132,9 @@ test("Create a TodoList", async ({ page }) => {
   await goToConnectDrive(page, "My Local Drive");
   await createDocument(page, "ToDoDocument", "MyTodoList");
   // Wait for the editor to load - look for the "Edit" button in the generated editor
-  await page.getByRole("button", { name: "Edit" }).waitFor({ state: "visible" });
+  await page
+    .getByRole("button", { name: "Edit" })
+    .waitFor({ state: "visible" });
 });
 
 // Helper Functions

@@ -207,7 +207,6 @@ export class SimpleJobExecutor implements IJobExecutor {
             startTime,
             indexTxn,
             skip,
-            sourceOperation,
           )
         : await this.executeRegularAction(
             job,
@@ -250,7 +249,6 @@ export class SimpleJobExecutor implements IJobExecutor {
     startTime: number,
     indexTxn: IOperationIndexTxn,
     skip: number = 0,
-    _sourceOperation?: Operation,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{

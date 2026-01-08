@@ -1,21 +1,15 @@
-import {
-  MemoryStorage,
-  driveDocumentModelModule,
-} from "document-drive";
-import type { DocumentModelDocument, DocumentModelModule, Operation } from "document-model";
-import {
-  documentModelDocumentModelModule,
-  setModelName,
+import { MemoryStorage, driveDocumentModelModule } from "document-drive";
+import type {
+  DocumentModelDocument,
+  DocumentModelModule,
+  Operation,
 } from "document-model";
-import {
-  reshuffleByTimestamp as baseServerReshuffle,
-} from "document-model/core";
+import { documentModelDocumentModelModule, setModelName } from "document-model";
+import { reshuffleByTimestamp as baseServerReshuffle } from "document-model/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReactorBuilder, type IReactor } from "../../src/index.js";
 import { JobStatus, type ConsistencyToken } from "../../src/shared/types.js";
-import {
-  reshuffleByTimestampAndIndex as reactorReshuffle,
-} from "../../src/utils/reshuffle.js";
+import { reshuffleByTimestampAndIndex as reactorReshuffle } from "../../src/utils/reshuffle.js";
 import { createDocModelDocument } from "../factories.js";
 
 /**
@@ -81,24 +75,48 @@ describe("Reshuffle Side-by-Side Comparison", () => {
     const startIndex = { index: 1, skip: 1 };
 
     console.log("\n=== INPUT ===");
-    console.log("Existing ops (B's):", existingOps.map(op => `${(op.action.input as any).name}@${op.index} (${op.timestampUtcMs})`));
-    console.log("Incoming ops (A's):", incomingOps.map(op => `${(op.action.input as any).name}@${op.index} (${op.timestampUtcMs})`));
+    console.log(
+      "Existing ops (B's):",
+      existingOps.map(
+        (op) =>
+          `${(op.action.input as any).name}@${op.index} (${op.timestampUtcMs})`,
+      ),
+    );
+    console.log(
+      "Incoming ops (A's):",
+      incomingOps.map(
+        (op) =>
+          `${(op.action.input as any).name}@${op.index} (${op.timestampUtcMs})`,
+      ),
+    );
     console.log("Start index:", startIndex);
 
     // Run base-server reshuffle (sorts by timestamp only)
-    const baseServerResult = baseServerReshuffle(startIndex, existingOps, incomingOps);
+    const baseServerResult = baseServerReshuffle(
+      startIndex,
+      existingOps,
+      incomingOps,
+    );
 
     console.log("\n=== BASE-SERVER RESHUFFLE (reshuffleByTimestamp) ===");
     for (const op of baseServerResult) {
-      console.log(`  index=${op.index}, skip=${op.skip}, input="${(op.action.input as any).name}", timestamp=${op.timestampUtcMs}`);
+      console.log(
+        `  index=${op.index}, skip=${op.skip}, input="${(op.action.input as any).name}", timestamp=${op.timestampUtcMs}`,
+      );
     }
 
     // Run reactor reshuffle (sorts by timestamp, then by index)
-    const reactorResult = reactorReshuffle(startIndex, existingOps, incomingOps);
+    const reactorResult = reactorReshuffle(
+      startIndex,
+      existingOps,
+      incomingOps,
+    );
 
     console.log("\n=== REACTOR RESHUFFLE (reshuffleByTimestampAndIndex) ===");
     for (const op of reactorResult) {
-      console.log(`  index=${op.index}, skip=${op.skip}, input="${(op.action.input as any).name}", timestamp=${op.timestampUtcMs}`);
+      console.log(
+        `  index=${op.index}, skip=${op.skip}, input="${(op.action.input as any).name}", timestamp=${op.timestampUtcMs}`,
+      );
     }
 
     console.log("\n=== COMPARISON ===");
@@ -178,12 +196,16 @@ describe("Reshuffle Side-by-Side Comparison", () => {
 
     console.log("\n=== BASE-SERVER RESHUFFLE ===");
     for (const op of baseServerResult) {
-      console.log(`  index=${op.index}, skip=${op.skip}, input="${(op.action.input as any).name}", originalIndex=${op.action.input === opA.action.input ? opA.index : opB.index}`);
+      console.log(
+        `  index=${op.index}, skip=${op.skip}, input="${(op.action.input as any).name}", originalIndex=${op.action.input === opA.action.input ? opA.index : opB.index}`,
+      );
     }
 
     console.log("\n=== REACTOR RESHUFFLE ===");
     for (const op of reactorResult) {
-      console.log(`  index=${op.index}, skip=${op.skip}, input="${(op.action.input as any).name}", originalIndex=${op.action.input === opA.action.input ? opA.index : opB.index}`);
+      console.log(
+        `  index=${op.index}, skip=${op.skip}, input="${(op.action.input as any).name}", originalIndex=${op.action.input === opA.action.input ? opA.index : opB.index}`,
+      );
     }
 
     // Both produce 2 operations
@@ -252,7 +274,9 @@ describe("Reshuffle End-to-End via Reactor", () => {
 
     console.log("\n=== Operations BEFORE loading A1 ===");
     for (const op of opsBefore.global.results) {
-      console.log(`  index=${op.index}, skip=${op.skip}, action=${op.action.type}, input="${(op.action.input as any)?.name}"`);
+      console.log(
+        `  index=${op.index}, skip=${op.skip}, action=${op.action.type}, input="${(op.action.input as any)?.name}"`,
+      );
     }
 
     expect(opsBefore.global.results.length).toBe(1);
@@ -283,10 +307,15 @@ describe("Reshuffle End-to-End via Reactor", () => {
 
     console.log("\n=== Operations AFTER loading A1 ===");
     for (const op of opsAfter.global.results) {
-      console.log(`  index=${op.index}, skip=${op.skip}, action=${op.action.type}, input="${(op.action.input as any)?.name}", timestamp=${op.timestampUtcMs}`);
+      console.log(
+        `  index=${op.index}, skip=${op.skip}, action=${op.action.type}, input="${(op.action.input as any)?.name}", timestamp=${op.timestampUtcMs}`,
+      );
     }
 
-    const finalDoc = await reactor.get<DocumentModelDocument>(document.header.id, { branch: "main" });
+    const finalDoc = await reactor.get<DocumentModelDocument>(
+      document.header.id,
+      { branch: "main" },
+    );
     console.log(`Final state name: "${finalDoc.document.state.global.name}"`);
 
     // EXPECTED BASE-SERVER BEHAVIOR:
