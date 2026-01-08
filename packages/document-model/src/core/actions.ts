@@ -206,10 +206,7 @@ export const operationFromAction = (
       context.documentId,
       context.scope,
       context.branch,
-      action.type,
       action.id,
-      index,
-      skip,
     ),
     timestampUtcMs: new Date().toISOString(),
     hash: "",
@@ -226,31 +223,25 @@ export const operationFromOperation = (
   skip: number,
   context: OperationContext,
 ): Operation => {
-  const derivedId = deriveOperationId(
+  const id = deriveOperationId(
     context.documentId,
     context.scope,
     context.branch,
-    operation.action.type,
     operation.action.id,
-    index,
-    skip,
   );
 
-  // Handle operation ID:
-  // - If operation has no ID, leave it undefined
-  // - If operation has an ID that matches derived ID, preserve it
-  // - If operation has an ID that doesn't match (e.g., after reshuffle), clear it
-  const idMatches = !operation.id || operation.id === derivedId;
-  const result: Operation = {
+  if (operation.id && operation.id !== id) {
+    throw new Error(`Operation id mismatch: ${operation.id} !== ${id}`);
+  }
+
+  return {
     ...operation,
     hash: "",
     error: undefined,
     index,
     skip,
-    id: idMatches ? operation.id : undefined,
+    id,
   };
-
-  return result;
 };
 
 export const operationWithContext = (

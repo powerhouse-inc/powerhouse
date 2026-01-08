@@ -1,6 +1,7 @@
 import type { Action, Operation } from "document-model";
 import {
   baseCreateDocument,
+  deriveOperationId,
   noop,
   processUndoRedo,
   redo,
@@ -430,13 +431,28 @@ describe("UNDO/REDO", () => {
         action: baseAction,
       };
 
-      const action1 = { ...baseAction } as CountAction;
-      const action2 = { ...baseAction } as CountAction;
-      const action3 = { ...baseAction } as CountAction;
+      const action1 = { ...baseAction, id: "noop-1" } as CountAction;
+      const action2 = { ...baseAction, id: "noop-2" } as CountAction;
+      const action3 = { ...baseAction, id: "noop-3" } as CountAction;
 
-      const op1 = { ...baseOperation, skip: 1 };
-      const op2 = { ...baseOperation, skip: 2 };
-      const op3 = { ...baseOperation, skip: 3 };
+      const op1 = {
+        ...baseOperation,
+        id: deriveOperationId(document.header.id, "global", "main", action1.id),
+        skip: 1,
+        action: action1,
+      };
+      const op2 = {
+        ...baseOperation,
+        id: deriveOperationId(document.header.id, "global", "main", action2.id),
+        skip: 2,
+        action: action2,
+      };
+      const op3 = {
+        ...baseOperation,
+        id: deriveOperationId(document.header.id, "global", "main", action3.id),
+        skip: 3,
+        action: action3,
+      };
 
       document = countReducer(document, action1, undefined, {
         pruneOnSkip: true,
