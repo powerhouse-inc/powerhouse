@@ -7,14 +7,36 @@ import type {
   DocumentNode,
   EnumTypeDefinitionNode,
   FieldDefinitionNode,
+  GraphQLInputType,
+  GraphQLObjectType,
+  GraphQLOutputType,
+  GraphQLSchema,
+  InputObjectTypeDefinitionNode,
   ListTypeNode,
   NamedTypeNode,
   NonNullTypeNode,
   ObjectTypeDefinitionNode,
   ScalarTypeDefinitionNode,
+  TypeNode,
   UnionTypeDefinitionNode,
 } from "graphql";
-import { Kind, print, visit } from "graphql";
+import {
+  getVariableValues,
+  GraphQLError,
+  GraphQLInputObjectType,
+  GraphQLList,
+  GraphQLNonNull,
+  isEnumType,
+  isListType,
+  isNonNullType,
+  isObjectType,
+  isScalarType,
+  Kind,
+  parse,
+  print,
+  visit,
+} from "graphql";
+import { buildASTSchema, getOperationAST } from "graphql/utilities";
 import { z } from "zod";
 import type { GqlPrimitiveNodeName } from "../constants/graphql-kinds.js";
 import {
@@ -573,4 +595,620 @@ export function handleModelNameChange(params: {
   }
 
   updateModelSchemaNames(params);
+}
+
+/**
+ * Converts an output object type into an equivalent input object type.
+ * Intended for structural validation of state objects.
+ */
+export function objectTypeToInputType(
+  schema: GraphQLSchema,
+  objectType: GraphQLObjectType,
+  options?: {
+    nameSuffix?: string;
+    cache?: Map<string, GraphQLInputObjectType>;
+  },
+): GraphQLInputObjectType {
+  const suffix = options?.nameSuffix ?? "Input";
+  const cache = options?.cache ?? new Map<string, GraphQLInputObjectType>();
+
+  const inputTypeName = `${objectType.name}${suffix}`;
+
+  if (cache.has(inputTypeName)) {
+    return cache.get(inputTypeName)!;
+  }
+
+  const inputType = new GraphQLInputObjectType({
+    name: inputTypeName,
+    fields: () => {
+      const fields = objectType.getFields();
+      const inputFields: Record<string, { type: GraphQLInputType }> = {};
+
+      for (const fieldName in fields) {
+        const field = fields[fieldName];
+
+        if (field.args.length > 0) {
+          throw new Error(
+            `Cannot convert field "${objectType.name}.${fieldName}" with arguments into input type`,
+          );
+        }
+
+        inputFields[fieldName] = {
+          type: outputTypeToInputType(schema, field.type, suffix, cache),
+        };
+      }
+
+      return inputFields;
+    },
+  });
+
+  cache.set(inputTypeName, inputType);
+  return inputType;
+}
+
+function outputTypeToInputType(
+  schema: GraphQLSchema,
+  type: GraphQLOutputType,
+  suffix: string,
+  cache: Map<string, GraphQLInputObjectType>,
+): GraphQLInputType {
+  if (isNonNullType(type)) {
+    return new GraphQLNonNull(
+      outputTypeToInputType(schema, type.ofType, suffix, cache),
+    );
+  }
+
+  if (isListType(type)) {
+    return new GraphQLList(
+      outputTypeToInputType(schema, type.ofType, suffix, cache),
+    );
+  }
+
+  if (isScalarType(type) || isEnumType(type)) {
+    return type;
+  }
+
+  if (isObjectType(type)) {
+    return objectTypeToInputType(schema, type, {
+      nameSuffix: suffix,
+      cache,
+    });
+  }
+
+  throw new Error(`Unsupported output type: ${type.toString()}`);
+}
+
+export function validateStateObject(
+  sharedSchemaDocumentNode: DocumentNode,
+  stateTypeDefinitionNode: ObjectTypeDefinitionNode,
+  stateValue: string,
+): Error[] {
+  let stateObjectJson: Record<string, unknown> | undefined;
+  try {
+    stateObjectJson = JSON.parse(stateValue) as Record<string, unknown>;
+  } catch (error) {
+    return [new Error("Invalid JSON object", { cause: error })];
+  }
+
+  // 2) Build a quick index of type definitions from the shared schema
+  const typeDefByName = indexTypeDefinitions(sharedSchemaDocumentNode);
+
+  // Ensure the passed node exists in the shared schema (optional but helpful)
+  const stateTypeName = stateTypeDefinitionNode.name.value;
+  if (!typeDefByName.has(stateTypeName)) {
+    return [
+      new Error(
+        `State type "${stateTypeName}" was not found in sharedSchemaDocumentNode`,
+      ),
+    ];
+  }
+
+  // 3) Generate input types needed to validate this state object
+  const inputSuffix = "Input";
+  const generatedInputDefs = generateInputTypesForObjectTree(
+    stateTypeName,
+    typeDefByName,
+    inputSuffix,
+  );
+
+  // 4) Build a schema that includes the generated input types
+  const augmentedDoc: DocumentNode = {
+    ...sharedSchemaDocumentNode,
+    definitions: [
+      ...sharedSchemaDocumentNode.definitions,
+      ...generatedInputDefs,
+    ],
+  };
+
+  let schema;
+  try {
+    schema = buildASTSchema(augmentedDoc, { assumeValidSDL: false });
+  } catch (e) {
+    return [new Error("Failed to build schema from SDL", { cause: e })];
+  }
+
+  // 5) Validate by coercing variables against the generated input type
+  const inputTypeName = `${stateTypeName}${inputSuffix}`;
+  const opDoc = parse(`query($v: ${inputTypeName}!) { __typename }`);
+  const op = getOperationAST(opDoc);
+
+  if (!op) {
+    return [new Error("Failed to create validation operation AST")];
+  }
+
+  const { errors } = getVariableValues(schema, op.variableDefinitions ?? [], {
+    v: stateObjectJson,
+  });
+
+  return errors ? graphQLErrorsToStateValidationErrors(errors) : [];
+}
+
+/**
+ * Indexes object/input/enum/scalar/interface/union type definition nodes by name.
+ * Note: only AST definitions that have a "name" field are indexed.
+ */
+function indexTypeDefinitions(doc: DocumentNode): Map<string, DefinitionNode> {
+  const map = new Map<string, DefinitionNode>();
+
+  for (const def of doc.definitions) {
+    if (
+      def.kind === Kind.OBJECT_TYPE_DEFINITION ||
+      def.kind === Kind.INPUT_OBJECT_TYPE_DEFINITION ||
+      def.kind === Kind.ENUM_TYPE_DEFINITION ||
+      def.kind === Kind.SCALAR_TYPE_DEFINITION ||
+      def.kind === Kind.INTERFACE_TYPE_DEFINITION ||
+      def.kind === Kind.UNION_TYPE_DEFINITION ||
+      def.kind === Kind.OBJECT_TYPE_EXTENSION ||
+      def.kind === Kind.INPUT_OBJECT_TYPE_EXTENSION ||
+      def.kind === Kind.ENUM_TYPE_EXTENSION ||
+      def.kind === Kind.INTERFACE_TYPE_EXTENSION ||
+      def.kind === Kind.UNION_TYPE_EXTENSION
+    ) {
+      // Extensions also have names; we index them too (but see note below).
+      // In production, you may want to merge extensions into base definitions.
+      // For state validation, prefer definitions (not extensions) if both exist.
+      const name = def.name.value;
+      if (!map.has(name)) {
+        map.set(name, def);
+      }
+    }
+  }
+
+  return map;
+}
+
+/**
+ * Generates InputObjectTypeDefinitionNode(s) for a root object type and any nested
+ * object types reachable via fields, converting object references to their *Input equivalents*.
+ */
+function generateInputTypesForObjectTree(
+  rootObjectTypeName: string,
+  typeDefByName: Map<string, DefinitionNode>,
+  inputSuffix: string,
+): InputObjectTypeDefinitionNode[] {
+  const generated = new Map<string, InputObjectTypeDefinitionNode>();
+  const visiting = new Set<string>();
+
+  const ensureInputForObject = (objectTypeName: string) => {
+    const inputName = `${objectTypeName}${inputSuffix}`;
+    if (generated.has(inputName)) return;
+
+    if (visiting.has(objectTypeName)) {
+      // Recursive reference; we rely on GraphQLInputObjectType lazy field resolution via AST schema build.
+      // Still, we must avoid infinite loops while generating AST nodes.
+      return;
+    }
+    visiting.add(objectTypeName);
+
+    const def = typeDefByName.get(objectTypeName);
+    if (!def) {
+      throw new GraphQLError(`Unknown referenced type "${objectTypeName}"`);
+    }
+
+    if (
+      def.kind !== Kind.OBJECT_TYPE_DEFINITION &&
+      def.kind !== Kind.OBJECT_TYPE_EXTENSION
+    ) {
+      throw new GraphQLError(
+        `Type "${objectTypeName}" is not an object type; cannot generate input from kind "${def.kind}"`,
+      );
+    }
+
+    const objDef = def as ObjectTypeDefinitionNode;
+
+    // Convert each field type to an input-acceptable TypeNode.
+    const inputFields =
+      objDef.fields?.map((f) => {
+        return {
+          kind: Kind.INPUT_VALUE_DEFINITION as const,
+          name: f.name,
+          description: f.description,
+          directives: [], // output-field directives don't automatically translate to input fields
+          type: convertOutputTypeNodeToInputTypeNode(
+            f.type,
+            typeDefByName,
+            inputSuffix,
+            ensureInputForObject,
+          ),
+          defaultValue: undefined,
+        };
+      }) ?? [];
+
+    const inputDef: InputObjectTypeDefinitionNode = {
+      kind: Kind.INPUT_OBJECT_TYPE_DEFINITION,
+      name: { kind: Kind.NAME, value: inputName },
+      description: objDef.description,
+      directives: [],
+      fields: inputFields,
+    };
+
+    generated.set(inputName, inputDef);
+
+    visiting.delete(objectTypeName);
+  };
+
+  // Kick off generation for root
+  ensureInputForObject(rootObjectTypeName);
+
+  return Array.from(generated.values());
+}
+
+function convertOutputTypeNodeToInputTypeNode(
+  typeNode: TypeNode,
+  typeDefByName: Map<string, DefinitionNode>,
+  inputSuffix: string,
+  ensureInputForObject: (objectTypeName: string) => void,
+): TypeNode {
+  switch (typeNode.kind) {
+    case Kind.NON_NULL_TYPE:
+      return {
+        kind: Kind.NON_NULL_TYPE,
+        type: convertOutputTypeNodeToInputTypeNode(
+          typeNode.type,
+          typeDefByName,
+          inputSuffix,
+          ensureInputForObject,
+        ) as NamedTypeNode | ListTypeNode,
+      };
+
+    case Kind.LIST_TYPE:
+      return {
+        kind: Kind.LIST_TYPE,
+        type: convertOutputTypeNodeToInputTypeNode(
+          typeNode.type,
+          typeDefByName,
+          inputSuffix,
+          ensureInputForObject,
+        ),
+      };
+
+    case Kind.NAMED_TYPE: {
+      const named = typeNode as NamedTypeNode;
+      const name = named.name.value;
+
+      const def = typeDefByName.get(name);
+
+      // If it's an object type, we must reference its generated input twin.
+      if (
+        def?.kind === Kind.OBJECT_TYPE_DEFINITION ||
+        def?.kind === Kind.OBJECT_TYPE_EXTENSION
+      ) {
+        ensureInputForObject(name);
+        return {
+          kind: Kind.NAMED_TYPE,
+          name: { kind: Kind.NAME, value: `${name}${inputSuffix}` },
+        };
+      }
+
+      // Scalars/enums/input objects are valid as-is in input positions.
+      if (
+        !def ||
+        def.kind === Kind.SCALAR_TYPE_DEFINITION ||
+        def.kind === Kind.ENUM_TYPE_DEFINITION ||
+        def.kind === Kind.INPUT_OBJECT_TYPE_DEFINITION ||
+        def.kind === Kind.INPUT_OBJECT_TYPE_EXTENSION
+      ) {
+        return named;
+      }
+
+      // Interfaces/unions are not valid input types.
+      if (
+        def.kind === Kind.INTERFACE_TYPE_DEFINITION ||
+        def.kind === Kind.UNION_TYPE_DEFINITION
+      ) {
+        throw new GraphQLError(
+          `Type "${name}" (${def.kind}) cannot be used in an input type`,
+        );
+      }
+
+      // Anything else is unexpected.
+      throw new GraphQLError(
+        `Unsupported named type "${name}" of kind "${def.kind}"`,
+      );
+    }
+
+    default:
+      // Exhaustiveness guard
+      throw new GraphQLError(
+        `Unsupported TypeNode kind: ${JSON.stringify(typeNode)}`,
+      );
+  }
+}
+
+export type StateValidationErrorKind =
+  | "MISSING"
+  | "UNKNOWN_FIELD"
+  | "NON_NULL"
+  | "TYPE";
+
+export type StateValidationErrorPayload =
+  | {
+      kind: "MISSING";
+      path: (string | number)[];
+      field: string;
+      expectedType?: string; // e.g. "String!"
+    }
+  | {
+      kind: "UNKNOWN_FIELD";
+      path: (string | number)[];
+      field: string;
+      didYouMean?: string; // e.g. "test"
+      typeName?: string; // e.g. "Test5StateInput"
+    }
+  | {
+      kind: "NON_NULL";
+      path: (string | number)[];
+      field: string;
+      expectedType?: string; // e.g. "Int!"
+    }
+  | {
+      kind: "TYPE";
+      path: (string | number)[];
+      field: string;
+      expectedType?: string; // e.g. "String" (or custom scalar)
+      details?: string; // optional raw hint (e.g. "cannot represent ...")
+    };
+
+export class StateValidationError extends Error {
+  readonly payload: StateValidationErrorPayload;
+  readonly originalMessage?: string;
+
+  constructor(payload: StateValidationErrorPayload, originalMessage?: string) {
+    // Keep Error.message stable but not user-facing; UI should render from payload.
+    super(payload.kind);
+    this.name = "StateValidationError";
+    this.payload = payload;
+    this.originalMessage = originalMessage;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+
+  get kind(): StateValidationErrorKind {
+    return this.payload.kind;
+  }
+
+  get path(): (string | number)[] {
+    return this.payload.path;
+  }
+
+  get field(): string {
+    return this.payload.field;
+  }
+}
+
+function extractInputPath(message: string): (string | number)[] {
+  const match = message.match(/at\s+"([^"]+)"/);
+  if (!match) return [];
+  const parts = match[1].split(".").filter(Boolean);
+  const withoutVar = parts[0] === "v" ? parts.slice(1) : parts;
+  return withoutVar.map((p) => (/^\d+$/.test(p) ? Number(p) : p));
+}
+
+const RE_MISSING_REQUIRED_FIELD =
+  /Field "([^"]+)" of required type "([^"]+)" was not provided\./;
+
+const RE_UNKNOWN_FIELD =
+  /Field "([^"]+)" is not defined by type "([^"]+)"\.(?: Did you mean "([^"]+)"\?)?/;
+
+function extractMissingRequiredField(
+  message: string,
+): { field: string; expectedType: string } | null {
+  const m = message.match(RE_MISSING_REQUIRED_FIELD);
+  if (!m) return null;
+  return { field: m[1], expectedType: m[2] };
+}
+
+function extractUnknownField(
+  message: string,
+): { field: string; typeName: string; didYouMean?: string } | null {
+  const m = message.match(RE_UNKNOWN_FIELD);
+  if (!m) return null;
+  return { field: m[1], typeName: m[2], didYouMean: m[3] };
+}
+
+function lastFieldFromPath(path: (string | number)[]): string | undefined {
+  for (let i = path.length - 1; i >= 0; i--) {
+    if (typeof path[i] === "string") return path[i] as string;
+  }
+  return undefined;
+}
+
+function extractExpectedType(message: string): string | undefined {
+  // NON_NULL: Expected non-nullable type "Int!" not to be null.
+  let m = message.match(/Expected non-nullable type "([^"]+)"/);
+  if (m?.[1]) return m[1];
+
+  // Sometimes: Expected type "X" ...
+  m = message.match(/Expected type "([^"]+)"/);
+  if (m?.[1]) return m[1];
+
+  // Scalar coercion: "; String cannot represent ..."
+  m = message.match(/;\s*([_A-Za-z][_0-9A-Za-z]*)\s+cannot represent/i);
+  if (m?.[1]) return m[1];
+
+  return undefined;
+}
+
+export function graphQLErrorsToStateValidationErrors(
+  errors: readonly Error[],
+): StateValidationError[] {
+  const out: StateValidationError[] = [];
+
+  for (const e of errors) {
+    const originalMessage = e.message;
+
+    // 1) Missing required field (no `at "v.x"` path usually)
+    const missing = extractMissingRequiredField(originalMessage);
+    if (missing) {
+      out.push(
+        new StateValidationError(
+          {
+            kind: "MISSING",
+            path: [missing.field],
+            field: missing.field,
+            expectedType: missing.expectedType, // if your payload supports it
+          },
+          originalMessage,
+        ),
+      );
+      continue;
+    }
+
+    // 2) Unknown field (extra key)
+    const unknown = extractUnknownField(originalMessage);
+    if (unknown) {
+      out.push(
+        new StateValidationError(
+          {
+            kind: "UNKNOWN_FIELD",
+            path: [unknown.field],
+            field: unknown.field,
+            didYouMean: unknown.didYouMean, // optional
+          },
+          originalMessage,
+        ),
+      );
+      continue;
+    }
+
+    // 3) Usual `at "v.path"` extraction (NON_NULL / TYPE)
+    const path = extractInputPath(originalMessage);
+    const field = lastFieldFromPath(path) ?? "value";
+    const expectedType = extractExpectedType(originalMessage);
+
+    if (
+      originalMessage.includes("Expected non-nullable type") &&
+      originalMessage.includes("not to be null")
+    ) {
+      out.push(
+        new StateValidationError(
+          { kind: "NON_NULL", path, field, expectedType },
+          originalMessage,
+        ),
+      );
+      continue;
+    }
+
+    if (
+      originalMessage.includes("cannot represent") ||
+      originalMessage.includes("Expected type")
+    ) {
+      out.push(
+        new StateValidationError(
+          {
+            kind: "TYPE",
+            path,
+            field,
+            expectedType,
+            details: originalMessage,
+          },
+          originalMessage,
+        ),
+      );
+      continue;
+    }
+
+    out.push(
+      new StateValidationError(
+        { kind: "TYPE", path, field, details: originalMessage },
+        originalMessage,
+      ),
+    );
+  }
+
+  return out;
+}
+
+export function fillMissingFieldsWithNull(
+  sharedSchemaDocumentNode: DocumentNode,
+  rootTypeNode: ObjectTypeDefinitionNode,
+  value: string | Record<string, unknown>,
+): string | undefined {
+  let stateObjectJson: Record<string, unknown> | undefined;
+  try {
+    stateObjectJson =
+      typeof value === "string"
+        ? (JSON.parse(value) as Record<string, unknown>)
+        : value;
+  } catch {
+    return;
+  }
+
+  const typeByName = indexObjectTypes(sharedSchemaDocumentNode);
+
+  const result = { ...stateObjectJson };
+
+  let changed = false;
+
+  for (const field of rootTypeNode.fields ?? []) {
+    const fieldName = field.name.value;
+
+    // If missing → add null
+    if (!(fieldName in result)) {
+      result[fieldName] = null;
+      changed = true;
+      continue;
+    }
+
+    // If present and object-typed → recurse
+    const namedType = unwrapNamedType(field.type);
+    const childType = namedType ? typeByName.get(namedType) : undefined;
+
+    if (
+      childType &&
+      typeof result[fieldName] === "object" &&
+      result[fieldName] !== null
+    ) {
+      const filledValue = fillMissingFieldsWithNull(
+        sharedSchemaDocumentNode,
+        childType,
+        result[fieldName] as Record<string, unknown>,
+      );
+      if (filledValue) {
+        result[fieldName] = filledValue;
+        changed = true;
+      }
+    }
+  }
+
+  return changed ? JSON.stringify(result, null, 2) : undefined;
+}
+
+function indexObjectTypes(
+  doc: DocumentNode,
+): Map<string, ObjectTypeDefinitionNode> {
+  const map = new Map<string, ObjectTypeDefinitionNode>();
+  for (const def of doc.definitions) {
+    if (def.kind === Kind.OBJECT_TYPE_DEFINITION) {
+      map.set(def.name.value, def);
+    }
+  }
+  return map;
+}
+
+function unwrapNamedType(typeNode: TypeNode): string | undefined {
+  if (typeNode.kind === Kind.NAMED_TYPE) return typeNode.name.value;
+  if (typeNode.kind === Kind.NON_NULL_TYPE)
+    return unwrapNamedType(typeNode.type);
+  if (typeNode.kind === Kind.LIST_TYPE) return unwrapNamedType(typeNode.type);
+  return undefined;
 }
