@@ -1,3 +1,13 @@
+## 5.2.0-staging.10 (2026-01-08)
+
+### 🩹 Fixes
+
+- use hoisted node-linker for containerd/k8s compatibility ([06e8df74e](https://github.com/powerhouse-inc/powerhouse/commit/06e8df74e))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.2.0-staging.9 (2025-12-19)
 
 ### 🚀 Features
