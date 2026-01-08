@@ -1,3 +1,13 @@
+## 5.2.0-staging.14 (2026-01-08)
+
+### 🩹 Fixes
+
+- **connect, switchboard:** run pnpm install after ph install in entrypoint ([bec470433](https://github.com/powerhouse-inc/powerhouse/commit/bec470433))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.2.0-staging.13 (2026-01-08)
 
 ### 🩹 Fixes
