@@ -10,6 +10,13 @@ Docker deployment is ideal for:
 - **CI/CD pipelines** that need automated testing and deployment
 - **Cloud platforms** like AWS ECS, Google Cloud Run, or Kubernetes
 
+:::tip Deployment Options
+This guide covers **Docker-based deployment**. If you prefer **traditional VM/server deployment** with direct installation, see the [Setup Environment Guide](./03-SetupEnvironment.md).
+
+**Choose Docker if:** You want the fastest path to production, prefer containerized workflows, or are deploying to cloud platforms.
+**Choose Direct Installation if:** You need maximum performance, want full control, or are setting up a dedicated server.
+:::
+
 ## Available Docker Images
 
 Powerhouse publishes three official Docker images to the GitHub Container Registry (ghcr.io):
