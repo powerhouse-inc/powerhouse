@@ -58,7 +58,7 @@ const dependenciesTemplate = (versionedDependencies: string[]) => json`
   "@powerhousedao/document-engineering": "^1.38.0",
   "graphql": "^16.10.0",
   "graphql-tag": "^2.12.6",
-  "zod": "^3.25.76"
+  "zod": "^4.3.5"
 `;
 
 const devDependenciesTemplate = (versionedDevDependencies: string[]) => json`
@@ -70,7 +70,7 @@ const devDependenciesTemplate = (versionedDevDependencies: string[]) => json`
   "@tailwindcss/cli": "^4.1.4",
   "@testing-library/react": "^16.3.0",
   "@types/node": "^24.9.2",
-  "@types/react": "^19.2.2",
+  "@types/react": "^19.2.3",
   "@vitejs/plugin-react": "^5.1.0",
   "eslint": "^9.38.0",
   "vite-plugin-node-polyfills": "^0.24.0",
@@ -81,8 +81,8 @@ const devDependenciesTemplate = (versionedDevDependencies: string[]) => json`
   "globals": "^16.4.0",
   "package-manager-detector": "^0.2.8",
   "pm2": "^5.4.3",
-  "react": "^19.2.0",
-  "react-dom": "^19.2.0",
+  "react": "^19.2.3",
+  "react-dom": "^19.2.3",
   "tailwindcss": "^4.1.16",
   "typescript": "^5.9.3",
   "typescript-eslint": "^8.46.2",
@@ -118,8 +118,8 @@ export const packageJsonTemplate = (
     ${devDependenciesTemplate(versionedDevDependencies)}
   },
   "peerDependencies": {
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
-  }
+    "react": ">=19.0.0",
+    "react-dom": ">=19.0.0"
+  },
 }
 `.raw;
