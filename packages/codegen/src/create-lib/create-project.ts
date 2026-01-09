@@ -19,6 +19,7 @@ import {
   legacyIndexHtmlTemplate,
   licenseTemplate,
   mcpTemplate,
+  npmrcTemplate,
   powerhouseManifestTemplate,
   processorsIndexTemplate,
   readmeTemplate,
@@ -96,7 +97,7 @@ export async function createProject({
     console.log(chalk.green(`✅ Boilerplate files formatted\n`));
 
     // Project creation complete
-    console.log(chalk.bold(`🎉 Successfully created project "${name}"🎉\n`));
+    console.log(chalk.bold(`🎉 Successfully created project "${name}" 🎉\n`));
   } catch (error) {
     console.error(error);
     process.exit(1);
@@ -112,6 +113,7 @@ async function writeProjectRootFiles(args: {
   const { name, tag, version, remoteDrive } = args;
   await writeFileEnsuringDir("LICENSE", licenseTemplate);
   await writeFileEnsuringDir("README.md", readmeTemplate);
+  await writeFileEnsuringDir(".npmrc", npmrcTemplate);
   const packageJson = await buildBoilerplatePackageJson({
     name,
     tag,
