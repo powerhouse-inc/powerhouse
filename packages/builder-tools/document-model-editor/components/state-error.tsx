@@ -52,6 +52,14 @@ export function StateValidationErrorMessage({
         </span>
       );
 
+    case "RECURSIVE_TYPE":
+      return (
+        <span>
+          Field <strong>{payload.typeName}</strong> has a recursive type. It
+          must be optional.
+        </span>
+      );
+
     default:
       return <span>Invalid value.</span>;
   }
