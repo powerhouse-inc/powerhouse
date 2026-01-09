@@ -1,3 +1,19 @@
+## 5.1.0-dev.36 (2026-01-09)
+
+### 🩹 Fixes
+
+- add relationship should work even if the child doesn't exist or is deleted, also added logging to logger not console ([8776991d4](https://github.com/powerhouse-inc/powerhouse/commit/8776991d4))
+- gql should create a channel if there isn't one, also fix issue with ADD_RELATIONSHIP needing the target ([3bda61732](https://github.com/powerhouse-inc/powerhouse/commit/3bda61732))
+- return gql-channel polling to something sane ([e0baf8006](https://github.com/powerhouse-inc/powerhouse/commit/e0baf8006))
+- all timestamps throughout the reactor should be stored as iso strings ([d52810df2](https://github.com/powerhouse-inc/powerhouse/commit/d52810df2))
+- fix some tests ([715696fa2](https://github.com/powerhouse-inc/powerhouse/commit/715696fa2))
+- skips were being calculated incorrectly ([d5ea31e58](https://github.com/powerhouse-inc/powerhouse/commit/d5ea31e58))
+- linting ([c135690f1](https://github.com/powerhouse-inc/powerhouse/commit/c135690f1))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.35 (2026-01-08)
 
 ### 🚀 Features

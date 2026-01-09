@@ -1,3 +1,14 @@
+## 5.1.0-dev.36 (2026-01-09)
+
+### 🩹 Fixes
+
+- oof, index and skip cannot be in the operation id ([4682d8503](https://github.com/powerhouse-inc/powerhouse/commit/4682d8503))
+- remove id and let downstream populate ([5c1d3a429](https://github.com/powerhouse-inc/powerhouse/commit/5c1d3a429))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.35 (2026-01-08)
 
 ### 🩹 Fixes

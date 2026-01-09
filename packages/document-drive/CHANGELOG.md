@@ -1,3 +1,14 @@
+## 5.1.0-dev.36 (2026-01-09)
+
+### 🩹 Fixes
+
+- as a result of op fix, we need to recompute header revisions in base server ([f351f04d2](https://github.com/powerhouse-inc/powerhouse/commit/f351f04d2))
+- remove id and let downstream populate ([5c1d3a429](https://github.com/powerhouse-inc/powerhouse/commit/5c1d3a429))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.35 (2026-01-08)
 
 ### 🩹 Fixes
