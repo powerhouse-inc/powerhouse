@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard-gui",
   "private": true,
-  "version": "5.1.0-dev.34",
+  "version": "5.1.0-dev.36",
   "type": "module",
   "repository": {
     "type": "git",

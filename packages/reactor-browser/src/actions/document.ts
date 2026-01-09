@@ -893,7 +893,6 @@ function _duplicateDocument(
     document.initialState,
     document.operations,
     documentModule.reducer,
-    undefined,
     createPresignedHeader(newId, document.header.documentType),
   );
 }

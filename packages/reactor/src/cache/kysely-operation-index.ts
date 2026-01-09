@@ -128,27 +128,18 @@ export class KyselyOperationIndex implements IOperationIndex {
       let operationOrdinals: number[] = [];
       if (operations.length > 0) {
         const operationRows: InsertableOperationIndexOperation[] =
-          operations.map((op) => {
-            const timestamp = op.timestampUtcMs;
-            let timestampMs: number;
-            if (/^\d+$/.test(timestamp)) {
-              timestampMs = Number(timestamp);
-            } else {
-              timestampMs = new Date(timestamp).getTime();
-            }
-            return {
-              opId: op.id || "",
-              documentId: op.documentId,
-              documentType: op.documentType,
-              scope: op.scope,
-              branch: op.branch,
-              timestampUtcMs: BigInt(timestampMs || 0),
-              index: op.index,
-              skip: op.skip,
-              hash: op.hash,
-              action: op.action as unknown,
-            };
-          });
+          operations.map((op) => ({
+            opId: op.id || "",
+            documentId: op.documentId,
+            documentType: op.documentType,
+            scope: op.scope,
+            branch: op.branch,
+            timestampUtcMs: op.timestampUtcMs,
+            index: op.index,
+            skip: op.skip,
+            hash: op.hash,
+            action: op.action as unknown,
+          }));
 
         const insertedOps = await trx
           .insertInto("operation_index_operations")
@@ -321,7 +312,7 @@ export class KyselyOperationIndex implements IOperationIndex {
     return {
       operation: {
         index: row.index,
-        timestampUtcMs: row.timestampUtcMs.toString(),
+        timestampUtcMs: row.timestampUtcMs,
         hash: row.hash,
         skip: row.skip,
         action: row.action as OperationWithContext["operation"]["action"],
@@ -347,7 +338,7 @@ export class KyselyOperationIndex implements IOperationIndex {
       branch: row.branch,
       scope: row.scope,
       index: row.index,
-      timestampUtcMs: row.timestampUtcMs.toString(),
+      timestampUtcMs: row.timestampUtcMs,
       hash: row.hash,
       skip: row.skip,
       action: row.action as OperationIndexEntry["action"],

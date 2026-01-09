@@ -763,6 +763,21 @@ export async function pollSyncEnvelopes(
   }
 
   const operations = remote.channel.outbox.items;
+
+  if (operations.length === 0) {
+    return [];
+  }
+
+  let maxOrdinal = args.cursorOrdinal;
+  for (const syncOp of operations) {
+    for (const op of syncOp.operations) {
+      const opOrdinal = op.context.ordinal;
+      if (opOrdinal > maxOrdinal) {
+        maxOrdinal = opOrdinal;
+      }
+    }
+  }
+
   const envelopes = operations.map((syncOp: SyncOperation) => ({
     type: "OPERATIONS",
     channelMeta: {
@@ -774,7 +789,7 @@ export async function pollSyncEnvelopes(
     })),
     cursor: {
       remoteName: remote.name,
-      cursorOrdinal: args.cursorOrdinal + 1,
+      cursorOrdinal: maxOrdinal,
       lastSyncedAtUtcMs: Date.now().toString(),
     },
   }));

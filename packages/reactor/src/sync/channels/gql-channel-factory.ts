@@ -1,3 +1,4 @@
+import type { ILogger } from "../../logging/types.js";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import type { IChannel, IChannelFactory } from "../interfaces.js";
 import type { ChannelConfig, RemoteFilter } from "../types.js";
@@ -10,6 +11,12 @@ import { GqlChannel, type GqlChannelConfig } from "./gql-channel.js";
  * instantiates GqlChannel instances for network-based synchronization.
  */
 export class GqlChannelFactory implements IChannelFactory {
+  private readonly logger: ILogger;
+
+  constructor(logger: ILogger) {
+    this.logger = logger;
+  }
+
   /**
    * Creates a new GqlChannel instance with the given configuration.
    * See GqlChannelConfig for the expected parameters.
@@ -90,6 +97,12 @@ export class GqlChannelFactory implements IChannelFactory {
       gqlConfig.fetchFn = config.parameters.fetchFn as typeof fetch;
     }
 
-    return new GqlChannel(remoteId, remoteName, cursorStorage, gqlConfig);
+    return new GqlChannel(
+      this.logger,
+      remoteId,
+      remoteName,
+      cursorStorage,
+      gqlConfig,
+    );
   }
 }

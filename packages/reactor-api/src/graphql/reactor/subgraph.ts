@@ -320,7 +320,7 @@ export class ReactorSubgraph extends BaseSubgraph {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-return
           return await resolvers.pollSyncEnvelopes(this.syncManager, args);
         } catch (error) {
-          this.logger.error("Error in pollSyncEnvelopes:", error);
+          this.logger.error("Error in pollSyncEnvelopes: @Error", error);
           throw error;
         }
       },
@@ -558,7 +558,8 @@ export class ReactorSubgraph extends BaseSubgraph {
       },
 
       pushSyncEnvelope: async (_parent, args) => {
-        this.logger.debug("pushSyncEnvelope", args);
+        this.logger.debug("pushSyncEnvelope(@args)", args);
+
         try {
           // Convert readonly arrays to mutable arrays for the resolver
           const mutableArgs = {
@@ -585,6 +586,7 @@ export class ReactorSubgraph extends BaseSubgraph {
                 : null,
             },
           };
+
           return await resolvers.pushSyncEnvelope(
             this.syncManager,
             mutableArgs,

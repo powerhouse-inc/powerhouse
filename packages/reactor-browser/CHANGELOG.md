@@ -1,3 +1,19 @@
+## 5.1.0-dev.36 (2026-01-09)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 5.1.0-dev.35 (2026-01-08)
+
+### 🩹 Fixes
+
+- update e2e test fixtures for document version type changes ([8f020dadc](https://github.com/powerhouse-inc/powerhouse/commit/8f020dadc))
+- linting and build fixes, plus a three-reactor setup test ([87cdde785](https://github.com/powerhouse-inc/powerhouse/commit/87cdde785))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- CallmeT-ty @CallmeT-ty
+
 ## 5.1.0-dev.34 (2026-01-07)
 
 ### 🚀 Features

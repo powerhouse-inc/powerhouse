@@ -34,7 +34,7 @@ export async function up(db: Kysely<any>): Promise<void> {
     .addColumn("documentType", "text", (col) => col.notNull())
     .addColumn("scope", "text", (col) => col.notNull())
     .addColumn("branch", "text", (col) => col.notNull())
-    .addColumn("timestampUtcMs", "bigint", (col) => col.notNull())
+    .addColumn("timestampUtcMs", "text", (col) => col.notNull())
     .addColumn("writeTimestampUtcMs", "timestamptz", (col) =>
       col.notNull().defaultTo(sql`NOW()`),
     )

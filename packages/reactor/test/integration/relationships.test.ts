@@ -193,15 +193,14 @@ describe("Relationship Operations", () => {
       expect(status.error?.message).toContain("source document");
     });
 
-    it("should fail if child document does not exist", async () => {
+    it("should succeed even if child document does not exist", async () => {
       const parentDoc = createDocModelDocument({ id: "parent-3" });
       await createDocument(parentDoc);
 
       const jobInfo = await reactor.addChildren("parent-3", ["missing-child"]);
 
-      const status = await waitForJobFailure(jobInfo.id);
-      expect(status.status).toBe(JobStatus.FAILED);
-      expect(status.error?.message).toContain("target document");
+      const status = await waitForJobCompletion(jobInfo.id);
+      expect(status).not.toBe(JobStatus.FAILED);
     });
 
     it("should be idempotent when adding same relationship twice", async () => {

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import { registerCommands } from "@powerhousedao/ph-cli";
+import { registerCommands } from "./index.js";
 
 function ensureNodeVersion(minVersion = "22") {
   const version = process.versions.node;

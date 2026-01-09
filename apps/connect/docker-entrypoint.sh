@@ -12,6 +12,9 @@ if [ ! -z "$PH_PACKAGES" ]; then
     for package in "${PACKAGES[@]}"; do
         ph install "$package"
     done
+    # Rebuild node_modules with hoisted mode to fix overlay filesystem symlink issues
+    echo "Rebuilding node_modules with hoisted mode..."
+    pnpm install
 fi
 
 # Build connect

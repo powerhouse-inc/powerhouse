@@ -43,7 +43,6 @@ import type {
 import type { IJobExecutorManager } from "#executor/interfaces.js";
 import { ConsoleLogger } from "#logging/console.js";
 import type { ILogger } from "#logging/types.js";
-import type { IDocumentIndexer } from "#storage/interfaces.js";
 import { PGlite } from "@electric-sql/pglite";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
@@ -69,7 +68,6 @@ export class ReactorBuilder {
   private migrationStrategy: MigrationStrategy = "auto";
   private syncBuilder?: SyncBuilder;
   private eventBus?: IEventBus;
-  private documentIndexer?: IDocumentIndexer;
   private readModelCoordinator?: IReadModelCoordinator;
   private signatureVerifier?: SignatureVerificationHandler;
   private kyselyInstance?: Kysely<Database>;
@@ -236,6 +234,7 @@ export class ReactorBuilder {
       executorManager = new SimpleJobExecutorManager(
         () =>
           new SimpleJobExecutor(
+            this.logger!,
             documentModelRegistry,
             storage,
             storage,
@@ -250,6 +249,7 @@ export class ReactorBuilder {
         eventBus,
         queue,
         jobTracker,
+        this.logger,
       );
     }
 
@@ -292,7 +292,6 @@ export class ReactorBuilder {
     }
 
     readModelInstances.push(documentIndexer);
-    this.documentIndexer = documentIndexer;
 
     const subscriptionManager = new ReactorSubscriptionManager(
       new DefaultSubscriptionErrorHandler(),

@@ -23,20 +23,20 @@ function rowToRemoteRecord(row: SyncRemoteRow): RemoteRecord {
       push: {
         state: row.push_state as "idle" | "running" | "error",
         lastSuccessUtcMs: row.push_last_success_utc_ms
-          ? Number(row.push_last_success_utc_ms)
+          ? new Date(row.push_last_success_utc_ms).getTime()
           : undefined,
         lastFailureUtcMs: row.push_last_failure_utc_ms
-          ? Number(row.push_last_failure_utc_ms)
+          ? new Date(row.push_last_failure_utc_ms).getTime()
           : undefined,
         failureCount: row.push_failure_count,
       },
       pull: {
         state: row.pull_state as "idle" | "running" | "error",
         lastSuccessUtcMs: row.pull_last_success_utc_ms
-          ? Number(row.pull_last_success_utc_ms)
+          ? new Date(row.pull_last_success_utc_ms).getTime()
           : undefined,
         lastFailureUtcMs: row.pull_last_failure_utc_ms
-          ? Number(row.pull_last_failure_utc_ms)
+          ? new Date(row.pull_last_failure_utc_ms).getTime()
           : undefined,
         failureCount: row.pull_failure_count,
       },
@@ -58,18 +58,18 @@ function remoteRecordToRow(remote: RemoteRecord): InsertableSyncRemote {
     filter_branch: remote.filter.branch,
     push_state: remote.status.push.state,
     push_last_success_utc_ms: remote.status.push.lastSuccessUtcMs
-      ? BigInt(remote.status.push.lastSuccessUtcMs)
+      ? new Date(remote.status.push.lastSuccessUtcMs).toISOString()
       : null,
     push_last_failure_utc_ms: remote.status.push.lastFailureUtcMs
-      ? BigInt(remote.status.push.lastFailureUtcMs)
+      ? new Date(remote.status.push.lastFailureUtcMs).toISOString()
       : null,
     push_failure_count: remote.status.push.failureCount,
     pull_state: remote.status.pull.state,
     pull_last_success_utc_ms: remote.status.pull.lastSuccessUtcMs
-      ? BigInt(remote.status.pull.lastSuccessUtcMs)
+      ? new Date(remote.status.pull.lastSuccessUtcMs).toISOString()
       : null,
     pull_last_failure_utc_ms: remote.status.pull.lastFailureUtcMs
-      ? BigInt(remote.status.pull.lastFailureUtcMs)
+      ? new Date(remote.status.pull.lastFailureUtcMs).toISOString()
       : null,
     pull_failure_count: remote.status.pull.failureCount,
   };

@@ -2,6 +2,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import {
   CompositeChannelFactory,
+  ConsoleLogger,
   type Database,
   EventBus,
   ReactorBuilder,
@@ -176,7 +177,9 @@ async function initServer(
       )
       .withLegacyStorage(storage)
       .withSync(
-        new SyncBuilder().withChannelFactory(new CompositeChannelFactory()),
+        new SyncBuilder().withChannelFactory(
+          new CompositeChannelFactory(new ConsoleLogger(["switchboard"])),
+        ),
       )
       .withFeatures({
         legacyStorageEnabled: !options.reactorOptions?.storageV2,

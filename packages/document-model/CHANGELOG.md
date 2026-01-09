@@ -1,3 +1,26 @@
+## 5.1.0-dev.36 (2026-01-09)
+
+### 🩹 Fixes
+
+- oof, index and skip cannot be in the operation id ([4682d8503](https://github.com/powerhouse-inc/powerhouse/commit/4682d8503))
+- remove id and let downstream populate ([5c1d3a429](https://github.com/powerhouse-inc/powerhouse/commit/5c1d3a429))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 5.1.0-dev.35 (2026-01-08)
+
+### 🩹 Fixes
+
+- linting and build fixes, plus a three-reactor setup test ([87cdde785](https://github.com/powerhouse-inc/powerhouse/commit/87cdde785))
+- document-model replays were incorrectly using a generated header instead of requiring a header ([69f19af8d](https://github.com/powerhouse-inc/powerhouse/commit/69f19af8d))
+- operation id should be deterministic, not a uuid ([41f50b7f8](https://github.com/powerhouse-inc/powerhouse/commit/41f50b7f8))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.34 (2026-01-07)
 
 ### 🚀 Features

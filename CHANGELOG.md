@@ -1,3 +1,55 @@
+## 5.1.0-dev.36 (2026-01-09)
+
+### 🩹 Fixes
+
+- remove id and let downstream populate ([5c1d3a429](https://github.com/powerhouse-inc/powerhouse/commit/5c1d3a429))
+- as a result of op fix, we need to recompute header revisions in base server ([f351f04d2](https://github.com/powerhouse-inc/powerhouse/commit/f351f04d2))
+- linting ([c135690f1](https://github.com/powerhouse-inc/powerhouse/commit/c135690f1))
+- oof, index and skip cannot be in the operation id ([4682d8503](https://github.com/powerhouse-inc/powerhouse/commit/4682d8503))
+- skips were being calculated incorrectly ([d5ea31e58](https://github.com/powerhouse-inc/powerhouse/commit/d5ea31e58))
+- fix some tests ([715696fa2](https://github.com/powerhouse-inc/powerhouse/commit/715696fa2))
+- all timestamps throughout the reactor should be stored as iso strings ([d52810df2](https://github.com/powerhouse-inc/powerhouse/commit/d52810df2))
+- return gql-channel polling to something sane ([e0baf8006](https://github.com/powerhouse-inc/powerhouse/commit/e0baf8006))
+- gql should create a channel if there isn't one, also fix issue with ADD_RELATIONSHIP needing the target ([3bda61732](https://github.com/powerhouse-inc/powerhouse/commit/3bda61732))
+- use hoisted node-linker for containerd/k8s compatibility ([5ae9e4abd](https://github.com/powerhouse-inc/powerhouse/commit/5ae9e4abd))
+- add relationship should work even if the child doesn't exist or is deleted, also added logging to logger not console ([8776991d4](https://github.com/powerhouse-inc/powerhouse/commit/8776991d4))
+- **connect, switchboard:** scope node-linker hoisted to project only ([948cc7bdf](https://github.com/powerhouse-inc/powerhouse/commit/948cc7bdf))
+- **connect, switchboard:** create .npmrc with hoisted node-linker before ph init ([4c8cdb1e5](https://github.com/powerhouse-inc/powerhouse/commit/4c8cdb1e5))
+- **connect, switchboard:** create .npmrc after ph init and reinstall ([dc78e58f5](https://github.com/powerhouse-inc/powerhouse/commit/dc78e58f5))
+- **connect, switchboard:** run pnpm install after ph install in entrypoint ([c4145c07d](https://github.com/powerhouse-inc/powerhouse/commit/c4145c07d))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+
+## 5.1.0-dev.35 (2026-01-08)
+
+### 🚀 Features
+
+- added reshuffle behavior proof ([e521b74ce](https://github.com/powerhouse-inc/powerhouse/commit/e521b74ce))
+- side-by-side reshuffle test ([cd4f879f9](https://github.com/powerhouse-inc/powerhouse/commit/cd4f879f9))
+
+### 🩹 Fixes
+
+- revert to 100 skips ([8409a98a8](https://github.com/powerhouse-inc/powerhouse/commit/8409a98a8))
+- ordinal issue ([bcc284ce1](https://github.com/powerhouse-inc/powerhouse/commit/bcc284ce1))
+- timestamps and indices were being overwritten -- also lots of logging that is in progress ([b4153193a](https://github.com/powerhouse-inc/powerhouse/commit/b4153193a))
+- removing a bunch of logging and making a half fix where we only overwrite _some_ timestamps ([31ce11c55](https://github.com/powerhouse-inc/powerhouse/commit/31ce11c55))
+- operation id should be deterministic, not a uuid ([41f50b7f8](https://github.com/powerhouse-inc/powerhouse/commit/41f50b7f8))
+- fix the internal-listener tests with new operation ids ([fe7cbbf41](https://github.com/powerhouse-inc/powerhouse/commit/fe7cbbf41))
+- document-model replays were incorrectly using a generated header instead of requiring a header ([69f19af8d](https://github.com/powerhouse-inc/powerhouse/commit/69f19af8d))
+- reactor was mutating operation indices ([47440d882](https://github.com/powerhouse-inc/powerhouse/commit/47440d882))
+- linting and build fixes, plus a three-reactor setup test ([87cdde785](https://github.com/powerhouse-inc/powerhouse/commit/87cdde785))
+- update e2e test fixtures for document version type changes ([8f020dadc](https://github.com/powerhouse-inc/powerhouse/commit/8f020dadc))
+- update e2e test fixtures for document version type changes ([#2192](https://github.com/powerhouse-inc/powerhouse/pull/2192))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Benjamin Jordan (@thegoldenmule)
+- CallmeT-ty @CallmeT-ty
+
 ## 5.1.0-dev.34 (2026-01-07)
 
 ### 🚀 Features

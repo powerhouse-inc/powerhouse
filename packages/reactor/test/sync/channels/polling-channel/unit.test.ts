@@ -17,23 +17,23 @@ const createMockCursorStorage = (): ISyncCursorStorage => ({
   remove: vi.fn(),
 });
 
-const createMockOperationContext = (): OperationContext => ({
+const createMockOperationContext = (ordinal: number = 1): OperationContext => ({
   documentId: "doc-1",
   documentType: "test/document",
   scope: "public",
   branch: "main",
-  ordinal: 1,
+  ordinal,
 });
 
 const createMockSyncOperation = (
   id: string,
   remoteName: string,
-  operationIndex: number = 0,
+  ordinal: number = 0,
 ): SyncOperation => {
   return new SyncOperation(id, remoteName, "doc-1", ["public"], "main", [
     {
       operation: {
-        index: operationIndex,
+        index: 0,
         skip: 0,
         id: "op-1",
         timestampUtcMs: new Date().toISOString(),
@@ -46,7 +46,7 @@ const createMockSyncOperation = (
           input: {},
         },
       },
-      context: createMockOperationContext(),
+      context: createMockOperationContext(ordinal),
     },
   ]);
 };

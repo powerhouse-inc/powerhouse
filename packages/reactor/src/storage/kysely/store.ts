@@ -72,12 +72,13 @@ export class KyselyOperationStore implements IOperationStore {
 
         try {
           await trx.insertInto("Operation").values(operations).execute();
-        } catch (error: any) {
+        } catch (error: unknown) {
           if (error instanceof Error) {
             if (error.message.includes("unique constraint")) {
-              // Extract the opId from the error if possible
-              const opId = operations[0]?.opId || "unknown";
-              throw new DuplicateOperationError(opId);
+              const op = operations[0];
+              throw new DuplicateOperationError(
+                `${op.opId} at index ${op.index} with skip ${op.skip}`,
+              );
             }
 
             throw error;
@@ -205,7 +206,6 @@ export class KyselyOperationStore implements IOperationStore {
     documentId: string,
     scope: string,
     branch: string,
-    minIndex: number,
     minTimestamp: string,
     paging?: PagingOptions,
     signal?: AbortSignal,
@@ -220,12 +220,7 @@ export class KyselyOperationStore implements IOperationStore {
       .where("documentId", "=", documentId)
       .where("scope", "=", scope)
       .where("branch", "=", branch)
-      .where((eb) =>
-        eb.or([
-          eb("index", ">=", minIndex),
-          eb("timestampUtcMs", ">=", new Date(minTimestamp)),
-        ]),
-      )
+      .where("timestampUtcMs", ">=", new Date(minTimestamp))
       .orderBy("index", "asc");
 
     if (paging) {

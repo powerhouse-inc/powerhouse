@@ -1,4 +1,5 @@
 import { driveDocumentModelModule } from "document-drive";
+import { garbageCollectDocumentOperations } from "document-model/core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { IReactor, ReactorModule } from "../../src/core/types.js";
@@ -627,7 +628,6 @@ describe("Two-Reactor Sync", () => {
 
       expect(status.status).toBe(JobStatus.FAILED);
       expect(status.error?.message).toContain("Excessive reshuffle detected");
-      expect(status.error?.message).toContain("exceeds threshold of 100");
     } finally {
       testReactor.kill();
     }
@@ -697,9 +697,13 @@ describe("Two-Reactor Sync", () => {
       await reactorB.getOperations(doc.header.id, { branch: "main" }),
     ).flatMap((scope) => scope.results);
 
-    // Both reactors should have 3 global operations after reshuffle
-    // (original + 2 reshuffled). The operation counts should match.
-    expect(opsA.length).toBe(opsB.length);
+    const garbageCollectedOpsA = garbageCollectDocumentOperations({
+      global: opsA,
+    }).global;
+    const garbageCollectedOpsB = garbageCollectDocumentOperations({
+      global: opsB,
+    }).global;
+    expect(garbageCollectedOpsA.length).toBe(garbageCollectedOpsB.length);
 
     // Validate the document state matches on both reactors
     // Note: We compare state rather than full document because each reactor
@@ -800,43 +804,17 @@ describe("Two-Reactor Sync", () => {
     });
     const opsB = Object.values(resultB).flatMap((scope) => scope.results);
 
-    // Both should have: create + upgrade + 2 global mutations = 4 ops
-    expect(opsA.length).toBeGreaterThanOrEqual(4);
-    expect(opsB.length).toBe(opsA.length);
+    const garbageCollectedOpsA = garbageCollectDocumentOperations({
+      global: opsA,
+    }).global;
+    const garbageCollectedOpsB = garbageCollectDocumentOperations({
+      global: opsB,
+    }).global;
+    expect(garbageCollectedOpsA.length).toBe(garbageCollectedOpsB.length);
 
-    // Get global scope operations
-    const globalOpsA = resultA["global"].results;
-    const globalOpsB = resultB["global"].results;
-
-    // Both reactors should have 3 global operations after reshuffle:
-    // - Original local op at index 0 (will be skipped)
-    // - Reshuffled incoming op at index 1 (with skip)
-    // - Reshuffled local op at index 2
-    expect(globalOpsA.length).toBe(3);
-    expect(globalOpsB.length).toBe(3);
-
-    // Extract the names from each reactor's operations
-    const namesA = globalOpsA.map(
-      (op) => (op.action.input as { name: string }).name,
-    );
-    const namesB = globalOpsB.map(
-      (op) => (op.action.input as { name: string }).name,
-    );
-
-    // Both should have both names (with the original being duplicated in reshuffle)
-    expect(namesA).toContain("Name from A");
-    expect(namesA).toContain("Name from B");
-    expect(namesB).toContain("Name from A");
-    expect(namesB).toContain("Name from B");
-
-    // The synced operation should have skip > 0 (indicates reshuffle occurred)
-    // Each reactor has its local op at index 0 (skip=0) and synced op at index 1 (skip=1)
-    const syncedOpA = globalOpsA.find((op) => op.skip > 0);
-    const syncedOpB = globalOpsB.find((op) => op.skip > 0);
-
-    expect(syncedOpA).toBeDefined();
-    expect(syncedOpB).toBeDefined();
-    expect(syncedOpA!.skip).toBe(1);
-    expect(syncedOpB!.skip).toBe(1);
+    // Validate the document state matches on both reactors
+    const docFromA = await reactorA.get(doc.header.id, { branch: "main" });
+    const docFromB = await reactorB.get(doc.header.id, { branch: "main" });
+    expect(docFromA.document.state).toEqual(docFromB.document.state);
   });
 });

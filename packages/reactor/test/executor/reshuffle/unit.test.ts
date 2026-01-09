@@ -1,10 +1,15 @@
 import type { Operation } from "document-model";
+import { deriveOperationId } from "document-model/core";
 import { describe, expect, it } from "vitest";
 import {
   reshuffleByTimestamp,
   reshuffleByTimestampAndIndex,
   sortOperations,
 } from "../../../src/utils/reshuffle.js";
+
+const TEST_DOC_ID = "test-doc-id";
+const TEST_BRANCH = "main";
+const TEST_SCOPE = "global";
 
 type InputOperation = Partial<Omit<Operation, "index" | "skip">> & {
   index: number;
@@ -14,11 +19,13 @@ type InputOperation = Partial<Omit<Operation, "index" | "skip">> & {
 
 const buildOperation = (input: InputOperation): Operation => {
   const timestamp = input.timestampUtcMs || new Date().toISOString();
+  const actionId = input.action?.id || `action-${input.index}`;
   return {
+    id: deriveOperationId(TEST_DOC_ID, TEST_SCOPE, TEST_BRANCH, actionId),
     hash: input.hash || `hash-${input.index}`,
     timestampUtcMs: timestamp,
     action: input.action || {
-      id: `action-${input.index}`,
+      id: actionId,
       type: input.type ?? "TEST",
       input: {},
       scope: "global",
@@ -396,6 +403,7 @@ describe("Reshuffle Functions", () => {
   describe("Skip field understanding", () => {
     it("should document skip=0 for all normal operations", () => {
       const normalOp: Operation = {
+        id: deriveOperationId(TEST_DOC_ID, TEST_SCOPE, TEST_BRANCH, "action-5"),
         index: 5,
         skip: 0,
         timestampUtcMs: "2021-01-01T00:00:00.000Z",
@@ -415,6 +423,12 @@ describe("Reshuffle Functions", () => {
     it("should document skip>0 only occurs during reshuffle", () => {
       const reshuffledOps: Operation[] = [
         {
+          id: deriveOperationId(
+            TEST_DOC_ID,
+            TEST_SCOPE,
+            TEST_BRANCH,
+            "action-10",
+          ),
           index: 10,
           skip: 3,
           timestampUtcMs: "2021-01-01T00:00:00.000Z",
@@ -428,6 +442,12 @@ describe("Reshuffle Functions", () => {
           },
         },
         {
+          id: deriveOperationId(
+            TEST_DOC_ID,
+            TEST_SCOPE,
+            TEST_BRANCH,
+            "action-11",
+          ),
           index: 11,
           skip: 0,
           timestampUtcMs: "2021-01-02T00:00:00.000Z",

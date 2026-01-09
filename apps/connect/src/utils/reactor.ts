@@ -1,5 +1,6 @@
 import { PGlite } from "@electric-sql/pglite";
 import {
+  ConsoleLogger,
   GqlChannelFactory,
   ReactorBuilder,
   ReactorClientBuilder,
@@ -125,13 +126,17 @@ export async function createBrowserReactor(
   const pg = new PGlite("idb://reactor", {
     relaxedDurability: true,
   });
+  const logger = new ConsoleLogger(["reactor-client"]);
   const builder = new ReactorClientBuilder()
+    .withLogger(logger)
     .withSigner(signerConfig)
     .withReactorBuilder(
       new ReactorBuilder()
         .withDocumentModels(documentModelModules)
         .withLegacyStorage(legacyStorage)
-        .withSync(new SyncBuilder().withChannelFactory(new GqlChannelFactory()))
+        .withSync(
+          new SyncBuilder().withChannelFactory(new GqlChannelFactory(logger)),
+        )
         .withFeatures({ legacyStorageEnabled: true })
         .withKysely(
           new Kysely<Database>({

@@ -1,3 +1,11 @@
+## 5.1.0-dev.36 (2026-01-09)
+
+This was a version bump only for @powerhousedao/reactor-local to align it with other projects, there were no code changes.
+
+## 5.1.0-dev.35 (2026-01-08)
+
+This was a version bump only for @powerhousedao/reactor-local to align it with other projects, there were no code changes.
+
 ## 5.1.0-dev.34 (2026-01-07)
 
 ### 🚀 Features

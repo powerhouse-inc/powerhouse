@@ -1,7 +1,10 @@
 import type { Operation } from "document-model";
-import { groupOperationsByScope } from "document-model/core";
+import { deriveOperationId, groupOperationsByScope } from "document-model/core";
 import { fakeAction } from "document-model/test";
 import { describe, expect, it } from "vitest";
+
+const TEST_DOC_ID = "test-doc-id";
+const TEST_BRANCH = "main";
 
 const fakeOperation = (
   index: number,
@@ -9,15 +12,17 @@ const fakeOperation = (
   scope: string,
   hash: string,
 ): Operation => {
+  const action = fakeAction({
+    scope,
+    type: "TEST",
+  });
   return {
+    id: deriveOperationId(TEST_DOC_ID, scope, TEST_BRANCH, action.id),
     index,
     skip,
     hash,
     timestampUtcMs: new Date().toISOString(),
-    action: fakeAction({
-      scope,
-      type: "TEST",
-    }),
+    action,
   };
 };
 

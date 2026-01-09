@@ -1,6 +1,7 @@
 import type { IEventBus } from "../events/interfaces.js";
 import { OperationEventTypes } from "../events/types.js";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
+import type { ILogger } from "../logging/types.js";
 import type { IQueue } from "../queue/interfaces.js";
 import type { IJobExecutionHandle } from "../queue/types.js";
 import { QueueEventTypes } from "../queue/types.js";
@@ -26,6 +27,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     private eventBus: IEventBus,
     private queue: IQueue,
     private jobTracker: IJobTracker,
+    private logger: ILogger,
   ) {}
 
   async start(numExecutors: number): Promise<void> {
@@ -101,7 +103,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     try {
       handle = await this.queue.dequeueNext();
     } catch (error) {
-      console.error("Error dequeueing job:", error);
+      this.logger.error("Error dequeueing next job: @Error", error);
       return;
     }
 
@@ -127,7 +129,11 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
         error instanceof Error ? error : String(error),
       );
 
-      console.error(`Error executing job ${handle.job.id}:`, errorInfo.message);
+      this.logger.error(
+        "Error executing job @JobId: @Error",
+        handle.job.id,
+        errorInfo,
+      );
 
       handle.fail(errorInfo);
       this.activeJobs--;
@@ -164,8 +170,9 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
           const retryErrorInfo = this.toErrorInfo(
             error instanceof Error ? error : "Failed to retry job",
           );
-          console.error(
-            `Failed to retry job ${handle.job.id}:`,
+          this.logger.error(
+            "Failed to retry job @JobId: @Error",
+            handle.job.id,
             retryErrorInfo.message,
           );
 
@@ -191,8 +198,10 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
           retryCount + 1,
         );
 
-        console.error(
-          `Job ${handle.job.id} failed after ${retryCount + 1} attempts:`,
+        this.logger.error(
+          "Job @JobId failed after @Attempts attempts: @Error",
+          handle.job.id,
+          retryCount + 1,
           fullErrorInfo.message,
         );
 
@@ -222,7 +231,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     try {
       hasMore = await this.queue.hasJobs();
     } catch (error) {
-      console.error("Error checking for more jobs:", error);
+      this.logger.error("Error checking for more jobs: @Error", error);
       return;
     }
 
@@ -236,7 +245,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     try {
       hasJobs = await this.queue.hasJobs();
     } catch (error) {
-      console.error("Error checking for existing jobs:", error);
+      this.logger.error("Error checking for existing jobs: @Error", error);
       return;
     }
 
@@ -250,7 +259,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
       try {
         await Promise.all(promises);
       } catch (error) {
-        console.error("Error processing existing jobs:", error);
+        this.logger.error("Error processing existing jobs: @Error", error);
       }
     }
   }

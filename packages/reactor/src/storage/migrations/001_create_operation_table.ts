@@ -6,7 +6,7 @@ export async function up(db: Kysely<any>): Promise<void> {
     .createTable("Operation")
     .addColumn("id", "serial", (col) => col.primaryKey())
     .addColumn("jobId", "text", (col) => col.notNull())
-    .addColumn("opId", "text", (col) => col.notNull().unique())
+    .addColumn("opId", "text", (col) => col.notNull())
     .addColumn("prevOpId", "text", (col) => col.notNull())
     .addColumn("writeTimestampUtcMs", "timestamptz", (col) =>
       col.notNull().defaultTo(sql`NOW()`),
@@ -27,6 +27,7 @@ export async function up(db: Kysely<any>): Promise<void> {
       "branch",
       "index",
     ])
+    .addUniqueConstraint("unique_operation_instance", ["opId", "index", "skip"])
     .execute();
 
   // Create index for streaming operations

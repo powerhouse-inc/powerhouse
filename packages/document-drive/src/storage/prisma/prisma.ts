@@ -26,7 +26,7 @@ import type {
   PHDocument,
   PHDocumentHeader,
 } from "document-model";
-import { actionContext } from "document-model/core";
+import { actionContext, deriveOperationId } from "document-model/core";
 import { backOff, type IBackOffOptions } from "exponential-backoff";
 import { resolveStorageUnitsFilter, setIntersection } from "../utils.js";
 import type { Prisma, PrismaClient } from "./client/index.js";
@@ -65,7 +65,8 @@ function operationFromStorage(
   }
 
   const operation: Operation = {
-    id: op.opId || undefined,
+    id:
+      op.opId ?? deriveOperationId(op.documentId, op.scope, op.branch, op.actionId),
     skip: op.skip,
     hash: op.hash,
     index: op.index,

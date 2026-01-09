@@ -8,7 +8,7 @@
 - Optimistic locking: see comparison below.
 - All writes are atomic.
 - Deterministic hashing.
-- Submitting a duplicate operation will be rejected with a `DuplicateOperationError`, and reject the entire transaction.
+- Submitting a duplicate operation (same opId, index, and skip) will be rejected with a `DuplicateOperationError`, and reject the entire transaction. Note: The same opId can appear multiple times with different index/skip values to support reshuffle scenarios.
 - **Scope-specific**: All operations are stored and queried per `(documentId, scope, branch)` tuple.
 - **Cross-scope concerns** like document headers (which aggregate information from multiple scopes) should be handled by `IDocumentView`, not `IOperationStore`.
 
@@ -212,8 +212,9 @@ model Operation {
   // id of the job that created the operation
   jobId           String       @unique
 
-  // stable id of the operation, to guarantee idempotency
-  opId            String       @unique
+  // stable id of the operation, derived from action id
+  // not globally unique - same opId can appear with different index/skip during reshuffle
+  opId            String
 
   // serves as a causation id
   prevOpId        String
@@ -236,6 +237,9 @@ model Operation {
 
   // compound unique constraint: the index is unique
   @@unique([documentId, scope, branch, index], name: "unique_revision")
+
+  // compound unique constraint: prevents exact duplicate operation instances
+  @@unique([opId, index, skip], name: "unique_operation_instance")
 
   // indexes
   @@index([documentId, scope, branch, id DESC], name: "streamOperations")

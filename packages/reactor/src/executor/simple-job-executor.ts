@@ -15,6 +15,7 @@ import type {
   UpgradeDocumentActionInput,
   UpgradeTransition,
 } from "document-model";
+import { deriveOperationId } from "document-model/core";
 import type { IDocumentMetaCache } from "../cache/document-meta-cache-types.js";
 import type {
   IOperationIndex,
@@ -27,6 +28,7 @@ import {
   OperationEventTypes,
   type OperationWrittenEvent,
 } from "../events/types.js";
+import type { ILogger } from "../logging/types.js";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import {
@@ -48,7 +50,7 @@ import {
   getNextIndexForScope,
 } from "./util.js";
 
-const MAX_SKIP_THRESHOLD = 1000;
+const MAX_SKIP_THRESHOLD = 100;
 
 type ProcessActionsResult = {
   success: boolean;
@@ -76,6 +78,7 @@ export class SimpleJobExecutor implements IJobExecutor {
   private config: Required<JobExecutorConfig>;
 
   constructor(
+    private logger: ILogger,
     private registry: IDocumentModelRegistry,
     private documentStorage: IDocumentStorage,
     private operationStorage: IDocumentOperationStorage,
@@ -177,6 +180,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     startTime: number,
     indexTxn: IOperationIndexTxn,
     skipValues?: number[],
+    sourceOperations?: (Operation | undefined)[],
   ): Promise<ProcessActionsResult> {
     const generatedOperations: Operation[] = [];
     const operationsWithContext: OperationWithContext[] = [];
@@ -195,6 +199,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     for (let actionIndex = 0; actionIndex < actions.length; actionIndex++) {
       const action = actions[actionIndex];
       const skip = skipValues?.[actionIndex] ?? 0;
+      const sourceOperation = sourceOperations?.[actionIndex];
 
       const isDocumentAction = documentScopeActions.includes(action.type);
       const result = isDocumentAction
@@ -211,6 +216,7 @@ export class SimpleJobExecutor implements IJobExecutor {
             startTime,
             indexTxn,
             skip,
+            sourceOperation,
           );
 
       const error = this.accumulateResultOrReturnError(
@@ -357,7 +363,11 @@ export class SimpleJobExecutor implements IJobExecutor {
       }
     }
 
-    const operation = this.createOperation(action, 0, skip);
+    const operation = this.createOperation(action, 0, skip, {
+      documentId: document.header.id,
+      scope: job.scope,
+      branch: job.branch,
+    });
 
     // Legacy: Write the CREATE_DOCUMENT operation to legacy storage
     if (this.config.legacyStorageEnabled) {
@@ -508,7 +518,11 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     const nextIndex = getNextIndexForScope(document, job.scope);
 
-    const operation = this.createOperation(action, nextIndex);
+    const operation = this.createOperation(action, nextIndex, 0, {
+      documentId,
+      scope: job.scope,
+      branch: job.branch,
+    });
 
     if (this.config.legacyStorageEnabled) {
       try {
@@ -682,7 +696,11 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
     }
 
-    const operation = this.createOperation(action, nextIndex, skip);
+    const operation = this.createOperation(action, nextIndex, skip, {
+      documentId,
+      scope: job.scope,
+      branch: job.branch,
+    });
 
     // Write the updated document to legacy storage
     if (this.config.legacyStorageEnabled) {
@@ -826,37 +844,13 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
     }
 
-    let targetDoc: PHDocument;
-    try {
-      targetDoc = await this.writeCache.getState(
-        input.targetId,
-        "document",
-        job.branch,
-      );
-    } catch (error) {
-      return this.buildErrorResult(
-        job,
-        new Error(
-          `ADD_RELATIONSHIP: target document ${input.targetId} not found: ${error instanceof Error ? error.message : String(error)}`,
-        ),
-        startTime,
-      );
-    }
-
-    const targetDocState = targetDoc.state.document;
-    if (targetDocState.isDeleted) {
-      return this.buildErrorResult(
-        job,
-        new Error(
-          `ADD_RELATIONSHIP: target document ${input.targetId} is deleted`,
-        ),
-        startTime,
-      );
-    }
-
     const nextIndex = getNextIndexForScope(sourceDoc, job.scope);
 
-    const operation = this.createOperation(action, nextIndex);
+    const operation = this.createOperation(action, nextIndex, 0, {
+      documentId: input.sourceId,
+      scope: job.scope,
+      branch: job.branch,
+    });
 
     const writeError = await this.writeOperationToStore(
       input.sourceId,
@@ -988,7 +982,11 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     const nextIndex = getNextIndexForScope(sourceDoc, job.scope);
 
-    const operation = this.createOperation(action, nextIndex);
+    const operation = this.createOperation(action, nextIndex, 0, {
+      documentId: input.sourceId,
+      scope: job.scope,
+      branch: job.branch,
+    });
 
     const writeError = await this.writeOperationToStore(
       input.sourceId,
@@ -1063,6 +1061,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
   /**
    * Execute a regular document action by applying it through the document model reducer.
+   * If sourceOperation is provided (for load jobs), its id and timestamp are preserved.
    */
   private async executeRegularAction(
     job: Job,
@@ -1070,6 +1069,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     startTime: number,
     indexTxn: IOperationIndexTxn,
     skip: number = 0,
+    sourceOperation?: Operation,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -1140,7 +1140,19 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     let updatedDocument: PHDocument;
     try {
-      updatedDocument = module.reducer(document as PHDocument, action);
+      const reducerOptions = sourceOperation
+        ? {
+            skip,
+            branch: job.branch,
+            replayOptions: { operation: sourceOperation },
+          }
+        : { skip, branch: job.branch };
+      updatedDocument = module.reducer(
+        document as PHDocument,
+        action,
+        undefined,
+        reducerOptions,
+      );
     } catch (error) {
       const contextMessage = `Failed to apply action to document:\n  Action type: ${action.type}\n  Document ID: ${job.documentId}\n  Document type: ${document.header.documentType}\n  Scope: ${job.scope}\n  Original error: ${error instanceof Error ? error.message : String(error)}`;
       const enhancedError = new Error(contextMessage);
@@ -1184,26 +1196,18 @@ export class SimpleJobExecutor implements IJobExecutor {
       header: updatedDocument.header,
     });
 
-    try {
-      await this.operationStore.apply(
-        job.documentId,
-        document.header.documentType,
-        scope,
-        job.branch,
-        newOperation.index,
-        (txn) => {
-          txn.addOperations(newOperation);
-        },
-      );
-    } catch (error) {
-      this.writeCache.invalidate(job.documentId, scope, job.branch);
-      return this.buildErrorResult(
-        job,
-        new Error(
-          `Failed to write operation to IOperationStore: ${error instanceof Error ? error.message : String(error)}`,
-        ),
-        startTime,
-      );
+    const writeFailResult = await this.writeOperationToStore(
+      job.documentId,
+      document.header.documentType,
+      scope,
+      job.branch,
+      newOperation,
+      job,
+      startTime,
+    );
+
+    if (writeFailResult !== null) {
+      return writeFailResult;
     }
 
     updatedDocument.header.revision = {
@@ -1254,8 +1258,17 @@ export class SimpleJobExecutor implements IJobExecutor {
     action: Action,
     index: number,
     skip: number = 0,
+    context: { documentId: string; scope: string; branch: string },
   ): Operation {
+    const id = deriveOperationId(
+      context.documentId,
+      context.scope,
+      context.branch,
+      action.id,
+    );
+
     return {
+      id,
       index: index,
       timestampUtcMs: action.timestampUtcMs || new Date().toISOString(),
       hash: "",
@@ -1300,30 +1313,12 @@ export class SimpleJobExecutor implements IJobExecutor {
       }
     }
 
-    const skipCount =
-      minIncomingIndex === Number.POSITIVE_INFINITY
-        ? 0
-        : Math.max(0, latestRevision - minIncomingIndex);
-
-    if (skipCount > this.config.maxSkipThreshold) {
-      return {
-        job,
-        success: false,
-        error: new Error(
-          `Excessive reshuffle detected: skip count of ${skipCount} exceeds threshold of ${this.config.maxSkipThreshold}. ` +
-            `This indicates an attempt to insert an operation at index ${minIncomingIndex} when the latest revision is ${latestRevision}.`,
-        ),
-        duration: Date.now() - startTime,
-      };
-    }
-
     let conflictingOps: Operation[] = [];
     try {
       const conflictingResult = await this.operationStore.getConflicting(
         job.documentId,
         scope,
         job.branch,
-        minIncomingIndex,
         minIncomingTimestamp,
         { limit: this.config.maxSkipThreshold + 1 },
       );
@@ -1345,10 +1340,51 @@ export class SimpleJobExecutor implements IJobExecutor {
       conflictingOps = [];
     }
 
-    const incomingOpIds = new Set(job.operations.map((op) => op.id));
-    const existingOpsToReshuffle = conflictingOps.filter(
-      (op) => !incomingOpIds.has(op.id),
+    // Filter out operations that have been superseded by later operations with skip values.
+    // An operation at index N is superseded if there exists an operation at index M > N
+    // where (M - skip_M) <= N, meaning the later operation's logical index covers N.
+    const nonSupersededOps = conflictingOps.filter((op) => {
+      for (const laterOp of conflictingOps) {
+        if (laterOp.index > op.index && laterOp.skip > 0) {
+          const logicalIndex = laterOp.index - laterOp.skip;
+          if (logicalIndex <= op.index) {
+            return false;
+          }
+        }
+      }
+      return true;
+    });
+
+    // All non-superseded conflicting operations need to be reshuffled
+    const existingOpsToReshuffle = nonSupersededOps;
+
+    // Skip count is the number of existing operations that need to be rewound
+    const skipCount = existingOpsToReshuffle.length;
+
+    if (skipCount > this.config.maxSkipThreshold) {
+      return {
+        job,
+        success: false,
+        error: new Error(
+          `Excessive reshuffle detected: skip count of ${skipCount} exceeds threshold of ${this.config.maxSkipThreshold}. ` +
+            `This indicates a significant divergence between local and incoming operations.`,
+        ),
+        duration: Date.now() - startTime,
+      };
+    }
+
+    // Filter out incoming operations that are duplicates (action already exists locally
+    // or appears multiple times in incoming)
+    const existingActionIds = new Set(
+      nonSupersededOps.map((op) => op.action.id),
     );
+    const seenIncomingActionIds = new Set<string>();
+    const incomingOpsToApply = job.operations.filter((op) => {
+      if (existingActionIds.has(op.action.id)) return false;
+      if (seenIncomingActionIds.has(op.action.id)) return false;
+      seenIncomingActionIds.add(op.action.id);
+      return true;
+    });
 
     const reshuffledOperations = reshuffleByTimestampAndIndex(
       {
@@ -1356,7 +1392,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         skip: skipCount,
       },
       existingOpsToReshuffle,
-      job.operations.map((operation) => ({
+      incomingOpsToApply.map((operation) => ({
         ...operation,
         id: operation.id,
       })),
@@ -1371,6 +1407,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       startTime,
       indexTxn,
       skipValues,
+      reshuffledOperations,
     );
 
     if (!result.success) {
@@ -1419,7 +1456,14 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
       return null;
     } catch (error) {
+      this.logger.error(
+        "Error writing @Operation to IOperationStore: @Error",
+        operation,
+        error,
+      );
+
       this.writeCache.invalidate(documentId, scope, branch);
+
       return {
         job,
         success: false,
@@ -1519,7 +1563,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       if (signer.signatures.length === 0) {
         throw new InvalidSignatureError(
           job.documentId,
-          `Operation ${operation.id ?? "unknown"} at index ${operation.index} has signer but no signatures`,
+          `Operation ${operation.id} at index ${operation.index} has signer but no signatures`,
         );
       }
 
@@ -1533,14 +1577,14 @@ export class SimpleJobExecutor implements IJobExecutor {
           error instanceof Error ? error.message : String(error);
         throw new InvalidSignatureError(
           job.documentId,
-          `Operation ${operation.id ?? "unknown"} at index ${operation.index} verification failed: ${errorMessage}`,
+          `Operation ${operation.id} at index ${operation.index} verification failed: ${errorMessage}`,
         );
       }
 
       if (!isValid) {
         throw new InvalidSignatureError(
           job.documentId,
-          `Operation ${operation.id ?? "unknown"} at index ${operation.index} signature verification returned false`,
+          `Operation ${operation.id} at index ${operation.index} signature verification returned false`,
         );
       }
     }
@@ -1573,6 +1617,12 @@ export class SimpleJobExecutor implements IJobExecutor {
 
       try {
         const tempOperation: Operation = {
+          id: deriveOperationId(
+            job.documentId,
+            action.scope,
+            job.branch,
+            action.id,
+          ),
           index: 0,
           timestampUtcMs: action.timestampUtcMs || new Date().toISOString(),
           hash: "",

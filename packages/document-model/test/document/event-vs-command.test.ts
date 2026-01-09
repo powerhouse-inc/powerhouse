@@ -1,6 +1,6 @@
 // Command = action => should process the action and asign the index, timestamp, and hash
 // Event = operation => should keep the same operation information but execute the action input against the document
-import { baseCreateDocument } from "document-model/core";
+import { baseCreateDocument, deriveOperationId } from "document-model/core";
 import type { TestPHState } from "document-model/test";
 import {
   defaultPHDocumentCreateState,
@@ -47,6 +47,12 @@ describe("Event", () => {
       skip: 1,
       replayOptions: {
         operation: {
+          id: deriveOperationId(
+            document.header.id,
+            "global",
+            "main",
+            action.id,
+          ),
           index: 3,
           hash: "test-4-hash",
           timestampUtcMs: new Date().toISOString(),
@@ -170,6 +176,12 @@ describe("Event", () => {
       skip: 1,
       replayOptions: {
         operation: {
+          id: deriveOperationId(
+            document.header.id,
+            "global",
+            "main",
+            action.id,
+          ),
           index: 3,
           hash: "test-4-hash",
           timestampUtcMs: new Date().toISOString(),
@@ -243,6 +255,12 @@ describe("Event", () => {
       skip: 1,
       replayOptions: {
         operation: {
+          id: deriveOperationId(
+            document.header.id,
+            "global",
+            "main",
+            action.id,
+          ),
           index: 3,
           hash: "test-4-hash",
           timestampUtcMs: new Date().toISOString(),

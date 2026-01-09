@@ -9,7 +9,7 @@ function rowToRemoteCursor(row: SyncCursorRow): RemoteCursor {
     remoteName: row.remote_name,
     cursorOrdinal: Number(row.cursor_ordinal),
     lastSyncedAtUtcMs: row.last_synced_at_utc_ms
-      ? Number(row.last_synced_at_utc_ms)
+      ? new Date(row.last_synced_at_utc_ms).getTime()
       : undefined,
   };
 }
@@ -19,7 +19,7 @@ function remoteCursorToRow(cursor: RemoteCursor): InsertableSyncCursor {
     remote_name: cursor.remoteName,
     cursor_ordinal: BigInt(cursor.cursorOrdinal),
     last_synced_at_utc_ms: cursor.lastSyncedAtUtcMs
-      ? BigInt(cursor.lastSyncedAtUtcMs)
+      ? new Date(cursor.lastSyncedAtUtcMs).toISOString()
       : null,
   };
 }

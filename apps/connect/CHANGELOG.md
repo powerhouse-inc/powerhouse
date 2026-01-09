@@ -1,3 +1,23 @@
+## 5.1.0-dev.36 (2026-01-09)
+
+### 🩹 Fixes
+
+- **connect, switchboard:** run pnpm install after ph install in entrypoint ([c4145c07d](https://github.com/powerhouse-inc/powerhouse/commit/c4145c07d))
+- **connect, switchboard:** create .npmrc after ph init and reinstall ([dc78e58f5](https://github.com/powerhouse-inc/powerhouse/commit/dc78e58f5))
+- **connect, switchboard:** create .npmrc with hoisted node-linker before ph init ([4c8cdb1e5](https://github.com/powerhouse-inc/powerhouse/commit/4c8cdb1e5))
+- **connect, switchboard:** scope node-linker hoisted to project only ([948cc7bdf](https://github.com/powerhouse-inc/powerhouse/commit/948cc7bdf))
+- add relationship should work even if the child doesn't exist or is deleted, also added logging to logger not console ([8776991d4](https://github.com/powerhouse-inc/powerhouse/commit/8776991d4))
+- use hoisted node-linker for containerd/k8s compatibility ([5ae9e4abd](https://github.com/powerhouse-inc/powerhouse/commit/5ae9e4abd))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+
+## 5.1.0-dev.35 (2026-01-08)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
 ## 5.1.0-dev.34 (2026-01-07)
 
 ### 🚀 Features

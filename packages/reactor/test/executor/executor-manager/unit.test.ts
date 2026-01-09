@@ -11,6 +11,7 @@ import type { IQueue } from "../../../src/queue/interfaces.js";
 import { InMemoryQueue } from "../../../src/queue/queue.js";
 import type { IJobExecutionHandle, Job } from "../../../src/queue/types.js";
 import { JobQueueState } from "../../../src/queue/types.js";
+import { createMockLogger } from "../../factories.js";
 
 describe("SimpleJobExecutorManager", () => {
   let manager: SimpleJobExecutorManager;
@@ -48,6 +49,7 @@ describe("SimpleJobExecutorManager", () => {
       eventBus,
       queue,
       jobTracker,
+      createMockLogger(),
     );
   });
 

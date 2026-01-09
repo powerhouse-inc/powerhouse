@@ -90,10 +90,12 @@ async function loadFromZip<TState extends PHBaseState>(
   const initialState = JSON.parse(initialStateStr) as TState;
 
   const headerZip = zip.file("header.json");
-  let header: PHDocumentHeader | undefined = undefined;
-  if (headerZip) {
-    header = JSON.parse(await headerZip.async("string")) as PHDocumentHeader;
+  if (!headerZip) {
+    throw new Error("Document header not found - file format may be outdated");
   }
+  const header = JSON.parse(
+    await headerZip.async("string"),
+  ) as PHDocumentHeader;
 
   const operationsZip = zip.file("operations.json");
   if (!operationsZip) {
@@ -111,24 +113,15 @@ async function loadFromZip<TState extends PHBaseState>(
     throw new Error(errorMessages.join("\n"));
   }
 
-  // TODO: There is a race condition here where operations are replayed and do not necessary
-  // result in the same lastModified value. This will be fixed once the header replaces this
-  // information as it is explicitly set below to the saved time.
-  let result = replayDocument(
+  const result = replayDocument(
     initialState,
     clearedOperations,
     reducer,
-    undefined,
     header,
+    undefined,
     {},
     options,
   );
 
-  if (header) {
-    result = {
-      ...result,
-      header,
-    };
-  }
   return result;
 }

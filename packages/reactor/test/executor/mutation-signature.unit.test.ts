@@ -13,6 +13,7 @@ import type { IOperationStore } from "../../src/storage/interfaces.js";
 import {
   createMockDocumentMetaCache,
   createMockDocumentStorage,
+  createMockLogger,
   createMockOperationStorage,
   createMockOperationStore,
   createSignedTestAction,
@@ -150,6 +151,7 @@ describe("SimpleJobExecutor mutation signature verification", () => {
 
     const mockDocumentMetaCache = createMockDocumentMetaCache();
     executor = new SimpleJobExecutor(
+      createMockLogger(),
       registry,
       mockDocStorage,
       mockOperationStorage,

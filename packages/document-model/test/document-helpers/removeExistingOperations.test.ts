@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import type { Operation } from "document-model";
-import { removeExistingOperations } from "document-model/core";
+import { deriveOperationId, removeExistingOperations } from "document-model/core";
 import { buildOperations, fakeAction } from "document-model/test";
+
+const TEST_DOC_ID = "test-doc-id";
+const TEST_BRANCH = "main";
+const TEST_SCOPE = "global";
 
 describe("removeExistingOperations", () => {
   const scenarios = [
@@ -93,35 +97,57 @@ describe("removeExistingOperations", () => {
   });
 
   it("should not consider operations skipped", () => {
+    const action1 = fakeAction({
+      type: "NOOP",
+      input: {},
+      scope: "global",
+    });
+    const action2 = fakeAction({
+      type: "ADD_FOLDER",
+      input: { id: "1", name: "test1" },
+      scope: "global",
+    });
+    const action3 = fakeAction({
+      type: "ADD_FOLDER",
+      input: { id: "2", name: "test2" },
+      scope: "global",
+    });
+    const action4 = fakeAction({
+      type: "ADD_FOLDER",
+      input: { id: "1", name: "test1" },
+      scope: "global",
+    });
+    const action5 = fakeAction({
+      type: "ADD_FOLDER",
+      input: { id: "1", name: "test1" },
+      scope: "global",
+    });
+    const action6 = fakeAction({
+      type: "ADD_FOLDER",
+      input: { id: "2", name: "test2" },
+      scope: "global",
+    });
+
     const existingOperations: Operation[] = [
       {
-        action: fakeAction({
-          type: "NOOP",
-          input: {},
-          scope: "global",
-        }),
+        id: deriveOperationId(TEST_DOC_ID, TEST_SCOPE, TEST_BRANCH, action1.id),
+        action: action1,
         index: 0,
         timestampUtcMs: "2024-04-22T18:33:20.624Z",
         hash: "pLimr2HqW//d6upWCv4tGfI0W4c=",
         skip: 0,
       },
       {
-        action: fakeAction({
-          type: "ADD_FOLDER",
-          input: { id: "1", name: "test1" },
-          scope: "global",
-        }),
+        id: deriveOperationId(TEST_DOC_ID, TEST_SCOPE, TEST_BRANCH, action2.id),
+        action: action2,
         index: 1,
         timestampUtcMs: "2024-04-22T18:33:20.631Z",
         hash: "P6p5OmHl7FpHRN9ftOS0k+eaU4E=",
         skip: 1,
       },
       {
-        action: fakeAction({
-          type: "ADD_FOLDER",
-          input: { id: "2", name: "test2" },
-          scope: "global",
-        }),
+        id: deriveOperationId(TEST_DOC_ID, TEST_SCOPE, TEST_BRANCH, action3.id),
+        action: action3,
         index: 2,
         timestampUtcMs: "2024-04-22T18:33:20.631Z",
         hash: "5XOFEY2NKrHVyOA3c3oXDibrjwM=",
@@ -131,33 +157,24 @@ describe("removeExistingOperations", () => {
 
     const operationsHistory: Operation[] = [
       {
-        action: fakeAction({
-          type: "ADD_FOLDER",
-          input: { id: "1", name: "test1" },
-          scope: "global",
-        }),
+        id: deriveOperationId(TEST_DOC_ID, TEST_SCOPE, TEST_BRANCH, action4.id),
+        action: action4,
         index: 0,
         timestampUtcMs: "2024-04-22T18:33:20.628Z",
         hash: "P6p5OmHl7FpHRN9ftOS0k+eaU4E=",
         skip: 0,
       },
       {
-        action: fakeAction({
-          type: "ADD_FOLDER",
-          input: { id: "1", name: "test1" },
-          scope: "global",
-        }),
+        id: deriveOperationId(TEST_DOC_ID, TEST_SCOPE, TEST_BRANCH, action5.id),
+        action: action5,
         index: 1,
         timestampUtcMs: "2024-04-22T18:33:20.630Z",
         hash: "P6p5OmHl7FpHRN9ftOS0k+eaU4E=",
         skip: 1,
       },
       {
-        action: fakeAction({
-          type: "ADD_FOLDER",
-          input: { id: "2", name: "test2" },
-          scope: "global",
-        }),
+        id: deriveOperationId(TEST_DOC_ID, TEST_SCOPE, TEST_BRANCH, action6.id),
+        action: action6,
         index: 2,
         timestampUtcMs: "2024-04-22T18:33:20.630Z",
         hash: "5XOFEY2NKrHVyOA3c3oXDibrjwM=",

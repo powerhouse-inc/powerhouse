@@ -1,4 +1,5 @@
 import type { Action, Signature } from "document-model";
+import type { ILogger } from "../../logging/types.js";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import { ChannelError } from "../errors.js";
 import type { IChannel } from "../interfaces.js";
@@ -51,6 +52,7 @@ export class GqlChannel implements IChannel {
   private lastFailureUtcMs?: number;
 
   constructor(
+    private readonly logger: ILogger,
     channelId: string,
     remoteName: string,
     cursorStorage: ISyncCursorStorage,
@@ -62,7 +64,7 @@ export class GqlChannel implements IChannel {
     this.config = {
       url: config.url,
       authToken: config.authToken,
-      pollIntervalMs: config.pollIntervalMs ?? 5000,
+      pollIntervalMs: config.pollIntervalMs ?? 10000,
       retryBaseDelayMs: config.retryBaseDelayMs ?? 1000,
       retryMaxDelayMs: config.retryMaxDelayMs ?? 300000,
       maxFailures: config.maxFailures ?? 5,
@@ -179,22 +181,68 @@ export class GqlChannel implements IChannel {
    * Handles polling errors with exponential backoff.
    */
   private handlePollError(error: unknown): void {
+    const err = error instanceof Error ? error : new Error(String(error));
+
+    if (err.message.includes("Channel not found")) {
+      this.recoverFromChannelNotFound();
+      return;
+    }
+
     this.failureCount++;
     this.lastFailureUtcMs = Date.now();
 
-    const err = error instanceof Error ? error : new Error(String(error));
     const channelError = new ChannelError(ChannelErrorSource.Inbox, err);
 
-    console.error(
-      `GqlChannel poll error (${this.failureCount}/${this.config.maxFailures}):`,
+    this.logger.error(
+      "GqlChannel poll error (@FailureCount/@MaxFailures): @Error",
+      this.failureCount,
+      this.config.maxFailures,
       channelError,
     );
 
     if (this.failureCount >= this.config.maxFailures!) {
-      console.error(
-        `GqlChannel ${this.channelId} exceeded failure threshold, stopping polls`,
+      this.logger.error(
+        "GqlChannel @ChannelId exceeded failure threshold, stopping polls",
+        this.channelId,
       );
     }
+  }
+
+  /**
+   * Recovers from a "Channel not found" error by re-registering and restarting polling.
+   */
+  private recoverFromChannelNotFound(): void {
+    this.logger.info(
+      "GqlChannel @ChannelId not found on remote, re-registering...",
+      this.channelId,
+    );
+
+    if (this.pollTimer) {
+      clearTimeout(this.pollTimer);
+      this.pollTimer = undefined;
+    }
+
+    void this.touchRemoteChannel()
+      .then(() => {
+        this.logger.info(
+          "GqlChannel @ChannelId re-registered successfully",
+          this.channelId,
+        );
+        this.failureCount = 0;
+        this.startPolling();
+      })
+      .catch((recoveryError) => {
+        this.logger.error(
+          "GqlChannel @ChannelId failed to re-register: @Error",
+          this.channelId,
+          recoveryError,
+        );
+        this.failureCount++;
+        this.lastFailureUtcMs = Date.now();
+        this.pollTimer = setTimeout(() => {
+          this.startPolling();
+        }, this.config.pollIntervalMs);
+      });
   }
 
   /**
@@ -324,6 +372,14 @@ export class GqlChannel implements IChannel {
    */
   private async pushSyncOperation(syncOp: SyncOperation): Promise<void> {
     syncOp.started();
+
+    this.logger.debug(
+      "[PUSH]: @Operations",
+      syncOp.operations.map(
+        (op) =>
+          `(${op.context.documentId}, ${op.context.branch}, ${op.context.scope}, ${op.operation.index})`,
+      ),
+    );
 
     const envelope: SyncEnvelope = {
       type: "operations",

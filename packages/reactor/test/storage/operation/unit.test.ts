@@ -1,6 +1,6 @@
 import { addFile, addFolder, deleteNode, setDriveName } from "document-drive";
 import type { Operation } from "document-model";
-import { generateId } from "document-model/core";
+import { deriveOperationId, generateId } from "document-model/core";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
@@ -79,6 +79,7 @@ describe("KyselyOperationStore", () => {
       await expect(
         store.apply(documentId, documentType, scope, branch, 5, (txn) => {
           txn.addOperations({
+            id: deriveOperationId(documentId, scope, branch, action.id),
             index: 5,
             timestampUtcMs: new Date().toISOString(),
             hash: "hash-1",
@@ -89,13 +90,98 @@ describe("KyselyOperationStore", () => {
       ).rejects.toThrow(RevisionMismatchError);
     });
 
-    it("should reject duplicate operation IDs", async () => {
+    it("should allow same opId with different index (reshuffle scenario)", async () => {
+      const documentId = generateId();
+      const scope = "global";
+      const branch = "main";
+      const sharedOpId = generateId();
+
+      const action = addFile({
+        id: generateId(),
+        name: "test-document.txt",
+        documentType: "text/plain",
+        parentFolder: null,
+      });
+
+      const documentType = "powerhouse/document-drive";
+
+      await store.apply(documentId, documentType, scope, branch, 0, (txn) => {
+        txn.addOperations({
+          index: 0,
+          timestampUtcMs: new Date().toISOString(),
+          hash: "hash-1",
+          skip: 0,
+          id: sharedOpId,
+          action,
+        });
+      });
+
+      await store.apply(documentId, documentType, scope, branch, 1, (txn) => {
+        txn.addOperations({
+          index: 1,
+          timestampUtcMs: new Date().toISOString(),
+          hash: "hash-2",
+          skip: 0,
+          id: sharedOpId,
+          action,
+        });
+      });
+
+      const result = await store.getSince(documentId, scope, branch, -1);
+      expect(result.items).toHaveLength(2);
+      expect(result.items[0].id).toBe(sharedOpId);
+      expect(result.items[1].id).toBe(sharedOpId);
+    });
+
+    it("should allow same opId with different skip (undo/redo scenario)", async () => {
+      const documentId = generateId();
+      const scope = "global";
+      const branch = "main";
+      const sharedOpId = generateId();
+
+      const action = addFile({
+        id: generateId(),
+        name: "test-document.txt",
+        documentType: "text/plain",
+        parentFolder: null,
+      });
+
+      const documentType = "powerhouse/document-drive";
+
+      await store.apply(documentId, documentType, scope, branch, 0, (txn) => {
+        txn.addOperations({
+          index: 0,
+          timestampUtcMs: new Date().toISOString(),
+          hash: "hash-1",
+          skip: 0,
+          id: sharedOpId,
+          action,
+        });
+      });
+
+      await store.apply(documentId, documentType, scope, branch, 1, (txn) => {
+        txn.addOperations({
+          index: 1,
+          timestampUtcMs: new Date().toISOString(),
+          hash: "hash-2",
+          skip: 1,
+          id: sharedOpId,
+          action,
+        });
+      });
+
+      const result = await store.getSince(documentId, scope, branch, -1);
+      expect(result.items).toHaveLength(2);
+      expect(result.items[0].skip).toBe(0);
+      expect(result.items[1].skip).toBe(1);
+    });
+
+    it("should reject duplicate (opId, index, skip) combination", async () => {
       const documentId = generateId();
       const scope = "global";
       const branch = "main";
       const duplicateOpId = generateId();
 
-      // Create a real action for adding a file
       const action = addFile({
         id: generateId(),
         name: "test-document.txt",
@@ -114,12 +200,10 @@ describe("KyselyOperationStore", () => {
 
       const documentType = "powerhouse/document-drive";
 
-      // First insert should succeed
       await store.apply(documentId, documentType, scope, branch, 0, (txn) => {
         txn.addOperations(op);
       });
 
-      // Second insert with same ID should fail
       const secondDocId = generateId();
       await expect(
         store.apply(secondDocId, documentType, scope, branch, 0, (txn) => {

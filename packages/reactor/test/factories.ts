@@ -36,6 +36,7 @@ import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
 import type { JobExecutorConfig } from "../src/executor/types.js";
 import { InMemoryJobTracker } from "../src/job-tracker/in-memory-job-tracker.js";
 import type { IJobTracker } from "../src/job-tracker/interfaces.js";
+import type { ILogger } from "../src/logging/types.js";
 import type { IQueue } from "../src/queue/interfaces.js";
 import { InMemoryQueue } from "../src/queue/queue.js";
 import type { Job } from "../src/queue/types.js";
@@ -60,10 +61,9 @@ import { KyselySyncRemoteStorage } from "../src/storage/kysely/sync-remote-stora
 import type { Database as DatabaseSchema } from "../src/storage/kysely/types.js";
 import { runMigrations } from "../src/storage/migrations/migrator.js";
 import type { IReactorSubscriptionManager } from "../src/subs/types.js";
-import { TestChannel } from "./sync/channels/test-channel.js";
 import type { IChannel, IChannelFactory } from "../src/sync/interfaces.js";
 import type { ChannelConfig, SyncEnvelope } from "../src/sync/types.js";
-import type { ILogger } from "../src/logging/types.js";
+import { TestChannel } from "./sync/channels/test-channel.js";
 
 /**
  * Creates a mock logger for testing that no-ops all log methods.
@@ -575,6 +575,7 @@ export async function createTestReactorSetup(
 
   // Create job executor with event bus
   const jobExecutor = new SimpleJobExecutor(
+    createMockLogger(),
     registry,
     storage,
     storage,
@@ -649,6 +650,7 @@ export function createTestJobExecutorManager(
     actualEventBus,
     actualQueue,
     actualJobTracker,
+    createMockLogger(),
   );
 
   return {
