@@ -1,4 +1,4 @@
-import { createProject, parseTag } from "@powerhousedao/codegen";
+import { createProject } from "@powerhousedao/codegen";
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path, { dirname } from "node:path";
@@ -11,42 +11,13 @@ import {
   POWERHOUSE_GLOBAL_DIR,
   packageManagers,
 } from "./constants.js";
+import { parsePackageManager, parseTag } from "./parsing.js";
 import type {
   GlobalProjectOptions,
   PackageManager,
   PathValidation,
   ProjectInfo,
 } from "./types.js";
-
-export function resolvePackageManagerOptions(options: {
-  packageManager?: string;
-  npm?: boolean;
-  pnpm?: boolean;
-  yarn?: boolean;
-  bun?: boolean;
-}) {
-  if (options.packageManager) {
-    return options.packageManager;
-  }
-
-  if (options.npm) {
-    return "npm";
-  }
-
-  if (options.pnpm) {
-    return "pnpm";
-  }
-
-  if (options.yarn) {
-    return "yarn";
-  }
-
-  if (options.bun) {
-    return "bun";
-  }
-
-  return undefined;
-}
 
 export function defaultPathValidation() {
   return true;
@@ -250,11 +221,9 @@ export const createGlobalProject = async (
   try {
     await createProject({
       name: PH_GLOBAL_DIR_NAME,
-      interactive: false,
       tag: parseTag(options),
       packageManager:
-        resolvePackageManagerOptions(options) ??
-        getPackageManagerFromPath(PH_BIN_PATH),
+        parsePackageManager(options) ?? getPackageManagerFromPath(PH_BIN_PATH),
     });
 
     // Fix the package.json name - ".ph" is invalid for npm/vite

@@ -26,7 +26,7 @@ export const setupGlobals: CommandActionType<
 export function setupGlobalsCommand(program: Command): Command {
   const setupGlobalsCmd = program
     .command("setup-globals")
-    .description("Initialize a new project")
+    .description("Initialize a new global project")
     .argument("[project-name]", "Name of the project")
     .option("-p, --project", "Name of the project")
     .option("-i, --interactive", "Run the command in interactive mode")
