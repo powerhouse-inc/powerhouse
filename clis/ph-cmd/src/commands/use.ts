@@ -1,6 +1,8 @@
 import { getPackageVersion } from "@powerhousedao/codegen/file-builders";
 import {
+  boolean,
   command,
+  flag,
   oneOf,
   option,
   optional,
@@ -42,8 +44,13 @@ const commandParser = command({
       description:
         "Specify the exact semver release version to use for your project.",
     }),
+    skipInstall: flag({
+      type: optional(boolean),
+      long: "skip-install",
+      short: "s",
+    }),
   },
-  handler: async ({ tagPositional, tagOption, version }) => {
+  handler: async ({ tagPositional, tagOption, version, skipInstall }) => {
     const tag = tagPositional ?? tagOption;
     handleMutuallyExclusiveOptions({ tag, version }, "versioning strategy");
 
@@ -126,6 +133,8 @@ const commandParser = command({
     }
 
     await writePackage(packageJson);
+
+    if (skipInstall) return;
 
     const packageManager = await detect();
 

@@ -1,4 +1,13 @@
-import { command, option, optional, positional, run, string } from "cmd-ts";
+import {
+  boolean,
+  command,
+  flag,
+  option,
+  optional,
+  positional,
+  run,
+  string,
+} from "cmd-ts";
 import path from "path";
 import { readPackage } from "read-pkg";
 import { writePackage } from "write-package";
@@ -29,8 +38,17 @@ const commandParser = command({
       description:
         "Path to your local powerhouse monorepo relative to this project",
     }),
+    skipInstall: flag({
+      type: optional(boolean),
+      long: "skip-install",
+      short: "s",
+    }),
   },
-  handler: async ({ monorepoPathPositional, monorepoPathOption }) => {
+  handler: async ({
+    monorepoPathPositional,
+    monorepoPathOption,
+    skipInstall,
+  }) => {
     const monorepoPath = monorepoPathPositional ?? monorepoPathOption;
 
     if (!monorepoPath) {
@@ -114,6 +132,8 @@ const commandParser = command({
     }
 
     await writePackage(packageJson);
+
+    if (skipInstall) return;
 
     console.log(`Installing linked dependencies with \`pnpm\``);
     runCmd(`pnpm install`);

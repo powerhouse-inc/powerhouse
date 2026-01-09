@@ -1,5 +1,5 @@
 import { getPackageVersion } from "@powerhousedao/codegen/file-builders";
-import { command, run } from "cmd-ts";
+import { boolean, command, flag, optional, run } from "cmd-ts";
 import { detect } from "detect-package-manager";
 import { readPackage } from "read-pkg";
 import { writePackage } from "write-package";
@@ -11,8 +11,14 @@ const commandParser = command({
   name: "ph update",
   description:
     "Update your powerhouse dependencies to their latest tagged version",
-  args: {},
-  handler: async () => {
+  args: {
+    skipInstall: flag({
+      type: optional(boolean),
+      long: "skip-install",
+      short: "s",
+    }),
+  },
+  handler: async ({ skipInstall }) => {
     console.log(`Updating Powerhouse dependencies...`);
     const packageJson = await readPackage();
 
@@ -83,6 +89,8 @@ const commandParser = command({
     }
 
     await writePackage(packageJson);
+
+    if (skipInstall) return;
 
     const packageManager = await detect();
 
