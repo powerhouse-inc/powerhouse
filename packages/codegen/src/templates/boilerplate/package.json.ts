@@ -98,7 +98,6 @@ export const packageJsonTemplate = (
   json`
 {
   "name": "${projectName}",
-  "description": "",
   "version": "1.0.0",
   "license": "AGPL-3.0-only",
   "type": "module",

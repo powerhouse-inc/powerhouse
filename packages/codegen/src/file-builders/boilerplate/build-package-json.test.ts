@@ -1,4 +1,5 @@
-import { describe, test } from "vitest";
+import { validate } from "package-json-validator";
+import { describe, expect, test } from "vitest";
 import { buildBoilerplatePackageJson } from "./package.json.js";
 
 describe("Build boilerplate package.json file", () => {
@@ -9,7 +10,8 @@ describe("Build boilerplate package.json file", () => {
       name,
       version,
     });
-    console.log(packageJson);
+    const validationResult = validate(packageJson);
+    expect(validationResult.valid).toBe(true);
   });
   test(
     "Should build a versioned boilerplate with tag",
@@ -22,7 +24,8 @@ describe("Build boilerplate package.json file", () => {
           name,
           tag,
         });
-        console.log(packageJson);
+        const validationResult = validate(packageJson);
+        expect(validationResult.valid).toBe(true);
       }
     },
   );

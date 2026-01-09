@@ -71,6 +71,7 @@
     "hygen": "^6.2.11",
     "kysely": "^0.28.2",
     "kysely-pglite": "^0.6.1",
+    "package-json-validator": "^0.60.0",
     "prettier": "^3.6.2",
     "read-pkg": "^9.0.1",
     "semver": "^7.7.3",
