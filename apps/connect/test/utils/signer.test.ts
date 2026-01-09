@@ -87,7 +87,12 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
     };
 
     const operation: Operation = {
-      id: deriveOperationId(TEST_DOC_ID, TEST_SCOPE, TEST_BRANCH, signedAction.id),
+      id: deriveOperationId(
+        TEST_DOC_ID,
+        TEST_SCOPE,
+        TEST_BRANCH,
+        signedAction.id,
+      ),
       index: 0,
       timestampUtcMs: action.timestampUtcMs,
       hash: "",
@@ -132,7 +137,12 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
     };
 
     const operation: Operation = {
-      id: deriveOperationId(TEST_DOC_ID, TEST_SCOPE, TEST_BRANCH, signedAction.id),
+      id: deriveOperationId(
+        TEST_DOC_ID,
+        TEST_SCOPE,
+        TEST_BRANCH,
+        signedAction.id,
+      ),
       index: 0,
       timestampUtcMs: action.timestampUtcMs,
       hash: "",
@@ -169,7 +179,12 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
     };
 
     const operation: Operation = {
-      id: deriveOperationId(TEST_DOC_ID, TEST_SCOPE, TEST_BRANCH, signedAction.id),
+      id: deriveOperationId(
+        TEST_DOC_ID,
+        TEST_SCOPE,
+        TEST_BRANCH,
+        signedAction.id,
+      ),
       index: 0,
       timestampUtcMs: action.timestampUtcMs,
       hash: "",
@@ -265,7 +280,12 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
     };
 
     const operation: Operation = {
-      id: deriveOperationId(TEST_DOC_ID, TEST_SCOPE, TEST_BRANCH, signedAction.id),
+      id: deriveOperationId(
+        TEST_DOC_ID,
+        TEST_SCOPE,
+        TEST_BRANCH,
+        signedAction.id,
+      ),
       index: 0,
       timestampUtcMs: action.timestampUtcMs,
       hash: "",
@@ -314,7 +334,12 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
     };
 
     const operation: Operation = {
-      id: deriveOperationId(TEST_DOC_ID, "document", TEST_BRANCH, signedAction.id),
+      id: deriveOperationId(
+        TEST_DOC_ID,
+        "document",
+        TEST_BRANCH,
+        signedAction.id,
+      ),
       index: 0,
       timestampUtcMs: action.timestampUtcMs,
       hash: "",
@@ -381,7 +406,12 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
     };
 
     const operation: Operation = {
-      id: deriveOperationId(TEST_DOC_ID, TEST_SCOPE, TEST_BRANCH, signedAction.id),
+      id: deriveOperationId(
+        TEST_DOC_ID,
+        TEST_SCOPE,
+        TEST_BRANCH,
+        signedAction.id,
+      ),
       index: 0,
       timestampUtcMs: action.timestampUtcMs,
       hash: "",
