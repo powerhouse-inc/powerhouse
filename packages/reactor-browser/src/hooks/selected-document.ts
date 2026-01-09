@@ -15,6 +15,16 @@ export function useSelectedDocumentId() {
 /** Returns the selected document. */
 export function useSelectedDocument() {
   const selectedDocumentId = useSelectedDocumentId();
+  const [document, dispatch] = useDocumentById(selectedDocumentId);
+  if (!document) {
+    throw new NoSelectedDocumentError();
+  }
+  return [document, dispatch] as const;
+}
+
+/** Returns the selected document. */
+export function useSelectedDocumentSafe() {
+  const selectedDocumentId = useSelectedDocumentId();
   return useDocumentById(selectedDocumentId);
 }
 

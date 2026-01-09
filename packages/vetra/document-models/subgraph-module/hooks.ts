@@ -1,15 +1,18 @@
 import type { DocumentDispatch } from "@powerhousedao/reactor-browser";
 import {
+  useDocumentById,
   useDocumentsInSelectedDrive,
   useDocumentsInSelectedFolder,
-  useDocumentById,
   useSelectedDocument,
 } from "@powerhousedao/reactor-browser";
 import type {
-  SubgraphModuleDocument,
   SubgraphModuleAction,
+  SubgraphModuleDocument,
 } from "@powerhousedao/vetra/document-models/subgraph-module";
-import { isSubgraphModuleDocument } from "./gen/document-schema.js";
+import {
+  assertIsSubgraphModuleDocument,
+  isSubgraphModuleDocument,
+} from "./gen/document-schema.js";
 
 /** Hook to get a SubgraphModule document by its id */
 export function useSubgraphModuleDocumentById(
@@ -23,12 +26,13 @@ export function useSubgraphModuleDocumentById(
 }
 
 /** Hook to get the selected SubgraphModule document */
-export function useSelectedSubgraphModuleDocument():
-  | [SubgraphModuleDocument, DocumentDispatch<SubgraphModuleAction>]
-  | [undefined, undefined] {
+export function useSelectedSubgraphModuleDocument(): [
+  SubgraphModuleDocument,
+  DocumentDispatch<SubgraphModuleAction>,
+] {
   const [document, dispatch] = useSelectedDocument();
-  if (!isSubgraphModuleDocument(document)) return [undefined, undefined];
-  return [document, dispatch];
+  assertIsSubgraphModuleDocument(document);
+  return [document, dispatch] as const;
 }
 
 /** Hook to get all SubgraphModule documents in the selected drive */

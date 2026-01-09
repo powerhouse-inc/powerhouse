@@ -1,15 +1,18 @@
 import type { DocumentDispatch } from "@powerhousedao/reactor-browser";
 import {
+  useDocumentById,
   useDocumentsInSelectedDrive,
   useDocumentsInSelectedFolder,
-  useDocumentById,
   useSelectedDocument,
 } from "@powerhousedao/reactor-browser";
 import type {
-  ProcessorModuleDocument,
   ProcessorModuleAction,
+  ProcessorModuleDocument,
 } from "@powerhousedao/vetra/document-models/processor-module";
-import { isProcessorModuleDocument } from "./gen/document-schema.js";
+import {
+  assertIsProcessorModuleDocument,
+  isProcessorModuleDocument,
+} from "./gen/document-schema.js";
 
 /** Hook to get a ProcessorModule document by its id */
 export function useProcessorModuleDocumentById(
@@ -23,12 +26,13 @@ export function useProcessorModuleDocumentById(
 }
 
 /** Hook to get the selected ProcessorModule document */
-export function useSelectedProcessorModuleDocument():
-  | [ProcessorModuleDocument, DocumentDispatch<ProcessorModuleAction>]
-  | [undefined, undefined] {
+export function useSelectedProcessorModuleDocument(): [
+  ProcessorModuleDocument,
+  DocumentDispatch<ProcessorModuleAction>,
+] {
   const [document, dispatch] = useSelectedDocument();
-  if (!isProcessorModuleDocument(document)) return [undefined, undefined];
-  return [document, dispatch];
+  assertIsProcessorModuleDocument(document);
+  return [document, dispatch] as const;
 }
 
 /** Hook to get all ProcessorModule documents in the selected drive */

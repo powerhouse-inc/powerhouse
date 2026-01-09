@@ -1,15 +1,18 @@
 import type { DocumentDispatch } from "@powerhousedao/reactor-browser";
 import {
+  useDocumentById,
   useDocumentsInSelectedDrive,
   useDocumentsInSelectedFolder,
-  useDocumentById,
   useSelectedDocument,
 } from "@powerhousedao/reactor-browser";
 import type {
-  AppModuleDocument,
   AppModuleAction,
+  AppModuleDocument,
 } from "@powerhousedao/vetra/document-models/app-module";
-import { isAppModuleDocument } from "./gen/document-schema.js";
+import {
+  assertIsAppModuleDocument,
+  isAppModuleDocument,
+} from "./gen/document-schema.js";
 
 /** Hook to get a AppModule document by its id */
 export function useAppModuleDocumentById(
@@ -23,12 +26,13 @@ export function useAppModuleDocumentById(
 }
 
 /** Hook to get the selected AppModule document */
-export function useSelectedAppModuleDocument():
-  | [AppModuleDocument, DocumentDispatch<AppModuleAction>]
-  | [undefined, undefined] {
+export function useSelectedAppModuleDocument(): [
+  AppModuleDocument,
+  DocumentDispatch<AppModuleAction>,
+] {
   const [document, dispatch] = useSelectedDocument();
-  if (!isAppModuleDocument(document)) return [undefined, undefined];
-  return [document, dispatch];
+  assertIsAppModuleDocument(document);
+  return [document, dispatch] as const;
 }
 
 /** Hook to get all AppModule documents in the selected drive */

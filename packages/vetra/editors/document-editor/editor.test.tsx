@@ -1,10 +1,10 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useSelectedDocumentEditorDocument } from "../hooks/useVetraDocument.js";
+import { useSelectedDocumentEditorDocument } from "../../document-models/document-editor/hooks.js";
 import Editor from "./editor.js";
 
-vi.mock("../hooks/useVetraDocument.js", () => ({
+vi.mock("../../document-models/document-editor/hooks.js", () => ({
   useSelectedDocumentEditorDocument: vi.fn(),
 }));
 
