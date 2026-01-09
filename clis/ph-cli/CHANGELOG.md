@@ -1,3 +1,13 @@
+## 5.1.0-dev.37 (2026-01-09)
+
+### 🚀 Features
+
+- **codegen,ph-cmd:** use templates for project boilerplate creation ([#2190](https://github.com/powerhouse-inc/powerhouse/pull/2190))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 5.1.0-dev.36 (2026-01-09)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
