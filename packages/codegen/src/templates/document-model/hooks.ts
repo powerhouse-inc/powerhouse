@@ -18,7 +18,7 @@ import type {
   ${v.phDocumentTypeName},
 } from "${v.versionedDocumentModelPackageImportPath}";
 import { 
-  ${v.assertIsPhStateOfTypeFunctionName},
+  ${v.assertIsPhDocumentOfTypeFunctionName},
   ${v.isPhDocumentOfTypeFunctionName} 
 } from "./gen/document-schema.js";
 
@@ -38,7 +38,7 @@ export function ${v.useSelectedHookName}():
   | [${v.phDocumentTypeName}, DocumentDispatch<${v.actionTypeName}>] {
   const [document, dispatch] = useSelectedDocument();
 
-  ${v.assertIsPhStateOfTypeFunctionName}(document);
+  ${v.assertIsPhDocumentOfTypeFunctionName}(document);
   return [document, dispatch] as const;
 }
 
