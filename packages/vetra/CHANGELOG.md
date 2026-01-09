@@ -1,3 +1,13 @@
+## 5.1.0-dev.38 (2026-01-09)
+
+### 🩹 Fixes
+
+- **monorepo:** use more appropriate peer dependency scheme ([cdb35daa8](https://github.com/powerhouse-inc/powerhouse/commit/cdb35daa8))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
 ## 5.1.0-dev.37 (2026-01-09)
 
 ### 🚀 Features
