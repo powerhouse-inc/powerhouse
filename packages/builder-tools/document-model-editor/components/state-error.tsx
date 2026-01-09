@@ -15,6 +15,13 @@ export function StateValidationErrorMessage({
         </span>
       );
 
+    case "MISSING_OPTIONAL":
+      return (
+        <span>
+          Optional field <strong>{payload.field}</strong> is not defined.
+        </span>
+      );
+
     case "UNKNOWN_FIELD":
       return (
         <span>
