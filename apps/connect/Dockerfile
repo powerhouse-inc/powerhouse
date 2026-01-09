@@ -61,10 +61,6 @@ RUN if [[ "$TAG" == *"dev"* ]]; then \
 
 WORKDIR /app/project
 
-# Create .npmrc with hoisted node-linker and reinstall to apply
-# This fixes symlink issues on containerd's overlay filesystem
-RUN echo "node-linker=hoisted" > .npmrc && pnpm install
-
 # Copy and set up entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh

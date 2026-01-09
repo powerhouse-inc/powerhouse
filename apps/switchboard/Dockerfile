@@ -49,10 +49,6 @@ RUN case "$TAG" in \
 
 WORKDIR /app/project
 
-# Create .npmrc with hoisted node-linker and reinstall to apply
-# This fixes symlink issues on containerd's overlay filesystem
-RUN echo "node-linker=hoisted" > .npmrc && pnpm install
-
 # Install curl for health checks
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
