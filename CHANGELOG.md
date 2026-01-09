@@ -1,3 +1,13 @@
+## 5.1.0-dev.39 (2026-01-09)
+
+### 🩹 Fixes
+
+- **codegen:** remove training comma from template :') ([9d93ffd87](https://github.com/powerhouse-inc/powerhouse/commit/9d93ffd87))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
 ## 5.1.0-dev.38 (2026-01-09)
 
 ### 🩹 Fixes
