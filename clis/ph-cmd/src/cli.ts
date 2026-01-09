@@ -4,6 +4,7 @@ import { forwardCommand } from "./commands/forward.js";
 import registerCommands from "./commands/index.js";
 import { init } from "./commands/init.js";
 import { update } from "./commands/update.js";
+import { useLocal } from "./commands/use-local.js";
 import { use } from "./commands/use.js";
 import type { CommandActionType } from "./types.js";
 import { generateMergedHelp } from "./utils/index.js";
@@ -61,6 +62,12 @@ const defaultCommand: CommandActionType<[{ verbose?: boolean }]> = async (
   if (isUse) {
     // forward from 3 to skip initial `ph`
     await use(process.argv.slice(3));
+    process.exit(0);
+  }
+  const isUseLocal = firstPositionalArg === "use-local";
+  if (isUseLocal) {
+    // forward from 3 to skip initial `ph`
+    await useLocal(process.argv.slice(3));
     process.exit(0);
   }
   const isHelpCommand = args.startsWith("--help") || args.startsWith("-h");

@@ -8,7 +8,6 @@ import {
   run,
   string,
 } from "cmd-ts";
-import console from "console";
 import { detect } from "detect-package-manager";
 import { readPackage } from "read-pkg";
 import { clean, valid } from "semver";
@@ -27,6 +26,7 @@ const commandParser = command({
   args: {
     tagPositional: positional({
       type: optional(oneOf(["latest", "staging", "dev"])),
+      displayName: "tag",
       description: `Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev".`,
     }),
     tagOption: option({
@@ -124,8 +124,6 @@ const commandParser = command({
         }
       }
     }
-
-    await writePackage(packageJson);
 
     await writePackage(packageJson);
 
