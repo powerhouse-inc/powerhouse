@@ -1,4 +1,5 @@
 import { createProject } from "@powerhousedao/codegen";
+import chalk from "chalk";
 import { kebabCase } from "change-case";
 import {
   boolean,
@@ -186,11 +187,12 @@ export async function init(args: string[]) {
     const { name, remoteDrive } = parsedArgs;
 
     if (remoteDrive) {
-      console.log("Setting up remote drive...");
+      console.log(chalk.blue("\n⏳ Setting up remote drive...\n"));
       await setupRemoteDrive(remoteDrive);
+      console.log(chalk.green("\n✅ Remote drive set up."));
     }
 
-    console.log("\nInitializing a new project...");
+    console.log(chalk.bold("\n🚀 Initializing a new project...\n"));
     await createProject(parsedArgs);
 
     if (remoteDrive) {
@@ -205,7 +207,7 @@ export async function init(args: string[]) {
       console.log();
     }
   } catch (error) {
-    console.error("\nFailed to initialize project: \n");
+    console.error("\n❌ Failed to initialize project: \n");
     console.error(error);
     process.exit(1);
   }

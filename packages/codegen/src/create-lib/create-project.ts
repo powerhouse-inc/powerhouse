@@ -28,10 +28,10 @@ import {
   viteConfigTemplate,
   vitestConfigTemplate,
 } from "@powerhousedao/codegen/templates";
+import chalk from "chalk";
 import fs from "node:fs";
 import path from "path";
 import { runCmd, writeFileEnsuringDir } from "./utils.js";
-
 type CreateProjectArgs = {
   name: string;
   packageManager: string;
@@ -52,8 +52,8 @@ export async function createProject({
     fs.mkdirSync(appPath);
   } catch (err) {
     if ((err as { code: string }).code === "EEXIST") {
-      console.log(
-        `\x1b[31mThe folder "${name}" already exists in the current directory, please give it another name.\x1b[0m`,
+      console.error(
+        `⛔ The folder "${name}" already exists in the current directory, please give it another name.`,
       );
     } else {
       console.error(err);
@@ -63,42 +63,40 @@ export async function createProject({
 
   try {
     // Create a new directory for the project
-    console.log(
-      `\n\x1b[34mCreating directory for project "${name}"...\x1b[0m\n`,
-    );
+    console.log(chalk.blue(`▶️ Creating directory for project "${name}"...\n`));
     const appPath = path.join(process.cwd(), name);
     process.chdir(appPath);
-    console.log(`\x1b[32mProject directory created\x1b[0m\n`);
+    console.log(chalk.green(`✅ Project directory created\n`));
 
     // Create a .gitignore file, then initialize the git repository
-    console.log(`\x1b[34mInitializing git repository...\x1b[0m\n`);
+    console.log(chalk.blue(`▶️ Initializing git repository...\n`));
     await writeFileEnsuringDir(".gitignore", gitIgnoreTemplate);
     runCmd(`git init`);
-    console.log(`\n\x1b[32mGit repository initialized\x1b[0m\n`);
+    console.log(chalk.green(`\n✅ Git repository initialized\n`));
 
     // Write the boilerplate files for the project
-    console.log(`\x1b[34mCreating project boilerplate files...\x1b[0m\n`);
+    console.log(chalk.blue(`▶️ Creating project boilerplate files...\n`));
     await writeProjectRootFiles({ name, tag, version, remoteDrive });
     await writeModuleFiles();
     await writeAiConfigFiles();
-    console.log(`\x1b[32mProject boilerplate files created\x1b[0m\n`);
+    console.log(chalk.green(`✅ Project boilerplate files created\n`));
 
     // Install the project dependencies with the specified package manager
     console.log(
-      `\x1b[34mInstalling project dependencies with ${packageManager}...\x1b[0m\n`,
+      chalk.blue(
+        `▶️ Installing project dependencies with ${packageManager}...\n`,
+      ),
     );
     runCmd(`${packageManager} install`);
-    console.log(`\n\x1b[32mProject dependencies installed\x1b[0m\n`);
+    console.log(chalk.green(`\n✅ Project dependencies installed\n`));
 
     // Use the installed version of `prettier` to format the generated code
-    console.log(`\x1b[34mFormatting boilerplate project files...\x1b[0m\n`);
+    console.log(chalk.blue(`▶️ Formatting boilerplate project files...\n`));
     await runPrettier();
-    console.log(`\x1b[32mBoilerplate files formatted\x1b[0m\n`);
+    console.log(chalk.green(`✅ Boilerplate files formatted\n`));
 
     // Project creation complete
-    console.log(
-      `\x1b[32m🎉 Successfully created project "${name}" 🎉\x1b[0m\n`,
-    );
+    console.log(chalk.bold(`🎉 Successfully created project "${name}"🎉\n`));
   } catch (error) {
     console.error(error);
     process.exit(1);
