@@ -9,9 +9,6 @@ if [ ! -z "$PH_PACKAGES" ]; then
     echo "[entrypoint] Installing package: $pkg"
     ph install $pkg
   done
-  # Rebuild node_modules with hoisted mode to fix overlay filesystem symlink issues
-  echo "[entrypoint] Rebuilding node_modules with hoisted mode..."
-  pnpm install
 fi
 
 # Check if DATABASE_URL starts with postgres and run Prisma db push
