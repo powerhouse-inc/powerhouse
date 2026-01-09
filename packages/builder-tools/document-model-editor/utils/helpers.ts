@@ -682,6 +682,7 @@ export function validateStateObject(
   sharedSchemaDocumentNode: DocumentNode,
   stateTypeDefinitionNode: ObjectTypeDefinitionNode,
   stateValue: string,
+  options?: { checkMissingOptionalFields?: boolean },
 ): Error[] {
   let stateObjectJson: Record<string, unknown> | undefined;
   try {
@@ -740,7 +741,20 @@ export function validateStateObject(
     v: stateObjectJson,
   });
 
-  return errors ? graphQLErrorsToStateValidationErrors(errors) : [];
+  const validationErrors = errors
+    ? graphQLErrorsToStateValidationErrors(errors)
+    : [];
+
+  if (options?.checkMissingOptionalFields) {
+    const missingOptionalErrors = detectMissingOptionalFields(
+      sharedSchemaDocumentNode,
+      stateTypeDefinitionNode,
+      stateObjectJson,
+    );
+    validationErrors.push(...missingOptionalErrors);
+  }
+
+  return validationErrors;
 }
 
 /**
@@ -937,6 +951,7 @@ function convertOutputTypeNodeToInputTypeNode(
 
 export type StateValidationErrorKind =
   | "MISSING"
+  | "MISSING_OPTIONAL"
   | "UNKNOWN_FIELD"
   | "NON_NULL"
   | "TYPE";
@@ -947,6 +962,12 @@ export type StateValidationErrorPayload =
       path: (string | number)[];
       field: string;
       expectedType?: string; // e.g. "String!"
+    }
+  | {
+      kind: "MISSING_OPTIONAL";
+      path: (string | number)[];
+      field: string;
+      expectedType?: string; // e.g. "String"
     }
   | {
       kind: "UNKNOWN_FIELD";
@@ -1136,6 +1157,87 @@ export function graphQLErrorsToStateValidationErrors(
   }
 
   return out;
+}
+
+/**
+ * Detects optional fields defined in the schema that are missing from the state object.
+ * Returns StateValidationError[] for each missing optional field.
+ */
+export function detectMissingOptionalFields(
+  sharedSchemaDocumentNode: DocumentNode,
+  rootTypeNode: ObjectTypeDefinitionNode,
+  value: string | Record<string, unknown>,
+  basePath: (string | number)[] = [],
+): StateValidationError[] {
+  let stateObjectJson: Record<string, unknown> | undefined;
+  try {
+    stateObjectJson =
+      typeof value === "string"
+        ? (JSON.parse(value) as Record<string, unknown>)
+        : value;
+  } catch {
+    return [];
+  }
+
+  const typeByName = indexObjectTypes(sharedSchemaDocumentNode);
+  const errors: StateValidationError[] = [];
+
+  for (const field of rootTypeNode.fields ?? []) {
+    const fieldName = field.name.value;
+    const fieldPath = [...basePath, fieldName];
+
+    // Check if field is missing from the state object
+    if (!(fieldName in stateObjectJson)) {
+      // Only report if the field is optional (not NonNull)
+      // Required fields are already caught by GraphQL validation
+      const isRequired = field.type.kind === Kind.NON_NULL_TYPE;
+      if (!isRequired) {
+        errors.push(
+          new StateValidationError({
+            kind: "MISSING_OPTIONAL",
+            path: fieldPath,
+            field: fieldName,
+            expectedType: typeNodeToString(field.type),
+          }),
+        );
+      }
+      continue;
+    }
+
+    // If present and object-typed → recurse to check nested missing fields
+    const namedType = unwrapNamedType(field.type);
+    const childType = namedType ? typeByName.get(namedType) : undefined;
+
+    if (
+      childType &&
+      typeof stateObjectJson[fieldName] === "object" &&
+      stateObjectJson[fieldName] !== null
+    ) {
+      const nestedErrors = detectMissingOptionalFields(
+        sharedSchemaDocumentNode,
+        childType,
+        stateObjectJson[fieldName] as Record<string, unknown>,
+        fieldPath,
+      );
+      errors.push(...nestedErrors);
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * Converts a TypeNode to its string representation (e.g., "String", "Int!", "[String]!")
+ */
+function typeNodeToString(typeNode: TypeNode): string {
+  switch (typeNode.kind) {
+    case Kind.NAMED_TYPE:
+      return typeNode.name.value;
+    case Kind.NON_NULL_TYPE:
+      return `${typeNodeToString(typeNode.type)}!`;
+    case Kind.LIST_TYPE:
+      return `[${typeNodeToString(typeNode.type)}]`;
+  }
 }
 
 export function fillMissingFieldsWithNull(

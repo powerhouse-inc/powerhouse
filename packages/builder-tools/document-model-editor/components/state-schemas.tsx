@@ -109,6 +109,9 @@ function StateEditor({
       sharedSchemaDocumentNode,
       stateTypeDefinitionNode,
       existingValue,
+      {
+        checkMissingOptionalFields: !syncWithSchema,
+      },
     );
 
     if (errors.length && syncWithSchema) {
