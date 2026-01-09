@@ -26,8 +26,8 @@ export class ReadModelCoordinator implements IReadModelCoordinator {
 
   constructor(
     private eventBus: IEventBus,
-    private preReady: IReadModel[],
-    private postReady: IReadModel[],
+    public readonly preReady: IReadModel[],
+    public readonly postReady: IReadModel[],
   ) {
     //
   }
