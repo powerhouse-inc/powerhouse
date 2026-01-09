@@ -120,6 +120,6 @@ export const packageJsonTemplate = (
   "peerDependencies": {
     "react": ">=19.0.0",
     "react-dom": ">=19.0.0"
-  },
+  }
 }
 `.raw;
