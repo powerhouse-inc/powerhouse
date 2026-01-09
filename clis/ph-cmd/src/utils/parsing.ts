@@ -1,3 +1,5 @@
+import chalk from "chalk";
+
 export function parseTag(args: {
   tag?: string;
   dev?: boolean;
@@ -60,5 +62,7 @@ export function logVersionUpdate(args: {
   newVersion: string;
 }) {
   const { name, version, newVersion } = args;
-  console.log(`Updating ${name}: ${version} -> ${newVersion}`);
+  console.log(
+    `⚙️ Updating ${chalk.bold(name)}: ${chalk.blue(version)} -> ${chalk.green(newVersion)}`,
+  );
 }

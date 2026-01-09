@@ -1,4 +1,5 @@
 import { getPackageVersion } from "@powerhousedao/codegen/file-builders";
+import chalk from "chalk";
 import {
   boolean,
   command,
@@ -10,7 +11,7 @@ import {
   run,
   string,
 } from "cmd-ts";
-import { detect } from "detect-package-manager";
+import { detect } from "package-manager-detector/detect";
 import { readPackage } from "read-pkg";
 import { clean, valid } from "semver";
 import { writePackage } from "write-package";
@@ -48,6 +49,7 @@ const commandParser = command({
       type: optional(boolean),
       long: "skip-install",
       short: "s",
+      description: "Skip running `install` with your package manager",
     }),
   },
   handler: async ({ tagPositional, tagOption, version, skipInstall }) => {
@@ -61,10 +63,12 @@ const commandParser = command({
     }
 
     if (version && !valid(clean(version))) {
-      throw new Error(`Invalid version: ${version}`);
+      throw new Error(`❌ Invalid version: ${chalk.bold(version)}`);
     }
 
-    console.log(`Updating project to use ${version ?? tag}`);
+    console.log(
+      `▶️ Updating project to use ${chalk.bold(version ?? tag)}...\n`,
+    );
 
     const packageJson = await readPackage();
 
@@ -134,12 +138,24 @@ const commandParser = command({
 
     await writePackage(packageJson);
 
+    console.log(
+      chalk.green(
+        `\n✅ Project updated to use ${chalk.bold(version ?? tag)}\n`,
+      ),
+    );
+
     if (skipInstall) return;
 
     const packageManager = await detect();
-
-    console.log(`Installing updated dependencies with \`${packageManager}\``);
-    runCmd(`${packageManager} install`);
+    if (!packageManager) {
+      throw new Error(
+        `❌ Failed to detect your package manager. Run install manually.`,
+      );
+    }
+    console.log(
+      `▶️ Installing updated dependencies with \`${packageManager.agent}\`\n`,
+    );
+    runCmd(`${packageManager.agent} install`);
   },
 });
 

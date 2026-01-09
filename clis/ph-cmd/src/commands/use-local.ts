@@ -1,3 +1,4 @@
+import chalk from "chalk";
 import {
   boolean,
   command,
@@ -42,6 +43,7 @@ const commandParser = command({
       type: optional(boolean),
       long: "skip-install",
       short: "s",
+      description: "Skip running `install` with `pnpm`",
     }),
   },
   handler: async ({
@@ -53,7 +55,7 @@ const commandParser = command({
 
     if (!monorepoPath) {
       throw new Error(
-        "Please provide the path to your local powerhouse monorepo.",
+        "❌ Please provide the path to your local powerhouse monorepo.",
       );
     }
 
@@ -61,11 +63,13 @@ const commandParser = command({
 
     if (!monorepoDirExists) {
       throw new Error(
-        "No directory found at the powerhouse monorepo path you specified.",
+        "❌ No directory found at the powerhouse monorepo path you specified.",
       );
     }
 
-    console.log(`Linking powerhouse dependencies to "${monorepoPath}...`);
+    console.log(
+      `\n▶️ Linking powerhouse dependencies to "${chalk.bold(monorepoPath)}...\n`,
+    );
 
     const packageJson = await readPackage();
 
@@ -133,9 +137,11 @@ const commandParser = command({
 
     await writePackage(packageJson);
 
+    console.log(chalk.green(`\n✅ Project linked successfully\n`));
+
     if (skipInstall) return;
 
-    console.log(`Installing linked dependencies with \`pnpm\``);
+    console.log(`Installing linked dependencies with \`pnpm\`\n`);
     runCmd(`pnpm install`);
   },
 });

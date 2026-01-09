@@ -498,12 +498,12 @@ importers:
       commander:
         specifier: ^12.1.0
         version: 12.1.0
-      detect-package-manager:
-        specifier: ^3.0.2
-        version: 3.0.2
       enquirer:
         specifier: ^2.4.1
         version: 2.4.1
+      package-manager-detector:
+        specifier: ^0.2.11
+        version: 0.2.11
       read-pkg:
         specifier: ^9.0.1
         version: 9.0.1
@@ -13043,10 +13043,6 @@ packages:
 
   detect-node@2.1.0:
     resolution: {integrity: sha512-T0NIuQpnTvFDATNuHN5roPwSBG83rFsuO+MXXH9/3N1eFbn4wcPjttvjMLEPWJ0RGUYgQE7cGgS3tNxbqCGM7g==}
-
-  detect-package-manager@3.0.2:
-    resolution: {integrity: sha512-8JFjJHutStYrfWwzfretQoyNGoZVW1Fsrp4JO9spa7h/fBfwgTMEIy4/LBzRDGsxwVPHU0q+T9YvwLDJoOApLQ==}
-    engines: {node: '>=12'}
 
   detect-port@1.6.1:
     resolution: {integrity: sha512-CmnVc+Hek2egPx1PeTFVta2W78xy2K/9Rkf6cC4T59S50tVnzKj+tnx5mmx5lwvCkujZ4uRrpRSuV+IVs3f90Q==}
@@ -37927,10 +37923,6 @@ snapshots:
   detect-node-es@1.1.0: {}
 
   detect-node@2.1.0: {}
-
-  detect-package-manager@3.0.2:
-    dependencies:
-      execa: 5.1.1
 
   detect-port@1.6.1:
     dependencies:

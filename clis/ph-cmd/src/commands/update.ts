@@ -1,6 +1,7 @@
 import { getPackageVersion } from "@powerhousedao/codegen/file-builders";
+import chalk from "chalk";
 import { boolean, command, flag, optional, run } from "cmd-ts";
-import { detect } from "detect-package-manager";
+import { detect } from "package-manager-detector/detect";
 import { readPackage } from "read-pkg";
 import { writePackage } from "write-package";
 import { ALL_POWERHOUSE_DEPENDENCIES } from "../utils/constants.js";
@@ -16,10 +17,11 @@ const commandParser = command({
       type: optional(boolean),
       long: "skip-install",
       short: "s",
+      description: "Skip running `install` with your package manager",
     }),
   },
   handler: async ({ skipInstall }) => {
-    console.log(`Updating Powerhouse dependencies...`);
+    console.log(`\n▶️ Updating Powerhouse dependencies...\n`);
     const packageJson = await readPackage();
 
     if (packageJson.dependencies) {
@@ -90,12 +92,21 @@ const commandParser = command({
 
     await writePackage(packageJson);
 
+    console.log(chalk.green(`\n✅ Project updated successfully\n`));
+
     if (skipInstall) return;
 
     const packageManager = await detect();
 
-    console.log(`Installing updated dependencies with \`${packageManager}\``);
-    runCmd(`${packageManager} install`);
+    if (!packageManager) {
+      throw new Error(
+        `❌ Failed to detect your package manager. Run install manually.`,
+      );
+    }
+    console.log(
+      `▶️ Installing updated dependencies with \`${packageManager.agent}\`\n`,
+    );
+    runCmd(`${packageManager.agent} install`);
   },
 });
 

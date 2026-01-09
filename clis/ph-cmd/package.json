@@ -39,8 +39,8 @@
     "change-case": "^5.4.4",
     "cmd-ts": "^0.14.3",
     "commander": "^12.1.0",
-    "detect-package-manager": "^3.0.2",
     "enquirer": "^2.4.1",
+    "package-manager-detector": "^0.2.11",
     "read-pkg": "^9.0.1",
     "write-package": "^7.2.0"
   },

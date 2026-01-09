@@ -14,6 +14,7 @@ export * from "./boilerplate/index.html.legacy.js";
 export * from "./boilerplate/index.js";
 export * from "./boilerplate/LICENSE.js";
 export * from "./boilerplate/mcp.json.js";
+export * from "./boilerplate/npmrc.js";
 export * from "./boilerplate/package.json.js";
 export * from "./boilerplate/package.json.legacy.js";
 export * from "./boilerplate/powerhouse.config.json.js";
