@@ -1,4 +1,5 @@
 import { InspectorModal as ConnectInspectorModal } from "@powerhousedao/design-system/connect";
+import { REACTOR_SCHEMA } from "@powerhousedao/reactor";
 import { closePHModal, usePHModal } from "@powerhousedao/reactor-browser";
 import { useDbExplorer } from "./useDbExplorer.js";
 import { useRemotesInspector } from "./useRemotesInspector.js";
@@ -19,7 +20,7 @@ export const InspectorModal: React.FC = () => {
         if (!status) closePHModal();
       }}
       dbExplorerProps={{
-        schema: "public",
+        schema: REACTOR_SCHEMA,
         getTables,
         getTableRows,
         pageSize: DEFAULT_PAGE_SIZE,

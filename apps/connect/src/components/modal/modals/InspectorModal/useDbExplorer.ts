@@ -1,4 +1,5 @@
 import { pgDump } from "@electric-sql/pglite-tools/pg_dump";
+import { REACTOR_SCHEMA } from "@powerhousedao/reactor";
 import { useDatabase, usePGlite } from "@powerhousedao/reactor-browser/connect";
 import { sql } from "kysely";
 import { useCallback } from "react";
@@ -56,7 +57,7 @@ export function useDbExplorer() {
       INNER JOIN information_schema.tables t
         ON c.table_name = t.table_name
         AND c.table_schema = t.table_schema
-      WHERE c.table_schema = 'public'
+      WHERE c.table_schema = ${REACTOR_SCHEMA}
         AND t.table_type = 'BASE TABLE'
       ORDER BY c.table_name, c.ordinal_position
     `.execute(database);
@@ -86,7 +87,7 @@ export function useDbExplorer() {
       }
 
       const { limit, offset, sort } = options;
-      const tableRef = sql.raw(`public."${table}"`);
+      const tableRef = sql.raw(`${REACTOR_SCHEMA}."${table}"`);
 
       let query;
       if (sort) {
@@ -145,10 +146,10 @@ export function useDbExplorer() {
 
       // Use explicit transaction to ensure writable transaction context
       await pglite.transaction(async (tx) => {
-        await tx.exec(`DROP SCHEMA public CASCADE`);
-        await tx.exec(`CREATE SCHEMA public`);
+        await tx.exec(`DROP SCHEMA ${REACTOR_SCHEMA} CASCADE`);
+        await tx.exec(`CREATE SCHEMA ${REACTOR_SCHEMA}`);
         await tx.exec(sqlContent);
-        await tx.exec(`SET search_path TO public`);
+        await tx.exec(`SET search_path TO ${REACTOR_SCHEMA}`);
       });
     },
     [pglite],

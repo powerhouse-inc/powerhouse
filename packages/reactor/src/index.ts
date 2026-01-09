@@ -176,7 +176,10 @@ export { ConsoleLogger } from "./logging/console.js";
 export { type ILogger } from "./logging/types.js";
 
 // Migrations
-export { runMigrations } from "./storage/migrations/migrator.js";
+export {
+  REACTOR_SCHEMA,
+  runMigrations,
+} from "./storage/migrations/migrator.js";
 
 // Synchronization
 export {
