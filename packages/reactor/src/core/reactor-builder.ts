@@ -57,6 +57,7 @@ import type { MigrationStrategy } from "../storage/migrations/types.js";
 import { DefaultSubscriptionErrorHandler } from "../subs/default-error-handler.js";
 import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
 import { SubscriptionNotificationReadModel } from "../subs/subscription-notification-read-model.js";
+import { ProcessorManager } from "../processors/processor-manager.js";
 
 export class ReactorBuilder {
   private logger?: ILogger;
@@ -305,10 +306,26 @@ export class ReactorBuilder {
     const subscriptionNotificationReadModel =
       new SubscriptionNotificationReadModel(subscriptionManager, documentView);
 
+    const processorManagerConsistencyTracker = new ConsistencyTracker();
+    const processorManager = new ProcessorManager(
+      // @ts-expect-error - Database type is a superset that includes all required tables
+      database,
+      operationIndex,
+      writeCache,
+      processorManagerConsistencyTracker,
+    );
+
+    try {
+      await processorManager.init();
+    } catch (error) {
+      console.error("Error initializing processor manager", error);
+    }
+
     const readModelCoordinator = this.readModelCoordinator
       ? this.readModelCoordinator
       : new ReadModelCoordinator(eventBus, readModelInstances, [
           subscriptionNotificationReadModel,
+          processorManager,
         ]);
 
     const reactor = new Reactor(
@@ -355,6 +372,8 @@ export class ReactorBuilder {
       documentIndexerConsistencyTracker,
       readModelCoordinator,
       subscriptionManager,
+      processorManager,
+      processorManagerConsistencyTracker,
       syncModule,
       reactor,
     };

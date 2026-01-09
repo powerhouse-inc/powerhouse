@@ -214,3 +214,13 @@ export {
   type SyncEnvelopeType,
   type SyncOperationErrorType,
 } from "./sync/index.js";
+
+// Processors
+export { ProcessorManager } from "./processors/index.js";
+export type {
+  IProcessor,
+  IProcessorManager,
+  ProcessorFactory,
+  ProcessorFilter,
+  ProcessorRecord,
+} from "./processors/index.js";

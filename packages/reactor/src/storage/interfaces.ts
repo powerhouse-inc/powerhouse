@@ -8,6 +8,8 @@ export type OperationContext = {
   scope: string;
   branch: string;
   resultingState?: string;
+
+  // This is a _global_ ordinal that is increasing across all documents and scopes.
   ordinal: number;
 };
 
