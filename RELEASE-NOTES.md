@@ -4,12 +4,50 @@
 
 ### ✨ Highlights
 
-1. **Authentication & Permissions** - CLI authentication and document-level permission system
-2. **TS Morph Code Generation (Now Default)** - Faster, more reliable code generation
-3. **Runtime Document Model Subgraphs** - No more generated subgraph code to manage
-4. **Versioned Document Models** - Initial support for document model versioning (WIP 🚧)
+1. **OpenTelemetry Tracing** - Migrated from Datadog to OpenTelemetry with Tempo service graphs for better observability
+2. **Runtime Document Model Subgraphs** - Subgraphs now generated at runtime, eliminating manual code generation
+3. **TS Morph Code Generation (Default)** - Faster, more reliable code generation is now the default
+4. **Document Permission Service** - Fine-grained access control at the document level
+5. **CLI Authentication** - New `ph login` and `ph access-token` commands
+6. **Cryptographic Signing** - Document and operation signing with verification
+
+---
 
 ### NEW FEATURES
+
+#### 📊 OpenTelemetry Tracing
+
+Migrated observability from Datadog to OpenTelemetry with Tempo service graphs, providing better distributed tracing across the entire Powerhouse stack.
+
+```bash
+# Tracing is now available on Switchboard
+# Configure via environment variables
+OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4318
+```
+
+#### 🔄 Runtime Document Model Subgraphs
+
+Document model subgraphs are now automatically generated at runtime on Switchboard. This eliminates the need to manually generate and maintain subgraph code.
+
+**Action required:** Delete generated subgraphs from your project to avoid conflicts:
+
+```bash
+# Remove generated subgraph files from your project
+rm -rf src/subgraphs/
+```
+
+#### ⚡ TS Morph Code Generation
+
+TS Morph is now the default code generator, replacing the previous template-based approach. This provides:
+
+- Faster code generation
+- Better type safety
+- More reliable output
+
+```bash
+# No changes needed - it's the default now
+ph generate
+```
 
 #### 🔐 CLI Authentication
 
@@ -19,17 +57,19 @@ New CLI commands for authentication workflows:
 
 ```bash
 ph login
+# Opens browser for authentication
 ```
 
 **`ph access-token`** - Generate access tokens for API authentication
 
 ```bash
 ph access-token
+# Outputs a JWT token for API calls
 ```
 
 #### 🛡️ Document Permission Service
 
-A new permission system that provides fine-grained access control at the document level for the Reactor-API (Not yet in Connect)
+A new permission system providing fine-grained access control at the document level for the Reactor-API.
 
 **Key Features:**
 
@@ -37,19 +77,148 @@ A new permission system that provides fine-grained access control at the documen
 - **Document Group Permissions** - Organize documents into groups with shared access rules
 - **Feature Flag** - Enable/disable via configuration
 
-The permission service can be enabled via environment variable or configuration. When enabled, all document operations are validated against the permission rules.
+```typescript
+// Enable via environment variable
+ENABLE_DOCUMENT_PERMISSIONS=true
+```
 
-#### Runtime Document Model Subgraphs
+#### ✍️ Cryptographic Signing
 
-Document model subgraphs are now automatically available on Switchboard at runtime.
-**Action required:** Delete generated subgraphs from your project to avoid conflicts.
+Initial support for document and operation signing with verification:
+
+- Connect crypto signer and verifier
+- Document creation signatures
+- All actions can now be signed
+- Reactor client signs mutations automatically
+
+#### 🔍 Inspector Tools
+
+New debugging components inside Connect to help developers understand what's happening under the hood:
+
+- **DB Explorer** - Browse and inspect tables in the local PGlite database
+- **Remotes Inspector** - View configured sync remotes and their status
+- **Channel Inspector** - Debug sync channels (inbox, outbox, dead letter queues)
+
+#### 📣 Dispatch Callbacks
+
+The `dispatch` function now supports `onSuccess` and `onErrors` callbacks:
+
+```typescript
+const [document, dispatch] = useDocumentById(documentId);
+
+// Dispatch with callbacks
+dispatch(myAction, {
+  onSuccess: () => {
+    console.log("Action completed!");
+  },
+  onErrors: (errors) => {
+    console.error("Action failed:", errors);
+  }
+});
+```
+
+#### 🔔 Toast Notifications
+
+Integrated toast notification system for validation errors and user feedback:
+
+```typescript
+// Automatic toast on invalid operation names
+// No code changes needed - works out of the box
+```
+
+#### 📦 Document Model Versioning (WIP 🚧)
+
+Initial support for versioned document models:
+
+- Version upgrade types
+- Versioned codegen output
+- Reactor integration for versioned models
+
+---
 
 ### IMPROVEMENTS
 
-- **TS Morph is now the default code generator** for better performance
-- **Document meta cache** improves reactor performance
-- **Queue performance** optimizations
-- **New document hooks** - Added `useDocument` and `useDocuments` suspense-based hooks, and `useGetDocument`/`useGetDocuments` now return getter functions
+#### React Hooks Enhancements
+
+- **Stale-while-revalidate** - Document retrieval hooks now show cached data while fetching fresh data
+- **Improved reactivity** - Documents update correctly when they change
+- **Feature flags context** - Global feature flag management across hooks
+
+#### Performance
+
+- **Document meta cache** - Reduces database queries
+- **Queue performance benchmarks** - Comprehensive performance testing for the reactor queue
+- **PGlite optimizations** - Better in-memory database performance
+
+#### Developer Experience
+
+- **Healthcheck routes** - `/health` endpoint for Connect and Switchboard
+- **Logging interface** - Improved debugging output
+- **HMR improvements** - Avoid page reloads on Vite hot module replacement
+- **Error boundaries** - Better error handling for outdated chunks
+
+#### CLI
+
+- **index.html migration** - `ph migrate` now handles index.html updates
+- **Template reorganization** - Templates moved to top level of codegen for easier customization
+
+#### Document Cache Hooks Changes
+
+The document cache hooks have been reorganized for better flexibility:
+
+| Hook                      | Description                                                                                  |
+| ------------------------- | -------------------------------------------------------------------------------------------- |
+| `useDocument(id)`         | Suspense-based hook that returns a document by ID (renamed from `useGetDocument`)            |
+| `useDocuments(ids)`       | Suspense-based hook that returns multiple documents (renamed from `useGetDocuments`)         |
+| `useGetDocument()`        | Returns a function `(id) => Promise<PHDocument>` to fetch documents imperatively             |
+| `useGetDocuments()`       | Returns a function `(ids) => Promise<PHDocument[]>` to fetch multiple documents imperatively |
+| `useGetDocumentAsync(id)` | Non-suspense hook that returns loading state (unchanged)                                     |
+
+**Migration:**
+
+```typescript
+// Before (v5.1.x)
+const document = useGetDocument(id);
+const documents = useGetDocuments(ids);
+
+// After (v5.2.0)
+const document = useDocument(id);
+const documents = useDocuments(ids);
+
+// New: Get a function to fetch documents on-demand (lazy loading)
+const getDocument = useGetDocument();
+
+const handleClick = async (id: string) => {
+  // Document is only fetched when the callback is invoked
+  const document = await getDocument(id);
+};
+```
+
+---
+
+### BUG FIXES
+
+- Fixed Safari drag-and-drop with empty `dataTransfer.items`
+- Fixed circular imports across multiple packages
+- Fixed query params preservation when navigating in Connect
+- Fixed schema drop transaction handling
+- Fixed sync operation batching with scopes
+- Fixed document cache reactivity issues
+- Fixed processors not being added on initial boot
+- Fixed off-by-one issues in cache invalidation
+- Numerous linting and build fixes
+
+---
+
+### ❤️ Contributors
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Frank @froid1911
+- Guillermo Puente @gpuente
+- Ryan Wolhuter @ryanwolhuter
+- Samuel Hawksby-Robinson @Samyoul
+- CallmeT-ty @CallmeT-ty
 
 #### Document Cache Hooks Changes
 

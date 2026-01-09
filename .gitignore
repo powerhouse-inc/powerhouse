@@ -27,3 +27,6 @@ test-results/
 # Identity/auth credential files
 .auth.json
 .keypair.json
+
+# Generated release notes prompt
+.release-notes-prompt.md
