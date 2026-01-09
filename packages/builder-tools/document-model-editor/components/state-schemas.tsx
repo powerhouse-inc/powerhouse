@@ -1,7 +1,15 @@
 import { cn } from "@powerhousedao/design-system";
 import { Checkbox } from "@powerhousedao/design-system/ui/components/checkbox/checkbox.js";
 import { Kind } from "graphql";
-import { lazy, Suspense, useCallback, useMemo, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { typeDefsDoc } from "../constants/documents.js";
 import { safeParseSdl, useSchemaContext } from "../context/schema-context.js";
 import type { Scope } from "../types/documents.js";
@@ -79,12 +87,16 @@ function StateEditor({
     [setInitialState, scope],
   );
 
-  const initialValueErrors = useMemo(() => {
+  // Track if we've already synced to prevent double-calls in StrictMode
+  const hasSyncedRef = useRef(false);
+
+  const { initialValueErrors, fixedState } = useMemo(() => {
     const existingValue = initialValue || "{}";
     const sharedSchemaDocumentNode = safeParseSdl(sharedSchemaSdl);
-    if (!sharedSchemaDocumentNode) return [];
+    if (!sharedSchemaDocumentNode)
+      return { initialValueErrors: [], fixedState: null };
     const stateTypeName = makeStateSchemaNameForScope(modelName, scope);
-    if (!stateTypeName) return [];
+    if (!stateTypeName) return { initialValueErrors: [], fixedState: null };
     const stateTypeDefinitionNode = sharedSchemaDocumentNode.definitions.find(
       (def) =>
         def.kind === Kind.OBJECT_TYPE_DEFINITION &&
@@ -94,7 +106,7 @@ function StateEditor({
       !stateTypeDefinitionNode ||
       stateTypeDefinitionNode.kind !== Kind.OBJECT_TYPE_DEFINITION
     )
-      return [];
+      return { initialValueErrors: [], fixedState: null };
 
     const errors = validateStateObject(
       sharedSchemaDocumentNode,
@@ -103,18 +115,28 @@ function StateEditor({
     );
 
     if (errors.length && syncWithSchema) {
-      const fixedState = makeMinimalObjectForStateType({
+      const computedFixedState = makeMinimalObjectForStateType({
         sharedSchemaDocumentNode,
         stateTypeDefinitionNode,
         existingValue,
       });
-      if (initialValue !== fixedState) {
-        setInitialState(fixedState, scope);
-        return [];
+      if (initialValue !== computedFixedState) {
+        return { initialValueErrors: [], fixedState: computedFixedState };
       }
     }
-    return errors;
-  }, [sharedSchemaSdl, initialValue, syncWithSchema, scope]);
+    return { initialValueErrors: errors, fixedState: null };
+  }, [sharedSchemaSdl, initialValue, syncWithSchema, scope, modelName]);
+
+  // Handle the side effect of syncing initial state separately
+  useEffect(() => {
+    if (fixedState && !hasSyncedRef.current) {
+      hasSyncedRef.current = true;
+      setInitialState(fixedState, scope);
+    } else if (!fixedState) {
+      // Reset the ref when there's no fix needed
+      hasSyncedRef.current = false;
+    }
+  }, [fixedState, setInitialState, scope]);
 
   return (
     <div className="grid grid-cols-2 gap-4">
