@@ -4,7 +4,7 @@
 **This tutorial is a summary for builders that are already familiar with building document models**.  
 It provides a summary from initial setup up to publishing a distributable package.
 
-Please start with the '**Get Started**' Chapter or '**Document Model Creation**' section if you are unfamiliar with building a document model.
+Please start with the [**Get Started**](/academy/GetStarted/home) Chapter or [**Document Model Creation**](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema) section if you are unfamiliar with building a document model.
 :::
 
 <details>

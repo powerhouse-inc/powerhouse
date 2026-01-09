@@ -2,7 +2,7 @@
 
 :::warning
 **This guide assumes familiarity with building document models in Vetra Studio.**  
-Please start with the **'Get Started'** chapter or **'Document Model Creation'** section if you are new to building document models.
+Please start with the [**Get Started**](/academy/GetStarted/home) chapter or [**Document Model Creation**](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema) section if you are new to building document models.
 :::
 
 This guide covers the process of **building** and **publishing** a Powerhouse package to NPM.
