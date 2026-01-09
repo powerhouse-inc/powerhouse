@@ -1,6 +1,8 @@
-import { Migrator } from "kysely";
+import { Migrator, sql } from "kysely";
 import type { MigrationProvider, Kysely } from "kysely";
 import type { MigrationResult } from "./types.js";
+
+export const REACTOR_SCHEMA = "reactor";
 import * as migration001 from "./001_create_operation_table.js";
 import * as migration002 from "./002_create_keyframe_table.js";
 import * as migration003 from "./003_create_document_table.js";
@@ -31,13 +33,37 @@ class ProgrammaticMigrationProvider implements MigrationProvider {
   }
 }
 
-export async function runMigrations(db: Kysely<any>): Promise<MigrationResult> {
+export async function runMigrations(
+  db: Kysely<any>,
+  schema: string = REACTOR_SCHEMA,
+): Promise<MigrationResult> {
+  try {
+    await sql`CREATE SCHEMA IF NOT EXISTS ${sql.id(schema)}`.execute(db);
+  } catch (error) {
+    return {
+      success: false,
+      migrationsExecuted: [],
+      error:
+        error instanceof Error ? error : new Error("Failed to create schema"),
+    };
+  }
+
   const migrator = new Migrator({
-    db,
+    db: db.withSchema(schema),
     provider: new ProgrammaticMigrationProvider(),
+    migrationTableSchema: schema,
   });
 
-  const { error, results } = await migrator.migrateToLatest();
+  let error: unknown;
+  let results: Awaited<ReturnType<typeof migrator.migrateToLatest>>["results"];
+  try {
+    const result = await migrator.migrateToLatest();
+    error = result.error;
+    results = result.results;
+  } catch (e) {
+    error = e;
+    results = [];
+  }
 
   const migrationsExecuted =
     results?.map((result) => result.migrationName) ?? [];
@@ -57,10 +83,14 @@ export async function runMigrations(db: Kysely<any>): Promise<MigrationResult> {
   };
 }
 
-export async function getMigrationStatus(db: Kysely<any>) {
+export async function getMigrationStatus(
+  db: Kysely<any>,
+  schema: string = REACTOR_SCHEMA,
+) {
   const migrator = new Migrator({
-    db,
+    db: db.withSchema(schema),
     provider: new ProgrammaticMigrationProvider(),
+    migrationTableSchema: schema,
   });
 
   return await migrator.getMigrations();

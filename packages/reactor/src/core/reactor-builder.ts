@@ -49,7 +49,10 @@ import { PGliteDialect } from "kysely-pglite-dialect";
 import type { IEventBus } from "../events/interfaces.js";
 import type { SignatureVerificationHandler } from "../signer/types.js";
 import { ConsistencyAwareLegacyStorage } from "../storage/consistency-aware-legacy-storage.js";
-import { runMigrations } from "../storage/migrations/migrator.js";
+import {
+  REACTOR_SCHEMA,
+  runMigrations,
+} from "../storage/migrations/migrator.js";
 import type { MigrationStrategy } from "../storage/migrations/types.js";
 import { DefaultSubscriptionErrorHandler } from "../subs/default-error-handler.js";
 import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
@@ -175,18 +178,20 @@ export class ReactorBuilder {
     const driveServer = builder.build() as unknown as BaseDocumentDriveServer;
     await driveServer.initialize();
 
-    const database =
+    const baseDatabase =
       this.kyselyInstance ??
       new Kysely<Database>({
         dialect: new PGliteDialect(new PGlite()),
       });
 
     if (this.migrationStrategy === "auto") {
-      const result = await runMigrations(database);
+      const result = await runMigrations(baseDatabase, REACTOR_SCHEMA);
       if (!result.success && result.error) {
         throw new Error(`Database migration failed: ${result.error.message}`);
       }
     }
+
+    const database = baseDatabase.withSchema(REACTOR_SCHEMA);
 
     const operationStore = new KyselyOperationStore(
       database as unknown as Kysely<StorageDatabase>,

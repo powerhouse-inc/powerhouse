@@ -59,7 +59,10 @@ import { KyselyOperationStore } from "../src/storage/kysely/store.js";
 import { KyselySyncCursorStorage } from "../src/storage/kysely/sync-cursor-storage.js";
 import { KyselySyncRemoteStorage } from "../src/storage/kysely/sync-remote-storage.js";
 import type { Database as DatabaseSchema } from "../src/storage/kysely/types.js";
-import { runMigrations } from "../src/storage/migrations/migrator.js";
+import {
+  REACTOR_SCHEMA,
+  runMigrations,
+} from "../src/storage/migrations/migrator.js";
 import type { IReactorSubscriptionManager } from "../src/subs/types.js";
 import type { IChannel, IChannelFactory } from "../src/sync/interfaces.js";
 import type { ChannelConfig, SyncEnvelope } from "../src/sync/types.js";
@@ -105,15 +108,16 @@ export async function createTestOperationStore(): Promise<{
   store: KyselyOperationStore;
   keyframeStore: KyselyKeyframeStore;
 }> {
-  const db = new Kysely<DatabaseSchema>({
+  const baseDb = new Kysely<DatabaseSchema>({
     dialect: new PGliteDialect(new PGlite()),
   });
 
-  const result = await runMigrations(db);
+  const result = await runMigrations(baseDb, REACTOR_SCHEMA);
   if (!result.success && result.error) {
     throw new Error(`Test migration failed: ${result.error.message}`);
   }
 
+  const db = baseDb.withSchema(REACTOR_SCHEMA);
   const store = new KyselyOperationStore(db);
   const keyframeStore = new KyselyKeyframeStore(db);
 
@@ -828,15 +832,16 @@ export async function createTestSyncStorage(): Promise<{
   syncRemoteStorage: KyselySyncRemoteStorage;
   syncCursorStorage: KyselySyncCursorStorage;
 }> {
-  const db = new Kysely<DatabaseSchema>({
+  const baseDb = new Kysely<DatabaseSchema>({
     dialect: new PGliteDialect(new PGlite()),
   });
 
-  const result = await runMigrations(db);
+  const result = await runMigrations(baseDb, REACTOR_SCHEMA);
   if (!result.success && result.error) {
     throw new Error(`Test migration failed: ${result.error.message}`);
   }
 
+  const db = baseDb.withSchema(REACTOR_SCHEMA);
   const syncRemoteStorage = new KyselySyncRemoteStorage(db);
   const syncCursorStorage = new KyselySyncCursorStorage(db);
 
