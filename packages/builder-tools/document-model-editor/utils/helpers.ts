@@ -116,10 +116,13 @@ export function makeMinimalObjectForStateType(args: {
   if (!stateTypeDefinitionFields?.length) {
     return existingValue;
   }
+  // Initialize visitedTypes with the root type to detect self-recursive types
+  const visitedTypes = new Set<string>([stateTypeDefinitionNode.name.value]);
   const minimalObject = makeMinimalValuesForObjectFields({
     schemaDocumentNode: sharedSchemaDocumentNode,
     fieldDefinitionNodes: stateTypeDefinitionFields,
     existingValueObject,
+    visitedTypes,
   });
   return JSON.stringify(minimalObject, null, 2);
 }
@@ -128,9 +131,14 @@ export function makeMinimalValuesForObjectFields(args: {
   schemaDocumentNode: DocumentNode;
   existingValueObject: Record<string, Serializable> | null;
   fieldDefinitionNodes: readonly FieldDefinitionNode[];
+  visitedTypes?: Set<string>;
 }) {
-  const { schemaDocumentNode, existingValueObject, fieldDefinitionNodes } =
-    args;
+  const {
+    schemaDocumentNode,
+    existingValueObject,
+    fieldDefinitionNodes,
+    visitedTypes,
+  } = args;
   const newJson: Record<string, Serializable> = {};
 
   for (const astNode of fieldDefinitionNodes) {
@@ -143,6 +151,7 @@ export function makeMinimalValuesForObjectFields(args: {
       astNode,
       schemaDocumentNode,
       existingValueObject,
+      visitedTypes,
     });
     newJson[astNode.name.value] = minimalValue;
   }
@@ -155,8 +164,15 @@ function makeMinimalValueForASTNode(args: {
   astNode: ASTNode;
   schemaDocumentNode: DocumentNode;
   existingValueObject: Record<string, Serializable> | null;
-}) {
-  const { fieldName, astNode, schemaDocumentNode, existingValueObject } = args;
+  visitedTypes?: Set<string>;
+}): Serializable {
+  const {
+    fieldName,
+    astNode,
+    schemaDocumentNode,
+    existingValueObject,
+    visitedTypes,
+  } = args;
   const existingFieldValue = existingValueObject?.[fieldName];
   let node: ASTNode | null = astNode;
 
@@ -169,7 +185,13 @@ function makeMinimalValueForASTNode(args: {
   }
 
   if (isListTypeNode(node)) {
-    return makeMinimalValueForGqlListNode(node, existingFieldValue, isNonNull);
+    return makeMinimalValueForGqlListNode(
+      node,
+      existingFieldValue,
+      isNonNull,
+      schemaDocumentNode,
+      visitedTypes,
+    );
   }
   if (isGqlPrimitiveNode(node)) {
     return makeMinimalValueForGQLPrimitiveNode(
@@ -205,6 +227,7 @@ function makeMinimalValueForASTNode(args: {
       schemaDocumentNode,
       existingValueObject,
       isNonNull,
+      visitedTypes,
     );
   }
   if (isObjectTypeDefinitionNode(namedTypeDefinitionNode)) {
@@ -214,6 +237,7 @@ function makeMinimalValueForASTNode(args: {
       existingValueObject,
       existingFieldValue,
       isNonNull,
+      visitedTypes,
     );
   }
 
@@ -405,6 +429,7 @@ function makeMinimalValueForGqlUnion(
   schemaDocumentNode: DocumentNode,
   existingValueObject: Record<string, Serializable> | null,
   isNonNull: boolean,
+  visitedTypes?: Set<string>,
 ) {
   if (!isNonNull && !existingFieldValue) {
     return null;
@@ -432,6 +457,7 @@ function makeMinimalValueForGqlUnion(
     existingValueObject,
     existingFieldValue,
     isNonNull,
+    visitedTypes,
   );
 }
 
@@ -439,6 +465,8 @@ function makeMinimalValueForGqlListNode(
   listTypeNode: ListTypeNode,
   existingFieldValue: Serializable,
   isNonNull: boolean,
+  schemaDocumentNode: DocumentNode,
+  visitedTypes?: Set<string>,
 ) {
   if (!isNonNull && !Array.isArray(existingFieldValue)) {
     return null;
@@ -446,16 +474,35 @@ function makeMinimalValueForGqlListNode(
   if (isNonNull && !Array.isArray(existingFieldValue)) {
     return [];
   }
-  return existingFieldValue;
+
+  // Process each array item recursively
+  const arrayValue = existingFieldValue as Serializable[];
+  return arrayValue.map((item, index) =>
+    makeMinimalValueForASTNode({
+      fieldName: String(index),
+      astNode: listTypeNode.type,
+      schemaDocumentNode,
+      existingValueObject: { [index]: item },
+      visitedTypes,
+    }),
+  );
 }
 
 function makeMinimalValueForGqlObject(
   objectTypeDefinitionNode: ObjectTypeDefinitionNode,
   schemaDocumentNode: DocumentNode,
-  existingValueObject: Record<string, Serializable> | null,
+  _existingValueObject: Record<string, Serializable> | null,
   existingFieldValue: Serializable,
   isNonNull: boolean,
+  visitedTypes?: Set<string>,
 ) {
+  const typeName = objectTypeDefinitionNode.name.value;
+
+  // Check for recursive types to prevent infinite recursion
+  if (visitedTypes?.has(typeName)) {
+    return null;
+  }
+
   if (!isNonNull && !existingFieldValue) {
     return null;
   }
@@ -463,10 +510,23 @@ function makeMinimalValueForGqlObject(
   if (!fields?.length) {
     return {};
   }
+
+  // Track this type to detect cycles
+  const newVisitedTypes = new Set(visitedTypes);
+  newVisitedTypes.add(typeName);
+
+  // Use existingFieldValue (the actual nested object) instead of existingValueObject (parent)
+  const nestedExistingValue =
+    existingFieldValue &&
+    typeof existingFieldValue === "object" &&
+    !Array.isArray(existingFieldValue)
+      ? (existingFieldValue as Record<string, Serializable>)
+      : null;
   return makeMinimalValuesForObjectFields({
     schemaDocumentNode,
-    existingValueObject,
+    existingValueObject: nestedExistingValue,
     fieldDefinitionNodes: fields,
+    visitedTypes: newVisitedTypes,
   });
 }
 
@@ -682,7 +742,6 @@ export function validateStateObject(
   sharedSchemaDocumentNode: DocumentNode,
   stateTypeDefinitionNode: ObjectTypeDefinitionNode,
   stateValue: string,
-  options?: { checkMissingOptionalFields?: boolean },
 ): Error[] {
   let stateObjectJson: Record<string, unknown> | undefined;
   try {
@@ -741,18 +800,41 @@ export function validateStateObject(
     v: stateObjectJson,
   });
 
+  // Detect recursive types first - these take priority over NON_NULL errors
+  const recursiveTypeErrors = detectRecursiveTypes(
+    stateTypeDefinitionNode,
+    typeDefByName,
+  );
+
+  // Get the field names that have recursive types
+  const recursiveFieldNames = new Set(recursiveTypeErrors.map((e) => e.field));
+
   const validationErrors = errors
-    ? graphQLErrorsToStateValidationErrors(errors)
+    ? graphQLErrorsToStateValidationErrors(errors).filter((e) => {
+        // Filter out NON_NULL errors caused by recursive types
+        if (e instanceof StateValidationError && e.kind === "NON_NULL") {
+          // Check if this error is in a path that starts with a recursive field
+          const rootField = e.path[0];
+          if (
+            typeof rootField === "string" &&
+            recursiveFieldNames.has(rootField)
+          ) {
+            return false;
+          }
+        }
+        return true;
+      })
     : [];
 
-  if (options?.checkMissingOptionalFields) {
-    const missingOptionalErrors = detectMissingOptionalFields(
-      sharedSchemaDocumentNode,
-      stateTypeDefinitionNode,
-      stateObjectJson,
-    );
-    validationErrors.push(...missingOptionalErrors);
-  }
+  // Add recursive type errors first (they have priority)
+  validationErrors.unshift(...recursiveTypeErrors);
+
+  const missingOptionalErrors = detectMissingOptionalFields(
+    sharedSchemaDocumentNode,
+    stateTypeDefinitionNode,
+    stateObjectJson,
+  );
+  validationErrors.push(...missingOptionalErrors);
 
   return validationErrors;
 }
@@ -954,7 +1036,8 @@ export type StateValidationErrorKind =
   | "MISSING_OPTIONAL"
   | "UNKNOWN_FIELD"
   | "NON_NULL"
-  | "TYPE";
+  | "TYPE"
+  | "RECURSIVE_TYPE";
 
 export type StateValidationErrorPayload =
   | {
@@ -988,6 +1071,12 @@ export type StateValidationErrorPayload =
       field: string;
       expectedType?: string; // e.g. "String" (or custom scalar)
       details?: string; // optional raw hint (e.g. "cannot represent ...")
+    }
+  | {
+      kind: "RECURSIVE_TYPE";
+      path: (string | number)[];
+      field: string;
+      typeName: string; // e.g. "Item"
     };
 
 export class StateValidationError extends Error {
@@ -1160,15 +1249,26 @@ export function graphQLErrorsToStateValidationErrors(
 }
 
 /**
- * Detects optional fields defined in the schema that are missing from the state object.
- * Returns StateValidationError[] for each missing optional field.
+ * Information about a missing field in the state object.
  */
-export function detectMissingOptionalFields(
+export type MissingFieldInfo = {
+  fieldName: string;
+  path: (string | number)[];
+  isRequired: boolean;
+  /** The underlying type (unwrapped from NonNull if applicable) */
+  type: TypeNode;
+};
+
+/**
+ * Finds all fields defined in the schema that are missing from the state object.
+ * Returns information about each missing field including whether it's required.
+ */
+export function findMissingFields(
   sharedSchemaDocumentNode: DocumentNode,
   rootTypeNode: ObjectTypeDefinitionNode,
   value: string | Record<string, unknown>,
   basePath: (string | number)[] = [],
-): StateValidationError[] {
+): MissingFieldInfo[] {
   let stateObjectJson: Record<string, unknown> | undefined;
   try {
     stateObjectJson =
@@ -1180,27 +1280,25 @@ export function detectMissingOptionalFields(
   }
 
   const typeByName = indexObjectTypes(sharedSchemaDocumentNode);
-  const errors: StateValidationError[] = [];
+  const missingFields: MissingFieldInfo[] = [];
 
   for (const field of rootTypeNode.fields ?? []) {
     const fieldName = field.name.value;
     const fieldPath = [...basePath, fieldName];
+    const isRequired = field.type.kind === Kind.NON_NULL_TYPE;
+    // Unwrap NonNull to get the underlying type
+    const underlyingType = isRequired
+      ? (field.type as NonNullTypeNode).type
+      : field.type;
 
     // Check if field is missing from the state object
     if (!(fieldName in stateObjectJson)) {
-      // Only report if the field is optional (not NonNull)
-      // Required fields are already caught by GraphQL validation
-      const isRequired = field.type.kind === Kind.NON_NULL_TYPE;
-      if (!isRequired) {
-        errors.push(
-          new StateValidationError({
-            kind: "MISSING_OPTIONAL",
-            path: fieldPath,
-            field: fieldName,
-            expectedType: typeNodeToString(field.type),
-          }),
-        );
-      }
+      missingFields.push({
+        fieldName,
+        path: fieldPath,
+        isRequired,
+        type: underlyingType,
+      });
       continue;
     }
 
@@ -1211,19 +1309,143 @@ export function detectMissingOptionalFields(
     if (
       childType &&
       typeof stateObjectJson[fieldName] === "object" &&
-      stateObjectJson[fieldName] !== null
+      stateObjectJson[fieldName] !== null &&
+      !Array.isArray(stateObjectJson[fieldName])
     ) {
-      const nestedErrors = detectMissingOptionalFields(
+      const nestedMissing = findMissingFields(
         sharedSchemaDocumentNode,
         childType,
         stateObjectJson[fieldName] as Record<string, unknown>,
         fieldPath,
       );
-      errors.push(...nestedErrors);
+      missingFields.push(...nestedMissing);
+    }
+  }
+
+  return missingFields;
+}
+
+/**
+ * Detects optional fields defined in the schema that are missing from the state object.
+ * Returns StateValidationError[] for each missing optional field.
+ */
+export function detectMissingOptionalFields(
+  sharedSchemaDocumentNode: DocumentNode,
+  rootTypeNode: ObjectTypeDefinitionNode,
+  value: string | Record<string, unknown>,
+): StateValidationError[] {
+  const missingFields = findMissingFields(
+    sharedSchemaDocumentNode,
+    rootTypeNode,
+    value,
+  );
+
+  // Only report optional (not required) fields as MISSING_OPTIONAL errors
+  // Required fields are already caught by GraphQL validation
+  return missingFields
+    .filter((field) => !field.isRequired)
+    .map(
+      (field) =>
+        new StateValidationError({
+          kind: "MISSING_OPTIONAL",
+          path: field.path,
+          field: field.fieldName,
+          expectedType: typeNodeToString(field.type),
+        }),
+    );
+}
+
+/**
+ * Detects fields that have recursive types (types that reference themselves directly or indirectly).
+ * Returns a RECURSIVE_TYPE error for each field that contains a recursive type.
+ */
+function detectRecursiveTypes(
+  stateTypeDefinitionNode: ObjectTypeDefinitionNode,
+  typeDefByName: Map<string, DefinitionNode>,
+): StateValidationError[] {
+  const errors: StateValidationError[] = [];
+
+  for (const field of stateTypeDefinitionNode.fields ?? []) {
+    const fieldName = field.name.value;
+    const namedTypeName = getNamedTypeName(field.type);
+
+    if (!namedTypeName) continue;
+
+    // Check if this field's type is recursive
+    if (isRecursiveType(namedTypeName, typeDefByName, new Set())) {
+      errors.push(
+        new StateValidationError({
+          kind: "RECURSIVE_TYPE",
+          path: [fieldName],
+          field: fieldName,
+          typeName: namedTypeName,
+        }),
+      );
     }
   }
 
   return errors;
+}
+
+/**
+ * Gets the named type name from a TypeNode, unwrapping NonNull and List types.
+ */
+function getNamedTypeName(typeNode: TypeNode): string | null {
+  if (typeNode.kind === Kind.NAMED_TYPE) {
+    return typeNode.name.value;
+  }
+  if (
+    typeNode.kind === Kind.NON_NULL_TYPE ||
+    typeNode.kind === Kind.LIST_TYPE
+  ) {
+    return getNamedTypeName(typeNode.type);
+  }
+  return null;
+}
+
+/**
+ * Checks if a type is recursive (references itself directly or indirectly through required fields).
+ */
+function isRecursiveType(
+  typeName: string,
+  typeDefByName: Map<string, DefinitionNode>,
+  visitedTypes: Set<string>,
+): boolean {
+  if (visitedTypes.has(typeName)) {
+    return true;
+  }
+
+  const typeDef = typeDefByName.get(typeName);
+  if (!typeDef || typeDef.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+    return false;
+  }
+
+  visitedTypes.add(typeName);
+
+  for (const field of typeDef.fields ?? []) {
+    // Only check required fields for recursion (NonNull types)
+    if (field.type.kind !== Kind.NON_NULL_TYPE) continue;
+
+    const innerType = field.type.type;
+    let fieldTypeName: string | null = null;
+
+    if (innerType.kind === Kind.NAMED_TYPE) {
+      fieldTypeName = innerType.name.value;
+    } else if (innerType.kind === Kind.LIST_TYPE) {
+      // For list types like [Item!]!, get the inner type
+      fieldTypeName = getNamedTypeName(innerType);
+    }
+
+    if (
+      fieldTypeName &&
+      isRecursiveType(fieldTypeName, typeDefByName, visitedTypes)
+    ) {
+      return true;
+    }
+  }
+
+  visitedTypes.delete(typeName);
+  return false;
 }
 
 /**
@@ -1238,61 +1460,6 @@ function typeNodeToString(typeNode: TypeNode): string {
     case Kind.LIST_TYPE:
       return `[${typeNodeToString(typeNode.type)}]`;
   }
-}
-
-export function fillMissingFieldsWithNull(
-  sharedSchemaDocumentNode: DocumentNode,
-  rootTypeNode: ObjectTypeDefinitionNode,
-  value: string | Record<string, unknown>,
-): string | undefined {
-  let stateObjectJson: Record<string, unknown> | undefined;
-  try {
-    stateObjectJson =
-      typeof value === "string"
-        ? (JSON.parse(value) as Record<string, unknown>)
-        : value;
-  } catch {
-    return;
-  }
-
-  const typeByName = indexObjectTypes(sharedSchemaDocumentNode);
-
-  const result = { ...stateObjectJson };
-
-  let changed = false;
-
-  for (const field of rootTypeNode.fields ?? []) {
-    const fieldName = field.name.value;
-
-    // If missing → add null
-    if (!(fieldName in result)) {
-      result[fieldName] = null;
-      changed = true;
-      continue;
-    }
-
-    // If present and object-typed → recurse
-    const namedType = unwrapNamedType(field.type);
-    const childType = namedType ? typeByName.get(namedType) : undefined;
-
-    if (
-      childType &&
-      typeof result[fieldName] === "object" &&
-      result[fieldName] !== null
-    ) {
-      const filledValue = fillMissingFieldsWithNull(
-        sharedSchemaDocumentNode,
-        childType,
-        result[fieldName] as Record<string, unknown>,
-      );
-      if (filledValue) {
-        result[fieldName] = filledValue;
-        changed = true;
-      }
-    }
-  }
-
-  return changed ? JSON.stringify(result, null, 2) : undefined;
 }
 
 function indexObjectTypes(

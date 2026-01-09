@@ -6,7 +6,6 @@ import { typeDefsDoc } from "../constants/documents.js";
 import { safeParseSdl, useSchemaContext } from "../context/schema-context.js";
 import type { Scope } from "../types/documents.js";
 import {
-  fillMissingFieldsWithNull,
   makeInitialSchemaDoc,
   makeMinimalObjectForStateType,
   makeStateSchemaNameForScope,
@@ -48,7 +47,8 @@ function StateEditor({
   setInitialState,
   scope,
 }: StateEditorProps) {
-  const sharedSchemaSdl = useSchemaContext();
+  const { sharedSchema: sharedSchemaSdl, error: sharedSchemaError } =
+    useSchemaContext();
   const [showStandardLib, setShowStandardLib] = useState(false);
   const [syncWithSchema, setSyncWithSchema] = useState(true);
 
@@ -57,10 +57,13 @@ function StateEditor({
     [modelName, scope],
   );
 
-  const schemaErrors = useMemo(
-    () => ensureValidStateSchemaName(stateSchema, modelName, scope),
-    [stateSchema, modelName, scope],
-  );
+  const schemaErrors = useMemo(() => {
+    const errors = ensureValidStateSchemaName(stateSchema, modelName, scope);
+    if (sharedSchemaError) {
+      return [...errors, sharedSchemaError];
+    }
+    return errors;
+  }, [stateSchema, modelName, scope, sharedSchemaError]);
 
   const handleToggleStandardLib = useCallback(() => {
     setShowStandardLib((prev) => !prev);
@@ -93,25 +96,10 @@ function StateEditor({
     )
       return [];
 
-    if (syncWithSchema) {
-      const filledState = fillMissingFieldsWithNull(
-        sharedSchemaDocumentNode,
-        stateTypeDefinitionNode,
-        existingValue,
-      );
-      if (filledState && filledState !== existingValue) {
-        setInitialState(filledState, scope);
-        return [];
-      }
-    }
-
     const errors = validateStateObject(
       sharedSchemaDocumentNode,
       stateTypeDefinitionNode,
       existingValue,
-      {
-        checkMissingOptionalFields: !syncWithSchema,
-      },
     );
 
     if (errors.length && syncWithSchema) {
