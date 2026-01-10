@@ -1,3 +1,27 @@
+## 5.1.0-dev.40 (2026-01-10)
+
+### 🚀 Features
+
+- moved over the processor-manager for reactor ([c232c55c1](https://github.com/powerhouse-inc/powerhouse/commit/c232c55c1))
+- **builder-tools:** improved doc model editor to sync initial state with schema by default or display error messages otherwise ([57370caec](https://github.com/powerhouse-inc/powerhouse/commit/57370caec))
+- **builder-tools:** display error for missing optional fields on Initial State ([9192ee889](https://github.com/powerhouse-inc/powerhouse/commit/9192ee889))
+- **builder-tools:** improved validation on doc model editor and unit tests ([336f5d575](https://github.com/powerhouse-inc/powerhouse/commit/336f5d575))
+- **codegen:** add validation to package json test ([03d06ef57](https://github.com/powerhouse-inc/powerhouse/commit/03d06ef57))
+
+### 🩹 Fixes
+
+- deleted claude.md and unified to just agents.md ([cbf5deab4](https://github.com/powerhouse-inc/powerhouse/commit/cbf5deab4))
+- linter fixes ([53cad5707](https://github.com/powerhouse-inc/powerhouse/commit/53cad5707))
+- inspector was not schema aware ([ed06ebc74](https://github.com/powerhouse-inc/powerhouse/commit/ed06ebc74))
+- **builder-tools:** avoid duplicated SET_INITIAL_STATE and fix connect e2e ([863bc339d](https://github.com/powerhouse-inc/powerhouse/commit/863bc339d))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- CallmeT-ty @CallmeT-ty
+- ryanwolhuter @ryanwolhuter
+
 ## 5.1.0-dev.39 (2026-01-09)
 
 ### 🩹 Fixes
