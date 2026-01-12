@@ -4,16 +4,16 @@ import type {
   GenerateDocumentModelArgs,
 } from "@powerhousedao/codegen";
 import {
-  buildTsMorphProject,
-  ensureDirectoriesExist,
-  formatSourceFileWithPrettier,
-  getOrCreateSourceFile,
-} from "@powerhousedao/codegen/utils";
-import {
   getDocumentModelDirName,
   getDocumentModelVariableNames,
 } from "@powerhousedao/codegen/name-builders";
-import { getInitialStates } from "@powerhousedao/codegen/utils";
+import {
+  buildTsMorphProject,
+  ensureDirectoriesExist,
+  formatSourceFileWithPrettier,
+  getInitialStates,
+  getOrCreateSourceFile,
+} from "@powerhousedao/codegen/utils";
 import { paramCase } from "change-case";
 import type { DocumentModelGlobalState } from "document-model";
 import { writeFileSync } from "fs";
@@ -24,6 +24,7 @@ import { makeDocumentModelModulesFile } from "../module-files.js";
 import { makeGenDirFiles } from "./gen-dir.js";
 import { makeRootDirFiles } from "./root-dir.js";
 import { makeSrcDirFiles } from "./src-dir.js";
+import { makeTestsDirFiles } from "./tests-dir.js";
 import {
   createOrUpdateUpgradeManifestFile,
   createOrUpdateVersionConstantsFile,
@@ -229,7 +230,7 @@ async function generateDocumentModelForSpec({
   const documentTypeId = documentModelState.id;
   const srcDirPath = path.join(documentModelVersionDirPath, "src");
   const reducersDirPath = path.join(srcDirPath, "reducers");
-  const testsDirPath = path.join(srcDirPath, "tests");
+  const testsDirPath = path.join(documentModelVersionDirPath, "tests");
   const genDirPath = path.join(documentModelVersionDirPath, "gen");
   const schemaDirPath = path.join(genDirPath, "schema");
   const { initialGlobalState, initialLocalState } = getInitialStates(
@@ -286,6 +287,7 @@ async function generateDocumentModelForSpec({
   makeRootDirFiles(fileMakerArgs);
   makeGenDirFiles(fileMakerArgs);
   makeSrcDirFiles(fileMakerArgs);
+  makeTestsDirFiles(fileMakerArgs);
   makeDocumentModelModulesFile(fileMakerArgs);
 
   if (!useVersioning) return;

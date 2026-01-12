@@ -4,6 +4,7 @@ export * from "./dependencies.js";
 export * from "./document-type-metadata.js";
 export * from "./format-with-prettier.js";
 export * from "./mock.js";
+export * from "./source-files.js";
 export * from "./spawn-async.js";
 export * from "./syntax-builders.js";
 export * from "./syntax-getters.js";
