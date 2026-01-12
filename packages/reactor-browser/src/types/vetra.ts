@@ -68,7 +68,7 @@ export type VetraModules = {
 };
 
 export type VetraPackage = BaseVetraPackage<VetraModules> & {
-  upgradeManifests?: UpgradeManifest<readonly number[]>[];
+  upgradeManifests: UpgradeManifest<readonly number[]>[];
 };
 
 export type VetraPackageManifest = VetraPackageMeta & {

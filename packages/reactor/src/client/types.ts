@@ -35,6 +35,16 @@ export type DocumentChangeEvent = {
 };
 
 /**
+ * Options for creating an empty document.
+ */
+export type CreateDocumentOptions = {
+  /** Optional "id" or "slug" of parent document */
+  parentIdentifier?: string;
+  /** Optional version of the document model to use (defaults to latest) */
+  documentModelVersion?: number;
+};
+
+/**
  * The ReactorClient interface that wraps lower-level APIs to provide
  * a simpler interface for document operations.
  *
@@ -151,15 +161,13 @@ export interface IReactorClient {
   /**
    * Creates an empty document and waits for completion
    *
-   * @param documentType - Type of document to create.
-   * @param parentIdentifier - Optional "id" or "slug" of parent document
-   * @param version - Optional version of the document model to use (defaults to latest)
+   * @param documentModelType - Type of document to create
+   * @param options - Optional creation options (parentIdentifier, documentModelVersion)
    * @param signal - Optional abort signal to cancel the request
    */
   createEmpty<TDocument extends PHDocument>(
-    documentType: string,
-    parentIdentifier?: string,
-    version?: number,
+    documentModelType: string,
+    options?: CreateDocumentOptions,
     signal?: AbortSignal,
   ): Promise<TDocument>;
 

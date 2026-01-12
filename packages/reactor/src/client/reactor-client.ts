@@ -31,6 +31,7 @@ import type { IDocumentIndexer } from "../storage/interfaces.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
 import {
   DocumentChangeType,
+  type CreateDocumentOptions,
   type DocumentChangeEvent,
   type IReactorClient,
 } from "./types.js";
@@ -279,15 +280,14 @@ export class ReactorClient implements IReactorClient {
    * Creates an empty document and waits for completion
    */
   async createEmpty<TDocument extends PHDocument>(
-    documentType: string,
-    parentIdentifier?: string,
-    version?: number,
+    documentModelType: string,
+    options?: CreateDocumentOptions,
     signal?: AbortSignal,
   ): Promise<TDocument> {
     this.logger.verbose(
-      "createEmpty(@documentType, @parentIdentifier)",
-      documentType,
-      parentIdentifier,
+      "createEmpty(@documentModelType, @options)",
+      documentModelType,
+      options,
     );
     const modulesResult = await this.reactor.getDocumentModels(
       undefined,
@@ -296,15 +296,17 @@ export class ReactorClient implements IReactorClient {
     );
 
     const matchingModules = modulesResult.results.filter(
-      (m) => m.documentModel.global.id === documentType,
+      (m) => m.documentModel.global.id === documentModelType,
     );
 
     let module: DocumentModelModule | undefined;
-    if (version !== undefined) {
-      module = matchingModules.find((m) => m.version === version);
+    if (options?.documentModelVersion !== undefined) {
+      module = matchingModules.find(
+        (m) => m.version === options.documentModelVersion,
+      );
       if (!module) {
         throw new Error(
-          `Document model not found for type: ${documentType} with version: ${version}`,
+          `Document model not found for type: ${documentModelType} with version: ${options.documentModelVersion}`,
         );
       }
     } else {
@@ -318,15 +320,18 @@ export class ReactorClient implements IReactorClient {
         undefined,
       );
       if (!module) {
-        throw new Error(`Document model not found for type: ${documentType}`);
+        throw new Error(
+          `Document model not found for type: ${documentModelType}`,
+        );
       }
     }
 
     const document = module.utils.createDocument();
+    document.state.document.version = module.version ?? 1;
 
     return this.create(
       document,
-      parentIdentifier,
+      options?.parentIdentifier,
       signal,
     ) as Promise<TDocument>;
   }

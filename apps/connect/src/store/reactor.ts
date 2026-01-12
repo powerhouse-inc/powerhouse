@@ -202,7 +202,7 @@ export async function createReactor() {
 
   // get upgrade manifests from packages
   const upgradeManifests = vetraPackages
-    .flatMap((pkg) => pkg.upgradeManifests ?? [])
+    .flatMap((pkg) => pkg.upgradeManifests)
     .filter((manifest) => manifest !== undefined);
 
   // filter to latest versions for legacy reactor (doesn't support versioning)

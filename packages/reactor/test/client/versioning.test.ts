@@ -30,6 +30,12 @@ interface ItemV1 {
   name: string;
 }
 
+interface ItemV2 {
+  id: string;
+  name: string;
+  addedAt: string;
+}
+
 interface GlobalStateV1 {
   items: ItemV1[];
 }
@@ -40,7 +46,7 @@ interface StateV1 extends PHBaseState {
 }
 
 interface GlobalStateV2 {
-  items: ItemV1[];
+  items: ItemV2[];
   title: string;
 }
 
@@ -87,7 +93,10 @@ function v2StateReducer(state: PHBaseState, action: Action): PHBaseState {
       ...typedState,
       global: {
         ...typedState.global,
-        items: [...typedState.global.items, { id: input.id, name: input.name }],
+        items: [
+          ...typedState.global.items,
+          { id: input.id, name: input.name, addedAt: new Date().toISOString() },
+        ],
       },
     };
     return newState as PHBaseState;
@@ -208,17 +217,19 @@ const v2Module: DocumentModelModule = {
 function upgradeV1ToV2(document: PHDocument): PHDocument {
   const stateV1 = document.state as StateV1;
   const initialStateV1 = document.initialState as StateV1;
+  const migrateItems = (items: ItemV1[]): ItemV2[] =>
+    items.map((item) => ({ ...item, addedAt: "" }));
   const newState: StateV2 = {
     ...stateV1,
     global: {
-      ...stateV1.global,
+      items: migrateItems(stateV1.global.items),
       title: "",
     },
   };
   const newInitialState: StateV2 = {
     ...initialStateV1,
     global: {
-      ...initialStateV1.global,
+      items: migrateItems(initialStateV1.global.items),
       title: "",
     },
   };
@@ -282,9 +293,9 @@ describe("ReactorClient Versioning Integration Tests", () => {
     reactor.kill();
   });
 
-  describe("getDocumentModels with versions", () => {
+  describe("getDocumentModelModules with versions", () => {
     it("should return all registered document model modules including versions", async () => {
-      const result = await client.getDocumentModels();
+      const result = await client.getDocumentModelModules();
 
       const versionedModules = result.results.filter(
         (m) => m.documentModel.global.id === VERSIONED_DOC_TYPE,
@@ -297,7 +308,7 @@ describe("ReactorClient Versioning Integration Tests", () => {
     });
 
     it("should have different versions for same document type", async () => {
-      const result = await client.getDocumentModels();
+      const result = await client.getDocumentModelModules();
 
       const v1 = result.results.find(
         (m) =>
@@ -317,19 +328,25 @@ describe("ReactorClient Versioning Integration Tests", () => {
 
   describe("create document with versioned module", () => {
     it("should create a document using v1 module via createEmpty", async () => {
-      const result = await client.createEmpty(VERSIONED_DOC_TYPE, undefined, 1);
+      const result = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 1,
+      });
 
       expect(result.header.documentType).toBe(VERSIONED_DOC_TYPE);
       expect(result.header.id).toBeDefined();
+      expect(result.state.document.version).toBe(1);
       const state = result.state as unknown as StateV1;
       expect(state.global).not.toHaveProperty("title");
     });
 
     it("should create a document using v2 module via createEmpty", async () => {
-      const result = await client.createEmpty(VERSIONED_DOC_TYPE, undefined, 2);
+      const result = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 2,
+      });
 
       expect(result.header.documentType).toBe(VERSIONED_DOC_TYPE);
       expect(result.header.id).toBeDefined();
+      expect(result.state.document.version).toBe(2);
       const state = result.state as unknown as StateV2;
       expect(state.global.title).toBe("");
     });
@@ -337,7 +354,9 @@ describe("ReactorClient Versioning Integration Tests", () => {
 
   describe("execute actions on versioned documents", () => {
     it("should apply v1 actions to v1 document through client", async () => {
-      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, undefined, 1);
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 1,
+      });
 
       const result = await client.execute(doc.header.id, "main", [
         v1Actions.addItem({ id: "1", name: "First Item" }),
@@ -347,7 +366,9 @@ describe("ReactorClient Versioning Integration Tests", () => {
     });
 
     it("should apply multiple v1 actions sequentially", async () => {
-      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, undefined, 1);
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 1,
+      });
 
       await client.execute(doc.header.id, "main", [
         v1Actions.addItem({ id: "1", name: "Item 1" }),
@@ -364,7 +385,9 @@ describe("ReactorClient Versioning Integration Tests", () => {
     });
 
     it("should apply v2 actions including setTitle", async () => {
-      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, undefined, 2);
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 2,
+      });
 
       await client.execute(doc.header.id, "main", [
         v2Actions.addItem({ id: "1", name: "First Item" }),
@@ -374,11 +397,45 @@ describe("ReactorClient Versioning Integration Tests", () => {
       const { document: retrieved } = await client.get(doc.header.id);
       expect(retrieved.operations.global.length).toBeGreaterThan(0);
     });
+
+    it("should use v2 reducer which adds timestamp to items", async () => {
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 2,
+      });
+
+      await client.execute(doc.header.id, "main", [
+        v2Actions.addItem({ id: "1", name: "Test Item" }),
+      ]);
+
+      const { document: retrieved } = await client.get(doc.header.id);
+      const state = retrieved.state as unknown as StateV2;
+
+      expect(state.global.items[0]).toHaveProperty("addedAt");
+      expect(typeof state.global.items[0].addedAt).toBe("string");
+      expect(state.global.items[0].addedAt.length).toBeGreaterThan(0);
+    });
+
+    it("should use v1 reducer which does NOT add timestamp to items", async () => {
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 1,
+      });
+
+      await client.execute(doc.header.id, "main", [
+        v1Actions.addItem({ id: "1", name: "Test Item" }),
+      ]);
+
+      const { document: retrieved } = await client.get(doc.header.id);
+      const state = retrieved.state as unknown as StateV1;
+
+      expect(state.global.items[0]).not.toHaveProperty("addedAt");
+    });
   });
 
   describe("document retrieval after operations", () => {
     it("should retrieve document with applied operations", async () => {
-      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, undefined, 1);
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 1,
+      });
 
       await client.execute(doc.header.id, "main", [
         v1Actions.addItem({ id: "1", name: "Test Item" }),
@@ -390,8 +447,12 @@ describe("ReactorClient Versioning Integration Tests", () => {
     });
 
     it("should find documents by type regardless of version", async () => {
-      const v1Doc = await client.createEmpty(VERSIONED_DOC_TYPE, undefined, 1);
-      const v2Doc = await client.createEmpty(VERSIONED_DOC_TYPE, undefined, 2);
+      const v1Doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 1,
+      });
+      const v2Doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 2,
+      });
 
       const result = await client.find({ type: VERSIONED_DOC_TYPE });
 
@@ -404,7 +465,9 @@ describe("ReactorClient Versioning Integration Tests", () => {
 
   describe("subscription to versioned documents", () => {
     it("should subscribe to changes on versioned documents", async () => {
-      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, undefined, 1);
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 1,
+      });
 
       const unsubscribe = client.subscribe({ ids: [doc.header.id] }, () => {
         // Callback is registered
@@ -429,7 +492,9 @@ describe("ReactorClient Versioning Integration Tests", () => {
 
   describe("delete versioned documents", () => {
     it("should delete a v1 document", async () => {
-      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, undefined, 1);
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 1,
+      });
 
       await client.deleteDocument(doc.header.id);
 
@@ -441,7 +506,9 @@ describe("ReactorClient Versioning Integration Tests", () => {
     });
 
     it("should delete a v2 document", async () => {
-      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, undefined, 2);
+      const doc = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 2,
+      });
 
       await client.deleteDocument(doc.header.id);
 
@@ -458,23 +525,30 @@ describe("ReactorClient Versioning Integration Tests", () => {
       const result = await client.createEmpty(VERSIONED_DOC_TYPE);
 
       expect(result.header.documentType).toBe(VERSIONED_DOC_TYPE);
+      expect(result.state.document.version).toBe(2);
       const state = result.state as unknown as StateV2;
       expect(state.global).toHaveProperty("title");
     });
 
     it("should create document at specific v1 version", async () => {
-      const result = await client.createEmpty(VERSIONED_DOC_TYPE, undefined, 1);
+      const result = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 1,
+      });
 
       expect(result.header.documentType).toBe(VERSIONED_DOC_TYPE);
+      expect(result.state.document.version).toBe(1);
       const state = result.state as unknown as StateV1;
       expect(state.global).not.toHaveProperty("title");
       expect(state.global.items).toEqual([]);
     });
 
     it("should create document at specific v2 version", async () => {
-      const result = await client.createEmpty(VERSIONED_DOC_TYPE, undefined, 2);
+      const result = await client.createEmpty(VERSIONED_DOC_TYPE, {
+        documentModelVersion: 2,
+      });
 
       expect(result.header.documentType).toBe(VERSIONED_DOC_TYPE);
+      expect(result.state.document.version).toBe(2);
       const state = result.state as unknown as StateV2;
       expect(state.global.title).toBe("");
       expect(state.global.items).toEqual([]);
@@ -482,7 +556,7 @@ describe("ReactorClient Versioning Integration Tests", () => {
 
     it("should throw error for non-existent version", async () => {
       await expect(
-        client.createEmpty(VERSIONED_DOC_TYPE, undefined, 99),
+        client.createEmpty(VERSIONED_DOC_TYPE, { documentModelVersion: 99 }),
       ).rejects.toThrow(
         `Document model not found for type: ${VERSIONED_DOC_TYPE} with version: 99`,
       );
