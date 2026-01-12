@@ -10,7 +10,8 @@ export const InspectorModal: React.FC = () => {
   const phModal = usePHModal();
   const open = phModal?.type === "inspector";
 
-  const { getTables, getTableRows, onExportDb, onImportDb } = useDbExplorer();
+  const { getTables, getTableRows, getDefaultSort, onExportDb, onImportDb } =
+    useDbExplorer();
   const { getRemotes } = useRemotesInspector();
 
   return (
@@ -23,6 +24,8 @@ export const InspectorModal: React.FC = () => {
         schema: REACTOR_SCHEMA,
         getTables,
         getTableRows,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        getDefaultSort,
         pageSize: DEFAULT_PAGE_SIZE,
         onExportDb,
         onImportDb,

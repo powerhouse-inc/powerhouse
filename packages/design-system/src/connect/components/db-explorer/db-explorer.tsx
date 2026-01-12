@@ -42,6 +42,7 @@ export type DBExplorerProps = {
     table: string,
     options: GetTableRowsOptions,
   ) => Promise<TablePage>;
+  readonly getDefaultSort?: (table: string) => SortOptions | undefined;
   readonly pageSize?: number;
   readonly onImportDb?: (sqlContent: string) => void | Promise<void>;
   readonly onExportDb?: () => void | Promise<void>;
@@ -53,6 +54,7 @@ export function DBExplorer({
   schema,
   getTables,
   getTableRows,
+  getDefaultSort,
   pageSize = DEFAULT_PAGE_SIZE,
   onImportDb,
   onExportDb,
@@ -135,7 +137,7 @@ export function DBExplorer({
 
     setSelectedTable(table);
     setPagination((prev) => ({ ...prev, offset: 0, total: null }));
-    setSort(undefined);
+    setSort(getDefaultSort?.(table));
     setTableData(null);
   };
 

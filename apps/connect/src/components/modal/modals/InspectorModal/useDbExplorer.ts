@@ -1,4 +1,5 @@
 import { pgDump } from "@electric-sql/pglite-tools/pg_dump";
+import type { SortOptions } from "@powerhousedao/design-system/connect";
 import { REACTOR_SCHEMA } from "@powerhousedao/reactor";
 import { useDatabase, usePGlite } from "@powerhousedao/reactor-browser/connect";
 import { sql } from "kysely";
@@ -20,11 +21,6 @@ type ColumnRow = {
   column_name: string;
   data_type: string;
   is_nullable: string;
-};
-
-type SortOptions = {
-  readonly column: string;
-  readonly direction: "asc" | "desc";
 };
 
 type GetTableRowsOptions = {
@@ -86,9 +82,15 @@ export function useDbExplorer() {
     return Array.from(tableMap).map(([name, columns]) => {
       const columnNames = columns.map((col) => col.name);
       const orderedColumns = [
-        ...PRIORITY_COLUMNS.filter((col) => columnNames.includes(col))
-          .map((col) => columns.find((c) => c.name === col)!),
-        ...columns.filter((col) => !PRIORITY_COLUMNS.includes(col.name as typeof PRIORITY_COLUMNS[number])),
+        ...PRIORITY_COLUMNS.filter((col) => columnNames.includes(col)).map(
+          (col) => columns.find((c) => c.name === col)!,
+        ),
+        ...columns.filter(
+          (col) =>
+            !PRIORITY_COLUMNS.includes(
+              col.name as (typeof PRIORITY_COLUMNS)[number],
+            ),
+        ),
       ];
       return {
         name,
@@ -135,7 +137,12 @@ export function useDbExplorer() {
         result.rows.length > 0 ? Object.keys(result.rows[0]) : [];
       const columns = [
         ...PRIORITY_COLUMNS.filter((col) => rawColumns.includes(col)),
-        ...rawColumns.filter((col) => !PRIORITY_COLUMNS.includes(col as typeof PRIORITY_COLUMNS[number])),
+        ...rawColumns.filter(
+          (col) =>
+            !PRIORITY_COLUMNS.includes(
+              col as (typeof PRIORITY_COLUMNS)[number],
+            ),
+        ),
       ];
 
       return {
@@ -177,9 +184,20 @@ export function useDbExplorer() {
     [pglite],
   );
 
+  const getDefaultSort = useCallback(
+    (table: string): SortOptions | undefined => {
+      if (table === "Operation") {
+        return { column: "timestampUtcMs", direction: "desc" };
+      }
+      return undefined;
+    },
+    [],
+  );
+
   return {
     getTables,
     getTableRows,
+    getDefaultSort,
     onExportDb,
     onImportDb,
   };
