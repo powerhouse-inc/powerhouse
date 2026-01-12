@@ -1,4 +1,3 @@
-import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type {
   Action,
@@ -16,12 +15,7 @@ import { driveDocumentModelModule } from "document-drive";
 import type { IReactorClient } from "../../src/client/types.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";
-import type { IReactor } from "../../src/core/types.js";
-import { EventBus } from "../../src/events/event-bus.js";
-import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
-import { KyselyDocumentIndexer } from "../../src/storage/kysely/document-indexer.js";
-import type { Database } from "../../src/storage/kysely/types.js";
-import { createTestOperationStore } from "../factories.js";
+import type { IReactor, ReactorClientModule } from "../../src/core/types.js";
 
 const VERSIONED_DOC_TYPE = "test/versioned-items";
 
@@ -256,37 +250,22 @@ const upgradeManifest: UpgradeManifest<readonly [1, 2]> = {
 describe("ReactorClient Versioning Integration Tests", () => {
   let client: IReactorClient;
   let reactor: IReactor;
-  let db: Kysely<Database>;
+  let module: ReactorClientModule;
 
   beforeEach(async () => {
-    const setup = await createTestOperationStore();
-    db = setup.db as unknown as Kysely<Database>;
-    const operationStore = setup.store;
-
-    const eventBus = new EventBus();
-
-    const documentIndexerConsistencyTracker = new ConsistencyTracker();
-    const documentIndexer = new KyselyDocumentIndexer(
-      db as any,
-      operationStore,
-      documentIndexerConsistencyTracker,
-    );
-    await documentIndexer.init();
-
     const reactorBuilder = new ReactorBuilder()
       .withDocumentModels([driveDocumentModelModule as any, v1Module, v2Module])
       .withUpgradeManifests([
         upgradeManifest as unknown as UpgradeManifest<readonly number[]>,
       ])
-      .withReadModel(documentIndexer)
-      .withEventBus(eventBus)
       .withFeatures({ legacyStorageEnabled: false });
 
-    client = await new ReactorClientBuilder()
+    module = await new ReactorClientBuilder()
       .withReactorBuilder(reactorBuilder)
-      .build();
+      .buildModule();
 
-    reactor = (client as any).reactor;
+    client = module.client;
+    reactor = module.reactor;
   });
 
   afterEach(() => {
