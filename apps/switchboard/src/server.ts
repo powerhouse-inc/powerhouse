@@ -144,7 +144,7 @@ async function initServer(
         documentModelDocumentModelModule,
         driveDocumentModelModule,
         ...documentModels,
-      ] as unknown as DocumentModelModule[]),
+      ]),
     )
       .withStorage(storage)
       .withCache(cache)
@@ -173,7 +173,7 @@ async function initServer(
           documentModelDocumentModelModule,
           driveDocumentModelModule,
           ...documentModels,
-        ] as unknown as DocumentModelModule[]),
+        ]),
       )
       .withLegacyStorage(storage)
       .withSync(

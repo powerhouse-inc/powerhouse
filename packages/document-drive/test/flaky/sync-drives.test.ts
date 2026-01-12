@@ -24,7 +24,6 @@ import {
 } from "document-drive";
 import {
   DocumentModelGlobalState,
-  DocumentModelModule,
   Operation,
   documentModelDocumentModelModule,
   generateId,
@@ -35,9 +34,7 @@ import { setupServer } from "msw/node";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 
 describe("Document Drive Server interaction", () => {
-  const documentModels = [
-    documentModelDocumentModelModule,
-  ] as DocumentModelModule[];
+  const documentModels = [documentModelDocumentModelModule];
 
   function setupHandlers(server: IDocumentDriveServer) {
     const handlers = [

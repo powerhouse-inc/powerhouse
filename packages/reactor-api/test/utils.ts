@@ -1,5 +1,5 @@
 import { ReactorBuilder, driveDocumentModelModule } from "document-drive";
-import type { DocumentModelModule, PHDocument } from "document-model";
+import type { PHDocument } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import type { ExpectStatic } from "vitest";
 
@@ -27,7 +27,7 @@ export async function testSetupReactor() {
   const reactor = new ReactorBuilder([
     documentModelDocumentModelModule,
     driveDocumentModelModule,
-  ] as unknown as DocumentModelModule[]).build();
+  ]).build();
   await reactor.initialize();
   return { reactor, listenerManager: reactor.listeners };
 }

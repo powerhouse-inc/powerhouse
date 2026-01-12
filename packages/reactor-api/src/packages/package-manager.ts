@@ -16,7 +16,7 @@ import type {
 } from "./types.js";
 import { debounce } from "./util.js";
 export function getUniqueDocumentModels(
-  ...documentModels: DocumentModelModule[][]
+  ...documentModels: DocumentModelModule<any>[][]
 ): DocumentModelModule[] {
   const uniqueModels = new Map<string, DocumentModelModule>();
 

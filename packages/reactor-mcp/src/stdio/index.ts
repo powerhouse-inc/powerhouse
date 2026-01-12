@@ -18,10 +18,10 @@ export interface IMcpOptions {
   documentModelsDir?: string;
 }
 
-const baseDocumentModels = [
+const baseDocumentModels: DocumentModelModule<any>[] = [
   documentModelDocumentModelModule,
   driveDocumentModelModule,
-] as unknown as DocumentModelModule[];
+];
 
 async function createReactor(
   documentModels: DocumentModelModule[],

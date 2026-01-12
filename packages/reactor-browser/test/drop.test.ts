@@ -7,10 +7,7 @@ import {
   type ReactorClientModule,
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "document-drive";
-import {
-  documentModelDocumentModelModule,
-  type DocumentModelModule,
-} from "document-model";
+import { documentModelDocumentModelModule } from "document-model";
 import { Kysely, sql } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -38,7 +35,7 @@ describe("dropAllTables", () => {
       .withDocumentModels([
         driveDocumentModelModule,
         documentModelDocumentModelModule,
-      ] as unknown as DocumentModelModule[])
+      ])
       .withKysely(db as Kysely<Database>)
       .withFeatures({ legacyStorageEnabled: false });
 
@@ -64,9 +61,7 @@ describe("dropAllTables", () => {
 
   it("should handle empty database without errors", async () => {
     const reactorBuilder = new ReactorBuilder()
-      .withDocumentModels([
-        documentModelDocumentModelModule,
-      ] as unknown as DocumentModelModule[])
+      .withDocumentModels([documentModelDocumentModelModule])
       .withKysely(db as Kysely<Database>)
       .withFeatures({ legacyStorageEnabled: false });
 
@@ -82,7 +77,7 @@ describe("dropAllTables", () => {
       .withDocumentModels([
         driveDocumentModelModule,
         documentModelDocumentModelModule,
-      ] as unknown as DocumentModelModule[])
+      ])
       .withKysely(db as Kysely<Database>)
       .withFeatures({ legacyStorageEnabled: false });
 
