@@ -1,5 +1,8 @@
-import { generateFromDocument, generateManifest } from "@powerhousedao/codegen";
-import { validateDocumentModelState } from "@powerhousedao/codegen/utils";
+import {
+  generateFromDocument,
+  generateManifest,
+  validateDocumentModelState,
+} from "@powerhousedao/codegen";
 import type { InternalTransmitterUpdate } from "document-drive";
 import type { DocumentModelGlobalState } from "document-model";
 import { logger } from "../../logger.js";
