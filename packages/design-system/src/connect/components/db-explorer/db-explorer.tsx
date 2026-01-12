@@ -7,19 +7,27 @@ import {
 import {
   TableView,
   type ColumnInfo,
+  type FilterGroup,
+  type FilterClause,
   type PaginationState,
   type SortOptions,
 } from "./components/table-view.js";
 
 // Re-export types
 export type { TableInfo } from "./components/schema-tree-sidebar.js";
-export type { ColumnInfo, SortOptions } from "./components/table-view.js";
+export type {
+  ColumnInfo,
+  SortOptions,
+  FilterGroup,
+  FilterClause,
+} from "./components/table-view.js";
 
 export type GetTableRowsOptions = {
   readonly schema?: string;
   readonly limit: number;
   readonly offset: number;
   readonly sort?: SortOptions;
+  readonly filters?: FilterGroup;
 };
 
 export type TablePage = {
@@ -70,6 +78,7 @@ export function DBExplorer({
     total: null,
   });
   const [sort, setSort] = useState<SortOptions | undefined>();
+  const [filters, setFilters] = useState<FilterGroup | undefined>();
   const [loading, setLoading] = useState(false);
   const [pendingImport, setPendingImport] = useState<string | null>(null);
 
@@ -84,6 +93,7 @@ export function DBExplorer({
       limit: pagination.limit,
       offset: pagination.offset,
       sort,
+      filters,
     });
     setTableData(data);
     setPagination((prev) => ({ ...prev, total: data.total }));
@@ -94,6 +104,7 @@ export function DBExplorer({
     pagination.limit,
     pagination.offset,
     sort,
+    filters,
     getTableRows,
   ]);
 
@@ -130,7 +141,7 @@ export function DBExplorer({
     if (selectedTable) {
       void loadTableData();
     }
-  }, [selectedTable, pagination.offset, sort, loadTableData]);
+  }, [selectedTable, pagination.offset, sort, filters, loadTableData]);
 
   const handleSelectTable = (table: string) => {
     if (table === selectedTable) return;
@@ -138,6 +149,7 @@ export function DBExplorer({
     setSelectedTable(table);
     setPagination((prev) => ({ ...prev, offset: 0, total: null }));
     setSort(getDefaultSort?.(table));
+    setFilters(undefined);
     setTableData(null);
   };
 
@@ -261,6 +273,11 @@ export function DBExplorer({
             onSort={handleSort}
             currentSort={sort}
             loading={loading}
+            filters={filters}
+            onFiltersChange={(newFilters) => {
+              setFilters(newFilters);
+              setPagination((prev) => ({ ...prev, offset: 0 }));
+            }}
           />
         ) : null}
       </div>

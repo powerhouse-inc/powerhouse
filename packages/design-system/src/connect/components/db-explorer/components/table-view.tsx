@@ -1,6 +1,7 @@
 import { Icon } from "@powerhousedao/design-system";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
+import { FilterBar } from "./filter-bar.js";
 
 export type ColumnInfo = {
   readonly name: string;
@@ -13,6 +14,30 @@ export type SortDirection = "asc" | "desc";
 export type SortOptions = {
   readonly column: string;
   readonly direction: SortDirection;
+};
+
+export type FilterOperator =
+  | "="
+  | "!="
+  | ">"
+  | "<"
+  | ">="
+  | "<="
+  | "LIKE"
+  | "ILIKE"
+  | "IS NULL"
+  | "IS NOT NULL";
+
+export type FilterClause = {
+  readonly id: string;
+  readonly column: string;
+  readonly operator: FilterOperator;
+  readonly value: string;
+};
+
+export type FilterGroup = {
+  readonly clauses: FilterClause[];
+  readonly connectors: ("AND" | "OR")[]; // connectors[i] connects clauses[i] and clauses[i+1]
 };
 
 export type PaginationState = {
@@ -29,6 +54,8 @@ export type TableViewProps = {
   readonly onSort?: (sort: SortOptions) => void;
   readonly currentSort?: SortOptions;
   readonly loading?: boolean;
+  readonly filters?: FilterGroup;
+  readonly onFiltersChange?: (filters: FilterGroup | undefined) => void;
 };
 
 function formatCellValue(value: unknown): string {
@@ -107,6 +134,8 @@ export function TableView({
   onSort,
   currentSort,
   loading = false,
+  filters,
+  onFiltersChange,
 }: TableViewProps) {
   const { offset, limit, total } = pagination;
 
@@ -184,6 +213,13 @@ export function TableView({
 
   return (
     <div className="flex h-full flex-col gap-2">
+      {onFiltersChange && (
+        <FilterBar
+          columns={columns}
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+        />
+      )}
       <div className="flex shrink-0 items-center justify-between text-sm">
         <div className="flex items-center gap-2">
           <span className="text-gray-600">

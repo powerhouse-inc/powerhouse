@@ -1,5 +1,8 @@
 import { pgDump } from "@electric-sql/pglite-tools/pg_dump";
-import type { SortOptions } from "@powerhousedao/design-system/connect";
+import type {
+  FilterGroup,
+  SortOptions,
+} from "@powerhousedao/design-system/connect";
 import { REACTOR_SCHEMA } from "@powerhousedao/reactor";
 import { useDatabase, usePGlite } from "@powerhousedao/reactor-browser/connect";
 import { sql } from "kysely";
@@ -28,6 +31,7 @@ type GetTableRowsOptions = {
   readonly limit: number;
   readonly offset: number;
   readonly sort?: SortOptions;
+  readonly filters?: FilterGroup;
 };
 
 type TablePage = {
@@ -105,30 +109,115 @@ export function useDbExplorer() {
         return { columns: [], rows: [], total: null };
       }
 
-      const { limit, offset, sort } = options;
+      const limit = options.limit;
+      const offset = options.offset;
+      const sort = options.sort;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const filters = options.filters;
       const tableRef = sql.raw(`${REACTOR_SCHEMA}."${table}"`);
 
+      // Build WHERE clause from filters
+      let whereClause = sql``;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      if (filters?.clauses && filters.clauses.length > 0) {
+        const conditions: ReturnType<typeof sql>[] = [];
+
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        for (let i = 0; i < filters.clauses.length; i++) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+          const clause = filters.clauses[i];
+          if (!clause) continue;
+
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          const columnRef = sql.raw(`"${clause.column}"`);
+
+          let condition: ReturnType<typeof sql>;
+
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          if (clause.operator === "IS NULL") {
+            condition = sql`${columnRef} IS NULL`;
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          } else if (clause.operator === "IS NOT NULL") {
+            condition = sql`${columnRef} IS NOT NULL`;
+          } else if (
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+            clause.operator === "LIKE" ||
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+            clause.operator === "ILIKE"
+          ) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+            const value = clause.value;
+            const operator =
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+              clause.operator === "LIKE" ? sql`LIKE` : sql`ILIKE`;
+            condition = sql`${columnRef} ${operator} ${value}`;
+          } else {
+            // For =, !=, >, <, >=, <=
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument
+            const operator = sql.raw(clause.operator);
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+            const value = clause.value;
+
+            // Try to parse as number if it looks like a number
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            let parsedValue: string | number = value;
+            if (
+              value !== "" &&
+              !isNaN(Number(value)) &&
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+              value.trim() !== ""
+            ) {
+              parsedValue = Number(value);
+            }
+
+            condition = sql`${columnRef} ${operator} ${parsedValue}`;
+          }
+
+          conditions.push(condition);
+
+          // Add connector if not the last clause
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          if (i < filters.clauses.length - 1) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+            const connector = filters.connectors?.[i] ?? "AND";
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+            conditions.push(sql.raw(connector));
+          }
+        }
+
+        // Combine all conditions
+        if (conditions.length > 0) {
+          whereClause = sql`WHERE ${sql.join(conditions, sql` `)}`;
+        }
+      }
+
+      // Build main query
       let query;
       if (sort) {
         const columnRef = sql.raw(`"${sort.column}"`);
         const direction = sort.direction === "desc" ? sql`DESC` : sql`ASC`;
         query = sql<Record<string, unknown>>`
           SELECT * FROM ${tableRef}
+          ${whereClause}
           ORDER BY ${columnRef} ${direction}
           LIMIT ${limit} OFFSET ${offset}
         `;
       } else {
         query = sql<Record<string, unknown>>`
           SELECT * FROM ${tableRef}
+          ${whereClause}
           LIMIT ${limit} OFFSET ${offset}
         `;
       }
 
       const result = await query.execute(database);
 
-      const countResult = await sql<{ count: string }>`
+      // Build count query with same filters
+      const countQuery = sql<{ count: string }>`
         SELECT COUNT(*) as count FROM ${tableRef}
-      `.execute(database);
+        ${whereClause}
+      `;
+      const countResult = await countQuery.execute(database);
       const total = countResult.rows[0]
         ? parseInt(countResult.rows[0].count, 10)
         : null;
