@@ -2,7 +2,7 @@ import { documentEditorModuleFileTemplate } from "@powerhousedao/codegen/templat
 import { pascalCase } from "change-case";
 import path from "path";
 import type { Project } from "ts-morph";
-import { getOrCreateSourceFile } from "../ts-morph-project.js";
+import { getOrCreateSourceFile } from "@powerhousedao/codegen/utils";
 
 type MakeEditorModuleFileArgs = {
   project: Project;

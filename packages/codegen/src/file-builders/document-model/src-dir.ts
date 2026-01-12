@@ -1,3 +1,10 @@
+import type { DocumentModelFileMakerArgs } from "@powerhousedao/codegen";
+import {
+  formatSourceFileWithPrettier,
+  getObjectLiteral,
+  getOrCreateSourceFile,
+} from "@powerhousedao/codegen/utils";
+import { getDocumentModelOperationsModuleVariableNames } from "@powerhousedao/codegen/name-builders";
 import {
   documentModelSrcIndexFileTemplate,
   documentModelSrcUtilsTemplate,
@@ -5,13 +12,6 @@ import {
   makeActionImportNames,
   makeTestCaseForAction,
 } from "@powerhousedao/codegen/templates";
-import type { DocumentModelFileMakerArgs } from "@powerhousedao/codegen/ts-morph";
-import {
-  formatSourceFileWithPrettier,
-  getObjectLiteral,
-  getOrCreateSourceFile,
-} from "@powerhousedao/codegen/ts-morph";
-import { getDocumentModelOperationsModuleVariableNames } from "@powerhousedao/codegen/ts-morph/name-builders";
 import { ts } from "@tmpl/core";
 import { camelCase, paramCase, pascalCase } from "change-case";
 import type { ModuleSpecification } from "document-model";

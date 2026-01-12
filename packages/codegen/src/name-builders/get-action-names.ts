@@ -1,4 +1,4 @@
-import type { ActionFromOperation } from "@powerhousedao/codegen/ts-morph";
+import type { ActionFromOperation } from "@powerhousedao/codegen";
 import { constantCase, pascalCase } from "change-case";
 
 export function getActionTypeName(action: ActionFromOperation) {

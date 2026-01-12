@@ -1,3 +1,9 @@
+import type { CommonGenerateEditorArgs } from "@powerhousedao/codegen";
+import {
+  buildTsMorphProject,
+  formatSourceFileWithPrettier,
+  getOrCreateSourceFile,
+} from "@powerhousedao/codegen/utils";
 import {
   createDocumentFileTemplate,
   driveEditorConfigFileTemplate,
@@ -10,12 +16,6 @@ import {
   emptyStateFileTemplate,
   folderTreeFileTemplate,
 } from "@powerhousedao/codegen/templates";
-import type { CommonGenerateEditorArgs } from "@powerhousedao/codegen/ts-morph";
-import {
-  buildTsMorphProject,
-  formatSourceFileWithPrettier,
-  getOrCreateSourceFile,
-} from "@powerhousedao/codegen/ts-morph";
 import path from "path";
 import { type Project } from "ts-morph";
 import { makeEditorModuleFile } from "./editor-common.js";

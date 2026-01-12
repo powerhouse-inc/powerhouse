@@ -1,7 +1,7 @@
 import type {
   ActionFromOperation,
   DocumentModelDocumentTypeMetadata,
-} from "@powerhousedao/codegen/ts-morph";
+} from "@powerhousedao/codegen";
 import { camelCase, paramCase, pascalCase } from "change-case";
 import type {
   DocumentModelGlobalState,
