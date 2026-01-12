@@ -45,7 +45,7 @@ export class KyselyOperationStore implements IOperationStore {
       // Check revision matches
       const currentRevision = latestOp ? latestOp.index : -1;
       if (currentRevision !== revision - 1) {
-        throw new RevisionMismatchError(revision - 1, currentRevision);
+        throw new RevisionMismatchError(currentRevision + 1, revision);
       }
 
       // Create atomic transaction
