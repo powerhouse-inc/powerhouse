@@ -18,12 +18,12 @@ export const documentModel: DocumentModelGlobalState = {
           schema:
             "type TestDocState {\n  id: Int!\n  name: String!\n  description: String\n  value: String!\n}",
           initialValue:
-            '"{\\n  \\"id\\": 0,\\n  \\"name\\": \\"\\",\\n  \\"description\\": null,\\n  \\"value\\": \\"\\"\\n}"',
+            '{\n  "id": 0,\n  "name": "",\n  "description": null,\n  "value": ""\n}',
           examples: [],
         },
         local: {
           schema: "",
-          initialValue: '""',
+          initialValue: "",
           examples: [],
         },
       },

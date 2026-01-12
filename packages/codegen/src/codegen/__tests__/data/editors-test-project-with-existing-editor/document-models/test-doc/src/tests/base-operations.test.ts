@@ -1,21 +1,16 @@
-/**
- * This is a scaffold file meant for customization:
- * - change it by adding new tests or modifying the existing ones
- */
-
-import { describe, it, expect } from "vitest";
 import { generateMock } from "@powerhousedao/codegen";
 import {
-  reducer,
-  utils,
   isTestDocDocument,
+  reducer,
   setTestId,
   SetTestIdInputSchema,
   setTestName,
   SetTestNameInputSchema,
+  utils,
 } from "test/document-models/test-doc";
+import { describe, expect, it } from "vitest";
 
-describe("BaseOperations Operations", () => {
+describe("BaseOperationsOperations", () => {
   it("should handle setTestId operation", () => {
     const document = utils.createDocument();
     const input = generateMock(SetTestIdInputSchema());
@@ -32,6 +27,7 @@ describe("BaseOperations Operations", () => {
     );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
+
   it("should handle setTestName operation", () => {
     const document = utils.createDocument();
     const input = generateMock(SetTestNameInputSchema());
