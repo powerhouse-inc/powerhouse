@@ -1,3 +1,8 @@
+import type {
+  DocumentModelFileMakerArgs,
+  DocumentModelTemplateInputsWithModule,
+} from "@powerhousedao/codegen/file-builders";
+import { getDocumentModelOperationsModuleVariableNames } from "@powerhousedao/codegen/name-builders";
 import {
   documentModelDocumentSchemaFileTemplate,
   documentModelDocumentTypeTemplate,
@@ -14,16 +19,11 @@ import {
   documentModelPhFactoriesFileTemplate,
   documentModelSchemaIndexTemplate,
 } from "@powerhousedao/codegen/templates";
-import type {
-  DocumentModelFileMakerArgs,
-  DocumentModelTemplateInputsWithModule,
-} from "@powerhousedao/codegen/ts-morph";
 import {
   buildObjectLiteral,
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
-} from "@powerhousedao/codegen/ts-morph";
-import { getDocumentModelOperationsModuleVariableNames } from "@powerhousedao/codegen/ts-morph/name-builders";
+} from "@powerhousedao/codegen/utils";
 import { paramCase, pascalCase } from "change-case";
 import path from "path";
 import { VariableDeclarationKind } from "ts-morph";

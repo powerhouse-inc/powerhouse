@@ -1,4 +1,4 @@
-import type { DocumentModelTemplateInputs } from "@powerhousedao/codegen/ts-morph";
+import type { DocumentModelTemplateInputs } from "@powerhousedao/codegen/file-builders";
 import { ts } from "@tmpl/core";
 
 export const documentModelDocumentSchemaFileTemplate = (

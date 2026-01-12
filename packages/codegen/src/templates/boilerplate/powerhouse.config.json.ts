@@ -1,5 +1,5 @@
 import { json } from "@tmpl/core";
-import { getPackageVersion } from "../../file-builders/utils.js";
+import { getPackageVersion } from "@powerhousedao/codegen/utils";
 
 const vetraPackageTemplate = (packageVersion: string) =>
   json`

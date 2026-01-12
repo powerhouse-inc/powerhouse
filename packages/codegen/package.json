@@ -16,14 +16,6 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./ts-morph": {
-      "types": "./dist/src/ts-morph-utils/index.d.ts",
-      "default": "./dist/src/ts-morph-utils/index.js"
-    },
-    "./ts-morph/*": {
-      "types": "./dist/src/ts-morph-utils/*/index.d.ts",
-      "default": "./dist/src/ts-morph-utils/*/index.js"
-    },
     "./templates": {
       "types": "./dist/src/templates/index.d.ts",
       "default": "./dist/src/templates/index.js"
@@ -31,6 +23,14 @@
     "./file-builders": {
       "types": "./dist/src/file-builders/index.d.ts",
       "default": "./dist/src/file-builders/index.js"
+    },
+    "./name-builders": {
+       "types": "./dist/src/name-builders/index.d.ts",
+      "default": "./dist/src/name-builders/index.js"
+    },
+    "./utils": {
+      "types": "./dist/src/utils/index.d.ts",
+      "default": "./dist/src/utils/index.js"
     }
   },
   "scripts": {

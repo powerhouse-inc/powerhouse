@@ -2,34 +2,35 @@ import type {
   DocumentModelFileMakerArgs,
   DocumentModelVariableNames,
   GenerateDocumentModelArgs,
-} from "@powerhousedao/codegen/ts-morph";
+} from "@powerhousedao/codegen";
+import {
+  getDocumentModelDirName,
+  getDocumentModelVariableNames,
+} from "@powerhousedao/codegen/name-builders";
 import {
   buildTsMorphProject,
   ensureDirectoriesExist,
   formatSourceFileWithPrettier,
+  getInitialStates,
   getOrCreateSourceFile,
-} from "@powerhousedao/codegen/ts-morph";
-import {
-  getDocumentModelDirName,
-  getDocumentModelVariableNames,
-} from "@powerhousedao/codegen/ts-morph/name-builders";
+} from "@powerhousedao/codegen/utils";
 import { paramCase } from "change-case";
 import type { DocumentModelGlobalState } from "document-model";
 import { writeFileSync } from "fs";
 import path from "path";
 import { type Project } from "ts-morph";
 import { generateDocumentModelZodSchemas } from "../../codegen/graphql.js";
-import { getInitialStates } from "../../templates/unsafe-utils.js";
-import { makeGenDirFiles } from "./document-model/gen-dir.js";
-import { makeRootDirFiles } from "./document-model/root-dir.js";
-import { makeSrcDirFiles } from "./document-model/src-dir.js";
+import { makeDocumentModelModulesFile } from "../module-files.js";
+import { makeGenDirFiles } from "./gen-dir.js";
+import { makeRootDirFiles } from "./root-dir.js";
+import { makeSrcDirFiles } from "./src-dir.js";
+import { makeTestsDirFiles } from "./tests-dir.js";
 import {
   createOrUpdateUpgradeManifestFile,
   createOrUpdateVersionConstantsFile,
   makeUpgradeFile,
   makeUpgradesIndexFile,
-} from "./document-model/upgrades-dir.js";
-import { makeDocumentModelModulesFile } from "./module-files.js";
+} from "./upgrades-dir.js";
 
 /** Generates a document model from the given `documentModelState`
  *
@@ -229,7 +230,7 @@ async function generateDocumentModelForSpec({
   const documentTypeId = documentModelState.id;
   const srcDirPath = path.join(documentModelVersionDirPath, "src");
   const reducersDirPath = path.join(srcDirPath, "reducers");
-  const testsDirPath = path.join(srcDirPath, "tests");
+  const testsDirPath = path.join(documentModelVersionDirPath, "tests");
   const genDirPath = path.join(documentModelVersionDirPath, "gen");
   const schemaDirPath = path.join(genDirPath, "schema");
   const { initialGlobalState, initialLocalState } = getInitialStates(
@@ -286,6 +287,7 @@ async function generateDocumentModelForSpec({
   makeRootDirFiles(fileMakerArgs);
   makeGenDirFiles(fileMakerArgs);
   makeSrcDirFiles(fileMakerArgs);
+  makeTestsDirFiles(fileMakerArgs);
   makeDocumentModelModulesFile(fileMakerArgs);
 
   if (!useVersioning) return;

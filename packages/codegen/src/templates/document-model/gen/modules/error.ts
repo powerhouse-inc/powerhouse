@@ -1,7 +1,7 @@
 import type {
   ActionFromOperation,
   DocumentModelTemplateInputsWithModule,
-} from "@powerhousedao/codegen/ts-morph";
+} from "@powerhousedao/codegen";
 import { ts } from "@tmpl/core";
 import { pascalCase } from "change-case";
 import type { OperationErrorSpecification } from "document-model";

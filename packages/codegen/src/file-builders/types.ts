@@ -2,7 +2,7 @@ import type {
   getDocumentModelOperationsModuleVariableNames,
   getDocumentModelVariableNames,
   getEditorVariableNames,
-} from "@powerhousedao/codegen/ts-morph/name-builders";
+} from "@powerhousedao/codegen/name-builders";
 import type {
   DocumentModelGlobalState,
   ModuleSpecification,

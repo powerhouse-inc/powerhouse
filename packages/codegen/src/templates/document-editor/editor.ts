@@ -1,4 +1,4 @@
-import type { EditorVariableNames } from "@powerhousedao/codegen/ts-morph";
+import type { EditorVariableNames } from "@powerhousedao/codegen";
 import { tsx } from "@tmpl/core";
 
 export const documentEditorEditorFileTemplate = (

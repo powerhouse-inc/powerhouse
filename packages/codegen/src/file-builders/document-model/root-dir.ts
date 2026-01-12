@@ -1,3 +1,8 @@
+import type { DocumentModelFileMakerArgs } from "@powerhousedao/codegen";
+import {
+  formatSourceFileWithPrettier,
+  getOrCreateSourceFile,
+} from "@powerhousedao/codegen/utils";
 import {
   documentModelHooksFileTemplate,
   documentModelIndexTemplate,
@@ -5,11 +10,6 @@ import {
   documentModelRootActionsFileTemplate,
   documentModelUtilsTemplate,
 } from "@powerhousedao/codegen/templates";
-import type { DocumentModelFileMakerArgs } from "@powerhousedao/codegen/ts-morph";
-import {
-  formatSourceFileWithPrettier,
-  getOrCreateSourceFile,
-} from "@powerhousedao/codegen/ts-morph";
 import path from "path";
 
 export function makeRootDirFiles(fileMakerArgs: DocumentModelFileMakerArgs) {

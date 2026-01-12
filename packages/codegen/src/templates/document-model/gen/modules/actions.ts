@@ -1,11 +1,11 @@
-import type { ActionFromOperation } from "@powerhousedao/codegen/ts-morph";
+import type { ActionFromOperation } from "@powerhousedao/codegen";
 import { ts } from "@tmpl/core";
 import {
   getActionInputName,
   getActionInputTypeNames,
   getActionType,
   getActionTypeName,
-} from "../../../utils.js";
+} from "@powerhousedao/codegen/name-builders";
 
 function getActionTypeExport(action: ActionFromOperation) {
   const baseActionTypeName = action.hasAttachment

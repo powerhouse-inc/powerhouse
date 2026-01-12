@@ -1,3 +1,5 @@
+import { makeEditorsModulesFile } from "@powerhousedao/codegen/file-builders";
+import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import type { PowerhouseConfig } from "@powerhousedao/config";
 import { pascalCase } from "change-case";
 import type { DocumentModelGlobalState } from "document-model";
@@ -6,8 +8,6 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readPackage } from "read-pkg";
-import { makeEditorsModulesFile } from "../ts-morph-utils/file-builders/module-files.js";
-import { buildTsMorphProject } from "../ts-morph-utils/ts-morph-project.js";
 import type { CodegenOptions, DocumentTypesMap } from "./types.js";
 
 const require = createRequire(import.meta.url);
