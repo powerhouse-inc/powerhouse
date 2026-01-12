@@ -1,3 +1,4 @@
+import { generateId } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../../src/events/event-bus.js";
 import type { IEventBus } from "../../src/events/interfaces.js";
@@ -1104,20 +1105,19 @@ describe("InMemoryQueue", () => {
 
   describe("job properties", () => {
     it("should preserve all job properties", async () => {
-      const operation = createTestOperation({
+      const operation = createTestOperation("doc-1", {
         index: 42,
         timestampUtcMs: "2023-01-01T00:00:00.000Z",
         hash: "custom-hash",
         skip: 5,
         action: {
-          id: "action-1",
+          id: generateId(),
           type: "custom-operation",
           timestampUtcMs: "2023-01-01T00:00:00.000Z",
           input: { custom: "input" },
           scope: "global",
         },
         error: "test error",
-        id: "custom-op-id",
       });
 
       const job = createTestJob({
@@ -1148,7 +1148,7 @@ describe("InMemoryQueue", () => {
         documentId: "doc-1",
         scope: "global",
         branch: "main",
-        actions: [createTestOperation().action],
+        actions: [createTestOperation("doc-1").action],
         operations: [],
         createdAt: new Date().toISOString(),
         queueHint: [],

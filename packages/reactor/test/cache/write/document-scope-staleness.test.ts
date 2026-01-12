@@ -147,8 +147,7 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
       const globalOps: Operation[] = [];
       for (let i = 1; i <= 10; i++) {
         globalOps.push(
-          createTestOperation({
-            id: `global-op-${i}`,
+          createTestOperation(docId, {
             index: i,
             skip: 0,
           }),
@@ -254,8 +253,7 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
       // Step 2: Apply global scope operation, cache result with putState
       await operationStore.apply(docId, docType, "global", "main", 0, (txn) => {
         txn.addOperations(
-          createTestOperation({
-            id: "global-op-1",
+          createTestOperation(docId, {
             index: 1,
             skip: 0,
           }),

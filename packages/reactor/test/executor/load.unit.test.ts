@@ -135,15 +135,17 @@ describe("SimpleJobExecutor load jobs", () => {
       latestTimestamp: new Date().toISOString(),
     });
 
+    const earlyAction = createTestAction({ scope: "document" });
+    const lateAction = createTestAction({ scope: "document" });
     const operations = [
-      createTestOperation({
+      createTestOperation("doc-1", {
         index: 10,
-        action: createTestAction({ id: "late", scope: "document" }),
+        action: lateAction,
         timestampUtcMs: "2023-01-02T00:00:00.000Z",
       }),
-      createTestOperation({
+      createTestOperation("doc-1", {
         index: 5,
-        action: createTestAction({ id: "early", scope: "document" }),
+        action: earlyAction,
         timestampUtcMs: "2023-01-01T00:00:00.000Z",
       }),
     ];
@@ -162,7 +164,7 @@ describe("SimpleJobExecutor load jobs", () => {
     });
 
     expect(result.success).toBe(true);
-    expect(order).toEqual(["early", "late"]);
+    expect(order).toEqual([earlyAction.id, lateAction.id]);
   });
 });
 
@@ -178,7 +180,7 @@ describe("Reactor.load", () => {
 
   it("enqueues a load job with normalized metadata", async () => {
     const operations = [
-      createTestOperation({
+      createTestOperation("doc-1", {
         index: 3,
         action: createTestAction({ scope: "document" }),
       }),
@@ -200,10 +202,10 @@ describe("Reactor.load", () => {
 
   it("throws when operations span multiple scopes", async () => {
     const operations = [
-      createTestOperation({
+      createTestOperation("doc-1", {
         action: createTestAction({ scope: "document" }),
       }),
-      createTestOperation({
+      createTestOperation("doc-1", {
         action: createTestAction({ scope: "global" }),
       }),
     ];

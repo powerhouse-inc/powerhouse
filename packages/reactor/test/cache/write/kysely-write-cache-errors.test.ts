@@ -81,10 +81,11 @@ describe("KyselyWriteCache - Error Handling", () => {
 
   describe("ModuleNotFoundError", () => {
     it("should propagate ModuleNotFoundError during cold miss", async () => {
+      const actionId = generateId();
       const createOp = {
-        ...createTestOperation({ id: "create-op", index: 0, skip: 0 }),
+        ...createTestOperation("doc1", { index: 0, skip: 0 }),
         action: {
-          id: "create-action",
+          id: actionId,
           type: "CREATE_DOCUMENT",
           scope: "document",
           timestampUtcMs: new Date().toISOString(),
@@ -104,7 +105,7 @@ describe("KyselyWriteCache - Error Handling", () => {
           });
         }
         return Promise.resolve({
-          items: [createTestOperation({ id: "op1", index: 1, skip: 0 })],
+          items: [createTestOperation("doc1", { index: 1, skip: 0 })],
           nextCursor: undefined,
         });
       });
@@ -179,10 +180,11 @@ describe("KyselyWriteCache - Error Handling", () => {
 
     it("should include document type in error message", async () => {
       const documentType = "test/missing-type";
+      const actionId = generateId();
       const createOp = {
-        ...createTestOperation({ id: "create-op", index: 0, skip: 0 }),
+        ...createTestOperation("doc1", { index: 0, skip: 0 }),
         action: {
-          id: "create-action",
+          id: actionId,
           type: "CREATE_DOCUMENT",
           scope: "document",
           timestampUtcMs: new Date().toISOString(),
@@ -202,7 +204,7 @@ describe("KyselyWriteCache - Error Handling", () => {
           });
         }
         return Promise.resolve({
-          items: [createTestOperation({ id: "op1", index: 1, skip: 0 })],
+          items: [createTestOperation("doc1", { index: 1, skip: 0 })],
           nextCursor: undefined,
         });
       });
@@ -232,10 +234,11 @@ describe("KyselyWriteCache - Error Handling", () => {
 
   describe("Reducer errors", () => {
     it("should propagate reducer errors during cold miss rebuild", async () => {
+      const actionId = generateId();
       const createOp = {
-        ...createTestOperation({ id: "create-op", index: 0, skip: 0 }),
+        ...createTestOperation("doc1", { index: 0, skip: 0 }),
         action: {
-          id: "create-action",
+          id: actionId,
           type: "CREATE_DOCUMENT",
           scope: "document",
           timestampUtcMs: new Date().toISOString(),
@@ -255,7 +258,7 @@ describe("KyselyWriteCache - Error Handling", () => {
           });
         }
         return Promise.resolve({
-          items: [createTestOperation({ id: "op1", index: 1, skip: 0 })],
+          items: [createTestOperation("doc1", { index: 1, skip: 0 })],
           nextCursor: undefined,
         });
       });
@@ -292,7 +295,7 @@ describe("KyselyWriteCache - Error Handling", () => {
       const doc = documentModelDocumentModelModule.utils.createDocument();
 
       const mockGetSince = vi.fn().mockResolvedValue({
-        items: [createTestOperation({ id: "op2", index: 2, skip: 0 })],
+        items: [createTestOperation("doc1", { index: 2, skip: 0 })],
         nextCursor: undefined,
       });
 
@@ -331,7 +334,7 @@ describe("KyselyWriteCache - Error Handling", () => {
       cache.putState("doc1", "global", "main", 1, doc);
 
       const mockGetSince = vi.fn().mockResolvedValue({
-        items: [createTestOperation({ id: "op2", index: 2, skip: 0 })],
+        items: [createTestOperation("doc1", { index: 2, skip: 0 })],
         nextCursor: undefined,
       });
 
@@ -373,10 +376,11 @@ describe("KyselyWriteCache - Error Handling", () => {
     });
 
     it("should preserve error details from reducer", async () => {
+      const actionId = generateId();
       const createOp = {
-        ...createTestOperation({ id: "create-op", index: 0, skip: 0 }),
+        ...createTestOperation("doc1", { index: 0, skip: 0 }),
         action: {
-          id: "create-action",
+          id: actionId,
           type: "CREATE_DOCUMENT",
           scope: "document",
           timestampUtcMs: new Date().toISOString(),
@@ -396,7 +400,7 @@ describe("KyselyWriteCache - Error Handling", () => {
           });
         }
         return Promise.resolve({
-          items: [createTestOperation({ id: "op1", index: 1, skip: 0 })],
+          items: [createTestOperation("doc1", { index: 1, skip: 0 })],
           nextCursor: undefined,
         });
       });
@@ -500,10 +504,11 @@ describe("KyselyWriteCache - Error Handling", () => {
     }, 10000);
 
     it("should handle abort during paging in cold miss", async () => {
+      const actionId = generateId();
       const createOp = {
-        ...createTestOperation({ id: "create-op", index: 0, skip: 0 }),
+        ...createTestOperation("doc1", { index: 0, skip: 0 }),
         action: {
-          id: "create-action",
+          id: actionId,
           type: "CREATE_DOCUMENT",
           scope: "document",
           timestampUtcMs: new Date().toISOString(),
@@ -527,7 +532,7 @@ describe("KyselyWriteCache - Error Handling", () => {
         if (callCount === 2) {
           return Promise.resolve({
             items: Array.from({ length: 100 }, (_, i) =>
-              createTestOperation({ id: `op${i}`, index: i + 1, skip: 0 }),
+              createTestOperation("doc1", { index: i + 1, skip: 0 }),
             ),
             nextCursor: "cursor1",
           });
@@ -694,7 +699,7 @@ describe("KyselyWriteCache - Error Handling", () => {
         .mockRejectedValue(keyframeError);
 
       const mockGetSince = vi.fn().mockResolvedValue({
-        items: [createTestOperation({ id: "op1", index: 1, skip: 0 })],
+        items: [createTestOperation("doc1", { index: 1, skip: 0 })],
         nextCursor: undefined,
       });
 
@@ -855,7 +860,7 @@ describe("KyselyWriteCache - Error Handling", () => {
         if (callCount === 1) {
           return Promise.resolve({
             items: Array.from({ length: 100 }, (_, i) =>
-              createTestOperation({ id: `op${i}`, index: i + 1, skip: 0 }),
+              createTestOperation("doc1", { index: i + 1, skip: 0 }),
             ),
             nextCursor: "cursor1",
           });
@@ -1047,7 +1052,7 @@ describe("KyselyWriteCache - Error Handling", () => {
 
     it("should allow successful operation after error", async () => {
       const createOp = {
-        ...createTestOperation({ id: "create-op", index: 0, skip: 0 }),
+        ...createTestOperation("doc1", { index: 0, skip: 0 }),
         action: {
           id: "create-action",
           type: "CREATE_DOCUMENT",
@@ -1075,7 +1080,7 @@ describe("KyselyWriteCache - Error Handling", () => {
         }
         if (scope === "global") {
           return Promise.resolve({
-            items: [createTestOperation({ id: "op1", index: 1, skip: 0 })],
+            items: [createTestOperation("doc1", { index: 1, skip: 0 })],
             nextCursor: undefined,
           });
         }
@@ -1114,10 +1119,11 @@ describe("KyselyWriteCache - Error Handling", () => {
     });
 
     it("should allow recovery after multiple errors", async () => {
+      const actionId = generateId();
       const createOp = {
-        ...createTestOperation({ id: "create-op", index: 0, skip: 0 }),
+        ...createTestOperation("doc1", { index: 0, skip: 0 }),
         action: {
-          id: "create-action",
+          id: actionId,
           type: "CREATE_DOCUMENT",
           scope: "document",
           timestampUtcMs: new Date().toISOString(),
@@ -1146,7 +1152,7 @@ describe("KyselyWriteCache - Error Handling", () => {
         }
         if (scope === "global") {
           return Promise.resolve({
-            items: [createTestOperation({ id: "op1", index: 1, skip: 0 })],
+            items: [createTestOperation("doc1", { index: 1, skip: 0 })],
             nextCursor: undefined,
           });
         }
@@ -1352,8 +1358,7 @@ describe("KyselyWriteCache - Error Handling (Integration)", () => {
     const operations: Operation[] = [];
     for (let i = 1; i <= 5; i++) {
       operations.push(
-        createTestOperation({
-          id: `op-${docId}-${i}`,
+        createTestOperation(docId, {
           index: i,
           skip: 0,
         }),

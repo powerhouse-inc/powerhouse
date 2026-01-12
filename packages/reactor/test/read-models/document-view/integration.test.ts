@@ -1567,9 +1567,10 @@ describe("KyselyDocumentView", () => {
 
         await view.indexOperations([
           {
-            operation: createTestOperation({
+            operation: createTestOperation("doc-1", {
               index: 0,
               action: {
+                id: generateId(),
                 type: "CREATE_DOCUMENT",
                 scope: "document",
                 input: {},
@@ -1610,9 +1611,10 @@ describe("KyselyDocumentView", () => {
 
         await view.indexOperations([
           {
-            operation: createTestOperation({
+            operation: createTestOperation("doc-1", {
               index: 0,
               action: {
+                id: generateId(),
                 type: "CREATE_DOCUMENT",
                 scope: "document",
                 input: {},
@@ -1658,9 +1660,10 @@ describe("KyselyDocumentView", () => {
 
         await view.indexOperations([
           {
-            operation: createTestOperation({
+            operation: createTestOperation("doc-1", {
               index: 0,
               action: {
+                id: generateId(),
                 type: "CREATE_DOCUMENT",
                 scope: "document",
                 input: {},
@@ -1703,9 +1706,10 @@ describe("KyselyDocumentView", () => {
 
         await view.indexOperations([
           {
-            operation: createTestOperation({
+            operation: createTestOperation("doc-1", {
               index: 0,
               action: {
+                id: generateId(),
                 type: "CREATE_DOCUMENT",
                 scope: "document",
                 input: {},
@@ -1724,9 +1728,10 @@ describe("KyselyDocumentView", () => {
             },
           },
           {
-            operation: createTestOperation({
+            operation: createTestOperation("doc-1", {
               index: 0,
               action: {
+                id: generateId(),
                 type: "CREATE_DOCUMENT",
                 scope: "document",
                 input: {},

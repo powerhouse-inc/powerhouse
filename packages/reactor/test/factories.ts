@@ -176,17 +176,20 @@ export function createMinimalJob(overrides: Partial<Job> = {}): Job {
  * Factory for creating test Operation objects
  */
 export function createTestOperation(
+  documentId: string,
   overrides: Partial<Operation> = {},
 ): Operation {
+  const action = createTestAction(
+    overrides.action ? { ...overrides.action } : undefined,
+  );
+
   const defaultOperation: Operation = {
     index: 1,
     timestampUtcMs: new Date().toISOString(),
     hash: "test-hash",
     skip: 0,
-    action: createTestAction(
-      overrides.action ? { ...overrides.action } : undefined,
-    ),
-    id: "op-1",
+    action,
+    id: deriveOperationId(documentId, "document", "main", action.id),
     resultingState: JSON.stringify({ state: "test" }),
   };
 
@@ -968,9 +971,10 @@ export function createTestChannelFactory(
  */
 export async function createSignedTestOperation(
   signer: any,
+  documentId: string,
   overrides: Partial<Operation> = {},
 ): Promise<Operation> {
-  const operation = createTestOperation(overrides);
+  const operation = createTestOperation(documentId, overrides);
   const publicKey = signer.getPublicKey();
 
   const signerData: any = {

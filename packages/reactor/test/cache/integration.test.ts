@@ -94,8 +94,7 @@ describe("KyselyWriteCache Integration Tests", () => {
       const operations: Operation[] = [];
       for (let i = 1; i <= 5; i++) {
         operations.push(
-          createTestOperation({
-            id: `op-integration-${i}`,
+          createTestOperation(docId, {
             index: i,
             skip: 0,
           }),
@@ -134,8 +133,7 @@ describe("KyselyWriteCache Integration Tests", () => {
       const operations: Operation[] = [];
       for (let i = 1; i <= 25; i++) {
         operations.push(
-          createTestOperation({
-            id: `op-integration-keyframe-${i}`,
+          createTestOperation(docId, {
             index: i,
             skip: 0,
           }),
@@ -191,8 +189,7 @@ describe("KyselyWriteCache Integration Tests", () => {
       const operations: Operation[] = [];
       for (let i = 1; i <= 20; i++) {
         operations.push(
-          createTestOperation({
-            id: `op-integration-accelerate-${i}`,
+          createTestOperation(docId, {
             index: i,
             skip: 0,
           }),
@@ -241,8 +238,7 @@ describe("KyselyWriteCache Integration Tests", () => {
       const operations: Operation[] = [];
       for (let i = 1; i <= 15; i++) {
         operations.push(
-          createTestOperation({
-            id: `op-integration-cache-${i}`,
+          createTestOperation(docId, {
             index: i,
             skip: 0,
           }),
@@ -311,8 +307,7 @@ describe("KyselyWriteCache Integration Tests", () => {
           0,
           (txn) => {
             txn.addOperations(
-              createTestOperation({
-                id: `op-${docId}`,
+              createTestOperation(docId, {
                 index: 1,
                 skip: 0,
               }),
@@ -359,7 +354,7 @@ describe("KyselyWriteCache Integration Tests", () => {
 
       await operationStore.apply(docId, docType, "global", "main", 0, (txn) => {
         txn.addOperations(
-          createTestOperation({
+          createTestOperation(docId, {
             index: 1,
             skip: 0,
           }),
@@ -374,7 +369,7 @@ describe("KyselyWriteCache Integration Tests", () => {
         0,
         (txn) => {
           txn.addOperations(
-            createTestOperation({
+            createTestOperation(docId, {
               index: 1,
               skip: 0,
             }),
@@ -384,7 +379,7 @@ describe("KyselyWriteCache Integration Tests", () => {
 
       await operationStore.apply(docId, docType, "local", "main", 0, (txn) => {
         txn.addOperations(
-          createTestOperation({
+          createTestOperation(docId, {
             index: 1,
             skip: 0,
           }),
@@ -420,8 +415,7 @@ describe("KyselyWriteCache Integration Tests", () => {
 
       await operationStore.apply(docId, docType, "global", "main", 0, (txn) => {
         txn.addOperations(
-          createTestOperation({
-            id: "op-abort-test",
+          createTestOperation(docId, {
             index: 1,
             skip: 0,
           }),
@@ -453,8 +447,7 @@ describe("KyselyWriteCache Integration Tests", () => {
 
       await operationStore.apply(docId, docType, "global", "main", 0, (txn) => {
         txn.addOperations(
-          createTestOperation({
-            id: "op-module-test",
+          createTestOperation(docId, {
             index: 1,
             skip: 0,
           }),
@@ -548,8 +541,7 @@ describe("KyselyWriteCache Integration Tests", () => {
 
       await operationStore.apply(docId, docType, "global", "main", 0, (txn) => {
         txn.addOperations(
-          createTestOperation({
-            id: "op-keyframe-fail",
+          createTestOperation(docId, {
             index: 1,
             skip: 0,
           }),
@@ -580,8 +572,7 @@ describe("KyselyWriteCache Integration Tests", () => {
       const operations: Operation[] = [];
       for (let i = 1; i <= 20; i++) {
         operations.push(
-          createTestOperation({
-            id: `op-perf-${i}`,
+          createTestOperation(docId, {
             index: i,
             skip: 0,
           }),
