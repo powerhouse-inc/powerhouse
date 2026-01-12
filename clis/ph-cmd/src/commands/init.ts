@@ -20,83 +20,60 @@ import {
   parseTag,
 } from "../utils/parsing.js";
 import { setupRemoteDrive } from "../utils/validate-remote-drive.js";
+import { packageManagerArgs } from "./package-manager-args.js";
 
-const commandParser = command({
-  name: "ph init",
+export const initArgs = {
+  namePositional: positional({
+    type: optional(string),
+    displayName: "name",
+    description:
+      "The name of your project. A new directory will be created in your current directory with this name.",
+  }),
+  nameOption: option({
+    type: optional(string),
+    long: "name",
+    short: "n",
+    description:
+      "The name of your project. A new directory will be created in your current directory with this name.",
+  }),
+  ...packageManagerArgs,
+  tag: option({
+    type: optional(oneOf(["latest", "staging", "dev"])),
+    long: "tag",
+    short: "t",
+    description: `Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev".`,
+  }),
+  version: option({
+    type: optional(string),
+    long: "version",
+    short: "v",
+    description:
+      "Specify the exact semver release version to use for your project.",
+  }),
+  dev: flag({
+    type: optional(boolean),
+    long: "dev",
+    short: "d",
+    description: "Use the `dev` release tag.",
+  }),
+  staging: flag({
+    type: optional(boolean),
+    long: "staging",
+    short: "s",
+    description: "Use the `staging` release tag.",
+  }),
+  remoteDrive: option({
+    type: optional(string),
+    long: "remote-drive",
+    short: "r",
+    description: "Remote drive identifier.",
+  }),
+};
+
+export const init = command({
+  name: "init",
   description: "Initialize a new project",
-  args: {
-    namePositional: positional({
-      type: optional(string),
-      displayName: "name",
-      description:
-        "The name of your project. A new directory will be created in your current directory with this name.",
-    }),
-    nameOption: option({
-      type: optional(string),
-      long: "name",
-      short: "n",
-      description:
-        "The name of your project. A new directory will be created in your current directory with this name.",
-    }),
-    packageManager: option({
-      type: optional(oneOf(["npm", "pnpm", "yarn", "bun"])),
-      long: "package-manager",
-      short: "p",
-      description:
-        "Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager.",
-    }),
-    npm: flag({
-      type: optional(boolean),
-      long: "npm",
-      description: "Use 'npm' as package manager",
-    }),
-    pnpm: flag({
-      type: optional(boolean),
-      long: "pnpm",
-      description: "Use 'pnpm' as package manager",
-    }),
-    yarn: flag({
-      type: optional(boolean),
-      long: "yarn",
-      description: "Use 'yarn' as package manager",
-    }),
-    bun: flag({
-      type: optional(boolean),
-      long: "bun",
-      description: "Use 'bun' as package manager",
-    }),
-    tag: option({
-      type: optional(oneOf(["latest", "staging", "dev"])),
-      long: "tag",
-      short: "t",
-      description: `Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev".`,
-    }),
-    version: option({
-      type: optional(string),
-      long: "version",
-      short: "v",
-      description:
-        "Specify the exact semver release version to use for your project.",
-    }),
-    dev: flag({
-      type: optional(boolean),
-      long: "dev",
-      short: "d",
-      description: "Use the `dev` release tag.",
-    }),
-    staging: flag({
-      type: optional(boolean),
-      long: "staging",
-      short: "s",
-      description: "Use the `staging` release tag.",
-    }),
-    remoteDrive: option({
-      type: optional(string),
-      long: "remote-drive",
-      short: "r",
-      description: "Remote drive identifier.",
-    }),
-  },
+  args: initArgs,
   handler: async ({
     namePositional,
     nameOption,
@@ -180,9 +157,9 @@ const commandParser = command({
   },
 });
 
-export async function init(args: string[]) {
+export async function runInit(args: string[]) {
   try {
-    const parsedArgs = await run(commandParser, args);
+    const parsedArgs = await run(init, args);
 
     const { name, remoteDrive } = parsedArgs;
 

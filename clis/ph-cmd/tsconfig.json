@@ -4,5 +4,5 @@
     "outDir": "./dist"
   },
   "include": ["**/*"],
-  "references": [{ "path": "../../packages/codegen" }]
+  "references": [{ "path": "../../packages/codegen" }, { "path": "../ph-cli" }]
 }

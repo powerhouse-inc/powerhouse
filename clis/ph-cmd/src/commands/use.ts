@@ -22,10 +22,10 @@ import {
 } from "../utils/parsing.js";
 import { runCmd } from "../utils/run-cmd.js";
 
-const commandParser = command({
-  name: "ph use",
+export const use = command({
+  name: "use",
   description:
-    "Specify the release version of Powerhouse dependencies to use.\nTo use a release tag, specify `staging`, `dev`, or `latest` as the first argument to this command or with the --tag option.\n You can also use a specific version with the --version option.",
+    "Specify the release version of Powerhouse dependencies to use. To use a release tag, specify `staging`, `dev`, or `latest` as the first argument to this command or with the --tag option. You can also use a specific version with the --version option.",
   args: {
     tagPositional: positional({
       type: optional(oneOf(["latest", "staging", "dev"])),
@@ -159,6 +159,6 @@ const commandParser = command({
   },
 });
 
-export async function use(args: string[]) {
-  await run(commandParser, args);
+export async function runUse(args: string[]) {
+  await run(use, args);
 }

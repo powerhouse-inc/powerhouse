@@ -8,8 +8,8 @@ import { ALL_POWERHOUSE_DEPENDENCIES } from "../utils/constants.js";
 import { getTagFromVersion, logVersionUpdate } from "../utils/parsing.js";
 import { runCmd } from "../utils/run-cmd.js";
 
-const commandParser = command({
-  name: "ph update",
+export const update = command({
+  name: "update",
   description:
     "Update your powerhouse dependencies to their latest tagged version",
   args: {
@@ -110,6 +110,6 @@ const commandParser = command({
   },
 });
 
-export async function update(args: string[]) {
-  await run(commandParser, args);
+export async function runUpdate(args: string[]) {
+  await run(update, args);
 }

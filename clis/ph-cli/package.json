@@ -47,11 +47,12 @@
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/switchboard": "workspace:*",
     "@renown/sdk": "workspace:*",
+    "@tmpl/core": "npm:@jsr/tmpl__core@^0.6.3",
+    "cmd-ts": "^0.14.3",
     "colorette": "^2.0.20",
     "commander": "^12.1.0",
     "read-pkg": "^9.0.1",
     "ts-morph": "^26.0.0",
-    "write-pkg": "^7.0.0",
-    "@tmpl/core": "npm:@jsr/tmpl__core@^0.6.3"
+    "write-pkg": "^7.0.0"
   }
 }

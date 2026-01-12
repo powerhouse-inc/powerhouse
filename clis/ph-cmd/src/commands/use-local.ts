@@ -21,8 +21,8 @@ import { dirExists } from "../utils/file-system.js";
 import { logVersionUpdate } from "../utils/parsing.js";
 import { runCmd } from "../utils/run-cmd.js";
 
-const commandParser = command({
-  name: "ph use-local",
+export const useLocal = command({
+  name: "use-local",
   description:
     "Use your local `powerhouse` monorepo dependencies the current project. NOTE: The monorepo uses `pnpm`, so this only works with `pnpm`.",
   args: {
@@ -164,6 +164,6 @@ function buildPnpmLink(packageName: string, monorepoPath: string) {
   return pnpmLink;
 }
 
-export async function useLocal(args: string[]) {
-  await run(commandParser, args);
+export async function runUseLocal(args: string[]) {
+  await run(useLocal, args);
 }

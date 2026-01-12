@@ -1,6 +1,7 @@
 export * from "./access-token.js";
 export * from "./connect.js";
 export * from "./generate.js";
+export * from "./generate.new.js";
 export * from "./help.js";
 export * from "./inspect.js";
 export * from "./install.js";
