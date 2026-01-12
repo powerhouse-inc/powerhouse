@@ -40,6 +40,15 @@ type TablePage = {
   readonly total: number | null;
 };
 
+const PRIORITY_COLUMNS = [
+  "documentType",
+  "documentId",
+  "scope",
+  "branch",
+  "index",
+  "skip",
+] as const;
+
 export function useDbExplorer() {
   const database = useDatabase();
   const pglite = usePGlite();
@@ -74,10 +83,18 @@ export function useDbExplorer() {
       });
     }
 
-    return Array.from(tableMap).map(([name, columns]) => ({
-      name,
-      columns,
-    }));
+    return Array.from(tableMap).map(([name, columns]) => {
+      const columnNames = columns.map((col) => col.name);
+      const orderedColumns = [
+        ...PRIORITY_COLUMNS.filter((col) => columnNames.includes(col))
+          .map((col) => columns.find((c) => c.name === col)!),
+        ...columns.filter((col) => !PRIORITY_COLUMNS.includes(col.name as typeof PRIORITY_COLUMNS[number])),
+      ];
+      return {
+        name,
+        columns: orderedColumns,
+      };
+    });
   }, [database]);
 
   const getTableRows = useCallback(
@@ -114,7 +131,12 @@ export function useDbExplorer() {
         ? parseInt(countResult.rows[0].count, 10)
         : null;
 
-      const columns = result.rows.length > 0 ? Object.keys(result.rows[0]) : [];
+      const rawColumns =
+        result.rows.length > 0 ? Object.keys(result.rows[0]) : [];
+      const columns = [
+        ...PRIORITY_COLUMNS.filter((col) => rawColumns.includes(col)),
+        ...rawColumns.filter((col) => !PRIORITY_COLUMNS.includes(col as typeof PRIORITY_COLUMNS[number])),
+      ];
 
       return {
         columns,
