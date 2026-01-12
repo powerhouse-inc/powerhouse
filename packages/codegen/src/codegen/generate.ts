@@ -2,8 +2,10 @@ import {
   makeDocumentModelModulesFile,
   makeSubgraphsIndexFile,
   tsMorphGenerateDocumentEditor,
+  tsMorphGenerateDocumentModel,
   tsMorphGenerateDriveEditor,
 } from "@powerhousedao/codegen/file-builders";
+import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import type {
   PartialPowerhouseManifest,
   PowerhouseConfig,
@@ -15,9 +17,7 @@ import fs from "node:fs";
 import path, { join } from "node:path";
 import { readPackage, type NormalizedPackageJson } from "read-pkg";
 import semver from "semver";
-import { TSMorphCodeGenerator } from "../ts-morph-generator/index.js";
-import { tsMorphGenerateDocumentModel } from "../file-builders/document-model/document-model.js";
-import { buildTsMorphProject } from "../utils/ts-morph-project.js";
+import { TSMorphCodeGenerator } from "../ts-morph-generator/core/TSMorphCodeGenerator.js";
 import { generateDocumentModelZodSchemas, generateSchemas } from "./graphql.js";
 import {
   hygenGenerateDocumentModel,
