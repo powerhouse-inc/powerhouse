@@ -132,8 +132,7 @@ This command typically opens Connect in your browser at `http://localhost:3000/`
 Vetra Studio integrates deeply with Claude through MCP (Model Context Protocol). This is where AI comes into the mix and you get the chance to have greater control and direction over what your LLM is coding for you.
 
 :::info Specification Driven Design & Development
-Vetra embraces **Specification Driven Design & Development**—an approach where your structured specification documents become the shared language between you and AI agents. Instead of relying on vibe coding, you communicate intent through precise specs that are machine-readable and executable. This turns fragile sandcastles into solid, maintainable functionality.
-:::
+Vetra embraces **Specification Driven Design & Development** —an approach where your structured specification documents become the shared language between you and AI agents. You communicate intent through precise specs that are machine-readable and executable. 
 
 <details>
 <summary>Explainer: Specification Driven AI</summary>
@@ -143,11 +142,6 @@ The **schema definition language** is not only a shared language that bridges th
 
 - Communicate your solution and intent through a structured specification framework designed for AI collaboration.
 - Specifications enable precise, iterative edits, since all our specification documents are machine-readable and executable.
-
-</details>
-
-<details>
-<summary> Reactor MCP Overview</summary>
 
 #### Key Reactor MCP Features
 
@@ -175,6 +169,8 @@ The **schema definition language** is not only a shared language that bridges th
 A specialized AI agent that guides users through document model creation with requirements gathering, design confirmation, and implementation including state schema definition, operation creation, and code generation.
 
 </details>
+:::
+
 
 #### 1. Start the Reactor MCP:
 
@@ -200,6 +196,10 @@ connect to the reactor mcp
 Connected to MCP successfully! I can see there's a
   "vetra-4de7fa45" drive available. The reactor-mcp server is
   running and ready for document model operations.
+
+  or
+
+  Connected to reactor MCP. You have access to 1 drive: vetra+a049e1b1==
 ```
 
 ## Phase 2: Package Creation
@@ -221,12 +221,14 @@ You can create document models in two ways:
 - The document model creation chapter in the Mastery track provides in depth support [here](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema)
 
 #### Using MCP (AI-Assisted)
-- Describe your document needs in natural language in great detail.
+- Describe your package, it's functionality and your needs in natural language in great detail.
 - Claude will:
-  - Generate an appropriate schema
+  - Generate an appropriate schema in the document model
   - Create the necessary operations
   - Implement the required reducers
   - Place the document in the Vetra drive
+
+- Claude will also add the necessary interface in the form of a [document editor](/academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors) and scaffold the [drive-app functionality](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer) when specified.
 
 <details>
 <summary>Alternatively: Use Connect</summary>
@@ -246,11 +248,6 @@ In the same editor, specify the operations (state transitions) for your document
   - Ensure operations reflect user intent for a clean API.
 
 Once your schema and operations are defined in Connect, export the specification. This will download a `.phdm.zip` file (e.g., `YourModelName.phdm.zip`). Save this file in the root of your Powerhouse project directory.
-
-</details>
-
-<details>
-<summary>Alternatively: Generate command</summary>
 
 Use the Powerhouse CLI to process an exported `.phdm.zip` file and generate the necessary boilerplate code for your document model.
 
@@ -347,13 +344,158 @@ Create a new document of your defined type. Interact with your editor, test all 
 
 </details>
 
-### Best Practices
+:::tip  Best Practices
 
 **Working with MCP and Claude**
-- Provide clear, specific instructions and ask for clarifying questions to be answered before code generation.
-- Review generated schemas before confirmation and work in layers instead of 'one-shotting' your code. 
-- Verify implementation details in generated code before continuing. 
-- Always double-check proposed next actions
+1. Provide clear, specific instructions.
+2. Ask for clarifying questions to be answered before code generation.
+3. Review generated schemas before confirmation.
+4. Work in layers instead of 'one-shotting' your code. 
+5. Verify implementation details in generated code before continuing. 
+6. Always double-check proposed next actions.
+
+<details>
+<summary>Complete Guide: Tips for Working with Claude in Vetra Studio</summary>
+
+## Before You Start
+
+**Setup Requirements:**
+1. Run `ph vetra --interactive --watch` in one terminal first
+2. Start Claude in a separate terminal from your project directory
+3. Connect with: `claude` or `connect to the reactor mcp`
+4. Verify you see the confirmation message with your drive name
+
+## Communication Best Practices
+
+### 1. Always Review Before Implementation
+
+**CRITICAL**: Claude will present a proposal before creating anything. You'll see:
+- Proposed document model structure (state schema, operations, modules)
+- How data will be organized
+- What actions users can perform
+
+**Always review and confirm** before Claude proceeds. This is your chance to adjust the design.
+
+### 2. Be Specific and Detailed
+
+When describing what you need, include:
+
+**For Document Models:**
+- Purpose of the document (what problem does it solve?)
+- All data fields and their types (strings, numbers, dates, etc.)
+- What operations users should be able to perform
+- Any relationships between data
+- Business rules or constraints
+
+**For Document Editors:**
+- Which document model it's for
+- UI layout and components you want
+- User interactions and workflows
+- Specific operations to use (by name from your document model)
+- Any styling preferences
+
+### 3. Use Clear Examples
+
+Good prompt for a document model:
+
+```
+Create a document model for expense tracking with:
+- Each expense has: amount (number), description (text), 
+  category (expense type), date, and receipt URL (optional)
+- Users can: add expenses, edit expense details, delete expenses, 
+  and categorize by type
+- Track total amount automatically
+```
+
+Good prompt for an editor:
+
+```
+Create an editor for the expense tracker with:
+- A form to add new expenses (amount, description, category, date)
+- A table showing all expenses with sort by date
+- Each row has edit and delete buttons
+- Show total at the bottom
+- Use the addExpense, updateExpense, and deleteExpense operations
+```
+
+### 4. Work in Layers (Don't "One-Shot")
+
+Instead of asking for everything at once:
+- ✅ Start with the core document model
+- ✅ Test it works
+- ✅ Then add the editor
+- ✅ Then add advanced features
+
+This approach catches issues early and gives you better results.
+
+### 5. Interactive Mode Benefits
+
+Using `ph vetra --interactive` gives you confirmation prompts:
+- Schema changes
+- Operation definitions  
+- Code generation
+
+**Review each step** before confirming - it's easier to adjust now than later.
+
+### 6. What to Expect After Implementation
+
+Claude will automatically:
+- Run TypeScript checks (`npm run tsc`)
+- Run linting (`npm run lint:fix`)
+- Report any errors found
+- Fix issues if needed
+
+You'll see confirmation when everything compiles successfully.
+
+### 7. Common Issues and How to Avoid Them
+
+**Issue**: Generated model doesn't match expectations
+- **Solution**: Provide more detailed requirements upfront. Ask clarifying questions.
+
+**Issue**: Operations don't work as expected
+- **Solution**: Be explicit about all actions and their parameters. Use real-world examples.
+
+**Issue**: Editor UI doesn't look right
+- **Solution**: Describe the UI in detail (layout, components, interactions). Reference similar interfaces if helpful.
+
+## Key Concepts to Know
+
+- **Document Model**: The template/blueprint for your documents (like a database schema)
+- **Document**: An actual instance with real data (like a database record)
+- **Operations**: Actions users can perform (like "add expense", "update status")
+- **Editor**: The user interface to interact with your documents
+- **Drive**: A collection that holds your documents (like a folder)
+
+## Quick Tips
+
+1. **Be specific**: More detail = better results
+2. **Review proposals**: Always check before confirming
+3. **Work incrementally**: Build in layers, not all at once
+4. **Use operation names**: Reference them when describing editor functionality
+5. **Ask questions**: If unsure, ask Claude to clarify or suggest options
+6. **Test as you go**: Create model first, test it, then add the editor
+
+## What Claude Can Do For You
+
+- Generate complete document models from natural language
+- Create all necessary operations automatically
+- Build React editor interfaces with your specifications
+- Handle all the TypeScript and boilerplate code
+- Fix type errors and linting issues
+- Add demo documents to test your models
+
+## What You Should Focus On
+
+- Clearly describing your business requirements
+- Defining what data you need to track
+- Specifying what actions users should perform
+- Reviewing and confirming proposals
+- Testing the generated results
+
+**Remember**: Claude works best with clear, detailed requirements. Take time to explain what you want - it's faster than multiple iterations to fix misunderstandings.
+
+</details>
+:::
 
 ## Phase 4: Packaging and publishing
 
