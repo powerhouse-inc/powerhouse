@@ -1,3 +1,4 @@
+import { deriveOperationId, generateId } from "document-model/core";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
@@ -27,9 +28,10 @@ describe("KyselyOperationIndex Integration", () => {
       const collectionId = driveCollectionId("main", driveId);
 
       const txn1 = operationIndex.start();
+      const createActionId = generateId();
       txn1.write([
         {
-          id: "op-create-child",
+          id: deriveOperationId(childDocId, "document", "main", createActionId),
           documentId: childDocId,
           documentType: "powerhouse/document-model",
           branch: "main",
@@ -39,7 +41,7 @@ describe("KyselyOperationIndex Integration", () => {
           hash: "hash-1",
           skip: 0,
           action: {
-            id: "action-create",
+            id: createActionId,
             type: "CREATE_DOCUMENT",
             scope: "document",
             timestampUtcMs: "1704067200000",
@@ -53,9 +55,10 @@ describe("KyselyOperationIndex Integration", () => {
       await operationIndex.commit(txn1);
 
       const txn2 = operationIndex.start();
+      const updateActionId = generateId();
       txn2.write([
         {
-          id: "op-update-child",
+          id: deriveOperationId(childDocId, "document", "main", updateActionId),
           documentId: childDocId,
           documentType: "powerhouse/document-model",
           branch: "main",
@@ -65,7 +68,7 @@ describe("KyselyOperationIndex Integration", () => {
           hash: "hash-2",
           skip: 0,
           action: {
-            id: "action-update",
+            id: updateActionId,
             type: "SET_NAME",
             scope: "global",
             timestampUtcMs: "1704067201000",
@@ -76,9 +79,15 @@ describe("KyselyOperationIndex Integration", () => {
       await operationIndex.commit(txn2);
 
       const txn3 = operationIndex.start();
+      const createDriveActionId = generateId();
       txn3.write([
         {
-          id: "op-create-drive",
+          id: deriveOperationId(
+            driveId,
+            "document",
+            "main",
+            createDriveActionId,
+          ),
           documentId: driveId,
           documentType: "powerhouse/document-drive",
           branch: "main",
@@ -88,7 +97,7 @@ describe("KyselyOperationIndex Integration", () => {
           hash: "hash-3",
           skip: 0,
           action: {
-            id: "action-create-drive",
+            id: createDriveActionId,
             type: "CREATE_DOCUMENT",
             scope: "document",
             timestampUtcMs: "1704067202000",
@@ -101,9 +110,15 @@ describe("KyselyOperationIndex Integration", () => {
       await operationIndex.commit(txn3);
 
       const txn4 = operationIndex.start();
+      const addRelationshipActionId = generateId();
       txn4.write([
         {
-          id: "op-add-relationship",
+          id: deriveOperationId(
+            driveId,
+            "document",
+            "main",
+            addRelationshipActionId,
+          ),
           documentId: driveId,
           documentType: "powerhouse/document-drive",
           branch: "main",
@@ -113,7 +128,7 @@ describe("KyselyOperationIndex Integration", () => {
           hash: "hash-4",
           skip: 0,
           action: {
-            id: "action-add-rel",
+            id: addRelationshipActionId,
             type: "ADD_RELATIONSHIP",
             scope: "document",
             timestampUtcMs: "1704067203000",
@@ -139,13 +154,17 @@ describe("KyselyOperationIndex Integration", () => {
         (op) => (op.action as { type: string }).type === "CREATE_DOCUMENT",
       );
       expect(createOp).toBeDefined();
-      expect(createOp?.id).toBe("op-create-child");
+      expect(createOp?.id).toBe(
+        deriveOperationId(childDocId, "document", "main", createActionId),
+      );
 
       const updateOp = childOps.find(
         (op) => (op.action as { type: string }).type === "SET_NAME",
       );
       expect(updateOp).toBeDefined();
-      expect(updateOp?.id).toBe("op-update-child");
+      expect(updateOp?.id).toBe(
+        deriveOperationId(childDocId, "document", "main", updateActionId),
+      );
     });
 
     it("should exclude operations after document left the collection", async () => {
@@ -154,9 +173,15 @@ describe("KyselyOperationIndex Integration", () => {
       const collectionId = driveCollectionId("main", driveId);
 
       const txn1 = operationIndex.start();
+      const createDriveActionId = generateId();
       txn1.write([
         {
-          id: "op-create-drive-2",
+          id: deriveOperationId(
+            driveId,
+            "document",
+            "main",
+            createDriveActionId,
+          ),
           documentId: driveId,
           documentType: "powerhouse/document-drive",
           branch: "main",
@@ -166,7 +191,7 @@ describe("KyselyOperationIndex Integration", () => {
           hash: "hash-1",
           skip: 0,
           action: {
-            id: "action-create-drive-2",
+            id: createDriveActionId,
             type: "CREATE_DOCUMENT",
             scope: "document",
             timestampUtcMs: "1704067200000",
@@ -179,9 +204,15 @@ describe("KyselyOperationIndex Integration", () => {
       await operationIndex.commit(txn1);
 
       const txn2 = operationIndex.start();
+      const createChildActionId = generateId();
       txn2.write([
         {
-          id: "op-create-child-2",
+          id: deriveOperationId(
+            childDocId,
+            "document",
+            "main",
+            createChildActionId,
+          ),
           documentId: childDocId,
           documentType: "powerhouse/document-model",
           branch: "main",
@@ -191,7 +222,7 @@ describe("KyselyOperationIndex Integration", () => {
           hash: "hash-2",
           skip: 0,
           action: {
-            id: "action-create-child-2",
+            id: createChildActionId,
             type: "CREATE_DOCUMENT",
             scope: "document",
             timestampUtcMs: "1704067201000",
@@ -206,9 +237,15 @@ describe("KyselyOperationIndex Integration", () => {
       await operationIndex.commit(txn2);
 
       const txn3 = operationIndex.start();
+      const removeRelationshipActionId = generateId();
       txn3.write([
         {
-          id: "op-remove-relationship",
+          id: deriveOperationId(
+            driveId,
+            "document",
+            "main",
+            removeRelationshipActionId,
+          ),
           documentId: driveId,
           documentType: "powerhouse/document-drive",
           branch: "main",
@@ -218,7 +255,7 @@ describe("KyselyOperationIndex Integration", () => {
           hash: "hash-3",
           skip: 0,
           action: {
-            id: "action-remove-rel",
+            id: removeRelationshipActionId,
             type: "REMOVE_RELATIONSHIP",
             scope: "document",
             timestampUtcMs: "1704067202000",
@@ -234,9 +271,15 @@ describe("KyselyOperationIndex Integration", () => {
       await operationIndex.commit(txn3);
 
       const txn4 = operationIndex.start();
+      const updateChildActionId = generateId();
       txn4.write([
         {
-          id: "op-update-child-after-removal",
+          id: deriveOperationId(
+            childDocId,
+            "document",
+            "main",
+            updateChildActionId,
+          ),
           documentId: childDocId,
           documentType: "powerhouse/document-model",
           branch: "main",
@@ -246,7 +289,7 @@ describe("KyselyOperationIndex Integration", () => {
           hash: "hash-4",
           skip: 0,
           action: {
-            id: "action-update-after-removal",
+            id: updateChildActionId,
             type: "SET_NAME",
             scope: "global",
             timestampUtcMs: "1704067203000",
@@ -262,11 +305,27 @@ describe("KyselyOperationIndex Integration", () => {
         (op) => op.documentId === childDocId,
       );
 
-      const createOp = childOps.find((op) => op.id === "op-create-child-2");
+      const createOp = childOps.find(
+        (op) =>
+          op.id ===
+          deriveOperationId(
+            childDocId,
+            "document",
+            "main",
+            createChildActionId,
+          ),
+      );
       expect(createOp).toBeDefined();
 
       const afterRemovalOp = childOps.find(
-        (op) => op.id === "op-update-child-after-removal",
+        (op) =>
+          op.id ===
+          deriveOperationId(
+            childDocId,
+            "document",
+            "main",
+            updateChildActionId,
+          ),
       );
       expect(afterRemovalOp).toBeUndefined();
     });

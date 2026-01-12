@@ -1,5 +1,9 @@
 import type { Action, Operation } from "document-model";
-import { documentModelDocumentModelModule } from "document-model";
+import {
+  deriveOperationId,
+  documentModelDocumentModelModule,
+  generateId,
+} from "document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { IDocumentMetaCache } from "../../../src/cache/document-meta-cache-types.js";
@@ -26,14 +30,17 @@ function createDeleteDocumentOperation(
   overrides: Partial<Operation> = {},
 ): Operation {
   const timestamp = overrides.timestampUtcMs || new Date().toISOString();
+  const actionId = generateId();
   return {
-    id: overrides.id || `${documentId}-delete-${index}`,
+    id:
+      overrides.id ||
+      deriveOperationId(documentId, "document", "main", actionId),
     index,
     skip: 0,
     hash: overrides.hash || `hash-delete-${index}`,
     timestampUtcMs: timestamp,
     action: {
-      id: `${documentId}-delete-action-${index}`,
+      id: actionId,
       type: "DELETE_DOCUMENT",
       scope: "document",
       timestampUtcMs: timestamp,

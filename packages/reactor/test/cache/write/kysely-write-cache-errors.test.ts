@@ -1,5 +1,9 @@
 import type { Operation } from "document-model";
-import { documentModelDocumentModelModule } from "document-model";
+import {
+  deriveOperationId,
+  documentModelDocumentModelModule,
+  generateId,
+} from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../../../src/cache/write-cache-types.js";
@@ -1324,14 +1328,15 @@ describe("KyselyWriteCache - Error Handling (Integration)", () => {
     const docType = "powerhouse/document-model";
 
     await operationStore.apply(docId, docType, "document", "main", 0, (txn) => {
+      const createActionId = generateId();
       txn.addOperations({
-        id: `${docId}-create`,
+        id: deriveOperationId(docId, "document", "main", createActionId),
         index: 0,
         skip: 0,
         hash: "hash-0",
         timestampUtcMs: new Date().toISOString(),
         action: {
-          id: `${docId}-create-action`,
+          id: createActionId,
           type: "CREATE_DOCUMENT",
           scope: "document",
           timestampUtcMs: new Date().toISOString(),

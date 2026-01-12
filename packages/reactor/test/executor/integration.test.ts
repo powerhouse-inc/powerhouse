@@ -1,5 +1,5 @@
 import { driveDocumentModelModule } from "document-drive";
-import { deriveOperationId } from "document-model/core";
+import { deriveOperationId, generateId } from "document-model/core";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { IDocumentMetaCache } from "../../src/cache/document-meta-cache-types.js";
@@ -39,7 +39,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
     documentType: string,
     state: any,
   ): Promise<void> {
-    const createActionId = `${documentId}-create`;
+    const createActionId = generateId();
     const createOperation = {
       id: deriveOperationId(documentId, "document", "main", createActionId),
       index: 0,
@@ -58,7 +58,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
       },
     };
 
-    const upgradeActionId = `${documentId}-upgrade`;
+    const upgradeActionId = generateId();
     const upgradeOperation = {
       id: deriveOperationId(documentId, "document", "main", upgradeActionId),
       index: 1,

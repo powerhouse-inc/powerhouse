@@ -338,7 +338,7 @@ describe("Dual Action Migration Tests", () => {
       const document = createDocumentModelWithId(documentId);
 
       // Add only CREATE_DOCUMENT operation (missing UPGRADE_DOCUMENT)
-      const createActionId = `${documentId}-create`;
+      const createActionId = generateId();
       document.operations.global!.push({
         id: deriveOperationId(
           documentId,

@@ -9,7 +9,7 @@ import type {
   DocumentModelModule,
   UpgradeDocumentActionInput,
 } from "document-model";
-import { documentModelDocumentModelModule } from "document-model";
+import { documentModelDocumentModelModule, generateId } from "document-model";
 import type {
   BatchExecutionRequest,
   IReactor,
@@ -240,7 +240,7 @@ export function buildBatchMutationRequest(
       };
 
       const createAction: Action = {
-        id: `${driveDoc.header.id}-create`,
+        id: generateId(),
         type: "CREATE_DOCUMENT",
         scope: "document",
         timestampUtcMs: new Date().toISOString(),
@@ -256,7 +256,7 @@ export function buildBatchMutationRequest(
       };
 
       const upgradeAction: Action = {
-        id: `${driveDoc.header.id}-upgrade`,
+        id: generateId(),
         type: "UPGRADE_DOCUMENT",
         scope: "document",
         timestampUtcMs: new Date().toISOString(),
@@ -309,7 +309,7 @@ export function buildBatchMutationRequest(
         };
 
         const createFileAction: Action = {
-          id: `${fileDoc.header.id}-create`,
+          id: generateId(),
           type: "CREATE_DOCUMENT",
           scope: "document",
           timestampUtcMs: new Date().toISOString(),
@@ -325,7 +325,7 @@ export function buildBatchMutationRequest(
         };
 
         const upgradeFileAction: Action = {
-          id: `${fileDoc.header.id}-upgrade`,
+          id: generateId(),
           type: "UPGRADE_DOCUMENT",
           scope: "document",
           timestampUtcMs: new Date().toISOString(),
@@ -355,7 +355,7 @@ export function buildBatchMutationRequest(
         });
 
         const addRelationshipAction = {
-          id: uuidv4(),
+          id: generateId(),
           type: "ADD_RELATIONSHIP",
           scope: "document",
           timestampUtcMs: new Date().toISOString(),

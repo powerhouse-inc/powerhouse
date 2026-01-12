@@ -16,7 +16,11 @@ import type {
   Operation,
   PHDocument,
 } from "document-model";
-import { documentModelDocumentModelModule } from "document-model";
+import {
+  deriveOperationId,
+  documentModelDocumentModelModule,
+  generateId,
+} from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { v4 as uuidv4 } from "uuid";
@@ -200,14 +204,18 @@ export function createCreateDocumentOperation(
   documentType: string,
   overrides: Partial<Operation> = {},
 ): Operation {
+  const actionId = generateId();
+
   return {
-    id: overrides.id || `${documentId}-create`,
+    id:
+      overrides.id ||
+      deriveOperationId(documentId, "document", "main", actionId),
     index: 0,
     skip: 0,
     hash: overrides.hash || "hash-0",
     timestampUtcMs: overrides.timestampUtcMs || new Date().toISOString(),
     action: {
-      id: `${documentId}-create-action`,
+      id: actionId,
       type: "CREATE_DOCUMENT",
       scope: "document",
       timestampUtcMs: overrides.timestampUtcMs || new Date().toISOString(),
@@ -232,14 +240,17 @@ export function createUpgradeDocumentOperation(
   overrides: Partial<Operation> = {},
 ): Operation {
   const index = overrides.index ?? 1;
+  const actionId = generateId();
   return {
-    id: overrides.id || `${documentId}-upgrade-${index}`,
+    id:
+      overrides.id ||
+      deriveOperationId(documentId, "document", "main", actionId),
     index,
     skip: 0,
     hash: overrides.hash || `hash-${index}`,
     timestampUtcMs: overrides.timestampUtcMs || new Date().toISOString(),
     action: {
-      id: `${documentId}-upgrade-action-${index}`,
+      id: actionId,
       type: "UPGRADE_DOCUMENT",
       scope: "document",
       timestampUtcMs: overrides.timestampUtcMs || new Date().toISOString(),

@@ -1,4 +1,9 @@
-import type { Action, Operation } from "document-model";
+import {
+  deriveOperationId,
+  generateId,
+  type Action,
+  type Operation,
+} from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DocumentMetaCacheConfig } from "../../src/cache/document-meta-cache-types.js";
 import { DocumentMetaCache } from "../../src/cache/document-meta-cache.js";
@@ -21,14 +26,15 @@ function createCreateDocumentOperation(
   documentId: string,
   documentType: string,
 ): Operation {
+  const actionId = generateId();
   return {
-    id: `${documentId}-create`,
+    id: deriveOperationId(documentId, "document", "main", actionId),
     index: 0,
     skip: 0,
-    hash: "hash-create",
+    hash: "",
     timestampUtcMs: "2024-01-01T00:00:00.000Z",
     action: {
-      id: `${documentId}-create-action`,
+      id: actionId,
       type: "CREATE_DOCUMENT",
       scope: "document",
       timestampUtcMs: "2024-01-01T00:00:00.000Z",
@@ -47,14 +53,15 @@ function createUpgradeDocumentOperation(
   index: number,
   version: number,
 ): Operation {
+  const actionId = generateId();
   return {
-    id: `${documentId}-upgrade-${index}`,
+    id: deriveOperationId(documentId, "document", "main", actionId),
     index,
     skip: 0,
     hash: `hash-upgrade-${index}`,
     timestampUtcMs: `2024-01-01T00:0${index}:00.000Z`,
     action: {
-      id: `${documentId}-upgrade-action-${index}`,
+      id: actionId,
       type: "UPGRADE_DOCUMENT",
       scope: "document",
       timestampUtcMs: `2024-01-01T00:0${index}:00.000Z`,
@@ -78,14 +85,15 @@ function createDeleteDocumentOperation(
   documentId: string,
   index: number,
 ): Operation {
+  const actionId = generateId();
   return {
-    id: `${documentId}-delete-${index}`,
+    id: deriveOperationId(documentId, "document", "main", actionId),
     index,
     skip: 0,
     hash: `hash-delete-${index}`,
     timestampUtcMs: `2024-01-01T00:0${index}:00.000Z`,
     action: {
-      id: `${documentId}-delete-action-${index}`,
+      id: actionId,
       type: "DELETE_DOCUMENT",
       scope: "document",
       timestampUtcMs: `2024-01-01T00:0${index}:00.000Z`,
