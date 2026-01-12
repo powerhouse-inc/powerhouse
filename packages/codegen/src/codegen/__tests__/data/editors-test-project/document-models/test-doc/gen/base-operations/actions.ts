@@ -1,4 +1,4 @@
-import { type Action } from "document-model";
+import type { Action } from "document-model";
 import type { SetTestIdInput, SetTestNameInput } from "../types.js";
 
 export type SetTestIdAction = Action & {
