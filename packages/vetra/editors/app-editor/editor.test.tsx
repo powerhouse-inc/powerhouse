@@ -1,10 +1,10 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useSelectedAppModuleDocument } from "../hooks/useVetraDocument.js";
+import { useSelectedAppModuleDocument } from "../../document-models/app-module/hooks.js";
 import Editor from "./editor.js";
 
-vi.mock("../hooks/useVetraDocument.js", () => ({
+vi.mock("../../document-models/app-module/hooks.js", () => ({
   useSelectedAppModuleDocument: vi.fn(),
 }));
 
@@ -21,6 +21,7 @@ vi.mock("@powerhousedao/reactor-browser", async (importOriginal) => {
     useSetPHDocumentEditorConfig: vi.fn(),
     // These are needed by DocumentToolbar but mocked in setupTests
     useSelectedDocument: vi.fn(() => [null, vi.fn()]),
+    useSelectedDocumentSafe: vi.fn(() => [null, vi.fn()]),
     useDocumentById: vi.fn(() => [null, vi.fn()]),
     useDocumentTimeline: vi.fn(() => []),
     useNodeParentFolderById: vi.fn(() => null),
