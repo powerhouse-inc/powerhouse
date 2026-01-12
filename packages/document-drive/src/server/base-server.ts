@@ -317,7 +317,7 @@ export class BaseDocumentDriveServer
     return errors.length === 0 ? null : errors;
   }
 
-  setDocumentModelModules(modules: DocumentModelModule[]): void {
+  setDocumentModelModules(modules: DocumentModelModule<any>[]): void {
     this.documentModelModules = [...modules];
     this.synchronizationManager.setDocumentModelModules([...modules]);
     this.eventEmitter.emit("documentModelModules", [...modules]);

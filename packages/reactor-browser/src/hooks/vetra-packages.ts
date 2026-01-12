@@ -1,4 +1,3 @@
-import type { DocumentModelModule } from "document-model";
 import type { VetraPackage } from "../types/vetra.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
@@ -17,7 +16,7 @@ export function setVetraPackages(vetraPackages: VetraPackage[] | undefined) {
   const documentModelModules = vetraPackages
     ?.flatMap((pkg) => pkg.modules.documentModelModules)
     .filter((module) => module !== undefined);
-  window.ph?.legacyReactor?.setDocumentModelModules(
-    documentModelModules as unknown as DocumentModelModule[],
-  );
+  if (documentModelModules) {
+    window.ph?.legacyReactor?.setDocumentModelModules(documentModelModules);
+  }
 }

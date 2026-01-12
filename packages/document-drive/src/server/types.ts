@@ -370,7 +370,7 @@ export interface IBaseDocumentDriveServer {
   // todo: remove this once we have DI
   get listeners(): IListenerManager;
 
-  setDocumentModelModules(models: DocumentModelModule[]): void;
+  setDocumentModelModules(models: DocumentModelModule<any>[]): void;
   getDrives(): Promise<string[]>;
   getDrivesSlugs(): Promise<string[]>;
   addDrive(

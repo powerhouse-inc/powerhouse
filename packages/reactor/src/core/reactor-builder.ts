@@ -47,6 +47,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import type { IEventBus } from "../events/interfaces.js";
+import { ProcessorManager } from "../processors/processor-manager.js";
 import type { SignatureVerificationHandler } from "../signer/types.js";
 import { ConsistencyAwareLegacyStorage } from "../storage/consistency-aware-legacy-storage.js";
 import {
@@ -57,11 +58,10 @@ import type { MigrationStrategy } from "../storage/migrations/types.js";
 import { DefaultSubscriptionErrorHandler } from "../subs/default-error-handler.js";
 import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
 import { SubscriptionNotificationReadModel } from "../subs/subscription-notification-read-model.js";
-import { ProcessorManager } from "../processors/processor-manager.js";
 
 export class ReactorBuilder {
   private logger?: ILogger;
-  private documentModels: DocumentModelModule[] = [];
+  private documentModels: DocumentModelModule<any>[] = [];
   private upgradeManifests: UpgradeManifest<readonly number[]>[] = [];
   private storage?: IDocumentStorage & IDocumentOperationStorage;
   private features: ReactorFeatures = { legacyStorageEnabled: true };
@@ -81,7 +81,7 @@ export class ReactorBuilder {
     return this;
   }
 
-  withDocumentModels(models: DocumentModelModule[]): this {
+  withDocumentModels(models: DocumentModelModule<any>[]): this {
     this.documentModels = models;
     return this;
   }
