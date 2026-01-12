@@ -1,5 +1,10 @@
 # Reactor API Authorization
 
+:::warning Work in Progress
+This documentation is still being written and may be incomplete.
+The feature is not yet available on production. 
+:::
+
 This guide explains how to configure **global role-based authorization** for the Powerhouse Reactor API. This is the first layer of access control that determines who can access your Reactor at all.
 
 ## Introduction
@@ -14,10 +19,6 @@ The Reactor API implements a two-layer authorization system:
 |-------|--------|---------|-------|
 | **Layer 1** | **Global Role-Based Authorization** (this guide) | Controls who can access the Reactor API | Reactor-wide |
 | **Layer 2** | [Document Permission System](./02-DocumentPermissions.md) | Controls access to specific documents/folders/drives | Per-document |
-
-**Think of it like a building:**
-- **Global roles** (this guide) = Front door access - determines who can enter the building
-- **Document permissions** = Room keys - determines which rooms you can access once inside
 
 :::tip Which system should I use?
 - Use **global roles** (this guide) for simple setups where all authenticated users should have similar access
@@ -154,7 +155,7 @@ Is user's address in ADMINS, USERS, or GUESTS?
 Is FREE_ENTRY=true?
      ├─ Yes → Grant USER access
      └─ No → 403 Forbidden
-
+```
 
 ### Step-by-Step
 

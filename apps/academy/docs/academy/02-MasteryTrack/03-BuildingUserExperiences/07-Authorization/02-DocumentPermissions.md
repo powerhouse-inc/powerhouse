@@ -16,10 +16,12 @@ Within a Reactor, data is organized hierarchically:
 
 ### Why Document Permissions?
 
-The Reactor API includes two levels of authorization:
+The Reactor API implements a two-layer authorization system:
 
-1. **[Global role-based authorization](./04-Authorization.md)** (ADMIN, USER, GUEST): Controls overall access to the Reactor API
-2. **Document permission system** (this guide): Controls access to individual documents, folders, and drives
+| Layer | System | Purpose | Scope |
+|-------|--------|---------|-------|
+| **Layer 1** | [**Global Role-Based Authorization**](./04-Authorization.md) | Controls who can access the Reactor API | Reactor-wide |
+| **Layer 2** | **Document Permission System** (this guide) | Controls access to specific documents/folders/drives | Per-document |
 
 This document permission system allows you to implement fine-grained access control—for example, you might want certain team members to have write access to a "Marketing" drive while only having read access to a "Finance" drive, even though they're both authenticated users of your Reactor.
 
