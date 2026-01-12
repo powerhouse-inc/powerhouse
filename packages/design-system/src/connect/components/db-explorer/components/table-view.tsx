@@ -75,10 +75,7 @@ function escapeCsvValue(value: string): string {
   return value;
 }
 
-function rowToCsv(
-  row: Record<string, unknown>,
-  columns: ColumnInfo[],
-): string {
+function rowToCsv(row: Record<string, unknown>, columns: ColumnInfo[]): string {
   return columns
     .map((column) => {
       const value = formatCellValue(row[column.name]);
