@@ -5,13 +5,15 @@ import { ModuleSpecificationsSection } from "./components/ModuleSpecificationsSe
 import { PackageInformationSection } from "./components/PackageInformationSection.js";
 
 interface DriveExplorerProps {
+  driveId: string;
+  driveName: string;
+  driveUrl: string;
   documentModels?: FileNode[];
   editors?: FileNode[];
   apps?: FileNode[];
   subgraphs?: FileNode[];
   processors?: FileNode[];
   codegenProcessors?: FileNode[];
-  onShareDrive?: () => void;
   onAddDocumentModel?: () => void;
   onAddEditor?: () => void;
   onAddApp?: () => void;
@@ -26,13 +28,15 @@ interface DriveExplorerProps {
 }
 
 export const DriveExplorer: React.FC<DriveExplorerProps> = ({
+  driveId,
+  driveName,
+  driveUrl,
   documentModels = [],
   editors = [],
   apps = [],
   subgraphs = [],
   processors = [],
   codegenProcessors = [],
-  onShareDrive,
   onAddDocumentModel,
   onAddEditor,
   onAddApp,
@@ -47,7 +51,7 @@ export const DriveExplorer: React.FC<DriveExplorerProps> = ({
 }) => {
   return (
     <div className="min-h-screen bg-white">
-      <DriveHeader onShareClick={onShareDrive} />
+      <DriveHeader driveId={driveId} driveName={driveName} driveUrl={driveUrl} />
 
       <div className="mx-6 mt-6 bg-white">
         <PackageInformationSection
