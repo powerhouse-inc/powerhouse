@@ -30,14 +30,14 @@ export const ConnectSidebar: React.FC<ConnectSidebarProps> = ({
   onLogin,
   onDisconnect,
   etherscanUrl,
+  showDebug,
+  onDebugClick,
   ...props
 }) => {
   return (
     <Sidebar {...props} maxWidth={maxWidth} minWidth={minWidth}>
       <SidebarPanel>
-        <ConnectSidebarHeader onClick={onClick}>
-          {headerContent}
-        </ConnectSidebarHeader>
+        <ConnectSidebarHeader>{headerContent}</ConnectSidebarHeader>
         <div className="flex flex-col">{props.children}</div>
       </SidebarPanel>
       <ConnectSidebarFooter
@@ -47,6 +47,9 @@ export const ConnectSidebar: React.FC<ConnectSidebarProps> = ({
         onLogin={onLogin}
         onDisconnect={onDisconnect}
         etherscanUrl={etherscanUrl}
+        onHomeClick={onClick}
+        showDebug={showDebug}
+        onDebugClick={onDebugClick}
       />
     </Sidebar>
   );

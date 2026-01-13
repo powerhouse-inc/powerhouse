@@ -1,18 +1,19 @@
-import { Icon, SidebarHeader } from "@powerhousedao/design-system";
+import { SidebarHeader } from "@powerhousedao/design-system";
 import type { ComponentProps } from "react";
 import { twMerge } from "tailwind-merge";
 
 export interface ConnectSidebarHeaderProps
-  extends ComponentProps<typeof SidebarHeader> {
-  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
-}
+  extends ComponentProps<typeof SidebarHeader> {}
 
 export const ConnectSidebarHeader: React.FC<ConnectSidebarHeaderProps> = ({
-  onClick,
   className,
   children,
   ...props
 }) => {
+  if (!children) {
+    return null;
+  }
+
   return (
     <SidebarHeader
       {...props}
@@ -21,14 +22,7 @@ export const ConnectSidebarHeader: React.FC<ConnectSidebarHeaderProps> = ({
         className,
       )}
     >
-      <button
-        aria-label="Home"
-        className={onClick ? "cursor-pointer" : "cursor-wait"}
-        onClick={onClick}
-        type="button"
-      >
-        <Icon className="text-gray-600" name="ConnectSmall" size={24} />
-      </button>
+      {children}
     </SidebarHeader>
   );
 };
