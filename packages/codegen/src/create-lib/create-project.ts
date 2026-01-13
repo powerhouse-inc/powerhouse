@@ -3,6 +3,7 @@ import {
   agentsTemplate,
   buildPowerhouseConfigTemplate,
   claudeSettingsLocalTemplate,
+  claudeTemplate,
   cursorMcpTemplate,
   documentModelsIndexTemplate,
   documentModelsTemplate,
@@ -150,6 +151,7 @@ async function writeModuleFiles() {
 }
 
 async function writeAiConfigFiles() {
+  await writeFileEnsuringDir("CLAUDE.md", claudeTemplate);
   await writeFileEnsuringDir("AGENTS.md", agentsTemplate);
   await writeFileEnsuringDir(".mcp.json", mcpTemplate);
   await writeFileEnsuringDir(".gemini/settings.json", geminiSettingsTemplate);

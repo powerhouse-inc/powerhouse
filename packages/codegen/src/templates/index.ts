@@ -1,4 +1,5 @@
 export * from "./boilerplate/AGENTS.md.js";
+export * from "./boilerplate/CLAUDE.md.js";
 export * from "./boilerplate/claude/settings.local.json.js";
 export * from "./boilerplate/cursor/mcp.json.js";
 export * from "./boilerplate/document-models/document-models.js";
