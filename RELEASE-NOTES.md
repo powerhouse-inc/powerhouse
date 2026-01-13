@@ -83,6 +83,39 @@ const handleClick = async (id: string) => {
 };
 ```
 
+#### vitest.config.ts Configuration Update
+
+For existing projects generated before this release, update your project configuration files to exclude `vitest.config.ts` from TypeScript compilation and add it to ESLint's allowed project list:
+
+**In `tsconfig.json`:**
+
+```json
+{
+  "exclude": [
+    "node_modules",
+    "dist",
+    "eslint.config.js",
+    "vitest.config.ts"
+  ]
+}
+```
+
+**In `eslint.config.js`:**
+
+```javascript
+{
+  languageOptions: {
+    parserOptions: {
+      projectService: {
+        allowDefaultProject: ["eslint.config.js", "vitest.config.ts"]
+      }
+    }
+  }
+}
+```
+
+This prevents issues with `package.json` imports in vitest.config.ts being copied to the dist folder during compilation.
+
 ### BUG FIXES
 
 - Fixed query params preservation when navigating in Connect
