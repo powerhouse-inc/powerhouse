@@ -1614,6 +1614,7 @@ export class BaseDocumentDriveServer
     return {
       ...replayed,
       operations: finalOperations,
+      clipboard: documentStorage.clipboard ?? [],
     };
   }
 
