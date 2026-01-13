@@ -3,6 +3,7 @@ import type {
   IDocumentOperationStorage,
   IDocumentStorage,
 } from "document-drive";
+import { deriveOperationId } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IWriteCache } from "../../src/cache/write/interfaces.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
@@ -13,6 +14,7 @@ import type { IOperationStore } from "../../src/storage/interfaces.js";
 import {
   createMockDocumentMetaCache,
   createMockDocumentStorage,
+  createMockLogger,
   createMockOperationStorage,
   createMockOperationStore,
   createSignedTestOperation,
@@ -151,6 +153,7 @@ describe("SimpleJobExecutor signature verification", () => {
 
     const mockDocumentMetaCache = createMockDocumentMetaCache();
     executor = new SimpleJobExecutor(
+      createMockLogger(),
       registry,
       mockDocStorage,
       mockOperationStorage,
@@ -168,9 +171,11 @@ describe("SimpleJobExecutor signature verification", () => {
   });
 
   it("accepts operations with valid signatures", async () => {
-    const operation = await createSignedTestOperation(signer, {
+    const action = createTestAction({ scope: "document" });
+    const operation = await createSignedTestOperation(signer, "doc-1", {
       index: 0,
-      action: createTestAction({ scope: "document" }),
+      action,
+      id: deriveOperationId("doc-1", "document", "main", action.id),
     });
 
     const job: Job = {
@@ -191,7 +196,7 @@ describe("SimpleJobExecutor signature verification", () => {
   });
 
   it("rejects operations with invalid signatures", async () => {
-    const operation = await createSignedTestOperation(signer, {
+    const operation = await createSignedTestOperation(signer, "doc-1", {
       index: 0,
       action: createTestAction({ scope: "document" }),
     });
@@ -237,7 +242,7 @@ describe("SimpleJobExecutor signature verification", () => {
   });
 
   it("accepts unsigned operations for backwards compatibility", async () => {
-    const operation = createTestOperation({
+    const operation = createTestOperation("doc-1", {
       index: 0,
       action: createTestAction({ scope: "document" }),
     });
@@ -260,7 +265,7 @@ describe("SimpleJobExecutor signature verification", () => {
   });
 
   it("rejects operations with signer but no signatures", async () => {
-    const operation = createTestOperation({
+    const operation = createTestOperation("doc-1", {
       index: 0,
       action: {
         ...createTestAction({ scope: "document" }),
@@ -294,12 +299,12 @@ describe("SimpleJobExecutor signature verification", () => {
   });
 
   it("fails fast on first invalid signature", async () => {
-    const validOp = await createSignedTestOperation(signer, {
+    const validOp = await createSignedTestOperation(signer, "doc-1", {
       index: 0,
       action: createTestAction({ scope: "document" }),
     });
 
-    const invalidOp = createTestOperation({
+    const invalidOp = createTestOperation("doc-1", {
       index: 1,
       action: {
         ...createTestAction({ scope: "document" }),
@@ -347,7 +352,7 @@ describe("SimpleJobExecutor signature verification", () => {
 
     const writeOpsSpy = vi.spyOn(mockOperationStore, "apply");
 
-    const invalidOp = createTestOperation({
+    const invalidOp = createTestOperation("doc-1", {
       index: 0,
       action: {
         ...createTestAction({ scope: "document" }),

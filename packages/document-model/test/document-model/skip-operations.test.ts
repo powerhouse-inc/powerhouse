@@ -533,6 +533,7 @@ describe("Document Operations", () => {
         document.initialState,
         garbageCollectDocumentOperations(document.operations),
         documentModelStateReducer,
+        document.header,
       );
 
       expect(replayedDoc.header.revision.global).toBe(6);

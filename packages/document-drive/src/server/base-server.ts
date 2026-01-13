@@ -66,9 +66,11 @@ import {
   attachBranch,
   createPresignedHeader,
   defaultBaseState,
+  deriveOperationId,
   diffOperations,
   garbageCollect,
   garbageCollectDocumentOperations,
+  generateId,
   groupOperationsByScope,
   hashDocumentStateForScope,
   merge,
@@ -316,7 +318,7 @@ export class BaseDocumentDriveServer
     return errors.length === 0 ? null : errors;
   }
 
-  setDocumentModelModules(modules: DocumentModelModule[]): void {
+  setDocumentModelModules(modules: DocumentModelModule<any>[]): void {
     this.documentModelModules = [...modules];
     this.synchronizationManager.setDocumentModelModules([...modules]);
     this.eventEmitter.emit("documentModelModules", [...modules]);
@@ -1199,7 +1201,7 @@ export class BaseDocumentDriveServer
       };
 
       const createDocumentAction: Action = {
-        id: `${header.id}-create`,
+        id: generateId(),
         type: "CREATE_DOCUMENT",
         timestampUtcMs,
         input: createDocumentInput,
@@ -1215,7 +1217,7 @@ export class BaseDocumentDriveServer
       };
 
       const upgradeDocumentAction: Action = {
-        id: `${header.id}-upgrade`,
+        id: generateId(),
         type: "UPGRADE_DOCUMENT",
         timestampUtcMs,
         input: upgradeDocumentInput,
@@ -1243,7 +1245,12 @@ export class BaseDocumentDriveServer
       // Create operations from actions with computed hashes
       operations = [
         {
-          id: `${header.id}-create`,
+          id: deriveOperationId(
+            header.id,
+            "document",
+            "main",
+            createDocumentAction.id,
+          ),
           index: 0,
           skip: 0,
           hash: createHash,
@@ -1251,7 +1258,12 @@ export class BaseDocumentDriveServer
           action: createDocumentAction,
         },
         {
-          id: `${header.id}-upgrade`,
+          id: deriveOperationId(
+            header.id,
+            "document",
+            "main",
+            upgradeDocumentAction.id,
+          ),
           index: 1,
           skip: 0,
           hash: upgradeHash,
@@ -1542,13 +1554,40 @@ export class BaseDocumentDriveServer
       }
     }
 
+    // If revisions filter is specified, compute header revision from filtered operations
+    // This ensures the returned document's header.revision reflects the requested revision,
+    // not the current storage state
+    let headerForReplay = documentStorage.header;
+    if (options?.revisions) {
+      const newRevision: Record<string, number | undefined> = {
+        ...documentStorage.header.revision,
+      };
+
+      // For each scope in the revision filter, compute actual revision from filtered ops
+      for (const scope of Object.keys(options.revisions)) {
+        const scopeOps = operations[scope] ?? [];
+        if (scopeOps.length === 0) {
+          // No ops means revision should not exist for this scope
+          delete newRevision[scope];
+        } else {
+          const lastOp = scopeOps.at(-1);
+          newRevision[scope] = lastOp ? lastOp.index + 1 : 0;
+        }
+      }
+
+      headerForReplay = {
+        ...documentStorage.header,
+        revision: newRevision as typeof documentStorage.header.revision,
+      };
+    }
+
     const replayed = replayDocument(
       documentStorage.initialState,
       operationsToReplay,
       documentModelModule.reducer,
+      headerForReplay,
       undefined,
-      documentStorage.header,
-      undefined,
+      {},
       {
         ...options,
         checkHashes: options?.checkHashes ?? true,
@@ -3024,6 +3063,14 @@ export class BaseDocumentDriveServer
     const operations: Operation[] = strand.operations.map(
       (op: OperationUpdate) => ({
         ...op,
+        id:
+          op.id ??
+          deriveOperationId(
+            strand.documentId,
+            strand.scope,
+            strand.branch,
+            op.actionId,
+          ),
         action: {
           id: op.actionId,
           timestampUtcMs: op.timestampUtcMs,

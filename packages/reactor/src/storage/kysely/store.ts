@@ -45,7 +45,7 @@ export class KyselyOperationStore implements IOperationStore {
       // Check revision matches
       const currentRevision = latestOp ? latestOp.index : -1;
       if (currentRevision !== revision - 1) {
-        throw new RevisionMismatchError(revision - 1, currentRevision);
+        throw new RevisionMismatchError(currentRevision + 1, revision);
       }
 
       // Create atomic transaction
@@ -72,12 +72,13 @@ export class KyselyOperationStore implements IOperationStore {
 
         try {
           await trx.insertInto("Operation").values(operations).execute();
-        } catch (error: any) {
+        } catch (error: unknown) {
           if (error instanceof Error) {
             if (error.message.includes("unique constraint")) {
-              // Extract the opId from the error if possible
-              const opId = operations[0]?.opId || "unknown";
-              throw new DuplicateOperationError(opId);
+              const op = operations[0];
+              throw new DuplicateOperationError(
+                `${op.opId} at index ${op.index} with skip ${op.skip}`,
+              );
             }
 
             throw error;
@@ -196,6 +197,60 @@ export class KyselyOperationStore implements IOperationStore {
 
     return {
       items: items.map((row) => this.rowToOperationWithContext(row)),
+      nextCursor,
+      hasMore,
+    };
+  }
+
+  async getConflicting(
+    documentId: string,
+    scope: string,
+    branch: string,
+    minTimestamp: string,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<Operation>> {
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    let query = this.db
+      .selectFrom("Operation")
+      .selectAll()
+      .where("documentId", "=", documentId)
+      .where("scope", "=", scope)
+      .where("branch", "=", branch)
+      .where("timestampUtcMs", ">=", new Date(minTimestamp))
+      .orderBy("index", "asc");
+
+    if (paging) {
+      if (paging.cursor) {
+        const lastIndex = Number.parseInt(paging.cursor, 10);
+        query = query.where("index", ">", lastIndex);
+      }
+
+      if (paging.limit) {
+        query = query.limit(paging.limit + 1);
+      }
+    }
+
+    const rows = await query.execute();
+
+    let hasMore = false;
+    let items = rows;
+
+    if (paging?.limit && rows.length > paging.limit) {
+      hasMore = true;
+      items = rows.slice(0, paging.limit);
+    }
+
+    const nextCursor =
+      hasMore && items.length > 0
+        ? items[items.length - 1].index.toString()
+        : undefined;
+
+    return {
+      items: items.map((row) => this.rowToOperation(row)),
       nextCursor,
       hasMore,
     };

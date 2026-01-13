@@ -5,6 +5,13 @@
 Powerhouse is a powerful platform that helps you manage and deploy your applications efficiently.  
 This guide will walk you through the process of setting up both the Powerhouse CLI and configuring your server machine to run Powerhouse services. Whether you're setting up a development environment or preparing for production deployment, this guide provides all the necessary steps and considerations.
 
+:::tip Deployment Options
+This guide covers **VM/server-based deployment** with direct installation. If you prefer **containerized deployment**, see the [Docker Deployment Guide](./05-DockerDeployment.md).
+
+**Choose Docker if:** You want the fastest path to production, prefer containerized workflows, or are deploying to cloud platforms.
+**Choose Direct Installation if:** You need maximum performance, want full control, or are setting up a dedicated server.
+:::
+
 ## Prerequisites
 
 Before you begin, ensure you have a Linux-based system (Ubuntu or Debian recommended), sudo privileges, and a stable internet connection.  

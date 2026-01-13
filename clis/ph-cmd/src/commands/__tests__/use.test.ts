@@ -45,7 +45,8 @@ vi.mock("../../utils/dependencies.js", async () => {
 
 vi.mock("../use.js", async () => {
   // eslint-disable-next-line @typescript-eslint/consistent-type-imports
-  const actual: typeof import("../use.js") = await vi.importActual("../use.js");
+  const actual: typeof import("../use.old.js") =
+    await vi.importActual("../use.js");
   return {
     ...actual,
     useCommand: vi.fn(actual.useCommand),
@@ -63,7 +64,7 @@ import {
   getPackageManagerFromLockfile,
   getProjectInfo,
 } from "../../utils/package-manager.js";
-import { useCommand } from "../use.js";
+import { useCommand } from "../use.old.js";
 
 describe("useCommand", () => {
   let program: Command;

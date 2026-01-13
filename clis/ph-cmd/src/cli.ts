@@ -2,6 +2,10 @@
 import { Command } from "commander";
 import { forwardCommand } from "./commands/forward.js";
 import registerCommands from "./commands/index.js";
+import { init } from "./commands/init.js";
+import { update } from "./commands/update.js";
+import { useLocal } from "./commands/use-local.js";
+import { use } from "./commands/use.js";
 import type { CommandActionType } from "./types.js";
 import { generateMergedHelp } from "./utils/index.js";
 
@@ -35,12 +39,37 @@ async function customHelpHandler() {
   process.exit(0);
 }
 
-const defaultCommand: CommandActionType<[{ verbose?: boolean }]> = (
+const defaultCommand: CommandActionType<[{ verbose?: boolean }]> = async (
   options,
 ) => {
   const allArgs = process.argv.slice(2);
   const args = allArgs.join(" ");
+  const firstPositionalArg = allArgs[0];
 
+  const isInit = firstPositionalArg === "init";
+  if (isInit) {
+    // forward from 3 to skip initial `ph`
+    await init(process.argv.slice(3));
+    process.exit(0);
+  }
+  const isUpdate = firstPositionalArg === "update";
+  if (isUpdate) {
+    // forward from 3 to skip initial `ph`
+    await update(process.argv.slice(3));
+    process.exit(0);
+  }
+  const isUse = firstPositionalArg === "use";
+  if (isUse) {
+    // forward from 3 to skip initial `ph`
+    await use(process.argv.slice(3));
+    process.exit(0);
+  }
+  const isUseLocal = firstPositionalArg === "use-local";
+  if (isUseLocal) {
+    // forward from 3 to skip initial `ph`
+    await useLocal(process.argv.slice(3));
+    process.exit(0);
+  }
   const isHelpCommand = args.startsWith("--help") || args.startsWith("-h");
   const isVersionCommand =
     args.startsWith("--version") ||

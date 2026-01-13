@@ -13,6 +13,7 @@ import { logger } from "document-drive/utils/logger";
 import { operationsToRevision } from "document-drive/utils/misc";
 import { runAsap, runAsapAsync } from "document-drive/utils/run-asap";
 import type { Action, GetDocumentOptions, PHBaseState } from "document-model";
+import { deriveOperationId } from "document-model/core";
 
 export class InternalTransmitter implements ITransmitter {
   protected drive: IBaseDocumentDriveServer;
@@ -82,6 +83,14 @@ export class InternalTransmitter implements ITransmitter {
 
       operations.push({
         ...operation,
+        id:
+          operation.id ??
+          deriveOperationId(
+            strand.documentId,
+            strand.scope,
+            strand.branch,
+            operation.actionId,
+          ),
         state: state as PHBaseState,
         previousState: previousState as PHBaseState,
         action,

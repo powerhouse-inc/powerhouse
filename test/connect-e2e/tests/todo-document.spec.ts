@@ -1,10 +1,5 @@
 import type { Download, Locator, Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
-import fs from "fs";
-import JSZip from "jszip";
-import path from "path";
-import { fileURLToPath } from "url";
-import type { DocumentBasicData } from "@powerhousedao/e2e-utils/types";
 import {
   clickDocumentOperationHistory,
   closeDocumentFromToolbar,
@@ -14,6 +9,11 @@ import {
   openDocumentByName,
   verifyDocumentInList,
 } from "@powerhousedao/e2e-utils";
+import type { DocumentBasicData } from "@powerhousedao/e2e-utils/types";
+import fs from "fs";
+import JSZip from "jszip";
+import path from "path";
+import { fileURLToPath } from "url";
 import {
   createDocument,
   createDocumentAndFillBasicData,
@@ -47,6 +47,7 @@ const EXPECTED_OPERATIONS = [
   "SET_MODEL_DESCRIPTION",
   "SET_AUTHOR_NAME",
   "SET_MODEL_ID",
+  "SET_INITIAL_STATE",
   "SET_STATE_SCHEMA",
   "SET_MODEL_NAME",
 ];
@@ -131,7 +132,10 @@ test("Create ToDoDocument Model", async ({ page }) => {
 test("Create a TodoList", async ({ page }) => {
   await goToConnectDrive(page, "My Local Drive");
   await createDocument(page, "ToDoDocument", "MyTodoList");
-  await page.getByText("Edit Name").waitFor({ state: "visible" });
+  // Wait for the editor to load - look for the "Edit" button in the generated editor
+  await page
+    .getByRole("button", { name: "Edit" })
+    .waitFor({ state: "visible" });
 });
 
 // Helper Functions

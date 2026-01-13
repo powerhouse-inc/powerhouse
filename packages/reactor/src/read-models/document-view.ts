@@ -1,4 +1,5 @@
 import type { Operation, PHDocument, PHDocumentHeader } from "document-model";
+import { deriveOperationId } from "document-model/core";
 import type { Kysely, Transaction } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
@@ -322,6 +323,12 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
       operations[context.scope] ??= [];
 
       const normalizedOp: Operation = {
+        id: deriveOperationId(
+          context.documentId,
+          context.scope,
+          context.branch,
+          operation.action.id,
+        ),
         action: operation.action,
         index: operation.index,
         timestampUtcMs: operation.timestampUtcMs,

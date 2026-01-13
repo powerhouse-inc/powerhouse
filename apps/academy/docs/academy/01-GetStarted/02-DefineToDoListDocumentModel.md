@@ -144,7 +144,12 @@ Check below screenshot for the complete implementation:
 
 ## Verify your document model generation
 
-If you have been watching the terminal in your IDE you will see that Vetra has been tracking your changes and scaffolding your directory. Your project should have the following structure in `document-models/todo-list/`:
+If you have been watching the terminal in your IDE you will see that Vetra has been tracking your changes and scaffolding your directory.
+It will mention: 
+```
+ℹ [Vetra] Document model TodoList is valid, proceeding with code generation  
+```
+ Your project should have the following structure in `document-models/todo-list/`:
 
 ```
 document-models/todo-list/

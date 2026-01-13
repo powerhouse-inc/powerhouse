@@ -69,6 +69,9 @@ export type Job = {
 
   /** History of all errors from each attempt (ordered) */
   errorHistory: ErrorInfo[];
+
+  /** Optional metadata that flows through the job lifecycle */
+  meta?: Record<string, unknown>;
 };
 
 /**

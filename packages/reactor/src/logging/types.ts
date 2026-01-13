@@ -10,4 +10,6 @@ export type ILogger = {
   error: (message: string, ...replacements: any[]) => void;
 
   errorHandler: LoggerErrorHandler;
+
+  child: (tags: string[]) => ILogger;
 };

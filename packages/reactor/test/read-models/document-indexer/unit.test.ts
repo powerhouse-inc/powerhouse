@@ -19,7 +19,10 @@ import type {
   Database,
   DocumentIndexerDatabase,
 } from "../../../src/storage/kysely/types.js";
-import { runMigrations } from "../../../src/storage/migrations/migrator.js";
+import {
+  REACTOR_SCHEMA,
+  runMigrations,
+} from "../../../src/storage/migrations/migrator.js";
 
 describe("KyselyDocumentIndexer Unit Tests", () => {
   let db: Kysely<Database & DocumentIndexerDatabase>;
@@ -28,20 +31,23 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
   let mockConsistencyTracker: IConsistencyTracker;
 
   beforeEach(async () => {
-    db = new Kysely<Database & DocumentIndexerDatabase>({
+    const baseDb = new Kysely<Database & DocumentIndexerDatabase>({
       dialect: new PGliteDialect(new PGlite()),
     });
 
     // Run migrations to create all tables
-    const result = await runMigrations(db);
+    const result = await runMigrations(baseDb, REACTOR_SCHEMA);
     if (!result.success && result.error) {
       throw new Error(`Test migration failed: ${result.error.message}`);
     }
+
+    db = baseDb.withSchema(REACTOR_SCHEMA);
 
     mockOperationStore = {
       apply: vi.fn(),
       getSince: vi.fn(),
       getSinceId: vi.fn().mockResolvedValue({ items: [], hasMore: false }),
+      getConflicting: vi.fn(),
       getRevisions: vi.fn(),
     };
 

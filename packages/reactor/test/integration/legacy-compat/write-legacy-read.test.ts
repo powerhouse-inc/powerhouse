@@ -46,6 +46,7 @@ import type { Database as StorageDatabase } from "../../../src/storage/kysely/ty
 import {
   createMockDocumentIndexer,
   createMockDocumentMetaCache,
+  createMockLogger,
   createMockReactorFeatures,
   createTestOperationStore,
 } from "../../factories.js";
@@ -201,6 +202,7 @@ describe.each(storageLayers)(
 
       const mockDocumentMetaCache = createMockDocumentMetaCache();
       const executor = new SimpleJobExecutor(
+        createMockLogger(),
         registry,
         legacyStorage as IDocumentStorage,
         legacyStorage,
@@ -216,12 +218,17 @@ describe.each(storageLayers)(
         eventBus,
         queue,
         jobTracker,
+        createMockLogger(),
       );
 
       await executorManager.start(1);
 
       // Create real read model coordinator with document view
-      readModelCoordinator = new ReadModelCoordinator(eventBus, [documentView]);
+      readModelCoordinator = new ReadModelCoordinator(
+        eventBus,
+        [documentView],
+        [],
+      );
 
       // Wrap storage with consistency-aware storage
       const legacyStorageConsistencyTracker = new ConsistencyTracker();
@@ -233,6 +240,7 @@ describe.each(storageLayers)(
 
       // Create reactor
       reactor = new Reactor(
+        createMockLogger(),
         driveServer,
         consistencyAwareStorage,
         queue,

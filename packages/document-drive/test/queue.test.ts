@@ -211,10 +211,11 @@ describe.each(queueLayers)(
 
       const document = documentModelCreateDocument();
       const header = createPresignedHeader(fileId, documentType);
-      await server.addDocument({ ...document, header });
+      const documentWithHeader = { ...document, header };
+      await server.addDocument(documentWithHeader);
       const mutation = buildOperation(
         documentModelDocumentModelModule.reducer,
-        document,
+        documentWithHeader,
         setModelName({
           name: "foo",
         }),

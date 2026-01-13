@@ -75,3 +75,32 @@ export const packageManagers = {
     installDepsCommand: "npm install",
   },
 } as const;
+
+export const PACKAGES_DEPENDENCIES = [
+  "@powerhousedao/builder-tools",
+  "@powerhousedao/codegen",
+  "@powerhousedao/common",
+  "@powerhousedao/config",
+  "@powerhousedao/design-system",
+  "document-drive",
+  "document-model",
+  "@powerhousedao/reactor",
+  "@powerhousedao/reactor-api",
+  "@powerhousedao/reactor-browser",
+  "@powerhousedao/reactor-local",
+  "@powerhousedao/reactor-mcp",
+  "@powerhousedao/switchboard-gui",
+  "@powerhousedao/vetra",
+] as const;
+
+export const CLIS_DEPENDENCIES = ["ph-cmd", "@powerhousedao/ph-cli"];
+export const APPS_DEPENDENCIES = [
+  "@powerhousedao/connect",
+  "@powerhousedao/switchboard",
+];
+
+export const ALL_POWERHOUSE_DEPENDENCIES = [
+  ...PACKAGES_DEPENDENCIES,
+  ...CLIS_DEPENDENCIES,
+  ...APPS_DEPENDENCIES,
+];

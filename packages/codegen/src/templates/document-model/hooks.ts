@@ -1,0 +1,56 @@
+import type { DocumentModelTemplateInputs } from "@powerhousedao/codegen/file-builders";
+import { ts } from "@tmpl/core";
+
+export const documentModelHooksFileTemplate = (
+  v: DocumentModelTemplateInputs,
+) =>
+  ts`
+
+import type { DocumentDispatch } from "@powerhousedao/reactor-browser";
+import {
+  useDocumentById,
+  useDocumentsInSelectedDrive,
+  useDocumentsInSelectedFolder,
+  useSelectedDocument,
+} from "@powerhousedao/reactor-browser";
+import type {
+  ${v.actionTypeName},
+  ${v.phDocumentTypeName},
+} from "${v.versionedDocumentModelPackageImportPath}";
+import { 
+  ${v.assertIsPhDocumentOfTypeFunctionName},
+  ${v.isPhDocumentOfTypeFunctionName} 
+} from "./gen/document-schema.js";
+
+/** Hook to get a ${v.pascalCaseDocumentType} document by its id */
+export function ${v.useByIdHookName}(
+  documentId: string | null | undefined,
+):
+  | [${v.phDocumentTypeName}, DocumentDispatch<${v.actionTypeName}>]
+  | [undefined, undefined] {
+  const [document, dispatch] = useDocumentById(documentId);
+  if (!${v.isPhDocumentOfTypeFunctionName}(document)) return [undefined, undefined];
+  return [document, dispatch];
+}
+
+/** Hook to get the selected ${v.pascalCaseDocumentType} document */
+export function ${v.useSelectedHookName}():
+  | [${v.phDocumentTypeName}, DocumentDispatch<${v.actionTypeName}>] {
+  const [document, dispatch] = useSelectedDocument();
+
+  ${v.assertIsPhDocumentOfTypeFunctionName}(document);
+  return [document, dispatch] as const;
+}
+
+/** Hook to get all ${v.pascalCaseDocumentType} documents in the selected drive */
+export function ${v.useInSelectedDriveHookName}() {
+  const documentsInSelectedDrive = useDocumentsInSelectedDrive();
+  return documentsInSelectedDrive?.filter(${v.isPhDocumentOfTypeFunctionName});
+}
+
+/** Hook to get all ${v.pascalCaseDocumentType} documents in the selected folder */
+export function ${v.useInSelectedFolderHookName}() {
+  const documentsInSelectedFolder = useDocumentsInSelectedFolder();
+  return documentsInSelectedFolder?.filter(${v.isPhDocumentOfTypeFunctionName});
+}
+`.raw;

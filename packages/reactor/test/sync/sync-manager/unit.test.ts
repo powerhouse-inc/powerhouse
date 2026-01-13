@@ -3,6 +3,7 @@ import type { IOperationIndex } from "../../../src/cache/operation-index-types.j
 import type { IReactor } from "../../../src/core/types.js";
 import type { IEventBus } from "../../../src/events/interfaces.js";
 import { OperationEventTypes } from "../../../src/events/types.js";
+import { ConsoleLogger } from "../../../src/logging/console.js";
 import type {
   ISyncCursorStorage,
   ISyncRemoteStorage,
@@ -99,6 +100,7 @@ describe("SyncManager - Unit Tests", () => {
     };
 
     syncManager = new SyncManager(
+      new ConsoleLogger(["SyncManager"]),
       mockRemoteStorage,
       mockCursorStorage,
       mockChannelFactory,

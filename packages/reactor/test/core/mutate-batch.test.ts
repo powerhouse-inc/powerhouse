@@ -13,6 +13,7 @@ import { ConsistencyAwareLegacyStorage } from "../../src/storage/consistency-awa
 import {
   createMockDocumentIndexer,
   createMockDocumentView,
+  createMockLogger,
   createMockOperationStore,
   createMockReactorFeatures,
 } from "../factories.js";
@@ -34,7 +35,7 @@ describe("mutateBatch validation", () => {
     const eventBus = new EventBus();
     const queue = new InMemoryQueue(eventBus);
     const jobTracker = new InMemoryJobTracker(eventBus);
-    const readModelCoordinator = new ReadModelCoordinator(eventBus, []);
+    const readModelCoordinator = new ReadModelCoordinator(eventBus, [], []);
     const consistencyTracker = new ConsistencyTracker();
     const consistencyAwareStorage = new ConsistencyAwareLegacyStorage(
       storage,
@@ -42,6 +43,7 @@ describe("mutateBatch validation", () => {
       eventBus,
     );
     return new Reactor(
+      createMockLogger(),
       driveServer,
       consistencyAwareStorage,
       queue,

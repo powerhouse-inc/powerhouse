@@ -66,9 +66,9 @@ function dispatch(
 
 | Category | Hooks |
 |----------|-------|
-| **Selected Document** | `useSelectedDocument`, `useSelectedDocumentId`, `useSelectedDocumentOfType` |
+| **Selected Document** | `useSelectedDocument`, `useSelectedDocumentSafe`, `useSelectedDocumentId`, `useSelectedDocumentOfType` |
 | **Document by ID** | `useDocumentById`, `useDocumentsByIds`, `useDocumentOfType` |
-| **Document Cache** | `useDocumentCache`, `useGetDocument`, `useGetDocuments`, `useGetDocumentAsync` |
+| **Document Cache** | `useDocumentCache`, `useDocument`, `useDocuments`, `useGetDocument`, `useGetDocuments`, `useGetDocumentAsync` |
 | **Drives** | `useDrives`, `useSelectedDrive`, `useSelectedDriveSafe`, `useSelectedDriveId` |
 | **Nodes & Folders** | `useSelectedNode`, `useSelectedFolder`, `useNodeById`, `useNodePathById` |
 | **Items in Drive** | `useNodesInSelectedDrive`, `useFileNodesInSelectedDrive`, `useFolderNodesInSelectedDrive`, `useDocumentsInSelectedDrive` |
@@ -97,10 +97,50 @@ function useSelectedDocumentId(): string | undefined
 
 ### `useSelectedDocument`
 
-Returns the selected document along with a dispatch function.
+Returns the selected document along with a dispatch function. Throws error if no document selected.
 
 ```typescript
 function useSelectedDocument(): readonly [
+  PHDocument,
+  (actionOrActions: Action | Action[] | undefined, onErrors?: (errors: Error[]) => void) => void
+]
+```
+
+**Returns:** A tuple `[document, dispatch]` where:
+- `document` — The selected document
+- `dispatch` — A function to dispatch actions to the document
+
+**Example:**
+
+```tsx
+import { useSelectedDocument } from '@powerhousedao/reactor-browser';
+
+function DocumentViewer() {
+  const [document, dispatch] = useSelectedDocument();
+
+  if (!document) {
+    return <p>No document selected</p>;
+  }
+
+  return (
+    <div>
+      <h1>{document.name}</h1>
+      <p>Type: {document.header.documentType}</p>
+    </div>
+  );
+}
+```
+
+**See also:** [`useSelectedDocumentSafe`](#useselecteddocumentsafe), [`useSelectedDocumentOfType`](#useselecteddocumentoftype), [`useDocumentById`](#usedocumentbyid)
+
+------
+
+### `useSelectedDocumentSafe`
+
+Returns the selected document along with a dispatch function or undefined is no document is selected.
+
+```typescript
+function useSelectedDocumentSafe(): readonly [
   PHDocument | undefined,
   (actionOrActions: Action | Action[] | undefined, onErrors?: (errors: Error[]) => void) => void
 ]
@@ -109,6 +149,9 @@ function useSelectedDocument(): readonly [
 **Returns:** A tuple `[document, dispatch]` where:
 - `document` — The selected document, or `undefined` if none selected
 - `dispatch` — A function to dispatch actions to the document
+
+**Throws:**
+- `NoSelectedDocumentError` — When no document is selected
 
 **Example:**
 
@@ -154,6 +197,7 @@ function useSelectedDocumentOfType(documentType: null | undefined): never[]
 
 **Throws:**
 - `NoSelectedDocumentError` — When no document is selected
+- `DocumentTypeMismatchError` - When selected document has different document type than the one provided
 
 **Example:**
 
@@ -266,12 +310,12 @@ function useDocumentCache(): IDocumentCache | undefined
 
 ---
 
-### `useGetDocument`
+### `useDocument`
 
 Retrieves a document from the reactor and subscribes to changes using React Suspense. This hook will suspend rendering while the document is loading.
 
 ```typescript
-function useGetDocument(id: string | null | undefined): PHDocument | undefined
+function useDocument(id: string | null | undefined): PHDocument | undefined
 ```
 
 **Parameters:**
@@ -281,18 +325,59 @@ function useGetDocument(id: string | null | undefined): PHDocument | undefined
 
 ---
 
-### `useGetDocuments`
+### `useDocuments`
 
 Retrieves multiple documents from the reactor using React Suspense. This hook will suspend rendering while any of the documents are loading.
 
 ```typescript
-function useGetDocuments(ids: string[] | null | undefined): PHDocument[]
+function useDocuments(ids: string[] | null | undefined): PHDocument[]
 ```
 
 **Parameters:**
 - `ids` — Array of document IDs to retrieve, or `null`/`undefined` to skip retrieval
 
 **Returns:** An array of documents. Returns an empty array if `ids` is `null`/`undefined`.
+
+---
+
+### `useGetDocument`
+
+Returns a function to retrieve a document from the cache. The returned function fetches and returns a document by ID.
+
+```typescript
+function useGetDocument(): (id: string) => Promise<PHDocument>
+```
+
+**Returns:** A function that takes a document ID and returns a Promise of the document.
+
+**Example:**
+
+```tsx
+import { useGetDocument } from '@powerhousedao/reactor-browser';
+
+function DocumentFetcher() {
+  const getDocument = useGetDocument();
+
+  const handleFetch = async (id: string) => {
+    const document = await getDocument(id);
+    console.log('Fetched document:', document.name);
+  };
+
+  return <button onClick={() => handleFetch('doc-123')}>Fetch Document</button>;
+}
+```
+
+---
+
+### `useGetDocuments`
+
+Returns a function to retrieve multiple documents from the cache. The returned function fetches and returns documents by their IDs.
+
+```typescript
+function useGetDocuments(): (ids: string[]) => Promise<PHDocument[]>
+```
+
+**Returns:** A function that takes an array of document IDs and returns a Promise of the documents.
 
 ---
 

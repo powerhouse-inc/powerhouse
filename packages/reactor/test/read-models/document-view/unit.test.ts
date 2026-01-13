@@ -21,6 +21,7 @@ describe("KyselyDocumentView Unit Tests", () => {
       apply: vi.fn(),
       getSince: vi.fn(),
       getSinceId: vi.fn(),
+      getConflicting: vi.fn(),
       getRevisions: vi.fn(),
     };
 

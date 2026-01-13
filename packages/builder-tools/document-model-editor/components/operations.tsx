@@ -25,6 +25,7 @@ type Props = {
     errorId: string,
     name: string,
   ) => void;
+  toggleNoInputRequired: (id: string, noInputRequired: boolean) => void;
 };
 export function Operations({
   module,
@@ -38,6 +39,7 @@ export function Operations({
   setOperationErrorName,
   updateOperationSchema,
   setOperationDescription,
+  toggleNoInputRequired,
 }: Props) {
   const [lastCreatedOperationId, setLastCreatedOperationId] = useState<
     string | null
@@ -75,6 +77,7 @@ export function Operations({
             deleteOperation={deleteOperation}
             updateOperationSchema={updateOperationSchema}
             setOperationDescription={setOperationDescription}
+            toggleNoInputRequired={toggleNoInputRequired}
           />
         </div>
       ))}

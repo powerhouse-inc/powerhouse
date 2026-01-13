@@ -3,8 +3,8 @@ import {
   createBaseState,
   driveCreateDocument,
   InMemoryCache,
-  LRUCacheStorage,
 } from "document-drive";
+import { LRUCacheStorage } from "document-drive/cache/lru";
 import type { DocumentModelGlobalState } from "document-model";
 import { documentModelCreateDocument } from "document-model";
 import { generateId } from "document-model/core";

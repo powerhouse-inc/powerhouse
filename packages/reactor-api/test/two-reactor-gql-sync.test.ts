@@ -1,5 +1,6 @@
 import {
   CompositeChannelFactory,
+  ConsoleLogger,
   JobStatus,
   OperationEventTypes,
   ReactorBuilder,
@@ -118,8 +119,9 @@ async function setupTwoReactorsWithGqlChannel(): Promise<TwoReactorSetup> {
 
   const resolverBridge = createResolverBridge(syncManagerRegistry);
 
-  const channelFactoryA = new CompositeChannelFactory();
-  const channelFactoryB = new CompositeChannelFactory();
+  const logger = new ConsoleLogger(["test"]);
+  const channelFactoryA = new CompositeChannelFactory(logger);
+  const channelFactoryB = new CompositeChannelFactory(logger);
 
   const models = [
     driveDocumentModelModule,
@@ -253,7 +255,152 @@ describe("Two-Reactor Sync with GqlChannel", () => {
     expect(docA.document).toEqual(docB.document);
   });
 
-  it("should sync multiple documents with concurrent operations from both reactors", async () => {}, 30000);
+  it("should sync multiple documents with concurrent operations from both reactors", async () => {
+    // Create 4 documents (2 for each reactor)
+    const docA1 = driveDocumentModelModule.utils.createDocument();
+    const docA2 = driveDocumentModelModule.utils.createDocument();
+    const docB1 = driveDocumentModelModule.utils.createDocument();
+    const docB2 = driveDocumentModelModule.utils.createDocument();
+
+    const allDocIds = [
+      docA1.header.id,
+      docA2.header.id,
+      docB1.header.id,
+      docB2.header.id,
+    ];
+
+    // Set up listeners for docs to sync to the other reactor
+    const readyOnB_A1 = waitForOperationsReady(eventBusB, docA1.header.id);
+    const readyOnB_A2 = waitForOperationsReady(eventBusB, docA2.header.id);
+    const readyOnA_B1 = waitForOperationsReady(eventBusA, docB1.header.id);
+    const readyOnA_B2 = waitForOperationsReady(eventBusA, docB2.header.id);
+
+    // Create documents on their respective reactors
+    const [jobA1, jobA2] = await Promise.all([
+      reactorA.create(docA1),
+      reactorA.create(docA2),
+    ]);
+    const [jobB1, jobB2] = await Promise.all([
+      reactorB.create(docB1),
+      reactorB.create(docB2),
+    ]);
+
+    // Wait for all creates to complete on source reactors
+    await Promise.all([
+      waitForJobCompletion(reactorA, jobA1.id),
+      waitForJobCompletion(reactorA, jobA2.id),
+      waitForJobCompletion(reactorB, jobB1.id),
+      waitForJobCompletion(reactorB, jobB2.id),
+    ]);
+
+    // Wait for all docs to sync to the other reactor
+    await Promise.all([readyOnB_A1, readyOnB_A2, readyOnA_B1, readyOnA_B2]);
+
+    // Now fire concurrent modify operations on each doc
+    void reactorA.execute(docA1.header.id, "main", [
+      driveDocumentModelModule.actions.setDriveName({ name: "Drive A1" }),
+      driveDocumentModelModule.actions.addFolder({
+        id: "folder-a1",
+        name: "Folder A1",
+        parentFolder: null,
+      }),
+    ]);
+    void reactorA.execute(docA2.header.id, "main", [
+      driveDocumentModelModule.actions.setDriveName({ name: "Drive A2" }),
+      driveDocumentModelModule.actions.addFolder({
+        id: "folder-a2",
+        name: "Folder A2",
+        parentFolder: null,
+      }),
+    ]);
+    void reactorB.execute(docB1.header.id, "main", [
+      driveDocumentModelModule.actions.setDriveName({ name: "Drive B1" }),
+      driveDocumentModelModule.actions.addFolder({
+        id: "folder-b1",
+        name: "Folder B1",
+        parentFolder: null,
+      }),
+    ]);
+    void reactorB.execute(docB2.header.id, "main", [
+      driveDocumentModelModule.actions.setDriveName({ name: "Drive B2" }),
+      driveDocumentModelModule.actions.addFolder({
+        id: "folder-b2",
+        name: "Folder B2",
+        parentFolder: null,
+      }),
+    ]);
+
+    // Poll until all 4 documents are synced on both reactors
+    const startTime = Date.now();
+    const timeout = 25000;
+    let synced = false;
+
+    while (Date.now() - startTime < timeout) {
+      let allDocsSynced = true;
+
+      for (const docId of allDocIds) {
+        try {
+          const resultA = await reactorA.getOperations(docId, {
+            branch: "main",
+          });
+          const opsA = Object.values(resultA).flatMap((scope) => scope.results);
+
+          const resultB = await reactorB.getOperations(docId, {
+            branch: "main",
+          });
+          const opsB = Object.values(resultB).flatMap((scope) => scope.results);
+
+          // Each doc should have at least 2 ops (create + execute with actions)
+          // and both reactors should have same count
+          if (
+            opsA.length < 2 ||
+            opsB.length < 2 ||
+            opsA.length !== opsB.length
+          ) {
+            allDocsSynced = false;
+            break;
+          }
+        } catch {
+          // Document may not exist on one reactor yet
+          allDocsSynced = false;
+          break;
+        }
+      }
+
+      if (allDocsSynced) {
+        synced = true;
+        break;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    expect(synced).toBe(true);
+
+    // Verify operation equality for all 4 documents
+    for (const docId of allDocIds) {
+      const resultA = await reactorA.getOperations(docId, { branch: "main" });
+      const opsA = Object.values(resultA).flatMap((scope) => scope.results);
+
+      const resultB = await reactorB.getOperations(docId, { branch: "main" });
+      const opsB = Object.values(resultB).flatMap((scope) => scope.results);
+
+      expect(opsA.length).toBeGreaterThan(0);
+      expect(opsB.length).toBe(opsA.length);
+
+      for (let i = 0; i < opsA.length; i++) {
+        expect(opsB[i]).toEqual(opsA[i]);
+      }
+    }
+
+    // Verify document state equality for all 4 documents
+    for (const docId of allDocIds) {
+      const docFromA = await reactorA.get(docId, { branch: "main" });
+      const docFromB = await reactorB.get(docId, { branch: "main" });
+
+      expect(docFromA.document).toEqual(docFromB.document);
+    }
+  }, 30000);
 
   it("should handle concurrent modifications to the same document from both reactors", async () => {
     const doc = driveDocumentModelModule.utils.createDocument();

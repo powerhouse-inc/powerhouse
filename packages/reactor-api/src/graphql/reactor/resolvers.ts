@@ -10,7 +10,11 @@ import {
   type SearchFilter,
   type ViewFilter,
 } from "@powerhousedao/reactor";
-import type { DocumentModelModule, Operation, PHDocument } from "document-model";
+import type {
+  DocumentModelModule,
+  Operation,
+  PHDocument,
+} from "document-model";
 import { GraphQLError } from "graphql";
 import {
   fromInputMaybe,
@@ -54,7 +58,7 @@ export async function documentModels(
 
   let result: PagedResults<DocumentModelModule>;
   try {
-    result = await reactorClient.getDocumentModels(namespace, paging);
+    result = await reactorClient.getDocumentModelModules(namespace, paging);
   } catch (error) {
     throw new GraphQLError(
       `Failed to fetch document models: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -674,12 +678,11 @@ export async function touchChannel(
   },
 ): Promise<boolean> {
   try {
-    const existing = syncManager.getById(args.input.id);
-    if (existing) {
-      return true;
-    }
+    syncManager.getById(args.input.id);
+
+    return true;
   } catch {
-    // Ignore errors when checking for existing sync connection
+    // getById will throw if the remote does not exist
   }
 
   const filter: RemoteFilter = {
@@ -730,7 +733,9 @@ function serializeOperationForGraphQL(operation: Operation) {
         ...operation.action.context,
         signer: {
           ...signer,
-          signatures: signer.signatures.map((sig) => sig.join(", ")),
+          signatures: signer.signatures.map((sig) =>
+            Array.isArray(sig) ? sig.join(", ") : sig,
+          ),
         },
       },
     },
@@ -759,6 +764,20 @@ export async function pollSyncEnvelopes(
 
   const operations = remote.channel.outbox.items;
 
+  if (operations.length === 0) {
+    return [];
+  }
+
+  let maxOrdinal = args.cursorOrdinal;
+  for (const syncOp of operations) {
+    for (const op of syncOp.operations) {
+      const opOrdinal = op.context.ordinal;
+      if (opOrdinal > maxOrdinal) {
+        maxOrdinal = opOrdinal;
+      }
+    }
+  }
+
   const envelopes = operations.map((syncOp: SyncOperation) => ({
     type: "OPERATIONS",
     channelMeta: {
@@ -770,7 +789,7 @@ export async function pollSyncEnvelopes(
     })),
     cursor: {
       remoteName: remote.name,
-      cursorOrdinal: args.cursorOrdinal + 1,
+      cursorOrdinal: maxOrdinal,
       lastSyncedAtUtcMs: Date.now().toString(),
     },
   }));

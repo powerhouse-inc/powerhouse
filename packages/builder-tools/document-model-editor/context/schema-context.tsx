@@ -12,6 +12,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import {
   hiddenQueryTypeDefDoc,
   initialSchema,
+  initialSchemaStr,
   typeDefsDoc,
 } from "../constants/documents.js";
 
@@ -32,7 +33,10 @@ const rules = createDefaultRules().filter(
 );
 
 /* The shared schema is just a string to make memoization easier */
-type TSchemaContext = string;
+type TSchemaContext = {
+  sharedSchema: string;
+  error: Error | undefined;
+};
 
 type TSchemaContextProps = {
   globalStateSchemaSdl: string;
@@ -43,7 +47,6 @@ type TSchemaContextProps = {
 
 /* 
  Makes one SDL string from all of the definitions in the state and operation schemas
- Uses try catch to prevent errors from breaking the editor
 */
 function makeSharedSchemaSdl(
   existingSchemaSdl: string,
@@ -51,23 +54,18 @@ function makeSharedSchemaSdl(
   localStateSchemaSdl?: string,
   operationSchemasSdl?: string,
 ) {
-  try {
-    const existingSchema = buildSchema(existingSchemaSdl);
-    const sdls = [
-      globalStateSchemaSdl,
-      localStateSchemaSdl,
-      operationSchemasSdl,
-    ].filter(Boolean);
-    const asts = sdls
-      .map((sdl) => (sdl ? safeParseSdl(sdl) : null))
-      .filter((ast) => ast !== null);
-    const documentNode = makeSafeDocumentNode(existingSchema, asts);
-    const schemaSdl = printSchema(buildASTSchema(documentNode));
-    return schemaSdl;
-  } catch (error) {
-    console.debug("in make shared schema", error);
-    return existingSchemaSdl;
-  }
+  const existingSchema = buildSchema(existingSchemaSdl);
+  const sdls = [
+    globalStateSchemaSdl,
+    localStateSchemaSdl,
+    operationSchemasSdl,
+  ].filter(Boolean);
+  const asts = sdls
+    .map((sdl) => (sdl ? safeParseSdl(sdl) : null))
+    .filter((ast) => ast !== null);
+  const documentNode = makeSafeDocumentNode(existingSchema, asts);
+  const schemaSdl = printSchema(buildASTSchema(documentNode));
+  return schemaSdl;
 }
 
 /* 
@@ -129,9 +127,40 @@ export function safeParseSdl(sdl: string) {
   }
 }
 
-export const SchemaContext = createContext<TSchemaContext>(
-  printSchema(initialSchema),
-);
+export const SchemaContext = createContext<TSchemaContext>({
+  sharedSchema: initialSchemaStr,
+  error: undefined,
+});
+
+export function parseSharedSchemaSdl(
+  initialSchema: string,
+  globalStateSchemaSdl?: string,
+  localStateSchemaSdl?: string,
+  operationSchemasSdl?: string,
+): TSchemaContext {
+  try {
+    return {
+      sharedSchema: makeSharedSchemaSdl(
+        initialSchema,
+        globalStateSchemaSdl,
+        localStateSchemaSdl,
+        operationSchemasSdl,
+      ),
+      error: undefined,
+    };
+  } catch (error) {
+    return {
+      sharedSchema: initialSchema,
+      error:
+        error instanceof Error
+          ? error
+          : new Error(
+              typeof error === "string" ? error : JSON.stringify(error),
+              { cause: error },
+            ),
+    };
+  }
+}
 
 /* 
  Provides the shared schema to the editor
@@ -144,8 +173,9 @@ export function SchemaContextProvider(props: TSchemaContextProps) {
     localStateSchemaSdl,
     operationSchemasSdl,
   } = props;
-  const [sharedSchemaSdl, setSharedSchemaSdl] = useState(() =>
-    makeSharedSchemaSdl(
+
+  const [sharedSchemaSdl, setSharedSchemaSdl] = useState<TSchemaContext>(() =>
+    parseSharedSchemaSdl(
       printSchema(initialSchema),
       globalStateSchemaSdl,
       localStateSchemaSdl,
@@ -155,8 +185,8 @@ export function SchemaContextProvider(props: TSchemaContextProps) {
 
   useEffect(() => {
     setSharedSchemaSdl((prev) =>
-      makeSharedSchemaSdl(
-        prev,
+      parseSharedSchemaSdl(
+        prev.sharedSchema,
         globalStateSchemaSdl,
         localStateSchemaSdl,
         operationSchemasSdl,

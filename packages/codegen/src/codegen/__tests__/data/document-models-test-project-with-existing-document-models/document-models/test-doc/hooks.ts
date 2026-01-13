@@ -1,15 +1,15 @@
 import type { DocumentDispatch } from "@powerhousedao/reactor-browser";
 import {
+  useDocumentById,
   useDocumentsInSelectedDrive,
   useDocumentsInSelectedFolder,
-  useDocumentById,
   useSelectedDocument,
 } from "@powerhousedao/reactor-browser";
-import type {
-  TestDocDocument,
-  TestDocAction,
-} from "test/document-models/test-doc";
-import { isTestDocDocument } from "./gen/document-schema.js";
+import {
+  assertIsTestDocDocument,
+  isTestDocDocument,
+} from "./gen/document-schema.js";
+import type { TestDocAction, TestDocDocument } from "./gen/types.js";
 
 /** Hook to get a TestDoc document by its id */
 export function useTestDocDocumentById(
@@ -21,12 +21,14 @@ export function useTestDocDocumentById(
 }
 
 /** Hook to get the selected TestDoc document */
-export function useSelectedTestDocDocument():
-  | [TestDocDocument, DocumentDispatch<TestDocAction>]
-  | [undefined, undefined] {
+export function useSelectedTestDocDocument(): [
+  TestDocDocument,
+  DocumentDispatch<TestDocAction>,
+] {
   const [document, dispatch] = useSelectedDocument();
-  if (!isTestDocDocument(document)) return [undefined, undefined];
-  return [document, dispatch];
+
+  assertIsTestDocDocument(document);
+  return [document, dispatch] as const;
 }
 
 /** Hook to get all TestDoc documents in the selected drive */

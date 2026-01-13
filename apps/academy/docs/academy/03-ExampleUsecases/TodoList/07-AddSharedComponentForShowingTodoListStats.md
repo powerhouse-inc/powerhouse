@@ -61,44 +61,51 @@ export function Stats({
   const hasTodoLists = todoListDocuments !== undefined;
 
   return (
-    <ul className="text-sm text-gray-800 max-w-1/2">
-      {hasTodoLists && (
-        <li className="flex justify-between">
-          <span>Todo Lists:</span> <span>{totalTodoListDocuments}</span>
+    <div className="w-[400px] rounded-xl bg-white p-6 shadow-sm">
+      <div className="mb-4 text-xs font-medium uppercase tracking-wide text-gray-400">
+        Statistics
+      </div>
+      <ul className="flex flex-col gap-2">
+        {hasTodoLists && (
+          <li className="flex justify-between items-center rounded-lg border border-gray-200 p-3">
+            <span className="text-sm text-gray-600">Todo Lists</span>
+            <span className="text-sm font-medium text-gray-900">{totalTodoListDocuments}</span>
+          </li>
+        )}
+        <li className="flex justify-between items-center rounded-lg border border-gray-200 p-3">
+          <span className="text-sm text-gray-600">Todos</span>
+          <span className="text-sm font-medium text-gray-900">{totalTodos}</span>
         </li>
-      )}
-      <li className="flex justify-between">
-        <span>Todos:</span> <span>{totalTodos}</span>
-      </li>
-      <li className="flex justify-between">
-        <span>Checked:</span>{" "}
-        <span>
-          {totalChecked} ({percentageChecked}%)
-        </span>
-      </li>
-      <li className="flex justify-between">
-        <span>Unchecked:</span>{" "}
-        <span>
-          {totalUnchecked} ({percentageUnchecked}%)
-        </span>
-      </li>
-      {hasCreatedAt && (
-        <li className="flex justify-between">
-          <span>Created:</span>{" "}
-          <span>
-            {createdAtFormattedDate} {createdAtFormattedTime}
+        <li className="flex justify-between items-center rounded-lg border border-gray-200 p-3">
+          <span className="text-sm text-gray-600">Checked</span>
+          <span className="text-sm font-medium text-gray-900">
+            {totalChecked} ({percentageChecked}%)
           </span>
         </li>
-      )}
-      {hasLastModified && (
-        <li className="flex justify-between">
-          <span>Last modified:</span>{" "}
-          <span>
-            {lastModifiedFormattedDate} {lastModifiedFormattedTime}
+        <li className="flex justify-between items-center rounded-lg border border-gray-200 p-3">
+          <span className="text-sm text-gray-600">Unchecked</span>
+          <span className="text-sm font-medium text-gray-900">
+            {totalUnchecked} ({percentageUnchecked}%)
           </span>
         </li>
-      )}
-    </ul>
+        {hasCreatedAt && (
+          <li className="flex justify-between items-center rounded-lg border border-gray-200 p-3">
+            <span className="text-sm text-gray-600">Created</span>
+            <span className="text-sm font-medium text-gray-900">
+              {createdAtFormattedDate} {createdAtFormattedTime}
+            </span>
+          </li>
+        )}
+        {hasLastModified && (
+          <li className="flex justify-between items-center rounded-lg border border-gray-200 p-3">
+            <span className="text-sm text-gray-600">Last modified</span>
+            <span className="text-sm font-medium text-gray-900">
+              {lastModifiedFormattedDate} {lastModifiedFormattedTime}
+            </span>
+          </li>
+        )}
+      </ul>
+    </div>
   );
 }
 
@@ -112,6 +119,7 @@ function calculatePercentage(total: unknown, value: unknown) {
   }
   return ratio * 100;
 }
+
 ```
 
 And `editors/components/index.ts` with this content:
@@ -126,57 +134,46 @@ Don't be too concerned with the math and time related code you see here — thos
 
 ## Using the  `<Stats />` component in our `TodoListEditor`
 
-Now let's use the `<Stats />` component in our `<TodoList />` component:
+Now let's use the `<Stats />` component in our `<TodoList />` component `editors/todo-list-editor/components/TodoList.tsx`:
 
 ```tsx
 import { useSelectedTodoListDocument } from "todo-tutorial/document-models/todo-list";
-// added-line
-import { Stats } from "todo-tutorial/editors/components";
-import { EditTodoListName } from "./EditName.js";
-import { Todos } from "./Todos.js";
 import { AddTodo } from "./AddTodo.js";
-import { CloseButton } from "./CloseButton.js";
+import { Todos } from "./Todos.js";
+
+// added-start
+import { Stats } from "todo-tutorial/editors/components";
+// added-end
 
 /** Displays the selected todo list */
 export function TodoList() {
-  const [selectedTodoList] = useSelectedTodoListDocument();
+  // this hook returns the currently selected TodoList document
+  const [selectedTodoListDocument] = useSelectedTodoListDocument();
 
-  if (!selectedTodoList) return null;
+  if (!selectedTodoListDocument) return null;
 
-  const todos = selectedTodoList.state.global.items;
+  const todos = selectedTodoListDocument.state.global.items;
   // added-start
-  const createdAtUtcIso = selectedTodoList.header.createdAtUtcIso;
-  const lastModifiedAtUtcIso = selectedTodoList.header.lastModifiedAtUtcIso;
+  const createdAtUtcIso = selectedTodoListDocument.header.createdAtUtcIso;
+  const lastModifiedAtUtcIso =
+    selectedTodoListDocument.header.lastModifiedAtUtcIso;
   // added-end
 
   return (
-    <div>
-      <section className="mb-4 flex gap-2 items-center">
-        <div className="grow">
-          <EditTodoListName />
-        </div>
-        <div className="flex-none">
-          <CloseButton />
-        </div>
-      </section>
+    <div className="flex flex-col items-center px-4 py-8 gap-6">
       // added-start
-      <section className="mb-4">
-        <Stats
-          todos={todos}
-          createdAtUtcIso={createdAtUtcIso}
-          lastModifiedAtUtcIso={lastModifiedAtUtcIso}
-        />
-      </section>
+      <Stats
+        todos={todos}
+        createdAtUtcIso={createdAtUtcIso}
+        lastModifiedAtUtcIso={lastModifiedAtUtcIso}
+      />
       // added-end
-      <section className="mb-4">
-        <Todos todos={todos} />
-      </section>
-      <section>
-        <AddTodo />
-      </section>
+      <AddTodo />
+      <Todos todos={todos} />
     </div>
   );
 }
+
 ```
 
 With this, you will now see statistics about the todo items in a todo list document.
@@ -185,7 +182,7 @@ And now we can also show off the flexibility of our new `<Stats />` component. S
 
 ## Using the `<Stats />` component in our `TodoDriveExplorer`
 
-Let's add this to our `<DriveContents />` component, along with some conditional logic that either shows stats for the selected folder (if one is selected) or the selected drive otherwise.
+Let's add this to our `<DriveContents />` component `editors/todo-drive-app/components/DriveContents.tsx`, along with some conditional logic that either shows stats for the selected folder (if one is selected) or the selected drive otherwise.
 
 ```tsx
 // added-start
@@ -282,11 +279,13 @@ import {
   useSelectedDrive,
   useSelectedFolder,
 } from "@powerhousedao/reactor-browser";
+
 import { CreateDocument } from "./CreateDocument.js";
 import { EmptyState } from "./EmptyState.js";
 import { Files } from "./Files.js";
 import { Folders } from "./Folders.js";
 import { NavigationBreadcrumbs } from "./NavigationBreadcrumbs.js";
+
 import { Stats } from "todo-tutorial/editors/components";
 import {
   useTodoListDocumentsInSelectedDrive,
@@ -306,6 +305,7 @@ export function getAllTodoItemsFromTodoLists(
 export function DriveContents() {
   const selectedFolder = useSelectedFolder();
   const hasSelectedFolder = selectedFolder !== undefined;
+
   return (
     <div className="space-y-6 px-6">
       <NavigationBreadcrumbs />

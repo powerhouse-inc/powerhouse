@@ -251,13 +251,40 @@ export type Action = {
  * @remarks
  * Wraps an action with an index, to be added to the operations history of a Document.
  * The `index` field is used to keep all operations in order and enable replaying the
- * document's history from the beginning.
+ * document's history from the beginning. Note that indices and skips are relative to
+ * a specific reactor. Example below:
+ *
+ * For (index, skip, ts, action)
+ * A - [(0, 0, 1, "A0"), (1, 0, 2, "A1")]
+ * B - [(0, 0, 0, "B0"), (1, 0, 3, "B1")]
+ * ...
+ * B gets A's Operations Scenario:
+ * B' - [(0, 0, 0, "B0"), (1, 0, 3, "B1"), (2, 1, 1, "A0"), (3, 0, 2, "A1"), (4, 0, 3, "B1")]
+ * Then A needs to end up with:
+ * A' - [(0, 0, 1, "A0"), (1, 0, 2, "A1"), (2, 2, 0, "B0"), (3, 0, 1, "A0"), (4, 0, 2, "A1"), (5, 0, 3, "B1")]
+ * So that both A and B end up with the stream of actions (action):
+ * [("B0"), ("A0"), ("A1"), ("B1")]
  *
  * @typeParam A - The type of the action.
  */
 export type Operation = {
-  /** Position of the operation in the history */
+  /**
+   * This is a stable id, derived from various document and action properties
+   * in deriveOperationId().
+   *
+   * It _cannot_ be an arbitrary string.
+   *
+   * It it also not unique per operation, as reshuffled operations will keep'
+   * the same id they had before they were reshuffled. This means that the
+   * IOperationStore may have multiple operations with the same operation id.
+   **/
+  id: string;
+
+  /** Position of the operation in the history. This is relative to a specific reactor -- they may not all agree on this value. */
   index: number;
+
+  /** The number of operations skipped with this Operation. This is relative to a specific reactor -- they may not all agree on this value. */
+  skip: number;
 
   /** Timestamp of when the operation was added */
   timestampUtcMs: string;
@@ -265,17 +292,11 @@ export type Operation = {
   /** Hash of the resulting document data after the operation */
   hash: string;
 
-  /** The number of operations skipped with this Operation */
-  skip: number;
-
   /** Error message for a failed action */
   error?: string;
 
   /** The resulting state after the operation */
   resultingState?: string;
-
-  /** Unique operation id. This is distinct from the action id and can be undefined and assigned later. */
-  id?: string;
 
   /**
    * The action that was applied to the document to produce this operation.

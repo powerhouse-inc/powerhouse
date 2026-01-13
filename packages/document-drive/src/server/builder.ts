@@ -25,7 +25,7 @@ import { TransmitterFactory } from "./transmitter/factory.js";
  * Builder class for constructing Reactor instances with proper configuration
  */
 export class ReactorBuilder {
-  public documentModelModules: DocumentModelModule[] = [];
+  public documentModelModules: DocumentModelModule<any>[] = [];
 
   public storage?: IDriveOperationStorage;
   public cache?: ICache;
@@ -36,7 +36,7 @@ export class ReactorBuilder {
   public listenerManager?: IListenerManager;
   public transmitterFactory?: ITransmitterFactory;
 
-  constructor(documentModelModules: DocumentModelModule[]) {
+  constructor(documentModelModules: DocumentModelModule<any>[]) {
     this.documentModelModules = documentModelModules;
   }
 

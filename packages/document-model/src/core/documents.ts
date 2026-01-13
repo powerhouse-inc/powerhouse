@@ -170,8 +170,8 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
   initialState: TState,
   operations: DocumentOperations,
   reducer: Reducer<TState>,
+  header: PHDocumentHeader,
   dispatch?: SignalDispatch,
-  header?: PHDocumentHeader,
   skipHeaderOperations: SkipHeaderOperations = {},
   options?: ReplayDocumentOptions,
 ): PHDocument<TState> {
@@ -232,16 +232,14 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
     );
   }
 
-  // builds a new document from the initial data
-  const document = baseCreateDocument(
-    defaultCreateState<TState>,
-    documentState,
-  );
-  if (header?.slug) {
-    document.header.slug = header.slug;
-  }
-  document.initialState = initialState;
-  document.operations = initialOperations;
+  // builds a new document using the provided header (no generated header)
+  const document: PHDocument<TState> = {
+    header,
+    state: defaultCreateState<TState>(documentState),
+    initialState,
+    operations: initialOperations,
+    clipboard: [],
+  };
 
   let result = document;
 

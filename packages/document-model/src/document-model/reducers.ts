@@ -99,6 +99,7 @@ import {
   UpdateOperationExampleInputSchema,
   UpdateStateExampleInputSchema,
 } from "./schemas.js";
+import { validateOperationName } from "./validation.js";
 
 function sorter<TItem extends { id: string }>(
   order: string[],
@@ -376,6 +377,8 @@ export const documentModelOperationExampleReducer: DocumentModelOperationExample
   };
 export const documentModelOperationReducer: DocumentModelOperationOperations = {
   addOperationOperation(state, action) {
+    validateOperationName(action.input.name, state);
+
     const latestSpec = state.specifications[state.specifications.length - 1];
     for (let i = 0; i < latestSpec.modules.length; i++) {
       if (latestSpec.modules[i].id == action.input.moduleId) {
@@ -395,6 +398,10 @@ export const documentModelOperationReducer: DocumentModelOperationOperations = {
   },
 
   setOperationNameOperation(state, action) {
+    if (action.input.name) {
+      validateOperationName(action.input.name, state, action.input.id);
+    }
+
     const latestSpec = state.specifications[state.specifications.length - 1];
     for (let i = 0; i < latestSpec.modules.length; i++) {
       for (let j = 0; j < latestSpec.modules[i].operations.length; j++) {

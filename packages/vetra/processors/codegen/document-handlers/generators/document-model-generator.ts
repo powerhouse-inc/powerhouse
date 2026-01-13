@@ -1,7 +1,6 @@
 import {
   generateFromDocument,
   generateManifest,
-  generateSubgraphFromDocumentModel,
   validateDocumentModelState,
 } from "@powerhousedao/codegen";
 import type { InternalTransmitterUpdate } from "document-drive";
@@ -66,12 +65,6 @@ export class DocumentModelGenerator extends BaseDocumentGen {
         useTsMorph: USE_TS_MORPH,
         useVersioning: USE_VERSIONING,
       });
-      await generateSubgraphFromDocumentModel(
-        state.name,
-        state,
-        this.config.PH_CONFIG,
-        { verbose: false },
-      );
       logger.info(
         `✅ Code generation completed successfully for: ${state.name}`,
       );

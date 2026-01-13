@@ -1,6 +1,6 @@
 # Using subgraphs
 
-This tutorial will demonstrate how to create and customize a subgraph using our To-do List project as an example.
+This tutorial will demonstrate how to create and customize a subgraph using our to-do list project as an example.
 Let's start with the basics and gradually add more complex features and functionality.
 
 ## What is a subgraph?
@@ -33,13 +33,13 @@ A subgraph in Powerhouse is a **GraphQL-based modular data component** that exte
 
 In this example we implement a subgraph which allows to search through todo-list documents in a specific document drive.
 
-First we will generate the subgraph with the help of the ph cli, then we will define the GraphQL schema and implement the resolvers and finally we will start the reactor and execute a query through the GraphQL Gateway.
+First we will generate the subgraph with the help of the Powerhouse CLI, then we will define the GraphQL schema and implement the resolvers and finally we will start the reactor and execute a query through the GraphQL Gateway.
 
 ### 1. Generate the subgraph
 
-Let's start by generating a new subgraph. For our tutorial we will create a new subgraph within our To-do List project.  
+Let's start by generating a new subgraph. For our tutorial we will create a new subgraph within our to-do list project you've created in the previous chapters.  
 Open your project and start your terminal.
-The Powerhouse toolkit provides a command-line utility to create new subgraphs easily.
+The Powerhouse Vetra toolkit provides a command-line utility to create new subgraphs easily.
 
 ```bash title="Run the following command to generate a new subgraph"
 ph generate --subgraph search-todos
@@ -54,6 +54,12 @@ Loaded templates: /projects/powerhouse/powerhouse/packages/codegen/dist/src/code
 Loaded templates: /projects/powerhouse/powerhouse/packages/codegen/dist/src/codegen/.hygen/templates
        FORCED: ./subgraphs/search-todos/resolvers.ts
        FORCED: ./subgraphs/search-todos/schema.ts
+```
+
+After generating the subgraph, build your project with a build step. 
+
+```bash title="Build your project"
+pnpm build
 ```
 
 ### What happened?
@@ -74,7 +80,7 @@ Initializing Subgraph Manager...
 > Registered /d/:drive subgraph.
 > Updating router
 > Registered /graphql supergraph
-> Registered /graphql/search-todos subgraph.
+> **Registered /graphql/search-todos subgraph.**
 > Updating router
 > Registered /graphql supergraph
   ➜  Reactor:   http://localhost:4001/d/powerhouse
@@ -82,7 +88,7 @@ Initializing Subgraph Manager...
 
 ## 2. Building a search subgraph
 
-Now that we've generated our subgraph its tome to define the GraphQL schema and implement the resolvers.
+Now that we've generated our subgraph its time to define the GraphQL schema and implement the resolvers.
 
 **Step 1: Define the schema in `subgraphs/search-todos/schema.ts` by creating the file:**
 
@@ -104,10 +110,10 @@ export const schema: DocumentNode = gql`
 
 ```typescript
 // subgraphs/search-todos/resolvers.ts
-import { type Subgraph } from "@powerhousedao/reactor-api";
-import { type ToDoListDocument } from "document-models/to-do-list/index.js";
+import { type ISubgraph } from "@powerhousedao/reactor-api";
+import { type TodoListDocument } from "todo-tutorial/document-models/todo-list";
 
-export const getResolvers = (subgraph: Subgraph) => {
+export const getResolvers = (subgraph: ISubgraph) => {
   const reactor = subgraph.reactor;
 
   return {
@@ -119,7 +125,7 @@ export const getResolvers = (subgraph: Subgraph) => {
         const documents = await reactor.getDocuments(args.driveId);
         const todoItems: string[] = [];
         for (const docId of documents) {
-          const doc: ToDoListDocument = await reactor.getDocument(docId);
+          const doc: TodoListDocument = await reactor.getDocument(docId);
           if (doc.header.documentType !== "powerhouse/todo-list") {
             continue;
           }
@@ -156,7 +162,7 @@ You should see the subgraph being registered in the console output:
 
 ### 3.2. Create some test data
 
-Before testing queries, let's create some To-do List documents with test data:
+Before testing queries, let's create some to-do list documents with test data:
 
 1. Start Connect
 
@@ -166,10 +172,10 @@ ph connect
 
 1. Open Connect at `http://localhost:3000` in the browser
 2. Add the 'remote' drive that is running locally via the (+) 'Add Drive' button. Add 'http://localhost:4001/d/powerhouse'
-3. Create a new To-do List document
+3. Create a new to-do list document
 4. Add some test items:
    - "Learn about subgraphs" (leave unchecked)
-   - "Build a To-do List subgraph" (mark as checked)
+   - "Build a to-do list subgraph" (mark as checked)
    - "Test the subgraph" (leave unchecked)
 
 ### 3.3. Access GraphQL playground
@@ -186,23 +192,45 @@ http://localhost:4001/graphql
 
 ```graphql
 query {
-  searchTodos(driveId: "powerhouse", searchTerm: "Test")
+  searchTodos(driveId: "powerhouse", searchTerm: "test")
 }
 ```
 
 You should get a list of the document Ids which contain the search term "Test".
+
+If you want to see the full state of your document use this query.
+
+```graphql
+query GetDocument($docId: PHID!) {
+  TodoList {
+    getDocument(docId: $docId) {
+      state {
+        items {
+          checked
+          id
+          text
+        }
+      }
+    }
+  }
+}
+```
 
 ### 3.5. Test real-time updates
 
 To verify that your subgraph stays synchronized with document changes:
 
 1. Keep the GraphQL playground open
-2. In another tab, open your To-do List document in Connect
+2. In another tab, open your to-do list document in Connect
 3. Add a new item or check/uncheck an existing item
 4. Return to the GraphQL playground and re-run your queries
 5. You should see the updated data immediately
 
 This demonstrates the real-time synchronization between the document model and the subgraph through event processing.
+
+:::tip
+Since you've gotten this far we'll explain a bit more in depth how the GraphQL API or Gateway works!
+:::
 
 ## 4. Working with the GraphQL Gateway
 
@@ -239,38 +267,53 @@ The Powerhouse supergraph for any given remote drive or reactor can be found und
 
 The supergraph allows you to both query & mutate data from the same endpoint.
 
-**Example: Using the supergraph with To-do List documents**
+**Example: Using the supergraph with to-do list documents**
 
-1. Create a todo document in the `powerhouse` drive using the `ToDoList_createDocument` mutation:
+1. Create a todo document in the `powerhouse` drive using the `TodoList_createDocument` mutation:
 
    ```graphql
-   mutation {
-     ToDoList_createDocument(
-       input: { documentId: "my-todo-list", name: "My Test To-do List" }
-     ) {
-       id
-       name
+   mutation CreateTodoList($name: String!, $driveId: String) {
+     TodoList_createDocument(name: $name, driveId: $driveId)
+   }
+   ```
+
+   Variables:
+   ```json
+   {
+     "name": "My Test To-do List",
+     "driveId": "powerhouse"
+   }
+   ```
+
+   This returns the document ID (e.g., `"abc123"`). Save this ID for the next steps.
+
+2. Add some items to your to-do list using the `TodoList_addTodoItem` mutation:
+
+   ```graphql
+   mutation AddTodoItem($docId: PHID, $driveId: String, $input: TodoList_AddTodoItemInput) {
+     TodoList_addTodoItem(docId: $docId, driveId: $driveId, input: $input)
+   }
+   ```
+
+   Variables:
+   ```json
+   {
+     "docId": "abc123",
+     "driveId": "powerhouse",
+     "input": {
+       "text": "Learn about supergraphs"
      }
    }
    ```
 
-2. Add some items to your to-do list using the `ToDoList_addTodoItem` mutation:
+   This returns the new revision number.
+
+3. Query the document state using the `getDocument` query:
 
    ```graphql
-   mutation {
-     ToDoList_addTodoItem(
-       docId: "my-todo-list"
-       input: { id: "item-1", text: "Learn about supergraphs" }
-     )
-   }
-   ```
-
-3. Query the document state using the `GetDocument` query:
-
-   ```graphql
-   query {
-     ToDoList {
-       getDocument(docId: "my-todo-list") {
+   query GetTodoList($docId: PHID!, $driveId: PHID) {
+     TodoList {
+       getDocument(docId: $docId, driveId: $driveId) {
          id
          name
          state {
@@ -279,30 +322,33 @@ The supergraph allows you to both query & mutate data from the same endpoint.
              text
              checked
            }
-           stats {
-             total
-             checked
-             unchecked
-           }
          }
        }
      }
    }
    ```
 
-4. Now query the same data through your subgraph (which should be included in the supergraph):
+   Variables:
+   ```json
+   {
+     "docId": "abc123",
+     "driveId": "powerhouse"
+   }
+   ```
+
+4. Use the `searchTodos` subgraph query to search for items across your to-do lists:
+
    ```graphql
-   query {
-     todoList {
-       total
-       checked
-       unchecked
-     }
-     todoItems {
-       id
-       text
-       checked
-     }
+   query SearchTodos($driveId: String!, $searchTerm: String!) {
+     searchTodos(driveId: $driveId, searchTerm: $searchTerm)
+   }
+   ```
+
+   Variables:
+   ```json
+   {
+     "driveId": "powerhouse",
+     "searchTerm": "supergraph"
    }
    ```
 
@@ -310,7 +356,7 @@ This demonstrates how the supergraph provides a unified interface to both your d
 
 ## 5. Summary
 
-Congratulations! You've successfully built a complete To-do List subgraph that demonstrates the power of extending document models with custom GraphQL functionality. Let's recap what you've accomplished:
+Congratulations! You've successfully built a complete to-do list subgraph that demonstrates the power of extending document models with custom GraphQL functionality. Let's recap what you've accomplished:
 
 ### Key concepts learned:
 
@@ -323,7 +369,7 @@ This tutorial has provided you with a solid foundation for building sophisticate
 
 ## Subgraphs are particularly useful for
 
-1. **Cross-Document Interactions**: For example, connecting a To-do List with an Invoice document model:
+1. **Cross-Document Interactions**: For example, connecting a to-do list with an Invoice document model:
    - When an invoice-related task is marked complete, update the invoice status
    - When an invoice is paid, automatically check off related tasks
 

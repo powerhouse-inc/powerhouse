@@ -7,7 +7,7 @@ import {
   ReactorBuilder as DriveReactorBuilder,
   MemoryStorage,
 } from "document-drive";
-import type { DocumentModelModule } from "document-model";
+import type { DocumentModelModule, UpgradeManifest } from "document-model";
 import { DocumentMetaCache } from "../cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../cache/kysely-operation-index.js";
 import { KyselyWriteCache } from "../cache/kysely-write-cache.js";
@@ -19,7 +19,10 @@ import { InMemoryJobTracker } from "../job-tracker/in-memory-job-tracker.js";
 import { InMemoryQueue } from "../queue/queue.js";
 import { ReadModelCoordinator } from "../read-models/coordinator.js";
 import { KyselyDocumentView } from "../read-models/document-view.js";
-import type { IReadModel } from "../read-models/interfaces.js";
+import type {
+  IReadModel,
+  IReadModelCoordinator,
+} from "../read-models/interfaces.js";
 import { DocumentModelRegistry } from "../registry/implementation.js";
 import { ConsistencyTracker } from "../shared/consistency-tracker.js";
 import { KyselyDocumentIndexer } from "../storage/kysely/document-indexer.js";
@@ -38,40 +41,53 @@ import type {
 } from "./types.js";
 
 import type { IJobExecutorManager } from "#executor/interfaces.js";
-import type { IDocumentIndexer } from "#storage/interfaces.js";
+import { ConsoleLogger } from "#logging/console.js";
+import type { ILogger } from "#logging/types.js";
 import { PGlite } from "@electric-sql/pglite";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import type { IEventBus } from "../events/interfaces.js";
-import type { IReadModelCoordinator } from "../read-models/interfaces.js";
+import { ProcessorManager } from "../processors/processor-manager.js";
 import type { SignatureVerificationHandler } from "../signer/types.js";
 import { ConsistencyAwareLegacyStorage } from "../storage/consistency-aware-legacy-storage.js";
-import { runMigrations } from "../storage/migrations/migrator.js";
+import {
+  REACTOR_SCHEMA,
+  runMigrations,
+} from "../storage/migrations/migrator.js";
 import type { MigrationStrategy } from "../storage/migrations/types.js";
-
-export type IReadModelCoordinatorFactory = (
-  eventBus: IEventBus,
-  readModels: IReadModel[],
-) => IReadModelCoordinator;
+import { DefaultSubscriptionErrorHandler } from "../subs/default-error-handler.js";
+import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
+import { SubscriptionNotificationReadModel } from "../subs/subscription-notification-read-model.js";
 
 export class ReactorBuilder {
-  private documentModels: DocumentModelModule[] = [];
+  private logger?: ILogger;
+  private documentModels: DocumentModelModule<any>[] = [];
+  private upgradeManifests: UpgradeManifest<readonly number[]>[] = [];
   private storage?: IDocumentStorage & IDocumentOperationStorage;
   private features: ReactorFeatures = { legacyStorageEnabled: true };
   private readModels: IReadModel[] = [];
   private executorManager: IJobExecutorManager | undefined;
   private executorConfig: ExecutorConfig = { count: 1 };
   private writeCacheConfig?: Partial<WriteCacheConfig>;
-  private readModelCoordinatorFactory?: IReadModelCoordinatorFactory;
   private migrationStrategy: MigrationStrategy = "auto";
   private syncBuilder?: SyncBuilder;
   private eventBus?: IEventBus;
-  public documentIndexer?: IDocumentIndexer;
+  private readModelCoordinator?: IReadModelCoordinator;
   private signatureVerifier?: SignatureVerificationHandler;
   private kyselyInstance?: Kysely<Database>;
 
-  withDocumentModels(models: DocumentModelModule[]): this {
+  withLogger(logger: ILogger): this {
+    this.logger = logger;
+    return this;
+  }
+
+  withDocumentModels(models: DocumentModelModule<any>[]): this {
     this.documentModels = models;
+    return this;
+  }
+
+  withUpgradeManifests(manifests: UpgradeManifest<readonly number[]>[]): this {
+    this.upgradeManifests = manifests;
     return this;
   }
 
@@ -92,8 +108,8 @@ export class ReactorBuilder {
     return this;
   }
 
-  withReadModelCoordinatorFactory(factory: IReadModelCoordinatorFactory): this {
-    this.readModelCoordinatorFactory = factory;
+  withReadModelCoordinator(readModelCoordinator: IReadModelCoordinator): this {
+    this.readModelCoordinator = readModelCoordinator;
     return this;
   }
 
@@ -143,9 +159,16 @@ export class ReactorBuilder {
   }
 
   async buildModule(): Promise<ReactorModule> {
+    if (!this.logger) {
+      this.logger = new ConsoleLogger(["reactor"]);
+    }
+
     const storage = this.storage || new MemoryStorage();
 
     const documentModelRegistry = new DocumentModelRegistry();
+    if (this.upgradeManifests.length > 0) {
+      documentModelRegistry.registerUpgradeManifests(...this.upgradeManifests);
+    }
     if (this.documentModels.length > 0) {
       documentModelRegistry.registerModules(...this.documentModels);
     }
@@ -156,18 +179,20 @@ export class ReactorBuilder {
     const driveServer = builder.build() as unknown as BaseDocumentDriveServer;
     await driveServer.initialize();
 
-    const database =
+    const baseDatabase =
       this.kyselyInstance ??
       new Kysely<Database>({
         dialect: new PGliteDialect(new PGlite()),
       });
 
     if (this.migrationStrategy === "auto") {
-      const result = await runMigrations(database);
+      const result = await runMigrations(baseDatabase, REACTOR_SCHEMA);
       if (!result.success && result.error) {
         throw new Error(`Database migration failed: ${result.error.message}`);
       }
     }
+
+    const database = baseDatabase.withSchema(REACTOR_SCHEMA);
 
     const operationStore = new KyselyOperationStore(
       database as unknown as Kysely<StorageDatabase>,
@@ -215,6 +240,7 @@ export class ReactorBuilder {
       executorManager = new SimpleJobExecutorManager(
         () =>
           new SimpleJobExecutor(
+            this.logger!,
             documentModelRegistry,
             storage,
             storage,
@@ -229,6 +255,7 @@ export class ReactorBuilder {
         eventBus,
         queue,
         jobTracker,
+        this.logger,
       );
     }
 
@@ -271,13 +298,38 @@ export class ReactorBuilder {
     }
 
     readModelInstances.push(documentIndexer);
-    this.documentIndexer = documentIndexer;
 
-    const readModelCoordinator = this.readModelCoordinatorFactory
-      ? this.readModelCoordinatorFactory(eventBus, readModelInstances)
-      : new ReadModelCoordinator(eventBus, readModelInstances);
+    const subscriptionManager = new ReactorSubscriptionManager(
+      new DefaultSubscriptionErrorHandler(),
+    );
+
+    const subscriptionNotificationReadModel =
+      new SubscriptionNotificationReadModel(subscriptionManager, documentView);
+
+    const processorManagerConsistencyTracker = new ConsistencyTracker();
+    const processorManager = new ProcessorManager(
+      // @ts-expect-error - Database type is a superset that includes all required tables
+      database,
+      operationIndex,
+      writeCache,
+      processorManagerConsistencyTracker,
+    );
+
+    try {
+      await processorManager.init();
+    } catch (error) {
+      console.error("Error initializing processor manager", error);
+    }
+
+    const readModelCoordinator = this.readModelCoordinator
+      ? this.readModelCoordinator
+      : new ReadModelCoordinator(eventBus, readModelInstances, [
+          subscriptionNotificationReadModel,
+          processorManager,
+        ]);
 
     const reactor = new Reactor(
+      this.logger,
       driveServer,
       consistencyAwareStorage,
       queue,
@@ -293,6 +345,7 @@ export class ReactorBuilder {
     if (this.syncBuilder) {
       syncModule = this.syncBuilder.buildModule(
         reactor,
+        this.logger,
         operationIndex,
         eventBus,
         database as unknown as Kysely<StorageDatabase>,
@@ -318,6 +371,9 @@ export class ReactorBuilder {
       documentIndexer,
       documentIndexerConsistencyTracker,
       readModelCoordinator,
+      subscriptionManager,
+      processorManager,
+      processorManagerConsistencyTracker,
       syncModule,
       reactor,
     };

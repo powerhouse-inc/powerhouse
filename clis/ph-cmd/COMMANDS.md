@@ -183,28 +183,30 @@ Examples:
 Command Overview:
   The use command allows you to quickly switch between different environments for all Powerhouse
   dependencies in your project. It provides a convenient way to toggle between development,
-  production, and local versions of the packages.
+  production, local versions, or a specific version of the packages.
 
   This command:
-  1. Updates all installed Powerhouse dependencies to the specified environment
+  1. Updates all installed Powerhouse dependencies to the specified environment or version
   2. Can link to local dependencies from a monorepo for development
   3. Only updates dependencies that are already present in your package.json
   4. Supports special packages without the @powerhousedao prefix
 
 Arguments:
-  <environment>         Required. The environment to use. Valid options:
+  <environment>         Required. The environment or version to use. Valid options:
                         - dev: Use development versions (@dev tag)
+                        - staging: Use staging versions (@staging tag)
                         - prod/latest: Use production versions (@latest tag)
                         - local: Use local filesystem versions (requires localPath)
-                        
+                        - <version>: Use a specific version (e.g., 5.1.0, 1.0.0-beta.1)
+
   [localPath]           Path to the local monorepo. Required when environment is 'local'.
                         This should be the root of your Powerhouse monorepo.
 
 Options:
   --force               Force environment to use, even if not in the predefined list
-                        
+
   --package-manager     Override the auto-detected package manager with the specified one.
-                        
+
   --debug               Show additional logs during execution for troubleshooting.
 
   --use-resolved        Resolves tags to their actual version numbers. For example:
@@ -215,14 +217,17 @@ Options:
 Special Cases:
   - Local Development: When using the 'local' environment, dependencies are linked directly
     to local filesystem paths, allowing for real-time development and testing.
-  
+
   - Missing Dependencies: The command only updates Powerhouse dependencies that are already
     installed in your project. It won't add new ones.
 
 Examples:
   $ ph use dev                       # Switch all dependencies to development versions
+  $ ph use staging                   # Switch all dependencies to staging versions
   $ ph use prod                      # Switch all dependencies to production versions
   $ ph use latest                    # Same as 'prod', use latest production versions
+  $ ph use 5.1.0                     # Switch all dependencies to version 5.1.0
+  $ ph use 1.0.0-beta.1              # Switch all dependencies to a pre-release version
   $ ph use local /path/to/monorepo   # Link to local versions in the specified monorepo
   $ ph use dev --package-manager npm # Use npm instead of the auto-detected package manager
   $ ph use dev --debug               # Show debug information during execution

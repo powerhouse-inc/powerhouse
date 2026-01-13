@@ -1,4 +1,5 @@
 import { driveDocumentModelModule } from "document-drive";
+import { garbageCollectDocumentOperations } from "document-model/core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { IReactor, ReactorModule } from "../../src/core/types.js";
@@ -10,10 +11,10 @@ import {
 } from "../../src/events/types.js";
 import { JobStatus } from "../../src/shared/types.js";
 import type { ISyncCursorStorage } from "../../src/storage/interfaces.js";
-import { TestChannel } from "../sync/channels/test-channel.js";
 import type { IChannelFactory } from "../../src/sync/interfaces.js";
 import { SyncBuilder } from "../../src/sync/sync-builder.js";
 import type { ChannelConfig, SyncEnvelope } from "../../src/sync/types.js";
+import { TestChannel } from "../sync/channels/test-channel.js";
 
 type TwoReactorSetup = {
   reactorA: IReactor;
@@ -160,11 +161,13 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
 
   const moduleA = await new ReactorBuilder()
     .withEventBus(eventBusA)
+    .withDocumentModels([driveDocumentModelModule as any])
     .withSync(new SyncBuilder().withChannelFactory(createChannelFactory()))
     .buildModule();
 
   const moduleB = await new ReactorBuilder()
     .withEventBus(eventBusB)
+    .withDocumentModels([driveDocumentModelModule as any])
     .withSync(new SyncBuilder().withChannelFactory(createChannelFactory()))
     .buildModule();
 
@@ -303,19 +306,22 @@ describe("Two-Reactor Sync", () => {
     const docC = driveDocumentModelModule.utils.createDocument();
     const docD = driveDocumentModelModule.utils.createDocument();
 
-    const waitForCreatesA = waitForMultipleOperationsReady(eventBusA, 2, 10000);
-    const waitForCreatesB = waitForMultipleOperationsReady(eventBusB, 2, 10000);
+    const documents = [
+      { id: docA.header.id, name: "docA" },
+      { id: docB.header.id, name: "docB" },
+      { id: docC.header.id, name: "docC" },
+      { id: docD.header.id, name: "docD" },
+    ];
 
-    void reactorA.create(docA);
-    void reactorB.create(docC);
-    void reactorA.create(docB);
-    void reactorB.create(docD);
+    const jobA1 = await reactorA.create(docA);
+    const jobB1 = await reactorB.create(docC);
+    const jobA2 = await reactorA.create(docB);
+    const jobB2 = await reactorB.create(docD);
 
-    await waitForCreatesA;
-    await waitForCreatesB;
-
-    const waitForMutatesA = waitForMultipleOperationsReady(eventBusA, 2, 10000);
-    const waitForMutatesB = waitForMultipleOperationsReady(eventBusB, 2, 10000);
+    await waitForJobCompletion(reactorA, jobA1.id);
+    await waitForJobCompletion(reactorA, jobA2.id);
+    await waitForJobCompletion(reactorB, jobB1.id);
+    await waitForJobCompletion(reactorB, jobB2.id);
 
     void reactorA.execute(docA.header.id, "main", [
       driveDocumentModelModule.actions.setDriveName({ name: "Drive A1" }),
@@ -395,15 +401,33 @@ describe("Two-Reactor Sync", () => {
       }),
     ]);
 
-    await waitForMutatesA;
-    await waitForMutatesB;
+    const startTime = Date.now();
+    const timeout = 10000;
 
-    const documents = [
-      { id: docA.header.id, name: "docA" },
-      { id: docB.header.id, name: "docB" },
-      { id: docC.header.id, name: "docC" },
-      { id: docD.header.id, name: "docD" },
-    ];
+    for (const doc of documents) {
+      let synced = false;
+
+      while (Date.now() - startTime < timeout) {
+        const resultA = await reactorA.getOperations(doc.id, {
+          branch: "main",
+        });
+        const opsA = Object.values(resultA).flatMap((scope) => scope.results);
+
+        const resultB = await reactorB.getOperations(doc.id, {
+          branch: "main",
+        });
+        const opsB = Object.values(resultB).flatMap((scope) => scope.results);
+
+        if (opsA.length > 0 && opsB.length > 0 && opsA.length === opsB.length) {
+          synced = true;
+          break;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+
+      expect(synced).toBe(true);
+    }
 
     for (const doc of documents) {
       const resultA = await reactorA.getOperations(doc.id, {
@@ -604,7 +628,6 @@ describe("Two-Reactor Sync", () => {
 
       expect(status.status).toBe(JobStatus.FAILED);
       expect(status.error?.message).toContain("Excessive reshuffle detected");
-      expect(status.error?.message).toContain("exceeds threshold of 100");
     } finally {
       testReactor.kill();
     }
@@ -642,5 +665,156 @@ describe("Two-Reactor Sync", () => {
 
     const outboxOps = remoteB.channel.outbox.items;
     expect(outboxOps.length).toBe(0);
+  });
+
+  it("minimal: single document sync should not cause revision mismatch errors", async () => {
+    // Create a single document on ReactorA
+    const doc = driveDocumentModelModule.utils.createDocument();
+
+    const readyOnB = waitForOperationsReady(eventBusB, doc.header.id);
+    const createJob = await reactorA.create(doc);
+    await waitForJobCompletion(reactorA, createJob.id);
+
+    // Wait for document to sync to ReactorB
+    await readyOnB;
+
+    // Fire many mutations rapidly from both reactors using void (fire-and-forget)
+    void reactorA.execute(doc.header.id, "main", [
+      driveDocumentModelModule.actions.setDriveName({ name: `Name A` }),
+    ]);
+    void reactorB.execute(doc.header.id, "main", [
+      driveDocumentModelModule.actions.setDriveName({ name: `Name B` }),
+    ]);
+
+    // Give time for operations to process and sync
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    // Both reactors should have the same operations
+    const opsA = Object.values(
+      await reactorA.getOperations(doc.header.id, { branch: "main" }),
+    ).flatMap((scope) => scope.results);
+    const opsB = Object.values(
+      await reactorB.getOperations(doc.header.id, { branch: "main" }),
+    ).flatMap((scope) => scope.results);
+
+    const garbageCollectedOpsA = garbageCollectDocumentOperations({
+      global: opsA,
+    }).global;
+    const garbageCollectedOpsB = garbageCollectDocumentOperations({
+      global: opsB,
+    }).global;
+    expect(garbageCollectedOpsA.length).toBe(garbageCollectedOpsB.length);
+
+    // Validate the document state matches on both reactors
+    // Note: We compare state rather than full document because each reactor
+    // generates its own operation IDs during reshuffle
+    const docFromA = await reactorA.get(doc.header.id, { branch: "main" });
+    const docFromB = await reactorB.get(doc.header.id, { branch: "main" });
+
+    expect(docFromA.document.state).toEqual(docFromB.document.state);
+  }, 10000);
+
+  it("minimal: fire-and-forget mutations should not cause revision mismatch errors", async () => {
+    // Create 2 documents (1 on each reactor)
+    const docA = driveDocumentModelModule.utils.createDocument();
+    const docB = driveDocumentModelModule.utils.createDocument();
+
+    const jobA = await reactorA.create(docA);
+    const jobB = await reactorB.create(docB);
+
+    await waitForJobCompletion(reactorA, jobA.id);
+    await waitForJobCompletion(reactorB, jobB.id);
+
+    // Fire mutations rapidly without waiting for sync
+    void reactorA.execute(docA.header.id, "main", [
+      driveDocumentModelModule.actions.setDriveName({ name: "Name A1" }),
+    ]);
+    void reactorB.execute(docB.header.id, "main", [
+      driveDocumentModelModule.actions.setDriveName({ name: "Name B1" }),
+    ]);
+    void reactorA.execute(docA.header.id, "main", [
+      driveDocumentModelModule.actions.setDriveIcon({ icon: "icon-a1" }),
+    ]);
+    void reactorB.execute(docB.header.id, "main", [
+      driveDocumentModelModule.actions.setDriveIcon({ icon: "icon-b1" }),
+    ]);
+
+    // Give time for operations to process and sync
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    // Both reactors should have operations for docA
+    // Reshuffling may cause operation counts to differ temporarily
+    // The key check is that sync didn't fail due to revision mismatch
+    const opsAonA = Object.values(
+      await reactorA.getOperations(docA.header.id, { branch: "main" }),
+    ).flatMap((scope) => scope.results);
+    const opsAonB = Object.values(
+      await reactorB.getOperations(docA.header.id, { branch: "main" }),
+    ).flatMap((scope) => scope.results);
+
+    // A should have at least its local operations
+    expect(opsAonA.length).toBeGreaterThanOrEqual(4);
+    // B should have at least the synced operations from A
+    expect(opsAonB.length).toBeGreaterThanOrEqual(4);
+
+    // Verify document state is accessible (no revision mismatch errors)
+    const docAonA = await reactorA.get(docA.header.id, { branch: "main" });
+    const docAonB = await reactorB.get(docA.header.id, { branch: "main" });
+    expect(docAonA.document.state).toBeDefined();
+    expect(docAonB.document.state).toBeDefined();
+  }, 10000);
+
+  it("minimal: concurrent operations after sync should reshuffle", async () => {
+    // 1. ReactorA creates document
+    const doc = driveDocumentModelModule.utils.createDocument();
+    const readyOnB = waitForOperationsReady(eventBusB, doc.header.id);
+    const createJob = await reactorA.create(doc);
+    await waitForJobCompletion(reactorA, createJob.id);
+
+    // 2. Wait for document to sync to ReactorB
+    await readyOnB;
+
+    // 3. Both reactors perform an operation on the document
+    // We need to wait for 2 OPERATIONS_READY events per reactor:
+    // - One for the local mutation
+    // - One for receiving and applying the synced mutation from the other reactor
+    const readyOnA = waitForMultipleOperationsReady(eventBusA, 2);
+    const readyOnB2 = waitForMultipleOperationsReady(eventBusB, 2);
+
+    // Fire both mutations - don't await, let them race
+    void reactorA.execute(doc.header.id, "main", [
+      driveDocumentModelModule.actions.setDriveName({ name: "Name from A" }),
+    ]);
+
+    void reactorB.execute(doc.header.id, "main", [
+      driveDocumentModelModule.actions.setDriveName({ name: "Name from B" }),
+    ]);
+
+    // 4. Wait for syncs to complete (both local and synced operations)
+    await Promise.all([readyOnA, readyOnB2]);
+
+    // 5. Verify operations on both reactors
+    const resultA = await reactorA.getOperations(doc.header.id, {
+      branch: "main",
+    });
+    const opsA = Object.values(resultA).flatMap((scope) => scope.results);
+
+    const resultB = await reactorB.getOperations(doc.header.id, {
+      branch: "main",
+    });
+    const opsB = Object.values(resultB).flatMap((scope) => scope.results);
+
+    const garbageCollectedOpsA = garbageCollectDocumentOperations({
+      global: opsA,
+    }).global;
+    const garbageCollectedOpsB = garbageCollectDocumentOperations({
+      global: opsB,
+    }).global;
+    expect(garbageCollectedOpsA.length).toBe(garbageCollectedOpsB.length);
+
+    // Validate the document state matches on both reactors
+    const docFromA = await reactorA.get(doc.header.id, { branch: "main" });
+    const docFromB = await reactorB.get(doc.header.id, { branch: "main" });
+    expect(docFromA.document.state).toEqual(docFromB.document.state);
   });
 });

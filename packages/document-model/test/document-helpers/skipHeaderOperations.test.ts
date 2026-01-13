@@ -1,6 +1,14 @@
 import type { Operation } from "document-model";
-import { skipHeaderOperations } from "document-model/core";
+import {
+  deriveOperationId,
+  generateId,
+  skipHeaderOperations,
+} from "document-model/core";
 import { describe, expect, it } from "vitest";
+
+const TEST_DOC_ID = "test-doc-id";
+const TEST_BRANCH = "main";
+const TEST_SCOPE = "global";
 
 const fakeOperation = (
   index: number,
@@ -8,13 +16,15 @@ const fakeOperation = (
   type: string,
 ): Operation => {
   const timestamp = new Date().toISOString();
+  const actionId = generateId();
   return {
+    id: deriveOperationId(TEST_DOC_ID, TEST_SCOPE, TEST_BRANCH, actionId),
     index,
     skip,
     timestampUtcMs: timestamp,
     hash: "123",
     action: {
-      id: "123",
+      id: actionId,
       timestampUtcMs: timestamp,
       type,
       input: {},

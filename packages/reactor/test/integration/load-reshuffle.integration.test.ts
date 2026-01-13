@@ -1,7 +1,8 @@
-import { ReactorBuilder, type IReactor } from "#index.js";
 import { driveDocumentModelModule, MemoryStorage } from "document-drive";
-import { documentModelDocumentModelModule, setName } from "document-model";
+import type { DocumentModelDocument } from "document-model";
+import { documentModelDocumentModelModule, setModelName } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ReactorBuilder, type IReactor } from "../../src/index.js";
 import { JobStatus, type ConsistencyToken } from "../../src/shared/types.js";
 import { createDocModelDocument } from "../factories.js";
 
@@ -14,6 +15,8 @@ describe("Load Reshuffles", () => {
   let reactorB: IReactor;
 
   beforeEach(async () => {
+    vi.useFakeTimers();
+
     const builderA = new ReactorBuilder()
       .withDocumentModels([
         documentModelDocumentModelModule as any,
@@ -42,9 +45,13 @@ describe("Load Reshuffles", () => {
   afterEach(() => {
     reactorA.kill();
     reactorB.kill();
+
+    vi.useRealTimers();
   });
 
   it("appends reshuffled operations with skip to the log", async () => {
+    vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+
     const document = createDocModelDocument({
       id: "reshuffle-doc",
       slug: "reshuffle-doc",
@@ -61,7 +68,6 @@ describe("Load Reshuffles", () => {
       undefined,
       createTokenA,
     );
-    expect(aCreateOperations.document.results).toHaveLength(2);
 
     info = await reactorB.load(
       document.header.id,
@@ -79,20 +85,19 @@ describe("Load Reshuffles", () => {
       undefined,
       loadTokenB,
     );
+
+    expect(aCreateOperations.document.results).toHaveLength(2);
     expect(bOperations.document.results).toHaveLength(2);
 
+    // They now both have the document
+
+    vi.advanceTimersByTime(1000);
+
+    // First, execute operation on A, but don't pass it to B.
     const mutateJobA = await reactorA.execute(document.header.id, "main", [
-      setName("A1"),
-      setName("A2"),
-      setName("A3"),
+      setModelName({ name: "A1" }),
     ]);
     const tokenA = await waitForJobCompletion(reactorA, mutateJobA.id);
-
-    const mutateJobB = await reactorB.execute(document.header.id, "main", [
-      setName("B1"),
-      setName("B2"),
-    ]);
-    const tokenB = await waitForJobCompletion(reactorB, mutateJobB.id);
 
     const aOperationsAfterMutate = await reactorA.getOperations(
       document.header.id,
@@ -103,24 +108,23 @@ describe("Load Reshuffles", () => {
       undefined,
       tokenA,
     );
-    expect(aOperationsAfterMutate.global.results).toHaveLength(3);
 
-    const bOperationsBeforeLoad = await reactorB.getOperations(
-      document.header.id,
-      {
-        branch: "main",
-        scopes: ["global"],
-      },
-      undefined,
-      tokenB,
-    );
-    expect(bOperationsBeforeLoad.global.results).toHaveLength(2);
+    expect(aOperationsAfterMutate.global.results).toHaveLength(1);
 
+    // Next, execute an operation on B, ensure it is later.
+    vi.advanceTimersByTime(1000);
+    const mutateJobB = await reactorB.execute(document.header.id, "main", [
+      setModelName({ name: "B1" }),
+    ]);
+    await waitForJobCompletion(reactorB, mutateJobB.id);
+
+    // now load the operations from reactor A into reactor B (reactor A operation came first, so this should reshuffle)
     info = await reactorB.load(
       document.header.id,
       "main",
       aOperationsAfterMutate.global.results,
     );
+
     const finalTokenB = await waitForJobCompletion(reactorB, info.id);
 
     const bOperationsAfterLoad = await reactorB.getOperations(
@@ -133,22 +137,139 @@ describe("Load Reshuffles", () => {
       finalTokenB,
     );
 
-    expect(bOperationsAfterLoad.global.results).toHaveLength(5);
+    expect(bOperationsAfterLoad.global.results).toHaveLength(3);
 
-    const bOpsWithSkip = bOperationsAfterLoad.global.results.filter(
-      (op) => op.skip > 0,
+    const result = await reactorB.get<DocumentModelDocument>(
+      document.header.id,
+      {
+        branch: "main",
+      },
     );
-    expect(bOpsWithSkip.length).toBeGreaterThan(0);
+    expect(result.document.state.global.name).toBe("B1");
+  });
 
-    const firstLoadedOpIndex = bOperationsAfterLoad.global.results.findIndex(
-      (op) => op.skip > 0,
+  /**
+   * Test Scenario:
+   *
+   * For (index, skip, ts, action):
+   *
+   * A - [(0, 0, 1, "A0"), (1, 0, 2, "A1")]
+   * B - [(0, 0, 0, "B0"), (1, 0, 3, "B1")]
+   *
+   * B gets A's Operations Scenario:
+   * B' - [(0, 0, 0, "B0"), (1, 0, 3, "B1"), (2, 1, 1, "A0"), (3, 0, 2, "A1"), (4, 0, 3, "B1")]
+   *
+   * Then A needs to end up with:
+   * A' - [(0, 0, 1, "A0"), (1, 0, 2, "A1"), (2, 2, 0, "B0"), (3, 0, 1, "A0"), (4, 0, 2, "A1"), (5, 0, 3, "B1")]
+   *
+   * So that both A and B end up with the stream of applied actions (action):
+   * [("B0"), ("A0"), ("A1"), ("B1")]
+   */
+  it("executes a reshuffle scenario", async () => {
+    vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+
+    const document = createDocModelDocument({
+      id: "reshuffle-scenario-doc",
+      slug: "reshuffle-scenario-doc",
+    });
+
+    let info = await reactorA.create(document);
+    const createTokenA = await waitForJobCompletion(reactorA, info.id);
+
+    const aCreateOperations = await reactorA.getOperations(
+      document.header.id,
+      { branch: "main", scopes: ["document"] },
+      undefined,
+      createTokenA,
     );
-    expect(firstLoadedOpIndex).toBeGreaterThan(-1);
 
-    const firstLoadedOp =
-      bOperationsAfterLoad.global.results[firstLoadedOpIndex];
-    expect(firstLoadedOp.skip).toBe(2);
-    expect(firstLoadedOp.index).toBe(2);
+    info = await reactorB.load(
+      document.header.id,
+      "main",
+      aCreateOperations.document.results,
+    );
+    await waitForJobCompletion(reactorB, info.id);
+
+    const b0Job = await reactorB.execute(document.header.id, "main", [
+      setModelName({ name: "B0" }),
+    ]);
+    await waitForJobCompletion(reactorB, b0Job.id);
+
+    vi.advanceTimersByTime(1000);
+    const a0Job = await reactorA.execute(document.header.id, "main", [
+      setModelName({ name: "A0" }),
+    ]);
+    await waitForJobCompletion(reactorA, a0Job.id);
+
+    vi.advanceTimersByTime(1000);
+    const a1Job = await reactorA.execute(document.header.id, "main", [
+      setModelName({ name: "A1" }),
+    ]);
+    const tokenA = await waitForJobCompletion(reactorA, a1Job.id);
+
+    vi.advanceTimersByTime(1000);
+    const b1Job = await reactorB.execute(document.header.id, "main", [
+      setModelName({ name: "B1" }),
+    ]);
+    await waitForJobCompletion(reactorB, b1Job.id);
+
+    const aGlobalOps = await reactorA.getOperations(
+      document.header.id,
+      { branch: "main", scopes: ["global"] },
+      undefined,
+      tokenA,
+    );
+
+    info = await reactorB.load(
+      document.header.id,
+      "main",
+      aGlobalOps.global.results,
+    );
+    const loadTokenB = await waitForJobCompletion(reactorB, info.id);
+
+    const bOpsAfterLoad = await reactorB.getOperations(
+      document.header.id,
+      { branch: "main", scopes: ["global"] },
+      undefined,
+      loadTokenB,
+    );
+
+    expect(bOpsAfterLoad.global.results).toHaveLength(5);
+
+    const bGlobalOps = await reactorB.getOperations(
+      document.header.id,
+      { branch: "main", scopes: ["global"] },
+      undefined,
+      loadTokenB,
+    );
+
+    info = await reactorA.load(
+      document.header.id,
+      "main",
+      bGlobalOps.global.results,
+    );
+    const loadTokenA = await waitForJobCompletion(reactorA, info.id);
+
+    const aOpsAfterLoad = await reactorA.getOperations(
+      document.header.id,
+      { branch: "main", scopes: ["global"] },
+      undefined,
+      loadTokenA,
+    );
+
+    expect(aOpsAfterLoad.global.results).toHaveLength(6);
+
+    const resultA = await reactorA.get<DocumentModelDocument>(
+      document.header.id,
+      { branch: "main" },
+    );
+    const resultB = await reactorB.get<DocumentModelDocument>(
+      document.header.id,
+      { branch: "main" },
+    );
+
+    expect(resultA.document.state.global.name).toBe("B1");
+    expect(resultB.document.state.global.name).toBe("B1");
   });
 });
 

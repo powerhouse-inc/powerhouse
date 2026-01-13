@@ -1,26 +1,30 @@
 import { phGlobalConfigFromEnv } from "@powerhousedao/connect/config";
 import { initFeatureFlags } from "@powerhousedao/connect/feature-flags.js";
+import { toast } from "@powerhousedao/connect/services";
 import {
   createBrowserDocumentDriveServer,
   createBrowserReactor,
   createBrowserStorage,
 } from "@powerhousedao/connect/utils";
 import {
+  DocumentCache,
+  ReactorClientDocumentCache,
   truncateAllTables as dropAllTables,
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
   getDrives,
   getReactorDefaultDrivesConfig,
   initConnectCrypto,
-  initDocumentCache,
   initLegacyReactor,
   login,
   refreshReactorData,
   refreshReactorDataClient,
   setFeatures,
+  setPHToast,
   setSelectedDrive,
   setSelectedNode,
   setVetraPackages,
+  type PHToastFn,
   type VetraPackage,
 } from "@powerhousedao/reactor-browser";
 import {
@@ -46,7 +50,6 @@ import type {
   IDocumentDriveServer,
 } from "document-drive";
 import { ProcessorManager, logger } from "document-drive";
-import type { DocumentModelModule } from "document-model";
 import { generateId } from "document-model/core";
 import { loadCommonPackage } from "./document-model.js";
 import {
@@ -136,6 +139,9 @@ export async function createReactor() {
   // add window event handlers for updates
   addPHEventHandlers();
 
+  // register toast function for use in editor components
+  setPHToast(toast as PHToastFn);
+
   // initialize feature flags
   const features = await initFeatureFlags();
 
@@ -171,7 +177,7 @@ export async function createReactor() {
   // create the legacy reactor
   const defaultConfig = getReactorDefaultDrivesConfig();
   const legacyReactor = createBrowserDocumentDriveServer(
-    documentModelModules as unknown as DocumentModelModule[],
+    documentModelModules,
     storage,
     {
       ...defaultConfig,
@@ -189,9 +195,6 @@ export async function createReactor() {
 
   // initialize the reactor
   await initLegacyReactor(legacyReactor, renown, connectCrypto);
-
-  // initialize the document cache
-  const documentCache = initDocumentCache(legacyReactor);
 
   // create the processor manager
   const processorManager = new ProcessorManager(
@@ -224,6 +227,12 @@ export async function createReactor() {
   const didFromUrl = getDidFromUrl();
   await login(didFromUrl, legacyReactor, renown, connectCrypto);
 
+  // initialize the document cache based on feature flags
+  const useLegacyRead = features.get("FEATURE_LEGACY_READ_ENABLED") ?? true;
+  const documentCache = useLegacyRead
+    ? new DocumentCache(legacyReactor)
+    : new ReactorClientDocumentCache(reactorClientModule.client);
+
   // dispatch the events to set the values in the window object
   setDefaultPHGlobalConfig(phGlobalConfigFromEnv);
   setLegacyReactor(legacyReactor);
@@ -244,8 +253,6 @@ export async function createReactor() {
   setFeatures(features);
 
   // subscribe to reactor events based on feature flags
-  const useLegacyRead = features.get("FEATURE_LEGACY_READ_ENABLED") ?? true;
-
   if (useLegacyRead) {
     // Subscribe to legacy reactor events
     legacyReactor.on("defaultRemoteDrive", (...args) => {

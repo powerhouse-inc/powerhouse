@@ -5,7 +5,6 @@ import {
   driveDocumentModelModule,
   ReactorBuilder,
 } from "document-drive";
-import type { DocumentModelModule } from "document-model";
 import {
   documentModelCreateDocument,
   documentModelDocumentModelModule,
@@ -28,7 +27,7 @@ async function createReactor() {
   const builder = new ReactorBuilder([
     documentModelDocumentModelModule,
     driveDocumentModelModule,
-  ] as unknown as DocumentModelModule[]);
+  ]);
 
   const reactor = builder.build();
   await reactor.initialize();

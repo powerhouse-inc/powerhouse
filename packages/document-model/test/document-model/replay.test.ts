@@ -100,6 +100,7 @@ describe("DocumentModel Replay", () => {
       initialState,
       { global: [], local: [] },
       countReducer,
+      initialDocument.header,
     );
     expect(initialDocument.state).toStrictEqual(document.state);
   });
@@ -114,6 +115,7 @@ describe("DocumentModel Replay", () => {
       initialState,
       newDocument.operations,
       reducer,
+      newDocument.header,
     );
     expect(newDocument.state.global.count).toBe(2);
     expect(newDocument.state).toStrictEqual(document.state);
@@ -133,6 +135,7 @@ describe("DocumentModel Replay", () => {
       initialState,
       newDocument.operations,
       reducer,
+      newDocument.header,
     );
 
     expect(mockReducer).toHaveBeenCalledTimes(6);
@@ -162,7 +165,7 @@ describe("DocumentModel Replay", () => {
       initialState,
       newDocument.operations,
       reducer,
-      undefined,
+      newDocument.header,
       undefined,
       undefined,
       { reuseOperationResultingState: true },
@@ -186,7 +189,7 @@ describe("DocumentModel Replay", () => {
         initialState,
         newDocument.operations,
         reducer,
-        undefined,
+        newDocument.header,
         undefined,
         undefined,
         {

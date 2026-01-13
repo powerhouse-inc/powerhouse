@@ -1,3 +1,4 @@
+import { PGlite } from "@electric-sql/pglite";
 import type {
   BaseDocumentDriveServer,
   IDocumentOperationStorage,
@@ -11,18 +12,22 @@ import {
 import type {
   Action,
   DocumentModelModule,
+  ISigner,
   Operation,
   PHDocument,
 } from "document-model";
-import { documentModelDocumentModelModule } from "document-model";
-import { PGlite } from "@electric-sql/pglite";
+import {
+  deriveOperationId,
+  documentModelDocumentModelModule,
+  generateId,
+} from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { v4 as uuidv4 } from "uuid";
 import { vi } from "vitest";
 import type {
-  IDocumentMetaCache,
   CachedDocumentMeta,
+  IDocumentMetaCache,
 } from "../src/cache/document-meta-cache-types.js";
 import type { IWriteCache } from "../src/cache/write/interfaces.js";
 import { Reactor } from "../src/core/reactor.js";
@@ -35,6 +40,7 @@ import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
 import type { JobExecutorConfig } from "../src/executor/types.js";
 import { InMemoryJobTracker } from "../src/job-tracker/in-memory-job-tracker.js";
 import type { IJobTracker } from "../src/job-tracker/interfaces.js";
+import type { ILogger } from "../src/logging/types.js";
 import type { IQueue } from "../src/queue/interfaces.js";
 import { InMemoryQueue } from "../src/queue/queue.js";
 import type { Job } from "../src/queue/types.js";
@@ -42,27 +48,46 @@ import type { IReadModelCoordinator } from "../src/read-models/interfaces.js";
 import { DocumentModelRegistry } from "../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../src/registry/interfaces.js";
 import type { IJobAwaiter } from "../src/shared/awaiter.js";
-import { JobStatus } from "../src/shared/types.js";
-import type { ISigner } from "../src/signer/types.js";
 import { ConsistencyTracker } from "../src/shared/consistency-tracker.js";
+import { JobStatus } from "../src/shared/types.js";
 import { ConsistencyAwareLegacyStorage } from "../src/storage/consistency-aware-legacy-storage.js";
 import type {
   IDocumentIndexer,
   IDocumentView,
   IOperationStore,
   ISyncCursorStorage,
+  OperationContext,
 } from "../src/storage/interfaces.js";
-import type { IReactorSubscriptionManager } from "../src/subs/types.js";
 import { KyselyKeyframeStore } from "../src/storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../src/storage/kysely/store.js";
 import { KyselySyncCursorStorage } from "../src/storage/kysely/sync-cursor-storage.js";
 import { KyselySyncRemoteStorage } from "../src/storage/kysely/sync-remote-storage.js";
 import type { Database as DatabaseSchema } from "../src/storage/kysely/types.js";
-import { runMigrations } from "../src/storage/migrations/migrator.js";
-import { TestChannel } from "./sync/channels/test-channel.js";
+import {
+  REACTOR_SCHEMA,
+  runMigrations,
+} from "../src/storage/migrations/migrator.js";
+import type { IReactorSubscriptionManager } from "../src/subs/types.js";
 import type { IChannel, IChannelFactory } from "../src/sync/interfaces.js";
 import type { ChannelConfig, SyncEnvelope } from "../src/sync/types.js";
-import type { OperationContext } from "../src/storage/interfaces.js";
+import { TestChannel } from "./sync/channels/test-channel.js";
+
+/**
+ * Creates a mock logger for testing that no-ops all log methods.
+ */
+export function createMockLogger(): ILogger {
+  const logger: ILogger = {
+    level: "error",
+    verbose: () => {},
+    debug: () => {},
+    info: () => {},
+    warn: () => {},
+    error: () => {},
+    errorHandler: () => {},
+    child: () => logger,
+  };
+  return logger;
+}
 
 /**
  * Creates an operation context with default ordinal for testing.
@@ -87,15 +112,16 @@ export async function createTestOperationStore(): Promise<{
   store: KyselyOperationStore;
   keyframeStore: KyselyKeyframeStore;
 }> {
-  const db = new Kysely<DatabaseSchema>({
+  const baseDb = new Kysely<DatabaseSchema>({
     dialect: new PGliteDialect(new PGlite()),
   });
 
-  const result = await runMigrations(db);
+  const result = await runMigrations(baseDb, REACTOR_SCHEMA);
   if (!result.success && result.error) {
     throw new Error(`Test migration failed: ${result.error.message}`);
   }
 
+  const db = baseDb.withSchema(REACTOR_SCHEMA);
   const store = new KyselyOperationStore(db);
   const keyframeStore = new KyselyKeyframeStore(db);
 
@@ -150,17 +176,20 @@ export function createMinimalJob(overrides: Partial<Job> = {}): Job {
  * Factory for creating test Operation objects
  */
 export function createTestOperation(
+  documentId: string,
   overrides: Partial<Operation> = {},
 ): Operation {
+  const action = createTestAction(
+    overrides.action ? { ...overrides.action } : undefined,
+  );
+
   const defaultOperation: Operation = {
     index: 1,
     timestampUtcMs: new Date().toISOString(),
     hash: "test-hash",
     skip: 0,
-    action: createTestAction(
-      overrides.action ? { ...overrides.action } : undefined,
-    ),
-    id: "op-1",
+    action,
+    id: deriveOperationId(documentId, "document", "main", action.id),
     resultingState: JSON.stringify({ state: "test" }),
   };
 
@@ -178,21 +207,25 @@ export function createCreateDocumentOperation(
   documentType: string,
   overrides: Partial<Operation> = {},
 ): Operation {
+  const actionId = generateId();
+
   return {
-    id: overrides.id || `${documentId}-create`,
+    id:
+      overrides.id ||
+      deriveOperationId(documentId, "document", "main", actionId),
     index: 0,
     skip: 0,
     hash: overrides.hash || "hash-0",
     timestampUtcMs: overrides.timestampUtcMs || new Date().toISOString(),
     action: {
-      id: `${documentId}-create-action`,
+      id: actionId,
       type: "CREATE_DOCUMENT",
       scope: "document",
       timestampUtcMs: overrides.timestampUtcMs || new Date().toISOString(),
       input: {
         documentId,
         model: documentType,
-        version: "0.0.0",
+        version: 0,
       },
     } as Action,
     resultingState:
@@ -204,29 +237,36 @@ export function createCreateDocumentOperation(
 
 export function createUpgradeDocumentOperation(
   documentId: string,
-  index: number,
-  initialState: Record<string, any> = {},
+  fromVersion: number,
+  toVersion: number,
+  initialState: Record<string, unknown> = {},
   overrides: Partial<Operation> = {},
 ): Operation {
+  const index = overrides.index ?? 1;
+  const actionId = generateId();
   return {
-    id: overrides.id || `${documentId}-upgrade-${index}`,
+    id:
+      overrides.id ||
+      deriveOperationId(documentId, "document", "main", actionId),
     index,
     skip: 0,
     hash: overrides.hash || `hash-${index}`,
     timestampUtcMs: overrides.timestampUtcMs || new Date().toISOString(),
     action: {
-      id: `${documentId}-upgrade-action-${index}`,
+      id: actionId,
       type: "UPGRADE_DOCUMENT",
       scope: "document",
       timestampUtcMs: overrides.timestampUtcMs || new Date().toISOString(),
       input: {
         documentId,
+        fromVersion,
+        toVersion,
         initialState,
       },
     } as Action,
     resultingState:
       overrides.resultingState ||
-      JSON.stringify({ document: { id: documentId, index } }),
+      JSON.stringify({ document: { id: documentId, version: toVersion } }),
     ...overrides,
   };
 }
@@ -553,6 +593,7 @@ export async function createTestReactorSetup(
 
   // Create job executor with event bus
   const jobExecutor = new SimpleJobExecutor(
+    createMockLogger(),
     registry,
     storage,
     storage,
@@ -583,6 +624,7 @@ export async function createTestReactorSetup(
 
   // Create reactor
   const reactor = new Reactor(
+    createMockLogger(),
     driveServer,
     consistencyAwareStorage,
     queue,
@@ -626,6 +668,7 @@ export function createTestJobExecutorManager(
     actualEventBus,
     actualQueue,
     actualJobTracker,
+    createMockLogger(),
   );
 
   return {
@@ -803,15 +846,16 @@ export async function createTestSyncStorage(): Promise<{
   syncRemoteStorage: KyselySyncRemoteStorage;
   syncCursorStorage: KyselySyncCursorStorage;
 }> {
-  const db = new Kysely<DatabaseSchema>({
+  const baseDb = new Kysely<DatabaseSchema>({
     dialect: new PGliteDialect(new PGlite()),
   });
 
-  const result = await runMigrations(db);
+  const result = await runMigrations(baseDb, REACTOR_SCHEMA);
   if (!result.success && result.error) {
     throw new Error(`Test migration failed: ${result.error.message}`);
   }
 
+  const db = baseDb.withSchema(REACTOR_SCHEMA);
   const syncRemoteStorage = new KyselySyncRemoteStorage(db);
   const syncCursorStorage = new KyselySyncCursorStorage(db);
 
@@ -823,7 +867,10 @@ export async function createTestSyncStorage(): Promise<{
  */
 export function createMockSigner(overrides: Partial<ISigner> = {}): ISigner {
   return {
-    sign: vi
+    publicKey: vi.fn().mockResolvedValue({}),
+    sign: vi.fn().mockResolvedValue(new Uint8Array(0)),
+    verify: vi.fn().mockResolvedValue(undefined),
+    signAction: vi
       .fn()
       .mockResolvedValue([
         "mock-signature",
@@ -924,9 +971,10 @@ export function createTestChannelFactory(
  */
 export async function createSignedTestOperation(
   signer: any,
+  documentId: string,
   overrides: Partial<Operation> = {},
 ): Promise<Operation> {
-  const operation = createTestOperation(overrides);
+  const operation = createTestOperation(documentId, overrides);
   const publicKey = signer.getPublicKey();
 
   const signerData: any = {

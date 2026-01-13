@@ -2,6 +2,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import {
   CompositeChannelFactory,
+  ConsoleLogger,
   type Database,
   EventBus,
   ReactorBuilder,
@@ -21,10 +22,10 @@ import {
   DocumentAlreadyExistsError,
   InMemoryCache,
   ReactorBuilder as LegacyReactorBuilder,
-  RedisCache,
   childLogger,
   driveDocumentModelModule,
 } from "document-drive";
+import { RedisCache } from "document-drive/cache/redis";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import { PrismaStorageFactory } from "document-drive/storage/prisma";
 import type { DocumentModelModule } from "document-model";
@@ -143,7 +144,7 @@ async function initServer(
         documentModelDocumentModelModule,
         driveDocumentModelModule,
         ...documentModels,
-      ] as unknown as DocumentModelModule[]),
+      ]),
     )
       .withStorage(storage)
       .withCache(cache)
@@ -172,14 +173,16 @@ async function initServer(
           documentModelDocumentModelModule,
           driveDocumentModelModule,
           ...documentModels,
-        ] as unknown as DocumentModelModule[]),
+        ]),
       )
       .withLegacyStorage(storage)
       .withSync(
-        new SyncBuilder().withChannelFactory(new CompositeChannelFactory()),
+        new SyncBuilder().withChannelFactory(
+          new CompositeChannelFactory(new ConsoleLogger(["switchboard"])),
+        ),
       )
       .withFeatures({
-        legacyStorageEnabled: true,
+        legacyStorageEnabled: !options.reactorOptions?.storageV2,
       });
 
     // if (dbPath && isPostgresUrl(dbPath)) {
@@ -317,9 +320,26 @@ export const startSwitchboard = async (
 
   options.enableDocumentModelSubgraphs = enableDocumentModelSubgraphs;
 
+  const storageV2 = await featureFlags.getBooleanValue(
+    "REACTOR_STORAGE_V2",
+    options.reactorOptions?.storageV2 ?? false,
+  );
+
+  const enableDualActionCreate = await featureFlags.getBooleanValue(
+    "ENABLE_DUAL_ACTION_CREATE",
+    options.reactorOptions?.enableDualActionCreate ?? true,
+  );
+
   options.reactorOptions = {
-    enableDualActionCreate: true,
+    enableDualActionCreate,
+    storageV2,
   };
+
+  logger.info("Feature flags:", {
+    DOCUMENT_MODEL_SUBGRAPHS_ENABLED: enableDocumentModelSubgraphs,
+    REACTOR_STORAGE_V2: storageV2,
+    ENABLE_DUAL_ACTION_CREATE: enableDualActionCreate,
+  });
 
   if (process.env.PYROSCOPE_SERVER_ADDRESS) {
     try {

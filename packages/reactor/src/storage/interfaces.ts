@@ -8,6 +8,8 @@ export type OperationContext = {
   scope: string;
   branch: string;
   resultingState?: string;
+
+  // This is a _global_ ordinal that is increasing across all documents and scopes.
   ordinal: number;
 };
 
@@ -17,8 +19,8 @@ export type OperationWithContext = {
 };
 
 export class DuplicateOperationError extends Error {
-  constructor(opId: string) {
-    super(`Operation with opId ${opId} already exists`);
+  constructor(description: string) {
+    super(`Duplicate operation: ${description}`);
     this.name = "DuplicateOperationError";
   }
 }
@@ -74,6 +76,26 @@ export interface IOperationStore {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<OperationWithContext>>;
+
+  /**
+   * Gets operations that may conflict with incoming operations during a load.
+   *
+   * @param documentId - The document id
+   * @param scope - The scope to query
+   * @param branch - The branch name
+   * @param minTimestamp - Minimum timestamp (inclusive) as ISO string
+   * @param paging - Optional paging options for cursor-based pagination
+   * @param signal - Optional abort signal to cancel the request
+   * @returns Paged results of operations that may conflict
+   */
+  getConflicting(
+    documentId: string,
+    scope: string,
+    branch: string,
+    minTimestamp: string,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<Operation>>;
 
   /**
    * Gets the latest operation index for each scope of a document, along with

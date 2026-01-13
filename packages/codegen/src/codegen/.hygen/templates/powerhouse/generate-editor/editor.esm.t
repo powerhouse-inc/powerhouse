@@ -24,7 +24,7 @@ export default function Editor() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="ph-default-styles min-h-screen bg-gray-50">
       <DocumentToolbar />
       <div className="flex justify-center px-4 py-8">
         <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-sm">

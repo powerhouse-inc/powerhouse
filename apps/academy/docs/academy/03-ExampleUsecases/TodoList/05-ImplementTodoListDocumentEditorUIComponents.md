@@ -10,44 +10,61 @@ Create a new file at `editors/todo-list-editor/components/TodoList.tsx` and add 
 
 ```jsx
 import { useSelectedTodoListDocument } from "todo-tutorial/document-models/todo-list";
-import { EditTodoListName } from "./EditName.js";
 
 /** Displays the selected todo list */
 export function TodoList() {
   // this hook returns the currently selected TodoList document
-  const [selectedTodoList] = useSelectedTodoListDocument();
+  const [selectedTodoListDocument] = useSelectedTodoListDocument();
 
-  if (!selectedTodoList) return null;
+  if (!selectedTodoListDocument) return null;
 
   return (
-    <div>
-     <EditTodoListName />
-      <pre>
-       {JSON.stringify(selectedTodoListDocument)}
-      </pre>
+    <div className="flex justify-center px-4 py-8">
+      <div className="w-full max-w-md h-[300px] rounded-xl bg-white p-6 shadow-sm flex flex-col">
+        <div className="mb-4 text-xs font-medium uppercase tracking-wide text-gray-400">
+          Todo List Document
+        </div>
+        <div className="overflow-auto flex-1">
+          <pre className="text-sm text-gray-900">
+            {JSON.stringify(selectedTodoListDocument, null, 2)}
+          </pre>
+        </div>
+      </div>
     </div>
   );
 }
 ```
 
-We've moved the `<EditTodoListName />` component here, so replace it in `editors/todo-list-editor/editor.tsx` with this component we just created.
+Now in `editors/todo-list-editor/editor.tsx` add this new component (TodoList) at the 
 
 ```tsx
-// removed-line
-import { EditTodoListName } from "./components/EditName.js";
-// added-line
+import { DocumentToolbar } from "@powerhousedao/design-system/connect";
+import { setName } from "document-model";
+import { useState } from "react";
+import type { FormEvent } from "react";
+import { useSelectedTodoListDocument } from "todo-tutorial/document-models/todo-list";
+// added-start
 import { TodoList } from "./components/TodoList.js";
+// added-end
 
 export default function Editor() {
+  ...
+
   return (
-    <div className="py-4 px-8">
-      // removed-line
-      <EditTodoListName />
-      // added-line
+    <div className="min-h-screen bg-gray-50">
+      <DocumentToolbar />
+      <div className="flex justify-center px-4 py-8">
+        ...
+      </div>
+      ...
+      
+      // added-start
       <TodoList />
+      // added-end
     </div>
   );
 }
+
 ```
 
 Now when you open a TodoList document in Connect, you will see an (albeit ugly for now) representation of your whole document in JSON.
@@ -59,6 +76,7 @@ Next, let's add a component for adding todos to a todo list.
 Create a new file at `editors/todo-list-editor/components/AddTodo.tsx` and add this to it:
 
 ```jsx
+import { generateId } from "@powerhousedao/design-system/connect/components/drop-zone/utils";
 import type { FormEventHandler } from "react";
 import { addTodoItem } from "todo-tutorial/document-models/todo-list";
 import { useSelectedTodoListDocument } from "todo-tutorial/document-models/todo-list";
@@ -81,123 +99,71 @@ export function AddTodo() {
     const text = addTodoInput.value;
     if (!text) return;
 
-    dispatch(addTodoItem({ text }));
+    dispatch(addTodoItem({ text, id: generateId() }));
 
     form.reset();
   };
 
   return (
-    <form onSubmit={onSubmitAddTodo} className="flex mx-auto min-w-fit gap-2">
-      <input
-        className="py-1 px-2 grow min-w-fit placeholder:text-gray-600 rounded border border-gray-600 text-gray-800"
-        type="text"
-        name="addTodo"
-        placeholder="What needs to be done?"
-        autoFocus
-      />
-      <button
-        type="submit"
-        className="text-gray-600 rounded border border-gray-600 px-3 py-1"
-      >
-        Add
-      </button>
-    </form>
+    <div className="w-[400px] rounded-xl bg-white p-6 shadow-sm">
+      <div className="mb-4 text-xs font-medium uppercase tracking-wide text-gray-400">
+        Add Todo
+      </div>
+      <form onSubmit={onSubmitAddTodo} className="flex gap-2">
+        <input
+          className="flex-1 rounded-lg border border-gray-200 px-4 py-3 text-lg font-semibold text-gray-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+          type="text"
+          name="addTodo"
+          placeholder="What needs to be done?"
+          autoFocus
+        />
+        <button
+          type="submit"
+          className="shrink-0 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+        >
+          Add
+        </button>
+      </form>
+    </div>
   );
 }
+
 ```
 
 We have provided some basic Tailwind styles but you are welcome to style your components however you wish. This hooks and functions also work with other component libraries like Radix etc.
 
-Let's add this component to our `<TodoList />` component.
-
+Let's add this component to our `<TodoList />` component. `./editors/todo-list-editor/components/TodoList.tsx`
 ```tsx
 import { useSelectedTodoListDocument } from "todo-tutorial/document-models/todo-list";
-import { EditTodoListName } from "./EditName.js";
-// added-line
 import { AddTodo } from "./AddTodo.js";
 
 /** Displays the selected todo list */
 export function TodoList() {
   // this hook returns the currently selected TodoList document
-  const [selectedTodoList] = useSelectedTodoListDocument();
+  const [selectedTodoListDocument] = useSelectedTodoListDocument();
 
-  if (!selectedTodoList) return null;
+  if (!selectedTodoListDocument) return null;
 
   return (
-    <div>
-     <EditTodoListName />
-     // added-line
-     <AddTodo />
-      <pre>
-       {JSON.stringify(selectedTodoListDocument)}
-      </pre>
+    <div className="flex flex-col items-center px-4 py-8 gap-6">
+      <AddTodo />
+      <div className="w-[400px] h-[300px] rounded-xl bg-white p-6 shadow-sm flex flex-col">
+        <div className="mb-4 text-xs font-medium uppercase tracking-wide text-gray-400">
+          Todo List Document
+        </div>
+        <div className="overflow-auto flex-1">
+          <pre className="text-sm text-gray-900">
+            {JSON.stringify(selectedTodoListDocument, null, 2)}
+          </pre>
+        </div>
+      </div>
     </div>
   );
 }
+
 ```
 
 Now when you open a TodoList document in Connect, you can add more todos.
-
-## Add a button for closing the open `TodoList` document
-
-Of course it's all well and good to be able to open TodoList documents, but we would also like to be able to close them.
-
-Let's add a `<CloseButton />` component that closes the selected document when clicked.
-
-Create a new file at `editors/todo-list-editor/components/CloseButton.tsx` and add this content:
-
-```jsx
-import { setSelectedNode } from "@powerhousedao/reactor-browser";
-import type { MouseEventHandler } from "react";
-
-/** Closes the selected todo list document editor */
-export function CloseButton() {
-  const onCloseButtonClick: MouseEventHandler<HTMLButtonElement> = () => {
-    // this function sets the selected node in Connect.
-    // a node can be either a file or a folder, and the same function works for both.
-    // notably, this is not a hook and therefore does not need to abide by the rules of hooks.
-    setSelectedNode(undefined);
-  };
-
-  return (
-    <button onClick={onCloseButtonClick} className="text-sm text-gray-600">
-      Close
-    </button>
-  );
-}
-```
-
-Let's add this component to our `<TodoList />` component:
-
-```tsx
-import { useSelectedTodoListDocument } from "todo-tutorial/document-models/todo-list";
-import { EditTodoListName } from "./EditName.js";
-import { AddTodo } from "./AddTodo.js";
-// added-line
-import { CloseButton } from "./CloseButton.js";
-
-/** Displays the selected todo list */
-export function TodoList() {
-  // this hook returns the currently selected TodoList document
-  const [selectedTodoList] = useSelectedTodoListDocument();
-
-  if (!selectedTodoList) return null;
-
-  return (
-    <div>
-     <EditTodoListName />
-     // added-line
-     <CloseButton />
-     <AddTodo />
-      <pre>
-       {JSON.stringify(selectedTodoListDocument)}
-      </pre>
-    </div>
-  );
-}
-```
-
-Now you have a button you can click to close the selected document.
 
 ## Add components for todo items and the list of todo items
 
@@ -275,22 +241,26 @@ export function Todo({ todo }: Props) {
   if (isEditing)
     return (
       <form
-        className="flex gap-2 items-center justify-between"
+        className="flex gap-2 items-center rounded-lg border border-gray-200 p-3"
         onSubmit={onSubmitUpdateTodoText}
       >
         <input
-          className="p-1 grow"
+          className="min-w-0 flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           type="text"
           name="todoText"
           defaultValue={todoText}
           autoFocus
         />
-        <div className="flex gap-2 grow-0">
-          <button type="submit" className="text-sm text-gray-600">
+        <div className="flex gap-2 shrink-0">
+          <button
+            type="submit"
+            className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+          >
             Save
           </button>
           <button
-            className="text-sm text-red-800"
+            type="button"
+            className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
             onClick={onClickCancelEditTodo}
           >
             Cancel
@@ -300,23 +270,34 @@ export function Todo({ todo }: Props) {
     );
 
   return (
-    <div className="flex justify-between items-center">
-      <div className="flex items-center gap-2 p-1">
+    <div className="flex justify-between items-center rounded-lg border border-gray-200 p-3 transition-colors hover:bg-gray-50">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
         <input
           type="checkbox"
           checked={todoChecked}
           onChange={onChangeTodoChecked}
+          className="h-4 w-4 shrink-0 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
         />
-        <span className={todoChecked ? "line-through" : ""}>{todoText}</span>
+        <span
+          className={`text-sm truncate ${todoChecked ? "line-through text-gray-400" : "text-gray-900"}`}
+        >
+          {todoText}
+        </span>
       </div>
-      <span className="flex place-items-center gap-2 text-sm">
-        <button className="text-gray-600" onClick={onClickEditTodo}>
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100"
+          onClick={onClickEditTodo}
+        >
           Edit
         </button>
-        <button className="text-red-800" onClick={onClickDeleteTodo}>
+        <button
+          className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+          onClick={onClickDeleteTodo}
+        >
           Delete
         </button>
-      </span>
+      </div>
     </div>
   );
 }
@@ -336,18 +317,25 @@ type Props = {
 export function Todos({ todos }: Props) {
   const hasTodos = todos.length > 0;
 
-  if (!hasTodos) {
-    return <p>Start adding things to your todo list</p>;
-  }
-
   return (
-    <ul>
-      {todos.map((todo) => (
-        <li key={todo.id}>
-          <Todo todo={todo} />
-        </li>
-      ))}
-    </ul>
+    <div className="w-[400px] rounded-xl bg-white p-6 shadow-sm">
+      <div className="mb-4 text-xs font-medium uppercase tracking-wide text-gray-400">
+        Todos
+      </div>
+      {!hasTodos ? (
+        <p className="text-sm text-gray-500">
+          Start adding things to your todo list
+        </p>
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {todos.map((todo) => (
+            <li key={todo.id}>
+              <Todo todo={todo} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 ```
@@ -356,45 +344,36 @@ And replace the content of your `TodoList.tsx` file with this:
 
 ```jsx
 import { useSelectedTodoListDocument } from "todo-tutorial/document-models/todo-list";
-import { EditTodoListName } from "./EditName.js";
-import { Todos } from "./Todos.js";
 import { AddTodo } from "./AddTodo.js";
-import { CloseButton } from "./CloseButton.js";
+import { Todos } from "./Todos.js";
 
 /** Displays the selected todo list */
 export function TodoList() {
-  const [selectedTodoList] = useSelectedTodoListDocument();
+  // this hook returns the currently selected TodoList document
+  const [selectedTodoListDocument] = useSelectedTodoListDocument();
 
-  if (!selectedTodoList) return null;
+  if (!selectedTodoListDocument) return null;
 
-  const todos = selectedTodoList.state.global.items;
+  const todos = selectedTodoListDocument.state.global.items;
 
   return (
-    <div>
-      <section className="mb-4 flex gap-2 items-center">
-        <div className="grow">
-          <EditTodoListName />
-        </div>
-        <div className="flex-none">
-          <CloseButton />
-        </div>
-      </section>
-      <section className="mb-4">
-        <Todos todos={todos} />
-      </section>
-      <section>
-        <AddTodo />
-      </section>
+    <div className="flex flex-col items-center px-4 py-8 gap-6">
+      <AddTodo />
+      <Todos todos={todos} />
     </div>
   );
 }
+
 ```
 
 ```
 editors/todo-list-editor/
 ├── components/
-│   └── EditName.tsx          # Auto-generated component for editing document name
-├── editor.tsx                # Main editor component (do not change this)
+│   └── AddTodo.tsx           # Component for adding a new todo
+│   └── Todo.tsx              # Renders an individual Todo item
+│   └── TodoList.tsx          # main Todo Component, renders the Todos and AddTodo Component
+│   └── Todos.tsx             # Renders the list of todos
+├── editor.tsx                # Main editor component
 └── module.ts                 # Editor module export (do not change this)
 ```
 

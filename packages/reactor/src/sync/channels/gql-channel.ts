@@ -1,3 +1,5 @@
+import type { Action, Signature } from "document-model";
+import type { ILogger } from "../../logging/types.js";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import { ChannelError } from "../errors.js";
 import type { IChannel } from "../interfaces.js";
@@ -5,7 +7,7 @@ import { Mailbox } from "../mailbox.js";
 import type { SyncOperation } from "../sync-operation.js";
 import type { RemoteCursor, RemoteFilter, SyncEnvelope } from "../types.js";
 import { ChannelErrorSource } from "../types.js";
-import { envelopeToSyncOperation } from "./utils.js";
+import { envelopesToSyncOperations } from "./utils.js";
 
 /**
  * Configuration parameters for GqlChannel
@@ -50,6 +52,7 @@ export class GqlChannel implements IChannel {
   private lastFailureUtcMs?: number;
 
   constructor(
+    private readonly logger: ILogger,
     channelId: string,
     remoteName: string,
     cursorStorage: ISyncCursorStorage,
@@ -61,7 +64,7 @@ export class GqlChannel implements IChannel {
     this.config = {
       url: config.url,
       authToken: config.authToken,
-      pollIntervalMs: config.pollIntervalMs ?? 5000,
+      pollIntervalMs: config.pollIntervalMs ?? 10000,
       retryBaseDelayMs: config.retryBaseDelayMs ?? 1000,
       retryMaxDelayMs: config.retryMaxDelayMs ?? 300000,
       maxFailures: config.maxFailures ?? 5,
@@ -108,11 +111,11 @@ export class GqlChannel implements IChannel {
       return;
     }
 
-    this.pollTimer = setTimeout(() => {
-      void this.poll().then(() => {
+    void this.poll().then(() => {
+      this.pollTimer = setTimeout(() => {
         this.startPolling(); // Schedule next poll
-      });
-    }, this.config.pollIntervalMs);
+      }, this.config.pollIntervalMs);
+    });
   }
 
   /**
@@ -148,10 +151,12 @@ export class GqlChannel implements IChannel {
     let maxCursorOrdinal = cursorOrdinal;
 
     for (const envelope of envelopes) {
-      if (envelope.type === "operations" && envelope.operations) {
-        const syncOp = envelopeToSyncOperation(envelope, this.remoteName);
-        syncOp.transported();
-        this.inbox.add(syncOp);
+      if (envelope.type.toLowerCase() === "operations" && envelope.operations) {
+        const syncOps = envelopesToSyncOperations(envelope, this.remoteName);
+        for (const syncOp of syncOps) {
+          syncOp.transported();
+          this.inbox.add(syncOp);
+        }
       }
 
       if (envelope.cursor && envelope.cursor.cursorOrdinal > maxCursorOrdinal) {
@@ -176,22 +181,68 @@ export class GqlChannel implements IChannel {
    * Handles polling errors with exponential backoff.
    */
   private handlePollError(error: unknown): void {
+    const err = error instanceof Error ? error : new Error(String(error));
+
+    if (err.message.includes("Channel not found")) {
+      this.recoverFromChannelNotFound();
+      return;
+    }
+
     this.failureCount++;
     this.lastFailureUtcMs = Date.now();
 
-    const err = error instanceof Error ? error : new Error(String(error));
     const channelError = new ChannelError(ChannelErrorSource.Inbox, err);
 
-    console.error(
-      `GqlChannel poll error (${this.failureCount}/${this.config.maxFailures}):`,
+    this.logger.error(
+      "GqlChannel poll error (@FailureCount/@MaxFailures): @Error",
+      this.failureCount,
+      this.config.maxFailures,
       channelError,
     );
 
     if (this.failureCount >= this.config.maxFailures!) {
-      console.error(
-        `GqlChannel ${this.channelId} exceeded failure threshold, stopping polls`,
+      this.logger.error(
+        "GqlChannel @ChannelId exceeded failure threshold, stopping polls",
+        this.channelId,
       );
     }
+  }
+
+  /**
+   * Recovers from a "Channel not found" error by re-registering and restarting polling.
+   */
+  private recoverFromChannelNotFound(): void {
+    this.logger.info(
+      "GqlChannel @ChannelId not found on remote, re-registering...",
+      this.channelId,
+    );
+
+    if (this.pollTimer) {
+      clearTimeout(this.pollTimer);
+      this.pollTimer = undefined;
+    }
+
+    void this.touchRemoteChannel()
+      .then(() => {
+        this.logger.info(
+          "GqlChannel @ChannelId re-registered successfully",
+          this.channelId,
+        );
+        this.failureCount = 0;
+        this.startPolling();
+      })
+      .catch((recoveryError) => {
+        this.logger.error(
+          "GqlChannel @ChannelId failed to re-register: @Error",
+          this.channelId,
+          recoveryError,
+        );
+        this.failureCount++;
+        this.lastFailureUtcMs = Date.now();
+        this.pollTimer = setTimeout(() => {
+          this.startPolling();
+        }, this.config.pollIntervalMs);
+      });
   }
 
   /**
@@ -322,6 +373,14 @@ export class GqlChannel implements IChannel {
   private async pushSyncOperation(syncOp: SyncOperation): Promise<void> {
     syncOp.started();
 
+    this.logger.debug(
+      "[PUSH]: @Operations",
+      syncOp.operations.map(
+        (op) =>
+          `(${op.context.documentId}, ${op.context.branch}, ${op.context.scope}, ${op.operation.index})`,
+      ),
+    );
+
     const envelope: SyncEnvelope = {
       type: "operations",
       channelMeta: { id: this.channelId },
@@ -350,6 +409,10 @@ export class GqlChannel implements IChannel {
 
   /**
    * Serializes a SyncEnvelope for GraphQL transport.
+   *
+   * Signatures are serialized as comma-separated strings since GraphQL schema
+   * defines them as [String!]!. Extra context fields (resultingState, ordinal)
+   * are stripped since they are not defined in OperationContextInput.
    */
   private serializeEnvelope(envelope: SyncEnvelope): unknown {
     return {
@@ -363,11 +426,39 @@ export class GqlChannel implements IChannel {
           skip: opWithContext.operation.skip,
           error: opWithContext.operation.error,
           id: opWithContext.operation.id,
-          action: opWithContext.operation.action,
+          action: this.serializeAction(opWithContext.operation.action),
         },
-        context: opWithContext.context,
+        context: {
+          documentId: opWithContext.context.documentId,
+          documentType: opWithContext.context.documentType,
+          scope: opWithContext.context.scope,
+          branch: opWithContext.context.branch,
+        },
       })),
       cursor: envelope.cursor,
+    };
+  }
+
+  /**
+   * Serializes an action for GraphQL transport, converting signature tuples to strings.
+   */
+  private serializeAction(action: Action): unknown {
+    const signer = action.context?.signer;
+    if (!signer?.signatures) {
+      return action;
+    }
+
+    return {
+      ...action,
+      context: {
+        ...action.context,
+        signer: {
+          ...signer,
+          signatures: signer.signatures.map((sig: Signature | string) =>
+            Array.isArray(sig) ? sig.join(", ") : sig,
+          ),
+        },
+      },
     };
   }
 

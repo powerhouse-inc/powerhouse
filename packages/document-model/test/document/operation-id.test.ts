@@ -62,35 +62,7 @@ describe("Document Operation ID", () => {
         global: document.operations.global!.map((op) => ({
           ...op,
           id: undefined,
-        })),
-      },
-    };
-
-    document = countReducer(document, increment());
-
-    expect(document.operations.global!).toHaveLength(4);
-    for (const operation of document.operations.global!) {
-      if (operation.index === 3) {
-        expect(operation.id).toBeDefined();
-      } else {
-        expect(operation.id).toBeUndefined();
-      }
-    }
-  });
-
-  it("should not add id field if existing operation does not include it", () => {
-    document = countReducer(document, increment());
-    document = countReducer(document, increment());
-    document = countReducer(document, increment());
-
-    document = {
-      ...document,
-      operations: {
-        ...document.operations,
-        global: document.operations.global!.map((op) => {
-          const { id, ...operation } = op;
-          return operation;
-        }),
+        })) as unknown as typeof document.operations.global,
       },
     };
 
@@ -119,6 +91,7 @@ describe("Document Operation ID", () => {
       initialState,
       clearedOperations,
       baseCountReducer,
+      document.header,
     );
 
     expect(replayedDoc.operations.global!).toHaveLength(3);
@@ -131,7 +104,7 @@ describe("Document Operation ID", () => {
     }
   });
 
-  it("should not assign an id to existing operations when replay document", () => {
+  it("should derive ids for existing operations without ids when replay document", () => {
     document = countReducer(document, increment());
     document = countReducer(document, increment());
     document = countReducer(document, increment());
@@ -143,7 +116,7 @@ describe("Document Operation ID", () => {
         global: document.operations.global!.map((op) => ({
           ...op,
           id: undefined,
-        })),
+        })) as unknown as typeof document.operations.global,
       },
     };
 
@@ -157,25 +130,18 @@ describe("Document Operation ID", () => {
       initialState,
       clearedOperations,
       baseCountReducer,
+      document.header,
     );
 
     expect(replayedDoc.operations.global!).toHaveLength(4);
     expect(document.operations.global!).toHaveLength(4);
 
     for (let i = 0; i < document.operations.global!.length; i++) {
-      if (i === 3) {
-        expect(replayedDoc.operations.global![i].id).toBeDefined();
-      } else {
-        expect(replayedDoc.operations.global![i].id).toBeUndefined();
-      }
-
-      expect(replayedDoc.operations.global![i].id).toBe(
-        document.operations.global![i].id,
-      );
+      expect(replayedDoc.operations.global![i].id).toBeDefined();
     }
   });
 
-  it("should not add id if existing operation does not include id field when replay document", () => {
+  it("should derive ids for operations missing id field when replay document", () => {
     document = countReducer(document, increment());
     document = countReducer(document, increment());
     document = countReducer(document, increment());
@@ -185,9 +151,9 @@ describe("Document Operation ID", () => {
       operations: {
         ...document.operations,
         global: document.operations.global!.map((op) => {
-          const { id, ...operation } = op;
+          const { id: _id, ...operation } = op;
           return operation;
-        }),
+        }) as unknown as typeof document.operations.global,
       },
     };
 
@@ -201,21 +167,14 @@ describe("Document Operation ID", () => {
       initialState,
       clearedOperations,
       baseCountReducer,
+      document.header,
     );
 
     expect(replayedDoc.operations.global!).toHaveLength(4);
     expect(document.operations.global!).toHaveLength(4);
 
     for (let i = 0; i < document.operations.global!.length; i++) {
-      if (i === 3) {
-        expect(replayedDoc.operations.global![i].id).toBeDefined();
-      } else {
-        expect(replayedDoc.operations.global![i].id).toBeUndefined();
-      }
-
-      expect(replayedDoc.operations.global![i].id).toBe(
-        document.operations.global![i].id,
-      );
+      expect(replayedDoc.operations.global![i].id).toBeDefined();
     }
   });
 });

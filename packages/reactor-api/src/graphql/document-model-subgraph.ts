@@ -127,7 +127,7 @@ export function generateDocumentModelResolversLegacy(
               throw new Error(errorOp.error);
             }
 
-            return true;
+            return result.operations.at(-1)?.index ?? -1;
           };
           return mutations;
         },

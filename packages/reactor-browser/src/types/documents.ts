@@ -8,12 +8,19 @@ export type DocumentDispatch<TAction extends Action> = (
     | DocumentAction[]
     | undefined,
   onErrors?: (errors: Error[]) => void,
+  onSuccess?: (result: PHDocument) => void,
 ) => void;
 
-export type PromiseWithState<T> = Promise<T> & {
-  status?: "pending" | "fulfilled" | "rejected";
-  value?: T;
-  reason?: unknown;
+export type PromiseWithState<T> = Promise<T> & PromiseState<T>;
+
+export type FulfilledPromise<T> = Promise<T> & {
+  status: "fulfilled";
+  value: T;
+};
+
+export type RejectedPromise<T> = Promise<T> & {
+  status: "rejected";
+  reason: unknown;
 };
 
 export type PromiseState<T> =
@@ -25,5 +32,6 @@ export type PromiseState<T> =
 
 export interface IDocumentCache {
   get(id: string, refetch?: boolean): Promise<PHDocument>;
+  getBatch(ids: string[], refetch?: boolean): Promise<PHDocument[]>;
   subscribe(id: string | string[], callback: () => void): () => void;
 }

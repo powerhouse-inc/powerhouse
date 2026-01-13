@@ -195,6 +195,19 @@ export function captureCommanderHelp(program: Command): string {
   return helpText;
 }
 
+const extraHelpLines = `
+  init [name] [options]                               Initialize a new project
+  use [release] [options]                             Specify your version of Powerhouse dependencies
+  update                                              Update your powerhouse dependencies
+`;
+
+function injectExtraHelpLines(helpText: string, extraLines: string): string {
+  const result = `${extraLines}${helpText}`
+    .replaceAll("\n\n", "")
+    .replace("\n", "");
+  return result;
+}
+
 /**
  * Generates and displays the merged help output
  * @param {Command} program - Commander program instance
@@ -223,10 +236,10 @@ export async function generateMergedHelp(program: Command): Promise<void> {
 
     // Restore original descriptions
     restoreCommandDescriptions(program);
-
     // Merge and display help
     const mergedHelp = mergeHelp(helpText, forwardedHelp);
-    console.log(mergedHelp);
+    const withExtraLines = injectExtraHelpLines(mergedHelp, extraHelpLines);
+    console.log(withExtraLines);
   } else {
     console.log(captureCommanderHelp(program));
   }

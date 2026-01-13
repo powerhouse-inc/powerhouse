@@ -6,6 +6,7 @@ import {
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
+import { deriveOperationId } from "document-model/core";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";
@@ -30,6 +31,7 @@ import type { Database as StorageDatabase } from "../../../src/storage/kysely/ty
 import {
   createDocModelDocument,
   createMockDocumentIndexer,
+  createMockLogger,
   createMockReactorFeatures,
   createTestDocuments,
   createTestJobTracker,
@@ -130,7 +132,11 @@ describe("Legacy Write -> Read", () => {
       consistencyTracker,
     );
     await documentView.init();
-    readModelCoordinator = new ReadModelCoordinator(eventBus, [documentView]);
+    readModelCoordinator = new ReadModelCoordinator(
+      eventBus,
+      [documentView],
+      [],
+    );
 
     // Create reactor facade with all required dependencies
     const jobTracker = createTestJobTracker();
@@ -141,6 +147,7 @@ describe("Legacy Write -> Read", () => {
       eventBus,
     );
     reactor = new Reactor(
+      createMockLogger(),
       driveServer,
       consistencyAwareStorage,
       queue,
@@ -265,9 +272,12 @@ describe("Legacy Write -> Read", () => {
 
   describe("getOperations", () => {
     it("should retrieve operations for a document", async () => {
+      const docId = "doc1";
+      const branch = "main";
       const mockOperations = {
         global: [
           {
+            id: deriveOperationId(docId, "global", branch, "action1"),
             index: 0,
             timestampUtcMs: "2023-01-01T00:00:00.000Z",
             hash: "hash1",
@@ -283,6 +293,7 @@ describe("Legacy Write -> Read", () => {
         ],
         local: [
           {
+            id: deriveOperationId(docId, "local", branch, "action2"),
             index: 1,
             timestampUtcMs: "2023-01-02T00:00:00.000Z",
             hash: "hash2",
@@ -298,7 +309,7 @@ describe("Legacy Write -> Read", () => {
         ],
       };
 
-      const document = createDocModelDocument({ id: "doc1" });
+      const document = createDocModelDocument({ id: docId });
       document.operations = mockOperations;
       await driveServer.addDocument(document);
 
@@ -312,9 +323,12 @@ describe("Legacy Write -> Read", () => {
     });
 
     it("should filter operations by scopes", async () => {
+      const docId = "doc1";
+      const branch = "main";
       const mockOperations = {
         global: [
           {
+            id: deriveOperationId(docId, "global", branch, "action1"),
             index: 0,
             timestampUtcMs: "2023-01-01T00:00:00.000Z",
             hash: "hash1",
@@ -330,6 +344,7 @@ describe("Legacy Write -> Read", () => {
         ],
         local: [
           {
+            id: deriveOperationId(docId, "local", branch, "action2"),
             index: 1,
             timestampUtcMs: "2023-01-02T00:00:00.000Z",
             hash: "hash2",
@@ -345,6 +360,7 @@ describe("Legacy Write -> Read", () => {
         ],
         private: [
           {
+            id: deriveOperationId(docId, "private", branch, "action3"),
             index: 2,
             timestampUtcMs: "2023-01-03T00:00:00.000Z",
             hash: "hash3",
@@ -360,7 +376,7 @@ describe("Legacy Write -> Read", () => {
         ],
       };
 
-      const document = createDocModelDocument({ id: "doc1" });
+      const document = createDocModelDocument({ id: docId });
       document.operations = mockOperations;
       await driveServer.addDocument(document);
 

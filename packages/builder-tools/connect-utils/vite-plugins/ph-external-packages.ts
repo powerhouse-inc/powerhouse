@@ -90,44 +90,17 @@ export function phExternalPackagesPlugin(
         return makeImportScriptFromPackages(phPackages, localPackage);
       }
     },
-    handleHotUpdate({ file, server, modules, timestamp }) {
-      const virtualModule = server.moduleGraph.getModuleById(
-        resolvedVirtualModuleId,
-      );
-      if (!virtualModule) {
-        return [];
-      }
-
-      let refreshVirtualModule = false;
-      const modulesToRefresh: ModuleNode[] = [];
-
-      for (const module of modules) {
-        if (!isImported(module, virtualModule)) {
-          // returns only modules that are actually imported by Connect
-          continue;
+    handleHotUpdate(ctx) {
+      // Skip HMR for modules that are only imported by style.css
+      return ctx.modules.filter((mod) => {
+        if (mod.importers.size === 1) {
+          const importer = mod.importers.values().next().value;
+          if (importer?.url === "/style.css") {
+            return false;
+          }
         }
-
-        // lets react modules be handled by react-refresh
-        if (module.file?.endsWith(".tsx") || module.file?.endsWith(".jsx")) {
-          modulesToRefresh.push(module);
-        } else {
-          // invalidates non-react modules to trigger HMR
-          server.moduleGraph.invalidateModule(
-            module,
-            new Set(),
-            timestamp,
-            true,
-          );
-        }
-        refreshVirtualModule = true;
-      }
-
-      // if a module was invalidated then triggers HMR on the external packages module
-      if (refreshVirtualModule) {
-        modulesToRefresh.push(virtualModule);
-      }
-
-      return modulesToRefresh;
+        return true;
+      });
     },
   };
 

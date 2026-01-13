@@ -1,3 +1,13 @@
+// Action Creators
+export {
+  addRelationshipAction,
+  createDocumentAction,
+  deleteDocumentAction,
+  documentActions,
+  removeRelationshipAction,
+  upgradeDocumentAction,
+} from "./actions/index.js";
+
 // Reactor Interface and Implementation
 export { ReactorClient } from "./client/reactor-client.js";
 export {
@@ -166,6 +176,12 @@ export { type IWriteCache } from "./cache/write/interfaces.js";
 export { ConsoleLogger } from "./logging/console.js";
 export { type ILogger } from "./logging/types.js";
 
+// Migrations
+export {
+  REACTOR_SCHEMA,
+  runMigrations,
+} from "./storage/migrations/migrator.js";
+
 // Synchronization
 export {
   KyselySyncCursorStorage,
@@ -178,9 +194,9 @@ export {
   ChannelErrorSource,
   CompositeChannelFactory,
   GqlChannelFactory,
+  Mailbox,
   PollingChannel,
   PollingChannelError,
-  Mailbox,
   SyncBuilder,
   SyncOperation,
   SyncOperationAggregateError,
@@ -202,3 +218,13 @@ export {
   type SyncEnvelopeType,
   type SyncOperationErrorType,
 } from "./sync/index.js";
+
+// Processors
+export { ProcessorManager } from "./processors/index.js";
+export type {
+  IProcessor,
+  IProcessorManager,
+  ProcessorFactory,
+  ProcessorFilter,
+  ProcessorRecord,
+} from "./processors/index.js";

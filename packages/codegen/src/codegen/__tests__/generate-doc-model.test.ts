@@ -1,8 +1,3 @@
-import {
-  generateDocumentModel,
-  hygenGenerateProcessor,
-  loadDocumentModel,
-} from "@powerhousedao/codegen";
 import { readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import {
@@ -14,6 +9,9 @@ import {
   it,
   type TestContext,
 } from "vitest";
+import { generateDocumentModel } from "../generate.js";
+import { hygenGenerateProcessor } from "../hygen.js";
+import { loadDocumentModel } from "../utils.js";
 import { USE_TS_MORPH } from "./config.js";
 import {
   DOCUMENT_MODELS_TEST_PROJECT,

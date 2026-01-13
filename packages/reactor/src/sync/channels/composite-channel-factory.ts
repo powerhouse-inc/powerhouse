@@ -1,3 +1,4 @@
+import type { ILogger } from "../../logging/types.js";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import type { IChannel, IChannelFactory } from "../interfaces.js";
 import type { ChannelConfig, RemoteFilter } from "../types.js";
@@ -11,6 +12,12 @@ import { PollingChannel } from "./polling-channel.js";
  * "internal" channels for in-process communication.
  */
 export class CompositeChannelFactory implements IChannelFactory {
+  private readonly logger: ILogger;
+
+  constructor(logger: ILogger) {
+    this.logger = logger;
+  }
+
   /**
    * Creates a new channel instance based on the configuration type.
    *
@@ -114,7 +121,13 @@ export class CompositeChannelFactory implements IChannelFactory {
       gqlConfig.fetchFn = config.parameters.fetchFn as typeof fetch;
     }
 
-    return new GqlChannel(remoteId, remoteName, cursorStorage, gqlConfig);
+    return new GqlChannel(
+      this.logger,
+      remoteId,
+      remoteName,
+      cursorStorage,
+      gqlConfig,
+    );
   }
 
   private createPollingChannel(

@@ -248,8 +248,9 @@ export class GraphQLManager {
       } catch (error) {
         this.logger.error(
           `Failed to setup document model subgraph for ${documentModel.documentModel.global.id}`,
-          error,
+          error instanceof Error ? error.message : error,
         );
+        this.logger.debug(error);
       }
     }
 

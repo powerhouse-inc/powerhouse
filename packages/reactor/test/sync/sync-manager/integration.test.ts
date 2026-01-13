@@ -7,13 +7,13 @@ import type { IReactor } from "../../../src/core/types.js";
 import { EventBus } from "../../../src/events/event-bus.js";
 import type { IEventBus } from "../../../src/events/interfaces.js";
 import { OperationEventTypes } from "../../../src/events/types.js";
+import { ConsoleLogger } from "../../../src/logging/console.js";
 import type {
   ISyncCursorStorage,
   ISyncRemoteStorage,
   OperationWithContext,
 } from "../../../src/storage/interfaces.js";
 import type { Database } from "../../../src/storage/kysely/types.js";
-import type { TestChannel } from "../channels/test-channel.js";
 import type { IChannelFactory } from "../../../src/sync/interfaces.js";
 import { SyncManager } from "../../../src/sync/sync-manager.js";
 import type { ChannelConfig, SyncEnvelope } from "../../../src/sync/types.js";
@@ -22,6 +22,7 @@ import {
   createTestChannelFactory,
   createTestSyncStorage,
 } from "../../factories.js";
+import type { TestChannel } from "../channels/test-channel.js";
 
 describe("SyncManager Integration", () => {
   let db: Kysely<Database>;
@@ -54,6 +55,7 @@ describe("SyncManager Integration", () => {
     channelFactory = createTestChannelFactory(channelRegistry, sentEnvelopes);
 
     syncManager = new SyncManager(
+      new ConsoleLogger(["SyncManager"]),
       syncRemoteStorage,
       syncCursorStorage,
       channelFactory,
@@ -410,9 +412,13 @@ describe("SyncManager Integration", () => {
 
       await new Promise((resolve) => setTimeout(resolve, 50));
 
-      expect(mockReactor.load).toHaveBeenCalledWith("doc1", "main", [
-        operations[0].operation,
-      ]);
+      expect(mockReactor.load).toHaveBeenCalledWith(
+        "doc1",
+        "main",
+        [operations[0].operation],
+        undefined,
+        { sourceRemote: "remote1" },
+      );
     });
 
     it("should handle reactor errors and move to dead letter", async () => {

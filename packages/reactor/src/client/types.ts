@@ -53,16 +53,26 @@ export interface IReactorClient {
    * @param signal - Optional abort signal to cancel the request
    * @returns List of document model modules
    */
-  getDocumentModels(
+  getDocumentModelModules(
     namespace?: string,
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<DocumentModelModule>>;
 
   /**
-   * Retrieves a specific PHDocument
+   * Retrieves a specific document model module by document type.
    *
-   * @param identifier - Required, this is either a document "id" field or a "slug"
+   * @param documentType - The document type identifier
+   * @returns The document model module
+   */
+  getDocumentModelModule(
+    documentType: string,
+  ): Promise<DocumentModelModule<any>>;
+
+  /**
+   * Retrieves a specific document by identifier (either id or slug).
+   *
+   * @param identifier - Required, this is the document id or slug
    * @param view - Optional filter containing branch and scopes information
    * @param signal - Optional abort signal to cancel the request
    * @returns The up-to-date PHDocument with scopes and list of child document ids
@@ -148,6 +158,24 @@ export interface IReactorClient {
   createEmpty<TDocument extends PHDocument>(
     documentType: string,
     parentIdentifier?: string,
+    signal?: AbortSignal,
+  ): Promise<TDocument>;
+
+  /**
+   * Creates an empty document in a drive as a single batched operation.
+   * This is more efficient than createEmpty + addFile as it batches all
+   * actions into dependent jobs and waits for them to complete together.
+   *
+   * @param driveId - The drive document id or slug
+   * @param document - The document to create
+   * @param parentFolder - Optional folder id within the drive
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The created document
+   */
+  createDocumentInDrive<TDocument extends PHDocument>(
+    driveId: string,
+    document: PHDocument,
+    parentFolder?: string,
     signal?: AbortSignal,
   ): Promise<TDocument>;
 

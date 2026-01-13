@@ -6,6 +6,7 @@ import type {
 import type {
   Action,
   DocumentModelModule,
+  ISigner,
   Operation,
   PHDocument,
 } from "document-model";
@@ -31,7 +32,7 @@ import type {
   ViewFilter,
 } from "../shared/types.js";
 import type { IJobAwaiter } from "../shared/awaiter.js";
-import type { ISigner } from "../signer/types.js";
+import type { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
 import type {
   IDocumentIndexer,
   IDocumentView,
@@ -47,6 +48,7 @@ import type {
 import type { IReactorSubscriptionManager } from "../subs/types.js";
 import type { IChannelFactory, ISyncManager } from "../sync/interfaces.js";
 import type { ReactorClient } from "../client/reactor-client.js";
+import type { IProcessorManager } from "../processors/types.js";
 
 /**
  * A single mutation job within a batch request.
@@ -200,12 +202,14 @@ export interface IReactor {
    * @param document - Document with optional id, slug, parent, model type, and initial state
    * @param signer - Optional signer to sign the actions
    * @param signal - Optional abort signal to cancel the request
+   * @param meta - Optional metadata that flows through the job lifecycle
    * @returns The job status
    */
   create(
     document: PHDocument,
     signer?: ISigner,
     signal?: AbortSignal,
+    meta?: Record<string, unknown>,
   ): Promise<JobInfo>;
 
   /**
@@ -214,12 +218,14 @@ export interface IReactor {
    * @param id - Document id
    * @param signer - Optional signer to sign the actions
    * @param signal - Optional abort signal to cancel the request
+   * @param meta - Optional metadata that flows through the job lifecycle
    * @returns The job id and status
    */
   deleteDocument(
     id: string,
     signer?: ISigner,
     signal?: AbortSignal,
+    meta?: Record<string, unknown>,
   ): Promise<JobInfo>;
 
   /**
@@ -229,6 +235,7 @@ export interface IReactor {
    * @param branch - Branch to apply actions to
    * @param actions - List of actions to apply
    * @param signal - Optional abort signal to cancel the request
+   * @param meta - Optional metadata that flows through the job lifecycle
    * @returns The job id and status
    */
   execute(
@@ -236,16 +243,25 @@ export interface IReactor {
     branch: string,
     actions: Action[],
     signal?: AbortSignal,
+    meta?: Record<string, unknown>,
   ): Promise<JobInfo>;
 
   /**
    * Loads existing operations generated elsewhere into this reactor.
+   *
+   * @param docId - Document id
+   * @param branch - Branch to load operations to
+   * @param operations - List of operations to load
+   * @param signal - Optional abort signal to cancel the request
+   * @param meta - Optional metadata that flows through the job lifecycle
+   * @returns The job id and status
    */
   load(
     docId: string,
     branch: string,
     operations: Operation[],
     signal?: AbortSignal,
+    meta?: Record<string, unknown>,
   ): Promise<JobInfo>;
 
   /**
@@ -253,11 +269,13 @@ export interface IReactor {
    *
    * @param request - Batch mutation request containing jobs with dependencies
    * @param signal - Optional abort signal to cancel the request
+   * @param meta - Optional metadata that flows through the job lifecycle
    * @returns Map of job keys to job information
    */
   executeBatch(
     request: BatchExecutionRequest,
     signal?: AbortSignal,
+    meta?: Record<string, unknown>,
   ): Promise<BatchExecutionResult>;
 
   /**
@@ -357,6 +375,9 @@ export interface ReactorModule {
   documentIndexer: IDocumentIndexer;
   documentIndexerConsistencyTracker: IConsistencyTracker;
   readModelCoordinator: IReadModelCoordinator;
+  subscriptionManager: ReactorSubscriptionManager;
+  processorManager: IProcessorManager;
+  processorManagerConsistencyTracker: IConsistencyTracker;
   syncModule: SyncModule | undefined;
   reactor: IReactor;
 }

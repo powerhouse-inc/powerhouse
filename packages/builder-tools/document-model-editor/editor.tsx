@@ -1,5 +1,8 @@
 import { DocumentToolbar } from "@powerhousedao/design-system/connect";
-import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
+import {
+  usePHToast,
+  useSetPHDocumentEditorConfig,
+} from "@powerhousedao/reactor-browser";
 import { pascalCase } from "change-case";
 import {
   addModule,
@@ -23,8 +26,10 @@ import {
   setStateSchema,
 } from "document-model";
 import { generateId } from "document-model/core";
-import { lazy, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Divider } from "./components/divider.js";
+import ModelMetadata from "./components/model-metadata-form.js";
+import Modules from "./components/modules.js";
 import { editorConfig } from "./config.js";
 import { SchemaContextProvider } from "./context/schema-context.js";
 import { useSelectedDocumentModelDocument } from "./hooks/useDocumentModelDocument.js";
@@ -32,14 +37,14 @@ import type { Scope } from "./types/documents.js";
 import {
   compareStringsWithoutWhitespace,
   initializeModelSchema,
+  makeEmptyOperationSchema,
   makeOperationInitialDoc,
 } from "./utils/helpers.js";
-import ModelMetadata from "./components/model-metadata-form.js";
-import Modules from "./components/modules.js";
 const StateSchemas = lazy(() => import("./components/state-schemas.js"));
 
 export default function Editor() {
   useSetPHDocumentEditorConfig(editorConfig);
+  const toast = usePHToast();
   const [document, dispatch] = useSelectedDocumentModelDocument();
   const [scope, setScope] = useState<Scope>("global");
   const documentNodeName = document.header.name;
@@ -166,45 +171,30 @@ export default function Editor() {
     name: string,
   ): Promise<string | undefined> => {
     return new Promise((resolve) => {
-      try {
-        const moduleOperationNames =
-          modules
-            .find((module) => module.id === moduleId)
-            ?.operations.map((operation) => operation.name)
-            .filter(Boolean) ?? [];
-        if (
-          moduleOperationNames.some((opName) =>
-            compareStringsWithoutWhitespace(opName, name),
-          )
-        ) {
-          resolve(undefined);
-          return;
-        }
-        const id = generateId();
-        dispatch(addOperation({ id, moduleId, name, scope }));
-        resolve(id);
-      } catch (error) {
-        console.error("Failed to add operation:", error);
-        resolve(undefined);
-      }
+      const id = generateId();
+      dispatch(
+        addOperation({ id, moduleId, name, scope }),
+        (errors) => {
+          if (errors.length > 0) {
+            if (toast) {
+              toast(errors[0].message, { type: "connect-warning" });
+            }
+            resolve(undefined);
+          } else {
+            resolve(id);
+          }
+        },
+        () => resolve(id),
+      );
     });
   };
 
   const handleSetOperationName = (id: string, name: string) => {
-    const operationModule = modules.find((module) =>
-      module.operations.some((operation) => operation.id === id),
-    );
-    const operationNames =
-      operationModule?.operations
-        .map((operation) => operation.name)
-        .filter(Boolean) ?? [];
-    if (
-      operationNames.some((opName) =>
-        compareStringsWithoutWhitespace(opName, name),
-      )
-    )
-      return;
-    dispatch(setOperationName({ id, name }));
+    dispatch(setOperationName({ id, name }), (errors) => {
+      if (errors.length > 0 && toast) {
+        toast(errors[0].message, { type: "connect-warning" });
+      }
+    });
   };
 
   const handleSetOperationSchema = (id: string, newSchema: string) => {
@@ -215,6 +205,30 @@ export default function Editor() {
     )
       return;
     dispatch(setOperationSchema({ id, schema: newSchema }));
+  };
+
+  const handleToggleNoInputRequired = (
+    id: string,
+    noInputRequired: boolean,
+  ) => {
+    const operation = operations.find((op) => op.id === id);
+    if (!operation?.name) return;
+
+    if (noInputRequired) {
+      dispatch(
+        setOperationSchema({
+          id,
+          schema: makeEmptyOperationSchema(operation.name),
+        }),
+      );
+    } else {
+      dispatch(
+        setOperationSchema({
+          id,
+          schema: makeOperationInitialDoc(operation.name),
+        }),
+      );
+    }
   };
 
   const handleSetOperationDescription = (
@@ -333,17 +347,19 @@ export default function Editor() {
           />
           <Divider />
           <div>
-            <StateSchemas
-              modelName={modelName}
-              globalStateSchema={globalStateSchema}
-              globalStateInitialValue={globalStateInitialValue}
-              localStateSchema={localStateSchema}
-              localStateInitialValue={localStateInitialValue}
-              setStateSchema={handleSetStateSchema}
-              setInitialState={handleSetInitialState}
-              currentScope={scope}
-              onScopeChange={setScope}
-            />
+            <Suspense>
+              <StateSchemas
+                modelName={modelName}
+                globalStateSchema={globalStateSchema}
+                globalStateInitialValue={globalStateInitialValue}
+                localStateSchema={localStateSchema}
+                localStateInitialValue={localStateInitialValue}
+                setStateSchema={handleSetStateSchema}
+                setInitialState={handleSetInitialState}
+                currentScope={scope}
+                onScopeChange={setScope}
+              />
+            </Suspense>
             <Divider />
             <h3 className="mb-6 text-lg capitalize">{scope} Operations</h3>
             <Modules
@@ -365,6 +381,7 @@ export default function Editor() {
               deleteOperationError={handleDeleteOperationError}
               setOperationErrorName={handleSetOperationErrorName}
               addOperationAndInitialSchema={addOperationAndInitialSchema}
+              toggleNoInputRequired={handleToggleNoInputRequired}
             />
           </div>
         </div>

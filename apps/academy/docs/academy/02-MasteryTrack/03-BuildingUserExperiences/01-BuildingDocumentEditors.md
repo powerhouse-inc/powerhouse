@@ -9,13 +9,13 @@ At Powerhouse, frontend development for document editors follows a simple and fa
 **Vetra Studio** is your primary tool for builder workflows and editor development.  
 When you run `ph vetra --watch`, it provides a dynamic, local environment where you can define and preview your document models and their editors live. This replaces the need for tools like Storybook for editor development, though Storybook remains invaluable for exploring the [Powerhouse Component Library](#powerhouse-component-library).
 
-Key aspects of the Powerhouse development environment:
+#### Key aspects of the Powerhouse development environment:
 
 - **React Foundation**: Build your editor UIs using React components, just as you would in any standard React project.
 - **Automatic Build Processes**: Tailwind CSS is installed by default and fully managed by Vetra Studio. There's no need to manually configure or run Tailwind or other build processes during development. Vetra Studio handles CSS generation and other necessary build steps automatically, especially when you publish a package.
 - **Styling Flexibility**: You are not limited to Tailwind. Regular CSS (`.css` files), inline styles, and any React-compatible styling method work exactly as you would expect.
 
-Powerhouse aims to keep your developer experience clean, familiar, and focused:
+#### Powerhouse aims to keep your developer experience clean, familiar, and focused:
 
 - Build React components as you normally would.
 - Use styling approaches you're comfortable with.

@@ -329,6 +329,7 @@ describe("skip operations", () => {
         initialState,
         clearedOperations,
         baseCountReducer,
+        document.header,
       );
 
       expect(replayedDoc.header.revision.global).toBe(3);
@@ -376,6 +377,7 @@ describe("skip operations", () => {
         initialState,
         clearedOperations,
         baseCountReducer,
+        document.header,
       );
 
       expect(replayedDoc.header.revision.global).toBe(5);
@@ -430,6 +432,7 @@ describe("skip operations", () => {
         initialState,
         clearedOperations,
         baseCountReducer,
+        document.header,
       );
 
       expect(replayedDoc.header.revision.global).toBe(6);
@@ -488,6 +491,7 @@ describe("skip operations", () => {
         initialState,
         clearedOperations,
         baseCountReducer,
+        document.header,
       );
 
       expect(replayedDoc.header.revision.global).toBe(5);

@@ -1,6 +1,6 @@
 import type { PHDocument } from "document-model";
-import { use, useSyncExternalStore } from "react";
-import { readPromiseState } from "../reactor.js";
+import { use, useCallback, useSyncExternalStore } from "react";
+import { readPromiseState } from "../document-cache.js";
 import type { IDocumentCache } from "../types/documents.js";
 import type { SetPHGlobalValue, UsePHGlobalValue } from "../types/global.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
@@ -57,7 +57,7 @@ function getDocumentQueryState(promise: Promise<PHDocument>) {
  * @param id - The document ID to retrieve, or null/undefined to skip retrieval
  * @returns The document if found, or undefined if id is null/undefined
  */
-export function useGetDocument(id: string | null | undefined) {
+export function useDocument(id: string | null | undefined) {
   const documentCache = useDocumentCache();
   const document = useSyncExternalStore(
     (cb) => (id && documentCache ? documentCache.subscribe(id, cb) : () => {}),
@@ -69,20 +69,64 @@ export function useGetDocument(id: string | null | undefined) {
 /**
  * Retrieves multiple documents from the reactor using React Suspense.
  * This hook will suspend rendering while any of the documents are loading.
+ *
+ * Uses getBatch from the document cache which handles promise caching internally,
+ * ensuring stable references for useSyncExternalStore.
+ *
  * @param ids - Array of document IDs to retrieve, or null/undefined to skip retrieval
- * @returns An array of documents if found, or undefined if ids is null/undefined
+ * @returns An array of documents if found, or empty array if ids is null/undefined
  */
-export function useGetDocuments(ids: string[] | null | undefined) {
+export function useDocuments(ids: string[] | null | undefined) {
   const documentCache = useDocumentCache();
-  if (!ids || !documentCache) {
-    return [];
-  }
-  const documents: PHDocument[] = [];
-  for (const id of ids) {
-    const doc = use(documentCache.get(id));
-    documents.push(doc);
-  }
-  return documents;
+
+  const documents = useSyncExternalStore(
+    (cb) =>
+      ids?.length && documentCache
+        ? documentCache.subscribe(ids, cb)
+        : () => {},
+    () =>
+      ids?.length && documentCache ? documentCache.getBatch(ids) : undefined,
+  );
+
+  return documents ? use(documents) : [];
+}
+
+/**
+ * Returns a function to retrieve a document from the cache.
+ * The returned function fetches and returns a document by ID.
+ * @returns A function that takes a document ID and returns a Promise of the document
+ */
+export function useGetDocument() {
+  const documentCache = useDocumentCache();
+
+  return useCallback(
+    (id: string) => {
+      if (!documentCache) {
+        return Promise.reject(new Error("Document cache not initialized"));
+      }
+      return documentCache.get(id);
+    },
+    [documentCache],
+  );
+}
+
+/**
+ * Returns a function to retrieve multiple documents from the cache.
+ * The returned function fetches and returns documents by their IDs.
+ * @returns A function that takes an array of document IDs and returns a Promise of the documents
+ */
+export function useGetDocuments() {
+  const documentCache = useDocumentCache();
+
+  return useCallback(
+    (ids: string[]) => {
+      if (!documentCache) {
+        return Promise.reject(new Error("Document cache not initialized"));
+      }
+      return documentCache.getBatch(ids);
+    },
+    [documentCache],
+  );
 }
 
 /**

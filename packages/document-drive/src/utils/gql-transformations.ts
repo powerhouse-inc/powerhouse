@@ -59,7 +59,7 @@ export function responseForDocument(
     createdAt: document.header.createdAtUtcIso,
     lastModified: document.header.lastModifiedAtUtcIso,
     documentType: document.header.documentType,
-    name,
+    name: name ?? "",
     revision: document.header.revision.global || 0,
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     state: (document.state as any).global,

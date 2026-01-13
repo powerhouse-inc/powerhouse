@@ -6,6 +6,7 @@ import {
   OperationEventTypes,
   type OperationWrittenEvent,
 } from "../events/types.js";
+import type { ILogger } from "../logging/types.js";
 import { JobAwaiter } from "../shared/awaiter.js";
 import {
   JobStatus,
@@ -27,9 +28,14 @@ import type {
   RemoteStatus,
 } from "./types.js";
 import { ChannelErrorSource, SyncOperationStatus } from "./types.js";
-import { createIdleHealth, filterOperations } from "./utils.js";
+import {
+  batchOperationsByDocument,
+  createIdleHealth,
+  filterOperations,
+} from "./utils.js";
 
 export class SyncManager implements ISyncManager {
+  private readonly logger: ILogger;
   private readonly remoteStorage: ISyncRemoteStorage;
   private readonly cursorStorage: ISyncCursorStorage;
   private readonly channelFactory: IChannelFactory;
@@ -42,9 +48,9 @@ export class SyncManager implements ISyncManager {
   private eventUnsubscribe?: () => void;
 
   public loadJobs: Map<string, JobInfo> = new Map();
-  private loadJobSources: Map<string, string> = new Map();
 
   constructor(
+    logger: ILogger,
     remoteStorage: ISyncRemoteStorage,
     cursorStorage: ISyncCursorStorage,
     channelFactory: IChannelFactory,
@@ -52,6 +58,7 @@ export class SyncManager implements ISyncManager {
     reactor: IReactor,
     eventBus: IEventBus,
   ) {
+    this.logger = logger;
     this.remoteStorage = remoteStorage;
     this.cursorStorage = cursorStorage;
     this.channelFactory = channelFactory;
@@ -170,6 +177,16 @@ export class SyncManager implements ISyncManager {
       throw new Error(`Remote with name '${name}' already exists`);
     }
 
+    this.logger.debug(
+      "Adding remote (@name, @collectionId, @channelConfig, @filter, @options, @id)",
+      name,
+      collectionId,
+      channelConfig,
+      filter,
+      options,
+      id,
+    );
+
     const remoteId = id ?? crypto.randomUUID();
 
     const status: RemoteStatus = {
@@ -256,16 +273,19 @@ export class SyncManager implements ISyncManager {
       return;
     }
 
-    const syncOp = new SyncOperation(
-      crypto.randomUUID(),
-      remote.name,
-      filteredOps[0].context.documentId,
-      [...new Set(filteredOps.map((op) => op.context.scope))],
-      filteredOps[0].context.branch,
-      filteredOps,
-    );
+    const batches = batchOperationsByDocument(filteredOps);
 
-    remote.channel.outbox.add(syncOp);
+    for (const batch of batches) {
+      const syncOp = new SyncOperation(
+        crypto.randomUUID(),
+        remote.name,
+        batch.documentId,
+        [batch.scope],
+        batch.branch,
+        batch.operations,
+      );
+      remote.channel.outbox.add(syncOp);
+    }
   }
 
   async remove(name: string): Promise<void> {
@@ -299,11 +319,7 @@ export class SyncManager implements ISyncManager {
       return;
     }
 
-    const sourceRemote = this.loadJobSources.get(event.jobId);
-
-    if (sourceRemote) {
-      this.loadJobSources.delete(event.jobId);
-    }
+    const sourceRemote = event.jobMeta?.sourceRemote as string | undefined;
 
     for (const remote of this.remotes.values()) {
       if (sourceRemote && remote.name === sourceRemote) {
@@ -315,16 +331,19 @@ export class SyncManager implements ISyncManager {
         continue;
       }
 
-      const syncOp = new SyncOperation(
-        crypto.randomUUID(),
-        remote.name,
-        filteredOps[0].context.documentId,
-        [...new Set(filteredOps.map((op) => op.context.scope))],
-        filteredOps[0].context.branch,
-        filteredOps,
-      );
+      const batches = batchOperationsByDocument(filteredOps);
 
-      remote.channel.outbox.add(syncOp);
+      for (const batch of batches) {
+        const syncOp = new SyncOperation(
+          crypto.randomUUID(),
+          remote.name,
+          batch.documentId,
+          [batch.scope],
+          batch.branch,
+          batch.operations,
+        );
+        remote.channel.outbox.add(syncOp);
+      }
     }
   }
 
@@ -358,8 +377,9 @@ export class SyncManager implements ISyncManager {
         syncOp.documentId,
         syncOp.branch,
         operations,
+        undefined,
+        { sourceRemote: remote.name },
       );
-      this.loadJobSources.set(jobInfo.id, remote.name);
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
       const channelError = new ChannelError(ChannelErrorSource.Inbox, err);

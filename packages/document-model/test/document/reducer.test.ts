@@ -4,6 +4,7 @@ import {
   baseCreateDocument,
   createAction,
   createReducer,
+  deriveOperationId,
   generateId,
 } from "document-model/core";
 import type { CountPHState, TestPHState } from "document-model/test";
@@ -207,6 +208,12 @@ describe("Base reducer", () => {
       wrappedEmptyReducer(document, action, undefined, {
         replayOptions: {
           operation: {
+            id: deriveOperationId(
+              document.header.id,
+              "global",
+              document.header.branch,
+              action.id,
+            ),
             action,
             hash: "",
             timestampUtcMs: action.timestampUtcMs,
@@ -254,6 +261,12 @@ describe("Base reducer", () => {
         skip: 1,
         replayOptions: {
           operation: {
+            id: deriveOperationId(
+              document.header.id,
+              "global",
+              document.header.branch,
+              action.id,
+            ),
             action,
             hash: "",
             timestampUtcMs: action.timestampUtcMs,
@@ -299,6 +312,12 @@ describe("Base reducer", () => {
       pruneOnSkip: false,
       replayOptions: {
         operation: {
+          id: deriveOperationId(
+            document.header.id,
+            "global",
+            document.header.branch,
+            action.id,
+          ),
           action,
           skip: 1,
           index: 3,

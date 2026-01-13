@@ -234,9 +234,9 @@ export class SynchronizationManager implements ISynchronizationManager {
       documentStorage.initialState,
       operations,
       documentModelModule.reducer,
-      undefined,
       documentStorage.header,
       undefined,
+      {},
       {
         checkHashes: true,
         reuseOperationResultingState: true,

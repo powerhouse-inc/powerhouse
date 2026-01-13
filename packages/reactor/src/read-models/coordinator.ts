@@ -26,8 +26,11 @@ export class ReadModelCoordinator implements IReadModelCoordinator {
 
   constructor(
     private eventBus: IEventBus,
-    private readModels: IReadModel[],
-  ) {}
+    public readonly preReady: IReadModel[],
+    public readonly postReady: IReadModel[],
+  ) {
+    //
+  }
 
   /**
    * Start listening for operation events and updating read models.
@@ -73,24 +76,25 @@ export class ReadModelCoordinator implements IReadModelCoordinator {
   private async handleOperationWritten(
     event: OperationWrittenEvent,
   ): Promise<void> {
-    // Index into all read models in parallel
-    // If any read model fails, the error will be collected by the event bus
+    // Index into pre-ready read models in parallel
     await Promise.all(
-      this.readModels.map((readModel) =>
+      this.preReady.map((readModel) =>
         readModel.indexOperations(event.operations),
       ),
     );
 
-    // Emit OPERATIONS_READY event after all read models have completed
-    // Use fire-and-forget pattern to avoid blocking
+    // Emit OPERATIONS_READY event after all pre-ready read models have completed
     const readyEvent: OperationsReadyEvent = {
       jobId: event.jobId,
       operations: event.operations,
     };
-    this.eventBus
-      .emit(OperationEventTypes.OPERATIONS_READY, readyEvent)
-      .catch(() => {
-        // No-op: Event emission is fire-and-forget
-      });
+    await this.eventBus.emit(OperationEventTypes.OPERATIONS_READY, readyEvent);
+
+    // Process post-ready read models (e.g., subscription notifications)
+    await Promise.all(
+      this.postReady.map((readModel) =>
+        readModel.indexOperations(event.operations),
+      ),
+    );
   }
 }

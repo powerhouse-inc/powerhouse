@@ -38,6 +38,7 @@ export async function dispatchActions<TDocument = PHDocument, TAction = Action>(
   actionOrActions: TAction[] | TAction | undefined,
   document: TDocument | undefined,
   onErrors?: (errors: Error[]) => void,
+  onSuccess?: (result: PHDocument) => void,
 ): Promise<PHDocument | undefined>;
 /**
  * Dispatches actions to a document.
@@ -50,11 +51,13 @@ export async function dispatchActions(
   actionOrActions: Action[] | Action | undefined,
   documentId: string,
   onErrors?: (errors: Error[]) => void,
+  onSuccess?: (result: PHDocument) => void,
 ): Promise<PHDocument | undefined>;
 export async function dispatchActions(
   actionOrActions: Action[] | Action | undefined,
   documentOrDocumentId: PHDocument | string | undefined,
   onErrors?: (errors: Error[]) => void,
+  onSuccess?: (result: PHDocument) => void,
 ): Promise<PHDocument | undefined> {
   const document =
     typeof documentOrDocumentId === "string"
@@ -83,6 +86,10 @@ export async function dispatchActions(
     if (errors.length) {
       onErrors(errors);
     }
+  }
+
+  if (onSuccess && result) {
+    onSuccess(result);
   }
 
   return result;

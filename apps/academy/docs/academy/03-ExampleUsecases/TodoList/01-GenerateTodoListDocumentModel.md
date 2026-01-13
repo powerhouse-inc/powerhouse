@@ -32,10 +32,12 @@ If you local drive is not present navigate into Settings in the bottom left corn
 Clear the storage of your localhost application as it might has an old session cached.
 :::
 
-4. Move into your local drive.  
+1. To create a new local drive, click the "Create New Drive" icon. In the "Drive Name" field, enter a name for your drive (we will use "local" as the name). For "Drive App", select "Generic drive explorer" and for "Location", choose "Local". Then click the "Create new drive" button at the bottom of the modal.
+
+2. Move into your local drive, by clicking the the name of the drive (local).  
    Create a new document model by clicking the `DocumentModel` button, found in the 'New Document' section at the bottom of the page. Name your document `Todo List`.
 
-If you've followed the steps correctly, you'll have an empty `TodoList` document where you can define the **'Document Specifications'**.
+If you've followed the steps correctly, you'll have an empty `Todo List` document where you can define the **'Document Specifications'**.
 
 ## TodoList document specification
 
@@ -134,6 +136,7 @@ Update the GraphQL input like so:
 
 ```graphql
 input AddTodoItemInput {
+  id: OID!
   text: String!
 }
 ```
@@ -185,7 +188,7 @@ pnpm generate ./todo-list.phd
 To use our reference example, run:
 
 ```bash
-pnpm generate ./todo-list.phdm.phd
+pnpm generate ./todo-list.phd
 ```
 
 This will overwrite your generated code with code that is identical to the branches in this repository.

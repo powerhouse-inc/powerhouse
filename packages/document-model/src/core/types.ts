@@ -390,6 +390,9 @@ export type ReducerOptions = {
    * When false, it will recompute state for the skip but preserve the existing operations history.
    */
   pruneOnSkip?: boolean;
+
+  /** The branch being operated on. Defaults to "main". */
+  branch?: string;
 };
 
 /**
