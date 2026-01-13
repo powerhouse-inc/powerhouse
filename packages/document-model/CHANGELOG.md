@@ -1,3 +1,13 @@
+## 5.1.0-dev.41 (2026-01-13)
+
+### 🩹 Fixes
+
+- do not throw on id mismatch, simply overwrite ([fc613e19d](https://github.com/powerhouse-inc/powerhouse/commit/fc613e19d))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.40 (2026-01-10)
 
 ### 🚀 Features

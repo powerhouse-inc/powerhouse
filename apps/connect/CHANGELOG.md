@@ -1,3 +1,17 @@
+## 5.1.0-dev.41 (2026-01-13)
+
+### 🚀 Features
+
+- **reactor-browser:** useSelectedDocument throws error if there is no selected document ([0eb7ce1b2](https://github.com/powerhouse-inc/powerhouse/commit/0eb7ce1b2))
+
+### 🩹 Fixes
+
+- less strict document models array type on reactor builder ([1548ddec7](https://github.com/powerhouse-inc/powerhouse/commit/1548ddec7))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.1.0-dev.40 (2026-01-10)
 
 ### 🚀 Features

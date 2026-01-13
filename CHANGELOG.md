@@ -1,3 +1,25 @@
+## 5.1.0-dev.41 (2026-01-13)
+
+### 🚀 Features
+
+- **codegen:** relocate generated tests dir ([#2199](https://github.com/powerhouse-inc/powerhouse/pull/2199))
+- **reactor-browser:** useSelectedDocument throws error if there is no selected document ([0eb7ce1b2](https://github.com/powerhouse-inc/powerhouse/commit/0eb7ce1b2))
+
+### 🩹 Fixes
+
+- less strict document models array type on reactor builder ([1548ddec7](https://github.com/powerhouse-inc/powerhouse/commit/1548ddec7))
+- move ALL operation ids to derived ids ([4ac51f535](https://github.com/powerhouse-inc/powerhouse/commit/4ac51f535))
+- testing issue with ids ([8cad05973](https://github.com/powerhouse-inc/powerhouse/commit/8cad05973))
+- do not throw on id mismatch, simply overwrite ([fc613e19d](https://github.com/powerhouse-inc/powerhouse/commit/fc613e19d))
+- deleting documents now actually deletes the document ([ff731acfa](https://github.com/powerhouse-inc/powerhouse/commit/ff731acfa))
+- **reactor-browser:** use correct zod utility to parse document ([22e51c5fe](https://github.com/powerhouse-inc/powerhouse/commit/22e51c5fe))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Ryan Wolhuter @ryanwolhuter
+
 ## 5.1.0-dev.40 (2026-01-10)
 
 ### 🚀 Features

@@ -1,3 +1,13 @@
+## 5.1.0-dev.41 (2026-01-13)
+
+### 🚀 Features
+
+- **codegen:** relocate generated tests dir ([#2199](https://github.com/powerhouse-inc/powerhouse/pull/2199))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 5.1.0-dev.40 (2026-01-10)
 
 ### 🚀 Features

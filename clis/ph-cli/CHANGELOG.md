@@ -1,3 +1,7 @@
+## 5.1.0-dev.41 (2026-01-13)
+
+This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
+
 ## 5.1.0-dev.40 (2026-01-10)
 
 ### 🚀 Features

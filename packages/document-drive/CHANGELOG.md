@@ -1,3 +1,15 @@
+## 5.1.0-dev.41 (2026-01-13)
+
+### 🩹 Fixes
+
+- move ALL operation ids to derived ids ([4ac51f535](https://github.com/powerhouse-inc/powerhouse/commit/4ac51f535))
+- less strict document models array type on reactor builder ([1548ddec7](https://github.com/powerhouse-inc/powerhouse/commit/1548ddec7))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.40 (2026-01-10)
 
 ### 🚀 Features
