@@ -160,6 +160,33 @@ describe.each([
         expect(retrievedDocument.state.global.nodes).toHaveLength(0);
       });
 
+      it("should set default protocol versions when creating a document", async () => {
+        const document = driveDocumentModelModule.utils.createDocument();
+
+        const createJobInfo = await reactor.create(document);
+        await waitForJobAndDocumentUpdate(createJobInfo.id, document.header.id);
+
+        const { document: retrievedDocument } =
+          await reactor.get<DocumentDriveDocument>(document.header.id);
+        expect(retrievedDocument.header.protocolVersions).toEqual({
+          "base-reducer": 2,
+        });
+      });
+
+      it("should preserve existing protocol versions when creating a document", async () => {
+        const document = driveDocumentModelModule.utils.createDocument();
+        document.header.protocolVersions = { "base-reducer": 1 };
+
+        const createJobInfo = await reactor.create(document);
+        await waitForJobAndDocumentUpdate(createJobInfo.id, document.header.id);
+
+        const { document: retrievedDocument } =
+          await reactor.get<DocumentDriveDocument>(document.header.id);
+        expect(retrievedDocument.header.protocolVersions).toEqual({
+          "base-reducer": 1,
+        });
+      });
+
       it("should sign actions when signer is provided to reactor.create", async () => {
         const mockSigner = createMockSigner();
         const document = driveDocumentModelModule.utils.createDocument();

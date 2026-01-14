@@ -622,6 +622,9 @@ export class Reactor implements IReactor {
       name: document.header.name,
       branch: document.header.branch,
       meta: document.header.meta,
+      protocolVersions: document.header.protocolVersions ?? {
+        "base-reducer": 2,
+      },
     };
 
     const createAction = createDocumentAction(createInput);

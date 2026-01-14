@@ -224,6 +224,7 @@ export type CreateDocumentActionInput = {
   name?: string;
   branch?: string;
   meta?: Record<string, unknown>;
+  protocolVersions?: { [key: string]: number };
 };
 
 export type UpgradeDocumentActionInput = {

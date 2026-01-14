@@ -1140,14 +1140,16 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     let updatedDocument: PHDocument;
     try {
+      const protocolVersion =
+        document.header.protocolVersions?.["base-reducer"] ?? 1;
       const reducerOptions = sourceOperation
         ? {
             skip,
             branch: job.branch,
             replayOptions: { operation: sourceOperation },
-            protocolVersion: 2,
+            protocolVersion,
           }
-        : { skip, branch: job.branch, protocolVersion: 2 };
+        : { skip, branch: job.branch, protocolVersion };
       updatedDocument = module.reducer(
         document as PHDocument,
         action,
