@@ -1,0 +1,28 @@
+{
+  "name": "switchboard-e2e",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "pnpm test:unit && pnpm test:e2e",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:e2e": "playwright test tests/reactor-core.spec.ts",
+    "test:e2e:all": "playwright test",
+    "test:e2e:processor": "playwright test tests/relational-db-processor.spec.ts",
+    "test:e2e:processor:headed": "playwright test tests/relational-db-processor.spec.ts --headed",
+    "test:e2e:headed": "playwright test tests/reactor-core.spec.ts --headed",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report",
+    "generate": "ph-cli generate",
+    "reactor": "node ../../packages/reactor-local/dist/src/cli.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1",
+    "@powerhousedao/ph-cli": "workspace:*",
+    "@powerhousedao/reactor": "workspace:*",
+    "document-drive": "workspace:*",
+    "document-model": "workspace:*",
+    "vitest": "^3.2.4"
+  }
+}
