@@ -14,13 +14,16 @@ import type { Kysely } from "kysely";
 
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
+import type { ReactorClient } from "../client/reactor-client.js";
 import type { IEventBus } from "../events/interfaces.js";
 import type { IJobExecutorManager } from "../executor/interfaces.js";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
+import type { IProcessorManager } from "../processors/types.js";
 import type { IQueue } from "../queue/interfaces.js";
 import type { IReadModelCoordinator } from "../read-models/interfaces.js";
 import type { DocumentViewDatabase } from "../read-models/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
+import type { IJobAwaiter } from "../shared/awaiter.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
 import type {
   ConsistencyToken,
@@ -31,8 +34,6 @@ import type {
   ShutdownStatus,
   ViewFilter,
 } from "../shared/types.js";
-import type { IJobAwaiter } from "../shared/awaiter.js";
-import type { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
 import type {
   IDocumentIndexer,
   IDocumentView,
@@ -45,10 +46,9 @@ import type {
   DocumentIndexerDatabase,
   Database as StorageDatabase,
 } from "../storage/kysely/types.js";
+import type { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
 import type { IChannelFactory, ISyncManager } from "../sync/interfaces.js";
-import type { ReactorClient } from "../client/reactor-client.js";
-import type { IProcessorManager } from "../processors/types.js";
 
 /**
  * A single mutation job within a batch request.

@@ -1,14 +1,15 @@
 import type {
   Action,
   ActionSigner,
+  ISigner,
   PHDocument,
   Reducer,
   ReducerOptions,
   SignalDispatch,
+  Signature,
   SigningParameters,
 } from "document-model";
 import {
-  PublicKeySigner,
   ab2hex,
   actionSigner,
   baseCreateDocument,
@@ -32,42 +33,50 @@ import {
 } from "../helpers.js";
 
 /**
- * A signer that uses a key pair to sign and verify data.
+ * Creates a test signer using ECDSA P-256 that can sign and verify data.
  */
-class KeyPairSigner extends PublicKeySigner {
-  readonly #privateKey: JsonWebKey;
+async function createTestSigner(): Promise<ISigner> {
+  const algorithm = { name: "ECDSA", namedCurve: "P-256" };
+  const keyPair = await crypto.subtle.generateKey(algorithm, true, [
+    "sign",
+    "verify",
+  ]);
 
-  #privateCryptoKey: CryptoKey | undefined;
+  const publicKeyJwk = await crypto.subtle.exportKey("jwk", keyPair.publicKey);
 
-  constructor(publicKey: JsonWebKey, privateKey: JsonWebKey) {
-    super(publicKey);
+  return {
+    async publicKey(): Promise<JsonWebKey> {
+      return publicKeyJwk;
+    },
 
-    this.#privateKey = privateKey;
-  }
-
-  async sign(data: Uint8Array): Promise<Uint8Array> {
-    const subtleCrypto = await this.subtleCrypto;
-    if (!this.#privateCryptoKey) {
-      this.#privateCryptoKey = await subtleCrypto.importKey(
-        "jwk",
-        this.#privateKey,
-        {
-          name: "Ed25519",
-          namedCurve: "Ed25519",
-        },
-        true,
-        ["sign"],
+    async sign(data: Uint8Array): Promise<Uint8Array> {
+      const signature = await crypto.subtle.sign(
+        { name: "ECDSA", hash: "SHA-256" },
+        keyPair.privateKey,
+        data.buffer as ArrayBuffer,
       );
-    }
+      return new Uint8Array(signature);
+    },
 
-    const arrayBuffer = await subtleCrypto.sign(
-      "Ed25519",
-      this.#privateCryptoKey,
-      data.buffer as ArrayBuffer,
-    );
+    async verify(data: Uint8Array, signature: Uint8Array): Promise<void> {
+      const isValid = await crypto.subtle.verify(
+        { name: "ECDSA", hash: "SHA-256" },
+        keyPair.publicKey,
+        signature.buffer as ArrayBuffer,
+        data.buffer as ArrayBuffer,
+      );
+      if (!isValid) {
+        throw new Error("invalid signature");
+      }
+    },
 
-    return new Uint8Array(arrayBuffer);
-  }
+    async signAction(
+      _action: Action,
+      _abortSignal?: AbortSignal,
+    ): Promise<Signature> {
+      throw new Error("signAction not implemented in test signer");
+    },
+  };
 }
 
 describe("Crypto utils", () => {
@@ -373,15 +382,7 @@ describe("Crypto utils", () => {
       nonce: generateId(),
     };
 
-    const keyPair = await crypto.subtle.generateKey("Ed25519", true, [
-      "sign",
-      "verify",
-    ]);
-
-    const publicKey = await crypto.subtle.exportKey("jwk", keyPair.publicKey);
-    const privateKey = await crypto.subtle.exportKey("jwk", keyPair.privateKey);
-
-    const signer = new KeyPairSigner(publicKey, privateKey);
+    const signer = await createTestSigner();
     const signature = await sign(parameters, signer);
 
     await verify(parameters, signature, signer);

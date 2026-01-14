@@ -1,5 +1,10 @@
-import type { ISigner } from "#signer/types.js";
-import type { Action, Operation, PHDocument, Signature } from "document-model";
+import type {
+  Action,
+  ISigner,
+  Operation,
+  PHDocument,
+  Signature,
+} from "document-model";
 import type { ErrorInfo, PagedResults } from "../shared/types.js";
 
 /**
@@ -195,7 +200,8 @@ export const signAction = async (
   signer: ISigner,
   signal?: AbortSignal,
 ): Promise<Action> => {
-  const signature: Signature = await signer.sign(action, signal);
+  const signature: Signature = await signer.signAction(action, signal);
+
   return {
     ...action,
     context: {

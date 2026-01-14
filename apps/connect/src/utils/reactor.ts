@@ -9,7 +9,11 @@ import {
   type SignerConfig,
 } from "@powerhousedao/reactor";
 import type { BrowserReactorClientModule } from "@powerhousedao/reactor-browser";
-import type { IConnectCrypto } from "@renown/sdk";
+import {
+  ConnectCryptoSigner,
+  createSignatureVerifier,
+  type IConnectCrypto,
+} from "@renown/sdk";
 import type {
   DefaultRemoteDriveInput,
   DocumentDriveServerOptions,
@@ -29,7 +33,6 @@ import type { DocumentModelModule } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { createRemoveOldRemoteDrivesConfig } from "./drive-preservation.js";
-import { ConnectCryptoSigner, createSignatureVerifier } from "./signer.js";
 
 const DEFAULT_DRIVES_URL =
   (import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL as string | undefined) ||

@@ -1,15 +1,13 @@
 import {
   ConnectCrypto,
+  ConnectCryptoSigner,
+  createSignatureVerifier,
   type JsonWebKeyPairStorage,
   type JwkKeyPair,
 } from "@renown/sdk";
 import type { Action, Operation, Signature } from "document-model";
 import { deriveOperationId } from "document-model/core";
 import { beforeEach, describe, expect, it } from "vitest";
-import {
-  ConnectCryptoSigner,
-  createSignatureVerifier,
-} from "../../src/utils/signer.js";
 
 const TEST_DOC_ID = "test-doc-id";
 const TEST_BRANCH = "main";
@@ -51,7 +49,7 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
       scope: "global",
     };
 
-    const signature = await signer.sign(action);
+    const signature = await signer.signAction(action);
 
     expect(signature).toHaveLength(5);
     const [timestamp, signerKey, hash, prevStateHash, signatureHex] = signature;
@@ -75,7 +73,7 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
       scope: "global",
     };
 
-    const signature = await signer.sign(action);
+    const signature = await signer.signAction(action);
 
     const signedAction: Action = {
       ...action,
@@ -117,7 +115,7 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
       scope: "global",
     };
 
-    const signature = await signer.sign(action);
+    const signature = await signer.signAction(action);
     const [timestamp, signerKey, hash, prevStateHash] = signature;
     const tamperedSignature: Signature = [
       timestamp,
@@ -167,7 +165,7 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
       scope: "global",
     };
 
-    const signature = await signer.sign(action);
+    const signature = await signer.signAction(action);
 
     const signedAction: Action = {
       ...action,
@@ -267,7 +265,7 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
       },
     };
 
-    const signature = await signer.sign(action);
+    const signature = await signer.signAction(action);
 
     const signedAction: Action = {
       ...action,
@@ -322,7 +320,7 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
       scope: "document",
     };
 
-    const signature = await signer.sign(action);
+    const signature = await signer.signAction(action);
 
     const signedAction: Action = {
       ...action,
@@ -370,8 +368,8 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
       scope: "global",
     };
 
-    const signature1 = await signer.sign(action1);
-    const signature2 = await signer.sign(action2);
+    const signature1 = await signer.signAction(action1);
+    const signature2 = await signer.signAction(action2);
 
     expect(signature1[2]).not.toBe(signature2[2]);
     expect(signature1[4]).not.toBe(signature2[4]);
@@ -388,7 +386,7 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
       scope: "global",
     };
 
-    const signature = await signer.sign(action);
+    const signature = await signer.signAction(action);
 
     const newKeyStorage = new InMemoryKeyStorage();
     const newConnectCrypto = new ConnectCrypto(newKeyStorage);

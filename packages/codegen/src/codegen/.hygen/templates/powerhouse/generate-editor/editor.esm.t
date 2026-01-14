@@ -24,53 +24,55 @@ export default function Editor() {
   };
 
   return (
-    <div className="ph-default-styles min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       <DocumentToolbar />
-      <div className="flex justify-center px-4 py-8">
-        <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-sm">
-          <div className="mb-4 text-xs font-medium uppercase tracking-wide text-gray-400">
-            <%= pascalCaseDocumentType %>
-          </div>
+      <div className="ph-default-styles">
+        <div className="flex justify-center px-4 py-8">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-sm">
+            <div className="mb-4 text-xs font-medium uppercase tracking-wide text-gray-400">
+              <%= pascalCaseDocumentType %>
+            </div>
 
-          {isEditing ? (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <input
-                type="text"
-                name="name"
-                defaultValue={document.header.name}
-                autoFocus
-                className="w-full rounded-lg border border-gray-200 px-4 py-3 text-lg font-semibold text-gray-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                placeholder="Enter name..."
-              />
-              <div className="flex gap-2">
+            {isEditing ? (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <input
+                  type="text"
+                  name="name"
+                  defaultValue={document.header.name}
+                  autoFocus
+                  className="w-full rounded-lg border border-gray-200 px-4 py-3 text-lg font-semibold text-gray-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  placeholder="Enter name..."
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(false)}
+                    className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="flex items-center justify-between gap-4">
+                <h2 className="truncate text-xl font-semibold text-gray-900">
+                  {document.header.name || "Untitled"}
+                </h2>
                 <button
-                  type="submit"
-                  className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                  onClick={() => setIsEditing(true)}
+                  className="shrink-0 rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
                 >
-                  Save
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsEditing(false)}
-                  className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
-                >
-                  Cancel
+                  Edit
                 </button>
               </div>
-            </form>
-          ) : (
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="truncate text-xl font-semibold text-gray-900">
-                {document.header.name || "Untitled"}
-              </h2>
-              <button
-                onClick={() => setIsEditing(true)}
-                className="shrink-0 rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
-              >
-                Edit
-              </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>

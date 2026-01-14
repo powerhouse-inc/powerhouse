@@ -6,7 +6,6 @@ import { ReactorClient } from "../client/reactor-client.js";
 import { JobAwaiter, type IJobAwaiter } from "../shared/awaiter.js";
 import { PassthroughSigner } from "../signer/passthrough-signer.js";
 import type {
-  ISigner,
   SignatureVerificationHandler,
   SignerConfig,
 } from "../signer/types.js";

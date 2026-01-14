@@ -1,14 +1,55 @@
 import type {
+  Action,
   ISigner,
+  Operation,
+  Signature,
   SignatureVerificationHandler,
-} from "@powerhousedao/reactor";
-import type { IConnectCrypto } from "@renown/sdk";
-import type { Action, Operation, Signature } from "document-model";
+} from "document-model";
+import type { IConnectCrypto } from "./index.js";
 
 export class ConnectCryptoSigner implements ISigner {
+  private cachedPublicKey: JsonWebKey | undefined;
+
   constructor(private readonly connectCrypto: IConnectCrypto) {}
 
-  async sign(action: Action, abortSignal?: AbortSignal): Promise<Signature> {
+  async publicKey(): Promise<JsonWebKey> {
+    if (!this.cachedPublicKey) {
+      const did = await this.connectCrypto.did();
+      const keyData = extractKeyFromDid(did);
+      const cryptoKey = await crypto.subtle.importKey(
+        "raw",
+        keyData.buffer as ArrayBuffer,
+        { name: "ECDSA", namedCurve: "P-256" },
+        true,
+        ["verify"],
+      );
+      this.cachedPublicKey = await crypto.subtle.exportKey("jwk", cryptoKey);
+    }
+    return this.cachedPublicKey;
+  }
+
+  async sign(data: Uint8Array): Promise<Uint8Array> {
+    return this.connectCrypto.sign(data);
+  }
+
+  async verify(data: Uint8Array, signature: Uint8Array): Promise<void> {
+    const did = await this.connectCrypto.did();
+    const cryptoKey = await importPublicKey(did);
+    const isValid = await crypto.subtle.verify(
+      { name: "ECDSA", hash: "SHA-256" },
+      cryptoKey,
+      signature.buffer as ArrayBuffer,
+      data.buffer as ArrayBuffer,
+    );
+    if (!isValid) {
+      throw new Error("invalid signature");
+    }
+  }
+
+  async signAction(
+    action: Action,
+    abortSignal?: AbortSignal,
+  ): Promise<Signature> {
     if (abortSignal?.aborted) {
       throw new Error("Signing aborted");
     }

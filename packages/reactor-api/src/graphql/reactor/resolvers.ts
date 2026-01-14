@@ -784,7 +784,7 @@ export async function pollSyncEnvelopes(
       id: args.channelId,
     },
     operations: syncOp.operations.map((op) => ({
-      operation: op.operation,
+      operation: serializeOperationForGraphQL(op.operation),
       context: op.context,
     })),
     cursor: {

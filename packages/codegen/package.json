@@ -11,8 +11,28 @@
     "type": "git",
     "url": "https://github.com/powerhouse-inc/powerhouse"
   },
-  "exports": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./templates": {
+      "types": "./dist/src/templates/index.d.ts",
+      "default": "./dist/src/templates/index.js"
+    },
+    "./file-builders": {
+      "types": "./dist/src/file-builders/index.d.ts",
+      "default": "./dist/src/file-builders/index.js"
+    },
+    "./name-builders": {
+      "types": "./dist/src/name-builders/index.d.ts",
+      "default": "./dist/src/name-builders/index.js"
+    },
+    "./utils": {
+      "types": "./dist/src/utils/index.d.ts",
+      "default": "./dist/src/utils/index.js"
+    }
+  },
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
@@ -41,6 +61,7 @@
     "@tmpl/core": "npm:@jsr/tmpl__core@^0.6.3",
     "@types/node": "^24.6.1",
     "arg": "^5.0.2",
+    "chalk": "^5.6.2",
     "change-case": "^4.1.2",
     "document-model": "workspace:*",
     "enquirer": "^2.4.1",
@@ -50,6 +71,7 @@
     "hygen": "^6.2.11",
     "kysely": "^0.28.2",
     "kysely-pglite": "^0.6.1",
+    "package-json-validator": "^0.60.0",
     "prettier": "^3.6.2",
     "read-pkg": "^9.0.1",
     "semver": "^7.7.3",
