@@ -1,3 +1,13 @@
+## 5.1.0-dev.43 (2026-01-14)
+
+### 🩹 Fixes
+
+- linter ([d28e68ea7](https://github.com/powerhouse-inc/powerhouse/commit/d28e68ea7))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.42 (2026-01-14)
 
 ### 🚀 Features

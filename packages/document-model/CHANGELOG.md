@@ -1,3 +1,14 @@
+## 5.1.0-dev.43 (2026-01-14)
+
+### 🚀 Features
+
+- implemented calculateUndoSkipNumber ([da19c2dab](https://github.com/powerhouse-inc/powerhouse/commit/da19c2dab))
+- set out rules for new skip calculation ([a03bce361](https://github.com/powerhouse-inc/powerhouse/commit/a03bce361))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.42 (2026-01-14)
 
 This was a version bump only for document-model to align it with other projects, there were no code changes.

@@ -1,3 +1,13 @@
+## 5.1.0-dev.43 (2026-01-14)
+
+### 🩹 Fixes
+
+- fix race condition in reactor tests ([6400c1867](https://github.com/powerhouse-inc/powerhouse/commit/6400c1867))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.42 (2026-01-14)
 
 ### 🩹 Fixes
