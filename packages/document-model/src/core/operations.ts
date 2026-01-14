@@ -1,11 +1,7 @@
 import type { Draft } from "mutative";
 import { castDraft, create } from "mutative";
 import { noop } from "./actions.js";
-import {
-  calculateUndoSkipNumber,
-  nextSkipNumber,
-  sortOperations,
-} from "./documents.js";
+import { nextSkipNumber, sortOperations } from "./documents.js";
 import type { Action, PHBaseState, PHDocument } from "./ph-types.js";
 import type { LoadStateActionInput } from "./types.js";
 
@@ -78,8 +74,8 @@ export function undoOperation<TDocument extends PHDocument>(
  * V2 of undoOperation for protocol version 2+.
  * Key differences from undoOperation:
  * - Never reuses operation index (always increments)
- * - Uses calculateUndoSkipNumber instead of nextSkipNumber
- * - No overlap adjustment logic (handled internally by calculateUndoSkipNumber)
+ * - Always sets skip=1 (consecutive NOOPs are handled during rebuild/GC)
+ * - No complex skip calculation - simpler model where each UNDO is independent
  */
 export function undoOperationV2<TDocument extends PHDocument>(
   document: TDocument,
@@ -101,18 +97,33 @@ export function undoOperationV2<TDocument extends PHDocument>(
   };
 
   return create(defaultResult, (draft) => {
-    const operations = [...document.operations[scope]];
-    const sortedOperations = sortOperations(operations);
+    const operations = document.operations[scope] || [];
+    const sortedOperations = sortOperations([...operations]);
 
-    draft.action = noop(scope) as Draft<Action>;
+    // Count non-NOOP operations to determine if there's anything to undo
+    const nonNoopOps = sortedOperations.filter(
+      (op) => op.action.type !== "NOOP",
+    );
 
-    draft.skip = calculateUndoSkipNumber(sortedOperations);
+    // Count consecutive NOOPs at the end (these represent pending undos)
+    let noopChainLength = 0;
+    for (let i = sortedOperations.length - 1; i >= 0; i--) {
+      if (sortedOperations[i].action.type === "NOOP") {
+        noopChainLength++;
+      } else {
+        break;
+      }
+    }
 
-    if (draft.skip < 0) {
+    // Check if we can undo: need more non-NOOP ops than the current NOOP chain
+    if (nonNoopOps.length <= noopChainLength) {
       throw new Error(
-        `Cannot undo: you can't undo more operations than the ones in the scope history`,
+        `Cannot undo: no more operations to undo in scope history`,
       );
     }
+
+    draft.action = noop(scope) as Draft<Action>;
+    draft.skip = 1;
   });
 }
 

@@ -120,7 +120,7 @@ export const loadState = <TState extends PHBaseState = PHBaseState>(
   );
 
 export const noop = (scope = "global") =>
-  createAction<NOOPAction>("NOOP", undefined, undefined, undefined, scope);
+  createAction<NOOPAction>("NOOP", {}, undefined, undefined, scope);
 
 // TODO improve base actions type
 

@@ -144,6 +144,78 @@ export function mapSkippedOperations(
   return scopeOpsWithIgnore.reverse();
 }
 
+/**
+ * V2 version of mapSkippedOperations for protocol version 2+.
+ * In V2, all NOOPs have skip=1 and consecutive NOOPs form chains.
+ * N consecutive NOOPs at any point skip N preceding content operations.
+ *
+ * Algorithm: Process from end to start
+ * - When hitting a NOOP: increment chain length, mark as ignored
+ * - When hitting a non-NOOP:
+ *   - If chain > 0: decrement chain, mark as ignored (this op was undone)
+ *   - If chain == 0: mark as not ignored (apply this op)
+ */
+export function mapSkippedOperationsV2(
+  operations: Operation[],
+): MappedOperation[] {
+  const ops = [...operations];
+  const result: MappedOperation[] = [];
+
+  let noopChainLength = 0;
+
+  for (let i = ops.length - 1; i >= 0; i--) {
+    const operation = ops[i];
+    const isNoop = operation.action.type === "NOOP";
+
+    if (isNoop) {
+      noopChainLength++;
+      result.unshift({ ignore: true, operation });
+    } else if (noopChainLength > 0) {
+      noopChainLength--;
+      result.unshift({ ignore: true, operation });
+    } else {
+      result.unshift({ ignore: false, operation });
+    }
+  }
+
+  return result;
+}
+
+/**
+ * V2 garbage collect that returns only operations that should be applied for state.
+ * Uses the V2 model where consecutive NOOPs form chains.
+ * Unlike V1 garbageCollect, this preserves ALL operations but marks which to apply.
+ */
+export function garbageCollectV2<TOpIndex extends OperationIndex>(
+  sortedOperations: TOpIndex[],
+): TOpIndex[] {
+  const result: TOpIndex[] = [];
+  let noopChainLength = 0;
+
+  for (let i = sortedOperations.length - 1; i >= 0; i--) {
+    const op = sortedOperations[i];
+    // Check if this is a NOOP operation
+    const isNoop =
+      "action" in op &&
+      (op as unknown as Operation).action.type === "NOOP" &&
+      op.skip > 0;
+
+    if (isNoop) {
+      noopChainLength++;
+      // Include the NOOP in result (for operation history)
+      result.unshift(op);
+    } else if (noopChainLength > 0) {
+      noopChainLength--;
+      // Skip this operation - it was undone
+    } else {
+      // Include this operation
+      result.unshift(op);
+    }
+  }
+
+  return result;
+}
+
 // Flattens the mapped operations (with ignore flag) from all scopes into
 // a single array and sorts them by timestamp
 export function sortMappedOperations(operations: DocumentOperationsIgnoreMap) {
@@ -795,66 +867,6 @@ export function nextSkipNumber(sortedOperations: OperationIndex[]) {
     : nextSkip;
 }
 
-export function calculateUndoSkipNumber(sortedOperations: Operation[]): number {
-  if (sortedOperations.length < 1) {
-    return -1;
-  }
-
-  const cleanedOperations = garbageCollect(sortedOperations);
-
-  if (cleanedOperations.length <= 1) {
-    return -1;
-  }
-
-  // We know there are at least 2 elements since we checked length <= 1 above
-  const lastOp = cleanedOperations[cleanedOperations.length - 1]!;
-  const secondLastOp = cleanedOperations[cleanedOperations.length - 2]!;
-
-  // Check if operations are NOOPs using action.type
-  const lastIsNoop = lastOp.action.type === "NOOP" && lastOp.skip > 0;
-
-  const secondLastIsNoop =
-    secondLastOp.action.type === "NOOP" && secondLastOp.skip > 0;
-
-  // Count non-NOOP operations - these are the actual content operations
-  const nonNoopOps = cleanedOperations.filter(
-    (op) => !(op.action.type === "NOOP" && op.skip > 0),
-  );
-
-  // If only one non-NOOP operation remains:
-  // - If last op is NOT a NOOP: return 1 (simple undo of that content op)
-  // - If last AND second-last are both NOOPs: return -1 (continuous NOOP chain, can't go further)
-  // - Otherwise: calculate normally (NOOP pointing directly to content op)
-  if (nonNoopOps.length <= 1) {
-    if (!lastIsNoop) {
-      return 1;
-    }
-    if (secondLastIsNoop) {
-      return -1;
-    }
-  }
-
-  let nextSkip: number;
-
-  if (lastIsNoop) {
-    // NOOPs chain: skip = lastSkip + 2 + secondLastSkip (+ 1 if secondLast is also NOOP)
-    nextSkip = lastOp.skip + 2;
-    nextSkip += secondLastOp.skip;
-    if (secondLastIsNoop) {
-      nextSkip += 1;
-    }
-  } else {
-    // Non-NOOPs are undone one at a time
-    nextSkip = 1;
-  }
-
-  // Check if undo would result in empty state
-  if (lastOp.index < nextSkip) {
-    return -1;
-  }
-
-  return nextSkip;
-}
 
 export function checkOperationsIntegrity(operations: Operation[]) {
   return checkCleanedOperationsIntegrity(

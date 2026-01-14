@@ -40,7 +40,7 @@ import type {
   IOperationStore,
   OperationWithContext,
 } from "../storage/interfaces.js";
-import { reshuffleByTimestampAndIndex } from "../utils/reshuffle.js";
+import { reshuffleByTimestamp } from "../utils/reshuffle.js";
 import type { IJobExecutor } from "./interfaces.js";
 import type { JobExecutorConfig, JobResult } from "./types.js";
 import {
@@ -347,6 +347,16 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     const document = createDocumentFromAction(action as CreateDocumentAction);
+
+    // DEBUG: Log protocolVersions during document creation
+    const createInput = (action as CreateDocumentAction).input;
+    this.logger.info("DEBUG: CREATE_DOCUMENT: @Data", {
+      Data: {
+        documentId: document.header.id,
+        inputProtocolVersions: createInput.protocolVersions,
+        headerProtocolVersions: document.header.protocolVersions,
+      },
+    });
 
     // Legacy: Store the document in storage
     if (this.config.legacyStorageEnabled) {
@@ -1120,6 +1130,20 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
     }
 
+    // DEBUG: Log document state from cache before reducer
+    const docOpsFromCache = document.operations[job.scope] || [];
+    const protocolVersionFromHeader =
+      document.header.protocolVersions?.["base-reducer"];
+    this.logger.info("DEBUG: Document from cache: @Document", {
+      documentId: job.documentId,
+      scope: job.scope,
+      actionType: action.type,
+      protocolVersionFromHeader,
+      operationCount: docOpsFromCache.length,
+      operationIndices: docOpsFromCache.map((op) => op.index),
+      operationTypes: docOpsFromCache.map((op) => op.action.type),
+    });
+
     let module: DocumentModelModule;
     try {
       // Use document version to get the correct module
@@ -1167,6 +1191,16 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     const scope = job.scope;
     const operations = updatedDocument.operations[scope];
+
+    // DEBUG: Log document state after reducer
+    this.logger.info("DEBUG: Document after reducer: @Document", {
+      documentId: job.documentId,
+      scope,
+      operationCount: operations.length,
+      operationIndices: operations.map((op) => op.index),
+      operationTypes: operations.map((op) => op.action.type),
+    });
+
     if (operations.length === 0) {
       return this.buildErrorResult(
         job,
@@ -1176,6 +1210,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     const newOperation = operations[operations.length - 1];
+
     if (!isUndoRedo(action)) {
       newOperation.skip = skip;
     }
@@ -1391,7 +1426,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       return true;
     });
 
-    const reshuffledOperations = reshuffleByTimestampAndIndex(
+    const reshuffledOperations = reshuffleByTimestamp(
       {
         index: latestRevision,
         skip: skipCount,
@@ -1402,6 +1437,13 @@ export class SimpleJobExecutor implements IJobExecutor {
         id: operation.id,
       })),
     );
+
+    // For v2, all NOOPs have skip=1 - consecutive NOOPs are handled during state rebuild
+    for (const operation of reshuffledOperations) {
+      if (operation.action.type === "NOOP") {
+        operation.skip = 1;
+      }
+    }
 
     const actions = reshuffledOperations.map((operation) => operation.action);
     const skipValues = reshuffledOperations.map((operation) => operation.skip);

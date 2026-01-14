@@ -10,6 +10,7 @@ import {
   diffOperations,
   garbageCollect,
   garbageCollectDocumentOperations,
+  garbageCollectV2,
   hashDocumentStateForScope,
   isDocumentAction,
   isUndo,
@@ -456,6 +457,7 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
     scope: _action.scope,
     branch,
   };
+
   newDocument = updateDocument(
     newDocument,
     _action,
@@ -465,16 +467,55 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
     options.replayOptions?.operation,
   );
 
-  // Only process undo for actual UNDO actions, not for NOOP operations
+  // Only process undo for actual UNDO actions in protocol v1
+  // For v2, NOOPs always have skip=1 and indices increment
   // NOOP operations with skip > 0 will have their clipboard populated server-side
-  if (isUndo(action)) {
-    console.log(">>>", newDocument.operations);
+  const protocolVersion = options.protocolVersion ?? 1;
+  if (isUndo(action) && protocolVersion < 2) {
     const result = processUndoOperation(
       newDocument,
       action.scope,
       customReducer,
     );
     return result;
+  }
+
+  // V2 UNDO: Rebuild state using garbageCollectV2 which handles consecutive NOOPs as chains
+  // Also trigger for NOOP operations loaded from sync (they have skip > 0)
+  const isNoopWithSkip = _action.type === "NOOP" && skipValue > 0;
+  if ((isUndo(action) || isNoopWithSkip) && protocolVersion >= 2) {
+    const scope = _action.scope;
+    const scopeOperations = newDocument.operations[scope] || [];
+    const sortedOps = sortOperations([...scopeOperations]);
+
+    // Get operations that should be applied (excludes undone operations)
+    const effectiveOps = garbageCollectV2(sortedOps) as Operation[];
+
+    // Build operations for replay - only include non-NOOP operations
+    const opsToReplay = effectiveOps.filter(
+      (op: Operation) => op.action.type !== "NOOP",
+    );
+
+    // Create document operations with only the effective ops for this scope
+    const replayOps: DocumentOperations = {
+      ...newDocument.operations,
+      [scope]: opsToReplay,
+    };
+
+    // Replay to rebuild state using replayOperations which wraps the reducer
+    const rebuiltDoc = replayOperations(
+      newDocument.initialState,
+      replayOps,
+      customReducer,
+      newDocument.header,
+    );
+
+    // Return document with rebuilt state but original operations (including all NOOPs)
+    return {
+      ...rebuiltDoc,
+      operations: newDocument.operations,
+      clipboard: [],
+    } as PHDocument<TState>;
   }
 
   if (shouldProcessSkipOperation) {

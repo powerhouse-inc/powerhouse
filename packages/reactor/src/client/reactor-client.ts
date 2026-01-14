@@ -344,6 +344,9 @@ export class ReactorClient implements IReactorClient {
       name: document.header.name,
       branch: document.header.branch,
       meta: document.header.meta,
+      protocolVersions: document.header.protocolVersions ?? {
+        "base-reducer": 2,
+      },
     };
 
     const documentActions: Action[] = await signActions(
