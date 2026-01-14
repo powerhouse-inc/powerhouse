@@ -795,9 +795,66 @@ export function nextSkipNumber(sortedOperations: OperationIndex[]) {
     : nextSkip;
 }
 
-export function calculateUndoSkipNumber(
-  sortedOperations: OperationIndex[],
-): number {}
+export function calculateUndoSkipNumber(sortedOperations: Operation[]): number {
+  if (sortedOperations.length < 1) {
+    return -1;
+  }
+
+  const cleanedOperations = garbageCollect(sortedOperations);
+
+  if (cleanedOperations.length <= 1) {
+    return -1;
+  }
+
+  // We know there are at least 2 elements since we checked length <= 1 above
+  const lastOp = cleanedOperations[cleanedOperations.length - 1]!;
+  const secondLastOp = cleanedOperations[cleanedOperations.length - 2]!;
+
+  // Check if operations are NOOPs using action.type
+  const lastIsNoop = lastOp.action.type === "NOOP" && lastOp.skip > 0;
+
+  const secondLastIsNoop =
+    secondLastOp.action.type === "NOOP" && secondLastOp.skip > 0;
+
+  // Count non-NOOP operations - these are the actual content operations
+  const nonNoopOps = cleanedOperations.filter(
+    (op) => !(op.action.type === "NOOP" && op.skip > 0),
+  );
+
+  // If only one non-NOOP operation remains:
+  // - If last op is NOT a NOOP: return 1 (simple undo of that content op)
+  // - If last AND second-last are both NOOPs: return -1 (continuous NOOP chain, can't go further)
+  // - Otherwise: calculate normally (NOOP pointing directly to content op)
+  if (nonNoopOps.length <= 1) {
+    if (!lastIsNoop) {
+      return 1;
+    }
+    if (secondLastIsNoop) {
+      return -1;
+    }
+  }
+
+  let nextSkip: number;
+
+  if (lastIsNoop) {
+    // NOOPs chain: skip = lastSkip + 2 + secondLastSkip (+ 1 if secondLast is also NOOP)
+    nextSkip = lastOp.skip + 2;
+    nextSkip += secondLastOp.skip;
+    if (secondLastIsNoop) {
+      nextSkip += 1;
+    }
+  } else {
+    // Non-NOOPs are undone one at a time
+    nextSkip = 1;
+  }
+
+  // Check if undo would result in empty state
+  if (lastOp.index < nextSkip) {
+    return -1;
+  }
+
+  return nextSkip;
+}
 
 export function checkOperationsIntegrity(operations: Operation[]) {
   return checkCleanedOperationsIntegrity(

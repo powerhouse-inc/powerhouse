@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { calculateUndoSkipNumber } from "document-model/core";
-import { buildOperations } from "./utils.js";
+import { buildOperations, rebuildState } from "./utils.js";
 
 /**
  * This is a new method for calculating skips for NOOPs, given the constraint
@@ -274,10 +274,23 @@ describe("calculateUndoSkipNumber", () => {
     },
   ];
 
-  it.each(scenarios)("should calculate undo skip: $title", (testInput) => {
-    const operations = buildOperations(testInput.operations);
-    const result = calculateUndoSkipNumber(operations);
+  describe("skip calculation", () => {
+    it.each(scenarios)("should calculate correct skip: $title", (testInput) => {
+      const operations = buildOperations(testInput.operations);
+      const result = calculateUndoSkipNumber(operations);
+      expect(result).toBe(testInput.expected.skip);
+    });
+  });
 
-    expect(result).toBe(testInput.expected.skip);
+  describe("state rebuild verification", () => {
+    it.each(scenarios)(
+      "should rebuild to expected state: $title",
+      (testInput) => {
+        const operations = buildOperations(testInput.operations);
+        const calculatedSkip = calculateUndoSkipNumber(operations);
+        const rebuiltState = rebuildState(testInput.operations, calculatedSkip);
+        expect(rebuiltState).toBe(testInput.expected.result);
+      },
+    );
   });
 });
