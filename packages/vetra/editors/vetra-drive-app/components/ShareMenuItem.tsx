@@ -12,12 +12,18 @@ export const ShareMenuItem: React.FC<ShareMenuItemProps> = ({ label, url }) => {
   const toast = usePHToast();
 
   const handleCopy = () => {
+    if (!navigator.clipboard) {
+      toast?.("Clipboard not available", { type: "error" });
+      return;
+    }
     navigator.clipboard
       .writeText(url)
       .then(() => {
         toast?.("URL copied to clipboard", { type: "connect-success" });
       })
-      .catch(console.error);
+      .catch(() => {
+        toast?.("Failed to copy to clipboard", { type: "error" });
+      });
   };
 
   return (
@@ -42,7 +48,8 @@ export const ShareMenuItem: React.FC<ShareMenuItemProps> = ({ label, url }) => {
           )}
         </div>
         <button
-          className="p-1 transition-colors hover:bg-gray-100 rounded"
+          aria-label="Copy URL"
+          className="rounded p-1 transition-colors hover:bg-gray-100"
           onClick={handleCopy}
         >
           <CopyIcon width={16} height={16} fill="#9CA3AF" />

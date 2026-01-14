@@ -14,16 +14,23 @@ export const DriveInfoItem: React.FC<DriveInfoItemProps> = ({
   const toast = usePHToast();
 
   const handleCopy = () => {
+    if (!navigator.clipboard) {
+      toast?.("Clipboard not available", { type: "error" });
+      return;
+    }
     navigator.clipboard
       .writeText(value)
       .then(() => {
         toast?.("Copied to clipboard", { type: "connect-success" });
       })
-      .catch(console.error);
+      .catch(() => {
+        toast?.("Failed to copy to clipboard", { type: "error" });
+      });
   };
 
   return (
     <button
+      aria-label={`Copy ${label}`}
       className="flex h-8 items-center gap-1 whitespace-nowrap rounded-lg bg-slate-50 pl-1 pr-2 text-xs text-stone-300"
       onClick={handleCopy}
     >

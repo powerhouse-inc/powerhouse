@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { DriveInfoItem } from "./DriveInfoItem.js";
 import { ShareMenuItem } from "./ShareMenuItem.js";
 import { InfoIcon } from "../icons/InfoIcon.js";
@@ -33,6 +33,8 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
   };
 
   useEffect(() => {
+    if (!isInfoMenuOpen && !isShareMenuOpen) return;
+
     const handleClickOutside = (event: MouseEvent) => {
       if (
         infoMenuRef.current &&
@@ -48,16 +50,31 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
       }
     };
 
-    if (isInfoMenuOpen || isShareMenuOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsInfoMenuOpen(false);
+        setIsShareMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
     };
   }, [isInfoMenuOpen, isShareMenuOpen]);
 
-  const shareUrl = `${window.location.origin}/?driveUrl=${encodeURIComponent(driveUrl)}`;
+  const shareUrl = useMemo(() => {
+    if (!driveUrl) return "";
+    try {
+      new URL(driveUrl);
+      return `${window.location.origin}/?driveUrl=${encodeURIComponent(driveUrl)}`;
+    } catch {
+      return "";
+    }
+  }, [driveUrl]);
 
   return (
     <div className="bg-white px-6 py-4">
@@ -69,13 +86,18 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
           </h1>
           <div className="relative" ref={infoMenuRef}>
             <button
+              aria-label="Drive information"
+              aria-expanded={isInfoMenuOpen}
               className="rounded-full p-1 transition-colors hover:bg-gray-100"
               onClick={toggleInfoMenu}
             >
               <InfoIcon className="text-gray-500" />
             </button>
             {isInfoMenuOpen && (
-              <div className="absolute left-0 top-full z-10 mt-2 flex flex-col items-start gap-2 rounded-lg bg-white p-3 shadow-lg">
+              <div
+                role="menu"
+                className="absolute left-0 top-full z-10 mt-2 flex flex-col items-start gap-2 rounded-lg bg-white p-3 shadow-lg"
+              >
                 <DriveInfoItem label="Name" value={driveName} />
                 <DriveInfoItem label="Drive ID" value={driveId} />
               </div>
@@ -84,13 +106,18 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
           {driveUrl && (
             <div className="relative" ref={shareMenuRef}>
               <button
+                aria-label="Share drive"
+                aria-expanded={isShareMenuOpen}
                 className="rounded-full p-1 transition-colors hover:bg-gray-100"
                 onClick={toggleShareMenu}
               >
                 <ShareIcon width={16} height={16} stroke="#343839" />
               </button>
               {isShareMenuOpen && (
-                <div className="absolute left-0 top-full z-10 mt-2 flex w-max flex-col gap-4 rounded-lg bg-white p-4 shadow-lg">
+                <div
+                  role="menu"
+                  className="absolute left-0 top-full z-10 mt-2 flex w-max flex-col gap-4 rounded-lg bg-white p-4 shadow-lg"
+                >
                   <ShareMenuItem label="Copy the Drive URL" url={driveUrl} />
                   <ShareMenuItem
                     label="Share this Drive directly in Connect"
