@@ -14,10 +14,12 @@ These unit tests serve a specific purpose in the switchboard-e2e project:
 ## What's Tested Here
 
 ### ✅ What We Test
-- Reactor can initialize with required document models
-- Document models have correct structure for GraphQL schema generation
-- Basic document and drive operations work (infrastructure for E2E tests)
-- Test utilities and helpers function correctly
+- **Reactor Infrastructure**: Initialization, drive/document operations, listener manager
+- **GraphQL Configuration**: Document model exposure, endpoint validity
+- **Relational DB Processors**: Initialization, operation processing, lifecycle management
+- **Processor Factory Patterns**: Dynamic processor creation, registration, composition
+- **Database Migrations**: Schema creation/teardown, idempotency, versioning
+- **Test Utilities**: Shared helpers and custom matchers
 
 ### ❌ What We DON'T Test (Already Covered Elsewhere)
 - Detailed reactor internals → `packages/reactor/test`
@@ -45,12 +47,17 @@ pnpm test:e2e
 
 ```
 unit/
-├── README.md                    # This file
-├── test-utils.ts                # Shared test utilities
-├── reactor-setup.test.ts        # Reactor initialization tests
-├── graphql-endpoint.test.ts     # GraphQL configuration tests
-└── document-models/             # Tests for custom document models
-    └── todo-list.test.ts        # (Add when TodoList is fixed)
+├── README.md                            # This file
+├── test-utils.ts                        # Shared test utilities
+├── reactor-setup.test.ts                # Reactor initialization tests (7 tests)
+├── graphql-endpoint.test.ts             # GraphQL configuration tests (4 tests)
+├── processors/                          # Processor-specific unit tests
+│   ├── README.md                        # Processor test documentation
+│   ├── relational-db-processor.test.ts  # Core processor logic (22 tests)
+│   ├── processor-factory.test.ts        # Factory patterns (18 tests)
+│   └── processor-migrations.test.ts     # Database migrations (20 tests)
+└── document-models/                     # Tests for custom document models
+    └── todo-list.test.ts                # (Add when TodoList is fixed)
 ```
 
 ## When TodoList Document Model Is Fixed

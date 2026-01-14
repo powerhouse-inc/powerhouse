@@ -37,7 +37,6 @@ describe("Switchboard Reactor Setup", () => {
         name: "test-drive",
         icon: null,
       },
-      meta: {},
     });
 
     expect(drive).toBeDefined();
@@ -52,13 +51,11 @@ describe("Switchboard Reactor Setup", () => {
     await reactor.addDrive({
       id: undefined,
       global: { name: "drive-1", icon: null },
-      meta: {},
     });
     
     await reactor.addDrive({
       id: undefined,
       global: { name: "drive-2", icon: null },
-      meta: {},
     });
 
     const drives = await reactor.getDrivesSlugs();

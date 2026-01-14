@@ -19,10 +19,15 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.49.1",
+    "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/ph-cli": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/reactor-browser": "workspace:*",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
-    "vitest": "^3.2.4"
+    "graphql": "^16.11.0",
+    "graphql-tag": "^2.12.6",
+    "vitest": "^3.2.4",
+    "zod": "^4.1.13"
   }
 }
