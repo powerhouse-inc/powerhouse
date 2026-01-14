@@ -111,9 +111,7 @@ function FilterClauseComponent({
   const availableOperators = column
     ? getAvailableOperators(column)
     : (["=", "!="] as FilterOperator[]);
-  const inputType = column
-    ? getInputType(column, clause.operator)
-    : "text";
+  const inputType = column ? getInputType(column, clause.operator) : "text";
   const showValueInput =
     clause.operator !== "IS NULL" && clause.operator !== "IS NOT NULL";
 
@@ -168,7 +166,10 @@ function FilterClauseComponent({
       onUpdate({
         ...clause,
         operator,
-        value: operator === "IS NULL" || operator === "IS NOT NULL" ? "" : clause.value,
+        value:
+          operator === "IS NULL" || operator === "IS NOT NULL"
+            ? ""
+            : clause.value,
       });
     },
     [clause, onUpdate],
@@ -293,7 +294,9 @@ export function FilterBar({
       if (!filters) return;
 
       const newClauses = filters.clauses.filter((_, i) => i !== index);
-      const newConnectors = filters.connectors.filter((_, i) => i !== index - 1);
+      const newConnectors = filters.connectors.filter(
+        (_, i) => i !== index - 1,
+      );
 
       if (newClauses.length === 0) {
         onFiltersChange(undefined);
@@ -333,7 +336,10 @@ export function FilterBar({
           type="button"
         >
           <Icon
-            className={twMerge("transition-transform", isExpanded && "rotate-90")}
+            className={twMerge(
+              "transition-transform",
+              isExpanded && "rotate-90",
+            )}
             name="ChevronDown"
             size={12}
           />
@@ -362,9 +368,7 @@ export function FilterBar({
               clause={clause}
               columns={columns}
               connector={
-                index > 0
-                  ? filters.connectors[index - 1] ?? "AND"
-                  : "AND"
+                index > 0 ? (filters.connectors[index - 1] ?? "AND") : "AND"
               }
               onConnectorChange={(connector) =>
                 handleConnectorChange(index - 1, connector)
@@ -381,4 +385,3 @@ export function FilterBar({
     </div>
   );
 }
-
