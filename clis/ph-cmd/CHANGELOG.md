@@ -1,3 +1,7 @@
+## 5.1.0-dev.42 (2026-01-14)
+
+This was a version bump only for ph-cmd to align it with other projects, there were no code changes.
+
 ## 5.1.0-dev.41 (2026-01-13)
 
 ### 🚀 Features

@@ -1,3 +1,14 @@
+## 5.1.0-dev.42 (2026-01-14)
+
+### 🚀 Features
+
+- added new filter-bar in inspector ([8ca500712](https://github.com/powerhouse-inc/powerhouse/commit/8ca500712))
+- basic ordering of fields in operation, temporary ([11711570d](https://github.com/powerhouse-inc/powerhouse/commit/11711570d))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.41 (2026-01-13)
 
 ### 🚀 Features

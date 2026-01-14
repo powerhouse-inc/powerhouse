@@ -1,3 +1,13 @@
+## 5.1.0-dev.42 (2026-01-14)
+
+### 🚀 Features
+
+- added new filter-bar in inspector ([8ca500712](https://github.com/powerhouse-inc/powerhouse/commit/8ca500712))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.41 (2026-01-13)
 
 ### 🚀 Features

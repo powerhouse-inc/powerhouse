@@ -1,3 +1,14 @@
+## 5.1.0-dev.42 (2026-01-14)
+
+### 🩹 Fixes
+
+- do not overwrite undo/redo skips ([35de3648d](https://github.com/powerhouse-inc/powerhouse/commit/35de3648d))
+- error was written incorrectly for revision mismatch ([4995abbb9](https://github.com/powerhouse-inc/powerhouse/commit/4995abbb9))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 5.1.0-dev.41 (2026-01-13)
 
 ### 🩹 Fixes

@@ -1,3 +1,13 @@
+## 5.1.0-dev.42 (2026-01-14)
+
+### 🩹 Fixes
+
+- **codegen:** project name import not working due to package.json being added to dist folder ([e5311e372](https://github.com/powerhouse-inc/powerhouse/commit/e5311e372))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.1.0-dev.41 (2026-01-13)
 
 ### 🚀 Features
