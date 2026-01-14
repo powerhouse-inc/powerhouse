@@ -182,5 +182,77 @@ describe("UNDO/REDO with protocolVersion: 2", () => {
       ]);
       expect(ops.map((op) => op.index)).toEqual([0, 1, 2, 3, 4]);
     });
+
+    it("should handle undo after new operations added following undos (gapped indices)", () => {
+      // This test reproduces the bug where undo fails after:
+      // 1. Multiple undos create NOOPs
+      // 2. New operations are added after the undos
+      // 3. Undo is triggered again
+      //
+      // The issue is that garbageCollectV2 creates a set of effective operations
+      // with gaps in indices (e.g., [0, 5, 6] instead of [0, 1, 2, 3, 4, 5, 6])
+      // and the state rebuild fails due to index validation.
+
+      // Initial state: count = 3 with operations [0: INC, 1: INC, 2: INC]
+      expect(document.state.global.count).toBe(3);
+
+      // Undo twice: count = 1
+      // Operations: [0: INC, 1: INC, 2: INC, 3: NOOP(skip=1), 4: NOOP(skip=1)]
+      document = countReducer(document, undo(), undefined, {
+        protocolVersion: 2,
+      });
+      document = countReducer(document, undo(), undefined, {
+        protocolVersion: 2,
+      });
+      expect(document.state.global.count).toBe(1);
+
+      // Add new operations after undos: count = 3
+      // Operations: [0: INC, 1: INC, 2: INC, 3: NOOP, 4: NOOP, 5: INC, 6: INC]
+      document = countReducer(document, increment(), undefined, {
+        protocolVersion: 2,
+      });
+      document = countReducer(document, increment(), undefined, {
+        protocolVersion: 2,
+      });
+      expect(document.state.global.count).toBe(3);
+
+      const opsBeforeUndo = document.operations.global!;
+      expect(opsBeforeUndo.map((op) => op.action.type)).toEqual([
+        "INCREMENT",
+        "INCREMENT",
+        "INCREMENT",
+        "NOOP",
+        "NOOP",
+        "INCREMENT",
+        "INCREMENT",
+      ]);
+      expect(opsBeforeUndo.map((op) => op.index)).toEqual([
+        0, 1, 2, 3, 4, 5, 6,
+      ]);
+
+      // Now undo - this is where the bug occurs
+      // garbageCollectV2 will return effective operations with gapped indices
+      // (operations 1, 2 are "undone" by NOOPs at 3, 4)
+      // Effective non-NOOP ops: indices [0, 5, 6] - there's a gap!
+      document = countReducer(document, undo(), undefined, {
+        protocolVersion: 2,
+      });
+
+      // Should have undone the last increment
+      expect(document.state.global.count).toBe(2);
+
+      const opsAfterUndo = document.operations.global!;
+      expect(opsAfterUndo.length).toBe(8);
+      expect(opsAfterUndo.map((op) => op.action.type)).toEqual([
+        "INCREMENT",
+        "INCREMENT",
+        "INCREMENT",
+        "NOOP",
+        "NOOP",
+        "INCREMENT",
+        "INCREMENT",
+        "NOOP",
+      ]);
+    });
   });
 });
