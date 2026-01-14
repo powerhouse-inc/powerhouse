@@ -185,7 +185,7 @@ export function createTestOperation(
 
   const defaultOperation: Operation = {
     index: 1,
-    timestampUtcMs: new Date().toISOString(),
+    timestampUtcMs: action.timestampUtcMs,
     hash: "test-hash",
     skip: 0,
     action,
