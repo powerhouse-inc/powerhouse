@@ -83,6 +83,16 @@ export type PHDocumentHeader = {
    **/
   lastModifiedAtUtcIso: string;
 
+  /**
+   * This is a map from protocol name to version. A protocol can be any set of
+   * rules that are applied to the document.
+   *
+   * Examples of protocols include:
+   *
+   * - "base-reducer"
+   */
+  protocolVersions?: { [key: string]: number };
+
   /** Meta information about the document. */
   meta?: PHDocumentMeta;
 };
@@ -121,7 +131,11 @@ export type HashConfig = {
  * The document state of the document.
  */
 export type PHDocumentState = {
-  /** The current version of the document. */
+  /**
+   * The current document model schema version of the document. This is used
+   * with the UPGRADE_DOCUMENT operation to specify the DocumentModelModule
+   * version to use for reducer execution.
+   */
   version: number;
 
   /** Hash configuration for operation state verification */

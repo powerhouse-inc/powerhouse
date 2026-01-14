@@ -1145,8 +1145,9 @@ export class SimpleJobExecutor implements IJobExecutor {
             skip,
             branch: job.branch,
             replayOptions: { operation: sourceOperation },
+            protocolVersion: 2,
           }
-        : { skip, branch: job.branch };
+        : { skip, branch: job.branch, protocolVersion: 2 };
       updatedDocument = module.reducer(
         document as PHDocument,
         action,

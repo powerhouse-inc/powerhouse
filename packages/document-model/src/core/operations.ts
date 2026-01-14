@@ -1,7 +1,11 @@
 import type { Draft } from "mutative";
 import { castDraft, create } from "mutative";
 import { noop } from "./actions.js";
-import { nextSkipNumber, sortOperations } from "./documents.js";
+import {
+  calculateUndoSkipNumber,
+  nextSkipNumber,
+  sortOperations,
+} from "./documents.js";
 import type { Action, PHBaseState, PHDocument } from "./ph-types.js";
 import type { LoadStateActionInput } from "./types.js";
 
@@ -61,6 +65,48 @@ export function undoOperation<TDocument extends PHDocument>(
       // (add 1 to the skip value because we are adding a new operation to the history)
       draft.skip = draft.skip + 1;
     }
+
+    if (draft.skip < 0) {
+      throw new Error(
+        `Cannot undo: you can't undo more operations than the ones in the scope history`,
+      );
+    }
+  });
+}
+
+/**
+ * V2 of undoOperation for protocol version 2+.
+ * Key differences from undoOperation:
+ * - Never reuses operation index (always increments)
+ * - Uses calculateUndoSkipNumber instead of nextSkipNumber
+ * - No overlap adjustment logic (handled internally by calculateUndoSkipNumber)
+ */
+export function undoOperationV2<TDocument extends PHDocument>(
+  document: TDocument,
+  action: Action,
+  skip: number,
+): {
+  document: TDocument;
+  action: Action;
+  skip: number;
+  reuseLastOperationIndex: false;
+} {
+  const { scope } = action;
+
+  const defaultResult = {
+    document,
+    action,
+    skip,
+    reuseLastOperationIndex: false as const,
+  };
+
+  return create(defaultResult, (draft) => {
+    const operations = [...document.operations[scope]];
+    const sortedOperations = sortOperations(operations);
+
+    draft.action = noop(scope) as Draft<Action>;
+
+    draft.skip = calculateUndoSkipNumber(sortedOperations);
 
     if (draft.skip < 0) {
       throw new Error(

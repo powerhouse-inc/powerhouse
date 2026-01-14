@@ -25,6 +25,7 @@ import {
   redoOperation,
   setNameOperation,
   undoOperation,
+  undoOperationV2,
 } from "./operations.js";
 import type {
   Action,
@@ -246,6 +247,7 @@ export function processUndoRedo<TState extends PHBaseState = PHBaseState>(
   document: PHDocument<TState>,
   action: Action,
   skip: number,
+  protocolVersion = 1,
 ): {
   document: PHDocument<TState>;
   action: Action;
@@ -254,6 +256,9 @@ export function processUndoRedo<TState extends PHBaseState = PHBaseState>(
 } {
   switch (action.type) {
     case "UNDO":
+      if (protocolVersion >= 2) {
+        return undoOperationV2(document, action, skip);
+      }
       return undoOperation(document, action, skip);
     case "REDO":
       return redoOperation(document, action, skip);
@@ -420,7 +425,12 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
       action: transformedAction,
       document: processedDocument,
       reuseLastOperationIndex: reuseIndex,
-    } = processUndoRedo(document, _action, skipValue);
+    } = processUndoRedo(
+      document,
+      _action,
+      skipValue,
+      options.protocolVersion ?? 1,
+    );
 
     _action = transformedAction;
     skipValue = calculatedSkip;

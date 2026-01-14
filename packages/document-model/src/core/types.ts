@@ -394,6 +394,13 @@ export type ReducerOptions = {
 
   /** The branch being operated on. Defaults to "main". */
   branch?: string;
+
+  /**
+   * Protocol version controlling undo/redo behavior.
+   * - Version 1 (default): Legacy behavior with index reuse
+   * - Version 2: Reactor behavior with monotonic indices
+   */
+  protocolVersion?: number;
 };
 
 /**
