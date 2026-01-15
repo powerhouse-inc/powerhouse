@@ -1,3 +1,22 @@
+## 6.0.0-dev.1 (2026-01-15)
+
+### 🚀 Features
+
+- **academy:** added k8s deployment ([5f7e27162](https://github.com/powerhouse-inc/powerhouse/commit/5f7e27162))
+- **monorepo:** upgrade document engineering package ([#2215](https://github.com/powerhouse-inc/powerhouse/pull/2215))
+
+### 🩹 Fixes
+
+- **codegen:** re-add npx specifically for boilerplate tailwind ([4ba289c2e](https://github.com/powerhouse-inc/powerhouse/commit/4ba289c2e))
+- **codegen:** removed newline from index files ([6a14459a7](https://github.com/powerhouse-inc/powerhouse/commit/6a14459a7))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
 ## 5.2.0-dev.1 (2026-01-15)
 
 ### 🚀 Features

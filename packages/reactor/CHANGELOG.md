@@ -1,3 +1,18 @@
+## 6.0.0-dev.1 (2026-01-15)
+
+### 🚀 Features
+
+- **academy:** added k8s deployment ([5f7e27162](https://github.com/powerhouse-inc/powerhouse/commit/5f7e27162))
+- adding protocol versions to document headers, populated by the reactor ([d7ceb80aa](https://github.com/powerhouse-inc/powerhouse/commit/d7ceb80aa))
+- first pass implementation of v2 undo/redo reducer ([d6c3b8084](https://github.com/powerhouse-inc/powerhouse/commit/d6c3b8084))
+- **monorepo:** upgrade document engineering package ([#2215](https://github.com/powerhouse-inc/powerhouse/pull/2215))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+
 ## 5.2.0-dev.1 (2026-01-15)
 
 ### 🚀 Features

@@ -1,3 +1,33 @@
+## 6.0.0-dev.1 (2026-01-15)
+
+### 🚀 Features
+
+- dx vetra studio update ([#2206](https://github.com/powerhouse-inc/powerhouse/pull/2206))
+- first pass implementation of v2 undo/redo reducer ([d6c3b8084](https://github.com/powerhouse-inc/powerhouse/commit/d6c3b8084))
+- adding protocol versions to document headers, populated by the reactor ([d7ceb80aa](https://github.com/powerhouse-inc/powerhouse/commit/d7ceb80aa))
+- **academy:** added k8s deployment ([5f7e27162](https://github.com/powerhouse-inc/powerhouse/commit/5f7e27162))
+- **academy,codegen:** delete package-lock.json files ([#2214](https://github.com/powerhouse-inc/powerhouse/pull/2214))
+- **monorepo:** upgrade document engineering package ([#2215](https://github.com/powerhouse-inc/powerhouse/pull/2215))
+
+### 🩹 Fixes
+
+- allowing reactor to skip index checks for new protocol ([851a6eab1](https://github.com/powerhouse-inc/powerhouse/commit/851a6eab1))
+- **academy:** updated search subgraph example ([f06540fe5](https://github.com/powerhouse-inc/powerhouse/commit/f06540fe5))
+- **codegen:** removed newline from index files ([6a14459a7](https://github.com/powerhouse-inc/powerhouse/commit/6a14459a7))
+- **codegen:** re-add npx specifically for boilerplate tailwind ([4ba289c2e](https://github.com/powerhouse-inc/powerhouse/commit/4ba289c2e))
+- **document-drive:** name in responseForDocument ([3d66d90e1](https://github.com/powerhouse-inc/powerhouse/commit/3d66d90e1))
+- **reactor-api:** correct cursor pagination in GraphQL adapters ([d43810389](https://github.com/powerhouse-inc/powerhouse/commit/d43810389))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 5.2.0-dev.1 (2026-01-15)
 
 ### 🚀 Features

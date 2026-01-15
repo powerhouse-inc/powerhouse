@@ -1,3 +1,17 @@
+## 6.0.0-dev.1 (2026-01-15)
+
+### 🚀 Features
+
+- **academy:** added k8s deployment ([5f7e27162](https://github.com/powerhouse-inc/powerhouse/commit/5f7e27162))
+- dx vetra studio update ([#2206](https://github.com/powerhouse-inc/powerhouse/pull/2206))
+- **monorepo:** upgrade document engineering package ([#2215](https://github.com/powerhouse-inc/powerhouse/pull/2215))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 5.2.0-dev.1 (2026-01-15)
 
 ### 🚀 Features

@@ -1,3 +1,19 @@
+## 6.0.0-dev.1 (2026-01-15)
+
+### 🚀 Features
+
+- **academy:** added k8s deployment ([5f7e27162](https://github.com/powerhouse-inc/powerhouse/commit/5f7e27162))
+- **monorepo:** upgrade document engineering package ([#2215](https://github.com/powerhouse-inc/powerhouse/pull/2215))
+
+### 🩹 Fixes
+
+- **academy:** updated search subgraph example ([f06540fe5](https://github.com/powerhouse-inc/powerhouse/commit/f06540fe5))
+
+### ❤️ Thank You
+
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+
 ## 5.2.0-dev.1 (2026-01-15)
 
 ### 🚀 Features
