@@ -40,6 +40,42 @@ pnpm --filter @powerhousedao/switchboard build
 pnpm --filter @powerhousedao/switchboard dev
 ```
 
+### Local Development (PostgreSQL)
+
+1. **Start the PostgreSQL database using reactor's Docker Compose:**
+
+```bash
+# From the repository root, start the database
+docker compose -f packages/reactor/docker-compose.yml up -d
+```
+
+This starts:
+- PostgreSQL on port `5433` (mapped from container port 5432)
+- Adminer (database UI) on port `8080`
+
+2. **Start switchboard with the PostgreSQL database URL:**
+
+```bash
+DATABASE_URL="postgresql://postgres:postgres@localhost:5433/reactor" pnpm start
+```
+
+3. **(Optional) Access the database UI:**
+   - Open http://localhost:8080
+   - System: PostgreSQL
+   - Server: postgres
+   - Username: postgres
+   - Password: postgres
+   - Database: reactor
+
+4. **(Optiona) Stopping the Database**
+
+```bash
+docker compose -f packages/reactor/docker-compose.yml down
+
+# To also remove the data volume:
+docker compose -f packages/reactor/docker-compose.yml down -v
+```
+
 ### Global Installation
 
 ```bash
@@ -51,6 +87,7 @@ pnpm add -g @powerhousedao/switchboard
 ```
 
 ## 🏃‍♂️ Quick Start
+
 
 ## ⚙️ Configuration
 
