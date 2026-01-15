@@ -62,7 +62,7 @@
     "@powerhousedao/builder-tools": "workspace:*",
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
-    "@powerhousedao/document-engineering": "^1.38.0",
+    "@powerhousedao/document-engineering": "^1.40.1",
     "@powerhousedao/vetra": "workspace:*",
     "document-model": "workspace:*",
     "graphql": "^16.10.0",

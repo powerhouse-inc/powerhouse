@@ -68,7 +68,7 @@
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/connect": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
-    "@powerhousedao/document-engineering": "^1.38.0",
+    "@powerhousedao/document-engineering": "^1.40.1",
     "@powerhousedao/e2e-utils": "workspace:*",
     "@powerhousedao/ph-cli": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",

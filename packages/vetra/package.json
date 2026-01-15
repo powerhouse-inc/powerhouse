@@ -89,7 +89,7 @@
     "@electric-sql/pglite": "0.2.17",
     "@powerhousedao/analytics-engine-core": "^0.5.0",
     "@powerhousedao/codegen": "workspace:*",
-    "@powerhousedao/document-engineering": "^1.27.0",
+    "@powerhousedao/document-engineering": "^1.40.1",
     "@powerhousedao/ph-cli": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
