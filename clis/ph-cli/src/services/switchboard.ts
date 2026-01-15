@@ -21,6 +21,10 @@ export type LocalSwitchboardOptions = StartServerOptions & {
   keypairPath?: string;
   /** Require existing keypair (fail if not found) */
   requireIdentity?: boolean;
+  /** Run database migrations and exit */
+  migrate?: boolean;
+  /** Show migration status and exit */
+  migrateStatus?: boolean;
 };
 
 export const defaultSwitchboardOptions = {

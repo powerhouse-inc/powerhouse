@@ -28,7 +28,9 @@
     "start:profile": "mkdir -p .prof && node --cpu-prof --cpu-prof-dir=.prof dist/src/index.js",
     "start:profile:bun": "mkdir -p .prof && bun --cpu-prof --cpu-prof-dir=.prof dist/src/index.js",
     "dev": "concurrently -P 'pnpm -w run tsc --watch' 'nodemon --trace-warnings --watch \"../..\" -e ts,tsx,js,json dist/src/index.js -- {@}' --",
-    "install-packages": "node dist/src/install-packages.js"
+    "install-packages": "node dist/src/install-packages.js",
+    "migrate": "node dist/src/migrate.js",
+    "migrate:status": "node dist/src/migrate.js status"
   },
   "author": "",
   "license": "ISC",

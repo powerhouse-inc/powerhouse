@@ -80,7 +80,22 @@ export function switchboardCommand(program: Command) {
       "--require-identity",
       "require existing keypair, fail if not found (implies --use-identity)",
     )
+    .option("--migrate", "run database migrations and exit")
+    .option("--migrate-status", "show migration status and exit")
     .action(async (...args: [LocalSwitchboardOptions]) => {
+      const options = args[0];
+
+      if (options.migrate || options.migrateStatus) {
+        const { runSwitchboardMigrations } = await import(
+          "../services/switchboard-migrate.js"
+        );
+        await runSwitchboardMigrations({
+          dbPath: options.dbPath,
+          statusOnly: options.migrateStatus,
+        });
+        return;
+      }
+
       const { defaultDriveUrl, connectCrypto } = await runStartLocalSwitchboard(
         ...args,
       );

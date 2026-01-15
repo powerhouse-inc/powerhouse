@@ -177,6 +177,7 @@ export { type ILogger } from "./logging/types.js";
 
 // Migrations
 export {
+  getMigrationStatus,
   REACTOR_SCHEMA,
   runMigrations,
 } from "./storage/migrations/migrator.js";
