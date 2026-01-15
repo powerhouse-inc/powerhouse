@@ -1,351 +1,176 @@
 #!/usr/bin/env tsx
 /**
- * Script to list all documents
- * Usage: tsx scripts/docs-list.ts [--endpoint <url>] [--driveId <id>]
- *
- * @example
- *   tsx scripts/docs-list.ts
- *   tsx scripts/docs-list.ts --driveId powerhouse
- *   tsx scripts/docs-list.ts --endpoint http://localhost:4001/graphql --driveId my-drive
+ * Script to count documents using cursor pagination
+ * Usage: tsx docs-list.ts [--endpoint <url>] [--type <documentType>]
  */
 
 import { GraphQLClient, gql } from "graphql-request";
 
-interface Document {
-  id: string;
-  name?: string;
-  documentType: string;
-  state: JSON;
-}
+const DEFAULT_ENDPOINT = "http://localhost:4001/graphql";
 
-interface FindDocumentsResponse {
-  findDocuments: {
-    items: Document[];
-    totalCount: number;
-    hasNextPage: boolean;
-    cursor?: string | null;
-  };
-}
-
-interface DriveDocumentResponse {
-  driveDocument: {
-    id: string;
-  } | null;
-}
-
-interface DocumentModelsResponse {
-  documentModels: {
-    items: Array<{
-      id: string;
-      name: string;
-    }>;
-  };
-}
-
-const GET_DRIVE_DOCUMENT_QUERY = gql`
-  query GetDriveDocument($idOrSlug: String!) {
-    driveDocument(idOrSlug: $idOrSlug) {
-      id
-    }
-  }
-`;
-
-const FIND_DOCUMENTS_QUERY = gql`
+const FIND_DOCUMENTS = gql`
   query FindDocuments($search: SearchFilterInput!, $paging: PagingInput) {
     findDocuments(search: $search, paging: $paging) {
-      items {
-        id
-        name
-        documentType
-        state
-      }
-      totalCount
+      items { id name }
       hasNextPage
       cursor
     }
   }
 `;
 
-const GET_DOCUMENT_MODELS_QUERY = gql`
+const GET_DOCUMENT_MODELS = gql`
   query GetDocumentModels {
     documentModels {
-      items {
-        id
-        name
-      }
+      items { id }
     }
   }
 `;
 
-async function getAvailableDocumentTypes(
+interface Document {
+  id: string;
+  name: string | null;
+}
+
+interface FindDocumentsResponse {
+  findDocuments: {
+    items: Document[];
+    hasNextPage: boolean;
+    cursor: string | null;
+  };
+}
+
+interface DocumentModelsResponse {
+  documentModels: { items: Array<{ id: string }> };
+}
+
+async function getDocumentTypes(client: GraphQLClient): Promise<string[]> {
+  const res = await client.request<DocumentModelsResponse>(GET_DOCUMENT_MODELS);
+  return res.documentModels.items.map((m) => m.id);
+}
+
+async function listDocumentsForType(
   client: GraphQLClient,
-): Promise<string[]> {
-  try {
-    const response = await client.request<DocumentModelsResponse>(
-      GET_DOCUMENT_MODELS_QUERY,
-    );
-    return response.documentModels.items.map((model) => model.id);
-  } catch (error) {
-    console.warn("Failed to query available document types:", error);
-    return [];
-  }
-}
+  documentType: string,
+  countOnly: boolean = false,
+): Promise<{ total: number; last10: Document[] }> {
+  let total = 0;
+  let last10: Document[] = [];
+  let cursor: string | undefined;
+  let hasNextPage = true;
+  // Use larger page size when count-only for maximum efficiency
+  const PAGE_SIZE = countOnly ? 5000 : 1000;
 
-async function checkDriveExists(
-  systemClient: GraphQLClient,
-  driveIdOrSlug: string,
-): Promise<boolean> {
-  try {
-    const response = await systemClient.request<DriveDocumentResponse>(
-      GET_DRIVE_DOCUMENT_QUERY,
-      {
-        idOrSlug: driveIdOrSlug,
-      },
-    );
-    return response.driveDocument !== null;
-  } catch (error) {
-    // If there's an error, assume the drive doesn't exist
-    return false;
-  }
-}
+  while (hasNextPage) {
+    try {
+      const res = await client.request<FindDocumentsResponse>(FIND_DOCUMENTS, {
+        search: { type: documentType },
+        paging: { limit: PAGE_SIZE, ...(cursor && { cursor }) },
+      });
 
-async function getDriveDocumentId(
-  systemClient: GraphQLClient,
-  driveIdOrSlug: string,
-): Promise<string> {
-  const response = await systemClient.request<DriveDocumentResponse>(
-    GET_DRIVE_DOCUMENT_QUERY,
-    {
-      idOrSlug: driveIdOrSlug,
-    },
-  );
+      const items = res.findDocuments.items;
+      if (items.length === 0) break;
 
-  if (!response.driveDocument) {
-    throw new Error(
-      `Drive "${driveIdOrSlug}" not found. Please create the drive first or use a different driveId.`,
-    );
+      total += items.length;
+      
+      // Only store last10 if not in count-only mode
+      if (!countOnly) {
+        last10 = [...last10, ...items].slice(-10);
+      }
+
+      hasNextPage = res.findDocuments.hasNextPage;
+      cursor = res.findDocuments.cursor ?? undefined;
+    } catch (error) {
+      console.error(`Error fetching documents for type ${documentType}:`, error);
+      break;
+    }
   }
 
-  return response.driveDocument.id;
+  return { total, last10 };
 }
 
 async function listDocuments(
   client: GraphQLClient,
-  systemClient: GraphQLClient,
-  driveIdOrSlug: string | undefined,
-  documentType?: string,
-): Promise<Document[]> {
-  // If no drive specified, list all documents by querying each document type
-  if (!driveIdOrSlug) {
-    // Get available document types if not specified
-    let typesToQuery: string[] = [];
-    if (documentType) {
-      typesToQuery = [documentType];
-    } else {
-      const availableTypes = await getAvailableDocumentTypes(client);
-      if (availableTypes.length === 0) {
-        console.warn("No document types available to query");
-        return [];
-      }
-      typesToQuery = availableTypes;
+  type?: string,
+  countOnly: boolean = false,
+): Promise<{ total: number; last10: Document[] }> {
+  const types = type ? [type] : await getDocumentTypes(client);
+  
+  // Process all document types in parallel for maximum speed
+  const results = await Promise.all(
+    types.map((t) => listDocumentsForType(client, t, countOnly))
+  );
+
+  // Aggregate results
+  let total = 0;
+  let last10: Document[] = [];
+  
+  for (const result of results) {
+    total += result.total;
+    if (!countOnly) {
+      last10 = [...last10, ...result.last10].slice(-10);
     }
-
-    // Query documents for each type and combine results
-    const allDocuments: Document[] = [];
-    for (const type of typesToQuery) {
-      let cursor: string | undefined;
-      let hasNextPage = true;
-
-      while (hasNextPage) {
-        const response = await client.request<FindDocumentsResponse>(
-          FIND_DOCUMENTS_QUERY,
-          {
-            search: {
-              type,
-            },
-            paging: cursor
-              ? {
-                  cursor,
-                  limit: 100,
-                }
-              : {
-                  limit: 100,
-                },
-          },
-        );
-
-        allDocuments.push(...response.findDocuments.items);
-        hasNextPage = response.findDocuments.hasNextPage;
-        cursor = response.findDocuments.cursor || undefined;
-      }
-    }
-
-    return allDocuments;
   }
 
-  // Try to get the drive document ID from the drive ID/slug
-  let driveDocumentId: string;
-  try {
-    driveDocumentId = await getDriveDocumentId(systemClient, driveIdOrSlug);
-  } catch (error: any) {
-    // If drive doesn't exist or is invalid, fall back to listing all documents
-    console.warn(
-      `\n⚠ Warning: Could not access drive "${driveIdOrSlug}": ${error.message}`,
-    );
-    console.warn(`   Listing all documents instead...\n`);
-    return listDocuments(client, systemClient, undefined);
-  }
-
-  // Find all documents with this drive as their parent
-  const allDocuments: Document[] = [];
-  let cursor: string | undefined;
-  let hasNextPage = true;
-
-  while (hasNextPage) {
-    const response = await client.request<FindDocumentsResponse>(
-      FIND_DOCUMENTS_QUERY,
-      {
-        search: {
-          parentId: driveDocumentId,
-        },
-        paging: cursor
-          ? {
-              cursor,
-              limit: 100,
-            }
-          : {
-              limit: 100,
-            },
-      },
-    );
-
-    allDocuments.push(...response.findDocuments.items);
-    hasNextPage = response.findDocuments.hasNextPage;
-    cursor = response.findDocuments.cursor || undefined;
-  }
-
-  return allDocuments;
+  return { total, last10 };
 }
 
-async function main() {
-  const args = process.argv.slice(2);
-  let endpoint = "http://localhost:4001/graphql";
-  let driveId: string | undefined;
+function parseArgs(args: string[]): { endpoint: string; type?: string; countOnly: boolean } {
+  let endpoint = DEFAULT_ENDPOINT;
+  let type: string | undefined;
+  let countOnly = false;
 
-  // Parse arguments
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg === "--endpoint" && args[i + 1]) {
-      endpoint = args[i + 1];
-      i++;
-    } else if (arg === "--driveId" && args[i + 1]) {
-      driveId = args[i + 1];
-      i++;
+      endpoint = args[++i];
+    } else if (arg === "--type" && args[i + 1]) {
+      type = args[++i];
+    } else if (arg === "--count-only") {
+      countOnly = true;
     } else if (arg === "--help" || arg === "-h") {
       console.log(`
-Usage: tsx scripts/docs-list.ts [options]
+Usage: tsx docs-list.ts [options]
 
 Options:
-  --endpoint <url>     GraphQL endpoint (default: http://localhost:4001/graphql)
-  --driveId <id>       Drive ID to filter by (optional, lists all documents by default)
-  --help, -h           Show this help message
-
-Examples:
-  tsx scripts/docs-list.ts
-  tsx scripts/docs-list.ts --driveId my-drive
-  tsx scripts/docs-list.ts --endpoint http://localhost:4001/graphql --driveId my-drive
+  --endpoint <url>   GraphQL endpoint (default: ${DEFAULT_ENDPOINT})
+  --type <type>      Filter by document type
+  --count-only       Only show the total count, skip listing documents
+  --help, -h         Show this help message
 `);
       process.exit(0);
     }
   }
 
-  // By default, list all documents (no drive filter)
-  // Use --driveId to filter by a specific drive
-  if (!driveId) {
-    console.log("Listing all documents (no drive filter)");
+  return { endpoint, type, countOnly };
+}
+
+async function main() {
+  const { endpoint, type, countOnly } = parseArgs(process.argv.slice(2));
+  const client = new GraphQLClient(endpoint);
+
+  if (countOnly) {
+    // In count-only mode, output only the number
+    const { total } = await listDocuments(client, type, countOnly);
+    console.log(total);
   } else {
-    console.log(`Listing documents from drive: ${driveId}`);
-  }
-  console.log(`Endpoint: ${endpoint}`);
-  console.log();
-
-  // Determine system endpoint
-  let systemEndpoint: string;
-  if (endpoint.endsWith("/graphql")) {
-    systemEndpoint = endpoint.replace("/graphql", "/graphql/system");
-  } else if (endpoint.endsWith("/graphql/system")) {
-    systemEndpoint = endpoint;
-  } else {
-    systemEndpoint = endpoint + "/system";
-  }
-
-  const client = new GraphQLClient(endpoint, {
-    fetch,
-  });
-
-  const systemClient = new GraphQLClient(systemEndpoint, {
-    fetch,
-  });
-
-  const startTime = Date.now();
-
-  try {
-    if (driveId) {
-      // Check if drive exists first
-      console.log(`Checking if drive "${driveId}" exists...`);
-      const driveExists = await checkDriveExists(systemClient, driveId);
-      
-      if (!driveExists) {
-        console.error(`\n✗ Drive "${driveId}" not found.`);
-        console.error(
-          `   Please create the drive first using:\n   tsx scripts/docs-create.ts 0 --driveId ${driveId}`,
-        );
-        console.error(
-          `   Or omit --driveId to list all documents: tsx scripts/docs-list.ts`,
-        );
-        process.exit(1);
-      }
-      
-      console.log(`✓ Drive "${driveId}" exists`);
+    const startTime = Date.now();
+    console.log("Listing documents...");
+    
+    const { total, last10 } = await listDocuments(client, type, countOnly);
+    
+    const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+    console.log(`\n✓ Total: ${total} documents (fetched in ${duration}s)`);
+    
+    if (last10.length > 0) {
+      console.log("\nLast 10 documents:");
+      last10.forEach((doc) => {
+        console.log(`  - ${doc.name || doc.id} (${doc.id})`);
+      });
     }
-    console.log("Fetching documents...");
-    const documents = await listDocuments(client, systemClient, driveId);
-    console.log(`✓ Found ${documents.length} documents`);
-
-    if (documents.length === 0) {
-      console.log("\nNo documents found.");
-      return;
-    }
-
-    // Show summary
-    console.log(`\n📊 Summary:`);
-    console.log(`  Total documents: ${documents.length}`);
-
-    // Show document list
-    console.log(`\n📄 Documents:`);
-    documents.forEach((doc, index) => {
-      const state = doc.state as any;
-      const name = doc.name || state?.name || "(unnamed)";
-      const description = state?.description
-        ? ` - ${state.description}`
-        : "";
-      const extension = state?.extension ? ` [.${state.extension}]` : "";
-      console.log(`  ${index + 1}. ${name}${extension}${description}`);
-      console.log(`     ID: ${doc.id}`);
-      console.log(`     Type: ${doc.documentType}`);
-    });
-
-    const endTime = Date.now();
-    const duration = ((endTime - startTime) / 1000).toFixed(2);
-
-    console.log(`\n✓ Completed in ${duration}s`);
-  } catch (error) {
-    console.error("\n✗ Error fetching documents:", error);
-    throw error;
   }
 }
 
 main().catch((error) => {
-  console.error("Error:", error);
+  console.error("Error:", error.message ?? error);
   process.exit(1);
 });
