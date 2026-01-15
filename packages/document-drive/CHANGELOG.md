@@ -1,3 +1,20 @@
+## 5.2.0-dev.1 (2026-01-15)
+
+### 🚀 Features
+
+- **monorepo:** upgrade zod and use compatibility layer for errors ([#2210](https://github.com/powerhouse-inc/powerhouse/pull/2210))
+- **monorepo:** use local package execution for tailwind instead of downloading it every time ([ed149558c](https://github.com/powerhouse-inc/powerhouse/commit/ed149558c))
+
+### 🩹 Fixes
+
+- clipboard should be loaded from storage ([8825f186a](https://github.com/powerhouse-inc/powerhouse/commit/8825f186a))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
 ## 5.1.0-dev.42 (2026-01-14)
 
 This was a version bump only for document-drive to align it with other projects, there were no code changes.
