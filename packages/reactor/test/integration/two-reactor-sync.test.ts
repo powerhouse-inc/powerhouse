@@ -821,6 +821,236 @@ describe("Two-Reactor Sync", () => {
     expect(docFromA.document.state).toEqual(docFromB.document.state);
   });
 
+  it("should converge when large reshuffle (10+ operations) is forced by loading operations with interleaved timestamps", async () => {
+    // This test verifies reshuffle behavior with many operations (10+) that need
+    // to be interleaved by timestamp. This stresses the reshuffle mechanism.
+    //
+    // We use load() for both "local" and "remote" operations to ensure timestamps
+    // are preserved (execute() ignores custom timestamps).
+    //
+    // Scenario:
+    // 1. Create doc on A
+    // 2. Load 10 "local" operations (timestamps T2, T4, T6, T8, ... T20)
+    // 3. Load 10 "remote" operations with interleaved timestamps (T1, T3, T5, ... T19)
+    // 4. Reshuffle must merge all 20 operations by timestamp
+    // 5. Verify the final state and operation ordering is correct
+
+    // 1. Create document on A (no sync needed for this test)
+    const testReactor = await new ReactorBuilder()
+      .withDocumentModels([driveDocumentModelModule as any])
+      .build();
+
+    try {
+      const doc = driveDocumentModelModule.utils.createDocument();
+      const createJob = await testReactor.create(doc);
+      await waitForJobCompletion(testReactor, createJob.id);
+
+      const baseTime = Date.now();
+
+      // 2. Create and load 10 "local" operations with EVEN timestamps (T2, T4, T6, ...)
+      // Each operation adds a folder
+      const localOperations = [];
+      for (let i = 0; i < 10; i++) {
+        const actionId = generateId();
+        // Timestamps: T2, T4, T6, ... (even slots: 200, 400, 600, ... ms from base)
+        const timestamp = new Date(baseTime + (i + 1) * 200).toISOString();
+
+        localOperations.push({
+          id: `local-op-${actionId}`,
+          index: i,
+          timestampUtcMs: timestamp,
+          hash: "",
+          skip: 0,
+          action: {
+            id: actionId,
+            type: "ADD_FOLDER",
+            scope: "global",
+            timestampUtcMs: timestamp,
+            input: {
+              id: `local-folder-${i}`,
+              name: `Local Folder ${i}`,
+              parentFolder: null,
+            },
+          },
+        });
+      }
+
+      const localLoadJob = await testReactor.load(
+        doc.header.id,
+        "main",
+        localOperations,
+      );
+      await waitForJobCompletion(testReactor, localLoadJob.id);
+
+      // Get operations after local load
+      const opsAfterLocalLoad = await testReactor.getOperations(doc.header.id, {
+        branch: "main",
+      });
+      const globalOpsAfterLocalLoad = opsAfterLocalLoad.global.results;
+
+      console.log(
+        `Operations after local load: ${globalOpsAfterLocalLoad.length}`,
+      );
+      console.log(
+        "Local operation timestamps:",
+        globalOpsAfterLocalLoad.map((op) => op.timestampUtcMs).slice(0, 5),
+        "...",
+      );
+
+      // 3. Create and load 10 "remote" operations with ODD timestamps (T1, T3, T5, ...)
+      // Each operation adds a file. These should interleave with the local operations.
+      const remoteOperations = [];
+      for (let i = 0; i < 10; i++) {
+        const actionId = generateId();
+        // Timestamps: T1, T3, T5, ... (odd slots: 100, 300, 500, ... ms from base)
+        const timestamp = new Date(baseTime + i * 200 + 100).toISOString();
+
+        remoteOperations.push({
+          id: `remote-op-${actionId}`,
+          index: i,
+          timestampUtcMs: timestamp,
+          hash: "",
+          skip: 0,
+          action: {
+            id: actionId,
+            type: "ADD_FILE",
+            scope: "global",
+            timestampUtcMs: timestamp,
+            input: {
+              id: `remote-file-${i}`,
+              name: `Remote File ${i}`,
+              documentType: "powerhouse/document-model",
+              parentFolder: null,
+            },
+          },
+        });
+      }
+
+      console.log(
+        "Remote operation timestamps (should interleave):",
+        remoteOperations.map((op) => op.timestampUtcMs).slice(0, 5),
+        "...",
+      );
+
+      // 4. Load all remote operations - this should trigger a large reshuffle
+      // All 10 local operations need to be rewound and interleaved with remote
+      const remoteLoadJob = await testReactor.load(
+        doc.header.id,
+        "main",
+        remoteOperations,
+      );
+
+      // Wait for the load job to complete
+      const startTime = Date.now();
+      while (Date.now() - startTime < 10000) {
+        const status = await testReactor.getJobStatus(remoteLoadJob.id);
+        if (status.status === JobStatus.READ_MODELS_READY) {
+          break;
+        }
+        if (status.status === JobStatus.FAILED) {
+          throw new Error(`Load job failed: ${status.error?.message}`);
+        }
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+
+      // 5. Get the final operations and verify
+      const opsAfterRemoteLoad = await testReactor.getOperations(
+        doc.header.id,
+        {
+          branch: "main",
+        },
+      );
+      const globalOpsAfterRemoteLoad = opsAfterRemoteLoad.global.results;
+
+      console.log(
+        `Total operations after remote load: ${globalOpsAfterRemoteLoad.length}`,
+      );
+
+      // Look for the reshuffle operation (should have skip > 0)
+      const reshuffleOps = globalOpsAfterRemoteLoad.filter((op) => op.skip > 0);
+      console.log(
+        `Operations with skip > 0 (reshuffle markers): ${reshuffleOps.length}`,
+      );
+      if (reshuffleOps.length > 0) {
+        console.log("First reshuffle operation:", {
+          index: reshuffleOps[0].index,
+          type: reshuffleOps[0].action.type,
+          skip: reshuffleOps[0].skip,
+          ts: reshuffleOps[0].timestampUtcMs,
+        });
+      }
+
+      // After garbage collection
+      const garbageCollectedOps = garbageCollectDocumentOperations({
+        global: globalOpsAfterRemoteLoad,
+      }).global;
+
+      console.log(
+        `Effective operations after GC: ${garbageCollectedOps.length}`,
+      );
+
+      // We should have 20 effective operations (10 local + 10 remote)
+      expect(garbageCollectedOps.length).toBe(20);
+
+      // Verify timestamps are in ascending order after GC
+      const timestamps = garbageCollectedOps.map((op) => op.timestampUtcMs);
+      const sortedTimestamps = [...timestamps].sort();
+      expect(timestamps).toEqual(sortedTimestamps);
+
+      // Verify interleaving: operations should alternate between ADD_FILE and ADD_FOLDER
+      // because odd timestamps (files) interleave with even timestamps (folders)
+      console.log(
+        "Operation types after GC (should interleave):",
+        garbageCollectedOps.slice(0, 10).map((op) => op.action.type),
+      );
+
+      // First operation should be ADD_FILE (T1 = baseTime + 100)
+      expect(garbageCollectedOps[0].action.type).toBe("ADD_FILE");
+      // Second operation should be ADD_FOLDER (T2 = baseTime + 200)
+      expect(garbageCollectedOps[1].action.type).toBe("ADD_FOLDER");
+
+      // Count operation types
+      const addFolderOps = garbageCollectedOps.filter(
+        (op) => op.action.type === "ADD_FOLDER",
+      );
+      const addFileOps = garbageCollectedOps.filter(
+        (op) => op.action.type === "ADD_FILE",
+      );
+
+      expect(addFolderOps.length).toBe(10);
+      expect(addFileOps.length).toBe(10);
+
+      // Verify state is correct - should have 10 folders and 10 files
+      const docResult = await testReactor.get(doc.header.id, {
+        branch: "main",
+      });
+      const state = docResult.document.state as unknown as {
+        global: { nodes: Array<{ id: string; kind: string }> };
+      };
+      const nodes = state.global.nodes;
+
+      const folders = nodes.filter((n) => n.kind === "folder");
+      const files = nodes.filter((n) => n.kind === "file");
+
+      console.log(
+        `Final state: ${folders.length} folders, ${files.length} files`,
+      );
+
+      expect(folders.length).toBe(10);
+      expect(files.length).toBe(10);
+
+      // Verify all expected items exist
+      for (let i = 0; i < 10; i++) {
+        const folder = nodes.find((n) => n.id === `local-folder-${i}`);
+        const file = nodes.find((n) => n.id === `remote-file-${i}`);
+        expect(folder).toBeDefined();
+        expect(file).toBeDefined();
+      }
+    } finally {
+      testReactor.kill();
+    }
+  }, 20000);
+
   it.skip("should converge when reshuffle occurs due to NOOP and reapplied operations", async () => {
     // KNOWN LIMITATION: This test is skipped because the v2 undo protocol has
     // a fundamental limitation when combined with reshuffle.
