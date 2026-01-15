@@ -4,7 +4,7 @@ import type {
   GraphQLScalarTypeConfig,
 } from "graphql";
 import type { Context } from "../../types.js";
-import { z } from "zod";
+import { z } from "zod/v3";
 import type { DocumentNode } from "graphql";
 import { gql } from "graphql-tag";
 export type Maybe<T> = T | null | undefined;

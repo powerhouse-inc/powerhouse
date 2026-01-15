@@ -2,7 +2,7 @@ import type { IDocumentDriveServer } from "document-drive";
 import type { DocumentModelGlobalState } from "document-model";
 import { DocumentModelGlobalStateSchema } from "document-model";
 import { generateId } from "document-model/core";
-import { z } from "zod";
+import { z } from "zod/v3";
 import type { ToolSchema, ToolWithCallback } from "./types.js";
 import { toolWithCallback, validateDocumentModelAction } from "./utils.js";
 

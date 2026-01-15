@@ -57,6 +57,6 @@
     "mutative": "^1.0.5",
     "safe-stable-stringify": "^2.4.3",
     "sha1-uint8array": "^0.10.7",
-    "zod": "^4.1.13"
+    "zod": "^4.3.5"
   }
 }
