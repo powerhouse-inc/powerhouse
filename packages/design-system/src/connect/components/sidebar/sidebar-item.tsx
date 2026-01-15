@@ -1,4 +1,5 @@
 import { twMerge } from "tailwind-merge";
+import { ConnectTooltip } from "../tooltip/tooltip.js";
 
 type SidebarItemProps = {
   readonly icon?: React.JSX.Element;
@@ -12,31 +13,36 @@ export const SidebarItem = function SidebarItem(props: SidebarItemProps) {
   const { icon, title, description, containerClassName, active, onClick } =
     props;
   return (
-    <div
-      className={twMerge(
-        "relative flex cursor-pointer flex-col items-center justify-center text-center text-sm text-black",
-        containerClassName,
-        active && "bg-white",
-        onClick && "cursor-pointer",
-      )}
-      onClick={onClick}
+    <ConnectTooltip
+      content={title}
+      side="right"
+      sideOffset={12}
+      className="border-none bg-gray-800 px-3 py-2 text-sm text-white"
     >
-      <div className="mx-auto py-4">
-        {icon || (
-          <div className="size-8 items-center justify-center rounded-lg bg-black pt-1">
-            <span className="text-6 w-6 text-white">
-              {title.slice(0, 1).toUpperCase()}
-            </span>
-          </div>
+      <div
+        className={twMerge(
+          "group/sidebar-item relative flex cursor-pointer flex-col items-center justify-center text-center text-sm text-black",
+          containerClassName,
+          active && "bg-white",
+          onClick && "cursor-pointer",
         )}
-      </div>
-      {/* {shareable && (
-        <div className="mb-4 flex w-full justify-start">
-          <div className="absolute left-8 top-8 ">
-            <PeopleFill width={12} height={12} />
-          </div>
+        onClick={onClick}
+      >
+        {active ? (
+          <div className="absolute left-0 top-1/2 h-10 w-1 -translate-y-1/2 rounded-r-sm bg-violet-400" />
+        ) : (
+          <div className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-sm bg-zinc-300 opacity-0 transition-opacity group-hover/sidebar-item:opacity-100" />
+        )}
+        <div className="mx-auto py-4">
+          {icon || (
+            <div className="flex size-8 items-center justify-center rounded-lg bg-black">
+              <span className="text-sm font-medium text-white">
+                {title.slice(0, 1).toUpperCase()}
+              </span>
+            </div>
+          )}
         </div>
-      )} */}
-    </div>
+      </div>
+    </ConnectTooltip>
   );
 };
