@@ -1,7 +1,6 @@
 import { html } from "@tmpl/core";
 
-export const indexHtmlTemplate = html`
-  <!DOCTYPE html>
+export const indexHtmlTemplate = html`<!DOCTYPE html>
   <html lang="en">
     <head>
       <meta charset="UTF-8" />
@@ -29,5 +28,4 @@ export const indexHtmlTemplate = html`
         import "@powerhousedao/connect/main.js";
       </script>
     </body>
-  </html>
-`.raw;
+  </html> `.raw;
