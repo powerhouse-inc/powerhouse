@@ -12,6 +12,9 @@ export interface ConnectSidebarFooterProps
   onLogin: (() => void) | undefined;
   etherscanUrl?: string;
   onDisconnect: (() => void) | undefined;
+  onHomeClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  showDebug?: boolean;
+  onDebugClick?: () => void;
 }
 
 export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
@@ -21,6 +24,9 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
   onClickSettings,
   onInspectorClick,
   onDisconnect,
+  onHomeClick,
+  showDebug,
+  onDebugClick,
   etherscanUrl = "",
   ...props
 }) => {
@@ -32,7 +38,28 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
         className,
       )}
     >
-      <div>
+      {onHomeClick && (
+        <button
+          aria-label="Home"
+          type="button"
+          className="flex w-full cursor-pointer items-center justify-center outline-none"
+          onClick={onHomeClick}
+        >
+          <Icon className="text-gray-600" name="ConnectSmall" size={24} />
+        </button>
+      )}
+      {showDebug && onDebugClick && (
+        <button
+          aria-label="Debug Settings"
+          type="button"
+          id="connect-debug-button"
+          className="mt-3 flex w-full cursor-pointer items-center justify-center outline-none"
+          onClick={onDebugClick}
+        >
+          <Icon className="text-gray-600" name="Tube" />
+        </button>
+      )}
+      <div className={onHomeClick ? "mt-3" : ""}>
         {address ? (
           <SidebarUser
             address={address}

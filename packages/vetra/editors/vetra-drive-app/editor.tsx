@@ -20,6 +20,13 @@ export function BaseEditor(props: EditorProps) {
   const [document] = useSelectedDrive();
 
   const driveId = document.header.id;
+  const driveName = document.state.global.name ?? "";
+  const driveUrl =
+    document.state.local.triggers.find((t) => t.type === "PullResponder")?.data
+      ?.url ??
+    document.state.local.listeners.find((l) => l.callInfo?.data)?.callInfo
+      ?.data ??
+    "";
   const documentModels = useDocumentModelModules();
   const fileNodes = document.state.global.nodes.filter(
     (node) => node.kind === "file",
@@ -84,6 +91,9 @@ export function BaseEditor(props: EditorProps) {
       className="bg-white after:pointer-events-none after:absolute after:inset-0 after:bg-blue-500 after:opacity-0 after:transition after:content-['']"
     >
       <DriveExplorer
+        driveId={driveId}
+        driveName={driveName}
+        driveUrl={driveUrl}
         documentModels={docModelsNodes}
         editors={docEditorsNodes}
         apps={docAppsNodes}

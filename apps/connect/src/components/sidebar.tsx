@@ -1,6 +1,5 @@
 import { DriveIcon } from "@powerhousedao/connect/components";
 import { connectConfig } from "@powerhousedao/connect/config";
-import { Icon } from "@powerhousedao/design-system";
 import {
   ConnectSidebar,
   SidebarAddDriveItem,
@@ -38,26 +37,6 @@ export function Sidebar() {
     showPHModal({ type: "inspector" });
   };
 
-  const headerContent = (
-    <div className="flex h-full items-center">
-      <Icon
-        name="Connect"
-        className="!h-[30px] !w-[100px] cursor-pointer"
-        onClick={() => setSelectedDrive(undefined)}
-      />
-      {connectDebug && (
-        <button
-          aria-label="Home"
-          id="connect-debug-button"
-          className="ml-6"
-          onClick={() => showPHModal({ type: "debugSettings" })}
-        >
-          <img src="settings.png" className="h-5 text-gray-600" />
-        </button>
-      )}
-    </div>
-  );
-
   const etherscanUrl = user?.address
     ? `https://etherscan.io/address/${user.address}`
     : "";
@@ -68,11 +47,12 @@ export function Sidebar() {
       onClick={() => setSelectedDrive(undefined)}
       onClickSettings={onClickSettings}
       onInspectorClick={inspectorEnabled ? onInspectorClick : undefined}
-      headerContent={headerContent}
       address={user?.address}
       onLogin={openRenown}
       onDisconnect={logout}
       etherscanUrl={etherscanUrl}
+      showDebug={connectDebug}
+      onDebugClick={() => showPHModal({ type: "debugSettings" })}
     >
       <ErrorBoundary
         variant="text"
