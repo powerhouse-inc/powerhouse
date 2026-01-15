@@ -4,6 +4,10 @@ on:
   workflow_call:
   workflow_dispatch:
 
+permissions:
+  contents: write
+  packages: write
+
 env:
   REGISTRY: ghcr.io
   HARBOR_REGISTRY: cr.vetra.io
@@ -11,9 +15,6 @@ env:
 jobs:
   connect:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -68,9 +69,6 @@ jobs:
 
   switchboard:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -125,16 +123,19 @@ jobs:
 
   academy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
+    outputs:
+      tag: ${{ steps.get-tag.outputs.tag }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Get tags
         run: git fetch --tags origin
       - name: Set last tag
-        run: echo "GITHUB_TAG=$(git for-each-ref --sort=creatordate --format '%(tag)' refs/tags  | tail -n 1)" >> $GITHUB_ENV
+        id: get-tag
+        run: |
+          TAG=$(git for-each-ref --sort=creatordate --format '%(tag)' refs/tags | tail -n 1)
+          echo "GITHUB_TAG=$TAG" >> $GITHUB_ENV
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
       - name: Set Harbor project name
         run: echo "HARBOR_PROJECT=${GITHUB_REPOSITORY//\//-}" >> $GITHUB_ENV
       - name: Determine additional tag

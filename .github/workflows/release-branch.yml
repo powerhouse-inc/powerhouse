@@ -21,6 +21,11 @@ on:
   schedule:
     - cron: "0 2 * * *"
 
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
 env:
   NX_ISOLATE_PLUGINS: false
 
@@ -28,9 +33,6 @@ jobs:
   build-and-publish:
     name: Build and Publish Package
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write
     timeout-minutes: 10
     steps:
       - name: Set version and tag if branch is main or release
