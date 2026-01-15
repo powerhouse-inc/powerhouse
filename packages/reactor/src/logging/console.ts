@@ -68,7 +68,7 @@ const LOG_LEVELS = {
 export class ConsoleLogger implements ILogger {
   #tags: string[];
   #tagString: string;
-  #level: number = LOG_LEVELS.verbose;
+  #level: number = LOG_LEVELS.info;
 
   errorHandler: LoggerErrorHandler;
 

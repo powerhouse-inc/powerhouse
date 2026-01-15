@@ -348,16 +348,6 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     const document = createDocumentFromAction(action as CreateDocumentAction);
 
-    // DEBUG: Log protocolVersions during document creation
-    const createInput = (action as CreateDocumentAction).input;
-    this.logger.info("DEBUG: CREATE_DOCUMENT: @Data", {
-      Data: {
-        documentId: document.header.id,
-        inputProtocolVersions: createInput.protocolVersions,
-        headerProtocolVersions: document.header.protocolVersions,
-      },
-    });
-
     // Legacy: Store the document in storage
     if (this.config.legacyStorageEnabled) {
       try {
@@ -1130,20 +1120,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
     }
 
-    // DEBUG: Log document state from cache before reducer
-    const docOpsFromCache = document.operations[job.scope] || [];
-    const protocolVersionFromHeader =
-      document.header.protocolVersions?.["base-reducer"];
-    this.logger.info("DEBUG: Document from cache: @Document", {
-      documentId: job.documentId,
-      scope: job.scope,
-      actionType: action.type,
-      protocolVersionFromHeader,
-      operationCount: docOpsFromCache.length,
-      operationIndices: docOpsFromCache.map((op) => op.index),
-      operationTypes: docOpsFromCache.map((op) => op.action.type),
-    });
-
     let module: DocumentModelModule;
     try {
       // Use document version to get the correct module
@@ -1191,15 +1167,6 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     const scope = job.scope;
     const operations = updatedDocument.operations[scope];
-
-    // DEBUG: Log document state after reducer
-    this.logger.info("DEBUG: Document after reducer: @Document", {
-      documentId: job.documentId,
-      scope,
-      operationCount: operations.length,
-      operationIndices: operations.map((op) => op.index),
-      operationTypes: operations.map((op) => op.action.type),
-    });
 
     if (operations.length === 0) {
       return this.buildErrorResult(
