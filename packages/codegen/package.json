@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/codegen",
-  "version": "5.1.0-dev.39",
+  "version": "5.2.0-dev.1",
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
@@ -16,14 +16,6 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./ts-morph": {
-      "types": "./dist/src/ts-morph-utils/index.d.ts",
-      "default": "./dist/src/ts-morph-utils/index.js"
-    },
-    "./ts-morph/*": {
-      "types": "./dist/src/ts-morph-utils/*/index.d.ts",
-      "default": "./dist/src/ts-morph-utils/*/index.js"
-    },
     "./templates": {
       "types": "./dist/src/templates/index.d.ts",
       "default": "./dist/src/templates/index.js"
@@ -31,6 +23,14 @@
     "./file-builders": {
       "types": "./dist/src/file-builders/index.d.ts",
       "default": "./dist/src/file-builders/index.js"
+    },
+    "./name-builders": {
+      "types": "./dist/src/name-builders/index.d.ts",
+      "default": "./dist/src/name-builders/index.js"
+    },
+    "./utils": {
+      "types": "./dist/src/utils/index.d.ts",
+      "default": "./dist/src/utils/index.js"
     }
   },
   "scripts": {
@@ -56,7 +56,7 @@
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
-    "@powerhousedao/document-engineering": "^1.30.0",
+    "@powerhousedao/document-engineering": "^1.40.1",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@tmpl/core": "npm:@jsr/tmpl__core@^0.6.3",
     "@types/node": "^24.6.1",

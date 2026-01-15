@@ -38,7 +38,10 @@ import type {
   DocumentIndexerDatabase,
   Database as StorageDatabase,
 } from "../../../src/storage/kysely/types.js";
-import { runMigrations } from "../../../src/storage/migrations/migrator.js";
+import {
+  REACTOR_SCHEMA,
+  runMigrations,
+} from "../../../src/storage/migrations/migrator.js";
 import { createMockLogger } from "../../factories.js";
 import {
   type RecordedOperation,
@@ -72,16 +75,18 @@ async function createReactorSetup(
   const driveServer = builder.build() as unknown as BaseDocumentDriveServer;
   await driveServer.initialize();
 
-  const db = new Kysely<Database>({
+  const baseDb = new Kysely<Database>({
     dialect: new PGliteDialect(new PGlite()),
   });
 
-  const migrationResult = await runMigrations(db);
+  const migrationResult = await runMigrations(baseDb, REACTOR_SCHEMA);
   if (!migrationResult.success) {
     throw new Error(
       `Failed to run migrations: ${migrationResult.error?.message}`,
     );
   }
+
+  const db = baseDb.withSchema(REACTOR_SCHEMA);
 
   const operationStore = new KyselyOperationStore(
     db as unknown as Kysely<StorageDatabase>,

@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/design-system",
-  "version": "5.1.0-dev.39",
+  "version": "5.2.0-dev.1",
   "description": "",
   "files": [
     "dist",
@@ -62,7 +62,7 @@
     "tsc": "tsc",
     "lint": "eslint",
     "create-icon-components": "tsx scripts/create-icon-components.ts",
-    "build:css": "npx @tailwindcss/cli -i style.css -o dist/style.css",
+    "build:css": "pnpm exec tailwindcss -i style.css -o dist/style.css",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test": "vitest run --exclude \"src/scalars/**\"",
@@ -132,7 +132,7 @@
   },
   "dependencies": {
     "@internationalized/date": "^3.5.6",
-    "@powerhousedao/document-engineering": "^1.27.0",
+    "@powerhousedao/document-engineering": "^1.40.1",
     "@radix-ui/react-checkbox": "^1.1.2",
     "@radix-ui/react-dialog": "^1.1.2",
     "@radix-ui/react-dropdown-menu": "^2.1.5",

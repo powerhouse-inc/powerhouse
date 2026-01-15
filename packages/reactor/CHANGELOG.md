@@ -1,3 +1,62 @@
+## 5.2.0-dev.1 (2026-01-15)
+
+### 🚀 Features
+
+- **monorepo:** upgrade zod and use compatibility layer for errors ([#2210](https://github.com/powerhouse-inc/powerhouse/pull/2210))
+- **monorepo:** use local package execution for tailwind instead of downloading it every time ([ed149558c](https://github.com/powerhouse-inc/powerhouse/commit/ed149558c))
+
+### 🩹 Fixes
+
+- fix race condition in reactor tests ([6400c1867](https://github.com/powerhouse-inc/powerhouse/commit/6400c1867))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
+## 5.1.0-dev.42 (2026-01-14)
+
+### 🩹 Fixes
+
+- do not overwrite undo/redo skips ([35de3648d](https://github.com/powerhouse-inc/powerhouse/commit/35de3648d))
+- error was written incorrectly for revision mismatch ([4995abbb9](https://github.com/powerhouse-inc/powerhouse/commit/4995abbb9))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 5.1.0-dev.41 (2026-01-13)
+
+### 🩹 Fixes
+
+- testing issue with ids ([8cad05973](https://github.com/powerhouse-inc/powerhouse/commit/8cad05973))
+- move ALL operation ids to derived ids ([4ac51f535](https://github.com/powerhouse-inc/powerhouse/commit/4ac51f535))
+- less strict document models array type on reactor builder ([1548ddec7](https://github.com/powerhouse-inc/powerhouse/commit/1548ddec7))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
+## 5.1.0-dev.40 (2026-01-10)
+
+### 🚀 Features
+
+- moved over the processor-manager for reactor ([c232c55c1](https://github.com/powerhouse-inc/powerhouse/commit/c232c55c1))
+- **builder-tools:** improved validation on doc model editor and unit tests ([336f5d575](https://github.com/powerhouse-inc/powerhouse/commit/336f5d575))
+- **codegen:** add validation to package json test ([03d06ef57](https://github.com/powerhouse-inc/powerhouse/commit/03d06ef57))
+
+### 🩹 Fixes
+
+- inspector was not schema aware ([ed06ebc74](https://github.com/powerhouse-inc/powerhouse/commit/ed06ebc74))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- ryanwolhuter @ryanwolhuter
+
 ## 5.1.0-dev.39 (2026-01-09)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

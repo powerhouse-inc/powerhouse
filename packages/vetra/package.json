@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/vetra",
-  "version": "5.1.0-dev.39",
+  "version": "5.2.0-dev.1",
   "license": "AGPL-3.0-only",
   "type": "module",
   "repository": {
@@ -56,7 +56,7 @@
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "build:css": "npx @tailwindcss/cli -i ./style.css -o ./dist/style.css",
+    "build:css": "pnpm exec tailwindcss -i ./style.css -o ./dist/style.css",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:document-models": "vitest run document-models",
@@ -89,7 +89,7 @@
     "@electric-sql/pglite": "0.2.17",
     "@powerhousedao/analytics-engine-core": "^0.5.0",
     "@powerhousedao/codegen": "workspace:*",
-    "@powerhousedao/document-engineering": "^1.27.0",
+    "@powerhousedao/document-engineering": "^1.40.1",
     "@powerhousedao/ph-cli": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",

@@ -1,7 +1,3 @@
-import {
-  loadDocumentModel,
-  TSMorphCodeGenerator,
-} from "@powerhousedao/codegen";
 import fs from "fs/promises";
 import { mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
@@ -13,6 +9,8 @@ import {
   it,
   type TestContext,
 } from "vitest";
+import { TSMorphCodeGenerator } from "../../ts-morph-generator/index.js";
+import { loadDocumentModel } from "../utils.js";
 import { PURGE_AFTER_TEST } from "./config.js";
 import {
   TEST_PACKAGE_NAME,

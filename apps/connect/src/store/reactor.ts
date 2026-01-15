@@ -50,7 +50,6 @@ import type {
   IDocumentDriveServer,
 } from "document-drive";
 import { ProcessorManager, logger } from "document-drive";
-import type { DocumentModelModule } from "document-model";
 import { generateId } from "document-model/core";
 import { loadCommonPackage } from "./document-model.js";
 import {
@@ -178,7 +177,7 @@ export async function createReactor() {
   // create the legacy reactor
   const defaultConfig = getReactorDefaultDrivesConfig();
   const legacyReactor = createBrowserDocumentDriveServer(
-    documentModelModules as unknown as DocumentModelModule[],
+    documentModelModules,
     storage,
     {
       ...defaultConfig,

@@ -1,15 +1,13 @@
 import { PGlite } from "@electric-sql/pglite";
 import {
+  REACTOR_SCHEMA,
   ReactorBuilder,
   ReactorClientBuilder,
   type Database,
   type ReactorClientModule,
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "document-drive";
-import {
-  documentModelDocumentModelModule,
-  type DocumentModelModule,
-} from "document-model";
+import { documentModelDocumentModelModule } from "document-model";
 import { Kysely, sql } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -37,7 +35,7 @@ describe("dropAllTables", () => {
       .withDocumentModels([
         driveDocumentModelModule,
         documentModelDocumentModelModule,
-      ] as unknown as DocumentModelModule[])
+      ])
       .withKysely(db as Kysely<Database>)
       .withFeatures({ legacyStorageEnabled: false });
 
@@ -49,23 +47,21 @@ describe("dropAllTables", () => {
     await module.client.create(doc);
 
     const beforeCount = await sql<{ count: number }>`
-      SELECT COUNT(*) as count FROM pg_catalog.pg_tables WHERE schemaname = 'public'
+      SELECT COUNT(*) as count FROM pg_catalog.pg_tables WHERE schemaname = ${REACTOR_SCHEMA}
     `.execute(db);
     expect(Number(beforeCount.rows[0]?.count)).toBeGreaterThan(0);
 
     await dropAllTables(pg);
 
     const afterCount = await sql<{ count: number }>`
-      SELECT COUNT(*) as count FROM pg_catalog.pg_tables WHERE schemaname = 'public'
+      SELECT COUNT(*) as count FROM pg_catalog.pg_tables WHERE schemaname = ${REACTOR_SCHEMA}
     `.execute(db);
     expect(Number(afterCount.rows[0]?.count)).toBe(0);
   });
 
   it("should handle empty database without errors", async () => {
     const reactorBuilder = new ReactorBuilder()
-      .withDocumentModels([
-        documentModelDocumentModelModule,
-      ] as unknown as DocumentModelModule[])
+      .withDocumentModels([documentModelDocumentModelModule])
       .withKysely(db as Kysely<Database>)
       .withFeatures({ legacyStorageEnabled: false });
 
@@ -81,7 +77,7 @@ describe("dropAllTables", () => {
       .withDocumentModels([
         driveDocumentModelModule,
         documentModelDocumentModelModule,
-      ] as unknown as DocumentModelModule[])
+      ])
       .withKysely(db as Kysely<Database>)
       .withFeatures({ legacyStorageEnabled: false });
 
@@ -98,7 +94,7 @@ describe("dropAllTables", () => {
     await module.client.create(child, "parent-doc");
 
     const tablesBefore = await sql<{ tablename: string }>`
-      SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public'
+      SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = ${REACTOR_SCHEMA}
     `.execute(db);
     expect(tablesBefore.rows.length).toBeGreaterThan(0);
     expect(tablesBefore.rows.map((r) => r.tablename)).toContain("Operation");
@@ -107,7 +103,7 @@ describe("dropAllTables", () => {
     await dropAllTables(pg);
 
     const tablesAfter = await sql<{ tablename: string }>`
-      SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public'
+      SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = ${REACTOR_SCHEMA}
     `.execute(db);
     expect(tablesAfter.rows.length).toBe(0);
   });

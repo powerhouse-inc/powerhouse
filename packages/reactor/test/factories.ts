@@ -16,7 +16,11 @@ import type {
   Operation,
   PHDocument,
 } from "document-model";
-import { documentModelDocumentModelModule } from "document-model";
+import {
+  deriveOperationId,
+  documentModelDocumentModelModule,
+  generateId,
+} from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { v4 as uuidv4 } from "uuid";
@@ -59,7 +63,10 @@ import { KyselyOperationStore } from "../src/storage/kysely/store.js";
 import { KyselySyncCursorStorage } from "../src/storage/kysely/sync-cursor-storage.js";
 import { KyselySyncRemoteStorage } from "../src/storage/kysely/sync-remote-storage.js";
 import type { Database as DatabaseSchema } from "../src/storage/kysely/types.js";
-import { runMigrations } from "../src/storage/migrations/migrator.js";
+import {
+  REACTOR_SCHEMA,
+  runMigrations,
+} from "../src/storage/migrations/migrator.js";
 import type { IReactorSubscriptionManager } from "../src/subs/types.js";
 import type { IChannel, IChannelFactory } from "../src/sync/interfaces.js";
 import type { ChannelConfig, SyncEnvelope } from "../src/sync/types.js";
@@ -105,15 +112,16 @@ export async function createTestOperationStore(): Promise<{
   store: KyselyOperationStore;
   keyframeStore: KyselyKeyframeStore;
 }> {
-  const db = new Kysely<DatabaseSchema>({
+  const baseDb = new Kysely<DatabaseSchema>({
     dialect: new PGliteDialect(new PGlite()),
   });
 
-  const result = await runMigrations(db);
+  const result = await runMigrations(baseDb, REACTOR_SCHEMA);
   if (!result.success && result.error) {
     throw new Error(`Test migration failed: ${result.error.message}`);
   }
 
+  const db = baseDb.withSchema(REACTOR_SCHEMA);
   const store = new KyselyOperationStore(db);
   const keyframeStore = new KyselyKeyframeStore(db);
 
@@ -168,17 +176,20 @@ export function createMinimalJob(overrides: Partial<Job> = {}): Job {
  * Factory for creating test Operation objects
  */
 export function createTestOperation(
+  documentId: string,
   overrides: Partial<Operation> = {},
 ): Operation {
+  const action = createTestAction(
+    overrides.action ? { ...overrides.action } : undefined,
+  );
+
   const defaultOperation: Operation = {
     index: 1,
-    timestampUtcMs: new Date().toISOString(),
+    timestampUtcMs: action.timestampUtcMs,
     hash: "test-hash",
     skip: 0,
-    action: createTestAction(
-      overrides.action ? { ...overrides.action } : undefined,
-    ),
-    id: "op-1",
+    action,
+    id: deriveOperationId(documentId, "document", "main", action.id),
     resultingState: JSON.stringify({ state: "test" }),
   };
 
@@ -196,14 +207,18 @@ export function createCreateDocumentOperation(
   documentType: string,
   overrides: Partial<Operation> = {},
 ): Operation {
+  const actionId = generateId();
+
   return {
-    id: overrides.id || `${documentId}-create`,
+    id:
+      overrides.id ||
+      deriveOperationId(documentId, "document", "main", actionId),
     index: 0,
     skip: 0,
     hash: overrides.hash || "hash-0",
     timestampUtcMs: overrides.timestampUtcMs || new Date().toISOString(),
     action: {
-      id: `${documentId}-create-action`,
+      id: actionId,
       type: "CREATE_DOCUMENT",
       scope: "document",
       timestampUtcMs: overrides.timestampUtcMs || new Date().toISOString(),
@@ -228,14 +243,17 @@ export function createUpgradeDocumentOperation(
   overrides: Partial<Operation> = {},
 ): Operation {
   const index = overrides.index ?? 1;
+  const actionId = generateId();
   return {
-    id: overrides.id || `${documentId}-upgrade-${index}`,
+    id:
+      overrides.id ||
+      deriveOperationId(documentId, "document", "main", actionId),
     index,
     skip: 0,
     hash: overrides.hash || `hash-${index}`,
     timestampUtcMs: overrides.timestampUtcMs || new Date().toISOString(),
     action: {
-      id: `${documentId}-upgrade-action-${index}`,
+      id: actionId,
       type: "UPGRADE_DOCUMENT",
       scope: "document",
       timestampUtcMs: overrides.timestampUtcMs || new Date().toISOString(),
@@ -828,15 +846,16 @@ export async function createTestSyncStorage(): Promise<{
   syncRemoteStorage: KyselySyncRemoteStorage;
   syncCursorStorage: KyselySyncCursorStorage;
 }> {
-  const db = new Kysely<DatabaseSchema>({
+  const baseDb = new Kysely<DatabaseSchema>({
     dialect: new PGliteDialect(new PGlite()),
   });
 
-  const result = await runMigrations(db);
+  const result = await runMigrations(baseDb, REACTOR_SCHEMA);
   if (!result.success && result.error) {
     throw new Error(`Test migration failed: ${result.error.message}`);
   }
 
+  const db = baseDb.withSchema(REACTOR_SCHEMA);
   const syncRemoteStorage = new KyselySyncRemoteStorage(db);
   const syncCursorStorage = new KyselySyncCursorStorage(db);
 
@@ -952,9 +971,10 @@ export function createTestChannelFactory(
  */
 export async function createSignedTestOperation(
   signer: any,
+  documentId: string,
   overrides: Partial<Operation> = {},
 ): Promise<Operation> {
-  const operation = createTestOperation(overrides);
+  const operation = createTestOperation(documentId, overrides);
   const publicKey = signer.getPublicKey();
 
   const signerData: any = {

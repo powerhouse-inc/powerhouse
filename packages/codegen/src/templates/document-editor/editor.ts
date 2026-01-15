@@ -1,4 +1,4 @@
-import type { EditorVariableNames } from "@powerhousedao/codegen/ts-morph";
+import type { EditorVariableNames } from "@powerhousedao/codegen";
 import { tsx } from "@tmpl/core";
 
 export const documentEditorEditorFileTemplate = (
@@ -15,8 +15,6 @@ import { ${v.useSelectedDocumentHookName} } from "${v.documentModelImportPath}";
 export default function Editor() {
   const [document, dispatch] = ${v.useSelectedDocumentHookName}();
   const [isEditing, setIsEditing] = useState(false);
-
-  if (!document) return null;
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

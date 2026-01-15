@@ -176,7 +176,10 @@ export { ConsoleLogger } from "./logging/console.js";
 export { type ILogger } from "./logging/types.js";
 
 // Migrations
-export { runMigrations } from "./storage/migrations/migrator.js";
+export {
+  REACTOR_SCHEMA,
+  runMigrations,
+} from "./storage/migrations/migrator.js";
 
 // Synchronization
 export {
@@ -214,3 +217,13 @@ export {
   type SyncEnvelopeType,
   type SyncOperationErrorType,
 } from "./sync/index.js";
+
+// Processors
+export { ProcessorManager } from "./processors/index.js";
+export type {
+  IProcessor,
+  IProcessorManager,
+  ProcessorFactory,
+  ProcessorFilter,
+  ProcessorRecord,
+} from "./processors/index.js";

@@ -15,7 +15,7 @@ import type {
   UpgradeDocumentActionInput,
   UpgradeTransition,
 } from "document-model";
-import { deriveOperationId } from "document-model/core";
+import { deriveOperationId, isUndoRedo } from "document-model/core";
 import type { IDocumentMetaCache } from "../cache/document-meta-cache-types.js";
 import type {
   IOperationIndex,
@@ -1173,7 +1173,9 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     const newOperation = operations[operations.length - 1];
-    newOperation.skip = skip;
+    if (!isUndoRedo(action)) {
+      newOperation.skip = skip;
+    }
 
     if (this.config.legacyStorageEnabled) {
       try {

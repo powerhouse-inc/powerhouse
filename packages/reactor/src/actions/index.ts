@@ -6,8 +6,7 @@ import type {
   RemoveRelationshipActionInput,
   UpgradeDocumentActionInput,
 } from "document-model";
-import { actions as documentActions } from "document-model";
-import { v4 as uuidv4 } from "uuid";
+import { actions as documentActions, generateId } from "document-model";
 
 export { documentActions };
 
@@ -16,7 +15,7 @@ export { documentActions };
  */
 export function createDocumentAction(input: CreateDocumentActionInput): Action {
   return {
-    id: `${input.documentId}-create`,
+    id: generateId(),
     type: "CREATE_DOCUMENT",
     scope: "document",
     timestampUtcMs: new Date().toISOString(),
@@ -31,7 +30,7 @@ export function upgradeDocumentAction(
   input: UpgradeDocumentActionInput,
 ): Action {
   return {
-    id: `${input.documentId}-upgrade`,
+    id: generateId(),
     type: "UPGRADE_DOCUMENT",
     scope: "document",
     timestampUtcMs: new Date().toISOString(),
@@ -48,7 +47,7 @@ export function deleteDocumentAction(documentId: string): Action {
   };
 
   return {
-    id: `${documentId}-delete`,
+    id: generateId(),
     type: "DELETE_DOCUMENT",
     scope: "document",
     timestampUtcMs: new Date().toISOString(),
@@ -71,7 +70,7 @@ export function addRelationshipAction(
   };
 
   return {
-    id: uuidv4(),
+    id: generateId(),
     type: "ADD_RELATIONSHIP",
     scope: "document",
     timestampUtcMs: new Date().toISOString(),
@@ -94,7 +93,7 @@ export function removeRelationshipAction(
   };
 
   return {
-    id: uuidv4(),
+    id: generateId(),
     type: "REMOVE_RELATIONSHIP",
     scope: "document",
     timestampUtcMs: new Date().toISOString(),

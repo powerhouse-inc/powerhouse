@@ -57,7 +57,7 @@
     "lint:fix": "npm run lint --fix",
     "tsc": "tsc",
     "tsc:watch": "tsc --watch",
-    "tailwind": "npx @tailwindcss/cli -i ./style.css -o ./dist/style.css",
+    "tailwind": "pnpm exec tailwindcss -i ./style.css -o ./dist/style.css",
     "prepublishOnly": "npm run build",
     "generate": "ph-cli generate",
     "connect": "ph-cli connect",

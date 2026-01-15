@@ -1,5 +1,7 @@
 import { Icon } from "@powerhousedao/design-system";
+import { useState } from "react";
 import { twMerge } from "tailwind-merge";
+import { FilterBar } from "./filter-bar.js";
 
 export type ColumnInfo = {
   readonly name: string;
@@ -12,6 +14,30 @@ export type SortDirection = "asc" | "desc";
 export type SortOptions = {
   readonly column: string;
   readonly direction: SortDirection;
+};
+
+export type FilterOperator =
+  | "="
+  | "!="
+  | ">"
+  | "<"
+  | ">="
+  | "<="
+  | "LIKE"
+  | "ILIKE"
+  | "IS NULL"
+  | "IS NOT NULL";
+
+export type FilterClause = {
+  readonly id: string;
+  readonly column: string;
+  readonly operator: FilterOperator;
+  readonly value: string;
+};
+
+export type FilterGroup = {
+  readonly clauses: FilterClause[];
+  readonly connectors: ("AND" | "OR")[]; // connectors[i] connects clauses[i] and clauses[i+1]
 };
 
 export type PaginationState = {
@@ -28,6 +54,8 @@ export type TableViewProps = {
   readonly onSort?: (sort: SortOptions) => void;
   readonly currentSort?: SortOptions;
   readonly loading?: boolean;
+  readonly filters?: FilterGroup;
+  readonly onFiltersChange?: (filters: FilterGroup | undefined) => void;
 };
 
 function formatCellValue(value: unknown): string {
@@ -37,6 +65,36 @@ function formatCellValue(value: unknown): string {
   if (typeof value === "function") return "[function]";
   if (typeof value === "symbol") return value.toString();
   return String(value as string | number | boolean | bigint);
+}
+
+function escapeCsvValue(value: string): string {
+  // If the value contains comma, newline, or double quote, wrap it in quotes and escape quotes
+  if (value.includes(",") || value.includes("\n") || value.includes('"')) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+function rowToCsv(row: Record<string, unknown>, columns: ColumnInfo[]): string {
+  return columns
+    .map((column) => {
+      const value = formatCellValue(row[column.name]);
+      return escapeCsvValue(value);
+    })
+    .join(",");
+}
+
+function rowsToCsv(
+  rows: Record<string, unknown>[],
+  columns: ColumnInfo[],
+): string {
+  const header = columns.map((col) => escapeCsvValue(col.name)).join(",");
+  const dataRows = rows.map((row) => rowToCsv(row, columns));
+  return [header, ...dataRows].join("\n");
+}
+
+async function copyToClipboard(text: string): Promise<void> {
+  await navigator.clipboard.writeText(text);
 }
 
 function SortIcon({
@@ -73,6 +131,8 @@ export function TableView({
   onSort,
   currentSort,
   loading = false,
+  filters,
+  onFiltersChange,
 }: TableViewProps) {
   const { offset, limit, total } = pagination;
 
@@ -119,17 +179,66 @@ export function TableView({
   };
 
   const visiblePages = getVisiblePages();
+  const [copying, setCopying] = useState(false);
+  const [copiedRowIndex, setCopiedRowIndex] = useState<number | null>(null);
+
+  const handleCopyAll = async () => {
+    if (rows.length === 0) return;
+    setCopying(true);
+    try {
+      const csv = rowsToCsv(rows, columns);
+      await copyToClipboard(csv);
+      setTimeout(() => setCopying(false), 1000);
+    } catch (err) {
+      console.error("Failed to copy to clipboard:", err);
+      setCopying(false);
+    }
+  };
+
+  const handleCopyRow = async (rowIndex: number) => {
+    if (rowIndex < 0 || rowIndex >= rows.length) return;
+    setCopiedRowIndex(rowIndex);
+    try {
+      const csv = rowToCsv(rows[rowIndex], columns);
+      await copyToClipboard(csv);
+      setTimeout(() => setCopiedRowIndex(null), 1000);
+    } catch (err) {
+      console.error("Failed to copy to clipboard:", err);
+      setCopiedRowIndex(null);
+    }
+  };
 
   return (
     <div className="flex h-full flex-col gap-2">
+      {onFiltersChange && (
+        <FilterBar
+          columns={columns}
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+        />
+      )}
       <div className="flex shrink-0 items-center justify-between text-sm">
-        <span className="text-gray-600">
-          {loading
-            ? "Loading..."
-            : total !== null
-              ? `Showing ${startItem.toLocaleString()}-${endItem.toLocaleString()} of ${total.toLocaleString()}`
-              : `Showing ${rows.length.toLocaleString()} rows`}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-gray-600">
+            {loading
+              ? "Loading..."
+              : total !== null
+                ? `Showing ${startItem.toLocaleString()}-${endItem.toLocaleString()} of ${total.toLocaleString()}`
+                : `Showing ${rows.length.toLocaleString()} rows`}
+          </span>
+          {rows.length > 0 && (
+            <button
+              className="flex items-center gap-1 rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={loading || copying}
+              onClick={handleCopyAll}
+              title="Copy all rows as CSV"
+              type="button"
+            >
+              <Icon name={copying ? "Check" : "Copy"} size={14} />
+              {copying ? "Copied!" : "Copy All"}
+            </button>
+          )}
+        </div>
 
         {total !== null && total > limit && (
           <div className="flex gap-1">
@@ -207,6 +316,9 @@ export function TableView({
         <table className="w-full border-collapse">
           <thead className="sticky top-0 bg-gray-100">
             <tr>
+              <th className="w-12 px-2 py-2 text-center text-xs font-medium text-gray-600">
+                <span className="sr-only">Copy</span>
+              </th>
               {columns.map((column, index) => {
                 const isActive = currentSort?.column === column.name;
                 const sortDirection = isActive ? currentSort.direction : "asc";
@@ -238,7 +350,7 @@ export function TableView({
               <tr>
                 <td
                   className="px-3 py-8 text-center text-sm text-gray-500"
-                  colSpan={columns.length}
+                  colSpan={columns.length + 1}
                 >
                   No data
                 </td>
@@ -249,6 +361,19 @@ export function TableView({
                   key={rowIndex}
                   className="odd:bg-white even:bg-gray-50 hover:bg-blue-50"
                 >
+                  <td className="px-2 py-2 text-center">
+                    <button
+                      className="flex items-center justify-center rounded p-1 text-gray-500 hover:bg-gray-200 hover:text-gray-700"
+                      onClick={() => void handleCopyRow(rowIndex)}
+                      title="Copy row as CSV"
+                      type="button"
+                    >
+                      <Icon
+                        name={copiedRowIndex === rowIndex ? "Check" : "Copy"}
+                        size={14}
+                      />
+                    </button>
+                  </td>
                   {columns.map((column, colIndex) => (
                     <td
                       key={column.name}

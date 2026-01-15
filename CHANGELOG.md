@@ -1,3 +1,91 @@
+## 5.2.0-dev.1 (2026-01-15)
+
+### 🚀 Features
+
+- set out rules for new skip calculation ([a03bce361](https://github.com/powerhouse-inc/powerhouse/commit/a03bce361))
+- implemented calculateUndoSkipNumber ([da19c2dab](https://github.com/powerhouse-inc/powerhouse/commit/da19c2dab))
+- **codegen:** update document engineering package version in boilerplate ([#2212](https://github.com/powerhouse-inc/powerhouse/pull/2212))
+- **monorepo:** use local package execution for tailwind instead of downloading it every time ([ed149558c](https://github.com/powerhouse-inc/powerhouse/commit/ed149558c))
+- **monorepo:** upgrade zod and use compatibility layer for errors ([#2210](https://github.com/powerhouse-inc/powerhouse/pull/2210))
+
+### 🩹 Fixes
+
+- clipboard should be loaded from storage ([8825f186a](https://github.com/powerhouse-inc/powerhouse/commit/8825f186a))
+- linter ([d28e68ea7](https://github.com/powerhouse-inc/powerhouse/commit/d28e68ea7))
+- fix race condition in reactor tests ([6400c1867](https://github.com/powerhouse-inc/powerhouse/commit/6400c1867))
+- **codegen:** remove hardcoded comment on editor module ([244aa75d4](https://github.com/powerhouse-inc/powerhouse/commit/244aa75d4))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
+## 5.1.0-dev.42 (2026-01-14)
+
+### 🚀 Features
+
+- basic ordering of fields in operation, temporary ([11711570d](https://github.com/powerhouse-inc/powerhouse/commit/11711570d))
+- added new filter-bar in inspector ([8ca500712](https://github.com/powerhouse-inc/powerhouse/commit/8ca500712))
+
+### 🩹 Fixes
+
+- error was written incorrectly for revision mismatch ([4995abbb9](https://github.com/powerhouse-inc/powerhouse/commit/4995abbb9))
+- do not overwrite undo/redo skips ([35de3648d](https://github.com/powerhouse-inc/powerhouse/commit/35de3648d))
+- **codegen:** project name import not working due to package.json being added to dist folder ([e5311e372](https://github.com/powerhouse-inc/powerhouse/commit/e5311e372))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
+## 5.1.0-dev.41 (2026-01-13)
+
+### 🚀 Features
+
+- **codegen:** relocate generated tests dir ([#2199](https://github.com/powerhouse-inc/powerhouse/pull/2199))
+- **reactor-browser:** useSelectedDocument throws error if there is no selected document ([0eb7ce1b2](https://github.com/powerhouse-inc/powerhouse/commit/0eb7ce1b2))
+
+### 🩹 Fixes
+
+- less strict document models array type on reactor builder ([1548ddec7](https://github.com/powerhouse-inc/powerhouse/commit/1548ddec7))
+- move ALL operation ids to derived ids ([4ac51f535](https://github.com/powerhouse-inc/powerhouse/commit/4ac51f535))
+- testing issue with ids ([8cad05973](https://github.com/powerhouse-inc/powerhouse/commit/8cad05973))
+- do not throw on id mismatch, simply overwrite ([fc613e19d](https://github.com/powerhouse-inc/powerhouse/commit/fc613e19d))
+- deleting documents now actually deletes the document ([ff731acfa](https://github.com/powerhouse-inc/powerhouse/commit/ff731acfa))
+- **reactor-browser:** use correct zod utility to parse document ([22e51c5fe](https://github.com/powerhouse-inc/powerhouse/commit/22e51c5fe))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Ryan Wolhuter @ryanwolhuter
+
+## 5.1.0-dev.40 (2026-01-10)
+
+### 🚀 Features
+
+- moved over the processor-manager for reactor ([c232c55c1](https://github.com/powerhouse-inc/powerhouse/commit/c232c55c1))
+- **builder-tools:** improved doc model editor to sync initial state with schema by default or display error messages otherwise ([57370caec](https://github.com/powerhouse-inc/powerhouse/commit/57370caec))
+- **builder-tools:** display error for missing optional fields on Initial State ([9192ee889](https://github.com/powerhouse-inc/powerhouse/commit/9192ee889))
+- **builder-tools:** improved validation on doc model editor and unit tests ([336f5d575](https://github.com/powerhouse-inc/powerhouse/commit/336f5d575))
+- **codegen:** add validation to package json test ([03d06ef57](https://github.com/powerhouse-inc/powerhouse/commit/03d06ef57))
+
+### 🩹 Fixes
+
+- deleted claude.md and unified to just agents.md ([cbf5deab4](https://github.com/powerhouse-inc/powerhouse/commit/cbf5deab4))
+- linter fixes ([53cad5707](https://github.com/powerhouse-inc/powerhouse/commit/53cad5707))
+- inspector was not schema aware ([ed06ebc74](https://github.com/powerhouse-inc/powerhouse/commit/ed06ebc74))
+- **builder-tools:** avoid duplicated SET_INITIAL_STATE and fix connect e2e ([863bc339d](https://github.com/powerhouse-inc/powerhouse/commit/863bc339d))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- CallmeT-ty @CallmeT-ty
+- ryanwolhuter @ryanwolhuter
+
 ## 5.1.0-dev.39 (2026-01-09)
 
 ### 🩹 Fixes

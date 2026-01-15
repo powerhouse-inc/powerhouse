@@ -1,7 +1,4 @@
-import {
-  buildBoilerplatePackageJson,
-  runPrettier,
-} from "@powerhousedao/codegen/file-builders";
+import { buildBoilerplatePackageJson } from "@powerhousedao/codegen/file-builders";
 import {
   agentsTemplate,
   buildPowerhouseConfigTemplate,
@@ -29,6 +26,7 @@ import {
   viteConfigTemplate,
   vitestConfigTemplate,
 } from "@powerhousedao/codegen/templates";
+import { runPrettier } from "@powerhousedao/codegen/utils";
 import chalk from "chalk";
 import fs from "node:fs";
 import path from "path";

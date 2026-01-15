@@ -22,6 +22,10 @@ export default defineConfig({
         "**/vitest.config.ts",
         "**/run-migrations.ts",
         "**/logging/**",
+        "**/*-factory.ts",
+        "**/*-builder.ts",
+        "**/*passthrough*.ts",
+        "**/migrator.ts",
       ],
     },
     poolOptions: {

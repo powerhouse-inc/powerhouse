@@ -1,5 +1,9 @@
 import type { Operation } from "document-model";
-import { deriveOperationId, generateId, skipHeaderOperations } from "document-model/core";
+import {
+  deriveOperationId,
+  generateId,
+  skipHeaderOperations,
+} from "document-model/core";
 import { describe, expect, it } from "vitest";
 
 const TEST_DOC_ID = "test-doc-id";

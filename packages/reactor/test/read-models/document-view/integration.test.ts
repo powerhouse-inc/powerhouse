@@ -13,7 +13,10 @@ import { ConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
 import type { IOperationStore } from "../../../src/storage/interfaces.js";
 import { KyselyOperationStore } from "../../../src/storage/kysely/store.js";
 import type { Database as StorageDatabase } from "../../../src/storage/kysely/types.js";
-import { runMigrations } from "../../../src/storage/migrations/migrator.js";
+import {
+  REACTOR_SCHEMA,
+  runMigrations,
+} from "../../../src/storage/migrations/migrator.js";
 import { createTestOperation } from "../../factories.js";
 
 // Combined database type that includes both storage and view tables
@@ -30,15 +33,17 @@ describe("KyselyDocumentView", () => {
   beforeEach(async () => {
     // Create in-memory PGLite database for testing
     dialect = new PGliteDialect(new PGlite());
-    db = new Kysely<Database>({
+    const baseDb = new Kysely<Database>({
       dialect,
     });
 
     // Run migrations to create all tables
-    const result = await runMigrations(db);
+    const result = await runMigrations(baseDb, REACTOR_SCHEMA);
     if (!result.success && result.error) {
       throw new Error(`Test migration failed: ${result.error.message}`);
     }
+
+    db = baseDb.withSchema(REACTOR_SCHEMA);
 
     // Cast db to the appropriate types for each component
     operationStore = new KyselyOperationStore(
@@ -1562,9 +1567,10 @@ describe("KyselyDocumentView", () => {
 
         await view.indexOperations([
           {
-            operation: createTestOperation({
+            operation: createTestOperation("doc-1", {
               index: 0,
               action: {
+                id: generateId(),
                 type: "CREATE_DOCUMENT",
                 scope: "document",
                 input: {},
@@ -1605,9 +1611,10 @@ describe("KyselyDocumentView", () => {
 
         await view.indexOperations([
           {
-            operation: createTestOperation({
+            operation: createTestOperation("doc-1", {
               index: 0,
               action: {
+                id: generateId(),
                 type: "CREATE_DOCUMENT",
                 scope: "document",
                 input: {},
@@ -1653,9 +1660,10 @@ describe("KyselyDocumentView", () => {
 
         await view.indexOperations([
           {
-            operation: createTestOperation({
+            operation: createTestOperation("doc-1", {
               index: 0,
               action: {
+                id: generateId(),
                 type: "CREATE_DOCUMENT",
                 scope: "document",
                 input: {},
@@ -1698,9 +1706,10 @@ describe("KyselyDocumentView", () => {
 
         await view.indexOperations([
           {
-            operation: createTestOperation({
+            operation: createTestOperation("doc-1", {
               index: 0,
               action: {
+                id: generateId(),
                 type: "CREATE_DOCUMENT",
                 scope: "document",
                 input: {},
@@ -1719,9 +1728,10 @@ describe("KyselyDocumentView", () => {
             },
           },
           {
-            operation: createTestOperation({
+            operation: createTestOperation("doc-1", {
               index: 0,
               action: {
+                id: generateId(),
                 type: "CREATE_DOCUMENT",
                 scope: "document",
                 input: {},

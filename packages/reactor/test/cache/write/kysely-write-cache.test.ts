@@ -507,8 +507,7 @@ describe("KyselyWriteCache (Partial Integration) - Cold Miss Rebuild", () => {
     const operations: Operation[] = [];
     for (let i = 1; i <= 5; i++) {
       operations.push(
-        createTestOperation({
-          id: `op-test-doc-1-${i}`,
+        createTestOperation(docId, {
           index: i,
           skip: 0,
         }),
@@ -541,8 +540,7 @@ describe("KyselyWriteCache (Partial Integration) - Cold Miss Rebuild", () => {
     const operations: Operation[] = [];
     for (let i = 1; i <= 22; i++) {
       operations.push(
-        createTestOperation({
-          id: `op-test-doc-2-${i}`,
+        createTestOperation(docId, {
           index: i,
           skip: 0,
         }),
@@ -584,8 +582,7 @@ describe("KyselyWriteCache (Partial Integration) - Cold Miss Rebuild", () => {
     const operations: Operation[] = [];
     for (let i = 1; i <= 3; i++) {
       operations.push(
-        createTestOperation({
-          id: `op-test-doc-3-${i}`,
+        createTestOperation(docId, {
           index: i,
           skip: 0,
         }),
@@ -623,8 +620,7 @@ describe("KyselyWriteCache (Partial Integration) - Cold Miss Rebuild", () => {
     const operations: Operation[] = [];
     for (let i = 1; i <= 5; i++) {
       operations.push(
-        createTestOperation({
-          id: `op-test-doc-4-${i}`,
+        createTestOperation(docId, {
           index: i,
           skip: 0,
         }),
@@ -717,8 +713,7 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     const operations: Operation[] = [];
     for (let i = 1; i <= 15; i++) {
       operations.push(
-        createTestOperation({
-          id: `op-test-warm-1-${i}`,
+        createTestOperation(docId, {
           index: i,
           skip: 0,
         }),
@@ -756,8 +751,7 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     const operations: Operation[] = [];
     for (let i = 1; i <= 20; i++) {
       operations.push(
-        createTestOperation({
-          id: `op-test-warm-2-${i}`,
+        createTestOperation(docId, {
           index: i,
           skip: 0,
         }),
@@ -793,8 +787,7 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     const operations: Operation[] = [];
     for (let i = 1; i <= 25; i++) {
       operations.push(
-        createTestOperation({
-          id: `op-test-warm-3-${i}`,
+        createTestOperation(docId, {
           index: i,
           skip: 0,
         }),
@@ -824,8 +817,7 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     const operations: Operation[] = [];
     for (let i = 1; i <= 15; i++) {
       operations.push(
-        createTestOperation({
-          id: `op-test-warm-4-${i}`,
+        createTestOperation(docId, {
           index: i,
           skip: 0,
         }),
@@ -864,8 +856,7 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     const operations: Operation[] = [];
     for (let i = 1; i <= 35; i++) {
       operations.push(
-        createTestOperation({
-          id: `op-test-warm-5-${i}`,
+        createTestOperation(docId, {
           index: i,
           skip: 0,
         }),
@@ -903,8 +894,7 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     const operations: Operation[] = [];
     for (let i = 1; i <= 65; i++) {
       operations.push(
-        createTestOperation({
-          id: `op-test-warm-6-${i}`,
+        createTestOperation(docId, {
           index: i,
           skip: 0,
         }),
@@ -944,8 +934,7 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     const operations: Operation[] = [];
     for (let i = 1; i <= 20; i++) {
       operations.push(
-        createTestOperation({
-          id: `op-test-warm-7-${i}`,
+        createTestOperation(docId, {
           index: i,
           skip: 0,
         }),

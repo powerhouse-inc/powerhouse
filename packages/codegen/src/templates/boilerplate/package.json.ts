@@ -55,7 +55,7 @@ const scriptsTemplate = json`
 
 const dependenciesTemplate = (versionedDependencies: string[]) => json`
   ${versionedDependencies.join(",\n")},
-  "@powerhousedao/document-engineering": "^1.38.0",
+  "@powerhousedao/document-engineering": "1.40.1",
   "graphql": "^16.10.0",
   "graphql-tag": "^2.12.6",
   "zod": "^4.3.5"

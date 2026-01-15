@@ -9,7 +9,7 @@ import type { z, ZodRawShape } from "zod/v3";
 export type ExtractCallbackFromTool<T extends ToolSchema> = T extends {
   inputSchema: infer S;
 }
-  ? // @ts-expect-error this was always wrong
+  ? // @ts-expect-error TODO: fix this Type instantiation is excessively deep and possibly infinite.
     ToolCallback<S extends ZodRawShape ? S : undefined>
   : ToolCallback;
 

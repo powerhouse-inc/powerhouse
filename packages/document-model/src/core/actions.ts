@@ -230,10 +230,6 @@ export const operationFromOperation = (
     operation.action.id,
   );
 
-  if (operation.id && operation.id !== id) {
-    throw new Error(`Operation id mismatch: ${operation.id} !== ${id}`);
-  }
-
   return {
     ...operation,
     hash: "",

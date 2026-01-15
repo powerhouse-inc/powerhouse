@@ -1,4 +1,4 @@
-import type { DocumentModelTemplateInputs } from "@powerhousedao/codegen/ts-morph";
+import type { DocumentModelTemplateInputs } from "@powerhousedao/codegen/file-builders";
 import { ts } from "@tmpl/core";
 
 export const documentModelHooksFileTemplate = (
@@ -8,16 +8,19 @@ export const documentModelHooksFileTemplate = (
 
 import type { DocumentDispatch } from "@powerhousedao/reactor-browser";
 import {
+  useDocumentById,
   useDocumentsInSelectedDrive,
   useDocumentsInSelectedFolder,
-  useDocumentById,
   useSelectedDocument,
 } from "@powerhousedao/reactor-browser";
 import type {
-  ${v.phDocumentTypeName},
   ${v.actionTypeName},
+  ${v.phDocumentTypeName},
 } from "${v.versionedDocumentModelPackageImportPath}";
-import { ${v.isPhDocumentOfTypeFunctionName} } from "./gen/document-schema.js";
+import { 
+  ${v.assertIsPhDocumentOfTypeFunctionName},
+  ${v.isPhDocumentOfTypeFunctionName} 
+} from "./gen/document-schema.js";
 
 /** Hook to get a ${v.pascalCaseDocumentType} document by its id */
 export function ${v.useByIdHookName}(
@@ -32,11 +35,11 @@ export function ${v.useByIdHookName}(
 
 /** Hook to get the selected ${v.pascalCaseDocumentType} document */
 export function ${v.useSelectedHookName}():
-  | [${v.phDocumentTypeName}, DocumentDispatch<${v.actionTypeName}>]
-  | [undefined, undefined] {
+  | [${v.phDocumentTypeName}, DocumentDispatch<${v.actionTypeName}>] {
   const [document, dispatch] = useSelectedDocument();
-  if (!${v.isPhDocumentOfTypeFunctionName}(document)) return [undefined, undefined];
-  return [document, dispatch];
+
+  ${v.assertIsPhDocumentOfTypeFunctionName}(document);
+  return [document, dispatch] as const;
 }
 
 /** Hook to get all ${v.pascalCaseDocumentType} documents in the selected drive */

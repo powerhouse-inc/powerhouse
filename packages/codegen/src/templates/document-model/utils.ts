@@ -1,4 +1,4 @@
-import type { DocumentModelVariableNames } from "@powerhousedao/codegen/ts-morph";
+import type { DocumentModelVariableNames } from "@powerhousedao/codegen/file-builders";
 import { ts } from "@tmpl/core";
 
 export const documentModelUtilsTemplate = ({

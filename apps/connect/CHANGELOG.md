@@ -1,3 +1,58 @@
+## 5.2.0-dev.1 (2026-01-15)
+
+### 🚀 Features
+
+- **monorepo:** upgrade zod and use compatibility layer for errors ([#2210](https://github.com/powerhouse-inc/powerhouse/pull/2210))
+- **monorepo:** use local package execution for tailwind instead of downloading it every time ([ed149558c](https://github.com/powerhouse-inc/powerhouse/commit/ed149558c))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
+## 5.1.0-dev.42 (2026-01-14)
+
+### 🚀 Features
+
+- added new filter-bar in inspector ([8ca500712](https://github.com/powerhouse-inc/powerhouse/commit/8ca500712))
+- basic ordering of fields in operation, temporary ([11711570d](https://github.com/powerhouse-inc/powerhouse/commit/11711570d))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 5.1.0-dev.41 (2026-01-13)
+
+### 🚀 Features
+
+- **reactor-browser:** useSelectedDocument throws error if there is no selected document ([0eb7ce1b2](https://github.com/powerhouse-inc/powerhouse/commit/0eb7ce1b2))
+
+### 🩹 Fixes
+
+- less strict document models array type on reactor builder ([1548ddec7](https://github.com/powerhouse-inc/powerhouse/commit/1548ddec7))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 5.1.0-dev.40 (2026-01-10)
+
+### 🚀 Features
+
+- **builder-tools:** improved validation on doc model editor and unit tests ([336f5d575](https://github.com/powerhouse-inc/powerhouse/commit/336f5d575))
+- **codegen:** add validation to package json test ([03d06ef57](https://github.com/powerhouse-inc/powerhouse/commit/03d06ef57))
+
+### 🩹 Fixes
+
+- inspector was not schema aware ([ed06ebc74](https://github.com/powerhouse-inc/powerhouse/commit/ed06ebc74))
+- linter fixes ([53cad5707](https://github.com/powerhouse-inc/powerhouse/commit/53cad5707))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- ryanwolhuter @ryanwolhuter
+
 ## 5.1.0-dev.39 (2026-01-09)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

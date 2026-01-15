@@ -3,6 +3,7 @@ import type { TestDocAction } from "./actions.js";
 import type { TestDocState as TestDocGlobalState } from "./schema/types.js";
 
 type TestDocLocalState = Record<PropertyKey, never>;
+
 type TestDocPHState = PHBaseState & {
   global: TestDocGlobalState;
   local: TestDocLocalState;

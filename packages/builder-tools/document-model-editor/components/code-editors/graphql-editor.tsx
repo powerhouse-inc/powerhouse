@@ -42,7 +42,7 @@ const GraphqlEditor = memo(function GraphqlEditor(props: Props) {
   // GraphQL-specific refs
   const graphqlCompartment = useRef(new Compartment());
   const linterCompartment = useRef(new Compartment());
-  const sharedSchema = useSchemaContext();
+  const { sharedSchema } = useSchemaContext();
 
   useEffect(() => {
     if (!viewRef.current) {

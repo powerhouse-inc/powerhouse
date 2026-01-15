@@ -41,6 +41,6 @@ export const tsConfigTemplate = json`
     "skipLibCheck": true
   },
   "include": ["**/*", "./powerhouse.manifest.json"],
-  "exclude": ["dist", "node_modules", ".ph"]
+  "exclude": ["dist", "node_modules", ".ph", "vitest.config.ts"]
 }
 `.raw;

@@ -12,7 +12,11 @@ import {
   documentModelCreateDocument,
   documentModelDocumentModelModule,
 } from "document-model";
-import { createPresignedHeader, deriveOperationId, generateId } from "document-model/core";
+import {
+  createPresignedHeader,
+  deriveOperationId,
+  generateId,
+} from "document-model/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const documentModels = baseDocumentModels;
@@ -186,7 +190,12 @@ describe("Dual Action Migration Tests", () => {
       // Manually add an operation to simulate a document from external source
       const actionId = "action-1";
       document.operations.global!.push({
-        id: deriveOperationId(documentId, "global", document.header.branch, actionId),
+        id: deriveOperationId(
+          documentId,
+          "global",
+          document.header.branch,
+          actionId,
+        ),
         index: 0,
         skip: 0,
         hash: "existing-hash",
@@ -329,9 +338,14 @@ describe("Dual Action Migration Tests", () => {
       const document = createDocumentModelWithId(documentId);
 
       // Add only CREATE_DOCUMENT operation (missing UPGRADE_DOCUMENT)
-      const createActionId = `${documentId}-create`;
+      const createActionId = generateId();
       document.operations.global!.push({
-        id: deriveOperationId(documentId, "global", document.header.branch, createActionId),
+        id: deriveOperationId(
+          documentId,
+          "global",
+          document.header.branch,
+          createActionId,
+        ),
         index: 0,
         skip: 0,
         hash: "create-hash",

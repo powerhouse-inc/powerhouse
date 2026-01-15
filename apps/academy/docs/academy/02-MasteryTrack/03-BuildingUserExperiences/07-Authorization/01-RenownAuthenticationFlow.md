@@ -30,8 +30,9 @@ Renown is designed to address the challenge of trust within DAOs, where contribu
 
 #### 3. Credential generation
 
-- A credential is generated, allowing the DID to sign operations on behalf of the user. This credential is stored on Ceramic, a decentralized data stream network.
-- Ceramic ensures that the credentials are securely stored and verifiable across the network. Credentials include the user's signing permissions and are linked to the DID.
+- A credential is generated, allowing the DID to sign operations on behalf of the user. This credential is stored on a Powerhouse-hosted identity node.
+- The identity node ensures that the credentials are securely stored and verifiable across the network. Credentials include the user's signing permissions and are linked to the DID.
+- Powerhouse aims to decentralize this identity reactor over time while maintaining an efficient hub for using your decentralized identity and reputation to explore different organizations.
 
 #### 4. Operation signing with Connect
 
@@ -46,7 +47,7 @@ Renown is designed to address the challenge of trust within DAOs, where contribu
 #### 5. Switchboard verification
 
 - Once an operation is signed by the DID through Connect, it is sent to Switchboard for verification.
-- Switchboard verifies whether the DID has a valid credential stored on Ceramic and if the DID was indeed the one that signed the operation.
+- Switchboard verifies whether the DID has a valid credential stored on the Powerhouse identity node and if the DID was indeed the one that signed the operation.
 - The request includes critical metadata such as the user's Ethereum address, the DID, the signed operation, and other parameters required for validation.
 
   ```json
@@ -64,14 +65,11 @@ Renown is designed to address the challenge of trust within DAOs, where contribu
 - The operation is then either approved or rejected based on the verification results.
 - Approved operations are processed, and changes made within the Connect system are synchronized across the relevant nodes.
 
-<img src="/img/Renown Intro Diagram.png" alt="renown diagram"/>
-*An overview of the Holder - Issuer - Verifier relationship that the decentralised identity system Renown makes use of to establish a self sovereign identity for it's users.*
-
 :::info
 **Key Components used during login-flow**
 
 - **Renown**: Manages user identities via DID creation and Ethereum wallet integration.
-- **Ceramic**: Decentralized data stream where user credentials are stored and verified.
+- **Powerhouse Identity Node**: Hosts user credentials and enables verification. Powerhouse is working towards decentralizing this identity reactor over time.
 - **Connect**: The interface for users to perform operations. It uses the DID for signing operations.
 - **Switchboard**: Responsible for verifying credentials and operation signatures to ensure authenticity.
   :::

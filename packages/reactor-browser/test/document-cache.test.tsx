@@ -6,7 +6,6 @@ import {
 import {
   documentModelDocumentModelModule,
   setName,
-  type DocumentModelModule,
   type PHDocument,
 } from "document-model";
 import { describe, expect, it, vi } from "vitest";
@@ -35,7 +34,7 @@ async function createDocumentCache(
   const legacyReactor = new ReactorBuilder([
     driveDocumentModelModule,
     documentModelDocumentModelModule,
-  ] as unknown as DocumentModelModule[]).build();
+  ]).build();
 
   for (const document of documents) {
     await legacyReactor.addDocument(document);

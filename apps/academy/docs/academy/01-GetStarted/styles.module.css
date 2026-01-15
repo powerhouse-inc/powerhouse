@@ -115,6 +115,7 @@
   z-index: 2;
   position: absolute;
   top: 18px;
+  border: 1px solid #e5e7eb;
 }
 
 :global([data-theme="dark"]) .masteryTrackTitle {

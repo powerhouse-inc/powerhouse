@@ -1,2 +1,2 @@
 #!/usr/bin/env sh
-pnpm dlx commitlint --options commitlint.config.cjs --edit $1
+pnpm exec commitlint --options commitlint.config.cjs --edit $1

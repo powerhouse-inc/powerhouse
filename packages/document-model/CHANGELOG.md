@@ -1,3 +1,49 @@
+## 5.2.0-dev.1 (2026-01-15)
+
+### 🚀 Features
+
+- **monorepo:** upgrade zod and use compatibility layer for errors ([#2210](https://github.com/powerhouse-inc/powerhouse/pull/2210))
+- **monorepo:** use local package execution for tailwind instead of downloading it every time ([ed149558c](https://github.com/powerhouse-inc/powerhouse/commit/ed149558c))
+- implemented calculateUndoSkipNumber ([da19c2dab](https://github.com/powerhouse-inc/powerhouse/commit/da19c2dab))
+- set out rules for new skip calculation ([a03bce361](https://github.com/powerhouse-inc/powerhouse/commit/a03bce361))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
+## 5.1.0-dev.42 (2026-01-14)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 5.1.0-dev.41 (2026-01-13)
+
+### 🩹 Fixes
+
+- do not throw on id mismatch, simply overwrite ([fc613e19d](https://github.com/powerhouse-inc/powerhouse/commit/fc613e19d))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 5.1.0-dev.40 (2026-01-10)
+
+### 🚀 Features
+
+- **builder-tools:** improved validation on doc model editor and unit tests ([336f5d575](https://github.com/powerhouse-inc/powerhouse/commit/336f5d575))
+- **codegen:** add validation to package json test ([03d06ef57](https://github.com/powerhouse-inc/powerhouse/commit/03d06ef57))
+
+### 🩹 Fixes
+
+- linter fixes ([53cad5707](https://github.com/powerhouse-inc/powerhouse/commit/53cad5707))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- ryanwolhuter @ryanwolhuter
+
 ## 5.1.0-dev.39 (2026-01-09)
 
 This was a version bump only for document-model to align it with other projects, there were no code changes.

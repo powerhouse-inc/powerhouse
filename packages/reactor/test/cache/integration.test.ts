@@ -5,7 +5,11 @@ import type {
 } from "document-drive";
 import { driveDocumentModelModule } from "document-drive";
 import type { Operation } from "document-model";
-import { documentModelDocumentModelModule } from "document-model";
+import {
+  deriveOperationId,
+  documentModelDocumentModelModule,
+  generateId,
+} from "document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { KyselyWriteCache } from "../../src/cache/kysely-write-cache.js";
@@ -90,8 +94,7 @@ describe("KyselyWriteCache Integration Tests", () => {
       const operations: Operation[] = [];
       for (let i = 1; i <= 5; i++) {
         operations.push(
-          createTestOperation({
-            id: `op-integration-${i}`,
+          createTestOperation(docId, {
             index: i,
             skip: 0,
           }),
@@ -130,8 +133,7 @@ describe("KyselyWriteCache Integration Tests", () => {
       const operations: Operation[] = [];
       for (let i = 1; i <= 25; i++) {
         operations.push(
-          createTestOperation({
-            id: `op-integration-keyframe-${i}`,
+          createTestOperation(docId, {
             index: i,
             skip: 0,
           }),
@@ -187,8 +189,7 @@ describe("KyselyWriteCache Integration Tests", () => {
       const operations: Operation[] = [];
       for (let i = 1; i <= 20; i++) {
         operations.push(
-          createTestOperation({
-            id: `op-integration-accelerate-${i}`,
+          createTestOperation(docId, {
             index: i,
             skip: 0,
           }),
@@ -237,8 +238,7 @@ describe("KyselyWriteCache Integration Tests", () => {
       const operations: Operation[] = [];
       for (let i = 1; i <= 15; i++) {
         operations.push(
-          createTestOperation({
-            id: `op-integration-cache-${i}`,
+          createTestOperation(docId, {
             index: i,
             skip: 0,
           }),
@@ -307,8 +307,7 @@ describe("KyselyWriteCache Integration Tests", () => {
           0,
           (txn) => {
             txn.addOperations(
-              createTestOperation({
-                id: `op-${docId}`,
+              createTestOperation(docId, {
                 index: 1,
                 skip: 0,
               }),
@@ -337,7 +336,6 @@ describe("KyselyWriteCache Integration Tests", () => {
         0,
         (txn) => {
           const createOp = createCreateDocumentOperation(docId, docType);
-          createOp.id = `${docId}-create-main`;
           txn.addOperations(createOp);
         },
       );
@@ -350,15 +348,13 @@ describe("KyselyWriteCache Integration Tests", () => {
         0,
         (txn) => {
           const createOp = createCreateDocumentOperation(docId, docType);
-          createOp.id = `${docId}-create-feature`;
           txn.addOperations(createOp);
         },
       );
 
       await operationStore.apply(docId, docType, "global", "main", 0, (txn) => {
         txn.addOperations(
-          createTestOperation({
-            id: "op-global-main",
+          createTestOperation(docId, {
             index: 1,
             skip: 0,
           }),
@@ -373,8 +369,7 @@ describe("KyselyWriteCache Integration Tests", () => {
         0,
         (txn) => {
           txn.addOperations(
-            createTestOperation({
-              id: "op-global-feature",
+            createTestOperation(docId, {
               index: 1,
               skip: 0,
             }),
@@ -384,8 +379,7 @@ describe("KyselyWriteCache Integration Tests", () => {
 
       await operationStore.apply(docId, docType, "local", "main", 0, (txn) => {
         txn.addOperations(
-          createTestOperation({
-            id: "op-local-main",
+          createTestOperation(docId, {
             index: 1,
             skip: 0,
           }),
@@ -421,8 +415,7 @@ describe("KyselyWriteCache Integration Tests", () => {
 
       await operationStore.apply(docId, docType, "global", "main", 0, (txn) => {
         txn.addOperations(
-          createTestOperation({
-            id: "op-abort-test",
+          createTestOperation(docId, {
             index: 1,
             skip: 0,
           }),
@@ -454,8 +447,7 @@ describe("KyselyWriteCache Integration Tests", () => {
 
       await operationStore.apply(docId, docType, "global", "main", 0, (txn) => {
         txn.addOperations(
-          createTestOperation({
-            id: "op-module-test",
+          createTestOperation(docId, {
             index: 1,
             skip: 0,
           }),
@@ -549,8 +541,7 @@ describe("KyselyWriteCache Integration Tests", () => {
 
       await operationStore.apply(docId, docType, "global", "main", 0, (txn) => {
         txn.addOperations(
-          createTestOperation({
-            id: "op-keyframe-fail",
+          createTestOperation(docId, {
             index: 1,
             skip: 0,
           }),
@@ -581,8 +572,7 @@ describe("KyselyWriteCache Integration Tests", () => {
       const operations: Operation[] = [];
       for (let i = 1; i <= 20; i++) {
         operations.push(
-          createTestOperation({
-            id: `op-perf-${i}`,
+          createTestOperation(docId, {
             index: i,
             skip: 0,
           }),
@@ -613,6 +603,8 @@ describe("KyselyWriteCache Integration Tests", () => {
 
       const initialState = driveDocumentModelModule.utils.createState();
 
+      const createActionId = generateId();
+      const upgradeActionId = generateId();
       await operationStore.apply(
         docId,
         docType,
@@ -621,13 +613,13 @@ describe("KyselyWriteCache Integration Tests", () => {
         0,
         (txn) => {
           txn.addOperations({
-            id: "op-doc-0",
+            id: deriveOperationId(docId, "document", branch, createActionId),
             index: 0,
             skip: 0,
             hash: "hash-doc-0",
             timestampUtcMs: new Date().toISOString(),
             action: {
-              id: `${docId}-create`,
+              id: createActionId,
               type: "CREATE_DOCUMENT",
               scope: "document",
               timestampUtcMs: Date.now().toString(),
@@ -640,13 +632,13 @@ describe("KyselyWriteCache Integration Tests", () => {
           });
 
           txn.addOperations({
-            id: "op-doc-1",
+            id: deriveOperationId(docId, "document", branch, upgradeActionId),
             index: 1,
             skip: 0,
             hash: "hash-doc-1",
             timestampUtcMs: new Date().toISOString(),
             action: {
-              id: `${docId}-upgrade`,
+              id: upgradeActionId,
               type: "UPGRADE_DOCUMENT",
               scope: "document",
               timestampUtcMs: Date.now().toString(),
@@ -663,14 +655,18 @@ describe("KyselyWriteCache Integration Tests", () => {
       );
 
       await operationStore.apply(docId, docType, scope, branch, 0, (txn) => {
+        const addFolderActionId = generateId();
+        const addFileActionId = generateId();
+        const addFolderActionId2 = generateId();
+
         txn.addOperations({
-          id: "op-1",
+          id: deriveOperationId(docId, scope, branch, addFolderActionId),
           index: 1,
           skip: 0,
           hash: "hash-1",
           timestampUtcMs: new Date().toISOString(),
           action: {
-            id: "action-1",
+            id: addFolderActionId,
             type: "ADD_FOLDER",
             scope: "global",
             timestampUtcMs: Date.now().toString(),
@@ -683,13 +679,13 @@ describe("KyselyWriteCache Integration Tests", () => {
         });
 
         txn.addOperations({
-          id: "op-2",
+          id: deriveOperationId(docId, scope, branch, addFileActionId),
           index: 2,
           skip: 0,
           hash: "hash-2",
           timestampUtcMs: new Date().toISOString(),
           action: {
-            id: "action-2",
+            id: addFileActionId,
             type: "ADD_FILE",
             scope: "global",
             timestampUtcMs: Date.now().toString(),
@@ -703,13 +699,13 @@ describe("KyselyWriteCache Integration Tests", () => {
         });
 
         txn.addOperations({
-          id: "op-3",
+          id: deriveOperationId(docId, scope, branch, addFolderActionId2),
           index: 3,
           skip: 0,
           hash: "hash-3",
           timestampUtcMs: new Date().toISOString(),
           action: {
-            id: "action-3",
+            id: addFolderActionId2,
             type: "ADD_FOLDER",
             scope: "global",
             timestampUtcMs: Date.now().toString(),
@@ -759,15 +755,18 @@ describe("KyselyWriteCache Integration Tests", () => {
       const doc3Again = await cache.getState(docId, scope, branch, 3);
       expect(doc3Again).toEqual(doc3);
 
+      const addFileActionId = generateId();
+      const addFolderActionId = generateId();
+
       await operationStore.apply(docId, docType, scope, branch, 4, (txn) => {
         txn.addOperations({
-          id: "op-4",
+          id: deriveOperationId(docId, scope, branch, addFileActionId),
           index: 4,
           skip: 0,
           hash: "hash-4",
           timestampUtcMs: new Date().toISOString(),
           action: {
-            id: "action-4",
+            id: addFileActionId,
             type: "ADD_FILE",
             scope: "global",
             timestampUtcMs: Date.now().toString(),
@@ -781,13 +780,13 @@ describe("KyselyWriteCache Integration Tests", () => {
         });
 
         txn.addOperations({
-          id: "op-5",
+          id: deriveOperationId(docId, scope, branch, addFolderActionId),
           index: 5,
           skip: 0,
           hash: "hash-5",
           timestampUtcMs: new Date().toISOString(),
           action: {
-            id: "action-5",
+            id: addFolderActionId,
             type: "ADD_FOLDER",
             scope: "global",
             timestampUtcMs: Date.now().toString(),
@@ -837,6 +836,8 @@ describe("KyselyWriteCache Integration Tests", () => {
 
       const initialState = driveDocumentModelModule.utils.createState();
 
+      const createActionId = generateId();
+      const upgradeActionId = generateId();
       await operationStore.apply(
         docId,
         docType,
@@ -845,13 +846,13 @@ describe("KyselyWriteCache Integration Tests", () => {
         0,
         (txn) => {
           txn.addOperations({
-            id: "op-doc-0",
+            id: deriveOperationId(docId, "document", branch, createActionId),
             index: 0,
             skip: 0,
             hash: "hash-doc-0",
             timestampUtcMs: new Date().toISOString(),
             action: {
-              id: `${docId}-create`,
+              id: createActionId,
               type: "CREATE_DOCUMENT",
               scope: "document",
               timestampUtcMs: Date.now().toString(),
@@ -864,13 +865,13 @@ describe("KyselyWriteCache Integration Tests", () => {
           });
 
           txn.addOperations({
-            id: "op-doc-1",
+            id: deriveOperationId(docId, "document", branch, upgradeActionId),
             index: 1,
             skip: 0,
             hash: "hash-doc-1",
             timestampUtcMs: new Date().toISOString(),
             action: {
-              id: `${docId}-upgrade`,
+              id: upgradeActionId,
               type: "UPGRADE_DOCUMENT",
               scope: "document",
               timestampUtcMs: Date.now().toString(),
@@ -888,14 +889,15 @@ describe("KyselyWriteCache Integration Tests", () => {
 
       await operationStore.apply(docId, docType, scope, branch, 0, (txn) => {
         for (let i = 1; i <= 25; i++) {
+          const addFolderActionId = generateId();
           txn.addOperations({
-            id: `op-${i}`,
+            id: deriveOperationId(docId, scope, branch, addFolderActionId),
             index: i,
             skip: 0,
             hash: `hash-${i}`,
             timestampUtcMs: new Date().toISOString(),
             action: {
-              id: `action-${i}`,
+              id: addFolderActionId,
               type: "ADD_FOLDER",
               scope: "global",
               timestampUtcMs: Date.now().toString(),
@@ -952,14 +954,16 @@ describe("KyselyWriteCache Integration Tests", () => {
         branch,
         0,
         (txn) => {
+          const createActionId = generateId();
+          const upgradeActionId = generateId();
           txn.addOperations({
-            id: "op-doc-0",
+            id: deriveOperationId(docId, "document", branch, createActionId),
             index: 0,
             skip: 0,
             hash: "hash-doc-0",
             timestampUtcMs: new Date().toISOString(),
             action: {
-              id: `${docId}-create`,
+              id: createActionId,
               type: "CREATE_DOCUMENT",
               scope: "document",
               timestampUtcMs: Date.now().toString(),
@@ -972,13 +976,13 @@ describe("KyselyWriteCache Integration Tests", () => {
           });
 
           txn.addOperations({
-            id: "op-doc-1",
+            id: deriveOperationId(docId, "document", branch, upgradeActionId),
             index: 1,
             skip: 0,
             hash: "hash-doc-1",
             timestampUtcMs: new Date().toISOString(),
             action: {
-              id: `${docId}-upgrade`,
+              id: upgradeActionId,
               type: "UPGRADE_DOCUMENT",
               scope: "document",
               timestampUtcMs: Date.now().toString(),
@@ -995,14 +999,21 @@ describe("KyselyWriteCache Integration Tests", () => {
       );
 
       await operationStore.apply(docId, docType, scope, branch, 0, (txn) => {
+        const addFolderActionId = generateId();
+        const addFolderActionId2 = generateId();
+        const addFolderActionId3 = generateId();
+        const addFileActionId = generateId();
+        const addFileActionId2 = generateId();
+        const addFileActionId3 = generateId();
+
         txn.addOperations({
-          id: "op-1",
+          id: deriveOperationId(docId, scope, branch, addFolderActionId),
           index: 1,
           skip: 0,
           hash: "hash-1",
           timestampUtcMs: new Date().toISOString(),
           action: {
-            id: "action-1",
+            id: addFolderActionId,
             type: "ADD_FOLDER",
             scope: "global",
             timestampUtcMs: Date.now().toString(),
@@ -1015,13 +1026,13 @@ describe("KyselyWriteCache Integration Tests", () => {
         });
 
         txn.addOperations({
-          id: "op-2",
+          id: deriveOperationId(docId, scope, branch, addFolderActionId2),
           index: 2,
           skip: 0,
           hash: "hash-2",
           timestampUtcMs: new Date().toISOString(),
           action: {
-            id: "action-2",
+            id: addFolderActionId2,
             type: "ADD_FOLDER",
             scope: "global",
             timestampUtcMs: Date.now().toString(),
@@ -1034,13 +1045,13 @@ describe("KyselyWriteCache Integration Tests", () => {
         });
 
         txn.addOperations({
-          id: "op-3",
+          id: deriveOperationId(docId, scope, branch, addFolderActionId3),
           index: 3,
           skip: 0,
           hash: "hash-3",
           timestampUtcMs: new Date().toISOString(),
           action: {
-            id: "action-3",
+            id: addFolderActionId3,
             type: "ADD_FOLDER",
             scope: "global",
             timestampUtcMs: Date.now().toString(),
@@ -1053,13 +1064,13 @@ describe("KyselyWriteCache Integration Tests", () => {
         });
 
         txn.addOperations({
-          id: "op-4",
+          id: deriveOperationId(docId, scope, branch, addFileActionId),
           index: 4,
           skip: 0,
           hash: "hash-4",
           timestampUtcMs: new Date().toISOString(),
           action: {
-            id: "action-4",
+            id: addFileActionId,
             type: "ADD_FILE",
             scope: "global",
             timestampUtcMs: Date.now().toString(),
@@ -1073,13 +1084,13 @@ describe("KyselyWriteCache Integration Tests", () => {
         });
 
         txn.addOperations({
-          id: "op-5",
+          id: deriveOperationId(docId, scope, branch, addFileActionId2),
           index: 5,
           skip: 0,
           hash: "hash-5",
           timestampUtcMs: new Date().toISOString(),
           action: {
-            id: "action-5",
+            id: addFileActionId2,
             type: "ADD_FILE",
             scope: "global",
             timestampUtcMs: Date.now().toString(),
@@ -1093,13 +1104,13 @@ describe("KyselyWriteCache Integration Tests", () => {
         });
 
         txn.addOperations({
-          id: "op-6",
+          id: deriveOperationId(docId, scope, branch, addFileActionId3),
           index: 6,
           skip: 0,
           hash: "hash-6",
           timestampUtcMs: new Date().toISOString(),
           action: {
-            id: "action-6",
+            id: addFileActionId3,
             type: "ADD_FILE",
             scope: "global",
             timestampUtcMs: Date.now().toString(),
@@ -1169,14 +1180,16 @@ describe("KyselyWriteCache Integration Tests", () => {
         branch,
         0,
         (txn) => {
+          const createActionId = generateId();
+          const upgradeActionId = generateId();
           txn.addOperations({
-            id: "op-doc-0",
+            id: deriveOperationId(docId, "document", branch, createActionId),
             index: 0,
             skip: 0,
             hash: "hash-doc-0",
             timestampUtcMs: new Date().toISOString(),
             action: {
-              id: `${docId}-create`,
+              id: createActionId,
               type: "CREATE_DOCUMENT",
               scope: "document",
               timestampUtcMs: Date.now().toString(),
@@ -1189,13 +1202,13 @@ describe("KyselyWriteCache Integration Tests", () => {
           });
 
           txn.addOperations({
-            id: "op-doc-1",
+            id: deriveOperationId(docId, "document", branch, upgradeActionId),
             index: 1,
             skip: 0,
             hash: "hash-doc-1",
             timestampUtcMs: new Date().toISOString(),
             action: {
-              id: `${docId}-upgrade`,
+              id: upgradeActionId,
               type: "UPGRADE_DOCUMENT",
               scope: "document",
               timestampUtcMs: Date.now().toString(),
@@ -1213,14 +1226,15 @@ describe("KyselyWriteCache Integration Tests", () => {
 
       await operationStore.apply(docId, docType, scope, branch, 0, (txn) => {
         for (let i = 1; i <= 15; i++) {
+          const addFolderActionId = generateId();
           txn.addOperations({
-            id: `op-${i}`,
+            id: deriveOperationId(docId, scope, branch, addFolderActionId),
             index: i,
             skip: 0,
             hash: `hash-${i}`,
             timestampUtcMs: new Date().toISOString(),
             action: {
-              id: `action-${i}`,
+              id: addFolderActionId,
               type: "ADD_FOLDER",
               scope: "global",
               timestampUtcMs: Date.now().toString(),

@@ -70,6 +70,7 @@ import {
   diffOperations,
   garbageCollect,
   garbageCollectDocumentOperations,
+  generateId,
   groupOperationsByScope,
   hashDocumentStateForScope,
   merge,
@@ -317,7 +318,7 @@ export class BaseDocumentDriveServer
     return errors.length === 0 ? null : errors;
   }
 
-  setDocumentModelModules(modules: DocumentModelModule[]): void {
+  setDocumentModelModules(modules: DocumentModelModule<any>[]): void {
     this.documentModelModules = [...modules];
     this.synchronizationManager.setDocumentModelModules([...modules]);
     this.eventEmitter.emit("documentModelModules", [...modules]);
@@ -1200,7 +1201,7 @@ export class BaseDocumentDriveServer
       };
 
       const createDocumentAction: Action = {
-        id: `${header.id}-create`,
+        id: generateId(),
         type: "CREATE_DOCUMENT",
         timestampUtcMs,
         input: createDocumentInput,
@@ -1216,7 +1217,7 @@ export class BaseDocumentDriveServer
       };
 
       const upgradeDocumentAction: Action = {
-        id: `${header.id}-upgrade`,
+        id: generateId(),
         type: "UPGRADE_DOCUMENT",
         timestampUtcMs,
         input: upgradeDocumentInput,
@@ -1244,7 +1245,12 @@ export class BaseDocumentDriveServer
       // Create operations from actions with computed hashes
       operations = [
         {
-          id: `${header.id}-create`,
+          id: deriveOperationId(
+            header.id,
+            "document",
+            "main",
+            createDocumentAction.id,
+          ),
           index: 0,
           skip: 0,
           hash: createHash,
@@ -1252,7 +1258,12 @@ export class BaseDocumentDriveServer
           action: createDocumentAction,
         },
         {
-          id: `${header.id}-upgrade`,
+          id: deriveOperationId(
+            header.id,
+            "document",
+            "main",
+            upgradeDocumentAction.id,
+          ),
           index: 1,
           skip: 0,
           hash: upgradeHash,
@@ -1603,6 +1614,7 @@ export class BaseDocumentDriveServer
     return {
       ...replayed,
       operations: finalOperations,
+      clipboard: documentStorage.clipboard ?? [],
     };
   }
 

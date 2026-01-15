@@ -1,4 +1,3 @@
-import { expect, test } from "./helpers/fixtures.js";
 import {
   clickDocumentOperationHistory,
   closeDocumentFromToolbar,
@@ -12,6 +11,7 @@ import {
   renameFolder,
 } from "@powerhousedao/e2e-utils";
 import { createDocument } from "./helpers/document.js";
+import { expect, test } from "./helpers/fixtures.js";
 
 test.use({
   storageState: {
@@ -106,9 +106,13 @@ test("Document Operation History", async ({ page }) => {
     .all();
 
   const articlesLength = articles.length;
-  expect(articles).toHaveLength(2);
+  expect(articles).toHaveLength(3);
 
-  const expectedOperations = ["SET_STATE_SCHEMA", "SET_MODEL_NAME"];
+  const expectedOperations = [
+    "SET_INITIAL_STATE",
+    "SET_STATE_SCHEMA",
+    "SET_MODEL_NAME",
+  ];
 
   let index = 0;
 

@@ -4,6 +4,9 @@ import type {
   GraphQLScalarType,
   GraphQLScalarTypeConfig,
 } from "graphql";
+import type { Context } from "../../types.js";
+import { z } from "zod/v3";
+import type { DocumentNode } from "graphql";
 import { gql } from "graphql-tag";
 import { z } from "zod";
 import type { Context } from "../../types.js";

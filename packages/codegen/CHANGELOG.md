@@ -1,3 +1,64 @@
+## 5.2.0-dev.1 (2026-01-15)
+
+### 🚀 Features
+
+- **codegen:** update document engineering package version in boilerplate ([#2212](https://github.com/powerhouse-inc/powerhouse/pull/2212))
+- **monorepo:** upgrade zod and use compatibility layer for errors ([#2210](https://github.com/powerhouse-inc/powerhouse/pull/2210))
+- **monorepo:** use local package execution for tailwind instead of downloading it every time ([ed149558c](https://github.com/powerhouse-inc/powerhouse/commit/ed149558c))
+
+### 🩹 Fixes
+
+- **codegen:** remove hardcoded comment on editor module ([244aa75d4](https://github.com/powerhouse-inc/powerhouse/commit/244aa75d4))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
+## 5.1.0-dev.42 (2026-01-14)
+
+### 🩹 Fixes
+
+- **codegen:** project name import not working due to package.json being added to dist folder ([e5311e372](https://github.com/powerhouse-inc/powerhouse/commit/e5311e372))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 5.1.0-dev.41 (2026-01-13)
+
+### 🚀 Features
+
+- **codegen:** relocate generated tests dir ([#2199](https://github.com/powerhouse-inc/powerhouse/pull/2199))
+- **reactor-browser:** useSelectedDocument throws error if there is no selected document ([0eb7ce1b2](https://github.com/powerhouse-inc/powerhouse/commit/0eb7ce1b2))
+
+### 🩹 Fixes
+
+- **reactor-browser:** use correct zod utility to parse document ([22e51c5fe](https://github.com/powerhouse-inc/powerhouse/commit/22e51c5fe))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Ryan Wolhuter @ryanwolhuter
+
+## 5.1.0-dev.40 (2026-01-10)
+
+### 🚀 Features
+
+- **builder-tools:** improved validation on doc model editor and unit tests ([336f5d575](https://github.com/powerhouse-inc/powerhouse/commit/336f5d575))
+- **codegen:** add validation to package json test ([03d06ef57](https://github.com/powerhouse-inc/powerhouse/commit/03d06ef57))
+
+### 🩹 Fixes
+
+- deleted claude.md and unified to just agents.md ([cbf5deab4](https://github.com/powerhouse-inc/powerhouse/commit/cbf5deab4))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- CallmeT-ty @CallmeT-ty
+- ryanwolhuter @ryanwolhuter
+
 ## 5.1.0-dev.39 (2026-01-09)
 
 ### 🩹 Fixes

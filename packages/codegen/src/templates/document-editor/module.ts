@@ -10,7 +10,7 @@ export const documentEditorModuleFileTemplate = (v: {
 import type { EditorModule } from "document-model";
 import { lazy } from "react";
 
-/** Document editor module for the Todo List document type */
+/** Document editor module for the "${v.documentTypes}" document type */
 export const ${v.pascalCaseEditorName}: EditorModule = {
     Component: lazy(() => import("./editor.js")),
     documentTypes: ${v.documentTypes},

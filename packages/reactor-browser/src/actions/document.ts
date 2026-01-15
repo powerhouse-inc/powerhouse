@@ -774,11 +774,21 @@ export async function deleteNode(driveId: string, nodeId: string) {
     }
     const drive = await reactor.getDrive(driveId);
     await queueActions(drive, baseDeleteNode({ id: nodeId }));
+
+    // now delete the document
+    await reactor.deleteDocument(nodeId);
   } else {
     const reactorClient = window.ph?.reactorClient;
     if (!reactorClient) {
       throw new Error("ReactorClient not initialized");
     }
+
+    // delete the node in the drive document
+    await reactorClient.execute(driveId, "main", [
+      baseDeleteNode({ id: nodeId }),
+    ]);
+
+    // now delete the document
     await reactorClient.deleteDocument(nodeId);
   }
 }

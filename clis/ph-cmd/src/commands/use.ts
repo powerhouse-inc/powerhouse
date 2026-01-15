@@ -1,4 +1,4 @@
-import { getPackageVersion } from "@powerhousedao/codegen/file-builders";
+import { getPackageVersion } from "@powerhousedao/codegen/utils";
 import chalk from "chalk";
 import {
   boolean,

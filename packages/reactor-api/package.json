@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-api",
-  "version": "5.1.0-dev.39",
+  "version": "5.2.0-dev.1",
   "description": "",
   "type": "module",
   "repository": {
@@ -54,7 +54,7 @@
     "@powerhousedao/analytics-engine-graphql": "^0.4.0",
     "@powerhousedao/analytics-engine-pg": "^0.6.0",
     "@powerhousedao/config": "workspace:*",
-    "@powerhousedao/document-engineering": "^1.27.0",
+    "@powerhousedao/document-engineering": "^1.40.1",
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-mcp": "workspace:*",
     "@renown/sdk": "workspace:*",

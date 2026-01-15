@@ -268,7 +268,16 @@ export type Action = {
  * @typeParam A - The type of the action.
  */
 export type Operation = {
-  /** Unique operation id. */
+  /**
+   * This is a stable id, derived from various document and action properties
+   * in deriveOperationId().
+   *
+   * It _cannot_ be an arbitrary string.
+   *
+   * It it also not unique per operation, as reshuffled operations will keep'
+   * the same id they had before they were reshuffled. This means that the
+   * IOperationStore may have multiple operations with the same operation id.
+   **/
   id: string;
 
   /** Position of the operation in the history. This is relative to a specific reactor -- they may not all agree on this value. */

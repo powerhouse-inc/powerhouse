@@ -47,9 +47,13 @@ import { PGlite } from "@electric-sql/pglite";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import type { IEventBus } from "../events/interfaces.js";
+import { ProcessorManager } from "../processors/processor-manager.js";
 import type { SignatureVerificationHandler } from "../signer/types.js";
 import { ConsistencyAwareLegacyStorage } from "../storage/consistency-aware-legacy-storage.js";
-import { runMigrations } from "../storage/migrations/migrator.js";
+import {
+  REACTOR_SCHEMA,
+  runMigrations,
+} from "../storage/migrations/migrator.js";
 import type { MigrationStrategy } from "../storage/migrations/types.js";
 import { DefaultSubscriptionErrorHandler } from "../subs/default-error-handler.js";
 import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
@@ -57,7 +61,7 @@ import { SubscriptionNotificationReadModel } from "../subs/subscription-notifica
 
 export class ReactorBuilder {
   private logger?: ILogger;
-  private documentModels: DocumentModelModule[] = [];
+  private documentModels: DocumentModelModule<any>[] = [];
   private upgradeManifests: UpgradeManifest<readonly number[]>[] = [];
   private storage?: IDocumentStorage & IDocumentOperationStorage;
   private features: ReactorFeatures = { legacyStorageEnabled: true };
@@ -77,7 +81,7 @@ export class ReactorBuilder {
     return this;
   }
 
-  withDocumentModels(models: DocumentModelModule[]): this {
+  withDocumentModels(models: DocumentModelModule<any>[]): this {
     this.documentModels = models;
     return this;
   }
@@ -175,18 +179,20 @@ export class ReactorBuilder {
     const driveServer = builder.build() as unknown as BaseDocumentDriveServer;
     await driveServer.initialize();
 
-    const database =
+    const baseDatabase =
       this.kyselyInstance ??
       new Kysely<Database>({
         dialect: new PGliteDialect(new PGlite()),
       });
 
     if (this.migrationStrategy === "auto") {
-      const result = await runMigrations(database);
+      const result = await runMigrations(baseDatabase, REACTOR_SCHEMA);
       if (!result.success && result.error) {
         throw new Error(`Database migration failed: ${result.error.message}`);
       }
     }
+
+    const database = baseDatabase.withSchema(REACTOR_SCHEMA);
 
     const operationStore = new KyselyOperationStore(
       database as unknown as Kysely<StorageDatabase>,
@@ -300,10 +306,26 @@ export class ReactorBuilder {
     const subscriptionNotificationReadModel =
       new SubscriptionNotificationReadModel(subscriptionManager, documentView);
 
+    const processorManagerConsistencyTracker = new ConsistencyTracker();
+    const processorManager = new ProcessorManager(
+      // @ts-expect-error - Database type is a superset that includes all required tables
+      database,
+      operationIndex,
+      writeCache,
+      processorManagerConsistencyTracker,
+    );
+
+    try {
+      await processorManager.init();
+    } catch (error) {
+      console.error("Error initializing processor manager", error);
+    }
+
     const readModelCoordinator = this.readModelCoordinator
       ? this.readModelCoordinator
       : new ReadModelCoordinator(eventBus, readModelInstances, [
           subscriptionNotificationReadModel,
+          processorManager,
         ]);
 
     const reactor = new Reactor(
@@ -350,6 +372,8 @@ export class ReactorBuilder {
       documentIndexerConsistencyTracker,
       readModelCoordinator,
       subscriptionManager,
+      processorManager,
+      processorManagerConsistencyTracker,
       syncModule,
       reactor,
     };

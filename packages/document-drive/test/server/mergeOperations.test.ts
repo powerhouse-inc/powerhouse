@@ -40,7 +40,12 @@ describe("mergeOperations", () => {
       },
       [
         {
-          id: deriveOperationId(TEST_DOC_ID, TEST_SCOPE, TEST_BRANCH, action2.id),
+          id: deriveOperationId(
+            TEST_DOC_ID,
+            TEST_SCOPE,
+            TEST_BRANCH,
+            action2.id,
+          ),
           action: action2,
           index: 1,
           timestampUtcMs: "2024-05-03T20:26:52.239Z",
@@ -49,7 +54,12 @@ describe("mergeOperations", () => {
           error: undefined,
         },
         {
-          id: deriveOperationId(TEST_DOC_ID, TEST_SCOPE, TEST_BRANCH, action3.id),
+          id: deriveOperationId(
+            TEST_DOC_ID,
+            TEST_SCOPE,
+            TEST_BRANCH,
+            action3.id,
+          ),
           action: action3,
           index: 2,
           timestampUtcMs: "2024-05-03T20:26:52.239Z",
@@ -105,7 +115,12 @@ describe("mergeOperations", () => {
           {
             global: [
               {
-                id: deriveOperationId(TEST_DOC_ID, TEST_SCOPE, TEST_BRANCH, action4.id),
+                id: deriveOperationId(
+                  TEST_DOC_ID,
+                  TEST_SCOPE,
+                  TEST_BRANCH,
+                  action4.id,
+                ),
                 action: action4,
                 index: 0,
                 timestampUtcMs: "2024-05-03T20:26:52.236Z",
@@ -114,7 +129,12 @@ describe("mergeOperations", () => {
                 error: undefined,
               },
               {
-                id: deriveOperationId(TEST_DOC_ID, TEST_SCOPE, TEST_BRANCH, action5.id),
+                id: deriveOperationId(
+                  TEST_DOC_ID,
+                  TEST_SCOPE,
+                  TEST_BRANCH,
+                  action5.id,
+                ),
                 action: action5,
                 index: 1,
                 timestampUtcMs: "2024-05-03T20:26:52.239Z",
@@ -127,7 +147,12 @@ describe("mergeOperations", () => {
           },
           [
             {
-              id: deriveOperationId(TEST_DOC_ID, TEST_SCOPE, TEST_BRANCH, action6.id),
+              id: deriveOperationId(
+                TEST_DOC_ID,
+                TEST_SCOPE,
+                TEST_BRANCH,
+                action6.id,
+              ),
               action: action6,
               index: 0,
               timestampUtcMs: "2024-05-03T20:26:52.239Z",

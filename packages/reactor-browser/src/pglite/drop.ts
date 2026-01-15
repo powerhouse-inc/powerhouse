@@ -1,10 +1,14 @@
 import type { PGlite } from "@electric-sql/pglite";
+import { REACTOR_SCHEMA } from "@powerhousedao/reactor";
 
-export async function dropAllTables(pg: PGlite): Promise<void> {
+export async function dropAllTables(
+  pg: PGlite,
+  schema: string = REACTOR_SCHEMA,
+): Promise<void> {
   await pg.exec(`
 DO $$
 DECLARE
-    _schemaname text := 'public';
+    _schemaname text := '${schema}';
     _tablename text;
 BEGIN
     FOR _tablename IN SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = _schemaname LOOP

@@ -48,6 +48,7 @@ import type {
 import type { IReactorSubscriptionManager } from "../subs/types.js";
 import type { IChannelFactory, ISyncManager } from "../sync/interfaces.js";
 import type { ReactorClient } from "../client/reactor-client.js";
+import type { IProcessorManager } from "../processors/types.js";
 
 /**
  * A single mutation job within a batch request.
@@ -375,6 +376,8 @@ export interface ReactorModule {
   documentIndexerConsistencyTracker: IConsistencyTracker;
   readModelCoordinator: IReadModelCoordinator;
   subscriptionManager: ReactorSubscriptionManager;
+  processorManager: IProcessorManager;
+  processorManagerConsistencyTracker: IConsistencyTracker;
   syncModule: SyncModule | undefined;
   reactor: IReactor;
 }

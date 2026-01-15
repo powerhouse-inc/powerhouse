@@ -5,7 +5,7 @@ import type {
   IDocumentStorage,
 } from "document-drive";
 import { MemoryStorage, driveDocumentModelModule } from "document-drive";
-import { deriveOperationId } from "document-model/core";
+import { deriveOperationId, generateId } from "document-model/core";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IDocumentMetaCache } from "../../src/cache/document-meta-cache-types.js";
@@ -43,7 +43,7 @@ describe("SimpleJobExecutor Integration", () => {
   async function createDocumentWithCreateOperation(
     document: DocumentDriveDocument,
   ): Promise<void> {
-    const createActionId = `${document.header.id}-create`;
+    const createActionId = generateId();
     const createOperation = {
       id: deriveOperationId(
         document.header.id,
@@ -67,7 +67,7 @@ describe("SimpleJobExecutor Integration", () => {
       },
     };
 
-    const upgradeActionId = `${document.header.id}-upgrade`;
+    const upgradeActionId = generateId();
     const upgradeOperation = {
       id: deriveOperationId(
         document.header.id,

@@ -1,5 +1,5 @@
 import { driveDocumentModelModule } from "document-drive";
-import type { PHDocument } from "document-model";
+import { deriveOperationId, generateId, type PHDocument } from "document-model";
 import { afterEach, bench, describe } from "vitest";
 import { KyselyWriteCache } from "../src/cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../src/cache/write-cache-types.js";
@@ -27,6 +27,9 @@ async function createDocumentInStore(
 ): Promise<void> {
   const initialState = driveDocumentModelModule.utils.createState();
 
+  const createActionId = generateId();
+  const upgradeActionId = generateId();
+
   await store.apply(
     documentId,
     DOCUMENT_TYPE,
@@ -35,13 +38,13 @@ async function createDocumentInStore(
     0,
     (txn: any) => {
       txn.addOperations({
-        id: `${documentId}-op-doc-0`,
+        id: deriveOperationId(documentId, "document", BRANCH, createActionId),
         index: 0,
         skip: 0,
         hash: `${documentId}-hash-doc-0`,
         timestampUtcMs: new Date().toISOString(),
         action: {
-          id: `${documentId}-create`,
+          id: createActionId,
           type: "CREATE_DOCUMENT",
           scope: "document",
           timestampUtcMs: Date.now().toString(),
@@ -54,13 +57,13 @@ async function createDocumentInStore(
       });
 
       txn.addOperations({
-        id: `${documentId}-op-doc-1`,
+        id: deriveOperationId(documentId, "document", BRANCH, upgradeActionId),
         index: 1,
         skip: 0,
         hash: `${documentId}-hash-doc-1`,
         timestampUtcMs: new Date().toISOString(),
         action: {
-          id: `${documentId}-upgrade`,
+          id: upgradeActionId,
           type: "UPGRADE_DOCUMENT",
           scope: "document",
           timestampUtcMs: Date.now().toString(),

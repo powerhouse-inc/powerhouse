@@ -1,3 +1,41 @@
+## 5.2.0-dev.1 (2026-01-15)
+
+### 🚀 Features
+
+- **monorepo:** upgrade zod and use compatibility layer for errors ([#2210](https://github.com/powerhouse-inc/powerhouse/pull/2210))
+- **monorepo:** use local package execution for tailwind instead of downloading it every time ([ed149558c](https://github.com/powerhouse-inc/powerhouse/commit/ed149558c))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
+## 5.1.0-dev.42 (2026-01-14)
+
+This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
+
+## 5.1.0-dev.41 (2026-01-13)
+
+This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
+
+## 5.1.0-dev.40 (2026-01-10)
+
+### 🚀 Features
+
+- **builder-tools:** improved validation on doc model editor and unit tests ([336f5d575](https://github.com/powerhouse-inc/powerhouse/commit/336f5d575))
+- **builder-tools:** display error for missing optional fields on Initial State ([9192ee889](https://github.com/powerhouse-inc/powerhouse/commit/9192ee889))
+- **builder-tools:** improved doc model editor to sync initial state with schema by default or display error messages otherwise ([57370caec](https://github.com/powerhouse-inc/powerhouse/commit/57370caec))
+- **codegen:** add validation to package json test ([03d06ef57](https://github.com/powerhouse-inc/powerhouse/commit/03d06ef57))
+
+### 🩹 Fixes
+
+- **builder-tools:** avoid duplicated SET_INITIAL_STATE and fix connect e2e ([863bc339d](https://github.com/powerhouse-inc/powerhouse/commit/863bc339d))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- ryanwolhuter @ryanwolhuter
+
 ## 5.1.0-dev.39 (2026-01-09)
 
 This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.

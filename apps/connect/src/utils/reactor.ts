@@ -94,7 +94,7 @@ export function createBrowserStorage(
 }
 
 export function createBrowserDocumentDriveServer(
-  documentModels: DocumentModelModule[],
+  documentModels: DocumentModelModule<any>[],
   storage: IDriveOperationStorage,
   options: DocumentDriveServerOptions,
 ): IDocumentDriveServer {

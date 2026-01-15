@@ -1,9 +1,9 @@
 import { packageJsonTemplate } from "@powerhousedao/codegen/templates";
-import { makeVersionedDependencies } from "../utils.js";
 import {
+  makeVersionedDependencies,
   VERSIONED_DEPENDENCIES,
   VERSIONED_DEV_DEPENDENCIES,
-} from "./constants.js";
+} from "@powerhousedao/codegen/utils";
 
 export async function buildBoilerplatePackageJson(args: {
   name: string;
