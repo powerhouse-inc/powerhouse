@@ -56,7 +56,7 @@
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
-    "@powerhousedao/document-engineering": "^1.30.0",
+    "@powerhousedao/document-engineering": "^1.40.1",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@tmpl/core": "npm:@jsr/tmpl__core@^0.6.3",
     "@types/node": "^24.6.1",
