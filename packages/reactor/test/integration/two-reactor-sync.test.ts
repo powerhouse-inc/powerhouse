@@ -1,5 +1,8 @@
 import { driveDocumentModelModule } from "document-drive";
-import { garbageCollectDocumentOperations } from "document-model/core";
+import {
+  garbageCollectDocumentOperations,
+  generateId,
+} from "document-model/core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { IReactor, ReactorModule } from "../../src/core/types.js";
@@ -817,4 +820,135 @@ describe("Two-Reactor Sync", () => {
     const docFromB = await reactorB.get(doc.header.id, { branch: "main" });
     expect(docFromA.document.state).toEqual(docFromB.document.state);
   });
+
+  it.skip("should converge when reshuffle occurs due to NOOP and reapplied operations", async () => {
+    // KNOWN LIMITATION: This test is skipped because the v2 undo protocol has
+    // a fundamental limitation when combined with reshuffle.
+    //
+    // The NOOP's skip value is index-based (e.g., skip=1 means "undo the operation
+    // at index NOOP.index - 1"). When a reshuffle occurs due to concurrent operations,
+    // the indices change, causing the NOOP to undo different operations on different
+    // reactors.
+    //
+    // For example:
+    // - A: [SET_DRIVE_NAME@0, NOOP@1(skip=1), ADD_FOLDER@2] -> NOOP undoes SET_DRIVE_NAME
+    // - B: [SET_DRIVE_NAME@0, ADD_FOLDER@1, NOOP@2(skip=1), ADD_FOLDER@3] -> NOOP undoes ADD_FOLDER@1
+    //
+    // A proper fix would require the NOOP to specify which action ID to undo,
+    // rather than a relative index. This is a protocol-level change that needs
+    // careful design.
+
+    // 1. ReactorA creates document and syncs to B
+    const doc = driveDocumentModelModule.utils.createDocument();
+    const readyOnB = waitForOperationsReady(eventBusB, doc.header.id);
+    const createJob = await reactorA.create(doc);
+    await waitForJobCompletion(reactorA, createJob.id);
+    await readyOnB;
+
+    // 2. ReactorA performs an operation that we can UNDO later
+    const setNameReadyOnB = waitForOperationsReady(eventBusB, doc.header.id);
+    const setNameJob = await reactorA.execute(doc.header.id, "main", [
+      driveDocumentModelModule.actions.setDriveName({ name: "Initial Name" }),
+    ]);
+    await waitForJobCompletion(reactorA, setNameJob.id);
+    await setNameReadyOnB;
+
+    // Now both reactors have: [0: SET_DRIVE_NAME]
+
+    // 3. Fire concurrent operations from both reactors at the same time
+    // A does UNDO (creates NOOP) while B does ADD_FOLDER
+    // The timestamps will overlap, triggering reshuffle on one or both reactors
+    const readyOnA = waitForMultipleOperationsReady(eventBusA, 2);
+    const readyOnB2 = waitForMultipleOperationsReady(eventBusB, 2);
+
+    // Fire both at nearly the same time (don't await)
+    void reactorA.execute(doc.header.id, "main", [
+      {
+        id: generateId(),
+        type: "UNDO",
+        scope: "global",
+        timestampUtcMs: new Date().toISOString(),
+        input: {},
+      },
+    ]);
+
+    void reactorB.execute(doc.header.id, "main", [
+      driveDocumentModelModule.actions.addFolder({
+        id: "folder-from-b",
+        name: "Folder from B",
+        parentFolder: null,
+      }),
+    ]);
+
+    // Wait for both to sync
+    await Promise.all([readyOnA, readyOnB2]);
+
+    // Give extra time for any sync to stabilize
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    // 4. Verify that both reactors have converged
+    const resultA = await reactorA.getOperations(doc.header.id, {
+      branch: "main",
+    });
+    const opsA = Object.values(resultA).flatMap((scope) => scope.results);
+
+    const resultB = await reactorB.getOperations(doc.header.id, {
+      branch: "main",
+    });
+    const opsB = Object.values(resultB).flatMap((scope) => scope.results);
+
+    // Log operations for debugging
+    console.log(
+      "ReactorA operations:",
+      opsA.map((op) => ({
+        index: op.index,
+        type: op.action.type,
+        skip: op.skip,
+      })),
+    );
+    console.log(
+      "ReactorB operations:",
+      opsB.map((op) => ({
+        index: op.index,
+        type: op.action.type,
+        skip: op.skip,
+      })),
+    );
+
+    // After garbage collection, effective operations should match
+    const garbageCollectedOpsA = garbageCollectDocumentOperations({
+      global: opsA,
+    }).global;
+    const garbageCollectedOpsB = garbageCollectDocumentOperations({
+      global: opsB,
+    }).global;
+
+    console.log(
+      "ReactorA effective ops:",
+      garbageCollectedOpsA.map((op) => ({
+        index: op.index,
+        type: op.action.type,
+      })),
+    );
+    console.log(
+      "ReactorB effective ops:",
+      garbageCollectedOpsB.map((op) => ({
+        index: op.index,
+        type: op.action.type,
+      })),
+    );
+
+    // The effective operation count should be the same
+    expect(garbageCollectedOpsA.length).toBe(garbageCollectedOpsB.length);
+
+    // The effective action IDs should be the same (same operations applied)
+    expect(garbageCollectedOpsA.map((op) => op.action.id).sort()).toEqual(
+      garbageCollectedOpsB.map((op) => op.action.id).sort(),
+    );
+
+    // Most importantly: the document state should be identical
+    const docFromA = await reactorA.get(doc.header.id, { branch: "main" });
+    const docFromB = await reactorB.get(doc.header.id, { branch: "main" });
+    expect(docFromA.document.state).toEqual(docFromB.document.state);
+  }, 30000);
 });
