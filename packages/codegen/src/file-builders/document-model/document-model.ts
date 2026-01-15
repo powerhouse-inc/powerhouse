@@ -31,6 +31,7 @@ import {
   makeUpgradeFile,
   makeUpgradesIndexFile,
 } from "./upgrades-dir.js";
+import { makeUpgradeManifestsExport } from "../module-files.js";
 
 /** Generates a document model from the given `documentModelState`
  *
@@ -154,6 +155,21 @@ export async function tsMorphGenerateDocumentModel({
     });
 
     makeUpgradesIndexFile({ project, upgradesDirPath, specVersions });
+
+    // Generate upgradeManifests export in document-models.ts
+    // This needs to run after upgrade-manifest.ts files are created
+    const documentModelsOutputFilePath = path.join(
+      documentModelsDirPath,
+      "document-models.ts",
+    );
+    makeUpgradeManifestsExport({
+      project,
+      modulesDirPath: documentModelsDirPath,
+      outputFilePath: documentModelsOutputFilePath,
+      variableName: "upgradeManifests",
+      variableType: "UpgradeManifest<readonly number[]>[]",
+      typeName: "UpgradeManifest",
+    });
   } else {
     await generateDocumentModelForSpec({
       project,

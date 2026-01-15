@@ -40,6 +40,7 @@ export function convertLegacyLibToVetraPackage(
         ),
       ),
     },
+    upgradeManifests: legacyLib.upgradeManifests,
   };
   return vetraPackage;
 }
@@ -66,6 +67,7 @@ export function convertLegacyDocumentModelModuleToVetraDocumentModelModule(
     reducer,
     actions,
     utils,
+    version: legacyDocumentModelModule.version,
   };
   return vetraDocumentModelModule;
 }

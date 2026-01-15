@@ -361,10 +361,9 @@ export async function createEmptyDocument(
 
   let result: PHDocument;
   try {
-    result = await reactorClient.createEmpty(
-      args.documentType,
+    result = await reactorClient.createEmpty(args.documentType, {
       parentIdentifier,
-    );
+    });
   } catch (error) {
     throw new GraphQLError(
       `Failed to create empty document: ${error instanceof Error ? error.message : "Unknown error"}`,

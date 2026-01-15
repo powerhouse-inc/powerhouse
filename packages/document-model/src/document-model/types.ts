@@ -18,6 +18,7 @@ import type {
   SaveToFileHandle,
   Scalars,
   SubgraphModule,
+  UpgradeManifest,
 } from "document-model";
 
 export type DocumentModelModule<TState extends PHBaseState = PHBaseState> = {
@@ -45,6 +46,7 @@ export type DocumentModelLib<TState extends PHBaseState = PHBaseState> = {
   editors: EditorModule[];
   subgraphs: SubgraphModule[];
   importScripts: ImportScriptModule[];
+  upgradeManifests: UpgradeManifest<readonly number[]>[];
 };
 export type DocumentModelDocument = PHDocument<DocumentModelPHState>;
 export type DocumentModelDocumentModelModule =

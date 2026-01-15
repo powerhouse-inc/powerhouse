@@ -26,15 +26,16 @@ export function CreateDocument() {
       <div className="flex w-full flex-wrap gap-4">
         {nonDriveDocumentModelModules?.map((doc) => {
           const spec = getDocumentSpec(doc);
+          const versionLabel = doc.version ? ` v${doc.version}` : "";
           return (
             <PowerhouseButton
-              key={spec.id}
+              key={`${spec.id}-v${doc.version ?? 1}`}
               color="light"
-              title={spec.name}
+              title={`${spec.name}${versionLabel}`}
               aria-description={spec.description}
               onClick={() => showCreateDocumentModal(spec.id)}
             >
-              <span className="text-sm">{spec.name}</span>
+              <span className="text-sm">{spec.name}{versionLabel}</span>
             </PowerhouseButton>
           );
         })}

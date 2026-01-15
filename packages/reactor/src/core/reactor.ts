@@ -632,7 +632,7 @@ export class Reactor implements IReactor {
       documentId: document.header.id,
       model: document.header.documentType,
       fromVersion: 0,
-      toVersion: 1,
+      toVersion: document.state.document.version,
       initialState: document.state,
     });
 
