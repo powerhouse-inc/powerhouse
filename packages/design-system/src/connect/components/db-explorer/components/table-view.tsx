@@ -56,6 +56,8 @@ export type TableViewProps = {
   readonly loading?: boolean;
   readonly filters?: FilterGroup;
   readonly onFiltersChange?: (filters: FilterGroup | undefined) => void;
+  /** Callback to get all rows as CSV. If provided, "Copy All" copies all pages. */
+  readonly onCopyAll?: () => Promise<string>;
 };
 
 function formatCellValue(value: unknown): string {
@@ -84,7 +86,7 @@ function rowToCsv(row: Record<string, unknown>, columns: ColumnInfo[]): string {
     .join(",");
 }
 
-function rowsToCsv(
+export function rowsToCsv(
   rows: Record<string, unknown>[],
   columns: ColumnInfo[],
 ): string {
@@ -133,6 +135,7 @@ export function TableView({
   loading = false,
   filters,
   onFiltersChange,
+  onCopyAll,
 }: TableViewProps) {
   const { offset, limit, total } = pagination;
 
@@ -186,7 +189,8 @@ export function TableView({
     if (rows.length === 0) return;
     setCopying(true);
     try {
-      const csv = rowsToCsv(rows, columns);
+      // If onCopyAll is provided, use it to get all rows; otherwise copy visible rows
+      const csv = onCopyAll ? await onCopyAll() : rowsToCsv(rows, columns);
       await copyToClipboard(csv);
       setTimeout(() => setCopying(false), 1000);
     } catch (err) {
