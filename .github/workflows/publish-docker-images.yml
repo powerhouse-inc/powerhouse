@@ -4,15 +4,16 @@ on:
   workflow_call:
   workflow_dispatch:
 
+permissions:
+  contents: write
+  packages: write
+
 env:
   REGISTRY: ghcr.io
 
 jobs:
   connect:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -56,9 +57,6 @@ jobs:
 
   switchboard:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -101,9 +99,6 @@ jobs:
             TAG=${{env.GITHUB_TAG}}
   academy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
     outputs:
       tag: ${{ steps.get-tag.outputs.tag }}
     steps:
