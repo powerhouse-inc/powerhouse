@@ -7,7 +7,7 @@ import {
   useImperativeHandle,
   useRef,
 } from "react";
-import type { FieldValues } from "react-hook-form";
+import type { FieldValues, Resolver } from "react-hook-form";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { createNameSchema } from "../schemas/inputs.js";
@@ -75,7 +75,9 @@ export const TextField = forwardRef<TextFieldHandle, TextFieldProps>(
     });
 
     const form = useForm({
-      resolver: zodResolver(fieldSchema),
+      resolver: zodResolver(
+        fieldSchema as unknown as Parameters<typeof zodResolver>[0],
+      ) as Resolver<FieldValues>,
       defaultValues: {
         [name]: value ?? "",
       },
