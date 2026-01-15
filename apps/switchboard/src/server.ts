@@ -47,6 +47,16 @@ const logger = childLogger(["switchboard"]);
 
 dotenv.config();
 
+// Feature flag constants
+const DOCUMENT_MODEL_SUBGRAPHS_ENABLED = "DOCUMENT_MODEL_SUBGRAPHS_ENABLED";
+const DOCUMENT_MODEL_SUBGRAPHS_ENABLED_DEFAULT = true;
+
+const REACTOR_STORAGE_V2 = "REACTOR_STORAGE_V2";
+const REACTOR_STORAGE_V2_DEFAULT = true;
+
+const ENABLE_DUAL_ACTION_CREATE = "ENABLE_DUAL_ACTION_CREATE";
+const ENABLE_DUAL_ACTION_CREATE_DEFAULT = true;
+
 // Create a monolith express app for all subgraphs
 const app = express();
 
@@ -326,20 +336,20 @@ export const startSwitchboard = async (
   const featureFlags = await initFeatureFlags();
 
   const enableDocumentModelSubgraphs = await featureFlags.getBooleanValue(
-    "DOCUMENT_MODEL_SUBGRAPHS_ENABLED",
-    options.enableDocumentModelSubgraphs ?? true,
+    DOCUMENT_MODEL_SUBGRAPHS_ENABLED,
+    options.enableDocumentModelSubgraphs ?? DOCUMENT_MODEL_SUBGRAPHS_ENABLED_DEFAULT,
   );
 
   options.enableDocumentModelSubgraphs = enableDocumentModelSubgraphs;
 
   const storageV2 = await featureFlags.getBooleanValue(
-    "REACTOR_STORAGE_V2",
-    options.reactorOptions?.storageV2 ?? false,
+    REACTOR_STORAGE_V2,
+    options.reactorOptions?.storageV2 ?? REACTOR_STORAGE_V2_DEFAULT,
   );
 
   const enableDualActionCreate = await featureFlags.getBooleanValue(
-    "ENABLE_DUAL_ACTION_CREATE",
-    options.reactorOptions?.enableDualActionCreate ?? true,
+    ENABLE_DUAL_ACTION_CREATE,
+    options.reactorOptions?.enableDualActionCreate ?? ENABLE_DUAL_ACTION_CREATE_DEFAULT,
   );
 
   options.reactorOptions = {
