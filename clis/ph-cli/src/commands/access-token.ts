@@ -1,16 +1,164 @@
-import type { Command } from "commander";
-import { accessTokenHelp } from "../help.js";
-import type { CommandActionType } from "../types.js";
-import { setCustomHelp } from "../utils.js";
-
-export type AccessTokenOptions = {
-  expiry?: string;
-  audience?: string;
-};
-
+import { command, option, optional, string } from "cmd-ts";
+import {
+  getConnectCrypto,
+  getConnectDid,
+  isAuthenticated,
+  loadCredentials,
+} from "../services/auth.js";
+import { debugArgs } from "./common-args.js";
 const SECONDS_IN_DAY = 24 * 60 * 60;
 const DEFAULT_EXPIRY_DAYS = 7;
 const DEFAULT_EXPIRY_SECONDS = DEFAULT_EXPIRY_DAYS * SECONDS_IN_DAY;
+
+export const accessTokenArgs = {
+  expiry: option({
+    long: "expiry",
+    type: optional(string),
+    description: `Token expiry duration. Supports: "7d" (days), "24h" (hours), "3600" or "3600s" (seconds)`,
+    defaultValue: () => `${DEFAULT_EXPIRY_DAYS}d` as const,
+    defaultValueIsSerializable: true,
+  }),
+  audience: option({
+    long: "audience",
+    type: optional(string),
+    description: "Target audience URL for the token",
+  }),
+  ...debugArgs,
+};
+export const accessToken = command({
+  name: "access-token",
+  description: `
+The access-token command generates a bearer token for API authentication. This token
+can be used to authenticate requests to Powerhouse APIs like reactor-api (Switchboard).
+
+This command:
+1. Uses your CLI's cryptographic identity (DID) to sign a verifiable credential
+2. Creates a JWT bearer token with configurable expiration
+3. Outputs the token to stdout (info to stderr) for easy piping
+
+Prerequisites:
+  You must have a cryptographic identity. Run 'ph login' first to:
+  - Generate a keypair (stored in .keypair.json)
+  - Optionally link your Ethereum address (stored in .auth.json)
+
+Token Details:
+  The generated token is a JWT (JSON Web Token) containing:
+  - Issuer (iss): Your CLI's DID (did:key:...)
+  - Subject (sub): Your CLI's DID
+  - Credential Subject: Chain ID, network ID, and address (if authenticated)
+  - Expiration (exp): Based on --expiry option
+  - Audience (aud): If --audience is specified
+
+Output:
+- Token information (DID, address, expiry) is printed to stderr
+- The token itself is printed to stdout for easy piping/copying
+
+This allows you to use the command in scripts:
+  TOKEN=$(ph access-token)
+  curl -H "Authorization: Bearer $TOKEN" http://localhost:4001/graphql
+
+Usage with APIs:
+  # Generate token and use with curl
+  TOKEN=$(ph access-token --expiry 1d)
+  curl -X POST http://localhost:4001/graphql \\
+    -H "Content-Type: application/json" \\
+    -H "Authorization: Bearer $TOKEN" \\
+    -d '{"query": "{ drives { id name } }"}'
+
+  # Export as environment variable
+  export PH_ACCESS_TOKEN=$(ph access-token)
+
+Notes:
+  - Tokens are self-signed using your CLI's private key
+  - No network request is made; tokens are generated locally
+  - The recipient API must trust your CLI's DID to accept the token
+  - For reactor-api, ensure AUTH_ENABLED=true to require authentication
+`,
+  args: accessTokenArgs,
+  handler: async (args) => {
+    if (args.debug) {
+      console.log(args);
+    }
+    // Require Renown authentication - user must have done 'ph login'
+    if (!isAuthenticated()) {
+      console.error(
+        "Not authenticated. Run 'ph login' first to authenticate with Renown.",
+      );
+      console.error(
+        "A Renown credential is required to generate valid bearer tokens.",
+      );
+      process.exit(1);
+    }
+
+    const creds = loadCredentials();
+    if (!creds) {
+      console.error("Failed to load credentials.");
+      process.exit(1);
+    }
+
+    // Get the CLI's DID
+    let did: string;
+    try {
+      did = await getConnectDid();
+    } catch (e) {
+      console.error(
+        "Failed to get CLI identity. Run 'ph login' to reinitialize.",
+      );
+      process.exit(1);
+    }
+
+    const address = creds.address;
+
+    // Parse expiry
+    let expiresIn = DEFAULT_EXPIRY_SECONDS;
+    if (args.expiry) {
+      try {
+        expiresIn = parseExpiry(args.expiry);
+      } catch (e) {
+        console.error((e as Error).message);
+        process.exit(1);
+      }
+    }
+
+    // Generate the bearer token
+    const crypto = await getConnectCrypto();
+    const token = await crypto.getBearerToken(
+      args.audience ?? "",
+      address,
+      true, // Force refresh to ensure we get a new token with the specified expiry
+      {
+        expiresIn,
+        aud: args.audience,
+      },
+    );
+
+    // Calculate human-readable expiry
+    const expiryDays = Math.floor(expiresIn / SECONDS_IN_DAY);
+    const expiryHours = Math.floor((expiresIn % SECONDS_IN_DAY) / 3600);
+    let expiryStr: string;
+    if (expiryDays > 0) {
+      expiryStr =
+        expiryHours > 0
+          ? `${expiryDays} day${expiryDays > 1 ? "s" : ""} and ${expiryHours} hour${expiryHours > 1 ? "s" : ""}`
+          : `${expiryDays} day${expiryDays > 1 ? "s" : ""}`;
+    } else if (expiryHours > 0) {
+      expiryStr = `${expiryHours} hour${expiryHours > 1 ? "s" : ""}`;
+    } else {
+      expiryStr = `${expiresIn} seconds`;
+    }
+
+    // Output token info to stderr, token itself to stdout for piping
+    console.error(`CLI DID: ${did}`);
+    console.error(`ETH Address: ${address}`);
+    console.error(`Token expires in: ${expiryStr}`);
+    console.error("");
+
+    // Output just the token to stdout (for easy piping/copying)
+    console.log(token);
+
+    return args;
+  },
+});
 
 /**
  * Parse expiry string to seconds
@@ -52,102 +200,4 @@ function parseExpiry(expiry: string): number {
   }
 
   return seconds;
-}
-
-export const accessToken: CommandActionType<[AccessTokenOptions]> = async (
-  options,
-) => {
-  const { getConnectCrypto, getConnectDid, isAuthenticated, loadCredentials } =
-    await import("../services/auth.js");
-
-  // Require Renown authentication - user must have done 'ph login'
-  if (!isAuthenticated()) {
-    console.error(
-      "Not authenticated. Run 'ph login' first to authenticate with Renown.",
-    );
-    console.error(
-      "A Renown credential is required to generate valid bearer tokens.",
-    );
-    process.exit(1);
-  }
-
-  const creds = loadCredentials();
-  if (!creds) {
-    console.error("Failed to load credentials.");
-    process.exit(1);
-  }
-
-  // Get the CLI's DID
-  let did: string;
-  try {
-    did = await getConnectDid();
-  } catch (e) {
-    console.error(
-      "Failed to get CLI identity. Run 'ph login' to reinitialize.",
-    );
-    process.exit(1);
-  }
-
-  const address = creds.address;
-
-  // Parse expiry
-  let expiresIn = DEFAULT_EXPIRY_SECONDS;
-  if (options.expiry) {
-    try {
-      expiresIn = parseExpiry(options.expiry);
-    } catch (e) {
-      console.error((e as Error).message);
-      process.exit(1);
-    }
-  }
-
-  // Generate the bearer token
-  const crypto = await getConnectCrypto();
-  const token = await crypto.getBearerToken(
-    options.audience ?? "",
-    address,
-    true, // Force refresh to ensure we get a new token with the specified expiry
-    {
-      expiresIn,
-      aud: options.audience,
-    },
-  );
-
-  // Calculate human-readable expiry
-  const expiryDays = Math.floor(expiresIn / SECONDS_IN_DAY);
-  const expiryHours = Math.floor((expiresIn % SECONDS_IN_DAY) / 3600);
-  let expiryStr: string;
-  if (expiryDays > 0) {
-    expiryStr =
-      expiryHours > 0
-        ? `${expiryDays} day${expiryDays > 1 ? "s" : ""} and ${expiryHours} hour${expiryHours > 1 ? "s" : ""}`
-        : `${expiryDays} day${expiryDays > 1 ? "s" : ""}`;
-  } else if (expiryHours > 0) {
-    expiryStr = `${expiryHours} hour${expiryHours > 1 ? "s" : ""}`;
-  } else {
-    expiryStr = `${expiresIn} seconds`;
-  }
-
-  // Output token info to stderr, token itself to stdout for piping
-  console.error(`CLI DID: ${did}`);
-  console.error(`ETH Address: ${address}`);
-  console.error(`Token expires in: ${expiryStr}`);
-  console.error("");
-
-  // Output just the token to stdout (for easy piping/copying)
-  console.log(token);
-};
-
-export function accessTokenCommand(program: Command): Command {
-  const cmd = program
-    .command("access-token")
-    .description("Generate a bearer token for API authentication")
-    .option(
-      "--expiry <duration>",
-      `Token expiry duration. Supports: "7d" (days), "24h" (hours), "3600" or "3600s" (seconds). Default: ${DEFAULT_EXPIRY_DAYS}d`,
-    )
-    .option("--audience <url>", "Target audience URL for the token (optional)")
-    .action(accessToken);
-
-  return setCustomHelp(cmd, accessTokenHelp);
 }

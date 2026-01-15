@@ -1,17 +1,17 @@
 import type { Command } from "commander";
-import { accessTokenCommand } from "./access-token.js";
-import { connectCommand } from "./connect.js";
-import { generateCommand } from "./generate.js";
-import { helpCommand } from "./help.js";
-import { inspectCommand } from "./inspect.js";
-import { installCommand } from "./install.js";
-import { listCommand } from "./list.js";
-import { loginCommand } from "./login.js";
-import { migrateCommand } from "./migrate.js";
-import { serviceCommand } from "./service.js";
-import { switchboardCommand } from "./switchboard.js";
-import { uninstallCommand } from "./uninstall.js";
-import { vetraCommand } from "./vetra.js";
+import { accessTokenCommand } from "./access-token.old.js";
+import { connectCommand } from "./connect.old.js";
+import { generateCommand } from "./generate.old.js";
+import { helpCommand } from "./help.old.js";
+import { inspectCommand } from "./inspect.old.js";
+import { installCommand } from "./install.old.js";
+import { listCommand } from "./list.old.js";
+import { loginCommand } from "./login.old.js";
+import { migrateCommand } from "./migrate.old.js";
+import { serviceCommand } from "./service.old.js";
+import { switchboardCommand } from "./switchboard.old.js";
+import { uninstallCommand } from "./uninstall.old.js";
+import { vetraCommand } from "./vetra.old.js";
 
 export const commands = [
   accessTokenCommand,

@@ -2,7 +2,7 @@ import type { IDocumentDriveServer } from "document-drive";
 import type { DocumentModelGlobalState } from "document-model";
 import { DocumentModelGlobalStateSchema } from "document-model";
 import { generateId } from "document-model/core";
-import { z } from "zod";
+import { z } from "zod/v3";
 import type { ToolSchema, ToolWithCallback } from "./types.js";
 import { toolWithCallback, validateDocumentModelAction } from "./utils.js";
 
@@ -188,7 +188,7 @@ export const getDriveTool = {
     options: z
       .object({
         revisions: z
-          .record(z.number())
+          .record(z.string(), z.number())
           .optional()
           .describe("Optional revision filter"),
         checkHashes: z.boolean().optional().describe("Whether to check hashes"),
@@ -262,7 +262,7 @@ export const addRemoteDriveTool = {
 } as const satisfies ToolSchema;
 
 type Properties<T> = Required<{
-  [K in keyof T]: z.ZodType<T[K], any, T[K]>;
+  [K in keyof T]: z.ZodType<T[K]>;
 }>;
 
 export const getDocumentModelSchemaTool = {

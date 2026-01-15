@@ -1,17 +1,25 @@
-import type { Command } from "commander";
-import type { CommandActionType } from "../types.js";
+import { boolean, command, flag, optional } from "cmd-ts";
+import { startMigrate } from "../services/migrate.js";
+import { debugArgs } from "./common-args.js";
 
-export const migrate: CommandActionType<
-  [string | string[] | undefined, { useHygen?: boolean }]
-> = async (_, options) => {
-  const { migrate: startMigrate } = await import("../services/migrate.js");
-  return await startMigrate(options);
+export const migrateDescription = "Run migrations";
+
+export const migrateArgs = {
+  useHygen: flag({
+    type: optional(boolean),
+    long: "use-hygen",
+  }),
+  ...debugArgs,
 };
 
-export function migrateCommand(program: Command) {
-  program
-    .command("migrate")
-    .description("Run migrations")
-    .option("--ts-morph", "Use new ts-morph codegen")
-    .action(migrate);
-}
+export const migrate = command({
+  name: "migrate",
+  args: migrateArgs,
+  handler: async (args) => {
+    if (args.debug) {
+      console.log(args);
+    }
+    await startMigrate(args);
+    return args;
+  },
+});

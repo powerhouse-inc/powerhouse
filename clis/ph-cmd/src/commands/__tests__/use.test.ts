@@ -241,7 +241,6 @@ describe("useCommand", () => {
     expect(updatedDependencies).not.toContain(
       "@powerhousedao/reactor-local@dev",
     );
-    expect(updatedDependencies).not.toContain("@powerhousedao/scalars@dev");
     expect(updatedDependencies).not.toContain("@powerhousedao/ph-cli@dev");
   });
 

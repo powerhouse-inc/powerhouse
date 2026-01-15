@@ -24,7 +24,7 @@ import { runCmd } from "../utils/run-cmd.js";
 export const useLocal = command({
   name: "use-local",
   description:
-    "Use your local `powerhouse` monorepo dependencies the current project. NOTE: The monorepo uses `pnpm`, so this only works with `pnpm`.",
+    "Use your local `powerhouse` monorepo dependencies the current project.",
   args: {
     monorepoPathPositional: positional({
       type: optional(string),

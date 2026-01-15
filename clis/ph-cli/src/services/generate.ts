@@ -10,131 +10,105 @@ import {
 } from "@powerhousedao/codegen";
 import { getConfig } from "@powerhousedao/config/node";
 import path from "path";
+import type { GenerateArgs } from "../types.js";
 
-export type GenerateOptions = {
-  interactive?: boolean;
-  editors?: string;
-  processors?: string;
-  documentModels?: string;
-  skipFormat?: boolean;
-  force?: boolean;
-  watch?: boolean;
-  specifiedPackageName?: string;
-  editor?: string;
-  editorId?: string;
-  editorDirName?: string;
-  processor?: string;
-  documentTypes?: string;
-  allowedDocumentTypes?: string;
-  isDragAndDropEnabled?: boolean;
-  processorType?: "analytics" | "relationalDb";
-  subgraph?: string;
-  importScript?: string;
-  file?: string;
-  driveEditor?: string;
-  driveEditorAppId?: string;
-  driveEditorDirName?: string;
-  migrationFile?: string;
-  schemaFile?: string;
-  useHygen?: boolean;
-  useVersioning?: boolean;
-};
-
-export async function startGenerate(
-  filePath: string | undefined,
-  options: GenerateOptions,
-) {
-  const baseConfig = getConfig();
-  const useVersioning = !!options.useVersioning;
-  const useTsMorph = useVersioning || !options.useHygen;
-  const config = {
-    ...baseConfig,
-    ...{
-      ...(options.editors && { editorsDir: options.editors }),
-      ...(options.processors && { processorsDir: options.processors }),
-      ...(options.documentModels && {
-        documentModelsDir: options.documentModels,
-      }),
-      ...(options.skipFormat && { skipFormat: options.skipFormat }),
-      ...(options.interactive && { interactive: options.interactive }),
-      ...(options.watch && { watch: options.watch }),
-      useTsMorph,
-      useVersioning,
-    },
-  };
-
-  const command = {
-    specifiedPackageName: options.specifiedPackageName,
-    editor: !!options.editor,
-    editorName: options.editor,
-    editorId: options.editorId,
-    editorDirName: options.editorDirName,
-    documentTypes: options.documentTypes,
-    allowedDocumentTypes: options.allowedDocumentTypes,
-    processor: !!options.processor,
-    processorName: options.processor,
-    processorType: options.processorType,
-    subgraph: !!options.subgraph,
-    subgraphName: options.subgraph,
-    importScript: !!options.importScript,
-    importScriptName: options.importScript,
-    driveEditor: !!options.driveEditor,
-    driveEditorName: options.driveEditor,
-    driveEditorAppId: options.driveEditorAppId,
-    driveEditorDirName: options.driveEditorDirName,
-    isDragAndDropEnabled: options.isDragAndDropEnabled,
-    migrationFile: options.migrationFile,
-    schemaFile: options.schemaFile,
-    useTsMorph,
+export async function startGenerate(options: GenerateArgs) {
+  const config = getConfig();
+  const { skipFormat } = config;
+  const {
+    documentModelFile,
+    editorName,
+    editorId,
+    documentType,
+    editorDirName,
+    driveEditorName,
+    driveEditorId,
+    driveEditorDirName,
+    allowedDocumentTypes,
+    disableDragAndDrop,
+    processorName,
+    processorType,
+    importScriptName,
+    migrationFile,
+    schemaFile,
+    verbose,
+    force,
     useVersioning,
-  };
+    useHygen,
+    subgraphName,
+  } = options;
 
-  if (command.driveEditor) {
-    if (!command.driveEditorName) {
-      throw new Error("Drive editor name is required (--drive-editor or -d)");
-    }
-    await generateDriveEditor({
-      config,
-      name: command.driveEditorName,
-      appId: command.driveEditorAppId,
-      allowedDocumentTypes: command.allowedDocumentTypes,
-      isDragAndDropEnabled: command.isDragAndDropEnabled,
-      driveEditorDirName: command.driveEditorDirName,
-      useTsMorph,
-    });
-  } else if (command.editor) {
-    if (!command.editorName) {
-      throw new Error("Editor name is required (--editor or -e)");
+  const useTsMorph = useVersioning || !useHygen;
+  const isDragAndDropEnabled = disableDragAndDrop !== true;
+  const specifiedPackageName = undefined;
+  const filePath = Array.isArray(documentModelFile)
+    ? documentModelFile.join(" ")
+    : documentModelFile;
+
+  if (editorName !== undefined) {
+    if (!documentType) {
+      throw new Error(
+        "Please specify a document type for the generated editor.",
+      );
     }
     await generateEditor({
-      name: command.editorName,
-      documentTypes: command.documentTypes?.split(/[|,;]/g) ?? [],
-      config: config,
-      editorId: command.editorId,
-      specifiedPackageName: command.specifiedPackageName,
-      editorDirName: command.editorDirName,
+      editorName,
+      editorId,
+      editorDirName,
+      documentTypes: [documentType],
       useTsMorph,
+      skipFormat,
+      specifiedPackageName,
     });
-  } else if (command.processor && options.processor) {
-    const processorType =
-      options.processorType === "relationalDb" ? "relationalDb" : "analytics";
+    return;
+  }
+
+  if (driveEditorName !== undefined) {
+    await generateDriveEditor({
+      driveEditorName,
+      driveEditorId,
+      driveEditorDirName,
+      allowedDocumentTypes,
+      isDragAndDropEnabled,
+      useTsMorph,
+      skipFormat,
+      specifiedPackageName,
+    });
+    return;
+  }
+
+  if (processorName !== undefined) {
     await generateProcessor(
-      options.processor,
+      processorName,
       processorType,
-      options.documentTypes?.split(",") ?? [],
-      config,
+      [documentType].filter((dt) => dt !== undefined),
+      skipFormat,
     );
-  } else if (command.subgraph && command.subgraphName) {
-    await generateSubgraph(command.subgraphName, options.file || null, config);
-  } else if (command.importScript && command.importScriptName) {
-    await generateImportScript(command.importScriptName, config);
-  } else if (command.migrationFile) {
-    const { migrationFile, schemaFile } = command;
+    return;
+  }
+
+  if (subgraphName !== undefined) {
+    await generateSubgraph(subgraphName, filePath || null, config, {
+      verbose,
+      force,
+    });
+    return;
+  }
+
+  if (importScriptName !== undefined) {
+    await generateImportScript(importScriptName, config);
+    return;
+  }
+
+  if (migrationFile !== undefined) {
     await generateDBSchema({
       migrationFile: path.join(process.cwd(), migrationFile),
       schemaFile: schemaFile ? path.join(process.cwd(), schemaFile) : undefined,
     });
-  } else if (filePath) {
+    return;
+  }
+
+  if (filePath !== undefined) {
     await generateFromFile({
       path: filePath,
       config,
@@ -142,7 +116,8 @@ export async function startGenerate(
       options,
       useVersioning,
     });
-  } else {
-    await generateCode(config, useTsMorph, useVersioning);
+    return;
   }
+
+  await generateCode(config, useTsMorph, useVersioning);
 }

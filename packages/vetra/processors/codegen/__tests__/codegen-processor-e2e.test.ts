@@ -143,12 +143,12 @@ describe("CodegenProcessor E2E Tests", () => {
 
       const generateEditorArgs: Parameters<typeof generateEditor> = [
         {
-          name: "Test Editor",
+          ...mockConfig.PH_CONFIG,
+          editorName: "Test Editor",
           documentTypes: [
             "powerhouse/document-model",
             "powerhouse/budget-statement",
           ],
-          config: mockConfig.PH_CONFIG,
           editorId: "test-editor",
           useTsMorph: USE_TS_MORPH,
         },
@@ -498,10 +498,10 @@ describe("CodegenProcessor E2E Tests", () => {
 
       const generateDriveEditorArgs: Parameters<typeof generateDriveEditor> = [
         {
-          name: "Test App",
-          config: mockConfig.PH_CONFIG,
-          appId: "test-app",
-          allowedDocumentTypes: "",
+          driveEditorName: "Test App",
+          ...mockConfig.PH_CONFIG,
+          driveEditorId: "test-app",
+          allowedDocumentTypes: [],
           isDragAndDropEnabled: false,
           useTsMorph: USE_TS_MORPH,
         },

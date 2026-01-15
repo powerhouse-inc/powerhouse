@@ -1,0 +1,147 @@
+#!/usr/bin/env node
+import { Command } from "commander";
+import { forwardCommand } from "./commands/forward.js";
+import registerCommands from "./commands/index.js";
+import { runInit } from "./commands/init.js";
+import { runUpdate } from "./commands/update.js";
+import { runUseLocal } from "./commands/use-local.js";
+import { runUse } from "./commands/use.js";
+import type { CommandActionType } from "./types.js";
+import { generateMergedHelp } from "./utils/index.js";
+
+function ensureNodeVersion(minVersion = "22") {
+  const version = process.versions.node;
+  if (!version) {
+    return;
+  }
+
+  if (version < minVersion) {
+    console.error(
+      `Node version ${minVersion} or higher is required. Current version: ${version}`,
+    );
+    process.exit(1);
+  }
+}
+// Ensure minimum Node.js version
+ensureNodeVersion("22");
+
+const program = new Command();
+
+// Flag to prevent duplicate help output
+let helpShown = false;
+
+// Custom help handler that uses the merged help functionality
+async function customHelpHandler() {
+  if (helpShown) return;
+  helpShown = true;
+
+  await generateMergedHelp(program);
+  process.exit(0);
+}
+
+const defaultCommand: CommandActionType<[{ verbose?: boolean }]> = async (
+  options,
+) => {
+  const allArgs = process.argv.slice(2);
+  const args = allArgs.join(" ");
+  const firstPositionalArg = allArgs[0];
+
+  const isInit = firstPositionalArg === "init";
+  if (isInit) {
+    // forward from 3 to skip initial `ph`
+    await runInit(process.argv.slice(3));
+    process.exit(0);
+  }
+  const isUpdate = firstPositionalArg === "update";
+  if (isUpdate) {
+    // forward from 3 to skip initial `ph`
+    await runUpdate(process.argv.slice(3));
+    process.exit(0);
+  }
+  const isUse = firstPositionalArg === "use";
+  if (isUse) {
+    // forward from 3 to skip initial `ph`
+    await runUse(process.argv.slice(3));
+    process.exit(0);
+  }
+  const isUseLocal = firstPositionalArg === "use-local";
+  if (isUseLocal) {
+    // forward from 3 to skip initial `ph`
+    await runUseLocal(process.argv.slice(3));
+    process.exit(0);
+  }
+  const isHelpCommand = args.startsWith("--help") || args.startsWith("-h");
+  const isVersionCommand =
+    args.startsWith("--version") ||
+    args.startsWith("-v") ||
+    args.startsWith("version");
+
+  // if no args are provided then runs the help command
+  if (!args.length) {
+    program.parse(process.argv.concat("--help"));
+    process.exit(0);
+  }
+
+  if (!isHelpCommand && !isVersionCommand) {
+    forwardCommand(args, { debug: !!options.verbose }).catch(
+      (error: unknown) => {
+        if (typeof error === "string" || options.verbose) {
+          console.error(error);
+        } else if (error instanceof Error) {
+          console.error(error.message);
+        }
+        process.exit(1);
+      },
+    );
+  }
+};
+
+program
+  .name("ph")
+  .description(
+    "The Powerhouse CLI (ph-cmd) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.",
+  )
+  .allowUnknownOption()
+  .option("--verbose, --debug", "Enable debug mode")
+  .option("-h, --help", "Display help information");
+
+// Register our commands
+registerCommands(program);
+
+// Hook the root action
+program.action(defaultCommand);
+
+// Handle global help requests - only for root help, not command-specific help
+program.on("option:help", () => {
+  // Check if this is a root help command (no other arguments except possibly --verbose)
+  const nonHelpArgs = process.argv
+    .slice(2)
+    .filter((arg) => arg !== "--help" && arg !== "-h");
+
+  // Only run the custom help handler for global help
+  if (nonHelpArgs.length === 0) {
+    customHelpHandler().catch((error: unknown) => {
+      console.error(error);
+      process.exit(1);
+    });
+  }
+});
+
+// Logs full error only on debug mode. Otherwise logs only error message
+program.parseAsync(process.argv).catch((error: unknown) => {
+  const isDebug = process.argv.find((arg) =>
+    ["--verbose", "--debug"].includes(arg),
+  );
+  if (isDebug) {
+    console.error(error);
+    return;
+  }
+
+  const errorMessage =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : JSON.stringify(error, null, 2);
+  console.error(errorMessage);
+});

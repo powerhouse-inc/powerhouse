@@ -24,8 +24,7 @@ import { runCmd } from "../utils/run-cmd.js";
 
 export const use = command({
   name: "use",
-  description:
-    "Specify the release version of Powerhouse dependencies to use. To use a release tag, specify `staging`, `dev`, or `latest` as the first argument to this command or with the --tag option. You can also use a specific version with the --version option.",
+  description: "Specify the release version of Powerhouse dependencies to use.",
   args: {
     tagPositional: positional({
       type: optional(oneOf(["latest", "staging", "dev"])),

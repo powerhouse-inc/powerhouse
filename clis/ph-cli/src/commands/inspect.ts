@@ -1,30 +1,36 @@
-import type { Command } from "commander";
-import { inspectHelp } from "../help.js";
-import type { InspectOptions } from "../services/inspect.js";
-import type { CommandActionType } from "../types.js";
-import { setCustomHelp } from "../utils.js";
+import { command, positional, string } from "cmd-ts";
+import { startInspect } from "../services/inspect.js";
+import { debugArgs } from "./common-args.js";
 
-async function startInspect(packageName: string, options: InspectOptions) {
-  const Inspect = await import("../services/inspect.js");
-  const { startInspect } = Inspect;
-  return startInspect(packageName, options);
-}
-
-export const inspect: CommandActionType<[string, InspectOptions]> = async (
-  packageName,
-  options,
-) => {
-  return startInspect(packageName, options);
+export const inspectArgs = {
+  packageName: positional({
+    type: string,
+    displayName: "package-name",
+    description: "The name of the package to inspect",
+  }),
+  ...debugArgs,
 };
 
-export function inspectCommand(program: Command) {
-  const command = program
-    .command("inspect")
-    .alias("is")
-    .description("Inspect a package")
-    .option("--debug", "Show additional logs")
-    .argument("<packageName>", "The name of the package to inspect")
-    .action(inspect);
+export const inspect = command({
+  name: "inspect",
+  description: `
+The inspect command examines and provides detailed information about a Powerhouse package.
+It helps you understand the structure, dependencies, and configuration of packages in
+your project.
 
-  setCustomHelp(command, inspectHelp);
-}
+This command:
+1. Analyzes the specified package
+2. Retrieves detailed information about its structure and configuration
+3. Displays package metadata, dependencies, and other relevant information
+4. Helps troubleshoot package-related issues`,
+  aliases: ["is"],
+  args: inspectArgs,
+  handler: async (args) => {
+    const { packageName, ...restArgs } = args;
+    if (args.debug) {
+      console.log(args);
+    }
+    await startInspect(packageName, restArgs);
+    return args;
+  },
+});

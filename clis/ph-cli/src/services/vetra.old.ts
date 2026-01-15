@@ -4,7 +4,6 @@ import { getConfig } from "@powerhousedao/config/node";
 import { blue, red } from "colorette";
 import type { IDocumentDriveServer } from "document-drive";
 import { setLogLevel } from "document-drive";
-import type { VetraArgs } from "../types.js";
 import { generateProjectDriveId } from "../utils.js";
 import {
   configureVetraGithubUrl,
@@ -18,6 +17,20 @@ const VETRA_DRIVE_NAME = "vetra";
 
 const getDefaultVetraUrl = (port: number) =>
   `http://localhost:${port}/d/${generateProjectDriveId(VETRA_DRIVE_NAME)}`;
+
+export type DevOptions = {
+  generate?: boolean;
+  switchboardPort?: number;
+  connectPort?: number;
+  configFile?: string;
+  httpsKeyFile?: string;
+  httpsCertFile?: string;
+  verbose?: boolean;
+  remoteDrive?: string;
+  disableConnect?: boolean;
+  interactive?: boolean;
+  watch?: boolean;
+};
 
 const getDriveId = (driveUrl: string | undefined): string =>
   driveUrl?.split("/").pop() ?? generateProjectDriveId(VETRA_DRIVE_NAME);
@@ -164,21 +177,22 @@ async function startLocalVetraSwitchboard(
 }
 
 export async function startVetra({
-  noGenerate,
+  generate,
   switchboardPort,
   connectPort,
   configFile,
-  verbose,
+  verbose = false,
   remoteDrive,
-  disableConnect,
-  interactive,
-  watch,
-}: VetraArgs) {
+  disableConnect = false,
+  interactive = false,
+  watch = false,
+}: DevOptions) {
   try {
     // Set default log level to info if not already specified
     if (!process.env.LOG_LEVEL) {
       setLogLevel("info");
     }
+
     const baseConfig = getConfig(configFile);
 
     // Use config port if no CLI port provided, fallback to default
@@ -191,7 +205,6 @@ export async function startVetra({
     // Use vetraUrl from config if no explicit remoteDrive is provided
     const configVetraUrl = baseConfig.vetra?.driveUrl;
     const resolvedVetraUrl = remoteDrive ?? configVetraUrl;
-    const generate = noGenerate !== true;
 
     if (verbose) {
       console.log("Starting Vetra Switchboard...");

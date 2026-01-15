@@ -17,14 +17,11 @@ import type {
 } from "ts-morph";
 import { Project, SyntaxKind } from "ts-morph";
 import { writePackage } from "write-pkg";
-import type { GenerateOptions } from "./generate.js";
-import { generate } from "../commands/generate.js";
+import { generate } from "../commands/generate.old.js";
+import type { MigrateArgs } from "../types.js";
+import type { GenerateOptions } from "./generate.old.js";
 
-/** Run all migrations */
-type MigrateOptions = {
-  useHygen?: boolean;
-};
-export async function migrate({ useHygen = false }: MigrateOptions) {
+export async function startMigrate({ useHygen = false }: MigrateArgs) {
   await migratePackageJson();
   await migrateTsConfig();
   await migrateIndexHtml();

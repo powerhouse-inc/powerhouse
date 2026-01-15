@@ -1,42 +1,22 @@
-import { command, oneOf, optional, positional } from "cmd-ts";
+import type { Command } from "commander";
+import { Argument } from "commander";
 import { execSync } from "node:child_process";
-import console from "node:console";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { PackageJson } from "read-pkg";
-import { debugArgs } from "./common-args.js";
+import { serviceHelp } from "../help.js";
+import type { CommandActionType } from "../types.js";
+import { setCustomHelp } from "../utils.js";
 
-const actions = ["start", "stop", "status", "setup", "restart"] as const;
-export const serviceArgs = {
-  action: positional({
-    type: optional(oneOf(actions)),
-  }),
-  ...debugArgs,
-};
-export const service = command({
-  name: "service",
-  description: `  
-The service command manages Powerhouse services, allowing you to start, stop, check status,
-and more. It provides a centralized way to control the lifecycle of services in your project.
+interface PackageJson {
+  name: string;
+  version: string;
+  [key: string]: unknown;
+}
 
-This command:
-1. Controls service lifecycle (start, stop, status, etc.)
-2. Manages multiple services from a single interface
-3. Provides detailed information about running services
-4. Uses PM2 under the hood for process management`,
-  args: serviceArgs,
-  handler: (args) => {
-    if (args.debug) {
-      console.log(args);
-    }
-    const { action = "status" } = args;
-    manageService(action);
-    return args;
-  },
-});
+const actions = ["start", "stop", "status", "setup", "restart"];
 
-function manageService(action: (typeof actions)[number]) {
+export const manageService: CommandActionType<[string]> = async (action) => {
   try {
     const dirname = path.dirname(fileURLToPath(import.meta.url));
     const manageScriptPath = path.join(
@@ -105,4 +85,14 @@ function manageService(action: (typeof actions)[number]) {
     console.error("Error:", error);
     process.exit(1);
   }
+};
+
+export function serviceCommand(program: Command) {
+  const command = program
+    .command("service")
+    .description("Manage environment services")
+    .addArgument(new Argument("action").choices(actions).default("status"))
+    .action(manageService);
+
+  setCustomHelp(command, serviceHelp);
 }

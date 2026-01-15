@@ -1,58 +1,53 @@
-#!/usr/bin/env node
-import { Command } from "commander";
-import { registerCommands } from "./index.js";
+import {
+  accessToken,
+  connect,
+  generate,
+  inspect,
+  install,
+  list,
+  login,
+  migrate,
+  phCliHelpCommands,
+  switchboard,
+  uninstall,
+  vetra,
+} from "@powerhousedao/ph-cli/commands";
+import { run, subcommands } from "cmd-ts";
 
-function ensureNodeVersion(minVersion = "22") {
-  const version = process.versions.node;
-  if (!version) {
-    return;
-  }
+const { version } = (await import("./version.js")) as { version: string };
 
-  if (version < minVersion) {
-    console.error(
-      `Node version ${minVersion} or higher is required. Current version: ${version}`,
-    );
-    process.exit(1);
-  }
+const phCliCommands = {
+  generate,
+  vetra,
+  connect,
+  "access-token": accessToken,
+  inspect,
+  list,
+  migrate,
+  switchboard,
+  login,
+  install,
+  uninstall,
+};
+
+async function main() {
+  const args = process.argv.slice(2);
+  const hasNoArgs = args.length == 0;
+  const isTopLevelHelp =
+    args.length == 1 && args.some((arg) => arg === "--help" || arg === "-h");
+  const showTopLevelHelp = hasNoArgs || isTopLevelHelp;
+
+  const cmds = showTopLevelHelp ? phCliHelpCommands : phCliCommands;
+
+  const phCli = subcommands({
+    name: "ph-cli",
+    description:
+      "The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.",
+    version,
+    cmds,
+  });
+
+  await run(phCli, args);
 }
 
-// Ensure minimum Node.js version
-ensureNodeVersion("22");
-
-const program = new Command();
-
-program
-  .name("ph-cli")
-  .description(
-    "The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.",
-  )
-  .allowUnknownOption(true)
-  .option("--verbose, --debug", "Enable debug mode");
-
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore build time version file
-import("./version.js")
-  .then(({ version }: { version: string }) => program.version(version))
-  .catch((error: unknown) => console.error("Error loading version", error));
-
-registerCommands(program);
-
-// Logs full error only on debug mode. Otherwise logs only error message
-program.parseAsync(process.argv).catch((error: unknown) => {
-  const isDebug = process.argv.find((arg) =>
-    ["--verbose", "--debug"].includes(arg),
-  );
-  if (isDebug) {
-    console.error(error);
-    return;
-  }
-
-  const errorMessage =
-    error instanceof Error
-      ? error.message
-      : typeof error === "string"
-        ? error
-        : JSON.stringify(error, null, 2);
-
-  console.error(errorMessage);
-});
+await main();

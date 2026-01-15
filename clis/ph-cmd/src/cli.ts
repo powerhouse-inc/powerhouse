@@ -1,147 +1,120 @@
-#!/usr/bin/env node
-import { Command } from "commander";
-import { forwardCommand } from "./commands/forward.js";
-import registerCommands from "./commands/index.js";
-import { runInit } from "./commands/init.js";
-import { runUpdate } from "./commands/update.js";
-import { runUseLocal } from "./commands/use-local.js";
-import { runUse } from "./commands/use.js";
-import type { CommandActionType } from "./types.js";
-import { generateMergedHelp } from "./utils/index.js";
+import {
+  phCliCommandNames,
+  phCliHelpCommands,
+} from "@powerhousedao/ph-cli/commands";
+import { run, subcommands } from "cmd-ts";
+import { execSync } from "node:child_process";
+import { detect, resolveCommand } from "package-manager-detector";
+import { readPackage } from "read-pkg";
+import { init } from "./commands/init.js";
+import { setupGlobals } from "./commands/setup-globals.js";
+import { update } from "./commands/update.js";
+import { useLocal } from "./commands/use-local.js";
+import { use } from "./commands/use.js";
+import {
+  getPackageManagerFromLockfile,
+  getProjectInfo,
+} from "./utils/package-manager.js";
 
-function ensureNodeVersion(minVersion = "22") {
-  const version = process.versions.node;
-  if (!version) {
-    return;
-  }
-
-  if (version < minVersion) {
-    console.error(
-      `Node version ${minVersion} or higher is required. Current version: ${version}`,
-    );
-    process.exit(1);
-  }
-}
-// Ensure minimum Node.js version
-ensureNodeVersion("22");
-
-const program = new Command();
-
-// Flag to prevent duplicate help output
-let helpShown = false;
-
-// Custom help handler that uses the merged help functionality
-async function customHelpHandler() {
-  if (helpShown) return;
-  helpShown = true;
-
-  await generateMergedHelp(program);
-  process.exit(0);
-}
-
-const defaultCommand: CommandActionType<[{ verbose?: boolean }]> = async (
-  options,
-) => {
-  const allArgs = process.argv.slice(2);
-  const args = allArgs.join(" ");
-  const firstPositionalArg = allArgs[0];
-
-  const isInit = firstPositionalArg === "init";
-  if (isInit) {
-    // forward from 3 to skip initial `ph`
-    await runInit(process.argv.slice(3));
-    process.exit(0);
-  }
-  const isUpdate = firstPositionalArg === "update";
-  if (isUpdate) {
-    // forward from 3 to skip initial `ph`
-    await runUpdate(process.argv.slice(3));
-    process.exit(0);
-  }
-  const isUse = firstPositionalArg === "use";
-  if (isUse) {
-    // forward from 3 to skip initial `ph`
-    await runUse(process.argv.slice(3));
-    process.exit(0);
-  }
-  const isUseLocal = firstPositionalArg === "use-local";
-  if (isUseLocal) {
-    // forward from 3 to skip initial `ph`
-    await runUseLocal(process.argv.slice(3));
-    process.exit(0);
-  }
-  const isHelpCommand = args.startsWith("--help") || args.startsWith("-h");
-  const isVersionCommand =
-    args.startsWith("--version") ||
-    args.startsWith("-v") ||
-    args.startsWith("version");
-
-  // if no args are provided then runs the help command
-  if (!args.length) {
-    program.parse(process.argv.concat("--help"));
-    process.exit(0);
-  }
-
-  if (!isHelpCommand && !isVersionCommand) {
-    forwardCommand(args, { debug: !!options.verbose }).catch(
-      (error: unknown) => {
-        if (typeof error === "string" || options.verbose) {
-          console.error(error);
-        } else if (error instanceof Error) {
-          console.error(error.message);
-        }
-        process.exit(1);
-      },
-    );
-  }
-};
-
-program
-  .name("ph")
-  .description(
-    "The Powerhouse CLI (ph-cmd) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.",
-  )
-  .allowUnknownOption()
-  .option("--verbose, --debug", "Enable debug mode")
-  .option("-h, --help", "Display help information");
-
-// Register our commands
-registerCommands(program);
-
-// Hook the root action
-program.action(defaultCommand);
-
-// Handle global help requests - only for root help, not command-specific help
-program.on("option:help", () => {
-  // Check if this is a root help command (no other arguments except possibly --verbose)
-  const nonHelpArgs = process.argv
-    .slice(2)
-    .filter((arg) => arg !== "--help" && arg !== "-h");
-
-  // Only run the custom help handler for global help
-  if (nonHelpArgs.length === 0) {
-    customHelpHandler().catch((error: unknown) => {
-      console.error(error);
-      process.exit(1);
-    });
-  }
-});
-
-// Logs full error only on debug mode. Otherwise logs only error message
-program.parseAsync(process.argv).catch((error: unknown) => {
-  const isDebug = process.argv.find((arg) =>
-    ["--verbose", "--debug"].includes(arg),
+async function executePhCliCommand(command: string) {
+  const forwardedArgs = process.argv.slice(3);
+  const detectResult = await detect();
+  const agent = detectResult?.agent ?? "npm";
+  const resolveExecuteLocalCommandResult = resolveCommand(
+    agent,
+    "execute-local",
+    ["ph-cli", command, ...forwardedArgs],
   );
-  if (isDebug) {
-    console.error(error);
-    return;
+  if (!resolveExecuteLocalCommandResult) {
+    throw new Error(
+      `Command ${command} is not executable by package manager ${agent}. Either install "@powerhousedao/ph-cli" in your local package, or run \`ph setup-globals\` to globally install the "@powerhousedao/ph-cli" package.`,
+    );
+  }
+  const { command: packageManager, args: localCommandToExecute } =
+    resolveExecuteLocalCommandResult;
+  const cmd = `${packageManager} ${localCommandToExecute.join(" ")}`;
+  execSync(cmd, { stdio: "inherit" });
+}
+
+async function main() {
+  const args = process.argv.slice(2);
+  const command = args[0];
+
+  // handle the special case where running `connect` with no positional argument
+  // defaults to `connect studio`
+  if (
+    command === "connect" &&
+    !args.some((arg) => ["studio", "build", "preview"].includes(arg)) &&
+    // do not default to `connect studio` when help is present, instead show general help
+    // for the `connect` command
+    !args.some((arg) => ["--help", "-h"].includes(arg))
+  ) {
+    await executePhCliCommand("connect studio");
+    process.exit(0);
   }
 
-  const errorMessage =
-    error instanceof Error
-      ? error.message
-      : typeof error === "string"
-        ? error
-        : JSON.stringify(error, null, 2);
-  console.error(errorMessage);
-});
+  // forward command to the local ph-cli installation if it exists
+  if (phCliCommandNames.includes(command)) {
+    await executePhCliCommand(command);
+    process.exit(0);
+  }
+
+  // Normal cmd-ts processing
+  const versionInfo = await getVersionInfo();
+
+  const ph = subcommands({
+    name: "ph",
+    version: versionInfo,
+    description:
+      "The Powerhouse CLI (ph-cmd) is a command-line interface tool that provides essential commands for managing Powerhouse projects.\nThe tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.",
+    cmds: {
+      init,
+      use,
+      update,
+      "setup-globals": setupGlobals,
+      "use-local": useLocal,
+      ...phCliHelpCommands,
+    },
+  });
+  await run(ph, process.argv.slice(2));
+}
+
+await main();
+
+async function getVersionInfo() {
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore build time version file
+  const { version } = (await import("./version.js")) as { version: string };
+
+  const phCliInfo = await getPhCliInfo();
+
+  return `
+-------------------------------------
+PH CMD version: ${version}
+${phCliInfo}
+-------------------------------------
+`.trim();
+}
+
+async function getPhCliInfo() {
+  const projectInfo = await getProjectInfo(undefined, false);
+
+  if (!projectInfo.available)
+    return "PH CLI is not available, please run `ph setup-globals` to generate the default global project";
+
+  const packageManager = getPackageManagerFromLockfile(projectInfo.path);
+
+  const packageJson = await readPackage({ cwd: projectInfo.path });
+
+  const phCliVersion =
+    packageJson.dependencies?.["@powerhousedao/ph-cli"] ??
+    packageJson.devDependencies?.["@powerhousedao/ph-cli"] ??
+    "Not found";
+
+  return `
+PH CLI version: ${phCliVersion}
+PH CLI path: ${projectInfo.path}
+PH CLI is global project: ${projectInfo.isGlobal}
+PH CLI package manager: ${packageManager}
+`.trim();
+}
