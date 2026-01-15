@@ -51,7 +51,11 @@ export const DriveExplorer: React.FC<DriveExplorerProps> = ({
 }) => {
   return (
     <div className="min-h-screen bg-white">
-      <DriveHeader driveId={driveId} driveName={driveName} driveUrl={driveUrl} />
+      <DriveHeader
+        driveId={driveId}
+        driveName={driveName}
+        driveUrl={driveUrl}
+      />
 
       <div className="mx-6 mt-6 bg-white">
         <PackageInformationSection

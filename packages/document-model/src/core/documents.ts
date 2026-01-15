@@ -869,7 +869,6 @@ export function nextSkipNumber(sortedOperations: OperationIndex[]) {
     : nextSkip;
 }
 
-
 export function checkOperationsIntegrity(operations: Operation[]) {
   return checkCleanedOperationsIntegrity(
     garbageCollect(sortOperations(operations)),
