@@ -1,3 +1,24 @@
+## 6.0.0-dev.2 (2026-01-15)
+
+### 🚀 Features
+
+- adding a migration command to switchboard ([155f3da66](https://github.com/powerhouse-inc/powerhouse/commit/155f3da66))
+- added profiling scripts to switchboard and listen for sigint ([3a3eab12d](https://github.com/powerhouse-inc/powerhouse/commit/3a3eab12d))
+- test-client now successfully executes scenarios ([ef9299d90](https://github.com/powerhouse-inc/powerhouse/commit/ef9299d90))
+- new cicd flows ([01310e0d3](https://github.com/powerhouse-inc/powerhouse/commit/01310e0d3))
+- enabled doc version in connect ([#2171](https://github.com/powerhouse-inc/powerhouse/pull/2171))
+
+### 🩹 Fixes
+
+- workflow permissions ([6e451590d](https://github.com/powerhouse-inc/powerhouse/commit/6e451590d))
+- switchboard, by default, writes to .ph directory ([6435defb6](https://github.com/powerhouse-inc/powerhouse/commit/6435defb6))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.0.0-dev.1 (2026-01-15)
 
 ### 🚀 Features

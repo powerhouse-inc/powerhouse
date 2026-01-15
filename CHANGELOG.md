@@ -1,3 +1,29 @@
+## 6.0.0-dev.2 (2026-01-15)
+
+### 🚀 Features
+
+- enabled doc version in connect ([#2171](https://github.com/powerhouse-inc/powerhouse/pull/2171))
+- new cicd flows ([01310e0d3](https://github.com/powerhouse-inc/powerhouse/commit/01310e0d3))
+- first pass on a test client ([977abbe3d](https://github.com/powerhouse-inc/powerhouse/commit/977abbe3d))
+- test-client now successfully executes scenarios ([ef9299d90](https://github.com/powerhouse-inc/powerhouse/commit/ef9299d90))
+- added profiling scripts to switchboard and listen for sigint ([3a3eab12d](https://github.com/powerhouse-inc/powerhouse/commit/3a3eab12d))
+- adding a migration command to switchboard ([155f3da66](https://github.com/powerhouse-inc/powerhouse/commit/155f3da66))
+
+### 🩹 Fixes
+
+- switchboard, by default, writes to .ph directory ([6435defb6](https://github.com/powerhouse-inc/powerhouse/commit/6435defb6))
+- copy all should copy all pages in the inspector ([7f6e0b393](https://github.com/powerhouse-inc/powerhouse/commit/7f6e0b393))
+- validateActions was querying, also fixing some logging ([3b4420656](https://github.com/powerhouse-inc/powerhouse/commit/3b4420656))
+- build fix, zod types ([79921fe63](https://github.com/powerhouse-inc/powerhouse/commit/79921fe63))
+- build + linting fixes ([1eb035161](https://github.com/powerhouse-inc/powerhouse/commit/1eb035161))
+- workflow permissions ([6e451590d](https://github.com/powerhouse-inc/powerhouse/commit/6e451590d))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.0.0-dev.1 (2026-01-15)
 
 ### 🚀 Features
