@@ -1,10 +1,8 @@
 name: Build and Publish Docker Images
 
 on:
-  workflow_run:
-    workflows: [Release Branch]
-    types:
-      - completed
+  workflow_call:
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -181,3 +179,10 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             TAG=${{env.GITHUB_TAG}}
+
+  deploy-k8s:
+    needs: [connect, switchboard, academy]
+    uses: "./.github/workflows/deploy-k8s.yml"
+    with:
+      tag: ${{ needs.academy.outputs.tag }}
+    secrets: inherit
