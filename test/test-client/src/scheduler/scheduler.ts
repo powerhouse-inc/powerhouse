@@ -1,7 +1,11 @@
+import type { Action } from "document-model";
 import { GraphQLClient } from "../client/graphql-client.js";
 import { MetricsCollector } from "../metrics/collector.js";
 import { Reporter } from "../metrics/reporter.js";
-import { createTestDocument, generateOperations } from "../operations/generator.js";
+import {
+  createTestDocument,
+  generateOperations,
+} from "../operations/generator.js";
 import type {
   DocumentResult,
   DriveInfo,
@@ -9,7 +13,29 @@ import type {
   OperationResult,
   TestDocument,
 } from "../types.js";
-import { DOCUMENT_DRIVE_TYPE, DOCUMENT_MODEL_TYPE } from "../types.js";
+import { DOCUMENT_MODEL_TYPE } from "../types.js";
+
+function generateId(): string {
+  return `test-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function createAddFileAction(
+  documentId: string,
+  documentName: string,
+  documentType: string,
+): Action {
+  return {
+    id: generateId(),
+    type: "ADD_FILE",
+    timestampUtcMs: new Date().toISOString(),
+    input: {
+      id: documentId,
+      name: documentName,
+      documentType,
+    },
+    scope: "global",
+  };
+}
 
 export class TestScheduler {
   private client: GraphQLClient;
@@ -100,25 +126,37 @@ export class TestScheduler {
   private async createDocument(): Promise<void> {
     if (!this.isRunning) return;
 
-    // Alternate between document types
-    const documentTypes = [DOCUMENT_MODEL_TYPE, DOCUMENT_DRIVE_TYPE];
-    const documentType =
-      documentTypes[this.documents.size % documentTypes.length];
-
-    // Pick a random drive as parent
+    const documentType = DOCUMENT_MODEL_TYPE;
     const drive = this.drives[Math.floor(Math.random() * this.drives.length)];
 
     const startTime = Date.now();
     let result: DocumentResult;
 
     try {
-      const doc = await this.client.createEmptyDocument(documentType, drive.id);
+      // Step 1: Create empty document using the high-level API
+      const createdDoc = await this.client.createEmptyDocument(
+        documentType,
+        drive.id,
+      );
+      const documentId = createdDoc.id;
+      // createEmptyDocument returns empty name, so generate a valid one for ADD_FILE
+      const documentName =
+        createdDoc.name ||
+        `TestDoc_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
-      const testDoc = createTestDocument(doc.id, documentType, drive.id);
-      this.documents.set(doc.id, testDoc);
+      // Step 2: Add the document to the drive's file tree
+      const addFileAction = createAddFileAction(
+        documentId,
+        documentName,
+        documentType,
+      );
+      await this.client.mutateDocument(drive.id, [addFileAction]);
+
+      const testDoc = createTestDocument(documentId, documentType, drive.id);
+      this.documents.set(documentId, testDoc);
 
       result = {
-        documentId: doc.id,
+        documentId,
         documentType,
         startTime,
         endTime: Date.now(),
@@ -127,7 +165,7 @@ export class TestScheduler {
       };
 
       this.reporter.printVerbose(
-        `Created ${documentType} document: ${doc.id}`,
+        `Created ${documentType} document: ${documentId} in drive ${drive.id}`,
         this.config.verbose,
       );
     } catch (error) {
@@ -141,10 +179,8 @@ export class TestScheduler {
         latencyMs: Date.now() - startTime,
       };
 
-      this.reporter.printVerbose(
-        `Failed to create document: ${result.error}`,
-        this.config.verbose,
-      );
+      // Always log errors
+      this.reporter.printError(`Document creation failed: ${result.error}`);
     }
 
     this.metrics.recordDocumentCreation(result);
@@ -198,10 +234,8 @@ export class TestScheduler {
         operationCount: operations.length,
       };
 
-      this.reporter.printVerbose(
-        `Mutation failed for ${doc.id}: ${result.error}`,
-        this.config.verbose,
-      );
+      // Always log errors
+      this.reporter.printError(`Mutation failed for ${doc.id}: ${result.error}`);
     }
 
     this.metrics.recordOperation(result);

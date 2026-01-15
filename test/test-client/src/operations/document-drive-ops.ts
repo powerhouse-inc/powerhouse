@@ -27,7 +27,9 @@ function createAction(type: string, input: unknown, scope = "global"): Action {
 }
 
 export function setDriveName(): Action {
-  return createAction("SET_DRIVE_NAME", { name: `TestDrive_${randomString(6)}` });
+  return createAction("SET_DRIVE_NAME", {
+    name: `TestDrive_${randomString(6)}`,
+  });
 }
 
 export function addFolder(doc: TestDocument): Action {

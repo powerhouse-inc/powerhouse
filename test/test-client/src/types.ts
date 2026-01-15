@@ -82,4 +82,3 @@ export const MIN_OPS_PER_CALL = 1;
 export const MAX_OPS_PER_CALL = 3;
 
 export const DOCUMENT_MODEL_TYPE = "powerhouse/document-model";
-export const DOCUMENT_DRIVE_TYPE = "powerhouse/document-drive";
