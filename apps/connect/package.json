@@ -115,7 +115,7 @@
     "test": "vitest run",
     "postinstall": "cp ./package.json ./package.copy.json",
     "dev": "vite dev",
-    "build:css": "npx @tailwindcss/cli -i ./src/index.css -o ./lib/style.css",
+    "build:css": "pnpm exec tailwindcss -i ./src/index.css -o ./lib/style.css",
     "build:vite": "vite build",
     "build:debug": "PH_DEBUG_BUILD=true vite build",
     "preview": "vite preview",

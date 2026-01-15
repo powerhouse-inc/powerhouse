@@ -40,7 +40,7 @@
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "build:css": "npx @tailwindcss/cli -i ./style.css -o ./dist/style.css",
+    "build:css": "pnpm exec tailwindcss -i ./style.css -o ./dist/style.css",
     "storybook": "storybook dev -p 6006",
     "test": "tsx test/index.ts"
   },

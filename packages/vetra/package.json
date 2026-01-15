@@ -56,7 +56,7 @@
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "build:css": "npx @tailwindcss/cli -i ./style.css -o ./dist/style.css",
+    "build:css": "pnpm exec tailwindcss -i ./style.css -o ./dist/style.css",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:document-models": "vitest run document-models",
