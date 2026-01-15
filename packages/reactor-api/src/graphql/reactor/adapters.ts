@@ -30,9 +30,9 @@ export function toDocumentModelResultPage(
 ): DocumentModelResultPage {
   const models = result.results.map((module) => module.documentModel);
   return {
-    cursor: result.options.cursor || null,
-    hasNextPage: false,
-    hasPreviousPage: false,
+    cursor: result.nextCursor ?? null,
+    hasNextPage: !!result.nextCursor,
+    hasPreviousPage: !!result.options.cursor,
     items: models.map(toGqlDocumentModelState),
     totalCount: result.results.length,
   };
@@ -72,9 +72,9 @@ export function toPhDocumentResultPage(
   result: PagedResults<PHDocument>,
 ): PhDocumentResultPage {
   return {
-    cursor: result.options.cursor || null,
-    hasNextPage: false,
-    hasPreviousPage: false,
+    cursor: result.nextCursor ?? null,
+    hasNextPage: !!result.nextCursor,
+    hasPreviousPage: !!result.options.cursor,
     items: result.results.map(toGqlPhDocument),
     totalCount: result.results.length,
   };
