@@ -41,7 +41,7 @@ const scriptsTemplate = json`
   "lint:fix": "npm run lint -- --fix",
   "tsc": "tsc",
   "tsc:watch": "tsc --watch",
-  "tailwind": "pnpm exec tailwindcss -i ./style.css -o ./dist/style.css",
+  "tailwind": "npx @tailwindcss/cli -i ./style.css -o ./dist/style.css",
   "prepublishOnly": "npm run build",
   "check-circular-imports": "npx dpdm -T ./index.ts",
   "generate": "ph-cli generate",
