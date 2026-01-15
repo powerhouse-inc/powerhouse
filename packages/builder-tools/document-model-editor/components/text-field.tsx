@@ -9,7 +9,7 @@ import {
 } from "react";
 import type { FieldValues } from "react-hook-form";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { z } from "zod/v3";
 import { createNameSchema } from "../schemas/inputs.js";
 import { compareStringsWithoutWhitespace } from "../utils/helpers.js";
 import {
