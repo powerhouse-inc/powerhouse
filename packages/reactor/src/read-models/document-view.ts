@@ -487,6 +487,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
       items: documents,
       nextCursor,
       hasMore,
+      totalCount: allDocumentIds.length,
     };
   }
 

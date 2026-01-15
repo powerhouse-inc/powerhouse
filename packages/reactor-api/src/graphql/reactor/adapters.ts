@@ -34,7 +34,7 @@ export function toDocumentModelResultPage(
     hasNextPage: !!result.nextCursor,
     hasPreviousPage: !!result.options.cursor,
     items: models.map(toGqlDocumentModelState),
-    totalCount: result.results.length,
+    totalCount: result.totalCount ?? result.results.length,
   };
 }
 
@@ -76,7 +76,7 @@ export function toPhDocumentResultPage(
     hasNextPage: !!result.nextCursor,
     hasPreviousPage: !!result.options.cursor,
     items: result.results.map(toGqlPhDocument),
-    totalCount: result.results.length,
+    totalCount: result.totalCount ?? result.results.length,
   };
 }
 

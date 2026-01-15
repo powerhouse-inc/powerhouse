@@ -161,6 +161,7 @@ export interface PagedResults<T> {
   items: T[];
   nextCursor?: string;
   hasMore: boolean;
+  totalCount?: number;
 }
 
 export interface DocumentSnapshot {

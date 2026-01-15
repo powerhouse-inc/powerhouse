@@ -170,6 +170,7 @@ export class Reactor implements IReactor {
       results: pagedModels,
       options: paging || { cursor: "0", limit: filteredModels.length },
       nextCursor,
+      totalCount: filteredModels.length,
       next: hasMore
         ? () =>
             this.getDocumentModels(
@@ -1134,6 +1135,7 @@ export class Reactor implements IReactor {
         results: pagedDocuments,
         options: paging || { cursor: "0", limit: documents.length },
         nextCursor,
+        totalCount: documents.length,
         next: hasMore
           ? () =>
               this.findByIds(
@@ -1185,6 +1187,7 @@ export class Reactor implements IReactor {
         results: pagedDocuments,
         options: paging || { cursor: "0", limit: documents.length },
         nextCursor,
+        totalCount: documents.length,
         next: hasMore
           ? () =>
               this.findByIds(
@@ -1282,6 +1285,7 @@ export class Reactor implements IReactor {
         results: pagedDocuments,
         options: paging || { cursor: "0", limit: documents.length },
         nextCursor,
+        totalCount: documents.length,
         next: hasMore
           ? () =>
               this.findBySlugs(
@@ -1352,6 +1356,7 @@ export class Reactor implements IReactor {
         results: pagedDocuments,
         options: paging || { cursor: "0", limit: documents.length },
         nextCursor,
+        totalCount: documents.length,
         next: hasMore
           ? () =>
               this.findBySlugs(
@@ -1442,6 +1447,7 @@ export class Reactor implements IReactor {
       results: pagedDocuments,
       options: paging || { cursor: "0", limit: documents.length },
       nextCursor,
+      totalCount: relationships.length,
       next: hasMore
         ? () =>
             this.findByParentId(
@@ -1527,10 +1533,13 @@ export class Reactor implements IReactor {
       }
 
       // Results are already paged from the storage layer
+      // Note: totalCount is not available from legacy storage, so we use documents.length
+      // which represents the count of successfully fetched documents on this page
       return {
         results: documents,
         options: paging || { cursor: cursor || "0", limit },
         nextCursor,
+        totalCount: documents.length, // Legacy storage doesn't provide total count
         next: nextCursor
           ? async () =>
               this.findByType(
@@ -1558,10 +1567,13 @@ export class Reactor implements IReactor {
       const cursor = paging?.cursor;
       const limit = paging?.limit || 100;
 
+      // documentView.findByType returns storage/interfaces.PagedResults (with 'items')
+      // Convert to shared/types.PagedResults (with 'results')
       return {
         results: result.items,
         options: paging || { cursor: cursor || "0", limit },
         nextCursor: result.nextCursor,
+        totalCount: result.totalCount,
         next: result.nextCursor
           ? async () =>
               this.findByType(

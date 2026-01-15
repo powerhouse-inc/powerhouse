@@ -122,6 +122,11 @@ export type PagedResults<T> = {
 
   next?: () => Promise<PagedResults<T>>;
   nextCursor?: string;
+  /**
+   * Total count of all matching items across all pages.
+   * Optional because it may not always be available or efficient to calculate.
+   */
+  totalCount?: number;
 };
 
 /**
