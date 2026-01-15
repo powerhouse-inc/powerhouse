@@ -235,7 +235,9 @@ export class TestScheduler {
       };
 
       // Always log errors
-      this.reporter.printError(`Mutation failed for ${doc.id}: ${result.error}`);
+      this.reporter.printError(
+        `Mutation failed for ${doc.id}: ${result.error}`,
+      );
     }
 
     this.metrics.recordOperation(result);

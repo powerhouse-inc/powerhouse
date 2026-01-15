@@ -94,6 +94,7 @@ export function isInspectorEnabledSync(): boolean {
 export function useInspectorEnabled(): boolean {
   const features = useFeatures();
   return (
-    features?.get(FEATURE_INSPECTOR_ENABLED) ?? FEATURE_INSPECTOR_ENABLED_DEFAULT
+    features?.get(FEATURE_INSPECTOR_ENABLED) ??
+    FEATURE_INSPECTOR_ENABLED_DEFAULT
   );
 }

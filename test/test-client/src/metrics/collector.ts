@@ -1,8 +1,4 @@
-import type {
-  DocumentResult,
-  OperationResult,
-  Statistics,
-} from "../types.js";
+import type { DocumentResult, OperationResult, Statistics } from "../types.js";
 
 export class MetricsCollector {
   private operationResults: OperationResult[] = [];
@@ -50,7 +46,9 @@ export class MetricsCollector {
       .reduce((sum, r) => sum + r.operationCount, 0);
     const failedOps = totalOps - successfulOps;
 
-    const latencies = this.operationResults.map((r) => r.latencyMs).sort((a, b) => a - b);
+    const latencies = this.operationResults
+      .map((r) => r.latencyMs)
+      .sort((a, b) => a - b);
 
     return {
       totalOperations: totalOps,

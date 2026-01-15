@@ -94,7 +94,7 @@ export const TextField = forwardRef<TextFieldHandle, TextFieldProps>(
     );
 
     const handleBlur = useCallback(async () => {
-      const currentValue = form.getValues()[name] ?? "";
+      const currentValue = (form.getValues()[name] as string | undefined) ?? "";
 
       if (value === null || value === undefined) {
         if (!currentValue || currentValue.trim() === "") return;

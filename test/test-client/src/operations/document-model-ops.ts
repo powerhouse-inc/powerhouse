@@ -26,7 +26,9 @@ function createAction(type: string, input: unknown, scope = "global"): Action {
 }
 
 export function setModelName(): Action {
-  return createAction("SET_MODEL_NAME", { name: `TestModel_${randomString(6)}` });
+  return createAction("SET_MODEL_NAME", {
+    name: `TestModel_${randomString(6)}`,
+  });
 }
 
 export function setModelDescription(): Action {

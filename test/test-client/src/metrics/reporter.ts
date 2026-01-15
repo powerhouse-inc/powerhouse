@@ -17,13 +17,17 @@ export class Reporter {
     errors: number,
     avgLatency: number,
   ): void {
-    const percent = Math.min(100, Math.round((elapsedSeconds / totalSeconds) * 100));
+    const percent = Math.min(
+      100,
+      Math.round((elapsedSeconds / totalSeconds) * 100),
+    );
     const barLength = 30;
     const filled = Math.round((percent / 100) * barLength);
     const empty = barLength - filled;
 
     const bar = green("=".repeat(filled)) + gray("-".repeat(empty));
-    const errorText = errors > 0 ? red(`Errors: ${errors}`) : green("Errors: 0");
+    const errorText =
+      errors > 0 ? red(`Errors: ${errors}`) : green("Errors: 0");
 
     const progress = `[${bar}] ${percent}% | Ops: ${totalOps} | ${errorText} | Avg: ${avgLatency}ms`;
 
@@ -45,15 +49,19 @@ export class Reporter {
 
     const successRate =
       stats.totalOperations > 0
-        ? ((stats.successfulOperations / stats.totalOperations) * 100).toFixed(1)
+        ? ((stats.successfulOperations / stats.totalOperations) * 100).toFixed(
+            1,
+          )
         : "0.0";
     console.log(
       `Successful:         ${green(String(stats.successfulOperations))} (${successRate}%)`,
     );
 
     if (stats.failedOperations > 0) {
-      const failRate =
-        ((stats.failedOperations / stats.totalOperations) * 100).toFixed(1);
+      const failRate = (
+        (stats.failedOperations / stats.totalOperations) *
+        100
+      ).toFixed(1);
       console.log(
         `Failed:             ${red(String(stats.failedOperations))} (${failRate}%)`,
       );

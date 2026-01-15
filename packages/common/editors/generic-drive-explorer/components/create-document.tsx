@@ -35,7 +35,10 @@ export function CreateDocument() {
               aria-description={spec.description}
               onClick={() => showCreateDocumentModal(spec.id)}
             >
-              <span className="text-sm">{spec.name}{versionLabel}</span>
+              <span className="text-sm">
+                {spec.name}
+                {versionLabel}
+              </span>
             </PowerhouseButton>
           );
         })}

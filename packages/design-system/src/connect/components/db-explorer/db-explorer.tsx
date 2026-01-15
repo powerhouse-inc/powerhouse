@@ -123,7 +123,15 @@ export function DBExplorer({
     });
 
     return rowsToCsv(data.rows, columns);
-  }, [selectedTable, schema, pagination.total, sort, filters, getTableRows, columns]);
+  }, [
+    selectedTable,
+    schema,
+    pagination.total,
+    sort,
+    filters,
+    getTableRows,
+    columns,
+  ]);
 
   const loadTables = useCallback(async () => {
     setTablesLoading(true);

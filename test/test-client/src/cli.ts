@@ -4,6 +4,14 @@ import { Command } from "commander";
 import { TestScheduler } from "./scheduler/scheduler.js";
 import type { LoadTestConfig } from "./types.js";
 
+interface CliOptions {
+  url: string;
+  duration: string;
+  documentInterval: string;
+  mutationInterval: string;
+  verbose: boolean;
+}
+
 const program = new Command();
 
 program
@@ -22,7 +30,7 @@ program
     "5",
   )
   .option("--verbose", "Enable verbose logging", false)
-  .action(async (options) => {
+  .action(async (options: CliOptions) => {
     const config: LoadTestConfig = {
       url: options.url,
       duration: parseInt(options.duration, 10),
