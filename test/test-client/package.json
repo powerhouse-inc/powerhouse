@@ -1,0 +1,31 @@
+{
+  "name": "@powerhousedao/load-test-client",
+  "version": "1.0.0",
+  "description": "Load testing CLI for Powerhouse Switchboard Reactor",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "ph-load-test": "dist/src/cli.js"
+  },
+  "exports": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.ts",
+    "scenario-1": "tsx src/cli.ts --url http://localhost:4001/graphql --duration 60 --document-interval 10 --mutation-interval 5",
+    "scenario-2": "tsx src/cli.ts --url http://localhost:4001/graphql --duration 120 --document-interval 5 --mutation-interval 2",
+    "scenario-stress": "tsx src/cli.ts --url http://localhost:4001/graphql --duration 300 --document-interval 3 --mutation-interval 1",
+    "test": "vitest --run"
+  },
+  "dependencies": {
+    "colorette": "^2.0.20",
+    "commander": "^12.1.0",
+    "document-model": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.1",
+    "tsx": "^4.20.3",
+    "vitest": "^3.2.4"
+  }
+}
