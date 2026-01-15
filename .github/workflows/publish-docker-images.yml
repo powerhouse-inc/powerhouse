@@ -1,10 +1,8 @@
 name: Build and Publish Docker Images
 
 on:
-  workflow_run:
-    workflows: [Release Branch]
-    types:
-      - completed
+  workflow_call:
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -153,31 +151,9 @@ jobs:
           build-args: |
             TAG=${{env.GITHUB_TAG}}
 
-  update-k8s-academy:
-    needs: academy
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout k8s cluster repository
-        uses: actions/checkout@v4
-        with:
-          repository: powerhouse-inc/powerhouse-k8s-hosting
-          token: ${{ secrets.K8S_REPO_PAT }}
-          path: k8s-cluster
-
-      - name: Install yq
-        uses: mikefarah/yq@v4
-
-      - name: Update academy image tag
-        run: |
-          cd k8s-cluster
-          # Update the academy image tag in the tenant values file
-          yq -i '.academy.image.tag = "${{ needs.academy.outputs.tag }}"' tenants/academy/powerhouse-values.yaml
-
-      - name: Commit and push changes
-        run: |
-          cd k8s-cluster
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add tenants/academy/powerhouse-values.yaml
-          git diff --staged --quiet || git commit -m "chore(academy): update image tag to ${{ needs.academy.outputs.tag }}"
-          git push
+  deploy-k8s:
+    needs: [connect, switchboard, academy]
+    uses: "./.github/workflows/deploy-k8s.yml"
+    with:
+      tag: ${{ needs.academy.outputs.tag }}
+    secrets: inherit
