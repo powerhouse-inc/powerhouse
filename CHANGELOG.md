@@ -1,3 +1,27 @@
+## 5.2.0-dev.1 (2026-01-15)
+
+### 🚀 Features
+
+- set out rules for new skip calculation ([a03bce361](https://github.com/powerhouse-inc/powerhouse/commit/a03bce361))
+- implemented calculateUndoSkipNumber ([da19c2dab](https://github.com/powerhouse-inc/powerhouse/commit/da19c2dab))
+- **codegen:** update document engineering package version in boilerplate ([#2212](https://github.com/powerhouse-inc/powerhouse/pull/2212))
+- **monorepo:** use local package execution for tailwind instead of downloading it every time ([ed149558c](https://github.com/powerhouse-inc/powerhouse/commit/ed149558c))
+- **monorepo:** upgrade zod and use compatibility layer for errors ([#2210](https://github.com/powerhouse-inc/powerhouse/pull/2210))
+
+### 🩹 Fixes
+
+- clipboard should be loaded from storage ([8825f186a](https://github.com/powerhouse-inc/powerhouse/commit/8825f186a))
+- linter ([d28e68ea7](https://github.com/powerhouse-inc/powerhouse/commit/d28e68ea7))
+- fix race condition in reactor tests ([6400c1867](https://github.com/powerhouse-inc/powerhouse/commit/6400c1867))
+- **codegen:** remove hardcoded comment on editor module ([244aa75d4](https://github.com/powerhouse-inc/powerhouse/commit/244aa75d4))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
 ## 5.1.0-dev.42 (2026-01-14)
 
 ### 🚀 Features

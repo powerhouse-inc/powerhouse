@@ -1,3 +1,15 @@
+## 5.2.0-dev.1 (2026-01-15)
+
+### 🚀 Features
+
+- **monorepo:** upgrade zod and use compatibility layer for errors ([#2210](https://github.com/powerhouse-inc/powerhouse/pull/2210))
+- **monorepo:** use local package execution for tailwind instead of downloading it every time ([ed149558c](https://github.com/powerhouse-inc/powerhouse/commit/ed149558c))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
 ## 5.1.0-dev.42 (2026-01-14)
 
 ### 🚀 Features
