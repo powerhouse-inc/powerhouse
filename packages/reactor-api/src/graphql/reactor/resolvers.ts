@@ -393,11 +393,7 @@ export async function mutateDocument(
   // Validate actions
   let validatedActions;
   try {
-    validatedActions = await validateActions(
-      reactorClient,
-      args.documentIdentifier,
-      args.actions,
-    );
+    validatedActions = validateActions(args.actions);
   } catch (error) {
     if (error instanceof GraphQLError) {
       throw error;
@@ -446,11 +442,7 @@ export async function mutateDocumentAsync(
   // Validate actions
   let validatedActions;
   try {
-    validatedActions = await validateActions(
-      reactorClient,
-      args.documentIdentifier,
-      args.actions,
-    );
+    validatedActions = validateActions(args.actions);
   } catch (error) {
     if (error instanceof GraphQLError) {
       throw error;

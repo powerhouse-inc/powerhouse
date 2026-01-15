@@ -254,14 +254,9 @@ export function validateDocumentModelAction(
 }
 
 /**
- * Validates a list of actions against a document model
+ * Validates a list of actions by converting them from JSON and checking structure
  */
-export async function validateActions(
-  reactorClient: IReactorClient,
-  documentIdentifier: string,
-  actions: readonly unknown[],
-): Promise<Action[]> {
-  // First convert JSONObjects to Actions
+export function validateActions(actions: readonly unknown[]): Action[] {
   const convertedActions: Action[] = [];
   for (let i = 0; i < actions.length; i++) {
     try {
@@ -272,62 +267,6 @@ export async function validateActions(
       );
     }
   }
-
-  // Get the document to determine its type
-  let document: PHDocument;
-  try {
-    const result = await reactorClient.get(documentIdentifier);
-    document = result.document;
-  } catch (error) {
-    throw new GraphQLError(
-      `Failed to fetch document for validation: ${error instanceof Error ? error.message : "Unknown error"}`,
-    );
-  }
-
-  // Get the document model module
-  let documentModelModule: DocumentModelModule;
-  try {
-    const modelsResult = await reactorClient.getDocumentModelModules();
-    const module = modelsResult.results.find(
-      (m) => m.documentModel.global.id === document.header.documentType,
-    );
-
-    if (!module) {
-      throw new GraphQLError(
-        `Document model not found for type: ${document.header.documentType}`,
-      );
-    }
-
-    documentModelModule = module;
-  } catch (error) {
-    if (error instanceof GraphQLError) {
-      throw error;
-    }
-    throw new GraphQLError(
-      `Failed to fetch document model: ${error instanceof Error ? error.message : "Unknown error"}`,
-    );
-  }
-
-  // Validate each action
-  const validationErrors: string[] = [];
-  for (let i = 0; i < convertedActions.length; i++) {
-    const validation = validateDocumentModelAction(
-      documentModelModule,
-      convertedActions[i],
-    );
-    if (!validation.isValid) {
-      validationErrors.push(
-        `Action ${i} (type: ${convertedActions[i].type}): ${validation.errors.join(", ")}`,
-      );
-    }
-  }
-
-  if (validationErrors.length > 0) {
-    throw new GraphQLError(
-      `Action validation failed:\n${validationErrors.join("\n")}`,
-    );
-  }
-
   return convertedActions;
 }
 
