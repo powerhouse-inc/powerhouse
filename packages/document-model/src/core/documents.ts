@@ -251,6 +251,7 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
     checkHashes = true,
     reuseOperationResultingState,
     operationResultingStateParser = parseResultingState,
+    skipIndexValidation,
   } = options || {};
 
   let documentState = initialState;
@@ -322,6 +323,7 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
       const doc = reducer(document, operation.action, dispatch, {
         ignoreSkipOperations: true,
         checkHashes,
+        skipIndexValidation,
         replayOptions: {
           operation,
         },

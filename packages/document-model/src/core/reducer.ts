@@ -128,6 +128,7 @@ function updateOperationsForOperation<TDocument extends PHDocument>(
   reuseLastOperationIndex: boolean,
   skip: number,
   context: OperationContext,
+  skipIndexValidation?: boolean,
 ): TDocument {
   const scope = operation.action.scope;
   const scopeOperations = document.operations[scope];
@@ -142,7 +143,7 @@ function updateOperationsForOperation<TDocument extends PHDocument>(
     ? lastOperationIndex
     : lastOperationIndex + 1;
 
-  if (operation.index - skip > nextIndex) {
+  if (!skipIndexValidation && operation.index - skip > nextIndex) {
     throw new Error(
       `Missing operations: expected ${nextIndex} with skip 0 or equivalent, got index ${operation.index} with skip ${skip}`,
     );
@@ -181,6 +182,7 @@ export function updateDocument<TDocument extends PHDocument>(
   skip: number,
   context: OperationContext,
   operation?: Operation,
+  skipIndexValidation?: boolean,
 ): TDocument {
   let newDocument: TDocument;
   if (operation) {
@@ -191,6 +193,7 @@ export function updateDocument<TDocument extends PHDocument>(
       reuseLastOperationIndex,
       skip,
       context,
+      skipIndexValidation,
     ) as TDocument;
   } else {
     // action
@@ -465,6 +468,7 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
     skipValue,
     operationContext,
     options.replayOptions?.operation,
+    options.skipIndexValidation,
   );
 
   // Only process undo for actual UNDO actions in protocol v1
@@ -503,11 +507,16 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
     };
 
     // Replay to rebuild state using replayOperations which wraps the reducer
+    // Pass skipIndexValidation since garbageCollectV2 creates gapped indices
     const rebuiltDoc = replayOperations(
       newDocument.initialState,
       replayOps,
       customReducer,
       newDocument.header,
+      dispatch,
+      baseReducer,
+      {},
+      { skipIndexValidation: true },
     );
 
     // Return document with rebuilt state but original operations (including all NOOPs)

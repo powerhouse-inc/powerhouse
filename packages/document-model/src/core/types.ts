@@ -402,6 +402,12 @@ export type ReducerOptions = {
    * - Version 2: Reactor behavior with monotonic indices
    */
   protocolVersion?: number;
+
+  /**
+   * When true, skip index contiguity validation during replay.
+   * Used for V2 state rebuild where gapped indices are expected.
+   */
+  skipIndexValidation?: boolean;
 };
 
 /**
@@ -647,6 +653,9 @@ export type ReplayDocumentOptions = {
   reuseOperationResultingState?: boolean;
   // Optional parser for the operation resulting state, uses JSON.parse by default
   operationResultingStateParser?: <TState>(state: string) => TState;
+  // When true, skip index contiguity validation during replay.
+  // Used for V2 state rebuild where gapped indices are expected.
+  skipIndexValidation?: boolean;
 };
 
 export type OperationIndex = {
