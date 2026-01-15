@@ -14,8 +14,6 @@ import {
 } from "@powerhousedao/ph-cli/commands";
 import { run, subcommands } from "cmd-ts";
 
-const { version } = (await import("./version.js")) as { version: string };
-
 const phCliCommands = {
   generate,
   vetra,
@@ -31,6 +29,7 @@ const phCliCommands = {
 };
 
 async function main() {
+  const { version } = (await import("./version.js")) as { version: string };
   const args = process.argv.slice(2);
   const hasNoArgs = args.length == 0;
   const isTopLevelHelp =
