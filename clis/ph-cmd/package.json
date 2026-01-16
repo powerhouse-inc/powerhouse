@@ -12,20 +12,18 @@
     "access": "public"
   },
   "bin": {
-    "ph": "dist/src/cli.js"
+    "ph": "build/cli.js"
   },
   "files": [
-    "dist"
+    "build/cli.js"
   ],
-  "exports": "./dist/src/index.js",
-  "types": "./dist/src/index.d.ts",
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
     "generate-commands-md": "tsx scripts/generate-commands-md.ts",
     "generate-version": "tsx scripts/generate-version.ts",
-    "build": "npm run generate-commands-md && npm run generate-version",
-    "prepublishOnly": "npm run generate-version && tsc src/version.ts --outDir dist/src --module NodeNext --target ESNext --sourceMap --declaration --declarationMap --skipLibCheck",
+    "bundle-cli": "tsup-node src/cli.ts --outDir build --format esm",
+    "build": "npm run generate-commands-md && npm run generate-version && npm run bundle-cli",
     "dev": "tsx src/cli.ts",
     "test": "vitest run",
     "test:watch": "vitest watch"
@@ -45,6 +43,7 @@
     "write-package": "^7.2.0"
   },
   "devDependencies": {
+    "tsup": "^8.5.1",
     "vitest": "^3.2.4"
   }
 }
