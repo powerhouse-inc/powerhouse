@@ -131,7 +131,7 @@ export type PagedResults<T> = {
    * - `findByIds`: Input IDs array size (not successfully fetched count)
    * - `findBySlugs`: Input slugs array size (not successfully fetched count)
    * - `findByParentId`: Relationships array size (not successfully fetched count)
-   * - `filterByType`: Filtered current page size (fallback, not total)
+   * - `filterByType`: `undefined` (cannot determine total after filtering)
    *
    * For lookup methods, this represents the input array size, not the count of
    * successfully fetched documents. This is a performance trade-off to avoid
