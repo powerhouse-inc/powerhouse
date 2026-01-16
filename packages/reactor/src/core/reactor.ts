@@ -1131,6 +1131,7 @@ export class Reactor implements IReactor {
       const hasMore = startIndex + limit < documents.length;
       const nextCursor = hasMore ? String(startIndex + limit) : undefined;
 
+      // totalCount reflects successfully fetched documents, not input array size
       return {
         results: pagedDocuments,
         options: paging || { cursor: "0", limit: documents.length },
@@ -1183,6 +1184,7 @@ export class Reactor implements IReactor {
       const hasMore = startIndex + limit < documents.length;
       const nextCursor = hasMore ? String(startIndex + limit) : undefined;
 
+      // totalCount reflects successfully fetched documents, not input array size
       return {
         results: pagedDocuments,
         options: paging || { cursor: "0", limit: documents.length },
@@ -1281,6 +1283,7 @@ export class Reactor implements IReactor {
       const hasMore = startIndex + limit < documents.length;
       const nextCursor = hasMore ? String(startIndex + limit) : undefined;
 
+      // totalCount reflects successfully fetched documents, not input array size
       return {
         results: pagedDocuments,
         options: paging || { cursor: "0", limit: documents.length },
@@ -1352,6 +1355,7 @@ export class Reactor implements IReactor {
       const hasMore = startIndex + limit < documents.length;
       const nextCursor = hasMore ? String(startIndex + limit) : undefined;
 
+      // totalCount reflects successfully fetched documents, not input array size
       return {
         results: pagedDocuments,
         options: paging || { cursor: "0", limit: documents.length },
@@ -1447,7 +1451,7 @@ export class Reactor implements IReactor {
       results: pagedDocuments,
       options: paging || { cursor: "0", limit: documents.length },
       nextCursor,
-      totalCount: relationships.length,
+      totalCount: documents.length,
       next: hasMore
         ? () =>
             this.findByParentId(
@@ -1533,13 +1537,11 @@ export class Reactor implements IReactor {
       }
 
       // Results are already paged from the storage layer
-      // Note: totalCount is not available from legacy storage, so we use documents.length
-      // which represents the count of successfully fetched documents on this page
       return {
         results: documents,
         options: paging || { cursor: cursor || "0", limit },
         nextCursor,
-        totalCount: documents.length, // Legacy storage doesn't provide total count
+        totalCount: undefined, // Legacy storage doesn't provide total count
         next: nextCursor
           ? async () =>
               this.findByType(
