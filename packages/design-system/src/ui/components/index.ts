@@ -19,6 +19,7 @@ export * from "./id-autocomplete/id-autocomplete.js";
 export * from "./id-autocomplete/use-id-autocomplete.js";
 export * from "./input/input.js";
 export * from "./input/splitted-input-diff.js";
+export * from "./json-viewer/json-viewer.js";
 export * from "./popover/popover.js";
 export * from "./radio-group-field/radio-group-field.js";
 export * from "./radio-group-field/radio-group.js";
