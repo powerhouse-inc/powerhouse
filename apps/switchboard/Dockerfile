@@ -39,6 +39,10 @@ RUN if [ -n "$PH_PACKAGES" ]; then \
         done; \
     fi
 
+# Regenerate Prisma client for Alpine Linux (linux-musl-openssl-3.0.x)
+# The document-drive package ships with darwin-arm64 binaries, we need to regenerate
+RUN prisma generate --schema node_modules/document-drive/dist/prisma/schema.prisma
+
 # Final stage - slim node image
 FROM node:22-alpine
 
