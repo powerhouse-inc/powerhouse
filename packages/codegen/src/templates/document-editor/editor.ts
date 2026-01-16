@@ -34,6 +34,11 @@ export default function Editor() {
             title="Edit document name and click outside to save."
             autoFocus
             onBlur={(e) => handleSetName(e.target.value.trim())}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.currentTarget.blur();
+              }
+            }}
             className="font-semibold"
           />
         </label>
