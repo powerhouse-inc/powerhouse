@@ -15,15 +15,11 @@ export const vetraArgs = {
     type: optional(number),
     long: "switchboard-port",
     description: "port to use for the Vetra Switchboard",
-    defaultValue: () => 4001 as const,
-    defaultValueIsSerializable: true,
   }),
   connectPort: option({
     type: optional(number),
     long: "connect-port",
     description: "port to use for the Vetra Connect",
-    defaultValue: () => 3000 as const,
-    defaultValueIsSerializable: true,
   }),
   httpsKeyFile: option({
     type: optional(string),
