@@ -55,11 +55,23 @@ export async function addDrive(input: DriveInput, preferredEditor?: string) {
       throw new Error("ReactorClient not initialized");
     }
 
-    const id = input.id || generateId();
     const newDrive = await reactorClient.createEmpty<DocumentDriveDocument>(
       "powerhouse/document-drive",
     );
-    return newDrive;
+
+    const driveId = newDrive.header.id;
+
+    // Set the drive name
+    if (input.global.name) {
+      await reactorClient.execute(driveId, "main", [
+        setDriveName({ name: input.global.name }),
+      ]);
+    }
+
+    // Return the updated drive
+    const { document: updatedDrive } =
+      await reactorClient.get<DocumentDriveDocument>(driveId);
+    return updatedDrive;
   }
 }
 
