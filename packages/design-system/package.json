@@ -161,6 +161,7 @@
     "react-circle-flags": "^0.0.22",
     "react-day-picker": "9.4.3",
     "react-hook-form": "^7.53.0",
+    "react-json-view-lite": "^2.5.0",
     "react-multi-select-component": "^4.3.4",
     "react-number-format": "^5.4.2",
     "react-select": "^5.8.0",
