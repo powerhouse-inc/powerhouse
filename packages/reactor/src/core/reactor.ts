@@ -1552,11 +1552,14 @@ export class Reactor implements IReactor {
       }
 
       // Results are already paged from the storage layer
+      // Legacy storage doesn't provide total count, so we use the current page size
+      // as a fallback. The adapter will use this value, which represents the number
+      // of documents on this page, not the total across all pages.
       return {
         results: documents,
         options: paging || { cursor: cursor || "0", limit },
         nextCursor,
-        totalCount: undefined, // Legacy storage doesn't provide total count
+        totalCount: documents.length, // Legacy storage fallback: current page size (not total)
         next: nextCursor
           ? async () =>
               this.findByType(

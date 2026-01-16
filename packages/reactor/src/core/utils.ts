@@ -156,12 +156,13 @@ export function filterByType(
 
   // Create new paged results with filtered documents
   // Note: This maintains the same paging structure but with filtered results
-  // totalCount is not preserved as filtering changes the total count
+  // totalCount cannot be accurately determined after filtering without iterating all pages,
+  // so we use the filtered documents length as a fallback (represents current page, not total)
   return {
     results: filteredDocuments,
     options: results.options,
     nextCursor: results.nextCursor,
-    totalCount: undefined, // Cannot determine total count after filtering without iterating all pages
+    totalCount: filteredDocuments.length, // Fallback: current page size (not total across all pages)
     next: results.next
       ? async () => {
           // If there's a next function, apply the same filter to the next page
