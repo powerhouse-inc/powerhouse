@@ -1,6 +1,6 @@
 import { TabContent, Tabs } from "@powerhousedao/design-system/connect";
 import { JsonViewer } from "@powerhousedao/design-system/ui";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { twMerge } from "tailwind-merge";
 
 interface DocumentStateViewerProps {
@@ -22,34 +22,18 @@ export function DocumentStateViewer({
   className,
 }: DocumentStateViewerProps) {
   const scopes = useMemo(
-    () =>
-      Object.keys(state).filter((scope) => !ignoredScopes.includes(scope)),
+    () => Object.keys(state).filter((scope) => !ignoredScopes.includes(scope)),
     [state, ignoredScopes],
   );
 
-  const [selectedScope, setSelectedScope] = useState(
-    defaultScope || scopes[0] || "global",
-  );
-
-  // Auto-select first scope when scopes change or selected scope becomes invalid
-  useEffect(() => {
-    if (scopes.length > 0 && !scopes.includes(selectedScope)) {
-      setSelectedScope(scopes[0]);
-    }
-  }, [scopes, selectedScope]);
+  const initialScope = defaultScope || scopes.at(0) || "global";
 
   if (scopes.length === 0) {
     return <div className="text-sm text-gray-500">No state data</div>;
   }
 
   return (
-    <Tabs
-      value={formatScopeLabel(selectedScope)}
-      onValueChange={(value) => {
-        const scope = scopes.find((s) => formatScopeLabel(s) === value);
-        if (scope) setSelectedScope(scope);
-      }}
-    >
+    <Tabs defaultValue={formatScopeLabel(initialScope)}>
       {scopes.map((scope) => (
         <TabContent
           key={scope}
