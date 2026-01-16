@@ -1,3 +1,13 @@
+## 6.0.0-dev.7 (2026-01-16)
+
+### 🩹 Fixes
+
+- **ph-cmd:** do not publish dependencies in cli ([0f5296d02](https://github.com/powerhouse-inc/powerhouse/commit/0f5296d02))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
 ## 6.0.0-dev.6 (2026-01-16)
 
 ### 🩹 Fixes
