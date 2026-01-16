@@ -1,6 +1,6 @@
+import { lazy, Suspense } from "react";
 import type { Props } from "react-json-view-lite";
 import {
-  JsonView,
   defaultStyles as _defaultStyles,
   allExpanded,
 } from "react-json-view-lite";
@@ -14,12 +14,18 @@ const defaultStyles = {
   stringValue: `${_defaultStyles.stringValue} !text-gray-600`,
 };
 
+const JsonView = lazy(() =>
+  import("react-json-view-lite").then((m) => ({ default: m.JsonView })),
+);
+
 export function JsonViewer(props: Props) {
   return (
-    <JsonView
-      {...props}
-      shouldExpandNode={props.shouldExpandNode ?? allExpanded}
-      style={props.style ?? defaultStyles}
-    />
+    <Suspense>
+      <JsonView
+        {...props}
+        shouldExpandNode={props.shouldExpandNode ?? allExpanded}
+        style={props.style ?? defaultStyles}
+      />
+    </Suspense>
   );
 }
