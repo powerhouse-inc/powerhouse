@@ -188,7 +188,7 @@ http://localhost:4001/graphql
 
 ### 3.4. Test the queries
 
-**Query 1: Search for Todos **
+**Query 1: Search for Todos**
 
 ```graphql
 query {
