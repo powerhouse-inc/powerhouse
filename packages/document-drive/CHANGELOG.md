@@ -1,3 +1,18 @@
+## 5.3.0-staging.2 (2026-01-16)
+
+### 🚀 Features
+
+- **design-system:** default styles tweaks and DocumentStateViewer ([18e4482e1](https://github.com/powerhouse-inc/powerhouse/commit/18e4482e1))
+
+### 🩹 Fixes
+
+- **document-drive:** name in responseForDocument ([63c4b0b45](https://github.com/powerhouse-inc/powerhouse/commit/63c4b0b45))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
 ## 5.3.0-staging.1 (2026-01-14)
 
 This was a version bump only for document-drive to align it with other projects, there were no code changes.

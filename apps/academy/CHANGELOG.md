@@ -1,3 +1,18 @@
+## 5.3.0-staging.2 (2026-01-16)
+
+### 🚀 Features
+
+- **design-system:** default styles tweaks and DocumentStateViewer ([18e4482e1](https://github.com/powerhouse-inc/powerhouse/commit/18e4482e1))
+
+### 🩹 Fixes
+
+- **academy:** updated search subgraph example ([758447cab](https://github.com/powerhouse-inc/powerhouse/commit/758447cab))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
 ## 5.3.0-staging.1 (2026-01-14)
 
 This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.

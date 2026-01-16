@@ -1,3 +1,22 @@
+## 5.3.0-staging.2 (2026-01-16)
+
+### 🚀 Features
+
+- **codegen:** updated document editor boilerplate ([deb8ff3c4](https://github.com/powerhouse-inc/powerhouse/commit/deb8ff3c4))
+- **design-system:** default styles tweaks and DocumentStateViewer ([18e4482e1](https://github.com/powerhouse-inc/powerhouse/commit/18e4482e1))
+- **codegen:** upgrade document engineering in boilerplate ([#2213](https://github.com/powerhouse-inc/powerhouse/pull/2213))
+
+### 🩹 Fixes
+
+- address code review issues ([e51b44c9c](https://github.com/powerhouse-inc/powerhouse/commit/e51b44c9c))
+- **codegen:** removed newline from index files ([2e303596a](https://github.com/powerhouse-inc/powerhouse/commit/2e303596a))
+- **codegen:** remove hardcoded comment on editor module ([dfb381969](https://github.com/powerhouse-inc/powerhouse/commit/dfb381969))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Ryan Wolhuter @ryanwolhuter
+
 ## 5.3.0-staging.1 (2026-01-14)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.

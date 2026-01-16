@@ -1,3 +1,21 @@
+## 5.3.0-staging.2 (2026-01-16)
+
+### 🚀 Features
+
+- **design-system:** lazy import json package ([aae2c98ea](https://github.com/powerhouse-inc/powerhouse/commit/aae2c98ea))
+- **design-system:** clean up document-state-viewer ([6da2b28af](https://github.com/powerhouse-inc/powerhouse/commit/6da2b28af))
+- **design-system:** default styles tweaks and DocumentStateViewer ([18e4482e1](https://github.com/powerhouse-inc/powerhouse/commit/18e4482e1))
+- **connect:** move home button to sidebar footer and add debug button ([4a727faeb](https://github.com/powerhouse-inc/powerhouse/commit/4a727faeb))
+
+### 🩹 Fixes
+
+- address code review issues ([e51b44c9c](https://github.com/powerhouse-inc/powerhouse/commit/e51b44c9c))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+
 ## 5.3.0-staging.1 (2026-01-14)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.

@@ -1,3 +1,19 @@
+## 5.3.0-staging.2 (2026-01-16)
+
+### 🚀 Features
+
+- **design-system:** default styles tweaks and DocumentStateViewer ([18e4482e1](https://github.com/powerhouse-inc/powerhouse/commit/18e4482e1))
+- **vetra:** update drive header with info menu, share menu, and Vetra Academy link ([78770de30](https://github.com/powerhouse-inc/powerhouse/commit/78770de30))
+
+### 🩹 Fixes
+
+- **vetra:** address PR review feedback for drive header components ([d59351ec3](https://github.com/powerhouse-inc/powerhouse/commit/d59351ec3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+
 ## 5.3.0-staging.1 (2026-01-14)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.

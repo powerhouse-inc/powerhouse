@@ -1,3 +1,15 @@
+## 5.3.0-staging.2 (2026-01-16)
+
+### 🚀 Features
+
+- **design-system:** default styles tweaks and DocumentStateViewer ([18e4482e1](https://github.com/powerhouse-inc/powerhouse/commit/18e4482e1))
+- **connect:** move home button to sidebar footer and add debug button ([4a727faeb](https://github.com/powerhouse-inc/powerhouse/commit/4a727faeb))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+
 ## 5.3.0-staging.1 (2026-01-14)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

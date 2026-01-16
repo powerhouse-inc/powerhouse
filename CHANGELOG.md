@@ -1,3 +1,31 @@
+## 5.3.0-staging.2 (2026-01-16)
+
+### 🚀 Features
+
+- **codegen:** upgrade document engineering in boilerplate ([#2213](https://github.com/powerhouse-inc/powerhouse/pull/2213))
+- **codegen:** updated document editor boilerplate ([deb8ff3c4](https://github.com/powerhouse-inc/powerhouse/commit/deb8ff3c4))
+- **connect:** move home button to sidebar footer and add debug button ([4a727faeb](https://github.com/powerhouse-inc/powerhouse/commit/4a727faeb))
+- **design-system:** default styles tweaks and DocumentStateViewer ([18e4482e1](https://github.com/powerhouse-inc/powerhouse/commit/18e4482e1))
+- **design-system:** clean up document-state-viewer ([6da2b28af](https://github.com/powerhouse-inc/powerhouse/commit/6da2b28af))
+- **design-system:** lazy import json package ([aae2c98ea](https://github.com/powerhouse-inc/powerhouse/commit/aae2c98ea))
+- **vetra:** update drive header with info menu, share menu, and Vetra Academy link ([78770de30](https://github.com/powerhouse-inc/powerhouse/commit/78770de30))
+
+### 🩹 Fixes
+
+- address code review issues ([e51b44c9c](https://github.com/powerhouse-inc/powerhouse/commit/e51b44c9c))
+- **academy:** updated search subgraph example ([758447cab](https://github.com/powerhouse-inc/powerhouse/commit/758447cab))
+- **codegen:** remove hardcoded comment on editor module ([dfb381969](https://github.com/powerhouse-inc/powerhouse/commit/dfb381969))
+- **codegen:** removed newline from index files ([2e303596a](https://github.com/powerhouse-inc/powerhouse/commit/2e303596a))
+- **document-drive:** name in responseForDocument ([63c4b0b45](https://github.com/powerhouse-inc/powerhouse/commit/63c4b0b45))
+- **vetra:** address PR review feedback for drive header components ([d59351ec3](https://github.com/powerhouse-inc/powerhouse/commit/d59351ec3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+- Guillermo Puente @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 5.3.0-staging.1 (2026-01-14)
 
 This was a version bump only, there were no code changes.
