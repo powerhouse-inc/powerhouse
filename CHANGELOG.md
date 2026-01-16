@@ -1,3 +1,13 @@
+## 6.0.0-dev.4 (2026-01-16)
+
+### 🩹 Fixes
+
+- **switchboard:** add openssl for Prisma compatibility ([fe7235609](https://github.com/powerhouse-inc/powerhouse/commit/fe7235609))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.3 (2026-01-16)
 
 ### 🚀 Features
