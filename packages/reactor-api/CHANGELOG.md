@@ -1,3 +1,13 @@
+## 6.0.0-dev.6 (2026-01-16)
+
+### 🩹 Fixes
+
+- **ph-cmd:** move .npmrc to codegen package dir ([35ef27743](https://github.com/powerhouse-inc/powerhouse/commit/35ef27743))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
 ## 6.0.0-dev.5 (2026-01-16)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
