@@ -123,7 +123,22 @@ export type PagedResults<T> = {
   next?: () => Promise<PagedResults<T>>;
   nextCursor?: string;
   /**
-   * Total count of all matching items across all pages.
+   * Count of items for pagination purposes.
+   *
+   * **⚠️ Inconsistent semantics**: The meaning of `totalCount` varies by method:
+   * - `findByType` (new storage): Actual total count from storage (accurate)
+   * - `findByType` (legacy storage): Current page size (fallback, not total)
+   * - `findByIds`: Input IDs array size (not successfully fetched count)
+   * - `findBySlugs`: Input slugs array size (not successfully fetched count)
+   * - `findByParentId`: Relationships array size (not successfully fetched count)
+   * - `filterByType`: Filtered current page size (fallback, not total)
+   *
+   * For lookup methods, this represents the input array size, not the count of
+   * successfully fetched documents. This is a performance trade-off to avoid
+   * fetching all documents. Only use `totalCount` for accurate pagination UI
+   * with `findByType` (new storage). For other methods, use `nextCursor`/`next`
+   * for pagination logic.
+   *
    * Optional because it may not always be available or efficient to calculate.
    */
   totalCount?: number;

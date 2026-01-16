@@ -161,6 +161,15 @@ export interface PagedResults<T> {
   items: T[];
   nextCursor?: string;
   hasMore: boolean;
+  /**
+   * Count of items for pagination purposes.
+   *
+   * **⚠️ Inconsistent semantics**: Meaning varies by method - see `shared/types.ts`
+   * for detailed breakdown. Only accurate for `findByType` (new storage). For lookup
+   * methods, represents input array size, not successfully fetched count.
+   *
+   * Optional because it may not always be available or efficient to calculate.
+   */
   totalCount?: number;
 }
 
