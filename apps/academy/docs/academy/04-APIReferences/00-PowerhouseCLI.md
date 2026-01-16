@@ -880,6 +880,14 @@ Identity Options:
                         want to ensure the switchboard runs with a valid identity. If no
                         keypair exists, run 'ph login' first to create one.
 
+Migration Options:
+  --migrate               Run database migrations and exit without starting the server.
+                        Useful for CI/CD pipelines or manual migration control.
+                        Only works with PostgreSQL databases.
+
+  --migrate-status        Show current migration status and exit. Lists all migrations
+                        and indicates which have been applied.
+
 Examples:
   $ ph switchboard                           # Start switchboard with default settings
   $ ph switchboard --port 5000               # Use custom port 5000
@@ -889,6 +897,9 @@ Examples:
   $ ph switchboard --base-path /switchboard  # Set API base path to /switchboard
   $ ph switchboard --use-identity            # Start with identity from ph login
   $ ph switchboard --require-identity        # Require identity, fail if not logged in
+  $ ph switchboard --migrate                 # Run migrations and exit
+  $ ph switchboard --migrate-status          # Check migration status
+  $ ph switchboard --db-path postgresql://... --migrate  # Migrate specific database
 ```
 
 ## Uninstall
