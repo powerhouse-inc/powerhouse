@@ -1068,6 +1068,11 @@ export class Reactor implements IReactor {
 
   /**
    * Finds documents by their IDs
+   *
+   * @performance Note: This method applies pagination to the input IDs array before
+   * fetching documents to avoid loading all documents into memory. However, totalCount
+   * uses the input array size, which may be slightly inaccurate if some documents fail
+   * to fetch. For accurate totalCount, all documents would need to be fetched.
    */
   private async findByIds(
     ids: string[],
@@ -1086,10 +1091,16 @@ export class Reactor implements IReactor {
       );
     }
     if (this.features.legacyStorageEnabled) {
+      // Apply pagination to IDs array BEFORE fetching documents to avoid loading all into memory
+      const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
+      const limit = paging?.limit || ids.length;
+      const pagedIds = ids.slice(startIndex, startIndex + limit);
+      const hasMore = startIndex + limit < ids.length;
+
       const documents: PHDocument[] = [];
 
-      // Fetch each document by ID using storage directly
-      for (const id of ids) {
+      // Only fetch documents for the current page
+      for (const id of pagedIds) {
         if (signal?.aborted) {
           throw new AbortError();
         }
@@ -1122,21 +1133,14 @@ export class Reactor implements IReactor {
         throw new AbortError();
       }
 
-      // Apply paging
-      const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-      const limit = paging?.limit || documents.length;
-      const pagedDocuments = documents.slice(startIndex, startIndex + limit);
-
-      // Create paged results
-      const hasMore = startIndex + limit < documents.length;
       const nextCursor = hasMore ? String(startIndex + limit) : undefined;
 
-      // totalCount reflects successfully fetched documents, not input array size
+      // totalCount uses input array size (may be slightly inaccurate if some documents fail to fetch)
       return {
-        results: pagedDocuments,
+        results: documents,
         options: paging || { cursor: "0", limit: documents.length },
         nextCursor,
-        totalCount: documents.length,
+        totalCount: ids.length,
         next: hasMore
           ? () =>
               this.findByIds(
@@ -1149,10 +1153,16 @@ export class Reactor implements IReactor {
           : undefined,
       };
     } else {
+      // Apply pagination to IDs array BEFORE fetching documents to avoid loading all into memory
+      const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
+      const limit = paging?.limit || ids.length;
+      const pagedIds = ids.slice(startIndex, startIndex + limit);
+      const hasMore = startIndex + limit < ids.length;
+
       const documents: PHDocument[] = [];
 
-      // Fetch each document by ID using documentView
-      for (const id of ids) {
+      // Only fetch documents for the current page
+      for (const id of pagedIds) {
         if (signal?.aborted) {
           throw new AbortError();
         }
@@ -1175,21 +1185,14 @@ export class Reactor implements IReactor {
         throw new AbortError();
       }
 
-      // Apply paging
-      const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-      const limit = paging?.limit || documents.length;
-      const pagedDocuments = documents.slice(startIndex, startIndex + limit);
-
-      // Create paged results
-      const hasMore = startIndex + limit < documents.length;
       const nextCursor = hasMore ? String(startIndex + limit) : undefined;
 
-      // totalCount reflects successfully fetched documents, not input array size
+      // totalCount uses input array size (may be slightly inaccurate if some documents fail to fetch)
       return {
-        results: pagedDocuments,
+        results: documents,
         options: paging || { cursor: "0", limit: documents.length },
         nextCursor,
-        totalCount: documents.length,
+        totalCount: ids.length,
         next: hasMore
           ? () =>
               this.findByIds(
@@ -1206,6 +1209,11 @@ export class Reactor implements IReactor {
 
   /**
    * Finds documents by their slugs
+   *
+   * @performance Note: This method applies pagination to the input slugs array before
+   * resolving and fetching documents to avoid loading all documents into memory. However,
+   * totalCount uses the resolved IDs array size, which may be slightly inaccurate if some
+   * documents fail to fetch. For accurate totalCount, all documents would need to be fetched.
    */
   private async findBySlugs(
     slugs: string[],
@@ -1224,13 +1232,17 @@ export class Reactor implements IReactor {
       );
     }
     if (this.features.legacyStorageEnabled) {
-      const documents: PHDocument[] = [];
+      // Apply pagination to slugs array BEFORE resolving and fetching to avoid loading all into memory
+      const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
+      const limit = paging?.limit || slugs.length;
+      const pagedSlugs = slugs.slice(startIndex, startIndex + limit);
+      const hasMore = startIndex + limit < slugs.length;
 
-      // Use storage to resolve slugs to IDs
+      // Use storage to resolve slugs to IDs (only for current page)
       let ids: string[];
       try {
         ids = await this.documentStorage.resolveIds(
-          slugs,
+          pagedSlugs,
           consistencyToken,
           signal,
         );
@@ -1239,6 +1251,8 @@ export class Reactor implements IReactor {
         // This matches the behavior expected from a search operation
         ids = [];
       }
+
+      const documents: PHDocument[] = [];
 
       // Fetch each document by resolved ID
       for (const id of ids) {
@@ -1273,22 +1287,15 @@ export class Reactor implements IReactor {
         throw new AbortError();
       }
 
-      // Apply paging - this will be removed when we pass the paging along
-      // to the underlying store, but is here now for the interface.
-      const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-      const limit = paging?.limit || documents.length;
-      const pagedDocuments = documents.slice(startIndex, startIndex + limit);
-
-      // Create paged results
-      const hasMore = startIndex + limit < documents.length;
       const nextCursor = hasMore ? String(startIndex + limit) : undefined;
 
-      // totalCount reflects successfully fetched documents, not input array size
+      // totalCount uses input array size (may be slightly inaccurate if some slugs fail to resolve or documents fail to fetch)
+      // Note: We use slugs.length instead of ids.length because slugs is the input parameter
       return {
-        results: pagedDocuments,
+        results: documents,
         options: paging || { cursor: "0", limit: documents.length },
         nextCursor,
-        totalCount: documents.length,
+        totalCount: slugs.length,
         next: hasMore
           ? () =>
               this.findBySlugs(
@@ -1301,11 +1308,17 @@ export class Reactor implements IReactor {
           : undefined,
       };
     } else {
+      // Apply pagination to slugs array BEFORE resolving and fetching to avoid loading all into memory
+      const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
+      const limit = paging?.limit || slugs.length;
+      const pagedSlugs = slugs.slice(startIndex, startIndex + limit);
+      const hasMore = startIndex + limit < slugs.length;
+
       const documents: PHDocument[] = [];
 
-      // Resolve each slug to a document ID
+      // Resolve each slug to a document ID (only for current page)
       const documentIds: string[] = [];
-      for (const slug of slugs) {
+      for (const slug of pagedSlugs) {
         if (signal?.aborted) {
           throw new AbortError();
         }
@@ -1322,7 +1335,7 @@ export class Reactor implements IReactor {
         }
       }
 
-      // Fetch each document
+      // Fetch each document (only for current page)
       for (const documentId of documentIds) {
         if (signal?.aborted) {
           throw new AbortError();
@@ -1346,21 +1359,14 @@ export class Reactor implements IReactor {
         throw new AbortError();
       }
 
-      // Apply paging
-      const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-      const limit = paging?.limit || documents.length;
-      const pagedDocuments = documents.slice(startIndex, startIndex + limit);
-
-      // Create paged results
-      const hasMore = startIndex + limit < documents.length;
       const nextCursor = hasMore ? String(startIndex + limit) : undefined;
 
-      // totalCount reflects successfully fetched documents, not input array size
+      // totalCount uses input array size (may be slightly inaccurate if some slugs fail to resolve or documents fail to fetch)
       return {
-        results: pagedDocuments,
+        results: documents,
         options: paging || { cursor: "0", limit: documents.length },
         nextCursor,
-        totalCount: documents.length,
+        totalCount: slugs.length,
         next: hasMore
           ? () =>
               this.findBySlugs(
@@ -1377,6 +1383,14 @@ export class Reactor implements IReactor {
 
   /**
    * Finds documents by parent ID
+   *
+   * @performance Note: This method applies pagination to the relationships array before
+   * fetching documents to avoid loading all child documents into memory. However, totalCount
+   * uses the relationships array size, which may be slightly inaccurate if some documents
+   * fail to fetch. For accurate totalCount, all documents would need to be fetched.
+   * Additionally, getOutgoing() currently returns all relationships without pagination support
+   * at the indexer level, so this optimization only reduces document fetching, not relationship
+   * retrieval.
    */
   private async findByParentId(
     parentId: string,
@@ -1387,6 +1401,7 @@ export class Reactor implements IReactor {
     this.logger.verbose("findByParentId(@parentId)", parentId);
 
     // Get child relationships from indexer
+    // TODO: getOutgoing() doesn't support pagination, so we still load all relationships into memory
     const relationships = await this._documentIndexer.getOutgoing(
       parentId,
       ["child"],
@@ -1398,10 +1413,16 @@ export class Reactor implements IReactor {
       throw new AbortError();
     }
 
+    // Apply pagination to relationships array BEFORE fetching documents to avoid loading all into memory
+    const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
+    const limit = paging?.limit || relationships.length;
+    const pagedRelationships = relationships.slice(startIndex, startIndex + limit);
+    const hasMore = startIndex + limit < relationships.length;
+
     const documents: PHDocument[] = [];
 
-    // Fetch each child document using the appropriate storage method
-    for (const relationship of relationships) {
+    // Only fetch documents for the current page
+    for (const relationship of pagedRelationships) {
       if (signal?.aborted) {
         throw new AbortError();
       }
@@ -1438,20 +1459,14 @@ export class Reactor implements IReactor {
       throw new AbortError();
     }
 
-    // Apply paging
-    const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-    const limit = paging?.limit || documents.length;
-    const pagedDocuments = documents.slice(startIndex, startIndex + limit);
-
-    // Create paged results
-    const hasMore = startIndex + limit < documents.length;
     const nextCursor = hasMore ? String(startIndex + limit) : undefined;
 
+    // totalCount uses relationships array size (may be slightly inaccurate if some documents fail to fetch)
     return {
-      results: pagedDocuments,
+      results: documents,
       options: paging || { cursor: "0", limit: documents.length },
       nextCursor,
-      totalCount: documents.length,
+      totalCount: relationships.length,
       next: hasMore
         ? () =>
             this.findByParentId(
