@@ -17,9 +17,9 @@ import type {
 } from "ts-morph";
 import { Project, SyntaxKind } from "ts-morph";
 import { writePackage } from "write-package";
-import { generate } from "../commands/generate.js";
-import type { GenerateArgs, MigrateArgs } from "../types.js";
-import { startGenerate } from "./generate.js";
+import { generate } from "../commands/generate.old.js";
+import type { MigrateArgs } from "../types.js";
+import type { GenerateOptions } from "./generate.old.js";
 
 export async function startMigrate({ useHygen = false }: MigrateArgs) {
   await migratePackageJson();
@@ -199,9 +199,9 @@ function fixImports(project: Project) {
 
 /** Run the generate command on all document models */
 async function runGenerateOnAllDocumentModels(useHygen: boolean) {
-  await startGenerate({
+  await generate(undefined, {
     useHygen,
-  } as GenerateArgs);
+  });
 }
 
 /** Run the generate command on all editors */
@@ -234,23 +234,25 @@ async function runGenerateOnAllEditors(useHygen: boolean) {
       const allowedDocumentTypes = hasConfigFile
         ? extractAllowedDocumentTypes(configFilePath)
         : undefined;
-      const args = {
-        driveEditorName: name,
-        driveEditorId: id,
+      const args: GenerateOptions = {
+        driveEditor: name,
+        driveEditorAppId: id,
         driveEditorDirName: dir,
-        allowedDocumentTypes,
         useHygen,
-      } as GenerateArgs;
-      await startGenerate(args);
+      };
+      if (allowedDocumentTypes) {
+        args.allowedDocumentTypes = allowedDocumentTypes.join(",");
+      }
+      await generate(undefined, args);
     } else {
-      const args = {
-        editorName: name,
+      const args: GenerateOptions = {
+        editor: name,
         editorId: id,
         editorDirName: dir,
-        documentType: documentTypes?.[0],
+        documentTypes: documentTypes?.join(","),
         useHygen,
-      } as GenerateArgs;
-      await startGenerate(args);
+      };
+      await generate(undefined, args);
     }
   }
 }

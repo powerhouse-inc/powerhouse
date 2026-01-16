@@ -9,8 +9,8 @@ import {
   optional,
   string,
 } from "cmd-ts";
+import { startSwitchboard } from "../services/switchboard.js";
 import { debugArgs } from "./common-args.js";
-import { runStartLocalSwitchboard } from "./switchboard.old.js";
 
 export const switchboardArgs = {
   port: option({
@@ -52,7 +52,7 @@ export const switchboardArgs = {
     description:
       "base path for the API endpoints (sets the BASE_PATH environment variable",
   }),
-  keyPairPath: option({
+  keypairPath: option({
     type: optional(string),
     long: "keypair-path",
     description: "path to custom keypair file for identity",
@@ -107,8 +107,30 @@ This command:
     if (args.debug) {
       console.log(args);
     }
-    const { defaultDriveUrl, connectCrypto } =
-      await runStartLocalSwitchboard(args);
+    const {
+      basePath,
+      port,
+      configFile,
+      dev,
+      dbPath,
+      packages,
+      useIdentity,
+      keypairPath,
+      requireIdentity,
+    } = args;
+    if (basePath) {
+      process.env.BASE_PATH = basePath;
+    }
+    const { defaultDriveUrl, connectCrypto } = await startSwitchboard({
+      port,
+      configFile,
+      dev,
+      dbPath,
+      packages,
+      useIdentity,
+      keypairPath,
+      requireIdentity,
+    });
     console.log("   ➜  Switchboard:", defaultDriveUrl);
     if (connectCrypto) {
       const did = await connectCrypto.did();

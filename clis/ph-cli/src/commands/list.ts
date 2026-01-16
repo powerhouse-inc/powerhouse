@@ -1,6 +1,6 @@
 import { getConfig } from "@powerhousedao/config/node";
 import { command } from "cmd-ts";
-import { getProjectInfo } from "../utils.js";
+import { getPowerhouseProjectInfo } from "../utils/projects.js";
 import { debugArgs } from "./common-args.js";
 
 export const listArgs = {
@@ -21,16 +21,18 @@ This command:
 `,
   aliases: ["l"],
   args: listArgs,
-  handler: (args) => {
-    const projectInfo = getProjectInfo(args.debug);
-
+  handler: async (args) => {
     if (args.debug) {
       console.log(args);
-      console.log("\n>>> projectInfo", projectInfo);
     }
 
     try {
-      const phConfig = getConfig(projectInfo.path + "/powerhouse.config.json");
+      const projectInfo = await getPowerhouseProjectInfo();
+      console.log("\n>>> projectInfo", projectInfo);
+
+      const phConfig = getConfig(
+        projectInfo.projectPath + "/powerhouse.config.json",
+      );
 
       if (!phConfig.packages || phConfig.packages.length === 0) {
         console.log("No packages found in the project");

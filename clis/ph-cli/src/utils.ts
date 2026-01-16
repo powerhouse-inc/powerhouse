@@ -4,7 +4,6 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import { homedir } from "node:os";
 import path, { dirname } from "node:path";
-
 export const POWERHOUSE_CONFIG_FILE = "powerhouse.config.json";
 export const POWERHOUSE_GLOBAL_DIR = path.join(homedir(), ".ph");
 export const SUPPORTED_PACKAGE_MANAGERS = ["npm", "yarn", "pnpm", "bun"];
@@ -140,7 +139,7 @@ export function getPackageManagerFromLockfile(dir: string): PackageManager {
 
 export function updatePackagesArray(
   currentPackages: PowerhouseConfig["packages"] = [],
-  dependencies: { name: string; version: string | undefined; full: string }[],
+  dependencies: { name: string; version: string | undefined }[],
   task: "install" | "uninstall" = "install",
 ): PowerhouseConfig["packages"] {
   const isInstall = task === "install";
@@ -165,7 +164,7 @@ export function updatePackagesArray(
 
 // Modify updateConfigFile to use the new function
 export function updateConfigFile(
-  dependencies: { name: string; version: string | undefined; full: string }[],
+  dependencies: { name: string; version: string | undefined }[],
   projectPath: string,
   task: "install" | "uninstall" = "install",
 ) {
@@ -257,7 +256,7 @@ export function setCustomHelp(command: Command, helpText: string): Command {
  * @param projectPath - Path to the project root
  */
 export function updateStylesFile(
-  dependencies: { name: string; version: string | undefined; full: string }[],
+  dependencies: { name: string; version: string | undefined }[],
   projectPath: string,
 ) {
   const stylesPath = path.join(projectPath, "style.css");
@@ -315,7 +314,7 @@ export function updateStylesFile(
  * Removes CSS imports for uninstalled packages from styles.css
  */
 export function removeStylesImports(
-  dependencies: { name: string; version: string | undefined; full: string }[],
+  dependencies: { name: string; version: string | undefined }[],
   projectPath: string,
 ) {
   const stylesPath = path.join(projectPath, "style.css");

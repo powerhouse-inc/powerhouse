@@ -10,7 +10,7 @@ import {
   configureVetraGithubUrl,
   sleep,
 } from "../utils/configure-vetra-github-url.js";
-import { startConnectStudio } from "./connect.js";
+import { startConnectStudio } from "./connect.old.js";
 import type { LocalSwitchboardOptions } from "./switchboard.js";
 import { defaultSwitchboardOptions } from "./switchboard.js";
 

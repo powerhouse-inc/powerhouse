@@ -1,11 +1,14 @@
-import { getPackageVersion } from "@powerhousedao/codegen/utils";
+import {
+  getPackageVersion,
+  getTagFromVersion,
+  logVersionUpdate,
+} from "@powerhousedao/codegen/utils";
 import chalk from "chalk";
 import { boolean, command, flag, optional, run } from "cmd-ts";
 import { detect } from "package-manager-detector/detect";
 import { readPackage } from "read-pkg";
 import { writePackage } from "write-package";
 import { ALL_POWERHOUSE_DEPENDENCIES } from "../utils/constants.js";
-import { getTagFromVersion, logVersionUpdate } from "../utils/parsing.js";
 import { runCmd } from "../utils/run-cmd.js";
 
 export const update = command({

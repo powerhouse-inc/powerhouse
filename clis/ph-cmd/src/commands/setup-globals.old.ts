@@ -2,6 +2,7 @@ import type { Command } from "commander";
 import { setupGlobalsHelp } from "../help.js";
 import type { CommandActionType } from "../types.js";
 import { createGlobalProject, withCustomHelp } from "../utils/index.js";
+import type { Agent } from "package-manager-detector";
 
 // Extract the type parameters for reuse
 export type SetupGlobalsOptions = {
@@ -10,7 +11,7 @@ export type SetupGlobalsOptions = {
   version?: string;
   dev?: boolean;
   staging?: boolean;
-  packageManager?: string;
+  packageManager?: Agent;
   npm?: boolean;
   pnpm?: boolean;
   yarn?: boolean;

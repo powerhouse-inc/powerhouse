@@ -1,3 +1,5 @@
+import type { Agent } from "package-manager-detector";
+
 export type ProjectInfo = {
   isGlobal: boolean;
   available: boolean;
@@ -20,5 +22,5 @@ export type GlobalProjectOptions = {
   tag?: string;
   dev?: boolean;
   staging?: boolean;
-  packageManager?: string;
+  packageManager?: Agent;
 };

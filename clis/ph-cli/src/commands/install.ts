@@ -1,27 +1,12 @@
 import { execSync } from "child_process";
+import { command, restPositionals, string } from "cmd-ts";
+import { updateConfigFile, updateStylesFile } from "../utils.js";
 import {
-  boolean,
-  command,
-  flag,
-  option,
-  optional,
-  restPositionals,
-  string,
-} from "cmd-ts";
-import fs from "node:fs";
-import { installHelp } from "../help.js";
-import {
-  SUPPORTED_PACKAGE_MANAGERS,
-  getPackageManagerFromLockfile,
-  getProjectInfo,
-  updateConfigFile,
-  updateStylesFile,
-  type PackageManager,
-} from "../utils.js";
-import { debugArgs } from "./common-args.js";
-import { installDependency } from "./install.old.js";
-
-export const installDescription = "Install a powerhouse dependency";
+  getPowerhouseProjectInfo,
+  getPowerhouseProjectInstallCommand,
+  makeDependenciesWithVersions,
+} from "../utils/projects.js";
+import { debugArgs, packageManagerArgs } from "./common-args.js";
 
 export const installArgs = {
   dependencies: restPositionals({
@@ -29,124 +14,60 @@ export const installArgs = {
     displayName: "[dependencies...]",
     description: "Names of the dependencies to install",
   }),
-  packageManager: option({
-    type: optional(string),
-    long: "package-manager",
-    description: "Force package manager to use",
-  }),
-  global: flag({
-    type: optional(boolean),
-    long: "global",
-    short: "g",
-    description: "Install the dependency globally",
-  }),
-  workspace: flag({
-    type: optional(boolean),
-    long: "workspace",
-    short: "w",
-    description:
-      "Install the dependency in the workspace (use this option for monorepos)",
-  }),
-  help: flag({
-    type: optional(boolean),
-    long: "help",
-    short: "h",
-    description: "Show help for this command",
-  }),
+  ...packageManagerArgs,
   ...debugArgs,
 };
 
 export const install = command({
   name: "install",
   aliases: ["add", "i"],
-  description: installDescription,
+  description: `
+The install command adds Powerhouse dependencies to your project. It handles installation
+of packages, updates configuration files, and ensures proper setup of dependencies.
+
+This command:
+1. Installs specified Powerhouse dependencies using your package manager
+2. Updates powerhouse.config.json to include the new dependencies
+3. Supports various installation options and configurations
+4. Works with npm, yarn, pnpm, and bun package managers
+  `,
   args: installArgs,
   handler: async (args) => {
     if (args.debug) {
       console.log(args);
     }
 
-    if (args.help) {
-      console.log(installHelp);
-      process.exit(0);
-    }
+    const {
+      projectPath,
+      localProjectPath,
+      globalProjectPath,
+      packageManager,
+      isGlobal,
+    } = await getPowerhouseProjectInfo(args);
 
-    const { dependencies } = args;
-
-    // Parse package names to extract version/tag
-    const parsedDependencies = dependencies.map((dep) => {
-      // Handle scoped packages (@org/package[@version])
-      if (dep.startsWith("@")) {
-        const matches = /^(@[^/]+\/[^@]+)(?:@(.+))?$/.exec(dep);
-        if (!matches) {
-          throw new Error(`Invalid scoped package name format: ${dep}`);
-        }
-        return {
-          name: matches[1],
-          version: matches[2] || "latest",
-          full: dep,
-        };
-      }
-
-      // Handle regular packages (package[@version])
-      const matches = /^([^@]+)(?:@(.+))?$/.exec(dep);
-      if (!matches) {
-        throw new Error(`Invalid package name format: ${dep}`);
-      }
-      return {
-        name: matches[1],
-        version: matches[2] || "latest",
-        full: dep,
-      };
-    });
+    const dependenciesWithVersions = await makeDependenciesWithVersions(
+      args.dependencies,
+    );
 
     if (args.debug) {
-      console.log(">>> parsedDependencies", parsedDependencies);
+      console.log(">>> parsedDependencies", dependenciesWithVersions);
     }
-
-    if (
-      args.packageManager &&
-      !SUPPORTED_PACKAGE_MANAGERS.includes(args.packageManager)
-    ) {
-      throw new Error(
-        "❌ Unsupported package manager. Supported package managers: npm, yarn, pnpm, bun",
-      );
-    }
-
-    const projectInfo = getProjectInfo(args.debug);
 
     if (args.debug) {
-      console.log("\n>>> projectInfo", projectInfo);
-    }
-
-    const isGlobal = args.global || projectInfo.isGlobal;
-    const packageManager =
-      args.packageManager || getPackageManagerFromLockfile(projectInfo.path);
-
-    if (args.debug) {
-      console.log("\n>>> installDependency arguments:");
-      console.log(">>> packageManager", packageManager);
-      console.log(">>> dependencies", dependencies);
-      console.log(">>> isGlobal", isGlobal);
-      console.log(">>> projectPath", projectInfo.path);
-      console.log(">>> workspace", args.workspace);
+      console.log("\n>>> projectInfo", {
+        localProjectPath,
+        globalProjectPath,
+        packageManager,
+        isGlobal,
+      });
     }
 
     try {
       console.log("installing dependencies 📦 ...");
-      if (!fs.existsSync(projectInfo.path)) {
-        throw new Error(`Project path not found: ${projectInfo.path}`);
-      }
-      const installCommand = installDependency(
-        packageManager as PackageManager,
-        parsedDependencies.map((dep) => dep.full),
-        projectInfo.path,
-        args.workspace,
-      );
-      const commandOptions = { cwd: projectInfo.path };
+      const installCommand = getPowerhouseProjectInstallCommand(packageManager);
       execSync(installCommand, {
         stdio: "inherit",
-        ...commandOptions,
+        cwd: projectPath,
       });
       console.log("Dependency installed successfully 🎉");
     } catch (error) {
@@ -156,13 +77,13 @@ export const install = command({
 
     if (args.debug) {
       console.log("\n>>> updateConfigFile arguments:");
-      console.log(">>> dependencies", dependencies);
-      console.log(">>> projectPath", projectInfo.path);
+      console.log(">>> dependencies", args.dependencies);
+      console.log(">>> projectPath", projectPath);
     }
 
     try {
       console.log("⚙️ Updating powerhouse config file...");
-      updateConfigFile(parsedDependencies, projectInfo.path, "install");
+      updateConfigFile(dependenciesWithVersions, projectPath, "install");
       console.log("Config file updated successfully 🎉");
     } catch (error) {
       console.error("❌ Failed to update config file");
@@ -171,7 +92,7 @@ export const install = command({
 
     try {
       console.log("⚙️ Updating styles.css file...");
-      updateStylesFile(parsedDependencies, projectInfo.path);
+      updateStylesFile(dependenciesWithVersions, projectPath);
       console.log("Styles file updated successfully 🎉");
     } catch (error) {
       console.error("❌ Failed to update styles file");

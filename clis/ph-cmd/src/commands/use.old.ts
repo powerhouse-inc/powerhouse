@@ -1,3 +1,4 @@
+import { parsePackageManager } from "@powerhousedao/codegen/utils";
 import type { Command } from "commander";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -11,7 +12,7 @@ import {
   updateDependencyVersionString,
   withCustomHelp,
 } from "../utils/index.js";
-import { parsePackageManager } from "../utils/parsing.js";
+import type { Agent } from "package-manager-detector";
 
 export const ORG = "@powerhousedao";
 
@@ -222,7 +223,7 @@ export type UseOptions = {
   debug?: boolean;
   latest?: boolean;
   force?: boolean;
-  packageManager?: string;
+  packageManager?: Agent;
   pnpm?: boolean;
   yarn?: boolean;
   bun?: boolean;

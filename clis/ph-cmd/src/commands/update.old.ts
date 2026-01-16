@@ -1,3 +1,4 @@
+import { parsePackageManager } from "@powerhousedao/codegen/utils";
 import type { Command } from "commander";
 import { execSync } from "node:child_process";
 import fs from "node:fs";
@@ -12,13 +13,13 @@ import {
   packageManagers,
   withCustomHelp,
 } from "../utils/index.js";
-import { parsePackageManager } from "../utils/parsing.js";
 import type { Environment } from "./use.old.js";
 import {
   detectPowerhousePackages,
   ENV_MAP,
   updatePackageJson,
 } from "./use.old.js";
+import type { Agent } from "package-manager-detector";
 
 type PackageJson = {
   dependencies?: Record<string, string>;
@@ -94,7 +95,7 @@ const getInstalledDependencies = (projectPath: string) => {
 export type UpdateOptions = {
   force?: string;
   debug?: boolean;
-  packageManager?: string;
+  packageManager?: Agent;
   pnpm?: boolean;
   yarn?: boolean;
   bun?: boolean;

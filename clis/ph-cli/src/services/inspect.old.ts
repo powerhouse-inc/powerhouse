@@ -1,15 +1,22 @@
-import { getProjectInfo, type InspectArgs } from "@powerhousedao/ph-cli";
 import type { Manifest } from "document-model";
 import fs from "node:fs";
-export function startInspect(args: InspectArgs) {
-  if (args.debug) {
-    console.log(">>> command arguments", args);
+import { getProjectInfo } from "../utils.js";
+
+export type InspectOptions = {
+  debug?: boolean;
+};
+
+export async function startInspect(
+  packageName: string,
+  options: InspectOptions,
+) {
+  if (options.debug) {
+    console.log(">>> command arguments", { options });
   }
 
-  const projectInfo = getProjectInfo(args.debug);
-  const { packageName } = args;
+  const projectInfo = getProjectInfo(options.debug);
 
-  if (args.debug) {
+  if (options.debug) {
     console.log("\n>>> projectInfo", projectInfo);
   }
 
@@ -49,7 +56,7 @@ export function startInspect(args: InspectArgs) {
       });
     }
   } catch (e) {
-    if (args.debug) {
+    if (options.debug) {
       console.error(e);
     } else {
       console.log("No manifest found in the package");

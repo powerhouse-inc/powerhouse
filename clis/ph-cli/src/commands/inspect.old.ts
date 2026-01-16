@@ -1,11 +1,11 @@
 import type { Command } from "commander";
 import { inspectHelp } from "../help.js";
-import type { InspectOptions } from "../services/inspect.js";
+import type { InspectOptions } from "../services/inspect.old.js";
 import type { CommandActionType } from "../types.js";
 import { setCustomHelp } from "../utils.js";
 
 async function startInspect(packageName: string, options: InspectOptions) {
-  const Inspect = await import("../services/inspect.js");
+  const Inspect = await import("../services/inspect.old.js");
   const { startInspect } = Inspect;
   return startInspect(packageName, options);
 }

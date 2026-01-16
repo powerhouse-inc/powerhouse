@@ -1,3 +1,4 @@
+import { logVersionUpdate } from "@powerhousedao/codegen/utils";
 import chalk from "chalk";
 import {
   boolean,
@@ -18,7 +19,6 @@ import {
   CLIS_DEPENDENCIES,
 } from "../utils/constants.js";
 import { dirExists } from "../utils/file-system.js";
-import { logVersionUpdate } from "../utils/parsing.js";
 import { runCmd } from "../utils/run-cmd.js";
 
 export const useLocal = command({

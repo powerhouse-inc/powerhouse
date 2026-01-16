@@ -1,3 +1,4 @@
+import { DEFAULT_CONNECT_OUTDIR } from "@powerhousedao/builder-tools";
 import {
   boolean,
   command,
@@ -9,24 +10,26 @@ import {
   subcommands,
 } from "cmd-ts";
 import {
-  buildConnect,
-  previewConnect,
-  startConnectStudio,
+  runConnectBuild,
+  runConnectPreview,
+  runConnectStudio,
 } from "../services/connect.js";
 import { debugArgs } from "./common-args.js";
 
 const studioArgs = {
   port: option({
-    type: optional(number),
+    type: number,
     long: "port",
     description: "Port to run the dev server on.",
     defaultValue: () => 3000 as const,
     defaultValueIsSerializable: true,
   }),
   mode: option({
-    type: optional(string),
+    type: string,
     long: "mode",
     description: "Vite mode to use",
+    defaultValue: () => "production" as const,
+    defaultValueIsSerializable: true,
   }),
   configFile: option({
     type: optional(string),
@@ -39,7 +42,7 @@ const studioArgs = {
     description: "Path to the vite config file",
   }),
   projectRoot: option({
-    type: optional(string),
+    type: string,
     long: "project-root",
     description: "The root directory of the project",
     defaultValue: () => process.cwd(),
@@ -70,6 +73,20 @@ const studioArgs = {
     long: "force",
     description: "Force the optimizer to ignore the cache and re-bundle",
   }),
+  printUrls: flag({
+    type: optional(boolean),
+    long: "print-urls",
+    description: "Print server urls",
+    defaultValue: () => false,
+    defaultValueIsSerializable: false,
+  }),
+  bindCLIShortcuts: flag({
+    type: optional(boolean),
+    long: "bind-cli-shortcuts",
+    description: "Bind CLI shortcuts",
+    defaultValue: () => false,
+    defaultValueIsSerializable: false,
+  }),
   ...debugArgs,
 };
 
@@ -77,7 +94,9 @@ const buildArgs = {
   outDir: option({
     type: optional(string),
     long: "outDir",
-    description: "Output directory. Defaults to '.ph/connect-build/dist/",
+    description: "Output directory",
+    defaultValue: () => DEFAULT_CONNECT_OUTDIR,
+    defaultValueIsSerializable: true,
   }),
   base: option({
     long: "base",
@@ -85,9 +104,11 @@ const buildArgs = {
     description: "Base path for the app",
   }),
   mode: option({
-    type: optional(string),
+    type: string,
     long: "mode",
     description: "Vite mode to use",
+    defaultValue: () => "production" as const,
+    defaultValueIsSerializable: true,
   }),
   configFile: option({
     type: optional(string),
@@ -100,7 +121,7 @@ const buildArgs = {
     description: "Path to the vite config file",
   }),
   projectRoot: option({
-    type: optional(string),
+    type: string,
     long: "project-root",
     description: "The root directory of the project",
     defaultValue: () => process.cwd(),
@@ -111,21 +132,25 @@ const buildArgs = {
 
 const previewArgs = {
   port: option({
-    type: optional(number),
+    type: number,
     long: "port",
     description: "Port to run the preview server on.",
     defaultValue: () => 4173 as const,
     defaultValueIsSerializable: true,
   }),
   mode: option({
-    type: optional(string),
+    type: string,
     long: "mode",
     description: "Vite mode to use",
+    defaultValue: () => "production" as const,
+    defaultValueIsSerializable: true,
   }),
   outDir: option({
     type: optional(string),
     long: "outDir",
-    description: "Output directory. Defaults to '.ph/connect-build/dist/",
+    description: "Output directory",
+    defaultValue: () => DEFAULT_CONNECT_OUTDIR,
+    defaultValueIsSerializable: true,
   }),
   base: option({
     long: "base",
@@ -143,7 +168,7 @@ const previewArgs = {
     description: "Path to the vite config file",
   }),
   projectRoot: option({
-    type: optional(string),
+    type: string,
     long: "project-root",
     description: "The root directory of the project",
     defaultValue: () => process.cwd(),
@@ -169,6 +194,20 @@ const previewArgs = {
     long: "strictPort",
     description: "Exit if specified port is already in use",
   }),
+  printUrls: flag({
+    type: boolean,
+    long: "print-urls",
+    description: "Print server urls",
+    defaultValue: () => true,
+    defaultValueIsSerializable: true,
+  }),
+  bindCLIShortcuts: flag({
+    type: boolean,
+    long: "bind-cli-shortcuts",
+    description: "Bind CLI shortcuts",
+    defaultValue: () => true,
+    defaultValueIsSerializable: true,
+  }),
   ...debugArgs,
 };
 
@@ -178,7 +217,7 @@ export const connectArgs = {
   ...previewArgs,
 };
 
-const studio = command({
+export const studio = command({
   name: "studio",
   description: `The studio command starts the Connect Studio, a development environment for building
 and testing Powerhouse applications. It provides a visual interface for working with
@@ -195,12 +234,12 @@ This command:
     if (args.debug) {
       console.log(args);
     }
-    await startConnectStudio(args);
+    await runConnectStudio(args);
     return args;
   },
 });
 
-const build = command({
+export const build = command({
   name: "build",
   description: `The Connect build command creates a production build with the project's local and
 external packages included
@@ -210,12 +249,12 @@ external packages included
     if (args.debug) {
       console.log(args);
     }
-    await buildConnect(args);
+    await runConnectBuild(args);
     return args;
   },
 });
 
-const preview = command({
+export const preview = command({
   name: "preview",
   description: `The Connect preview command previews a built Connect project.
 NOTE: You must run \`ph connect build\` first
@@ -225,7 +264,7 @@ NOTE: You must run \`ph connect build\` first
     if (args.debug) {
       console.log(args);
     }
-    await previewConnect(args);
+    await runConnectPreview(args);
     return args;
   },
 });

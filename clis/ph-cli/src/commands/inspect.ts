@@ -25,12 +25,11 @@ This command:
 4. Helps troubleshoot package-related issues`,
   aliases: ["is"],
   args: inspectArgs,
-  handler: async (args) => {
-    const { packageName, ...restArgs } = args;
+  handler: (args) => {
     if (args.debug) {
       console.log(args);
     }
-    await startInspect(packageName, restArgs);
+    startInspect(args);
     return args;
   },
 });

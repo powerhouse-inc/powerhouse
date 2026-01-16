@@ -4,7 +4,7 @@ import type { CommandActionType } from "../types.js";
 export const migrate: CommandActionType<
   [string | string[] | undefined, { useHygen?: boolean; debug?: boolean }]
 > = async (_, options) => {
-  const { startMigrate } = await import("../services/migrate.js");
+  const { startMigrate } = await import("../services/migrate.old.js");
   return await startMigrate({
     useHygen: !!options.useHygen,
     debug: !!options.debug,

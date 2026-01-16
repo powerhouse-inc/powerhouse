@@ -10,7 +10,7 @@ import { LOCAL_PACKAGE_ID } from "./constants.js";
 import { setConnectEnv } from "./env-config.js";
 import type { ConnectCommonOptions } from "./types.js";
 
-export const DEFAULT_CONNECT_OUTDIR = ".ph/connect-build/dist/";
+export const DEFAULT_CONNECT_OUTDIR = ".ph/connect-build/dist/" as const;
 
 export async function loadVite() {
   try {
