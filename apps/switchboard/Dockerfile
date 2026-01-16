@@ -44,8 +44,8 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-# Install runtime dependencies only
-RUN apk add --no-cache curl
+# Install runtime dependencies (curl for health checks, openssl for Prisma)
+RUN apk add --no-cache curl openssl
 
 # Setup pnpm
 ENV PNPM_HOME="/pnpm"
