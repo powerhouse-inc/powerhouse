@@ -1,3 +1,13 @@
+## 6.0.0-dev.5 (2026-01-16)
+
+### 🩹 Fixes
+
+- **switchboard:** regenerate Prisma client for Alpine Linux ([4bc96c72d](https://github.com/powerhouse-inc/powerhouse/commit/4bc96c72d))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.4 (2026-01-16)
 
 ### 🩹 Fixes

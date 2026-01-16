@@ -1,3 +1,7 @@
+## 6.0.0-dev.5 (2026-01-16)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.4 (2026-01-16)
 
 This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
