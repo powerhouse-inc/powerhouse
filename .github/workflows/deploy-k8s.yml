@@ -17,21 +17,25 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # Only deploy from main branch for now
-    if: github.ref == 'refs/heads/main'
+    # Deploy from main branch (dev) or release/staging/* branches (staging)
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/staging/')
     steps:
       - name: Determine tenant name
         id: tenant
         run: |
           # Map branch to tenant name
           # main branch -> dev tenant
+          # release/staging/* -> staging tenant
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             echo "name=dev" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/heads/release/staging/* ]]; then
+            echo "name=staging" >> $GITHUB_OUTPUT
           else
             # For future: extract tenant name from branch
-            # e.g., release/staging -> staging, release/production -> production
+            # e.g., release/production -> production
             BRANCH_NAME="${{ github.ref_name }}"
-            echo "name=${BRANCH_NAME##*/}" >> $GITHUB_OUTPUT
+            # Extract second path component (e.g., release/production/1.0.0 -> production)
+            echo "name=$(echo $BRANCH_NAME | cut -d'/' -f2)" >> $GITHUB_OUTPUT
           fi
 
       - name: Checkout k8s cluster repository
