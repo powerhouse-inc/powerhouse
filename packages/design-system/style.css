@@ -1,10 +1,11 @@
 @import "react-toastify/dist/ReactToastify.css";
+@import "react-json-view-lite/dist/index.css";
+
 @import "tailwindcss";
 @import "./theme.css";
 @plugin "tailwind-scrollbar";
 
 @custom-variant dark (&:where(.dark, .dark *));
-
 
 :root {
   /* Toastify */
@@ -79,122 +80,97 @@ input[type="number"] {
   button {
     @apply cursor-pointer;
   }
-}
 
-.ph-default-styles h1 {
-  font-family: "Inter", sans-serif;
-  font-style: normal;
-  font-weight: 600;
-  font-size: 32px;
-  line-height: 120%;
-  color: #343839;
-}
+  .ph-default-styles h1 {
+    @apply mb-4 mt-6 font-sans text-[32px] font-bold leading-[120%] text-[#343839];
+  }
 
-.ph-default-styles h2 {
-  font-family: "Inter", sans-serif;
-  font-style: normal;
-  font-weight: 600;
-  font-size: 24px;
-  line-height: 120%;
-  color: #343839;
-}
+  .ph-default-styles h2 {
+    @apply mb-3 mt-5 font-sans text-2xl font-bold leading-[120%] text-[#343839];
+  }
 
-.ph-default-styles h3 {
-  font-family: "Inter", sans-serif;
-  font-style: normal;
-  font-weight: 600;
-  font-size: 20px;
-  line-height: 120%;
-  color: #343839;
-}
+  .ph-default-styles h3 {
+    @apply mb-2 mt-4 font-sans text-xl font-bold leading-[120%] text-[#343839];
+  }
 
-.ph-default-styles p {
-  font-family: "Inter", sans-serif;
-  font-style: normal;
-  font-weight: 400;
-  font-size: 16px;
-  line-height: 120%;
-  color: #343839;
-}
+  .ph-default-styles p {
+    @apply font-sans text-base font-normal leading-[120%] text-[#343839];
+  }
 
-.ph-default-styles small {
-  font-family: "Inter", sans-serif;
-  font-style: normal;
-  font-weight: 400;
-  font-size: 14px;
-  line-height: 100%;
-  color: #474d4e;
-}
+  .ph-default-styles small {
+    @apply font-sans text-sm font-normal leading-[100%] text-[#474d4e];
+  }
 
-/* Default styles for text input fields and textareas based on Storybook */
-.ph-default-styles input[type="text"],
-.ph-default-styles input[type="email"],
-.ph-default-styles input[type="password"],
-.ph-default-styles input[type="search"],
-.ph-default-styles input[type="tel"],
-.ph-default-styles input[type="url"],
-.ph-default-styles input[type="number"],
-.ph-default-styles textarea {
-  font-family:
-    "Inter", sans-serif; /* Consistent with other defaults, Tailwind uses font-sans */
-  font-size: 0.875rem; /* text-sm */
-  font-weight: 400; /* font-normal */
-  line-height: 1.25rem; /* leading-5 */
-  color: #343839; /* text-gray-900 is #1a202c, using established default */
-  background-color: #ffffff; /* bg-white */
-  border: 1px solid #ced4da; /* border border-gray-300 (#d1d5db), using established default */
-  border-radius: 0.375rem; /* rounded-md */
-  padding: 7px 0.75rem; /* py-[7px] (textarea) / py-2 (input), px-3 */
-  width: 100%; /* w-full */
-  box-sizing: border-box;
-  margin-bottom: 10px; /* For some default spacing */
-}
+  /* Default styles for text input fields and textareas based on Storybook */
+  .ph-default-styles input[type="text"],
+  .ph-default-styles input[type="email"],
+  .ph-default-styles input[type="password"],
+  .ph-default-styles input[type="search"],
+  .ph-default-styles input[type="tel"],
+  .ph-default-styles input[type="url"],
+  .ph-default-styles input[type="number"],
+  .ph-default-styles textarea {
+    /* Consistent with other defaults, Tailwind uses font-sans */
+    /* text-sm, font-normal, leading-5 */
+    /* text-gray-900 is #1a202c, using established default */
+    /* bg-white */
+    /* border border-gray-300 (#d1d5db), using established default */
+    /* rounded-md */
+    /* py-[7px] (textarea) / py-2 (input), px-3 */
+    /* w-full */
+    /* For some default spacing */
+    @apply mb-[10px] box-border w-full rounded-md border border-[#ced4da] bg-white px-3 py-[7px] font-sans text-sm font-normal leading-5 text-[#343839];
+  }
 
-.ph-default-styles textarea {
-  min-height: 2.25rem; /* min-h-9 from textarea styles */
-  resize: vertical; /* resize-y from textarea styles */
-}
+  .ph-default-styles textarea {
+    /* min-h-9 from textarea styles */
+    /* resize-y from textarea styles */
+    @apply min-h-9 resize-y;
+  }
 
-/* Default styles for anchor/links */
-.ph-default-styles a {
-  color: #007bff; /* Example link color - match your design system */
-  text-decoration: none;
-}
+  .ph-default-styles input[type="text"]:is([readonly], [disabled]),
+  .ph-default-styles input[type="email"]:is([readonly], [disabled]),
+  .ph-default-styles input[type="password"]:is([readonly], [disabled]),
+  .ph-default-styles input[type="search"]:is([readonly], [disabled]),
+  .ph-default-styles input[type="tel"]:is([readonly], [disabled]),
+  .ph-default-styles input[type="url"]:is([readonly], [disabled]),
+  .ph-default-styles input[type="number"]:is([readonly], [disabled]),
+  .ph-default-styles textarea:is([readonly], [disabled]) {
+    @apply bg-gray-50 text-gray-500;
+  }
 
-.ph-default-styles a:hover {
-  text-decoration: underline;
-  color: #0056b3; /* Darker shade for hover */
-}
+  /* Default styles for anchor/links */
+  .ph-default-styles a {
+    /* Example link color - match your design system */
+    @apply text-[#007bff] no-underline;
+  }
 
-.ph-default-styles a:focus {
-  outline: 2px solid transparent;
-  outline-offset: 2px;
-  box-shadow:
-    0 0 0 2px #ffffff,
-    0 0 0 4px rgba(0, 123, 255, 0.5); /* Example focus ring */
-}
+  .ph-default-styles a:hover {
+    /* Darker shade for hover */
+    @apply text-[#0056b3] underline;
+  }
 
-/* Default styles for lists */
-.ph-default-styles ul,
-.ph-default-styles ol {
-  padding-left: 0px;
-  margin-top: 0;
-  margin-bottom: 0;
-}
+  .ph-default-styles a:focus {
+    /* Example focus ring */
+    @apply outline-none ring-2 ring-[#007bff]/50 ring-offset-2;
+  }
 
-/* Default styles for labels */
-.ph-default-styles label {
-  display: block;
-  font-family: "Inter", sans-serif;
-  font-weight: 500; /* font-medium or similar */
-  color: #343839; /* Match other text colors */
-}
+  /* Default styles for lists */
+  .ph-default-styles ul,
+  .ph-default-styles ol {
+    @apply mb-0 mt-0 pl-0;
+  }
 
-/* Default styles for horizontal rules */
-.ph-default-styles hr {
-  border: 0;
-  height: 1px;
-  background-color: #ced4da; /* A common light grey border color */
-  margin-top: 1rem;
-  margin-bottom: 1rem;
+  /* Default styles for labels */
+  .ph-default-styles label {
+    /* font-medium or similar */
+    /* Match other text colors */
+    @apply block font-sans font-medium text-[#343839];
+  }
+
+  /* Default styles for horizontal rules */
+  .ph-default-styles hr {
+    /* A common light grey border color */
+    @apply my-4 h-px border-0 bg-[#ced4da];
+  }
 }
