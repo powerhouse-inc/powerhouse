@@ -1070,9 +1070,14 @@ export class Reactor implements IReactor {
    * Finds documents by their IDs
    *
    * @performance Note: This method applies pagination to the input IDs array before
-   * fetching documents to avoid loading all documents into memory. However, totalCount
-   * uses the input array size, which may be slightly inaccurate if some documents fail
-   * to fetch. For accurate totalCount, all documents would need to be fetched.
+   * fetching documents to avoid loading all documents into memory.
+   *
+   * @important totalCount semantics: The totalCount field represents the SIZE OF THE
+   * INPUT ARRAY (ids.length), NOT the count of successfully fetched documents. If 100
+   * IDs are provided but only 80 documents exist or can be fetched, totalCount will
+   * return 100. This is a performance trade-off - to get an accurate count of successfully
+   * fetched documents, all documents would need to be fetched, defeating pagination.
+   * Clients should not rely on totalCount for accurate pagination UI in these cases.
    */
   private async findByIds(
     ids: string[],
@@ -1135,12 +1140,14 @@ export class Reactor implements IReactor {
 
       const nextCursor = hasMore ? String(startIndex + limit) : undefined;
 
-      // totalCount uses input array size (may be slightly inaccurate if some documents fail to fetch)
+      // IMPORTANT: totalCount uses input array size (ids.length), NOT the count of
+      // successfully fetched documents. This means if some documents fail to fetch,
+      // totalCount will be higher than the actual number of documents returned.
       return {
         results: documents,
         options: paging || { cursor: "0", limit: documents.length },
         nextCursor,
-        totalCount: ids.length,
+        totalCount: ids.length, // Input array size, not successfully fetched count
         next: hasMore
           ? () =>
               this.findByIds(
@@ -1187,12 +1194,14 @@ export class Reactor implements IReactor {
 
       const nextCursor = hasMore ? String(startIndex + limit) : undefined;
 
-      // totalCount uses input array size (may be slightly inaccurate if some documents fail to fetch)
+      // IMPORTANT: totalCount uses input array size (ids.length), NOT the count of
+      // successfully fetched documents. This means if some documents fail to fetch,
+      // totalCount will be higher than the actual number of documents returned.
       return {
         results: documents,
         options: paging || { cursor: "0", limit: documents.length },
         nextCursor,
-        totalCount: ids.length,
+        totalCount: ids.length, // Input array size, not successfully fetched count
         next: hasMore
           ? () =>
               this.findByIds(
@@ -1211,9 +1220,14 @@ export class Reactor implements IReactor {
    * Finds documents by their slugs
    *
    * @performance Note: This method applies pagination to the input slugs array before
-   * resolving and fetching documents to avoid loading all documents into memory. However,
-   * totalCount uses the resolved IDs array size, which may be slightly inaccurate if some
-   * documents fail to fetch. For accurate totalCount, all documents would need to be fetched.
+   * resolving and fetching documents to avoid loading all documents into memory.
+   *
+   * @important totalCount semantics: The totalCount field represents the SIZE OF THE
+   * INPUT ARRAY (slugs.length), NOT the count of successfully resolved/fetched documents.
+   * If 100 slugs are provided but only 80 can be resolved or fetched, totalCount will
+   * return 100. This is a performance trade-off - to get an accurate count, all slugs
+   * would need to be resolved and all documents fetched, defeating pagination. Clients
+   * should not rely on totalCount for accurate pagination UI in these cases.
    */
   private async findBySlugs(
     slugs: string[],
@@ -1289,13 +1303,15 @@ export class Reactor implements IReactor {
 
       const nextCursor = hasMore ? String(startIndex + limit) : undefined;
 
-      // totalCount uses input array size (may be slightly inaccurate if some slugs fail to resolve or documents fail to fetch)
-      // Note: We use slugs.length instead of ids.length because slugs is the input parameter
+      // IMPORTANT: totalCount uses input array size (slugs.length), NOT the count of
+      // successfully resolved/fetched documents. This means if some slugs fail to resolve
+      // or documents fail to fetch, totalCount will be higher than the actual number of
+      // documents returned.
       return {
         results: documents,
         options: paging || { cursor: "0", limit: documents.length },
         nextCursor,
-        totalCount: slugs.length,
+        totalCount: slugs.length, // Input array size, not successfully resolved/fetched count
         next: hasMore
           ? () =>
               this.findBySlugs(
@@ -1361,12 +1377,15 @@ export class Reactor implements IReactor {
 
       const nextCursor = hasMore ? String(startIndex + limit) : undefined;
 
-      // totalCount uses input array size (may be slightly inaccurate if some slugs fail to resolve or documents fail to fetch)
+      // IMPORTANT: totalCount uses input array size (slugs.length), NOT the count of
+      // successfully resolved/fetched documents. This means if some slugs fail to resolve
+      // or documents fail to fetch, totalCount will be higher than the actual number of
+      // documents returned.
       return {
         results: documents,
         options: paging || { cursor: "0", limit: documents.length },
         nextCursor,
-        totalCount: slugs.length,
+        totalCount: slugs.length, // Input array size, not successfully resolved/fetched count
         next: hasMore
           ? () =>
               this.findBySlugs(
@@ -1385,12 +1404,17 @@ export class Reactor implements IReactor {
    * Finds documents by parent ID
    *
    * @performance Note: This method applies pagination to the relationships array before
-   * fetching documents to avoid loading all child documents into memory. However, totalCount
-   * uses the relationships array size, which may be slightly inaccurate if some documents
-   * fail to fetch. For accurate totalCount, all documents would need to be fetched.
-   * Additionally, getOutgoing() currently returns all relationships without pagination support
-   * at the indexer level, so this optimization only reduces document fetching, not relationship
+   * fetching documents to avoid loading all child documents into memory. Additionally,
+   * getOutgoing() currently returns all relationships without pagination support at the
+   * indexer level, so this optimization only reduces document fetching, not relationship
    * retrieval.
+   *
+   * @important totalCount semantics: The totalCount field represents the SIZE OF THE
+   * RELATIONSHIPS ARRAY (relationships.length), NOT the count of successfully fetched
+   * documents. If 100 relationships exist but only 80 documents can be fetched, totalCount
+   * will return 100. This is a performance trade-off - to get an accurate count, all documents
+   * would need to be fetched, defeating pagination. Clients should not rely on totalCount for
+   * accurate pagination UI in these cases.
    */
   private async findByParentId(
     parentId: string,
@@ -1461,12 +1485,14 @@ export class Reactor implements IReactor {
 
     const nextCursor = hasMore ? String(startIndex + limit) : undefined;
 
-    // totalCount uses relationships array size (may be slightly inaccurate if some documents fail to fetch)
+    // IMPORTANT: totalCount uses relationships array size (relationships.length), NOT the
+    // count of successfully fetched documents. This means if some documents fail to fetch,
+    // totalCount will be higher than the actual number of documents returned.
     return {
       results: documents,
       options: paging || { cursor: "0", limit: documents.length },
       nextCursor,
-      totalCount: relationships.length,
+      totalCount: relationships.length, // Relationships array size, not successfully fetched count
       next: hasMore
         ? () =>
             this.findByParentId(
