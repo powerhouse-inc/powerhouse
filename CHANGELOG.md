@@ -1,3 +1,13 @@
+## 6.0.0-dev.3 (2026-01-16)
+
+### 🚀 Features
+
+- **docker:** optimize images with multi-stage builds ([d51a2df9d](https://github.com/powerhouse-inc/powerhouse/commit/d51a2df9d))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.2 (2026-01-15)
 
 ### 🚀 Features
