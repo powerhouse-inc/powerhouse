@@ -9,6 +9,7 @@ import type {
   Trigger,
 } from "document-drive";
 import {
+  driveCreateDocument,
   PullResponderTransmitter,
   addTrigger as baseAddTrigger,
   removeTrigger as baseRemoveTrigger,
@@ -55,23 +56,15 @@ export async function addDrive(input: DriveInput, preferredEditor?: string) {
       throw new Error("ReactorClient not initialized");
     }
 
-    const newDrive = await reactorClient.createEmpty<DocumentDriveDocument>(
-      "powerhouse/document-drive",
-    );
+    const driveDoc = driveCreateDocument({
+      global: {
+        name: input.global.name || "",
+        icon: input.global.icon ?? null,
+        nodes: [],
+      },
+    });
 
-    const driveId = newDrive.header.id;
-
-    // Set the drive name
-    if (input.global.name) {
-      await reactorClient.execute(driveId, "main", [
-        setDriveName({ name: input.global.name }),
-      ]);
-    }
-
-    // Return the updated drive
-    const { document: updatedDrive } =
-      await reactorClient.get<DocumentDriveDocument>(driveId);
-    return updatedDrive;
+    return (await reactorClient.create(driveDoc)) as DocumentDriveDocument;
   }
 }
 
