@@ -1,3 +1,22 @@
+## 6.0.0-dev.8 (2026-01-17)
+
+### 🚀 Features
+
+- **design-system:** lazy import json package ([f2a9b15f0](https://github.com/powerhouse-inc/powerhouse/commit/f2a9b15f0))
+- **design-system:** clean up document-state-viewer ([12d7f3645](https://github.com/powerhouse-inc/powerhouse/commit/12d7f3645))
+- **design-system:** default styles tweaks and DocumentStateViewer ([c0a66720c](https://github.com/powerhouse-inc/powerhouse/commit/c0a66720c))
+- **ci:** deploy staging tenant from release/staging/* branches ([8761579e7](https://github.com/powerhouse-inc/powerhouse/commit/8761579e7))
+- **ci:** add Harbor registry to docker image publishing ([f3a2fab69](https://github.com/powerhouse-inc/powerhouse/commit/f3a2fab69))
+
+### 🩹 Fixes
+
+- address code review issues ([7ed9ac697](https://github.com/powerhouse-inc/powerhouse/commit/7ed9ac697))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
 ## 6.0.0-dev.7 (2026-01-16)
 
 ### 🩹 Fixes

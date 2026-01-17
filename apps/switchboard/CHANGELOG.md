@@ -1,3 +1,21 @@
+## 6.0.0-dev.8 (2026-01-17)
+
+### 🚀 Features
+
+- **design-system:** default styles tweaks and DocumentStateViewer ([c0a66720c](https://github.com/powerhouse-inc/powerhouse/commit/c0a66720c))
+- **ci:** deploy staging tenant from release/staging/* branches ([8761579e7](https://github.com/powerhouse-inc/powerhouse/commit/8761579e7))
+- **ci:** add Harbor registry to docker image publishing ([f3a2fab69](https://github.com/powerhouse-inc/powerhouse/commit/f3a2fab69))
+
+### 🩹 Fixes
+
+- **switchboard:** keep prisma db push before running migrations ([e666de869](https://github.com/powerhouse-inc/powerhouse/commit/e666de869))
+- **switchboard:** use ph switchboard --migrate for database migrations ([d4ee55a23](https://github.com/powerhouse-inc/powerhouse/commit/d4ee55a23))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
 ## 6.0.0-dev.7 (2026-01-16)
 
 ### 🩹 Fixes
