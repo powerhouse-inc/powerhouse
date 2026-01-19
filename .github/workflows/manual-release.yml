@@ -58,6 +58,9 @@ jobs:
       - name: Install deps (frozen lockfile)
         run: pnpm install:ci
 
+      - name: Install bun global runtime
+        run: pnpm install-bun-global
+
       - name: Build typescript project
         run: pnpm tsc:build
 

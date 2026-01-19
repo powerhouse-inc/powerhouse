@@ -22,9 +22,10 @@
     "lint": "eslint",
     "generate-commands-md": "tsx scripts/generate-commands-md.ts",
     "generate-version": "tsx scripts/generate-version.ts",
-    "bundle-cli": "tsup-node src/cli.ts --outDir build --format esm",
+    "bundle-cli": "bun build ./src/cli.ts --outdir ./build --target node",
     "build": "npm run generate-commands-md && npm run generate-version && npm run bundle-cli",
     "dev": "tsx src/cli.ts",
+    "cli": "node build/cli.js",
     "test": "vitest run",
     "test:watch": "vitest watch"
   },
@@ -43,6 +44,7 @@
     "write-package": "^7.2.0"
   },
   "devDependencies": {
+    "@types/bun": "^1.3.6",
     "tsup": "^8.5.1",
     "vitest": "^3.2.4"
   }
