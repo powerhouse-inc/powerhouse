@@ -242,11 +242,11 @@ export class ReactorClient implements IReactorClient {
   /**
    * Creates a document and waits for completion
    */
-  async create(
+  async create<TDocument extends PHDocument = PHDocument>(
     document: PHDocument,
     parentIdentifier?: string,
     signal?: AbortSignal,
-  ): Promise<PHDocument> {
+  ): Promise<TDocument> {
     this.logger.verbose(
       "create(@id, @parentIdentifier)",
       document.header.id,
@@ -266,7 +266,7 @@ export class ReactorClient implements IReactorClient {
       await this.addChildren(parentIdentifier, [documentId], undefined, signal);
     }
 
-    const result = await this.reactor.get<PHDocument>(
+    const result = await this.reactor.get<TDocument>(
       documentId,
       undefined,
       completedJob.consistencyToken,
@@ -329,11 +329,7 @@ export class ReactorClient implements IReactorClient {
     const document = module.utils.createDocument();
     document.state.document.version = module.version ?? 1;
 
-    return this.create(
-      document,
-      options?.parentIdentifier,
-      signal,
-    ) as Promise<TDocument>;
+    return this.create<TDocument>(document, options?.parentIdentifier, signal);
   }
 
   /**

@@ -64,7 +64,7 @@ export async function addDrive(input: DriveInput, preferredEditor?: string) {
       },
     });
 
-    return (await reactorClient.create(driveDoc)) as DocumentDriveDocument;
+    return await reactorClient.create<DocumentDriveDocument>(driveDoc);
   }
 }
 
