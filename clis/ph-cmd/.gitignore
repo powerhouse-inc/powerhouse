@@ -1,6 +1,7 @@
 document-models
 editors 
 processors
+build
 *.zip
 *.db
 .ph
