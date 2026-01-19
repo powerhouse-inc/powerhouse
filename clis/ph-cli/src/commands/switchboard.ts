@@ -9,6 +9,7 @@ import {
   optional,
   string,
 } from "cmd-ts";
+import { runSwitchboardMigrations } from "../services/switchboard-migrate.js";
 import { startSwitchboard } from "../services/switchboard.js";
 import { debugArgs } from "./common-args.js";
 
@@ -86,6 +87,16 @@ export const switchboardArgs = {
     description:
       "require existing keypair, fail if not found (implies --use-identity)",
   }),
+  migrate: flag({
+    type: optional(boolean),
+    long: "migrate",
+    description: "Run database migrations and exit",
+  }),
+  migrateStatus: flag({
+    type: optional(boolean),
+    long: "migrate-status",
+    description: "Show migration status and exit",
+  }),
   ...debugArgs,
 };
 export const switchboard = command({
@@ -117,10 +128,21 @@ This command:
       useIdentity,
       keypairPath,
       requireIdentity,
+      migrate,
+      migrateStatus,
     } = args;
     if (basePath) {
       process.env.BASE_PATH = basePath;
     }
+
+    if (migrate || migrateStatus) {
+      await runSwitchboardMigrations({
+        dbPath,
+        statusOnly: migrateStatus,
+      });
+      return args;
+    }
+
     const { defaultDriveUrl, connectCrypto } = await startSwitchboard({
       port,
       configFile,
@@ -136,5 +158,7 @@ This command:
       const did = await connectCrypto.did();
       console.log("   ➜  Identity:", did);
     }
+
+    return args;
   },
 });
