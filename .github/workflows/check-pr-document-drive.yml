@@ -82,8 +82,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install:ci
 
-      - name: Install bun global runtime
-        run: pnpm install-bun-global
+      - name: Setup bun global install
+        uses: oven-sh/setup-bun@v2
 
       - name: Generate Prisma client
         run: pnpm prisma generate
@@ -126,8 +126,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install:ci
 
-      - name: Install bun global runtime
-        run: pnpm install-bun-global
+      - name: Setup bun global install
+        uses: oven-sh/setup-bun@v2
 
       - name: Build
         run: pnpm tsc:build
