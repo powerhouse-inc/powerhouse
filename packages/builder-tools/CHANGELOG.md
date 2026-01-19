@@ -1,3 +1,7 @@
+## 5.3.0-staging.5 (2026-01-19)
+
+This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
+
 ## 5.3.0-staging.4 (2026-01-19)
 
 ### 🚀 Features

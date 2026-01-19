@@ -1,3 +1,13 @@
+## 5.3.0-staging.5 (2026-01-19)
+
+### 🩹 Fixes
+
+- include input type definitions from state schema in generated subgraphs ([c12b2e7d8](https://github.com/powerhouse-inc/powerhouse/commit/c12b2e7d8))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.3.0-staging.4 (2026-01-19)
 
 ### 🚀 Features
