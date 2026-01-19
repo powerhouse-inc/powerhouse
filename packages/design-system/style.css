@@ -67,6 +67,10 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
+.hover-bg-transparent:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
 @layer base {
   h1,
   h2,

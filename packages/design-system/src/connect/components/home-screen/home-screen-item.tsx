@@ -17,7 +17,7 @@ export const HomeScreenItem = function HomeScreenItem(
   return (
     <div
       className={twMerge(
-        "relative flex h-24 cursor-pointer flex-col items-center justify-center text-center text-sm text-black",
+        "hover-bg-transparent relative flex h-24 cursor-pointer flex-col items-center justify-center rounded-md p-2 text-center text-sm text-black",
         containerClassName,
         onClick && "cursor-pointer",
       )}
