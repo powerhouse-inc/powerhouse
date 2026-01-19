@@ -31,7 +31,7 @@ jobs:
           node-version: 22
 
       - name: Setup bun global install
-      - uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@v2
 
       - name: Setup pnpm with cache
         uses: pnpm/action-setup@v4
