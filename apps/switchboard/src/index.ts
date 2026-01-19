@@ -18,4 +18,9 @@ function ensureNodeVersion(minVersion = "22") {
 // Ensure minimum Node.js version
 ensureNodeVersion("22");
 
+process.on("SIGINT", () => {
+  console.log("\nShutting down...");
+  process.exit(0);
+});
+
 startSwitchboard(config).catch(console.error);

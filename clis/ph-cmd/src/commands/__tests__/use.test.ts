@@ -55,7 +55,6 @@ vi.mock("../use.js", async () => {
 
 import { Command } from "commander";
 import * as fs from "node:fs";
-import type { ProjectInfo } from "ph-cmd";
 import {
   installDependency,
   updateDependencyVersionString,
@@ -64,6 +63,7 @@ import {
   getPackageManagerFromLockfile,
   getProjectInfo,
 } from "../../utils/package-manager.js";
+import type { ProjectInfo } from "../../utils/types.js";
 import { useCommand } from "../use.old.js";
 
 describe("useCommand", () => {

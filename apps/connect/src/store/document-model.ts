@@ -85,6 +85,7 @@ export async function loadCommonPackage(): Promise<VetraPackage> {
         genericDriveExplorerEditorModule,
       ],
     },
+    upgradeManifests: [],
   };
   return vetraPackage;
 }

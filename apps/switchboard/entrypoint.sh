@@ -1,22 +1,17 @@
 #!/bin/sh
 set -e
 
-if [ ! -z "$PH_PACKAGES" ]; then
-  # Convert comma-separated list to space-separated
-  PACKAGES=$(echo $PH_PACKAGES | tr ',' ' ')
-  # Install each package
-  for pkg in $PACKAGES; do
-    echo "[entrypoint] Installing package: $pkg"
-    ph install $pkg
-  done
+# Regenerate Prisma client for current platform (fixes darwin-arm64 vs linux-musl-openssl mismatch)
+echo "[entrypoint] Regenerating Prisma client for current platform..."
+prisma generate --schema node_modules/document-drive/dist/prisma/schema.prisma
+
+# Run migrations if DATABASE_URL is postgres and migrations not skipped
+if [ -n "$DATABASE_URL" ] && echo "$DATABASE_URL" | grep -q "^postgres" && [ "$SKIP_DB_MIGRATIONS" != "true" ]; then
+    echo "[entrypoint] Running Prisma db push..."
+    prisma db push --schema node_modules/document-drive/dist/prisma/schema.prisma --skip-generate
+    echo "[entrypoint] Running migrations..."
+    ph switchboard --migrate
 fi
 
-# Check if DATABASE_URL starts with postgres and run Prisma db push
-if [ ! -z "$DATABASE_URL" ] && echo "$DATABASE_URL" | grep -q "^postgres" && [ "$SKIP_DB_MIGRATIONS" != "true" ]; then
-  echo "[entrypoint] DATABASE_URL starts with postgres, running Prisma db push..."
-  prisma db push --schema node_modules/document-drive/dist/prisma/schema.prisma --skip-generate
-fi
-
-echo "[entrypoint] Starting switchboard..."
-export SWITCHBOARD_PORT="${PORT:-4001}"
-ph switchboard --port $SWITCHBOARD_PORT
+echo "[entrypoint] Starting switchboard on port ${PORT:-3000}..."
+exec ph switchboard --port ${PORT:-3000}

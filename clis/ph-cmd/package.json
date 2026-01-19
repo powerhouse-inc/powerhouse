@@ -1,6 +1,6 @@
 {
   "name": "ph-cmd",
-  "version": "5.2.0-dev.1",
+  "version": "6.0.0-dev.10",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -12,29 +12,27 @@
     "access": "public"
   },
   "bin": {
-    "ph": "./dist/src/cli.js",
+    "ph": "./build/cli.js",
     "ph-legacy": "./dist/src/cli.old.js"
   },
   "files": [
-    "dist"
+    "build/cli.js"
   ],
-  "exports": "./dist/src/index.js",
-  "types": "./dist/src/index.d.ts",
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
     "generate-commands-md": "tsx scripts/generate-commands-md.ts",
     "generate-version": "tsx scripts/generate-version.ts",
-    "build": "npm run generate-commands-md && npm run generate-version",
+    "bundle-cli": "bun build ./src/cli.ts --outdir ./build --target node",
+    "build": "npm run generate-commands-md && npm run generate-version && npm run bundle-cli",
     "dev": "tsx src/cli.ts",
-    "cli": "node ./dist/src/cli.js",
-    "cli-legacy": "node ./dist/src/cli.old.js",
+    "cli": "node build/cli.js",
     "test": "vitest run",
     "test:watch": "vitest watch"
   },
   "keywords": [],
   "author": "",
-  "dependencies": {
+  "devDependencies": {
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/ph-cli": "workspace:*",
@@ -45,9 +43,7 @@
     "enquirer": "^2.4.1",
     "package-manager-detector": "^0.2.11",
     "read-pkg": "^9.0.1",
-    "write-package": "^7.2.0"
-  },
-  "devDependencies": {
+    "write-package": "^7.2.0",
     "vitest": "^3.2.4"
   }
 }

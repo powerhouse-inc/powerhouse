@@ -32,9 +32,10 @@ import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import dotenv from "dotenv";
 import express from "express";
-import { Kysely } from "kysely";
+import { Kysely, PostgresDialect } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import path from "path";
+import { Pool } from "pg";
 import type { RedisClientType } from "redis";
 import { initRedis } from "./clients/redis.js";
 import { initConnectCrypto } from "./connect-crypto.js";
@@ -46,6 +47,16 @@ import { addDefaultDrive, addRemoteDrive, isPostgresUrl } from "./utils.js";
 const logger = childLogger(["switchboard"]);
 
 dotenv.config();
+
+// Feature flag constants
+const DOCUMENT_MODEL_SUBGRAPHS_ENABLED = "DOCUMENT_MODEL_SUBGRAPHS_ENABLED";
+const DOCUMENT_MODEL_SUBGRAPHS_ENABLED_DEFAULT = true;
+
+const REACTOR_STORAGE_V2 = "REACTOR_STORAGE_V2";
+const REACTOR_STORAGE_V2_DEFAULT = true;
+
+const ENABLE_DUAL_ACTION_CREATE = "ENABLE_DUAL_ACTION_CREATE";
+const ENABLE_DUAL_ACTION_CREATE_DEFAULT = true;
 
 // Create a monolith express app for all subgraphs
 const app = express();
@@ -185,24 +196,26 @@ async function initServer(
         legacyStorageEnabled: !options.reactorOptions?.storageV2,
       });
 
-    // if (dbPath && isPostgresUrl(dbPath)) {
-    //   const connectionString =
-    //     dbPath.includes("amazonaws") && !dbPath.includes("sslmode=no-verify")
-    //       ? dbPath + "?sslmode=no-verify"
-    //       : dbPath;
-    //   const pool = new Pool({ connectionString });
-    //   const kysely = new Kysely<Database>({
-    //     dialect: new PostgresDialect({ pool }),
-    //   });
-    //   builder.withKysely(kysely);
-    // } else {
-    // const pglitePath = "./.ph/reactor-storage";
-    const pglite = new PGlite();
-    const kysely = new Kysely<Database>({
-      dialect: new PGliteDialect(pglite),
-    });
-    builder.withKysely(kysely);
-    // }
+    const reactorDbUrl = process.env.PH_REACTOR_DATABASE_URL;
+    if (reactorDbUrl && isPostgresUrl(reactorDbUrl)) {
+      const connectionString = reactorDbUrl.includes("?")
+        ? reactorDbUrl
+        : `${reactorDbUrl}?sslmode=disable`;
+      const pool = new Pool({ connectionString });
+      const kysely = new Kysely<Database>({
+        dialect: new PostgresDialect({ pool }),
+      });
+      builder.withKysely(kysely);
+      logger.info("Using PostgreSQL for reactor storage");
+    } else {
+      const pglitePath = "./.ph/reactor-storage";
+      const pglite = new PGlite(pglitePath);
+      const kysely = new Kysely<Database>({
+        dialect: new PGliteDialect(pglite),
+      });
+      builder.withKysely(kysely);
+      logger.info("Using PGlite for reactor storage");
+    }
 
     const clientBuilder = new ReactorClientBuilder().withReactorBuilder(
       builder,
@@ -326,20 +339,22 @@ export const startSwitchboard = async (
   const featureFlags = await initFeatureFlags();
 
   const enableDocumentModelSubgraphs = await featureFlags.getBooleanValue(
-    "DOCUMENT_MODEL_SUBGRAPHS_ENABLED",
-    options.enableDocumentModelSubgraphs ?? true,
+    DOCUMENT_MODEL_SUBGRAPHS_ENABLED,
+    options.enableDocumentModelSubgraphs ??
+      DOCUMENT_MODEL_SUBGRAPHS_ENABLED_DEFAULT,
   );
 
   options.enableDocumentModelSubgraphs = enableDocumentModelSubgraphs;
 
   const storageV2 = await featureFlags.getBooleanValue(
-    "REACTOR_STORAGE_V2",
-    options.reactorOptions?.storageV2 ?? false,
+    REACTOR_STORAGE_V2,
+    options.reactorOptions?.storageV2 ?? REACTOR_STORAGE_V2_DEFAULT,
   );
 
   const enableDualActionCreate = await featureFlags.getBooleanValue(
-    "ENABLE_DUAL_ACTION_CREATE",
-    options.reactorOptions?.enableDualActionCreate ?? true,
+    ENABLE_DUAL_ACTION_CREATE,
+    options.reactorOptions?.enableDualActionCreate ??
+      ENABLE_DUAL_ACTION_CREATE_DEFAULT,
   );
 
   options.reactorOptions = {

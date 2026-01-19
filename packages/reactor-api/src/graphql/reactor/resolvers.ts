@@ -361,10 +361,9 @@ export async function createEmptyDocument(
 
   let result: PHDocument;
   try {
-    result = await reactorClient.createEmpty(
-      args.documentType,
+    result = await reactorClient.createEmpty(args.documentType, {
       parentIdentifier,
-    );
+    });
   } catch (error) {
     throw new GraphQLError(
       `Failed to create empty document: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -394,11 +393,7 @@ export async function mutateDocument(
   // Validate actions
   let validatedActions;
   try {
-    validatedActions = await validateActions(
-      reactorClient,
-      args.documentIdentifier,
-      args.actions,
-    );
+    validatedActions = validateActions(args.actions);
   } catch (error) {
     if (error instanceof GraphQLError) {
       throw error;
@@ -447,11 +442,7 @@ export async function mutateDocumentAsync(
   // Validate actions
   let validatedActions;
   try {
-    validatedActions = await validateActions(
-      reactorClient,
-      args.documentIdentifier,
-      args.actions,
-    );
+    validatedActions = validateActions(args.actions);
   } catch (error) {
     if (error instanceof GraphQLError) {
       throw error;

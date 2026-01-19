@@ -40,7 +40,7 @@ import type {
   IOperationStore,
   OperationWithContext,
 } from "../storage/interfaces.js";
-import { reshuffleByTimestampAndIndex } from "../utils/reshuffle.js";
+import { reshuffleByTimestamp } from "../utils/reshuffle.js";
 import type { IJobExecutor } from "./interfaces.js";
 import type { JobExecutorConfig, JobResult } from "./types.js";
 import {
@@ -1140,13 +1140,16 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     let updatedDocument: PHDocument;
     try {
+      const protocolVersion =
+        document.header.protocolVersions?.["base-reducer"] ?? 1;
       const reducerOptions = sourceOperation
         ? {
             skip,
             branch: job.branch,
             replayOptions: { operation: sourceOperation },
+            protocolVersion,
           }
-        : { skip, branch: job.branch };
+        : { skip, branch: job.branch, protocolVersion };
       updatedDocument = module.reducer(
         document as PHDocument,
         action,
@@ -1164,6 +1167,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     const scope = job.scope;
     const operations = updatedDocument.operations[scope];
+
     if (operations.length === 0) {
       return this.buildErrorResult(
         job,
@@ -1173,6 +1177,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     const newOperation = operations[operations.length - 1];
+
     if (!isUndoRedo(action)) {
       newOperation.skip = skip;
     }
@@ -1388,7 +1393,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       return true;
     });
 
-    const reshuffledOperations = reshuffleByTimestampAndIndex(
+    const reshuffledOperations = reshuffleByTimestamp(
       {
         index: latestRevision,
         skip: skipCount,
@@ -1399,6 +1404,13 @@ export class SimpleJobExecutor implements IJobExecutor {
         id: operation.id,
       })),
     );
+
+    // For v2, all NOOPs have skip=1 - consecutive NOOPs are handled during state rebuild
+    for (const operation of reshuffledOperations) {
+      if (operation.action.type === "NOOP") {
+        operation.skip = 1;
+      }
+    }
 
     const actions = reshuffledOperations.map((operation) => operation.action);
     const skipValues = reshuffledOperations.map((operation) => operation.skip);

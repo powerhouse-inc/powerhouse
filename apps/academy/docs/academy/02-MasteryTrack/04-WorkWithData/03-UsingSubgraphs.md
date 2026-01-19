@@ -120,7 +120,7 @@ export const getResolvers = (subgraph: ISubgraph) => {
     Query: {
       searchTodos: async (
         parent: unknown,
-        args: { driveId: string; searchTerm: string },
+        args: { driveId: string; searchTerm: string }
       ) => {
         const documents = await reactor.getDocuments(args.driveId);
         const todoItems: string[] = [];
@@ -131,7 +131,7 @@ export const getResolvers = (subgraph: ISubgraph) => {
           }
 
           const amountEntries = doc.state.global.items.filter((e) =>
-            e.text.includes(args.searchTerm),
+            e.text.includes(args.searchTerm)
           ).length;
           if (amountEntries > 0) {
             todoItems.push(docId);
@@ -188,7 +188,7 @@ http://localhost:4001/graphql
 
 ### 3.4. Test the queries
 
-**Query 1: Search for Todos **
+**Query 1: Search for Todos**
 
 ```graphql
 query {

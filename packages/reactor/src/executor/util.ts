@@ -58,6 +58,9 @@ export function createDocumentFromAction(
   if (input.meta !== undefined) {
     header.meta = input.meta;
   }
+  if (input.protocolVersions !== undefined) {
+    header.protocolVersions = input.protocolVersions;
+  }
 
   // Construct the document with default base state (UPGRADE_DOCUMENT will set the full state)
   const baseState = defaultBaseState();

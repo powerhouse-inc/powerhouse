@@ -382,10 +382,9 @@ describe("ReactorClient Integration Tests", () => {
         const parent = createDocModelDocument({ id: "empty-parent" });
         await client.create(parent);
 
-        const result = await client.createEmpty(
-          "powerhouse/document-model",
-          "empty-parent",
-        );
+        const result = await client.createEmpty("powerhouse/document-model", {
+          parentIdentifier: "empty-parent",
+        });
 
         expect(result.header.documentType).toBe("powerhouse/document-model");
 

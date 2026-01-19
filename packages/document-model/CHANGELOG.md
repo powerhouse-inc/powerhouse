@@ -1,3 +1,106 @@
+## 6.0.0-dev.10 (2026-01-19)
+
+### 🚀 Features
+
+- **ph-cmd:** move dependencies to dev dependencies ([8aa16c346](https://github.com/powerhouse-inc/powerhouse/commit/8aa16c346))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
+## 6.0.0-dev.9 (2026-01-19)
+
+### 🚀 Features
+
+- **ph-cmd:** test build with bun ([#2225](https://github.com/powerhouse-inc/powerhouse/pull/2225))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.8 (2026-01-17)
+
+### 🚀 Features
+
+- **design-system:** default styles tweaks and DocumentStateViewer ([c0a66720c](https://github.com/powerhouse-inc/powerhouse/commit/c0a66720c))
+- **ci:** deploy staging tenant from release/staging/* branches ([8761579e7](https://github.com/powerhouse-inc/powerhouse/commit/8761579e7))
+- **ci:** add Harbor registry to docker image publishing ([f3a2fab69](https://github.com/powerhouse-inc/powerhouse/commit/f3a2fab69))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
+## 6.0.0-dev.7 (2026-01-16)
+
+### 🩹 Fixes
+
+- **ph-cmd:** do not publish dependencies in cli ([0f5296d02](https://github.com/powerhouse-inc/powerhouse/commit/0f5296d02))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
+## 6.0.0-dev.6 (2026-01-16)
+
+### 🩹 Fixes
+
+- **ph-cmd:** move .npmrc to codegen package dir ([35ef27743](https://github.com/powerhouse-inc/powerhouse/commit/35ef27743))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
+## 6.0.0-dev.5 (2026-01-16)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.4 (2026-01-16)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.3 (2026-01-16)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.2 (2026-01-15)
+
+### 🚀 Features
+
+- adding a migration command to switchboard ([155f3da66](https://github.com/powerhouse-inc/powerhouse/commit/155f3da66))
+- test-client now successfully executes scenarios ([ef9299d90](https://github.com/powerhouse-inc/powerhouse/commit/ef9299d90))
+- new cicd flows ([01310e0d3](https://github.com/powerhouse-inc/powerhouse/commit/01310e0d3))
+- enabled doc version in connect ([#2171](https://github.com/powerhouse-inc/powerhouse/pull/2171))
+
+### 🩹 Fixes
+
+- workflow permissions ([6e451590d](https://github.com/powerhouse-inc/powerhouse/commit/6e451590d))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+- Guillermo Puente Sandoval @gpuente
+
+## 6.0.0-dev.1 (2026-01-15)
+
+### 🚀 Features
+
+- **academy:** added k8s deployment ([5f7e27162](https://github.com/powerhouse-inc/powerhouse/commit/5f7e27162))
+- adding protocol versions to document headers, populated by the reactor ([d7ceb80aa](https://github.com/powerhouse-inc/powerhouse/commit/d7ceb80aa))
+- first pass implementation of v2 undo/redo reducer ([d6c3b8084](https://github.com/powerhouse-inc/powerhouse/commit/d6c3b8084))
+- **monorepo:** upgrade document engineering package ([#2215](https://github.com/powerhouse-inc/powerhouse/pull/2215))
+
+### 🩹 Fixes
+
+- allowing reactor to skip index checks for new protocol ([851a6eab1](https://github.com/powerhouse-inc/powerhouse/commit/851a6eab1))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+
 ## 5.2.0-dev.1 (2026-01-15)
 
 ### 🚀 Features

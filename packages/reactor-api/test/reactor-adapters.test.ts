@@ -424,38 +424,7 @@ describe("Reactor Adapters", () => {
   });
 
   describe("validateActions", () => {
-    let mockReactorClient: IReactorClient;
-
-    beforeEach(() => {
-      vi.clearAllMocks();
-
-      mockReactorClient = {
-        getDocumentModelModules: vi.fn(),
-        getDocumentModelModule: vi.fn(),
-        get: vi.fn(),
-        getChildren: vi.fn(),
-        getParents: vi.fn(),
-        find: vi.fn(),
-        getJobStatus: vi.fn(),
-        waitForJob: vi.fn(),
-        create: vi.fn(),
-        createEmpty: vi.fn(),
-        createDocumentInDrive: vi.fn(),
-        execute: vi.fn(),
-        executeAsync: vi.fn(),
-        rename: vi.fn(),
-        addChildren: vi.fn(),
-        removeChildren: vi.fn(),
-        moveChildren: vi.fn(),
-        deleteDocument: vi.fn(),
-        deleteDocuments: vi.fn(),
-        subscribe: vi.fn(),
-      };
-    });
-
-    it("should validate multiple actions successfully", async () => {
-      const testDocument = createTestDocument();
-
+    it("should validate multiple actions successfully", () => {
       const actions = [
         documentModelDocumentModelModule.actions.setModelName({
           name: "Name 1",
@@ -465,80 +434,22 @@ describe("Reactor Adapters", () => {
         }),
       ];
 
-      vi.mocked(mockReactorClient.get).mockResolvedValue({
-        document: testDocument,
-        childIds: [],
-      });
-
-      vi.mocked(mockReactorClient.getDocumentModelModules).mockResolvedValue({
-        results: [
-          documentModelDocumentModelModule as unknown as DocumentModelModule,
-        ],
-        options: { cursor: "", limit: 10 },
-      } as PagedResults<DocumentModelModule>);
-
-      const result = await adapters.validateActions(
-        mockReactorClient,
-        testDocument.header.id,
-        actions,
-      );
+      const result = adapters.validateActions(actions);
 
       expect(result).toHaveLength(2);
       expect(result[0].type).toBe("SET_MODEL_NAME");
       expect(result[1].type).toBe("SET_MODEL_NAME");
     });
 
-    it("should reject when action structure is invalid", async () => {
+    it("should reject when action structure is invalid", () => {
       const invalidActions = [{ invalidAction: true }];
 
-      await expect(
-        adapters.validateActions(mockReactorClient, "doc-1", invalidActions),
-      ).rejects.toThrow("Action at index 0");
-    });
-
-    it("should reject when document is not found", async () => {
-      const actions = [
-        {
-          type: "SET_NAME",
-          scope: "global",
-          input: { name: "Test" },
-          id: "action-1",
-          timestampUtcMs: "2024-01-01T00:00:00Z",
-        },
-      ];
-
-      vi.mocked(mockReactorClient.get).mockRejectedValue(
-        new Error("Document not found"),
+      expect(() => adapters.validateActions(invalidActions)).toThrow(
+        "Action at index 0",
       );
-
-      await expect(
-        adapters.validateActions(mockReactorClient, "doc-1", actions),
-      ).rejects.toThrow("Failed to fetch document for validation");
     });
 
-    it("should reject when document model is not found", async () => {
-      const mockDocument: PHDocument = {
-        header: {
-          id: "doc-1",
-          name: "Test Document",
-          documentType: "unknown/model",
-          slug: "test-doc",
-          createdAtUtcIso: "2024-01-01T00:00:00Z",
-          lastModifiedAtUtcIso: "2024-01-02T00:00:00Z",
-          branch: "main",
-          sig: {
-            publicKey: {} as JsonWebKey,
-            nonce: "test-nonce",
-          },
-          revision: { global: 1 },
-        },
-        state: {},
-        history: {},
-        initialState: {},
-        operations: {},
-        clipboard: [],
-      } as any;
-
+    it("should convert valid action objects", () => {
       const actions = [
         {
           type: "SET_NAME",
@@ -549,104 +460,11 @@ describe("Reactor Adapters", () => {
         },
       ];
 
-      vi.mocked(mockReactorClient.get).mockResolvedValue({
-        document: mockDocument,
-        childIds: [],
-      });
+      const result = adapters.validateActions(actions);
 
-      vi.mocked(mockReactorClient.getDocumentModelModules).mockResolvedValue({
-        results: [],
-        options: { cursor: "", limit: 10 },
-      } as PagedResults<DocumentModelModule>);
-
-      await expect(
-        adapters.validateActions(mockReactorClient, "doc-1", actions),
-      ).rejects.toThrow("Document model not found for type: unknown/model");
-    });
-
-    it("should reject when action validation fails", async () => {
-      const mockDocument: PHDocument = {
-        header: {
-          id: "doc-1",
-          name: "Test Document",
-          documentType: "test/model",
-          slug: "test-doc",
-          createdAtUtcIso: "2024-01-01T00:00:00Z",
-          lastModifiedAtUtcIso: "2024-01-02T00:00:00Z",
-          branch: "main",
-          sig: {
-            publicKey: {} as JsonWebKey,
-            nonce: "test-nonce",
-          },
-          revision: { global: 1 },
-        },
-        state: {},
-        history: {},
-        initialState: {},
-        operations: {},
-        clipboard: [],
-      } as any;
-
-      const mockModule: DocumentModelModule = {
-        documentModel: {
-          global: {
-            id: "test/model",
-            name: "Test Model",
-            author: { name: "Test", website: null },
-            description: "Test",
-            extension: "test",
-            specifications: [
-              {
-                version: "1.0.0",
-                changeLog: [],
-                modules: [
-                  {
-                    name: "test",
-                    operations: [
-                      {
-                        name: "SET_NAME",
-                        scope: "global",
-                      } as any,
-                    ],
-                  } as any,
-                ],
-              } as any,
-            ],
-          },
-          local: {},
-        } as any,
-        actions: {
-          setName: vi.fn(() => {
-            throw new Error("Name is required");
-          }),
-        },
-        reducer: vi.fn(),
-        utils: {} as any,
-      } as any;
-
-      const actions = [
-        {
-          type: "SET_NAME",
-          scope: "global",
-          input: {},
-          id: "action-1",
-          timestampUtcMs: "2024-01-01T00:00:00Z",
-        },
-      ];
-
-      vi.mocked(mockReactorClient.get).mockResolvedValue({
-        document: mockDocument,
-        childIds: [],
-      });
-
-      vi.mocked(mockReactorClient.getDocumentModelModules).mockResolvedValue({
-        results: [mockModule],
-        options: { cursor: "", limit: 10 },
-      } as PagedResults<DocumentModelModule>);
-
-      await expect(
-        adapters.validateActions(mockReactorClient, "doc-1", actions),
-      ).rejects.toThrow("Action validation failed");
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe("SET_NAME");
+      expect(result[0].scope).toBe("global");
     });
   });
 });

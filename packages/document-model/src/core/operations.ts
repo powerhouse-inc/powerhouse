@@ -70,6 +70,63 @@ export function undoOperation<TDocument extends PHDocument>(
   });
 }
 
+/**
+ * V2 of undoOperation for protocol version 2+.
+ * Key differences from undoOperation:
+ * - Never reuses operation index (always increments)
+ * - Always sets skip=1 (consecutive NOOPs are handled during rebuild/GC)
+ * - No complex skip calculation - simpler model where each UNDO is independent
+ */
+export function undoOperationV2<TDocument extends PHDocument>(
+  document: TDocument,
+  action: Action,
+  skip: number,
+): {
+  document: TDocument;
+  action: Action;
+  skip: number;
+  reuseLastOperationIndex: false;
+} {
+  const { scope } = action;
+
+  const defaultResult = {
+    document,
+    action,
+    skip,
+    reuseLastOperationIndex: false as const,
+  };
+
+  return create(defaultResult, (draft) => {
+    const operations = document.operations[scope] || [];
+    const sortedOperations = sortOperations([...operations]);
+
+    // Count non-NOOP operations to determine if there's anything to undo
+    const nonNoopOps = sortedOperations.filter(
+      (op) => op.action.type !== "NOOP",
+    );
+
+    // Count consecutive NOOPs at the end (these represent pending undos)
+    let noopChainLength = 0;
+    for (let i = sortedOperations.length - 1; i >= 0; i--) {
+      if (sortedOperations[i].action.type === "NOOP") {
+        noopChainLength++;
+      } else {
+        break;
+      }
+    }
+
+    // Check if we can undo: need more non-NOOP ops than the current NOOP chain
+    if (nonNoopOps.length <= noopChainLength) {
+      throw new Error(
+        `Cannot undo: no more operations to undo in scope history`,
+      );
+    }
+
+    draft.action = noop(scope) as Draft<Action>;
+    draft.skip = 1;
+  });
+}
+
 export function redoOperation<TDocument extends PHDocument>(
   document: TDocument,
   action: Action,

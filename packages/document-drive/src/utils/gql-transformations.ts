@@ -43,14 +43,7 @@ export function responseForDocument(
   typeName: string,
   nodeName?: string,
 ): PHDocumentGQL {
-  let name = nodeName ?? document.header.name;
-
-  // dynamically lookup if there is a global state
-  if (Object.keys(document.state).includes("global")) {
-    // dynamically pull the name field off of global state
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-    name = (document.state as any).global.name;
-  }
+  const name = nodeName ?? document.header.name ?? "";
 
   return {
     ...document.header,
@@ -59,7 +52,7 @@ export function responseForDocument(
     createdAt: document.header.createdAtUtcIso,
     lastModified: document.header.lastModifiedAtUtcIso,
     documentType: document.header.documentType,
-    name: name ?? "",
+    name: name,
     revision: document.header.revision.global || 0,
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     state: (document.state as any).global,

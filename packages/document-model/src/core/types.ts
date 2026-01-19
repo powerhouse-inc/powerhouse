@@ -224,6 +224,7 @@ export type CreateDocumentActionInput = {
   name?: string;
   branch?: string;
   meta?: Record<string, unknown>;
+  protocolVersions?: { [key: string]: number };
 };
 
 export type UpgradeDocumentActionInput = {
@@ -394,6 +395,19 @@ export type ReducerOptions = {
 
   /** The branch being operated on. Defaults to "main". */
   branch?: string;
+
+  /**
+   * Protocol version controlling undo/redo behavior.
+   * - Version 1 (default): Legacy behavior with index reuse
+   * - Version 2: Reactor behavior with monotonic indices
+   */
+  protocolVersion?: number;
+
+  /**
+   * When true, skip index contiguity validation during replay.
+   * Used for V2 state rebuild where gapped indices are expected.
+   */
+  skipIndexValidation?: boolean;
 };
 
 /**
@@ -639,6 +653,9 @@ export type ReplayDocumentOptions = {
   reuseOperationResultingState?: boolean;
   // Optional parser for the operation resulting state, uses JSON.parse by default
   operationResultingStateParser?: <TState>(state: string) => TState;
+  // When true, skip index contiguity validation during replay.
+  // Used for V2 state rebuild where gapped indices are expected.
+  skipIndexValidation?: boolean;
 };
 
 export type OperationIndex = {

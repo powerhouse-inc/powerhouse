@@ -1,3 +1,151 @@
+## 6.0.0-dev.10 (2026-01-19)
+
+### 🚀 Features
+
+- **ph-cmd:** move dependencies to dev dependencies ([8aa16c346](https://github.com/powerhouse-inc/powerhouse/commit/8aa16c346))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
+## 6.0.0-dev.9 (2026-01-19)
+
+### 🚀 Features
+
+- **ph-cmd:** test build with bun ([#2225](https://github.com/powerhouse-inc/powerhouse/pull/2225))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.8 (2026-01-17)
+
+### 🚀 Features
+
+- **ci:** add Harbor registry to docker image publishing ([f3a2fab69](https://github.com/powerhouse-inc/powerhouse/commit/f3a2fab69))
+- **ci:** deploy staging tenant from release/staging/* branches ([8761579e7](https://github.com/powerhouse-inc/powerhouse/commit/8761579e7))
+- **codegen:** updated document editor boilerplate ([141e67a94](https://github.com/powerhouse-inc/powerhouse/commit/141e67a94))
+- **design-system:** default styles tweaks and DocumentStateViewer ([c0a66720c](https://github.com/powerhouse-inc/powerhouse/commit/c0a66720c))
+- **design-system:** clean up document-state-viewer ([12d7f3645](https://github.com/powerhouse-inc/powerhouse/commit/12d7f3645))
+- **design-system:** lazy import json package ([f2a9b15f0](https://github.com/powerhouse-inc/powerhouse/commit/f2a9b15f0))
+
+### 🩹 Fixes
+
+- address code review issues ([7ed9ac697](https://github.com/powerhouse-inc/powerhouse/commit/7ed9ac697))
+- **switchboard:** use ph switchboard --migrate for database migrations ([d4ee55a23](https://github.com/powerhouse-inc/powerhouse/commit/d4ee55a23))
+- **switchboard:** keep prisma db push before running migrations ([e666de869](https://github.com/powerhouse-inc/powerhouse/commit/e666de869))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
+## 6.0.0-dev.7 (2026-01-16)
+
+### 🩹 Fixes
+
+- **ph-cmd:** do not publish dependencies in cli ([0f5296d02](https://github.com/powerhouse-inc/powerhouse/commit/0f5296d02))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
+## 6.0.0-dev.6 (2026-01-16)
+
+### 🩹 Fixes
+
+- **ph-cmd:** move .npmrc to codegen package dir ([35ef27743](https://github.com/powerhouse-inc/powerhouse/commit/35ef27743))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
+## 6.0.0-dev.5 (2026-01-16)
+
+### 🩹 Fixes
+
+- **switchboard:** regenerate Prisma client for Alpine Linux ([4bc96c72d](https://github.com/powerhouse-inc/powerhouse/commit/4bc96c72d))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.4 (2026-01-16)
+
+### 🩹 Fixes
+
+- **switchboard:** add openssl for Prisma compatibility ([fe7235609](https://github.com/powerhouse-inc/powerhouse/commit/fe7235609))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.3 (2026-01-16)
+
+### 🚀 Features
+
+- **docker:** optimize images with multi-stage builds ([d51a2df9d](https://github.com/powerhouse-inc/powerhouse/commit/d51a2df9d))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.2 (2026-01-15)
+
+### 🚀 Features
+
+- enabled doc version in connect ([#2171](https://github.com/powerhouse-inc/powerhouse/pull/2171))
+- new cicd flows ([01310e0d3](https://github.com/powerhouse-inc/powerhouse/commit/01310e0d3))
+- first pass on a test client ([977abbe3d](https://github.com/powerhouse-inc/powerhouse/commit/977abbe3d))
+- test-client now successfully executes scenarios ([ef9299d90](https://github.com/powerhouse-inc/powerhouse/commit/ef9299d90))
+- added profiling scripts to switchboard and listen for sigint ([3a3eab12d](https://github.com/powerhouse-inc/powerhouse/commit/3a3eab12d))
+- adding a migration command to switchboard ([155f3da66](https://github.com/powerhouse-inc/powerhouse/commit/155f3da66))
+
+### 🩹 Fixes
+
+- switchboard, by default, writes to .ph directory ([6435defb6](https://github.com/powerhouse-inc/powerhouse/commit/6435defb6))
+- copy all should copy all pages in the inspector ([7f6e0b393](https://github.com/powerhouse-inc/powerhouse/commit/7f6e0b393))
+- validateActions was querying, also fixing some logging ([3b4420656](https://github.com/powerhouse-inc/powerhouse/commit/3b4420656))
+- build fix, zod types ([79921fe63](https://github.com/powerhouse-inc/powerhouse/commit/79921fe63))
+- build + linting fixes ([1eb035161](https://github.com/powerhouse-inc/powerhouse/commit/1eb035161))
+- workflow permissions ([6e451590d](https://github.com/powerhouse-inc/powerhouse/commit/6e451590d))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+- Guillermo Puente Sandoval @gpuente
+
+## 6.0.0-dev.1 (2026-01-15)
+
+### 🚀 Features
+
+- dx vetra studio update ([#2206](https://github.com/powerhouse-inc/powerhouse/pull/2206))
+- first pass implementation of v2 undo/redo reducer ([d6c3b8084](https://github.com/powerhouse-inc/powerhouse/commit/d6c3b8084))
+- adding protocol versions to document headers, populated by the reactor ([d7ceb80aa](https://github.com/powerhouse-inc/powerhouse/commit/d7ceb80aa))
+- **academy:** added k8s deployment ([5f7e27162](https://github.com/powerhouse-inc/powerhouse/commit/5f7e27162))
+- **academy,codegen:** delete package-lock.json files ([#2214](https://github.com/powerhouse-inc/powerhouse/pull/2214))
+- **monorepo:** upgrade document engineering package ([#2215](https://github.com/powerhouse-inc/powerhouse/pull/2215))
+
+### 🩹 Fixes
+
+- allowing reactor to skip index checks for new protocol ([851a6eab1](https://github.com/powerhouse-inc/powerhouse/commit/851a6eab1))
+- **academy:** updated search subgraph example ([f06540fe5](https://github.com/powerhouse-inc/powerhouse/commit/f06540fe5))
+- **codegen:** removed newline from index files ([6a14459a7](https://github.com/powerhouse-inc/powerhouse/commit/6a14459a7))
+- **codegen:** re-add npx specifically for boilerplate tailwind ([4ba289c2e](https://github.com/powerhouse-inc/powerhouse/commit/4ba289c2e))
+- **document-drive:** name in responseForDocument ([3d66d90e1](https://github.com/powerhouse-inc/powerhouse/commit/3d66d90e1))
+- **reactor-api:** correct cursor pagination in GraphQL adapters ([d43810389](https://github.com/powerhouse-inc/powerhouse/commit/d43810389))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 5.2.0-dev.1 (2026-01-15)
 
 ### 🚀 Features

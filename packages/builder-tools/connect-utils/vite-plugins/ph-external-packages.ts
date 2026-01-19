@@ -35,6 +35,7 @@ function makeImportScriptFromPackages(
           modules.push({
               id: 'module${index}',
               ...module,
+              upgradeManifests: module.upgradeManifests || [],
           });
       } catch (error) {
           console.error("Error loading package: '${pkg.name}'", error);

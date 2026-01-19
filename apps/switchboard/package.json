@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard",
   "type": "module",
-  "version": "5.2.0-dev.1",
+  "version": "6.0.0-dev.10",
   "main": "dist/src/index.js",
   "exports": {
     ".": {
@@ -25,8 +25,12 @@
     "lint": "eslint",
     "build": "pnpm run install-packages",
     "start": "node dist/src/index.js",
+    "start:profile": "mkdir -p .prof && node --cpu-prof --cpu-prof-dir=.prof dist/src/index.js",
+    "start:profile:bun": "mkdir -p .prof && bun --cpu-prof --cpu-prof-dir=.prof dist/src/index.js",
     "dev": "concurrently -P 'pnpm -w run tsc --watch' 'nodemon --trace-warnings --watch \"../..\" -e ts,tsx,js,json dist/src/index.js -- {@}' --",
-    "install-packages": "node dist/src/install-packages.js"
+    "install-packages": "node dist/src/install-packages.js",
+    "migrate": "node dist/src/migrate.js",
+    "migrate:status": "node dist/src/migrate.js status"
   },
   "author": "",
   "license": "ISC",

@@ -399,7 +399,12 @@ export class KyselyWriteCache implements IWriteCache {
         } else if (operation.action.type === "DELETE_DOCUMENT") {
           applyDeleteDocumentAction(document, operation.action as never);
         } else {
-          document = docModule.reducer(document, operation.action);
+          const protocolVersion =
+            document.header.protocolVersions?.["base-reducer"] ?? 1;
+          document = docModule.reducer(document, operation.action, undefined, {
+            skip: operation.skip,
+            protocolVersion,
+          });
         }
       }
     }
@@ -435,7 +440,12 @@ export class KyselyWriteCache implements IWriteCache {
           }
 
           // Fail-fast: if reducer throws, error propagates immediately without caching partial state
-          document = module.reducer(document, operation.action);
+          const protocolVersion =
+            document.header.protocolVersions?.["base-reducer"] ?? 1;
+          document = module.reducer(document, operation.action, undefined, {
+            skip: operation.skip,
+            protocolVersion,
+          });
         }
 
         const reachedTarget =
@@ -499,7 +509,12 @@ export class KyselyWriteCache implements IWriteCache {
         }
 
         // Fail-fast: if reducer throws, error propagates immediately without caching partial state
-        document = module.reducer(document, operation.action);
+        const protocolVersion =
+          document.header.protocolVersions?.["base-reducer"] ?? 1;
+        document = module.reducer(document, operation.action, undefined, {
+          skip: operation.skip,
+          protocolVersion,
+        });
 
         if (
           targetRevision !== undefined &&

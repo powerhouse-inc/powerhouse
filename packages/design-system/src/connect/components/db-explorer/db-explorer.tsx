@@ -6,6 +6,7 @@ import {
 } from "./components/schema-tree-sidebar.js";
 import {
   TableView,
+  rowsToCsv,
   type ColumnInfo,
   type FilterGroup,
   type FilterClause,
@@ -106,6 +107,30 @@ export function DBExplorer({
     sort,
     filters,
     getTableRows,
+  ]);
+
+  const handleCopyAll = useCallback(async (): Promise<string> => {
+    if (!selectedTable) return "";
+
+    // Fetch all rows by using total as limit (or a large number if unknown)
+    const limit = pagination.total ?? 1000000;
+    const data = await getTableRows(selectedTable, {
+      schema,
+      limit,
+      offset: 0,
+      sort,
+      filters,
+    });
+
+    return rowsToCsv(data.rows, columns);
+  }, [
+    selectedTable,
+    schema,
+    pagination.total,
+    sort,
+    filters,
+    getTableRows,
+    columns,
   ]);
 
   const loadTables = useCallback(async () => {
@@ -278,6 +303,7 @@ export function DBExplorer({
               setFilters(newFilters);
               setPagination((prev) => ({ ...prev, offset: 0 }));
             }}
+            onCopyAll={handleCopyAll}
           />
         ) : null}
       </div>

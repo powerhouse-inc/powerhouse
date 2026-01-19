@@ -206,17 +206,17 @@ export class ReactorSubgraph extends BaseSubgraph {
   resolvers: Resolvers = {
     Query: {
       documentModels: async (_parent, args) => {
-        this.logger.debug("documentModels", args);
+        this.logger.debug("documentModels(@args)", args);
         try {
           return await resolvers.documentModels(this.reactorClient, args);
         } catch (error) {
-          this.logger.error("Error in documentModels:", error);
+          this.logger.error("Error in documentModels: @Error", error);
           throw error;
         }
       },
 
       document: async (_parent, args, ctx: Context) => {
-        this.logger.debug("document", args);
+        this.logger.debug("document(@args)", args);
         try {
           // Resolve the document ID first
           const doc = await resolvers.document(this.reactorClient, args);
@@ -225,13 +225,13 @@ export class ReactorSubgraph extends BaseSubgraph {
           }
           return doc;
         } catch (error) {
-          this.logger.error("Error in document:", error);
+          this.logger.error("Error in document: @Error", error);
           throw error;
         }
       },
 
       documentChildren: async (_parent, args, ctx: Context) => {
-        this.logger.debug("documentChildren", args);
+        this.logger.debug("documentChildren(@args)", args);
         try {
           // First resolve the parent to get its ID and check permission
           const parent = await resolvers.document(this.reactorClient, {
@@ -243,13 +243,13 @@ export class ReactorSubgraph extends BaseSubgraph {
           }
           return await resolvers.documentChildren(this.reactorClient, args);
         } catch (error) {
-          this.logger.error("Error in documentChildren:", error);
+          this.logger.error("Error in documentChildren: @Error", error);
           throw error;
         }
       },
 
       documentParents: async (_parent, args, ctx: Context) => {
-        this.logger.debug("documentParents", args);
+        this.logger.debug("documentParents(@args)", args);
         try {
           // First resolve the child to get its ID and check permission
           const child = await resolvers.document(this.reactorClient, {
@@ -261,13 +261,13 @@ export class ReactorSubgraph extends BaseSubgraph {
           }
           return await resolvers.documentParents(this.reactorClient, args);
         } catch (error) {
-          this.logger.error("Error in documentParents:", error);
+          this.logger.error("Error in documentParents: @Error", error);
           throw error;
         }
       },
 
       findDocuments: async (_parent, args, ctx: Context) => {
-        this.logger.debug("findDocuments", args);
+        this.logger.debug("findDocuments(@args)", args);
         try {
           const result = await resolvers.findDocuments(
             this.reactorClient,
@@ -295,17 +295,17 @@ export class ReactorSubgraph extends BaseSubgraph {
 
           return result;
         } catch (error) {
-          this.logger.error("Error in findDocuments:", error);
+          this.logger.error("Error in findDocuments: @Error", error);
           throw error;
         }
       },
 
       jobStatus: async (_parent, args) => {
-        this.logger.debug("jobStatus", args);
+        this.logger.debug("jobStatus(@args)", args);
         try {
           return await resolvers.jobStatus(this.reactorClient, args);
         } catch (error) {
-          this.logger.error("Error in jobStatus:", error);
+          this.logger.error("Error in jobStatus: @Error", error);
           throw error;
         }
       },
@@ -314,13 +314,13 @@ export class ReactorSubgraph extends BaseSubgraph {
         _parent: unknown,
         args: { channelId: string; cursorOrdinal: number },
       ) => {
-        this.logger.debug("pollSyncEnvelopes", args);
+        this.logger.debug("pollSyncEnvelopes(@args)", args);
 
         try {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-return
           return await resolvers.pollSyncEnvelopes(this.syncManager, args);
         } catch (error) {
-          this.logger.error("Error in pollSyncEnvelopes: @Error", error);
+          this.logger.error("Error in pollSyncEnvelopes(@args): @Error", error);
           throw error;
         }
       },
@@ -328,7 +328,7 @@ export class ReactorSubgraph extends BaseSubgraph {
 
     Mutation: {
       createDocument: async (_parent, args, ctx: Context) => {
-        this.logger.debug("createDocument", args);
+        this.logger.debug("createDocument(@args)", args);
         try {
           // If creating under a parent, check write permission on parent
           if (args.parentIdentifier) {
@@ -345,13 +345,13 @@ export class ReactorSubgraph extends BaseSubgraph {
           }
           return await resolvers.createDocument(this.reactorClient, args);
         } catch (error) {
-          this.logger.error("Error in createDocument:", error);
+          this.logger.error("Error in createDocument(@args): @Error", error);
           throw error;
         }
       },
 
       createEmptyDocument: async (_parent, args, ctx: Context) => {
-        this.logger.debug("createEmptyDocument", args);
+        this.logger.debug("createEmptyDocument(@args)", args);
         try {
           // If creating under a parent, check write permission on parent
           if (args.parentIdentifier) {
@@ -368,13 +368,16 @@ export class ReactorSubgraph extends BaseSubgraph {
           }
           return await resolvers.createEmptyDocument(this.reactorClient, args);
         } catch (error) {
-          this.logger.error("Error in createEmptyDocument:", error);
+          this.logger.error(
+            "Error in createEmptyDocument(@args): @Error",
+            error,
+          );
           throw error;
         }
       },
 
       mutateDocument: async (_parent, args, ctx: Context) => {
-        this.logger.debug("mutateDocument", args);
+        this.logger.debug("mutateDocument(@args)", args);
         try {
           // Resolve document and check write permission
           const doc = await resolvers.document(this.reactorClient, {
@@ -392,13 +395,13 @@ export class ReactorSubgraph extends BaseSubgraph {
           }
           return await resolvers.mutateDocument(this.reactorClient, args);
         } catch (error) {
-          this.logger.error("Error in mutateDocument:", error);
+          this.logger.error("Error in mutateDocument(@args): @Error", error);
           throw error;
         }
       },
 
       mutateDocumentAsync: async (_parent, args, ctx: Context) => {
-        this.logger.debug("mutateDocumentAsync", args);
+        this.logger.debug("mutateDocumentAsync(@args)", args);
         try {
           // Resolve document and check write permission
           const doc = await resolvers.document(this.reactorClient, {
@@ -416,13 +419,16 @@ export class ReactorSubgraph extends BaseSubgraph {
           }
           return await resolvers.mutateDocumentAsync(this.reactorClient, args);
         } catch (error) {
-          this.logger.error("Error in mutateDocumentAsync:", error);
+          this.logger.error(
+            "Error in mutateDocumentAsync(@args): @Error",
+            error,
+          );
           throw error;
         }
       },
 
       renameDocument: async (_parent, args, ctx: Context) => {
-        this.logger.debug("renameDocument", args);
+        this.logger.debug("renameDocument(@args)", args);
         try {
           // Resolve document and check write permission
           const doc = await resolvers.document(this.reactorClient, {
@@ -433,13 +439,13 @@ export class ReactorSubgraph extends BaseSubgraph {
           }
           return await resolvers.renameDocument(this.reactorClient, args);
         } catch (error) {
-          this.logger.error("Error in renameDocument:", error);
+          this.logger.error("Error in renameDocument(@args): @Error", error);
           throw error;
         }
       },
 
       addChildren: async (_parent, args, ctx: Context) => {
-        this.logger.debug("addChildren", args);
+        this.logger.debug("addChildren(@args)", args);
         try {
           // Check write permission on parent
           const parent = await resolvers.document(this.reactorClient, {
@@ -450,13 +456,13 @@ export class ReactorSubgraph extends BaseSubgraph {
           }
           return await resolvers.addChildren(this.reactorClient, args);
         } catch (error) {
-          this.logger.error("Error in addChildren:", error);
+          this.logger.error("Error in addChildren(@args): @Error", error);
           throw error;
         }
       },
 
       removeChildren: async (_parent, args, ctx: Context) => {
-        this.logger.debug("removeChildren", args);
+        this.logger.debug("removeChildren(@args)", args);
         try {
           // Check write permission on parent
           const parent = await resolvers.document(this.reactorClient, {
@@ -467,13 +473,13 @@ export class ReactorSubgraph extends BaseSubgraph {
           }
           return await resolvers.removeChildren(this.reactorClient, args);
         } catch (error) {
-          this.logger.error("Error in removeChildren:", error);
+          this.logger.error("Error in removeChildren(@args): @Error", error);
           throw error;
         }
       },
 
       moveChildren: async (_parent, args, ctx: Context) => {
-        this.logger.debug("moveChildren", args);
+        this.logger.debug("moveChildren(@args)", args);
         try {
           // Check write permission on both source and target parents
           const sourceParent = await resolvers.document(this.reactorClient, {
@@ -491,13 +497,17 @@ export class ReactorSubgraph extends BaseSubgraph {
           }
           return await resolvers.moveChildren(this.reactorClient, args);
         } catch (error) {
-          this.logger.error("Error in moveChildren:", error);
+          this.logger.error(
+            "Error in moveChildren(@args): @Error @args",
+            error,
+            args,
+          );
           throw error;
         }
       },
 
       deleteDocument: async (_parent, args, ctx: Context) => {
-        this.logger.debug("deleteDocument", args);
+        this.logger.debug("deleteDocument(@args)", args);
         try {
           // Check write permission on document
           const doc = await resolvers.document(this.reactorClient, {
@@ -508,13 +518,13 @@ export class ReactorSubgraph extends BaseSubgraph {
           }
           return await resolvers.deleteDocument(this.reactorClient, args);
         } catch (error) {
-          this.logger.error("Error in deleteDocument:", error);
+          this.logger.error("Error in deleteDocument(@args): @Error", error);
           throw error;
         }
       },
 
       deleteDocuments: async (_parent, args, ctx: Context) => {
-        this.logger.debug("deleteDocuments", args);
+        this.logger.debug("deleteDocuments(@args)", args);
         try {
           // Check write permission on each document
           for (const identifier of args.identifiers) {
@@ -527,7 +537,7 @@ export class ReactorSubgraph extends BaseSubgraph {
           }
           return await resolvers.deleteDocuments(this.reactorClient, args);
         } catch (error) {
-          this.logger.error("Error in deleteDocuments:", error);
+          this.logger.error("Error in deleteDocuments(@args): @Error", error);
           throw error;
         }
       },
@@ -547,12 +557,12 @@ export class ReactorSubgraph extends BaseSubgraph {
           };
         },
       ) => {
-        this.logger.debug("touchChannel", args);
+        this.logger.debug("touchChannel(@args)", args);
 
         try {
           return await resolvers.touchChannel(this.syncManager, args);
         } catch (error) {
-          this.logger.error("Error in touchChannel:", error);
+          this.logger.error("Error in touchChannel(@args): @Error", error);
           throw error;
         }
       },
@@ -592,7 +602,7 @@ export class ReactorSubgraph extends BaseSubgraph {
             mutableArgs,
           );
         } catch (error) {
-          this.logger.error("Error in pushSyncEnvelope:", error);
+          this.logger.error("Error in pushSyncEnvelope(@args): @Error", error);
           throw error;
         }
       },
@@ -604,7 +614,7 @@ export class ReactorSubgraph extends BaseSubgraph {
         subscribe: withFilter(
           // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           (() => {
-            this.logger.debug("documentChanges subscription started");
+            this.logger.debug("documentChanges(@args) subscription started");
             ensureGlobalDocumentSubscription(this.reactorClient);
 
             return getPubSub().asyncIterableIterator<DocumentChangesPayload>(
@@ -640,7 +650,7 @@ export class ReactorSubgraph extends BaseSubgraph {
         subscribe: withFilter(
           // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           ((_parent: unknown, args: { jobId: string }) => {
-            this.logger.debug("jobChanges subscription", args);
+            this.logger.debug("jobChanges(@args) subscription started", args);
             ensureJobSubscription(this.reactorClient, args.jobId);
 
             return getPubSub().asyncIterableIterator<JobChangesPayload>(

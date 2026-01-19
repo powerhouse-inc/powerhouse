@@ -40,6 +40,48 @@ pnpm --filter @powerhousedao/switchboard build
 pnpm --filter @powerhousedao/switchboard dev
 ```
 
+### Local Development (PostgreSQL)
+
+1. **Start the PostgreSQL database using reactor's Docker Compose:**
+
+```bash
+# From the repository root, start the database
+docker compose -f packages/reactor/docker-compose.yml up -d
+```
+
+This starts:
+- PostgreSQL on port `5433` (mapped from container port 5432)
+- Adminer (database UI) on port `8080`
+
+2. **Run database migrations:**
+
+```bash
+DATABASE_URL="postgresql://postgres:postgres@localhost:5433/reactor" pnpm migrate
+```
+
+3. **Start switchboard with the PostgreSQL database URL:**
+
+```bash
+DATABASE_URL="postgresql://postgres:postgres@localhost:5433/reactor" pnpm start
+```
+
+4. **(Optional) Access the database UI:**
+   - Open http://localhost:8080
+   - System: PostgreSQL
+   - Server: postgres
+   - Username: postgres
+   - Password: postgres
+   - Database: reactor
+
+5. **(Optional) Stop the Database**
+
+```bash
+docker compose -f packages/reactor/docker-compose.yml down
+
+# To also remove the data volume:
+docker compose -f packages/reactor/docker-compose.yml down -v
+```
+
 ### Global Installation
 
 ```bash
@@ -52,6 +94,7 @@ pnpm add -g @powerhousedao/switchboard
 
 ## 🏃‍♂️ Quick Start
 
+
 ## ⚙️ Configuration
 
 ### Environment Variables
@@ -60,6 +103,7 @@ pnpm add -g @powerhousedao/switchboard
 | ---------------------------- | ---------------------------------- | --------------------- |
 | `PORT`                       | Server port                        | `4001`                |
 | `DATABASE_URL`               | Database connection string         | `./.ph/drive-storage` |
+| `PH_REACTOR_DATABASE_URL`    | PostgreSQL URL (takes precedence)  | -                     |
 | `REDIS_URL`                  | Redis connection URL               | -                     |
 | `REDIS_TLS_URL`              | Redis TLS connection URL           | -                     |
 | `SENTRY_DSN`                 | Sentry DSN for error tracking      | -                     |
@@ -164,11 +208,59 @@ pnpm dev
 # Start production server
 pnpm start
 
+# Run database migrations (PostgreSQL only)
+pnpm migrate
+
+# Check migration status
+pnpm migrate:status
+
 # Lint code
 pnpm lint
 
 # Clean build artifacts
 pnpm clean
+```
+
+### Database Migrations
+
+Switchboard uses Kysely for database migrations when running with PostgreSQL. Migrations are handled differently depending on your storage backend:
+
+- **PGlite (default)**: Migrations run automatically on startup
+- **PostgreSQL**: Migrations can be run manually or as part of your deployment pipeline
+
+#### Running Migrations
+
+```bash
+# Via pnpm scripts (from apps/switchboard directory)
+DATABASE_URL="postgresql://user:pass@localhost:5432/db" pnpm migrate
+
+# Check which migrations have been applied
+DATABASE_URL="postgresql://user:pass@localhost:5432/db" pnpm migrate:status
+
+# Via ph CLI (from anywhere)
+ph switchboard --db-path postgresql://user:pass@localhost:5432/db --migrate
+ph switchboard --db-path postgresql://user:pass@localhost:5432/db --migrate-status
+```
+
+#### Environment Variables for Migrations
+
+The migration commands check for a PostgreSQL URL in this order:
+1. `PH_REACTOR_DATABASE_URL`
+2. `DATABASE_URL`
+3. Config file (`powerhouse.config.json` -> `switchboard.database.url`)
+
+If no PostgreSQL URL is found, migrations are skipped with a message (PGlite handles migrations automatically).
+
+#### CI/CD Integration
+
+For production deployments, run migrations before starting the server:
+
+```bash
+# Run migrations then start
+ph switchboard --migrate && ph switchboard
+
+# Or with pnpm
+pnpm migrate && pnpm start
 ```
 
 ### Adding New Features

@@ -622,6 +622,9 @@ export class Reactor implements IReactor {
       name: document.header.name,
       branch: document.header.branch,
       meta: document.header.meta,
+      protocolVersions: document.header.protocolVersions ?? {
+        "base-reducer": 2,
+      },
     };
 
     const createAction = createDocumentAction(createInput);
@@ -629,7 +632,7 @@ export class Reactor implements IReactor {
       documentId: document.header.id,
       model: document.header.documentType,
       fromVersion: 0,
-      toVersion: 1,
+      toVersion: document.state.document.version,
       initialState: document.state,
     });
 

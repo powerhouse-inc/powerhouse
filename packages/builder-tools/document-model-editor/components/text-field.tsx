@@ -7,7 +7,7 @@ import {
   useImperativeHandle,
   useRef,
 } from "react";
-import type { FieldValues } from "react-hook-form";
+import type { FieldValues, Resolver } from "react-hook-form";
 import { useForm } from "react-hook-form";
 import { z } from "zod/v3";
 import { createNameSchema } from "../schemas/inputs.js";
@@ -75,7 +75,9 @@ export const TextField = forwardRef<TextFieldHandle, TextFieldProps>(
     });
 
     const form = useForm({
-      resolver: zodResolver(fieldSchema),
+      resolver: zodResolver(
+        fieldSchema as unknown as Parameters<typeof zodResolver>[0],
+      ) as Resolver<FieldValues>,
       defaultValues: {
         [name]: value ?? "",
       },
@@ -92,7 +94,7 @@ export const TextField = forwardRef<TextFieldHandle, TextFieldProps>(
     );
 
     const handleBlur = useCallback(async () => {
-      const currentValue = form.getValues()[name] ?? "";
+      const currentValue = (form.getValues()[name] as string | undefined) ?? "";
 
       if (value === null || value === undefined) {
         if (!currentValue || currentValue.trim() === "") return;
