@@ -12,13 +12,11 @@
     "access": "public"
   },
   "bin": {
-    "ph": "dist/src/cli.js"
+    "ph": "build/cli.js"
   },
   "files": [
-    "dist"
+    "build/cli.js"
   ],
-  "exports": "./dist/src/index.js",
-  "types": "./dist/src/index.d.ts",
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
