@@ -152,11 +152,11 @@ export interface IReactorClient {
    * @param signal - Optional abort signal to cancel the request
    * @returns The created document
    */
-  create(
+  create<TDocument extends PHDocument = PHDocument>(
     document: PHDocument,
     parentIdentifier?: string,
     signal?: AbortSignal,
-  ): Promise<PHDocument>;
+  ): Promise<TDocument>;
 
   /**
    * Creates an empty document and waits for completion

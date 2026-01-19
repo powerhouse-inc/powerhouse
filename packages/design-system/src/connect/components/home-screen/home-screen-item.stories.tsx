@@ -49,3 +49,23 @@ export const Default: Story = {
 export const Shareable: Story = {
   ...TemplateShareable,
 };
+
+const TemplateLongName: Story = {
+  args: {
+    title:
+      "This is a very long drive name that should be truncated when displayed in the UI",
+    icon: <Icon name="Drive" />,
+    description: "Contributor App",
+  },
+  decorators: [
+    (Story) => (
+      <div className="grid h-48 w-96 place-items-center bg-white">
+        <Story />
+      </div>
+    ),
+  ],
+};
+
+export const LongName: Story = {
+  ...TemplateLongName,
+};
