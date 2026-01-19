@@ -1,3 +1,13 @@
+## 6.0.0-dev.10 (2026-01-19)
+
+### 🚀 Features
+
+- **ph-cmd:** move dependencies to dev dependencies ([8aa16c346](https://github.com/powerhouse-inc/powerhouse/commit/8aa16c346))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
 ## 6.0.0-dev.9 (2026-01-19)
 
 ### 🚀 Features
