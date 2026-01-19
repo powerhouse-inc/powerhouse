@@ -1,3 +1,20 @@
+## 5.3.0-staging.4 (2026-01-19)
+
+### 🚀 Features
+
+- new cicd flows ([0f52d237b](https://github.com/powerhouse-inc/powerhouse/commit/0f52d237b))
+- **ci:** deploy staging tenant from release/staging/* branches ([3bce3ce41](https://github.com/powerhouse-inc/powerhouse/commit/3bce3ce41))
+- **ci:** add Harbor registry to docker image publishing ([bb100a302](https://github.com/powerhouse-inc/powerhouse/commit/bb100a302))
+
+### 🩹 Fixes
+
+- **monorepo:** exclude root package from recursive build to prevent infinite loop ([bf8ecc244](https://github.com/powerhouse-inc/powerhouse/commit/bf8ecc244))
+- workflow permissions ([6ea8e6b0e](https://github.com/powerhouse-inc/powerhouse/commit/6ea8e6b0e))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.3.0-staging.3 (2026-01-19)
 
 ### 🩹 Fixes
