@@ -12,7 +12,6 @@
     "simulate-ci-workflow": "pnpm clean && pnpm install:ci && pnpm install-bun-global && pnpm tsc:build && pnpm lint && pnpm build && pnpm install && pnpm test:ci && pnpm build:storybook && pnpm check-circular-imports",
     "lint": "NODE_OPTIONS=--max-old-space-size=8192 eslint --config eslint.config.js --quiet --fix --cache --cache-strategy content",
     "install:ci": "pnpm i --frozen-lockfile",
-    "install-bun-global": "curl -fsSL https://bun.com/install | bash",
     "build:misc": "pnpm --filter !academy -r --no-bail build && pnpm install:ci",
     "build:css": "pnpm -r --no-bail build:css",
     "build:vite": "pnpm -r --no-bail build:vite",
