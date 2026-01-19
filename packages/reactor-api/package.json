@@ -109,7 +109,6 @@
     "@types/ws": "^8.18.1",
     "copyfiles": "^2.4.1",
     "esbuild": "^0.24.0",
-    "graphql-codegen-typescript-validation-schema": "^0.12.0",
     "graphql-tag": "^2.12.6",
     "kysely-pglite-dialect": "^1.2.0",
     "msw": "^2.7.3",
