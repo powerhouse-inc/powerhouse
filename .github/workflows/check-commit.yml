@@ -36,6 +36,12 @@ jobs:
           version: latest
           run_install: false
 
+      - name: Setup bun global install
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Test that bun is available
+        run: bun --help
+
       - name: Cache ESLint
         uses: actions/cache@v4
         with:
@@ -46,15 +52,6 @@ jobs:
 
       - name: Install deps (frozen lockfile)
         run: pnpm install:ci
-
-      - name: Install bun global runtime
-        run: pnpm install-bun-global
-
-      - name: Source path added to bash profile
-        run: source /home/runner/.bash_profile 
-
-      - name: Test that bun is available
-        run: bun --help
 
       - name: Build typescript project
         run: pnpm tsc:build
