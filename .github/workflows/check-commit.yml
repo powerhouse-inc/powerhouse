@@ -50,6 +50,9 @@ jobs:
       - name: Install bun global runtime
         run: pnpm install-bun-global
 
+      - name: Source path added to bash profile
+        run: source /home/runner/.bash_profile 
+
       - name: Build typescript project
         run: pnpm tsc:build
 
