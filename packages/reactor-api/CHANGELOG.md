@@ -1,3 +1,13 @@
+## 6.0.0-dev.9 (2026-01-19)
+
+### 🚀 Features
+
+- **ph-cmd:** test build with bun ([#2225](https://github.com/powerhouse-inc/powerhouse/pull/2225))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.8 (2026-01-17)
 
 ### 🚀 Features
