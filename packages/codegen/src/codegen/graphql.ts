@@ -58,7 +58,7 @@ const validationSchemaConfig: ValidationSchemaPluginConfig = {
   enumsAsTypes: true,
   skipTypename: true,
   importFrom: `./types.js`,
-  schema: "zod",
+  schema: "zodv4",
   useTypeImports: true,
   scalarSchemas: scalarsValidation,
   directives: {
