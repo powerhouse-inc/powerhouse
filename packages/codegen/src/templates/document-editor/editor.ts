@@ -7,75 +7,82 @@ export const documentEditorEditorFileTemplate = (
   },
 ) =>
   tsx`
-import { DocumentToolbar } from "@powerhousedao/design-system/connect";
-import { setName } from "document-model";
-import { type FormEvent, useState } from "react";
-import { ${v.useSelectedDocumentHookName} } from "${v.documentModelImportPath}";
+import { DocumentStateViewer, DocumentToolbar } from "@powerhousedao/design-system/connect";
+import { ${v.useSelectedDocumentHookName}, actions } from "${v.documentModelImportPath}";
 
 export default function Editor() {
   const [document, dispatch] = ${v.useSelectedDocumentHookName}();
-  const [isEditing, setIsEditing] = useState(false);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const nameInput = form.elements.namedItem("name") as HTMLInputElement;
-    const name = nameInput.value.trim();
-    if (!name) return;
-    dispatch(setName(name));
-    setIsEditing(false);
+  const handleSetName = (name: string) => {
+    // 'actions' contains all available actions for this document type
+    dispatch(actions.setName(name));
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="mx-auto max-w-4xl p-6">
       <DocumentToolbar />
-      <div className="ph-default-styles">
-        <div className="flex justify-center px-4 py-8">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-sm">
-            <div className="mb-4 text-xs font-medium uppercase tracking-wide text-gray-400">
-              ${v.documentModelDocumentTypeName}
-            </div>
 
-            {isEditing ? (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <input
-                  type="text"
-                  name="name"
-                  defaultValue={document.header.name}
-                  autoFocus
-                  className="w-full rounded-lg border border-gray-200 px-4 py-3 text-lg font-semibold text-gray-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  placeholder="Enter name..."
-                />
-                <div className="flex gap-2">
-                  <button
-                    type="submit"
-                    className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
-                  >
-                    Save
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsEditing(false)}
-                    className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div className="flex items-center justify-between gap-4">
-                <h2 className="truncate text-xl font-semibold text-gray-900">
-                  {document.header.name || "Untitled"}
-                </h2>
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="shrink-0 rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
-                >
-                  Edit
-                </button>
-              </div>
-            )}
-          </div>
+      {/* "ph-default-styles" sets default styles for basic UI elements */}
+      <div className="ph-default-styles">
+        {/* Edit document name */}
+        <label className="my-6">
+          <h3>Document Name</h3>
+          <input
+            type="text"
+            defaultValue={document.header.name}
+            placeholder="Enter document name..."
+            title="Edit document name and click outside to save."
+            autoFocus
+            onBlur={(e) => handleSetName(e.target.value.trim())}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.currentTarget.blur();
+              }
+            }}
+            className="font-semibold"
+          />
+        </label>
+        <hr />
+
+        {/* Document header info */}
+        <div className="mb-6 grid grid-cols-2 gap-x-8">
+          <label>
+            <h3 className="text-base">ID</h3>
+            <input
+              type="text"
+              value={document.header.id}
+              readOnly
+              className="font-mono"
+            />
+          </label>
+          <label>
+            <h3 className="text-base">Created</h3>
+            <input
+              type="text"
+              value={new Date(document.header.createdAtUtcIso).toLocaleString()}
+              readOnly
+            />
+          </label>
+          <label>
+            <h3 className="text-base">Type</h3>
+            <input type="text" value={document.header.documentType} readOnly />
+          </label>
+          <label>
+            <h3 className="text-base">Last Modified</h3>
+            <input
+              type="text"
+              value={new Date(
+                document.header.lastModifiedAtUtcIso,
+              ).toLocaleString()}
+              readOnly
+            />
+          </label>
+        </div>
+
+        {/* Document state */}
+        <div className="mt-6">
+          <h3 className="text-base">Document State</h3>
+          <DocumentStateViewer state={document.state} />
         </div>
       </div>
     </div>
