@@ -49,7 +49,7 @@ WORKDIR /app
 RUN pnpm config set @jsr:registry https://npm.jsr.io
 
 # Create and initialize the project
-RUN pnpm add -g ph-cmd@$TAG
+RUN pnpm add -g ph-cmd@$TAG prettier
 
 RUN if [[ "$TAG" == *"dev"* ]]; then \
         ph init project --dev --package-manager pnpm; \

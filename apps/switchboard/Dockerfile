@@ -39,7 +39,7 @@ ENV TAG=$TAG
 # RUN apk add --no-cache openssl
 # Configure JSR registry for @jsr scoped packages
 RUN pnpm config set @jsr:registry https://npm.jsr.io
-RUN pnpm add -g ph-cmd@$TAG prisma@5.17.0
+RUN pnpm add -g ph-cmd@$TAG prisma@5.17.0 prettier
 
 RUN case "$TAG" in \
         *dev*) ph init project --dev --package-manager pnpm ;; \
