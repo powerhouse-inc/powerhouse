@@ -53,6 +53,9 @@ jobs:
       - name: Source path added to bash profile
         run: source /home/runner/.bash_profile 
 
+      - name: Test that bun is available
+        run: bun --help
+
       - name: Build typescript project
         run: pnpm tsc:build
 
