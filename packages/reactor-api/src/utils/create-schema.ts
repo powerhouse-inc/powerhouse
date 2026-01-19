@@ -402,19 +402,26 @@ export function generateDocumentModelSchemaLegacy(
         }
     }
 
-    """
+    ${prefixedStateInputTypes ? `"""
     Input Types from State Schema
     """
-    ${prefixedStateInputTypes}
+    ${prefixedStateInputTypes}` : ""}
 
     ${
-      specification?.modules
-        .map(
-          (module) =>
-            `"""
+      (() => {
+        // Helper to check if schema has actual GraphQL type definitions
+        const hasValidSchema = (schema: string | undefined) =>
+          schema && /\b(input|type|enum|union|interface)\s+\w+/.test(schema);
+        return (
+          specification?.modules
+            .filter((module) => module.operations.some((op) => hasValidSchema(op.schema)))
+            .map(
+              (module) =>
+                `"""
        Module: ${pascalCase(module.name)}
        """
        ${module.operations
+         .filter((op) => hasValidSchema(op.schema))
          .map((op) =>
            applyGraphQLTypePrefixes(
              op.schema ?? "",
@@ -423,7 +430,9 @@ export function generateDocumentModelSchemaLegacy(
            ),
          )
          .join("\n  ")}`,
-        )
-        .join("\n") ?? ""
+            )
+            .join("\n") ?? ""
+        );
+      })()
     }`;
 }

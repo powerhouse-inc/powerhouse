@@ -60,6 +60,22 @@ const DOCUMENT_MODELS_TO_EXCLUDE = [
   "powerhouse/document-drive",
 ];
 
+/**
+ * Check if a document model has any operations with valid schemas.
+ * Document models without valid operation schemas cannot generate valid subgraph schemas.
+ */
+function hasOperationSchemas(documentModel: DocumentModelModule): boolean {
+  const specification =
+    documentModel.documentModel.global.specifications.at(-1);
+  if (!specification) return false;
+  // Check if any operation has a schema with actual GraphQL type definitions
+  const hasValidSchema = (schema: string | undefined) =>
+    schema && /\b(input|type|enum|union|interface)\s+\w+/.test(schema);
+  return specification.modules.some((module) =>
+    module.operations.some((op) => hasValidSchema(op.schema)),
+  );
+}
+
 const DefaultFeatureFlags = {
   enableDocumentModelSubgraphs: true,
 };
@@ -228,6 +244,9 @@ export class GraphQLManager {
         )
       ) {
         continue; // Skip the legacy document model
+      }
+      if (!hasOperationSchemas(documentModel)) {
+        continue; // Skip document models without operation schemas
       }
       try {
         const subgraphInstance = new DocumentModelSubgraphLegacy(
