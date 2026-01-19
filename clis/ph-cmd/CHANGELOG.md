@@ -1,3 +1,20 @@
+## 5.3.0-staging.3 (2026-01-19)
+
+### 🚀 Features
+
+- **ph-cmd:** add build dir to gitignore ([471971e1d](https://github.com/powerhouse-inc/powerhouse/commit/471971e1d))
+- **ph-cmd:** update bin for ph-cmd ([6d4c939f8](https://github.com/powerhouse-inc/powerhouse/commit/6d4c939f8))
+
+### 🩹 Fixes
+
+- **ph-cmd:** remove problematic index file ([1190b7674](https://github.com/powerhouse-inc/powerhouse/commit/1190b7674))
+- **ph-cmd:** bundle ph cmd ([#2226](https://github.com/powerhouse-inc/powerhouse/pull/2226))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
 ## 5.3.0-staging.2 (2026-01-16)
 
 ### 🚀 Features

@@ -1,3 +1,13 @@
+## 5.3.0-staging.3 (2026-01-19)
+
+### 🩹 Fixes
+
+- **ph-cmd:** bundle ph cmd ([#2226](https://github.com/powerhouse-inc/powerhouse/pull/2226))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 5.3.0-staging.2 (2026-01-16)
 
 ### 🚀 Features
