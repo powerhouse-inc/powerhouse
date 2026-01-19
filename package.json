@@ -12,7 +12,7 @@
     "simulate-ci-workflow": "pnpm clean && pnpm install:ci && pnpm tsc:build && pnpm lint && pnpm build && pnpm install && pnpm test:ci && pnpm build:storybook && pnpm check-circular-imports",
     "lint": "NODE_OPTIONS=--max-old-space-size=8192 eslint --config eslint.config.js --quiet --fix --cache --cache-strategy content",
     "install:ci": "pnpm i --frozen-lockfile",
-    "build:misc": "pnpm --filter !academy -r --no-bail build && pnpm install:ci",
+    "build:misc": "pnpm --filter '!academy' --filter '!root' -r --no-bail build && pnpm install:ci",
     "build:css": "pnpm -r --no-bail build:css",
     "build:vite": "pnpm -r --no-bail build:vite",
     "build:storybook": "pnpm -r --no-bail run build-storybook",
