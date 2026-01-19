@@ -238,7 +238,7 @@ export const getDocumentModelTypeDefs = (
  * @returns {string[]} Array of type names
  */
 function extractTypeNames(schema: string) {
-  const found = schema.match(/(type|enum|union|interface|input)\s+(\w+)\s/g);
+  const found = schema.match(/(type|enum|union|interface|input)\s+(\w+)[\s{]/g);
   if (!found) return [];
   return found.map((f) =>
     f
@@ -247,8 +247,34 @@ function extractTypeNames(schema: string) {
       .replaceAll("union ", "")
       .replaceAll("interface ", "")
       .replaceAll("input ", "")
+      .replaceAll("{", "")
       .trim(),
   );
+}
+
+/**
+ * Extract input type definitions from a GraphQL schema.
+ * @param {string} schema - GraphQL schema string
+ * @param {Set<string>} excludeTypeNames - Type names to exclude from extraction
+ * @returns {string} All input type definitions as a string
+ */
+function extractInputTypeDefinitions(
+  schema: string,
+  excludeTypeNames: Set<string> = new Set(),
+): string {
+  // Match input type blocks: input TypeName { ... }
+  const inputTypeRegex = /input\s+(\w+)\s*\{[^}]*\}/g;
+  const matches: string[] = [];
+  let match;
+  while ((match = inputTypeRegex.exec(schema)) !== null) {
+    const typeName = match[1];
+    // Skip if this type name is in the exclusion set
+    if (!excludeTypeNames.has(typeName)) {
+      matches.push(match[0]);
+    }
+  }
+  if (matches.length === 0) return "";
+  return matches.join("\n\n");
 }
 
 /**
@@ -317,6 +343,30 @@ export function generateDocumentModelSchemaLegacy(
   const stateSchema = specification?.state.global.schema;
   const stateTypeNames = extractTypeNames(stateSchema ?? "");
 
+  // Collect ALL type names from all operations' schemas
+  const allOperationTypeNames =
+    specification?.modules.flatMap((module) =>
+      module.operations.flatMap((op) => extractTypeNames(op.schema ?? "")),
+    ) ?? [];
+
+  // Combine state types and all operation types for prefixing
+  const allTypeNames = [
+    ...new Set([...stateTypeNames, ...allOperationTypeNames]),
+  ];
+
+  // Extract input type definitions from state schema, excluding operation-specific inputs
+  // (those are already defined in op.schema)
+  const operationInputTypeNames = new Set(allOperationTypeNames);
+  const stateInputTypes = extractInputTypeDefinitions(
+    stateSchema ?? "",
+    operationInputTypeNames,
+  );
+  const prefixedStateInputTypes = applyGraphQLTypePrefixes(
+    stateInputTypes,
+    documentName,
+    allTypeNames,
+  );
+
   return gql`
     """
     Queries: ${documentName} Document
@@ -351,7 +401,12 @@ export function generateDocumentModelSchemaLegacy(
             .join("\n        ") ?? ""
         }
     }
- 
+
+    """
+    Input Types from State Schema
+    """
+    ${prefixedStateInputTypes}
+
     ${
       specification?.modules
         .map(
@@ -364,7 +419,7 @@ export function generateDocumentModelSchemaLegacy(
            applyGraphQLTypePrefixes(
              op.schema ?? "",
              documentName,
-             stateTypeNames,
+             allTypeNames,
            ),
          )
          .join("\n  ")}`,
