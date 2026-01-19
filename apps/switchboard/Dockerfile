@@ -19,8 +19,8 @@ RUN pnpm config set @jsr:registry https://npm.jsr.io
 ARG TAG=latest
 ARG PH_PACKAGES=""
 
-# Install ph-cmd and prisma
-RUN pnpm add -g ph-cmd@$TAG prisma@5.17.0
+# Install ph-cmd, prisma, and prettier
+RUN pnpm add -g ph-cmd@$TAG prisma@5.17.0 prettier
 
 # Initialize project based on tag
 RUN case "$TAG" in \

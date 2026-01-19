@@ -20,8 +20,8 @@ ARG TAG=latest
 ARG PH_PACKAGES=""
 ARG PH_CONNECT_BASE_PATH="/"
 
-# Install ph-cmd and initialize project
-RUN pnpm add -g ph-cmd@$TAG
+# Install ph-cmd and prettier
+RUN pnpm add -g ph-cmd@$TAG prettier
 
 RUN case "$TAG" in \
         *dev*) ph init project --dev --package-manager pnpm ;; \
