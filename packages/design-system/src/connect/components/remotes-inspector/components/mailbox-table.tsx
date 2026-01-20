@@ -1,11 +1,11 @@
 import { Icon } from "@powerhousedao/design-system";
-import {
-  type SyncOperation,
+import type {
+  SyncOperation,
   SyncOperationStatus,
 } from "@powerhousedao/reactor";
 import { twMerge } from "tailwind-merge";
-import { SortIcon } from "./sort-icon.js";
 import { type ColumnDef, type SortOptions, truncateId } from "../utils.js";
+import { SortIcon } from "./sort-icon.js";
 
 export type MailboxType = "inbox" | "outbox" | "deadLetter";
 
@@ -26,15 +26,15 @@ const DEAD_LETTER_COLUMNS: ColumnDef[] = [
 
 function getStatusLabel(status: SyncOperationStatus): string {
   switch (status) {
-    case SyncOperationStatus.Unknown:
+    case -1:
       return "Unknown";
-    case SyncOperationStatus.TransportPending:
+    case 0:
       return "Transport Pending";
-    case SyncOperationStatus.ExecutionPending:
+    case 1:
       return "Execution Pending";
-    case SyncOperationStatus.Applied:
+    case 2:
       return "Applied";
-    case SyncOperationStatus.Error:
+    case 3:
       return "Error";
     default:
       return "Unknown";
@@ -43,12 +43,12 @@ function getStatusLabel(status: SyncOperationStatus): string {
 
 function getStatusIcon(status: SyncOperationStatus): React.ReactNode {
   switch (status) {
-    case SyncOperationStatus.TransportPending:
-    case SyncOperationStatus.ExecutionPending:
+    case 0:
+    case 1:
       return <span>⏳</span>;
-    case SyncOperationStatus.Applied:
+    case 2:
       return <span>✅</span>;
-    case SyncOperationStatus.Error:
+    case 3:
       return <span>❌</span>;
     default:
       return <span>❓</span>;
