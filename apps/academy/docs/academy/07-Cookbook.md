@@ -275,7 +275,7 @@ ph use prod
 ### Related recipes
 
 - [Installing 'ph-cmd'](#installing-ph-cmd)
-- Updating Your Powerhouse Project Dependencies
+- [Managing and Updating Powerhouse Dependencies](#managing-and-updating-powerhouse-dependencies)
 - [Setting up or Resetting the Global Powerhouse Configuration](#setting-up-or-resetting-the-global-powerhouse-configuration)
 
 ### Further reading
@@ -399,9 +399,15 @@ ph init --package-manager pnpm
 - [Bun Installation Guide](https://bun.sh/docs/installation#how-to-add-your-path)
 </details>
 
-## Vetra Studio recipes
+## Powerhouse Package Development recipes
 
-This section covers recipes for using Vetra Studio, the AI-powered development environment for building Powerhouse packages with specification-driven workflows.
+This comprehensive section covers the complete workflow for building Powerhouse packages using Vetra Studio, from project initialization and document model creation to editors, Drive-apps, and package publishing.
+
+> **Tip:** For the best development experience, use **Vetra Studio** with `ph vetra --watch`. Vetra Studio provides automatic code generation, AI-assisted development, and live preview of your documents and editors.
+
+### Vetra Studio
+
+Vetra Studio is the AI-powered development environment for building Powerhouse packages with specification-driven workflows.
 
 <details id="launching-vetra-studio">
 <summary>Launching Vetra Studio</summary>
@@ -848,98 +854,9 @@ Run Vetra Studio and open your document to test the new editor interface.
 - [Build a Todo-list Editor](/academy/GetStarted/BuildToDoListEditor)
 </details>
 
-## Powerhouse Environment recipes
+### Project Initialization & Management
 
-This section covers recipes for setting up and managing Powerhouse environments, from local development to production servers.
-
-<details id="setting-up-a-production-environment">
-<summary>Setting up a Production Environment</summary>
-
-### How to set up a Production Powerhouse Environment
-
----
-
-### Problem statement
-
-You need to set up a new production-ready server to host and run your Powerhouse services (Connect and Switchboard).
-
-### Prerequisites
-
-- A Linux-based server (Ubuntu or Debian recommended) with `sudo` privileges.
-- A registered domain name.
-- DNS `A` records for your `connect` and `switchboard` subdomains pointing to your server's public IP address.
-
-### Solution
-
-### Step 1: Install Powerhouse Services
-
-SSH into your server and run the universal installation script. This will install Node.js, pnpm, and prepare the system for Powerhouse services.
-
-```bash
-curl -fsSL https://apps.powerhouse.io/install | bash
-```
-
-### Step 2: Reload Your Shell
-
-After the installation, reload your shell's configuration to recognize the new commands.
-
-```bash
-source ~/.bashrc  # Or source ~/.zshrc if using zsh
-```
-
-### Step 3: Initialize a Project
-
-Create a project directory for your services. The `ph-init` command sets up the basic structure. Move into the directory after creation.
-
-```bash
-ph-init my-powerhouse-services
-cd my-powerhouse-services
-```
-
-### Step 4: Configure Services
-
-Run the interactive setup command. This will guide you through configuring Nginx, PM2, databases, and SSL.
-
-```bash
-ph service setup
-```
-
-During the setup, you will be prompted for:
-
-- **Packages to install:** You can pre-install any Powerhouse packages you need. (Optional)
-- **Database:** Choose between a local PostgreSQL setup or connecting to a remote database.
-- **SSL Certificate:** Select Let's Encrypt for a production setup. You will need to provide your domain and subdomains.
-
-### Expected outcome
-
-- Powerhouse Connect and Switchboard services are installed, configured, and running on your server.
-- Nginx is set up as a reverse proxy with SSL certificates from Let's Encrypt.
-- Services are managed by PM2 and will restart automatically on boot or if they crash.
-- You can access your services securely at `https://connect.yourdomain.com` and `https://switchboard.yourdomain.com`.
-
-### Common issues and solutions
-
-- **Issue:** `ph: command not found`
-  - **Solution:** Ensure you have reloaded your shell with `source ~/.bashrc` or have restarted your terminal session.
-- **Issue:** Let's Encrypt SSL certificate creation fails.
-  - **Solution:** Verify that your domain's DNS records have fully propagated and are pointing to the correct server IP. This can take some time.
-- **Issue:** Services fail to start.
-  - **Solution:** Check the service logs for errors using `ph service logs` or `pm2 logs`.
-
-### Related recipes
-
-- [Installing a Custom Powerhouse Package](#installing-a-custom-powerhouse-package)
-
-### Further reading
-
-- [Full Setup Guide](/academy/MasteryTrack/Launch/SetupEnvironment)
-</details>
-
-## Powerhouse Project recipes
-
-This section focuses on creating, configuring, and managing Powerhouse projects, which are collections of document models, editors, and other resources.
-
-> **Tip:** For the best development experience, use **Vetra Studio** with `ph vetra --watch`. Vetra provides automatic code generation and live preview of your documents and editors. See the [Vetra Studio recipes](#vetra-studio-recipes) section for detailed guidance.
+Creating, configuring, and managing Powerhouse projects, which are collections of document models, editors, and other resources.
 
 <details id="initializing-a-new-project-and-document-model">
 <summary>Initializing a New Project & Document Model</summary>
@@ -1104,46 +1021,200 @@ The command will output the generated reducer scaffolding code in the designated
 
 </details>
 
-<details id="updating-your-powerhouse-project-dependencies">
-<summary>Updating Your Powerhouse Project Dependencies</summary>
+<details id="managing-and-updating-powerhouse-dependencies">
+<summary>Managing and Updating Powerhouse Dependencies</summary>
 
-### How to Update Your Powerhouse Project Dependencies
+### How to Manage and Update Powerhouse Dependencies
 
 ---
 
 ### Problem statement
 
-The update command allows you to update your Powerhouse dependencies to their latest versions based on the version ranges specified in your package.json.
+You need to understand and manage different types of dependencies in your Powerhouse project, and know how to update them using `ph update` and `ph use` commands. This includes updating based on version ranges, switching between development environments, and understanding the Powerhouse branching strategy.
+
+### Prerequisites
+
+- Powerhouse CLI (`ph-cmd`) installed
+- A Powerhouse project initialized (`ph init`)
+- Terminal or command prompt access
+
+### Solution
+
+### Understanding Dependency Types
+
+#### 1. Monorepo Dependencies (Powerhouse Core)
+
+The Powerhouse monorepo uses a specific branching strategy:
+- **Development** (`dev` tag): Ongoing development on the main branch
+- **Staging** (`staging` tag): Pre-release branch (`Release/staging/v.x.x`)
+- **Production** (`latest` or `prod` tag): Latest stable release (`Release/production/v.x.x`)
+
+You can install CLI versions matching these environments:
 
 ```bash
-ph update [options]
+# Install dev version of CLI
+pnpm install -g ph-cmd@dev
+
+# Install staging version
+pnpm install -g ph-cmd@staging
+
+# Install latest stable version
+pnpm install -g ph-cmd
 ```
 
-**Examples**
+#### 2. Project Dependencies
 
-#### Update dependencies based on package.json ranges
+These are dependencies from published npm packages in your `package.json`.
+
+### Using `ph update`: Version Range Updates
+
+Use `ph update` to update dependencies based on the semver ranges in your `package.json`:
+
+#### Step 1: Standard Update (Respect Version Ranges)
+
+Update all Powerhouse dependencies within the ranges specified in your `package.json`:
 
 ```bash
 ph update
 ```
 
-#### Force update to latest dev versions
+This updates packages like `@powerhousedao/*` and `document-model` to their latest versions that satisfy your version constraints.
+
+### Step 2: Force Update to Specific Environment
+
+Override version ranges and force all dependencies to a specific environment:
 
 ```bash
+# Force update to latest dev versions
 ph update --force dev
-```
 
-#### Force update to latest stable versions
-
-```bash
+# Force update to latest stable/production versions
 ph update --force prod
+# or
+ph update --force latest
 ```
 
-#### Use a specific package manager
+#### Step 3: Specify Package Manager (Optional)
 
 ```bash
 ph update --package-manager pnpm
 ```
+
+### Using `ph use`: Environment Switching
+
+Use `ph use` to quickly switch all dependencies between environments or versions:
+
+#### Switching to Development Environment
+
+```bash
+ph use dev
+```
+
+This switches all installed Powerhouse dependencies to their `@dev` tagged versions.
+
+#### Switching to Staging Environment
+
+```bash
+ph use staging
+```
+
+#### Switching to Production Environment
+
+```bash
+ph use prod
+# or
+ph use latest
+```
+
+#### Switching to Specific Version
+
+```bash
+# Use a specific release version
+ph use 5.1.0
+
+# Use a pre-release version
+ph use 1.0.0-beta.1
+```
+
+#### Using Local Development Versions
+
+For active development, link to local packages:
+
+```bash
+ph use local /path/to/powerhouse/monorepo
+```
+
+#### Resolving Tags to Exact Versions
+
+Use `--use-resolved` to resolve tags to actual version numbers:
+
+```bash
+ph use dev --use-resolved
+```
+
+This resolves `@dev` to an exact version like `v1.0.1-dev.1` instead of using the tag.
+
+### Initializing Projects with Specific Environments
+
+When creating new projects, you can specify the environment:
+
+```bash
+# Initialize with dev dependencies
+ph init my-project --dev
+
+# Initialize with staging dependencies
+ph init my-project --staging
+
+# Initialize with production dependencies (default)
+ph init my-project
+```
+
+### Publishing Updated Dependencies
+
+If you're developing packages:
+
+1. Update dependencies in your project using `ph use` or `ph update`
+2. Test thoroughly
+3. Publish the updated package to npm:
+   ```bash
+   pnpm build
+   npm publish
+   ```
+4. Other projects get the new version when they run `ph install your-package`
+
+### Expected outcome
+
+- Clear understanding of Powerhouse dependency types and environments
+- Ability to update dependencies based on version ranges with `ph update`
+- Ability to switch between environments with `ph use`
+- Knowledge of the dev/staging/prod branching strategy
+- Understanding of when to use each command
+
+### Common issues and solutions
+
+- **Issue**: Dependencies not updating as expected
+  - **Solution**: Check your `package.json` version ranges. Use `ph update --force <env>` to override ranges.
+- **Issue**: Confusion between `ph update` and `ph use`
+  - **Solution**: Use `ph update` for version range updates. Use `ph use` for environment switching.
+- **Issue**: Breaking changes after updates
+  - **Solution**: Test thoroughly. Consider publishing to a private npm registry first. Use staging environment before production.
+- **Issue**: Local development changes not reflecting
+  - **Solution**: Use `ph use local /path/to/monorepo` and ensure you've built the local packages.
+- **Issue**: Which version am I using?
+  - **Solution**: Check `package.json` for installed versions. Use `ph list` to see installed packages.
+
+### Related recipes
+
+- [Installing 'ph-cmd'](#installing-ph-cmd)
+- [Using Different Branches in Powerhouse](#using-different-branches-in-powerhouse)
+- [Setting up or Resetting the Global Powerhouse Configuration](#setting-up-or-resetting-the-global-powerhouse-configuration)
+- [Installing a Custom Powerhouse Package](#installing-a-custom-powerhouse-package)
+
+### Further reading
+
+- [Powerhouse CLI Reference: Update Command](/academy/APIReferences/PowerhouseCLI#update)
+- [Powerhouse CLI Reference: Use Command](/academy/APIReferences/PowerhouseCLI#use)
+- [Powerhouse Builder Tools](/academy/MasteryTrack/BuilderEnvironment/BuilderTools)
 
 </details>
 
@@ -1231,11 +1302,9 @@ You might encounter a browser warning about the self-signed certificate; you may
 - [Powerhouse Builder Tools](/academy/MasteryTrack/BuilderEnvironment/BuilderTools)
 </details>
 
-## Document & Drive Editor recipes
+### Editors & Drive-apps
 
-This section provides guidance on generating and customizing editors for Document Models and custom interfaces for Drives.
-
-> **Tip:** For editor development, use **Vetra Studio** with `ph vetra --watch`. Vetra provides automatic code generation and live preview as you develop your editors. See [Creating an Editor with AI Assistance](#creating-an-editor-with-ai-assistance) for AI-powered editor creation.
+Generating and customizing editors for Document Models and custom interfaces for Drives.
 
 <details id="generating-a-document-editor">
 <summary>Generating a Document Editor</summary>
@@ -1484,11 +1553,21 @@ Use the constructed URL to add or access the drive in your Connect environment.
 
 </details>
 
-## Reactor recipes
+### Package Publishing & Distribution
 
-Learn how to manage the Powerhouse Reactor, the local service for processing document model operations and state.
+Creating, installing, and managing Powerhouse Packages for distribution and reuse.
+
+## Deployment recipes
+
+This section covers deploying Powerhouse applications and packages to various environments using Docker and other deployment methods.
+
+## Reactor & Data Synchronisation recipes
+
+This section covers managing the Powerhouse Reactor (the local service for processing document model operations) and troubleshooting data synchronization within the Powerhouse ecosystem.
 
 > **Tip:** For development workflows, **Vetra Studio** (`ph vetra --watch`) is recommended as it includes reactor functionality along with automatic code generation and live preview.
+
+### Reactor Management
 
 <details id="starting-the-reactor">
 <summary>Starting the Reactor</summary>
@@ -1560,9 +1639,268 @@ ph reactor
 
 </details>
 
-## Package Development recipes
+<details id="deploying-powerhouse-with-docker">
+<summary>Deploying Powerhouse with Docker</summary>
 
-These recipes guide you through creating, installing, and managing Powerhouse Packages, which are reusable collections of document models and editors.
+### How to Deploy Powerhouse with Docker
+
+---
+
+### Problem statement
+
+You want to deploy your Powerhouse application (Connect and Switchboard) using Docker containers for production or development environments. Docker deployment provides consistency, reproducibility, and easy scalability across different platforms.
+
+### Prerequisites
+
+- Docker installed on your system
+- Docker Compose installed (usually included with Docker Desktop)
+- Basic understanding of Docker concepts
+- (Optional) A custom Powerhouse package to deploy
+
+### Solution
+
+### Step 1: Create a Docker Compose Configuration
+
+Create a `docker-compose.yml` file in your project directory:
+
+```yaml
+name: powerhouse
+
+services:
+  connect:
+    image: ghcr.io/powerhouse-inc/powerhouse/connect:latest
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
+      - PH_CONNECT_BASE_PATH=/
+    ports:
+      - "127.0.0.1:3000:4000"
+    networks:
+      - powerhouse_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  switchboard:
+    image: ghcr.io/powerhouse-inc/powerhouse/switchboard:latest
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
+    ports:
+      - "127.0.0.1:4000:4001"
+    networks:
+      - powerhouse_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16.1
+    ports:
+      - "127.0.0.1:5444:5432"
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - powerhouse_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+networks:
+  powerhouse_network:
+    name: powerhouse_network
+
+volumes:
+  postgres_data:
+```
+
+### Step 2: Install Custom Packages (Optional)
+
+If you have custom Powerhouse packages to deploy, add them via the `PH_PACKAGES` environment variable:
+
+```yaml
+services:
+  connect:
+    image: ghcr.io/powerhouse-inc/powerhouse/connect:latest
+    environment:
+      - PH_PACKAGES=@powerhousedao/your-package,@powerhousedao/another-package
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
+```
+
+### Step 3: Start the Services
+
+Launch all services in detached mode:
+
+```bash
+docker compose up -d
+```
+
+### Step 4: Verify Deployment
+
+Check that all services are running:
+
+```bash
+docker compose ps
+```
+
+View logs to confirm successful startup:
+
+```bash
+docker compose logs -f
+```
+
+### Step 5: Access Your Application
+
+Once services are running, access:
+- **Connect**: http://localhost:3000
+- **Switchboard API**: http://localhost:4000
+
+### Production Configuration
+
+For production deployments, use specific version tags and secure credentials:
+
+```yaml
+services:
+  connect:
+    image: ghcr.io/powerhouse-inc/powerhouse/connect:v1.0.0
+    env_file:
+      - .env
+  
+  switchboard:
+    image: ghcr.io/powerhouse-inc/powerhouse/switchboard:v1.0.0
+    env_file:
+      - .env
+```
+
+Create a `.env` file with secure credentials:
+
+```bash
+POSTGRES_PASSWORD=your-secure-password
+DATABASE_URL=postgres://powerhouse:your-secure-password@postgres:5432/powerhouse
+```
+
+### Expected outcome
+
+- All Powerhouse services (Connect, Switchboard, PostgreSQL) are running in Docker containers
+- Services can communicate with each other through the Docker network
+- Your custom packages (if specified) are installed and available
+- The application is accessible through the configured ports
+- Data is persisted in Docker volumes
+
+### Common issues and solutions
+
+- **Issue**: Container fails to start with "port already in use" error
+  - **Solution**: Change the port mapping in `docker-compose.yml` to use an available port (e.g., `3001:4000` instead of `3000:4000`)
+- **Issue**: Database connection errors on startup
+  - **Solution**: Ensure the `depends_on` configuration includes health checks so services wait for PostgreSQL to be ready
+- **Issue**: Custom packages fail to install
+  - **Solution**: Verify package names are correct and published to npm. Check container logs with `docker compose logs switchboard` or `docker compose logs connect`
+- **Issue**: Changes to docker-compose.yml not taking effect
+  - **Solution**: Run `docker compose down` then `docker compose up -d` to recreate containers with new configuration
+- **Issue**: Permission errors with volumes
+  - **Solution**: Ensure the volume paths have correct permissions: `sudo chown -R 1000:1000 ./data`
+
+### Related recipes
+
+- [Installing a Custom Powerhouse Package](#installing-a-custom-powerhouse-package)
+- [Setting up a Production Environment](#setting-up-a-production-environment)
+- [Publishing a Powerhouse Package](#packaging-and-publishing-a-powerhouse-project)
+
+### Further reading
+
+- [Docker Deployment Guide](/academy/MasteryTrack/Launch/DockerDeployment)
+- [Environment Configuration](/academy/MasteryTrack/Launch/ConfigureEnvironment)
+- [Setup Environment Guide](/academy/MasteryTrack/Launch/SetupEnvironment)
+- [Docker Compose Documentation](https://docs.docker.com/compose/)
+</details>
+
+<details id="setting-up-a-production-environment">
+<summary>Setting up a Production Environment</summary>
+
+### How to set up a Production Powerhouse Environment
+
+---
+
+### Problem statement
+
+You need to set up a new production-ready server to host and run your Powerhouse services (Connect and Switchboard).
+
+### Prerequisites
+
+- A Linux-based server (Ubuntu or Debian recommended) with `sudo` privileges.
+- A registered domain name.
+- DNS `A` records for your `connect` and `switchboard` subdomains pointing to your server's public IP address.
+
+### Solution
+
+### Step 1: Install Powerhouse Services
+
+SSH into your server and run the universal installation script. This will install Node.js, pnpm, and prepare the system for Powerhouse services.
+
+```bash
+curl -fsSL https://apps.powerhouse.io/install | bash
+```
+
+### Step 2: Reload Your Shell
+
+After the installation, reload your shell's configuration to recognize the new commands.
+
+```bash
+source ~/.bashrc  # Or source ~/.zshrc if using zsh
+```
+
+### Step 3: Initialize a Project
+
+Create a project directory for your services. The `ph-init` command sets up the basic structure. Move into the directory after creation.
+
+```bash
+ph-init my-powerhouse-services
+cd my-powerhouse-services
+```
+
+### Step 4: Configure Services
+
+Run the interactive setup command. This will guide you through configuring Nginx, PM2, databases, and SSL.
+
+```bash
+ph service setup
+```
+
+During the setup, you will be prompted for:
+
+- **Packages to install:** You can pre-install any Powerhouse packages you need. (Optional)
+- **Database:** Choose between a local PostgreSQL setup or connecting to a remote database.
+- **SSL Certificate:** Select Let's Encrypt for a production setup. You will need to provide your domain and subdomains.
+
+### Expected outcome
+
+- Powerhouse Connect and Switchboard services are installed, configured, and running on your server.
+- Nginx is set up as a reverse proxy with SSL certificates from Let's Encrypt.
+- Services are managed by PM2 and will restart automatically on boot or if they crash.
+- You can access your services securely at `https://connect.yourdomain.com` and `https://switchboard.yourdomain.com`.
+
+### Common issues and solutions
+
+- **Issue:** `ph: command not found`
+  - **Solution:** Ensure you have reloaded your shell with `source ~/.bashrc` or have restarted your terminal session.
+- **Issue:** Let's Encrypt SSL certificate creation fails.
+  - **Solution:** Verify that your domain's DNS records have fully propagated and are pointing to the correct server IP. This can take some time.
+- **Issue:** Services fail to start.
+  - **Solution:** Check the service logs for errors using `ph service logs` or `pm2 logs`.
+
+### Related recipes
+
+- [Installing a Custom Powerhouse Package](#installing-a-custom-powerhouse-package)
+- [Deploying Powerhouse with Docker](#deploying-powerhouse-with-docker)
+
+### Further reading
+
+- [Full Setup Guide](/academy/MasteryTrack/Launch/SetupEnvironment)
+</details>
 
 <details id="installing-a-custom-powerhouse-package">
 <summary>Installing a Custom Powerhouse Package</summary>
@@ -1635,110 +1973,6 @@ Check your project's `package.json` and `powerhouse.manifest.json` to ensure the
 
 - [Publishing a Powerhouse Package](#publishing-a-powerhouse-package)
 - [Initializing a Powerhouse Project](#initializing-a-new-project-and-document-model)
-
-</details>
-
-<details id="managing-powerhouse-dependencies-and-versions">
-<summary>Managing Powerhouse Dependencies and Versions</summary>
-
-### How to Manage Powerhouse Dependencies and Versions
-
----
-
-> **Note:** This is a temporary solution until version control is fully implemented in Powerhouse. Future updates may change how dependencies are managed.
-
-### Problem statement
-
-You need to understand and manage different types of dependencies in your Powerhouse project, including:
-
-- Monorepo dependencies (from the Powerhouse core repository)
-- Project-specific dependencies (from published npm packages)
-- Boilerplate dependencies
-
-### Prerequisites
-
-- Powerhouse CLI (`ph-cmd`) installed
-- A Powerhouse project initialized (`ph init`)
-- npm account (if you need to publish packages)
-
-### Solution
-
-#### Understanding Different Types of Dependencies
-
-1. **Monorepo Dependencies**
-   - The Powerhouse monorepo has the following branching strategy:
-     - Ongoing development happens on the main branch with tag `dev`   
-     - A pre-release is branched off on Release/staging/v.x.x with tag `staging`
-     - Production is the latest release Release/production/v.x.x accessed with tag `latest`or `prod` 
-     
-   - You can use these branches or dependencies by:
-
-     ```bash
-     # Install dev version of CLI
-     pnpm install -g ph-cmd@dev
-
-     # Initialize project with dev dependencies
-     ph init --dev
-     ```
-
-2. **Project Dependencies**
-   - These are dependencies from published npm packages
-   - Update them using:
-
-     ```bash
-     # Update to latest stable versions
-     ph use
-
-     # Update to development versions
-     ph use dev
-
-     # Update to production versions
-     ph use prod
-     ```
-
-3. **Publishing Updated Dependencies**
-   - If you make changes to dependencies, you need to:
-     1. Update the dependencies in your project
-     2. Publish the updated package to npm
-     3. Other projects will then get the new version when they run `ph install`
-
-#### Important Notes
-
-1. **Breaking Changes**
-   - Currently, updating Connect versions might break older packages
-   - Always test thoroughly after updating dependencies
-   - Consider publishing to a private npm registry for testing
-
-2. **Local Development**
-   - Using `ph use` in a project folder only affects that specific project
-   - Other projects will still download the latest published version from npm
-   - For testing, you can publish to your own npm account
-
-### Expected outcome
-
-- Clear understanding of different dependency types
-- Ability to manage and update dependencies appropriately
-- Knowledge of when to publish updated packages
-
-### Common issues and solutions
-
-- Issue: Dependencies not updating as expected
-  - Solution: Ensure you're using the correct `ph use` command for your needs
-- Issue: Breaking changes after updates
-  - Solution: Test thoroughly and consider publishing to a private npm registry first
-- Issue: Confusion about which version is being used
-  - Solution: Check your package.json and powerhouse.manifest.json for current versions
-
-### Related recipes
-
-- [Installing 'ph-cmd'](#installing-ph-cmd)
-- [Using Different Branches in Powerhouse](#using-different-branches-in-powerhouse)
-- [Setting up or Resetting the Global Powerhouse Configuration](#setting-up-or-resetting-the-global-powerhouse-configuration)
-
-### Further reading
-
-- [Powerhouse Builder Tools](/academy/MasteryTrack/BuilderEnvironment/BuilderTools)
-- [GraphQL Schema Best Practices](/academy/MasteryTrack/WorkWithData/UsingTheAPI)
 
 </details>
 
@@ -1823,13 +2057,11 @@ git push --tags
 ### Related recipes
 
 - [Installing a Custom Powerhouse Package](#installing-a-custom-powerhouse-package)
-- [Managing Powerhouse Dependencies and Versions](#managing-powerhouse-dependencies-and-versions)
+- [Managing and Updating Powerhouse Dependencies](#managing-and-updating-powerhouse-dependencies)
 
 </details>
 
-## Data Synchronisation recipes
-
-This section helps troubleshoot and understand data synchronization within the Powerhouse ecosystem, including interactions between different services and components.
+### Data Synchronisation
 
 <details id="troubleshooting-document-syncing">
 <summary>Troubleshooting Document Syncing: Supergraph vs. Drive Endpoints</summary>
@@ -2023,6 +2255,6 @@ yarn cache clean --force
 
 - [Installing 'ph-cmd'](#installing-ph-cmd)
 - [Uninstalling 'ph-cmd'](#uninstalling-ph-cmd)
-- [Managing Powerhouse Dependencies and Versions](#managing-powerhouse-dependencies-and-versions)
+- [Managing and Updating Powerhouse Dependencies](#managing-and-updating-powerhouse-dependencies)
 
 </details>
