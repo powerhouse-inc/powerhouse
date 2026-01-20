@@ -31,17 +31,20 @@ export async function createDocument(
   await expect(addButton).toBeVisible();
   await addButton.click();
 
-  // Wait for dialog to open - using a timeout for the animation
-  await page.waitForTimeout(500);
+  // Wait for the create document dialog to be visible
+  // Look for the dialog that contains "Create a new document" text
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible({ timeout: 5000 });
 
-  // Find the form (use .last() in case there are duplicate forms)
-  const form = page.locator('form[name="create-document"]').last();
+  // Fill in the document name - find the input within the dialog
+  const nameInput = dialog.getByPlaceholder("Document name");
+  await expect(nameInput).toBeVisible({ timeout: 5000 });
+  await nameInput.fill(documentName);
 
-  // Fill in the document name within the form
-  await form.locator('input[type="text"]').fill(documentName);
-
-  // Click create button within the form
-  await form.locator('button:has-text("Create")').click();
+  // Wait for Create button to be enabled (validation passes)
+  const createButton = dialog.getByRole("button", { name: "Create" });
+  await expect(createButton).toBeEnabled({ timeout: 5000 });
+  await createButton.click();
 
   // Wait for navigation to the new document
   await page.waitForLoadState("networkidle");
@@ -85,12 +88,19 @@ export async function navigateToVetraDrive(
     });
     if (await cookieButton.isVisible()) {
       await cookieButton.click();
-      await page.waitForTimeout(1000);
+      await cookieButton.waitFor({ state: "hidden", timeout: 5000 });
     }
   }
 
-  // Click on Vetra drive
-  const vetraDrive = page.getByText("Vetra Drive App");
+  // Wait for the app skeleton to finish loading
+  await page
+    .locator(".skeleton-loader")
+    .waitFor({ state: "hidden", timeout: 30000 });
+
+  // Wait for Vetra drive card to appear (default drives load asynchronously)
+  // Look for the h3 heading with "Vetra" which is the drive title
+  const vetraDrive = page.getByRole("heading", { name: "Vetra", level: 3 });
+  await expect(vetraDrive).toBeVisible({ timeout: 15000 });
   await vetraDrive.click();
 
   // Wait for drive page to load
@@ -156,47 +166,81 @@ export async function createDocumentAndFillBasicData(
   await page.getByText("Global State Schema").first().click();
 
   if (data.global) {
-    // Focus the editor
-    await page.click(".cm-editor");
+    // Focus the first CodeMirror editor (global state schema)
+    const schemaEditor = page.locator(".cm-content").first();
+    await expect(schemaEditor).toBeVisible({ timeout: 5000 });
+    await schemaEditor.click();
 
-    // Select all and delete
+    // Select all and delete existing content
     await page.keyboard.press("ControlOrMeta+A");
     await page.keyboard.press("Backspace");
 
-    await page.locator(".cm-content").first().fill(data.global.schema);
+    // Use insertText instead of fill() for CodeMirror (contenteditable div)
+    await page.keyboard.insertText(data.global.schema);
 
-    await page.getByText("Global State Schema").first().click();
+    // Click away to blur and commit changes
+    await page.getByText("global state schema").first().click();
 
-    await page.waitForTimeout(500);
+    // Uncheck "Sync with schema" to prevent auto-updates overwriting our value
+    const syncCheckbox = page.getByRole("checkbox", {
+      name: "Sync with schema",
+    });
+    if (await syncCheckbox.isChecked()) {
+      await syncCheckbox.click();
+    }
 
-    await page.locator(".cm-content").nth(1).fill(data.global.initialState);
+    // Wait for the second CodeMirror editor to be ready (initial state value)
+    const initialStateEditor = page.locator(".cm-content").nth(1);
+    await expect(initialStateEditor).toBeVisible({ timeout: 5000 });
+    await initialStateEditor.click();
 
+    // Select all and delete existing content
+    await page.keyboard.press("ControlOrMeta+A");
+    await page.keyboard.press("Backspace");
+
+    // Use insertText instead of fill() for CodeMirror
+    await page.keyboard.insertText(data.global.initialState);
+
+    // Click away to blur and commit changes
     await page.getByText("global state initial value").first().click();
-    await page.waitForTimeout(500);
   }
 
   if (data.modules) {
     for (const module of data.modules) {
-      await page
+      // Wait for module textarea to be ready
+      const moduleInput = page
         .locator('textarea[placeholder="Add module"]')
-        .last()
-        .fill(module.name);
+        .last();
+      await expect(moduleInput).toBeVisible({ timeout: 5000 });
+      await moduleInput.fill(module.name);
       await page.keyboard.press("Enter");
 
-      for (const operation of module.operations) {
-        await page
+      for (let i = 0; i < module.operations.length; i++) {
+        const operation = module.operations[i];
+
+        // Wait for operation textarea to be ready
+        const operationInput = page
           .locator('textarea[placeholder="Add operation"]')
-          .last()
-          .fill(operation.name);
+          .last();
+        await expect(operationInput).toBeVisible({ timeout: 5000 });
+        await operationInput.fill(operation.name);
         await page.keyboard.press("Enter");
 
-        // Wait for the operation to be created
-        await page.waitForTimeout(1000);
+        // Wait for the new operation to be created by checking the operation name appears
+        // The operation name gets converted to SCREAMING_SNAKE_CASE in the UI
+        const expectedName = operation.name.toUpperCase().replace(/\s+/g, "_");
+        const operationNameField = page.locator(
+          `textarea[placeholder="Add operation"]:has-text("${expectedName}")`,
+        );
+        await expect(operationNameField).toBeVisible({ timeout: 5000 });
 
-        // In Vetra, operation schemas use CodeMirror editors
-        // Find the editor that contains the operation name
-        // Note: We need to find the last .cm-content as new operations are added at the end
-        const operationEditor = page.locator(".cm-content").last();
+        // Count total CodeMirror editors: 2 (schema + initial state) + number of operations created so far
+        // The operation editors start after the first 2 global editors
+        const operationEditorIndex = 2 + i;
+        const operationEditor = page
+          .locator(".cm-content")
+          .nth(operationEditorIndex);
+        await expect(operationEditor).toBeVisible({ timeout: 5000 });
 
         await operationEditor.click();
 
@@ -207,9 +251,10 @@ export async function createDocumentAndFillBasicData(
         // Insert the operation schema
         await page.keyboard.insertText(operation.schema);
 
-        await page.keyboard.press("Enter");
-        await page.getByText("Global State Schema").first().click();
-        await page.waitForTimeout(500);
+        // Click away to blur and commit the changes
+        const globalSchemaLabel = page.getByText("Global State Schema").first();
+        await expect(globalSchemaLabel).toBeVisible({ timeout: 5000 });
+        await globalSchemaLabel.click();
       }
     }
   }

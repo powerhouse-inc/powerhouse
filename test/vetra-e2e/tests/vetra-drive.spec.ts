@@ -9,9 +9,15 @@ test("should display Vetra drive automatically on Connect main page", async ({
 
   await handleCookieConsent(page);
 
+  // Wait for the app skeleton to finish loading (skeleton-loader should be hidden)
+  await page
+    .locator(".skeleton-loader")
+    .waitFor({ state: "hidden", timeout: 30000 });
+
   // Wait for the Vetra drive card to appear (default drives load asynchronously)
-  const vetraDriveCard = page.getByText("Vetra Drive App");
-  await expect(vetraDriveCard).toBeVisible({ timeout: 10000 });
+  // Look for the h3 heading with "Vetra" which is the drive title
+  const vetraDriveCard = page.getByRole("heading", { name: "Vetra", level: 3 });
+  await expect(vetraDriveCard).toBeVisible({ timeout: 15000 });
 });
 
 test("should allow clicking on Vetra drive", async ({ page }) => {
@@ -20,8 +26,13 @@ test("should allow clicking on Vetra drive", async ({ page }) => {
 
   await handleCookieConsent(page);
 
+  // Wait for the app skeleton to finish loading
+  await page
+    .locator(".skeleton-loader")
+    .waitFor({ state: "hidden", timeout: 30000 });
+
   const vetraDrive = page.getByRole("heading", { name: "Vetra", level: 3 });
-  await expect(vetraDrive).toBeVisible();
+  await expect(vetraDrive).toBeVisible({ timeout: 15000 });
 
   await vetraDrive.click();
 

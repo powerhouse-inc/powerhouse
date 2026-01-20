@@ -19,7 +19,9 @@ export async function goToDrive(page: Page, driveName: string) {
 
   // Click on the drive
   await page.click(`text=${driveName}`);
-  await page.isVisible(`text=Documents and files`);
+  await expect(page.getByText("Documents and files")).toBeVisible({
+    timeout: 5000,
+  });
 }
 
 /**
@@ -113,8 +115,9 @@ export async function verifyDocumentInList(
  * ```
  */
 export async function openDocumentByName(page: Page, documentName: string) {
-  await page
+  const docLocator = page
     .locator("div.rounded-md.border-2.border-transparent.p-2")
-    .getByText(documentName)
-    .click({ force: true });
+    .getByText(documentName);
+  await expect(docLocator).toBeVisible({ timeout: 5000 });
+  await docLocator.click();
 }

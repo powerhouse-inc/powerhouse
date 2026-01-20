@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { handleCookieConsent } from "./cookie-consent.js";
 
 /**
@@ -17,11 +18,17 @@ export async function createLocalDrive(page: Page, driveName: string) {
   // Navigate to URL
   await page.goto("/");
 
+  // Wait for the app skeleton to finish loading
+  await page
+    .locator(".skeleton-loader")
+    .waitFor({ state: "hidden", timeout: 30000 });
+
   // Handle cookie consent
   await handleCookieConsent(page);
 
   const createDriveButton = page.getByText("Create New Drive");
 
+  await expect(createDriveButton).toBeVisible({ timeout: 15000 });
   await createDriveButton.click();
 
   const form = page.locator('form[name="add-local-drive"]').last();

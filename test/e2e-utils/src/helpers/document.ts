@@ -1,8 +1,10 @@
 import type { Page } from "@playwright/test";
+import { expect } from "@playwright/test";
 
 /**
  * Helper function to close document from toolbar.
  * Clicks the close button identified by its SVG path.
+ * Waits for the button to be visible before clicking.
  *
  * @param page - Playwright Page object
  *
@@ -12,7 +14,9 @@ import type { Page } from "@playwright/test";
  * ```
  */
 export async function closeDocumentFromToolbar(page: Page) {
-  await page.getByLabel("Close document").click();
+  const closeButton = page.getByLabel("Close document");
+  await expect(closeButton).toBeVisible({ timeout: 5000 });
+  await closeButton.click();
 }
 
 /**

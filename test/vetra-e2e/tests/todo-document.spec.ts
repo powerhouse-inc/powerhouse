@@ -9,6 +9,9 @@ import {
 } from "./helpers/document.js";
 import { expect, test } from "./helpers/fixtures.js";
 
+// Run serially to avoid conflicts with other tests that modify the shared Vetra drive
+test.describe.configure({ mode: "serial" });
+
 const DOCUMENT_NAME = "ToDoDocument";
 
 const TEST_DOCUMENT_DATA: DocumentBasicData = {
@@ -79,12 +82,24 @@ async function setupDocument(
   await navigateToVetraDrive(page);
   await createDocumentAndFillBasicData(page, DOCUMENT_NAME, data);
 
-  // Wait for code generation to complete
-  await page.waitForTimeout(5000);
+  // Wait for code generation to complete by waiting for network idle
+  // and giving the codegen processor time to write files
+  await page.waitForLoadState("networkidle");
 
-  // Verify document model folder was created
+  // Poll for the generated files with a timeout
+  const maxWaitMs = 30000;
+  const startTime = Date.now();
   const documentModelsDir = path.join(process.cwd(), "document-models");
   const todoDocModelDir = path.join(documentModelsDir, "to-do-document");
+
+  while (Date.now() - startTime < maxWaitMs) {
+    if (fs.existsSync(todoDocModelDir)) {
+      break;
+    }
+    await page.waitForTimeout(500);
+  }
+
+  // Verify document model folder was created
   const documentModelsIndex = path.join(documentModelsDir, "index.ts");
 
   expect(fs.existsSync(todoDocModelDir)).toBe(true);
