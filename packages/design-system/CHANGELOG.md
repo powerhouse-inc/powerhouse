@@ -1,3 +1,13 @@
+## 5.3.0-staging.7 (2026-01-20)
+
+### 🩹 Fixes
+
+- **design-system:** import assets with runtime relative paths ([975dae3f2](https://github.com/powerhouse-inc/powerhouse/commit/975dae3f2))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.3.0-staging.6 (2026-01-20)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
