@@ -1,7 +1,11 @@
 #!/usr/bin/env tsx
 /**
- * Script to create N documents
- * Usage: tsx docs-create.ts [N] [--endpoint <url>] [--documentType <type>]
+ * Script to create N documents and perform M operations on each
+ * Usage: tsx docs-create.ts [N] [--operations M] [--endpoint <url>] [--documentType <type>]
+ *
+ * Process flow:
+ *   1. Create N documents
+ *   2. For each document, perform M operations
  *
  * Documents are created without drive association due to server limitations
  * with drive initialization.
@@ -27,6 +31,14 @@ const RENAME_DOCUMENT = gql`
   }
 `;
 
+const MUTATE_DOCUMENT = gql`
+  mutation MutateDocument($documentIdentifier: String!, $actions: [JSONObject!]!) {
+    mutateDocument(documentIdentifier: $documentIdentifier, actions: $actions) {
+      id
+    }
+  }
+`;
+
 const GET_DOCUMENT_MODELS = gql`
   query GetDocumentModels {
     documentModels {
@@ -40,6 +52,44 @@ const GET_DOCUMENT_MODELS = gql`
 
 interface CreateDocumentResponse {
   createEmptyDocument: { id: string };
+}
+
+function createOperation(docIndex: number, opIndex: number): object {
+  // Cycle through different operation types for variety
+  const operations = [
+    {
+      type: "SET_MODEL_NAME",
+      input: { name: `Model-${docIndex}-op${opIndex}` },
+      scope: "global",
+    },
+    {
+      type: "SET_MODEL_DESCRIPTION",
+      input: { description: `Description for document ${docIndex}, operation ${opIndex}` },
+      scope: "global",
+    },
+    {
+      type: "SET_AUTHOR_NAME",
+      input: { authorName: `Author-${docIndex}-op${opIndex}` },
+      scope: "global",
+    },
+    {
+      type: "SET_AUTHOR_WEBSITE",
+      input: { authorWebsite: `https://example-${docIndex}-${opIndex}.com` },
+      scope: "global",
+    },
+    {
+      type: "SET_MODEL_EXTENSION",
+      input: { extension: `.ext${opIndex}` },
+      scope: "global",
+    },
+    {
+      type: "SET_MODEL_ID",
+      input: { id: `org/model-${docIndex}-v${opIndex}` },
+      scope: "global",
+    },
+  ];
+
+  return operations[opIndex % operations.length];
 }
 
 interface DocumentModelsResponse {
@@ -68,12 +118,32 @@ async function createDocument(
   return createEmptyDocument.id;
 }
 
+async function performOperations(
+  client: GraphQLClient,
+  documentId: string,
+  docIndex: number,
+  operationCount: number,
+  totalDocs: number,
+  onProgress: (opNum: number) => void,
+): Promise<void> {
+  for (let i = 0; i < operationCount; i++) {
+    const action = createOperation(docIndex, i + 1);
+    await client.request(MUTATE_DOCUMENT, {
+      documentIdentifier: documentId,
+      actions: [action],
+    });
+    onProgress(i + 1);
+  }
+}
+
 function parseArgs(args: string[]): {
   count: number;
+  operations: number;
   endpoint: string;
   documentType?: string;
 } {
   let count = 10;
+  let operations = 0;
   let endpoint = DEFAULT_ENDPOINT;
   let documentType: string | undefined;
 
@@ -83,22 +153,30 @@ function parseArgs(args: string[]): {
       endpoint = args[++i];
     } else if (arg === "--documentType" && args[i + 1]) {
       documentType = args[++i];
+    } else if ((arg === "--operations" || arg === "-o") && args[i + 1]) {
+      operations = Number(args[++i]);
     } else if (arg === "--help" || arg === "-h") {
       console.log(`
 Usage: tsx docs-create.ts [N] [options]
 
 Arguments:
-  N                      Number of documents to create (default: 10)
+  N                         Number of documents to create (default: 10)
 
 Options:
-  --endpoint <url>       GraphQL endpoint (default: ${DEFAULT_ENDPOINT})
-  --documentType <type>  Document type (default: first available)
-  --help, -h             Show this help message
+  --operations, -o <M>      Number of operations to perform on each document (default: 0)
+  --endpoint <url>          GraphQL endpoint (default: ${DEFAULT_ENDPOINT})
+  --documentType <type>     Document type (default: first available)
+  --help, -h                Show this help message
+
+Process flow:
+  1. Create N documents
+  2. For each document, perform M operations (cycling through metadata operations)
 
 Examples:
   tsx docs-create.ts 10
-  tsx docs-create.ts 100 --endpoint http://localhost:4001/graphql
-  tsx docs-create.ts 50 --documentType powerhouse/document-model
+  tsx docs-create.ts 10 --operations 5
+  tsx docs-create.ts 100 --operations 10 --endpoint http://localhost:4001/graphql
+  tsx docs-create.ts 50 --documentType powerhouse/document-model -o 3
 `);
       process.exit(0);
     } else if (!isNaN(Number(arg))) {
@@ -106,11 +184,11 @@ Examples:
     }
   }
 
-  return { count, endpoint, documentType };
+  return { count, operations, endpoint, documentType };
 }
 
 async function main() {
-  const { count, endpoint, documentType: docTypeArg } = parseArgs(
+  const { count, operations, endpoint, documentType: docTypeArg } = parseArgs(
     process.argv.slice(2),
   );
 
@@ -127,17 +205,51 @@ async function main() {
     console.log(`Using document type: ${documentType}`);
   }
 
-  // Create documents
-  console.log(`\nCreating ${count} documents...`);
-  const startTime = Date.now();
+  // Phase 1: Create documents
+  console.log(`\nPhase 1: Creating ${count} documents...`);
+  const createStartTime = Date.now();
+  const documentIds: string[] = [];
 
   for (let i = 0; i < count; i++) {
-    await createDocument(client, documentType, `doc-${i + 1}`);
+    const id = await createDocument(client, documentType, `doc-${i + 1}`);
+    documentIds.push(id);
     process.stdout.write(`\r  Progress: ${i + 1}/${count}`);
   }
 
-  const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-  console.log(`\n✓ Created ${count} documents in ${duration}s`);
+  const createDuration = ((Date.now() - createStartTime) / 1000).toFixed(2);
+  console.log(`\n  Created ${count} documents in ${createDuration}s`);
+
+  // Phase 2: Perform operations on each document
+  if (operations > 0) {
+    console.log(`\nPhase 2: Performing ${operations} operations on each document...`);
+    const opsStartTime = Date.now();
+    const totalOps = count * operations;
+    let completedOps = 0;
+
+    for (let i = 0; i < documentIds.length; i++) {
+      const docNum = i + 1;
+      await performOperations(
+        client,
+        documentIds[i],
+        docNum,
+        operations,
+        count,
+        (opNum) => {
+          completedOps++;
+          process.stdout.write(
+            `\r  Doc ${docNum}/${count}, op ${opNum}/${operations} (total: ${completedOps}/${totalOps})`
+          );
+        }
+      );
+    }
+
+    const opsDuration = ((Date.now() - opsStartTime) / 1000).toFixed(2);
+    console.log(`\n  Completed ${totalOps} operations in ${opsDuration}s`);
+  }
+
+  // Summary
+  const totalDuration = ((Date.now() - createStartTime) / 1000).toFixed(2);
+  console.log(`\nDone! Total time: ${totalDuration}s`);
 }
 
 main().catch((error) => {
