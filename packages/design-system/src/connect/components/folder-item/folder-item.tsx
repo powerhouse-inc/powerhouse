@@ -6,7 +6,7 @@ import {
   useNodeActions,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
-import { type FolderNode } from "document-drive";
+import type { FolderNode } from "document-drive";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { defaultNodeOptions, nodeOptionsMap } from "../../constants/options.js";
@@ -14,7 +14,6 @@ import { useDrag } from "../../hooks/use-drag.js";
 import { useDrop } from "../../hooks/use-drop.js";
 import { ConnectDropdownMenu } from "../dropdown-menu/dropdown-menu.js";
 import { NodeInput } from "../node-input/node-input.js";
-import { SyncStatusIcon } from "../status-icon/sync-status-icon.js";
 
 export function FolderItem(props: {
   folderNode: FolderNode;
