@@ -1,3 +1,16 @@
+## 6.0.0-dev.11 (2026-01-20)
+
+### 🩹 Fixes
+
+- **monorepo:** exclude root package from recursive build to prevent infinite loop ([099139393](https://github.com/powerhouse-inc/powerhouse/commit/099139393))
+- improve document model subgraph generation ([9c20b7593](https://github.com/powerhouse-inc/powerhouse/commit/9c20b7593))
+- **codegen:** fix failing codegen tests ([#2227](https://github.com/powerhouse-inc/powerhouse/pull/2227))
+
+### ❤️ Thank You
+
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.10 (2026-01-19)
 
 ### 🚀 Features

@@ -1,3 +1,21 @@
+## 6.0.0-dev.11 (2026-01-20)
+
+### 🚀 Features
+
+- **design-system:** improve sidebar UX and add document toolbar story ([#2217](https://github.com/powerhouse-inc/powerhouse/pull/2217))
+
+### 🩹 Fixes
+
+- **monorepo:** exclude root package from recursive build to prevent infinite loop ([099139393](https://github.com/powerhouse-inc/powerhouse/commit/099139393))
+- update addDrive function to set drive name ([#2223](https://github.com/powerhouse-inc/powerhouse/pull/2223))
+- **codegen:** fix failing codegen tests ([#2227](https://github.com/powerhouse-inc/powerhouse/pull/2227))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.10 (2026-01-19)
 
 ### 🚀 Features
