@@ -28,7 +28,6 @@ export * from "./select-field/content.js";
 export * from "./select-field/select-field.js";
 export * from "./select-field/selected-content.js";
 export * from "./storybook-arg-types.js";
-export * from "./testing.js";
 export * from "./text-field/text-field.js";
 export * from "./text-input/text-input-diff.js";
 export * from "./text-input/text-input.js";

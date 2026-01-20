@@ -1,8 +1,8 @@
 import { Icon } from "@powerhousedao/design-system";
-import { type IChannel } from "@powerhousedao/reactor";
+import type { IChannel } from "@powerhousedao/reactor";
 import { useState } from "react";
-import { MailboxTable, type MailboxType } from "./mailbox-table.js";
 import { type SortDirection, type SortOptions } from "../utils.js";
+import { MailboxTable, type MailboxType } from "./mailbox-table.js";
 
 export type ChannelInspectorProps = {
   readonly remoteName: string;
