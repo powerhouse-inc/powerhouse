@@ -842,6 +842,46 @@ export async function renameNode(
   }
 }
 
+export async function renameDriveNode(
+  driveId: string,
+  nodeId: string,
+  name: string,
+): Promise<Node | undefined> {
+  const { isAllowedToCreateDocuments } = getUserPermissions();
+  if (!isAllowedToCreateDocuments) {
+    throw new Error("User is not allowed to rename documents");
+  }
+
+  const useLegacy = isLegacyWriteEnabledSync();
+
+  if (useLegacy) {
+    const reactor = window.ph?.legacyReactor;
+    if (!reactor) {
+      throw new Error("Legacy reactor not initialized");
+    }
+    const drive = await reactor.getDrive(driveId);
+    const updatedDrive = (await queueActions(
+      drive,
+      updateNode({ id: nodeId, name }),
+    )) as DocumentDriveDocument;
+
+    return updatedDrive.state.global.nodes.find((n) => n.id === nodeId);
+  } else {
+    const reactorClient = window.ph?.reactorClient;
+    if (!reactorClient) {
+      throw new Error("ReactorClient not initialized");
+    }
+
+    await reactorClient.execute(driveId, "main", [
+      updateNode({ id: nodeId, name }),
+    ]);
+
+    const { document: drive } =
+      await reactorClient.get<DocumentDriveDocument>(driveId);
+    return drive.state.global.nodes.find((n) => n.id === nodeId);
+  }
+}
+
 export async function moveNode(
   driveId: string,
   src: Node,

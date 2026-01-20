@@ -4,8 +4,10 @@ import {
   addFolder,
   copyNode,
   moveNode,
+  renameDriveNode,
   renameNode,
 } from "../actions/document.js";
+import { useDrives } from "./drives.js";
 import { useFolderById } from "./folder-by-id.js";
 import { useSelectedDriveSafe } from "./selected-drive.js";
 import { useSelectedFolder } from "./selected-folder.js";
@@ -21,6 +23,7 @@ export function useNodeActions() {
   const selectedNode = useSelectedNode();
   const selectedParentFolder = useFolderById(selectedNode?.parentFolder);
   const selectedDriveId = selectedDrive?.header.id;
+  const drives = useDrives();
 
   async function onAddFile(file: File, parent: Node | undefined) {
     if (!selectedDriveId) return;
@@ -124,6 +127,25 @@ export function useNodeActions() {
     }
   }
 
+  async function onRenameDriveNodes(
+    newName: string,
+    nodeId: string,
+  ): Promise<void> {
+    if (!drives) return;
+
+    // Find all drives that contain this node
+    const drivesWithNode = drives.filter((drive) =>
+      drive.state.global.nodes.some((n) => n.id === nodeId),
+    );
+
+    // Update node name in all parent drives
+    await Promise.all(
+      drivesWithNode.map((drive) =>
+        renameDriveNode(drive.header.id, nodeId, newName),
+      ),
+    );
+  }
+
   return {
     onAddFile,
     onAddFolder,
@@ -132,5 +154,6 @@ export function useNodeActions() {
     onMoveNode,
     onDuplicateNode,
     onAddAndSelectNewFolder,
+    onRenameDriveNodes,
   };
 }
