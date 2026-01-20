@@ -75,10 +75,12 @@ async function waitForDrivesReady(
       }
 
       // If we get a successful response with drive documents, the drive exists
-      if (data?.data?.findDocuments?.items?.length > 0) {
-        console.log(
-          `✅ Reactor drive is ready: ${data.data.findDocuments.items.map((d: { name: string }) => d.name).join(", ")}`,
-        );
+      const items = data?.data?.findDocuments?.items;
+      if (items && Array.isArray(items) && items.length > 0) {
+        const driveNames = items
+          .map((d: { name: string }) => d.name)
+          .join(", ");
+        console.log(`✅ Reactor drive is ready: ${driveNames}`);
         return;
       }
 
