@@ -1,8 +1,9 @@
-import renownShortHover from "@powerhousedao/design-system/assets/renown-short-hover.png";
-import renownShort from "@powerhousedao/design-system/assets/renown-short.png";
 import { twMerge } from "tailwind-merge";
 import { AccountPopoverLogin } from "../account-popover/account-popover-login.js";
 import { AccountPopover } from "../account-popover/account-popover.js";
+
+const renownShort = new URL('../../../../../assets/renown-short.png', import.meta.url).href
+const renownShortHover = new URL('../../../../../assets/renown-short-hover.png', import.meta.url).href
 
 export interface SidebarLoginProps {
   onLogin: (() => void) | undefined;
