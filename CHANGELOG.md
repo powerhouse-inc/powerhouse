@@ -1,3 +1,13 @@
+## 6.0.0-dev.12 (2026-01-20)
+
+### 🩹 Fixes
+
+- **docker:** install prettier globally for ph init project ([7817c65ba](https://github.com/powerhouse-inc/powerhouse/commit/7817c65ba))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.11 (2026-01-20)
 
 ### 🚀 Features

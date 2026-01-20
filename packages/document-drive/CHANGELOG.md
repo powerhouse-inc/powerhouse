@@ -1,3 +1,7 @@
+## 6.0.0-dev.12 (2026-01-20)
+
+This was a version bump only for document-drive to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.11 (2026-01-20)
 
 ### 🩹 Fixes
