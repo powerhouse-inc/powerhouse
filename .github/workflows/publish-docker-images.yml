@@ -187,3 +187,31 @@ jobs:
     with:
       tag: ${{ needs.academy.outputs.tag }}
     secrets: inherit
+
+  # Determine channel from tag for downstream packages
+  determine-channel:
+    needs: [academy]
+    runs-on: ubuntu-latest
+    outputs:
+      channel: ${{ steps.channel.outputs.channel }}
+    steps:
+      - name: Determine channel from tag
+        id: channel
+        run: |
+          TAG="${{ needs.academy.outputs.tag }}"
+          if [[ "$TAG" == *"-dev."* ]]; then
+            echo "channel=dev" >> $GITHUB_OUTPUT
+          elif [[ "$TAG" == *"-staging."* ]]; then
+            echo "channel=staging" >> $GITHUB_OUTPUT
+          else
+            echo "channel=latest" >> $GITHUB_OUTPUT
+          fi
+
+  # Trigger downstream package updates
+  trigger-downstream:
+    needs: [deploy-k8s, determine-channel, academy]
+    uses: "./.github/workflows/trigger-downstream-packages.yml"
+    with:
+      version: ${{ needs.academy.outputs.tag }}
+      channel: ${{ needs.determine-channel.outputs.channel }}
+    secrets: inherit
