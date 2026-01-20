@@ -38,12 +38,18 @@ import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { createRemoveOldRemoteDrivesConfig } from "./drive-preservation.js";
 
-const DEFAULT_DRIVES_URL =
-  (import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL as string | undefined) ||
-  undefined;
-const defaultDrivesUrl = DEFAULT_DRIVES_URL
-  ? DEFAULT_DRIVES_URL.split(",")
-  : [];
+/**
+ * Gets the default drives URLs from environment variable at call time.
+ * This must be called at runtime, not at module initialization, because
+ * the env var is set after the module is first imported during Vite dev server startup.
+ */
+function getDefaultDrivesUrlFromEnv(): string[] {
+  const envValue = import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL as
+    | string
+    | undefined;
+  if (!envValue) return [];
+  return envValue.split(",").filter((url) => url.trim().length > 0);
+}
 
 /**
  * Gets the default drives config for Connect, reading URLs from PH_CONNECT_DEFAULT_DRIVES_URL
@@ -53,6 +59,9 @@ export const getReactorDefaultDrivesConfig = (): Pick<
   DocumentDriveServerOptions,
   "defaultDrives"
 > => {
+  // Read env var at call time, not at module initialization
+  const defaultDrivesUrl = getDefaultDrivesUrlFromEnv();
+
   const baseConfig = getReactorDefaultDrivesConfigBase({
     defaultDrivesUrl,
   });
