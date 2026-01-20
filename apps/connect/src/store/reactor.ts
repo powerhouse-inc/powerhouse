@@ -2,9 +2,11 @@ import { phGlobalConfigFromEnv } from "@powerhousedao/connect/config";
 import { initFeatureFlags } from "@powerhousedao/connect/feature-flags.js";
 import { toast } from "@powerhousedao/connect/services";
 import {
+  addDefaultDrivesForNewReactor,
   createBrowserDocumentDriveServer,
   createBrowserReactor,
   createBrowserStorage,
+  getDefaultDrivesFromEnv,
 } from "@powerhousedao/connect/utils";
 import {
   DocumentCache,
@@ -231,6 +233,19 @@ export async function createReactor() {
     connectCrypto,
   );
 
+  // Add default drives for new reactor if not using legacy read
+  const useLegacyRead = features.get("FEATURE_LEGACY_READ_ENABLED") ?? true;
+  if (!useLegacyRead) {
+    const defaultDrivesConfig = getDefaultDrivesFromEnv();
+    if (defaultDrivesConfig.length > 0) {
+      const syncManager =
+        reactorClientModule.reactorModule?.syncModule?.syncManager;
+      if (syncManager) {
+        await addDefaultDrivesForNewReactor(syncManager, defaultDrivesConfig);
+      }
+    }
+  }
+
   // initialize the reactor
   await initLegacyReactor(legacyReactor, renown, connectCrypto);
 
@@ -266,7 +281,6 @@ export async function createReactor() {
   await login(didFromUrl, legacyReactor, renown, connectCrypto);
 
   // initialize the document cache based on feature flags
-  const useLegacyRead = features.get("FEATURE_LEGACY_READ_ENABLED") ?? true;
   const documentCache = useLegacyRead
     ? new DocumentCache(legacyReactor)
     : new ReactorClientDocumentCache(reactorClientModule.client);

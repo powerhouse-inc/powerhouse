@@ -767,7 +767,11 @@ export async function initializeAndStartAPI(
   ) => Promise<ReactorClientModule>,
   options: Options,
 ): Promise<
-  API & { driveServer: IDocumentDriveServer; client: IReactorClient }
+  API & {
+    driveServer: IDocumentDriveServer;
+    client: IReactorClient;
+    syncManager: ISyncManager;
+  }
 > {
   const {
     port,
@@ -835,5 +839,6 @@ export async function initializeAndStartAPI(
     ...api,
     driveServer: reactor,
     client: reactorClient,
+    syncManager,
   };
 }

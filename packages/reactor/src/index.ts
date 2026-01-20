@@ -31,6 +31,11 @@ export {
   makeConsistencyKey,
   type IConsistencyTracker,
 } from "./shared/consistency-tracker.js";
+export {
+  driveIdFromUrl,
+  parseDriveUrl,
+  type ParsedDriveUrl,
+} from "./shared/drive-url.js";
 export { createMutableShutdownStatus } from "./shared/factories.js";
 export {
   JobStatus,

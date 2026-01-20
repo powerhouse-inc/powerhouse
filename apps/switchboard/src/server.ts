@@ -3,8 +3,10 @@ import { PGlite } from "@electric-sql/pglite";
 import {
   CompositeChannelFactory,
   ConsoleLogger,
+  driveCollectionId,
   type Database,
   EventBus,
+  parseDriveUrl,
   ReactorBuilder,
   ReactorClientBuilder,
   SyncBuilder,
@@ -299,8 +301,25 @@ async function initServer(
       let driveId: string | undefined;
 
       try {
-        const remoteDrive = await addRemoteDrive(driveServer, remoteDriveUrl);
-        driveId = remoteDrive.header.id;
+        if (legacyReactor) {
+          // Use legacy reactor's addRemoteDrive
+          const remoteDrive = await addRemoteDrive(driveServer, remoteDriveUrl);
+          driveId = remoteDrive.header.id;
+        } else {
+          // Use new reactor's sync manager
+          const { syncManager } = api;
+          const parsed = parseDriveUrl(remoteDriveUrl);
+          driveId = parsed.driveId;
+          const remoteName = `remote-drive-${driveId}-${crypto.randomUUID()}`;
+          await syncManager.add(
+            remoteName,
+            driveCollectionId("main", driveId),
+            {
+              type: "gql",
+              parameters: { url: parsed.graphqlEndpoint },
+            },
+          );
+        }
         logger.debug(`Remote drive ${remoteDriveUrl} synced`);
       } catch (error) {
         if (error instanceof DocumentAlreadyExistsError) {

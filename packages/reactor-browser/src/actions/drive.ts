@@ -1,4 +1,4 @@
-import { driveCollectionId } from "@powerhousedao/reactor";
+import { driveCollectionId, parseDriveUrl } from "@powerhousedao/reactor";
 import type {
   DocumentDriveDocument,
   DriveInput,
@@ -96,12 +96,7 @@ export async function addRemoteDrive(
       throw new Error("Sync not initialized");
     }
 
-    const driveId = driveIdFromUrl(url);
-
-    // Construct the reactor subgraph URL from the base URL
-    // e.g., "http://localhost:4001/d/abc123" -> "http://localhost:4001/graphql/r"
-    const parsedUrl = new URL(url);
-    const reactorGraphqlUrl = `${parsedUrl.protocol}//${parsedUrl.host}/graphql/r`;
+    const { driveId, graphqlEndpoint: reactorGraphqlUrl } = parseDriveUrl(url);
 
     // Use a unique name for the remote to allow multiple subscribers to the same drive
     const remoteName = crypto.randomUUID();
@@ -113,10 +108,6 @@ export async function addRemoteDrive(
       },
     });
   }
-}
-
-function driveIdFromUrl(url: string): string {
-  return url.split("/").pop() ?? "";
 }
 
 export async function deleteDrive(driveId: string) {
