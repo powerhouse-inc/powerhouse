@@ -48,6 +48,7 @@ import {
 import { initRenown } from "@renown/sdk";
 import type {
   DocumentDriveDocument,
+  DocumentDriveServerOptions,
   IDocumentAdminStorage,
   IDocumentDriveServer,
 } from "document-drive";
@@ -212,17 +213,26 @@ export async function createReactor() {
     documentModelModules as unknown as DocumentModelModule[],
   );
 
+  // Determine if we're using legacy reads before creating the reactor
+  const useLegacyRead = features.get("FEATURE_LEGACY_READ_ENABLED") ?? true;
+
   // create the legacy reactor with only latest versions
-  const defaultConfig = getReactorDefaultDrivesConfig();
-  const legacyReactor = createBrowserDocumentDriveServer(
-    latestModules,
-    storage,
-    {
-      ...defaultConfig,
+  // Only include default drives config for legacy reactor when using legacy reads
+  const legacyReactorOptions: DocumentDriveServerOptions = {
       featureFlags: {
         enableDualActionCreate: true,
       },
-    },
+    };
+
+  if (useLegacyRead) {
+    const defaultConfig = getReactorDefaultDrivesConfig();
+    Object.assign(legacyReactorOptions, defaultConfig);
+  }
+
+  const legacyReactor = createBrowserDocumentDriveServer(
+    latestModules,
+    storage,
+    legacyReactorOptions,
   );
 
   // create reactor v2 with all versions and upgrade manifests
@@ -234,7 +244,6 @@ export async function createReactor() {
   );
 
   // Add default drives for new reactor if not using legacy read
-  const useLegacyRead = features.get("FEATURE_LEGACY_READ_ENABLED") ?? true;
   if (!useLegacyRead) {
     const defaultDrivesConfig = getDefaultDrivesFromEnv();
     if (defaultDrivesConfig.length > 0) {
