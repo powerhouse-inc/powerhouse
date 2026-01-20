@@ -87,28 +87,36 @@ async function setupDocument(
   await page.waitForLoadState("networkidle");
 
   // Poll for the generated files with a timeout
-  const maxWaitMs = 30000;
+  // We need to wait for the full code generation including index.ts update
+  const maxWaitMs = 60000;
   const startTime = Date.now();
   const documentModelsDir = path.join(process.cwd(), "document-models");
   const todoDocModelDir = path.join(documentModelsDir, "to-do-document");
+  const documentModelsIndex = path.join(documentModelsDir, "index.ts");
+  const expectedExport =
+    'export { ToDoDocument } from "./to-do-document/module.js"';
 
+  // Wait for the index.ts file to contain the expected export
+  // This is more reliable than just waiting for the directory to exist
+  // because the code generation uses debouncing
+  let foundExport = false;
   while (Date.now() - startTime < maxWaitMs) {
-    if (fs.existsSync(todoDocModelDir)) {
-      break;
+    if (fs.existsSync(documentModelsIndex) && fs.existsSync(todoDocModelDir)) {
+      const indexContent = fs.readFileSync(documentModelsIndex, "utf-8");
+      if (indexContent.includes(expectedExport)) {
+        foundExport = true;
+        break;
+      }
     }
     await page.waitForTimeout(500);
   }
 
   // Verify document model folder was created
-  const documentModelsIndex = path.join(documentModelsDir, "index.ts");
-
   expect(fs.existsSync(todoDocModelDir)).toBe(true);
 
   // Verify export was added to document-models/index.ts
   const docModelsIndexContent = fs.readFileSync(documentModelsIndex, "utf-8");
-  expect(docModelsIndexContent).toContain(
-    'export { ToDoDocument } from "./to-do-document/module.js"',
-  );
+  expect(docModelsIndexContent).toContain(expectedExport);
 
   // Note: Automatic subgraph generation for document models was disabled
   // in commit d705e0c5f. Subgraphs are now generated separately via
