@@ -11,7 +11,8 @@ import { resolveLinkedPackage } from "./import-resolver.js";
 type DocumentModelsExport = Record<string, DocumentModelModule>;
 type SubgraphsExport = Record<string, Record<string, SubgraphClass>>;
 type ProcessorsExport = {
-  processorFactory: (module: IProcessorHostModule) => ProcessorFactory;
+  processorFactory?: (module: IProcessorHostModule) => ProcessorFactory;
+  processorFactoryLegacy?: (module: IProcessorHostModule) => ProcessorFactory;
 };
 
 const logger = childLogger(["reactor-api", "packages/util"]);

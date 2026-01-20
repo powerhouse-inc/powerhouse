@@ -1,62 +1,41 @@
-import {
-  RelationalDbProcessor,
-  type InternalTransmitterUpdate,
-} from "document-drive";
+import type { IProcessor, OperationWithContext } from "@powerhousedao/reactor";
+import type { Kysely } from "kysely";
 import type { VetraPackageState } from "../../document-models/vetra-package/gen/schema/types.js";
-import { up } from "./migrations.js";
+import { logger } from "../codegen/logger.js";
 import { type DB } from "./schema.js";
 
 interface VetraPackageGlobalState extends VetraPackageState {}
 
-export class VetraReadModelProcessor extends RelationalDbProcessor<DB> {
-  static override getNamespace(driveId: string): string {
-    // Default namespace: `${this.name}_${driveId.replaceAll("-", "_")}`
-    // we keep all vetra packages in the same namespace even if they are stored in different drives
-    return super.getNamespace("vetra-packages");
+export class VetraReadModelProcessor implements IProcessor {
+  private relationalDb: Kysely<DB>;
+
+  constructor(relationalDb: Kysely<DB>) {
+    this.relationalDb = relationalDb;
   }
 
-  override async initAndUpgrade(): Promise<void> {
-    await up(this.relationalDb);
-  }
+  async onOperations(operations: OperationWithContext[]): Promise<void> {
+    logger.info(">>> VetraReadModelProcessor.onOperations()");
+    if (operations.length === 0) return;
 
-  override async onStrands(
-    strands: InternalTransmitterUpdate[],
-  ): Promise<void> {
-    if (strands.length === 0) {
-      return;
-    }
+    for (const { operation, context } of operations) {
+      if (context.documentType !== "powerhouse/package") continue;
 
-    for (const strand of strands) {
-      if (strand.operations.length === 0) {
-        continue;
-      }
+      const state = context.resultingState
+        ? (JSON.parse(context.resultingState) as VetraPackageGlobalState)
+        : undefined;
 
-      // Only process VetraPackage documents
-      if (strand.documentType !== "powerhouse/package") {
-        continue;
-      }
-
-      // Get the last operation to extract the most recent state
-      const lastOperation = strand.operations[strand.operations.length - 1];
-      if (!lastOperation) continue;
-
-      // Extract VetraPackage state fields with proper typing
-      const state = strand.state as VetraPackageGlobalState | undefined;
-
-      // Helper to safely get string values
       const getString = (val: unknown): string | null =>
         typeof val === "string" ? val : null;
 
       const now = new Date();
       const operationTimestamp = new Date(
-        parseInt(lastOperation.timestampUtcMs, 10),
+        parseInt(operation.timestampUtcMs, 10),
       );
 
       await this.relationalDb
         .insertInto("vetra_package")
         .values({
-          document_id: strand.documentId,
-          // VetraPackage state fields
+          document_id: context.documentId,
           name: getString(state?.name),
           description: getString(state?.description),
           category: getString(state?.category),
@@ -65,11 +44,10 @@ export class VetraReadModelProcessor extends RelationalDbProcessor<DB> {
           keywords: state?.keywords ? JSON.stringify(state.keywords) : null,
           github_url: getString(state?.githubUrl),
           npm_url: getString(state?.npmUrl),
-          // Document metadata
-          last_operation_index: lastOperation.index,
-          last_operation_hash: lastOperation.hash,
+          last_operation_index: operation.index,
+          last_operation_hash: operation.hash,
           last_operation_timestamp: operationTimestamp,
-          drive_id: strand.driveId,
+          drive_id: "", // Not available in new format
           created_at: now,
           updated_at: now,
         })
@@ -83,10 +61,9 @@ export class VetraReadModelProcessor extends RelationalDbProcessor<DB> {
             keywords: state?.keywords ? JSON.stringify(state.keywords) : null,
             github_url: getString(state?.githubUrl),
             npm_url: getString(state?.npmUrl),
-            last_operation_index: lastOperation.index,
-            last_operation_hash: lastOperation.hash,
+            last_operation_index: operation.index,
+            last_operation_hash: operation.hash,
             last_operation_timestamp: operationTimestamp,
-            drive_id: strand.driveId,
             updated_at: now,
           }),
         )

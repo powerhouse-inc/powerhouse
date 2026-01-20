@@ -9,6 +9,7 @@ import type { ViteDevServer } from "vite";
 import { createServer } from "vite";
 import { isSubgraphClass } from "../graphql/utils.js";
 import type {
+  IPackageLoaderOptions,
   ISubscribablePackageLoader,
   ISubscriptionOptions,
 } from "./types.js";
@@ -16,15 +17,17 @@ import { debounce, isSubpath } from "./util.js";
 
 export class VitePackageLoader implements ISubscribablePackageLoader {
   private readonly logger = childLogger(["reactor-api", "vite-loader"]);
+  private readonly legacyReactor: boolean;
 
   private readonly vite: ViteDevServer;
 
-  static build(vite: ViteDevServer) {
-    return new VitePackageLoader(vite);
+  static build(vite: ViteDevServer, options?: IPackageLoaderOptions) {
+    return new VitePackageLoader(vite, options);
   }
 
-  constructor(vite: ViteDevServer) {
+  constructor(vite: ViteDevServer, options?: IPackageLoaderOptions) {
     this.vite = vite;
+    this.legacyReactor = options?.legacyReactor ?? false;
   }
 
   private getDocumentModelsPath(identifier: string): string {
@@ -118,17 +121,36 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     this.logger.verbose("Loading processors from", fullPath);
 
     try {
-      const module = await this.vite.ssrLoadModule(fullPath);
+      const pkgModule = await this.vite.ssrLoadModule(fullPath);
 
+      // Choose factory based on constructor option
+      const factoryName = this.legacyReactor
+        ? "processorFactoryLegacy"
+        : "processorFactory";
+      const factory = (
+        pkgModule as Record<
+          string,
+          ((module: IProcessorHostModule) => ProcessorFactory) | undefined
+        >
+      )?.[factoryName];
+
+      if (factory && typeof factory === "function") {
+        this.logger.verbose(
+          `  ➜  Loaded Processor Factory (${factoryName}) from: ${identifier}`,
+        );
+        return factory as (module: IProcessorHostModule) => ProcessorFactory;
+      }
+
+      // Fallback: if legacy requested but not found, try default (backwards compat)
       if (
-        module.processorFactory &&
-        typeof module.processorFactory === "function"
+        this.legacyReactor &&
+        pkgModule?.processorFactory &&
+        typeof pkgModule.processorFactory === "function"
       ) {
         this.logger.verbose(
-          `  ➜  Loaded Processor factory from: ${identifier}`,
+          `  ➜  Loaded Processor Factory (fallback to processorFactory) from: ${identifier}`,
         );
-
-        return module.processorFactory as (
+        return pkgModule.processorFactory as (
           module: IProcessorHostModule,
         ) => ProcessorFactory;
       }

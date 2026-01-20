@@ -8,7 +8,10 @@ import type {
 } from "document-drive";
 import type { Express } from "express";
 import type { IPackageManager } from "./packages/types.js";
-export type { IPackageLoader } from "./packages/types.js";
+export type {
+  IPackageLoader,
+  IPackageLoaderOptions,
+} from "./packages/types.js";
 
 export type API = {
   app: Express;

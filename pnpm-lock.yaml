@@ -2166,6 +2166,9 @@ importers:
       '@powerhousedao/design-system':
         specifier: workspace:*
         version: link:../design-system
+      '@powerhousedao/reactor':
+        specifier: workspace:*
+        version: link:../reactor
       change-case:
         specifier: ^5.4.4
         version: 5.4.4
@@ -33709,7 +33712,7 @@ snapshots:
     dependencies:
       '@babel/runtime': 7.28.4
       '@noble/curves': 1.9.7
-      '@noble/hashes': 1.4.0
+      '@noble/hashes': 1.8.0
       '@solana/buffer-layout': 4.0.1
       '@solana/codecs-numbers': 2.3.0(typescript@5.9.3)
       agentkeepalive: 4.6.0

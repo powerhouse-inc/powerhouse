@@ -1,9 +1,8 @@
 import type { VetraProcessorConfigType } from "@powerhousedao/config";
 import { VETRA_PROCESSOR_CONFIG_KEY } from "@powerhousedao/config";
-import type { ProcessorRecord } from "@powerhousedao/reactor";
-import type { IProcessorHostModule } from "document-drive";
+import type { IProcessorHostModule, ProcessorRecord } from "document-drive";
 import type { PHDocumentHeader } from "document-model";
-import { CodegenProcessor } from "./index.js";
+import { CodegenProcessorLegacy } from "./index.legacy.js";
 import { logger } from "./logger.js";
 
 /**
@@ -34,7 +33,7 @@ function isDriveVetra(
   return matchesPattern(driveHeader.slug) || matchesPattern(driveHeader.id);
 }
 
-export const codegenProcessorFactory =
+export const codegenProcessorFactoryLegacy =
   (module: IProcessorHostModule) =>
   (driveHeader: PHDocumentHeader): ProcessorRecord[] => {
     // Create the processor
@@ -52,10 +51,10 @@ export const codegenProcessorFactory =
     }
 
     logger.info(
-      `Drive ${driveHeader.slug} is a Vetra drive, using codegen processor`,
+      `Drive ${driveHeader.slug} is a Vetra drive, using codegen processor (legacy)`,
     );
 
-    const processor = new CodegenProcessor(vetraConfig?.interactive);
+    const processor = new CodegenProcessorLegacy(vetraConfig?.interactive);
     return [
       {
         processor,

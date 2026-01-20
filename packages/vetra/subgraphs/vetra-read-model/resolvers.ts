@@ -1,9 +1,8 @@
 import type { ISubgraph } from "@powerhousedao/reactor-api";
-import { VetraReadModelProcessor } from "../../processors/vetra-read-model/index.js";
+import { VetraReadModelProcessorLegacy } from "../../processors/vetra-read-model/index.legacy.js";
 import type { DB } from "../../processors/vetra-read-model/schema.js";
 
 export const getResolvers = (subgraph: ISubgraph): Record<string, unknown> => {
-  const reactor = subgraph.reactor;
   const db = subgraph.relationalDb;
 
   return {
@@ -19,7 +18,10 @@ export const getResolvers = (subgraph: ISubgraph): Record<string, unknown> => {
         const { search, documentId_in } = args;
         const sortOrder = args.sortOrder || "asc";
 
-        let query = VetraReadModelProcessor.query<DB>("vetra-packages", db)
+        let query = VetraReadModelProcessorLegacy.query<DB>(
+          "vetra-packages",
+          db,
+        )
           .selectFrom("vetra_package")
           .selectAll();
 

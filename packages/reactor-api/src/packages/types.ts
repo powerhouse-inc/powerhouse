@@ -47,9 +47,14 @@ export interface IPackageManager {
   ): void;
 }
 
+export type IPackageLoaderOptions = {
+  legacyReactor?: boolean;
+};
+
 export type IPackageManagerOptions = {
   packages?: string[];
   configFile?: string;
+  legacyReactor?: boolean;
 };
 
 export interface PackageConfig {
