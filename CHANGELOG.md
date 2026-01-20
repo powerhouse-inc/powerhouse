@@ -1,3 +1,14 @@
+## 5.3.0-staging.6 (2026-01-20)
+
+### 🩹 Fixes
+
+- skip document models without valid operation schemas in subgraph generation ([90b382e86](https://github.com/powerhouse-inc/powerhouse/commit/90b382e86))
+- update hasValidSchema type to accept Maybe<string> (string | null | undefined) ([6d5a7a0f6](https://github.com/powerhouse-inc/powerhouse/commit/6d5a7a0f6))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.3.0-staging.5 (2026-01-19)
 
 ### 🩹 Fixes
