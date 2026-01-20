@@ -171,6 +171,7 @@ async function setupGraphQLManager(
   },
   documentPermissionService?: DocumentPermissionService,
   enableDocumentModelSubgraphs?: boolean,
+  port?: number,
 ): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager(
     config.basePath,
@@ -193,6 +194,7 @@ async function setupGraphQLManager(
     {
       enableDocumentModelSubgraphs,
     },
+    port,
   );
 
   await graphqlManager.init(subgraphs.core);
@@ -653,6 +655,7 @@ async function _setupAPI(
     auth,
     documentPermissionService,
     options.enableDocumentModelSubgraphs,
+    port,
   );
 
   // Set up event listeners

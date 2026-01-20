@@ -114,6 +114,7 @@ export class GraphQLManager {
     private readonly authConfig?: AuthConfig,
     private readonly documentPermissionService?: DocumentPermissionService,
     private readonly featureFlags: GraphqlManagerFeatureFlags = DefaultFeatureFlags,
+    private readonly port: number = 4001,
   ) {
     if (this.authConfig) {
       this.authService = new AuthService(this.authConfig);
@@ -516,7 +517,7 @@ export class GraphQLManager {
     try {
       const herokuOrLocal = process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME
         ? `https://${process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME}`
-        : `http://localhost:${process.env.PORT ?? 4001}`;
+        : `http://localhost:${this.port}`;
 
       const serviceList: ServiceDefinition[] = Array.from(
         subgraphs.entries(),
