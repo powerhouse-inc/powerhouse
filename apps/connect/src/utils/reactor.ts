@@ -13,13 +13,13 @@ import {
   type SignerConfig,
 } from "@powerhousedao/reactor";
 import type { BrowserReactorClientModule } from "@powerhousedao/reactor-browser";
+import { getReactorDefaultDrivesConfig as getReactorDefaultDrivesConfigBase } from "@powerhousedao/reactor-browser";
 import {
   ConnectCryptoSigner,
   createSignatureVerifier,
   type IConnectCrypto,
 } from "@renown/sdk";
 import type {
-  DefaultRemoteDriveInput,
   DocumentDriveServerOptions,
   IDocumentAdminStorage,
   IDocumentDriveServer,
@@ -45,43 +45,22 @@ const defaultDrivesUrl = DEFAULT_DRIVES_URL
   ? DEFAULT_DRIVES_URL.split(",")
   : [];
 
+/**
+ * Gets the default drives config for Connect, reading URLs from PH_CONNECT_DEFAULT_DRIVES_URL
+ * and using the Connect-specific preservation strategy from config.
+ */
 export const getReactorDefaultDrivesConfig = (): Pick<
   DocumentDriveServerOptions,
   "defaultDrives"
 > => {
-  const remoteDrives: DefaultRemoteDriveInput[] = defaultDrivesUrl.map(
-    (driveUrl) => ({
-      url: driveUrl,
-      options: {
-        sharingType: "PUBLIC",
-        availableOffline: true,
-        listeners: [
-          {
-            block: true,
-            callInfo: {
-              data: driveUrl,
-              name: "switchboard-push",
-              transmitterType: "SwitchboardPush",
-            },
-            filter: {
-              branch: ["main"],
-              documentId: ["*"],
-              documentType: ["*"],
-              scope: ["global"],
-            },
-            label: "Switchboard Sync",
-            listenerId: "1",
-            system: true,
-          },
-        ],
-        triggers: [],
-      },
-    }),
-  );
+  const baseConfig = getReactorDefaultDrivesConfigBase({
+    defaultDrivesUrl,
+  });
 
+  // Override the removeOldRemoteDrives strategy with Connect-specific config
   return {
     defaultDrives: {
-      remoteDrives,
+      ...baseConfig.defaultDrives,
       removeOldRemoteDrives:
         createRemoveOldRemoteDrivesConfig(defaultDrivesUrl),
     },

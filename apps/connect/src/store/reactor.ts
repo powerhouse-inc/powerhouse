@@ -7,6 +7,7 @@ import {
   createBrowserReactor,
   createBrowserStorage,
   getDefaultDrivesFromEnv,
+  getReactorDefaultDrivesConfig,
 } from "@powerhousedao/connect/utils";
 import {
   DocumentCache,
@@ -15,7 +16,6 @@ import {
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
   getDrives,
-  getReactorDefaultDrivesConfig,
   initConnectCrypto,
   initLegacyReactor,
   login,
@@ -219,10 +219,10 @@ export async function createReactor() {
   // create the legacy reactor with only latest versions
   // Only include default drives config for legacy reactor when using legacy reads
   const legacyReactorOptions: DocumentDriveServerOptions = {
-      featureFlags: {
-        enableDualActionCreate: true,
-      },
-    };
+    featureFlags: {
+      enableDualActionCreate: true,
+    },
+  };
 
   if (useLegacyRead) {
     const defaultConfig = getReactorDefaultDrivesConfig();
