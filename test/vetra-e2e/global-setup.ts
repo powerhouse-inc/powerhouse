@@ -1,6 +1,15 @@
 import MCR from "monocart-coverage-reports";
 import coverageOptions from "./mcr.config.js";
 
+interface GraphQLResponse {
+  data?: {
+    findDocuments?: {
+      items?: Array<{ id: string; name: string }>;
+    };
+  };
+  errors?: Array<{ message?: string }>;
+}
+
 async function waitForPort(
   port: number,
   maxWaitMs: number = 60000,
@@ -53,9 +62,9 @@ async function waitForDrivesReady(
       });
 
       const text = await response.text();
-      let data;
+      let data: GraphQLResponse;
       try {
-        data = JSON.parse(text);
+        data = JSON.parse(text) as GraphQLResponse;
       } catch (error) {
         console.log(
           `⏳ Response not JSON yet, error: ${error instanceof Error ? error.message : String(error)}, continuing to wait...`,
