@@ -216,35 +216,41 @@ async function main() {
     process.stdout.write(`\r  Progress: ${i + 1}/${count}`);
   }
 
-  const createDuration = ((Date.now() - createStartTime) / 1000).toFixed(2);
-  console.log(`\n  Created ${count} documents in ${createDuration}s`);
+  const createDurationMs = Date.now() - createStartTime;
+  const createDuration = (createDurationMs / 1000).toFixed(2);
+  const msPerDoc = (createDurationMs / count).toFixed(0);
+  console.log(`\n  Created ${count} documents in ${createDuration}s (avg: ${msPerDoc}ms/doc)`);
 
   // Phase 2: Perform operations on each document
   if (operations > 0) {
     console.log(`\nPhase 2: Performing ${operations} operations on each document...`);
     const opsStartTime = Date.now();
     const totalOps = count * operations;
-    let completedOps = 0;
 
     for (let i = 0; i < documentIds.length; i++) {
       const docNum = i + 1;
+      const docId = documentIds[i];
+      const docStartTime = Date.now();
       await performOperations(
         client,
-        documentIds[i],
+        docId,
         docNum,
         operations,
         count,
         (opNum) => {
-          completedOps++;
-          process.stdout.write(
-            `\r  Doc ${docNum}/${count}, op ${opNum}/${operations} (total: ${completedOps}/${totalOps})`
-          );
+          process.stdout.write(`\r  [${docNum}/${count}] ${docId}: ${opNum}/${operations} ops`);
         }
       );
+      const docDurationMs = Date.now() - docStartTime;
+      const docDuration = (docDurationMs / 1000).toFixed(2);
+      const msPerOp = (docDurationMs / operations).toFixed(0);
+      process.stdout.write(` (${docDuration}s, ${msPerOp}ms/op)\n`);
     }
 
-    const opsDuration = ((Date.now() - opsStartTime) / 1000).toFixed(2);
-    console.log(`\n  Completed ${totalOps} operations in ${opsDuration}s`);
+    const opsDurationMs = Date.now() - opsStartTime;
+    const opsDuration = (opsDurationMs / 1000).toFixed(2);
+    const avgMsPerOp = (opsDurationMs / totalOps).toFixed(0);
+    console.log(`  Completed ${totalOps} operations in ${opsDuration}s (avg: ${avgMsPerOp}ms/op)`);
   }
 
   // Summary
