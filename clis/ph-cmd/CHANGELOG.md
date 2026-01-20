@@ -1,3 +1,13 @@
+## 5.3.0-staging.9 (2026-01-20)
+
+### 🩹 Fixes
+
+- **design-system:** declare document-drive and reactor-browser as runtime dependencies ([0ae6ae062](https://github.com/powerhouse-inc/powerhouse/commit/0ae6ae062))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.3.0-staging.8 (2026-01-20)
 
 This was a version bump only for ph-cmd to align it with other projects, there were no code changes.
