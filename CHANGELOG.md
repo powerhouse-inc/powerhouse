@@ -1,3 +1,13 @@
+## 5.3.0-staging.8 (2026-01-20)
+
+### 🩹 Fixes
+
+- **design-system:** avoid testing-library and reactor imports ([ef36fd59c](https://github.com/powerhouse-inc/powerhouse/commit/ef36fd59c))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.3.0-staging.7 (2026-01-20)
 
 ### 🩹 Fixes
