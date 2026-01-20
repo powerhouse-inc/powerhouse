@@ -69,7 +69,7 @@ function hasOperationSchemas(documentModel: DocumentModelModule): boolean {
     documentModel.documentModel.global.specifications.at(-1);
   if (!specification) return false;
   // Check if any operation has a schema with actual GraphQL type definitions
-  const hasValidSchema = (schema: string | undefined) =>
+  const hasValidSchema = (schema: string | null | undefined) =>
     schema && /\b(input|type|enum|union|interface)\s+\w+/.test(schema);
   return specification.modules.some((module) =>
     module.operations.some((op) => hasValidSchema(op.schema)),

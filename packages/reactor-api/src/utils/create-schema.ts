@@ -410,7 +410,7 @@ export function generateDocumentModelSchemaLegacy(
     ${
       (() => {
         // Helper to check if schema has actual GraphQL type definitions
-        const hasValidSchema = (schema: string | undefined) =>
+        const hasValidSchema = (schema: string | null | undefined) =>
           schema && /\b(input|type|enum|union|interface)\s+\w+/.test(schema);
         return (
           specification?.modules
