@@ -110,4 +110,20 @@ fi
 echo "Starting Switchboard with Pyroscope profiling..."
 echo
 
-node "$SWITCHBOARD_PATH" "${SWITCHBOARD_ARGS[@]}"
+# Track the node process and forward signals
+node "$SWITCHBOARD_PATH" ${SWITCHBOARD_ARGS[@]+"${SWITCHBOARD_ARGS[@]}"} &
+NODE_PID=$!
+
+cleanup() {
+  echo ""
+  echo "Stopping switchboard (PID: $NODE_PID)..."
+  kill -TERM "$NODE_PID" 2>/dev/null
+  wait "$NODE_PID" 2>/dev/null
+  echo "Stopped."
+  exit 0
+}
+
+trap cleanup SIGINT SIGTERM
+
+# Wait for node process
+wait "$NODE_PID"
