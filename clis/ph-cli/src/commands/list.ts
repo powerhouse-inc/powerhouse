@@ -1,11 +1,7 @@
+import { listArgs } from "@powerhousedao/common/cli-args";
 import { getConfig } from "@powerhousedao/config/node";
 import { command } from "cmd-ts";
 import { getPowerhouseProjectInfo } from "../utils/projects.js";
-import { debugArgs } from "./common-args.js";
-
-export const listArgs = {
-  ...debugArgs,
-};
 
 export const list = command({
   name: "list",

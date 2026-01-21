@@ -1,22 +1,12 @@
+import { installArgs } from "@powerhousedao/common/cli-args";
 import { execSync } from "child_process";
-import { command, restPositionals, string } from "cmd-ts";
+import { command } from "cmd-ts";
 import { updateConfigFile, updateStylesFile } from "../utils.js";
 import {
   getPowerhouseProjectInfo,
   getPowerhouseProjectInstallCommand,
   makeDependenciesWithVersions,
 } from "../utils/projects.js";
-import { debugArgs, packageManagerArgs } from "./common-args.js";
-
-export const installArgs = {
-  dependencies: restPositionals({
-    type: string,
-    displayName: "[dependencies...]",
-    description: "Names of the dependencies to install",
-  }),
-  ...packageManagerArgs,
-  ...debugArgs,
-};
 
 export const install = command({
   name: "install",

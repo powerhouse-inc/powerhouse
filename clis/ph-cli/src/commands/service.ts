@@ -1,19 +1,15 @@
-import { command, oneOf, optional, positional } from "cmd-ts";
+import {
+  serviceArgs,
+  type ServiceAction,
+} from "@powerhousedao/common/cli-args";
+import { command } from "cmd-ts";
 import { execSync } from "node:child_process";
 import console from "node:console";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { PackageJson } from "read-pkg";
-import { debugArgs } from "./common-args.js";
 
-const actions = ["start", "stop", "status", "setup", "restart"] as const;
-export const serviceArgs = {
-  action: positional({
-    type: optional(oneOf(actions)),
-  }),
-  ...debugArgs,
-};
 export const service = command({
   name: "service",
   description: `  
@@ -35,7 +31,7 @@ This command:
   },
 });
 
-function manageService(action: (typeof actions)[number]) {
+function manageService(action: ServiceAction) {
   try {
     const dirname = path.dirname(fileURLToPath(import.meta.url));
     const manageScriptPath = path.join(

@@ -1,30 +1,15 @@
-import { command, option, optional, string } from "cmd-ts";
+import {
+  accessTokenArgs,
+  DEFAULT_EXPIRY_SECONDS,
+  SECONDS_IN_DAY,
+} from "@powerhousedao/common/cli-args";
+import { command } from "cmd-ts";
 import {
   getConnectCrypto,
   getConnectDid,
   isAuthenticated,
   loadCredentials,
 } from "../services/auth.js";
-import { debugArgs } from "./common-args.js";
-const SECONDS_IN_DAY = 24 * 60 * 60;
-const DEFAULT_EXPIRY_DAYS = 7;
-const DEFAULT_EXPIRY_SECONDS = DEFAULT_EXPIRY_DAYS * SECONDS_IN_DAY;
-
-export const accessTokenArgs = {
-  expiry: option({
-    long: "expiry",
-    type: optional(string),
-    description: `Token expiry duration. Supports: "7d" (days), "24h" (hours), "3600" or "3600s" (seconds)`,
-    defaultValue: () => `${DEFAULT_EXPIRY_DAYS}d` as const,
-    defaultValueIsSerializable: true,
-  }),
-  audience: option({
-    long: "audience",
-    type: optional(string),
-    description: "Target audience URL for the token",
-  }),
-  ...debugArgs,
-};
 export const accessToken = command({
   name: "access-token",
   description: `

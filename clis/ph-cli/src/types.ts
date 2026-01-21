@@ -1,6 +1,6 @@
+import type { getPackageManagerCommand } from "@powerhousedao/common/cli-args";
 import type { ArgParser } from "cmd-ts/dist/cjs/argparser.js";
 import type { accessToken } from "./commands/access-token.js";
-import type { getPackageManagerCommand } from "./commands/common-args.js";
 import type { build, connect, preview, studio } from "./commands/connect.js";
 import type { generate } from "./commands/generate.js";
 import type { inspect } from "./commands/inspect.js";

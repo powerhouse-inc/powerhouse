@@ -1,15 +1,7 @@
-import { command, positional, string } from "cmd-ts";
+import { inspectArgs } from "@powerhousedao/common/cli-args";
+import { command } from "cmd-ts";
+import console from "console";
 import { startInspect } from "../services/inspect.js";
-import { debugArgs } from "./common-args.js";
-
-export const inspectArgs = {
-  packageName: positional({
-    type: string,
-    displayName: "package-name",
-    description: "The name of the package to inspect",
-  }),
-  ...debugArgs,
-};
 
 export const inspect = command({
   name: "inspect",

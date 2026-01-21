@@ -5,12 +5,18 @@ import {
   command,
   flag,
   multioption,
+  number,
   oneOf,
   option,
   optional,
   string,
 } from "cmd-ts";
 import { AGENTS } from "package-manager-detector";
+import {
+  DEFAULT_TIMEOUT,
+  DRIVES_PRESERVE_STRATEGIES,
+  LOG_LEVELS,
+} from "./constants.js";
 
 export const debugArgs = {
   debug: flag({
@@ -115,7 +121,7 @@ export const https = flag({
 export const getPackageManagerCommand = command({
   name: "get-package-manager",
   args: packageManagerArgs,
-  handler: (args) => args,
+  handler: () => {},
 });
 
 export const vetraSwitchboardArgs = {
@@ -136,4 +142,99 @@ export const vetraSwitchboardArgs = {
   }),
   disableLocalPackages,
   ...debugArgs,
+};
+
+export const defaultDrivesUrl = option({
+  type: optional(string),
+  long: "default-drives-url",
+  description: "The default drives url to use in connect",
+  env: "PH_CONNECT_DEFAULT_DRIVES_URL" as const,
+});
+
+export const logLevel = option({
+  type: oneOf(LOG_LEVELS),
+  long: "log-level",
+  description: "Log level for the application",
+  defaultValue: () => "info" as const,
+  defaultValueIsSerializable: true,
+  env: "PH_CONNECT_LOG_LEVEL" as const,
+});
+
+export const connectBasePath = option({
+  long: "base",
+  type: string,
+  description: "Base path for the app",
+  env: "PH_CONNECT_BASE_PATH" as const,
+  defaultValue: () => process.cwd(),
+  defaultValueIsSerializable: true,
+});
+
+export const drivesPreserveStrategy = option({
+  type: oneOf(DRIVES_PRESERVE_STRATEGIES),
+  long: "The preservation strategy to use on default drives",
+  defaultValue: () => "preserve-by-url-and-detach" as const,
+  defaultValueIsSerializable: true,
+  env: "PH_CONNECT_DRIVES_PRESERVE_STRATEGY" as const,
+});
+
+export const forceOptimizeDeps = flag({
+  type: optional(boolean),
+  long: "force",
+});
+
+export const commonArgs = {
+  connectBasePath,
+  logLevel,
+  packages,
+  localPackage,
+  disableLocalPackages,
+  defaultDrivesUrl,
+  drivesPreserveStrategy,
+  forceOptimizeDeps,
+  ...debugArgs,
+};
+
+export const commonServerArgs = {
+  host: flag({
+    type: optional(boolean),
+    long: "host",
+    description: "Expose the server to the network",
+  }),
+  open: flag({
+    type: optional(boolean),
+    long: "open",
+    description: "Open browser on startup",
+  }),
+  cors: flag({
+    type: optional(boolean),
+    long: "cors",
+    description: "Enable CORS",
+  }),
+  strictPort: flag({
+    type: optional(boolean),
+    long: "strictPort",
+    description: "Exit if specified port is already in use",
+  }),
+  printUrls: flag({
+    type: boolean,
+    long: "print-urls",
+    description: "Print server urls",
+    defaultValue: () => true,
+    defaultValueIsSerializable: true,
+  }),
+  bindCLIShortcuts: flag({
+    type: boolean,
+    long: "bind-cli-shortcuts",
+    description: "Bind CLI shortcuts",
+    defaultValue: () => true,
+    defaultValueIsSerializable: true,
+  }),
+  watchTimeout: option({
+    type: number,
+    long: "watch-timeout",
+    description: "Amount of time to wait before a file is considered changed",
+    defaultValue: () => DEFAULT_TIMEOUT,
+    defaultValueIsSerializable: true,
+    env: "PH_WATCH_TIMEOUT" as const,
+  }),
 };

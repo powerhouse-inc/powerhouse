@@ -1,18 +1,16 @@
-import {
-  accessToken,
-  connect,
-  generate,
-  inspect,
-  install,
-  list,
-  login,
-  migrate,
-  phCliHelpCommands,
-  switchboard,
-  uninstall,
-  vetra,
-} from "@powerhousedao/ph-cli/commands";
+import { phCliHelpCommands } from "@powerhousedao/common/cli-args";
 import { run, subcommands } from "cmd-ts";
+import { accessToken } from "./commands/access-token.js";
+import { install } from "./commands/install.js";
+import { list } from "./commands/list.js";
+import { migrate } from "./commands/migrate.js";
+import { switchboard } from "./commands/switchboard.js";
+import { uninstall } from "./commands/uninstall.js";
+import { vetra } from "./commands/vetra.js";
+import { generate } from "./commands/generate.js";
+import { connect } from "./commands/connect.js";
+import { inspect } from "./commands/inspect.js";
+import { login } from "./commands/login.js";
 
 const phCliCommands = {
   generate,

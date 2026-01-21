@@ -22,10 +22,6 @@
     ".": {
       "types": "./dist/src/index.d.ts",
       "default": "./dist/src/index.js"
-    },
-    "./commands": {
-      "types": "./dist/src/commands/index.d.ts",
-      "default": "./dist/src/commands/index.js"
     }
   },
   "scripts": {

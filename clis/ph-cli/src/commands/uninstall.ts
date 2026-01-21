@@ -1,5 +1,6 @@
+import { uninstallArgs } from "@powerhousedao/common/cli-args";
 import { execSync } from "child_process";
-import { command, restPositionals, string } from "cmd-ts";
+import { command } from "cmd-ts";
 import { AGENTS } from "package-manager-detector";
 import { removeStylesImports, updateConfigFile } from "../utils.js";
 import {
@@ -7,17 +8,6 @@ import {
   getPowerhouseProjectUninstallCommand,
   makeDependenciesWithVersions,
 } from "../utils/projects.js";
-import { debugArgs, packageManagerArgs } from "./common-args.js";
-
-export const uninstallArgs = {
-  dependencies: restPositionals({
-    type: string,
-    displayName: "dependencies",
-    description: "Names of the dependencies to uninstall",
-  }),
-  ...packageManagerArgs,
-  ...debugArgs,
-};
 
 export const uninstall = command({
   name: "uninstall",

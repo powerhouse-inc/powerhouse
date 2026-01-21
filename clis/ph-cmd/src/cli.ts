@@ -1,7 +1,7 @@
 import {
   phCliCommandNames,
   phCliHelpCommands,
-} from "@powerhousedao/ph-cli/commands";
+} from "@powerhousedao/common/cli-args";
 import { run, subcommands } from "cmd-ts";
 import { execSync } from "node:child_process";
 import { detect, resolveCommand } from "package-manager-detector";

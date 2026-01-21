@@ -36,7 +36,6 @@
   "devDependencies": {
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/common": "workspace:*",
-    "@powerhousedao/ph-cli": "workspace:*",
     "chalk": "^5.6.2",
     "change-case": "^5.4.4",
     "cmd-ts": "^0.14.3",
