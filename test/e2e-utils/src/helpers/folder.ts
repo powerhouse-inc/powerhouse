@@ -39,9 +39,8 @@ export async function renameFolder(
   oldName: string,
   newName: string,
 ) {
-  const folder = page.locator("[draggable=true]", {
-    has: page.locator(`text=${oldName}`),
-  });
+  // Find the folder row by looking for text within draggable elements
+  const folder = page.locator("[draggable=true]").filter({ hasText: oldName });
 
   // Wait for the folder to be visible
   await folder.waitFor({ state: "visible" });
@@ -49,33 +48,30 @@ export async function renameFolder(
   // Hover over the folder to make options visible
   await folder.hover();
 
-  // Wait for the options button to appear (it's hidden until hover)
-  const optionsButton = folder.locator('button[aria-haspopup="menu"]');
+  // Wait for and click the options button (three dots menu)
+  const optionsButton = page.locator('button[aria-haspopup="menu"]');
   await optionsButton.waitFor({ state: "visible", timeout: 5000 });
-
-  // Click the options button (three dots)
   await optionsButton.click();
 
   // Click Rename option
   await page.getByRole("menuitem", { name: "Rename" }).click();
 
-  // Wait for the rename input to be visible
-  const renameInput = page.locator('input[type="text"]');
-  await renameInput.waitFor({ state: "visible" });
-
-  // Wait a bit for the NodeInput's setTimeout to finish focusing/selecting (100ms)
-  await page.waitForTimeout(150);
-
-  // Select all text and type the new name (more reliable than fill for controlled inputs)
-  await renameInput.selectText();
-  await renameInput.pressSequentially(newName, { delay: 10 });
+  // Exactly match createFolder's pattern:
+  // 1. Fill the input with the new name
+  // 2. Press Enter
+  await page.fill('input[type="text"]', newName);
   await page.keyboard.press("Enter");
 
+  // Small wait for the rename operation to complete
+  await page.waitForTimeout(500);
+
   // Verify the renamed folder exists
-  await page.locator(`text=${newName}`).waitFor({ state: "visible" });
+  await page
+    .locator(`text=${newName}`)
+    .waitFor({ state: "visible", timeout: 10000 });
 
   // Verify no elements with the old folder name exist in the DOM
-  await page.getByText(oldName).waitFor({ state: "detached" });
+  await page.getByText(oldName).waitFor({ state: "detached", timeout: 5000 });
 }
 
 /**
