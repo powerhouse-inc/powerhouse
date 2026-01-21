@@ -91,6 +91,7 @@ export type ViewFilter = {
   branch?: string;
   scopes?: string[];
   revision?: number;
+  includeOperations?: boolean;
 };
 
 /**

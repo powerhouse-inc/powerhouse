@@ -410,7 +410,7 @@ describe("ReactorClient Integration Tests", () => {
         );
 
         expect(result.header.id).toBe("mutate-test-1");
-        expect(result.operations.global.length).toBeGreaterThan(0);
+        expect(result.header.name).toBe("Updated Name");
       });
 
       it("should handle multiple actions", async () => {
@@ -429,7 +429,7 @@ describe("ReactorClient Integration Tests", () => {
         );
 
         expect(result.header.id).toBe("mutate-test-2");
-        expect(result.operations.global.length).toBeGreaterThanOrEqual(2);
+        expect(result.header.name).toBe("Final Update");
       });
     });
 
@@ -453,7 +453,7 @@ describe("ReactorClient Integration Tests", () => {
 
         const result = await client.get("mutate-async-1");
         expect(result.document.header.id).toBe("mutate-async-1");
-        expect(result.document.operations.global.length).toBeGreaterThan(0);
+        expect(result.document.header.name).toBe("Async Update");
       });
     });
 
@@ -468,7 +468,7 @@ describe("ReactorClient Integration Tests", () => {
         );
 
         expect(result.header.id).toBe("rename-test-1");
-        expect(result.operations.global.length).toBeGreaterThan(0);
+        expect(result.header.name).toBe("New Document Name");
       });
 
       it("should support view filters", async () => {
@@ -482,7 +482,7 @@ describe("ReactorClient Integration Tests", () => {
         );
 
         expect(result.header.id).toBe("rename-test-2");
-        expect(result.operations.global.length).toBeGreaterThan(0);
+        expect(result.header.name).toBe("Named with View");
       });
     });
   });
