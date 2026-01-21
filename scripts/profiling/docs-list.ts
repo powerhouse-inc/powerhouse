@@ -11,7 +11,10 @@ const DEFAULT_ENDPOINT = "http://localhost:4001/graphql";
 const FIND_DOCUMENTS = gql`
   query FindDocuments($search: SearchFilterInput!, $paging: PagingInput) {
     findDocuments(search: $search, paging: $paging) {
-      items { id name }
+      items {
+        id
+        name
+      }
       hasNextPage
       cursor
     }
@@ -22,7 +25,9 @@ const FIND_DOCUMENTS = gql`
 const FIND_DOCUMENTS_COUNT = gql`
   query FindDocumentsCount($search: SearchFilterInput!, $paging: PagingInput) {
     findDocuments(search: $search, paging: $paging) {
-      items { id }
+      items {
+        id
+      }
       hasNextPage
       cursor
     }
@@ -32,7 +37,9 @@ const FIND_DOCUMENTS_COUNT = gql`
 const GET_DOCUMENT_MODELS = gql`
   query GetDocumentModels {
     documentModels {
-      items { id }
+      items {
+        id
+      }
     }
   }
 `;
@@ -120,7 +127,10 @@ async function listDocumentsForType(
       hasNextPage = res.findDocuments.hasNextPage;
       cursor = res.findDocuments.cursor ?? undefined;
     } catch (error) {
-      console.error(`Error fetching documents for type ${documentType}:`, error);
+      console.error(
+        `Error fetching documents for type ${documentType}:`,
+        error,
+      );
       break;
     }
   }
@@ -148,7 +158,10 @@ async function listDocuments(
 
   const reportProgress = () => {
     if (onProgress) {
-      const progress = types.map((t) => ({ type: t, count: progressByType.get(t) || 0 }));
+      const progress = types.map((t) => ({
+        type: t,
+        count: progressByType.get(t) || 0,
+      }));
       onProgress(progress);
     }
   };
@@ -164,9 +177,9 @@ async function listDocuments(
           progressByType.set(t, count);
           reportProgress();
         },
-        onTiming
-      )
-    )
+        onTiming,
+      ),
+    ),
   );
 
   // Aggregate results
@@ -183,7 +196,12 @@ async function listDocuments(
   return { total, last10 };
 }
 
-function parseArgs(args: string[]): { endpoint: string; type?: string; countOnly: boolean; timing: boolean } {
+function parseArgs(args: string[]): {
+  endpoint: string;
+  type?: string;
+  countOnly: boolean;
+  timing: boolean;
+} {
   let endpoint = DEFAULT_ENDPOINT;
   let type: string | undefined;
   let countOnly = false;
@@ -218,7 +236,9 @@ Options:
 }
 
 async function main() {
-  const { endpoint, type, countOnly, timing } = parseArgs(process.argv.slice(2));
+  const { endpoint, type, countOnly, timing } = parseArgs(
+    process.argv.slice(2),
+  );
   const client = new GraphQLClient(endpoint);
 
   const timings: RequestTiming[] = [];
@@ -226,7 +246,7 @@ async function main() {
     ? (t: RequestTiming) => {
         timings.push(t);
         console.log(
-          `  [${t.type.split("/").pop()}] page ${t.page}: ${t.count} docs in ${t.durationMs}ms (${(t.durationMs / t.count).toFixed(0)}ms/doc)`
+          `  [${t.type.split("/").pop()}] page ${t.page}: ${t.count} docs in ${t.durationMs}ms (${(t.durationMs / t.count).toFixed(0)}ms/doc)`,
         );
       }
     : undefined;
@@ -244,7 +264,7 @@ async function main() {
             const totalSoFar = progress.reduce((sum, p) => sum + p.count, 0);
             process.stdout.write(`\rCounting... ${totalSoFar}`);
           },
-      timingCallback
+      timingCallback,
     );
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
     if (timing) {
@@ -268,9 +288,11 @@ async function main() {
               .filter((p) => p.count > 0)
               .map((p) => `${p.type.split("/").pop()}: ${p.count}`)
               .join(", ");
-            process.stdout.write(`\r  Found ${totalSoFar} documents (${typeProgress})     `);
+            process.stdout.write(
+              `\r  Found ${totalSoFar} documents (${typeProgress})     `,
+            );
           },
-      timingCallback
+      timingCallback,
     );
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
@@ -278,7 +300,9 @@ async function main() {
     if (timing && timings.length > 0) {
       const totalMs = timings.reduce((sum, t) => sum + t.durationMs, 0);
       const totalDocs = timings.reduce((sum, t) => sum + t.count, 0);
-      console.log(`\nTiming summary: ${totalDocs} docs in ${totalMs}ms avg (${(totalMs / totalDocs).toFixed(0)}ms/doc)`);
+      console.log(
+        `\nTiming summary: ${totalDocs} docs in ${totalMs}ms avg (${(totalMs / totalDocs).toFixed(0)}ms/doc)`,
+      );
     }
 
     console.log(`\n✓ Total: ${total} documents (fetched in ${duration}s)`);

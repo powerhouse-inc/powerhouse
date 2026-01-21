@@ -32,7 +32,10 @@ const RENAME_DOCUMENT = gql`
 `;
 
 const MUTATE_DOCUMENT = gql`
-  mutation MutateDocument($documentIdentifier: String!, $actions: [JSONObject!]!) {
+  mutation MutateDocument(
+    $documentIdentifier: String!
+    $actions: [JSONObject!]!
+  ) {
     mutateDocument(documentIdentifier: $documentIdentifier, actions: $actions) {
       id
     }
@@ -88,7 +91,9 @@ function createOperation(docIndex: number, opIndex: number): object {
     },
     {
       type: "SET_MODEL_DESCRIPTION",
-      input: { description: `Description for document ${docIndex}, operation ${opIndex}` },
+      input: {
+        description: `Description for document ${docIndex}, operation ${opIndex}`,
+      },
       scope: "global",
     },
     {
@@ -218,9 +223,13 @@ Examples:
 }
 
 async function main() {
-  const { count, operations, endpoint, documentType: docTypeArg, verbose } = parseArgs(
-    process.argv.slice(2),
-  );
+  const {
+    count,
+    operations,
+    endpoint,
+    documentType: docTypeArg,
+    verbose,
+  } = parseArgs(process.argv.slice(2));
 
   const client = new GraphQLClient(endpoint);
 
@@ -255,12 +264,16 @@ async function main() {
   const createDuration = (createDurationMs / 1000).toFixed(2);
   const msPerDoc = (createDurationMs / count).toFixed(0);
   const phase1Memory = getMemoryStats();
-  console.log(`\n  Created ${count} documents in ${createDuration}s (avg: ${msPerDoc}ms/doc)`);
+  console.log(
+    `\n  Created ${count} documents in ${createDuration}s (avg: ${msPerDoc}ms/doc)`,
+  );
   console.log(`  Memory: ${formatMemory(phase1Memory)}`);
 
   // Phase 2: Perform operations on each document
   if (operations > 0) {
-    console.log(`\nPhase 2: Performing ${operations} operations on each document...`);
+    console.log(
+      `\nPhase 2: Performing ${operations} operations on each document...`,
+    );
     const opsStartTime = Date.now();
     const totalOps = count * operations;
 
@@ -281,11 +294,15 @@ async function main() {
         count,
         (opNum, action) => {
           if (verbose) {
-            console.log(`    op ${opNum}/${operations}: ${JSON.stringify(action)}`);
+            console.log(
+              `    op ${opNum}/${operations}: ${JSON.stringify(action)}`,
+            );
           } else {
-            process.stdout.write(`\r  [${docNum}/${count}] ${docId}: ${opNum}/${operations} ops`);
+            process.stdout.write(
+              `\r  [${docNum}/${count}] ${docId}: ${opNum}/${operations} ops`,
+            );
           }
-        }
+        },
       );
       const docDurationMs = Date.now() - docStartTime;
       const docDuration = (docDurationMs / 1000).toFixed(2);
@@ -302,7 +319,9 @@ async function main() {
     const opsDuration = (opsDurationMs / 1000).toFixed(2);
     const avgMsPerOp = (opsDurationMs / totalOps).toFixed(0);
     const phase2Memory = getMemoryStats();
-    console.log(`  Completed ${totalOps} operations in ${opsDuration}s (avg: ${avgMsPerOp}ms/op)`);
+    console.log(
+      `  Completed ${totalOps} operations in ${opsDuration}s (avg: ${avgMsPerOp}ms/op)`,
+    );
     console.log(`  Memory: ${formatMemory(phase2Memory)}`);
   }
 
@@ -312,7 +331,9 @@ async function main() {
   const heapDelta = finalMemory.heapUsed - initialMemory.heapUsed;
   const rssDelta = finalMemory.rss - initialMemory.rss;
   console.log(`\nDone! Total time: ${totalDuration}s`);
-  console.log(`Memory delta: heap: ${heapDelta >= 0 ? '+' : ''}${formatBytes(heapDelta)}, rss: ${rssDelta >= 0 ? '+' : ''}${formatBytes(rssDelta)}`);
+  console.log(
+    `Memory delta: heap: ${heapDelta >= 0 ? "+" : ""}${formatBytes(heapDelta)}, rss: ${rssDelta >= 0 ? "+" : ""}${formatBytes(rssDelta)}`,
+  );
 }
 
 main().catch((error) => {
