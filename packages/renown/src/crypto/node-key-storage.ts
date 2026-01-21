@@ -1,71 +1,113 @@
+import type { ILogger } from "@powerhousedao/reactor";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import type { JsonWebKeyPairStorage, JwkKeyPair } from "./index.js";
 
+const ENV_KEY_NAME = "PH_RENOWN_PRIVATE_KEY";
+const DEFAULT_KEYPAIR_PATH = join(process.cwd(), ".keypair.json");
+
+/**
+ * Key storage that supports:
+ * 1. PH_RENOWN_PRIVATE_KEY environment variable (JSON-encoded JwkKeyPair)
+ * 2. Custom file path passed via options
+ * 3. Falls back to file storage at .keypair.json in current working directory
+ */
 export class NodeKeyStorage implements JsonWebKeyPairStorage {
-  static #DEFAULT_DIR = ".vetra";
-  static #DEFAULT_FILE = "keypair.json";
-  static #KEY = "keyPair";
-
   #filePath: string;
+  #envKeyName: string;
+  #logger?: ILogger;
 
-  constructor(filePath?: string) {
-    if (filePath) {
-      this.#filePath = filePath;
-    } else {
-      const homeDir = homedir();
-      const defaultDir = join(homeDir, NodeKeyStorage.#DEFAULT_DIR);
-      this.#filePath = join(defaultDir, NodeKeyStorage.#DEFAULT_FILE);
-    }
+  static readonly DEFAULT_KEYPAIR_PATH = DEFAULT_KEYPAIR_PATH;
+  static readonly ENV_KEY_NAME = ENV_KEY_NAME;
+
+  constructor(
+    filePath?: string,
+    options: { envKeyName?: string; logger?: ILogger } = {},
+  ) {
+    this.#filePath = filePath || DEFAULT_KEYPAIR_PATH;
+    this.#envKeyName = options.envKeyName || ENV_KEY_NAME;
+    this.#logger = options.logger;
 
     // Ensure directory exists
     const dir = dirname(this.#filePath);
     if (!existsSync(dir)) {
       mkdirSync(dir, { recursive: true });
     }
-
-    // Initialize file if it doesn't exist
-    if (!existsSync(this.#filePath)) {
-      this.#writeData({});
-    }
-  }
-
-  #readData(): Record<string, unknown> {
-    try {
-      const data = readFileSync(this.#filePath, "utf-8");
-      return JSON.parse(data) as Record<string, unknown>;
-    } catch (error) {
-      // If file is corrupted or doesn't exist, return empty object
-      return {};
-    }
-  }
-
-  #writeData(data: Record<string, unknown>): void {
-    try {
-      writeFileSync(this.#filePath, JSON.stringify(data, null, 2), "utf-8");
-    } catch (error) {
-      throw new Error(`Failed to write key pair data: ${error}`);
-    }
-  }
-
-  async saveKeyPair(keyPair: JwkKeyPair): Promise<void> {
-    try {
-      const data = this.#readData();
-      data[NodeKeyStorage.#KEY] = keyPair;
-      this.#writeData(data);
-    } catch (error) {
-      throw new Error(`Failed to save key pair: ${error}`);
-    }
   }
 
   async loadKeyPair(): Promise<JwkKeyPair | undefined> {
-    try {
-      const data = this.#readData();
-      const keyPair = data[NodeKeyStorage.#KEY] as JwkKeyPair | undefined;
-      return keyPair;
-    } catch (error) {
-      throw new Error(`Failed to load key pair: ${error}`);
+    // First check environment variable
+    const envKey = process.env[this.#envKeyName];
+    if (envKey) {
+      try {
+        let keyPairJson = JSON.parse(envKey);
+        let keyPair: JwkKeyPair =
+          "keyPair" in keyPairJson ? keyPairJson.keyPair : keyPairJson;
+
+        // Validate it has the required structure
+        if (keyPair.publicKey && keyPair.privateKey) {
+          this.#logger?.debug("Loaded keypair from environment variable");
+          return keyPair;
+        } else {
+          throw new Error(
+            `${this.#envKeyName} is set but doesn't contain valid publicKey and privateKey`,
+          );
+        }
+      } catch (e) {
+        throw new Error(
+          `Failed to parse ${this.#envKeyName}: ${e instanceof Error ? e.message : String(e)}`,
+          {
+            cause: e,
+          },
+        );
+      }
     }
+
+    // Fall back to file storage
+    return this.#loadFromFile();
+  }
+
+  async saveKeyPair(keyPair: JwkKeyPair): Promise<void> {
+    // Don't save if using env var
+    if (process.env[this.#envKeyName]) {
+      return;
+    }
+
+    // Save to file
+    this.#saveToFile(keyPair);
+  }
+
+  #loadFromFile(): JwkKeyPair | undefined {
+    try {
+      if (!existsSync(this.#filePath)) {
+        return undefined;
+      }
+      const data = readFileSync(this.#filePath, "utf-8");
+      const parsed = JSON.parse(data);
+      const keyPair =
+        "keyPair" in parsed ? (parsed.keyPair as JwkKeyPair) : parsed;
+
+      if (keyPair.publicKey && keyPair.privateKey) {
+        this.#logger?.debug(`Loaded keypair from ${this.#filePath}`);
+        return keyPair;
+      } else {
+        throw new Error(
+          `${this.#filePath} doesn't contain valid publicKey and privateKey`,
+        );
+      }
+    } catch (e) {
+      throw new Error(
+        `Failed to parse ${this.#filePath}: ${e instanceof Error ? e.message : String(e)}`,
+        {
+          cause: e,
+        },
+      );
+    }
+  }
+
+  #saveToFile(keyPair: JwkKeyPair): void {
+    const data = { keyPair };
+    writeFileSync(this.#filePath, JSON.stringify(data, null, 2), "utf-8");
+    this.#logger?.debug(`Saved keypair to ${this.#filePath}`);
   }
 }

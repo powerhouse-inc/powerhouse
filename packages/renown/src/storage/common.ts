@@ -16,3 +16,30 @@ export abstract class BaseStorage<
   abstract set<Key extends keyof T>(key: Key, value?: T[Key]): void;
   abstract delete(key: keyof T): void;
 }
+
+export class MemoryStorage<
+  T extends Record<string, unknown> = Record<string, unknown>,
+> extends BaseStorage<T> {
+  private readonly data = new Map();
+
+  constructor() {
+    // namespace is not needed for memory storage
+    super("");
+  }
+
+  get<Key extends keyof T>(key: Key): T[Key] | undefined {
+    return this.data.get(key);
+  }
+
+  set<Key extends keyof T>(key: Key, value?: T[Key]): void {
+    if (value === undefined) {
+      this.data.delete(key);
+    } else {
+      this.data.set(key, value);
+    }
+  }
+
+  delete(key: keyof T): void {
+    this.data.delete(key);
+  }
+}

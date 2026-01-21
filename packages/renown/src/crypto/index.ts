@@ -13,6 +13,8 @@ import {
   type CreateBearerTokenOptions,
 } from "../utils.js";
 
+export { MemoryKeyStorage } from "./memory-key-storage.js";
+
 // Export the proper BrowserKeyStorage implementation
 export { BrowserKeyStorage } from "./browser-key-storage.js";
 
