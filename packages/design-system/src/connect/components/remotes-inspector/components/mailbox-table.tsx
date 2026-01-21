@@ -1,6 +1,6 @@
 import { Icon } from "@powerhousedao/design-system";
-import type {
-  SyncOperation,
+import {
+  type SyncOperation,
   SyncOperationStatus,
 } from "@powerhousedao/reactor";
 import { twMerge } from "tailwind-merge";
@@ -26,15 +26,15 @@ const DEAD_LETTER_COLUMNS: ColumnDef[] = [
 
 function getStatusLabel(status: SyncOperationStatus): string {
   switch (status) {
-    case -1:
+    case SyncOperationStatus.Unknown:
       return "Unknown";
-    case 0:
+    case SyncOperationStatus.TransportPending:
       return "Transport Pending";
-    case 1:
+    case SyncOperationStatus.ExecutionPending:
       return "Execution Pending";
-    case 2:
+    case SyncOperationStatus.Applied:
       return "Applied";
-    case 3:
+    case SyncOperationStatus.Error:
       return "Error";
     default:
       return "Unknown";
@@ -43,12 +43,12 @@ function getStatusLabel(status: SyncOperationStatus): string {
 
 function getStatusIcon(status: SyncOperationStatus): React.ReactNode {
   switch (status) {
-    case 0:
-    case 1:
+    case SyncOperationStatus.TransportPending:
+    case SyncOperationStatus.ExecutionPending:
       return <span>⏳</span>;
-    case 2:
+    case SyncOperationStatus.Applied:
       return <span>✅</span>;
-    case 3:
+    case SyncOperationStatus.Error:
       return <span>❌</span>;
     default:
       return <span>❓</span>;
