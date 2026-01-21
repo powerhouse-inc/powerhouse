@@ -1,3 +1,21 @@
+## 6.0.0-dev.13 (2026-01-21)
+
+### 🚀 Features
+
+- add workflow to trigger downstream package updates ([e8c6cce75](https://github.com/powerhouse-inc/powerhouse/commit/e8c6cce75))
+
+### 🩹 Fixes
+
+- gql port issue and don't add remotes that already exist ([9830c16b2](https://github.com/powerhouse-inc/powerhouse/commit/9830c16b2))
+- issue with reading env vars in the wrong order ([a6dfb866b](https://github.com/powerhouse-inc/powerhouse/commit/a6dfb866b))
+- consolidate default drive functions ([8a4f8fc07](https://github.com/powerhouse-inc/powerhouse/commit/8a4f8fc07))
+- do not pass default drives to the reactor that is not enabled ([49f339bc3](https://github.com/powerhouse-inc/powerhouse/commit/49f339bc3))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+
 ## 6.0.0-dev.12 (2026-01-20)
 
 ### 🩹 Fixes

@@ -1,3 +1,18 @@
+## 6.0.0-dev.13 (2026-01-21)
+
+### 🚀 Features
+
+- add workflow to trigger downstream package updates ([e8c6cce75](https://github.com/powerhouse-inc/powerhouse/commit/e8c6cce75))
+
+### 🩹 Fixes
+
+- processor filter logic fixes and tests ([3b5b210b7](https://github.com/powerhouse-inc/powerhouse/commit/3b5b210b7))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+
 ## 6.0.0-dev.12 (2026-01-20)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

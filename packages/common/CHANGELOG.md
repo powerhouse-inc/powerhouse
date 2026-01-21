@@ -1,3 +1,13 @@
+## 6.0.0-dev.13 (2026-01-21)
+
+### 🚀 Features
+
+- add workflow to trigger downstream package updates ([e8c6cce75](https://github.com/powerhouse-inc/powerhouse/commit/e8c6cce75))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.12 (2026-01-20)
 
 This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
