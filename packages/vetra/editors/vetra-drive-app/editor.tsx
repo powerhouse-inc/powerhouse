@@ -88,7 +88,7 @@ export function BaseEditor(props: EditorProps) {
   ) : (
     <div
       style={{ height: "100%" }}
-      className="bg-white after:pointer-events-none after:absolute after:inset-0 after:bg-blue-500 after:opacity-0 after:transition after:content-['']"
+      className="bg-gray-50 p-6 after:pointer-events-none after:absolute after:inset-0 after:bg-blue-500 after:opacity-0 after:transition after:content-['']"
     >
       <DriveExplorer
         driveId={driveId}
