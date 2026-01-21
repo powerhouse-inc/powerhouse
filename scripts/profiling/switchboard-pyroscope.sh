@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Run Switchboard with Pyroscope continuous profiling (no CPU profiling)
-# Usage: ./scripts/switchboard-pyroscope.sh [--v2|--legacy] [--postgres URL] [switchboard-options...]
+# Usage: ./scripts/switchboard-pyroscope.sh [--mode v2|legacy] [--postgres URL] [switchboard-options...]
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
@@ -15,15 +15,26 @@ DATABASE_URL=""
 SWITCHBOARD_ARGS=()
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --v2)
-      STORAGE_V2="true"
-      STORAGE_MODE_LABEL="v2"
-      shift
-      ;;
-    --legacy)
-      STORAGE_V2=""
-      STORAGE_MODE_LABEL="legacy"
-      shift
+    --mode|-m)
+      if [ -z "${2:-}" ]; then
+        echo "Error: --mode/-m requires a value (v2 or legacy)"
+        exit 1
+      fi
+      case "$2" in
+        v2)
+          STORAGE_V2="true"
+          STORAGE_MODE_LABEL="v2"
+          ;;
+        legacy)
+          STORAGE_V2=""
+          STORAGE_MODE_LABEL="legacy"
+          ;;
+        *)
+          echo "Error: --mode/-m must be 'v2' or 'legacy', got: $2"
+          exit 1
+          ;;
+      esac
+      shift 2
       ;;
     --postgres|-p)
       if [ -z "${2:-}" ]; then
@@ -38,10 +49,9 @@ while [[ $# -gt 0 ]]; do
       echo "Usage: ./scripts/profiling/switchboard-pyroscope.sh [options] [switchboard-options...]"
       echo ""
       echo "Options:"
-      echo "  --legacy              Use legacy storage (REACTOR_STORAGE_V2=false)"
-      echo "  --v2                  Use new storage (default)"
-      echo "  --postgres, -p <url> Set PostgreSQL database URL (sets both PH_REACTOR_DATABASE_URL and DATABASE_URL)"
-      echo "  --help, -h            Show this help message"
+      echo "  --mode, -m <v2|legacy> Storage mode: 'v2' for new storage (default) or 'legacy' for legacy storage"
+      echo "  --postgres, -p <url>   Set PostgreSQL database URL (sets both PH_REACTOR_DATABASE_URL and DATABASE_URL)"
+      echo "  --help, -h              Show this help message"
       echo ""
       echo "All other options are passed to switchboard."
       exit 0
