@@ -51,7 +51,7 @@ interface DocumentModelsResponse {
 
 async function getDocumentTypes(client: GraphQLClient): Promise<string[]> {
   const res = await client.request<DocumentModelsResponse>(GET_DOCUMENT_MODELS);
-  return res.documentModels.items.map((m: { id: string; name: string }) => m.id);
+  return res.documentModels.items.map((m: { id: string }) => m.id);
 }
 
 async function getAllDocumentIds(client: GraphQLClient): Promise<string[]> {
