@@ -17,11 +17,20 @@ import { createLocalDrive } from "./drive.js";
 export async function goToDrive(page: Page, driveName: string) {
   await createLocalDrive(page, driveName);
 
-  // Click on the drive
+  // Click on the drive in the sidebar to select it
   await page.click(`text=${driveName}`);
   await expect(page.getByText("Documents and files")).toBeVisible({
     timeout: 5000,
   });
+
+  // Click on the drive name in the breadcrumb to ensure we're at root level
+  // This is important if a previous test left us inside a subfolder
+  const breadcrumbDrive = page.getByRole("button", { name: driveName });
+  if (await breadcrumbDrive.isVisible()) {
+    await breadcrumbDrive.click();
+    // Wait for navigation to complete
+    await page.waitForTimeout(100);
+  }
 }
 
 /**
