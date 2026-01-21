@@ -32,7 +32,6 @@ This command:
     }
     const { action = "status" } = args;
     manageService(action);
-    return args;
   },
 });
 

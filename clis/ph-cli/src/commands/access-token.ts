@@ -155,8 +155,6 @@ Notes:
 
     // Output just the token to stdout (for easy piping/copying)
     console.log(token);
-
-    return args;
   },
 });
 

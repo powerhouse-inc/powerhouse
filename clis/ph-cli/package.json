@@ -36,6 +36,7 @@
     "build": "npm run generate-commands-md && npm run generate-version && tsc && npm run copy-scripts",
     "copy-scripts": "copyfiles scripts/* dist/",
     "dev": "concurrently -P 'pnpm -w run tsc --watch' 'nodemon --watch \"../..\" -e ts,tsx,js,json dist/src/cli.js -- {@}' --",
+    "cli": "node ./dist/src/cli.js",
     "test": "vitest --run"
   },
   "keywords": [],

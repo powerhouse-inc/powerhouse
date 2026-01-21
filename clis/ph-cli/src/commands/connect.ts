@@ -4,6 +4,7 @@ import {
   command,
   flag,
   number,
+  oneOf,
   option,
   optional,
   string,
@@ -14,40 +15,71 @@ import {
   runConnectPreview,
   runConnectStudio,
 } from "../services/connect.js";
-import { debugArgs } from "./common-args.js";
+import {
+  debugArgs,
+  disableLocalPackages,
+  localPackage,
+  packages,
+} from "./common-args.js";
 
-const studioArgs = {
-  port: option({
-    type: number,
-    long: "port",
-    description: "Port to run the dev server on.",
-    defaultValue: () => 3000 as const,
-    defaultValueIsSerializable: true,
-  }),
-  mode: option({
-    type: string,
-    long: "mode",
-    description: "Vite mode to use",
-    defaultValue: () => "production" as const,
-    defaultValueIsSerializable: true,
-  }),
-  configFile: option({
-    type: optional(string),
-    long: "config-file",
-    description: "Path to the powerhouse.config.js file",
-  }),
-  viteConfigFile: option({
-    type: optional(string),
-    long: "vite-config-file",
-    description: "Path to the vite config file",
-  }),
-  projectRoot: option({
-    type: string,
-    long: "project-root",
-    description: "The root directory of the project",
-    defaultValue: () => process.cwd(),
-    defaultValueIsSerializable: true,
-  }),
+const drivesPreserveStrategies = [
+  "preserve-all",
+  "preserve-by-url-and-detach",
+] as const;
+
+const logLevels = ["debug", "info", "warn", "error"] as const;
+
+export const defaultDrivesUrl = option({
+  type: optional(string),
+  long: "default-drives-url",
+  description: "The default drives url to use in connect",
+  env: "PH_CONNECT_DEFAULT_DRIVES_URL" as const,
+});
+
+export const logLevel = option({
+  type: oneOf(logLevels),
+  long: "log-level",
+  description: "Log level for the application",
+  defaultValue: () => "info" as const,
+  defaultValueIsSerializable: true,
+  env: "PH_CONNECT_LOG_LEVEL" as const,
+});
+
+export const connectBasePath = option({
+  long: "base",
+  type: string,
+  description: "Base path for the app",
+  env: "PH_CONNECT_BASE_PATH" as const,
+  defaultValue: () => process.cwd(),
+  defaultValueIsSerializable: true,
+});
+
+export const drivesPreserveStrategy = option({
+  type: oneOf(drivesPreserveStrategies),
+  long: "The preservation strategy to use on default drives",
+  defaultValue: () => "preserve-by-url-and-detach" as const,
+  defaultValueIsSerializable: true,
+  env: "PH_CONNECT_DRIVES_PRESERVE_STRATEGY" as const,
+});
+
+export const forceOptimizeDeps = flag({
+  type: optional(boolean),
+  long: "force",
+});
+
+export const commonArgs = {
+  connectBasePath,
+  logLevel,
+  packages,
+  localPackage,
+  disableLocalPackages,
+  defaultDrivesUrl,
+  drivesPreserveStrategy,
+  forceOptimizeDeps,
+  ...debugArgs,
+};
+
+export const commonServerArgs = {
   host: flag({
     type: optional(boolean),
     long: "host",
@@ -68,26 +100,40 @@ const studioArgs = {
     long: "strictPort",
     description: "Exit if specified port is already in use",
   }),
-  force: flag({
-    type: optional(boolean),
-    long: "force",
-    description: "Force the optimizer to ignore the cache and re-bundle",
-  }),
   printUrls: flag({
-    type: optional(boolean),
+    type: boolean,
     long: "print-urls",
     description: "Print server urls",
-    defaultValue: () => false,
-    defaultValueIsSerializable: false,
+    defaultValue: () => true,
+    defaultValueIsSerializable: true,
   }),
   bindCLIShortcuts: flag({
-    type: optional(boolean),
+    type: boolean,
     long: "bind-cli-shortcuts",
     description: "Bind CLI shortcuts",
-    defaultValue: () => false,
-    defaultValueIsSerializable: false,
+    defaultValue: () => true,
+    defaultValueIsSerializable: true,
   }),
-  ...debugArgs,
+  watchTimeout: option({
+    type: number,
+    long: "watch-timeout",
+    description: "Amount of time to wait before a file is considered changed",
+    defaultValue: () => 300 as const,
+    defaultValueIsSerializable: true,
+    env: "PH_WATCH_TIMEOUT" as const,
+  }),
+};
+
+const studioArgs = {
+  port: option({
+    type: number,
+    long: "port",
+    description: "Port to run the dev server on.",
+    defaultValue: () => 3000 as const,
+    defaultValueIsSerializable: true,
+  }),
+  ...commonArgs,
+  ...commonServerArgs,
 };
 
 const buildArgs = {
@@ -98,36 +144,7 @@ const buildArgs = {
     defaultValue: () => DEFAULT_CONNECT_OUTDIR,
     defaultValueIsSerializable: true,
   }),
-  base: option({
-    long: "base",
-    type: optional(string),
-    description: "Base path for the app",
-  }),
-  mode: option({
-    type: string,
-    long: "mode",
-    description: "Vite mode to use",
-    defaultValue: () => "production" as const,
-    defaultValueIsSerializable: true,
-  }),
-  configFile: option({
-    type: optional(string),
-    long: "config-file",
-    description: "Path to the powerhouse.config.js file",
-  }),
-  viteConfigFile: option({
-    type: optional(string),
-    long: "vite-config-file",
-    description: "Path to the vite config file",
-  }),
-  projectRoot: option({
-    type: string,
-    long: "project-root",
-    description: "The root directory of the project",
-    defaultValue: () => process.cwd(),
-    defaultValueIsSerializable: true,
-  }),
-  ...debugArgs,
+  ...commonArgs,
 };
 
 const previewArgs = {
@@ -138,13 +155,6 @@ const previewArgs = {
     defaultValue: () => 4173 as const,
     defaultValueIsSerializable: true,
   }),
-  mode: option({
-    type: string,
-    long: "mode",
-    description: "Vite mode to use",
-    defaultValue: () => "production" as const,
-    defaultValueIsSerializable: true,
-  }),
   outDir: option({
     type: optional(string),
     long: "outDir",
@@ -152,63 +162,8 @@ const previewArgs = {
     defaultValue: () => DEFAULT_CONNECT_OUTDIR,
     defaultValueIsSerializable: true,
   }),
-  base: option({
-    long: "base",
-    type: optional(string),
-    description: "Base path for the app",
-  }),
-  configFile: option({
-    type: optional(string),
-    long: "config-file",
-    description: "Path to the powerhouse.config.js file",
-  }),
-  viteConfigFile: option({
-    type: optional(string),
-    long: "vite-config-file",
-    description: "Path to the vite config file",
-  }),
-  projectRoot: option({
-    type: string,
-    long: "project-root",
-    description: "The root directory of the project",
-    defaultValue: () => process.cwd(),
-    defaultValueIsSerializable: true,
-  }),
-  host: flag({
-    type: optional(boolean),
-    long: "host",
-    description: "Expose the server to the network",
-  }),
-  open: flag({
-    type: optional(boolean),
-    long: "open",
-    description: "Open browser on startup",
-  }),
-  cors: flag({
-    type: optional(boolean),
-    long: "cors",
-    description: "Enable CORS",
-  }),
-  strictPort: flag({
-    type: optional(boolean),
-    long: "strictPort",
-    description: "Exit if specified port is already in use",
-  }),
-  printUrls: flag({
-    type: boolean,
-    long: "print-urls",
-    description: "Print server urls",
-    defaultValue: () => true,
-    defaultValueIsSerializable: true,
-  }),
-  bindCLIShortcuts: flag({
-    type: boolean,
-    long: "bind-cli-shortcuts",
-    description: "Bind CLI shortcuts",
-    defaultValue: () => true,
-    defaultValueIsSerializable: true,
-  }),
-  ...debugArgs,
+  ...commonArgs,
+  ...commonServerArgs,
 };
 
 export const connectArgs = {
@@ -235,7 +190,6 @@ This command:
       console.log(args);
     }
     await runConnectStudio(args);
-    return args;
   },
 });
 
@@ -250,7 +204,6 @@ external packages included
       console.log(args);
     }
     await runConnectBuild(args);
-    return args;
   },
 });
 
@@ -265,7 +218,6 @@ NOTE: You must run \`ph connect build\` first
       console.log(args);
     }
     await runConnectPreview(args);
-    return args;
   },
 });
 

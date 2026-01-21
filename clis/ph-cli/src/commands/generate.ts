@@ -144,8 +144,6 @@ export const generateArgs = {
   ...debugArgs,
 };
 
-export const generateDescription = "Generate powerhouse code.";
-
 export const generate = command({
   name: "generate",
   description: `
@@ -159,30 +157,10 @@ This command:
 4. Can watch files for changes and regenerate code automatically
 `,
   args: generateArgs,
-  handler: async (allArgs) => {
-    if (
-      Object.values(allArgs).filter((value) => value !== undefined).length === 0
-    ) {
-      console.log(
-        "No command arguments specified. Run `ph generate --help` for usage instructions.",
-      );
-      process.exit(0);
-    }
-    const {
-      documentModelFilePositional,
-      documentModelFileOption,
-      ...restArgs
-    } = allArgs;
-    const documentModelFile =
-      documentModelFilePositional ?? documentModelFileOption;
-    const args = {
-      documentModelFile,
-      ...restArgs,
-    };
+  handler: async (args) => {
     if (args.debug) {
       console.log(args);
     }
     await startGenerate(args);
-    return args;
   },
 });

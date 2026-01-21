@@ -1,6 +1,7 @@
+import type { ArgParser } from "cmd-ts/dist/cjs/argparser.js";
 import type { accessToken } from "./commands/access-token.js";
 import type { getPackageManagerCommand } from "./commands/common-args.js";
-import type { build, preview, studio } from "./commands/connect.js";
+import type { build, connect, preview, studio } from "./commands/connect.js";
 import type { generate } from "./commands/generate.js";
 import type { inspect } from "./commands/inspect.js";
 import type { install } from "./commands/install.js";
@@ -15,22 +16,22 @@ export type CommandActionType<Args extends any[], Return = void> = (
   ...args: Args
 ) => Return | Promise<Return>;
 
-export type GenerateArgs = Awaited<ReturnType<typeof generate.handler>>;
-export type VetraArgs = Awaited<ReturnType<typeof vetra.handler>>;
-export type MigrateArgs = Awaited<ReturnType<typeof migrate.handler>>;
-export type ConnectStudioArgs = Awaited<ReturnType<typeof studio.handler>>;
-export type ConnectBuildArgs = Awaited<ReturnType<typeof build.handler>>;
-export type ConnectPreviewArgs = Awaited<ReturnType<typeof preview.handler>>;
-export type ConnectArgs = ConnectStudioArgs &
-  ConnectBuildArgs &
-  ConnectPreviewArgs;
-export type AccessTokenArgs = Awaited<ReturnType<typeof accessToken.handler>>;
-export type InspectArgs = Awaited<ReturnType<typeof inspect.handler>>;
-export type ListArgs = Awaited<ReturnType<typeof list.handler>>;
-export type SwitchboardArgs = Awaited<ReturnType<typeof switchboard.handler>>;
-export type LoginArgs = Awaited<ReturnType<typeof login.handler>>;
-export type InstallArgs = Awaited<ReturnType<typeof install.handler>>;
-export type UninstallArgs = Awaited<ReturnType<typeof uninstall.handler>>;
+export type ParsedCmdResult<P> = P extends ArgParser<infer Out> ? Out : never;
+
+export type GenerateArgs = ParsedCmdResult<typeof generate>;
+export type VetraArgs = ParsedCmdResult<typeof vetra>;
+export type MigrateArgs = ParsedCmdResult<typeof migrate>;
+export type ConnectStudioArgs = ParsedCmdResult<typeof studio>;
+export type ConnectBuildArgs = ParsedCmdResult<typeof build>;
+export type ConnectPreviewArgs = ParsedCmdResult<typeof preview>;
+export type ConnectArgs = ParsedCmdResult<typeof connect>;
+export type AccessTokenArgs = ParsedCmdResult<typeof accessToken>;
+export type InspectArgs = ParsedCmdResult<typeof inspect>;
+export type ListArgs = ParsedCmdResult<typeof list>;
+export type SwitchboardArgs = ParsedCmdResult<typeof switchboard>;
+export type LoginArgs = ParsedCmdResult<typeof login>;
+export type InstallArgs = ParsedCmdResult<typeof install>;
+export type UninstallArgs = ParsedCmdResult<typeof uninstall>;
 export type PackageManagerArgs = Partial<
-  Awaited<ReturnType<typeof getPackageManagerCommand.handler>>
+  ParsedCmdResult<typeof getPackageManagerCommand>
 >;

@@ -1,3 +1,4 @@
+import { getConfig } from "@powerhousedao/config/node";
 import {
   boolean,
   command,
@@ -8,75 +9,72 @@ import {
   string,
 } from "cmd-ts";
 import { startVetra } from "../services/vetra.js";
-import { debugArgs } from "./common-args.js";
+import { vetraSwitchboardArgs } from "./common-args.js";
+import { commonArgs, commonServerArgs } from "./connect.js";
 
 export const vetraArgs = {
   switchboardPort: option({
-    type: optional(number),
+    type: number,
     long: "switchboard-port",
     description: "port to use for the Vetra Switchboard",
+    defaultValue: () => {
+      const baseConfig = getConfig();
+      return baseConfig.reactor?.port ?? 4001;
+    },
   }),
   connectPort: option({
-    type: optional(number),
+    type: number,
     long: "connect-port",
     description: "port to use for the Vetra Connect",
-  }),
-  httpsKeyFile: option({
-    type: optional(string),
-    long: "https-key-file",
-    description: "path to the ssl key file",
-  }),
-  httpsCertFile: option({
-    type: optional(string),
-    long: "https-cert-file",
-    description: "path to the ssl cert file",
-  }),
-  configFile: option({
-    type: optional(string),
-    long: "config-file",
-    description: "path to the powerhouse.config.js file",
+    defaultValue: () => 3000 as const,
+    defaultValueIsSerializable: true,
   }),
   remoteDrive: option({
     type: optional(string),
     long: "remote-drive",
     description:
       "URL of remote drive to connect to (skips switchboard initialization)",
+    defaultValue: () => {
+      const baseConfig = getConfig();
+      return baseConfig.vetra?.driveUrl;
+    },
+    defaultValueIsSerializable: true,
   }),
   watch: flag({
-    type: optional(boolean),
+    type: boolean,
     long: "watch",
     short: "w",
     description:
       "Enable dynamic loading for document-models and editors in connect-studio and switchboard",
+    defaultValue: () => false,
+    defaultValueIsSerializable: true,
   }),
   verbose: flag({
-    type: optional(boolean),
+    type: boolean,
     long: "logs",
     description: "Show additional logs",
+    defaultValue: () => false,
+    defaultValueIsSerializable: true,
   }),
   disableConnect: flag({
-    type: optional(boolean),
+    type: boolean,
     long: "disable-connect",
     description:
       "Skip Connect initialization (only start switchboard and reactor)",
+    defaultValue: () => false,
+    defaultValueIsSerializable: true,
   }),
   interactive: flag({
-    type: optional(boolean),
+    type: boolean,
     long: "interactive",
     description:
       "Enable interactive mode for code generation (requires user confirmation before generating code)",
+    defaultValue: () => false,
+    defaultValueIsSerializable: true,
   }),
-  ignoreLocal: flag({
-    type: optional(boolean),
-    long: "ignore-local",
-    description: "Skip loading local project files",
-  }),
-  noGenerate: flag({
-    type: optional(boolean),
-    long: "no-generate",
-    description: "Skip code generation",
-  }),
-  ...debugArgs,
+  ...commonArgs,
+  ...commonServerArgs,
+  ...vetraSwitchboardArgs,
 };
 
 export const vetra = command({
@@ -97,6 +95,5 @@ This command:
       console.log(args);
     }
     await startVetra(args);
-    return args;
   },
 });

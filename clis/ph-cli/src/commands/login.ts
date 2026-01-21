@@ -26,6 +26,7 @@ export const loginArgs = {
     defaultValue: () => DEFAULT_RENOWN_URL,
     description: `Renown server URL.`,
     defaultValueIsSerializable: true,
+    env: "PH_CONNECT_RENOWN_URL",
   }),
   timeout: option({
     type: number,
@@ -86,7 +87,7 @@ This command:
       return;
     }
 
-    const renownUrl = args.renownUrl || DEFAULT_RENOWN_URL;
+    const renownUrl = args.renownUrl;
     const timeoutMs = args.timeout ? args.timeout * 1000 : DEFAULT_TIMEOUT_MS;
 
     // Check if already authenticated
@@ -133,9 +134,9 @@ This command:
     console.log(); // New line after dots
 
     if (!result) {
-      console.error("\nAuthentication timed out.");
-      console.log("Please try again with: ph login");
-      process.exit(1);
+      throw new Error(
+        "\nAuthentication timed out. \nPlease try again with: ph login",
+      );
     }
 
     // Save credentials

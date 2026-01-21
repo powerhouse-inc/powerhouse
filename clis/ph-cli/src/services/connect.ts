@@ -1,8 +1,8 @@
 import {
-  commonConnectOptionsToEnv,
   loadVite,
   resolveConnectPublicDir,
   resolveViteConfigPath,
+  setConnectEnv,
 } from "@powerhousedao/builder-tools";
 import type { InlineConfig } from "vite";
 import type {
@@ -11,23 +11,41 @@ import type {
   ConnectStudioArgs,
 } from "../types.js";
 
+function assignEnvVars(
+  args: ConnectBuildArgs | ConnectPreviewArgs | ConnectStudioArgs,
+) {
+  const {
+    connectBasePath,
+    defaultDrivesUrl,
+    drivesPreserveStrategy,
+    disableLocalPackages,
+  } = args;
+
+  setConnectEnv({
+    PH_CONNECT_BASE_PATH: connectBasePath,
+    PH_CONNECT_DEFAULT_DRIVES_URL: defaultDrivesUrl,
+    PH_CONNECT_DRIVES_PRESERVE_STRATEGY: drivesPreserveStrategy,
+    PH_DISABLE_LOCAL_PACKAGE: disableLocalPackages,
+  });
+}
+
 export async function runConnectStudio(args: ConnectStudioArgs) {
   const {
-    mode,
-    projectRoot,
     port,
     host,
     open,
     cors,
     strictPort,
-    force,
     printUrls,
     bindCLIShortcuts,
+    forceOptimizeDeps,
   } = args;
-  commonConnectOptionsToEnv(args);
+  assignEnvVars(args);
   const vite = await loadVite();
+  const mode = "development";
+  const projectRoot = process.cwd();
 
-  const viteConfigPath = resolveViteConfigPath(args);
+  const viteConfigPath = resolveViteConfigPath({});
   const userViteConfig = await vite.loadConfigFromFile(
     { command: "serve", mode },
     viteConfigPath,
@@ -39,7 +57,7 @@ export async function runConnectStudio(args: ConnectStudioArgs) {
     mode,
     configFile: false,
     publicDir: connectPublicDir,
-    forceOptimizeDeps: force,
+    forceOptimizeDeps,
     server: { port, host, open, cors, strictPort },
   };
 
@@ -57,13 +75,13 @@ export async function runConnectStudio(args: ConnectStudioArgs) {
 }
 
 export async function runConnectBuild(args: ConnectBuildArgs) {
-  const { mode, base, outDir, projectRoot } = args;
-
-  commonConnectOptionsToEnv(args);
-
+  const { connectBasePath, outDir } = args;
+  const mode = "production";
+  const projectRoot = process.cwd();
   const vite = await loadVite();
+  const viteConfigPath = resolveViteConfigPath({});
 
-  const viteConfigPath = resolveViteConfigPath(args);
+  assignEnvVars(args);
 
   const userViteConfig = await vite.loadConfigFromFile(
     { command: "build", mode },
@@ -73,7 +91,7 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
   const connectPublicDir = resolveConnectPublicDir(projectRoot);
 
   const buildConfig: InlineConfig = {
-    base,
+    base: connectBasePath,
     publicDir: connectPublicDir,
     mode,
     configFile: false,
@@ -92,10 +110,8 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
 
 export async function runConnectPreview(args: ConnectPreviewArgs) {
   const {
-    mode,
     outDir,
-    base,
-    projectRoot,
+    connectBasePath,
     port,
     host,
     open,
@@ -104,12 +120,12 @@ export async function runConnectPreview(args: ConnectPreviewArgs) {
     printUrls,
     bindCLIShortcuts,
   } = args;
-
-  commonConnectOptionsToEnv(args);
-
   const vite = await loadVite();
+  const viteConfigPath = resolveViteConfigPath({});
+  const mode = "production";
+  const projectRoot = process.cwd();
 
-  const viteConfigPath = resolveViteConfigPath(args);
+  assignEnvVars(args);
 
   const userViteConfig = await vite.loadConfigFromFile(
     { command: "build", mode },
@@ -119,7 +135,7 @@ export async function runConnectPreview(args: ConnectPreviewArgs) {
   const connectPublicDir = resolveConnectPublicDir(projectRoot);
 
   const previewConfig: InlineConfig = {
-    base,
+    base: connectBasePath,
     publicDir: connectPublicDir,
     mode,
     configFile: false,

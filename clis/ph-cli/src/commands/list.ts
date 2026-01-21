@@ -43,10 +43,8 @@ This command:
       phConfig.packages.forEach((pkg) => {
         console.log(pkg.packageName);
       });
-      process.exit(0);
     } catch (e) {
       console.log("No packages found in the project");
-      process.exit(1);
     }
   },
 });

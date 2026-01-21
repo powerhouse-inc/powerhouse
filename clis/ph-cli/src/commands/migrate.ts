@@ -19,6 +19,5 @@ export const migrate = command({
       console.log(args);
     }
     await startMigrate(args);
-    return args;
   },
 });

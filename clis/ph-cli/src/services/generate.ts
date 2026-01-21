@@ -16,7 +16,8 @@ export async function startGenerate(options: GenerateArgs) {
   const config = getConfig();
   const { skipFormat } = config;
   const {
-    documentModelFile,
+    documentModelFilePositional,
+    documentModelFileOption,
     editorName,
     editorId,
     documentType,
@@ -37,6 +38,9 @@ export async function startGenerate(options: GenerateArgs) {
     useHygen,
     subgraphName,
   } = options;
+
+  const documentModelFile =
+    documentModelFilePositional ?? documentModelFileOption;
 
   const useTsMorph = useVersioning || !useHygen;
   const isDragAndDropEnabled = disableDragAndDrop !== true;

@@ -10,8 +10,8 @@ import {
   sleep,
 } from "../utils/configure-vetra-github-url.js";
 import { startConnectStudio } from "./connect.old.js";
-import type { LocalSwitchboardOptions } from "./switchboard.js";
-import { defaultSwitchboardOptions } from "./switchboard.js";
+import type { LocalSwitchboardOptions } from "./switchboard.old.js";
+import { defaultSwitchboardOptions } from "./switchboard.old.js";
 
 const VETRA_DRIVE_NAME = "vetra";
 
@@ -110,7 +110,7 @@ async function startLocalVetraSwitchboard(
     const remoteDrives = remoteDrive ? [remoteDrive] : undefined;
 
     // Use the same switchboard service as the standalone command
-    const Switchboard = await import("./switchboard.js");
+    const Switchboard = await import("./switchboard.old.js");
     const { startSwitchboard } = Switchboard;
 
     const vetraProcessorConfig: VetraProcessorConfigType = {

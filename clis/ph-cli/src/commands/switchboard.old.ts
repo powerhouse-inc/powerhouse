@@ -1,7 +1,7 @@
 import type { SwitchboardReactor } from "@powerhousedao/switchboard/server";
 import type { Command } from "commander";
 import { switchboardHelp } from "../help.js";
-import type { LocalSwitchboardOptions } from "../services/switchboard.js";
+import type { LocalSwitchboardOptions } from "../services/switchboard.old.js";
 import type { CommandActionType } from "../types.js";
 import { setCustomHelp } from "../utils.js";
 
@@ -10,7 +10,7 @@ async function startLocalSwitchboard(options: LocalSwitchboardOptions) {
     process.env.BASE_PATH = options.basePath;
   }
 
-  const Switchboard = await import("../services/switchboard.js");
+  const Switchboard = await import("../services/switchboard.old.js");
   const { startSwitchboard } = Switchboard;
 
   // Extract only the props that switchboard expects

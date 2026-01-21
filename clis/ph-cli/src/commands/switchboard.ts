@@ -1,9 +1,8 @@
+import { getConfig } from "@powerhousedao/config/node";
 import {
-  array,
   boolean,
   command,
   flag,
-  multioption,
   number,
   option,
   optional,
@@ -11,41 +10,17 @@ import {
 } from "cmd-ts";
 import { runSwitchboardMigrations } from "../services/switchboard-migrate.js";
 import { startSwitchboard } from "../services/switchboard.js";
-import { debugArgs } from "./common-args.js";
+import { packages, vetraSwitchboardArgs } from "./common-args.js";
 
 export const switchboardArgs = {
+  ...vetraSwitchboardArgs,
+  packages,
   port: option({
-    type: optional(number),
+    type: number,
     long: "port",
-    description: "Port to run the preview server on",
+    description: "Port to host the api",
     defaultValue: () => 4001 as const,
     defaultValueIsSerializable: true,
-  }),
-  configFile: option({
-    type: optional(string),
-    long: "config-file",
-    description: "Path to the powerhouse.config.js file",
-  }),
-  dbPath: option({
-    type: optional(string),
-    long: "db-path",
-    description: "path to the database",
-  }),
-  httpsKeyFile: option({
-    type: optional(string),
-    long: "https-key-file",
-    description: "path to the ssl key file",
-  }),
-  httpsCertFile: option({
-    type: optional(string),
-    long: "https-cert-file",
-    description: "path to the ssl cert file",
-  }),
-  packages: multioption({
-    type: optional(array(string)),
-    long: "packages",
-    description:
-      "list of packages to be loaded, if defined then packages on config file are ignored",
   }),
   basePath: option({
     type: optional(string),
@@ -58,22 +33,17 @@ export const switchboardArgs = {
     long: "keypair-path",
     description: "path to custom keypair file for identity",
   }),
-  generate: flag({
-    type: optional(boolean),
-    long: "generate",
-    description: "generate code when document model is updated",
-  }),
-  dev: flag({
-    type: optional(boolean),
-    long: "dev",
-    description: "enable development mode to load local packages",
-  }),
-  mcp: flag({
-    type: boolean,
-    long: "mcp",
-    description: "enable Mcp route at /mcp",
-    defaultValue: () => true,
+  vetraDriveId: option({
+    type: string,
+    long: "vetra-drive-id",
+    description: "Specify a Vetra drive ID",
+    defaultValue: () => "vetra" as const,
     defaultValueIsSerializable: true,
+  }),
+  dbPath: option({
+    type: optional(string),
+    long: "db-path",
+    description: "path to the database",
   }),
   useIdentity: flag({
     type: optional(boolean),
@@ -97,7 +67,20 @@ export const switchboardArgs = {
     long: "migrate-status",
     description: "Show migration status and exit",
   }),
-  ...debugArgs,
+  mcp: flag({
+    type: boolean,
+    long: "mcp",
+    description: "enable Mcp route at /mcp",
+    defaultValue: () => true,
+    defaultValueIsSerializable: true,
+  }),
+  useVetraDrive: flag({
+    type: boolean,
+    long: "use-vetra-drive",
+    description: "Use a Vetra drive",
+    defaultValue: () => false,
+    defaultValueIsSerializable: true,
+  }),
 };
 export const switchboard = command({
   name: "switchboard",
@@ -118,19 +101,7 @@ This command:
     if (args.debug) {
       console.log(args);
     }
-    const {
-      basePath,
-      port,
-      configFile,
-      dev,
-      dbPath,
-      packages,
-      useIdentity,
-      keypairPath,
-      requireIdentity,
-      migrate,
-      migrateStatus,
-    } = args;
+    const { basePath, dbPath, migrate, migrateStatus } = args;
     if (basePath) {
       process.env.BASE_PATH = basePath;
     }
@@ -140,25 +111,14 @@ This command:
         dbPath,
         statusOnly: migrateStatus,
       });
-      return args;
+      return;
     }
 
-    const { defaultDriveUrl, connectCrypto } = await startSwitchboard({
-      port,
-      configFile,
-      dev,
-      dbPath,
-      packages,
-      useIdentity,
-      keypairPath,
-      requireIdentity,
-    });
+    const { defaultDriveUrl, connectCrypto } = await startSwitchboard(args);
     console.log("   ➜  Switchboard:", defaultDriveUrl);
     if (connectCrypto) {
       const did = await connectCrypto.did();
       console.log("   ➜  Identity:", did);
     }
-
-    return args;
   },
 });

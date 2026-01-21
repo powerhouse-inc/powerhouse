@@ -30,6 +30,5 @@ This command:
       console.log(args);
     }
     startInspect(args);
-    return args;
   },
 });
