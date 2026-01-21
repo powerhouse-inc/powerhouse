@@ -56,7 +56,7 @@ interface DocumentModelsResponse {
 
 async function getDocumentTypes(client: GraphQLClient): Promise<string[]> {
   const res = await client.request<DocumentModelsResponse>(GET_DOCUMENT_MODELS);
-  return res.documentModels.items.map((m) => m.id);
+  return res.documentModels.items.map((m: { id: string }) => m.id);
 }
 
 interface RequestTiming {
@@ -293,6 +293,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error("Error:", error.message ?? error);
+  console.error("Error:", error instanceof Error ? error.message : error);
   process.exit(1);
 });

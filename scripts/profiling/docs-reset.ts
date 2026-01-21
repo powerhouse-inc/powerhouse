@@ -51,7 +51,7 @@ interface DocumentModelsResponse {
 
 async function getDocumentTypes(client: GraphQLClient): Promise<string[]> {
   const res = await client.request<DocumentModelsResponse>(GET_DOCUMENT_MODELS);
-  return res.documentModels.items.map((m) => m.id);
+  return res.documentModels.items.map((m: { id: string }) => m.id);
 }
 
 async function getAllDocumentIds(client: GraphQLClient): Promise<string[]> {
@@ -67,7 +67,7 @@ async function getAllDocumentIds(client: GraphQLClient): Promise<string[]> {
         paging: { limit: 100, ...(cursor && { cursor }) },
       });
 
-      ids.push(...res.findDocuments.items.map((d) => d.id));
+      ids.push(...res.findDocuments.items.map((d: { id: string }) => d.id));
       cursor = res.findDocuments.hasNextPage
         ? (res.findDocuments.cursor ?? undefined)
         : undefined;
@@ -159,6 +159,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error("Error:", error.message ?? error);
+  console.error("Error:", error instanceof Error ? error.message : error);
   process.exit(1);
 });
