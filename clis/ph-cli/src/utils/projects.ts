@@ -89,7 +89,9 @@ export async function makeDependenciesWithVersions(dependencies: string[]) {
   return dependenciesWithVersions;
 }
 
-export async function getPowerhouseProjectInfo(args?: PackageManagerArgs) {
+export async function getPowerhouseProjectInfo(
+  args?: Partial<PackageManagerArgs>,
+) {
   const localProjectPath = await getLocalPowerhouseProjectDirPath();
   const globalProjectPath = await getGlobalPowerhouseProjectDirPath();
   const projectPath = localProjectPath ?? globalProjectPath;

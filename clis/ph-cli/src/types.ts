@@ -1,4 +1,3 @@
-import type { getPackageManagerCommand } from "@powerhousedao/common/cli-args";
 import type { ArgParser } from "cmd-ts/dist/cjs/argparser.js";
 import type { accessToken } from "./commands/access-token.js";
 import type { build, connect, preview, studio } from "./commands/connect.js";
@@ -11,6 +10,7 @@ import type { migrate } from "./commands/migrate.js";
 import type { switchboard } from "./commands/switchboard.js";
 import type { uninstall } from "./commands/uninstall.js";
 import type { vetra } from "./commands/vetra.js";
+import type { getPackageManagerCommand } from "./commands/get-package-manager.js";
 
 export type CommandActionType<Args extends any[], Return = void> = (
   ...args: Args

@@ -2,7 +2,6 @@ import { getConfig } from "@powerhousedao/config/node";
 import {
   array,
   boolean,
-  command,
   flag,
   multioption,
   number,
@@ -117,11 +116,6 @@ export const https = flag({
     return undefined;
   },
   defaultValueIsSerializable: true,
-});
-export const getPackageManagerCommand = command({
-  name: "get-package-manager",
-  args: packageManagerArgs,
-  handler: () => {},
 });
 
 export const vetraSwitchboardArgs = {
