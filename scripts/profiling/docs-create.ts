@@ -227,11 +227,12 @@ async function main() {
   // Determine document type
   let documentType = docTypeArg;
   if (!documentType) {
-    documentType = await getDefaultDocumentType(client);
-    if (!documentType) {
+    const defaultType = await getDefaultDocumentType(client);
+    if (!defaultType) {
       console.error("No document types available");
       process.exit(1);
     }
+    documentType = defaultType;
     console.log(`Using document type: ${documentType}`);
   }
 
