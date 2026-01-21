@@ -33,6 +33,7 @@
     "copy-scripts": "copyfiles scripts/* dist/",
     "dev": "concurrently -P 'pnpm -w run tsc --watch' 'nodemon --watch \"../..\" -e ts,tsx,js,json dist/src/cli.js -- {@}' --",
     "cli": "node ./dist/src/cli.js",
+    "cli-legacy": "node ./dist/src/cli.old.js",
     "test": "vitest --run"
   },
   "keywords": [],
@@ -56,7 +57,6 @@
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/switchboard": "workspace:*",
     "@renown/sdk": "workspace:*",
-    "@tmpl/core": "npm:@jsr/tmpl__core@^0.6.3",
     "chalk": "^5.6.2",
     "cmd-ts": "^0.14.3",
     "colorette": "^2.0.20",

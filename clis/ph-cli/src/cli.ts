@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { phCliHelpCommands } from "@powerhousedao/common/cli-args";
 import { run, subcommands } from "cmd-ts";
 import { accessToken } from "./commands/access-token.js";
