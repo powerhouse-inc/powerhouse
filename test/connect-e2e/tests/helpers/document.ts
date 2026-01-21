@@ -99,6 +99,14 @@ export async function createDocumentAndFillBasicData(
 
     await page.getByText("Global State Schema").first().click();
 
+    // Uncheck "Sync with schema" to prevent auto-updates overwriting our value
+    const syncCheckbox = page.getByRole("checkbox", {
+      name: "Sync with schema",
+    });
+    if (await syncCheckbox.isChecked()) {
+      await syncCheckbox.click();
+    }
+
     // Wait for the second CodeMirror editor to be ready
     const initialStateEditor = page.locator(".cm-content").nth(1);
     await expect(initialStateEditor).toBeVisible({ timeout: 5000 });
