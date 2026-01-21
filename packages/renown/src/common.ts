@@ -1,11 +1,13 @@
 import type { Issuer } from "did-jwt-vc";
 import { DEFAULT_RENOWN_URL } from "./constants.js";
+import { MemoryStorage } from "./storage/common.js";
 import type {
   IRenown,
   PowerhouseVerifiableCredential,
   RenownEventEmitter,
   RenownEvents,
   RenownStorage,
+  RenownStorageMap,
   User,
 } from "./types.js";
 import type { CreateBearerTokenOptions } from "./utils.js";
@@ -14,6 +16,8 @@ import {
   parsePkhDid,
   verifyAuthBearerToken,
 } from "./utils.js";
+
+export class RenownMemoryStorage extends MemoryStorage<RenownStorageMap> {}
 
 export class Renown implements IRenown {
   #baseUrl: string;
@@ -136,7 +140,7 @@ export class Renown implements IRenown {
       };
       return result.credential;
     } else {
-      throw new Error("Failed to get credential");
+      throw new Error(`Failed to get credential: ${response.status}`);
     }
   }
 
