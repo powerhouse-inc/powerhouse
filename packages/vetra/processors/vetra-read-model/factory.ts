@@ -1,37 +1,30 @@
-import {
-  type IProcessorHostModule,
-  type ProcessorRecord,
-  type RelationalDbProcessorFilter,
-} from "document-drive";
-import { type PHDocumentHeader } from "document-model";
+import type { ProcessorRecord } from "@powerhousedao/reactor";
+import type { IProcessorHostModule, IRelationalDb } from "document-drive";
+import type { PHDocumentHeader } from "document-model";
 import { VetraReadModelProcessor } from "./index.js";
+import { up } from "./migrations.js";
+import type { DB } from "./schema.js";
 
 export const vetraReadModelProcessorFactory =
   (module: IProcessorHostModule) =>
   async (driveHeader: PHDocumentHeader): Promise<ProcessorRecord[]> => {
-    // Create a namespace for the processor and the provided drive id
-    const namespace = VetraReadModelProcessor.getNamespace(driveHeader.id);
+    // Create namespace (same as legacy - all vetra packages share one namespace)
+    const db = await module.relationalDb.createNamespace<DB>("vetra-packages");
 
-    // Create a namespaced db for the processor
-    const store =
-      await module.relationalDb.createNamespace<VetraReadModelProcessor>(
-        namespace,
-      );
+    // Run migrations (idempotent - uses ifNotExists)
+    await up(db as IRelationalDb<DB>);
 
-    // Create a filter for the processor
-    const filter: RelationalDbProcessorFilter = {
-      branch: ["main"],
-      documentId: ["*"],
-      documentType: ["powerhouse/package"],
-      scope: ["global"],
-    };
-
-    // Create the processor
-    const processor = new VetraReadModelProcessor(namespace, filter, store);
+    // Create the processor with the relational database
+    const processor = new VetraReadModelProcessor(db);
     return [
       {
         processor,
-        filter,
+        filter: {
+          branch: ["main"],
+          documentId: ["*"],
+          documentType: ["powerhouse/package"],
+          scope: ["global"],
+        },
       },
     ];
   };

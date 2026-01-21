@@ -2,9 +2,12 @@ import { phGlobalConfigFromEnv } from "@powerhousedao/connect/config";
 import { initFeatureFlags } from "@powerhousedao/connect/feature-flags.js";
 import { toast } from "@powerhousedao/connect/services";
 import {
+  addDefaultDrivesForNewReactor,
   createBrowserDocumentDriveServer,
   createBrowserReactor,
   createBrowserStorage,
+  getDefaultDrivesFromEnv,
+  getReactorDefaultDrivesConfig,
 } from "@powerhousedao/connect/utils";
 import {
   DocumentCache,
@@ -13,7 +16,6 @@ import {
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
   getDrives,
-  getReactorDefaultDrivesConfig,
   initConnectCrypto,
   initLegacyReactor,
   login,
@@ -46,6 +48,7 @@ import {
 import { initRenown } from "@renown/sdk";
 import type {
   DocumentDriveDocument,
+  DocumentDriveServerOptions,
   IDocumentAdminStorage,
   IDocumentDriveServer,
 } from "document-drive";
@@ -210,17 +213,26 @@ export async function createReactor() {
     documentModelModules as unknown as DocumentModelModule[],
   );
 
+  // Determine if we're using legacy reads before creating the reactor
+  const useLegacyRead = features.get("FEATURE_LEGACY_READ_ENABLED") ?? true;
+
   // create the legacy reactor with only latest versions
-  const defaultConfig = getReactorDefaultDrivesConfig();
+  // Only include default drives config for legacy reactor when using legacy reads
+  const legacyReactorOptions: DocumentDriveServerOptions = {
+    featureFlags: {
+      enableDualActionCreate: true,
+    },
+  };
+
+  if (useLegacyRead) {
+    const defaultConfig = getReactorDefaultDrivesConfig();
+    Object.assign(legacyReactorOptions, defaultConfig);
+  }
+
   const legacyReactor = createBrowserDocumentDriveServer(
     latestModules,
     storage,
-    {
-      ...defaultConfig,
-      featureFlags: {
-        enableDualActionCreate: true,
-      },
-    },
+    legacyReactorOptions,
   );
 
   // create reactor v2 with all versions and upgrade manifests
@@ -230,6 +242,18 @@ export async function createReactor() {
     storage,
     connectCrypto,
   );
+
+  // Add default drives for new reactor if not using legacy read
+  if (!useLegacyRead) {
+    const defaultDrivesConfig = getDefaultDrivesFromEnv();
+    if (defaultDrivesConfig.length > 0) {
+      const syncManager =
+        reactorClientModule.reactorModule?.syncModule?.syncManager;
+      if (syncManager) {
+        await addDefaultDrivesForNewReactor(syncManager, defaultDrivesConfig);
+      }
+    }
+  }
 
   // initialize the reactor
   await initLegacyReactor(legacyReactor, renown, connectCrypto);
@@ -266,7 +290,6 @@ export async function createReactor() {
   await login(didFromUrl, legacyReactor, renown, connectCrypto);
 
   // initialize the document cache based on feature flags
-  const useLegacyRead = features.get("FEATURE_LEGACY_READ_ENABLED") ?? true;
   const documentCache = useLegacyRead
     ? new DocumentCache(legacyReactor)
     : new ReactorClientDocumentCache(reactorClientModule.client);

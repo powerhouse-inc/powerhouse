@@ -1,3 +1,59 @@
+## 6.0.0-dev.13 (2026-01-21)
+
+### 🚀 Features
+
+- add workflow to trigger downstream package updates ([e8c6cce75](https://github.com/powerhouse-inc/powerhouse/commit/e8c6cce75))
+- posttooluse prettier hook ([083e3b823](https://github.com/powerhouse-inc/powerhouse/commit/083e3b823))
+
+### 🩹 Fixes
+
+- properly run migrations and use namespaces in vetra read model ([71e77a4f2](https://github.com/powerhouse-inc/powerhouse/commit/71e77a4f2))
+- do not pass default drives to the reactor that is not enabled ([49f339bc3](https://github.com/powerhouse-inc/powerhouse/commit/49f339bc3))
+- consolidate default drive functions ([8a4f8fc07](https://github.com/powerhouse-inc/powerhouse/commit/8a4f8fc07))
+- issue with reading env vars in the wrong order ([a6dfb866b](https://github.com/powerhouse-inc/powerhouse/commit/a6dfb866b))
+- gql port issue and don't add remotes that already exist ([9830c16b2](https://github.com/powerhouse-inc/powerhouse/commit/9830c16b2))
+- testing expectations had a race condition ([567174891](https://github.com/powerhouse-inc/powerhouse/commit/567174891))
+- better wait for drives to be ready ([9cc837d79](https://github.com/powerhouse-inc/powerhouse/commit/9cc837d79))
+- wip on fixing lots of race conditions in e2e vetra tests ([39c9ffe20](https://github.com/powerhouse-inc/powerhouse/commit/39c9ffe20))
+- processor filter logic fixes and tests ([3b5b210b7](https://github.com/powerhouse-inc/powerhouse/commit/3b5b210b7))
+- vetra test fixes using new structures ([b00ce98b8](https://github.com/powerhouse-inc/powerhouse/commit/b00ce98b8))
+- linting fixes ([98c374a82](https://github.com/powerhouse-inc/powerhouse/commit/98c374a82))
+- shoot me in the face -- tsc may build differently depending on directory ([a175f86c1](https://github.com/powerhouse-inc/powerhouse/commit/a175f86c1))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+
+## 6.0.0-dev.12 (2026-01-20)
+
+### 🩹 Fixes
+
+- **docker:** install prettier globally for ph init project ([7817c65ba](https://github.com/powerhouse-inc/powerhouse/commit/7817c65ba))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.11 (2026-01-20)
+
+### 🚀 Features
+
+- **design-system:** improve sidebar UX and add document toolbar story ([#2217](https://github.com/powerhouse-inc/powerhouse/pull/2217))
+
+### 🩹 Fixes
+
+- update addDrive function to set drive name ([#2223](https://github.com/powerhouse-inc/powerhouse/pull/2223))
+- improve document model subgraph generation ([9c20b7593](https://github.com/powerhouse-inc/powerhouse/commit/9c20b7593))
+- **codegen:** fix failing codegen tests ([#2227](https://github.com/powerhouse-inc/powerhouse/pull/2227))
+- **monorepo:** exclude root package from recursive build to prevent infinite loop ([099139393](https://github.com/powerhouse-inc/powerhouse/commit/099139393))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.10 (2026-01-19)
 
 ### 🚀 Features

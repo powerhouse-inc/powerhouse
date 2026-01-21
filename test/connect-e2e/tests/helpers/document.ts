@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { camelCase } from "change-case";
 
 // Import shared types and functions from e2e-utils package
@@ -98,12 +99,13 @@ export async function createDocumentAndFillBasicData(
 
     await page.getByText("Global State Schema").first().click();
 
-    await page.waitForTimeout(500);
+    // Wait for the second CodeMirror editor to be ready
+    const initialStateEditor = page.locator(".cm-content").nth(1);
+    await expect(initialStateEditor).toBeVisible({ timeout: 5000 });
 
-    await page.locator(".cm-content").nth(1).fill(data.global.initialState);
+    await initialStateEditor.fill(data.global.initialState);
 
     await page.getByText("global state initial value").first().click();
-    await page.waitForTimeout(500);
   }
 
   if (data.modules) {
@@ -121,13 +123,14 @@ export async function createDocumentAndFillBasicData(
           .fill(operation.name);
         await page.keyboard.press("Enter");
 
+        // Wait for the operation editor to be created and visible
         const operationInputName = camelCase(operation.name);
-
         const operationEditor = page
           .locator(".cm-content", {
             hasText: operationInputName,
           })
           .first();
+        await expect(operationEditor).toBeVisible({ timeout: 5000 });
 
         await operationEditor.click();
 
@@ -137,12 +140,16 @@ export async function createDocumentAndFillBasicData(
         await page.keyboard.insertText(operation.schema);
 
         await page.keyboard.press("Enter");
-        await page.getByText("Global State Schema").first().click();
-        await page.waitForTimeout(500);
+        // Click away to blur and commit the changes
+        const globalSchemaLabel = page.getByText("Global State Schema").first();
+        await expect(globalSchemaLabel).toBeVisible({ timeout: 5000 });
+        await globalSchemaLabel.click();
       }
     }
   }
 
-  await page.getByText("Global State Schema").first().click();
-  await page.waitForTimeout(1000);
+  // Final blur to ensure all changes are committed
+  const finalLabel = page.getByText("Global State Schema").first();
+  await expect(finalLabel).toBeVisible({ timeout: 5000 });
+  await finalLabel.click();
 }

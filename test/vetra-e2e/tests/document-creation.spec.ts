@@ -2,6 +2,10 @@ import { closeDocumentFromToolbar } from "@powerhousedao/e2e-utils";
 import { createDocument, navigateToVetraDrive } from "./helpers/document.js";
 import { expect, test } from "./helpers/fixtures.js";
 
+// Run these tests serially to avoid conflicts with other tests
+// that modify the shared Vetra drive
+test.describe.configure({ mode: "serial" });
+
 test.use({
   storageState: {
     cookies: [],
@@ -85,5 +89,6 @@ test("should log console message when attempting to create powerhouse/codegen-pr
   await expect(codegenButton).toBeVisible();
   await codegenButton.click();
 
-  await page.waitForTimeout(1000);
+  // Wait for any console messages to appear
+  await page.waitForLoadState("networkidle");
 });

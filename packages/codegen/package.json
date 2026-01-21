@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/codegen",
-  "version": "6.0.0-dev.10",
+  "version": "6.0.0-dev.13",
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
@@ -67,7 +67,7 @@
     "enquirer": "^2.4.1",
     "execa": "^8.0.1",
     "graphql": "^16.11.0",
-    "graphql-codegen-typescript-validation-schema": "^0.18.1",
+    "graphql-codegen-typescript-validation-schema": "0.18.1",
     "hygen": "^6.2.11",
     "kysely": "^0.28.2",
     "kysely-pglite": "^0.6.1",

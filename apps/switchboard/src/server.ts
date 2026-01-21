@@ -3,8 +3,10 @@ import { PGlite } from "@electric-sql/pglite";
 import {
   CompositeChannelFactory,
   ConsoleLogger,
+  driveCollectionId,
   type Database,
   EventBus,
+  parseDriveUrl,
   ReactorBuilder,
   ReactorClientBuilder,
   SyncBuilder,
@@ -227,12 +229,8 @@ async function initServer(
 
     const module = await clientBuilder.buildModule();
 
-    const syncManager = module.reactorModule?.syncModule?.syncManager;
-    if (!syncManager) {
-      throw new Error("SyncManager not available from ReactorClientBuilder");
-    }
-
-    return { client: module.client, syncManager };
+    // Return the full ReactorClientModule
+    return module;
   };
 
   let defaultDriveUrl: undefined | string = undefined;
@@ -247,10 +245,13 @@ async function initServer(
     packages.push(basePath);
   }
 
-  // create loader
-  const packageLoader = vite ? VitePackageLoader.build(vite) : undefined;
+  // storageV2=true means use new reactor (NOT legacy)
+  const legacyReactor = !options.reactorOptions?.storageV2;
 
-  // Start the API with the reactor and options
+  // create loader with legacyReactor option
+  const packageLoader = vite
+    ? VitePackageLoader.build(vite, { legacyReactor })
+    : undefined;
   const api = await initializeAndStartAPI(
     initializeDriveServer,
     initializeClient,
@@ -267,6 +268,7 @@ async function initServer(
         path.join(process.cwd(), "powerhouse.config.json"),
       mcp: options.mcp ?? true,
       enableDocumentModelSubgraphs: options.enableDocumentModelSubgraphs,
+      legacyReactor,
     },
   );
 
@@ -299,8 +301,25 @@ async function initServer(
       let driveId: string | undefined;
 
       try {
-        const remoteDrive = await addRemoteDrive(driveServer, remoteDriveUrl);
-        driveId = remoteDrive.header.id;
+        if (legacyReactor) {
+          // Use legacy reactor's addRemoteDrive
+          const remoteDrive = await addRemoteDrive(driveServer, remoteDriveUrl);
+          driveId = remoteDrive.header.id;
+        } else {
+          // Use new reactor's sync manager
+          const { syncManager } = api;
+          const parsed = parseDriveUrl(remoteDriveUrl);
+          driveId = parsed.driveId;
+          const remoteName = `remote-drive-${driveId}-${crypto.randomUUID()}`;
+          await syncManager.add(
+            remoteName,
+            driveCollectionId("main", driveId),
+            {
+              type: "gql",
+              parameters: { url: parsed.graphqlEndpoint },
+            },
+          );
+        }
         logger.debug(`Remote drive ${remoteDriveUrl} synced`);
       } catch (error) {
         if (error instanceof DocumentAlreadyExistsError) {

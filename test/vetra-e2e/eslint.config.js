@@ -16,7 +16,13 @@ const typescriptReactFiles = ["**/*.tsx"];
 const javascriptFiles = ["**/*.js", "**/*.cjs", "**/*.mjs"];
 
 export default tseslint.config(
-  globalIgnores(["node_modules/", "dist/", ".ph/", "eslint.config.js"]),
+  globalIgnores([
+    "node_modules/",
+    "dist/",
+    ".ph/",
+    "eslint.config.js",
+    "coverage/",
+  ]),
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
   {

@@ -1,3 +1,4 @@
+import path from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
@@ -16,4 +17,9 @@ export default defineConfig({
     passWithNoTests: true,
   },
   plugins: [react()],
+  resolve: {
+    alias: {
+      "versioned-documents": path.resolve(__dirname, "."),
+    },
+  },
 });

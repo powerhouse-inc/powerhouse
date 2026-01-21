@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/vetra",
-  "version": "6.0.0-dev.10",
+  "version": "6.0.0-dev.13",
   "license": "AGPL-3.0-only",
   "type": "module",
   "repository": {
@@ -76,6 +76,7 @@
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/connect": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
+    "@powerhousedao/reactor": "workspace:*",
     "change-case": "^5.4.4",
     "colorette": "^2.0.20",
     "document-model": "workspace:*",

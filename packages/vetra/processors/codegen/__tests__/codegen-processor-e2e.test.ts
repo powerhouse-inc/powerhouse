@@ -15,7 +15,7 @@ import {
   USE_TS_MORPH,
   USE_VERSIONING,
 } from "../document-handlers/generators/constants.js";
-import { CodegenProcessor } from "../index.js";
+import { CodegenProcessorLegacy } from "../index.legacy.js";
 
 const defaultManifest: PowerhouseManifest = {
   name: "",
@@ -76,8 +76,8 @@ vi.mock("../logger.js", () => ({
   },
 }));
 
-describe("CodegenProcessor E2E Tests", () => {
-  let processor: CodegenProcessor;
+describe("CodegenProcessorLegacy E2E Tests", () => {
+  let processor: CodegenProcessorLegacy;
   let mockConfig: { PH_CONFIG: PowerhouseConfig; CURRENT_WORKING_DIR: string };
 
   beforeEach(async () => {
@@ -92,7 +92,7 @@ describe("CodegenProcessor E2E Tests", () => {
     };
 
     // Create a REAL processor instance (not mocked)
-    processor = new CodegenProcessor();
+    processor = new CodegenProcessorLegacy();
 
     // Reset all codegen function mocks to resolve successfully
     const codegen = await import("@powerhousedao/codegen");

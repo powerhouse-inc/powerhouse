@@ -9,6 +9,9 @@ import {
 } from "./helpers/document.js";
 import { expect, test } from "./helpers/fixtures.js";
 
+// Run serially to avoid conflicts with other tests that modify the shared Vetra drive
+test.describe.configure({ mode: "serial" });
+
 const DOCUMENT_NAME = "ToDoDocument";
 
 const TEST_DOCUMENT_DATA: DocumentBasicData = {
@@ -79,21 +82,41 @@ async function setupDocument(
   await navigateToVetraDrive(page);
   await createDocumentAndFillBasicData(page, DOCUMENT_NAME, data);
 
-  // Wait for code generation to complete
-  await page.waitForTimeout(5000);
+  // Wait for code generation to complete by waiting for network idle
+  // and giving the codegen processor time to write files
+  await page.waitForLoadState("networkidle");
 
-  // Verify document model folder was created
+  // Poll for the generated files with a timeout
+  // We need to wait for the full code generation including index.ts update
+  const maxWaitMs = 60000;
+  const startTime = Date.now();
   const documentModelsDir = path.join(process.cwd(), "document-models");
   const todoDocModelDir = path.join(documentModelsDir, "to-do-document");
   const documentModelsIndex = path.join(documentModelsDir, "index.ts");
+  const expectedExport =
+    'export { ToDoDocument } from "./to-do-document/module.js"';
 
+  // Wait for the index.ts file to contain the expected export
+  // This is more reliable than just waiting for the directory to exist
+  // because the code generation uses debouncing
+  let foundExport = false;
+  while (Date.now() - startTime < maxWaitMs) {
+    if (fs.existsSync(documentModelsIndex) && fs.existsSync(todoDocModelDir)) {
+      const indexContent = fs.readFileSync(documentModelsIndex, "utf-8");
+      if (indexContent.includes(expectedExport)) {
+        foundExport = true;
+        break;
+      }
+    }
+    await page.waitForTimeout(500);
+  }
+
+  // Verify document model folder was created
   expect(fs.existsSync(todoDocModelDir)).toBe(true);
 
   // Verify export was added to document-models/index.ts
   const docModelsIndexContent = fs.readFileSync(documentModelsIndex, "utf-8");
-  expect(docModelsIndexContent).toContain(
-    'export { ToDoDocument } from "./to-do-document/module.js"',
-  );
+  expect(docModelsIndexContent).toContain(expectedExport);
 
   // Note: Automatic subgraph generation for document models was disabled
   // in commit d705e0c5f. Subgraphs are now generated separately via

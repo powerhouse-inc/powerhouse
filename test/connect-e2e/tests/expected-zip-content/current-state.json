@@ -1,7 +1,7 @@
 {
   "auth": {},
   "document": {
-    "version": 0
+    "version": 1
   },
   "global": {
     "id": "powerhouse/todo",
@@ -19,7 +19,7 @@
         "state": {
           "global": {
             "schema": "type ToDoDocumentState {\n  items: [ToDoItem!]!\n  stats: ToDoListStats!\n}\n\ntype ToDoItem {\n  id: ID!\n  text: String!\n  checked: Boolean!\n}\n\ntype ToDoListStats {\n  total: Int!\n  checked: Int!\n  unchecked: Int!\n}",
-            "initialValue": "{\n  \"items\": [],\n  \"stats\": {\n    \"total\": 0,\n    \"checked\": 0,\n    \"unchecked\": 0\n  }\n}",
+            "initialValue": "{\n  \"items\": [],\n  \"stats\": {\n    \"total\": 0,\n    \"checked\": 0,\n    \"unchecked\": 0\n  }\n}{\n  \"_placeholder\": null\n}",
             "examples": []
           },
           "local": {

@@ -49,14 +49,26 @@ export async function renameFolder(
   // Hover over the folder to make options visible
   await folder.hover();
 
+  // Wait for the options button to appear (it's hidden until hover)
+  const optionsButton = folder.locator('button[aria-haspopup="menu"]');
+  await optionsButton.waitFor({ state: "visible", timeout: 5000 });
+
   // Click the options button (three dots)
-  await folder.locator('button[aria-haspopup="menu"]').click();
+  await optionsButton.click();
 
   // Click Rename option
   await page.getByRole("menuitem", { name: "Rename" }).click();
 
-  // Fill in the new name and press Enter
-  await page.fill('input[type="text"]', newName);
+  // Wait for the rename input to be visible
+  const renameInput = page.locator('input[type="text"]');
+  await renameInput.waitFor({ state: "visible" });
+
+  // Wait a bit for the NodeInput's setTimeout to finish focusing/selecting (100ms)
+  await page.waitForTimeout(150);
+
+  // Select all text and type the new name (more reliable than fill for controlled inputs)
+  await renameInput.selectText();
+  await renameInput.pressSequentially(newName, { delay: 10 });
   await page.keyboard.press("Enter");
 
   // Verify the renamed folder exists

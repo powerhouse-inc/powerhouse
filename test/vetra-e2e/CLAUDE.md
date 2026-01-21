@@ -1,0 +1,2 @@
+- Use `pnpm test:e2e` to run tests.
+- You can also run `ph vetra` in this directory, then load `http://localhost:3001` with the Chrome DevTools to inspect what is being served manually.

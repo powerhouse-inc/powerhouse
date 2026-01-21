@@ -74,7 +74,8 @@ export function matchesFilter(
   }
 
   if (filter.documentId && filter.documentId.length > 0) {
-    if (!filter.documentId.includes(op.context.documentId)) {
+    const hasWildcard = filter.documentId.includes("*");
+    if (!hasWildcard && !filter.documentId.includes(op.context.documentId)) {
       return false;
     }
   }

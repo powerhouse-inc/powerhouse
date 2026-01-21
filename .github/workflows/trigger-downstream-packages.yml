@@ -1,0 +1,75 @@
+name: Trigger Downstream Packages
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v5.3.0-staging.6)'
+        required: true
+        type: string
+      channel:
+        description: 'Release channel (dev/staging/latest)'
+        required: true
+        type: string
+      dry-run:
+        description: 'Dry run mode'
+        required: false
+        type: boolean
+        default: false
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v5.3.0-staging.6)'
+        required: true
+        type: string
+      channel:
+        description: 'Release channel'
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - latest
+      dry-run:
+        description: 'Dry run mode'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  trigger-packages:
+    name: Trigger Package Updates
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Add downstream packages here
+        # Each package should have the sync-and-publish.yml workflow
+        package:
+          - repo: powerhouse-inc/renown-package
+            name: renown-package
+          # Add more packages as needed:
+          # - repo: powerhouse-inc/other-package
+          #   name: other-package
+    steps:
+      - name: Trigger ${{ matrix.package.name }}
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.K8S_REPO_PAT }}
+          repository: ${{ matrix.package.repo }}
+          event-type: powerhouse-release
+          client-payload: |
+            {
+              "version": "${{ inputs.version }}",
+              "channel": "${{ inputs.channel }}",
+              "dry_run": ${{ inputs.dry-run }},
+              "triggered_by": "${{ github.repository }}",
+              "triggered_at": "${{ github.event.head_commit.timestamp || github.event.repository.updated_at }}"
+            }
+
+      - name: Log trigger
+        run: |
+          echo "Triggered ${{ matrix.package.name }} with:"
+          echo "  Version: ${{ inputs.version }}"
+          echo "  Channel: ${{ inputs.channel }}"
+          echo "  Dry Run: ${{ inputs.dry-run }}"

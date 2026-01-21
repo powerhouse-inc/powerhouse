@@ -1,21 +1,25 @@
 import { PGlite } from "@electric-sql/pglite";
 import {
   ConsoleLogger,
+  driveCollectionId,
   GqlChannelFactory,
+  parseDriveUrl,
   ReactorBuilder,
   ReactorClientBuilder,
   SyncBuilder,
   type Database,
+  type ISyncManager,
+  type ParsedDriveUrl,
   type SignerConfig,
 } from "@powerhousedao/reactor";
 import type { BrowserReactorClientModule } from "@powerhousedao/reactor-browser";
+import { getReactorDefaultDrivesConfig as getReactorDefaultDrivesConfigBase } from "@powerhousedao/reactor-browser";
 import {
   ConnectCryptoSigner,
   createSignatureVerifier,
   type IConnectCrypto,
 } from "@renown/sdk";
 import type {
-  DefaultRemoteDriveInput,
   DocumentDriveServerOptions,
   IDocumentAdminStorage,
   IDocumentDriveServer,
@@ -34,50 +38,38 @@ import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { createRemoveOldRemoteDrivesConfig } from "./drive-preservation.js";
 
-const DEFAULT_DRIVES_URL =
-  (import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL as string | undefined) ||
-  undefined;
-const defaultDrivesUrl = DEFAULT_DRIVES_URL
-  ? DEFAULT_DRIVES_URL.split(",")
-  : [];
+/**
+ * Gets the default drives URLs from environment variable at call time.
+ * This must be called at runtime, not at module initialization, because
+ * the env var is set after the module is first imported during Vite dev server startup.
+ */
+function getDefaultDrivesUrlFromEnv(): string[] {
+  const envValue = import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL as
+    | string
+    | undefined;
+  if (!envValue) return [];
+  return envValue.split(",").filter((url) => url.trim().length > 0);
+}
 
+/**
+ * Gets the default drives config for Connect, reading URLs from PH_CONNECT_DEFAULT_DRIVES_URL
+ * and using the Connect-specific preservation strategy from config.
+ */
 export const getReactorDefaultDrivesConfig = (): Pick<
   DocumentDriveServerOptions,
   "defaultDrives"
 > => {
-  const remoteDrives: DefaultRemoteDriveInput[] = defaultDrivesUrl.map(
-    (driveUrl) => ({
-      url: driveUrl,
-      options: {
-        sharingType: "PUBLIC",
-        availableOffline: true,
-        listeners: [
-          {
-            block: true,
-            callInfo: {
-              data: driveUrl,
-              name: "switchboard-push",
-              transmitterType: "SwitchboardPush",
-            },
-            filter: {
-              branch: ["main"],
-              documentId: ["*"],
-              documentType: ["*"],
-              scope: ["global"],
-            },
-            label: "Switchboard Sync",
-            listenerId: "1",
-            system: true,
-          },
-        ],
-        triggers: [],
-      },
-    }),
-  );
+  // Read env var at call time, not at module initialization
+  const defaultDrivesUrl = getDefaultDrivesUrlFromEnv();
 
+  const baseConfig = getReactorDefaultDrivesConfigBase({
+    defaultDrivesUrl,
+  });
+
+  // Override the removeOldRemoteDrives strategy with Connect-specific config
   return {
     defaultDrives: {
-      remoteDrives,
+      ...baseConfig.defaultDrives,
       removeOldRemoteDrives:
         createRemoveOldRemoteDrivesConfig(defaultDrivesUrl),
     },
@@ -102,10 +94,7 @@ export function createBrowserDocumentDriveServer(
     .withStorage(storage)
     .withCache(new InMemoryCache())
     .withQueueManager(new EventQueueManager())
-    .withOptions({
-      ...options,
-      ...getReactorDefaultDrivesConfig(),
-    })
+    .withOptions(options)
     .build();
 }
 
@@ -152,4 +141,45 @@ export async function createBrowserReactor(
     ...module,
     pg,
   } as BrowserReactorClientModule;
+}
+
+/**
+ * Parse default drives from environment variable.
+ */
+export function getDefaultDrivesFromEnv(): ParsedDriveUrl[] {
+  const envValue = import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL as
+    | string
+    | undefined;
+  if (!envValue) return [];
+  return envValue
+    .split(",")
+    .filter((url) => url.trim().length > 0)
+    .map(parseDriveUrl);
+}
+
+/**
+ * Add default drives for the new reactor via sync manager.
+ */
+export async function addDefaultDrivesForNewReactor(
+  sync: ISyncManager,
+  defaultDrivesConfig: ParsedDriveUrl[],
+): Promise<void> {
+  const existingRemotes = sync.list();
+  const existingRemoteNames = new Set(existingRemotes.map((r) => r.name));
+
+  for (const config of defaultDrivesConfig) {
+    try {
+      const remoteName = `default-drive-${config.driveId}`;
+      if (existingRemoteNames.has(remoteName)) {
+        // Remote already exists, skip adding it
+        continue;
+      }
+      await sync.add(remoteName, driveCollectionId("main", config.driveId), {
+        type: "gql",
+        parameters: { url: config.graphqlEndpoint },
+      });
+    } catch (error) {
+      console.error(`Failed to add default drive ${config.url}:`, error);
+    }
+  }
 }

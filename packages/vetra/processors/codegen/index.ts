@@ -1,5 +1,6 @@
 import { getConfig } from "@powerhousedao/config/node";
-import type { InternalTransmitterUpdate, IProcessor } from "document-drive";
+import type { IProcessor, OperationWithContext } from "@powerhousedao/reactor";
+import type { InternalTransmitterUpdate } from "document-drive";
 import type { DocumentCodegenManager } from "./document-handlers/document-codegen-manager.js";
 import { DocumentCodegenFactory } from "./document-handlers/index.js";
 import { logger } from "./logger.js";
@@ -20,9 +21,7 @@ export class CodegenProcessor implements IProcessor {
     );
 
     if (interactiveMode) {
-      logger.info(
-        `🔔 CodegenProcessor initialized with interactive mode enabled`,
-      );
+      logger.info(`CodegenProcessor initialized with interactive mode enabled`);
     } else {
       logger.debug(
         `CodegenProcessor initialized with interactive mode disabled`,
@@ -30,40 +29,36 @@ export class CodegenProcessor implements IProcessor {
     }
   }
 
-  async onStrands(strands: InternalTransmitterUpdate[]): Promise<void> {
-    logger.info(">>> onStrands()");
+  async onOperations(operations: OperationWithContext[]): Promise<void> {
+    logger.info(">>> CodegenProcessor.onOperations()");
 
-    // Filter strands to only include those that should be processed
-    const validStrands = strands.filter((strand) => {
-      const generator = this.manager.getGenerator(strand.documentType);
+    for (const { operation, context } of operations) {
+      const generator = this.manager.getGenerator(context.documentType);
       if (!generator) {
         logger.debug(
-          `>>> No generator found for document type: ${strand.documentType}`,
+          `>>> No generator found for document type: ${context.documentType}`,
         );
-        return false;
+        continue;
       }
 
-      // Use the required shouldProcess method for validation
-      const shouldProcessResult = generator.shouldProcess(strand);
-      if (!shouldProcessResult) {
-        logger.debug(
-          `>>> Generator validation failed for ${strand.documentType}:${strand.documentId}, skipping processing`,
-        );
-      }
-      return shouldProcessResult;
-    });
+      // Create strand-like object for generator (using existing generator interface)
+      // Cast to InternalTransmitterUpdate since generators only use a subset of fields
+      const strand = {
+        documentId: context.documentId,
+        documentType: context.documentType,
+        scope: context.scope,
+        branch: context.branch,
+        driveId: "", // Not available in new format
+        operations: [operation],
+        state: context.resultingState
+          ? (JSON.parse(context.resultingState) as unknown)
+          : undefined,
+      } as InternalTransmitterUpdate;
 
-    if (validStrands.length > 0) {
-      logger.debug(
-        `>>> Processing ${validStrands.length} valid strands (out of ${strands.length} total)`,
-      );
-      for (const strand of validStrands) {
+      const shouldProcess = generator.shouldProcess(strand);
+      if (shouldProcess) {
         await this.manager.routeAndGenerate(strand);
       }
-    } else {
-      logger.debug(
-        `>>> No valid strands to process (${strands.length} strands received)`,
-      );
     }
   }
 

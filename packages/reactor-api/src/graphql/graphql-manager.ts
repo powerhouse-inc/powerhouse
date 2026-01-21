@@ -60,6 +60,22 @@ const DOCUMENT_MODELS_TO_EXCLUDE = [
   "powerhouse/document-drive",
 ];
 
+/**
+ * Check if a document model has any operations with valid schemas.
+ * Document models without valid operation schemas cannot generate valid subgraph schemas.
+ */
+function hasOperationSchemas(documentModel: DocumentModelModule): boolean {
+  const specification =
+    documentModel.documentModel.global.specifications.at(-1);
+  if (!specification) return false;
+  // Check if any operation has a schema with actual GraphQL type definitions
+  const hasValidSchema = (schema: string | null | undefined) =>
+    schema && /\b(input|type|enum|union|interface)\s+\w+/.test(schema);
+  return specification.modules.some((module) =>
+    module.operations.some((op) => hasValidSchema(op.schema)),
+  );
+}
+
 const DefaultFeatureFlags = {
   enableDocumentModelSubgraphs: true,
 };
@@ -98,6 +114,7 @@ export class GraphQLManager {
     private readonly authConfig?: AuthConfig,
     private readonly documentPermissionService?: DocumentPermissionService,
     private readonly featureFlags: GraphqlManagerFeatureFlags = DefaultFeatureFlags,
+    private readonly port: number = 4001,
   ) {
     if (this.authConfig) {
       this.authService = new AuthService(this.authConfig);
@@ -228,6 +245,9 @@ export class GraphQLManager {
         )
       ) {
         continue; // Skip the legacy document model
+      }
+      if (!hasOperationSchemas(documentModel)) {
+        continue; // Skip document models without operation schemas
       }
       try {
         const subgraphInstance = new DocumentModelSubgraphLegacy(
@@ -497,7 +517,7 @@ export class GraphQLManager {
     try {
       const herokuOrLocal = process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME
         ? `https://${process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME}`
-        : `http://localhost:${process.env.PORT ?? 4001}`;
+        : `http://localhost:${this.port}`;
 
       const serviceList: ServiceDefinition[] = Array.from(
         subgraphs.entries(),

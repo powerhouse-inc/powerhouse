@@ -9,9 +9,12 @@
   "slug": "d220f2c5-688f-404a-978a-ea67a193f2a8",
   "name": "ToDoDocument",
   "branch": "main",
+  "protocolVersions": {
+    "base-reducer": 2
+  },
   "revision": {
-    "document": 0,
-    "global": 25
+    "document": 2,
+    "global": 24
   },
   "lastModifiedAtUtcIso": "2025-09-11T14:21:12.548Z",
   "meta": {}
