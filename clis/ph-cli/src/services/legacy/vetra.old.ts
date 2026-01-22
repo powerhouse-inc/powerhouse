@@ -4,11 +4,11 @@ import { getConfig } from "@powerhousedao/config/node";
 import { blue, red } from "colorette";
 import type { IDocumentDriveServer } from "document-drive";
 import { setLogLevel } from "document-drive";
-import { generateProjectDriveId } from "../utils.js";
+import { generateProjectDriveId } from "../../utils.js";
 import {
   configureVetraGithubUrl,
   sleep,
-} from "../utils/configure-vetra-github-url.js";
+} from "../../utils/configure-vetra-github-url.js";
 import { startConnectStudio } from "./connect.old.js";
 import type { LocalSwitchboardOptions } from "./switchboard.old.js";
 import { defaultSwitchboardOptions } from "./switchboard.old.js";

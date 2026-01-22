@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { loginHelp } from "../help.js";
+import { loginHelp } from "../../help.js";
 import {
   clearCredentials,
   DEFAULT_RENOWN_URL,
@@ -9,9 +9,9 @@ import {
   loadCredentials,
   saveCredentials,
   type StoredCredentials,
-} from "../services/auth.js";
-import type { CommandActionType } from "../types.js";
-import { setCustomHelp } from "../utils.js";
+} from "../../services/auth.js";
+import type { CommandActionType } from "../../types.js";
+import { setCustomHelp } from "../../utils.js";
 
 export type LoginOptions = {
   renownUrl?: string;

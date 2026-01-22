@@ -9,9 +9,9 @@ import {
   connectBuildHelp,
   connectPreviewHelp,
   connectStudioHelp,
-} from "../help.js";
-import type { CommandActionType } from "../types.js";
-import { setCustomHelp } from "../utils.js";
+} from "../../help.js";
+import type { CommandActionType } from "../../types.js";
+import { setCustomHelp } from "../../utils.js";
 
 type CliConnectCommonOptions = Pick<
   ConnectCommonOptions,
@@ -34,7 +34,9 @@ type CliConnectPreviewOptions = Omit<
   CliConnectCommonOptions;
 
 async function startConnectStudio(options: CliConnectStudioOptions = {}) {
-  const { startConnectStudio } = await import("../services/connect.old.js");
+  const { startConnectStudio } = await import(
+    "../../services/legacy/connect.old.js"
+  );
   const { port, host, open, cors, strictPort, force, ...otherOptions } =
     options;
   return startConnectStudio({
@@ -71,7 +73,7 @@ const studioCommand = new Command("studio")
 setCustomHelp(studioCommand, connectStudioHelp);
 
 async function buildConnect(options?: CliConnectBuildOptions) {
-  const { buildConnect } = await import("../services/connect.old.js");
+  const { buildConnect } = await import("../../services/legacy/connect.old.js");
   return buildConnect(options);
 }
 
@@ -101,7 +103,9 @@ const buildCommand = new Command("build")
 setCustomHelp(buildCommand, connectBuildHelp);
 
 async function previewConnect(options?: CliConnectPreviewOptions) {
-  const { previewConnect } = await import("../services/connect.old.js");
+  const { previewConnect } = await import(
+    "../../services/legacy/connect.old.js"
+  );
   return previewConnect(options);
 }
 

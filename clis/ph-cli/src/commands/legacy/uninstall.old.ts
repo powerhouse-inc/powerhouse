@@ -2,9 +2,9 @@ import type { Command } from "commander";
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 
-import { uninstallHelp } from "../help.js";
-import type { CommandActionType } from "../types.js";
-import type { PackageManager } from "../utils.js";
+import { uninstallHelp } from "../../help.js";
+import type { CommandActionType } from "../../types.js";
+import type { PackageManager } from "../../utils.js";
 import {
   getPackageManagerFromLockfile,
   getProjectInfo,
@@ -13,7 +13,7 @@ import {
   setCustomHelp,
   SUPPORTED_PACKAGE_MANAGERS,
   updateConfigFile,
-} from "../utils.js";
+} from "../../utils.js";
 
 export function uninstallDependency(
   packageManager: PackageManager,

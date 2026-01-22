@@ -1,10 +1,10 @@
 import type { Command } from "commander";
-import type { CommandActionType } from "../types.js";
+import type { CommandActionType } from "../../types.js";
 
 export const migrate: CommandActionType<
   [string | string[] | undefined, { useHygen?: boolean; debug?: boolean }]
 > = async (_, options) => {
-  const { startMigrate } = await import("../services/migrate.old.js");
+  const { startMigrate } = await import("../../services/legacy/migrate.old.js");
   return await startMigrate({
     useHygen: !!options.useHygen,
     debug: !!options.debug,

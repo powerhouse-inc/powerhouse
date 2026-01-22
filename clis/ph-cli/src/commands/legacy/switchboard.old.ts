@@ -1,16 +1,16 @@
 import type { SwitchboardReactor } from "@powerhousedao/switchboard/server";
 import type { Command } from "commander";
-import { switchboardHelp } from "../help.js";
-import type { LocalSwitchboardOptions } from "../services/switchboard.old.js";
-import type { CommandActionType } from "../types.js";
-import { setCustomHelp } from "../utils.js";
+import { switchboardHelp } from "../../help.js";
+import type { LocalSwitchboardOptions } from "../../services/legacy/switchboard.old.js";
+import type { CommandActionType } from "../../types.js";
+import { setCustomHelp } from "../../utils.js";
 
 async function startLocalSwitchboard(options: LocalSwitchboardOptions) {
   if (options.basePath) {
     process.env.BASE_PATH = options.basePath;
   }
 
-  const Switchboard = await import("../services/switchboard.old.js");
+  const Switchboard = await import("../../services/legacy/switchboard.old.js");
   const { startSwitchboard } = Switchboard;
 
   // Extract only the props that switchboard expects
@@ -87,7 +87,7 @@ export function switchboardCommand(program: Command) {
 
       if (options.migrate || options.migrateStatus) {
         const { runSwitchboardMigrations } = await import(
-          "../services/switchboard-migrate.js"
+          "../../services/switchboard-migrate.js"
         );
         await runSwitchboardMigrations({
           dbPath: options.dbPath,

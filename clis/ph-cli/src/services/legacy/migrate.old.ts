@@ -17,8 +17,8 @@ import type {
 } from "ts-morph";
 import { Project, SyntaxKind } from "ts-morph";
 import { writePackage } from "write-package";
-import { generate } from "../commands/generate.old.js";
-import type { MigrateArgs } from "../types.js";
+import { generate } from "../../commands/legacy/generate.old.js";
+import type { MigrateArgs } from "../../types.js";
 import type { GenerateOptions } from "./generate.old.js";
 
 export async function startMigrate({ useHygen = false }: MigrateArgs) {

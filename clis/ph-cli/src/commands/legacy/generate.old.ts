@@ -1,14 +1,14 @@
 import type { Command } from "commander";
-import { generateHelp } from "../help.js";
-import type { GenerateOptions } from "../services/generate.old.js";
-import type { CommandActionType } from "../types.js";
-import { setCustomHelp } from "../utils.js";
+import { generateHelp } from "../../help.js";
+import type { GenerateOptions } from "../../services/legacy/generate.old.js";
+import type { CommandActionType } from "../../types.js";
+import { setCustomHelp } from "../../utils.js";
 
 async function startGenerate(
   filePath: string | string[] | undefined,
   options: GenerateOptions,
 ) {
-  const Generate = await import("../services/generate.old.js");
+  const Generate = await import("../../services/legacy/generate.old.js");
   const { startGenerate } = Generate;
 
   const resolvedPath = Array.isArray(filePath) ? filePath.join(" ") : filePath;

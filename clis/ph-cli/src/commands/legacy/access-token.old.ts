@@ -1,7 +1,7 @@
 import type { Command } from "commander";
-import { accessTokenHelp } from "../help.js";
-import type { CommandActionType } from "../types.js";
-import { setCustomHelp } from "../utils.js";
+import { accessTokenHelp } from "../../help.js";
+import type { CommandActionType } from "../../types.js";
+import { setCustomHelp } from "../../utils.js";
 
 export type AccessTokenOptions = {
   expiry?: string;
@@ -58,7 +58,7 @@ export const accessToken: CommandActionType<[AccessTokenOptions]> = async (
   options,
 ) => {
   const { getConnectCrypto, getConnectDid, isAuthenticated, loadCredentials } =
-    await import("../services/auth.js");
+    await import("../../services/auth.js");
 
   // Require Renown authentication - user must have done 'ph login'
   if (!isAuthenticated()) {

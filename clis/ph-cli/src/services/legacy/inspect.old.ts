@@ -1,6 +1,6 @@
 import type { Manifest } from "document-model";
 import fs from "node:fs";
-import { getProjectInfo } from "../utils.js";
+import { getProjectInfo } from "../../utils.js";
 
 export type InspectOptions = {
   debug?: boolean;

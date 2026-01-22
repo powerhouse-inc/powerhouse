@@ -2,7 +2,7 @@ import type { CommandActionType, PackageManager } from "@powerhousedao/ph-cli";
 import type { Command } from "commander";
 import { execSync } from "node:child_process";
 import fs from "node:fs";
-import { installHelp } from "../help.js";
+import { installHelp } from "../../help.js";
 import {
   getPackageManagerFromLockfile,
   getProjectInfo,
@@ -11,7 +11,7 @@ import {
   SUPPORTED_PACKAGE_MANAGERS,
   updateConfigFile,
   updateStylesFile,
-} from "../utils.js";
+} from "../../utils.js";
 
 export function installDependency(
   packageManager: PackageManager,

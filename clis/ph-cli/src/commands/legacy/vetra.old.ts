@@ -1,7 +1,7 @@
 import type { Command } from "commander";
-import { vetraHelp } from "../help.js";
-import type { CommandActionType } from "../types.js";
-import { setCustomHelp } from "../utils.js";
+import { vetraHelp } from "../../help.js";
+import type { CommandActionType } from "../../types.js";
+import { setCustomHelp } from "../../utils.js";
 
 export type DevOptions = {
   generate?: boolean;
@@ -17,7 +17,7 @@ export type DevOptions = {
   watch?: boolean;
 };
 async function startVetraEnv(options: DevOptions) {
-  const Vetra = await import("../services/vetra.old.js");
+  const Vetra = await import("../../services/legacy/vetra.old.js");
   const { startVetra } = Vetra;
   return startVetra(options);
 }

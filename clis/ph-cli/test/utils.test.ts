@@ -1,6 +1,6 @@
 import type { PowerhouseConfig } from "@powerhousedao/config";
 import { describe, expect, it } from "vitest";
-import { buildInstallCommand } from "../src/commands/install.old.js";
+import { buildInstallCommand } from "../src/commands/legacy/install.old.js";
 import { updatePackagesArray } from "../src/utils.js";
 
 describe("updatePackagesArray", () => {
