@@ -25,7 +25,7 @@ async function main() {
     cliDescription,
     entries: commands,
   });
-  process.exit(0);
+  return;
 }
 
 await main();

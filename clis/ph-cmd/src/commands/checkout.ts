@@ -40,8 +40,7 @@ export const checkout = command({
     const packageDocument = await getPackageDocument(remoteDrive);
 
     if (!packageDocument.isValid) {
-      console.error(packageDocument.error);
-      process.exit(1);
+      throw new Error(packageDocument.error);
     }
 
     if (!packageDocument.githubUrl) {

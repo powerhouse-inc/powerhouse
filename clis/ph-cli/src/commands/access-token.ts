@@ -66,19 +66,14 @@ Notes:
     }
     // Require Renown authentication - user must have done 'ph login'
     if (!isAuthenticated()) {
-      console.error(
-        "Not authenticated. Run 'ph login' first to authenticate with Renown.",
+      throw new Error(
+        "Not authenticated. Run 'ph login' first to authenticate with Renown. A Renown credential is required to generate valid bearer tokens.",
       );
-      console.error(
-        "A Renown credential is required to generate valid bearer tokens.",
-      );
-      process.exit(1);
     }
 
     const creds = loadCredentials();
     if (!creds) {
-      console.error("Failed to load credentials.");
-      process.exit(1);
+      throw new Error("Failed to load credentials.");
     }
 
     // Get the CLI's DID
@@ -86,24 +81,16 @@ Notes:
     try {
       did = await getConnectDid();
     } catch (e) {
-      console.error(
+      throw new Error(
         "Failed to get CLI identity. Run 'ph login' to reinitialize.",
       );
-      process.exit(1);
     }
 
     const address = creds.address;
 
     // Parse expiry
     let expiresIn = DEFAULT_EXPIRY_SECONDS;
-    if (args.expiry) {
-      try {
-        expiresIn = parseExpiry(args.expiry);
-      } catch (e) {
-        console.error((e as Error).message);
-        process.exit(1);
-      }
-    }
+    if (args.expiry) expiresIn = parseExpiry(args.expiry);
 
     // Generate the bearer token
     const crypto = await getConnectCrypto();

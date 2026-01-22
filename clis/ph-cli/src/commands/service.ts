@@ -91,10 +91,10 @@ function manageService(action: ServiceAction) {
 
       default:
         console.log("Unknown action:", action);
-        process.exit(1);
+        return;
     }
   } catch (error) {
-    console.error("Error:", error);
-    process.exit(1);
+    console.error("Error:");
+    throw error;
   }
 }

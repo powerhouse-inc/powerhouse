@@ -240,8 +240,8 @@ async function showDid(): Promise<void> {
     const connectDid = await getConnectDid();
     console.log(connectDid);
   } catch (e) {
-    console.error("Failed to get DID:", e);
-    process.exit(1);
+    console.error("Failed to get DID:");
+    throw e;
   }
 }
 

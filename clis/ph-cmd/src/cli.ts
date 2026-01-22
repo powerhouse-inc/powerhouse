@@ -2,7 +2,6 @@
 import { run } from "cmd-ts";
 import { execSync } from "node:child_process";
 import { detect, resolveCommand } from "package-manager-detector";
-
 import { phCliCommandNames } from "@powerhousedao/common/clis";
 import { ph } from "./commands/ph.js";
 
@@ -40,13 +39,13 @@ async function main() {
     !args.some((arg) => ["--help", "-h"].includes(arg))
   ) {
     await executePhCliCommand("connect studio");
-    process.exit(0);
+    return;
   }
 
   // forward command to the local ph-cli installation if it exists
   if (phCliCommandNames.includes(command)) {
     await executePhCliCommand(command);
-    process.exit(0);
+    return;
   }
 
   await run(ph, process.argv.slice(2));
