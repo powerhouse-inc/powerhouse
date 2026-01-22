@@ -1,3 +1,22 @@
+## 6.0.0-dev.14 (2026-01-22)
+
+### 🚀 Features
+
+- **connect:** log level can be set in query param ([3230fd6b9](https://github.com/powerhouse-inc/powerhouse/commit/3230fd6b9))
+
+### 🩹 Fixes
+
+- pnpm filtering ([3875e271c](https://github.com/powerhouse-inc/powerhouse/commit/3875e271c))
+- do not run profiling tests by default ([a196a19da](https://github.com/powerhouse-inc/powerhouse/commit/a196a19da))
+- **profiling:** add TypeScript configuration for profiling scripts ([d0ee094c7](https://github.com/powerhouse-inc/powerhouse/commit/d0ee094c7))
+- **design-system:** declare document-drive and reactor-browser as runtime dependencies ([3db4afa38](https://github.com/powerhouse-inc/powerhouse/commit/3db4afa38))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.13 (2026-01-21)
 
 ### 🚀 Features

@@ -265,7 +265,7 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
       const strand = {
         documentId: "test-doc-1",
         documentType: "powerhouse/document-model",
-        state: validState,
+        state: { global: validState },
       } as InternalTransmitterUpdate;
 
       await processor.onStrands([strand]);
@@ -317,7 +317,7 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
       const strand = {
         documentId: "test-doc-1",
         documentType: "powerhouse/document-model",
-        state: invalidState,
+        state: { global: invalidState },
       } as InternalTransmitterUpdate;
 
       await processor.onStrands([strand]);
@@ -354,7 +354,7 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
       const strand = {
         documentId: "test-doc-1",
         documentType: "powerhouse/document-model",
-        state: validState,
+        state: { global: validState },
       } as InternalTransmitterUpdate;
 
       await processor.onStrands([strand]);

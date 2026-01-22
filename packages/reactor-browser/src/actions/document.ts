@@ -829,11 +829,13 @@ export async function renameNode(
       throw new Error("ReactorClient not initialized");
     }
 
-    await reactorClient.rename(nodeId, name);
+    // Rename the node in the drive document using updateNode action
+    const drive = await reactorClient.execute<DocumentDriveDocument>(
+      driveId,
+      "main",
+      [updateNode({ id: nodeId, name })],
+    );
 
-    // Fetch the updated drive to return the node
-    const { document: drive } =
-      await reactorClient.get<DocumentDriveDocument>(driveId);
     const node = drive.state.global.nodes.find((n) => n.id === nodeId);
     if (!node) {
       throw new Error("There was an error renaming node");

@@ -1,3 +1,22 @@
+## 6.0.0-dev.14 (2026-01-22)
+
+### 🩹 Fixes
+
+- pnpm filtering ([3875e271c](https://github.com/powerhouse-inc/powerhouse/commit/3875e271c))
+- do not run profiling tests by default ([a196a19da](https://github.com/powerhouse-inc/powerhouse/commit/a196a19da))
+- **design-system:** linting issues ([c7973fc83](https://github.com/powerhouse-inc/powerhouse/commit/c7973fc83))
+- build fixes across the board ([7070406ad](https://github.com/powerhouse-inc/powerhouse/commit/7070406ad))
+- **profiling:** add TypeScript configuration for profiling scripts ([d0ee094c7](https://github.com/powerhouse-inc/powerhouse/commit/d0ee094c7))
+- **design-system:** declare document-drive and reactor-browser as runtime dependencies ([3db4afa38](https://github.com/powerhouse-inc/powerhouse/commit/3db4afa38))
+- **design-system:** avoid testing-library and reactor imports ([e85ae2fcc](https://github.com/powerhouse-inc/powerhouse/commit/e85ae2fcc))
+- **design-system:** import assets with runtime relative paths ([8fe099d62](https://github.com/powerhouse-inc/powerhouse/commit/8fe099d62))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.13 (2026-01-21)
 
 ### 🚀 Features

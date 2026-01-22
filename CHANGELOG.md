@@ -1,3 +1,41 @@
+## 6.0.0-dev.14 (2026-01-22)
+
+### 🚀 Features
+
+- added a switchboard up with pyroscope script ([2821a14b7](https://github.com/powerhouse-inc/powerhouse/commit/2821a14b7))
+- added script to create basic documents to switchboard ([56acf69ef](https://github.com/powerhouse-inc/powerhouse/commit/56acf69ef))
+- added script to list all basic documents in switchboard ([efd4741b3](https://github.com/powerhouse-inc/powerhouse/commit/efd4741b3))
+- added script to delete all basic documents from switchboard ([396667997](https://github.com/powerhouse-inc/powerhouse/commit/396667997))
+- **connect:** log level can be set in query param ([3230fd6b9](https://github.com/powerhouse-inc/powerhouse/commit/3230fd6b9))
+- **profiling:** optimize document listing and add count-only mode ([7f1f478ad](https://github.com/powerhouse-inc/powerhouse/commit/7f1f478ad))
+- **profiling:** add operations support to docs-create script ([6b8ee1717](https://github.com/powerhouse-inc/powerhouse/commit/6b8ee1717))
+- **profiling:** improve performance metrics in docs-create script ([4629bae44](https://github.com/powerhouse-inc/powerhouse/commit/4629bae44))
+- **profiling:** add memory tracking and verbose mode to docs-create script ([3978df906](https://github.com/powerhouse-inc/powerhouse/commit/3978df906))
+- **profiling:** add timing and progress tracking to docs-list script ([0cd802500](https://github.com/powerhouse-inc/powerhouse/commit/0cd802500))
+
+### 🩹 Fixes
+
+- connect e2e fixes, still a couple failing ([c6aa33a0a](https://github.com/powerhouse-inc/powerhouse/commit/c6aa33a0a))
+- connect e2e issues ([f33107568](https://github.com/powerhouse-inc/powerhouse/commit/f33107568))
+- rename a node is not the same as rename a document ([4b288defd](https://github.com/powerhouse-inc/powerhouse/commit/4b288defd))
+- connect e2e test fixes ([a562cd2db](https://github.com/powerhouse-inc/powerhouse/commit/a562cd2db))
+- build fixes across the board ([7070406ad](https://github.com/powerhouse-inc/powerhouse/commit/7070406ad))
+- reactor now returns state objects ([ea1006e81](https://github.com/powerhouse-inc/powerhouse/commit/ea1006e81))
+- do not run profiling tests by default ([a196a19da](https://github.com/powerhouse-inc/powerhouse/commit/a196a19da))
+- do not throw an error in profiling test script ([47af4d681](https://github.com/powerhouse-inc/powerhouse/commit/47af4d681))
+- pnpm filtering ([3875e271c](https://github.com/powerhouse-inc/powerhouse/commit/3875e271c))
+- **design-system:** import assets with runtime relative paths ([8fe099d62](https://github.com/powerhouse-inc/powerhouse/commit/8fe099d62))
+- **design-system:** avoid testing-library and reactor imports ([e85ae2fcc](https://github.com/powerhouse-inc/powerhouse/commit/e85ae2fcc))
+- **design-system:** declare document-drive and reactor-browser as runtime dependencies ([3db4afa38](https://github.com/powerhouse-inc/powerhouse/commit/3db4afa38))
+- **design-system:** linting issues ([c7973fc83](https://github.com/powerhouse-inc/powerhouse/commit/c7973fc83))
+- **profiling:** add TypeScript configuration for profiling scripts ([d0ee094c7](https://github.com/powerhouse-inc/powerhouse/commit/d0ee094c7))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.13 (2026-01-21)
 
 ### 🚀 Features

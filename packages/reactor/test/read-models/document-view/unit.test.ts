@@ -220,10 +220,13 @@ describe("KyselyDocumentView Unit Tests", () => {
       });
 
       vi.mocked(mockOperationStore.getRevisions).mockResolvedValue({
-        document: [{ index: 0 }],
-      } as any);
+        revision: {},
+        latestTimestamp: new Date().toISOString(),
+      });
 
-      await expect(view.get("doc-1")).rejects.toThrow();
+      const result = await view.get("doc-1");
+      expect(result).toBeDefined();
+      expect(result.operations).toEqual({});
 
       expect(mockDb.where).not.toHaveBeenCalledWith(
         "scope",

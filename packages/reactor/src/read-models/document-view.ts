@@ -313,33 +313,35 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
 
     const operations: Record<string, Operation[]> = {};
 
-    const allOps = await this.operationStore.getSinceId(0, undefined, signal);
-    const docOps = allOps.items.filter(
-      (op) =>
-        op.context.documentId === documentId && op.context.branch === branch,
-    );
+    if (view?.includeOperations) {
+      const allOps = await this.operationStore.getSinceId(0, undefined, signal);
+      const docOps = allOps.items.filter(
+        (op) =>
+          op.context.documentId === documentId && op.context.branch === branch,
+      );
 
-    for (const { operation, context } of docOps) {
-      operations[context.scope] ??= [];
+      for (const { operation, context } of docOps) {
+        operations[context.scope] ??= [];
 
-      const normalizedOp: Operation = {
-        id: deriveOperationId(
-          context.documentId,
-          context.scope,
-          context.branch,
-          operation.action.id,
-        ),
-        action: operation.action,
-        index: operation.index,
-        timestampUtcMs: operation.timestampUtcMs,
-        hash: operation.hash,
-        skip: operation.skip,
-        ...(operation.action as Record<string, unknown>),
-        error: operation.error,
-        resultingState: operation.resultingState,
-      };
+        const normalizedOp: Operation = {
+          id: deriveOperationId(
+            context.documentId,
+            context.scope,
+            context.branch,
+            operation.action.id,
+          ),
+          action: operation.action,
+          index: operation.index,
+          timestampUtcMs: operation.timestampUtcMs,
+          hash: operation.hash,
+          skip: operation.skip,
+          ...(operation.action as Record<string, unknown>),
+          error: operation.error,
+          resultingState: operation.resultingState,
+        };
 
-      operations[context.scope].push(normalizedOp);
+        operations[context.scope].push(normalizedOp);
+      }
     }
 
     const document: PHDocument = {

@@ -341,7 +341,9 @@ describe("ReactorClient Versioning Integration Tests", () => {
         v1Actions.addItem({ id: "1", name: "First Item" }),
       ]);
 
-      expect(result.operations.global.length).toBeGreaterThan(0);
+      const state = result.state as unknown as StateV1;
+      expect(state.global.items.length).toBe(1);
+      expect(state.global.items[0].name).toBe("First Item");
     });
 
     it("should apply multiple v1 actions sequentially", async () => {
@@ -360,7 +362,8 @@ describe("ReactorClient Versioning Integration Tests", () => {
       ]);
 
       const { document: retrieved } = await client.get(doc.header.id);
-      expect(retrieved.operations.global.length).toBeGreaterThanOrEqual(3);
+      const state = retrieved.state as unknown as StateV1;
+      expect(state.global.items.length).toBeGreaterThanOrEqual(3);
     });
 
     it("should apply v2 actions including setTitle", async () => {
@@ -374,7 +377,9 @@ describe("ReactorClient Versioning Integration Tests", () => {
       ]);
 
       const { document: retrieved } = await client.get(doc.header.id);
-      expect(retrieved.operations.global.length).toBeGreaterThan(0);
+      const state = retrieved.state as unknown as StateV2;
+      expect(state.global.title).toBe("My Items List");
+      expect(state.global.items.length).toBe(1);
     });
 
     it("should use v2 reducer which adds timestamp to items", async () => {
@@ -420,7 +425,9 @@ describe("ReactorClient Versioning Integration Tests", () => {
         v1Actions.addItem({ id: "1", name: "Test Item" }),
       ]);
 
-      const { document: retrieved } = await client.get(doc.header.id);
+      const { document: retrieved } = await client.get(doc.header.id, {
+        includeOperations: true,
+      });
       expect(retrieved.header.id).toBe(doc.header.id);
       expect(retrieved.operations.global.length).toBeGreaterThan(0);
     });

@@ -4,8 +4,8 @@ import {
   SyncOperationStatus,
 } from "@powerhousedao/reactor";
 import { twMerge } from "tailwind-merge";
-import { SortIcon } from "./sort-icon.js";
 import { type ColumnDef, type SortOptions, truncateId } from "../utils.js";
+import { SortIcon } from "./sort-icon.js";
 
 export type MailboxType = "inbox" | "outbox" | "deadLetter";
 
