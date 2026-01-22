@@ -1,7 +1,8 @@
-import { TabContent, Tabs } from "@powerhousedao/design-system/connect";
-import { JsonViewer } from "@powerhousedao/design-system/ui";
+import { JsonViewer } from "@powerhousedao/design-system/ui/components/json-viewer/json-viewer.js";
 import { useMemo } from "react";
 import { twMerge } from "tailwind-merge";
+import { TabContent } from "../tabs/tab-content.js";
+import { Tabs } from "../tabs/tabs.js";
 
 interface DocumentStateViewerProps {
   state: Record<string, unknown>;
