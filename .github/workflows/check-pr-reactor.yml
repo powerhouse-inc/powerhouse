@@ -1,7 +1,13 @@
-name: Check PR document-drive and reactor
+name: Check PR reactor
 
 on:
   workflow_dispatch:
+    inputs:
+      legacy:
+        description: "Run legacy tests"
+        required: false
+        type: boolean
+        default: false
   push:
     branches: ["main"]
     paths:
@@ -39,6 +45,7 @@ jobs:
   #           run: pnpm run build:tsc
 
   test-document-drive:
+    if: ${{ github.event.inputs.legacy == 'true' }}
     name: Test document-drive
     runs-on: ubuntu-24.04
     container: node:22
