@@ -15,8 +15,8 @@ import {
 import type { BrowserReactorClientModule } from "@powerhousedao/reactor-browser";
 import { getReactorDefaultDrivesConfig as getReactorDefaultDrivesConfigBase } from "@powerhousedao/reactor-browser";
 import {
-  ConnectCryptoSigner,
   createSignatureVerifier,
+  RenownCryptoSigner,
   type IConnectCrypto,
 } from "@renown/sdk";
 import type {
@@ -109,7 +109,7 @@ export async function createBrowserReactor(
   connectCrypto: IConnectCrypto,
 ): Promise<BrowserReactorClientModule> {
   const signerConfig: SignerConfig = {
-    signer: new ConnectCryptoSigner(connectCrypto),
+    signer: new RenownCryptoSigner(connectCrypto),
     verifier: createSignatureVerifier(),
   };
 

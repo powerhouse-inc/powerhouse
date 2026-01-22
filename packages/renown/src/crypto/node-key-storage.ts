@@ -1,6 +1,6 @@
-import type { ILogger } from "@powerhousedao/reactor";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import type { ILogger } from "../utils.js";
 import type { JsonWebKeyPairStorage, JwkKeyPair } from "./index.js";
 
 const ENV_KEY_NAME = "PH_RENOWN_PRIVATE_KEY";

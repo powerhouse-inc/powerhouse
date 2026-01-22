@@ -1,12 +1,11 @@
-import type { ILogger } from "@powerhousedao/reactor";
+import { ConsoleLogger } from "@powerhousedao/reactor";
 import {
   ConnectCrypto,
   NodeKeyStorage,
   type IConnectCrypto,
 } from "@renown/sdk/node";
-import { childLogger } from "document-drive";
 
-const logger = childLogger(["switchboard", "connect-crypto"]);
+const logger = new ConsoleLogger(["switchboard", "connect-crypto"]);
 
 // Singleton instance of ConnectCrypto for the switchboard
 let connectCryptoInstance: IConnectCrypto | null = null;
@@ -29,7 +28,7 @@ export async function initConnectCrypto(
   const { keypairPath, requireExisting = false } = options;
 
   const keyStorage = new NodeKeyStorage(keypairPath, {
-    logger: logger as unknown as ILogger,
+    logger,
   });
 
   // Check if we have an existing keypair

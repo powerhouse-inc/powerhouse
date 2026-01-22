@@ -3,13 +3,13 @@ import { PGlite } from "@electric-sql/pglite";
 import {
   CompositeChannelFactory,
   ConsoleLogger,
-  driveCollectionId,
-  type Database,
   EventBus,
-  parseDriveUrl,
   ReactorBuilder,
   ReactorClientBuilder,
   SyncBuilder,
+  driveCollectionId,
+  parseDriveUrl,
+  type Database,
 } from "@powerhousedao/reactor";
 import {
   VitePackageLoader,
@@ -17,7 +17,7 @@ import {
   initializeAndStartAPI,
   startViteServer,
 } from "@powerhousedao/reactor-api";
-import { ConnectCryptoSigner, type IConnectCrypto } from "@renown/sdk";
+import { RenownCryptoSigner, type IConnectCrypto } from "@renown/sdk";
 import * as Sentry from "@sentry/node";
 import type { ICache, IDocumentDriveServer } from "document-drive";
 import {
@@ -224,7 +224,7 @@ async function initServer(
     );
 
     if (connectCrypto) {
-      clientBuilder.withSigner(new ConnectCryptoSigner(connectCrypto));
+      clientBuilder.withSigner(new RenownCryptoSigner(connectCrypto));
     }
 
     const module = await clientBuilder.buildModule();

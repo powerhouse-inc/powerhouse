@@ -1,4 +1,4 @@
-import type { User as EditorUser } from "document-model";
+import type { User as EditorUser, ISigner } from "document-model";
 import type { CREDENTIAL_TYPES } from "./constants.js";
 import type { IEventEmitter } from "./event/types.js";
 import type { IStorage } from "./storage/common.js";
@@ -28,6 +28,7 @@ export interface IRenown extends Pick<RenownEventEmitter, "on"> {
   user: User | undefined | (() => Promise<User | undefined>);
   login: (did: string) => Promise<User | undefined>;
   logout: () => Promise<void>;
+  signer: ISigner;
 }
 
 type IssuerType<T> = {

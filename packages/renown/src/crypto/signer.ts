@@ -1,20 +1,26 @@
 import type {
   Action,
+  AppActionSigner,
   ISigner,
   Operation,
   Signature,
   SignatureVerificationHandler,
+  UserActionSigner,
 } from "document-model";
-import type { IConnectCrypto } from "./index.js";
+import type { IRenownCrypto } from "./index.js";
 
-export class ConnectCryptoSigner implements ISigner {
+export class RenownCryptoSigner implements ISigner {
   private cachedPublicKey: JsonWebKey | undefined;
 
-  constructor(private readonly connectCrypto: IConnectCrypto) {}
+  constructor(
+    private readonly crypto: IRenownCrypto,
+    public app: AppActionSigner,
+    public user?: UserActionSigner,
+  ) {}
 
   async publicKey(): Promise<JsonWebKey> {
     if (!this.cachedPublicKey) {
-      const did = await this.connectCrypto.did();
+      const did = await this.crypto.did();
       const keyData = extractKeyFromDid(did);
       const cryptoKey = await crypto.subtle.importKey(
         "raw",
@@ -29,11 +35,11 @@ export class ConnectCryptoSigner implements ISigner {
   }
 
   async sign(data: Uint8Array): Promise<Uint8Array> {
-    return this.connectCrypto.sign(data);
+    return this.crypto.sign(data);
   }
 
   async verify(data: Uint8Array, signature: Uint8Array): Promise<void> {
-    const did = await this.connectCrypto.did();
+    const did = await this.crypto.did();
     const cryptoKey = await importPublicKey(did);
     const isValid = await crypto.subtle.verify(
       { name: "ECDSA", hash: "SHA-256" },
@@ -55,7 +61,7 @@ export class ConnectCryptoSigner implements ISigner {
     }
 
     const timestamp = (new Date().getTime() / 1000).toFixed(0);
-    const did = await this.connectCrypto.did();
+    const did = await this.crypto.did();
 
     if (abortSignal?.aborted) {
       throw new Error("Signing aborted");
@@ -76,7 +82,7 @@ export class ConnectCryptoSigner implements ISigner {
       prevStateHash,
     ];
     const message = this.buildSignatureMessage(params);
-    const signatureBytes = await this.connectCrypto.sign(message);
+    const signatureBytes = await this.crypto.sign(message);
     const signatureHex = `0x${this.arrayBufferToHex(signatureBytes)}`;
 
     if (abortSignal?.aborted) {

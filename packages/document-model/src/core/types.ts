@@ -3,11 +3,13 @@ import type { FC, ReactNode } from "react";
 import type {
   Action,
   ActionSigner,
+  AppActionSigner,
   AttachmentRef,
   Operation,
   PHBaseState,
   PHDocument,
   Signature,
+  UserActionSigner,
 } from "./ph-types.js";
 
 export type Maybe<T> = T | null;
@@ -682,6 +684,12 @@ export type SigningParameters = {
  * Describes a signer that can sign both document headers and actions.
  */
 export interface ISigner {
+  /** The user associated with the signer */
+  user?: UserActionSigner;
+
+  /** The app associated with the signer */
+  app?: AppActionSigner;
+
   /** The corresponding public key */
   publicKey(): Promise<JsonWebKey>;
 
