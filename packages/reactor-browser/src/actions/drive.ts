@@ -64,6 +64,10 @@ export async function addDrive(input: DriveInput, preferredEditor?: string) {
       },
     });
 
+    if (preferredEditor) {
+      driveDoc.header.meta = { preferredEditor };
+    }
+
     return await reactorClient.create<DocumentDriveDocument>(driveDoc);
   }
 }
