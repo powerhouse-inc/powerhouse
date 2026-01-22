@@ -31,4 +31,4 @@ export const DEFAULT_SWITCHBOARD_PORT = 4001 as const;
 
 export const DEFAULT_VETRA_DRIVE_ID = "vetra" as const;
 
-export const MINIMUM_NODE_VERSION = 22 as const;
+export const MINIMUM_NODE_VERSION = "22.0.0" as const;
