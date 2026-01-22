@@ -91,10 +91,7 @@ export function DocumentEditorContainer() {
   }, [parentFolder, setSelectedNode]);
 
   return (
-    <div
-      id="document-editor-container"
-      className="flex-1 rounded-2xl bg-gray-50 p-4"
-    >
+    <div id="document-editor-container" className="flex-1">
       <DocumentEditor
         document={selectedDocument}
         onClose={onClose}
