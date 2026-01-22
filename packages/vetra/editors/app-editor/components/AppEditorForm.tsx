@@ -118,7 +118,7 @@ export const AppEditorForm = () => {
   };
 
   return (
-    <div className="space-y-6 bg-white p-6">
+    <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-medium text-gray-900">App Configuration</h2>
         <StatusPill

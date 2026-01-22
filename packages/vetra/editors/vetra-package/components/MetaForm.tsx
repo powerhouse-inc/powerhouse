@@ -66,7 +66,7 @@ export const MetaForm: React.FC<MetaFormProps> = (props) => {
   useDebounce(npmPackage, onNpmPackageChange, 300);
 
   return (
-    <div className="grid grid-cols-1 gap-6 bg-white p-6 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-6 p-6 lg:grid-cols-3">
       {/* Left Column */}
       <div className="space-y-6">
         {/* Name Field */}

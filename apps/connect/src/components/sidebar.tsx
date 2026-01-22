@@ -2,6 +2,7 @@ import { DriveIcon } from "@powerhousedao/connect/components";
 import { connectConfig } from "@powerhousedao/connect/config";
 import {
   ConnectSidebar,
+  ConnectTooltipProvider,
   SidebarAddDriveItem,
   SidebarItem,
 } from "@powerhousedao/design-system/connect";
@@ -42,36 +43,38 @@ export function Sidebar() {
     : "";
 
   return (
-    <ConnectSidebar
-      id="sidebar"
-      onClick={() => setSelectedDrive(undefined)}
-      onClickSettings={onClickSettings}
-      onInspectorClick={inspectorEnabled ? onInspectorClick : undefined}
-      address={user?.address}
-      onLogin={openRenown}
-      onDisconnect={logout}
-      etherscanUrl={etherscanUrl}
-      showDebug={connectDebug}
-      onDebugClick={() => showPHModal({ type: "debugSettings" })}
-    >
-      <ErrorBoundary
-        variant="text"
-        fallbackMessage="There was an error loading drives"
-        loggerContext={["Connect", "Sidebar"]}
+    <ConnectTooltipProvider>
+      <ConnectSidebar
+        id="sidebar"
+        onClick={() => setSelectedDrive(undefined)}
+        onClickSettings={onClickSettings}
+        onInspectorClick={inspectorEnabled ? onInspectorClick : undefined}
+        address={user?.address}
+        onLogin={openRenown}
+        onDisconnect={logout}
+        etherscanUrl={etherscanUrl}
+        showDebug={connectDebug}
+        onDebugClick={() => showPHModal({ type: "debugSettings" })}
       >
-        {drives?.map((drive, index) => (
-          <SidebarItem
-            key={index}
-            title={drive.header.name}
-            onClick={() => setSelectedDrive(drive)}
-            active={selectedDrive?.header.id === drive.header.id}
-            icon={<DriveIcon drive={drive} />}
-          />
-        ))}
-        {connectConfig.drives.addDriveEnabled && (
-          <SidebarAddDriveItem onClick={onAddDriveClick} />
-        )}
-      </ErrorBoundary>
-    </ConnectSidebar>
+        <ErrorBoundary
+          variant="text"
+          fallbackMessage="There was an error loading drives"
+          loggerContext={["Connect", "Sidebar"]}
+        >
+          {drives?.map((drive, index) => (
+            <SidebarItem
+              key={index}
+              title={drive.header.name}
+              onClick={() => setSelectedDrive(drive)}
+              active={selectedDrive?.header.id === drive.header.id}
+              icon={<DriveIcon drive={drive} />}
+            />
+          ))}
+          {connectConfig.drives.addDriveEnabled && (
+            <SidebarAddDriveItem onClick={onAddDriveClick} />
+          )}
+        </ErrorBoundary>
+      </ConnectSidebar>
+    </ConnectTooltipProvider>
   );
 }

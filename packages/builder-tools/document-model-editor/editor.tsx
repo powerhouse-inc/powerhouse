@@ -320,7 +320,7 @@ export default function Editor() {
   };
 
   return (
-    <main className="min-h-dvh bg-gray-50">
+    <main className="min-h-dvh bg-gray-50 p-6">
       <DocumentToolbar />
       <SchemaContextProvider
         globalStateSchemaSdl={globalStateSchema}
