@@ -5,13 +5,16 @@ import {
   setSelectedTimelineItem,
   showRevisionHistory,
   useGetSwitchboardLink,
+  useNodeActions,
   useNodeParentFolderById,
   useSelectedDocumentSafe,
 } from "@powerhousedao/reactor-browser";
+import type { Node } from "document-drive";
 import type { PHDocument } from "document-model";
 import { useEffect, useState, type ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 import { DocumentTimeline } from "../document-timeline/document-timeline.js";
+import { NodeInput } from "../node-input/node-input.js";
 import { useDocumentUndoRedo } from "./utils/use-document-undo-redo.js";
 
 // TODO: Remove this when timeline analytics is available
@@ -110,8 +113,10 @@ export const DocumentToolbar: React.FC<DocumentToolbarProps> = (props) => {
 
   const [selectedDocument] = useSelectedDocumentSafe();
   const document = _document ?? selectedDocument;
+  const { onRenameNode, onRenameDriveNodes } = useNodeActions();
 
   const documentName = document?.header.name || undefined;
+  const [isEditingName, setIsEditingName] = useState(false);
   const parentFolder = useNodeParentFolderById(document?.header.id);
   const handleClose = onClose ?? (() => setSelectedNode(parentFolder));
   const handleExport = async (doc: PHDocument | undefined) => {
@@ -231,7 +236,40 @@ export const DocumentToolbar: React.FC<DocumentToolbarProps> = (props) => {
         </div>
 
         <div className="flex items-center">
-          <h1 className="text-sm font-medium text-gray-500">{documentName}</h1>
+          {isEditingName && document ? (
+            <NodeInput
+              defaultValue={documentName}
+              className="text-center text-sm font-medium text-gray-500"
+              aria-label="Document name"
+              onCancel={() => setIsEditingName(false)}
+              onSubmit={(newName) => {
+                const node = { id: document.header.id } as Node;
+
+                Promise.all([
+                  onRenameNode(newName, node),
+                  onRenameDriveNodes(newName, document.header.id),
+                ])
+                  .then(() => setIsEditingName(false))
+                  .catch((error: unknown) => {
+                    console.error("Failed to rename document:", error);
+                    setIsEditingName(false);
+                  });
+              }}
+            />
+          ) : (
+            <h1
+              className={twMerge(
+                "text-sm font-medium text-gray-500",
+                document && "cursor-pointer hover:text-gray-700",
+              )}
+              onDoubleClick={
+                document ? () => setIsEditingName(true) : undefined
+              }
+              title={document ? "Double-click to edit" : undefined}
+            >
+              {documentName}
+            </h1>
+          )}
         </div>
 
         <div className="flex items-center gap-x-2">
