@@ -1,14 +1,14 @@
 import { getConfig } from "@powerhousedao/config/node";
 import { boolean, flag, number, option, optional, string } from "cmd-ts";
 import {
+  DEFAULT_CONNECT_STUDIO_PORT,
+  DEFAULT_SWITCHBOARD_PORT,
+} from "../constants.js";
+import {
   commonArgs,
   commonServerArgs,
   vetraSwitchboardArgs,
 } from "./common.js";
-import {
-  DEFAULT_CONNECT_STUDIO_PORT,
-  DEFAULT_SWITCHBOARD_PORT,
-} from "./constants.js";
 
 export const vetraArgs = {
   switchboardPort: option({
@@ -36,7 +36,6 @@ export const vetraArgs = {
       const baseConfig = getConfig();
       return baseConfig.vetra?.driveUrl;
     },
-    defaultValueIsSerializable: true,
   }),
   watch: flag({
     type: boolean,

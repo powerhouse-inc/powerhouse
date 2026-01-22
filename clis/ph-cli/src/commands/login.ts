@@ -1,4 +1,4 @@
-import { loginArgs } from "@powerhousedao/common/cli-args";
+import { loginArgs } from "@powerhousedao/common/clis";
 import { command } from "cmd-ts";
 import {
   clearCredentials,

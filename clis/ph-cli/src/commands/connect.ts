@@ -1,8 +1,4 @@
-import {
-  buildArgs,
-  previewArgs,
-  studioArgs,
-} from "@powerhousedao/common/cli-args";
+import { buildArgs, previewArgs, studioArgs } from "@powerhousedao/common/clis";
 import { command, subcommands } from "cmd-ts";
 import {
   runConnectBuild,

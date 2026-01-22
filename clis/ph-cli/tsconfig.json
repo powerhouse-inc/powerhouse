@@ -7,6 +7,9 @@
   "include": ["**/*"],
   "references": [
     {
+      "path": "../../packages/common"
+    },
+    {
       "path": "../../packages/codegen"
     },
     {

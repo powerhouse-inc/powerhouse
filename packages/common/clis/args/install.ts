@@ -4,7 +4,7 @@ import { debugArgs, packageManagerArgs } from "./common.js";
 export const installArgs = {
   dependencies: restPositionals({
     type: string,
-    displayName: "[dependencies...]",
+    displayName: "dependencies",
     description: "Names of the dependencies to install",
   }),
   ...packageManagerArgs,

@@ -89,3 +89,24 @@ export type DocumentModelFileMakerArgs = DocumentModelVariableNames &
     reducersDirPath: string;
     fileExtension: string;
   };
+
+export type CommandEntry = {
+  name: string;
+  command: {
+    description?: string;
+    helpTopics?: () => HelpTopic[];
+  };
+};
+
+export type HelpTopic = {
+  category: string;
+  usage: string;
+  description: string;
+  defaults: string[];
+};
+
+export type CommandHelpInfo = {
+  name: string;
+  description: string;
+  helpTopics: HelpTopic[];
+};

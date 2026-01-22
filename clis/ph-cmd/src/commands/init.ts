@@ -4,7 +4,7 @@ import {
   parsePackageManager,
   parseTag,
 } from "@powerhousedao/codegen/utils";
-import { packageManagerArgs } from "@powerhousedao/common/cli-args";
+import { packageManagerArgs } from "@powerhousedao/common/clis";
 import chalk from "chalk";
 import { kebabCase } from "change-case";
 import {

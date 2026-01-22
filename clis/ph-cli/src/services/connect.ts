@@ -38,7 +38,7 @@ export async function runConnectStudio(args: ConnectStudioArgs) {
     strictPort,
     printUrls,
     bindCLIShortcuts,
-    forceOptimizeDeps,
+    force,
   } = args;
   assignEnvVars(args);
   const vite = await loadVite();
@@ -57,8 +57,10 @@ export async function runConnectStudio(args: ConnectStudioArgs) {
     mode,
     configFile: false,
     publicDir: connectPublicDir,
-    forceOptimizeDeps,
     server: { port, host, open, cors, strictPort },
+    optimizeDeps: {
+      force,
+    },
   };
 
   const mergedConfig = vite.mergeConfig(

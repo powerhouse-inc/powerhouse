@@ -1,4 +1,4 @@
-import { packageManagerArgs } from "@powerhousedao/common/cli-args";
+import { packageManagerArgs } from "@powerhousedao/common/clis";
 import { command } from "cmd-ts";
 
 export const getPackageManagerCommand = command({

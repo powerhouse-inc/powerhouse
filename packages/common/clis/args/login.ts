@@ -1,6 +1,6 @@
 import { boolean, flag, number, option, optional, string } from "cmd-ts";
 import { debugArgs } from "./common.js";
-import { DEFAULT_RENOWN_URL, DEFAULT_TIMEOUT } from "./constants.js";
+import { DEFAULT_RENOWN_URL, DEFAULT_TIMEOUT } from "../constants.js";
 
 export const loginArgs = {
   renownUrl: option({

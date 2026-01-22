@@ -1,4 +1,4 @@
-import { inspectArgs } from "@powerhousedao/common/cli-args";
+import { inspectArgs } from "@powerhousedao/common/clis";
 import { command } from "cmd-ts";
 import console from "console";
 import { startInspect } from "../services/inspect.js";

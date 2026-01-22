@@ -12,7 +12,7 @@ async function generateCommandsMd() {
     const __dirname = path.dirname(__filename);
     const rootDir = path.resolve(__dirname, "..");
     const helpFilePath = path.join(rootDir, "src", "help.ts");
-    const outputPath = path.join(rootDir, "COMMANDS.md");
+    const outputPath = path.join(rootDir, "COMMANDS-LEGACY.md");
 
     // Read the help.ts file
     const helpFileContent = fs.readFileSync(helpFilePath, "utf8");

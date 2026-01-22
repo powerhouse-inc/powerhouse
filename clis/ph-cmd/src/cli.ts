@@ -1,21 +1,10 @@
 #!/usr/bin/env node
-import {
-  phCliCommandNames,
-  phCliHelpCommands,
-} from "@powerhousedao/common/cli-args";
-import { run, subcommands } from "cmd-ts";
+import { run } from "cmd-ts";
 import { execSync } from "node:child_process";
 import { detect, resolveCommand } from "package-manager-detector";
-import { readPackage } from "read-pkg";
-import { init } from "./commands/init.js";
-import { setupGlobals } from "./commands/setup-globals.js";
-import { update } from "./commands/update.js";
-import { useLocal } from "./commands/use-local.js";
-import { use } from "./commands/use.js";
-import {
-  getPackageManagerFromLockfile,
-  getProjectInfo,
-} from "./utils/package-manager.js";
+
+import { phCliCommandNames } from "@powerhousedao/common/clis";
+import { ph } from "./commands/ph.js";
 
 async function executePhCliCommand(command: string) {
   const forwardedArgs = process.argv.slice(3);
@@ -60,62 +49,7 @@ async function main() {
     process.exit(0);
   }
 
-  // Normal cmd-ts processing
-  const versionInfo = await getVersionInfo();
-
-  const ph = subcommands({
-    name: "ph",
-    version: versionInfo,
-    description:
-      "The Powerhouse CLI (ph-cmd) is a command-line interface tool that provides essential commands for managing Powerhouse projects.\nThe tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.",
-    cmds: {
-      init,
-      use,
-      update,
-      "setup-globals": setupGlobals,
-      "use-local": useLocal,
-      ...phCliHelpCommands,
-    },
-  });
   await run(ph, process.argv.slice(2));
 }
 
 await main();
-
-async function getVersionInfo() {
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore build time version file
-  const { version } = (await import("./version.js")) as { version: string };
-
-  const phCliInfo = await getPhCliInfo();
-
-  return `
--------------------------------------
-PH CMD version: ${version}
-${phCliInfo}
--------------------------------------
-`.trim();
-}
-
-async function getPhCliInfo() {
-  const projectInfo = await getProjectInfo(undefined, false);
-
-  if (!projectInfo.available)
-    return "PH CLI is not available, please run `ph setup-globals` to generate the default global project";
-
-  const packageManager = getPackageManagerFromLockfile(projectInfo.path);
-
-  const packageJson = await readPackage({ cwd: projectInfo.path });
-
-  const phCliVersion =
-    packageJson.dependencies?.["@powerhousedao/ph-cli"] ??
-    packageJson.devDependencies?.["@powerhousedao/ph-cli"] ??
-    "Not found";
-
-  return `
-PH CLI version: ${phCliVersion}
-PH CLI path: ${projectInfo.path}
-PH CLI is global project: ${projectInfo.isGlobal}
-PH CLI package manager: ${packageManager}
-`.trim();
-}

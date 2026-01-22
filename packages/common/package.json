@@ -31,9 +31,9 @@
       "types": "./dist/src/analytics.d.ts",
       "default": "./dist/src/analytics.js"
     },
-    "./cli-args": {
-      "types": "./dist/cli-args/index.d.ts",
-      "default": "./dist/cli-args/index.js"
+    "./clis": {
+      "types": "./dist/clis/index.d.ts",
+      "default": "./dist/clis/index.js"
     }
   },
   "sideEffects": false,

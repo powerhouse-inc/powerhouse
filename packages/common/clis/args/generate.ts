@@ -9,7 +9,7 @@ import {
   positional,
   string,
 } from "cmd-ts";
-import { debugArgs } from "./common.js";
+import { debugArgs, useHygen } from "./common.js";
 
 export const generateArgs = {
   documentModelFilePositional: positional({
@@ -125,13 +125,7 @@ export const generateArgs = {
     short: "sf",
     description: "Skip formatting the generated code.",
   }),
-  useHygen: flag({
-    type: boolean,
-    long: "use-hygen",
-    description: "Use legacy hygen codegen.",
-    defaultValue: () => false,
-    defaultValueIsSerializable: true,
-  }),
+  useHygen,
   useVersioning: flag({
     type: boolean,
     long: "use-versioning",

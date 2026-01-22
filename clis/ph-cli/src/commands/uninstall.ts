@@ -1,4 +1,4 @@
-import { uninstallArgs } from "@powerhousedao/common/cli-args";
+import { uninstallArgs } from "@powerhousedao/common/clis";
 import { execSync } from "child_process";
 import { command } from "cmd-ts";
 import { AGENTS } from "package-manager-detector";

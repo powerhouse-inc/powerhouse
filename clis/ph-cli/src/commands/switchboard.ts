@@ -1,4 +1,4 @@
-import { switchboardArgs } from "@powerhousedao/common/cli-args";
+import { switchboardArgs } from "@powerhousedao/common/clis";
 import { command } from "cmd-ts";
 import { runSwitchboardMigrations } from "../services/switchboard-migrate.js";
 import { startSwitchboard } from "../services/switchboard.js";

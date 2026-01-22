@@ -15,7 +15,7 @@ import {
   DEFAULT_TIMEOUT,
   DRIVES_PRESERVE_STRATEGIES,
   LOG_LEVELS,
-} from "./constants.js";
+} from "../constants.js";
 
 export const debugArgs = {
   debug: flag({
@@ -88,7 +88,6 @@ export const httpsKeyFile = option({
     if (typeof https === "boolean") return undefined;
     return https.keyPath;
   },
-  defaultValueIsSerializable: true,
 });
 
 export const httpsCertFile = option({
@@ -102,7 +101,6 @@ export const httpsCertFile = option({
     if (typeof https === "boolean") return undefined;
     return https.certPath;
   },
-  defaultValueIsSerializable: true,
 });
 
 export const https = flag({
@@ -115,7 +113,6 @@ export const https = flag({
     if (typeof https === "boolean") return https;
     return undefined;
   },
-  defaultValueIsSerializable: true,
 });
 
 export const vetraSwitchboardArgs = {
@@ -132,7 +129,6 @@ export const vetraSwitchboardArgs = {
     long: "remote-drives",
     description: "Specify remote drive URLs to use",
     defaultValue: () => [],
-    defaultValueIsSerializable: true,
   }),
   disableLocalPackages,
   ...debugArgs,
@@ -160,20 +156,22 @@ export const connectBasePath = option({
   description: "Base path for the app",
   env: "PH_CONNECT_BASE_PATH" as const,
   defaultValue: () => process.cwd(),
-  defaultValueIsSerializable: true,
 });
 
 export const drivesPreserveStrategy = option({
   type: oneOf(DRIVES_PRESERVE_STRATEGIES),
-  long: "The preservation strategy to use on default drives",
+  long: "drive-preserve-strategy",
+  description: "The preservation strategy to use on default drives",
   defaultValue: () => "preserve-by-url-and-detach" as const,
   defaultValueIsSerializable: true,
   env: "PH_CONNECT_DRIVES_PRESERVE_STRATEGY" as const,
 });
 
-export const forceOptimizeDeps = flag({
+export const force = flag({
   type: optional(boolean),
   long: "force",
+  description:
+    "Force dep pre-optimization regardless of whether deps have changed.",
 });
 
 export const commonArgs = {
@@ -184,7 +182,7 @@ export const commonArgs = {
   disableLocalPackages,
   defaultDrivesUrl,
   drivesPreserveStrategy,
-  forceOptimizeDeps,
+  force,
   ...debugArgs,
 };
 
@@ -232,3 +230,11 @@ export const commonServerArgs = {
     env: "PH_WATCH_TIMEOUT" as const,
   }),
 };
+
+export const useHygen = flag({
+  type: boolean,
+  long: "use-hygen",
+  description: "Use legacy hygen codegen",
+  defaultValue: () => false,
+  defaultValueIsSerializable: true,
+});

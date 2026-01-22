@@ -3,7 +3,7 @@ import { packages, vetraSwitchboardArgs } from "./common.js";
 import {
   DEFAULT_SWITCHBOARD_PORT,
   DEFAULT_VETRA_DRIVE_ID,
-} from "./constants.js";
+} from "../constants.js";
 
 export const switchboardArgs = {
   ...vetraSwitchboardArgs,
@@ -19,7 +19,7 @@ export const switchboardArgs = {
     type: optional(string),
     long: "base-path",
     description:
-      "base path for the API endpoints (sets the BASE_PATH environment variable",
+      "base path for the API endpoints (sets the BASE_PATH environment variable)",
   }),
   keypairPath: option({
     type: optional(string),

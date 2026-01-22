@@ -1,4 +1,4 @@
-import { vetraArgs } from "@powerhousedao/common/cli-args";
+import { vetraArgs } from "@powerhousedao/common/clis";
 import { command } from "cmd-ts";
 import { startVetra } from "../services/vetra.js";
 

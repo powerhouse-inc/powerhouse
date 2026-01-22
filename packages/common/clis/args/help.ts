@@ -1,5 +1,5 @@
 import { command } from "cmd-ts";
-import { accessTokenArgs } from "./access.token.js";
+import { accessTokenArgs } from "./access-token.js";
 import { connectArgs } from "./connect.js";
 import { generateArgs } from "./generate.js";
 import { inspectArgs } from "./inspect.js";

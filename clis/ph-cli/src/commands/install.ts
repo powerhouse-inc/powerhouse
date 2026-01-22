@@ -1,4 +1,4 @@
-import { installArgs } from "@powerhousedao/common/cli-args";
+import { installArgs } from "@powerhousedao/common/clis";
 import { execSync } from "child_process";
 import { command } from "cmd-ts";
 import { updateConfigFile, updateStylesFile } from "../utils.js";

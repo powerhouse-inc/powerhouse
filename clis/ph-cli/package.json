@@ -27,9 +27,10 @@
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "generate-commands-md": "tsx scripts/generate-commands-md.ts",
+    "generate-docs-legacy": "tsx scripts/generate-docs-legacy.ts",
+    "generate-docs": "bun run scripts/generate-commands-docs.ts",
     "generate-version": "tsx scripts/generate-version.ts",
-    "build": "npm run generate-commands-md && npm run generate-version && tsc && npm run copy-scripts",
+    "build": "npm run generate-docs-legacy && npm run generate-version && tsc && npm run generate-docs && npm run copy-scripts",
     "copy-scripts": "copyfiles scripts/* dist/",
     "dev": "concurrently -P 'pnpm -w run tsc --watch' 'nodemon --watch \"../..\" -e ts,tsx,js,json dist/src/cli.js -- {@}' --",
     "cli": "node ./dist/src/cli.js",

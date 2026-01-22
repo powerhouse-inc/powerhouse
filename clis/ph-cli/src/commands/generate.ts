@@ -1,4 +1,4 @@
-import { generateArgs } from "@powerhousedao/common/cli-args";
+import { generateArgs } from "@powerhousedao/common/clis";
 import { command } from "cmd-ts";
 import { startGenerate } from "../services/generate.js";
 

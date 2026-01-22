@@ -26,6 +26,7 @@ export * from "./boilerplate/subgraphs/index.js";
 export * from "./boilerplate/tsconfig.json.js";
 export * from "./boilerplate/vite.config.ts.js";
 export * from "./boilerplate/vitest.config.ts.js";
+export * from "./cli-docs/docs-from-cli-help.js";
 export * from "./document-editor/editor.js";
 export * from "./document-editor/module.js";
 export * from "./document-model/actions.js";

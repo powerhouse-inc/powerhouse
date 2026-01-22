@@ -2,7 +2,7 @@ import {
   accessTokenArgs,
   DEFAULT_EXPIRY_SECONDS,
   SECONDS_IN_DAY,
-} from "@powerhousedao/common/cli-args";
+} from "@powerhousedao/common/clis";
 import { command } from "cmd-ts";
 import {
   getConnectCrypto,
@@ -43,14 +43,14 @@ This allows you to use the command in scripts:
   curl -H "Authorization: Bearer $TOKEN" http://localhost:4001/graphql
 
 Usage with APIs:
-  # Generate token and use with curl
+  Generate token and use with curl
   TOKEN=$(ph access-token --expiry 1d)
   curl -X POST http://localhost:4001/graphql \\
     -H "Content-Type: application/json" \\
     -H "Authorization: Bearer $TOKEN" \\
     -d '{"query": "{ drives { id name } }"}'
 
-  # Export as environment variable
+  Export as environment variable
   export PH_ACCESS_TOKEN=$(ph access-token)
 
 Notes:

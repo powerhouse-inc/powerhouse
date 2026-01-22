@@ -4,7 +4,7 @@ import {
   DEFAULT_CONNECT_OUTDIR,
   DEFAULT_CONNECT_PREVIEW_PORT,
   DEFAULT_CONNECT_STUDIO_PORT,
-} from "./constants.js";
+} from "../constants.js";
 
 export const studioArgs = {
   port: option({

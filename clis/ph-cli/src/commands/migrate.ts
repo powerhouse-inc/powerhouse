@@ -1,4 +1,4 @@
-import { migrateArgs } from "@powerhousedao/common/cli-args";
+import { migrateArgs } from "@powerhousedao/common/clis";
 import { command } from "cmd-ts";
 import { startMigrate } from "../services/migrate.js";
 

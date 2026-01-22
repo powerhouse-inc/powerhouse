@@ -1,4 +1,4 @@
-import { listArgs } from "@powerhousedao/common/cli-args";
+import { listArgs } from "@powerhousedao/common/clis";
 import { getConfig } from "@powerhousedao/config/node";
 import { command } from "cmd-ts";
 import { getPowerhouseProjectInfo } from "../utils/projects.js";

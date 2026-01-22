@@ -1,6 +1,6 @@
 import { option, optional, string } from "cmd-ts";
 import { debugArgs } from "./common.js";
-import { DEFAULT_EXPIRY_DAYS } from "./constants.js";
+import { DEFAULT_EXPIRY_DAYS } from "../constants.js";
 
 export const accessTokenArgs = {
   expiry: option({

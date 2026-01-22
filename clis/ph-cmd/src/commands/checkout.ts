@@ -3,7 +3,7 @@ import {
   handleMutuallyExclusiveOptions,
   parsePackageManager,
 } from "@powerhousedao/codegen/utils";
-import { packageManagerArgs } from "@powerhousedao/common/cli-args";
+import { packageManagerArgs } from "@powerhousedao/common/clis";
 import { command, option, optional, positional, string } from "cmd-ts";
 import { getPackageManagerFromLockfile } from "../utils/package-manager.js";
 import { runCmd } from "../utils/run-cmd.js";
