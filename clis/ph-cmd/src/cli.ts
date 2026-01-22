@@ -1,8 +1,11 @@
 #!/usr/bin/env node
+import {
+  assertNodeVersion,
+  phCliCommandNames,
+} from "@powerhousedao/common/clis";
 import { run } from "cmd-ts";
 import { execSync } from "node:child_process";
 import { detect, resolveCommand } from "package-manager-detector";
-import { phCliCommandNames } from "@powerhousedao/common/clis";
 import { ph } from "./commands/ph.js";
 
 async function executePhCliCommand(command: string) {
@@ -26,6 +29,7 @@ async function executePhCliCommand(command: string) {
 }
 
 async function main() {
+  assertNodeVersion();
   const args = process.argv.slice(2);
   const command = args[0];
 

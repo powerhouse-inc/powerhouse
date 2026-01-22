@@ -1,9 +1,11 @@
 #!/usr/bin/env node
+import { assertNodeVersion } from "@powerhousedao/common/clis";
 import { run } from "cmd-ts";
 import { phCliHelp } from "./commands/ph-cli-help.js";
 import { phCli } from "./commands/ph-cli.js";
 
 async function main() {
+  assertNodeVersion();
   const args = process.argv.slice(2);
   const hasNoArgs = args.length === 0;
   const isTopLevelHelp =

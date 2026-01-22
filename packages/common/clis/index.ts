@@ -14,3 +14,4 @@ export * from "./args/uninstall.js";
 export * from "./args/vetra.js";
 export * from "./constants.js";
 export type * from "./types.js";
+export * from "./utils.js";
