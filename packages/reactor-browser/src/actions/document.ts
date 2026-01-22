@@ -23,7 +23,7 @@ import {
   updateNode,
 } from "document-drive";
 import type {
-  DocumentModelDocument,
+  DocumentModelModule,
   DocumentOperations,
   PHDocument,
 } from "document-model";
@@ -195,6 +195,45 @@ export function downloadFile(document: PHDocument, fileName: string) {
     .catch(logger.error);
 }
 
+async function getDocumentExtension(document: PHDocument): Promise<string> {
+  const documentType = document.header.documentType;
+
+  // DocumentModel definitions always use "phdm"
+  if (documentType === documentModelDocumentType) {
+    return "phdm";
+  }
+
+  // For document instances, look up the module's extension
+  const useLegacy = isLegacyReadEnabledSync();
+
+  let rawExtension: string | undefined;
+
+  if (useLegacy) {
+    const reactor = window.ph?.legacyReactor;
+    if (reactor) {
+      const documentModelModules = reactor.getDocumentModelModules();
+      const module = documentModelModules.find(
+        (m: DocumentModelModule) => m.documentModel.global.id === documentType,
+      );
+      rawExtension = module?.utils.fileExtension;
+    }
+  } else {
+    const reactorClient = window.ph?.reactorClient;
+    if (reactorClient) {
+      const { results: documentModelModules } =
+        await reactorClient.getDocumentModelModules();
+      const module = documentModelModules.find(
+        (m: DocumentModelModule) => m.documentModel.global.id === documentType,
+      );
+      rawExtension = module?.utils.fileExtension;
+    }
+  }
+
+  // Clean the extension (remove leading/trailing dots) and fallback to "phdm"
+  const cleanExtension = (rawExtension ?? "phdm").replace(/^\.+|\.+$/g, "");
+  return cleanExtension || "phdm";
+}
+
 export async function exportFile(document: PHDocument, suggestedName?: string) {
   // Ensure we have either reactor available for consistency
   const useLegacy = isLegacyReadEnabledSync();
@@ -208,16 +247,10 @@ export async function exportFile(document: PHDocument, suggestedName?: string) {
     }
   }
 
-  let extension = "";
+  // Get the extension from the document model module
+  const extension = await getDocumentExtension(document);
 
-  if (document.header.documentType === documentModelDocumentType) {
-    const documentExtension = (document as DocumentModelDocument).state.global
-      .extension;
-    const cleanExtension = documentExtension.replace(/^\.+|\.+$/g, "");
-    extension = cleanExtension !== "" ? `.${cleanExtension}` : "";
-  }
-
-  const name = `${suggestedName || document.header.name || "Untitled"}${extension}.phd`;
+  const name = `${suggestedName || document.header.name || "Untitled"}.${extension}.phd`;
 
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (!window.showSaveFilePicker) {
