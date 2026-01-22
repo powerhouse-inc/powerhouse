@@ -1,0 +1,19 @@
+{
+  "name": "Switchboard-E2E-Package",
+  "description": "E2E test package for Switchboard with TodoList document model, processors, and subgraphs",
+  "category": "Testing",
+  "publisher": {
+    "name": "Powerhouse",
+    "url": "https://www.powerhouse.inc/"
+  },
+  "documentModels": [
+    {
+      "id": "powerhouse/todo-list",
+      "name": "Todo List"
+    }
+  ],
+  "editors": [],
+  "apps": [],
+  "subgraphs": [],
+  "importScripts": []
+}

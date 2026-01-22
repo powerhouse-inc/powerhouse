@@ -1,4 +1,4 @@
-import type { BaseSubgraph } from "@powerhousedao/reactor-api";
+import type { ISubgraph } from "@powerhousedao/reactor-api";
 import { addFile } from "document-drive";
 import { setName } from "document-model";
 import {
@@ -9,14 +9,81 @@ import {
   type UpdateTodoItemInput,
   type DeleteTodoItemInput,
 } from "../../document-models/todo-list/index.js";
+import { TodoListProcessor } from "../../processors/todo-list/index.js";
 
-export const getResolvers = (
-  subgraph: BaseSubgraph,
-): Record<string, unknown> => {
+/**
+ * TodoList Subgraph Resolvers
+ * Following documentation pattern - connecting to processor's relational database
+ */
+export const getResolvers = (subgraph: ISubgraph) => {
   const reactor = subgraph.reactor;
+  const relationalDb = subgraph.relationalDb;
 
   return {
     Query: {
+      // Processor database query (following documentation)
+      todos: {
+        resolve: async (_: any, args: { driveId: string }) => {
+          // Query the database using the processor's static query method
+          const todos = await TodoListProcessor.query(
+            args.driveId,
+            relationalDb,
+          )
+            .selectFrom("todo") // Select from the "todo" table
+            .selectAll() // Get all columns
+            .execute(); // Execute the query
+
+          // Transform database results to match GraphQL schema
+          return todos.map((todo) => ({
+            task: todo.task, // Map database "task" column
+            status: todo.status, // Map database "status" column
+            documentId: todo.task.split('-')[0], // Extract document ID from task
+            driveId: args.driveId, // Pass through drive ID
+          }));
+        },
+      },
+      // Search functionality (following documentation pattern)
+      searchTodos: {
+        resolve: async (_: any, args: { driveId: string; searchTerm: string }) => {
+          const { driveId, searchTerm } = args;
+          const foundDocumentIds: string[] = [];
+
+          try {
+            // Get all documents in the drive
+            const documentIds = await reactor.getDocuments(driveId);
+            
+            // Search through each TodoList document
+            for (const docId of documentIds) {
+              try {
+                const doc = await reactor.getDocument<TodoListDocument>(docId);
+                
+                // Only search TodoList documents
+                if (doc.header.documentType !== todoListDocumentType) {
+                  continue;
+                }
+
+                // Search through todo items in the document state
+                const items = doc.state.global?.items || [];
+                const hasMatch = items.some((item: any) => 
+                  item.text && item.text.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+
+                if (hasMatch) {
+                  foundDocumentIds.push(docId);
+                }
+              } catch (error) {
+                // Skip documents that can't be loaded
+                console.warn(`[searchTodos] Failed to load document ${docId}:`, error);
+              }
+            }
+          } catch (error) {
+            console.error(`[searchTodos] Error searching drive ${driveId}:`, error);
+            throw new Error(`Failed to search todos: ${error}`);
+          }
+
+          return foundDocumentIds;
+        },
+      },
       TodoList: async () => {
         return {
           getDocument: async (args: { docId: string; driveId: string }) => {

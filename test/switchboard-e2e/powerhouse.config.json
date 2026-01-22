@@ -1,4 +1,5 @@
 {
+  "logLevel": "debug",
   "documentModelsDir": "./document-models",
   "editorsDir": "./editors",
   "processorsDir": "./processors",
@@ -9,5 +10,17 @@
   "reactor": {
     "port": 4001,
     "storage": "memory"
-  }
+  },
+  "packages": [
+    {
+      "packageName": "@powerhousedao/vetra",
+      "version": "latest",
+      "provider": "npm"
+    }, 
+    {
+      "packageName": "@powerhousedao/todo-demo",
+      "version": "latest",
+      "provider": "npm"
+    }
+  ]
 }

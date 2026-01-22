@@ -3,31 +3,47 @@
   "version": "1.0.0",
   "type": "module",
   "private": true,
+  "main": "./dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./manifest": "./dist/powerhouse.manifest.json"
+  },
   "scripts": {
-    "test": "pnpm test:unit && pnpm test:e2e",
-    "test:unit": "vitest run",
-    "test:unit:watch": "vitest",
-    "test:e2e": "playwright test tests/reactor-core.spec.ts",
-    "test:e2e:all": "playwright test",
-    "test:e2e:processor": "playwright test tests/relational-db-processor.spec.ts",
-    "test:e2e:processor:headed": "playwright test tests/relational-db-processor.spec.ts --headed",
-    "test:e2e:headed": "playwright test tests/reactor-core.spec.ts --headed",
-    "test:e2e:ui": "playwright test --ui",
-    "test:e2e:report": "playwright show-report",
+    "build": "tsc && cp powerhouse.manifest.json dist/powerhouse.manifest.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui", 
     "generate": "ph-cli generate",
-    "reactor": "node ../../packages/reactor-local/dist/src/cli.js"
+    "vetra:switchboard": "ph-cli vetra --disable-connect",
+    "start:switchboard": "ph-cli vetra --disable-connect",
+    "test:full": "echo '📋 Workflow: 1) Terminal 1: pnpm start:switchboard  2) Terminal 2: pnpm test' && echo '' && pnpm test"
   },
   "devDependencies": {
-    "@playwright/test": "^1.49.1",
     "@powerhousedao/codegen": "workspace:*",
+    "@powerhousedao/config": "workspace:*",
+    "@powerhousedao/vetra": "workspace:*",
     "@powerhousedao/ph-cli": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/todo-demo": "2.0.3",
+    "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
+    "@powerhousedao/reactor-local": "workspace:*",
+    "@powerhousedao/switchboard": "workspace:*",
+    "@types/node": "^20.11.0",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "graphql": "^16.11.0",
+    "graphql-request": "^7.1.2",
     "graphql-tag": "^2.12.6",
     "vitest": "^3.2.4",
     "zod": "^4.1.13"
+  },
+  "dependencies": {
+    "@opentelemetry/auto-instrumentations-node": "^0.68.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.210.0",
+    "@opentelemetry/resources": "^2.4.0",
+    "@opentelemetry/sdk-node": "^0.210.0",
+    "@opentelemetry/sdk-trace-base": "^2.4.0",
+    "@opentelemetry/semantic-conventions": "^1.39.0"
   }
 }

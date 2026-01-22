@@ -3,6 +3,17 @@ import type { DocumentNode } from "graphql";
 
 export const schema: DocumentNode = gql`
   """
+  Indexed Todo Entry from Processor Database
+  Following the RelationalDbProcessor documentation pattern
+  """
+  type TodoListEntry {
+    task: String!     # Task description from processor indexing
+    status: Boolean!  # Completion status
+    documentId: String # Source document ID
+    driveId: String   # Source drive ID
+  }
+
+  """
   Queries: TodoList Document
   """
   type TodoListQueries {
@@ -12,6 +23,10 @@ export const schema: DocumentNode = gql`
 
   type Query {
     TodoList: TodoListQueries
+    # Processor database queries (following documentation)
+    todos(driveId: ID!): [TodoListEntry]
+    # Search functionality (following documentation pattern)
+    searchTodos(driveId: String!, searchTerm: String!): [String!]!
   }
 
   """
