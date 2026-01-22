@@ -77,7 +77,7 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
   }, [driveUrl]);
 
   return (
-    <div className="bg-white px-6 py-4">
+    <div className="bg-gray-50 px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <VetraIcon width={20} height={20} />
