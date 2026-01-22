@@ -3,23 +3,23 @@ import type { Command } from "commander";
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { updateHelp } from "../help.js";
-import type { CommandActionType } from "../types.js";
-import type { PackageManager } from "../utils/index.js";
+import type { Agent } from "package-manager-detector";
+import { updateHelp } from "../../help.js";
+import type { CommandActionType } from "../../types.js";
+import { packageManagers } from "../../utils/constants.js";
+import { withCustomHelp } from "../../utils/help.js";
 import {
   findContainerDirectory,
   getPackageManagerFromLockfile,
   getProjectInfo,
-  packageManagers,
-  withCustomHelp,
-} from "../utils/index.js";
-import type { Environment } from "./use.old.js";
+} from "../../utils/package-manager.js";
+import type { PackageManager } from "../../utils/types.js";
 import {
   detectPowerhousePackages,
   ENV_MAP,
   updatePackageJson,
-} from "./use.old.js";
-import type { Agent } from "package-manager-detector";
+  type Environment,
+} from "./use.js";
 
 type PackageJson = {
   dependencies?: Record<string, string>;

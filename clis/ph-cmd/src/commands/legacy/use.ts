@@ -2,18 +2,19 @@ import { parsePackageManager } from "@powerhousedao/codegen/utils";
 import type { Command } from "commander";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { useHelp } from "../help.js";
-import type { CommandActionType } from "../types.js";
-import type { PackageManager } from "../utils/index.js";
+import type { Agent } from "package-manager-detector";
+import { useHelp } from "../../help.js";
+import type { CommandActionType } from "../../types.js";
+import {
+  installDependency,
+  updateDependencyVersionString,
+} from "../../utils/dependencies.js";
+import { withCustomHelp } from "../../utils/help.js";
 import {
   getPackageManagerFromLockfile,
   getProjectInfo,
-  installDependency,
-  updateDependencyVersionString,
-  withCustomHelp,
-} from "../utils/index.js";
-import type { Agent } from "package-manager-detector";
-
+} from "../../utils/package-manager.js";
+import type { PackageManager } from "../../utils/types.js";
 export const ORG = "@powerhousedao";
 
 // Special packages that don't use the @powerhousedao organization

@@ -9,7 +9,7 @@ import {
   getPackageManagerFromLockfile,
   getProjectInfo,
 } from "../../utils/index.js";
-import { updateCommand } from "../update.old.js";
+import { updateCommand } from "../legacy/update.js";
 
 // Mock dependencies
 vi.mock("node:fs");

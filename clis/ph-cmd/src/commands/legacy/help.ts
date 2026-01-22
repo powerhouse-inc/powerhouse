@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { generateMergedHelp } from "../utils/index.js";
+import { generateMergedHelp } from "../../utils/help-formatting.js";
 
 /**
  * Registers the help command with Commander

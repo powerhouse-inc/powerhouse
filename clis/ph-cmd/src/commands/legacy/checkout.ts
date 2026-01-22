@@ -1,10 +1,10 @@
 import { cloneRepository, installDependencies } from "@powerhousedao/codegen";
 import type { Command } from "commander";
-import { checkoutHelp } from "../help.js";
-import type { CommandActionType } from "../types.js";
-import { withCustomHelp } from "../utils/index.js";
-import { getPackageManagerFromLockfile } from "../utils/package-manager.js";
-import { getPackageDocument } from "../utils/validate-remote-drive-checkout.js";
+import { checkoutHelp } from "../../help.js";
+import type { CommandActionType } from "../../types.js";
+import { withCustomHelp } from "../../utils/help.js";
+import { getPackageManagerFromLockfile } from "../../utils/package-manager.js";
+import { getPackageDocument } from "../../utils/validate-remote-drive-checkout.js";
 
 export type CheckoutOptions = {
   remoteDrive: string;
