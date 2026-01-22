@@ -502,12 +502,12 @@ The document permission system integrates with the **Renown authentication flow*
 
 ```bash
 # Generate access token (valid for 7 days)
-TOKEN=$(ph access-token --expiry 7d)
+TOKEN="$(ph access-token --expiry 7d)"
 
 # Make authenticated request to query your permissions
 curl -X POST http://localhost:4001/graphql \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
+  -H "Authorization: Bearer ${TOKEN}" \
   -d '{"query": "{ userDocumentPermissions { documentId permission } }"}'
 ```
 
