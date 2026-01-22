@@ -8,12 +8,21 @@ async function main() {
   assertNodeVersion();
   const args = process.argv.slice(2);
   const hasNoArgs = args.length === 0;
-  const isTopLevelHelp =
-    args.length === 1 && args.some((arg) => arg === "--help" || arg === "-h");
+  const isHelp = args.some((arg) => arg === "--help" || arg === "-h");
+  const isTopLevelHelp = isHelp && args.length === 1;
   const showTopLevelHelp = hasNoArgs || isTopLevelHelp;
   const cli = showTopLevelHelp ? phCliHelp : phCli;
-
-  await run(cli, args);
+  const [command, ...restArgs] = args;
+  if (
+    command === "connect" &&
+    !["studio", "build", "preview"].includes(args[1]) &&
+    !isHelp
+  ) {
+    const argsWithDefaultConnectSubCommand = ["connect", "studio", ...restArgs];
+    await run(cli, argsWithDefaultConnectSubCommand);
+  } else {
+    await run(cli, args);
+  }
 }
 
 main()
