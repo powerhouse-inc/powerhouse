@@ -157,7 +157,7 @@ port to use for the Vetra Connect<br><br>
 #### Remote Drive <br>
 URL of remote drive to connect to (skips switchboard initialization)<br><br>
 **usage:** `--remote-drive <str>`<br>
-**default**: `undefined`
+
 #### Base <br>
 Base path for the app<br><br>
 **usage:** `--base <str>`<br>

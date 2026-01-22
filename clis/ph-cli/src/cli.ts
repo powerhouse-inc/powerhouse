@@ -16,7 +16,9 @@ async function main() {
   await run(cli, args);
 }
 
-await main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+main()
+  .then(() => process.exit(0))
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });

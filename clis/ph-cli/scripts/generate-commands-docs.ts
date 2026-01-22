@@ -1,4 +1,5 @@
 import { writeCliDocsMarkdownFile } from "@powerhousedao/codegen/file-builders";
+import process from "process";
 import { accessToken } from "../src/commands/access-token.js";
 import { build, connect, preview, studio } from "../src/commands/connect.js";
 import { generate } from "../src/commands/generate.js";
@@ -40,7 +41,11 @@ async function main() {
     cliDescription,
     entries: commands,
   });
-  return;
 }
 
-await main();
+main()
+  .then(() => process.exit(0))
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
