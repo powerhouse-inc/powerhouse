@@ -106,7 +106,8 @@ export function FileContentView() {
                   left: 0,
                   marginTop: virtualRow.index === 0 ? 0 : GAP,
                   width: `${virtualColumn.size}px`,
-                  height: `${virtualRow.size}px`,
+                  height: `${ITEM_HEIGHT}px`,
+                  overflow: "hidden",
                   transform: `translateX(${virtualColumn.start}px) translateY(${virtualRow.start}px)`,
                 }}
               >

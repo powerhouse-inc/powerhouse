@@ -50,10 +50,14 @@ export const DriveExplorer: React.FC<DriveExplorerProps> = ({
   onDelete,
 }) => {
   return (
-    <div className="min-h-screen bg-white">
-      <DriveHeader driveId={driveId} driveName={driveName} driveUrl={driveUrl} />
+    <div className="min-h-screen">
+      <DriveHeader
+        driveId={driveId}
+        driveName={driveName}
+        driveUrl={driveUrl}
+      />
 
-      <div className="mx-6 mt-6 bg-white">
+      <div className="mx-6 mt-6">
         <PackageInformationSection
           className="mb-6"
           packageDocumentId={packageDocumentId}

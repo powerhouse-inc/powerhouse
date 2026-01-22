@@ -19,7 +19,7 @@ export default function Editor() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl p-6">
+    <div className="mx-auto max-w-4xl bg-gray-50 p-6">
       <DocumentToolbar />
 
       {/* "ph-default-styles" sets default styles for basic UI elements */}

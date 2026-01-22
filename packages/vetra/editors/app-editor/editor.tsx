@@ -7,7 +7,7 @@ export default function Editor() {
   useSetPHDocumentEditorConfig(editorConfig);
 
   return (
-    <div>
+    <div className="bg-gray-50 p-6">
       <DocumentToolbar />
       <AppEditorForm />
     </div>

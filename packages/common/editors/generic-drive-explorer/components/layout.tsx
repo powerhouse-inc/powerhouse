@@ -17,10 +17,7 @@ DriveLayout.Container = function DriveLayoutContainer({
 }: BaseProps) {
   return (
     <div
-      className={cn(
-        "flex grow flex-col overflow-auto rounded-2xl bg-gray-50 p-2",
-        className,
-      )}
+      className={cn("flex grow flex-col overflow-auto", className)}
       {...containerProps}
       {...props}
     >
