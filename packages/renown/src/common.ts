@@ -1,5 +1,7 @@
 import type { Issuer } from "did-jwt-vc";
+import type { AppActionSigner, ISigner } from "document-model";
 import { DEFAULT_RENOWN_URL } from "./constants.js";
+import { RenownCryptoSigner, type IRenownCrypto } from "./crypto/index.js";
 import { MemoryStorage } from "./storage/common.js";
 import type {
   IRenown,
@@ -22,19 +24,29 @@ export class RenownMemoryStorage extends MemoryStorage<RenownStorageMap> {}
 export class Renown implements IRenown {
   #baseUrl: string;
   #store: RenownStorage;
-  #connectId: string;
   #eventEmitter: RenownEventEmitter;
+  #app: AppActionSigner;
+  #crypto: IRenownCrypto;
+  #signer: ISigner;
 
   constructor(
     store: RenownStorage,
     eventEmitter: RenownEventEmitter,
-    connectId: string,
+    app: AppActionSigner,
+    crypto: IRenownCrypto,
+    appName?: string,
     baseUrl = DEFAULT_RENOWN_URL,
   ) {
     this.#store = store;
     this.#eventEmitter = eventEmitter;
-    this.#connectId = connectId;
+    this.#app = app;
     this.#baseUrl = baseUrl;
+    this.#crypto = crypto;
+    this.#signer = new RenownCryptoSigner(crypto, app, this.user);
+
+    this.on("user", (user) => {
+      this.#signer.user = user;
+    });
 
     if (this.user) {
       this.login(this.user.did).catch(() => void 0);
@@ -43,6 +55,10 @@ export class Renown implements IRenown {
 
   get user() {
     return this.#store.get("user");
+  }
+
+  get signer() {
+    return this.#signer;
   }
 
   #updateUser(user: User | undefined) {
@@ -54,8 +70,8 @@ export class Renown implements IRenown {
     this.#eventEmitter.emit("user", user);
   }
 
-  set connectId(connectId: string) {
-    this.#connectId = connectId;
+  set app(app: AppActionSigner) {
+    this.#app = app;
     const user = this.user;
 
     this.#updateUser(undefined);
@@ -75,7 +91,7 @@ export class Renown implements IRenown {
       const credential = await this.#getCredential(
         result.address,
         result.chainId,
-        this.#connectId,
+        this.#app.key,
       );
       if (!credential) {
         this.#updateUser(undefined);
@@ -83,6 +99,7 @@ export class Renown implements IRenown {
       }
       const user: User = {
         ...result,
+        address: credential.issuer.ethereumAddress,
         did,
         credential,
       };
@@ -159,7 +176,7 @@ export class Renown implements IRenown {
     }
     return createAuthBearerToken(
       chainId,
-      this.#connectId,
+      this.#app.key,
       address,
       issuer,
       options,

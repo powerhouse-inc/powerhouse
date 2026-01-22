@@ -4,6 +4,17 @@ import type { Issuer, JwtCredentialPayload } from "did-jwt-vc";
 import { createVerifiableCredentialJwt, verifyCredential } from "did-jwt-vc";
 import { Resolver } from "did-resolver";
 import { getResolver as keyDidResolver } from "key-did-resolver";
+
+export type ILogger = {
+  level: "verbose" | "debug" | "info" | "warn" | "error";
+
+  verbose: (message: string, ...replacements: any[]) => void;
+  debug: (message: string, ...replacements: any[]) => void;
+  info: (message: string, ...replacements: any[]) => void;
+  warn: (message: string, ...replacements: any[]) => void;
+  error: (message: string, ...replacements: any[]) => void;
+};
+
 export type PKHDid = {
   networkId: string;
   chainId: number;

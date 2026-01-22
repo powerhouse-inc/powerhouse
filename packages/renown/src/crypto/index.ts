@@ -37,7 +37,7 @@ function ab2hex(ab: ArrayBuffer) {
     .join("");
 }
 
-export interface IConnectCrypto {
+export interface IRenownCrypto {
   did: () => Promise<DID>;
   regenerateDid(): Promise<void>;
   sign: (data: Uint8Array) => Promise<Uint8Array>;
@@ -50,9 +50,14 @@ export interface IConnectCrypto {
   ) => Promise<string>;
 }
 
+/**
+ * @deprecated Use IRenownCrypto instead
+ */
+export interface IConnectCrypto extends IRenownCrypto {}
+
 export type DID = `did:${string}`;
 
-export class ConnectCrypto implements IConnectCrypto {
+export class RenownCrypto implements IRenownCrypto {
   #subtleCrypto: SubtleCrypto;
   #keyPair: CryptoKeyPair | undefined;
   #keyPairStorage: JsonWebKeyPairStorage;
@@ -241,4 +246,9 @@ export class ConnectCrypto implements IConnectCrypto {
   }
 }
 
-export { ConnectCryptoSigner, createSignatureVerifier } from "./signer.js";
+/**
+ * @deprecated Use RenownCrypto instead
+ */
+export class ConnectCrypto extends RenownCrypto {}
+
+export { createSignatureVerifier, RenownCryptoSigner } from "./signer.js";
