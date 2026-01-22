@@ -55,4 +55,7 @@ async function main() {
   await run(ph, process.argv.slice(2));
 }
 
-await main();
+await main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
