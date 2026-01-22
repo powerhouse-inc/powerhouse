@@ -1,3 +1,7 @@
+## 5.3.0-staging.10 (2026-01-22)
+
+This was a version bump only for ph-cmd to align it with other projects, there were no code changes.
+
 ## 5.3.0-staging.9 (2026-01-20)
 
 ### 🩹 Fixes

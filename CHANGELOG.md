@@ -1,3 +1,24 @@
+## 5.3.0-staging.10 (2026-01-22)
+
+### 🚀 Features
+
+- add document renaming functionality ([#2238](https://github.com/powerhouse-inc/powerhouse/pull/2238))
+- fix drive explorer scroll overflow and move default styling to editors and codegen templates ([#2243](https://github.com/powerhouse-inc/powerhouse/pull/2243))
+- **design-system:** improve sidebar UX and add document toolbar story ([#2217](https://github.com/powerhouse-inc/powerhouse/pull/2217))
+
+### 🩹 Fixes
+
+- wrap ConnectSidebar in ConnectTooltipProvider and fix vetra drive app bg ([1fc6db873](https://github.com/powerhouse-inc/powerhouse/commit/1fc6db873))
+- **design-system:** remove circular import ([dc6752116](https://github.com/powerhouse-inc/powerhouse/commit/dc6752116))
+- **design-system:** add truncation for long drive names in home screen ([cb28e5491](https://github.com/powerhouse-inc/powerhouse/commit/cb28e5491))
+- **reactor-browser:** use document extension when exporting document ([#2244](https://github.com/powerhouse-inc/powerhouse/pull/2244))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 5.3.0-staging.9 (2026-01-20)
 
 ### 🩹 Fixes

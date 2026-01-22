@@ -1,3 +1,13 @@
+## 5.3.0-staging.10 (2026-01-22)
+
+### 🚀 Features
+
+- fix drive explorer scroll overflow and move default styling to editors and codegen templates ([#2243](https://github.com/powerhouse-inc/powerhouse/pull/2243))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 5.3.0-staging.9 (2026-01-20)
 
 ### 🩹 Fixes

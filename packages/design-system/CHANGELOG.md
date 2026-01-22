@@ -1,3 +1,21 @@
+## 5.3.0-staging.10 (2026-01-22)
+
+### 🚀 Features
+
+- add document renaming functionality ([#2238](https://github.com/powerhouse-inc/powerhouse/pull/2238))
+- **design-system:** improve sidebar UX and add document toolbar story ([#2217](https://github.com/powerhouse-inc/powerhouse/pull/2217))
+
+### 🩹 Fixes
+
+- **design-system:** add truncation for long drive names in home screen ([cb28e5491](https://github.com/powerhouse-inc/powerhouse/commit/cb28e5491))
+- **design-system:** remove circular import ([dc6752116](https://github.com/powerhouse-inc/powerhouse/commit/dc6752116))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 5.3.0-staging.9 (2026-01-20)
 
 ### 🩹 Fixes

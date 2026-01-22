@@ -1,3 +1,17 @@
+## 5.3.0-staging.10 (2026-01-22)
+
+### 🚀 Features
+
+- add document renaming functionality ([#2238](https://github.com/powerhouse-inc/powerhouse/pull/2238))
+
+### 🩹 Fixes
+
+- **reactor-browser:** use document extension when exporting document ([#2244](https://github.com/powerhouse-inc/powerhouse/pull/2244))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 5.3.0-staging.9 (2026-01-20)
 
 ### 🩹 Fixes

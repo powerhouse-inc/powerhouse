@@ -1,3 +1,18 @@
+## 5.3.0-staging.10 (2026-01-22)
+
+### 🚀 Features
+
+- fix drive explorer scroll overflow and move default styling to editors and codegen templates ([#2243](https://github.com/powerhouse-inc/powerhouse/pull/2243))
+
+### 🩹 Fixes
+
+- wrap ConnectSidebar in ConnectTooltipProvider and fix vetra drive app bg ([1fc6db873](https://github.com/powerhouse-inc/powerhouse/commit/1fc6db873))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 5.3.0-staging.9 (2026-01-20)
 
 ### 🩹 Fixes
