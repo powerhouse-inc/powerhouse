@@ -1,8 +1,8 @@
 import { getConfig } from "@powerhousedao/config/node";
 import { boolean, flag, number, option, optional, string } from "cmd-ts";
 import {
-  DEFAULT_CONNECT_STUDIO_PORT,
   DEFAULT_SWITCHBOARD_PORT,
+  DEFAULT_VETRA_CONNECT_PORT,
 } from "../constants.js";
 import {
   commonArgs,
@@ -24,7 +24,7 @@ export const vetraArgs = {
     type: number,
     long: "connect-port",
     description: "port to use for the Vetra Connect",
-    defaultValue: () => DEFAULT_CONNECT_STUDIO_PORT,
+    defaultValue: () => DEFAULT_VETRA_CONNECT_PORT,
     defaultValueIsSerializable: true,
   }),
   remoteDrive: option({

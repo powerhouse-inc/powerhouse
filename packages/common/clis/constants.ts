@@ -21,6 +21,8 @@ export const DEFAULT_TIMEOUT = 300 as const;
 
 export const DEFAULT_CONNECT_STUDIO_PORT = 3000 as const;
 
+export const DEFAULT_VETRA_CONNECT_PORT = 3001 as const;
+
 export const DEFAULT_CONNECT_PREVIEW_PORT = 4173 as const;
 
 export const DEFAULT_CONNECT_OUTDIR = ".ph/connect-build/dist/" as const;
