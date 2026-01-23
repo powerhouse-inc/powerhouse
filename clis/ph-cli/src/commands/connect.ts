@@ -20,7 +20,6 @@ This command:
 `,
   args: studioArgs,
   handler: async (args) => {
-    console.log("Running connect studio...");
     if (args.debug) {
       console.log(args);
     }

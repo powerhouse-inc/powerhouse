@@ -21,6 +21,8 @@ export async function startGenerate(options: GenerateArgs) {
     editorName,
     editorId,
     documentType,
+    // [DEPRECATED] - should be removed asap
+    documentTypes,
     editorDirName,
     driveEditorName,
     driveEditorId,
@@ -50,7 +52,14 @@ export async function startGenerate(options: GenerateArgs) {
     : documentModelFile;
 
   if (editorName !== undefined) {
-    if (!documentType) {
+    const documentTypeFromDocumentTypes = documentTypes?.split(",")[0];
+    if (documentTypes) {
+      console.warn(
+        `[WARNING] --document-types is deprecated. Generated editor code is not set up to use multiple document types. Using the first document type in the list you specified (${documentTypeFromDocumentTypes})`,
+      );
+    }
+    const documentTypeToUse = documentType ?? documentTypeFromDocumentTypes;
+    if (!documentTypeToUse) {
       throw new Error(
         "Please specify a document type for the generated editor.",
       );
@@ -59,7 +68,7 @@ export async function startGenerate(options: GenerateArgs) {
       editorName,
       editorId,
       editorDirName,
-      documentTypes: [documentType],
+      documentTypes: [documentTypeToUse],
       useTsMorph,
       skipFormat,
       specifiedPackageName,

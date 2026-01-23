@@ -139,6 +139,7 @@ export const defaultDrivesUrl = option({
   long: "default-drives-url",
   description: "The default drives url to use in connect",
   env: "PH_CONNECT_DEFAULT_DRIVES_URL" as const,
+  defaultValue: () => "",
 });
 
 export const logLevel = option({
@@ -155,7 +156,7 @@ export const connectBasePath = option({
   type: string,
   description: "Base path for the app",
   env: "PH_CONNECT_BASE_PATH" as const,
-  defaultValue: () => process.cwd(),
+  defaultValue: () => "",
 });
 
 export const drivesPreserveStrategy = option({
