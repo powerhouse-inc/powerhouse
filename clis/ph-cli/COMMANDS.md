@@ -157,7 +157,7 @@ port to use for the Vetra Switchboard<br><br>
 #### Connect Port <br>
 port to use for the Vetra Connect<br><br>
 **usage:** `--connect-port <number>`<br>
-**default**: `3000`
+**default**: `3001`
 #### Remote Drive <br>
 URL of remote drive to connect to (skips switchboard initialization)<br><br>
 **usage:** `--remote-drive <str>`<br>
