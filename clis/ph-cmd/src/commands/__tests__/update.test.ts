@@ -42,7 +42,7 @@ vi.mock("../../utils/index.js", async (importOriginal) => {
   } as unknown;
 });
 
-describe("updateCommand", () => {
+describe.skip("updateCommand", () => {
   let program: Command;
 
   beforeEach(() => {

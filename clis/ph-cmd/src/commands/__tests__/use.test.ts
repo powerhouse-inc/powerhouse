@@ -46,7 +46,7 @@ vi.mock("../../utils/dependencies.js", async () => {
 vi.mock("../use.js", async () => {
   // eslint-disable-next-line @typescript-eslint/consistent-type-imports
   const actual: typeof import("../legacy/use.js") =
-    await vi.importActual("../use.js");
+    await vi.importActual("../legacy/use.js");
   return {
     ...actual,
     useCommand: vi.fn(actual.useCommand),

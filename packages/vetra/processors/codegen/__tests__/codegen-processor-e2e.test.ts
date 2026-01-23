@@ -394,7 +394,7 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         "Test Processor",
         "analytics",
         ["powerhouse/document-model", "powerhouse/budget-statement"],
-        mockConfig.PH_CONFIG,
+        mockConfig.PH_CONFIG.skipFormat,
       );
     });
 
@@ -423,7 +423,7 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         "Test Processor",
         "relationalDb",
         ["powerhouse/document-model"],
-        mockConfig.PH_CONFIG,
+        mockConfig.PH_CONFIG.skipFormat,
       );
     });
 
@@ -550,11 +550,13 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
       await vi.runAllTimersAsync();
 
       expect(generateDriveEditor).toHaveBeenCalledWith({
-        name: "Test App",
-        config: mockConfig.PH_CONFIG,
-        appId: "test-app",
-        allowedDocumentTypes:
-          "powerhouse/document-model,powerhouse/budget-statement",
+        driveEditorName: "Test App",
+        ...mockConfig.PH_CONFIG,
+        driveEditorId: "test-app",
+        allowedDocumentTypes: [
+          "powerhouse/document-model",
+          "powerhouse/budget-statement",
+        ],
         isDragAndDropEnabled: true,
         useTsMorph: USE_TS_MORPH,
       });
@@ -757,9 +759,9 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
       await vi.runAllTimersAsync();
 
       expect(generateEditor).toHaveBeenCalledWith({
-        name: "Test Editor",
+        editorName: "Test Editor",
         documentTypes: ["powerhouse/document-model"],
-        config: mockConfig.PH_CONFIG,
+        ...mockConfig.PH_CONFIG,
         editorId: "test-editor",
         useTsMorph: USE_TS_MORPH,
       });
@@ -810,9 +812,9 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
 
       // Valid strand should be processed
       expect(generateEditor).toHaveBeenCalledWith({
-        name: "Test Editor",
+        editorName: "Test Editor",
         documentTypes: ["powerhouse/document-model"],
-        config: mockConfig.PH_CONFIG,
+        ...mockConfig.PH_CONFIG,
         editorId: "test-editor",
         useTsMorph: USE_TS_MORPH,
       });
