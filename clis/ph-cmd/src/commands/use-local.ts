@@ -139,10 +139,12 @@ export const useLocal = command({
 
     console.log(chalk.green(`\n✅ Project linked successfully\n`));
 
-    if (skipInstall) return;
+    if (!skipInstall) {
+      console.log(`Installing linked dependencies with \`pnpm\`\n`);
+      runCmd(`pnpm install`);
+    }
 
-    console.log(`Installing linked dependencies with \`pnpm\`\n`);
-    runCmd(`pnpm install`);
+    process.exit(0);
   },
 });
 

@@ -127,6 +127,7 @@ Notes:
 
     // Output just the token to stdout (for easy piping/copying)
     console.log(token);
+    process.exit(0);
   },
 });
 

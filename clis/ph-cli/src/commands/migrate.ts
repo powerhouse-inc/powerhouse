@@ -11,5 +11,6 @@ export const migrate = command({
       console.log(args);
     }
     await startMigrate(args);
+    process.exit(0);
   },
 });

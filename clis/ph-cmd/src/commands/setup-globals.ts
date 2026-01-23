@@ -9,5 +9,6 @@ export const setupGlobals = command({
   handler: async ({ namePositional, nameOption, ...options }) => {
     const name = namePositional ?? nameOption;
     await createGlobalProject(name, options);
+    process.exit(0);
   },
 });

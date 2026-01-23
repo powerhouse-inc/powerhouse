@@ -187,4 +187,6 @@ export async function runInit(args: string[]) {
     console.error("\n❌ Failed to initialize project: \n");
     throw error;
   }
+
+  process.exit(0);
 }

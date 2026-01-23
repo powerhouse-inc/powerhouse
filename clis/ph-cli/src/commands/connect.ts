@@ -20,6 +20,7 @@ This command:
 `,
   args: studioArgs,
   handler: async (args) => {
+    console.log("Running connect studio...");
     if (args.debug) {
       console.log(args);
     }
@@ -38,6 +39,7 @@ external packages included
       console.log(args);
     }
     await runConnectBuild(args);
+    process.exit(0);
   },
 });
 

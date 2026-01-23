@@ -143,18 +143,20 @@ export const use = command({
       ),
     );
 
-    if (skipInstall) return;
-
-    const packageManager = await detect();
-    if (!packageManager) {
-      throw new Error(
-        `❌ Failed to detect your package manager. Run install manually.`,
+    if (!skipInstall) {
+      const packageManager = await detect();
+      if (!packageManager) {
+        throw new Error(
+          `❌ Failed to detect your package manager. Run install manually.`,
+        );
+      }
+      console.log(
+        `▶️ Installing updated dependencies with \`${packageManager.agent}\`\n`,
       );
+      runCmd(`${packageManager.agent} install`);
     }
-    console.log(
-      `▶️ Installing updated dependencies with \`${packageManager.agent}\`\n`,
-    );
-    runCmd(`${packageManager.agent} install`);
+
+    process.exit(0);
   },
 });
 

@@ -42,5 +42,6 @@ This command:
     } catch (e) {
       console.log("No packages found in the project");
     }
+    process.exit(0);
   },
 });

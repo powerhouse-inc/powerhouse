@@ -40,6 +40,7 @@ export async function runConnectStudio(args: ConnectStudioArgs) {
     bindCLIShortcuts,
     force,
   } = args;
+  console.log("Running vite dev server...");
   assignEnvVars(args);
   const vite = await loadVite();
   const mode = "development";

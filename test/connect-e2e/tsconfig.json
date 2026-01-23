@@ -7,19 +7,37 @@
   "references": [
     {
       "path": "../e2e-utils"
+    },
+    {
+      "path": "../../clis/ph-cli",
+    },
+    {
+      "path": "../../apps/connect"
+    },
+    {
+      "path": "../../packages/builder-tools"
+    },
+    {
+      "path": "../../packages/codegen"
+    },
+    {
+      "path": "../../packages/config"
+    },
+    {
+      "path": "../../packages/design-system"
+    },
+    {
+      "path": "../../packages/reactor-api"
+    },
+    {
+      "path": "../../packages/reactor-browser"
+    },
+    {
+      "path": "../../packages/document-model"
+    },
+    {
+      "path": "../../packages/document-drive"
     }
   ],
-  "include": [
-    "tests/**/*",
-    "index.ts",
-    "global-setup.ts",
-    "global-teardown.ts",
-    "playwright.config.ts",
-    "vite.config.ts",
-    "mcr.config.ts",
-    "powerhouse.manifest.json",
-    "document-models/**/*",
-    "editors/**/*",
-    "subgraphs/**/*"
-  ]
+  "include": ["**/*", "powerhouse.manifest.json"]
 }

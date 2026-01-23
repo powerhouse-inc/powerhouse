@@ -20,5 +20,6 @@ This command:
       console.log(args);
     }
     await startGenerate(args);
+    process.exit(0);
   },
 });

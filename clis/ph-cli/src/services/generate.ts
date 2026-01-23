@@ -64,10 +64,7 @@ export async function startGenerate(options: GenerateArgs) {
       skipFormat,
       specifiedPackageName,
     });
-    return;
-  }
-
-  if (driveEditorName !== undefined) {
+  } else if (driveEditorName !== undefined) {
     await generateDriveEditor({
       driveEditorName,
       driveEditorId,
@@ -78,41 +75,27 @@ export async function startGenerate(options: GenerateArgs) {
       skipFormat,
       specifiedPackageName,
     });
-    return;
-  }
-
-  if (processorName !== undefined) {
+  } else if (processorName !== undefined) {
     await generateProcessor(
       processorName,
       processorType,
       [documentType].filter((dt) => dt !== undefined),
       skipFormat,
     );
-    return;
-  }
-
-  if (subgraphName !== undefined) {
+  } else if (subgraphName !== undefined) {
     await generateSubgraph(subgraphName, filePath || null, config, {
       verbose,
       force,
     });
-    return;
-  }
-
-  if (importScriptName !== undefined) {
+  } else if (importScriptName !== undefined) {
     await generateImportScript(importScriptName, config);
     return;
-  }
-
-  if (migrationFile !== undefined) {
+  } else if (migrationFile !== undefined) {
     await generateDBSchema({
       migrationFile: path.join(process.cwd(), migrationFile),
       schemaFile: schemaFile ? path.join(process.cwd(), schemaFile) : undefined,
     });
-    return;
-  }
-
-  if (filePath !== undefined) {
+  } else if (filePath !== undefined) {
     await generateFromFile({
       path: filePath,
       config,
@@ -120,8 +103,7 @@ export async function startGenerate(options: GenerateArgs) {
       options,
       useVersioning,
     });
-    return;
+  } else {
+    await generateCode(config, useTsMorph, useVersioning);
   }
-
-  await generateCode(config, useTsMorph, useVersioning);
 }

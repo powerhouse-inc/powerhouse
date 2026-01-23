@@ -32,7 +32,7 @@ This command:
         dbPath,
         statusOnly: migrateStatus,
       });
-      return;
+      process.exit(0);
     }
 
     const { defaultDriveUrl, connectCrypto } = await startSwitchboard(args);

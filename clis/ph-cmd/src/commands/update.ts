@@ -110,6 +110,7 @@ export const update = command({
       `▶️ Installing updated dependencies with \`${packageManager.agent}\`\n`,
     );
     runCmd(`${packageManager.agent} install`);
+    process.exit(0);
   },
 });
 

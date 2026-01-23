@@ -22,5 +22,6 @@ This command:
       console.log(args);
     }
     startInspect(args);
+    process.exit(0);
   },
 });

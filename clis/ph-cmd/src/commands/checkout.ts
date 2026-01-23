@@ -62,5 +62,7 @@ export const checkout = command({
     runCmd(`${packageManager} install`);
 
     console.log("Project checked out successfully");
+
+    process.exit(0);
   },
 });

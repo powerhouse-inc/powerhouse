@@ -25,6 +25,7 @@ This command:
     }
     const { action = "status" } = args;
     manageService(action);
+    process.exit(0);
   },
 });
 

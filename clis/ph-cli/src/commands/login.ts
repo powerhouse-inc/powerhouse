@@ -230,6 +230,8 @@ async function showStatus(): Promise<void> {
   console.log(`  Chain ID: ${creds.chainId}`);
   console.log(`  Authenticated at: ${creds.authenticatedAt}`);
   console.log(`  Renown URL: ${creds.renownUrl}`);
+
+  process.exit(0);
 }
 
 /**
