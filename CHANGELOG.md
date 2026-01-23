@@ -1,3 +1,7 @@
+## 5.3.0-staging.11 (2026-01-23)
+
+This was a version bump only, there were no code changes.
+
 ## 5.3.0-staging.10 (2026-01-22)
 
 ### 🚀 Features
