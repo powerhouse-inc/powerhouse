@@ -41,7 +41,7 @@ function parseJsonc(content: string): unknown {
       continue;
     }
 
-    if (char === '"' && !escape) {
+    if (char === '"') {
       inString = !inString;
       result += char;
       i++;
@@ -145,7 +145,7 @@ async function discoverWorkspacePackages(): Promise<Map<string, string>> {
     for (const packageJsonPath of packageJsonPaths) {
       try {
         const content = fs.readFileSync(packageJsonPath, "utf-8");
-        const packageJson: PackageJson = JSON.parse(content);
+        const packageJson = JSON.parse(content) as PackageJson;
         if (packageJson.name) {
           const packageDir = path.dirname(packageJsonPath);
           packageNameToPath.set(packageJson.name, packageDir);
@@ -215,9 +215,9 @@ function validatePackage(
     return null;
   }
 
-  const packageJson: PackageJson = JSON.parse(
+  const packageJson = JSON.parse(
     fs.readFileSync(packageJsonPath, "utf-8"),
-  );
+  ) as PackageJson;
   const workspaceDeps = getWorkspaceDependencies(packageJson);
   const currentRefs = getTsConfigReferences(tsConfigPath);
 
