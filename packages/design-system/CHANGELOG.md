@@ -1,3 +1,18 @@
+## 6.0.0-dev.15 (2026-01-23)
+
+### 🚀 Features
+
+- add document renaming functionality ([#2238](https://github.com/powerhouse-inc/powerhouse/pull/2238))
+
+### 🩹 Fixes
+
+- **design-system:** remove circular import ([2c7252d38](https://github.com/powerhouse-inc/powerhouse/commit/2c7252d38))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.0.0-dev.14 (2026-01-22)
 
 ### 🩹 Fixes

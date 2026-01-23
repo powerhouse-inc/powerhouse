@@ -1,3 +1,13 @@
+## 6.0.0-dev.15 (2026-01-23)
+
+### 🩹 Fixes
+
+- **academy:** improved making authenticated requests ([079182b75](https://github.com/powerhouse-inc/powerhouse/commit/079182b75))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.14 (2026-01-22)
 
 ### 🩹 Fixes

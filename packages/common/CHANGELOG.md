@@ -1,3 +1,13 @@
+## 6.0.0-dev.15 (2026-01-23)
+
+### 🚀 Features
+
+- fix drive explorer scroll overflow and move default styling to editors and codegen templates ([#2243](https://github.com/powerhouse-inc/powerhouse/pull/2243))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.0.0-dev.14 (2026-01-22)
 
 ### 🩹 Fixes

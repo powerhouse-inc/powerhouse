@@ -1,3 +1,7 @@
+## 6.0.0-dev.15 (2026-01-23)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.14 (2026-01-22)
 
 ### 🩹 Fixes

@@ -1,3 +1,19 @@
+## 6.0.0-dev.15 (2026-01-23)
+
+### 🚀 Features
+
+- add document renaming functionality ([#2238](https://github.com/powerhouse-inc/powerhouse/pull/2238))
+
+### 🩹 Fixes
+
+- **reactor-browser:** add support for preferred editor in drive document metadata ([2b8f13824](https://github.com/powerhouse-inc/powerhouse/commit/2b8f13824))
+- **reactor-browser:** use document extension when exporting document ([#2244](https://github.com/powerhouse-inc/powerhouse/pull/2244))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.0.0-dev.14 (2026-01-22)
 
 ### 🩹 Fixes
