@@ -1,48 +1,85 @@
 {
-  // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
-    // File Layout
     "outDir": "./dist",
-
-    // Environment Settings
-    // See also https://aka.ms/tsconfig/module
     "module": "nodenext",
     "target": "esnext",
-    "types": ["node", "vitest/globals"],
-    "lib": ["ESNext", "dom", "dom.iterable"],
-
-    // Other Outputs
+    "types": [
+      "node",
+      "vitest/globals"
+    ],
+    "lib": [
+      "ESNext",
+      "dom",
+      "dom.iterable"
+    ],
     "sourceMap": false,
     "declaration": true,
     "declarationMap": true,
-
-    // Stricter Typechecking Options
-    // "noUncheckedIndexedAccess": true,
-    // "exactOptionalPropertyTypes": true,
-
-    // Style Options
-    // "noImplicitReturns": true,
-    // "noImplicitOverride": true,
-    // "noUnusedLocals": true,
-    // "noUnusedParameters": true,
-    // "noFallthroughCasesInSwitch": true,
-    // "noPropertyAccessFromIndexSignature": true,
-
-    // Recommended Options
     "strict": true,
     "jsx": "react-jsx",
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
-    "skipLibCheck": true,
+    "skipLibCheck": true
   },
   "references": [
     {
       "path": "../e2e-utils"
+    },
+    {
+      "path": "../../packages/builder-tools"
+    },
+    {
+      "path": "../../packages/common"
+    },
+    {
+      "path": "../../packages/design-system"
+    },
+    {
+      "path": "../../packages/vetra"
+    },
+    {
+      "path": "../../packages/document-model"
+    },
+    {
+      "path": "../../packages/codegen"
+    },
+    {
+      "path": "../../packages/config"
+    },
+    {
+      "path": "../../apps/connect"
+    },
+    {
+      "path": "../../clis/ph-cli"
+    },
+    {
+      "path": "../../packages/reactor-api"
+    },
+    {
+      "path": "../../packages/reactor-browser"
+    },
+    {
+      "path": "../../packages/reactor-local"
+    },
+    {
+      "path": "../../apps/switchboard"
+    },
+    {
+      "path": "../../packages/document-drive"
     }
   ],
-  "files": [ "./powerhouse.manifest.json", "./vite.config.ts"],
-  "include": ["**/*",],
-  "exclude": ["dist", "node_modules", ".ph"],
+  "files": [
+    "./powerhouse.manifest.json",
+    "./vite.config.ts"
+  ],
+  "include": [
+    "**/*"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    ".ph"
+  ]
 }

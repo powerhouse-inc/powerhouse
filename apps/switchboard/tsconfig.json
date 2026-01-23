@@ -2,9 +2,13 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "lib": ["ESNext"]
+    "lib": [
+      "ESNext"
+    ]
   },
-  "include": ["**/*"],
+  "include": [
+    "**/*"
+  ],
   "references": [
     {
       "path": "../../packages/document-model"
@@ -20,6 +24,9 @@
     },
     {
       "path": "../../packages/renown"
+    },
+    {
+      "path": "../../packages/reactor"
     }
   ]
 }

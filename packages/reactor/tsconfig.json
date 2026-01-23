@@ -3,6 +3,19 @@
   "compilerOptions": {
     "outDir": "./dist"
   },
-  "include": ["**/*"],
-  "exclude": ["dist", "node_modules"]
+  "include": [
+    "**/*"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules"
+  ],
+  "references": [
+    {
+      "path": "../document-drive"
+    },
+    {
+      "path": "../document-model"
+    }
+  ]
 }

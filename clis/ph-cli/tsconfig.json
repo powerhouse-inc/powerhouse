@@ -1,10 +1,15 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "types": ["node", "vitest/globals"],
+    "types": [
+      "node",
+      "vitest/globals"
+    ],
     "outDir": "./dist"
   },
-  "include": ["**/*"],
+  "include": [
+    "**/*"
+  ],
   "references": [
     {
       "path": "../../packages/codegen"
@@ -26,6 +31,12 @@
     },
     {
       "path": "../../apps/switchboard"
+    },
+    {
+      "path": "../../packages/common"
+    },
+    {
+      "path": "../../packages/reactor"
     }
   ]
 }

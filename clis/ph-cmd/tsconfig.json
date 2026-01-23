@@ -3,6 +3,15 @@
   "compilerOptions": {
     "outDir": "./dist"
   },
-  "include": ["**/*"],
-  "references": [{ "path": "../../packages/codegen" }]
+  "include": [
+    "**/*"
+  ],
+  "references": [
+    {
+      "path": "../../packages/codegen"
+    },
+    {
+      "path": "../../packages/common"
+    }
+  ]
 }

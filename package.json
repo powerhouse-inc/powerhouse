@@ -18,7 +18,8 @@
     "build:storybook": "pnpm -r --no-bail run build-storybook",
     "clean": "pnpm exec scripts/simulate-fresh-git-clone.sh",
     "prepare": "husky",
-    "check-circular-imports": "dpdm -T ./**/* --no-tree --no-warning --exit-code circular:1"
+    "check-circular-imports": "dpdm -T ./**/* --no-tree --no-warning --exit-code circular:1",
+    "check-ts-references": "tsx scripts/check-ts-references.ts"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
