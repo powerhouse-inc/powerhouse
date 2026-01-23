@@ -48,6 +48,8 @@ describe("document model", () => {
 
     documentModelsDirName = path.join(testOutDirPath, "document-models");
     processorsDirName = path.join(testOutDirPath, "processors");
+
+    process.chdir(testOutDirPath);
   }
 
   beforeEach(async (context) => {

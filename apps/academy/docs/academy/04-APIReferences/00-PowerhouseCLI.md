@@ -253,8 +253,12 @@ Use a different directory name for the generated editor. Default is the editor n
 **usage:** `--editor-dir-name <str>`<br>
 
 #### Document Type <br>
-Document type for the generated code.<br><br>
+Document type for the generated document editor.<br><br>
 **usage:** `--document-type <str>`<br>
+
+#### Document Types <br>
+[DEPRECATED] Comma separated list of document types for the generated document editor. [WARNING] Generated editor code is not set up to handle multiple document types.<br><br>
+**usage:** `--document-types <str>`<br>
 
 #### Drive Editor <br>
 Drive editor name.<br><br>

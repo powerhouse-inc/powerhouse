@@ -53,6 +53,8 @@ describe("generateDriveEditor", () => {
 
     config.editorsDir = path.join(testOutDirPath, "editors");
     config.documentModelsDir = path.join(testOutDirPath, "document-models");
+
+    process.chdir(testOutDirPath);
   }
 
   beforeAll(() => {
