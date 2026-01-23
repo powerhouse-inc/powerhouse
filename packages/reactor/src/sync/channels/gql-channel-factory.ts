@@ -1,3 +1,4 @@
+import type { IOperationIndex } from "../../cache/operation-index-types.js";
 import type { ILogger } from "../../logging/types.js";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import type { IChannel, IChannelFactory } from "../interfaces.js";
@@ -23,6 +24,7 @@ export class GqlChannelFactory implements IChannelFactory {
    *
    * @param config - Channel configuration including type and parameters
    * @param cursorStorage - Storage for persisting synchronization cursors
+   * @param operationIndex - Operation index for querying timestamps
    * @returns A new GqlChannel instance
    * @throws Error if config.type is not "gql" or required parameters are missing
    */
@@ -33,6 +35,7 @@ export class GqlChannelFactory implements IChannelFactory {
     cursorStorage: ISyncCursorStorage,
     collectionId: string,
     filter: RemoteFilter,
+    operationIndex: IOperationIndex,
   ): IChannel {
     if (config.type !== "gql") {
       throw new Error(
@@ -103,6 +106,7 @@ export class GqlChannelFactory implements IChannelFactory {
       remoteName,
       cursorStorage,
       gqlConfig,
+      operationIndex,
     );
   }
 }

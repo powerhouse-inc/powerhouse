@@ -87,6 +87,7 @@ export class SyncManager implements ISyncManager {
         this.cursorStorage,
         record.collectionId,
         record.filter,
+        this._operationIndex,
       );
 
       try {
@@ -166,7 +167,7 @@ export class SyncManager implements ISyncManager {
     collectionId: string,
     channelConfig: ChannelConfig,
     filter: RemoteFilter = { documentId: [], scope: [], branch: "" },
-    options: RemoteOptions = {},
+    options: RemoteOptions = { sinceTimestampUtcMs: "0" },
     id?: string,
   ): Promise<Remote> {
     if (this.isShutdown) {
@@ -213,6 +214,7 @@ export class SyncManager implements ISyncManager {
       this.cursorStorage,
       collectionId,
       filter,
+      this._operationIndex,
     );
 
     await channel.init();
@@ -229,7 +231,12 @@ export class SyncManager implements ISyncManager {
     this.remotes.set(name, remote);
     this.wireChannelCallbacks(remote);
 
-    await this.backfillOutbox(remote, collectionId, filter);
+    await this.backfillOutbox(
+      remote,
+      collectionId,
+      filter,
+      options.sinceTimestampUtcMs,
+    );
 
     return remote;
   }
@@ -238,6 +245,7 @@ export class SyncManager implements ISyncManager {
     remote: Remote,
     collectionId: string,
     filter: RemoteFilter,
+    sinceTimestampUtcMs: string,
   ): Promise<void> {
     let historicalOps;
     try {
@@ -268,7 +276,12 @@ export class SyncManager implements ISyncManager {
       },
     }));
 
-    const filteredOps = filterOperations(opsWithContext, filter);
+    let filteredOps = filterOperations(opsWithContext, filter);
+
+    filteredOps = filteredOps.filter(
+      (op) => op.operation.timestampUtcMs > sinceTimestampUtcMs,
+    );
+
     if (filteredOps.length === 0) {
       return;
     }

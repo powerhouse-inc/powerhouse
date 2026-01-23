@@ -18,7 +18,7 @@ function rowToRemoteRecord(row: SyncRemoteRow): RemoteRecord {
       scope: (row.filter_scopes ?? []) as string[],
       branch: row.filter_branch,
     },
-    options: {},
+    options: { sinceTimestampUtcMs: "0" },
     status: {
       push: {
         state: row.push_state as "idle" | "running" | "error",

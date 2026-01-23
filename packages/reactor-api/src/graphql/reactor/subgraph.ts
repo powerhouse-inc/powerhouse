@@ -554,6 +554,7 @@ export class ReactorSubgraph extends BaseSubgraph {
               scope: readonly string[];
               branch: string;
             };
+            sinceTimestampUtcMs: string;
           };
         },
       ) => {

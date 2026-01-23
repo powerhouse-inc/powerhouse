@@ -345,4 +345,27 @@ export class KyselyOperationIndex implements IOperationIndex {
       id: row.opId,
     };
   }
+
+  async getLatestTimestampForCollection(
+    collectionId: string,
+    signal?: AbortSignal,
+  ): Promise<string | null> {
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    const result = await this.db
+      .selectFrom("operation_index_operations as oi")
+      .innerJoin("document_collections as dc", "oi.documentId", "dc.documentId")
+      .select("oi.timestampUtcMs")
+      .where("dc.collectionId", "=", collectionId)
+      .where(
+        sql<boolean>`dc."leftOrdinal" IS NULL OR oi.ordinal < dc."leftOrdinal"`,
+      )
+      .orderBy("oi.ordinal", "desc")
+      .limit(1)
+      .executeTakeFirst();
+
+    return result?.timestampUtcMs ?? null;
+  }
 }

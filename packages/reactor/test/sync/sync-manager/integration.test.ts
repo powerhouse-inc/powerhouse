@@ -90,7 +90,7 @@ describe("SyncManager Integration", () => {
         collectionId: "collection1",
         channelConfig,
         filter: { documentId: [], scope: [], branch: "main" },
-        options: {},
+        options: { sinceTimestampUtcMs: "0" },
         status: {
           push: { state: "idle", failureCount: 0 },
           pull: { state: "idle", failureCount: 0 },
@@ -128,7 +128,7 @@ describe("SyncManager Integration", () => {
         "collection1",
         channelConfig,
         { documentId: ["doc1"], scope: ["global"], branch: "main" },
-        {},
+        { sinceTimestampUtcMs: "0" },
       );
 
       expect(remote.name).toBe("remote1");

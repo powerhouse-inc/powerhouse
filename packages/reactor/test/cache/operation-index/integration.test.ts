@@ -330,4 +330,250 @@ describe("KyselyOperationIndex Integration", () => {
       expect(afterRemovalOp).toBeUndefined();
     });
   });
+
+  describe("getLatestTimestampForCollection()", () => {
+    it("returns the latest timestamp for a collection with multiple operations", async () => {
+      const driveId = "drive-timestamp-1";
+      const childDocId = "child-doc-timestamp-1";
+      const collectionId = driveCollectionId("main", driveId);
+
+      const txn1 = operationIndex.start();
+      const createDriveActionId = generateId();
+      txn1.write([
+        {
+          id: deriveOperationId(
+            driveId,
+            "document",
+            "main",
+            createDriveActionId,
+          ),
+          documentId: driveId,
+          documentType: "powerhouse/document-drive",
+          branch: "main",
+          scope: "document",
+          index: 0,
+          timestampUtcMs: "1704067200000",
+          hash: "hash-1",
+          skip: 0,
+          action: {
+            id: createDriveActionId,
+            type: "CREATE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: "1704067200000",
+            input: { documentId: driveId, model: "powerhouse/document-drive" },
+          },
+        },
+      ]);
+      txn1.createCollection(collectionId);
+      txn1.addToCollection(collectionId, driveId);
+      await operationIndex.commit(txn1);
+
+      const txn2 = operationIndex.start();
+      const createChildActionId = generateId();
+      txn2.write([
+        {
+          id: deriveOperationId(
+            childDocId,
+            "document",
+            "main",
+            createChildActionId,
+          ),
+          documentId: childDocId,
+          documentType: "powerhouse/document-model",
+          branch: "main",
+          scope: "document",
+          index: 0,
+          timestampUtcMs: "1704067205000",
+          hash: "hash-2",
+          skip: 0,
+          action: {
+            id: createChildActionId,
+            type: "CREATE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: "1704067205000",
+            input: {
+              documentId: childDocId,
+              model: "powerhouse/document-model",
+            },
+          },
+        },
+      ]);
+      txn2.addToCollection(collectionId, childDocId);
+      await operationIndex.commit(txn2);
+
+      const txn3 = operationIndex.start();
+      const updateActionId = generateId();
+      txn3.write([
+        {
+          id: deriveOperationId(driveId, "document", "main", updateActionId),
+          documentId: driveId,
+          documentType: "powerhouse/document-drive",
+          branch: "main",
+          scope: "global",
+          index: 1,
+          timestampUtcMs: "1704067203000",
+          hash: "hash-3",
+          skip: 0,
+          action: {
+            id: updateActionId,
+            type: "SET_NAME",
+            scope: "global",
+            timestampUtcMs: "1704067203000",
+            input: { name: "My Drive" },
+          },
+        },
+      ]);
+      await operationIndex.commit(txn3);
+
+      const result =
+        await operationIndex.getLatestTimestampForCollection(collectionId);
+
+      expect(result).toBe("1704067203000");
+    });
+
+    it("returns null for collection with no operations", async () => {
+      const result =
+        await operationIndex.getLatestTimestampForCollection("nonexistent");
+
+      expect(result).toBeNull();
+    });
+
+    it("excludes operations after document was removed from collection", async () => {
+      const driveId = "drive-timestamp-2";
+      const childDocId = "child-doc-timestamp-2";
+      const collectionId = driveCollectionId("main", driveId);
+
+      const txn1 = operationIndex.start();
+      const createDriveActionId = generateId();
+      txn1.write([
+        {
+          id: deriveOperationId(
+            driveId,
+            "document",
+            "main",
+            createDriveActionId,
+          ),
+          documentId: driveId,
+          documentType: "powerhouse/document-drive",
+          branch: "main",
+          scope: "document",
+          index: 0,
+          timestampUtcMs: "1704067200000",
+          hash: "hash-1",
+          skip: 0,
+          action: {
+            id: createDriveActionId,
+            type: "CREATE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: "1704067200000",
+            input: { documentId: driveId, model: "powerhouse/document-drive" },
+          },
+        },
+      ]);
+      txn1.createCollection(collectionId);
+      txn1.addToCollection(collectionId, driveId);
+      await operationIndex.commit(txn1);
+
+      const txn2 = operationIndex.start();
+      const createChildActionId = generateId();
+      txn2.write([
+        {
+          id: deriveOperationId(
+            childDocId,
+            "document",
+            "main",
+            createChildActionId,
+          ),
+          documentId: childDocId,
+          documentType: "powerhouse/document-model",
+          branch: "main",
+          scope: "document",
+          index: 0,
+          timestampUtcMs: "1704067201000",
+          hash: "hash-2",
+          skip: 0,
+          action: {
+            id: createChildActionId,
+            type: "CREATE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: "1704067201000",
+            input: {
+              documentId: childDocId,
+              model: "powerhouse/document-model",
+            },
+          },
+        },
+      ]);
+      txn2.addToCollection(collectionId, childDocId);
+      await operationIndex.commit(txn2);
+
+      const txn3 = operationIndex.start();
+      const removeRelationshipActionId = generateId();
+      txn3.write([
+        {
+          id: deriveOperationId(
+            driveId,
+            "document",
+            "main",
+            removeRelationshipActionId,
+          ),
+          documentId: driveId,
+          documentType: "powerhouse/document-drive",
+          branch: "main",
+          scope: "document",
+          index: 1,
+          timestampUtcMs: "1704067202000",
+          hash: "hash-3",
+          skip: 0,
+          action: {
+            id: removeRelationshipActionId,
+            type: "REMOVE_RELATIONSHIP",
+            scope: "document",
+            timestampUtcMs: "1704067202000",
+            input: {
+              sourceId: driveId,
+              targetId: childDocId,
+              relationshipType: "child",
+            },
+          },
+        },
+      ]);
+      txn3.removeFromCollection(collectionId, childDocId);
+      await operationIndex.commit(txn3);
+
+      const txn4 = operationIndex.start();
+      const updateChildActionId = generateId();
+      txn4.write([
+        {
+          id: deriveOperationId(
+            childDocId,
+            "document",
+            "main",
+            updateChildActionId,
+          ),
+          documentId: childDocId,
+          documentType: "powerhouse/document-model",
+          branch: "main",
+          scope: "global",
+          index: 1,
+          timestampUtcMs: "1704067210000",
+          hash: "hash-4",
+          skip: 0,
+          action: {
+            id: updateChildActionId,
+            type: "SET_NAME",
+            scope: "global",
+            timestampUtcMs: "1704067210000",
+            input: { name: "Updated After Removal" },
+          },
+        },
+      ]);
+      await operationIndex.commit(txn4);
+
+      const result =
+        await operationIndex.getLatestTimestampForCollection(collectionId);
+
+      expect(result).toBe("1704067202000");
+    });
+  });
 });

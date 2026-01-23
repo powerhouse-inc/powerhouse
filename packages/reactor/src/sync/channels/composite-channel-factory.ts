@@ -1,3 +1,4 @@
+import type { IOperationIndex } from "../../cache/operation-index-types.js";
 import type { ILogger } from "../../logging/types.js";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import type { IChannel, IChannelFactory } from "../interfaces.js";
@@ -27,6 +28,7 @@ export class CompositeChannelFactory implements IChannelFactory {
    * @param cursorStorage - Storage for persisting synchronization cursors
    * @param collectionId - Collection ID for filtering
    * @param filter - Remote filter configuration
+   * @param operationIndex - Operation index for querying timestamps
    * @returns A new channel instance
    * @throws Error if config.type is not supported or required parameters are missing
    */
@@ -37,6 +39,7 @@ export class CompositeChannelFactory implements IChannelFactory {
     cursorStorage: ISyncCursorStorage,
     collectionId: string,
     filter: RemoteFilter,
+    operationIndex: IOperationIndex,
   ): IChannel {
     if (config.type === "gql") {
       return this.createGqlChannel(
@@ -46,6 +49,7 @@ export class CompositeChannelFactory implements IChannelFactory {
         cursorStorage,
         collectionId,
         filter,
+        operationIndex,
       );
     }
 
@@ -65,6 +69,7 @@ export class CompositeChannelFactory implements IChannelFactory {
     cursorStorage: ISyncCursorStorage,
     collectionId: string,
     filter: RemoteFilter,
+    operationIndex: IOperationIndex,
   ): GqlChannel {
     const url = config.parameters.url;
     if (typeof url !== "string" || !url) {
@@ -127,6 +132,7 @@ export class CompositeChannelFactory implements IChannelFactory {
       remoteName,
       cursorStorage,
       gqlConfig,
+      operationIndex,
     );
   }
 

@@ -1,8 +1,7 @@
 import type { OperationWithContext } from "../storage/interfaces.js";
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export type RemoteOptions = {
-  // future configuration options
+  sinceTimestampUtcMs: string;
 };
 
 export type RemoteFilter = {

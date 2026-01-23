@@ -77,7 +77,7 @@ const mockRemotes: Remote[] = [
       scope: [],
       branch: "main",
     },
-    options: {},
+    options: { sinceTimestampUtcMs: "0" },
     channel: createMockChannel(
       [
         createMockSyncOperation(
@@ -139,7 +139,7 @@ const mockRemotes: Remote[] = [
       scope: ["scope-a"],
       branch: "dev",
     },
-    options: {},
+    options: { sinceTimestampUtcMs: "0" },
     channel: createMockChannel(
       [
         createMockSyncOperation(
@@ -163,7 +163,7 @@ const mockRemotes: Remote[] = [
       scope: ["ui", "components"],
       branch: "feature/new-ui",
     },
-    options: {},
+    options: { sinceTimestampUtcMs: "0" },
     channel: createMockChannel([], [], []),
   },
 ];
@@ -195,7 +195,7 @@ const manyRemotes: Remote[] = Array.from({ length: 20 }, (_, i) => ({
     scope: i % 2 === 0 ? ["scope-a"] : [],
     branch: i % 4 === 0 ? "main" : i % 4 === 1 ? "dev" : `feature-${i}`,
   },
-  options: {},
+  options: { sinceTimestampUtcMs: "0" },
   channel: createMockChannel(
     Array.from({ length: i % 5 }, (_, j) =>
       createMockSyncOperation(
