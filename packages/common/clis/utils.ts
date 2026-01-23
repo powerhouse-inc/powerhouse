@@ -10,5 +10,3 @@ export function assertNodeVersion(nodeVersion = process.versions.node) {
     );
   }
 }
-
-assertNodeVersion();
