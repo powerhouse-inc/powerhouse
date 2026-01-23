@@ -1,3 +1,18 @@
+## 6.0.0-dev.15 (2026-01-23)
+
+### 🚀 Features
+
+- fix drive explorer scroll overflow and move default styling to editors and codegen templates ([#2243](https://github.com/powerhouse-inc/powerhouse/pull/2243))
+
+### 🩹 Fixes
+
+- wrap ConnectSidebar in ConnectTooltipProvider and fix vetra drive app bg ([9b6b9b4c1](https://github.com/powerhouse-inc/powerhouse/commit/9b6b9b4c1))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.0.0-dev.14 (2026-01-22)
 
 ### 🩹 Fixes
