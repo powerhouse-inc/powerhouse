@@ -1,3 +1,13 @@
+## 5.3.0-staging.12 (2026-01-23)
+
+### 🩹 Fixes
+
+- revert import assets with runtime relative paths ([3a8d93f01](https://github.com/powerhouse-inc/powerhouse/commit/3a8d93f01))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 5.3.0-staging.11 (2026-01-23)
 
 This was a version bump only, there were no code changes.
