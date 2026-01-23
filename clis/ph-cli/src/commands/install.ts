@@ -88,7 +88,5 @@ This command:
       console.error("❌ Failed to update styles file");
       throw error;
     }
-
-    process.exit(0);
   },
 });
