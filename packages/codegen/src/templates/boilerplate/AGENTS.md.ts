@@ -265,6 +265,47 @@ throw new MissingIdError("message");
 - **InvalidInputError**: Business logic violations
 - **PermissionDeniedError**: Access control violations
 
+#### Testing Reducer Errors
+
+**CRITICAL**: When a reducer throws an error, the operation is **still added** to the document but with an \`.error\` property containing the error message as a string.
+
+**DO NOT** use \`.toThrow()\` or \`expect(() => ...).toThrow()\` patterns when testing reducer errors.
+
+##### How Errors Work in Operations
+
+1. The reducer throws an error (e.g., \`throw new InvalidNameError("message")\`)
+2. The operation is still recorded in \`document.operations.global\` (or \`.local\`)
+3. The error message is stored in \`operation.error\` as a string
+4. **The state is NOT mutated** - it remains unchanged from before the operation
+
+##### Accessing the Correct Operation Index
+
+**CRITICAL**: You must access the correct operation index. The index corresponds to how many operations were dispatched before it.
+
+- If this is the **first** operation dispatched, access \`[0]\`
+- If 3 operations were dispatched **before** the failing one, access \`[3]\`
+
+##### Example
+
+~~~typescript
+it("should return error and not mutate state", () => {
+  const document = utils.createDocument();
+  const initialState = document.state.global.name;
+
+  const updatedDocument = reducer(document, setName({ name: "invalid" }));
+
+  // Access the correct operation index (0 = first operation)
+  expect(updatedDocument.operations.global[0].error).toBe(
+    "Name is not allowed",
+  );
+  // State remains unchanged
+  expect(updatedDocument.state.global.name).toBe(initialState);
+});
+
+// ❌ WRONG - Never use toThrow()
+expect(() => reducer(document, setName({ name: "invalid" }))).toThrow();
+~~~
+
 ## Document Model Structure
 
 ### Core Components
