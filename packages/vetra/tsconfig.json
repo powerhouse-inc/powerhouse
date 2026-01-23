@@ -2,12 +2,26 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "types": ["node", "vitest/globals"],
-    "lib": ["ESNext", "dom", "dom.iterable"],
+    "types": [
+      "node",
+      "vitest/globals"
+    ],
+    "lib": [
+      "ESNext",
+      "dom",
+      "dom.iterable"
+    ],
     "sourceMap": false
   },
-  "include": ["**/*", "./powerhouse.manifest.json"],
-  "exclude": ["dist", "node_modules", ".ph"],
+  "include": [
+    "**/*",
+    "./powerhouse.manifest.json"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    ".ph"
+  ],
   "references": [
     {
       "path": "../document-model"
@@ -47,6 +61,9 @@
     },
     {
       "path": "../../apps/switchboard"
+    },
+    {
+      "path": "../reactor"
     }
   ]
 }

@@ -9,12 +9,6 @@
       "path": "../e2e-utils"
     },
     {
-      "path": "../../clis/ph-cli",
-    },
-    {
-      "path": "../../apps/connect"
-    },
-    {
       "path": "../../packages/builder-tools"
     },
     {
@@ -24,7 +18,13 @@
       "path": "../../packages/config"
     },
     {
+      "path": "../../apps/connect"
+    },
+    {
       "path": "../../packages/design-system"
+    },
+    {
+      "path": "../../clis/ph-cli"
     },
     {
       "path": "../../packages/reactor-api"
@@ -33,10 +33,10 @@
       "path": "../../packages/reactor-browser"
     },
     {
-      "path": "../../packages/document-model"
+      "path": "../../packages/document-drive"
     },
     {
-      "path": "../../packages/document-drive"
+      "path": "../../packages/document-model"
     }
   ],
   "include": ["**/*", "powerhouse.manifest.json"]

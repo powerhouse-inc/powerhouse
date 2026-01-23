@@ -72,6 +72,9 @@
     },
     {
       "path": "./scripts/profiling"
+    },
+    {
+      "path": "./scripts"
     }
   ],
   "files": []

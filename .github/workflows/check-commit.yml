@@ -50,6 +50,9 @@ jobs:
       - name: Install deps (frozen lockfile)
         run: pnpm install:ci
 
+      - name: Check tsconfig references
+        run: pnpm check-ts-references
+
       - name: Build typescript project
         run: pnpm tsc:build
 

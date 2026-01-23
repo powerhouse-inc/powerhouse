@@ -9,22 +9,19 @@
       "path": "../e2e-utils"
     },
     {
-      "path": "../../clis/ph-cli",
-    },
-    {
-      "path": "../../apps/connect"
-    },
-    {
-      "path": "../../apps/switchboard"
-    },
-    {
       "path": "../../packages/builder-tools"
     },
     {
       "path": "../../packages/common"
     },
     {
+      "path": "../../packages/design-system"
+    },
+    {
       "path": "../../packages/vetra"
+    },
+    {
+      "path": "../../packages/document-model"
     },
     {
       "path": "../../packages/codegen"
@@ -33,7 +30,10 @@
       "path": "../../packages/config"
     },
     {
-      "path": "../../packages/design-system"
+      "path": "../../apps/connect"
+    },
+    {
+      "path": "../../clis/ph-cli"
     },
     {
       "path": "../../packages/reactor-api"
@@ -45,12 +45,12 @@
       "path": "../../packages/reactor-local"
     },
     {
-      "path": "../../packages/document-model"
+      "path": "../../apps/switchboard"
     },
     {
       "path": "../../packages/document-drive"
     }
   ],
   "include": ["**/*", "powerhouse.manifest.json"],
-  "exclude": ["dist", "node_modules", ".ph"],
+  "exclude": ["dist", "node_modules", ".ph"]
 }
