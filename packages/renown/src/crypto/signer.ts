@@ -9,29 +9,28 @@ import type {
 } from "document-model";
 import type { IRenownCrypto } from "./index.js";
 
+export class InvalidSignatureError extends Error {
+  constructor() {
+    super("Invalid signature");
+  }
+}
+
 export class RenownCryptoSigner implements ISigner {
-  private cachedPublicKey: JsonWebKey | undefined;
+  readonly app: AppActionSigner;
 
   constructor(
     private readonly crypto: IRenownCrypto,
-    public app: AppActionSigner,
+    private readonly appName: string,
     public user?: UserActionSigner,
-  ) {}
+  ) {
+    this.app = {
+      key: this.crypto.did,
+      name: this.appName,
+    };
+  }
 
-  async publicKey(): Promise<JsonWebKey> {
-    if (!this.cachedPublicKey) {
-      const did = await this.crypto.did();
-      const keyData = extractKeyFromDid(did);
-      const cryptoKey = await crypto.subtle.importKey(
-        "raw",
-        keyData.buffer as ArrayBuffer,
-        { name: "ECDSA", namedCurve: "P-256" },
-        true,
-        ["verify"],
-      );
-      this.cachedPublicKey = await crypto.subtle.exportKey("jwk", cryptoKey);
-    }
-    return this.cachedPublicKey;
+  get publicKey() {
+    return this.crypto.publicKey;
   }
 
   async sign(data: Uint8Array): Promise<Uint8Array> {
@@ -39,16 +38,9 @@ export class RenownCryptoSigner implements ISigner {
   }
 
   async verify(data: Uint8Array, signature: Uint8Array): Promise<void> {
-    const did = await this.crypto.did();
-    const cryptoKey = await importPublicKey(did);
-    const isValid = await crypto.subtle.verify(
-      { name: "ECDSA", hash: "SHA-256" },
-      cryptoKey,
-      signature.buffer as ArrayBuffer,
-      data.buffer as ArrayBuffer,
-    );
+    const isValid = await this.crypto.verify(data, signature);
     if (!isValid) {
-      throw new Error("invalid signature");
+      throw new InvalidSignatureError();
     }
   }
 
@@ -61,11 +53,6 @@ export class RenownCryptoSigner implements ISigner {
     }
 
     const timestamp = (new Date().getTime() / 1000).toFixed(0);
-    const did = await this.crypto.did();
-
-    if (abortSignal?.aborted) {
-      throw new Error("Signing aborted");
-    }
 
     const hash = await this.hashAction(action);
 
@@ -77,7 +64,7 @@ export class RenownCryptoSigner implements ISigner {
 
     const params: [string, string, string, string] = [
       timestamp,
-      did,
+      this.crypto.did,
       hash,
       prevStateHash,
     ];

@@ -1,4 +1,10 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import type { ILogger } from "../utils.js";
 import type { JsonWebKeyPairStorage, JwkKeyPair } from "./index.js";
@@ -75,6 +81,16 @@ export class NodeKeyStorage implements JsonWebKeyPairStorage {
 
     // Save to file
     this.#saveToFile(keyPair);
+  }
+
+  removeKeyPair(): Promise<void> {
+    if (process.env[this.#envKeyName]) {
+      delete process.env[this.#envKeyName];
+    }
+    if (existsSync(this.#filePath)) {
+      unlinkSync(this.#filePath);
+    }
+    return Promise.resolve();
   }
 
   #loadFromFile(): JwkKeyPair | undefined {

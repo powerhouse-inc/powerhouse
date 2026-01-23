@@ -3,7 +3,7 @@ import {
   NodeKeyStorage,
   NodeRenownEventEmitter,
   Renown,
-  RenownCrypto,
+  RenownCryptoBuilder,
   RenownMemoryStorage,
 } from "@renown/sdk/node";
 import {
@@ -15,28 +15,28 @@ import { describe, expect, it } from "vitest";
 
 describe("Renown on script", () => {
   it("should create a document and add a signed SET_NAME action", async () => {
+    const userDid = `did:pkh:eip155:1:0x9addcbbaa28f7eb5f75e023f7c1fcb13c9dfd8f7`;
+    const scriptDid = `did:key:zDnaeW2bFev2wtLK4hzGQrXUh8BHWySfded1z72oR89btwipJ`;
     // Setup signer
     const keyPath = `${import.meta.dirname}/tmp/.keypair.json`;
     const keyStorage = new NodeKeyStorage(keyPath);
-    const connectCrypto = new RenownCrypto(keyStorage);
-    const scriptDid = await connectCrypto.did();
-    expect(scriptDid).toBe(
-      "did:key:zDnaeW2bFev2wtLK4hzGQrXUh8BHWySfded1z72oR89btwipJ",
-    );
+    const renownCrypto = await new RenownCryptoBuilder()
+      .withKeyPairStorage(keyStorage)
+      .build();
+    expect(renownCrypto.did).toBe(scriptDid);
 
     // Setup renown instance
-    const renownStorage = new RenownMemoryStorage();
     const renown = new Renown(
-      renownStorage,
+      new RenownMemoryStorage(),
       new NodeRenownEventEmitter(),
-      { key: scriptDid, name: "script" },
-      connectCrypto,
+      renownCrypto,
+      "script",
     );
 
     // // "did:pkh:networkId:chainId:address"
-    const userDid = `did:pkh:eip155:1:0x9addcbbaa28f7eb5f75e023f7c1fcb13c9dfd8f7`;
-    const user = await renown.login(userDid);
-    console.info(JSON.stringify(user, null, 2));
+
+    // const user = await renown.login(userDid);
+
     // Build reactor
     const reactorBuilder = new ReactorBuilder().withDocumentModels([
       documentModelDocumentModelModule,
@@ -61,15 +61,15 @@ describe("Renown on script", () => {
     const actionSigner = operation.action.context?.signer;
     console.info(JSON.stringify(actionSigner, null, 2));
 
+    expect(actionSigner?.app).toStrictEqual({
+      key: "did:key:zDnaeW2bFev2wtLK4hzGQrXUh8BHWySfded1z72oR89btwipJ",
+      name: "script",
+    });
+
     expect(actionSigner?.user).toStrictEqual({
       address: "0x9aDdcBbaA28F7eB5f75E023F7C1Fcb13C9DFD8F7",
       networkId: "eip155",
       chainId: 1,
-    });
-
-    expect(actionSigner?.app).toStrictEqual({
-      key: scriptDid,
-      name: "script",
     });
 
     expect(

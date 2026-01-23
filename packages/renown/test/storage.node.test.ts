@@ -1,12 +1,15 @@
-import { NodeKeyStorage, type JwkKeyPair } from "@renown/sdk/node";
+import {
+  NodeKeyStorage,
+  RenownCrypto,
+  type JwkKeyPair,
+} from "@renown/sdk/node";
 import { subtle } from "node:crypto";
 import { rmSync, writeFileSync } from "node:fs";
 import { afterEach } from "node:test";
 import { beforeEach, describe, expect, it } from "vitest";
-import { ConnectCrypto } from "../src/lib/crypto/index.js";
 
 async function generateKeyPair(): Promise<JwkKeyPair> {
-  const keyPair = await subtle.generateKey(ConnectCrypto.algorithm, true, [
+  const keyPair = await subtle.generateKey(RenownCrypto.algorithm, true, [
     "sign",
     "verify",
   ]);

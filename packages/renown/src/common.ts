@@ -1,5 +1,4 @@
-import type { Issuer } from "did-jwt-vc";
-import type { AppActionSigner, ISigner } from "document-model";
+import type { ISigner } from "document-model";
 import { DEFAULT_RENOWN_URL } from "./constants.js";
 import { RenownCryptoSigner, type IRenownCrypto } from "./crypto/index.js";
 import { MemoryStorage } from "./storage/common.js";
@@ -25,24 +24,23 @@ export class Renown implements IRenown {
   #baseUrl: string;
   #store: RenownStorage;
   #eventEmitter: RenownEventEmitter;
-  #app: AppActionSigner;
+  #appName: string;
   #crypto: IRenownCrypto;
   #signer: ISigner;
 
   constructor(
     store: RenownStorage,
     eventEmitter: RenownEventEmitter,
-    app: AppActionSigner,
     crypto: IRenownCrypto,
-    appName?: string,
+    appName: string,
     baseUrl = DEFAULT_RENOWN_URL,
   ) {
     this.#store = store;
     this.#eventEmitter = eventEmitter;
-    this.#app = app;
     this.#baseUrl = baseUrl;
     this.#crypto = crypto;
-    this.#signer = new RenownCryptoSigner(crypto, app, this.user);
+    this.#appName = appName;
+    this.#signer = new RenownCryptoSigner(crypto, appName, this.user);
 
     this.on("user", (user) => {
       this.#signer.user = user;
@@ -70,29 +68,16 @@ export class Renown implements IRenown {
     this.#eventEmitter.emit("user", user);
   }
 
-  set app(app: AppActionSigner) {
-    this.#app = app;
-    const user = this.user;
-
-    this.#updateUser(undefined);
-
-    // tries to login with new connectId
-    if (user) {
-      this.login(user.did).catch((e: unknown) => {
-        console.log("User no longer authenticated:", e);
-      });
-    }
-  }
-
   async login(did: string): Promise<User> {
     try {
       const result = parsePkhDid(did);
-
+      console.log(result, this.#crypto.did);
       const credential = await this.#getCredential(
         result.address,
         result.chainId,
-        this.#app.key,
+        this.#crypto.did,
       );
+
       if (!credential) {
         this.#updateUser(undefined);
         throw new Error("Credential not found");
@@ -139,13 +124,13 @@ export class Renown implements IRenown {
   async #getCredential(
     address: string,
     chainId: number,
-    connectId: string,
+    appDid: string,
   ): Promise<PowerhouseVerifiableCredential | undefined> {
     if (!this.#baseUrl) {
       throw new Error("RENOWN_URL is not set");
     }
     const url = new URL(
-      `/api/auth/credential?address=${encodeURIComponent(address)}&chainId=${encodeURIComponent(chainId)}&connectId=${encodeURIComponent(connectId)}`,
+      `/api/auth/credential?address=${encodeURIComponent(address)}&chainId=${encodeURIComponent(chainId)}&connectId=${encodeURIComponent(appDid)}`,
       this.#baseUrl,
     );
     const response = await fetch(url, {
@@ -165,20 +150,15 @@ export class Renown implements IRenown {
     return verifyAuthBearerToken(token);
   }
 
-  async createBearerToken(
-    address: string,
-    chainId: number,
-    issuer: Issuer,
-    options: CreateBearerTokenOptions,
-  ) {
+  async createBearerToken(options: CreateBearerTokenOptions) {
     if (!this.user) {
       throw new Error("User not found");
     }
     return createAuthBearerToken(
-      chainId,
-      this.#app.key,
-      address,
-      issuer,
+      this.user.chainId,
+      this.user.networkId,
+      this.user.address,
+      this.#crypto.issuer,
       options,
     );
   }
