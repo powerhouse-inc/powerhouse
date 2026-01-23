@@ -691,7 +691,7 @@ export interface ISigner {
   app?: AppActionSigner;
 
   /** The corresponding public key */
-  publicKey(): Promise<JsonWebKey>;
+  publicKey: CryptoKey;
 
   /**
    * Signs raw data (used for document header signing).

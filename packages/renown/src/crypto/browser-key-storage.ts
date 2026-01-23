@@ -1,4 +1,4 @@
-import type { JsonWebKeyPairStorage, JwkKeyPair } from "./index.js";
+import type { JsonWebKeyPairStorage, JwkKeyPair } from "./types.js";
 
 export class BrowserKeyStorage implements JsonWebKeyPairStorage {
   static #DB_NAME = "browserKeyDB";
@@ -88,6 +88,20 @@ export class BrowserKeyStorage implements JsonWebKeyPairStorage {
       };
       request.onerror = () => {
         reject(new Error("Failed to load key pair"));
+      };
+    });
+  }
+
+  async removeKeyPair(): Promise<void> {
+    const store = await this.#useStore();
+    const request = store.delete(BrowserKeyStorage.#KEY);
+
+    return new Promise<void>((resolve, reject) => {
+      request.onsuccess = () => {
+        resolve();
+      };
+      request.onerror = () => {
+        reject(new Error("Failed to remove key pair"));
       };
     });
   }

@@ -1,11 +1,11 @@
 import {
   ConnectCrypto,
   type IConnectCrypto,
-  type JsonWebKeyPairStorage,
   type JwkKeyPair,
 } from "@renown/sdk";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { NodeKeyStorage } from "@renown/sdk/node";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
 const ENV_KEY_NAME = "PH_RENOWN_PRIVATE_KEY";
 const AUTH_FILE = ".auth.json";
@@ -26,76 +26,6 @@ export interface StoredCredentials {
   authenticatedAt: string;
   renownUrl: string;
 }
-
-/**
- * Key storage that supports:
- * 1. PH_RENOWN_PRIVATE_KEY environment variable (JSON-encoded JwkKeyPair)
- * 2. Falls back to file storage at .keypair.json in current working directory
- */
-export class KeyStorage implements JsonWebKeyPairStorage {
-  #filePath: string;
-
-  constructor(filePath?: string) {
-    this.#filePath = filePath || KEYPAIR_PATH;
-
-    // Ensure directory exists
-    const dir = dirname(this.#filePath);
-    if (!existsSync(dir)) {
-      mkdirSync(dir, { recursive: true });
-    }
-  }
-
-  async loadKeyPair(): Promise<JwkKeyPair | undefined> {
-    // First check environment variable
-    const envKey = process.env[ENV_KEY_NAME];
-    if (envKey) {
-      try {
-        const keyPair = JSON.parse(envKey) as JwkKeyPair;
-        // Validate it has the required structure
-        if (keyPair.publicKey && keyPair.privateKey) {
-          return keyPair;
-        }
-        console.warn(
-          `${ENV_KEY_NAME} is set but doesn't contain valid publicKey and privateKey`,
-        );
-      } catch (e) {
-        console.warn(`Failed to parse ${ENV_KEY_NAME} as JSON:`, e);
-      }
-    }
-
-    // Fall back to file storage
-    return this.#loadFromFile();
-  }
-
-  async saveKeyPair(keyPair: JwkKeyPair): Promise<void> {
-    // Don't save if using env var
-    if (process.env[ENV_KEY_NAME]) {
-      return;
-    }
-
-    // Save to file
-    this.#saveToFile(keyPair);
-  }
-
-  #loadFromFile(): JwkKeyPair | undefined {
-    try {
-      if (!existsSync(this.#filePath)) {
-        return undefined;
-      }
-      const data = readFileSync(this.#filePath, "utf-8");
-      const parsed = JSON.parse(data) as Record<string, unknown>;
-      return parsed.keyPair as JwkKeyPair | undefined;
-    } catch {
-      return undefined;
-    }
-  }
-
-  #saveToFile(keyPair: JwkKeyPair): void {
-    const data = { keyPair };
-    writeFileSync(this.#filePath, JSON.stringify(data, null, 2), "utf-8");
-  }
-}
-
 /**
  * Load stored credentials from disk
  */
@@ -170,7 +100,7 @@ export const DEFAULT_RENOWN_URL = "https://www.renown.id" as const;
  */
 export async function getConnectCrypto(): Promise<IConnectCrypto> {
   if (!connectCryptoInstance) {
-    const keyStorage = new KeyStorage();
+    const keyStorage = new NodeKeyStorage();
     connectCryptoInstance = new ConnectCrypto(keyStorage);
   }
   return connectCryptoInstance;

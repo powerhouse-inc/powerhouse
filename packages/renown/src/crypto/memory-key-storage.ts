@@ -1,4 +1,4 @@
-import type { JsonWebKeyPairStorage, JwkKeyPair } from "./index.js";
+import type { JsonWebKeyPairStorage, JwkKeyPair } from "./types.js";
 
 export class MemoryKeyStorage implements JsonWebKeyPairStorage {
   private keyPair: JwkKeyPair | undefined;
@@ -13,6 +13,11 @@ export class MemoryKeyStorage implements JsonWebKeyPairStorage {
 
   saveKeyPair(keyPair: JwkKeyPair) {
     this.keyPair = keyPair;
+    return Promise.resolve();
+  }
+
+  removeKeyPair() {
+    this.keyPair = undefined;
     return Promise.resolve();
   }
 }
