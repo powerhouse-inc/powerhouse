@@ -1,5 +1,107 @@
 # Release Changelog
 
+## 🚀 **v5.3.0**
+
+### ✨ Highlights
+
+1. **Document Renaming** - Native support for renaming documents within drives
+2. **Enhanced UI/UX Improvements** - Improved sidebar experience, better drive explorer, and enhanced styling
+3. **Robust Development Tooling** - Enhanced codegen templates and improved CI/CD workflows
+4. **Export & Subgraph Enhancements** - Better document export functionality and improved GraphQL subgraph generation
+
+### NEW FEATURES
+
+#### 📝 Document Renaming
+
+Documents can now be renamed directly within drives, providing better document management capabilities.
+
+#### 🎨 Enhanced Design System & UI Components
+
+**Improved Sidebar Experience:**
+- Enhanced Connect sidebar with tooltip provider integration
+- Better navigation and user interaction patterns
+- Streamlined sidebar footer with home and debug buttons
+
+**Drive Explorer Improvements:**
+- Fixed scroll overflow issues in drive explorer
+- Better default styling for editors and codegen templates
+- Enhanced drive header with info menu, share menu, and Vetra Academy links
+
+#### 📋 Document State Viewer
+
+New `DocumentStateViewer` component for inspecting document states with:
+- Clean interface for debugging document structures
+- Lazy loading for improved performance
+- Better integration with the design system
+
+### IMPROVEMENTS
+
+#### 🏗️ Enhanced Code Generation
+
+**Updated Document Editor Boilerplate:**
+- Upgraded document engineering components in project templates
+- Improved editor module generation with cleaner code output
+- Better test organization with relocated generated test directories
+
+**Template Enhancements:**
+- Removed hardcoded comments from generated editor modules
+- Cleaner index file generation without unnecessary newlines
+- Better integration with Document Engineering components
+
+#### 🔧 CI/CD & Infrastructure
+
+**New Deployment Workflows:**
+- Harbor registry integration for Docker image publishing
+- Staging tenant deployment from release/staging/* branches
+- Improved workflow permissions and error handling
+
+**Development Environment:**
+- Global prettier installation for `ph init` projects
+- Better monorepo build process with infinite loop prevention
+- Enhanced ph-cmd bundling and distribution
+
+#### 📊 GraphQL Subgraph Generation
+
+**Schema Validation Improvements:**
+- Skip document models without valid operation schemas
+- Better type handling for Maybe<string> schemas (null/undefined support)
+- Include input type definitions from state schemas in generated subgraphs
+
+### BUG FIXES
+
+#### 🏠 Home Screen & UI
+- Added truncation for long drive names in home screen display
+- Fixed Vetra drive app background styling issues
+- Removed circular imports in design-system components
+
+#### 📤 Document Export
+- Fixed document extension handling when exporting documents
+- Improved document response naming consistency
+- Better error handling in export functionality
+
+#### 🔧 Build & Dependencies
+- Resolved design-system runtime dependency declarations
+- Fixed testing-library and reactor import conflicts
+- Improved asset import paths for runtime environments
+
+#### 🧪 Testing & Development
+- Fixed race conditions in reactor tests
+- Better clipboard storage loading from local storage
+- Improved error handling for revision mismatches
+- Enhanced document deletion functionality
+
+### DEVELOPMENT EXPERIENCE
+
+#### 🎯 Better Error Handling
+- `useSelectedDocument` now throws descriptive errors when no document is selected
+- Improved validation and error messages throughout the system
+- Better handling of document model type validation
+
+#### 🔍 Inspector Tools
+- New filter bar in inspector for better debugging
+- Improved operation field ordering (temporary implementation)
+- Enhanced undo/redo skip calculation logic
+
 ## 🚀 **v5.2.0**
 
 ### ✨ Highlights
