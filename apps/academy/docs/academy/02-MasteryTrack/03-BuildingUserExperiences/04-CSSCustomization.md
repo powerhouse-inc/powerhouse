@@ -7,18 +7,23 @@ When your editor runs inside Connect, it's rendered within a specific container 
 Connect wraps your editor component in two key containers that you can target for styling:
 
 ```
-<div id="document-editor-container" class="flex-1">
+<div id="document-editor-container"
+     class="flex-1"
+     data-document-type="[type]">
   └── <DocumentEditor />
-       └── <div id="document-editor-context" class="relative h-full">
+       └── <div id="document-editor-context"
+                class="relative h-full"
+                data-editor="[editorId]"
+                data-document-type="[type]">
             └── <YourEditorComponent />
 ```
 
 ### Container Details
 
-| Container ID                 | Default Classes   | Purpose                                                     |
-| ---------------------------- | ----------------- | ----------------------------------------------------------- |
-| `#document-editor-container` | `flex-1`          | Outermost wrapper, controls overall editor space allocation |
-| `#document-editor-context`   | `relative h-full` | Inner context, provides positioning context and full height |
+| Container ID                 | Default Classes   | Data Attributes                     | Purpose                                                     |
+| ---------------------------- | ----------------- | ----------------------------------- | ----------------------------------------------------------- |
+| `#document-editor-container` | `flex-1`          | `data-document-type`                | Outermost wrapper, controls overall editor space allocation |
+| `#document-editor-context`   | `relative h-full` | `data-editor`, `data-document-type` | Inner context, provides positioning context and full height |
 
 These containers are defined in Connect's source:
 
@@ -49,6 +54,10 @@ Using `height: "100%"` ensures your editor fills the available vertical space wi
 
 For more complex customizations or when you need to override Connect's default container styles, you can target the container IDs directly in a CSS file:
 
+:::danger Affects All Editors
+Targeting container IDs directly will apply styles to **ALL** editors in your Connect application. For editor-specific styling, use [Method 3: Scoped Styling with Data Attributes](#method-3-scoped-styling-with-data-attributes) instead.
+:::
+
 ```css
 /* editors/my-editor/editor.css */
 #document-editor-container {
@@ -76,6 +85,57 @@ Remember to import styles in your `styles.css` file rather than directly in `.ts
 @import "./editors/my-editor/editor.css";
 ```
 
+:::
+
+### Method 3: Scoped Styling with Data Attributes
+
+Connect adds `data-editor` and `data-document-type` attributes to editor containers, allowing you to scope CSS rules to specific editors without affecting others.
+
+```css
+/* Only applies to a specific editor */
+#document-editor-context[data-editor="document-editor-editor"] {
+  background-color: #f0f9ff;
+}
+
+/* Only applies to a specific document type */
+#document-editor-context[data-document-type="powerhouse/document-editor"] {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* Combine both for precise targeting */
+#document-editor-context[data-editor="document-editor-editor"][data-document-type="powerhouse/document-editor"] {
+  padding: 1rem;
+}
+```
+
+#### Finding Your Editor ID
+
+The `data-editor` value comes from the `id` property in your editor module configuration:
+
+```typescript
+// editors/my-editor/module.ts
+import type { EditorModule } from "@powerhousedao/reactor-browser";
+
+export const MyEditor: EditorModule = {
+  config: {
+    id: "my-custom-editor", // <-- This becomes the data-editor value
+    documentTypes: ["my-org/my-document-model"],
+  },
+  Component: MyEditorComponent,
+};
+```
+
+#### Common Editor IDs
+
+| Editor ID                | Document Type                | Description     |
+| ------------------------ | ---------------------------- | --------------- |
+| `document-editor-editor` | `powerhouse/document-editor` | Document Editor |
+| `vetra-drive-app`        | `powerhouse/document-drive`  | Drive Explorer  |
+| `app-editor`             | `powerhouse/app`             | App Editor      |
+
+:::tip Runtime Inspection
+You can inspect the `data-editor` and `data-document-type` attributes in your browser's developer tools when editing a document to find the exact values for your target editor.
 :::
 
 ## Reference Implementation: Vetra Drive App

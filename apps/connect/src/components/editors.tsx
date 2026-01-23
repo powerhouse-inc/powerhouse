@@ -170,7 +170,12 @@ export const DocumentEditor: React.FC<Props> = (props) => {
   const EditorComponent = editorModule.Component;
 
   return (
-    <div className="relative h-full" id="document-editor-context">
+    <div
+      className="relative h-full"
+      id="document-editor-context"
+      data-editor={editorModule.id}
+      data-document-type={documentType}
+    >
       {revisionHistoryVisible ? (
         <RevisionHistory
           key={documentId}
