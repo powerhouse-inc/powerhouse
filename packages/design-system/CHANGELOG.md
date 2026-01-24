@@ -1,3 +1,15 @@
+## 6.0.0-dev.16 (2026-01-24)
+
+### 🩹 Fixes
+
+- reactor backfill now respects timestamp ([6edcdeaeb](https://github.com/powerhouse-inc/powerhouse/commit/6edcdeaeb))
+- revert import assets with runtime relative paths ([92f21e353](https://github.com/powerhouse-inc/powerhouse/commit/92f21e353))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.15 (2026-01-23)
 
 ### 🚀 Features
