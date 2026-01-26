@@ -181,13 +181,6 @@ jobs:
           build-args: |
             TAG=${{env.GITHUB_TAG}}
 
-  deploy-k8s:
-    needs: [connect, switchboard, academy]
-    uses: "./.github/workflows/deploy-k8s.yml"
-    with:
-      tag: ${{ needs.academy.outputs.tag }}
-    secrets: inherit
-
   # Determine channel from tag for downstream packages
   determine-channel:
     needs: [academy]
@@ -209,7 +202,7 @@ jobs:
 
   # Trigger downstream package updates
   trigger-downstream:
-    needs: [deploy-k8s, determine-channel, academy]
+    needs: [connect, switchboard, academy, determine-channel]
     uses: "./.github/workflows/trigger-downstream-packages.yml"
     with:
       version: ${{ needs.academy.outputs.tag }}
