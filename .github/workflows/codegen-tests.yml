@@ -8,15 +8,9 @@ on:
   workflow_dispatch:
   push:
     branches: ["main"]
-    paths:
-      - "packages/codegen/**"
-      - ".github/workflows/codegen-tests.yml"
   pull_request:
     branches: ["main"]
     types: [opened]
-    paths:
-      - "packages/codegen/**"
-      - ".github/workflows/codegen-tests.yml"
 
 permissions:
   contents: read
