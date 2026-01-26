@@ -83,8 +83,12 @@ jobs:
             *) BRANCH="staging" ;;
           esac
 
-          # Extract project name from repository (e.g., powerhouse-inc/renown-package -> renown-package)
-          PROJECT_NAME="\${GITHUB_REPOSITORY#*/}"
+          # Use DOCKER_PROJECT secret if set, otherwise extract from repository name
+          if [ -n "\${{ secrets.DOCKER_PROJECT }}" ]; then
+            PROJECT_NAME="\${{ secrets.DOCKER_PROJECT }}"
+          else
+            PROJECT_NAME="\${GITHUB_REPOSITORY#*/}"
+          fi
 
           echo "channel=\$CHANNEL" >> \$GITHUB_OUTPUT
           echo "version=\$VERSION" >> \$GITHUB_OUTPUT
