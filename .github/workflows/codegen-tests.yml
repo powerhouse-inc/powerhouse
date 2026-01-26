@@ -47,17 +47,37 @@ jobs:
         run: pnpm tsc -b
         working-directory: 'packages/codegen'
 
-      - name: Vitest related (PR)
-        if: ${{ github.event_name == 'pull_request' }}
-        run: echo files from diff: $(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}")
-        run: pnpm vitest related --run $(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}")
-        working-directory: 'packages/codegen'
+      - name: Get changed files
+        id: diff
+        shell: bash
+        run: |
+          set -euo pipefail
 
-      - name: Vitest related (push)
-        if: ${{ github.event_name != 'pull_request' }}
-        run: echo files from diff: $(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}")
-        run: pnpm vitest related --run $(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}")
-        working-directory: 'packages/codegen'
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            HEAD="${{ github.event.pull_request.head.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+            HEAD="${{ github.sha }}"
+          fi
+
+          FILES="$(git diff --name-only "$BASE" "$HEAD")"
+
+          echo "Base: $BASE"
+          echo "Head: $HEAD"
+          echo "Changed files:"
+          echo "$FILES"
+
+          echo "files=$FILES" >> "$GITHUB_OUTPUT"
+
+      - name: Vitest related
+        if: ${{ steps.diff.outputs.files != '' }}
+        working-directory: packages/codegen
+        run: pnpm vitest related --run ${{ steps.diff.outputs.files }}
+
+      - name: Skip vitest related (no changed files)
+        if: ${{ steps.diff.outputs.files == '' }}
+        run: echo "No changed files; skipping vitest related."
 
   notify-discord:
     if: failure() && github.event_name != 'pull_request'
