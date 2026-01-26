@@ -23,7 +23,7 @@
   "sideEffects": false,
   "scripts": {
     "tsc": "tsc",
-    "build": "pnpm tsc --build && copyfiles -u 0 \"src/**/*.graphql\" dist/",
+    "build": "copyfiles -u 0 \"src/**/*.graphql\" dist/",
     "lint": "eslint",
     "test": "vitest run",
     "bench": "vitest bench",

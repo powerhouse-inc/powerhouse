@@ -41,8 +41,6 @@
   "scripts": {
     "lint": "eslint . --cache",
     "lint:fix": "eslint . --fix --cache",
-    "build:tsc": "tsc",
-    "build:tsc:watch": "tsc --watch",
     "build:css": "pnpm exec tailwindcss -i ./style.css -o ./dist/style.css",
     "build:css:watch": "pnpm exec tailwindcss -i ./style.css -o ./dist/style.css --watch",
     "typecheck": "tsc --noEmit",

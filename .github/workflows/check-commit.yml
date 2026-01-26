@@ -78,7 +78,7 @@ jobs:
         run: pnpm test:ci
 
       - name: Run codegen tests
-        run: pnpm --filter=codegen test --silent passed-only
+        run: pnpm test:codegen
 
       - name: Run circular imports check
         run: pnpm check-circular-imports
