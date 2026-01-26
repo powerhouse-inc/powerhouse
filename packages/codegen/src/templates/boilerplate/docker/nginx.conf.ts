@@ -62,7 +62,7 @@ http {
         }
 
         # match any file in the root folder, except index.html
-        location ~ \${PH_CONNECT_BASE_PATH}/(?!index\\.html$)([^/]+\\.[a-z0-9]+)$ {
+        location ~ \${PH_CONNECT_BASE_PATH}/(?!index\\.html$)([^/]+\\.[a-zA-Z0-9]+)$ {
             alias /var/www/html/project/$1;
             access_log off;
             log_not_found off;
