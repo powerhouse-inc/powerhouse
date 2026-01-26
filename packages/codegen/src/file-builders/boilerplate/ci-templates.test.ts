@@ -35,8 +35,8 @@ describe("CI/CD Templates", () => {
       expect(syncAndPublishWorkflowTemplate).toContain("powerhouse-release");
     });
 
-    test("should configure Harbor and GHCR registries", () => {
-      expect(syncAndPublishWorkflowTemplate).toContain("HARBOR_REGISTRY:");
+    test("should configure Docker and GHCR registries", () => {
+      expect(syncAndPublishWorkflowTemplate).toContain("DOCKER_REGISTRY:");
       expect(syncAndPublishWorkflowTemplate).toContain("GHCR_REGISTRY:");
       expect(syncAndPublishWorkflowTemplate).toContain("cr.vetra.io");
       expect(syncAndPublishWorkflowTemplate).toContain("ghcr.io");
