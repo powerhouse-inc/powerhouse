@@ -13,7 +13,7 @@ on:
   pull_request:
     branches: ["main"]
     types: [opened]
-    paths: 
+    paths:
       - "packages/codegen/**"
 
 permissions:
@@ -40,14 +40,14 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: 'pnpm'
+          cache: pnpm
 
       - name: Install deps (frozen lockfile)
         run: pnpm install-ci
 
       - name: Build typescript project
         run: pnpm tsc -b
-        working-directory: 'packages/codegen'
+        working-directory: packages/codegen
 
       - name: Get changed files
         id: diff
@@ -55,28 +55,39 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          EVENT="${{ github.event_name }}"
+
+          if [[ "$EVENT" == "pull_request" ]]; then
             BASE="${{ github.event.pull_request.base.sha }}"
             HEAD="${{ github.event.pull_request.head.sha }}"
-          else
+          elif [[ "$EVENT" == "push" ]]; then
             BASE="${{ github.event.before }}"
             HEAD="${{ github.sha }}"
+          else
+            # workflow_dispatch (manual): diff last commit on the checked-out ref
+            BASE="$(git rev-parse HEAD~1)"
+            HEAD="$(git rev-parse HEAD)"
           fi
 
           FILES="$(git diff --name-only "$BASE" "$HEAD")"
 
-          echo "Base: $BASE"
-          echo "Head: $HEAD"
+          echo "Event: $EVENT"
+          echo "Base:  $BASE"
+          echo "Head:  $HEAD"
           echo "Changed files:"
           echo "$FILES"
 
-          # store as single line for later steps
+          # store as single line for later steps (you said no spaces in paths)
           echo "files=$(echo "$FILES" | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
 
       - name: Vitest related
         if: ${{ steps.diff.outputs.files != '' }}
         working-directory: packages/codegen
         run: pnpm vitest related --run ${{ steps.diff.outputs.files }}
+
+      - name: Skip vitest related (no changed files)
+        if: ${{ steps.diff.outputs.files == '' }}
+        run: echo "No changed files; skipping vitest related."
 
   notify-discord:
     if: failure() && github.event_name != 'pull_request'
@@ -90,7 +101,7 @@ jobs:
         run: |
           DISCORD_USER=$(echo "$DISCORD_USER_MAPPING" | jq -r --arg GH_USER "${{ github.actor }}" '.[$GH_USER] // ""')
           MENTION_STRING=""
-          if [ ! -z "$DISCORD_USER" ]; then
+          if [ -n "$DISCORD_USER" ]; then
             MENTION_STRING="<@${DISCORD_USER}> "
           fi
 
