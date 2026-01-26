@@ -34,10 +34,10 @@ jobs:
         uses: oven-sh/setup-bun@v2
 
       - name: Setup pnpm with cache
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@master
         with:
           version: latest
-          run_install: false
+          cache: true
 
       - name: Cache ESLint
         uses: actions/cache@v5
