@@ -8,9 +8,11 @@ on:
   workflow_dispatch:
   push:
     branches: ["main"]
+    paths:
+      - "packages/codegen/**"
   pull_request:
     branches: ["main"]
-    types: [opened, synchronize]
+    types: [opened]
     paths: 
       - "packages/codegen/**"
 
@@ -68,16 +70,13 @@ jobs:
           echo "Changed files:"
           echo "$FILES"
 
-          echo "files=$FILES" >> "$GITHUB_OUTPUT"
+          # store as single line for later steps
+          echo "files=$(echo "$FILES" | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
 
       - name: Vitest related
         if: ${{ steps.diff.outputs.files != '' }}
         working-directory: packages/codegen
         run: pnpm vitest related --run ${{ steps.diff.outputs.files }}
-
-      - name: Skip vitest related (no changed files)
-        if: ${{ steps.diff.outputs.files == '' }}
-        run: echo "No changed files; skipping vitest related."
 
   notify-discord:
     if: failure() && github.event_name != 'pull_request'
