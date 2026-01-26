@@ -10,7 +10,7 @@ on:
     branches: ["main"]
   pull_request:
     branches: ["main"]
-    types: [openedm reopened, synchronize]
+    types: [opened, reopened, synchronize]
 
 permissions:
   contents: read
@@ -46,60 +46,12 @@ jobs:
         working-directory: packages/codegen
 
       - name: Get changed files
-        id: diff
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          EVENT_NAME="${{ github.event_name }}"
-          PR_ACTION="${{ github.event.action || '' }}"
-
-          # Default base/head
-          BASE=""
-          HEAD=""
-
-          if [[ "$EVENT_NAME" == "pull_request" && "$PR_ACTION" == "synchronize" ]]; then
-            # For PR synchronize: diff the last pushed range (before -> after) from the webhook payload
-            BASE="$(jq -r '.before // empty' "$GITHUB_EVENT_PATH")"
-            HEAD="$(jq -r '.after  // empty' "$GITHUB_EVENT_PATH")"
-
-            # Fallback (in case payload changes / is trimmed)
-            if [[ -z "$BASE" || -z "$HEAD" ]]; then
-              BASE="${{ github.event.pull_request.base.sha }}"
-              HEAD="${{ github.event.pull_request.head.sha }}"
-            fi
-
-          elif [[ "$EVENT_NAME" == "pull_request" ]]; then
-            # opened/reopened/etc: use full PR diff
-            BASE="${{ github.event.pull_request.base.sha }}"
-            HEAD="${{ github.event.pull_request.head.sha }}"
-
-          elif [[ "$EVENT_NAME" == "push" ]]; then
-            BASE="${{ github.event.before }}"
-            HEAD="${{ github.sha }}"
-
-          else
-            # workflow_dispatch (manual): diff last commit on the checked-out ref
-            BASE="$(git rev-parse HEAD~1)"
-            HEAD="$(git rev-parse HEAD)"
-          fi
-
-          FILES="$(git diff --name-only "$BASE" "$HEAD")"
-
-          echo "Event:  $EVENT_NAME"
-          echo "Action: $PR_ACTION"
-          echo "Base:   $BASE"
-          echo "Head:   $HEAD"
-          echo "Changed files:"
-          echo "$FILES"
-
-          # single-line output (you said no spaces in paths)
-          echo "files=$(echo "$FILES" | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+        id: changed
+        uses: ./.github/changed-files
 
       - name: Vitest related
         if: ${{ steps.diff.outputs.files != '' }}
-        working-directory: packages/codegen
-        run: pnpm vitest related --run ${{ steps.diff.outputs.files }}
+        run: pnpm vitest --run related ${{ steps.diff.outputs.files }}
 
       - name: Skip vitest related (no changed files)
         if: ${{ steps.diff.outputs.files == '' }}

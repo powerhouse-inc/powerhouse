@@ -51,7 +51,7 @@
   },
   "scripts": {
     "build": "npm run tsc && npm run tailwind",
-    "test": "vitest run",
+    "test": "vitest --run",
     "test:watch": "vitest",
     "lint": "eslint --config eslint.config.js --cache --cache-strategy content",
     "lint:fix": "npm run lint --fix",

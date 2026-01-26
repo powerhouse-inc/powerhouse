@@ -35,7 +35,7 @@
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "test:browser": "vitest run",
+    "test:browser": "vitest --run",
     "install:playwright": "playwright install"
   },
   "devDependencies": {

@@ -25,7 +25,7 @@
     "tsc": "tsc",
     "build": "copyfiles -u 0 \"src/**/*.graphql\" dist/",
     "lint": "eslint",
-    "test": "vitest run",
+    "test": "vitest --run",
     "bench": "vitest bench",
     "codegen": "graphql-codegen --config codegen.ts && prettier --write src/graphql/reactor/gen/*.ts && eslint --fix src/graphql/reactor/gen/*.ts --no-warn-ignored",
     "codegen:watch": "graphql-codegen --config codegen.ts --watch"

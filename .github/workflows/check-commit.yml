@@ -10,7 +10,7 @@ on:
     branches: ["main"]
   pull_request:
     branches: ["main"]
-    types: [opened, synchronize]
+    types: [opened, reopened, synchronize]
 
 permissions:
   contents: read
@@ -54,8 +54,12 @@ jobs:
       - name: Run install again after generating binaries
         run: pnpm install-ci
 
+      - name: Get changed files
+        id: changed
+        uses: ./.github/changed-files
+
       - name: Run eslint
-        run: pnpm lint-ci
+        run: pnpm lint-ci ${{ steps.diff.outputs.files }}
 
       - name: Run css build scripts
         run: pnpm build-css
@@ -66,8 +70,13 @@ jobs:
       - name: Run storybook build scripts
         run: pnpm build-storybook
 
-      - name: Run CI tests (excludes document-drive, reactor and codegen)
-        run: pnpm test-ci
+      - name: Vitest related
+        if: ${{ steps.diff.outputs.files != '' }}
+        run: pnpm test-ci ${{ steps.diff.outputs.files }}
+
+      - name: Skip vitest related (no changed files)
+        if: ${{ steps.diff.outputs.files == '' }}
+        run: echo "No changed files; skipping vitest related."
 
       - name: Run circular imports check
         run: pnpm check-circular-imports

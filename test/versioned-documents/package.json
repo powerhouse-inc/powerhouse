@@ -58,7 +58,7 @@
     "tsc": "tsc",
     "lint": "eslint",
     "build:css": "npx @tailwindcss/cli -i ./style.css -o ./dist/style.css",
-    "test": "vitest run",
+    "test": "vitest --run",
     "test:watch": "vitest",
     "test:document-models": "vitest run document-models",
     "test:editors": "vitest run editors",

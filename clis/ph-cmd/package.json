@@ -29,7 +29,7 @@
     "build": "npm run generate-docs-legacy && npm run generate-version && npm run generate-docs && npm run bundle-cli && npm run bundle-cli-legacy",
     "dev": "tsx src/cli.ts",
     "cli": "node build/cli.js",
-    "test": "vitest run",
+    "test": "vitest --run",
     "test:watch": "vitest watch"
   },
   "keywords": [],

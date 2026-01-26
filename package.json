@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "tsc": "tsc",
-    "test-ci": "pnpm -r --no-bail --filter=!codegen --filter=!document-drive --filter=!reactor --filter=!atlas --filter=!load-test-client --filter=!scripts run test -- --silent passed-only",
+    "test-ci": "pnpm -r --no-bail --filter=!codegen --filter=!document-drive --filter=!reactor --filter=!atlas --filter=!load-test-client --filter=!scripts run test -- --silent passed-only related",
     "test-codegen": "pnpm --filter=codegen run test -- --silent passed-only",
     "test-coverage": "pnpm vitest run --coverage",
     "simulate-ci-workflow": "pnpm clean && pnpm install-ci && pnpm check-ts-references && pnpm build-tsc && pnpm build-misc && pnpm build-css && pnpm build-vite && pnpm install-ci && pnpm lint && pnpm test-ci && pnpm test-codegen && pnpm build-storybook && pnpm check-circular-imports",

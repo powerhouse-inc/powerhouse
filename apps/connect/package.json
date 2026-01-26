@@ -112,7 +112,7 @@
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "test": "vitest run",
+    "test": "vitest --run",
     "postinstall": "cp ./package.json ./package.copy.json",
     "dev": "vite dev",
     "build:css": "pnpm exec tailwindcss -i ./src/index.css -o ./lib/style.css",

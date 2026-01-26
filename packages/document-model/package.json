@@ -34,7 +34,7 @@
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "test": "vitest run",
+    "test": "vitest --run",
     "test:watch": "vitest watch"
   },
   "devDependencies": {
