@@ -4,7 +4,9 @@ import {
   buildPowerhouseConfigTemplate,
   claudeSettingsLocalTemplate,
   claudeTemplate,
+  connectEntrypointTemplate,
   cursorMcpTemplate,
+  dockerfileTemplate,
   documentModelsIndexTemplate,
   documentModelsTemplate,
   editorsIndexTemplate,
@@ -16,12 +18,15 @@ import {
   legacyIndexHtmlTemplate,
   licenseTemplate,
   mcpTemplate,
+  nginxConfTemplate,
   npmrcTemplate,
   powerhouseManifestTemplate,
   processorsIndexTemplate,
   readmeTemplate,
   styleTemplate,
   subgraphsIndexTemplate,
+  switchboardEntrypointTemplate,
+  syncAndPublishWorkflowTemplate,
   tsConfigTemplate,
   viteConfigTemplate,
   vitestConfigTemplate,
@@ -78,6 +83,7 @@ export async function createProject({
     await writeProjectRootFiles({ name, tag, version, remoteDrive });
     await writeModuleFiles();
     await writeAiConfigFiles();
+    await writeCIFiles();
     console.log(chalk.green(`✅ Project boilerplate files created\n`));
 
     // Install the project dependencies with the specified package manager
@@ -159,5 +165,22 @@ async function writeAiConfigFiles() {
   await writeFileEnsuringDir(
     ".claude/settings.local.json",
     claudeSettingsLocalTemplate,
+  );
+}
+
+async function writeCIFiles() {
+  await writeFileEnsuringDir(
+    ".github/workflows/sync-and-publish.yml",
+    syncAndPublishWorkflowTemplate,
+  );
+  await writeFileEnsuringDir("Dockerfile", dockerfileTemplate);
+  await writeFileEnsuringDir("docker/nginx.conf", nginxConfTemplate);
+  await writeFileEnsuringDir(
+    "docker/connect-entrypoint.sh",
+    connectEntrypointTemplate,
+  );
+  await writeFileEnsuringDir(
+    "docker/switchboard-entrypoint.sh",
+    switchboardEntrypointTemplate,
   );
 }
