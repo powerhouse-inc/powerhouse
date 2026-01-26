@@ -1,11 +1,14 @@
 import { generateEditor, generateManifest } from "@powerhousedao/codegen";
 import { kebabCase } from "change-case";
 import type { InternalTransmitterUpdate } from "document-drive";
-import type { DocumentEditorState } from "../../../../document-models/document-editor/index.js";
+import type {
+  DocumentEditorPHState,
+  DocumentEditorState,
+} from "../../../../document-models/document-editor/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
 import { USE_TS_MORPH } from "./constants.js";
-import { backupDocument } from "./utils.js";
+import { minimalBackupDocument } from "./utils.js";
 
 /**
  * Generator for document editor documents
@@ -111,11 +114,15 @@ export class DocumentEditorGenerator extends BaseDocumentGen {
       }
 
       // Backup the document
-      await backupDocument(
-        strand.document,
+      await minimalBackupDocument(
+        {
+          documentId: strand.documentId,
+          documentType: strand.documentType,
+          branch: strand.branch,
+          state: strand.state as DocumentEditorPHState,
+          name: state.name,
+        },
         this.config.CURRENT_WORKING_DIR,
-        undefined,
-        state.name,
       );
     } catch (error) {
       logger.error(

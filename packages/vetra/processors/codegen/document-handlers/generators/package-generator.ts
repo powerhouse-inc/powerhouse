@@ -1,9 +1,12 @@
 import { generateManifest } from "@powerhousedao/codegen";
 import type { InternalTransmitterUpdate } from "document-drive";
-import type { VetraPackageState } from "../../../../document-models/vetra-package/index.js";
+import type {
+  VetraPackagePHState,
+  VetraPackageState,
+} from "../../../../document-models/vetra-package/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
-import { backupDocument } from "./utils.js";
+import { minimalBackupDocument } from "./utils.js";
 
 /**
  * Generator for package documents
@@ -48,11 +51,15 @@ export class PackageGenerator extends BaseDocumentGen {
     logger.info("✅ Manifest generated successfully");
 
     // Backup the document
-    await backupDocument(
-      strand.document,
+    await minimalBackupDocument(
+      {
+        documentId: strand.documentId,
+        documentType: strand.documentType,
+        branch: strand.branch,
+        state: strand.state as VetraPackagePHState,
+        name: "vetra-package",
+      },
       this.config.CURRENT_WORKING_DIR,
-      undefined,
-      "vetra-package",
     );
   }
 }
