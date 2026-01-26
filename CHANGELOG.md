@@ -1,3 +1,13 @@
+## 6.0.0-dev.17 (2026-01-26)
+
+### 🩹 Fixes
+
+- **academy:** remove reference to excluded DriveAnalyticsHooks doc ([83dc4dcf5](https://github.com/powerhouse-inc/powerhouse/commit/83dc4dcf5))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.16 (2026-01-24)
 
 ### 🚀 Features
