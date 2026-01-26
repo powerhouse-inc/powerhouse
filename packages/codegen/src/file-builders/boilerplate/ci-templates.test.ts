@@ -13,7 +13,9 @@ describe("CI/CD Templates", () => {
     });
 
     test("should have correct workflow name", () => {
-      expect(syncAndPublishWorkflowTemplate).toContain("name: Sync and Publish");
+      expect(syncAndPublishWorkflowTemplate).toContain(
+        "name: Sync and Publish",
+      );
     });
 
     test("should contain required jobs", () => {
