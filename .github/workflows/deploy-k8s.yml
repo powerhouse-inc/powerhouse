@@ -39,7 +39,7 @@ jobs:
           fi
 
       - name: Checkout k8s cluster repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: powerhouse-inc/powerhouse-k8s-hosting
           token: ${{ secrets.K8S_REPO_PAT }}
