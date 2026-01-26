@@ -18,10 +18,12 @@ import type {
 import { GraphQLError } from "graphql";
 import {
   fromInputMaybe,
+  serializeOperationForGraphQL,
   toDocumentModelResultPage,
   toGqlJobInfo,
   toGqlPhDocument,
   toMutableArray,
+  toOperationResultPage,
   toPhDocumentResultPage,
   validateActions,
 } from "./adapters.js";
@@ -30,6 +32,7 @@ import type {
   JobInfo as GqlJobInfo,
   PropagationMode as GqlPropagationMode,
   PhDocumentResultPage,
+  ReactorOperationResultPage,
 } from "./gen/graphql.js";
 
 export async function documentModels(
@@ -307,6 +310,104 @@ export async function jobStatus(
   } catch (error) {
     throw new GraphQLError(
       `Failed to convert job status to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
+export async function documentOperations(
+  reactorClient: IReactorClient,
+  args: {
+    filter: {
+      documentId: string;
+      branch?: string | null;
+      scopes?: readonly string[] | null;
+      actionTypes?: readonly string[] | null;
+      sinceRevision?: number | null;
+      timestampFrom?: string | null;
+      timestampTo?: string | null;
+    };
+    paging?: {
+      cursor?: string | null;
+      limit?: number | null;
+    } | null;
+  },
+): Promise<ReactorOperationResultPage> {
+  let view: ViewFilter | undefined;
+  const branch = fromInputMaybe(args.filter.branch);
+  const scopes = toMutableArray(fromInputMaybe(args.filter.scopes));
+  if (branch || scopes) {
+    view = { branch, scopes };
+  }
+
+  let paging: PagingOptions | undefined;
+  if (args.paging) {
+    const cursor = fromInputMaybe(args.paging.cursor);
+    const limit = fromInputMaybe(args.paging.limit);
+    if (cursor || limit) {
+      paging = {
+        cursor: cursor || "",
+        limit: limit || 100,
+      };
+    }
+  }
+
+  let result: PagedResults<Operation>;
+  try {
+    result = await reactorClient.getOperations(
+      args.filter.documentId,
+      view,
+      paging,
+    );
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to fetch document operations: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  const actionTypes = toMutableArray(fromInputMaybe(args.filter.actionTypes));
+  const sinceRevision = fromInputMaybe(args.filter.sinceRevision);
+  const timestampFrom = fromInputMaybe(args.filter.timestampFrom);
+  const timestampTo = fromInputMaybe(args.filter.timestampTo);
+
+  let filteredOperations = result.results;
+
+  if (actionTypes && actionTypes.length > 0) {
+    filteredOperations = filteredOperations.filter((op) =>
+      actionTypes.includes(op.action.type),
+    );
+  }
+
+  if (sinceRevision !== undefined) {
+    filteredOperations = filteredOperations.filter(
+      (op) => op.index >= sinceRevision,
+    );
+  }
+
+  if (timestampFrom) {
+    const fromMs = new Date(timestampFrom).getTime();
+    filteredOperations = filteredOperations.filter(
+      (op) => new Date(op.action.timestampUtcMs).getTime() >= fromMs,
+    );
+  }
+
+  if (timestampTo) {
+    const toMs = new Date(timestampTo).getTime();
+    filteredOperations = filteredOperations.filter(
+      (op) => new Date(op.action.timestampUtcMs).getTime() <= toMs,
+    );
+  }
+
+  const filteredResult: PagedResults<Operation> = {
+    results: filteredOperations,
+    options: result.options,
+    nextCursor: result.nextCursor,
+  };
+
+  try {
+    return toOperationResultPage(filteredResult);
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to convert operations to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 }
@@ -706,36 +807,6 @@ export async function touchChannel(
   }
 
   return true;
-}
-
-/**
- * Transforms an operation to serialize signatures from tuples to strings
- * for GraphQL compatibility.
- *
- * The Signature type is a tuple [string, string, string, string, string],
- * but GraphQL expects [String!]! (flat array of strings).
- */
-function serializeOperationForGraphQL(operation: Operation) {
-  const signer = operation.action.context?.signer;
-  if (!signer?.signatures) {
-    return operation;
-  }
-
-  return {
-    ...operation,
-    action: {
-      ...operation.action,
-      context: {
-        ...operation.action.context,
-        signer: {
-          ...signer,
-          signatures: signer.signatures.map((sig) =>
-            Array.isArray(sig) ? sig.join(", ") : sig,
-          ),
-        },
-      },
-    },
-  };
 }
 
 export async function pollSyncEnvelopes(

@@ -4,6 +4,7 @@ import type {
   CreateDocumentActionInput,
   DocumentModelModule,
   ISigner,
+  Operation,
   PHDocument,
 } from "document-model";
 import { actions } from "document-model";
@@ -128,6 +129,53 @@ export class ReactorClient implements IReactorClient {
       undefined,
       signal,
     );
+  }
+
+  /**
+   * Retrieves operations for a document
+   */
+  async getOperations(
+    documentIdentifier: string,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<Operation>> {
+    this.logger.verbose(
+      "getOperations(@documentIdentifier, @view, @paging)",
+      documentIdentifier,
+      view,
+      paging,
+    );
+
+    const doc = await this.reactor.getByIdOrSlug(
+      documentIdentifier,
+      view,
+      undefined,
+      signal,
+    );
+    const documentId = doc.document.header.id;
+
+    const operationsByScope = await this.reactor.getOperations(
+      documentId,
+      view,
+      paging,
+      undefined,
+      signal,
+    );
+
+    const allOperations: Operation[] = [];
+    for (const scopeResults of Object.values(operationsByScope)) {
+      allOperations.push(...scopeResults.results);
+    }
+
+    allOperations.sort((a, b) => a.index - b.index);
+
+    const effectivePaging = paging || { cursor: "0", limit: 100 };
+
+    return {
+      results: allOperations,
+      options: effectivePaging,
+    };
   }
 
   /**

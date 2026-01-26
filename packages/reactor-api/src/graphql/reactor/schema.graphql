@@ -20,6 +20,16 @@ input SearchFilterInput {
   identifiers: [String!]
 }
 
+input OperationsFilterInput {
+  documentId: String!
+  branch: String
+  scopes: [String!]
+  actionTypes: [String!]
+  sinceRevision: Int
+  timestampFrom: String
+  timestampTo: String
+}
+
 # Enums
 enum PropagationMode {
   CASCADE
@@ -72,6 +82,14 @@ type PHDocument {
 
 type PHDocumentResultPage {
   items: [PHDocument!]!
+  totalCount: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  cursor: String
+}
+
+type ReactorOperationResultPage {
+  items: [ReactorOperation!]!
   totalCount: Int!
   hasNextPage: Boolean!
   hasPreviousPage: Boolean!
@@ -325,6 +343,12 @@ type Query {
 
   # Get job status
   jobStatus(jobId: String!): JobInfo
+
+  # Get operations for a document with filtering and pagination
+  documentOperations(
+    filter: OperationsFilterInput!
+    paging: PagingInput
+  ): ReactorOperationResultPage!
 
   # Poll for sync envelopes from a channel
   pollSyncEnvelopes(channelId: String!, cursorOrdinal: Int!): [SyncEnvelope!]!

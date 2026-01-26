@@ -1,4 +1,9 @@
-import type { Action, DocumentModelModule, PHDocument } from "document-model";
+import type {
+  Action,
+  DocumentModelModule,
+  Operation,
+  PHDocument,
+} from "document-model";
 
 import type {
   JobInfo,
@@ -95,6 +100,22 @@ export interface IReactorClient {
     document: TDocument;
     childIds: string[];
   }>;
+
+  /**
+   * Retrieves operations for a document.
+   *
+   * @param documentIdentifier - Required, this is either a document "id" field or a "slug"
+   * @param view - Optional filter containing branch and scopes information
+   * @param paging - Optional pagination options
+   * @param signal - Optional abort signal to cancel the request
+   * @returns Paginated list of operations
+   */
+  getOperations(
+    documentIdentifier: string,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<Operation>>;
 
   /**
    * Retrieves children of a document.
