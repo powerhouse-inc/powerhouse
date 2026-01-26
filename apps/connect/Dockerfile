@@ -20,8 +20,8 @@ ARG TAG=latest
 ARG PH_PACKAGES=""
 ARG PH_CONNECT_BASE_PATH="/"
 
-# Install ph-cmd and prettier
-RUN pnpm add -g ph-cmd@$TAG prettier
+# Install ph-cmd, ph-cli and prettier
+RUN pnpm add -g ph-cmd@$TAG @powerhousedao/ph-cli@$TAG prettier
 
 RUN case "$TAG" in \
         *dev*) ph init project --dev --package-manager pnpm ;; \
