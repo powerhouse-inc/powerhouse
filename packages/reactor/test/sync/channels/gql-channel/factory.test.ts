@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { IOperationIndex } from "../../../../src/cache/operation-index-types.js";
 import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
 import { GqlChannelFactory } from "../../../../src/sync/channels/gql-channel-factory.js";
 import { GqlChannel } from "../../../../src/sync/channels/gql-channel.js";
@@ -28,6 +29,18 @@ const createMockFetch = () => {
     json: () => Promise.resolve({ data: { pollSyncEnvelopes: [] } }),
   });
 };
+
+const createMockOperationIndex = (): IOperationIndex => ({
+  start: vi.fn(),
+  commit: vi.fn().mockResolvedValue([]),
+  find: vi
+    .fn()
+    .mockResolvedValue({ items: [], nextCursor: undefined, hasMore: false }),
+  getSinceOrdinal: vi
+    .fn()
+    .mockResolvedValue({ items: [], nextCursor: undefined, hasMore: false }),
+  getLatestTimestampForCollection: vi.fn().mockResolvedValue(null),
+});
 
 describe("GqlChannelFactory", () => {
   let originalFetch: typeof global.fetch;
@@ -66,6 +79,7 @@ describe("GqlChannelFactory", () => {
         cursorStorage,
         TEST_COLLECTION_ID,
         TEST_FILTER,
+        createMockOperationIndex(),
       );
 
       expect(channel).toBeInstanceOf(GqlChannel);
@@ -100,6 +114,7 @@ describe("GqlChannelFactory", () => {
         cursorStorage,
         TEST_COLLECTION_ID,
         TEST_FILTER,
+        createMockOperationIndex(),
       );
 
       expect(channel).toBeInstanceOf(GqlChannel);
@@ -125,6 +140,7 @@ describe("GqlChannelFactory", () => {
         cursorStorage,
         TEST_COLLECTION_ID,
         TEST_FILTER,
+        createMockOperationIndex(),
       );
 
       expect(channel).toBeInstanceOf(GqlChannel);
@@ -151,6 +167,7 @@ describe("GqlChannelFactory", () => {
           cursorStorage,
           TEST_COLLECTION_ID,
           TEST_FILTER,
+          createMockOperationIndex(),
         ),
       ).toThrow(
         'GqlChannelFactory can only create channels of type "gql", got "internal"',
@@ -173,6 +190,7 @@ describe("GqlChannelFactory", () => {
           cursorStorage,
           TEST_COLLECTION_ID,
           TEST_FILTER,
+          createMockOperationIndex(),
         ),
       ).toThrow(
         'GqlChannelFactory requires "url" parameter in config.parameters',
@@ -197,6 +215,7 @@ describe("GqlChannelFactory", () => {
           cursorStorage,
           TEST_COLLECTION_ID,
           TEST_FILTER,
+          createMockOperationIndex(),
         ),
       ).toThrow(
         'GqlChannelFactory requires "url" parameter in config.parameters',
@@ -221,6 +240,7 @@ describe("GqlChannelFactory", () => {
           cursorStorage,
           TEST_COLLECTION_ID,
           TEST_FILTER,
+          createMockOperationIndex(),
         ),
       ).toThrow(
         'GqlChannelFactory requires "url" parameter in config.parameters',
@@ -246,6 +266,7 @@ describe("GqlChannelFactory", () => {
           cursorStorage,
           TEST_COLLECTION_ID,
           TEST_FILTER,
+          createMockOperationIndex(),
         ),
       ).toThrow('"authToken" parameter must be a string');
     });
@@ -269,6 +290,7 @@ describe("GqlChannelFactory", () => {
           cursorStorage,
           TEST_COLLECTION_ID,
           TEST_FILTER,
+          createMockOperationIndex(),
         ),
       ).toThrow('"pollIntervalMs" parameter must be a number');
     });
@@ -292,6 +314,7 @@ describe("GqlChannelFactory", () => {
           cursorStorage,
           TEST_COLLECTION_ID,
           TEST_FILTER,
+          createMockOperationIndex(),
         ),
       ).toThrow('"retryBaseDelayMs" parameter must be a number');
     });
@@ -315,6 +338,7 @@ describe("GqlChannelFactory", () => {
           cursorStorage,
           TEST_COLLECTION_ID,
           TEST_FILTER,
+          createMockOperationIndex(),
         ),
       ).toThrow('"retryMaxDelayMs" parameter must be a number');
     });
@@ -338,6 +362,7 @@ describe("GqlChannelFactory", () => {
           cursorStorage,
           TEST_COLLECTION_ID,
           TEST_FILTER,
+          createMockOperationIndex(),
         ),
       ).toThrow('"maxFailures" parameter must be a number');
     });
@@ -372,6 +397,7 @@ describe("GqlChannelFactory", () => {
         cursorStorage1,
         TEST_COLLECTION_ID,
         TEST_FILTER,
+        createMockOperationIndex(),
       );
       const channel2 = factory.instance(
         "id-2",
@@ -380,6 +406,7 @@ describe("GqlChannelFactory", () => {
         cursorStorage2,
         TEST_COLLECTION_ID,
         TEST_FILTER,
+        createMockOperationIndex(),
       );
 
       expect(channel1).toBeInstanceOf(GqlChannel);
@@ -413,6 +440,7 @@ describe("GqlChannelFactory", () => {
         cursorStorage,
         TEST_COLLECTION_ID,
         TEST_FILTER,
+        createMockOperationIndex(),
       );
 
       expect(channel).toBeInstanceOf(GqlChannel);
@@ -440,6 +468,7 @@ describe("GqlChannelFactory", () => {
         cursorStorage,
         TEST_COLLECTION_ID,
         TEST_FILTER,
+        createMockOperationIndex(),
       );
 
       expect(channel).toBeInstanceOf(GqlChannel);

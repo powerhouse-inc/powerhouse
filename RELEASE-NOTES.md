@@ -1,13 +1,12 @@
 # Release Changelog
 
-## 🚀 **v5.2.0**
+## 🚀 **v5.3.0**
 
 ### ✨ Highlights
 
-1. **Authentication & Permissions** - CLI authentication and document-level permission system
-2. **TS Morph Code Generation (Now Default)** - Faster, more reliable code generation
+1. **Authentication & Permissions** - CLI authentication and document-level permission system on Switchboard
+2. **Improved code generation with TS Morph and templates** - Faster, more reliable code generation and templates are easier to maintain
 3. **Runtime Document Model Subgraphs** - No more generated subgraph code to manage
-4. **Versioned Document Models** - Initial support for document model versioning (WIP 🚧)
 
 ### NEW FEATURES
 
@@ -29,7 +28,7 @@ ph access-token
 
 #### 🛡️ Document Permission Service
 
-A new permission system that provides fine-grained access control at the document level for the Reactor-API (Not yet in Connect)
+A new permission system that provides fine-grained access control at the document level for Switchboard
 
 **Key Features:**
 
@@ -42,46 +41,68 @@ The permission service can be enabled via environment variable or configuration.
 #### Runtime Document Model Subgraphs
 
 Document model subgraphs are now automatically available on Switchboard at runtime.
-**Action required:** Delete generated subgraphs from your project to avoid conflicts.
+**Action required:** Previously generated subgraphs should be deleted to avoid conflicts.
 
-### IMPROVEMENTS
+#### React Hooks Changes
 
-- **TS Morph is now the default code generator** for better performance
-- **Document meta cache** improves reactor performance
-- **Queue performance** optimizations
-- **New document hooks** - Added `useDocument` and `useDocuments` suspense-based hooks, and `useGetDocument`/`useGetDocuments` now return getter functions
+**Bug Fixes**
 
-#### Document Cache Hooks Changes
+- _Bug fix_: Hooks that return multiple documents now correctly update when any of the documents changes
+- Improved React Suspense integration to avoid triggering loading states on every document update
 
-The document cache hooks have been reorganized for better flexibility:
+**Imperative document hooks**
 
-| Hook                      | Description                                                                                  |
-| ------------------------- | -------------------------------------------------------------------------------------------- |
-| `useDocument(id)`         | Suspense-based hook that returns a document by ID (renamed from `useGetDocument`)            |
-| `useDocuments(ids)`       | Suspense-based hook that returns multiple documents (renamed from `useGetDocuments`)         |
-| `useGetDocument()`        | Returns a function `(id) => Promise<PHDocument>` to fetch documents imperatively             |
-| `useGetDocuments()`       | Returns a function `(ids) => Promise<PHDocument[]>` to fetch multiple documents imperatively |
-| `useGetDocumentAsync(id)` | Non-suspense hook that returns loading state (unchanged)                                     |
-
-**Migration:**
+Added `useGetDocument` and `useGetDocuments` hooks to allow fetching documents imperatively.
 
 ```typescript
-// Before (v5.1.x)
-const document = useGetDocument(id);
-const documents = useGetDocuments(ids);
-
-// After (v5.2.0)
-const document = useDocument(id);
-const documents = useDocuments(ids);
-
-// New: Get a function to fetch documents on-demand (lazy loading)
 const getDocument = useGetDocument();
 
-const handleClick = async (id: string) => {
+const onDocumentSelected = async (id: string) => {
   // Document is only fetched when the callback is invoked
   const document = await getDocument(id);
 };
 ```
+
+**Handle result of dispatched actions**
+
+The `dispatch` function now accepts two optional callbacks:
+
+- `onErrors` - invoked with any errors thrown by the reducers when processing the actions.
+- `onSuccess` - invoked with the updated document.
+
+These callbacks are useful to update the UI or perform other actions based on the result of the dispatched action.
+
+**Usage:**
+
+```typescript
+const [document, dispatch] = useDocumentById(documentId);
+
+dispatch(
+  myAction,
+  // Handle errors (e.g., show toast notification)
+  (errors) => {
+    alert(errors);
+  },
+  // Handle success
+  (document) => {
+    console.log("Document updated:", document);
+  },
+);
+```
+
+### MIGRATION STEPS
+
+#### ph migrate
+
+Run `ph migrate` to automatically apply some necessary migrations to your project.
+
+#### Editor Style Updates
+
+The padding added by Connect when displaying the editor has been removed. Each editor is now able to control its own padding.
+
+#### Delete document model subgraphs
+
+Delete the document model subgraphs from your project to avoid conflicts with the automatically generated subgraphs.
 
 #### vitest.config.ts Configuration Update
 
@@ -91,12 +112,7 @@ For existing projects generated before this release, update your project configu
 
 ```json
 {
-  "exclude": [
-    "node_modules",
-    "dist",
-    "eslint.config.js",
-    "vitest.config.ts"
-  ]
+  "exclude": ["node_modules", "dist", "eslint.config.js", "vitest.config.ts"]
 }
 ```
 
@@ -107,7 +123,7 @@ For existing projects generated before this release, update your project configu
   languageOptions: {
     parserOptions: {
       projectService: {
-        allowDefaultProject: ["eslint.config.js", "vitest.config.ts"]
+        allowDefaultProject: ["eslint.config.js", "vitest.config.ts"];
       }
     }
   }
@@ -116,11 +132,24 @@ For existing projects generated before this release, update your project configu
 
 This prevents issues with `package.json` imports in vitest.config.ts being copied to the dist folder during compilation.
 
-### BUG FIXES
+### BUG FIXES AND IMPROVEMENTS
 
-- Fixed query params preservation when navigating in Connect
-- Fixed schema drop transaction handling
-- Fixed bug where hooks that return multiple documents were not updating when one of the returned documents was changed.
+#### Connect UI/UX
+
+- Renaming a file now also updates the document name
+- Fixed scroll overflow issues in files list
+- Better default styling for editors and codegen templates
+- Enhanced drive header with info menu, share menu, and Vetra Academy links
+
+#### Document Export
+
+- Fixed document extension handling when exporting documents
+- Improved document response naming consistency
+- Better error handling in export functionality
+
+#### Document Editor Boilerplate
+
+- The document editor boilerplate has been updated to provide a better starting point for custom editors.
 
 ### DOCUMENTATION (Now also live on https://academy.vetra.io)
 
@@ -137,24 +166,6 @@ This prevents issues with `package.json` imports in vitest.config.ts being copie
 
 - Updated hooks documentation
 - Vetra Studio usage guides
-
-## **v5.1.1**
-
-### **Error Handling for dispatched actions**
-
-Added support for error handling when dispatching actions to documents. The `dispatch` function now accepts an optional `onErrors` callback that is invoked with any errors thrown by the reducers when processing the actions.
-
-**Usage:**
-
-```typescript
-const [document, dispatch] = useDocumentById(documentId);
-
-// Dispatch actions with error handling
-dispatch(myAction, (errors) => {
-  console.error("Action errors:", errors);
-  // Handle errors (e.g., show toast notification)
-});
-```
 
 ### **Document Model Subgraphs**
 

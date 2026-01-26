@@ -114,6 +114,7 @@ export function createResolverBridge(
             scope: readonly string[];
             branch: string;
           };
+          sinceTimestampUtcMs: string;
         };
       };
 

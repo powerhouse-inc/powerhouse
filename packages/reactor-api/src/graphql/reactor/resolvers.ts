@@ -665,6 +665,7 @@ export async function touchChannel(
         scope: readonly string[];
         branch: string;
       };
+      sinceTimestampUtcMs: string;
     };
   },
 ): Promise<boolean> {
@@ -682,6 +683,10 @@ export async function touchChannel(
     branch: args.input.filter.branch,
   };
 
+  const options = {
+    sinceTimestampUtcMs: args.input.sinceTimestampUtcMs,
+  };
+
   try {
     await syncManager.add(
       args.input.name,
@@ -691,7 +696,7 @@ export async function touchChannel(
         parameters: {},
       },
       filter,
-      {},
+      options,
       args.input.id,
     );
   } catch (error) {

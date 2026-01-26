@@ -4,6 +4,7 @@ import type { OperationIndexEntry } from "../../../src/cache/operation-index-typ
 
 function createMockKysely() {
   const mockExecute = vi.fn();
+  const mockExecuteTakeFirst = vi.fn();
   const mockLimit = vi.fn();
   const mockOrderBy = vi.fn();
   const mockWhere = vi.fn();
@@ -26,6 +27,7 @@ function createMockKysely() {
     orderBy: mockOrderBy,
     limit: mockLimit,
     execute: mockExecute,
+    executeTakeFirst: mockExecuteTakeFirst,
     set: mockSet,
   };
 
@@ -91,6 +93,7 @@ function createMockKysely() {
       orderBy: mockOrderBy,
       limit: mockLimit,
       execute: mockExecute,
+      executeTakeFirst: mockExecuteTakeFirst,
       insertInto: mockInsertInto,
       updateTable: mockUpdateTable,
       values: mockValues,
@@ -859,5 +862,57 @@ describe("KyselyOperationIndex.find()", () => {
     });
 
     expect(mocks.where).toHaveBeenCalledWith("oi.ordinal", ">", 42);
+  });
+});
+
+describe("KyselyOperationIndex.getLatestTimestampForCollection()", () => {
+  it("returns latest timestamp for operations in collection", async () => {
+    const { db, mocks } = createMockKysely();
+    const index = new KyselyOperationIndex(db);
+
+    mocks.executeTakeFirst.mockResolvedValue({
+      timestampUtcMs: "2021-01-01T00:00:05.000Z",
+    });
+
+    const result =
+      await index.getLatestTimestampForCollection("collection.doc-123");
+
+    expect(result).toBe("2021-01-01T00:00:05.000Z");
+    expect(mocks.selectFrom).toHaveBeenCalledWith(
+      "operation_index_operations as oi",
+    );
+    expect(mocks.innerJoin).toHaveBeenCalledWith(
+      "document_collections as dc",
+      "oi.documentId",
+      "dc.documentId",
+    );
+    expect(mocks.orderBy).toHaveBeenCalledWith("oi.ordinal", "desc");
+    expect(mocks.limit).toHaveBeenCalledWith(1);
+  });
+
+  it("returns null for empty collection", async () => {
+    const { db, mocks } = createMockKysely();
+    const index = new KyselyOperationIndex(db);
+
+    mocks.executeTakeFirst.mockResolvedValue(undefined);
+
+    const result =
+      await index.getLatestTimestampForCollection("collection.doc-123");
+
+    expect(result).toBeNull();
+  });
+
+  it("throws when signal is aborted", async () => {
+    const { db } = createMockKysely();
+    const index = new KyselyOperationIndex(db);
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      index.getLatestTimestampForCollection(
+        "collection.doc-123",
+        controller.signal,
+      ),
+    ).rejects.toThrow("Operation aborted");
   });
 });

@@ -34,6 +34,7 @@ describe("KyselyDocumentView Unit Tests", () => {
         nextCursor: undefined,
         hasMore: false,
       }),
+      getLatestTimestampForCollection: vi.fn().mockResolvedValue(null),
     };
 
     mockWriteCache = {

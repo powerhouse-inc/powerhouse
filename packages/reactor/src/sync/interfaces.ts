@@ -1,3 +1,4 @@
+import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { ShutdownStatus } from "../shared/types.js";
 import type { ISyncCursorStorage } from "../storage/interfaces.js";
 import type { SyncOperation } from "./sync-operation.js";
@@ -74,6 +75,7 @@ export interface IChannelFactory {
    * @param cursorStorage - Storage for persisting synchronization cursors
    * @param collectionId - Collection ID to synchronize
    * @param filter - Filter to apply to operations
+   * @param operationIndex - Operation index for querying timestamps
    * @returns A new channel instance
    */
   instance(
@@ -83,6 +85,7 @@ export interface IChannelFactory {
     cursorStorage: ISyncCursorStorage,
     collectionId: string,
     filter: RemoteFilter,
+    operationIndex: IOperationIndex,
   ): IChannel;
 }
 

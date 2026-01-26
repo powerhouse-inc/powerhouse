@@ -289,6 +289,7 @@ input TouchChannelInput {
   name: String!
   collectionId: String!
   filter: RemoteFilterInput!
+  sinceTimestampUtcMs: String!
 }
 
 type Query {
@@ -299,10 +300,7 @@ type Query {
   ): DocumentModelResultPage!
 
   # Get a specific document by ID or slug
-  document(
-    identifier: String!
-    view: ViewFilterInput
-  ): DocumentWithChildren
+  document(identifier: String!, view: ViewFilterInput): DocumentWithChildren
 
   # Get children of a document
   documentChildren(
@@ -329,18 +327,12 @@ type Query {
   jobStatus(jobId: String!): JobInfo
 
   # Poll for sync envelopes from a channel
-  pollSyncEnvelopes(
-    channelId: String!
-    cursorOrdinal: Int!
-  ): [SyncEnvelope!]!
+  pollSyncEnvelopes(channelId: String!, cursorOrdinal: Int!): [SyncEnvelope!]!
 }
 
 type Mutation {
   # Create a new document
-  createDocument(
-    document: JSONObject!
-    parentIdentifier: String
-  ): PHDocument!
+  createDocument(document: JSONObject!, parentIdentifier: String): PHDocument!
 
   # Create an empty document of specified type
   createEmptyDocument(
@@ -392,26 +384,16 @@ type Mutation {
   ): MoveChildrenResult!
 
   # Delete a single document
-  deleteDocument(
-    identifier: String!
-    propagate: PropagationMode
-  ): Boolean!
+  deleteDocument(identifier: String!, propagate: PropagationMode): Boolean!
 
   # Delete multiple documents
-  deleteDocuments(
-    identifiers: [String!]!
-    propagate: PropagationMode
-  ): Boolean!
+  deleteDocuments(identifiers: [String!]!, propagate: PropagationMode): Boolean!
 
   # Touch (create or update) a channel for sync
-  touchChannel(
-    input: TouchChannelInput!
-  ): Boolean!
+  touchChannel(input: TouchChannelInput!): Boolean!
 
   # Push sync envelope to a channel
-  pushSyncEnvelope(
-    envelope: SyncEnvelopeInput!
-  ): Boolean!
+  pushSyncEnvelope(envelope: SyncEnvelopeInput!): Boolean!
 }
 
 type Subscription {
@@ -422,8 +404,5 @@ type Subscription {
   ): DocumentChangeEvent!
 
   # Subscribe to job changes
-  jobChanges(
-    jobId: String!
-  ): JobChangeEvent!
+  jobChanges(jobId: String!): JobChangeEvent!
 }
-

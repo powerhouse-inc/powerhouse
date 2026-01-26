@@ -37,6 +37,10 @@ export interface IOperationIndex {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<OperationWithContext>>;
+  getLatestTimestampForCollection(
+    collectionId: string,
+    signal?: AbortSignal,
+  ): Promise<string | null>;
 }
 
 export interface DocumentCollectionTable {

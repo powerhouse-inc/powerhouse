@@ -1,3 +1,13 @@
+## 6.0.0-dev.16 (2026-01-24)
+
+### 🚀 Features
+
+- **codegen:** added testing reducers instructions and deduplicated agents.md and claude.md ([07af9b04f](https://github.com/powerhouse-inc/powerhouse/commit/07af9b04f))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 6.0.0-dev.15 (2026-01-23)
 
 ### 🚀 Features

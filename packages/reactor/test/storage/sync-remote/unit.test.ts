@@ -39,7 +39,7 @@ describe("KyselySyncRemoteStorage", () => {
           scope: [],
           branch: "main",
         },
-        options: {},
+        options: { sinceTimestampUtcMs: "0" },
         status: {
           push: { state: "idle", failureCount: 0 },
           pull: { state: "idle", failureCount: 0 },
@@ -59,7 +59,7 @@ describe("KyselySyncRemoteStorage", () => {
           scope: ["global"],
           branch: "develop",
         },
-        options: {},
+        options: { sinceTimestampUtcMs: "0" },
         status: {
           push: { state: "running", failureCount: 0 },
           pull: { state: "error", failureCount: 3 },
@@ -110,7 +110,7 @@ describe("KyselySyncRemoteStorage", () => {
           scope: ["public", "protected"],
           branch: "main",
         },
-        options: {},
+        options: { sinceTimestampUtcMs: "0" },
         status: {
           push: {
             state: "idle",
@@ -183,7 +183,7 @@ describe("KyselySyncRemoteStorage", () => {
           scope: [],
           branch: "main",
         },
-        options: {},
+        options: { sinceTimestampUtcMs: "0" },
         status: {
           push: { state: "idle", failureCount: 0 },
           pull: { state: "idle", failureCount: 0 },
@@ -211,7 +211,7 @@ describe("KyselySyncRemoteStorage", () => {
           scope: [],
           branch: "main",
         },
-        options: {},
+        options: { sinceTimestampUtcMs: "0" },
         status: {
           push: { state: "idle", failureCount: 0 },
           pull: { state: "idle", failureCount: 0 },
@@ -252,7 +252,7 @@ describe("KyselySyncRemoteStorage", () => {
           scope: [],
           branch: "main",
         },
-        options: {},
+        options: { sinceTimestampUtcMs: "0" },
         status: {
           push: { state: "idle", failureCount: 0 },
           pull: { state: "idle", failureCount: 0 },
@@ -288,7 +288,7 @@ describe("KyselySyncRemoteStorage", () => {
           scope: [],
           branch: "main",
         },
-        options: {},
+        options: { sinceTimestampUtcMs: "0" },
         status: {
           push: { state: "idle", failureCount: 0 },
           pull: { state: "idle", failureCount: 0 },
@@ -324,7 +324,7 @@ describe("KyselySyncRemoteStorage", () => {
           scope: [],
           branch: "main",
         },
-        options: {},
+        options: { sinceTimestampUtcMs: "0" },
         status: {
           push: {
             state: "idle",
@@ -363,7 +363,7 @@ describe("KyselySyncRemoteStorage", () => {
           parameters: {},
         },
         filter: { documentId: [], scope: [], branch: "main" },
-        options: {},
+        options: { sinceTimestampUtcMs: "0" },
         status: {
           push: { state: "idle", failureCount: 0 },
           pull: { state: "idle", failureCount: 0 },
@@ -391,7 +391,7 @@ describe("KyselySyncRemoteStorage", () => {
           scope: [],
           branch: "main",
         },
-        options: {},
+        options: { sinceTimestampUtcMs: "0" },
         status: {
           push: { state: "idle", failureCount: 0 },
           pull: { state: "idle", failureCount: 0 },
@@ -437,7 +437,7 @@ describe("KyselySyncRemoteStorage", () => {
           scope: [],
           branch: "main",
         },
-        options: {},
+        options: { sinceTimestampUtcMs: "0" },
         status: {
           push: { state: "idle", failureCount: 0 },
           pull: { state: "idle", failureCount: 0 },

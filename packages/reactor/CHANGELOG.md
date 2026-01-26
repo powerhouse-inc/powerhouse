@@ -1,3 +1,13 @@
+## 6.0.0-dev.16 (2026-01-24)
+
+### 🩹 Fixes
+
+- reactor backfill now respects timestamp ([6edcdeaeb](https://github.com/powerhouse-inc/powerhouse/commit/6edcdeaeb))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 6.0.0-dev.15 (2026-01-23)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

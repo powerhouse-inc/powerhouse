@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { IOperationIndex } from "../../../../src/cache/operation-index-types.js";
 import type {
   ISyncCursorStorage,
   OperationContext,
@@ -86,6 +87,18 @@ const createMockFetch = (response: any = {}) => {
   });
 };
 
+const createMockOperationIndex = (): IOperationIndex => ({
+  start: vi.fn(),
+  commit: vi.fn().mockResolvedValue([]),
+  find: vi
+    .fn()
+    .mockResolvedValue({ items: [], nextCursor: undefined, hasMore: false }),
+  getSinceOrdinal: vi
+    .fn()
+    .mockResolvedValue({ items: [], nextCursor: undefined, hasMore: false }),
+  getLatestTimestampForCollection: vi.fn().mockResolvedValue(null),
+});
+
 describe("GqlChannel", () => {
   let originalFetch: typeof global.fetch;
 
@@ -114,6 +127,7 @@ describe("GqlChannel", () => {
         createTestConfig({
           authToken: "test-token",
         }),
+        createMockOperationIndex(),
       );
 
       expect(channel.inbox.items).toHaveLength(0);
@@ -132,6 +146,7 @@ describe("GqlChannel", () => {
         "remote-1",
         cursorStorage,
         createTestConfig(),
+        createMockOperationIndex(),
       );
 
       expect(channel.inbox.items).toEqual([]);
@@ -150,6 +165,7 @@ describe("GqlChannel", () => {
         "remote-1",
         cursorStorage,
         createTestConfig(),
+        createMockOperationIndex(),
       );
 
       const health = channel.getHealth();
@@ -173,6 +189,7 @@ describe("GqlChannel", () => {
         createTestConfig({
           pollIntervalMs: 5000,
         }),
+        createMockOperationIndex(),
       );
 
       // Before init, no polling should happen
@@ -209,6 +226,7 @@ describe("GqlChannel", () => {
         createTestConfig({
           pollIntervalMs: 3000,
         }),
+        createMockOperationIndex(),
       );
       await channel.init();
 
@@ -240,6 +258,7 @@ describe("GqlChannel", () => {
         "remote-1",
         cursorStorage,
         createTestConfig(),
+        createMockOperationIndex(),
       );
       await channel.init();
 
@@ -274,6 +293,7 @@ describe("GqlChannel", () => {
         createTestConfig({
           authToken: "secret-token",
         }),
+        createMockOperationIndex(),
       );
       await channel.init();
 
@@ -309,6 +329,7 @@ describe("GqlChannel", () => {
         "remote-1",
         cursorStorage,
         createTestConfig(),
+        createMockOperationIndex(),
       );
       await channel.init();
 
@@ -339,6 +360,7 @@ describe("GqlChannel", () => {
         "remote-1",
         cursorStorage,
         createTestConfig(),
+        createMockOperationIndex(),
       );
       await channel.init();
 
@@ -388,6 +410,7 @@ describe("GqlChannel", () => {
         "remote-1",
         cursorStorage,
         createTestConfig({ pollIntervalMs: 5000 }),
+        createMockOperationIndex(),
       );
       await channel.init();
 
@@ -422,6 +445,7 @@ describe("GqlChannel", () => {
         "remote-1",
         cursorStorage,
         createTestConfig(),
+        createMockOperationIndex(),
       );
 
       const job = createMockSyncOperation("job-1", "remote-1");
@@ -452,6 +476,7 @@ describe("GqlChannel", () => {
         "remote-1",
         cursorStorage,
         createTestConfig(),
+        createMockOperationIndex(),
       );
 
       const job = createMockSyncOperation("job-1", "remote-1");
@@ -481,6 +506,7 @@ describe("GqlChannel", () => {
         "remote-1",
         cursorStorage,
         createTestConfig(),
+        createMockOperationIndex(),
       );
 
       const job = createMockSyncOperation("job-1", "remote-1");
@@ -508,6 +534,7 @@ describe("GqlChannel", () => {
         "remote-1",
         cursorStorage,
         createTestConfig(),
+        createMockOperationIndex(),
       );
 
       const job = createMockSyncOperation("job-1", "remote-1");
@@ -542,6 +569,7 @@ describe("GqlChannel", () => {
           maxFailures: 3,
           pollIntervalMs: 5000,
         }),
+        createMockOperationIndex(),
       );
       await channel.init();
 
@@ -580,6 +608,7 @@ describe("GqlChannel", () => {
           maxFailures: 3,
           pollIntervalMs: 1000,
         }),
+        createMockOperationIndex(),
       );
       await channel.init();
 
@@ -633,6 +662,7 @@ describe("GqlChannel", () => {
         createTestConfig({
           pollIntervalMs: 1000,
         }),
+        createMockOperationIndex(),
       );
       await channel.init();
 
@@ -676,6 +706,7 @@ describe("GqlChannel", () => {
         "remote-1",
         cursorStorage,
         createTestConfig({ pollIntervalMs: 5000 }),
+        createMockOperationIndex(),
       );
       await channel.init();
 
@@ -712,6 +743,7 @@ describe("GqlChannel", () => {
         "remote-1",
         cursorStorage,
         createTestConfig({ pollIntervalMs: 5000 }),
+        createMockOperationIndex(),
       );
       await channel.init();
 
@@ -766,6 +798,7 @@ describe("GqlChannel", () => {
         "remote-1",
         cursorStorage,
         createTestConfig({ pollIntervalMs: 1000 }),
+        createMockOperationIndex(),
       );
       await channel.init();
 
@@ -801,6 +834,7 @@ describe("GqlChannel", () => {
         "remote-1",
         cursorStorage,
         createTestConfig(),
+        createMockOperationIndex(),
       );
 
       await channel.updateCursor(42);
@@ -831,6 +865,7 @@ describe("GqlChannel", () => {
         createTestConfig({
           pollIntervalMs: 1000,
         }),
+        createMockOperationIndex(),
       );
       await channel.init();
 
@@ -859,6 +894,7 @@ describe("GqlChannel", () => {
         "remote-1",
         cursorStorage,
         createTestConfig(),
+        createMockOperationIndex(),
       );
 
       expect(() => channel.shutdown()).not.toThrow();
@@ -878,6 +914,7 @@ describe("GqlChannel", () => {
         "remote-1",
         cursorStorage,
         createTestConfig(),
+        createMockOperationIndex(),
       );
 
       const job = createMockSyncOperation("job-1", "remote-1");
@@ -910,6 +947,7 @@ describe("GqlChannel", () => {
         "remote-1",
         cursorStorage,
         createTestConfig(),
+        createMockOperationIndex(),
       );
       await channel.init();
 
@@ -939,6 +977,7 @@ describe("GqlChannel", () => {
         "remote-1",
         cursorStorage,
         createTestConfig(),
+        createMockOperationIndex(),
       );
       await channel.init();
 
@@ -975,6 +1014,7 @@ describe("GqlChannel", () => {
         createTestConfig({
           pollIntervalMs: 1000,
         }),
+        createMockOperationIndex(),
       );
       await channel.init();
 

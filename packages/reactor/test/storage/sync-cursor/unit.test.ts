@@ -25,7 +25,7 @@ describe("KyselySyncCursorStorage", () => {
         scope: [],
         branch: "main",
       },
-      options: {},
+      options: { sinceTimestampUtcMs: "0" },
       status: {
         push: { state: "idle", failureCount: 0 },
         pull: { state: "idle", failureCount: 0 },
@@ -281,7 +281,7 @@ describe("KyselySyncCursorStorage", () => {
           scope: [],
           branch: "main",
         },
-        options: {},
+        options: { sinceTimestampUtcMs: "0" },
         status: {
           push: { state: "idle", failureCount: 0 },
           pull: { state: "idle", failureCount: 0 },

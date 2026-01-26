@@ -1,10 +1,6 @@
+import ImgPowerhouse from "@powerhousedao/design-system/assets/powerhouse-rounded.png";
 import type { CSSProperties } from "react";
 import { useEnsAvatar, useEnsName } from "wagmi";
-
-const ImgPowerhouse = new URL(
-  "../../../../../assets/powerhouse-rounded.png",
-  import.meta.url,
-).href;
 
 type Props = {
   readonly address: `0x${string}`;

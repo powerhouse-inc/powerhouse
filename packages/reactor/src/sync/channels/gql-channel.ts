@@ -1,4 +1,5 @@
 import type { Action, Signature } from "document-model";
+import type { IOperationIndex } from "../../cache/operation-index-types.js";
 import type { ILogger } from "../../logging/types.js";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import { ChannelError } from "../errors.js";
@@ -57,6 +58,7 @@ export class GqlChannel implements IChannel {
     remoteName: string,
     cursorStorage: ISyncCursorStorage,
     config: GqlChannelConfig,
+    private readonly operationIndex: IOperationIndex,
   ) {
     this.channelId = channelId;
     this.remoteName = remoteName;
@@ -327,6 +329,18 @@ export class GqlChannel implements IChannel {
    * Registers or updates this channel on the remote server via GraphQL mutation.
    */
   private async touchRemoteChannel(): Promise<void> {
+    let sinceTimestampUtcMs = "0";
+    try {
+      const result = await this.operationIndex.getLatestTimestampForCollection(
+        this.config.collectionId,
+      );
+      if (result) {
+        sinceTimestampUtcMs = result;
+      }
+    } catch {
+      // If query fails, use default "0" (sends all operations)
+    }
+
     const mutation = `
       mutation TouchChannel($input: TouchChannelInput!) {
         touchChannel(input: $input)
@@ -343,6 +357,7 @@ export class GqlChannel implements IChannel {
           scope: this.config.filter.scope,
           branch: this.config.filter.branch,
         },
+        sinceTimestampUtcMs,
       },
     };
 

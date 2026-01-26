@@ -83,6 +83,7 @@ describe("SyncManager - Unit Tests", () => {
         nextCursor: undefined,
         hasMore: false,
       }),
+      getLatestTimestampForCollection: vi.fn().mockResolvedValue(null),
     };
 
     mockReactor = {
@@ -126,7 +127,7 @@ describe("SyncManager - Unit Tests", () => {
             parameters: {},
           },
           filter: { documentId: [], scope: [], branch: "main" },
-          options: {},
+          options: { sinceTimestampUtcMs: "0" },
           status: {
             push: { state: "idle", failureCount: 0 },
             pull: { state: "idle", failureCount: 0 },
@@ -146,6 +147,7 @@ describe("SyncManager - Unit Tests", () => {
         mockCursorStorage,
         remoteRecords[0].collectionId,
         remoteRecords[0].filter,
+        mockOperationIndex,
       );
       expect(mockEventBus.subscribe).toHaveBeenCalledWith(
         OperationEventTypes.OPERATION_WRITTEN,
@@ -164,7 +166,7 @@ describe("SyncManager - Unit Tests", () => {
             parameters: {},
           },
           filter: { documentId: [], scope: [], branch: "main" },
-          options: {},
+          options: { sinceTimestampUtcMs: "0" },
           status: {
             push: { state: "idle", failureCount: 0 },
             pull: { state: "idle", failureCount: 0 },
@@ -201,7 +203,7 @@ describe("SyncManager - Unit Tests", () => {
             parameters: {},
           },
           filter: { documentId: [], scope: [], branch: "main" },
-          options: {},
+          options: { sinceTimestampUtcMs: "0" },
           status: {
             push: { state: "idle", failureCount: 0 },
             pull: { state: "idle", failureCount: 0 },
@@ -244,7 +246,7 @@ describe("SyncManager - Unit Tests", () => {
         "collection1",
         channelConfig,
         { documentId: [], scope: [], branch: "main" },
-        {},
+        { sinceTimestampUtcMs: "0" },
       );
 
       expect(remote.name).toBe("remote1");
@@ -263,6 +265,7 @@ describe("SyncManager - Unit Tests", () => {
         mockCursorStorage,
         "collection1",
         { documentId: [], scope: [], branch: "main" },
+        mockOperationIndex,
       );
     });
 
@@ -309,7 +312,7 @@ describe("SyncManager - Unit Tests", () => {
       );
 
       expect(remote.filter).toEqual({ documentId: [], scope: [], branch: "" });
-      expect(remote.options).toEqual({});
+      expect(remote.options).toEqual({ sinceTimestampUtcMs: "0" });
     });
   });
 
