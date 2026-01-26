@@ -158,7 +158,6 @@ const sidebars = {
         "academy/APIReferences/PowerhouseCLI",
         "academy/APIReferences/VetraRemoteDrive",
         "academy/APIReferences/ReactHooks",
-        "academy/APIReferences/DriveAnalyticsHooks",
         "academy/APIReferences/RelationalDatabase",
         "academy/APIReferences/PHDocumentMigrationGuide",
       ],
