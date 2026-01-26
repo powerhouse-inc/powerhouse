@@ -4,7 +4,12 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import https from "node:https";
 import { join } from "node:path";
-import { baseLoadFromInput, createZip } from "./files.js";
+import {
+  baseLoadFromInput,
+  createMinimalZip,
+  createZip,
+  type MinimalBackupData,
+} from "./files.js";
 import type { PHBaseState, PHDocument } from "./ph-types.js";
 import type {
   Attachment,
@@ -111,6 +116,34 @@ export async function baseSaveToFile(
     file,
   );
 }
+
+/**
+ * Saves a minimal document backup to a .phd file.
+ * Used when the full document is not available (e.g., in onOperations handler).
+ * Creates a file with minimal header and empty operations.
+ */
+export async function baseMinimalSaveToFile(
+  data: MinimalBackupData,
+  path: string,
+  extension: string,
+) {
+  const zip = createMinimalZip(data);
+  const file = await zip.generateAsync({
+    type: "uint8array",
+    streamFiles: true,
+  });
+  const fileExtension = extension ? `.${extension}.phd` : ".phd";
+
+  return writeFileNode(
+    path,
+    data.name.endsWith(fileExtension)
+      ? data.name
+      : `${data.name}${fileExtension}`,
+    file,
+  );
+}
+
+export type { MinimalBackupData };
 
 export function writeFileNode(
   path: string,

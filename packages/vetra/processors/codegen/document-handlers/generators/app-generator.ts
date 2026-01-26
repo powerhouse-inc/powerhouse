@@ -1,11 +1,14 @@
 import { generateDriveEditor, generateManifest } from "@powerhousedao/codegen";
-import type { AppModuleGlobalState } from "@powerhousedao/vetra/document-models/app-module";
+import type {
+  AppModuleGlobalState,
+  AppModulePHState,
+} from "@powerhousedao/vetra/document-models/app-module";
 import { kebabCase } from "change-case";
 import type { InternalTransmitterUpdate } from "document-drive";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
 import { USE_TS_MORPH } from "./constants.js";
-import { backupDocument } from "./utils.js";
+import { minimalBackupDocument } from "./utils.js";
 
 /**
  * Generator for app documents
@@ -98,7 +101,16 @@ export class AppGenerator extends BaseDocumentGen {
         }
 
         // Backup the document
-        await backupDocument(strand.document, this.config.CURRENT_WORKING_DIR);
+        await minimalBackupDocument(
+          {
+            documentId: strand.documentId,
+            documentType: strand.documentType,
+            branch: strand.branch,
+            state: strand.state as AppModulePHState,
+            name: state.name,
+          },
+          this.config.CURRENT_WORKING_DIR,
+        );
       } catch (error) {
         logger.error(
           `❌ Error during drive editor generation for app ${state.name}:`,

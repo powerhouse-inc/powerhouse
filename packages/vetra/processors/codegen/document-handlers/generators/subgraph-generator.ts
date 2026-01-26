@@ -1,10 +1,13 @@
 import { generateManifest, generateSubgraph } from "@powerhousedao/codegen";
 import { kebabCase } from "change-case";
 import type { InternalTransmitterUpdate } from "document-drive";
-import type { SubgraphModuleState } from "../../../../document-models/subgraph-module/index.js";
+import type {
+  SubgraphModulePHState,
+  SubgraphModuleState,
+} from "../../../../document-models/subgraph-module/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
-import { backupDocument } from "./utils.js";
+import { minimalBackupDocument } from "./utils.js";
 
 /**
  * Generator for subgraph documents
@@ -89,11 +92,15 @@ export class SubgraphGenerator extends BaseDocumentGen {
         }
 
         // Backup the document
-        await backupDocument(
-          strand.document,
+        await minimalBackupDocument(
+          {
+            documentId: strand.documentId,
+            documentType: strand.documentType,
+            branch: strand.branch,
+            state: strand.state as SubgraphModulePHState,
+            name: state.name,
+          },
           this.config.CURRENT_WORKING_DIR,
-          undefined,
-          state.name,
         );
       } catch (error) {
         logger.error(
