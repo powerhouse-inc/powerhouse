@@ -45,29 +45,8 @@ jobs:
       - name: Check tsconfig references
         run: pnpm check-ts-references
 
-      - name: Restore TypeScript build info
-        id: tsbuildinfo
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            **/*.tsbuildinfo
-            !**/node_modules/**
-          key: tsbuildinfo-${{ runner.os }}-node${{ matrix.node || '24' }}-${{ hashFiles('pnpm-lock.yaml', '**/tsconfig*.json', '**/package.json') }}
-          restore-keys: |
-            tsbuildinfo-${{ runner.os }}-node${{ matrix.node || '24' }}-
-            tsbuildinfo-${{ runner.os }}-
-
       - name: Build typescript project
         run: pnpm build-tsc
-
-      - name: Save TypeScript build info
-        if: steps.tsbuildinfo.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            **/*.tsbuildinfo
-            !**/node_modules/**
-          key: tsbuildinfo-${{ runner.os }}-node${{ matrix.node || '24' }}-${{ hashFiles('pnpm-lock.yaml', '**/tsconfig*.json', '**/package.json') }}
 
       - name: Run misc build scripts
         run: pnpm build-misc
