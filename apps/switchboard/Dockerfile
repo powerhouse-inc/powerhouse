@@ -19,8 +19,8 @@ RUN pnpm config set @jsr:registry https://npm.jsr.io
 ARG TAG=latest
 ARG PH_PACKAGES=""
 
-# Install ph-cmd, ph-cli, prisma, and prettier
-RUN pnpm add -g ph-cmd@$TAG @powerhousedao/ph-cli@$TAG prisma@5.17.0 prettier
+# Install ph-cmd, prisma, and prettier
+RUN pnpm add -g ph-cmd@$TAG prisma@5.17.0 prettier
 
 # Initialize project based on tag
 RUN case "$TAG" in \
@@ -59,9 +59,9 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 # Configure JSR registry
 RUN pnpm config set @jsr:registry https://npm.jsr.io
 
-# Install ph-cmd, ph-cli and prisma globally (needed at runtime)
+# Install ph-cmd and prisma globally (needed at runtime)
 ARG TAG=latest
-RUN pnpm add -g ph-cmd@$TAG @powerhousedao/ph-cli@$TAG prisma@5.17.0
+RUN pnpm add -g ph-cmd@$TAG prisma@5.17.0
 
 # Copy built project from build stage
 COPY --from=build /app/project /app/project
