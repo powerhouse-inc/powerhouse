@@ -1,11 +1,5 @@
 import { ReactorBuilder, ReactorClientBuilder } from "@powerhousedao/reactor";
-import {
-  NodeKeyStorage,
-  NodeRenownEventEmitter,
-  Renown,
-  RenownCryptoBuilder,
-  RenownMemoryStorage,
-} from "@renown/sdk/node";
+import { RenownBuilder } from "../src/init.node.js";
 import {
   type DocumentModelDocument,
   documentModelDocumentModelModule,
@@ -15,27 +9,17 @@ import { describe, expect, it } from "vitest";
 
 describe("Renown on script", () => {
   it("should create a document and add a signed SET_NAME action", async () => {
+    // "did:pkh:networkId:chainId
     const userDid = `did:pkh:eip155:1:0x9addcbbaa28f7eb5f75e023f7c1fcb13c9dfd8f7`;
-    const scriptDid = `did:key:zDnaeW2bFev2wtLK4hzGQrXUh8BHWySfded1z72oR89btwipJ`;
-    // Setup signer
+    const scriptDid = `did:key:zDnaemYykA84zrhGcX2Tosec5nhabbxg652ARGkmjFJUfiy4J`;
+
+    // Setup renown with RenownBuilder - much simpler!
     const keyPath = `${import.meta.dirname}/tmp/.keypair.json`;
-    const keyStorage = new NodeKeyStorage(keyPath);
-    const renownCrypto = await new RenownCryptoBuilder()
-      .withKeyPairStorage(keyStorage)
-      .build();
-    expect(renownCrypto.did).toBe(scriptDid);
+    const renown = await new RenownBuilder("script", { keyPath }).build();
 
-    // Setup renown instance
-    const renown = new Renown(
-      new RenownMemoryStorage(),
-      new NodeRenownEventEmitter(),
-      renownCrypto,
-      "script",
-    );
+    expect(renown.signer.app?.key).toBe(scriptDid);
 
-    // // "did:pkh:networkId:chainId:address"
-
-    // const user = await renown.login(userDid);
+    await renown.login(userDid);
 
     // Build reactor
     const reactorBuilder = new ReactorBuilder().withDocumentModels([
@@ -59,10 +43,9 @@ describe("Renown on script", () => {
     // Get action signature
     const operation = result.operations.global[0];
     const actionSigner = operation.action.context?.signer;
-    console.info(JSON.stringify(actionSigner, null, 2));
 
     expect(actionSigner?.app).toStrictEqual({
-      key: "did:key:zDnaeW2bFev2wtLK4hzGQrXUh8BHWySfded1z72oR89btwipJ",
+      key: "did:key:zDnaemYykA84zrhGcX2Tosec5nhabbxg652ARGkmjFJUfiy4J",
       name: "script",
     });
 

@@ -2,8 +2,9 @@ export * from "./common.js";
 export * from "./components/index.js";
 export * from "./crypto/index.js";
 export * from "./hooks/index.js";
-export { initRenown } from "./init.browser.js";
+export * from "./init.browser.js";
 export * from "./providers/index.js";
+export * from "./renown-builder.js";
 export * from "./types.js";
 export * from "./utils.js";
 // Export specific items from lib/renown to avoid conflicts

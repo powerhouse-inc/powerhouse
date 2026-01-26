@@ -40,15 +40,11 @@ export class Renown implements IRenown {
     this.#baseUrl = baseUrl;
     this.#crypto = crypto;
     this.#appName = appName;
-    this.#signer = new RenownCryptoSigner(crypto, appName, this.user);
+    this.#signer = new RenownCryptoSigner(crypto, this.#appName, this.user);
 
     this.on("user", (user) => {
       this.#signer.user = user;
     });
-
-    if (this.user) {
-      this.login(this.user.did).catch(() => void 0);
-    }
   }
 
   get user() {
