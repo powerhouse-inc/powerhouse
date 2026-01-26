@@ -194,14 +194,14 @@ jobs:
         run: git push
 
       - name: Setup npm for publishing
-        if: needs.prepare.outputs.dry_run != 'true'
+        if: needs.prepare.outputs.dry_run != 'true' && secrets.NPM_ACCESS_TOKEN != ''
         uses: actions/setup-node@v4
         with:
           node-version: \${{ env.NODE_VERSION }}
           registry-url: 'https://registry.npmjs.org'
 
       - name: Publish to npm with provenance
-        if: needs.prepare.outputs.dry_run != 'true'
+        if: needs.prepare.outputs.dry_run != 'true' && secrets.NPM_ACCESS_TOKEN != ''
         env:
           NODE_AUTH_TOKEN: \${{ secrets.NPM_ACCESS_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
@@ -225,7 +225,11 @@ jobs:
   build-docker:
     name: Build Docker Images
     needs: [prepare, update-and-publish]
-    if: needs.prepare.outputs.skip_docker != 'true' && needs.prepare.outputs.dry_run != 'true'
+    if: |
+      needs.prepare.outputs.skip_docker != 'true' &&
+      needs.prepare.outputs.dry_run != 'true' &&
+      secrets.DOCKER_USERNAME != '' &&
+      secrets.DOCKER_PASSWORD != ''
     runs-on: ubuntu-latest
     permissions:
       contents: read
