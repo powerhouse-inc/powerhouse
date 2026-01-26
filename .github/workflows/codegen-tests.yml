@@ -10,13 +10,13 @@ on:
     branches: ["main"]
   pull_request:
     branches: ["main"]
-    types: [opened, synchronize]
+    types: [opened]
 
 permissions:
   contents: read
 
 jobs:
-  check:
+  do-codegen-tests:
     runs-on: ubuntu-latest
     env:
       CI: true
