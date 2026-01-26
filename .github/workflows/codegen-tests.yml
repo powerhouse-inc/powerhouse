@@ -10,11 +10,13 @@ on:
     branches: ["main"]
     paths:
       - "packages/codegen/**"
+      - ".github/workflows/codegen-tests.yml"
   pull_request:
     branches: ["main"]
     types: [opened]
     paths:
       - "packages/codegen/**"
+      - ".github/workflows/codegen-tests.yml"
 
 permissions:
   contents: read
@@ -40,7 +42,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: pnpm
+          cache: 'pnpm'
 
       - name: Install deps (frozen lockfile)
         run: pnpm install-ci
