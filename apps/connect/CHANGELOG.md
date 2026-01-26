@@ -1,3 +1,13 @@
+## 6.0.0-dev.19 (2026-01-26)
+
+### 🩹 Fixes
+
+- **docker:** add ph-cli to global install for connect build ([5e818aa5c](https://github.com/powerhouse-inc/powerhouse/commit/5e818aa5c))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.18 (2026-01-26)
 
 ### 🚀 Features
