@@ -144,7 +144,6 @@ export interface IKeyframeStore {
 export interface ViewFilter {
   branch?: string;
   scopes?: string[];
-  includeOperations?: boolean;
 }
 
 export interface SearchFilter {
