@@ -1,7 +1,7 @@
 # Create a new to-do list document
 
 :::tip Tutorial Repository
-📦 **Reference Code**: [step-1-initialize-with-ph-init](https://github.com/powerhouse-inc/todo-tutorial/tree/step-1-initialize-with-ph-init)
+**Reference Code**: [step-1-initialize-with-ph-init](https://github.com/powerhouse-inc/todo-tutorial/tree/step-1-initialize-with-ph-init)
 
 This tutorial step has a corresponding branch in the repository. You can:
 - View the complete code for this step
@@ -27,7 +27,7 @@ For today's purpose, you'll be using **Vetra Studio**, the builder platform thro
 If you need help with installing the prerequisites you can visit our page [prerequisites](/academy/MasteryTrack/BuilderEnvironment/Prerequisites)
 
 <details>
-<summary>📖 How to use this tutorial</summary>
+<summary>How to use this tutorial</summary>
 
 This tutorial is designed for you to **build your own project from scratch** while having access to reference code at each step.
 

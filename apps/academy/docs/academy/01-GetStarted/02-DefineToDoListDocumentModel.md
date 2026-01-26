@@ -1,7 +1,7 @@
 # Write the document specification
 
 :::tip Tutorial Repository
-📦 **Reference Code**: [step-2-generate-todo-list-document-model](https://github.com/powerhouse-inc/todo-tutorial/tree/step-2-generate-todo-list-document-model)
+**Reference Code**: [step-2-generate-todo-list-document-model](https://github.com/powerhouse-inc/todo-tutorial/tree/step-2-generate-todo-list-document-model)
 
 This tutorial step has a corresponding branch. After completing this step, your project will have a generated document model with:
 - Document model specification files (`todo-list.json`, `schema.graphql`)
@@ -10,7 +10,7 @@ This tutorial step has a corresponding branch. After completing this step, your 
 :::
 
 <details>
-<summary>📖 How to use this tutorial</summary>
+<summary>How to use this tutorial</summary>
 
 **Prerequisites**: Complete step 1 and set up the tutorial remote (see previous step).
 
