@@ -1,3 +1,7 @@
+## 5.3.0-staging.13 (2026-01-26)
+
+This was a version bump only for @powerhousedao/reactor-mcp to align it with other projects, there were no code changes.
+
 ## 5.3.0-staging.12 (2026-01-23)
 
 This was a version bump only for @powerhousedao/reactor-mcp to align it with other projects, there were no code changes.
