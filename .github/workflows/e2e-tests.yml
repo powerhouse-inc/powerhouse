@@ -51,7 +51,7 @@ jobs:
         run: pnpm build:misc
 
       - name: Run install again after generating binaries
-        run: pnpm install
+        run: pnpm install:ci
 
       - name: Run css build scripts
         run: pnpm build:css
@@ -130,7 +130,7 @@ jobs:
         run: pnpm build:misc
 
       - name: Run install again after generating binaries
-        run: pnpm install
+        run: pnpm install:ci
 
       - name: Run css build scripts
         run: pnpm build:css
