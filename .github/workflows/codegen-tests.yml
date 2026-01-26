@@ -87,7 +87,7 @@ jobs:
 
   notify-discord:
     if: failure() && github.event_name != 'pull_request'
-    needs: [check]
+    needs: [do-codegen-tests]
     runs-on: ubuntu-latest
     steps:
       - name: Send Discord notification
@@ -104,7 +104,7 @@ jobs:
           curl -H "Content-Type: application/json" -X POST "$DISCORD_WEBHOOK" -d '{
             "embeds": [{
               "title": "⚠️ Codegen tests failed",
-              "description": "**Author:** '"${MENTION_STRING}"'\n**Commit:** [`${{ github.event.head_commit.message }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) \n**Failed job:** [`check`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
+              "description": "**Author:** '"${MENTION_STRING}"'\n**Commit:** [`${{ github.event.head_commit.message }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) \n**Failed job:** [`do-codegen-tests`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
               "color": 16711680
             }]
           }'
