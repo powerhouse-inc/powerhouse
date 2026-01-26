@@ -61,7 +61,7 @@ jobs:
         run: pnpm install-ci
 
       - name: Run eslint
-        run: pnpm lint-ci -- ${{ steps.diff.outputs.files }}
+        run: NODE_OPTIONS=--max-old-space-size=8192 pnpm eslint --config eslint.config.js --quiet ${{ steps.diff.outputs.files }}
 
       - name: Run css build scripts
         run: pnpm build-css
