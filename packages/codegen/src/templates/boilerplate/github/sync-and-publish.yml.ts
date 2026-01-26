@@ -38,7 +38,7 @@ on:
 env:
   NODE_VERSION: '22'
   PNPM_VERSION: '10'
-  HARBOR_REGISTRY: cr.vetra.io
+  DOCKER_REGISTRY: cr.vetra.io
   GHCR_REGISTRY: ghcr.io
 
 jobs:
@@ -241,20 +241,20 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Ensure Harbor project exists
+      - name: Ensure Docker project exists
         run: |
           PROJECT_NAME="\${{ needs.prepare.outputs.project_name }}"
 
           # Check if project exists, create if not
           STATUS=\$(curl -s -o /dev/null -w "%{http_code}" \\
-            -u "\${{ secrets.HARBOR_USERNAME }}:\${{ secrets.HARBOR_PASSWORD }}" \\
-            "https://\${{ env.HARBOR_REGISTRY }}/api/v2.0/projects?name=\${PROJECT_NAME}")
+            -u "\${{ secrets.DOCKER_USERNAME }}:\${{ secrets.DOCKER_PASSWORD }}" \\
+            "https://\${{ env.DOCKER_REGISTRY }}/api/v2.0/projects?name=\${PROJECT_NAME}")
 
           if [ "\$STATUS" = "200" ]; then
             # Check if the project is in the response
             EXISTS=\$(curl -s \\
-              -u "\${{ secrets.HARBOR_USERNAME }}:\${{ secrets.HARBOR_PASSWORD }}" \\
-              "https://\${{ env.HARBOR_REGISTRY }}/api/v2.0/projects?name=\${PROJECT_NAME}" | \\
+              -u "\${{ secrets.DOCKER_USERNAME }}:\${{ secrets.DOCKER_PASSWORD }}" \\
+              "https://\${{ env.DOCKER_REGISTRY }}/api/v2.0/projects?name=\${PROJECT_NAME}" | \\
               jq -r ".[] | select(.name==\\"\${PROJECT_NAME}\\") | .name")
 
             if [ "\$EXISTS" = "\$PROJECT_NAME" ]; then
@@ -262,18 +262,18 @@ jobs:
             else
               echo "Creating project \${PROJECT_NAME}..."
               curl -X POST \\
-                -u "\${{ secrets.HARBOR_USERNAME }}:\${{ secrets.HARBOR_PASSWORD }}" \\
+                -u "\${{ secrets.DOCKER_USERNAME }}:\${{ secrets.DOCKER_PASSWORD }}" \\
                 -H "Content-Type: application/json" \\
                 -d "{\\"project_name\\": \\"\${PROJECT_NAME}\\", \\"public\\": false}" \\
-                "https://\${{ env.HARBOR_REGISTRY }}/api/v2.0/projects"
+                "https://\${{ env.DOCKER_REGISTRY }}/api/v2.0/projects"
             fi
           else
             echo "Creating project \${PROJECT_NAME}..."
             curl -X POST \\
-              -u "\${{ secrets.HARBOR_USERNAME }}:\${{ secrets.HARBOR_PASSWORD }}" \\
+              -u "\${{ secrets.DOCKER_USERNAME }}:\${{ secrets.DOCKER_PASSWORD }}" \\
               -H "Content-Type: application/json" \\
               -d "{\\"project_name\\": \\"\${PROJECT_NAME}\\", \\"public\\": false}" \\
-              "https://\${{ env.HARBOR_REGISTRY }}/api/v2.0/projects"
+              "https://\${{ env.DOCKER_REGISTRY }}/api/v2.0/projects"
           fi
 
       - name: Login to GitHub Container Registry
@@ -283,12 +283,12 @@ jobs:
           username: \${{ github.actor }}
           password: \${{ secrets.GITHUB_TOKEN }}
 
-      - name: Login to Harbor Registry
+      - name: Login to Docker Registry
         uses: docker/login-action@v3
         with:
-          registry: \${{ env.HARBOR_REGISTRY }}
-          username: \${{ secrets.HARBOR_USERNAME }}
-          password: \${{ secrets.HARBOR_PASSWORD }}
+          registry: \${{ env.DOCKER_REGISTRY }}
+          username: \${{ secrets.DOCKER_USERNAME }}
+          password: \${{ secrets.DOCKER_PASSWORD }}
 
       - name: Extract package name
         id: package
@@ -307,20 +307,20 @@ jobs:
           # GHCR tags
           GHCR_BASE="\${{ env.GHCR_REGISTRY }}/\${{ github.repository_owner }}/\${PROJECT}/\${TARGET}"
 
-          # Harbor tags
-          HARBOR_BASE="\${{ env.HARBOR_REGISTRY }}/\${PROJECT}/\${TARGET}"
+          # Docker registry tags
+          DOCKER_BASE="\${{ env.DOCKER_REGISTRY }}/\${PROJECT}/\${TARGET}"
 
           # Build tag list
           TAGS="\${GHCR_BASE}:v\${VERSION}"
-          TAGS="\${TAGS},\${HARBOR_BASE}:v\${VERSION}"
+          TAGS="\${TAGS},\${DOCKER_BASE}:v\${VERSION}"
 
           # Add channel tag
           if [ "\$CHANNEL" = "latest" ] || [ "\$CHANNEL" = "main" ]; then
             TAGS="\${TAGS},\${GHCR_BASE}:latest"
-            TAGS="\${TAGS},\${HARBOR_BASE}:latest"
+            TAGS="\${TAGS},\${DOCKER_BASE}:latest"
           else
             TAGS="\${TAGS},\${GHCR_BASE}:\${CHANNEL}"
-            TAGS="\${TAGS},\${HARBOR_BASE}:\${CHANNEL}"
+            TAGS="\${TAGS},\${DOCKER_BASE}:\${CHANNEL}"
           fi
 
           echo "tags=\$TAGS" >> \$GITHUB_OUTPUT
@@ -363,6 +363,6 @@ jobs:
           echo "| Dry Run | \${{ needs.prepare.outputs.dry_run }} |" >> \$GITHUB_STEP_SUMMARY
           echo "" >> \$GITHUB_STEP_SUMMARY
           echo "### Docker Images" >> \$GITHUB_STEP_SUMMARY
-          echo "- \\\`\${{ env.HARBOR_REGISTRY }}/\${{ needs.prepare.outputs.project_name }}/connect:v\${{ needs.update-and-publish.outputs.new_version }}\\\`" >> \$GITHUB_STEP_SUMMARY
-          echo "- \\\`\${{ env.HARBOR_REGISTRY }}/\${{ needs.prepare.outputs.project_name }}/switchboard:v\${{ needs.update-and-publish.outputs.new_version }}\\\`" >> \$GITHUB_STEP_SUMMARY
+          echo "- \\\`\${{ env.DOCKER_REGISTRY }}/\${{ needs.prepare.outputs.project_name }}/connect:v\${{ needs.update-and-publish.outputs.new_version }}\\\`" >> \$GITHUB_STEP_SUMMARY
+          echo "- \\\`\${{ env.DOCKER_REGISTRY }}/\${{ needs.prepare.outputs.project_name }}/switchboard:v\${{ needs.update-and-publish.outputs.new_version }}\\\`" >> \$GITHUB_STEP_SUMMARY
 `.raw;
