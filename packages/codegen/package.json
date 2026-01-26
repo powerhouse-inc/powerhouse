@@ -42,7 +42,7 @@
     "publish:create-lib": "npm publish --cwd ./src/create-lib/",
     "start": "tsx src/cli.ts",
     "pretest": "npm run build",
-    "test": "vitest run",
+    "test": "vitest related --run",
     "test:keep": "KEEP_TEST_OUTPUT=true npm run test",
     "test:hygen": "USE_TS_MORPH=false npm run test",
     "test:keep:hygen": "USE_TS_MORPH=false KEEP_TEST_OUTPUT=true npm run test"

@@ -274,7 +274,7 @@ export async function generateEditor(args: GenerateEditorArgs) {
     );
     if (invalidType) {
       throw new Error(
-        `Document model for ${invalidType} not found. Make sure the document model is available in the document-models directory (\`document-models\`) and has been properly generated.`,
+        `Document model for ${invalidType} not found, oh no. Make sure the document model is available in the document-models directory (\`document-models\`) and has been properly generated.`,
       );
     }
     const packageNameFromPackageJson = await readPackage().then(
