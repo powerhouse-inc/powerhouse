@@ -311,10 +311,17 @@ describe("KyselyOperationStore", () => {
       }
 
       // Get first page of 2 items starting from revision 0
-      const page1 = await store.getSince(documentId, scope, branch, 0, {
-        cursor: "",
-        limit: 2,
-      });
+      const page1 = await store.getSince(
+        documentId,
+        scope,
+        branch,
+        0,
+        undefined,
+        {
+          cursor: "",
+          limit: 2,
+        },
+      );
       expect(page1.items).toHaveLength(2);
       expect(page1.items[0].index).toBe(1);
       expect(page1.items[1].index).toBe(2);
@@ -322,10 +329,17 @@ describe("KyselyOperationStore", () => {
       expect(page1.nextCursor).toBeDefined();
 
       // Get second page using cursor
-      const page2 = await store.getSince(documentId, scope, branch, 0, {
-        cursor: page1.nextCursor,
-        limit: 2,
-      });
+      const page2 = await store.getSince(
+        documentId,
+        scope,
+        branch,
+        0,
+        undefined,
+        {
+          cursor: page1.nextCursor,
+          limit: 2,
+        },
+      );
       expect(page2.items).toHaveLength(2);
       expect(page2.items[0].index).toBe(3);
       expect(page2.items[1].index).toBe(4);
@@ -405,6 +419,7 @@ describe("KyselyOperationStore", () => {
           "global",
           "main",
           0,
+          undefined,
           undefined,
           controller.signal,
         ),

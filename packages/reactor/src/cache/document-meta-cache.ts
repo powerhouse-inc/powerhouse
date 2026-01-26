@@ -162,6 +162,7 @@ export class DocumentMetaCache implements IDocumentMetaCache {
       branch,
       -1,
       undefined,
+      undefined,
       signal,
     );
 

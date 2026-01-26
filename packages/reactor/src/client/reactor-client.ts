@@ -28,7 +28,10 @@ import {
   type SearchFilter,
   type ViewFilter,
 } from "../shared/types.js";
-import type { IDocumentIndexer } from "../storage/interfaces.js";
+import type {
+  IDocumentIndexer,
+  OperationFilter,
+} from "../storage/interfaces.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
 import {
   DocumentChangeType,
@@ -137,13 +140,15 @@ export class ReactorClient implements IReactorClient {
   async getOperations(
     documentIdentifier: string,
     view?: ViewFilter,
+    filter?: OperationFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<Operation>> {
     this.logger.verbose(
-      "getOperations(@documentIdentifier, @view, @paging)",
+      "getOperations(@documentIdentifier, @view, @filter, @paging)",
       documentIdentifier,
       view,
+      filter,
       paging,
     );
 
@@ -158,6 +163,7 @@ export class ReactorClient implements IReactorClient {
     const operationsByScope = await this.reactor.getOperations(
       documentId,
       view,
+      filter,
       paging,
       undefined,
       signal,

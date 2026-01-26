@@ -13,6 +13,7 @@ import type {
   SearchFilter,
   ViewFilter,
 } from "../shared/types.js";
+import type { OperationFilter } from "../storage/interfaces.js";
 
 /**
  * Describes the types of document changes that can occur.
@@ -106,6 +107,7 @@ export interface IReactorClient {
    *
    * @param documentIdentifier - Required, this is either a document "id" field or a "slug"
    * @param view - Optional filter containing branch and scopes information
+   * @param filter - Optional filter for actionTypes, timestamps, and revision
    * @param paging - Optional pagination options
    * @param signal - Optional abort signal to cancel the request
    * @returns Paginated list of operations
@@ -113,6 +115,7 @@ export interface IReactorClient {
   getOperations(
     documentIdentifier: string,
     view?: ViewFilter,
+    filter?: OperationFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<Operation>>;

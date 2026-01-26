@@ -82,11 +82,13 @@ describe("Load Operation ID Preservation", () => {
       document.header.id,
       { branch: "main", scopes: ["document"] },
       undefined,
+      undefined,
       finalTokenA,
     );
     const aGlobalOps = await reactorA.getOperations(
       document.header.id,
       { branch: "main", scopes: ["global"] },
+      undefined,
       undefined,
       finalTokenA,
     );
@@ -111,6 +113,7 @@ describe("Load Operation ID Preservation", () => {
     const bGlobalOps = await reactorB.getOperations(
       document.header.id,
       { branch: "main", scopes: ["global"] },
+      undefined,
       undefined,
       finalTokenB,
     );
@@ -151,11 +154,13 @@ describe("Load Operation ID Preservation", () => {
       document.header.id,
       { branch: "main", scopes: ["document"] },
       undefined,
+      undefined,
       tokenA,
     );
     const aGlobalOps = await reactorA.getOperations(
       document.header.id,
       { branch: "main", scopes: ["global"] },
+      undefined,
       undefined,
       tokenA,
     );
@@ -179,6 +184,7 @@ describe("Load Operation ID Preservation", () => {
     const bOpsAfterFirstLoad = await reactorB.getOperations(
       document.header.id,
       { branch: "main", scopes: ["global"] },
+      undefined,
       undefined,
       tokenB1,
     );
@@ -216,6 +222,7 @@ describe("Load Operation ID Preservation", () => {
       document.header.id,
       { branch: "main", scopes: ["document"] },
       undefined,
+      undefined,
       createTokenA,
     );
 
@@ -236,6 +243,7 @@ describe("Load Operation ID Preservation", () => {
     const aGlobalOps = await reactorA.getOperations(
       document.header.id,
       { branch: "main", scopes: ["global"] },
+      undefined,
       undefined,
       tokenA,
     );
@@ -265,6 +273,7 @@ describe("Load Operation ID Preservation", () => {
     const bGlobalOps = await reactorB.getOperations(
       document.header.id,
       { branch: "main", scopes: ["global"] },
+      undefined,
       undefined,
       finalTokenB,
     );

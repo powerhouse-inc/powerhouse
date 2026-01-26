@@ -351,6 +351,7 @@ export class KyselyWriteCache implements IWriteCache {
         "document",
         branch,
         -1,
+        undefined,
         { limit: 1 },
         signal,
       );
@@ -384,6 +385,7 @@ export class KyselyWriteCache implements IWriteCache {
         "document",
         branch,
         0,
+        undefined,
         undefined,
         signal,
       );
@@ -419,7 +421,7 @@ export class KyselyWriteCache implements IWriteCache {
         throw new Error("Operation aborted");
       }
 
-      const paging = cursor ? { cursor, pageSize } : { pageSize };
+      const paging = cursor ? { cursor, limit: pageSize } : { limit: pageSize };
 
       try {
         const result = await this.operationStore.getSince(
@@ -427,6 +429,7 @@ export class KyselyWriteCache implements IWriteCache {
           scope,
           branch,
           startRevision,
+          undefined,
           paging,
           signal,
         );
@@ -495,6 +498,7 @@ export class KyselyWriteCache implements IWriteCache {
         scope,
         branch,
         baseRevision,
+        undefined,
         undefined,
         signal,
       );

@@ -3,6 +3,7 @@ import {
   type IReactorClient,
   type ISyncManager,
   type JobInfo,
+  type OperationFilter,
   type PagedResults,
   type PagingOptions,
   type PropagationMode,
@@ -339,6 +340,27 @@ export async function documentOperations(
     view = { branch, scopes };
   }
 
+  const actionTypes = toMutableArray(fromInputMaybe(args.filter.actionTypes));
+  const sinceRevision = fromInputMaybe(args.filter.sinceRevision);
+  const timestampFrom = fromInputMaybe(args.filter.timestampFrom);
+  const timestampTo = fromInputMaybe(args.filter.timestampTo);
+
+  let operationFilter: OperationFilter | undefined;
+  if (
+    (actionTypes && actionTypes.length > 0) ||
+    sinceRevision !== undefined ||
+    timestampFrom ||
+    timestampTo
+  ) {
+    operationFilter = {
+      actionTypes:
+        actionTypes && actionTypes.length > 0 ? actionTypes : undefined,
+      sinceRevision,
+      timestampFrom: timestampFrom || undefined,
+      timestampTo: timestampTo || undefined,
+    };
+  }
+
   let paging: PagingOptions | undefined;
   if (args.paging) {
     const cursor = fromInputMaybe(args.paging.cursor);
@@ -356,6 +378,7 @@ export async function documentOperations(
     result = await reactorClient.getOperations(
       args.filter.documentId,
       view,
+      operationFilter,
       paging,
     );
   } catch (error) {
@@ -364,47 +387,8 @@ export async function documentOperations(
     );
   }
 
-  const actionTypes = toMutableArray(fromInputMaybe(args.filter.actionTypes));
-  const sinceRevision = fromInputMaybe(args.filter.sinceRevision);
-  const timestampFrom = fromInputMaybe(args.filter.timestampFrom);
-  const timestampTo = fromInputMaybe(args.filter.timestampTo);
-
-  let filteredOperations = result.results;
-
-  if (actionTypes && actionTypes.length > 0) {
-    filteredOperations = filteredOperations.filter((op) =>
-      actionTypes.includes(op.action.type),
-    );
-  }
-
-  if (sinceRevision !== undefined) {
-    filteredOperations = filteredOperations.filter(
-      (op) => op.index >= sinceRevision,
-    );
-  }
-
-  if (timestampFrom) {
-    const fromMs = new Date(timestampFrom).getTime();
-    filteredOperations = filteredOperations.filter(
-      (op) => new Date(op.action.timestampUtcMs).getTime() >= fromMs,
-    );
-  }
-
-  if (timestampTo) {
-    const toMs = new Date(timestampTo).getTime();
-    filteredOperations = filteredOperations.filter(
-      (op) => new Date(op.action.timestampUtcMs).getTime() <= toMs,
-    );
-  }
-
-  const filteredResult: PagedResults<Operation> = {
-    results: filteredOperations,
-    options: result.options,
-    nextCursor: result.nextCursor,
-  };
-
   try {
-    return toOperationResultPage(filteredResult);
+    return toOperationResultPage(result);
   } catch (error) {
     throw new GraphQLError(
       `Failed to convert operations to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,

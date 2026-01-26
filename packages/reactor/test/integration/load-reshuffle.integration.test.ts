@@ -66,6 +66,7 @@ describe("Load Reshuffles", () => {
         scopes: ["document"],
       },
       undefined,
+      undefined,
       createTokenA,
     );
 
@@ -82,6 +83,7 @@ describe("Load Reshuffles", () => {
         branch: "main",
         scopes: ["document"],
       },
+      undefined,
       undefined,
       loadTokenB,
     );
@@ -105,6 +107,7 @@ describe("Load Reshuffles", () => {
         branch: "main",
         scopes: ["global"],
       },
+      undefined,
       undefined,
       tokenA,
     );
@@ -133,6 +136,7 @@ describe("Load Reshuffles", () => {
         branch: "main",
         scopes: ["global"],
       },
+      undefined,
       undefined,
       finalTokenB,
     );
@@ -180,6 +184,7 @@ describe("Load Reshuffles", () => {
       document.header.id,
       { branch: "main", scopes: ["document"] },
       undefined,
+      undefined,
       createTokenA,
     );
 
@@ -217,6 +222,7 @@ describe("Load Reshuffles", () => {
       document.header.id,
       { branch: "main", scopes: ["global"] },
       undefined,
+      undefined,
       tokenA,
     );
 
@@ -231,6 +237,7 @@ describe("Load Reshuffles", () => {
       document.header.id,
       { branch: "main", scopes: ["global"] },
       undefined,
+      undefined,
       loadTokenB,
     );
 
@@ -239,6 +246,7 @@ describe("Load Reshuffles", () => {
     const bGlobalOps = await reactorB.getOperations(
       document.header.id,
       { branch: "main", scopes: ["global"] },
+      undefined,
       undefined,
       loadTokenB,
     );
@@ -253,6 +261,7 @@ describe("Load Reshuffles", () => {
     const aOpsAfterLoad = await reactorA.getOperations(
       document.header.id,
       { branch: "main", scopes: ["global"] },
+      undefined,
       undefined,
       loadTokenA,
     );

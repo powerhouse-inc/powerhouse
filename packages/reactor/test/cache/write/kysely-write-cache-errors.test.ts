@@ -461,7 +461,7 @@ describe("KyselyWriteCache - Error Handling", () => {
     it("should handle abort between keyframe and operation loading", async () => {
       const mockGetSince = vi
         .fn()
-        .mockImplementation((_, __, ___, ____, _____, signal) => {
+        .mockImplementation((_, __, ___, ____, _____, ______, signal) => {
           return new Promise((_, reject) => {
             const checkAbort = () => {
               if (signal?.aborted) {
