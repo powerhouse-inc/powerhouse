@@ -20,7 +20,7 @@ RUN apk add --no-cache python3 make g++ git bash \\
 
 # Setup pnpm
 ENV PNPM_HOME="/pnpm"
-ENV PATH="\$PNPM_HOME:\$PATH"
+ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 # Configure JSR registry
@@ -31,10 +31,10 @@ ARG TAG=latest
 ARG PH_CONNECT_BASE_PATH="/"
 
 # Install ph-cmd, prisma, and prettier globally
-RUN pnpm add -g ph-cmd@\$TAG prisma@5.17.0 prettier
+RUN pnpm add -g ph-cmd@$TAG prisma@5.17.0 prettier
 
 # Initialize project based on tag (dev/staging/latest)
-RUN case "\$TAG" in \\
+RUN case "$TAG" in \\
         *dev*) ph init project --dev --package-manager pnpm ;; \\
         *staging*) ph init project --staging --package-manager pnpm ;; \\
         *) ph init project --package-manager pnpm ;; \\
@@ -47,9 +47,9 @@ COPY package.json pnpm-lock.yaml ./
 
 # Install the current package (this package)
 ARG PACKAGE_NAME
-RUN if [ -n "\$PACKAGE_NAME" ]; then \\
-        echo "Installing package: \$PACKAGE_NAME"; \\
-        ph install "\$PACKAGE_NAME"; \\
+RUN if [ -n "$PACKAGE_NAME" ]; then \\
+        echo "Installing package: $PACKAGE_NAME"; \\
+        ph install "$PACKAGE_NAME"; \\
     else \\
         echo "Warning: PACKAGE_NAME not provided, using local build"; \\
         pnpm install; \\
@@ -109,7 +109,7 @@ RUN apk add --no-cache curl openssl
 
 # Setup pnpm
 ENV PNPM_HOME="/pnpm"
-ENV PATH="\$PNPM_HOME:\$PATH"
+ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 # Configure JSR registry
@@ -117,7 +117,7 @@ RUN pnpm config set @jsr:registry https://npm.jsr.io
 
 # Install ph-cmd and prisma globally (needed at runtime)
 ARG TAG=latest
-RUN pnpm add -g ph-cmd@\$TAG prisma@5.17.0
+RUN pnpm add -g ph-cmd@$TAG prisma@5.17.0
 
 # Copy built project from build stage
 COPY --from=base /app/project /app/project
