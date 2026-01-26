@@ -89,13 +89,15 @@ dispatch(
 
 ### MIGRATION STEPS
 
-1. **ph migrate** - Run `ph migrate` to automatically apply some necessary migrations to your project.
+1. ** Update `ph-cmd`** - Run `pnpm install -g ph-cmd` or equivalent command for the package manager you are using.
 
-2. **Update editor styles** - The padding added by Connect when displaying the editor has been removed. Each editor is now able to control its own padding.
+2. **ph migrate** - Run `ph migrate` to automatically apply some necessary migrations to your project.
 
-3. **Delete document model subgraphs** - Remove existing document model subgraphs from your project to avoid conflicts with the automatically generated subgraphs.
+3. **Update editor styles** - The padding added by Connect when displaying the editor has been removed. Each editor is now able to control its own padding.
 
-4. **vitest.config.ts configuration update**
+4. **Delete document model subgraphs** - Remove existing document model subgraphs from your project to avoid conflicts with the automatically generated subgraphs.
+
+5. **vitest.config.ts configuration update**
 
 Tho prevents issues when importing from your package, update your project configuration files to exclude `vitest.config.ts` from TypeScript compilation and add it to ESLint's allowed project list:
 
