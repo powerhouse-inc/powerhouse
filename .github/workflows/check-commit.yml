@@ -24,6 +24,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed
+        uses: ./.github/actions/changed-files
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -53,10 +59,6 @@ jobs:
 
       - name: Run install again after generating binaries
         run: pnpm install-ci
-
-      - name: Get changed files
-        id: changed
-        uses: ./.github/actions/changed-files
 
       - name: Run eslint
         run: pnpm lint-ci ${{ steps.diff.outputs.files }}

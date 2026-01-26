@@ -27,6 +27,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Get changed files
+        id: changed
+        uses: ./.github/actions/changed-files
+
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -44,10 +48,6 @@ jobs:
       - name: Build typescript project
         run: pnpm tsc -b
         working-directory: packages/codegen
-
-      - name: Get changed files
-        id: changed
-        uses: ./.github/actions/changed-files
 
       - name: Vitest related
         if: ${{ steps.diff.outputs.files != '' }}
