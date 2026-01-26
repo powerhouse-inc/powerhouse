@@ -21,16 +21,18 @@ export function TodoList() {
 
   return (
     <div>
-     <EditTodoListName />
-      <pre>
-       {JSON.stringify(selectedTodoListDocument)}
-      </pre>
+      <EditTodoListName />
+      <pre>{JSON.stringify(selectedTodoListDocument)}</pre>
     </div>
   );
 }
 ```
 
 We've moved the `<EditTodoListName />` component here, so replace it in `editors/todo-list-editor/editor.tsx` with this component we just created.
+
+## Adding the Document Toolbar
+
+The `DocumentToolbar` component provides essential document operations like saving, sharing, and navigation. To add it to your document editor, simply import it from the design system and place it at the top of your editor component. The toolbar automatically connects to the currently selected document and provides all standard document actions. For more details, see the [DocumentToolbar documentation](../02-MasteryTrack/03-BuildingUserExperiences/06-DocumentTools/00-DocumentToolbar.mdx).
 
 ```tsx
 // removed-line
@@ -40,7 +42,7 @@ import { TodoList } from "./components/TodoList.js";
 
 export default function Editor() {
   return (
-    <div className="py-4 px-8">
+    <div className="px-8 py-4">
       // removed-line
       <EditTodoListName />
       // added-line
@@ -125,12 +127,10 @@ export function TodoList() {
 
   return (
     <div>
-     <EditTodoListName />
-     // added-line
-     <AddTodo />
-      <pre>
-       {JSON.stringify(selectedTodoListDocument)}
-      </pre>
+      <EditTodoListName />
+      // added-line
+      <AddTodo />
+      <pre>{JSON.stringify(selectedTodoListDocument)}</pre>
     </div>
   );
 }
@@ -185,13 +185,11 @@ export function TodoList() {
 
   return (
     <div>
-     <EditTodoListName />
-     // added-line
-     <CloseButton />
-     <AddTodo />
-      <pre>
-       {JSON.stringify(selectedTodoListDocument)}
-      </pre>
+      <EditTodoListName />
+      // added-line
+      <CloseButton />
+      <AddTodo />
+      <pre>{JSON.stringify(selectedTodoListDocument)}</pre>
     </div>
   );
 }
@@ -371,7 +369,7 @@ export function TodoList() {
 
   return (
     <div>
-      <section className="mb-4 flex gap-2 items-center">
+      <section className="mb-4 flex items-center gap-2">
         <div className="grow">
           <EditTodoListName />
         </div>
@@ -398,24 +396,24 @@ editors/todo-list-editor/
 └── module.ts                 # Editor module export (do not change this)
 ```
 
- ## Check your work
+## Check your work
 
 To make sure all works as expected, we should:
 
 - check types
-run: `pnpm tsc`
+  run: `pnpm tsc`
 
 - check linting
-run: `pnpm lint`
+  run: `pnpm lint`
 
 - check tests
-run: `pnpm test`
+  run: `pnpm test`
 
 - test in connect
-run: `pnpm connect` — you should now be able to open a `TodoList` document and update all of the fields we defined in the `TodoList` document model schema
+  run: `pnpm connect` — you should now be able to open a `TodoList` document and update all of the fields we defined in the `TodoList` document model schema
 
 - make sure your code matches the code in the completed step branch
-run: `git diff your-branch-name step-5-complete-added-basic-todo-list-document-editor-ui-components`
+  run: `git diff your-branch-name step-5-complete-added-basic-todo-list-document-editor-ui-components`
 
 ## Up next: generating a custom drive explorer for managing our `TodoList` documents
 
