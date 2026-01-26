@@ -1,0 +1,28 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres16
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres16-data:/var/lib/postgresql/data
+
+  pyroscope:
+    image: grafana/pyroscope:latest
+    container_name: pyroscope
+    command: server
+    restart: unless-stopped
+
+    ports:
+      - "4040:4040"
+
+volumes:
+  postgres16-data:
