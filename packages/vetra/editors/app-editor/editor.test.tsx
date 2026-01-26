@@ -1,11 +1,15 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useSelectedAppModuleDocument } from "../../document-models/app-module/hooks.js";
 import Editor from "./editor.js";
 
 vi.mock("../../document-models/app-module/hooks.js", () => ({
   useSelectedAppModuleDocument: vi.fn(),
+}));
+
+vi.mock("@powerhousedao/design-system/connect", () => ({
+  DocumentToolbar: () => null,
 }));
 
 vi.mock("@powerhousedao/reactor-browser", async (importOriginal) => {
@@ -33,11 +37,11 @@ vi.mock("@powerhousedao/reactor-browser", async (importOriginal) => {
   };
 });
 
-// TODO: re-enable this test once it's been fixed
-describe.skip("AppModule Editor", () => {
+describe("AppModule Editor", () => {
   let mockDispatch: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    window.ph = {};
     mockDispatch = vi.fn();
     vi.mocked(useSelectedAppModuleDocument).mockReturnValue([
       {
@@ -52,6 +56,10 @@ describe.skip("AppModule Editor", () => {
       },
       mockDispatch,
     ] as any);
+  });
+
+  afterEach(() => {
+    delete window.ph;
   });
 
   describe("Core Rendering", () => {
