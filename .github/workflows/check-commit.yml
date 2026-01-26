@@ -56,7 +56,7 @@ jobs:
 
       - name: Get changed files
         id: changed
-        uses: ./.github/changed-files
+        uses: ./.github/actions/changed-files
 
       - name: Run eslint
         run: pnpm lint-ci ${{ steps.diff.outputs.files }}
