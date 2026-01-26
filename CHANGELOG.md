@@ -1,3 +1,24 @@
+## 6.0.0-dev.18 (2026-01-26)
+
+### 🚀 Features
+
+- **codegen:** add CI/CD workflow and Docker templates ([d034641cb](https://github.com/powerhouse-inc/powerhouse/commit/d034641cb))
+- **codegen:** add DOCKER_PROJECT secret for custom project name ([7c23f9844](https://github.com/powerhouse-inc/powerhouse/commit/7c23f9844))
+- **codegen:** skip npm/docker jobs if secrets not configured ([9d7ad8225](https://github.com/powerhouse-inc/powerhouse/commit/9d7ad8225))
+- **ph-cli, ph-cmd:** use cmd ts for remaining ph cmd commands ([#2209](https://github.com/powerhouse-inc/powerhouse/pull/2209))
+
+### 🩹 Fixes
+
+- address pre-merge recommendations for CI templates ([c8c5c67ea](https://github.com/powerhouse-inc/powerhouse/commit/c8c5c67ea))
+- trailing newline in publish-docker-images workflow ([7d2e30db4](https://github.com/powerhouse-inc/powerhouse/commit/7d2e30db4))
+- **ci:** remove deploy-k8s from publish-docker-images workflow ([c5869e82f](https://github.com/powerhouse-inc/powerhouse/commit/c5869e82f))
+- **codegen:** remove unnecessary escape characters in Dockerfile template ([1e5b91bca](https://github.com/powerhouse-inc/powerhouse/commit/1e5b91bca))
+
+### ❤️ Thank You
+
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.17 (2026-01-26)
 
 ### 🩹 Fixes
