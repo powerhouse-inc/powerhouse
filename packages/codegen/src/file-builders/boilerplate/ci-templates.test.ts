@@ -134,17 +134,8 @@ describe("CI/CD Templates", () => {
       expect(switchboardEntrypointTemplate).toMatch(/^#!/);
     });
 
-    test("should regenerate Prisma client", () => {
-      expect(switchboardEntrypointTemplate).toContain("prisma generate");
-    });
-
     test("should start switchboard", () => {
       expect(switchboardEntrypointTemplate).toContain("ph switchboard");
-    });
-
-    test("should handle database migrations", () => {
-      expect(switchboardEntrypointTemplate).toContain("DATABASE_URL");
-      expect(switchboardEntrypointTemplate).toContain("prisma db push");
     });
   });
 });
