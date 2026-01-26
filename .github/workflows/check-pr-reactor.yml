@@ -133,9 +133,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install:ci
 
-      - name: Setup bun global install
-        uses: oven-sh/setup-bun@v2
-
       - name: Build
         run: pnpm tsc:build
 

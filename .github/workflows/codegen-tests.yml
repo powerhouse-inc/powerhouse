@@ -1,4 +1,4 @@
-name: Check Commit
+name: Codegen Tests
 
 concurrency:
   group: check-commit-${{ github.workflow }}-${{ github.ref }}
@@ -11,6 +11,8 @@ on:
   pull_request:
     branches: ["main"]
     types: [opened, synchronize]
+    paths: 
+      - "packages/codegen/**"
 
 permissions:
   contents: read
@@ -30,55 +32,20 @@ jobs:
         with:
           node-version: 22
 
-      - name: Setup bun global install
-        uses: oven-sh/setup-bun@v2
-
       - name: Setup pnpm with cache
         uses: pnpm/action-setup@v4
         with:
           version: latest
           run_install: false
 
-      - name: Cache ESLint
-        uses: actions/cache@v4
-        with:
-          path: .eslintcache
-          key: eslint-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'eslint.config.js') }}
-          restore-keys: |
-            eslint-${{ runner.os }}-
-
       - name: Install deps (frozen lockfile)
         run: pnpm install:ci
-
-      - name: Check tsconfig references
-        run: pnpm check-ts-references
 
       - name: Build typescript project
         run: pnpm tsc:build
 
-      - name: Run eslint
-        run: pnpm lint
-
-      - name: Run misc build scripts
-        run: pnpm build:misc
-
-      - name: Run install again after generating binaries
-        run: pnpm install
-
-      - name: Run css build scripts
-        run: pnpm build:css
-
-      - name: Run vite build scripts
-        run: pnpm build:vite
-
-      - name: Run storybook build scripts
-        run: pnpm build:storybook
-
-      - name: Run CI tests (excludes document-drive, reactor and codegen)
-        run: pnpm test:ci
-
-      - name: Run circular imports check
-        run: pnpm check-circular-imports
+      - name: Run codegen tests
+        run: pnpm test:codegen
 
   notify-discord:
     if: failure() && github.event_name != 'pull_request'
@@ -98,7 +65,7 @@ jobs:
 
           curl -H "Content-Type: application/json" -X POST "$DISCORD_WEBHOOK" -d '{
             "embeds": [{
-              "title": "⚠️ Commit Check Failed",
+              "title": "⚠️ Codegen tests failed",
               "description": "**Author:** '"${MENTION_STRING}"'\n**Commit:** [`${{ github.event.head_commit.message }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) \n**Failed job:** [`check`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
               "color": 16711680
             }]
