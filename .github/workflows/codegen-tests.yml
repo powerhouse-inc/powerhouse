@@ -1,7 +1,7 @@
 name: Codegen Tests
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: codegen-tests-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 on:
