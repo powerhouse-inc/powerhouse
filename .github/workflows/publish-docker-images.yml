@@ -208,3 +208,4 @@ jobs:
       version: ${{ needs.academy.outputs.tag }}
       channel: ${{ needs.determine-channel.outputs.channel }}
     secrets: inherit
+
