@@ -1,3 +1,13 @@
+## 6.0.0-dev.20 (2026-01-26)
+
+### 🩹 Fixes
+
+- **ph-cmd:** use full package name for ph-cli to fix npx resolution ([d2adc3ccf](https://github.com/powerhouse-inc/powerhouse/commit/d2adc3ccf))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.19 (2026-01-26)
 
 ### 🩹 Fixes
