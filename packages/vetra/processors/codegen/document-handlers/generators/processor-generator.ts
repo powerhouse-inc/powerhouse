@@ -83,7 +83,7 @@ export class ProcessorGenerator extends BaseDocumentGen {
           state.name,
           processorType,
           documentTypes,
-          this.config.PH_CONFIG,
+          this.config.PH_CONFIG.skipFormat,
         );
 
         logger.info(

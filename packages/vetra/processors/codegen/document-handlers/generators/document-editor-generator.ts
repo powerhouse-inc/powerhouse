@@ -69,9 +69,9 @@ export class DocumentEditorGenerator extends BaseDocumentGen {
 
       // Generate the editor using the codegen function
       await generateEditor({
-        name: state.name,
+        ...this.config.PH_CONFIG,
+        editorName: state.name,
         documentTypes: documentTypes,
-        config: this.config.PH_CONFIG,
         editorId: editorId,
         useTsMorph: USE_TS_MORPH,
       });

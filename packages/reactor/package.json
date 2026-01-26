@@ -18,8 +18,6 @@
     "./dist/src"
   ],
   "scripts": {
-    "build": "pnpm run build:tsc",
-    "build:tsc": "tsc --build",
     "prebuild": "pnpm run clean",
     "test": "vitest run --coverage --printConsoleTrace=true --silent=false",
     "test:watch": "vitest --coverage",

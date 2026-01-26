@@ -12,21 +12,29 @@
     "access": "public"
   },
   "bin": {
-    "ph-cli": "dist/src/cli.js"
+    "ph-cli": "dist/src/cli.js",
+    "ph-cli-legacy": "dist/src/cli.old.js"
   },
   "files": [
     "dist"
   ],
-  "exports": "./dist/src/index.js",
-  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  },
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "generate-commands-md": "tsx scripts/generate-commands-md.ts",
+    "generate-docs-legacy": "tsx scripts/generate-docs-legacy.ts",
+    "generate-docs": "bun run scripts/generate-commands-docs.ts",
     "generate-version": "tsx scripts/generate-version.ts",
-    "build": "npm run generate-commands-md && npm run generate-version && tsc && npm run copy-scripts",
+    "build": "npm run generate-docs-legacy && npm run generate-version && tsc && npm run generate-docs && npm run copy-scripts",
     "copy-scripts": "copyfiles scripts/* dist/",
     "dev": "concurrently -P 'pnpm -w run tsc --watch' 'nodemon --watch \"../..\" -e ts,tsx,js,json dist/src/cli.js -- {@}' --",
+    "cli": "node ./dist/src/cli.js",
+    "cli-legacy": "node ./dist/src/cli.old.js",
     "test": "vitest --run"
   },
   "keywords": [],
@@ -34,6 +42,7 @@
   "devDependencies": {
     "@types/node": "^24.6.1",
     "@types/pg": "^8.11.10",
+    "@types/npm-package-arg": "^6.1.4",
     "concurrently": "^9.1.2",
     "copyfiles": "^2.4.1",
     "document-drive": "workspace:*",
@@ -49,12 +58,17 @@
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/switchboard": "workspace:*",
     "@renown/sdk": "workspace:*",
+    "chalk": "^5.6.2",
+    "cmd-ts": "^0.14.3",
     "colorette": "^2.0.20",
     "commander": "^12.1.0",
     "kysely": "0.28.8",
     "pg": "^8.13.0",
+    "npm-package-arg": "^13.0.2",
+    "package-manager-detector": "^1.6.0",
     "read-pkg": "^9.0.1",
     "ts-morph": "^26.0.0",
-    "write-pkg": "^7.0.0"
+    "vite": "^7.2.6",
+    "write-package": "^7.2.0"
   }
 }

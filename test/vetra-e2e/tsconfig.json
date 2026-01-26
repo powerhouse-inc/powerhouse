@@ -1,27 +1,8 @@
 {
+  "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "module": "nodenext",
-    "target": "esnext",
-    "types": [
-      "node",
-      "vitest/globals"
-    ],
-    "lib": [
-      "ESNext",
-      "dom",
-      "dom.iterable"
-    ],
-    "sourceMap": false,
-    "declaration": true,
-    "declarationMap": true,
-    "strict": true,
-    "jsx": "react-jsx",
-    "verbatimModuleSyntax": true,
-    "isolatedModules": true,
-    "noUncheckedSideEffectImports": true,
-    "moduleDetection": "force",
-    "skipLibCheck": true
+    "resolveJsonModule": true
   },
   "references": [
     {
@@ -70,16 +51,6 @@
       "path": "../../packages/document-drive"
     }
   ],
-  "files": [
-    "./powerhouse.manifest.json",
-    "./vite.config.ts"
-  ],
-  "include": [
-    "**/*"
-  ],
-  "exclude": [
-    "dist",
-    "node_modules",
-    ".ph"
-  ]
+  "include": ["**/*", "powerhouse.manifest.json"],
+  "exclude": ["dist", "node_modules", ".ph"]
 }

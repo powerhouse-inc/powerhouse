@@ -41,13 +41,9 @@
   "scripts": {
     "lint": "eslint . --cache",
     "lint:fix": "eslint . --fix --cache",
-    "build:tsc": "tsc",
-    "build:tsc:watch": "tsc --watch",
     "build:css": "pnpm exec tailwindcss -i ./style.css -o ./dist/style.css",
     "build:css:watch": "pnpm exec tailwindcss -i ./style.css -o ./dist/style.css --watch",
-    "build": "npm run build:tsc && npm run build:css",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run build",
     "generate": "ph-cli generate",
     "connect": "ph-cli connect",
     "reactor": "ph-cli reactor",
@@ -72,7 +68,7 @@
     "zod": "^4.3.5"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "^0.2.17",
+    "@electric-sql/pglite": "^0.3.14",
     "@eslint/js": "^9.37.0",
     "@openfeature/core": "^1.9.1",
     "@playwright/test": "^1.55.0",
@@ -85,7 +81,6 @@
     "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/reactor-local": "workspace:*",
-    "@powerhousedao/scalars": "2.0.1",
     "@powerhousedao/switchboard": "workspace:*",
     "@tailwindcss/cli": "^4.1.14",
     "@types/node": "^22.13.11",

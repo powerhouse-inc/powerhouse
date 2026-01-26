@@ -2,21 +2,8 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "composite": true,
-    "types": [
-      "node"
-    ]
+    "types": ["node"]
   },
-  "include": [
-    "src/**/*"
-  ],
-  "exclude": [
-    "dist",
-    "node_modules"
-  ],
-  "references": [
-    {
-      "path": "../../packages/config"
-    }
-  ]
+  "include": ["**/*"],
+  "references": [{ "path": "../../packages/config" }]
 }

@@ -30,6 +30,10 @@
     "./analytics": {
       "types": "./dist/src/analytics.d.ts",
       "default": "./dist/src/analytics.js"
+    },
+    "./clis": {
+      "types": "./dist/clis/index.d.ts",
+      "default": "./dist/clis/index.js"
     }
   },
   "sideEffects": false,
@@ -81,6 +85,7 @@
     "@types/wicg-file-system-access": "^2020.9.6",
     "autoprefixer": "^10.4.20",
     "clsx": "^2.1.1",
+    "cmd-ts": "^0.14.3",
     "document-model": "workspace:*",
     "package-manager-detector": "^0.2.8",
     "postcss": "^8.5.1",

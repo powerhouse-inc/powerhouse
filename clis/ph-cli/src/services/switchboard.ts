@@ -1,31 +1,10 @@
-import { getConfig } from "@powerhousedao/config/node";
 import type {
   IdentityOptions,
   StartServerOptions,
 } from "@powerhousedao/switchboard/server";
 import { startSwitchboard as startSwitchboardServer } from "@powerhousedao/switchboard/server";
 import path from "node:path";
-
-export type LocalSwitchboardOptions = StartServerOptions & {
-  configFile?: string;
-  generate?: boolean;
-  watch?: boolean;
-  basePath?: string;
-  dbPath?: string;
-  disableDefaultDrive?: boolean;
-  remoteDrives?: string;
-  remoteDrivesConfig?: string;
-  /** Enable identity/authentication using keypair from ph login */
-  useIdentity?: boolean;
-  /** Path to custom keypair file */
-  keypairPath?: string;
-  /** Require existing keypair (fail if not found) */
-  requireIdentity?: boolean;
-  /** Run database migrations and exit */
-  migrate?: boolean;
-  /** Show migration status and exit */
-  migrateStatus?: boolean;
-};
+import type { SwitchboardArgs } from "../types.js";
 
 export const defaultSwitchboardOptions = {
   port: 4001,
@@ -71,25 +50,12 @@ function getDefaultVetraSwitchboardOptions(
   };
 }
 
-type SwitchboardOptions = StartServerOptions & {
-  remoteDrives?: string[];
-  useVetraDrive?: boolean;
-  vetraDriveId?: string;
-  /** Enable identity/authentication using keypair from ph login */
-  useIdentity?: boolean;
-  /** Path to custom keypair file */
-  keypairPath?: string;
-  /** Require existing keypair (fail if not found) */
-  requireIdentity?: boolean;
-};
-
-export async function startSwitchboard(options: SwitchboardOptions) {
-  const baseConfig = getConfig(options.configFile);
-  const { https } = baseConfig.reactor ?? { https: false };
+export async function startSwitchboard(options: SwitchboardArgs) {
   const {
-    remoteDrives = [],
-    useVetraDrive = false,
-    vetraDriveId = "vetra",
+    packages: packagesString,
+    remoteDrives,
+    useVetraDrive,
+    vetraDriveId,
     useIdentity,
     keypairPath,
     requireIdentity,
@@ -110,6 +76,8 @@ export async function startSwitchboard(options: SwitchboardOptions) {
         }
       : undefined;
 
+  const packages = packagesString?.split(",");
+
   // Only include the default drive if no remote drives are provided
   const finalOptions =
     remoteDrives.length > 0
@@ -117,16 +85,16 @@ export async function startSwitchboard(options: SwitchboardOptions) {
           ...defaultOptions,
           drive: undefined, // Don't create default drive when syncing with remote
           ...serverOptions,
-          https,
           remoteDrives,
           identity,
+          packages,
         }
       : {
           ...defaultOptions,
           ...serverOptions,
-          https,
           remoteDrives,
           identity,
+          packages,
         };
 
   const reactor = await startSwitchboardServer(finalOptions);

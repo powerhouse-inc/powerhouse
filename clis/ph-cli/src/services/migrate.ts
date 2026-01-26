@@ -16,15 +16,12 @@ import type {
   StringLiteral,
 } from "ts-morph";
 import { Project, SyntaxKind } from "ts-morph";
-import { writePackage } from "write-pkg";
-import type { GenerateOptions } from "./generate.js";
+import { writePackage } from "write-package";
 import { generate } from "../commands/generate.js";
+import type { GenerateArgs, MigrateArgs } from "../types.js";
+import { startGenerate } from "./generate.js";
 
-/** Run all migrations */
-type MigrateOptions = {
-  useHygen?: boolean;
-};
-export async function migrate({ useHygen = false }: MigrateOptions) {
+export async function startMigrate({ useHygen = false }: MigrateArgs) {
   await migratePackageJson();
   await migrateTsConfig();
   await migrateIndexHtml();
@@ -202,9 +199,9 @@ function fixImports(project: Project) {
 
 /** Run the generate command on all document models */
 async function runGenerateOnAllDocumentModels(useHygen: boolean) {
-  await generate(undefined, {
+  await startGenerate({
     useHygen,
-  });
+  } as GenerateArgs);
 }
 
 /** Run the generate command on all editors */
@@ -237,25 +234,23 @@ async function runGenerateOnAllEditors(useHygen: boolean) {
       const allowedDocumentTypes = hasConfigFile
         ? extractAllowedDocumentTypes(configFilePath)
         : undefined;
-      const args: GenerateOptions = {
-        driveEditor: name,
-        driveEditorAppId: id,
+      const args = {
+        driveEditorName: name,
+        driveEditorId: id,
         driveEditorDirName: dir,
+        allowedDocumentTypes,
         useHygen,
-      };
-      if (allowedDocumentTypes) {
-        args.allowedDocumentTypes = allowedDocumentTypes.join(",");
-      }
-      await generate(undefined, args);
+      } as GenerateArgs;
+      await startGenerate(args);
     } else {
-      const args: GenerateOptions = {
-        editor: name,
+      const args = {
+        editorName: name,
         editorId: id,
         editorDirName: dir,
-        documentTypes: documentTypes?.join(","),
+        documentType: documentTypes?.[0],
         useHygen,
-      };
-      await generate(undefined, args);
+      } as GenerateArgs;
+      await startGenerate(args);
     }
   }
 }

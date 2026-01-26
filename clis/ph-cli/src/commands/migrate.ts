@@ -1,17 +1,16 @@
-import type { Command } from "commander";
-import type { CommandActionType } from "../types.js";
+import { migrateArgs } from "@powerhousedao/common/clis";
+import { command } from "cmd-ts";
+import { startMigrate } from "../services/migrate.js";
 
-export const migrate: CommandActionType<
-  [string | string[] | undefined, { useHygen?: boolean }]
-> = async (_, options) => {
-  const { migrate: startMigrate } = await import("../services/migrate.js");
-  return await startMigrate(options);
-};
-
-export function migrateCommand(program: Command) {
-  program
-    .command("migrate")
-    .description("Run migrations")
-    .option("--ts-morph", "Use new ts-morph codegen")
-    .action(migrate);
-}
+export const migrate = command({
+  name: "migrate",
+  args: migrateArgs,
+  description: "Run migrations",
+  handler: async (args) => {
+    if (args.debug) {
+      console.log(args);
+    }
+    await startMigrate(args);
+    process.exit(0);
+  },
+});

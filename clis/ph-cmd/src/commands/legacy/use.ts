@@ -1,18 +1,20 @@
+import { parsePackageManager } from "@powerhousedao/codegen/utils";
 import type { Command } from "commander";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { useHelp } from "../help.js";
-import type { CommandActionType } from "../types.js";
-import type { PackageManager } from "../utils/index.js";
+import type { Agent } from "package-manager-detector";
+import { useHelp } from "../../help.js";
+import type { CommandActionType } from "../../types.js";
+import {
+  installDependency,
+  updateDependencyVersionString,
+} from "../../utils/dependencies.js";
+import { withCustomHelp } from "../../utils/help.js";
 import {
   getPackageManagerFromLockfile,
   getProjectInfo,
-  installDependency,
-  updateDependencyVersionString,
-  withCustomHelp,
-} from "../utils/index.js";
-import { parsePackageManager } from "../utils/parsing.js";
-
+} from "../../utils/package-manager.js";
+import type { PackageManager } from "../../utils/types.js";
 export const ORG = "@powerhousedao";
 
 // Special packages that don't use the @powerhousedao organization
@@ -25,7 +27,6 @@ export const SPECIAL_PACKAGES = [
 // Packages to exclude from dynamic detection (external dependencies)
 export const EXCLUDED_PACKAGES = [
   "@powerhousedao/document-engineering",
-  "@powerhousedao/scalars",
   "@powerhousedao/diff-analyzer",
   "@powerhousedao/analytics-engine-core",
   "@powerhousedao/analytics-engine-graphql",
@@ -223,7 +224,7 @@ export type UseOptions = {
   debug?: boolean;
   latest?: boolean;
   force?: boolean;
-  packageManager?: string;
+  packageManager?: Agent;
   pnpm?: boolean;
   yarn?: boolean;
   bun?: boolean;

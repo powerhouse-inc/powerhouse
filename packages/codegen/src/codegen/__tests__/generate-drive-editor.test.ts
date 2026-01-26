@@ -53,6 +53,8 @@ describe("generateDriveEditor", () => {
 
     config.editorsDir = path.join(testOutDirPath, "editors");
     config.documentModelsDir = path.join(testOutDirPath, "document-models");
+
+    process.chdir(testOutDirPath);
   }
 
   beforeAll(() => {
@@ -73,11 +75,14 @@ describe("generateDriveEditor", () => {
       const name = "Atlas Drive Explorer";
 
       await generateDriveEditor({
-        name,
-        config,
-        appId: "AtlasDriveExplorer",
-        allowedDocumentTypes: "powerhouse/test-doc",
+        ...config,
+        driveEditorName: name,
+        driveEditorId: "AtlasDriveExplorer",
+        allowedDocumentTypes: ["powerhouse/test-doc"],
         useTsMorph: USE_TS_MORPH,
+        specifiedPackageName: undefined,
+        driveEditorDirName: undefined,
+        isDragAndDropEnabled: true,
       });
 
       const editorsDir = path.join(testOutDirPath, "editors");
@@ -196,7 +201,16 @@ describe("generateDriveEditor", () => {
         getTestDataDir(testDir, EDITORS_TEST_PROJECT_WITH_EXISTING_EDITOR),
       );
       const name = "TestApp";
-      await generateDriveEditor({ name, config, useTsMorph: USE_TS_MORPH }); // No appId provided
+      await generateDriveEditor({
+        ...config,
+        driveEditorName: name,
+        useTsMorph: USE_TS_MORPH,
+        driveEditorId: undefined,
+        specifiedPackageName: undefined,
+        driveEditorDirName: undefined,
+        isDragAndDropEnabled: true,
+        allowedDocumentTypes: [],
+      }); // No appId provided
 
       const editorsDir = path.join(testOutDirPath, "editors");
       const editorDir = path.join(editorsDir, "test-app");
@@ -221,11 +235,14 @@ describe("generateDriveEditor", () => {
       const name = "Atlas Drive Explorer";
 
       await generateDriveEditor({
-        name,
-        config,
-        appId: "AtlasDriveExplorer",
-        allowedDocumentTypes: "powerhouse/test-doc",
+        ...config,
+        driveEditorName: name,
+        driveEditorId: "AtlasDriveExplorer",
+        allowedDocumentTypes: ["powerhouse/test-doc"],
         useTsMorph: USE_TS_MORPH,
+        specifiedPackageName: undefined,
+        driveEditorDirName: undefined,
+        isDragAndDropEnabled: true,
       });
 
       const editorsDir = path.join(testOutDirPath, "editors");
@@ -247,7 +264,16 @@ describe("generateDriveEditor", () => {
       const editorsDir = path.join(testOutDirPath, "editors");
       const editorsFilePath = path.join(editorsDir, "editors.ts");
       rmSync(editorsFilePath, { force: true });
-      await generateDriveEditor({ name, config, useTsMorph: USE_TS_MORPH });
+      await generateDriveEditor({
+        ...config,
+        driveEditorName: name,
+        useTsMorph: USE_TS_MORPH,
+        allowedDocumentTypes: [],
+        driveEditorId: undefined,
+        specifiedPackageName: undefined,
+        driveEditorDirName: undefined,
+        isDragAndDropEnabled: true,
+      });
       await compile(testOutDirPath);
       const editorsContent = fs.readFileSync(editorsFilePath, "utf-8");
       expect(editorsContent).toContain(`export const editors: EditorModule[]`);

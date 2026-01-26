@@ -11,7 +11,6 @@
   "exports": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
   "scripts": {
-    "build": "tsc",
     "dev": "tsx src/cli.ts",
     "scenario-1": "tsx src/cli.ts --url http://localhost:4001/graphql --duration 60 --document-interval 10 --mutation-interval 5",
     "scenario-2": "tsx src/cli.ts --url http://localhost:4001/graphql --duration 120 --document-interval 5 --mutation-interval 2",

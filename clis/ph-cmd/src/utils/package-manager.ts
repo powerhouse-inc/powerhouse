@@ -1,4 +1,5 @@
 import { createProject } from "@powerhousedao/codegen";
+import { parsePackageManager, parseTag } from "@powerhousedao/codegen/utils";
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path, { dirname } from "node:path";
@@ -11,7 +12,6 @@ import {
   POWERHOUSE_GLOBAL_DIR,
   packageManagers,
 } from "./constants.js";
-import { parsePackageManager, parseTag } from "./parsing.js";
 import type {
   GlobalProjectOptions,
   PackageManager,

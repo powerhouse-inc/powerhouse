@@ -1,4 +1,8 @@
-import { getPackageVersion } from "@powerhousedao/codegen/utils";
+import {
+  getPackageVersion,
+  handleMutuallyExclusiveOptions,
+  logVersionUpdate,
+} from "@powerhousedao/codegen/utils";
 import chalk from "chalk";
 import {
   boolean,
@@ -16,16 +20,11 @@ import { readPackage } from "read-pkg";
 import { clean, valid } from "semver";
 import { writePackage } from "write-package";
 import { ALL_POWERHOUSE_DEPENDENCIES } from "../utils/constants.js";
-import {
-  handleMutuallyExclusiveOptions,
-  logVersionUpdate,
-} from "../utils/parsing.js";
 import { runCmd } from "../utils/run-cmd.js";
 
-const commandParser = command({
-  name: "ph use",
-  description:
-    "Specify the release version of Powerhouse dependencies to use.\nTo use a release tag, specify `staging`, `dev`, or `latest` as the first argument to this command or with the --tag option.\n You can also use a specific version with the --version option.",
+export const use = command({
+  name: "use",
+  description: "Specify the release version of Powerhouse dependencies to use.",
   args: {
     tagPositional: positional({
       type: optional(oneOf(["latest", "staging", "dev"])),
@@ -144,21 +143,23 @@ const commandParser = command({
       ),
     );
 
-    if (skipInstall) return;
-
-    const packageManager = await detect();
-    if (!packageManager) {
-      throw new Error(
-        `❌ Failed to detect your package manager. Run install manually.`,
+    if (!skipInstall) {
+      const packageManager = await detect();
+      if (!packageManager) {
+        throw new Error(
+          `❌ Failed to detect your package manager. Run install manually.`,
+        );
+      }
+      console.log(
+        `▶️ Installing updated dependencies with \`${packageManager.agent}\`\n`,
       );
+      runCmd(`${packageManager.agent} install`);
     }
-    console.log(
-      `▶️ Installing updated dependencies with \`${packageManager.agent}\`\n`,
-    );
-    runCmd(`${packageManager.agent} install`);
+
+    process.exit(0);
   },
 });
 
-export async function use(args: string[]) {
-  await run(commandParser, args);
+export async function runUse(args: string[]) {
+  await run(use, args);
 }

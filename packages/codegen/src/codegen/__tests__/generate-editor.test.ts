@@ -51,6 +51,8 @@ describe("generateEditor", () => {
 
     config.editorsDir = path.join(testOutDirPath, "editors");
     config.documentModelsDir = path.join(testOutDirPath, "document-models");
+
+    process.chdir(testOutDirPath);
   }
 
   beforeAll(() => {
@@ -71,9 +73,10 @@ describe("generateEditor", () => {
 
       const name = "TestDocEditor";
       await generateEditor({
-        name: name,
+        ...config,
+        editorName: name,
+        editorDirName: undefined,
         documentTypes: ["powerhouse/test-doc"],
-        config: config,
         editorId: "test-document-model-editor",
         specifiedPackageName: TEST_PACKAGE_NAME,
         useTsMorph: USE_TS_MORPH,
@@ -132,12 +135,13 @@ describe("generateEditor", () => {
 
       const name = "TestDocEditorTwo";
       await generateEditor({
-        name: name,
+        ...config,
+        editorName: name,
         documentTypes: ["powerhouse/test-doc"],
-        config: config,
         editorId: "test-document-model-editor-two",
         specifiedPackageName: TEST_PACKAGE_NAME,
         useTsMorph: USE_TS_MORPH,
+        editorDirName: undefined,
       });
       const editorsDir = path.join(testOutDirPath, "editors");
       const editorsFilePath = path.join(editorsDir, "editors.ts");
@@ -165,12 +169,13 @@ describe("generateEditor", () => {
       );
       rmSync(editorsFilePath, { force: true });
       await generateEditor({
-        name: "TestDocEditor2",
+        ...config,
+        editorName: "TestDocEditor2",
         documentTypes: ["powerhouse/test-doc"],
-        config: config,
         editorId: "test-doc-editor-2",
         specifiedPackageName: TEST_PACKAGE_NAME,
         useTsMorph: USE_TS_MORPH,
+        editorDirName: undefined,
       });
       await compile(testOutDirPath);
       const editorsContent = fs.readFileSync(editorsFilePath, "utf-8");

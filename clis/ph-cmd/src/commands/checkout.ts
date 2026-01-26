@@ -1,59 +1,68 @@
-import { cloneRepository, installDependencies } from "@powerhousedao/codegen";
-import type { Command } from "commander";
-import { checkoutHelp } from "../help.js";
-import type { CommandActionType } from "../types.js";
-import { withCustomHelp } from "../utils/index.js";
+import { cloneRepository } from "@powerhousedao/codegen";
+import {
+  handleMutuallyExclusiveOptions,
+  parsePackageManager,
+} from "@powerhousedao/codegen/utils";
+import { packageManagerArgs } from "@powerhousedao/common/clis";
+import { command, option, optional, positional, string } from "cmd-ts";
 import { getPackageManagerFromLockfile } from "../utils/package-manager.js";
+import { runCmd } from "../utils/run-cmd.js";
 import { getPackageDocument } from "../utils/validate-remote-drive-checkout.js";
 
-export type CheckoutOptions = {
-  remoteDrive: string;
-  packageManager?: string;
-};
+export const checkout = command({
+  name: "checkout",
+  description: "Checkout an existing project from a remote drive",
+  args: {
+    remoteDrivePositional: positional({
+      type: optional(string),
+    }),
+    remoteDriveOption: option({
+      type: optional(string),
+      long: "remote-drive",
+      short: "r",
+    }),
+    ...packageManagerArgs,
+  },
+  handler: async ({
+    remoteDrivePositional,
+    remoteDriveOption,
+    ...packageManagerArgs
+  }) => {
+    const remoteDrive = remoteDrivePositional ?? remoteDriveOption;
+    if (!remoteDrive) {
+      throw new Error("Please specify a remote drive URL to checkout from");
+    }
+    handleMutuallyExclusiveOptions(packageManagerArgs, "package managers");
 
-export const checkout: CommandActionType<[CheckoutOptions]> = async (
-  options,
-) => {
-  console.log("Checking out project from remote drive...");
+    console.log("Checking out project from remote drive...");
 
-  try {
     // Validate remote drive and get GitHub URL
-    const packageDocument = await getPackageDocument(options.remoteDrive);
+    const packageDocument = await getPackageDocument(remoteDrive);
 
     if (!packageDocument.isValid) {
-      console.error(packageDocument.error);
-      process.exit(1);
+      throw new Error(packageDocument.error);
+    }
+
+    if (!packageDocument.githubUrl) {
+      throw new Error(
+        "Project at remote drive URL does not have a GitHub URL.",
+      );
     }
 
     // Clone repository
-    const projectPath = cloneRepository(packageDocument.githubUrl!);
+    const projectPath = cloneRepository(packageDocument.githubUrl);
 
-    // Detect package manager from lock files or use user-provided one
-    const detectedPackageManager = getPackageManagerFromLockfile(projectPath);
-    const packageManager = options.packageManager ?? detectedPackageManager;
+    const parsedPackageManager = parsePackageManager(packageManagerArgs);
 
-    // Install dependencies
-    installDependencies(projectPath, packageManager);
+    const packageManager =
+      parsedPackageManager ?? getPackageManagerFromLockfile(projectPath);
 
-    console.log("\x1b[32m", "Checkout completed successfully!", "\x1b[0m");
-  } catch (error) {
-    console.error(
-      "Failed to checkout the project",
-      error instanceof Error ? error.message : String(error),
-    );
-    process.exit(1);
-  }
-};
+    process.chdir(projectPath);
 
-export function checkoutCommand(program: Command): Command {
-  const checkoutCmd = program
-    .command("checkout")
-    .description("Checkout an existing project from a remote drive")
-    .requiredOption(
-      "-r, --remote-drive <remoteDrive>",
-      "Remote drive identifier",
-    )
-    .option("--package-manager <packageManager>", "Package manager to use");
+    runCmd(`${packageManager} install`);
 
-  return withCustomHelp<[CheckoutOptions]>(checkoutCmd, checkout, checkoutHelp);
-}
+    console.log("Project checked out successfully");
+
+    process.exit(0);
+  },
+});

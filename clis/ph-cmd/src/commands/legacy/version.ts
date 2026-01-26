@@ -4,7 +4,7 @@ import path from "node:path";
 import {
   getPackageManagerFromLockfile,
   getProjectInfo,
-} from "../utils/index.js";
+} from "../../utils/index.js";
 
 interface PackageJson {
   dependencies?: Record<string, string>;
@@ -17,7 +17,7 @@ export const customVersionHandler = async () => {
 
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore build time version file
-  const { version } = (await import("../version.js")) as { version: string };
+  const { version } = (await import("../../version.js")) as { version: string };
 
   console.log("PH CMD version: ", version);
 

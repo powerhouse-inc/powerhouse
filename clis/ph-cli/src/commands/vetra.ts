@@ -1,64 +1,24 @@
-import type { Command } from "commander";
-import { vetraHelp } from "../help.js";
-import type { DevOptions } from "../services/vetra.js";
-import type { CommandActionType } from "../types.js";
-import { setCustomHelp } from "../utils.js";
+import { vetraArgs } from "@powerhousedao/common/clis";
+import { command } from "cmd-ts";
+import { startVetra } from "../services/vetra.js";
 
-async function startVetraEnv(options: DevOptions) {
-  const Vetra = await import("../services/vetra.js");
-  const { startVetra } = Vetra;
-  return startVetra(options);
-}
+export const vetra = command({
+  name: "vetra",
+  description: `
+The vetra command sets up a Vetra development environment for working with Vetra projects.
+It starts a Vetra Switchboard and optionally Connect Studio, enabling document collaboration 
+and real-time processing with a "Vetra" drive or connection to remote drives.
 
-export const vetra: CommandActionType<
-  [DevOptions & { logs?: boolean; watch?: boolean }]
-> = async (options) => {
-  return startVetraEnv({
-    ...options,
-    verbose: options.logs,
-    disableConnect: options.disableConnect,
-    interactive: options.interactive,
-    watch: options.watch,
-  });
-};
-
-export function vetraCommand(program: Command) {
-  const cmd = program
-    .command("vetra")
-    .option("--logs", "Show additional logs")
-    .description(
-      "Starts Vetra development environment with switchboard, reactor, and connect",
-    )
-    .option(
-      "--switchboard-port <port>",
-      "port to use for the Vetra switchboard (default: 4001)",
-    )
-    .option("--connect-port <port>", "port to use for Connect (default: 3000)")
-    .option("--https-key-file <HTTPS_KEY_FILE>", "path to the ssl key file")
-    .option("--https-cert-file <HTTPS_CERT_FILE>", "path to the ssl cert file")
-    .option(
-      "--config-file <configFile>",
-      "Path to the powerhouse.config.js file",
-    )
-    .option(
-      "-w, --watch",
-      "Enable dynamic loading for document-models and editors in connect-studio and switchboard",
-    )
-    .option(
-      "--remote-drive <url>",
-      "URL of remote drive to connect to (skips switchboard initialization)",
-    )
-    .option(
-      "--disable-connect",
-      "Skip Connect initialization (only start switchboard and reactor)",
-    )
-    .option(
-      "--interactive",
-      "Enable interactive mode for code generation (requires user confirmation before generating code)",
-    );
-
-  // Use the setCustomHelp utility to apply custom help formatting
-  setCustomHelp(cmd, vetraHelp);
-
-  cmd.action(vetra);
-}
+This command:
+1. Starts a Vetra Switchboard with a "Vetra" drive for document storage
+2. Optionally connects to remote drives instead of creating a local drive
+3. Starts Connect Studio pointing to the Switchboard for user interaction (unless disabled)
+4. Enables real-time updates, collaboration, and code generation`,
+  args: vetraArgs,
+  handler: async (args) => {
+    if (args.debug) {
+      console.log(args);
+    }
+    await startVetra(args);
+  },
+});

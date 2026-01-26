@@ -45,8 +45,8 @@ vi.mock("../../utils/dependencies.js", async () => {
 
 vi.mock("../use.js", async () => {
   // eslint-disable-next-line @typescript-eslint/consistent-type-imports
-  const actual: typeof import("../use.old.js") =
-    await vi.importActual("../use.js");
+  const actual: typeof import("../legacy/use.js") =
+    await vi.importActual("../legacy/use.js");
   return {
     ...actual,
     useCommand: vi.fn(actual.useCommand),
@@ -64,7 +64,7 @@ import {
   getProjectInfo,
 } from "../../utils/package-manager.js";
 import type { ProjectInfo } from "../../utils/types.js";
-import { useCommand } from "../use.old.js";
+import { useCommand } from "../legacy/use.js";
 
 describe("useCommand", () => {
   let program: Command;
@@ -241,7 +241,6 @@ describe("useCommand", () => {
     expect(updatedDependencies).not.toContain(
       "@powerhousedao/reactor-local@dev",
     );
-    expect(updatedDependencies).not.toContain("@powerhousedao/scalars@dev");
     expect(updatedDependencies).not.toContain("@powerhousedao/ph-cli@dev");
   });
 

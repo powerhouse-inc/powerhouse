@@ -1,17 +1,17 @@
 import type { Command } from "commander";
-import { accessTokenCommand } from "./access-token.js";
-import { connectCommand } from "./connect.js";
-import { generateCommand } from "./generate.js";
-import { helpCommand } from "./help.js";
-import { inspectCommand } from "./inspect.js";
-import { installCommand } from "./install.js";
-import { listCommand } from "./list.js";
-import { loginCommand } from "./login.js";
-import { migrateCommand } from "./migrate.js";
-import { serviceCommand } from "./service.js";
-import { switchboardCommand } from "./switchboard.js";
-import { uninstallCommand } from "./uninstall.js";
-import { vetraCommand } from "./vetra.js";
+import { accessTokenCommand } from "./legacy/access-token.old.js";
+import { connectCommand } from "./legacy/connect.old.js";
+import { generateCommand } from "./legacy/generate.old.js";
+import { helpCommand } from "./legacy/help.old.js";
+import { inspectCommand } from "./legacy/inspect.old.js";
+import { installCommand } from "./legacy/install.old.js";
+import { loginCommand } from "./legacy/login.old.js";
+import { migrateCommand } from "./legacy/migrate.old.js";
+import { serviceCommand } from "./legacy/service.old.js";
+import { switchboardCommand } from "./legacy/switchboard.old.js";
+import { uninstallCommand } from "./legacy/uninstall.old.js";
+import { vetraCommand } from "./legacy/vetra.old.js";
+import { listCommand } from "./list.old.js";
 
 export const commands = [
   accessTokenCommand,

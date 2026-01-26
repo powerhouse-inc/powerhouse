@@ -1,30 +1,27 @@
-import type { Command } from "commander";
-import { inspectHelp } from "../help.js";
-import type { InspectOptions } from "../services/inspect.js";
-import type { CommandActionType } from "../types.js";
-import { setCustomHelp } from "../utils.js";
+import { inspectArgs } from "@powerhousedao/common/clis";
+import { command } from "cmd-ts";
+import console from "console";
+import { startInspect } from "../services/inspect.js";
 
-async function startInspect(packageName: string, options: InspectOptions) {
-  const Inspect = await import("../services/inspect.js");
-  const { startInspect } = Inspect;
-  return startInspect(packageName, options);
-}
+export const inspect = command({
+  name: "inspect",
+  description: `
+The inspect command examines and provides detailed information about a Powerhouse package.
+It helps you understand the structure, dependencies, and configuration of packages in
+your project.
 
-export const inspect: CommandActionType<[string, InspectOptions]> = async (
-  packageName,
-  options,
-) => {
-  return startInspect(packageName, options);
-};
-
-export function inspectCommand(program: Command) {
-  const command = program
-    .command("inspect")
-    .alias("is")
-    .description("Inspect a package")
-    .option("--debug", "Show additional logs")
-    .argument("<packageName>", "The name of the package to inspect")
-    .action(inspect);
-
-  setCustomHelp(command, inspectHelp);
-}
+This command:
+1. Analyzes the specified package
+2. Retrieves detailed information about its structure and configuration
+3. Displays package metadata, dependencies, and other relevant information
+4. Helps troubleshoot package-related issues`,
+  aliases: ["is"],
+  args: inspectArgs,
+  handler: (args) => {
+    if (args.debug) {
+      console.log(args);
+    }
+    startInspect(args);
+    process.exit(0);
+  },
+});

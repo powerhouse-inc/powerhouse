@@ -1,8 +1,8 @@
 import type { Command } from "commander";
-import { checkoutCommand } from "./checkout.js";
-import { helpCommand } from "./help.js";
-import { setupGlobalsCommand } from "./setup-globals.js";
-import { versionOption } from "./version.js";
+import { checkoutCommand } from "./legacy/checkout.js";
+import { helpCommand } from "./legacy/help.js";
+import { versionOption } from "./legacy/version.js";
+import { setupGlobalsCommand } from "./legacy/setup-globals.js";
 export { checkoutCommand, helpCommand, setupGlobalsCommand, versionOption };
 export const commands = [
   setupGlobalsCommand,

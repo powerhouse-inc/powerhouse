@@ -55,10 +55,10 @@ export class AppGenerator extends BaseDocumentGen {
         const appId: string = kebabCase(state.name);
         // Generate the drive editor using the codegen function
         await generateDriveEditor({
-          name: state.name,
-          config: this.config.PH_CONFIG,
-          appId: appId,
-          allowedDocumentTypes: state.allowedDocumentTypes?.join(","),
+          ...this.config.PH_CONFIG,
+          driveEditorName: state.name,
+          driveEditorId: appId,
+          allowedDocumentTypes: state.allowedDocumentTypes ?? [],
           isDragAndDropEnabled: state.isDragAndDropEnabled,
           useTsMorph: USE_TS_MORPH,
         });

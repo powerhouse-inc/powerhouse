@@ -2,7 +2,7 @@ import { homedir } from "node:os";
 import path from "node:path";
 
 export const PH_BIN_PATH = process.argv[1];
-export const PH_BIN = "ph-cli";
+export const PH_BIN = "ph-cli-legacy";
 export const PH_CLI_COMMANDS = [
   "init",
   "dev",

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v3";
 import validator from "validator";
 import { snakeCase, constantCase } from "change-case";
 

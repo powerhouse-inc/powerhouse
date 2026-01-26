@@ -1,3 +1,4 @@
+import { logVersionUpdate } from "@powerhousedao/codegen/utils";
 import chalk from "chalk";
 import {
   boolean,
@@ -18,13 +19,12 @@ import {
   CLIS_DEPENDENCIES,
 } from "../utils/constants.js";
 import { dirExists } from "../utils/file-system.js";
-import { logVersionUpdate } from "../utils/parsing.js";
 import { runCmd } from "../utils/run-cmd.js";
 
-const commandParser = command({
-  name: "ph use-local",
+export const useLocal = command({
+  name: "use-local",
   description:
-    "Use your local `powerhouse` monorepo dependencies the current project. NOTE: The monorepo uses `pnpm`, so this only works with `pnpm`.",
+    "Use your local `powerhouse` monorepo dependencies the current project.",
   args: {
     monorepoPathPositional: positional({
       type: optional(string),
@@ -139,10 +139,12 @@ const commandParser = command({
 
     console.log(chalk.green(`\n✅ Project linked successfully\n`));
 
-    if (skipInstall) return;
+    if (!skipInstall) {
+      console.log(`Installing linked dependencies with \`pnpm\`\n`);
+      runCmd(`pnpm install`);
+    }
 
-    console.log(`Installing linked dependencies with \`pnpm\`\n`);
-    runCmd(`pnpm install`);
+    process.exit(0);
   },
 });
 
@@ -164,6 +166,6 @@ function buildPnpmLink(packageName: string, monorepoPath: string) {
   return pnpmLink;
 }
 
-export async function useLocal(args: string[]) {
-  await run(commandParser, args);
+export async function runUseLocal(args: string[]) {
+  await run(useLocal, args);
 }

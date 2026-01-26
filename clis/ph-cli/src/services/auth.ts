@@ -162,7 +162,7 @@ export function generateSessionId(): string {
 /**
  * Default Renown URL
  */
-export const DEFAULT_RENOWN_URL = "https://www.renown.id";
+export const DEFAULT_RENOWN_URL = "https://www.renown.id" as const;
 
 /**
  * Get or create the ConnectCrypto instance

@@ -12,18 +12,21 @@
     "access": "public"
   },
   "bin": {
-    "ph": "build/cli.js"
+    "ph": "./build/cli.js",
+    "ph-legacy": "./build/cli.old.js"
   },
   "files": [
-    "build/cli.js"
+    "build"
   ],
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "generate-commands-md": "tsx scripts/generate-commands-md.ts",
+    "generate-docs-legacy": "tsx scripts/generate-docs-legacy.ts",
+    "generate-docs": "bun run scripts/generate-commands-docs.ts",
     "generate-version": "tsx scripts/generate-version.ts",
     "bundle-cli": "bun build ./src/cli.ts --outdir ./build --target node",
-    "build": "npm run generate-commands-md && npm run generate-version && npm run bundle-cli",
+    "bundle-cli-legacy": "bun build ./src/cli.old.ts --outdir ./build --target node",
+    "build": "npm run generate-docs-legacy && npm run generate-version && npm run generate-docs && npm run bundle-cli && npm run bundle-cli-legacy",
     "dev": "tsx src/cli.ts",
     "cli": "node build/cli.js",
     "test": "vitest run",

@@ -1,22 +1,35 @@
-import type { Command } from "commander";
-import { Argument } from "commander";
+import { serviceArgs, type ServiceAction } from "@powerhousedao/common/clis";
+import { command } from "cmd-ts";
 import { execSync } from "node:child_process";
+import console from "node:console";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { serviceHelp } from "../help.js";
-import type { CommandActionType } from "../types.js";
-import { setCustomHelp } from "../utils.js";
+import type { PackageJson } from "read-pkg";
 
-interface PackageJson {
-  name: string;
-  version: string;
-  [key: string]: unknown;
-}
+export const service = command({
+  name: "service",
+  description: `  
+The service command manages Powerhouse services, allowing you to start, stop, check status,
+and more. It provides a centralized way to control the lifecycle of services in your project.
 
-const actions = ["start", "stop", "status", "setup", "restart"];
+This command:
+1. Controls service lifecycle (start, stop, status, etc.)
+2. Manages multiple services from a single interface
+3. Provides detailed information about running services
+4. Uses PM2 under the hood for process management`,
+  args: serviceArgs,
+  handler: (args) => {
+    if (args.debug) {
+      console.log(args);
+    }
+    const { action = "status" } = args;
+    manageService(action);
+    process.exit(0);
+  },
+});
 
-export const manageService: CommandActionType<[string]> = async (action) => {
+function manageService(action: ServiceAction) {
   try {
     const dirname = path.dirname(fileURLToPath(import.meta.url));
     const manageScriptPath = path.join(
@@ -79,20 +92,10 @@ export const manageService: CommandActionType<[string]> = async (action) => {
 
       default:
         console.log("Unknown action:", action);
-        process.exit(1);
+        return;
     }
   } catch (error) {
-    console.error("Error:", error);
-    process.exit(1);
+    console.error("Error:");
+    throw error;
   }
-};
-
-export function serviceCommand(program: Command) {
-  const command = program
-    .command("service")
-    .description("Manage environment services")
-    .addArgument(new Argument("action").choices(actions).default("status"))
-    .action(manageService);
-
-  setCustomHelp(command, serviceHelp);
 }
