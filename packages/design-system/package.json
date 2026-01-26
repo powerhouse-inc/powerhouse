@@ -64,7 +64,7 @@
     "create-icon-components": "tsx scripts/create-icon-components.ts",
     "build:css": "pnpm exec tailwindcss -i style.css -o dist/style.css",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build",
+    "build:storybook": "storybook build",
     "test": "vitest run --exclude \"src/scalars/**\"",
     "test:watch": "vitest watch",
     "chromatic": "npx chromatic --project-token=chpt_b9c79db0df52861"

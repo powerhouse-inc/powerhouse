@@ -56,25 +56,25 @@ jobs:
           run_install: false
 
       - name: Install deps (frozen lockfile)
-        run: pnpm install:ci
+        run: pnpm install-ci
 
       - name: Setup bun global install
         uses: oven-sh/setup-bun@v2
 
       - name: Build typescript project
-        run: pnpm tsc:build
+        run: pnpm build-tsc
 
       - name: Run misc build scripts
-        run: pnpm build:misc
+        run: pnpm build-misc
 
       - name: Run install again after generating binaries
         run: pnpm install
 
       - name: Run css build scripts
-        run: pnpm build:css
+        run: pnpm build-css
 
       - name: Run vite build scripts
-        run: pnpm build:vite
+        run: pnpm build-vite
 
       - name: git config
         run: |

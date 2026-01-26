@@ -39,13 +39,13 @@ jobs:
           run_install: false
 
       - name: Install deps (frozen lockfile)
-        run: pnpm install:ci
+        run: pnpm install-ci
 
       - name: Build typescript project
-        run: pnpm tsc:build
+        run: pnpm build-tsc
 
       - name: Run codegen tests
-        run: pnpm test:codegen
+        run: pnpm test-codegen
 
   notify-discord:
     if: failure() && github.event_name != 'pull_request'

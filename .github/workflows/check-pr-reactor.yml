@@ -87,7 +87,7 @@ jobs:
           run_install: false
 
       - name: Install dependencies
-        run: pnpm install:ci
+        run: pnpm install-ci
 
       - name: Setup bun global install
         uses: oven-sh/setup-bun@v2
@@ -105,7 +105,7 @@ jobs:
         working-directory: packages/document-drive
 
       - name: Build
-        run: pnpm tsc:build
+        run: pnpm build-tsc
 
       - name: Lint
         run: pnpm lint
@@ -131,10 +131,10 @@ jobs:
           run_install: false
 
       - name: Install dependencies
-        run: pnpm install:ci
+        run: pnpm install-ci
 
       - name: Build
-        run: pnpm tsc:build
+        run: pnpm build-tsc
 
       - name: Lint
         run: pnpm lint
