@@ -49,11 +49,13 @@ jobs:
 
       - name: Vitest related (PR)
         if: ${{ github.event_name == 'pull_request' }}
+        run: echo files from diff: $(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}")
         run: pnpm vitest related --run $(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}")
         working-directory: 'packages/codegen'
 
       - name: Vitest related (push)
         if: ${{ github.event_name != 'pull_request' }}
+        run: echo files from diff: $(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}")
         run: pnpm vitest related --run $(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}")
         working-directory: 'packages/codegen'
 
