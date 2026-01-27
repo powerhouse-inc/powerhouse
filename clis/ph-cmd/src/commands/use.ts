@@ -3,6 +3,7 @@ import {
   handleMutuallyExclusiveOptions,
   logVersionUpdate,
 } from "@powerhousedao/codegen/utils";
+import { debugArgs } from "@powerhousedao/common/clis";
 import chalk from "chalk";
 import {
   boolean,
@@ -50,8 +51,13 @@ export const use = command({
       short: "s",
       description: "Skip running `install` with your package manager",
     }),
+    ...debugArgs,
   },
-  handler: async ({ tagPositional, tagOption, version, skipInstall }) => {
+  handler: async (args) => {
+    const { tagPositional, tagOption, version, skipInstall, debug } = args;
+    if (debug) {
+      console.log({ args });
+    }
     const tag = tagPositional ?? tagOption;
     handleMutuallyExclusiveOptions({ tag, version }, "versioning strategy");
 

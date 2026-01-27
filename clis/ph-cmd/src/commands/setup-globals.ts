@@ -6,7 +6,11 @@ export const setupGlobals = command({
   name: "setup-globals",
   description: "Initialize a new global project",
   args: initArgs,
-  handler: async ({ namePositional, nameOption, ...options }) => {
+  handler: async (args) => {
+    const { namePositional, nameOption, debug, ...options } = args;
+    if (debug) {
+      console.log({ args });
+    }
     const name = namePositional ?? nameOption;
     await createGlobalProject(name, options);
     process.exit(0);

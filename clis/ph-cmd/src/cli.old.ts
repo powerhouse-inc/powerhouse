@@ -1,11 +1,12 @@
 #!/usr/bin/env node
+import { run } from "cmd-ts";
 import { Command } from "commander";
 import { forwardCommand } from "./commands/forward.js";
 import registerCommands from "./commands/index.js";
-import { runInit } from "./commands/init.js";
-import { runUpdate } from "./commands/update.js";
-import { runUseLocal } from "./commands/use-local.js";
-import { runUse } from "./commands/use.js";
+import { init } from "./commands/init.js";
+import { update } from "./commands/update.js";
+import { useLocal } from "./commands/use-local.js";
+import { use } from "./commands/use.js";
 import type { CommandActionType } from "./types.js";
 import { generateMergedHelp } from "./utils/index.js";
 
@@ -49,25 +50,25 @@ const defaultCommand: CommandActionType<[{ verbose?: boolean }]> = async (
   const isInit = firstPositionalArg === "init";
   if (isInit) {
     // forward from 3 to skip initial `ph`
-    await runInit(process.argv.slice(3));
+    await run(init, process.argv.slice(3));
     process.exit(0);
   }
   const isUpdate = firstPositionalArg === "update";
   if (isUpdate) {
     // forward from 3 to skip initial `ph`
-    await runUpdate(process.argv.slice(3));
+    await run(update, process.argv.slice(3));
     process.exit(0);
   }
   const isUse = firstPositionalArg === "use";
   if (isUse) {
     // forward from 3 to skip initial `ph`
-    await runUse(process.argv.slice(3));
+    await run(useLocal, process.argv.slice(3));
     process.exit(0);
   }
   const isUseLocal = firstPositionalArg === "use-local";
   if (isUseLocal) {
     // forward from 3 to skip initial `ph`
-    await runUseLocal(process.argv.slice(3));
+    await run(use, process.argv.slice(3));
     process.exit(0);
   }
   const isHelpCommand = args.startsWith("--help") || args.startsWith("-h");

@@ -3,7 +3,7 @@ import {
   handleMutuallyExclusiveOptions,
   parsePackageManager,
 } from "@powerhousedao/codegen/utils";
-import { packageManagerArgs } from "@powerhousedao/common/clis";
+import { debugArgs, packageManagerArgs } from "@powerhousedao/common/clis";
 import { command, option, optional, positional, string } from "cmd-ts";
 import { getPackageManagerFromLockfile } from "../utils/package-manager.js";
 import { runCmd } from "../utils/run-cmd.js";
@@ -22,12 +22,18 @@ export const checkout = command({
       short: "r",
     }),
     ...packageManagerArgs,
+    ...debugArgs,
   },
-  handler: async ({
-    remoteDrivePositional,
-    remoteDriveOption,
-    ...packageManagerArgs
-  }) => {
+  handler: async (args) => {
+    const {
+      remoteDrivePositional,
+      remoteDriveOption,
+      debug,
+      ...packageManagerArgs
+    } = args;
+    if (debug) {
+      console.log({ args });
+    }
     const remoteDrive = remoteDrivePositional ?? remoteDriveOption;
     if (!remoteDrive) {
       throw new Error("Please specify a remote drive URL to checkout from");

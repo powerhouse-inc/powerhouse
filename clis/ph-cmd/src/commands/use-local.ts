@@ -1,4 +1,5 @@
 import { logVersionUpdate } from "@powerhousedao/codegen/utils";
+import { debugArgs } from "@powerhousedao/common/clis";
 import chalk from "chalk";
 import {
   boolean,
@@ -45,12 +46,14 @@ export const useLocal = command({
       short: "s",
       description: "Skip running `install` with `pnpm`",
     }),
+    ...debugArgs,
   },
-  handler: async ({
-    monorepoPathPositional,
-    monorepoPathOption,
-    skipInstall,
-  }) => {
+  handler: async (args) => {
+    const { monorepoPathPositional, monorepoPathOption, skipInstall, debug } =
+      args;
+    if (debug) {
+      console.log({ args });
+    }
     const monorepoPath = monorepoPathPositional ?? monorepoPathOption;
 
     if (!monorepoPath) {

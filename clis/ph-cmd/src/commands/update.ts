@@ -3,8 +3,9 @@ import {
   getTagFromVersion,
   logVersionUpdate,
 } from "@powerhousedao/codegen/utils";
+import { debugArgs } from "@powerhousedao/common/clis";
 import chalk from "chalk";
-import { boolean, command, flag, optional, run } from "cmd-ts";
+import { boolean, command, flag, optional } from "cmd-ts";
 import { detect } from "package-manager-detector/detect";
 import { readPackage } from "read-pkg";
 import { writePackage } from "write-package";
@@ -22,8 +23,13 @@ export const update = command({
       short: "s",
       description: "Skip running `install` with your package manager",
     }),
+    ...debugArgs,
   },
-  handler: async ({ skipInstall }) => {
+  handler: async (args) => {
+    const { skipInstall, debug } = args;
+    if (debug) {
+      console.log({ args });
+    }
     console.log(`\n▶️ Updating Powerhouse dependencies...\n`);
     const packageJson = await readPackage();
 
@@ -113,7 +119,3 @@ export const update = command({
     process.exit(0);
   },
 });
-
-export async function runUpdate(args: string[]) {
-  await run(update, args);
-}

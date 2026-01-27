@@ -4,7 +4,7 @@ import {
   parsePackageManager,
   parseTag,
 } from "@powerhousedao/codegen/utils";
-import { packageManagerArgs } from "@powerhousedao/common/clis";
+import { debugArgs, packageManagerArgs } from "@powerhousedao/common/clis";
 import chalk from "chalk";
 import { kebabCase } from "change-case";
 import {
@@ -15,7 +15,6 @@ import {
   option,
   optional,
   positional,
-  run,
   string,
 } from "cmd-ts";
 import enquirer from "enquirer";
@@ -68,26 +67,32 @@ export const initArgs = {
     short: "r",
     description: "Remote drive identifier.",
   }),
+  ...debugArgs,
 };
 
 export const init = command({
   name: "init",
   description: "Initialize a new project",
   args: initArgs,
-  handler: async ({
-    namePositional,
-    nameOption,
-    packageManager,
-    npm,
-    pnpm,
-    yarn,
-    bun,
-    tag,
-    version,
-    dev,
-    staging,
-    remoteDrive,
-  }) => {
+  handler: async (args) => {
+    const {
+      namePositional,
+      nameOption,
+      packageManager,
+      npm,
+      pnpm,
+      yarn,
+      bun,
+      tag,
+      version,
+      dev,
+      staging,
+      remoteDrive,
+      debug,
+    } = args;
+    if (debug) {
+      console.log({ args });
+    }
     let name = namePositional ?? nameOption;
     if (!name) {
       const { prompt } = enquirer;
@@ -107,9 +112,13 @@ export const init = command({
       throw new Error("You must provide a name for your project.");
     }
 
+    console.log("step 1 done");
+
     if (version !== undefined && !valid(clean(version))) {
       throw new Error(`Invalid version: ${version}`);
     }
+
+    console.log("step w done");
 
     handleMutuallyExclusiveOptions(
       {
@@ -120,6 +129,8 @@ export const init = command({
       },
       "versioning strategy",
     );
+
+    console.log("step 3 done");
 
     handleMutuallyExclusiveOptions(
       {
@@ -132,6 +143,8 @@ export const init = command({
       "package manager",
     );
 
+    console.log("step 4 done");
+
     const parsedPackageManager =
       parsePackageManager({
         npm,
@@ -141,52 +154,45 @@ export const init = command({
         packageManager,
       }) ?? "npm";
 
+    console.log("step 5 done");
+
     const parsedTag = parseTag({
       tag,
       dev,
       staging,
     });
 
-    return {
-      name,
-      version,
-      remoteDrive,
-      packageManager: parsedPackageManager,
-      tag: parsedTag,
-    };
+    try {
+      if (remoteDrive) {
+        console.log(chalk.blue("\n⏳ Setting up remote drive...\n"));
+        await setupRemoteDrive(remoteDrive);
+        console.log(chalk.green("\n✅ Remote drive set up."));
+      }
+
+      console.log(chalk.bold("\n🚀 Initializing a new project...\n"));
+      await createProject({
+        ...args,
+        name,
+        packageManager: parsedPackageManager,
+        tag: parsedTag,
+      });
+
+      if (remoteDrive) {
+        console.log();
+        console.log("To link your project to GitHub:");
+        console.log();
+        console.log("  1. Create a new repository on GitHub");
+        console.log(`  2. cd ${name}`);
+        console.log("  3. git add . && git commit -m 'Initial commit'");
+        console.log("  4. git remote add origin <your-github-url>");
+        console.log(`  5. git push -u origin main`);
+        console.log();
+      }
+    } catch (error) {
+      console.error("\n❌ Failed to initialize project: \n");
+      throw error;
+    }
+
+    process.exit(0);
   },
 });
-
-export async function runInit(args: string[]) {
-  try {
-    const parsedArgs = await run(init, args);
-
-    const { name, remoteDrive } = parsedArgs;
-
-    if (remoteDrive) {
-      console.log(chalk.blue("\n⏳ Setting up remote drive...\n"));
-      await setupRemoteDrive(remoteDrive);
-      console.log(chalk.green("\n✅ Remote drive set up."));
-    }
-
-    console.log(chalk.bold("\n🚀 Initializing a new project...\n"));
-    await createProject(parsedArgs);
-
-    if (remoteDrive) {
-      console.log();
-      console.log("To link your project to GitHub:");
-      console.log();
-      console.log("  1. Create a new repository on GitHub");
-      console.log(`  2. cd ${name}`);
-      console.log("  3. git add . && git commit -m 'Initial commit'");
-      console.log("  4. git remote add origin <your-github-url>");
-      console.log(`  5. git push -u origin main`);
-      console.log();
-    }
-  } catch (error) {
-    console.error("\n❌ Failed to initialize project: \n");
-    throw error;
-  }
-
-  process.exit(0);
-}

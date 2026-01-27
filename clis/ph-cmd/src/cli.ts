@@ -53,7 +53,7 @@ async function main() {
     return;
   }
 
-  await run(ph, process.argv.slice(2));
+  await run(ph, args);
 }
 
 await main().catch((e) => {
