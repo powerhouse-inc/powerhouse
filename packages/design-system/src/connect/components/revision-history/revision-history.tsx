@@ -15,6 +15,7 @@ type Props = {
   readonly itemsPerPage?: number;
   readonly documentState?: object;
   readonly onCopyState?: () => void;
+  readonly onCopyDocId?: () => void;
 };
 
 export function RevisionHistory(props: Props) {
@@ -27,6 +28,7 @@ export function RevisionHistory(props: Props) {
     itemsPerPage = 100,
     documentState,
     onCopyState,
+    onCopyDocId,
   } = props;
 
   const [scope, setScope] = useState<string>("global");
@@ -84,32 +86,35 @@ export function RevisionHistory(props: Props) {
 
   return (
     <ConnectTooltipProvider>
-      <Header
-        docId={documentId}
-        onChangeScope={onChangeScope}
-        onClose={onClose}
-        scope={scope}
-        title={documentTitle}
-        documentState={documentState}
-        onCopyState={onCopyState}
-      />
-      {PaginationComponent}
-      <div className="mt-4 flex justify-center rounded-md bg-slate-50 p-4">
-        {visibleOperations.length > 0 ? (
-          <div className="grid grid-cols-[minmax(min-content,1018px)]">
-            <Timeline
-              globalOperations={scope === "global" ? pageItems : []}
-              localOperations={scope === "local" ? pageItems : []}
-              scope={scope}
-            />
-          </div>
-        ) : (
-          <h3 className="my-40 text-gray-600">
-            This document has no recorded operations yet.
-          </h3>
-        )}
+      <div className="p-6">
+        <Header
+          docId={documentId}
+          onChangeScope={onChangeScope}
+          onClose={onClose}
+          scope={scope}
+          title={documentTitle}
+          documentState={documentState}
+          onCopyState={onCopyState}
+          onCopyDocId={onCopyDocId}
+        />
+        {PaginationComponent}
+        <div className="mt-4 flex justify-center rounded-md bg-slate-50 p-4">
+          {visibleOperations.length > 0 ? (
+            <div className="grid grid-cols-[minmax(min-content,1018px)]">
+              <Timeline
+                globalOperations={scope === "global" ? pageItems : []}
+                localOperations={scope === "local" ? pageItems : []}
+                scope={scope}
+              />
+            </div>
+          ) : (
+            <h3 className="my-40 text-gray-600">
+              This document has no recorded operations yet.
+            </h3>
+          )}
+        </div>
+        {PaginationComponent}
       </div>
-      {PaginationComponent}
     </ConnectTooltipProvider>
   );
 }

@@ -3,16 +3,21 @@ import { useCopyToClipboard } from "usehooks-ts";
 
 type Props = {
   readonly docId: string;
+  readonly onCopy?: () => void;
 };
 export function DocId(props: Props) {
-  const { docId } = props;
+  const { docId, onCopy } = props;
   const [, copy] = useCopyToClipboard();
 
   function handleCopy(text: string) {
     return () => {
-      copy(text).catch((error) => {
-        console.error("Failed to copy!", error);
-      });
+      copy(text)
+        .then(() => {
+          onCopy?.();
+        })
+        .catch((error) => {
+          console.error("Failed to copy!", error);
+        });
     };
   }
 
