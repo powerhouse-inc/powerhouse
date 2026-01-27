@@ -91,7 +91,11 @@ export function DocumentEditorContainer() {
   }, [parentFolder, setSelectedNode]);
 
   return (
-    <div id="document-editor-container" className="flex-1">
+    <div
+      id="document-editor-container"
+      className="flex-1"
+      data-document-type={selectedDocument.header.documentType}
+    >
       <DocumentEditor
         document={selectedDocument}
         onClose={onClose}

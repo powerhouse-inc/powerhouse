@@ -105,6 +105,10 @@ You have several options for styling your editor components:
 
 Choose the method or combination of methods that best suits your project needs and team preferences. Vetra Studio (`ph vetra --watch`) or Connect (`ph connect`) will allow you to see your styles applied in real-time.
 
+:::tip Advanced Styling: Connect Container Customization
+When your editor runs inside Connect, it's wrapped in container elements that you can target for advanced styling. See [CSS Customization for Connect Integration](/academy/MasteryTrack/BuildingUserExperiences/CSSCustomization) to learn how to customize `#document-editor-container` and `#document-editor-context`.
+:::
+
 :::warning **Best practices for consistent reliable styles**
 
 In any package the styles are being generated through the styles.css file with the help of the tailwindcss/cli package.
@@ -142,6 +146,7 @@ Think of it like ordering food at a restaurant:
 **Props Approach** 📦: Like a waiter passing you a menu and taking your order. The main component receives everything and passes it down to child components. Children can only work with what they're given.
 
 **Which is better?** For Powerhouse editors, we recommend the **Hooks approach** because:
+
 - Components are more independent
 - Easier to move components around
 - Less "prop drilling" (passing data through many layers)
@@ -157,29 +162,30 @@ The **hook-based approach** uses `useSelectedTodoListDocument` — a React hook 
 Powerhouse provides many more hooks beyond the document-specific ones. See the complete [React Hooks API Reference](/academy/APIReferences/ReactHooks) for all available hooks.
 :::
 
-  ```typescript
+```typescript
 import { useSelectedTodoListDocument } from "todo-tutorial/document-models/todo-list";
 import { addTodoItem } from "todo-tutorial/document-models/todo-list";
 
 export function AddTodo() {
-  // The hook returns [document, dispatch]
-  const [todoList, dispatch] = useSelectedTodoListDocument();
+// The hook returns [document, dispatch]
+const [todoList, dispatch] = useSelectedTodoListDocument();
 
-  if (!todoList) return null;
+if (!todoList) return null;
 
-  const handleAdd = (text: string) => {
-    dispatch(addTodoItem({ text }));
-  };
+const handleAdd = (text: string) => {
+  dispatch(addTodoItem({ text }));
+};
 
-  return (
-    <button onClick={() => handleAdd("New task")}>
-      Add Todo
-    </button>
-  );
+return (
+  <button onClick={() => handleAdd("New task")}>
+    Add Todo
+  </button>
+);
 }
 ```
 
 **Why hooks are recommended:**
+
 - ✅ **Self-contained components**: Each component gets its own connection to the document
 - ✅ **Less boilerplate**: No need to pass props through multiple levels
 - ✅ **Easier refactoring**: Move components around without rewiring props
@@ -209,18 +215,19 @@ export default function Editor(props: IProps) {
 ```
 
 **When props might be useful:**
+
 - When you need strict control over which components can access state
 - When building components that should work outside of Powerhouse context
 - For testing purposes where you want to inject mock state
 
 ### Which should you use?
 
-| Scenario | Recommended Approach |
-|----------|---------------------|
-| Building a standard Powerhouse editor | **Hooks** 🪝 |
-| Component needs document state | **Hooks** 🪝 |
-| Building reusable UI components (buttons, inputs) | **Props** 📦 |
-| Need to test components in isolation | **Props** 📦 |
+| Scenario                                          | Recommended Approach |
+| ------------------------------------------------- | -------------------- |
+| Building a standard Powerhouse editor             | **Hooks** 🪝         |
+| Component needs document state                    | **Hooks** 🪝         |
+| Building reusable UI components (buttons, inputs) | **Props** 📦         |
+| Need to test components in isolation              | **Props** 📦         |
 
 **Bottom line**: Use hooks for most Powerhouse editor development. It's simpler, cleaner, and matches the patterns used in the [todo-demo repository](https://github.com/powerhouse-inc/todo-demo).
 
@@ -228,14 +235,14 @@ export default function Editor(props: IProps) {
 
 Beyond the document-specific hooks (like `useSelectedTodoListDocument`), Powerhouse provides a comprehensive set of hooks from the reactor-browser package that you can use in your editors:
 
-| Hook | Description |
-|------|-------------|
-| `useSelectedDocument` | Returns the currently selected document |
-| `useSelectedDocumentId` | Returns just the ID of the selected document |
-| `useDocumentById` | Returns a document by its ID |
-| `useSelectedDrive` | Returns the currently selected drive |
+| Hook                        | Description                                   |
+| --------------------------- | --------------------------------------------- |
+| `useSelectedDocument`       | Returns the currently selected document       |
+| `useSelectedDocumentId`     | Returns just the ID of the selected document  |
+| `useDocumentById`           | Returns a document by its ID                  |
+| `useSelectedDrive`          | Returns the currently selected drive          |
 | `useRevisionHistoryVisible` | Check and control revision history visibility |
-| `usePHModal` | Manage modals in your editor |
+| `usePHModal`                | Manage modals in your editor                  |
 
 **Example: Using `useDocumentById` to reference another document**
 
@@ -244,9 +251,9 @@ import { useDocumentById } from "@powerhousedao/reactor-browser";
 
 export function RelatedDocument({ documentId }: { documentId: string }) {
   const relatedDoc = useDocumentById(documentId);
-  
+
   if (!relatedDoc) return <span>Loading...</span>;
-  
+
   return (
     <div>
       <h3>Related: {relatedDoc.name}</h3>
@@ -287,7 +294,7 @@ import { useSelectedTodoListDocument, addTodoItem } from "todo-tutorial/document
 export function AddTodo() {
   // Local state - just for this component's UI
   const [inputValue, setInputValue] = useState('');
-  
+
   // Global document state - saved in the document
   const [todoList, dispatch] = useSelectedTodoListDocument();
 
@@ -300,9 +307,9 @@ export function AddTodo() {
 
   return (
     <div>
-      <input 
-        value={inputValue} 
-        onChange={(e) => setInputValue(e.target.value)} 
+      <input
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
       />
       <button onClick={handleSubmit}>Add</button>
     </div>
@@ -315,20 +322,20 @@ export function AddTodo() {
 When dispatching actions to a document, you may want to handle errors that occur during action execution. The `dispatch` function accepts an optional `onErrors` callback as its second parameter, which is invoked with any errors thrown by the reducers when processing the actions.
 
 ```typescript
-import { useSelectedTodoListDocument, addTodoItem } from "todo-tutorial/document-models/todo-list";
+import {
+  useSelectedTodoListDocument,
+  addTodoItem,
+} from "todo-tutorial/document-models/todo-list";
 
 export function AddTodo() {
   const [todoList, dispatch] = useSelectedTodoListDocument();
 
   const handleAdd = (text: string) => {
-    dispatch(
-      addTodoItem({ text }),
-      (errors) => {
-        // Handle errors - e.g., show a toast notification
-        console.error("Failed to add todo:", errors);
-        alert(`Error: ${errors[0]?.message}`);
-      }
-    );
+    dispatch(addTodoItem({ text }), (errors) => {
+      // Handle errors - e.g., show a toast notification
+      console.error("Failed to add todo:", errors);
+      alert(`Error: ${errors[0]?.message}`);
+    });
   };
 
   // ... rest of component
@@ -336,6 +343,7 @@ export function AddTodo() {
 ```
 
 This pattern is useful when you need to:
+
 - Display error messages to users
 - Log errors for debugging
 - Trigger recovery actions when an operation fails
@@ -599,7 +607,7 @@ export function TodoList() {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-4">TodoList</h1>
-      
+
       {/* Stats section (only show if there are items) */}
       {items.length >= 2 && (
                 <div className="mb-4 bg-white rounded-lg px-3 py-2 shadow-md">
