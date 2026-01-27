@@ -7,7 +7,7 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 /* eslint-disable no-unsafe-optional-chaining */
 import type { BaseSubgraph, Context } from "@powerhousedao/reactor-api";
-import type { DocumentPermissionService } from "@powerhousedao/reactor-api/services/document-permission.service";
+import type { DocumentPermissionService } from "@powerhousedao/reactor-api";
 import type { IRelationalDb } from "document-drive";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getResolvers } from "../vetra-read-model/resolvers.js";
@@ -213,7 +213,7 @@ describe("VetraReadModel Subgraph Permission Checks", () => {
         setupMockQuery(mockPackages);
         // User can read pkg-1 and pkg-3, but not pkg-2
         vi.mocked(mockDocumentPermissionService.canRead!).mockImplementation(
-          async (docId) => docId === "pkg-1" || docId === "pkg-3",
+          async (docId: string) => docId === "pkg-1" || docId === "pkg-3",
         );
         const ctx = createContext({ userAddress: "0xpartial" });
 
@@ -370,7 +370,11 @@ describe("VetraReadModel Subgraph Permission Checks", () => {
       let capturedGetParentsFn: ((docId: string) => Promise<string[]>) | null =
         null;
       vi.mocked(mockDocumentPermissionService.canRead!).mockImplementation(
-        async (_docId, _user, getParentsFn) => {
+        async (
+          _docId: string,
+          _user: string | undefined,
+          getParentsFn: (docId: string) => Promise<string[]>,
+        ) => {
           capturedGetParentsFn = getParentsFn;
           return true;
         },
@@ -443,7 +447,7 @@ describe("VetraReadModel Subgraph Permission Checks", () => {
       setupMockQuery(mockPackages);
       const callOrder: string[] = [];
       vi.mocked(mockDocumentPermissionService.canRead!).mockImplementation(
-        async (docId) => {
+        async (docId: string) => {
           callOrder.push(docId);
           return true;
         },

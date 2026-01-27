@@ -9,6 +9,7 @@ export default defineConfig({
       "document-models/**/*.test.ts",
       "editors/**/*.test.tsx",
       "processors/**/*.test.ts",
+      "subgraphs/**/*.test.ts",
     ],
     globals: true,
     environment: "happy-dom",
