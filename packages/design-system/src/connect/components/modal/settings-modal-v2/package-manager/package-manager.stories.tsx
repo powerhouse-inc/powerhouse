@@ -84,3 +84,14 @@ export const WithAutoComplete: Story = PackageManagerStoryWrapper({
     { packageName: "@test/local", provider: "local" },
   ],
 });
+
+export const WithManyPackages: Story = {
+  ...PackageManagerStoryWrapper(),
+  decorators: [
+    (Story) => (
+      <div className="h-[600px]">
+        <Story />
+      </div>
+    ),
+  ],
+};
