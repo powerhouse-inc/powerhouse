@@ -53,6 +53,8 @@ Previously generated subgraphs should be **deleted** to avoid conflicts.
 
 <!-- This eliminates manual subgraph generation and maintenance. Clean up old generated files to prevent runtime conflicts. -->
 
+---
+
 # ⚛️ New React Hooks
 
 `useGetDocument` and `useGetDocuments`
