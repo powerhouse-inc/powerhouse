@@ -42,7 +42,7 @@ runs:
           HEAD="$(git rev-parse HEAD)"
         fi
 
-        FILES="$(git diff --name-only "$BASE" "$HEAD")"
+        FILES="$(git diff --name-only --diff-filter=ACMR "$BASE" "$HEAD")"
 
         echo "Event:  $EVENT_NAME"
         echo "Action: $PR_ACTION"
