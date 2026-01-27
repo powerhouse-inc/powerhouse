@@ -14,7 +14,7 @@ import { RenownUserContext } from "../providers/renown-user-provider.js";
  * @example
  * ```tsx
  * function MyComponent() {
- *   const { user, loginStatus, isLoading, login, logout, openRenown, connectCrypto, renown } = useUser()
+ *   const { user, loginStatus, isLoading, login, logout, openRenown, renownCrypto, renown } = useUser()
  *
  *   if (isLoading) return <div>Loading...</div>
  *   if (!user) return <button onClick={openRenown}>Login</button>

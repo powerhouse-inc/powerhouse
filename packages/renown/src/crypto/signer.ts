@@ -120,7 +120,7 @@ export class RenownCryptoSigner implements ISigner {
 
 /**
  * Creates a signature verification handler that verifies signatures using the Web Crypto API.
- * The verification uses ECDSA with P-256 curve and SHA-256 hash, matching the ConnectCrypto signing algorithm.
+ * The verification uses ECDSA with P-256 curve and SHA-256 hash, matching the RenownCrypto signing algorithm.
  */
 export function createSignatureVerifier(): SignatureVerificationHandler {
   return async (operation: Operation, publicKey: string): Promise<boolean> => {

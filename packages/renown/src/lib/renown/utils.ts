@@ -1,5 +1,5 @@
 import type { IRenown } from "@renown/sdk";
-import type { IConnectCrypto } from "../../crypto/index.js";
+import type { IRenownCrypto } from "../../crypto/index.js";
 import { SessionStorageManager } from "../session-storage.js";
 import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID, RENOWN_URL } from "./constants.js";
 import { extractEthAddressFromDid } from "./did-parser.js";
@@ -124,7 +124,7 @@ declare global {
       ) => void;
       removeJwtHandler: () => void;
     };
-    connectCrypto?: IConnectCrypto;
+    renownCrypto?: IRenownCrypto;
   }
 }
 
@@ -139,17 +139,11 @@ export async function openRenown(documentId?: string) {
   // Otherwise, open the auth flow
   const url = new URL(RENOWN_URL);
 
-  // Get DID from connectCrypto if available
-  let connectDid = "";
-  if (window.connectCrypto) {
-    try {
-      connectDid = await window.connectCrypto.did();
-    } catch (error) {
-      console.error("Failed to get DID from connectCrypto:", error);
-    }
-  } else {
-    console.warn(
-      "connectCrypto not available - authentication may not be properly initialized",
+  // Get DID from renownCrypto if available
+  const connectDid = window.renownCrypto?.did;
+  if (!connectDid) {
+    throw new Error(
+      "Keypair not found - authentication may not be properly initialized",
     );
   }
 
@@ -170,9 +164,9 @@ export async function handleRenownReturn() {
   const userDid = decodeURIComponent(urlParams.get("user") ?? "");
 
   // If we have authentication parameters, attempt login
-  if (userDid && window.renown && window.connectCrypto) {
+  if (userDid && window.renown && window.renownCrypto) {
     try {
-      await login(userDid, window.renown, window.connectCrypto);
+      await login(userDid, window.renown, window.renownCrypto);
       // Clean up URL parameters
       const cleanUrl = new URL(window.location.href);
       cleanUrl.searchParams.delete("user");
@@ -186,9 +180,9 @@ export async function handleRenownReturn() {
 export async function login(
   userDid: string | undefined,
   renown: IRenown | undefined,
-  connectCrypto: IConnectCrypto | undefined,
+  renownCrypto: IRenownCrypto | undefined,
 ) {
-  if (!renown || !connectCrypto) {
+  if (!renown || !renownCrypto) {
     return;
   }
 
@@ -266,11 +260,7 @@ export async function logout() {
  * This allows calling renown.login without needing to go through the full auth flow again
  */
 export async function reauthenticateFromSession(): Promise<User | null> {
-  if (
-    typeof window === "undefined" ||
-    !window.renown ||
-    !window.connectCrypto
-  ) {
+  if (typeof window === "undefined" || !window.renown || !window.renownCrypto) {
     return null;
   }
 
@@ -280,7 +270,7 @@ export async function reauthenticateFromSession(): Promise<User | null> {
   }
 
   try {
-    await login(storedUserDid, window.renown, window.connectCrypto);
+    await login(storedUserDid, window.renown, window.renownCrypto);
 
     // Get the current user after login
     let currentUser =
