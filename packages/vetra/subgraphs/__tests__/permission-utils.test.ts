@@ -5,7 +5,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/unbound-method */
 import type { BaseSubgraph, Context } from "@powerhousedao/reactor-api";
-import type { DocumentPermissionService } from "@powerhousedao/reactor-api/services/document-permission.service";
+import type { DocumentPermissionService } from "@powerhousedao/reactor-api";
 import { GraphQLError } from "graphql";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -357,7 +357,11 @@ describe("permission-utils", () => {
           | ((docId: string) => Promise<string[]>)
           | null = null;
         vi.mocked(mockDocumentPermissionService.canRead!).mockImplementation(
-          async (_docId, _user, getParentsFn) => {
+          async (
+            _docId: string,
+            _user: string | undefined,
+            getParentsFn: (docId: string) => Promise<string[]>,
+          ) => {
             capturedGetParentsFn = getParentsFn;
             return false;
           },
@@ -383,7 +387,11 @@ describe("permission-utils", () => {
           | ((docId: string) => Promise<string[]>)
           | null = null;
         vi.mocked(mockDocumentPermissionService.canRead!).mockImplementation(
-          async (_docId, _user, getParentsFn) => {
+          async (
+            _docId: string,
+            _user: string | undefined,
+            getParentsFn: (docId: string) => Promise<string[]>,
+          ) => {
             capturedGetParentsFn = getParentsFn;
             return false;
           },

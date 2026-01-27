@@ -6,7 +6,7 @@
 /* eslint-disable @typescript-eslint/require-await */
 /* eslint-disable @typescript-eslint/unbound-method */
 import type { BaseSubgraph, Context } from "@powerhousedao/reactor-api";
-import type { DocumentPermissionService } from "@powerhousedao/reactor-api/services/document-permission.service";
+import type { DocumentPermissionService } from "@powerhousedao/reactor-api";
 import type { IDocumentDriveServer } from "document-drive";
 import { GraphQLError } from "graphql";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -264,7 +264,7 @@ describe("AppModule Subgraph Permission Checks", () => {
       it("should filter documents based on permissions when no global access", async () => {
         // User can read drive-1 (required), app-1, and app-3, but not app-2
         vi.mocked(mockDocumentPermissionService.canRead!).mockImplementation(
-          async (docId) =>
+          async (docId: string) =>
             docId === "drive-1" || docId === "app-1" || docId === "app-3",
         );
         const ctx = createContext({ userAddress: "0xpartial" });
@@ -278,7 +278,7 @@ describe("AppModule Subgraph Permission Checks", () => {
       it("should return empty array when user has no document permissions", async () => {
         // User can read drive-1 but no documents inside it
         vi.mocked(mockDocumentPermissionService.canRead!).mockImplementation(
-          async (docId) => docId === "drive-1",
+          async (docId: string) => docId === "drive-1",
         );
         const ctx = createContext({ userAddress: "0xnopermissions" });
 
@@ -646,7 +646,11 @@ describe("AppModule Subgraph Permission Checks", () => {
       let capturedGetParentsFn: ((docId: string) => Promise<string[]>) | null =
         null;
       vi.mocked(mockDocumentPermissionService.canRead!).mockImplementation(
-        async (_docId, _user, getParentsFn) => {
+        async (
+          _docId: string,
+          _user: string | undefined,
+          getParentsFn: (docId: string) => Promise<string[]>,
+        ) => {
           capturedGetParentsFn = getParentsFn;
           return true;
         },

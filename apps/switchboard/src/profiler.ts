@@ -47,7 +47,7 @@ export async function initProfiler(
   console.log("  Wall profiling:", flags.wallEnabled ? "enabled" : "disabled");
   console.log("  Heap profiling:", flags.heapEnabled ? "enabled" : "disabled");
 
-  const Pyroscope = await import("@pyroscope/nodejs");
+  const { default: Pyroscope } = await import("@pyroscope/nodejs");
   Pyroscope.init(options);
 
   // Start wall profiling (captures async I/O time - shows resolvers)
