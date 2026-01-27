@@ -1,10 +1,8 @@
 import { bytesToBase64url } from "did-jwt";
 import type { Issuer } from "did-jwt-vc";
 import { fromString } from "uint8arrays";
-import {
-  createAuthBearerToken,
-  type CreateBearerTokenOptions,
-} from "../utils.js";
+import type { CreateBearerTokenOptions } from "../types.js";
+import { createAuthBearerToken } from "../utils.js";
 import type { DID, IRenownCrypto, JsonWebKeyPairStorage } from "./types.js";
 import { ECDSA_ALGORITHM, ECDSA_SIGN_ALGORITHM } from "./utils.js";
 
@@ -39,26 +37,16 @@ export class RenownCrypto implements IRenownCrypto {
   }
 
   async getBearerToken(
-    _driveUrl: string,
     address: string | undefined,
-    refresh = false,
     options?: CreateBearerTokenOptions,
   ): Promise<string> {
-    if (refresh || !this.#bearerToken) {
-      this.#bearerToken = await createAuthBearerToken(
-        Number(RENOWN_CHAIN_ID),
-        RENOWN_NETWORK_ID,
-        address || this.did,
-        this.issuer,
-        options,
-      );
-    }
-
-    if (!this.#bearerToken) {
-      throw new Error("Could not create bearer token");
-    }
-
-    return this.#bearerToken;
+    return await createAuthBearerToken(
+      Number(RENOWN_CHAIN_ID),
+      RENOWN_NETWORK_ID,
+      address || this.did,
+      this.issuer,
+      options,
+    );
   }
 
   async removeDid(): Promise<void> {

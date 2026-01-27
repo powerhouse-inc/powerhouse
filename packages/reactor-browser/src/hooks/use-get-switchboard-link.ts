@@ -5,7 +5,7 @@ import {
   getDriveIsRemote,
   getDriveRemoteUrl,
 } from "../utils/index.js";
-import { useConnectCrypto, useUser } from "./connect.js";
+import { useRenown, useUser } from "./connect.js";
 import { useSelectedDrive } from "./selected-drive.js";
 
 /**
@@ -25,7 +25,7 @@ export function useGetSwitchboardLink(
   const [drive] = useSelectedDrive();
   const isRemoteDrive = getDriveIsRemote(drive);
   const remoteUrl = getDriveRemoteUrl(drive);
-  const connectCrypto = useConnectCrypto();
+  const renown = useRenown();
   const user = useUser();
 
   return useMemo(() => {
@@ -36,13 +36,14 @@ export function useGetSwitchboardLink(
     return async () => {
       // Get bearer token if user is authenticated
       const token = user?.address
-        ? await connectCrypto?.getBearerToken(remoteUrl, user.address, false, {
+        ? await renown?.getBearerToken({
             expiresIn: 600,
+            aud: remoteUrl,
           })
         : undefined;
 
       // Build and return the switchboard URL with the document subgraph query
       return buildDocumentSubgraphUrl(remoteUrl, document.header.id, token);
     };
-  }, [isRemoteDrive, remoteUrl, document, user, connectCrypto]);
+  }, [isRemoteDrive, remoteUrl, document, user, renown]);
 }

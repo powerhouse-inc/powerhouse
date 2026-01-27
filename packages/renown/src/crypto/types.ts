@@ -1,5 +1,5 @@
 import type { Issuer } from "did-jwt-vc";
-import type { CreateBearerTokenOptions } from "../utils.js";
+import type { CreateBearerTokenOptions } from "../types.js";
 
 export type JwkKeyPair = {
   publicKey: JsonWebKey;
@@ -22,9 +22,7 @@ export interface IRenownCrypto {
   verify: (data: Uint8Array, signature: Uint8Array) => Promise<boolean>;
   issuer: Issuer;
   getBearerToken: (
-    driveUrl: string,
     address: string | undefined,
-    refresh?: boolean,
     options?: CreateBearerTokenOptions,
   ) => Promise<string>;
 }

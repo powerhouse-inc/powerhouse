@@ -14,7 +14,7 @@ import {
 } from "@powerhousedao/reactor";
 import type { BrowserReactorClientModule } from "@powerhousedao/reactor-browser";
 import { getReactorDefaultDrivesConfig as getReactorDefaultDrivesConfigBase } from "@powerhousedao/reactor-browser";
-import { createSignatureVerifier, RenownCryptoSigner } from "@renown/sdk";
+import { createSignatureVerifier, type IRenown } from "@renown/sdk";
 import type {
   DocumentDriveServerOptions,
   IDocumentAdminStorage,
@@ -102,10 +102,10 @@ export async function createBrowserReactor(
   documentModelModules: DocumentModelModule[],
   upgradeManifests: UpgradeManifest<readonly number[]>[],
   legacyStorage: IDocumentStorage & IDocumentOperationStorage,
-  connectCrypto: IRenownCrypto,
+  renown: IRenown,
 ): Promise<BrowserReactorClientModule> {
   const signerConfig: SignerConfig = {
-    signer: new RenownCryptoSigner(connectCrypto),
+    signer: renown.signer,
     verifier: createSignatureVerifier(),
   };
 

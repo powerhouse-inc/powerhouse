@@ -1,9 +1,9 @@
+import type { Renown } from "./common.js";
 import { BrowserKeyStorage } from "./crypto/browser-key-storage.js";
 import { BrowserEventEmitter } from "./event/event.browser.js";
 import { BaseRenownBuilder } from "./renown-builder.js";
 import { BrowserStorage } from "./storage/storage.browser.js";
 import type { RenownEvents, RenownStorageMap } from "./types.js";
-import type { Renown } from "./common.js";
 
 export class BrowserRenownStorage extends BrowserStorage<RenownStorageMap> {}
 export class BrowserRenownEventEmitter extends BrowserEventEmitter<RenownEvents> {}
@@ -67,4 +67,18 @@ export class RenownBuilder extends BaseRenownBuilder {
     this.withKeyPairStorage(keyStorage);
     return super.build();
   }
+}
+
+/**
+ * @deprecated Use RenownBuilder directly instead.
+ * Initialize a browser-specific Renown instance.
+ * @param appName - Application name used for signing context
+ * @param options - Browser-specific configuration options
+ * @returns Initialized Renown instance
+ */
+export function initRenown(
+  appName: string,
+  options: BrowserRenownBuilderOptions = {},
+) {
+  return new RenownBuilder(appName, options).build();
 }

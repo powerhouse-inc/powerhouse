@@ -15,13 +15,18 @@ const generateStablePayload = (parameters: SigningParameters): string =>
  * @param pubKey - The public key to use for verification.
  * @returns An ISigner that can only verify signatures.
  */
-export function createVerificationSigner(pubKey: JsonWebKey): ISigner {
-  let cachedCryptoKey: CryptoKey | undefined;
-
+export async function createVerificationSigner(
+  pubKey: JsonWebKey,
+): Promise<ISigner> {
+  const cryptoKey = await crypto.subtle.importKey(
+    "jwk",
+    pubKey,
+    { name: "ECDSA", namedCurve: "P-256" },
+    true,
+    ["verify"],
+  );
   return {
-    async publicKey(): Promise<JsonWebKey> {
-      return pubKey;
-    },
+    publicKey: cryptoKey,
 
     async sign(_data: Uint8Array): Promise<Uint8Array> {
       throw new Error("verification-only signer cannot sign data");
@@ -35,21 +40,11 @@ export function createVerificationSigner(pubKey: JsonWebKey): ISigner {
     },
 
     async verify(data: Uint8Array, signature: Uint8Array): Promise<void> {
-      if (!cachedCryptoKey) {
-        cachedCryptoKey = await crypto.subtle.importKey(
-          "jwk",
-          pubKey,
-          { name: "ECDSA", namedCurve: "P-256" },
-          true,
-          ["verify"],
-        );
-      }
-
       let isValid: boolean;
       try {
         isValid = await crypto.subtle.verify(
           { name: "ECDSA", hash: "SHA-256" },
-          cachedCryptoKey,
+          cryptoKey,
           new Uint8Array(signature),
           new Uint8Array(data),
         );
@@ -70,7 +65,9 @@ export function createVerificationSigner(pubKey: JsonWebKey): ISigner {
  * @param header - The header to create a signer from.
  * @returns A signer that can verify the header's signature.
  */
-const createSignerFromHeader = (header: PHDocumentHeader): ISigner => {
+const createSignerFromHeader = async (
+  header: PHDocumentHeader,
+): Promise<ISigner> => {
   return createVerificationSigner(header.sig.publicKey);
 };
 
@@ -137,7 +134,7 @@ export const verify = async (
 export const validateHeader = async (
   header: PHDocumentHeader,
 ): Promise<void> => {
-  const signer = createSignerFromHeader(header);
+  const signer = await createSignerFromHeader(header);
 
   return verify(
     {
@@ -201,13 +198,14 @@ export const createSignedHeader = async (
   };
 
   const signature = await sign(parameters, signer);
-  const publicKey = await signer.publicKey();
+
+  const jsonPublicKey = await crypto.subtle.exportKey("jwk", signer.publicKey);
 
   return {
     // immutable fields
     id: signature,
     sig: {
-      publicKey,
+      publicKey: jsonPublicKey,
       nonce: parameters.nonce,
     },
     documentType,
