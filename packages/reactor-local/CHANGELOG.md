@@ -1,3 +1,13 @@
+## 6.0.0-dev.22 (2026-01-27)
+
+### 🩹 Fixes
+
+- **monorepo:** inefficient workflows ([#2250](https://github.com/powerhouse-inc/powerhouse/pull/2250))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.21 (2026-01-27)
 
 This was a version bump only for @powerhousedao/reactor-local to align it with other projects, there were no code changes.
