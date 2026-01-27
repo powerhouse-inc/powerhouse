@@ -61,21 +61,26 @@ jobs:
         run: pnpm install-ci
 
       - name: Run eslint
+        if: ${{ steps.diff.outputs.files != '' }}
         run: NODE_OPTIONS=--max-old-space-size=8192 pnpm eslint --config eslint.config.js --quiet ${{ steps.diff.outputs.files }}
+
+      - name: Skip lint (no changed files)
+        if: ${{ steps.diff.outputs.files == '' }}
+        run: echo "No changed files; skipping linting."
+
+      - name: Run tests
+        if: ${{ steps.diff.outputs.files != '' }}
+        run: pnpm test-ci ${{ steps.diff.outputs.files }}
+
+      - name: Skip test (no changed files)
+        if: ${{ steps.diff.outputs.files == '' }}
+        run: echo "No changed files; skipping tests."
 
       - name: Run css build scripts
         run: pnpm build-css
 
       - name: Run vite build scripts
         run: pnpm build-vite
-
-      - name: Vitest related
-        if: ${{ steps.diff.outputs.files != '' }}
-        run: pnpm test-ci ${{ steps.diff.outputs.files }}
-
-      - name: Skip vitest related (no changed files)
-        if: ${{ steps.diff.outputs.files == '' }}
-        run: echo "No changed files; skipping vitest related."
 
       - name: Run storybook build scripts
         run: pnpm build-storybook

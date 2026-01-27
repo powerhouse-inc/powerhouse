@@ -46,14 +46,13 @@ jobs:
         run: pnpm install-ci
 
       - name: Build typescript project
-        run: pnpm tsc -b
-        working-directory: packages/codegen
+        run: pnpm build-tsc
 
-      - name: Vitest related
+      - name: Run tests
         if: ${{ steps.diff.outputs.files != '' }}
         run: pnpm vitest --run related ${{ steps.diff.outputs.files }}
 
-      - name: Skip vitest related (no changed files)
+      - name: Skip tests
         if: ${{ steps.diff.outputs.files == '' }}
         run: echo "No changed files; skipping vitest related."
 
