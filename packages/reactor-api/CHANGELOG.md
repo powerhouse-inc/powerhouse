@@ -1,3 +1,19 @@
+## 6.0.0-dev.24 (2026-01-27)
+
+### 🚀 Features
+
+- **reactor-api:** add permission checks to DocumentModelSubgraphLegacy ([2ce8d2036](https://github.com/powerhouse-inc/powerhouse/commit/2ce8d2036))
+- **monorepo:** ensure the same typescript version is used everywhere ([#2258](https://github.com/powerhouse-inc/powerhouse/pull/2258))
+
+### 🩹 Fixes
+
+- **vetra,reactor-api:** add eslint-disable for permission test files ([9cab4e2b3](https://github.com/powerhouse-inc/powerhouse/commit/9cab4e2b3))
+
+### ❤️ Thank You
+
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.23 (2026-01-27)
 
 ### 🚀 Features

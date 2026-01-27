@@ -1,3 +1,18 @@
+## 6.0.0-dev.24 (2026-01-27)
+
+### 🚀 Features
+
+- **monorepo:** ensure the same typescript version is used everywhere ([#2258](https://github.com/powerhouse-inc/powerhouse/pull/2258))
+
+### 🩹 Fixes
+
+- **ph-cmd:** use binary name instead of package name for pnpm exec ([94985a74a](https://github.com/powerhouse-inc/powerhouse/commit/94985a74a))
+
+### ❤️ Thank You
+
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.23 (2026-01-27)
 
 ### 🚀 Features

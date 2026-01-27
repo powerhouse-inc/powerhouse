@@ -1,3 +1,19 @@
+## 6.0.0-dev.24 (2026-01-27)
+
+### 🚀 Features
+
+- **switchboard:** enhance pyroscope profiler with wall and heap support ([254c0cea9](https://github.com/powerhouse-inc/powerhouse/commit/254c0cea9))
+- **monorepo:** ensure the same typescript version is used everywhere ([#2258](https://github.com/powerhouse-inc/powerhouse/pull/2258))
+
+### 🩹 Fixes
+
+- **vetra,switchboard:** fix TypeScript errors in permission tests and profiler ([7726f95a3](https://github.com/powerhouse-inc/powerhouse/commit/7726f95a3))
+
+### ❤️ Thank You
+
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.23 (2026-01-27)
 
 ### 🚀 Features
