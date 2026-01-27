@@ -14,6 +14,7 @@ interface Props extends Omit<React.HTMLAttributes<HTMLDivElement>, "title"> {
   readonly onClose: () => void;
   readonly documentState?: object;
   readonly onCopyState?: () => void;
+  readonly onCopyDocId?: () => void;
 }
 
 export function Header(props: Props) {
@@ -26,6 +27,7 @@ export function Header(props: Props) {
     className,
     documentState,
     onCopyState,
+    onCopyDocId,
     ...divProps
   } = props;
   return (
@@ -47,7 +49,7 @@ export function Header(props: Props) {
         <h1 className="text-xs">{title}</h1>
       </div>
       <div className="flex items-center gap-2">
-        <DocId docId={docId} />
+        <DocId docId={docId} onCopy={onCopyDocId} />
         {documentState && (
           <DocumentState
             documentState={documentState}
