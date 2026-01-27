@@ -241,7 +241,7 @@ describe.each(storageLayers)(
       // Create reactor
       reactor = new Reactor(
         createMockLogger(),
-        driveServer,
+        registry,
         consistencyAwareStorage,
         queue,
         jobTracker,

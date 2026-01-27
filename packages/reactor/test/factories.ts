@@ -625,7 +625,7 @@ export async function createTestReactorSetup(
   // Create reactor
   const reactor = new Reactor(
     createMockLogger(),
-    driveServer,
+    registry,
     consistencyAwareStorage,
     queue,
     jobTracker,

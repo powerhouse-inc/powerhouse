@@ -148,7 +148,7 @@ describe("Legacy Write -> Read", () => {
     );
     reactor = new Reactor(
       createMockLogger(),
-      driveServer,
+      registry,
       consistencyAwareStorage,
       queue,
       jobTracker,

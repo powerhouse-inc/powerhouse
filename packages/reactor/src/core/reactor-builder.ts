@@ -330,7 +330,7 @@ export class ReactorBuilder {
 
     const reactor = new Reactor(
       this.logger,
-      driveServer,
+      documentModelRegistry,
       consistencyAwareStorage,
       queue,
       jobTracker,

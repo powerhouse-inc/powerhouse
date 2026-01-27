@@ -193,7 +193,7 @@ async function createReactorSetup(
 
   const reactor = new Reactor(
     createMockLogger(),
-    driveServer,
+    registry,
     consistencyAwareStorage,
     queue,
     jobTracker,
