@@ -1,3 +1,4 @@
+import type { VerifiedCredential } from "did-jwt-vc";
 import type { User as EditorUser, ISigner } from "document-model";
 import type { CREDENTIAL_TYPES } from "./constants.js";
 import type { IEventEmitter } from "./event/types.js";
@@ -29,6 +30,12 @@ export interface IRenown extends Pick<RenownEventEmitter, "on"> {
   login: (did: string) => Promise<User | undefined>;
   logout: () => Promise<void>;
   signer: ISigner;
+  did: string;
+  verifyBearerToken: (token: string) => Promise<false | VerifiedCredential>;
+  getBearerToken: (
+    options: CreateBearerTokenOptions,
+    refresh?: boolean,
+  ) => Promise<string>;
 }
 
 type IssuerType<T> = {
@@ -99,3 +106,14 @@ export type PowerhouseVerifiableCredential = IVerifiableCredential<
   IPowerhouseCredentialSubject,
   IPowerhouseIssuerType
 >;
+
+export type PKHDid = {
+  networkId: string;
+  chainId: number;
+  address: `0x${string}`;
+};
+
+export interface CreateBearerTokenOptions {
+  expiresIn?: number;
+  aud?: string;
+}

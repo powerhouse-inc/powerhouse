@@ -1,6 +1,6 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
-import type { IConnectCrypto, IRenown } from "@renown/sdk";
-import { BrowserKeyStorage, ConnectCrypto } from "@renown/sdk";
+import type { IRenown } from "@renown/sdk";
+import { BrowserKeyStorage, RenownCryptoBuilder } from "@renown/sdk";
 import type {
   DefaultRemoteDriveInput,
   DocumentDriveDocument,
@@ -156,9 +156,8 @@ export const refreshReactorDataClient =
 export async function initLegacyReactor(
   legacyReactor: IDocumentDriveServer,
   renown: IRenown | undefined,
-  connectCrypto: IConnectCrypto | undefined,
 ) {
-  await initJwtHandler(legacyReactor, renown, connectCrypto);
+  await initJwtHandler(legacyReactor, renown);
   const errors = await legacyReactor.initialize();
   const error = errors?.at(0);
   if (error) {
@@ -198,25 +197,38 @@ export async function handleCreateFirstLocalDrive(
 async function initJwtHandler(
   legacyReactor: IDocumentDriveServer,
   renown: IRenown | undefined,
-  connectCrypto: IConnectCrypto | undefined,
 ) {
   let user = renown?.user;
   if (user instanceof Function) {
     user = await user();
   }
-  if (!connectCrypto || !user) {
+  if (!renown || !user) {
     return;
   }
 
   legacyReactor.setGenerateJwtHandler(async (driveUrl) => {
-    return connectCrypto.getBearerToken(driveUrl, user.address, true, {
+    return renown.getBearerToken({
       expiresIn: 10,
+      aud: driveUrl,
     });
   });
 }
 
+/**
+ * @deprecated Use {@link initRenownCrypto} instead
+ *
+ * Initialize ConnectCrypto
+ * @returns ConnectCrypto instance
+ */
 export async function initConnectCrypto() {
-  const connectCrypto = new ConnectCrypto(new BrowserKeyStorage());
-  await connectCrypto.did();
-  return connectCrypto;
+  return initRenownCrypto();
+}
+
+/**
+ * Initialize RenownCrypto
+ * @returns RenownCrypto instance
+ */
+export async function initRenownCrypto() {
+  const keyStorage = await BrowserKeyStorage.create();
+  return await new RenownCryptoBuilder().withKeyPairStorage(keyStorage).build();
 }

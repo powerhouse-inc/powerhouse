@@ -1,6 +1,6 @@
-import { setLoginStatus, setUser } from "../connect.js";
-import type { IConnectCrypto, IRenown, User } from "@renown/sdk";
+import type { IRenown, User } from "@renown/sdk";
 import { logger, type IDocumentDriveServer } from "document-drive";
+import { setLoginStatus, setUser } from "../connect.js";
 import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID, RENOWN_URL } from "./constants.js";
 
 export function openRenown() {
@@ -18,9 +18,8 @@ export async function login(
   userDid: string | undefined,
   reactor: IDocumentDriveServer | undefined,
   renown: IRenown | undefined,
-  connectCrypto: IConnectCrypto | undefined,
 ): Promise<User | undefined> {
-  if (!renown || !connectCrypto || !reactor) {
+  if (!renown || !reactor) {
     return;
   }
   try {
@@ -32,9 +31,7 @@ export async function login(
       setLoginStatus("authorized");
       setUser(user);
       reactor.setGenerateJwtHandler(async (driveUrl) =>
-        connectCrypto.getBearerToken(driveUrl, user.address, true, {
-          expiresIn: 10,
-        }),
+        renown.getBearerToken({ expiresIn: 10, aud: driveUrl }),
       );
       return user;
     }
@@ -48,9 +45,7 @@ export async function login(
       setLoginStatus("authorized");
       setUser(newUser);
       reactor.setGenerateJwtHandler(async (driveUrl) =>
-        connectCrypto.getBearerToken(driveUrl, newUser.address, true, {
-          expiresIn: 10,
-        }),
+        renown.getBearerToken({ aud: driveUrl, expiresIn: 10 }),
       );
     } else {
       setLoginStatus("not-authorized");

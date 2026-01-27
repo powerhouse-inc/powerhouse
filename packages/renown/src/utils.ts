@@ -4,6 +4,7 @@ import type { Issuer, JwtCredentialPayload } from "did-jwt-vc";
 import { createVerifiableCredentialJwt, verifyCredential } from "did-jwt-vc";
 import { Resolver } from "did-resolver";
 import { getResolver as keyDidResolver } from "key-did-resolver";
+import type { CreateBearerTokenOptions, PKHDid } from "./types.js";
 
 export type ILogger = {
   level: "verbose" | "debug" | "info" | "warn" | "error";
@@ -14,17 +15,6 @@ export type ILogger = {
   warn: (message: string, ...replacements: any[]) => void;
   error: (message: string, ...replacements: any[]) => void;
 };
-
-export type PKHDid = {
-  networkId: string;
-  chainId: number;
-  address: `0x${string}`;
-};
-
-export interface CreateBearerTokenOptions {
-  expiresIn?: number;
-  aud?: string;
-}
 
 export function parsePkhDid(did: string): PKHDid {
   const parts = did.split(":");

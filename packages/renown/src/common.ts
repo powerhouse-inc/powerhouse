@@ -3,6 +3,7 @@ import { DEFAULT_RENOWN_URL } from "./constants.js";
 import { RenownCryptoSigner, type IRenownCrypto } from "./crypto/index.js";
 import { MemoryStorage } from "./storage/common.js";
 import type {
+  CreateBearerTokenOptions,
   IRenown,
   PowerhouseVerifiableCredential,
   RenownEventEmitter,
@@ -11,12 +12,7 @@ import type {
   RenownStorageMap,
   User,
 } from "./types.js";
-import type { CreateBearerTokenOptions } from "./utils.js";
-import {
-  createAuthBearerToken,
-  parsePkhDid,
-  verifyAuthBearerToken,
-} from "./utils.js";
+import { parsePkhDid, verifyAuthBearerToken } from "./utils.js";
 
 export class RenownMemoryStorage extends MemoryStorage<RenownStorageMap> {}
 
@@ -53,6 +49,10 @@ export class Renown implements IRenown {
 
   get signer() {
     return this.#signer;
+  }
+
+  get did() {
+    return this.#crypto.did;
   }
 
   #updateUser(user: User | undefined) {
@@ -146,16 +146,10 @@ export class Renown implements IRenown {
     return verifyAuthBearerToken(token);
   }
 
-  async createBearerToken(options: CreateBearerTokenOptions) {
+  async getBearerToken(options: CreateBearerTokenOptions) {
     if (!this.user) {
       throw new Error("User not found");
     }
-    return createAuthBearerToken(
-      this.user.chainId,
-      this.user.networkId,
-      this.user.address,
-      this.#crypto.issuer,
-      options,
-    );
+    return this.#crypto.getBearerToken(this.user.address, options);
   }
 }
