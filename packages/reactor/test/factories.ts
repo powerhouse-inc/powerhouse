@@ -487,9 +487,18 @@ export function createMockOperationStore(
         branch: "main",
       },
     }),
-    getSince: vi.fn().mockResolvedValue([]),
-    getSinceTimestamp: vi.fn().mockResolvedValue([]),
-    getSinceId: vi.fn().mockResolvedValue([]),
+    getSince: vi
+      .fn()
+      .mockResolvedValue({ items: [], nextCursor: undefined, hasMore: false }),
+    getSinceTimestamp: vi
+      .fn()
+      .mockResolvedValue({ items: [], nextCursor: undefined, hasMore: false }),
+    getSinceId: vi
+      .fn()
+      .mockResolvedValue({ items: [], nextCursor: undefined, hasMore: false }),
+    getConflicting: vi
+      .fn()
+      .mockResolvedValue({ items: [], nextCursor: undefined, hasMore: false }),
     getRevisions: vi.fn().mockResolvedValue({
       revision: {},
       latestTimestamp: new Date(0).toISOString(),
