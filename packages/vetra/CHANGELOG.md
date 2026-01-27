@@ -1,3 +1,37 @@
+## 6.0.0-dev.21 (2026-01-27)
+
+### 🩹 Fixes
+
+- vetra e2e tests ([#2253](https://github.com/powerhouse-inc/powerhouse/pull/2253))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
+## 6.0.0-dev.20 (2026-01-26)
+
+This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.19 (2026-01-26)
+
+This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.18 (2026-01-26)
+
+### 🚀 Features
+
+- **ph-cli, ph-cmd:** use cmd ts for remaining ph cmd commands ([#2209](https://github.com/powerhouse-inc/powerhouse/pull/2209))
+
+### 🩹 Fixes
+
+- trailing newline in publish-docker-images workflow ([7d2e30db4](https://github.com/powerhouse-inc/powerhouse/commit/7d2e30db4))
+- **ci:** remove deploy-k8s from publish-docker-images workflow ([c5869e82f](https://github.com/powerhouse-inc/powerhouse/commit/c5869e82f))
+
+### ❤️ Thank You
+
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.17 (2026-01-26)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.

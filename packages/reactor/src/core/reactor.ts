@@ -39,6 +39,7 @@ import type {
   IDocumentIndexer,
   IDocumentView,
   IOperationStore,
+  OperationFilter,
 } from "../storage/interfaces.js";
 import type {
   BatchExecutionRequest,
@@ -396,19 +397,20 @@ export class Reactor implements IReactor {
   async getOperations(
     documentId: string,
     view?: ViewFilter,
+    filter?: OperationFilter,
     paging?: PagingOptions,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<Record<string, PagedResults<Operation>>> {
     this.logger.verbose(
-      "getOperations(@documentId, @view, @paging)",
+      "getOperations(@documentId, @view, @filter, @paging)",
       documentId,
       view,
+      filter,
       paging,
     );
 
     if (this.features.legacyStorageEnabled) {
-      // Use storage directly to get the document
       const document = await this.documentStorage.get(
         documentId,
         consistencyToken,
@@ -422,13 +424,35 @@ export class Reactor implements IReactor {
       const operations = document.operations;
       const result: Record<string, PagedResults<Operation>> = {};
 
-      // apply view filter, per scope -- this will be removed when we pass the viewfilter along
-      // to the underlying store, but is here now for the interface.
       for (const scope in operations) {
         if (matchesScope(view, scope)) {
-          const scopeOperations = operations[scope];
+          let scopeOperations = operations[scope];
 
-          // apply paging too
+          if (filter) {
+            if (filter.actionTypes && filter.actionTypes.length > 0) {
+              scopeOperations = scopeOperations.filter((op) =>
+                filter.actionTypes!.includes(op.action.type),
+              );
+            }
+            if (filter.sinceRevision !== undefined) {
+              scopeOperations = scopeOperations.filter(
+                (op) => op.index >= filter.sinceRevision!,
+              );
+            }
+            if (filter.timestampFrom) {
+              const fromMs = new Date(filter.timestampFrom).getTime();
+              scopeOperations = scopeOperations.filter(
+                (op) => new Date(op.timestampUtcMs).getTime() >= fromMs,
+              );
+            }
+            if (filter.timestampTo) {
+              const toMs = new Date(filter.timestampTo).getTime();
+              scopeOperations = scopeOperations.filter(
+                (op) => new Date(op.timestampUtcMs).getTime() <= toMs,
+              );
+            }
+          }
+
           const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
           const limit = paging?.limit || scopeOperations.length;
           const pagedOperations = scopeOperations.slice(
@@ -445,10 +469,8 @@ export class Reactor implements IReactor {
 
       return Promise.resolve(result);
     } else {
-      // Use operation store to get operations
       const branch = view?.branch || "main";
 
-      // Get all scopes for this document
       const revisions = await this.operationStore.getRevisions(
         documentId,
         branch,
@@ -462,7 +484,6 @@ export class Reactor implements IReactor {
       const allScopes = Object.keys(revisions.revision);
       const result: Record<string, PagedResults<Operation>> = {};
 
-      // Filter scopes based on view filter and query operations for each
       for (const scope of allScopes) {
         if (!matchesScope(view, scope)) {
           continue;
@@ -472,17 +493,16 @@ export class Reactor implements IReactor {
           throw new AbortError();
         }
 
-        // Get operations for this scope
         const scopeResult = await this.operationStore.getSince(
           documentId,
           scope,
           branch,
           -1,
+          filter,
           paging,
           signal,
         );
 
-        // Transform to Reactor's PagedResults format
         const currentCursor = paging?.cursor ? parseInt(paging.cursor) : 0;
         const currentLimit = paging?.limit || 100;
 
@@ -498,6 +518,7 @@ export class Reactor implements IReactor {
                 const nextPage = await this.getOperations(
                   documentId,
                   view,
+                  filter,
                   {
                     cursor: scopeResult.nextCursor!,
                     limit: currentLimit,

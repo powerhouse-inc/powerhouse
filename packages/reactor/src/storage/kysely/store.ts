@@ -1,11 +1,12 @@
 import { type Operation } from "document-model";
-import type { Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
 import {
   DuplicateOperationError,
   RevisionMismatchError,
   type AtomicTxn,
   type DocumentRevisions,
   type IOperationStore,
+  type OperationFilter,
   type OperationWithContext,
   type PagedResults,
   type PagingOptions,
@@ -95,6 +96,7 @@ export class KyselyOperationStore implements IOperationStore {
     scope: string,
     branch: string,
     revision: number,
+    filter?: OperationFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<Operation>> {
@@ -111,15 +113,40 @@ export class KyselyOperationStore implements IOperationStore {
       .where("index", ">", revision)
       .orderBy("index", "asc");
 
-    // Handle cursor-based pagination
+    if (filter) {
+      if (filter.actionTypes && filter.actionTypes.length > 0) {
+        const actionTypesArray = filter.actionTypes
+          .map((t) => `'${t.replace(/'/g, "''")}'`)
+          .join(",");
+        query = query.where(
+          sql<boolean>`action->>'type' = ANY(ARRAY[${sql.raw(actionTypesArray)}]::text[])`,
+        );
+      }
+      if (filter.timestampFrom) {
+        query = query.where(
+          "timestampUtcMs",
+          ">=",
+          new Date(filter.timestampFrom),
+        );
+      }
+      if (filter.timestampTo) {
+        query = query.where(
+          "timestampUtcMs",
+          "<=",
+          new Date(filter.timestampTo),
+        );
+      }
+      if (filter.sinceRevision !== undefined) {
+        query = query.where("index", ">=", filter.sinceRevision);
+      }
+    }
+
     if (paging) {
-      // Cursor encodes the last seen index
       if (paging.cursor) {
         const lastIndex = Number.parseInt(paging.cursor, 10);
         query = query.where("index", ">", lastIndex);
       }
 
-      // Apply limit if specified (fetch one extra to determine hasMore)
       if (paging.limit) {
         query = query.limit(paging.limit + 1);
       }
@@ -127,7 +154,6 @@ export class KyselyOperationStore implements IOperationStore {
 
     const rows = await query.execute();
 
-    // Determine if there are more results
     let hasMore = false;
     let items = rows;
 
@@ -136,7 +162,6 @@ export class KyselyOperationStore implements IOperationStore {
       items = rows.slice(0, paging.limit);
     }
 
-    // Generate next cursor from last item's index
     const nextCursor =
       hasMore && items.length > 0
         ? items[items.length - 1].index.toString()

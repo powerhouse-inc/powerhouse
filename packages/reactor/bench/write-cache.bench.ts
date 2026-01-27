@@ -525,6 +525,7 @@ describe("Write Cache vs No-Cache Baseline", () => {
           SCOPE,
           BRANCH,
           0,
+          undefined,
           { limit: 100, cursor },
           undefined,
         );

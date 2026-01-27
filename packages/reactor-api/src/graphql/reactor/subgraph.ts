@@ -310,6 +310,27 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
+      documentOperations: async (_parent, args, ctx: Context) => {
+        this.logger.debug("documentOperations(@args)", args);
+        try {
+          // Resolve the document first to check permissions
+          const doc = await resolvers.document(this.reactorClient, {
+            identifier: args.filter.documentId,
+            view: {
+              branch: args.filter.branch,
+              scopes: args.filter.scopes,
+            },
+          });
+          if (doc) {
+            await this.assertCanRead(doc.document.id, ctx);
+          }
+          return await resolvers.documentOperations(this.reactorClient, args);
+        } catch (error) {
+          this.logger.error("Error in documentOperations: @Error", error);
+          throw error;
+        }
+      },
+
       pollSyncEnvelopes: async (
         _parent: unknown,
         args: { channelId: string; cursorOrdinal: number },

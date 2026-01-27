@@ -20,11 +20,11 @@ export function TodoList() {
 
   return (
     <div className="flex justify-center px-4 py-8">
-      <div className="w-full max-w-md h-[300px] rounded-xl bg-white p-6 shadow-sm flex flex-col">
+      <div className="flex h-[300px] w-full max-w-md flex-col rounded-xl bg-white p-6 shadow-sm">
         <div className="mb-4 text-xs font-medium uppercase tracking-wide text-gray-400">
           Todo List Document
         </div>
-        <div className="overflow-auto flex-1">
+        <div className="flex-1 overflow-auto">
           <pre className="text-sm text-gray-900">
             {JSON.stringify(selectedTodoListDocument, null, 2)}
           </pre>
@@ -35,7 +35,11 @@ export function TodoList() {
 }
 ```
 
-Now in `editors/todo-list-editor/editor.tsx` add this new component (TodoList) at the 
+## Adding the Document Toolbar
+
+The `DocumentToolbar` component provides essential document operations like saving, sharing, and navigation. To add it to your document editor, simply import it from the design system and place it at the top of your editor component. The toolbar automatically connects to the currently selected document and provides all standard document actions. For more details, see the [DocumentToolbar documentation](../../02-MasteryTrack/03-BuildingUserExperiences/06-DocumentTools/00-DocumentToolbar.mdx).
+
+Now in `editors/todo-list-editor/editor.tsx` add this new component (TodoList) at the
 
 ```tsx
 import { DocumentToolbar } from "@powerhousedao/design-system/connect";
@@ -57,7 +61,7 @@ export default function Editor() {
         ...
       </div>
       ...
-      
+
       // added-start
       <TodoList />
       // added-end
@@ -133,6 +137,7 @@ export function AddTodo() {
 We have provided some basic Tailwind styles but you are welcome to style your components however you wish. This hooks and functions also work with other component libraries like Radix etc.
 
 Let's add this component to our `<TodoList />` component. `./editors/todo-list-editor/components/TodoList.tsx`
+
 ```tsx
 import { useSelectedTodoListDocument } from "todo-tutorial/document-models/todo-list";
 import { AddTodo } from "./AddTodo.js";
@@ -145,13 +150,13 @@ export function TodoList() {
   if (!selectedTodoListDocument) return null;
 
   return (
-    <div className="flex flex-col items-center px-4 py-8 gap-6">
+    <div className="flex flex-col items-center gap-6 px-4 py-8">
       <AddTodo />
-      <div className="w-[400px] h-[300px] rounded-xl bg-white p-6 shadow-sm flex flex-col">
+      <div className="flex h-[300px] w-[400px] flex-col rounded-xl bg-white p-6 shadow-sm">
         <div className="mb-4 text-xs font-medium uppercase tracking-wide text-gray-400">
           Todo List Document
         </div>
-        <div className="overflow-auto flex-1">
+        <div className="flex-1 overflow-auto">
           <pre className="text-sm text-gray-900">
             {JSON.stringify(selectedTodoListDocument, null, 2)}
           </pre>
@@ -160,7 +165,6 @@ export function TodoList() {
     </div>
   );
 }
-
 ```
 
 Now when you open a TodoList document in Connect, you can add more todos.
@@ -357,13 +361,12 @@ export function TodoList() {
   const todos = selectedTodoListDocument.state.global.items;
 
   return (
-    <div className="flex flex-col items-center px-4 py-8 gap-6">
+    <div className="flex flex-col items-center gap-6 px-4 py-8">
       <AddTodo />
       <Todos todos={todos} />
     </div>
   );
 }
-
 ```
 
 ```
@@ -377,24 +380,24 @@ editors/todo-list-editor/
 └── module.ts                 # Editor module export (do not change this)
 ```
 
- ## Check your work
+## Check your work
 
 To make sure all works as expected, we should:
 
 - check types
-run: `pnpm tsc`
+  run: `pnpm tsc`
 
 - check linting
-run: `pnpm lint`
+  run: `pnpm lint`
 
 - check tests
-run: `pnpm test`
+  run: `pnpm test`
 
 - test in connect
-run: `pnpm connect` — you should now be able to open a `TodoList` document and update all of the fields we defined in the `TodoList` document model schema
+  run: `pnpm connect` — you should now be able to open a `TodoList` document and update all of the fields we defined in the `TodoList` document model schema
 
 - make sure your code matches the code in the completed step branch
-run: `git diff your-branch-name step-5-complete-added-basic-todo-list-document-editor-ui-components`
+  run: `git diff your-branch-name step-5-complete-added-basic-todo-list-document-editor-ui-components`
 
 ## Up next: generating a custom drive explorer for managing our `TodoList` documents
 

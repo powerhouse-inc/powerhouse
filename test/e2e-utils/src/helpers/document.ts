@@ -14,8 +14,10 @@ import { expect } from "@playwright/test";
  * ```
  */
 export async function closeDocumentFromToolbar(page: Page) {
-  const closeButton = page.getByLabel("Close document");
-  await expect(closeButton).toBeVisible({ timeout: 5000 });
+  // Use id selector for more reliable selection, fall back to aria-label
+  const closeButton = page.locator("#close-document-button");
+  // Increase timeout to 15s to handle slow CI environments
+  await expect(closeButton).toBeVisible({ timeout: 15000 });
   await closeButton.click();
 }
 

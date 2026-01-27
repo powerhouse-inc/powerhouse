@@ -141,6 +141,7 @@ export {
   type IKeyframeStore,
   type IOperationStore,
   type OperationContext,
+  type OperationFilter,
   type OperationWithContext,
 } from "./storage/interfaces.js";
 export { KyselyDocumentIndexer } from "./storage/kysely/document-indexer.js";

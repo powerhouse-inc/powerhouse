@@ -1,8 +1,14 @@
 import type { PHDocument } from "document-model";
-import { baseSaveToFile } from "document-model/node";
+import {
+  baseMinimalSaveToFile,
+  baseSaveToFile,
+  type MinimalBackupData,
+} from "document-model/node";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { logger } from "../../logger.js";
+
+export type { MinimalBackupData };
 
 const BACKUP_FOLDER = "backup-documents";
 
@@ -39,6 +45,33 @@ export async function backupDocument(
     return filePath;
   } catch (error) {
     logger.warn(`⚠️ Failed to backup document "${docName}":`, error);
+    return undefined;
+  }
+}
+
+/**
+ * Creates a minimal backup of a document from strand data.
+ * Used when the full document is not available (e.g., in onOperations handler).
+ */
+export async function minimalBackupDocument(
+  data: MinimalBackupData,
+  workingDir: string,
+  extension?: string,
+): Promise<string | undefined> {
+  try {
+    const backupPath = join(workingDir, BACKUP_FOLDER);
+    await mkdir(backupPath, { recursive: true });
+
+    const filePath = await baseMinimalSaveToFile(
+      data,
+      backupPath,
+      extension ?? "",
+    );
+
+    logger.debug(`Document backed up to: ${filePath}`);
+    return filePath;
+  } catch (error) {
+    logger.warn(`Failed to backup document "${data.name}":`, error);
     return undefined;
   }
 }

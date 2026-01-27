@@ -20,6 +20,8 @@ import type {
   JobInfo as GqlJobInfo,
   PhDocument,
   PhDocumentResultPage,
+  ReactorOperation,
+  ReactorOperationResultPage,
 } from "./gen/graphql.js";
 
 /**
@@ -268,6 +270,49 @@ export function validateActions(actions: readonly unknown[]): Action[] {
     }
   }
   return convertedActions;
+}
+
+/**
+ * Transforms an operation to serialize signatures from tuples to strings for GraphQL compatibility.
+ */
+export function serializeOperationForGraphQL(
+  operation: Operation,
+): ReactorOperation {
+  const signer = operation.action.context?.signer;
+  if (!signer?.signatures) {
+    return operation as unknown as ReactorOperation;
+  }
+
+  return {
+    ...operation,
+    action: {
+      ...operation.action,
+      context: {
+        ...operation.action.context,
+        signer: {
+          ...signer,
+          signatures: signer.signatures.map((sig) =>
+            Array.isArray(sig) ? sig.join(", ") : sig,
+          ),
+        },
+      },
+    },
+  } as unknown as ReactorOperation;
+}
+
+/**
+ * Converts a PagedResults of Operation to GraphQL ReactorOperationResultPage format
+ */
+export function toOperationResultPage(
+  result: PagedResults<Operation>,
+): ReactorOperationResultPage {
+  return {
+    cursor: result.nextCursor ?? null,
+    hasNextPage: !!result.nextCursor,
+    hasPreviousPage: !!result.options.cursor && result.options.cursor !== "0",
+    items: result.results.map(serializeOperationForGraphQL),
+    totalCount: result.results.length,
+  };
 }
 
 export function toGqlDocumentChangeEvent(

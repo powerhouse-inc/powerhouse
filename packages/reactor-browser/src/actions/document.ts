@@ -388,16 +388,18 @@ export async function addDocument(
     const documentModelModule =
       await reactorClient.getDocumentModelModule(documentType);
 
-    // create
-    const document = documentModelModule.utils.createDocument();
-    document.header.name = name;
+    // create - use passed document's state if available
+    const newDocument = documentModelModule.utils.createDocument({
+      ...document?.state,
+    });
+    newDocument.header.name = name;
 
     // Create document using ReactorClient
     let newDoc: PHDocument;
     try {
       newDoc = await reactorClient.createDocumentInDrive(
         driveId,
-        document,
+        newDocument,
         parentFolder,
       );
     } catch (e) {

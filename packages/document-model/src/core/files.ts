@@ -56,6 +56,42 @@ export function createZip(document: PHDocument) {
   return zip;
 }
 
+export type MinimalBackupData = {
+  documentId: string;
+  documentType: string;
+  branch: string;
+  state: PHBaseState;
+  name: string;
+};
+
+/**
+ * Creates a minimal ZIP backup from strand data.
+ * Used when the full document is not available (e.g., in onOperations handler).
+ * Creates a ZIP with minimal header and empty operations.
+ */
+export function createMinimalZip(data: MinimalBackupData) {
+  const now = new Date().toISOString();
+  const header: PHDocumentHeader = {
+    id: data.documentId,
+    sig: { publicKey: {}, nonce: "" },
+    documentType: data.documentType,
+    createdAtUtcIso: now,
+    slug: data.name,
+    name: data.name,
+    branch: data.branch,
+    revision: {},
+    lastModifiedAtUtcIso: now,
+  };
+
+  const zip = new JSZip();
+  zip.file("header.json", JSON.stringify(header, null, 2));
+  zip.file("state.json", JSON.stringify(data.state, null, 2));
+  zip.file("current-state.json", JSON.stringify(data.state, null, 2));
+  zip.file("operations.json", JSON.stringify({}, null, 2));
+
+  return zip;
+}
+
 export async function baseSaveToFileHandle(
   document: PHDocument,
   input: FileSystemFileHandle,

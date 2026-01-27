@@ -67,6 +67,7 @@ export interface IOperationStore {
     scope: string,
     branch: string,
     revision: number,
+    filter?: OperationFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<Operation>>;
@@ -156,6 +157,21 @@ export interface SearchFilter {
 export interface PagingOptions {
   cursor?: string;
   limit?: number;
+}
+
+/**
+ * Filter options for querying operations. When multiple filters are provided,
+ * they are combined with AND logic.
+ */
+export interface OperationFilter {
+  /** Filter by action types (OR logic within array) */
+  actionTypes?: string[];
+  /** Filter operations with timestamp >= this value (ISO string) */
+  timestampFrom?: string;
+  /** Filter operations with timestamp <= this value (ISO string) */
+  timestampTo?: string;
+  /** Filter operations with index >= this value */
+  sinceRevision?: number;
 }
 
 export interface PagedResults<T> {

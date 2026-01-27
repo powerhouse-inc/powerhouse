@@ -297,6 +297,14 @@ export type PhDocumentResultPage = {
   readonly totalCount: Scalars["Int"]["output"];
 };
 
+export type ReactorOperationResultPage = {
+  readonly cursor?: Maybe<Scalars["String"]["output"]>;
+  readonly hasNextPage: Scalars["Boolean"]["output"];
+  readonly hasPreviousPage: Scalars["Boolean"]["output"];
+  readonly items: ReadonlyArray<ReactorOperation>;
+  readonly totalCount: Scalars["Int"]["output"];
+};
+
 export type PagingInput = {
   readonly cursor?: InputMaybe<Scalars["String"]["input"]>;
   readonly limit?: InputMaybe<Scalars["Int"]["input"]>;
@@ -312,6 +320,7 @@ export type Query = {
   readonly document?: Maybe<DocumentWithChildren>;
   readonly documentChildren: PhDocumentResultPage;
   readonly documentModels: DocumentModelResultPage;
+  readonly documentOperations: ReactorOperationResultPage;
   readonly documentParents: PhDocumentResultPage;
   readonly findDocuments: PhDocumentResultPage;
   readonly jobStatus?: Maybe<JobInfo>;
@@ -348,6 +357,11 @@ export type QueryFindDocumentsArgs = {
 
 export type QueryJobStatusArgs = {
   jobId: Scalars["String"]["input"];
+};
+
+export type QueryDocumentOperationsArgs = {
+  filter: OperationsFilterInput;
+  paging?: InputMaybe<PagingInput>;
 };
 
 export type QueryPollSyncEnvelopesArgs = {
@@ -426,6 +440,16 @@ export type SearchFilterInput = {
   readonly identifiers?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
   readonly parentId?: InputMaybe<Scalars["String"]["input"]>;
   readonly type?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+export type OperationsFilterInput = {
+  readonly documentId: Scalars["String"]["input"];
+  readonly branch?: InputMaybe<Scalars["String"]["input"]>;
+  readonly scopes?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
+  readonly actionTypes?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
+  readonly sinceRevision?: InputMaybe<Scalars["Int"]["input"]>;
+  readonly timestampFrom?: InputMaybe<Scalars["String"]["input"]>;
+  readonly timestampTo?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type Subscription = {
@@ -1020,6 +1044,7 @@ export type ResolversTypes = ResolversObject<{
   OperationWithContextInput: OperationWithContextInput;
   PHDocument: ResolverTypeWrapper<PhDocument>;
   PHDocumentResultPage: ResolverTypeWrapper<PhDocumentResultPage>;
+  ReactorOperationResultPage: ResolverTypeWrapper<ReactorOperationResultPage>;
   PagingInput: PagingInput;
   PropagationMode: PropagationMode;
   Query: ResolverTypeWrapper<{}>;
@@ -1074,6 +1099,7 @@ export type ResolversParentTypes = ResolversObject<{
   OperationWithContextInput: OperationWithContextInput;
   PHDocument: PhDocument;
   PHDocumentResultPage: PhDocumentResultPage;
+  ReactorOperationResultPage: ReactorOperationResultPage;
   PagingInput: PagingInput;
   Query: {};
   ReactorOperation: ReactorOperation;
@@ -1469,6 +1495,27 @@ export type PhDocumentResultPageResolvers<
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
+export type ReactorOperationResultPageResolvers<
+  ContextType = Context,
+  ParentType extends
+    ResolversParentTypes["ReactorOperationResultPage"] = ResolversParentTypes["ReactorOperationResultPage"],
+> = ResolversObject<{
+  cursor?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
+  hasNextPage?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
+  hasPreviousPage?: Resolver<
+    ResolversTypes["Boolean"],
+    ParentType,
+    ContextType
+  >;
+  items?: Resolver<
+    ReadonlyArray<ResolversTypes["ReactorOperation"]>,
+    ParentType,
+    ContextType
+  >;
+  totalCount?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
 export type QueryResolvers<
   ContextType = Context,
   ParentType extends
@@ -1491,6 +1538,12 @@ export type QueryResolvers<
     ParentType,
     ContextType,
     Partial<QueryDocumentModelsArgs>
+  >;
+  documentOperations?: Resolver<
+    ResolversTypes["ReactorOperationResultPage"],
+    ParentType,
+    ContextType,
+    RequireFields<QueryDocumentOperationsArgs, "filter">
   >;
   documentParents?: Resolver<
     ResolversTypes["PHDocumentResultPage"],
@@ -1667,6 +1720,7 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   OperationWithContext?: OperationWithContextResolvers<ContextType>;
   PHDocument?: PhDocumentResolvers<ContextType>;
   PHDocumentResultPage?: PhDocumentResultPageResolvers<ContextType>;
+  ReactorOperationResultPage?: ReactorOperationResultPageResolvers<ContextType>;
   Query?: QueryResolvers<ContextType>;
   ReactorOperation?: ReactorOperationResolvers<ContextType>;
   ReactorSigner?: ReactorSignerResolvers<ContextType>;

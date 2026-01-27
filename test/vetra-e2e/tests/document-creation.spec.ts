@@ -62,12 +62,15 @@ test("should create document of each supported type in Vetra drive", async ({
     const documentUrl = await createDocument(page, doc.type, doc.name);
     expect(documentUrl).toContain("/d/vetra-");
 
+    // Wait for the document toolbar to be fully rendered before closing
+    await page.waitForLoadState("networkidle");
     await closeDocumentFromToolbar(page);
     await page.waitForLoadState("networkidle");
 
     const documentHeading = page.getByRole("heading", {
       name: doc.name,
       level: 3,
+      exact: true,
     });
     await expect(documentHeading).toBeVisible();
   }

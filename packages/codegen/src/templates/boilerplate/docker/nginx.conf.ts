@@ -1,0 +1,78 @@
+export const nginxConfTemplate = `user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log warn;
+pid /var/run/nginx.pid;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    # Gzip compression
+    gzip on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_buffers 16 8k;
+    gzip_http_version 1.1;
+    gzip_types text/plain text/css application/javascript application/json image/svg+xml application/xml+rss image/avif;
+
+    server {
+        listen 0.0.0.0:\${PORT};
+        server_name _;
+        root /var/www/html/project;
+
+        # Health check endpoint
+        location /health {
+            access_log off;
+            add_header Content-Type text/plain;
+            return 200 'OK';
+        }
+
+        location \${PH_CONNECT_BASE_PATH}/assets/ {
+            alias /var/www/html/project/assets/;
+            access_log off;
+            log_not_found off;
+            etag off;
+            expires max;
+            add_header Cache-Control "public, max-age=31536000, immutable";
+        }
+
+        location \${PH_CONNECT_BASE_PATH}/fonts/ {
+            alias /var/www/html/project/fonts/;
+            access_log off;
+            log_not_found off;
+            expires max;
+            add_header Cache-Control "public, max-age=31536000, immutable";
+        }
+
+        location = \${PH_CONNECT_BASE_PATH}/service-worker.js {
+            alias /var/www/html/project/service-worker.js;
+
+            access_log off;
+            log_not_found off;
+            etag off;
+
+            add_header Cache-Control "no-cache, no-store, must-revalidate";
+            add_header Pragma "no-cache";
+            add_header Expires "0";
+        }
+
+        # match any file in the root folder, except index.html
+        location ~ \${PH_CONNECT_BASE_PATH}/(?!index\\.html$)([^/]+\\.[a-zA-Z0-9]+)$ {
+            alias /var/www/html/project/$1;
+            access_log off;
+            log_not_found off;
+            etag on;
+            add_header Cache-Control "public, must-revalidate";
+        }
+
+        location \${PH_CONNECT_BASE_PATH} {
+            try_files $uri $uri/ /index.html;
+        }
+    }
+}
+`;

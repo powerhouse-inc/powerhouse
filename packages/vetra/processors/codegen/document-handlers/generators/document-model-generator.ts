@@ -11,7 +11,7 @@ import type {
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
 import { USE_TS_MORPH, USE_VERSIONING } from "./constants.js";
-import { backupDocument } from "./utils.js";
+import { minimalBackupDocument } from "./utils.js";
 
 /**
  * Generator for document model documents
@@ -124,11 +124,16 @@ export class DocumentModelGenerator extends BaseDocumentGen {
 
       // Backup the document
       const extension = globalState.extension?.replace(/^\.+|\.+$/g, "") || "";
-      await backupDocument(
-        strand.document,
+      await minimalBackupDocument(
+        {
+          documentId: strand.documentId,
+          documentType: strand.documentType,
+          branch: strand.branch,
+          state: strand.state as DocumentModelPHState,
+          name: globalState.name,
+        },
         this.config.CURRENT_WORKING_DIR,
         extension,
-        globalState.name,
       );
     } catch (error) {
       logger.error(

@@ -40,6 +40,7 @@ import type {
   IOperationStore,
   ISyncCursorStorage,
   ISyncRemoteStorage,
+  OperationFilter,
 } from "../storage/interfaces.js";
 import type {
   DocumentIndexerDatabase,
@@ -165,6 +166,7 @@ export interface IReactor {
    *
    * @param documentId - The document id
    * @param view - Optional filter containing branch and scopes information
+   * @param filter - Optional filter for actionTypes, timestamps, and revision
    * @param paging - Optional pagination options
    * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
@@ -173,6 +175,7 @@ export interface IReactor {
   getOperations(
     documentId: string,
     view?: ViewFilter,
+    filter?: OperationFilter,
     paging?: PagingOptions,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,

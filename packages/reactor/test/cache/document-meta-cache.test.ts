@@ -173,6 +173,7 @@ describe("DocumentMetaCache", () => {
         -1,
         undefined,
         undefined,
+        undefined,
       );
     });
 

@@ -1,9 +1,12 @@
 import { generateProcessor } from "@powerhousedao/codegen";
 import type { InternalTransmitterUpdate } from "document-drive";
-import type { ProcessorModuleState } from "../../../../document-models/processor-module/index.js";
+import type {
+  ProcessorModulePHState,
+  ProcessorModuleState,
+} from "../../../../document-models/processor-module/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
-import { backupDocument } from "./utils.js";
+import { minimalBackupDocument } from "./utils.js";
 
 /**
  * Generator for processor documents
@@ -91,11 +94,15 @@ export class ProcessorGenerator extends BaseDocumentGen {
         );
 
         // Backup the document
-        await backupDocument(
-          strand.document,
+        await minimalBackupDocument(
+          {
+            documentId: strand.documentId,
+            documentType: strand.documentType,
+            branch: strand.branch,
+            state: strand.state as ProcessorModulePHState,
+            name: state.name,
+          },
           this.config.CURRENT_WORKING_DIR,
-          undefined,
-          state.name,
         );
       } catch (error) {
         logger.error(

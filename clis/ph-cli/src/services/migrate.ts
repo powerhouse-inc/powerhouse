@@ -1,12 +1,17 @@
 import {
+  connectEntrypointTemplate,
+  dockerfileTemplate,
   indexHtmlTemplate,
   indexTsTemplate,
+  nginxConfTemplate,
   packageJsonExportsTemplate,
   packageJsonScriptsTemplate,
+  switchboardEntrypointTemplate,
+  syncAndPublishWorkflowTemplate,
   tsConfigTemplate,
 } from "@powerhousedao/codegen/templates";
 import { existsSync, readdirSync } from "node:fs";
-import { readdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, stat, writeFile } from "node:fs/promises";
 import path from "path";
 import { readPackage } from "read-pkg";
 import type {
@@ -25,6 +30,7 @@ export async function startMigrate({ useHygen = false }: MigrateArgs) {
   await migratePackageJson();
   await migrateTsConfig();
   await migrateIndexHtml();
+  await migrateCIFiles();
   await runGenerateOnAllDocumentModels(useHygen);
   await runGenerateOnAllEditors(useHygen);
   const project = new Project({
@@ -75,6 +81,66 @@ async function migrateIndexHtml() {
 async function migrateTsConfig() {
   const tsConfigPath = path.join(process.cwd(), "tsconfig.json");
   await writeFile(tsConfigPath, tsConfigTemplate);
+}
+
+/** Check if a file exists */
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    await stat(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Write a file with optional warning if it already exists */
+async function writeFileWithWarning(
+  filePath: string,
+  content: string,
+): Promise<void> {
+  const exists = await fileExists(filePath);
+  if (exists) {
+    console.warn(`Warning: Overwriting existing file: ${filePath}`);
+  }
+  await writeFile(filePath, content);
+}
+
+/** Add CI/CD workflow and Docker files to the project. */
+async function migrateCIFiles() {
+  const cwd = process.cwd();
+
+  try {
+    // Create directories if they don't exist
+    await mkdir(path.join(cwd, ".github/workflows"), { recursive: true });
+    await mkdir(path.join(cwd, "docker"), { recursive: true });
+
+    // Write CI/CD workflow
+    await writeFileWithWarning(
+      path.join(cwd, ".github/workflows/sync-and-publish.yml"),
+      syncAndPublishWorkflowTemplate,
+    );
+
+    // Write Docker files
+    await writeFileWithWarning(
+      path.join(cwd, "Dockerfile"),
+      dockerfileTemplate,
+    );
+    await writeFileWithWarning(
+      path.join(cwd, "docker/nginx.conf"),
+      nginxConfTemplate,
+    );
+    await writeFileWithWarning(
+      path.join(cwd, "docker/connect-entrypoint.sh"),
+      connectEntrypointTemplate,
+    );
+    await writeFileWithWarning(
+      path.join(cwd, "docker/switchboard-entrypoint.sh"),
+      switchboardEntrypointTemplate,
+    );
+  } catch (error) {
+    console.error("Error migrating CI files:", error);
+    throw error;
+  }
 }
 
 /** Ensure that the project index.ts file uses the new exports for editors and document models */
