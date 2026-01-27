@@ -50,7 +50,7 @@ jobs:
 
       - name: Run tests
         if: ${{ steps.diff.outputs.files != '' }}
-        run: pnpm vitest --run related ${{ steps.diff.outputs.files }}
+        run: pnpm test-codegen ${{ steps.diff.outputs.files }}
 
       - name: Skip tests
         if: ${{ steps.diff.outputs.files == '' }}
