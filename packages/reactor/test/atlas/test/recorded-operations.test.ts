@@ -63,9 +63,7 @@ type ReactorTestSetup = {
   cleanup: () => Promise<void>;
 };
 
-async function createReactorSetup(
-  legacyStorageEnabled: boolean,
-): Promise<ReactorTestSetup> {
+async function createReactorSetup(): Promise<ReactorTestSetup> {
   const documentModels = getDocumentModels();
   const storage = new MemoryStorage();
   const registry = new DocumentModelRegistry();
@@ -132,7 +130,7 @@ async function createReactorSetup(
     writeCache,
     operationIndex,
     documentMetaCache,
-    { legacyStorageEnabled },
+    {},
   );
 
   const executorManager = new SimpleJobExecutorManager(
@@ -198,7 +196,7 @@ async function createReactorSetup(
     queue,
     jobTracker,
     readModelCoordinator,
-    { legacyStorageEnabled },
+    {},
     documentView,
     documentIndexer,
     operationStore,
@@ -227,7 +225,7 @@ async function createReactorSetup(
 
 describe("Atlas Recorded Operations Reactor Test", () => {
   it("should process all recorded operations without errors using Reactor", async () => {
-    const setup = await createReactorSetup(true);
+    const setup = await createReactorSetup();
 
     const recordedOpsContent = readFileSync(
       path.join(__dirname, "recorded-operations.json"),
@@ -246,7 +244,7 @@ describe("Atlas Recorded Operations Reactor Test", () => {
   }, 10000);
 
   it("should submit all mutations with queue hints and process them correctly", async () => {
-    const setup = await createReactorSetup(true);
+    const setup = await createReactorSetup();
 
     const recordedOpsContent = readFileSync(
       path.join(__dirname, "recorded-operations.json"),
@@ -352,14 +350,14 @@ describe("Atlas Recorded Operations State Comparison Test", () => {
 
     const documentModels = getDocumentModels();
 
-    // Setup reactor 1 (with legacy storage enabled)
-    const setup1 = await createReactorSetup(true);
+    // Setup reactor 1
+    const setup1 = await createReactorSetup();
 
-    // Setup reactor 2 (with legacy storage disabled)
-    const setup2 = await createReactorSetup(false);
+    // Setup reactor 2
+    const setup2 = await createReactorSetup();
 
     // Setup reactor 3 (with batch submission via queue hints)
-    const setup3 = await createReactorSetup(true);
+    const setup3 = await createReactorSetup();
 
     // Setup base server for comparison
     const baseServerStorage = new MemoryStorage();

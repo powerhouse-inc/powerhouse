@@ -88,7 +88,6 @@ export class Reactor implements IReactor {
     documentIndexer: IDocumentIndexer,
     operationStore: IOperationStore,
   ) {
-    // Store required dependencies
     this.logger = logger;
     this.documentModelRegistry = documentModelRegistry;
     this.documentStorage = documentStorage;
@@ -100,7 +99,6 @@ export class Reactor implements IReactor {
     this._documentIndexer = documentIndexer;
     this.operationStore = operationStore;
 
-    // Create mutable shutdown status using factory method
     const [status, setter] = createMutableShutdownStatus(false);
     this.shutdownStatus = status;
     this.setShutdown = setter;

@@ -40,8 +40,7 @@ describe("ReactorClient Subscription Integration Tests", () => {
       .withDocumentModels([
         driveDocumentModelModule as unknown as DocumentModelModule,
       ])
-      .withLegacyStorage(storage)
-      .withFeatures({ legacyStorageEnabled: true });
+      .withLegacyStorage(storage);
 
     module = await new ReactorClientBuilder()
       .withReactorBuilder(reactorBuilder)

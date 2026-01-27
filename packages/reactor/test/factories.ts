@@ -602,7 +602,7 @@ export async function createTestReactorSetup(
     mockWriteCache,
     mockOperationIndex,
     mockDocumentMetaCache,
-    executorConfig ?? { legacyStorageEnabled: true },
+    executorConfig ?? {},
     undefined,
   );
 

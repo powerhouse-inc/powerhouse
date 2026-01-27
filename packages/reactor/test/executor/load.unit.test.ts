@@ -111,7 +111,7 @@ describe("SimpleJobExecutor load jobs", () => {
       mockWriteCache,
       mockOperationIndex,
       mockDocumentMetaCache,
-      { legacyStorageEnabled: true },
+      {},
       undefined,
     );
   });
