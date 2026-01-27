@@ -51,6 +51,9 @@ jobs:
       - name: Check tsconfig references
         run: pnpm check-ts-references
 
+      - name: Check wrong tsc usage
+        run: pnpm check-wrong-tsc-usage
+
       - name: Build typescript project
         run: pnpm build-tsc
 

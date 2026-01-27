@@ -27,7 +27,16 @@ async function main() {
   });
   const packageDirs = packageJsonPaths.map((p) => path.dirname(p));
   const packageScripts = await getPackageScripts(packageDirs);
-  assertCorrectUsageOfTsc(packageScripts);
+  const { errors, warnings } = getUsageOfTscErrorsAndWarnings(packageScripts);
+  for (const error of errors) {
+    console.error(error);
+  }
+  for (const warning of warnings) {
+    console.warn(warning);
+  }
+  if (errors.length !== 0) {
+    process.exit(1);
+  }
   process.exit(0);
 }
 
@@ -46,32 +55,40 @@ async function getPackageScripts(
   );
 }
 
-function assertCorrectUsageOfTsc(packageScripts: PackageScripts) {
+function getUsageOfTscErrorsAndWarnings(packageScripts: PackageScripts) {
+  const errors: string[] = [];
+  const warnings: string[] = [];
   for (const { packageName, scripts } of packageScripts) {
     for (const { scriptName, script } of scripts) {
       if (script.includes("tsc -b") || script.includes("tsc --build")) {
-        console.error(
+        errors.push(
           `
-          Package "${packageName}" has a script "${scriptName}" that makes incorrect use of tsc --build.
+[ERROR]:  Package "${packageName}" has a script "${scriptName}" that makes incorrect use of tsc --build.
+          
           The tsc --build command is meant to be invoked at the top level of the monorepo.
-          Calling it here in your package will cause unexpected behavior in the CI pipeline, leading to inconsistent builds.
-          To build just this individual package, run tsc without the --build flag
-          To build this individual package and its dependencies during development, run tsc --build yourself, but do not place it in a script.
-          `.trim(),
+          Calling it here in your package will cause unexpected behavior in the CI pipeline, 
+          leading to inconsistent builds.
+
+          To build just this individual package, run tsc without the --build flag.
+          To build this individual package and its dependencies during development, 
+          run tsc --build yourself, but do not place it in a script.
+          `.trimStart(),
         );
-        process.exit(1);
       }
 
       if (script.includes("tsc") && script !== "tsc") {
-        console.warn(
+        warnings.push(
           `
-          [WARNING]: Package "${packageName}" contains a script "${scriptName}" which invokes tsc.
-          This must be done very carefully, as it can cause inconsistent builds if this script runs in the CI pipeline.
-          `.trim(),
+[WARNING]:  Package "${packageName}" contains a script "${scriptName}" which invokes tsc.
+            This must be done very carefully, as it can cause inconsistent builds 
+            if this script runs in the CI pipeline.
+          `.trimStart(),
         );
       }
     }
   }
+
+  return { errors, warnings };
 }
 
 await main();
