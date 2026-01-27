@@ -194,6 +194,157 @@ describe("Reshuffle Functions", () => {
     );
   });
 
+  describe("reshuffleByTimestamp with identical timestamps", () => {
+    it("should use operation id as tiebreaker when timestamps are identical", () => {
+      const sameTimestamp = "2021-01-01T00:00:00.000Z";
+      const operationsA = buildOperations([
+        {
+          index: 3,
+          skip: 0,
+          type: "OP_A",
+          timestampUtcMs: sameTimestamp,
+          action: {
+            id: "action-B",
+            type: "OP_A",
+            input: {},
+            scope: "global",
+            timestampUtcMs: sameTimestamp,
+          },
+        },
+      ]);
+      const operationsB = buildOperations([
+        {
+          index: 3,
+          skip: 0,
+          type: "OP_B",
+          timestampUtcMs: sameTimestamp,
+          action: {
+            id: "action-A",
+            type: "OP_B",
+            input: {},
+            scope: "global",
+            timestampUtcMs: sameTimestamp,
+          },
+        },
+      ]);
+
+      const result = reshuffleByTimestamp(
+        { index: 3, skip: 0 },
+        operationsA,
+        operationsB,
+      );
+
+      expect(result.length).toBe(2);
+      expect(result[0].id < result[1].id).toBe(true);
+    });
+
+    it("should produce deterministic order regardless of input order", () => {
+      const sameTimestamp = "2021-01-01T00:00:00.000Z";
+      const operationsA = buildOperations([
+        {
+          index: 3,
+          skip: 0,
+          type: "OP_A",
+          timestampUtcMs: sameTimestamp,
+          action: {
+            id: "action-B",
+            type: "OP_A",
+            input: {},
+            scope: "global",
+            timestampUtcMs: sameTimestamp,
+          },
+        },
+      ]);
+      const operationsB = buildOperations([
+        {
+          index: 3,
+          skip: 0,
+          type: "OP_B",
+          timestampUtcMs: sameTimestamp,
+          action: {
+            id: "action-A",
+            type: "OP_B",
+            input: {},
+            scope: "global",
+            timestampUtcMs: sameTimestamp,
+          },
+        },
+      ]);
+
+      const resultAB = reshuffleByTimestamp(
+        { index: 3, skip: 0 },
+        operationsA,
+        operationsB,
+      );
+      const resultBA = reshuffleByTimestamp(
+        { index: 3, skip: 0 },
+        operationsB,
+        operationsA,
+      );
+
+      expect(resultAB[0].action.type).toBe(resultBA[0].action.type);
+      expect(resultAB[1].action.type).toBe(resultBA[1].action.type);
+    });
+
+    it("should handle multiple operations with same timestamp", () => {
+      const sameTimestamp = "2021-01-01T00:00:00.000Z";
+      const operationsA = buildOperations([
+        {
+          index: 3,
+          skip: 0,
+          type: "OP_A1",
+          timestampUtcMs: sameTimestamp,
+          action: {
+            id: "action-C",
+            type: "OP_A1",
+            input: {},
+            scope: "global",
+            timestampUtcMs: sameTimestamp,
+          },
+        },
+        {
+          index: 4,
+          skip: 0,
+          type: "OP_A2",
+          timestampUtcMs: sameTimestamp,
+          action: {
+            id: "action-A",
+            type: "OP_A2",
+            input: {},
+            scope: "global",
+            timestampUtcMs: sameTimestamp,
+          },
+        },
+      ]);
+      const operationsB = buildOperations([
+        {
+          index: 3,
+          skip: 0,
+          type: "OP_B1",
+          timestampUtcMs: sameTimestamp,
+          action: {
+            id: "action-B",
+            type: "OP_B1",
+            input: {},
+            scope: "global",
+            timestampUtcMs: sameTimestamp,
+          },
+        },
+      ]);
+
+      const result = reshuffleByTimestamp(
+        { index: 3, skip: 0 },
+        operationsA,
+        operationsB,
+      );
+
+      expect(result.length).toBe(3);
+      for (let i = 0; i < result.length - 1; i++) {
+        expect(result[i].id < result[i + 1].id).toBe(true);
+      }
+    });
+  });
+
   describe("reshuffleByTimestampAndIndex", () => {
     const scenarios = [
       {
@@ -398,6 +549,97 @@ describe("Reshuffle Functions", () => {
         expect(result).toMatchObject(testInput.expected);
       },
     );
+
+    it("should use operation id as tiebreaker when index and timestamp are identical", () => {
+      const sameTimestamp = "2021-01-01T00:00:00.000Z";
+      const operationsA = buildOperations([
+        {
+          index: 3,
+          skip: 0,
+          type: "OP_A",
+          timestampUtcMs: sameTimestamp,
+          action: {
+            id: "action-B",
+            type: "OP_A",
+            input: {},
+            scope: "global",
+            timestampUtcMs: sameTimestamp,
+          },
+        },
+      ]);
+      const operationsB = buildOperations([
+        {
+          index: 3,
+          skip: 0,
+          type: "OP_B",
+          timestampUtcMs: sameTimestamp,
+          action: {
+            id: "action-A",
+            type: "OP_B",
+            input: {},
+            scope: "global",
+            timestampUtcMs: sameTimestamp,
+          },
+        },
+      ]);
+
+      const result = reshuffleByTimestampAndIndex(
+        { index: 3, skip: 0 },
+        operationsA,
+        operationsB,
+      );
+
+      expect(result.length).toBe(2);
+      expect(result[0].id < result[1].id).toBe(true);
+    });
+
+    it("should produce deterministic order regardless of input order with same index and timestamp", () => {
+      const sameTimestamp = "2021-01-01T00:00:00.000Z";
+      const operationsA = buildOperations([
+        {
+          index: 3,
+          skip: 0,
+          type: "OP_A",
+          timestampUtcMs: sameTimestamp,
+          action: {
+            id: "action-B",
+            type: "OP_A",
+            input: {},
+            scope: "global",
+            timestampUtcMs: sameTimestamp,
+          },
+        },
+      ]);
+      const operationsB = buildOperations([
+        {
+          index: 3,
+          skip: 0,
+          type: "OP_B",
+          timestampUtcMs: sameTimestamp,
+          action: {
+            id: "action-A",
+            type: "OP_B",
+            input: {},
+            scope: "global",
+            timestampUtcMs: sameTimestamp,
+          },
+        },
+      ]);
+
+      const resultAB = reshuffleByTimestampAndIndex(
+        { index: 3, skip: 0 },
+        operationsA,
+        operationsB,
+      );
+      const resultBA = reshuffleByTimestampAndIndex(
+        { index: 3, skip: 0 },
+        operationsB,
+        operationsA,
+      );
+
+      expect(resultAB[0].action.type).toBe(resultBA[0].action.type);
+      expect(resultAB[1].action.type).toBe(resultBA[1].action.type);
+    });
   });
 
   describe("Skip field understanding", () => {
@@ -487,18 +729,29 @@ describe("Reshuffle Functions", () => {
   });
 
   describe("sortOperations", () => {
+    const buildOpIndex = (
+      index: number,
+      skip: number,
+      id: string = `op-${index}-${skip}`,
+    ) => ({
+      index,
+      skip,
+      id,
+      timestampUtcMs: "2021-01-01T00:00:00.000Z",
+    });
+
     it("should sort operations by index then by skip", () => {
       const operations = [
-        { index: 0, skip: 0 },
-        { index: 2, skip: 0 },
-        { index: 1, skip: 0 },
-        { index: 3, skip: 3 },
-        { index: 3, skip: 1 },
+        buildOpIndex(0, 0),
+        buildOpIndex(2, 0),
+        buildOpIndex(1, 0),
+        buildOpIndex(3, 3),
+        buildOpIndex(3, 1),
       ];
 
       const sorted = sortOperations(operations);
 
-      expect(sorted).toEqual([
+      expect(sorted).toMatchObject([
         { index: 0, skip: 0 },
         { index: 1, skip: 0 },
         { index: 2, skip: 0 },
@@ -509,15 +762,15 @@ describe("Reshuffle Functions", () => {
 
     it("should sort with different index values", () => {
       const operations = [
-        { index: 5, skip: 0 },
-        { index: 2, skip: 0 },
-        { index: 8, skip: 0 },
-        { index: 1, skip: 0 },
+        buildOpIndex(5, 0),
+        buildOpIndex(2, 0),
+        buildOpIndex(8, 0),
+        buildOpIndex(1, 0),
       ];
 
       const sorted = sortOperations(operations);
 
-      expect(sorted).toEqual([
+      expect(sorted).toMatchObject([
         { index: 1, skip: 0 },
         { index: 2, skip: 0 },
         { index: 5, skip: 0 },
@@ -527,15 +780,15 @@ describe("Reshuffle Functions", () => {
 
     it("should sort with same index but different skip values", () => {
       const operations = [
-        { index: 5, skip: 5 },
-        { index: 5, skip: 1 },
-        { index: 5, skip: 3 },
-        { index: 5, skip: 0 },
+        buildOpIndex(5, 5),
+        buildOpIndex(5, 1),
+        buildOpIndex(5, 3),
+        buildOpIndex(5, 0),
       ];
 
       const sorted = sortOperations(operations);
 
-      expect(sorted).toEqual([
+      expect(sorted).toMatchObject([
         { index: 5, skip: 0 },
         { index: 5, skip: 1 },
         { index: 5, skip: 3 },
@@ -544,7 +797,12 @@ describe("Reshuffle Functions", () => {
     });
 
     it("should handle empty array", () => {
-      const operations: { index: number; skip: number }[] = [];
+      const operations: {
+        index: number;
+        skip: number;
+        id: string;
+        timestampUtcMs: string;
+      }[] = [];
 
       const sorted = sortOperations(operations);
 
@@ -552,37 +810,42 @@ describe("Reshuffle Functions", () => {
     });
 
     it("should handle single operation", () => {
-      const operations = [{ index: 42, skip: 7 }];
+      const operations = [buildOpIndex(42, 7)];
 
       const sorted = sortOperations(operations);
 
-      expect(sorted).toEqual([{ index: 42, skip: 7 }]);
+      expect(sorted).toMatchObject([{ index: 42, skip: 7 }]);
     });
 
     it("should handle already sorted operations", () => {
       const operations = [
+        buildOpIndex(0, 0),
+        buildOpIndex(1, 0),
+        buildOpIndex(2, 0),
+        buildOpIndex(3, 0),
+      ];
+
+      const sorted = sortOperations(operations);
+
+      expect(sorted).toMatchObject([
         { index: 0, skip: 0 },
         { index: 1, skip: 0 },
         { index: 2, skip: 0 },
         { index: 3, skip: 0 },
-      ];
-
-      const sorted = sortOperations(operations);
-
-      expect(sorted).toEqual(operations);
+      ]);
     });
 
     it("should handle reverse ordered operations", () => {
       const operations = [
-        { index: 4, skip: 0 },
-        { index: 3, skip: 0 },
-        { index: 2, skip: 0 },
-        { index: 1, skip: 0 },
+        buildOpIndex(4, 0),
+        buildOpIndex(3, 0),
+        buildOpIndex(2, 0),
+        buildOpIndex(1, 0),
       ];
 
       const sorted = sortOperations(operations);
 
-      expect(sorted).toEqual([
+      expect(sorted).toMatchObject([
         { index: 1, skip: 0 },
         { index: 2, skip: 0 },
         { index: 3, skip: 0 },
@@ -592,9 +855,9 @@ describe("Reshuffle Functions", () => {
 
     it("should not mutate original array", () => {
       const operations = [
-        { index: 3, skip: 0 },
-        { index: 1, skip: 0 },
-        { index: 2, skip: 0 },
+        buildOpIndex(3, 0),
+        buildOpIndex(1, 0),
+        buildOpIndex(2, 0),
       ];
       const originalCopy = [...operations];
 

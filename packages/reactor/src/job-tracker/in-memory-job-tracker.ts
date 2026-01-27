@@ -10,6 +10,7 @@ import {
   createConsistencyToken,
   createEmptyConsistencyToken,
 } from "../executor/util.js";
+import type { Job } from "../queue/types.js";
 import type { ErrorInfo } from "../shared/types.js";
 import { JobStatus, type JobInfo } from "../shared/types.js";
 import type { IJobTracker } from "./interfaces.js";
@@ -81,10 +82,14 @@ export class InMemoryJobTracker implements IJobTracker {
   }
 
   private handleJobFailed(event: JobFailedEvent): void {
-    this.markFailed(event.jobId, {
-      message: event.error.message,
-      stack: event.error.stack || "",
-    });
+    this.markFailed(
+      event.jobId,
+      {
+        message: event.error.message,
+        stack: event.error.stack || "",
+      },
+      event.job,
+    );
   }
 
   shutdown(): void {
@@ -119,27 +124,27 @@ export class InMemoryJobTracker implements IJobTracker {
     });
   }
 
-  markFailed(jobId: string, error: ErrorInfo): void {
-    const job = this.jobs.get(jobId);
-    if (!job) {
-      // Job not found - create minimal failed entry
+  markFailed(jobId: string, error: ErrorInfo, job?: Job): void {
+    const existing = this.jobs.get(jobId);
+    if (!existing) {
       this.jobs.set(jobId, {
         id: jobId,
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
         completedAtUtcIso: new Date().toISOString(),
         error,
+        job,
         consistencyToken: createEmptyConsistencyToken(),
       });
       return;
     }
 
-    // Update existing job
     this.jobs.set(jobId, {
-      ...job,
+      ...existing,
       status: JobStatus.FAILED,
       completedAtUtcIso: new Date().toISOString(),
       error,
+      job,
       consistencyToken: createEmptyConsistencyToken(),
     });
   }

@@ -137,12 +137,13 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
 
       handle.fail(errorInfo);
       this.activeJobs--;
-      this.jobTracker.markFailed(handle.job.id, errorInfo);
+      this.jobTracker.markFailed(handle.job.id, errorInfo, handle.job);
 
       this.eventBus
         .emit(OperationEventTypes.JOB_FAILED, {
           jobId: handle.job.id,
           error: new Error(errorInfo.message),
+          job: handle.job,
         })
         .catch(() => {});
 
@@ -176,12 +177,13 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
             retryErrorInfo.message,
           );
 
-          this.jobTracker.markFailed(handle.job.id, retryErrorInfo);
+          this.jobTracker.markFailed(handle.job.id, retryErrorInfo, handle.job);
 
           this.eventBus
             .emit(OperationEventTypes.JOB_FAILED, {
               jobId: handle.job.id,
               error: new Error(retryErrorInfo.message),
+              job: handle.job,
             })
             .catch(() => {});
 
@@ -199,18 +201,20 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
         );
 
         this.logger.error(
-          "Job @JobId failed after @Attempts attempts: @Error",
+          "@Kind job @JobId failed after @Attempts attempts: @Error",
+          handle.job.kind,
           handle.job.id,
           retryCount + 1,
           fullErrorInfo.message,
         );
 
-        this.jobTracker.markFailed(handle.job.id, fullErrorInfo);
+        this.jobTracker.markFailed(handle.job.id, fullErrorInfo, handle.job);
 
         this.eventBus
           .emit(OperationEventTypes.JOB_FAILED, {
             jobId: handle.job.id,
             error: new Error(fullErrorInfo.message),
+            job: handle.job,
           })
           .catch(() => {});
 

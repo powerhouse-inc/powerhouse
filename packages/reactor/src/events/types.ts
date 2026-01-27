@@ -1,3 +1,4 @@
+import type { Job } from "../queue/types.js";
 import type { OperationWithContext } from "#storage/interfaces.js";
 
 /**
@@ -84,4 +85,5 @@ export type OperationsReadyEvent = {
 export type JobFailedEvent = {
   jobId: string;
   error: Error;
+  job?: Job;
 };
