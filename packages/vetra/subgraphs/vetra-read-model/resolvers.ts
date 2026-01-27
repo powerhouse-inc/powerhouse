@@ -1,19 +1,23 @@
-import type { ISubgraph } from "@powerhousedao/reactor-api";
+import type { BaseSubgraph, Context } from "@powerhousedao/reactor-api";
 import { VetraReadModelProcessorLegacy } from "../../processors/vetra-read-model/index.legacy.js";
 import type { DB } from "../../processors/vetra-read-model/schema.js";
+import { canReadDocument, hasGlobalReadAccess } from "../permission-utils.js";
 
-export const getResolvers = (subgraph: ISubgraph): Record<string, unknown> => {
+export const getResolvers = (
+  subgraph: BaseSubgraph,
+): Record<string, unknown> => {
   const db = subgraph.relationalDb;
 
   return {
     Query: {
       vetraPackages: async (
-        parent: unknown,
+        _parent: unknown,
         args: {
           search?: string;
           sortOrder?: "asc" | "desc";
           documentId_in?: string[];
         },
+        ctx: Context,
       ) => {
         const { search, documentId_in } = args;
         const sortOrder = args.sortOrder || "asc";
@@ -35,7 +39,9 @@ export const getResolvers = (subgraph: ISubgraph): Record<string, unknown> => {
 
         query = query.orderBy("name", sortOrder);
 
-        return (await query.execute()).map((pkg) => ({
+        const results = await query.execute();
+
+        const mappedResults = results.map((pkg) => ({
           ...pkg,
           documentId: pkg.document_id,
           name: pkg.name,
@@ -48,6 +54,24 @@ export const getResolvers = (subgraph: ISubgraph): Record<string, unknown> => {
           keywords: pkg.keywords,
           driveId: pkg.drive_id,
         }));
+
+        // If user doesn't have global read access, filter by document-level permissions
+        if (!hasGlobalReadAccess(ctx) && subgraph.documentPermissionService) {
+          const filteredResults = [];
+          for (const pkg of mappedResults) {
+            const canRead = await canReadDocument(
+              subgraph,
+              pkg.documentId,
+              ctx,
+            );
+            if (canRead) {
+              filteredResults.push(pkg);
+            }
+          }
+          return filteredResults;
+        }
+
+        return mappedResults;
       },
     },
   };
