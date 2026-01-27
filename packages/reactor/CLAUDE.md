@@ -1,4 +1,3 @@
-- Before you start on a task, read the specs in the `docs/planning` folder.
 - Before writing tests, run `pnpm vitest list` to understand test coverage.
 
 - Always use pnpm, never use npm or yarn.
