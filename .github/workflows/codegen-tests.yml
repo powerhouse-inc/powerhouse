@@ -1,7 +1,7 @@
 name: Codegen Tests
 
 concurrency:
-  group: check-commit-${{ github.workflow }}-${{ github.ref }}
+  group: codegen-tests-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 on:
@@ -10,33 +10,37 @@ on:
     branches: ["main"]
   pull_request:
     branches: ["main"]
-    types: [opened, synchronize]
-    paths: 
-      - "packages/codegen/**"
+    types: [opened, reopened, synchronize]
 
 permissions:
   contents: read
 
 jobs:
-  check:
+  do-codegen-tests:
     runs-on: ubuntu-latest
     env:
       CI: true
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/checkout@v6
         with:
-          node-version: 22
+          fetch-depth: 0
 
-      - name: Setup pnpm with cache
+      - name: Get changed files
+        id: diff
+        uses: ./.github/actions/changed-files
+
+      - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           version: latest
-          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: 'pnpm'
 
       - name: Install deps (frozen lockfile)
         run: pnpm install-ci
@@ -44,12 +48,17 @@ jobs:
       - name: Build typescript project
         run: pnpm build-tsc
 
-      - name: Run codegen tests
-        run: pnpm test-codegen
+      - name: Run tests
+        if: ${{ steps.diff.outputs.files != '' }}
+        run: pnpm test-codegen ${{ steps.diff.outputs.files }}
+
+      - name: Skip tests
+        if: ${{ steps.diff.outputs.files == '' }}
+        run: echo "No changed files; skipping vitest related."
 
   notify-discord:
     if: failure() && github.event_name != 'pull_request'
-    needs: [check]
+    needs: [do-codegen-tests]
     runs-on: ubuntu-latest
     steps:
       - name: Send Discord notification
@@ -59,14 +68,14 @@ jobs:
         run: |
           DISCORD_USER=$(echo "$DISCORD_USER_MAPPING" | jq -r --arg GH_USER "${{ github.actor }}" '.[$GH_USER] // ""')
           MENTION_STRING=""
-          if [ ! -z "$DISCORD_USER" ]; then
+          if [ -n "$DISCORD_USER" ]; then
             MENTION_STRING="<@${DISCORD_USER}> "
           fi
 
           curl -H "Content-Type: application/json" -X POST "$DISCORD_WEBHOOK" -d '{
             "embeds": [{
               "title": "⚠️ Codegen tests failed",
-              "description": "**Author:** '"${MENTION_STRING}"'\n**Commit:** [`${{ github.event.head_commit.message }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) \n**Failed job:** [`check`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
+              "description": "**Author:** '"${MENTION_STRING}"'\n**Commit:** [`${{ github.event.head_commit.message }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) \n**Failed job:** [`do-codegen-tests`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
               "color": 16711680
             }]
           }'

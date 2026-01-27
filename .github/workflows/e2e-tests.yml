@@ -13,7 +13,7 @@ env:
   HUSKY: 0
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: e2e-tests-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -25,15 +25,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Install Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           version: latest
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: 'pnpm'
 
       - name: Install dependencies
         run: pnpm install-ci
@@ -42,7 +43,8 @@ jobs:
         uses: oven-sh/setup-bun@v2
 
       - name: Build typescript project
-        run: pnpm build-tsc
+        run: pnpm tsc -b
+        working-directory: './test/connect-e2e'
 
       - name: Run misc build scripts
         run: pnpm build-misc
@@ -101,16 +103,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Install Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           version: latest
-          run_install: false
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: 'pnpm'
 
       - name: Install dependencies
         run: pnpm install-ci
@@ -119,7 +121,8 @@ jobs:
         uses: oven-sh/setup-bun@v2
 
       - name: Build typescript project
-        run: pnpm build-tsc
+        run: pnpm tsc -b
+        working-directory: './test/vetra-e2e'
 
       - name: Run misc build scripts
         run: pnpm build-misc

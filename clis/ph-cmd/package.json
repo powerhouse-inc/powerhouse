@@ -26,10 +26,10 @@
     "generate-version": "tsx scripts/generate-version.ts",
     "bundle-cli": "bun build ./src/cli.ts --outdir ./build --target node",
     "bundle-cli-legacy": "bun build ./src/cli.old.ts --outdir ./build --target node",
-    "build": "npm run generate-docs-legacy && npm run generate-version && npm run generate-docs && npm run bundle-cli && npm run bundle-cli-legacy",
+    "build": "pnpm generate-version && pnpm tsc && pnpm generate-docs && pnpm generate-docs-legacy && pnpm bundle-cli && pnpm bundle-cli-legacy",
     "dev": "tsx src/cli.ts",
     "cli": "node build/cli.js",
-    "test": "vitest run",
+    "test": "vitest --run",
     "test:watch": "vitest watch"
   },
   "keywords": [],

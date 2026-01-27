@@ -1,0 +1,54 @@
+name: Changed files (for vitest related)
+description: Outputs a space-separated list of changed files for PR/push/workflow_dispatch. For PR synchronize, uses the last push range.
+
+outputs:
+  files:
+    description: Space-separated changed files
+    value: ${{ steps.diff.outputs.files }}
+
+runs:
+  using: composite
+  steps:
+    - id: diff
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        EVENT_NAME="${{ github.event_name }}"
+        PR_ACTION="${{ github.event.action || '' }}"
+
+        BASE=""
+        HEAD=""
+
+        if [[ "$EVENT_NAME" == "pull_request" && "$PR_ACTION" == "synchronize" ]]; then
+          BASE="$(jq -r '.before // empty' "$GITHUB_EVENT_PATH")"
+          HEAD="$(jq -r '.after  // empty' "$GITHUB_EVENT_PATH")"
+
+          if [[ -z "$BASE" || -z "$HEAD" ]]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            HEAD="${{ github.event.pull_request.head.sha }}"
+          fi
+
+        elif [[ "$EVENT_NAME" == "pull_request" ]]; then
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+
+        elif [[ "$EVENT_NAME" == "push" ]]; then
+          BASE="${{ github.event.before }}"
+          HEAD="${{ github.sha }}"
+
+        else
+          BASE="$(git rev-parse HEAD~1)"
+          HEAD="$(git rev-parse HEAD)"
+        fi
+
+        FILES="$(git diff --name-only "$BASE" "$HEAD")"
+
+        echo "Event:  $EVENT_NAME"
+        echo "Action: $PR_ACTION"
+        echo "Base:   $BASE"
+        echo "Head:   $HEAD"
+        echo "Changed files:"
+        echo "$FILES"
+
+        echo "files=$(echo "$FILES" | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
