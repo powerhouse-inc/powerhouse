@@ -1,18 +1,4 @@
 {
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx prettier --write \"$(jq -r '.tool_input.file_path')\"",
-            "timeout": 30
-          }
-        ]
-      }
-    ]
-  },
   "permissions": {
     "allow": [
       "mcp__context7",
@@ -33,9 +19,25 @@
       "WebSearch",
       "WebFetch(domain:github.com)",
       "mcp__chrome-devtools",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx prettier --write \"$(jq -r '.tool_input.file_path')\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
   }
 }

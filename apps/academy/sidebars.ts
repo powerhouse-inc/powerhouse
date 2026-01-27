@@ -197,6 +197,14 @@ const sidebars = {
     },
     { type: "doc", id: "academy/Cookbook", label: "Cookbook" },
     { type: "doc", id: "academy/Glossary", label: "Glossary" },
+
+    // Release Notes section - moved to bottom with custom styling
+    {
+      type: "doc",
+      id: "academy/ReleaseNotes/index",
+      label: "Release Notes",
+      className: "release-notes-sidebar-item",
+    },
   ],
 };
 
