@@ -1,5 +1,5 @@
 import { ReactorBuilder, ReactorClientBuilder } from "@powerhousedao/reactor";
-import { RenownBuilder } from "../src/init.node.js";
+import { RenownBuilder } from "@renown/sdk/node";
 import {
   type DocumentModelDocument,
   documentModelDocumentModelModule,
