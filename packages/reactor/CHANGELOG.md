@@ -1,3 +1,14 @@
+## 6.0.0-dev.21 (2026-01-27)
+
+### 🚀 Features
+
+- pulling operation filters into the store ([7c88714b4](https://github.com/powerhouse-inc/powerhouse/commit/7c88714b4))
+- step one of operation filtering ([62580c897](https://github.com/powerhouse-inc/powerhouse/commit/62580c897))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 6.0.0-dev.20 (2026-01-26)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

@@ -1,3 +1,24 @@
+## 6.0.0-dev.21 (2026-01-27)
+
+### 🚀 Features
+
+- step one of operation filtering ([62580c897](https://github.com/powerhouse-inc/powerhouse/commit/62580c897))
+- pulling operation filters into the store ([7c88714b4](https://github.com/powerhouse-inc/powerhouse/commit/7c88714b4))
+- **profiling:** add --v2/--legacy flags to switchboard-pyroscope.sh ([9310b6343](https://github.com/powerhouse-inc/powerhouse/commit/9310b6343))
+- **profiling:** add PostgreSQL database flag to switchboard-pyroscope ([f45092207](https://github.com/powerhouse-inc/powerhouse/commit/f45092207))
+- **profiling:** add graceful shutdown handling to switchboard-pyroscope ([762f3915c](https://github.com/powerhouse-inc/powerhouse/commit/762f3915c))
+- **profiling:** add docker-compose for PostgreSQL and Pyroscope services ([4d62d75f0](https://github.com/powerhouse-inc/powerhouse/commit/4d62d75f0))
+
+### 🩹 Fixes
+
+- vetra e2e tests ([#2253](https://github.com/powerhouse-inc/powerhouse/pull/2253))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente Sandoval @gpuente
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.20 (2026-01-26)
 
 ### 🩹 Fixes

@@ -1,3 +1,13 @@
+## 6.0.0-dev.21 (2026-01-27)
+
+### 🩹 Fixes
+
+- vetra e2e tests ([#2253](https://github.com/powerhouse-inc/powerhouse/pull/2253))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.0.0-dev.20 (2026-01-26)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
