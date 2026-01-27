@@ -1,3 +1,19 @@
+## 6.0.0-dev.23 (2026-01-27)
+
+### 🚀 Features
+
+- **monorepo:** add diff filter to exclude deleted files in changed files action ([e86961e79](https://github.com/powerhouse-inc/powerhouse/commit/e86961e79))
+- **academy:** added release slides to academy project ([eab5e56fe](https://github.com/powerhouse-inc/powerhouse/commit/eab5e56fe))
+
+### 🩹 Fixes
+
+- **academy:** added missing slide break ([4d2adfe41](https://github.com/powerhouse-inc/powerhouse/commit/4d2adfe41))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- ryanwolhuter @ryanwolhuter
+
 ## 6.0.0-dev.22 (2026-01-27)
 
 ### 🩹 Fixes
