@@ -1,6 +1,6 @@
 import { Icon } from "@powerhousedao/design-system";
 import type { ReactNode } from "react";
-import { useCallback, useState } from "react";
+import { useCallback, useLayoutEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { ConnectDropdownMenu } from "../../../dropdown-menu/dropdown-menu.js";
 
@@ -127,6 +127,23 @@ export const PackageManagerList: React.FC<PackageManagerListProps> = (
   props,
 ) => {
   const { className, packages, onUninstall, mutable, ...rest } = props;
+  const [maxHeight, setMaxHeight] = useState<number | undefined>();
+
+  useLayoutEffect(() => {
+    const calculateMaxHeight = () => {
+      // Modal has py-28 padding (7rem * 2 = 14rem = 224px)
+      // Header ~64px, reactor select ~80px, install input ~100px, margins ~48px
+      // Total offset from viewport: ~516px
+      const viewportHeight = window.innerHeight;
+      const availableHeight = viewportHeight - 516;
+      setMaxHeight(Math.max(200, availableHeight));
+    };
+
+    calculateMaxHeight();
+
+    window.addEventListener("resize", calculateMaxHeight);
+    return () => window.removeEventListener("resize", calculateMaxHeight);
+  }, []);
 
   const handleUninstall = useCallback(
     (id: string) => {
@@ -139,9 +156,10 @@ export const PackageManagerList: React.FC<PackageManagerListProps> = (
     <div
       {...rest}
       className={twMerge(
-        "flex max-h-[370px] flex-col items-stretch overflow-hidden",
+        "flex flex-col items-stretch overflow-hidden",
         className,
       )}
+      style={{ maxHeight }}
     >
       <h3 className="mb-4 font-semibold text-gray-900">Installed Packages</h3>
       <div className="flex-1 overflow-y-auto pr-2">
