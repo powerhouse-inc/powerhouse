@@ -1342,11 +1342,37 @@ export class SimpleJobExecutor implements IJobExecutor {
       conflictingOps = [];
     }
 
+    // To properly detect superseded operations, we need to look at ALL operations
+    // from the minimum conflicting index onwards, not just the conflicting ones.
+    // An operation with an earlier timestamp (not in conflictingOps) might have
+    // a skip value that supersedes operations in conflictingOps.
+    let allOpsFromMinConflictingIndex: Operation[] = conflictingOps;
+    if (conflictingOps.length > 0) {
+      const minConflictingIndex = Math.min(
+        ...conflictingOps.map((op) => op.index),
+      );
+      try {
+        const allOpsResult = await this.operationStore.getSince(
+          job.documentId,
+          scope,
+          job.branch,
+          minConflictingIndex - 1,
+          undefined,
+          { limit: this.config.maxSkipThreshold * 2 },
+        );
+        allOpsFromMinConflictingIndex = allOpsResult.items;
+      } catch {
+        allOpsFromMinConflictingIndex = conflictingOps;
+      }
+    }
+
     // Filter out operations that have been superseded by later operations with skip values.
     // An operation at index N is superseded if there exists an operation at index M > N
     // where (M - skip_M) <= N, meaning the later operation's logical index covers N.
+    // We check against ALL operations (not just conflicting) to catch superseding ops
+    // that have earlier timestamps.
     const nonSupersededOps = conflictingOps.filter((op) => {
-      for (const laterOp of conflictingOps) {
+      for (const laterOp of allOpsFromMinConflictingIndex) {
         if (laterOp.index > op.index && laterOp.skip > 0) {
           const logicalIndex = laterOp.index - laterOp.skip;
           if (logicalIndex <= op.index) {

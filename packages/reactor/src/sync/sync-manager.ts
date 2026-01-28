@@ -16,6 +16,7 @@ import type {
 } from "../storage/interfaces.js";
 import { ChannelError } from "./errors.js";
 import type { IChannelFactory, ISyncManager, Remote } from "./interfaces.js";
+import { SyncAwaiter } from "./sync-awaiter.js";
 import { SyncOperation } from "./sync-operation.js";
 import type {
   ChannelConfig,
@@ -25,6 +26,7 @@ import type {
   RemoteStatus,
   SyncFailedEvent,
   SyncPendingEvent,
+  SyncResult,
   SyncSucceededEvent,
 } from "./types.js";
 import {
@@ -58,6 +60,7 @@ export class SyncManager implements ISyncManager {
   private readonly eventBus: IEventBus;
   private readonly remotes: Map<string, Remote>;
   private readonly awaiter: JobAwaiter;
+  private readonly syncAwaiter: SyncAwaiter;
   private readonly jobSyncStates: Map<string, JobSyncState>;
   private isShutdown: boolean;
   private eventUnsubscribe?: () => void;
@@ -84,6 +87,7 @@ export class SyncManager implements ISyncManager {
     this.awaiter = new JobAwaiter(eventBus, (jobId, signal) =>
       reactor.getJobStatus(jobId, signal),
     );
+    this.syncAwaiter = new SyncAwaiter(eventBus);
     this.jobSyncStates = new Map();
     this.isShutdown = false;
   }
@@ -143,6 +147,7 @@ export class SyncManager implements ISyncManager {
     }
 
     this.awaiter.shutdown();
+    this.syncAwaiter.shutdown();
 
     for (const remote of this.remotes.values()) {
       try {
@@ -334,6 +339,10 @@ export class SyncManager implements ISyncManager {
     return Array.from(this.remotes.values());
   }
 
+  waitForSync(jobId: string, signal?: AbortSignal): Promise<SyncResult> {
+    return this.syncAwaiter.waitForSync(jobId, signal);
+  }
+
   private wireChannelCallbacks(remote: Remote): void {
     remote.channel.inbox.onAdded((syncOp) => {
       this.handleInboxJob(remote, syncOp);
@@ -350,7 +359,8 @@ export class SyncManager implements ISyncManager {
     }
 
     const sourceRemote = event.jobMeta?.sourceRemote as string | undefined;
-    const createdSyncOps: SyncOperation[] = [];
+    const syncOpsWithRemote: Array<{ syncOp: SyncOperation; remote: Remote }> =
+      [];
     const remoteNames: string[] = [];
 
     for (const remote of this.remotes.values()) {
@@ -376,40 +386,42 @@ export class SyncManager implements ISyncManager {
           batch.operations,
         );
 
-        createdSyncOps.push(syncOp);
+        syncOpsWithRemote.push({ syncOp, remote });
         if (!remoteNames.includes(remote.name)) {
           remoteNames.push(remote.name);
         }
-
-        syncOp.on((op, _prev, next) => {
-          if (next === SyncOperationStatus.Applied) {
-            this.markSyncOpCompleted(op.jobId, op.id, true);
-          } else if (next === SyncOperationStatus.Error) {
-            this.markSyncOpCompleted(op.jobId, op.id, false, {
-              remoteName: op.remoteName,
-              documentId: op.documentId,
-              error: op.error?.message ?? "Unknown error",
-            });
-          }
-        });
-
-        remote.channel.outbox.add(syncOp);
       }
     }
 
-    if (createdSyncOps.length > 0 && event.jobId) {
+    if (syncOpsWithRemote.length > 0 && event.jobId) {
       this.jobSyncStates.set(event.jobId, {
-        total: createdSyncOps.length,
+        total: syncOpsWithRemote.length,
         completed: new Set(),
         failed: new Map(),
         remoteNames,
       });
       const pendingEvent: SyncPendingEvent = {
         jobId: event.jobId,
-        syncOperationCount: createdSyncOps.length,
+        syncOperationCount: syncOpsWithRemote.length,
         remoteNames,
       };
       void this.eventBus.emit(SyncEventTypes.SYNC_PENDING, pendingEvent);
+    }
+
+    for (const { syncOp, remote } of syncOpsWithRemote) {
+      syncOp.on((op, _prev, next) => {
+        if (next === SyncOperationStatus.Applied) {
+          this.markSyncOpCompleted(op.jobId, op.id, true);
+        } else if (next === SyncOperationStatus.Error) {
+          this.markSyncOpCompleted(op.jobId, op.id, false, {
+            remoteName: op.remoteName,
+            documentId: op.documentId,
+            error: op.error?.message ?? "Unknown error",
+          });
+        }
+      });
+
+      remote.channel.outbox.add(syncOp);
     }
   }
 

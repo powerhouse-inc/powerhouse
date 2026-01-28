@@ -22,6 +22,9 @@ export type {
   SyncPendingEvent,
   SyncSucceededEvent,
   SyncFailedEvent,
+  SyncResult,
+  SyncResultStatus,
+  SyncResultError,
 } from "./types.js";
 
 export {

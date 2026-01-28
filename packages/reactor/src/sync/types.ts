@@ -120,3 +120,30 @@ export type SyncFailedEvent = {
     error: string;
   }>;
 };
+
+/**
+ * Status of a sync operation result.
+ */
+export type SyncResultStatus = "succeeded" | "failed";
+
+/**
+ * Error information for a failed sync operation to a specific remote.
+ */
+export type SyncResultError = {
+  remoteName: string;
+  documentId: string;
+  error: string;
+};
+
+/**
+ * Result of waiting for sync operations to complete for a job.
+ * Returned by ISyncManager.waitForSync().
+ */
+export type SyncResult = {
+  jobId: string;
+  status: SyncResultStatus;
+  syncOperationCount: number;
+  successCount: number;
+  failureCount: number;
+  errors: SyncResultError[];
+};

@@ -3,7 +3,12 @@ import type { ShutdownStatus } from "../shared/types.js";
 import type { ISyncCursorStorage } from "../storage/interfaces.js";
 import type { SyncOperation } from "./sync-operation.js";
 import type { Mailbox } from "./mailbox.js";
-import type { ChannelConfig, RemoteFilter, RemoteOptions } from "./types.js";
+import type {
+  ChannelConfig,
+  RemoteFilter,
+  RemoteOptions,
+  SyncResult,
+} from "./types.js";
 
 /**
  * Represents a bidirectional synchronization channel between two reactor instances.
@@ -213,4 +218,15 @@ export interface ISyncManager {
    * @returns Array of all remotes
    */
   list(): Remote[];
+
+  /**
+   * Waits for sync operations for a job to complete.
+   * Resolves when SYNC_SUCCEEDED is emitted.
+   * Rejects when SYNC_FAILED is emitted.
+   *
+   * @param jobId - The job id to wait for
+   * @param signal - Optional abort signal
+   * @returns The sync result
+   */
+  waitForSync(jobId: string, signal?: AbortSignal): Promise<SyncResult>;
 }
