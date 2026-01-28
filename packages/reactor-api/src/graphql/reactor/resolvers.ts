@@ -886,6 +886,7 @@ export function pushSyncEnvelope(
 
   const firstOp = args.envelope.operations[0];
   const syncOpId = `syncop-${args.envelope.channelMeta.id}-${Date.now()}-${crypto.randomUUID()}`;
+  const jobId = `job-${args.envelope.channelMeta.id}-${Date.now()}-${crypto.randomUUID()}`;
   const scopes = [
     ...new Set(args.envelope.operations.map((op) => op.context.scope)),
   ];
@@ -903,6 +904,7 @@ export function pushSyncEnvelope(
 
   const syncOp = new SyncOperation(
     syncOpId,
+    jobId,
     remote.name,
     firstOp.context.documentId,
     scopes,

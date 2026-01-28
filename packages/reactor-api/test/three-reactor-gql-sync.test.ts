@@ -2,7 +2,7 @@ import {
   CompositeChannelFactory,
   ConsoleLogger,
   JobStatus,
-  OperationEventTypes,
+  ReactorEventTypes,
   ReactorBuilder,
   ReactorClientBuilder,
   SyncBuilder,
@@ -10,7 +10,7 @@ import {
   type IReactor,
   type IReactorClient,
   type ISyncManager,
-  type OperationsReadyEvent,
+  type JobReadReadyEvent,
   type OperationWithContext,
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "document-drive";
@@ -46,7 +46,7 @@ async function waitForJobCompletion(
   while (Date.now() - startTime < timeoutMs) {
     const status = await reactor.getJobStatus(jobId);
 
-    if (status.status === JobStatus.READ_MODELS_READY) {
+    if (status.status === JobStatus.READ_READY) {
       return;
     }
 
@@ -76,8 +76,8 @@ async function waitForOperationsReady(
     }, timeoutMs);
 
     const unsubscribe = eventBus.subscribe(
-      OperationEventTypes.OPERATIONS_READY,
-      (type: number, event: OperationsReadyEvent) => {
+      ReactorEventTypes.JOB_READ_READY,
+      (type: number, event: JobReadReadyEvent) => {
         const hasDocument = event.operations.some(
           (op: OperationWithContext) => op.context.documentId === documentId,
         );

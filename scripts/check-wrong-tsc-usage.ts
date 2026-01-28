@@ -1,7 +1,37 @@
 #!/usr/bin/env tsx
-import fg from "fast-glob";
+/* eslint-disable @typescript-eslint/no-require-imports */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+
 import path from "node:path";
-import { readPackage } from "read-pkg";
+
+type FgOptions = {
+  cwd?: string;
+  onlyFiles?: boolean;
+  absolute?: boolean;
+  ignore?: string[];
+};
+
+type NormalizedPackageJson = {
+  name: string;
+  scripts?: Record<string, string>;
+};
+
+type ReadPkgOptions = {
+  cwd?: string;
+};
+
+const fg = require("fast-glob") as (
+  pattern: string,
+  options?: FgOptions,
+) => Promise<string[]>;
+
+const readPackage = (
+  require("read-pkg") as {
+    readPackage: (options?: ReadPkgOptions) => Promise<NormalizedPackageJson>;
+  }
+).readPackage;
 
 type PackageScripts = {
   packageName: string;
