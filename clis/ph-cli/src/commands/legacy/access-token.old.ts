@@ -1,3 +1,4 @@
+import type { IRenown } from "@renown/sdk";
 import type { Command } from "commander";
 import { accessTokenHelp } from "../../help.js";
 import type { CommandActionType } from "../../types.js";
@@ -57,8 +58,9 @@ function parseExpiry(expiry: string): number {
 export const accessToken: CommandActionType<[AccessTokenOptions]> = async (
   options,
 ) => {
-  const { getConnectCrypto, getConnectDid, isAuthenticated, loadCredentials } =
-    await import("../../services/auth.js");
+  const { getRenown, isAuthenticated, loadCredentials } = await import(
+    "../../services/auth.js"
+  );
 
   // Require Renown authentication - user must have done 'ph login'
   if (!isAuthenticated()) {
@@ -78,9 +80,9 @@ export const accessToken: CommandActionType<[AccessTokenOptions]> = async (
   }
 
   // Get the CLI's DID
-  let did: string;
+  let renown: IRenown;
   try {
-    did = await getConnectDid();
+    renown = await getRenown();
   } catch (e) {
     console.error(
       "Failed to get CLI identity. Run 'ph login' to reinitialize.",
@@ -102,15 +104,12 @@ export const accessToken: CommandActionType<[AccessTokenOptions]> = async (
   }
 
   // Generate the bearer token
-  const crypto = await getConnectCrypto();
-  const token = await crypto.getBearerToken(
-    options.audience ?? "",
-    address,
-    true, // Force refresh to ensure we get a new token with the specified expiry
+  const token = await renown.getBearerToken(
     {
       expiresIn,
       aud: options.audience,
     },
+    true,
   );
 
   // Calculate human-readable expiry
@@ -129,7 +128,7 @@ export const accessToken: CommandActionType<[AccessTokenOptions]> = async (
   }
 
   // Output token info to stderr, token itself to stdout for piping
-  console.error(`CLI DID: ${did}`);
+  console.error(`CLI DID: ${renown.did}`);
   console.error(`ETH Address: ${address}`);
   console.error(`Token expires in: ${expiryStr}`);
   console.error("");
