@@ -1,3 +1,13 @@
+## 6.0.0-dev.25 (2026-01-28)
+
+### 🩹 Fixes
+
+- **design-system:** make package manager list fill available modal he… ([#2260](https://github.com/powerhouse-inc/powerhouse/pull/2260))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.0.0-dev.24 (2026-01-27)
 
 ### 🚀 Features

@@ -1,3 +1,17 @@
+## 6.0.0-dev.25 (2026-01-28)
+
+### 🩹 Fixes
+
+- fixing some bad tests ([cf8b8649a](https://github.com/powerhouse-inc/powerhouse/commit/cf8b8649a))
+- resolve reshuffle race issues when timestamps match ([bb66eeb90](https://github.com/powerhouse-inc/powerhouse/commit/bb66eeb90))
+- ci pipeline does not like my build command ([03c70d15e](https://github.com/powerhouse-inc/powerhouse/commit/03c70d15e))
+- **design-system:** make package manager list fill available modal he… ([#2260](https://github.com/powerhouse-inc/powerhouse/pull/2260))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.0.0-dev.24 (2026-01-27)
 
 ### 🚀 Features
