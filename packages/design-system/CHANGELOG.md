@@ -1,3 +1,13 @@
+## 5.3.0-staging.14 (2026-01-28)
+
+### 🩹 Fixes
+
+- resolve linting errors in release/staging/5.3.0 ([ba4fe9c7c](https://github.com/powerhouse-inc/powerhouse/commit/ba4fe9c7c))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.3.0-staging.13 (2026-01-26)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.

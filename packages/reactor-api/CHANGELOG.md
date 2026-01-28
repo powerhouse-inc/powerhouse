@@ -1,3 +1,17 @@
+## 5.3.0-staging.14 (2026-01-28)
+
+### 🚀 Features
+
+- **reactor-api:** add permission checks to DocumentModelSubgraphLegacy ([2612b4dff](https://github.com/powerhouse-inc/powerhouse/commit/2612b4dff))
+
+### 🩹 Fixes
+
+- **vetra,reactor-api:** add eslint-disable for permission test files ([612088051](https://github.com/powerhouse-inc/powerhouse/commit/612088051))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.3.0-staging.13 (2026-01-26)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.

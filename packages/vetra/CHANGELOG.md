@@ -1,3 +1,20 @@
+## 5.3.0-staging.14 (2026-01-28)
+
+### 🚀 Features
+
+- **vetra:** add permission checks to all subgraph resolvers ([2492f282b](https://github.com/powerhouse-inc/powerhouse/commit/2492f282b))
+- **vetra:** add permission-utils for subgraph permission checks ([614dedd2b](https://github.com/powerhouse-inc/powerhouse/commit/614dedd2b))
+
+### 🩹 Fixes
+
+- **vetra:** fix TypeScript errors in permission resolvers and tests ([8e4b11945](https://github.com/powerhouse-inc/powerhouse/commit/8e4b11945))
+- **vetra,switchboard:** fix TypeScript errors in permission tests and profiler ([1406a36f2](https://github.com/powerhouse-inc/powerhouse/commit/1406a36f2))
+- **vetra,reactor-api:** add eslint-disable for permission test files ([612088051](https://github.com/powerhouse-inc/powerhouse/commit/612088051))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.3.0-staging.13 (2026-01-26)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.

@@ -1,3 +1,22 @@
+## 5.3.0-staging.14 (2026-01-28)
+
+### 🚀 Features
+
+- **reactor-api:** add permission checks to DocumentModelSubgraphLegacy ([2612b4dff](https://github.com/powerhouse-inc/powerhouse/commit/2612b4dff))
+- **vetra:** add permission-utils for subgraph permission checks ([614dedd2b](https://github.com/powerhouse-inc/powerhouse/commit/614dedd2b))
+- **vetra:** add permission checks to all subgraph resolvers ([2492f282b](https://github.com/powerhouse-inc/powerhouse/commit/2492f282b))
+
+### 🩹 Fixes
+
+- resolve linting errors in release/staging/5.3.0 ([ba4fe9c7c](https://github.com/powerhouse-inc/powerhouse/commit/ba4fe9c7c))
+- **vetra:** fix TypeScript errors in permission resolvers and tests ([8e4b11945](https://github.com/powerhouse-inc/powerhouse/commit/8e4b11945))
+- **vetra,reactor-api:** add eslint-disable for permission test files ([612088051](https://github.com/powerhouse-inc/powerhouse/commit/612088051))
+- **vetra,switchboard:** fix TypeScript errors in permission tests and profiler ([1406a36f2](https://github.com/powerhouse-inc/powerhouse/commit/1406a36f2))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.3.0-staging.13 (2026-01-26)
 
 This was a version bump only, there were no code changes.
