@@ -1,10 +1,19 @@
 import { getAuthenticatedDID } from "@didtools/key-did";
 import { EdDSASigner } from "did-jwt";
-import type { Issuer, JwtCredentialPayload } from "did-jwt-vc";
+import type {
+  Issuer,
+  JwtCredentialPayload,
+  VerifiedCredential,
+} from "did-jwt-vc";
 import { createVerifiableCredentialJwt, verifyCredential } from "did-jwt-vc";
 import { Resolver } from "did-resolver";
 import { getResolver as keyDidResolver } from "key-did-resolver";
-import type { CreateBearerTokenOptions, PKHDid } from "./types.js";
+import type {
+  AuthVerifiedCredential,
+  CreateBearerTokenOptions,
+  IAuthCredentialSubject,
+  PKHDid,
+} from "./types.js";
 
 export type ILogger = {
   level: "verbose" | "debug" | "info" | "warn" | "error";
@@ -39,7 +48,9 @@ export function parsePkhDid(did: string): PKHDid {
   };
 }
 
-export async function verifyAuthBearerToken(jwt: string) {
+export async function verifyAuthBearerToken(
+  jwt: string,
+): Promise<false | AuthVerifiedCredential> {
   try {
     const now = parseInt(String(Date.now() / 1000));
     const verified = await verifyCredential(jwt, getResolver(), {
@@ -53,10 +64,33 @@ export async function verifyAuthBearerToken(jwt: string) {
     if (verified.payload.exp && verified.payload.exp! < now) {
       return false;
     }
+    assertIsAuthCredential(verified);
     return verified;
   } catch (e) {
     console.error(e);
     return false;
+  }
+}
+
+export function assertIsAuthCredential(
+  credential: VerifiedCredential,
+): asserts credential is AuthVerifiedCredential {
+  const subjectKeys = Object.keys(
+    credential.verifiableCredential.credentialSubject,
+  );
+  if (
+    !["address", "chainId", "networkId"].every((key) =>
+      subjectKeys.includes(key),
+    )
+  ) {
+    throw new Error(
+      "Invalid Auth Credential Subject:" +
+        JSON.stringify(
+          credential.verifiableCredential.credentialSubject,
+          null,
+          2,
+        ),
+    );
   }
 }
 
@@ -76,7 +110,7 @@ export async function createAuthBearerToken(
         chainId,
         networkId,
         address,
-      },
+      } satisfies IAuthCredentialSubject,
     },
     aud: options?.aud,
   };
@@ -86,6 +120,7 @@ export async function createAuthBearerToken(
   });
   return jwt;
 }
+
 export const getResolver = () => {
   const keyResolver = keyDidResolver();
   if (!keyResolver) {

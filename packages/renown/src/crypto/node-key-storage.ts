@@ -7,16 +7,16 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import type { ILogger } from "../utils.js";
-import type { JsonWebKeyPairStorage, JwkKeyPair } from "./index.js";
+import type { JsonWebKeyPairStorage, JwkKeyPair } from "./types.js";
 
 const ENV_KEY_NAME = "PH_RENOWN_PRIVATE_KEY";
-const DEFAULT_KEYPAIR_PATH = join(process.cwd(), ".keypair.json");
+const DEFAULT_KEYPAIR_PATH = join(process.cwd(), ".ph/.keypair.json");
 
 /**
  * Key storage that supports:
  * 1. PH_RENOWN_PRIVATE_KEY environment variable (JSON-encoded JwkKeyPair)
  * 2. Custom file path passed via options
- * 3. Falls back to file storage at .keypair.json in current working directory
+ * 3. Falls back to file storage at .ph/.keypair.json in current working directory
  */
 export class NodeKeyStorage implements JsonWebKeyPairStorage {
   #filePath: string;

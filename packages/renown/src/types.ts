@@ -1,4 +1,4 @@
-import type { VerifiedCredential } from "did-jwt-vc";
+import type { Verifiable, VerifiedCredential } from "did-jwt-vc";
 import type { User as EditorUser, ISigner } from "document-model";
 import type { CREDENTIAL_TYPES } from "./constants.js";
 import type { IEventEmitter } from "./event/types.js";
@@ -26,11 +26,12 @@ export type RenownEvents = {
 export type RenownEventEmitter = IEventEmitter<RenownEvents>;
 
 export interface IRenown extends Pick<RenownEventEmitter, "on"> {
-  user: User | undefined | (() => Promise<User | undefined>);
-  login: (did: string) => Promise<User>;
+  readonly baseUrl: string;
+  readonly user: User | undefined;
+  login: (userDid: string) => Promise<User>;
   logout: () => Promise<void>;
-  signer: ISigner;
-  did: string;
+  readonly signer: ISigner;
+  readonly did: string;
   verifyBearerToken: (token: string) => Promise<false | VerifiedCredential>;
   getBearerToken: (
     options: CreateBearerTokenOptions,
@@ -68,7 +69,7 @@ interface IVerifiableCredentialPayload<Subject, Issuer> {
   credentialSchema: CredentialSchema;
 }
 
-interface IProof {
+export interface IProof {
   verificationMethod: string;
   ethereumAddress: `0x${string}`;
   created: string;
@@ -106,6 +107,21 @@ export type PowerhouseVerifiableCredential = IVerifiableCredential<
   IPowerhouseCredentialSubject,
   IPowerhouseIssuerType
 >;
+
+export interface IAuthCredentialSubject {
+  chainId: number;
+  networkId: string;
+  address: string;
+}
+
+export type AuthVerifiableCredential = IVerifiableCredential<
+  IAuthCredentialSubject,
+  {}
+>;
+
+export type AuthVerifiedCredential = VerifiedCredential & {
+  verifiableCredential: Verifiable<AuthVerifiableCredential>;
+};
 
 export type PKHDid = {
   networkId: string;
