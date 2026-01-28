@@ -199,12 +199,14 @@ async function performOperations(
 function parseArgs(args: string[]): {
   count: number;
   operations: number;
+  opLoops: number;
   endpoint: string;
   documentType?: string;
   verbose: boolean;
 } {
   let count = 10;
   let operations = 0;
+  let opLoops = 1;
   let endpoint = DEFAULT_ENDPOINT;
   let documentType: string | undefined;
   let verbose = false;
@@ -217,6 +219,8 @@ function parseArgs(args: string[]): {
       documentType = args[++i];
     } else if ((arg === "--operations" || arg === "-o") && args[i + 1]) {
       operations = Number(args[++i]);
+    } else if ((arg === "--op-loops" || arg === "-l") && args[i + 1]) {
+      opLoops = Number(args[++i]);
     } else if (arg === "--verbose" || arg === "-v") {
       verbose = true;
     } else if (arg === "--help" || arg === "-h") {
@@ -227,7 +231,8 @@ Arguments:
   N                         Number of documents to create (default: 10)
 
 Options:
-  --operations, -o <M>      Number of operations to perform on each document (default: 0)
+  --operations, -o <M>      Number of operations per loop (default: 0)
+  --op-loops, -l <L>        Number of operation loops per document (default: 1)
   --endpoint <url>          GraphQL endpoint (default: ${DEFAULT_ENDPOINT})
   --documentType <type>     Document type (default: first available)
   --verbose, -v             Show detailed operation payloads
@@ -235,11 +240,12 @@ Options:
 
 Process flow:
   1. Create N documents
-  2. For each document, perform M operations (cycling through metadata operations)
+  2. For each document, perform M operations L times (total: M * L ops per document)
 
 Examples:
   tsx docs-create.ts 10
   tsx docs-create.ts 10 --operations 5
+  tsx docs-create.ts 1 -o 25 -l 100    # 1 doc, 25 ops repeated 100 times (2500 total ops)
   tsx docs-create.ts 100 --operations 10 --endpoint http://localhost:4001/graphql
   tsx docs-create.ts 50 --documentType powerhouse/document-model -o 3
   tsx docs-create.ts 5 -o 3 --verbose
@@ -250,13 +256,14 @@ Examples:
     }
   }
 
-  return { count, operations, endpoint, documentType, verbose };
+  return { count, operations, opLoops, endpoint, documentType, verbose };
 }
 
 async function main() {
   const {
     count,
     operations,
+    opLoops,
     endpoint,
     documentType: docTypeArg,
     verbose,
@@ -302,81 +309,90 @@ async function main() {
 
   // Phase 2: Perform operations on each document
   if (operations > 0) {
+    const loopLabel = opLoops > 1 ? ` x ${opLoops} loops` : "";
     console.log(
-      `\nPhase 2: Performing ${operations} operations on each document...`,
+      `\nPhase 2: Performing ${operations} operations${loopLabel} on each document...`,
     );
     const opsStartTime = Date.now();
-    const totalOps = count * operations;
+    const totalOps = count * operations * opLoops;
 
-    // Track overall min/max across all documents
+    // Track overall min/max across all documents and loops
     let overallMinOp: {
       docId: string;
       docNum: number;
+      loop: number;
       timing: OperationTiming;
     } | null = null;
     let overallMaxOp: {
       docId: string;
       docNum: number;
+      loop: number;
       timing: OperationTiming;
     } | null = null;
 
     for (let i = 0; i < documentIds.length; i++) {
       const docNum = i + 1;
       const docId = documentIds[i];
-      const docStartTime = Date.now();
 
-      if (verbose) {
-        console.log(`  [${docNum}/${count}] ${docId}:`);
-      }
+      for (let loop = 1; loop <= opLoops; loop++) {
+        const loopStartTime = Date.now();
+        const loopPrefix = opLoops > 1 ? `loop ${loop}/${opLoops}: ` : "";
 
-      const result = await performOperations(
-        client,
-        docId,
-        docNum,
-        operations,
-        count,
-        (opNum, action, durationMs) => {
-          if (verbose) {
-            console.log(
-              `    op ${opNum}/${operations}: ${durationMs}ms ${JSON.stringify(action)}`,
-            );
-          } else {
-            process.stdout.write(
-              `\r  [${docNum}/${count}] ${docId}: ${opNum}/${operations} ops`,
-            );
-          }
-        },
-      );
+        if (verbose) {
+          console.log(`  [${docNum}/${count}] ${docId} ${loopPrefix}:`);
+        }
 
-      // Update overall min/max
-      if (
-        result.minOp &&
-        (overallMinOp === null ||
-          result.minOp.durationMs < overallMinOp.timing.durationMs)
-      ) {
-        overallMinOp = { docId, docNum, timing: result.minOp };
-      }
-      if (
-        result.maxOp &&
-        (overallMaxOp === null ||
-          result.maxOp.durationMs > overallMaxOp.timing.durationMs)
-      ) {
-        overallMaxOp = { docId, docNum, timing: result.maxOp };
-      }
+        const result = await performOperations(
+          client,
+          docId,
+          docNum,
+          operations,
+          count,
+          (opNum, action, durationMs) => {
+            if (verbose) {
+              console.log(
+                `    op ${opNum}/${operations}: ${durationMs}ms ${JSON.stringify(action)}`,
+              );
+            } else {
+              process.stdout.write(
+                `\r  [${docNum}/${count}] ${docId}: ${loopPrefix}${opNum}/${operations} ops`,
+              );
+            }
+          },
+        );
 
-      const docDurationMs = Date.now() - docStartTime;
-      const docDuration = (docDurationMs / 1000).toFixed(2);
-      const msPerOp = (docDurationMs / operations).toFixed(0);
+        // Update overall min/max
+        if (
+          result.minOp &&
+          (overallMinOp === null ||
+            result.minOp.durationMs < overallMinOp.timing.durationMs)
+        ) {
+          overallMinOp = { docId, docNum, loop, timing: result.minOp };
+        }
+        if (
+          result.maxOp &&
+          (overallMaxOp === null ||
+            result.maxOp.durationMs > overallMaxOp.timing.durationMs)
+        ) {
+          overallMaxOp = { docId, docNum, loop, timing: result.maxOp };
+        }
 
-      const minMax =
-        result.minOp && result.maxOp
-          ? `, min: ${result.minOp.durationMs}ms, max: ${result.maxOp.durationMs}ms`
-          : "";
+        const loopDurationMs = Date.now() - loopStartTime;
+        const loopDuration = (loopDurationMs / 1000).toFixed(2);
+        const msPerOp = (loopDurationMs / operations).toFixed(0);
 
-      if (verbose) {
-        console.log(`    Done: ${docDuration}s, ${msPerOp}ms/op${minMax}`);
-      } else {
-        process.stdout.write(` (${docDuration}s, ${msPerOp}ms/op${minMax})\n`);
+        const minMax =
+          result.minOp && result.maxOp
+            ? `, min: ${result.minOp.durationMs}ms, max: ${result.maxOp.durationMs}ms`
+            : "";
+
+        if (verbose) {
+          console.log(`    Done: ${loopDuration}s, ${msPerOp}ms/op${minMax}`);
+        } else {
+          process.stdout.write(
+            ` (${loopDuration}s, ${msPerOp}ms/op${minMax})\n`,
+          );
+        }
       }
     }
 
