@@ -202,6 +202,7 @@ function parseArgs(args: string[]): {
   opLoops: number;
   endpoint: string;
   documentType?: string;
+  docIds: string[];
   verbose: boolean;
 } {
   let count = 10;
@@ -209,6 +210,7 @@ function parseArgs(args: string[]): {
   let opLoops = 1;
   let endpoint = DEFAULT_ENDPOINT;
   let documentType: string | undefined;
+  const docIds: string[] = [];
   let verbose = false;
 
   for (let i = 0; i < args.length; i++) {
@@ -221,6 +223,8 @@ function parseArgs(args: string[]): {
       operations = Number(args[++i]);
     } else if ((arg === "--op-loops" || arg === "-l") && args[i + 1]) {
       opLoops = Number(args[++i]);
+    } else if ((arg === "--doc-id" || arg === "-d") && args[i + 1]) {
+      docIds.push(args[++i]);
     } else if (arg === "--verbose" || arg === "-v") {
       verbose = true;
     } else if (arg === "--help" || arg === "-h") {
@@ -233,19 +237,23 @@ Arguments:
 Options:
   --operations, -o <M>      Number of operations per loop (default: 0)
   --op-loops, -l <L>        Number of operation loops per document (default: 1)
+  --doc-id, -d <id>         Use existing document(s) instead of creating new ones
+                            (can be specified multiple times, skips document creation)
   --endpoint <url>          GraphQL endpoint (default: ${DEFAULT_ENDPOINT})
-  --documentType <type>     Document type (default: first available)
+  --documentType <type>     Document type for new documents (default: first available)
   --verbose, -v             Show detailed operation payloads
   --help, -h                Show this help message
 
 Process flow:
-  1. Create N documents
+  1. Create N documents (skipped if --doc-id is provided)
   2. For each document, perform M operations L times (total: M * L ops per document)
 
 Examples:
   tsx docs-create.ts 10
   tsx docs-create.ts 10 --operations 5
   tsx docs-create.ts 1 -o 25 -l 100    # 1 doc, 25 ops repeated 100 times (2500 total ops)
+  tsx docs-create.ts --doc-id abc123 -o 25 -l 100  # ops on existing document
+  tsx docs-create.ts -d doc1 -d doc2 -o 10        # ops on multiple existing documents
   tsx docs-create.ts 100 --operations 10 --endpoint http://localhost:4001/graphql
   tsx docs-create.ts 50 --documentType powerhouse/document-model -o 3
   tsx docs-create.ts 5 -o 3 --verbose
@@ -256,7 +264,15 @@ Examples:
     }
   }
 
-  return { count, operations, opLoops, endpoint, documentType, verbose };
+  return {
+    count,
+    operations,
+    opLoops,
+    endpoint,
+    documentType,
+    docIds,
+    verbose,
+  };
 }
 
 async function main() {
@@ -266,55 +282,69 @@ async function main() {
     opLoops,
     endpoint,
     documentType: docTypeArg,
+    docIds,
     verbose,
   } = parseArgs(process.argv.slice(2));
 
   const client = new GraphQLClient(endpoint);
-
-  // Determine document type
-  let documentType = docTypeArg;
-  if (!documentType) {
-    const defaultType = await getDefaultDocumentType(client);
-    if (!defaultType) {
-      console.error("No document types available");
-      process.exit(1);
-    }
-    documentType = defaultType;
-    console.log(`Using document type: ${documentType}`);
-  }
+  const useExistingDocs = docIds.length > 0;
 
   // Track memory
   const initialMemory = getMemoryStats();
   console.log(`\nInitial memory: ${formatMemory(initialMemory)}`);
 
-  // Phase 1: Create documents
-  console.log(`\nPhase 1: Creating ${count} documents...`);
-  const createStartTime = Date.now();
-  const documentIds: string[] = [];
+  const overallStartTime = Date.now();
+  let documentIds: string[];
 
-  for (let i = 0; i < count; i++) {
-    const id = await createDocument(client, documentType, `doc-${i + 1}`);
-    documentIds.push(id);
-    process.stdout.write(`\r  Progress: ${i + 1}/${count}`);
+  if (useExistingDocs) {
+    // Use existing documents
+    documentIds = docIds;
+    console.log(`\nUsing ${documentIds.length} existing document(s):`);
+    documentIds.forEach((id) => console.log(`  - ${id}`));
+  } else {
+    // Determine document type
+    let documentType = docTypeArg;
+    if (!documentType) {
+      const defaultType = await getDefaultDocumentType(client);
+      if (!defaultType) {
+        console.error("No document types available");
+        process.exit(1);
+      }
+      documentType = defaultType;
+      console.log(`Using document type: ${documentType}`);
+    }
+
+    // Phase 1: Create documents
+    console.log(`\nPhase 1: Creating ${count} documents...`);
+    const createStartTime = Date.now();
+    documentIds = [];
+
+    for (let i = 0; i < count; i++) {
+      const id = await createDocument(client, documentType, `doc-${i + 1}`);
+      documentIds.push(id);
+      process.stdout.write(`\r  Progress: ${i + 1}/${count}`);
+    }
+
+    const createDurationMs = Date.now() - createStartTime;
+    const createDuration = (createDurationMs / 1000).toFixed(2);
+    const msPerDoc = (createDurationMs / count).toFixed(0);
+    const phase1Memory = getMemoryStats();
+    console.log(
+      `\n  Created ${count} documents in ${createDuration}s (avg: ${msPerDoc}ms/doc)`,
+    );
+    console.log(`  Memory: ${formatMemory(phase1Memory)}`);
   }
-
-  const createDurationMs = Date.now() - createStartTime;
-  const createDuration = (createDurationMs / 1000).toFixed(2);
-  const msPerDoc = (createDurationMs / count).toFixed(0);
-  const phase1Memory = getMemoryStats();
-  console.log(
-    `\n  Created ${count} documents in ${createDuration}s (avg: ${msPerDoc}ms/doc)`,
-  );
-  console.log(`  Memory: ${formatMemory(phase1Memory)}`);
 
   // Phase 2: Perform operations on each document
   if (operations > 0) {
+    const docCount = documentIds.length;
     const loopLabel = opLoops > 1 ? ` x ${opLoops} loops` : "";
+    const phaseLabel = useExistingDocs ? "Operations" : "Phase 2";
     console.log(
-      `\nPhase 2: Performing ${operations} operations${loopLabel} on each document...`,
+      `\n${phaseLabel}: Performing ${operations} operations${loopLabel} on each document...`,
     );
     const opsStartTime = Date.now();
-    const totalOps = count * operations * opLoops;
+    const totalOps = docCount * operations * opLoops;
 
     // Track overall min/max across all documents and loops
     let overallMinOp: {
@@ -339,7 +369,7 @@ async function main() {
         const loopPrefix = opLoops > 1 ? `loop ${loop}/${opLoops}: ` : "";
 
         if (verbose) {
-          console.log(`  [${docNum}/${count}] ${docId} ${loopPrefix}:`);
+          console.log(`  [${docNum}/${docCount}] ${docId} ${loopPrefix}:`);
         }
 
         const result = await performOperations(
@@ -347,7 +377,7 @@ async function main() {
           docId,
           docNum,
           operations,
-          count,
+          docCount,
           (opNum, action, durationMs) => {
             if (verbose) {
               console.log(
@@ -355,7 +385,7 @@ async function main() {
               );
             } else {
               process.stdout.write(
-                `\r  [${docNum}/${count}] ${docId}: ${loopPrefix}${opNum}/${operations} ops`,
+                `\r  [${docNum}/${docCount}] ${docId}: ${loopPrefix}${opNum}/${operations} ops`,
               );
             }
           },
@@ -412,7 +442,7 @@ async function main() {
 
   // Summary
   const finalMemory = getMemoryStats();
-  const totalDuration = ((Date.now() - createStartTime) / 1000).toFixed(2);
+  const totalDuration = ((Date.now() - overallStartTime) / 1000).toFixed(2);
   const heapDelta = finalMemory.heapUsed - initialMemory.heapUsed;
   const rssDelta = finalMemory.rss - initialMemory.rss;
   console.log(`\nDone! Total time: ${totalDuration}s`);
