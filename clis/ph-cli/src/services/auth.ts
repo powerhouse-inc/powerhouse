@@ -1,26 +1,18 @@
-import {
-  ConnectCrypto,
-  type IConnectCrypto,
-  type JwkKeyPair,
-} from "@renown/sdk";
-import { NodeKeyStorage } from "@renown/sdk/node";
+import { RenownBuilder, type IRenown, type JwkKeyPair } from "@renown/sdk/node";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-const ENV_KEY_NAME = "PH_RENOWN_PRIVATE_KEY";
 const AUTH_FILE = ".auth.json";
-const KEYPAIR_FILE = ".keypair.json";
 const AUTH_PATH = join(process.cwd(), AUTH_FILE);
-const KEYPAIR_PATH = join(process.cwd(), KEYPAIR_FILE);
 
-// Singleton instance of ConnectCrypto
-let connectCryptoInstance: IConnectCrypto | null = null;
+// Singleton instance of Renown
+let renownInstance: IRenown | null = null;
 
 export interface StoredCredentials {
   address: string;
   chainId: number;
-  did: string;
-  connectDid: string; // The DID of the ConnectCrypto instance (did:key:...)
+  userDid: string;
+  appDid: string;
   credentialId: string;
   userDocumentId?: string;
   authenticatedAt: string;
@@ -90,49 +82,14 @@ export function generateSessionId(): string {
 }
 
 /**
- * Default Renown URL
- */
-export const DEFAULT_RENOWN_URL = "https://www.renown.id" as const;
-
-/**
- * Get or create the ConnectCrypto instance
+ * Get or create the Renown instance
  * Uses PH_RENOWN_PRIVATE_KEY env var if set, otherwise generates/loads from file
  */
-export async function getConnectCrypto(): Promise<IConnectCrypto> {
-  if (!connectCryptoInstance) {
-    const keyStorage = new NodeKeyStorage();
-    connectCryptoInstance = new ConnectCrypto(keyStorage);
+export async function getRenown(): Promise<IRenown> {
+  if (!renownInstance) {
+    renownInstance = await new RenownBuilder("ph-cli").build();
   }
-  return connectCryptoInstance;
-}
-
-/**
- * Get the DID from ConnectCrypto
- * This is the did:key:... format DID that identifies this CLI instance
- */
-export async function getConnectDid(): Promise<string> {
-  const crypto = await getConnectCrypto();
-  return crypto.did();
-}
-
-/**
- * Get the issuer for signing credentials
- */
-export async function getIssuer() {
-  const crypto = await getConnectCrypto();
-  return crypto.getIssuer();
-}
-
-/**
- * Get a bearer token for API authentication
- */
-export async function getBearerToken(
-  driveUrl: string,
-  address?: string,
-  refresh = false,
-): Promise<string> {
-  const crypto = await getConnectCrypto();
-  return crypto.getBearerToken(driveUrl, address, refresh);
+  return renownInstance;
 }
 
 /**

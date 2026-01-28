@@ -1,15 +1,7 @@
+import { DEFAULT_RENOWN_URL } from "@renown/sdk/node";
 import type { Command } from "commander";
 import { loginHelp } from "../../help.js";
-import {
-  clearCredentials,
-  DEFAULT_RENOWN_URL,
-  generateSessionId,
-  getConnectDid,
-  isAuthenticated,
-  loadCredentials,
-  saveCredentials,
-  type StoredCredentials,
-} from "../../services/auth.js";
+import type { StoredCredentials } from "../../services/auth.js";
 import type { CommandActionType } from "../../types.js";
 import { setCustomHelp } from "../../utils.js";
 
@@ -106,11 +98,12 @@ function sleep(ms: number): Promise<void> {
  * Show current authentication status
  */
 async function showStatus(): Promise<void> {
+  const { getRenown, loadCredentials } = await import("../../services/auth.js");
   const creds = loadCredentials();
 
   // Always show the CLI's DID
   try {
-    const connectDid = await getConnectDid();
+    const connectDid = await getRenown();
     console.log(`CLI DID: ${connectDid}`);
     console.log();
   } catch (e) {
@@ -126,7 +119,7 @@ async function showStatus(): Promise<void> {
 
   console.log("Authenticated");
   console.log(`  ETH Address: ${creds.address}`);
-  console.log(`  User DID: ${creds.did}`);
+  console.log(`  User DID: ${creds.userDid}`);
   console.log(`  Chain ID: ${creds.chainId}`);
   console.log(`  Authenticated at: ${creds.authenticatedAt}`);
   console.log(`  Renown URL: ${creds.renownUrl}`);
@@ -136,9 +129,10 @@ async function showStatus(): Promise<void> {
  * Show just the CLI DID
  */
 async function showDid(): Promise<void> {
+  const { getRenown } = await import("../../services/auth.js");
   try {
-    const connectDid = await getConnectDid();
-    console.log(connectDid);
+    const renown = await getRenown();
+    console.log(renown.did);
   } catch (e) {
     console.error("Failed to get DID:", e);
     process.exit(1);
@@ -148,7 +142,10 @@ async function showDid(): Promise<void> {
 /**
  * Logout and clear credentials
  */
-function handleLogout(): void {
+async function handleLogout() {
+  const { isAuthenticated, clearCredentials } = await import(
+    "../../services/auth.js"
+  );
   if (!isAuthenticated()) {
     console.log("Not currently authenticated.");
     return;
@@ -186,6 +183,15 @@ export const login: CommandActionType<[LoginOptions]> = async (options) => {
     ? parseInt(options.timeout, 10) * 1000
     : DEFAULT_TIMEOUT_MS;
 
+  const {
+    getRenown,
+    clearCredentials,
+    generateSessionId,
+    isAuthenticated,
+    loadCredentials,
+    saveCredentials,
+  } = await import("../../services/auth.js");
+
   // Check if already authenticated
   if (isAuthenticated()) {
     const creds = loadCredentials();
@@ -196,8 +202,8 @@ export const login: CommandActionType<[LoginOptions]> = async (options) => {
 
   // Get the CLI's DID from ConnectCrypto
   console.log("Initializing cryptographic identity...");
-  const connectDid = await getConnectDid();
-  console.log(`CLI DID: ${connectDid}`);
+  const renown = await getRenown();
+  console.log(`CLI DID: ${renown.did}`);
   console.log();
 
   // Generate session ID
@@ -206,7 +212,7 @@ export const login: CommandActionType<[LoginOptions]> = async (options) => {
   // Build the login URL with connect DID
   const loginUrl = new URL(`${renownUrl}/console`);
   loginUrl.searchParams.set("session", sessionId);
-  loginUrl.searchParams.set("connect", connectDid);
+  loginUrl.searchParams.set("connect", renown.did);
 
   console.log("Opening browser for authentication...");
   console.log(`Session ID: ${sessionId.slice(0, 8)}...`);
@@ -239,8 +245,8 @@ export const login: CommandActionType<[LoginOptions]> = async (options) => {
   const credentials: StoredCredentials = {
     address: result.address!,
     chainId: result.chainId!,
-    did: result.did!,
-    connectDid: connectDid,
+    userDid: result.did!,
+    appDid: renown.did,
     credentialId: result.credentialId!,
     userDocumentId: result.userDocumentId,
     authenticatedAt: new Date().toISOString(),
@@ -252,8 +258,8 @@ export const login: CommandActionType<[LoginOptions]> = async (options) => {
   console.log();
   console.log("Successfully authenticated!");
   console.log(`  ETH Address: ${credentials.address}`);
-  console.log(`  User DID: ${credentials.did}`);
-  console.log(`  CLI DID: ${credentials.connectDid}`);
+  console.log(`  User DID: ${credentials.userDid}`);
+  console.log(`  CLI DID: ${credentials.appDid}`);
   console.log();
   console.log("The CLI can now act on behalf of your Ethereum identity.");
 };

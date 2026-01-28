@@ -5,8 +5,7 @@ import {
 } from "@powerhousedao/common/clis";
 import { command } from "cmd-ts";
 import {
-  getConnectCrypto,
-  getConnectDid,
+  getRenown,
   isAuthenticated,
   loadCredentials,
 } from "../services/auth.js";
@@ -71,18 +70,28 @@ Notes:
       );
     }
 
+    const renown = await getRenown();
+
+    // Get the CLI's DID
+    let did: string;
+    try {
+      did = renown.did;
+    } catch (e) {
+      throw new Error(
+        "Failed to get CLI identity. Run 'ph login' to reinitialize.",
+      );
+    }
+
     const creds = loadCredentials();
     if (!creds) {
       throw new Error("Failed to load credentials.");
     }
 
-    // Get the CLI's DID
-    let did: string;
     try {
-      did = await getConnectDid();
+      await renown.login(creds.userDid);
     } catch (e) {
       throw new Error(
-        "Failed to get CLI identity. Run 'ph login' to reinitialize.",
+        "Failed to login with existing credentials. Run 'ph login' to reinitialize.",
       );
     }
 
@@ -92,16 +101,13 @@ Notes:
     let expiresIn = DEFAULT_EXPIRY_SECONDS;
     if (args.expiry) expiresIn = parseExpiry(args.expiry);
 
-    // Generate the bearer token
-    const crypto = await getConnectCrypto();
-    const token = await crypto.getBearerToken(
-      args.audience ?? "",
-      address,
-      true, // Force refresh to ensure we get a new token with the specified expiry
+    // Generate the bearer token;
+    const token = await renown.getBearerToken(
       {
         expiresIn,
         aud: args.audience,
       },
+      true,
     );
 
     // Calculate human-readable expiry

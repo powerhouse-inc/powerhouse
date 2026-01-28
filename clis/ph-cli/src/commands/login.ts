@@ -3,7 +3,7 @@ import { command } from "cmd-ts";
 import {
   clearCredentials,
   generateSessionId,
-  getConnectDid,
+  getRenown,
   isAuthenticated,
   loadCredentials,
   saveCredentials,
@@ -58,9 +58,8 @@ This command:
 
     // Get the CLI's DID from ConnectCrypto
     console.log("Initializing cryptographic identity...");
-    const connectDid = await getConnectDid();
-    console.log(`CLI DID: ${connectDid}`);
-    console.log();
+    const renown = await getRenown();
+    console.log(`CLI DID: ${renown.did}`);
 
     // Generate session ID
     const sessionId = generateSessionId();
@@ -68,7 +67,7 @@ This command:
     // Build the login URL with connect DID
     const loginUrl = new URL(`${renownUrl}/console`);
     loginUrl.searchParams.set("session", sessionId);
-    loginUrl.searchParams.set("connect", connectDid);
+    loginUrl.searchParams.set("connect", renown.did);
 
     console.log("Opening browser for authentication...");
     console.log(`Session ID: ${sessionId.slice(0, 8)}...`);
@@ -101,8 +100,8 @@ This command:
     const credentials: StoredCredentials = {
       address: result.address!,
       chainId: result.chainId!,
-      did: result.did!,
-      connectDid: connectDid,
+      userDid: result.did!,
+      appDid: renown.did,
       credentialId: result.credentialId!,
       userDocumentId: result.userDocumentId,
       authenticatedAt: new Date().toISOString(),
@@ -114,8 +113,8 @@ This command:
     console.log();
     console.log("Successfully authenticated!");
     console.log(`  ETH Address: ${credentials.address}`);
-    console.log(`  User DID: ${credentials.did}`);
-    console.log(`  CLI DID: ${credentials.connectDid}`);
+    console.log(`  User DID: ${credentials.userDid}`);
+    console.log(`  CLI DID: ${credentials.appDid}`);
     console.log();
     console.log("The CLI can now act on behalf of your Ethereum identity.");
   },
@@ -210,8 +209,8 @@ async function showStatus(): Promise<void> {
 
   // Always show the CLI's DID
   try {
-    const connectDid = await getConnectDid();
-    console.log(`CLI DID: ${connectDid}`);
+    const renown = await getRenown();
+    console.log(`CLI DID: ${renown.did}`);
     console.log();
   } catch (e) {
     console.log("CLI DID: (not yet initialized)");
@@ -226,7 +225,7 @@ async function showStatus(): Promise<void> {
 
   console.log("Authenticated");
   console.log(`  ETH Address: ${creds.address}`);
-  console.log(`  User DID: ${creds.did}`);
+  console.log(`  User DID: ${creds.userDid}`);
   console.log(`  Chain ID: ${creds.chainId}`);
   console.log(`  Authenticated at: ${creds.authenticatedAt}`);
   console.log(`  Renown URL: ${creds.renownUrl}`);
@@ -239,8 +238,8 @@ async function showStatus(): Promise<void> {
  */
 async function showDid(): Promise<void> {
   try {
-    const connectDid = await getConnectDid();
-    console.log(connectDid);
+    const renown = await getRenown();
+    console.log(renown.did);
   } catch (e) {
     console.error("Failed to get DID:");
     throw e;
