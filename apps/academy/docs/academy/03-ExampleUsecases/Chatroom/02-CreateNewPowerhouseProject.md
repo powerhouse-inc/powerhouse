@@ -4,10 +4,11 @@
 📦 **Reference Code**: [chatroom-demo](https://github.com/powerhouse-inc/chatroom-demo)
 
 This tutorial has a complete reference implementation available. You can:
+
 - View the complete code for each step
 - Clone and compare your implementation
 - Use `git diff` to compare your code with the reference
-:::
+  :::
 
 <details>
 <summary>📖 How to use this tutorial</summary>
@@ -17,6 +18,7 @@ This tutorial is designed for you to **build your own project from scratch** whi
 ### Setup: Create your project and connect to tutorial repo
 
 1. **Create your project** following the tutorial:
+
    ```bash
    mkdir ph-projects
    cd ph-projects
@@ -26,6 +28,7 @@ This tutorial is designed for you to **build your own project from scratch** whi
    ```
 
 2. **Add the tutorial repository as a remote** to access reference code:
+
    ```bash
    git remote add tutorial https://github.com/powerhouse-inc/chatroom-demo.git
    git fetch tutorial --prune
@@ -69,7 +72,7 @@ A Powerhouse project primarily consists of a document model and its editor. The 
 ## Prerequisites
 
 - Powerhouse CLI installed: `pnpm install -g ph-cmd` or `npm install -g ph-cmd`
-- Node.js 22 and a package manager (pnpm or npm) installed
+- Node.js 24 and a package manager (pnpm or npm) installed
 - Visual Studio Code (or your preferred IDE)
 - Terminal/Command Prompt access
 
@@ -159,7 +162,7 @@ The Connect application will start and you will see the following output:
 
 A new browser window will open and you will see the Connect application. If it doesn't open automatically, you can open it manually by navigating to `http://localhost:3000/` in your browser.
 
-:::tip 
+:::tip
 If your local drive is not present, navigate to Settings in the bottom left corner. Settings > Danger Zone > Clear Storage.
 Clear the storage of your localhost application as it might have an old session cached.
 :::

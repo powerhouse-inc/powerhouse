@@ -1,5 +1,5 @@
 # Build stage
-FROM node:22-alpine AS build
+FROM node:24-alpine AS build
 
 WORKDIR /app
 
@@ -44,7 +44,7 @@ RUN if [ -n "$PH_PACKAGES" ]; then \
 RUN prisma generate --schema node_modules/document-drive/dist/prisma/schema.prisma
 
 # Final stage - slim node image
-FROM node:22-alpine
+FROM node:24-alpine
 
 WORKDIR /app
 

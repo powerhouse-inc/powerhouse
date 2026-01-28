@@ -1,24 +1,12 @@
 #!/usr/bin/env node
+import { assertNodeVersion } from "@powerhousedao/common/clis";
 import { Command } from "commander";
 import { registerCommands } from "./commands/register-commands.js";
 
 console.log("Running legacy ph-cli...");
-function ensureNodeVersion(minVersion = "22") {
-  const version = process.versions.node;
-  if (!version) {
-    return;
-  }
-
-  if (version < minVersion) {
-    console.error(
-      `Node version ${minVersion} or higher is required. Current version: ${version}`,
-    );
-    process.exit(1);
-  }
-}
 
 // Ensure minimum Node.js version
-ensureNodeVersion("22");
+assertNodeVersion();
 
 const program = new Command();
 

@@ -5,6 +5,7 @@
 Powerhouse provides official Docker images for deploying your applications in containerized environments. This guide covers the available Docker images, how to use them with Docker Compose, and the environment variables you can configure.
 
 Docker deployment is ideal for:
+
 - **Production environments** that require consistent, reproducible deployments
 - **Development teams** that want to share a common environment
 - **CI/CD pipelines** that need automated testing and deployment
@@ -30,6 +31,7 @@ ghcr.io/powerhouse-inc/powerhouse/connect
 ```
 
 **Available tags:**
+
 - `latest` - Latest stable release
 - `dev` - Development builds
 - `staging` - Staging builds
@@ -44,6 +46,7 @@ ghcr.io/powerhouse-inc/powerhouse/switchboard
 ```
 
 **Available tags:**
+
 - `latest` - Latest stable release
 - `dev` - Development builds
 - `staging` - Staging builds
@@ -58,6 +61,7 @@ ghcr.io/powerhouse-inc/powerhouse/academy
 ```
 
 **Available tags:**
+
 - `latest` - Latest stable release
 - `dev` - Development builds
 - `staging` - Staging builds
@@ -138,6 +142,7 @@ docker compose down
 ```
 
 After starting, you can access:
+
 - **Connect**: http://localhost:3000
 - **Switchboard**: http://localhost:4000
 
@@ -145,72 +150,72 @@ After starting, you can access:
 
 ### Connect Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Port the server listens on | `4000` |
-| `PH_CONNECT_BASE_PATH` | Base URL path for the application | `/` |
-| `PH_PACKAGES` | Comma-separated list of packages to install at startup | `""` |
-| `PH_CONNECT_SENTRY_DSN` | Sentry DSN for error tracking | `""` |
-| `PH_CONNECT_SENTRY_ENV` | Sentry environment name | `""` |
-| `DATABASE_URL` | PostgreSQL connection string | Required |
+| Variable                | Description                                            | Default  |
+| ----------------------- | ------------------------------------------------------ | -------- |
+| `PORT`                  | Port the server listens on                             | `4000`   |
+| `PH_CONNECT_BASE_PATH`  | Base URL path for the application                      | `/`      |
+| `PH_PACKAGES`           | Comma-separated list of packages to install at startup | `""`     |
+| `PH_CONNECT_SENTRY_DSN` | Sentry DSN for error tracking                          | `""`     |
+| `PH_CONNECT_SENTRY_ENV` | Sentry environment name                                | `""`     |
+| `DATABASE_URL`          | PostgreSQL connection string                           | Required |
 
 #### Feature Flags
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PH_CONNECT_DEFAULT_DRIVES_URL` | Default drives URL to load | `""` |
-| `PH_CONNECT_ENABLED_EDITORS` | Enabled editor types (`*` for all) | `"*"` |
-| `PH_CONNECT_DISABLED_EDITORS` | Disabled editor types | `""` |
-| `PH_CONNECT_PUBLIC_DRIVES_ENABLED` | Enable public drives | `"true"` |
-| `PH_CONNECT_CLOUD_DRIVES_ENABLED` | Enable cloud drives | `"true"` |
-| `PH_CONNECT_LOCAL_DRIVES_ENABLED` | Enable local drives | `"true"` |
-| `PH_CONNECT_SEARCH_BAR_ENABLED` | Enable search bar | `"false"` |
-| `PH_CONNECT_DISABLE_ADD_PUBLIC_DRIVES` | Disable adding public drives | `"false"` |
-| `PH_CONNECT_DISABLE_ADD_CLOUD_DRIVES` | Disable adding cloud drives | `"false"` |
-| `PH_CONNECT_DISABLE_ADD_LOCAL_DRIVES` | Disable adding local drives | `"false"` |
-| `PH_CONNECT_DISABLE_DELETE_PUBLIC_DRIVES` | Disable deleting public drives | `"false"` |
-| `PH_CONNECT_DISABLE_DELETE_CLOUD_DRIVES` | Disable deleting cloud drives | `"false"` |
-| `PH_CONNECT_DISABLE_DELETE_LOCAL_DRIVES` | Disable deleting local drives | `"false"` |
-| `PH_CONNECT_HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS` | Hide document model selection | `"true"` |
+| Variable                                            | Description                        | Default   |
+| --------------------------------------------------- | ---------------------------------- | --------- |
+| `PH_CONNECT_DEFAULT_DRIVES_URL`                     | Default drives URL to load         | `""`      |
+| `PH_CONNECT_ENABLED_EDITORS`                        | Enabled editor types (`*` for all) | `"*"`     |
+| `PH_CONNECT_DISABLED_EDITORS`                       | Disabled editor types              | `""`      |
+| `PH_CONNECT_PUBLIC_DRIVES_ENABLED`                  | Enable public drives               | `"true"`  |
+| `PH_CONNECT_CLOUD_DRIVES_ENABLED`                   | Enable cloud drives                | `"true"`  |
+| `PH_CONNECT_LOCAL_DRIVES_ENABLED`                   | Enable local drives                | `"true"`  |
+| `PH_CONNECT_SEARCH_BAR_ENABLED`                     | Enable search bar                  | `"false"` |
+| `PH_CONNECT_DISABLE_ADD_PUBLIC_DRIVES`              | Disable adding public drives       | `"false"` |
+| `PH_CONNECT_DISABLE_ADD_CLOUD_DRIVES`               | Disable adding cloud drives        | `"false"` |
+| `PH_CONNECT_DISABLE_ADD_LOCAL_DRIVES`               | Disable adding local drives        | `"false"` |
+| `PH_CONNECT_DISABLE_DELETE_PUBLIC_DRIVES`           | Disable deleting public drives     | `"false"` |
+| `PH_CONNECT_DISABLE_DELETE_CLOUD_DRIVES`            | Disable deleting cloud drives      | `"false"` |
+| `PH_CONNECT_DISABLE_DELETE_LOCAL_DRIVES`            | Disable deleting local drives      | `"false"` |
+| `PH_CONNECT_HIDE_DOCUMENT_MODEL_SELECTION_SETTINGS` | Hide document model selection      | `"true"`  |
 
 #### Renown Authentication
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PH_CONNECT_RENOWN_URL` | Renown authentication service URL | `"https://auth.renown.id"` |
-| `PH_CONNECT_RENOWN_NETWORK_ID` | Renown network identifier | `"eip155"` |
-| `PH_CONNECT_RENOWN_CHAIN_ID` | Renown chain ID | `1` |
+| Variable                       | Description                       | Default                    |
+| ------------------------------ | --------------------------------- | -------------------------- |
+| `PH_CONNECT_RENOWN_URL`        | Renown authentication service URL | `"https://auth.renown.id"` |
+| `PH_CONNECT_RENOWN_NETWORK_ID` | Renown network identifier         | `"eip155"`                 |
+| `PH_CONNECT_RENOWN_CHAIN_ID`   | Renown chain ID                   | `1`                        |
 
 ### Switchboard Environment Variables
 
 #### Core Configuration
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Port the server listens on | `4001` |
-| `PH_SWITCHBOARD_PORT` | Alias for PORT | `$PORT` |
-| `DATABASE_URL` | PostgreSQL or SQLite connection string | `"dev.db"` |
-| `PH_SWITCHBOARD_DATABASE_URL` | Alias for DATABASE_URL | `"dev.db"` |
-| `BASE_PATH` | Base URL path for the API | `"/"` |
-| `PH_PACKAGES` | Comma-separated list of packages to install at startup | `""` |
+| Variable                      | Description                                            | Default    |
+| ----------------------------- | ------------------------------------------------------ | ---------- |
+| `PORT`                        | Port the server listens on                             | `4001`     |
+| `PH_SWITCHBOARD_PORT`         | Alias for PORT                                         | `$PORT`    |
+| `DATABASE_URL`                | PostgreSQL or SQLite connection string                 | `"dev.db"` |
+| `PH_SWITCHBOARD_DATABASE_URL` | Alias for DATABASE_URL                                 | `"dev.db"` |
+| `BASE_PATH`                   | Base URL path for the API                              | `"/"`      |
+| `PH_PACKAGES`                 | Comma-separated list of packages to install at startup | `""`       |
 
 #### Authentication
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `AUTH_ENABLED` | Enable authentication | `"false"` |
-| `ADMINS` | Comma-separated list of admin wallet addresses | `""` |
-| `USERS` | Comma-separated list of user wallet addresses | `""` |
-| `GUESTS` | Comma-separated list of guest wallet addresses | `""` |
-| `FREE_ENTRY` | Allow unauthenticated access when auth is enabled | `"false"` |
+| Variable       | Description                                       | Default   |
+| -------------- | ------------------------------------------------- | --------- |
+| `AUTH_ENABLED` | Enable authentication                             | `"false"` |
+| `ADMINS`       | Comma-separated list of admin wallet addresses    | `""`      |
+| `USERS`        | Comma-separated list of user wallet addresses     | `""`      |
+| `GUESTS`       | Comma-separated list of guest wallet addresses    | `""`      |
+| `FREE_ENTRY`   | Allow unauthenticated access when auth is enabled | `"false"` |
 
 #### Error Tracking & Monitoring
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `SENTRY_DSN` | Sentry DSN for error tracking | `""` |
-| `SENTRY_ENV` | Sentry environment name (e.g., "production", "staging") | `""` |
-| `PYROSCOPE_SERVER_ADDRESS` | Pyroscope server address for performance profiling | `""` |
+| Variable                   | Description                                             | Default |
+| -------------------------- | ------------------------------------------------------- | ------- |
+| `SENTRY_DSN`               | Sentry DSN for error tracking                           | `""`    |
+| `SENTRY_ENV`               | Sentry environment name (e.g., "production", "staging") | `""`    |
+| `PYROSCOPE_SERVER_ADDRESS` | Pyroscope server address for performance profiling      | `""`    |
 
 ## Installing Custom Packages
 
@@ -231,25 +236,29 @@ Packages are installed using the `ph install` command before the service starts.
 ### Connect Image
 
 The Connect image is based on Alpine Linux and includes:
+
 - Node.js and pnpm
 - Nginx with Brotli compression
 - The `ph-cmd` CLI tool
 - A pre-initialized Powerhouse project
 
 At startup, the entrypoint script:
+
 1. Installs any packages specified in `PH_PACKAGES`
 2. Builds the Connect frontend with `ph connect build`
 3. Configures and starts Nginx to serve the built files
 
 ### Switchboard Image
 
-The Switchboard image is based on Node.js 22 and includes:
+The Switchboard image is based on Node.js 24 and includes:
+
 - pnpm package manager
 - The `ph-cmd` CLI tool
 - Prisma CLI for database migrations
 - A pre-initialized Powerhouse project
 
 At startup, the entrypoint script:
+
 1. Installs any packages specified in `PH_PACKAGES`
 2. Runs Prisma database migrations (if using PostgreSQL)
 3. Starts the Switchboard server with `ph switchboard`
@@ -301,6 +310,7 @@ ports:
 ```
 
 This prevents direct external access. In production, use a reverse proxy (like Nginx or Traefik) to:
+
 - Terminate SSL/TLS
 - Handle load balancing
 - Provide additional security headers
@@ -343,6 +353,7 @@ docker compose logs postgres
 ```
 
 Verify the `DATABASE_URL` format:
+
 ```
 postgres://user:password@host:port/database
 ```
@@ -350,6 +361,7 @@ postgres://user:password@host:port/database
 ### Package Installation Fails
 
 If custom packages fail to install, check:
+
 1. Package name is correct
 2. Network connectivity from container
 3. Container has access to npm registry

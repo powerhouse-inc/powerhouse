@@ -67,7 +67,7 @@
     "read-pkg": "^9.0.1"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "pnpm": {
     "overrides": {

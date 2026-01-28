@@ -36,7 +36,7 @@ on:
         default: false
 
 env:
-  NODE_VERSION: '22'
+  NODE_VERSION: '24'
   PNPM_VERSION: '10'
   DOCKER_REGISTRY: cr.vetra.io
   GHCR_REGISTRY: ghcr.io
