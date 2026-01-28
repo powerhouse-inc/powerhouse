@@ -3,12 +3,6 @@ import type { IOperationIndex } from "../../../src/cache/operation-index-types.j
 import type { IReactor } from "../../../src/core/types.js";
 import type { IEventBus } from "../../../src/events/interfaces.js";
 import { ReactorEventTypes } from "../../../src/events/types.js";
-import {
-  SyncEventTypes,
-  type SyncFailedEvent,
-  type SyncPendingEvent,
-  type SyncSucceededEvent,
-} from "../../../src/sync/types.js";
 import { ConsoleLogger } from "../../../src/logging/console.js";
 import type {
   ISyncCursorStorage,
@@ -21,6 +15,12 @@ import type {
 } from "../../../src/sync/interfaces.js";
 import { SyncManager } from "../../../src/sync/sync-manager.js";
 import type { ChannelConfig, RemoteRecord } from "../../../src/sync/types.js";
+import {
+  SyncEventTypes,
+  type SyncFailedEvent,
+  type SyncPendingEvent,
+  type SyncSucceededEvent,
+} from "../../../src/sync/types.js";
 
 describe("SyncManager - Unit Tests", () => {
   let syncManager: SyncManager;
@@ -230,7 +230,7 @@ describe("SyncManager - Unit Tests", () => {
     it("should unsubscribe from event bus", async () => {
       await syncManager.startup();
 
-      expect(eventSubscribers.size).toBe(3);
+      expect(eventSubscribers.size).toBe(5);
 
       syncManager.shutdown();
 
