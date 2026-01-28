@@ -54,7 +54,7 @@ export const documentModelGlobalState: DocumentModelGlobalState = {
           schema:
             "type CodeExample {\n    id: ID!\n    value: String!\n}\n\ntype OperationError {\n    id: ID!\n    code: String\n    name: String\n    description: String\n    template: String\n}\n\ntype Operation {\n    id: ID!\n    name: String\n    schema: String\n    description: String\n    template: String\n    errors: [OperationError!]!\n    examples: [CodeExample!]!\n    reducer: String\n    scope: String\n}\n\ntype Module {\n    id: ID!\n    name: String!\n    description: String\n    operations: [Operation!]!\n}\n\ntype State {\n    schema: String!\n    initialValue: String!\n    examples: [CodeExample!]!\n}\n\ntype ScopeState {\n    global: State!\n    local: State!\n}\n\ntype Author {\n    name: String!\n    website: String\n}\n\ntype DocumentSpecification {\n    version: Int!\n    state: ScopeState!\n    modules: [Module!]!\n    changeLog: [String!]!\n}\n\ntype DocumentModelGlobalState {\n    name: String!\n    id: String!\n    extension: String!\n    description: String!\n    author: Author!\n    specifications: [DocumentSpecification!]!\n}",
           initialValue:
-            '{\n    "id": "",\n    "name": "",\n    "extension": "",\n    "description": "",\n    "author": {\n        "name": "",\n        "website": ""\n    },\n    "specifications": [\n        {\n            "version": 1,\n            "changeLog": [],\n            "state": {\n                "schema": "",\n                "initialValue": "",\n                "examples": []\n            },\n            "modules": []\n        }\n    ]\n}',
+            '{\n    "id": "",\n    "name": "",\n    "extension": "",\n    "description": "",\n    "author": {\n        "name": "",\n        "website": ""\n    },\n    "specifications": [\n        {\n            "version": 1,\n            "changeLog": [],\n            "state": {\n                "global": {\n                    "schema": "",\n                    "initialValue": "",\n                    "examples": []\n                },\n                "local": {\n                    "schema": "",\n                    "initialValue": "",\n                    "examples": []\n                }\n            },\n            "modules": []\n        }\n    ]\n}',
           examples: [],
         },
         local: {
@@ -429,7 +429,7 @@ export const documentModelGlobalState: DocumentModelGlobalState = {
               id: "",
               description: "Adds a new operation to a module",
               schema:
-                "input AddOperationInput {\n    moduleId: ID!\n    id: ID!\n    name: String!\n    schema: String\n    description: String\n    template: String\n    reducer: String\n}",
+                "input AddOperationInput {\n    moduleId: ID!\n    id: ID!\n    name: String!\n    schema: String\n    description: String\n    template: String\n    reducer: String\n    scope: String\n}",
               template: "",
               reducer: "",
               examples: [],
@@ -491,6 +491,18 @@ export const documentModelGlobalState: DocumentModelGlobalState = {
               description: "Sets the reducer function code for an operation",
               schema:
                 "input SetOperationReducerInput {\n    id: ID!\n    reducer: String\n}",
+              template: "",
+              reducer: "",
+              examples: [],
+              errors: [],
+              scope: "global",
+            },
+            {
+              name: "SET_OPERATION_SCOPE",
+              id: "",
+              description: "Sets the scope of an operation (global or local)",
+              schema:
+                "input SetOperationScopeInput {\n    id: ID!\n    scope: String\n}",
               template: "",
               reducer: "",
               examples: [],
