@@ -486,7 +486,7 @@ function mergeEnvSources(
 
       // Try to validate just this field
       try {
-        const fieldSchema = schema.shape[key];
+        const fieldSchema = schema.shape[key] as z.ZodTypeAny | undefined;
         if (fieldSchema) {
           fieldSchema.parse(value);
           merged[key] = value;

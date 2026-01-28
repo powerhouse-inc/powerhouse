@@ -65,6 +65,7 @@ async function migratePackageJson() {
   };
   packageJson.scripts = newScripts;
   packageJson.exports = newExports;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call -- write-pkg has incomplete type declarations
   await writePackage(packageJson);
 }
 
