@@ -259,9 +259,39 @@ Examples:
   tsx docs-create.ts 5 -o 3 --verbose
 `);
       process.exit(0);
-    } else if (!isNaN(Number(arg))) {
+    } else if (!isNaN(Number(arg)) && arg.trim() !== "") {
       count = Number(arg);
+    } else {
+      console.error(`Error: Unrecognized argument: ${arg}`);
+      console.error("Use --help for usage information.");
+      process.exit(1);
     }
+  }
+
+  // Validate numeric inputs
+  if (count < 0) {
+    console.error(`Error: Document count must be a non-negative integer.`);
+    process.exit(1);
+  }
+
+  if (isNaN(operations) || operations < 0) {
+    console.error(
+      `Error: Invalid operations value: must be a non-negative integer.`,
+    );
+    process.exit(1);
+  }
+
+  if (isNaN(opLoops) || opLoops < 1) {
+    console.error(
+      `Error: Invalid op-loops value: must be a positive integer (>= 1).`,
+    );
+    process.exit(1);
+  }
+
+  if (operations === 0 && opLoops > 1) {
+    console.warn(
+      `Warning: --op-loops=${opLoops} has no effect when operations is 0.`,
+    );
   }
 
   return {
